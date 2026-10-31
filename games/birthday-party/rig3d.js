@@ -9,7 +9,7 @@
 // - أوامر الرسم للضيف ≤ 6: الجسم، الراس (الوجه)، ملحقات الراس (طاقية الشعر والكعكة والإكسسوار)،
 //   الخصل، التنورة، القبعة. صاحبة الحفلة مستثناة (تاجها الكبير وفستانها الفخم ولمعاتها).
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { SKIN, HAIR, OUTFIT, hash } from './crowd-common.js';
+import { SKIN, HAIR, OUTFIT, hash, BOY_HEADWEAR } from './crowd-common.js';
 import { createGown } from './gown3d.js';
 
 const T = THREE;
@@ -187,7 +187,60 @@ function along(v, joints, blend) {
 function tubeX(x0, x1, r0, r1, rings = 12, seg = 12, y0 = 0) { const g = new T.CylinderGeometry(1, 1, 1, seg, rings, false); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = p.getY(i) + .5, r = r1 + (r0 - r1) * f; p.setXYZ(i, x1 + (x0 - x1) * f, y0 + p.getX(i) * r, p.getZ(i) * r); } g.computeVertexNormals(); return g; }
 function tubeY(y0, y1, r0, r1, rings = 14, seg = 12) { const g = new T.CylinderGeometry(1, 1, 1, seg, rings, false); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const f = p.getY(i) + .5, r = r1 + (r0 - r1) * f; p.setXYZ(i, p.getX(i) * r, y1 + (y0 - y1) * f, p.getZ(i) * r); } g.computeVertexNormals(); return g; }
 
+// ================= الولد: جسم أعرض كتوف، و4 لبسات (st): ثوب، قميص وبنطلون، هودي وجينز، بدلة وبابيون =================
+// ألوان كل لبسة من لون اللبس المختار (o)
+export function boyColors(L) {
+  const o = new T.Color(L.o >= 0 ? OUTFIT[L.o] : OUTFIT[4]), W = new T.Color('#ffffff');
+  if (L.st === 0) { const th = o.clone().lerp(W, .8); return { top: th, legs: th, shoe: '#6b4f3a', sleeve: .6, thobe: th }; }
+  if (L.st === 2) return { top: o.clone().multiplyScalar(.88), legs: new T.Color('#3b5b8c'), shoe: '#f2f2f2', sleeve: .6, hood: true };
+  if (L.st === 3) { const j = o.clone().lerp(new T.Color('#1c1f2e'), .72); return { top: j, legs: j, shoe: '#141218', sleeve: .6, suit: true, tie: o }; }
+  return { top: o, legs: new T.Color('#3d4657'), shoe: '#2d2a32', sleeve: .27 };
+}
+function buildBoyBody(L) {
+  const skin = SKIN[L.s], C = boyColors(L), acc = { pos: [], nor: [], col: [], si: [], sw: [] };
+  const torso = new T.LatheGeometry([[.001, .8], [.14, .8], [.162, .88], [.158, .97], [.163, 1.05], [.18, 1.15], [.192, 1.24], [.16, 1.3], [.075, 1.345], [.001, 1.35]].map(([r, y]) => new T.Vector2(r, y)), 28);
+  torso.rotateY(Math.PI); torso.scale(1, 1, .72); torso.computeVertexNormals();
+  const spineW = (x, y) => {
+    if (y > 1.27 && Math.abs(x) > .09) return ['Spine2', x > 0 ? 'LeftShoulder' : 'RightShoulder', smooth(Math.abs(x), .09, .16) * .6];
+    return along(y, [['Hips', 0], ['Spine', 1.0], ['Spine1', 1.1], ['Spine2', 1.2]], .045);
+  };
+  { const g = torso.toNonIndexed(), p = g.attributes.position; bodyAdd(acc, g, C.top, spineW);
+    const base = acc.col.length / 3 - p.count, lc = new T.Color(C.legs), wh = new T.Color('#ffffff');
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      // البنطلون من الحوض (إلا الثوب كله لون واحد)، والبدلة: قميص أبيض على شكل V قدام
+      if (y < .95 && !C.thobe) acc.col.splice((base + i) * 3, 3, lc.r, lc.g, lc.b);
+      if (C.suit && z > 0 && y > 1.02 && Math.abs(x) < .012 + (y - 1.02) * .3) acc.col.splice((base + i) * 3, 3, wh.r, wh.g, wh.b);
+    } }
+  bodyAdd(acc, tubeY(1.3, 1.47, .052, .048, 6, 10), skin, (x, y) => along(y, [['Spine2', 0], ['Neck', 1.34], ['Head', 1.44]], .03));
+  // ياقة الثوب (حلقة صغيرة حول الرقبة) / القبعة الخلفية للهودي / البابيون
+  if (C.thobe) { const col = new T.TorusGeometry(.058, .012, 6, 20); col.rotateX(Math.PI / 2); col.translate(0, 1.33, 0); bodyAdd(acc, col, C.top, () => ['Spine2', 'Neck', .3]); }
+  if (C.hood) { const hd = new T.TorusGeometry(.085, .042, 8, 18, Math.PI); hd.rotateX(Math.PI / 2); hd.rotateY(Math.PI); hd.translate(0, 1.32, -.035); bodyAdd(acc, hd, C.top.clone().multiplyScalar(.9), () => ['Spine2', 'Spine2', 0]); }
+  if (C.tie) for (const sd of [1, -1]) { const b = new T.ConeGeometry(.026, .05, 8); b.rotateZ(sd * Math.PI / 2); b.translate(sd * .024, 1.31, .118); bodyAdd(acc, b, C.tie, () => ['Spine2', 'Spine2', 0]); }
+  if (C.tie) { const k = new T.SphereGeometry(.013, 8, 6); k.translate(0, 1.31, .122); bodyAdd(acc, k, C.tie, () => ['Spine2', 'Spine2', 0]); }
+  for (const [S, sd] of [['Left', 1], ['Right', -1]]) {
+    const armG = tubeX(sd * .1, sd * .66, .06, .038, 16, 12, WORLD_REST.LeftArm.y), ax = x => Math.abs(x);
+    const armW = x => along(ax(x), [[S + 'Shoulder', 0], [S + 'Arm', .14], [S + 'ForeArm', .4], [S + 'Hand', .62]], .045);
+    { const g = armG.toNonIndexed(), p = g.attributes.position; bodyAdd(acc, g, skin, armW);
+      const base = acc.col.length / 3 - p.count, sc = new T.Color(C.top), cuff = new T.Color(C.suit ? '#ffffff' : C.top);
+      for (let i = 0; i < p.count; i++) { const a = ax(p.getX(i)); if (a < C.sleeve) { const c = C.suit && a > .57 ? cuff : sc; acc.col.splice((base + i) * 3, 3, c.r, c.g, c.b); } } }
+    const sh = new T.SphereGeometry(.064, 12, 10); sh.scale(1.08, .95, .9); sh.translate(sd * .145, 1.29, 0); bodyAdd(acc, sh, C.top, () => [S + 'Shoulder', S + 'Arm', .55]);
+    const hand = new T.SphereGeometry(.047, 12, 8); hand.scale(1.35, .55, .85); hand.translate(sd * .68, 1.31, .005); bodyAdd(acc, hand, skin, () => [S + 'Hand', S + 'Hand', 0]);
+    const thumb = new T.SphereGeometry(.019, 8, 6); thumb.scale(1.4, 1, 1); thumb.translate(sd * .655, 1.312, .035); bodyAdd(acc, thumb, skin, () => [S + 'Hand', S + 'Hand', 0]);
+    const legG = tubeY(.9, .06, .09, .062, 18, 12); legG.translate(sd * .088, 0, 0);
+    bodyAdd(acc, legG, C.legs, (x, y) => along(-y, [['Hips', -2], [S + 'UpLeg', -.93], [S + 'Leg', -.47], [S + 'Foot', -.07]], .05));
+    const foot = new T.SphereGeometry(.062, 12, 8); foot.scale(1, .55, 1.9); foot.translate(sd * .088, .047, .05);
+    bodyAdd(acc, foot, C.shoe, (x, y, z) => [S + 'Foot', S + 'ToeBase', smooth(z, .05, .11)]);
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(acc.pos, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(acc.nor, 3));
+  g.setAttribute('color', new T.Float32BufferAttribute(acc.col, 3));
+  g.setAttribute('skinIndex', new T.Uint16BufferAttribute(acc.si, 4)); g.setAttribute('skinWeight', new T.Float32BufferAttribute(acc.sw, 4));
+  return g;
+}
+
 function buildBody(L, role) {
+  if (role !== 'girl' && L.g === 1) return buildBoyBody(L);
   const girl = role === 'girl', pants = L.st === 1 && !girl, h = hash(L._n || 0);
   const out = L.o < 0 ? '#fff4f8' : OUTFIT[L.o], skin = SKIN[L.s];
   const shirt = girl ? (L.o < 0 ? '#5b2d8c' : new T.Color(out).multiplyScalar(.7)) : pants ? new T.Color(out).lerp(new T.Color('#ffffff'), .55) : new T.Color(out).lerp(new T.Color('#ffffff'), .2);
@@ -230,15 +283,15 @@ function buildBody(L, role) {
 
 // ================= الوجه (رسم بالكانفس، 3 حالات: مفتوح، رمشة، ضحكة) — مشترك حسب لون البشرة =================
 const faceCache = new Map();
-function faceTex(skin, kind) {
-  const key = skin + kind; if (faceCache.has(key)) return faceCache.get(key);
+function faceTex(skin, kind, boy = false) {
+  const key = skin + kind + (boy ? 'b' : ''); if (faceCache.has(key)) return faceCache.get(key);
   const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
   g.fillStyle = skin; g.fillRect(0, 0, 512, 256);
   const cx = 128, cy = 136, lid = new T.Color(skin).multiplyScalar(.82).getStyle();
-  for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * 30, cy + 22, 0, cx + sx * 30, cy + 22, 16); gr.addColorStop(0, 'rgba(240,110,130,.35)'); gr.addColorStop(1, 'rgba(240,110,130,0)'); g.fillStyle = gr; g.fillRect(cx + sx * 30 - 18, cy + 4, 36, 36); }
+  if (!boy) for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * 30, cy + 22, 0, cx + sx * 30, cy + 22, 16); gr.addColorStop(0, 'rgba(240,110,130,.35)'); gr.addColorStop(1, 'rgba(240,110,130,0)'); g.fillStyle = gr; g.fillRect(cx + sx * 30 - 18, cy + 4, 36, 36); }
   for (const sx of [-1, 1]) {
     const ex = cx + sx * 20, ey = cy - 4;
-    g.strokeStyle = 'rgba(60,32,20,.85)'; g.lineCap = 'round'; g.lineWidth = 3; g.beginPath(); g.arc(ex, ey - 3, 14, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); // الحاجب
+    g.strokeStyle = 'rgba(60,32,20,.85)'; g.lineCap = 'round'; g.lineWidth = boy ? 5 : 3; g.beginPath(); if (boy) g.arc(ex, ey + 4, 16, Math.PI * 1.28, Math.PI * 1.72); else g.arc(ex, ey - 3, 14, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); // الحاجب (أعرض وأعدل للولد)
     if (kind === 'open') {
       g.fillStyle = '#fff'; g.beginPath(); g.ellipse(ex, ey + 6, 9, 7, 0, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#5a3420'; g.beginPath(); g.arc(ex, ey + 6, 5.5, 0, Math.PI * 2); g.fill();
@@ -252,7 +305,7 @@ function faceTex(skin, kind) {
   }
   g.strokeStyle = 'rgba(150,80,60,.4)'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy + 14, 3.5, Math.PI * .2, Math.PI * .8); g.stroke(); // الخشم
   if (kind === 'laugh') { g.fillStyle = '#9c2f4f'; g.beginPath(); g.moveTo(cx - 13, cy + 25); g.quadraticCurveTo(cx, cy + 46, cx + 13, cy + 25); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(cx - 9, cy + 25, 18, 4); }
-  else { g.strokeStyle = '#c4566f'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx - 10, cy + 26); g.quadraticCurveTo(cx, cy + 33, cx + 10, cy + 26); g.stroke(); }
+  else { g.strokeStyle = boy ? '#a5584f' : '#c4566f'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx - 10, cy + 26); g.quadraticCurveTo(cx, cy + 33, cx + 10, cy + 26); g.stroke(); }
   const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; faceCache.set(key, t); return t;
 }
 
@@ -267,7 +320,50 @@ function merge(list) {
   const out = new T.BufferGeometry(); out.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new T.Float32BufferAttribute(col, 3));
   return out;
 }
+// لون لكل رأس (vertex) حسب مكانه — للشماغ (مربعات حمراء وبيضاء)
+function paintBy(geo, fn) { const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, a = new Float32Array(p.count * 3), c = new T.Color(); for (let i = 0; i < p.count; i++) { c.set(fn(p.getX(i), p.getY(i), p.getZ(i))); a.set([c.r, c.g, c.b], i * 3); } g.setAttribute('color', new T.BufferAttribute(a, 3)); g.deleteAttribute('uv'); return g; }
+// الولد: التسريحة (hs) والإكسسوار (acc: شماغ، غترة، نظارة، كاب، سماعات)
+function buildBoyHead(L) {
+  const hairC = HAIR[L.h], parts = [], o = L.o >= 0 ? OUTFIT[L.o] : OUTFIT[4], acc = L.acc, covered = acc === 1 || acc === 2;
+  if (!covered) {
+    const buzz = L.hs === 4;
+    const cap = new T.SphereGeometry(HEAD_R * (buzz ? 1.015 : 1.05), 28, 16, 0, TAU, 0, Math.PI * (buzz ? .46 : .5)); cap.rotateX(-.3); cap.translate(0, HEAD_C + .01, -.015);
+    parts.push(colored(cap, buzz ? new T.Color(hairC).lerp(new T.Color(SKIN[L.s]), .35) : hairC));
+    if (L.hs !== 4) { const nape = new T.SphereGeometry(HEAD_R * 1.035, 20, 10, Math.PI * .15, Math.PI * .7, Math.PI * .38, Math.PI * (L.hs === 5 ? .36 : .26)); nape.rotateY(Math.PI); nape.translate(0, HEAD_C, -.012); parts.push(colored(nape, hairC)); }
+    if (L.hs === 1) for (let k = 0; k < 18; k++) { // سبايكي: شوكات للفوق
+      const a = k * 2.399, ph = .15 + (k / 18) * .55, d = new T.Vector3(Math.cos(a) * Math.sin(ph), Math.cos(ph), Math.sin(a) * Math.sin(ph) * .9 - .15).normalize();
+      const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), d), g2 = new T.ConeGeometry(.03, .1, 5); g2.translate(0, .05, 0); g2.applyQuaternion(q); g2.translate(d.x * HEAD_R * 1.02, HEAD_C + .01 + d.y * HEAD_R * 1.02, d.z * HEAD_R * 1.02 - .015);
+      parts.push(colored(g2, hairC));
+    }
+    if (L.hs === 2) { const f = new T.SphereGeometry(.1, 16, 10); f.scale(1.35, .42, .85); f.rotateZ(-.25); f.translate(.045, HEAD_C + .14, .085); parts.push(colored(f, hairC)); } // مفروق جنب: غرة على جنب
+    if (L.hs === 3) for (let k = 0; k < 34; k++) { // كيرلي
+      const a = k * 2.399, ph = .18 + (k / 34) * 1.25, r = HEAD_R * 1.08;
+      const x = Math.cos(a) * Math.sin(ph) * r, y = HEAD_C + Math.cos(ph) * r * 1.02, z = Math.sin(a) * Math.sin(ph) * r - .01;
+      if (z > .05 && y < HEAD_C + .07) continue;
+      const b = new T.IcosahedronGeometry(.032 + (k % 3) * .005, 1); b.translate(x, y, z); parts.push(colored(b, hairC));
+    }
+    if (L.hs === 5) for (const sd of [1, -1]) { const t = new T.SphereGeometry(.05, 10, 8); t.scale(.6, 1.2, 1); t.translate(sd * .16, HEAD_C - .01, -.02); parts.push(colored(t, hairC)); } // طويل شوي: سوالف
+  } else {
+    // الشماغ (أحمر وأبيض) أو الغترة (بيضاء) مع العقال الأسود: غطا الراس وطرف ينزل ورا وعلى الجنبين
+    const red = acc === 1, pat = (x, y, z) => red && ((Math.floor((x + z) * 38) + Math.floor(y * 38)) & 1) ? '#c4162f' : '#fbfbf7';
+    const top = new T.SphereGeometry(HEAD_R * 1.13, 30, 16, 0, TAU, 0, Math.PI * .56); top.translate(0, HEAD_C + .004, -.004); parts.push(paintBy(top, pat));
+    const drape = new T.CylinderGeometry(HEAD_R * 1.12, HEAD_R * 1.6, .38, 30, 5, true, .62, TAU - 1.24); drape.translate(0, HEAD_C - .19, -.012); parts.push(paintBy(drape, pat));
+    for (const y of [.085, .11]) { const r = new T.TorusGeometry(HEAD_R * .99, .013, 6, 30); r.rotateX(Math.PI / 2); r.rotateX(-.1); r.translate(0, HEAD_C + y, -.012); parts.push(colored(r, '#151515')); }
+  }
+  if (acc === 3) { for (const x of [-.11, .11]) { const t = new T.TorusGeometry(.075, .014, 6, 18); t.translate(x, 1.58, .29); parts.push(colored(fromOld(t), '#2a1a24')); } const br = new T.CylinderGeometry(.01, .01, .07, 6); br.rotateZ(Math.PI / 2); br.translate(0, 1.58, .29); parts.push(colored(fromOld(br), '#2a1a24')); }
+  if (acc === 4) { // كاب بلون اللبس
+    const crown = new T.SphereGeometry(HEAD_R * 1.1, 24, 12, 0, TAU, 0, Math.PI * .45); crown.rotateX(-.15); crown.translate(0, HEAD_C + .01, -.01); parts.push(colored(crown, o));
+    const visor = new T.CylinderGeometry(.13, .13, .012, 20, 1, false, -Math.PI / 2, Math.PI); visor.scale(1, 1, .85); visor.rotateX(.12); visor.translate(0, HEAD_C + .075, .12); parts.push(colored(visor, new T.Color(o).multiplyScalar(.8)));
+    const btn = new T.SphereGeometry(.016, 8, 6); btn.translate(0, HEAD_C + HEAD_R * 1.1, -.03); parts.push(colored(btn, new T.Color(o).multiplyScalar(.8)));
+  }
+  if (acc === 5) { // سماعات
+    const band = new T.TorusGeometry(HEAD_R * 1.13, .015, 6, 24, Math.PI); band.translate(0, HEAD_C + .01, 0); parts.push(colored(band, '#2b2b33'));
+    for (const sd of [1, -1]) { const cup = new T.CylinderGeometry(.052, .052, .045, 16); cup.rotateZ(Math.PI / 2); cup.translate(sd * .19, HEAD_C + .005, 0); parts.push(colored(cup, o)); }
+  }
+  return merge(parts);
+}
 function buildHeadGear(L, role) {
+  if (role !== 'girl' && L.g === 1) return buildBoyHead(L);
   const hairC = HAIR[L.h], parts = [], girl = role === 'girl';
   // طاقية الشعر: تغطي فوق وورا الراس، والغرة قدام
   const cap = new T.SphereGeometry(HEAD_R * 1.07, 30, 18, 0, TAU, 0, Math.PI * .58); cap.rotateX(-.32); cap.translate(0, HEAD_C + .012, -.012); parts.push(colored(cap, hairC));
@@ -379,11 +475,12 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
   const headGeo = new T.SphereGeometry(HEAD_R, 32, 24); headGeo.scale(.92, 1.1, .98);
   const headMesh = new T.Mesh(headGeo, headMat); headMesh.position.set(0, HEAD_C, 0); bones.Head.add(headMesh);
   let bodyMesh = null, gear = null, hat = null, hatMat = null, strands = null, skirt = null, gown = null, crown = null, L = null;
-  let hairChains = [], hairKind = null, skirtChains = [];
+  let hairChains = [], hairKind = null, skirtChains = [], skirtCfg = { r0: .15, out: .45, flare: .5 };
 
   function clearMesh(m) { if (!m) return; m.removeFromParent(); m.geometry.dispose(); }
   function setLook(look) {
-    L = Object.assign({ _n: n }, look); if (girl) L.st = 0;
+    L = Object.assign({ _n: n }, look); if (girl) { L.st = 0; L.g = 0; }
+    const boy = L.g === 1;
     root.updateMatrixWorld(true);
     // الجسم: نعيد بناء الهندسة بس (الهيكل نفسه ما يتغير)
     if (bodyMesh) { bodyMesh.geometry.dispose(); bodyMesh.geometry = buildBody(L, role); }
@@ -400,7 +497,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     faceKind = null;
     clearMesh(gear); gear = new T.Mesh(buildHeadGear(L, role), gearMat); bones.Head.add(gear);
     clearMesh(hat); if (hatMat) hatMat.dispose(); hat = hatMat = null;
-    if (L.hat > 0 && !girl) {
+    if (L.hat > 0 && !girl && !(boy && BOY_HEADWEAR.includes(L.acc))) { // الشماغ/الغترة/الكاب: بدون قبعة حفلة
       hatMat = L.hat === 3 ? new T.MeshPhysicalMaterial({ vertexColors: true, metalness: 1, roughness: .16, clearcoat: 1, emissive: '#4a3000', emissiveIntensity: .25, side: T.DoubleSide })
         : new T.MeshStandardMaterial({ vertexColors: true, roughness: .5, side: T.DoubleSide });
       hat = new T.Mesh(buildHat(L.hat, L), hatMat); bones.Head.add(hat);
@@ -408,7 +505,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     // الخصل
     clearMesh(strands); strands = null; hairChains = []; hairKind = null;
     hairMat.color.set(HAIR[L.h]);
-    if (L.hs === 1 || L.hs === 3 || L.hs === 5) {
+    if (!boy && (L.hs === 1 || L.hs === 3 || L.hs === 5)) {
       const add = (n, seg, x, y, z, w) => { const c = makeChain(n, seg * worldScale); c.anchor = new T.Vector3(x, y, z); c.w = w * worldScale; hairChains.push(c); };
       if (L.hs === 1) for (let k = 0; k < 26; k++) { const a = Math.PI * (.12 + .76 * k / 25) + Math.PI, r = HEAD_R * .98; add(6, girl ? .1 : .085, Math.cos(a) * r, HEAD_C + .05 - Math.abs(Math.cos(a)) * .04, Math.sin(a) * r * .9 - .02, .05); }
       if (L.hs === 3) for (const sd of [1, -1]) for (let k = 0; k < 3; k++) add(5, .07, sd * (.175 + k * .006), HEAD_C + .02 - k * .012, -.045 + (k - 1) * .016, .045);
@@ -418,13 +515,16 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     }
     // التنورة (الفستان العادي)؛ صاحبة الحفلة لها الفستان الفخم
     clearMesh(skirt); skirt = null; skirtChains = [];
+    // الثوب (ولد st 0): نفس فيزياء التنورة بس أطول لين الكعب وأضيق
+    const thobe = boy && L.st === 0;
+    skirtCfg = thobe ? { r0: .165, out: .04, flare: .1 } : { r0: .15, out: .45, flare: .5 };
     if (!girl && L.st === 0) {
-      const SK = 18, SKN = 4; for (let j = 0; j < SK; j++) { const c = makeChain(SKN, .13 * worldScale); c.a = j / SK * TAU; skirtChains.push(c); }
+      const SK = 18, SKN = thobe ? 5 : 4; for (let j = 0; j < SK; j++) { const c = makeChain(SKN, (thobe ? .172 : .13) * worldScale); c.a = j / SK * TAU; skirtChains.push(c); }
       const geo = new T.BufferGeometry(), pos = new Float32Array((SKN + 1) * (SK + 1) * 3), idx = [];
       for (let i = 0; i < SKN; i++) for (let j = 0; j < SK; j++) { const a = i * (SK + 1) + j, b = a + SK + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
       geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setIndex(idx);
       skirt = new T.Mesh(geo, skirtMat); skirt.frustumCulled = false; body.add(skirt);
-      skirtMat.color.set(L.o < 0 ? '#fff4f8' : OUTFIT[L.o]);
+      skirtMat.color.set(thobe ? boyColors(L).thobe : L.o < 0 ? '#fff4f8' : OUTFIT[L.o]);
     }
     if (girl) {
       if (!gown) { gown = createGown(body); gown.attachTo(bones.Hips, HIPS_Y); }
@@ -459,7 +559,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     blinkT -= dt; exprT -= dt;
     const k = exprT > 0 ? expr : blinkT < 0 ? 'blink' : 'open';
     if (blinkT < -.13) blinkT = 2.6 + Math.random() * 2.4;
-    if (k !== faceKind) { const first = !headMat.map; faceKind = k; headMat.map = faceTex(SKIN[L.s], k); if (first) headMat.needsUpdate = true; }
+    if (k !== faceKind) { const first = !headMat.map; faceKind = k; headMat.map = faceTex(SKIN[L.s], k, L.g === 1); if (first) headMat.needsUpdate = true; }
   }
 
   // ---- الفيزياء ----
@@ -499,12 +599,12 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     if (skirt) {
       bones.Hips.getWorldPosition(hipsP); bones.Hips.getWorldQuaternion(hipsQ);
       for (let s = 0; s < 2; s++) { const S = s ? 'Right' : 'Left'; bones[S + 'UpLeg'].getWorldPosition(legA[s]); bones[S + 'Leg'].getWorldPosition(legB[s]); bones[S + 'Foot'].getWorldPosition(legC[s]); }
-      const top = .05 * worldScale, r0 = .15 * worldScale, legR = .1 * worldScale;
-      const col = (p, i) => { if (!i) return; _t.copy(p).sub(hipsP); const depth = Math.max(0, top - _t.y); _t.y = 0; const want = r0 + depth * .5, d = _t.length(); if (d < want) p.addScaledVector(_t.divideScalar(d || 1), want - d); for (let s = 0; s < 2; s++) { outCapsule(p, legA[s], legB[s], legR); outCapsule(p, legB[s], legC[s], legR * .8); } };
+      const top = .05 * worldScale, r0 = skirtCfg.r0 * worldScale, legR = .1 * worldScale;
+      const col = (p, i) => { if (!i) return; _t.copy(p).sub(hipsP); const depth = Math.max(0, top - _t.y); _t.y = 0; const want = r0 + depth * skirtCfg.flare, d = _t.length(); if (d < want) p.addScaledVector(_t.divideScalar(d || 1), want - d); for (let s = 0; s < 2; s++) { outCapsule(p, legA[s], legB[s], legR); outCapsule(p, legB[s], legC[s], legR * .8); } };
       for (const c of skirtChains) {
         _b.set(Math.cos(c.a), 0, Math.sin(c.a)).applyQuaternion(hipsQ); _b.y = 0; _b.normalize();
         start.copy(hipsP).addScaledVector(_b, r0); start.y += top;
-        hint.copy(_b).multiplyScalar(.45); hint.y = -1; hint.normalize();
+        hint.copy(_b).multiplyScalar(skirtCfg.out); hint.y = -1; hint.normalize();
         stepChain(c, start, hint, sub, on, .08, col);
       }
       const SK = skirtChains.length, arr = skirt.geometry.attributes.position.array;
@@ -516,7 +616,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
   // كيرلي قصير: يرتد مع حركة الراس (نابض على ارتفاع الطاقية)
   let bounceV = 0, bounceX = 0, lastHeadY = null;
   function bounce(dt) {
-    if (L.hs !== 4 || dt <= 0) { gear.scale.set(1, 1, 1); return; }
+    if (L.hs !== 4 || L.g === 1 || dt <= 0) { gear.scale.set(1, 1, 1); return; }
     const y = hp.y; if (lastHeadY !== null) bounceV -= (y - lastHeadY) * 6; lastHeadY = y;
     bounceV += (-bounceX * 160 - bounceV * 9) * dt; bounceX += bounceV * dt; bounceX = Math.max(-.06, Math.min(.06, bounceX));
     gear.scale.set(1 - bounceX * .4, 1 + bounceX, 1 - bounceX * .4);

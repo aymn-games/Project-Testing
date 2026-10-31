@@ -1,6 +1,7 @@
 // المشترك بين نوعي الشخصيات (الكلاسيكي crowd3d.js والهيكل العظمي crowd-rig.js):
 // الألوان وأسماء الخيارات، والشكل الافتراضي المشتق من رقم اللاعب.
-// الشكل look = [st, o, s, h, hs, acc, fx, hat] بنفس الترتيب والحدود اللي يفرضها السيرفر (LOOK_MAX).
+// الشكل look = [st, o, s, h, hs, acc, fx, hat, g] بنفس الترتيب والحدود اللي يفرضها السيرفر (LOOK_MAX).
+// g: 0 بنت، 1 ولد — والولد له قوائم خاصة لنوع اللبس والتسريحة والإكسسوار (boyStyles/boyHairStyles/boyAccs).
 
 export const SKIN = ['#f9d7c3', '#f1c3a5', '#e0a882', '#c98d66', '#9c6a4a'];
 export const HAIR = ['#3b2418', '#5a3622', '#8a5a35', '#c99a5b', '#1f1a1d', '#7a3b52', '#e8cf9a', '#a8432f'];
@@ -14,7 +15,13 @@ export const LOOK = {
   accs: ['بدون', 'فيونكة', 'تاج صغير', 'وردة', 'نظارة', 'قبعة حفلة'],
   fxs: ['بدون', 'قلوب', 'شرار', 'هالة'],
   hats: ['بدون', 'منقّطة', 'مخطّطة', 'ذهبية لامعة', 'وردية بشراشيب'],
+  genders: ['👧 بنت', '👦 ولد'],
+  boyStyles: ['ثوب وشماغ', 'قميص وبنطلون', 'هودي وجينز', 'بدلة وبابيون'],
+  boyHairStyles: ['قصير', 'سبايكي', 'مفروق جنب', 'كيرلي', 'محلوق', 'طويل شوي'],
+  boyAccs: ['بدون', 'شماغ أحمر', 'غترة بيضاء', 'نظارة', 'كاب', 'سماعات'],
 };
+// إكسسوارات الولد اللي تغطي الراس (ما تنلبس معها قبعة الحفلة)
+export const BOY_HEADWEAR = [1, 2, 4];
 
 export const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Math.imul(h, 1274126177) >>> 0; return h ^ (h >>> 16); };
 
@@ -22,8 +29,15 @@ export const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Ma
 // القبعة الافتراضية «بدون» — اللاعب يختارها من ركن التعديل
 export function resolveLook(n, role, look) {
   const h = hash(n), L = Array.isArray(look) ? look : [], pick = (i, def) => (Number.isInteger(L[i]) && L[i] >= 0 ? L[i] : def);
+  const g = role === 'girl' ? 0 : pick(8, 0) ? 1 : 0;
+  if (g) {
+    // الولد: اللبس الافتراضي متنوع حسب رقمه، والثوب معه شماغ أو غترة
+    const st = pick(0, (h >>> 3) % 4);
+    return { g: 1, st, o: pick(1, h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length), h: pick(3, [0, 1, 4, 2][(h >>> 12) % 4]),
+      hs: pick(4, (h >>> 18) % 4), acc: pick(5, st === 0 ? 1 + ((h >>> 22) % 2) : 0), fx: pick(6, 0), hat: pick(7, 0) };
+  }
   return {
-    st: role === 'girl' ? 0 : pick(0, 0), o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
+    g: 0, st: role === 'girl' ? 0 : Math.min(1, pick(0, 0)), o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
     h: pick(3, (h >>> 12) % 6), hs: pick(4, role === 'girl' ? 1 : (h >>> 18) % 3), acc: pick(5, 0), fx: pick(6, 0), hat: pick(7, 0),
   };
 }
