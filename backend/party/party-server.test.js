@@ -636,3 +636,21 @@ test('chars message from host broadcasts room with new chars; guest refused', as
     assert.ok(m);
     r.h.close(); g.close(); srv.close();
 });
+
+test('host link on any device: key + current opens the running party; wrong key refused; none when nothing runs', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port;
+    var a = await client(port); a.send({ t: 'host', key: 'test-key', current: true });
+    assert.equal((await a.wait(function (x) { return x.t === 'err' && x.of === 'host'; })).err, 'none', 'no party yet → create form');
+    var r = await hostRoom(port);
+    var b = await client(port); b.send({ t: 'host', key: 'test-key', current: true });
+    var hb = await b.wait(function (x) { return x.t === 'hosted'; });
+    assert.equal(hb.code, r.code); assert.ok(hb.token && hb.girlKey && hb.viewKey, 'second device gets everything the host needs');
+    await b.wait(function (x) { return x.t === 'phase'; });
+    var c = await client(port); c.send({ t: 'host', key: 'nope', current: true });
+    assert.equal((await c.wait(function (x) { return x.t === 'err' && x.of === 'host'; })).err, 'hostkey');
+    // الجهاز الثاني يتحكم مثل الأول
+    await sleep(1100); b.send({ t: 'start' });
+    await b.wait(function (x) { return x.t === 'phase' && x.p !== 'lobby' && x.p !== 'closed'; }, 3000);
+    a.close(); b.close(); c.close(); r.h.close(); srv.close();
+});

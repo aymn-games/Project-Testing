@@ -9,7 +9,8 @@
  * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName, key, schedule} | host {code, token}   ← hosted {code, token, girlKey, viewKey}
+ *   عميل → host {girlName, key, schedule} | host {code, token} | host {key, current: true} (أي جهاز معه المفتاح ← الحفلة الشغالة، أو err none)
+ *          ← hosted {code, token, girlKey, viewKey}
  *          schedule = {startAt (ms UTC), durationMin, openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
  *   المذيع → schedule {schedule} (تعديل أي وقت) ← phase جديدة للكل
  *   عميل → join {code, name, auth?, girlKey?, dev?, g? (0 بنت · 1 ولد)} ← welcome {id, key, n, role, kind} ثم all {d}
@@ -220,7 +221,15 @@ function handle(client, msg, t, ident) {
     var code = typeof msg.code === 'string' ? msg.code : null, res;
 
     if (t === 'host') {
-        if (code) {
+        if (!code && msg.current) {
+            // رابط المذيع من أي جهاز: المفتاح السري يكفي، ويفتح الحفلة الشغالة الحين (لو فيه)
+            if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
+            var cur = _mgr.currentRoom();
+            if (!cur) return send(client, { t: 'err', err: 'none', of: t });
+            var crm = _mgr.getRoom(cur);
+            attach(client, cur, 'host');
+            send(client, { t: 'hosted', code: cur, token: crm.token, girlKey: crm.girlKey, viewKey: crm.viewKey });
+        } else if (code) {
             res = _mgr.hostResume(code, String(msg.token || ''));
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             var room = _mgr.getRoom(code);

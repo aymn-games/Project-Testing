@@ -619,12 +619,14 @@ function createRoomManager(opts) {
 
     function closeRoom(code) { if (!rooms[code]) return fail('nocode'); delete rooms[code]; return { ok: true }; }
     function getRoom(code) { return rooms[code] || null; }
+    // الحفلة الشغالة الحين (أحدث وحدة ما انتهت) — رابط المذيع بأي جهاز يفتحها
+    function currentRoom() { var best = null; Object.keys(rooms).forEach(function (c) { var r = rooms[c]; if (r.phase !== 'ended' && (!best || r.createdAt > best.createdAt)) best = r; }); return best ? best.code : null; }
 
     return {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
-        getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, endNow: endNow, tick: tick,
+        getRoom: getRoom, currentRoom: currentRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, endNow: endNow, tick: tick,
         setLook: setLook, kick: kick, react: react, takeReacts: takeReacts, reactHidden: reactHidden, rain: rain, setChars: setChars, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }
