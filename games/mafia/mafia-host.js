@@ -28,7 +28,8 @@
             '<li><span>1</span><span><b>امسح الباركود</b> بكاميرا جوالك، أو افتح <b dir="ltr">' + siteUrl + '</b> واكتب ' + c + '.</span></li>' +
             '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b> — اللي ما عنده حساب ينشئ واحد (إلزامي، واسمك وصورتك وإطارك يطلعون منه).</span></li>' +
             '<li><span>3</span><span>جهّز شكل شخصيتك واضغط <b>«ادخل الساحة»</b> — بطاقتك تطلع هنا فوراً.</span></li>' +
-            '</ol>';
+            '</ol>' +
+            '<div class="steps-note">💡 الدخول للمباراة <b>بالباركود أو رقم الغرفة فقط</b>، واللاعب يظهر باللوبي مباشرة أول ما يدخل — <b>ما فيه دخول بكتابة كلمة بشات البث</b>.</div>';
     }
 
     window.MafiaHost = { buildFx: buildFx, joinStepsHtml: joinStepsHtml };

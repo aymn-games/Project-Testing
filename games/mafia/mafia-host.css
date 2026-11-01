@@ -89,6 +89,8 @@ a { color: var(--c); } a:hover { color: var(--c2); }
 .steps li > span:first-child { width: 24px; height: 24px; flex-shrink: 0; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.14); color: var(--c2); font: 700 12px 'IBM Plex Sans Arabic'; }
 .steps b { color: #fff; font-weight: 700; }
 .steps .must { color: #fcd34d; }
+.steps-note { margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: rgba(139,92,246,.1); border: 1px solid rgba(167,139,250,.28); font: 500 13.5px/1.6 'IBM Plex Sans Arabic'; color: var(--ink2); }
+.steps-note b { color: #fff; font-weight: 700; }
 
 /* النوافذ والتنبيه */
 .ov { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.6); backdrop-filter: blur(10px); display: none; place-items: center; animation: fade .25s ease; }
