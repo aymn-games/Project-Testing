@@ -65,7 +65,7 @@ function hasPartyRoom(code) {
 }
 
 function hasMafiaRoom(code) {
-    return Promise.resolve(Object.prototype.hasOwnProperty.call(mafia._rooms, code));
+    return Promise.resolve(mafia.hasRoom(code));
 }
 
 function hasBilliardsRoom(code) {

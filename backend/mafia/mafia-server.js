@@ -288,4 +288,7 @@ function handleUpgrade(req, socket) {
     socket.on('error', function () { removeClient(id); });
 }
 
-module.exports = { handleUpgrade: handleUpgrade, _rooms: _rooms, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
+/** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
+function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
+
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
