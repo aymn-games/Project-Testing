@@ -9,6 +9,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const T = THREE;
 const HALL = { w: 64, l: 96, h: 16 };
 const HX = HALL.w / 2, HZ = HALL.l / 2;
+// شعار ألعاب أيمن (نسخ ذهبي وردي بمجلد brand/): داخل القاعة، وختم صغير على الصورة الجماعية
+const BRAND_URL = new URL('brand/aymn-gold.png', import.meta.url).href, LOGO_AR = 287 / 880;
+const stampImg = new Image(); stampImg.src = BRAND_URL;
 const STAGE = { w: 34, d: 14, h: 1.2, front: -HZ + 14 };
 const EYE = 1.65;
 
@@ -535,6 +538,17 @@ export function mountHall(el, opts = {}) {
     const st = mesh(new T.PlaneGeometry(11, 2.3), basic({ map: neon('أهلاً بكم في الحفلة', '700 150px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false, fog: false }), sg.x, sg.y, sg.z); st.rotation.y = sg.ry;
   }
 
+  // ---------- شعار ألعاب أيمن داخل القاعة (brand/aymn-gold.png: ذهبي وردي) ----------
+  // لوحة كريمية بإطار ذهبي فوق باب المدخل (فوق «أهلاً بكم في الحفلة»)، وشعارين صغار على واجهة المسرح يمين ويسار الدرج
+  {
+    const logoTex = new T.TextureLoader().load(BRAND_URL); logoTex.colorSpace = T.SRGBColorSpace; logoTex.anisotropy = ANISO;
+    const logoMat = basic({ map: logoTex, transparent: true, alphaTest: .05, depthWrite: false, fog: false });
+    const pl = onWall('S', 0, 12.9, .12); const plate = mesh(new T.PlaneGeometry(8, 3), basic({ color: '#fbefe6', fog: false }), pl.x, pl.y, pl.z); plate.rotation.y = pl.ry;
+    const pf = onWall('S', 0, 12.9, .06); const frame = mesh(new T.BoxGeometry(8.4, 3.4, .16), gold, pf.x, pf.y, pf.z); frame.rotation.y = pf.ry;
+    const lg = onWall('S', 0, 12.9, .16); const logo = mesh(new T.PlaneGeometry(7, 7 * LOGO_AR), logoMat, lg.x, lg.y, lg.z); logo.rotation.y = lg.ry;
+    for (const sd of [-1, 1]) mesh(new T.PlaneGeometry(2.6, 2.6 * LOGO_AR), logoMat, sd * 11, STAGE.h * .52, STAGE.front + .015);
+  }
+
   // ---------- أبواب الأقسام ----------
   const portals = [];
   for (const s of SECTIONS) {
@@ -937,7 +951,18 @@ export function mountHall(el, opts = {}) {
   let photoCam = false;
   function snapshot() {
     r.render(scene, cam);
-    try { return r.domElement.toDataURL('image/jpeg', .92); } catch (e) { return null; }
+    try {
+      const src = r.domElement;
+      if (!stampImg.complete || !stampImg.naturalWidth) return src.toDataURL('image/jpeg', .92);
+      // ختم الشعار بالزاوية تحت يسار (ذهبي وردي بهالة بيضاء ناعمة تفصله عن أي خلفية)
+      const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d');
+      g.drawImage(src, 0, 0);
+      const lw = Math.round(Math.min(c.width * .2, c.height * .42)), lh = Math.round(lw * LOGO_AR), m = Math.round(c.height * .035);
+      g.shadowColor = 'rgba(255,250,246,.95)'; g.shadowBlur = Math.max(6, lh * .22);
+      for (let i = 0; i < 2; i++) g.drawImage(stampImg, m, c.height - lh - m, lw, lh);
+      g.shadowBlur = 0; g.drawImage(stampImg, m, c.height - lh - m, lw, lh);
+      return c.toDataURL('image/jpeg', .92);
+    } catch (e) { return null; }
   }
 
   // ---------- قصاصات الورق (كونفيتي) ----------
