@@ -20,6 +20,7 @@ html, body { margin: 0; background: radial-gradient(700px 500px at 100% -10%, rg
 body { min-height: 100dvh; padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
 button, input { font-family: inherit; }
 .wrap { max-width: 480px; margin: 0 auto; }
+@media (min-width: 700px) { .wrap { max-width: 760px; } }
 .hide { display: none !important; }
 h1 { font-size: 30px; font-weight: 900; margin: 16px 0 4px; }
 h2 { font-size: 22px; font-weight: 900; margin: 16px 0 8px; }
@@ -58,6 +59,34 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .acct .sub2 { font-size: 14px; color: var(--mute); font-weight: 700; }
 .need-login { flex-direction: column; align-items: stretch; text-align: center; gap: 10px; }
 .need-login .btn { margin-top: 0; color: #fff; }
+
+/* بطاقات اختيار اللاعبين */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 44vh; overflow-y: auto; margin-top: 10px; padding: 2px; scrollbar-width: thin; overscroll-behavior: contain; }
+.pt { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; border-radius: 16px; border: 1.5px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); color: #fff; font: inherit; cursor: pointer; min-width: 0; }
+.pt svg { width: 42px; height: 42px; border-radius: 50%; background: var(--card2); }
+.pt b { max-width: 100%; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt em { font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(139,92,246,.25); color: var(--c3); }
+.pt .num { position: absolute; top: 6px; right: 6px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.3); font-size: 11px; font-weight: 700; }
+.pt.sel { border-color: var(--gold); background: linear-gradient(180deg, rgba(139,92,246,.32), rgba(124,58,237,.12)); box-shadow: 0 0 0 2px rgba(167,139,250,.35), 0 6px 18px rgba(124,58,237,.35); }
+.pt.dead, .pt[disabled] { opacity: .4; cursor: default; }
+.pt.skip { border-style: dashed; border-color: rgba(251,191,36,.55); background: rgba(251,191,36,.08); color: #fde68a; }
+.pt.skip .pi { font-size: 28px; line-height: 1; }
+.pt.skip.sel { border-style: solid; border-color: #fbbf24; background: rgba(251,191,36,.2); box-shadow: 0 0 0 2px rgba(251,191,36,.35); }
+.sec-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.sec-h h2 { margin: 0; font-size: 19px; }
+.sec-h .st { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(139,92,246,.18); color: var(--c3); white-space: nowrap; }
+.sec-h .st.ok { background: rgba(47,179,106,.2); color: #7ee2a6; }
+.ctiles { display: flex; gap: 8px; overflow-x: auto; margin-top: 8px; padding: 2px; scrollbar-width: none; }
+.ctiles::-webkit-scrollbar { display: none; }
+.ct { flex: none; width: 92px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 16px; border: 1.5px solid rgba(167,139,250,.25); background: linear-gradient(160deg, rgba(139,92,246,.16), rgba(255,255,255,.02)); color: #fff; font: inherit; cursor: pointer; }
+.ct span { font-size: 28px; line-height: 1; }
+.ct b { font-size: 13px; font-weight: 700; }
+.ct em { font-style: normal; font-size: 11px; color: var(--mute); font-weight: 600; }
+.ct.sel { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(167,139,250,.4); }
+.ct[disabled] { opacity: .4; cursor: default; }
+.ct.none { border-style: dashed; }
+.pbtn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; margin-top: 10px; border-radius: 999px; border: 1px solid rgba(226,72,61,.45); background: rgba(226,72,61,.12); color: #fff; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+.pbtn i { font-style: normal; background: #e2483d; border-radius: 999px; padding: 0 7px; font-size: 12px; }
 
 /* دور المافيا: ملخص، خطوات، كروت، نافذة اختيار */
 .msum { margin-top: 12px; padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(167,139,250,.3); background: rgba(139,92,246,.1); }
@@ -327,17 +356,17 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     function act(a, arg) { net.send({ t: 'act', a: a, arg: arg }); }
     function big(G) { return G.players.length > 25; }
 
+    // اختيار اللاعب: بطاقات مربعة (عمودين بالجوال وأكثر بالآيباد) داخل صندوق بسكرول، وزر «تخطي» مميز أول الشبكة
     function playerRows(G, opts) {
-        // opts: {can(p) → bool, sel(p) → bool, tag(p) → html, action, argOf(p)} — الرومات الكبيرة: الأحياء فقط مع بحث بالاسم
         var f = S.filter.trim().toLowerCase();
         var list = plist(G).filter(function (p) { return (!big(G) || p.alive) && (!f || p.name.toLowerCase().indexOf(f) >= 0); });
-        return (big(G) ? '<input class="field" id="pf" placeholder="🔎 دوّر على اسم…" autocomplete="off" style="margin-top:10px;height:44px;font-size:16px" value="' + esc(S.filter) + '">' : '') +
-            '<div class="list">' + list.map(function (p) {
+        var skip = opts.skip ? '<button type="button" class="pt skip' + (opts.skip.sel ? ' sel' : '') + '"' + (opts.skip.can === false ? ' disabled' : ' data-act="' + opts.action + '" data-id="' + (opts.skip.id || 'skip') + '"') + '><span class="pi">⏭️</span><b>تخطي</b>' + (opts.skip.tag ? '<em>' + opts.skip.tag + '</em>' : '') + '</button>' : '';
+        return (big(G) ? '<input class="field" id="pf" placeholder="🔎 دوّر على اسم…" autocomplete="off" style="margin-top:10px;height:42px;font-size:16px" value="' + esc(S.filter) + '">' : '') +
+            '<div class="grid">' + skip + list.map(function (p) {
                 var ok = opts.can(p), sel = opts.sel && opts.sel(p), t = opts.tag ? opts.tag(p) : '';
-                return '<button type="button" class="prow' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + esc(opts.argOf ? opts.argOf(p) : p.id) + '"' : ' disabled') + '>' +
-                    '<span class="who"><span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<span>' + esc(p.name) + (p.id === S.me.id ? ' (أنت)' : '') + '</span></span>' +
-                    (t ? '<span class="tag">' + t + '</span>' : '') + '</button>';
-            }).join('') + (list.length ? '' : '<p>ما فيه أحد بهالاسم</p>') + '</div>';
+                return '<button type="button" class="pt' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + esc(opts.argOf ? opts.argOf(p) : p.id) + '"' : ' disabled') + '>' +
+                    '<span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<b>' + esc(p.name) + '</b>' + (t ? '<em>' + t + '</em>' : '') + '</button>';
+            }).join('') + (list.length ? '' : '<p>ما فيه أحد</p>') + '</div>';
     }
 
     // الشات: عام للمدينة، حي (لو فيه أحياء)، والمافيا السري — العام والحي بالنقاش فقط، والمافيا طول المباراة
@@ -363,13 +392,14 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var names = { city: '🏙️ العام', district: '🏘️ حيّك (' + G.me.district + ')', mafia: '🔪 المافيا' };
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
-        var msgs = G.chat.filter(function (c) { return c.sys ? S.chan === 'city' : c.ch === S.chan; }).slice(-60).map(function (c) {
+        var dayN = 0; for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
+        var msgs = G.chat.filter(function (c) { return !c.sys && c.ch === S.chan && c.n > dayN; }).slice(-60).map(function (c) {
             if (c.sys) return '<div class="cm sys">' + esc(c.text) + '</div>';
             return bubble(c, byId, canSend);
         }).join('');
-        return (chans.length > 1 ? '<div class="opts" style="margin-top:10px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
-            '<div class="chatbox" id="chatbox">' + msgs + '</div>' + (canSend
-            ? replyBar(G, S.chan) + '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (S.chan === 'mafia' ? 'كلّم فريقك بسرية…' : 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+        return '<div class="sec-h"><h2>💬 العام</h2></div>' + (chans.length > 1 ? '<div class="opts" style="margin-top:8px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
+            '<div class="chatbox" id="chatbox">' + (msgs || '<div class="cm sys">💬</div>') + '</div>' + (canSend
+            ? replyBar(G, S.chan) + '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
     }
     function chansFor(G) {
         var c = [];
@@ -396,110 +426,68 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var unread = open ? 0 : list.filter(function (c) { return c.n > seen && c.from !== G.me.id; }).length;
         var canSend = ch === 'mafia' || G.phase === 'day';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var head = forceOpen ? '<h2>' + PRIV[ch].n + '</h2>'
-            : '<button type="button" class="btn ghost" data-priv-toggle style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:17px">' +
-              '<span>🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + (unread ? ' <span style="background:#e2483d;color:#fff;border-radius:999px;padding:1px 9px;font-size:13px">' + unread + ' جديدة</span>' : '') + '</span><span>' + (open ? 'اقفل ▴' : 'افتح ▾') + '</span></button>';
+        var head = '<button type="button" class="pbtn" data-priv-toggle aria-expanded="' + open + '">🔒 ' + PRIV[ch].n.split(' ')[0] + (unread ? ' <i>' + unread + '</i>' : '') + ' ' + (open ? '▴' : '▾') + '</button>';
         if (!open) return head;
         return head + '<div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + (list.slice(-60).map(function (c) {
             return bubble(c, byId, canSend);
-        }).join('') || '<div class="cm sys">ما فيه رسائل — الشات هذا يشوفه ' + (ch === 'mafia' ? 'فريقك' : ch === 'doctor' ? 'الأطباء' : 'المحققين') + ' بس</div>') + '</div>' +
-            (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="' + PRIV[ch].h + '" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '<p>يفتح للكتابة وقت النقاش.</p>');
+        }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>') + '</div>' +
+            (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
     }
 
-    // الكروت: وش تسوي، متى تنفع، وعلى مين
     var CARD_INFO = {
-        recruit: { i: '🤝', d: 'يحوّل لاعب من المدينة لمافيا الصبح — بدل القتل بنفس الليلة', when: 'من الليلة 3', on: 'لاعب من المدينة' },
-        shield: { i: '🛡️', d: 'لو فحصه المحقق يطلع له «تعذر التحقيق» (لمدة ليلتين)', when: 'من الليلة 2', on: 'واحد من المافيا' },
-        reveal: { i: '👁️', d: 'تعرفون دوره الحقيقي (طبيب، محقق، مواطن)', when: 'من الليلة 2', on: 'لاعب من المدينة' },
-        mislead: { i: '🎭', d: 'لو فحصه المحقق يطلع له «مافيا» (لمدة ليلتين)', when: 'من الليلة 2', on: 'لاعب من المدينة' },
-        silence: { i: '🤐', d: 'ما يقدر يكتب بنقاش بكرة (يصوّت عادي)', when: 'من الليلة 2', on: 'لاعب من المدينة (غير اللي تقتلونه)' }
+        recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوف: تعذّر' }, reveal: { i: '👁️', d: 'تعرفون دوره' },
+        mislead: { i: '🎭', d: 'المحقق يشوف: مافيا' }, silence: { i: '🤐', d: 'ما يكتب بكرة' }
     };
-    S.cardHelp = false;
-    function cardHelpHtml(G) {
-        var mine = (G.cards || []).map(function (c) { return c.id; });
-        return '<button type="button" class="btn ghost" data-cardhelp style="height:44px;font-size:16px">❓ شرح الكروت ' + (S.cardHelp ? '▴' : '▾') + '</button>' + (!S.cardHelp ? '' :
-            '<div class="help">' +
-            '<p><b>متى؟</b> وقت دور المافيا بالليل، كرت واحد بالليلة، وكل كرت مرة وحدة بالمباراة.</p>' +
-            '<p><b>كيف تتفقون؟</b> كل واحد يختار من جواله بنفس الوقت ويشوف اختيارات فريقه مباشرة. الأكثرية تتنفّذ، والتعادل يلغي (والكرت ما يحترق). تنسّقوا بشات المافيا.</p>' +
-            Object.keys(CARD_INFO).filter(function (k) { return !mine.length || mine.indexOf(k) >= 0; }).map(function (k) { var I = CARD_INFO[k];
-                return '<div class="help-c"><span>' + I.i + '</span><div><b>' + ({ recruit: 'التجنيد', shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' })[k] + '</b><small>' + I.d + '</small><small>⏰ ' + I.when + ' · 🎯 ' + I.on + '</small></div></div>';
-            }).join('') + '</div>');
-    }
-    function pname(G, id) { var p = G.players.find(function (q) { return q.id === id; }); return p ? p.name : '؟'; }
     function mafiaNight(G) {
         var me = G.me, ops = me.ops || {}, cv = me.cardVotes || {}, cards = G.cards || [];
         var team = G.players.filter(function (p) { return p.team === 'mafia' && p.alive; });
         var recruit = cards.find(function (c) { return c.id === 'recruit'; });
         if (S.opMode === 'recruit' && !(recruit && recruit.available)) S.opMode = 'kill';
-        var votersOf = function (fn) { return team.filter(function (m) { return fn(m.id); }).map(function (m) { return m.id === me.id ? 'أنت' : m.name; }); };
-
-        // ---- ملخص: وش بيتنفّذ لو خلص الوقت الحين
-        var opKeys = team.map(function (m) { return ops[m.id] ? ops[m.id].op + ':' + ops[m.id].target : null; });
-        var cdKeys = team.map(function (m) { return cv[m.id] ? cv[m.id].card + ':' + (cv[m.id].target || '') : null; });
-        var top = function (keys) { var c = {}, best = 0, w = []; keys.forEach(function (k) { if (!k) return; c[k] = (c[k] || 0) + 1; }); Object.keys(c).forEach(function (k) { if (c[k] > best) { best = c[k]; w = [k]; } else if (c[k] === best) w.push(k); }); return { win: w.length === 1 ? w[0] : null, tie: w.length > 1, n: best }; };
-        var T1 = top(opKeys), T2 = top(cdKeys), anyCard = cards.some(function (c) { return c.id !== 'recruit' && c.available; });
-        var waiting = team.filter(function (m) { return !ops[m.id] || (anyCard && !cv[m.id]); }).map(function (m) { return m.id === me.id ? 'أنت' : m.name; });
-        var opLine = T1.win ? (T1.win.split(':')[0] === 'recruit' ? '🤝 تجنيد ' : '🔪 قتل ') + esc(pname(G, T1.win.split(':')[1])) + ' <small>(' + T1.n + '/' + team.length + ')</small>' : T1.tie ? '⚠️ تعادل — ما أحد بيتقتل' : '— ما أحد اختار';
-        var recruitWins = T1.win && T1.win.split(':')[0] === 'recruit';
-        var cdLine = !anyCard ? '' : recruitWins ? '🃏 ما فيه كرت (التجنيد بدل القتل والكروت)' :
-            T2.win ? (T2.win.split(':')[0] === 'none' ? '🃏 بدون كرت' : '🃏 ' + CARD_INFO[T2.win.split(':')[0]].i + ' ' + ({ shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' })[T2.win.split(':')[0]] + ' على ' + esc(pname(G, T2.win.split(':')[1]))) + ' <small>(' + T2.n + '/' + team.length + ')</small>' : T2.tie ? '⚠️ تعادل بالكرت — ما بيتنفّذ كرت' : '🃏 — ما أحد اختار';
-        var agreed = T1.win && T1.n === team.length && (!anyCard || recruitWins || (T2.win && T2.n === team.length));
-        var html = '<div class="msum ' + (agreed ? 'ok' : 'warn') + '"><div class="msum-h">' + (agreed ? '✅ متفقين' : team.length > 1 ? '⏳ لسا ما اتفقتوا' : '📋 اختيارك') + '</div>' +
-            '<div class="msum-l">' + opLine + '</div>' + (cdLine ? '<div class="msum-l">' + cdLine + '</div>' : '') +
-            (waiting.length ? '<small>بانتظار: ' + waiting.map(esc).join('، ') + '</small>' : '') + '</div>';
-
-        // ---- الخطوة 1: الهدف
-        html += '<div class="mstep"><div class="mstep-h"><span class="n">1</span><b>مين تستهدفون الليلة؟</b></div>' +
-            (team.length > 1 ? '<p>كل واحد يختار من جواله — اسم زميلك يطلع جنب اللي اختاره، واضغط نفس اللاعب عشان تتفقون.</p>' : '') +
-            (recruit ? '<div class="opts"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button>' +
-                '<button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit"' + (recruit.available ? '' : ' disabled style="opacity:.45"') + '>🤝 تجنيد بدل القتل' + (recruit.used ? ' (مستخدم)' : recruit.available ? '' : ' (من الليلة 3)') + '</button></div>' : '') +
+        var aux = cards.filter(function (c) { return c.id !== 'recruit'; }), anyCard = aux.some(function (c) { return c.available; });
+        var key = function (o) { return o ? JSON.stringify(o) : ''; };
+        var opsK = team.map(function (m) { return key(ops[m.id]); }), cdK = team.map(function (m) { return key(cv[m.id]); });
+        var recruitMine = ops[me.id] && ops[me.id].op === 'recruit';
+        var agreed = opsK.every(function (k) { return k && k === opsK[0]; }) && (!anyCard || recruitMine || cdK.every(function (k) { return k && k === cdK[0]; }));
+        var done = team.filter(function (m) { return ops[m.id]; }).length;
+        var cnt = function (fn) { return team.filter(function (m) { return fn(m.id); }).length; };
+        var html = '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : done + '/' + team.length) + '</span></div>' +
+            (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
             playerRows(G, {
                 action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia'; },
                 sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
-                tag: function (p) {
-                    if (p.team === 'mafia') return '🔪 فريقك';
-                    var v = votersOf(function (id) { return ops[id] && ops[id].target === p.id; });
-                    return v.length ? '🎯 ' + esc(v.join('، ')) : '';
-                }
-            }) + '</div>';
-
-        // ---- الخطوة 2: الكرت (اختياري)
-        var aux = cards.filter(function (c) { return c.id !== 'recruit'; });
-        if (aux.length) {
-            html += '<div class="mstep"><div class="mstep-h"><span class="n">2</span><b>تستخدمون كرت الليلة؟</b><small>اختياري</small></div>' +
-                (recruitWins ? '<p>🤝 فريقك مختار التجنيد — التجنيد ما ينجمع مع كرت.</p>' : anyCard ? '<p>اضغط الكرت واختر اللاعب. كرت واحد بالليلة، والأكثرية تتنفّذ.</p>' : '<p>الكروت تفتح من الليلة 2.</p>') +
-                '<div class="cards">' + aux.map(function (c) {
-                    var I = CARD_INFO[c.id], v = team.filter(function (m) { return cv[m.id] && cv[m.id].card === c.id; });
-                    var st = c.used ? 'مستخدم' : c.available ? 'متاح الحين' : I.when;
-                    return '<button type="button" class="ccard' + (cv[me.id] && cv[me.id].card === c.id ? ' sel' : '') + '"' + (c.available && !recruitWins ? ' data-cardsel="' + c.id + '"' : ' disabled') + '>' +
-                        '<span class="ci">' + I.i + '</span><span class="cb"><b>' + esc(c.name) + '</b><small>' + I.d + '</small><span class="cm2">🎯 ' + I.on + ' · ⏰ ' + st + '</span>' +
-                        (v.length ? '<span class="cv">' + v.map(function (m) { return esc(m.id === me.id ? 'أنت' : m.name) + ' ← ' + esc(pname(G, cv[m.id].target)); }).join(' · ') + '</span>' : '') + '</span></button>';
-                }).join('') + '</div>' +
-                (anyCard && !recruitWins ? (function () { var v = votersOf(function (id) { return cv[id] && cv[id].card === 'none'; });
-                    return '<button type="button" class="btn ghost" data-act="card" data-id="none">' + (cv[me.id] && cv[me.id].card === 'none' ? '✓ ' : '') + 'بدون كرت الليلة' + (v.length ? ' · ' + esc(v.join('، ')) : '') + '</button>'; })() : '') +
-                cardHelpHtml(G) + '</div>';
+                tag: function (p) { if (p.team === 'mafia') return '🔪'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : ''; },
+                skip: { id: 'skip', sel: ops[me.id] && ops[me.id].op === 'skip', tag: (function () { var n = cnt(function (id) { return ops[id] && ops[id].op === 'skip'; }); return n ? String(n) : ''; })() }
+            });
+        if (aux.length && !recruitMine) {
+            html += '<div class="sec-h"><h2>🃏 كرت</h2>' + (anyCard ? '' : '<span class="st">من الليلة 2</span>') + '</div><div class="ctiles">' + aux.map(function (c) {
+                var I = CARD_INFO[c.id], n = cnt(function (id) { return cv[id] && cv[id].card === c.id; });
+                return '<button type="button" class="ct' + (cv[me.id] && cv[me.id].card === c.id ? ' sel' : '') + '"' + (c.available ? ' data-cardsel="' + c.id + '"' : ' disabled') + '><span>' + I.i + '</span><b>' + esc(c.name) + '</b><em>' + (c.used ? 'مستخدم' : n ? '🎯 ' + n : I.d) + '</em></button>';
+            }).join('') + (anyCard ? '<button type="button" class="ct none' + (cv[me.id] && cv[me.id].card === 'none' ? ' sel' : '') + '" data-act="card" data-id="none"><span>⏭️</span><b>بدون</b><em>' + (cnt(function (id) { return cv[id] && cv[id].card === 'none'; }) || '') + '</em></button>' : '') + '</div>';
         }
-
-        // ---- نافذة اختيار اللاعب للكرت (بس اللي ينفع عليهم)
         if (S.cardSel && CARD_INFO[S.cardSel]) {
-            var shield = S.cardSel === 'shield', I = CARD_INFO[S.cardSel];
-            var killT = ops[me.id] && ops[me.id].target;
-            var cands = plist(G).filter(function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia'); });
-            html += '<div class="pick-bg" data-cardclose><div class="pick"><div class="pick-h"><b>' + I.i + ' ' + esc((cards.find(function (c) { return c.id === S.cardSel; }) || {}).name || '') + ' — على مين؟</b><button type="button" data-cardclose aria-label="إغلاق">✕</button></div>' +
-                '<p>' + I.d + '</p><div class="list">' + cands.map(function (p) {
-                    var v = team.filter(function (m) { return cv[m.id] && cv[m.id].card === S.cardSel && cv[m.id].target === p.id; }).map(function (m) { return m.id === me.id ? 'أنت' : m.name; });
-                    var bad = S.cardSel === 'silence' && p.id === killT;
-                    return '<button type="button" class="prow' + (cv[me.id] && cv[me.id].card === S.cardSel && cv[me.id].target === p.id ? ' sel' : '') + '"' + (bad ? ' disabled style="opacity:.45"' : ' data-act="card" data-id="' + S.cardSel + '|' + esc(p.id) + '"') + '>' +
-                        '<span class="who"><span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<span>' + esc(p.name) + (p.id === me.id ? ' (أنت)' : '') + '</span></span>' +
-                        (bad || v.length ? '<span class="tag">' + (bad ? 'هدف القتل' : '🎯 ' + esc(v.join('، '))) + '</span>' : '') + '</button>';
-                }).join('') + '</div></div></div>';
+            var shield = S.cardSel === 'shield', I = CARD_INFO[S.cardSel], killT = ops[me.id] && ops[me.id].target;
+            html += '<div class="pick-bg" data-cardclose><div class="pick"><div class="pick-h"><b>' + I.i + ' ' + esc((cards.find(function (c) { return c.id === S.cardSel; }) || {}).name || '') + ' · ' + I.d + '</b><button type="button" data-cardclose aria-label="إغلاق">✕</button></div>' +
+                playerRows(G, {
+                    action: 'card', argOf: function (p) { return S.cardSel + '|' + p.id; },
+                    can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia') && !(S.cardSel === 'silence' && p.id === killT); },
+                    sel: function (p) { return cv[me.id] && cv[me.id].card === S.cardSel && cv[me.id].target === p.id; },
+                    tag: function (p) { var n = cnt(function (id) { return cv[id] && cv[id].card === S.cardSel && cv[id].target === p.id; }); return n ? '🎯 ' + n : ''; }
+                }) + '</div></div>';
         }
         return html;
+    }
+    function inspections(G) {
+        var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
+        var R3 = { mafia: ['#ff8a80', '🔪 مافيا'], town: ['#7ee2a6', '✓ مدينة'], blocked: ['#ffd27a', '❔ تعذّر'] };
+        return '<div class="sec-h"><h2>📁 فحوصاتك</h2></div>' + list.map(function (r) {
+            var p = G.players.find(function (q) { return q.id === r.id; }), x = R3[r.res] || R3.town;
+            return '<div class="res"><span>' + r.round + ' · ' + esc(p ? p.name : '') + '</span><span style="color:' + x[0] + '">' + x[1] + '</span></div>';
+        }).join('');
     }
 
     function noticesHtml(G) {
         var list = (G.me.notices || []).slice(-6).reverse(); if (!list.length) return '';
-        return '<h2>📬 إشعاراتك السرية</h2>' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('');
+        return '<div class="sec-h"><h2>📬 إشعاراتك</h2></div>' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('');
     }
 
     var lastRenderKey = '';
@@ -529,40 +517,40 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 (G.districts > 1 ? '<div class="note">أنت في الحي ' + me.district + ' — شات الحي لأهل حيّك بس.</div>' : '') +
                 '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
         } else if (ph === 'night') {
-            // الليل بأدوار: كل دور يشتغل بوقته، والباقين ينتظرون
             var myTurn = me.team === 'mafia' ? 'mafia' : me.role === 'doctor' || me.role === 'detective' ? me.role : null;
             var ORDER = ['mafia', 'doctor', 'detective'], TN = { mafia: 'المافيا', doctor: 'الطبيب', detective: 'المحقق' };
-            var wait = function (ic, tt) { return '<div class="big"><div class="ic">' + ic + '</div><div class="tt">' + tt + '</div><p>الحين دور ' + TN[G.turn] + '. تابع البث.</p></div>'; };
-            if (!alive) html += '<div class="big"><div class="ic">🌙</div><div class="tt">الليل · دور ' + TN[G.turn] + '</div></div>';
+            var wait = function (ic, tt) { return '<div class="big"><div class="ic">' + ic + '</div><div class="tt">' + tt + '</div><p>دور ' + TN[G.turn] + '</p></div>'; };
+            if (!alive) html += wait('🌙', 'الليل');
             else if (myTurn && G.turn !== myTurn) {
-                html += ORDER.indexOf(G.turn) < ORDER.indexOf(myTurn) ? wait('⏳', 'انتظر… دورك بعد شوي') : wait('✔️', 'خلّصت دورك الليلة');
-                if (me.team === 'mafia') html += privateHtml(G, true);
+                html += ORDER.indexOf(G.turn) < ORDER.indexOf(myTurn) ? wait('⏳', 'دورك بعد شوي') : wait('✔️', 'خلّصت دورك');
                 if (me.role === 'detective') html += inspections(G);
+                html += privateHtml(G);
             }
-            else if (me.team === 'mafia') html += mafiaNight(G) + privateHtml(G, true);
+            else if (me.team === 'mafia') html += mafiaNight(G) + privateHtml(G);
             else if (me.role === 'doctor') {
-                html += '<h2>🩺 مين تحمي الليلة؟</h2><p>ما تكرر نفس الشخص ليلتين ورا بعض، وتحمي نفسك مرة وحدة بالمباراة' + (me.doctorSelfUsed ? ' (استخدمتها)' : '') + '.</p>' + playerRows(G, {
+                html += '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
                     action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed); },
                     sel: function (p) { return me.protect === p.id; },
-                    tag: function (p) { return me.protect === p.id ? '🛡️ محمي' : p.id === me.doctorPrev ? 'حميته أمس' : ''; }
+                    tag: function (p) { return me.protect === p.id ? '🛡️' : p.id === me.doctorPrev ? 'أمس' : ''; },
+                    skip: { sel: me.protect === 'skip' }
                 });
             } else if (me.role === 'detective') {
-                html += '<h2>🕵️ مين تفحص الليلة؟</h2><p>فحص واحد بالليلة، والنتيجة توصلك الصبح.</p>' + playerRows(G, {
+                html += '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
                     action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
-                    sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍 تحت التحقيق' : ''; }
+                    sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍' : ''; },
+                    skip: { sel: me.inspect === 'skip', can: !me.inspect }
                 }) + inspections(G);
-            } else {
-                html += '<div class="big"><div class="ic">😴</div><div class="tt">نام يا مواطن…</div><p>الحين دور ' + TN[G.turn] + '. لا تشيل عينك عن البث!</p></div>';
-            }
+            } else html += wait('😴', 'نام يا مواطن…');
         } else if (ph === 'dawn') {
-            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div><p>مشاهد الليلة شغالة على شاشة البث الحين.</p></div>' + noticesHtml(G);
+            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div></div>' + noticesHtml(G);
         } else if (ph === 'day') {
-            html += '<h2>💬 النقاش</h2><p>رسائل الشات العام تظهر على البث.</p>' + chatHtml(G, chansFor(G)) + privateHtml(G) + noticesHtml(G) + inspections(G);
+            html += chatHtml(G, chansFor(G)) + privateHtml(G) + noticesHtml(G) + inspections(G);
         } else if (ph === 'vote') {
             var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
-            html += '<h2>🗳️ مين يطلع؟</h2><p>تقدر تغيّر صوتك لين يخلص الوقت. التعادل = ما أحد يطلع.</p>' + (alive ? '<button type="button" class="btn ghost" data-act="vote" data-id="skip">' + (me.vote === 'skip' ? '✓ ' : '') + 'أمتنع عن التصويت (' + (tally.skip || 0) + ')</button>' : '') + playerRows(G, {
+            html += '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + '</span></div>' + playerRows(G, {
                 action: 'vote', can: function (p) { return alive && p.alive && p.id !== me.id; },
-                sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; }
+                sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; },
+                skip: { sel: me.vote === 'skip', can: alive, tag: tally.skip ? String(tally.skip) : '' }
             }) + (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
@@ -583,14 +571,6 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); fe.setSelectionRange(fe.value.length, fe.value.length); }
     }
 
-    function inspections(G) {
-        var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
-        var R3 = { mafia: ['#ff8a80', '🔪 مافيا!'], town: ['#7ee2a6', '✓ من المدينة'], blocked: ['#ffd27a', '❔ تعذر التحقيق'] };
-        return '<h2>📁 ملف التحقيقات</h2>' + list.map(function (r) {
-            var p = G.players.find(function (q) { return q.id === r.id; }), x = R3[r.res] || R3.town;
-            return '<div class="res"><span>الليلة ' + r.round + ': ' + esc(p ? p.name : '') + '</span><span style="color:' + x[0] + '">' + x[1] + '</span></div>';
-        }).join('');
-    }
 
     $('gameBody').addEventListener('click', function (e) {
         var b = e.target.closest('[data-act]');

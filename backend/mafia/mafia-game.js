@@ -171,7 +171,7 @@ function createGame(roster, settings, hooks) {
         var protectedIds = {};
         aliveRole('doctor').forEach(function (d) {
             var t = N.actions[d.id];
-            if (!t) { d.doctorPrev = null; return; }
+            if (!t || t === 'skip') { d.doctorPrev = null; return; }
             protectedIds[t] = (protectedIds[t] || []).concat(d);
             d.doctorPrev = t;
             if (t === d.id) d.doctorSelfUsed = true;
@@ -336,7 +336,8 @@ function createGame(roster, settings, hooks) {
         var N = G.night;
         if (G.phase === 'night') {
             var turn = G.turn;
-            if ((a === 'kill' || a === 'recruit') && me.faction === 'mafia' && turn === 'mafia') {
+            if (a === 'kill' && arg === 'skip' && me.faction === 'mafia' && turn === 'mafia') N.ops[id] = { op: 'skip' };   // تخطي: ما يقتلون أحد
+            else if ((a === 'kill' || a === 'recruit') && me.faction === 'mafia' && turn === 'mafia') {
                 var t = P(String(arg || ''));
                 if (!t || !t.alive || t.faction === 'mafia') return;
                 if (a === 'recruit' && !available('recruit')) return;
@@ -349,6 +350,9 @@ function createGame(roster, settings, hooks) {
                     if ((c === 'shield') !== (ct.faction === 'mafia')) return;   // الحماية لعضو مافيا، والباقي لأحد من المدينة
                     N.cards[id] = { card: c, target: ct.id };
                 }
+            } else if ((a === 'protect' || a === 'inspect') && arg === 'skip' && me.role === (a === 'protect' ? 'doctor' : 'detective') && turn === me.role) {
+                if (a === 'inspect' && N.actions[id]) return;
+                N.actions[id] = 'skip';   // تخطي الليلة
             } else if (a === 'protect' && me.role === 'doctor' && turn === 'doctor') {
                 var dt = P(String(arg || ''));
                 if (!dt || !dt.alive || dt.id === me.doctorPrev || (dt.id === id && me.doctorSelfUsed)) return;
