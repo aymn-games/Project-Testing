@@ -267,7 +267,7 @@ function createRoomManager(opts) {
         var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (rooms[code]);
         var sched = null;
         if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
-        rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
+        rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(), ownerId: o && o.ownerId != null ? o.ownerId : null,
             chars: CHARS.indexOf(o && o.chars) >= 0 ? o.chars : 'rig', reacts: [],
             sched: sched, phase: sched && now() < openAtOf(sched) ? 'closed' : 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} } };
@@ -578,7 +578,7 @@ function createRoomManager(opts) {
 
     // ---- الحفظ (party-store) والرجوع بعد إعادة تشغيل السيرفر ----
     // كل شي إلا المواقع (تتغيّر 8 مرات/ث) وحالة الإرسال — بعد الرجوع كل لاعب يتحط بمكان مرحلته
-    var ROOM_KEYS = ['chars', 'code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
+    var ROOM_KEYS = ['chars', 'code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'ownerId', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
         'wishes', 'wishSeq', 'wishCur', 'cakeCut', 'photoDone', 'startedAt', 'banned', 'pointsMsg', 'pointsAcked'];
     function serialize(code) {
         var room = rooms[code]; if (!room) return null;
@@ -619,8 +619,13 @@ function createRoomManager(opts) {
 
     function closeRoom(code) { if (!rooms[code]) return fail('nocode'); delete rooms[code]; return { ok: true }; }
     function getRoom(code) { return rooms[code] || null; }
-    // الحفلة الشغالة الحين (أحدث وحدة ما انتهت) — رابط المذيع بأي جهاز يفتحها
-    function currentRoom() { var best = null; Object.keys(rooms).forEach(function (c) { var r = rooms[c]; if (r.phase !== 'ended' && (!best || r.createdAt > best.createdAt)) best = r; }); return best ? best.code : null; }
+    // الحفلة الشغالة الحين (أحدث وحدة ما انتهت) لصاحب الحساب ownerId — المذيع يرجع لها من أي جهاز.
+    // بدون ownerId (رابط المفتاح الخاص): الحفلات اللي انشأت بالمفتاح بس، ما يوصل لحفلات الاستريمرز
+    function currentRoom(ownerId) {
+        var own = ownerId != null ? ownerId : null, best = null;
+        Object.keys(rooms).forEach(function (c) { var r = rooms[c]; if (r.phase !== 'ended' && (r.ownerId != null ? r.ownerId : null) === own && (!best || r.createdAt > best.createdAt)) best = r; });
+        return best ? best.code : null;
+    }
 
     return {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,

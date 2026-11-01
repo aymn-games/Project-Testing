@@ -144,14 +144,14 @@ async function hostRoom(port) {
 function onlineOf(code, name) { var r = party._mgr.roster(code).players.find(function (p) { return p[1] === name; }); return r ? r[4] : null; }
 var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
-test('creating a party needs the private host key', async function () {
+test('creating a party needs a site account (or the private host key)', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), c = await client(srv.address().port);
     c.send({ t: 'host', girlName: 'سارة' });
-    assert.equal((await c.wait(function (x) { return x.t === 'err'; })).err, 'hostkey');
+    assert.equal((await c.wait(function (x) { return x.t === 'err'; })).err, 'login');
     c.send({ t: 'host', girlName: 'سارة', key: 'wrong' });
     await sleep(1100);
-    assert.equal(c.msgs.filter(function (x) { return x.t === 'err' && x.err === 'hostkey'; }).length, 2);
+    assert.equal(c.msgs.filter(function (x) { return x.t === 'err' && x.err === 'hostkey'; }).length, 1);
     c.close(); srv.close();
 });
 
@@ -653,4 +653,30 @@ test('host link on any device: key + current opens the running party; wrong key 
     await sleep(1100); b.send({ t: 'start' });
     await b.wait(function (x) { return x.t === 'phase' && x.p !== 'lobby' && x.p !== 'closed'; }, 3000);
     a.close(); b.close(); c.close(); r.h.close(); srv.close();
+});
+
+test('any streamer account hosts its own party; same account on another device gets it back; others cannot reach it', async function () {
+    reset(); party._setEnabled(true);
+    party._setHostUser(function (tok) { return tok === 'tok-a' ? { id: 1 } : tok === 'tok-b' ? { id: 2 } : null; });
+    try {
+        var srv = await startServer(), port = srv.address().port;
+        var bad = await client(port); bad.send({ t: 'host', auth: 'expired', girlName: 'سارة', schedule: SCHED() });
+        assert.equal((await bad.wait(function (x) { return x.t === 'err'; })).err, 'login');
+        var a1 = await client(port); a1.send({ t: 'host', auth: 'tok-a', current: true });
+        assert.equal((await a1.wait(function (x) { return x.t === 'err'; })).err, 'none');
+        var a2 = await client(port); a2.send({ t: 'host', auth: 'tok-a', girlName: 'سارة', schedule: SCHED() });
+        var ha = await a2.wait(function (x) { return x.t === 'hosted'; });
+        var b1 = await client(port); b1.send({ t: 'host', auth: 'tok-b', girlName: 'ريم', schedule: SCHED() });
+        var hb = await b1.wait(function (x) { return x.t === 'hosted'; });
+        assert.notEqual(ha.code, hb.code);
+        // جهاز ثاني لنفس الحساب ← نفس حفلته، و«إنشاء» مرة ثانية ما يسوي حفلة ثانية
+        var a3 = await client(port); a3.send({ t: 'host', auth: 'tok-a', current: true });
+        assert.equal((await a3.wait(function (x) { return x.t === 'hosted'; })).code, ha.code);
+        var a4 = await client(port); a4.send({ t: 'host', auth: 'tok-a', girlName: 'غيرها', schedule: SCHED() });
+        assert.equal((await a4.wait(function (x) { return x.t === 'hosted'; })).code, ha.code);
+        // المفتاح الخاص ما يوصل لحفلات الحسابات
+        var k = await client(port); k.send({ t: 'host', key: 'test-key', current: true });
+        assert.equal((await k.wait(function (x) { return x.t === 'err'; })).err, 'none');
+        [bad, a1, a2, b1, a3, a4, k].forEach(function (c) { c.close(); }); srv.close();
+    } finally { party._setHostUser(null); }
 });

@@ -4,12 +4,14 @@
  * يوصّل منطق الغرف (party-rooms.js) بالجوالات وشاشة المذيع، بنفس أسلوب
  * «محطة سهيل» (station-server.js). الحفلات طافية افتراضياً (config.partyEnabled
  * ← متغير البيئة PARTY_ENABLED=1)، وكل رسالة وكل دورة تحديث محمية بـ try/catch:
- * أي خطأ هنا يتسجل وما يطيّح باقي سيرفر الموقع. إنشاء حفلة يحتاج المفتاح الخاص
- * (config.partyHostKey ← PARTY_HOST_KEY)، وكل اتصال عليه حد للرسائل وحد للي
+ * أي خطأ هنا يتسجل وما يطيّح باقي سيرفر الموقع. إنشاء حفلة يحتاج حساب الموقع (auth) أو المفتاح الخاص
+ * أو أي حساب مسجّل بالموقع (config.partyHostKey ← PARTY_HOST_KEY اختياري)، وكل اتصال عليه حد للرسائل وحد للي
  * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName, key, schedule} | host {code, token} | host {key, current: true} (أي جهاز معه المفتاح ← الحفلة الشغالة، أو err none)
+ *   عميل → host {girlName, auth, schedule} (أي استريمر بحساب الموقع؛ حفلة شغالة وحدة لكل حساب — لو عنده وحدة يرجع لها)
+ *          | host {auth, current: true} (حساب المذيع من أي جهاز ← حفلته الشغالة، أو err none؛ بدون حساب صالح ← err login)
+ *          | host {code, token} | host {girlName, key, schedule} و host {key, current: true} (المفتاح الخاص PARTY_HOST_KEY، اختياري)
  *          ← hosted {code, token, girlKey, viewKey}
  *          schedule = {startAt (ms UTC), durationMin, openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
  *   المذيع → schedule {schedule} (تعديل أي وقت) ← phase جديدة للكل
@@ -58,7 +60,7 @@ var _idleMs = 40 * 1000;                 // ما وصل شي من الاتصال
 var _roster = {};                        // code -> {at, dirty}
 // التحقق من الجلسة يتحمّل وقت الحاجة فقط (يفتح قاعدة البيانات)
 var _mgr = createRoomManager({
-    maxRooms: config.partyMaxRooms || 2,
+    maxRooms: config.partyMaxRooms || 10,
     validateSession: function (token) { try { return require('../auth/auth-service').validateSession(token); } catch (err) { logger.error('Party: session check failed:', err); return null; } }
 });
 // الحفظ في SQLite (party-store): الحفلة ترجع بعد إعادة تشغيل السيرفر. مجمّع (مرة كل 2ث بالأكثر لكل
@@ -116,6 +118,13 @@ function sendRaw(client, encoded) {
     try { client.socket.write(encoded); } catch (err) { logger.error('Party: write failed:', err); }
 }
 function send(client, obj) { if (client && !client.closed) sendRaw(client, frame.encodeTextFrame(JSON.stringify(obj))); }
+// حساب المذيع من توكن الجلسة (AGPAuth) — null لو مو صالح
+var hostUserFn = null; // للاختبارات
+function hostUser(token) {
+    if (!token || typeof token !== 'string') return null;
+    if (hostUserFn) return hostUserFn(token);
+    try { var u = require('../auth/auth-service').validateSession(token); return u && u.id != null ? u : null; } catch (err) { logger.error('Party: host session check failed:', err); return null; }
+}
 function keyOk(k) { return !!_hostKey && sameKey(k, _hostKey); }
 function sameKey(k, secret) {
     var a = Buffer.from(String(k || '')), b = Buffer.from(String(secret));
@@ -221,10 +230,15 @@ function handle(client, msg, t, ident) {
     var code = typeof msg.code === 'string' ? msg.code : null, res;
 
     if (t === 'host') {
+        // المذيع: حساب الموقع (auth)، أو المفتاح الخاص (key) لو انرسل
+        var owner = null;
+        if (!code && msg.key == null) { var hu = hostUser(msg.auth); if (!hu) return send(client, { t: 'err', err: 'login', of: t }); owner = hu.id; }
+        else if (!code && !keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
+        // حفلة شغالة وحدة لكل حساب: «إنشاء» وعنده حفلة ← يرجع لها بدل حفلة ثانية
+        if (!code && owner != null && !msg.current && _mgr.currentRoom(owner)) msg.current = true;
         if (!code && msg.current) {
-            // رابط المذيع من أي جهاز: المفتاح السري يكفي، ويفتح الحفلة الشغالة الحين (لو فيه)
-            if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
-            var cur = _mgr.currentRoom();
+            // المذيع من أي جهاز: حسابه (أو المفتاح الخاص) يفتح حفلته الشغالة الحين (لو فيه)
+            var cur = _mgr.currentRoom(owner);
             if (!cur) return send(client, { t: 'err', err: 'none', of: t });
             var crm = _mgr.getRoom(cur);
             attach(client, cur, 'host');
@@ -236,13 +250,12 @@ function handle(client, msg, t, ident) {
             attach(client, code, 'host');
             send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey, viewKey: room.viewKey });
         } else {
-            if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
             // كل حفلة من صفحة المذيع مجدولة (الغرفة بدون جدول للاختبارات بس)
             if (!msg.schedule || typeof msg.schedule !== 'object') return send(client, { t: 'err', err: 'schedule', of: t });
-            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars });
+            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars, ownerId: owner });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
-            logger.log('Party: room ' + res.code + ' created');
+            logger.log('Party: room ' + res.code + ' created' + (owner != null ? ' by user ' + owner : ''));
             send(client, { t: 'hosted', code: res.code, token: res.token, girlKey: res.girlKey, viewKey: res.viewKey });
         }
         send(client, rosterMsg(client.code)); send(client, phaseMsg(client.code)); send(client, wishesMsg(client.code)); sendAll(client);
@@ -486,6 +499,7 @@ module.exports = {
     _mgr: _mgr,
     _setEnabled: function (v) { _enabled = !!v; },
     _setHostKey: function (k) { _hostKey = String(k || ''); },
+    _setHostUser: function (fn) { hostUserFn = fn || null; },
     _setIdleMs: function (ms) { _idleMs = ms; },
     _sendRaw: sendRaw
 };

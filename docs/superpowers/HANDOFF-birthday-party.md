@@ -64,8 +64,8 @@
 **الإنتاج:**
 - **السيرفر:** Render على `project-testing-akds.onrender.com`. متغيرات البيئة المطلوبة (صاحب المشروع حطها):
   - `PARTY_ENABLED=1`
-  - `PARTY_HOST_KEY=<مفتاح سري>`
-  - `PARTY_MAX_ROOMS` (اختياري، والافتراضي 2).
+  - `PARTY_HOST_KEY=<مفتاح سري>` (اختياري: أي استريمر بحساب الموقع ينشئ حفلته بدونه).
+  - `PARTY_MAX_ROOMS` (اختياري، والافتراضي 10).
 - **الروابط:**
   - **المذيع:** `games/birthday-party/index.html?k=<المفتاح>`. ينحفظ بالجهاز وينشال من الرابط.
 - **الموسيقى:** صاحب المشروع يرفعها بعدين في `games/birthday-party/music/` بأسماء `lobby.mp3` و`reveal.mp3` و`dance.mp3` و`cake.mp3`. لو مو موجودة تسكت بدون أخطاء.
