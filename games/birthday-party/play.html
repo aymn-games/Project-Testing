@@ -556,7 +556,7 @@
             hall.setSoft(slowLeft > 0);
             if (slowLeft > 0) {
                 hall.flutter(slowLeft / 1000, { wide: true });
-                slowT = setTimeout(() => { if (phase && phase.p === 'free') { hall.setSoft(false); music.play('dance'); } }, slowLeft);
+                slowT = setTimeout(() => { if (phase && phase.p === 'free') { hall.setSoft(false); music.play('bg'); } }, slowLeft);
             }
             crowdPhase();
             // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
@@ -604,11 +604,12 @@
             else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') {
                 // أول الرقص: أغنية الافتتاح تكمل لين آخرها (بدأت قبل الرقص بـ 12ث) وبعدها أغنية الرقص
                 if (p === 'dance') music.play('reveal', { from: (since + 12000) / 1000 });
-                music.play('dance');
+                music.play('bg', { wait: p === 'dance' });
             }
             // أغنية القص: مربوطة بمشهد الاحتفال بوقته (اللي يرجع للصفحة بالنص يسمعها من نفس اللحظة)
             else if (p === 'celebrate') music.play('cutsong', { from: since / 1000 });
-            else if (p !== 'reveal') music.play('lobby');
+            // باقي المشاهد (اللوبي، الدخول، التجمّع، الكيكة، الصورة…): موسيقى الخلفية بصوت منخفض
+            else if (p !== 'reveal') music.play('bg');
             } catch (e) { console.error('party: phase scene', e); }
             // إشعارات المراحل (بس أول ثواني المرحلة — اللي يرجع متأخر ما يشوفها من جديد)
             if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');
