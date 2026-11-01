@@ -32,8 +32,8 @@ var SCHEMA = [
         { k: 'mafiaSec', n: 'دور المافيا بالليل', t: 'num', min: 15, max: 120, step: 5, d: 40, u: 'ث' },
         { k: 'doctorSec', n: 'دور الطبيب', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
         { k: 'detectiveSec', n: 'دور المحقق', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
-        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 180, u: 'ث' },
-        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 45, u: 'ث' }
+        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 60, u: 'ث' },
+        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 30, u: 'ث' }
     ] },
     { id: 'room', n: 'الروم', f: [
         { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: MIN_ROOM, max: MAX_ROOM, step: 5, d: MAX_ROOM }
