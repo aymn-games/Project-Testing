@@ -27,7 +27,7 @@
 
 var REVEAL_MS = 8000;
 var VERDICT_MS = 12000;
-var CHAT_MAX = 200;
+var CHAT_MAX = 300;
 var DISTRICT_SIZE = 25;
 var RECRUIT_CAP = 0.30;
 var CARDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
@@ -292,12 +292,17 @@ function createGame(roster, settings, hooks) {
 
     function tick(now) { if (G.endsAt && now >= G.endsAt) next(); }
 
+    function roleChatOpen(ch) { return (ch === 'doctor' ? S.doctors : S.detectives) > 1; }
+
     function chat(me, arg) {
         var raw = String(arg == null ? '' : arg), bar = raw.indexOf('|');
         var ch = bar > 0 ? raw.slice(0, bar) : 'city', text = (bar > 0 ? raw.slice(bar + 1) : raw).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
         if (!text || !me.alive) return;
         if (ch === 'mafia') { if (me.faction !== 'mafia' || G.phase === 'over') return; }
-        else if (ch === 'city' || ch === 'district') {
+        else if (ch === 'doctor' || ch === 'detective') {
+            // شات خاص للأطباء/المحققين وقت النقاش، لو عددهم بالإعدادات أكثر من واحد (الإسكات ما يشمله)
+            if (!roleChatOpen(ch) || me.role !== ch || G.phase !== 'day') return;
+        } else if (ch === 'city' || ch === 'district') {
             if (G.phase !== 'day') return;                       // الشات العام وشات الحي بالنقاش فقط
             if (G.silenced.indexOf(me.id) >= 0) return;          // المسكَت يصوّت بس
             if (ch === 'district' && G.districts < 2) ch = 'city';
@@ -390,6 +395,7 @@ function createGame(roster, settings, hooks) {
         });
         var chat = G.chat.filter(function (c) {
             if (c.ch === 'mafia') return meMafia && c.n > me.mafiaSince;
+            if (c.ch === 'doctor' || c.ch === 'detective') return !!me && me.alive && me.role === c.ch;   // المجنّد يفقد شات دوره
             if (c.ch === 'district') return !!me && c.d === me.district;
             return true;
         });
