@@ -69,10 +69,6 @@
     .pc .e{ font-size:clamp(22px,1.9vw,30px); }
 
     /* ===== تحكم الستريمر ===== */
-    .host{ position:fixed; bottom:clamp(14px,2.2vh,26px); right:clamp(12px,1.4vw,26px); z-index:21; display:flex; flex-direction:column; gap:8px; align-items:stretch; }
-    .host .hbtn{ justify-content:center; height:44px; font-weight:700; }
-    .host .go{ background:linear-gradient(180deg,#a855f7,#7c3aed); border-color:rgba(216,180,254,.7); color:#fff; box-shadow:0 8px 26px rgba(124,58,237,.45); }
-    .host .go[disabled]{ opacity:.5; cursor:not-allowed; }
     .stats{ position:fixed; bottom:clamp(14px,2.2vh,26px); left:clamp(12px,1.4vw,26px); z-index:19; padding:10px 14px; border-radius:16px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); font:600 13px 'IBM Plex Sans Arabic'; display:flex; flex-direction:column; gap:4px; min-width:150px; }
     .stats div{ display:flex; justify-content:space-between; gap:14px; }
     .stats b{ font:800 16px 'Zain'; }
@@ -94,8 +90,7 @@
     .champ .av{ width:110px; height:110px; margin:12px auto; border-radius:50%; border:4px solid var(--gold); background:#5b54d6 center/cover; display:grid; place-items:center; font:900 46px 'Zain'; box-shadow:0 0 30px rgba(245,197,66,.6); }
     .champ .nm{ font:900 34px/1.15 'Zain'; word-break:break-word; }
     .champ .sub{ font:500 14px 'IBM Plex Sans Arabic'; opacity:.8; margin-top:6px; }
-    .champ .row{ display:flex; gap:8px; margin-top:16px; }
-    .champ .row .hbtn{ flex:1; justify-content:center; }
+    .champ .next{ margin-top:14px; padding:8px 14px; border-radius:999px; background:rgba(245,197,66,.14); border:1px solid rgba(245,197,66,.45); font:700 14px 'IBM Plex Sans Arabic'; color:#fde68a; }
 
     /* ===== لوحة ثنائية الأبعاد (لو فشل الثري دي) ===== */
     .flat{ position:fixed; inset:190px 16px 190px; z-index:5; overflow:auto; display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; justify-content:center; }
@@ -108,7 +103,6 @@
     @media (max-width:700px){
         .top{ top:64px; } .timer{ width:62px; height:62px; } .timer span{ font-size:26px; }
         .stats{ display:none; } .pc{ padding:8px 10px; } .pc .l .e{ display:none; }
-        .host{ bottom:auto; top:64px; right:12px; } .host .hbtn{ height:38px; font-size:13px; }
         .champ{ top:auto; bottom:150px; right:50%; transform:translateX(50%); animation:none; }
     }
 </style>
@@ -145,10 +139,6 @@
     </div>
 </div>
 
-<div class="host">
-    <button type="button" class="hbtn go" id="btn-start" disabled>ابدأ البطولة</button>
-    <button type="button" class="hbtn hidden" id="btn-skip">إنهاء الوقت</button>
-</div>
 <div class="stats" id="stats">
     <div><span>المواجهات</span><b id="st-duels">—</b></div>
     <div><span>اختاروا</span><b id="st-picked">—</b></div>
@@ -163,10 +153,7 @@
     <div class="av" id="champ-av"></div>
     <div class="nm"><bdi id="champ-nm"></bdi></div>
     <div class="sub" id="champ-sub"></div>
-    <div class="row">
-        <button type="button" class="hbtn go" id="btn-again" style="background:linear-gradient(180deg,#f5c542,#d49b12);color:#1a1206;border-color:#fde68a">بطولة جديدة</button>
-        <button type="button" class="hbtn" id="btn-home">الإعدادات</button>
-    </div>
+    <div class="next" id="champ-next"></div>
 </div>
 <div class="toast hidden" id="toast"></div>
 
@@ -191,6 +178,7 @@
     var E = window.RpsEngine;
     var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
     var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    var NEXT_MS = 15000; // بعد إعلان البطل تبدأ فترة دخول جديدة لحالها
     var SHAKE_MS = 1800, REVEAL_MS = 1300, RESULT_MS = 2300, INTRO_MS = 2600, TIE_MS = 1600;
     var PICK = { 1: { n: 'حجرة', e: '✊', c: '#ff9a3c' }, 2: { n: 'ورقة', e: '✋', c: '#36d6ff' }, 3: { n: 'مقص', e: '✌️', c: '#ff4fd8' } };
 
@@ -290,10 +278,18 @@
         var av = $('champ-av');
         if (c && c.avatarUrl) { av.style.backgroundImage = 'url("' + c.avatarUrl.replace(/"/g, '%22') + '")'; av.textContent = ''; }
         else { av.style.backgroundImage = ''; av.textContent = c ? (Array.from(c.name.replace(/[\s_.@\d]/g, ''))[0] || '؟') : ''; }
-        $('champ-sub').textContent = 'غلب ' + (G.players.length - 1) + ' لاعب بـ ' + (G.round) + ' أدوار';
+        $('champ-sub').textContent = 'غلب ' + (G.players.length - 1) + ' لاعب ' + (G.round === 1 ? 'بدور واحد' : 'بـ ' + G.round + ' أدوار');
         $('champ').classList.remove('hidden');
         render();
         reportPoints();
+        var nextAt = Date.now() + NEXT_MS;
+        (function count() {
+            if (phase !== 'champion') return;
+            var s = Math.ceil((nextAt - Date.now()) / 1000);
+            if (s <= 0) { reset(); return; }
+            $('champ-next').textContent = 'بطولة جديدة بعد ' + s + ' ث — اكتبوا 1 أو 2 أو 3 للدخول';
+            later(count, 250);
+        }());
     }
     function reportPoints() {
         if (reported) return; reported = true;
@@ -334,9 +330,6 @@
         $('count-n').textContent = inJoin ? players.length : alive.length;
         $('count-l').textContent = inJoin ? ('لاعب من ' + G.maxPlayers) : 'باقي من ' + players.length;
         $('stage-name').textContent = inJoin ? 'فترة الدخول' : phase === 'champion' ? 'انتهت البطولة' : G.stageName();
-        $('btn-start').classList.toggle('hidden', !inJoin);
-        $('btn-start').disabled = players.length < 2;
-        $('btn-skip').classList.toggle('hidden', phase !== 'pick');
         var hint = $('hint');
         if (inJoin) hint.innerHTML = 'اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة';
         else if (phase === 'pick') hint.innerHTML = 'اللي عليهم الدور: اكتبوا <b>1</b> حجرة · <b>2</b> ورقة · <b>3</b> مقص';
@@ -414,10 +407,6 @@
     }
 
     // ---------------------------------------------------------------- الأزرار
-    $('btn-start').addEventListener('click', startTournament);
-    $('btn-skip').addEventListener('click', function () { if (phase === 'pick') { phaseEnds = 0; shake(); } });
-    $('btn-again').addEventListener('click', reset);
-    $('btn-home').addEventListener('click', function () { go('index.html'); });
     $('exit').addEventListener('click', function () { go('index.html'); });
 
     // ---------------------------------------------------------------- البث

@@ -462,40 +462,25 @@ export function createArena(container, opts = {}) {
     }
 
     // ================================================================ الكاميرا
-    const camPos = new T.Vector3(0, 14, 26), camLook = new T.Vector3(0, 1, 0), tPos = new T.Vector3(), tLook = new T.Vector3(), box = new T.Box3(), tmpV = new T.Vector3();
-    function frameCamera(dt) {
-        box.makeEmpty(); let champ = null, focusDuel = false;
-        for (const c of chars.values()) {
-            if (c.kind === 'podium') champ = c;
-            if (c.kind === 'ring' && phase !== 'join') continue;
-            box.expandByPoint(c.target);
-            if (c.kind === 'duel') focusDuel = true;
-        }
-        if (box.isEmpty()) box.set(tmpV.set(-6, 0, -4), new T.Vector3(6, 0, 4));
-        const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
-        const half = Math.max((box.max.x - box.min.x) / 2 + 1.6, ((box.max.z - box.min.z) / 2 + 1.6) * camera.aspect * .9, 2.6);
+    // كاميرا ثابتة: لقطة وحدة تغطي الساحة كلها طول المباراة (تتعدل بس مع مقاس الشاشة)
+    const camLook = new T.Vector3(0, .4, .6);
+    function fixCamera() {
+        const half = 11.5, pitch = .6;
         const fovH = 2 * Math.atan(Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
-        let dist = half / Math.tan(fovH / 2) * 1.08 + 1.5, pitch = .5, sway = REDUCED ? 0 : Math.sin(now * .07) * .14;
-        if (champ) { dist = 7.8; pitch = .24; sway = REDUCED ? 0 : Math.sin(now * .22) * .55; tLook.set(0, PODIUM_TOP + 1, 0); }
-        else tLook.set(cx, .9, cz + (focusDuel ? .2 : 0));
-        if (phase === 'shake' && !REDUCED) dist *= .94; // دفّة خفيفة وقت العد
-        tPos.set(tLook.x + Math.sin(sway) * dist * Math.cos(pitch), tLook.y + dist * Math.sin(pitch) + .6, tLook.z + Math.cos(sway) * dist * Math.cos(pitch));
-        const k = 1 - Math.exp(-dt * (champ ? 1.4 : 1.8));
-        camPos.lerp(tPos, k); camLook.lerp(tLook, k);
-        camera.position.copy(camPos); camera.lookAt(camLook);
+        const dist = Math.max(half / Math.tan(fovH / 2), 9 / Math.tan(T.MathUtils.degToRad(camera.fov / 2))) * .92;
+        camera.position.set(0, camLook.y + dist * Math.sin(pitch), camLook.z + dist * Math.cos(pitch));
+        camera.lookAt(camLook);
     }
-
     // ================================================================ الحلقة
     const clock = new T.Clock(); let raf = 0, frame = 0, stopped = false;
     function tick() {
         raf = requestAnimationFrame(tick);
         const dt = Math.min(clock.getDelta(), .05); now += dt; frame++;
         // الجمهور الخلفي
-        for (let i = 0; i < FANS; i++) { const d = fanData[i], hop = Math.max(0, Math.sin(now * d.sp + d.ph)) * (phase === 'champion' ? .45 : .14); p4.set(d.x, d.y + hop, d.z); m4.compose(p4, q4, s4); fans.setMatrixAt(i, m4); }
+        for (let i = 0; i < FANS; i++) { const d = fanData[i], hop = phase === 'champion' ? Math.max(0, Math.sin(now * d.sp + d.ph)) * .3 : 0; p4.set(d.x, d.y + hop, d.z); m4.compose(p4, q4, s4); fans.setMatrixAt(i, m4); }
         fans.instanceMatrix.needsUpdate = true;
-        for (const b of beams) { const a = Math.sin(now * .35 + b.ph) * .45; b.beam.lookAt(Math.sin(a + b.ph) * 8, -2, Math.cos(a) * 5); b.beam.rotateX(-Math.PI / 2); b.beam.material.opacity = phase === 'champion' ? .22 : .11; }
-        for (const g of giants) { g.g.rotation.y = now * .4 + g.ph; g.g.position.y += Math.sin(now * 1.2 + g.ph) * .004; g.halo.rotation.z = now * .3; g.halo.lookAt(camera.position); }
-        edgeRing.material.color.setHSL((now * .05) % 1, .8, .65);
+        for (const b of beams) { const a = 0; b.beam.lookAt(Math.sin(a + b.ph) * 8, -2, Math.cos(a) * 5); b.beam.rotateX(-Math.PI / 2); b.beam.material.opacity = phase === 'champion' ? .22 : .11; }
+        for (const g of giants) { g.g.rotation.y = now * .25 + g.ph; g.halo.rotation.z = now * .3; g.halo.lookAt(camera.position); }
         // منصة البطل
         const podUp = phase === 'champion' ? ease((now - phaseAt) / 1.2) : 0;
         podium.position.y = -1.4 + podUp * 1.4; podium.visible = podUp > 0;
@@ -531,7 +516,7 @@ export function createArena(container, opts = {}) {
         pads.forEach((pd, k) => {
             const e = padList[k]; pd.g.visible = !!e; if (!e) return;
             pd.g.position.set(e.x, 0, e.z);
-            const pulse = e.live ? .75 + Math.sin(now * (phase === 'shake' ? 14 : 4) + k) * .25 : .35;
+            const pulse = e.live ? .9 : .35;
             pd.ring.material.opacity = pulse; pd.ring.material.color.set(phase === 'shake' && e.live ? '#ff4fd8' : '#a855f7');
         });
         for (const f of flashes) if (f.t < 1) { f.t += dt / .9; const s = .6 + f.t * 2.4; f.m.scale.set(s, 1, s); f.m.material.opacity = (1 - f.t) * .9; f.m.visible = f.t < 1; }
@@ -541,13 +526,12 @@ export function createArena(container, opts = {}) {
             q4.identity(); confetti.instanceMatrix.needsUpdate = true;
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
-        frameCamera(dt);
         if (composer) composer.render(); else renderer.render(scene, camera);
     }
 
     function resize() {
         const w = container.clientWidth || 1, h = container.clientHeight || 1;
-        renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); fixCamera();
         if (composer) { composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); }
     }
     const ro = new ResizeObserver(resize); ro.observe(container); resize();
