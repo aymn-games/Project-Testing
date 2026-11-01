@@ -636,6 +636,10 @@ module.exports = {
         require('../station/station-server').handleUpgrade(req, socket);
         return;
       }
+      if (pathname === '/ws/mafia') {
+        require('../mafia/mafia-server').handleUpgrade(req, socket);
+        return;
+      }
       if (pathname === '/ws/party') {
         require('../party/party-server').handleUpgrade(req, socket);
         return;

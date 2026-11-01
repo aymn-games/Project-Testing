@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المافيا — الإعدادات</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<link rel="stylesheet" href="mafia-host.css">
+<script src="mafia-net.js"></script>
+<script src="mafia-host.js"></script>
+</head>
+<body>
+<div class="fx" aria-hidden="true"></div>
+<!-- 1) شاشة الإعدادات ← 2) lobby.html (الباركود وكود الغرفة) ← 3) game.html (المباراة) -->
+<header class="hdr">
+    <div class="side"><button class="hbtn exit" id="exitBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="lbl-txt">خروج</span></button></div>
+    <div class="logo"><img src="../../logo.png" alt="" onerror="this.style.display='none'"></div>
+    <div></div>
+</header>
+
+<main class="main">
+    <div class="wrap">
+        <div class="titlebox">
+            <span class="title">المافيا</span>
+            <span class="pill"><span class="dot"></span>اللاعبين يدخلون من جوالاتهم بحساب الموقع</span>
+        </div>
+        <div class="scroll noscroll">
+            <div class="grid" id="sections"><div class="spinner" aria-label="جاري التحميل"></div></div>
+        </div>
+        <div class="footer">
+            <button class="cta" id="goBtn" type="button" disabled>الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+        </div>
+    </div>
+</main>
+
+<div class="ov" id="exitOv">
+    <div class="dlg">
+        <span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+        <b>الخروج؟</b>
+        <p>بترجع لمكتبة الألعاب</p>
+        <div class="two"><button class="btn-ghost" type="button" data-close>إلغاء</button><button class="btn-red" type="button" id="exitYes">خروج</button></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var NET = window.MafiaNet;
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var schema = null, cur = NET.setup() || {}, firstRender = true;
+
+    // مخطط الإعدادات من الخادم (هو المرجع للحدود والقيم الافتراضية)
+    var net = NET.connect(function (m) {
+        if (m.t !== 'schema') return;
+        schema = m.schema;
+        schema.forEach(function (g) { g.f.forEach(function (f) { if (cur[f.k] === undefined) cur[f.k] = f.d; }); });
+        render(); $('goBtn').disabled = false;
+    }, function () { net.send({ t: 'schema' }); });
+
+    function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
+    // صفوف ما لها فايدة بهالإعدادات تختفي (نفس منطق الخادم mafia-settings.cardUseful)
+    var HIDE = {
+        doctorSec: function (s) { return !s.doctors; }, detectiveSec: function (s) { return !s.detectives; },
+        disguised: function (s) { return !s.detectives; },
+        card_shield: function (s) { return !s.detectives; }, card_mislead: function (s) { return !s.detectives; },
+        card_reveal: function (s) { return !s.doctors && !s.detectives; }
+    };
+    function hidden(k) { return HIDE[k] ? HIDE[k](cur) : false; }
+    function enabledCards(s) { return ['recruit', 'shield', 'reveal', 'mislead', 'silence'].filter(function (c) { return s['card_' + c] !== false && !hidden('card_' + c); }); }
+    function minPlayers(s) { return Math.max(5, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1, s.detectives > 0 ? 6 : 0); }
+
+    function render() {
+        // حركة الدخول أول مرة بس — بعدها كل ضغطة تعيد الرسم بدون ما تختفي الكروت
+        var html = '', anim = firstRender ? ' anim' : ''; firstRender = false;
+        schema.forEach(function (g, gi) {
+            html += '<section class="sec' + anim + '" style="animation-delay:' + gi * 0.06 + 's"><div class="sec-h"><span class="sec-n">' + (gi + 1) + '</span><span class="sec-t">' + esc(g.n) + '</span></div>';
+            g.f.forEach(function (f) {
+                if (hidden(f.k)) return;
+                var ctl = f.t === 'bool'
+                    ? '<button type="button" class="toggle' + (cur[f.k] ? ' on' : '') + '" role="switch" aria-checked="' + !!cur[f.k] + '" aria-label="' + esc(f.n) + '" data-k="' + f.k + '"><span></span></button>'
+                    : '<div class="stepper"><button type="button" data-k="' + f.k + '" data-d="-1" aria-label="إنقاص">−</button><output>' + cur[f.k] + (f.u ? ' ' + f.u : '') + '</output><button type="button" data-k="' + f.k + '" data-d="1" aria-label="زيادة">+</button></div>';
+                html += '<div class="row"><span class="lbl"><b>' + esc(f.n) + '</b>' + (f.desc ? '<small>' + esc(f.desc) + '</small>' : '') + '</span>' + ctl + '</div>';
+            });
+            html += '</section>';
+        });
+        var s = cur;
+        html += '<section class="sec full' + anim + '" style="animation-delay:.2s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">ملخص الأدوار</span></div>' +
+            '<div class="chips" style="padding:10px 0 4px"><span class="chip">🔪 ' + s.mafia + ' مافيا' + (s.disguised ? ' (منهم ' + s.disguised + ' متخفي)' : '') + '</span>' +
+            (s.doctors ? '<span class="chip">🩺 ' + s.doctors + ' طبيب</span>' : '') +
+            (s.detectives ? '<span class="chip">🕵️ ' + s.detectives + ' محقق</span>' : '') +
+            '<span class="chip">🏠 والباقي مواطنين</span>' +
+            '<span class="chip">🃏 ' + (s.cardsCount ? s.cardsCount + ' كروت للمافيا من ' + enabledCards(s).length : 'بدون كروت') + '</span></div>' +
+            '<div class="note" style="padding-top:6px">تحتاج <b style="color:#fff">' + minPlayers(s) + '</b> لاعبين على الأقل لهالإعدادات، والروم يقبل لين ' + s.maxPlayers + ' لاعب. فوق 25 لاعب تتوزع الأسماء على أحياء.</div></section>' +
+            // طريقة دخول اللاعبين (تتكرر باللوبي مع الباركود ورقم الغرفة)
+            '<section class="sec full' + anim + '" style="animation-delay:.26s"><div class="sec-h"><span class="sec-n">' + (schema.length + 2) + '</span><span class="sec-t">طريقة الدخول</span></div>' +
+            '<div style="padding-top:8px">' + window.MafiaHost.joinStepsHtml(new URL('join.html', location.href).href.replace(/^https?:\/\//, ''), '') + '</div>' +
+            '<div class="note" style="padding-top:8px">الباركود ورقم الروم يطلعون باللوبي.</div></section>';
+        $('sections').innerHTML = html;
+    }
+
+    $('sections').addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-k]'); if (!b || !schema) return;
+        var k = b.getAttribute('data-k'), f = field(k);
+        if (f.t === 'bool') cur[k] = !cur[k];
+        else cur[k] = Math.max(f.min, Math.min(f.max, cur[k] + f.step * Number(b.getAttribute('data-d'))));
+        if (cur.disguised > cur.mafia) cur.disguised = cur.mafia;   // المتخفين من ضمن المافيا
+        if (!cur.detectives) cur.disguised = 0;                     // بدون محقق ما له معنى
+        cur.cardsCount = Math.min(cur.cardsCount, enabledCards(cur).length);   // ما يتعدى الكروت المفعّلة
+        NET.setup(cur); render();
+    });
+
+    $('goBtn').onclick = function () { NET.setup(cur); location.href = 'lobby.html'; };
+    $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
+    $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
+    $('exitYes').onclick = function () {
+        var h = NET.hostSession();
+        if (h) { net.send({ t: 'host', code: h.code, token: h.token }); net.send({ t: 'close' }); NET.hostSession(null); }
+        setTimeout(function () { location.href = '../../games.html'; }, 200);
+    };
+})();
+</script>
+</body>
+</html>
