@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0d0f24">
+<meta name="theme-color" content="#07060b">
 <title>المافيا — العب من جوالك</title>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="../../auth/auth-client.js"></script>
 <script src="mafia-net.js"></script>
 <script src="mafia-looks.js"></script>
 <style>
-:root { --bg: #0d0f24; --card: #171a38; --card2: #1e2247; --ink: #f6f3ff; --mute: #a9a6c6; --line: rgba(255,255,255,.12); --gold: #ffcc4d; --red: #e2483d; --green: #2fb36a; --blue: #3e8ef0; }
+:root { /* هوية ألعاب أيمن (نفس روليت الإقصاء): بنفسجي على خلفية داكنة */
+    --bg: #07060b; --card: #13111b; --card2: #1c1828; --ink: #f4f2f8; --mute: #a8a3b5; --line: rgba(255,255,255,.09);
+    --gold: #a78bfa; --c2: #c4b5fd; --c3: #ddd6fe; --g1: #7c3aed; --g2: #a855f7; --red: #e2483d; --green: #2fb36a; --blue: #3e8ef0; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Zain, "Segoe UI", Tahoma, sans-serif; direction: rtl; }
+html, body { margin: 0; background: radial-gradient(700px 500px at 100% -10%, rgba(124,58,237,.2), transparent 65%), radial-gradient(600px 500px at -10% 60%, rgba(139,92,246,.1), transparent 65%), var(--bg); background-attachment: fixed; color: var(--ink); font-family: 'IBM Plex Sans Arabic', "Segoe UI", Tahoma, sans-serif; direction: rtl; }
 body { min-height: 100dvh; padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
 button, input { font-family: inherit; }
 .wrap { max-width: 480px; margin: 0 auto; }
@@ -23,19 +25,20 @@ h1 { font-size: 30px; font-weight: 900; margin: 16px 0 4px; }
 h2 { font-size: 22px; font-weight: 900; margin: 16px 0 8px; }
 p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; margin-top: 12px; }
-.field { width: 100%; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: #0f1130; color: #fff; font-size: 20px; font-weight: 800; padding: 0 14px; outline: none; }
-.field:focus { border-color: var(--gold); }
+.field { width: 100%; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: rgba(255,255,255,.03); color: #fff; font-size: 20px; font-weight: 800; padding: 0 14px; outline: none; }
+.field:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(139,92,246,.18); }
 .code-in { text-align: center; letter-spacing: 10px; font-size: 32px; direction: ltr; }
-.btn { width: 100%; height: 54px; border-radius: 16px; border: 0; font-weight: 900; font-size: 20px; color: #1b1300; background: linear-gradient(180deg, #ffd96b, #f2b632); box-shadow: 0 5px 0 #a87710; margin-top: 12px; cursor: pointer; }
-.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #a87710; }
+.btn { width: 100%; height: 54px; border-radius: 16px; border: 0; font-weight: 900; font-size: 20px; color: #fff; background: linear-gradient(135deg, var(--g1), var(--g2)); box-shadow: 0 8px 24px rgba(139,92,246,.35); margin-top: 12px; cursor: pointer; }
+.btn:active { transform: scale(.98); }
 .btn[disabled] { filter: grayscale(1) brightness(.6); }
-.btn.ghost { background: rgba(255,255,255,.08); color: #fff; box-shadow: none; border: 1px solid var(--line); }
+.btn.ghost { background: rgba(139,92,246,.08); color: var(--c3); border-color: rgba(167,139,250,.28) !important; box-shadow: none; border: 1px solid var(--line); }
 .err { color: #ff8a80; font-weight: 800; min-height: 22px; margin-top: 8px; }
-.brand { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 900; font-size: 18px; color: var(--mute); }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 12px; font-weight: 600; font-size: 14px; color: var(--mute); }
+.brand img { height: 46px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(139,92,246,.45)); }
 
 /* محرر الشخصية — صف لكل خيار: العنوان يمين والاختيارات يسار */
 .preview { display: grid; place-items: center; padding: 6px; }
-.preview svg { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #2b2f63, #15183a); }
+.preview svg { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #3b2a6e, #16121f); box-shadow: 0 0 30px rgba(139,92,246,.3); }
 .opt-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
 .opt-row:first-of-type { border-top: 0; }
 .opt-row .lbl { font-weight: 800; font-size: 16px; text-align: right; flex: none; }
@@ -44,7 +47,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .sw { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
 .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
 .pill { flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; }
-.pill.on { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.pill.on { background: rgba(139,92,246,.28); color: #fff; border-color: var(--gold); box-shadow: 0 0 12px rgba(139,92,246,.35); }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
 .acct a { color: var(--gold); font-weight: 900; }
 .acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--card2); font-weight: 900; font-size: 22px; }
@@ -54,10 +57,10 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .acct .nm2 { font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct .sub2 { font-size: 14px; color: var(--mute); font-weight: 700; }
 .need-login { flex-direction: column; align-items: stretch; text-align: center; gap: 10px; }
-.need-login .btn { margin-top: 0; color: #1b1300; }
+.need-login .btn { margin-top: 0; color: #fff; }
 
 /* اللعبة */
-.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; background: var(--bg); }
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; background: rgba(7,6,11,.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .me { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 18px; }
 .me svg { width: 40px; height: 40px; border-radius: 50%; background: var(--card2); }
 .rolechip { padding: 6px 12px; border-radius: 999px; font-weight: 900; font-size: 15px; border: 0; color: #fff; cursor: pointer; }
@@ -74,17 +77,17 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--card); border: 2px solid transparent; cursor: pointer; width: 100%; color: #fff; text-align: right; font-size: 17px; font-weight: 800; }
 .prow .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .prow svg { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--card2); }
-.prow .num { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; background: #5b54d6; font-size: 14px; }
+.prow .num { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; background: rgba(139,92,246,.35); font-size: 14px; }
 .prow .tag { font-size: 14px; font-weight: 900; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); flex: none; }
-.prow.sel { border-color: var(--gold); background: #2a2650; }
+.prow.sel { border-color: var(--gold); background: rgba(139,92,246,.16); }
 .prow.dead { opacity: .45; cursor: default; }
 .prow[disabled] { cursor: default; }
-.note { padding: 12px 14px; border-radius: 14px; background: rgba(255,204,77,.1); color: #ffe7a6; font-weight: 800; margin-top: 10px; font-size: 16px; }
+.note { padding: 12px 14px; border-radius: 14px; background: rgba(139,92,246,.1); border: 1px solid rgba(167,139,250,.22); color: var(--c3); font-weight: 600; margin-top: 10px; font-size: 16px; }
 .res { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 12px; background: var(--card); margin-top: 6px; font-weight: 800; }
-.chatbox { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; padding: 8px; border-radius: 14px; background: #0b0c22; border: 1px solid var(--line); margin-top: 10px; }
+.chatbox { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; padding: 8px; border-radius: 14px; background: rgba(0,0,0,.3); border: 1px solid var(--line); margin-top: 10px; }
 .cm { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
 .cm b { color: var(--gold); font-weight: 900; }
-.cm.sys { color: #ffe7a6; text-align: center; font-size: 14px; }
+.cm.sys { color: #ddd6fe; text-align: center; font-size: 14px; }
 .cm.maf b { color: #ff8a80; }
 /* فقاعة رسالة مع زر رد */
 .bm { display: flex; flex-direction: column; gap: 3px; padding: 7px 10px 8px; border-radius: 4px 14px 14px 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
@@ -94,12 +97,12 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .bm .rp { border: 0; background: rgba(255,255,255,.08); color: #d9d6ff; font: inherit; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
 .bm .tx { font-size: 16px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
 .bm .qt { padding: 3px 8px; border-inline-start: 3px solid var(--gold); border-radius: 6px; background: rgba(0,0,0,.28); font-size: 12px; font-weight: 700; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.replybar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: rgba(255,204,77,.1); border: 1px solid rgba(255,204,77,.3); font-size: 13px; font-weight: 800; color: #ffe7a6; }
+.replybar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.3); font-size: 13px; font-weight: 800; color: #ddd6fe; }
 .replybar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.replybar button { border: 0; background: none; color: #ffe7a6; font-size: 18px; cursor: pointer; padding: 0 4px; }
+.replybar button { border: 0; background: none; color: #ddd6fe; font-size: 18px; cursor: pointer; padding: 0 4px; }
 .send { display: flex; gap: 8px; margin-top: 8px; }
 .send .field { height: 48px; font-size: 17px; }
-.send button { flex: none; width: 74px; height: 48px; border-radius: 14px; border: 0; background: var(--gold); font-weight: 900; font-size: 17px; }
+.send button { flex: none; width: 74px; height: 48px; border-radius: 14px; border: 0; background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; font-weight: 900; font-size: 17px; }
 .big { text-align: center; padding: 26px 10px; }
 .big .ic { font-size: 70px; }
 .big .tt { font-size: 28px; font-weight: 900; margin-top: 6px; }
@@ -109,7 +112,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 </head>
 <body>
 <div class="wrap">
-    <div class="brand">🔪 المافيا · ساحة القرية</div>
+    <div class="brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display='none'"><span>🔪 المافيا · ساحة القرية</span></div>
 
     <!-- 1) رقم الروم -->
     <section id="vCode" class="hide">
@@ -422,7 +425,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var G = S.G; if (!G || !G.me) return;
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
         $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
-        $('roleChip').style.background = S.hideRole ? '#3b3f63' : R.c;
+        $('roleChip').style.background = S.hideRole ? '#2a2438' : R.c;
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
 
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
@@ -438,7 +441,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
 
         if (ph === 'reveal') {
-            html += '<div class="role-card" style="background:linear-gradient(160deg,' + R.c + ',#1b1d3d)"><div class="ic">' + R.icon + '</div><div class="nm">أنت ' + R.n + '</div><div class="ds">' + R.desc + '</div>' +
+            html += '<div class="role-card" style="background:linear-gradient(160deg,' + R.c + ',#16121f)"><div class="ic">' + R.icon + '</div><div class="nm">أنت ' + R.n + '</div><div class="ds">' + R.desc + '</div>' +
                 (me.team === 'mafia' && mates.length ? '<div class="mates">فريقك: ' + mates.map(function (p) { return esc(p.name) + (p.role === 'disguised' ? ' 🎭' : ''); }).join('، ') + '</div>' : '') + '</div>' +
                 (G.districts > 1 ? '<div class="note">أنت في الحي ' + me.district + ' — شات الحي لأهل حيّك بس.</div>' : '') +
                 '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
