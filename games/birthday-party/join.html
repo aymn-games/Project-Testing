@@ -30,6 +30,11 @@
     button,input{ font-family:inherit; }
     .hidden{ display:none !important; }
     main{ min-height:100dvh; max-width:460px; margin:0 auto; padding:max(28px,env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:16px; justify-content:center; }
+    /* شعار ألعاب أيمن أعلى الصفحة: نسخة ذهبي وردي (brand/aymn-gold.png) بين خطين ذهبيين رفيعين */
+    .agp-brand{ display:flex; align-items:center; justify-content:center; gap:14px; margin:0 auto 14px; text-decoration:none; }
+    .agp-brand::before, .agp-brand::after{ content:''; flex:1; max-width:90px; height:1px; background:linear-gradient(90deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand::after{ background:linear-gradient(270deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand img{ height:44px; width:auto; display:block; }
     .hero{ text-align:center; }
     .hero small{ display:block; font:600 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
     .hero h1{ margin:4px 0 0; font:700 40px/1.25 'Aref Ruqaa',serif; color:var(--rose2); }
@@ -68,6 +73,7 @@
 </head>
 <body>
 <main>
+    <a class="agp-brand" href="../../" aria-label="ألعاب أيمن"><img src="brand/aymn-gold.png" alt="ألعاب أيمن" width="135" height="44"></a>
     <div class="hero">
         <small id="heroSmall">أهلاً فيك في</small>
         <h1 id="heroTitle">حفلة عيد الميلاد</h1>

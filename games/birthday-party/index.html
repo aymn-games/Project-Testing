@@ -33,6 +33,11 @@
     button,input{ font-family:inherit; }
     .hidden{ display:none !important; }
     main{ max-width:980px; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 16px 40px; }
+    /* شعار ألعاب أيمن أعلى الصفحة: نسخة ذهبي وردي (brand/aymn-gold.png) بين خطين ذهبيين رفيعين */
+    .agp-brand{ display:flex; align-items:center; justify-content:center; gap:14px; margin:0 auto 14px; text-decoration:none; }
+    .agp-brand::before, .agp-brand::after{ content:''; flex:1; max-width:90px; height:1px; background:linear-gradient(90deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand::after{ background:linear-gradient(270deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand img{ height:44px; width:auto; display:block; }
     header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
     header h1{ margin:0; font:700 34px/1.2 'Aref Ruqaa',serif; color:var(--rose2); }
     .net{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:var(--card); border:1px solid var(--line); font:600 13px 'IBM Plex Sans Arabic'; }
@@ -149,6 +154,7 @@
 </head>
 <body>
 <main>
+    <a class="agp-brand" href="../../" aria-label="ألعاب أيمن"><img src="brand/aymn-gold.png" alt="ألعاب أيمن" width="135" height="44"></a>
     <header>
         <h1>حفلة عيد الميلاد</h1>
         <span class="net" id="net"><i></i><span id="netTxt">جاري الاتصال…</span></span>

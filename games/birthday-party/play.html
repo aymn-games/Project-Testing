@@ -53,6 +53,10 @@
     .group{ display:flex; gap:8px; }
     .pill.party.on{ background:linear-gradient(180deg,#c86bff,#8b3fd9); box-shadow:0 0 22px rgba(200,107,255,.55); }
     body.party{ --glass:rgba(48,20,52,.55); --line:rgba(214,140,255,.45); --ink:#fde7f3; }
+    /* شعار ألعاب أيمن فوق عنوان الحفلة (نسخة فاتحة بظل خفيف تنقرا فوق المشهد) */
+    .titlebox{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; pointer-events:none; }
+    .titlebox .title{ flex:none; max-width:100%; }
+    .brandmark{ height:30px; width:auto; display:block; filter:drop-shadow(0 1px 2px rgba(90,20,50,.55)) drop-shadow(0 0 10px rgba(150,40,90,.35)); }
     body.party .title{ text-shadow:0 0 18px rgba(255,79,174,.9),0 2px 3px rgba(40,0,30,.7); }
 
     .hint{ position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:9px 18px; border-radius:999px; background:var(--glass); border:1px solid var(--line);
@@ -83,11 +87,11 @@
     @keyframes sp{ to{ transform:rotate(360deg); } }
     .loader.fail .spin{ display:none; }
     @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
-    @media (max-width:520px){ .title{ font-size:19px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
+    @media (max-width:520px){ .title{ font-size:19px; } .brandmark{ height:24px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
     /* الجوال بالعرض (اللعب الأساسي): شريط علوي أصغر، العصا أصغر، التلميح تحت بالنص */
     @media (orientation:landscape) and (max-height:520px){
         html.is-touch .top{ top:max(8px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
-        html.is-touch .pill{ height:34px; font-size:12px; } html.is-touch .title{ font-size:18px; }
+        html.is-touch .pill{ height:34px; font-size:12px; } html.is-touch .title{ font-size:18px; } html.is-touch .brandmark{ height:22px; }
         html.is-touch .joy{ width:108px; height:108px; bottom:max(14px,env(safe-area-inset-bottom)); left:max(18px,env(safe-area-inset-left)); }
         html.is-touch .joy-knob{ width:46px; height:46px; margin:-23px 0 0 -23px; }
         html.is-touch .hint{ top:auto; bottom:max(10px,env(safe-area-inset-bottom)); font-size:12px; padding:6px 14px; }
@@ -120,6 +124,7 @@
     .soundtip{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:14px 26px; border-radius:999px; border:0; font:800 17px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 10px 30px rgba(212,90,138,.45); cursor:pointer; z-index:6; }
     .endscreen{ position:fixed; inset:0; z-index:11; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 40%,rgba(255,243,248,.93),rgba(243,198,218,.96)); }
     .endscreen h2{ margin:0 0 8px; font:700 clamp(40px,8vw,84px)/1.25 'Aref Ruqaa',serif; color:#d6407f; }
+    .endscreen .endbrand{ display:block; height:clamp(40px,7vh,58px); width:auto; margin:clamp(22px,5vh,40px) auto 0; opacity:.9; }
     .endscreen p{ margin:0 0 18px; font:700 clamp(16px,3vw,26px) 'IBM Plex Sans Arabic'; color:#9b6683; }
     /* شاشة البث (صفحة المذيع، host=1): بدون أزرار، والنصوص أكبر عشان تنقرا بالبث */
     body.stream .top .pill, body.stream .hint, body.stream .joy{ display:none !important; }
@@ -243,7 +248,7 @@
         <a class="pill" href="../../games.html" aria-label="خروج">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="lbl">خروج</span>
         </a>
-        <div class="title" id="title">حفلة عيد الميلاد</div>
+        <div class="titlebox"><img class="brandmark" src="brand/aymn-light.png" alt="ألعاب أيمن" width="92" height="30"><div class="title" id="title">حفلة عيد الميلاد</div></div>
         <div class="group">
             <button class="pill hidden" id="lookBtn" type="button" aria-label="شكلي">✨<span class="lbl">شكلي</span></button>
             <button class="pill party" id="partyBtn" type="button" aria-pressed="false">
@@ -307,7 +312,7 @@
     <p class="bd-ar" dir="rtl" lang="ar" data-seg="ar"></p>
     <p class="bd-en" dir="ltr" lang="en" data-seg="en"></p>
 </div>
-<div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a></div></div>
+<div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a><img class="endbrand" src="brand/aymn-gold.png" alt="ألعاب أيمن" width="160" height="52"></div></div>
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
     <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
