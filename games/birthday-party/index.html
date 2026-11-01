@@ -45,6 +45,7 @@
     .net.on i{ background:#22c55e; }
     .card{ background:var(--card); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 10px 30px rgba(201,79,126,.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
     .card h2{ margin:0 0 14px; font:900 22px/1.2 'Zain'; }
+    .card .lead{ margin:0 0 16px; font:500 15px/1.7 'IBM Plex Sans Arabic'; color:var(--soft); }
     /* صف إعداد: العنوان يمين والحقل يسار (قاعدة CLAUDE.md) */
     .row{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,240,246,.5)); border:1px solid var(--line); }
     .row label{ text-align:right; font-weight:700; }
@@ -161,6 +162,13 @@
     </header>
 
     <!-- إنشاء الحفلة -->
+    <!-- بدون حساب: تسجيل الدخول أول (حفلة الاستريمر مربوطة بحسابه، فيرجع لها من أي جهاز) -->
+    <section class="card hidden" id="login">
+        <h2>سجّل دخولك وأقم حفلتك</h2>
+        <p class="lead">أي استريمر يقدر يقيم حفلة عيد ميلاد لمتابعينه. الحفلة تنربط بحسابك، فتقدر تفتح لوحتها من أي جهاز.</p>
+        <div class="actions"><a class="btn" id="loginBtn" href="../../login.html">تسجيل الدخول</a></div>
+    </section>
+
     <section class="card hidden" id="create">
         <h2>حفلة جديدة</h2>
         <div class="row">
@@ -244,7 +252,8 @@
     const $ = id => document.getElementById(id);
     const ERR = {
         disabled: 'الحفلات متوقفة حالياً على السيرفر.',
-        busy: 'فيه حفلتين شغالة الحين — جرّب بعد شوي.',
+        busy: 'الحفلات ممتلئة الحين — جرّب بعد شوي.',
+        login: 'انتهت جلستك — سجّل دخولك مرة ثانية.',
         nocode: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         hostkey: 'هذا الرابط ما يسمح بإنشاء حفلة — افتح الرابط الخاص بالمذيع.',
@@ -308,6 +317,10 @@
     const urlKey = new URLSearchParams(location.search).get('k');
     if (urlKey) { writeJSON('party-host-key', urlKey); const u = new URL(location.href); u.searchParams.delete('k'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
     const hostKey = () => readJSON('party-host-key') || '';
+    // حساب الموقع: أي استريمر مسجّل دخوله يقيم حفلته (بدون مفتاح)
+    const authTok = () => (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || '';
+    // صفحة الدخول ترجعه هنا بعد التسجيل (next = مسار نسبي من جذر الموقع)
+    $('loginBtn').href = '../../login.html?next=' + encodeURIComponent('games/birthday-party/index.html');
 
     const link = (q) => new URL('join.html?' + q, location.href).href;
     const guestUrl = () => link('code=' + state.code);
@@ -316,8 +329,11 @@
         if (!window.qrcode) { setTimeout(() => qr(img, url), 200); return; }
         const q = window.qrcode(0, 'M'); q.addData(url); q.make(); img.src = q.createDataURL(8, 2);
     }
+    function showLogin() {
+        $('room').classList.add('hidden'); $('create').classList.add('hidden'); $('login').classList.remove('hidden');
+    }
     function showCreate(msg) {
-        $('room').classList.add('hidden'); $('create').classList.remove('hidden');
+        $('room').classList.add('hidden'); $('login').classList.add('hidden'); $('create').classList.remove('hidden');
         $('createBtn').disabled = false;
         $('createMsg').classList.toggle('hidden', !msg); $('createMsg').textContent = msg || '';
     }
@@ -375,7 +391,12 @@
         });
     }
 
-    function askCurrent() { if (hostKey()) net.send({ t: 'host', key: hostKey(), current: true }); else showCreate(ERR.hostkey); }
+    // الحفلة الشغالة: بالمفتاح الخاص لو موجود، وإلا بحساب الموقع (حفلة هذا الحساب)
+    function askCurrent() {
+        if (hostKey()) net.send({ t: 'host', key: hostKey(), current: true });
+        else if (authTok()) net.send({ t: 'host', auth: authTok(), current: true });
+        else showLogin();
+    }
     const net = connect({
         onStatus: on => { $('net').classList.toggle('on', on); $('netTxt').textContent = on ? 'متصل' : 'جاري إعادة الاتصال…'; },
         // الجهاز حافظ حفلته ← يرجع لها. غير كذا (جهاز جديد بنفس رابط المذيع) ← نسأل السيرفر عن الحفلة الشغالة بالمفتاح،
@@ -396,7 +417,8 @@
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'end' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 // الحفلة المحفوظة بالجهاز انتهت/انمسحت ← نشوف لو فيه حفلة شغالة ثانية بالمفتاح
-                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; if (hostKey()) { askCurrent(); return; } }
+                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; if (hostKey() || authTok()) { askCurrent(); return; } }
+                if (m.err === 'login') { showLogin(); return; }
                 if (m.err === 'none') { showCreate(); return; } // ما فيه حفلة شغالة ← إنشاء
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
             }
@@ -409,8 +431,10 @@
         const schedule = createForm.read();
         if (!schedule) { showCreate('اختر تاريخ الحفل وساعة البداية'); return; }
         if (schedule.startAt < Date.now() - 60000) { showCreate(ERR.schedule); return; }
+        const who = hostKey() ? { key: hostKey() } : { auth: authTok() };
+        if (!who.key && !who.auth) { showLogin(); return; }
         $('createBtn').disabled = true;
-        net.send({ t: 'host', girlName, key: hostKey(), schedule, chars: segValue($('cChars')) });
+        net.send(Object.assign({ t: 'host', girlName, schedule, chars: segValue($('cChars')) }, who));
     });
 
     // ---- الشخصيات: الجديدة (rig) أو الكلاسيكية ----
@@ -568,8 +592,8 @@
         try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { if (b.dataset.copy === 'girl') b.textContent = 'ما قدرنا ننسخ'; else prompt('انسخ الرابط:', url); }
         setTimeout(() => { b.textContent = 'نسخ الرابط'; }, 1500);
     }));
-    // بدون مفتاح ولا حفلة محفوظة: نموذج الإنشاء على طول (برسالة المفتاح) — غير كذا ننتظر رد السيرفر
-    if (!readJSON('party-host') && !hostKey()) showCreate(ERR.hostkey);
+    // بدون حفلة محفوظة ولا مفتاح ولا حساب: صفحة تسجيل الدخول على طول — غير كذا ننتظر رد السيرفر
+    if (!readJSON('party-host') && !hostKey() && !authTok()) showLogin();
 </script>
 </body>
 </html>
