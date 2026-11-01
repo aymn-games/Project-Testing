@@ -2,9 +2,10 @@
 // لحن «Happy Birthday» (ملكية عامة) بتوزيعات مختلفة لكل مرحلة، وآلات مركّبة (synth):
 // بيانو كهربائي FM، باد، باص، بلَك، ليد، أجراس، نحاس، وطبول مصنوعة من الموجات والضجيج.
 //
-//   lobby.mp3  — لو-فاي هادي (84 BPM) للانتظار والتهاني، يتكرر بدون قطع
-//   reveal.mp3 — فانفير الافتتاح (14ث) — بس مع --reveal: الحفلة الحين تستخدم أغنية يرفعها صاحب المشروع
-//   dance.mp3  — دانس بوب (124 BPM) للرقص والرقص الحر، يتكرر بدون قطع
+//   الحفلة الحين ما تستخدم أي ملف من هذي (كلها أغاني يرفعها صاحب المشروع، والخلفية bg.mp3)، فما يتولد شي إلا بالخيار:
+//   lobby.mp3  — لو-فاي هادي (84 BPM)، يتكرر بدون قطع — بس مع --lobby
+//   reveal.mp3 — فانفير الافتتاح (14ث) — بس مع --reveal
+//   dance.mp3  — دانس بوب (124 BPM)، يتكرر بدون قطع — بس مع --dance
 //   (موسيقى الكيكة ما عادت تتولد: التجمّع حول الكيكة cakesong.mp3 ورقص الكيكة cutsong.mp3 أغاني يرفعها صاحب المشروع)
 //
 // التشغيل: node tools/make-music.mjs  (يحتاج ffmpeg) ← games/birthday-party/music/*.mp3
@@ -247,8 +248,9 @@ function lobby() {
 
 function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  const jobs = [['lobby', lobby, -19], ['dance', dance, -15]];
-  if (process.argv.includes('--reveal')) jobs.unshift(['reveal', reveal, -14]);
+  // تنبيه: الملف الناتج يكتب فوق أي ملف بنفس الاسم بمجلد الموسيقى
+  const jobs = [['reveal', reveal, -14], ['lobby', lobby, -19], ['dance', dance, -15]].filter(([n]) => process.argv.includes('--' + n));
+  if (!jobs.length) console.log('ما فيه شي يتولد: اختر --lobby أو --dance أو --reveal');
   for (const [name, fn, lufs] of jobs) {
     const t0 = Date.now(); writeMp3(name, fn(), lufs);
     console.log(name + '.mp3', (fs.statSync(path.join(OUT, name + '.mp3')).size / 1024).toFixed(0) + 'KB', ((Date.now() - t0) / 1000).toFixed(1) + 's');
