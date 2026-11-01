@@ -439,12 +439,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     var PRIV = { mafia: { n: '🔪 شات المافيا', h: 'كلّم فريقك بسرية…' }, doctor: { n: '🩺 شات الأطباء', h: 'نسّقوا مين تحمون…' }, detective: { n: '🕵️ شات المحققين', h: 'شاركوا نتائج الفحص…' } };
     // الشاتات الخاصة: المافيا، وشات الأطباء/المحققين (لو أكثر من واحد) — والمجنّد يبقى بشات دوره القديم كمان
     S.privOpen = ''; S.privSeen = {}; S.pdraft = '';
-    function privChans(G) {
-        var me = G.me, out = []; if (!me.alive) return out;
-        if (me.team === 'mafia') out.push('mafia');
-        ['doctor', 'detective'].forEach(function (r) { if ((me.role === r || me.formerRole === r) && G.settings[r + 's'] > 1) out.push(r); });
-        return out;
-    }
+    function privChans(G) { return (G.me && G.me.privChats) || []; }   // الخادم يحددها: بس لو معك أحد حي بنفس الشات
     function privChan(G) { var l = privChans(G); return l.indexOf(S.privOpen) >= 0 ? S.privOpen : l[0] || null; }
     function privateHtml(G) {
         var chans = privChans(G); if (!chans.length) return '';
@@ -526,7 +521,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             g.style.justifyContent = 'center'; g.style.gap = gap + 'px';
             g.style.setProperty('--ts', Math.floor(size) + 'px');
             // بالوضع الطولي: لو البطاقات كلها داخلة، الشات ياخذ باقي المساحة تحتها
-            if (fits && getComputedStyle(lay).flexDirection === 'column' && !lay.classList.contains('solo')) {
+            if (fits && getComputedStyle(lay).flexDirection === 'column') {
                 var rws = Math.ceil(n / cols);
                 g.style.flex = 'none'; g.style.height = Math.ceil(rws * size + gap * (rws - 1) + 4) + 'px'; pa.style.flex = '0 0 auto';
             }

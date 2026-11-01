@@ -29,6 +29,7 @@ var REVEAL_MS = 8000;
 var VERDICT_MS = 12000;
 var CHAT_MAX = 300;
 var DISTRICT_SIZE = 25;
+var Settings = require('./mafia-settings');
 var RECRUIT_CAP = 0.30;
 var CARDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
 var CARD_NAMES = { recruit: 'التجنيد', shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' };
@@ -82,7 +83,7 @@ function createGame(roster, settings, hooks) {
                 mafiaSince: 0, notices: [], inspections: []
             };
         }),
-        cards: shuffle(CARDS.filter(function (c) { return S['card_' + c] !== false; })).slice(0, S.cardsCount == null ? 3 : S.cardsCount),   // من الكروت المفعّلة بالإعدادات
+        cards: shuffle(Settings.enabledCards(S, roster.length)).slice(0, S.cardsCount == null ? 3 : S.cardsCount),   // المفعّلة واللي لها فايدة بهالمباراة
         usedCards: [], effects: [], silenced: [], silenceNext: [],
         night: null, seq: [], chat: [], votes: {}, verdict: null, winner: null
     };
@@ -305,6 +306,15 @@ function createGame(roster, settings, hooks) {
     function tick(now) { if (G.endsAt && now >= G.endsAt) next(); }
 
     function roleChatOpen(ch) { return (ch === 'doctor' ? S.doctors : S.detectives) > 1; }
+    // الشاتات الخاصة اللي لها فايدة لهاللاعب: لازم يكون معه أحد حي بنفس الشات (مافيا لحاله أو طبيب وحيد = بدون شات)
+    function privChatsOf(me) {
+        var out = []; if (!me || !me.alive) return out;
+        if (me.faction === 'mafia' && aliveMafia().length > 1) out.push('mafia');
+        ['doctor', 'detective'].forEach(function (ch) {
+            if (roleChatOpen(ch) && inRoleChat(me, ch) && G.players.filter(function (p) { return inRoleChat(p, ch); }).length > 1) out.push(ch);
+        });
+        return out;
+    }
     function inRoleChat(p, ch) { return !!p && p.alive && (p.role === ch || p.formerRole === ch); }   // المجنّد يبقى بشات دوره القديم
 
     function chat(me, arg) {
@@ -440,6 +450,7 @@ function createGame(roster, settings, hooks) {
         if (me) {
             v.me = {
                 id: me.id, role: me.role, team: me.faction, alive: me.alive, district: me.district, formerRole: me.formerRole || null,
+                privChats: privChatsOf(me),
                 silenced: G.phase === 'day' && G.silenced.indexOf(me.id) >= 0,
                 notices: me.notices.slice(-20), inspections: me.role === 'detective' || me.inspections.length ? me.inspections : undefined
             };

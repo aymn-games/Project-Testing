@@ -439,6 +439,12 @@ button { font-family: inherit; cursor: pointer; }
         $('round').classList.toggle('hide', !started);
         // سجل المجريات يبان طول المباراة (يختفي وقت المشاهد السينمائية بس)
         $('chat').classList.toggle('off', !(G && G.phase !== 'dawn' && G.phase !== 'verdict' && G.phase !== 'over'));
+        // اللوحات الجانبية (الشات يمين، ملخص الليلة يسار) ما تغطي اللاعبين: نزيح المشهد للمساحة الفاضية
+        if (stage && stage.setViewShift && (!tickUI.vsAt || now - tickUI.vsAt > 250)) {
+            tickUI.vsAt = now;
+            var pw = function (id) { var el = $(id); if (el.classList.contains('off')) return 0; var r = el.getBoundingClientRect(); return r.width + 16; };
+            stage.setViewShift((pw('chat') - pw('recap')) / 2 / innerWidth);
+        }
         // صوت مع كل دور ليل جديد
         var tk = G && G.phase === 'night' ? G.turn + G.round : '';
         if (tk && tk !== tickUI.lastTurn) window.MafiaSFX.cue({ mafia: 'eyes', doctor: 'heal', detective: 'paper' }[G.turn] || 'whoosh', {});

@@ -795,8 +795,16 @@ export function createStage(container, getFrame, opts) {
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
+    // إزاحة الصورة أفقياً (نسبة من العرض) عشان لوحات البث الجانبية ما تغطي اللاعبين — تتحرك بنعومة
+    let viewW = 1, viewH = 1, viewShift = 0, viewShiftTarget = 0;
+    function applyViewShift() {
+        viewShift += (viewShiftTarget - viewShift) * 0.08;
+        if (Math.abs(viewShift) < 0.0005 && viewShiftTarget === 0) { viewShift = 0; if (camera.view && camera.view.enabled) camera.clearViewOffset(); return; }
+        camera.setViewOffset(viewW, viewH, viewShift * viewW, 0, viewW, viewH);
+    }
     function resize() {
         const w = container.clientWidth || innerWidth, h = container.clientHeight || innerHeight;
+        viewW = w; viewH = h;
         renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
         composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
     }
@@ -1183,6 +1191,7 @@ export function createStage(container, getFrame, opts) {
         camera.position.copy(camPos).add(new THREE.Vector3((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake));
         camera.lookAt(camLook);
         perf(dt);
+        applyViewShift();
         composer.render();
     }
     // وضع خفيف تلقائي: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 4ث) نطفي الظلال والتوهّج وننزل الدقة
@@ -1205,6 +1214,7 @@ export function createStage(container, getFrame, opts) {
     return {
         shotInfo: () => info,
         /** موضع لاعب على الشاشة (0..1) — لعرض عناصر HTML فوق الشخصية إذا احتجنا */
+        setViewShift(f) { viewShiftTarget = Math.max(-0.25, Math.min(0.25, +f || 0)); },
         screenOf(id) { const v = chars.get(id); if (!v) return null; const p = v.group.position.clone(); p.y += 2.5; p.project(camera); return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 }; },
         dispose() { stopped = true; removeEventListener('resize', resize); renderer.dispose(); }
     };

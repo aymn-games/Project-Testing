@@ -61,7 +61,15 @@
     }, function () { net.send({ t: 'schema' }); });
 
     function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
-    function enabledCards(s) { return ['recruit', 'shield', 'reveal', 'mislead', 'silence'].filter(function (c) { return s['card_' + c] !== false; }); }
+    // صفوف ما لها فايدة بهالإعدادات تختفي (نفس منطق الخادم mafia-settings.cardUseful)
+    var HIDE = {
+        doctorSec: function (s) { return !s.doctors; }, detectiveSec: function (s) { return !s.detectives; },
+        disguised: function (s) { return !s.detectives; },
+        card_shield: function (s) { return !s.detectives; }, card_mislead: function (s) { return !s.detectives; },
+        card_reveal: function (s) { return !s.doctors && !s.detectives; }
+    };
+    function hidden(k) { return HIDE[k] ? HIDE[k](cur) : false; }
+    function enabledCards(s) { return ['recruit', 'shield', 'reveal', 'mislead', 'silence'].filter(function (c) { return s['card_' + c] !== false && !hidden('card_' + c); }); }
     function minPlayers(s) { return Math.max(5, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1, s.detectives > 0 ? 6 : 0); }
 
     function render() {
@@ -70,6 +78,7 @@
         schema.forEach(function (g, gi) {
             html += '<section class="sec' + anim + '" style="animation-delay:' + gi * 0.06 + 's"><div class="sec-h"><span class="sec-n">' + (gi + 1) + '</span><span class="sec-t">' + esc(g.n) + '</span></div>';
             g.f.forEach(function (f) {
+                if (hidden(f.k)) return;
                 var ctl = f.t === 'bool'
                     ? '<button type="button" class="toggle' + (cur[f.k] ? ' on' : '') + '" role="switch" aria-checked="' + !!cur[f.k] + '" aria-label="' + esc(f.n) + '" data-k="' + f.k + '"><span></span></button>'
                     : '<div class="stepper"><button type="button" data-k="' + f.k + '" data-d="-1" aria-label="إنقاص">−</button><output>' + cur[f.k] + (f.u ? ' ' + f.u : '') + '</output><button type="button" data-k="' + f.k + '" data-d="1" aria-label="زيادة">+</button></div>';
@@ -98,6 +107,7 @@
         if (f.t === 'bool') cur[k] = !cur[k];
         else cur[k] = Math.max(f.min, Math.min(f.max, cur[k] + f.step * Number(b.getAttribute('data-d'))));
         if (cur.disguised > cur.mafia) cur.disguised = cur.mafia;   // المتخفين من ضمن المافيا
+        if (!cur.detectives) cur.disguised = 0;                     // بدون محقق ما له معنى
         cur.cardsCount = Math.min(cur.cardsCount, enabledCards(cur).length);   // ما يتعدى الكروت المفعّلة
         NET.setup(cur); render();
     });

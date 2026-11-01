@@ -57,18 +57,26 @@ function validate(input) {
             }
         });
     });
-    out.disguised = Math.min(out.disguised, out.mafia);   // المتخفين من ضمن المافيا
+    out.disguised = out.detectives ? Math.min(out.disguised, out.mafia) : 0;   // المتخفين من ضمن المافيا، ولا لهم معنى بدون محقق
     out.cardsCount = Math.min(out.cardsCount, enabledCards(out).length);   // ما يتعدى عدد الكروت المفعّلة
     return out;
 }
 
 var CARD_IDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
-/** الكروت المفعّلة بالإعدادات */
-function enabledCards(s) { return CARD_IDS.filter(function (c) { return s['card_' + c] !== false; }); }
+/** هل للكرت فايدة بهالإعدادات؟ الحماية والتضليل يحتاجون محقق، وكشف الهوية يحتاج دور خاص بالمدينة (طبيب/محقق)،
+ *  والتجنيد يحتاج روم كبيرة كفاية عشان ما يتعدى 30% (n = عدد اللاعبين لو معروف). */
+function cardUseful(c, s, n) {
+    if (c === 'shield' || c === 'mislead') return s.detectives > 0;
+    if (c === 'reveal') return s.doctors + s.detectives > 0;
+    if (c === 'recruit' && n) return (s.mafia + 1) / n <= 0.30;
+    return true;
+}
+/** الكروت المفعّلة بالإعدادات واللي لها فايدة */
+function enabledCards(s, n) { return CARD_IDS.filter(function (c) { return s['card_' + c] !== false && cardUseful(c, s, n); }); }
 
 /** أقل عدد لاعبين لهالإعدادات: 5 على الأقل، والمافيا أقل من الباقين، ومواطن واحد على الأقل، والمحقق من 6 لاعبين. */
 function minPlayers(s) {
     return Math.max(MIN_ROOM, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1, s.detectives > 0 ? 6 : 0);
 }
 
-module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, enabledCards: enabledCards, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };
+module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, enabledCards: enabledCards, cardUseful: cardUseful, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };
