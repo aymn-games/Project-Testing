@@ -467,6 +467,10 @@
         // بطولها بالضبط (music/slowsong.mp3 = 120.8ث)، وبعدها يرجع الرقص الحر العادي بموسيقاه وأنواره
         const SLOW_MS = 120800;
         let slowT = 0;
+        // رجوع للصفحة (من الخلفية أو زر الرجوع): نعيد تطبيق المشهد بوقته، فالصوت يرجع لمقطع المشهد ومكانه بالضبط
+        const resync = () => { if (document.visibilityState !== 'visible' || !phase) return; applied = null; applyPhase(); };
+        document.addEventListener('visibilitychange', resync);
+        addEventListener('pageshow', e => { if (e.persisted) resync(); });
         const faceCake = (x, z) => Math.atan2(CAKE_C[0] - x, CAKE_C[1] - z);
         const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
             : CAKE_PH.includes(p) ? (myRole === 'girl' ? 0 : faceCake(...(myTarget || [hall.getLocal().x, hall.getLocal().z])))
@@ -552,7 +556,7 @@
             hall.setSoft(slowLeft > 0);
             if (slowLeft > 0) {
                 hall.flutter(slowLeft / 1000, { wide: true });
-                slowT = setTimeout(() => { if (phase && phase.p === 'free') { hall.setSoft(false); music.play('dance'); } }, slowLeft);
+                slowT = setTimeout(() => { if (phase && phase.p === 'free') { hall.setSoft(false); music.play('bg'); } }, slowLeft);
             }
             crowdPhase();
             // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
@@ -600,9 +604,12 @@
             else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') {
                 // أول الرقص: أغنية الافتتاح تكمل لين آخرها (بدأت قبل الرقص بـ 12ث) وبعدها أغنية الرقص
                 if (p === 'dance') music.play('reveal', { from: (since + 12000) / 1000 });
-                music.play('dance');
+                music.play('bg', { wait: p === 'dance' });
             }
-            else if (p !== 'reveal' && p !== 'celebrate') music.play('lobby');
+            // أغنية القص: مربوطة بمشهد الاحتفال بوقته (اللي يرجع للصفحة بالنص يسمعها من نفس اللحظة)
+            else if (p === 'celebrate') music.play('cutsong', { from: since / 1000 });
+            // باقي المشاهد (اللوبي، الدخول، التجمّع، الكيكة، الصورة…): موسيقى الخلفية بصوت منخفض
+            else if (p !== 'reveal') music.play('bg');
             } catch (e) { console.error('party: phase scene', e); }
             // إشعارات المراحل (بس أول ثواني المرحلة — اللي يرجع متأخر ما يشوفها من جديد)
             if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');

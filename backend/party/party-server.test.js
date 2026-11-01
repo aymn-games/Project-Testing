@@ -680,3 +680,27 @@ test('any streamer account hosts its own party; same account on another device g
         [bad, a1, a2, b1, a3, a4, k].forEach(function (c) { c.close(); }); srv.close();
     } finally { party._setHostUser(null); }
 });
+
+test('close: host ends the party right away from any phase (no outro); guests cannot; the account can create a new one', async function () {
+    reset(); party._setEnabled(true);
+    party._setHostUser(function (tok) { return tok === 'tok-a' ? { id: 1 } : null; });
+    try {
+        var srv = await startServer(), port = srv.address().port;
+        var h = await client(port); h.send({ t: 'host', auth: 'tok-a', girlName: 'سارة', schedule: SCHED() });
+        var hd = await h.wait(function (x) { return x.t === 'hosted'; });
+        var g = await client(port); g.send({ t: 'join', code: hd.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome' || x.t === 'closed'; });
+        await sleep(1100); g.send({ t: 'close' });
+        assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'close'; })).err, 'host-only');
+        h.send({ t: 'close' });
+        await g.wait(function (x) { return x.t === 'phase' && x.p === 'ended'; });
+        assert.equal(party._mgr.phaseOf(hd.code).p, 'ended');
+        await sleep(1100); h.send({ t: 'close' });
+        assert.equal((await h.wait(function (x) { return x.t === 'err' && x.of === 'close'; })).err, 'phase');
+        // نفس الحساب: ما فيه حفلة شغالة، وينشئ وحدة جديدة برقم ثاني
+        var n = await client(port); n.send({ t: 'host', auth: 'tok-a', current: true });
+        assert.equal((await n.wait(function (x) { return x.t === 'err'; })).err, 'none');
+        var n2 = await client(port); n2.send({ t: 'host', auth: 'tok-a', girlName: 'نورة', schedule: SCHED() });
+        assert.notEqual((await n2.wait(function (x) { return x.t === 'hosted'; })).code, hd.code);
+        [h, g, n, n2].forEach(function (c) { c.close(); }); srv.close();
+    } finally { party._setHostUser(null); }
+});
