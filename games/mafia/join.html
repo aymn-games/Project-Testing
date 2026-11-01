@@ -371,7 +371,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
 
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
-        var key = JSON.stringify([G.phase, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.chan, S.filter]);
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.chan, S.filter]);
         if (key === lastRenderKey) return; lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
         var focusId = document.activeElement && document.activeElement.id;
@@ -387,7 +387,16 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 (G.districts > 1 ? '<div class="note">أنت في الحي ' + me.district + ' — شات الحي لأهل حيّك بس.</div>' : '') +
                 '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
         } else if (ph === 'night') {
-            if (!alive) html += '<div class="big"><div class="ic">🌙</div><div class="tt">الليل</div></div>';
+            // الليل بأدوار: كل دور يشتغل بوقته، والباقين ينتظرون
+            var myTurn = me.team === 'mafia' ? 'mafia' : me.role === 'doctor' || me.role === 'detective' ? me.role : null;
+            var ORDER = ['mafia', 'doctor', 'detective'], TN = { mafia: 'المافيا', doctor: 'الطبيب', detective: 'المحقق' };
+            var wait = function (ic, tt) { return '<div class="big"><div class="ic">' + ic + '</div><div class="tt">' + tt + '</div><p>الحين دور ' + TN[G.turn] + '. تابع البث.</p></div>'; };
+            if (!alive) html += '<div class="big"><div class="ic">🌙</div><div class="tt">الليل · دور ' + TN[G.turn] + '</div></div>';
+            else if (myTurn && G.turn !== myTurn) {
+                html += ORDER.indexOf(G.turn) < ORDER.indexOf(myTurn) ? wait('⏳', 'انتظر… دورك بعد شوي') : wait('✔️', 'خلّصت دورك الليلة');
+                if (me.team === 'mafia') html += '<h2>شات المافيا السري</h2>' + chatHtml(G, ['mafia']);
+                if (me.role === 'detective') html += inspections(G);
+            }
             else if (me.team === 'mafia') html += mafiaNight(G) + '<h2>شات المافيا السري</h2>' + chatHtml(G, ['mafia']);
             else if (me.role === 'doctor') {
                 html += '<h2>🩺 مين تحمي الليلة؟</h2><p>ما تكرر نفس الشخص ليلتين ورا بعض، وتحمي نفسك مرة وحدة بالمباراة' + (me.doctorSelfUsed ? ' (استخدمتها)' : '') + '.</p>' + playerRows(G, {
@@ -401,7 +410,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                     sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍 تحت التحقيق' : ''; }
                 }) + inspections(G);
             } else {
-                html += '<div class="big"><div class="ic">😴</div><div class="tt">نام يا مواطن…</div><p>أصحاب الأدوار يختارون الحين. لا تشيل عينك عن البث!</p></div>';
+                html += '<div class="big"><div class="ic">😴</div><div class="tt">نام يا مواطن…</div><p>الحين دور ' + TN[G.turn] + '. لا تشيل عينك عن البث!</p></div>';
             }
         } else if (ph === 'dawn') {
             html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div><p>مشاهد الليلة شغالة على شاشة البث الحين.</p></div>' + noticesHtml(G);
@@ -455,7 +464,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     setInterval(function () {
         var G = S.G; if (!G || S.view !== 'vGame') return;
         var names = { reveal: 'كشف الأدوار', night: '🌙 الليل', dawn: '🎬 مشاهد الليلة', day: '☀️ النقاش', vote: '🗳️ التصويت', verdict: '⚖️ النتائج', over: '🏁 النهاية' };
-        $('phaseTxt').textContent = names[G.phase] + (G.round ? ' · ' + G.round : '');
+        $('phaseTxt').textContent = names[G.phase] + (G.phase === 'night' && G.turn ? ' · دور ' + ({ mafia: 'المافيا', doctor: 'الطبيب', detective: 'المحقق' })[G.turn] : G.round ? ' · ' + G.round : '');
         var left = G.endsAt ? Math.max(0, Math.ceil((G.endsAt - NET.now()) / 1000)) : 0;
         $('phaseT').textContent = G.endsAt && G.phase !== 'dawn' && G.phase !== 'verdict' ? left : '';
     }, 250);

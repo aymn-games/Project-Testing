@@ -52,6 +52,12 @@ button { font-family: inherit; cursor: pointer; }
 .banner .prog { margin-top: 4px; display: flex; gap: 6px; justify-content: center; }
 .banner .prog i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.2); }
 .banner .prog i.on { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+/* ترتيب أدوار الليل: المافيا ← الطبيب ← المحقق ← الصباح */
+.turns { display: flex; gap: 4px; justify-content: center; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.turns span { padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; color: rgba(255,255,255,.45); background: rgba(255,255,255,.06); }
+.turns span.done { color: rgba(255,255,255,.7); }
+.turns span.on { color: #fff; background: var(--tc, #e2483d); box-shadow: 0 0 12px var(--tc, #e2483d); }
+.turns b { color: rgba(255,255,255,.3); font-size: 12px; }
 
 /* عنوان اللقطة السينمائية */
 .caption { position: absolute; bottom: 9vh; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90vw; }
@@ -160,7 +166,7 @@ button { font-family: inherit; cursor: pointer; }
     <div class="banner hide" id="banner"><div class="sub" id="bSub"></div><div class="title" id="bTitle"></div><div class="prog" id="bProg"></div></div>
     <div class="caption" id="caption"><div class="k" id="capK"></div><div class="s" id="capS"></div><div id="capR"></div></div>
 
-    <aside class="chat off" id="chat"><h3>💬 النقاش <small id="chatHint">من جوالات اللاعبين</small></h3><div class="msgs" id="msgs"></div></aside>
+    <aside class="chat off" id="chat"><h3>📜 مجريات المباراة <small id="chatHint">والنقاش من جوالات اللاعبين</small></h3><div class="msgs" id="msgs"></div></aside>
 
     <div class="qr-mini" id="qrMini"><img id="qrMiniImg" alt="باركود الدخول"><div><b>دورك على هاتفك</b><div class="code" id="qrMiniCode">----</div><small>قفلت الصفحة؟ امسح الباركود</small></div></div>
 
@@ -318,8 +324,16 @@ button { font-family: inherit; cursor: pointer; }
         $('banner').classList.toggle('hide', !title);
         if (!title) return;
         $('bTitle').textContent = title; $('bSub').textContent = sub || '';
-        $('bProg').innerHTML = !prog ? '' : prog.need > 14 ? '<span style="font-weight:900;color:#ffcc4d">' + prog.done + ' / ' + prog.need + '</span>'
+        $('bProg').innerHTML = !prog ? '' : prog.html ? prog.html : prog.need > 14 ? '<span style="font-weight:900;color:#ffcc4d">' + prog.done + ' / ' + prog.need + '</span>'
             : Array.from({ length: prog.need }, function (_, i) { return '<i class="' + (i < prog.done ? 'on' : '') + '"></i>'; }).join('');
+    }
+    // أدوار الليل بالترتيب (اللي ما له أحد بالإعدادات ينحذف) — يبين للمشاهدين وين وصلت الليلة
+    var TURN = { mafia: { n: '🔪 المافيا', c: '#e2483d', t: '🔪 دور المافيا', s: 'المافيا يختارون ضحيتهم من جوالاتهم — الكل نايم' },
+        doctor: { n: '🩺 الطبيب', c: '#2fb36a', t: '🩺 دور الطبيب', s: 'الطبيب يختار مين يحمي الليلة' },
+        detective: { n: '🕵️ المحقق', c: '#3e8ef0', t: '🕵️ دور المحقق', s: 'المحقق يختار مين يفحص الليلة' } };
+    function turnsHtml(G) {
+        var order = ['mafia'].concat(G.settings.doctors ? ['doctor'] : [], G.settings.detectives ? ['detective'] : []), i = order.indexOf(G.turn);
+        return '<div class="turns">' + order.map(function (k, j) { return '<span class="' + (j === i ? 'on' : j < i ? 'done' : '') + '" style="--tc:' + TURN[k].c + '">' + TURN[k].n + '</span>'; }).join('<b>←</b>') + '<b>←</b><span>☀️ الصباح</span></div>';
     }
     function flash(color, a) { var f = $('flash'); f.style.background = color; f.style.opacity = a; }
 
@@ -330,7 +344,12 @@ button { font-family: inherit; cursor: pointer; }
         $('over').classList.toggle('hide', !(G && G.phase === 'over'));
         document.body.classList.toggle('is-over', !!(G && G.phase === 'over'));
         $('round').classList.toggle('hide', !started);
-        $('chat').classList.toggle('off', !(G && (G.phase === 'day' || G.phase === 'vote' || G.phase === 'verdict')));
+        // سجل المجريات يبان طول المباراة (يختفي وقت المشاهد السينمائية بس)
+        $('chat').classList.toggle('off', !(G && G.phase !== 'dawn' && G.phase !== 'verdict' && G.phase !== 'over'));
+        // صوت مع كل دور ليل جديد
+        var tk = G && G.phase === 'night' ? G.turn + G.round : '';
+        if (tk && tk !== tickUI.lastTurn) window.MafiaSFX.cue({ mafia: 'eyes', doctor: 'heal', detective: 'paper' }[G.turn] || 'whoosh', {});
+        tickUI.lastTurn = tk;
         if (!started) { $('timer').classList.add('hide'); banner(''); caption(''); $('letterbox').classList.remove('on'); flash('#000', 0); return; }
 
         var alive = G.players.filter(function (p) { return p.alive; }).length;
@@ -359,7 +378,8 @@ button { font-family: inherit; cursor: pointer; }
             if (s.doctors) parts.push(s.doctors + ' طبيب'); if (s.detectives) parts.push(s.detectives + ' محقق');
             caption('في المدينة ' + parts.join(' و'), 'والباقي مواطنين… مين تثق فيه؟', '', '#ffcc4d');
         } else if (G.phase === 'night') {
-            banner('حل الليل: الاختيار من الهواتف فقط', 'أغمضوا أعينكم.. المافيا تختار ضحيتها، وأصحاب الأدوار يختارون من هواتفهم', G.nightProgress);
+            var TT = TURN[G.turn] || TURN.mafia;
+            banner(TT.t, TT.s, { html: turnsHtml(G) });
         } else if (G.phase === 'dawn') {
             banner('');
             var sh = info.s, u = info.u;

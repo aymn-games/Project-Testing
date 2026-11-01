@@ -1151,7 +1151,23 @@ export function createStage(container, getFrame, opts) {
                 fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true;
                 runCues('over' + G.id, now - (G.endedAt || G.phaseAt), [{ t: 150, k: 'fanfare', mafia: mafiaWin }]);
                 { const a = t * 0.035 + 0.6, [R, H] = pull(14, 4.5); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 5.5, 0); }   // تطالع فوق للألعاب النارية
-            } else if (phase === 'night') orbit(t, 12, 4.2, 0.015);   // دوران بطيء جداً: أهدى للمشاهد وأخف
+            } else if (phase === 'night') {
+                // جو كل دور ليل (بدون ما يكشف أحد): المافيا = عيون حمرا تحوم بالظلام، الطبيب = توهّج أخضر هادي، المحقق = كشاف يمسح الساحة
+                const tn = G && G.turn;
+                if (tn === 'mafia') {
+                    const a = t * 0.04 + 1.2, R = Math.max(13, outerR + 4.5);
+                    mafioso.root.visible = true; standPose(mafioso); mafioso.body.rotation.set(0.1, 0, 0);
+                    mafioso.root.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); mafioso.root.rotation.set(0, Math.atan2(-Math.cos(a), -Math.sin(a)), 0);
+                    mafioso.eyes.forEach((e) => { e.material.emissiveIntensity = 1.3 + Math.sin(t * 3) * 0.3; e.scale.y = e.userData.sy; });
+                    evilLight.position.set(Math.cos(a) * (R - 1), 2.5, Math.sin(a) * (R - 1)); evilLight.intensity = 9;
+                } else if (tn === 'doctor') {
+                    healLight.position.set(0, 3, 0); healLight.intensity = 12 + Math.sin(t * 2) * 4;
+                } else if (tn === 'detective') {
+                    const a = t * 0.45, R = Math.max(3.4, Math.min(outerR, 9));
+                    verdictSpot.position.set(0, 16, 0); verdictSpot.target.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); verdictSpot.intensity = 140;
+                }
+                orbit(t, 12, 4.2, 0.015);   // دوران بطيء جداً: أهدى للمشاهد وأخف
+            }
             else if (phase === 'vote') orbit(t, 13, 7.5, 0.02);
             else if (phase === 'day') orbit(t, 13.5, 6, 0.02);
             else orbit(t, 14, 6.5, 0.02);

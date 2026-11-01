@@ -20,7 +20,9 @@ var SCHEMA = [
         { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مطفي = حسب القواعد: قتيل الليل بدون كشف، والمطرود يظهر فريقه بس' }
     ] },
     { id: 'time', n: 'الوقت', f: [
-        { k: 'nightSec', n: 'مدة الليل', t: 'num', min: 20, max: 180, step: 5, d: 90, u: 'ث' },
+        { k: 'mafiaSec', n: 'دور المافيا بالليل', t: 'num', min: 15, max: 120, step: 5, d: 40, u: 'ث' },
+        { k: 'doctorSec', n: 'دور الطبيب', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
+        { k: 'detectiveSec', n: 'دور المحقق', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
         { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 180, u: 'ث' },
         { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 45, u: 'ث' }
     ] },
