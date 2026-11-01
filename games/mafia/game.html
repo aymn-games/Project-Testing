@@ -82,7 +82,7 @@ button { font-family: inherit; cursor: pointer; }
 .qr-mini img { width: 64px; height: 64px; image-rendering: pixelated; }
 .qr-mini b { display: block; color: var(--red); font-size: 14px; }
 .qr-mini .code { font-size: 24px; font-weight: 900; letter-spacing: 2px; direction: ltr; text-align: right; }
-.qr-mini small { font-size: 12px; color: #5d5a70; }
+.qr-mini small { display: block; font-size: 12px; line-height: 1.45; color: #5d5a70; }
 
 /* لوحة النقاش/المجريات: بالنقاش والتصويت = الشات العام بس، وبباقي المراحل = سجل الأحداث */
 .chat { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(390px, 28vw); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
@@ -203,7 +203,7 @@ button { font-family: inherit; cursor: pointer; }
     <aside class="chat off" id="chat"><div class="chat-h"><b id="chatTitle"><i></i>النقاش العام</b><span id="chatCount"></span></div><div class="msgs" id="msgs"></div></aside>
     <aside class="recap off" id="recap" aria-label="ملخص الليلة"></aside>
 
-    <div class="qr-mini" id="qrMini"><img id="qrMiniImg" alt="باركود الدخول"><div><b>دورك على هاتفك</b><div class="code" id="qrMiniCode">----</div><small>قفلت الصفحة؟ امسح الباركود</small></div></div>
+    <div class="qr-mini" id="qrMini"><img id="qrMiniImg" alt="باركود الدخول"><div><b>رجوع اللاعبين للمباراة</b><div class="code" id="qrMiniCode">----</div><small>قفلت صفحة اللعبة؟ امسحه من نفس جوالك<br>وترجع لدورك · للمشاركين فقط</small></div></div>
 
     <section class="over hide" id="over">
         <div class="win" id="winTxt"></div>
