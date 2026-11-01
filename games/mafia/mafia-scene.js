@@ -361,7 +361,7 @@ export function createStage(container, getFrame, opts) {
     opts = opts || {};
     const onCue = opts.onCue || (() => {}), onAmbience = opts.onAmbience || (() => {});
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -908,12 +908,12 @@ export function createStage(container, getFrame, opts) {
             const hh = (amp) => [Math.sin(u / 310) * amp + Math.sin(u / 170) * amp * 0.6, Math.sin(u / 260) * amp * 0.7, Math.cos(u / 230) * amp * 0.5];
             const camAt = (o, c, l, amp) => { const h = hh(amp == null ? 0.03 : amp); return [o.x + c[0] + h[0], o.y + c[1] + h[1], o.z + c[2] + h[2], o.x + l[0], o.y + l[1], o.z + l[2]]; };
             if (s.k === 'intro') {
-                // من القمر تنزل الكاميرا على البلدة النايمة حول النار
+                // نزول هادي على البلدة النايمة حول النار (حركة قليلة، بدون اهتزاز)
                 const k = ease(u / s.dur), [R0, H0] = pull(15, 7.5);
-                cam = camAt(ORIGIN, [lerp(-7, 0, k), lerp(15, H0, k), lerp(22, R0, k)], [lerp(moon.position.x, 0, k), lerp(moon.position.y, 1, k), lerp(moon.position.z, 0, k)], 0.015);
+                cam = camAt(ORIGIN, [lerp(-1.5, 0, k), lerp(H0 + 2.5, H0, k), lerp(R0 + 2.5, R0, k)], [0, lerp(3, 1, k), 0], 0);
             } else if (s.k === 'inspect') {
                 // غرفة التحقيق: تأسيس ← فوق كتف المحقق ← ضربة الطاولة ← وجه المشتبه ← الجوال يضيء بالنتيجة
-                const slamU = 3250, swing = 0.16 + 0.32 * Math.exp(-Math.max(0, u - slamU) / 900) * (u > slamU ? 1 : 0);
+                const slamU = 3250, swing = 0.1 + 0.18 * Math.exp(-Math.max(0, u - slamU) / 900) * (u > slamU ? 1 : 0);
                 lampPivot.rotation.z = Math.sin(u / 600) * swing;
                 const flip = ease(span(u, 1500, 1900)), exam = ease(span(u, 2000, 2700)) * (1 - ease(span(u, 3050, 3200)));
                 folder.rotation.z = -flip * 0.5; folder.position.y = 1.08 + flip * 0.04;
@@ -924,16 +924,16 @@ export function createStage(container, getFrame, opts) {
                 detective.head.rotation.set(0.1 + exam * 0.15, Math.sin(u / 900) * 0.2 * (1 - exam), 0);
                 susp.head.rotation.set(-0.05, Math.sin(u / 500) * 0.1, 0);
                 susp.eyes.forEach((e) => { e.material.emissiveIntensity = u > 3700 && u < 5200 ? 1 + (Math.sin(u / 45) > 0.6 ? 1.6 : 0) : 1; });
-                if (u > slamU && u < slamU + 250) shake = 0.18;
+                if (u > slamU && u < slamU + 220) shake = 0.1;
                 qTag.material.opacity = 0.6 + Math.sin(u / 200) * 0.4;
                 secH.rotation.z = -Math.floor(u / 1000) * TAU / 60 - 1.2; minH.rotation.z = -0.9;
                 phoneScreen.emissiveIntensity = u > 5300 ? 1.6 + Math.sin(u / 90) * 0.6 : 0;
                 hemi.intensity = 0.06; sky.intensity = 0;
-                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camAt(ROOM, [lerp(3.4, 2.7, k), lerp(3.7, 3.0, k), lerp(3.4, 2.6, k)], [0, 1.2, 0], 0.01); }
-                else if (u < slamU) cam = camAt(ROOM, [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.012);                 // فوق كتف المحقق
-                else if (u < 3700) cam = camAt(ROOM, [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.01);                          // الضربة من الجنب
-                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camAt(ROOM, [lerp(0.9, 0.7, k), 1.8, lerp(0.7, 0.4, k)], [0, 1.5, -1.35], 0.008); }   // وجه المشتبه
-                else { const k = ease(span(u, 5200, s.dur)); cam = camAt(ROOM, [lerp(1.2, 2.9, k), lerp(1.8, 3.4, k), lerp(1.4, 3.6, k)], [-0.5, 1.05, 0.2], 0.01); }   // الجوال يضيء
+                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camAt(ROOM, [lerp(3.1, 2.8, k), lerp(3.4, 3.1, k), lerp(3.0, 2.7, k)], [0, 1.2, 0], 0.004); }
+                else if (u < slamU) cam = camAt(ROOM, [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.004);                 // فوق كتف المحقق
+                else if (u < 3700) cam = camAt(ROOM, [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.004);                          // الضربة من الجنب
+                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camAt(ROOM, [lerp(0.85, 0.75, k), 1.8, lerp(0.65, 0.5, k)], [0, 1.5, -1.35], 0.003); }   // وجه المشتبه
+                else { const k = ease(span(u, 5200, s.dur)); cam = camAt(ROOM, [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
                 // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
                 const w = marketWalker(vt.p.look), Z = STREET_Z;
@@ -1070,18 +1070,21 @@ export function createStage(container, getFrame, opts) {
                 mafioso.head.rotation.set(0.1, Math.sin(u / 700) * 0.35 * (u > 2600 && u < 3600 ? 1 : 0), 0);
                 evilLight.position.copy(mafioso.root.position).add(new THREE.Vector3(0, 2.6, 0)).addScaledVector(out, -1); evilLight.intensity = 10 * eyeK;
                 const lift = Math.max(0, outerR - 7.2) * 0.4;
-                if (u < 2600) { const cr = Math.max(outerR, 3.4) + 1.4; cam = camAt(ORIGIN, [out.x * cr, 1.7 + lift, out.z * cr], [out.x * LR, 1.5, out.z * LR], 0.02); }   // من ورا النايمين للظلام
-                else cam = camAt(ORIGIN, [out.x * (r + 2.6), 2.2 + lift * 0.5, out.z * (r + 2.6) + 0.8], [0, 1.0, 0], 0.015);                                     // من ورا المافيا على النار
+                // لقطة وحدة هادية: من الجهة الثانية للنار، فوق رؤوس النايمين، والمافيا بالظلام قدّام
+                // الكاميرا مايلة عن خط النار عشان المافيا يبان جنب النار مو وراها
+                const qk = ease(u / s.dur), qr = (Math.max(outerR, 3.4) + 1.5) * lerp(1, 0.92, qk), qa = Math.atan2(-out.z, -out.x) + 0.75;
+                const mp = mafioso.root.position;
+                cam = camAt(ORIGIN, [Math.cos(qa) * qr, 3.6 + lift, Math.sin(qa) * qr], [mp.x * 0.85, 1.3, mp.z * 0.85], 0);
             } else if (s.k === 'result') {
                 // الشروق: الشمس تطلع ورا السور، ولو فيه ضحية الكاميرا تمشي لمكانه
                 const vv = s.victim && chars.get(s.victim), [R1, H1] = pull(15.5, 12);
                 if (vv && u > 1600) {
                     const k = ease(span(u, 1600, s.dur)), p = seatWorld(vv, tmp), dir = tmp2.copy(p).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x);
-                    const c = p.clone().addScaledVector(dir, -Math.min(3.6, vv.seat.r - 0.8) + k * 0.6).addScaledVector(side, 1.8);
-                    cam = camAt(ORIGIN, [c.x, lerp(3.2, 1.7, k), c.z], [p.x, 0.5, p.z], 0.012);
+                    const c = p.clone().addScaledVector(dir, -Math.min(3.6, vv.seat.r - 0.8) + k * 0.3).addScaledVector(side, 1.8);
+                    cam = camAt(ORIGIN, [c.x, lerp(2.8, 2.2, k), c.z], [p.x, 0.5, p.z], 0);
                 } else {
                     const k = ease(u / s.dur);
-                    cam = camAt(ORIGIN, [lerp(-2, 2, k), lerp(H1, H1 - 4.5, k), lerp(R1, R1 - 3, k)], [0, lerp(4, 1, k), 0], 0.01);
+                    cam = camAt(ORIGIN, [lerp(-0.8, 0.8, k), lerp(H1, H1 - 2, k), lerp(R1, R1 - 1.5, k)], [0, lerp(2.5, 1, k), 0], 0);
                 }
             }
         }
@@ -1098,7 +1101,7 @@ export function createStage(container, getFrame, opts) {
                 cage.visible = true;
                 const drop = ease(span(u, 1800, 2700)), lift = ease(span(u, 5400, 8400)), spotK = ease(span(u, 80, 500)) * (1 - ease(span(u, 8400, 10500)));
                 cage.position.set(p.x, lerp(16, 0, drop) + lift * 16, p.z);
-                if (u > 2700 && u < 2950) shake = 0.24;
+                if (u > 2700 && u < 2900) shake = 0.1;
                 v.group.position.y = lift * 16;
                 verdictSpot.position.set(p.x, 12, p.z); verdictSpot.target.position.set(p.x, 0, p.z); verdictSpot.intensity = 220 * spotK;
                 spotBeam.position.set(p.x, 6 + lift * 16, p.z); spotBeam.material.opacity = 0.07 * spotK;
@@ -1114,16 +1117,15 @@ export function createStage(container, getFrame, opts) {
                 else { v.c.armL.rotation.set(-1.5, 0, -0.5); v.c.armR.rotation.set(-1.5, 0, 0.5); v.c.head.rotation.set(lift > 0 ? 0.45 : 0, Math.sin(u / 300) * 0.25, 0); }
                 v.tag.position.y = 2.45;
                 runCues('verdict' + G.phaseAt, u, [{ t: 0, k: 'whoosh', g: 0.6 }, { t: 90, k: 'clunk' }, { t: 1850, k: 'fall' }, { t: 2700, k: 'cage' }, { t: 4200, k: V.team === 'mafia' ? 'revealMafia' : 'revealTown' }, { t: 5400, k: 'chain' }]);
-                if (u < 1800) { const a = Math.atan2(-dir.z, -dir.x) + lerp(-0.5, 0.4, ease(span(u, 0, 1800))), c = p.clone().add(V3(Math.cos(a) * 5.5, 3.2, Math.sin(a) * 5.5)); cam = at(c, V3(p.x, 1.3, p.z), 0.02); }
-                else if (u < 2700) cam = at(p.clone().addScaledVector(dir, -2.4).add(V3(0, 0.6, 0)), V3(p.x, 9 - drop * 7, p.z), 0.01);          // من تحت: القفص طايح من السما
-                else if (u < 4200) cam = at(p.clone().addScaledVector(side, 3.3).addScaledVector(dir, -1.2).add(V3(0, 1.8, 0)), V3(p.x, 1.2, p.z), 0.02);
-                else if (u < 5400) { const k = ease(span(u, 4200, 5400)); cam = at(p.clone().addScaledVector(dir, -lerp(2.8, 2.0, k)).addScaledVector(side, 0.5).add(V3(0, 1.7, 0)), V3(p.x, 1.5, p.z), 0.008); }
-                else if (u < 8400) cam = at(p.clone().addScaledVector(dir, -Math.min(4, v.seat.r - 1)).addScaledVector(side, 2.5).add(V3(0, 3.2 + lift * 7.7, 0)), V3(p.x, 1.3 + lift * 16, p.z), 0.015);
-                else { const k = ease(span(u, 8400, 12000)), [R2, H2] = pull(15, 8); cam = at(V3(Math.sin(0.6) * R2, H2, Math.cos(0.6) * R2), V3(lerp(p.x, 0, k), lerp(14, 1, k), lerp(p.z, 0, k)), 0.01); }
+                // كاميرا وحدة شبه ثابتة: تقرب شوي وقت الارتطام والكشف، وتطالع فوق مع ارتفاع القفص
+                const base = p.clone().addScaledVector(dir, -Math.min(4.2, v.seat.r - 0.8)).addScaledVector(side, 2.4);
+                const push = ease(span(u, 2700, 5400)) * 0.6;
+                const settle = ease(span(u, 8400, 11000));   // بعد ما يختفي القفص ترجع الكاميرا للساحة
+                cam = at(base.clone().addScaledVector(dir, push).add(V3(0, 3.4 + lift * 4 * (1 - settle), 0)), V3(p.x, (u < 2700 ? 2.2 : 1.4) + lift * 11 * (1 - settle), p.z), 0);
             } else if (V) {
                 // تعادل/ما أحد طلع: دوران هادي حول النار
                 runCues('verdict' + G.phaseAt, now - G.phaseAt, [{ t: 300, k: 'tie' }]);
-                orbit(t, 13, 6, 0.05);
+                orbit(t, 13, 6, 0.02);
             } else if (phase === 'over') {
                 confetti.visible = true;
                 for (let i = 0; i < CONF; i++) { const s = confSeed[i], y = 12 - ((t * s.sp + s.off) % 12); confPos[i * 3] = s.x + Math.sin(t * 2 + s.w) * 0.5; confPos[i * 3 + 1] = y; confPos[i * 3 + 2] = s.z + Math.cos(t * 2 + s.w) * 0.5; }
@@ -1148,11 +1150,11 @@ export function createStage(container, getFrame, opts) {
                 }
                 fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true;
                 runCues('over' + G.id, now - (G.endedAt || G.phaseAt), [{ t: 150, k: 'fanfare', mafia: mafiaWin }]);
-                { const a = t * 0.12 + 0.6, [R, H] = pull(14, 4.5); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 5.5, 0); }   // تطالع فوق للألعاب النارية
-            } else if (phase === 'night') orbit(t, 12, 4.2, 0.03);
-            else if (phase === 'vote') orbit(t, 13, 7.5, 0.04);
-            else if (phase === 'day') orbit(t, 13.5, 6, 0.05);
-            else orbit(t, 14, 6.5, 0.04);
+                { const a = t * 0.035 + 0.6, [R, H] = pull(14, 4.5); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 5.5, 0); }   // تطالع فوق للألعاب النارية
+            } else if (phase === 'night') orbit(t, 12, 4.2, 0.015);   // دوران بطيء جداً: أهدى للمشاهد وأخف
+            else if (phase === 'vote') orbit(t, 13, 7.5, 0.02);
+            else if (phase === 'day') orbit(t, 13.5, 6, 0.02);
+            else orbit(t, 14, 6.5, 0.02);
         }
         if (cam) { camPos.set(cam[0], cam[1], cam[2]); camLook.set(cam[3], cam[4], cam[5]); }   // اللقطات محسوبة من الوقت مباشرة
 
@@ -1164,7 +1166,23 @@ export function createStage(container, getFrame, opts) {
         shake *= Math.pow(0.02, dt);
         camera.position.copy(camPos).add(new THREE.Vector3((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake));
         camera.lookAt(camLook);
+        perf(dt);
         composer.render();
+    }
+    // وضع خفيف تلقائي: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 4ث) نطفي الظلال والتوهّج وننزل الدقة
+    // (نفس فكرة ship3d.js بسفينة النجاة) — الجهاز الضعيف يكمل سلس بدل ما يتقطع
+    let lite = false, pfT = 0, pfN = 0, pfS = 0;
+    function perf(dt) {
+        if (lite) return;
+        pfT += dt; if (pfT < 4) return;
+        pfN++; pfS += dt;
+        if (pfS < 2) return;
+        const fps = pfN / pfS; pfN = 0; pfS = 0;
+        if (fps >= 40) return;
+        lite = true;
+        renderer.shadowMap.enabled = false; bloom.enabled = false; renderer.setPixelRatio(1);
+        scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
+        resize();
     }
     requestAnimationFrame(frame);
 
