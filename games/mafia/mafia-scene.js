@@ -471,7 +471,7 @@ export function createStage(container, getFrame, opts) {
     fire.add(sparks);
 
     // ---------- غرفة التحقيق (بعيدة عن الساحة، الكاميرا تنتقل لها)
-    const ROOM = new THREE.Vector3(80, 0, 0);
+    const ROOM = new THREE.Vector3(80, 0, 0), ORIGIN = new THREE.Vector3(0, 0, 0);
     const room = new THREE.Group(); room.position.copy(ROOM); scene.add(room);
     const roomBox = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 10), new THREE.MeshStandardMaterial({ color: '#2b2a33', roughness: 1, side: THREE.BackSide, map: canvasTex(256, 256, (ctx) => { ctx.fillStyle = '#34323c'; ctx.fillRect(0, 0, 256, 256); ctx.strokeStyle = '#26242c'; ctx.lineWidth = 4; for (let y = 0; y < 256; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke(); for (let x = (y / 32) % 2 ? 0 : 32; x < 256; x += 64) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke(); } } }) }));
     roomBox.material.map.wrapS = roomBox.material.map.wrapT = THREE.RepeatWrapping; roomBox.material.map.repeat.set(3, 2);
@@ -498,6 +498,15 @@ export function createStage(container, getFrame, opts) {
     glass.add(mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.28, 8), mat('#3a2416'), 0, -0.27, 0));
     glass.position.set(0, -0.62, 0.05); glass.scale.setScalar(1.3); detective.armR.add(glass);
     const qTag = makeSprite(1.1); room.add(qTag); qTag.position.set(0, 2.55, -1.35);
+    // جوال المحقق على الطاولة (يضيء لما توصل النتيجة) وساعة جدار
+    const phoneScreen = new THREE.MeshStandardMaterial({ color: '#111', emissive: '#7dd3fc', emissiveIntensity: 0 });
+    const phone = new THREE.Group(); phone.position.set(-0.55, 1.075, 0.25); phone.rotation.y = -0.4; table.add(phone);
+    phone.add(mesh(new THREE.BoxGeometry(0.16, 0.02, 0.3), mat('#1c1c22'), 0, 0, 0));
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.27), phoneScreen); scr.rotation.x = -Math.PI / 2; scr.position.y = 0.011; phone.add(scr);
+    const clock = new THREE.Group(); clock.position.set(-4.95, 3.6, 0); clock.rotation.y = Math.PI / 2; room.add(clock);
+    const face = mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.06, 32), mat('#e9e2cf'), 0, 0, 0); face.rotation.x = Math.PI / 2; clock.add(face);
+    const handM = mat('#151515'), minH = new THREE.Group(), secH = new THREE.Group(); clock.add(minH); clock.add(secH);
+    minH.add(mesh(new THREE.BoxGeometry(0.035, 0.32, 0.02), handM, 0, 0.14, 0.05)); secH.add(mesh(new THREE.BoxGeometry(0.015, 0.38, 0.02), mat('#b91c1c'), 0, 0.16, 0.06));
     (function () { const { c, tex } = qTag.userData, ctx = c.getContext('2d'); ctx.font = '900 130px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff4d4d'; ctx.fillText('?', 256, 86); tex.needsUpdate = true; })();
 
     // ---------- المافيا والطبيب (شخصيات المشاهد)
@@ -624,12 +633,22 @@ export function createStage(container, getFrame, opts) {
         for (let t = ATK.follow; t < ATK.close; t += 620) atk.push({ t, k: 'step', g: 0.12, pan: -0.4 });
         atk.push({ t: ATK.raise + 60, k: 'shing' }, { t: ATK.strike, k: 'stab' }, { t: ATK.strike + 20, k: 'stinger' }, { t: ATK.down - 40, k: 'thud' });
         for (let t = ATK.flee + 100, i = 0; t < ATK.gone; t += 230, i++) atk.push({ t, k: 'step', g: Math.max(0.05, 0.45 - i * 0.06), pan: -0.5 });
+        // الإنقاذ: ركض الطبيب، تزحلق على الركب، علاج ونبض يرجع يقوى، يقوم
         const save = [{ t: 0, k: 'whoosh', g: 0.6 }];
-        for (let t = 80; t < 2000; t += 210) save.push({ t, k: 'step', g: 0.4, pan: 0.4 });
-        save.push({ t: 2200, k: 'heal' }, { t: 4300, k: 'rise' });
+        for (let t = 80; t < 2000; t += 200) save.push({ t, k: 'step', g: 0.45, pan: 0.3 });
+        save.push({ t: 2050, k: 'step', g: 0.9 }, { t: 2300, k: 'heal' });
+        [2700, 3300, 3800, 4250].forEach((t, i) => save.push({ t, k: 'heart', g: 0.3 + i * 0.17 }));
+        save.push({ t: 4600, k: 'rise' });
+        // التحقيق: ساعة تتكتك، تقليب ملف، ضربة الطاولة، الجوال يهتز بالنتيجة
+        const inspect = [{ t: 0, k: 'whoosh', g: 0.6 }];
+        for (let t = 500; t < 6500; t += 1000) inspect.push({ t, k: 'tick', g: 0.5 });
+        inspect.push({ t: 1550, k: 'paper' }, { t: 3250, k: 'slam' }, { t: 5300, k: 'buzz' });
+        // الليلة الهادية: عيون بالظلام، نبض، وانسحاب
+        const quiet = [{ t: 0, k: 'whoosh', g: 0.5 }, { t: 300, k: 'eyes' }, { t: 1300, k: 'heart', g: 0.4 }, { t: 2100, k: 'heart', g: 0.45 }, { t: 2600, k: 'whoosh', g: 0.4 }, { t: 2900, k: 'heart', g: 0.35 }, { t: 3900, k: 'owl' }];
+        for (let t = 4250; t < 5000; t += 260) quiet.push({ t, k: 'step', g: 0.12, pan: -0.3 });
         return {
-            attack: atk, save, intro: [{ t: 0, k: 'whoosh', g: 0.8 }], inspect: [{ t: 0, k: 'whoosh', g: 0.6 }, { t: 3200, k: 'slam' }],
-            quiet: [{ t: 0, k: 'whoosh', g: 0.5 }], result: [{ t: 300, k: 'bell' }]
+            attack: atk, save, inspect, quiet, intro: [{ t: 0, k: 'whoosh', g: 0.8 }, { t: 900, k: 'owl' }],
+            result: [{ t: 300, k: 'bell' }], resultVictim: [{ t: 1700, k: 'mourn' }]
         };
     })();
     let cueKey = '', cueU = 0;
@@ -648,6 +667,16 @@ export function createStage(container, getFrame, opts) {
     const cageRing = mesh(new THREE.TorusGeometry(0.95, 0.05, 8, 30), barM, 0, 0.05, 0); cageRing.rotation.x = Math.PI / 2; cage.add(cageRing);
     cage.add(mesh(new THREE.TorusGeometry(0.2, 0.04, 8, 16), barM, 0, 2.85, 0));
     const verdictSpot = new THREE.SpotLight('#fff2cc', 0, 18, 0.32, 0.5, 1.2); verdictSpot.castShadow = true; scene.add(verdictSpot); scene.add(verdictSpot.target);
+    // شعاع الكشاف المرئي، وسلسلة القفص للسماء
+    const spotBeam = new THREE.Mesh(new THREE.ConeGeometry(2.6, 12, 32, 1, true), new THREE.MeshBasicMaterial({ color: '#fff2cc', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    scene.add(spotBeam);
+    const chain = mesh(new THREE.CylinderGeometry(0.05, 0.05, 30, 6), barM, 0, 17.9, 0); cage.add(chain);
+    // حلقة غبار وقت ارتطام القفص بالأرض
+    const RING = 70, ringGeo = new THREE.BufferGeometry(), ringPos = new Float32Array(RING * 3), ringSeed = [];
+    for (let i = 0; i < RING; i++) ringSeed.push({ a: (i / RING) * TAU + Math.random() * 0.1, s: 1.4 + Math.random() * 1.4, y: 0.2 + Math.random() * 0.5 });
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+    const dustRing = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: '#b49a84', size: 0.16, transparent: true, opacity: 0, depthWrite: false }));
+    scene.add(dustRing);
 
     // ---------- احتفال
     const CONF = 260, confGeo = new THREE.BufferGeometry(), confPos = new Float32Array(CONF * 3), confCol = new Float32Array(CONF * 3), confSeed = [];
@@ -655,6 +684,17 @@ export function createStage(container, getFrame, opts) {
     for (let i = 0; i < CONF; i++) { confSeed.push({ x: (Math.random() - 0.5) * 16, z: (Math.random() - 0.5) * 16, sp: 1 + Math.random() * 1.5, off: Math.random() * 10, w: Math.random() * TAU }); const c = confPal[i % confPal.length]; confCol.set([c.r, c.g, c.b], i * 3); }
     confGeo.setAttribute('position', new THREE.BufferAttribute(confPos, 3)); confGeo.setAttribute('color', new THREE.BufferAttribute(confCol, 3));
     const confetti = new THREE.Points(confGeo, new THREE.PointsMaterial({ size: 0.18, vertexColors: true })); confetti.visible = false; scene.add(confetti);
+    // ألعاب نارية: 6 انفجارات، كل واحد 90 شرارة (مواقعها وتوقيتها ثابتة من رقم الانفجار)
+    const FW = 6, FWN = 90, fwGeo = new THREE.BufferGeometry(), fwPos = new Float32Array(FW * FWN * 3), fwCol = new Float32Array(FW * FWN * 3), fwDir = [];
+    for (let i = 0; i < FW * FWN; i++) { const th = Math.random() * TAU, ph = Math.acos(2 * Math.random() - 1), sp = 0.7 + Math.random() * 0.3; fwDir.push([Math.sin(ph) * Math.cos(th) * sp, Math.cos(ph) * sp, Math.sin(ph) * Math.sin(th) * sp]); }
+    fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
+    const fireworks = new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 0.6, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    fireworks.visible = false; fireworks.frustumCulled = false; scene.add(fireworks);
+    const FW_PERIOD = 1300, fwLast = new Array(FW).fill(1e9);   // انفجار كل 1.3ث بالتناوب على الستة
+    // الشمس للشروق (تطلع من ورا السور الشرقي)
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(3, 24, 16), new THREE.MeshBasicMaterial({ color: '#ffd38a', fog: false }));
+    const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffb347', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    sunGlow.scale.set(30, 30, 1); scene.add(sun); scene.add(sunGlow); sun.visible = sunGlow.visible = false;
 
     // ---------------------------------------------------------------- اللاعبين
     const chars = new Map();   // id -> {c, stool, tag, bubble, badge, seat, angle, lookKey}
@@ -716,6 +756,7 @@ export function createStage(container, getFrame, opts) {
         sky.color.set('#9fb4ff').lerp(new THREE.Color('#ffd29a'), k); sky.intensity = lerp(0.45, 2.2, k);
         sky.position.set(lerp(-14, 16, k), lerp(22, 18, k), lerp(-10, -6, k));
         stars.material.opacity = 1 - k; moon.visible = moonGlow.visible = k < 0.8;
+        sun.visible = sunGlow.visible = k > 0.02; sun.position.set(30, lerp(-8, 24, k), -55); sunGlow.position.copy(sun.position);
         moon.position.y = lerp(26, 8, k);
         lanterns.forEach((l) => { l.pl.intensity = lerp(10, 1, k); l.glass.material.emissiveIntensity = lerp(2, 0.4, k); });
         renderer.toneMappingExposure = lerp(1.05, 0.95, k);
@@ -777,7 +818,7 @@ export function createStage(container, getFrame, opts) {
         room.visible = !!(sh && sh.s.k === 'inspect');
         const away = market.visible || room.visible;
         info = { shot: sh ? sh.s.k : null, u: sh ? sh.u : 0, s: sh ? sh.s : null };
-        if (sh && CUES[sh.s.k]) runCues('shot' + G.phaseAt + ':' + sh.s.at, sh.u, CUES[sh.s.k]);
+        if (sh && CUES[sh.s.k]) runCues('shot' + G.phaseAt + ':' + sh.s.at, sh.u, sh.s.k === 'result' && sh.s.victim ? CUES.resultVictim : CUES[sh.s.k]);
         onAmbience(market.visible ? 'market' : room.visible ? 'room' : dayK > 0.5 ? 'plaza-day' : 'plaza-night');
 
         // ----- النار
@@ -787,7 +828,8 @@ export function createStage(container, getFrame, opts) {
         sparkGeo.attributes.position.needsUpdate = true;
 
         // ----- الإضاءة
-        let dayTarget = phase === 'day' || phase === 'vote' || phase === 'verdict' || phase === 'over' ? 1 : phase === 'reveal' || phase === 'lobby' ? 0.15 : 0;
+        let dayTarget = phase === 'over' ? 0.32 : phase === 'day' || phase === 'vote' || phase === 'verdict' ? 1 :   // النهاية وقت الغروب عشان تبان الألعاب النارية
+             phase === 'reveal' || phase === 'lobby' ? 0.15 : 0;
         if (sh && sh.s.k === 'result') dayTarget = ease(sh.u / 3500);
         applyLight(dayTarget, dt);
         // السوق: ضباب ليلي كثيف للعمق، وغبار يسبح بضوء الفوانيس
@@ -820,6 +862,11 @@ export function createStage(container, getFrame, opts) {
             if (sleeping && alive && fallK === 0) { c.head.rotation.x = 0.32 + Math.sin(T * 1.2 + ph) * 0.04; c.head.rotation.z = 0.12; }
             if (speakers[id] && alive) { c.head.rotation.x = Math.sin(T * 14) * 0.06; c.armR.rotation.x = -1.1 + Math.sin(T * 6) * 0.25; }
             if (phase === 'vote' && votes[id] && alive) { c.armR.rotation.set(-2.9, 0, 0.2); }
+            if (phase === 'verdict' && G.verdict && G.verdict.id && G.verdict.id !== id && alive && chars.get(G.verdict.id)) {
+                // الكل يطالع المطرود
+                const ts = chars.get(G.verdict.id).seat; let yaw = Math.atan2(ts.x - v.seat.x, ts.z - v.seat.z) - v.group.rotation.y;
+                yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw)); c.head.rotation.set(0, Math.max(-1.2, Math.min(1.2, yaw)), 0);
+            }
             if (phase === 'over' && G && alive) {
                 const won = G.winner && p.role && L.ROLE[p.role].team === G.winner;
                 if (won) { c.root.position.y = Math.abs(Math.sin(T * 5 + ph)) * 0.45; c.armL.rotation.set(-2.8, 0, -0.3); c.armR.rotation.set(-2.8, 0, 0.3); }
@@ -852,29 +899,41 @@ export function createStage(container, getFrame, opts) {
 
         // ----- المشاهد الخاصة
         mafioso.root.visible = false; doctor.root.visible = false; if (walker) walker.wrap.visible = false; evilLight.intensity = 0; healPts.visible = false; healRing.visible = false; healLight.intensity = 0;
-        cage.visible = false; verdictSpot.intensity = 0; confetti.visible = false;
+        cage.visible = false; verdictSpot.intensity = 0; confetti.visible = false; fireworks.visible = false; spotBeam.material.opacity = 0; dustRing.material.opacity = 0; phoneScreen.emissiveIntensity = 0;
         let cam = null;   // [px,py,pz, lx,ly,lz, snap]
 
         if (sh) {
             const s = sh.s, u = sh.u, vt = s.target && chars.get(s.target);
+            // كاميرا عامة: إزاحة من نقطة أصل (الساحة/الغرفة/السوق) + اهتزاز يد خفيف
+            const hh = (amp) => [Math.sin(u / 310) * amp + Math.sin(u / 170) * amp * 0.6, Math.sin(u / 260) * amp * 0.7, Math.cos(u / 230) * amp * 0.5];
+            const camAt = (o, c, l, amp) => { const h = hh(amp == null ? 0.03 : amp); return [o.x + c[0] + h[0], o.y + c[1] + h[1], o.z + c[2] + h[2], o.x + l[0], o.y + l[1], o.z + l[2]]; };
             if (s.k === 'intro') {
-                const k = ease(u / s.dur);
-                const [R0, H0] = pull(15, 9);
-                cam = [lerp(0, -6, k), lerp(H0, H0 + 7, k), lerp(R0, R0 + 7, k), -10 * k, lerp(1, 12, k), -20 * k];
+                // من القمر تنزل الكاميرا على البلدة النايمة حول النار
+                const k = ease(u / s.dur), [R0, H0] = pull(15, 7.5);
+                cam = camAt(ORIGIN, [lerp(-7, 0, k), lerp(15, H0, k), lerp(22, R0, k)], [lerp(moon.position.x, 0, k), lerp(moon.position.y, 1, k), lerp(moon.position.z, 0, k)], 0.015);
             } else if (s.k === 'inspect') {
-                const k = u / s.dur;
-                lampPivot.rotation.z = Math.sin(u / 600) * 0.22;
-                const slam = u > 3200 && u < 3700;
-                detective.armR.rotation.set(slam ? -1.2 : -0.9 + Math.sin(u / 400) * 0.1, 0, 0.2);
-                detective.armL.rotation.set(slam ? -1.6 + span(u, 3200, 3400) * 0.9 : -0.55, 0, -0.12);
-                detective.head.rotation.set(0.1, Math.sin(u / 900) * 0.25, 0);
+                // غرفة التحقيق: تأسيس ← فوق كتف المحقق ← ضربة الطاولة ← وجه المشتبه ← الجوال يضيء بالنتيجة
+                const slamU = 3250, swing = 0.16 + 0.32 * Math.exp(-Math.max(0, u - slamU) / 900) * (u > slamU ? 1 : 0);
+                lampPivot.rotation.z = Math.sin(u / 600) * swing;
+                const flip = ease(span(u, 1500, 1900)), exam = ease(span(u, 2000, 2700)) * (1 - ease(span(u, 3050, 3200)));
+                folder.rotation.z = -flip * 0.5; folder.position.y = 1.08 + flip * 0.04;
+                const slam = span(u, slamU - 150, slamU), back = ease(span(u, slamU, slamU + 500));
+                detective.armR.rotation.set(-0.9 - exam * 0.8 + Math.sin(u / 400) * 0.06, 0, 0.2);
+                detective.armL.rotation.set(u < slamU ? -0.55 - slam * 1.5 : -2.05 + back * 1.5, 0, -0.12);
+                detective.body.rotation.x = u > slamU - 100 && u < slamU + 600 ? 0.18 : exam * 0.08;
+                detective.head.rotation.set(0.1 + exam * 0.15, Math.sin(u / 900) * 0.2 * (1 - exam), 0);
                 susp.head.rotation.set(-0.05, Math.sin(u / 500) * 0.1, 0);
-                if (u > 3200 && u < 3500) shake = 0.18;
+                susp.eyes.forEach((e) => { e.material.emissiveIntensity = u > 3700 && u < 5200 ? 1 + (Math.sin(u / 45) > 0.6 ? 1.6 : 0) : 1; });
+                if (u > slamU && u < slamU + 250) shake = 0.18;
                 qTag.material.opacity = 0.6 + Math.sin(u / 200) * 0.4;
-                // جانبية: المحقق يمين والمشتبه يسار والطاولة بينهم، والكاميرا تقترب ببطء
-                const a = lerp(1.45, 1.68, ease(k)), d = lerp(4.9, 4.2, ease(k));
-                cam = [ROOM.x + Math.sin(a) * d, lerp(2.7, 2.3, k), ROOM.z + Math.cos(a) * d, ROOM.x, 1.3, ROOM.z];
+                secH.rotation.z = -Math.floor(u / 1000) * TAU / 60 - 1.2; minH.rotation.z = -0.9;
+                phoneScreen.emissiveIntensity = u > 5300 ? 1.6 + Math.sin(u / 90) * 0.6 : 0;
                 hemi.intensity = 0.06; sky.intensity = 0;
+                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camAt(ROOM, [lerp(3.4, 2.7, k), lerp(3.7, 3.0, k), lerp(3.4, 2.6, k)], [0, 1.2, 0], 0.01); }
+                else if (u < slamU) cam = camAt(ROOM, [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.012);                 // فوق كتف المحقق
+                else if (u < 3700) cam = camAt(ROOM, [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.01);                          // الضربة من الجنب
+                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camAt(ROOM, [lerp(0.9, 0.7, k), 1.8, lerp(0.7, 0.4, k)], [0, 1.5, -1.35], 0.008); }   // وجه المشتبه
+                else { const k = ease(span(u, 5200, s.dur)); cam = camAt(ROOM, [lerp(1.2, 2.9, k), lerp(1.8, 3.4, k), lerp(1.4, 3.6, k)], [-0.5, 1.05, 0.2], 0.01); }   // الجوال يضيء
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
                 // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
                 const w = marketWalker(vt.p.look), Z = STREET_Z;
@@ -968,21 +1027,23 @@ export function createStage(container, getFrame, opts) {
                         cam = shotCam([6.6 + k * 0.6, 2.9 + k * 0.3, 2.6], [-2.4, 0.4, -1.6], 0.02);
                     }
                 } else {
-                    // الطبيب يركض بالسوق للمصاب، يركع، وهالة خضراء ترجعه واقف
+                    // الإنقاذ: الطبيب يركض بالسوق ← يتزحلق على ركبه جنبه ← هالة خضرا ونبض يرجع ← يقوم الاثنين
                     w.wrap.position.set(STOP_X, 0, Z);
-                    const fall = 1 - ease(span(u, 3800, 4800));
+                    const fall = 1 - ease(span(u, 4600, 5400));
                     w.root.rotation.x = fall * Math.PI / 2 * 0.96;
                     if (fall > 0) { w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
+                    else { const cheer = span(u, 5400, 6000); w.armL.rotation.set(-0.4 - Math.sin(cheer * Math.PI) * 1.6, 0, -0.3); w.head.rotation.set(-0.15, 0.6, 0); }
                     const p = mw(STOP_X + 0.8, 0, Z);   // مكان جسم المصاب على الأرض
-                    doctor.root.visible = true; standPose(doctor);
-                    const run = ease(span(u, 0, 2000));
+                    doctor.root.visible = true; standPose(doctor); doctor.body.rotation.set(0, 0, 0);
+                    const run = ease(span(u, 0, 2000)), docX = lerp(9, STOP_X + 0.8, run);
                     const from = mw(9, 0, Z + 0.9), to = mw(STOP_X + 0.8, 0, Z + 1.2);
                     doctor.root.position.lerpVectors(from, to, run);
-                    if (run < 1) { walkPose(doctor, u / 70, 0.8); doctor.root.position.y = Math.abs(Math.sin(u / 70)) * 0.12; }
+                    if (run < 1) { walkPose(doctor, u / 70, 0.85); doctor.root.position.y = Math.abs(Math.sin(u / 70)) * 0.12; doctor.body.rotation.x = 0.12; }
                     else doctor.armR.rotation.set(-1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
                     doctor.root.lookAt(run < 1 ? to.x : p.x, 0, run < 1 ? to.z : p.z);
-                    const kneel = ease(span(u, 2000, 2400)); doctor.root.position.y -= kneel * 0.25;
-                    const healK = span(u, 2200, 5200);
+                    const kneel = ease(span(u, 2000, 2300)) * (1 - ease(span(u, 5000, 5500)));
+                    doctor.root.position.y -= kneel * 0.25; doctor.body.rotation.x += kneel * 0.15;
+                    const healK = span(u, 2300, 5000);
                     if (healK > 0 && healK < 1) {
                         healPts.visible = true; healRing.visible = true;
                         healLight.position.set(p.x, 1.2, p.z); healLight.intensity = Math.sin(healK * Math.PI) * 25;
@@ -990,48 +1051,104 @@ export function createStage(container, getFrame, opts) {
                         healGeo.attributes.position.needsUpdate = true;
                         healRing.position.set(p.x, 0.05 + healK * 1.8, p.z); healRing.scale.setScalar(1 + healK); healRing.material.opacity = 1 - healK;
                     }
-                    const k = ease(u / s.dur);
-                    cam = shotCam([STOP_X + 4 - k * 0.6, 2.7 - k * 0.5, Z + 4.2 - k * 0.6], [STOP_X + 0.8, 0.8, Z], 0.02);
+                    if (u < 2000) cam = shotCam([docX - 3.4, 1.05, Z + 2.3], [docX, 1.15, Z + 0.9], 0.04);                       // يركض نحونا
+                    else if (u < 4600) { const a = lerp(0.35, 1.5, ease(span(u, 2000, 4600))); cam = shotCam([0.8 + Math.cos(a) * 2.5, 4.3, Z + Math.sin(a) * 2.5], [0.8, 0.35, Z + 0.4], 0.01); }   // من فوق تدور
+                    else { const k = ease(span(u, 4600, s.dur)); cam = shotCam([lerp(2.9, 2.4, k), lerp(0.6, 0.8, k), Z - lerp(2.2, 1.8, k)], [0.3, lerp(0.8, 1.35, k), Z + 0.3], 0.02); }   // يقوم: لقطة بطولية من تحت (جهة الزقاق عشان الطبيب ما يغطيه)
                 }
             } else if (s.k === 'quiet') {
-                mafioso.root.visible = u < 3500;
-                const k = span(u, 0, 3500);
-                const a = 2.2 + k * 0.6, LR = Math.max(11, outerR + 3.2);   // المافيا يحوم برا آخر حلقة
-                mafioso.root.position.set(Math.cos(a) * LR, 0, Math.sin(a) * LR);
-                mafioso.root.lookAt(0, 0, 0); mafioso.root.rotateY(k > 0.6 ? Math.PI * ease(span(k, 0.6, 0.8)) : 0);
-                mafioso.armR.rotation.set(-0.5, 0, 0.15);
-                evilLight.position.set(Math.cos(a) * (LR - 1), 2.6, Math.sin(a) * (LR - 1)); evilLight.intensity = mafioso.root.visible ? 18 : 0;
-                cam = [Math.cos(a - 0.25) * (LR - 5.5), 2.4 + Math.max(0, outerR - 7.2) * 0.4, Math.sin(a - 0.25) * (LR - 5.5), Math.cos(a) * LR, 1.4, Math.sin(a) * LR];
+                // ليلة هادية: المافيا يراقب البلدة النايمة من الظلام، ويقرر ينسحب
+                const LR = Math.max(11, outerR + 3.2), a = 2.3, out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+                mafioso.root.visible = true; standPose(mafioso); mafioso.body.rotation.set(0, 0, 0);
+                const creep = ease(span(u, 900, 2600)), turn = ease(span(u, 3600, 4200)), leave = span(u, 4200, s.dur);
+                const r = LR + 3 - creep * 3 + leave * 4;
+                mafioso.root.position.copy(out).multiplyScalar(r);
+                mafioso.root.rotation.set(0, Math.atan2(-out.x, -out.z) + turn * Math.PI, 0);
+                if ((u > 900 && u < 2600) || leave > 0) walkPose(mafioso, u / 140, 0.35);
+                if (u < 3600) mafioso.body.rotation.x = 0.12;
+                const eyeK = ease(span(u, 300, 900)) * (1 - ease(span(u, 4300, s.dur)));
+                mafioso.eyes.forEach((e) => { e.material.emissiveIntensity = 0.2 + eyeK * 1.4; e.scale.y = e.userData.sy * (0.25 + ease(span(u, 300, 900)) * 0.75); });
+                mafioso.head.rotation.set(0.1, Math.sin(u / 700) * 0.35 * (u > 2600 && u < 3600 ? 1 : 0), 0);
+                evilLight.position.copy(mafioso.root.position).add(new THREE.Vector3(0, 2.6, 0)).addScaledVector(out, -1); evilLight.intensity = 10 * eyeK;
+                const lift = Math.max(0, outerR - 7.2) * 0.4;
+                if (u < 2600) { const cr = Math.max(outerR, 3.4) + 1.4; cam = camAt(ORIGIN, [out.x * cr, 1.7 + lift, out.z * cr], [out.x * LR, 1.5, out.z * LR], 0.02); }   // من ورا النايمين للظلام
+                else cam = camAt(ORIGIN, [out.x * (r + 2.6), 2.2 + lift * 0.5, out.z * (r + 2.6) + 0.8], [0, 1.0, 0], 0.015);                                     // من ورا المافيا على النار
             } else if (s.k === 'result') {
-                const k = ease(u / s.dur);
-                const [R1, H1] = pull(15.5, 13);
-                cam = [lerp(0, 2, k), lerp(H1, H1 - 4.5, k), lerp(R1, R1 - 3, k), 0, 1, 0];
+                // الشروق: الشمس تطلع ورا السور، ولو فيه ضحية الكاميرا تمشي لمكانه
+                const vv = s.victim && chars.get(s.victim), [R1, H1] = pull(15.5, 12);
+                if (vv && u > 1600) {
+                    const k = ease(span(u, 1600, s.dur)), p = seatWorld(vv, tmp), dir = tmp2.copy(p).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x);
+                    const c = p.clone().addScaledVector(dir, -Math.min(3.6, vv.seat.r - 0.8) + k * 0.6).addScaledVector(side, 1.8);
+                    cam = camAt(ORIGIN, [c.x, lerp(3.2, 1.7, k), c.z], [p.x, 0.5, p.z], 0.012);
+                } else {
+                    const k = ease(u / s.dur);
+                    cam = camAt(ORIGIN, [lerp(-2, 2, k), lerp(H1, H1 - 4.5, k), lerp(R1, R1 - 3, k)], [0, lerp(4, 1, k), 0], 0.01);
+                }
             }
         }
 
         if (!cam) {
             const t = T;
-            if (phase === 'verdict' && G && G.verdict && G.verdict.id && chars.get(G.verdict.id)) {
-                const v = chars.get(G.verdict.id), u = now - G.phaseAt, p = seatWorld(v, tmp), dir = tmp2.copy(p).normalize();
+            const V = phase === 'verdict' && G && G.verdict;
+            if (V && V.id && chars.get(V.id)) {
+                // الطرد (12ث): كشاف ← القفص ينزل من السما ← ارتطام وغبار ← كشف الفريق ← القفص يرتفع بالسلسلة ← لقطة واسعة
+                const v = chars.get(V.id), u = now - G.phaseAt, p = seatWorld(v, tmp), dir = tmp2.copy(p).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x);
+                const hh2 = (amp) => [Math.sin(u / 310) * amp, Math.sin(u / 260) * amp * 0.7, Math.cos(u / 230) * amp * 0.5];
+                const at = (c, l, amp) => { const h = hh2(amp == null ? 0.02 : amp); return [c.x + h[0], c.y + h[1], c.z + h[2], l.x, l.y, l.z]; };
+                const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
                 cage.visible = true;
-                const drop = ease(span(u, 1800, 2700)), lift = ease(span(u, 5200, 8000));
-                cage.position.set(p.x, lerp(14, 0, drop) + lift * 14, p.z);
-                if (u > 2650 && u < 2900) shake = 0.2;
-                runCues('verdict' + G.phaseAt, u, [{ t: 0, k: 'whoosh', g: 0.6 }, { t: 2660, k: 'cage' }, { t: 5200, k: 'whoosh', g: 1.2 }]);
-                v.group.position.y = lift * 14;
-                verdictSpot.position.set(p.x, 12, p.z); verdictSpot.target.position.set(p.x, 0, p.z); verdictSpot.intensity = 220 * ease(span(u, 0, 900));
-                // المطرود واقف وخايف
-                v.c.root.rotation.z = 0; v.c.root.position.set(0, 0, 0); setGrey(v.c, 0);
-                v.c.armL.rotation.set(-2.6, 0, -0.4); v.c.armR.rotation.set(-2.6, 0, 0.4); v.c.head.rotation.set(-0.2, Math.sin(u / 120) * 0.15, 0);
+                const drop = ease(span(u, 1800, 2700)), lift = ease(span(u, 5400, 8400)), spotK = ease(span(u, 80, 500)) * (1 - ease(span(u, 8400, 10500)));
+                cage.position.set(p.x, lerp(16, 0, drop) + lift * 16, p.z);
+                if (u > 2700 && u < 2950) shake = 0.24;
+                v.group.position.y = lift * 16;
+                verdictSpot.position.set(p.x, 12, p.z); verdictSpot.target.position.set(p.x, 0, p.z); verdictSpot.intensity = 220 * spotK;
+                spotBeam.position.set(p.x, 6 + lift * 16, p.z); spotBeam.material.opacity = 0.07 * spotK;
+                const dk = span(u, 2700, 3700);   // حلقة الغبار
+                if (dk > 0 && dk < 1) {
+                    dustRing.material.opacity = 0.6 * (1 - dk);
+                    for (let i = 0; i < RING; i++) { const d = ringSeed[i], r = 1 + d.s * ease(dk); ringPos[i * 3] = p.x + Math.cos(d.a) * r; ringPos[i * 3 + 1] = d.y * Math.sin(dk * Math.PI); ringPos[i * 3 + 2] = p.z + Math.sin(d.a) * r; }
+                    ringGeo.attributes.position.needsUpdate = true;
+                }
+                // المطرود: خايف ورافع يديه، بعد الارتطام ماسك القضبان، وبالرفع يطالع تحت
+                v.c.root.rotation.z = 0; v.c.root.position.set(0, 0, 0); setGrey(v.c, 0); v.c.root.visible = true;
+                if (u < 2700) { v.c.armL.rotation.set(-2.6, 0, -0.4); v.c.armR.rotation.set(-2.6, 0, 0.4); v.c.head.rotation.set(-0.35 * drop, Math.sin(u / 120) * 0.15, 0); }
+                else { v.c.armL.rotation.set(-1.5, 0, -0.5); v.c.armR.rotation.set(-1.5, 0, 0.5); v.c.head.rotation.set(lift > 0 ? 0.45 : 0, Math.sin(u / 300) * 0.25, 0); }
                 v.tag.position.y = 2.45;
-                const camBase = p.clone().addScaledVector(dir, -Math.min(4, v.seat.r - 1)).addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), 2.5);
-                cam = [camBase.x, 3.2 + lift * 7.7, camBase.z, p.x, 1.3 + lift * 14, p.z];
-                v.c.root.visible = true;
+                runCues('verdict' + G.phaseAt, u, [{ t: 0, k: 'whoosh', g: 0.6 }, { t: 90, k: 'clunk' }, { t: 1850, k: 'fall' }, { t: 2700, k: 'cage' }, { t: 4200, k: V.team === 'mafia' ? 'revealMafia' : 'revealTown' }, { t: 5400, k: 'chain' }]);
+                if (u < 1800) { const a = Math.atan2(-dir.z, -dir.x) + lerp(-0.5, 0.4, ease(span(u, 0, 1800))), c = p.clone().add(V3(Math.cos(a) * 5.5, 3.2, Math.sin(a) * 5.5)); cam = at(c, V3(p.x, 1.3, p.z), 0.02); }
+                else if (u < 2700) cam = at(p.clone().addScaledVector(dir, -2.4).add(V3(0, 0.6, 0)), V3(p.x, 9 - drop * 7, p.z), 0.01);          // من تحت: القفص طايح من السما
+                else if (u < 4200) cam = at(p.clone().addScaledVector(side, 3.3).addScaledVector(dir, -1.2).add(V3(0, 1.8, 0)), V3(p.x, 1.2, p.z), 0.02);
+                else if (u < 5400) { const k = ease(span(u, 4200, 5400)); cam = at(p.clone().addScaledVector(dir, -lerp(2.8, 2.0, k)).addScaledVector(side, 0.5).add(V3(0, 1.7, 0)), V3(p.x, 1.5, p.z), 0.008); }
+                else if (u < 8400) cam = at(p.clone().addScaledVector(dir, -Math.min(4, v.seat.r - 1)).addScaledVector(side, 2.5).add(V3(0, 3.2 + lift * 7.7, 0)), V3(p.x, 1.3 + lift * 16, p.z), 0.015);
+                else { const k = ease(span(u, 8400, 12000)), [R2, H2] = pull(15, 8); cam = at(V3(Math.sin(0.6) * R2, H2, Math.cos(0.6) * R2), V3(lerp(p.x, 0, k), lerp(14, 1, k), lerp(p.z, 0, k)), 0.01); }
+            } else if (V) {
+                // تعادل/ما أحد طلع: دوران هادي حول النار
+                runCues('verdict' + G.phaseAt, now - G.phaseAt, [{ t: 300, k: 'tie' }]);
+                orbit(t, 13, 6, 0.05);
             } else if (phase === 'over') {
                 confetti.visible = true;
                 for (let i = 0; i < CONF; i++) { const s = confSeed[i], y = 12 - ((t * s.sp + s.off) % 12); confPos[i * 3] = s.x + Math.sin(t * 2 + s.w) * 0.5; confPos[i * 3 + 1] = y; confPos[i * 3 + 2] = s.z + Math.cos(t * 2 + s.w) * 0.5; }
                 confGeo.attributes.position.needsUpdate = true;
-                orbit(t, 13, 6, 0.12);
+                // ألعاب نارية بلون الفريق الفائز
+                const mafiaWin = G.winner === 'mafia', pal = (mafiaWin ? ['#ff3b30', '#ff7a1a', '#ffd0a0', '#b91c1c'] : ['#ffd34d', '#4dc3ff', '#7dff9a', '#c18cff', '#ff7ab6']).map((c) => new THREE.Color(c));
+                fireworks.visible = true;
+                const ms = t * 1000, cyc = FW * FW_PERIOD;
+                for (let b = 0; b < FW; b++) {
+                    const age = ((ms - b * FW_PERIOD) % cyc + cyc) % cyc, launching = age < 700, burst = (age - 700) / 2000;
+                    const cx = Math.cos(b * 1.9) * 7, cz = Math.sin(b * 1.9) * 7 - 3, cy = 10 + (b % 3) * 1.5, col = pal[b % pal.length];
+                    if (age < fwLast[b]) onCue('firework', { pan: Math.max(-0.8, Math.min(0.8, cx / 10)) });   // انطلاق صاروخ جديد
+                    fwLast[b] = age;
+                    for (let i = 0; i < FWN; i++) {
+                        const j = (b * FWN + i) * 3, d = fwDir[b * FWN + i];
+                        let x = cx, y = cy, z = cz, a = 0;
+                        if (launching) { const q = age / 700; y = lerp(1, cy, ease(q)); a = i < 6 ? 1 : 0; x += (Math.random() - 0.5) * 0.1; }
+                        else if (burst < 1) { const r = ease(burst) * 6; x += d[0] * r; y += d[1] * r - burst * burst * 3; z += d[2] * r; a = 1 - burst; }
+                        fwPos[j] = x; fwPos[j + 1] = y; fwPos[j + 2] = z;
+                        fwCol[j] = col.r * a * 2; fwCol[j + 1] = col.g * a * 2; fwCol[j + 2] = col.b * a * 2;   // ×2 عشان التوهّج يمسكها
+                    }
+                }
+                fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true;
+                runCues('over' + G.id, now - (G.endedAt || G.phaseAt), [{ t: 150, k: 'fanfare', mafia: mafiaWin }]);
+                { const a = t * 0.12 + 0.6, [R, H] = pull(14, 4.5); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 5.5, 0); }   // تطالع فوق للألعاب النارية
             } else if (phase === 'night') orbit(t, 12, 4.2, 0.03);
             else if (phase === 'vote') orbit(t, 13, 7.5, 0.04);
             else if (phase === 'day') orbit(t, 13.5, 6, 0.05);

@@ -342,6 +342,10 @@ button { font-family: inherit; cursor: pointer; }
         var left = G.endsAt ? Math.max(0, G.endsAt - now) : 0, total = G.endsAt ? G.endsAt - G.phaseAt : 1;
         var showTimer = !!G.endsAt && G.phase !== 'dawn' && G.phase !== 'verdict';
         $('timer').classList.toggle('hide', !showTimer);
+        // تكتكة آخر 10 ثواني (أعلى بآخر 3)
+        var sec = Math.ceil(left / 1000);
+        if (showTimer && sec <= 10 && sec > 0 && sec !== tickUI.lastSec) window.MafiaSFX.cue('tick', { hi: sec <= 3, g: sec <= 3 ? 1 : 0.6 });
+        tickUI.lastSec = showTimer ? sec : 0;
         if (showTimer) { $('timerTxt').textContent = Math.ceil(left / 1000); $('timerArc').style.strokeDashoffset = String(201 * (1 - left / total)); $('timerArc').style.stroke = left < 10000 ? '#e2483d' : '#ffcc4d'; }
 
         var info = stage ? stage.shotInfo() : { shot: null };
