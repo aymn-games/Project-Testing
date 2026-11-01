@@ -25,11 +25,11 @@
     function joinStepsHtml(siteUrl, code) {
         var c = code ? '<b style="letter-spacing:2px">' + code + '</b>' : '';
         return '<ol class="steps">' +
-            '<li><span>1</span><span><b>امسح الباركود</b> أو افتح <b dir="ltr">' + siteUrl + '</b> واكتب رقم الروم ' + c + '</span></li>' +
-            '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b> (إلزامي)</span></li>' +
-            '<li><span>3</span><span>جهّز شخصيتك واضغط <b>«ادخل الساحة»</b> — تظهر هنا فوراً</span></li>' +
+            '<li><span>1</span><span><b>امسح الباركود</b> أو اكتب رقم الروم ' + c + ' في <b dir="ltr">' + siteUrl + '</b></span></li>' +
+            '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b></span></li>' +
+            '<li><span>3</span><span>اضغط <b>«ادخل الساحة»</b></span></li>' +
             '</ol>' +
-            '<div class="steps-note">💡 الدخول <b>بالباركود أو رقم الروم فقط</b> — مو بكتابة كلمة بالشات</div>';
+            '<div class="steps-note">💡 ما فيه دخول بالشات</div>';
     }
 
     window.MafiaHost = { buildFx: buildFx, joinStepsHtml: joinStepsHtml };
