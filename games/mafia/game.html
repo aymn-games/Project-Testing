@@ -108,6 +108,9 @@ button { font-family: inherit; cursor: pointer; }
 .msg .re { margin-bottom: 4px; padding: 3px 8px; border-inline-start: 3px solid var(--rc); border-radius: 6px; background: rgba(0,0,0,.25); font-size: 13px; font-weight: 700; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msg .re b { color: var(--rc); }
 .ev { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 15px; font-weight: 800; color: #e9e6ff; animation: pop .3s ease-out; }
+.roles-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-bottom: 10px; margin-bottom: 2px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.roles-sum span { padding: 7px 10px; border-radius: 10px; background: rgba(139,92,246,.1); border: 1px solid rgba(167,139,250,.2); font-size: 14px; font-weight: 700; color: #e9e6ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.roles-sum b { color: #fff; font-size: 16px; }
 .ev.big { background: rgba(167,139,250,.1); color: #ddd6fe; }
 .empty-talk { margin: auto; text-align: center; color: var(--mute); font-size: 15px; font-weight: 700; line-height: 1.7; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
@@ -312,15 +315,31 @@ button { font-family: inherit; cursor: pointer; }
     // النقاش والتصويت: الشات العام بس (رسائل اللاعبين مع الردود) · باقي المراحل: سجل أحداث المباراة
     function renderChat(G) {
         var talk = G.phase === 'day' || G.phase === 'vote';
-        var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city'; }) : G.chat.filter(function (c) { return c.sys; });
+        // الشات يتصفّر كل نقاش: نعرض بس رسائل اليوم الحالي (بعد رسالة «بدأ النقاش» الأخيرة)
+        var dayN = 0;
+        for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
+        // بدون نقاش: أحداث المباراة المهمة بس (بداية، نتيجة كل ليلة، الطرد)
+        var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city' && c.n > dayN; })
+            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد/.test(c.text); });
         var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
         $('chatTitle').innerHTML = talk ? '<i></i>النقاش العام' : '📜 مجريات المباراة';
-        $('chatCount').textContent = talk ? list.length + ' رسالة' : 'الليلة ' + Math.max(1, G.round);
+        $('chatCount').textContent = talk ? list.length + ' رسالة' : G.players.filter(function (p) { return p.alive; }).length + ' أحياء';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var box = $('msgs'), prev = null;
         if (talk && !list.length) { box.innerHTML = '<div class="empty-talk">💬 النقاش بدأ<br>اللاعبين يكتبون من جوالاتهم…</div>'; return; }
+        if (!talk) {
+            // الأدوار بالمباراة (أعداد بس — مين صاحب الدور يبقى سر)
+            var st = G.settings || {}, cit = G.players.length - (st.mafia || 0) - (st.doctors || 0) - (st.detectives || 0);
+            var roles = [['🔪', st.mafia, 'مافيا' + (st.disguised ? ' (' + st.disguised + ' متخفي)' : '')], ['🩺', st.doctors, 'طبيب'], ['🕵️', st.detectives, 'محقق'], ['🏠', cit, 'مواطن']]
+                .filter(function (r) { return r[1] > 0; }).map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b> ' + r[2] + '</span>'; }).join('');
+            box.innerHTML = '<div class="roles-sum">' + roles + '</div>' + (list.length ? list.slice(-12).map(function (c) {
+                return '<div class="ev' + (/إقصاء|طرد/.test(c.text) && !/دون/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/\s*—.*$/, '')) + '</div>';
+            }).join('') : '<div class="empty-talk">المباراة بدأت للتو…</div>');
+            box.scrollTop = box.scrollHeight;
+            return;
+        }
         box.innerHTML = list.slice(-40).map(function (c) {
             if (c.sys) return '<div class="ev' + (/إقصاء|طرد|أنقذ|فاز|سيطرت|تخلّصت/.test(c.text) ? ' big' : '') + '">' + esc(c.text) + '</div>';
             var p = byId[c.from] || { name: '؟' }, pc = playerColor(p), cont = prev === c.from && !c.re;
