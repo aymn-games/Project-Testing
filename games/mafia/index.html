@@ -95,11 +95,7 @@
             (s.detectives ? '<span class="chip">🕵️ ' + s.detectives + ' محقق</span>' : '') +
             '<span class="chip">🏠 والباقي مواطنين</span>' +
             '<span class="chip">🃏 ' + (s.cardsCount ? s.cardsCount + ' كروت للمافيا من ' + enabledCards(s).length : 'بدون كروت') + '</span></div>' +
-            '<div class="note" style="padding-top:6px">تحتاج <b style="color:#fff">' + minPlayers(s) + '</b> لاعبين على الأقل لهالإعدادات، والروم يقبل لين ' + s.maxPlayers + ' لاعب. فوق 25 لاعب تتوزع الأسماء على أحياء.</div></section>' +
-            // طريقة دخول اللاعبين (تتكرر باللوبي مع الباركود ورقم الغرفة)
-            '<section class="sec full' + anim + '" style="animation-delay:.26s"><div class="sec-h"><span class="sec-n">' + (schema.length + 2) + '</span><span class="sec-t">طريقة الدخول</span></div>' +
-            '<div style="padding-top:8px">' + window.MafiaHost.joinStepsHtml(new URL('join.html', location.href).href.replace(/^https?:\/\//, ''), '') + '</div>' +
-            '<div class="note" style="padding-top:8px">الباركود ورقم الروم يطلعون باللوبي.</div></section>';
+            '<div class="note" style="padding-top:6px">تحتاج <b style="color:#fff">' + minPlayers(s) + '</b> لاعبين على الأقل لهالإعدادات، والروم يقبل لين ' + s.maxPlayers + ' لاعب. فوق 25 لاعب تتوزع الأسماء على أحياء.</div></section>';
         $('sections').innerHTML = html;
     }
 

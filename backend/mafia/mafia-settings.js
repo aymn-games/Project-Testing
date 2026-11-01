@@ -17,7 +17,7 @@ var SCHEMA = [
         { k: 'disguised', n: 'منهم متخفين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'أول فحص ناجح له يطلع «مواطن»' },
         { k: 'doctors', n: 'عدد الأطباء', t: 'num', min: 0, max: 10, step: 1, d: 1 },
         { k: 'detectives', n: 'عدد المحققين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'يحتاج 6 لاعبين وطالع' },
-        { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مطفي = حسب القواعد: قتيل الليل بدون كشف، والمطرود يظهر فريقه بس' }
+        { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مشغّل: يطلع دور اللي يموت أو ينطرد بالضبط (طبيب، محقق…). مطفي: قتيل الليل دوره سر، والمطرود يطلع فريقه بس (مافيا أو مواطن). وبالنهاية تنكشف أدوار الكل' }
     ] },
     // كروت المافيا: المذيع يفعّل اللي يبيه، وكل مباراة تنسحب منها عشوائي بالعدد المحدد
     { id: 'cards', n: 'كروت المافيا', f: [
@@ -32,8 +32,8 @@ var SCHEMA = [
         { k: 'mafiaSec', n: 'دور المافيا بالليل', t: 'num', min: 15, max: 120, step: 5, d: 40, u: 'ث' },
         { k: 'doctorSec', n: 'دور الطبيب', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
         { k: 'detectiveSec', n: 'دور المحقق', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
-        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 180, u: 'ث' },
-        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 45, u: 'ث' }
+        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 60, u: 'ث' },
+        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 30, u: 'ث' }
     ] },
     { id: 'room', n: 'الروم', f: [
         { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: MIN_ROOM, max: MAX_ROOM, step: 5, d: MAX_ROOM }
