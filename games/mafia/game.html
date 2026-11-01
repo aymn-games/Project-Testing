@@ -7,10 +7,11 @@
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
-<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js" } }</script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 <script src="../../auth/auth-client.js"></script>
 <script src="mafia-net.js"></script>
 <script src="mafia-looks.js"></script>
+<script src="mafia-sfx.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 :root {
@@ -147,6 +148,7 @@ button { font-family: inherit; cursor: pointer; }
     <header class="topbar">
         <div class="brand"><span class="brand-dot">🔪</span> المافيا <small>ساحة القرية</small></div>
         <div class="top-actions">
+            <button class="tbtn" id="sndBtn" type="button" aria-label="الصوت">🔊 الصوت</button>
             <button class="tbtn" id="fsBtn" type="button">⛶ ملء الشاشة</button>
             <button class="tbtn" id="ctlBtn" type="button">☰ التحكم</button>
             <button class="tbtn" id="exitBtn" type="button">⏻ إنهاء اللعبة</button>
@@ -248,6 +250,10 @@ button { font-family: inherit; cursor: pointer; }
         net.send({ t: 'close' }); NET.hostSession(null);
         setTimeout(function () { location.href = '../../games.html'; }, 300);
     };
+    // الصوت: المتصفح يقفله لين أول ضغطة — الزر يوضّح الحالة ويفتحه/يكتمه
+    function sndLabel() { var S2 = window.MafiaSFX; $('sndBtn').textContent = S2.needsUnlock() ? '🔈 اضغط لتفعيل الصوت' : S2.muted() ? '🔇 الصوت مقفل' : '🔊 الصوت'; }
+    $('sndBtn').onclick = function () { var S2 = window.MafiaSFX; if (S2.needsUnlock()) S2.unlock(); else S2.setMuted(!S2.muted()); setTimeout(sndLabel, 50); };
+    setInterval(sndLabel, 1000);
     $('fsBtn').onclick = function () {
         var d = document.documentElement;
         if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen();
@@ -357,11 +363,13 @@ button { font-family: inherit; cursor: pointer; }
                 if (sh.k === 'intro') caption('الليلة ' + G.round, 'المدينة نايمة… والمافيا صاحية', '', '#9fb4ff');
                 else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
-                    if (u < 1600) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
-                    else if (u < 3900) caption('🔪 المافيا تتحرك في الظلام…', 'انتبه وراك!', '', '#ff8a80');
-                    else if (u < 4700) caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
+                    // نفس توقيتات ATK بالمشهد (mafia-scene.js)
+                    if (u < 3200) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
+                    else if (u < 6000) caption('👁️ في أحد يراقب من الظلام…', '', '', '#ff8a80');
+                    else if (u < 6650) caption('انتبه وراك!', '', '', '#ff8a80');
+                    else if (u < 8200) caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
                     else caption('المافيا هرب في الظلام…', nameOf(sh.target) + ' طايح بالسوق', '', '#ff8a80');
-                    if (u > 3900 && u < 4450) flash('#c40000', 0.55 * (1 - (u - 3900) / 550));
+                    if (u > 6650 && u < 7250) flash('#c40000', 0.6 * (1 - (u - 6650) / 600));
                 } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'result') {
@@ -406,7 +414,9 @@ button { font-family: inherit; cursor: pointer; }
 </script>
 <script type="module">
 import { createStage } from './mafia-scene.js';
-window.__mafiaStage = createStage(document.getElementById('stage'), function () { return window.__mafiaFrame(); });
+window.__mafiaStage = createStage(document.getElementById('stage'), function () { return window.__mafiaFrame(); }, {
+    onCue: function (k, d) { window.MafiaSFX.cue(k, d); }, onAmbience: function (m) { window.MafiaSFX.ambience(m); }
+});
 </script>
 </body>
 </html>

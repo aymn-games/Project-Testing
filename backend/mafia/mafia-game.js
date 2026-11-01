@@ -34,7 +34,9 @@ var CARDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
 var CARD_NAMES = { recruit: 'التجنيد', shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' };
 var ROLE_NAMES = { citizen: 'مواطن', mafia: 'مافيا', disguised: 'متخفي', doctor: 'طبيب', detective: 'محقق' };
 // أطوال لقطات الفجر (لازم تطابق مدد المشاهد في games/mafia/mafia-scene.js)
-var SHOT = { intro: 3000, inspect: 6500, attack: 7000, save: 6000, quiet: 5000, result: 5000 };
+var SHOT = { intro: 3000, inspect: 6500, attack: 10000, save: 6000, quiet: 5000, result: 5000 };
+// لحظة وصول جسم الضحية للأرض داخل لقطة الهجوم (ATK.down بالمشهد) — قبلها يبقى «حي» بحالة البث
+var ATTACK_DOWN_MS = 7900;
 
 function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
@@ -339,7 +341,7 @@ function createGame(roster, settings, hooks) {
     function hiddenDeath(p) {
         if (G.phase !== 'dawn' || p.cause !== 'mafia' || p.diedRound !== G.round) return false;
         var atk = G.seq.find(function (s) { return s.k === 'attack'; });
-        return !atk || Date.now() < G.phaseAt + atk.at + 4600;
+        return !atk || Date.now() < G.phaseAt + atk.at + ATTACK_DOWN_MS;
     }
 
     /** وش ينكشف عن لاعب ميت للكل: الدور كامل (fullReveal) أو الفريق للمطرود بالتصويت (القواعد). */
