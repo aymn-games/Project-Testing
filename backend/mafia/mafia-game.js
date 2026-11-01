@@ -338,8 +338,11 @@ function createGame(roster, settings, hooks) {
             if (ch === 'district' && G.districts < 2) ch = 'city';
         } else return;
         var now = Date.now();
-        if (me._lastChat && now - me._lastChat < 1500) return;
+        // حد الإرسال: رصيد 5 رسائل يرجع منها وحدة كل ثانية (يسمح بالكتابة السريعة ويمنع السبام)
+        me._chatTok = Math.min(5, (me._chatTok == null ? 5 : me._chatTok) + (now - (me._lastChat || now)) / 1000);
         me._lastChat = now;
+        if (me._chatTok < 1) return;
+        me._chatTok -= 1;
         var re = null;
         if (reN) {
             var orig = G.chat.find(function (c) { return c.n === reN && !c.sys && c.ch === ch && (ch !== 'district' || c.d === me.district); });

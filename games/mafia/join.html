@@ -420,13 +420,17 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
         var dayN = 0; for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
-        var msgs = G.chat.filter(function (c) { return !c.sys && c.ch === S.chan && c.n > dayN; }).slice(-60).map(function (c) {
-            if (c.sys) return '<div class="cm sys">' + esc(c.text) + '</div>';
-            return bubble(c, byId, canSend);
-        }).join('');
+        var msgs = chatMsgs(G);
         return '<div class="sec-h"><h2>💬 العام</h2></div>' + (chans.length > 1 ? '<div class="opts" style="margin-top:8px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
             '<div class="chatbox" id="chatbox">' + (msgs || '<div class="cm sys">💬</div>') + '</div>' + (canSend
             ? replyBar(G, S.chan) + '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+    }
+    // محتوى صندوق الشات العام بس (يتحدّث لحاله بدون ما نعيد بناء الشاشة كلها)
+    function chatMsgs(G) {
+        var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
+        var dayN = 0; for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
+        return G.chat.filter(function (c) { return !c.sys && c.ch === S.chan && c.n > dayN; }).slice(-60).map(function (c) { return bubble(c, byId, canSend); }).join('');
     }
     function chansFor(G) {
         var c = [];
@@ -445,19 +449,26 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var chans = privChans(G); if (!chans.length) return '';
         if (S.privOpen && chans.indexOf(S.privOpen) < 0) S.privOpen = '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var heads = chans.map(function (ch) {
+        var heads = privHeads(G, chans);
+        var ch = S.privOpen; if (!ch) return '<div class="pbtns">' + heads + '</div>';
+        var canSend = ch === 'mafia' || G.phase === 'day';
+        return '<div class="pbtns">' + heads + '</div><div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + privMsgs(G) + '</div>' +
+            (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
+    }
+    function privMsgs(G) {
+        var ch = S.privOpen; if (!ch) return '';
+        var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = ch === 'mafia' || G.phase === 'day';
+        return list.slice(-60).map(function (c) { return bubble(c, byId, canSend); }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>';
+    }
+    function privHeads(G, chans) {
+        return chans.map(function (ch) {
             var list = G.chat.filter(function (c) { return c.ch === ch; }), open = S.privOpen === ch;
             var last = list.length ? list[list.length - 1].n : 0, seen = S.privSeen[ch] || 0;
             if (open) S.privSeen[ch] = last;
             var unread = open ? 0 : list.filter(function (c) { return c.n > seen && c.from !== G.me.id; }).length;
             return '<button type="button" class="pbtn" data-priv-toggle="' + ch + '" aria-expanded="' + open + '">🔒 ' + PRIV[ch].n.split(' ')[0] + (unread ? ' <i>' + unread + '</i>' : '') + ' ' + (open ? '▴' : '▾') + '</button>';
         }).join(' ');
-        var ch = S.privOpen; if (!ch) return '<div class="pbtns">' + heads + '</div>';
-        var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = ch === 'mafia' || G.phase === 'day';
-        return '<div class="pbtns">' + heads + '</div><div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + (list.slice(-60).map(function (c) {
-            return bubble(c, byId, canSend);
-        }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>') + '</div>' +
-            (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
     }
 
     var CARD_INFO = {
@@ -552,11 +563,15 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
 
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply]);
-        if (key === lastRenderKey) return; lastRenderKey = key;
+        // الشاشة تنبني من جديد بس لو تغيّر شي غير الشات؛ الرسائل الجديدة تحدّث صناديق الشات لحالها
+        // (عشان الكتابة ما تتقطّع، والكيبورد ما يرمش، واللي يقرأ رسائل قديمة ما ينسحب لتحت غصب)
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply]);
+        if (key === lastRenderKey) { patchChat(G); return; }
+        lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
         var pin = $('privIn'); if (pin) S.pdraft = pin.value;
         var focusId = document.activeElement && document.activeElement.id;
+        var caret = document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement.selectionStart : 1e9;
 
         var html = '', main = '', side = '', ph = G.phase, alive = me.alive;
         var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
@@ -621,10 +636,22 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         $('gameBody').innerHTML = html;
         fitGrids();
         var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
+        lastChatHtml = chatMsgs(G) || '<div class="cm sys">💬</div>'; lastPrivHtml = privMsgs(G); lastHeads = privChans(G).length ? privHeads(G, privChans(G)) : '';
         var ci = $('chatIn'); if (ci) ci.value = S.draft;
         var pi = $('privIn'); if (pi) pi.value = S.pdraft;
         var pb = $('privbox'); if (pb) pb.scrollTop = pb.scrollHeight;
-        var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); fe.setSelectionRange(fe.value.length, fe.value.length); }
+        var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); var sp = Math.min(caret, fe.value.length); fe.setSelectionRange(sp, sp); }
+    }
+    // تحديث الرسائل بس: يحافظ على مكان القراءة (إلا لو كان تحت أصلاً) وما يلمس خانة الكتابة
+    var lastChatHtml = '', lastPrivHtml = '', lastHeads = '';
+    function patchChat(G) {
+        var stick = function (box) { return box.scrollHeight - box.scrollTop - box.clientHeight < 80; };
+        var box = $('chatbox');
+        if (box) { var h = chatMsgs(G) || '<div class="cm sys">💬</div>'; if (h !== lastChatHtml) { var st = stick(box); box.innerHTML = h; lastChatHtml = h; if (st) box.scrollTop = box.scrollHeight; } }
+        var pb = $('privbox');
+        if (pb) { var ph = privMsgs(G); if (ph !== lastPrivHtml) { var st2 = stick(pb); pb.innerHTML = ph; lastPrivHtml = ph; if (st2) pb.scrollTop = pb.scrollHeight; } }
+        var hb = document.querySelector('#gameBody .pbtns'), chans = privChans(G);
+        if (hb && chans.length) { var hh = privHeads(G, chans); if (hh !== lastHeads) { hb.innerHTML = hh; lastHeads = hh; } }
     }
 
 
