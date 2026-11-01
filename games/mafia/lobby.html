@@ -108,6 +108,8 @@
 
 <script>
 (function () {
+    // صورة اللاعب: مسار نسبي من خادم المنصة (صورة تيك توك المحفوظة) أو رابط كامل
+    function avUrl(a) { return a && a.charAt(0) === '/' ? ((window.AGPAuth && window.AGPAuth.API_BASE) || '') + a : a; }
     'use strict';
     var NET = window.MafiaNet, AGP = window.AymanGamesPlatform;
     var $ = function (id) { return document.getElementById(id); };
@@ -145,7 +147,7 @@
     var FRAME_W_RATIO = 4.96, X_SIZE = 24, cells = {};
     function initial(n) { return ([].slice.call(String(n || '')).find(function (ch) { return /[^\s_\d]/.test(ch); })) || ''; }
     function plainHtml(p) {
-        return '<div class="plain"><span class="av">' + esc(initial(p.name)) + (p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+        return '<div class="plain"><span class="av">' + esc(initial(p.name)) + (p.avatar ? '<img src="' + esc(avUrl(p.avatar)) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
             '<span class="pname" title="' + esc(p.name) + '">' + esc(p.name) + '</span>' +
             '<button class="x" type="button" data-kick="' + p.id + '" aria-label="إقصاء ' + esc(p.name) + '">' + X_SVG + '</button></div>';
     }
@@ -153,7 +155,7 @@
         var w = Math.floor(cell.clientWidth); if (!w) return;
         cell.dataset.w = w;
         cell.innerHTML = '<div class="framebox">' + AGP.playerCard.renderHtml(
-            { id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame },
+            { id: p.id, name: p.name, avatarUrl: p.avatar ? avUrl(p.avatar) : null, frame: p.frame },
             { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(w / FRAME_W_RATIO)) }) +
             '<button class="x" type="button" data-kick="' + p.id + '" aria-label="إقصاء ' + esc(p.name) + '">' + X_SVG + '</button></div>';
         var box = cell.firstChild, plates = box.querySelectorAll('[data-agp-pcard-name="1"]');

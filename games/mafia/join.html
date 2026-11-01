@@ -78,7 +78,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .pill.on { background: rgba(139,92,246,.28); color: #fff; border-color: var(--gold); box-shadow: 0 0 12px rgba(139,92,246,.35); }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
 .acct a { color: var(--gold); font-weight: 900; }
-.acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--card2); font-weight: 900; font-size: 22px; }
+.acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; position: relative; background: var(--card2); font-weight: 900; font-size: 22px; }
 .acct .av img { width: 100%; height: 100%; object-fit: cover; }
 .acct .who2 { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .acct .who2 div { min-width: 0; }
@@ -318,7 +318,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             return;
         }
         var name = u.tiktok_display_name || u.username || '', tk = u.tiktok_verified && u.tiktok_username;
-        box.innerHTML = '<span class="who2"><span class="av">' + (u.tiktok_avatar_url ? '<img src="' + esc(u.tiktok_avatar_url) + '" alt="" referrerpolicy="no-referrer">' : esc(name.slice(0, 1))) + '</span>' +
+        box.innerHTML = '<span class="who2"><span class="av">' + esc(name.slice(0, 1)) + (tk ? '<img src="' + esc(((window.AGPAuth && window.AGPAuth.API_BASE) || '') + '/api/public/streamer-avatar?u=' + encodeURIComponent(tk)) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0">' : '') + '</span>' +
             '<div><div class="nm2">' + esc(name) + '</div><div class="sub2">' + (tk ? '@' + esc(tk) + ' · <span style="color:#7ee2a6">تنحسب لك النقاط</span>' : 'حسابك مو موثّق بتيك توك — بدون نقاط ولا إطار') + '</div></div></span>';
     }
     function openProfile() {

@@ -771,7 +771,7 @@ export function createStage(container, getFrame, opts) {
         camPos.lerp(camTarget, 0.06); camLook.lerp(lookTarget, 0.06);
     }
     // بالرومات الكبيرة الكاميرا تكون برا أبعد حلقة وأعلى، عشان ما تنحجب بالرؤوس القريبة
-    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7), h + extra * 1.1]; }
+    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7) * 1.15, (h + extra * 1.1) * 1.12]; }   // الكاميرا أبعد شوي عن الحلقة
     function orbit(t, r, h, speed) { const a = t * (speed || 0.05) + 0.6, [R, H] = pull(r, h); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 1.0, 0); }
     function seatWorld(v, out) { return (out || new THREE.Vector3()).set(v.seat.x, 0, v.seat.z); }
 
@@ -920,6 +920,8 @@ export function createStage(container, getFrame, opts) {
                 const k = ease(u / s.dur), [R0, H0] = pull(15, 7.5);
                 cam = camAt(ORIGIN, [lerp(-1.5, 0, k), lerp(H0 + 2.5, H0, k), lerp(R0 + 2.5, R0, k)], [0, lerp(3, 1, k), 0], 0);
             } else if (s.k === 'inspect') {
+                // تصوير أبعد شوي: نبعّد الكاميرا عن نقطة النظر ×1.25 (وتبقى داخل الغرفة)
+                const camRoom = (c, l, amp) => { const f = 1.25, x = Math.max(-4.5, Math.min(4.5, l[0] + (c[0] - l[0]) * f)), y = Math.min(5.4, l[1] + (c[1] - l[1]) * f), z = Math.max(-4.5, Math.min(4.5, l[2] + (c[2] - l[2]) * f)); return camAt(ROOM, [x, y, z], l, amp); };
                 // غرفة التحقيق: تأسيس ← فوق كتف المحقق ← ضربة الطاولة ← وجه المشتبه ← الجوال يضيء بالنتيجة
                 const slamU = 3250, swing = 0.1 + 0.18 * Math.exp(-Math.max(0, u - slamU) / 900) * (u > slamU ? 1 : 0);
                 lampPivot.rotation.z = Math.sin(u / 600) * swing;
@@ -937,11 +939,11 @@ export function createStage(container, getFrame, opts) {
                 secH.rotation.z = -Math.floor(u / 1000) * TAU / 60 - 1.2; minH.rotation.z = -0.9;
                 phoneScreen.emissiveIntensity = u > 5300 ? 1.6 + Math.sin(u / 90) * 0.6 : 0;
                 hemi.intensity = 0.06; sky.intensity = 0;
-                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camAt(ROOM, [lerp(3.1, 2.8, k), lerp(3.4, 3.1, k), lerp(3.0, 2.7, k)], [0, 1.2, 0], 0.004); }
-                else if (u < slamU) cam = camAt(ROOM, [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.004);                 // فوق كتف المحقق
-                else if (u < 3700) cam = camAt(ROOM, [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.004);                          // الضربة من الجنب
-                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camAt(ROOM, [lerp(0.85, 0.75, k), 1.8, lerp(0.65, 0.5, k)], [0, 1.5, -1.35], 0.003); }   // وجه المشتبه
-                else { const k = ease(span(u, 5200, s.dur)); cam = camAt(ROOM, [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
+                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camRoom( [lerp(3.1, 2.8, k), lerp(3.4, 3.1, k), lerp(3.0, 2.7, k)], [0, 1.2, 0], 0.004); }
+                else if (u < slamU) cam = camRoom( [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.004);                 // فوق كتف المحقق
+                else if (u < 3700) cam = camRoom( [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.004);                          // الضربة من الجنب
+                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camRoom( [lerp(0.85, 0.75, k), 1.8, lerp(0.65, 0.5, k)], [0, 1.5, -1.35], 0.003); }   // وجه المشتبه
+                else { const k = ease(span(u, 5200, s.dur)); cam = camRoom( [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
                 // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
                 const w = marketWalker(vt.p.look), Z = STREET_Z;
