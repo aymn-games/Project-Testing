@@ -85,6 +85,11 @@
    تلقائياً عبر `agp-registry.js`.
 8. اللعبة المستضافة خارجياً تُربط عبر `AGP.gameBridge.connect(...)` — لا
    `postMessage` يدوي.
+9. لعبة يدخلها اللاعبون من جوالاتهم (باركود): لازم يكون لها رقم غرفة من
+   4 أرقام ظاهر بجانب الباركود، من نطاق خاص فيها بـ
+   `backend/rooms/room-code-ranges.js` (أول نطاق 100 فاضي)، ومضافة لبحث زر
+   «دخول غرفة» (`CHECKS` بـ`room-lookup-service.js` و`GAMES` بـ
+   `js/agp-join-room.js`). الخطوات مكتوبة بأول ملف النطاقات.
 
 مراجع حيّة لهذا النمط: `games/fruit-roulette/` و`games/memory-challenge/`.
 

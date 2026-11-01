@@ -23,6 +23,7 @@
 'use strict';
 
 var crypto = require('crypto');
+var CodeRanges = require('../rooms/room-code-ranges');
 
 var HX = 31, HZ = 47;           // حدود الحركة داخل القاعة (القاعة 64×96م)
 var MAX_SPEED = 14;             // م/ث — أسرع من الجري بالواجهة بهامش
@@ -264,7 +265,9 @@ function createRoomManager(opts) {
     function createRoom(o) {
         // الحفلات اللي انتهت ما تحجز مكان (تبقى بس عشان الرجوع وحفظ الصورة والنقاط)
         if (Object.keys(rooms).filter(function (c) { return rooms[c].phase !== 'ended'; }).length >= maxRooms) return fail('busy');
-        var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (rooms[code]);
+        // رقم من نطاق حفلة الميلاد (rooms/room-code-ranges.js) — ما يتشارك مع لعبة ثانية
+        var code = CodeRanges.allocate('party', function (c) { return !!rooms[c]; });
+        if (!code) return fail('busy');
         var sched = null;
         if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(), ownerId: o && o.ownerId != null ? o.ownerId : null,
