@@ -23,13 +23,13 @@
 
     /** خطوات الدخول: باركود أو رقم الغرفة من الموقع، والحساب إلزامي. siteUrl = رابط صفحة الدخول بدون الكود. */
     function joinStepsHtml(siteUrl, code) {
-        var c = code ? '<b style="letter-spacing:2px">' + code + '</b>' : 'رقم الغرفة';
+        var c = code ? '<b style="letter-spacing:2px">' + code + '</b>' : '';
         return '<ol class="steps">' +
-            '<li><span>1</span><span><b>امسح الباركود</b> بكاميرا جوالك، أو افتح <b dir="ltr">' + siteUrl + '</b> واكتب ' + c + '.</span></li>' +
-            '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b> — اللي ما عنده حساب ينشئ واحد (إلزامي، واسمك وصورتك وإطارك يطلعون منه).</span></li>' +
-            '<li><span>3</span><span>جهّز شكل شخصيتك واضغط <b>«ادخل الساحة»</b> — بطاقتك تطلع هنا فوراً.</span></li>' +
+            '<li><span>1</span><span><b>امسح الباركود</b> أو افتح <b dir="ltr">' + siteUrl + '</b> واكتب رقم الروم ' + c + '</span></li>' +
+            '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b> (إلزامي)</span></li>' +
+            '<li><span>3</span><span>جهّز شخصيتك واضغط <b>«ادخل الساحة»</b> — تظهر هنا فوراً</span></li>' +
             '</ol>' +
-            '<div class="steps-note">💡 الدخول للمباراة <b>بالباركود أو رقم الغرفة فقط</b>، واللاعب يظهر باللوبي مباشرة أول ما يدخل — <b>ما فيه دخول بكتابة كلمة بشات البث</b>.</div>';
+            '<div class="steps-note">💡 الدخول <b>بالباركود أو رقم الروم فقط</b> — مو بكتابة كلمة بالشات</div>';
     }
 
     window.MafiaHost = { buildFx: buildFx, joinStepsHtml: joinStepsHtml };
