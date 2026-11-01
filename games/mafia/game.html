@@ -320,7 +320,7 @@ button { font-family: inherit; cursor: pointer; }
         for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
         // بدون نقاش: أحداث المباراة المهمة بس (بداية، نتيجة كل ليلة، الطرد)
         var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city' && c.n > dayN; })
-            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد/.test(c.text); });
+            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت/.test(c.text); });
         var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
@@ -335,7 +335,7 @@ button { font-family: inherit; cursor: pointer; }
             var roles = [['🔪', st.mafia, 'مافيا' + (st.disguised ? ' (' + st.disguised + ' متخفي)' : '')], ['🩺', st.doctors, 'طبيب'], ['🕵️', st.detectives, 'محقق'], ['🏠', cit, 'مواطن']]
                 .filter(function (r) { return r[1] > 0; }).map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b> ' + r[2] + '</span>'; }).join('');
             box.innerHTML = '<div class="roles-sum">' + roles + '</div>' + (list.length ? list.slice(-12).map(function (c) {
-                return '<div class="ev' + (/إقصاء|طرد/.test(c.text) && !/دون/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/\s*—.*$/, '')) + '</div>';
+                return '<div class="ev' + (/إقصاء|طرد|جنّدت/.test(c.text) && !/دون/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/\s*—.*$/, '')) + '</div>';
             }).join('') : '<div class="empty-talk">المباراة بدأت للتو…</div>');
             box.scrollTop = box.scrollHeight;
             return;
@@ -362,7 +362,8 @@ button { font-family: inherit; cursor: pointer; }
         var N = G.lastNight || {}, html = '<h4>🌙 ملخص الليلة ' + (N.round || G.round) + '<small>وش صار</small></h4>';
         if (N.victim && byId[N.victim]) { var v = byId[N.victim]; html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; }
         else if (N.saved && byId[N.saved]) { var sv = byId[N.saved]; html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; }
-        else html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
+        else if (!N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
+        if (N.recruited) html += '<div class="rc-row dead"><div class="ic">🤝</div><div><b>تم تجنيد لاعب</b><span>واحد من المدينة صار مع المافيا</span></div></div>';
         var X = G.lastExile;
         if (X && byId[X.id]) {
             var xp = byId[X.id], R = X.role && L.ROLE[X.role];
@@ -490,7 +491,7 @@ button { font-family: inherit; cursor: pointer; }
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'result') {
                     if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
-                    else caption('طلع الصبح ☀️', sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#c4b5fd');
+                    else caption('طلع الصبح ☀️', sh.recruited ? '🤝 بس المافيا جنّدت لاعب من المدينة!' : sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#c4b5fd');
                 }
             }
         } else if (G.phase === 'day') {

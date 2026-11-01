@@ -45,6 +45,7 @@ body.in-game .brand img { height: 30px; }
 .lay .pt svg { width: calc(var(--ts) * .46); height: calc(var(--ts) * .46); }
 .lay .pt b { font-size: clamp(13px, calc(var(--ts) * .13), 19px); }
 .lay .pt.skip .pi { font-size: calc(var(--ts) * .3); }
+.pbtns { display: flex; flex-wrap: wrap; gap: 8px; }
 .lay .pbtn { align-self: flex-start; }
 body.in-game .top { position: static; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hide { display: none !important; }
@@ -436,25 +437,29 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     // ---- الشات الخاص بالدور: المافيا (طول المباراة)، والأطباء/المحققين لو أكثر من واحد (وقت النقاش)
     // لوحة تنفتح وتنقفل تحت الشات العام، فيقدر يتابع الاثنين ويكتب بالاثنين
     var PRIV = { mafia: { n: '🔪 شات المافيا', h: 'كلّم فريقك بسرية…' }, doctor: { n: '🩺 شات الأطباء', h: 'نسّقوا مين تحمون…' }, detective: { n: '🕵️ شات المحققين', h: 'شاركوا نتائج الفحص…' } };
-    S.privOpen = false; S.privSeen = {}; S.pdraft = '';
-    function privChan(G) {
-        var me = G.me; if (!me.alive) return null;
-        if (me.team === 'mafia') return 'mafia';
-        if (me.role === 'doctor' && G.settings.doctors > 1) return 'doctor';
-        if (me.role === 'detective' && G.settings.detectives > 1) return 'detective';
-        return null;
+    // الشاتات الخاصة: المافيا، وشات الأطباء/المحققين (لو أكثر من واحد) — والمجنّد يبقى بشات دوره القديم كمان
+    S.privOpen = ''; S.privSeen = {}; S.pdraft = '';
+    function privChans(G) {
+        var me = G.me, out = []; if (!me.alive) return out;
+        if (me.team === 'mafia') out.push('mafia');
+        ['doctor', 'detective'].forEach(function (r) { if ((me.role === r || me.formerRole === r) && G.settings[r + 's'] > 1) out.push(r); });
+        return out;
     }
-    function privateHtml(G, forceOpen) {
-        var ch = privChan(G); if (!ch) return '';
-        var open = forceOpen || S.privOpen, list = G.chat.filter(function (c) { return c.ch === ch; });
-        var last = list.length ? list[list.length - 1].n : 0, seen = S.privSeen[ch] || 0;
-        if (open) S.privSeen[ch] = last;
-        var unread = open ? 0 : list.filter(function (c) { return c.n > seen && c.from !== G.me.id; }).length;
-        var canSend = ch === 'mafia' || G.phase === 'day';
+    function privChan(G) { var l = privChans(G); return l.indexOf(S.privOpen) >= 0 ? S.privOpen : l[0] || null; }
+    function privateHtml(G) {
+        var chans = privChans(G); if (!chans.length) return '';
+        if (S.privOpen && chans.indexOf(S.privOpen) < 0) S.privOpen = '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var head = '<button type="button" class="pbtn" data-priv-toggle aria-expanded="' + open + '">🔒 ' + PRIV[ch].n.split(' ')[0] + (unread ? ' <i>' + unread + '</i>' : '') + ' ' + (open ? '▴' : '▾') + '</button>';
-        if (!open) return head;
-        return head + '<div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + (list.slice(-60).map(function (c) {
+        var heads = chans.map(function (ch) {
+            var list = G.chat.filter(function (c) { return c.ch === ch; }), open = S.privOpen === ch;
+            var last = list.length ? list[list.length - 1].n : 0, seen = S.privSeen[ch] || 0;
+            if (open) S.privSeen[ch] = last;
+            var unread = open ? 0 : list.filter(function (c) { return c.n > seen && c.from !== G.me.id; }).length;
+            return '<button type="button" class="pbtn" data-priv-toggle="' + ch + '" aria-expanded="' + open + '">🔒 ' + PRIV[ch].n.split(' ')[0] + (unread ? ' <i>' + unread + '</i>' : '') + ' ' + (open ? '▴' : '▾') + '</button>';
+        }).join(' ');
+        var ch = S.privOpen; if (!ch) return '<div class="pbtns">' + heads + '</div>';
+        var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = ch === 'mafia' || G.phase === 'day';
+        return '<div class="pbtns">' + heads + '</div><div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + (list.slice(-60).map(function (c) {
             return bubble(c, byId, canSend);
         }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>') + '</div>' +
             (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
@@ -528,6 +533,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         });
     }
     window.addEventListener('resize', function () { fitGrids(); });
+    function recruitNote(G) { return G.lastNight && G.lastNight.recruited && G.lastNight.round === G.round ? '<div class="note" style="margin-top:8px">🤝 المافيا جنّدت لاعب من المدينة الليلة!</div>' : ''; }
     function inspections(G) {
         var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
         var R3 = { mafia: ['#ff8a80', '🔪 مافيا'], town: ['#7ee2a6', '✓ مدينة'], blocked: ['#ffd27a', '❔ تعذّر'] };
@@ -596,7 +602,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         } else if (ph === 'dawn') {
             html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div></div>' + noticesHtml(G);
         } else if (ph === 'day') {
-            main = chatHtml(G, chansFor(G)); side = privateHtml(G) + noticesHtml(G) + inspections(G);
+            main = recruitNote(G) + chatHtml(G, chansFor(G)); side = privateHtml(G) + noticesHtml(G) + inspections(G);
         } else if (ph === 'vote') {
             var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
             main = '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + '</span></div>' + playerRows(G, {
@@ -638,17 +644,17 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var rp = e.target.closest('[data-reply]');
         if (rp) {
             var parts = rp.getAttribute('data-reply').split(':'); S.reply[parts[0]] = +parts[1]; renderGame();
-            var inp = $(S.G && privChan(S.G) === parts[0] ? 'privIn' : 'chatIn'); if (inp) inp.focus();
+            var inp = $(S.privOpen === parts[0] ? 'privIn' : 'chatIn'); if (inp) inp.focus();
             return;
         }
         var ur = e.target.closest('[data-unreply]'); if (ur) { delete S.reply[ur.getAttribute('data-unreply')]; return renderGame(); }
         if (e.target.id === 'chatSend') sendChat();
         if (e.target.id === 'privSend') sendPriv();
-        if (e.target.closest('[data-priv-toggle]')) { S.privOpen = !S.privOpen; lastRenderKey = ''; renderGame(); }
+        var pt = e.target.closest('[data-priv-toggle]'); if (pt) { var pc = pt.getAttribute('data-priv-toggle'); S.privOpen = S.privOpen === pc ? '' : pc; lastRenderKey = ''; renderGame(); }
     });
     $('gameBody').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'chatIn') sendChat(); if (e.target.id === 'privIn') sendPriv(); });
     $('gameBody').addEventListener('input', function (e) { if (e.target.id === 'pf') { S.filter = e.target.value; renderGame(); } });
-    function sendPriv() { var i = $('privIn'), ch = S.G && privChan(S.G); if (!i || !ch) return; var t = i.value.trim(); if (!t) return; act('chat', ch + (S.reply[ch] ? '#' + S.reply[ch] : '') + '|' + t); delete S.reply[ch]; i.value = ''; S.pdraft = ''; renderGame(); var f = $('privIn'); if (f) f.focus(); }
+    function sendPriv() { var i = $('privIn'), ch = S.privOpen; if (!i || !ch) return; var t = i.value.trim(); if (!t) return; act('chat', ch + (S.reply[ch] ? '#' + S.reply[ch] : '') + '|' + t); delete S.reply[ch]; i.value = ''; S.pdraft = ''; renderGame(); var f = $('privIn'); if (f) f.focus(); }
     function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', S.chan + (S.reply[S.chan] ? '#' + S.reply[S.chan] : '') + '|' + t); delete S.reply[S.chan]; i.value = ''; S.draft = ''; renderGame(); var f = $('chatIn'); if (f) f.focus(); }
 
     // المؤقت

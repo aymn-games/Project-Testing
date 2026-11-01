@@ -205,6 +205,8 @@ function createGame(roster, settings, hooks) {
         } else if (op && op.op === 'recruit') {
             if ((mafs.length + 1) / alive().length <= RECRUIT_CAP) {
                 recruited = opTarget;
+                // أي لاعب من المدينة (حتى الطبيب والمحقق) يفقد قدرته ويصير مافيا، ويبقى بشات دوره القديم بدون ما يدرون
+                if (recruited.role === 'doctor' || recruited.role === 'detective') recruited.formerRole = recruited.role;
                 recruited.role = 'mafia'; recruited.faction = 'mafia'; recruited.recruitedRound = G.round; recruited.mafiaSince = chatSeq;
                 G.usedCards.push('recruit');
                 notice(recruited, '🃏 تم تجنيدك! أنت الحين من المافيا، وفقدت دورك وقدرتك السابقة.');
@@ -220,7 +222,7 @@ function createGame(roster, settings, hooks) {
         });
         if (card && card.card === 'reveal') aliveMafia().forEach(function (m) { notice(m, '🃏 كشف الهوية: ' + cardTarget.name + ' دوره ' + ROLE_NAMES[cardTarget.role] + '.'); });
 
-        // ---- مشاهد البث (التجنيد سري: يطلع كليلة هادية)
+        // ---- مشاهد البث (مين انجنّد سر، بس الكل يعرف إن فيه تجنيد)
         var seq = [], at = 0;
         function shot(k, extra) { seq.push(Object.assign({ k: k, at: at, dur: SHOT[k] }, extra || {})); at += SHOT[k]; }
         shot('intro');
@@ -229,12 +231,13 @@ function createGame(roster, settings, hooks) {
             shot('attack', { target: opTarget.id, saved: !!saved });
             if (saved) shot('save', { target: opTarget.id });
         } else shot('quiet');
-        shot('result', { victim: victim ? victim.id : null, saved: saved ? saved.id : null });
+        shot('result', { victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited });
 
-        G.lastNight = { round: G.round, victim: victim ? victim.id : null, saved: saved ? saved.id : null };   // ملخص الليلة لشاشة النقاش
+        G.lastNight = { round: G.round, victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
         if (victim) sys('🌙 تم إقصاء ' + victim.name + ' أثناء الليل.');
         else if (saved) sys('💊 الطبيب أنقذ ' + saved.name + ' من هجوم المافيا!');
         else sys('🌙 انتهى الليل دون إقصاء أحد.');
+        if (recruited) sys('🤝 المافيا جنّدت لاعب من المدينة الليلة!');
 
         G.seq = seq;
         go('dawn', at);
@@ -301,6 +304,7 @@ function createGame(roster, settings, hooks) {
     function tick(now) { if (G.endsAt && now >= G.endsAt) next(); }
 
     function roleChatOpen(ch) { return (ch === 'doctor' ? S.doctors : S.detectives) > 1; }
+    function inRoleChat(p, ch) { return !!p && p.alive && (p.role === ch || p.formerRole === ch); }   // المجنّد يبقى بشات دوره القديم
 
     function chat(me, arg) {
         // الصيغة: 'قناة|نص' أو 'قناة#رقم_الرسالة|نص' للرد على رسالة بنفس القناة
@@ -311,7 +315,7 @@ function createGame(roster, settings, hooks) {
         if (ch === 'mafia') { if (me.faction !== 'mafia' || G.phase === 'over') return; }
         else if (ch === 'doctor' || ch === 'detective') {
             // شات خاص للأطباء/المحققين وقت النقاش، لو عددهم بالإعدادات أكثر من واحد (الإسكات ما يشمله)
-            if (!roleChatOpen(ch) || me.role !== ch || G.phase !== 'day') return;
+            if (!roleChatOpen(ch) || !inRoleChat(me, ch) || G.phase !== 'day') return;
         } else if (ch === 'city' || ch === 'district') {
             if (G.phase !== 'day') return;                       // الشات العام وشات الحي بالنقاش فقط
             if (G.silenced.indexOf(me.id) >= 0) return;          // المسكَت يصوّت بس
@@ -414,7 +418,7 @@ function createGame(roster, settings, hooks) {
         });
         var chat = G.chat.filter(function (c) {
             if (c.ch === 'mafia') return meMafia && c.n > me.mafiaSince;
-            if (c.ch === 'doctor' || c.ch === 'detective') return !!me && me.alive && me.role === c.ch;   // المجنّد يفقد شات دوره
+            if (c.ch === 'doctor' || c.ch === 'detective') return inRoleChat(me, c.ch);   // المجنّد يبقى فيه
             if (c.ch === 'district') return !!me && c.d === me.district;
             return true;
         });
@@ -434,7 +438,7 @@ function createGame(roster, settings, hooks) {
         v.turn = G.phase === 'night' ? G.turn : null;
         if (me) {
             v.me = {
-                id: me.id, role: me.role, team: me.faction, alive: me.alive, district: me.district,
+                id: me.id, role: me.role, team: me.faction, alive: me.alive, district: me.district, formerRole: me.formerRole || null,
                 silenced: G.phase === 'day' && G.silenced.indexOf(me.id) >= 0,
                 notices: me.notices.slice(-20), inspections: me.role === 'detective' || me.inspections.length ? me.inspections : undefined
             };
