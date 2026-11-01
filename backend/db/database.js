@@ -694,6 +694,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-sakura-pink.png', display_name_ar: 'ساكورا الوردي (منح محدود)' },
     { image_filename: 'frame-pink-swan.png', display_name_ar: 'البجعة الوردية (منح محدود)' },
     { image_filename: 'frame-azooz.png', display_name_ar: 'عزوز (منح محدود)' },
+    { image_filename: 'frame-bronze-bat.png', display_name_ar: 'الخفاش البرونزي (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
