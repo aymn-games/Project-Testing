@@ -70,7 +70,7 @@ function drawTag(sp, o) {
     ctx.fillText(name, x + bw - 22, y + h / 2 + 3, tw);
     if (o.role || o.team) {
         // الدور كامل لو مكشوف، وإلا الفريق بس (المطرود حسب القواعد)
-        const R = o.role ? L.ROLE[o.role] : o.team === 'mafia' ? { icon: '🔪', n: 'مافيا', c: '#e2483d' } : { icon: '🏠', n: 'من المدينة', c: '#2f7de1' };
+        const R = o.role ? L.ROLE[o.role] : o.team === 'mafia' ? { icon: '🔪', n: 'مافيا', c: '#e2483d' } : { icon: '🏠', n: 'مواطن', c: '#2f7de1' };
         const t = R.icon + ' ' + R.n;
         ctx.font = '800 38px ' + FONT; const rw = ctx.measureText(t).width + 40;
         roundRect(ctx, (W - rw) / 2, y + h + 8, rw, 52, 26); ctx.fillStyle = R.c; ctx.fill();

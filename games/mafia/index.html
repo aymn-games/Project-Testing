@@ -62,7 +62,7 @@
 
     function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
     function enabledCards(s) { return ['recruit', 'shield', 'reveal', 'mislead', 'silence'].filter(function (c) { return s['card_' + c] !== false; }); }
-    function minPlayers(s) { return Math.max(10, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1); }
+    function minPlayers(s) { return Math.max(5, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1, s.detectives > 0 ? 6 : 0); }
 
     function render() {
         // حركة الدخول أول مرة بس — بعدها كل ضغطة تعيد الرسم بدون ما تختفي الكروت
@@ -78,7 +78,7 @@
             html += '</section>';
         });
         var s = cur;
-        html += '<section class="sec full' + anim + '" style="animation-delay:.2s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">ملخص المدينة</span></div>' +
+        html += '<section class="sec full' + anim + '" style="animation-delay:.2s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">ملخص الأدوار</span></div>' +
             '<div class="chips" style="padding:10px 0 4px"><span class="chip">🔪 ' + s.mafia + ' مافيا' + (s.disguised ? ' (منهم ' + s.disguised + ' متخفي)' : '') + '</span>' +
             (s.doctors ? '<span class="chip">🩺 ' + s.doctors + ' طبيب</span>' : '') +
             (s.detectives ? '<span class="chip">🕵️ ' + s.detectives + ' محقق</span>' : '') +

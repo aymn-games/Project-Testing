@@ -202,7 +202,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 </head>
 <body>
 <div class="wrap">
-    <div class="brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display='none'"><span>🔪 المافيا · ساحة القرية</span></div>
+    <div class="brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display='none'"><span>🔪 المافيا</span></div>
 
     <!-- 1) رقم الروم -->
     <section id="vCode" class="hide">
@@ -466,7 +466,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     }
 
     var CARD_INFO = {
-        recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوفه: مدينة' }, reveal: { i: '👁️', d: 'تعرفون دوره' },
+        recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوفه: مواطن' }, reveal: { i: '👁️', d: 'تعرفون دوره' },
         mislead: { i: '🎭', d: 'المحقق يشوف: مافيا' }, silence: { i: '🤐', d: 'ما يكتب بكرة' }
     };
     function mafiaNight(G) {
@@ -533,10 +533,10 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         });
     }
     window.addEventListener('resize', function () { fitGrids(); });
-    function recruitNote(G) { return G.lastNight && G.lastNight.recruited && G.lastNight.round === G.round ? '<div class="note" style="margin-top:8px">🤝 المافيا جنّدت لاعب من المدينة الليلة!</div>' : ''; }
+    function recruitNote(G) { return G.lastNight && G.lastNight.recruited && G.lastNight.round === G.round ? '<div class="note" style="margin-top:8px">🤝 المافيا جنّدت مواطن الليلة!</div>' : ''; }
     function inspections(G) {
         var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
-        var R3 = { mafia: ['#ff8a80', '🔪 مافيا'], town: ['#7ee2a6', '✓ مدينة'], blocked: ['#ffd27a', '❔ تعذّر'] };
+        var R3 = { mafia: ['#ff8a80', '🔪 مافيا'], town: ['#7ee2a6', '✓ مواطن'], blocked: ['#ffd27a', '❔ تعذّر'] };
         return '<div class="sec-h"><h2>📁 فحوصاتك</h2></div>' + list.map(function (r) {
             var p = G.players.find(function (q) { return q.id === r.id; }), x = R3[r.res] || R3.town;
             return '<div class="res"><span>' + r.round + ' · ' + esc(p ? p.name : '') + '</span><span style="color:' + x[0] + '">' + x[1] + '</span></div>';
@@ -612,11 +612,11 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             }); side = (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
-            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المدينة طردت ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
-                (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان من المدينة 🏠') : 'شوف البث') + '</p></div>';
+            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
+                (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') : 'شوف البث') + '</p></div>';
         } else if (ph === 'over') {
             var won = me.team === G.winner;
-            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فازت المدينة') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
+            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فاز المواطنين') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
                 (G.cards ? '<div class="note">🃏 كروت المافيا كانت: ' + G.cards.map(function (c) { return esc(c.name) + (c.used ? ' ✓' : ''); }).join('، ') + '</div>' : '') +
                 '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + (p.recruited ? ' ← جُنّد' : '') + '</span></div>'; }).join('') + '</div>' +
                 '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';

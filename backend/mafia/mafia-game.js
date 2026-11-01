@@ -219,7 +219,7 @@ function createGame(roster, settings, hooks) {
         reports.forEach(function (r) {
             if (!r.d.alive) return;   // المحقق المقتول ما يستلم نتيجته
             r.d.inspections.push({ round: G.round, id: r.t.id, res: r.res });
-            notice(r.d, '🔍 نتيجة فحص ' + r.t.name + ': ' + (r.res === 'mafia' ? 'مافيا' : r.res === 'town' ? 'من المدينة' : 'تعذر التحقيق') + '.');
+            notice(r.d, '🔍 نتيجة فحص ' + r.t.name + ': ' + (r.res === 'mafia' ? 'مافيا' : r.res === 'town' ? 'مواطن' : 'تعذر التحقيق') + '.');
         });
         if (card && card.card === 'reveal') aliveMafia().forEach(function (m) { notice(m, '🃏 كشف الهوية: ' + cardTarget.name + ' دوره ' + ROLE_NAMES[cardTarget.role] + '.'); });
 
@@ -238,7 +238,7 @@ function createGame(roster, settings, hooks) {
         if (victim) sys('🌙 تم إقصاء ' + victim.name + ' أثناء الليل.');
         else if (saved) sys('💊 الطبيب أنقذ ' + saved.name + ' من هجوم المافيا!');
         else sys('🌙 انتهى الليل دون إقصاء أحد.');
-        if (recruited) sys('🤝 المافيا جنّدت لاعب من المدينة الليلة!');
+        if (recruited) sys('🤝 المافيا جنّدت مواطن الليلة!');
 
         G.seq = seq;
         go('dawn', at);
@@ -253,7 +253,7 @@ function createGame(roster, settings, hooks) {
 
     function finish(w) {
         G.winner = w; G.endedAt = Date.now();
-        sys(w === 'mafia' ? '🏆 المافيا سيطرت على المدينة!' : '🏆 المدينة تخلّصت من المافيا!');
+        sys(w === 'mafia' ? '🏆 فازت المافيا!' : '🏆 المواطنين تخلّصوا من المافيا!');
         go('over', 0);
     }
 
@@ -280,7 +280,7 @@ function createGame(roster, settings, hooks) {
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
             G.lastExile = { round: G.round, id: out.id, team: out.faction, role: S.fullReveal ? out.role : null };
-            sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'من المدينة') + ') بـ' + best + ' صوت.');
+            sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'مواطن') + ') بـ' + best + ' صوت.');
         } else sys(top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
         // ملخص الأصوات للمشاهدين (أعلى 3 + الممتنعين)
         var ranked = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);

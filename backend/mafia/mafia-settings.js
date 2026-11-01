@@ -9,22 +9,22 @@
  */
 'use strict';
 
-var MIN_ROOM = 10, MAX_ROOM = 200;
+var MIN_ROOM = 5, MAX_ROOM = 200;   // أقل شي 5: مافيا + طبيب + 3 مواطنين، والمحقق من 6 لاعبين وطالع
 
 var SCHEMA = [
     { id: 'roles', n: 'الأدوار', f: [
         { k: 'mafia', n: 'عدد المافيا', t: 'num', min: 1, max: 60, step: 1, d: 2, desc: 'يشمل المتخفين' },
-        { k: 'disguised', n: 'منهم متخفين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'أول فحص ناجح له يطلع «من المدينة»' },
+        { k: 'disguised', n: 'منهم متخفين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'أول فحص ناجح له يطلع «مواطن»' },
         { k: 'doctors', n: 'عدد الأطباء', t: 'num', min: 0, max: 10, step: 1, d: 1 },
-        { k: 'detectives', n: 'عدد المحققين', t: 'num', min: 0, max: 10, step: 1, d: 1 },
+        { k: 'detectives', n: 'عدد المحققين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'يحتاج 6 لاعبين وطالع' },
         { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مطفي = حسب القواعد: قتيل الليل بدون كشف، والمطرود يظهر فريقه بس' }
     ] },
     // كروت المافيا: المذيع يفعّل اللي يبيه، وكل مباراة تنسحب منها عشوائي بالعدد المحدد
     { id: 'cards', n: 'كروت المافيا', f: [
         { k: 'cardsCount', n: 'عدد الكروت بالمباراة', t: 'num', min: 0, max: 5, step: 1, d: 3, desc: 'تنسحب عشوائي من الكروت المفعّلة' },
-        { k: 'card_recruit', n: '🤝 التجنيد', t: 'bool', d: true, desc: 'بدل القتل: لاعب من المدينة يصير مافيا (من الليلة 3)' },
-        { k: 'card_shield', n: '🛡️ الحماية', t: 'bool', d: true, desc: 'عضو مافيا يطلع للمحقق «من المدينة» لليلتين' },
-        { k: 'card_reveal', n: '👁️ كشف الهوية', t: 'bool', d: true, desc: 'المافيا يعرفون دور لاعب من المدينة' },
+        { k: 'card_recruit', n: '🤝 التجنيد', t: 'bool', d: true, desc: 'بدل القتل: مواطن يصير مافيا (من الليلة 3)' },
+        { k: 'card_shield', n: '🛡️ الحماية', t: 'bool', d: true, desc: 'عضو مافيا يطلع للمحقق «مواطن» لليلتين' },
+        { k: 'card_reveal', n: '👁️ كشف الهوية', t: 'bool', d: true, desc: 'المافيا يعرفون دور مواطن' },
         { k: 'card_mislead', n: '🎭 التضليل', t: 'bool', d: true, desc: 'لاعب بريء يطلع للمحقق «مافيا» لليلتين' },
         { k: 'card_silence', n: '🤐 الإسكات', t: 'bool', d: true, desc: 'لاعب ما يكتب بنقاش بكرة (يصوّت عادي)' }
     ] },
@@ -66,9 +66,9 @@ var CARD_IDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
 /** الكروت المفعّلة بالإعدادات */
 function enabledCards(s) { return CARD_IDS.filter(function (c) { return s['card_' + c] !== false; }); }
 
-/** أقل عدد لاعبين لهالإعدادات: 10 على الأقل، والمافيا أقل من الباقين، ومواطن واحد على الأقل. */
+/** أقل عدد لاعبين لهالإعدادات: 5 على الأقل، والمافيا أقل من الباقين، ومواطن واحد على الأقل، والمحقق من 6 لاعبين. */
 function minPlayers(s) {
-    return Math.max(MIN_ROOM, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1);
+    return Math.max(MIN_ROOM, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1, s.detectives > 0 ? 6 : 0);
 }
 
 module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, enabledCards: enabledCards, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };
