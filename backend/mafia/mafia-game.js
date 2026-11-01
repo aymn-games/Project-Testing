@@ -136,7 +136,13 @@ function createGame(roster, settings, hooks) {
     function turnDone() {
         var N = G.night, aux = anyAuxCard(), actors = turnActors(G.turn);
         if (!actors.length) return false;   // دور وهمي (صاحبه ميت): يكمّل مدته
-        if (G.turn === 'mafia') return actors.every(function (m) { return N.ops[m.id] && (!aux || N.cards[m.id]); });
+        // المافيا: الدور يخلص بدري بس لو الكل اختار واتفقوا على نفس الهدف ونفس الكرت — غير كذا ينتظر الوقت (والأكثرية تتنفّذ)
+        if (G.turn === 'mafia') {
+            var same = function (list) { return list.every(function (x) { return JSON.stringify(x) === JSON.stringify(list[0]); }); };
+            if (!actors.every(function (m) { return N.ops[m.id] && (!aux || N.cards[m.id]); })) return false;
+            var ops = actors.map(function (m) { return N.ops[m.id]; });
+            return same(ops) && (!aux || ops[0].op === 'recruit' || same(actors.map(function (m) { return N.cards[m.id]; })));
+        }
         return actors.every(function (d) { return N.actions[d.id]; });
     }
 
