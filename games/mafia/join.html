@@ -21,6 +21,32 @@ body { min-height: 100dvh; padding: env(safe-area-inset-top) 16px calc(16px + en
 button, input { font-family: inherit; }
 .wrap { max-width: 480px; margin: 0 auto; }
 @media (min-width: 700px) { .wrap { max-width: 760px; } }
+/* شاشة اللعب: تملى الشاشة كاملة بأي وضع (طولي/عرضي) وبأي جهاز */
+body.in-game { height: 100dvh; min-height: 0; overflow: hidden; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+body.in-game .wrap { max-width: 1280px; height: 100%; display: flex; flex-direction: column; }
+body.in-game .brand { flex-direction: row; justify-content: center; gap: 10px; margin-top: 6px; }
+body.in-game .brand img { height: 30px; }
+#vGame:not(.hide) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#gameBody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.lay { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.lay .pa { flex: 1.3 1 0; min-height: 220px; display: flex; flex-direction: column; }
+.lay .pb { flex: 0 0 auto; max-height: 45%; display: flex; flex-direction: column; overflow-y: auto; }
+.lay .pb:has(.chatbox) { flex: 1 1 0; min-height: 160px; max-height: none; }
+.lay.solo .pa { flex: 1; }
+.lay .grid { flex: 1; max-height: none; min-height: 0; align-content: start; }
+.lay .chatbox { flex: 1; max-height: none; min-height: 110px; }
+.lay .pa > .sec-h:first-child, .lay .pb > .sec-h:first-child { margin-top: 10px; }
+@media (orientation: landscape) and (min-width: 640px), (min-width: 900px) {
+    .lay { flex-direction: row; }
+    .lay .pa { flex: 1.5 1 0; min-height: 0; }
+    .lay .pb { flex: 1 1 0; min-height: 0; }
+}
+.lay .grid { --ts: 110px; }
+.lay .pt svg { width: calc(var(--ts) * .46); height: calc(var(--ts) * .46); }
+.lay .pt b { font-size: clamp(13px, calc(var(--ts) * .13), 19px); }
+.lay .pt.skip .pi { font-size: calc(var(--ts) * .3); }
+.lay .pbtn { align-self: flex-start; }
+body.in-game .top { position: static; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hide { display: none !important; }
 h1 { font-size: 30px; font-weight: 900; margin: 16px 0 4px; }
 h2 { font-size: 22px; font-weight: 900; margin: 16px 0 8px; }
@@ -231,7 +257,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: NET.look() || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
 
-    function show(v) { S.view = v; ['vCode', 'vProfile', 'vWait', 'vGame'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
+    function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame'); ['vCode', 'vProfile', 'vWait', 'vGame'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
 
     var net = NET.connect(onMsg, function () {
         if (S.me && (S.me.room === S.code || !S.code)) { S.code = S.me.room; net.send({ t: 'resume', code: S.me.room, id: S.me.id, key: S.me.key }); }
@@ -476,6 +502,32 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         }
         return html;
     }
+    // حجم البطاقات يتمدد عشان تملى المساحة المتاحة (بالطول أو العرض)، ولو ما تكفي تنزل بسكرول بأقل حجم مريح
+    function fitGrids() {
+        document.querySelectorAll('.lay .grid').forEach(function (g) {
+            var pa = g.closest('.pa'), lay = g.closest('.lay');
+            pa.style.flex = ''; g.style.height = ''; g.style.flex = '';
+            var n = g.children.length, gap = 10, W = g.clientWidth - 4, H = g.clientHeight - 4;
+            if (!n || W <= 0 || H <= 0) return;
+            var cols = 0, size = 0;
+            for (var c = 1; c <= n; c++) {
+                var sz = Math.min((W - gap * (c - 1)) / c, 230), rows = Math.ceil(n / c);
+                if (sz < 92) break;
+                if (rows * sz + gap * (rows - 1) <= H) { cols = c; size = sz; break; }
+            }
+            var fits = !!cols;
+            if (!fits) { cols = Math.max(2, Math.floor((W + gap) / (105 + gap))); size = (W - gap * (cols - 1)) / cols; }
+            g.style.gridTemplateColumns = 'repeat(' + cols + ', ' + (fits ? Math.floor(size) + 'px' : 'minmax(0, 1fr)') + ')';
+            g.style.justifyContent = 'center'; g.style.gap = gap + 'px';
+            g.style.setProperty('--ts', Math.floor(size) + 'px');
+            // بالوضع الطولي: لو البطاقات كلها داخلة، الشات ياخذ باقي المساحة تحتها
+            if (fits && getComputedStyle(lay).flexDirection === 'column' && !lay.classList.contains('solo')) {
+                var rws = Math.ceil(n / cols);
+                g.style.flex = 'none'; g.style.height = Math.ceil(rws * size + gap * (rws - 1) + 4) + 'px'; pa.style.flex = '0 0 auto';
+            }
+        });
+    }
+    window.addEventListener('resize', function () { fitGrids(); });
     function inspections(G) {
         var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
         var R3 = { mafia: ['#ff8a80', '🔪 مافيا'], town: ['#7ee2a6', '✓ مدينة'], blocked: ['#ffd27a', '❔ تعذّر'] };
@@ -505,7 +557,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var pin = $('privIn'); if (pin) S.pdraft = pin.value;
         var focusId = document.activeElement && document.activeElement.id;
 
-        var html = '', ph = G.phase, alive = me.alive;
+        var html = '', main = '', side = '', ph = G.phase, alive = me.alive;
         var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
         if (!alive && ph !== 'over') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
         if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
@@ -526,32 +578,32 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 if (me.role === 'detective') html += inspections(G);
                 html += privateHtml(G);
             }
-            else if (me.team === 'mafia') html += mafiaNight(G) + privateHtml(G);
+            else if (me.team === 'mafia') { main = mafiaNight(G); side = privateHtml(G); }
             else if (me.role === 'doctor') {
-                html += '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
+                main = '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
                     action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed); },
                     sel: function (p) { return me.protect === p.id; },
                     tag: function (p) { return me.protect === p.id ? '🛡️' : p.id === me.doctorPrev ? 'أمس' : ''; },
                     skip: { sel: me.protect === 'skip' }
                 });
             } else if (me.role === 'detective') {
-                html += '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
+                main = '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
                     action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
                     sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍' : ''; },
                     skip: { sel: me.inspect === 'skip', can: !me.inspect }
-                }) + inspections(G);
+                }); side = inspections(G);
             } else html += wait('😴', 'نام يا مواطن…');
         } else if (ph === 'dawn') {
             html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div></div>' + noticesHtml(G);
         } else if (ph === 'day') {
-            html += chatHtml(G, chansFor(G)) + privateHtml(G) + noticesHtml(G) + inspections(G);
+            main = chatHtml(G, chansFor(G)); side = privateHtml(G) + noticesHtml(G) + inspections(G);
         } else if (ph === 'vote') {
             var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
-            html += '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + '</span></div>' + playerRows(G, {
+            main = '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + '</span></div>' + playerRows(G, {
                 action: 'vote', can: function (p) { return alive && p.alive && p.id !== me.id; },
                 sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; },
                 skip: { sel: me.vote === 'skip', can: alive, tag: tally.skip ? String(tally.skip) : '' }
-            }) + (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
+            }); side = (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
             html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المدينة طردت ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
@@ -563,7 +615,10 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + (p.recruited ? ' ← جُنّد' : '') + '</span></div>'; }).join('') + '</div>' +
                 '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
         }
+        // تقسيم مرن: البطاقات/الشات الرئيسي يملى المساحة، والشات الثاني تحته (طولي) أو جنبه (عرضي/آيباد)
+        if (main || side) html += '<div class="lay' + (side ? '' : ' solo') + '"><div class="pa">' + main + '</div>' + (side ? '<div class="pb">' + side + '</div>' : '') + '</div>';
         $('gameBody').innerHTML = html;
+        fitGrids();
         var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
         var ci = $('chatIn'); if (ci) ci.value = S.draft;
         var pi = $('privIn'); if (pi) pi.value = S.pdraft;
