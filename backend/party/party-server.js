@@ -491,9 +491,16 @@ function handleUpgrade(req, socket) {
     socket.on('error', function () { removeClient(id); });
 }
 
+/** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه حفلة شغّالة بهالرقم؟ الحفلة المنتهية ما تنحسب. */
+function hasRoom(code) {
+    var room = _mgr.getRoom(String(code || ''));
+    return !!room && room.phase !== 'ended';
+}
+
 module.exports = {
     handleUpgrade: handleUpgrade,
     boot: boot,
+    hasRoom: hasRoom,
     _flushAll: flushAll,
     _setStore: function (st) { _store = st || null; _save = {}; },
     _mgr: _mgr,

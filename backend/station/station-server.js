@@ -27,6 +27,7 @@ var handshake = require('../websocket/ws-handshake');
 var logger = require('../utils/logger');
 var Settings = require('./station-settings');
 var Game = require('./station-game');
+var CodeRanges = require('../rooms/room-code-ranges');
 
 var COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#f97316', '#a855f7', '#ec4899', '#14b8a6', '#f4f2f8', '#64748b', '#84cc16', '#06b6d4', '#b45309', '#f43f5e', '#6366f1', '#10b981', '#facc15', '#c084fc', '#0ea5e9', '#78350f'];
 var SKIN_KEYS = ['hat', 'acc', 'top', 'pants', 'back'];
@@ -83,7 +84,9 @@ function sendStates(room) {
 }
 
 function createRoom(client) {
-    var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (_rooms[code]);
+    // رقم من نطاق محطة سهيل (rooms/room-code-ranges.js) — ما يتشارك مع لعبة ثانية
+    var code = CodeRanges.allocate('intruder', function (c) { return !!_rooms[c]; });
+    if (!code) return null;
     var room = { code: code, token: rid(16), settings: Settings.validate({}), players: [], hostSkin: cleanSkin(null), started: false, game: null, hostConn: null, hostGoneAt: 0, dirty: false, lastSend: 0 };
     _rooms[code] = room;
     logger.log('Station: room ' + code + ' created');
@@ -133,6 +136,7 @@ function onMessage(client, msg) {
         if (!allowed) return send(client, { t: 'err', code: 'admin_only', err: 'اللعبة بمرحلة اختبار ومتاحة للأدمن فقط' });
         var r = msg.code && _rooms[msg.code];
         if (!(r && msg.token && r.token === msg.token)) r = createRoom(client);
+        if (!r) return send(client, { t: 'err', code: 'busy', err: 'الرومات ممتلئة الحين — جرّب بعد شوي' });
         attach(client, r, 'host', 'host');
         send(client, { t: 'welcome', role: 'host', id: 'host', code: r.code, token: r.token });
         broadcastRoom(r); if (r.game) sendStates(r);
