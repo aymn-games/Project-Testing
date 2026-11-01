@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>حفلة عيد الميلاد — القاعة</title>
+<!-- الحفلة كأيقونة بالشاشة الرئيسية (تفتح بكامل الشاشة بدون شريط المتصفح) — app-mode.js -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الحفلة">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script src="app-mode.js"></script>
+<script>
+    // شاشة لمس؟ (الآيباد بسفاري يعلن أحياناً إنه جهاز ماوس، فعصا التحكم كانت تختفي وما يقدر يتحرك)
+    window.IS_TOUCH = (navigator.maxTouchPoints || 0) > 0 || matchMedia('(any-pointer:coarse)').matches || matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
+    if (window.IS_TOUCH) document.documentElement.classList.add('is-touch');
+    // سفاري قبل 16 (آيبادات قديمة) ما فيه roundRect بالرسم — بدونه تتعطل لوحات الأسماء
+    if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        r = Math.max(0, Math.min(+r || 0, w / 2, h / 2)); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+    };
+</script>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&family=Amiri:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<!-- حفلة عيد الميلاد ثري دي — المرحلة الأولى: القاعة الرئيسية (الماب).
+     المشهد كله في hall3d.js، والتحكم بالتجوّل في controls.js. اسم صاحبة
+     الحفلة يُمرَّر مؤقتاً بالرابط: index.html?name=سارة
+     أبواب الأقسام الأربعة موجودة بالقاعة وتظهر "قريباً" لحد ما تنبني مشاهدها. -->
+<style>
+    :root{ --agp-accent:#f472b6; --ink:#6b2147; --glass:rgba(255,246,250,.72); --line:rgba(236,160,195,.55); }
+    html,body{ margin:0; height:100%; overflow:hidden; background:#f3d3e0; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); -webkit-tap-highlight-color:transparent; }
+    button{ font-family:inherit; }
+    .hidden{ display:none !important; }
+
+    #stage{ position:fixed; inset:0; touch-action:none; cursor:grab; }
+    #stage:active{ cursor:grabbing; }
+
+    .hud{ position:fixed; inset:0; pointer-events:none; z-index:5; }
+    .hud > *{ pointer-events:auto; }
+    .top{ position:absolute; top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; pointer-events:none; }
+    .top > *{ pointer-events:auto; }
+    .pill{ height:40px; padding:0 16px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--glass); color:var(--ink);
+        font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 6px 20px rgba(214,110,160,.18); cursor:pointer; text-decoration:none; white-space:nowrap; transition:transform .15s, background .2s; }
+    .pill:active{ transform:scale(.96); }
+    .pill:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
+    .pill.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    .pill svg{ width:18px; height:18px; flex:none; }
+    .title{ font:900 24px/1 'Zain'; color:#fff; text-shadow:0 2px 3px rgba(140,30,80,.55),0 2px 16px rgba(219,39,119,.6); pointer-events:none; text-align:center; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .group{ display:flex; gap:8px; }
+    .pill.party.on{ background:linear-gradient(180deg,#c86bff,#8b3fd9); box-shadow:0 0 22px rgba(200,107,255,.55); }
+    body.party{ --glass:rgba(48,20,52,.55); --line:rgba(214,140,255,.45); --ink:#fde7f3; }
+    /* شعار ألعاب أيمن فوق عنوان الحفلة (نسخة فاتحة بظل خفيف تنقرا فوق المشهد) */
+    .titlebox{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; pointer-events:none; }
+    .titlebox .title{ flex:none; max-width:100%; }
+    .brandmark{ height:30px; width:auto; display:block; filter:drop-shadow(0 1px 2px rgba(90,20,50,.55)) drop-shadow(0 0 10px rgba(150,40,90,.35)); }
+    body.party .title{ text-shadow:0 0 18px rgba(255,79,174,.9),0 2px 3px rgba(40,0,30,.7); }
+
+    .hint{ position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:9px 18px; border-radius:999px; background:var(--glass); border:1px solid var(--line);
+        backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:600 13px 'IBM Plex Sans Arabic'; white-space:nowrap; pointer-events:none; transition:opacity .4s; }
+    .netbad{ position:absolute; top:64px; right:16px; padding:7px 14px; border-radius:999px; background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; }
+    body.net #tourBtn, body.net #partyBtn{ display:none; }
+    body.viewer .hint, body.viewer .joy{ display:none !important; }
+    .toast{ position:absolute; top:76px; left:50%; transform:translate(-50%,-8px); opacity:0; transition:all .3s; pointer-events:none; text-align:center;
+        padding:12px 26px; border-radius:22px; background:rgba(255,250,252,.9); border:2px solid #f0c98f; box-shadow:0 12px 34px rgba(214,110,160,.3); }
+    .toast.show{ opacity:1; transform:translate(-50%,0); }
+    .toast b{ display:block; font:900 26px/1.1 'Zain'; color:#a3306a; }
+    .toast span{ font:600 13px 'IBM Plex Sans Arabic'; color:#c07a9c; }
+
+    .joy{ position:absolute; left:max(24px,env(safe-area-inset-left)); bottom:max(28px,env(safe-area-inset-bottom)); width:124px; height:124px; border-radius:50%; touch-action:none;
+        background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,214,231,.35)); border:2px solid rgba(255,255,255,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; }
+    .joy-knob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffb3d6,#f472b6); box-shadow:0 4px 14px rgba(219,39,119,.4); pointer-events:none; transition:transform .12s; }
+    .joy.on .joy-knob{ transition:none; }
+    /* is-touch: أي جهاز فيه شاشة لمس (الآيباد أحياناً يعلن إنه «ماوس» فما نعتمد على pointer:coarse بس) */
+    html.is-touch .joy{ display:block; } html.is-touch .hint .desk{ display:none; } html.is-touch .hint{ bottom:auto; top:calc(max(12px,env(safe-area-inset-top)) + 52px); } html.is-touch .toast{ top:118px; }
+    html:not(.is-touch) .hint .touch{ display:none; }
+
+    .loader{ position:fixed; inset:0; z-index:10; display:grid; place-items:center; background:radial-gradient(circle at 50% 40%,#fff3f8,#f7c9dc); transition:opacity .6s; }
+    .loader.out{ opacity:0; pointer-events:none; }
+    .loader .box{ text-align:center; }
+    .loader h1{ margin:14px 0 4px; font:700 46px/1.2 'Aref Ruqaa',serif; color:#d6407f; }
+    .loader p{ margin:0; font:600 14px 'IBM Plex Sans Arabic'; color:#b0708f; }
+    .spin{ width:58px; height:58px; margin:auto; border-radius:50%; border:5px solid #fbd3e4; border-top-color:#f472b6; animation:sp 1s linear infinite; }
+    @keyframes sp{ to{ transform:rotate(360deg); } }
+    .loader.fail .spin{ display:none; }
+    @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
+    @media (max-width:520px){ .title{ font-size:19px; } .brandmark{ height:24px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
+    /* الجوال بالعرض (اللعب الأساسي): شريط علوي أصغر، العصا أصغر، التلميح تحت بالنص */
+    @media (orientation:landscape) and (max-height:520px){
+        html.is-touch .top{ top:max(8px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
+        html.is-touch .pill{ height:34px; font-size:12px; } html.is-touch .title{ font-size:18px; } html.is-touch .brandmark{ height:22px; }
+        html.is-touch .joy{ width:108px; height:108px; bottom:max(14px,env(safe-area-inset-bottom)); left:max(18px,env(safe-area-inset-left)); }
+        html.is-touch .joy-knob{ width:46px; height:46px; margin:-23px 0 0 -23px; }
+        html.is-touch .hint{ top:auto; bottom:max(10px,env(safe-area-inset-bottom)); font-size:12px; padding:6px 14px; }
+        html.is-touch .toast{ top:54px; } html.is-touch .netbad{ top:50px; }
+    }
+    .hint.gone{ opacity:0 !important; }
+    .phase{ position:absolute; top:max(58px,calc(env(safe-area-inset-top) + 50px)); left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; padding:7px 16px; border-radius:999px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; white-space:nowrap; }
+    .phase:empty, .phase b:empty + span:empty{ display:none; }
+    body:not(.net) .phase{ display:none; }
+    .phase span{ font:900 16px 'Zain'; color:#c94f7e; font-variant-numeric:tabular-nums; direction:ltr; }
+    .count{ position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; font:900 min(34vw,180px)/1 'Zain'; color:#fff; text-shadow:0 0 30px #ff4fa8,0 0 80px rgba(255,79,168,.6); }
+    .count.pop{ animation:cpop .9s ease-out both; }
+    @keyframes cpop{ 0%{ transform:scale(1.6); opacity:0; } 25%{ opacity:1; } 100%{ transform:scale(.9); opacity:.2; } }
+    .wishcard{ position:absolute; top:max(100px,calc(env(safe-area-inset-top) + 92px)); left:50%; transform:translateX(-50%); width:min(560px,86vw); padding:12px 18px; border-radius:18px; background:rgba(58,18,54,.86); color:#fff; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.25); pointer-events:none; }
+    .wishcard small{ display:block; font:600 12px 'IBM Plex Sans Arabic'; color:#f6bcd6; }
+    .wishcard b{ display:block; font:900 22px/1.2 'Zain'; color:#f2cf8e; }
+    .wishcard p{ margin:4px 0 0; font:600 15px/1.6 'IBM Plex Sans Arabic'; white-space:pre-wrap; overflow-wrap:anywhere; max-height:5.2em; overflow:hidden; }
+    .bigbtn{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); height:52px; padding:0 22px; border:0; border-radius:999px; color:#fff; font:800 16px 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 24px rgba(212,90,138,.4); cursor:pointer; }
+    .bigbtn.cake{ background:linear-gradient(180deg,#f7d08a,#d9a24e); color:#4a2a05; font-size:18px; height:58px; }
+    #nextBtn{ right:auto; left:50%; transform:translateX(calc(-100% - 6px)); }
+    #prevBtn{ right:auto; left:50%; transform:translateX(6px); background:#fff; color:#c94f7e; border:1px solid var(--line); }
+    body:has(#prevBtn.hidden) #nextBtn{ transform:translateX(-50%); }
+    /* قص الكيكة بالنص تحت (مثل «التالي»)، وأزرار الحركات تطلع فوقه عشان ما تغطيه */
+    #cutBtn{ right:auto; left:50%; transform:translateX(-50%); }
+    body.bigup .actbar{ bottom:max(84px,calc(env(safe-area-inset-bottom) + 80px)); }
+    /* إشعارات كبيرة وسط الشاشة (وقت الصورة، الشكر، الكتابة) */
+    .notice{ position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(.92); opacity:0; transition:opacity .4s, transform .4s; pointer-events:none; text-align:center; padding:16px 32px; border-radius:26px; background:rgba(58,18,54,.88); color:#fff; font:900 clamp(26px,5vw,54px)/1.2 'Zain'; box-shadow:0 14px 40px rgba(0,0,0,.3); max-width:88vw; }
+    .notice.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    .notice small{ display:block; margin-top:6px; font:600 clamp(13px,2vw,20px) 'IBM Plex Sans Arabic'; color:#f6bcd6; }
+    .soundtip{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:14px 26px; border-radius:999px; border:0; font:800 17px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 10px 30px rgba(212,90,138,.45); cursor:pointer; z-index:6; }
+    .endscreen{ position:fixed; inset:0; z-index:11; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 40%,rgba(255,243,248,.93),rgba(243,198,218,.96)); }
+    .endscreen h2{ margin:0 0 8px; font:700 clamp(40px,8vw,84px)/1.25 'Aref Ruqaa',serif; color:#d6407f; }
+    .endscreen .endbrand{ display:block; height:clamp(40px,7vh,58px); width:auto; margin:clamp(22px,5vh,40px) auto 0; opacity:.9; }
+    .endscreen p{ margin:0 0 18px; font:700 clamp(16px,3vw,26px) 'IBM Plex Sans Arabic'; color:#9b6683; }
+    /* شاشة البث (صفحة المذيع، host=1): بدون أزرار، والنصوص أكبر عشان تنقرا بالبث */
+    body.stream .top .pill, body.stream .hint, body.stream .joy{ display:none !important; }
+    body.stream .phase{ top:18px; padding:10px 24px; font-size:20px; }
+    body.stream .phase span{ font-size:26px; }
+    body.stream .wishcard{ width:min(820px,72vw); padding:18px 26px; }
+    body.stream .wishcard b{ font-size:34px; } body.stream .wishcard p{ font-size:22px; max-height:none; }
+    body:has(#nextBtn:not(.hidden)) .actbar, body:has(#wishBtn:not(.hidden)) .actbar{ bottom:max(80px,calc(env(safe-area-inset-bottom) + 76px)); }
+    .wishbox{ position:absolute; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(520px,92vw); padding:14px; border-radius:18px; background:rgba(255,250,252,.97); border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:8px; z-index:6; }
+    .wishbox b{ font:900 18px 'Zain'; }
+    .wishbox textarea{ width:100%; box-sizing:border-box; resize:none; padding:10px 12px; border-radius:12px; border:1px solid var(--line); font:600 15px/1.6 'IBM Plex Sans Arabic'; color:var(--ink); text-align:right; }
+    .wbrow{ display:flex; align-items:center; justify-content:space-between; gap:10px; font:600 12px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .wbrow button, .savebtn{ height:40px; padding:0 18px; border-radius:999px; border:0; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .wbrow button.ghost{ background:#fff; color:#c94f7e; border:1px solid var(--line); }
+    .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:8; }
+    .flash.go{ animation:flash .8s ease-out; }
+    /* آخر ثواني مشهد النهاية: الشاشة تبيض بهدوء (كأنها دخلت النور) */
+    /* مشهد النهاية: لقطة سينمائية — شريطين سود، ألوان خافتة دافية، إطار معتم، وبدون أزرار */
+    body.cine #stage canvas{ filter:saturate(.55) contrast(1.06) brightness(.88) sepia(.14); transition:filter 2.5s ease; }
+    #stage canvas{ transition:filter 2.5s ease; }
+    .cinebar{ position:fixed; left:0; right:0; height:11vh; background:#07040a; z-index:9; transform:scaleY(0); transition:transform 1.8s cubic-bezier(.2,.7,.2,1); pointer-events:none; }
+    .cinebar.t{ top:0; transform-origin:top; } .cinebar.b{ bottom:0; transform-origin:bottom; display:grid; place-items:center; }
+    body.cine .cinebar{ transform:scaleY(1); }
+    .cinebar.b span{ font:400 clamp(15px,2.6vh,24px) 'Aref Ruqaa',serif; color:#e9d6c2; letter-spacing:.06em; opacity:0; transition:opacity 2.5s ease 2.5s; }
+    body.cine .cinebar.b span{ opacity:.9; }
+    .vignette{ position:fixed; inset:0; z-index:8; pointer-events:none; opacity:0; transition:opacity 2.5s ease; background:radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 45%,rgba(10,4,12,.6) 100%); }
+    body.cine .vignette{ opacity:1; }
+    body.cine .top, body.cine .phase, body.cine .actbar, body.cine .joy, body.cine .jumpbtn, body.cine .hint, body.cine .notice, body.cine .toast, body.cine .wishcard, body.cine .bigbtn, body.cine .emotip, body.cine .soundtip{ opacity:0 !important; pointer-events:none !important; transition:opacity 1.2s; }
+    /* رسالة التهنئة بمشهد النهاية (greeting.js): تنكتب على الشاشة نفسها فوق المشهد (بدون بطاقة)، خط كبير وعريض
+       بلون كريمي وظل ناعم عشان تنقرا فوق أي لون بالمشهد، بين الشريطين السود */
+    .bdcard{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:12; width:min(1100px,96vw); max-height:76vh; box-sizing:border-box; overflow:hidden;
+        padding:0 clamp(8px,2vw,24px); color:#fbefe2; text-align:center; pointer-events:none; opacity:0;
+        text-shadow:0 2px 3px rgba(20,8,6,.85), 0 0 18px rgba(20,8,6,.7), 0 0 40px rgba(20,8,6,.45); }
+    .bdcard p{ margin:0; display:grid; }
+    .bdcard .g-full, .bdcard .g-typed{ grid-area:1/1; white-space:pre-line; }
+    .bdcard .g-full{ visibility:hidden; }
+    .bdcard .typing .g-typed::after{ content:''; display:inline-block; width:2px; height:.95em; margin-inline-start:3px; vertical-align:-.12em; background:currentColor; animation:gcaret 1s steps(1) infinite; }
+    @keyframes gcaret{ 50%{ opacity:0; } }
+    .bd-from{ font-family:'Aref Ruqaa',serif; font-weight:700; font-size:min(5vh,7.5vw); line-height:1.4; color:#f3d6a8; margin-bottom:min(1.6vh,2vw) !important; }
+    .bd-date{ font-size:min(4vh,5.2vw); line-height:1.45; color:#f5e0cc; }
+    .bd-date.ar{ font-family:'Amiri',serif; font-weight:700; letter-spacing:.02em; }
+    .bd-date.en{ font-family:'Cormorant Garamond',serif; font-weight:600; letter-spacing:.14em; font-variant:small-caps; }
+    .bd-gap{ height:min(3.2vh,3.6vw); }
+    .bd-ar{ font-family:'Amiri',serif; font-weight:700; font-size:min(6.4vh,8vw); line-height:1.6; }
+    .bd-en{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:600; font-size:min(4.2vh,5.2vw); line-height:1.4; margin-top:min(1.8vh,2.4vw) !important; color:#f1e2d4; }
+    @media (prefers-reduced-motion:reduce){ .bdcard .typing .g-typed::after{ animation:none; } }
+    .fadeout{ position:fixed; inset:0; background:radial-gradient(circle at 50% 45%,#fffdf6,#fff3e0); opacity:0; pointer-events:none; z-index:10; }
+    @keyframes flash{ 0%{ opacity:1; } 100%{ opacity:0; } }
+    .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
+    .photomodal > div{ background:#fff; padding:12px; border-radius:18px; display:flex; flex-direction:column; gap:10px; max-width:min(720px,94vw); }
+    .photomodal img{ width:100%; max-height:70vh; object-fit:contain; border-radius:10px; }
+    /* أزرار تحت يمين: صف التفاعلات فوق، وصف أيقونات الحركات تحته */
+    .actbar{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:flex-end; gap:8px; max-width:calc(100vw - 190px); }
+    .emotes, .reacts{ display:flex; gap:8px; max-width:100%; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding:2px; }
+    .emotes::-webkit-scrollbar, .reacts::-webkit-scrollbar{ display:none; }
+    .emotes button, .reacts button, .jumpbtn{ flex:none; width:46px; height:46px; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:22px/1 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; }
+    .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); border-color:transparent; box-shadow:0 4px 14px rgba(219,39,119,.4); }
+    .reacts button{ width:42px; height:42px; font-size:20px; background:rgba(255,255,255,.55); }
+    .reacts button:active, .emotes button:active, .jumpbtn:active{ transform:scale(.9); }
+    .reacts .rainbtn{ width:auto; padding:0 12px; border-radius:999px; font:800 13px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#ff8fc0,#e11d74); border-color:transparent; }
+    .reacts .rainbtn:disabled{ opacity:.55; }
+    .jumpbtn{ position:absolute; left:calc(max(24px,env(safe-area-inset-left)) + 136px); bottom:max(32px,env(safe-area-inset-bottom)); width:58px; height:58px; font-size:26px; display:none; }
+    html.is-touch .jumpbtn:not(.hidden){ display:block; }
+    body.viewer .jumpbtn, body.stream .jumpbtn{ display:none !important; }
+    .emotip{ position:absolute; z-index:8; padding:6px 12px; border-radius:999px; background:rgba(60,24,48,.88); color:#fff; font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; transform:translate(-50%,-100%); white-space:nowrap; }
+    /* ركن التعديل: لوحة جانبية (يمين) والشخصية تبان باقي الشاشة للمعاينة */
+    .lookpanel{ position:absolute; top:0; bottom:0; right:0; width:min(400px,46vw); box-sizing:border-box; padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 14px;
+        background:rgba(255,248,251,.96); color:#6b2147; border-left:1px solid rgba(236,160,195,.55); box-shadow:-12px 0 40px rgba(120,30,80,.22); display:flex; flex-direction:column; gap:8px; z-index:7; direction:rtl; }
+    .lookpanel h3{ margin:0; font:900 22px/1.1 'Zain'; color:#a3306a; }
+    .lookbody{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-left:4px; }
+    .lookrow{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; border-radius:14px; border:1px solid rgba(236,160,195,.45); background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,236,245,.55)); }
+    .lookrow > b{ flex:none; width:78px; text-align:right; font:700 13px 'IBM Plex Sans Arabic'; }
+    .lookrow .opts{ flex:1; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+    .lookrow.locked{ opacity:.5; }
+    .lookrow.locked .opts{ pointer-events:none; }
+    .sw{ width:26px; height:26px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(160,80,120,.35); cursor:pointer; padding:0; }
+    .sw.on{ box-shadow:0 0 0 3px var(--agp-accent); }
+    .sw.def{ background:linear-gradient(135deg,#3b1a5c,#b38ae0) !important; }
+    .opt{ height:30px; padding:0 11px; border-radius:999px; border:1px solid rgba(236,160,195,.6); background:rgba(255,255,255,.75); color:#6b2147; font:700 12px 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .opt.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    .lockmsg{ padding:8px 12px; border-radius:12px; background:#fff1f6; border:1px dashed #f0a0c4; font:600 13px 'IBM Plex Sans Arabic'; }
+    .lockmsg a{ color:#c94f7e; font-weight:800; }
+    .lookfoot{ display:flex; justify-content:space-between; gap:10px; }
+    .lookfoot button{ flex:1; height:42px; border-radius:999px; border:0; font:800 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; }
+    .lookfoot button.ghost{ background:#fff; color:#c94f7e; border:1px solid rgba(236,160,195,.7); }
+    @media (max-height:420px){ .lookpanel h3{ font-size:18px; } .lookrow{ padding:5px 8px; } .sw{ width:22px; height:22px; } .opt{ height:26px; padding:0 9px; } .lookfoot button{ height:36px; } }
+    .kicked{ position:fixed; inset:0; z-index:12; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); }
+    .kicked h2{ margin:0 0 14px; font:900 26px/1.2 'Zain'; color:#a3306a; }
+    .kicked a{ display:inline-flex; align-items:center; height:46px; padding:0 24px; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); text-decoration:none; }
+    @media (orientation:landscape) and (max-height:520px){ html.is-touch .phase{ top:48px; font-size:12px; } html.is-touch .emotes button{ width:40px; height:40px; font-size:19px; } html.is-touch .reacts button{ width:36px; height:36px; font-size:17px; } html.is-touch .reacts .rainbtn{ font-size:12px; } html.is-touch .actbar{ gap:6px; } html.is-touch .jumpbtn{ left:calc(max(18px,env(safe-area-inset-left)) + 118px); bottom:max(18px,env(safe-area-inset-bottom)); width:50px; height:50px; } }
+    /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
+    /* شرح الأيقونة بالشاشة الرئيسية */
+    .appsheet{ position:fixed; inset:0; z-index:21; display:grid; place-items:center; padding:16px; background:rgba(40,12,34,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+    .appcard{ width:min(420px,100%); max-height:100%; overflow:auto; padding:18px 18px 16px; border-radius:22px; background:#fffafc; color:#5b1d3e; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+    .appcard img{ border-radius:16px; box-shadow:0 6px 18px rgba(201,79,126,.3); }
+    .appcard h2{ margin:8px 0 2px; font:900 22px/1.25 'Zain'; color:#a3306a; }
+    .appcard p{ margin:0 0 10px; font:600 13px/1.6 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .appcard ol{ margin:0 0 12px; padding:0; list-style:none; counter-reset:st; text-align:right; display:flex; flex-direction:column; gap:8px; }
+    .appcard li{ counter-increment:st; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:14px; background:#fdeef5; font:700 14px/1.5 'IBM Plex Sans Arabic'; }
+    .appcard li::before{ content:counter(st); flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:#f472b6; color:#fff; font:800 14px 'IBM Plex Sans Arabic'; }
+    .appcard li svg{ flex:none; width:22px; height:22px; color:#2563eb; }
+    .appcard li small{ display:block; font:600 12px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .appcard button{ width:100%; height:46px; border:0; border-radius:999px; color:#fff; font:800 16px 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; }
+    @media (max-height:420px){ .appcard{ padding:12px 16px; } .appcard img{ display:none; } .appcard ol{ gap:5px; } .appcard li{ padding:6px 10px; } }
+    .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
+    .rotate .ph{ width:64px; height:104px; margin:0 auto 18px; border:5px solid #d45a8a; border-radius:14px; position:relative; animation:turn 2.2s ease-in-out infinite; }
+    .rotate .ph::after{ content:''; position:absolute; bottom:6px; left:50%; width:14px; height:4px; margin-left:-7px; border-radius:2px; background:#d45a8a; }
+    .rotate h2{ margin:0 0 6px; font:900 26px/1.2 'Zain'; color:#a3306a; }
+    .rotate p{ margin:0 0 16px; font:600 14px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .rotate button{ height:46px; padding:0 24px; border:0; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.3); cursor:pointer; }
+    @keyframes turn{ 0%,20%{ transform:rotate(0); } 50%,80%{ transform:rotate(-90deg); } 100%{ transform:rotate(0); } }
+    @media (prefers-reduced-motion:reduce){ .rotate .ph{ animation:none; transform:rotate(-90deg); } }
+    @media (orientation:portrait){ html.is-touch body:not(.viewer) .rotate{ display:grid; } }
+</style>
+</head>
+<body>
+<div id="stage" aria-label="قاعة حفلة عيد الميلاد"></div>
+
+<div class="hud" id="hud">
+    <div class="top">
+        <a class="pill" href="../../games.html" aria-label="خروج">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="lbl">خروج</span>
+        </a>
+        <div class="titlebox"><img class="brandmark" src="brand/aymn-light.png" alt="ألعاب أيمن" width="92" height="30"><div class="title" id="title">حفلة عيد الميلاد</div></div>
+        <div class="group">
+            <button class="pill hidden" id="lookBtn" type="button" aria-label="شكلي">✨<span class="lbl">شكلي</span></button>
+            <button class="pill party" id="partyBtn" type="button" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span class="lbl" id="partyLbl">بدء الحفل</span>
+            </button>
+            <button class="pill on" id="tourBtn" type="button" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="lbl">جولة سينمائية</span>
+            </button>
+            <button class="pill hidden" id="appBtn" type="button" aria-label="شاشة كاملة">📲<span class="lbl">شاشة كاملة</span></button>
+            <button class="pill" id="fsBtn" type="button" aria-label="ملء الشاشة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="netbad hidden" id="netBad" role="status">جاري إعادة الاتصال…</div>
+    <div class="phase" id="phase" aria-live="polite"><b id="phaseTxt"></b><span id="phaseTime"></span></div>
+    <div class="count" id="count" aria-live="assertive"></div>
+    <div class="wishcard hidden" id="wishCard" aria-live="polite"><small id="wcCount"></small><b id="wcName"></b><p id="wcText"></p></div>
+    <button class="bigbtn hidden" id="wishBtn" type="button">اكتب تهنئتك 💌</button>
+    <button class="bigbtn hidden" id="nextBtn" type="button">التالي ←</button>
+    <button class="bigbtn hidden" id="prevBtn" type="button">→ رجوع</button>
+    <div class="notice" id="notice" role="status" aria-live="polite"><span id="noticeTxt"></span><small id="noticeSub"></small></div>
+    <button class="soundtip hidden" id="soundTip" type="button">اضغط عشان تشغّل الصوت 🔊</button>
+    <button class="bigbtn cake hidden" id="cutBtn" type="button">قص الكيكة 🎂</button>
+    <div class="wishbox hidden" id="wishBox" role="dialog" aria-label="اكتب تهنئتك">
+        <b>تهنئتك لصاحبة الحفلة</b>
+        <textarea id="wishText" maxlength="200" rows="3" placeholder="كل عام وأنتِ بخير…"></textarea>
+        <div class="wbrow"><span id="wishStatus"></span><small><span id="wishLeft">200</span> حرف</small></div>
+        <div class="wbrow"><button type="button" id="wishCancel" class="ghost">إغلاق</button><button type="button" id="wishSend">إرسال 💌</button></div>
+    </div>
+    <div class="actbar">
+        <div class="reacts hidden" id="reacts" aria-label="تفاعلات"></div>
+        <div class="emotes hidden" id="emotes" aria-label="الحركات"></div>
+    </div>
+    <div class="emotip hidden" id="emoTip"></div>
+    <div class="lookpanel hidden" id="lookPanel" role="dialog" aria-label="ركن التعديل">
+        <h3>✨ شكلي</h3>
+        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر الشخصية (ولد/بنت) ولون لبسك وقبعتك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
+        <div class="lookbody" id="lookBody"></div>
+        <div class="lookfoot"><button type="button" class="ghost" id="lookCancel">إلغاء</button><button type="button" id="lookSave">حفظ</button></div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
+    <div class="hint" id="hint">
+        <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري · Space للقفز</span>
+        <span class="touch">العصا للمشي · اسحب بإصبعك للنظر</span>
+    </div>
+    <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
+    <button class="jumpbtn hidden" id="jumpBtn" type="button" aria-label="قفز">⤴️</button>
+</div>
+
+<div class="flash" id="flash" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="cinebar t" aria-hidden="true"></div>
+<div class="cinebar b" aria-hidden="true"><span>إلى لقاء أجمل</span></div>
+<div class="fadeout" id="fadeOut" aria-hidden="true"></div>
+<div class="bdcard hidden" id="bdCard" role="note" aria-label="تهنئة">
+    <p class="bd-from" dir="rtl" lang="ar" data-seg="from"></p>
+    <p class="bd-date ar" dir="rtl" lang="ar" data-seg="dateAr"></p>
+    <p class="bd-date en" dir="ltr" lang="en" data-seg="dateEn"></p>
+    <div class="bd-gap"></div>
+    <p class="bd-ar" dir="rtl" lang="ar" data-seg="ar"></p>
+    <p class="bd-en" dir="ltr" lang="en" data-seg="en"></p>
+</div>
+<div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a><img class="endbrand" src="brand/aymn-gold.png" alt="ألعاب أيمن" width="160" height="52"></div></div>
+<div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
+<div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
+    <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
+</div>
+<!-- شرح «أضف الحفلة للشاشة الرئيسية» (آيفون/آيباد، أو متصفح ما يدعم التثبيت المباشر) -->
+<div class="appsheet hidden" id="appSheet" role="dialog" aria-modal="true" aria-labelledby="appTitle">
+    <div class="appcard">
+        <img src="icons/icon-180.png" alt="" width="64" height="64">
+        <h2 id="appTitle">خلّ الحفلة أيقونة بشاشتك 📲</h2>
+        <p>تفتح بكامل الشاشة بدون شريط المتصفح، وترجع لنفس شخصيتك.</p>
+        <ol id="appSteps"></ol>
+        <button type="button" id="appOk">تمام</button>
+    </div>
+</div>
+<div class="rotate" id="rotate" role="dialog" aria-label="لف الجوال بالعرض">
+    <div>
+        <div class="ph" aria-hidden="true"></div>
+        <h2>لف جوالك بالعرض</h2>
+        <p>الحفلة مصممة للشاشة العريضة</p>
+        <button type="button" id="landBtn">تشغيل بالعرض</button>
+    </div>
+</div>
+
+<div class="loader" id="loader">
+    <div class="box">
+        <div class="spin"></div>
+        <h1>عيد ميلاد سعيد</h1>
+        <p id="loaderMsg">نجهّز القاعة…</p>
+    </div>
+</div>
+
+<script type="module">
+    const log = (...a) => { try { const A = window.AymanGamesPlatform; (A && A.log ? A.log : function () {})(...a); } catch (e) {} };
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    const name = (params.get('name') || '').trim().slice(0, 30);
+    // play.html?code=XXXX → حفلة جماعية (view=1 = شاشة عرض بدون شخصية). بدون code = القاعة التجريبية.
+    const code = (params.get('code') || '').replace(/\D/g, '').slice(0, 4);
+    const viewOnly = params.get('view') === '1';
+    // host=1: نفس شاشة العرض داخل صفحة المذيع (شاشة البث)
+    if (viewOnly && params.get('host') === '1') document.body.classList.add('stream');
+    if (code) document.body.classList.add('net');
+    if (code && viewOnly) document.body.classList.add('viewer');
+    if (name) $('title').textContent = 'حفلة ' + name;
+
+    // الخطوط لازم تكون جاهزة قبل رسم اللافتات على الـ canvas
+    const fontLoads = ['700 100px "Aref Ruqaa"', '900 100px Zain', '700 50px "IBM Plex Sans Arabic"'].map(f => document.fonts.load(f, 'عيد'));
+    await Promise.race([Promise.all(fontLoads).catch(() => {}), new Promise(r => setTimeout(r, 3500))]);
+
+    let hall = null;
+    try {
+        const [{ mountHall }, { createControls }] = await Promise.all([import('./hall3d.js'), import('./controls.js')]);
+        const controls = createControls($('stage'), $('joy'));
+        let toastTimer = 0;
+        hall = mountHall($('stage'), {
+            name, controls: (code && viewOnly) ? null : controls, noFreeWalk: !!code,
+            onReady: () => setTimeout(() => $('loader').classList.add('out'), 250),
+            onModeChange: m => {
+                const on = m === 'tour';
+                $('tourBtn').classList.toggle('on', on); $('tourBtn').setAttribute('aria-pressed', String(on));
+                $('hint').style.opacity = on ? '1' : '.75';
+            },
+            onPartyChange: on => {
+                document.body.classList.toggle('party', on);
+                $('partyBtn').classList.toggle('on', on); $('partyBtn').setAttribute('aria-pressed', String(on));
+                $('partyLbl').textContent = on ? 'إنهاء الحفل' : 'بدء الحفل';
+            },
+            onSectionNear: s => {
+                clearTimeout(toastTimer);
+                if (s) { $('toastTitle').textContent = s.title; $('toast').classList.add('show'); }
+                else toastTimer = setTimeout(() => $('toast').classList.remove('show'), 200);
+            },
+        });
+        $('partyBtn').addEventListener('click', () => hall.setParty(!hall.party));
+        $('tourBtn').addEventListener('click', () => hall.setMode(hall.mode === 'tour' ? 'walk' : 'tour'));
+        if (code) await startParty(hall);
+        // اختبار بصري: play.html?cam=x,y,z,lx,ly,lz&curtain=0&doors=1&fw=1&party=1
+        const camQ = params.get('cam');
+        if (params.has('debug')) window.__hall = hall;
+        if (!code && camQ) {
+            const v = camQ.split(',').map(Number); hall.debugView(v.slice(0, 3), v.slice(3, 6));
+            if (params.has('curtain')) hall.setCurtain(+params.get('curtain'), true);
+            if (params.has('doors')) hall.setDoors(+params.get('doors'), true);
+            if (params.get('party') === '1') hall.setParty(true);
+            if (params.get('fw') === '1') hall.fireworks(30);
+            if (params.get('wish') === '1') hall.setWishScreen(1, { i: 3, total: 12, name: 'نورة', text: 'كل عام وانتي بخير يا أحلى سارة، الله يسعدك ويحقق كل أمانيك وتبقين دايم مبتسمة 💖' }, true);
+            if (params.get('cut') === '1') hall.cutCake(params.get('cutnow') === '1');
+        }
+    } catch (err) {
+        log('[birthday-party] 3D غير متاح', err);
+        $('loader').classList.add('fail');
+        $('loaderMsg').textContent = 'جهازك أو متصفحك ما يدعم العرض ثلاثي الأبعاد — جرّب متصفح Chrome أو جهاز آخر.';
+    }
+
+    // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
+    async function startParty(hall) {
+        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, rigMod, { LOOK, REACTS, REACT_EMOJI, resolveLook }, { ANIMS, JUMP }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd-rig.js'), import('./crowd-common.js'), import('./rig3d.js'), import('./music.js')]);
+        const { clockText, tzLabel, countdownText } = await import('./party-net.js');
+        const { createGreeting } = await import('./greeting.js');
+        const greet = createGreeting($('bdCard')); // بطاقة التهنئة بمشهد النهاية
+        const me = viewOnly ? null : readJSON('party-me');
+        if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
+        if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
+        // الشخصيات: الهيكل العظمي (crowd-rig) أو الكلاسيكية (crowd3d) حسب إعداد الغرفة room.chars.
+        // التبديل وسط الحفلة: نشيل القديمة ونبني الجديدة من آخر قائمة حضور وآخر مواقع وصلت
+        // تنبني أول ما توصل قائمة الحضور (عشان الغرفة الكلاسيكية ما تبني الجديدة على الفاضي)
+        let crowd = null, crowdKind = null, wantKind = null, localGetter = null, lastPlayers = null;
+        const lastRows = new Map(); // n → آخر [n, x, z, ry, a]
+        if (params.has('debug')) { window.__hall = hall; Object.defineProperty(window, '__crowd', { get: () => crowd, configurable: true }); }
+        async function useCrowd(kind) {
+            kind = kind === 'classic' ? 'classic' : 'rig';
+            if (kind === (wantKind || crowdKind)) return;
+            wantKind = kind;
+            let mod;
+            try { mod = kind === 'classic' ? await import('./crowd3d.js') : rigMod; }
+            catch (err) { log('[birthday-party] الشخصيات الكلاسيكية ما تحمّلت', err); if (wantKind === kind) wantKind = null; if (!crowd) useCrowd('rig'); return; }
+            if (wantKind !== kind) return; // تبدّل مرة ثانية وهو يحمّل
+            wantKind = null; crowdKind = kind;
+            const next = mod.createCrowd(hall.scene, { floorAt: hall.floorAt });
+            next.prewarm(hall.compile);
+            if (crowd) crowd.dispose();
+            crowd = next;
+            if (localGetter) crowd.setLocal(myN, localGetter);
+            if (lastPlayers) crowd.sync(lastPlayers);
+            if (lastRows.size) crowd.apply([...lastRows.values()], serverNow(), true);
+            if (draft && !$('lookPanel').classList.contains('hidden')) crowd && crowd.setLocalLook(lookToSend());
+            else if (pendingLook) crowd && crowd.setLocalLook(pendingLook.split(',').map(Number));
+            crowdPhase(); // يرجّع المشي التلقائي والسبوت لايت
+        }
+        const music = createMusic();
+        const roles = new Map();
+        let myN = null, myRole = null, myKind = null, placed = false, gotAll = false, lastSent = null;
+        let myLook = null, lookAuto = false, pendingLook = null, pendingT = 0;
+        let girlOn = false; // صاحبة الحفلة متصلة (من قائمة الحضور) — الحفل المجدول ينتظرها
+        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null, myServer = null;
+        const zoneFor = p => p === 'lobby' || p === 'closed' ? (myRole === 'girl' ? 'girl' : 'lounge') : (myRole === 'girl' ? 'hall' : 'nostage');
+        // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
+        const GIRL_WP = [[0, -52], [16, -51], [16, -44]];
+        const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
+        const pathFor = (n, start, target) => [start, ...(roles.get(n) === 'girl' ? GIRL_WP : guestWp(n)), target];
+        const curEmote = () => { if (emote && emoteUntil && serverNow() > emoteUntil) emote = 0; return emote; };
+        const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 }[phase.p];
+
+        // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
+        // outro (58.5ث بطول أغنيته): صاحبة الحفلة تمشي السجادة كلها لحالها (45ث)، والضيوف يبقون بمكانهم ومخفيين
+        const WALK = { entrance: .85, gather: .85, cakeWalk: 8500, photo: 6000, outro: 45000 }, OUTRO_GUEST_MS = 1000;
+        const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
+        // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
+        // الكيكة تنزل بنص القاعة (نفس CAKE_C بالسيرفر وSKY_C في hall3d.js): الكل يطالعها وقت الكيكة
+        const CAKE_C = [0, -17], CAKE_PH = ['cakeWalk', 'cake', 'celebrate'];
+        // أول الرقص الحر (بعد الصورة، يعني بعد نهاية أغنية القص بـ 15ث): أغنية هادية بإضاءة خافتة وتأثيرات
+        // بطولها بالضبط (music/slowsong.mp3 = 120.8ث)، وبعدها يرجع الرقص الحر العادي بموسيقاه وأنواره
+        const SLOW_MS = 120800;
+        let slowT = 0;
+        // رجوع للصفحة (من الخلفية أو زر الرجوع): نعيد تطبيق المشهد بوقته، فالصوت يرجع لمقطع المشهد ومكانه بالضبط
+        const resync = () => { if (document.visibilityState !== 'visible' || !phase) return; applied = null; applyPhase(); };
+        document.addEventListener('visibilitychange', resync);
+        addEventListener('pageshow', e => { if (e.persisted) resync(); });
+        const faceCake = (x, z) => Math.atan2(CAKE_C[0] - x, CAKE_C[1] - z);
+        const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
+            : CAKE_PH.includes(p) ? (myRole === 'girl' ? 0 : faceCake(...(myTarget || [hall.getLocal().x, hall.getLocal().z])))
+            : myRole === 'girl' && !['photo', 'free'].includes(p) ? 0 : Math.PI;
+        let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null, noticeT = 0;
+        // جا وقت البداية وصاحبة الحفلة مو موجودة (نحسبها هنا عشان تتحدث لحظة ما تدخل)
+        const waitingGirl = () => !!(phase && phase.p === 'lobby' && phase.sched && serverNow() >= phase.sched.startAt && !girlOn);
+        function notice(txt, sub, ms) {
+            $('noticeTxt').textContent = txt; $('noticeSub').textContent = sub || '';
+            $('notice').classList.add('show'); clearTimeout(noticeT); noticeT = setTimeout(() => $('notice').classList.remove('show'), ms || 5000);
+        }
+        // المتصفح ما يشغّل الصوت قبل أول لمسة — والحفل المجدول يبدأ لحاله، فنطلبها من بدري
+        let touched = false;
+        addEventListener('pointerdown', () => { touched = true; $('soundTip').classList.add('hidden'); }, { capture: true, once: true });
+        $('soundTip').addEventListener('click', () => $('soundTip').classList.add('hidden'));
+
+        // المشي التلقائي للمرحلة الحالية (نفس الحساب على كل الجوالات): الأهداف ووقت البداية والنهاية والمسار
+        function walkOf() {
+            const p = phase.p, wf = WALK[p];
+            if (!wf || !phase.walk) return null;
+            const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
+            const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf;
+            // مشهد النهاية: هي تنزل للسجادة وتمشيها للباب، والضيوف يوصلون صفوفهم أسرع
+            const outro = p === 'outro', t1Of = n => outro && roles.get(n) !== 'girl' ? t0 + OUTRO_GUEST_MS : t1;
+            const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : outro && roles.get(n) === 'girl' ? [st, [0, Math.max(st[1], -36.5)], tg] : [st, tg];
+            return { walk, t0, t1, route, t1Of };
+        }
+        // اللي يخص الشخصيات بس من المرحلة (المسارات والسبوت لايت) — ينعاد لحاله بعد تبديل الشخصيات
+        function crowdPhase() {
+            if (!crowd || !phase) return;
+            const p = phase.p, W = walkOf();
+            if (W) {
+                const paths = {};
+                for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
+                const t1s = {}; for (const n of Object.keys(paths)) t1s[n] = W.t1Of(+n);
+                crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : c.ry)
+                    : CAKE_PH.includes(p) ? (role === 'girl' ? 0 : faceCake(c.x, c.z))
+                    : role === 'girl' && p !== 'photo' ? 0 : Math.PI, { t1Of: t1s });
+            } else crowd.setAutoPaths(null, serverNow());
+            crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended', 'outro'].includes(p)); // بالنهاية النور من الباب بداله
+            // مشهد النهاية: هي بس اللي تبان (الضيوف ومعهم أنا يختفون عند الكل)
+            const gn = [...roles].find(([, r]) => r === 'girl');
+            crowd.setSolo(p === 'outro' && gn ? gn[0] : null);
+        }
+        function applyPhase() {
+            if (!phase || !gotAll) return;
+            const now = serverNow(), p = phase.p, key = p + ':' + phase.at, since = now - phase.at;
+            if (applied === key) return;
+            applied = key;
+            const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance' || p === 'closed', lateReveal = now > phase.at + 3000;
+            const slowLeft = p === 'free' ? SLOW_MS - since : 0; clearTimeout(slowT);
+            // المشهد (الستارة، الإضاءة، المشي، الموسيقى) بـ try: لو صار فيه خطأ بأي جهاز (آيباد مثلاً)
+            // ما يمنع الأزرار تحت («التالي» و«قص الكيكة») إنها تطلع
+            try {
+            // الستارة مسكّرة لين يخلص العد التنازلي (الفتح يصير بالـ ticker عند الصفر)
+            const closed = preShow || (p === 'reveal' && !lateReveal);
+            hall.setCurtain(closed ? 0 : 1, true);
+            // شموع الميلاد ورا صاحبة الحفلة: تنطفي لين تنفتح الستارة (تولّع بالـ ticker عند الصفر)
+            hall.setCandles(!closed, true);
+            if (p === 'reveal' && lateReveal && since < 13000) hall.flutter(15 - (since - 3000) / 1000);
+            hall.setDoors(p === 'lobby' || p === 'closed' ? 0 : 1, p !== 'entrance');
+            // الإضاءة الخافتة والليزر وقت الرقص والاحتفال؛ التهاني والكيكة أهدى عشان القراءة
+            hall.setParty(['dance', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal));
+            revealFired = p !== 'reveal' || lateReveal;
+            if (p === 'reveal' && lateReveal && since < 9000) hall.fireworks((9000 - since) / 1000);
+            // اللي يدخل متأخر وقت الافتتاح يسمع موسيقاه من نفس اللحظة اللي يسمعها الباقين (تبدأ بعد العد)
+            // أغنية الافتتاح تبدأ مع العد التنازلي (واللي يدخل متأخر يسمعها من نفس اللحظة)
+            if (p === 'reveal') music.play('reveal', { from: since / 1000 });
+            if (!viewOnly) hall.setZone(zoneFor(p));
+            // الشاشة الكبيرة: «اكتبوا تهانيكم» وقت الكتابة، والرسالة المعروضة وقت العرض
+            hall.setWishScreen(p === 'wishes' || p === 'wishWrite' ? 1 : 0, p === 'wishes' && lastWishes && lastWishes.cur ? Object.assign({ total: lastWishes.total }, lastWishes.cur) : null, since > 2500);
+            // الكيكة: مقصوصة (رجوع) أو أنيميشن القص + احتفال ثاني
+            if (phase.cut) {
+                // رقص الكيكة: ألعاب نارية طول المدة والأنوار تشتغل وتطفي، وأغنية الكيكة
+                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000), { strobe: true }); music.play('cutsong', { from: since / 1000 }); }
+                else hall.cutCake(true);
+                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cutsong', { from: since / 1000 }); }
+            }
+            // كيكة السماء: تنزل أول مشي الكيكة، وتبقى للقص والاحتفال، وترجع للسماء وقت الصورة
+            hall.setSkyCake(p === 'cakeWalk' ? 'drop' : p === 'cake' || p === 'celebrate' ? 'on' : p === 'photo' && since < 4000 ? 'up' : 'off', since);
+            hall.setPhotoCam(p === 'photo');
+            // الأغنية الهادية: إضاءة خافتة + بتلات ولمعات ذهبية طول مدتها، وبعدها الرقص الحر العادي
+            hall.setSoft(slowLeft > 0);
+            if (slowLeft > 0) {
+                hall.flutter(slowLeft / 1000, { wide: true });
+                slowT = setTimeout(() => { if (phase && phase.p === 'free') { hall.setSoft(false); music.play('bg'); } }, slowLeft);
+            }
+            crowdPhase();
+            // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
+            if (p === 'outro') {
+                hall.setOutro(() => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; }, since / 1000);
+                hall.flutter(Math.max(2, 58 - since / 1000));
+                greet.run(phase.at, phase.until, serverNow); // «رسالة من نايف» والتاريخ والتهنئة تنكتب من أول المشهد (13ث) وتبقى لين آخره
+            } else { hall.setOutro(null); greet.stop(); }
+            // لقطة سينمائية: الأزرار والنصوص تختفي، شريطين سود، وألوان خافتة
+            document.body.classList.toggle('cine', p === 'outro');
+            const W = walkOf();
+            if (W) {
+                const { walk, t0, route } = W, t1 = W.t1Of(myN);
+                if (!viewOnly && myN != null && walk[myN]) {
+                    // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
+                    myTarget = walk[myN];
+                    const st = myServer || [hall.getLocal().x, hall.getLocal().z];
+                    if (Math.hypot(st[0] - myTarget[0], st[1] - myTarget[1]) < .5) hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: facing(p) });
+                    else hall.setAutoPath(route(myN, st, myTarget), t0, t1, serverNow, facing(p));
+                }
+            } else {
+                if (!viewOnly) {
+                    hall.setAutoPath(null);
+                    // انتهى المشي (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
+                    if (myTarget && p !== 'lobby') {
+                        const onStage = isGirl && myTarget[1] < -34;
+                        hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: facing(p), elev: onStage ? .45 : undefined, yawOff: onStage ? .7 : 0 });
+                        myServer = myTarget.slice(); // السيرفر ما يرسل لنا صفّنا، فنعرف مكاننا عنده من هنا
+                    }
+                    myTarget = null;
+                }
+            }
+            // شاشة البث: بعد ما تنفتح الستارة الكاميرا تتمركز على صاحبة الحفلة وتلف حولها شوي
+            // (العد التنازلي واللقطة الجماعية ومشهد النهاية لها لقطاتها)
+            // وقت الكيكة: اللقطة على الكيكة وصاحبة الحفلة وراها، والحلقة حولهم
+            if (viewOnly) hall.setFocus(CAKE_PH.includes(p) ? () => CAKE_C
+                : ['dance', 'gather', 'wishWrite', 'wishes', 'free'].includes(p) || (p === 'reveal' && lateReveal) ? () => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; } : null,
+                CAKE_PH.includes(p) ? { r: 6.2, h: 5, look: .9 } : null);
+            if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
+            if (p === 'ended') music.stop();
+            else if (p === 'outro') music.play('outro', { from: since / 1000 });
+            // التجمّع حول الكيكة: أغنية «Happy Birthday» من أولها (اللي يدخل متأخر يسمعها من نفس اللحظة)، وبعدها يطلع زر القص
+            else if (p === 'cakeWalk') music.play('cakesong', { from: since / 1000 });
+            else if (slowLeft > 0) music.play('slowsong', { from: since / 1000 });
+            else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') {
+                // أول الرقص: أغنية الافتتاح تكمل لين آخرها (بدأت قبل الرقص بـ 12ث) وبعدها أغنية الرقص
+                if (p === 'dance') music.play('reveal', { from: (since + 12000) / 1000 });
+                music.play('bg', { wait: p === 'dance' });
+            }
+            // أغنية القص: مربوطة بمشهد الاحتفال بوقته (اللي يرجع للصفحة بالنص يسمعها من نفس اللحظة)
+            else if (p === 'celebrate') music.play('cutsong', { from: since / 1000 });
+            // باقي المشاهد (اللوبي، الدخول، التجمّع، الكيكة، الصورة…): موسيقى الخلفية بصوت منخفض
+            else if (p !== 'reveal') music.play('bg');
+            } catch (e) { console.error('party: phase scene', e); }
+            // إشعارات المراحل (بس أول ثواني المرحلة — اللي يرجع متأخر ما يشوفها من جديد)
+            if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');
+            if (p === 'photo' && since < 5000) notice('وقت الصورة الجماعية 📸', 'الكل يتصف تلقائياً');
+            if (p === 'free' && since < 8000) notice('شكراً لحضوركم 💖', 'استمتعوا بالحفل', 6500);
+            // أي مرحلة (مو بس الانتظار): بعد تحديث الصفحة وسط الحفلة الصوت يحتاج لمسة من جديد
+            if (!touched && p !== 'ended') $('soundTip').classList.remove('hidden');
+            // نهاية الحفلة: شاشة شكر فوق المشهد، والصورة (لو انأخذت) تبقى تنحفظ
+            $('endScreen').classList.toggle('hidden', p !== 'ended');
+            if (p === 'ended') { $('photoModal').classList.add('hidden'); $('endPhoto').classList.toggle('hidden', !$('photoImg').src); }
+            // الأزرار حسب المرحلة والدور — وقت عرض التهاني الكل يرقص ويسوي حركات
+            const showEmotes = !viewOnly && ['lobby', 'dance', 'celebrate', 'free', 'cake', 'wishes'].includes(p);
+            $('emotes').classList.toggle('hidden', !showEmotes); $('jumpBtn').classList.toggle('hidden', !showEmotes);
+            // التفاعلات بكل وقت (إلا قبل فتح الباب وبعد النهاية)، ومطر القلوب لصاحبة الحفلة بعد الافتتاح
+            $('reacts').classList.toggle('hidden', viewOnly || p === 'closed' || p === 'ended');
+            rainShown = isGirl && !preShow && p !== 'ended'; buildReacts();
+            updateLookBtn();
+            $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishWrite');
+            if (p !== 'wishWrite') $('wishBox').classList.add('hidden');
+            $('nextBtn').classList.toggle('hidden', !isGirl || p !== 'wishes');
+            $('prevBtn').classList.toggle('hidden', !isGirl || p !== 'wishes' || !(lastWishes && lastWishes.pos > 1));
+            $('cutBtn').classList.toggle('hidden', !isGirl || p !== 'cake');
+            // زر كبير تحت (التالي/اكتب تهنئتك/قص الكيكة) ← أزرار الحركات ترتفع فوقه (بدون :has عشان سفاري القديم)
+            document.body.classList.toggle('bigup', ['nextBtn', 'wishBtn', 'cutBtn'].some(id => !$(id).classList.contains('hidden')));
+            $('wishCard').classList.toggle('hidden', !(p === 'wishes' && lastWishes && lastWishes.cur));
+            if (showEmotes || p === 'wishes' || p === 'wishWrite') $('hint').classList.add('gone'); // التلميح يغطي الأزرار
+        }
+
+        function onWishes(m) {
+            lastWishes = m;
+            const cur = m.cur, inWishes = phase && phase.p === 'wishes';
+            try { hall.setWishScreen(inWishes ? 1 : 0, cur ? Object.assign({ total: m.total }, cur) : null); } catch (e) { console.error('party: wish screen', e); }
+            $('wishCard').classList.toggle('hidden', !(inWishes && cur));
+            if (cur) { $('wcName').textContent = cur.name; $('wcText').textContent = cur.text; $('wcCount').textContent = cur.i + ' من ' + m.total; }
+            $('nextBtn').textContent = cur && cur.i >= m.total ? 'خلصت الرسائل ← الكيكة' : cur ? 'التالي ←' : (m.total ? 'ابدئي الرسائل ←' : 'التالي ←');
+            $('prevBtn').classList.toggle('hidden', !(inWishes && myRole === 'girl' && m.pos > 1));
+        }
+
+        // ---- الصورة الجماعية: بعد ما يوصل الكل، عد 3-2-1 ثم فلاش ولقطة ----
+        function photoTick(now) {
+            if (!phase || phase.p !== 'photo') return;
+            const key = 'photo:' + phase.at, at = phase.at + 8000, left = at + 3000 - now;
+            if (photoKey === key || now < at) return;
+            if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } return; }
+            photoKey = key; $('count').textContent = '';
+            if (now - at > 6000) return; // رجع متأخر: فاتته اللقطة
+            const shot = hall.snapshot();
+            $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+            if (shot) {
+                $('photoImg').src = shot; $('photoSave').href = shot; $('photoSave').download = 'party-' + code + '.jpg';
+                // رابط blob للحفظ: بعض نسخ iOS تفتح رابط data: بدل ما تحفظه
+                fetch(shot).then(r => r.blob()).then(b => { if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = URL.createObjectURL(b); $('photoSave').href = photoUrl; }).catch(() => {});
+                setTimeout(() => $('photoModal').classList.remove('hidden'), 700);
+            }
+        }
+
+        const sc = () => phase && phase.sched, at = ms => clockText(ms, sc().tzOffsetMin);
+        const LABEL = {
+            closed: () => sc() ? 'الدخول يفتح الساعة ' + at(sc().openAt) : 'الدخول لسا ما فتح',
+            lobby: () => waitingGirl() ? (myRole === 'girl' ? 'الكل ينتظرك 💖' : 'بانتظار صاحبة الحفلة 💖')
+                : sc() ? (myRole === 'girl' ? 'غرفتك · ' : viewOnly ? '' : 'صالة الضيوف · ') + 'الحفل يبدأ الساعة ' + at(sc().startAt) + ' ' + tzLabel(sc().tzOffsetMin)
+                : viewOnly ? 'بانتظار بدء الحفلة' : myRole === 'girl' ? 'غرفتك · الحفلة تبدأ قريباً' : 'صالة الضيوف · بانتظار بدء الحفلة',
+            wishWrite: () => 'اكتبوا تهانيكم 💌',
+            ended: () => 'انتهت الحفلة',
+            entrance: () => myRole === 'girl' ? 'طريقك للمنصة… محد يشوفك' : 'الدخول للقاعة',
+            reveal: () => 'الافتتاح',
+            dance: () => 'وقت الرقص',
+            gather: () => 'التجمّع للتهاني',
+            wishes: () => 'عرض التهاني',
+            cakeWalk: () => 'وقت الكيكة',
+            cake: () => myRole === 'girl' ? 'اضغطي «قص الكيكة»' : 'صاحبة الحفلة بتقص الكيكة…',
+            celebrate: () => 'احتفال 🎉',
+            photo: () => 'الصورة الجماعية 📸',
+            free: () => sc() ? 'الحفلة مستمرة · تنتهي الساعة ' + at(sc().endAt) : 'الحفلة مستمرة',
+            outro: () => 'إلى لقاء أجمل ✨',
+        };
+        // العدّاد بجنب اسم المرحلة: فتح الدخول، ثم بداية الحفل، ثم مدة المرحلة، ثم نهاية الحفل
+        function phaseLeft(now) {
+            const p = phase.p, s = sc();
+            if (p === 'closed' && s) return countdownText(s.openAt - now);
+            if (p === 'lobby') return s && now < s.startAt ? countdownText(s.startAt - now) : '';
+            if (p === 'free') return s ? countdownText(s.endAt - now) : '';
+            return phase.until && p !== 'reveal' && p !== 'photo' ? countdownText(phase.until - now) : '';
+        }
+        hall.addTicker(dt => {
+            const now = serverNow();
+            if (crowd) crowd.update(dt, hall.camera, now);
+            rainTick(now);
+            if (!phase) return;
+            // الافتتاح: عد تنازلي 3-2-1 ثم الستارة تنفتح مع ألعاب نارية
+            if (phase.p === 'reveal' && !revealFired) {
+                const left = phase.at + 3000 - now;
+                if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } }
+                else { revealFired = true; $('count').textContent = ''; hall.setCurtain(1); hall.fireworks(7); hall.setParty(true); hall.setCandles(true); hall.flutter(15); }
+            } else if (phase.p === 'photo') photoTick(now);
+            else if ($('count').textContent) $('count').textContent = '';
+            $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
+            $('phaseTime').textContent = phaseLeft(now);
+            const fo = phase.p === 'outro' ? Math.max(0, Math.min(1, (now - phase.at - 52000) / 5000)) : 0; // الشاشة تبيض آخر المشهد
+            if (+$('fadeOut').style.opacity !== fo) $('fadeOut').style.opacity = fo;
+        });
+
+        const net = connect({
+            onStatus: on => $('netBad').classList.toggle('hidden', on),
+            onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code, vk: params.get('vk') || undefined } : { t: 'resume', code, id: me.id, key: me.key }); },
+            onMessage: m => {
+                if (m.t === 'welcome') {
+                    myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); buildReacts(); updateLookBtn();
+                    localGetter = () => Object.assign(hall.getLocal(), { emote: curEmote() });
+                    if (crowd) crowd.setLocal(myN, localGetter);
+                    // حفظ شكله وانقطع قبل ما يوصل: نعيد إرساله
+                    if (pendingLook) net.send({ t: 'look', look: pendingLook.split(',').map(Number) });
+                }
+                else if (m.t === 'room') {
+                    m.room.players.forEach(r => roles.set(r[0], r[2]));
+                    girlOn = m.room.players.some(r => r[2] === 'girl' && r[4]);
+                    lastPlayers = m.room.players;
+                    if (crowd) crowd.sync(m.room.players);
+                    useCrowd(m.room.chars);
+                    const mine = myN != null ? m.room.players.find(r => r[0] === myN) : null;
+                    if (mine) onMyLook(mine[5]);
+                    if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
+                } else if (m.t === 'wishes') onWishes(m);
+                else if (m.t === 'myWish') onMyWish(m);
+                else if (m.t === 'phase') { phase = m; applied = null; try { if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); } catch (e) { console.error(e); } applyPhase(); }
+                else if (m.t === 'all' || m.t === 's') {
+                    const rows = unpackRows(m.d);
+                    if (m.t === 'all') lastRows.clear();
+                    rows.forEach(r => lastRows.set(r[0], r));
+                    try { if (crowd) crowd.apply(rows, m.now, m.t === 'all'); } catch (e) { console.error('party: crowd', e); } // خطأ بالشخصيات ما يوقف المكان والأزرار
+                    // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
+                    const mine = myN != null ? rows.find(x => x[0] === myN) : null;
+                    if (mine) myServer = [mine[1], mine[2]];
+                    if (!placed && mine) { placed = true; hall.setFollow({ x: mine[1], z: mine[2], ry: mine[3] }); }
+                    if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
+                } else if (m.t === 'reacts') { if (crowd) for (let i = 0; i + 1 < m.d.length; i += 2) crowd.react(m.d[i], m.d[i + 1]); }
+                else if (m.t === 'rain') { rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); if (crowd && serverNow() - m.at < 4000) crowd.rain(m.at); }
+                else if (m.t === 'err') {
+                    if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
+                    else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kicked').classList.remove('hidden'); }
+                    else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
+                    else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
+                    else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }
+                    else if (m.of === 'next' || m.of === 'cut') { $(m.of === 'next' ? 'nextBtn' : 'cutBtn').disabled = false; }
+                    else if (m.of === 'rain') { if (m.at) rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); }
+                }
+            },
+        });
+        // ---- التهاني: كتابة الضيف + زر التالي لصاحبة الحفلة + قص الكيكة ----
+        function onMyWish(m) {
+            $('wishStatus').textContent = m.shown ? 'تهنئتك انعرضت 💖' : 'وصلت تهنئتك ✓ (تقدر تعدّلها قبل ما تنعرض)';
+            $('wishSend').disabled = false; if (m.text && !$('wishText').value) $('wishText').value = m.text;
+            $('wishBtn').textContent = m.shown ? 'تهنئتك انعرضت 💖' : 'تعديل تهنئتك ✏️';
+            setTimeout(() => { if (!$('wishBox').classList.contains('hidden') && !m.shown) $('wishBox').classList.add('hidden'); }, 1200);
+        }
+        $('wishBtn').addEventListener('click', () => { $('wishBox').classList.remove('hidden'); $('wishText').focus(); });
+        $('wishCancel').addEventListener('click', () => $('wishBox').classList.add('hidden'));
+        $('wishText').addEventListener('input', () => { $('wishLeft').textContent = (200 - Array.from($('wishText').value).length) + ''; });
+        $('wishSend').addEventListener('click', () => {
+            const text = $('wishText').value.trim(); if (!text) { $('wishStatus').textContent = 'اكتب تهنئتك أول'; return; }
+            $('wishSend').disabled = true; $('wishStatus').textContent = 'جاري الإرسال…'; net.send({ t: 'wish', text });
+        });
+        const once = (id, msg) => $(id).addEventListener('click', () => { $(id).disabled = true; net.send(msg()); setTimeout(() => { $(id).disabled = false; }, 1100); });
+        // seen: كم رسالة شافت — لو المذيع ضغط التالي بنفس اللحظة السيرفر يرفض الثانية بدل ما تنتخطى رسالة
+        once('nextBtn', () => ({ t: 'next', seen: lastWishes ? lastWishes.pos || 0 : 0 }));
+        once('prevBtn', () => ({ t: 'prev', seen: lastWishes ? lastWishes.pos || 0 : 0 }));
+        $('endPhoto').addEventListener('click', ev => { ev.preventDefault(); $('photoModal').classList.remove('hidden'); });
+        once('cutBtn', () => ({ t: 'cut' }));
+        $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
+
+        // أيقونات الحركات: كل الضيوف كل الحركات (السيرفر يسمح لين 10)، وصاحبة الحفلة زيادة تحية الأميرة.
+        // الرقصات والتمايل تستمر لين تضغطها مرة ثانية أو تمشي، والباقي ثواني. الضغط المطوّل يطلّع اسم الحركة
+        const LOOP_EMOTE = { 2: 1, 8: 1, 9: 1, 10: 1 }, EMOTE_MS = { 3: 2500, 4: 3000, 5: 2400, 7: 3000, 11: 3200, [JUMP]: 1000 };
+        function buildEmotes() {
+            const list = ANIMS.filter(a => !a.girl || myRole === 'girl');
+            $('emotes').innerHTML = list.map(a => '<button type="button" data-e="' + a.id + '" aria-label="' + a.name + '" title="' + a.name + '">' + a.icon + '</button>').join('');
+        }
+        function setEmote(e) {
+            if (LOOP_EMOTE[e]) { emote = emote === e ? 0 : e; emoteUntil = 0; }
+            else { emote = e; emoteUntil = serverNow() + (EMOTE_MS[e] || 3000); }
+            document.querySelectorAll('#emotes button').forEach(x => x.classList.toggle('on', +x.dataset.e === emote));
+        }
+        let tipT = 0, tipShown = false;
+        function holdTip(bar) {
+            bar.addEventListener('pointerdown', ev => {
+                const b = ev.target.closest('button'); if (!b) return;
+                tipShown = false; clearTimeout(tipT);
+                tipT = setTimeout(() => { const r = b.getBoundingClientRect(), t = $('emoTip'); t.textContent = b.getAttribute('aria-label'); t.style.left = (r.left + r.width / 2) + 'px'; t.style.top = (r.top - 6) + 'px'; t.classList.remove('hidden'); tipShown = true; }, 450);
+            });
+            const end = () => { clearTimeout(tipT); setTimeout(() => $('emoTip').classList.add('hidden'), tipShown ? 900 : 0); };
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(k => bar.addEventListener(k, end));
+            bar.addEventListener('contextmenu', ev => ev.preventDefault());
+        }
+        holdTip($('emotes')); holdTip($('reacts'));
+        $('emotes').addEventListener('click', ev => {
+            const b = ev.target.closest('button'); if (!b || tipShown) return;
+            setEmote(+b.dataset.e);
+        });
+        const jump = () => { if (!$('emotes').classList.contains('hidden')) setEmote(JUMP); };
+        $('jumpBtn').addEventListener('click', jump);
+        if (!viewOnly) addEventListener('keydown', ev => { if (ev.code === 'Space' && !ev.repeat && !$('emotes').classList.contains('hidden') && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { ev.preventDefault(); jump(); } });
+
+        // ---- التفاعلات: إيموجي يطير فوق راسك عند الكل (السيرفر يحدد 2/ث)، ولصاحبة الحفلة 3 زيادة + مطر القلوب ----
+        const REACT_NAMES = ['قلب', 'ابتسامة', 'ضحك', 'احتفال', 'تاج', 'حب', 'لمعة'];
+        let rainShown = false, rainAt = 0, rainRetry = 0, reactsKey = '';
+        function buildReacts() {
+            const n = myRole === 'girl' ? REACTS.length : 4, key = n + ':' + rainShown;
+            if (key === reactsKey) return; reactsKey = key;
+            $('reacts').innerHTML = (rainShown ? '<button type="button" class="rainbtn" id="rainBtn" aria-label="مطر القلوب">مطر القلوب 💕</button>' : '')
+                + REACT_EMOJI.slice(0, n).map((ch, i) => '<button type="button" data-r="' + i + '" aria-label="' + REACT_NAMES[i] + '">' + ch + '</button>').join('');
+            rainTick(serverNow(), true);
+        }
+        $('reacts').addEventListener('click', ev => {
+            const b = ev.target.closest('button'); if (!b || tipShown) return;
+            // لو الرسالة ضاعت (انقطاع) ما يبقى الزر مقفل للأبد
+            if (b.id === 'rainBtn') { if (!b.disabled) { b.disabled = true; net.send({ t: 'rain' }); clearTimeout(rainRetry); rainRetry = setTimeout(() => rainTick(serverNow(), true), 4000); } return; }
+            net.send({ t: 'react', e: REACTS[+b.dataset.r] });
+        });
+        // عدّاد الانتظار على زر المطر (مرة كل 20ث)
+        let rainLeft = -1;
+        function rainTick(now, force) {
+            const b = $('rainBtn'); if (!b) return;
+            const left = Math.max(0, Math.ceil((rainAt + 20000 - now) / 1000));
+            if (left === rainLeft && !force) return; rainLeft = left;
+            b.disabled = left > 0; b.textContent = left > 0 ? 'مطر القلوب 💕 ' + left : 'مطر القلوب 💕';
+        }
+
+        // ---- ركن التعديل: اللاعب يختار شكله ويشوفه على شخصيته قبل الحفظ ----
+        // الضيف السريع: لون اللبس بس (السيرفر يفرض نفس الشي)، والباقي يبان مقفل
+        // opts ممكن تكون دالة (boy) ← الولد له قوائم خاصة للبس والتسريحة والإكسسوار
+        const LOOK_ROWS = [
+            { k: 8, label: 'الشخصية', opts: LOOK.genders, quick: true, noGirl: true },
+            { k: 0, label: 'نوع اللبس', opts: boy => boy ? LOOK.boyStyles : LOOK.styles, noGirl: true },
+            { k: 1, label: 'لون اللبس', colors: LOOK.outfits, quick: true },
+            { k: 2, label: 'البشرة', colors: LOOK.skins },
+            { k: 3, label: 'لون الشعر', colors: LOOK.hairs },
+            { k: 4, label: 'التسريحة', opts: boy => boy ? LOOK.boyHairStyles : LOOK.hairStyles },
+            { k: 5, label: 'إكسسوار', opts: boy => boy ? LOOK.boyAccs : LOOK.accs, girlSkip: [2, 5] }, // عندها تاج: التاج الصغير والقبعة ما يركبون فوقه
+            { k: 6, label: 'المؤثر', opts: LOOK.fxs },
+            { k: 7, label: 'قبعة الحفلة', opts: LOOK.hats, quick: true, noGirl: true }, // صاحبة الحفلة عليها تاجها
+        ];
+        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx', 'hat', 'g'];
+        let draft = null;
+        const isDefault = L => !Array.isArray(L) || L.every(v => !(v >= 0));
+        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 || i === 7 || i === 8 ? v : -1) : draft.slice();
+        function updateLookBtn() {
+            const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free' || phase.p === 'closed');
+            $('lookBtn').classList.toggle('hidden', !ok);
+            if (!ok) closeLook();
+        }
+        function renderLook() {
+            const girl = myRole === 'girl', quick = myKind === 'quick', boy = !girl && draft[8] === 1;
+            $('lookLock').classList.toggle('hidden', !quick);
+            $('lookBody').innerHTML = LOOK_ROWS.filter(row => !(girl && row.noGirl)).map(row => {
+                let opts = '';
+                if (row.colors) {
+                    if (girl && row.k === 1) opts += '<button type="button" class="sw def" data-k="1" data-v="-1" aria-label="الفستان البنفسجي الفخم" title="الفستان البنفسجي الفخم"></button>';
+                    opts += row.colors.map((c, v) => '<button type="button" class="sw" data-k="' + row.k + '" data-v="' + v + '" style="background:' + c + '" aria-label="' + row.label + ' ' + (v + 1) + '"></button>').join('');
+                } else opts = (typeof row.opts === 'function' ? row.opts(boy) : row.opts).map((t, v) => (girl && row.girlSkip && row.girlSkip.includes(v)) ? '' : '<button type="button" class="opt" data-k="' + row.k + '" data-v="' + v + '">' + t + '</button>').join('');
+                const locked = quick && !row.quick;
+                return '<div class="lookrow' + (locked ? ' locked' : '') + '"><b>' + (locked ? '🔒 ' : '') + row.label + '</b><div class="opts">' + opts + '</div></div>';
+            }).join('');
+            markLook();
+        }
+        function markLook() {
+            $('lookBody').querySelectorAll('[data-k]').forEach(b => { const on = draft[+b.dataset.k] === +b.dataset.v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+        }
+        function openLook() {
+            const R = resolveLook(myN, myRole, pendingLook ? pendingLook.split(',').map(Number) : myLook);
+            draft = FIELDS.map(f => R[f]);
+            renderLook(); $('lookPanel').classList.remove('hidden');
+        }
+        function closeLook(save) {
+            if ($('lookPanel').classList.contains('hidden')) return;
+            $('lookPanel').classList.add('hidden');
+            if (save) {
+                const L = lookToSend();
+                net.send({ t: 'look', look: L }); writeJSON('party-look', { look: L });
+                // المعاينة تبقى لين يرجع الشكل من السيرفر (أو 4 ثواني لو قصّه السيرفر لشي ثاني)
+                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd && crowd.setLocalLook(null); }, 4000);
+            } else if (!pendingLook) crowd && crowd.setLocalLook(null);
+        }
+        // شكلي من السيرفر (الصف السادس في room). أول مرة: لو السيرفر ما عنده شكل لي والجوال حافظ شكل، نرسله
+        function onMyLook(L) {
+            myLook = L;
+            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd && crowd.setLocalLook(null); }
+            if (lookAuto) return;
+            lookAuto = true;
+            const saved = readJSON('party-look');
+            if (saved && Array.isArray(saved.look) && (saved.look.length === 7 || saved.look.length === 8) && isDefault(L) && !isDefault(saved.look)) net.send({ t: 'look', look: saved.look });
+        }
+        $('lookBtn').addEventListener('click', () => $('lookPanel').classList.contains('hidden') ? openLook() : closeLook());
+        $('lookBody').addEventListener('click', ev => {
+            const b = ev.target.closest('[data-k]'); if (!b || !draft) return;
+            const k = +b.dataset.k, v = +b.dataset.v;
+            if (k === 8 && draft[8] !== v) {
+                // ولد ↔ بنت: اللبس والتسريحة والإكسسوار يرجعون للافتراضي حق النوع الجديد (قوائمهم مختلفة)
+                draft[8] = v; const R = resolveLook(myN, myRole, draft.map((x, i) => i === 0 || i === 4 || i === 5 ? -1 : x));
+                draft[0] = R.st; draft[4] = R.hs; draft[5] = R.acc; renderLook();
+            } else { draft[k] = v; markLook(); }
+            crowd && crowd.setLocalLook(lookToSend());
+        });
+        $('lookSave').addEventListener('click', () => closeLook(true));
+        $('lookCancel').addEventListener('click', () => closeLook());
+        document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeLook(); });
+        $('lookLogin').addEventListener('click', ev => { ev.preventDefault(); writeJSON('party-me', null); location.href = 'join.html?code=' + code; });
+
+        // نرسل مكاننا 8 مرات بالثانية — بس إذا تغيّر (ووقت المشي التلقائي ما نرسل)
+        if (!viewOnly) setInterval(() => {
+            if (!placed || hall.mode !== 'follow' || autoPhase()) return;
+            const L = hall.getLocal();
+            // القفزة تشتغل حتى وهو يمشي؛ باقي الحركات تنلغي مع المشي
+            if (L.moving && emote && emote !== JUMP) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
+            const a = L.moving && curEmote() !== JUMP ? 1 : curEmote();
+            if (!a) document.querySelectorAll('#emotes button.on').forEach(x => x.classList.remove('on'));
+            const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
+            if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;
+            lastSent = p; myServer = [p[0], p[1]]; net.send({ t: 'mv', p });
+        }, 125);
+    }
+
+    // ---- العرض الأفقي على الجوال ----
+    // أندرويد: ملء الشاشة + قفل الاتجاه بالعرض (يحتاج ضغطة من المستخدم). الآيفون ما يسمح
+    // بقفل الاتجاه للمواقع، فتبقى شاشة «لف جوالك» لين يلفّه بنفسه.
+    const coarse = !!window.IS_TOUCH;
+    async function goLandscape() {
+        try {
+            const d = document.documentElement;
+            if (!document.fullscreenElement && d.requestFullscreen) await d.requestFullscreen({ navigationUI: 'hide' });
+            if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+        } catch (e) { /* غير مدعوم (آيفون) — المستخدم يلفّه بنفسه */ }
+    }
+    $('landBtn').addEventListener('click', goLandscape);
+    if (coarse && !viewOnly) document.addEventListener('pointerdown', function once() { document.removeEventListener('pointerdown', once); if (matchMedia('(orientation:portrait)').matches) goLandscape(); }, { once: true });
+    // التلميح يختفي بعد شوي عشان ما يغطي اللعب
+    setTimeout(() => $('hint').classList.add('gone'), 9000);
+
+
+    // ---- «📲 شاشة كاملة»: الحفلة كأيقونة بالشاشة الرئيسية (app-mode.js) ----
+    // أبل ما تسمح بملء الشاشة بسفاري ولا بإضافة الأيقونة بالكود، فبالآيفون/الآيباد نشرح الخطوتين،
+    // وبالأندرويد نطلب التثبيت مباشرة. الزر يختفي لو الحفلة مفتوحة من الأيقونة أصلاً.
+    {
+        const APP = window.PARTY_APP || {};
+        const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 002 2h10a2 2 0 002-2v-8"/></svg>';
+        const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+        const ipad = APP.ios && !/iPhone|iPod/.test(navigator.userAgent);
+        const showApp = !viewOnly && !!code && !APP.standalone && !!window.IS_TOUCH;
+        $('appBtn').classList.toggle('hidden', !showApp);
+        // زر ملء الشاشة العادي ما يشتغل بالآيفون، وما له داعي من الأيقونة
+        if (APP.standalone || !(document.fullscreenEnabled || document.webkitFullscreenEnabled) || (APP.ios && showApp)) $('fsBtn').classList.add('hidden');
+        let restoreUrl = null;
+        function openSheet() {
+            const steps = APP.ios ? [
+                `${SHARE}<span>اضغط زر المشاركة<small>${ipad ? 'فوق يمين بسفاري' : 'تحت بنص سفاري'} — أو ••• ثم «مشاركة»</small></span>`,
+                `${PLUS}<span>اختر «إضافة إلى الشاشة الرئيسية»<small>لو ما بان انزل بالقائمة شوي</small></span>`,
+                `<span>اضغط «إضافة»، وافتح الحفلة من أيقونتها 🎂</span>`,
+            ] : [
+                `<span>افتح قائمة المتصفح ⋮<small>فوق بزاوية الشاشة</small></span>`,
+                `${PLUS}<span>اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»</span>`,
+                `<span>افتح الحفلة من أيقونتها 🎂</span>`,
+            ];
+            $('appSteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
+            // الأيقونة بالآيفون تاخذ رابط الصفحة الحالي: نحط فيه الجلسة عشان ترجع لنفس الشخصية
+            if (APP.ios && APP.markUrl) restoreUrl = APP.markUrl();
+            $('appSheet').classList.remove('hidden');
+        }
+        function closeSheet() { $('appSheet').classList.add('hidden'); if (restoreUrl) { restoreUrl(); restoreUrl = null; } }
+        $('appBtn').addEventListener('click', async () => {
+            if (APP.canPrompt && APP.canPrompt()) { const ok = await APP.prompt(); if (ok) $('appBtn').classList.add('hidden'); return; }
+            openSheet();
+        });
+        $('appOk').addEventListener('click', closeSheet);
+        $('appSheet').addEventListener('click', e => { if (e.target === $('appSheet')) closeSheet(); });
+    }
+
+    $('fsBtn').addEventListener('click', () => {
+        const d = document;
+        if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen();
+        else d.documentElement.requestFullscreen && d.documentElement.requestFullscreen().catch(() => {});
+    });
+</script>
+</body>
+</html>

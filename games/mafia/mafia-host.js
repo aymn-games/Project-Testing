@@ -25,7 +25,7 @@
     function joinStepsHtml(siteUrl, code) {
         var c = code ? '<b style="letter-spacing:2px">' + code + '</b>' : '';
         return '<ol class="steps">' +
-            '<li><span>1</span><span><b>امسح الباركود</b> أو اكتب رقم الروم ' + c + ' في <b dir="ltr">' + siteUrl + '</b></span></li>' +
+            '<li><span>1</span><span><b>امسح الباركود</b> أو اكتب رقم الروم ' + c + ' بالصفحة الرئيسية لموقع <b>ألعاب أيمن</b></span></li>' +
             '<li><span>2</span><span class="must"><b class="must">سجّل دخول بحساب الموقع</b></span></li>' +
             '<li><span>3</span><span>اضغط <b>«ادخل الساحة»</b></span></li>' +
             '</ol>' +

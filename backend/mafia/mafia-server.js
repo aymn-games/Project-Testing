@@ -23,6 +23,7 @@ var crypto = require('crypto');
 var frame = require('../websocket/ws-frame');
 var handshake = require('../websocket/ws-handshake');
 var logger = require('../utils/logger');
+var CodeRanges = require('../rooms/room-code-ranges');
 var Settings = require('./mafia-settings');
 var Game = require('./mafia-game');
 
@@ -78,7 +79,9 @@ function sendStates(room) {
 }
 
 function createRoom() {
-    var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (_rooms[code]);
+    // رقم من نطاق المافيا (rooms/room-code-ranges.js) عشان خانة «رقم الغرفة» بالرئيسية توصل للعبة الصح
+    var code = CodeRanges.allocate('mafia', function (c) { return !!_rooms[c]; });
+    if (!code) return null;
     var room = { code: code, token: rid(16), settings: Settings.validate({}), players: [], lobbyChat: [], started: false, game: null, hostConn: null, hostGoneAt: 0, dirty: false, lastSend: 0 };
     _rooms[code] = room;
     logger.log('Mafia: room ' + code + ' created');
@@ -133,6 +136,7 @@ function onMessage(client, msg) {
     if (t === 'host') {
         var r = msg.code && _rooms[msg.code];
         if (!(r && msg.token && r.token === msg.token)) r = createRoom();
+        if (!r) return send(client, { t: 'err', err: 'كل الرومات مشغولة، جرّب بعد شوي' });
         // إعدادات شاشة الإعدادات تنطبق قبل البداية بس
         if (msg.settings && !r.started) r.settings = Settings.validate(msg.settings);
         attach(client, r, 'host', 'host');

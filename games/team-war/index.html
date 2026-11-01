@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
@@ -260,8 +261,9 @@ const SETTINGS = [
     { type:'text', key:'blueKw',   label:'الكلمة المفتاحية للانضمام', placeholder:'مثلاً: أزرق', default:'' }
   ]},
   { title:'المباراة', full:true, rows:[
-    { type:'choice', key:'size',  label:'حجم الفريق', options:['2 ضد 2','4 ضد 4','8 ضد 8'], default:1 },
-    { type:'choice', key:'start', label:'نقاط البداية لكل فريق', options:['150','200','250'], default:1 },
+    { type:'choice', key:'size',  label:'حجم الفريق', options:['2 ضد 2','4 ضد 4','8 ضد 8','16 ضد 16','30 ضد 30'], default:1 },
+    { type:'choice', key:'start', label:'نقاط البداية لكل فريق', options:['150','200','250','450','650'], default:1 },
+    { type:'choice', key:'tiles', label:'عدد المربعات', options:['70','100'], default:0 },
     { type:'choice', key:'timer', label:'مؤقت اختيار المربع', hint:'إذا خلص الوقت ينتقل الدور تلقائياً للي بعده', options:['20 ث','25 ث','30 ث','بدون مؤقت'], default:1 }
   ]}
 ];
@@ -296,7 +298,7 @@ class Component extends DCLogic {
 
   // نفس تطبيع الشات (TW.norm) حتى الكلمتين ما تتطابقان بالشات
   nrm(x){ return TW.norm(x); }
-  twValues(v){ return { redName:String(v.redName||'').trim()||'الفريق الأحمر', redKw:String(v.redKw||'').trim(), blueName:String(v.blueName||'').trim()||'الفريق الأزرق', blueKw:String(v.blueKw||'').trim(), size:parseInt(v.size)||4, start:parseInt(v.start)||200, timer:v.timer==='بدون مؤقت'?0:(parseInt(v.timer)||25) }; }
+  twValues(v){ return { redName:String(v.redName||'').trim()||'الفريق الأحمر', redKw:String(v.redKw||'').trim(), blueName:String(v.blueName||'').trim()||'الفريق الأزرق', blueKw:String(v.blueKw||'').trim(), size:parseInt(v.size)||4, start:parseInt(v.start)||200, tiles:parseInt(v.tiles)||70, timer:v.timer==='بدون مؤقت'?0:(parseInt(v.timer)||25) }; }
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
     out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):r.type==='support'?(SUPPORT_TYPES.find(x=>x.id===v)||{}).name||null:v; } out.supCount=this.state.supCount; return out; }
 

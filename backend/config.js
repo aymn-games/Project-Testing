@@ -16,6 +16,14 @@ module.exports = {
 
     debug: process.env.NODE_ENV !== 'production',
 
+    // «حفلة عيد الميلاد» (/ws/party) — مطفأة افتراضياً. تشتغل فقط بـ PARTY_ENABLED=1
+    // (مفتاح إيقاف: أي مشكلة بالحفلة ← تشيل المتغير والموقع يكمل عادي).
+    partyEnabled: process.env.PARTY_ENABLED === '1',
+    // مفتاح خاص اختياري لإنشاء حفلة بدون حساب (games/birthday-party/?k=...). الاستريمرز ينشئون بحساب الموقع بدونه.
+    partyHostKey: process.env.PARTY_HOST_KEY || '',
+    // كم حفلة ممكن تشتغل بنفس الوقت لكل الاستريمرز (الافتراضي 10، كل وحدة لحد 100 ضيف).
+    partyMaxRooms: Number(process.env.PARTY_MAX_ROOMS) || 10,
+
     // ⚠️ لازم يُنشأ من Google Cloud Console — راجع README.md.
     googleClientId: process.env.GOOGLE_CLIENT_ID || '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com',
 

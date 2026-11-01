@@ -15,6 +15,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
@@ -109,7 +110,7 @@ input::placeholder{color:#6f6a7c}
                       </div>
                       <sc-if value="{{ row.chosen }}" hint-placeholder-val="{{ false }}">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-                          <span style="font:700 14px 'Zain';color:#e7e3ef">كم مرة مسموح يستخدم الطوق</span>
+                          <span style="font:700 14px 'Zain';color:#e7e3ef">كم طوق يقدر ياخذ كل لاعب بالمباراة</span>
                           <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
                             <button onClick="{{ row.dec }}" aria-label="إنقاص" style="width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:400 20px/1 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">−</button>
                             <span style="width:44px;text-align:center;font:700 16px 'Zain';color:#ddd6fe;font-variant-numeric:tabular-nums">{{ row.count }}</span>
@@ -282,7 +283,7 @@ const SETTINGS = [
     { type:'text', key:'kw', label:'الكلمة المفتاحية للانضمام', hint:'يكتبها اللاعب بالشات عشان يطلب الدخول', placeholder:'مثال: سفينة', default:'' }
   ]},
   { title:'🛟 طوق النجاة', full:true, rows:[
-    { type:'toggle', key:'ring', label:'تفعيل طوق النجاة', hint:'اللاعب يرسل هدية وتنقذه من البحر', default:false },
+    { type:'toggle', key:'ring', label:'تفعيل طوق النجاة', hint:'اللاعب اللي على السفينة يرسل الهدية فيلبس الطوق، وأول ما يغلط أو يخلص وقته ينقذه الطوق من البحر بدل ما يطيح', default:false },
     { type:'support', key:'supType', showIf:'ring', label:null, default:null }
   ]}
 ];

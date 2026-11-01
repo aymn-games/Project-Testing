@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fbeaf1">
+<title>حفلة عيد الميلاد — الدخول</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الحفلة">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script src="app-mode.js"></script>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
+<script src="../../auth/auth-client.js"></script>
+<!-- دخول الجوال للحفلة (من الباركود): join.html?code=XXXX
+     - ضيف: «دخول بحسابي» (أشكال ورقصات أكثر + نقاط) أو «دخول باسمي فقط».
+     - صاحبة الحفلة: join.html?code=XXXX&g=<مفتاحها> — اسم فقط.
+     الجلسة تنحفظ بـ 'party-me' فلو رجع لنفس الرابط يرجع لنفس شخصيته.
+     بدون رقم (join.html) أو برقم غلط: خانة «رقم الحفلة» (4 أرقام يقولها المذيع). -->
+<style>
+    :root{ --ink:#5b1d3e; --soft:#9b6683; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.9); }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); background:radial-gradient(circle at 90% -10%,#ffd9ea,transparent 55%),radial-gradient(circle at 0% 105%,#e9dbff,transparent 50%),#fbf1f5; }
+    button,input{ font-family:inherit; }
+    .hidden{ display:none !important; }
+    main{ min-height:100dvh; max-width:460px; margin:0 auto; padding:max(28px,env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:16px; justify-content:center; }
+    /* شعار ألعاب أيمن أعلى الصفحة: نسخة ذهبي وردي (brand/aymn-gold.png) بين خطين ذهبيين رفيعين */
+    .agp-brand{ display:flex; align-items:center; justify-content:center; gap:14px; margin:0 auto 14px; text-decoration:none; }
+    .agp-brand::before, .agp-brand::after{ content:''; flex:1; max-width:90px; height:1px; background:linear-gradient(90deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand::after{ background:linear-gradient(270deg,transparent,rgba(190,128,92,.55)); }
+    .agp-brand img{ height:44px; width:auto; display:block; }
+    .hero{ text-align:center; }
+    .hero small{ display:block; font:600 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    .hero h1{ margin:4px 0 0; font:700 40px/1.25 'Aref Ruqaa',serif; color:var(--rose2); }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:22px; padding:18px; box-shadow:0 10px 30px rgba(201,79,126,.08); }
+    .card h2{ margin:0 0 4px; font:900 21px/1.2 'Zain'; }
+    .card p{ margin:0 0 14px; font-size:13px; color:var(--soft); line-height:1.6; }
+    .perks{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; padding:0; list-style:none; }
+    .perks li{ font:600 12px 'IBM Plex Sans Arabic'; padding:4px 10px; border-radius:999px; background:#f3e8ff; color:#7e22ce; }
+    input{ width:100%; padding:13px 16px; border-radius:14px; border:1px solid var(--line); background:#fff; font-size:17px; color:var(--ink); text-align:right; }
+    input:focus{ outline:3px solid rgba(226,112,154,.35); }
+    .btn{ display:flex; align-items:center; justify-content:center; width:100%; height:50px; margin-top:10px; border-radius:999px; border:0; cursor:pointer; font:700 16px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.28); text-decoration:none; }
+    .btn.ghost{ background:#fff; color:var(--rose2); border:1px solid var(--line); box-shadow:none; }
+    .btn:disabled{ opacity:.55; }
+    .btn:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
+    .or{ display:flex; align-items:center; gap:10px; color:var(--soft); font-size:13px; }
+    .or::before,.or::after{ content:''; flex:1; height:1px; background:var(--line); }
+    .msg{ padding:12px 14px; border-radius:14px; background:#fff1f2; color:#9f1239; font-weight:600; text-align:center; }
+    .wait{ text-align:center; color:var(--soft); }
+    .spin{ width:40px; height:40px; margin:0 auto 10px; border-radius:50%; border:4px solid #fbd3e4; border-top-color:#e2709a; animation:sp 1s linear infinite; }
+    @keyframes sp{ to{ transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
+    .doors{ text-align:center; }
+    .doors h2{ margin:0 0 2px; font:900 22px/1.3 'Zain'; }
+    .doors .when{ font:600 13px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    .doors .left{ margin:10px 0 4px; font:900 44px/1 'Zain'; color:var(--rose2); font-variant-numeric:tabular-nums; direction:ltr; }
+    .doors p{ margin:6px 0 0; }
+    .gender{ display:flex; gap:10px; }
+    .gender button{ flex:1; height:58px; border-radius:16px; border:2px solid var(--line); background:#fff; color:var(--ink); font:800 18px 'IBM Plex Sans Arabic'; cursor:pointer; transition:transform .12s; }
+    .gender button[aria-pressed="true"]{ border-color:#e2709a; background:linear-gradient(180deg,#fff0f6,#ffe1ee); box-shadow:0 6px 16px rgba(226,112,154,.25); }
+    .gender button:active{ transform:scale(.97); }
+    .gender.need button{ animation:nudge .5s; }
+    @keyframes nudge{ 25%{ transform:translateX(-4px); } 75%{ transform:translateX(4px); } }
+    .codein{ text-align:center !important; font:900 34px/1 'Zain' !important; letter-spacing:.35em; direction:ltr; padding:10px 16px !important; }
+    .linkbtn{ display:block; margin:2px auto 0; padding:8px 14px; border:0; background:none; color:var(--rose2); font:700 14px 'IBM Plex Sans Arabic'; text-decoration:underline; text-underline-offset:4px; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+    <a class="agp-brand" href="../../" aria-label="ألعاب أيمن"><img src="brand/aymn-gold.png" alt="ألعاب أيمن" width="135" height="44"></a>
+    <div class="hero">
+        <small id="heroSmall">أهلاً فيك في</small>
+        <h1 id="heroTitle">حفلة عيد الميلاد</h1>
+    </div>
+
+    <div class="msg hidden" id="msg" role="alert"></div>
+    <!-- قبل فتح الدخول (الحفلة المجدولة): الوقت والعدّاد، وأزرار الدخول تنفتح لحالها -->
+    <div class="card doors hidden" id="doors" role="status" aria-live="polite">
+        <h2>الدخول يفتح الساعة <bdi id="doorsAt"></bdi></h2>
+        <div class="when" id="doorsWhen"></div>
+        <div class="left" id="doorsLeft"></div>
+        <p>اكتب اسمك واضغط «دخول» من الحين — بتدخل لحالك أول ما يفتح الدخول.</p>
+    </div>
+    <div class="wait" id="wait"><div class="spin"></div>جاري الاتصال بالحفلة…</div>
+
+    <!-- رقم الحفلة: لو دخل بدون باركود، أو الرقم غلط -->
+    <section class="hidden" id="codeForm">
+        <div class="card">
+            <h2>رقم الحفلة</h2>
+            <p>اكتب رقم الحفلة (4 أرقام) اللي يقوله المذيع أو تحت الباركود.</p>
+            <input id="codeIn" class="codein" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" autocomplete="off" enterkeyhint="go" aria-label="رقم الحفلة">
+            <button class="btn" id="codeBtn" type="button">دخول الحفلة</button>
+        </div>
+    </section>
+
+    <!-- ضيف -->
+    <section class="hidden" id="guestForm">
+        <!-- شخصيتك: ولد أو بنت (تقدر تغيّرها بعدين من «✨ شكلي») -->
+        <div class="card">
+            <h2>شخصيتك</h2>
+            <div class="gender" id="gender" role="group" aria-label="شخصيتك">
+                <button type="button" data-g="0" aria-pressed="false">👧 بنت</button>
+                <button type="button" data-g="1" aria-pressed="false">👦 ولد</button>
+            </div>
+        </div>
+        <div class="card">
+            <h2>دخول بحسابي</h2>
+            <p id="memberNote">أشكال ورقصات ومؤثرات أكثر، وتاخذ نقاط المنصة.</p>
+            <ul class="perks"><li>سكنات كثيرة</li><li>رقصات</li><li>مؤثرات</li><li>نقاط</li></ul>
+            <button class="btn" id="memberBtn" type="button">دخول بحسابي</button>
+        </div>
+        <div class="or">أو</div>
+        <div class="card">
+            <h2>دخول باسمي فقط</h2>
+            <p>شخصية جاهزة و3 حركات.</p>
+            <input id="quickName" maxlength="16" placeholder="اكتب اسمك" autocomplete="nickname" enterkeyhint="go">
+            <button class="btn ghost" id="quickBtn" type="button">دخول</button>
+        </div>
+        <button class="linkbtn" id="otherCode" type="button">عندك رقم حفلة ثاني؟</button>
+    </section>
+
+    <!-- صاحبة الحفلة -->
+    <section class="hidden" id="girlForm">
+        <div class="card">
+            <h2>أهلاً يا صاحبة الحفلة</h2>
+            <p>هذا الدخول خاص فيكِ. كل الأشكال والرقصات مفتوحة لكِ.</p>
+            <input id="girlName" maxlength="16" placeholder="اسمك" autocomplete="nickname" enterkeyhint="go">
+            <button class="btn" id="girlBtn" type="button">دخول</button>
+        </div>
+    </section>
+</main>
+
+<script type="module">
+    import { connect, readJSON, writeJSON, serverNow, clockText, dateText, tzLabel, countdownText } from './party-net.js';
+    const $ = id => document.getElementById(id);
+    const q = new URLSearchParams(location.search);
+    const code = (q.get('code') || '').replace(/\D/g, '').slice(0, 4);
+    const girlKey = q.get('g');
+    const ERR = {
+        full: 'الحفلة مكتملة (100 ضيف) — تابعها من البث 💖',
+        ended: 'انتهت الحفلة · شكراً لحضوركم 💖',
+        'girl-taken': 'صاحبة الحفلة داخلة من جهاز ثاني.',
+        'girl-key': 'رابط صاحبة الحفلة غير صحيح.',
+        nocode: 'الحفلة غير موجودة أو انتهت.',
+        disabled: 'الحفلات متوقفة حالياً.',
+        auth: 'انتهت جلسة حسابك — سجّل دخولك من جديد.',
+        name: 'اكتب اسمك.',
+        kicked: 'المذيع طلّعك من هذي الحفلة.',
+    };
+    let girlName = '', sentJoin = false;
+    // معرّف ثابت للجهاز: المطرود ما يرجع بنفس الجهاز، ورجوعه بحسابه ياخذ مكان شخصيته الغايبة
+    let dev = readJSON('party-dev');
+    if (typeof dev !== 'string' || !/^[a-z0-9]{8,32}$/i.test(dev)) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); writeJSON('party-dev', dev); }
+
+    // الحفلة المجدولة قبل فتح الدخول: الضيف يشوف الوقت والعدّاد، وأزرار دخول الضيوف مقفلة
+    // لين توصل phase lobby (صاحبة الحفلة تقدر تدخل غرفتها بدري)
+    let doorsAt = 0, doorsT = 0, pendingJoin = null, onDoorsOpen = null; // ضغط دخول قبل ما يفتح: يدخل لحاله أول ما يفتح
+    function setDoors(openAt, tz) {
+        doorsAt = openAt || 0;
+        $('doors').classList.toggle('hidden', !doorsAt || !!girlKey);
+        // الأزرار تبقى تنضغط: الضغطة قبل الفتح تنحفظ، ويدخل لحاله أول ما يفتح
+        ['memberBtn', 'quickBtn'].forEach(id => { $(id).dataset.closed = doorsAt ? '1' : ''; });
+        clearInterval(doorsT);
+        if (!doorsAt) { if (pendingJoin && onDoorsOpen) { const pj = pendingJoin; pendingJoin = null; onDoorsOpen(pj); } return; }
+        $('doorsAt').textContent = clockText(doorsAt, tz);
+        $('doorsWhen').textContent = dateText(doorsAt, tz) + ' · ' + tzLabel(tz);
+        const tickDoors = () => { $('doorsLeft').textContent = countdownText(doorsAt - serverNow()); };
+        tickDoors(); doorsT = setInterval(tickDoors, 1000);
+    }
+    function showMsg(t) { $('msg').textContent = t || ''; $('msg').classList.toggle('hidden', !t); }
+    function showForm() {
+        $('wait').classList.add('hidden');
+        $((girlKey ? 'girl' : 'guest') + 'Form').classList.remove('hidden');
+        sentJoin = false; ['memberBtn', 'quickBtn', 'girlBtn'].forEach(id => { $(id).disabled = false; });
+    }
+    function renderMember() {
+        const A = window.AGPAuth, tok = A && A.getToken && A.getToken(), user = A && A.getCachedUser && A.getCachedUser();
+        if (tok) { $('memberBtn').textContent = 'دخول باسم ' + ((user && user.username) || 'حسابي'); }
+        else { $('memberBtn').textContent = 'سجّل دخولك'; }
+    }
+
+    // خانة رقم الحفلة: تودّي لنفس الصفحة بالرقم
+    function showCode(msg) {
+        ['wait', 'guestForm', 'girlForm', 'doors'].forEach(id => $(id).classList.add('hidden'));
+        $('codeForm').classList.remove('hidden'); showMsg(msg || '');
+        if (code) $('codeIn').value = code;
+    }
+    const goCode = () => {
+        const v = $('codeIn').value.replace(/\D/g, '').slice(0, 4);
+        if (v.length !== 4) { showMsg('رقم الحفلة 4 أرقام.'); $('codeIn').focus(); return; }
+        location.href = 'join.html?code=' + v;
+    };
+    $('codeBtn').addEventListener('click', goCode);
+    $('codeIn').addEventListener('input', () => { $('codeIn').value = $('codeIn').value.replace(/\D/g, '').slice(0, 4); });
+    $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') goCode(); });
+    $('otherCode').addEventListener('click', () => { showCode(); $('codeIn').value = ''; $('codeIn').focus(); });
+
+    const saved = readJSON('party-me');
+    // بس لو انفتحت من الأيقونة (?app=1) — غير كذا يكتب الرقم (يمكن يبي حفلة جديدة)
+    if (!code && q.get('app') && saved && saved.code && /^\d{4}$/.test(saved.code)) {
+        // فتح من الأيقونة (أندرويد: join.html?app=1) أو بدون رقم: يرجع لشخصيته بحفلته المحفوظة
+        // (play.html يكمل بالجلسة، ولو انتهت يرجّعه هنا برقم الحفلة)
+        location.replace('play.html?code=' + saved.code);
+    } else if (!code) {
+        showCode();
+    } else {
+        const net = connect({
+            onStatus: on => { if (!on && !sentJoin) $('wait').classList.remove('hidden'); },
+            onOpen: () => {
+                // انقطع الاتصال بعد ما ضغط «دخول» وقبل ما يوصل الرد: نرجّع النموذج بدل التعليق
+                sentJoin = false;
+                const me = readJSON('party-me');
+                if (me && me.code === code && me.id && me.key && (me.role === 'girl') === !!girlKey) { sentJoin = true; net.send({ t: 'resume', code, id: me.id, key: me.key }); }
+                else net.send({ t: 'peek', code });
+            },
+            onMessage: m => {
+                if (m.t === 'room') {
+                    girlName = m.room.girlName || '';
+                    if (girlName) { $('heroTitle').textContent = 'حفلة ' + girlName; if (girlKey && !$('girlName').value) $('girlName').value = girlName; }
+                    if (!sentJoin) { showForm(); renderMember(); }
+                } else if (m.t === 'phase') {
+                    if (m.p === 'ended') { setDoors(0); $('wait').classList.add('hidden'); $('guestForm').classList.add('hidden'); $('girlForm').classList.add('hidden'); $('doors').classList.add('hidden'); showMsg(ERR.ended); return; }
+                    setDoors(m.p === 'closed' && m.sched ? m.sched.openAt : 0, m.sched && m.sched.tzOffsetMin);
+                } else if (m.t === 'closed') {
+                    // ضغط دخول والدخول لسا ما فتح (السيرفر يرسل phase lobby أول ما يفتح)
+                    sentJoin = false; showForm(); setDoors(m.openAt, m.tzOffsetMin);
+                } else if (m.t === 'welcome') {
+                    writeJSON('party-me', { code, id: m.id, key: m.key, role: m.role });
+                    location.replace('play.html?code=' + code);
+                } else if (m.t === 'err') {
+                    if (m.of === 'resume') { writeJSON('party-me', null); sentJoin = false; net.send({ t: 'peek', code }); return; }
+                    if (m.err === 'nocode' && !girlKey) { showCode('ما لقينا حفلة بهالرقم — تأكد من الرقم وجرّب مرة ثانية.'); return; }
+                    if (m.of === 'peek' || m.err === 'nocode' || m.err === 'disabled') { $('wait').classList.add('hidden'); $('guestForm').classList.add('hidden'); $('girlForm').classList.add('hidden'); showMsg(ERR[m.err] || 'صار خطأ.'); return; }
+                    showForm(); showMsg(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
+                }
+            },
+        });
+        // ولد/بنت: لازم يختار قبل الدخول (ينحفظ للمرة الجاية)
+        let gender = readJSON('party-gender'); if (gender !== 0 && gender !== 1) gender = null;
+        const markGender = () => $('gender').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.g === gender)));
+        markGender();
+        $('gender').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; gender = +b.dataset.g; writeJSON('party-gender', gender); markGender(); showMsg(''); });
+        const needGender = () => { if (girlKey || gender !== null) return false; showMsg('اختر شخصيتك: بنت أو ولد'); const g = $('gender'); g.classList.remove('need'); void g.offsetWidth; g.classList.add('need'); g.scrollIntoView({ block: 'center', behavior: 'smooth' }); return true; };
+        const join = (extra, btn) => {
+            if (needGender()) return;
+            showMsg(''); sentJoin = true; $(btn).disabled = true;
+            net.send(Object.assign({ t: 'join', code, dev }, girlKey ? {} : { g: gender }, extra));
+        };
+        onDoorsOpen = pj => join(pj.extra, pj.btn);
+        $('memberBtn').addEventListener('click', () => {
+            const tok = window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken();
+            if (!tok) {
+                // login.html يقبل ?next= كمسار نسبي من جذر الموقع فقط
+                const next = 'games/birthday-party/join.html?code=' + code + (q.get('host') ? '&host=1' : '');
+                location.href = '../../login.html?next=' + encodeURIComponent(next);
+                return;
+            }
+            if (needGender()) return;
+            if ($('memberBtn').dataset.closed) { pendingJoin = { extra: { auth: tok }, btn: 'memberBtn' }; $('doors').querySelector('p').textContent = 'تمام ✓ بتدخل بحسابك لحالك أول ما يفتح الدخول — خلّ الصفحة مفتوحة.'; return; }
+            join({ auth: tok }, 'memberBtn');
+        });
+        $('quickBtn').addEventListener('click', () => {
+            const name = $('quickName').value.trim();
+            if (!name) { showMsg(ERR.name); $('quickName').focus(); return; }
+            if (needGender()) return;
+            if ($('quickBtn').dataset.closed) { pendingJoin = { extra: { name }, btn: 'quickBtn' }; showMsg(''); $('doors').querySelector('p').textContent = 'تمام ✓ بتدخل لحالك أول ما يفتح الدخول — خلّ الصفحة مفتوحة.'; return; }
+            join({ name }, 'quickBtn');
+        });
+        $('girlBtn').addEventListener('click', () => join({ name: $('girlName').value.trim(), girlKey }, 'girlBtn'));
+        $('quickName').addEventListener('keydown', e => { if (e.key === 'Enter') $('quickBtn').click(); });
+        $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('girlBtn').click(); });
+    }
+</script>
+</body>
+</html>

@@ -3,9 +3,14 @@
  * الغرفة (4 أرقام) هنا، ونرجع أي لعبة/ألعاب فيها روم بهذا الرقم:
  *   - «محطة سهيل»: خادمها داخل هذا الباك اند (station/station-server.js)،
  *     فنقرأ روماتها مباشرة من الذاكرة.
+ *   - «حفلة الميلاد»: خادمها داخل هذا الباك اند (party/party-server.js).
+ *   - «المافيا»: خادمها داخل هذا الباك اند (mafia/mafia-server.js).
  *   - «بلياردو ٨»: خادم منفصل بمستودعه ونطاقه الخاص. نسأله عبر
  *     GET <BILLIARDS_API_BASE_URL>/api/room/<code> ← {exists:true|false}.
  *     الرابط فارغ افتراضياً = الفحص معطّل (السيرفر لسا ما انبنى).
+ * كل لعبة تولّد أرقامها من نطاق خاص فيها (rooms/room-code-ranges.js)، فالرقم
+ * الجديد يطلع بلعبة وحدة بس. نفحص كل الألعاب رغم كذا عشان الغرف القديمة اللي
+ * انفتحت قبل النطاقات تظل توصل.
  * أي خطأ/مهلة بخادم خارجي = "ما لقينا" لتلك اللعبة فقط، بدون رمي خطأ.
  */
 
@@ -17,6 +22,8 @@ var http = require('http');
 var config = require('../config');
 var logger = require('../utils/logger');
 var station = require('../station/station-server');
+var party = require('../party/party-server');
+var mafia = require('../mafia/mafia-server');
 
 var REMOTE_TIMEOUT_MS = 2500;
 
@@ -53,6 +60,14 @@ function hasStationRoom(code) {
     return Promise.resolve(Object.prototype.hasOwnProperty.call(station._rooms, code));
 }
 
+function hasPartyRoom(code) {
+    return Promise.resolve(party.hasRoom(code));
+}
+
+function hasMafiaRoom(code) {
+    return Promise.resolve(Object.prototype.hasOwnProperty.call(mafia._rooms, code));
+}
+
 function hasBilliardsRoom(code) {
     var base = String(config.billiardsApiBaseUrl || '').replace(/\/+$/, '');
     if (!base) return Promise.resolve(false);
@@ -62,6 +77,8 @@ function hasBilliardsRoom(code) {
 // المفتاح يطابق خريطة GAMES بـ js/agp-join-room.js (هي اللي تعرف الاسم والرابط).
 var CHECKS = [
     { game: 'intruder', check: hasStationRoom },
+    { game: 'party', check: hasPartyRoom },
+    { game: 'mafia', check: hasMafiaRoom },
     { game: 'billiards', check: hasBilliardsRoom }
 ];
 

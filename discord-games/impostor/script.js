@@ -301,9 +301,12 @@ function escapeHtml(str){
     .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
 
-/** يولّد رمز غرفة عشوائيًا من 4 أرقام، مثل 5739 (موحّد مع زر «دخول غرفة» بهيدر الموقع) */
+/** يولّد رمز غرفة عشوائيًا من 4 أرقام ضمن نطاق «من الأمبوستر؟» 1200–1299، عشان ما
+   يتشارك رقم مع لعبة ثانية وزر «دخول غرفة» بهيدر الموقع يوصل هنا مباشرة.
+   النطاقات كلها بـ backend/rooms/room-code-ranges.js — أي تغيير هنا لازم يطابقها. */
+const ROOM_CODE_FROM = 1200, ROOM_CODE_TO = 1299;
 function randomRoomCode(){
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(ROOM_CODE_FROM + Math.floor(Math.random() * (ROOM_CODE_TO - ROOM_CODE_FROM + 1)));
 }
 
 /** الغرفة شغّالة لو فيها لاعب واحد على الأقل متصل الآن. الغرف ما تنحذف من
@@ -552,7 +555,7 @@ async function createRoomAsPlayer(name, settings = DEFAULT_SETTINGS){
     code = randomRoomCode();
     existing = await Backend.getRoom(code);
     attempts++;
-  } while(isRoomActive(existing) && attempts < 20);
+  } while(isRoomActive(existing) && attempts < 100); // النطاق 100 رقم
 
   ensurePlayerId();
   state.playerName = name;

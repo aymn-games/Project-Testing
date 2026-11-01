@@ -166,6 +166,8 @@ var ROUTES = [
   { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
   // زر «عرض إحصائيات البث» بمكتبة الألعاب — ملخص البث الحالي/الأخير (بالذاكرة).
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
+  { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
+  { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
@@ -881,6 +883,40 @@ function handleStreamSessionStats(req, res, body, user) {
     });
   }).then(function (r) {
     sendJson(res, 200, { success: true, stats: r.stats, streamer: r.streamer });
+  });
+}
+
+/**
+ * GET /api/stream/recent-gifts?since=<seq> → { success, sid, seq, gifts: [...], totals, live } (sid = معرّف البث)
+ * آخر الهدايا (حتى 72) بعد seq — لوعاء الهدايا بأوفرلي البث (js/agp-stream-overlay.js).
+ * طلب خفيف (بدون صور بروفايل) يتكرر كل كم ثانية. نفس قواعد اليوزر بـsession-stats.
+ */
+function handleStreamRecentGifts(req, res, body, user) {
+  var canAny = user.role === 'admin' || Boolean(user.permissions && user.permissions.full_game_access);
+  var requested = canAny ? tiktokLiveCheck.normalize(getQueryParam(req, 'username')) : null;
+  var username = requested || (user.tiktok_verified ? tiktokLiveCheck.normalize(user.tiktok_username) : null);
+  if (!username) {
+    sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
+    return;
+  }
+  var r = liveSessionStats.getRecentGifts(username, getQueryParam(req, 'since'));
+  sendJson(res, 200, r ? { success: true, sid: r.sid, seq: r.seq, gifts: r.gifts, totals: r.totals, live: r.live } : { success: true, sid: 0, seq: 0, gifts: [], totals: null, live: false });
+}
+
+/**
+ * GET /api/stream/media?k=g&id=<giftId> → صورة (بايتات) أو 404.
+ * صورة هدية تيك توك لوعاء الهدايا — بديل لو الرابط المباشر ما
+ * فتح بالمتصفح. عام (وسم <img> ما يرسل توكن)، بس ما يجيب إلا روابط جات من
+ * أحداث الهدايا بالبث (live-session-stats noteGiftMedia)، ومخزّنة بالكاش.
+ */
+function handleStreamMedia(req, res) {
+  var kind = getQueryParam(req, 'k') || 'g';
+  var id = String(getQueryParam(req, 'id') || '').slice(0, 64);
+  return liveSessionStats.getMediaDataUrl(kind, id).then(function (dataUrl) {
+    var m = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+    if (!m) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
+    res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=86400' });
+    res.end(Buffer.from(m[2], 'base64'));
   });
 }
 

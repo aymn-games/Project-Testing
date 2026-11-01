@@ -166,6 +166,7 @@
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-challenge-comms.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script>
 (function () {
@@ -212,6 +213,7 @@
     }
 
     function vsHtml(st, answeredSet) {
+        if (st.settings.mode === 'solo') return '';
         var info = st.playerInfo || {};
         var mine = M.you, theirs = 1 - M.you;
         function p(side, cls) {
@@ -230,10 +232,10 @@
                 (host ? '<div class="controls"><button class="btn btn-big" data-a="newGame">مباراة جديدة</button></div>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ مباراة جديدة</p>');
         } else if (st.phase === 'ready') {
             html = '<p class="s-title">' + (st.round ? 'جاهزين للجولة ' + (st.round + 1) : 'جاهزين للجولة الأولى!') + '</p>' +
-                '<p class="s-sub">كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه. أول إجابة صحيحة = نقطتين.</p>' +
+                '<p class="s-sub">' + (st.settings.mode === 'solo' ? 'النمط الفردي: أي لاعب منضم يجاوب من شات بثه، وأسرع إجابة صحيحة = نقطة لبثه.' : 'كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه. أول إجابة صحيحة = نقطتين.') + '</p>' +
                 (host ? '<button class="btn btn-big" data-a="spin">ابدأ الجولة</button>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ الجولة</p>');
         } else if (st.phase === 'spinning') {
-            html = '<p class="s-sub">اختيار اللاعبين والفئة...</p><div id="spin-names">' + vsHtml(st) + '</div><span class="cat" id="spin-cat">' + esc(st.catName) + '</span>';
+            html = '<p class="s-sub">' + (st.settings.mode === 'solo' ? 'اختيار الفئة...' : 'اختيار اللاعبين والفئة...') + '</p><div id="spin-names">' + vsHtml(st) + '</div><span class="cat" id="spin-cat">' + esc(st.catName) + '</span>';
         } else if (st.phase === 'countdown') {
             html = vsHtml(st) + '<span class="cat">' + esc(st.catName) + '</span><div class="count" id="count">' + Math.max(1, Math.ceil(left(st.phaseEndsAt) / 1000)) + '</div>';
         } else if (st.phase === 'question' && st.question) {
@@ -244,7 +246,7 @@
                 (q.img ? '<img class="q-img" src="' + esc(q.img) + '" alt="">' : '') +
                 (q.prompt ? '<div class="q-prompt" dir="' + (q.dir || 'rtl') + '" style="letter-spacing:' + esc(q.ls || '0') + '">' + esc(q.prompt) + '</div>' : '') +
                 '<div class="timer"><i id="timer-bar" style="width:' + (left(st.phaseEndsAt) / total * 100) + '%"></i></div><div class="timer-n" id="timer-n">' + Math.ceil(left(st.phaseEndsAt) / 1000) + '</div>' +
-                vsHtml(st, answered) + '<p class="s-sub">بس اللاعبين المختارين يجاوبون — كل واحد من شات بثه</p>';
+                vsHtml(st, answered) + '<p class="s-sub">' + (st.settings.mode === 'solo' ? 'كل اللاعبين المنضمين يجاوبون — كل واحد من شات بثه، والأسرع ياخذ النقطة' : 'بس اللاعبين المختارين يجاوبون — كل واحد من شات بثه') + '</p>';
         } else if (st.phase === 'results') {
             html = '<p class="s-sub">الإجابة الصحيحة</p><div class="answer">' + esc(st.answer || '') + '</div>' +
                 '<div class="results">' + ((st.answers && st.answers.length) ? st.answers.map(function (a) {

@@ -247,55 +247,48 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * ==================================================================== */
     function buildSettingsFields() {
         return [
-            { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 3, default: 24 },
+            { key: 'maxPlayers', type: 'counter', label: 'الحد الأقصى للاعبين', min: 3, default: 24 },
             {
-                key: 'followersOnly', type: 'pill-choice', label: '🔑 مين يقدر يدخل؟',
-                options: [{ label: 'الكل', value: false }, { label: 'المتابعون فقط', value: true }],
+                key: 'followersOnly', type: 'pill-choice', label: 'المسموح لهم',
+                options: [{ label: 'الجميع', value: false }, { label: 'المتابعين فقط', value: true }],
                 default: false
             },
             {
-                key: 'chairDeficitMode', type: 'pill-choice', label: '🪑 طريقة نقصان الكراسي',
+                key: 'chairDeficitMode', type: 'pill-choice', label: 'نقصان الكراسي',
+                description: 'تلقائي: كرسي واحد أقل كل دورة · مخصّص: تحدد العدد بنفسك',
                 options: [
-                    { label: 'تلقائي (كرسي واحد كل دورة)', value: 'auto' },
-                    { label: 'مخصّص (أحدده بنفسي)', value: 'custom' }
+                    { label: 'تلقائي', value: 'auto' },
+                    { label: 'مخصّص', value: 'custom' }
                 ],
                 default: 'auto'
             },
             {
-                key: 'customDeficitStart', type: 'counter', label: '➖ عدد الكراسي الناقصة أول دورة',
+                key: 'customDeficitStart', type: 'counter', label: 'الكراسي الناقصة أول دورة',
                 min: 1, default: 5, showWhen: { key: 'chairDeficitMode', equals: 'custom' }
             },
             {
-                key: 'selectionTimerSeconds', type: 'pill-group', label: '⏱️ مهلة اختيار الكرسي',
+                key: 'selectionTimerSeconds', type: 'pill-group', label: 'مهلة اختيار الكرسي',
                 options: SELECTION_TIMER_OPTIONS, default: 15
             },
             {
-                key: 'spinDurationSeconds', type: 'pill-group', label: '🎵 مدة تدوير الموسيقى',
+                key: 'spinDurationSeconds', type: 'pill-group', label: 'مدة تدوير الموسيقى',
                 options: SPIN_DURATION_OPTIONS, default: 15
             }
         ];
     }
 
     /* ======================================================================
-     *  3) الأنماط
-     *     ألوان: بنفسج المنصة الرسمي (--agp-accent)، سماوي المنصة الرسمي
-     *     (--agp-accent-2)، وردي المنصة الرسمي (--agp-accent-pink)، ذهبي
-     *     خاص بالكراسي (--mc-gold). شريط الأدوات ولوحة "عدد اللاعبين"
-     *     مبنيان حرفياً على القيم اللي زوَّدنا بها صاحب المشروع من Figma
-     *     (تعبئة #CAB6B6 + حد #9F5FC4 بسماكة 4 من الداخل + استدارة 35) —
-     *     نفس القيم انطبقت على بادج "عدد الكراسي" أيضاً لتناسق الشريط، لأن
-     *     ما وصلتنا قيم منفصلة له. باقي عناصر الشريط (زر التدوير، السلايدر،
-     *     زر نوع الموسيقى) صممتها بذوقي متناسقة مع نفس اللوحة والصورة
-     *     المرجعية المرسلة — تُعدَّل يدوياً بسهولة لاحقاً لو الألوان ما
-     *     عجبتك بالضبط.
+     *  3) الأنماط — ثيم روليت الإقصاء بالكامل (ألوان، خط IBM Plex Sans
+     *     Arabic، كروت زجاجية، أزرار كبسولة). كل الألوان بمتغيرات --mc-*
+     *     بأول الستايل، فتعديلها لاحقاً من مكان واحد.
      * ==================================================================== */
-    // خطوط شاشة الإعدادات/اللوبي — نفس خطوط السلم والثعبان
+    // خط روليت الإقصاء (IBM Plex Sans Arabic) لكل شاشات اللعبة
     function ensureDesignFonts() {
         if (el('mc-design-fonts-link')) return;
         var sheet = document.createElement('link');
         sheet.id = 'mc-design-fonts-link';
         sheet.rel = 'stylesheet';
-        sheet.href = 'https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap';
         document.head.appendChild(sheet);
     }
 
@@ -305,55 +298,66 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var style = document.createElement('style');
         style.id = 'mc-stage-styles';
         style.textContent = [
-            ':root{--mc-gold:#ffb020;--mc-gold-2:#ff7a3d;--mc-danger:#ff4d6a;--mc-badge-fill:#CAB6B6;--mc-badge-stroke:#9F5FC4;--mc-video-glow:#4d0008;}',
+            /* ألوان وتنسيق روليت الإقصاء (games/elimination-roulette): خلفية
+             * #07060b، كروت زجاجية داكنة، بنفسجي #7c3aed→#a855f7، نص #f4f2f8،
+             * رمادي #8a8596، أخضر #34d399 للنجاح وأحمر #f87171 للإقصاء. */
+            ':root{--agp-accent:#7c3aed;--agp-accent-2:#c4b5fd;--agp-accent-pink:#a855f7;',
+            '--mc-bg:#07060b;--mc-glass:linear-gradient(180deg,rgba(30,26,44,.86),rgba(18,16,26,.86));--mc-line:rgba(255,255,255,.11);',
+            '--mc-depth:inset 0 1px 0 rgba(255,255,255,.07),0 24px 60px rgba(0,0,0,.45);',
+            '--mc-ctl-bg:rgba(255,255,255,.05);--mc-ctl-line:rgba(255,255,255,.12);',
+            '--mc-text:#f7f5fb;--mc-label:#f1eef7;--mc-muted:#9a95a6;--mc-muted-2:#b9b4c6;',
+            '--mc-grad:linear-gradient(90deg,#7c3aed,#a855f7);--mc-ok:#34d399;--mc-bad:#f87171;--mc-bad-soft:#fca5a5;',
+            '--mc-backdrop:radial-gradient(55% 45% at 85% 0%,rgba(124,58,237,.16),transparent 70%),',
+            'radial-gradient(50% 45% at 8% 100%,rgba(91,33,182,.14),transparent 72%),#07060b;}',
+            'html,body.agp-shell-active{background:#07060b !important;}',
+            '@keyframes mc-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}',
+            '@keyframes mc-pop{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}',
 
             /* ==================================================================
-             * شاشة اللعب — مبنية حرفياً على ملف التصميم
-             * design_handoff_musical_chairs (musical-chairs.dc.html + README.md):
-             * هيدر (أزرار/شعار/عنوان) ← قائمة الإجراءات + دائرة اللعب، ونوافذ
-             * الإقصاء/الإعدادات/إضافة لاعب.
+             * شاشة اللعب: هيدر (أزرار/شعار/عنوان) ← قائمة الإجراءات + دائرة
+             * اللعب، ونوافذ الإقصاء/الإعدادات/إضافة لاعب.
              * ==================================================================== */
             'body.mc-game-on #agp-persistent-header{display:none !important;}',
             '#mc-stage{position:fixed;inset:0;z-index:10;height:100vh;height:100dvh;overflow:hidden;',
-            'display:flex;flex-direction:column;direction:rtl;color:#f3eefb;',
-            'font-family:"IBM Plex Sans Arabic",sans-serif;',
-            'background:radial-gradient(70% 60% at 50% 55%,rgba(124,58,237,0.28) 0%,rgba(124,58,237,0) 70%),',
-            'radial-gradient(60% 50% at 100% 100%,rgba(217,70,239,0.16) 0%,rgba(217,70,239,0) 70%),',
-            'radial-gradient(50% 45% at 0% 0%,rgba(34,195,238,0.10) 0%,rgba(34,195,238,0) 70%),',
-            'linear-gradient(180deg,#130a24 0%,#0d0719 100%);}',
+            'display:flex;flex-direction:column;direction:rtl;color:var(--mc-text);',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;background:var(--mc-backdrop);}',
             '#mc-stage *{box-sizing:border-box;}',
             '#mc-stage button{font-family:inherit;}',
 
             /* 1) الهيدر */
-            '.mc-header{min-height:clamp(54px,7vh,76px);flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;',
-            'gap:clamp(8px,1.4vw,16px);align-items:center;padding:clamp(6px,1vh,10px) clamp(10px,2vw,24px);',
-            'background:linear-gradient(180deg,rgba(26,14,46,0.95),rgba(19,10,36,0.85));',
-            'border-bottom:1px solid rgba(190,140,255,0.14);',
-            'box-shadow:0 1px 0 rgba(255,255,255,0.03),0 10px 30px rgba(0,0,0,0.35);}',
-            '.mc-header-btns{display:flex;flex-wrap:wrap;align-items:center;gap:clamp(6px,0.7vw,10px);min-width:0;}',
-            '.mc-hbtn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(34px,4.4vh,44px);',
-            'padding:0 clamp(10px,1.1vw,16px);border-radius:999px;border:1px solid rgba(190,140,255,0.3);',
-            'background:rgba(255,255,255,0.04);color:#f3eefb;cursor:pointer;font-size:clamp(12px,1.05vw,15px);',
-            'font-weight:600;transition:background .2s,border-color .2s;}',
-            '.mc-hbtn:hover{background:rgba(217,70,239,0.18);border-color:rgba(217,70,239,0.5);}',
-            '.mc-spin-btn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(34px,4.4vh,44px);',
-            'padding:0 clamp(12px,1.4vw,20px);border-radius:999px;border:none;cursor:pointer;font-size:clamp(12px,1.05vw,15px);',
-            'font-weight:700;color:#fff;background:linear-gradient(135deg,#d946ef,#7c3aed);',
-            'box-shadow:0 0 0 1px rgba(255,255,255,0.12) inset,0 6px 18px rgba(217,70,239,0.35);}',
-            '.mc-spin-btn:disabled{opacity:0.5;cursor:default;}',
+            '.mc-header{min-height:clamp(60px,8vh,80px);flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;',
+            'gap:clamp(8px,1.2vw,24px);align-items:center;padding:clamp(6px,1vh,10px) clamp(12px,1.25vw,24px);',
+            'background:rgba(12,10,18,.86);border-bottom:1.5px solid rgba(167,139,250,.18);box-shadow:0 10px 30px rgba(0,0,0,.4);',
+            'backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}',
+            '.mc-header-btns{display:flex;flex-wrap:wrap;align-items:center;gap:clamp(6px,0.5vw,10px);min-width:0;}',
+            '.mc-hbtn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(38px,2.6vw,46px);',
+            'padding:0 clamp(12px,1.1vw,18px);border-radius:999px;border:1.5px solid rgba(167,139,250,.4);',
+            'background:rgba(139,92,246,.12);color:#ede9fe;cursor:pointer;font-size:clamp(13px,0.9vw,16px);',
+            'font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:all .2s;}',
+            '.mc-hbtn:hover{background:rgba(139,92,246,.16);border-color:rgba(167,139,250,.55);}',
+            '.mc-hbtn:active,.mc-spin-btn:active{transform:scale(.97);}',
+            '.mc-spin-btn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(38px,2.6vw,46px);',
+            'padding:0 clamp(16px,1.4vw,24px);border-radius:999px;border:none;cursor:pointer;font-size:clamp(14px,1vw,17px);',
+            'font-weight:800;color:#fff;background:var(--mc-grad);',
+            'box-shadow:0 6px 20px rgba(139,92,246,.4),inset 0 1px 0 rgba(255,255,255,.2);transition:filter .2s,transform .2s;}',
+            '.mc-spin-btn:hover{filter:brightness(1.1);}',
+            '.mc-spin-btn:disabled{opacity:0.5;cursor:default;filter:none;}',
             /* وقت الجلوس (مهلة اختيار الكرسي) — يظهر بالهيدر وقت الجلوس بس */
-            '.mc-seat-timer{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(34px,4.4vh,44px);',
-            'padding:0 clamp(12px,1.4vw,18px);border-radius:999px;font-size:clamp(12px,1.05vw,15px);font-weight:700;',
-            'color:#1a0c2e;background:#f5a623;box-shadow:0 0 14px rgba(245,166,35,0.45);}',
+            '.mc-seat-timer{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(38px,2.6vw,46px);',
+            'padding:0 clamp(14px,1.3vw,20px);border-radius:999px;font-size:clamp(13px,0.95vw,16px);font-weight:800;',
+            'color:#a7f3d0;background:rgba(52,211,153,.14);border:1.5px solid rgba(52,211,153,.55);',
+            'box-shadow:0 0 18px rgba(52,211,153,.18);}',
             '.mc-seat-timer[hidden]{display:none;}',
-            '.mc-seat-timer b{font-size:1.2em;font-weight:800;font-variant-numeric:tabular-nums;}',
-            '.mc-seat-timer.mc-warn{background:#ff5c7a;color:#fff;box-shadow:0 0 14px rgba(255,92,122,0.55);}',
-            '.mc-header-logo{justify-self:center;height:clamp(34px,5.2vh,56px);max-width:100%;width:auto;display:block;}',
-            '.mc-header-end{justify-self:end;display:flex;align-items:center;gap:clamp(6px,0.7vw,10px);min-width:0;}',
+            '.mc-seat-timer b{font-size:1.2em;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;}',
+            '.mc-seat-timer.mc-warn{color:var(--mc-bad-soft);background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.5);',
+            'box-shadow:0 0 18px rgba(248,113,113,.3);}',
+            '.mc-header-logo{justify-self:center;height:clamp(36px,5.6vh,60px);max-width:100%;width:auto;display:block;',
+            'filter:drop-shadow(0 0 14px rgba(139,92,246,.45));}',
+            '.mc-header-end{justify-self:end;display:flex;align-items:center;gap:clamp(6px,0.5vw,10px);min-width:0;}',
             '.mc-header-title{justify-self:end;white-space:nowrap;display:flex;align-items:center;gap:8px;font-weight:700;',
-            'font-size:clamp(13px,1.15vw,17px);padding:clamp(5px,0.8vh,8px) clamp(12px,1.4vw,22px);border-radius:999px;',
-            'background:linear-gradient(135deg,rgba(217,70,239,0.22),rgba(124,58,237,0.22));',
-            'border:1px solid rgba(217,70,239,0.35);box-shadow:0 0 24px rgba(217,70,239,0.18);}',
+            'font-size:clamp(14px,1.15vw,18px);font-weight:800;height:clamp(38px,2.6vw,46px);padding:0 clamp(14px,1.3vw,22px);border-radius:999px;',
+            'background:rgba(139,92,246,.18);border:1.5px solid rgba(167,139,250,.45);color:#ede9fe;',
+            'box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}',
 
             /* 2) المحتوى */
             '.mc-main{flex:1;display:flex;flex-direction:row;gap:clamp(14px,2vw,28px);padding:clamp(14px,2vw,28px);min-height:0;}',
@@ -364,161 +368,236 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'transition:width .35s ease,max-height .35s ease,opacity .25s ease;display:flex;min-height:0;}',
             '#mc-stage.mc-panel-closed .mc-panel{width:0;opacity:0;}',
             '.mc-panel-inner{width:clamp(280px,24vw,360px);flex-shrink:0;min-height:0;overflow-y:auto;display:flex;',
-            'flex-direction:column;gap:clamp(8px,1.4vh,14px);}',
-            '.mc-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;',
-            'border-radius:14px;border:1px solid rgba(190,140,255,0.25);background:rgba(20,8,36,0.6);color:#f3eefb;',
-            'cursor:pointer;font-size:15px;font-weight:600;flex-shrink:0;height:clamp(40px,5vh,48px);}',
-            '.mc-panel-head span:last-child{font-size:13px;color:#bfaedb;}',
+            'flex-direction:column;gap:clamp(8px,1.4vh,14px);scrollbar-width:none;}',
+            '.mc-panel-inner::-webkit-scrollbar{display:none;}',
+            '.mc-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px;',
+            'border-radius:999px;border:1.5px solid var(--mc-line);background:var(--mc-glass);color:var(--mc-text);box-shadow:var(--mc-depth);',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
+            'cursor:pointer;font-size:16px;font-weight:800;flex-shrink:0;height:clamp(44px,5.4vh,52px);transition:border-color .2s;}',
+            '.mc-panel-head:hover{border-color:rgba(167,139,250,.4);}',
+            '.mc-panel-head span:last-child{font-size:13px;font-weight:600;color:var(--mc-muted);}',
             '.mc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}',
-            '.mc-stat{padding:clamp(6px,1.2vh,14px) 10px;border-radius:16px;background:rgba(255,255,255,0.05);',
-            'border:1px solid rgba(190,140,255,0.2);text-align:center;}',
-            '.mc-stat-lbl{font-size:12px;color:#bfaedb;}',
-            '.mc-stat-val{font-size:clamp(20px,2.8vh,26px);font-weight:700;}',
-            '.mc-stat-val.mc-gold{color:#f5a623;}',
+            '.mc-stat{padding:clamp(8px,1.4vh,16px) 10px;border-radius:22px;background:var(--mc-glass);box-shadow:var(--mc-depth);',
+            'border:1.5px solid var(--mc-line);text-align:center;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}',
+            '.mc-stat-lbl{font-size:13px;font-weight:700;color:var(--mc-muted);}',
+            '.mc-stat-val{font-size:clamp(24px,3.3vh,32px);font-weight:800;line-height:1.25;color:#ddd6fe;font-variant-numeric:tabular-nums;}',
+            '.mc-stat-val.mc-gold{background:linear-gradient(180deg,#f4f2f8,#a78bfa);-webkit-background-clip:text;',
+            'background-clip:text;color:transparent;}',
             '.mc-game-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:clamp(10px,1.8vh,18px);',
-            'padding:clamp(12px,1.8vh,18px);border-radius:20px;background:rgba(20,8,36,0.6);border:1px solid rgba(190,140,255,0.25);}',
-            '.mc-gs-title{grid-column:1/-1;font-size:13px;font-weight:600;color:#bfaedb;letter-spacing:0.02em;}',
+            'padding:clamp(16px,2vh,22px) clamp(18px,1.5vw,22px);border-radius:26px;background:var(--mc-glass);',
+            'border:1.5px solid var(--mc-line);box-shadow:var(--mc-depth);',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}',
+            '.mc-gs-title{grid-column:1/-1;font-size:17px;font-weight:800;color:var(--mc-text);',
+            'padding-bottom:12px;border-bottom:1.5px solid rgba(255,255,255,.08);}',
             '.mc-gs-row{display:flex;flex-direction:column;gap:8px;}',
-            '.mc-gs-lbl{font-size:14px;font-weight:600;}',
-            '.mc-gs-lbl-row{display:flex;justify-content:space-between;font-size:14px;font-weight:600;}',
-            '.mc-gs-lbl-row span{color:#f5a623;}',
-            '.mc-seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:rgba(0,0,0,0.35);}',
+            '.mc-gs-lbl{font-size:15px;font-weight:700;color:var(--mc-label);}',
+            '.mc-gs-lbl-row{display:flex;justify-content:space-between;font-size:15px;font-weight:700;color:var(--mc-label);}',
+            '.mc-gs-lbl-row span{color:#ddd6fe;font-variant-numeric:tabular-nums;}',
+            '.mc-seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;padding:4px;border-radius:999px;',
+            'background:var(--mc-ctl-bg);border:1.5px solid var(--mc-ctl-line);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);}',
             '.mc-seg-4{grid-template-columns:repeat(4,1fr);}',
-            '.mc-seg button{height:36px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;',
-            'background:transparent;color:#bfaedb;}',
-            '.mc-seg button.mc-on{background:#8b5cf6;color:#fff;}',
+            '.mc-seg button{height:38px;border-radius:999px;border:none;cursor:pointer;font-size:14px;font-weight:700;',
+            'background:transparent;color:var(--mc-muted-2);transition:all .25s;}',
+            '.mc-seg button:hover{color:#fff;}',
+            '.mc-seg button.mc-on{background:var(--mc-grad);color:#fff;font-weight:800;',
+            'box-shadow:0 6px 20px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.25);}',
             '#mc-seat-times button{white-space:nowrap;font-size:13px;padding:0 2px;}',
-            '.mc-modal .mc-seg button{height:38px;}',
-            '.mc-stepper{display:flex;align-items:center;justify-content:space-between;padding:4px;border-radius:12px;background:rgba(0,0,0,0.35);}',
-            '.mc-stepper button{width:40px;height:40px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);',
-            'color:#fff;font-size:20px;cursor:pointer;}',
-            '.mc-stepper div{font-size:16px;font-weight:600;}',
-            '.mc-vol{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,0.35);}',
-            '.mc-vol input{flex:1;accent-color:#f5a623;}',
+            '.mc-modal .mc-seg button{height:42px;}',
+            '.mc-stepper{display:flex;align-items:center;justify-content:space-between;padding:4px;border-radius:999px;',
+            'background:var(--mc-ctl-bg);border:1.5px solid var(--mc-ctl-line);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);}',
+            '.mc-stepper button{width:38px;height:38px;border-radius:999px;border:none;background:rgba(255,255,255,.06);',
+            'color:#fff;font-size:22px;font-weight:700;cursor:pointer;transition:all .2s;}',
+            '.mc-stepper button:hover{background:rgba(139,92,246,.3);}',
+            '.mc-stepper div{font-size:16px;font-weight:800;color:#ede9fe;}',
+            '.mc-vol{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:999px;',
+            'background:var(--mc-ctl-bg);border:1.5px solid var(--mc-ctl-line);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);}',
+            '.mc-vol input{flex:1;accent-color:#a855f7;}',
             '.mc-mute-btn{border:none;background:none;color:#fff;font-size:16px;cursor:pointer;padding:0;line-height:1;}',
 
-            /* 2ب) دائرة اللعب */
+            /* 2ب) دائرة اللعب — إطار العجلة نفسه بروليت الإقصاء */
             '.mc-arena{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;}',
             '.mc-cq{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;}',
             '.mc-circle{position:relative;width:min(100cqw - 50px,100cqh - 50px);aspect-ratio:1;container-type:inline-size;}',
-            '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:3px;',
-            'background:conic-gradient(#e040fb,#8b5cf6,#22c3ee,#8fd16a,#f5a623,#e040fb);}',
-            '.mc-ring div{width:100%;height:100%;border-radius:50%;background:#1a0c2e;box-shadow:inset 0 0 80px rgba(139,92,246,0.25);}',
-            '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.1;pointer-events:none;}',
+            /* هالة ناعمة حول الحلبة */
+            '.mc-circle::before{content:"";position:absolute;inset:-7%;border-radius:50%;pointer-events:none;',
+            'background:radial-gradient(circle,rgba(139,92,246,.22) 40%,rgba(139,92,246,.06) 58%,transparent 70%);}',
+            /* الإطار: تدرّج بنفسجي ناعم بدل الحلقة المعدنية، مع لمعة خفيفة فوق */
+            '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:max(6px,.9cqw);',
+            'background:linear-gradient(160deg,#c4b5fd 0%,#8b5cf6 30%,#5b21b6 65%,#7c3aed 100%);',
+            'box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(139,92,246,.3),inset 0 2px 3px rgba(255,255,255,.35);}',
+            /* أرضية الدائرة «مسرح بنفسجي»: مخمل بنفسجي غامق بنسيج مايل خفيف،
+             * إضاءة ناعمة نازلة من فوق، وأطراف تغمق بلطف، وحولها خط لافندر رفيع */
+            '.mc-ring div{position:relative;width:100%;height:100%;border-radius:50%;',
+            'background:',
+            'radial-gradient(ellipse 60% 45% at 50% 18%,rgba(221,214,254,.22),transparent 70%),',
+            'radial-gradient(circle at 50% 50%,rgba(139,92,246,.18),transparent 60%),',
+            'radial-gradient(circle,transparent 60%,rgba(5,3,12,.55) 100%),',
+            'repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0 2px,transparent 2px 6px),',
+            'linear-gradient(170deg,#2a1d4d,#1b1336 55%,#130d27);',
+            'box-shadow:inset 0 0 0 2px rgba(20,14,40,.8),inset 0 0 0 3.5px rgba(196,181,253,.45),',
+            'inset 0 0 0 5px rgba(20,14,40,.5),inset 0 10px 40px rgba(0,0,0,.4);}',
+            /* لمعات صغيرة متفرّقة مثل النجوم + حلقتين لافندر خفيفة بالنص */
+            '.mc-ring div::before,.mc-ring div::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;}',
+            '.mc-ring div::before{background:',
+            'radial-gradient(1.5px 1.5px at 22% 30%,rgba(255,255,255,.7),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 70% 22%,rgba(255,255,255,.6),transparent 60%),',
+            'radial-gradient(1px 1px at 40% 70%,rgba(255,255,255,.6),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 80% 60%,rgba(221,214,254,.7),transparent 60%),',
+            'radial-gradient(1px 1px at 30% 82%,rgba(255,255,255,.5),transparent 60%),',
+            'radial-gradient(1px 1px at 58% 45%,rgba(255,255,255,.45),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 15% 55%,rgba(221,214,254,.55),transparent 60%),',
+            'radial-gradient(1px 1px at 86% 38%,rgba(255,255,255,.5),transparent 60%),',
+            'radial-gradient(1px 1px at 62% 85%,rgba(255,255,255,.45),transparent 60%);}',
+            '.mc-ring div::after{background:',
+            'radial-gradient(circle,transparent 0 15.6%,rgba(196,181,253,.22) 15.8% 16.2%,transparent 16.4%),',
+            'radial-gradient(circle,transparent 0 31.6%,rgba(196,181,253,.10) 31.8% 32.1%,transparent 32.3%);}',
+            '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.06;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
-            '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
-            'filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}',
-            '.mc-ch-num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0.12em 0.28em;border-radius:0.3em;',
-            'display:none;align-items:center;justify-content:center;background:#f5a623;color:#1a0c2e;font-weight:800;line-height:1;',
-            'letter-spacing:-0.03em;font-variant-numeric:tabular-nums;box-shadow:0 0 14px rgba(245,166,35,0.45);}',
-            '.mc-ch.mc-numbered .mc-ch-num{display:flex;}',
-            '.mc-ch.mc-taken .mc-ch-glyph,.mc-ch.mc-taken .mc-ch-num{display:none;}',
+            /* ظل ناعم تحت الكرسي على الأرضية */
+            '.mc-ch::before{content:"";position:absolute;left:18%;right:18%;bottom:2%;height:12%;border-radius:50%;',
+            'background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);filter:blur(2px);}',
+            '.mc-ch-glyph{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
+            'filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));',
+            'transition:transform .45s cubic-bezier(.34,1.4,.64,1);}',
+            '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;',
+            'filter:saturate(.9) brightness(.95) contrast(.95);}',
+            '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.04);}',
+            /* رقم الكرسي: مربع بحواف مدوّرة شوي، خلفية بنفسجي داكن وحد فاتح،
+             * والرقم كبير بخط عريض واضح */
+            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.1em 0.26em;border-radius:0.22em;',
+            'display:none;align-items:center;justify-content:center;color:#fff;font-weight:900;line-height:1;',
+            'background:linear-gradient(180deg,#4c2f8f,#33206a);',
+            'letter-spacing:-0.02em;font-variant-numeric:tabular-nums;border:2px solid rgba(221,214,254,.7);',
+            'text-shadow:0 2px 3px rgba(0,0,0,.5);',
+            'box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);}',
+            '.mc-ch.mc-numbered .mc-ch-num{display:flex;animation:mc-pop .45s cubic-bezier(.2,1.25,.35,1);}',
+            '.mc-ch.mc-taken .mc-ch-glyph,.mc-ch.mc-taken .mc-ch-num,.mc-ch.mc-taken::before{display:none;}',
             '.mc-p{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;}',
-            '.mc-p.mc-moving{transition:left .6s cubic-bezier(.34,1.45,.64,1),top .6s cubic-bezier(.34,1.45,.64,1);}',
+            '.mc-p.mc-moving{transition:left .7s cubic-bezier(.34,1.25,.64,1),top .7s cubic-bezier(.34,1.25,.64,1);}',
             '.mc-p.mc-seated{z-index:3;}',
-            '.mc-p-av{aspect-ratio:1;transition:width .5s ease,border-color .3s,box-shadow .3s;border-radius:50%;display:flex;',
-            'align-items:center;justify-content:center;background:#1a0c2e;border:2px solid #22c3ee;',
-            'box-shadow:0 0 12px rgba(34,195,238,0.45);font-weight:700;overflow:hidden;}',
+            /* صورة اللاعب: حد رفيع فاتح وهالة ناعمة بدل الحد السميك */
+            '.mc-p-av{aspect-ratio:1;transition:width .5s ease,border-color .4s,box-shadow .4s,filter .4s;border-radius:50%;display:flex;',
+            'align-items:center;justify-content:center;background:linear-gradient(160deg,#3b2a6b,#241a40);border:2px solid #c4b5fd;',
+            'box-shadow:0 4px 12px rgba(0,0,0,.4),0 0 0 3px rgba(167,139,250,.18),0 0 16px rgba(167,139,250,.3);',
+            'font-weight:700;color:#fff;overflow:hidden;}',
             '.mc-p-av img{width:100%;height:100%;object-fit:cover;display:block;}',
-            '.mc-p.mc-seated .mc-p-av{border-color:#f5a623;box-shadow:0 0 12px rgba(245,166,35,0.55);}',
-            '.mc-p.mc-out .mc-p-av{border-color:#ff5c7a;box-shadow:0 0 12px rgba(255,92,122,0.6);}',
-            '.mc-p-name{font-size:clamp(11px,2.2cqw,15px);padding:1px 8px;border-radius:999px;background:rgba(0,0,0,0.6);white-space:nowrap;}',
+            '.mc-p.mc-seated .mc-p-av{border-color:#6ee7b7;box-shadow:0 4px 12px rgba(0,0,0,.4),0 0 0 3px rgba(52,211,153,.2),0 0 18px rgba(52,211,153,.45);}',
+            '.mc-p.mc-out .mc-p-av{border-color:#fca5a5;box-shadow:0 4px 12px rgba(0,0,0,.4),0 0 14px rgba(248,113,113,.45);filter:grayscale(.45) brightness(.9);}',
+            '.mc-p-name{font-size:clamp(11px,2cqw,14px);font-weight:700;padding:2px 10px;border-radius:999px;color:#f4f2f8;',
+            'background:rgba(20,16,32,.78);border:1px solid rgba(196,181,253,.28);box-shadow:0 2px 8px rgba(0,0,0,.3);',
+            'backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);white-space:nowrap;}',
             '.mc-p.mc-seated .mc-p-name,.mc-circle.mc-no-names .mc-p-name{display:none;}',
             '.mc-center{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;',
             'gap:10px;text-align:center;}',
             '.mc-center.mc-show{display:flex;}',
-            '.mc-ended-title{font-size:6cqw;font-weight:700;}',
-            '.mc-ended-sub{font-size:2.6cqw;color:#bfaedb;}',
+            '.mc-ended-title{font-size:6.4cqw;font-weight:800;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);',
+            '-webkit-background-clip:text;background-clip:text;color:transparent;}',
+            '.mc-ended-sub{font-size:2.6cqw;color:var(--mc-muted-2);}',
 
-            /* النوافذ */
+            /* النوافذ — نفس نوافذ روليت الإقصاء */
             '.mc-modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;',
-            'background:rgba(8,4,16,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}',
+            'background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}',
             '.mc-modal.mc-show{display:flex;}',
             '.mc-card{position:relative;max-height:calc(100dvh - 40px);min-height:0;overflow-y:auto;display:flex;flex-direction:column;',
-            'gap:18px;padding:22px;border-radius:22px;background:linear-gradient(180deg,#1d1033,#150b27);',
-            'border:1px solid rgba(190,140,255,0.25);box-shadow:0 30px 80px rgba(0,0,0,0.6);}',
+            'gap:18px;padding:24px 26px;border-radius:30px;background:linear-gradient(180deg,#171326,#0d0b14);scrollbar-width:none;',
+            'border:1.5px solid rgba(167,139,250,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 30px 90px rgba(0,0,0,.65),0 0 60px rgba(124,58,237,.25);',
+            'animation:mc-pop .4s cubic-bezier(.2,1.25,.35,1);}',
+            '.mc-card::-webkit-scrollbar{display:none;}',
             '.mc-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
-            '.mc-card-title{font-size:19px;font-weight:700;}',
-            '.mc-x{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid rgba(190,140,255,0.25);',
-            'background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:18px;line-height:1;transition:background .2s,border-color .2s;}',
-            '.mc-x:hover{background:rgba(255,92,122,0.2);border-color:rgba(255,92,122,0.5);}',
-            '.mc-btn-primary{border:none;cursor:pointer;font-weight:700;color:#fff;',
-            'background:linear-gradient(135deg,#d946ef,#7c3aed);box-shadow:0 6px 18px rgba(217,70,239,0.35);}',
+            '.mc-card-title{font-size:22px;font-weight:800;}',
+            '.mc-x{width:42px;height:42px;flex-shrink:0;border-radius:999px;border:1.5px solid rgba(255,255,255,.14);font-weight:700;',
+            'background:rgba(255,255,255,.04);color:var(--mc-label);cursor:pointer;font-size:16px;line-height:1;transition:background .2s;}',
+            '.mc-x:hover{background:rgba(255,255,255,.09);}',
+            '.mc-btn-primary{border:none;cursor:pointer;font-weight:800;color:#fff;border-radius:999px;',
+            'background:var(--mc-grad);box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2);',
+            'transition:filter .2s,transform .2s;}',
+            '.mc-btn-primary:hover{filter:brightness(1.1);}',
+            '.mc-btn-primary:active{transform:scale(.97);}',
             // نافذة الإقصاء
             '#mc-out-modal{transition:opacity .35s ease;opacity:0;}',
             '#mc-out-modal.mc-in{opacity:1;}',
-            '#mc-out-modal .mc-card{width:min(820px,100%);transform:scale(0.85) translateY(20px);',
+            '#mc-out-modal .mc-card{width:min(820px,100%);transform:scale(0.85) translateY(20px);animation:none;',
+            'border-color:rgba(248,113,113,.35);box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 60px rgba(248,113,113,.15);',
             'transition:transform .55s cubic-bezier(.34,1.56,.64,1);}',
             '#mc-out-modal.mc-in .mc-card{transform:scale(1);}',
             '#mc-out-modal .mc-x{position:absolute;top:16px;left:16px;}',
             '.mc-out-head{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;}',
-            '.mc-out-head img{height:clamp(44px,8vh,64px);width:auto;max-width:70%;}',
-            '.mc-out-title{font-size:18px;font-weight:700;}',
-            '.mc-out-sub{font-size:13px;color:#bfaedb;}',
+            '.mc-out-head img{height:clamp(44px,8vh,64px);width:auto;max-width:70%;filter:drop-shadow(0 0 14px rgba(139,92,246,.45));}',
+            '.mc-out-title{font-size:24px;font-weight:800;color:var(--mc-bad-soft);}',
+            '.mc-out-sub{font-size:13px;color:var(--mc-muted);}',
             '.mc-out-list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}',
             '.mc-out-item{width:clamp(104px,14vw,132px);display:flex;flex-direction:column;align-items:center;gap:8px;',
-            'padding:14px 8px;border-radius:16px;background:rgba(255,92,122,0.14);border:1px solid rgba(255,92,122,0.6);',
+            'padding:16px 8px;border-radius:22px;background:rgba(248,113,113,.1);border:1.5px solid rgba(248,113,113,.45);',
             'opacity:0;transform:scale(0.6);transition:opacity .4s ease,transform .5s cubic-bezier(.34,1.56,.64,1);}',
             '#mc-out-modal.mc-in .mc-out-item{opacity:1;transform:scale(1);}',
             '.mc-out-av{width:clamp(68px,9vw,88px);height:clamp(68px,9vw,88px);border-radius:50%;display:flex;align-items:center;',
-            'justify-content:center;background:#1a0c2e;border:3px solid #ff5c7a;box-shadow:0 0 18px rgba(255,92,122,0.45);',
-            'font-weight:700;font-size:clamp(20px,2.6vw,26px);overflow:hidden;}',
+            'justify-content:center;background:rgba(248,113,113,.12);border:3px solid var(--mc-bad);box-shadow:0 0 18px rgba(248,113,113,.4);',
+            'font-weight:700;font-size:clamp(20px,2.6vw,26px);overflow:hidden;filter:grayscale(.35);}',
             '.mc-out-av img{width:100%;height:100%;object-fit:cover;display:block;}',
-            '.mc-out-name{font-size:clamp(14px,1.4vw,17px);font-weight:700;text-align:center;overflow-wrap:anywhere;}',
-            '.mc-out-tag{font-size:12px;color:#ff8da3;}',
-            '.mc-out-next{align-self:center;height:44px;padding:0 28px;border-radius:999px;font-size:15px;}',
+            '.mc-out-name{font-size:clamp(15px,1.5vw,18px);font-weight:800;text-align:center;overflow-wrap:anywhere;}',
+            '.mc-out-tag{font-size:13px;font-weight:700;color:var(--mc-bad-soft);}',
+            '.mc-out-next{align-self:center;height:52px;padding:0 40px;font-size:17px;}',
             // نافذة الإعدادات
             '#mc-settings-modal .mc-card{width:min(460px,100%);}',
-            '.mc-end-btn{height:46px;border-radius:12px;border:none;background:#ff5c7a;color:#fff;cursor:pointer;',
-            'font-size:15px;font-weight:700;transition:background .2s;}',
-            '.mc-end-btn:hover{background:#e0405f;}',
-            '.mc-reset-btn{height:46px;border-radius:12px;border:1px solid rgba(255,92,122,0.45);background:transparent;',
-            'color:#ff8da3;cursor:pointer;font-size:15px;font-weight:600;transition:background .2s;}',
-            '.mc-reset-btn:hover{background:rgba(255,92,122,0.15);}',
+            '.mc-end-btn{height:52px;border-radius:999px;border:none;cursor:pointer;font-size:16px;font-weight:800;color:#fff;',
+            'background:linear-gradient(90deg,#dc2626,#f87171);box-shadow:0 10px 30px rgba(248,113,113,.3);transition:filter .2s;}',
+            '.mc-end-btn:hover{filter:brightness(1.1);}',
+            '.mc-reset-btn{height:52px;border-radius:999px;border:1.5px solid rgba(248,113,113,.45);background:rgba(248,113,113,.06);',
+            'color:var(--mc-bad-soft);cursor:pointer;font-size:16px;font-weight:700;transition:all .2s;}',
+            '.mc-reset-btn:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.5);}',
             // نافذة إضافة لاعب
-            '#mc-add-modal{z-index:60;background:rgba(8,4,16,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}',
-            '#mc-add-modal .mc-card{width:500px;height:700px;max-width:100%;gap:16px;background:rgba(29,16,51,0.4);',
-            'border:2px solid rgba(217,70,239,0.55);box-shadow:0 0 30px rgba(217,70,239,0.25),0 30px 80px rgba(0,0,0,0.5);overflow:hidden;}',
-            '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:#e7dcf7;}',
-            '.mc-add-done{flex-shrink:0;height:50px;border-radius:14px;font-size:16px;}',
-            '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;padding:4px 14px;border-radius:999px;',
-            'font-size:13px;font-weight:700;background:rgba(79,209,138,0.16);border:1px solid rgba(79,209,138,0.5);color:#8ff0b8;}',
-            '.mc-join-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#4fd18a;}',
-            '.mc-join-status.mc-closed{background:rgba(255,92,122,0.14);border-color:rgba(255,92,122,0.5);color:#ff8da3;}',
-            '.mc-join-status.mc-closed::before{background:#ff5c7a;}',
-            '.mc-join-kw{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 16px;border-radius:16px;',
-            'background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.4);text-align:center;}',
-            '.mc-join-kw span{font-size:14px;font-weight:600;color:#f3eefb;}',
-            '.mc-join-kw b{font-size:30px;font-weight:800;line-height:1.3;color:#f5a623;word-break:break-word;}',
-            '.mc-join-notes{margin:0;padding:0 18px 0 0;font-size:13px;line-height:1.9;color:#bfaedb;}',
-            '.mc-join-count{font-size:14px;font-weight:700;color:#f3eefb;}',
-            '.mc-join-count span{color:#f5a623;}',
-            /* بطاقات اللاعبين الجدد — نفس بطاقات اللوبي الأساسي (217×57)،
-             * لاعبين بكل صف، وتمرير مخفي للأسفل لو العدد كبير */
-            '#mc-join-list{list-style:none;margin:0;padding:10px 0 12px;flex:1;min-height:0;overflow-y:auto;',
-            'scrollbar-width:none;-ms-overflow-style:none;display:grid;grid-template-columns:repeat(2,217px);',
-            'column-gap:16px;row-gap:18px;justify-content:center;justify-items:center;align-items:end;align-content:start;}',
+            '#mc-add-modal{z-index:60;}',
+            '#mc-add-modal .mc-card{width:520px;height:700px;max-width:100%;gap:16px;overflow:hidden;}',
+            '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:var(--mc-label);}',
+            '.mc-add-done{flex-shrink:0;height:56px;font-size:18px;}',
+            '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;',
+            'font-size:13px;font-weight:700;background:rgba(52,211,153,.12);border:1.5px solid rgba(52,211,153,.45);color:var(--mc-ok);}',
+            '.mc-join-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mc-ok);box-shadow:0 0 8px var(--mc-ok);}',
+            '.mc-join-status.mc-closed{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3);color:var(--mc-bad-soft);}',
+            '.mc-join-status.mc-closed::before{background:var(--mc-bad);box-shadow:0 0 8px var(--mc-bad);}',
+            '.mc-join-kw{display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:center;}',
+            '.mc-join-kw span{font-size:14px;font-weight:600;color:var(--mc-muted);text-align:right;}',
+            '.mc-join-kw b{padding:12px 24px;border-radius:999px;background:rgba(139,92,246,.16);border:2px dashed #a78bfa;',
+            'font-size:clamp(26px,3.2vw,36px);font-weight:800;line-height:1.2;color:#a78bfa;word-break:break-word;}',
+            '.mc-join-notes{margin:0;padding:0 18px 0 0;font-size:13px;line-height:1.9;color:var(--mc-muted);}',
+            '.mc-join-count{font-size:15px;font-weight:800;color:var(--mc-text);}',
+            '.mc-join-count span{color:#a78bfa;}',
+            '#mc-join-list{list-style:none;margin:0;padding:4px 0 12px;flex:1;min-height:0;overflow-y:auto;',
+            'scrollbar-width:none;-ms-overflow-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));',
+            'gap:10px;align-content:start;}',
             '#mc-join-list::-webkit-scrollbar{display:none;}',
-            '@media (max-width:520px){#mc-join-list{grid-template-columns:217px;}}',
-            '#mc-join-list li{position:relative;display:flex;align-items:center;padding:0;}',
-            '#mc-join-list .mc-join-empty{grid-column:1 / -1;width:100%;box-sizing:border-box;padding:18px;border-radius:14px;',
-            'border:1px dashed rgba(190,140,255,0.3);text-align:center;font-size:13px;color:#8f7fae;}',
-            '#mc-join-list .agp-pcard{width:217px !important;height:57px !important;box-sizing:border-box !important;',
-            'padding:0 3px 0 28px !important;gap:6px !important;border-radius:24px !important;',
-            'background:rgba(217,217,217,.3) !important;border:2px solid #000 !important;max-width:none !important;}',
-            '#mc-join-list .agp-pcard-avatar-basic{width:48px !important;height:48px !important;background:#D9D9D9 !important;border:none !important;}',
-            '#mc-join-list .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;min-width:0 !important;',
-            'height:auto !important;margin:0 !important;padding:0 !important;font-size:20px !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;color:#fff !important;',
-            'background:none !important;border:none !important;}',
-            '#mc-join-list .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
-            '#mc-join-list li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;overflow:visible !important;',
-            'display:flex !important;flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
-            '#mc-join-list .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
-            '#mc-join-list .agp-player-remove-btn{position:absolute;top:50%;left:7px;right:auto;transform:translateY(-50%);',
-            'width:16px;height:16px;font-size:9px;z-index:5;padding:0;line-height:1;cursor:pointer;border-radius:50%;',
-            'border:1px solid rgba(224,115,111,.55);background:rgba(224,115,111,.18);color:#e0736f;}',
-            '#mc-join-list .agp-player-remove-btn:hover{background:rgba(224,115,111,.3);color:#ff9b96;}',
+            '@media (max-width:520px){#mc-join-list{grid-template-columns:minmax(0,1fr);}}',
+            '#mc-join-list .mc-join-empty{grid-column:1 / -1;display:grid;place-items:center;min-height:120px;padding:20px;',
+            'border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);text-align:center;font-size:14px;font-weight:500;color:var(--mc-muted);}',
+
+            /* بطاقات اللاعبين (اللوبي + إضافة لاعب) — كبسولة روليت الإقصاء:
+             * صورة دائرية بحد بنفسجي، اسم، و✕ للحذف على الطرف. */
+            '.mc-er-players{justify-items:stretch !important;}',
+            '.mc-er-players > li{position:relative;width:100%;min-width:0;display:flex;align-items:center;padding:0;',
+            'animation:mc-rise .4s cubic-bezier(.2,1.3,.4,1) both;}',
+            '.mc-er-players .agp-pcard{width:100% !important;max-width:none !important;height:60px !important;',
+            'box-sizing:border-box !important;padding:0 7px 0 40px !important;gap:10px !important;border-radius:999px !important;',
+            'justify-content:flex-start !important;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03)) !important;',
+            'border:1.5px solid rgba(255,255,255,.12) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 16px rgba(0,0,0,.25) !important;}',
+            '.mc-er-players .agp-pcard-avatar-basic{width:46px !important;height:46px !important;box-sizing:border-box !important;',
+            'background:#2a1f45 !important;border:2.5px solid #a78bfa !important;box-shadow:0 0 12px rgba(167,139,250,.35) !important;}',
+            '.mc-er-players .agp-pcard-avatar-basic--fallback{font-size:16px !important;font-weight:800 !important;color:#fff !important;}',
+            '.mc-er-players .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;min-width:0 !important;',
+            'height:auto !important;margin:0 !important;padding:0 !important;justify-content:flex-start !important;',
+            'font-size:16px !important;font-family:"IBM Plex Sans Arabic",sans-serif !important;font-weight:700 !important;',
+            'color:var(--mc-text) !important;background:none !important;border:none !important;box-shadow:none !important;}',
+            '.mc-er-players li:has(> .agp-pcard-tpl){height:75px;overflow:visible;justify-content:center;}',
+            '.mc-er-players .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
+            '.mc-er-players .agp-player-remove-btn{position:absolute !important;top:50% !important;left:10px !important;right:auto !important;',
+            'transform:translateY(-50%);width:24px !important;height:24px !important;padding:0 !important;margin:0 !important;',
+            'z-index:5;border:none !important;border-radius:50% !important;background:transparent !important;',
+            'color:var(--mc-bad-soft) !important;font-size:13px !important;font-weight:700;line-height:1;cursor:pointer;',
+            'opacity:.75;transition:opacity .2s,transform .2s;}',
+            '.mc-er-players .agp-player-remove-btn:hover{opacity:1;transform:translateY(-50%) scale(1.15);}',
+            // زر الحذف بالشل فيه 🗑️ — نعرض ✕ بداله مثل روليت الإقصاء
+            '.mc-er-players .agp-player-remove-btn{font-size:0 !important;}',
+            '.mc-er-players .agp-player-remove-btn > *{display:none !important;}',
+            '.mc-er-players .agp-player-remove-btn::before{content:"✕";font-size:15px;font-weight:800;}',
 
             /* الوضع العمودي / الشاشات الأضيق من 900px */
             '@media (max-width:899px),(max-aspect-ratio:9/10){',
@@ -528,305 +607,291 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-panel,.mc-panel-inner{width:100%;}',
             '#mc-stage.mc-panel-closed .mc-panel{width:100%;max-height:0;}}',
 
-
-            /* شاشة الفائز + فيديو الاحتفال */
-            /* ⚠️ إزالة الخلفية البنفسجية/الحدود/التوهج عن صندوق الشل خاص
-             * بشاشة الفائز فقط (Override محلي بملفي، بدون أي لمس لملف
-             * agp-game-shell.js المشترك) — يبقى المحتوى (العنوان، الفيديو،
-             * البطاقة، الأزرار) عائم مباشرة بدون لوحة خلفية حوله. */
-            '#agp-shell-box.mc-winner-screen{background:none !important;',
-            'border:none !important;box-shadow:none !important;}',
-            '.mc-winner-screen h2{background:linear-gradient(90deg,var(--mc-gold),var(--agp-accent-2));',
-            '-webkit-background-clip:text;background-clip:text;color:transparent;}',
-            /* ⚠️ خلفية مغبّشة (Glassmorphism) على صندوق الفيديو — تتّسق
-             * بصرياً مع زجاجية البطاقة الرسمية المشتركة (.agp-trophy-card)
-             * تحته مباشرة، بدل الخلفية المصمتة القديمة. */
-            '.mc-winner-video-wrap{width:250px;height:250px;margin:6px auto 14px;border-radius:18px;',
-            'overflow:hidden;position:relative;border:3px solid var(--mc-video-glow);',
-            'background:rgba(101,98,98,0.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
-            'box-shadow:0 0 18px var(--mc-video-glow),0 0 38px var(--mc-video-glow);',
-            'animation:mcVideoPulse 1.8s ease-in-out infinite;}',
-            '@keyframes mcVideoPulse{0%,100%{box-shadow:0 0 14px var(--mc-video-glow),0 0 26px var(--mc-video-glow);}',
-            '50%{box-shadow:0 0 22px var(--mc-video-glow),0 0 48px var(--mc-video-glow);}}',
-            '.mc-winner-video-wrap video{width:100%;height:100%;object-fit:cover;display:block;}',
-            '.mc-winner-video-unmute{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);',
-            'background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:999px;padding:5px 12px;',
-            'font-size:0.8em;cursor:pointer;font-family:Cairo,sans-serif;}',
-            /* ⚠️ حاوية توسيط بس لبطاقة AGP.playerCard.renderTrophyCard —
-             * البطاقة نفسها بدون أي تعديل على تصميمها (من الملف المشترك). */
-            '.mc-trophy-wrap{display:flex;justify-content:center;margin:0 0 14px;}',
-            '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;',
-            'font-size:3em;background:rgba(0,0,0,0.3);}',
-
-            /* ⚠️ جديد: زرّي نهاية المباراة بجانب بعض، كل وحد عرضه 350px بالضبط — طلب صريح */
-            /* أزرار شاشة الفوز: بحجم نصها، جنب بعض بصف واحد */
-            '.mc-winner-actions{display:flex;gap:12px;flex-wrap:nowrap;justify-content:center;width:100%;}',
-            '.mc-winner-action-btn{width:auto !important;flex:0 0 auto;white-space:nowrap;padding:13px 24px !important;margin-top:0 !important;}',
+            /* شاشة الفائز — نفس شاشة الفوز بروليت الإقصاء */
+            '#agp-shell-overlay:has(.mc-winner-screen){padding:0 !important;background:rgba(8,4,16,.38) !important;',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);overflow:hidden !important;}',
+            '#agp-shell-box.mc-winner-screen{position:static !important;width:100% !important;max-width:none !important;',
+            'height:100% !important;max-height:none !important;margin:0 !important;padding:16px !important;box-sizing:border-box;',
+            'overflow-y:auto !important;display:flex;flex-direction:column;align-items:center;',
+            'background:none !important;border:none !important;border-radius:0 !important;box-shadow:none !important;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif !important;font-size:18px;color:#f4f2f8;animation:mc-fade .3s ease;}',
+            '@keyframes mc-fade{from{opacity:0}to{opacity:1}}',
+            '@keyframes mc-crown{0%{opacity:0;transform:translateX(-50%) translateY(-14px) rotate(-6deg)}60%{opacity:1}',
+            '100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}}',
+            '@keyframes mc-shine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}',
+            '.mc-win-owned{width:240px;max-width:100%;line-height:0;animation:mc-pop .55s cubic-bezier(.2,1.3,.4,1) both;}',
+            '.mc-win-inner{position:relative;margin:auto 0;max-width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;}',
+            '.mc-winner-screen h2{margin:0 0 6px !important;padding:0 !important;font-size:1.6em !important;font-weight:800 !important;',
+            'color:#fff !important;background:none !important;border:none !important;',
+            'text-shadow:0 2px 12px rgba(0,0,0,.65) !important;text-wrap:balance;}',
+            '.mc-winner-video-wrap{position:relative;overflow:hidden;width:160px;height:160px;margin-bottom:18px;border-radius:24px;',
+            'box-sizing:border-box;border:1px dashed rgba(167,139,250,.4);background:rgba(255,255,255,.03);',
+            'animation:mc-pop .45s cubic-bezier(.2,1,.3,1) both;}',
+            '.mc-winner-video-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-winner-video-unmute{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:2;white-space:nowrap;',
+            'background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:4px 10px;',
+            'font-size:12px;cursor:pointer;font-family:inherit;}',
+            '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3em;}',
+            '.mc-win-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px;}',
+            '.mc-win-none{margin:30px 0;color:#a8a3b5;font-size:16px;}',
+            '.mc-win-card-wrap{position:relative;width:200px;display:flex;flex-direction:column;align-items:center;}',
+            '.mc-win-crown{position:absolute;top:4px;left:50%;z-index:3;display:block;fill:#a78bfa;stroke:#6d28d9;stroke-linejoin:round;',
+            'filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:mc-crown .6s cubic-bezier(.2,1.4,.4,1) .15s both;}',
+            '.mc-win-card{position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;',
+            'background:linear-gradient(165deg,rgba(30,20,52,.74) 0%,rgba(13,10,24,.84) 100%);border:1.5px solid #a78bfa8c;',
+            'box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 0 40px #a78bfa26;',
+            'animation:mc-pop .45s cubic-bezier(.2,1,.3,1) both;}',
+            '.mc-win-shine{position:absolute;top:0;left:0;width:60%;height:100%;pointer-events:none;',
+            'background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);',
+            'animation:mc-shine 2.6s ease-in-out .6s infinite;}',
+            '.mc-win-card-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;',
+            'padding:18px 14px 16px;box-sizing:border-box;}',
+            '.mc-win-label{font-size:15px;letter-spacing:3px;font-weight:800;color:#a78bfa;margin-bottom:12px;}',
+            '.mc-win-av{flex-shrink:0;width:84px;height:84px;border-radius:50%;box-sizing:border-box;border:2.5px solid #a78bfa;',
+            'box-shadow:0 4px 10px rgba(0,0,0,.4);background:#5b21b6;display:flex;align-items:center;justify-content:center;',
+            'color:#fff;font-weight:800;font-size:1.4em;overflow:hidden;}',
+            '.mc-win-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-win-name{margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;',
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.mc-win-pts{margin-top:auto;width:100%;padding-top:10px;border-top:1px solid #a78bfa40;text-align:center;}',
+            '.mc-win-pts b{display:block;font-size:1.4em;font-weight:800;letter-spacing:1px;color:#a78bfa;line-height:1.1;',
+            'text-shadow:0 2px 6px rgba(0,0,0,.4);}',
+            '.mc-win-pts b.mc-win-pts-num{font-size:2em;}',
+            '.mc-win-pts span{display:block;margin-top:4px;font-size:.5em;font-weight:500;color:rgba(167,139,250,.8);text-wrap:balance;}',
+            '.mc-winner-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:min(600px,100%);margin:0 auto;}',
+            '.mc-win-btn{flex:1 0 auto;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;white-space:nowrap;',
+            'font-size:15px;cursor:pointer;transition:filter .2s,transform .15s;}',
+            '.mc-win-btn:active{transform:scale(.97);}',
+            '.mc-win-btn-exit{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8;}',
+            '.mc-win-btn-exit:hover{filter:brightness(1.25);}',
+            '.mc-win-btn-new{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4);}',
+            '.mc-win-btn-new:hover{filter:brightness(1.1);}',
+            '.mc-win-btn-replay{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe;}',
+            '.mc-win-btn-replay:hover{filter:brightness(1.2);}',
 
             /* ==================================================================
-             * شاشة الإعدادات الأولى + طبقة "جاري الاتصال" + اللوبي — منسوخة
-             * من تنسيق السلم والثعبان (games/snakes-ladders) بنفس الـCSS،
-             * بادئة mc- بدل sl-، بدون أي تعديل على الملفات المشتركة.
+             * شاشة الإعدادات الأولى + اللوبي + طبقة "جاري الاتصال" — نفس
+             * صفحتي index.html وlobby.html بروليت الإقصاء: هيدر ثابت (خروج +
+             * شعار)، عنوان متدرّج، أقسام مرقّمة بكروت زجاجية، وزر بنفسجي.
              * ==================================================================== */
-            '#agp-shell-box.agp-lobby-box,#agp-shell-box.agp-lobby-box *,',
-            '#mc-conn-layer,#mc-conn-layer *{font-family:"Zain",Cairo,sans-serif !important;}',
-            '.agp-field-desc{font-size:11.5px !important;font-weight:400 !important;color:#8f88a3 !important;',
-            'font-family:"IBM Plex Sans Arabic",sans-serif !important;white-space:normal !important;text-align:right;}',
-            '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
-            'overflow-y:auto !important;',
-            'background:',
-            'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
-            'radial-gradient(50% 40% at 88% 40%,rgba(214,168,60,.14),transparent 72%),',
-            'radial-gradient(55% 45% at 40% 104%,rgba(48,26,104,.26),transparent 74%),',
-            'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%) !important;}',
-            '#agp-shell-box.agp-lobby-box{background:none !important;border:none !important;',
-            'box-shadow:none !important;position:relative;overflow:hidden;}',
-            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;',
-            'max-width:min(94vw,1310px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
-            'height:min(94dvh,980px) !important;max-height:94dvh !important;',
-            'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
-            '#agp-shell-box.agp-lobby-box > h2,',
-            '#agp-shell-box.agp-lobby-box > .agp-join-hint,',
-            '#agp-shell-box.agp-lobby-box > #agp-entrance-stage,',
-            '#agp-shell-box.agp-lobby-box > #agp-entrance-settled-list{flex:0 0 auto !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
-            'min-height:0 !important;overflow-y:auto !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{scrollbar-width:none !important;',
-            '-ms-overflow-style:none !important;padding-top:12px !important;',
-            'padding-bottom:calc(var(--mc-actions-h,62px) + 16px) !important;',
-            'margin-bottom:calc(-1 * var(--mc-actions-h,62px)) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
-            '#mc-lobby-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
-            'width:55%;max-width:420px;opacity:0.25;pointer-events:none;z-index:0;}',
-            '#agp-shell-box.agp-lobby-box > *:not(#mc-lobby-watermark){position:relative;z-index:1;}',
-            '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0 !important;',
-            'font-family:"Cairo",sans-serif !important;font-weight:800 !important;font-size:44px !important;',
-            'color:#fff !important;line-height:1.3 !important;margin:0 0 6px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
-            'justify-content:center !important;align-items:center !important;gap:56px !important;',
-            'width:100% !important;margin-bottom:22px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
-            'align-items:center !important;gap:14px !important;background:none !important;',
-            'border:none !important;padding:0 !important;font-family:"Cairo",sans-serif !important;',
-            'font-size:44px !important;font-weight:800 !important;line-height:1.2 !important;',
-            'color:#E2C700 !important;box-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"للدخول اكتب في شات البث";',
-            'font-family:"Cairo",sans-serif;font-size:22px;font-weight:700;color:#fff;white-space:nowrap;}',
-            '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:static !important;order:1 !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{display:inline-flex !important;',
-            'align-items:center !important;justify-content:center !important;width:157px !important;',
-            'height:52px !important;box-sizing:border-box !important;padding:0 !important;',
-            'background:rgba(217,217,217,.1) !important;border:4px solid #000 !important;',
-            'border-radius:26px !important;font-family:"Cairo",sans-serif !important;direction:ltr !important;',
-            'font-size:28px !important;font-weight:800 !important;color:#fff !important;',
-            'box-shadow:none !important;}',
-            '@media (max-width:600px){',
-            '#agp-shell-box.agp-lobby-box h2{font-size:26px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint{gap:12px 24px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{font-size:30px !important;gap:10px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{font-size:16px;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{width:120px !important;height:44px !important;',
-            'font-size:22px !important;border-width:3px !important;}}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(auto-fill,217px) !important;column-gap:37px !important;',
-            'row-gap:20px !important;justify-content:center !important;',
-            'justify-items:center !important;align-items:end !important;align-content:start !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard{width:217px !important;height:57px !important;',
-            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
-            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
-            'border:2px solid #000 !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
-            'background:#D9D9D9 !important;border:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
-            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
-            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
-            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
-            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
-            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
-            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
-            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
-            'overflow:visible !important;display:flex !important;',
-            'flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
-            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl) .agp-player-remove-btn{',
-            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
-            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
-            'background:rgba(224,115,111,.18) !important;border-color:rgba(224,115,111,.55) !important;',
-            'color:#e0736f !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn:hover{',
-            'background:rgba(224,115,111,.3) !important;color:#ff9b96 !important;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row{flex:0 0 auto !important;',
-            'display:flex;gap:14px;margin-top:14px;justify-content:center;',
-            'flex-wrap:wrap;position:relative;z-index:3 !important;}',
-            '.mc-lobby-actions-row > *{width:360px !important;height:48px !important;',
-            'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
-            'display:flex !important;align-items:center !important;justify-content:center !important;',
-            'padding:0 14px !important;margin:0 !important;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row #agp-start-round-btn{',
-            'background:#7a3fd4 !important;color:#f3ecff !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;',
-            'box-shadow:0 22px 46px -24px rgba(122,63,212,1) !important;transition:background .25s !important;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row #agp-start-round-btn:hover{',
-            'background:#9a6cf0 !important;}',
-            '.mc-back-to-platform-btn{display:block;margin:14px auto 0;padding:10px 22px;',
-            'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
-            'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
-            'transition:background 0.15s;}',
-            '.mc-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}',
-            '#agp-shell-overlay:has(.mc-settings-initial-box){padding:0 !important;',
-            'align-items:flex-start !important;justify-content:center !important;overflow-y:auto !important;',
-            'background:',
-            'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
-            'radial-gradient(50% 40% at 88% 40%,rgba(70,40,150,.22),transparent 72%),',
-            'radial-gradient(55% 45% at 40% 104%,rgba(48,26,104,.26),transparent 74%),',
-            'linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),',
-            'linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px),',
-            'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%) !important;',
-            'background-size:auto,auto,auto,88px 88px,88px 88px,auto !important;}',
-            '.mc-settings-initial-box{width:min(1040px,94vw) !important;',
-            'max-width:min(1040px,94vw) !important;height:calc(100vh - 70px) !important;',
-            'height:calc(100dvh - 70px) !important;',
-            'max-height:calc(100vh - 70px) !important;max-height:calc(100dvh - 70px) !important;',
-            'margin:70px 0 0 !important;overflow:visible !important;',
-            'display:flex !important;flex-direction:column !important;align-items:center !important;',
-            'column-count:auto !important;column-gap:0 !important;',
-            'background:none !important;border:none !important;border-radius:0 !important;',
-            'box-shadow:none !important;padding:16px 4px 0 !important;box-sizing:border-box !important;',
+            '.agp-field-desc{font-size:13px !important;font-weight:500 !important;line-height:1.55 !important;',
+            'color:var(--mc-muted) !important;font-family:"IBM Plex Sans Arabic",sans-serif !important;',
+            'white-space:normal !important;text-align:right;}',
+            '#agp-shell-overlay:has(.mc-settings-initial-box),#agp-shell-overlay:has(.agp-lobby-box){padding:0 !important;',
+            'align-items:flex-start !important;justify-content:center !important;overflow:hidden !important;',
+            'background:var(--mc-backdrop) !important;color:var(--mc-text) !important;',
             'font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
-            '.mc-settings-initial-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
-            '.mc-settings-initial-box > h2{flex:0 0 auto !important;margin:0 0 4px !important;',
-            'max-width:none !important;width:100% !important;font-size:clamp(24px,3.6vw,40px) !important;',
-            'font-weight:900 !important;line-height:1.4 !important;text-align:center !important;',
+            '#mc-er-header{display:none;}',
+            '#agp-shell-overlay:has(.mc-settings-initial-box) #mc-er-header,',
+            '#agp-shell-overlay:has(.agp-lobby-box) #mc-er-header{position:fixed;top:0;left:0;right:0;z-index:5;height:80px;',
+            'display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);',
+            'padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;direction:rtl;',
+            'background:rgba(12,10,18,.86);border-bottom:1.5px solid rgba(167,139,250,.18);box-shadow:0 10px 30px rgba(0,0,0,.4);',
+            'backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}',
+            '#mc-er-header img{height:60px;width:auto;display:block;filter:drop-shadow(0 0 14px rgba(139,92,246,.45));}',
+            '.mc-er-exit{justify-self:start;height:clamp(38px,2.6vw,46px);padding:0 clamp(14px,1.1vw,18px);border-radius:999px;',
+            'display:flex;align-items:center;gap:8px;font:700 clamp(13px,0.9vw,16px) "IBM Plex Sans Arabic",sans-serif;',
+            'white-space:nowrap;cursor:pointer;transition:all .2s;border:1.5px solid rgba(248,113,113,.4);',
+            'background:rgba(248,113,113,.06);color:var(--mc-bad-soft);}',
+            '.mc-er-exit:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45);}',
+            '.mc-er-exit:active{transform:scale(.97);}',
+            '.mc-er-cta{width:100% !important;max-width:420px !important;height:clamp(56px,7vh,66px) !important;',
+            'margin:0 !important;padding:0 24px !important;border:none !important;border-radius:999px !important;cursor:pointer;',
+            'display:flex !important;align-items:center !important;justify-content:center !important;gap:10px;',
+            'background:var(--mc-grad) !important;color:#fff !important;',
+            'font:800 clamp(18px,1.7vw,22px) "IBM Plex Sans Arabic",sans-serif !important;',
+            'box-shadow:0 12px 36px rgba(139,92,246,.5),inset 0 1px 0 rgba(255,255,255,.3),inset 0 -3px 0 rgba(46,16,101,.35) !important;',
+            'transition:filter .2s,transform .2s !important;}',
+            '.mc-er-cta:hover{filter:brightness(1.1);}',
+            '.mc-er-cta:active{transform:scale(.97);}',
+            '.mc-er-cta:disabled{opacity:.45 !important;cursor:not-allowed !important;filter:none;transform:none;}',
+
+            /* — الإعدادات — */
+            '.mc-settings-initial-box{width:min(1080px,100vw) !important;max-width:min(1080px,100vw) !important;',
+            'height:calc(100vh - 80px) !important;height:calc(100dvh - 80px) !important;',
+            'max-height:none !important;margin:80px 0 0 !important;overflow:visible !important;',
+            'display:flex !important;flex-direction:column !important;align-items:center !important;',
+            'column-count:auto !important;column-gap:0 !important;background:none !important;border:none !important;',
+            'border-radius:0 !important;box-shadow:none !important;padding:0 clamp(12px,2.5vw,32px) !important;',
+            'box-sizing:border-box !important;color:var(--mc-text);}',
+            '.mc-settings-initial-box,.mc-settings-initial-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '.mc-settings-initial-box > h2{flex:0 0 auto !important;margin:clamp(16px,3.2vh,34px) 0 12px !important;',
+            'max-width:none !important;width:100% !important;font-size:clamp(32px,4.2vw,56px) !important;',
+            'font-weight:800 !important;line-height:1.15 !important;text-align:center !important;',
             'padding:0 !important;border-bottom:none !important;position:static;',
-            'font-family:"Cairo",sans-serif !important;',
-            'background:linear-gradient(90deg,#b28cf5,#f0cd6a,#d9a0f0,#b28cf5) !important;',
-            'background-size:200% 100% !important;-webkit-background-clip:text !important;',
-            'background-clip:text !important;-webkit-text-fill-color:transparent !important;',
-            'animation:mc-settings-wave 9s linear infinite !important;}',
+            'background:linear-gradient(180deg,#f4f2f8,#c4b5fd) !important;-webkit-background-clip:text !important;',
+            'background-clip:text !important;-webkit-text-fill-color:transparent !important;}',
             '.mc-settings-initial-box > h2::after{content:none !important;}',
-            '@keyframes mc-settings-wave{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
-            '.mc-settings-initial-box .agp-shell-btn-connect:disabled{opacity:.45 !important;',
-            'cursor:not-allowed !important;transform:none !important;}',
-            '.mc-settings-initial-box .mc-settings-scroll{position:relative;',
-            'flex:1 1 auto;min-height:0;width:100%;margin-top:18px;}',
-            '.mc-settings-initial-box .mc-settings-scroll-inner{box-sizing:border-box;',
-            'height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;',
-            'padding:0 2px 26px;scrollbar-width:none;}',
-            '.mc-settings-initial-box .mc-settings-scroll-inner::-webkit-scrollbar{',
-            'display:none;}',
-            '.mc-settings-initial-box .mc-settings-fade{position:absolute;inset:auto 0 0;',
-            'height:44px;background:linear-gradient(transparent,#08060d);pointer-events:none;}',
-            '.mc-settings-initial-box .mc-settings-glowline{position:absolute;inset:auto 0 0;',
-            'height:1px;background:linear-gradient(90deg,transparent,rgba(178,140,245,.55),transparent);',
-            'pointer-events:none;}',
-            '.mc-settings-initial-box .agp-shell-field,',
-            '.mc-settings-initial-box .agp-shell-row{border-bottom:none !important;',
-            'padding:2px 0 !important;max-width:none !important;margin:0 !important;display:flex !important;',
-            'justify-content:space-between !important;align-items:center !important;width:100% !important;',
-            'flex-wrap:wrap !important;gap:12px !important;}',
-            '.mc-settings-initial-box .agp-shell-field{flex-direction:column !important;',
-            'align-items:flex-start !important;}',
-            '.mc-settings-initial-box .agp-shell-field label,',
-            '.mc-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
-            'font-weight:600 !important;color:#f4f2fb !important;text-align:right !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;display:flex !important;',
-            'flex-direction:column !important;align-items:flex-end !important;gap:3px !important;}',
-            '.mc-settings-initial-box .agp-shell-field input[type=text]{',
-            'max-width:none !important;width:100% !important;background:rgba(255,255,255,.04) !important;',
-            'border:1px solid rgba(255,255,255,.14) !important;border-radius:999px !important;',
-            'padding:13px 18px !important;font-size:15px !important;font-weight:400 !important;',
-            'text-align:center !important;transition:border-color .25s !important;color:#f4f2fb !important;',
-            'box-sizing:border-box !important;}',
-            '.mc-settings-initial-box .agp-shell-field input[type=text]:focus,',
-            '.mc-settings-initial-box .agp-shell-field input[type=text]:not(:placeholder-shown){',
-            'border-color:rgba(178,140,245,.6) !important;outline:none !important;}',
-            '.mc-settings-initial-box .agp-pill-group{gap:8px !important;padding:4px !important;',
-            'border-radius:999px !important;',
-            'background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)) !important;',
-            'border:1px solid rgba(255,255,255,.12) !important;',
-            'box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 3px 10px -6px rgba(0,0,0,.6) !important;}',
-            '.mc-settings-initial-box .agp-pill-btn{background:transparent !important;',
-            'border:none !important;color:#a79fbb !important;padding:10px 16px !important;',
-            'border-radius:999px !important;font-size:13.5px !important;font-weight:600 !important;',
-            'transition:.25s !important;white-space:nowrap;}',
-            '.mc-settings-initial-box .agp-pill-btn.agp-pill-active{',
-            'background:#7a3fd4 !important;color:#f3ecff !important;',
-            'box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 4px 10px -4px rgba(122,63,212,.7) !important;}',
-            '.mc-settings-initial-box .agp-shell-counter-row button{display:none !important;}',
-            '.mc-settings-initial-box .agp-shell-counter-row{justify-content:flex-end !important;',
-            'flex:1;max-width:220px;}',
-            '.mc-settings-initial-box .agp-count-input{',
-            'background:rgba(255,255,255,.04) !important;border:1px solid rgba(255,255,255,.14) !important;',
-            'border-radius:999px !important;padding:13px 18px !important;width:100% !important;',
-            'height:auto !important;color:#f4f2fb !important;font-size:15px !important;',
-            'font-weight:400 !important;outline:none !important;text-align:center !important;',
-            'box-sizing:border-box !important;}',
-            '.mc-settings-initial-box .agp-count-input:focus{',
-            'border-color:rgba(178,140,245,.55) !important;}',
-            '.mc-settings-initial-box .mc-settings-card{width:100%;',
-            'padding:16px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.09);',
-            'background:rgba(255,255,255,.03);box-sizing:border-box;display:flex;',
-            'flex-direction:column;gap:12px;}',
-            '.mc-settings-initial-box .mc-settings-card > .agp-shell-row,',
-            '.mc-settings-initial-box .mc-settings-card > .agp-shell-field{padding:0 !important;}',
-            '.mc-settings-initial-box .mc-conditional-section{display:flex !important;',
-            'flex-direction:column !important;gap:14px !important;margin-top:4px !important;',
-            'padding-top:16px !important;border-top:1px solid rgba(255,255,255,.07) !important;',
-            'border-right:none !important;padding-right:0 !important;}',
-            '.mc-settings-initial-box .mc-conditional-section .agp-shell-row{',
-            'border-bottom:none !important;padding:0 !important;}',
-            '.mc-settings-initial-box .mc-field-note{color:#8f88a3 !important;',
-            'text-align:right !important;}',
-            '.mc-settings-initial-box .mc-settings-footer{flex:0 0 auto !important;',
-            'width:100% !important;display:flex !important;flex-wrap:wrap !important;',
-            'align-items:center !important;justify-content:center !important;',
-            'gap:clamp(16px,3vw,36px) !important;padding:20px 0 26px !important;}',
-            '.mc-settings-initial-box .agp-shell-btn-connect{',
-            'order:1;column-span:none !important;display:inline-flex !important;',
-            'align-items:center !important;justify-content:center !important;width:auto !important;',
-            'max-width:none !important;margin:0 !important;padding:16px 42px !important;',
-            'background:#7a3fd4 !important;color:#f3ecff !important;font-weight:700 !important;',
-            'font-size:clamp(15px,1.8vw,17px) !important;border-radius:999px !important;',
-            'letter-spacing:0.4px;font-family:"Noto Kufi Arabic",sans-serif !important;',
-            'box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 22px 46px -24px rgba(122,63,212,1) !important;',
-            'transition:background .25s,transform .25s !important;}',
-            '.mc-settings-initial-box .agp-shell-btn-connect:hover{',
-            'background:#9a6cf0 !important;transform:translateY(-2px);}',
-            '.mc-settings-initial-box .mc-back-to-platform-btn{',
-            'order:2;column-span:none !important;display:inline-flex !important;',
-            'align-items:center !important;width:auto !important;margin:0 !important;padding:0 !important;',
-            'border:none !important;background:transparent !important;font-size:14px !important;',
-            'font-weight:400 !important;color:#a79fbb !important;transition:color .25s !important;}',
-            '.mc-settings-initial-box .mc-back-to-platform-btn:hover{',
-            'color:#d3bcff !important;background:transparent !important;}',
+            '.mc-settings-initial-box .agp-shell-conn-badge{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;',
+            'justify-content:center;gap:8px;margin:0 0 clamp(14px,2.6vh,26px);padding:0;background:none;border:none;}',
+            '.mc-er-live{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;',
+            'font-size:13px;font-weight:700;background:rgba(248,113,113,.12);border:1.5px solid rgba(248,113,113,.45);',
+            'color:var(--mc-bad-soft);}',
+            '.mc-er-live b{color:#fff;font-weight:700;}',
+            '.agp-shell-conn-yes .mc-er-live{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3);color:var(--mc-ok);}',
+            '.mc-settings-initial-box .agp-shell-conn-dot{width:7px;height:7px;background:var(--mc-bad);box-shadow:0 0 8px var(--mc-bad);}',
+            '.mc-settings-initial-box .agp-shell-conn-yes .agp-shell-conn-dot{background:var(--mc-ok);box-shadow:0 0 8px var(--mc-ok);}',
+            '.mc-settings-initial-box .agp-shell-conn-link{height:34px;padding:0 16px;display:flex;align-items:center;',
+            'border-radius:999px;text-decoration:none;background:var(--mc-grad);color:#fff;font-size:13px;font-weight:700;',
+            'box-shadow:0 4px 14px rgba(139,92,246,.35);}',
+            '.mc-settings-initial-box .agp-shell-conn-link:hover{filter:brightness(1.1);}',
+            '.mc-settings-initial-box .mc-settings-scroll{position:relative;flex:1 1 auto;min-height:0;width:100%;}',
+            '.mc-settings-initial-box .mc-settings-scroll-inner{box-sizing:border-box;height:100%;overflow-y:auto;',
+            'overscroll-behavior:contain;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));',
+            'gap:clamp(12px,1.4vw,18px);align-content:start;padding:0 0 16px;scrollbar-width:none;}',
+            '.mc-settings-initial-box .mc-settings-scroll-inner::-webkit-scrollbar{display:none;}',
+            '.mc-er-section{position:relative;min-width:0;display:flex;flex-direction:column;padding:clamp(18px,1.8vw,24px) clamp(20px,2vw,28px);',
+            'border-radius:26px;background:var(--mc-glass);border:1.5px solid var(--mc-line);',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--mc-depth);',
+            'animation:mc-rise .45s ease both;}',
+            '.mc-er-section:nth-child(2){animation-delay:.06s;}',
+            '.mc-er-section:nth-child(3){animation-delay:.12s;}',
+            '.mc-er-section.mc-er-full{grid-column:1 / -1;}',
+            '.mc-er-sec-head{display:flex;align-items:center;gap:12px;padding-bottom:12px;margin-bottom:4px;',
+            'border-bottom:1.5px solid rgba(255,255,255,.08);}',
+            '.mc-er-sec-num{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;',
+            'background:var(--mc-grad);color:#fff;font-size:15px;font-weight:800;',
+            'box-shadow:0 4px 14px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.3);}',
+            '.mc-er-sec-title{font-size:clamp(18px,1.45vw,21px);font-weight:800;color:var(--mc-text);}',
+            '.mc-er-section > .agp-shell-row,.mc-er-section > .agp-shell-field{display:flex !important;',
+            'flex-direction:row !important;flex-wrap:nowrap !important;justify-content:space-between !important;',
+            'align-items:center !important;gap:12px !important;min-height:62px;width:auto !important;max-width:none !important;',
+            'margin:0 !important;padding:8px 0 !important;border:none !important;border-radius:0 !important;',
+            'background:none !important;box-shadow:none !important;}',
+            // لو الخيار ما يكفي جنب عنوانه ينزل تحته ويبقى على اليسار
+            '.mc-er-section > .agp-shell-row,.mc-er-section > .agp-shell-field{flex-wrap:wrap !important;}',
+            '.mc-er-section > .agp-shell-row > .agp-pill-group,.mc-er-section > .agp-shell-row > .agp-shell-counter-row,',
+            '.mc-er-section > .agp-shell-field > input[type=text]{margin-inline-start:auto !important;}',
+            '.mc-er-section > .agp-shell-row + .agp-shell-row,.mc-er-section > .agp-shell-field + .agp-shell-row{',
+            'border-top:1.5px solid rgba(255,255,255,.07) !important;}',
+            '.mc-er-section .agp-shell-row-label,.mc-er-section > .agp-shell-field > label{display:flex !important;',
+            'flex-direction:column !important;align-items:flex-start !important;gap:3px !important;min-width:0;flex:1 1 auto;',
+            'font-size:clamp(15px,1.2vw,17px) !important;font-weight:700 !important;color:var(--mc-label) !important;',
+            'text-align:right !important;margin:0 !important;}',
+            '.mc-er-section > .agp-shell-field > input[type=text]{flex:0 0 auto;width:min(210px,50%) !important;',
+            'max-width:none !important;height:46px !important;box-sizing:border-box !important;margin:0 !important;',
+            'border-radius:999px !important;border:1.5px solid var(--mc-ctl-line) !important;',
+            'background:var(--mc-ctl-bg) !important;color:var(--mc-text) !important;box-shadow:inset 0 2px 6px rgba(0,0,0,.25) !important;',
+            'font-size:16px !important;font-weight:700 !important;padding:0 16px !important;text-align:center !important;',
+            'outline:none !important;transition:border-color .2s !important;}',
+            '.mc-er-section > .agp-shell-field > input[type=text]::placeholder{color:#6f6a7c;}',
+            '.mc-er-section > .agp-shell-field > input[type=text]:focus{border-color:#a78bfa !important;}',
+            '.mc-er-section .agp-pill-group{flex:0 0 auto;display:flex !important;flex-wrap:nowrap !important;gap:4px !important;',
+            'padding:4px !important;margin:0 !important;border-radius:999px !important;background:var(--mc-ctl-bg) !important;',
+            'border:1.5px solid var(--mc-ctl-line) !important;box-shadow:inset 0 2px 6px rgba(0,0,0,.25) !important;}',
+            '.mc-er-section .agp-pill-btn{height:40px !important;padding:0 16px !important;border:none !important;',
+            'border-radius:999px !important;background:transparent !important;color:var(--mc-muted-2) !important;',
+            'font-size:14px !important;font-weight:700 !important;white-space:nowrap;transition:all .25s !important;box-shadow:none !important;}',
+            '.mc-er-section .agp-pill-btn:hover{color:#fff !important;}',
+            '.mc-er-section .agp-pill-btn.agp-pill-active{background:var(--mc-grad) !important;color:#fff !important;font-weight:800 !important;',
+            'box-shadow:0 6px 20px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.25) !important;}',
+            '.mc-er-section .agp-shell-counter-row{flex:0 0 auto;display:flex !important;align-items:center !important;gap:4px !important;',
+            'padding:4px !important;margin:0 !important;border-radius:999px !important;background:var(--mc-ctl-bg) !important;',
+            'border:1.5px solid var(--mc-ctl-line) !important;box-shadow:inset 0 2px 6px rgba(0,0,0,.25) !important;}',
+            '.mc-er-section .agp-shell-counter-row button{display:block !important;width:40px !important;height:40px !important;',
+            'padding:0 !important;border-radius:999px !important;border:none !important;background:rgba(255,255,255,.07) !important;',
+            'color:#fff !important;font-size:22px !important;font-weight:700 !important;line-height:1 !important;',
+            'cursor:pointer;transition:all .2s !important;}',
+            '.mc-er-section .agp-shell-counter-row button:hover{background:rgba(139,92,246,.35) !important;}',
+            '.mc-er-section .agp-count-input{width:56px !important;height:40px !important;box-sizing:border-box !important;',
+            'padding:0 !important;border:none !important;border-radius:999px !important;background:transparent !important;',
+            'text-align:center !important;font-size:19px !important;font-weight:800 !important;color:#fff !important;',
+            'font-variant-numeric:tabular-nums;outline:none !important;-moz-appearance:textfield;appearance:textfield;}',
+            '.mc-er-section .agp-count-input::-webkit-outer-spin-button,.mc-er-section .agp-count-input::-webkit-inner-spin-button{',
+            '-webkit-appearance:none;margin:0;}',
+            // الشاشات الضيقة (جوال): لو الخيارات ما تكفي جنب العنوان تنزل
+            // تحته وتبقى على اليسار، وتتمرّر أفقياً بدل ما تطلع برا الكرت
+            '@media (max-width:640px){',
+            '.mc-er-section .agp-pill-group{max-width:100%;overflow-x:auto;scrollbar-width:none;}',
+            '.mc-er-section .agp-pill-group::-webkit-scrollbar{display:none;}',
+            '.mc-er-section .agp-pill-btn{padding:0 11px !important;}}',
+            '.mc-settings-initial-box .mc-settings-footer{flex:0 0 auto !important;width:100% !important;display:flex !important;',
+            'justify-content:center !important;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px) !important;}',
+
+            /* — اللوبي — */
+            '#agp-shell-box.agp-lobby-box{width:min(1080px,100vw) !important;max-width:min(1080px,100vw) !important;',
+            'height:calc(100vh - 80px) !important;height:calc(100dvh - 80px) !important;max-height:none !important;',
+            'margin:80px 0 0 !important;padding:0 clamp(12px,2.5vw,32px) !important;box-sizing:border-box !important;',
+            'display:flex !important;flex-direction:column !important;overflow:hidden !important;',
+            'background:none !important;border:none !important;border-radius:0 !important;box-shadow:none !important;',
+            'color:var(--mc-text);}',
+            '#agp-shell-box.agp-lobby-box,#agp-shell-box.agp-lobby-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '#agp-shell-box.agp-lobby-box > h2{flex:0 0 auto !important;display:flex;flex-direction:column;align-items:center;gap:10px;',
+            'margin:0 !important;padding:clamp(6px,1.2vh,12px) 0 clamp(14px,2.6vh,26px) !important;text-align:center;',
+            'text-shadow:none !important;letter-spacing:0 !important;font-size:clamp(32px,4.2vw,56px) !important;',
+            'font-weight:800 !important;line-height:1.15 !important;color:var(--mc-text) !important;}',
+            '.mc-er-kicker{font-size:clamp(15px,1.5vw,19px);font-weight:700;line-height:1.4;color:var(--mc-muted-2);letter-spacing:.5px;}',
+            '.mc-er-grad{background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;',
+            'color:transparent;-webkit-text-fill-color:transparent;}',
+            '.mc-er-lobby-card{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden;',
+            'border-radius:28px;background:var(--mc-glass);border:2px solid rgba(167,139,250,.45);',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
+            'box-shadow:var(--mc-depth),0 0 50px rgba(139,92,246,.16);}',
+            '.mc-er-lobby-card::before{content:"";position:absolute;top:-100px;left:50%;width:460px;height:200px;margin-left:-230px;',
+            'border-radius:50%;background:rgba(139,92,246,.12);filter:blur(44px);pointer-events:none;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint{position:relative;flex:0 0 auto;display:grid !important;',
+            'grid-template-columns:1fr auto;grid-template-areas:"title count" "label label" "kw kw";',
+            'align-items:center;gap:14px 12px;width:auto !important;margin:0 !important;',
+            'padding:clamp(18px,2.2vw,26px) clamp(20px,2.4vw,30px) !important;border-bottom:1.5px solid rgba(255,255,255,.08);}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint::before{content:"اللاعبين";grid-area:title;justify-self:start;',
+            'padding-right:22px;font-size:clamp(20px,1.9vw,24px);font-weight:800;color:#c4b5fd;',
+            'background:radial-gradient(circle,#a78bfa 0 5px,transparent 6px) right center / 12px 12px no-repeat;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{grid-area:label;justify-self:start;margin-bottom:-6px;',
+            'font-size:14px !important;font-weight:600 !important;color:var(--mc-muted) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{grid-area:kw;display:block !important;margin:0 !important;',
+            'box-sizing:border-box;padding:10px 22px !important;border-radius:999px !important;text-align:center;',
+            'background:rgba(139,92,246,.16) !important;border:2px dashed #a78bfa !important;box-shadow:none !important;',
+            'font-size:clamp(28px,3.4vw,40px) !important;font-weight:800 !important;line-height:1.2 !important;color:#a78bfa !important;',
+            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+            '#agp-shell-box.agp-lobby-box #agp-lobby-count{grid-area:count;position:static !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{display:flex !important;align-items:baseline;gap:4px;',
+            'margin:0 !important;padding:6px 14px !important;border-radius:999px !important;direction:ltr;',
+            'background:rgba(139,92,246,.16) !important;border:1.5px solid rgba(167,139,250,.5) !important;box-shadow:none !important;',
+            'font-size:22px !important;font-weight:800 !important;color:#c4b5fd !important;font-variant-numeric:tabular-nums;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::after{content:"لاعب";font-size:14px;font-weight:600;color:var(--mc-muted-2);}',
+            '#agp-shell-box.agp-lobby-box #agp-entrance-stage,#agp-shell-box.agp-lobby-box #agp-entrance-settled-list{',
+            'flex:0 0 auto !important;position:relative;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;min-height:0 !important;',
+            'overflow-y:auto !important;overscroll-behavior:contain;scrollbar-width:none !important;position:relative;',
+            'margin:0 !important;padding:clamp(12px,1.6vw,20px) !important;max-height:none !important;',
+            'display:grid !important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr)) !important;',
+            'grid-auto-rows:minmax(60px,auto);gap:12px !important;align-content:start !important;align-items:center !important;',
+            'background:none !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list:not(:has(.agp-pcard,.agp-pcard-tpl))::before{',
+            'content:"بانتظار انضمام اللاعبين…";grid-column:1 / -1;display:grid;place-items:center;min-height:140px;padding:20px;',
+            'border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:var(--mc-muted);font-size:14px;font-weight:500;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list > li:not(:has(.agp-pcard,.agp-pcard-tpl)){grid-column:1 / -1;',
+            'text-align:center;font-size:14px;color:var(--mc-bad-soft) !important;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row{flex:0 0 auto !important;display:flex;justify-content:center;',
+            'padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px);margin:0;}',
+
+            /* — طبقة "جاري الاتصال" — نفس نافذة الاتصال بروليت الإقصاء — */
             '#agp-shell-box.agp-connecting-box,#agp-shell-box.agp-conn-error{visibility:hidden !important;}',
             '#mc-conn-layer{position:fixed;inset:0;z-index:100010;display:none;',
-            'align-items:center;justify-content:center;}',
+            'align-items:center;justify-content:center;font-family:"IBM Plex Sans Arabic",sans-serif;}',
             '#mc-conn-layer.show{display:flex;}',
             '#mc-conn-layer .mc-conn-backdrop{position:absolute;inset:0;overflow:hidden;display:flex;justify-content:center;align-items:flex-start;',
-            'filter:blur(6px) brightness(0.55);pointer-events:none;}',
+            'background:var(--mc-backdrop);filter:blur(6px) brightness(0.55);pointer-events:none;}',
             '#mc-conn-layer .mc-conn-backdrop > *{pointer-events:none !important;}',
-            '#mc-conn-layer .mc-conn-modal{position:relative;z-index:1;width:min(360px,90vw);',
-            'background:linear-gradient(180deg,rgba(30,24,52,.98),rgba(11,10,18,.99));',
-            'border:1px solid rgba(178,140,245,.32);border-radius:24px;',
-            'padding:32px 26px;text-align:center;box-shadow:0 40px 90px -46px rgba(0,0,0,1);',
-            'font-family:"Noto Kufi Arabic",sans-serif;}',
-            '#mc-conn-layer .mc-conn-modal.mc-conn-err{border-color:#ef4444;}',
-            '#mc-conn-layer::before{content:"";position:absolute;inset:0;background:rgba(5,2,8,0.45);}',
-            '#mc-conn-layer .mc-conn-spinner{width:52px;height:52px;margin:0 auto 18px;',
-            'border-radius:50%;border:4px solid rgba(178,140,245,.25);border-top-color:#b28cf5;',
+            '#mc-conn-layer .mc-conn-modal{position:relative;z-index:1;width:min(360px,calc(100vw - 24px));box-sizing:border-box;',
+            'display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;',
+            'background:linear-gradient(180deg,#171326,#0d0b14);border:1.5px solid rgba(167,139,250,.45);border-radius:28px;padding:34px 30px;',
+            'box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 60px rgba(124,58,237,.2);animation:mc-pop .4s cubic-bezier(.2,1.25,.35,1);}',
+            '#mc-conn-layer .mc-conn-modal.mc-conn-err{border-color:rgba(248,113,113,.5);',
+            'box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 60px rgba(248,113,113,.18);}',
+            '#mc-conn-layer::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.55);',
+            'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}',
+            '#mc-conn-layer .mc-conn-spinner{width:64px;height:64px;box-sizing:border-box;',
+            'border-radius:50%;border:5px solid rgba(167,139,250,.18);border-top-color:#a78bfa;',
             'animation:mc-conn-spin 0.9s linear infinite;}',
             '@keyframes mc-conn-spin{to{transform:rotate(360deg);}}',
-            '#mc-conn-layer .mc-conn-err-icon{width:42px;height:42px;margin:0 auto 18px;',
-            'border-radius:50%;background:rgba(239,68,68,0.15);color:#ef4444;font-size:22px;',
-            'font-weight:900;display:flex;align-items:center;justify-content:center;}',
-            '#mc-conn-layer .mc-conn-title{margin:0 0 6px;font-size:16.5px;font-weight:700;color:#f4f2fb;}',
-            '#mc-conn-layer .mc-conn-modal.mc-conn-err .mc-conn-title{color:#ef4444;}',
-            '#mc-conn-layer .mc-conn-sub{margin:0;font-size:13px;color:#8f88a3;',
-            'font-family:"IBM Plex Sans Arabic",sans-serif;}',
+            '#mc-conn-layer .mc-conn-err-icon{width:64px;height:64px;border-radius:50%;background:rgba(248,113,113,.14);',
+            'border:2px solid var(--mc-bad);color:var(--mc-bad);font-size:26px;font-weight:900;',
+            'display:flex;align-items:center;justify-content:center;}',
+            '#mc-conn-layer .mc-conn-title{margin:0;font-size:22px;font-weight:800;color:var(--mc-text);}',
+            '#mc-conn-layer .mc-conn-modal.mc-conn-err .mc-conn-title{color:var(--mc-bad-soft);}',
+            '#mc-conn-layer .mc-conn-sub{margin:0;font-size:14px;font-weight:500;color:var(--mc-muted-2);}',
         ].join('');
         document.head.appendChild(style);
     }
@@ -914,7 +979,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<li>كل لاعب جديد يدخل تظهر بطاقته هنا، وينضم للدائرة مباشرة.</li>' +
                     '</ul>' +
                     '<div class="mc-join-count">اللاعبون الجدد (<span id="mc-join-count">0</span>)</div>' +
-                    '<ul id="mc-join-list"></ul>' +
+                    '<ul id="mc-join-list" class="mc-er-players"></ul>' +
                 '</div>' +
                 '<button type="button" class="mc-btn-primary mc-add-done" id="mc-add-done">أكمل المباراة</button>' +
             '</div></div>' +
@@ -1145,7 +1210,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // حجم صورة اللاعب (% من عرض الدائرة) — pA = min(11, 314/N × 0.78)
     function playerAvatarPct() {
-        return Math.min(11, 314 / Math.max(_alive.length, 1) * 0.78);
+        return Math.min(8, 314 / Math.max(_alive.length, 1) * 0.62);
     }
 
     // الكراسي بحلقات متحدة المركز داخل الدائرة (كرسي واحد = بالمنتصف).
@@ -1194,6 +1259,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // الكرسي: صورة كرسي خشب بني غامق بظهر أعمدة — images/chair-final.png بخلفية شفافة.
+    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-final.png" alt="" draggable="false">';
+
     function renderChairs() {
         var wrap = el('mc-chairs');
         if (!wrap) return;
@@ -1202,8 +1270,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wrap.innerHTML = _chairs.map(function (chair, idx) {
             var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
             return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
-                '<div class="mc-ch-glyph" style="font-size:' + (c * 0.9) + 'cqw">🪑</div>' +
-                '<div class="mc-ch-num" style="font-size:' + (c * 0.36) + 'cqw">' + chair.number + '</div></div>';
+                '<div class="mc-ch-glyph">' + CHAIR_IMG + '</div>' +
+                '<div class="mc-ch-num" style="font-size:' + (c * 0.42) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
 
@@ -1686,8 +1754,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
     }
 
-    // ⚠️ فيديو الاحتفال (250×250، حدود بلون الفيديو #4d0008 + توهج نابض)
-    // يشتغل مباشرة مع بطاقة الفائز بنفس الشاشة — طلب صريح.
+    // فيديو الاحتفال (160×160 مثل روليت الإقصاء) يشتغل مع بطاقة الفائز.
     function winnerVideoHtml() {
         // ⚠️ onerror جديد: لو ملف الفيديو مو موجود على السيرفر (404) أو
         // فشل تحميله لأي سبب، نستبدل الصندوق برسالة واضحة بدل ما يطلع
@@ -1746,39 +1813,57 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.className = 'mc-winner-screen';
         var awarded = winner ? findAwardedFor(pointsResult, winner) : null;
 
-        // ⚠️ صار يستخدم البطاقة الرسمية المشتركة (AGP.playerCard.renderTrophyCard)
-        // بدل بطاقة الكراسي الموسيقية المحلية القديمة — بطلب صريح، بدون
-        // أي لمس أو تعديل على تصميمها بملف js/agp-player-card.js المشترك
-        // نفسه، فقط استدعاء واجهتها العامة الجاهزة.
-        var trophyHtml = '';
+        // نفس شاشة الفوز بروليت الإقصاء: فيديو الفوز فوق، العنوان، بطاقة
+        // WINNER بنفسجية — أو بطاقة الفوز المملوكة (js/agp-win-card.js) بدالها
+        // لو الفائز يملك وحدة، بنفس أسطر الروليت — وثلاث أزرار.
+        var cardHtml = '';
         if (winner) {
-            var pointsHtml = awarded
-                ? '<div class="agp-trophy-points">+' + awarded.added + ' نقطة 🎉</div>'
-                : '';
-            trophyHtml = AGP.playerCard.renderTrophyCard(winner, {
-                kind: 'winner',
-                showCrown: true,
-                pointsHtml: pointsHtml,
-                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
-                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']
-            });
+            if (AGP.winCard && AGP.winCard.canShow(winner)) {
+                cardHtml = '<div class="mc-win-owned">' + AGP.winCard.renderHtml(winner, [
+                    awarded ? '+' + awarded.added + ' نقطة' : 'النقاط للحسابات الموثّقة في الموقع',
+                    'المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب',
+                    GAME_NAME
+                ], { pop: false }) + '</div>';
+            } else {
+                cardHtml =
+                    '<div class="mc-win-card-wrap">' +
+                        '<svg class="mc-win-crown" width="60" height="40" viewBox="0 0 60 40" aria-hidden="true">' +
+                            '<polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"/>' +
+                            '<circle cx="6" cy="13" r="4" stroke-width="1.5"/><circle cx="30" cy="4" r="4.5" stroke-width="1.5"/>' +
+                            '<circle cx="54" cy="13" r="4" stroke-width="1.5"/><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"/></svg>' +
+                        '<div class="mc-win-card"><div class="mc-win-shine"></div><div class="mc-win-card-in">' +
+                            '<span class="mc-win-label">WINNER</span>' +
+                            '<span class="mc-win-av">' + avatarHtml(winner) + '</span>' +
+                            '<span class="mc-win-name">' + escapeHtml(playerLabel(winner)) + '</span>' +
+                            '<div class="mc-win-pts">' + (awarded
+                                ? '<b class="mc-win-pts-num">+' + awarded.added + ' نقطة</b><span>تظهر في بروفايلك</span>'
+                                : '<b>—</b><span>النقاط للحسابات الموثّقة في الموقع</span>') + '</div>' +
+                        '</div></div></div>';
+            }
         }
 
         box.innerHTML =
-            '<h2>🏆 انتهت المباراة</h2>' +
-            (winner ? winnerVideoHtml() : '') +
-            (winner
-                ? '<div class="mc-trophy-wrap">' + trophyHtml + '</div>'
-                : '<p class="agp-shell-status" style="text-align:center;">ما فيه فائز واضح لهذي المباراة.</p>') +
-            '<div class="mc-winner-actions">' +
-            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-new-match-btn">🔄 مباراة جديدة</button>' +
-            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-replay-same-btn">🔁 إعادة المباراة (نفس اللاعبين)</button>' +
+            '<div class="mc-win-inner">' +
+                (winner ? winnerVideoHtml() : '') +
+                '<h2>🏆 الفائز في لعبة "' + GAME_NAME + '"</h2>' +
+                (winner
+                    ? '<div class="mc-win-cards">' + cardHtml + '</div>'
+                    : '<p class="mc-win-none">ما فيه فائز واضح لهذي المباراة.</p>') +
+                '<div class="mc-winner-actions">' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-exit" id="mc-exit-btn">الخروج</button>' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-new" id="mc-new-match-btn">مباراة جديدة</button>' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-replay" id="mc-replay-same-btn">إعادة بنفس اللاعبين</button>' +
+                '</div>' +
             '</div>';
 
         box.id = 'agp-shell-box';
         overlay.style.display = 'flex';
 
         if (winner) wireWinnerVideo();
+        document.getElementById('mc-exit-btn').onclick = function () {
+            stopWinnerVideo();
+            homeNavigate();
+        };
         document.getElementById('mc-new-match-btn').onclick = function () {
             stopWinnerVideo();
             window.location.reload();
@@ -1829,12 +1914,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.gameShell.init({
             gameId: GAME_ID,
             gameTitle: GAME_NAME,
-            settingsTitle: 'إعدادات مباراة الكراسي الموسيقية',
+            settingsTitle: GAME_NAME,
             gameExplanation: 'تدور الأفاتارات حول حلقة الكراسي وقت ما تضغط "تدوير" (12 ثانية، أو توقفها يدوياً قبل ' +
                 'لو تبي)، وفجأة تتوقف وتظهر أرقام على كل كرسي. كل لاعب يكتب رقم الكرسي اللي يبيه بالشات — أول وحد ' +
                 'يكتب الرقم الصحيح يفوز فيه. أي لاعب ما يلقى كرسي يُقصى فوراً. عدد الكراسي ينقص كل دورة (تلقائي أو ' +
                 'مخصّص حسب اختيار الاستريمر) لين يبقى لاعب واحد فقط — هو الفائز!',
-            connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
+            connectButtonLabel: 'الدخول للوبي',
             minPlayersToStart: 3,
             logoImage: '../../logo.png',
             homeUrl: '../../games.html',
@@ -1847,9 +1932,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  14) شاشة الإعدادات الأولى + اللوبي + طبقة "جاري الاتصال" — نفس
-     *      تنسيق السلم والثعبان بالضبط (MutationObserver على
-     *      #agp-shell-overlay)، بدون أي تعديل على js/agp-game-shell.js.
+     *  14) شاشة الإعدادات الأولى + اللوبي + طبقة "جاري الاتصال" — بنفس
+     *      صفحات روليت الإقصاء (index.html/lobby.html): هيدر ثابت فيه خروج
+     *      وشعار، عنوان متدرّج، أقسام مرقّمة، وزر بنفسجي واحد. يعيد ترتيب
+     *      عناصر الشل بـMutationObserver على #agp-shell-overlay، بدون أي
+     *      تعديل على js/agp-game-shell.js.
      * ==================================================================== */
     function homeNavigate() {
         var homeBtn = el('agp-header-home-btn');
@@ -1857,13 +1944,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else { window.location.href = '../../games.html'; }
     }
 
-    function makeBackToPlatformBtn() {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'mc-back-to-platform-btn';
-        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
-        btn.addEventListener('click', homeNavigate);
-        return btn;
+    var EXIT_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>' +
+        '<polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>';
+    var CTA_ARROW = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+
+    // هيدر الإعدادات واللوبي (يظهر بـCSS بس لما الشل يعرض وحدة منهم)
+    function ensureErHeader() {
+        var overlay = el('agp-shell-overlay');
+        if (!overlay || el('mc-er-header')) return;
+        var header = document.createElement('header');
+        header.id = 'mc-er-header';
+        header.innerHTML =
+            '<button type="button" class="mc-er-exit">' + EXIT_ICON + '<span>خروج</span></button>' +
+            '<img src="../../logo.png" alt="ألعاب أيمن"><div></div>';
+        header.querySelector('.mc-er-exit').addEventListener('click', homeNavigate);
+        overlay.insertBefore(header, overlay.firstChild);
+    }
+
+    function setCtaLabel(btn, label) {
+        if (btn.getAttribute('data-mc-cta') === label) return;
+        btn.innerHTML = escapeHtml(label) + CTA_ARROW;
+        btn.setAttribute('data-mc-cta', label);
+        btn.classList.add('mc-er-cta');
     }
 
     function layoutInitialSettingsFields(box) {
@@ -1875,62 +1979,62 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var ctl = box.querySelector(dataKeySelector);
             return ctl ? ctl.closest('.agp-shell-row') : null;
         }
-        function cardWith(rows) {
-            var card = document.createElement('div');
-            card.className = 'mc-settings-card';
-            rows.forEach(function (r) { card.appendChild(r); });
-            return card;
+        function section(num, title, rows, full) {
+            var sec = document.createElement('section');
+            sec.className = 'mc-er-section' + (full ? ' mc-er-full' : '');
+            sec.innerHTML = '<div class="mc-er-sec-head"><span class="mc-er-sec-num">' + num + '</span>' +
+                '<span class="mc-er-sec-title">' + title + '</span></div>';
+            rows.filter(Boolean).forEach(function (r) { sec.appendChild(r); });
+            return sec;
         }
 
         var usernameInput = el('agp-tiktok-username');
         var usernameField = usernameInput ? usernameInput.closest('.agp-shell-field') : null;
         var keywordInput = el('agp-keyword');
         var keywordField = keywordInput ? keywordInput.closest('.agp-shell-field') : null;
-
-        var maxPlayersRow = rowFor('[data-key="maxPlayers"]');
-        var followersRow = rowFor('[data-key="followersOnly"]');
-        var deficitModeRow = rowFor('[data-key="chairDeficitMode"]');
-        var deficitStartRow = rowFor('[data-key="customDeficitStart"]');
-        var selectionTimerRow = rowFor('[data-key="selectionTimerSeconds"]');
-        var spinDurationRow = rowFor('[data-key="spinDurationSeconds"]');
+        if (keywordField) {
+            var kwLabel = keywordField.querySelector('label');
+            if (kwLabel) kwLabel.textContent = 'كلمة الدخول';
+            keywordInput.placeholder = 'اكتب كلمة الدخول';
+        }
 
         var scroll = document.createElement('div');
         scroll.className = 'mc-settings-scroll';
         var scrollInner = document.createElement('div');
         scrollInner.className = 'mc-settings-scroll-inner';
         scroll.appendChild(scrollInner);
+        if (usernameField) scrollInner.appendChild(usernameField);
 
-        [usernameField, keywordField, maxPlayersRow, followersRow]
-            .filter(Boolean).forEach(function (fieldEl) { scrollInner.appendChild(fieldEl); });
-
-        // "كروت" — نفس كرت "عدد الفائزين" بالسلم والثعبان. عدد الكراسي
-        // الناقصة (يظهر بس مع "مخصّص") داخل نفس كرت طريقة النقصان.
-        if (deficitModeRow) {
-            var deficitCard = cardWith([deficitModeRow]);
-            if (deficitStartRow) {
-                var cond = document.createElement('div');
-                cond.className = 'mc-conditional-section';
-                cond.appendChild(deficitStartRow);
-                deficitCard.appendChild(cond);
-            }
-            scrollInner.appendChild(deficitCard);
-        }
-        [selectionTimerRow, spinDurationRow].filter(Boolean).forEach(function (row) {
-            scrollInner.appendChild(cardWith([row]));
-        });
-
-        var fade = document.createElement('div');
-        fade.className = 'mc-settings-fade';
-        var glowline = document.createElement('div');
-        glowline.className = 'mc-settings-glowline';
-        scroll.appendChild(fade);
-        scroll.appendChild(glowline);
+        scrollInner.appendChild(section(1, 'الدخول', [
+            keywordField, rowFor('[data-key="maxPlayers"]'), rowFor('[data-key="followersOnly"]')
+        ]));
+        // عدد الكراسي الناقصة يظهر بس مع "مخصّص" (الشل يرسمه حسب الاختيار)
+        scrollInner.appendChild(section(2, 'الكراسي', [
+            rowFor('[data-key="chairDeficitMode"]'), rowFor('[data-key="customDeficitStart"]')
+        ]));
+        scrollInner.appendChild(section(3, 'الوقت', [
+            rowFor('[data-key="selectionTimerSeconds"]'), rowFor('[data-key="spinDurationSeconds"]')
+        ], true));
         box.appendChild(scroll);
 
         var footer = document.createElement('div');
         footer.className = 'mc-settings-footer';
         footer.appendChild(connectBtn);
         box.appendChild(footer);
+    }
+
+    // شارة الاتصال: نص الحالة بكبسولة حمراء/خضراء، والرابط كبسولة بنفسجية جنبها
+    function enhanceConnBadge(box) {
+        var badge = box.querySelector('.agp-shell-conn-badge');
+        if (!badge || badge.querySelector('.mc-er-live')) return;
+        var live = document.createElement('span');
+        live.className = 'mc-er-live';
+        Array.prototype.slice.call(badge.childNodes).forEach(function (n) {
+            if (!(n.classList && n.classList.contains('agp-shell-conn-link'))) live.appendChild(n);
+        });
+        badge.insertBefore(live, badge.firstChild);
+        var link = badge.querySelector('.agp-shell-conn-link');
+        if (link) link.textContent = 'ابدأ البث ونتصل تلقائياً';
     }
 
     function enhanceSettingsScreen() {
@@ -1941,13 +2045,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isInitial = !!el('agp-tiktok-username');
         box.classList.toggle('mc-settings-initial-box', isInitial);
         if (!isInitial) return;
+        ensureErHeader();
+        enhanceConnBadge(box);
         layoutInitialSettingsFields(box);
-        if (box.querySelector('.mc-back-to-platform-btn')) return;
         var connectBtn = el('agp-connect-btn');
-        if (!connectBtn) return;
-        var backBtn = makeBackToPlatformBtn();
-        backBtn.textContent = 'العودة للمنصة ←';
-        connectBtn.insertAdjacentElement('afterend', backBtn);
+        if (connectBtn) setCtaLabel(connectBtn, 'الدخول للوبي');
     }
 
     function enhanceLobbyHeading() {
@@ -1956,7 +2058,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var h2 = box.querySelector('h2');
         if (!h2) return;
         if (h2.getAttribute('data-mc-heading') !== '1') {
-            h2.textContent = 'لوبي الدخول للعبة "' + GAME_NAME + '"';
+            h2.innerHTML = '<span class="mc-er-kicker">' + GAME_NAME + '</span><span class="mc-er-grad">لوبي الدخول</span>';
             h2.setAttribute('data-mc-heading', '1');
         }
     }
@@ -2039,54 +2141,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    function enhanceLobbyWatermarkAndActions() {
+    // كرت "اللاعبين" (كلمة الدخول + العدد + القائمة) وزر بدء واحد، مثل
+    // lobby.html بروليت الإقصاء. الشل يعيد رسم الصندوق كامل أحياناً،
+    // فالتغليف يتكرر بأمان كل مرة.
+    function enhanceLobbyLayout() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
+        ensureErHeader();
 
-        if (!box.querySelector('#mc-lobby-watermark')) {
-            var img = document.createElement('img');
-            img.id = 'mc-lobby-watermark';
-            img.src = '../../logo.png';
-            img.alt = '';
-            box.insertBefore(img, box.firstChild);
+        var hintText = box.querySelector('.agp-join-hint-text');
+        if (hintText && hintText.textContent !== 'كلمة الدخول · اكتبها في الشات') {
+            hintText.textContent = 'كلمة الدخول · اكتبها في الشات';
+        }
+
+        var list = el('agp-lobby-list');
+        if (list) list.classList.add('mc-er-players');
+        var card = box.querySelector('.mc-er-lobby-card');
+        if (!card && list) {
+            card = document.createElement('section');
+            card.className = 'mc-er-lobby-card';
+            var hint = box.querySelector('.agp-join-hint');
+            (hint || list).parentNode.insertBefore(card, hint || list);
+            [hint, el('agp-entrance-stage'), el('agp-entrance-settled-list'), list].forEach(function (n) {
+                if (n) card.appendChild(n);
+            });
         }
 
         var startBtn = el('agp-start-round-btn');
         if (!startBtn) return;
-        if (startBtn.textContent.indexOf('اغلاق اللوبي') === -1) {
-            startBtn.textContent = '🔒 اغلاق اللوبي وبدء المباراة';
-        }
-
-        var row = box.querySelector('.mc-lobby-actions-row');
-        if (!row) {
-            row = document.createElement('div');
+        setCtaLabel(startBtn, 'ابدأ المباراة');
+        if (!startBtn.parentNode.classList.contains('mc-lobby-actions-row')) {
+            var row = document.createElement('div');
             row.className = 'mc-lobby-actions-row';
             startBtn.parentNode.insertBefore(row, startBtn);
             row.appendChild(startBtn);
-            var syncActionsHeight = function () {
-                box.style.setProperty('--mc-actions-h',
-                    (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
-            };
-            syncActionsHeight();
-            if (window.ResizeObserver) new ResizeObserver(syncActionsHeight).observe(row);
-        }
-
-        if (!row.querySelector('.mc-back-to-platform-btn')) {
-            var backBtn = document.createElement('button');
-            backBtn.type = 'button';
-            backBtn.className = 'mc-back-to-platform-btn';
-            backBtn.textContent = '🏠 العودة لمكتبة الألعاب';
-            backBtn.addEventListener('click', function () {
-                window.location.href = '../../games.html';
-            });
-            row.appendChild(backBtn);
         }
     }
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         enhanceLobbyHeading();
-        enhanceLobbyWatermarkAndActions();
+        enhanceLobbyLayout();
         enhanceLobbyFramedCards();
     }
 

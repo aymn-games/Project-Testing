@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
@@ -195,8 +196,8 @@ input::placeholder{color:#6f6a7c}
 //   choice : اختيار واحد        { key, label, options:[...], default:رقم_الخيار }
 //   multi  : اختيار متعدد       { key, label, options:[...], default:[أرقام], minPick }
 //   toggle : تشغيل / إيقاف      { key, label, default:true|false }
-//  خيارات إضافية: dot:'#لون' نقطة ملونة بجانب الاسم
-//  القسم: { title, full:true (بعرض الشاشة), rows:[...] }
+//  خيارات إضافية: dot:'#لون' نقطة ملونة بجانب الاسم · only:'teams'|'solo' يظهر بنمط واحد بس · soloLabel اسم بديل بالفردي
+//  القسم: { title, full:true (بعرض الشاشة), only:'teams'|'solo', rows:[...] }
 // ============================================================
 const GAME = {
   name: 'أسرع إجابة',
@@ -205,16 +206,20 @@ const GAME = {
   lobbyUrl: 'lobby.html'
 };
 const SETTINGS = [
-  { title:'الفريق 1', rows:[
+  { title:'نمط اللعب', full:true, rows:[
+    { type:'choice', key:'mode', label:'النمط', options:['فريقين','فردي'], default:0 }
+  ]},
+  { title:'الفريق 1', only:'teams', rows:[
     { type:'text', key:'team1',    label:'اسم الفريق',    placeholder:'مثلاً: الصقور', default:'', dot:'#a78bfa' },
     { type:'text', key:'keyword1', label:'كلمة الدخول',   placeholder:'مثلاً: صقر',   default:'', dot:'#a78bfa' }
   ]},
-  { title:'الفريق 2', rows:[
+  { title:'الفريق 2', only:'teams', rows:[
     { type:'text', key:'team2',    label:'اسم الفريق',    placeholder:'مثلاً: النمور', default:'', dot:'#38bdf8' },
     { type:'text', key:'keyword2', label:'كلمة الدخول',   placeholder:'مثلاً: نمر',   default:'', dot:'#38bdf8' }
   ]},
   { title:'الدخول', rows:[
-    { type:'number', key:'maxPlayers', label:'عدد اللاعبين لكل فريق', min:1, max:200, step:1, default:20 },
+    { type:'text', key:'keywordS', label:'كلمة الدخول', placeholder:'مثلاً: دخول', default:'', only:'solo' },
+    { type:'number', key:'maxPlayers', label:'عدد اللاعبين لكل فريق', soloLabel:'عدد اللاعبين', min:1, max:200, step:1, default:20 },
     { type:'choice', key:'who',        label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
   ]},
   { title:'المباراة', rows:[
@@ -238,8 +243,11 @@ class Component extends DCLogic {
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
   seg(on){ return {bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'}; }
 
+  // الأقسام/الصفوف الظاهرة حسب نمط اللعب (فريقين أو فردي)
+  isSolo(){ return this.state.values.mode===1; }
+  shown(x){ return !x.only||x.only===(this.isSolo()?'solo':'teams'); }
   buildRow(r,idx){ const v=this.state.values[r.key], t=r.type;
-    const row={label:r.label,dot:r.dot||null,divider:idx>0,isText:t==='text',isNumber:t==='number',isChoice:t==='choice',isToggle:t==='toggle',isMulti:t==='multi',isInline:t!=='multi',value:v,placeholder:r.placeholder||''};
+    const row={label:this.isSolo()&&r.soloLabel||r.label,dot:r.dot||null,divider:idx>0,isText:t==='text',isNumber:t==='number',isChoice:t==='choice',isToggle:t==='toggle',isMulti:t==='multi',isInline:t!=='multi',value:v,placeholder:r.placeholder||''};
     if(t==='text') row.onInput=e=>this.set(r.key,e.target.value);
     if(t==='number'){ const mn=r.min??0, mx=r.max??999, st=r.step??1, clamp=n=>Math.min(mx,Math.max(mn,n));
       row.dec=()=>this.set(r.key,clamp((+v||mn)-st)); row.inc=()=>this.set(r.key,clamp((+v||0)+st));
@@ -277,7 +285,7 @@ class Component extends DCLogic {
     return {
       gameName:GAME.name, fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.map((r,k)=>this.buildRow(r,k))})),
+      sections:SETTINGS.filter(s=>this.shown(s)).map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>this.shown(r)).map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,
       connect:()=>{ if(S.connecting) return; this.setState({connecting:true}); setTimeout(()=>this.setState({live:true,connecting:false}),1400); },
       disconnect:()=>this.setState({live:false}), connLabel:S.connecting?'…':'اتصل بالبث', connOp:S.connecting?.7:1,
@@ -285,7 +293,9 @@ class Component extends DCLogic {
       liveTitle:S.live?'متصل بالبث':'غير متصل بالبث',
       startOp:1,
       start:()=>{
-        const V=S.values; if(!V.team1.trim()||!V.team2.trim()) return this.toastMsg('اكتب اسم كل فريق');
+        const V=S.values;
+        if(this.isSolo()){ if(!V.keywordS.trim()) return this.toastMsg('اكتب كلمة الدخول'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); return this.setState({step:'cats'}); }
+        if(!V.team1.trim()||!V.team2.trim()) return this.toastMsg('اكتب اسم كل فريق');
         if(!V.keyword1.trim()||!V.keyword2.trim()) return this.toastMsg('اكتب كلمة الدخول لكل فريق');
         if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); this.setState({step:'cats'}); },
       onSettings:S.step==='settings', onCats:S.step==='cats', catW:this.catSize()+'px', catCount:S.cats.length,
