@@ -82,7 +82,8 @@ function createGame(roster, settings, hooks) {
                 mafiaSince: 0, notices: [], inspections: []
             };
         }),
-        cards: shuffle(CARDS.slice()).slice(0, 3), usedCards: [], effects: [], silenced: [], silenceNext: [],
+        cards: shuffle(CARDS.filter(function (c) { return S['card_' + c] !== false; })).slice(0, S.cardsCount == null ? 3 : S.cardsCount),   // من الكروت المفعّلة بالإعدادات
+        usedCards: [], effects: [], silenced: [], silenceNext: [],
         night: null, seq: [], chat: [], votes: {}, verdict: null, winner: null
     };
     var chatSeq = 0;

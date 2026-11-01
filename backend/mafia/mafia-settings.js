@@ -19,6 +19,15 @@ var SCHEMA = [
         { k: 'detectives', n: 'عدد المحققين', t: 'num', min: 0, max: 10, step: 1, d: 1 },
         { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مطفي = حسب القواعد: قتيل الليل بدون كشف، والمطرود يظهر فريقه بس' }
     ] },
+    // كروت المافيا: المذيع يفعّل اللي يبيه، وكل مباراة تنسحب منها عشوائي بالعدد المحدد
+    { id: 'cards', n: 'كروت المافيا', f: [
+        { k: 'cardsCount', n: 'عدد الكروت بالمباراة', t: 'num', min: 0, max: 5, step: 1, d: 3, desc: 'تنسحب عشوائي من الكروت المفعّلة' },
+        { k: 'card_recruit', n: '🤝 التجنيد', t: 'bool', d: true, desc: 'بدل القتل: لاعب من المدينة يصير مافيا (من الليلة 3)' },
+        { k: 'card_shield', n: '🛡️ الحماية', t: 'bool', d: true, desc: 'عضو مافيا يطلع للمحقق «من المدينة» لليلتين' },
+        { k: 'card_reveal', n: '👁️ كشف الهوية', t: 'bool', d: true, desc: 'المافيا يعرفون دور لاعب من المدينة' },
+        { k: 'card_mislead', n: '🎭 التضليل', t: 'bool', d: true, desc: 'لاعب بريء يطلع للمحقق «مافيا» لليلتين' },
+        { k: 'card_silence', n: '🤐 الإسكات', t: 'bool', d: true, desc: 'لاعب ما يكتب بنقاش بكرة (يصوّت عادي)' }
+    ] },
     { id: 'time', n: 'الوقت', f: [
         { k: 'mafiaSec', n: 'دور المافيا بالليل', t: 'num', min: 15, max: 120, step: 5, d: 40, u: 'ث' },
         { k: 'doctorSec', n: 'دور الطبيب', t: 'num', min: 10, max: 90, step: 5, d: 25, u: 'ث' },
@@ -49,12 +58,17 @@ function validate(input) {
         });
     });
     out.disguised = Math.min(out.disguised, out.mafia);   // المتخفين من ضمن المافيا
+    out.cardsCount = Math.min(out.cardsCount, enabledCards(out).length);   // ما يتعدى عدد الكروت المفعّلة
     return out;
 }
+
+var CARD_IDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
+/** الكروت المفعّلة بالإعدادات */
+function enabledCards(s) { return CARD_IDS.filter(function (c) { return s['card_' + c] !== false; }); }
 
 /** أقل عدد لاعبين لهالإعدادات: 10 على الأقل، والمافيا أقل من الباقين، ومواطن واحد على الأقل. */
 function minPlayers(s) {
     return Math.max(MIN_ROOM, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1);
 }
 
-module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };
+module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, enabledCards: enabledCards, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };

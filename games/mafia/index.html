@@ -61,6 +61,7 @@
     }, function () { net.send({ t: 'schema' }); });
 
     function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
+    function enabledCards(s) { return ['recruit', 'shield', 'reveal', 'mislead', 'silence'].filter(function (c) { return s['card_' + c] !== false; }); }
     function minPlayers(s) { return Math.max(10, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1); }
 
     function render() {
@@ -82,7 +83,7 @@
             (s.doctors ? '<span class="chip">🩺 ' + s.doctors + ' طبيب</span>' : '') +
             (s.detectives ? '<span class="chip">🕵️ ' + s.detectives + ' محقق</span>' : '') +
             '<span class="chip">🏠 والباقي مواطنين</span>' +
-            '<span class="chip">🃏 3 كروت للمافيا من 5</span></div>' +
+            '<span class="chip">🃏 ' + (s.cardsCount ? s.cardsCount + ' كروت للمافيا من ' + enabledCards(s).length : 'بدون كروت') + '</span></div>' +
             '<div class="note" style="padding-top:6px">تحتاج <b style="color:#fff">' + minPlayers(s) + '</b> لاعبين على الأقل لهالإعدادات، والروم يقبل لين ' + s.maxPlayers + ' لاعب. فوق 25 لاعب تتوزع الأسماء على أحياء.</div></section>' +
             // طريقة دخول اللاعبين (تتكرر باللوبي مع الباركود ورقم الغرفة)
             '<section class="sec full' + anim + '" style="animation-delay:.26s"><div class="sec-h"><span class="sec-n">' + (schema.length + 2) + '</span><span class="sec-t">طريقة الدخول</span></div>' +
@@ -97,6 +98,7 @@
         if (f.t === 'bool') cur[k] = !cur[k];
         else cur[k] = Math.max(f.min, Math.min(f.max, cur[k] + f.step * Number(b.getAttribute('data-d'))));
         if (cur.disguised > cur.mafia) cur.disguised = cur.mafia;   // المتخفين من ضمن المافيا
+        cur.cardsCount = Math.min(cur.cardsCount, enabledCards(cur).length);   // ما يتعدى الكروت المفعّلة
         NET.setup(cur); render();
     });
 
