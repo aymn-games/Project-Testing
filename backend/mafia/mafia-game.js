@@ -7,7 +7,7 @@
  *
  * الأدوار: مواطن · مافيا · متخفي (من المافيا؛ أول فحص ناجح له يطلع «من المدينة») ·
  *   طبيب (ما يكرر نفس الشخص ليلتين ورا بعض، ويحمي نفسه مرة وحدة بالمباراة) ·
- *   محقق (النتيجة: مافيا / من المدينة / تعذر التحقيق). الفريق: faction = 'mafia' | 'town'.
+ *   محقق (النتيجة: مافيا / من المدينة — كرت الحماية يطلّع المافيا «من المدينة»). الفريق: faction = 'mafia' | 'town'.
  *
  * كروت المافيا: 3 مختلفة عشوائياً من 5، مخزون مشترك وكل كرت مرة وحدة:
  *   recruit (تجنيد — بديل القتل، من الليلة 3) · shield / reveal / mislead / silence
@@ -187,7 +187,7 @@ function createGame(roster, settings, hooks) {
             var shield = G.effects.find(function (e) { return e.card === 'shield' && e.target === t.id; });
             var mislead = G.effects.find(function (e) { return e.card === 'mislead' && e.target === t.id; });
             var res;
-            if (shield) { res = 'blocked'; triggered.push(shield); }
+            if (shield) { res = 'town'; triggered.push(shield); }   // الحماية: عضو المافيا يطلع للمحقق «من المدينة»
             else if (mislead) { res = 'mafia'; triggered.push(mislead); }
             else if (unscanned[t.id]) { res = 'town'; t.disguisedScanned = true; }   // كل المحققين بنفس الليلة يطلع لهم «من المدينة»
             else res = t.faction === 'mafia' ? 'mafia' : 'town';
