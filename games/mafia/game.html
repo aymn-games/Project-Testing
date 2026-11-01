@@ -501,6 +501,8 @@ button { font-family: inherit; cursor: pointer; }
                     if (u > 6650 && u < 7250) flash('#c40000', 0.6 * (1 - (u - 6650) / 600));
                 } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
+                else if (sh.k === 'heal') caption('🩺 الطبيب يعالج…', 'حمى أحد الليلة — ومين هو؟ سر', '', '#7ee2a6');
+                else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');
                 else if (sh.k === 'result') {
                     if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
                     else caption('طلع الصبح ☀️', sh.recruited ? '🤝 بس المافيا جنّدت مواطن!' : sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#c4b5fd');

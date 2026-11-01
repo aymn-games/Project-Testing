@@ -35,7 +35,7 @@ var CARDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
 var CARD_NAMES = { recruit: 'التجنيد', shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' };
 var ROLE_NAMES = { citizen: 'مواطن', mafia: 'مافيا', disguised: 'متخفي', doctor: 'طبيب', detective: 'محقق' };
 // أطوال لقطات الفجر (لازم تطابق مدد المشاهد في games/mafia/mafia-scene.js)
-var SHOT = { intro: 3000, inspect: 6500, attack: 10000, save: 6000, quiet: 5000, result: 5000 };
+var SHOT = { intro: 3000, inspect: 6500, attack: 10000, save: 6000, quiet: 5000, heal: 5500, noheal: 3500, result: 5000 };
 // لحظة وصول جسم الضحية للأرض داخل لقطة الهجوم (ATK.down بالمشهد) — قبلها يبقى «حي» بحالة البث
 var ATTACK_DOWN_MS = 7900;
 
@@ -233,6 +233,11 @@ function createGame(roster, settings, hooks) {
             shot('attack', { target: opTarget.id, saved: !!saved });
             if (saved) shot('save', { target: opTarget.id });
         } else shot('quiet');
+        // الطبيب: لو حمى أحد (وما صار إنقاذ) مشهد علاج بدون ما ينكشف مين، ولو ما اختار أحد نوضّح هالشي
+        if (S.doctors > 0 && !saved) {
+            var docActed = G.players.some(function (p) { return p.role === 'doctor' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
+            shot(docActed ? 'heal' : 'noheal');
+        }
         shot('result', { victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited });
 
         G.lastNight = { round: G.round, victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
@@ -378,7 +383,7 @@ function createGame(roster, settings, hooks) {
                 N.actions[id] = it.id;
             } else return;
             changed();
-            if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 2000); changed(); }
+            if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 600); changed(); }   // أول ما يختارون (والمافيا يتفقون) ينتهي الدور
             return;
         }
         if (G.phase === 'vote' && a === 'vote') {

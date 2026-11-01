@@ -646,7 +646,12 @@ export function createStage(container, getFrame, opts) {
         // الليلة الهادية: عيون بالظلام، نبض، وانسحاب
         const quiet = [{ t: 0, k: 'whoosh', g: 0.5 }, { t: 300, k: 'eyes' }, { t: 1300, k: 'heart', g: 0.4 }, { t: 2100, k: 'heart', g: 0.45 }, { t: 2600, k: 'whoosh', g: 0.4 }, { t: 2900, k: 'heart', g: 0.35 }, { t: 3900, k: 'owl' }];
         for (let t = 4250; t < 5000; t += 260) quiet.push({ t, k: 'step', g: 0.12, pan: -0.3 });
+        // العلاج: خطوات الطبيب، ووقت العلاج نبض يقوى
+        const heal = [{ t: 0, k: 'whoosh', g: 0.5 }];
+        for (let t = 100; t < 1900; t += 260) heal.push({ t, k: 'step', g: 0.35, pan: 0.2 });
+        heal.push({ t: 2100, k: 'heal' }, { t: 2700, k: 'heart', g: 0.35 }, { t: 3400, k: 'heart', g: 0.5 }, { t: 4300, k: 'rise' });
         return {
+            heal, noheal: [{ t: 0, k: 'whoosh', g: 0.4 }, { t: 600, k: 'owl' }],
             attack: atk, save, inspect, quiet, intro: [{ t: 0, k: 'whoosh', g: 0.8 }, { t: 900, k: 'owl' }],
             result: [{ t: 300, k: 'bell' }], resultVictim: [{ t: 1700, k: 'mourn' }]
         };
@@ -822,7 +827,7 @@ export function createStage(container, getFrame, opts) {
         const phase = G ? G.phase : 'lobby';
         const sh = currentShot(G, now);
         // السوق وغرفة التحقيق ما ينرسمون إلا بلقطاتهم، واللاعبين بالساحة يختفون وقتها (أداء)
-        market.visible = !!(sh && (sh.s.k === 'attack' || sh.s.k === 'save'));
+        market.visible = !!(sh && (sh.s.k === 'attack' || sh.s.k === 'save' || sh.s.k === 'heal'));
         room.visible = !!(sh && sh.s.k === 'inspect');
         const away = market.visible || room.visible;
         info = { shot: sh ? sh.s.k : null, u: sh ? sh.u : 0, s: sh ? sh.s : null };
@@ -1065,6 +1070,39 @@ export function createStage(container, getFrame, opts) {
                     else if (u < 4600) { const a = lerp(0.35, 1.5, ease(span(u, 2000, 4600))); cam = shotCam([0.8 + Math.cos(a) * 2.5, 4.3, Z + Math.sin(a) * 2.5], [0.8, 0.35, Z + 0.4], 0.01); }   // من فوق تدور
                     else { const k = ease(span(u, 4600, s.dur)); cam = shotCam([lerp(2.9, 2.4, k), lerp(0.6, 0.8, k), Z - lerp(2.2, 1.8, k)], [0.3, lerp(0.8, 1.35, k), Z + 0.3], 0.02); }   // يقوم: لقطة بطولية من تحت (جهة الزقاق عشان الطبيب ما يغطيه)
                 }
+            } else if (s.k === 'heal') {
+                // الطبيب يعالج مريض مجهول (رمادي بدون اسم) بالسوق: يمشي له، يركع، هالة خضرا، والمريض يقوم
+                const Z = STREET_Z, w = marketWalker({ skin: 2, hair: 0, hairC: 0, shirt: 0, pants: 0 });
+                w.wrap.visible = true; w.root.position.set(0, 0, 0); standPose(w); setGrey(w, 0.9);
+                w.wrap.rotation.y = Math.PI / 2; w.wrap.position.set(STOP_X, 0, Z);
+                const sit = 1 - ease(span(u, 4300, 5000));
+                w.root.rotation.set(0, 0, 0); w.body.position.y = -sit * 0.45; w.body.rotation.x = sit * 0.35; w.head.rotation.set(sit * 0.4, 0, 0);
+                w.armL.rotation.set(-0.3 - (1 - sit) * 1.2, 0, -0.3);
+                const p = mw(STOP_X, 0, Z);
+                doctor.root.visible = true; standPose(doctor); doctor.body.rotation.set(0, 0, 0);
+                const walk = ease(span(u, 0, 1900)), from = mw(7.5, 0, Z + 0.4), to = mw(STOP_X + 1.0, 0, Z + 0.3);
+                doctor.root.position.lerpVectors(from, to, walk);
+                if (walk < 1) { walkPose(doctor, u / 110, 0.6); doctor.root.position.y = Math.abs(Math.sin(u / 110)) * 0.05; }
+                doctor.root.lookAt(walk < 1 ? to.x : p.x, 0, walk < 1 ? to.z : p.z);
+                const kneel = ease(span(u, 1900, 2200)) * (1 - ease(span(u, 4300, 4800)));
+                doctor.root.position.y -= kneel * 0.25; doctor.body.rotation.x += kneel * 0.15;
+                if (kneel > 0.5) doctor.armR.rotation.set(-1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
+                const healK = span(u, 2100, 4600);
+                if (healK > 0 && healK < 1) {
+                    healPts.visible = true; healRing.visible = true;
+                    healLight.position.set(p.x, 1.2, p.z); healLight.intensity = Math.sin(healK * Math.PI) * 22;
+                    for (let i = 0; i < HEAL; i++) { const q = (healK * 2 + i / HEAL) % 1, a = i * 2.4 + u / 500; healPos[i * 3] = p.x + Math.cos(a) * (0.9 - q * 0.6); healPos[i * 3 + 1] = q * 2.6; healPos[i * 3 + 2] = p.z + Math.sin(a) * (0.9 - q * 0.6); }
+                    healGeo.attributes.position.needsUpdate = true;
+                    healRing.position.set(p.x, 0.05 + healK * 1.8, p.z); healRing.scale.setScalar(1 + healK); healRing.material.opacity = 1 - healK;
+                }
+                const hand = (amp) => [Math.sin(u / 310) * amp, Math.sin(u / 260) * amp * 0.7, Math.cos(u / 230) * amp * 0.5];
+                const shotCam = (c, l, amp) => { const h = hand(amp), c0 = mw(c[0] + h[0], c[1] + h[1], c[2] + h[2]), l0 = mw(l[0], l[1], l[2]); return [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; };
+                if (u < 1900) cam = shotCam([STOP_X - 3.2, 1.8, Z + 4.4], [STOP_X + 2.4, 1.0, Z + 0.4], 0.02);   // الطبيب جاي بالشارع والمريض قدّامنا
+                else { const a = lerp(2.0, 1.55, ease(span(u, 1900, s.dur))); cam = shotCam([STOP_X + 0.5 + Math.cos(a) * 3.8, 2.4, Z + Math.sin(a) * 3.8], [STOP_X + 0.5, 0.75, Z + 0.3], 0.01); }   // يدور حول العلاج من جهة ما يغطي فيها الطبيب المريض
+            } else if (s.k === 'noheal') {
+                // الطبيب ما اختار أحد: لقطة هادية للساحة النايمة
+                const k = ease(u / s.dur), [R0, H0] = pull(14, 6.5);
+                cam = camAt(ORIGIN, [lerp(1.5, -1.5, k), H0, R0], [0, 1.2, 0], 0);
             } else if (s.k === 'quiet') {
                 // ليلة هادية: المافيا يراقب البلدة النايمة من الظلام، ويقرر ينسحب
                 const LR = Math.max(11, outerR + 3.2), a = 2.3, out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
