@@ -124,7 +124,7 @@ function accountOf(auth) {
     if (!u) return null;
     var tk = u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null, fr = null;
     if (tk) { try { fr = _frameOf(tk) || null; } catch (err) { logger.error('Mafia: frame lookup failed:', err); } }
-    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || u.username || tk || ''), avatar: u.tiktok_avatar_url || null, tiktok: tk, frame: fr };
+    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || u.username || tk || ''), avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
 }
 
 function onMessage(client, msg) {

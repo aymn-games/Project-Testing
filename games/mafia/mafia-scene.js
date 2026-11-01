@@ -519,6 +519,47 @@ export function createStage(container, getFrame, opts) {
     knife.position.set(0, -0.56, 0); knife.scale.setScalar(1.3); mafioso.armR.add(knife);
     const evilLight = new THREE.PointLight('#ff2a2a', 0, 7, 1.3); scene.add(evilLight);
     const doctor = buildChar({ skin: 2 }, { outfit: 'doctor' }); scene.add(doctor.root); doctor.root.visible = false; standUp(doctor);
+
+    // ---------------------------------------------------------------- العيادة (الطبيب يحمي لاعب ما انهاجم)
+    const CLINIC = new THREE.Vector3(-80, 0, 0);
+    const clinic = new THREE.Group(); clinic.position.copy(CLINIC); scene.add(clinic); clinic.visible = false;
+    const clinicBox = new THREE.Mesh(new THREE.BoxGeometry(10, 5.5, 10), new THREE.MeshStandardMaterial({ color: '#cfe7e4', roughness: 1, side: THREE.BackSide, map: canvasTex(256, 256, (ctx) => { ctx.fillStyle = '#d8ecea'; ctx.fillRect(0, 0, 256, 256); ctx.fillStyle = '#9fcfca'; ctx.fillRect(0, 150, 256, 106); ctx.fillStyle = '#7fbab4'; ctx.fillRect(0, 146, 256, 8); }) }));
+    clinicBox.position.y = 2.75; clinicBox.receiveShadow = true; clinic.add(clinicBox);
+    const tiles = mesh(new THREE.PlaneGeometry(9.9, 9.9), new THREE.MeshStandardMaterial({ color: '#e9f1f0', roughness: 0.6, map: canvasTex(256, 256, (ctx) => { ctx.fillStyle = '#eef5f4'; ctx.fillRect(0, 0, 256, 256); ctx.strokeStyle = '#c7d9d7'; ctx.lineWidth = 3; for (let i = 0; i <= 256; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke(); } }) }), 0, 0.01, 0);
+    tiles.rotation.x = -Math.PI / 2; tiles.material.map.wrapS = tiles.material.map.wrapT = THREE.RepeatWrapping; tiles.material.map.repeat.set(3, 3); clinic.add(tiles);
+    // السرير
+    const bed = new THREE.Group(); bed.position.set(0, 0, -0.6); clinic.add(bed);
+    bed.add(mesh(new THREE.BoxGeometry(1.5, 0.12, 3.0), mat('#9aa7b0', { metalness: 0.5, roughness: 0.4 }), 0, 0.75, 0));
+    bed.add(mesh(new THREE.BoxGeometry(1.4, 0.22, 2.9), mat('#ffffff'), 0, 0.92, 0));
+    bed.add(mesh(new THREE.BoxGeometry(1.42, 0.1, 1.9), mat('#5fb3a8'), 0, 1.32, 0.55));   // البطانية فوق المريض
+    bed.add(mesh(new THREE.BoxGeometry(0.9, 0.18, 0.45), mat('#f4f6f8'), 0, 1.1, -1.2));    // المخدة
+    bed.add(mesh(new THREE.BoxGeometry(1.5, 0.9, 0.08), mat('#8d9aa3', { metalness: 0.5 }), 0, 1.1, -1.5));
+    [[-0.65, -1.35], [0.65, -1.35], [-0.65, 1.35], [0.65, 1.35]].forEach(([x, z]) => bed.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.75, 8), mat('#8d9aa3', { metalness: 0.6 }), x, 0.37, z)));
+    // المريض (مجهول: رمادي بدون اسم)
+    const patient = buildChar({ skin: 2, hair: 0, hairC: 0, shirt: 0, pants: 0 }, {}); bed.add(patient.root);
+    patient.root.position.set(0, 1.05, 0.1); patient.root.rotation.set(-Math.PI / 2, 0, 0);
+    // جهاز نبض القلب + مغذي + خزانة بصليب أحمر
+    const monitor = new THREE.Group(); monitor.position.set(1.4, 0, -1.6); clinic.add(monitor);
+    monitor.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 8), mat('#6b7780', { metalness: 0.6 }), 0, 0.8, 0));
+    monitor.add(mesh(new THREE.BoxGeometry(0.85, 0.6, 0.12), mat('#20262b'), 0, 1.85, 0));
+    const ecgCanvas = document.createElement('canvas'); ecgCanvas.width = 256; ecgCanvas.height = 160;
+    const ecgTex = new THREE.CanvasTexture(ecgCanvas); ecgTex.colorSpace = THREE.SRGBColorSpace;
+    const ecgScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.46), new THREE.MeshBasicMaterial({ map: ecgTex })); ecgScreen.position.set(0, 1.85, 0.07); monitor.add(ecgScreen);
+    monitor.rotation.y = -0.6;
+    function drawEcg(u, strong) {
+        const c = ecgCanvas.getContext('2d'); c.fillStyle = '#04120c'; c.fillRect(0, 0, 256, 160);
+        c.strokeStyle = strong ? '#5dff9a' : '#2fb36a'; c.lineWidth = 4; c.beginPath();
+        for (let x = 0; x <= 256; x += 2) { const ph = ((x + u / 6) % 128) / 128, beat = ph > 0.45 && ph < 0.55 ? Math.sin((ph - 0.45) / 0.1 * Math.PI * 2) * (strong ? 60 : 30) : 0; const y = 80 - beat; x ? c.lineTo(x, y) : c.moveTo(x, y); }
+        c.stroke(); c.fillStyle = strong ? '#5dff9a' : '#2fb36a'; c.font = 'bold 28px sans-serif'; c.fillText(strong ? '♥ 82' : '♥ 41', 150, 40); ecgTex.needsUpdate = true;
+    }
+    const iv = new THREE.Group(); iv.position.set(-1.3, 0, -1.4); clinic.add(iv);
+    iv.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 8), mat('#9aa7b0', { metalness: 0.6 }), 0, 1.1, 0));
+    iv.add(mesh(new THREE.BoxGeometry(0.22, 0.32, 0.08), mat('#cfeaff', { transparent: true, opacity: 0.8 }), 0.12, 2.05, 0));
+    const cabinet = mesh(new THREE.BoxGeometry(1.4, 2.0, 0.6), mat('#f2f5f6'), -3.2, 1.0, -4.4); clinic.add(cabinet);
+    cabinet.add(mesh(new THREE.BoxGeometry(0.5, 0.14, 0.02), mat('#e2483d'), 0, 0.5, 0.31)); cabinet.add(mesh(new THREE.BoxGeometry(0.14, 0.5, 0.02), mat('#e2483d'), 0, 0.5, 0.31));
+    const clinicLight = new THREE.PointLight('#fff6e8', 14, 14, 1.3); clinicLight.position.set(0.5, 4.6, 1.5); clinic.add(clinicLight);
+    const clinicFill = new THREE.PointLight('#a8fff0', 5, 10, 1.4); clinicFill.position.set(-3, 3, 3); clinic.add(clinicFill);
+    clinic.add(mesh(new THREE.BoxGeometry(2.4, 0.08, 0.5), new THREE.MeshBasicMaterial({ color: '#ffffff' }), 0.5, 5.45, 1.5));   // لمبة السقف
     const bag = new THREE.Group(); bag.add(mesh(new THREE.BoxGeometry(0.42, 0.3, 0.2), mat('#b22a2a')));
     bag.add(mesh(new THREE.BoxGeometry(0.2, 0.06, 0.205), mat('#ffffff'))); bag.add(mesh(new THREE.BoxGeometry(0.06, 0.2, 0.205), mat('#ffffff')));
     bag.position.set(0, -0.7, 0.05); bag.scale.setScalar(1.3); doctor.armL.add(bag);
@@ -646,7 +687,12 @@ export function createStage(container, getFrame, opts) {
         // الليلة الهادية: عيون بالظلام، نبض، وانسحاب
         const quiet = [{ t: 0, k: 'whoosh', g: 0.5 }, { t: 300, k: 'eyes' }, { t: 1300, k: 'heart', g: 0.4 }, { t: 2100, k: 'heart', g: 0.45 }, { t: 2600, k: 'whoosh', g: 0.4 }, { t: 2900, k: 'heart', g: 0.35 }, { t: 3900, k: 'owl' }];
         for (let t = 4250; t < 5000; t += 260) quiet.push({ t, k: 'step', g: 0.12, pan: -0.3 });
+        // العلاج: خطوات الطبيب، ووقت العلاج نبض يقوى
+        const heal = [{ t: 0, k: 'whoosh', g: 0.5 }];
+        for (let t = 100; t < 1900; t += 260) heal.push({ t, k: 'step', g: 0.35, pan: 0.2 });
+        heal.push({ t: 2100, k: 'heal' }, { t: 2700, k: 'heart', g: 0.35 }, { t: 3400, k: 'heart', g: 0.5 }, { t: 4300, k: 'rise' });
         return {
+            heal, noheal: [{ t: 0, k: 'whoosh', g: 0.4 }, { t: 600, k: 'owl' }],
             attack: atk, save, inspect, quiet, intro: [{ t: 0, k: 'whoosh', g: 0.8 }, { t: 900, k: 'owl' }],
             result: [{ t: 300, k: 'bell' }], resultVictim: [{ t: 1700, k: 'mourn' }]
         };
@@ -771,7 +817,7 @@ export function createStage(container, getFrame, opts) {
         camPos.lerp(camTarget, 0.06); camLook.lerp(lookTarget, 0.06);
     }
     // بالرومات الكبيرة الكاميرا تكون برا أبعد حلقة وأعلى، عشان ما تنحجب بالرؤوس القريبة
-    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7), h + extra * 1.1]; }
+    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7) * 1.15, (h + extra * 1.1) * 1.12]; }   // الكاميرا أبعد شوي عن الحلقة
     function orbit(t, r, h, speed) { const a = t * (speed || 0.05) + 0.6, [R, H] = pull(r, h); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 1.0, 0); }
     function seatWorld(v, out) { return (out || new THREE.Vector3()).set(v.seat.x, 0, v.seat.z); }
 
@@ -824,10 +870,11 @@ export function createStage(container, getFrame, opts) {
         // السوق وغرفة التحقيق ما ينرسمون إلا بلقطاتهم، واللاعبين بالساحة يختفون وقتها (أداء)
         market.visible = !!(sh && (sh.s.k === 'attack' || sh.s.k === 'save'));
         room.visible = !!(sh && sh.s.k === 'inspect');
-        const away = market.visible || room.visible;
+        clinic.visible = !!(sh && sh.s.k === 'heal');
+        const away = market.visible || room.visible || clinic.visible;
         info = { shot: sh ? sh.s.k : null, u: sh ? sh.u : 0, s: sh ? sh.s : null };
         if (sh && CUES[sh.s.k]) runCues('shot' + G.phaseAt + ':' + sh.s.at, sh.u, sh.s.k === 'result' && sh.s.victim ? CUES.resultVictim : CUES[sh.s.k]);
-        onAmbience(market.visible ? 'market' : room.visible ? 'room' : dayK > 0.5 ? 'plaza-day' : 'plaza-night');
+        onAmbience(market.visible ? 'market' : room.visible || clinic.visible ? 'room' : dayK > 0.5 ? 'plaza-day' : 'plaza-night');
 
         // ----- النار
         flames.forEach((f, i) => { const k = 1 + Math.sin(T * (9 + i * 3) + i) * 0.08 + Math.sin(T * 23 + i * 5) * 0.05; f.scale.set(1 + Math.sin(T * 7 + i) * 0.06, k, 1 + Math.cos(T * 8 + i) * 0.06); f.rotation.y = T * (0.6 + i * 0.3); });
@@ -920,6 +967,8 @@ export function createStage(container, getFrame, opts) {
                 const k = ease(u / s.dur), [R0, H0] = pull(15, 7.5);
                 cam = camAt(ORIGIN, [lerp(-1.5, 0, k), lerp(H0 + 2.5, H0, k), lerp(R0 + 2.5, R0, k)], [0, lerp(3, 1, k), 0], 0);
             } else if (s.k === 'inspect') {
+                // تصوير أبعد شوي: نبعّد الكاميرا عن نقطة النظر ×1.25 (وتبقى داخل الغرفة)
+                const camRoom = (c, l, amp) => { const f = 1.25, x = Math.max(-4.5, Math.min(4.5, l[0] + (c[0] - l[0]) * f)), y = Math.min(5.4, l[1] + (c[1] - l[1]) * f), z = Math.max(-4.5, Math.min(4.5, l[2] + (c[2] - l[2]) * f)); return camAt(ROOM, [x, y, z], l, amp); };
                 // غرفة التحقيق: تأسيس ← فوق كتف المحقق ← ضربة الطاولة ← وجه المشتبه ← الجوال يضيء بالنتيجة
                 const slamU = 3250, swing = 0.1 + 0.18 * Math.exp(-Math.max(0, u - slamU) / 900) * (u > slamU ? 1 : 0);
                 lampPivot.rotation.z = Math.sin(u / 600) * swing;
@@ -937,11 +986,11 @@ export function createStage(container, getFrame, opts) {
                 secH.rotation.z = -Math.floor(u / 1000) * TAU / 60 - 1.2; minH.rotation.z = -0.9;
                 phoneScreen.emissiveIntensity = u > 5300 ? 1.6 + Math.sin(u / 90) * 0.6 : 0;
                 hemi.intensity = 0.06; sky.intensity = 0;
-                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camAt(ROOM, [lerp(3.1, 2.8, k), lerp(3.4, 3.1, k), lerp(3.0, 2.7, k)], [0, 1.2, 0], 0.004); }
-                else if (u < slamU) cam = camAt(ROOM, [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.004);                 // فوق كتف المحقق
-                else if (u < 3700) cam = camAt(ROOM, [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.004);                          // الضربة من الجنب
-                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camAt(ROOM, [lerp(0.85, 0.75, k), 1.8, lerp(0.65, 0.5, k)], [0, 1.5, -1.35], 0.003); }   // وجه المشتبه
-                else { const k = ease(span(u, 5200, s.dur)); cam = camAt(ROOM, [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
+                if (u < 1500) { const k = ease(span(u, 0, 1500)); cam = camRoom( [lerp(3.1, 2.8, k), lerp(3.4, 3.1, k), lerp(3.0, 2.7, k)], [0, 1.2, 0], 0.004); }
+                else if (u < slamU) cam = camRoom( [1.0, 2.45, 3.35], [-0.1, 1.35, -1.35], 0.004);                 // فوق كتف المحقق
+                else if (u < 3700) cam = camRoom( [2.3, 1.45, 0.9], [0, 1.1, 0.1], 0.004);                          // الضربة من الجنب
+                else if (u < 5200) { const k = ease(span(u, 3700, 5200)); cam = camRoom( [lerp(0.85, 0.75, k), 1.8, lerp(0.65, 0.5, k)], [0, 1.5, -1.35], 0.003); }   // وجه المشتبه
+                else { const k = ease(span(u, 5200, s.dur)); cam = camRoom( [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
                 // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
                 const w = marketWalker(vt.p.look), Z = STREET_Z;
@@ -1063,6 +1112,38 @@ export function createStage(container, getFrame, opts) {
                     else if (u < 4600) { const a = lerp(0.35, 1.5, ease(span(u, 2000, 4600))); cam = shotCam([0.8 + Math.cos(a) * 2.5, 4.3, Z + Math.sin(a) * 2.5], [0.8, 0.35, Z + 0.4], 0.01); }   // من فوق تدور
                     else { const k = ease(span(u, 4600, s.dur)); cam = shotCam([lerp(2.9, 2.4, k), lerp(0.6, 0.8, k), Z - lerp(2.2, 1.8, k)], [0.3, lerp(0.8, 1.35, k), Z + 0.3], 0.02); }   // يقوم: لقطة بطولية من تحت (جهة الزقاق عشان الطبيب ما يغطيه)
                 }
+            } else if (s.k === 'heal') {
+                // العيادة: الطبيب يدخل ← يوقف جنب السرير ← هالة خضرا والنبض يقوى ← المريض يقعد (مجهول بدون اسم)
+                setGrey(patient, 0.85);
+                standPose(patient); patient.body.position.y = 0; patient.root.rotation.set(-Math.PI / 2, 0, 0); patient.root.position.set(0, 1.12, 1.0);
+                const wake = ease(span(u, 4300, 4900));   // يصحى: يفتح عيونه ويرفع يده
+                patient.eyes.forEach((e) => { e.scale.y = e.userData.sy * (0.15 + wake * 0.85); e.visible = true; });
+                patient.head.rotation.set(0, Math.sin(u / 500) * 0.2 * wake, 0); patient.armR.rotation.set(-wake * 2.2 + Math.sin(u / 180) * 0.25 * wake, 0, 0.2);
+                const cw = (x, y, z) => new THREE.Vector3(CLINIC.x + x, CLINIC.y + y, CLINIC.z + z);
+                doctor.root.visible = true; standPose(doctor); doctor.body.rotation.set(0, 0, 0); setGrey(doctor, 0);
+                const walk = ease(span(u, 0, 1800)), from = cw(3.6, 0, 3.6), to = cw(1.15, 0, -0.3), bedP = cw(0, 0, -0.5);
+                doctor.root.position.lerpVectors(from, to, walk);
+                if (walk < 1) { walkPose(doctor, u / 120, 0.6); doctor.root.position.y = Math.abs(Math.sin(u / 120)) * 0.05; }
+                doctor.root.lookAt(walk < 1 ? to.x : bedP.x, 0, walk < 1 ? to.z : bedP.z);
+                const treat = span(u, 1900, 4400) > 0 && u < 4400;
+                if (treat) { doctor.armR.rotation.set(-1.3 + Math.sin(u / 160) * 0.18, 0, 0.15); doctor.armL.rotation.set(-1.0 + Math.cos(u / 190) * 0.12, 0, -0.15); doctor.body.rotation.x = 0.15; }
+                const healK = span(u, 2000, 4500), hp = cw(0, 1.1, -0.5);
+                if (healK > 0 && healK < 1) {
+                    healPts.visible = true; healRing.visible = true;
+                    healLight.position.set(hp.x, 2.2, hp.z); healLight.intensity = Math.sin(healK * Math.PI) * 20;
+                    for (let i = 0; i < HEAL; i++) { const q = (healK * 2 + i / HEAL) % 1, a = i * 2.4 + u / 500; healPos[i * 3] = hp.x + Math.cos(a) * (0.8 - q * 0.5); healPos[i * 3 + 1] = 1.0 + q * 2.0; healPos[i * 3 + 2] = hp.z + Math.sin(a) * (1.3 - q * 0.8); }
+                    healGeo.attributes.position.needsUpdate = true;
+                    healRing.position.set(hp.x, 1.1 + healK * 1.4, hp.z); healRing.scale.setScalar(1 + healK); healRing.material.opacity = 1 - healK;
+                }
+                drawEcg(u, u > 3300);
+                if (u < 1800) { const k = ease(span(u, 0, 1800)); cam = camAt(CLINIC, [lerp(-3.8, -3.4, k), 3.2, lerp(3.8, 3.4, k)], [0.6, 1.0, -0.4], 0.005); }   // تأسيس: الغرفة والسرير والطبيب داخل
+                else if (u < 3300) cam = camAt(CLINIC, [-2.2, 2.3, 1.6], [0.3, 1.2, -0.6], 0.004);                                 // العلاج من جهة السرير
+                else if (u < 4300) { const k = ease(span(u, 3300, 4300)); cam = camAt(CLINIC, [lerp(-0.7, -0.4, k), 2.3, lerp(-0.7, -0.9, k)], [1.4, 1.8, -1.6], 0.002); }   // لقطة قريبة: شاشة النبض تقوى
+                else { const k = ease(span(u, 4300, s.dur)); cam = camAt(CLINIC, [lerp(-2.4, -3.0, k), 2.4, lerp(1.2, 1.8, k)], [0.2, 1.3, -0.9], 0.004); }   // المريض يصحى
+            } else if (s.k === 'noheal') {
+                // الطبيب ما اختار أحد: لقطة هادية للساحة النايمة
+                const k = ease(u / s.dur), [R0, H0] = pull(14, 6.5);
+                cam = camAt(ORIGIN, [lerp(1.5, -1.5, k), H0, R0], [0, 1.2, 0], 0);
             } else if (s.k === 'quiet') {
                 // ليلة هادية: المافيا يراقب البلدة النايمة من الظلام، ويقرر ينسحب
                 const LR = Math.max(11, outerR + 3.2), a = 2.3, out = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
