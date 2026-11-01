@@ -378,6 +378,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 43.28, nameTopPct: 38.88, nameWidthPct: 32.23, nameHeightPct: 33.72,
             printedName: true
         },
+        // إطار "الخفاش البرونزي" — منح محدود (خارج المتجر وعرض الإطارات).
+        // مقاس بالبكسل على 2157×729: نافذة المحتوى = أعلى/أسفل بكسل غير شفاف
+        // (20→711)، مربع الصورة = حدود الفتحة الدائرية الشفافة (392→846 ×
+        // 127→566)، ولوح الاسم = داخل اللوح بعيداً عن الماستين بالنص (920→1915
+        // × 250→475). اللوح بني غامق — اسم أبيض افتراضي.
+        'frame-bronze-bat.png': {
+            canvasW: 2157, canvasH: 729, contentTop: 20, contentHeight: 692,
+            avatarLeftPct: 18.17, avatarTopPct: 15.46, avatarWidthPct: 21.09, avatarHeightPct: 63.58,
+            nameLeftPct: 42.65, nameTopPct: 33.24, nameWidthPct: 46.18, nameHeightPct: 32.66
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
