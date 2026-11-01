@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>حجرة ورقة مقص — الإعدادات</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!-- إعدادات بطولة «حجرة ورقة مقص» — تنحفظ بـ localStorage 'rps-settings' وتقرأها game.html.
+     صفوف الإعدادات حسب قاعدة CLAUDE.md بالجذر: RTL، العنوان يمين والعداد يسار بنفس السطر. -->
+<style>
+    :root{ --accent:#a855f7; --rock:#ff9a3c; --paper:#36d6ff; --scis:#ff4fd8; --ink:#f4f2ff; --muted:#a59fc0; --line:rgba(255,255,255,.12); }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
+    body{ direction:rtl; font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink);
+        background:radial-gradient(1200px 600px at 80% -10%, rgba(168,85,247,.28), transparent 60%), radial-gradient(900px 500px at 0% 110%, rgba(54,214,255,.16), transparent 60%), #08061a; }
+    button{ font-family:inherit; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px clamp(16px,3vw,40px); }
+    .hbtn{ height:40px; padding:0 16px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; font:600 14px 'IBM Plex Sans Arabic'; cursor:pointer; color:#e7e3ef; border:1px solid var(--line); background:rgba(255,255,255,.04); text-decoration:none; }
+    .status{ height:40px; padding:0 14px; border-radius:999px; display:flex; align-items:center; gap:8px; font:600 13px 'IBM Plex Sans Arabic'; border:1px solid var(--line); background:rgba(255,255,255,.04); }
+    .status i{ width:9px; height:9px; border-radius:50%; background:#f87171; box-shadow:0 0 10px #f87171; }
+    .status.on i{ background:#4ade80; box-shadow:0 0 10px #4ade80; }
+    main{ max-width:640px; margin:0 auto; padding:8px 16px 48px; }
+    .hero{ text-align:center; margin:10px 0 26px; }
+    .icons{ font-size:clamp(40px,8vw,58px); letter-spacing:6px; filter:drop-shadow(0 6px 18px rgba(168,85,247,.5)); }
+    h1{ margin:8px 0 6px; font:900 clamp(36px,7vw,54px)/1.05 'Zain'; background:linear-gradient(90deg,var(--rock),var(--paper),var(--scis)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hero p{ margin:0; color:var(--muted); font-size:15px; line-height:1.7; }
+    h2{ font:800 20px 'Zain'; margin:24px 4px 10px; text-align:right; }
+    /* صف الإعداد: العنوان يمين، العداد يسار (قاعدة الجذر) */
+    .agp-shell-row{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px 16px; margin-bottom:10px; border-radius:18px; border:1px solid var(--line);
+        background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .agp-shell-row-label{ order:-1; text-align:right; display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .agp-shell-row-label b{ font:700 16px 'IBM Plex Sans Arabic'; }
+    .agp-field-desc{ font-size:12.5px; color:var(--muted); }
+    .counter{ display:flex; align-items:center; gap:6px; direction:ltr; flex:none; }
+    .counter button{ width:38px; height:38px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.06); color:#fff; font:700 20px 'Zain'; cursor:pointer; }
+    .counter button:active{ transform:scale(.95); }
+    .counter output{ min-width:64px; text-align:center; font:900 22px 'Zain'; }
+    .counter output small{ font:500 12px 'IBM Plex Sans Arabic'; color:var(--muted); margin-inline-start:3px; }
+    .rules{ display:grid; gap:10px; }
+    .rule{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; border-radius:16px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-size:14.5px; line-height:1.6; }
+    .rule .k{ flex:none; width:44px; height:44px; border-radius:12px; display:grid; place-items:center; font:900 24px 'Zain'; color:#140b26; }
+    .start{ display:block; width:100%; margin-top:26px; height:58px; border-radius:18px; border:1px solid rgba(216,180,254,.7); cursor:pointer; color:#fff; font:900 24px 'Zain';
+        background:linear-gradient(180deg,#a855f7,#6d28d9); box-shadow:0 14px 40px rgba(124,58,237,.45); }
+    .start:active{ transform:scale(.99); }
+    .note{ margin-top:12px; text-align:center; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+    <a class="hbtn" href="../../games.html">→ مكتبة الألعاب</a>
+    <div class="status" id="status"><i></i><span id="status-t">البث غير متصل</span></div>
+</header>
+<main>
+    <section class="hero">
+        <div class="icons" aria-hidden="true">✊✋✌️</div>
+        <h1>حجرة ورقة مقص</h1>
+        <p>بطولة لكل جمهورك بساحة ثلاثية الأبعاد. المشاهد يكتب 1 أو 2 أو 3 بالشات ويدخل،<br>وكل دور مواجهات ثنائية لين يبقى بطل واحد.</p>
+    </section>
+
+    <h2>الإعدادات</h2>
+    <div class="agp-shell-row">
+        <div class="counter" data-key="joinSec" data-min="15" data-max="300" data-step="15" data-unit="ث"><button type="button" data-d="-1" aria-label="أقل">−</button><output></output><button type="button" data-d="1" aria-label="أكثر">+</button></div>
+        <span class="agp-shell-row-label"><b>وقت الدخول</b><span class="agp-field-desc">المدة اللي يقدر فيها الجمهور يدخل قبل ما تبدأ البطولة</span></span>
+    </div>
+    <div class="agp-shell-row">
+        <div class="counter" data-key="pickSec" data-min="5" data-max="60" data-step="1" data-unit="ث"><button type="button" data-d="-1" aria-label="أقل">−</button><output></output><button type="button" data-d="1" aria-label="أكثر">+</button></div>
+        <span class="agp-shell-row-label"><b>وقت الاختيار</b><span class="agp-field-desc">كم ثانية عند كل لاعب يكتب اختياره بكل مواجهة</span></span>
+    </div>
+    <div class="agp-shell-row">
+        <div class="counter" data-key="maxPlayers" data-min="2" data-max="64" data-step="2" data-unit="لاعب"><button type="button" data-d="-1" aria-label="أقل">−</button><output></output><button type="button" data-d="1" aria-label="أكثر">+</button></div>
+        <span class="agp-shell-row-label"><b>أقصى عدد لاعبين</b><span class="agp-field-desc">العدد الكبير يحتاج جهاز أقوى (كل لاعب شخصية ثلاثية الأبعاد)</span></span>
+    </div>
+
+    <h2>طريقة اللعب</h2>
+    <div class="rules">
+        <div class="rule"><span>اكتب <b>1</b> للحجرة — الحجرة تكسر المقص</span><span class="k" style="background:var(--rock)">1</span></div>
+        <div class="rule"><span>اكتب <b>2</b> للورقة — الورقة تلف الحجرة</span><span class="k" style="background:var(--paper)">2</span></div>
+        <div class="rule"><span>اكتب <b>3</b> للمقص — المقص يقص الورقة</span><span class="k" style="background:var(--scis)">3</span></div>
+        <div class="rule"><span>أول رقم تكتبه بفترة الدخول يدخّلك. التعادل يعيد المواجهة، واللي ما يختار يخسر. العدد الفردي: لاعب يتأهل مباشرة.</span><span class="k" style="background:#c4b5fd">؟</span></div>
+    </div>
+
+    <button type="button" class="start" id="start">ابدأ البطولة</button>
+    <div class="note">البطل ياخذ نقاط الفوز، وكل المشاركين ياخذون نقاط المشاركة (لأصحاب الحسابات الموثّقة).</div>
+</main>
+
+<script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script>
+(function () {
+    'use strict';
+    var KEY = 'rps-settings', CONN = 'agp:agp-stream-connection';
+    var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    function read(k, d) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (e) { return d; } }
+    var s = Object.assign({}, DEF, read(KEY, {}) || {});
+    function save() { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.counter'), function (el) {
+        var k = el.dataset.key, min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step, out = el.querySelector('output');
+        function show() { s[k] = Math.max(min, Math.min(max, Math.round(+s[k] || DEF[k]))); out.innerHTML = s[k] + '<small>' + el.dataset.unit + '</small>'; }
+        el.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; s[k] = +s[k] + step * +b.dataset.d; show(); save(); });
+        show();
+    });
+
+    function status() {
+        var c = read(CONN, null), on = !!(c && c.username);
+        document.getElementById('status').classList.toggle('on', on);
+        document.getElementById('status-t').textContent = on ? 'متصل: @' + c.username : 'البث غير متصل';
+    }
+    status(); addEventListener('storage', status); addEventListener('agp:stream-connected', status);
+
+    document.getElementById('start').addEventListener('click', function () { save(); location.href = 'game.html'; });
+}());
+</script>
+</body>
+</html>

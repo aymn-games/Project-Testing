@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>حجرة ورقة مقص — البطولة</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!-- «three» لازم يطابق الرابط اللي يستورده games/birthday-party/rig3d.js حرفياً
+     (three.module.js مو .min) عشان تكون نسخة Three.js وحدة للمشهد والشخصيات. -->
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<!-- شاشة بطولة «حجرة ورقة مقص» على البث:
+     - فترة الدخول: أي مشاهد يكتب 1 أو 2 أو 3 بالشات يدخل وتطلع له شخصية بالساحة.
+     - كل دور: اللاعبين ينقسمون أزواج، وكل واحد يكتب 1 حجرة · 2 ورقة · 3 مقص.
+       الفائز يتأهل والخاسر يطلع للمتفرجين، والتعادل يعيد المواجهة، لين يبقى بطل.
+     - المنطق: rps-engine.js · المشهد: rps-scene.js (لو فشل الثري دي تشتغل لوحة ثنائية الأبعاد).
+     - الإعدادات من index.html (localStorage 'rps-settings'). -->
+<style>
+    :root{ --rock:#ff9a3c; --paper:#36d6ff; --scis:#ff4fd8; --gold:#f5c542; --ink:#f4f2ff; --glass:rgba(14,10,34,.62); --line:rgba(255,255,255,.14); }
+    html,body{ margin:0; height:100%; background:#07051a; overflow:hidden; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); direction:rtl; }
+    button{ font-family:inherit; }
+    bdi{ unicode-bidi:isolate; }
+    .hidden{ display:none !important; }
+    #stage{ position:fixed; inset:0; }
+    #stage canvas{ display:block; }
+    .vignette{ position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, transparent 55%, rgba(4,2,14,.55) 100%); }
+
+    /* ===== الترويسة ===== */
+    header{ position:fixed; top:0; left:0; right:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px clamp(12px,1.4vw,26px); pointer-events:none; }
+    header > *{ pointer-events:auto; }
+    .hgroup{ display:flex; align-items:center; gap:10px; }
+    .hbtn{ height:40px; padding:0 16px; border-radius:999px; display:flex; align-items:center; gap:8px; font:600 14px 'IBM Plex Sans Arabic'; white-space:nowrap; cursor:pointer; color:#e7e3ef;
+        border:1px solid var(--line); background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); transition:transform .15s, background .2s; }
+    .hbtn:hover{ background:rgba(40,30,80,.7); }
+    .hbtn:active{ transform:scale(.97); }
+    .hbtn.exit{ color:#fca5a5; border-color:rgba(248,113,113,.3); }
+    .pill-status{ height:40px; padding:0 14px; border-radius:999px; display:flex; align-items:center; gap:8px; font:600 13px 'IBM Plex Sans Arabic'; border:1px solid var(--line); background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+    .pill-status i{ width:9px; height:9px; border-radius:50%; background:#f87171; box-shadow:0 0 10px currentColor; color:#f87171; }
+    .pill-status.on i{ background:#4ade80; color:#4ade80; }
+    .count{ height:40px; padding:0 16px; border-radius:999px; display:flex; align-items:center; gap:8px; font:800 18px 'Zain'; border:1px solid var(--line); background:var(--glass); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+    .count small{ font:500 13px 'IBM Plex Sans Arabic'; opacity:.75; }
+
+    /* ===== العنوان والعداد ===== */
+    .top{ position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:19; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; text-align:center; }
+    .title{ font:900 clamp(26px,2.6vw,44px)/1 'Zain'; letter-spacing:.5px; text-shadow:0 4px 24px rgba(168,85,247,.6); }
+    .title b{ background:linear-gradient(90deg,var(--rock),var(--paper),var(--scis)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .stage-name{ padding:6px 18px; border-radius:999px; font:800 clamp(15px,1.2vw,20px) 'Zain'; background:linear-gradient(180deg,rgba(168,85,247,.45),rgba(88,28,135,.45)); border:1px solid rgba(216,180,254,.5); }
+    .timer{ position:relative; width:78px; height:78px; margin-top:4px; }
+    .timer svg{ position:absolute; inset:0; transform:rotate(-90deg); }
+    .timer circle{ fill:none; stroke-width:7; }
+    .timer .bg{ stroke:rgba(255,255,255,.12); }
+    .timer .fg{ stroke:url(#tg); stroke-linecap:round; transition:stroke-dashoffset .25s linear; }
+    .timer span{ position:absolute; inset:0; display:grid; place-items:center; font:900 32px 'Zain'; }
+    .timer.low span{ color:#fca5a5; animation:beat 1s infinite; }
+    @keyframes beat{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.15); } }
+
+    /* ===== شريط الخيارات ===== */
+    .picks{ position:fixed; bottom:clamp(14px,2.2vh,26px); left:50%; transform:translateX(-50%); z-index:19; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none; width:min(92vw,760px); }
+    .hint{ font:700 clamp(15px,1.25vw,21px) 'IBM Plex Sans Arabic'; padding:8px 20px; border-radius:999px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); text-align:center; }
+    .hint b{ color:#fde68a; }
+    .cards{ display:flex; gap:clamp(8px,1vw,16px); width:100%; justify-content:center; }
+    .pc{ flex:1; max-width:220px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-radius:20px; background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03)); border:1.5px solid var(--c); box-shadow:0 0 24px color-mix(in srgb,var(--c) 35%,transparent), inset 0 0 18px color-mix(in srgb,var(--c) 18%,transparent); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+    .pc .n{ width:clamp(40px,3.2vw,54px); height:clamp(40px,3.2vw,54px); border-radius:14px; display:grid; place-items:center; font:900 clamp(26px,2.2vw,36px) 'Zain'; color:#140b26; background:var(--c); flex:none; }
+    .pc .l{ font:800 clamp(18px,1.6vw,26px) 'Zain'; display:flex; align-items:center; gap:8px; }
+    .pc .e{ font-size:clamp(22px,1.9vw,30px); }
+
+    /* ===== تحكم الستريمر ===== */
+    .host{ position:fixed; bottom:clamp(14px,2.2vh,26px); right:clamp(12px,1.4vw,26px); z-index:21; display:flex; flex-direction:column; gap:8px; align-items:stretch; }
+    .host .hbtn{ justify-content:center; height:44px; font-weight:700; }
+    .host .go{ background:linear-gradient(180deg,#a855f7,#7c3aed); border-color:rgba(216,180,254,.7); color:#fff; box-shadow:0 8px 26px rgba(124,58,237,.45); }
+    .host .go[disabled]{ opacity:.5; cursor:not-allowed; }
+    .stats{ position:fixed; bottom:clamp(14px,2.2vh,26px); left:clamp(12px,1.4vw,26px); z-index:19; padding:10px 14px; border-radius:16px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); font:600 13px 'IBM Plex Sans Arabic'; display:flex; flex-direction:column; gap:4px; min-width:150px; }
+    .stats div{ display:flex; justify-content:space-between; gap:14px; }
+    .stats b{ font:800 16px 'Zain'; }
+
+    /* ===== العد الكبير «حجرة.. ورقة.. مقص!» ===== */
+    .shout{ position:fixed; inset:0; z-index:18; display:grid; place-items:center; pointer-events:none; }
+    .shout span{ font:900 clamp(70px,9vw,170px)/1 'Zain'; color:#fff; text-shadow:0 0 28px var(--c,#a855f7), 0 0 60px var(--c,#a855f7), 0 8px 0 rgba(20,8,40,.55); animation:shout .6s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes shout{ 0%{ opacity:0; transform:scale(.4) rotate(-6deg); } 60%{ opacity:1; transform:scale(1.12) rotate(2deg); } 100%{ opacity:1; transform:scale(1); } }
+    .banner{ position:fixed; top:34%; left:50%; transform:translate(-50%,-50%); z-index:18; pointer-events:none; padding:16px 44px; border-radius:26px; font:900 clamp(34px,4vw,64px)/1.1 'Zain'; background:linear-gradient(180deg,rgba(124,58,237,.92),rgba(76,29,149,.92)); border:2px solid rgba(255,255,255,.75); box-shadow:0 20px 60px rgba(0,0,0,.45), 0 0 60px rgba(168,85,247,.5); animation:pop .5s cubic-bezier(.2,1.4,.4,1) both; text-align:center; }
+    .banner small{ display:block; font:700 clamp(15px,1.3vw,22px) 'IBM Plex Sans Arabic'; opacity:.9; margin-top:6px; }
+    @keyframes pop{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.7); } 100%{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
+
+    /* ===== البطل ===== */
+    .champ{ position:fixed; top:clamp(110px,15vh,170px); right:clamp(12px,3vw,60px); z-index:22; width:min(360px,86vw); padding:22px; border-radius:28px; text-align:center;
+        background:linear-gradient(180deg,rgba(60,36,10,.82),rgba(26,14,40,.86)); border:2px solid rgba(245,197,66,.8); box-shadow:0 0 60px rgba(245,197,66,.35); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
+    @keyframes rise{ from{ opacity:0; transform:translateY(30px) scale(.95); } to{ opacity:1; transform:none; } }
+    .champ .crown{ font-size:46px; line-height:1; }
+    .champ .k{ font:800 18px 'Zain'; color:#fde68a; margin-top:6px; }
+    .champ .av{ width:110px; height:110px; margin:12px auto; border-radius:50%; border:4px solid var(--gold); background:#5b54d6 center/cover; display:grid; place-items:center; font:900 46px 'Zain'; box-shadow:0 0 30px rgba(245,197,66,.6); }
+    .champ .nm{ font:900 34px/1.15 'Zain'; word-break:break-word; }
+    .champ .sub{ font:500 14px 'IBM Plex Sans Arabic'; opacity:.8; margin-top:6px; }
+    .champ .row{ display:flex; gap:8px; margin-top:16px; }
+    .champ .row .hbtn{ flex:1; justify-content:center; }
+
+    /* ===== لوحة ثنائية الأبعاد (لو فشل الثري دي) ===== */
+    .flat{ position:fixed; inset:190px 16px 190px; z-index:5; overflow:auto; display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; justify-content:center; }
+    .flat .duel{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:260px; padding:12px 16px; border-radius:18px; background:var(--glass); border:1px solid var(--line); font:700 16px 'IBM Plex Sans Arabic'; }
+    .flat .duel em{ font:900 18px 'Zain'; color:#c4b5fd; font-style:normal; }
+    .flat .duel .w{ color:#fde68a; } .flat .duel .x{ opacity:.45; text-decoration:line-through; }
+    .flat .pl{ padding:8px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); font:600 15px 'IBM Plex Sans Arabic'; }
+    .toast{ position:fixed; top:110px; left:50%; transform:translateX(-50%); z-index:30; padding:10px 22px; border-radius:999px; background:rgba(20,14,40,.92); border:1px solid var(--line); font:600 14px 'IBM Plex Sans Arabic'; }
+
+    @media (max-width:700px){
+        .top{ top:64px; } .timer{ width:62px; height:62px; } .timer span{ font-size:26px; }
+        .stats{ display:none; } .pc{ padding:8px 10px; } .pc .l .e{ display:none; }
+        .host{ bottom:auto; top:64px; right:12px; } .host .hbtn{ height:38px; font-size:13px; }
+        .champ{ top:auto; bottom:150px; right:50%; transform:translateX(50%); animation:none; }
+    }
+</style>
+</head>
+<body>
+<div id="stage" aria-hidden="true"></div>
+<div class="vignette"></div>
+<div class="flat hidden" id="flat"></div>
+
+<header>
+    <div class="hgroup">
+        <button type="button" class="hbtn exit" id="exit">✕ خروج</button>
+        <div class="pill-status" id="stream"><i></i><span id="stream-t">البث غير متصل</span></div>
+    </div>
+    <div class="count" id="count"><span id="count-n">0</span><small id="count-l">لاعب</small></div>
+</header>
+
+<div class="top">
+    <div class="title"><b>حجرة ورقة مقص</b></div>
+    <div class="stage-name" id="stage-name">فترة الدخول</div>
+    <div class="timer" id="timer">
+        <svg viewBox="0 0 80 80"><defs><linearGradient id="tg" x1="0" x2="1"><stop offset="0" stop-color="#ff9a3c"/><stop offset=".5" stop-color="#36d6ff"/><stop offset="1" stop-color="#ff4fd8"/></linearGradient></defs>
+            <circle class="bg" cx="40" cy="40" r="34"/><circle class="fg" id="timer-fg" cx="40" cy="40" r="34" stroke-dasharray="213.6" stroke-dashoffset="0"/></svg>
+        <span id="timer-n">60</span>
+    </div>
+</div>
+
+<div class="picks">
+    <div class="hint" id="hint">اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة</div>
+    <div class="cards">
+        <div class="pc" style="--c:var(--rock)"><span class="l"><span class="e">✊</span>حجرة</span><span class="n">1</span></div>
+        <div class="pc" style="--c:var(--paper)"><span class="l"><span class="e">✋</span>ورقة</span><span class="n">2</span></div>
+        <div class="pc" style="--c:var(--scis)"><span class="l"><span class="e">✌️</span>مقص</span><span class="n">3</span></div>
+    </div>
+</div>
+
+<div class="host">
+    <button type="button" class="hbtn go" id="btn-start" disabled>ابدأ البطولة</button>
+    <button type="button" class="hbtn hidden" id="btn-skip">إنهاء الوقت</button>
+</div>
+<div class="stats" id="stats">
+    <div><span>المواجهات</span><b id="st-duels">—</b></div>
+    <div><span>اختاروا</span><b id="st-picked">—</b></div>
+    <div><span>باقي بالبطولة</span><b id="st-alive">—</b></div>
+</div>
+
+<div class="shout hidden" id="shout"><span id="shout-t"></span></div>
+<div class="banner hidden" id="banner"></div>
+<div class="champ hidden" id="champ">
+    <div class="crown">👑</div>
+    <div class="k">بطل البطولة</div>
+    <div class="av" id="champ-av"></div>
+    <div class="nm"><bdi id="champ-nm"></bdi></div>
+    <div class="sub" id="champ-sub"></div>
+    <div class="row">
+        <button type="button" class="hbtn go" id="btn-again" style="background:linear-gradient(180deg,#f5c542,#d49b12);color:#1a1206;border-color:#fde68a">بطولة جديدة</button>
+        <button type="button" class="hbtn" id="btn-home">الإعدادات</button>
+    </div>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="rps-engine.js"></script>
+<script>
+(function () {
+    'use strict';
+    var AGP = window.AymanGamesPlatform || {};
+    var log = (AGP.log || function () {});
+    var E = window.RpsEngine;
+    var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
+    var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    var SHAKE_MS = 1800, REVEAL_MS = 1300, RESULT_MS = 2300, INTRO_MS = 2600, TIE_MS = 1600;
+    var PICK = { 1: { n: 'حجرة', e: '✊', c: '#ff9a3c' }, 2: { n: 'ورقة', e: '✋', c: '#36d6ff' }, 3: { n: 'مقص', e: '✌️', c: '#ff4fd8' } };
+
+    function $(id) { return document.getElementById(id); }
+    function readJSON(k, d) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (e) { return d; } }
+    function clampInt(v, a, b, d) { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(a, Math.min(b, v)); }
+    var saved = readJSON(SETTINGS_KEY, {}) || {};
+    var S = { joinSec: clampInt(saved.joinSec, 15, 300, DEF.joinSec), pickSec: clampInt(saved.pickSec, 5, 60, DEF.pickSec), maxPlayers: clampInt(saved.maxPlayers, 2, 64, DEF.maxPlayers) };
+
+    function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 2800); }
+    function go(url) { try { if (window.top !== window) { window.top.location.href = url; return; } } catch (e) {} location.href = url; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+    // ---------------------------------------------------------------- الحالة
+    var G, phase, phaseEnds, timers = [], openIds, joinedAt, matchStartedAt, reported, pendingPhaseUI, revealInfo, lastBanner;
+    function later(fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+    function reset() {
+        clearTimers();
+        G = E.create({ maxPlayers: S.maxPlayers });
+        phase = 'join'; phaseEnds = Date.now() + S.joinSec * 1000; openIds = {}; joinedAt = {}; reported = false; revealInfo = {};
+        matchStartedAt = 0;
+        $('champ').classList.add('hidden'); hideBanner(); $('shout').classList.add('hidden');
+        render();
+    }
+
+    // ---------------------------------------------------------------- الشات
+    function onComment(p) {
+        if (!p || typeof p.text !== 'string' || !p.id) return;
+        var choice = E.parsePick(p.text);
+        if (!choice) return;
+        if (phase === 'join') {
+            if (G.player(p.id)) { G.touch(p); return; }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); render(); later(render, 2300); }
+            else if (G.players.length >= G.maxPlayers) toast('البطولة اكتملت (' + G.maxPlayers + ' لاعب)');
+            return;
+        }
+        if (phase !== 'pick' || !openIds[p.id]) return;
+        if (G.pick(p.id, choice)) {
+            render();
+            // الكل اختار؟ نختصر الوقت
+            var all = Object.keys(openIds).every(function (id) { var d = G.duelOf(id); return !d || d.picks[id]; });
+            if (all && phaseEnds - Date.now() > 1200) { phaseEnds = Date.now() + 1000; }
+        }
+    }
+
+    // ---------------------------------------------------------------- مراحل الدور
+    function startTournament() {
+        if (phase !== 'join') return;
+        if (G.players.length < 2) { toast('نحتاج لاعبين على الأقل'); phaseEnds = Date.now() + 15000; return; }
+        G.startRound(); matchStartedAt = Date.now();
+        intro();
+    }
+    function intro() {
+        phase = 'intro'; phaseEnds = 0;
+        var n = G.duels.length;
+        showBanner(G.stageName(), n === 1 ? 'مواجهة وحدة على اللقب' : n + ' مواجهات' + (G.bye ? ' · ولاعب يتأهل مباشرة' : ''));
+        render();
+        later(function () { hideBanner(); openPick(); }, INTRO_MS);
+    }
+    function openPick() {
+        phase = 'pick'; phaseEnds = Date.now() + S.pickSec * 1000; openIds = {}; revealInfo = {};
+        G.duels.forEach(function (d) { if (!d.result) { openIds[d.a] = 1; openIds[d.b] = 1; } });
+        render();
+    }
+    function shake() {
+        phase = 'shake'; phaseEnds = 0;
+        var words = [['حجرة..', '#ff9a3c'], ['ورقة..', '#36d6ff'], ['مقص!', '#ff4fd8']];
+        words.forEach(function (w, i) { later(function () { shout(w[0], w[1]); }, i * (SHAKE_MS / 3)); });
+        render();
+        later(reveal, SHAKE_MS);
+    }
+    function reveal() {
+        $('shout').classList.add('hidden');
+        var before = {}; G.duels.forEach(function (d, i) { if (!d.result) before[i] = 1; });
+        // نحفظ الاختيارات قبل الحسم (التعادل يصفّرها بعد startReplay)
+        Object.keys(before).forEach(function (i) { var d = G.duels[i]; revealInfo[d.a] = d.picks[d.a] || 0; revealInfo[d.b] = d.picks[d.b] || 0; });
+        var res = G.resolve();
+        phase = 'reveal'; render();
+        later(function () {
+            phase = 'result'; render();
+            if (res.ties) {
+                later(function () { G.startReplay(); showBanner('تعادل!', 'المتعادلين يعيدون الحين'); later(function () { hideBanner(); openPick(); }, TIE_MS); }, RESULT_MS - 600);
+            } else later(advance, RESULT_MS);
+        }, REVEAL_MS);
+    }
+    function advance() {
+        G.nextRound();
+        if (G.champion) return crown();
+        intro();
+    }
+    function crown() {
+        phase = 'champion'; phaseEnds = 0;
+        var c = G.player(G.champion);
+        $('champ-nm').textContent = c ? c.name : '';
+        var av = $('champ-av');
+        if (c && c.avatarUrl) { av.style.backgroundImage = 'url("' + c.avatarUrl.replace(/"/g, '%22') + '")'; av.textContent = ''; }
+        else { av.style.backgroundImage = ''; av.textContent = c ? (Array.from(c.name.replace(/[\s_.@\d]/g, ''))[0] || '؟') : ''; }
+        $('champ-sub').textContent = 'غلب ' + (G.players.length - 1) + ' لاعب بـ ' + (G.round) + ' أدوار';
+        $('champ').classList.remove('hidden');
+        render();
+        reportPoints();
+    }
+    function reportPoints() {
+        if (reported) return; reported = true;
+        var A = window.AGPAuth;
+        if (A && typeof A.reportMatchPoints === 'function') {
+            A.reportMatchPoints({
+                players: G.players.map(function (p) { return { id: p.id, name: p.name }; }),
+                winnerIds: G.champion ? [G.champion] : [],
+                teamGame: false,
+                durationMs: Date.now() - (matchStartedAt || Date.now())
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------- الواجهة
+    function shout(t, c) { var el = $('shout'), s = $('shout-t'); s.textContent = t; s.style.setProperty('--c', c); el.classList.remove('hidden'); s.style.animation = 'none'; void s.offsetWidth; s.style.animation = ''; }
+    function showBanner(t, sub) { var b = $('banner'); b.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : ''); b.classList.remove('hidden'); b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; }
+    function hideBanner() { $('banner').classList.add('hidden'); }
+
+    function tickTimer() {
+        var el = $('timer');
+        if (!phaseEnds || (phase !== 'join' && phase !== 'pick')) { el.style.visibility = 'hidden'; return; }
+        var total = (phase === 'join' ? S.joinSec : S.pickSec) * 1000, left = Math.max(0, phaseEnds - Date.now());
+        el.style.visibility = 'visible';
+        $('timer-n').textContent = Math.ceil(left / 1000);
+        $('timer-fg').setAttribute('stroke-dashoffset', String(213.6 * (1 - Math.min(1, left / total))));
+        el.classList.toggle('low', left < 4000);
+        if (left <= 0) {
+            phaseEnds = 0;
+            if (phase === 'join') { if (G.players.length >= 2) startTournament(); else { phaseEnds = Date.now() + 15000; toast('بانتظار لاعبين.. نحتاج 2 على الأقل'); } }
+            else if (phase === 'pick') shake();
+        }
+    }
+    setInterval(tickTimer, 200);
+
+    function render() {
+        var players = G.players, alive = G.alive, inJoin = phase === 'join';
+        $('count-n').textContent = inJoin ? players.length : alive.length;
+        $('count-l').textContent = inJoin ? ('لاعب من ' + G.maxPlayers) : 'باقي من ' + players.length;
+        $('stage-name').textContent = inJoin ? 'فترة الدخول' : phase === 'champion' ? 'انتهت البطولة' : G.stageName();
+        $('btn-start').classList.toggle('hidden', !inJoin);
+        $('btn-start').disabled = players.length < 2;
+        $('btn-skip').classList.toggle('hidden', phase !== 'pick');
+        var hint = $('hint');
+        if (inJoin) hint.innerHTML = 'اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة';
+        else if (phase === 'pick') hint.innerHTML = 'اللي عليهم الدور: اكتبوا <b>1</b> حجرة · <b>2</b> ورقة · <b>3</b> مقص';
+        else if (phase === 'champion') hint.innerHTML = '👑 مبروك للبطل!';
+        else hint.innerHTML = 'الحجرة تكسر المقص · المقص يقص الورقة · الورقة تلف الحجرة';
+        var openCount = Object.keys(openIds).length, picked = Object.keys(openIds).filter(function (id) { var d = G.duelOf(id); return d && d.picks[id]; }).length;
+        $('st-duels').textContent = inJoin ? '—' : String(G.duels.length);
+        $('st-picked').textContent = phase === 'pick' ? picked + ' / ' + openCount : '—';
+        $('st-alive').textContent = inJoin ? '—' : String(alive.length);
+        pushScene();
+        renderFlat();
+    }
+
+    function sceneState() {
+        var players = G.players, list = [], outList = players.filter(function (p) { return p.out; });
+        var champ = G.champion;
+        players.forEach(function (p, idx) {
+            var o = { id: p.id, name: p.name, avatarUrl: p.avatarUrl, pose: 'idle', pick: 0, bubble: null, badge: null };
+            if (phase === 'join') {
+                o.place = { kind: 'grid', i: idx, n: players.length };
+                if (Date.now() - (joinedAt[p.id] || 0) < 2200) o.pose = 'wave';
+            } else if (phase === 'champion') {
+                if (p.id === champ) { o.place = { kind: 'podium' }; o.pose = 'dance'; o.badge = { text: '👑 البطل', color: '#f5c542' }; }
+                else { o.place = { kind: 'ring', i: outList.indexOf(p), n: outList.length }; o.pose = 'clap'; }
+            } else if (p.out) {
+                o.place = { kind: 'ring', i: outList.indexOf(p), n: outList.length }; o.pose = 'clap';
+            } else if (G.bye === p.id) {
+                o.place = { kind: 'bye' }; o.badge = { text: 'تأهل مباشر', color: '#8b5cf6' };
+            } else {
+                var di = -1; G.duels.forEach(function (d, i) { if (d.a === p.id || d.b === p.id) di = i; });
+                var d = G.duels[di];
+                o.place = { kind: 'duel', i: di, n: G.duels.length, side: d && d.b === p.id ? 1 : 0 };
+                var mine = revealInfo[p.id];
+                if (phase === 'pick' && openIds[p.id]) {
+                    o.pose = 'ready';
+                    o.bubble = d && d.picks[p.id] ? { text: '✓ اختار', color: '#22c55e' } : { text: '...', color: '#64748b' };
+                } else if (phase === 'shake' && openIds[p.id]) {
+                    o.pose = 'shake';
+                } else if ((phase === 'reveal' || phase === 'result') && openIds[p.id]) {
+                    o.pick = mine || 0;
+                    o.bubble = mine ? { text: PICK[mine].e + ' ' + PICK[mine].n, color: PICK[mine].c } : { text: 'ما اختار', color: '#64748b' };
+                    if (phase === 'reveal') o.pose = 'reveal';
+                    else if (d && d.result !== 'done') { o.pose = 'idle'; o.badge = { text: 'تعادل!', color: '#f59e0b' }; }
+                    else if (d && d.winner === p.id) { o.pose = 'win'; o.badge = { text: d.how === 'draw' ? 'فاز بالقرعة' : 'تأهّل ✓', color: '#16a34a' }; }
+                    else if (d) { o.pose = 'lose'; o.badge = { text: d.how === 'noshow' && !mine ? 'خرج (ما اختار)' : 'خرج', color: '#dc2626' }; }
+                } else if (d && d.result === 'done') {
+                    // مواجهته انحسمت وينتظر المتعادلين
+                    o.pose = d.winner === p.id ? 'clap' : 'lose';
+                    o.badge = d.winner === p.id ? { text: 'تأهّل ✓', color: '#16a34a' } : { text: 'خرج', color: '#dc2626' };
+                }
+            }
+            list.push(o);
+        });
+        return { phase: phase === 'intro' ? 'pick' : phase, players: list };
+    }
+
+    var arena = null, flat = false;
+    function pushScene() { if (arena) { try { arena.setState(sceneState()); } catch (e) { log('rps: scene error', e); } } }
+
+    function renderFlat() {
+        var el = $('flat'); if (!flat) return; el.classList.remove('hidden');
+        if (phase === 'join') { el.innerHTML = G.players.map(function (p) { return '<div class="pl"><bdi>' + esc(p.name) + '</bdi></div>'; }).join(''); return; }
+        var html = G.duels.map(function (d) {
+            var A = G.player(d.a), B = G.player(d.b), pa = revealInfo[d.a], pb = revealInfo[d.b], showPick = phase === 'reveal' || phase === 'result';
+            function side(p, pk) {
+                var cls = d.result === 'done' ? (d.winner === p.id ? 'w' : 'x') : '';
+                var extra = showPick && pk ? ' ' + PICK[pk].e : (phase === 'pick' && d.picks[p.id] ? ' ✓' : '');
+                return '<span class="' + cls + '"><bdi>' + esc(p.name) + '</bdi>' + extra + '</span>';
+            }
+            return '<div class="duel">' + side(A, pa) + '<em>VS</em>' + side(B, pb) + '</div>';
+        }).join('');
+        if (G.bye) html += '<div class="duel"><span><bdi>' + esc(G.player(G.bye).name) + '</bdi></span><em>تأهل مباشر</em></div>';
+        if (G.champion) html = '<div class="duel"><span class="w">👑 <bdi>' + esc(G.player(G.champion).name) + '</bdi></span></div>';
+        el.innerHTML = html;
+    }
+
+    // ---------------------------------------------------------------- الأزرار
+    $('btn-start').addEventListener('click', startTournament);
+    $('btn-skip').addEventListener('click', function () { if (phase === 'pick') { phaseEnds = 0; shake(); } });
+    $('btn-again').addEventListener('click', reset);
+    $('btn-home').addEventListener('click', function () { go('index.html'); });
+    $('exit').addEventListener('click', function () { go('index.html'); });
+
+    // ---------------------------------------------------------------- البث
+    var STREAM_TEXT = { connected: 'متصل بالبث', connecting: 'جاري الاتصال بالبث...', error: 'البث غير متصل', ended: 'البث انتهى', idle: 'البث غير متصل', disconnected: 'البث غير متصل' };
+    function setStream(st) { $('stream').classList.toggle('on', st === 'connected'); $('stream-t').textContent = STREAM_TEXT[st] || 'البث غير متصل'; }
+    if (AGP.events && typeof AGP.events.on === 'function') {
+        AGP.events.on('stream:commentReceived', onComment);
+        AGP.events.on('stream:statusChanged', function (p) { if (p && p.platform === 'tiktok') setStream(p.status); });
+    }
+    (function connect() {
+        var c = readJSON(CONN_KEY, null);
+        if (c && c.username && AGP.streamConnector && typeof AGP.streamConnector.connect === 'function') {
+            setStream('connecting');
+            try { AGP.streamConnector.connect('tiktok', { username: c.username }); } catch (e) { setStream('error'); }
+        }
+    }());
+
+    // ---------------------------------------------------------------- المشهد
+    window.__rpsBoot = function (mod) {
+        try {
+            arena = mod.createArena($('stage'));
+            pushScene();
+        } catch (e) { log('rps: 3D failed', e); useFlat(); }
+    };
+    window.__rpsFail = function (e) { log('rps: 3D import failed', e); useFlat(); };
+    function useFlat() { arena = null; flat = true; renderFlat(); }
+
+    reset();
+    window.__rps = { get G() { return G; }, get phase() { return phase; }, start: startTournament, reset: reset };
+}());
+</script>
+<script type="module">
+import('./rps-scene.js').then(function (m) { window.__rpsBoot(m); }).catch(function (e) { window.__rpsFail(e); });
+</script>
+</body>
+</html>
