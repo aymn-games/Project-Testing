@@ -128,8 +128,9 @@
     .timeline li b{ font:900 16px 'Zain'; color:var(--rose2); white-space:nowrap; direction:ltr; }
     .timeline li.note{ color:var(--soft); font-size:12px; }
     .warn{ margin-top:10px; padding:10px 14px; border-radius:12px; background:#fffbeb; color:#92400e; font-weight:600; font-size:13px; }
-    .kick.sure, #endBtn.sure{ background:#9f1239 !important; color:#fff !important; }
-    #endBtn{ color:#9f1239; border-color:#fecdd3; }
+    .kick.sure, #endBtn.sure, #closeBtn.sure{ background:#9f1239 !important; color:#fff !important; }
+    #endBtn, #closeBtn{ color:#9f1239; border-color:#fecdd3; }
+    #closeBtn.fresh{ color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); border-color:transparent; }
 
     /* ---- شاشة البث: المشهد بكامل الشاشة، واللوحة تنفتح فوقه ---- */
     #stage{ display:none; }
@@ -198,6 +199,7 @@
             <div class="actions">
                 <button class="btn ghost" id="qrBtn" type="button" aria-pressed="false">اعرض الباركود على الشاشة</button>
                 <button class="btn ghost hidden" id="endBtn" type="button">إنهاء الحفلة</button>
+                <button class="btn ghost" id="closeBtn" type="button">إغلاق الحفلة نهائياً</button>
                 <button class="btn ghost" id="closePanel" type="button">إغلاق اللوحة ✕</button>
             </div>
             <div class="row" style="margin-top:12px">
@@ -405,7 +407,7 @@
         onMessage: m => {
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey, viewKey: m.viewKey }; writeJSON('party-host', { code: m.code, token: m.token, viewKey: m.viewKey }); showRoom(); }
             else if (m.t === 'room') { renderList(m.room); segSet($('rChars'), m.room.chars || 'rig'); }
-            else if (m.t === 'phase') { phase = m; renderPhase(); }
+            else if (m.t === 'phase') { phase = m; renderPhase(); if (closing && m.p === 'ended') freshParty(); }
             else if (m.t === 'wishList') renderWishList(m.items || []);
             else if (m.t === 'points') onPoints(m);
             else if (m.t === 'pointsGo') onPointsGo(m.id);
@@ -414,6 +416,7 @@
             else if (m.t === 'err' && m.of === 'kick') showShowMsg(m.err === 'noplayer' ? 'الضيف طلع من الحفلة أصلاً.' : 'ما قدرنا نطرده، جرّب مرة ثانية.');
             else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
+            else if (m.t === 'err' && m.of === 'close') { closing = false; if (m.err === 'phase') freshParty(); else showShowMsg('ما قدرنا نسكّر الحفلة، جرّب مرة ثانية.'); }
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'end' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 // الحفلة المحفوظة بالجهاز انتهت/انمسحت ← نشوف لو فيه حفلة شغالة ثانية بالمفتاح
@@ -463,6 +466,9 @@
         // «إنهاء الحفلة»: من بعد الافتتاح لين قبل مشهد النهاية
         $('endBtn').classList.toggle('hidden', !END_OK.includes(phase.p));
         if (!END_OK.includes(phase.p)) endReset();
+        // «إغلاق الحفلة نهائياً» بأي مرحلة، وبعد ما تنتهي يصير «حفلة جديدة»
+        if (phase.p === 'ended') { closeReset(); $('closeBtn').classList.add('fresh'); $('closeBtn').textContent = 'حفلة جديدة'; }
+        else if (!closeSure) { $('closeBtn').classList.remove('fresh'); $('closeBtn').textContent = 'إغلاق الحفلة نهائياً'; }
         $('wishesCard').classList.toggle('hidden', !['gather', 'wishWrite', 'wishes'].includes(phase.p));
         $('nextBtn').classList.toggle('hidden', phase.p !== 'wishes');
         $('prevBtn').classList.toggle('hidden', !(phase.p === 'wishes' && wishesPos > 1));
@@ -500,6 +506,21 @@
             endT = setTimeout(endReset, 4000); return;
         }
         endReset(); press($('endBtn'), { t: 'end' });
+    });
+    // «إغلاق الحفلة نهائياً»: تنتهي الحين عند الكل (بدون مشهد النهاية)، والصفحة ترجع لنموذج حفلة جديدة.
+    // تأكيد بضغطة ثانية خلال 4ث. بعد نهاية الحفلة نفس الزر «حفلة جديدة» يفتح النموذج على طول
+    let closeSure = false, closeT = 0, closing = false;
+    function closeReset() { clearTimeout(closeT); closeSure = false; $('closeBtn').classList.remove('sure'); if (!phase || phase.p !== 'ended') $('closeBtn').textContent = 'إغلاق الحفلة نهائياً'; }
+    function freshParty() { writeJSON('party-host', null); state = null; location.reload(); }
+    $('closeBtn').addEventListener('click', () => {
+        if (!phase) return;
+        if (phase.p === 'ended') { freshParty(); return; }
+        if (!closeSure) {
+            closeSure = true; $('closeBtn').classList.add('sure');
+            $('closeBtn').textContent = ['photo', 'free', 'outro'].includes(phase.p) ? 'متأكد؟ الحفلة تنتهي عند الكل الحين' : 'متأكد؟ تنتهي الحين والنقاط ما تنحسب';
+            closeT = setTimeout(closeReset, 4000); return;
+        }
+        closeReset(); closing = true; press($('closeBtn'), { t: 'close' });
     });
     // «بدء» ما يرجع: التأكيد بضغطة ثانية خلال 4 ثواني (بدل confirm اللي يطلع بالبث)
     let startSure = false, startT = 0;

@@ -448,6 +448,12 @@ function createRoomManager(opts) {
         if (i < PHASES.indexOf('reveal') || room.phase === 'outro' || room.phase === 'ended') return fail('phase');
         setPhase(room, 'outro'); return { ok: true };
     }
+    // إغلاق الحفلة نهائياً (زر المذيع): تنتهي الحين من أي مرحلة، بدون مشهد النهاية — والحساب يقدر ينشئ حفلة جديدة على طول
+    function closeNow(code) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        if (room.phase === 'ended') return fail('phase');
+        setPhase(room, 'ended'); return { ok: true };
+    }
     // catchUp: رجوع بعد إعادة تشغيل — كل مرحلة فاتت تبدأ بوقتها حسب الساعة (مو «الحين»)
     function tick(code, catchUp) {
         var room = rooms[code]; if (!room) return fail('nocode');
@@ -631,7 +637,7 @@ function createRoomManager(opts) {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
-        getRoom: getRoom, currentRoom: currentRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, endNow: endNow, tick: tick,
+        getRoom: getRoom, currentRoom: currentRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, endNow: endNow, closeNow: closeNow, tick: tick,
         setLook: setLook, kick: kick, react: react, takeReacts: takeReacts, reactHidden: reactHidden, rain: rain, setChars: setChars, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }
