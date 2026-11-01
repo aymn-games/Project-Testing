@@ -225,6 +225,7 @@ function createGame(roster, settings, hooks) {
         } else shot('quiet');
         shot('result', { victim: victim ? victim.id : null, saved: saved ? saved.id : null });
 
+        G.lastNight = { round: G.round, victim: victim ? victim.id : null, saved: saved ? saved.id : null };   // ملخص الليلة لشاشة النقاش
         if (victim) sys('🌙 تم إقصاء ' + victim.name + ' أثناء الليل.');
         else if (saved) sys('💊 الطبيب أنقذ ' + saved.name + ' من هجوم المافيا!');
         else sys('🌙 انتهى الليل دون إقصاء أحد.');
@@ -268,6 +269,7 @@ function createGame(roster, settings, hooks) {
         G.verdict = { id: out ? out.id : null, tie: top.length > 1, tally: tally, team: out ? out.faction : null, votes: best };
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
+            G.lastExile = { round: G.round, id: out.id, team: out.faction, role: S.fullReveal ? out.role : null };
             sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'من المدينة') + ') بـ' + best + ' صوت.');
         } else sys(top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
         // ملخص الأصوات للمشاهدين (أعلى 3 + الممتنعين)
@@ -295,8 +297,10 @@ function createGame(roster, settings, hooks) {
     function roleChatOpen(ch) { return (ch === 'doctor' ? S.doctors : S.detectives) > 1; }
 
     function chat(me, arg) {
+        // الصيغة: 'قناة|نص' أو 'قناة#رقم_الرسالة|نص' للرد على رسالة بنفس القناة
         var raw = String(arg == null ? '' : arg), bar = raw.indexOf('|');
-        var ch = bar > 0 ? raw.slice(0, bar) : 'city', text = (bar > 0 ? raw.slice(bar + 1) : raw).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
+        var head = /^([a-z]+)(?:#(\d+))?$/.exec(bar > 0 ? raw.slice(0, bar) : 'city') || [null, 'city', null];
+        var ch = head[1], reN = head[2] ? +head[2] : 0, text = (bar > 0 ? raw.slice(bar + 1) : raw).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
         if (!text || !me.alive) return;
         if (ch === 'mafia') { if (me.faction !== 'mafia' || G.phase === 'over') return; }
         else if (ch === 'doctor' || ch === 'detective') {
@@ -310,7 +314,12 @@ function createGame(roster, settings, hooks) {
         var now = Date.now();
         if (me._lastChat && now - me._lastChat < 1500) return;
         me._lastChat = now;
-        G.chat.push({ n: ++chatSeq, from: me.id, ch: ch, d: ch === 'district' ? me.district : undefined, text: text, at: now }); trimChat();
+        var re = null;
+        if (reN) {
+            var orig = G.chat.find(function (c) { return c.n === reN && !c.sys && c.ch === ch && (ch !== 'district' || c.d === me.district); });
+            if (orig) re = { n: orig.n, from: orig.from, text: orig.text.slice(0, 80) };
+        }
+        G.chat.push({ n: ++chatSeq, from: me.id, ch: ch, d: ch === 'district' ? me.district : undefined, text: text, at: now, re: re || undefined }); trimChat();
         changed();
     }
 
@@ -407,6 +416,8 @@ function createGame(roster, settings, hooks) {
             verdict: G.verdict,
             seq: G.phase === 'dawn' ? G.seq : [],
             silenced: G.phase === 'day' ? G.silenced : [],
+            lastNight: G.phase === 'dawn' ? null : G.lastNight || null,   // وقت مشاهد الفجر ما ينكشف قبل اللقطة
+            lastExile: G.lastExile || null,
             cards: over ? G.cards.map(function (c) { return { id: c, name: CARD_NAMES[c], used: G.usedCards.indexOf(c) >= 0 }; }) : null
         };
         // دور الليل الحالي (بدون عدد اللي خلّصوا: العدد يكشف كم مافيا/طبيب باقي حي)

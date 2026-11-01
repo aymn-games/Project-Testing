@@ -78,21 +78,48 @@ button { font-family: inherit; cursor: pointer; }
 .qr-mini .code { font-size: 24px; font-weight: 900; letter-spacing: 2px; direction: ltr; text-align: right; }
 .qr-mini small { font-size: 12px; color: #5d5a70; }
 
-/* الشات */
-.chat { position: absolute; top: 140px; right: 14px; bottom: 14px; width: min(330px, 26vw); display: flex; flex-direction: column; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; transition: opacity .3s, transform .3s; }
+/* لوحة النقاش/المجريات: بالنقاش والتصويت = الشات العام بس، وبباقي المراحل = سجل الأحداث */
+.chat { position: absolute; top: 140px; right: 14px; bottom: 14px; width: min(390px, 28vw); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(20,22,46,.92), rgba(10,11,26,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
 .chat.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
-.chat h3 { margin: 0; padding: 10px 14px; font-size: 17px; font-weight: 900; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
-.chat h3 small { color: var(--mute); font-weight: 700; font-size: 13px; }
-.msgs { flex: 1; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
-.msg { display: flex; gap: 8px; align-items: flex-start; animation: pop .25s ease-out; }
-.msg .av { width: 32px; height: 32px; flex: none; border-radius: 50%; background: rgba(255,255,255,.08); overflow: hidden; }
-.msg .av svg { width: 32px; height: 32px; }
-.msg .bd { background: rgba(255,255,255,.07); border-radius: 12px; padding: 5px 10px; min-width: 0; }
-.msg .nm { font-size: 13px; font-weight: 900; color: var(--gold); }
-.msg .tx { font-size: 16px; font-weight: 700; word-wrap: break-word; overflow-wrap: anywhere; }
-.msg.sys { justify-content: center; }
-.msg.sys .bd { background: rgba(255,204,77,.12); color: #ffe7a6; font-size: 14px; font-weight: 800; text-align: center; }
+.chat-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); }
+.chat-h b { font-size: 19px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+.chat-h b i { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; animation: live 1.6s ease-in-out infinite; }
+.chat-h span { font-size: 13px; font-weight: 800; color: var(--mute); background: rgba(255,255,255,.06); padding: 3px 10px; border-radius: 999px; }
+@keyframes live { 50% { opacity: .35; } }
+.msgs { flex: 1; overflow-y: auto; padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+.msgs::-webkit-scrollbar { display: none; }
+.msg { display: flex; gap: 10px; align-items: flex-start; animation: pop .3s ease-out; }
+.msg.cont { margin-top: -6px; }
+.msg.cont .av, .msg.cont .who { visibility: hidden; height: 0; }
+.msg.cont .av { height: 0; }
+.msg .av { width: 40px; height: 40px; flex: none; border-radius: 50%; background: rgba(255,255,255,.06); overflow: hidden; box-shadow: 0 0 0 2px var(--pc); }
+.msg .av svg { width: 40px; height: 40px; }
+.msg .col { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.msg .who { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 900; color: var(--pc); }
+.msg .who em { font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: var(--pc); padding: 0 7px; border-radius: 999px; opacity: .85; }
+.msg .bd { align-self: flex-start; max-width: 100%; background: color-mix(in srgb, var(--pc) 14%, rgba(255,255,255,.04)); border: 1px solid color-mix(in srgb, var(--pc) 30%, transparent); border-radius: 4px 14px 14px 14px; padding: 7px 12px 8px; }
+.msg .tx { font-size: 18px; line-height: 1.45; font-weight: 700; color: #f6f4ff; word-wrap: break-word; overflow-wrap: anywhere; }
+.msg .re { margin-bottom: 4px; padding: 3px 8px; border-inline-start: 3px solid var(--rc); border-radius: 6px; background: rgba(0,0,0,.25); font-size: 13px; font-weight: 700; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg .re b { color: var(--rc); }
+.ev { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 15px; font-weight: 800; color: #e9e6ff; animation: pop .3s ease-out; }
+.ev.big { background: rgba(255,204,77,.1); color: #ffe7a6; }
+.empty-talk { margin: auto; text-align: center; color: var(--mute); font-size: 15px; font-weight: 700; line-height: 1.7; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+
+/* ملخص الليلة (بالنقاش والتصويت): مين انقصى/أنقذه الطبيب، وآخر طرد، والأحياء */
+.recap { position: absolute; top: 152px; left: 18px; width: min(330px, 25vw); padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(20,22,46,.92), rgba(10,11,26,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; transition: opacity .3s, transform .3s; }
+.recap.off { opacity: 0; transform: translateX(-30px); pointer-events: none; }
+.recap h4 { margin: 0; font-size: 17px; font-weight: 900; color: #c7d2fe; display: flex; justify-content: space-between; }
+.recap h4 small { color: var(--mute); font-size: 12px; }
+.rc-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,.04); }
+.rc-row .av { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,.06); }
+.rc-row .av svg { width: 44px; height: 44px; }
+.rc-row .ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; font-size: 26px; border-radius: 50%; background: rgba(255,255,255,.06); }
+.rc-row b { display: block; font-size: 17px; font-weight: 900; }
+.rc-row span { display: block; font-size: 13px; font-weight: 700; color: var(--mute); }
+.rc-row.dead { background: rgba(226,72,61,.12); box-shadow: inset 3px 0 0 #e2483d; }
+.rc-row.dead .av { filter: grayscale(1); }
+.rc-row.saved { background: rgba(47,179,106,.12); box-shadow: inset 3px 0 0 #2fb36a; }
 
 /* النوافذ */
 .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4,5,14,.66); backdrop-filter: blur(4px); z-index: 20; padding: 16px; }
@@ -166,7 +193,8 @@ button { font-family: inherit; cursor: pointer; }
     <div class="banner hide" id="banner"><div class="sub" id="bSub"></div><div class="title" id="bTitle"></div><div class="prog" id="bProg"></div></div>
     <div class="caption" id="caption"><div class="k" id="capK"></div><div class="s" id="capS"></div><div id="capR"></div></div>
 
-    <aside class="chat off" id="chat"><h3>📜 مجريات المباراة <small id="chatHint">والنقاش من جوالات اللاعبين</small></h3><div class="msgs" id="msgs"></div></aside>
+    <aside class="chat off" id="chat"><div class="chat-h"><b id="chatTitle"><i></i>النقاش العام</b><span id="chatCount"></span></div><div class="msgs" id="msgs"></div></aside>
+    <aside class="recap off" id="recap" aria-label="ملخص الليلة"></aside>
 
     <div class="qr-mini" id="qrMini"><img id="qrMiniImg" alt="باركود الدخول"><div><b>دورك على هاتفك</b><div class="code" id="qrMiniCode">----</div><small>قفلت الصفحة؟ امسح الباركود</small></div></div>
 
@@ -268,22 +296,60 @@ button { font-family: inherit; cursor: pointer; }
     // ---------------------------------------------------------------- الحالة
     var lastChatN = '';
     // لوحة الشات: الشات العام للمباراة
-    function renderChat(list, players, key) {
-        var box = $('msgs');
+    // لون لكل لاعب (من لون قميصه، مفتّح عشان يقرا على الخلفية الداكنة)
+    function playerColor(p) {
+        var hex = L.colors(p && p.look).shirt, n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255, k = 0.38;
+        r = Math.round(r + (255 - r) * k); g = Math.round(g + (255 - g) * k); b = Math.round(b + (255 - b) * k);
+        return 'rgb(' + r + ',' + g + ',' + b + ')';
+    }
+    // النقاش والتصويت: الشات العام بس (رسائل اللاعبين مع الردود) · باقي المراحل: سجل أحداث المباراة
+    function renderChat(G) {
+        var talk = G.phase === 'day' || G.phase === 'vote';
+        var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city'; }) : G.chat.filter(function (c) { return c.sys; });
+        var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
-        var byId = {}; players.forEach(function (p) { byId[p.id] = p; });
+        $('chatTitle').innerHTML = talk ? '<i></i>النقاش العام' : '📜 مجريات المباراة';
+        $('chatCount').textContent = talk ? list.length + ' رسالة' : 'الليلة ' + Math.max(1, G.round);
+        var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var box = $('msgs'), prev = null;
+        if (talk && !list.length) { box.innerHTML = '<div class="empty-talk">💬 النقاش بدأ<br>اللاعبين يكتبون من جوالاتهم…</div>'; return; }
         box.innerHTML = list.slice(-40).map(function (c) {
-                if (c.sys) return '<div class="msg sys"><div class="bd">' + esc(c.text) + '</div></div>';
-                var p = byId[c.from] || { name: '؟' };
-                return '<div class="msg"><div class="av">' + L.avatarSVG(p.look, 32) + '</div><div class="bd"><div class="nm">' + esc(p.name) + '</div><div class="tx">' + esc(c.text) + '</div></div></div>';
-            }).join('');
+            if (c.sys) return '<div class="ev' + (/إقصاء|طرد|أنقذ|فاز|سيطرت|تخلّصت/.test(c.text) ? ' big' : '') + '">' + esc(c.text) + '</div>';
+            var p = byId[c.from] || { name: '؟' }, pc = playerColor(p), cont = prev === c.from && !c.re;
+            prev = c.from;
+            var re = c.re ? (function () { var rp = byId[c.re.from] || { name: '؟' }; return '<div class="re" style="--rc:' + playerColor(rp) + '">↩ <b>' + esc(rp.name) + '</b>: ' + esc(c.re.text) + '</div>'; })() : '';
+            return '<div class="msg' + (cont ? ' cont' : '') + '" style="--pc:' + pc + '"><div class="av">' + L.avatarSVG(p.look, 40) + '</div><div class="col">' +
+                '<div class="who">' + esc(p.name) + (p.seat != null ? ' <em>' + (p.seat + 1) + '</em>' : '') + '</div><div class="bd">' + re + '<div class="tx">' + esc(c.text) + '</div></div></div></div>';
+        }).join('');
         box.scrollTop = box.scrollHeight;
+    }
+    // ملخص الليلة اللي فاتت + آخر طرد + عدد الأحياء
+    var recapKey = '';
+    function renderRecap(G) {
+        var show = G.phase === 'day' || G.phase === 'vote', box = $('recap');
+        box.classList.toggle('off', !show);
+        var key = show ? JSON.stringify([G.lastNight, G.lastExile, G.round, G.players.filter(function (p) { return p.alive; }).length]) : '';
+        if (!show || key === recapKey) return;
+        recapKey = key;
+        var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var N = G.lastNight || {}, html = '<h4>🌙 ملخص الليلة ' + (N.round || G.round) + '<small>وش صار</small></h4>';
+        if (N.victim && byId[N.victim]) { var v = byId[N.victim]; html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; }
+        else if (N.saved && byId[N.saved]) { var sv = byId[N.saved]; html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; }
+        else html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
+        var X = G.lastExile;
+        if (X && byId[X.id]) {
+            var xp = byId[X.id], R = X.role && L.ROLE[X.role];
+            html += '<div class="rc-row"><div class="av" style="filter:grayscale(1)">' + L.avatarSVG(xp.look, 44) + '</div><div><b>⚖️ ' + esc(xp.name) + '</b><span>انطرد بالتصويت · ' + (R ? 'كان ' + R.n : X.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان من المدينة 🏠') + '</span></div></div>';
+        }
+        var alive = G.players.filter(function (p) { return p.alive; }).length;
+        html += '<div class="rc-row"><div class="ic">👥</div><div><b>' + alive + ' أحياء</b><span>من أصل ' + G.players.length + ' لاعب</span></div></div>';
+        box.innerHTML = html;
     }
     function onState() {
         var G = S.G;
         renderCtl();
-        renderChat(G.chat, G.players, 'g' + G.id + ':' + (G.chat.length ? G.chat[G.chat.length - 1].n : 0));
+        renderChat(G); renderRecap(G);
         // نتيجة المباراة ← نقاط المنصة (مرة وحدة لكل مباراة)
         if (G.phase === 'over' && G.winner) reportPoints(G);
     }

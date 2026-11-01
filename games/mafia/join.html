@@ -86,6 +86,17 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .cm b { color: var(--gold); font-weight: 900; }
 .cm.sys { color: #ffe7a6; text-align: center; font-size: 14px; }
 .cm.maf b { color: #ff8a80; }
+/* فقاعة رسالة مع زر رد */
+.bm { display: flex; flex-direction: column; gap: 3px; padding: 7px 10px 8px; border-radius: 4px 14px 14px 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); }
+.bm.mine { background: rgba(124,92,255,.16); border-color: rgba(124,92,255,.35); }
+.bm .hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bm .hd b { font-size: 14px; font-weight: 900; }
+.bm .rp { border: 0; background: rgba(255,255,255,.08); color: #d9d6ff; font: inherit; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
+.bm .tx { font-size: 16px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.bm .qt { padding: 3px 8px; border-inline-start: 3px solid var(--gold); border-radius: 6px; background: rgba(0,0,0,.28); font-size: 12px; font-weight: 700; color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replybar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: rgba(255,204,77,.1); border: 1px solid rgba(255,204,77,.3); font-size: 13px; font-weight: 800; color: #ffe7a6; }
+.replybar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replybar button { border: 0; background: none; color: #ffe7a6; font-size: 18px; cursor: pointer; padding: 0 4px; }
 .send { display: flex; gap: 8px; margin-top: 8px; }
 .send .field { height: 48px; font-size: 17px; }
 .send button { flex: none; width: 74px; height: 48px; border-radius: 14px; border: 0; background: var(--gold); font-weight: 900; font-size: 17px; }
@@ -293,19 +304,35 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     }
 
     // الشات: عام للمدينة، حي (لو فيه أحياء)، والمافيا السري — العام والحي بالنقاش فقط، والمافيا طول المباراة
+    // رسالة بفقاعة: اسم المرسل (بلون ثابت له)، الرسالة اللي يرد عليها، وزر «رد» لو تقدر تكتب بالقناة
+    S.reply = {};
+    var NAME_C = ['#ffcc4d', '#7ee2a6', '#8ab4ff', '#ff9e80', '#e9a6ff', '#6ee7e7', '#ffd27a', '#b5f07a'];
+    function nameColor(p) { var s = String(p && p.id || ''), h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return NAME_C[h % NAME_C.length]; }
+    function bubble(c, byId, canReply) {
+        var p = byId[c.from] || { name: '؟' }, mine = c.from === S.me.id;
+        var q = c.re ? '<div class="qt">↩ <b style="color:' + nameColor(byId[c.re.from]) + '">' + esc((byId[c.re.from] || { name: '؟' }).name) + '</b>: ' + esc(c.re.text) + '</div>' : '';
+        return '<div class="bm' + (mine ? ' mine' : '') + '"><div class="hd"><b style="color:' + nameColor(p) + '">' + esc(p.name) + (mine ? ' (أنت)' : '') + '</b>' +
+            (canReply ? '<button type="button" class="rp" data-reply="' + c.ch + ':' + c.n + '">↩ رد</button>' : '') + '</div>' + q + '<div class="tx">' + esc(c.text) + '</div></div>';
+    }
+    function replyBar(G, ch) {
+        var r = S.reply[ch]; if (!r) return '';
+        var c = G.chat.find(function (m) { return m.n === r && m.ch === ch; });
+        if (!c) { delete S.reply[ch]; return ''; }
+        var p = G.players.find(function (q) { return q.id === c.from; }) || { name: '؟' };
+        return '<div class="replybar"><span>↩ ترد على ' + esc(p.name) + ': ' + esc(c.text) + '</span><button type="button" data-unreply="' + ch + '" aria-label="إلغاء الرد">✕</button></div>';
+    }
     function chatHtml(G, chans) {
         if (chans.indexOf(S.chan) < 0) S.chan = chans[0];
         var names = { city: '🏙️ العام', district: '🏘️ حيّك (' + G.me.district + ')', mafia: '🔪 المافيا' };
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
         var msgs = G.chat.filter(function (c) { return c.sys ? S.chan === 'city' : c.ch === S.chan; }).slice(-60).map(function (c) {
             if (c.sys) return '<div class="cm sys">' + esc(c.text) + '</div>';
-            var p = byId[c.from] || { name: '؟' };
-            return '<div class="cm' + (c.ch === 'mafia' ? ' maf' : '') + '"><b>' + esc(p.name) + ':</b> ' + esc(c.text) + '</div>';
+            return bubble(c, byId, canSend);
         }).join('');
-        var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
         return (chans.length > 1 ? '<div class="opts" style="margin-top:10px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
             '<div class="chatbox" id="chatbox">' + msgs + '</div>' + (canSend
-            ? '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (S.chan === 'mafia' ? 'كلّم فريقك بسرية…' : 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+            ? replyBar(G, S.chan) + '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (S.chan === 'mafia' ? 'كلّم فريقك بسرية…' : 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
     }
     function chansFor(G) {
         var c = [];
@@ -337,9 +364,9 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
               '<span>🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + (unread ? ' <span style="background:#e2483d;color:#fff;border-radius:999px;padding:1px 9px;font-size:13px">' + unread + ' جديدة</span>' : '') + '</span><span>' + (open ? 'اقفل ▴' : 'افتح ▾') + '</span></button>';
         if (!open) return head;
         return head + '<div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + (list.slice(-60).map(function (c) {
-            var p = byId[c.from] || { name: '؟' }; return '<div class="cm maf"><b>' + esc(p.name) + ':</b> ' + esc(c.text) + '</div>';
+            return bubble(c, byId, canSend);
         }).join('') || '<div class="cm sys">ما فيه رسائل — الشات هذا يشوفه ' + (ch === 'mafia' ? 'فريقك' : ch === 'doctor' ? 'الأطباء' : 'المحققين') + ' بس</div>') + '</div>' +
-            (canSend ? '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="' + PRIV[ch].h + '" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '<p>يفتح للكتابة وقت النقاش.</p>');
+            (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="' + PRIV[ch].h + '" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '<p>يفتح للكتابة وقت النقاش.</p>');
     }
 
     var CARD_INFO = {
@@ -399,7 +426,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
 
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.chan, S.filter, S.privOpen]);
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.chan, S.filter, S.privOpen, S.reply]);
         if (key === lastRenderKey) return; lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
         var pin = $('privIn'); if (pin) S.pdraft = pin.value;
@@ -485,14 +512,21 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var m = e.target.closest('[data-opmode]'); if (m) { S.opMode = m.getAttribute('data-opmode'); return renderGame(); }
         var c = e.target.closest('[data-cardsel]'); if (c) { var id = c.getAttribute('data-cardsel'); S.cardSel = S.cardSel === id ? null : id; return renderGame(); }
         var ch = e.target.closest('[data-chan]'); if (ch) { S.chan = ch.getAttribute('data-chan'); return renderGame(); }
+        var rp = e.target.closest('[data-reply]');
+        if (rp) {
+            var parts = rp.getAttribute('data-reply').split(':'); S.reply[parts[0]] = +parts[1]; renderGame();
+            var inp = $(S.G && privChan(S.G) === parts[0] ? 'privIn' : 'chatIn'); if (inp) inp.focus();
+            return;
+        }
+        var ur = e.target.closest('[data-unreply]'); if (ur) { delete S.reply[ur.getAttribute('data-unreply')]; return renderGame(); }
         if (e.target.id === 'chatSend') sendChat();
         if (e.target.id === 'privSend') sendPriv();
         if (e.target.closest('[data-priv-toggle]')) { S.privOpen = !S.privOpen; lastRenderKey = ''; renderGame(); }
     });
     $('gameBody').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'chatIn') sendChat(); if (e.target.id === 'privIn') sendPriv(); });
     $('gameBody').addEventListener('input', function (e) { if (e.target.id === 'pf') { S.filter = e.target.value; renderGame(); } });
-    function sendPriv() { var i = $('privIn'), ch = S.G && privChan(S.G); if (!i || !ch) return; var t = i.value.trim(); if (!t) return; act('chat', ch + '|' + t); i.value = ''; S.pdraft = ''; i.focus(); }
-    function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', S.chan + '|' + t); i.value = ''; S.draft = ''; i.focus(); }
+    function sendPriv() { var i = $('privIn'), ch = S.G && privChan(S.G); if (!i || !ch) return; var t = i.value.trim(); if (!t) return; act('chat', ch + (S.reply[ch] ? '#' + S.reply[ch] : '') + '|' + t); delete S.reply[ch]; i.value = ''; S.pdraft = ''; renderGame(); var f = $('privIn'); if (f) f.focus(); }
+    function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', S.chan + (S.reply[S.chan] ? '#' + S.reply[S.chan] : '') + '|' + t); delete S.reply[S.chan]; i.value = ''; S.draft = ''; renderGame(); var f = $('chatIn'); if (f) f.focus(); }
 
     // المؤقت
     setInterval(function () {
