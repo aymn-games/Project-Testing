@@ -32,6 +32,20 @@
             '<div class="steps-note">💡 ما فيه دخول بالشات</div>';
     }
 
-    window.MafiaHost = { buildFx: buildFx, joinStepsHtml: joinStepsHtml };
-    document.addEventListener('DOMContentLoaded', function () { buildFx(document.querySelector('.fx')); });
+    /** تكبير مرن حسب حجم الشاشة: التصميم مبني على 1440×900، وبالشاشات الأكبر (2K/4K) كل شي يكبر بنفس النسبة
+     *  عشان الأدوات والأيقونات تبان بنفس الوضوح. el = العنصر اللي يتكبّر (الافتراضي body). */
+    function autoScale(el, base) {
+        base = base || [1440, 900];
+        function fit() {
+            var t = el || document.body; if (!t) return;
+            var z = Math.min(window.innerWidth / base[0], window.innerHeight / base[1]);
+            z = Math.max(1, Math.min(3, z));   // ما نصغّر تحت الحجم الأصلي، ونكبّر لين 3×
+            t.style.zoom = z > 1.04 ? String(Math.round(z * 100) / 100) : '';
+        }
+        fit(); window.addEventListener('resize', fit);
+        return fit;
+    }
+
+    window.MafiaHost = { buildFx: buildFx, joinStepsHtml: joinStepsHtml, autoScale: autoScale };
+    document.addEventListener('DOMContentLoaded', function () { buildFx(document.querySelector('.fx')); autoScale(); });
 })();

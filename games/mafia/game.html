@@ -52,7 +52,7 @@ button { font-family: inherit; cursor: pointer; }
 .round .ico { font-size: 26px; }
 
 /* لافتة المرحلة */
-.banner { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); max-width: min(760px, 70vw); text-align: center; padding: 8px 26px 10px; border-radius: 14px; background: rgba(10,9,15,.82); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(0,0,0,.5); transition: opacity .35s; }
+.banner { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); max-width: min(760px, 70%); text-align: center; padding: 8px 26px 10px; border-radius: 14px; background: rgba(10,9,15,.82); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(0,0,0,.5); transition: opacity .35s; }
 .banner .sub { font-size: 15px; font-weight: 700; color: #e6e2f7; }
 .banner .title { font-size: 30px; font-weight: 900; color: var(--gold); line-height: 1.15; }
 .banner .prog { margin-top: 4px; display: flex; gap: 6px; justify-content: center; }
@@ -66,16 +66,16 @@ button { font-family: inherit; cursor: pointer; }
 .turns b { color: rgba(255,255,255,.3); font-size: 12px; }
 
 /* عنوان اللقطة السينمائية */
-.caption { position: absolute; bottom: 9vh; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90vw; }
+.caption { position: absolute; bottom: 9%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90%; }
 .caption.on { opacity: 1; }
-.caption .k { font-size: clamp(30px, 4.4vw, 64px); font-weight: 900; text-shadow: 0 4px 22px rgba(0,0,0,.85), 0 0 2px #000; }
-.caption .s { font-size: clamp(16px, 1.7vw, 26px); font-weight: 800; color: #f1ecff; text-shadow: 0 2px 12px rgba(0,0,0,.9); margin-top: 4px; }
-.caption .role { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 999px; font-size: clamp(16px, 1.6vw, 24px); font-weight: 900; }
+.caption .k { font-size: 58px; font-weight: 900; text-shadow: 0 4px 22px rgba(0,0,0,.85), 0 0 2px #000; }
+.caption .s { font-size: 24px; font-weight: 800; color: #f1ecff; text-shadow: 0 2px 12px rgba(0,0,0,.9); margin-top: 4px; }
+.caption .role { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 999px; font-size: 22px; font-weight: 900; }
 .flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
 .letterbox::before, .letterbox::after { content: ''; position: absolute; inset-inline: 0; height: 0; background: #000; transition: height .5s; pointer-events: none; }
 .letterbox::before { top: 0; } .letterbox::after { bottom: 0; }
-.letterbox.on::before, .letterbox.on::after { height: 7vh; }
+.letterbox.on::before, .letterbox.on::after { height: 7%; }
 
 /* QR صغير (أثناء المباراة) */
 .qr-mini { position: absolute; bottom: 14px; left: 14px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: #fffaf0; color: #1b1a26; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
@@ -85,7 +85,7 @@ button { font-family: inherit; cursor: pointer; }
 .qr-mini small { display: block; font-size: 12px; line-height: 1.45; color: #5d5a70; }
 
 /* لوحة النقاش/المجريات: بالنقاش والتصويت = الشات العام بس، وبباقي المراحل = سجل الأحداث */
-.chat { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(390px, 28vw); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
+.chat { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(390px, 30%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
 .chat.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
 .chat-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); }
 .chat-h b { font-size: 19px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
@@ -116,7 +116,7 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
 
 /* ملخص الليلة (بالنقاش والتصويت): مين انقصى/أنقذه الطبيب، وآخر طرد، والأحياء */
-.recap { position: absolute; top: 180px; left: 18px; width: min(330px, 25vw); padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; transition: opacity .3s, transform .3s; }
+.recap { position: absolute; top: 180px; left: 18px; width: min(330px, 26%); padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; transition: opacity .3s, transform .3s; }
 .recap.off { opacity: 0; transform: translateX(-30px); pointer-events: none; }
 .recap h4 { margin: 0; font-size: 17px; font-weight: 900; color: var(--c3); display: flex; justify-content: space-between; }
 .recap h4 small { color: var(--mute); font-size: 12px; }
@@ -133,7 +133,7 @@ button { font-family: inherit; cursor: pointer; }
 /* النوافذ */
 .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4,5,14,.66); backdrop-filter: blur(4px); z-index: 20; padding: 16px; }
 .modal.on { display: flex; }
-.sheet { width: min(560px, 100%); max-height: 88vh; overflow-y: auto; border-radius: 20px; background: #12101a; border: 1px solid var(--line); padding: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.sheet { width: min(560px, 100%); max-height: 88%; overflow-y: auto; border-radius: 20px; background: #12101a; border: 1px solid var(--line); padding: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
 .sheet h3 { margin: 0 0 10px; font-size: 24px; font-weight: 900; display: flex; align-items: center; justify-content: space-between; }
 .sheet h4 { margin: 14px 0 8px; color: var(--gold); font-size: 16px; font-weight: 900; }
 .x { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: #fff; font-size: 18px; }
@@ -161,8 +161,8 @@ button { font-family: inherit; cursor: pointer; }
 .ctl-actions .btn { height: 44px; font-size: 16px; padding: 0 10px; }
 
 /* شاشة النهاية */
-.over { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(900px, 94vw); padding: 16px 18px; border-radius: 22px; background: rgba(10,9,15,.9); border: 1px solid var(--line); text-align: center; }
-.over .win { font-size: clamp(30px, 4vw, 54px); font-weight: 900; }
+.over { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(900px, 94%); padding: 16px 18px; border-radius: 22px; background: rgba(10,9,15,.9); border: 1px solid var(--line); text-align: center; }
+.over .win { font-size: 50px; font-weight: 900; }
 .over .roles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0 12px; }
 .over .rl { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 999px; background: rgba(255,255,255,.07); font-weight: 800; }
 .over .rl svg { width: 28px; height: 28px; }
@@ -174,7 +174,7 @@ button { font-family: inherit; cursor: pointer; }
 .is-over .qr-mini { display: none; }
 
 @media (max-width: 760px) {
-    .chat { width: 46vw; }
+    .chat { width: 46%; }
     .banner .title { font-size: 22px; }
     .brand small { display: none; }
 }
@@ -534,6 +534,16 @@ import { createStage } from './mafia-scene.js';
 window.__mafiaStage = createStage(document.getElementById('stage'), function () { return window.__mafiaFrame(); }, {
     onCue: function (k, d) { window.MafiaSFX.cue(k, d); }, onAmbience: function (m) { window.MafiaSFX.ambience(m); }
 });
+</script>
+<script>
+// تكبير مرن لواجهة البث حسب حجم الشاشة (التصميم على 1366×768): بشاشات 1080p و2K و4K كل الأدوات والأيقونات تكبر بنفس النسبة
+(function () {
+    function fit() {
+        var z = Math.max(1, Math.min(3, Math.min(innerWidth / 1366, innerHeight / 768)));
+        ['ui', 'ctlModal'].forEach(function (id) { var el = document.getElementById(id); if (el) el.style.zoom = z > 1.04 ? String(Math.round(z * 100) / 100) : ''; });
+    }
+    fit(); addEventListener('resize', fit);
+})();
 </script>
 </body>
 </html>
