@@ -388,6 +388,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 18.17, avatarTopPct: 15.46, avatarWidthPct: 21.09, avatarHeightPct: 63.58,
             nameLeftPct: 42.65, nameTopPct: 33.24, nameWidthPct: 46.18, nameHeightPct: 32.66
         },
+        // إطار "القطة الزرقاء" — منح محدود (خارج المتجر وعرض الإطارات).
+        // مقاس بالبكسل على 2089×753: نافذة المحتوى = أعلى/أسفل بكسل غير شفاف
+        // (4→748)، مربع الصورة = حدود الفتحة الدائرية الشفافة (175→592 ×
+        // 159→545)، ولوح الاسم = داخل اللوح بعيداً عن النجوم والمخالب
+        // (840→1689 × 305→479). اللوح أزرق فاتح — اسم أزرق غامق.
+        'frame-blue-kitty.png': {
+            canvasW: 2089, canvasH: 753, contentTop: 4, contentHeight: 745,
+            avatarLeftPct: 8.38, avatarTopPct: 20.81, avatarWidthPct: 20.01, avatarHeightPct: 51.95,
+            nameLeftPct: 40.21, nameTopPct: 40.40, nameWidthPct: 40.69, nameHeightPct: 23.49,
+            textColor: '#1e3f7a'
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص

@@ -104,6 +104,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             holeBleed: 8,
             avatarBg: '#111216',
             sound: 'elim-card-azooz.mp3'
+        },
+        // القطة الزرقاء — منح محدود. 1642×958. "عملية إقصاء" مطبوعة باللوح
+        // الأوسط، فالبطاقة بدون textBox (الصورتين فقط) مثل البجعة الوردية.
+        // الدائرتين = حدود الفتحتين الشفافتين بالبكسل.
+        'blue-kitty': {
+            image: 'elim-card-blue-kitty.png',
+            width: 1642,
+            height: 958,
+            actorHole: { x: 1162, y: 242, w: 303, h: 283 },  // right circle
+            targetHole: { x: 176, y: 242, w: 300, h: 282 },  // left circle
+            holeBleed: 8,
+            avatarBg: '#dce7f7'
         }
     };
 

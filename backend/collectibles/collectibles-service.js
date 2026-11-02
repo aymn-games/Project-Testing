@@ -326,7 +326,8 @@ var ELIM_CARD_CATALOG = [
   { key: 'crystal-crown', displayNameAr: 'بطاقة الإقصاء — الريس الكريستالي', imageFilename: 'assets/elim-cards/elim-card-crystal-crown.png' },
   // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
   { key: 'pink-swan', displayNameAr: 'بطاقة الإقصاء — البجعة الوردية (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-pink-swan.png', limited: true },
-  { key: 'azooz', displayNameAr: 'بطاقة الإقصاء — عزوز (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-azooz.png', limited: true }
+  { key: 'azooz', displayNameAr: 'بطاقة الإقصاء — عزوز (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-azooz.png', limited: true },
+  { key: 'blue-kitty', displayNameAr: 'بطاقة الإقصاء — القطة الزرقاء (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-blue-kitty.png', limited: true }
 ];
 
 function getElimCardCatalog() {
@@ -445,7 +446,8 @@ var WIN_CARD_CATALOG = [
   { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' },
   { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' },
   // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
-  { key: 'sakura-pink', displayNameAr: 'بطاقة الفوز — ساكورا الوردي (منح محدود)', imageFilename: 'assets/win-cards/win-card-sakura-pink.png', limited: true }
+  { key: 'sakura-pink', displayNameAr: 'بطاقة الفوز — ساكورا الوردي (منح محدود)', imageFilename: 'assets/win-cards/win-card-sakura-pink.png', limited: true },
+  { key: 'blue-kitty', displayNameAr: 'بطاقة الفوز — القطة الزرقاء (منح محدود)', imageFilename: 'assets/win-cards/win-card-blue-kitty.png', limited: true }
 ];
 
 function getWinCardCatalog() {
