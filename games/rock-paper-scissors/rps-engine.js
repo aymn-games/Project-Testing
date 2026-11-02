@@ -37,6 +37,19 @@
         return s === '1' || s === '2' || s === '3' ? Number(s) : 0;
     }
 
+    /** تطبيع النص قبل مقارنة كلمة الدخول (نفس norm بـ games/luck-color/lc-platform.js وروليت الإقصاء). */
+    function norm(x) {
+        return String(x == null ? '' : x).normalize('NFKC').trim()
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+            .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+            .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
+            .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
+            .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '')
+            .split(/\s+/).map(function (w) { return w.replace(/^ال/, ''); }).join('')
+            .replace(/(\p{L})\1+/gu, '$1');
+    }
+
     function shuffle(list, rnd) {
         var a = list.slice();
         for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
@@ -193,7 +206,7 @@
         };
     }
 
-    var api = { create: create, beats: beats, parsePick: parsePick, NAMES: NAMES, ROCK: ROCK, PAPER: PAPER, SCISSORS: SCISSORS, MAX_TIES: MAX_TIES, WINS: WINS };
+    var api = { create: create, beats: beats, parsePick: parsePick, norm: norm, NAMES: NAMES, ROCK: ROCK, PAPER: PAPER, SCISSORS: SCISSORS, MAX_TIES: MAX_TIES, WINS: WINS };
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.RpsEngine = api;
 }(typeof window !== 'undefined' ? window : this));

@@ -114,3 +114,9 @@ test('rules: paper beats rock, rock beats scissors, scissors beats paper (all 9 
     const g = E.create(); add(g, 2); g.startRound(); const d = g.duels[0];
     g.pick(d.a, 1); g.pick(d.b, 2); g.resolve(0); assert.equal(d.rounds[0].w, d.b);
 });
+
+test('norm: keyword matching ignores ال, repeated letters, hamza forms and diacritics', () => {
+    const k = E.norm('دخول');
+    for (const t of ['دخول', 'الدخول', 'دخووول', ' دُخول ', 'دخول!']) assert.equal(E.norm(t), k, t);
+    assert.notEqual(E.norm('1'), k); assert.equal(E.norm('أحمد'), E.norm('احمد'));
+});
