@@ -429,7 +429,7 @@ export function createArena(container, opts = {}) {
             drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
-            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16; // اللي بالمواجهة اسمه بشريط VS فوق
+            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag; // اللي بالمواجهة اسمه بشريط VS فوق
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
         // مراكز المواجهات من أماكن اللاعبين

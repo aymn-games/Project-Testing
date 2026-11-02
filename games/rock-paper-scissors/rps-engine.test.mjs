@@ -105,3 +105,12 @@ test('resolve(i) settles only that duel; others stay open for later', () => {
     assert.equal(d1.result, null); assert.deepEqual(d1.wins, { [d1.a]: 0, [d1.b]: 0 }); assert.equal(g.roundDone(), false);
     attempt(g, 1, 3, 2); attempt(g, 1, 3, 2); assert.ok(g.roundDone());
 });
+
+test('rules: paper beats rock, rock beats scissors, scissors beats paper (all 9 combos)', () => {
+    const R = E.ROCK, P = E.PAPER, S = E.SCISSORS;
+    const expect = [[P, R, 1], [R, S, 1], [S, P, 1], [R, P, -1], [S, R, -1], [P, S, -1], [R, R, 0], [P, P, 0], [S, S, 0]];
+    for (const [a, b, w] of expect) assert.equal(E.beats(a, b), w, E.NAMES[a] + ' vs ' + E.NAMES[b]);
+    // ونفس الشي داخل مواجهة فعلية: 2 (ورقة) ضد 1 (حجرة) — الورقة تفوز
+    const g = E.create(); add(g, 2); g.startRound(); const d = g.duels[0];
+    g.pick(d.a, 1); g.pick(d.b, 2); g.resolve(0); assert.equal(d.rounds[0].w, d.b);
+});
