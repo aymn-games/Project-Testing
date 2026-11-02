@@ -8,10 +8,11 @@
  *
  * المشهد عرض بس: الشاشة (game.html) تمسك القواعد والوقت وترسل الحالة:
  *   setState({ phase, players: [{ id, name, avatarUrl, place, pose, pick, bubble, badge }] })
- *   place = { kind: 'grid'|'duel'|'bye'|'ring'|'podium', i, n, side }
- *     grid: فترة الدخول · duel: المواجهة رقم i من n، side 0/1 · bye: تأهل مباشر
- *     ring: خرج وصار متفرج حول الساحة · podium: البطل
- *   pose = 'idle'|'wave'|'ready'|'shake'|'reveal'|'win'|'lose'|'clap'|'dance'
+ *   place = { kind: 'duel'|'queue'|'podium', i, n, side }
+ *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
+ *     queue: ينتظر دوره بنص دائرة خلف المواجهة (i من n) · podium: البطل
+ *   pose = 'idle'|'wave'|'ready'|'shake'|'reveal'|'win'|'ko'|'clap'|'dance'
+ *     ko = إقصاء مضحك (ko: 1 نابض يطيّره · 2 مجسم عملاق من اختيار الفائز koPick يفرشه) ~2.9ث
  *   pick = 1/2/3 (يظهر المجسم بيده وقت reveal) · bubble = {text, color} · badge = {text, color}
  * createArena(container) ← { ready: Promise, setState, stop }
  */
@@ -166,7 +167,7 @@ export function createArena(container, opts = {}) {
     const scene = new T.Scene();
     scene.background = canvasTex(4, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#05030f'); gr.addColorStop(.55, '#140a33'); gr.addColorStop(1, '#2a0f45'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
     scene.fog = new T.Fog('#12082a', 34, 90);
-    const camera = new T.PerspectiveCamera(40, 16 / 9, .1, 260);
+    const camera = new T.PerspectiveCamera(36, 16 / 9, .1, 260);
     camera.position.set(0, 14, 26);
 
     // ---------- إضاءة: سماء + شمس ناعمة + إضاءة ملوّنة من الأطراف
@@ -271,11 +272,11 @@ export function createArena(container, opts = {}) {
     let padList = []; // [{x, z, live}]
 
     // ---------- منصة البطل (تطلع من الأرض)
-    const podium = new T.Group(); podium.position.y = -1.4; scene.add(podium);
+    const podium = new T.Group(); podium.position.set(0, -1.4, 4); scene.add(podium);
     const podGold = new T.MeshStandardMaterial({ color: '#f5c542', metalness: .85, roughness: .25, emissive: '#7a4b00', emissiveIntensity: .35 });
-    const pod1 = new T.Mesh(new T.CylinderGeometry(1.25, 1.45, .9, 48), podGold); pod1.position.y = .45; podium.add(pod1);
-    const podRing = new T.Mesh(new T.TorusGeometry(1.3, .06, 8, 64), new T.MeshBasicMaterial({ color: '#ffe08a' })); podRing.rotation.x = Math.PI / 2; podRing.position.y = .91; podium.add(podRing);
-    const PODIUM_TOP = .9;
+    const pod1 = new T.Mesh(new T.CylinderGeometry(1.1, 1.3, .5, 48), podGold); pod1.position.y = .25; podium.add(pod1);
+    const podRing = new T.Mesh(new T.TorusGeometry(1.3, .06, 8, 64), new T.MeshBasicMaterial({ color: '#ffe08a' })); podRing.rotation.x = Math.PI / 2; podRing.position.y = .51; podium.add(podRing);
+    const PODIUM_TOP = .5;
 
     // ---------- ظل ناعم تحت كل شخصية (InstancedMesh واحد)
     const CAP = 80;
@@ -298,7 +299,7 @@ export function createArena(container, opts = {}) {
     let confT = -1;
     function startConfetti(cx, cz) {
         confT = 0; confetti.visible = true;
-        for (const d of confData) { d.p.set(cx + (Math.random() - .5) * 10, 9 + Math.random() * 6, cz + (Math.random() - .5) * 8); d.v.set((Math.random() - .5) * .8, -1.2 - Math.random() * 1.2, (Math.random() - .5) * .8); d.r.set(Math.random() * TAU, Math.random() * TAU, 0); d.w.set(Math.random() * 6, Math.random() * 6, Math.random() * 3); }
+        for (const d of confData) { d.p.set(cx + (Math.random() - .5) * 7, 4 + Math.random() * 4, cz + (Math.random() - .5) * 5); d.v.set((Math.random() - .5) * .8, -1.2 - Math.random() * 1.2, (Math.random() - .5) * .8); d.r.set(Math.random() * TAU, Math.random() * TAU, 0); d.w.set(Math.random() * 6, Math.random() * 6, Math.random() * 3); }
     }
 
     // ---------- المعالجة اللاحقة: توهّج (Bloom). لو فشلت نرسم عادي.
@@ -314,32 +315,22 @@ export function createArena(container, opts = {}) {
     const chars = new Map(); // id → {rig, slot, pos, target, ry, tRy, tag, bubble, badge, prop, pick, pose, place, ...}
     let phase = 'join', phaseAt = 0, now = 0;
 
-    function placeOf(p, all) {
-        const pl = p.place || { kind: 'grid' };
-        if (pl.kind === 'podium') return { x: 0, z: 0, y: PODIUM_TOP, ry: 0 };
-        if (pl.kind === 'ring') {
-            // متفرجين بنص دائرة أمام المدرجات، وجوههم للوسط
-            const n = Math.max(1, pl.n), a = Math.PI * (.1 + .8 * (pl.i + .5) / n) + Math.PI, r = R - 1.3 - (pl.i % 2) * 1.1;
-            const x = -Math.cos(a) * r, z = Math.sin(a) * r * .85 - 1.5;
-            return { x, z, y: 0, ry: Math.atan2(-x, -z) };
-        }
-        if (pl.kind === 'bye') return { x: 0, z: duelBottom() + 2.6, y: 0, ry: 0 };
+    // مكان المواجهة الوحيد (الكاميرا ثابتة عليه) والطابور خلفه
+    const DZ = 4, QC = 3;
+    function placeOf(p) {
+        const pl = p.place || { kind: 'queue', i: 0, n: 1 };
+        if (pl.kind === 'podium') return { x: 0, z: DZ, y: PODIUM_TOP, ry: 0 };
         if (pl.kind === 'duel') {
-            const n = Math.max(1, pl.n), cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : n <= 16 ? 4 : 5, rows = Math.ceil(n / cols);
-            const row = Math.floor(pl.i / cols), inRow = Math.min(cols, n - row * cols), c = pl.i - row * cols;
-            const CW = n <= 1 ? 4 : 4.6, RH = 3.3;
-            const cx = (c - (inRow - 1) / 2) * CW, cz = (row - (rows - 1) / 2) * RH - .4;
-            const sx = pl.side ? 1 : -1, gap = n <= 1 ? .95 : .82;
             // الاثنين متقابلين ومايلين شوي للكاميرا عشان تنشاف الوجوه والإيدين
-            return { x: cx + sx * gap, z: cz, y: 0, ry: -sx * (Math.PI / 2 - .42) };
+            const sx = pl.side ? 1 : -1;
+            return { x: sx * .82, z: DZ, y: 0, ry: -sx * (Math.PI / 2 - .85) };
         }
-        // grid: فترة الدخول، صفوف قدام الكاميرا
-        const n = Math.max(1, pl.n || all), cols = Math.min(10, Math.ceil(Math.sqrt(n * 2.2))), rows = Math.ceil(n / cols);
-        const row = Math.floor(pl.i / cols), inRow = Math.min(cols, n - row * cols), c = pl.i - row * cols;
-        return { x: (c - (inRow - 1) / 2) * 1.35 + (row % 2) * .3, z: (row - (rows - 1) / 2) * 1.7, y: 0, ry: 0 };
+        // queue: نص دائرة خلف المواجهة، صفوف 12، وجوههم للمواجهة
+        const n = Math.max(1, pl.n), row = Math.floor(pl.i / 12), inRow = Math.min(12, n - row * 12), k = pl.i - row * 12;
+        const rad = 4.6 + row * 1.35, a = Math.PI / 2 + (k - (inRow - 1) / 2) * (.82 / rad) * (row % 2 ? 1.04 : 1);
+        const x = Math.cos(a) * rad, z = QC - Math.sin(a) * rad;
+        return { x, z, y: 0, ry: Math.atan2(-x, DZ - z) };
     }
-    let duelRows = 0;
-    function duelBottom() { return (duelRows - 1) / 2 * 3.3; }
 
     function makeChar(p) {
         const n = idNum(p.id);
@@ -348,8 +339,8 @@ export function createArena(container, opts = {}) {
         const rig = makeRig({ look, role: 'guest', n });
         rig.root.visible = false; scene.add(rig.root);
         const tag = makeSprite(512, 104, .36); scene.add(tag);
-        const bubble = makeSprite(420, 120, .5); bubble.visible = false; scene.add(bubble);
-        const badge = makeSprite(420, 120, .42); badge.visible = false; scene.add(badge);
+        const bubble = makeSprite(420, 120, .34); bubble.visible = false; scene.add(bubble);
+        const badge = makeSprite(420, 120, .34); badge.visible = false; scene.add(badge);
         const c = { id: p.id, rig, slot: freeSlots.pop(), pos: new T.Vector3(), target: new T.Vector3(), ry: 0, tRy: 0, y: 0,
             tag, bubble, badge, prop: null, propKind: 0, pick: 0, pose: 'idle', anim: -1, born: now, walking: false, poseAt: now, acc: 0, n };
         chars.set(p.id, c);
@@ -358,36 +349,39 @@ export function createArena(container, opts = {}) {
     function dropChar(c) {
         c.rig.dispose();
         [c.tag, c.bubble, c.badge].forEach(s => { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); });
-        if (c.prop) c.prop.removeFromParent();
+        if (c.prop) dropObj(c.prop);
+        if (c.ko) dropObj(c.ko.obj);
         if (c.slot != null) { blobs.setMatrixAt(c.slot, ZERO); freeSlots.push(c.slot); }
         chars.delete(c.id);
     }
 
     function setState(s) {
         if (!s) return;
-        if (s.phase !== phase) { phase = s.phase; phaseAt = now; if (phase === 'champion') { startConfetti(0, 0); } }
+        if (s.phase !== phase) { phase = s.phase; phaseAt = now; if (phase === 'champion') { startConfetti(0, DZ); } }
         const list = s.players || [];
-        duelRows = 0;
-        const nd = list.reduce((m, p) => p.place && p.place.kind === 'duel' ? Math.max(m, p.place.n) : m, 0);
-        if (nd) { const cols = nd <= 1 ? 1 : nd <= 4 ? 2 : nd <= 9 ? 3 : nd <= 16 ? 4 : 5; duelRows = Math.ceil(nd / cols); }
         const seen = new Set();
         list.forEach((p) => {
             seen.add(p.id);
             let c = chars.get(p.id);
-            if (!c) { if (!freeSlots.length) return; c = makeChar(p); const t = placeOf(p, list.length); c.pos.set(t.x, t.y, t.z + 3); c.ry = t.ry; }
-            const t = placeOf(p, list.length);
-            c.target.set(t.x, t.y, t.z); c.tRy = t.ry; c.kind = (p.place && p.place.kind) || 'grid';
-            if (p.pose !== c.pose) { c.pose = p.pose; c.poseAt = now; if (p.pose === 'win') flashAt(t.x, t.y, t.z, '#ffe08a'); }
+            if (!c) { if (!freeSlots.length) return; c = makeChar(p); const t = placeOf(p); c.pos.set(t.x, t.y, t.z - 2.5); c.ry = t.ry; }
+            const t = placeOf(p);
+            c.target.set(t.x, t.y, t.z); c.tRy = t.ry; c.kind = (p.place && p.place.kind) || 'queue';
+            if (p.pose !== c.pose) {
+                c.pose = p.pose; c.poseAt = now;
+                if (p.pose === 'win') flashAt(t.x, t.y, t.z, '#ffe08a');
+                if (p.pose === 'ko') { c.ko = { kind: p.ko || 1, at: now, pick: p.koPick || 1, obj: null, done: false }; }
+            }
             c.pick = p.pick || 0;
-            drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'ring' });
+            c.hand = c.kind === 'duel' && !(p.place && p.place.side) ? 'Left' : 'Right';
+            drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
-            c.tag.visible = c.kind !== 'ring' || list.length <= 24;
+            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16; // اللي بالمواجهة اسمه بشريط VS فوق
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
         // مراكز المواجهات من أماكن اللاعبين
         const by = new Map();
-        list.forEach(p => { if (p.place && p.place.kind === 'duel') { const t = placeOf(p, list.length); const e = by.get(p.place.i) || { x: 0, z: 0, k: 0, live: false }; e.x += t.x; e.z += t.z; e.k++; if (p.pose === 'ready' || p.pose === 'shake' || p.pose === 'reveal') e.live = true; by.set(p.place.i, e); } });
+        list.forEach(p => { if (p.place && p.place.kind === 'duel') { const t = placeOf(p); const e = by.get(p.place.i) || { x: 0, z: 0, k: 0, live: false }; e.x += t.x; e.z += t.z; e.k++; if (p.pose === 'ready' || p.pose === 'shake' || p.pose === 'reveal') e.live = true; by.set(p.place.i, e); } });
         padList = [...by.values()].filter(e => e.k === 2).map(e => ({ x: e.x / 2, z: e.z / 2, live: e.live }));
     }
 
@@ -407,7 +401,7 @@ export function createArena(container, opts = {}) {
     const lerp3 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
     const FIST_U = [-.42, -.35, .85], FIST_F = [-.15, .75, .65];   // قبضة مرفوعة قدام الصدر
     const DOWN_F = [-.1, -.15, 1];                                 // الساعد نازل قدام (ضربة العد)
-    const OUT_U = [-.2, .05, 1], OUT_F = [-.05, .1, 1];            // اليد ممدودة قدام بالمجسم
+    const OUT_U = [-.7, .08, .7], OUT_F = [-.72, .14, .68];        // اليد ممدودة للخصم بالمجسم
     const SHAKE_SEC = 1.8;
 
     function wantAnim(c) {
@@ -422,55 +416,114 @@ export function createArena(container, opts = {}) {
     }
     function propFor(c, kind) {
         if (c.propKind === kind) return c.prop;
-        if (c.prop) c.prop.removeFromParent();
+        if (c.prop) dropObj(c.prop);
         c.prop = kind ? BUILDERS[kind]() : null; c.propKind = kind;
         if (c.prop) { c.prop.scale.setScalar(0); scene.add(c.prop); c.propAt = now; }
         return c.prop;
     }
 
+    // الاتجاهات مكتوبة لليد اليمين (يمين الشخصية = -X)؛ اللي على اليسار يستخدم يده اليسار فتنعكس X،
+    // عشان اليدين يتقابلون بالنص قدام الكاميرا.
+    function arm(c, U, F) {
+        const S = c.hand || 'Right', k = S === 'Left' ? -1 : 1;
+        aimBone(c, S + 'Arm', U[0] * k, U[1], U[2]); aimBone(c, S + 'ForeArm', F[0] * k, F[1], F[2]);
+    }
     function poseChar(c, dt) {
         const u = now - c.poseAt;
         let showProp = 0;
         if (!c.walking) {
             if (c.pose === 'ready') {
-                const k = ease(u / .35); const f = lerp3([-.12, -1, .2], FIST_F, k), up = lerp3([-.22, -1, .05], FIST_U, k);
-                aimBone(c, 'RightArm', ...up); aimBone(c, 'RightForeArm', ...f);
+                const k = ease(u / .35);
+                arm(c, lerp3([-.22, -1, .05], FIST_U, k), lerp3([-.12, -1, .2], FIST_F, k));
             } else if (c.pose === 'shake') {
                 // ثلاث ضربات: «حجرة.. ورقة.. مقص!» — اليد تطلع وتنزل مع العد
                 const t = Math.min(u, SHAKE_SEC) / SHAKE_SEC * 3, ph = t % 1, beat = Math.sin(ph * Math.PI);
-                const f = lerp3(FIST_F, DOWN_F, u >= SHAKE_SEC ? 1 : beat < 0 ? 0 : (ph < .5 ? ease(ph * 2) : 1 - ease((ph - .5) * 2)));
-                aimBone(c, 'RightArm', ...FIST_U); aimBone(c, 'RightForeArm', ...f);
+                const f = lerp3(FIST_F, DOWN_F, u >= SHAKE_SEC ? 1 : (ph < .5 ? ease(ph * 2) : 1 - ease((ph - .5) * 2)));
+                arm(c, FIST_U, f);
                 addRot(c, 'Spine', .06 * beat, 0, 0);
-            } else if (c.pose === 'reveal' || ((c.pose === 'win' || c.pose === 'lose') && c.pick && u < 1.2 && c.kind === 'duel')) {
-                aimBone(c, 'RightArm', ...OUT_U); aimBone(c, 'RightForeArm', ...OUT_F); showProp = c.pick;
-                if (c.pose === 'lose') { addRot(c, 'Spine', .35 * ease(u / .5), 0, 0); addRot(c, 'Head', .35 * ease(u / .5), 0, 0); }
-            } else if (c.pose === 'lose') {
-                const k = ease(u / .5); addRot(c, 'Spine', .38 * k, 0, 0); addRot(c, 'Spine1', .12 * k, 0, 0); addRot(c, 'Head', .4 * k, 0, .1 * k);
-                aimBone(c, 'RightArm', .25, -1, .12); aimBone(c, 'LeftArm', -.25, -1, .12);
+            } else if (c.pose === 'reveal' || (c.pose === 'win' && c.pick && u < 1.2 && c.kind === 'duel') || (c.pose === 'ko' && c.pick && u < .7)) {
+                // الخاسر يبقى ماسك اختياره وهو يرجف قبل الإقصاء
+                arm(c, OUT_U, OUT_F); showProp = c.pick;
             }
         }
-        // المجسم بيد اللاعب: يكبر بنطّة ويلتف شوي
+        // المجسم بيد اللاعب: يكبر بنطّة، ويطلع قدام اليد على امتداد الساعد
         const prop = propFor(c, showProp);
         if (prop) {
-            const hand = c.rig.bones.RightHand; hand.getWorldPosition(_v1);
-            const fx = Math.sin(c.ry), fz = Math.cos(c.ry);
-            prop.position.set(_v1.x + fx * .16, _v1.y + .05, _v1.z + fz * .16);
+            const S = c.hand || 'Right';
+            c.rig.bones[S + 'Hand'].getWorldPosition(_v1); c.rig.bones[S + 'ForeArm'].getWorldPosition(_v2);
+            _v2.subVectors(_v1, _v2).normalize();
+            prop.position.copy(_v1).addScaledVector(_v2, .15);
             const s = backOut((now - c.propAt) / .45) * .55;
             prop.scale.setScalar(Math.max(0, s));
-            prop.rotation.set(c.propKind === 2 ? -.2 : .2, c.ry + (c.propKind === 2 ? Math.PI / 2 : 0) + Math.sin(now * 2 + c.n) * .15, c.propKind === 3 ? Math.PI / 2 : 0);
+            const toCam = Math.atan2(camera.position.x - prop.position.x, camera.position.z - prop.position.z);
+            prop.rotation.set(c.propKind === 2 ? -.15 : .2, toCam + (c.propKind === 1 ? now * .8 : Math.sin(now * 2 + c.n) * .2), c.propKind === 3 ? Math.PI / 2 : 0);
         }
     }
 
     // ================================================================ الكاميرا
     // كاميرا ثابتة: لقطة وحدة تغطي الساحة كلها طول المباراة (تتعدل بس مع مقاس الشاشة)
-    const camLook = new T.Vector3(0, .4, .6);
+    // لقطة قريبة ثابتة على مكان المواجهة: الاثنين كاملين ويديهم بالنص، والطابور ورا
+    const camLook = new T.Vector3(0, 1.22, DZ);
     function fixCamera() {
-        const half = 11.5, pitch = .6;
-        const fovH = 2 * Math.atan(Math.tan(T.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
-        const dist = Math.max(half / Math.tan(fovH / 2), 9 / Math.tan(T.MathUtils.degToRad(camera.fov / 2))) * .92;
+        const W = 3.9, H = 3.05, pitch = .2;
+        const tv = Math.tan(T.MathUtils.degToRad(camera.fov / 2)), th = tv * camera.aspect;
+        const dist = Math.max(H / 2 / tv, W / 2 / th);
         camera.position.set(0, camLook.y + dist * Math.sin(pitch), camLook.z + dist * Math.cos(pitch));
         camera.lookAt(camLook);
     }
+    // ================================================================ الإقصاء المضحك
+    // 1 «النابض»: يرجف خوف، ينط نابض من الأرض ويطيّره يلف بالسما لين يختفي بنجمة.
+    // 2 «الفطيرة»: مجسم عملاق من اختيار الفائز يطيح عليه من فوق ويفرشه فطيرة، ثم يختفي بـ«بوف».
+    const coilGeo = (() => { const pts = []; for (let i = 0; i <= 120; i++) { const t = i / 120, a = t * TAU * 6; pts.push(new T.Vector3(Math.cos(a) * .28, t, Math.sin(a) * .28)); } return new T.TubeGeometry(new T.CatmullRomCurve3(pts), 240, .035, 6, false); })();
+    const coilMat = new T.MeshStandardMaterial({ color: '#d7dde6', metalness: .9, roughness: .25 });
+    const plateGeo = new T.CylinderGeometry(.42, .42, .06, 24), plateMat = new T.MeshStandardMaterial({ color: '#ff4fd8', emissive: '#ff4fd8', emissiveIntensity: .5 });
+    const starTex = canvasTex(128, 128, (g, w) => { g.translate(w / 2, w / 2); g.fillStyle = '#fff6c8'; g.shadowColor = '#ffd84a'; g.shadowBlur = 20; g.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 18 : 52, a = k / 10 * TAU - Math.PI / 2; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); });
+    const stars = Array.from({ length: 4 }, () => { const sp = new T.Sprite(new T.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending })); sp.visible = false; sp.renderOrder = 12; scene.add(sp); return { sp, t: 9 }; });
+    function starAt(x, y, z, size) { const s = stars.find(s => s.t >= 1) || stars[0]; s.t = 0; s.size = size || 1; s.sp.position.set(x, y, z); s.sp.visible = true; }
+    function dropObj(o) { if (!o) return; o.removeFromParent(); o.traverse(m => { if (m.geometry && m.geometry !== coilGeo && m.geometry !== plateGeo) m.geometry.dispose(); }); }
+
+    function koApply(c) {
+        const k = c.ko, u = now - k.at, root = c.rig.root;
+        // البداية المشتركة: رجفة خوف وعيون مفتوحة
+        if (u < .75) { root.position.x += Math.sin(u * 70) * .025; if (!k.scared) { k.scared = true; c.rig.express('open', 2.5); } }
+        if (k.kind === 1) {
+            if (u >= .7 && !k.obj) {
+                k.obj = new T.Group(); const coil = new T.Mesh(coilGeo, coilMat), plate = new T.Mesh(plateGeo, plateMat); plate.position.y = 1; k.obj.add(coil, plate);
+                k.obj.position.set(c.pos.x, 0, c.pos.z); scene.add(k.obj);
+            }
+            if (k.obj) { const e = u < .82 ? backOut((u - .7) / .12) : Math.max(0, 1 - (u - 1.6) / .4); k.obj.scale.set(1, Math.max(.001, e * .55), 1); k.obj.visible = e > .01; }
+            if (u >= .8) {
+                const t = u - .8, side = c.pos.x < 0 ? -1 : 1;
+                root.position.set(c.pos.x + side * t * 1.6, .55 + 7.5 * t - 4.2 * t * t, c.pos.z - t * 5);
+                root.rotation.set(t * 9, c.ry + t * 6, side * t * 4);
+                const sc = Math.max(0, 1 - Math.max(0, t - .9) / .9); root.scale.setScalar(sc);
+                if (t > 1.65 && !k.star) { k.star = true; starAt(root.position.x, root.position.y, root.position.z, 1.4); }
+                if (sc <= 0) { root.visible = false; k.done = true; }
+            } else root.scale.setScalar(1);
+        } else {
+            const IMPACT = 1.0;
+            if (u >= .45 && !k.obj) { k.obj = BUILDERS[k.pick](); k.obj.scale.setScalar(2.1); scene.add(k.obj); }
+            if (k.obj) {
+                const f = clamp01((u - .45) / (IMPACT - .45));
+                let y = 7.5 - f * f * (7.5 - .9);
+                if (u > IMPACT) { const b = u - IMPACT; y = .9 + Math.max(0, Math.sin(b * 7) * .6 * Math.exp(-b * 3)); }
+                k.obj.position.set(c.pos.x, y, c.pos.z); k.obj.rotation.set(0, now * 2, k.pick === 3 ? Math.PI / 2 : 0);
+                const fade = clamp01((u - 1.9) / .35); k.obj.scale.setScalar(2.1 * (1 - fade)); k.obj.visible = fade < 1;
+            }
+            if (u >= IMPACT) {
+                if (!k.hit) { k.hit = true; flashAt(c.pos.x, 0, c.pos.z, '#ffffff'); flashAt(c.pos.x, 0, c.pos.z, '#ff4fd8'); }
+                const b = u - IMPACT, wob = Math.sin(b * 22) * Math.exp(-b * 5) * .25;
+                let sy = .14 + wob * .3, sxz = 1.55 - wob;
+                if (u > 2.5) { const g = clamp01((u - 2.5) / .3); sy *= 1 - g; sxz *= 1 + g * .6; if (g >= 1 && !k.star) { k.star = true; starAt(c.pos.x, .4, c.pos.z, 1.1); } }
+                root.scale.set(sxz, Math.max(.001, sy), sxz);
+                if (u > 2.8) { root.visible = false; k.done = true; }
+            }
+        }
+        // اللافتات تختفي أول ما يبدأ الطيران أو الفرش
+        if (u > .75) { c.tag.visible = false; c.bubble.visible = false; }
+        if (u > 1.1) c.badge.visible = false;
+    }
+
     // ================================================================ الحلقة
     const clock = new T.Clock(); let raf = 0, frame = 0, stopped = false;
     function tick() {
@@ -488,7 +541,7 @@ export function createArena(container, opts = {}) {
         let i = 0;
         for (const c of chars.values()) {
             const d = _v1.subVectors(c.target, c.pos); d.y = 0; const dist = d.length();
-            const far = c.kind === 'ring' && chars.size > 20;
+            const far = c.kind === 'queue' && chars.size > 20;
             c.walking = dist > .08;
             if (c.walking) {
                 const sp = Math.max(2.2, Math.min(5, dist / 1.2)); if (Math.abs(sp - (c.sp || 0)) > .3) { c.sp = sp; c.rig.setSpeed(sp); } const step = Math.min(dist, dt * sp); c.pos.addScaledVector(d.normalize(), step);
@@ -498,7 +551,9 @@ export function createArena(container, opts = {}) {
             c.pos.y += (groundY - c.pos.y) * (1 - Math.exp(-dt * 12));
             const a = wantAnim(c); if (a !== c.anim) { c.rig.play(a); c.anim = a; }
             if (c.pose === 'win' || c.pose === 'dance') { if (!c.expT || now > c.expT) { c.rig.express('laugh', 1.4); c.expT = now + 1.3; } }
-            c.rig.root.position.copy(c.pos); c.rig.root.rotation.y = c.ry; c.rig.root.visible = true;
+            c.rig.root.position.copy(c.pos); c.rig.root.rotation.set(0, c.ry, 0);
+            if (c.pose === 'ko' && c.ko) { if (!c.ko.done) { c.rig.root.visible = true; koApply(c); } }
+            else { c.rig.root.visible = true; c.rig.root.scale.setScalar(1); if (c.ko) { dropObj(c.ko.obj); c.ko = null; } c.tag.visible = c.tagOk !== false; }
             // البعيدين (المتفرجين) يتحدثون كل إطارين بدون فيزياء
             c.acc += dt;
             if (!far || (frame + i) % 2 === 0) { c.rig.update(c.acc, !far); c.acc = 0; }
@@ -506,10 +561,10 @@ export function createArena(container, opts = {}) {
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;
             c.tag.position.set(c.pos.x, head, c.pos.z);
-            c.bubble.position.set(c.pos.x, head + .5, c.pos.z);
-            c.badge.position.set(c.pos.x, head + (c.bubble.visible ? 1 : .5), c.pos.z);
-            if (c.badge.visible) c.badge.scale.set(.42 * 420 / 120 * (1 + Math.sin(now * 5) * .03), .42, 1);
-            if (c.slot != null) { p4.set(c.pos.x, c.pos.y + .02, c.pos.z); s4.set(.95, 1, .95); m4.compose(p4, q4, s4); blobs.setMatrixAt(c.slot, m4); s4.set(1, 1, 1); }
+            c.bubble.position.set(c.pos.x, head + .3, c.pos.z);
+            c.badge.position.set(c.pos.x, head + (c.bubble.visible ? .66 : .3), c.pos.z);
+            
+            if (c.slot != null) { const air = c.ko && c.ko.kind === 1 ? clamp01((now - c.ko.at - .8) * 2) : (c.ko && c.ko.done ? 1 : 0); p4.set(c.pos.x, c.pos.y + .02, c.pos.z); s4.set(.95 * (1 - air) + .001, 1, .95 * (1 - air) + .001); m4.compose(p4, q4, s4); blobs.setMatrixAt(c.slot, m4); s4.set(1, 1, 1); }
             i++;
         }
         blobs.instanceMatrix.needsUpdate = true;
@@ -519,10 +574,11 @@ export function createArena(container, opts = {}) {
             const pulse = e.live ? .9 : .35;
             pd.ring.material.opacity = pulse; pd.ring.material.color.set(phase === 'shake' && e.live ? '#ff4fd8' : '#a855f7');
         });
+        for (const st of stars) if (st.t < 1) { st.t += dt / .7; const s = st.size * (st.t < .3 ? st.t / .3 : 1) * (1 + st.t); st.sp.scale.set(s, s, 1); st.sp.material.opacity = 1 - st.t; st.sp.material.rotation = st.t * 3; st.sp.visible = st.t < 1; }
         for (const f of flashes) if (f.t < 1) { f.t += dt / .9; const s = .6 + f.t * 2.4; f.m.scale.set(s, 1, s); f.m.material.opacity = (1 - f.t) * .9; f.m.visible = f.t < 1; }
         if (confT >= 0) {
             confT += dt;
-            confData.forEach((d, k) => { d.p.addScaledVector(d.v, dt); d.p.x += Math.sin(now * 2 + k) * dt * .3; if (d.p.y < 0) d.p.y += 14; d.r.x += d.w.x * dt; d.r.y += d.w.y * dt; q4.setFromEuler(d.r); m4.compose(d.p, q4, s4); confetti.setMatrixAt(k, m4); });
+            confData.forEach((d, k) => { d.p.addScaledVector(d.v, dt); d.p.x += Math.sin(now * 2 + k) * dt * .3; if (d.p.y < 0) d.p.y += 8; d.r.x += d.w.x * dt; d.r.y += d.w.y * dt; q4.setFromEuler(d.r); m4.compose(d.p, q4, s4); confetti.setMatrixAt(k, m4); });
             q4.identity(); confetti.instanceMatrix.needsUpdate = true;
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }

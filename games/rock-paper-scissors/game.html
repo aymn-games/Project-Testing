@@ -81,6 +81,18 @@
     .banner small{ display:block; font:700 clamp(15px,1.3vw,22px) 'IBM Plex Sans Arabic'; opacity:.9; margin-top:6px; }
     @keyframes pop{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.7); } 100%{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
 
+    /* ===== شريط المواجهة الحالية ===== */
+    .vs-bar{ position:fixed; top:clamp(150px,19vh,190px); left:50%; transform:translateX(-50%); z-index:19; display:flex; align-items:center; gap:clamp(10px,1.4vw,22px); direction:ltr; pointer-events:none; animation:pop2 .45s cubic-bezier(.2,1.3,.4,1) both; }
+    @keyframes pop2{ from{ opacity:0; transform:translate(-50%,-12px) scale(.9); } to{ opacity:1; transform:translate(-50%,0); } }
+    .vs-p{ display:flex; align-items:center; gap:10px; padding:8px 16px 8px 8px; border-radius:999px; background:var(--glass); border:1.5px solid rgba(255,154,60,.6); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); min-width:0; max-width:34vw; }
+    .vs-p.r{ flex-direction:row-reverse; padding:8px 8px 8px 16px; border-color:rgba(54,214,255,.6); }
+    .vs-av{ width:46px; height:46px; border-radius:50%; flex:none; background:#5b54d6 center/cover; display:grid; place-items:center; font:900 22px 'Zain'; border:2px solid rgba(255,255,255,.8); }
+    .vs-t{ display:flex; flex-direction:column; direction:rtl; min-width:0; }
+    .vs-n{ font:800 clamp(17px,1.5vw,24px)/1.1 'Zain'; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vs-s{ font:600 12.5px 'IBM Plex Sans Arabic'; opacity:.8; }
+    .vs-s.ok{ color:#86efac; opacity:1; }
+    .vs-x{ font:900 clamp(26px,2.4vw,40px) 'Zain'; color:#fff; text-shadow:0 0 18px #a855f7, 0 0 36px #ff4fd8; }
+
     /* ===== البطل ===== */
     .champ{ position:fixed; top:clamp(110px,15vh,170px); right:clamp(12px,3vw,60px); z-index:22; width:min(360px,86vw); padding:22px; border-radius:28px; text-align:center;
         background:linear-gradient(180deg,rgba(60,36,10,.82),rgba(26,14,40,.86)); border:2px solid rgba(245,197,66,.8); box-shadow:0 0 60px rgba(245,197,66,.35); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
@@ -130,6 +142,12 @@
     </div>
 </div>
 
+<div class="vs-bar hidden" id="vs">
+    <div class="vs-p" id="vs-a"><div class="vs-av"></div><div class="vs-t"><bdi class="vs-n"></bdi><span class="vs-s"></span></div></div>
+    <div class="vs-x">VS</div>
+    <div class="vs-p r" id="vs-b"><div class="vs-av"></div><div class="vs-t"><bdi class="vs-n"></bdi><span class="vs-s"></span></div></div>
+</div>
+
 <div class="picks">
     <div class="hint" id="hint">اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة</div>
     <div class="cards">
@@ -140,8 +158,7 @@
 </div>
 
 <div class="stats" id="stats">
-    <div><span>المواجهات</span><b id="st-duels">—</b></div>
-    <div><span>اختاروا</span><b id="st-picked">—</b></div>
+    <div><span>المواجهة</span><b id="st-duels">—</b></div>
     <div><span>باقي بالبطولة</span><b id="st-alive">—</b></div>
 </div>
 
@@ -179,7 +196,7 @@
     var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
     var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
     var NEXT_MS = 15000; // بعد إعلان البطل تبدأ فترة دخول جديدة لحالها
-    var SHAKE_MS = 1800, REVEAL_MS = 1300, RESULT_MS = 2300, INTRO_MS = 2600, TIE_MS = 1600;
+    var SHAKE_MS = 1800, REVEAL_MS = 1600, KO_MS = 3400, ROUND_MS = 2400, WALK_MS = 2300, TIE_MS = 1600;
     var PICK = { 1: { n: 'حجرة', e: '✊', c: '#ff9a3c' }, 2: { n: 'ورقة', e: '✋', c: '#36d6ff' }, 3: { n: 'مقص', e: '✌️', c: '#ff4fd8' } };
 
     function $(id) { return document.getElementById(id); }
@@ -193,14 +210,14 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
     // ---------------------------------------------------------------- الحالة
-    var G, phase, phaseEnds, timers = [], openIds, joinedAt, matchStartedAt, reported, pendingPhaseUI, revealInfo, lastBanner;
+    var G, phase, phaseEnds, timers = [], openIds, joinedAt, matchStartedAt, reported, revealInfo, cur, gone, koKind;
     function later(fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; }
     function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
     function reset() {
         clearTimers();
         G = E.create({ maxPlayers: S.maxPlayers });
-        phase = 'join'; phaseEnds = Date.now() + S.joinSec * 1000; openIds = {}; joinedAt = {}; reported = false; revealInfo = {};
+        phase = 'join'; phaseEnds = Date.now() + S.joinSec * 1000; openIds = {}; joinedAt = {}; reported = false; revealInfo = {}; cur = -1; gone = {}; koKind = 1;
         matchStartedAt = 0;
         $('champ').classList.add('hidden'); hideBanner(); $('shout').classList.add('hidden');
         render();
@@ -227,22 +244,33 @@
     }
 
     // ---------------------------------------------------------------- مراحل الدور
+    // المواجهات تنلعب وحدة وحدة بنفس المكان (الكاميرا قريبة وثابتة عليه):
+    // الاثنين يمشون للمكان ← يكتبون اختيارهم ← «حجرة.. ورقة.. مقص!» ← يطلع اللي بيدهم
+    // ← الفائز يحتفل ويرجع للطابور، والخاسر ينقصى بشكل مضحك ويختفي.
     function startTournament() {
         if (phase !== 'join') return;
-        if (G.players.length < 2) { toast('نحتاج لاعبين على الأقل'); phaseEnds = Date.now() + 15000; return; }
+        if (G.players.length < 2) { phaseEnds = Date.now() + 15000; return; }
         G.startRound(); matchStartedAt = Date.now();
-        intro();
+        roundIntro();
     }
-    function intro() {
-        phase = 'intro'; phaseEnds = 0;
+    function roundIntro() {
+        phase = 'round'; phaseEnds = 0; cur = -1; openIds = {}; gone = {};
         var n = G.duels.length;
         showBanner(G.stageName(), n === 1 ? 'مواجهة وحدة على اللقب' : n + ' مواجهات' + (G.bye ? ' · ولاعب يتأهل مباشرة' : ''));
         render();
-        later(function () { hideBanner(); openPick(); }, INTRO_MS);
+        later(function () { hideBanner(); nextDuel(); }, ROUND_MS);
+    }
+    function nextDuel() {
+        var i = -1; G.duels.forEach(function (d, k) { if (i < 0 && !d.result) i = k; });
+        if (i < 0) return advance();
+        cur = i; var d = G.duels[i];
+        openIds = {}; openIds[d.a] = 1; openIds[d.b] = 1; revealInfo = {};
+        koKind = Math.random() < .5 ? 1 : 2;
+        phase = 'walk'; phaseEnds = 0; render();
+        later(openPick, WALK_MS);
     }
     function openPick() {
-        phase = 'pick'; phaseEnds = Date.now() + S.pickSec * 1000; openIds = {}; revealInfo = {};
-        G.duels.forEach(function (d) { if (!d.result) { openIds[d.a] = 1; openIds[d.b] = 1; } });
+        phase = 'pick'; phaseEnds = Date.now() + S.pickSec * 1000; revealInfo = {};
         render();
     }
     function shake() {
@@ -254,22 +282,24 @@
     }
     function reveal() {
         $('shout').classList.add('hidden');
-        var before = {}; G.duels.forEach(function (d, i) { if (!d.result) before[i] = 1; });
+        var d = G.duels[cur];
         // نحفظ الاختيارات قبل الحسم (التعادل يصفّرها بعد startReplay)
-        Object.keys(before).forEach(function (i) { var d = G.duels[i]; revealInfo[d.a] = d.picks[d.a] || 0; revealInfo[d.b] = d.picks[d.b] || 0; });
-        var res = G.resolve();
+        revealInfo[d.a] = d.picks[d.a] || 0; revealInfo[d.b] = d.picks[d.b] || 0;
+        var res = G.resolve(cur);
         phase = 'reveal'; render();
         later(function () {
             phase = 'result'; render();
             if (res.ties) {
-                later(function () { G.startReplay(); showBanner('تعادل!', 'المتعادلين يعيدون الحين'); later(function () { hideBanner(); openPick(); }, TIE_MS); }, RESULT_MS - 600);
-            } else later(advance, RESULT_MS);
+                later(function () { G.startReplay(cur); showBanner('تعادل!', 'نعيدها مرة ثانية'); later(function () { hideBanner(); openPick(); }, TIE_MS); }, 900);
+            } else {
+                later(function () { gone[d.loser] = 1; openIds = {}; render(); later(nextDuel, 600); }, KO_MS);
+            }
         }, REVEAL_MS);
     }
     function advance() {
         G.nextRound();
         if (G.champion) return crown();
-        intro();
+        roundIntro();
     }
     function crown() {
         phase = 'champion'; phaseEnds = 0;
@@ -332,58 +362,70 @@
         $('stage-name').textContent = inJoin ? 'فترة الدخول' : phase === 'champion' ? 'انتهت البطولة' : G.stageName();
         var hint = $('hint');
         if (inJoin) hint.innerHTML = 'اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة';
-        else if (phase === 'pick') hint.innerHTML = 'اللي عليهم الدور: اكتبوا <b>1</b> حجرة · <b>2</b> ورقة · <b>3</b> مقص';
+        else if (phase === 'pick') hint.innerHTML = 'الاثنين اللي بالمواجهة: اكتبوا <b>1</b> حجرة · <b>2</b> ورقة · <b>3</b> مقص';
         else if (phase === 'champion') hint.innerHTML = '👑 مبروك للبطل!';
         else hint.innerHTML = 'الحجرة تكسر المقص · المقص يقص الورقة · الورقة تلف الحجرة';
-        var openCount = Object.keys(openIds).length, picked = Object.keys(openIds).filter(function (id) { var d = G.duelOf(id); return d && d.picks[id]; }).length;
-        $('st-duels').textContent = inJoin ? '—' : String(G.duels.length);
-        $('st-picked').textContent = phase === 'pick' ? picked + ' / ' + openCount : '—';
+        $('st-duels').textContent = cur >= 0 && phase !== 'champion' ? (cur + 1) + ' من ' + G.duels.length : '—';
+        renderVs();
         $('st-alive').textContent = inJoin ? '—' : String(alive.length);
         pushScene();
         renderFlat();
     }
 
+    function renderVs() {
+        var d = cur >= 0 && phase !== 'champion' && phase !== 'round' ? G.duels[cur] : null, el = $('vs');
+        if (!d) { el.classList.add('hidden'); return; }
+        var was = el.classList.contains('hidden'); el.classList.remove('hidden');
+        if (was || el.dataset.k !== d.a + d.b) { el.dataset.k = d.a + d.b; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
+        [['vs-a', d.a], ['vs-b', d.b]].forEach(function (x) {
+            var box = $(x[0]), p = G.player(x[1]), av = box.querySelector('.vs-av'), st = box.querySelector('.vs-s'), mine = revealInfo[x[1]];
+            box.querySelector('.vs-n').textContent = p.name;
+            if (p.avatarUrl) { av.style.backgroundImage = 'url("' + p.avatarUrl.replace(/"/g, '%22') + '")'; av.textContent = ''; }
+            else { av.style.backgroundImage = ''; av.textContent = Array.from(p.name.replace(/[\s_.@\d]/g, ''))[0] || '؟'; }
+            var t = '', ok = false;
+            if (phase === 'pick') { ok = !!d.picks[x[1]]; t = ok ? '✓ اختار' : 'ينتظر اختياره...'; }
+            else if ((phase === 'reveal' || phase === 'result') && mine) t = PICK[mine].e + ' ' + PICK[mine].n;
+            else if (phase === 'walk') t = 'جاي للمواجهة';
+            if (phase === 'result' && d.result === 'done') { ok = d.winner === x[1]; t = ok ? '🏆 فاز' : '💥 انقصى'; }
+            st.textContent = t; st.classList.toggle('ok', ok);
+        });
+    }
+
     function sceneState() {
-        var players = G.players, list = [], outList = players.filter(function (p) { return p.out; });
-        var champ = G.champion;
-        players.forEach(function (p, idx) {
+        var players = G.players, list = [], champ = G.champion, d = cur >= 0 ? G.duels[cur] : null;
+        // الطابور: الباقين بالبطولة اللي مو بالمواجهة الحالية (بترتيب دخولهم)
+        var queue = players.filter(function (p) { return !p.out && !gone[p.id] && p.id !== champ && !(d && openIds[p.id]); });
+        players.forEach(function (p) {
+            if ((p.out || gone[p.id]) && !(d && openIds[p.id])) return; // اللي انقصى طار واختفى
             var o = { id: p.id, name: p.name, avatarUrl: p.avatarUrl, pose: 'idle', pick: 0, bubble: null, badge: null };
-            if (phase === 'join') {
-                o.place = { kind: 'grid', i: idx, n: players.length };
-                if (Date.now() - (joinedAt[p.id] || 0) < 2200) o.pose = 'wave';
-            } else if (phase === 'champion') {
-                if (p.id === champ) { o.place = { kind: 'podium' }; o.pose = 'dance'; o.badge = { text: '👑 البطل', color: '#f5c542' }; }
-                else { o.place = { kind: 'ring', i: outList.indexOf(p), n: outList.length }; o.pose = 'clap'; }
-            } else if (p.out) {
-                o.place = { kind: 'ring', i: outList.indexOf(p), n: outList.length }; o.pose = 'clap';
-            } else if (G.bye === p.id) {
-                o.place = { kind: 'bye' }; o.badge = { text: 'تأهل مباشر', color: '#8b5cf6' };
-            } else {
-                var di = -1; G.duels.forEach(function (d, i) { if (d.a === p.id || d.b === p.id) di = i; });
-                var d = G.duels[di];
-                o.place = { kind: 'duel', i: di, n: G.duels.length, side: d && d.b === p.id ? 1 : 0 };
+            if (phase === 'champion') {
+                if (p.id !== champ) return;
+                o.place = { kind: 'podium' }; o.pose = 'dance'; // اسمه بكرت البطل
+            } else if (d && openIds[p.id]) {
+                o.place = { kind: 'duel', side: d.b === p.id ? 1 : 0 };
                 var mine = revealInfo[p.id];
-                if (phase === 'pick' && openIds[p.id]) {
+                if (phase === 'pick') {
                     o.pose = 'ready';
-                    o.bubble = d && d.picks[p.id] ? { text: '✓ اختار', color: '#22c55e' } : { text: '...', color: '#64748b' };
-                } else if (phase === 'shake' && openIds[p.id]) {
-                    o.pose = 'shake';
-                } else if ((phase === 'reveal' || phase === 'result') && openIds[p.id]) {
+                } else if (phase === 'shake') o.pose = 'shake';
+                else if (phase === 'reveal' || phase === 'result') {
                     o.pick = mine || 0;
-                    o.bubble = mine ? { text: PICK[mine].e + ' ' + PICK[mine].n, color: PICK[mine].c } : { text: 'ما اختار', color: '#64748b' };
-                    if (phase === 'reveal') o.pose = 'reveal';
-                    else if (d && d.result !== 'done') { o.pose = 'idle'; o.badge = { text: 'تعادل!', color: '#f59e0b' }; }
-                    else if (d && d.winner === p.id) { o.pose = 'win'; o.badge = { text: d.how === 'draw' ? 'فاز بالقرعة' : 'تأهّل ✓', color: '#16a34a' }; }
-                    else if (d) { o.pose = 'lose'; o.badge = { text: d.how === 'noshow' && !mine ? 'خرج (ما اختار)' : 'خرج', color: '#dc2626' }; }
-                } else if (d && d.result === 'done') {
-                    // مواجهته انحسمت وينتظر المتعادلين
-                    o.pose = d.winner === p.id ? 'clap' : 'lose';
-                    o.badge = d.winner === p.id ? { text: 'تأهّل ✓', color: '#16a34a' } : { text: 'خرج', color: '#dc2626' };
+                    if (phase === 'reveal') { o.pose = 'reveal'; o.bubble = mine ? { text: PICK[mine].e + ' ' + PICK[mine].n, color: PICK[mine].c } : { text: 'ما اختار', color: '#64748b' }; }
+                    else if (d.result !== 'done') { o.badge = { text: 'تعادل!', color: '#f59e0b' }; }
+                    else if (d.winner === p.id) { o.pose = 'win'; o.badge = { text: d.how === 'draw' ? 'فاز بالقرعة' : 'فاز! ✓', color: '#16a34a' }; }
+                    else {
+                        o.pose = 'ko'; o.ko = koKind === 2 && revealInfo[d.winner] ? 2 : 1; o.koPick = revealInfo[d.winner] || 1;
+                        o.badge = { text: d.how === 'noshow' && !mine ? 'انقصى (ما اختار)' : 'انقصى!', color: '#dc2626' };
+                    }
                 }
+            } else {
+                o.place = { kind: 'queue', i: queue.indexOf(p), n: queue.length };
+                if (phase === 'join' && Date.now() - (joinedAt[p.id] || 0) < 2200) o.pose = 'wave';
+                else if (phase !== 'join') o.pose = 'clap';
+                if (G.bye === p.id && phase !== 'join') o.badge = { text: 'تأهل مباشر', color: '#8b5cf6' };
             }
             list.push(o);
         });
-        return { phase: phase === 'intro' ? 'pick' : phase, players: list };
+        return { phase: phase === 'walk' || phase === 'round' ? 'pick' : phase, players: list };
     }
 
     var arena = null, flat = false;

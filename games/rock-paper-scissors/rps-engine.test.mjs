@@ -74,3 +74,15 @@ test('stageName follows remaining players', () => {
     const g = E.create(); add(g, 2); g.startRound(); assert.equal(g.stageName(), 'النهائي');
     const h = E.create(); add(h, 4); h.startRound(); assert.equal(h.stageName(), 'نصف النهائي');
 });
+
+test('resolve(i) settles only that duel; others stay open for later', () => {
+    const g = E.create({ random: seq(0) }); add(g, 4); g.startRound();
+    const [d0, d1] = g.duels;
+    g.pick(d0.a, 1); g.pick(d0.b, 3);
+    g.resolve(0);
+    assert.equal(d0.result, 'done'); assert.equal(d0.winner, d0.a);
+    assert.equal(d1.result, null); assert.equal(g.roundDone(), false);
+    g.pick(d1.a, 2); g.pick(d1.b, 2); assert.equal(g.resolve(1).ties, 1);
+    assert.equal(g.startReplay(0), 0); assert.equal(g.startReplay(1), 1);
+    g.pick(d1.a, 3); g.pick(d1.b, 2); g.resolve(1); assert.ok(g.roundDone());
+});

@@ -7,8 +7,8 @@
  * مباشرة (الأولوية لمن ما تأهل مباشرة قبل). التعادل يعيد المواجهة نفسها.
  *
  * الشاشة (game.html) هي اللي تمسك الوقت وتستدعي الدوال هنا بالترتيب:
- *   join() طول فترة الدخول ← startRound() ← pick() طول وقت الاختيار
- *   ← resolve() ← (لو فيه تعادل: startReplay() ثم pick() ثم resolve() من جديد)
+ *   join() طول فترة الدخول ← startRound() ← لكل مواجهة i بالترتيب: pick() طول وقت
+ *   الاختيار ← resolve(i) ← (لو تعادل: startReplay(i) ثم pick() ثم resolve(i) من جديد)
  *   ← nextRound() ... لين champion().
  *
  * يشتغل بالمتصفح (window.RpsEngine) وبـ node للاختبار (module.exports).
@@ -117,13 +117,14 @@
         }
 
         /**
-         * نهاية وقت الاختيار: يحسم كل مواجهة مفتوحة. يرجع {ties: عدد المواجهات اللي تعادلت}.
+         * نهاية وقت الاختيار: يحسم كل مواجهة مفتوحة، أو المواجهة رقم only بس (اللعب مواجهة مواجهة).
+         * يرجع {ties: عدد المواجهات اللي تعادلت}.
          * how: 'beat' غلب · 'noshow' الخصم ما اختار · 'draw' قرعة (كلهم ما اختاروا أو تعادل كثير)
          */
-        function resolve() {
+        function resolve(only) {
             var ties = 0;
-            duels.forEach(function (d) {
-                if (d.result) return;
+            duels.forEach(function (d, i) {
+                if (d.result || (only != null && i !== only)) return;
                 var pa = d.picks[d.a] || 0, pb = d.picks[d.b] || 0, w = 0, how = 'beat';
                 if (pa && pb) {
                     w = beats(pa, pb);
@@ -141,9 +142,9 @@
         }
 
         /** يفتح المواجهات المتعادلة من جديد (نفس اللاعبين، اختيارات جديدة). */
-        function startReplay() {
+        function startReplay(only) {
             var n = 0;
-            duels.forEach(function (d) { if (d.result === 'tie') { d.result = null; d.lastPicks = d.picks; d.picks = {}; n++; } });
+            duels.forEach(function (d, i) { if (d.result === 'tie' && (only == null || i === only)) { d.result = null; d.lastPicks = d.picks; d.picks = {}; n++; } });
             return n;
         }
 
