@@ -23,9 +23,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { makeRig, loadClips, boyColors } from '../birthday-party/rig3d.js';
-import { resolveLook, SKIN, OUTFIT } from '../birthday-party/crowd-common.js';
+import { makeRig, loadClips } from '../birthday-party/rig3d.js';
+import { resolveLook, SKIN, HAIR } from '../birthday-party/crowd-common.js';
 import { makeHand } from './rps-hand.js';
+import { applyBoyFace } from './rps-face.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -386,16 +387,18 @@ export function createArena(container, opts = {}) {
         const look = resolveLook(n, 'guest', [-1, -1, -1, -1, -1, -1, -1, -1, n % 2]);
         const rig = makeRig({ look, role: 'guest', n });
         rig.root.visible = false; scene.add(rig.root);
+        const face = applyBoyFace(rig, { SKIN, HAIR }); // ملامح الأولاد الجديدة (بهاللعبة بس)
         const tag = makeSprite(512, 104, .36); scene.add(tag);
         const bubble = makeSprite(420, 120, .27); bubble.visible = false; scene.add(bubble);
         const badge = makeSprite(420, 120, .27); badge.visible = false; scene.add(badge);
         const c = { id: p.id, rig, slot: freeSlots.pop(), pos: new T.Vector3(), target: new T.Vector3(), ry: 0, tRy: 0, y: 0,
-            tag, bubble, badge, prop: null, propKind: 0, pick: 0, pose: 'idle', anim: -1, born: now, walking: false, poseAt: now, acc: 0, n };
+            face, tag, bubble, badge, prop: null, propKind: 0, pick: 0, pose: 'idle', anim: -1, born: now, walking: false, poseAt: now, acc: 0, n };
         chars.set(p.id, c);
         return c;
     }
     function dropChar(c) {
         removeHands(c);
+        if (c.face) c.face.dispose();
         c.rig.dispose();
         [c.tag, c.bubble, c.badge].forEach(s => { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); });
         if (c.prop) dropObj(c.prop);
@@ -656,6 +659,7 @@ export function createArena(container, opts = {}) {
             // البعيدين (المتفرجين) يتحدثون كل إطارين بدون فيزياء
             c.acc += dt;
             if (!far || (frame + i) % 2 === 0) { c.rig.update(c.acc, !far); c.acc = 0; }
+            if (c.face) c.face.update(dt, c.pose === 'win' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
             poseChar(c, dt);
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;
