@@ -451,9 +451,8 @@ export function createArena(container, opts = {}) {
             drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
-            // اللي بالمواجهة اسمه بشريط VS فوق. باللوبي (stage) الأسماء أصغر عشان ما تركب على بعض
-            c.tagOk = (c.kind === 'stage' || (c.kind === 'queue' && p.place && p.place.n <= 16)) && !p.noTag;
-            const ts = c.kind === 'stage' ? .27 : .36; c.tag.scale.set(ts * 512 / 104, ts, 1);
+            // اللي بالمواجهة اسمه بشريط VS فوق. واللوبي (stage) أسماؤه وصورهم HTML بالصفحة (heads())
+            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag;
             c.hl = p.hl || 0;
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
@@ -780,5 +779,17 @@ export function createArena(container, opts = {}) {
         if (composer) composer.dispose && composer.dispose();
         renderer.dispose(); renderer.domElement.remove();
     }
-    return { ready, setState, stop };
+    // مكان راس كل شخصية باللوبي على الشاشة (بكسل)، عشان الصفحة تحط فوقه تبويب HTML بالاسم وصورة تيك توك:
+    // صورة الحساب بـ<img> عادي تطلع حتى لو سيرفر الصور ما يسمح برسمها داخل WebGL (CORS)
+    const hv = new T.Vector3();
+    function heads() {
+        const w = container.clientWidth || 1, h = container.clientHeight || 1, out = [];
+        for (const c of chars.values()) {
+            if (c.kind !== 'stage' || !c.rig.root.visible) continue;
+            hv.set(c.pos.x, c.pos.y + 1.86, c.pos.z).project(camera);
+            out.push({ id: c.id, x: (hv.x + 1) / 2 * w, y: (1 - hv.y) / 2 * h, z: hv.z });
+        }
+        return out;
+    }
+    return { ready, setState, stop, heads };
 }

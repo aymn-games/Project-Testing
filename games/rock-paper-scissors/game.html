@@ -124,6 +124,14 @@
     .joined .ms{ color:#f39bfd; } .joined.hidden{ display:none; }
     @keyframes joinIn{ from{ opacity:0; transform:translateY(8px) scale(.9); } to{ opacity:1; transform:none; } }
     body.lobby .kw{ display:inline-flex; } body.lobby .lobby-info{ display:flex; }
+    /* تبويبات اللوبي فوق راس كل شخصية: صورة حساب تيك توك + الاسم */
+    .ltags{ position:fixed; inset:0; z-index:6; pointer-events:none; display:none; }
+    body.lobby .ltags{ display:block; }
+    .ltag{ position:absolute; left:0; top:0; display:inline-flex; align-items:center; gap:6px; max-width:150px; padding:3px 10px 3px 3px; border-radius:999px; direction:rtl; white-space:nowrap; will-change:transform;
+        background:rgba(18,12,31,.9); border:1.5px solid rgba(178,140,245,.5); box-shadow:0 4px 14px rgba(0,0,0,.35); font:800 14px 'IBM Plex Sans Arabic'; color:#fff; }
+    .ltag bdi{ overflow:hidden; text-overflow:ellipsis; }
+    .ltag .lav{ order:2; width:26px; height:26px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:1.5px solid #b28cf5; font:900 13px 'Zain'; }
+    .ltag .lav img{ width:100%; height:100%; object-fit:cover; display:block; }
     .sound{ position:fixed; top:88px; right:clamp(12px,1.4vw,26px); z-index:25; height:40px; padding:0 16px; border-radius:999px; cursor:pointer; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(135deg,#7a3fd4,#9a6cf0); border:none; display:flex; align-items:center; gap:6px; box-shadow:0 8px 20px rgba(0,0,0,.4); }
 
     /* ===== العد الكبير «حجرة.. ورقة.. مقص!» ===== */
@@ -212,6 +220,7 @@
         <div class="opt" style="--c:var(--scis)"><span class="n">3</span><span class="e">✌️</span><span class="l">مقص</span></div>
     </div>
 </div>
+<div class="ltags" id="ltags" aria-hidden="true"></div>
 <div class="kw" id="kw"><span class="ms">chat</span>اكتب <b><bdi id="kw-t"></bdi></b> بالشات وادخل</div>
 <div class="lobby-info">
     <div class="joined hidden" id="joined"><span class="ms">person_add</span><bdi id="joined-n"></bdi> دخل</div>
@@ -655,6 +664,30 @@
     };
     window.__rpsFail = function (e) { log('rps: 3D import failed', e); useFlat(); };
     function useFlat() { arena = null; flat = true; renderFlat(); }
+
+    // تبويبات اللوبي (HTML) فوق راس كل شخصية: صورة حساب تيك توك + الاسم، تتبع مكانها بالمشهد كل إطار
+    var ltagEls = {};
+    function firstLetter(n) { return (Array.from(String(n || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase(); }
+    function makeLtag(p) {
+        var el = document.createElement('div'); el.className = 'ltag';
+        var nm = document.createElement('bdi'); nm.textContent = p.name;
+        var av = document.createElement('span'); av.className = 'lav'; av.textContent = firstLetter(p.name);
+        if (p.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = function () { av.textContent = ''; av.appendChild(img); }; img.src = p.avatarUrl; }
+        el.appendChild(nm); el.appendChild(av); $('ltags').appendChild(el);
+        return el;
+    }
+    function lobbyTags() {
+        requestAnimationFrame(lobbyTags);
+        var hs = phase === 'join' && arena && arena.heads ? arena.heads() : [], seen = {};
+        hs.forEach(function (h) {
+            var p = G.player(h.id); if (!p) return; seen[h.id] = 1;
+            var el = ltagEls[h.id] || (ltagEls[h.id] = makeLtag(p));
+            el.style.transform = 'translate(' + h.x.toFixed(1) + 'px,' + h.y.toFixed(1) + 'px) translate(-50%,-100%)';
+            el.style.zIndex = String(Math.round((1 - h.z) * 1e5));
+        });
+        Object.keys(ltagEls).forEach(function (id) { if (!seen[id]) { ltagEls[id].remove(); delete ltagEls[id]; } });
+    }
+    lobbyTags();
 
     reset();
     window.__rps = { get G() { return G; }, get phase() { return phase; }, start: startTournament, reset: reset };
