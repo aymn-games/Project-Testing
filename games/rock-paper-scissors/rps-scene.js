@@ -23,8 +23,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { makeRig, loadClips } from '../birthday-party/rig3d.js';
-import { resolveLook } from '../birthday-party/crowd-common.js';
+import { makeRig, loadClips, boyColors } from '../birthday-party/rig3d.js';
+import { resolveLook, SKIN, OUTFIT } from '../birthday-party/crowd-common.js';
+import { makeHand } from './rps-hand.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -426,6 +427,10 @@ export function createArena(container, opts = {}) {
             c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16; // اللي بالمواجهة اسمه بشريط VS فوق
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
+        // اليدين القريبة: لاعب اليسار (side 0) واليمين (side 1) واختياراتهم وقت الكشف
+        const duelists = [null, null];
+        list.forEach(p => { if (p.place && p.place.kind === 'duel') { const c = chars.get(p.id); if (c) { duelists[p.place.side ? 1 : 0] = c; HO.picks[p.place.side ? 1 : 0] = p.pick || 0; } } });
+        if (duelists[0] && duelists[1]) handsFor(duelists);
         // مراكز المواجهات من أماكن اللاعبين
         const by = new Map();
         list.forEach(p => { if (p.place && p.place.kind === 'duel') { const t = placeOf(p); const e = by.get(p.place.i) || { x: 0, z: 0, k: 0, live: false }; e.x += t.x; e.z += t.z; e.k++; if (p.pose === 'ready' || p.pose === 'shake' || p.pose === 'reveal') e.live = true; by.set(p.place.i, e); } });
@@ -524,6 +529,60 @@ export function createArena(container, opts = {}) {
         camera.position.set(0, camLook.y + dist * Math.sin(pitch), camLook.z + dist * Math.cos(pitch));
         camera.lookAt(camLook);
     }
+    // ================================================================ لقطة اليدين القريبة
+    // من بداية العد لين نهاية الكشف: يدين كبار بأصابع (rps-hand.js) فوق المشهد بلون بشرة وكم كل لاعب.
+    // العد: القبضتين تنزل وتطلع ثلاث مرات · الكشف: كل يد تفتح على اختيار صاحبها (ما اختار ← اليد تنزل).
+    const hScene = new T.Scene(); hScene.environment = ENV;
+    const hCam = new T.PerspectiveCamera(32, 16 / 9, .1, 50); hCam.position.set(0, 1.0, 7.6); hCam.lookAt(0, .85, 0);
+    hScene.add(new T.HemisphereLight('#dfe5ee', '#2a2622', .35));
+    const hKey = new T.DirectionalLight('#fff0dc', 2.2); hKey.position.set(3, 5, 6); hScene.add(hKey);
+    const hRim = new T.DirectionalLight('#9fb3d1', .8); hRim.position.set(-4, 3, -5); hScene.add(hRim);
+    const hDim = new T.Mesh(new T.PlaneGeometry(60, 40), new T.MeshBasicMaterial({ color: '#07080b', transparent: true, opacity: 0, depthWrite: false }));
+    hDim.position.z = -4; hScene.add(hDim);
+    const HO = { on: false, at: 0, fadeAt: 0, a: 0, hands: [null, null], keys: ['', ''], picks: [0, 0] };
+    function lookColors(c) {
+        const L = c.rig.look || {};
+        const skin = SKIN[L.s] || SKIN[1];
+        let sleeve = L.g === 1 ? '#' + new T.Color(boyColors(L).top).getHexString() : OUTFIT[L.o >= 0 ? L.o : 0];
+        sleeve = '#' + new T.Color(sleeve).lerp(new T.Color('#2a2e36'), .35).getHexString(); // أهدى شوي
+        return { skin, sleeve };
+    }
+    function handsFor(duelists) {
+        for (let s = 0; s < 2; s++) {
+            const c = duelists[s]; if (!c) continue;
+            const col = lookColors(c), key = c.id + col.skin + col.sleeve;
+            if (HO.keys[s] === key) continue;
+            if (HO.hands[s]) { HO.hands[s].group.removeFromParent(); HO.hands[s].dispose(); }
+            const h = makeHand({ skin: col.skin, sleeve: col.sleeve, left: s === 1 });
+            h.group.position.set(s ? 1.25 : -1.25, -.25, 0); hScene.add(h.group);
+            HO.hands[s] = h; HO.keys[s] = key;
+        }
+    }
+    const POSE_OF = { 1: 'rock', 2: 'paper', 3: 'scissors' };
+    function handsTick(dt) {
+        const want = phase === 'shake' || phase === 'reveal';
+        if (want && !HO.on) { HO.on = true; HO.at = now; }
+        if (!want && HO.on && phase !== 'shake' && phase !== 'reveal') { HO.on = false; HO.fadeAt = now; }
+        HO.a += ((HO.on ? 1 : 0) - HO.a) * (1 - Math.exp(-dt * (HO.on ? 10 : 7)));
+        if (HO.a < .01) { HO.a = HO.on ? HO.a : 0; return false; }
+        const u = now - HO.at, beat = Math.min(u, SHAKE_SEC) / SHAKE_SEC * 3, ph = beat % 1;
+        const shaking = phase === 'shake' && u < SHAKE_SEC, bob = shaking && !REDUCED ? Math.sin(ph * Math.PI) : 0;
+        const revealed = phase !== 'shake';
+        if (!revealed) HO.revAt = null; else if (HO.revAt == null) HO.revAt = now;
+        const rev = revealed ? Math.min(1, (now - HO.revAt) / .25) : 0;
+        HO.hands.forEach((h, s) => {
+            if (!h) return; const sg = s ? -1 : 1, pk = HO.picks[s];
+            h.group.rotation.set(-.15 + bob * .35, sg * (.55 - rev * .1), sg * (-.18 - bob * .1));
+            // ما اختار: اليد تنزل برا الكادر بدل ما تبان «حجرة» بالغلط
+            h.group.position.y = -.25 + bob * .42 + (revealed ? (pk ? rev * .08 : -rev * 2.6) : 0);
+            h.setPose(revealed && pk ? POSE_OF[pk] : 'rock'); h.update(dt, 16);
+        });
+        // تظهر بانزلاق خفيف من تحت + تعتيم المشهد وراها
+        const a = HO.a; hDim.material.opacity = .62 * a;
+        HO.hands.forEach((h, s) => { if (h) { h.group.position.y -= (1 - a) * 1.2; h.group.visible = a > .02; } });
+        return true;
+    }
+
     // ================================================================ الإقصاء المضحك
     // 1 «النابض»: يرجف خوف، ينط نابض من الأرض ويطيّره يلف بالسما لين يختفي بنجمة.
     // 2 «الفطيرة»: مجسم عملاق من اختيار الفائز يطيح عليه من فوق ويفرشه فطيرة، ثم يختفي بـ«بوف».
@@ -635,11 +694,14 @@ export function createArena(container, opts = {}) {
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
         if (composer) composer.render(); else renderer.render(scene, camera);
+        if (handsTick(dt)) { renderer.autoClear = false; renderer.clearDepth(); renderer.render(hScene, hCam); renderer.autoClear = true; }
     }
 
     function resize() {
         const w = container.clientWidth || 1, h = container.clientHeight || 1;
         renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); fixCamera();
+        // اليدين: نفس الكادر بالعرضي، وبالطولي نبعد الكاميرا عشان اليدين يدخلون بالعرض
+        hCam.aspect = w / h; hCam.position.z = 7.6 * Math.max(1, 1.6 / hCam.aspect); hCam.updateProjectionMatrix();
         if (composer) { composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); }
     }
     const ro = new ResizeObserver(resize); ro.observe(container); resize();
@@ -652,6 +714,8 @@ export function createArena(container, opts = {}) {
     function stop() {
         stopped = true; cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
         for (const c of [...chars.values()]) dropChar(c);
+        HO.hands.forEach(h => h && h.dispose());
+        hScene.traverse(o => { if (o.geometry) o.geometry.dispose(); });
         scene.traverse(o => { if (o.geometry) o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         Object.values(propMats).forEach(m => { if (m.isTexture) m.dispose(); else if (m.dispose) { if (m.map) m.map.dispose(); m.dispose(); } });
         for (const k in propMats) delete propMats[k];
