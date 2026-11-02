@@ -120,6 +120,15 @@
     .banner small{ display:block; font:600 clamp(15px,1.3vw,21px) 'IBM Plex Sans Arabic'; color:var(--muted); margin-top:6px; }
     @keyframes pop{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.7); } 100%{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
 
+    /* ===== تمهيد الإقصاء (3 ثواني) ===== */
+    .doom{ position:fixed; inset:0; z-index:17; pointer-events:none; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:96px; box-sizing:border-box; gap:2px; animation:doomEdge .5s ease-in-out infinite alternate; }
+    @keyframes doomEdge{ from{ box-shadow:inset 0 0 90px 10px rgba(255,59,92,.25); } to{ box-shadow:inset 0 0 160px 40px rgba(255,59,92,.55); } }
+    .doom-l{ display:inline-flex; align-items:center; gap:6px; padding:4px 16px; border-radius:999px; background:#2a0b14; border:1.5px solid #ff3b5c; color:#ffd0d8; font:900 clamp(18px,1.6vw,26px) 'Zain'; box-shadow:0 0 30px rgba(255,59,92,.45); }
+    .doom-l .ms{ color:#ff6b84; }
+    .duel-hud.dooming .hud-mid{ visibility:hidden; } /* العدّ ياخذ مكان VS بين اللوحتين */
+    .doom-n{ font:900 clamp(70px,7vw,120px)/1 'Zain'; color:#fff; text-shadow:0 0 40px #ff3b5c, 0 0 90px rgba(255,59,92,.7), 0 8px 0 rgba(60,0,15,.6); animation:doomNum .9s cubic-bezier(.2,1.4,.4,1) both; }
+    @keyframes doomNum{ 0%{ opacity:0; transform:scale(2.2); } 35%{ opacity:1; transform:scale(.95); } 100%{ opacity:.85; transform:scale(1); } }
+
     /* ===== البطل ===== */
     .champ{ position:fixed; top:clamp(110px,15vh,170px); right:clamp(12px,3vw,60px); z-index:22; width:min(360px,86vw); padding:22px; border-radius:28px; text-align:center;
         background:rgba(24,16,40,.9); border:1px solid rgba(178,140,245,.6); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.3); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
@@ -187,6 +196,7 @@
 <button type="button" class="sound hidden" id="sound"><span class="ms">volume_up</span>اضغط هنا لتفعيل الصوت</button>
 
 <div class="shout hidden" id="shout"><span id="shout-t"></span></div>
+<div class="doom hidden" id="doom"><div class="doom-l"><span class="ms">warning</span>إقصاء!</div><div class="doom-n" id="doom-n"></div></div>
 <div class="banner hidden" id="banner"></div>
 <div class="champ hidden" id="champ">
     <div class="crown">👑</div>
@@ -221,6 +231,7 @@
     var E = window.RpsEngine;
     var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
     var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    var DOOM_MS = 3000; // تمهيد قبل أي إقصاء: عدّ 3-2-1 وبقعة حمراء على الخاسر
     var NEXT_MS = 15000; // بعد إعلان البطل تبدأ فترة دخول جديدة لحالها
     var SHAKE_MS = 1800, REVEAL_MS = 1700, KO_MS = 3400, ROUND_MS = 2400, WALK_MS = 2300, TIE_MS = 1700, POINT_MS = 1500;
     var PICK = { 1: { n: 'حجرة', e: '✊', c: '#5b6bff' }, 2: { n: 'ورقة', e: '✋', c: '#9a6cf0' }, 3: { n: 'مقص', e: '✌️', c: '#f08bf5' } };
@@ -237,14 +248,14 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
     // ---------------------------------------------------------------- الحالة
-    var G, phase, phaseEnds, timers = [], openIds, joinedAt, matchStartedAt, reported, revealInfo, cur, gone, koKind, outcome;
+    var G, phase, phaseEnds, timers = [], openIds, joinedAt, matchStartedAt, reported, revealInfo, cur, gone, koKind, outcome, dooming = false;
     function later(fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; }
     function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
     function reset() {
         clearTimers();
         G = E.create({ maxPlayers: S.maxPlayers });
-        phase = 'join'; phaseEnds = Date.now() + S.joinSec * 1000; openIds = {}; joinedAt = {}; reported = false; revealInfo = {}; cur = -1; gone = {}; koKind = 1; outcome = null;
+        phase = 'join'; phaseEnds = Date.now() + S.joinSec * 1000; openIds = {}; joinedAt = {}; reported = false; revealInfo = {}; cur = -1; gone = {}; koKind = 1; outcome = null; dooming = false; doomOverlay(false);
         matchStartedAt = 0;
         $('champ').classList.add('hidden'); hideBanner(); $('shout').classList.add('hidden');
         render();
@@ -324,9 +335,15 @@
             if (outcome.result === 'done') {
                 // فوز بالمواجهة + صوت الإقصاء بتوقيت المشهد (rps-scene.js koApply)
                 sfx('win');
-                if (koKind === 2 && revealInfo[d.winner]) { later(function () { sfx('fall'); }, 450); later(function () { sfx('splat'); }, 1000); later(function () { sfx('poof'); }, 2750); }
-                else { later(function () { sfx('boing'); }, 750); later(function () { sfx('poof'); }, 2500); }
-                later(function () { gone[d.loser] = 1; openIds = {}; outcome = null; render(); later(nextDuel, 600); }, KO_MS);
+                // 3 ثواني تمهيد: الخاسر يرجف تحت بقعة حمراء والكاميرا تقرّب عليه، وعدّ 3-2-1 بالنص
+                dooming = true; render(); doomOverlay(true); sfx('doom');
+                [3, 2, 1].forEach(function (n, i) { later(function () { doomCount(n); sfx('count'); }, i * 1000); });
+                later(function () {
+                    dooming = false; doomOverlay(false); render(); // الحين يبدأ الإقصاء نفسه
+                    if (koKind === 2 && revealInfo[d.winner]) { later(function () { sfx('fall'); }, 450); later(function () { sfx('splat'); }, 1000); later(function () { sfx('poof'); }, 2750); }
+                    else { later(function () { sfx('boing'); }, 750); later(function () { sfx('poof'); }, 2500); }
+                    later(function () { gone[d.loser] = 1; openIds = {}; outcome = null; render(); later(nextDuel, 600); }, KO_MS);
+                }, DOOM_MS);
                 return;
             }
             // المواجهة من ثلاث محاولات: تعادل ما ينحسب، ومحاولة لواحد تحتاج اللي بعدها
@@ -383,6 +400,8 @@
     function shout(t, c) { var el = $('shout'), s = $('shout-t'); s.textContent = t; s.style.setProperty('--c', c); el.classList.remove('hidden'); s.style.animation = 'none'; void s.offsetWidth; s.style.animation = ''; }
     function showBanner(t, sub) { var b = $('banner'); b.innerHTML = esc(t) + (sub ? '<small>' + esc(sub) + '</small>' : ''); b.classList.remove('hidden'); b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; }
     function hideBanner() { $('banner').classList.add('hidden'); }
+    function doomOverlay(on) { $('doom').classList.toggle('hidden', !on); $('vs').classList.toggle('dooming', !!on); if (!on) $('doom-n').textContent = ''; }
+    function doomCount(n) { var el = $('doom-n'); el.textContent = n; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
 
     var lastSec = -1;
     function tickTimer() {
@@ -447,10 +466,10 @@
             if (phase === 'pick') { ok = !!d.picks[x[1]]; t = ok ? '✓ اختار' : 'ينتظر اختياره...'; }
             else if ((phase === 'reveal' || phase === 'result') && mine) t = PICK[mine].e + ' ' + PICK[mine].n;
             else if (phase === 'walk') t = 'جاي للمواجهة';
-            if (phase === 'result' && outcome && outcome.result === 'done') { ok = d.winner === x[1]; t = ok ? '🏆 فاز بالمواجهة' : '💥 انقصى'; }
+            if (phase === 'result' && outcome && outcome.result === 'done') { ok = d.winner === x[1]; t = ok ? '🏆 فاز بالمواجهة' : dooming ? 'على وشك الإقصاء' : '💥 انقصى'; }
             else if (phase === 'result' && outcome && outcome.result === 'point') { ok = outcome.w === x[1]; t = ok ? '✓ كسب المحاولة' : 'خسر المحاولة'; }
             // أيقونة الحالة (Material Symbols بنفس هوية الموقع)
-            var ic = /اختار$/.test(t) && ok ? 'check_circle' : /ينتظر/.test(t) ? 'hourglass_top' : /فاز/.test(t) ? 'emoji_events' : /كسب/.test(t) ? 'add_task' : /انقصى/.test(t) ? 'cancel' : /خسر|ما اختار/.test(t) ? 'remove_circle' : /جاي/.test(t) ? 'directions_walk' : '';
+            var ic = /وشك/.test(t) ? 'warning' : /اختار$/.test(t) && ok ? 'check_circle' : /ينتظر/.test(t) ? 'hourglass_top' : /فاز/.test(t) ? 'emoji_events' : /كسب/.test(t) ? 'add_task' : /انقصى/.test(t) ? 'cancel' : /خسر|ما اختار/.test(t) ? 'remove_circle' : /جاي/.test(t) ? 'directions_walk' : '';
             var clean = t.replace(/^[✓🏆💥]\s*/u, '');
             st.innerHTML = (ic ? '<span class="ms">' + ic + '</span>' : '') + esc(clean); st.classList.toggle('ok', ok); st.style.display = t ? '' : 'none';
             var bad = /انقصى|خسر|ما اختار/.test(t); st.classList.toggle('bad', bad);
@@ -493,6 +512,7 @@
                         else { o.pose = 'oops'; o.badge = { text: oc.how === 'noshow' && !mine ? 'ما اختار' : 'خسر المحاولة', color: C.lose }; }
                     }
                     else if (d.winner === p.id) { o.pose = 'win'; o.badge = { text: oc.how === 'draw' ? 'فاز بالقرعة' : 'فاز بالمواجهة', color: C.win }; }
+                    else if (dooming) { o.pose = 'doom'; }
                     else {
                         o.pose = 'ko'; o.ko = koKind === 2 && revealInfo[d.winner] ? 2 : 1; o.koPick = revealInfo[d.winner] || 1;
                         o.badge = { text: oc.how === 'noshow' && !mine ? 'انقصى (ما اختار)' : 'انقصى!', color: C.lose };

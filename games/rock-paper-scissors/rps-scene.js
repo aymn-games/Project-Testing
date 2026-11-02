@@ -11,7 +11,7 @@
  *   place = { kind: 'duel'|'queue'|'podium', i, n, side }
  *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
  *     queue: ينتظر دوره بنص دائرة خلف المواجهة (i من n) · podium: البطل
- *   pose = 'idle'|'still' (واقف ثابت تماماً)|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
+ *   pose = 'idle'|'still' (واقف ثابت تماماً)|'doom' (3ث قبل الإقصاء: يرجف ويخاف)|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
  *   g = 0 بنت · 1 ولد (اختياري، وإلا من رقم اللاعب)
  *     ko = إقصاء مضحك (ko: 1 نابض يطيّره · 2 مجسم عملاق من اختيار الفائز koPick يفرشه) ~2.9ث
  *   pick = 1/2/3 (يظهر المجسم بيده وقت reveal) · bubble = {text, color} · badge = {text, color}
@@ -488,6 +488,12 @@ export function createArena(container, opts = {}) {
                 const f = lerp3(FIST_F, DOWN_F, u >= SHAKE_SEC ? 1 : (ph < .5 ? ease(ph * 2) : 1 - ease((ph - .5) * 2)));
                 arm(c, FIST_U, f); gesture = 'rock';
                 addRot(c, 'Spine', .06 * beat, 0, 0);
+            } else if (c.pose === 'doom') {
+                // قبل الإقصاء: الرجفة تزيد، ينحني شوي ويرفع يدينه قدام وجهه خوف
+                const k = ease(u / .5), sh = Math.min(1, u / 3);
+                addRot(c, 'Spine', .12 * k, Math.sin(now * 37) * .05 * sh, 0); addRot(c, 'Head', -.1 * k, Math.sin(now * 29) * .08 * sh, 0);
+                aimBone(c, 'RightArm', -.35, .05, .9); aimBone(c, 'RightForeArm', -.05, .95, .35);
+                aimBone(c, 'LeftArm', .35, .05, .9); aimBone(c, 'LeftForeArm', .05, .95, .35);
             } else if (c.pose === 'oops') {
                 const k = ease(u / .4); addRot(c, 'Spine', .3 * k, 0, 0); addRot(c, 'Spine1', .1 * k, 0, 0); addRot(c, 'Head', .35 * k, 0, .08 * k);
                 if (c.pick && u < 1.4) { arm(c, OUT_U, OUT_F); showProp = c.pick; }
@@ -515,9 +521,11 @@ export function createArena(container, opts = {}) {
         camera.position.copy(basePos); camera.lookAt(camLook);
     }
     const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
-    function placeCamera(k) {
+    function placeCamera(k, kd) {
         camera.position.lerpVectors(basePos, closePos, k);
-        camera.lookAt(_cl.lerpVectors(camLook, closeLook, k));
+        _cl.lerpVectors(camLook, closeLook, k);
+        if (kd > 0) { camera.position.lerp(DO.pos, kd); _cl.lerp(DO.look, kd); }
+        camera.lookAt(_cl);
     }
     // ================================================================ أيدي الشخصيات بأصابع + التقريب
     // اللي بالمواجهة: يد الشخصية نفسها تتبدّل بيد بأصابع (rps-hand.js) مركّبة على عظمة الكف
@@ -569,6 +577,24 @@ export function createArena(container, opts = {}) {
         }
     }
     const HO = { on: false, a: 0 };
+    // تمهيد الإقصاء: شعاع أحمر من فوق الخاسر وحلقة تنبض تحته، والكاميرا تقرّب عليه
+    const doomBeam = new T.Mesh(new T.CylinderGeometry(.35, 1.0, 6, 32, 1, true).translate(0, 3, 0), new T.MeshBasicMaterial({ color: '#ff3b5c', map: beamTex, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    doomBeam.geometry.rotateX(Math.PI); doomBeam.geometry.translate(0, 6, 0); doomBeam.visible = false; scene.add(doomBeam);
+    const doomRing = new T.Mesh(new T.RingGeometry(.55, .78, 48).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: '#ff3b5c', transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false }));
+    doomRing.visible = false; scene.add(doomRing);
+    const DO = { a: 0, c: null, look: new T.Vector3(), pos: new T.Vector3() };
+    function doomTick(dt) {
+        let c = null; for (const x of chars.values()) if (x.pose === 'doom') { c = x; break; }
+        if (c) DO.c = c;
+        DO.a += ((c ? 1 : 0) - DO.a) * (1 - Math.exp(-dt * (c ? 1.6 : 6)));
+        const on = DO.a > .01 && DO.c; doomBeam.visible = doomRing.visible = !!on;
+        if (!on) return 0;
+        const p = DO.c.pos, pulse = .65 + Math.sin(now * 9) * .35;
+        doomBeam.position.set(p.x, 0, p.z); doomBeam.material.opacity = .32 * DO.a * pulse;
+        doomRing.position.set(p.x, .03, p.z); doomRing.material.opacity = .85 * DO.a * pulse; doomRing.scale.setScalar(1 + Math.sin(now * 9) * .08);
+        DO.look.set(p.x * .7, 1.15, p.z); DO.pos.set(p.x * .45, 1.55, p.z + 3.1);
+        return REDUCED ? 0 : ease(DO.a) * .85;
+    }
     function closeTick(dt) {
         const want = phase === 'shake' || phase === 'reveal';
         HO.on = want;
@@ -656,6 +682,7 @@ export function createArena(container, opts = {}) {
             const a = wantAnim(c); if (a !== c.anim) { c.rig.play(a); c.anim = a; }
             if (c.pose === 'win' || c.pose === 'dance') { if (!c.expT || now > c.expT) { c.rig.express('laugh', 1.4); c.expT = now + 1.3; } }
             c.rig.root.position.copy(c.pos); c.rig.root.rotation.set(0, c.ry, 0);
+            if (c.pose === 'doom' && !REDUCED) { const sh = Math.min(1, (now - c.poseAt) / 3); c.rig.root.position.x += Math.sin(now * 61) * .012 * (.3 + sh); c.rig.root.position.z += Math.cos(now * 53) * .008 * (.3 + sh); }
             if (c.pose === 'ko' && c.ko) { if (!c.ko.done) { c.rig.root.visible = true; koApply(c); } }
             else { c.rig.root.visible = true; c.rig.root.scale.setScalar(1); if (c.ko) { dropObj(c.ko.obj); c.ko = null; } c.tag.visible = c.tagOk !== false; }
             // البعيدين (المتفرجين) يتحدثون كل إطارين بدون فيزياء
@@ -664,7 +691,7 @@ export function createArena(container, opts = {}) {
             const frozen = c.pose === 'still' && !c.walking && c.stillAt != null && now - c.stillAt > .5;
             if (c.pose === 'still' && !c.walking) { if (c.stillAt == null) c.stillAt = now; } else c.stillAt = null;
             if (!frozen && (!far || (frame + i) % 2 === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
-            if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
+            if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' || c.pose === 'doom' ? 'scared' : 'smile');
             poseChar(c, dt);
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;
@@ -690,7 +717,7 @@ export function createArena(container, opts = {}) {
             q4.identity(); confetti.instanceMatrix.needsUpdate = true;
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
-        placeCamera(closeTick(dt));
+        placeCamera(closeTick(dt), doomTick(dt));
         if (composer) composer.render(); else renderer.render(scene, camera);
     }
 
