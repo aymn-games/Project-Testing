@@ -35,7 +35,7 @@ var CARDS = ['recruit', 'shield', 'reveal', 'mislead', 'silence'];
 var CARD_NAMES = { recruit: 'التجنيد', shield: 'الحماية', reveal: 'كشف الهوية', mislead: 'التضليل', silence: 'الإسكات' };
 var ROLE_NAMES = { citizen: 'مواطن', mafia: 'مافيا', disguised: 'متخفي', doctor: 'طبيب', detective: 'محقق' };
 // أطوال لقطات الفجر (لازم تطابق مدد المشاهد في games/mafia/mafia-scene.js)
-var SHOT = { intro: 3000, inspect: 6500, attack: 10000, save: 6000, quiet: 5000, result: 5000 };
+var SHOT = { intro: 3000, inspect: 6500, attack: 10000, save: 6000, quiet: 5000, heal: 5500, noheal: 3500, result: 5000 };
 // لحظة وصول جسم الضحية للأرض داخل لقطة الهجوم (ATK.down بالمشهد) — قبلها يبقى «حي» بحالة البث
 var ATTACK_DOWN_MS = 7900;
 
@@ -119,7 +119,32 @@ function createGame(roster, settings, hooks) {
         sys(TURN_TXT[turn]);
         go('night', ms);
     }
+    // ---- عدم النشاط: نعدّ اللي فاتهم دورهم بالليل والتصويت ورا بعض
+    var IDLE_LIMIT = 2;
+    function markTurnMisses(turn) {
+        if (!turn || S.kickIdle === false) return;
+        var N = G.night;
+        turnActors(turn).forEach(function (p) {
+            var did = turn === 'mafia' ? !!N.ops[p.id] : !!N.actions[p.id];
+            p.missNights = did ? 0 : (p.missNights || 0) + 1;
+        });
+    }
+    /** إقصاء لاعب لعدم نشاطه (بدون كشف دوره). why: 'offline' | 'vote' | 'night' */
+    function kickIdle(id, why) {
+        var p = P(id); if (!p || !p.alive || G.phase === 'over') return;
+        p.alive = false; p.diedRound = G.round; p.cause = 'idle';
+        sys('⏳ ' + p.name + ' انقصى بسبب عدم نشاطه');
+        notice(p, '⏳ انقصيت من اللعبة بسبب عدم نشاطك' + (why === 'offline' ? ' (قفلت الصفحة أكثر من دقيقة)' : why === 'vote' ? ' (فاتك التصويت مرتين)' : ' (فاتك دورك بالليل ليلتين)') + '.');
+        G.players.forEach(function (q) { if (q !== p && q.alive) notice(q, '⏳ ' + p.name + ' انقصى بسبب عدم نشاطه.'); });
+        if (G.phase !== 'dawn' && G.phase !== 'verdict' && G.phase !== 'night') { var w = winner(); if (w) finish(w); }
+        changed();
+    }
+    function kickNightIdlers() {
+        if (S.kickIdle === false) return;
+        G.players.forEach(function (p) { if (p.alive && (p.missNights || 0) >= IDLE_LIMIT) kickIdle(p.id, 'night'); });
+    }
     function nextTurn() {
+        markTurnMisses(G.turn);
         for (var j = TURNS.indexOf(G.turn) + 1; j < TURNS.length; j++) if (turnExists(TURNS[j])) return startTurn(TURNS[j]);
         G.turn = null; resolveNight();
     }
@@ -233,6 +258,11 @@ function createGame(roster, settings, hooks) {
             shot('attack', { target: opTarget.id, saved: !!saved });
             if (saved) shot('save', { target: opTarget.id });
         } else shot('quiet');
+        // الطبيب: لو حمى أحد (وما صار إنقاذ) مشهد علاج بدون ما ينكشف مين، ولو ما اختار أحد نوضّح هالشي
+        if (S.doctors > 0 && !saved) {
+            var docActed = G.players.some(function (p) { return p.role === 'doctor' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
+            shot(docActed ? 'heal' : 'noheal');
+        }
         shot('result', { victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited });
 
         G.lastNight = { round: G.round, victim: victim ? victim.id : null, saved: saved ? saved.id : null, recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
@@ -259,6 +289,7 @@ function createGame(roster, settings, hooks) {
     }
 
     function afterDawn() {
+        kickNightIdlers();   // اللي فاته دوره ليلتين ينقصى مع طلوع الصبح (مو بنص الليل)
         var w = winner(); if (w) return finish(w);
         G.votes = {};
         G.silenced = G.silenceNext; G.silenceNext = [];   // الإسكات يبدأ مع النهار ويحترق هنا
@@ -288,6 +319,11 @@ function createGame(roster, settings, hooks) {
         var abst = alive().filter(function (p) { return G.votes[p.id] === 'skip'; }).length;
         if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'امتنع ' + abst : ''));
         G.silenced = [];
+        // اللي ما صوّت ولا امتنع: مرتين ورا بعض = إقصاء لعدم النشاط
+        if (S.kickIdle !== false) alive().forEach(function (p) {
+            p.missVotes = G.votes[p.id] ? 0 : (p.missVotes || 0) + 1;
+            if (p.missVotes >= IDLE_LIMIT) kickIdle(p.id, 'vote');
+        });
         go('verdict', VERDICT_MS);
     }
 
@@ -333,8 +369,11 @@ function createGame(roster, settings, hooks) {
             if (ch === 'district' && G.districts < 2) ch = 'city';
         } else return;
         var now = Date.now();
-        if (me._lastChat && now - me._lastChat < 1500) return;
+        // حد الإرسال: رصيد 5 رسائل يرجع منها وحدة كل ثانية (يسمح بالكتابة السريعة ويمنع السبام)
+        me._chatTok = Math.min(5, (me._chatTok == null ? 5 : me._chatTok) + (now - (me._lastChat || now)) / 1000);
         me._lastChat = now;
+        if (me._chatTok < 1) return;
+        me._chatTok -= 1;
         var re = null;
         if (reN) {
             var orig = G.chat.find(function (c) { return c.n === reN && !c.sys && c.ch === ch && (ch !== 'district' || c.d === me.district); });
@@ -378,7 +417,7 @@ function createGame(roster, settings, hooks) {
                 N.actions[id] = it.id;
             } else return;
             changed();
-            if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 2000); changed(); }
+            if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 600); changed(); }   // أول ما يختارون (والمافيا يتفقون) ينتهي الدور
             return;
         }
         if (G.phase === 'vote' && a === 'vote') {
@@ -411,7 +450,7 @@ function createGame(roster, settings, hooks) {
     /** وش ينكشف عن لاعب ميت للكل: الدور كامل (fullReveal) أو الفريق للمطرود بالتصويت (القواعد). */
     function deadInfo(p) {
         if (p.alive || hiddenDeath(p)) return {};
-        if (S.fullReveal && p.cause !== 'left') return { role: p.role, team: p.faction };
+        if (S.fullReveal && p.cause !== 'left' && p.cause !== 'idle') return { role: p.role, team: p.faction };
         if (p.cause === 'vote') return { team: p.faction };
         return {};
     }
@@ -468,7 +507,7 @@ function createGame(roster, settings, hooks) {
 
     sys('بدأت المباراة: ' + G.players.length + ' لاعب' + (G.districts > 1 ? ' في ' + G.districts + ' أحياء' : '') + ' — شوفوا أدواركم على جوالاتكم');
     changed();
-    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, view: view, _available: available };
+    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, kickIdle: kickIdle, view: view, _available: available };
 }
 
 module.exports = { createGame: createGame, SHOT: SHOT, REVEAL_MS: REVEAL_MS, VERDICT_MS: VERDICT_MS, CARDS: CARDS, CARD_NAMES: CARD_NAMES, ROLE_NAMES: ROLE_NAMES, DISTRICT_SIZE: DISTRICT_SIZE };
