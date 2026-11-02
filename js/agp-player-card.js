@@ -440,6 +440,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 9.02, avatarTopPct: 19.42, avatarWidthPct: 20.40, avatarHeightPct: 63.17,
             nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
         },
+        // [الأذنين الزرقاء] hole 177→620 × 157→601 (الفيونكة تغطي أسفل الدائرة)،
+        // name 800→1820 × 300→490 (بعيد عن اللمعات وآثار الأقدام)، content 15→717.
+        // لوح فاتح = نص أزرق غامق.
+        'frame-blue-ears.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 15, contentHeight: 702,
+            avatarLeftPct: 8.15, avatarTopPct: 20.23, avatarWidthPct: 20.40, avatarHeightPct: 63.25,
+            nameLeftPct: 36.83, nameTopPct: 40.60, nameWidthPct: 46.96, nameHeightPct: 27.07,
+            textColor: '#17437e'
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,

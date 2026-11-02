@@ -704,7 +704,8 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-pink-duck.png', display_name_ar: 'إطار البطة الوردية' },
     { image_filename: 'frame-cool-boy.png', display_name_ar: 'إطار الولد الكول' },
     { image_filename: 'frame-cowboy.png', display_name_ar: 'إطار الكاوبوي' },
-    { image_filename: 'frame-fire-water.png', display_name_ar: 'إطار النار والماء' }
+    { image_filename: 'frame-fire-water.png', display_name_ar: 'إطار النار والماء' },
+    { image_filename: 'frame-blue-ears.png', display_name_ar: 'إطار الأذنين الزرقاء' }
 ].forEach(function (frame) {
     var exists = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(frame.image_filename);
     if (!exists) {
