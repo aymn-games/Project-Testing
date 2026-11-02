@@ -120,3 +120,21 @@ test('norm: keyword matching ignores ال, repeated letters, hamza forms and dia
     for (const t of ['دخول', 'الدخول', 'دخووول', ' دُخول ', 'دخول!']) assert.equal(E.norm(t), k, t);
     assert.notEqual(E.norm('1'), k); assert.equal(E.norm('أحمد'), E.norm('احمد'));
 });
+
+test('lateJoin: new players wait for the next round; eliminated players can never come back', () => {
+    const g = E.create({ maxPlayers: 4 }); add(g, 2); g.startRound(); const d = g.duels[0];
+    assert.ok(g.lateJoin({ id: 'tiktok:late', name: 'late' }));
+    assert.equal(g.duelOf('tiktok:late'), null); assert.equal(g.pick('tiktok:late', 1), false); // ما يلعب بالدور الحالي
+    attempt(g, 0, 1, 3); attempt(g, 0, 1, 3); g.nextRound();
+    assert.equal(g.champion, null); // باقي اثنين: الفائز والمتأخر
+    assert.deepEqual(g.duels.flatMap(x => [x.a, x.b]).sort(), [d.a, 'tiktok:late'].sort());
+    assert.equal(g.lateJoin({ id: d.b, name: 'p' }), null); // المقصى ما يرجع
+    assert.equal(g.lateJoin({ id: d.a, name: 'p' }), null); // ولا اللي داخل أصلاً
+});
+
+test('lateJoin respects maxPlayers on remaining players and closes once there is a champion', () => {
+    const g = E.create({ maxPlayers: 2 }); add(g, 2); g.startRound();
+    assert.equal(g.lateJoin({ id: 'x' }), null); // اثنين باقين = الحد
+    attempt(g, 0, 1, 3); attempt(g, 0, 1, 3); g.nextRound();
+    assert.ok(g.champion); assert.equal(g.lateJoin({ id: 'y' }), null);
+});

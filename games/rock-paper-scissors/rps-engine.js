@@ -80,6 +80,18 @@
             return pl;
         }
 
+        /**
+         * دخول متأخر بعد بداية البطولة («إتاحة الدخول»): اللاعب الجديد ينتظر مع المتأهلين ويدخل القرعة من الدور الجاي.
+         * اللي دخل قبل (حتى لو انقصى) ما يرجع، والحد الأعلى على اللاعبين الباقين بالبطولة.
+         */
+        function lateJoin(p) {
+            if (round === 0) return join(p);
+            if (champ || !p || !p.id || byId[p.id] || alive().length >= maxPlayers) return null;
+            var pl = { id: p.id, name: String(p.name || p.id), avatarUrl: p.avatarUrl || null, out: false, outRound: 0, byes: 0, late: round };
+            players.push(pl); byId[p.id] = pl;
+            return pl;
+        }
+
         /** يحدّث الاسم/الصورة لو تغيّرت (نفس اللاعب). */
         function touch(p) {
             var pl = p && byId[p.id];
@@ -192,7 +204,7 @@
         }
 
         return {
-            join: join, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
+            join: join, lateJoin: lateJoin, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
             startReplay: startReplay, roundDone: roundDone, nextRound: nextRound, stageName: stageName,
             get players() { return players; },
             get alive() { return alive(); },
