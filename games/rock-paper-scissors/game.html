@@ -137,9 +137,12 @@
     .champ{ position:fixed; bottom:clamp(18px,4vh,40px); left:50%; transform:translateX(-50%); z-index:22; width:min(520px,92vw); box-sizing:border-box; padding:18px 22px 20px; border-radius:26px; text-align:center;
         background:#120c1f; border:1px solid rgba(178,140,245,.45); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.25); animation:rise .5s ease both; }
     @keyframes rise{ from{ opacity:0; transform:translate(-50%,16px); } to{ opacity:1; transform:translate(-50%,0); } }
-    .champ .k{ display:inline-flex; align-items:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; color:#d8c2ff; }
-    .champ .k .ms{ color:#f39bfd; }
-    .champ .nm{ margin-top:4px; font:900 clamp(34px,4vw,52px)/1.15 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; word-break:break-word; }
+    .champ .who{ display:flex; align-items:center; justify-content:center; gap:16px; }
+    .champ .av{ width:84px; height:84px; flex:none; border-radius:50%; position:relative; overflow:hidden; display:grid; place-items:center; background:linear-gradient(135deg,#7c3aed,#a78bfa); border:3px solid #b28cf5; box-shadow:0 0 24px rgba(178,140,245,.45); font:900 36px 'Zain'; color:#fff; }
+    .champ .av img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    .champ .names{ display:flex; flex-direction:column; align-items:flex-start; min-width:0; text-align:right; }
+    .champ .nm{ font:900 clamp(30px,3.4vw,44px)/1.15 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .champ .user{ font:600 15px 'IBM Plex Sans Arabic'; color:#a79fbb; direction:ltr; }
     .champ .row{ display:flex; gap:10px; margin-top:16px; }
     .cbtn{ flex:1; height:52px; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; transition:filter .2s, transform .15s; }
     .cbtn:active{ transform:scale(.97); }
@@ -204,10 +207,12 @@
 <div class="doom cd hidden" id="cd"><div class="doom-n" id="cd-n"></div></div>
 <div class="doom hidden" id="doom"><div class="doom-l"><span class="ms">warning</span>إقصاء!</div><div class="doom-n" id="doom-n"></div></div>
 <div class="banner hidden" id="banner"></div>
-<!-- شاشة الفوز: شخصية الفائز على المنصة تحتفل، وتحتها اسمه وزرين — بدون أي شي يتطاير -->
+<!-- شاشة الفوز: شخصية الفائز على المنصة تحتفل، وتحتها صورة حسابه بتيك توك واسمه وزرين — بدون أي شي يتطاير -->
 <div class="champ hidden" id="champ">
-    <div class="k"><span class="ms">emoji_events</span>الفائز</div>
-    <div class="nm"><bdi id="champ-nm"></bdi></div>
+    <div class="who">
+        <div class="av" id="champ-av"></div>
+        <div class="names"><bdi class="nm" id="champ-nm"></bdi><bdi class="user" id="champ-user"></bdi></div>
+    </div>
     <div class="row">
         <button type="button" class="cbtn new" id="btn-new"><span class="ms">replay</span>مباراة جديدة</button>
         <button type="button" class="cbtn out" id="btn-out"><span class="ms">logout</span>خروج</button>
@@ -280,7 +285,7 @@
             if (E.norm(p.text) !== KW) return;
             if (FOLLOWERS && !p.isFollower) return;
             if (G.player(p.id)) { G.touch(p); return; }
-            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; sfx('join'); render(); later(render, 2300); }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
             return;
         }
@@ -409,8 +414,12 @@
     }
     function crown() {
         phase = 'champion'; phaseEnds = 0;
-        var c = G.player(G.champion);
-        $('champ-nm').textContent = c ? c.name : '';
+        var c = G.player(G.champion) || {};
+        $('champ-nm').textContent = c.name || '';
+        $('champ-user').textContent = c.user ? '@' + c.user : '';
+        // صورة حسابه بتيك توك، ولو ما تحمّلت أول حرف من اسمه
+        var av = $('champ-av'); av.textContent = (Array.from(String(c.name || '').replace(/[\s_.@\d]/g, ''))[0] || '؟');
+        if (c.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onerror = function () { img.remove(); }; img.src = c.avatarUrl; av.appendChild(img); }
         $('champ').classList.remove('hidden'); sfx('champion');
         render();
         reportPoints();
@@ -590,8 +599,8 @@
 
     // ---------------------------------------------------------------- الأزرار
     $('go').addEventListener('click', startTournament);
-    $('btn-new').addEventListener('click', reset);                       // مباراة جديدة ← اللوبي بنفس الشاشة
-    $('btn-out').addEventListener('click', function () { go('index.html'); });
+    $('btn-new').addEventListener('click', reset);                       // مباراة جديدة ← اللوبي بنفس الشاشة وبنفس كلمة الدخول
+    $('btn-out').addEventListener('click', function () { go('../../games.html'); }); // مكتبة الألعاب مباشرة
     $('exit').addEventListener('click', function () { go('index.html'); });
 
     // ---------------------------------------------------------------- البث
