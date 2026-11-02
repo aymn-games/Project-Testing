@@ -1178,6 +1178,23 @@ var STORE_FRAMES_BATCH_3 = [
     logger.log('Store: frames batch 3 added (' + STORE_FRAMES_BATCH_3.length + ' frames)');
 }());
 
+// إطار «الأذنين الزرقاء» بالمتجر (مرة وحدة لكل قاعدة بيانات) — «إطارات عامة»
+// بنفس سعر CATALOG_V2_PRICE وتسليم 'frame'. ما يضيفه لو صورته موجودة.
+(function ensureStoreFrameBlueEars() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_frame_blue_ears'").get()) return;
+    var t = now();
+    db.transaction(function () {
+        var cat = db.prepare("SELECT id FROM store_categories WHERE name = 'إطارات عامة' AND kind = 'normal'").get();
+        if (cat && !db.prepare('SELECT 1 FROM store_products WHERE image_url = ?').get('frame-blue-ears.png')) {
+            db.prepare(
+                "INSERT INTO store_products (category_id, name, price, badge, image_url, hidden, delivery, created_at) VALUES (?, ?, ?, 'جديد', ?, 0, 'frame', ?)"
+            ).run(cat.id, 'إطار الأذنين الزرقاء', CATALOG_V2_PRICE, 'frame-blue-ears.png', t);
+        }
+        db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_frame_blue_ears', ?)").run(String(t));
+    })();
+    logger.log('Store: blue ears frame added');
+}());
+
 // حذف الاستريمر «الريس» من المتجر (مرة وحدة) — نفس حذفه من لوحة الإدارة.
 (function removeRayesStreamer() {
     if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_rayes_removed'").get()) return;
