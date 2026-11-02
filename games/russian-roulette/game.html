@@ -193,46 +193,39 @@ input::placeholder{color:#6f6a7c}
     </sc-if>
 
     <sc-if value="{{ chooseOpen }}" hint-placeholder-val="{{ false }}">
-      <div style="position:absolute;inset:0;z-index:40;padding:104px 32px 24px;box-sizing:border-box;background:rgba(10,9,15,.96);display:grid;grid-template-columns:420px minmax(0,1fr);gap:24px;animation:fade .25s ease">
-        <div style="min-height:0;box-sizing:border-box;padding:40px 24px;border-radius:28px;background:linear-gradient(180deg,rgba(52,211,153,.08),rgba(255,255,255,.02) 60%);border:1px solid rgba(52,211,153,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
-          <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 19px 'IBM Plex Sans Arabic';color:#6ee7b7"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span>صاحب الدور</span>
-          <div style="width:230px;height:230px;border-radius:50%;padding:6px;border:5px solid #34d399;box-shadow:0 0 0 8px rgba(52,211,153,.12), 0 0 50px rgba(52,211,153,.35);box-sizing:border-box">
-            <div style="position:relative;overflow:hidden;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6d28d9,#2e1065);display:grid;place-items:center;font:700 96px 'IBM Plex Sans Arabic';color:#fff">{{ chIni }}<img src="{{ chAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ chOp }}"></div>
+      <!-- مرحلة الاختيار: شريط صاحب الدور فوق، وبطاقات اللاعبين تحت بحجم يتكيّف مع العدد (fitChoose) فيظهر الكل بدون تمرير -->
+      <div style="position:absolute;inset:0;z-index:40;padding:104px 32px 24px;box-sizing:border-box;background:rgba(10,9,15,.97);display:flex;flex-direction:column;gap:16px;animation:fade .25s ease">
+        <div style="flex-shrink:0;height:150px;box-sizing:border-box;display:flex;align-items:center;gap:26px;padding:0 30px;border-radius:24px;background:linear-gradient(90deg,rgba(52,211,153,.12),rgba(255,255,255,.02));border:1px solid rgba(52,211,153,.4);animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
+          <div style="flex-shrink:0;width:112px;height:112px;border-radius:50%;padding:4px;border:4px solid #34d399;box-shadow:0 0 0 6px rgba(52,211,153,.12), 0 0 30px rgba(52,211,153,.35);box-sizing:border-box">
+            <div style="position:relative;overflow:hidden;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6d28d9,#2e1065);display:grid;place-items:center;font:700 48px 'IBM Plex Sans Arabic';color:#fff">{{ chIni }}<img src="{{ chAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ chOp }}"></div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%">
-            <span style="font:700 52px/1.2 'IBM Plex Sans Arabic';color:#f4f2f8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ chName }}</span>
-            <div style="display:flex;align-items:center;gap:12px">
-              <span style="padding:3px 14px;border-radius:11px;background:#7c3aed;box-shadow:0 0 0 1px rgba(196,181,253,.5), 0 4px 12px rgba(124,58,237,.45);font:800 22px 'IBM Plex Sans Arabic';color:#fff">رقم {{ chNum }}</span>
-              <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
-            </div>
+          <div style="min-width:0;max-width:520px;display:flex;flex-direction:column;gap:6px">
+            <span style="display:flex;align-items:center;gap:8px;font:700 18px 'IBM Plex Sans Arabic';color:#6ee7b7"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span>صاحب الدور</span>
+            <span style="font:700 44px/1.15 'IBM Plex Sans Arabic';color:#f4f2f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ chName }}</span>
+            <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;animation:{{ cdAn }}">
-            <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
-            <span style="font:700 72px/1 'IBM Plex Sans Arabic';color:{{ cdCol }};font-variant-numeric:tabular-nums;transition:color .3s">{{ timeTxt }}</span>
-            <div style="width:240px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ cdCol }};border-radius:999px;transition:width 1s linear, background .3s"></div></div>
+          <span style="flex-shrink:0;padding:6px 18px;border-radius:14px;background:#7c3aed;box-shadow:0 0 0 2px rgba(196,181,253,.6), 0 4px 12px rgba(124,58,237,.45);font:800 30px 'IBM Plex Sans Arabic';color:#fff">رقم {{ chNum }}</span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center">
+            <span style="font:700 34px 'IBM Plex Sans Arabic'">اختر الهدف</span>
+            <span style="font:500 19px 'IBM Plex Sans Arabic';color:#a8a3b5">اكتب رقم اللاعب في الشات، أو اضغط عليه يدوياً — {{ candCount }} لاعب</span>
           </div>
-          <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin-top:8px">
-            <button onClick="{{ resume }}" style="height:56px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:linear-gradient(135deg,#3b0764,#5b21b6);color:#fff;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.12)" style-active="transform:scale(.97)">إنهاء الاختيار</button>
-            <button onClick="{{ kickChooser }}" style="height:56px;border-radius:999px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:#fca5a5;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(248,113,113,.16)" style-active="transform:scale(.97)">إقصاء صاحب الدور</button>
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;animation:{{ cdAn }}">
+            <span style="font:700 60px/1 'IBM Plex Sans Arabic';color:{{ cdCol }};font-variant-numeric:tabular-nums;transition:color .3s">{{ timeTxt }}</span>
+            <div style="width:180px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ cdCol }};border-radius:999px;transition:width 1s linear, background .3s"></div></div>
+          </div>
+          <div style="flex-shrink:0;width:230px;display:flex;flex-direction:column;gap:10px">
+            <button onClick="{{ resume }}" style="height:48px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:linear-gradient(135deg,#3b0764,#5b21b6);color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.12)" style-active="transform:scale(.97)">إنهاء الاختيار</button>
+            <button onClick="{{ kickChooser }}" style="height:48px;border-radius:999px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:#fca5a5;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(248,113,113,.16)" style-active="transform:scale(.97)">إقصاء صاحب الدور</button>
           </div>
         </div>
-        <div style="min-height:0;box-sizing:border-box;border-radius:28px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;overflow:hidden">
-          <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 28px;border-bottom:1px solid rgba(255,255,255,.06)">
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <span style="font:700 26px 'IBM Plex Sans Arabic'">اختر الهدف</span>
-              <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5">اختر من الشات بكتابة الرقم، أو يدوياً بالضغط على اللاعب</span>
-            </div>
-            <span style="flex-shrink:0;font:700 19px 'IBM Plex Sans Arabic';color:#a78bfa">{{ candCount }} لاعب</span>
-          </div>
-          <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:22px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-content:start;gap:10px">
+        <div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <div style="display:grid;grid-template-columns:repeat({{ cg.cols }},{{ cg.w }}px);gap:{{ cg.gap }}px;justify-content:center;align-content:center">
             <sc-for list="{{ cands }}" as="c" hint-placeholder-count="12">
-              <button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:12px;height:72px;padding:0 14px 0 10px;border-radius:14px;background:#1a1626;border:1px solid rgba(255,255,255,.1);cursor:pointer;min-width:0;text-align:start;color:#f4f2f8;transition:all .2s" style-hover="background:#2a1620;border-color:rgba(248,113,113,.55)" style-active="transform:scale(.98)">
-                <span style="position:relative;overflow:hidden;flex-shrink:0;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:2px solid rgba(167,139,250,.35);box-sizing:border-box;color:#fff;font:700 16px 'IBM Plex Sans Arabic'">{{ c.ini }}<img src="{{ c.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }}"></span>
-                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
-                  <span style="font:600 18px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
-                  <span style="display:flex;gap:2px"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
-                </span>
-                <span style="flex-shrink:0;margin-inline-start:auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;line-height:1;padding-top:3px;box-sizing:border-box;background:#7c3aed;box-shadow:0 0 0 1px rgba(196,181,253,.5), 0 4px 12px rgba(124,58,237,.45);color:#fff;font:800 31px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ c.num }}</span>
+              <button onClick="{{ c.pick }}" style="position:relative;height:{{ cg.h }}px;box-sizing:border-box;border-radius:{{ cg.rad }}px;background:linear-gradient(180deg,#2a1d4a,#151021);border:{{ cg.bd }}px solid rgba(167,139,250,.35);display:flex;flex-direction:column;align-items:center;padding:{{ cg.padT }}px 0 0;min-width:0;overflow:hidden;cursor:pointer;color:#fff;font-family:'IBM Plex Sans Arabic';transition:border-color .2s, background .2s" style-hover="border-color:rgba(248,113,113,.75);background:linear-gradient(180deg,#3a1d2e,#1a1018)" style-active="transform:scale(.97)">
+                <span style="position:absolute;top:{{ cg.htTop }}px;inset-inline-end:{{ cg.htTop }}px;display:{{ cg.htDisp }};gap:2px"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:{{ cg.ht }}px;height:{{ cg.ht }}px"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
+                <span style="position:relative;flex-shrink:0;overflow:hidden;width:{{ cg.ph }}px;height:{{ cg.ph }}px;border-radius:50%;box-sizing:border-box;border:{{ cg.phBd }}px solid #a78bfa;background:linear-gradient(135deg,#6d28d9,#2e1065);display:grid;place-items:center;font-weight:700;font-size:{{ cg.iniFs }}px">{{ c.ini }}<img src="{{ c.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }}"></span>
+                <span style="position:relative;z-index:2;flex-shrink:0;margin-top:-{{ cg.numLift }}px;min-width:{{ cg.numW }}px;height:{{ cg.numH }}px;padding:{{ cg.numPadT }}px {{ cg.numPadX }}px 0;box-sizing:border-box;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#7c3aed;box-shadow:0 0 0 {{ cg.numRing }}px #fff, 0 4px 12px rgba(0,0,0,.55);font-weight:800;font-size:{{ cg.numFs }}px;line-height:1;font-variant-numeric:tabular-nums">{{ c.num }}</span>
+                <span style="flex:1;min-height:0;width:100%;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:center"><span style="max-width:100%;font-weight:700;font-size:{{ c.fs }}px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span></span>
               </button>
             </sc-for>
           </div>
@@ -526,6 +519,17 @@ const SEG=['#6d28d9','#312e81','#8b5cf6','#1e1b4b'];
 const ini=n=>[...(n||'')].find(c=>/[^\s_\d]/.test(c))||'';
 const norm=RR.norm;
 const HP='M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z';
+// مرحلة الاختيار: يختار عدد الأعمدة اللي يعطي أكبر بطاقة ممكنة بحيث يظهر كل اللاعبين بدون تمرير
+// المساحة ثابتة لأن المسرح 1920×1080 ويتكبّر مع الشاشة: 1856 عرض × 770 ارتفاع (بعد شريط صاحب الدور)
+function fitChoose(n){ const W=1856, H=770, RATIO=.86, MAXH=420; n=Math.max(1,n); let b=null;
+  for(let cols=1;cols<=n;cols++){ const rows=Math.ceil(n/cols), gap=Math.max(6,Math.min(18,H/rows*.1)), h=Math.floor(Math.min((H-gap*(rows-1))/rows,(W-gap*(cols-1))/cols/RATIO,MAXH));
+    if(h>0&&(!b||h>b.h)) b={cols,gap:Math.round(gap),h}; }
+  const h=b.h, r=v=>Math.max(1,Math.round(h*v));
+  return {cols:b.cols,gap:b.gap,h,w:Math.floor(h*RATIO),rad:r(.1),bd:h<90?1:2,padT:h<110?r(.05):r(.09),ph:h<110?r(.5):r(.47),phBd:h<90?2:Math.max(2,r(.016)),iniFs:r(.22),
+    numH:r(.27),numW:r(.42),numFs:r(.23),numLift:r(.11),numPadT:r(.025),numPadX:r(.05),numRing:h<90?1.5:Math.max(2,r(.012)),
+    nameFs:Math.max(12,r(.11)),htDisp:h<110?'none':'flex',ht:r(.058),htTop:r(.03)}; }
+// الاسم الطويل يصغر خطه (لين 60%) بدل ما يُقص بسرعة — تقدير حسب عدد الحروف
+function fitName(name,cg){ const avail=cg.w*.88, len=[...(name||'')].length||1, f=Math.min(cg.nameFs,avail/(len*.56)); return Math.max(10,Math.round(cg.nameFs*.6),Math.floor(f)); }
 
 class Component extends DCLogic {
   reg = RR.createRegistry(PLAYERS);
@@ -680,6 +684,7 @@ class Component extends DCLogic {
       style:{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}):null;
     const pts=s.pts, ptsMain=pts==='pending'?'…':typeof pts==='number'?`+${pts} نقطة`:'—', ptsSub=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?'تظهر في بروفايلك':'النقاط للحسابات الموثّقة في الموقع';
     const A=n=>this.av(n);
+    const candList=s.phase==='choose'?W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num):[], cg=fitChoose(candList.length);
     const lastE=s.log[0]?evRow(s.log[0]):null;
     return {
       fx:this.buildFx(), scale:s.scale, lblDisp:s.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:s.toast,
@@ -712,7 +717,7 @@ class Component extends DCLogic {
       hitPct:Math.round(c.bullets/c.chambers*100)+'%', gunTxt:`${c.bullets} ${c.bullets===1?'طلقة':'طلقات'} · ${c.chambers} غرف`,
       chooseOpen:s.phase==='choose'&&!!ch, chName:ch?ch.name:'', chIni:ini(ch&&ch.name), chAv:A(ch&&ch.name).av, chOp:A(ch&&ch.name).op, chNum:ch?ch.num:'', chHearts:ch?this.hearts(ch.hearts,c.chambers):[],
       left:s.left, cdOff:(452.4*(1-s.left/c.chooseSec)).toFixed(1), cdCol:s.left<=5?'#f87171':'#a78bfa', cdAn:s.left<=5?'warnPulse 1s ease-in-out infinite':'none', timeTxt:'00:'+String(s.left).padStart(2,'0'), timePct:(s.left/c.chooseSec*100).toFixed(1), candCount:Math.max(0,W.length-1),
-      cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
+      cg, cands:candList.map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),fs:fitName(p.name,cg),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
       kickChooser:()=>ch&&this.eliminate(ch.id,{by:'المذيع',type:'manual',host:true,tag:'إقصاء يدوي'}), resume:()=>this.endTurn(),
       clashOpen:s.phase==='clash'&&!!tg, shName:ch?ch.name:'', shIni:ini(ch&&ch.name), shAv:A(ch&&ch.name).av, shOp:A(ch&&ch.name).op, tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
       clashHit:!!(s.clash&&s.clash.stage==='hit'), clashMiss:!!(s.clash&&s.clash.stage==='miss'),
