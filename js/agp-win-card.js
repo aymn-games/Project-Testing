@@ -87,6 +87,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#8a3a5c 0%,#6b2546 50%,#4a1530 100%)',
             fallbackBg: '#f7dbe4',
             fallbackColor: '#6b2546'
+        },
+        // القطة الزرقاء — منح محدود. 1024×1536. الدائرة شفافة (256→765 ×
+        // 274→778)، الاسم داخل اللوح البيضاوي تحت القطة (222→782 × 964→1056)،
+        // والنقاط/الترتيب بالكرت السفلي (108→916 × 1204→1410) بعيداً عن
+        // النجوم. اللوحان أزرق فاتح — نص أزرق غامق.
+        'blue-kitty': {
+            image: 'win-card-blue-kitty.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 256, y: 274, w: 510, h: 505 },
+            holeBleed: 8,
+            nameBox: { x: 250, y: 968, w: 524, h: 86 },
+            detailBox: { x: 175, y: 1215, w: 674, h: 185 },
+            textColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
+            detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
+            fallbackBg: '#dce7f7',
+            fallbackColor: '#2b4a86'
         }
     };
 

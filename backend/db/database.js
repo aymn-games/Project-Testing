@@ -695,6 +695,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-pink-swan.png', display_name_ar: 'البجعة الوردية (منح محدود)' },
     { image_filename: 'frame-azooz.png', display_name_ar: 'عزوز (منح محدود)' },
     { image_filename: 'frame-bronze-bat.png', display_name_ar: 'الخفاش البرونزي (منح محدود)' },
+    { image_filename: 'frame-blue-kitty.png', display_name_ar: 'القطة الزرقاء (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
@@ -711,6 +712,25 @@ migrateSingleCardTable('user_win_cards');
         db.prepare('INSERT INTO custom_frames (image_filename, display_name_ar, created_at) VALUES (?, ?, ?)')
             .run(frame.image_filename, frame.display_name_ar, Date.now());
     }
+});
+
+// باكجات منح محدود جاهزة — إطار + بطاقة إقصاء + بطاقة فوز بنفس التصميم.
+// تُضاف لجدول bundles مرة وحدة (بحث بالاسم)، فتطلع بقائمة الباكجات بلوحة
+// الأدمن ويقدر يولّد لها كود استرداد يمنح الثلاث دفعة وحدة. مفاتيح البطاقات
+// معرّفة بـbackend/collectibles/collectibles-service.js.
+[
+    { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' }
+].forEach(function (bundle) {
+    if (db.prepare('SELECT id FROM bundles WHERE name = ?').get(bundle.name)) return;
+    var frame = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(bundle.frameImage);
+    if (!frame) return;
+    var items = [
+        { kind: 'frame', frameType: 'custom', frameRef: String(frame.id) },
+        { kind: 'elim', cardKey: bundle.cardKey },
+        { kind: 'win', cardKey: bundle.cardKey }
+    ];
+    db.prepare('INSERT INTO bundles (name, items, created_at) VALUES (?, ?, ?)')
+        .run(bundle.name, JSON.stringify(items), Date.now());
 });
 
 /**
