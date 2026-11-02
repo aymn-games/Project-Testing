@@ -63,6 +63,9 @@
     .ring.low b{ color:#fda4af; animation:beat 1s infinite; }
     @keyframes beat{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
     .jtimer{ position:fixed; top:110px; right:clamp(16px,3vw,60px); z-index:19; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+    .jt-kw{ display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:16px; background:#120c1f; border:1.5px solid rgba(243,155,253,.55); box-shadow:0 0 22px rgba(178,140,245,.3); font:700 16px 'IBM Plex Sans Arabic'; color:#e2d6ff; }
+    .jt-kw b{ font:900 26px 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; padding:0 2px; }
+    .jt-kw .ms{ color:#f39bfd; }
     .jt-l{ display:inline-flex; align-items:center; gap:6px; font:700 15px 'IBM Plex Sans Arabic'; color:#e2d6ff; padding:4px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); }
 
     /* ===== لوحة المواجهة ===== */
@@ -172,6 +175,7 @@
 <div class="jtimer" id="jtimer">
     <div class="ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5464ff"/><stop offset=".55" stop-color="#8f68ff"/><stop offset="1" stop-color="#f39bfd"/></linearGradient></defs><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="jt-fg" cx="60" cy="60" r="52"/></svg><b id="jt-n">60</b><small>ثانية</small></div>
     <div class="jt-l"><span class="ms">timer</span><span id="jt-l">باقي على بداية البطولة</span></div>
+    <div class="jt-kw"><span class="ms">chat</span>اكتب <b id="jt-kw"></b> بالشات للدخول</div>
 </div>
 
 <!-- لوحة المواجهة: اللاعبين على الطرفين والوقت بالنص -->
@@ -230,7 +234,7 @@
     var log = (AGP.log || function () {});
     var E = window.RpsEngine;
     var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
-    var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    var DEF = { keyword: '', joinSec: 60, pickSec: 12, maxPlayers: 32 };
     var DOOM_MS = 3000; // تمهيد قبل أي إقصاء: عدّ 3-2-1 وبقعة حمراء على الخاسر
     var NEXT_MS = 15000; // بعد إعلان البطل تبدأ فترة دخول جديدة لحالها
     var SHAKE_MS = 1800, REVEAL_MS = 1700, KO_MS = 3400, ROUND_MS = 2400, WALK_MS = 2300, TIE_MS = 1700, POINT_MS = 1500;
@@ -241,7 +245,23 @@
     function readJSON(k, d) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (e) { return d; } }
     function clampInt(v, a, b, d) { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(a, Math.min(b, v)); }
     var saved = readJSON(SETTINGS_KEY, {}) || {};
-    var S = { joinSec: clampInt(saved.joinSec, 15, 300, DEF.joinSec), pickSec: clampInt(saved.pickSec, 5, 60, DEF.pickSec), maxPlayers: clampInt(saved.maxPlayers, 2, 64, DEF.maxPlayers) };
+    var S = { keyword: String(saved.keyword || '').trim(), joinSec: clampInt(saved.joinSec, 15, 300, DEF.joinSec), pickSec: clampInt(saved.pickSec, 5, 60, DEF.pickSec), maxPlayers: clampInt(saved.maxPlayers, 2, 64, DEF.maxPlayers) };
+
+    // تطبيع النص قبل مقارنة كلمة الدخول (نفس norm بـ games/luck-color/lc-platform.js وروليت الإقصاء)
+    function norm(x) {
+        return String(x == null ? '' : x).normalize('NFKC').trim()
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+            .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+            .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
+            .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
+            .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '')
+            .split(/\s+/).map(function (w) { return w.replace(/^ال/, ''); }).join('')
+            .replace(/(\p{L})\1+/gu, '$1');
+    }
+    // كلمة الدخول إجبارية: بدونها نرجع للإعدادات
+    if (!S.keyword) { location.replace('index.html'); return; }
+    var KW = norm(S.keyword);
 
     function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 2800); }
     function go(url) { try { if (window.top !== window) { window.top.location.href = url; return; } } catch (e) {} location.href = url; }
@@ -264,14 +284,16 @@
     // ---------------------------------------------------------------- الشات
     function onComment(p) {
         if (!p || typeof p.text !== 'string' || !p.id) return;
-        var choice = E.parsePick(p.text);
-        if (!choice) return;
         if (phase === 'join') {
+            // الدخول بكلمة الدخول بس (الأرقام للاختيار وقت المواجهة)
+            if (!KW || norm(p.text) !== KW) return;
             if (G.player(p.id)) { G.touch(p); return; }
             if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; sfx('join'); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('البطولة اكتملت (' + G.maxPlayers + ' لاعب)');
             return;
         }
+        var choice = E.parsePick(p.text);
+        if (!choice) return;
         if (phase !== 'pick' || !openIds[p.id]) return;
         var had = G.duelOf(p.id) && G.duelOf(p.id).picks[p.id];
         if (G.pick(p.id, choice)) {
@@ -567,6 +589,8 @@
 
     // خط الأيقونات (Material Symbols): نظهرها بس بعد ما يتحمّل
     try { if (document.fonts && document.fonts.load) document.fonts.load('24px "Material Symbols Rounded"', 'groups').then(function (f) { if (f && f.length) document.documentElement.classList.add('ms-ok'); }); } catch (e) {}
+
+    $('jt-kw').textContent = '«' + S.keyword + '»';
 
     // ---------------------------------------------------------------- الأصوات
     function sfx(name, o) { if (window.RpsSFX) window.RpsSFX.play(name, o); }

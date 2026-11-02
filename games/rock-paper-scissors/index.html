@@ -73,6 +73,11 @@
     .num button:hover{ background:rgba(255,255,255,.08); color:#fff; }
     .num input{ width:52px; height:34px; box-sizing:border-box; border:none; border-radius:999px; background:transparent; text-align:center; font:700 16px 'IBM Plex Sans Arabic'; color:#ddd6fe; font-variant-numeric:tabular-nums; }
     .num input:focus{ outline:none; }
+    .txt{ width:min(190px,48%); height:40px; box-sizing:border-box; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); color:#f4f2f8; font:600 14px 'IBM Plex Sans Arabic'; padding:0 16px; text-align:center; flex-shrink:0; }
+    .txt:focus{ outline:none; border-color:rgba(167,139,250,.5); }
+    .txt::placeholder{ color:#6f6a7c; }
+    .txt.err{ border-color:rgba(248,113,113,.6); }
+    .toast{ position:fixed; top:96px; left:50%; transform:translateX(-50%); z-index:90; padding:10px 22px; border-radius:999px; background:rgba(12,11,18,.94); border:1px solid rgba(248,113,113,.4); color:#fca5a5; font:600 14px 'IBM Plex Sans Arabic'; box-shadow:0 20px 50px rgba(0,0,0,.5); animation:rise .3s ease; white-space:nowrap; }
     .key{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font:700 17px 'IBM Plex Sans Arabic'; color:#fff; flex-shrink:0; }
 
     .foot{ flex-shrink:0; display:flex; justify-content:center; padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px); }
@@ -109,7 +114,12 @@
                     <section style="animation-delay:0s">
                         <div class="sec-h"><span class="sec-n">1</span><span class="sec-t">الدخول</span></div>
                         <div class="row">
-                            <div class="lbl"><div class="t"><b>وقت الدخول (ثانية)</b><small>المشاهد يكتب 1 أو 2 أو 3 بالشات ويدخل</small></div></div>
+                            <div class="lbl"><div class="t"><b>كلمة الدخول</b><small>المشاهد يكتبها بالشات عشان يدخل البطولة</small></div></div>
+                            <input class="txt" id="keyword" type="text" maxlength="30" placeholder="اكتب كلمة الدخول" aria-label="كلمة الدخول">
+                        </div>
+                        <span class="divider"></span>
+                        <div class="row">
+                            <div class="lbl"><div class="t"><b>وقت الدخول (ثانية)</b><small>بعدها تبدأ البطولة لحالها</small></div></div>
                             <div class="choice" data-key="joinSec" data-opts="30,45,60,90,120"></div>
                         </div>
                         <span class="divider"></span>
@@ -150,7 +160,7 @@
                         </div>
                         <span class="divider"></span>
                         <div class="row">
-                            <div class="lbl"><span class="dot" style="background:#34d399;box-shadow:0 0 8px #34d399"></span><div class="t"><b>البطولة</b><small>مواجهات ثنائية وحدة وحدة، والخاسر ينقصى لين يبقى بطل واحد. البطل ياخذ نقاط الفوز، وكل المشاركين ياخذون نقاط المشاركة (لأصحاب الحسابات الموثّقة).</small></div></div>
+                            <div class="lbl"><span class="dot" style="background:#34d399;box-shadow:0 0 8px #34d399"></span><div class="t"><b>البطولة</b><small>المشاهد يكتب كلمة الدخول بالشات ويدخل، وبعدها مواجهات ثنائية وحدة وحدة، والخاسر ينقصى لين يبقى بطل واحد. البطل ياخذ نقاط الفوز، وكل المشاركين ياخذون نقاط المشاركة (لأصحاب الحسابات الموثّقة).</small></div></div>
                         </div>
                     </section>
                 </div>
@@ -163,6 +173,7 @@
     </main>
 </div>
 
+<div class="toast" id="toast" hidden></div>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
@@ -171,7 +182,7 @@
 (function () {
     'use strict';
     var KEY = 'rps-settings', CONN = 'agp:agp-stream-connection';
-    var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
+    var DEF = { keyword: '', joinSec: 60, pickSec: 12, maxPlayers: 32 };
     function $(id) { return document.getElementById(id); }
     function read(k, d) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (e) { return d; } }
     var s = Object.assign({}, DEF, read(KEY, {}) || {});
@@ -206,6 +217,10 @@
         inp.addEventListener('change', function () { s[k] = clamp(inp.value.replace(/[٠-٩]/g, function (d) { return d.charCodeAt(0) - 0x0660; })); show(); save(); });
         show();
     });
+    // كلمة الدخول (إجبارية)
+    var kw = $('keyword'); kw.value = s.keyword || '';
+    kw.addEventListener('input', function () { s.keyword = kw.value.trim(); kw.classList.remove('err'); save(); });
+    function toast(t) { var el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 2600); }
     save();
 
     // حالة البث (من الاتصال المحفوظ بمكتبة الألعاب أو الاتصال التلقائي)
@@ -217,7 +232,11 @@
     }
     status(); addEventListener('storage', status); addEventListener('agp:stream-connected', status);
 
-    $('start').addEventListener('click', function () { save(); location.href = 'game.html'; });
+    $('start').addEventListener('click', function () {
+        s.keyword = kw.value.trim();
+        if (!s.keyword) { kw.classList.add('err'); kw.focus(); return toast('اكتب كلمة الدخول'); }
+        save(); location.href = 'game.html';
+    });
 }());
 </script>
 </body>
