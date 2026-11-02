@@ -8,6 +8,7 @@
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
 <!-- «three» لازم يطابق الرابط اللي يستورده games/birthday-party/rig3d.js حرفياً
      (three.module.js مو .min) عشان تكون نسخة Three.js وحدة للمشهد والشخصيات. -->
@@ -19,8 +20,10 @@
      - المنطق: rps-engine.js · المشهد: rps-scene.js (لو فشل الثري دي تشتغل لوحة ثنائية الأبعاد).
      - الإعدادات من index.html (localStorage 'rps-settings'). -->
 <style>
-    :root{ --rock:#b8926a; --paper:#7fa7c4; --scis:#c4706a; --gold:#d2b277; --ink:#f1ede4; --muted:#a7a299; --glass:rgba(15,17,22,.74); --line:rgba(255,255,255,.10); }
-    html,body{ margin:0; height:100%; background:#0b0d11; overflow:hidden; }
+    :root{ /* هوية ألعاب أيمن: بنفسجي + تدرّج اللوقو (أزرق ← بنفسجي ← وردي) */
+        --brand:#7a3fd4; --brand-2:#b28cf5; --brand-3:#f39bfd; --brand-blue:#5464ff; --grad:linear-gradient(135deg,#5464ff,#8f68ff 55%,#f39bfd);
+        --rock:#5b6bff; --paper:#9a6cf0; --scis:#f08bf5; --gold:#b28cf5; --ink:#f3ecff; --muted:#a79fbb; --glass:rgba(24,16,40,.78); --line:rgba(178,140,245,.2); }
+    html,body{ margin:0; height:100%; background:#050508; overflow:hidden; }
     body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); direction:rtl; }
     button{ font-family:inherit; }
     bdi{ unicode-bidi:isolate; }
@@ -29,103 +32,106 @@
     #stage canvas{ display:block; }
     .vignette{ position:fixed; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, transparent 60%, rgba(5,6,9,.5) 100%); }
 
+    .ms{ font-family:'Material Symbols Rounded'; font-weight:normal; font-style:normal; line-height:1; letter-spacing:normal; text-transform:none; display:inline-block; white-space:nowrap; direction:ltr; -webkit-font-feature-settings:'liga'; font-feature-settings:'liga'; font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24; font-size:1.25em; vertical-align:-.2em; }
+    .ms{ display:none; } html.ms-ok .ms{ display:inline-block; } /* لو خط الأيقونات ما تحمّل ما تطلع أسماؤها كنص */
+    .hint .ms{ color:#b28cf5; } .stage-name .ms{ color:#f39bfd; margin-inline-end:4px; } .count .ms{ color:#b28cf5; } .jt-l .ms{ color:#b28cf5; } .pl-s .ms{ font-size:1.1em; margin-inline-end:3px; }
     /* ===== الترويسة: شفافة 30% واللوقو بالنص ===== */
     header{ position:fixed; top:0; left:0; right:0; z-index:20; height:76px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; padding:0 clamp(12px,1.4vw,26px);
-        background:rgba(10,12,16,.30); border-bottom:1px solid rgba(255,255,255,.06); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-sizing:border-box; }
+        background:rgba(13,9,24,.30); border-bottom:1px solid rgba(178,140,245,.14); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-sizing:border-box; }
     .hside{ display:flex; align-items:center; gap:10px; }
     .hside.end{ justify-content:flex-end; }
     .logo{ display:flex; justify-content:center; }
     .logo img{ height:58px; display:block; filter:drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
     .hbtn{ height:38px; padding:0 14px; border-radius:999px; display:flex; align-items:center; gap:8px; font:600 14px 'IBM Plex Sans Arabic'; white-space:nowrap; cursor:pointer; color:#e7e3ef;
-        border:1px solid var(--line); background:rgba(15,17,22,.5); transition:transform .15s, background .2s; }
-    .hbtn:hover{ background:rgba(34,38,46,.85); }
+        border:1px solid var(--line); background:rgba(24,16,40,.55); transition:transform .15s, background .2s; }
+    .hbtn:hover{ background:rgba(122,63,212,.35); }
     .hbtn:active{ transform:scale(.97); }
-    .hbtn.exit{ color:#e3b3ab; border-color:rgba(196,112,106,.3); }
-    .count{ height:38px; padding:0 16px; border-radius:999px; display:flex; align-items:center; gap:8px; font:800 18px 'Zain'; border:1px solid var(--line); background:rgba(15,17,22,.5); }
+    .hbtn.exit{ color:#fda4af; border-color:rgba(244,63,94,.3); }
+    .count{ height:38px; padding:0 16px; border-radius:999px; display:flex; align-items:center; gap:8px; font:800 18px 'Zain'; border:1px solid var(--line); background:rgba(24,16,40,.55); }
     .count small{ font:500 13px 'IBM Plex Sans Arabic'; color:var(--muted); }
 
     /* ===== العنوان ===== */
     .top{ position:fixed; top:88px; left:50%; transform:translateX(-50%); z-index:19; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; text-align:center; }
-    .title{ font:900 clamp(22px,2vw,34px)/1 'Zain'; background:linear-gradient(180deg,#f4ead6,#cfae72); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
-    .stage-name{ padding:5px 18px; border-radius:999px; font:800 clamp(14px,1.1vw,19px) 'Zain'; color:#e9dcc0; background:var(--glass); border:1px solid rgba(210,178,119,.4); }
+    .title{ font:900 clamp(22px,2vw,34px)/1 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+    .stage-name{ padding:5px 18px; border-radius:999px; font:800 clamp(14px,1.1vw,19px) 'Zain'; color:#e2d6ff; background:var(--glass); border:1px solid rgba(178,140,245,.45); }
 
     /* ===== الوقت: حلقة كبيرة ورقم واضح ===== */
     .ring{ position:relative; width:118px; height:118px; display:grid; place-items:center; }
     .ring svg{ position:absolute; inset:0; transform:rotate(-90deg); }
-    .ring circle{ fill:rgba(15,17,22,.72); stroke-width:8; }
-    .ring .bg{ stroke:rgba(255,255,255,.1); }
-    .ring .fg{ fill:none; stroke:var(--gold); stroke-linecap:round; stroke-dasharray:326.7; stroke-dashoffset:0; transition:stroke-dashoffset .25s linear, stroke .3s; }
-    .ring b{ position:relative; font:900 54px/1 'Zain'; color:#f4eee2; margin-top:-8px; }
+    .ring circle{ fill:rgba(24,16,40,.8); stroke-width:8; }
+    .ring .bg{ stroke:rgba(178,140,245,.18); }
+    .ring .fg{ fill:none; stroke:url(#ringGrad); stroke-linecap:round; stroke-dasharray:326.7; stroke-dashoffset:0; transition:stroke-dashoffset .25s linear, stroke .3s; }
+    .ring b{ position:relative; font:900 54px/1 'Zain'; color:#f3ecff; margin-top:-8px; }
     .ring small{ position:absolute; bottom:22px; font:600 12px 'IBM Plex Sans Arabic'; color:var(--muted); }
-    .ring.low .fg{ stroke:#d0675c; }
-    .ring.low b{ color:#f0a49a; animation:beat 1s infinite; }
+    .ring.low .fg{ stroke:#f43f5e; }
+    .ring.low b{ color:#fda4af; animation:beat 1s infinite; }
     @keyframes beat{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
     .jtimer{ position:fixed; top:50%; right:clamp(16px,3vw,60px); transform:translateY(-50%); z-index:19; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
-    .jt-l{ font:700 15px 'IBM Plex Sans Arabic'; color:#e9dcc0; padding:4px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); }
+    .jt-l{ font:700 15px 'IBM Plex Sans Arabic'; color:#e2d6ff; padding:4px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); }
 
     /* ===== لوحة المواجهة ===== */
     .duel-hud{ position:fixed; top:162px; left:50%; transform:translateX(-50%); z-index:19; width:min(1100px,96vw); display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(10px,2vw,30px); direction:ltr; pointer-events:none; animation:pop2 .45s cubic-bezier(.2,1.3,.4,1) both; }
     @keyframes pop2{ from{ opacity:0; transform:translate(-50%,-12px) scale(.96); } to{ opacity:1; transform:translate(-50%,0); } }
-    .plate{ display:flex; align-items:center; gap:14px; padding:10px 18px 10px 10px; border-radius:22px; min-width:0; background:linear-gradient(90deg,rgba(15,17,22,.88),rgba(15,17,22,.62)); border:1px solid rgba(255,255,255,.1); box-shadow:0 12px 30px rgba(0,0,0,.35); position:relative; overflow:hidden; }
-    .plate::before{ content:''; position:absolute; top:0; bottom:0; left:0; width:5px; background:var(--gold); }
-    .plate.b{ flex-direction:row-reverse; padding:10px 10px 10px 18px; background:linear-gradient(270deg,rgba(15,17,22,.88),rgba(15,17,22,.62)); }
-    .plate.b::before{ left:auto; right:0; background:#8fa9c2; }
+    .plate{ display:flex; align-items:center; gap:14px; padding:10px 18px 10px 10px; border-radius:22px; min-width:0; background:linear-gradient(90deg,rgba(30,19,52,.92),rgba(24,16,40,.7)); border:1px solid rgba(178,140,245,.22); box-shadow:0 12px 30px rgba(0,0,0,.35); position:relative; overflow:hidden; }
+    .plate::before{ content:''; position:absolute; top:0; bottom:0; left:0; width:5px; background:linear-gradient(180deg,#b28cf5,#f39bfd); }
+    .plate.b{ flex-direction:row-reverse; padding:10px 10px 10px 18px; background:linear-gradient(270deg,rgba(30,19,52,.92),rgba(24,16,40,.7)); }
+    .plate.b::before{ left:auto; right:0; background:linear-gradient(180deg,#5464ff,#8f68ff); }
     .plate.win{ border-color:rgba(127,179,138,.7); box-shadow:0 0 0 1px rgba(127,179,138,.4), 0 12px 30px rgba(0,0,0,.35); }
     .plate.lose{ opacity:.72; }
-    .pl-av{ width:64px; height:64px; border-radius:50%; flex:none; background:#4a5263 center/cover; display:grid; place-items:center; font:900 28px 'Zain'; border:3px solid rgba(210,178,119,.75); }
-    .plate.b .pl-av{ border-color:rgba(143,169,194,.8); }
+    .pl-av{ width:64px; height:64px; border-radius:50%; flex:none; background:#7a3fd4 center/cover; display:grid; place-items:center; font:900 28px 'Zain'; border:3px solid #b28cf5; box-shadow:0 0 16px rgba(178,140,245,.35); }
+    .plate.b .pl-av{ border-color:#6f7cff; box-shadow:0 0 16px rgba(84,100,255,.35); }
     .pl-info{ display:flex; flex-direction:column; gap:6px; direction:rtl; min-width:0; flex:1; }
     .plate.b .pl-info{ align-items:flex-start; }
-    .pl-n{ font:900 clamp(20px,1.9vw,30px)/1.1 'Zain'; color:#f4eee2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pl-n{ font:900 clamp(20px,1.9vw,30px)/1.1 'Zain'; color:#f3ecff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pl-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .pl-s{ font:700 13.5px 'IBM Plex Sans Arabic'; color:var(--muted); padding:3px 10px; border-radius:999px; background:rgba(255,255,255,.06); white-space:nowrap; }
+    .pl-s{ font:700 13.5px 'IBM Plex Sans Arabic'; color:var(--muted); padding:3px 10px; border-radius:999px; background:rgba(178,140,245,.12); white-space:nowrap; }
     .pl-s.ok{ color:#bfe0c5; background:rgba(127,179,138,.18); }
     .pl-s.bad{ color:#f0b8b0; background:rgba(196,112,106,.18); }
     .pl-d{ display:flex; gap:6px; }
-    .pl-d i{ width:15px; height:15px; border-radius:50%; border:2px solid rgba(210,178,119,.6); }
-    .pl-d i.on{ background:var(--gold); border-color:var(--gold); box-shadow:0 0 10px rgba(210,178,119,.6); }
+    .pl-d i{ width:15px; height:15px; border-radius:50%; border:2px solid rgba(178,140,245,.55); }
+    .pl-d i.on{ background:var(--grad); border-color:#f39bfd; box-shadow:0 0 10px rgba(243,155,253,.6); }
     .hud-mid{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:120px; }
-    .vs-x{ font:900 40px/1 'Zain'; color:#e6d3a8; text-shadow:0 2px 10px rgba(0,0,0,.6); }
-    .vs-at{ font:700 13.5px 'IBM Plex Sans Arabic'; color:#e9dcc0; white-space:nowrap; direction:rtl; padding:3px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--line); }
+    .vs-x{ font:900 40px/1 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 2px 10px rgba(0,0,0,.6); }
+    .vs-at{ font:700 13.5px 'IBM Plex Sans Arabic'; color:#e2d6ff; white-space:nowrap; direction:rtl; padding:3px 12px; border-radius:999px; background:var(--glass); border:1px solid var(--line); }
 
     /* ===== الخيارات: كبيرة وواضحة ===== */
     .picks{ position:fixed; bottom:clamp(12px,2vh,24px); left:50%; transform:translateX(-50%); z-index:19; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none; width:min(94vw,860px); }
-    .hint{ font:800 clamp(16px,1.35vw,22px) 'IBM Plex Sans Arabic'; padding:8px 22px; border-radius:999px; background:var(--glass); border:1px solid var(--line); text-align:center; color:#f1ead9; }
-    .hint b{ color:#e6cd98; font-size:1.15em; }
+    .hint{ font:800 clamp(16px,1.35vw,22px) 'IBM Plex Sans Arabic'; padding:8px 22px; border-radius:999px; background:var(--glass); border:1px solid rgba(178,140,245,.35); text-align:center; color:#f3ecff; display:flex; align-items:center; gap:8px; }
+    .hint b{ color:#d8c2ff; font-size:1.15em; }
     .cards{ display:flex; gap:clamp(8px,1.2vw,18px); width:100%; justify-content:center; direction:rtl; }
-    .opt{ flex:1; max-width:250px; display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:20px; background:linear-gradient(180deg,rgba(24,27,34,.92),rgba(15,17,22,.88)); border:1.5px solid color-mix(in srgb,var(--c) 70%,transparent); box-shadow:0 10px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06); }
-    .opt .n{ width:clamp(46px,3.8vw,62px); height:clamp(46px,3.8vw,62px); border-radius:14px; display:grid; place-items:center; font:900 clamp(30px,2.6vw,42px) 'Zain'; color:#15171c; background:var(--c); flex:none; box-shadow:inset 0 -3px 0 rgba(0,0,0,.18); }
+    .opt{ flex:1; max-width:250px; display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:20px; background:linear-gradient(180deg,rgba(34,22,58,.94),rgba(22,15,36,.9)); border:1.5px solid color-mix(in srgb,var(--c) 75%,transparent); box-shadow:0 10px 26px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06); }
+    .opt .n{ width:clamp(46px,3.8vw,62px); height:clamp(46px,3.8vw,62px); border-radius:14px; display:grid; place-items:center; font:900 clamp(30px,2.6vw,42px) 'Zain'; color:#fff; background:var(--c); flex:none; box-shadow:inset 0 -3px 0 rgba(0,0,0,.2), 0 0 18px color-mix(in srgb,var(--c) 45%,transparent); text-shadow:0 2px 0 rgba(0,0,0,.2); }
     .opt .e{ font-size:clamp(28px,2.4vw,40px); line-height:1; }
-    .opt .l{ font:900 clamp(22px,2vw,32px) 'Zain'; color:#f4eee2; }
-    .rules{ font:600 clamp(12.5px,1vw,15px) 'IBM Plex Sans Arabic'; color:#d9d2c3; padding:5px 16px; border-radius:999px; background:rgba(15,17,22,.6); border:1px solid var(--line); text-align:center; }
-    .sound{ position:fixed; top:88px; right:clamp(12px,1.4vw,26px); z-index:25; height:40px; padding:0 16px; border-radius:999px; cursor:pointer; font:700 14px 'IBM Plex Sans Arabic'; color:#1a1610; background:linear-gradient(180deg,#e2c891,#b8935a); border:none; box-shadow:0 8px 20px rgba(0,0,0,.4); }
+    .opt .l{ font:900 clamp(22px,2vw,32px) 'Zain'; color:#f3ecff; }
+    .rules{ font:600 clamp(12.5px,1vw,15px) 'IBM Plex Sans Arabic'; color:#cfc7e2; padding:5px 16px; border-radius:999px; background:rgba(24,16,40,.7); border:1px solid var(--line); text-align:center; }
+    .sound{ position:fixed; top:88px; right:clamp(12px,1.4vw,26px); z-index:25; height:40px; padding:0 16px; border-radius:999px; cursor:pointer; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(135deg,#7a3fd4,#9a6cf0); border:none; display:flex; align-items:center; gap:6px; box-shadow:0 8px 20px rgba(0,0,0,.4); }
 
     /* ===== العد الكبير «حجرة.. ورقة.. مقص!» ===== */
     .shout{ position:fixed; inset:0; z-index:18; display:grid; place-items:center; pointer-events:none; }
-    .shout span{ font:900 clamp(70px,9vw,170px)/1 'Zain'; color:#f4eee2; text-shadow:0 6px 24px rgba(0,0,0,.6), 0 0 40px color-mix(in srgb,var(--c,#d2b277) 45%,transparent); animation:shout .6s cubic-bezier(.2,1.4,.4,1) both; }
+    .shout span{ font:900 clamp(70px,9vw,170px)/1 'Zain'; color:#f3ecff; text-shadow:0 6px 24px rgba(0,0,0,.6), 0 0 44px color-mix(in srgb,var(--c,#b28cf5) 65%,transparent); animation:shout .6s cubic-bezier(.2,1.4,.4,1) both; }
     @keyframes shout{ 0%{ opacity:0; transform:scale(.4) rotate(-6deg); } 60%{ opacity:1; transform:scale(1.12) rotate(2deg); } 100%{ opacity:1; transform:scale(1); } }
-    .banner{ position:fixed; top:34%; left:50%; transform:translate(-50%,-50%); z-index:18; pointer-events:none; padding:16px 44px; border-radius:26px; font:900 clamp(34px,4vw,64px)/1.1 'Zain'; color:#f1ead9; background:rgba(15,17,22,.88); border:1px solid rgba(210,178,119,.55); box-shadow:0 20px 60px rgba(0,0,0,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); animation:pop .5s cubic-bezier(.2,1.4,.4,1) both; text-align:center; }
+    .banner{ position:fixed; top:34%; left:50%; transform:translate(-50%,-50%); z-index:18; pointer-events:none; padding:16px 44px; border-radius:26px; font:900 clamp(34px,4vw,64px)/1.1 'Zain'; color:#f3ecff; background:rgba(24,16,40,.9); border:1px solid rgba(178,140,245,.55); box-shadow:0 20px 60px rgba(0,0,0,.5); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); animation:pop .5s cubic-bezier(.2,1.4,.4,1) both; text-align:center; }
     .banner small{ display:block; font:600 clamp(15px,1.3vw,21px) 'IBM Plex Sans Arabic'; color:var(--muted); margin-top:6px; }
     @keyframes pop{ 0%{ opacity:0; transform:translate(-50%,-50%) scale(.7); } 100%{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
 
     /* ===== البطل ===== */
     .champ{ position:fixed; top:clamp(110px,15vh,170px); right:clamp(12px,3vw,60px); z-index:22; width:min(360px,86vw); padding:22px; border-radius:28px; text-align:center;
-        background:rgba(15,17,22,.86); border:1px solid rgba(210,178,119,.6); box-shadow:0 20px 60px rgba(0,0,0,.5); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
+        background:rgba(24,16,40,.9); border:1px solid rgba(178,140,245,.6); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.3); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
     @keyframes rise{ from{ opacity:0; transform:translateY(30px) scale(.95); } to{ opacity:1; transform:none; } }
     .champ .crown{ font-size:46px; line-height:1; }
-    .champ .k{ font:800 18px 'Zain'; color:#e6cd98; margin-top:6px; }
-    .champ .av{ width:110px; height:110px; margin:12px auto; border-radius:50%; border:3px solid var(--gold); background:#4a5263 center/cover; display:grid; place-items:center; font:900 46px 'Zain'; box-shadow:0 10px 30px rgba(0,0,0,.4); }
+    .champ .k{ font:800 18px 'Zain'; color:#d8c2ff; margin-top:6px; }
+    .champ .av{ width:110px; height:110px; margin:12px auto; border-radius:50%; border:3px solid #b28cf5; background:#7a3fd4 center/cover; display:grid; place-items:center; font:900 46px 'Zain'; box-shadow:0 10px 30px rgba(0,0,0,.4); }
     .champ .nm{ font:900 34px/1.15 'Zain'; word-break:break-word; }
     .champ .sub{ font:500 14px 'IBM Plex Sans Arabic'; opacity:.8; margin-top:6px; }
-    .champ .next{ margin-top:14px; padding:8px 14px; border-radius:999px; background:rgba(210,178,119,.1); border:1px solid rgba(210,178,119,.35); font:600 14px 'IBM Plex Sans Arabic'; color:#e6cd98; }
+    .champ .next{ margin-top:14px; padding:8px 14px; border-radius:999px; background:rgba(122,63,212,.18); border:1px solid rgba(178,140,245,.35); font:600 14px 'IBM Plex Sans Arabic'; color:#e2d6ff; }
 
     /* ===== لوحة ثنائية الأبعاد (لو فشل الثري دي) ===== */
     .flat{ position:fixed; inset:190px 16px 190px; z-index:5; overflow:auto; display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; justify-content:center; }
     .flat .duel{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:260px; padding:12px 16px; border-radius:18px; background:var(--glass); border:1px solid var(--line); font:700 16px 'IBM Plex Sans Arabic'; }
-    .flat .duel em{ font:900 18px 'Zain'; color:#d2b277; font-style:normal; }
-    .flat .duel .w{ color:#e6cd98; } .flat .duel .x{ opacity:.45; text-decoration:line-through; }
+    .flat .duel em{ font:900 18px 'Zain'; color:#b28cf5; font-style:normal; }
+    .flat .duel .w{ color:#d8c2ff; } .flat .duel .x{ opacity:.45; text-decoration:line-through; }
     .flat .pl{ padding:8px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); font:600 15px 'IBM Plex Sans Arabic'; }
-    .toast{ position:fixed; top:110px; left:50%; transform:translateX(-50%); z-index:30; padding:10px 22px; border-radius:999px; background:rgba(15,17,22,.92); border:1px solid var(--line); font:600 14px 'IBM Plex Sans Arabic'; }
+    .toast{ position:fixed; top:110px; left:50%; transform:translateX(-50%); z-index:30; padding:10px 22px; border-radius:999px; background:rgba(24,16,40,.92); border:1px solid var(--line); font:600 14px 'IBM Plex Sans Arabic'; }
 
     @media (max-width:700px){
         header{ height:62px; } .logo img{ height:44px; } .count small{ display:none; } .top{ top:70px; }
@@ -142,20 +148,20 @@
 <div class="flat hidden" id="flat"></div>
 
 <header>
-    <div class="hside"><button type="button" class="hbtn exit" id="exit">✕ خروج</button></div>
+    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button></div>
     <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
-    <div class="hside end"><div class="count" id="count"><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
+    <div class="hside end"><div class="count" id="count"><span class="ms">groups</span><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
 </header>
 
 <div class="top">
     <div class="title">حجرة ورقة مقص</div>
-    <div class="stage-name" id="stage-name">فترة الدخول</div>
+    <div class="stage-name"><span class="ms">emoji_events</span><span id="stage-name">فترة الدخول</span></div>
 </div>
 
 <!-- وقت الدخول (قبل البطولة) -->
 <div class="jtimer" id="jtimer">
-    <div class="ring"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="jt-fg" cx="60" cy="60" r="52"/></svg><b id="jt-n">60</b><small>ثانية</small></div>
-    <div class="jt-l" id="jt-l">باقي على بداية البطولة</div>
+    <div class="ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5464ff"/><stop offset=".55" stop-color="#8f68ff"/><stop offset="1" stop-color="#f39bfd"/></linearGradient></defs><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="jt-fg" cx="60" cy="60" r="52"/></svg><b id="jt-n">60</b><small>ثانية</small></div>
+    <div class="jt-l"><span class="ms">timer</span> <span id="jt-l">باقي على بداية البطولة</span></div>
 </div>
 
 <!-- لوحة المواجهة: اللاعبين على الطرفين والوقت بالنص -->
@@ -170,7 +176,7 @@
 </div>
 
 <div class="picks">
-    <div class="hint" id="hint">اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة</div>
+    <div class="hint"><span class="ms">chat</span><span id="hint">اكتب <b>1</b> أو <b>2</b> أو <b>3</b> بالشات عشان تدخل البطولة</span></div>
     <div class="cards">
         <div class="opt" style="--c:var(--rock)"><span class="n">1</span><span class="e">✊</span><span class="l">حجرة</span></div>
         <div class="opt" style="--c:var(--paper)"><span class="n">2</span><span class="e">✋</span><span class="l">ورقة</span></div>
@@ -178,7 +184,7 @@
     </div>
     <div class="rules">✋ الورقة أقوى من ✊ الحجرة · ✊ الحجرة أقوى من ✌️ المقص · ✌️ المقص أقوى من ✋ الورقة</div>
 </div>
-<button type="button" class="sound hidden" id="sound">🔊 اضغط هنا لتفعيل الصوت</button>
+<button type="button" class="sound hidden" id="sound"><span class="ms">volume_up</span>اضغط هنا لتفعيل الصوت</button>
 
 <div class="shout hidden" id="shout"><span id="shout-t"></span></div>
 <div class="banner hidden" id="banner"></div>
@@ -217,8 +223,8 @@
     var DEF = { joinSec: 60, pickSec: 12, maxPlayers: 32 };
     var NEXT_MS = 15000; // بعد إعلان البطل تبدأ فترة دخول جديدة لحالها
     var SHAKE_MS = 1800, REVEAL_MS = 1700, KO_MS = 3400, ROUND_MS = 2400, WALK_MS = 2300, TIE_MS = 1700, POINT_MS = 1500;
-    var PICK = { 1: { n: 'حجرة', e: '✊', c: '#b8926a' }, 2: { n: 'ورقة', e: '✋', c: '#7fa7c4' }, 3: { n: 'مقص', e: '✌️', c: '#c4706a' } };
-    var C = { win: '#4f8a63', lose: '#a8463e', tie: '#a88a4e', bye: '#55617a', none: '#5b616c' };
+    var PICK = { 1: { n: 'حجرة', e: '✊', c: '#5b6bff' }, 2: { n: 'ورقة', e: '✋', c: '#9a6cf0' }, 3: { n: 'مقص', e: '✌️', c: '#f08bf5' } };
+    var C = { win: '#22a06b', lose: '#e5484d', tie: '#9a6cf0', bye: '#7a3fd4', none: '#5b5470' };
 
     function $(id) { return document.getElementById(id); }
     function readJSON(k, d) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : d; } catch (e) { return d; } }
@@ -443,7 +449,10 @@
             else if (phase === 'walk') t = 'جاي للمواجهة';
             if (phase === 'result' && outcome && outcome.result === 'done') { ok = d.winner === x[1]; t = ok ? '🏆 فاز بالمواجهة' : '💥 انقصى'; }
             else if (phase === 'result' && outcome && outcome.result === 'point') { ok = outcome.w === x[1]; t = ok ? '✓ كسب المحاولة' : 'خسر المحاولة'; }
-            st.textContent = t; st.classList.toggle('ok', ok);
+            // أيقونة الحالة (Material Symbols بنفس هوية الموقع)
+            var ic = /اختار$/.test(t) && ok ? 'check_circle' : /ينتظر/.test(t) ? 'hourglass_top' : /فاز/.test(t) ? 'emoji_events' : /كسب/.test(t) ? 'add_task' : /انقصى/.test(t) ? 'cancel' : /خسر|ما اختار/.test(t) ? 'remove_circle' : /جاي/.test(t) ? 'directions_walk' : '';
+            var clean = t.replace(/^[✓🏆💥]\s*/u, '');
+            st.innerHTML = (ic ? '<span class="ms">' + ic + '</span>' : '') + esc(clean); st.classList.toggle('ok', ok); st.style.display = t ? '' : 'none';
             var bad = /انقصى|خسر|ما اختار/.test(t); st.classList.toggle('bad', bad);
             box.classList.toggle('win', phase === 'result' && ok); box.classList.toggle('lose', phase === 'result' && bad);
             // نقاط المحاولات (اللي يوصل 2 يفوز)
@@ -530,6 +539,9 @@
             try { AGP.streamConnector.connect('tiktok', { username: c.username }); } catch (e) { log('rps: stream connect failed', e); }
         }
     }());
+
+    // خط الأيقونات (Material Symbols): نظهرها بس بعد ما يتحمّل
+    try { if (document.fonts && document.fonts.load) document.fonts.load('24px "Material Symbols Rounded"', 'groups').then(function (f) { if (f && f.length) document.documentElement.classList.add('ms-ok'); }); } catch (e) {}
 
     // ---------------------------------------------------------------- الأصوات
     function sfx(name, o) { if (window.RpsSFX) window.RpsSFX.play(name, o); }

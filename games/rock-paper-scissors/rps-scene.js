@@ -176,15 +176,15 @@ function drawTag(sp, o) {
     const name = o.name.length > 16 ? o.name.slice(0, 15) + '…' : o.name;
     const tw = Math.min(360, ctx.measureText(name).width), bw = tw + 112, x = (W - bw) / 2, y = 14, h = 76;
     ctx.globalAlpha = o.dim ? .55 : 1;
-    roundRect(ctx, x, y, bw, h, 38); ctx.fillStyle = 'rgba(14,16,21,.86)'; ctx.fill();
-    ctx.lineWidth = 3; ctx.strokeStyle = o.ring || 'rgba(255,255,255,.14)'; ctx.stroke();
+    roundRect(ctx, x, y, bw, h, 38); ctx.fillStyle = 'rgba(24,16,40,.9)'; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = o.ring || 'rgba(178,140,245,.5)'; ctx.stroke();
     // الصورة يسار الاسم (نفس لافتات البث)
     const cx = x + 40, cy = y + h / 2, r = 28;
     ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.closePath(); ctx.clip();
     if (av && av.img) { try { ctx.drawImage(av.img, cx - r, cy - r, r * 2, r * 2); } catch (e) { /* صورة بدون CORS */ } }
-    else { ctx.fillStyle = '#4a5263'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2); ctx.fillStyle = '#fff'; ctx.font = '900 30px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initial(o.name), cx, cy + 2); }
+    else { ctx.fillStyle = '#7a3fd4'; ctx.fillRect(cx - r, cy - r, r * 2, r * 2); ctx.fillStyle = '#fff'; ctx.font = '900 30px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initial(o.name), cx, cy + 2); }
     ctx.restore();
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.lineWidth = 3; ctx.strokeStyle = '#b28cf5'; ctx.stroke();
     ctx.font = '800 46px ' + FONT; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
     ctx.fillText(name, x + bw - 22, y + h / 2 + 3, tw);
     ctx.globalAlpha = 1; tex.needsUpdate = true;
@@ -306,13 +306,13 @@ export function createArena(container, opts = {}) {
     }
 
     // ---------- منصة المواجهة: حلقة ذهبية رفيعة و«VS» على الأرض (pool)
-    const vsTex = canvasTex(256, 128, (ctx, W, H) => { ctx.font = '900 92px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(236,226,204,.85)'; ctx.fillText('VS', W / 2, H / 2 + 6); });
+    const vsTex = canvasTex(256, 128, (ctx, W, H) => { ctx.font = '900 92px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(216,194,255,.9)'; ctx.fillText('VS', W / 2, H / 2 + 6); });
     const padRingGeo = new T.RingGeometry(1.36, 1.42, 72); padRingGeo.rotateX(-Math.PI / 2);
     const padDiscGeo = new T.CircleGeometry(1.36, 48); padDiscGeo.rotateX(-Math.PI / 2);
     const vsGeo = new T.PlaneGeometry(.8, .4); vsGeo.rotateX(-Math.PI / 2);
     const pads = Array.from({ length: 32 }, () => {
         const g = new T.Group(); g.visible = false; scene.add(g);
-        const ring = new T.Mesh(padRingGeo, new T.MeshBasicMaterial({ color: '#b39a68', transparent: true, opacity: .8, depthWrite: false }));
+        const ring = new T.Mesh(padRingGeo, new T.MeshBasicMaterial({ color: '#9a6cf0', transparent: true, opacity: .8, depthWrite: false }));
         const disc = new T.Mesh(padDiscGeo, new T.MeshBasicMaterial({ color: '#0d0f13', transparent: true, opacity: .35, depthWrite: false }));
         const vs = new T.Mesh(vsGeo, new T.MeshBasicMaterial({ map: vsTex, transparent: true, depthWrite: false }));
         ring.position.y = .025; disc.position.y = .02; vs.position.set(0, .03, .62);
