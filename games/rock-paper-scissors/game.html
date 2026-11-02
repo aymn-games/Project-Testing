@@ -133,16 +133,22 @@
     .doom-n{ font:900 clamp(70px,7vw,120px)/1 'Zain'; color:#fff; text-shadow:0 0 40px #ff3b5c, 0 0 90px rgba(255,59,92,.7), 0 8px 0 rgba(60,0,15,.6); animation:doomNum .9s cubic-bezier(.2,1.4,.4,1) both; }
     @keyframes doomNum{ 0%{ opacity:0; transform:scale(2.2); } 35%{ opacity:1; transform:scale(.95); } 100%{ opacity:.85; transform:scale(1); } }
 
-    /* ===== البطل ===== */
-    .champ{ position:fixed; top:clamp(110px,15vh,170px); right:clamp(12px,3vw,60px); z-index:22; width:min(360px,86vw); padding:22px; border-radius:28px; text-align:center;
-        background:rgba(24,16,40,.9); border:1px solid rgba(178,140,245,.6); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.3); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:rise .6s cubic-bezier(.2,1.2,.4,1) both; }
-    @keyframes rise{ from{ opacity:0; transform:translateY(30px) scale(.95); } to{ opacity:1; transform:none; } }
-    .champ .crown{ font-size:46px; line-height:1; }
-    .champ .k{ font:800 18px 'Zain'; color:#d8c2ff; margin-top:6px; }
-    .champ .av{ width:110px; height:110px; margin:12px auto; border-radius:50%; border:3px solid #b28cf5; background:#7a3fd4 center/cover; display:grid; place-items:center; font:900 46px 'Zain'; box-shadow:0 10px 30px rgba(0,0,0,.4); }
-    .champ .nm{ font:900 34px/1.15 'Zain'; word-break:break-word; }
-    .champ .sub{ font:500 14px 'IBM Plex Sans Arabic'; opacity:.8; margin-top:6px; }
-    .champ .next{ margin-top:14px; padding:8px 14px; border-radius:999px; background:rgba(122,63,212,.18); border:1px solid rgba(178,140,245,.35); font:600 14px 'IBM Plex Sans Arabic'; color:#e2d6ff; }
+    /* ===== شاشة الفوز ===== */
+    .champ{ position:fixed; bottom:clamp(18px,4vh,40px); left:50%; transform:translateX(-50%); z-index:22; width:min(520px,92vw); box-sizing:border-box; padding:18px 22px 20px; border-radius:26px; text-align:center;
+        background:#120c1f; border:1px solid rgba(178,140,245,.45); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.25); animation:rise .5s ease both; }
+    @keyframes rise{ from{ opacity:0; transform:translate(-50%,16px); } to{ opacity:1; transform:translate(-50%,0); } }
+    .champ .k{ display:inline-flex; align-items:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; color:#d8c2ff; }
+    .champ .k .ms{ color:#f39bfd; }
+    .champ .nm{ margin-top:4px; font:900 clamp(34px,4vw,52px)/1.15 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; word-break:break-word; }
+    .champ .row{ display:flex; gap:10px; margin-top:16px; }
+    .cbtn{ flex:1; height:52px; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; transition:filter .2s, transform .15s; }
+    .cbtn:active{ transform:scale(.97); }
+    .cbtn.new{ border:none; color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 10px 28px rgba(139,92,246,.45); }
+    .cbtn.new:hover{ filter:brightness(1.1); }
+    .cbtn.out{ background:rgba(255,255,255,.03); border:1px solid rgba(248,113,113,.35); color:#fca5a5; }
+    .cbtn.out:hover{ background:rgba(248,113,113,.1); }
+    body.won .picks, body.won #vs{ display:none !important; }
+    body.won header .hside{ visibility:hidden; } /* اللوقو يبقى بالنص */
 
     /* ===== لوحة ثنائية الأبعاد (لو فشل الثري دي) ===== */
     .flat{ position:fixed; inset:190px 16px 190px; z-index:5; overflow:auto; display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start; justify-content:center; }
@@ -198,13 +204,14 @@
 <div class="doom cd hidden" id="cd"><div class="doom-n" id="cd-n"></div></div>
 <div class="doom hidden" id="doom"><div class="doom-l"><span class="ms">warning</span>إقصاء!</div><div class="doom-n" id="doom-n"></div></div>
 <div class="banner hidden" id="banner"></div>
+<!-- شاشة الفوز: شخصية الفائز على المنصة تحتفل، وتحتها اسمه وزرين — بدون أي شي يتطاير -->
 <div class="champ hidden" id="champ">
-    <div class="crown">👑</div>
-    <div class="k">بطل البطولة</div>
-    <div class="av" id="champ-av"></div>
+    <div class="k"><span class="ms">emoji_events</span>الفائز</div>
     <div class="nm"><bdi id="champ-nm"></bdi></div>
-    <div class="sub" id="champ-sub"></div>
-    <div class="next" id="champ-next"></div>
+    <div class="row">
+        <button type="button" class="cbtn new" id="btn-new"><span class="ms">replay</span>مباراة جديدة</button>
+        <button type="button" class="cbtn out" id="btn-out"><span class="ms">logout</span>خروج</button>
+    </div>
 </div>
 <div class="toast hidden" id="toast"></div>
 
@@ -232,7 +239,6 @@
     var SETTINGS_KEY = 'rps-settings', CONN_KEY = 'agp:agp-stream-connection';
     var DEF = { keyword: '', pickSec: 12, maxPlayers: 32 };
     var DOOM_MS = 3000; // تمهيد قبل أي إقصاء: عدّ 3-2-1 وبقعة حمراء على الخاسر
-    var NEXT_MS = 15000; // بعد إعلان البطل نرجع للوبي (بنفس الشاشة) لبطولة جديدة
     var SHAKE_MS = 1800, REVEAL_MS = 1700, KO_MS = 3400, ROUND_MS = 2400, WALK_MS = 2300, TIE_MS = 1700, POINT_MS = 1500;
     var PICK = { 1: { n: 'حجرة', e: '✊', c: '#5b6bff' }, 2: { n: 'ورقة', e: '✋', c: '#9a6cf0' }, 3: { n: 'مقص', e: '✌️', c: '#f08bf5' } };
     var C = { win: '#22a06b', lose: '#e5484d', tie: '#9a6cf0', bye: '#7a3fd4', none: '#5b5470' };
@@ -405,21 +411,9 @@
         phase = 'champion'; phaseEnds = 0;
         var c = G.player(G.champion);
         $('champ-nm').textContent = c ? c.name : '';
-        var av = $('champ-av');
-        if (c && c.avatarUrl) { av.style.backgroundImage = 'url("' + c.avatarUrl.replace(/"/g, '%22') + '")'; av.textContent = ''; }
-        else { av.style.backgroundImage = ''; av.textContent = c ? (Array.from(c.name.replace(/[\s_.@\d]/g, ''))[0] || '؟') : ''; }
-        $('champ-sub').textContent = 'غلب ' + (G.players.length - 1) + ' لاعب ' + (G.round === 1 ? 'بدور واحد' : 'بـ ' + G.round + ' أدوار');
         $('champ').classList.remove('hidden'); sfx('champion');
         render();
         reportPoints();
-        var nextAt = Date.now() + NEXT_MS;
-        (function count() {
-            if (phase !== 'champion') return;
-            var s = Math.ceil((nextAt - Date.now()) / 1000);
-            if (s <= 0) { reset(); return; }
-            $('champ-next').textContent = 'بطولة جديدة بعد ' + s + ' ث';
-            later(count, 250);
-        }());
     }
     function reportPoints() {
         if (reported) return; reported = true;
@@ -464,6 +458,7 @@
     function render() {
         var players = G.players, alive = G.alive, inJoin = phase === 'join';
         document.body.classList.toggle('lobby', inJoin);
+        document.body.classList.toggle('won', phase === 'champion');
         $('go').classList.toggle('hidden', !inJoin);
         $('count-n').textContent = inJoin ? players.length : alive.length;
         $('count-l').textContent = inJoin ? ('لاعب من ' + G.maxPlayers) : 'باقي من ' + players.length;
@@ -532,7 +527,7 @@
             var o = { id: p.id, name: p.name, avatarUrl: p.avatarUrl, g: p.g, pose: 'idle', pick: 0, bubble: null, badge: null };
             if (phase === 'champion') {
                 if (p.id !== champ) return;
-                o.place = { kind: 'podium' }; o.pose = 'dance'; // اسمه بكرت البطل
+                o.place = { kind: 'podium' }; o.pose = 'clap'; // احتفال بسيط — اسمه بالبطاقة تحت
             } else if (d && openIds[p.id]) {
                 o.place = { kind: 'duel', side: d.b === p.id ? 1 : 0 }; o.quiet = true;
                 var mine = revealInfo[p.id];
@@ -595,6 +590,8 @@
 
     // ---------------------------------------------------------------- الأزرار
     $('go').addEventListener('click', startTournament);
+    $('btn-new').addEventListener('click', reset);                       // مباراة جديدة ← اللوبي بنفس الشاشة
+    $('btn-out').addEventListener('click', function () { go('index.html'); });
     $('exit').addEventListener('click', function () { go('index.html'); });
 
     // ---------------------------------------------------------------- البث

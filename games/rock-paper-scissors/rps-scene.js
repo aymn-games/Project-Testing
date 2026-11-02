@@ -431,7 +431,7 @@ export function createArena(container, opts = {}) {
     function setState(s) {
         if (!s) return;
         camMode = s.cam === 'wide' ? 'wide' : 'close';
-        if (s.phase !== phase) { phase = s.phase; phaseAt = now; if (phase === 'champion') { startConfetti(0, DZ); } }
+        if (s.phase !== phase) { phase = s.phase; phaseAt = now; /* شاشة الفوز بدون كونفيتي (طلب صاحب المشروع) */ }
         const list = s.players || [];
         const seen = new Set();
         list.forEach((p) => {
@@ -687,7 +687,7 @@ export function createArena(container, opts = {}) {
         raf = requestAnimationFrame(tick);
         const dt = Math.min(clock.getDelta(), .05); now += dt; frame++;
         // الجمهور الخلفي
-        for (let i = 0; i < FANS; i++) { const d = fanData[i], hop = phase === 'champion' ? Math.max(0, Math.sin(now * d.sp + d.ph)) * .3 : 0; p4.set(d.x, d.y + hop, d.z); m4.compose(p4, q4, s4); fans.setMatrixAt(i, m4); }
+        for (let i = 0; i < FANS; i++) { const d = fanData[i], hop = 0; p4.set(d.x, d.y + hop, d.z); m4.compose(p4, q4, s4); fans.setMatrixAt(i, m4); }
         fans.instanceMatrix.needsUpdate = true;
         for (const b of beams) { const a = 0; b.beam.lookAt(Math.sin(a + b.ph) * 8, -2, Math.cos(a) * 5); b.beam.rotateX(-Math.PI / 2); b.beam.material.opacity = phase === 'champion' ? .1 : .06; }
         // منصة البطل
