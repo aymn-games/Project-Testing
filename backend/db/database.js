@@ -714,6 +714,25 @@ migrateSingleCardTable('user_win_cards');
     }
 });
 
+// باكجات منح محدود جاهزة — إطار + بطاقة إقصاء + بطاقة فوز بنفس التصميم.
+// تُضاف لجدول bundles مرة وحدة (بحث بالاسم)، فتطلع بقائمة الباكجات بلوحة
+// الأدمن ويقدر يولّد لها كود استرداد يمنح الثلاث دفعة وحدة. مفاتيح البطاقات
+// معرّفة بـbackend/collectibles/collectibles-service.js.
+[
+    { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' }
+].forEach(function (bundle) {
+    if (db.prepare('SELECT id FROM bundles WHERE name = ?').get(bundle.name)) return;
+    var frame = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(bundle.frameImage);
+    if (!frame) return;
+    var items = [
+        { kind: 'frame', frameType: 'custom', frameRef: String(frame.id) },
+        { kind: 'elim', cardKey: bundle.cardKey },
+        { kind: 'win', cardKey: bundle.cardKey }
+    ];
+    db.prepare('INSERT INTO bundles (name, items, created_at) VALUES (?, ?, ?)')
+        .run(bundle.name, JSON.stringify(items), Date.now());
+});
+
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — INSERT OR
  * IGNORE بمفتاح slug، فلا خطر إعادة الكتابة فوق تعديلات الأدمن اللاحقة.
