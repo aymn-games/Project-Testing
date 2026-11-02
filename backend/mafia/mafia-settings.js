@@ -36,7 +36,8 @@ var SCHEMA = [
         { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 30, u: 'ث' }
     ] },
     { id: 'room', n: 'الروم', f: [
-        { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: MIN_ROOM, max: MAX_ROOM, step: 5, d: MAX_ROOM }
+        { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: MIN_ROOM, max: MAX_ROOM, step: 5, d: MAX_ROOM },
+        { k: 'kickIdle', n: 'إقصاء غير النشطين', t: 'bool', d: true, desc: 'ينقصى اللي يقفل الصفحة دقيقة، أو يفوته التصويت مرتين ورا بعض، أو يفوته دوره بالليل ليلتين' }
     ] }
 ];
 

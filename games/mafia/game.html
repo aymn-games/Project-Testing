@@ -355,7 +355,7 @@ button { font-family: inherit; cursor: pointer; }
         for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
         // بدون نقاش: أحداث المباراة المهمة بس (بداية، نتيجة كل ليلة، الطرد)
         var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city' && c.n > dayN; })
-            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت/.test(c.text); });
+            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت|عدم نشاطه/.test(c.text); });
         var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
@@ -409,7 +409,7 @@ button { font-family: inherit; cursor: pointer; }
     function renderRecap(G) {
         var show = G.phase === 'day', box = $('recap');   // وقت التصويت تختفي وتطلع لوحة الأصوات
         box.classList.toggle('off', !show);
-        var key = show ? JSON.stringify([G.lastNight, G.lastExile, G.round, G.players.filter(function (p) { return p.alive; }).length]) : '';
+        var key = show ? JSON.stringify([G.lastNight, G.lastExile, G.round, G.players.filter(function (p) { return p.alive; }).length, G.players.filter(function (p) { return p.cause === 'idle'; }).length]) : '';
         if (!show || key === recapKey) return;
         recapKey = key;
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
@@ -423,6 +423,9 @@ button { font-family: inherit; cursor: pointer; }
             var xp = byId[X.id], R = X.role && L.ROLE[X.role];
             html += '<div class="rc-row"><div class="av" style="filter:grayscale(1)">' + L.avatarSVG(xp.look, 44) + '</div><div><b>⚖️ ' + esc(xp.name) + '</b><span>انطرد بالتصويت · ' + (R ? 'كان ' + R.n : X.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') + '</span></div></div>';
         }
+        G.players.filter(function (p) { return !p.alive && p.cause === 'idle' && p.diedRound >= G.round - 1; }).forEach(function (ip) {
+            html += '<div class="rc-row"><div class="av" style="filter:grayscale(1)">' + L.avatarSVG(ip.look, 44) + '</div><div><b>⏳ ' + esc(ip.name) + '</b><span>انقصى بسبب عدم نشاطه</span></div></div>';
+        });
         var alive = G.players.filter(function (p) { return p.alive; }).length;
         html += '<div class="rc-row"><div class="ic">👥</div><div><b>' + alive + ' أحياء</b><span>من أصل ' + G.players.length + ' لاعب</span></div></div>';
         box.innerHTML = html;
