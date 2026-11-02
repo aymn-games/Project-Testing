@@ -12,7 +12,7 @@
 <!-- إعدادات بطولة «حجرة ورقة مقص» — نفس تنسيق شاشة إعدادات «روليت الإقصاء»
      (games/elimination-roulette/index.html): ترويسة بزر الخروج واللوقو، عنوان بتدرّج وحالة
      البث، بطاقات أقسام مرقّمة، وزر بدء عريض تحت. الإعدادات تنحفظ بـ localStorage 'rps-settings'
-     ويقرأها lobby.html (الدخول) وgame.html (المباراة). صفوف الإعدادات حسب قاعدة CLAUDE.md: العنوان يمين والتحكم يسار. -->
+     وتقرأها game.html (اللوبي والمباراة بنفس الشاشة). صفوف الإعدادات حسب قاعدة CLAUDE.md: العنوان يمين والتحكم يسار. -->
 <style>
     html,body{ margin:0; height:100%; background:#07060b; overflow:hidden; }
     body{ direction:rtl; font-family:'IBM Plex Sans Arabic',sans-serif; color:#f4f2f8; }
@@ -160,14 +160,14 @@
                         </div>
                         <span class="divider"></span>
                         <div class="row">
-                            <div class="lbl"><span class="dot" style="background:#34d399;box-shadow:0 0 8px #34d399"></span><div class="t"><b>البطولة</b><small>المشاهد يكتب كلمة الدخول بالشات ويدخل اللوبي، وبعد ما تبدأ المباراة مواجهات ثنائية وحدة وحدة، والخاسر ينقصى لين يبقى بطل واحد. البطل ياخذ نقاط الفوز، وكل المشاركين ياخذون نقاط المشاركة (لأصحاب الحسابات الموثّقة).</small></div></div>
+                            <div class="lbl"><span class="dot" style="background:#34d399;box-shadow:0 0 8px #34d399"></span><div class="t"><b>البطولة</b><small>المشاهد يكتب كلمة الدخول بالشات وتطلع شخصيته بالساحة، وبعد ما تضغط «ابدأ» ينختار كل مرة لاعبين عشوائياً للمواجهة، والخاسر ينقصى لين يبقى بطل واحد. البطل ياخذ نقاط الفوز، وكل المشاركين ياخذون نقاط المشاركة (لأصحاب الحسابات الموثّقة).</small></div></div>
                         </div>
                     </section>
                 </div>
             </div>
 
             <div class="foot">
-                <button type="button" class="start" id="start">الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+                <button type="button" class="start" id="start">الدخول للعبة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
             </div>
         </div>
     </main>
@@ -236,7 +236,7 @@
     $('start').addEventListener('click', function () {
         s.keyword = kw.value.trim();
         if (!s.keyword) { kw.classList.add('err'); kw.focus(); return toast('اكتب كلمة الدخول'); }
-        delete s.joinSec; save(); location.href = 'lobby.html';
+        delete s.joinSec; save(); location.href = 'game.html';
     });
 }());
 </script>

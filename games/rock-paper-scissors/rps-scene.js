@@ -8,7 +8,8 @@
  *
  * المشهد عرض بس: الشاشة (game.html) تمسك القواعد والوقت وترسل الحالة:
  *   setState({ phase, players: [{ id, name, avatarUrl, place, pose, pick, bubble, badge }] })
- *   place = { kind: 'duel'|'queue'|'podium', i, n, side }
+ *   place = { kind: 'stage'|'duel'|'queue'|'podium', i, n, side }  (stage = اللوبي قدام قبل البدء)
+ *   hl = 1 الضوء يمر عليه (الاختيار العشوائي) · 2 انختار · cam = 'wide' (اللوبي والاختيار) | 'close'
  *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
  *     queue: ينتظر دوره بنص دائرة خلف المواجهة (i من n) · podium: البطل
  *   pose = 'idle'|'still' (واقف ثابت تماماً)|'doom' (3ث قبل الإقصاء: يرجف ويخاف)|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
@@ -370,6 +371,11 @@ export function createArena(container, opts = {}) {
     function placeOf(p) {
         const pl = p.place || { kind: 'queue', i: 0, n: 1 };
         if (pl.kind === 'podium') return { x: 0, z: DZ, y: PODIUM_TOP, ry: 0 };
+        if (pl.kind === 'stage') {
+            // اللوبي: صفوف (8 بكل صف) قدام بالساحة، والصف الجديد ورا اللي قبله
+            const n = Math.max(1, pl.n), row = Math.floor(pl.i / 8), inRow = Math.min(8, n - row * 8), k = pl.i - row * 8;
+            return { x: (k - (inRow - 1) / 2) * .95 + (row % 2) * .22, z: 2.2 - row * 1.15, y: 0, ry: 0 };
+        }
         if (pl.kind === 'duel') {
             // الاثنين متقابلين ومايلين شوي للكاميرا عشان تنشاف الوجوه والإيدين
             const sx = pl.side ? 1 : -1;
@@ -400,6 +406,7 @@ export function createArena(container, opts = {}) {
     }
     function dropChar(c) {
         removeHands(c);
+        if (c.hlFx) { c.hlFx.g.removeFromParent(); c.hlFx.ring.material.dispose(); c.hlFx.beam.material.dispose(); }
         if (c.face) c.face.dispose();
         c.rig.dispose();
         [c.tag, c.bubble, c.badge].forEach(s => { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); });
@@ -409,8 +416,21 @@ export function createArena(container, opts = {}) {
         chars.delete(c.id);
     }
 
+    // ضوء الاختيار العشوائي: حلقة على الأرض وشعاع من فوق (لكل لاعب لما يحتاجه)
+    const hlRingGeo = new T.RingGeometry(.42, .62, 40).rotateX(-Math.PI / 2);
+    const hlBeamGeo = new T.CylinderGeometry(.3, .75, 4.5, 24, 1, true).translate(0, 2.25, 0);
+    function hlFor(c) {
+        if (c.hlFx) return c.hlFx;
+        const ring = new T.Mesh(hlRingGeo, new T.MeshBasicMaterial({ color: '#b28cf5', transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false }));
+        const beam = new T.Mesh(hlBeamGeo, new T.MeshBasicMaterial({ color: '#b28cf5', map: beamTex, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+        const g = new T.Group(); g.add(ring, beam); scene.add(g);
+        return (c.hlFx = { g, ring, beam, a: 0 });
+    }
+    let camMode = 'close', WA = 0;
+
     function setState(s) {
         if (!s) return;
+        camMode = s.cam === 'wide' ? 'wide' : 'close';
         if (s.phase !== phase) { phase = s.phase; phaseAt = now; if (phase === 'champion') { startConfetti(0, DZ); } }
         const list = s.players || [];
         const seen = new Set();
@@ -432,6 +452,7 @@ export function createArena(container, opts = {}) {
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
             c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag; // اللي بالمواجهة اسمه بشريط VS فوق
+            c.hl = p.hl || 0;
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
         // مراكز المواجهات من أماكن اللاعبين
@@ -518,12 +539,17 @@ export function createArena(container, opts = {}) {
         // القريبة: اليدين بالنص (عرض ~2.3م) من مستوى الصدر
         const dc = Math.max(1.15 / th, .72 / tv);
         closePos.set(0, closeLook.y + dc * Math.sin(.12), closeLook.z + dc * Math.cos(.12));
+        // الواسعة: اللوبي قدام والطابور ورا كلهم بالكادر
+        const ww = Math.max(5.6 / tv, 11 / th) * .5;
+        widePos.set(0, wideLook.y + ww * Math.sin(.34), wideLook.z + ww * Math.cos(.34));
         camera.position.copy(basePos); camera.lookAt(camLook);
     }
+    const widePos = new T.Vector3(), wideLook = new T.Vector3(0, .9, 1.4), _wp = new T.Vector3(), _wl = new T.Vector3();
     const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
-    function placeCamera(k, kd) {
+    function placeCamera(k, kd, kw) {
         camera.position.lerpVectors(basePos, closePos, k);
         _cl.lerpVectors(camLook, closeLook, k);
+        if (kw > 0) { camera.position.lerp(widePos, kw); _cl.lerp(wideLook, kw); }
         if (kd > 0) { camera.position.lerp(DO.pos, kd); _cl.lerp(DO.look, kd); }
         camera.lookAt(_cl);
     }
@@ -693,6 +719,13 @@ export function createArena(container, opts = {}) {
             if (!frozen && (!far || (frame + i) % 2 === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
             if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' || c.pose === 'doom' ? 'scared' : 'smile');
             poseChar(c, dt);
+            if (c.hl || c.hlFx) {
+                const f = hlFor(c), want = c.hl ? 1 : 0; f.a += (want - f.a) * (1 - Math.exp(-dt * (c.hl ? 30 : 9)));
+                f.g.visible = f.a > .01; f.g.position.set(c.pos.x, .03, c.pos.z);
+                const col = c.hl === 2 ? '#f39bfd' : '#b28cf5', pulse = c.hl === 2 ? .85 + Math.sin(now * 8) * .15 : 1;
+                f.ring.material.color.set(col); f.beam.material.color.set(col);
+                f.ring.material.opacity = .95 * f.a * pulse; f.beam.material.opacity = (c.hl === 2 ? .5 : .38) * f.a * pulse;
+            }
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;
             c.tag.position.set(c.pos.x, head, c.pos.z);
@@ -717,7 +750,8 @@ export function createArena(container, opts = {}) {
             q4.identity(); confetti.instanceMatrix.needsUpdate = true;
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
-        placeCamera(closeTick(dt), doomTick(dt));
+        WA += ((camMode === 'wide' ? 1 : 0) - WA) * (1 - Math.exp(-dt * 2.2));
+        placeCamera(closeTick(dt), doomTick(dt), REDUCED ? (camMode === 'wide' ? 1 : 0) : ease(WA));
         if (composer) composer.render(); else renderer.render(scene, camera);
     }
 
