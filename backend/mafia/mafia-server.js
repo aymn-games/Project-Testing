@@ -124,7 +124,39 @@ function accountOf(auth) {
     if (!u) return null;
     var tk = u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null, fr = null;
     if (tk) { try { fr = _frameOf(tk) || null; } catch (err) { logger.error('Mafia: frame lookup failed:', err); } }
-    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || u.username || tk || ''), avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
+    // الاسم: اسم بروفايل تيك توك، وإلا يوزر تيك توك، وإلا اسم الحساب بالموقع
+    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || tk || u.username || ''), hasTkName: !!u.tiktok_display_name, avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
+}
+
+// ---- تكملة اسم وصورة تيك توك اللي ناقصة بالحساب (مرة وحدة لكل يوزر بكل تشغيل للسيرفر)
+// بعض الحسابات الموثّقة ما عندها اسم بروفايل أو صورة محفوظة (رابط صورة تيك توك انتهى)، فنجيبها من
+// صفحة البروفايل العامة بالخلفية، ونحفظ الصورة بالحساب، ونحدّث بطاقة اللاعب باللوبي.
+var _enriched = new Set();
+var _profileFetcher = function (tk) {
+    var auth = require('../auth/auth-service');
+    return auth.fetchPublicProfileHtml(tk).then(function (html) {
+        var title = auth.extractProfileDisplayNameFromHtml(html) || '';
+        var name = String(title).replace(/\s*\|\s*TikTok.*$/i, '').replace(/\s*\(@[^)]*\)\s*$/, '').trim();
+        return { name: name || null, avatar: auth.extractProfileAvatarFromHtml(html) || null };
+    });
+};
+function enrichPlayer(room, p, acc) {
+    if (!p.tiktok || _enriched.has(p.tiktok.toLowerCase())) return;
+    var db, row;
+    try { db = require('../db/database'); row = db.prepare('SELECT avatar_image_base64 IS NOT NULL AS hasAv FROM users WHERE id = ?').get(acc.uid); } catch (e) { return; }
+    var needAv = !(row && row.hasAv), needName = !acc.hasTkName;
+    if (!needAv && !needName) return;
+    _enriched.add(p.tiktok.toLowerCase());
+    Promise.resolve().then(function () { return _profileFetcher(p.tiktok); }).then(function (prof) {
+        if (!prof) return;
+        var jobs = [];
+        if (needName && prof.name) {
+            try { db.prepare('UPDATE users SET tiktok_display_name = ? WHERE id = ? AND tiktok_display_name IS NULL').run(prof.name, acc.uid); } catch (e) { }
+            if (!room.started) { var nm = cleanName(prof.name); if (nm.length >= 2 && !room.players.some(function (q) { return q !== p && q.name.toLowerCase() === nm.toLowerCase(); })) p.name = nm; }
+        }
+        if (needAv && prof.avatar) jobs.push(require('../auth/tiktok-avatar-sync').saveAvatarIfMissing(acc.uid, prof.avatar).then(function (ok) { if (ok) p.avatar = p.avatar.split('&v=')[0] + '&v=' + Date.now(); }));
+        return Promise.all(jobs).then(function () { if (_rooms[room.code] === room) broadcastRoom(room); });
+    }).catch(function (err) { logger.error('Mafia: TikTok profile fetch failed for ' + p.tiktok + ': ' + (err && err.message)); });
 }
 
 function onMessage(client, msg) {
@@ -170,6 +202,7 @@ function onMessage(client, msg) {
         for (var k = 2, base = name; jr.players.some(function (q) { return q.name.toLowerCase() === name.toLowerCase(); }); k++) name = base.slice(0, 21) + ' ' + k;
         var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame };
         jr.players.push(p); attach(client, jr, 'player', p.id);
+        enrichPlayer(jr, p, acc);
         send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok });
         broadcastRoom(jr);
         return;
@@ -291,4 +324,4 @@ function handleUpgrade(req, socket) {
 /** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
 function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
 
-module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
