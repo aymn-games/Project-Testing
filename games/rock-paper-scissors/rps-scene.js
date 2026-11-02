@@ -451,7 +451,9 @@ export function createArena(container, opts = {}) {
             drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
-            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag; // اللي بالمواجهة اسمه بشريط VS فوق
+            // اللي بالمواجهة اسمه بشريط VS فوق. باللوبي (stage) الأسماء أصغر عشان ما تركب على بعض
+            c.tagOk = (c.kind === 'stage' || (c.kind === 'queue' && p.place && p.place.n <= 16)) && !p.noTag;
+            const ts = c.kind === 'stage' ? .27 : .36; c.tag.scale.set(ts * 512 / 104, ts, 1);
             c.hl = p.hl || 0;
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);

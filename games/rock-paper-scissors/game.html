@@ -112,6 +112,18 @@
     .go-btn:hover{ filter:brightness(1.1); } .go-btn:active{ transform:translateX(-50%) scale(.97); }
     .go-btn .ms{ font-size:1.3em; }
     body.lobby .picks, body.lobby .count{ display:none; }
+    /* ===== اللوبي: كلمة الدخول فوق، وعدد اللاعبين واسم آخر داخل فوق زر «ابدأ» ===== */
+    .kw{ position:fixed; top:clamp(84px,11vh,104px); left:50%; transform:translateX(-50%); z-index:19; display:none; align-items:center; gap:10px; padding:10px 26px; border-radius:999px; white-space:nowrap; direction:rtl;
+        background:rgba(18,12,31,.88); border:1.5px solid rgba(178,140,245,.45); box-shadow:0 10px 30px rgba(0,0,0,.35); font:700 clamp(17px,1.6vw,24px) 'IBM Plex Sans Arabic'; color:#e2d6ff; }
+    .kw .ms{ color:#f39bfd; font-size:1.2em; }
+    .kw b{ font:900 1.35em/1 'Zain'; padding:4px 16px 6px; border-radius:14px; color:#fff; background:var(--grad); box-shadow:0 0 22px rgba(143,104,255,.45); }
+    .lobby-info{ position:fixed; bottom:calc(clamp(18px,4vh,40px) + 74px); left:50%; transform:translateX(-50%); z-index:25; display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; direction:rtl; }
+    .lobby-n{ display:inline-flex; align-items:center; gap:8px; padding:6px 18px; border-radius:999px; background:rgba(18,12,31,.88); border:1px solid rgba(178,140,245,.4); font:900 22px 'Zain'; color:#fff; }
+    .lobby-n .ms{ color:#b28cf5; } .lobby-n small{ font:600 14px 'IBM Plex Sans Arabic'; color:var(--muted); }
+    .joined{ display:inline-flex; align-items:center; gap:6px; padding:5px 16px; border-radius:999px; background:#2a1748; border:1px solid #9a6cf0; font:700 15px 'IBM Plex Sans Arabic'; color:#f3ecff; animation:joinIn .35s cubic-bezier(.2,1.4,.4,1) both; }
+    .joined .ms{ color:#f39bfd; } .joined.hidden{ display:none; }
+    @keyframes joinIn{ from{ opacity:0; transform:translateY(8px) scale(.9); } to{ opacity:1; transform:none; } }
+    body.lobby .kw{ display:inline-flex; } body.lobby .lobby-info{ display:flex; }
     .sound{ position:fixed; top:88px; right:clamp(12px,1.4vw,26px); z-index:25; height:40px; padding:0 16px; border-radius:999px; cursor:pointer; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(135deg,#7a3fd4,#9a6cf0); border:none; display:flex; align-items:center; gap:6px; box-shadow:0 8px 20px rgba(0,0,0,.4); }
 
     /* ===== العد الكبير «حجرة.. ورقة.. مقص!» ===== */
@@ -200,6 +212,11 @@
         <div class="opt" style="--c:var(--scis)"><span class="n">3</span><span class="e">✌️</span><span class="l">مقص</span></div>
     </div>
 </div>
+<div class="kw" id="kw"><span class="ms">chat</span>اكتب <b><bdi id="kw-t"></bdi></b> بالشات وادخل</div>
+<div class="lobby-info">
+    <div class="joined hidden" id="joined"><span class="ms">person_add</span><bdi id="joined-n"></bdi> دخل</div>
+    <div class="lobby-n"><span class="ms">groups</span><span id="lobby-n">0</span><small id="lobby-l">من 0 لاعب</small></div>
+</div>
 <button type="button" class="go-btn hidden" id="go"><span class="ms">play_arrow</span>ابدأ</button>
 <button type="button" class="sound hidden" id="sound"><span class="ms">volume_up</span>اضغط هنا لتفعيل الصوت</button>
 
@@ -257,8 +274,11 @@
     // كلمة الدخول إجبارية (من الإعدادات) — بدونها نرجع للإعدادات
     if (!S.keyword) { location.replace('index.html'); return; }
     var KW = E.norm(S.keyword), FOLLOWERS = saved.who === 'المتابعين فقط';
+    $('kw-t').textContent = S.keyword.trim();
     var SELECT_MS = 2600, COUNT_MS = 3000, ARRANGE_MS = 2600;
 
+    // «فلان دخل» فوق العدّاد لثانيتين
+    function showJoined(name) { var el = $('joined'); $('joined-n').textContent = name; el.classList.add('hidden'); void el.offsetWidth; el.classList.remove('hidden'); clearTimeout(showJoined.t); showJoined.t = setTimeout(function () { el.classList.add('hidden'); }, 2000); }
     function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 2800); }
     function go(url) { try { if (window.top !== window) { window.top.location.href = url; return; } } catch (e) {} location.href = url; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -285,7 +305,7 @@
             if (E.norm(p.text) !== KW) return;
             if (FOLLOWERS && !p.isFollower) return;
             if (G.player(p.id)) { G.touch(p); return; }
-            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); render(); later(render, 2300); }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
             return;
         }
@@ -470,6 +490,7 @@
         document.body.classList.toggle('won', phase === 'champion');
         $('go').classList.toggle('hidden', !inJoin);
         $('count-n').textContent = inJoin ? players.length : alive.length;
+        $('lobby-n').textContent = players.length; $('lobby-l').textContent = 'من ' + G.maxPlayers + ' لاعب';
         $('count-l').textContent = inJoin ? ('لاعب من ' + G.maxPlayers) : 'باقي من ' + players.length;
         $('stage-name').textContent = inJoin ? 'فترة الدخول' : phase === 'champion' ? 'انتهت البطولة' : G.stageName() + (cur >= 0 && G.duels.length > 1 ? ' · ' + (cur + 1) + '/' + G.duels.length : '');
         var hint = $('hint') || {}; // (شلنا سطر التعليمات من الشاشة)
@@ -561,7 +582,7 @@
                     }
                 }
             } else if (phase === 'join') {
-                o.place = { kind: 'stage', i: players.indexOf(p), n: players.length }; o.noTag = true;
+                o.place = { kind: 'stage', i: players.indexOf(p), n: players.length }; // اسمه فوق شخصيته
                 o.pose = Date.now() - (joinedAt[p.id] || 0) < 2200 ? 'wave' : 'still';
             } else {
                 o.place = { kind: 'queue', i: queue.indexOf(p), n: queue.length };
