@@ -11,7 +11,8 @@
  *   place = { kind: 'duel'|'queue'|'podium', i, n, side }
  *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
  *     queue: ينتظر دوره بنص دائرة خلف المواجهة (i من n) · podium: البطل
- *   pose = 'idle'|'wave'|'ready'|'shake'|'reveal'|'win'|'oops'|'ko'|'clap'|'dance' (oops = خسر محاولة بس)
+ *   pose = 'idle'|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
+ *   g = 0 بنت · 1 ولد (اختياري، وإلا من رقم اللاعب)
  *     ko = إقصاء مضحك (ko: 1 نابض يطيّره · 2 مجسم عملاق من اختيار الفائز koPick يفرشه) ~2.9ث
  *   pick = 1/2/3 (يظهر المجسم بيده وقت reveal) · bubble = {text, color} · badge = {text, color}
  * createArena(container) ← { ready: Promise, setState, stop }
@@ -384,7 +385,8 @@ export function createArena(container, opts = {}) {
     function makeChar(p) {
         const n = idNum(p.id);
         // بنت أو ولد حسب الرقم، والباقي من الشكل الافتراضي المشتق من نفس الرقم (crowd-common.js)
-        const look = resolveLook(n, 'guest', [-1, -1, -1, -1, -1, -1, -1, -1, n % 2]);
+        const g = p.g === 0 || p.g === 1 ? p.g : n % 2; // بنت أو ولد (عشوائي من الشاشة)
+        const look = resolveLook(n, 'guest', [-1, -1, -1, -1, -1, -1, -1, -1, g]);
         const rig = makeRig({ look, role: 'guest', n });
         rig.root.visible = false; scene.add(rig.root);
         const face = applyBoyFace(rig, { SKIN, HAIR }); // ملامح الأولاد الجديدة (بهاللعبة بس)
@@ -462,7 +464,7 @@ export function createArena(container, opts = {}) {
         switch (c.pose) {
             case 'wave': return 3;
             case 'win': return now - c.poseAt < 1.1 ? 6 : 4;
-            case 'clap': return 4;
+            case 'clap': case 'cheer': return 4;
             case 'dance': return 2;
             default: return 0;
         }
@@ -489,7 +491,7 @@ export function createArena(container, opts = {}) {
             } else if (c.pose === 'oops') {
                 const k = ease(u / .4); addRot(c, 'Spine', .3 * k, 0, 0); addRot(c, 'Spine1', .1 * k, 0, 0); addRot(c, 'Head', .35 * k, 0, .08 * k);
                 if (c.pick && u < 1.4) { arm(c, OUT_U, OUT_F); showProp = c.pick; }
-            } else if (c.pose === 'reveal' || (c.pose === 'win' && c.pick && u < 1.4 && c.kind === 'duel') || (c.pose === 'ko' && c.pick && u < .7)) {
+            } else if (c.pose === 'reveal' || ((c.pose === 'win' || c.pose === 'cheer') && c.pick && u < 1.4 && c.kind === 'duel') || (c.pose === 'ko' && c.pick && u < .7)) {
                 // الخاسر يبقى ماسك اختياره وهو يرجف قبل الإقصاء
                 arm(c, OUT_U, OUT_F); showProp = c.pick;
             }
@@ -659,7 +661,7 @@ export function createArena(container, opts = {}) {
             // البعيدين (المتفرجين) يتحدثون كل إطارين بدون فيزياء
             c.acc += dt;
             if (!far || (frame + i) % 2 === 0) { c.rig.update(c.acc, !far); c.acc = 0; }
-            if (c.face) c.face.update(dt, c.pose === 'win' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
+            if (c.face) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
             poseChar(c, dt);
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;
