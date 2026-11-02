@@ -395,6 +395,7 @@ export function createArena(container, opts = {}) {
         return c;
     }
     function dropChar(c) {
+        removeHands(c);
         c.rig.dispose();
         [c.tag, c.bubble, c.badge].forEach(s => { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); });
         if (c.prop) dropObj(c.prop);
@@ -421,16 +422,13 @@ export function createArena(container, opts = {}) {
             }
             c.pick = p.pick || 0;
             c.hand = c.kind === 'duel' && !(p.place && p.place.side) ? 'Left' : 'Right';
+            if (c.kind === 'duel') addHands(c); else removeHands(c);
             drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
             c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16; // اللي بالمواجهة اسمه بشريط VS فوق
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
-        // اليدين القريبة: لاعب اليسار (side 0) واليمين (side 1) واختياراتهم وقت الكشف
-        const duelists = [null, null];
-        list.forEach(p => { if (p.place && p.place.kind === 'duel') { const c = chars.get(p.id); if (c) { duelists[p.place.side ? 1 : 0] = c; HO.picks[p.place.side ? 1 : 0] = p.pick || 0; } } });
-        if (duelists[0] && duelists[1]) handsFor(duelists);
         // مراكز المواجهات من أماكن اللاعبين
         const by = new Map();
         list.forEach(p => { if (p.place && p.place.kind === 'duel') { const t = placeOf(p); const e = by.get(p.place.i) || { x: 0, z: 0, k: 0, live: false }; e.x += t.x; e.z += t.z; e.k++; if (p.pose === 'ready' || p.pose === 'shake' || p.pose === 'reveal') e.live = true; by.set(p.place.i, e); } });
@@ -466,14 +464,6 @@ export function createArena(container, opts = {}) {
             default: return 0;
         }
     }
-    function propFor(c, kind) {
-        if (c.propKind === kind) return c.prop;
-        if (c.prop) dropObj(c.prop);
-        c.prop = kind ? BUILDERS[kind]() : null; c.propKind = kind;
-        if (c.prop) { c.prop.scale.setScalar(0); scene.add(c.prop); c.propAt = now; }
-        return c.prop;
-    }
-
     // الاتجاهات مكتوبة لليد اليمين (يمين الشخصية = -X)؛ اللي على اليسار يستخدم يده اليسار فتنعكس X،
     // عشان اليدين يتقابلون بالنص قدام الكاميرا.
     function arm(c, U, F) {
@@ -482,16 +472,16 @@ export function createArena(container, opts = {}) {
     }
     function poseChar(c, dt) {
         const u = now - c.poseAt;
-        let showProp = 0;
+        let showProp = 0, gesture = null;
         if (!c.walking) {
             if (c.pose === 'ready') {
                 const k = ease(u / .35);
-                arm(c, lerp3([-.22, -1, .05], FIST_U, k), lerp3([-.12, -1, .2], FIST_F, k));
+                arm(c, lerp3([-.22, -1, .05], FIST_U, k), lerp3([-.12, -1, .2], FIST_F, k)); gesture = 'rock';
             } else if (c.pose === 'shake') {
                 // ثلاث ضربات: «حجرة.. ورقة.. مقص!» — اليد تطلع وتنزل مع العد
                 const t = Math.min(u, SHAKE_SEC) / SHAKE_SEC * 3, ph = t % 1, beat = Math.sin(ph * Math.PI);
                 const f = lerp3(FIST_F, DOWN_F, u >= SHAKE_SEC ? 1 : (ph < .5 ? ease(ph * 2) : 1 - ease((ph - .5) * 2)));
-                arm(c, FIST_U, f);
+                arm(c, FIST_U, f); gesture = 'rock';
                 addRot(c, 'Spine', .06 * beat, 0, 0);
             } else if (c.pose === 'oops') {
                 const k = ease(u / .4); addRot(c, 'Spine', .3 * k, 0, 0); addRot(c, 'Spine1', .1 * k, 0, 0); addRot(c, 'Head', .35 * k, 0, .08 * k);
@@ -501,21 +491,8 @@ export function createArena(container, opts = {}) {
                 arm(c, OUT_U, OUT_F); showProp = c.pick;
             }
         }
-        // المجسم بيد اللاعب: يكبر بنطّة، ويطلع قدام اليد على امتداد الساعد
-        const prop = propFor(c, showProp);
-        if (prop) {
-            const S = c.hand || 'Right';
-            c.rig.bones[S + 'Hand'].getWorldPosition(_v1); c.rig.bones[S + 'ForeArm'].getWorldPosition(_v2);
-            _v2.subVectors(_v1, _v2).normalize();
-            prop.position.copy(_v1).addScaledVector(_v2, c.propKind === 3 ? .1 : .06);
-            const s = backOut((now - c.propAt) / .45) * (c.propKind === 1 ? .4 : c.propKind === 2 ? .5 : .74);
-            prop.scale.setScalar(Math.max(0, s));
-            const toCam = Math.atan2(camera.position.x - prop.position.x, camera.position.z - prop.position.z);
-            const toward = (c.hand === 'Left' ? 1 : -1); // جهة الخصم على الشاشة
-            if (c.propKind === 1) prop.rotation.set(.3, now * .6 + c.n, .2);                                   // الحجر يلف بهدوء
-            else if (c.propKind === 2) prop.rotation.set(-.12, toCam - toward * .35, toward * .08);             // الورقة مواجهة للكاميرا ومايلة للخصم
-            else prop.rotation.set(0, toCam, -toward * (Math.PI / 2) + Math.sin(now * 9) * .05);              // المقص رأسه للخصم
-        }
+        if (showProp) gesture = POSE_OF[showProp];
+        handsUpdate(c, dt, gesture);
     }
 
     // ================================================================ الكاميرا
@@ -526,61 +503,72 @@ export function createArena(container, opts = {}) {
         const W = 3.9, H = 3.05, pitch = .2;
         const tv = Math.tan(T.MathUtils.degToRad(camera.fov / 2)), th = tv * camera.aspect;
         const dist = Math.max(H / 2 / tv, W / 2 / th);
-        camera.position.set(0, camLook.y + dist * Math.sin(pitch), camLook.z + dist * Math.cos(pitch));
-        camera.lookAt(camLook);
+        basePos.set(0, camLook.y + dist * Math.sin(pitch), camLook.z + dist * Math.cos(pitch));
+        // القريبة: اليدين بالنص (عرض ~2.3م) من مستوى الصدر
+        const dc = Math.max(1.15 / th, .72 / tv);
+        closePos.set(0, closeLook.y + dc * Math.sin(.12), closeLook.z + dc * Math.cos(.12));
+        camera.position.copy(basePos); camera.lookAt(camLook);
     }
-    // ================================================================ لقطة اليدين القريبة
-    // من بداية العد لين نهاية الكشف: يدين كبار بأصابع (rps-hand.js) فوق المشهد بلون بشرة وكم كل لاعب.
-    // العد: القبضتين تنزل وتطلع ثلاث مرات · الكشف: كل يد تفتح على اختيار صاحبها (ما اختار ← اليد تنزل).
-    const hScene = new T.Scene(); hScene.environment = ENV;
-    const hCam = new T.PerspectiveCamera(32, 16 / 9, .1, 50); hCam.position.set(0, 1.0, 7.6); hCam.lookAt(0, .85, 0);
-    hScene.add(new T.HemisphereLight('#dfe5ee', '#2a2622', .35));
-    const hKey = new T.DirectionalLight('#fff0dc', 2.2); hKey.position.set(3, 5, 6); hScene.add(hKey);
-    const hRim = new T.DirectionalLight('#9fb3d1', .8); hRim.position.set(-4, 3, -5); hScene.add(hRim);
-    const hDim = new T.Mesh(new T.PlaneGeometry(60, 40), new T.MeshBasicMaterial({ color: '#07080b', transparent: true, opacity: 0, depthWrite: false }));
-    hDim.position.z = -4; hScene.add(hDim);
-    const HO = { on: false, at: 0, fadeAt: 0, a: 0, hands: [null, null], keys: ['', ''], picks: [0, 0] };
+    const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
+    function placeCamera(k) {
+        camera.position.lerpVectors(basePos, closePos, k);
+        camera.lookAt(_cl.lerpVectors(camLook, closeLook, k));
+    }
+    // ================================================================ أيدي الشخصيات بأصابع + التقريب
+    // اللي بالمواجهة: يد الشخصية نفسها تتبدّل بيد بأصابع (rps-hand.js) مركّبة على عظمة الكف
+    // (اليد الكرتونية تختفي بتصغير عظمتها)، والحجرة/الورقة/المقص تنعمل بأصابعها.
+    // من بداية العد لين نهاية الكشف الكاميرا تقرّب على اليدين، وبعدها ترجع للقطة العادية.
+    const HAND_S = .145, POSE_OF = { 1: 'rock', 2: 'paper', 3: 'scissors' };
+    const QMAP = {
+        // عظمة الكف بوضع الراحة: يمين الأصابع لـ -X والكف لتحت والإبهام لقدام؛ اليسار مرآة
+        Right: new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0, 0, 1), new T.Vector3(-1, 0, 0), new T.Vector3(0, -1, 0))),
+        Left: new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0, 0, -1), new T.Vector3(1, 0, 0), new T.Vector3(0, -1, 0))),
+    };
     function lookColors(c) {
         const L = c.rig.look || {};
-        const skin = SKIN[L.s] || SKIN[1];
-        let sleeve = L.g === 1 ? '#' + new T.Color(boyColors(L).top).getHexString() : OUTFIT[L.o >= 0 ? L.o : 0];
-        sleeve = '#' + new T.Color(sleeve).lerp(new T.Color('#2a2e36'), .35).getHexString(); // أهدى شوي
-        return { skin, sleeve };
+        return { skin: SKIN[L.s] || SKIN[1] };
     }
-    function handsFor(duelists) {
-        for (let s = 0; s < 2; s++) {
-            const c = duelists[s]; if (!c) continue;
-            const col = lookColors(c), key = c.id + col.skin + col.sleeve;
-            if (HO.keys[s] === key) continue;
-            if (HO.hands[s]) { HO.hands[s].group.removeFromParent(); HO.hands[s].dispose(); }
-            const h = makeHand({ skin: col.skin, sleeve: col.sleeve, left: s === 1 });
-            h.group.position.set(s ? 1.25 : -1.25, -.25, 0); hScene.add(h.group);
-            HO.hands[s] = h; HO.keys[s] = key;
+    function addHands(c) {
+        if (c.fh) return;
+        const { skin } = lookColors(c); c.fh = {};
+        for (const S of ['Left', 'Right']) {
+            const h = makeHand({ skin, left: S === 'Left', bare: true, env: ENV });
+            h.group.scale.multiplyScalar(HAND_S); scene.add(h.group); c.fh[S] = h;
+            c.rig.bones[S + 'Hand'].scale.setScalar(.001); // نخفي اليد الكرتونية
         }
     }
-    const POSE_OF = { 1: 'rock', 2: 'paper', 3: 'scissors' };
-    function handsTick(dt) {
+    function removeHands(c) {
+        if (!c.fh) return;
+        for (const S of ['Left', 'Right']) { const h = c.fh[S]; h.group.removeFromParent(); h.dispose(); c.rig.bones[S + 'Hand'].scale.setScalar(1); }
+        c.fh = null;
+    }
+    const _hx = new T.Vector3(), _hy = new T.Vector3(), _hz = new T.Vector3(), _hm = new T.Matrix4(), _hq = new T.Quaternion(), _hp = new T.Vector3(), _hf = new T.Vector3();
+    function handsUpdate(c, dt, gesture) {
+        if (!c.fh) return;
+        for (const S of ['Left', 'Right']) {
+            const h = c.fh[S], bone = c.rig.bones[S + 'Hand'];
+            bone.getWorldPosition(_hp); h.group.position.copy(_hp);
+            if (gesture && S === (c.hand || 'Right')) {
+                // اليد اللي تلعب: الأصابع على امتداد الساعد، وباطن الكف للكاميرا عشان الحركة تنقرا
+                c.rig.bones[S + 'ForeArm'].getWorldPosition(_hf);
+                _hy.subVectors(_hp, _hf).normalize();
+                _hz.subVectors(camera.position, _hp).addScaledVector(_hy, -_hz.copy(camera.position).sub(_hp).dot(_hy)).normalize();
+                _hx.crossVectors(_hy, _hz).normalize();
+                h.group.quaternion.setFromRotationMatrix(_hm.makeBasis(_hx, _hy, _hz));
+                h.setPose(gesture);
+            } else {
+                bone.getWorldQuaternion(_hq); h.group.quaternion.copy(_hq).multiply(QMAP[S]);
+                h.setPose('relax');
+            }
+            h.update(dt, 16);
+        }
+    }
+    const HO = { on: false, a: 0 };
+    function closeTick(dt) {
         const want = phase === 'shake' || phase === 'reveal';
-        if (want && !HO.on) { HO.on = true; HO.at = now; }
-        if (!want && HO.on && phase !== 'shake' && phase !== 'reveal') { HO.on = false; HO.fadeAt = now; }
-        HO.a += ((HO.on ? 1 : 0) - HO.a) * (1 - Math.exp(-dt * (HO.on ? 10 : 7)));
-        if (HO.a < .01) { HO.a = HO.on ? HO.a : 0; return false; }
-        const u = now - HO.at, beat = Math.min(u, SHAKE_SEC) / SHAKE_SEC * 3, ph = beat % 1;
-        const shaking = phase === 'shake' && u < SHAKE_SEC, bob = shaking && !REDUCED ? Math.sin(ph * Math.PI) : 0;
-        const revealed = phase !== 'shake';
-        if (!revealed) HO.revAt = null; else if (HO.revAt == null) HO.revAt = now;
-        const rev = revealed ? Math.min(1, (now - HO.revAt) / .25) : 0;
-        HO.hands.forEach((h, s) => {
-            if (!h) return; const sg = s ? -1 : 1, pk = HO.picks[s];
-            h.group.rotation.set(-.15 + bob * .35, sg * (.55 - rev * .1), sg * (-.18 - bob * .1));
-            // ما اختار: اليد تنزل برا الكادر بدل ما تبان «حجرة» بالغلط
-            h.group.position.y = -.25 + bob * .42 + (revealed ? (pk ? rev * .08 : -rev * 2.6) : 0);
-            h.setPose(revealed && pk ? POSE_OF[pk] : 'rock'); h.update(dt, 16);
-        });
-        // تظهر بانزلاق خفيف من تحت + تعتيم المشهد وراها
-        const a = HO.a; hDim.material.opacity = .62 * a;
-        HO.hands.forEach((h, s) => { if (h) { h.group.position.y -= (1 - a) * 1.2; h.group.visible = a > .02; } });
-        return true;
+        HO.on = want;
+        HO.a += ((want ? 1 : 0) - HO.a) * (1 - Math.exp(-dt * (want ? 4.5 : 3.2)));
+        return REDUCED ? 0 : ease(HO.a);
     }
 
     // ================================================================ الإقصاء المضحك
@@ -693,15 +681,13 @@ export function createArena(container, opts = {}) {
             q4.identity(); confetti.instanceMatrix.needsUpdate = true;
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
+        placeCamera(closeTick(dt));
         if (composer) composer.render(); else renderer.render(scene, camera);
-        if (handsTick(dt)) { renderer.autoClear = false; renderer.clearDepth(); renderer.render(hScene, hCam); renderer.autoClear = true; }
     }
 
     function resize() {
         const w = container.clientWidth || 1, h = container.clientHeight || 1;
         renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); fixCamera();
-        // اليدين: نفس الكادر بالعرضي، وبالطولي نبعد الكاميرا عشان اليدين يدخلون بالعرض
-        hCam.aspect = w / h; hCam.position.z = 7.6 * Math.max(1, 1.6 / hCam.aspect); hCam.updateProjectionMatrix();
         if (composer) { composer.setSize(w, h); bloom.resolution.set(w / 2, h / 2); }
     }
     const ro = new ResizeObserver(resize); ro.observe(container); resize();
@@ -714,8 +700,6 @@ export function createArena(container, opts = {}) {
     function stop() {
         stopped = true; cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
         for (const c of [...chars.values()]) dropChar(c);
-        HO.hands.forEach(h => h && h.dispose());
-        hScene.traverse(o => { if (o.geometry) o.geometry.dispose(); });
         scene.traverse(o => { if (o.geometry) o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         Object.values(propMats).forEach(m => { if (m.isTexture) m.dispose(); else if (m.dispose) { if (m.map) m.map.dispose(); m.dispose(); } });
         for (const k in propMats) delete propMats[k];

@@ -1,7 +1,8 @@
 /**
  * «حجرة ورقة مقص» — يد ثلاثية الأبعاد بأصابع ومفاصل (للقطة القريبة وقت الكشف بـ rps-scene.js).
  *
- * makeHand({ skin, sleeve, left }) ← { group, setPose(name), snap(name), update(dt), dispose() }
+ * makeHand({ skin, sleeve, left, bare, env }) ← { group, setPose(name), snap(name), update(dt), dispose() }
+ *   bare: بدون رسغ وكم (اليد تنركّب على ذراع الشخصية) · env: خريطة انعكاس للجلد والأظافر
  *   - اليد بإحداثياتها: الأصابع لفوق (+Y)، باطن الكف لقدام (+Z)، الإبهام على +X (يد يمين).
  *   - كل إصبع 3 سلاميات (الإبهام: مشط + سلاميتين)، وكل مفصل يدور حول محوره، فالوضعيات
  *     (حجرة/ورقة/مقص) مجرد زوايا للمفاصل، والتنقّل بينها سلس (lerp).
@@ -22,6 +23,7 @@ const FINGERS = [
 export const POSES = {
     rock: { index: [1.55, 1.75, .95, 0], middle: [1.6, 1.75, .95, 0], ring: [1.6, 1.7, .95, 0], pinky: [1.55, 1.65, .9, 0], thumb: [-1.15, -.3, .7, .6, .5] },
     paper: { index: [.04, .05, .03, .13], middle: [.03, .04, .03, .03], ring: [.04, .05, .03, -.07], pinky: [.06, .06, .04, -.17], thumb: [-.2, -.75, .1, .08, .05] },
+    relax: { index: [.3, .35, .2, .06], middle: [.32, .38, .22, 0], ring: [.36, .42, .24, -.04], pinky: [.42, .46, .26, -.09], thumb: [-.35, -.6, .2, .15, .1] },
     scissors: { index: [.04, .05, .03, .2], middle: [.03, .04, .03, -.12], ring: [1.55, 1.7, .95, 0], pinky: [1.5, 1.6, .9, 0], thumb: [-1.0, -.45, .65, .6, .45] },
 };
 
@@ -42,7 +44,7 @@ function seg(len, r0, r1, mat) {
     return m;
 }
 
-export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false } = {}) {
+export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false, bare = false, env = null } = {}) {
     const skinM = new T.MeshPhysicalMaterial({ color: skin, roughness: .62, metalness: 0, sheen: .25, sheenRoughness: .7, sheenColor: new T.Color('#ff9f87'), envMapIntensity: .35 });
     const nailM = new T.MeshPhysicalMaterial({ color: new T.Color(skin).lerp(new T.Color('#f3cfc6'), .5), roughness: .3, clearcoat: .5, envMapIntensity: .5 });
     const knuckleTone = new T.MeshPhysicalMaterial({ color: new T.Color(skin).multiplyScalar(.94), roughness: .64, sheen: .2, sheenColor: new T.Color('#ff9f87'), envMapIntensity: .35 });
@@ -63,10 +65,13 @@ export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false } 
     // لحمة الإبهام (thenar) بالباطن
     const thenar = new T.Mesh(new T.SphereGeometry(.2, 24, 16), skinM); thenar.scale.set(.95, 1.3, .62); thenar.position.set(.25, .27, .05); hand.add(thenar);
     // الرسغ والساعد (كم بسيط)
-    const wrist = new T.Mesh(new T.CylinderGeometry(.27, .29, .3, 28), skinM); wrist.scale.z = .6; wrist.position.y = -.05; hand.add(wrist);
+    const wrist = new T.Mesh(new T.CylinderGeometry(.27, .29, bare ? .16 : .3, 28), skinM); wrist.scale.z = .6; wrist.position.y = bare ? .02 : -.05; hand.add(wrist);
     const sleeveM = new T.MeshStandardMaterial({ color: sleeve, roughness: .85 });
-    const sleeveMesh = new T.Mesh(new T.CylinderGeometry(.36, .38, .7, 28), sleeveM); sleeveMesh.scale.z = .72; sleeveMesh.position.y = -.5; hand.add(sleeveMesh);
-    const cuff = new T.Mesh(new T.TorusGeometry(.355, .035, 10, 32), sleeveM); cuff.rotation.x = Math.PI / 2; cuff.scale.y = .72; cuff.position.y = -.16; hand.add(cuff);
+    if (!bare) {
+        const sleeveMesh = new T.Mesh(new T.CylinderGeometry(.36, .38, .7, 28), sleeveM); sleeveMesh.scale.z = .72; sleeveMesh.position.y = -.5; hand.add(sleeveMesh);
+        const cuff = new T.Mesh(new T.TorusGeometry(.355, .035, 10, 32), sleeveM); cuff.rotation.x = Math.PI / 2; cuff.scale.y = .72; cuff.position.y = -.16; hand.add(cuff);
+    }
+    if (env) [skinM, nailM, knuckleTone].forEach(m => { m.envMap = env; });
 
     const joints = {};
     for (const [name, x, z, lens, r] of FINGERS) {
@@ -116,6 +121,6 @@ export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false } 
         for (const k in cur) for (let i = 0; i < cur[k].length; i++) cur[k][i] += (target[k][i] - cur[k][i]) * f;
         apply();
     }
-    snap('rock');
+    snap(bare ? 'relax' : 'rock');
     return { group, setPose, snap, update, dispose() { group.traverse(o => { if (o.geometry) o.geometry.dispose(); }); [skinM, nailM, knuckleTone, sleeveM].forEach(m => m.dispose()); } };
 }
