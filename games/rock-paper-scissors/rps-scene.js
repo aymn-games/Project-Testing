@@ -11,7 +11,7 @@
  *   place = { kind: 'duel'|'queue'|'podium', i, n, side }
  *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
  *     queue: ينتظر دوره بنص دائرة خلف المواجهة (i من n) · podium: البطل
- *   pose = 'idle'|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
+ *   pose = 'idle'|'still' (واقف ثابت تماماً)|'wave'|'ready'|'shake'|'reveal'|'win'|'cheer'|'oops'|'ko'|'clap'|'dance' (cheer/oops = كسب/خسر محاولة بس)
  *   g = 0 بنت · 1 ولد (اختياري، وإلا من رقم اللاعب)
  *     ko = إقصاء مضحك (ko: 1 نابض يطيّره · 2 مجسم عملاق من اختيار الفائز koPick يفرشه) ~2.9ث
  *   pick = 1/2/3 (يظهر المجسم بيده وقت reveal) · bubble = {text, color} · badge = {text, color}
@@ -660,8 +660,11 @@ export function createArena(container, opts = {}) {
             else { c.rig.root.visible = true; c.rig.root.scale.setScalar(1); if (c.ko) { dropObj(c.ko.obj); c.ko = null; } c.tag.visible = c.tagOk !== false; }
             // البعيدين (المتفرجين) يتحدثون كل إطارين بدون فيزياء
             c.acc += dt;
-            if (!far || (frame + i) % 2 === 0) { c.rig.update(c.acc, !far); c.acc = 0; }
-            if (c.face) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
+            // still: بعد ما يوقف بمكانه وتخلص نقلة الحركة (نص ثانية) نجمّده تماماً — بدون تنفّس ولا رمش
+            const frozen = c.pose === 'still' && !c.walking && c.stillAt != null && now - c.stillAt > .5;
+            if (c.pose === 'still' && !c.walking) { if (c.stillAt == null) c.stillAt = now; } else c.stillAt = null;
+            if (!frozen && (!far || (frame + i) % 2 === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
+            if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' ? 'scared' : 'smile');
             poseChar(c, dt);
             // اللافتات فوق الراس
             const head = c.pos.y + 1.92;

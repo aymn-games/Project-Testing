@@ -500,8 +500,10 @@
                 }
             } else {
                 o.place = { kind: 'queue', i: queue.indexOf(p), n: queue.length };
+                // الواقفين ورا: ثابتين بدون حركة (بس تلويحة أول ما يدخل)
                 if (phase === 'join' && Date.now() - (joinedAt[p.id] || 0) < 2200) o.pose = 'wave';
-                else if (phase !== 'join') { o.pose = 'clap'; o.noTag = true; }
+                else o.pose = 'still';
+                if (phase !== 'join') o.noTag = true;
                 if (G.bye === p.id && phase !== 'join') o.badge = { text: 'تأهل مباشر', color: C.bye };
             }
             if (o.quiet) { o.bubble = null; o.badge = null; }
