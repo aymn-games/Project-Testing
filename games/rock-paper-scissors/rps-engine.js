@@ -2,13 +2,15 @@
  * «حجرة ورقة مقص» — منطق البطولة (بدون واجهة ولا Three.js).
  *
  * نظام اللعب: بطولة مواجهات ثنائية. كل دور اللاعبين الباقين ينقسمون أزواج،
- * وكل لاعب يكتب بالشات 1 (حجرة) أو 2 (ورقة) أو 3 (مقص). الفائز يتأهل للدور
- * اللي بعده، والخاسر يطلع ويصير متفرج. العدد الفردي: لاعب واحد يتأهل
- * مباشرة (الأولوية لمن ما تأهل مباشرة قبل). التعادل يعيد المواجهة نفسها.
+ * وكل لاعب يكتب بالشات 1 (حجرة) أو 2 (ورقة) أو 3 (مقص). كل مواجهة من ثلاث
+ * محاولات: أول واحد يكسب محاولتين (WINS) يفوز بالمواجهة ويتأهل، والثاني ينقصى.
+ * التعادل ما ينحسب ويعيد المحاولة. العدد الفردي: لاعب واحد يتأهل مباشرة
+ * (الأولوية لمن ما تأهل مباشرة قبل).
  *
  * الشاشة (game.html) هي اللي تمسك الوقت وتستدعي الدوال هنا بالترتيب:
  *   join() طول فترة الدخول ← startRound() ← لكل مواجهة i بالترتيب: pick() طول وقت
- *   الاختيار ← resolve(i) ← (لو تعادل: startReplay(i) ثم pick() ثم resolve(i) من جديد)
+ *   الاختيار ← resolve(i) ← (لو المواجهة ما انحسمت — تعادل أو محاولة: startReplay(i)
+ *   ثم pick() ثم resolve(i) من جديد)
  *   ← nextRound() ... لين champion().
  *
  * يشتغل بالمتصفح (window.RpsEngine) وبـ node للاختبار (module.exports).
@@ -18,7 +20,8 @@
 
     var ROCK = 1, PAPER = 2, SCISSORS = 3;
     var NAMES = { 1: 'حجرة', 2: 'ورقة', 3: 'مقص' };
-    var MAX_TIES = 3; // بعد 3 تعادلات ورا بعض يُحسم بالقرعة عشان البث ما يعلق
+    var MAX_TIES = 3; // بعد 3 تعادلات ورا بعض تنحسم المحاولة بالقرعة عشان البث ما يعلق
+    var WINS = 2;     // من ثلاث محاولات: اللي يكسب محاولتين يفوز بالمواجهة
 
     /** 1 لو a يغلب b، -1 لو العكس، 0 تعادل. */
     function beats(a, b) {
@@ -50,7 +53,7 @@
         var players = [];      // {id, name, avatarUrl, out, outRound, byes}
         var byId = {};
         var round = 0;
-        var duels = [];        // {a, b, picks:{}, ties, result, winner, loser, how}
+        var duels = [];        // {a, b, picks:{}, ties, wins:{id:n}, rounds:[{pa,pb,w,how}], result, winner, loser, how}
         var bye = null;        // id المتأهل مباشرة بهذا الدور
         var champ = null;
 
@@ -91,7 +94,7 @@
                 list = list.filter(function (p) { return p !== b; });
             }
             duels = [];
-            for (var i = 0; i < list.length; i += 2) duels.push({ a: list[i].id, b: list[i + 1].id, picks: {}, ties: 0, result: null, winner: null, loser: null, how: null });
+            for (var i = 0; i < list.length; i += 2) { var w0 = {}; w0[list[i].id] = 0; w0[list[i + 1].id] = 0; duels.push({ a: list[i].id, b: list[i + 1].id, picks: {}, ties: 0, wins: w0, rounds: [], result: null, winner: null, loser: null, how: null }); }
         }
 
         /** يبدأ الدور الأول. يحتاج لاعبين على الأقل. */
@@ -117,12 +120,13 @@
         }
 
         /**
-         * نهاية وقت الاختيار: يحسم كل مواجهة مفتوحة، أو المواجهة رقم only بس (اللعب مواجهة مواجهة).
-         * يرجع {ties: عدد المواجهات اللي تعادلت}.
-         * how: 'beat' غلب · 'noshow' الخصم ما اختار · 'draw' قرعة (كلهم ما اختاروا أو تعادل كثير)
+         * نهاية وقت الاختيار: يحسم المحاولة بكل مواجهة مفتوحة، أو بالمواجهة رقم only بس.
+         * result بعدها: 'tie' تعادل (ما ينحسب) · 'point' محاولة لواحد والمواجهة مكملة · 'done' انحسمت.
+         * how للمحاولة: 'beat' غلب · 'noshow' الخصم ما اختار · 'draw' قرعة (كلهم ما اختاروا أو تعادل كثير)
+         * يرجع {ties, points}: عدد المواجهات اللي تعادلت / اللي تحتاج محاولة ثانية.
          */
         function resolve(only) {
-            var ties = 0;
+            var ties = 0, points = 0;
             duels.forEach(function (d, i) {
                 if (d.result || (only != null && i !== only)) return;
                 var pa = d.picks[d.a] || 0, pb = d.picks[d.b] || 0, w = 0, how = 'beat';
@@ -130,21 +134,25 @@
                     w = beats(pa, pb);
                     if (!w) {
                         d.ties++;
-                        if (d.ties < MAX_TIES) { d.result = 'tie'; ties++; return; }
+                        if (d.ties < MAX_TIES) { d.result = 'tie'; d.rounds.push({ pa: pa, pb: pb, w: null, how: 'tie' }); ties++; return; }
                         how = 'draw'; w = rnd() < 0.5 ? 1 : -1;
                     }
                 } else if (pa || pb) { w = pa ? 1 : -1; how = 'noshow'; }
                 else { w = rnd() < 0.5 ? 1 : -1; how = 'draw'; }
-                d.result = 'done'; d.how = how;
-                d.winner = w > 0 ? d.a : d.b; d.loser = w > 0 ? d.b : d.a;
+                var rw = w > 0 ? d.a : d.b;
+                d.ties = 0; d.wins[rw]++;
+                d.rounds.push({ pa: pa, pb: pb, w: rw, how: how });
+                d.how = how;
+                if (d.wins[rw] >= WINS) { d.result = 'done'; d.winner = rw; d.loser = rw === d.a ? d.b : d.a; }
+                else { d.result = 'point'; points++; }
             });
-            return { ties: ties };
+            return { ties: ties, points: points };
         }
 
-        /** يفتح المواجهات المتعادلة من جديد (نفس اللاعبين، اختيارات جديدة). */
+        /** يفتح المواجهات اللي ما انحسمت (تعادل أو محاولة) لمحاولة جديدة: نفس اللاعبين واختيارات جديدة. */
         function startReplay(only) {
             var n = 0;
-            duels.forEach(function (d, i) { if (d.result === 'tie' && (only == null || i === only)) { d.result = null; d.lastPicks = d.picks; d.picks = {}; n++; } });
+            duels.forEach(function (d, i) { if ((d.result === 'tie' || d.result === 'point') && (only == null || i === only)) { d.result = null; d.lastPicks = d.picks; d.picks = {}; n++; } });
             return n;
         }
 
@@ -185,7 +193,7 @@
         };
     }
 
-    var api = { create: create, beats: beats, parsePick: parsePick, NAMES: NAMES, ROCK: ROCK, PAPER: PAPER, SCISSORS: SCISSORS, MAX_TIES: MAX_TIES };
+    var api = { create: create, beats: beats, parsePick: parsePick, NAMES: NAMES, ROCK: ROCK, PAPER: PAPER, SCISSORS: SCISSORS, MAX_TIES: MAX_TIES, WINS: WINS };
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.RpsEngine = api;
 }(typeof window !== 'undefined' ? window : this));

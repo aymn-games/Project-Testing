@@ -31,13 +31,34 @@ test('start needs 2 players; odd count gives exactly one bye', () => {
     const ids = new Set(g.duels.flatMap(d => [d.a, d.b]).concat(g.bye)); assert.equal(ids.size, 5);
 });
 
-test('resolve: winner by pick, no-show loses, last pick counts', () => {
+// محاولة وحدة بمواجهة i: اختيارين ثم حسم، وتفتح محاولة ثانية لو المواجهة ما انحسمت
+const attempt = (g, i, pa, pb) => { const d = g.duels[i]; if (pa) g.pick(d.a, pa); if (pb) g.pick(d.b, pb); const r = g.resolve(i); if (d.result !== 'done') g.startReplay(i); return r; };
+
+test('best of three: one win is a point, two wins take the duel', () => {
     const g = E.create({ random: seq(0) }); add(g, 2); g.startRound();
     const d = g.duels[0];
-    g.pick(d.a, 1); g.pick(d.a, 2); g.pick(d.b, 1); // a غيّر لورقة
-    g.resolve(); assert.equal(d.winner, d.a); assert.equal(d.how, 'beat');
-    const h = E.create({ random: seq(0) }); add(h, 2); h.startRound();
-    h.pick(h.duels[0].b, 3); h.resolve(); assert.equal(h.duels[0].winner, h.duels[0].b); assert.equal(h.duels[0].how, 'noshow');
+    g.pick(d.a, 1); g.pick(d.a, 2); g.pick(d.b, 1); // a غيّر لورقة — آخر اختيار يُحسب
+    assert.deepEqual(g.resolve(0), { ties: 0, points: 1 });
+    assert.equal(d.result, 'point'); assert.equal(d.wins[d.a], 1); assert.equal(d.winner, null);
+    assert.equal(g.startReplay(0), 1); assert.deepEqual(d.picks, {});
+    attempt(g, 0, 3, 2);
+    assert.equal(d.result, 'done'); assert.equal(d.winner, d.a); assert.equal(d.wins[d.a], 2); assert.equal(d.rounds.length, 2);
+});
+
+test('best of three goes to a third attempt at 1-1', () => {
+    const g = E.create(); add(g, 2); g.startRound(); const d = g.duels[0];
+    attempt(g, 0, 1, 3); attempt(g, 0, 1, 2);
+    assert.equal(d.result, null); assert.equal(d.wins[d.a], 1); assert.equal(d.wins[d.b], 1);
+    attempt(g, 0, 3, 1);
+    assert.equal(d.result, 'done'); assert.equal(d.winner, d.b);
+});
+
+test('no-show loses the attempt, not the whole duel', () => {
+    const g = E.create(); add(g, 2); g.startRound(); const d = g.duels[0];
+    attempt(g, 0, 0, 3);
+    assert.equal(d.result, null); assert.equal(d.wins[d.b], 1); assert.equal(d.how, 'noshow');
+    attempt(g, 0, 0, 1);
+    assert.equal(d.result, 'done'); assert.equal(d.winner, d.b);
 });
 
 test('outsiders and eliminated players cannot pick', () => {
@@ -45,24 +66,25 @@ test('outsiders and eliminated players cannot pick', () => {
     assert.equal(g.pick(g.bye, 1), false); assert.equal(g.pick('nobody', 1), false); assert.equal(g.pick(g.duels[0].a, 4), false);
 });
 
-test('tie replays the same duel, then a draw after MAX_TIES', () => {
+test('ties do not count; after MAX_TIES in a row the attempt is drawn', () => {
     const g = E.create({ random: seq(0.9) }); add(g, 2); g.startRound();
     const d = g.duels[0];
     for (let i = 1; i < E.MAX_TIES; i++) {
         g.pick(d.a, 1); g.pick(d.b, 1);
-        assert.equal(g.resolve().ties, 1); assert.equal(g.roundDone(), false);
-        assert.equal(g.startReplay(), 1); assert.deepEqual(d.picks, {});
+        assert.equal(g.resolve(0).ties, 1); assert.equal(d.wins[d.a] + d.wins[d.b], 0);
+        assert.equal(g.startReplay(0), 1);
     }
-    g.pick(d.a, 2); g.pick(d.b, 2); assert.equal(g.resolve().ties, 0);
-    assert.equal(d.how, 'draw'); assert.ok(g.roundDone());
+    g.pick(d.a, 2); g.pick(d.b, 2); assert.equal(g.resolve(0).ties, 0);
+    assert.equal(d.how, 'draw'); assert.equal(d.result, 'point'); assert.equal(d.wins[d.b], 1);
+    assert.equal(d.ties, 0); // التعادلات تتصفّر بعد كل محاولة محسومة
 });
 
 test('full tournament of 7 ends with one champion and everyone else out', () => {
     const g = E.create({ random: Math.random }); add(g, 7); g.startRound();
     let rounds = 0;
     while (!g.champion) {
-        g.duels.forEach(d => { g.pick(d.a, 1); g.pick(d.b, 3); });
-        g.resolve(); assert.ok(g.nextRound()); rounds++;
+        g.duels.forEach((d, i) => { while (d.result !== 'done') attempt(g, i, 1, 3); });
+        assert.ok(g.nextRound()); rounds++;
         assert.ok(rounds < 10);
     }
     assert.equal(rounds, 3);
@@ -78,11 +100,8 @@ test('stageName follows remaining players', () => {
 test('resolve(i) settles only that duel; others stay open for later', () => {
     const g = E.create({ random: seq(0) }); add(g, 4); g.startRound();
     const [d0, d1] = g.duels;
-    g.pick(d0.a, 1); g.pick(d0.b, 3);
-    g.resolve(0);
+    attempt(g, 0, 1, 3); attempt(g, 0, 2, 1);
     assert.equal(d0.result, 'done'); assert.equal(d0.winner, d0.a);
-    assert.equal(d1.result, null); assert.equal(g.roundDone(), false);
-    g.pick(d1.a, 2); g.pick(d1.b, 2); assert.equal(g.resolve(1).ties, 1);
-    assert.equal(g.startReplay(0), 0); assert.equal(g.startReplay(1), 1);
-    g.pick(d1.a, 3); g.pick(d1.b, 2); g.resolve(1); assert.ok(g.roundDone());
+    assert.equal(d1.result, null); assert.deepEqual(d1.wins, { [d1.a]: 0, [d1.b]: 0 }); assert.equal(g.roundDone(), false);
+    attempt(g, 1, 3, 2); attempt(g, 1, 3, 2); assert.ok(g.roundDone());
 });
