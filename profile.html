@@ -984,7 +984,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     head.parentNode.insertBefore(row, head.nextSibling);
   }
 
-  // زر «شاشات البث» (obs-studio.html — js/agp-obs-studio.js): يصمّم فيها
+  // زر «شاشات البث» (overlay/ — overlay/studio.js): يصمّم فيها
   // الستريمر شاشات لـOBS/TikTok LIVE Studio، ولكل شاشة رابط. نفس صف زر
   // الإحصائيات، لصاحب الحساب الستريمر فقط، وينضاف مع كل تعبئة للتبويب.
   function addScreensButton(p){
@@ -1003,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     txt.style.cssText = 'flex:1 1 220px;min-width:0;text-align:right;font-size:13px;line-height:1.8;color:#c3bad6;';
     txt.textContent = 'شاشات البث لـOBS وTikTok LIVE Studio: أليرتات الهدايا والمتابعين، التوب، الأهداف، النصوص والأيقونات — تصمّم كل شاشة وتنسخ رابطها.';
     var btn = document.createElement('a');
-    btn.href = 'obs-studio.html';
+    btn.href = 'overlay/index.html';
     btn.className = 'nl-btn-glossy';
     btn.setAttribute('data-agp-screens-btn', '1');
     btn.textContent = 'شاشات البث';

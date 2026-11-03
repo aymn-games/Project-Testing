@@ -1,7 +1,7 @@
 /**
- * AGP STREAM SCREENS SERVICE — «شاشات البث» (obs-studio.html): كل ستريمر يسوي
+ * AGP STREAM SCREENS SERVICE — «شاشات البث» (overlay/index.html): كل ستريمر يسوي
  * أكثر من شاشة (بداية البث، اللعب، استراحة…)، ولكل شاشة رابط خاص
- * (overlay.html?k=<رمز>) يحطه بـOBS أو TikTok LIVE Studio كـBrowser Source.
+ * (overlay/live.html?k=<رمز>) يحطه بـOBS أو TikTok LIVE Studio كـBrowser Source.
  *
  * - تصميم الشاشة = نفس كائن js/agp-stream-overlay.js ({ v, template, items… }).
  * - الرمز (screen_key) سري ويكفي لوحده لقراءة تصميم الشاشة وإحصائيات بث صاحبها

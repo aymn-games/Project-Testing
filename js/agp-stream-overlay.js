@@ -30,8 +30,8 @@
  * - طول الشاشة ثابت (100vh) بدل innerHeight عشان العناصر ما تتزحزح لما شريط
  *   Safari يختفي ويرجع مع التمرير.
  *
- * «شاشات البث» (obs-studio.html + js/agp-obs-studio.js): المذيع يسوي شاشات
- * لـOBS/TikTok LIVE Studio، ولكل شاشة رابط overlay.html?k=<رمز>:
+ * «شاشات البث» (overlay/index.html + overlay/studio.js): المذيع يسوي شاشات
+ * لـOBS/TikTok LIVE Studio، ولكل شاشة رابط overlay/live.html?k=<رمز>:
  * - <html data-agp-overlay-link> = صفحة الرابط: التصميم من السيرفر
  *   (/api/public/screen، يتشيّك كل DESIGN_POLL_MS) بدل localStorage، والبيانات
  *   بالرمز بدون تسجيل دخول، وما يفتح اتصال بث — يقرأ اللي يحسبه اتصال الموقع.

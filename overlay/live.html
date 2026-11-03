@@ -8,7 +8,7 @@
 <title>أوفرلي البث — ألعاب أيمن</title>
 <!--
   «رابط الأوفرلي»: يحطه المذيع بـOBS أو TikTok LIVE Studio كـBrowser Source
-  (overlay.html?k=<رمز> — ينسخه من «استوديو البث»). الخلفية شفافة، والتصميم
+  (overlay/live.html?k=<رمز> — ينسخه من «شاشات البث» overlay/). الخلفية شفافة، والتصميم
   والبيانات من السيرفر بالرمز (js/agp-stream-overlay.js بوضع data-agp-overlay-link).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,11 +25,11 @@
   if (!new URLSearchParams(location.search).get('k')) {
     var m = document.createElement('div');
     m.className = 'ol-missing';
-    m.textContent = 'الرابط ناقص — انسخ رابط الأوفرلي من «استوديو البث» بموقع ألعاب أيمن';
+    m.textContent = 'الرابط ناقص — انسخ رابط الشاشة من «شاشات البث» بموقع ألعاب أيمن';
     document.body.appendChild(m);
   } else {
     var s = document.createElement('script');
-    s.src = 'js/agp-stream-overlay.js';
+    s.src = '../js/agp-stream-overlay.js';
     document.body.appendChild(s);
   }
 </script>

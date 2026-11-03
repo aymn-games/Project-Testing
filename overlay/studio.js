@@ -1,7 +1,7 @@
 /**
- * AGP OBS STUDIO — صفحة «شاشات البث» (obs-studio.html): محرر شاشات لـOBS وTikTok
+ * AGP OBS STUDIO — صفحة «شاشات البث» (overlay/index.html): محرر شاشات لـOBS وTikTok
  * LIVE Studio. المذيع يسوي أكثر من شاشة، يرتّب فوق كل وحدة الأدوات اللي يبيها،
- * وينسخ رابطها (overlay.html?k=<رمز>) ويحطه بتطبيق البث كـBrowser Source.
+ * وينسخ رابطها (overlay/live.html?k=<رمز>) ويحطه بتطبيق البث كـBrowser Source.
  *
  * - يمين الشاشة شريط أقسام بالطول (الأليرتات، التوب، الأهداف، الوعاء، النصوص،
  *   الأيقونات، الأشكال، الطبقات، الشاشة). الضغط على قسم يفتح لوحته جنبه، وفيها
@@ -65,7 +65,7 @@
         { key: 'dark', label: 'داكن' },
         { key: 'light', label: 'فاتح' },
         { key: 'green', label: 'كروما' },
-        { key: 'roulette', label: 'لعبة', img: 'elimination-roulette-cover.png' }
+        { key: 'roulette', label: 'لعبة', img: '../elimination-roulette-cover.png' }
     ];
 
     var TOOLS = {
@@ -172,7 +172,7 @@
         });
     }
 
-    function linkUrl(scr) { return scr ? new URL('overlay.html?k=' + scr.key, location.href).href : ''; }
+    function linkUrl(scr) { return scr ? new URL('live.html?k=' + scr.key, location.href).href : ''; }
 
     function setSaved(kind, text) {
         savedEl.className = 'ob-saved' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
@@ -1011,13 +1011,13 @@
             gbox.appendChild(el('h2', null, 'سجّل دخول أول'));
             gbox.appendChild(el('p', null, 'شاشات البث مربوطة بحسابك، عشان تحفظ تصاميمك وتاخذ رابط لكل شاشة.'));
             var a = el('a', 'ob-btn primary', 'تسجيل الدخول');
-            a.href = 'login.html';
+            a.href = '../login.html';
             gbox.appendChild(a);
         } else if (kind === 'streamer') {
             gbox.appendChild(el('h2', null, 'لحسابات الستريمر'));
             gbox.appendChild(el('p', null, 'شاشات البث لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
             var b = el('a', 'ob-btn ghost', 'رجوع لحسابي');
-            b.href = 'profile.html';
+            b.href = '../profile.html';
             gbox.appendChild(b);
         } else {
             gbox.appendChild(el('h2', null, 'ما قدرنا نفتح شاشاتك'));

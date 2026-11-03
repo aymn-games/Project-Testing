@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>شاشات البث — ألعاب أيمن</title>
-<link rel="icon" href="favicon.ico">
+<link rel="icon" href="../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <style>
-  /* «شاشات البث» — محرر شاشات OBS / TikTok LIVE Studio (js/agp-obs-studio.js).
+  /* «شاشات البث» — محرر شاشات OBS / TikTok LIVE Studio (overlay/studio.js).
      هوية الموقع: خلفية داكنة وبنفسجي #7a3fd4، ولمسة سماوي للروابط. */
   :root {
     --bg: #07060c; --rail: #0c0b14; --panel: #110f1c; --card: rgba(255,255,255,.035); --card-2: rgba(255,255,255,.06);
@@ -210,7 +210,7 @@
 <body>
 <div class="ob-app">
   <header class="ob-top">
-    <a class="ob-back" href="profile.html" title="رجوع لحسابي" aria-label="رجوع لحسابي">→</a>
+    <a class="ob-back" href="../profile.html" title="رجوع لحسابي" aria-label="رجوع لحسابي">→</a>
     <div class="ob-brand"><b>شاشات البث</b><small>OBS و TikTok LIVE Studio</small></div>
     <span class="ob-sep"></span>
     <div class="ob-screens" id="ob-screens"></div>
@@ -232,8 +232,8 @@
 </div>
 <div class="ob-gate" id="ob-gate" hidden><div class="ob-gbox" id="ob-gbox"></div></div>
 <div class="ob-toast" id="ob-toast"></div>
-<script src="auth/auth-client.js"></script>
-<script src="js/agp-stream-overlay.js"></script>
-<script src="js/agp-obs-studio.js"></script>
+<script src="../auth/auth-client.js"></script>
+<script src="../js/agp-stream-overlay.js"></script>
+<script src="studio.js"></script>
 </body>
 </html>

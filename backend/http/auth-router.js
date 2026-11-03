@@ -169,7 +169,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
   { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
   { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
-  // «شاشات البث» (obs-studio.html) — كل شاشة لها رابط overlay.html?k= لـOBS/TikTok LIVE Studio.
+  // «شاشات البث» (overlay/index.html) — كل شاشة لها رابط overlay/live.html?k= لـOBS/TikTok LIVE Studio.
   // راجع stats/stream-screens-service.js. الإدارة لحسابات الستريمر، والرابط يقرأ بالرمز بس.
   { method: 'GET', path: '/api/screens', requireAuth: true, handler: handleListScreens },
   { method: 'POST', path: '/api/screens/create', requireAuth: true, handler: handleCreateScreen },
@@ -924,7 +924,7 @@ function sendRecentGifts(res, username, since) {
 }
 
 /* -----------------------------------------------------------------------
- * «شاشات البث» — obs-studio.html، وكل شاشة رابطها overlay.html?k=<رمز>.
+ * «شاشات البث» — overlay/index.html، وكل شاشة رابطها overlay/live.html?k=<رمز>.
  * ----------------------------------------------------------------------- */
 
 /** نفس شرط الاتصال بالبث (ws-server checkStreamConnectAllowed): حساب ستريمر أو صلاحية. */
