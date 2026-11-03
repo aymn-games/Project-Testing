@@ -490,9 +490,9 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var html = '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : done + '/' + team.length) + '</span></div>' +
             (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
             playerRows(G, {
-                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia'; },
+                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && p.id !== me.mafiaPrev; },
                 sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
-                tag: function (p) { if (p.team === 'mafia') return '🔪'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : ''; },
+                tag: function (p) { if (p.team === 'mafia') return '🔪'; if (p.id === me.mafiaPrev) return 'أمس'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : ''; },
                 skip: { id: 'skip', sel: ops[me.id] && ops[me.id].op === 'skip', tag: (function () { var n = cnt(function (id) { return ops[id] && ops[id].op === 'skip'; }); return n ? String(n) : ''; })() }
             });
         if (aux.length && !recruitMine) {
