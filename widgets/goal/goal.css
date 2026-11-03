@@ -227,6 +227,16 @@ body {
 
 /* ===== شكل القلب (?style=heart) ===== */
 .goal-heart { display: none; }
+/* القلب بدون كرت خلفه: يركب على البث مباشرة، والنصوص بظل عشان تنقرأ فوق أي خلفية. */
+:root[data-style="heart"] {
+    --goal-bg: transparent;
+    --goal-border: transparent;
+    --goal-shadow: none;
+    --goal-blur: 0px;
+    --goal-muted: rgba(255, 255, 255, .9);
+}
+:root[data-style="heart"] .goal-title,
+:root[data-style="heart"] .goal-foot { text-shadow: 0 2px 6px rgba(0, 0, 0, .7); }
 :root[data-style="heart"] .goal {
     width: auto;
     display: inline-flex;
