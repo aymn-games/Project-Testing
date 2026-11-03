@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devil Heart Goals — قلوب الأهداف</title>
+<!--
+    قلوب الأهداف (Devil Heart Goals) — ملف واحد، Browser Source لـ OBS.
+    قلب زجاجي بجناحين وقرنين وذيل، يتعبّى بسائل فيه لمعات وقلوب صغيرة،
+    ولما يكتمل الهدف تطلع قلوب طايرة فوقه. الخلفية شفافة بالكامل.
+
+    الإعدادات من الرابط (رقم القلب 1 أو 2 أو 3):
+      current1=80&target1=100     القيمة الحالية والهدف
+      label1=Donation Goal        اسم الهدف تحت القلب
+      color1=8b4dff               لون السائل (بدون #)
+      glow1=a35cff                لون التوهج
+      wing1=5b2a9e                لون الجناحين والقرنين والذيل
+      prefix1=$                   رمز قبل الرقم
+      display1=fraction|count|percent   طريقة عرض الرقم (display= للكل)
+      count=2                     عدد القلوب المعروضة (1–3)
+      only=2                      اعرض القلب رقم 2 بس (لـ Browser Source مستقل لكل قلب)
+      size=240                    عرض القلب بالبكسل
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Tajawal:wght@700&display=swap">
+<style>
+    :root {
+        --heart-size: 240px;
+        --heart-gap: 80px;
+        --heart-font: 'Quicksand', 'Tajawal', system-ui, sans-serif;
+        --heart-wave-speed: 3s;
+        --heart-fill-time: 1.8s;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+        font-family: var(--heart-font);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+        gap: var(--heart-gap);
+        padding: 40px 16px 20px;
+    }
+
+    .goal {
+        --c: #8b4dff;   /* السائل */
+        --g: #a35cff;   /* التوهج */
+        --w: #5b2a9e;   /* الجناحين والقرنين والذيل */
+        width: var(--heart-size);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: goal-in .9s cubic-bezier(.2, .9, .3, 1.2) both;
+    }
+    .goal:nth-child(2) { animation-delay: .12s; }
+    .goal:nth-child(3) { animation-delay: .24s; }
+    .goal svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+    /* ===== الجناحين والقرنين والذيل ===== */
+    .wing { fill: url(#WING); stroke: color-mix(in srgb, var(--w) 60%, #ffffff); stroke-width: 1.6; stroke-linejoin: round; }
+    .wing-bone { fill: none; stroke: color-mix(in srgb, var(--w) 45%, #ffffff); stroke-width: 1.6; stroke-linecap: round; opacity: .8; }
+    /* الرفرفة على الجناح الداخلي؛ الجناح اليمين نفس اليسار بعد قلبه بمجموعة خارجية. */
+    .flap { transform-box: view-box; transform-origin: 76px 126px; animation: flap 3.2s ease-in-out infinite; }
+    .horn { fill: color-mix(in srgb, var(--w) 70%, #120018); stroke: color-mix(in srgb, var(--w) 55%, #ffffff); stroke-width: 1.4; }
+    .tail { fill: none; stroke: color-mix(in srgb, var(--w) 80%, #ffffff); stroke-width: 4.5; stroke-linecap: round; }
+    .tail-tip { fill: color-mix(in srgb, var(--w) 80%, #ffffff); }
+    .tail-g { transform-box: view-box; transform-origin: 160px 238px; animation: tail 4s ease-in-out infinite; }
+    .devil { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--g) 45%, transparent)); }
+
+    /* ===== الزجاج ===== */
+    .glass-in { opacity: 1; }
+    .glass-line { fill: none; stroke: color-mix(in srgb, var(--g) 25%, #f2eaff); stroke-width: 7; stroke-linejoin: round; opacity: .85; }
+    .neon {
+        filter:
+            drop-shadow(0 0 4px var(--g))
+            drop-shadow(0 0 14px color-mix(in srgb, var(--g) 80%, transparent))
+            drop-shadow(0 0 32px color-mix(in srgb, var(--g) 50%, transparent));
+    }
+    .hl      { fill: #ffffff; opacity: .7; }
+    .hl-soft { fill: #ffffff; opacity: .18; }
+
+    /* ===== السائل ===== */
+    .liquid { transition: transform var(--heart-fill-time) cubic-bezier(.22, 1, .36, 1); }
+    .wave-a { animation: wave var(--heart-wave-speed) linear infinite; }
+    .wave-b { animation: wave-rev calc(var(--heart-wave-speed) * 1.5) linear infinite; }
+    .wave-c { animation: wave calc(var(--heart-wave-speed) * 1.25) linear infinite; }
+    .sparkle { fill: #ffffff; animation: twinkle 2.4s ease-in-out infinite; }
+    .mini {
+        fill: color-mix(in srgb, var(--c) 30%, #ffd6ea);
+        opacity: 0;
+        animation: rise 5s ease-in infinite;
+    }
+
+    /* قلوب طايرة فوق القلب لما يكتمل الهدف */
+    .fly { opacity: 0; transition: opacity .6s; }
+    .goal.is-full .fly { opacity: 1; }
+    .fly path {
+        fill: color-mix(in srgb, var(--g) 35%, #ffc4e1);
+        opacity: 0;
+        animation: fly 3.6s ease-out infinite;
+    }
+
+    .goal.is-full .heart-body { animation: beat 1.6s ease-in-out infinite; transform-box: view-box; transform-origin: 160px 160px; }
+
+    /* ===== النص ===== */
+    .label, .value {
+        text-align: center;
+        white-space: nowrap;
+        color: #fff;
+        text-shadow: 0 0 10px color-mix(in srgb, var(--g) 55%, transparent), 0 2px 4px rgba(0, 0, 0, .6);
+    }
+    .label { margin-top: 6px; font-size: calc(var(--heart-size) * .1); font-weight: 700; }
+    .value { margin-top: 2px; font-size: calc(var(--heart-size) * .085); font-weight: 700; font-variant-numeric: tabular-nums; opacity: .95; }
+
+    @keyframes wave     { from { transform: translateX(0); }      to { transform: translateX(-120px); } }
+    @keyframes wave-rev { from { transform: translateX(-120px); } to { transform: translateX(0); } }
+    @keyframes twinkle  { 0%, 100% { opacity: .15; } 50% { opacity: .95; } }
+    @keyframes rise {
+        0%   { transform: translateY(0); opacity: 0; }
+        15%  { opacity: .9; }
+        100% { transform: translateY(-150px); opacity: 0; }
+    }
+    @keyframes fly {
+        0%   { transform: translateY(0) scale(.6); opacity: 0; }
+        20%  { opacity: .95; }
+        100% { transform: translateY(-80px) scale(1.1); opacity: 0; }
+    }
+    @keyframes flap { 0%, 100% { rotate: 0deg; } 50% { rotate: 8deg; } }
+    @keyframes tail   { 0%, 100% { rotate: -5deg; } 50% { rotate: 6deg; } }
+    @keyframes beat   { 0%, 100% { scale: 1; } 25% { scale: 1.05; } 45% { scale: .99; } 65% { scale: 1.03; } }
+    @keyframes goal-in { from { opacity: 0; transform: translateY(20px) scale(.94); } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .goal, .wave-a, .wave-b, .wave-c, .sparkle, .mini, .fly path, .flap, .tail-g,
+        .goal.is-full .heart-body { animation: none; }
+    }
+</style>
+</head>
+<body>
+<main class="row" id="row"></main>
+
+<script>
+(function () {
+    'use strict';
+
+    var q = new URLSearchParams(location.search);
+    function param(name, def) { var v = q.get(name); return v === null || v === '' ? def : v; }
+    function num(v, def) { var n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : def; }
+    function hex(v) { return /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v; }
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+    function fmt(n) { return Math.abs(n - Math.round(n)) > .004 ? n.toFixed(2) : String(Math.round(n)); }
+
+    var DEFAULTS = [
+        { label: 'Donation Goal',  color: '8b4dff', glow: 'a35cff', wing: '5b2a9e', prefix: '$', display: 'fraction' },
+        { label: 'Follow Goal',    color: 'ff1f3d', glow: 'ff2d4a', wing: '8e1b2c', prefix: '',  display: 'fraction' },
+        { label: 'Sub Goal',       color: 'ff4fb0', glow: 'ff6cc4', wing: '8a2563', prefix: '',  display: 'fraction' }
+    ];
+
+    /*
+     * الرسم (إحداثيات 320 × 320): القلب بين x 60..260 و y 70..240.
+     */
+    var HEART = 'M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 ' +
+                'C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z';
+    var HEART_T = 'translate(60 70)';
+    var BOTTOM = 240, TOP = 72;
+
+    // جناح خفاش (يسار)؛ اليمين نفسه معكوس.
+    // جناح خفاش يسار (حافة علوية مقوّسة وحافة سفلية مموّجة)، والمفصل عند (76,126).
+    var WING = 'M80 122 C64 86 26 52 -26 44 C-14 60 -12 74 -18 90 C-2 84 12 90 16 106 ' +
+               'C30 96 46 102 50 120 C58 112 70 116 74 134 Z';
+    var BONES = 'M76 126 L-22 48 M76 126 L-16 88 M76 126 L16 104 M76 126 L50 118';
+    var HORN_L = 'M92 86 C84 66 90 48 104 40 C100 56 104 70 116 80 Z';
+    var HORN_R = 'M228 86 C236 66 230 48 216 40 C220 56 216 70 204 80 Z';
+    var TAIL = 'M160 236 C150 268 112 266 116 294 C120 318 152 316 154 298';
+    var TIP = 'M146 290 L166 296 L154 312 Z';
+    var MINI = 'M0 2 C-3 -1 -6 0 -6 3 C-6 6 -2 8 0 10 C2 8 6 6 6 3 C6 0 3 -1 0 2 Z';
+
+    function wave(amp) {
+        var d = 'M-120 0';
+        for (var x = -120; x < 480; x += 60) { d += ' Q' + (x + 30) + ' ' + (((x / 60) % 2 === 0) ? -amp : amp) + ' ' + (x + 60) + ' 0'; }
+        return d + ' V360 H-120 Z';
+    }
+    var WAVE_A = wave(5), WAVE_B = wave(7);
+
+    if (param('size', '')) { document.documentElement.style.setProperty('--heart-size', num(param('size'), 240) + 'px'); }
+    if (param('gap', ''))  { document.documentElement.style.setProperty('--heart-gap', num(param("gap"), 80) + 'px'); }
+
+    function build(i) {
+        var d = DEFAULTS[i - 1];
+        var color = hex(param('color' + i, d.color));
+        var glow = hex(param('glow' + i, d.glow));
+        var wing = hex(param('wing' + i, d.wing));
+        var cfg = {
+            label: param('label' + i, d.label),
+            current: Math.max(0, num(param('current' + i, 0), 0)),
+            target: Math.max(0, num(param('target' + i, i === 2 ? 10 : 100), 100)),
+            prefix: param('prefix' + i, d.prefix),
+            display: param('display' + i, param('display', d.display))
+        };
+        var id = 'h' + i;
+        var heart = '<path transform="' + HEART_T + '" d="' + HEART + '"/>';
+        var light = 'color-mix(in srgb, ' + color + ' 55%, #ffffff)';
+
+        var sparkles = [[96, 30, 1.6, 0], [130, 52, 1.2, .8], [180, 26, 1.8, 1.5], [210, 60, 1.3, .4],
+                        [150, 88, 1.5, 1.1], [112, 76, 1.1, 1.9], [196, 98, 1.6, .2], [166, 120, 1.2, 1.4],
+                        [138, 18, 1.1, 2.1], [226, 34, 1.2, 1.7]].map(function (s) {
+            return '<circle class="sparkle" cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] +
+                '" style="animation-delay:' + s[3] + 's"/>';
+        }).join('');
+        var minis = [[120, 70, .9, 0], [176, 92, .7, 1.6], [200, 60, .8, 3], [146, 110, .6, 2.2]].map(function (m) {
+            return '<g transform="translate(' + m[0] + ' ' + m[1] + ') scale(' + m[2] + ')">' +
+                '<path class="mini" d="' + MINI + '" style="animation-delay:' + m[3] + 's"/></g>';
+        }).join('');
+        var flyers = [[140, 60, .9, 0], [176, 48, 1.1, .9], [158, 36, .7, 1.8], [196, 66, .8, 2.6], [124, 44, .75, 1.3]].map(function (f) {
+            return '<g transform="translate(' + f[0] + ' ' + f[1] + ') scale(' + f[2] + ')">' +
+                '<path d="' + MINI + '" style="animation-delay:' + f[3] + 's"/></g>';
+        }).join('');
+
+        var el = document.createElement('section');
+        el.className = 'goal';
+        el.style.setProperty('--c', color);
+        el.style.setProperty('--g', glow);
+        el.style.setProperty('--w', wing);
+        el.innerHTML =
+            '<svg viewBox="0 0 320 320" role="img" aria-label="' + esc(cfg.label) + '">' +
+              '<defs>' +
+                '<clipPath id="' + id + '-clip">' + heart + '</clipPath>' +
+                '<mask id="' + id + '-out" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="320">' +
+                  '<rect width="320" height="320" fill="#fff"/><g fill="#000">' + heart + '</g></mask>' +
+                '<linearGradient id="' + id + '-wing" x1="1" y1="1" x2="0" y2="0">' +
+                  '<stop offset="0" style="stop-color:color-mix(in srgb, ' + wing + ' 60%, #0d0010)"/>' +
+                  '<stop offset="1" style="stop-color:' + wing + '"/>' +
+                '</linearGradient>' +
+                '<linearGradient id="' + id + '-liq" x1="0" y1="0" x2="0" y2="1">' +
+                  '<stop offset="0" style="stop-color:' + color + '"/>' +
+                  '<stop offset="1" style="stop-color:color-mix(in srgb, ' + color + ' 70%, #14001c)"/>' +
+                '</linearGradient>' +
+                '<radialGradient id="' + id + '-glass" cx=".4" cy=".35" r=".8">' +
+                  '<stop offset="0" style="stop-color:rgba(255,255,255,.05)"/>' +
+                  '<stop offset=".75" style="stop-color:color-mix(in srgb, ' + glow + ' 12%, transparent)"/>' +
+                  '<stop offset="1" style="stop-color:color-mix(in srgb, ' + glow + ' 30%, transparent)"/>' +
+                '</radialGradient>' +
+              '</defs>' +
+              // الجناحين والذيل ورا القلب
+              '<g class="devil">' +
+                '<g><g class="flap"><path class="wing" d="' + WING + '"/><path class="wing-bone" d="' + BONES + '"/></g></g>' +
+                '<g transform="translate(320 0) scale(-1 1)"><g class="flap">' +
+                  '<path class="wing" d="' + WING + '"/><path class="wing-bone" d="' + BONES + '"/></g></g>' +
+                '<g class="tail-g"><path class="tail" d="' + TAIL + '"/><path class="tail-tip" d="' + TIP + '"/></g>' +
+              '</g>' +
+              '<g class="heart-body">' +
+                '<rect width="320" height="320" fill="url(#' + id + '-glass)" clip-path="url(#' + id + '-clip)"/>' +
+                '<g clip-path="url(#' + id + '-clip)">' +
+                  '<g class="liquid" style="transform:translateY(' + (BOTTOM + 12) + 'px)">' +
+                    '<path class="wave-b" style="fill:' + light + ';opacity:.5" d="' + WAVE_B + '" transform="translate(0 -5)"/>' +
+                    '<path class="wave-a" style="fill:' + light + '" d="' + WAVE_A + '"/>' +
+                    '<g transform="translate(0 7)"><path class="wave-c" fill="url(#' + id + '-liq)" d="' + WAVE_A + '"/></g>' +
+                    sparkles + minis +
+                  '</g>' +
+                '</g>' +
+                '<g class="neon"><g class="glass-line" mask="url(#' + id + '-out)">' + heart + '</g></g>' +
+                '<ellipse class="hl" cx="96" cy="100" rx="15" ry="8" transform="rotate(-30 96 100)"/>' +
+                '<circle class="hl" cx="82" cy="118" r="3.5"/>' +
+                '<ellipse class="hl-soft" cx="214" cy="98" rx="13" ry="6" transform="rotate(30 214 98)"/>' +
+                '<path class="hl-soft" d="M80 150 C88 172 104 190 124 204" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
+              '</g>' +
+              // القرنين فوق القلب
+              '<g class="devil"><path class="horn" d="' + HORN_L + '"/><path class="horn" d="' + HORN_R + '"/></g>' +
+              '<g class="fly">' + flyers + '</g>' +
+            '</svg>' +
+            '<div class="label">' + esc(cfg.label) + '</div>' +
+            '<div class="value"></div>';
+
+        // تدرّج الجناح خاص بكل قلب
+        el.querySelectorAll('.wing').forEach(function (w) { w.style.fill = 'url(#' + id + '-wing)'; });
+
+        var liquid = el.querySelector('.liquid');
+        var valueEl = el.querySelector('.value');
+        var shown = 0;
+
+        function text(v) {
+            var p = cfg.target > 0 ? Math.floor(v / cfg.target * 100) : 0;
+            var a = cfg.prefix + fmt(v), b = cfg.prefix + fmt(cfg.target);
+            if (cfg.display === 'percent') { return p + '%'; }
+            if (cfg.display === 'count') { return a; }
+            return a + ' · ' + b;
+        }
+
+        /* يرفع السائل بسلاسة ويعدّ الرقم تدريجياً. */
+        function set() {
+            var pct = cfg.target > 0 ? cfg.current / cfg.target * 100 : 0;
+            var lvl = Math.min(100, pct);
+            var y = BOTTOM + 12 - (BOTTOM + 12 - TOP + 6) * lvl / 100;
+            liquid.style.transform = 'translateY(' + y.toFixed(2) + 'px)';
+            el.classList.toggle('is-full', pct >= 100 && cfg.target > 0);
+            var from = shown, to = cfg.current, t0 = performance.now(), dur = 1700;
+            (function step(now) {
+                var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+                shown = from + (to - from) * e;
+                valueEl.textContent = text(k >= 1 ? to : shown);
+                if (k < 1) { requestAnimationFrame(step); }
+            }(t0));
+        }
+        valueEl.textContent = text(0);
+        return { el: el, set: set };
+    }
+
+    // only=N يعرض قلب واحد بس (لكل قلب Browser Source مستقل)، وإلا count قلوب من الأول.
+    var only = Math.round(num(param('only', 0), 0));
+    var list = [];
+    if (only >= 1 && only <= 3) { list = [only]; }
+    else {
+        var count = Math.max(1, Math.min(3, Math.round(num(param('count', 2), 2))));
+        for (var n = 1; n <= count; n++) { list.push(n); }
+    }
+    var row = document.getElementById('row');
+    var goals = list.map(function (n) { var g = build(n); row.appendChild(g.el); return g; });
+    setTimeout(function () { goals.forEach(function (g) { g.set(); }); }, 300);
+}());
+</script>
+</body>
+</html>
