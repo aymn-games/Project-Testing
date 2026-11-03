@@ -483,9 +483,17 @@
         return Boolean(sc && sc.getStatus('tiktok') === 'connected');
     }
 
+    // صفحة لعبة (مو صفحة دخول اللاعبين) — /games/<id>/ أو /discord-games/<id>/
+    var GAME_PAGE = /\/(?:discord-)?games\/[a-z0-9-]+\//i.test(location.pathname) && !/\/join\.html$/i.test(location.pathname);
+
+    /** صفحة لعبة ما فيها اتصال تيك توك خاص (حفلة الميلاد، محطة سهيل، المافيا،
+     * من الأمبوستر…): نفتح الاتصال حتى لو التصميم ما يحتاج بيانات، عشان
+     * الستريمر يظهر بـ«البثوث الشغّالة» (الأدمن وبطاقات المكتبة). */
+    function presenceWanted() { return GAME_PAGE && !STUDIO && !gameConnector(); }
+
     function linkWanted() {
         var c = savedConn();
-        if (!dataWanted() || !token() || !c) return false;
+        if ((!dataWanted() && !presenceWanted()) || !token() || !c) return false;
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
         if (gameConnected()) { gameDownSince = null; return false; }
         if (gameConnector()) {
