@@ -180,7 +180,8 @@ function createGame(roster, settings, hooks) {
         if (card && card.card === 'none') card = null;
         if (op && op.op === 'recruit') { card = null; if (!available('recruit')) op = null; }   // التجنيد بديل القتل وما يجتمع مع كرت
         var opTarget = op && P(op.target);
-        if (opTarget && (!opTarget.alive || opTarget.faction === 'mafia')) { op = null; opTarget = null; }
+        if (opTarget && (!opTarget.alive || opTarget.faction === 'mafia' || opTarget.id === G.mafiaPrev)) { op = null; opTarget = null; }
+        G.mafiaPrev = opTarget ? opTarget.id : null;   // المافيا ما يستهدفون نفس الشخص ليلتين ورا بعض
 
         // ---- الكرت المساعد
         var cardTarget = card && P(card.target);
@@ -393,7 +394,7 @@ function createGame(roster, settings, hooks) {
             if (a === 'kill' && arg === 'skip' && me.faction === 'mafia' && turn === 'mafia') N.ops[id] = { op: 'skip' };   // تخطي: ما يقتلون أحد
             else if ((a === 'kill' || a === 'recruit') && me.faction === 'mafia' && turn === 'mafia') {
                 var t = P(String(arg || ''));
-                if (!t || !t.alive || t.faction === 'mafia') return;
+                if (!t || !t.alive || t.faction === 'mafia' || t.id === G.mafiaPrev) return;   // ممنوع نفس هدف الليلة اللي فاتت
                 if (a === 'recruit' && !available('recruit')) return;
                 N.ops[id] = { op: a, target: t.id };
             } else if (a === 'card' && me.faction === 'mafia' && turn === 'mafia') {
@@ -495,7 +496,7 @@ function createGame(roster, settings, hooks) {
             };
             if (me.role === 'doctor') { v.me.doctorPrev = me.doctorPrev; v.me.doctorSelfUsed = me.doctorSelfUsed; }
             if (G.phase === 'night' && G.night) {
-                if (meMafia) { v.me.ops = G.night.ops; v.me.cardVotes = G.night.cards; }
+                if (meMafia) { v.me.ops = G.night.ops; v.me.cardVotes = G.night.cards; v.me.mafiaPrev = G.mafiaPrev || null; }
                 if (me.role === 'doctor') v.me.protect = G.night.actions[me.id] || null;
                 if (me.role === 'detective') v.me.inspect = G.night.actions[me.id] || null;
             }

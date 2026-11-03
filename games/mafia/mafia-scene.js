@@ -51,13 +51,23 @@ function makeSprite(scaleY) {
     return sp;
 }
 
+// صور بروفايل اللاعبين للافتات (Data URL من الخادم بس، عشان الكانفس ما ينقفل بسبب صور من دومين ثاني)
+const PHOTO_IMG = new Map();
+function photoImg(src) {
+    if (!src || src.slice(0, 5) !== 'data:') return null;
+    let im = PHOTO_IMG.get(src);
+    if (!im) { im = new Image(); im.onload = () => { im._ok = true; }; im.src = src; PHOTO_IMG.set(src, im); if (PHOTO_IMG.size > 400) PHOTO_IMG.delete(PHOTO_IMG.keys().next().value); }
+    return im._ok ? im : null;
+}
 function drawTag(sp, o) {
-    const key = JSON.stringify(o); if (sp.userData.key === key) return; sp.userData.key = key;
+    const ph = photoImg(o.photo);
+    const key = JSON.stringify([o.name, o.num, o.dead, o.role, o.team, o.ring, ph ? o.photo.length : 0]); if (sp.userData.key === key) return; sp.userData.key = key;
     const { c, tex } = sp.userData, ctx = c.getContext('2d'), W = c.width, H = c.height;
     ctx.clearRect(0, 0, W, H);
     ctx.font = '800 50px ' + FONT; ctx.direction = 'rtl';
     const name = o.name.length > 14 ? o.name.slice(0, 13) + '…' : o.name;
-    const tw = Math.min(330, ctx.measureText(name).width), bw = tw + 120, x = (W - bw) / 2, y = 14, h = 72;
+    const PW = ph ? 78 : 0;   // مكان الصورة على يمين الاسم
+    const tw = Math.min(330 - PW, ctx.measureText(name).width), bw = tw + 120 + PW, x = (W - bw) / 2, y = 14, h = 72;
     ctx.globalAlpha = o.dead ? 0.6 : 1;
     roundRect(ctx, x, y, bw, h, 36); ctx.fillStyle = 'rgba(20,22,40,.82)'; ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = o.ring || 'rgba(255,255,255,.18)'; ctx.stroke();
@@ -67,7 +77,14 @@ function drawTag(sp, o) {
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '900 32px ' + FONT;
     ctx.fillText(o.dead ? '✕' : String(o.num), x + 40, y + h / 2 + 2);
     ctx.font = '800 46px ' + FONT; ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
-    ctx.fillText(name, x + bw - 22, y + h / 2 + 3, tw);
+    if (ph) {
+        const cx = x + bw - 40, cy = y + h / 2, r = 30;
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.closePath(); ctx.clip();
+        if (o.dead) ctx.filter = 'grayscale(1)';
+        ctx.drawImage(ph, cx - r, cy - r, r * 2, r * 2); ctx.restore();
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.stroke();
+    }
+    ctx.fillText(name, x + bw - 22 - PW, y + h / 2 + 3, tw);
     if (o.role || o.team) {
         // الدور كامل لو مكشوف، وإلا الفريق بس (المطرود حسب القواعد)
         const R = o.role ? L.ROLE[o.role] : o.team === 'mafia' ? { icon: '🔪', n: 'مافيا', c: '#e2483d' } : { icon: '🏠', n: 'مواطن', c: '#2f7de1' };
@@ -937,7 +954,7 @@ export function createStage(container, getFrame, opts) {
             const hideRoleNow = phase === 'verdict' && G.verdict && G.verdict.id === id && now - G.phaseAt < 4200;
             const shown = (revealDead || phase === 'over') && !hideRoleNow, isVerdict = phase === 'verdict' && G.verdict && G.verdict.id === id;
             v.tag.visible = !v.lite || isVerdict;   // الحلقات البعيدة بدون أسماء (إلا المطرود وقت مشهده)
-            if (v.tag.visible) drawTag(v.tag, { name: p.name, num: v.num, dead: revealDead && !isVerdict, role: shown ? p.role : null, team: shown ? p.team : null, ring: speakers[id] ? '#ffd34d' : null });
+            if (v.tag.visible) drawTag(v.tag, { photo: opts.photoOf ? opts.photoOf(id) : null, name: p.name, num: v.num, dead: revealDead && !isVerdict, role: shown ? p.role : null, team: shown ? p.team : null, ring: speakers[id] ? '#ffd34d' : null });
             v.tag.position.set(0, revealDead ? 1.25 : 2.45, 0);
             // المطرود بالتصويت راح مع القفص: يبقى كرسيه فاضي واسمه عليه
             c.root.visible = !(revealDead && p.cause === 'vote');
