@@ -451,7 +451,8 @@ export function createArena(container, opts = {}) {
             drawTag(c.tag, { name: p.name, avatarUrl: p.avatarUrl, ring: p.ring || null, dim: c.kind === 'queue' });
             drawPill(c.bubble, p.bubble || null);
             drawPill(c.badge, p.badge || null);
-            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag; // اللي بالمواجهة اسمه بشريط VS فوق
+            // اللي بالمواجهة اسمه بشريط VS فوق. واللوبي (stage) أسماؤه وصورهم HTML بالصفحة (heads())
+            c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag;
             c.hl = p.hl || 0;
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
@@ -546,11 +547,13 @@ export function createArena(container, opts = {}) {
     }
     const widePos = new T.Vector3(), wideLook = new T.Vector3(0, .9, 1.4), _wp = new T.Vector3(), _wl = new T.Vector3();
     const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
+    const CHAMP_DROP = .24; let champK = 0;
     function placeCamera(k, kd, kw) {
         camera.position.lerpVectors(basePos, closePos, k);
         _cl.lerpVectors(camLook, closeLook, k);
         if (kw > 0) { camera.position.lerp(widePos, kw); _cl.lerp(wideLook, kw); }
         if (kd > 0) { camera.position.lerp(DO.pos, kd); _cl.lerp(DO.look, kd); }
+        _cl.y -= CHAMP_DROP * champK; // شاشة الفوز: البطل أعلى بالكادر عشان بطاقة الفوز ما تغطي رجوله
         camera.lookAt(_cl);
     }
     // ================================================================ أيدي الشخصيات بأصابع + التقريب
@@ -751,6 +754,7 @@ export function createArena(container, opts = {}) {
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
         WA += ((camMode === 'wide' ? 1 : 0) - WA) * (1 - Math.exp(-dt * 2.2));
+        champK += ((phase === 'champion' ? 1 : 0) - champK) * (REDUCED ? 1 : 1 - Math.exp(-dt * 2.5));
         placeCamera(closeTick(dt), doomTick(dt), REDUCED ? (camMode === 'wide' ? 1 : 0) : ease(WA));
         if (composer) composer.render(); else renderer.render(scene, camera);
     }
@@ -778,5 +782,17 @@ export function createArena(container, opts = {}) {
         if (composer) composer.dispose && composer.dispose();
         renderer.dispose(); renderer.domElement.remove();
     }
-    return { ready, setState, stop };
+    // مكان راس كل شخصية باللوبي على الشاشة (بكسل)، عشان الصفحة تحط فوقه تبويب HTML بالاسم وصورة تيك توك:
+    // صورة الحساب بـ<img> عادي تطلع حتى لو سيرفر الصور ما يسمح برسمها داخل WebGL (CORS)
+    const hv = new T.Vector3();
+    function heads() {
+        const w = container.clientWidth || 1, h = container.clientHeight || 1, out = [];
+        for (const c of chars.values()) {
+            if (c.kind !== 'stage' || !c.rig.root.visible) continue;
+            hv.set(c.pos.x, c.pos.y + 1.86, c.pos.z).project(camera);
+            out.push({ id: c.id, x: (hv.x + 1) / 2 * w, y: (1 - hv.y) / 2 * h, z: hv.z });
+        }
+        return out;
+    }
+    return { ready, setState, stop, heads };
 }

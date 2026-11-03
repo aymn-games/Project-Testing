@@ -80,6 +80,18 @@
             return pl;
         }
 
+        /**
+         * دخول متأخر بعد بداية البطولة («إتاحة الدخول»): اللاعب الجديد ينتظر مع المتأهلين ويدخل القرعة من الدور الجاي.
+         * اللي دخل قبل (حتى لو انقصى) ما يرجع، والحد الأعلى على اللاعبين الباقين بالبطولة.
+         */
+        function lateJoin(p) {
+            if (round === 0) return join(p);
+            if (champ || !p || !p.id || byId[p.id] || alive().length >= maxPlayers) return null;
+            var pl = { id: p.id, name: String(p.name || p.id), avatarUrl: p.avatarUrl || null, out: false, outRound: 0, byes: 0, late: round };
+            players.push(pl); byId[p.id] = pl;
+            return pl;
+        }
+
         /** يحدّث الاسم/الصورة لو تغيّرت (نفس اللاعب). */
         function touch(p) {
             var pl = p && byId[p.id];
@@ -92,6 +104,21 @@
             if (round > 0 || !byId[id]) return false;
             players = players.filter(function (p) { return p.id !== id; });
             delete byId[id];
+            return true;
+        }
+
+        /**
+         * إقصاء يدوي من المذيع. قبل البداية يشيله من اللوبي. بعدها يطلع من البطولة فوراً:
+         * لو مواجهته ما انحسمت، خصمه ياخذها (how: 'kick')، ولو كان متأهل مباشرة يروح تأهله.
+         */
+        function kick(id) {
+            var pl = byId[id];
+            if (!pl || pl.out || champ) return false;
+            if (round === 0) return remove(id);
+            var d = duelOf(id);
+            if (d) { var other = d.a === id ? d.b : d.a; d.result = 'done'; d.winner = other; d.loser = id; d.how = 'kick'; d.picks = {}; }
+            if (bye === id) bye = null;
+            pl.out = true; pl.outRound = round; pl.kicked = true;
             return true;
         }
 
@@ -192,7 +219,7 @@
         }
 
         return {
-            join: join, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
+            join: join, lateJoin: lateJoin, kick: kick, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
             startReplay: startReplay, roundDone: roundDone, nextRound: nextRound, stageName: stageName,
             get players() { return players; },
             get alive() { return alive(); },

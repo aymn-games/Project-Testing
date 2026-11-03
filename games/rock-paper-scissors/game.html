@@ -47,6 +47,66 @@
     .hbtn:hover{ background:rgba(122,63,212,.35); }
     .hbtn:active{ transform:scale(.97); }
     .hbtn.exit{ color:#fda4af; border-color:rgba(244,63,94,.3); }
+    .hbtn.ic{ width:38px; padding:0; justify-content:center; } .hbtn.ic .ms{ font-size:21px; }
+    /* ===== إعدادات المباراة: نفس لوحة «روليت الإقصاء» (لوحة جانبية يمين تحت الهيدر) ===== */
+    .hbtn.set{ border-color:rgba(167,139,250,.3); background:rgba(139,92,246,.08); color:#ddd6fe; backdrop-filter:blur(10px); }
+    .hbtn.set:hover{ background:rgba(139,92,246,.16); border-color:rgba(167,139,250,.55); }
+    .smodal{ position:fixed; inset:76px 0 0 0; z-index:40; background:rgba(0,0,0,.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); direction:rtl; animation:sFade .25s ease; }
+    .smodal.hidden{ display:none; }
+    .smodal.closing{ animation:sFadeOut .26s ease forwards; } .smodal.closing .sbox{ animation:sSlideOut .26s ease forwards; }
+    @keyframes sFade{ from{ opacity:0; } to{ opacity:1; } } @keyframes sFadeOut{ from{ opacity:1; } to{ opacity:0; } }
+    @keyframes sSlideIn{ from{ opacity:0; transform:translateX(60px); } to{ opacity:1; transform:none; } }
+    @keyframes sSlideOut{ from{ opacity:1; transform:none; } to{ opacity:0; transform:translateX(60px); } }
+    .sbox{ position:absolute; top:clamp(6px,1vw,12px); right:clamp(8px,1vw,16px); width:min(400px,calc(100vw - 16px)); height:min(1100px,calc(100dvh - 92px)); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;
+        background:rgba(12,11,18,.94); border:1px solid rgba(255,255,255,.08); border-radius:24px; box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 80px rgba(124,58,237,.12); animation:sSlideIn .45s cubic-bezier(.2,1,.3,1); }
+    .shead{ display:flex; justify-content:space-between; align-items:center; padding:clamp(14px,3.5vw,22px) clamp(16px,4vw,26px); border-bottom:1px solid rgba(255,255,255,.06); }
+    .shead h2{ margin:0; font:700 clamp(18px,1.2vw,24px) 'IBM Plex Sans Arabic'; color:#f3ecff; }
+    .sx{ width:42px; height:42px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#e7e3ef; cursor:pointer; display:grid; place-items:center; transition:background .2s; }
+    .sx:hover{ background:rgba(255,255,255,.09); }
+    .stabs-wrap{ padding:clamp(12px,3vw,18px) clamp(14px,3.5vw,22px) 0; }
+    .stabs{ display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px; border-radius:999px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); }
+    .stabs button{ height:44px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font:700 16px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; transition:all .25s; }
+    .stabs button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.4); }
+    .sbody{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; padding:clamp(14px,3.5vw,20px) clamp(14px,3.5vw,22px); display:flex; flex-direction:column; gap:8px; }
+    .sbody::-webkit-scrollbar{ display:none; }
+    .scard{ flex-shrink:0; display:flex; flex-direction:column; gap:14px; padding:16px; border-radius:18px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); }
+    .scard .lbl{ display:flex; flex-direction:column; gap:3px; text-align:right; }
+    .scard .lbl b{ font:700 16px 'IBM Plex Sans Arabic'; color:#f4f2f8; } .scard .lbl small{ font:500 13px/1.5 'IBM Plex Sans Arabic'; color:#8a8596; }
+    .sopts{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:5px; border-radius:999px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); }
+    .sopts button{ height:40px; border:none; border-radius:999px; cursor:pointer; font:700 15px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; transition:all .25s; }
+    .sopts button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.35); }
+    .sp-head{ display:flex; justify-content:space-between; align-items:center; padding:0 4px 6px; font:700 15px 'IBM Plex Sans Arabic'; color:#cfcad9; }
+    .sp-head b{ font:700 14px 'IBM Plex Sans Arabic'; color:#a78bfa; }
+    .sp{ flex-shrink:0; display:flex; align-items:center; gap:10px; height:56px; padding:0 8px 0 12px; border-radius:14px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); transition:all .25s; }
+    .sp.pending{ opacity:.55; background:rgba(248,113,113,.06); border-color:rgba(248,113,113,.25); } .sp.pending .sp-n > bdi{ text-decoration:line-through; }
+    .sp.out{ opacity:.75; background:rgba(248,113,113,.05); border-color:rgba(248,113,113,.2); }
+    .sp-num{ width:26px; height:26px; flex:none; border-radius:8px; display:grid; place-items:center; background:rgba(139,92,246,.14); color:#c4b5fd; font:700 13px 'IBM Plex Sans Arabic'; }
+    .sp-av{ width:34px; height:34px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:1.5px solid #b28cf5; font:900 15px 'Zain'; color:#fff; }
+    .sp-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .sp-n{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; text-align:right; }
+    .sp-n > bdi{ font:600 16px 'IBM Plex Sans Arabic'; color:#f4f2f8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sp-n small{ font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sp-chip{ flex:none; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); font:600 12px 'IBM Plex Sans Arabic'; color:#fca5a5; }
+    .sp-kick{ width:34px; height:34px; flex:none; border-radius:999px; border:1px solid rgba(248,113,113,.3); background:rgba(248,113,113,.08); color:#fca5a5; cursor:pointer; display:grid; place-items:center; transition:background .2s; }
+    .sp-kick:hover{ background:rgba(248,113,113,.18); } .sp-kick:active{ transform:scale(.92); }
+    .sp-undo{ height:34px; flex:none; padding:0 14px; border-radius:999px; border:1px solid rgba(167,139,250,.4); background:rgba(139,92,246,.15); color:#ddd6fe; font:700 13px 'IBM Plex Sans Arabic'; cursor:pointer; display:flex; align-items:center; gap:6px; animation:sFade .25s ease; }
+    .sp-undo:hover{ background:rgba(139,92,246,.28); }
+    .sfoot{ flex-shrink:0; padding:12px clamp(14px,3.5vw,22px) clamp(14px,3.5vw,22px); border-top:1px solid rgba(255,255,255,.06); font:500 12.5px/1.6 'IBM Plex Sans Arabic'; color:#8a8596; text-align:center; }
+    .sempty{ padding:40px 0; text-align:center; color:#8a8596; font:500 15px 'IBM Plex Sans Arabic'; }
+    /* «إتاحة الدخول» أثناء المباراة: العنوان يمين ومفتاح التبديل يسار (قاعدة صفوف الإعدادات) */
+    .late{ height:38px; padding:0 8px 0 14px; border-radius:999px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; white-space:nowrap; direction:rtl;
+        font:600 14px 'IBM Plex Sans Arabic'; color:#e7e3ef; background:rgba(24,16,40,.55); border:1px solid var(--line); }
+    .late .sw{ position:relative; width:40px; height:22px; border-radius:999px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); transition:background .2s; flex:none; }
+    .late .sw::after{ content:''; position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:#cfc7e2; transition:right .2s, background .2s; }
+    .late[aria-checked="true"]{ border-color:rgba(178,140,245,.6); }
+    .late[aria-checked="true"] .sw{ background:var(--grad); border-color:transparent; }
+    .late[aria-checked="true"] .sw::after{ right:20px; background:#fff; }
+    body.lobby .late{ display:none; }
+    /* كلمة الدخول جنب المفتاح، تظهر بس لما «إتاحة الدخول» مفعّل */
+    .late-kw{ height:38px; padding:0 6px 0 12px; border-radius:999px; display:none; align-items:center; gap:6px; white-space:nowrap; direction:rtl; font:600 13px 'IBM Plex Sans Arabic'; color:#e2d6ff; background:rgba(24,16,40,.55); border:1px solid rgba(178,140,245,.45); }
+    .late-kw .ms{ color:#f39bfd; font-size:1.25em; }
+    .late-kw b{ font:900 19px/1 'Zain'; padding:4px 12px 6px; border-radius:999px; color:#fff; background:var(--grad); max-width:140px; overflow:hidden; text-overflow:ellipsis; }
+    body.late-on:not(.lobby):not(.won) .late-kw{ display:inline-flex; }
     .count{ height:38px; padding:0 16px; border-radius:999px; display:flex; align-items:center; gap:8px; font:800 18px 'Zain'; border:1px solid var(--line); background:rgba(24,16,40,.55); }
     .count small{ font:500 13px 'IBM Plex Sans Arabic'; color:var(--muted); }
 
@@ -112,6 +172,26 @@
     .go-btn:hover{ filter:brightness(1.1); } .go-btn:active{ transform:translateX(-50%) scale(.97); }
     .go-btn .ms{ font-size:1.3em; }
     body.lobby .picks, body.lobby .count{ display:none; }
+    /* ===== اللوبي: كلمة الدخول فوق، وعدد اللاعبين واسم آخر داخل فوق زر «ابدأ» ===== */
+    .kw{ position:fixed; top:clamp(84px,11vh,104px); left:50%; transform:translateX(-50%); z-index:19; display:none; align-items:center; gap:10px; padding:10px 26px; border-radius:999px; white-space:nowrap; direction:rtl;
+        background:rgba(18,12,31,.88); border:1.5px solid rgba(178,140,245,.45); box-shadow:0 10px 30px rgba(0,0,0,.35); font:700 clamp(17px,1.6vw,24px) 'IBM Plex Sans Arabic'; color:#e2d6ff; }
+    .kw .ms{ color:#f39bfd; font-size:1.2em; }
+    .kw b{ font:900 1.35em/1 'Zain'; padding:4px 16px 6px; border-radius:14px; color:#fff; background:var(--grad); box-shadow:0 0 22px rgba(143,104,255,.45); }
+    .lobby-info{ position:fixed; bottom:calc(clamp(18px,4vh,40px) + 74px); left:50%; transform:translateX(-50%); z-index:25; display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; direction:rtl; }
+    .lobby-n{ display:inline-flex; align-items:center; gap:8px; padding:6px 18px; border-radius:999px; background:rgba(18,12,31,.88); border:1px solid rgba(178,140,245,.4); font:900 22px 'Zain'; color:#fff; }
+    .lobby-n .ms{ color:#b28cf5; } .lobby-n small{ font:600 14px 'IBM Plex Sans Arabic'; color:var(--muted); }
+    .joined{ display:inline-flex; align-items:center; gap:6px; padding:5px 16px; border-radius:999px; background:#2a1748; border:1px solid #9a6cf0; font:700 15px 'IBM Plex Sans Arabic'; color:#f3ecff; animation:joinIn .35s cubic-bezier(.2,1.4,.4,1) both; }
+    .joined .ms{ color:#f39bfd; } .joined.hidden{ display:none; }
+    @keyframes joinIn{ from{ opacity:0; transform:translateY(8px) scale(.9); } to{ opacity:1; transform:none; } }
+    body.lobby .kw{ display:inline-flex; } body.lobby .lobby-info{ display:flex; }
+    /* تبويبات اللوبي فوق راس كل شخصية: صورة حساب تيك توك + الاسم */
+    .ltags{ position:fixed; inset:0; z-index:6; pointer-events:none; display:none; }
+    body.lobby .ltags{ display:block; }
+    .ltag{ position:absolute; left:0; top:0; display:inline-flex; align-items:center; gap:6px; max-width:150px; padding:3px 10px 3px 3px; border-radius:999px; direction:rtl; white-space:nowrap; will-change:transform;
+        background:rgba(18,12,31,.9); border:1.5px solid rgba(178,140,245,.5); box-shadow:0 4px 14px rgba(0,0,0,.35); font:800 14px 'IBM Plex Sans Arabic'; color:#fff; }
+    .ltag bdi{ overflow:hidden; text-overflow:ellipsis; }
+    .ltag .lav{ order:2; width:26px; height:26px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:1.5px solid #b28cf5; font:900 13px 'Zain'; }
+    .ltag .lav img{ width:100%; height:100%; object-fit:cover; display:block; }
     .sound{ position:fixed; top:88px; right:clamp(12px,1.4vw,26px); z-index:25; height:40px; padding:0 16px; border-radius:999px; cursor:pointer; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(135deg,#7a3fd4,#9a6cf0); border:none; display:flex; align-items:center; gap:6px; box-shadow:0 8px 20px rgba(0,0,0,.4); }
 
     /* ===== العد الكبير «حجرة.. ورقة.. مقص!» ===== */
@@ -133,17 +213,24 @@
     .doom-n{ font:900 clamp(70px,7vw,120px)/1 'Zain'; color:#fff; text-shadow:0 0 40px #ff3b5c, 0 0 90px rgba(255,59,92,.7), 0 8px 0 rgba(60,0,15,.6); animation:doomNum .9s cubic-bezier(.2,1.4,.4,1) both; }
     @keyframes doomNum{ 0%{ opacity:0; transform:scale(2.2); } 35%{ opacity:1; transform:scale(.95); } 100%{ opacity:.85; transform:scale(1); } }
 
-    /* ===== شاشة الفوز ===== */
-    .champ{ position:fixed; bottom:clamp(18px,4vh,40px); left:50%; transform:translateX(-50%); z-index:22; width:min(520px,92vw); box-sizing:border-box; padding:18px 22px 20px; border-radius:26px; text-align:center;
-        background:#120c1f; border:1px solid rgba(178,140,245,.45); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.25); animation:rise .5s ease both; }
-    @keyframes rise{ from{ opacity:0; transform:translate(-50%,16px); } to{ opacity:1; transform:translate(-50%,0); } }
-    .champ .who{ display:flex; align-items:center; justify-content:center; gap:16px; }
-    .champ .av{ width:84px; height:84px; flex:none; border-radius:50%; position:relative; overflow:hidden; display:grid; place-items:center; background:linear-gradient(135deg,#7c3aed,#a78bfa); border:3px solid #b28cf5; box-shadow:0 0 24px rgba(178,140,245,.45); font:900 36px 'Zain'; color:#fff; }
+    /* ===== شاشة الفوز: بطاقة زجاجية بإطار متدرّج، صورة الحساب فوق حافتها، والاسم و@الحساب بالنص — بدون أي شي يتطاير ===== */
+    .champ{ position:fixed; bottom:clamp(14px,3vh,30px); left:50%; transform:translateX(-50%); z-index:22; width:min(480px,92vw); box-sizing:border-box; padding:18px 20px 18px; border-radius:28px; text-align:center;
+        background:linear-gradient(180deg,rgba(34,22,58,.94),rgba(13,10,22,.96)); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 60px rgba(122,63,212,.28); animation:rise .55s cubic-bezier(.2,1,.3,1) both; }
+    .champ::before{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1.5px; background:linear-gradient(135deg,#5464ff,#8f68ff 50%,#f39bfd); pointer-events:none;
+        -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+    @keyframes rise{ from{ opacity:0; transform:translate(-50%,18px) scale(.97); } to{ opacity:1; transform:translate(-50%,0) scale(1); } }
+    .champ .who{ display:flex; align-items:center; justify-content:center; gap:16px; direction:rtl; }
+    .champ .av{ position:relative; flex:none; width:80px; height:80px; border-radius:50%; overflow:hidden; display:grid; place-items:center; box-sizing:border-box;
+        background:linear-gradient(135deg,#7c3aed,#a78bfa); border:4px solid #120c1f; box-shadow:0 0 0 3px #b28cf5, 0 0 0 6px rgba(243,155,253,.25), 0 10px 30px rgba(122,63,212,.55); font:900 34px 'Zain'; color:#fff; }
     .champ .av img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-    .champ .names{ display:flex; flex-direction:column; align-items:flex-start; min-width:0; text-align:right; }
-    .champ .nm{ font:900 clamp(30px,3.4vw,44px)/1.15 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .champ .user{ font:600 15px 'IBM Plex Sans Arabic'; color:#a79fbb; direction:ltr; }
+    .champ .names{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; text-align:right; }
+    .champ .nm{ font:900 clamp(32px,3.4vw,46px)/1.1 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 6px; }
+    .champ .user{ display:inline-block; padding:3px 14px; border-radius:999px; background:rgba(178,140,245,.12); border:1px solid rgba(178,140,245,.3); font:600 14px 'IBM Plex Sans Arabic'; color:#d8c8f5; direction:ltr; }
+    .champ .user:empty{ display:none; }
     .champ .row{ display:flex; gap:10px; margin-top:16px; }
+    /* إضاءة ثابتة تركّز النظر على البطل (تعتيم الأطراف) */
+    .won-vig{ position:fixed; inset:0; z-index:4; pointer-events:none; display:none; background:radial-gradient(ellipse 46% 62% at 50% 46%, transparent 0%, transparent 45%, rgba(5,3,10,.62) 100%); animation:sFade .8s ease both; }
+    body.won .won-vig{ display:block; }
     .cbtn{ flex:1; height:52px; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; transition:filter .2s, transform .15s; }
     .cbtn:active{ transform:scale(.97); }
     .cbtn.new{ border:none; color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 10px 28px rgba(139,92,246,.45); }
@@ -159,14 +246,14 @@
     .flat .duel em{ font:900 18px 'Zain'; color:#b28cf5; font-style:normal; }
     .flat .duel .w{ color:#d8c2ff; } .flat .duel .x{ opacity:.45; text-decoration:line-through; }
     .flat .pl{ padding:8px 14px; border-radius:999px; background:var(--glass); border:1px solid var(--line); font:600 15px 'IBM Plex Sans Arabic'; }
-    .toast{ position:fixed; top:110px; left:50%; transform:translateX(-50%); z-index:30; padding:10px 22px; border-radius:999px; background:rgba(24,16,40,.92); border:1px solid var(--line); font:600 14px 'IBM Plex Sans Arabic'; }
+    .toast{ position:fixed; top:clamp(250px,42vh,340px); left:50%; transform:translateX(-50%); z-index:30; padding:10px 22px; border-radius:999px; background:rgba(24,16,40,.92); border:1px solid var(--line); font:600 14px 'IBM Plex Sans Arabic'; }
 
     @media (max-width:700px){
         header{ height:62px; } .logo img{ height:44px; } .count small{ display:none; }
         .duel-hud{ top:70px; gap:6px; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); } .mid-stage{ font-size:11px; padding:3px 8px; } .vs-at{ font-size:11px; } .plate{ padding:6px 10px 6px 6px; gap:8px; } .pl-av{ width:40px; height:40px; font-size:18px; } .pl-n{ font-size:16px; } .pl-s{ font-size:11px; padding:2px 7px; }
         .ring{ width:84px; height:84px; } .ring b{ font-size:36px; } .ring small{ bottom:14px; font-size:10px; }
         .opt{ padding:8px; gap:6px; } .opt .e{ display:none; }
-        .champ{ top:auto; bottom:150px; right:50%; transform:translateX(50%); animation:none; }
+        .champ{ padding:14px 14px 14px; } .champ .av{ width:64px; height:64px; font-size:28px; } .cbtn{ height:46px; font-size:15px; }
     }
 </style>
 </head>
@@ -176,9 +263,9 @@
 <div class="flat hidden" id="flat"></div>
 
 <header>
-    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button></div>
+    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button><button type="button" class="hbtn ic" id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><span class="ms" id="fs-i">fullscreen</span></button><button type="button" class="hbtn set" id="set" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>الإعدادات</button></div>
     <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
-    <div class="hside end"><div class="count" id="count"><span class="ms">groups</span><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
+    <div class="hside end"><button type="button" class="late" id="late" role="switch" aria-checked="false"><span>إتاحة الدخول</span><span class="sw"></span></button><div class="late-kw" id="late-kw"><span class="ms">chat</span><b><bdi id="late-kw-t"></bdi></b></div><div class="count" id="count"><span class="ms">groups</span><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
 </header>
 
 <!-- لوحة المواجهة: اللاعبين على الطرفين والوقت بالنص -->
@@ -200,6 +287,23 @@
         <div class="opt" style="--c:var(--scis)"><span class="n">3</span><span class="e">✌️</span><span class="l">مقص</span></div>
     </div>
 </div>
+<div class="ltags" id="ltags" aria-hidden="true"></div>
+<div class="smodal hidden" id="smodal" role="dialog" aria-modal="true" aria-labelledby="s-title">
+    <aside class="sbox" id="sbox">
+        <div class="shead"><h2 id="s-title">إعدادات المباراة</h2><button type="button" class="sx" id="s-close" aria-label="إغلاق"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button></div>
+        <div class="stabs-wrap"><div class="stabs"><button type="button" class="on" data-tab="time">الإعدادات</button><button type="button" data-tab="players">اللاعبين</button></div></div>
+        <div class="sbody" id="s-time">
+            <div class="scard"><span class="lbl"><b>وقت الاختيار</b><small>مدة كتابة اللاعب لاختياره بالشات — ينطبق من المحاولة الجاية</small></span><div class="sopts" id="s-pick"></div></div>
+        </div>
+        <div class="sbody hidden" id="s-players"></div>
+        <div class="sfoot hidden" id="s-foot">الإقصاء ينفّذ لما تقفل اللوحة</div>
+    </aside>
+</div>
+<div class="kw" id="kw"><span class="ms">chat</span>اكتب <b><bdi id="kw-t"></bdi></b> بالشات وادخل</div>
+<div class="lobby-info">
+    <div class="joined hidden" id="joined"><span class="ms">person_add</span><bdi id="joined-n"></bdi> دخل</div>
+    <div class="lobby-n"><span class="ms">groups</span><span id="lobby-n">0</span><small id="lobby-l">من 0 لاعب</small></div>
+</div>
 <button type="button" class="go-btn hidden" id="go"><span class="ms">play_arrow</span>ابدأ</button>
 <button type="button" class="sound hidden" id="sound"><span class="ms">volume_up</span>اضغط هنا لتفعيل الصوت</button>
 
@@ -208,6 +312,7 @@
 <div class="doom hidden" id="doom"><div class="doom-l"><span class="ms">warning</span>إقصاء!</div><div class="doom-n" id="doom-n"></div></div>
 <div class="banner hidden" id="banner"></div>
 <!-- شاشة الفوز: شخصية الفائز على المنصة تحتفل، وتحتها صورة حسابه بتيك توك واسمه وزرين — بدون أي شي يتطاير -->
+<div class="won-vig" aria-hidden="true"></div>
 <div class="champ hidden" id="champ">
     <div class="who">
         <div class="av" id="champ-av"></div>
@@ -257,8 +362,13 @@
     // كلمة الدخول إجبارية (من الإعدادات) — بدونها نرجع للإعدادات
     if (!S.keyword) { location.replace('index.html'); return; }
     var KW = E.norm(S.keyword), FOLLOWERS = saved.who === 'المتابعين فقط';
+    var banned = {}; // اللي أقصاهم المذيع يدوياً (تتصفّر مع «مباراة جديدة»)
+    var LATE = false; try { LATE = localStorage.getItem('rps-late') === '1'; } catch (e) {}
+    $('kw-t').textContent = S.keyword.trim();
     var SELECT_MS = 2600, COUNT_MS = 3000, ARRANGE_MS = 2600;
 
+    // «فلان دخل» فوق العدّاد لثانيتين
+    function showJoined(name) { var el = $('joined'); $('joined-n').textContent = name; el.classList.add('hidden'); void el.offsetWidth; el.classList.remove('hidden'); clearTimeout(showJoined.t); showJoined.t = setTimeout(function () { el.classList.add('hidden'); }, 2000); }
     function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 2800); }
     function go(url) { try { if (window.top !== window) { window.top.location.href = url; return; } } catch (e) {} location.href = url; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -272,6 +382,7 @@
         clearTimers();
         G = E.create({ maxPlayers: S.maxPlayers });
         // اللوبي نفسه بشاشة اللعبة: اللي يكتب كلمة الدخول تطلع شخصيته بالساحة، والمذيع يضغط «ابدأ»
+        banned = {};
         phase = 'join'; phaseEnds = 0; hl = {}; flickId = null; openIds = {}; joinedAt = {}; reported = false; revealInfo = {}; cur = -1; gone = {}; koKind = 1; outcome = null; dooming = false; doomOverlay(false);
         matchStartedAt = 0;
         $('champ').classList.add('hidden'); hideBanner(); $('shout').classList.add('hidden');
@@ -284,9 +395,18 @@
         if (phase === 'join') {
             if (E.norm(p.text) !== KW) return;
             if (FOLLOWERS && !p.isFollower) return;
+            if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
-            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); render(); later(render, 2300); }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
+            return;
+        }
+        // دخول متأخر (إتاحة الدخول): نفس كلمة الدخول وشرط المتابعين. اللي دخل قبل — حتى لو انقصى — ما يرجع
+        if (LATE && phase !== 'champion' && E.norm(p.text) === KW) {
+            if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
+            if (G.player(p.id)) { G.touch(p); return; }
+            if (FOLLOWERS && !p.isFollower) return;
+            if (G.lateJoin({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); toast(G.player(p.id).name + ' دخل البطولة'); render(); }
             return;
         }
         var choice = E.parsePick(p.text);
@@ -329,7 +449,7 @@
         // اختيار عشوائي: ضوء يتنقّل بين الواقفين ويثبت على الأول ثم الثاني، وبعدها يتقدّمون
         openIds = {}; hl = {}; flickId = null;
         phase = 'select'; phaseEnds = 0; render();
-        var pool = G.alive.filter(function (p) { return !gone[p.id] && p.id !== G.bye; }).map(function (p) { return p.id; });
+        var pool = G.alive.filter(function (p) { return !gone[p.id] && p.id !== G.bye && p.late !== G.round; }).map(function (p) { return p.id; });
         flick(pool, d.a, SELECT_MS * .55, function () {
             flick(pool.filter(function (id) { return id !== d.a; }), d.b, SELECT_MS * .45, function () {
                 later(function () {
@@ -409,6 +529,8 @@
     }
     function advance() {
         G.nextRound();
+        // لو المذيع أقصى الكل يدوياً وما بقى أحد: نرجع للوبي
+        if (!G.champion && !G.alive.length) { toast('ما بقى لاعبين'); return reset(); }
         if (G.champion) return crown();
         roundIntro();
     }
@@ -470,6 +592,7 @@
         document.body.classList.toggle('won', phase === 'champion');
         $('go').classList.toggle('hidden', !inJoin);
         $('count-n').textContent = inJoin ? players.length : alive.length;
+        $('lobby-n').textContent = players.length; $('lobby-l').textContent = 'من ' + G.maxPlayers + ' لاعب';
         $('count-l').textContent = inJoin ? ('لاعب من ' + G.maxPlayers) : 'باقي من ' + players.length;
         $('stage-name').textContent = inJoin ? 'فترة الدخول' : phase === 'champion' ? 'انتهت البطولة' : G.stageName() + (cur >= 0 && G.duels.length > 1 ? ' · ' + (cur + 1) + '/' + G.duels.length : '');
         var hint = $('hint') || {}; // (شلنا سطر التعليمات من الشاشة)
@@ -482,6 +605,7 @@
         renderVs();
         pushScene();
         renderFlat();
+        renderSettings();
     }
 
     // «✋ الورقة أقوى من ✊ الحجرة» للمحاولة اللي انحسمت للتو
@@ -561,7 +685,7 @@
                     }
                 }
             } else if (phase === 'join') {
-                o.place = { kind: 'stage', i: players.indexOf(p), n: players.length }; o.noTag = true;
+                o.place = { kind: 'stage', i: players.indexOf(p), n: players.length }; // اسمه فوق شخصيته
                 o.pose = Date.now() - (joinedAt[p.id] || 0) < 2200 ? 'wave' : 'still';
             } else {
                 o.place = { kind: 'queue', i: queue.indexOf(p), n: queue.length };
@@ -601,7 +725,122 @@
     $('go').addEventListener('click', startTournament);
     $('btn-new').addEventListener('click', reset);                       // مباراة جديدة ← اللوبي بنفس الشاشة وبنفس كلمة الدخول
     $('btn-out').addEventListener('click', function () { go('../../games.html'); }); // مكتبة الألعاب مباشرة
-    $('exit').addEventListener('click', function () { go('index.html'); });
+    $('exit').addEventListener('click', function () { go('../../games.html'); }); // خروج أثناء المباراة → مكتبة الألعاب
+    // «إتاحة الدخول»: لو مفعّل، أي مشاهد جديد يكتب كلمة الدخول أثناء المباراة يدخل وينتظر الدور الجاي
+    $('late-kw-t').textContent = S.keyword.trim();
+    function setLate(on) { LATE = !!on; $('late').setAttribute('aria-checked', LATE ? 'true' : 'false'); document.body.classList.toggle('late-on', LATE); try { localStorage.setItem('rps-late', LATE ? '1' : '0'); } catch (e) {} }
+    $('late').addEventListener('click', function () { setLate(!LATE); });
+
+    // ---------------------------------------------------------------- ملء الشاشة
+    function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
+    $('fs').addEventListener('click', function () {
+        var d = document, el = d.documentElement;
+        try {
+            if (fsEl()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+            else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        } catch (e) { toast('ملء الشاشة غير مدعوم هنا'); }
+    });
+    function fsIcon() { $('fs-i').textContent = fsEl() ? 'fullscreen_exit' : 'fullscreen'; }
+    document.addEventListener('fullscreenchange', fsIcon); document.addEventListener('webkitfullscreenchange', fsIcon);
+
+    // ---------------------------------------------------------------- الإعدادات أثناء اللعب
+    // لوحة «إعدادات المباراة» بنفس شكل وسلوك روليت الإقصاء:
+    // تبويب «الإعدادات»: وقت الاختيار (نفس خيارات شاشة الإعدادات، وينحفظ لها)
+    // تبويب «اللاعبين»: ✕ يعلّم اللاعب للإقصاء (مع «تراجع»)، والإقصاء ينفّذ لما تنقفل اللوحة
+    var PICK_OPTS = [8, 10, 12, 15, 20], sTab = 'time', pending = [];
+    var KICK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
+    var UNDO_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-15-6.7L3 13"></path></svg>';
+    function settingsOpen() { return !$('smodal').classList.contains('hidden'); }
+    function openSettings() { var m = $('smodal'); m.classList.remove('closing', 'hidden'); renderSettings(); }
+    function closeSettings() {
+        var m = $('smodal'); if (!settingsOpen() || m.classList.contains('closing')) return;
+        m.classList.add('closing');
+        setTimeout(function () {
+            m.classList.add('hidden'); m.classList.remove('closing');
+            var ids = pending.slice(); pending = [];
+            ids.forEach(kickPlayer);
+        }, 260);
+    }
+    $('set').addEventListener('click', function () { settingsOpen() ? closeSettings() : openSettings(); });
+    $('s-close').addEventListener('click', closeSettings);
+    $('smodal').addEventListener('click', function (e) { if (e.target === $('smodal')) closeSettings(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && settingsOpen()) closeSettings(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.stabs button'), function (b) {
+        b.addEventListener('click', function () { sTab = b.getAttribute('data-tab'); renderSettings(); });
+    });
+    $('s-pick').innerHTML = PICK_OPTS.map(function (v) { return '<button type="button" data-v="' + v + '">' + v + ' ث</button>'; }).join('');
+    $('s-pick').addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        S.pickSec = +b.getAttribute('data-v');
+        try { var cur0 = readJSON(SETTINGS_KEY, {}) || {}; cur0.pickSec = S.pickSec; localStorage.setItem(SETTINGS_KEY, JSON.stringify(cur0)); } catch (err) {}
+        renderSettings();
+    });
+    function playerStatus(p) {
+        if (phase === 'join' || phase === 'arrange' || !G.round) return 'باللوبي';
+        if (openIds[p.id]) return 'بالمواجهة الحين';
+        if (p.late === G.round) return 'دخل متأخر — يلعب الدور الجاي';
+        if (G.bye === p.id) return 'متأهل مباشرة بهالدور';
+        if (G.duels.some(function (d) { return d.result === 'done' && d.winner === p.id; })) return 'تأهل للدور الجاي';
+        return 'ينتظر دوره';
+    }
+    function renderSettings() {
+        if (!settingsOpen()) return;
+        Array.prototype.forEach.call(document.querySelectorAll('.stabs button'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === sTab); });
+        $('s-time').classList.toggle('hidden', sTab !== 'time');
+        $('s-players').classList.toggle('hidden', sTab !== 'players');
+        Array.prototype.forEach.call($('s-pick').children, function (b) { b.classList.toggle('on', +b.getAttribute('data-v') === S.pickSec); });
+        pending = pending.filter(function (id) { var p = G.player(id); return p && !p.out; });
+        $('s-foot').classList.toggle('hidden', sTab !== 'players' || !pending.length);
+        if (sTab !== 'players') return;
+        var box = $('s-players'), live = G.players.filter(function (p) { return !p.out; }), outs = G.players.filter(function (p) { return p.out; });
+        box.innerHTML = '<div class="sp-head">قائمة اللاعبين<b>' + live.length + ' لاعب</b></div>';
+        if (!G.players.length) { box.insertAdjacentHTML('beforeend', '<div class="sempty">لا يوجد لاعبين</div>'); return; }
+        var canKick = phase !== 'champion';
+        live.concat(outs).forEach(function (p, i) {
+            var pd = pending.indexOf(p.id) >= 0;
+            var row = document.createElement('div'); row.className = 'sp' + (p.out ? ' out' : pd ? ' pending' : '');
+            row.innerHTML = '<span class="sp-num"></span><span class="sp-av"></span><span class="sp-n"><bdi></bdi><small></small></span>';
+            row.querySelector('.sp-num').textContent = p.out ? '—' : String(i + 1);
+            var av = row.querySelector('.sp-av'); av.textContent = firstLetter(p.name);
+            if (p.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = function () { av.textContent = ''; av.appendChild(img); }; img.src = p.avatarUrl; }
+            row.querySelector('.sp-n bdi').textContent = p.name;
+            var st = row.querySelector('.sp-n small');
+            if (p.user) { var u = document.createElement('bdi'); u.dir = 'ltr'; u.textContent = '@' + p.user; st.appendChild(u); }
+            if (!p.out) st.appendChild(document.createTextNode((p.user ? ' · ' : '') + playerStatus(p)));
+            if (p.out) {
+                row.insertAdjacentHTML('beforeend', '<span class="sp-chip">' + (p.kicked ? 'مُقصى يدوياً' : 'مُقصى') + '</span>');
+            } else if (pd) {
+                var un = document.createElement('button'); un.type = 'button'; un.className = 'sp-undo'; un.innerHTML = UNDO_SVG + 'تراجع';
+                un.addEventListener('click', function () { pending = pending.filter(function (x) { return x !== p.id; }); renderSettings(); });
+                row.appendChild(un);
+            } else if (canKick) {
+                var k = document.createElement('button'); k.type = 'button'; k.className = 'sp-kick'; k.setAttribute('aria-label', 'إقصاء ' + p.name); k.title = 'إقصاء'; k.innerHTML = KICK_SVG;
+                k.addEventListener('click', function () { pending.push(p.id); renderSettings(); });
+                row.appendChild(k);
+            }
+            box.appendChild(row);
+        });
+    }
+    // إقصاء يدوي: باللوبي ينشال، وأثناء البطولة يطلع فوراً. لو كان بالمواجهة الحالية
+    // نوقف المواجهة (خصمه ياخذها) وننتقل للمواجهة الجاية
+    function kickPlayer(id) {
+        var p = G.player(id); if (!p || p.out || phase === 'champion') return;
+        banned[id] = 1;
+        if (!G.round) { G.kick(id); delete joinedAt[id]; toast(p.name + ' انشال من اللعبة'); render(); return; }
+        var d = G.duelOf(id), active = d && cur >= 0 && G.duels[cur] === d;
+        G.kick(id); gone[id] = 1;
+        toast(p.name + ' انقصى');
+        if (active) {
+            clearTimers(); cdOverlay(false); doomOverlay(false); dooming = false; hideBanner(); $('shout').classList.add('hidden');
+            hl = {}; flickId = null; openIds = {}; outcome = null; revealInfo = {}; phaseEnds = 0; cur = -1;
+            phase = 'round'; render();
+            later(nextDuel, 900);
+            return;
+        }
+        render();
+    }
+
+    setLate(LATE);
 
     // ---------------------------------------------------------------- البث
     // الاتصال بشات البث (بدون مؤشر على الشاشة)
@@ -634,6 +873,30 @@
     };
     window.__rpsFail = function (e) { log('rps: 3D import failed', e); useFlat(); };
     function useFlat() { arena = null; flat = true; renderFlat(); }
+
+    // تبويبات اللوبي (HTML) فوق راس كل شخصية: صورة حساب تيك توك + الاسم، تتبع مكانها بالمشهد كل إطار
+    var ltagEls = {};
+    function firstLetter(n) { return (Array.from(String(n || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase(); }
+    function makeLtag(p) {
+        var el = document.createElement('div'); el.className = 'ltag';
+        var nm = document.createElement('bdi'); nm.textContent = p.name;
+        var av = document.createElement('span'); av.className = 'lav'; av.textContent = firstLetter(p.name);
+        if (p.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = function () { av.textContent = ''; av.appendChild(img); }; img.src = p.avatarUrl; }
+        el.appendChild(nm); el.appendChild(av); $('ltags').appendChild(el);
+        return el;
+    }
+    function lobbyTags() {
+        requestAnimationFrame(lobbyTags);
+        var hs = phase === 'join' && arena && arena.heads ? arena.heads() : [], seen = {};
+        hs.forEach(function (h) {
+            var p = G.player(h.id); if (!p) return; seen[h.id] = 1;
+            var el = ltagEls[h.id] || (ltagEls[h.id] = makeLtag(p));
+            el.style.transform = 'translate(' + h.x.toFixed(1) + 'px,' + h.y.toFixed(1) + 'px) translate(-50%,-100%)';
+            el.style.zIndex = String(Math.round((1 - h.z) * 1e5));
+        });
+        Object.keys(ltagEls).forEach(function (id) { if (!seen[id]) { ltagEls[id].remove(); delete ltagEls[id]; } });
+    }
+    lobbyTags();
 
     reset();
     window.__rps = { get G() { return G; }, get phase() { return phase; }, start: startTournament, reset: reset };

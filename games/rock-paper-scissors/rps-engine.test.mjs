@@ -120,3 +120,39 @@ test('norm: keyword matching ignores ال, repeated letters, hamza forms and dia
     for (const t of ['دخول', 'الدخول', 'دخووول', ' دُخول ', 'دخول!']) assert.equal(E.norm(t), k, t);
     assert.notEqual(E.norm('1'), k); assert.equal(E.norm('أحمد'), E.norm('احمد'));
 });
+
+test('lateJoin: new players wait for the next round; eliminated players can never come back', () => {
+    const g = E.create({ maxPlayers: 4 }); add(g, 2); g.startRound(); const d = g.duels[0];
+    assert.ok(g.lateJoin({ id: 'tiktok:late', name: 'late' }));
+    assert.equal(g.duelOf('tiktok:late'), null); assert.equal(g.pick('tiktok:late', 1), false); // ما يلعب بالدور الحالي
+    attempt(g, 0, 1, 3); attempt(g, 0, 1, 3); g.nextRound();
+    assert.equal(g.champion, null); // باقي اثنين: الفائز والمتأخر
+    assert.deepEqual(g.duels.flatMap(x => [x.a, x.b]).sort(), [d.a, 'tiktok:late'].sort());
+    assert.equal(g.lateJoin({ id: d.b, name: 'p' }), null); // المقصى ما يرجع
+    assert.equal(g.lateJoin({ id: d.a, name: 'p' }), null); // ولا اللي داخل أصلاً
+});
+
+test('lateJoin respects maxPlayers on remaining players and closes once there is a champion', () => {
+    const g = E.create({ maxPlayers: 2 }); add(g, 2); g.startRound();
+    assert.equal(g.lateJoin({ id: 'x' }), null); // اثنين باقين = الحد
+    attempt(g, 0, 1, 3); attempt(g, 0, 1, 3); g.nextRound();
+    assert.ok(g.champion); assert.equal(g.lateJoin({ id: 'y' }), null);
+});
+
+test('kick: lobby removes; mid-duel gives the duel to the opponent; waiting player just leaves', () => {
+    const lob = E.create(); add(lob, 3); assert.ok(lob.kick('tiktok:p2')); assert.equal(lob.players.length, 2);
+    const g = E.create({ random: seq(0) }); add(g, 5); g.startRound(); // مواجهتين ومتأهل مباشرة
+    const [d0, d1] = g.duels, by = g.bye;
+    assert.ok(g.kick(d0.a));
+    assert.equal(d0.result, 'done'); assert.equal(d0.winner, d0.b); assert.equal(d0.how, 'kick');
+    assert.equal(g.pick(d0.b, 1), false); assert.equal(g.kick(d0.a), false); // ما ينقصى مرتين
+    assert.ok(g.kick(by)); assert.equal(g.bye, null);
+    attempt(g, 1, 1, 3); attempt(g, 1, 1, 3); g.nextRound();
+    assert.deepEqual(g.alive.map(p => p.id).sort(), [d0.b, d1.a].sort());
+    assert.equal(g.lateJoin({ id: d0.a }), null); // المقصى يدوياً ما يرجع
+});
+
+test('kicking down to one player crowns them at the next round', () => {
+    const g = E.create(); add(g, 2); g.startRound(); const d = g.duels[0];
+    g.kick(d.b); assert.ok(g.roundDone()); g.nextRound(); assert.equal(g.champion, d.a);
+});
