@@ -12,7 +12,9 @@
 (function () {
     'use strict';
     var ctx = null, master = null, noise = null, muted = false, amb = {}, ambMode = null, timers = [];
+    // مستوى الصوت العام (المؤثرات + أجواء الصباح والمساء)، ويتذكّره جهاز المذيع
     var VOL = 0.8;
+    try { var sv = parseFloat(localStorage.getItem('mafia-vol')); if (sv >= 0 && sv <= 1) VOL = sv; } catch (e) { }
 
     function init() {
         if (ctx) return ctx;
@@ -233,6 +235,8 @@
         unlock: function () { if (!init()) return; if (ctx.state === 'suspended') ctx.resume(); if (!timers.length) timers.push(setInterval(sprinkle, 650)); if (ambMode) { var m = ambMode; ambMode = null; this.ambience(m); } },
         needsUnlock: function () { return !ctx || ctx.state !== 'running'; },
         muted: function () { return muted; },
+        volume: function () { return VOL; },
+        setVolume: function (v) { VOL = Math.max(0, Math.min(1, +v || 0)); try { localStorage.setItem('mafia-vol', String(VOL)); } catch (e) { } if (VOL > 0 && muted) muted = false; if (master) master.gain.setTargetAtTime(muted ? 0 : VOL, now(), 0.05); },
         setMuted: function (v) { muted = !!v; if (master) master.gain.setTargetAtTime(muted ? 0 : VOL, now(), 0.05); },
         ambience: function (mode) {
             if (mode === ambMode) return;
