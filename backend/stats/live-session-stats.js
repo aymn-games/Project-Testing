@@ -67,6 +67,7 @@ var _avatarCache = new Map(); // url -> dataUrl|null
 // صور وعاء الهدايا: 'g:<giftId>' -> رابط تيك توك. تنملى بس من
 // أحداث الهدايا نفسها، فمسار /api/stream/media ما يجيب إلا روابط جات من البث.
 var _mediaUrls = new Map();
+var RECENT_EVENTS_MAX = 60; // أحداث الأليرتات المحفوظة لكل بث
 var MEDIA_URLS_MAX = 3000;
 var _cleanupStarted = false;
 var _store = null;
@@ -89,7 +90,10 @@ function newSession(username, roomId, connectionId) {
     avatars: new Map(), // id -> روابط الصورة (مشتركة بين كل الأقسام)
     // آخر الهدايا بالترتيب (وعاء الهدايا) — seq يزيد مع كل هدية عشان الأوفرلي يطلب الجديد بس
     recentGifts: [],
-    giftSeq: 0
+    giftSeq: 0,
+    // آخر الأحداث (هدية/متابعة/شير/دخول) لأليرتات «شاشات البث» — بالذاكرة بس، ما تنحفظ
+    events: [],
+    eventSeq: 0
   };
   Object.keys(SECTIONS).forEach(function (k) { s.lists[k] = new Map(); });
   return s;
@@ -234,6 +238,22 @@ function recordShare(username, connectionId, data) {
   s.totals.shares++;
   var r = rec(s, s.lists.sharers, data);
   if (r) r.count++;
+  pushEvent(s, 'share', data);
+}
+
+/**
+ * حدث لأليرتات «شاشات البث» (js/agp-stream-overlay.js نوع alert). eventSeq يزيد
+ * مع كل حدث عشان الرابط يطلب الجديد بس. الجلسة المسترجعة من القاعدة ما فيها
+ * أحداث (تنضاف هنا أول مرة).
+ */
+function pushEvent(s, type, data, extra) {
+  if (!data || normalize(data.id) === s.username) return; // صاحب البث نفسه
+  if (!s.events) { s.events = []; s.eventSeq = 0; }
+  s.eventSeq++;
+  var urls = Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data.avatarUrl ? [data.avatarUrl] : []);
+  var avatar = urls.filter(function (u) { return typeof u === 'string' && /^https:\/\//.test(u); })[0] || null;
+  s.events.push(Object.assign({ seq: s.eventSeq, type: type, user: String(data.name || data.id || '').slice(0, 60), avatar: avatar, at: Date.now() }, extra || {}));
+  if (s.events.length > RECENT_EVENTS_MAX) s.events.splice(0, s.events.length - RECENT_EVENTS_MAX);
 }
 
 function recordGift(username, connectionId, data) {
@@ -254,6 +274,7 @@ function recordGift(username, connectionId, data) {
   };
   s.recentGifts.push(g);
   noteGiftMedia(g);
+  pushEvent(s, 'gift', data, { gift: g.name, img: g.img, giftId: g.giftId, count: repeat, diamonds: diamonds });
   if (s.recentGifts.length > RECENT_GIFTS_MAX) s.recentGifts.splice(0, s.recentGifts.length - RECENT_GIFTS_MAX);
 }
 
@@ -315,11 +336,25 @@ function recordMember(username, connectionId, data) {
   seen(s, data);
   var r = s.lists.viewers.get(data.id);
   if (r) r.count++;
+  pushEvent(s, 'join', data);
 }
 
-function recordFollow(username, connectionId) {
+function recordFollow(username, connectionId, data) {
   var s = owned(username, connectionId);
-  if (s) s.totals.follows++;
+  if (!s) return;
+  s.totals.follows++;
+  pushEvent(s, 'follow', data);
+}
+
+/** أحداث الأليرتات بعد since → { sid, seq, events, live } أو null. sid = معرّف البث. */
+function getRecentEvents(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var list = s.events || [];
+  var seq = s.eventSeq || 0;
+  var after = Number(since) || 0;
+  if (after > seq) after = 0;
+  return { sid: s.startedAt, seq: seq, events: list.filter(function (e) { return e.seq > after; }), live: !s.endedAt };
 }
 
 function recordViewers(username, connectionId, current, totalUsers) {
@@ -469,6 +504,7 @@ module.exports = {
   markEnded: markEnded,
   getSummary: getSummary,
   getRecentGifts: getRecentGifts,
+  getRecentEvents: getRecentEvents,
   getMediaDataUrl: getMediaDataUrl,
   flush: flush,
   cachedAvatar: cachedAvatar
