@@ -431,24 +431,24 @@ document.addEventListener('DOMContentLoaded', async function() {
   // تتبع الماوس. لون كل بطاقة حسب تصنيفها (hue بنظام oklch).
   // الترتيب نفسه ترتيب REAL_GAMES الحالي بالمنصة.
   var CARD_INFO = {
-    'word-chain':           { name: 'سلسلة الكلمات', cat: 'q', icon: 'link', badge: 'جديد', desc: 'اكتب كلمة من نفس الفئة تبدأ بآخر حرف من الكلمة اللي قبلها، واللي يقفلها على الكل ياخذ 4 نقاط.' },
+    'word-chain':           { name: 'سلسلة الكلمات', cat: 'q', icon: 'link', badge: 'رائج', desc: 'اكتب كلمة من نفس الفئة تبدأ بآخر حرف من الكلمة اللي قبلها، واللي يقفلها على الكل ياخذ 4 نقاط.' },
     'rock-paper-scissors':  { name: 'حجرة ورقة مقص', cat: 'c', icon: 'back_hand', badge: 'دقايق وتنزل', soon: true, desc: 'بطولة بساحة ثلاثية الأبعاد: اكتب 1 حجرة أو 2 ورقة أو 3 مقص بالشات، والفائز بكل مواجهة يتأهل لين يبقى بطل واحد.' },
-    'penalty':              { name: 'بلنتي', cat: 'c', icon: 'sports_soccer', badge: 'جديد', desc: 'العبها في بثك بفريقين من جمهورك، أو ادعُ ستريمر وجمهور كل بث يسدد على مرماه بكتابة رقم الزاوية بالشات.' },
+    'penalty':              { name: 'بلنتي', cat: 'c', icon: 'sports_soccer', badge: 'رائج', desc: 'العبها في بثك بفريقين من جمهورك، أو ادعُ ستريمر وجمهور كل بث يسدد على مرماه بكتابة رقم الزاوية بالشات.' },
     'mafia':                { name: 'المافيا', cat: 'c', icon: 'theater_comedy', badge: 'جديد', desc: 'العب من جوالك: مافيا وطبيب ومحقق ومواطنين.. بالليل مشاهد ثلاثية الأبعاد على البث، وبالنهار نقاش وتصويت وكروت سرية للمافيا.' },
-    'word-hive':            { name: 'كوّن كلمة', cat: 'q', icon: 'hive', badge: 'جديد', desc: 'كوّن كلمات من أحرف الخلية بالشات، وكل كلمة لازم فيها حرف الوسط.. أول من يرسلها ياخذ نقاطها.' },
-    'greed':                { name: 'الطمع', cat: 'c', icon: 'savings', badge: 'جديد', desc: 'اكتب لف لرقم حظ يُضاف لنقاط دورك، أو توقف لتحفظها.. ورقم 1 يضيّع كل نقاط الدور، وأول من يوصل الهدف يفوز.' },
-    'dots':                 { name: 'توصيل النقاط', cat: 'c', icon: 'grid_on', badge: 'جديد', desc: 'وصّل خط بين نقطتين بكتابة رقمين بالشات مثل 2-3، واللي يكمّل مربع ياخذه.. والفريق صاحب المربعات الأكثر يفوز.' },
-    'survival-ship':        { name: 'سفينة النجاة', cat: 'q', icon: 'sailing', badge: 'جديد', desc: 'حرف وفئة لصاحب الدور، يجاوب بالشات قبل ما يخلص الوقت.. والغلط ينرمي في البحر، وآخر واحد على السفينة يفوز.' },
+    'word-hive':            { name: 'كوّن كلمة', cat: 'q', icon: 'hive', badge: 'الأكثر انتشاراً', desc: 'كوّن كلمات من أحرف الخلية بالشات، وكل كلمة لازم فيها حرف الوسط.. أول من يرسلها ياخذ نقاطها.' },
+    'greed':                { name: 'الطمع', cat: 'c', icon: 'savings', badge: 'رائج', desc: 'اكتب لف لرقم حظ يُضاف لنقاط دورك، أو توقف لتحفظها.. ورقم 1 يضيّع كل نقاط الدور، وأول من يوصل الهدف يفوز.' },
+    'dots':                 { name: 'توصيل النقاط', cat: 'c', icon: 'grid_on', badge: 'رائج', desc: 'وصّل خط بين نقطتين بكتابة رقمين بالشات مثل 2-3، واللي يكمّل مربع ياخذه.. والفريق صاحب المربعات الأكثر يفوز.' },
+    'survival-ship':        { name: 'سفينة النجاة', cat: 'q', icon: 'sailing', badge: 'الأكثر انتشاراً', desc: 'حرف وفئة لصاحب الدور، يجاوب بالشات قبل ما يخلص الوقت.. والغلط ينرمي في البحر، وآخر واحد على السفينة يفوز.' },
     'intruder':             { name: 'محطة سهيل', cat: 'c', icon: 'rocket_launch', badge: 'نسخة تجريبية', desc: 'العب من جوالك على محطة فضائية: خلّص مهامك واكشف الامبوستر قبل ما يقضي على المواطنين.' },
     'luck-color':           { name: 'حظ و لون', cat: 'c', icon: 'palette', badge: 'مرحلة اختبار', adminOnly: true, desc: 'القرعة تختار لاعب، يختار لون بالشات ويطلع له تحدي أو مفاجأة.. واشترِ بطاقات من المتجر، وأعلى نقاط يفوز.' },
-    'bomb':                 { name: 'القنبلة', cat: 'c', icon: 'local_fire_department', badge: 'جديد', desc: 'القنبلة عند لاعب والوقت يخلص، يرميها على غيره بكتابة رقمه بالشات.. واللي تنفجر عنده يطلع.' },
-    'vocab':                { name: 'تحدي المفردات', cat: 'q', icon: 'spellcheck', badge: 'جديد', desc: 'بدّل حرف واحد من الكلمة بحرف من حروف فريقك، وأول فريق يخلّص حروفه يفوز.' },
-    'draw':                 { name: 'شخبليطة', cat: 'q', icon: 'brush', badge: 'جديد', desc: 'اكتب كلمة سرية وارسمها، وأول لاعب يخمّنها صح بالشات ياخذ النقاط.' },
-    'xo':                   { name: 'إكس أو', cat: 'c', icon: 'grid_3x3', badge: 'جديد', desc: 'لاعبين بالقرعة، X ضد O، وكل واحد بدوره يكتب رقم المربع بالشات.. أول من يكمّل خط يفوز.' },
-    'memory-challenge':     { name: 'تحدي الذاكرة', cat: 'c', icon: 'psychology', badge: 'جديد', desc: 'احفظ مكان الإيموجيز، وبعد ما تتغطى اكتب رقم المربع الصحيح بالشات.. الغلط يطلع من اللعبة.' },
-    'snakes-ladders':       { name: 'السلم والثعبان', cat: 'c', icon: 'stairs', badge: 'جديد', desc: 'ارمِ النرد بأمر من الشات، اطلع مع السلالم وانتبه للثعابين، وأول من يوصل للكأس يفوز.' },
+    'bomb':                 { name: 'القنبلة', cat: 'c', icon: 'local_fire_department', badge: 'رائج', desc: 'القنبلة عند لاعب والوقت يخلص، يرميها على غيره بكتابة رقمه بالشات.. واللي تنفجر عنده يطلع.' },
+    'vocab':                { name: 'تحدي المفردات', cat: 'q', icon: 'spellcheck', badge: 'رائج', desc: 'بدّل حرف واحد من الكلمة بحرف من حروف فريقك، وأول فريق يخلّص حروفه يفوز.' },
+    'draw':                 { name: 'شخبليطة', cat: 'q', icon: 'brush', badge: 'رائج', desc: 'اكتب كلمة سرية وارسمها، وأول لاعب يخمّنها صح بالشات ياخذ النقاط.' },
+    'xo':                   { name: 'إكس أو', cat: 'c', icon: 'grid_3x3', badge: 'رائج', desc: 'لاعبين بالقرعة، X ضد O، وكل واحد بدوره يكتب رقم المربع بالشات.. أول من يكمّل خط يفوز.' },
+    'memory-challenge':     { name: 'تحدي الذاكرة', cat: 'c', icon: 'psychology', badge: 'رائج', desc: 'احفظ مكان الإيموجيز، وبعد ما تتغطى اكتب رقم المربع الصحيح بالشات.. الغلط يطلع من اللعبة.' },
+    'snakes-ladders':       { name: 'السلم والثعبان', cat: 'c', icon: 'stairs', badge: 'رائج', desc: 'ارمِ النرد بأمر من الشات، اطلع مع السلالم وانتبه للثعابين، وأول من يوصل للكأس يفوز.' },
     'letters-cell':         { name: 'خلية الحروف', cat: 'q', icon: 'hexagon', desc: 'فريقان على خلية الحروف، جاوب سؤال كل حرف بالشات قبل خصمك.' },
-    'codenames':            { name: 'كود نيمز', cat: 'q', icon: 'key', desc: 'السباي ماستر يلمّح بكلمة ورقم، وفريقه يخمّن الكلمات السرية.' },
+    'codenames':            { name: 'كود نيمز', cat: 'q', icon: 'key', badge: 'الأكثر انتشاراً', desc: 'السباي ماستر يلمّح بكلمة ورقم، وفريقه يخمّن الكلمات السرية.' },
     'photo-challenge':      { name: 'تحدي الصور', cat: 'c', icon: 'image_search', badge: 'رائج', desc: 'صورة كل جولة، وأول من يكتب الإجابة يسجّل نقطة لفريقه.' },
     'khazna':               { name: 'الخزنة', cat: 'c', icon: 'lock', badge: 'رائج', desc: 'العجلة تختار لاعب، ويكتب أرقام ساعات الخزنة بالترتيب برسالة وحدة.' },
     'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
@@ -458,8 +458,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'إعادة تصميم', redesign: true, desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
     'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
     'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
-    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
-    'fastest-answer':       { name: 'أسرع إجابة', cat: 'q', icon: 'bolt', badge: 'جديد', desc: 'لاعب من كل فريق وسؤال سريع، وأول إجابة صحيحة بالشات تكسب فريقها النقاط.' }
+    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', badge: 'الأكثر انتشاراً', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
+    'fastest-answer':       { name: 'أسرع إجابة', cat: 'q', icon: 'bolt', badge: 'الأكثر انتشاراً', desc: 'لاعب من كل فريق وسؤال سريع، وأول إجابة صحيحة بالشات تكسب فريقها النقاط.' }
   };
   var CARD_CATS = {
     r: { label: 'روليت', hue: 25 },
@@ -516,16 +516,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     var st = document.createElement('style');
     st.id = 'gl-card-styles';
     st.textContent =
-      '.gl-card{position:relative;overflow:hidden;isolation:isolate;background:oklch(0.17 0.025 300);' +
-      'border:1px solid oklch(0.26 0.04 300);border-radius:20px;padding:18px;display:flex;flex-direction:column;' +
-      'gap:10px;min-height:260px;cursor:pointer;font-family:"Readex Pro",system-ui,sans-serif;color:#fff;text-align:right;' +
-      'transform:translateY(calc(var(--h,0) * -5px));transition:transform .25s,border-color .25s,box-shadow .25s;}' +
+      // [بطاقة اللعبة] بطاقة كاملة سميكة بهوية ألعاب أيمن (بنفسجي #7a3fd4 / #b28cf5):
+      // حدود عريضة وحافة سفلية صلبة تعطيها سماكة، وإضاءة ناعمة من فوق
+      // (توهّج + خط لامع بالحافة العلوية)، وزر "العب الآن" بلون باستيل.
+      '.gl-card{--hue:298;position:relative;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;gap:12px;' +
+      'min-height:320px;padding:22px 20px 22px;cursor:pointer;font-family:"Readex Pro",system-ui,sans-serif;color:#fff;text-align:right;' +
+      'border-radius:26px;border:2px solid oklch(0.55 0.13 var(--hue) / 0.5);' +
+      'background:radial-gradient(130% 70% at 50% -12%,oklch(0.6 0.18 var(--hue) / 0.32),transparent 62%),' +
+      'linear-gradient(180deg,oklch(0.26 0.06 var(--hue)),oklch(0.185 0.04 var(--hue)));' +
+      'box-shadow:0 8px 0 oklch(0.15 0.05 var(--hue)),0 9px 0 oklch(0.45 0.12 var(--hue) / 0.5),' +
+      '0 26px 44px -22px rgba(0,0,0,.85),0 0 40px -16px rgba(122,63,212,.45),' +
+      'inset 0 2px 0 oklch(0.9 0.04 var(--hue) / 0.16),inset 0 -2px 0 rgba(0,0,0,.25);' +
+      'transform:translateY(calc(var(--h,0) * -4px));transition:transform .25s,border-color .25s,box-shadow .25s;}' +
+      '.gl-card::before{content:"";position:absolute;top:0;left:16%;right:16%;height:2px;z-index:-1;pointer-events:none;' +
+      'background:linear-gradient(90deg,transparent,rgba(211,188,255,.85),transparent);' +
+      'opacity:calc(0.6 + var(--h,0) * 0.4);transition:opacity .3s;}' +
+      '.gl-card:hover{border-color:rgba(178,140,245,.75);' +
+      'box-shadow:0 12px 0 oklch(0.15 0.05 var(--hue)),0 13px 0 oklch(0.5 0.13 var(--hue) / 0.55),' +
+      '0 34px 54px -26px rgba(0,0,0,.9),0 0 60px -12px rgba(122,63,212,.7),' +
+      'inset 0 2px 0 oklch(0.92 0.04 var(--hue) / 0.22),inset 0 -2px 0 rgba(0,0,0,.25);}' +
       '.gl-ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;' +
       'text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:"liga";font-feature-settings:"liga";}' +
       '.gl-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:var(--h,0);transition:opacity .3s;' +
-      'background:radial-gradient(240px circle at var(--x,50%) var(--y,0%),oklch(0.65 0.18 var(--hue) / 0.2),transparent 70%);}' +
-      '.gl-bgicon{position:absolute;z-index:-1;left:-18px;bottom:48px;pointer-events:none;font-size:130px;' +
-      'color:oklch(0.74 0.14 var(--hue));opacity:calc(0.06 + var(--h,0) * 0.08);' +
+      'background:radial-gradient(260px circle at var(--x,50%) var(--y,0%),rgba(178,140,245,.18),transparent 70%);}' +
+      '.gl-bgicon{position:absolute;z-index:-1;left:-18px;bottom:56px;pointer-events:none;font-size:140px;' +
+      'color:#b28cf5;opacity:calc(0.07 + var(--h,0) * 0.08);' +
       'transform:rotate(calc(-14deg + var(--h,0) * 10deg)) scale(calc(1 + var(--h,0) * 0.08));transition:transform .4s,opacity .3s;' +
       'font-variation-settings:"FILL" 1,"wght" 500,"opsz" 48;}' +
       '.gl-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}' +
@@ -533,29 +548,41 @@ document.addEventListener('DOMContentLoaded', async function() {
       'border:1px solid oklch(0.6 0.16 var(--hue) / 0.3);display:flex;align-items:center;justify-content:center;' +
       'transform:rotate(calc(var(--h,0) * -8deg));transition:transform .3s;}' +
       '.gl-tile .gl-ms{font-size:24px;color:oklch(0.74 0.14 var(--hue));font-variation-settings:"FILL" 1,"wght" 500;}' +
-      '.gl-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:oklch(0.72 0.02 300);}' +
-      '.gl-meta{display:flex;align-items:center;gap:8px;margin-top:4px;}' +
-      '.gl-cat{font-size:12px;font-weight:500;color:oklch(0.74 0.14 var(--hue));}' +
-      '.gl-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:oklch(0.6 0.22 295 / 0.18);' +
-      'color:oklch(0.8 0.14 300);border:1px solid oklch(0.6 0.22 295 / 0.5);}' +
-      '.gl-title{margin:0;font-size:19px;font-weight:600;line-height:1.3;color:#fff;}' +
-      '.gl-desc{margin:0;font-size:13px;line-height:1.65;color:oklch(0.72 0.02 300);text-wrap:pretty;flex:1 1 0%;}' +
-      '.gl-play{font-family:inherit;font-size:14px;font-weight:600;height:44px;border-radius:12px;border:none;' +
-      'background:linear-gradient(90deg,oklch(0.62 0.22 300),oklch(0.55 0.23 285));color:oklch(0.99 0 0);cursor:pointer;' +
-      'display:flex;align-items:center;justify-content:center;gap:6px;transition:filter .15s;text-decoration:none;}' +
-      '.gl-play:hover{filter:brightness(1.12);color:oklch(0.99 0 0);}' +
-      '.gl-play .gl-ms{font-size:18px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}' +
-      '.gl-card.gl-locked .gl-play{background:oklch(0.32 0.02 300);color:oklch(0.72 0.02 300);filter:none;}' +
+      '.gl-card .gl-tile{width:56px;height:56px;border-radius:17px;border:none;' +
+      'background:linear-gradient(180deg,#e2d6ff,#c6b4f2);' +
+      'box-shadow:0 4px 0 #7a5bb8,0 0 26px -6px rgba(178,140,245,.6),inset 0 1px 0 rgba(255,255,255,.6);}' +
+      '.gl-card .gl-tile .gl-ms{font-size:30px;color:#5a2ca8;}' +
+      '.gl-num{font-family:"IBM Plex Mono",monospace;font-size:12px;padding:3px 10px;border-radius:999px;' +
+      'background:oklch(0.7 0.06 var(--hue) / 0.12);color:oklch(0.86 0.04 var(--hue));border:1px solid oklch(0.7 0.06 var(--hue) / 0.25);}' +
+      '.gl-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px;}' +
+      '.gl-cat{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:oklch(0.86 0.07 var(--cat-hue,298));' +
+      'background:oklch(0.7 0.07 var(--cat-hue,298) / 0.14);border:1px solid oklch(0.7 0.07 var(--cat-hue,298) / 0.3);}' +
+      '.gl-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:oklch(0.75 0.08 300 / 0.14);' +
+      'color:oklch(0.86 0.07 300);border:1px solid oklch(0.75 0.08 300 / 0.4);}' +
+      '.gl-title{margin:0;font-size:21px;font-weight:700;line-height:1.3;color:oklch(0.98 0.01 var(--hue));}' +
+      '.gl-desc{margin:0;font-size:14px;line-height:1.7;color:oklch(0.78 0.02 var(--hue));text-wrap:pretty;flex:1 1 0%;}' +
+      '.gl-play{font-family:inherit;font-size:15px;font-weight:700;height:48px;margin-top:4px;border-radius:14px;border:none;' +
+      'background:linear-gradient(180deg,#9a6cf0,#7a3fd4);color:#f3ecff;' +
+      'box-shadow:0 4px 0 #4f2596,0 12px 26px -10px rgba(122,63,212,.8),inset 0 1px 0 rgba(255,255,255,.35);cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;gap:6px;transition:filter .15s,transform .12s,box-shadow .12s;text-decoration:none;}' +
+      '.gl-play:hover{filter:brightness(1.1);color:#fff;}' +
+      '.gl-play:active{transform:translateY(3px);box-shadow:0 1px 0 #4f2596,inset 0 1px 0 rgba(255,255,255,.35);}' +
+      '.gl-play .gl-ms{font-size:19px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}' +
+      '.gl-card.gl-locked .gl-play{background:oklch(0.33 0.04 var(--hue));color:oklch(0.8 0.04 var(--hue));filter:none;' +
+      'box-shadow:0 4px 0 oklch(0.21 0.04 var(--hue)),inset 0 1px 0 rgba(255,255,255,.08);}' +
       '.gl-card.gl-locked .gl-play .gl-ms{transform:none;}' +
       '.gl-card.gl-maint .gl-badge{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5);}' +
       // الشبكة تملأ عرض الشاشة بالكامل (تطلع من حد الـ1600px للحاوية)،
-      // وعدد البطاقات بكل صف ثابت حسب المقاس — الشاشة الأعرض تكبّر
-      // عرض البطاقة نفسها بدل ما تزيد عدد البطاقات.
-      '.gl-grid{display:grid !important;gap:20px !important;grid-template-columns:repeat(6,minmax(0,1fr)) !important;' +
+      // وعدد البطاقات بكل صف ثابت حسب المقاس (الوضع "تلقائي"):
+      // كمبيوتر 4 · شاشة كبيرة 27 إنش فأكبر (2000px+) 5 ·
+      // آيباد 3 (720–1099px) و4 بالآيباد الأكبر/العرضي (1100px+) ·
+      // 600–719px بطاقتين · الجوال بطاقة وحدة.
+      '.gl-grid{display:grid !important;gap:22px !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;' +
       'width:calc(100vw - 48px) !important;max-width:none !important;' +
       'margin-left:calc(50% - 50vw + 24px) !important;margin-right:calc(50% - 50vw + 24px) !important;}' +
-      '@media (max-width:1199px){.gl-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}}' +
-      '@media (max-width:899px){.gl-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}' +
+      '@media (min-width:2000px){.gl-grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:26px !important;}}' +
+      '@media (max-width:1099px){.gl-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:18px !important;}}' +
+      '@media (max-width:719px){.gl-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}' +
       '@media (min-width:600px){' +
       '.gl-grid[data-cols="2"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}' +
       '.gl-grid[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}' +
@@ -719,13 +746,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   function buildCard(g, i){
     var info = CARD_INFO[g.id] || { name: g.title, cat: 'c', icon: 'sports_esports', desc: g.desc };
     var cat = CARD_CATS[info.cat];
-    // شارة "تم التحديث" محسوبة من GAME_UPDATES (آخر 3) — تحل محل "جديد"
+    // شارة "تم التحديث" محسوبة من GAME_UPDATES (آخر 3) — تحل محل "جديد"/"رائج"/"الأكثر انتشاراً"
     // بس ما تغطي شارات الحالة (صيانة / تجريبية / مرحلة اختبار).
     var badge = info.badge;
-    if (UPDATED_IDS.indexOf(g.id) !== -1 && (!badge || badge === 'جديد')) badge = 'تم التحديث';
+    if (UPDATED_IDS.indexOf(g.id) !== -1 && (!badge || ['جديد', 'رائج', 'الأكثر انتشاراً'].indexOf(badge) !== -1)) badge = 'تم التحديث';
     var card = document.createElement('article');
     card.className = 'gl-card' + (info.maintenance || info.redesign || info.soon ? ' gl-maint' : '') + (info.redesign ? ' gl-redesign' : '') + (info.soon ? ' gl-soon' : '') + (info.adminOnly ? ' gl-admin' : '');
-    card.style.setProperty('--hue', cat.hue);
+    // لون البطاقة من هوية ألعاب أيمن (بنفسجي ثابت بالـCSS)، ولون التصنيف
+    // يظهر بس على شارة التصنيف.
+    card.style.setProperty('--cat-hue', cat.hue);
     card.innerHTML =
       '<span class="gl-glow"></span>' +
       '<span class="gl-bgicon gl-ms">' + info.icon + '</span>' +
