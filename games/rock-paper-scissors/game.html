@@ -213,17 +213,24 @@
     .doom-n{ font:900 clamp(70px,7vw,120px)/1 'Zain'; color:#fff; text-shadow:0 0 40px #ff3b5c, 0 0 90px rgba(255,59,92,.7), 0 8px 0 rgba(60,0,15,.6); animation:doomNum .9s cubic-bezier(.2,1.4,.4,1) both; }
     @keyframes doomNum{ 0%{ opacity:0; transform:scale(2.2); } 35%{ opacity:1; transform:scale(.95); } 100%{ opacity:.85; transform:scale(1); } }
 
-    /* ===== شاشة الفوز ===== */
-    .champ{ position:fixed; bottom:clamp(18px,4vh,40px); left:50%; transform:translateX(-50%); z-index:22; width:min(520px,92vw); box-sizing:border-box; padding:18px 22px 20px; border-radius:26px; text-align:center;
-        background:#120c1f; border:1px solid rgba(178,140,245,.45); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 40px rgba(122,63,212,.25); animation:rise .5s ease both; }
-    @keyframes rise{ from{ opacity:0; transform:translate(-50%,16px); } to{ opacity:1; transform:translate(-50%,0); } }
-    .champ .who{ display:flex; align-items:center; justify-content:center; gap:16px; }
-    .champ .av{ width:84px; height:84px; flex:none; border-radius:50%; position:relative; overflow:hidden; display:grid; place-items:center; background:linear-gradient(135deg,#7c3aed,#a78bfa); border:3px solid #b28cf5; box-shadow:0 0 24px rgba(178,140,245,.45); font:900 36px 'Zain'; color:#fff; }
+    /* ===== شاشة الفوز: بطاقة زجاجية بإطار متدرّج، صورة الحساب فوق حافتها، والاسم و@الحساب بالنص — بدون أي شي يتطاير ===== */
+    .champ{ position:fixed; bottom:clamp(14px,3vh,30px); left:50%; transform:translateX(-50%); z-index:22; width:min(480px,92vw); box-sizing:border-box; padding:18px 20px 18px; border-radius:28px; text-align:center;
+        background:linear-gradient(180deg,rgba(34,22,58,.94),rgba(13,10,22,.96)); box-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 60px rgba(122,63,212,.28); animation:rise .55s cubic-bezier(.2,1,.3,1) both; }
+    .champ::before{ content:''; position:absolute; inset:0; border-radius:inherit; padding:1.5px; background:linear-gradient(135deg,#5464ff,#8f68ff 50%,#f39bfd); pointer-events:none;
+        -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+    @keyframes rise{ from{ opacity:0; transform:translate(-50%,18px) scale(.97); } to{ opacity:1; transform:translate(-50%,0) scale(1); } }
+    .champ .who{ display:flex; align-items:center; justify-content:center; gap:16px; direction:rtl; }
+    .champ .av{ position:relative; flex:none; width:80px; height:80px; border-radius:50%; overflow:hidden; display:grid; place-items:center; box-sizing:border-box;
+        background:linear-gradient(135deg,#7c3aed,#a78bfa); border:4px solid #120c1f; box-shadow:0 0 0 3px #b28cf5, 0 0 0 6px rgba(243,155,253,.25), 0 10px 30px rgba(122,63,212,.55); font:900 34px 'Zain'; color:#fff; }
     .champ .av img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-    .champ .names{ display:flex; flex-direction:column; align-items:flex-start; min-width:0; text-align:right; }
-    .champ .nm{ font:900 clamp(30px,3.4vw,44px)/1.15 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .champ .user{ font:600 15px 'IBM Plex Sans Arabic'; color:#a79fbb; direction:ltr; }
+    .champ .names{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; text-align:right; }
+    .champ .nm{ font:900 clamp(32px,3.4vw,46px)/1.1 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 6px; }
+    .champ .user{ display:inline-block; padding:3px 14px; border-radius:999px; background:rgba(178,140,245,.12); border:1px solid rgba(178,140,245,.3); font:600 14px 'IBM Plex Sans Arabic'; color:#d8c8f5; direction:ltr; }
+    .champ .user:empty{ display:none; }
     .champ .row{ display:flex; gap:10px; margin-top:16px; }
+    /* إضاءة ثابتة تركّز النظر على البطل (تعتيم الأطراف) */
+    .won-vig{ position:fixed; inset:0; z-index:4; pointer-events:none; display:none; background:radial-gradient(ellipse 46% 62% at 50% 46%, transparent 0%, transparent 45%, rgba(5,3,10,.62) 100%); animation:sFade .8s ease both; }
+    body.won .won-vig{ display:block; }
     .cbtn{ flex:1; height:52px; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:800 17px 'IBM Plex Sans Arabic'; transition:filter .2s, transform .15s; }
     .cbtn:active{ transform:scale(.97); }
     .cbtn.new{ border:none; color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 10px 28px rgba(139,92,246,.45); }
@@ -246,7 +253,7 @@
         .duel-hud{ top:70px; gap:6px; grid-template-columns:minmax(0,1fr) 96px minmax(0,1fr); } .mid-stage{ font-size:11px; padding:3px 8px; } .vs-at{ font-size:11px; } .plate{ padding:6px 10px 6px 6px; gap:8px; } .pl-av{ width:40px; height:40px; font-size:18px; } .pl-n{ font-size:16px; } .pl-s{ font-size:11px; padding:2px 7px; }
         .ring{ width:84px; height:84px; } .ring b{ font-size:36px; } .ring small{ bottom:14px; font-size:10px; }
         .opt{ padding:8px; gap:6px; } .opt .e{ display:none; }
-        .champ{ top:auto; bottom:150px; right:50%; transform:translateX(50%); animation:none; }
+        .champ{ padding:14px 14px 14px; } .champ .av{ width:64px; height:64px; font-size:28px; } .cbtn{ height:46px; font-size:15px; }
     }
 </style>
 </head>
@@ -305,6 +312,7 @@
 <div class="doom hidden" id="doom"><div class="doom-l"><span class="ms">warning</span>إقصاء!</div><div class="doom-n" id="doom-n"></div></div>
 <div class="banner hidden" id="banner"></div>
 <!-- شاشة الفوز: شخصية الفائز على المنصة تحتفل، وتحتها صورة حسابه بتيك توك واسمه وزرين — بدون أي شي يتطاير -->
+<div class="won-vig" aria-hidden="true"></div>
 <div class="champ hidden" id="champ">
     <div class="who">
         <div class="av" id="champ-av"></div>

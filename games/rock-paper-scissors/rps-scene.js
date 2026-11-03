@@ -547,11 +547,13 @@ export function createArena(container, opts = {}) {
     }
     const widePos = new T.Vector3(), wideLook = new T.Vector3(0, .9, 1.4), _wp = new T.Vector3(), _wl = new T.Vector3();
     const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
+    const CHAMP_DROP = .24; let champK = 0;
     function placeCamera(k, kd, kw) {
         camera.position.lerpVectors(basePos, closePos, k);
         _cl.lerpVectors(camLook, closeLook, k);
         if (kw > 0) { camera.position.lerp(widePos, kw); _cl.lerp(wideLook, kw); }
         if (kd > 0) { camera.position.lerp(DO.pos, kd); _cl.lerp(DO.look, kd); }
+        _cl.y -= CHAMP_DROP * champK; // شاشة الفوز: البطل أعلى بالكادر عشان بطاقة الفوز ما تغطي رجوله
         camera.lookAt(_cl);
     }
     // ================================================================ أيدي الشخصيات بأصابع + التقريب
@@ -752,6 +754,7 @@ export function createArena(container, opts = {}) {
             if (phase !== 'champion') { confT = -1; confetti.visible = false; }
         }
         WA += ((camMode === 'wide' ? 1 : 0) - WA) * (1 - Math.exp(-dt * 2.2));
+        champK += ((phase === 'champion' ? 1 : 0) - champK) * (REDUCED ? 1 : 1 - Math.exp(-dt * 2.5));
         placeCamera(closeTick(dt), doomTick(dt), REDUCED ? (camMode === 'wide' ? 1 : 0) : ease(WA));
         if (composer) composer.render(); else renderer.render(scene, camera);
     }
