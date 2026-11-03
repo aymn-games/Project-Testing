@@ -30,6 +30,11 @@
  * - طول الشاشة ثابت (100vh) بدل innerHeight عشان العناصر ما تتزحزح لما شريط
  *   Safari يختفي ويرجع مع التمرير.
  *
+ * <html data-agp-overlay-link> = «رابط الأوفرلي» (overlay.html?k=<رمز>) لـOBS/TikTok
+ * LIVE Studio: التصميم من السيرفر (يحفظه الاستوديو) بدل localStorage، والبيانات
+ * بالرمز بدون تسجيل دخول (/api/public/overlay*)، وما يفتح اتصال بث — يقرأ بس
+ * اللي يحسبه اتصال اللعبة أو الأوفرلي بالموقع.
+ *
  * <html data-agp-studio> = صفحة الاستوديو: ما ترسم طبقة البث، بس توفّر الرسم
  * والبيانات للمعاينة. النصوص تنعرض بـtextContent فقط. مستقل عن
  * window.AymanGamesPlatform (زي AGPStreamStats) عشان يشتغل بأي صفحة.
@@ -54,6 +59,9 @@
     var POLL_MS = 15000;
     var Z = 2147483000;
     var STUDIO = document.documentElement.hasAttribute('data-agp-studio');
+    var LINK = document.documentElement.hasAttribute('data-agp-overlay-link');
+    var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
+    var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
     var COLORS = ['#ffffff', '#ffd54a', '#ff4d6d', '#4dd8ff', '#7cff6b', '#c58bff', '#111111'];
     // b = أثقل وزن متوفر بالخط (للخطوط اللي وزنها واحد = 400)
@@ -176,33 +184,40 @@
     function defaults() { return { v: 3, enabled: true, template: 'auto', editOrient: null, preview: 'grid', items: [] }; }
 
     function load() {
-        try {
-            var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-            if (s && Array.isArray(s.items)) {
-                // v1: المواقع كانت لكل اتجاه بس (pos.l / pos.p) = قالب «شاشة جهازي»
-                if (!s.v || s.v < 2) {
-                    s.items.forEach(function (it) {
-                        var pos = it.pos || {};
-                        it.pos = {};
-                        if (pos.l) it.pos['auto-l'] = pos.l;
-                        if (pos.p) it.pos['auto-p'] = pos.p;
-                    });
-                    if (!s.template && s.items.length) s.template = 'auto';
-                }
-                // v2: «توب المكبّسين» كان نوع خاص (likers) = توب بقسم المكبّسين
-                if (s.v < 3) {
-                    s.items.forEach(function (it) { if (it.type === 'likers') { it.type = 'top'; it.section = 'likers'; } });
-                    delete s.launcher;
-                    s.v = 3;
-                }
-                if (!s.template) s.template = 'auto';
-                return s;
-            }
-        } catch (e) { /* تخزين غير متاح أو تالف */ }
-        return defaults();
+        if (LINK) return Object.assign(defaults(), { enabled: false }); // يوصل من السيرفر
+        try { return migrate(JSON.parse(localStorage.getItem(STORE_KEY) || 'null')) || defaults(); }
+        catch (e) { return defaults(); } // تخزين غير متاح أو تالف
     }
 
+    /** تحويل التصاميم القديمة لآخر نسخة — null لو مو تصميم. */
+    function migrate(s) {
+        if (s && Array.isArray(s.items)) {
+            // v1: المواقع كانت لكل اتجاه بس (pos.l / pos.p) = قالب «شاشة جهازي»
+            if (!s.v || s.v < 2) {
+                s.items.forEach(function (it) {
+                    var pos = it.pos || {};
+                    it.pos = {};
+                    if (pos.l) it.pos['auto-l'] = pos.l;
+                    if (pos.p) it.pos['auto-p'] = pos.p;
+                });
+                if (!s.template && s.items.length) s.template = 'auto';
+            }
+            // v2: «توب المكبّسين» كان نوع خاص (likers) = توب بقسم المكبّسين
+            if (s.v < 3) {
+                s.items.forEach(function (it) { if (it.type === 'likers') { it.type = 'top'; it.section = 'likers'; } });
+                delete s.launcher;
+                s.v = 3;
+            }
+            if (!s.template) s.template = 'auto';
+            return s;
+        }
+        return null;
+    }
+
+    /** savedAt = وقت آخر تعديل — الاستوديو يقارنه بنسخة السيرفر (أيها أحدث). */
     function save() {
+        if (LINK) return;
+        state.savedAt = Date.now();
         try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
     }
 
@@ -333,11 +348,12 @@
     function fetchStats() {
         var q = needs();
         if (!q || inflight || document.visibilityState === 'hidden') return;
-        var t = token();
-        if (!t) { stats.status = 'login'; notify('stats'); return; }
+        var t = LINK ? null : token();
+        if (!t && !LINK) { stats.status = 'login'; notify('stats'); return; }
         inflight = true;
         lastNeeds = q;
-        fetch(apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + t } })
+        fetch(LINK ? apiBase() + '/api/public/overlay/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
+            : apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -421,10 +437,12 @@
 
     function fetchJar() {
         if (jarInflight || document.visibilityState === 'hidden') return;
-        var t = token();
-        if (!t) return;
+        var t = LINK ? null : token();
+        if (!t && !LINK) return;
         jarInflight = true;
-        fetch(apiBase() + '/api/stream/recent-gifts?since=' + (jar.sid ? jar.seq : 0), { headers: { 'Authorization': 'Bearer ' + t } })
+        var since = jar.sid ? jar.seq : 0;
+        fetch(LINK ? apiBase() + '/api/public/overlay/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
+            : apiBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -492,6 +510,7 @@
     function presenceWanted() { return GAME_PAGE && !STUDIO && !gameConnector(); }
 
     function linkWanted() {
+        if (LINK) return false; // رابط OBS يقرأ بس — الحساب من اتصال الموقع
         var c = savedConn();
         if ((!dataWanted() && !presenceWanted()) || !token() || !c) return false;
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
@@ -928,6 +947,30 @@
         return base;
     }
 
+    /* ---------------- رابط الأوفرلي: التصميم من السيرفر ---------------- */
+
+    var design = { v: null, inflight: false };
+
+    function fetchDesign() {
+        if (design.inflight) return;
+        design.inflight = true;
+        fetch(apiBase() + '/api/public/overlay?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : ''))
+            .then(function (res) { return res.json(); })
+            .then(function (d) {
+                if (!d || !d.success) {
+                    // رمز غلط أو تغيّر من الاستوديو: نفضّي الشاشة
+                    if (d && d.error === 'invalid_key' && state.enabled) { state = load(); design.v = null; render(); }
+                    return;
+                }
+                if (!('design' in d)) return; // ما تغيّر
+                design.v = d.updatedAt;
+                state = (d.design && migrate(d.design)) || Object.assign(defaults(), { enabled: false });
+                render();
+            })
+            .catch(function () { /* نحاول بالدورة الجاية */ })
+            .then(function () { design.inflight = false; });
+    }
+
     /* ---------------- طبقة البث (غير الاستوديو) ---------------- */
 
     var layer = null, stage = null, nodes = {}, frameRect = null;
@@ -1127,6 +1170,10 @@
                 render();
             });
             render();
+            if (LINK) {
+                fetchDesign();
+                setInterval(fetchDesign, DESIGN_POLL_MS);
+            }
         } else {
             syncPolling();
             syncJarPolling();
@@ -1143,6 +1190,7 @@
         });
         // تعديل من الاستوديو بتبويب ثاني
         window.addEventListener('storage', function (e) {
+            if (LINK) return; // تصميم الرابط من السيرفر بس
             if (e.key === CONN_KEY) { syncLink(); return; }
             if (e.key !== STORE_KEY) return;
             state = load();
@@ -1155,6 +1203,15 @@
         COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
+        /** الاستوديو: تبنّي تصميم من السيرفر (أحدث من المحفوظ بالجهاز). */
+        replaceState: function (s) {
+            var m = migrate(s);
+            if (!m) return false;
+            state = m;
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+            if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
+            return true;
+        },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
         commit: function () { save(); if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); } },
         /** الاستوديو: هدايا تجريبية تطيح بالوعاء (بالمعاينة فقط، ما تنحفظ). */

@@ -25,6 +25,7 @@ var codenamesSpySlots = require('../codenames/spy-slots-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var liveSessionStats = require('../stats/live-session-stats');
+var streamOverlays = require('../stats/stream-overlay-service');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
@@ -168,6 +169,14 @@ var ROUTES = [
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
   { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
   { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
+  // «رابط الأوفرلي» (overlay.html?k=) لـOBS/TikTok LIVE Studio — راجع stats/stream-overlay-service.js.
+  // الاستوديو يحفظ التصميم ويجيب الرمز، والرابط يقرأ بالرمز بس (بدون حساب، قراءة فقط).
+  { method: 'GET', path: '/api/stream/overlay', requireAuth: true, handler: handleGetOwnOverlay },
+  { method: 'POST', path: '/api/stream/overlay', requireAuth: true, handler: handleSaveOwnOverlay },
+  { method: 'POST', path: '/api/stream/overlay/new-key', requireAuth: true, handler: handleRotateOverlayKey },
+  { method: 'GET', path: '/api/public/overlay', requireAuth: false, handler: handlePublicOverlayDesign },
+  { method: 'GET', path: '/api/public/overlay/stats', requireAuth: false, handler: handlePublicOverlayStats },
+  { method: 'GET', path: '/api/public/overlay/gifts', requireAuth: false, handler: handlePublicOverlayGifts },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
@@ -867,8 +876,12 @@ function handleStreamSessionStats(req, res, body, user) {
     sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
     return;
   }
+  return sendSessionStats(res, username, getQueryParam(req, 'sections'));
+}
+
+/** ملخص بث username بالأقسام المطلوبة — مشترك بين session-stats ورابط الأوفرلي. */
+function sendSessionStats(res, username, rawSections) {
   var tops = null;
-  var rawSections = getQueryParam(req, 'sections');
   if (rawSections) {
     tops = {};
     String(rawSections).split(',').forEach(function (part) {
@@ -899,8 +912,71 @@ function handleStreamRecentGifts(req, res, body, user) {
     sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
     return;
   }
-  var r = liveSessionStats.getRecentGifts(username, getQueryParam(req, 'since'));
+  sendRecentGifts(res, username, getQueryParam(req, 'since'));
+}
+
+function sendRecentGifts(res, username, since) {
+  var r = liveSessionStats.getRecentGifts(username, since);
   sendJson(res, 200, r ? { success: true, sid: r.sid, seq: r.seq, gifts: r.gifts, totals: r.totals, live: r.live } : { success: true, sid: 0, seq: 0, gifts: [], totals: null, live: false });
+}
+
+/* -----------------------------------------------------------------------
+ * «رابط الأوفرلي» — overlay.html?k=<رمز> بـOBS/TikTok LIVE Studio.
+ * ----------------------------------------------------------------------- */
+
+/** GET /api/stream/overlay → { success, key, design, updatedAt } — الاستوديو (ينشئ الرمز أول مرة). */
+function handleGetOwnOverlay(req, res, body, user) {
+  var o = streamOverlays.getOwn(user.id);
+  sendJson(res, 200, { success: true, key: o.key, design: o.design, updatedAt: o.updatedAt, tiktokLinked: Boolean(user.tiktok_verified && user.tiktok_username) });
+}
+
+/** POST /api/stream/overlay { design } → { success, updatedAt } — الاستوديو بعد كل تعديل. */
+function handleSaveOwnOverlay(req, res, body, user) {
+  var r = streamOverlays.saveDesign(user.id, body && body.design);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+
+/** POST /api/stream/overlay/new-key → { success, key } — الرابط القديم يوقف فوراً. */
+function handleRotateOverlayKey(req, res, body, user) {
+  sendJson(res, 200, { success: true, key: streamOverlays.rotateKey(user.id) });
+}
+
+/** صاحب الرابط من ?k= — أو يرد 404 ويرجع null. */
+function overlayFromKey(req, res) {
+  var o = streamOverlays.findByKey(getQueryParam(req, 'k'));
+  if (!o) sendJson(res, 404, { success: false, error: 'invalid_key' });
+  return o;
+}
+
+/** GET /api/public/overlay?k=&v=<updatedAt> → { success, updatedAt, design? } (design بس لو تغيّر). */
+function handlePublicOverlayDesign(req, res) {
+  var o = overlayFromKey(req, res);
+  if (!o) return;
+  var out = { success: true, updatedAt: o.updatedAt };
+  if (String(o.updatedAt) !== getQueryParam(req, 'v')) out.design = o.design;
+  sendJson(res, 200, out);
+}
+
+function overlayTikTok(req, res) {
+  var o = overlayFromKey(req, res);
+  if (!o) return null;
+  var username = tiktokLiveCheck.normalize(streamOverlays.ownerTikTok(o.userId));
+  if (!username) sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
+  return username || null;
+}
+
+/** GET /api/public/overlay/stats?k=&sections= — نفس /api/stream/session-stats لصاحب الرابط. */
+function handlePublicOverlayStats(req, res) {
+  var username = overlayTikTok(req, res);
+  if (!username) return;
+  return sendSessionStats(res, username, getQueryParam(req, 'sections'));
+}
+
+/** GET /api/public/overlay/gifts?k=&since= — نفس /api/stream/recent-gifts لصاحب الرابط. */
+function handlePublicOverlayGifts(req, res) {
+  var username = overlayTikTok(req, res);
+  if (!username) return;
+  sendRecentGifts(res, username, getQueryParam(req, 'since'));
 }
 
 /**
