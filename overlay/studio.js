@@ -1,13 +1,11 @@
 /**
- * VEYRO — «شاشات البث» (overlay/index.html): محرر شاشات لـOBS وTikTok LIVE Studio
- * بهوية Veyro (من منظومة ألعاب أيمن). المذيع يسوي أكثر من شاشة، يرتّب فوق كل وحدة
- * الأدوات اللي يبيها، وينسخ رابطها (overlay/live.html?k=<رمز>) ويحطه بتطبيق البث.
+ * AGP OBS STUDIO — صفحة «شاشات البث» (overlay/index.html): محرر شاشات لـOBS وTikTok
+ * LIVE Studio. المذيع يسوي أكثر من شاشة، يرتّب فوق كل وحدة الأدوات اللي يبيها،
+ * وينسخ رابطها (overlay/live.html?k=<رمز>) ويحطه بتطبيق البث كـBrowser Source.
  *
- * - يسار الشاشة قائمة جانبية تنطوي (أيقونات بس) وتنفتح (أيقونة + اسم):
- *   الرئيسية ← الشاشات ← أدوات البث (الأليرتات، التوب، الأهداف، الوعاء، النصوص،
- *   الأيقونات، الأشكال — كل أداة قسم) ← الطبقات ← الرابط والإعدادات.
- *   قسم الأداة يفتح المحرر ولوحته جنب القائمة، وفيها بطاقات بمعاينة حقيقية مصغّرة
- *   — الضغط على البطاقة يضيف الأداة. بالجوال القائمة درج، والأقسام شريط فوق المحرر.
+ * - يمين الشاشة شريط أقسام بالطول (الأليرتات، التوب، الأهداف، الوعاء، النصوص،
+ *   الأيقونات، الأشكال، الطبقات، الشاشة). الضغط على قسم يفتح لوحته جنبه، وفيها
+ *   بطاقات أدوات بمعاينة حقيقية مصغّرة — الضغط على البطاقة يضيف الأداة.
  * - الرسم والبيانات كلها من js/agp-stream-overlay.js (وضع data-agp-screens):
  *   نفس الكود اللي يرسم الرابط، فالمعاينة = اللي يطلع بالبث.
  * - الشاشات بالسيرفر (backend/stats/stream-screens-service.js، /api/screens*)،
@@ -23,15 +21,8 @@
     var LAST_KEY = 'agp:obs-studio:last';
     var TEMPLATE = 'pc'; // 1920×1080 (أفقي) / 1080×1920 (عمودي)
 
-    var app = document.getElementById('vy-app');
-    var navEl = document.getElementById('vy-nav');
-    var mtabs = document.getElementById('ob-mtabs');
-    var homeBody = document.getElementById('vy-home-body');
-    var screensBody = document.getElementById('vy-screens-body');
-    var userEl = document.getElementById('vy-user');
-    var tipEl = document.getElementById('vy-tip');
-    var mtitle = document.getElementById('vy-mtitle');
     var body = document.getElementById('ob-body');
+    var rail = document.getElementById('ob-rail');
     var panel = document.getElementById('ob-panel');
     var stage = document.getElementById('ob-stage');
     var frame = document.getElementById('ob-frame');
@@ -50,19 +41,7 @@
         shapes: '<path d="M3 3h9v9H3zM17.5 3a4.5 4.5 0 110 9 4.5 4.5 0 010-9zM12 13.5l5.5 8.5h-11z"/>',
         layers: '<path d="M12 2l10 5-10 5L2 7zM4.4 10.2L12 14l7.6-3.8L22 11.5l-10 5-10-5zm0 4.5L12 18.5l7.6-3.8L22 16l-10 5-10-5z"/>',
         gear: '<path d="M10 2h4l.6 3 2.4 1.4 2.9-1 2 3.4-2.3 2a7 7 0 010 2.4l2.3 2-2 3.4-2.9-1-2.4 1.4-.6 3h-4l-.6-3L7 17.8l-2.9 1-2-3.4 2.3-2a7 7 0 010-2.4l-2.3-2 2-3.4 2.9 1L9.4 5zM12 9a3 3 0 100 6 3 3 0 000-6z"/>',
-        close: '<path d="M6.4 5L12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/>',
-        home: '<path d="M12 3l9 7.6V21h-6.5v-6h-5v6H3V10.6z"/>',
-        screens: '<path d="M3 4h18a1 1 0 011 1v12a1 1 0 01-1 1h-7v2h3v2H7v-2h3v-2H3a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v10h16V6z"/>',
-        link: '<path d="M10.6 13.4a1 1 0 001.4 1.4l.1-.1a4 4 0 000-5.6L9.3 6.3a4 4 0 00-5.6 5.6l1.6 1.6 1.4-1.4-1.6-1.6a2 2 0 112.8-2.8l2.8 2.8a2 2 0 010 2.8zm2.8-2.8a1 1 0 00-1.4-1.4l-.1.1a4 4 0 000 5.6l2.8 2.8a4 4 0 005.6-5.6l-1.6-1.6-1.4 1.4 1.6 1.6a2 2 0 11-2.8 2.8l-2.8-2.8a2 2 0 010-2.8z"/>',
-        copy: '<path d="M8 3h11a2 2 0 012 2v11h-2V5H8zM4 7h11a2 2 0 012 2v11a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"/>',
-        edit: '<path d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7zM20.7 6a1 1 0 000-1.4l-1.3-1.3a1 1 0 00-1.4 0l-1.5 1.5 2.7 2.7z"/>',
-        dup: '<path d="M7 7V3h14v14h-4v4H3V7zm2 0h8v8h2V5H9zm-4 2v10h10V9z"/>',
-        trash: '<path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z"/>',
-        plus: '<path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/>',
-        play: '<path d="M8 5v14l11-7z"/>',
-        login: '<path d="M10 3h9a2 2 0 012 2v14a2 2 0 01-2 2h-9v-2h9V5h-9zm1.6 4.6L13 6.2 18.8 12 13 17.8l-1.4-1.4 3.4-3.4H3v-2h12z"/>',
-        check: '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>',
-        bolt2: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'
+        close: '<path d="M6.4 5L12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/>'
     };
     function ic(name) { return O.ICON_SET[name] ? O.ICON_SET[name].p : UI[name]; }
     function svg(paths) { return '<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">' + paths + '</svg>'; }
@@ -77,10 +56,8 @@
         { key: 'shapes', label: 'الأشكال', icon: 'shapes', title: 'الأشكال', desc: 'لوحات وإطارات وشرائط تحط فوقها الأدوات.' },
         { sep: true },
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
-        { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
+        { key: 'screen', label: 'الشاشة', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['alerts', 'tops', 'goals', 'jar', 'text', 'icons', 'shapes'];
-    var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes' };
     var PREVIEWS = [
@@ -142,8 +119,6 @@
     var maxScreens = 12;
     var tiktokLinked = true;
     var section = 'alerts';
-    var view = 'home';         // home | screens | editor
-    var me = null;             // الحساب (AGPAuth.getCachedUser)
     var panelOpen = true;
     var selectedId = null;
     var textTab = 'text';
@@ -256,15 +231,13 @@
         renderZoom();
     }
 
-    /** stay = تبقى بالصفحة الحالية (أول شاشة تنسوى تلقائياً). */
-    function createScreen(name, design, stay) {
+    function createScreen(name, design) {
         if (screens.length >= maxScreens) { toast('وصلت للحد: ' + maxScreens + ' شاشة'); return; }
         api('POST', '/api/screens/create', { name: name || '', design: design || freshDesign() }).then(function (d) {
             if (!d.success) { toast(d.error === 'too_many_screens' ? 'وصلت للحد: ' + maxScreens + ' شاشة' : 'ما قدرنا نسوي الشاشة'); return; }
             screens.push(d.screen);
             openScreen(d.screen);
-            if (stay) renderViews();
-            else go('editor', design ? null : 'alerts');
+            if (!design) { section = 'alerts'; panelOpen = true; renderRail(); renderPanel(); layoutChanged(); }
             toast('انضافت «' + d.screen.name + '» — رابطها جاهز بقسم «الشاشة»');
         }).catch(function () { toast('ما قدرنا نسوي الشاشة — تأكد من الاتصال'); });
     }
@@ -273,24 +246,21 @@
         if (!cur) return;
         var scr = cur;
         api('POST', '/api/screens/save', { id: scr.id, name: name }).then(function (d) {
-            if (d.success) { scr.name = d.name; renderChips(); renderViews(); }
+            if (d.success) { scr.name = d.name; renderChips(); }
         }).catch(function () { /* ignore */ });
     }
 
-    function deleteScreen(target) {
-        var scr = target && target.id ? target : cur;
-        if (!scr) return;
-        if (!window.confirm('تحذف «' + scr.name + '»؟ رابطها بيوقف على طول.')) return;
-        if (scr === cur) save.pending = false;
+    function deleteScreen() {
+        if (!cur) return;
+        if (!window.confirm('تحذف «' + cur.name + '»؟ رابطها بيوقف على طول.')) return;
+        var scr = cur;
+        save.pending = false;
         api('POST', '/api/screens/delete', { id: scr.id }).then(function (d) {
             if (!d.success) { toast('ما قدرنا نحذفها'); return; }
             screens = screens.filter(function (x) { return x.id !== scr.id; });
-            if (scr === cur) {
-                cur = null;
-                if (screens.length) openScreen(screens[0]);
-                else { createScreen('شاشتي الأولى'); return; }
-            }
-            renderViews();
+            cur = null;
+            if (screens.length) openScreen(screens[0]);
+            else createScreen('شاشتي الأولى');
             toast('انحذفت الشاشة');
         }).catch(function () { toast('ما قدرنا نحذفها'); });
     }
@@ -304,20 +274,19 @@
         }).catch(function () { toast('ما قدرنا نغيّر الرابط'); });
     }
 
-    function copyLink(target) {
-        var scr = target && target.id ? target : cur;
-        if (!scr) return;
-        var url = linkUrl(scr);
+    function copyLink() {
+        if (!cur) return;
+        var url = linkUrl(cur);
         var done = function () { toast('انسخ الرابط ✓ — حطه بتطبيق البث كـ Browser Source'); };
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { window.prompt('انسخ الرابط:', url); });
         else window.prompt('انسخ الرابط:', url);
     }
-    copyBtn.addEventListener('click', function () { copyLink(); });
+    copyBtn.addEventListener('click', copyLink);
 
     function renderChips() {
         chipsEl.textContent = '';
         screens.forEach(function (scr) {
-            var c = button('', 'ob-chip' + (scr === cur ? ' on' : ''), function () { if (scr !== cur) { openScreen(scr); renderViews(); } });
+            var c = button('', 'ob-chip' + (scr === cur ? ' on' : ''), function () { if (scr !== cur) openScreen(scr); });
             c.appendChild(el('i', 'dot'));
             c.appendChild(el('span', null, scr.name));
             c.title = scr.name;
@@ -331,80 +300,26 @@
         if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
 
-    /* ---------------- القائمة الجانبية (يسار) ---------------- */
-
-    function secOf(key) { return SECTIONS.filter(function (s) { return s.key === key; })[0]; }
-
-    function navItem(label, icon, on, onClick, badge) {
-        var b = button('', 'vy-item' + (on ? ' on' : ''), onClick);
-        b.innerHTML = svg(ic(icon));
-        b.appendChild(el('span', 'lbl', label));
-        if (badge) b.appendChild(el('span', 'badge', badge));
-        b.setAttribute('aria-label', label);
-        b.setAttribute('data-tip', label);
-        if (on) b.setAttribute('aria-current', 'page');
-        return b;
-    }
-
-    /** قسم أداة من القائمة: يفتح المحرر عليه، والضغط مرة ثانية يطوي اللوحة. */
-    function pickSection(key) {
-        if (view === 'editor' && key === section && panelOpen && !selectedId) { panelOpen = false; }
-        else { section = key; panelOpen = true; }
-        if (selectedId) { selectedId = null; renderCanvas(); }
-        go('editor');
-    }
+    /* ---------------- شريط الأقسام ---------------- */
 
     function renderRail() {
-        navEl.textContent = '';
-        var n = S().items.length;
-        navEl.appendChild(navItem('الرئيسية', 'home', view === 'home', function () { go('home'); }));
-        navEl.appendChild(navItem('الشاشات', 'screens', view === 'screens', function () { go('screens'); }, screens.length ? String(screens.length) : ''));
-        navEl.appendChild(el('div', 'vy-group', 'أدوات البث'));
-        TOOL_KEYS.forEach(function (k) {
-            var sec = secOf(k);
-            navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }));
+        rail.textContent = '';
+        SECTIONS.forEach(function (sec) {
+            if (sec.sep) { rail.appendChild(el('div', 'ob-rsep')); return; }
+            var b = button('', 'ob-rbtn' + (sec.key === section && panelOpen ? ' on' : ''), function () {
+                if (sec.key === section && panelOpen && !selectedId) { panelOpen = false; }
+                else { section = sec.key; panelOpen = true; }
+                if (selectedId) { selectedId = null; renderCanvas(); }
+                renderRail();
+                renderPanel();
+                layoutChanged();
+            });
+            b.innerHTML = svg(ic(sec.icon));
+            b.appendChild(el('span', null, sec.label));
+            if (sec.key === 'layers' && S().items.length) b.appendChild(el('span', 'badge', String(S().items.length)));
+            b.setAttribute('aria-label', sec.title);
+            rail.appendChild(b);
         });
-        navEl.appendChild(el('div', 'vy-group', 'الشاشة المفتوحة'));
-        ['layers', 'screen'].forEach(function (k) {
-            var sec = secOf(k);
-            navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }, k === 'layers' && cur && n ? String(n) : ''));
-        });
-        // بالجوال: نفس أقسام المحرر كشريط فوقه
-        mtabs.textContent = '';
-        TOOL_KEYS.concat(['layers', 'screen']).forEach(function (k) {
-            var sec = secOf(k);
-            mtabs.appendChild(navItem(sec.label, sec.icon, section === k && panelOpen && !selectedId, function () { pickSection(k); }));
-        });
-        var on = mtabs.querySelector('.on');
-        if (on && on.scrollIntoView && view === 'editor') on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-
-    /** التنقّل بين الصفحات: home | screens | editor (و sec = قسم أداة بالمحرر). */
-    function go(next, sec) {
-        if (sec) { section = sec; panelOpen = true; selectedId = null; }
-        if (next === 'editor' && !cur) { if (screens[0]) openScreen(screens[0]); else { next = 'screens'; } }
-        var changed = next !== view;
-        view = next;
-        ['home', 'screens', 'editor'].forEach(function (v) {
-            var sEl = document.getElementById('vy-' + v);
-            sEl.hidden = v !== view;
-            if (v === view && changed) { sEl.classList.remove('enter'); void sEl.offsetWidth; sEl.classList.add('enter'); }
-        });
-        mtitle.textContent = view === 'editor' ? (secOf(section) || {}).label || VIEW_TITLES.editor : VIEW_TITLES[view];
-        document.title = 'Veyro — ' + (view === 'editor' && cur ? cur.name : VIEW_TITLES[view]);
-        app.classList.remove('drawer');
-        try { history.replaceState(null, '', '#' + (view === 'editor' ? 'tools/' + section : view)); } catch (e) { /* ignore */ }
-        renderRail();
-        if (view === 'home') renderHome();
-        else if (view === 'screens') renderScreensView();
-        else { renderPanel(); layoutChanged(); renderCanvas(); }
-    }
-
-    /** يعيد رسم الصفحة المفتوحة لو هي الرئيسية أو الشاشات (بعد تغيّر قائمة الشاشات). */
-    function renderViews() {
-        renderRail();
-        if (view === 'home') renderHome();
-        else if (view === 'screens') renderScreensView();
     }
 
     function layoutChanged() {
@@ -842,7 +757,7 @@
         url.addEventListener('focus', function () { url.select(); });
         link.appendChild(url);
         var a = el('div', 'ob-actions');
-        a.appendChild(button('نسخ الرابط', 'ob-btn primary', function () { copyLink(); }));
+        a.appendChild(button('نسخ الرابط', 'ob-btn sky', copyLink));
         a.appendChild(button('افتح الرابط', 'ob-btn ghost', function () { window.open(linkUrl(cur), '_blank', 'noopener'); }));
         a.appendChild(button('رابط جديد', 'ob-btn ghost', newKey));
         link.appendChild(a);
@@ -884,7 +799,7 @@
             flush();
             createScreen(cur.name + ' (نسخة)', JSON.parse(JSON.stringify(S())));
         }));
-        acts.appendChild(button('حذف الشاشة', 'ob-btn danger', function () { deleteScreen(); }));
+        acts.appendChild(button('حذف الشاشة', 'ob-btn danger', deleteScreen));
         box.appendChild(acts);
     }
 
@@ -1084,418 +999,48 @@
         statusEl.classList.toggle('ok', ok);
         statusEl.title = O.linkText();
         statusEl.lastChild.textContent = ok ? 'البيانات متصلة' : 'البيانات';
-        var hs = document.getElementById('vy-data-stat');
-        if (hs) paintDataStat(hs);
     }
-    statusEl.addEventListener('click', function () { go('editor', 'screen'); });
+    statusEl.addEventListener('click', function () { section = 'screen'; panelOpen = true; selectedId = null; renderRail(); renderPanel(); layoutChanged(); });
     statusEl.style.cursor = 'pointer';
-
-    /* ---------------- الرئيسية ---------------- */
-
-    function svgEl(name) { var w = el('span', 'ic'); w.innerHTML = svg(ic(name)); return w; }
-    function iconBtn(label, icon, cls, onClick) {
-        var b = button('', 'ob-btn ' + (cls || 'ghost'), onClick);
-        b.innerHTML = svg(ic(icon));
-        b.appendChild(el('span', null, label));
-        return b;
-    }
-    function firstName() {
-        var n = me && (me.display_name || me.tiktok_display_name || me.username);
-        return n ? String(n).split(/\s+/)[0] : '';
-    }
-    function itemsOf(scr) { return scr && scr.design && Array.isArray(scr.design.items) ? scr.design.items : []; }
-    function itemsCount(scr) { return scr === cur ? S().items.length : itemsOf(scr).length; }
-
-    function paintDataStat(card) {
-        var ok = O.linkOk();
-        card.className = 'vy-stat glass ' + (ok ? 'ok' : 'warn');
-        card.querySelector('b').textContent = ok ? 'متصلة' : 'غير متصلة';
-        card.querySelector('.sub').textContent = ok ? 'أرقام البث توصل للروابط' : 'اتصل بالبث من الموقع';
-    }
-
-    function stat(icon, value, label, id) {
-        var c = el('div', 'vy-stat glass');
-        if (id) c.id = id;
-        c.appendChild(svgEl(icon));
-        c.appendChild(el('b', null, value));
-        c.appendChild(el('span', 'sub', label));
-        return c;
-    }
-
-    function renderHome() {
-        homeBody.textContent = '';
-        var w = el('div', 'vy-wrap');
-
-        // الهيرو
-        var hero = el('div', 'vy-hero glass');
-        var txt = el('div');
-        var k = el('span', 'kicker');
-        k.appendChild(el('i'));
-        k.appendChild(document.createTextNode(firstName() ? 'أهلاً ' + firstName() + ' — جاهز للبث؟' : 'منصة الأوفرلي لصناع المحتوى'));
-        txt.appendChild(k);
-        var h1 = el('h1');
-        h1.appendChild(el('span', 'ar', 'فيرو '));
-        h1.appendChild(el('span', 'en', 'Veyro'));
-        txt.appendChild(h1);
-        txt.appendChild(el('p', null, 'صمّم شاشات بثك على OBS و TikTok LIVE Studio: أليرتات، توب الداعمين، أهداف، نصوص وأيقونات — وكل شاشة لها رابط تحطه ببرنامج البث.'));
-        var acts = el('div', 'acts');
-        acts.appendChild(iconBtn(cur ? 'افتح أدوات البث' : 'ابدأ أول شاشة', 'play', 'primary lg', function () { if (cur) go('editor'); else createScreen(''); }));
-        acts.appendChild(iconBtn('شاشاتي', 'screens', 'ghost lg', function () { go('screens'); }));
-        txt.appendChild(acts);
-        hero.appendChild(txt);
-        var live = el('div', 'vy-live');
-        live.id = 'vy-live';
-        var tag = el('span', 'tag'); tag.appendChild(el('i')); tag.appendChild(document.createTextNode('LIVE'));
-        live.appendChild(tag);
-        var logo = el('img'); logo.src = 'brand/veyro-icon.png'; logo.alt = ''; live.appendChild(logo);
-        var st2 = el('div', 'stat');
-        st2.appendChild(el('span', null, screens.length + ' شاشة'));
-        if (cur) st2.appendChild(el('span', null, cur.name));
-        live.appendChild(st2);
-        hero.appendChild(live);
-        w.appendChild(hero);
-
-        // أرقام سريعة
-        var stats = el('div', 'vy-stats');
-        stats.appendChild(stat('screens', screens.length + ' / ' + maxScreens, 'شاشاتك'));
-        var total = 0, on = 0;
-        screens.forEach(function (x) { total += itemsCount(x); if (!(x === cur ? S().enabled === false : x.design && x.design.enabled === false)) on++; });
-        stats.appendChild(stat('layers', String(total), 'عنصر بكل الشاشات'));
-        stats.appendChild(stat('link', String(on), 'رابط شغّال بالبث'));
-        var ds = stat('bolt2', '', '', 'vy-data-stat');
-        paintDataStat(ds);
-        stats.appendChild(ds);
-        w.appendChild(stats);
-
-        // أدوات البث
-        w.appendChild(secHead('أدوات البث', 'اختر أداة وتنضاف للشاشة المفتوحة — وبعدها اسحبها لأي مكان.'));
-        var tools = el('div', 'vy-tools');
-        TOOL_KEYS.forEach(function (key) {
-            var sec = secOf(key);
-            var c = button('', 'vy-card vy-tool glass', function () { pickSection(key); });
-            c.appendChild(svgEl(sec.icon));
-            c.appendChild(el('b', null, sec.label));
-            c.appendChild(el('small', null, sec.desc));
-            tools.appendChild(c);
-        });
-        w.appendChild(tools);
-
-        // آخر الشاشات
-        if (screens.length) {
-            var hd = secHead('شاشاتك', 'آخر الشاشات اللي اشتغلت عليها.');
-            hd.appendChild(iconBtn('كل الشاشات', 'screens', 'ghost', function () { go('screens'); }));
-            w.appendChild(hd);
-            var grid = el('div', 'vy-screens');
-            screensSorted().slice(0, 3).forEach(function (scr) { grid.appendChild(screenCard(scr)); });
-            w.appendChild(grid);
-        }
-
-        // طريقة الإضافة
-        w.appendChild(secHead('طريقة الإضافة ببرنامج البث', 'انسخ رابط الشاشة وحطه كمصدر متصفح — الخلفية شفافة لحالها.'));
-        w.appendChild(guideCard());
-
-        homeBody.appendChild(w);
-        thumbsLater(homeBody);
-    }
-
-    function secHead(title, sub) {
-        var h = el('div', 'vy-sechead');
-        var t = el('div');
-        t.appendChild(el('h2', null, title));
-        if (sub) t.appendChild(el('p', null, sub));
-        h.appendChild(t);
-        return h;
-    }
-
-    function guideCard() {
-        var g = el('div', 'vy-guide glass');
-        [['OBS Studio', 'PC', ['من «المصادر» اضغط + واختر «Browser» (متصفح).', 'الصق الرابط بخانة URL.', 'العرض 1920 والطول 1080 (للعمودي 1080 × 1920).', 'اضغط OK — والخلفية شفافة لحالها.']],
-         ['TikTok LIVE Studio', 'LIVE', ['من «إضافة مصدر» اختر «رابط» أو «Link».', 'الصق الرابط واضبط المقاس على حجم المشهد.', 'لو المشهد عمودي غيّر اتجاه الشاشة لـ«عمودي» من «الرابط والإعدادات».']]
-        ].forEach(function (x) {
-            var c = el('div');
-            var h = el('h3', null, x[0] + ' ');
-            h.appendChild(el('span', null, x[1]));
-            c.appendChild(h);
-            var ol = el('ol', 'ob-steps');
-            x[2].forEach(function (t) { ol.appendChild(el('li', null, t)); });
-            c.appendChild(ol);
-            g.appendChild(c);
-        });
-        return g;
-    }
-
-    /* ---------------- الشاشات ---------------- */
-
-    function screensSorted() {
-        return screens.slice().sort(function (a, b) {
-            if (a === cur) return -1;
-            if (b === cur) return 1;
-            return String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
-        });
-    }
-
-    function designOf(scr) { return scr === cur ? S() : (scr.design || {}); }
-
-    function screenCard(scr) {
-        var d = designOf(scr);
-        var portrait = d.editOrient === 'p';
-        var c = el('div', 'vy-card vy-scr glass' + (scr === cur ? ' cur' : ''));
-        var th = el('div', 'thumb');
-        th.setAttribute('data-thumb', String(scr.id));
-        th.title = 'افتح بأدوات البث';
-        th.addEventListener('click', function () { openIn(scr); });
-        var badge = el('span', 'badge' + (d.enabled === false ? ' off' : ''), d.enabled === false ? 'مخفية بالبث' : (portrait ? 'عمودي' : 'أفقي'));
-        th.appendChild(badge);
-        c.appendChild(th);
-        var info = el('div', 'info');
-        info.appendChild(el('b', null, scr.name));
-        var n = itemsCount(scr);
-        info.appendChild(el('small', null, (n ? n + ' عنصر' : 'فاضية') + (scr === cur ? ' · مفتوحة الحين' : '')));
-        c.appendChild(info);
-        var a = el('div', 'acts');
-        var open = iconBtn('تعديل', 'edit', 'primary grow', function () { openIn(scr); });
-        a.appendChild(open);
-        var cp = iconBtn('', 'link', 'ghost icon', function () { copyLink(scr); });
-        cp.title = 'نسخ الرابط'; cp.setAttribute('aria-label', 'نسخ رابط ' + scr.name);
-        a.appendChild(cp);
-        var dp = iconBtn('', 'dup', 'ghost icon', function () {
-            if (screens.length >= maxScreens) { toast('وصلت للحد: ' + maxScreens + ' شاشة'); return; }
-            if (scr === cur) flush();
-            createScreen(scr.name + ' (نسخة)', JSON.parse(JSON.stringify(designOf(scr))), true);
-        });
-        dp.title = 'تكرار'; dp.setAttribute('aria-label', 'تكرار ' + scr.name);
-        a.appendChild(dp);
-        var rm = iconBtn('', 'trash', 'danger icon', function () { deleteScreen(scr); });
-        rm.title = 'حذف'; rm.setAttribute('aria-label', 'حذف ' + scr.name);
-        a.appendChild(rm);
-        c.appendChild(a);
-        return c;
-    }
-
-    function openIn(scr) {
-        if (scr !== cur) openScreen(scr);
-        go('editor');
-    }
-
-    function renderScreensView() {
-        screensBody.textContent = '';
-        var w = el('div', 'vy-wrap');
-        var hd = secHead('الشاشات', 'كل شاشة لها تصميم ورابط خاص — تقدر تسوي لين ' + maxScreens + ' شاشة.');
-        if (screens.length < maxScreens) hd.appendChild(iconBtn('شاشة جديدة', 'plus', 'primary', function () { createScreen(''); }));
-        w.appendChild(hd);
-        var grid = el('div', 'vy-screens');
-        screensSorted().forEach(function (scr) { grid.appendChild(screenCard(scr)); });
-        if (screens.length < maxScreens) {
-            var nw = button('', 'vy-card vy-new', function () { createScreen(''); });
-            nw.appendChild(el('span', 'plus', '+'));
-            nw.appendChild(el('span', null, 'شاشة جديدة'));
-            nw.appendChild(el('small', null, (maxScreens - screens.length) + ' متبقية'));
-            grid.appendChild(nw);
-        }
-        w.appendChild(grid);
-        screensBody.appendChild(w);
-        thumbsLater(screensBody);
-    }
-
-    /** معاينة مصغّرة حقيقية لكل شاشة (نفس رسم الرابط) — بعد ما تنقاس البطاقات. */
-    function thumbsLater(root) {
-        requestAnimationFrame(function () {
-            Array.prototype.forEach.call(root.querySelectorAll('[data-thumb]'), function (th) {
-                var scr = screens.filter(function (x) { return String(x.id) === th.getAttribute('data-thumb'); })[0];
-                if (scr) drawThumb(scr, th);
-            });
-        });
-    }
-
-    function drawThumb(scr, th) {
-        var d = designOf(scr);
-        var items = (Array.isArray(d.items) ? d.items : []).filter(function (it) { return !it.hidden; });
-        var W = th.clientWidth, H = th.clientHeight;
-        if (!W || !H) return;
-        if (!items.length) { th.appendChild(el('span', 'empty', 'شاشة فاضية')); return; }
-        var o = d.editOrient === 'p' ? 'p' : 'l';
-        var fw = o === 'l' ? W : Math.round(H * 1080 / 1920), fh = H;
-        var tf = el('div', 'tf' + (o === 'p' ? ' p' : ''));
-        tf.style.width = fw + 'px';
-        var Fs = { w: fw, h: fh };
-        th.appendChild(tf);
-        var key = O.keyFor(TEMPLATE, o);
-        items.forEach(function (it, i) {
-            try {
-                var copy = JSON.parse(JSON.stringify(it));
-                copy.id = 'th-' + scr.id + '-' + i;
-                var n = O.buildItem(copy, Fs, { preview: true });
-                tf.appendChild(n);
-                O.place(n, O.posOf(it, key), Fs);
-            } catch (e) { /* معاينة بس — نتجاهل أي عنصر ما انرسم */ }
-        });
-    }
-
-    /* ---------------- القائمة: طي، درج الجوال، الحساب، تأثيرات الماوس ---------------- */
-
-    var NAV_KEY = 'vy:nav-mini';
-    function setMini(on) {
-        app.classList.toggle('mini', on);
-        try { localStorage.setItem(NAV_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
-        var cb = document.getElementById('vy-collapse');
-        cb.setAttribute('aria-label', on ? 'فتح القائمة' : 'طي القائمة');
-        cb.querySelector('.lbl').textContent = on ? 'فتح القائمة' : 'طي القائمة';
-        setTimeout(function () { if (view === 'editor' && !drag) renderCanvas(); }, 380);
-    }
-    try { if (localStorage.getItem(NAV_KEY) === '1') setMini(true); } catch (e) { /* ignore */ }
-    document.getElementById('vy-collapse').addEventListener('click', function () { setMini(!app.classList.contains('mini')); });
-    document.getElementById('vy-menu').addEventListener('click', function () { app.classList.add('drawer'); });
-    document.getElementById('vy-scrim').addEventListener('click', function () { app.classList.remove('drawer'); });
-    document.querySelector('.vy-brand').addEventListener('click', function (e) { e.preventDefault(); go('home'); });
-
-    function renderUser() {
-        userEl.textContent = '';
-        try { me = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) { me = null; }
-        if (!token() || !me) {
-            var b = el('a', 'ob-btn primary');
-            b.href = loginUrl();
-            b.innerHTML = svg(ic('login'));
-            b.appendChild(el('span', 'lbl', 'تسجيل الدخول'));
-            b.setAttribute('data-tip', 'تسجيل الدخول');
-            b.style.width = '100%';
-            userEl.appendChild(b);
-            return;
-        }
-        var u = el('a', 'vy-user');
-        u.href = '../profile.html';
-        u.setAttribute('data-tip', 'حسابي');
-        var av = el('span', 'av');
-        var pic = me.tiktok_avatar_url;
-        if (pic) { var im = el('img'); im.src = pic; im.alt = ''; im.referrerPolicy = 'no-referrer'; im.onerror = function () { av.textContent = initial(); }; av.appendChild(im); }
-        else av.textContent = initial();
-        u.appendChild(av);
-        var who = el('span', 'who');
-        who.appendChild(el('b', null, me.display_name || me.tiktok_display_name || me.username || 'حسابي'));
-        who.appendChild(el('small', null, me.tiktok_username ? '@' + me.tiktok_username : 'حسابي'));
-        u.appendChild(who);
-        userEl.appendChild(u);
-    }
-    function initial() { var n = me && (me.display_name || me.username) || 'V'; return String(n).trim().charAt(0).toUpperCase(); }
-    function loginUrl() { return '../login.html?next=' + encodeURIComponent('overlay/index.html'); }
-
-    // لمعة تتبع الماوس على الأزرار والبطاقات، وتوهّج الخلفية، وميلان بطاقة LIVE
-    var glowEl = document.getElementById('vy-glow');
-    var gPos = null, gRaf = 0;
-    document.addEventListener('pointermove', function (e) {
-        if (e.pointerType === 'touch') return;
-        var t = e.target.closest && e.target.closest('.ob-btn, .vy-item, .vy-card, .ob-tool, .ob-chip');
-        if (t) {
-            var r = t.getBoundingClientRect();
-            t.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-            t.style.setProperty('--my', (e.clientY - r.top) + 'px');
-        }
-        gPos = [e.clientX, e.clientY];
-        if (!gRaf) gRaf = requestAnimationFrame(function () {
-            gRaf = 0;
-            glowEl.style.setProperty('--gx', gPos[0] + 'px');
-            glowEl.style.setProperty('--gy', gPos[1] + 'px');
-            var lv = view === 'home' && document.getElementById('vy-live');
-            if (lv) {
-                var rr = lv.getBoundingClientRect();
-                var dx = clamp((gPos[0] - (rr.left + rr.width / 2)) / rr.width, -1, 1);
-                var dy = clamp((gPos[1] - (rr.top + rr.height / 2)) / rr.height, -1, 1);
-                lv.style.setProperty('--ry', (-8 + dx * 10) + 'deg');
-                lv.style.setProperty('--rx', (4 - dy * 8) + 'deg');
-            }
-        });
-    }, { passive: true });
-
-    // اسم القسم كتلميح لما القائمة مطوية
-    document.getElementById('vy-side').addEventListener('pointerover', function (e) {
-        var t = e.target.closest && e.target.closest('[data-tip]');
-        if (!t || !app.classList.contains('mini') || window.innerWidth <= 900) { tipEl.classList.remove('show'); return; }
-        var r = t.getBoundingClientRect();
-        tipEl.textContent = t.getAttribute('data-tip');
-        tipEl.style.left = (r.right + 12) + 'px';
-        tipEl.style.top = (r.top + r.height / 2 - 16) + 'px';
-        tipEl.classList.add('show');
-    });
-    document.getElementById('vy-side').addEventListener('pointerleave', function () { tipEl.classList.remove('show'); });
 
     /* ---------------- تشغيل ---------------- */
 
     function showGate(kind) {
         gbox.textContent = '';
-        // يسار: هوية Veyro ومزاياها — يمين: الرسالة والأزرار
-        var br = el('div', 'ob-gbrand');
-        var logo = el('img', 'ob-glogo');
-        logo.src = 'brand/veyro-logo.webp';
-        logo.alt = 'Veyro فيرو';
-        logo.width = 260; logo.height = 128;
-        br.appendChild(logo);
-        var ul = el('ul');
-        ['شاشات برابط لكل وحدة على OBS و TikTok LIVE Studio', 'أليرتات الهدايا والمتابعين والشير', 'توب الداعمين والأهداف والعدّادات', 'كل تعديل ينحفظ ويوصل للبث خلال ثواني'].forEach(function (t) {
-            var li = el('li');
-            li.innerHTML = svg(ic('check'));
-            li.appendChild(el('span', null, t));
-            ul.appendChild(li);
-        });
-        br.appendChild(ul);
-        var f = el('div', 'ob-gform');
         if (kind === 'login') {
-            f.appendChild(el('h2', null, 'سجّل دخولك'));
-            f.appendChild(el('p', null, 'شاشات البث مربوطة بحسابك، عشان تنحفظ تصاميمك وتاخذ رابط لكل شاشة.'));
-            var a = el('a', 'ob-btn primary lg');
-            a.href = loginUrl();
-            a.innerHTML = svg(ic('login'));
-            a.appendChild(el('span', null, 'تسجيل الدخول'));
-            f.appendChild(a);
-            f.appendChild(el('div', 'or', 'أو'));
-            var sg = el('a', 'ob-btn ghost lg', 'إنشاء حساب جديد');
-            sg.href = '../signup.html';
-            f.appendChild(sg);
+            gbox.appendChild(el('h2', null, 'سجّل دخول أول'));
+            gbox.appendChild(el('p', null, 'شاشات البث مربوطة بحسابك، عشان تحفظ تصاميمك وتاخذ رابط لكل شاشة.'));
+            var a = el('a', 'ob-btn primary', 'تسجيل الدخول');
+            a.href = '../login.html';
+            gbox.appendChild(a);
         } else if (kind === 'streamer') {
-            f.appendChild(el('h2', null, 'لحسابات الستريمر'));
-            f.appendChild(el('p', null, 'أدوات Veyro لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
-            var b = el('a', 'ob-btn primary lg', 'رجوع لحسابي');
+            gbox.appendChild(el('h2', null, 'لحسابات الستريمر'));
+            gbox.appendChild(el('p', null, 'شاشات البث لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
+            var b = el('a', 'ob-btn ghost', 'رجوع لحسابي');
             b.href = '../profile.html';
-            f.appendChild(b);
+            gbox.appendChild(b);
         } else {
-            f.appendChild(el('h2', null, 'ما قدرنا نفتح شاشاتك'));
-            f.appendChild(el('p', null, 'تأكد من الاتصال بالإنترنت وحدّث الصفحة.'));
-            f.appendChild(button('حدّث الصفحة', 'ob-btn primary lg', function () { location.reload(); }));
+            gbox.appendChild(el('h2', null, 'ما قدرنا نفتح شاشاتك'));
+            gbox.appendChild(el('p', null, 'تأكد من الاتصال بالإنترنت وحدّث الصفحة.'));
+            gbox.appendChild(button('حدّث الصفحة', 'ob-btn primary', function () { location.reload(); }));
         }
-        f.appendChild(el('div', 'fine', 'Veyro — من منظومة ألعاب أيمن'));
-        gbox.appendChild(br);
-        gbox.appendChild(f);
         gate.hidden = false;
     }
 
-    /** الصفحة من الرابط: #home، #screens، #tools/<قسم> (أو ?s=<شاشة> = المحرر). */
-    function viewFromUrl() {
-        var h = (location.hash || '').replace(/^#/, '');
-        var m = /^tools\/(\w+)$/.exec(h);
-        if (m && secOf(m[1])) return { view: 'editor', sec: m[1] };
-        if (h === 'screens') return { view: 'screens' };
-        if (h === 'tools') return { view: 'editor' };
-        if (new URLSearchParams(location.search).get('s')) return { view: 'editor' };
-        return { view: 'home' };
-    }
-
     function start() {
-        renderUser();
-        if (!token()) { renderHome(); showGate('login'); return; }
+        if (!token()) { showGate('login'); return; }
         api('GET', '/api/screens').then(function (d) {
-            if (d._status === 401) { renderHome(); showGate('login'); return; }
-            if (d._status === 403) { renderHome(); showGate('streamer'); return; }
-            if (!d.success) { renderHome(); showGate('error'); return; }
+            if (d._status === 401) { showGate('login'); return; }
+            if (d._status === 403) { showGate('streamer'); return; }
+            if (!d.success) { showGate('error'); return; }
             screens = d.screens || [];
             maxScreens = d.max || maxScreens;
             tiktokLinked = d.tiktokLinked !== false;
-            renderUser();
+            if (!screens.length) { createScreen('شاشتي الأولى'); return; }
             var want = Number(new URLSearchParams(location.search).get('s'));
             if (!want) { try { want = Number(localStorage.getItem(LAST_KEY)); } catch (e) { want = 0; } }
-            var first = screens.filter(function (x) { return x.id === want; })[0] || screens[0];
-            if (first) openScreen(first);
-            var v = viewFromUrl();
-            go(v.view, v.sec);
-            if (!screens.length) createScreen('شاشتي الأولى', null, true);
-        }).catch(function () { renderHome(); showGate('error'); });
+            openScreen(screens.filter(function (x) { return x.id === want; })[0] || screens[0]);
+        }).catch(function () { showGate('error'); });
     }
 
     // بيانات جديدة: نعيد رسم أدوات البيانات بس (الأليرت والنصوص وحركتها ما تنلمس)
@@ -1507,7 +1052,6 @@
     window.addEventListener('resize', function () { if (!drag) renderCanvas(); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!drag) renderCanvas(); });
 
-    window.addEventListener('resize', function () { if (window.innerWidth > 900) app.classList.remove('drawer'); });
     renderRail();
     paintStatus();
     start();
