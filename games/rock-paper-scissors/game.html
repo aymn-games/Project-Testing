@@ -48,31 +48,51 @@
     .hbtn:active{ transform:scale(.97); }
     .hbtn.exit{ color:#fda4af; border-color:rgba(244,63,94,.3); }
     .hbtn.ic{ width:38px; padding:0; justify-content:center; } .hbtn.ic .ms{ font-size:21px; }
-    /* ===== نافذة الإعدادات أثناء اللعب: الوقت + اللاعبين (إقصاء يدوي) ===== */
-    .smodal{ position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(5,5,8,.62); direction:rtl; }
+    /* ===== إعدادات المباراة: نفس لوحة «روليت الإقصاء» (لوحة جانبية يمين تحت الهيدر) ===== */
+    .hbtn.set{ border-color:rgba(167,139,250,.3); background:rgba(139,92,246,.08); color:#ddd6fe; backdrop-filter:blur(10px); }
+    .hbtn.set:hover{ background:rgba(139,92,246,.16); border-color:rgba(167,139,250,.55); }
+    .smodal{ position:fixed; inset:76px 0 0 0; z-index:40; background:rgba(0,0,0,.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); direction:rtl; animation:sFade .25s ease; }
     .smodal.hidden{ display:none; }
-    .sbox{ width:min(520px,100%); max-height:min(640px,calc(100vh - 32px)); display:flex; flex-direction:column; border-radius:24px; overflow:hidden; background:linear-gradient(180deg,#1a1526,#0d0b14); border:1px solid rgba(178,140,245,.35); box-shadow:0 30px 80px rgba(0,0,0,.55); }
-    .shead{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px 10px; }
-    .shead h2{ margin:0; font:900 26px 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .stabs{ display:flex; gap:4px; margin:0 18px; padding:4px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
-    .stabs button{ flex:1; height:38px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:700 14px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; }
-    .stabs button .ms{ font-size:19px; } .stabs button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 4px 14px rgba(139,92,246,.4); }
-    .sbody{ padding:14px 18px 18px; overflow:auto; display:flex; flex-direction:column; gap:10px; }
-    .srow{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); }
-    .srow .lbl{ display:flex; flex-direction:column; gap:2px; text-align:right; min-width:0; font:700 15px 'IBM Plex Sans Arabic'; color:#f3ecff; }
-    .srow .lbl small{ font:500 12px 'IBM Plex Sans Arabic'; color:var(--muted); }
-    .schoice{ display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); flex-shrink:0; direction:rtl; }
-    .schoice button{ height:32px; min-width:38px; padding:0 10px; border:none; border-radius:999px; cursor:pointer; font:700 13px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; }
-    .schoice button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.45); }
-    .sp-who{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .sp-av{ width:38px; height:38px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:2px solid #b28cf5; font:900 17px 'Zain'; color:#fff; }
+    .smodal.closing{ animation:sFadeOut .26s ease forwards; } .smodal.closing .sbox{ animation:sSlideOut .26s ease forwards; }
+    @keyframes sFade{ from{ opacity:0; } to{ opacity:1; } } @keyframes sFadeOut{ from{ opacity:1; } to{ opacity:0; } }
+    @keyframes sSlideIn{ from{ opacity:0; transform:translateX(60px); } to{ opacity:1; transform:none; } }
+    @keyframes sSlideOut{ from{ opacity:1; transform:none; } to{ opacity:0; transform:translateX(60px); } }
+    .sbox{ position:absolute; top:clamp(6px,1vw,12px); right:clamp(8px,1vw,16px); width:min(400px,calc(100vw - 16px)); height:min(1100px,calc(100dvh - 92px)); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;
+        background:rgba(12,11,18,.94); border:1px solid rgba(255,255,255,.08); border-radius:24px; box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 80px rgba(124,58,237,.12); animation:sSlideIn .45s cubic-bezier(.2,1,.3,1); }
+    .shead{ display:flex; justify-content:space-between; align-items:center; padding:clamp(14px,3.5vw,22px) clamp(16px,4vw,26px); border-bottom:1px solid rgba(255,255,255,.06); }
+    .shead h2{ margin:0; font:700 clamp(18px,1.2vw,24px) 'IBM Plex Sans Arabic'; color:#f3ecff; }
+    .sx{ width:42px; height:42px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#e7e3ef; cursor:pointer; display:grid; place-items:center; transition:background .2s; }
+    .sx:hover{ background:rgba(255,255,255,.09); }
+    .stabs-wrap{ padding:clamp(12px,3vw,18px) clamp(14px,3.5vw,22px) 0; }
+    .stabs{ display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:6px; border-radius:999px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); }
+    .stabs button{ height:44px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font:700 16px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; transition:all .25s; }
+    .stabs button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.4); }
+    .sbody{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:none; padding:clamp(14px,3.5vw,20px) clamp(14px,3.5vw,22px); display:flex; flex-direction:column; gap:8px; }
+    .sbody::-webkit-scrollbar{ display:none; }
+    .scard{ flex-shrink:0; display:flex; flex-direction:column; gap:14px; padding:16px; border-radius:18px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); }
+    .scard .lbl{ display:flex; flex-direction:column; gap:3px; text-align:right; }
+    .scard .lbl b{ font:700 16px 'IBM Plex Sans Arabic'; color:#f4f2f8; } .scard .lbl small{ font:500 13px/1.5 'IBM Plex Sans Arabic'; color:#8a8596; }
+    .sopts{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:5px; border-radius:999px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); }
+    .sopts button{ height:40px; border:none; border-radius:999px; cursor:pointer; font:700 15px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; transition:all .25s; }
+    .sopts button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.35); }
+    .sp-head{ display:flex; justify-content:space-between; align-items:center; padding:0 4px 6px; font:700 15px 'IBM Plex Sans Arabic'; color:#cfcad9; }
+    .sp-head b{ font:700 14px 'IBM Plex Sans Arabic'; color:#a78bfa; }
+    .sp{ flex-shrink:0; display:flex; align-items:center; gap:10px; height:56px; padding:0 8px 0 12px; border-radius:14px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); transition:all .25s; }
+    .sp.pending{ opacity:.55; background:rgba(248,113,113,.06); border-color:rgba(248,113,113,.25); } .sp.pending .sp-n > bdi{ text-decoration:line-through; }
+    .sp.out{ opacity:.75; background:rgba(248,113,113,.05); border-color:rgba(248,113,113,.2); }
+    .sp-num{ width:26px; height:26px; flex:none; border-radius:8px; display:grid; place-items:center; background:rgba(139,92,246,.14); color:#c4b5fd; font:700 13px 'IBM Plex Sans Arabic'; }
+    .sp-av{ width:34px; height:34px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:1.5px solid #b28cf5; font:900 15px 'Zain'; color:#fff; }
     .sp-av img{ width:100%; height:100%; object-fit:cover; display:block; }
-    .sp-who .lbl bdi{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .kick{ height:36px; padding:0 14px; flex:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px; font:700 13.5px 'IBM Plex Sans Arabic'; color:#fca5a5; background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.4); }
-    .kick:hover{ background:rgba(248,113,113,.18); } .kick .ms{ font-size:18px; }
-    .kick.sure{ color:#fff; background:#e11d48; border-color:#e11d48; }
-    .srow.out{ opacity:.45; } .srow.out .kick{ display:none; }
-    .sempty{ padding:24px; text-align:center; font:600 14px 'IBM Plex Sans Arabic'; color:var(--muted); }
+    .sp-n{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; text-align:right; }
+    .sp-n > bdi{ font:600 16px 'IBM Plex Sans Arabic'; color:#f4f2f8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sp-n small{ font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sp-chip{ flex:none; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); font:600 12px 'IBM Plex Sans Arabic'; color:#fca5a5; }
+    .sp-kick{ width:34px; height:34px; flex:none; border-radius:999px; border:1px solid rgba(248,113,113,.3); background:rgba(248,113,113,.08); color:#fca5a5; cursor:pointer; display:grid; place-items:center; transition:background .2s; }
+    .sp-kick:hover{ background:rgba(248,113,113,.18); } .sp-kick:active{ transform:scale(.92); }
+    .sp-undo{ height:34px; flex:none; padding:0 14px; border-radius:999px; border:1px solid rgba(167,139,250,.4); background:rgba(139,92,246,.15); color:#ddd6fe; font:700 13px 'IBM Plex Sans Arabic'; cursor:pointer; display:flex; align-items:center; gap:6px; animation:sFade .25s ease; }
+    .sp-undo:hover{ background:rgba(139,92,246,.28); }
+    .sfoot{ flex-shrink:0; padding:12px clamp(14px,3.5vw,22px) clamp(14px,3.5vw,22px); border-top:1px solid rgba(255,255,255,.06); font:500 12.5px/1.6 'IBM Plex Sans Arabic'; color:#8a8596; text-align:center; }
+    .sempty{ padding:40px 0; text-align:center; color:#8a8596; font:500 15px 'IBM Plex Sans Arabic'; }
     /* «إتاحة الدخول» أثناء المباراة: العنوان يمين ومفتاح التبديل يسار (قاعدة صفوف الإعدادات) */
     .late{ height:38px; padding:0 8px 0 14px; border-radius:999px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; white-space:nowrap; direction:rtl;
         font:600 14px 'IBM Plex Sans Arabic'; color:#e7e3ef; background:rgba(24,16,40,.55); border:1px solid var(--line); }
@@ -236,7 +256,7 @@
 <div class="flat hidden" id="flat"></div>
 
 <header>
-    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button><button type="button" class="hbtn ic" id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><span class="ms" id="fs-i">fullscreen</span></button><button type="button" class="hbtn ic" id="set" title="الإعدادات" aria-label="الإعدادات"><span class="ms">settings</span></button></div>
+    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button><button type="button" class="hbtn ic" id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><span class="ms" id="fs-i">fullscreen</span></button><button type="button" class="hbtn set" id="set" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>الإعدادات</button></div>
     <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
     <div class="hside end"><button type="button" class="late" id="late" role="switch" aria-checked="false"><span>إتاحة الدخول</span><span class="sw"></span></button><div class="late-kw" id="late-kw"><span class="ms">chat</span><b><bdi id="late-kw-t"></bdi></b></div><div class="count" id="count"><span class="ms">groups</span><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
 </header>
@@ -262,14 +282,15 @@
 </div>
 <div class="ltags" id="ltags" aria-hidden="true"></div>
 <div class="smodal hidden" id="smodal" role="dialog" aria-modal="true" aria-labelledby="s-title">
-    <div class="sbox">
-        <div class="shead"><h2 id="s-title">الإعدادات</h2><button type="button" class="hbtn ic" id="s-close" aria-label="إغلاق"><span class="ms">close</span></button></div>
-        <div class="stabs"><button type="button" class="on" data-tab="time"><span class="ms">timer</span>الوقت</button><button type="button" data-tab="players"><span class="ms">groups</span>اللاعبين <span id="s-pn"></span></button></div>
+    <aside class="sbox" id="sbox">
+        <div class="shead"><h2 id="s-title">إعدادات المباراة</h2><button type="button" class="sx" id="s-close" aria-label="إغلاق"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button></div>
+        <div class="stabs-wrap"><div class="stabs"><button type="button" class="on" data-tab="time">الإعدادات</button><button type="button" data-tab="players">اللاعبين</button></div></div>
         <div class="sbody" id="s-time">
-            <div class="srow"><span class="lbl">وقت الاختيار<small>بالثواني — ينطبق من المحاولة الجاية</small></span><div class="schoice" id="s-pick"></div></div>
+            <div class="scard"><span class="lbl"><b>وقت الاختيار</b><small>مدة كتابة اللاعب لاختياره بالشات — ينطبق من المحاولة الجاية</small></span><div class="sopts" id="s-pick"></div></div>
         </div>
         <div class="sbody hidden" id="s-players"></div>
-    </div>
+        <div class="sfoot hidden" id="s-foot">الإقصاء ينفّذ لما تقفل اللوحة</div>
+    </aside>
 </div>
 <div class="kw" id="kw"><span class="ms">chat</span>اكتب <b><bdi id="kw-t"></bdi></b> بالشات وادخل</div>
 <div class="lobby-info">
@@ -715,20 +736,31 @@
     document.addEventListener('fullscreenchange', fsIcon); document.addEventListener('webkitfullscreenchange', fsIcon);
 
     // ---------------------------------------------------------------- الإعدادات أثناء اللعب
-    // قسم «الوقت»: وقت الاختيار (نفس خيارات شاشة الإعدادات، وينحفظ لها)
-    // قسم «اللاعبين»: كل اللاعبين مع زر «إقصاء» (ضغطتين للتأكيد)
-    var PICK_OPTS = [8, 10, 12, 15, 20], sTab = 'time', sureId = null, sureT = 0;
+    // لوحة «إعدادات المباراة» بنفس شكل وسلوك روليت الإقصاء:
+    // تبويب «الإعدادات»: وقت الاختيار (نفس خيارات شاشة الإعدادات، وينحفظ لها)
+    // تبويب «اللاعبين»: ✕ يعلّم اللاعب للإقصاء (مع «تراجع»)، والإقصاء ينفّذ لما تنقفل اللوحة
+    var PICK_OPTS = [8, 10, 12, 15, 20], sTab = 'time', pending = [];
+    var KICK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
+    var UNDO_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-15-6.7L3 13"></path></svg>';
     function settingsOpen() { return !$('smodal').classList.contains('hidden'); }
-    function openSettings() { $('smodal').classList.remove('hidden'); renderSettings(); }
-    function closeSettings() { $('smodal').classList.add('hidden'); sureId = null; }
-    $('set').addEventListener('click', openSettings);
+    function openSettings() { var m = $('smodal'); m.classList.remove('closing', 'hidden'); renderSettings(); }
+    function closeSettings() {
+        var m = $('smodal'); if (!settingsOpen() || m.classList.contains('closing')) return;
+        m.classList.add('closing');
+        setTimeout(function () {
+            m.classList.add('hidden'); m.classList.remove('closing');
+            var ids = pending.slice(); pending = [];
+            ids.forEach(kickPlayer);
+        }, 260);
+    }
+    $('set').addEventListener('click', function () { settingsOpen() ? closeSettings() : openSettings(); });
     $('s-close').addEventListener('click', closeSettings);
     $('smodal').addEventListener('click', function (e) { if (e.target === $('smodal')) closeSettings(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && settingsOpen()) closeSettings(); });
     Array.prototype.forEach.call(document.querySelectorAll('.stabs button'), function (b) {
         b.addEventListener('click', function () { sTab = b.getAttribute('data-tab'); renderSettings(); });
     });
-    $('s-pick').innerHTML = PICK_OPTS.map(function (v) { return '<button type="button" data-v="' + v + '">' + v + '</button>'; }).join('');
+    $('s-pick').innerHTML = PICK_OPTS.map(function (v) { return '<button type="button" data-v="' + v + '">' + v + ' ث</button>'; }).join('');
     $('s-pick').addEventListener('click', function (e) {
         var b = e.target.closest('button'); if (!b) return;
         S.pickSec = +b.getAttribute('data-v');
@@ -736,7 +768,6 @@
         renderSettings();
     });
     function playerStatus(p) {
-        if (p.out) return p.kicked || banned[p.id] ? 'انقصى يدوياً' : 'مقصى';
         if (phase === 'join' || phase === 'arrange' || !G.round) return 'باللوبي';
         if (openIds[p.id]) return 'بالمواجهة الحين';
         if (p.late === G.round) return 'دخل متأخر — يلعب الدور الجاي';
@@ -750,31 +781,33 @@
         $('s-time').classList.toggle('hidden', sTab !== 'time');
         $('s-players').classList.toggle('hidden', sTab !== 'players');
         Array.prototype.forEach.call($('s-pick').children, function (b) { b.classList.toggle('on', +b.getAttribute('data-v') === S.pickSec); });
-        var list = G.players.slice().sort(function (a, b) { return (a.out ? 1 : 0) - (b.out ? 1 : 0); });
-        $('s-pn').textContent = '(' + G.alive.length + ')';
+        pending = pending.filter(function (id) { var p = G.player(id); return p && !p.out; });
+        $('s-foot').classList.toggle('hidden', sTab !== 'players' || !pending.length);
         if (sTab !== 'players') return;
-        var box = $('s-players');
-        if (!list.length) { box.innerHTML = '<div class="sempty">ما فيه لاعبين للحين</div>'; return; }
+        var box = $('s-players'), live = G.players.filter(function (p) { return !p.out; }), outs = G.players.filter(function (p) { return p.out; });
+        box.innerHTML = '<div class="sp-head">قائمة اللاعبين<b>' + live.length + ' لاعب</b></div>';
+        if (!G.players.length) { box.insertAdjacentHTML('beforeend', '<div class="sempty">لا يوجد لاعبين</div>'); return; }
         var canKick = phase !== 'champion';
-        box.innerHTML = '';
-        list.forEach(function (p) {
-            var row = document.createElement('div'); row.className = 'srow' + (p.out ? ' out' : '');
-            var who = document.createElement('div'); who.className = 'sp-who';
-            var lbl = document.createElement('span'); lbl.className = 'lbl';
-            var nm = document.createElement('bdi'); nm.textContent = p.name;
-            var st = document.createElement('small'); st.textContent = playerStatus(p);
-            if (p.user) { var u = document.createElement('bdi'); u.dir = 'ltr'; u.textContent = '@' + p.user; st.appendChild(document.createTextNode(' · ')); st.appendChild(u); }
-            lbl.appendChild(nm); lbl.appendChild(st);
-            var av = document.createElement('span'); av.className = 'sp-av'; av.textContent = firstLetter(p.name);
+        live.concat(outs).forEach(function (p, i) {
+            var pd = pending.indexOf(p.id) >= 0;
+            var row = document.createElement('div'); row.className = 'sp' + (p.out ? ' out' : pd ? ' pending' : '');
+            row.innerHTML = '<span class="sp-num"></span><span class="sp-av"></span><span class="sp-n"><bdi></bdi><small></small></span>';
+            row.querySelector('.sp-num').textContent = p.out ? '—' : String(i + 1);
+            var av = row.querySelector('.sp-av'); av.textContent = firstLetter(p.name);
             if (p.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = function () { av.textContent = ''; av.appendChild(img); }; img.src = p.avatarUrl; }
-            who.appendChild(av); who.appendChild(lbl); row.appendChild(who);
-            if (canKick && !p.out) {
-                var k = document.createElement('button'); k.type = 'button'; k.className = 'kick' + (sureId === p.id ? ' sure' : '');
-                k.innerHTML = '<span class="ms">person_remove</span>' + (sureId === p.id ? 'متأكد؟' : 'إقصاء');
-                k.addEventListener('click', function () {
-                    if (sureId !== p.id) { sureId = p.id; clearTimeout(sureT); sureT = setTimeout(function () { sureId = null; renderSettings(); }, 3000); return renderSettings(); }
-                    sureId = null; kickPlayer(p.id);
-                });
+            row.querySelector('.sp-n bdi').textContent = p.name;
+            var st = row.querySelector('.sp-n small');
+            if (p.user) { var u = document.createElement('bdi'); u.dir = 'ltr'; u.textContent = '@' + p.user; st.appendChild(u); }
+            if (!p.out) st.appendChild(document.createTextNode((p.user ? ' · ' : '') + playerStatus(p)));
+            if (p.out) {
+                row.insertAdjacentHTML('beforeend', '<span class="sp-chip">' + (p.kicked ? 'مُقصى يدوياً' : 'مُقصى') + '</span>');
+            } else if (pd) {
+                var un = document.createElement('button'); un.type = 'button'; un.className = 'sp-undo'; un.innerHTML = UNDO_SVG + 'تراجع';
+                un.addEventListener('click', function () { pending = pending.filter(function (x) { return x !== p.id; }); renderSettings(); });
+                row.appendChild(un);
+            } else if (canKick) {
+                var k = document.createElement('button'); k.type = 'button'; k.className = 'sp-kick'; k.setAttribute('aria-label', 'إقصاء ' + p.name); k.title = 'إقصاء'; k.innerHTML = KICK_SVG;
+                k.addEventListener('click', function () { pending.push(p.id); renderSettings(); });
                 row.appendChild(k);
             }
             box.appendChild(row);
