@@ -66,7 +66,20 @@ function publicRoom(room) {
         chat: room.lobbyChat.slice(-40)
     };
 }
-function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); }
+function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); sendAvatars(room); }
+
+// صورة بروفايل اللاعب بالموقع (المرفوعة أو صورة تيك توك المحفوظة) — لشاشة المذيع بس (اللوبي وشاشة الفوز)،
+// وترسل مرة وحدة لكل لاعب بدل ما تتكرر مع كل تحديث
+function profilePhoto(uid) {
+    try { var row = require('../db/database').prepare('SELECT avatar_image_base64 FROM users WHERE id = ?').get(uid); return (row && row.avatar_image_base64) || null; } catch (e) { return null; }
+}
+function sendAvatars(room) {
+    var h = room.hostConn; if (!h || h.closed) return;
+    h.avSent = h.avSent || {};
+    var map = {}, any = false;
+    room.players.forEach(function (p) { if (p.photo && h.avSent[p.id] !== p.photo.length) { map[p.id] = p.photo; h.avSent[p.id] = p.photo.length; any = true; } });
+    if (any) send(h, { t: 'avatars', map: map });
+}
 
 function sendStates(room) {
     if (!room.game) return;
@@ -134,6 +147,7 @@ function accountOf(auth) {
 // بعض الحسابات الموثّقة ما عندها اسم بروفايل أو صورة محفوظة (رابط صورة تيك توك انتهى)، فنجيبها من
 // صفحة البروفايل العامة بالخلفية، ونحفظ الصورة بالحساب، ونحدّث بطاقة اللاعب باللوبي.
 var _enriched = new Set();
+var _photoOf = profilePhoto;
 var _profileFetcher = function (tk) {
     var auth = require('../auth/auth-service');
     return auth.fetchPublicProfileHtml(tk).then(function (html) {
@@ -156,7 +170,7 @@ function enrichPlayer(room, p, acc) {
             try { db.prepare('UPDATE users SET tiktok_display_name = ? WHERE id = ? AND tiktok_display_name IS NULL').run(prof.name, acc.uid); } catch (e) { }
             if (!room.started) { var nm = cleanName(prof.name); if (nm.length >= 2 && !room.players.some(function (q) { return q !== p && q.name.toLowerCase() === nm.toLowerCase(); })) p.name = nm; }
         }
-        if (needAv && prof.avatar) jobs.push(require('../auth/tiktok-avatar-sync').saveAvatarIfMissing(acc.uid, prof.avatar).then(function (ok) { if (ok) p.avatar = p.avatar.split('&v=')[0] + '&v=' + Date.now(); }));
+        if (needAv && prof.avatar) jobs.push(require('../auth/tiktok-avatar-sync').saveAvatarIfMissing(acc.uid, prof.avatar).then(function (ok) { if (ok) { p.avatar = p.avatar.split('&v=')[0] + '&v=' + Date.now(); p.photo = _photoOf(acc.uid) || p.photo; } }));
         return Promise.all(jobs).then(function () { if (_rooms[room.code] === room) broadcastRoom(room); });
     }).catch(function (err) { logger.error('Mafia: TikTok profile fetch failed for ' + p.tiktok + ': ' + (err && err.message)); });
 }
@@ -192,7 +206,7 @@ function onMessage(client, msg) {
         if (!acc) return send(client, { t: 'err', err: 'لازم تسجّل دخول بحساب الموقع عشان تلعب', step: 'auth' });
         var mine = jr.players.find(function (q) { return q.uid === acc.uid; });
         if (mine) {   // نفس الحساب من جهاز ثاني ← يكمل بنفس اللاعب
-            mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame;
+            mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame; mine.photo = _photoOf(acc.uid) || mine.photo;
             roomClients(jr).forEach(function (c) { if (c.id === mine.id && c !== client) { send(c, { t: 'gone', reason: 'elsewhere' }); c.code = null; c.id = null; } });
             attach(client, jr, 'player', mine.id);
             send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok });
@@ -202,7 +216,7 @@ function onMessage(client, msg) {
         var name = acc.name.length >= 2 ? acc.name : 'لاعب';
         // أسماء الحسابات ممكن تتكرر — نميّزها برقم
         for (var k = 2, base = name; jr.players.some(function (q) { return q.name.toLowerCase() === name.toLowerCase(); }); k++) name = base.slice(0, 21) + ' ' + k;
-        var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame };
+        var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame, photo: _photoOf(acc.uid) };
         jr.players.push(p); attach(client, jr, 'player', p.id);
         enrichPlayer(jr, p, acc);
         send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok });
@@ -335,4 +349,4 @@ function handleUpgrade(req, socket) {
 /** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
 function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
 
-module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
