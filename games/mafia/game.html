@@ -43,6 +43,8 @@ button { font-family: inherit; cursor: pointer; }
 .vol { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 0; height: 38px; border-radius: 999px; border: 1px solid var(--c-bd); background: rgba(139,92,246,.06); }
 .vol .tbtn { border: 0; background: transparent; height: 36px; }
 .vol .vb { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(167,139,250,.4); background: rgba(139,92,246,.12); color: #fff; font-size: 17px; font-weight: 900; line-height: 1; display: grid; place-items: center; }
+.vol.locked { animation: volPulse 1.6s ease-in-out infinite; }
+@keyframes volPulse { 50% { box-shadow: 0 0 0 4px rgba(167,139,250,.35); } }
 .vol .vb:hover { background: rgba(139,92,246,.3); }
 .vol .vbar { width: 70px; height: 6px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; direction: ltr; }
 .vol .vbar i { display: block; height: 100%; width: 80%; background: linear-gradient(90deg, var(--g1), var(--g2)); border-radius: 6px; transition: width .15s; }
@@ -374,7 +376,9 @@ button { font-family: inherit; cursor: pointer; }
     // الصوت: المتصفح يقفله لين أول ضغطة — الزر يوضّح الحالة ويفتحه/يكتمه
     function sndLabel() {
         var S2 = window.MafiaSFX, v = S2.muted() ? 0 : S2.volume();
-        $('sndBtn').textContent = S2.needsUnlock() ? '🔈 تفعيل الصوت' : v === 0 ? '🔇' : '🔊';
+        $('sndBtn').textContent = S2.needsUnlock() ? '🔈' : v === 0 ? '🔇' : '🔊';
+        $('sndBtn').title = S2.needsUnlock() ? 'اضغط لتفعيل الصوت' : v === 0 ? 'الصوت مكتوم' : 'كتم الصوت';
+        $('volBox').classList.toggle('locked', S2.needsUnlock());
         $('volFill').style.width = Math.round(v * 100) + '%'; $('volPct').textContent = Math.round(v * 100) + '%';
     }
     // زيادة/نقص صوت اللعبة كلها بخطوات 10%
@@ -631,7 +635,7 @@ button { font-family: inherit; cursor: pointer; }
     // شاشة الفوز: الفريق الفائز بشخصياتهم الكبيرة (المافيا كلهم، أو المواطنين الأحياء)، وتحتهم باقي اللاعبين بأدوارهم
     var overKey = '';
     // صورة البروفايل بالموقع (من الخادم) أو صورة تيك توك المحفوظة، وإلا شخصية اللعبة
-    var PHOTOS = {};
+    var PHOTOS = window.__mafiaPhotos = {};
     function photoHtml(p, size) {
         var rp = S.room && S.room.players.find(function (q) { return q.id === p.id; });
         var src = PHOTOS[p.id] || (rp && rp.avatar ? (rp.avatar.charAt(0) === '/' ? ((window.AGPAuth && window.AGPAuth.API_BASE) || '') + rp.avatar : rp.avatar) : null);
@@ -678,7 +682,8 @@ button { font-family: inherit; cursor: pointer; }
 <script type="module">
 import { createStage } from './mafia-scene.js';
 window.__mafiaStage = createStage(document.getElementById('stage'), function () { return window.__mafiaFrame(); }, {
-    onCue: function (k, d) { window.MafiaSFX.cue(k, d); }, onAmbience: function (m) { window.MafiaSFX.ambience(m); }
+    onCue: function (k, d) { window.MafiaSFX.cue(k, d); }, onAmbience: function (m) { window.MafiaSFX.ambience(m); },
+    photoOf: function (id) { return (window.__mafiaPhotos || {})[id] || null; }
 });
 </script>
 <script>
