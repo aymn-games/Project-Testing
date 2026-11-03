@@ -206,6 +206,7 @@
 
     /** بعد أي تعديل على S(): يحدّث البيانات ويجدول الحفظ. */
     function commit() {
+        markDirty();
         O.commit();
         save.pending = true;
         setSaved('saving');
@@ -240,6 +241,7 @@
     }
 
     function openScreen(scr) {
+        markDirty();
         if (cur && cur !== scr && save.pending) flush();
         cur = scr;
         try { localStorage.setItem(LAST_KEY, String(scr.id)); } catch (e) { /* ignore */ }
@@ -396,13 +398,26 @@
         app.classList.remove('drawer');
         try { history.replaceState(null, '', '#' + (view === 'editor' ? 'tools/' + section : view)); } catch (e) { /* ignore */ }
         renderRail();
-        if (view === 'home') renderHome();
-        else if (view === 'screens') renderScreensView();
-        else { renderPanel(); layoutChanged(); renderCanvas(); }
+        // الرئيسية والشاشات ما تنعاد رسمتها إلا لو تغيّر شي (أسرع تنقّل)
+        if (view === 'home') { if (dirty.home) renderHome(); }
+        else if (view === 'screens') { if (dirty.screens) renderScreensView(); }
+        else {
+            var wasClosed = body.classList.contains('closed');
+            renderPanel();
+            body.classList.toggle('closed', !panelOpen);
+            if (changed || !F) renderCanvas();
+            // بعد ما تخلص حركة فتح/طي اللوحة تتغيّر مساحة المعاينة
+            if (wasClosed !== !panelOpen) setTimeout(function () { if (!drag) renderCanvas(); }, 380);
+        }
     }
+
+    /** شي تغيّر بالشاشات: الرئيسية وصفحة الشاشات تنرسم من جديد أول ما تنفتح. */
+    var dirty = { home: true, screens: true };
+    function markDirty() { dirty.home = true; dirty.screens = true; }
 
     /** يعيد رسم الصفحة المفتوحة لو هي الرئيسية أو الشاشات (بعد تغيّر قائمة الشاشات). */
     function renderViews() {
+        markDirty();
         renderRail();
         if (view === 'home') renderHome();
         else if (view === 'screens') renderScreensView();
@@ -1124,6 +1139,7 @@
     }
 
     function renderHome() {
+        dirty.home = false;
         homeBody.textContent = '';
         var w = el('div', 'vy-wrap');
 
@@ -1279,6 +1295,7 @@
     }
 
     function renderScreensView() {
+        dirty.screens = false;
         screensBody.textContent = '';
         var w = el('div', 'vy-wrap');
         var hd = secHead('الشاشات', 'كل شاشة لها تصميم ورابط خاص — تقدر تسوي لين ' + maxScreens + ' شاشة.');
