@@ -1450,6 +1450,12 @@
             var sg = el('a', 'ob-btn ghost lg', 'إنشاء حساب جديد');
             sg.href = '../signup.html';
             f.appendChild(sg);
+        } else if (kind === 'preview') {
+            f.appendChild(el('h2', null, 'قريباً'));
+            f.appendChild(el('p', null, 'Veyro بمرحلة التجربة الحين ومتاح للإدارة بس. شاشات البث الحالية شغّالة زي ما هي من حسابك.'));
+            var c = el('a', 'ob-btn primary lg', 'شاشات البث الحالية');
+            c.href = '../overlay/index.html';
+            f.appendChild(c);
         } else if (kind === 'streamer') {
             f.appendChild(el('h2', null, 'لحسابات الستريمر'));
             f.appendChild(el('p', null, 'أدوات Veyro لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
@@ -1478,9 +1484,25 @@
         return { view: 'home' };
     }
 
+    /**
+     * مرحلة التجربة: Veyro للإدارة بس (role = admin). الدور من السيرفر (/api/auth/me)
+     * مو من الكاش. لفتحه للستريمرز: خلّ PREVIEW_ADMIN_ONLY = false.
+     */
+    var PREVIEW_ADMIN_ONLY = true;
+
     function start() {
         renderUser();
         if (!token()) { renderHome(); showGate('login'); return; }
+        var gateCheck = PREVIEW_ADMIN_ONLY ? api('GET', '/api/auth/me') : Promise.resolve(null);
+        gateCheck.then(function (m) {
+            if (!m) return loadScreens();
+            if (m._status === 401) { renderHome(); showGate('login'); return; }
+            if (!m.success || !m.user || m.user.role !== 'admin') { renderHome(); showGate(m.success ? 'preview' : 'error'); return; }
+            loadScreens();
+        }).catch(function () { renderHome(); showGate('error'); });
+    }
+
+    function loadScreens() {
         api('GET', '/api/screens').then(function (d) {
             if (d._status === 401) { renderHome(); showGate('login'); return; }
             if (d._status === 403) { renderHome(); showGate('streamer'); return; }
