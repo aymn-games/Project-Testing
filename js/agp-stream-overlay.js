@@ -175,6 +175,17 @@
         eye: '<path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8z"/>'
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
+    // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
+    var THRONE_CROWN = '<svg viewBox="0 0 64 48" aria-hidden="true"><defs><linearGradient id="agp-so-cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c2"/><stop offset=".45" stop-color="#ffd25e"/><stop offset="1" stop-color="#c98a12"/></linearGradient></defs>' +
+        '<path d="M6 38 2 12l15 12L32 3l15 21 15-12-4 26z" fill="url(#agp-so-cg)" stroke="#8a5a08" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<rect x="6" y="38" width="52" height="7" rx="2.5" fill="url(#agp-so-cg)" stroke="#8a5a08" stroke-width="1.5"/>' +
+        '<circle cx="32" cy="27" r="4.2" fill="#ff4d7a"/><circle cx="17" cy="30" r="3" fill="#5ec8ff"/><circle cx="47" cy="30" r="3" fill="#5ec8ff"/>' +
+        '<circle cx="2.5" cy="11" r="2.6" fill="#fff3c2"/><circle cx="32" cy="3" r="2.8" fill="#fff3c2"/><circle cx="61.5" cy="11" r="2.6" fill="#fff3c2"/>' +
+        '<path d="M10 40.5h44" stroke="#fff6d6" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></svg>';
+    var THRONE_ICONS = {
+        likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
+        gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
+    };
     // فراشة «جناح الملاك»: جناحين يرفرفون (wl/wr)
     var BUTTERFLY = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="agp-so-bw" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#a6e6ff"/><stop offset="1" stop-color="#2f8cff"/></radialGradient></defs>' +
         '<g class="wl"><path d="M20 20C14 6 3 5 2 12c-1 6 7 9 18 8z" fill="url(#agp-so-bw)"/><path d="M20 21c-9 0-15 4-13 9 2 5 9 2 13-9z" fill="url(#agp-so-bw)" opacity=".85"/></g>' +
@@ -718,30 +729,33 @@
             return box;
         }
         /**
-         * «العرش» (Veyro — منصة التتويج): الثلاثة الأوائل على منصّات تحت أضواء
-         * مسرح تتمايل، وحول كل صورة إطار «جناح الملاك» المتحرك. الحد 3.
+         * «العرش» (Veyro — منصة التتويج): الأول بالوسط أكبر وفوقه تاج، والثاني
+         * يمين والثالث يسار، وحول كل صورة إطار «جناح الملاك» المتحرك. الحد 3.
          */
+        function throneCount(r) {
+            var c = el('span', 'agp-so-tcount');
+            var ic = el('span', 'agp-so-tic');
+            ic.innerHTML = THRONE_ICONS[sec] || '';
+            if (!THRONE_ICONS[sec]) ic.appendChild(icon(meta.icon));
+            c.appendChild(ic);
+            c.appendChild(el('span', 'agp-so-tnum', meta.value(r)));
+            return c;
+        }
         function throne(rows) {
-            var box = el('div', 'agp-so-throne');
-            [[1, 'l'], [0, 'c'], [2, 'r']].forEach(function (s) {
-                if (!rows[s[0]]) return;
-                box.appendChild(el('span', 'agp-so-beam b-' + s[1] + rkClass(s[0])));
-            });
-            box.appendChild(el('span', 'agp-so-floor'));
-            var row = el('div', 'agp-so-trow');
+            var row = el('div', 'agp-so-throne');
             // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
             [1, 0, 2].forEach(function (i) {
                 var r = rows[i];
                 if (!r) return;
                 var col = el('div', 'agp-so-tcol' + rkClass(i));
-                col.appendChild(angelFrame(r));
-                col.appendChild(el('span', 'agp-so-name', nameOf(r)));
-                col.appendChild(countEl(r));
-                col.appendChild(el('span', 'agp-so-ped', String(i + 1)));
+                var f = angelFrame(r);
+                if (i === 0) { var cr = el('span', 'agp-so-tcrown'); cr.innerHTML = THRONE_CROWN; f.appendChild(cr); }
+                col.appendChild(f);
+                col.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+                col.appendChild(throneCount(r));
                 row.appendChild(col);
             });
-            box.appendChild(row);
-            return box;
+            return row;
         }
         return { podium: podium, medals: medals, cards: cards, minimal: minimal, throne: throne };
     }
@@ -1651,25 +1665,24 @@
         /* العرش (Veyro) */
         '@property --agp-so-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
         '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
-        '.agp-so-throne{position:relative;width:20em;padding-top:2.2em;isolation:isolate}',
-        '.agp-so-beam{position:absolute;top:-2.4em;width:6.4em;height:16em;z-index:-1;transform-origin:50% 0;background:linear-gradient(180deg,color-mix(in srgb,var(--rk) 60%,transparent),transparent 82%);clip-path:polygon(44% 0,56% 0,100% 100%,0 100%);opacity:.42;filter:blur(.12em);animation:agp-so-sway 5s ease-in-out infinite;pointer-events:none}',
-        '.agp-so-beam.b-r{right:8%;--r0:-9deg;--r1:5deg;animation-delay:-1.3s}',
-        '.agp-so-beam.b-c{left:50%;margin-left:-3.2em;--r0:-4deg;--r1:4deg}',
-        '.agp-so-beam.b-l{left:8%;--r0:5deg;--r1:10deg;animation-delay:-2.6s}',
-        '@keyframes agp-so-sway{0%,100%{transform:rotate(var(--r0))}50%{transform:rotate(var(--r1))}}',
-        '.agp-so-floor{position:absolute;left:4%;right:4%;bottom:-.6em;height:3em;border-radius:50%;z-index:-1;background:radial-gradient(closest-side,rgba(255,213,74,.3),transparent)}',
-        '.agp-so-trow{display:flex;align-items:flex-end;justify-content:center;gap:.3em}',
-        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;gap:.12em;width:6.3em}',
-        '.agp-so-tcol .agp-so-name{max-width:6.1em;font-size:.82em;margin-top:.7em}',
-        '.agp-so-tcol .agp-so-count{font-size:.78em;color:var(--rk)}',
-        '.agp-so-ped{position:relative;width:100%;margin-top:.3em;display:flex;justify-content:center;align-items:flex-start;padding-top:.12em;font-weight:900;font-size:1.5em;line-height:1.1;color:color-mix(in srgb,var(--rk) 30%,#fff);text-shadow:0 .06em .3em rgba(0,0,0,.6);clip-path:polygon(10% 0,90% 0,100% 100%,0 100%);background:linear-gradient(180deg,color-mix(in srgb,var(--rk) 55%,#2a2338),color-mix(in srgb,var(--rk) 12%,#120f19))}',
-        '.agp-so-ped::before{content:"";position:absolute;inset:0 0 auto;height:.12em;background:color-mix(in srgb,var(--rk) 70%,#fff);opacity:.85}',
-        '.agp-so-tcol.rk1 .agp-so-ped{height:1.85em}',
-        '.agp-so-tcol.rk2 .agp-so-ped{height:1.3em}',
-        '.agp-so-tcol.rk3 .agp-so-ped{height:1em}',
+        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.9em;padding-top:2.4em}',
+        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:6em}',
+        '.agp-so-tcol.rk1{width:7em;margin-bottom:.55em}',
+        '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
+        '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
+        '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
+        '.agp-so-tnum{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.72em;line-height:1.35;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 .05em .15em rgba(0,0,0,.7)}',
+        '.agp-so-tcol.rk1 .agp-so-tnum{font-size:.8em}',
+        '.agp-so-tic{display:inline-flex;width:.95em;height:.95em;flex:none;color:var(--rk);filter:drop-shadow(0 0 .18em rgba(255,60,120,.55))}',
+        '.agp-so-tic svg{width:100%;height:100%;display:block}',
+        '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
+        '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
+        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;top:-58%;width:52%;transform:translateX(-50%);filter:drop-shadow(0 .06em .12em rgba(0,0,0,.55)) drop-shadow(0 0 .3em rgba(255,210,94,.55));animation:agp-so-crown 2.6s ease-in-out infinite}',
+        '.agp-so-tcrown svg{display:block;width:100%;height:auto}',
+        '@keyframes agp-so-crown{0%,100%{transform:translateX(-50%) translateY(0) rotate(-3deg)}50%{transform:translateX(-50%) translateY(-8%) rotate(3deg)}}',
         /* إطار «جناح الملاك» */
         '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
-        '.agp-so-tcol.rk1 .agp-so-fav{--s:3.3em}',
+        '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
         '.agp-so-fav .agp-so-av{width:100%;height:100%;padding:0;background:none;box-shadow:none}',
         '.agp-so-fart{position:absolute;z-index:3;width:149%;height:149%;left:-25.25%;top:-24.5%;pointer-events:none;transform-origin:50.5% 50%;animation:agp-so-f7float 4.2s ease-in-out infinite}',
         '.agp-so-fart img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}',
