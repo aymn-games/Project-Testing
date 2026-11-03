@@ -98,10 +98,11 @@
 
     var TOOLS = {
         tops: [
-            { label: 'توب المكبّسين', sub: 'منصة تتويج', type: 'top', opts: { section: 'likers' } },
-            { label: 'توب الداعمين', sub: 'بالماس', type: 'top', opts: { section: 'gifters' } },
-            { label: 'المتفاعلين', sub: 'أكثر من علّق', type: 'top', opts: { section: 'commenters' } },
-            { label: 'توب الشير', sub: 'أكثر من نشر', type: 'top', opts: { section: 'sharers' } },
+            // منصة التتويج = «العرش» بإطار «جناح الملاك» (الثلاثة الأوائل، بدون عنوان)
+            { label: 'توب المكبّسين', sub: 'منصة العرش', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', top: 3, title: '' } },
+            { label: 'توب الداعمين', sub: 'منصة العرش — بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', top: 3, title: '' } },
+            { label: 'المتفاعلين', sub: 'منصة العرش — أكثر من علّق', type: 'top', opts: { section: 'commenters' }, set: { design: 'throne', top: 3, title: '' } },
+            { label: 'توب الشير', sub: 'منصة العرش — أكثر من نشر', type: 'top', opts: { section: 'sharers' }, set: { design: 'throne', top: 3, title: '' } },
             { label: 'الداعمين — ميداليات', sub: 'قائمة بالترتيب', type: 'top', opts: { section: 'gifters' }, set: { design: 'medals', top: 5 } },
             { label: 'المكبّسين — بطاقات', sub: 'صور جنب بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'cards' } }
         ],
@@ -976,12 +977,21 @@
             update(it, 'section', v, true);
             O.refreshStats();
         }), true));
-        box.appendChild(row('التصميم', pills(opts(O.DESIGNS), it.design || 'podium', function (v) { update(it, 'design', v, true); }), true));
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); })));
-        box.appendChild(row('عدد الأشخاص', pills(O.TOPS.map(function (n) { return { label: String(n), value: n }; }), Number(it.top) || 3, function (v) {
+        // «العرش» بدل منصة التتويج القديمة، وحده الأقصى 3
+        var designs = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
+        var curD = designs.filter(function (d) { return d.key === it.design; })[0] || designs[0];
+        box.appendChild(row('التصميم', pills(opts(designs), curD.key, function (v) {
+            var d = designs.filter(function (x) { return x.key === v; })[0];
+            if (d && d.max && (Number(it.top) || 3) > d.max) it.top = d.max;
+            update(it, 'design', v, true);
+            O.refreshStats();
+        }), true));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
+        var counts = O.TOPS.filter(function (n) { return !curD.max || n <= curD.max; });
+        box.appendChild(row('عدد الأشخاص', pills(counts.map(function (n) { return { label: String(n), value: n }; }), Math.min(Number(it.top) || 3, curD.max || 99), function (v) {
             update(it, 'top', v, true);
             O.refreshStats();
-        })));
+        }), false, curD.max ? 'الحد ' + curD.max : ''));
         sizeColor(it, box, 1.5, 9);
     }
 

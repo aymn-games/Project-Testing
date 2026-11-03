@@ -47,6 +47,11 @@
 (function () {
     'use strict';
 
+    // ملفات إطارات التوب (Veyro) جنب هذا الملف: js/ → assets/overlay-frames/
+    var FRAMES_BASE = (function () {
+        try { return new URL('../assets/overlay-frames/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/overlay-frames/'; }
+    }());
+
     if (window.AGPStreamOverlay) return;
 
     var STORE_KEY = 'agp:stream-overlay';
@@ -170,6 +175,11 @@
         eye: '<path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8z"/>'
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
+    // فراشة «جناح الملاك»: جناحين يرفرفون (wl/wr)
+    var BUTTERFLY = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="agp-so-bw" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#a6e6ff"/><stop offset="1" stop-color="#2f8cff"/></radialGradient></defs>' +
+        '<g class="wl"><path d="M20 20C14 6 3 5 2 12c-1 6 7 9 18 8z" fill="url(#agp-so-bw)"/><path d="M20 21c-9 0-15 4-13 9 2 5 9 2 13-9z" fill="url(#agp-so-bw)" opacity=".85"/></g>' +
+        '<g class="wr"><path d="M20 20c6-14 17-15 18-8 1 6-7 9-18 8z" fill="url(#agp-so-bw)"/><path d="M20 21c9 0 15 4 13 9-2 5-9 2-13-9z" fill="url(#agp-so-bw)" opacity=".85"/></g>' +
+        '<rect x="19.2" y="13" width="1.6" height="15" rx=".8" fill="#e9f9ff"/></svg>';
     // بيانات تجريبية للمعاينة بالاستوديو لما ما فيه بث
     var SAMPLE_ROWS = [
         { name: 'الأول', count: 12400, diamonds: 5200 }, { name: 'الثاني', count: 8100, diamonds: 3100 },
@@ -707,7 +717,66 @@
             });
             return box;
         }
-        return { podium: podium, medals: medals, cards: cards, minimal: minimal };
+        /**
+         * «العرش» (Veyro — منصة التتويج): الثلاثة الأوائل على منصّات تحت أضواء
+         * مسرح تتمايل، وحول كل صورة إطار «جناح الملاك» المتحرك. الحد 3.
+         */
+        function throne(rows) {
+            var box = el('div', 'agp-so-throne');
+            [[1, 'l'], [0, 'c'], [2, 'r']].forEach(function (s) {
+                if (!rows[s[0]]) return;
+                box.appendChild(el('span', 'agp-so-beam b-' + s[1] + rkClass(s[0])));
+            });
+            box.appendChild(el('span', 'agp-so-floor'));
+            var row = el('div', 'agp-so-trow');
+            // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
+            [1, 0, 2].forEach(function (i) {
+                var r = rows[i];
+                if (!r) return;
+                var col = el('div', 'agp-so-tcol' + rkClass(i));
+                col.appendChild(angelFrame(r));
+                col.appendChild(el('span', 'agp-so-name', nameOf(r)));
+                col.appendChild(countEl(r));
+                col.appendChild(el('span', 'agp-so-ped', String(i + 1)));
+                row.appendChild(col);
+            });
+            box.appendChild(row);
+            return box;
+        }
+        return { podium: podium, medals: medals, cards: cards, minimal: minimal, throne: throne };
+    }
+
+    /** إطار «جناح الملاك» حول صورة الشخص: الرسمة + ضوء يلف + شرار + فراشات. */
+    function angelFrame(r) {
+        var f = el('span', 'agp-so-fav fr-angel');
+        f.appendChild(avatar(r));
+        f.appendChild(el('span', 'agp-so-fcomet'));
+        var art = el('span', 'agp-so-fart');
+        ['glow', ''].forEach(function (c) {
+            var img = document.createElement('img');
+            img.src = FRAMES_BASE + 'angel.webp';
+            img.alt = '';
+            img.draggable = false;
+            if (c) img.className = c;
+            art.appendChild(img);
+        });
+        f.appendChild(art);
+        [[200, 0], [235, 0.7], [300, 1.4], [330, 2.1], [20, 0.35], [60, 1.05], [110, 1.75], [150, 2.45]].forEach(function (sp) {
+            var rad = sp[0] * Math.PI / 180;
+            var k = el('span', 'agp-so-fspk');
+            k.style.left = (50 + Math.cos(rad) * 55 - 2.5) + '%';
+            k.style.top = (50 + Math.sin(rad) * 55 - 2.5) + '%';
+            k.style.animationDelay = sp[1] + 's';
+            f.appendChild(k);
+        });
+        ['b1', 'b2'].forEach(function (b) {
+            var o = el('span', 'agp-so-fbfo ' + b);
+            var bf = el('span', 'agp-so-fbf');
+            bf.innerHTML = BUTTERFLY;
+            o.appendChild(bf);
+            f.appendChild(o);
+        });
+        return f;
     }
 
     var DESIGNS = [
@@ -716,6 +785,8 @@
         { key: 'cards', label: 'بطاقات' },
         { key: 'minimal', label: 'بسيط' }
     ];
+    // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
+    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3 }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
@@ -780,6 +851,7 @@
         node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-' + design;
         title(node, it.title);
         var n = Number(it.top) || 3;
+        if (design === 'throne') n = Math.min(n, 3);
         var rows = (stats.sections[sec] || []).slice(0, n);
         if (!rows.length && !preview) {
             node.appendChild(el('div', 'agp-so-empty', 'بانتظار ' + SECTIONS[sec].label + '…'));
@@ -1576,6 +1648,46 @@
         '.agp-so-pcol.rk1 .agp-so-step{height:2.1em}',
         '.agp-so-pcol.rk2 .agp-so-step{height:1.5em}',
         '.agp-so-pcol.rk3 .agp-so-step{height:1.1em}',
+        /* العرش (Veyro) */
+        '@property --agp-so-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
+        '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
+        '.agp-so-throne{position:relative;width:20em;padding-top:2.2em;isolation:isolate}',
+        '.agp-so-beam{position:absolute;top:-2.4em;width:6.4em;height:16em;z-index:-1;transform-origin:50% 0;background:linear-gradient(180deg,color-mix(in srgb,var(--rk) 60%,transparent),transparent 82%);clip-path:polygon(44% 0,56% 0,100% 100%,0 100%);opacity:.42;filter:blur(.12em);animation:agp-so-sway 5s ease-in-out infinite;pointer-events:none}',
+        '.agp-so-beam.b-r{right:8%;--r0:-9deg;--r1:5deg;animation-delay:-1.3s}',
+        '.agp-so-beam.b-c{left:50%;margin-left:-3.2em;--r0:-4deg;--r1:4deg}',
+        '.agp-so-beam.b-l{left:8%;--r0:5deg;--r1:10deg;animation-delay:-2.6s}',
+        '@keyframes agp-so-sway{0%,100%{transform:rotate(var(--r0))}50%{transform:rotate(var(--r1))}}',
+        '.agp-so-floor{position:absolute;left:4%;right:4%;bottom:-.6em;height:3em;border-radius:50%;z-index:-1;background:radial-gradient(closest-side,rgba(255,213,74,.3),transparent)}',
+        '.agp-so-trow{display:flex;align-items:flex-end;justify-content:center;gap:.3em}',
+        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;gap:.12em;width:6.3em}',
+        '.agp-so-tcol .agp-so-name{max-width:6.1em;font-size:.82em;margin-top:.7em}',
+        '.agp-so-tcol .agp-so-count{font-size:.78em;color:var(--rk)}',
+        '.agp-so-ped{position:relative;width:100%;margin-top:.3em;display:flex;justify-content:center;align-items:flex-start;padding-top:.12em;font-weight:900;font-size:1.5em;line-height:1.1;color:color-mix(in srgb,var(--rk) 30%,#fff);text-shadow:0 .06em .3em rgba(0,0,0,.6);clip-path:polygon(10% 0,90% 0,100% 100%,0 100%);background:linear-gradient(180deg,color-mix(in srgb,var(--rk) 55%,#2a2338),color-mix(in srgb,var(--rk) 12%,#120f19))}',
+        '.agp-so-ped::before{content:"";position:absolute;inset:0 0 auto;height:.12em;background:color-mix(in srgb,var(--rk) 70%,#fff);opacity:.85}',
+        '.agp-so-tcol.rk1 .agp-so-ped{height:1.85em}',
+        '.agp-so-tcol.rk2 .agp-so-ped{height:1.3em}',
+        '.agp-so-tcol.rk3 .agp-so-ped{height:1em}',
+        /* إطار «جناح الملاك» */
+        '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
+        '.agp-so-tcol.rk1 .agp-so-fav{--s:3.3em}',
+        '.agp-so-fav .agp-so-av{width:100%;height:100%;padding:0;background:none;box-shadow:none}',
+        '.agp-so-fart{position:absolute;z-index:3;width:149%;height:149%;left:-25.25%;top:-24.5%;pointer-events:none;transform-origin:50.5% 50%;animation:agp-so-f7float 4.2s ease-in-out infinite}',
+        '.agp-so-fart img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}',
+        '.agp-so-fart img.glow{filter:blur(.15em) brightness(1.4);opacity:.35;animation:agp-so-f7glow 2.6s ease-in-out infinite}',
+        '.agp-so-fcomet{position:absolute;z-index:4;inset:-3.6%;border-radius:50%;pointer-events:none;background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(190,235,255,.85) 95%,#fff 99%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .07em));mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .07em));filter:drop-shadow(0 0 .12em #9fe0ff);animation:agp-so-f7spin 3.4s linear infinite}',
+        '.agp-so-fspk{position:absolute;z-index:5;width:5%;height:5%;min-width:2px;min-height:2px;border-radius:50%;background:#e8f8ff;box-shadow:0 0 .2em #9fe0ff,0 0 .4em #4fb6ff;opacity:0;pointer-events:none;animation:agp-so-f7spark 2.8s ease-in-out infinite}',
+        '.agp-so-fbfo{position:absolute;inset:-14%;z-index:5;pointer-events:none;animation:agp-so-spin 11s linear infinite}',
+        '.agp-so-fbfo.b2{inset:-6%;animation-duration:15s;animation-direction:reverse}',
+        '.agp-so-fbf{position:absolute;top:0;left:50%;width:20%;height:20%;transform:translate(-50%,-50%) rotate(90deg);filter:drop-shadow(0 0 .1em #8fd8ff) drop-shadow(0 0 .22em #3aa8ff)}',
+        '.agp-so-fbfo.b2 .agp-so-fbf{transform:translate(-50%,-50%) rotate(-90deg) scale(.8)}',
+        '.agp-so-fbf svg{width:100%;height:100%;overflow:visible;display:block}',
+        '.agp-so-fbf .wl,.agp-so-fbf .wr{transform-origin:50% 50%;animation:agp-so-flap .32s ease-in-out infinite alternate}',
+        '@keyframes agp-so-flap{to{transform:scaleX(.25)}}',
+        '@keyframes agp-so-spin{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-f7spin{to{--agp-so-ang:360deg}}',
+        '@keyframes agp-so-f7float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.5%) rotate(-1.2deg)}}',
+        '@keyframes agp-so-f7glow{50%{opacity:.7}}',
+        '@keyframes agp-so-f7spark{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1;transform:translateY(-20%) scale(1)}100%{opacity:0;transform:translateY(-160%) scale(.3)}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
@@ -1761,6 +1873,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
+        VEYRO_DESIGNS: VEYRO_DESIGNS,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
