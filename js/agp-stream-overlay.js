@@ -176,9 +176,29 @@
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
     // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
-    // تاج «العرش» (رسمة أصلية): بلاتين بانعكاسات كروم، ماس أزرق ثلجي بلون إطار «جناح الملاك»،
-    // لؤلؤ على الأطراف، تخريم وزخارف — ولمعة تمر على المعدن وبريق على الأحجار (CSS)
-    var THRONE_CROWN = '<svg viewBox="0 0 200 150" aria-hidden="true"><defs><linearGradient id="agp-so-km" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".18" stop-color="#e6eef8"/><stop offset=".42" stop-color="#9aaec4"/><stop offset=".55" stop-color="#f7fbff"/><stop offset=".7" stop-color="#b9c8d9"/><stop offset="1" stop-color="#5d6f86"/></linearGradient><linearGradient id="agp-so-ks" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6f8299"/><stop offset=".35" stop-color="#e9f1fb"/><stop offset=".5" stop-color="#ffffff"/><stop offset=".68" stop-color="#a9bacd"/><stop offset="1" stop-color="#55667c"/></linearGradient><linearGradient id="agp-so-kb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4a60"/><stop offset="1" stop-color="#18202d"/></linearGradient><radialGradient id="agp-so-kp" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#eef6ff"/><stop offset="1" stop-color="#9fb2c9"/></radialGradient><radialGradient id="agp-so-kg" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".25" stop-color="#bff0ff"/><stop offset=".6" stop-color="#3fb4ff"/><stop offset="1" stop-color="#0b4fb3"/></radialGradient><linearGradient id="agp-so-kshine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><filter id="agp-so-kglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><clipPath id="agp-so-kclip"><path d="M16 112 C20 86 28 66 40 50 L52 82 L66 34 L82 76 L100 6 L118 76 L134 34 L148 82 L160 50 C172 66 180 86 184 112 C140 126 60 126 16 112Z"/><path d="M10 104 C70 120 130 120 190 104 L188 128 C128 144 72 144 12 128Z"/></clipPath></defs><path d="M30 104 C40 70 70 52 100 48 C130 52 160 70 170 104" fill="none" stroke="url(#agp-so-kb)" stroke-width="7" stroke-linecap="round"/><path d="M30 104 C40 70 70 52 100 48 C130 52 160 70 170 104" fill="none" stroke="#8fa3bb" stroke-width="1.2" stroke-linecap="round" opacity=".6"/><g stroke="#2e3b4d" stroke-width=".9" stroke-linejoin="round"><path d="M16 112 C20 86 28 66 40 50 C42 64 46 76 52 86 Z" fill="url(#agp-so-ks)"/><path d="M184 112 C180 86 172 66 160 50 C158 64 154 76 148 86 Z" fill="url(#agp-so-ks)"/><path d="M44 106 C52 80 58 56 66 34 C72 58 78 80 86 104 Z" fill="url(#agp-so-ks)"/><path d="M156 106 C148 80 142 56 134 34 C128 58 122 80 114 104 Z" fill="url(#agp-so-ks)"/><path d="M78 104 C86 70 93 36 100 6 C107 36 114 70 122 104 Z" fill="url(#agp-so-ks)"/></g><g fill="url(#agp-so-kb)" stroke="#c9d6e6" stroke-width=".7"><path d="M38 98 C38 86 40 76 42 68 C45 78 47 88 48 98 Z"/><path d="M162 98 C162 86 160 76 158 68 C155 78 153 88 152 98 Z"/><path d="M62 96 C62 92 63 88 64 84 C66 88 68 92 69 96 Z"/><path d="M138 96 C138 92 137 88 136 84 C134 88 132 92 131 96 Z"/><path d="M95 98 C95 94 96 90 97 87 L103 87 C104 90 105 94 105 98 Z"/></g><g fill="none" stroke="url(#agp-so-ks)" stroke-width="2.6" stroke-linecap="round"><path d="M52 104 c-2-8 4-12 8-8 3 3-1 7-3 5"/><path d="M148 104 c2-8-4-12-8-8-3 3 1 7 3 5"/><path d="M86 104 c-1-7 3-10 6-7 2 2 0 5-2 4"/><path d="M114 104 c1-7-3-10-6-7-2 2 0 5 2 4"/></g><g fill="#e9fbff" stroke="#7fcfff" stroke-width=".4"><path d="M93 30 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/><path d="M107 30 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/><path d="M91 40 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/><path d="M109 40 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/><path d="M89 90 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/><path d="M111 90 l1.6 2.2 -1.6 2.2 -1.6 -2.2z"/></g><g stroke="#fff" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".85"><path d="M100 12 C97 40 93 70 88 100"/><path d="M66 40 C62 58 58 78 54 98"/><path d="M134 40 C138 58 142 78 146 98"/></g><g filter="url(#agp-so-kglow)"><path class="gem" d="M100 50 L109 62 L100 82 L91 62 Z" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".8"/><path d="M100 50 L104 62 L100 82 L96 62 Z" fill="#dff7ff" opacity=".55"/><ellipse class="gem" cx="66" cy="74" rx="4.6" ry="6" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".7"/><ellipse class="gem" cx="134" cy="74" rx="4.6" ry="6" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".7"/></g><g stroke="#7d8ea4" stroke-width=".6"><circle cx="100" cy="6" r="5.2" fill="url(#agp-so-kp)"/><circle cx="66" cy="33" r="4.2" fill="url(#agp-so-kp)"/><circle cx="134" cy="33" r="4.2" fill="url(#agp-so-kp)"/><circle cx="40" cy="49" r="3.6" fill="url(#agp-so-kp)"/><circle cx="160" cy="49" r="3.6" fill="url(#agp-so-kp)"/></g><path d="M10 104 C70 120 130 120 190 104 L188 128 C128 144 72 144 12 128Z" fill="url(#agp-so-km)" stroke="#2e3b4d" stroke-width="1"/><path d="M11 108 C70 124 130 124 189 108" fill="none" stroke="#fff" stroke-width="1.3" opacity=".9"/><path d="M12 124 C72 140 128 140 188 124" fill="none" stroke="#2e3b4d" stroke-width="1" opacity=".55"/><g filter="url(#agp-so-kglow)"><path class="gem" d="M100 113 L112 122 L100 133 L88 122 Z" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".8"/><path d="M100 113 L104 122 L100 133 L96 122 Z" fill="#dff7ff" opacity=".5"/><ellipse class="gem" cx="66" cy="124" rx="6.5" ry="5" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".7"/><ellipse class="gem" cx="134" cy="124" rx="6.5" ry="5" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".7"/><ellipse cx="34" cy="118" rx="4.4" ry="3.6" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".6"/><ellipse cx="166" cy="118" rx="4.4" ry="3.6" fill="url(#agp-so-kg)" stroke="#e8fbff" stroke-width=".6"/></g><g fill="url(#agp-so-kp)"><circle cx="20" cy="119" r="1.8"/><circle cx="48" cy="124" r="1.8"/><circle cx="82" cy="127" r="1.8"/><circle cx="118" cy="127" r="1.8"/><circle cx="152" cy="124" r="1.8"/><circle cx="180" cy="119" r="1.8"/></g><g clip-path="url(#agp-so-kclip)"><rect class="shine" x="-60" y="0" width="46" height="150" fill="url(#agp-so-kshine)" transform="skewX(-18)"/></g><g fill="#fff"><path class="spk" d="M100 52 l1.6 12 12 1.6 -12 1.6 -1.6 12 -1.6 -12 -12 -1.6 12 -1.6z"/><path class="spk s2" d="M134 64 l1 7 7 1 -7 1 -1 7 -1 -7 -7 -1 7 -1z"/><path class="spk s3" d="M66 116 l1 7 7 1 -7 1 -1 7 -1 -7 -7 -1 7 -1z"/><path class="spk s4" d="M100 0 l.9 5 5 .9 -5 .9 -.9 5 -.9 -5 -5 -.9 5 -.9z"/></g></svg>';
+    // تاج «العرش»: صورة تاج ذهبي (assets/overlay-frames/crown-gold.webp، الخلفية انشالت)
+    // + لمعة تمر على الذهب + بريق على رؤوس التاج. مواقع الرؤوس بنسبة من الصورة.
+    var CROWN_TIPS = [[33, 6, 0], [67, 6, 1.1], [50.2, 34, .55], [7.2, 13, 1.6], [92.5, 13, .3]];
+    function throneCrown() {
+        var c = el('span', 'agp-so-tcrown');
+        var url = FRAMES_BASE + 'crown-gold.webp';
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.draggable = false;
+        c.appendChild(img);
+        var sh = el('span', 'agp-so-tshine');
+        sh.style.webkitMaskImage = sh.style.maskImage = 'url("' + url + '")';
+        c.appendChild(sh);
+        CROWN_TIPS.forEach(function (t) {
+            var k = el('span', 'agp-so-tspark');
+            k.style.left = t[0] + '%';
+            k.style.top = t[1] + '%';
+            k.style.animationDelay = t[2] + 's';
+            c.appendChild(k);
+        });
+        return c;
+    }
     var THRONE_ICONS = {
         likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
         gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
@@ -746,7 +766,7 @@
                 if (!r) return;
                 var col = el('div', 'agp-so-tcol' + rkClass(i));
                 var f = angelFrame(r);
-                if (i === 0) { var cr = el('span', 'agp-so-tcrown'); cr.innerHTML = THRONE_CROWN; f.appendChild(cr); }
+                if (i === 0) f.appendChild(throneCrown());
                 col.appendChild(f);
                 col.appendChild(el('span', 'agp-so-tname', nameOf(r)));
                 col.appendChild(throneCount(r));
@@ -1674,18 +1694,13 @@
         '.agp-so-tic svg{width:100%;height:100%;display:block}',
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
-        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;bottom:calc(100% - 6%);width:104%;transform:translateX(-50%);transform-origin:50% 100%;filter:drop-shadow(0 .06em .12em rgba(0,0,0,.65)) drop-shadow(0 0 .35em rgba(120,200,255,.55));animation:agp-so-crown 3.6s ease-in-out infinite}',
-        '.agp-so-tcrown .shine{animation:agp-so-tshine 3.2s ease-in-out infinite}',
-        '.agp-so-tcrown .spk.s3{animation-delay:.6s}',
-        '.agp-so-tcrown .spk.s4{animation-delay:1.6s}',
-        '@keyframes agp-so-tshine{0%,35%{transform:skewX(-18deg) translateX(0)}100%{transform:skewX(-18deg) translateX(330px)}}',
-        '.agp-so-tcrown svg{display:block;width:100%;height:auto;overflow:visible}',
-        '.agp-so-tcrown .spk{transform-box:fill-box;transform-origin:center;animation:agp-so-tspk 2.2s ease-in-out infinite}',
-        '.agp-so-tcrown .spk.s2{animation-delay:1.1s}',
-        '.agp-so-tcrown .gem{animation:agp-so-tgem 2.2s ease-in-out infinite}',
+        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;bottom:calc(100% - 7%);width:112%;transform:translateX(-50%);transform-origin:50% 100%;filter:drop-shadow(0 .06em .12em rgba(0,0,0,.6)) drop-shadow(0 0 .22em rgba(255,196,70,.55)) drop-shadow(0 0 .5em rgba(140,210,255,.35));animation:agp-so-crown 3.6s ease-in-out infinite}',
+        '.agp-so-tcrown img{display:block;width:100%;height:auto}',
+        '.agp-so-tshine{position:absolute;inset:0;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;background:linear-gradient(105deg,transparent 40%,rgba(255,250,225,.85) 50%,transparent 60%) no-repeat;background-size:260% 100%;mix-blend-mode:screen;animation:agp-so-tshine 3.4s ease-in-out infinite}',
+        '.agp-so-tspark{position:absolute;width:13%;aspect-ratio:1;margin:-6.5% 0 0 -6.5%;pointer-events:none;background:radial-gradient(circle,#fff 0 8%,transparent 9%),conic-gradient(from 45deg,transparent 0 10%,rgba(255,255,255,.95) 12.5%,transparent 15% 35%,rgba(255,255,255,.95) 37.5%,transparent 40% 60%,rgba(255,255,255,.95) 62.5%,transparent 65% 85%,rgba(255,255,255,.95) 87.5%,transparent 90%);-webkit-mask:radial-gradient(circle,#000 0 20%,transparent 62%);mask:radial-gradient(circle,#000 0 20%,transparent 62%);filter:drop-shadow(0 0 .12em #fff7d6);opacity:0;animation:agp-so-tspk 2.2s ease-in-out infinite}',
         '@keyframes agp-so-crown{0%,100%{transform:translateX(-50%) rotate(-1.5deg)}50%{transform:translateX(-50%) rotate(1.5deg)}}',
-        '@keyframes agp-so-tspk{0%,100%{opacity:.2;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}',
-        '@keyframes agp-so-tgem{50%{filter:brightness(1.4) drop-shadow(0 0 3px #8fdcff)}}',
+        '@keyframes agp-so-tshine{0%,30%{background-position:120% 0}100%{background-position:-20% 0}}',
+        '@keyframes agp-so-tspk{0%,100%{opacity:0;transform:scale(.3) rotate(0)}45%{opacity:1;transform:scale(1) rotate(30deg)}}',
         /* إطار «جناح الملاك» */
         '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
         '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
