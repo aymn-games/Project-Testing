@@ -815,8 +815,15 @@
         inner.appendChild(angelFrame(r));
         inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
         var c = el('span', 'agp-so-tcount');
-        var ic = el('span', 'agp-so-tic');
-        if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
+        var ic = el('span', 'agp-so-tic i-' + sec);
+        if (sec === 'gifters') {
+            // الدعم: عملة ذهبية (assets/overlay-frames/coin.webp)
+            var coin = document.createElement('img');
+            coin.src = FRAMES_BASE + 'coin.webp';
+            coin.alt = '';
+            coin.draggable = false;
+            ic.appendChild(coin);
+        } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
         var num = el('span', 'agp-so-tnum', fmt(rowNum(sec, r)));
@@ -1790,7 +1797,10 @@
         '.agp-so-tnum{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.72em;line-height:1.35;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 .05em .15em rgba(0,0,0,.7)}',
         '.agp-so-tcol.rk1 .agp-so-tnum{font-size:.8em}',
         '.agp-so-tic{display:inline-flex;width:.95em;height:.95em;flex:none;color:var(--rk);filter:drop-shadow(0 0 .18em rgba(255,60,120,.55))}',
-        '.agp-so-tic svg{width:100%;height:100%;display:block}',
+        '.agp-so-tic svg,.agp-so-tic img{width:100%;height:100%;display:block}',
+        '.agp-so-tic.i-gifters{width:1.15em;height:1.15em;margin:-.08em 0;filter:drop-shadow(0 0 .16em rgba(255,190,60,.6))}',
+        '.agp-so-tcol.rk1 .agp-so-tic.i-gifters{animation:agp-so-coin 3.2s ease-in-out infinite}',
+        '@keyframes agp-so-coin{0%,70%,100%{transform:perspective(4em) rotateY(0)}85%{transform:perspective(4em) rotateY(360deg)}}',
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
         '.agp-so-throne.pal-single .agp-so-tcol{--rk:var(--agp-so-c)}',
