@@ -47,6 +47,32 @@
     .hbtn:hover{ background:rgba(122,63,212,.35); }
     .hbtn:active{ transform:scale(.97); }
     .hbtn.exit{ color:#fda4af; border-color:rgba(244,63,94,.3); }
+    .hbtn.ic{ width:38px; padding:0; justify-content:center; } .hbtn.ic .ms{ font-size:21px; }
+    /* ===== نافذة الإعدادات أثناء اللعب: الوقت + اللاعبين (إقصاء يدوي) ===== */
+    .smodal{ position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(5,5,8,.62); direction:rtl; }
+    .smodal.hidden{ display:none; }
+    .sbox{ width:min(520px,100%); max-height:min(640px,calc(100vh - 32px)); display:flex; flex-direction:column; border-radius:24px; overflow:hidden; background:linear-gradient(180deg,#1a1526,#0d0b14); border:1px solid rgba(178,140,245,.35); box-shadow:0 30px 80px rgba(0,0,0,.55); }
+    .shead{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px 10px; }
+    .shead h2{ margin:0; font:900 26px 'Zain'; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .stabs{ display:flex; gap:4px; margin:0 18px; padding:4px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .stabs button{ flex:1; height:38px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; font:700 14px 'IBM Plex Sans Arabic'; color:#a8a3b5; background:transparent; }
+    .stabs button .ms{ font-size:19px; } .stabs button.on{ color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 4px 14px rgba(139,92,246,.4); }
+    .sbody{ padding:14px 18px 18px; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+    .srow{ display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); }
+    .srow .lbl{ display:flex; flex-direction:column; gap:2px; text-align:right; min-width:0; font:700 15px 'IBM Plex Sans Arabic'; color:#f3ecff; }
+    .srow .lbl small{ font:500 12px 'IBM Plex Sans Arabic'; color:var(--muted); }
+    .schoice{ display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); flex-shrink:0; direction:rtl; }
+    .schoice button{ height:32px; min-width:38px; padding:0 10px; border:none; border-radius:999px; cursor:pointer; font:700 13px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; }
+    .schoice button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.45); }
+    .sp-who{ display:flex; align-items:center; gap:10px; min-width:0; }
+    .sp-av{ width:38px; height:38px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:#7a3fd4; border:2px solid #b28cf5; font:900 17px 'Zain'; color:#fff; }
+    .sp-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .sp-who .lbl bdi{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .kick{ height:36px; padding:0 14px; flex:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px; font:700 13.5px 'IBM Plex Sans Arabic'; color:#fca5a5; background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.4); }
+    .kick:hover{ background:rgba(248,113,113,.18); } .kick .ms{ font-size:18px; }
+    .kick.sure{ color:#fff; background:#e11d48; border-color:#e11d48; }
+    .srow.out{ opacity:.45; } .srow.out .kick{ display:none; }
+    .sempty{ padding:24px; text-align:center; font:600 14px 'IBM Plex Sans Arabic'; color:var(--muted); }
     /* «إتاحة الدخول» أثناء المباراة: العنوان يمين ومفتاح التبديل يسار (قاعدة صفوف الإعدادات) */
     .late{ height:38px; padding:0 8px 0 14px; border-radius:999px; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; white-space:nowrap; direction:rtl;
         font:600 14px 'IBM Plex Sans Arabic'; color:#e7e3ef; background:rgba(24,16,40,.55); border:1px solid var(--line); }
@@ -210,7 +236,7 @@
 <div class="flat hidden" id="flat"></div>
 
 <header>
-    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button></div>
+    <div class="hside"><button type="button" class="hbtn exit" id="exit"><span class="ms">logout</span>خروج</button><button type="button" class="hbtn ic" id="fs" title="ملء الشاشة" aria-label="ملء الشاشة"><span class="ms" id="fs-i">fullscreen</span></button><button type="button" class="hbtn ic" id="set" title="الإعدادات" aria-label="الإعدادات"><span class="ms">settings</span></button></div>
     <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
     <div class="hside end"><button type="button" class="late" id="late" role="switch" aria-checked="false"><span>إتاحة الدخول</span><span class="sw"></span></button><div class="late-kw" id="late-kw"><span class="ms">chat</span><b><bdi id="late-kw-t"></bdi></b></div><div class="count" id="count"><span class="ms">groups</span><span id="count-n">0</span><small id="count-l">لاعب</small></div></div>
 </header>
@@ -235,6 +261,16 @@
     </div>
 </div>
 <div class="ltags" id="ltags" aria-hidden="true"></div>
+<div class="smodal hidden" id="smodal" role="dialog" aria-modal="true" aria-labelledby="s-title">
+    <div class="sbox">
+        <div class="shead"><h2 id="s-title">الإعدادات</h2><button type="button" class="hbtn ic" id="s-close" aria-label="إغلاق"><span class="ms">close</span></button></div>
+        <div class="stabs"><button type="button" class="on" data-tab="time"><span class="ms">timer</span>الوقت</button><button type="button" data-tab="players"><span class="ms">groups</span>اللاعبين <span id="s-pn"></span></button></div>
+        <div class="sbody" id="s-time">
+            <div class="srow"><span class="lbl">وقت الاختيار<small>بالثواني — ينطبق من المحاولة الجاية</small></span><div class="schoice" id="s-pick"></div></div>
+        </div>
+        <div class="sbody hidden" id="s-players"></div>
+    </div>
+</div>
 <div class="kw" id="kw"><span class="ms">chat</span>اكتب <b><bdi id="kw-t"></bdi></b> بالشات وادخل</div>
 <div class="lobby-info">
     <div class="joined hidden" id="joined"><span class="ms">person_add</span><bdi id="joined-n"></bdi> دخل</div>
@@ -297,6 +333,7 @@
     // كلمة الدخول إجبارية (من الإعدادات) — بدونها نرجع للإعدادات
     if (!S.keyword) { location.replace('index.html'); return; }
     var KW = E.norm(S.keyword), FOLLOWERS = saved.who === 'المتابعين فقط';
+    var banned = {}; // اللي أقصاهم المذيع يدوياً (تتصفّر مع «مباراة جديدة»)
     var LATE = false; try { LATE = localStorage.getItem('rps-late') === '1'; } catch (e) {}
     $('kw-t').textContent = S.keyword.trim();
     var SELECT_MS = 2600, COUNT_MS = 3000, ARRANGE_MS = 2600;
@@ -316,6 +353,7 @@
         clearTimers();
         G = E.create({ maxPlayers: S.maxPlayers });
         // اللوبي نفسه بشاشة اللعبة: اللي يكتب كلمة الدخول تطلع شخصيته بالساحة، والمذيع يضغط «ابدأ»
+        banned = {};
         phase = 'join'; phaseEnds = 0; hl = {}; flickId = null; openIds = {}; joinedAt = {}; reported = false; revealInfo = {}; cur = -1; gone = {}; koKind = 1; outcome = null; dooming = false; doomOverlay(false);
         matchStartedAt = 0;
         $('champ').classList.add('hidden'); hideBanner(); $('shout').classList.add('hidden');
@@ -328,6 +366,7 @@
         if (phase === 'join') {
             if (E.norm(p.text) !== KW) return;
             if (FOLLOWERS && !p.isFollower) return;
+            if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
             if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
@@ -335,6 +374,7 @@
         }
         // دخول متأخر (إتاحة الدخول): نفس كلمة الدخول وشرط المتابعين. اللي دخل قبل — حتى لو انقصى — ما يرجع
         if (LATE && phase !== 'champion' && E.norm(p.text) === KW) {
+            if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
             if (FOLLOWERS && !p.isFollower) return;
             if (G.lateJoin({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); toast(G.player(p.id).name + ' دخل البطولة'); render(); }
@@ -460,6 +500,8 @@
     }
     function advance() {
         G.nextRound();
+        // لو المذيع أقصى الكل يدوياً وما بقى أحد: نرجع للوبي
+        if (!G.champion && !G.alive.length) { toast('ما بقى لاعبين'); return reset(); }
         if (G.champion) return crown();
         roundIntro();
     }
@@ -534,6 +576,7 @@
         renderVs();
         pushScene();
         renderFlat();
+        renderSettings();
     }
 
     // «✋ الورقة أقوى من ✊ الحجرة» للمحاولة اللي انحسمت للتو
@@ -658,6 +701,104 @@
     $('late-kw-t').textContent = S.keyword.trim();
     function setLate(on) { LATE = !!on; $('late').setAttribute('aria-checked', LATE ? 'true' : 'false'); document.body.classList.toggle('late-on', LATE); try { localStorage.setItem('rps-late', LATE ? '1' : '0'); } catch (e) {} }
     $('late').addEventListener('click', function () { setLate(!LATE); });
+
+    // ---------------------------------------------------------------- ملء الشاشة
+    function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
+    $('fs').addEventListener('click', function () {
+        var d = document, el = d.documentElement;
+        try {
+            if (fsEl()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+            else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+        } catch (e) { toast('ملء الشاشة غير مدعوم هنا'); }
+    });
+    function fsIcon() { $('fs-i').textContent = fsEl() ? 'fullscreen_exit' : 'fullscreen'; }
+    document.addEventListener('fullscreenchange', fsIcon); document.addEventListener('webkitfullscreenchange', fsIcon);
+
+    // ---------------------------------------------------------------- الإعدادات أثناء اللعب
+    // قسم «الوقت»: وقت الاختيار (نفس خيارات شاشة الإعدادات، وينحفظ لها)
+    // قسم «اللاعبين»: كل اللاعبين مع زر «إقصاء» (ضغطتين للتأكيد)
+    var PICK_OPTS = [8, 10, 12, 15, 20], sTab = 'time', sureId = null, sureT = 0;
+    function settingsOpen() { return !$('smodal').classList.contains('hidden'); }
+    function openSettings() { $('smodal').classList.remove('hidden'); renderSettings(); }
+    function closeSettings() { $('smodal').classList.add('hidden'); sureId = null; }
+    $('set').addEventListener('click', openSettings);
+    $('s-close').addEventListener('click', closeSettings);
+    $('smodal').addEventListener('click', function (e) { if (e.target === $('smodal')) closeSettings(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && settingsOpen()) closeSettings(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.stabs button'), function (b) {
+        b.addEventListener('click', function () { sTab = b.getAttribute('data-tab'); renderSettings(); });
+    });
+    $('s-pick').innerHTML = PICK_OPTS.map(function (v) { return '<button type="button" data-v="' + v + '">' + v + '</button>'; }).join('');
+    $('s-pick').addEventListener('click', function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        S.pickSec = +b.getAttribute('data-v');
+        try { var cur0 = readJSON(SETTINGS_KEY, {}) || {}; cur0.pickSec = S.pickSec; localStorage.setItem(SETTINGS_KEY, JSON.stringify(cur0)); } catch (err) {}
+        renderSettings();
+    });
+    function playerStatus(p) {
+        if (p.out) return p.kicked || banned[p.id] ? 'انقصى يدوياً' : 'مقصى';
+        if (phase === 'join' || phase === 'arrange' || !G.round) return 'باللوبي';
+        if (openIds[p.id]) return 'بالمواجهة الحين';
+        if (p.late === G.round) return 'دخل متأخر — يلعب الدور الجاي';
+        if (G.bye === p.id) return 'متأهل مباشرة بهالدور';
+        if (G.duels.some(function (d) { return d.result === 'done' && d.winner === p.id; })) return 'تأهل للدور الجاي';
+        return 'ينتظر دوره';
+    }
+    function renderSettings() {
+        if (!settingsOpen()) return;
+        Array.prototype.forEach.call(document.querySelectorAll('.stabs button'), function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === sTab); });
+        $('s-time').classList.toggle('hidden', sTab !== 'time');
+        $('s-players').classList.toggle('hidden', sTab !== 'players');
+        Array.prototype.forEach.call($('s-pick').children, function (b) { b.classList.toggle('on', +b.getAttribute('data-v') === S.pickSec); });
+        var list = G.players.slice().sort(function (a, b) { return (a.out ? 1 : 0) - (b.out ? 1 : 0); });
+        $('s-pn').textContent = '(' + G.alive.length + ')';
+        if (sTab !== 'players') return;
+        var box = $('s-players');
+        if (!list.length) { box.innerHTML = '<div class="sempty">ما فيه لاعبين للحين</div>'; return; }
+        var canKick = phase !== 'champion';
+        box.innerHTML = '';
+        list.forEach(function (p) {
+            var row = document.createElement('div'); row.className = 'srow' + (p.out ? ' out' : '');
+            var who = document.createElement('div'); who.className = 'sp-who';
+            var lbl = document.createElement('span'); lbl.className = 'lbl';
+            var nm = document.createElement('bdi'); nm.textContent = p.name;
+            var st = document.createElement('small'); st.textContent = playerStatus(p);
+            if (p.user) { var u = document.createElement('bdi'); u.dir = 'ltr'; u.textContent = '@' + p.user; st.appendChild(document.createTextNode(' · ')); st.appendChild(u); }
+            lbl.appendChild(nm); lbl.appendChild(st);
+            var av = document.createElement('span'); av.className = 'sp-av'; av.textContent = firstLetter(p.name);
+            if (p.avatarUrl) { var img = new Image(); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.onload = function () { av.textContent = ''; av.appendChild(img); }; img.src = p.avatarUrl; }
+            who.appendChild(av); who.appendChild(lbl); row.appendChild(who);
+            if (canKick && !p.out) {
+                var k = document.createElement('button'); k.type = 'button'; k.className = 'kick' + (sureId === p.id ? ' sure' : '');
+                k.innerHTML = '<span class="ms">person_remove</span>' + (sureId === p.id ? 'متأكد؟' : 'إقصاء');
+                k.addEventListener('click', function () {
+                    if (sureId !== p.id) { sureId = p.id; clearTimeout(sureT); sureT = setTimeout(function () { sureId = null; renderSettings(); }, 3000); return renderSettings(); }
+                    sureId = null; kickPlayer(p.id);
+                });
+                row.appendChild(k);
+            }
+            box.appendChild(row);
+        });
+    }
+    // إقصاء يدوي: باللوبي ينشال، وأثناء البطولة يطلع فوراً. لو كان بالمواجهة الحالية
+    // نوقف المواجهة (خصمه ياخذها) وننتقل للمواجهة الجاية
+    function kickPlayer(id) {
+        var p = G.player(id); if (!p || p.out || phase === 'champion') return;
+        banned[id] = 1;
+        if (!G.round) { G.kick(id); delete joinedAt[id]; toast(p.name + ' انشال من اللعبة'); render(); return; }
+        var d = G.duelOf(id), active = d && cur >= 0 && G.duels[cur] === d;
+        G.kick(id); gone[id] = 1;
+        toast(p.name + ' انقصى');
+        if (active) {
+            clearTimers(); cdOverlay(false); doomOverlay(false); dooming = false; hideBanner(); $('shout').classList.add('hidden');
+            hl = {}; flickId = null; openIds = {}; outcome = null; revealInfo = {}; phaseEnds = 0; cur = -1;
+            phase = 'round'; render();
+            later(nextDuel, 900);
+            return;
+        }
+        render();
+    }
+
     setLate(LATE);
 
     // ---------------------------------------------------------------- البث

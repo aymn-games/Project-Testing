@@ -107,6 +107,21 @@
             return true;
         }
 
+        /**
+         * إقصاء يدوي من المذيع. قبل البداية يشيله من اللوبي. بعدها يطلع من البطولة فوراً:
+         * لو مواجهته ما انحسمت، خصمه ياخذها (how: 'kick')، ولو كان متأهل مباشرة يروح تأهله.
+         */
+        function kick(id) {
+            var pl = byId[id];
+            if (!pl || pl.out || champ) return false;
+            if (round === 0) return remove(id);
+            var d = duelOf(id);
+            if (d) { var other = d.a === id ? d.b : d.a; d.result = 'done'; d.winner = other; d.loser = id; d.how = 'kick'; d.picks = {}; }
+            if (bye === id) bye = null;
+            pl.out = true; pl.outRound = round; pl.kicked = true;
+            return true;
+        }
+
         function pair(list) {
             list = shuffle(list, rnd);
             bye = null;
@@ -204,7 +219,7 @@
         }
 
         return {
-            join: join, lateJoin: lateJoin, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
+            join: join, lateJoin: lateJoin, kick: kick, touch: touch, remove: remove, startRound: startRound, pick: pick, resolve: resolve,
             startReplay: startReplay, roundDone: roundDone, nextRound: nextRound, stageName: stageName,
             get players() { return players; },
             get alive() { return alive(); },
