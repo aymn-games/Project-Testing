@@ -460,7 +460,7 @@ function handleConnectMessage(connectionId, socket, payload) {
 
     onFollow: function (data) {
       if (!isOverlay) sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
-      if (entry.statsUsername) liveSessionStats.recordFollow(entry.statsUsername, connectionId);
+      if (entry.statsUsername) liveSessionStats.recordFollow(entry.statsUsername, connectionId, data);
 
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);

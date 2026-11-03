@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-agp-studio data-agp-screens>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>شاشات البث — ألعاب أيمن</title>
+<link rel="icon" href="../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  /* «شاشات البث» — محرر شاشات OBS / TikTok LIVE Studio (overlay/studio.js).
+     هوية الموقع: خلفية داكنة وبنفسجي #7a3fd4، ولمسة سماوي للروابط. */
+  :root {
+    --bg: #07060c; --rail: #0c0b14; --panel: #110f1c; --card: rgba(255,255,255,.035); --card-2: rgba(255,255,255,.06);
+    --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.14);
+    --text: #f4f2fb; --muted: #958da6; --accent: #7a3fd4; --accent-2: #b28cf5; --sky: #4dd8ff;
+    --ok: #22c55e; --warn: #f5a623; --bad: #ef4444;
+    --rail-w: 88px; --panel-w: 348px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; overflow: hidden; }
+  button { font: inherit; color: inherit; }
+  a { color: var(--accent-2); text-decoration: none; }
+  svg { display: block; }
+
+  .ob-app { display: grid; grid-template-rows: auto 1fr; height: 100vh; height: 100dvh; }
+
+  /* ---------- الشريط العلوي ---------- */
+  .ob-top { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(20,17,34,.96), rgba(12,11,20,.96)); min-width: 0; }
+  .ob-back { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); color: #cfc7e2; font-size: 17px; }
+  .ob-back:hover { border-color: rgba(178,140,245,.5); color: #fff; }
+  .ob-brand { flex: none; display: flex; flex-direction: column; line-height: 1.25; }
+  .ob-brand b { font-family: "Noto Kufi Arabic", sans-serif; font-weight: 800; font-size: 17px; }
+  .ob-brand small { font-size: 11.5px; color: var(--muted); }
+  .ob-sep { flex: none; width: 1px; height: 30px; background: var(--line); }
+  .ob-screens { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+  .ob-screens::-webkit-scrollbar { display: none; }
+  .ob-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: #cfc7e2; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; max-width: 220px; }
+  .ob-chip span { overflow: hidden; text-overflow: ellipsis; }
+  .ob-chip:hover { border-color: var(--line-2); color: #fff; }
+  .ob-chip.on { background: linear-gradient(180deg, rgba(138,79,232,.35), rgba(122,63,212,.22)); border-color: rgba(178,140,245,.65); color: #fff; box-shadow: 0 0 0 1px rgba(178,140,245,.2), 0 6px 18px -8px rgba(122,63,212,.8); }
+  .ob-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+  .ob-chip.on .dot { background: var(--sky); box-shadow: 0 0 8px var(--sky); }
+  .ob-chip.add { border-style: dashed; color: var(--accent-2); }
+  .ob-status { flex: none; display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .ob-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 8px rgba(245,166,35,.6); }
+  .ob-status.ok i { background: var(--ok); box-shadow: 0 0 8px rgba(34,197,94,.6); }
+  .ob-saved { flex: none; font-size: 12.5px; color: var(--muted); white-space: nowrap; min-width: 64px; text-align: center; }
+  .ob-saved.ok { color: var(--ok); }
+  .ob-saved.bad { color: var(--warn); }
+  .ob-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px; border-radius: 12px; border: 1px solid rgba(178,140,245,.4); background: rgba(122,63,212,.14); color: #e2d6ff; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .ob-btn:hover { background: rgba(122,63,212,.24); }
+  .ob-btn.primary { background: linear-gradient(180deg, #8a4fe8, #7a3fd4); border-color: #8a4fe8; color: #fff; box-shadow: 0 8px 22px -10px rgba(122,63,212,.9); }
+  .ob-btn.sky { background: linear-gradient(180deg, #5ee0ff, #2bb8e0); border-color: #5ee0ff; color: #04131a; }
+  .ob-btn.ghost { background: transparent; border-color: var(--line-2); color: #cfc7e2; }
+  .ob-btn.danger { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.45); color: #ff9aa9; }
+  .ob-btn svg { width: 16px; height: 16px; }
+
+  /* ---------- الجسم: شريط الأقسام (يمين) + اللوحة + المساحة ---------- */
+  .ob-body { display: grid; grid-template-columns: var(--rail-w) var(--panel-w) 1fr; min-height: 0; transition: grid-template-columns .28s cubic-bezier(.22,1,.36,1); }
+  .ob-body.closed { grid-template-columns: var(--rail-w) 0 1fr; }
+
+  .ob-rail { background: var(--rail); border-left: 1px solid var(--line); display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px 8px; overflow-y: auto; scrollbar-width: none; }
+  .ob-rail::-webkit-scrollbar { display: none; }
+  .ob-rbtn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px; border: 0; border-radius: 14px; background: transparent; color: #9d95b0; cursor: pointer; font-size: 11.5px; font-weight: 600; line-height: 1.25; text-align: center; }
+  .ob-rbtn svg { width: 23px; height: 23px; }
+  .ob-rbtn:hover { color: #fff; background: rgba(255,255,255,.04); }
+  .ob-rbtn.on { color: #fff; background: linear-gradient(180deg, rgba(138,79,232,.3), rgba(122,63,212,.14)); }
+  .ob-rbtn.on::after { content: ""; position: absolute; right: -8px; top: 22%; bottom: 22%; width: 3px; border-radius: 3px 0 0 3px; background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); }
+  .ob-rbtn .badge { position: absolute; top: 5px; left: 12px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 10.5px; display: flex; align-items: center; justify-content: center; }
+  .ob-rsep { height: 1px; margin: 6px 10px; background: var(--line); }
+
+  .ob-panel { background: var(--panel); border-left: 1px solid var(--line); overflow: hidden; min-width: 0; display: flex; flex-direction: column; }
+  .ob-body.closed .ob-panel { border-left: 0; }
+  .ob-phead { flex: none; display: flex; align-items: flex-start; gap: 10px; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); min-width: var(--panel-w); }
+  .ob-phead div { flex: 1; min-width: 0; }
+  .ob-phead h2 { margin: 0; font-family: "Noto Kufi Arabic", sans-serif; font-size: 16px; font-weight: 800; }
+  .ob-phead p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  .ob-x { flex: none; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: #cfc7e2; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .ob-x:hover { color: #fff; border-color: var(--line-2); }
+  .ob-pbody { flex: 1; overflow-y: auto; padding: 14px 16px 24px; min-width: var(--panel-w); display: flex; flex-direction: column; gap: 12px; }
+
+  /* بطاقات الأدوات: معاينة حقيقية مصغّرة + اسم */
+  .ob-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ob-tools.one { grid-template-columns: 1fr; }
+  .ob-tool { display: flex; flex-direction: column; gap: 0; padding: 0; border-radius: 16px; border: 1px solid var(--line); background: var(--card); cursor: pointer; text-align: right; overflow: hidden; transition: border-color .2s, transform .2s, background .2s; }
+  .ob-tool:hover { border-color: rgba(178,140,245,.55); background: rgba(122,63,212,.08); transform: translateY(-2px); }
+  .ob-tool .pv { position: relative; height: 104px; overflow: hidden; pointer-events: none; background: radial-gradient(circle at 50% 40%, rgba(122,63,212,.18), transparent 70%), repeating-conic-gradient(#15131f 0 25%, #100e19 0 50%) 0 0 / 16px 16px; }
+  .ob-tools.one .ob-tool .pv { height: 120px; }
+  .ob-pvw { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; }
+  .ob-pvw .agp-so-item { left: 0; top: 0; max-width: none; }
+  .ob-tool .pv .agp-so-ghost { opacity: 1; }
+  .ob-tool .meta { padding: 9px 11px 10px; }
+  .ob-tool b { display: block; font-size: 13.5px; }
+  .ob-tool small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .ob-gtitle { margin: 6px 0 -2px; font-size: 12.5px; font-weight: 700; color: var(--accent-2); }
+
+  .ob-igrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .ob-ibtn { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 13px; border: 1px solid var(--line); background: var(--card); cursor: pointer; color: #ffd54a; padding: 10px; }
+  .ob-ibtn:hover { border-color: rgba(178,140,245,.6); background: rgba(122,63,212,.12); transform: scale(1.04); }
+  .ob-ibtn svg { width: 100%; height: 100%; filter: drop-shadow(0 0 4px currentColor); }
+  .ob-ibtn.emo { font-size: 26px; line-height: 1; font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif; }
+
+  .ob-seg { display: flex; gap: 4px; padding: 4px; border-radius: 13px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .ob-seg button { flex: 1; padding: 8px 6px; border: 0; border-radius: 10px; background: transparent; color: #cfc7e2; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ob-seg button.on { background: var(--accent); color: #fff; }
+
+  /* صفوف الإعدادات: العنوان يمين والتحكم يسار (قاعدة CLAUDE.md) */
+  .ob-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); }
+  .ob-row > .ob-label { text-align: right; font-size: 13.5px; font-weight: 600; flex: none; }
+  .ob-row > .ob-label small { display: block; font-size: 11.5px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .ob-row.col { flex-direction: column; align-items: stretch; }
+  .ob-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .ob-row.col .ob-pills { justify-content: flex-start; }
+  .ob-pill { padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #cfc7e2; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .ob-pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .ob-sw { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; align-items: center; }
+  .ob-sw button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+  .ob-sw button.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(178,140,245,.55); }
+  .ob-sw input[type=color] { width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .ob-input { flex: 1; min-width: 0; font: inherit; font-size: 15px; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 8px 10px; direction: rtl; resize: vertical; }
+  .ob-input:focus { outline: none; border-color: rgba(178,140,245,.7); }
+  .ob-input.num { direction: ltr; text-align: left; max-width: 130px; }
+  .ob-range { flex: 1; max-width: 190px; accent-color: var(--accent-2); }
+  .ob-toggle { position: relative; width: 46px; height: 26px; flex: none; }
+  .ob-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .ob-toggle span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.15); transition: background .2s; cursor: pointer; }
+  .ob-toggle span::after { content: ""; position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .ob-toggle input:checked + span { background: var(--accent); }
+  .ob-toggle input:checked + span::after { transform: translateX(-20px); }
+  .ob-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ob-hint { font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+  .ob-card { padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 10px; }
+  .ob-card h3 { margin: 0; font-size: 14px; font-weight: 700; color: #e2d6ff; }
+  .ob-card.link { border-color: rgba(77,216,255,.35); background: linear-gradient(160deg, rgba(77,216,255,.09), rgba(77,216,255,.02)); }
+  .ob-url { width: 100%; direction: ltr; text-align: left; font: 12.5px ui-monospace, Menlo, monospace; color: #d8f6ff; background: rgba(0,0,0,.35); border: 1px solid rgba(77,216,255,.3); border-radius: 10px; padding: 10px; }
+  .ob-steps { margin: 0; padding: 0 18px 0 0; font-size: 12.5px; color: #c3bad6; line-height: 1.9; }
+  .ob-warn { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(245,166,35,.4); background: rgba(245,166,35,.08); color: #ffd28a; font-size: 12.5px; line-height: 1.8; }
+
+  .ob-layers { display: flex; flex-direction: column; gap: 6px; }
+  .ob-layer { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); cursor: pointer; }
+  .ob-layer.on { border-color: var(--accent-2); background: rgba(122,63,212,.16); }
+  .ob-layer.off .ob-lname { opacity: .45; text-decoration: line-through; }
+  .ob-lic { flex: none; width: 28px; height: 28px; border-radius: 9px; background: rgba(255,255,255,.05); display: flex; align-items: center; justify-content: center; color: var(--accent-2); }
+  .ob-lic svg { width: 16px; height: 16px; }
+  .ob-lname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+  .ob-ib { width: 30px; height: 30px; flex: none; border-radius: 9px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: #cfc7e2; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; padding: 0; }
+  .ob-ib:hover { color: #fff; border-color: rgba(178,140,245,.5); }
+  .ob-ib.danger:hover { color: #ff8fa3; border-color: rgba(239,68,68,.5); }
+
+  .ob-ptabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .ob-ptabs button { flex: 1; padding: 7px 4px; border: 0; border-radius: 9px; background: transparent; color: #cfc7e2; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .ob-ptabs button.on { background: var(--accent); color: #fff; }
+  .ob-fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ob-fbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: #fff; cursor: pointer; }
+  .ob-fbtn.on { border-color: var(--accent-2); background: rgba(122,63,212,.18); }
+  .ob-fbtn span:first-child { font-size: 20px; line-height: 1.5; }
+  .ob-fbtn span:last-child { font-size: 11px; color: var(--muted); }
+
+  /* ---------- مساحة التصميم ---------- */
+  .ob-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(circle at 50% 35%, rgba(122,63,212,.12), transparent 60%), #08070d; }
+  .ob-frame { position: absolute; overflow: hidden; border-radius: 4px; box-shadow: 0 0 0 1px rgba(178,140,245,.45), 0 40px 90px -40px rgba(0,0,0,.95); touch-action: none; }
+  .ob-frame.bg-checker { background: repeating-conic-gradient(#1a1825 0 25%, #13111c 0 50%) 0 0 / 28px 28px; }
+  .ob-frame.bg-dark { background: #0b0a10; }
+  .ob-frame.bg-light { background: #e7e5ee; }
+  .ob-frame.bg-green { background: #00b140; }
+  .ob-frame.bg-img { background-size: cover; background-position: center; }
+  .ob-ftag { position: absolute; top: 10px; right: 12px; z-index: 2; display: inline-flex; gap: 8px; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgba(5,5,8,.7); font-size: 12px; font-weight: 700; color: var(--accent-2); pointer-events: none; }
+  .ob-ftag b { color: #fff; font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+  .ob-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 15px; pointer-events: none; padding: 20px; }
+  .ob-empty b { color: #e2d6ff; font-size: 18px; }
+  .ob-frame .agp-so-item { cursor: grab; touch-action: none; border-radius: 6px; }
+  .ob-frame .agp-so-item:hover { outline: 1.5px dashed rgba(255,255,255,.35); outline-offset: 5px; }
+  .ob-frame .agp-so-item.ob-sel { outline: 2px solid var(--sky); outline-offset: 5px; }
+  .ob-frame .agp-so-item.ob-hidden { opacity: .28; }
+  .ob-handle { position: absolute; left: -12px; bottom: -12px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--sky); cursor: nesw-resize; touch-action: none; z-index: 3; }
+  .ob-zoom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 14px; background: rgba(12,11,20,.85); border: 1px solid var(--line); font-size: 12px; color: var(--muted); z-index: 3; }
+  .ob-zoom .ob-btn { padding: 6px 12px; font-size: 12.5px; }
+
+  /* بوابة الدخول / الصلاحية */
+  .ob-gate { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(5,4,9,.86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .ob-gate[hidden] { display: none; }
+  .ob-gbox { max-width: 440px; text-align: center; padding: 28px; border-radius: 22px; border: 1px solid rgba(178,140,245,.3); background: linear-gradient(180deg, rgba(30,24,52,.96), rgba(12,11,20,.98)); }
+  .ob-gbox h2 { margin: 0 0 10px; font-family: "Noto Kufi Arabic", sans-serif; font-size: 20px; }
+  .ob-gbox p { margin: 0 0 18px; color: #c3bad6; line-height: 1.9; font-size: 14px; }
+
+  .ob-toast { position: fixed; bottom: 84px; left: 50%; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 60; padding: 10px 18px; border-radius: 12px; background: #1d1830; border: 1px solid rgba(178,140,245,.4); font-size: 13.5px; font-weight: 600; transition: opacity .25s, transform .25s; }
+  .ob-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* جوال وآيباد عمودي: الأقسام تحت، واللوحة فوقها */
+  @media (max-width: 900px) {
+    .ob-top { flex-wrap: wrap; gap: 10px; }
+    .ob-brand small, .ob-sep, .ob-status span { display: none; }
+    .ob-screens { order: 5; flex-basis: 100%; }
+    .ob-body, .ob-body.closed { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto; }
+    .ob-stage { grid-row: 1; min-height: 240px; }
+    .ob-panel { grid-row: 2; max-height: 46vh; border-left: 0; border-top: 1px solid var(--line); }
+    .ob-body.closed .ob-panel { display: none; }
+    .ob-phead, .ob-pbody { min-width: 0; }
+    .ob-rail { grid-row: 3; flex-direction: row; border-left: 0; border-top: 1px solid var(--line); overflow-x: auto; padding: 6px; }
+    .ob-rbtn { flex: none; min-width: 70px; }
+    .ob-rbtn.on::after { display: none; }
+    .ob-rsep { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="ob-app">
+  <header class="ob-top">
+    <a class="ob-back" href="../profile.html" title="رجوع لحسابي" aria-label="رجوع لحسابي">→</a>
+    <div class="ob-brand"><b>شاشات البث</b><small>OBS و TikTok LIVE Studio</small></div>
+    <span class="ob-sep"></span>
+    <div class="ob-screens" id="ob-screens"></div>
+    <span class="ob-status" id="ob-status" title=""><i></i><span>البيانات</span></span>
+    <span class="ob-saved" id="ob-saved"></span>
+    <button type="button" class="ob-btn sky" id="ob-copy">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 3h11a2 2 0 012 2v11h-2V5H8zM4 7h11a2 2 0 012 2v11a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"/></svg>
+      <span>نسخ رابط الشاشة</span>
+    </button>
+  </header>
+  <div class="ob-body" id="ob-body">
+    <nav class="ob-rail" id="ob-rail" aria-label="الأقسام"></nav>
+    <aside class="ob-panel" id="ob-panel"></aside>
+    <main class="ob-stage" id="ob-stage">
+      <div class="ob-frame bg-checker" id="ob-frame"></div>
+      <div class="ob-zoom" id="ob-zoom"></div>
+    </main>
+  </div>
+</div>
+<div class="ob-gate" id="ob-gate" hidden><div class="ob-gbox" id="ob-gbox"></div></div>
+<div class="ob-toast" id="ob-toast"></div>
+<script src="../auth/auth-client.js"></script>
+<script src="../js/agp-stream-overlay.js"></script>
+<script src="studio.js"></script>
+</body>
+</html>
