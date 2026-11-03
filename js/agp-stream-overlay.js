@@ -176,29 +176,6 @@
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
     // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
-    // تاج «العرش»: صورة تاج ذهبي (assets/overlay-frames/crown-gold.webp، الخلفية انشالت)
-    // + لمعة تمر على الذهب + بريق على رؤوس التاج. مواقع الرؤوس بنسبة من الصورة.
-    var CROWN_TIPS = [[33, 6, 0], [67, 6, 1.1], [50.2, 34, .55], [7.2, 13, 1.6], [92.5, 13, .3]];
-    function throneCrown() {
-        var c = el('span', 'agp-so-tcrown');
-        var url = FRAMES_BASE + 'crown-gold.webp';
-        var img = document.createElement('img');
-        img.src = url;
-        img.alt = '';
-        img.draggable = false;
-        c.appendChild(img);
-        var sh = el('span', 'agp-so-tshine');
-        sh.style.webkitMaskImage = sh.style.maskImage = 'url("' + url + '")';
-        c.appendChild(sh);
-        CROWN_TIPS.forEach(function (t) {
-            var k = el('span', 'agp-so-tspark');
-            k.style.left = t[0] + '%';
-            k.style.top = t[1] + '%';
-            k.style.animationDelay = t[2] + 's';
-            c.appendChild(k);
-        });
-        return c;
-    }
     var THRONE_ICONS = {
         likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
         gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
@@ -376,7 +353,8 @@
     function needs() {
         var secs = {}, totals = false;
         activeItems().forEach(function (it) {
-            if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
+            if (it.type === 'top' && it.design === 'throne') throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, 3); });
+            else if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
             else if (it.type === 'goal' || it.type === 'counter') totals = true;
         });
         var keys = Object.keys(secs).sort();
@@ -745,36 +723,152 @@
             });
             return box;
         }
-        /**
-         * «العرش» (Veyro — منصة التتويج): الأول بالوسط أكبر وفوقه تاج، والثاني
-         * يمين والثالث يسار، وحول كل صورة إطار «جناح الملاك» المتحرك. الحد 3.
-         */
-        function throneCount(r) {
-            var c = el('span', 'agp-so-tcount');
-            var ic = el('span', 'agp-so-tic');
-            ic.innerHTML = THRONE_ICONS[sec] || '';
-            if (!THRONE_ICONS[sec]) ic.appendChild(icon(meta.icon));
-            c.appendChild(ic);
-            c.appendChild(el('span', 'agp-so-tnum', meta.value(r)));
-            return c;
-        }
-        function throne(rows) {
-            var row = el('div', 'agp-so-throne');
-            // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
-            [1, 0, 2].forEach(function (i) {
-                var r = rows[i];
-                if (!r) return;
-                var col = el('div', 'agp-so-tcol' + rkClass(i));
-                var f = angelFrame(r);
-                if (i === 0) f.appendChild(throneCrown());
-                col.appendChild(f);
-                col.appendChild(el('span', 'agp-so-tname', nameOf(r)));
-                col.appendChild(throneCount(r));
-                row.appendChild(col);
-            });
-            return row;
-        }
-        return { podium: podium, medals: medals, cards: cards, minimal: minimal, throne: throne };
+        return { podium: podium, medals: medals, cards: cards, minimal: minimal };
+    }
+
+    /* ---------------- «العرش» (Veyro) ----------------
+     * الثلاثة الأوائل: الأول بالوسط أكبر، الثاني يمين، الثالث يسار، وحول كل صورة
+     * إطار «جناح الملاك». الحالة على العنصر نفسه (node._throne)، وتحديث البيانات
+     * يغيّر الأرقام والأشخاص مكانهم بدون ما يعيد رسم كل شي (الحركة ما تنقطع).
+     * it.sections = الأقسام اللي يعرضها (أكثر من قسم = يتبدّل كل it.cycle ثانية)،
+     * it.palette = medal (ذهبي/فضي/برونزي) أو single (it.color)،
+     * it.frameColor = لون الإطار (FRAME_COLORS). */
+    var FRAME_COLORS = [
+        { key: 'ice', label: 'ثلجي', hue: 0, sw: '#7fd0ff' },
+        { key: 'purple', label: 'بنفسجي', hue: 65, sw: '#b48cff' },
+        { key: 'pink', label: 'وردي', hue: 125, sw: '#ff8fc8' },
+        { key: 'red', label: 'أحمر', hue: 160, sw: '#ff6b6b' },
+        { key: 'gold', label: 'ذهبي', hue: 195, sw: '#ffd36b' },
+        { key: 'green', label: 'أخضر', hue: -75, sw: '#7cf0a0' }
+    ];
+    var THRONE_CYCLES = [5, 8, 10, 15, 20, 30];
+    var throneNodes = [], throneTimer = null;
+
+    function throneSecs(it) {
+        var a = (Array.isArray(it.sections) ? it.sections : []).filter(function (k) { return SECTIONS[k]; });
+        return a.length ? a : [SECTIONS[it.section] ? it.section : 'likers'];
+    }
+    function throneIdx(it) {
+        var secs = throneSecs(it);
+        if (secs.length < 2) return 0;
+        var cyc = clamp(Number(it.cycle) || 10, 3, 300) * 1000;
+        return Math.floor(Date.now() / cyc) % secs.length;
+    }
+    function rowNum(sec, r) { return Number(sec === 'gifters' ? r.diamonds : r.count) || 0; }
+
+    function buildThrone(node, it, preview) {
+        title(node, it.title);
+        var body = el('div', 'agp-so-lbody');
+        var box = el('div', 'agp-so-throne' + (it.palette === 'single' ? ' pal-single' : ''));
+        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0] || FRAME_COLORS[0];
+        box.style.setProperty('--agp-so-fhue', fc.hue + 'deg');
+        var slots = {};
+        // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
+        [1, 0, 2].forEach(function (i) {
+            var slot = el('div', 'agp-so-tcol' + rkClass(i));
+            slot.style.setProperty('--d', [1, 0, 2].indexOf(i) * 0.12 + 's');
+            slots[i] = slot;
+            box.appendChild(slot);
+        });
+        var wait = el('div', 'agp-so-empty agp-so-twait');
+        body.appendChild(box);
+        body.appendChild(wait);
+        node.appendChild(body);
+        node._throne = { it: it, preview: preview, box: box, slots: slots, wait: wait, idx: -1 };
+        paintThrone(node, false);
+        throneNodes.push(node);
+        if (!throneTimer) throneTimer = setInterval(tickThrones, 400);
+    }
+
+    /** يرسم/يحدّث العرش. animate = تحديث بيانات أو تبديل قسم (حركة قلب للي تغيّر). */
+    function paintThrone(node, animate) {
+        var t = node._throne, it = t.it;
+        var secs = throneSecs(it), idx = throneIdx(it), sec = secs[idx];
+        var rows = (stats.sections[sec] || []).slice(0, 3);
+        var ghost = !rows.length && t.preview;
+        if (ghost) rows = SAMPLE_ROWS.slice(0, 3);
+        t.box.classList.toggle('agp-so-ghost', ghost);
+        t.wait.textContent = rows.length ? '' : 'بانتظار ' + SECTIONS[sec].label + '…';
+        t.wait.style.display = rows.length ? 'none' : '';
+        var switching = animate && t.idx !== -1 && t.idx !== idx;
+        t.idx = idx;
+        [1, 0, 2].forEach(function (i, order) {
+            var slot = t.slots[i], r = rows[i];
+            if (!r) { slot.style.visibility = 'hidden'; slot._sig = null; return; }
+            slot.style.visibility = '';
+            var sig = sec + '|' + nameOf(r) + '|' + (r.avatar ? String(r.avatar).length : 0);
+            if (!slot._sig) {
+                fillThroneCol(slot, r, sec, i);
+                if (!animate) slot.classList.add('t-enter');
+            } else if (switching || slot._sig !== sig) {
+                flipCol(slot, function () { fillThroneCol(slot, r, sec, i); }, order * 90);
+            } else {
+                tweenNum(slot.querySelector('.agp-so-tnum'), rowNum(sec, r));
+            }
+            slot._sig = sig;
+        });
+    }
+
+    function fillThroneCol(slot, r, sec, i) {
+        slot.textContent = '';
+        var inner = el('div', 'agp-so-tin');
+        inner.appendChild(angelFrame(r));
+        inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+        var c = el('span', 'agp-so-tcount');
+        var ic = el('span', 'agp-so-tic');
+        if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
+        else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
+        c.appendChild(ic);
+        var num = el('span', 'agp-so-tnum', fmt(rowNum(sec, r)));
+        num._v = rowNum(sec, r);
+        c.appendChild(num);
+        inner.appendChild(c);
+        slot.appendChild(inner);
+    }
+
+    function flipCol(slot, swap, delay) {
+        setTimeout(function () {
+            slot.classList.remove('t-enter', 't-in');
+            slot.classList.add('t-out');
+            setTimeout(function () {
+                swap();
+                slot.classList.remove('t-out');
+                void slot.offsetWidth;
+                slot.classList.add('t-in');
+            }, 320);
+        }, delay || 0);
+    }
+
+    /** الرقم يعد لين القيمة الجديدة بدل ما يقفز. */
+    function tweenNum(elm, to) {
+        if (!elm) return;
+        var from = Number(elm._v) || 0;
+        elm._v = to;
+        if (from === to) return;
+        var t0 = performance.now(), dur = 700;
+        (function step(now) {
+            var k = Math.min(1, (now - t0) / dur);
+            var e = 1 - Math.pow(1 - k, 3);
+            elm.textContent = fmt(Math.round(from + (to - from) * e));
+            if (k < 1 && elm.isConnected) requestAnimationFrame(step);
+        }(t0));
+    }
+
+    function tickThrones() {
+        throneNodes = throneNodes.filter(function (n) { return n.isConnected; });
+        if (!throneNodes.length) { clearInterval(throneTimer); throneTimer = null; return; }
+        throneNodes.forEach(function (n) {
+            var t = n._throne;
+            if (t && throneIdx(t.it) !== t.idx) paintThrone(n, true);
+        });
+    }
+
+    /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
+    function refreshItem(node, it) {
+        if (!node || !node._throne || !it || it.design !== 'throne') return false;
+        node._throne.it = it;
+        paintThrone(node, true);
+        return true;
     }
 
     /** إطار «جناح الملاك» حول صورة الشخص: الرسمة + ضوء يلف + شرار + فراشات. */
@@ -817,7 +911,7 @@
         { key: 'minimal', label: 'بسيط' }
     ];
     // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
-    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3 }];
+    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
@@ -876,13 +970,17 @@
     function title(node, text) { if (text) node.appendChild(el('div', 'agp-so-wtitle', text)); }
 
     function fillTop(node, it, preview) {
+        if (it.design === 'throne') {
+            node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-throne';
+            buildThrone(node, it, preview);
+            return;
+        }
         var sec = SECTIONS[it.section] ? it.section : 'likers';
         var builders = makeTop(sec);
         var design = builders[it.design] ? it.design : 'podium';
         node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-' + design;
         title(node, it.title);
         var n = Number(it.top) || 3;
-        if (design === 'throne') n = Math.min(n, 3);
         var rows = (stats.sections[sec] || []).slice(0, n);
         if (!rows.length && !preview) {
             node.appendChild(el('div', 'agp-so-empty', 'بانتظار ' + SECTIONS[sec].label + '…'));
@@ -1606,6 +1704,7 @@
         activeItems().forEach(function (it) {
             var old = nodes[it.id];
             if (!old || !isDataItem(it) || it.type === 'jar') return;
+            if (refreshItem(old, it)) return;
             var n = buildItem(it, frameRect);
             stage.replaceChild(n, old);
             nodes[it.id] = n;
@@ -1682,7 +1781,7 @@
         /* العرش (Veyro) */
         '@property --agp-so-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
         '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
-        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.15em;padding-top:2.6em}',
+        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.15em;padding-top:1.4em}',
         '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:5.4em}',
         '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em}',
         '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
@@ -1694,13 +1793,18 @@
         '.agp-so-tic svg{width:100%;height:100%;display:block}',
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
-        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;bottom:calc(100% - 7%);width:112%;transform:translateX(-50%);transform-origin:50% 100%;filter:drop-shadow(0 .06em .12em rgba(0,0,0,.6)) drop-shadow(0 0 .22em rgba(255,196,70,.55)) drop-shadow(0 0 .5em rgba(140,210,255,.35));animation:agp-so-crown 3.6s ease-in-out infinite}',
-        '.agp-so-tcrown img{display:block;width:100%;height:auto}',
-        '.agp-so-tshine{position:absolute;inset:0;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;background:linear-gradient(105deg,transparent 40%,rgba(255,250,225,.85) 50%,transparent 60%) no-repeat;background-size:260% 100%;mix-blend-mode:screen;animation:agp-so-tshine 3.4s ease-in-out infinite}',
-        '.agp-so-tspark{position:absolute;width:13%;aspect-ratio:1;margin:-6.5% 0 0 -6.5%;pointer-events:none;background:radial-gradient(circle,#fff 0 8%,transparent 9%),conic-gradient(from 45deg,transparent 0 10%,rgba(255,255,255,.95) 12.5%,transparent 15% 35%,rgba(255,255,255,.95) 37.5%,transparent 40% 60%,rgba(255,255,255,.95) 62.5%,transparent 65% 85%,rgba(255,255,255,.95) 87.5%,transparent 90%);-webkit-mask:radial-gradient(circle,#000 0 20%,transparent 62%);mask:radial-gradient(circle,#000 0 20%,transparent 62%);filter:drop-shadow(0 0 .12em #fff7d6);opacity:0;animation:agp-so-tspk 2.2s ease-in-out infinite}',
-        '@keyframes agp-so-crown{0%,100%{transform:translateX(-50%) rotate(-1.5deg)}50%{transform:translateX(-50%) rotate(1.5deg)}}',
-        '@keyframes agp-so-tshine{0%,30%{background-position:120% 0}100%{background-position:-20% 0}}',
-        '@keyframes agp-so-tspk{0%,100%{opacity:0;transform:scale(.3) rotate(0)}45%{opacity:1;transform:scale(1) rotate(30deg)}}',
+        '.agp-so-throne.pal-single .agp-so-tcol{--rk:var(--agp-so-c)}',
+        '.agp-so-tin{display:flex;flex-direction:column;align-items:center;animation:agp-so-tbob 4.4s ease-in-out infinite;animation-delay:calc(var(--d) * -6)}',
+        '@keyframes agp-so-tbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.12em)}}',
+        '.agp-so-tcol.t-enter{animation:agp-so-tenter .8s cubic-bezier(.2,1.3,.4,1) both;animation-delay:var(--d)}',
+        '@keyframes agp-so-tenter{0%{opacity:0;transform:translateY(.8em) scale(.6)}100%{opacity:1;transform:none}}',
+        '.agp-so-tcol.t-out{transition:transform .3s ease-in,opacity .3s ease-in;transform:perspective(20em) rotateY(90deg) scale(.9);opacity:0}',
+        '.agp-so-tcol.t-in{animation:agp-so-tin .5s cubic-bezier(.2,1.2,.4,1) both}',
+        '@keyframes agp-so-tin{0%{opacity:0;transform:perspective(20em) rotateY(-90deg) scale(.9)}100%{opacity:1;transform:none}}',
+        '.agp-so-twait{margin-top:.4em}',
+        '.agp-so-throne .agp-so-fart,.agp-so-throne .agp-so-fspk{filter:hue-rotate(var(--agp-so-fhue,0deg))}',
+        '.agp-so-throne .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em #9fe0ff)}',
+        '.agp-so-throne .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em #8fd8ff) drop-shadow(0 0 .22em #3aa8ff)}',
         /* إطار «جناح الملاك» */
         '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
         '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
@@ -1907,7 +2011,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, refreshItem: refreshItem,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */

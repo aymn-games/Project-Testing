@@ -99,10 +99,9 @@
     var TOOLS = {
         tops: [
             // منصة التتويج = «العرش» بإطار «جناح الملاك» (الثلاثة الأوائل، بدون عنوان)
-            { label: 'توب المكبّسين', sub: 'منصة العرش', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', top: 3, title: '' } },
-            { label: 'توب الداعمين', sub: 'منصة العرش — بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', top: 3, title: '' } },
-            { label: 'المتفاعلين', sub: 'منصة العرش — أكثر من علّق', type: 'top', opts: { section: 'commenters' }, set: { design: 'throne', top: 3, title: '' } },
-            { label: 'توب الشير', sub: 'منصة العرش — أكثر من نشر', type: 'top', opts: { section: 'sharers' }, set: { design: 'throne', top: 3, title: '' } },
+            { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
+            { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
+            { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
             { label: 'الداعمين — ميداليات', sub: 'قائمة بالترتيب', type: 'top', opts: { section: 'gifters' }, set: { design: 'medals', top: 5 } },
             { label: 'المكبّسين — بطاقات', sub: 'صور جنب بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'cards' } }
         ],
@@ -970,7 +969,48 @@
         box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
     }
 
+    /** «العرش»: الأقسام (واحد أو أكثر يتبدّلون)، مدة التبديل، لون الإطار، ألوان المراكز. */
+    function throneProps(it, box) {
+        var all = Object.keys(O.SECTIONS);
+        var cur = (Array.isArray(it.sections) && it.sections.length ? it.sections : [it.section || 'likers']).filter(function (k) { return O.SECTIONS[k]; });
+        box.appendChild(row('يعرض', pills(all.map(function (k) { return { label: O.SECTIONS[k].label, value: k }; }), cur, function (v) {
+            var next = cur.indexOf(v) === -1 ? cur.concat([v]) : cur.filter(function (x) { return x !== v; });
+            if (!next.length) return;
+            it.section = next[0];
+            update(it, 'sections', next, true);
+            O.refreshStats();
+        }, true), true, 'اختر واحد أو أكثر — أكثر من واحد يتبدّلون'));
+        if (cur.length > 1) {
+            box.appendChild(row('مدة التبديل', pills(O.THRONE_CYCLES.map(function (n) { return { label: n + ' ث', value: n }; }), Number(it.cycle) || 10, function (v) {
+                update(it, 'cycle', v, true);
+            }), true, 'كل كم ثانية يتبدّل بين ' + cur.map(function (k) { return O.SECTIONS[k].label; }).join(' و')));
+        }
+        var fw = el('div', 'ob-sw');
+        O.FRAME_COLORS.forEach(function (c) {
+            var b = button('', (it.frameColor || 'ice') === c.key ? 'on' : '', function () { update(it, 'frameColor', c.key, true); });
+            b.style.background = c.sw;
+            b.title = c.label;
+            b.setAttribute('aria-label', 'إطار ' + c.label);
+            fw.appendChild(b);
+        });
+        box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور'));
+        box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }], it.palette || 'medal', function (v) {
+            update(it, 'palette', v, true);
+        }), true, 'حدود الأرقام وأيقوناتها'));
+        if (it.palette === 'single') box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
+        box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
+    }
+
     function topProps(it, box) {
+        var designs0 = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
+        if (it.design === 'throne') {
+            box.appendChild(row('التصميم', pills(opts(designs0), 'throne', function (v) {
+                if (v !== 'throne') { it.section = (it.sections && it.sections[0]) || it.section; update(it, 'design', v, true); O.refreshStats(); }
+            }), true));
+            throneProps(it, box);
+            return;
+        }
         box.appendChild(row('القسم', pills(sectionOpts(), it.section, function (v) {
             var oldTitle = (O.SECTIONS[it.section] || {}).title;
             if (!it.title || it.title === oldTitle) it.title = O.SECTIONS[v].title;
@@ -978,11 +1018,12 @@
             O.refreshStats();
         }), true));
         // «العرش» بدل منصة التتويج القديمة، وحده الأقصى 3
-        var designs = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
-        var curD = designs.filter(function (d) { return d.key === it.design; })[0] || designs[0];
+        var designs = designs0;
+        var curD = designs.filter(function (d) { return d.key === it.design; })[0] || designs[1] || designs[0];
         box.appendChild(row('التصميم', pills(opts(designs), curD.key, function (v) {
             var d = designs.filter(function (x) { return x.key === v; })[0];
             if (d && d.max && (Number(it.top) || 3) > d.max) it.top = d.max;
+            if (v === 'throne' && !it.sections) it.sections = [it.section || 'likers'];
             update(it, 'design', v, true);
             O.refreshStats();
         }), true));
@@ -2040,7 +2081,7 @@
 
     // بيانات جديدة: نعيد رسم أدوات البيانات بس (الأليرت والنصوص وحركتها ما تنلمس)
     O.onStats(function () {
-        if (!drag && !resize && F) S().items.forEach(function (it) { if (O.isDataItem(it)) rebuildNode(it); });
+        if (!drag && !resize && F) S().items.forEach(function (it) { if (O.isDataItem(it) && !O.refreshItem(nodes[it.id], it)) rebuildNode(it); });
         paintStatus();
     });
     O.onLink(paintStatus);
