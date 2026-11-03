@@ -38,6 +38,15 @@
     --goal-bar-radius: 999px;
     --goal-glow: 0 0 18px rgba(236, 72, 153, .55);
 
+    /* شكل القلب (?style=heart) — لون الماء متدرّج من فوق لتحت */
+    --goal-water-start: #ff6b8b;
+    --goal-water-end: #d6164a;
+    --goal-heart-size: 230px;
+    --goal-heart-stroke: rgba(255, 255, 255, .85);
+    --goal-heart-empty: rgba(255, 255, 255, .08);
+    --goal-heart-glow: drop-shadow(0 0 14px color-mix(in srgb, var(--goal-water-start) 60%, transparent));
+    --goal-wave-speed: 2.6s;
+
     /* لون حالة «اكتمل الهدف» */
     --goal-done-start: #22c55e;
     --goal-done-end: #a3e635;
@@ -216,6 +225,69 @@ body {
 }
 .goal.is-complete .goal-percent { animation: goal-pulse 1.4s ease-in-out infinite; }
 
+/* ===== شكل القلب (?style=heart) ===== */
+.goal-heart { display: none; }
+:root[data-style="heart"] .goal {
+    width: auto;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+:root[data-style="heart"] .goal-head { flex-direction: column; gap: 8px; margin-bottom: 8px; }
+:root[data-style="heart"] .goal-percent { display: none; }
+:root[data-style="heart"] .goal.is-complete .goal-percent { display: block; }
+:root[data-style="heart"] .goal-bar { display: none; }
+:root[data-style="heart"] .goal-foot { gap: 18px; justify-content: center; }
+:root[data-style="heart"] .goal-pop { top: 50px; inset-inline: 0; width: fit-content; margin: 0 auto; z-index: 2; }
+:root[data-style="heart"] .goal-heart { display: block; }
+
+.goal-heart {
+    position: relative;
+    width: var(--goal-heart-size);
+    aspect-ratio: 212 / 186;
+    filter: var(--goal-heart-glow);
+}
+.goal-heart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.goal-heart-empty { fill: var(--goal-heart-empty); }
+.goal-heart-outline {
+    fill: none;
+    stroke: var(--goal-heart-stroke);
+    stroke-width: 4;
+    stroke-linejoin: round;
+}
+.goal-water-stop-a { stop-color: var(--goal-water-start); }
+.goal-water-stop-b { stop-color: var(--goal-water-end); }
+.goal-water { transform: translateY(180px); transition: transform 1.4s cubic-bezier(.22, 1, .36, 1); }
+.goal-wave { fill: url(#goal-water-grad); }
+.goal-wave-front { animation: goal-wave var(--goal-wave-speed) linear infinite; }
+.goal-wave-back {
+    opacity: .45;
+    transform: translate(-50px, -4px);
+    animation: goal-wave-back calc(var(--goal-wave-speed) * 1.6) linear infinite;
+}
+.goal-bubble { fill: rgba(255, 255, 255, .55); animation: goal-bubble 4.5s ease-in infinite; }
+.goal-bubble:nth-of-type(2) { animation-delay: 1.2s; animation-duration: 5.5s; }
+.goal-bubble:nth-of-type(3) { animation-delay: 2.4s; animation-duration: 4s; }
+.goal-bubble:nth-of-type(4) { animation-delay: 3.3s; animation-duration: 6s; }
+.goal-heart-text {
+    position: absolute;
+    inset: 0 0 12% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, .55);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+.goal-heart-pct { font-size: calc(var(--goal-heart-size) * .19); font-weight: 800; line-height: 1; }
+.goal-heart-value { font-size: calc(var(--goal-heart-size) * .065); font-weight: 700; opacity: .92; }
+.goal.is-bump .goal-heart { animation: goal-beat .6s ease; }
+.goal.is-complete .goal-heart { animation: goal-beat 1.2s ease-in-out infinite; }
+
 /* مؤشر الاتصال (يظهر بس مع ?debug=1) */
 .goal-status {
     display: none;
@@ -243,6 +315,16 @@ body {
     100% { opacity: 0; transform: translateY(-26px); }
 }
 
+@keyframes goal-wave { from { transform: translateX(0); } to { transform: translateX(-100px); } }
+@keyframes goal-wave-back { from { transform: translate(-100px, -4px); } to { transform: translate(0, -4px); } }
+@keyframes goal-bubble {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translateY(-150px); opacity: 0; }
+}
+@keyframes goal-beat { 0%, 100% { transform: scale(1); } 25% { transform: scale(1.08); } 45% { transform: scale(.98); } 65% { transform: scale(1.05); } }
+
 @media (prefers-reduced-motion: reduce) {
-    .goal, .goal-fill::after, .goal-pop, .goal.is-bump .goal-bar { animation: none; }
+    .goal, .goal-fill::after, .goal-pop, .goal.is-bump .goal-bar, .goal-wave, .goal-bubble,
+    .goal.is-bump .goal-heart, .goal.is-complete .goal-heart { animation: none; }
 }

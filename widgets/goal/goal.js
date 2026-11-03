@@ -49,12 +49,18 @@
     /* ===== المظهر من الرابط (ثيم، اتجاه، ألوان سريعة) ===== */
     var rootEl = document.documentElement;
     if (param('theme', '')) { rootEl.setAttribute('data-theme', param('theme')); }
+    // شكل الأداة: bar (شريط، الافتراضي) أو heart (قلب يتعبّى بالماء).
+    rootEl.setAttribute('data-style', param('style', 'bar') === 'heart' ? 'heart' : 'bar');
     if (param('dir', '')) { rootEl.setAttribute('dir', param('dir') === 'ltr' ? 'ltr' : 'rtl'); }
     var COLOR_PARAMS = { accent: '--goal-accent', fill1: '--goal-fill-start', fill2: '--goal-fill-end',
-        text: '--goal-text', track: '--goal-track', bg: '--goal-bg' };
+        text: '--goal-text', track: '--goal-track', bg: '--goal-bg',
+        water: ['--goal-water-start', '--goal-water-end'], water1: '--goal-water-start',
+        water2: '--goal-water-end', heartStroke: '--goal-heart-stroke', heartEmpty: '--goal-heart-empty' };
     Object.keys(COLOR_PARAMS).forEach(function (k) {
         var v = q.get(k);
-        if (v) { rootEl.style.setProperty(COLOR_PARAMS[k], /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v); }
+        if (!v) { return; }
+        var color = /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v;
+        [].concat(COLOR_PARAMS[k]).forEach(function (name) { rootEl.style.setProperty(name, color); });
     });
     if (param('width', '')) { rootEl.style.setProperty('--goal-width', Core.num(param('width')) + 'px'); }
     if (param('scale', '')) { rootEl.style.setProperty('--goal-scale', String(Core.num(param('scale')) || 1)); }
@@ -62,7 +68,8 @@
     var $ = function (id) { return document.getElementById(id); };
     var el = { box: $('goal'), title: $('goal-title'), percent: $('goal-percent'), fill: $('goal-fill'),
         barText: $('goal-bar-text'), foot: $('goal-foot'), remaining: $('goal-remaining'),
-        last: $('goal-last'), status: $('goal-status') };
+        last: $('goal-last'), status: $('goal-status'), water: $('goal-water'),
+        heartPct: $('goal-heart-pct'), heartValue: $('goal-heart-value') };
     if (cfg.debug) { el.box.classList.add('is-debug'); }
     if (!cfg.foot) { el.foot.style.display = 'none'; }
 
@@ -105,10 +112,20 @@
         var bdi = document.createElement('bdi');
         bdi.textContent = withUnit(money(value) + ' / ' + money(state.goal));
         el.barText.appendChild(bdi);
+        el.heartPct.textContent = Math.floor(rawPct) + '%';
+        el.heartValue.textContent = bdi.textContent;
         var left = Math.max(0, state.goal - value);
         el.remaining.textContent = done ? '' : cfg.leftLabel + ' ' + withUnit(money(left));
         el.last.textContent = state.lastName ? cfg.lastLabel + ' ' + state.lastName : '';
         el.box.classList.toggle('is-complete', done);
+    }
+
+    /*
+     * مستوى الماء بالقلب: سطح الموجة عند y بإحداثيات الرسم (قاع القلب 170،
+     * وأعلاه 0)، فـ 0% ← 180 (مخفي تحت) و100% ← -10 (يغطي القلب كامل).
+     */
+    function setWater(pct) {
+        el.water.style.transform = 'translateY(' + (180 - pct * 1.9).toFixed(2) + 'px)';
     }
 
     /* العدّ التدريجي للرقم من القيمة القديمة للجديدة. */
@@ -116,6 +133,7 @@
     function render() {
         var from = shown, to = state.current, t0 = performance.now(), dur = 900, id = ++tweenId;
         el.fill.style.width = Core.percent(to, state.goal).toFixed(2) + '%';
+        setWater(Core.percent(to, state.goal));
         if (from === to) { paint(to); return; }
         (function step(now) {
             if (id !== tweenId) { return; }

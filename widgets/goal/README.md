@@ -45,6 +45,9 @@ index.html?type=follower&goal=100&demo=1
 | `token` | — | توكن المزوّد (شرحه تحت) |
 | `server` | نفس الموقع | رابط `server.js` لو كان على دومين ثاني، مثل `https://goal.example.com` |
 | `key` | `default` | اسم الهدف، عشان تشغّل أكثر من هدف بنفس الوقت |
+| `style` | `bar` | شكل الأداة: `bar` شريط · `heart` قلب يتعبّى بالماء (القسم 3-أ) |
+| `water` | وردي/أحمر | لون الماء بالقلب بدون `#`، مثل `water=3fa9f5`. وللتدرّج: `water1=` (فوق) و`water2=` (تحت) |
+| `heartStroke` / `heartEmpty` | — | لون حدود القلب / لون داخل القلب الفاضي |
 | `theme` | زجاجي | `neon` · `light` · `minimal` |
 | `dir` | `rtl` | `ltr` للإنجليزي |
 | `accent` `fill1` `fill2` `text` `track` `bg` | — | ألوان سريعة بدون `#`، مثل `fill1=ff3d7f&fill2=ffb347` |
@@ -97,6 +100,32 @@ index.html?type=follower&goal=100&demo=1
 3. **من الملف:** عدّل `goal.css` مباشرة، والتعديل يطبق على كل مكان تستخدم فيه الأداة.
 
 الخلفية دايماً شفافة، فالأداة تركب فوق البث مباشرة.
+
+### 3-أ) شكل القلب 💖
+
+أضف `style=heart` للرابط، والقلب يتعبّى بماء متموّج حسب نسبة الهدف. فيه فقاعات
+تطلع داخل الماء، ونبضة مع كل دعم، والقلب ينبض باستمرار لما يكتمل الهدف.
+
+```
+index.html?style=heart&type=follower&goal=1000&water=3fa9f5
+index.html?style=heart&type=tip&goal=500&water1=7cff6b&water2=12a150
+```
+
+ومتغيراته في `goal.css` (أو خانة Custom CSS في OBS):
+
+```css
+:root {
+    --goal-water-start: #ff6b8b;   /* لون الماء فوق */
+    --goal-water-end: #d6164a;     /* لون الماء تحت */
+    --goal-heart-size: 230px;      /* حجم القلب */
+    --goal-heart-stroke: rgba(255,255,255,.85);  /* حدود القلب */
+    --goal-heart-empty: rgba(255,255,255,.08);   /* داخل القلب الفاضي */
+    --goal-wave-speed: 2.6s;       /* سرعة الموج (أصغر = أسرع) */
+}
+```
+
+التوهّج حول القلب ياخذ لون الماء تلقائياً. أبعاد OBS المناسبة للقلب:
+**Width = 320** و **Height = 360**.
 
 ---
 
