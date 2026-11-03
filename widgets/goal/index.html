@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Goal Widget — أداة الهدف</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap">
+    <link rel="stylesheet" href="goal.css">
+</head>
+<body>
+    <!--
+        أداة هدف للبث (Browser Source لـ OBS). كل الإعدادات من الرابط —
+        الشرح الكامل بـ README.md بنفس المجلد.
+    -->
+    <div class="goal" id="goal" role="status" aria-live="polite">
+        <span class="goal-status" id="goal-status" title="حالة الاتصال"></span>
+        <div class="goal-head">
+            <div class="goal-title" id="goal-title">الهدف</div>
+            <div class="goal-percent" id="goal-percent">0%</div>
+        </div>
+        <div class="goal-bar">
+            <div class="goal-fill" id="goal-fill"></div>
+            <div class="goal-bar-text" id="goal-bar-text"></div>
+        </div>
+        <div class="goal-foot" id="goal-foot">
+            <span id="goal-remaining"></span>
+            <span id="goal-last"></span>
+        </div>
+    </div>
+
+    <script src="goal-core.js"></script>
+    <script src="goal.js"></script>
+</body>
+</html>

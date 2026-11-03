@@ -1,0 +1,257 @@
+# أداة الهدف للبث (Goal Widget)
+
+أداة تُضاف كـ **Browser Source** في OBS (أو Streamlabs Desktop / vMix / أي برنامج
+بث يدعم صفحات الويب). تعرض شريط تقدّم متحرك لهدف البث (متابعين، اشتراكات، دعم
+مادي، بتس، أو أي رقم مخصّص)، وتتحدث تلقائياً لحظة وصول تنبيه من
+**StreamElements** أو **Streamlabs** أو أي أداة ترسل ويب هوك.
+
+## الملفات
+
+| الملف | وظيفته |
+|---|---|
+| `index.html` | صفحة الويدجت (هذي اللي تنحط في OBS) |
+| `goal.css` | الشكل. كل الألوان والمقاسات متغيرات CSS في أوله |
+| `goal.js` | التشغيل: القراءة من الرابط، الرسم، والاتصال بمصادر البيانات |
+| `goal-core.js` | تحويل أحداث المزوّدين لشكل موحّد. يستخدمه المتصفح والسيرفر |
+| `server.js` | **اختياري**: سيرفر صغير (Node.js بدون أي حزم) يستقبل الويب هوك/API ويدفعها للويدجت |
+
+---
+
+## 1) تجربة سريعة (دقيقة وحدة)
+
+افتح `index.html` في المتصفح مع هذا الرابط:
+
+```
+index.html?type=follower&goal=100&demo=1
+```
+
+`demo=1` يضيف أرقام عشوائية كل ثانيتين ونص عشان تشوف الحركة. شيله بالبث الحقيقي.
+
+---
+
+## 2) الإعدادات (كلها من الرابط)
+
+مثال: `index.html?type=tip&goal=500&title=هدف الدعم&theme=neon&provider=streamelements&token=...`
+
+| المتغير | الافتراضي | الشرح |
+|---|---|---|
+| `type` | `follower` | نوع الهدف: `follower` متابعين · `subscriber` اشتراكات · `tip` دعم مادي · `cheer` بتس · `custom` أي حدث |
+| `goal` | `100` | الرقم المستهدف |
+| `start` | `0` | القيمة اللي تبدأ منها (مثلاً عندك 640 متابع الحين) |
+| `title` | حسب النوع | عنوان الهدف |
+| `prefix` | `$` للدعم | رمز قبل الرقم (`$` أو `SAR ` أو فاضي) |
+| `unit` | حسب النوع | كلمة بعد الرقم (`متابع`، `subs`…) |
+| `provider` | `none` | مصدر البيانات: `streamelements` · `streamlabs` · `server` · `none` |
+| `token` | — | توكن المزوّد (شرحه تحت) |
+| `server` | نفس الموقع | رابط `server.js` لو كان على دومين ثاني، مثل `https://goal.example.com` |
+| `key` | `default` | اسم الهدف، عشان تشغّل أكثر من هدف بنفس الوقت |
+| `theme` | زجاجي | `neon` · `light` · `minimal` |
+| `dir` | `rtl` | `ltr` للإنجليزي |
+| `accent` `fill1` `fill2` `text` `track` `bg` | — | ألوان سريعة بدون `#`، مثل `fill1=ff3d7f&fill2=ffb347` |
+| `width` / `scale` | `520` / `1` | عرض الكرت بالبكسل / تكبير الأداة كلها |
+| `done` | `اكتمل الهدف 🎉` | النص اللي يطلع لما يكتمل الهدف |
+| `leftLabel` / `lastLabel` | `المتبقي:` / `آخر دعم:` | نصوص السطر السفلي |
+| `foot` | `1` | `0` يخفي السطر السفلي |
+| `persist` | `1` | يحفظ الرقم بالمتصفح عشان ما يضيع لو OBS أعاد تحميل الصفحة |
+| `reset` | — | `reset=1` يصفّر الرقم المحفوظ. افتحه مرة وحدة بعدين شيله |
+| `test` | `0` | `1` يحسب أحداث التجربة (Emulate) من لوحة StreamElements |
+| `eio` | `3` | إصدار بروتوكول الـ socket. جرّب `4` لو الاتصال ما يشتغل |
+| `debug` | `0` | `1` يطلع نقطة حالة الاتصال (🟢 متصل · 🟠 يتصل · 🔴 خطأ) والتفاصيل بالـ Console |
+| `demo` | `0` | `1` أرقام تجريبية |
+
+> لو غيّرت `start` بالرابط، الأداة تبدأ من الرقم الجديد وتتجاهل الرقم المحفوظ القديم.
+
+---
+
+## 3) تخصيص الشكل (CSS Variables)
+
+كل الشكل في متغيرات بأول `goal.css`:
+
+```css
+:root {
+    --goal-width: 520px;
+    --goal-radius: 20px;
+    --goal-bg: linear-gradient(135deg, rgba(20,16,38,.78), rgba(32,22,58,.62));
+    --goal-border: rgba(255,255,255,.14);
+    --goal-text: #ffffff;
+    --goal-muted: rgba(255,255,255,.68);
+    --goal-accent: #8b5cf6;
+    --goal-fill-start: #8b5cf6;
+    --goal-fill-end: #ec4899;
+    --goal-track: rgba(255,255,255,.12);
+    --goal-bar-height: 26px;
+    --goal-done-start: #22c55e;   /* لون الشريط لما يكتمل الهدف */
+    --goal-done-end: #a3e635;
+    /* والمزيد في الملف… */
+}
+```
+
+عندك ثلاث طرق للتعديل، من الأسهل:
+
+1. **من الرابط:** `?fill1=ff3d7f&fill2=ffb347&theme=neon`
+2. **من OBS بدون لمس الملفات:** خصائص المصدر ← خانة **Custom CSS**. امسح الموجود فيها
+   والصق تعديلاتك:
+   ```css
+   :root { --goal-fill-start: #00c6ff; --goal-fill-end: #0072ff; --goal-width: 600px; }
+   ```
+3. **من الملف:** عدّل `goal.css` مباشرة، والتعديل يطبق على كل مكان تستخدم فيه الأداة.
+
+الخلفية دايماً شفافة، فالأداة تركب فوق البث مباشرة.
+
+---
+
+## 4) ربط البيانات
+
+### أ) StreamElements (اتصال مباشر)
+
+1. ادخل [streamelements.com](https://streamelements.com) ← **Account** (من صورتك فوق) ← **Channels**.
+2. اضغط **Show secrets** وانسخ **JWT Token**.
+3. الرابط:
+   ```
+   index.html?provider=streamelements&token=<JWT>&type=tip&goal=500
+   ```
+- المتابعات والاشتراكات والدعم والبتس كلها تنحسب تلقائياً حسب `type`.
+- عشان تختبر بزر **Emulate** في لوحة StreamElements، أضف `&test=1` مؤقتاً.
+
+### ب) Streamlabs (اتصال مباشر)
+
+1. ادخل [streamlabs.com](https://streamlabs.com/dashboard) ← **Settings** ← **API Settings** ← **API Tokens**.
+2. انسخ **Your Socket API Token**.
+3. الرابط:
+   ```
+   index.html?provider=streamlabs&token=<SOCKET_TOKEN>&type=follower&goal=1000&start=640
+   ```
+- الأنواع: `donation` و`superchat` تنحسب للدعم (`tip`)، و`follow` للمتابعين، و`subscription` و`resub` للاشتراكات، و`bits` للبتس.
+- تنبيهات «Test» من لوحة Streamlabs تنحسب كأنها حقيقية. صفّر بعد التجربة بـ `&reset=1`.
+
+> ⚠️ **التوكن سرّي.** لا تعرض رابط المصدر على البث ولا ترسله لأحد. أي أحد معه
+> الـ JWT يقدر يتحكم بحسابك في StreamElements.
+
+### ج) ويب هوك / API عبر `server.js`
+
+StreamElements وStreamlabs يوصلون تنبيهاتهم الحية عبر socket، وهذا اللي يغطيه
+(أ) و(ب). أما `server.js` فهو للأدوات اللي ترسل **طلب HTTP**، مثل Streamer.bot وZapier
+وأوامر بوت الشات وTipeeeStream وKo-fi وغيرها، أو لو تبي تتحكم بالرقم يدوياً.
+
+**التشغيل:**
+
+```bash
+cd widgets/goal
+GOAL_SECRET=اكتب-كلمة-سر-طويلة node server.js
+# الويدجت: http://localhost:3030/?provider=server&type=tip&goal=500
+```
+
+(بويندوز PowerShell: `$env:GOAL_SECRET="..."; node server.js`)
+
+**الطلبات** (`:key` نفس قيمة `key` بالرابط، والافتراضي `default`):
+
+```bash
+# إضافة مبلغ
+curl -X POST http://localhost:3030/api/goal/default \
+  -H "X-Goal-Secret: كلمة-السر" -H "Content-Type: application/json" \
+  -d '{"action":"add","amount":10,"name":"سارة"}'
+
+# تعيين الرقم / تصفير / ضبط الهدف والعنوان والنوع
+-d '{"action":"set","value":250}'
+-d '{"action":"reset"}'
+-d '{"action":"config","goal":1000,"title":"هدف الدعم","type":"tip"}'
+
+# حدث بصيغة StreamElements أو Streamlabs كما هو (يتفلتر حسب type المحفوظ)
+-d '{"provider":"streamlabs","event":{"type":"donation","message":[{"amount":"5","name":"Ali"}]}}'
+-d '{"provider":"streamelements","event":{"type":"tip","data":{"amount":5,"username":"Ali"}}}'
+```
+
+**طلبات GET سريعة** (لأوامر الشات وStreamer.bot):
+
+```
+http://localhost:3030/api/goal/default/add?amount=1&name=Ali&secret=كلمة-السر
+http://localhost:3030/api/goal/default/set?value=120&secret=كلمة-السر
+http://localhost:3030/api/goal/default/reset?secret=كلمة-السر
+```
+
+يرجع رد نصي قصير مثل `هدف الدعم: 120 / 500`، فتقدر تحطه بأمر شات:
+- StreamElements: `${customapi.https://goal.example.com/api/goal/default/add?amount=1&secret=...}`
+- Nightbot: `$(urlfetch https://goal.example.com/api/goal/default/add?amount=1&secret=...)`
+
+(خلّ هالأوامر للمشرفين بس، لأن الرابط فيه كلمة السر.)
+
+- كلمة السر تنقبل بثلاث طرق: هيدر `X-Goal-Secret`، أو `Authorization: Bearer ...`، أو `?secret=`.
+- بدون `GOAL_SECRET`، التعديل مسموح من نفس الجهاز بس (`localhost`).
+- الأرقام تنحفظ في `data/goals.json`، فما تضيع لو أعدت تشغيل السيرفر.
+- `GET /api/goal/default` يرجع الحالة الحالية JSON.
+
+---
+
+## 5) الاستضافة
+
+### محلياً بدون سيرفر (الأسهل لـ StreamElements / Streamlabs)
+
+ما يحتاج أي شي: في OBS اختر **Local file** وحدد `index.html`. المشكلة إن خانة الملف
+المحلي ما تقبل `?type=...`، فعندك حلّين:
+- افتح الملف بالمتصفح بالرابط اللي تبيه وانسخ العنوان كامل (`file:///C:/.../index.html?provider=...`)
+  والصقه في خانة **URL** بعد ما تشيل علامة Local file، أو
+- استخدم السيرفر المحلي تحت.
+
+### سيرفر محلي على جهازك
+
+```bash
+node server.js                       # يحتاج Node.js 18 أو أحدث
+# أو، لو ما تحتاج ويب هوك وتبي تعرض الملفات بس:
+python -m http.server 8080           # بعدها http://localhost:8080/index.html?...
+```
+
+### رفعها على استضافة
+
+- **بدون ويب هوك** (StreamElements / Streamlabs / ثابت): ارفع الملفات الأربعة
+  (`index.html` و`goal.css` و`goal.js` و`goal-core.js`) لأي استضافة ملفات ثابتة: نفس
+  موقعك، أو GitHub Pages، أو Netlify، أو Cloudflare Pages. الرابط يصير
+  `https://موقعك/widgets/goal/index.html?...`.
+- **مع ويب هوك (`server.js`)**: يحتاج استضافة تشغّل Node.js، مثل VPS أو Render أو Railway أو Fly.io:
+  1. ارفع المجلد كامل.
+  2. أمر التشغيل: `node server.js`.
+  3. متغيرات البيئة: `GOAL_SECRET` (إلزامي)، و`PORT` (أغلب الاستضافات تحدده تلقائياً).
+  4. على Render أو أي استضافة ملفاتها مؤقتة، حدد `GOAL_DATA` على قرص دائم (Persistent Disk)
+     عشان الأرقام ما تضيع.
+  5. لو عندك Nginx قدام السيرفر، طفّ التخزين المؤقت لمسار البث:
+     ```nginx
+     location /api/goal/ {
+         proxy_pass http://127.0.0.1:3030;
+         proxy_http_version 1.1;
+         proxy_set_header Connection '';
+         proxy_buffering off;
+         proxy_read_timeout 1h;
+     }
+     ```
+  6. لو الويدجت على دومين والسيرفر على دومين ثاني، أضف `&server=https://دومين-السيرفر`
+     (CORS مفعّل).
+
+---
+
+## 6) إضافتها في OBS كـ Browser Source
+
+1. في **Sources** اضغط **+** واختر **Browser**، وسمّه مثلاً «هدف البث».
+2. **URL**: الصق الرابط كامل بإعداداتك. مثال:
+   ```
+   https://موقعك/widgets/goal/index.html?provider=streamelements&token=...&type=tip&goal=500&theme=neon
+   ```
+3. **Width = 600** و **Height = 180** (لو كبّرت `width` أو `scale`، زِد الأبعاد بنفس النسبة).
+4. **Custom CSS**: امسح الموجود فيها، أو حط متغيرات الألوان (القسم 3).
+5. خلّ **Shutdown source when not visible** بدون صح، عشان الأداة تبقى متصلة ولا تفوّت أي حدث.
+6. اضغط **OK** واسحب الأداة لمكانها بالمشهد.
+7. لو عدّلت الملفات: كلك يمين على المصدر ← **Properties** ← **Refresh cache of current page**.
+
+**Streamlabs Desktop:** نفس الخطوات من **Add Source** ← **Browser Source**.
+
+---
+
+## 7) حل المشاكل
+
+| المشكلة | الحل |
+|---|---|
+| الرقم ما يتحرك | أضف `&debug=1` وشوف النقطة. 🔴 يعني التوكن غلط أو الاتصال مقطوع. افتح الرابط بكروم وشوف Console (F12) |
+| StreamElements أو Streamlabs ما يتصل أبد | جرّب `&eio=4`. وإذا ما زال، استخدم `server.js` مع أداة وسيطة مثل Streamer.bot |
+| زر Emulate في StreamElements ما يغيّر الرقم | هذا مقصود. أضف `&test=1` وقت التجربة بس |
+| الرقم رجع صفر بعد إعادة تشغيل OBS | تأكد إن `persist` مو `0`، وإن الرابط ما فيه `reset=1` |
+| الرقم المحفوظ غلط | افتح الرابط مرة وحدة مع `&reset=1` أو غيّر `start` |
+| `401 unauthorized` من السيرفر | كلمة السر غلط أو ناقصة. وبدون `GOAL_SECRET` لازم الطلب يكون من نفس الجهاز |
+| التحديث يتأخر خلف Nginx | أضف `proxy_buffering off` (القسم 5) |
