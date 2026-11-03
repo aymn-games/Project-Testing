@@ -1007,6 +1007,12 @@
 
     function showGate(kind) {
         gbox.textContent = '';
+        // شعار Veyro فوق رسالة البوابة (overlay/brand/)
+        var logo = el('img', 'ob-glogo');
+        logo.src = 'brand/veyro-logo.webp';
+        logo.alt = 'Veyro — منصة الأوفرلي لصناع المحتوى والبث المباشر';
+        logo.width = 300; logo.height = 100;
+        gbox.appendChild(logo);
         if (kind === 'login') {
             gbox.appendChild(el('h2', null, 'سجّل دخول أول'));
             gbox.appendChild(el('p', null, 'شاشات البث مربوطة بحسابك، عشان تحفظ تصاميمك وتاخذ رابط لكل شاشة.'));
