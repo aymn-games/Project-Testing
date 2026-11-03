@@ -235,11 +235,16 @@ var GAME_NAMES = {
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
   'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
-  'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو'
+  'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو',
+  'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
+  'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو'
 };
 
+// صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/
+var GAME_PAGE_RE = /\/(?:discord-)?games\/([a-z0-9-]+)\//i;
+
 function gameFromPage(page) {
-  var m = /\/games\/([a-z0-9-]+)\//i.exec(String(page || ''));
+  var m = GAME_PAGE_RE.exec(String(page || ''));
   if (!m) return { slug: null, name: null };
   var slug = m[1].toLowerCase();
   return { slug: slug, name: GAME_NAMES[slug] || slug };
@@ -365,7 +370,8 @@ function handleConnectMessage(connectionId, socket, payload) {
   //
   // source: 'overlay' = أوفرلي البث (js/agp-stream-overlay.js) بصفحة ما فيها
   // لعبة متصلة (مكتبة الألعاب): يحسب إحصائيات البث فقط (statsUsername)، بدون
-  // ساعات بث ولا ظهور بـ«البثوث الشغّالة»، وبوضع statsOnly بالموصِّل.
+  // ساعات بث، وبوضع statsOnly بالموصِّل. يظهر بـ«البثوث الشغّالة» بس لو
+  // الصفحة صفحة لعبة (overlayOnGame تحت).
   var isOverlay = payload.source === 'overlay';
   entry.broadcastTracking = null;
   entry.statsUsername = null;
@@ -383,9 +389,13 @@ function handleConnectMessage(connectionId, socket, payload) {
   if (isOverlay) payload.statsOnly = true;
 
   // معلومات العرض بصفحة «البثوث الشغّالة الآن» بلوحة الأدمن (بالذاكرة فقط).
-  // التحقق من اليوزر بمكتبة الألعاب ما يُعرض — المكتبة مو لعبة.
+  // التحقق من اليوزر بمكتبة الألعاب ما يُعرض — المكتبة مو لعبة. اتصال
+  // الأوفرلي يُعرض بس لو جاي من صفحة لعبة: الألعاب اللي ما فيها اتصال تيك توك
+  // خاص فيها (حفلة الميلاد، محطة سهيل، المافيا، من الأمبوستر…) اتصالها الوحيد
+  // هو الأوفرلي. يبقى بدون ساعات بث (broadcastTracking فوق).
   entry.live = null;
-  if (payload.source !== 'library' && !isOverlay) {
+  var overlayOnGame = isOverlay && GAME_PAGE_RE.test(String(payload.page || ''));
+  if (payload.source !== 'library' && (!isOverlay || overlayOnGame)) {
     entry.live = buildLiveInfo(platform, payload);
   }
 
