@@ -1085,6 +1085,16 @@
         var stage = n.querySelector('.agp-so-astage');
         if (!stage) return;
         stage.textContent = '';
+        if (isVideoAlert(n._item)) {
+            // بالمحرر: أول فريم من الفيديو باهت (بنفس التفريغ) عشان يشوف مكانه وحجمه
+            if (n._preview) {
+                var vb = videoBox(n._item, null, true);
+                vb.root.classList.add('agp-so-ghost');
+                stage.appendChild(vb.root);
+            }
+            if (n._pos) place(n, n._pos, n._F);
+            return;
+        }
         // بالمحرر: نموذج باهت عشان المذيع يشوف مكانه ويسحبه
         if (n._preview) {
             var c = alertCard(n._item, { type: (n._item.events || ['gift'])[0] || 'gift', user: 'اسم المشاهد', gift: 'وردة', img: SAMPLE_GIFT_SVGS[0], count: 5, diamonds: 5 });
@@ -1125,6 +1135,196 @@
         } catch (e) { /* ignore */ }
     }
 
+    /* ---------------- أليرت الفيديو + تفريغ الخلفية (Veyro: veyro/) ----------------
+     * أداة «alert» فيها it.video = { id, w, h, d, name } (ملف مرفوع:
+     * /api/screens/media/file?id=) تشغّل الفيديو بدل البطاقة مع كل حدث.
+     * it.key = تفريغ الخلفية لحظياً بـWebGL (مثل Chroma Key بـOBS):
+     *   { on, mode: color|black|white, color, sim, smooth, spill }.
+     * أي أليرت بدون it.video يشتغل زي ما كان بالضبط. */
+
+    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1 };
+    function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
+    function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
+    function videoFileUrl(id) { return id ? apiBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
+    function hexRgb(hex) {
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+        return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
+    }
+
+    var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
+    var KEY_FS = [
+        'precision mediump float;',
+        'uniform sampler2D tex;uniform vec3 key;uniform float sim,smo,spill;uniform int mode;varying vec2 uv;',
+        // المسافة بين الألوان بقناتي اللون (CbCr) — الإضاءة ما تأثر، مثل OBS
+        'vec2 cc(vec3 c){return vec2(dot(c,vec3(-.169,-.331,.5)),dot(c,vec3(.5,-.419,-.081)));}',
+        'void main(){vec4 c=texture2D(tex,uv);float a=1.;',
+        ' if(mode==0){float t=sim*.5;float d=distance(cc(c.rgb),cc(key));a=smoothstep(t,t+smo*.5+.0001,d);',
+        '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
+        ' else{float l=dot(c.rgb,vec3(.299,.587,.114));float t=sim*.5;',
+        '  if(mode==1)a=smoothstep(t,t+smo+.0001,l);else a=1.-smoothstep(1.-t-smo-.0001,1.-t,l);}',
+        ' a*=c.a;gl_FragColor=vec4(c.rgb*a,a);}'
+    ].join('\n');
+
+    var keyers = [];
+    /** يطفي سياقات WebGL للعناصر اللي انشالت من الصفحة (المتصفح له حد لعددها). */
+    function sweepKeyers() {
+        keyers = keyers.filter(function (k) { if (k.canvas.isConnected) return true; k.destroy(); return false; });
+    }
+
+    /**
+     * تفريغ لحظي: canvas يرسم الفيديو بعد شيل الخلفية. getKey() يرجع إعدادات
+     * التفريغ (تنقرى كل فريم). يرجع null لو WebGL مو متاح.
+     */
+    function makeKeyer(video, getKey) {
+        sweepKeyers();
+        var cv = document.createElement('canvas');
+        var gl = null;
+        try { gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { gl = null; }
+        if (!gl) return null;
+        function sh(type, src) { var x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); return x; }
+        var prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, KEY_VS));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, KEY_FS));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+        gl.useProgram(prog);
+        var buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        var loc = gl.getAttribLocation(prog, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        var tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        var U = {};
+        ['key', 'sim', 'smo', 'spill', 'mode'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        var k = { canvas: cv, failed: false, onfail: null };
+        var raf = 0, dead = false;
+        k.draw = function () {
+            if (dead || k.failed || video.readyState < 2 || !video.videoWidth) return;
+            var w = video.videoWidth, h = video.videoHeight;
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
+            try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video); } catch (e) {
+                // فيديو من مصدر ما يسمح بالقراءة (CORS): نعرض الفيديو بدون تفريغ
+                k.failed = true;
+                if (k.onfail) k.onfail();
+                return;
+            }
+            var key = getKey();
+            var rgb = hexRgb(key.color);
+            gl.uniform3f(U.key, rgb[0], rgb[1], rgb[2]);
+            gl.uniform1f(U.sim, clamp(Number(key.sim), 0, 1));
+            gl.uniform1f(U.smo, clamp(Number(key.smooth), 0, 1));
+            gl.uniform1f(U.spill, clamp(Number(key.spill), 0, 1));
+            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : 0);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        };
+        function loop() { if (dead) return; k.draw(); raf = requestAnimationFrame(loop); }
+        function start() { if (!raf && !dead) loop(); }
+        function stop() { cancelAnimationFrame(raf); raf = 0; k.draw(); }
+        video.addEventListener('play', start);
+        video.addEventListener('pause', stop);
+        video.addEventListener('ended', stop);
+        video.addEventListener('seeked', k.draw);
+        video.addEventListener('loadeddata', k.draw);
+        k.destroy = function () {
+            dead = true;
+            cancelAnimationFrame(raf);
+            video.removeEventListener('play', start);
+            try { var ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); } catch (e) { /* ignore */ }
+        };
+        keyers.push(k);
+        if (!video.paused) start();
+        return k;
+    }
+
+    function makeVideo(it) {
+        var v = document.createElement('video');
+        v.crossOrigin = 'anonymous'; // لازم عشان التفريغ يقرأ البكسلات
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.preload = 'auto';
+        v.src = videoFileUrl(it.video.id);
+        v.volume = clamp(it.volume == null ? 0.8 : Number(it.volume), 0, 1);
+        return v;
+    }
+
+    /** صندوق الفيديو (مع التفريغ والنص فوقه). preview = نموذج المحرر الواقف. */
+    function videoBox(it, e, preview) {
+        var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
+        var box = el('div', 'agp-so-vbox');
+        box.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
+        box.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
+        var v = makeVideo(it);
+        box.appendChild(v);
+        var key = keyOf(it);
+        var k = key.on ? makeKeyer(v, function () { return keyOf(it); }) : null;
+        if (k) {
+            box.className += ' keyed';
+            box.appendChild(k.canvas);
+            k.onfail = function () { box.classList.remove('keyed'); if (k.canvas.parentNode) k.canvas.remove(); };
+        }
+        if (it.showText !== false && e) {
+            var msg = (it.msg && it.msg[e.type]) || (ALERT_EVENTS[e.type] || ALERT_EVENTS.gift).msg;
+            var t = el('div', 'agp-so-vtxt ' + (it.textPos === 'top' ? 'top' : it.textPos === 'middle' ? 'middle' : 'bottom'), fillMsg(msg, e));
+            box.appendChild(t);
+        }
+        if (preview) {
+            v.muted = true;
+            v.addEventListener('loadedmetadata', function () {
+                try { v.currentTime = Math.min(0.6, (v.duration || 1) / 2); } catch (er) { /* ignore */ }
+            }, { once: true });
+        }
+        return { root: box, video: v, keyer: k };
+    }
+
+    function stopVideoBox(vb) {
+        try { vb.video.pause(); vb.video.removeAttribute('src'); vb.video.load(); } catch (e) { /* ignore */ }
+        if (vb.keyer) vb.keyer.destroy();
+    }
+
+    function playVideoAlert(id, it, e, targets) {
+        var q = alertQ[id];
+        var max = (clamp(Number(it.video.d) || 30, 1, 60) + 2) * 1000;
+        var ended = false, boxes = [], timer = null;
+        function done() {
+            if (ended) return;
+            ended = true;
+            clearTimeout(timer);
+            boxes.forEach(stopVideoBox);
+            q.busy = false;
+            liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
+            setTimeout(function () { pumpAlert(id); }, 250);
+        }
+        targets.forEach(function (t) {
+            var stage = t.node.querySelector('.agp-so-astage');
+            if (!stage) return;
+            stage.textContent = '';
+            var vb = videoBox(it, e, false);
+            vb.root.classList.add('in');
+            stage.appendChild(vb.root);
+            boxes.push(vb);
+            if (t.node._pos) place(t.node, t.node._pos, t.node._F);
+        });
+        if (!boxes.length) { done(); return; }
+        boxes.forEach(function (vb, i) {
+            var v = vb.video;
+            v.muted = i > 0 || Boolean(it.mute);
+            var p = v.play();
+            // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
+            if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(done); });
+        });
+        boxes[0].video.addEventListener('ended', done);
+        boxes[0].video.addEventListener('error', done);
+        timer = setTimeout(done, max);
+    }
+
     /** يضيف تنبيه لطابور الأداة. force = تجربة المحرر (بدون فلترة). */
     function queueAlert(id, e, force) {
         var q = alertQ[id] = alertQ[id] || { list: [], busy: false };
@@ -1141,6 +1341,7 @@
         if (!targets.length) { q.list = []; return; }
         var e = q.list.shift();
         var it = targets[0].node._item;
+        if (isVideoAlert(it)) { q.busy = true; playVideoAlert(id, it, e, targets); return; }
         var dur = clamp(Number(it.duration) || 5, 2, 20) * 1000;
         var anim = ALERT_ANIMS.filter(function (a) { return a.key === it.anim; })[0] ? it.anim : 'pop';
         q.busy = true;
@@ -1229,6 +1430,9 @@
             var evs = Array.isArray(opts.events) && opts.events.length ? opts.events : ['gift', 'follow', 'share'];
             var msg = {};
             Object.keys(ALERT_EVENTS).forEach(function (k) { msg[k] = ALERT_EVENTS[k].msg; });
+            if (opts.video) {
+                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: msg });
+            }
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
         if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
@@ -1447,6 +1651,14 @@
         /* أليرتات */
         '.agp-so-alert{line-height:1.3}',
         '.agp-so-astage{display:flex;justify-content:center}',
+        '.agp-so-vbox{position:relative;flex:none}',
+        '.agp-so-vbox video,.agp-so-vbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}',
+        '.agp-so-vbox.keyed video{opacity:0}',
+        '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
+        '.agp-so-vtxt{position:absolute;left:0;right:0;padding:0 .4em;text-align:center;direction:rtl;color:var(--agp-so-c,#fff);font-weight:800;font-size:1em;line-height:1.35;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.55)}',
+        '.agp-so-vtxt.top{top:4%}',
+        '.agp-so-vtxt.middle{top:50%;transform:translateY(-50%)}',
+        '.agp-so-vtxt.bottom{bottom:4%}',
         '.agp-so-acard{display:flex;align-items:center;gap:.7em;color:#fff;direction:rtl;text-shadow:0 .04em .1em rgba(0,0,0,.6);--c:var(--agp-so-c)}',
         '.agp-so-acard.d-card{padding:.6em 1.1em .6em .7em;border-radius:1.2em;min-width:14em;max-width:24em;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 38%,rgba(12,12,22,.92)),rgba(12,12,22,.9) 70%);border:.08em solid color-mix(in srgb,var(--c) 70%,#fff);box-shadow:0 0 1.2em color-mix(in srgb,var(--c) 45%,transparent),0 .4em 1.2em rgba(0,0,0,.5)}',
         '.agp-so-acard.d-banner{padding:.45em 1.6em .45em .6em;min-width:22em;max-width:40em;border-radius:.4em;background:linear-gradient(270deg,var(--c),color-mix(in srgb,var(--c) 55%,#000) 75%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.4)}',
@@ -1551,6 +1763,8 @@
         },
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
+        /** أليرت الفيديو والتفريغ (Veyro). */
+        KEY_DEFAULT: KEY_DEFAULT, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

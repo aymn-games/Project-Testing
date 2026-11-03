@@ -62,13 +62,18 @@
         play: '<path d="M8 5v14l11-7z"/>',
         login: '<path d="M10 3h9a2 2 0 012 2v14a2 2 0 01-2 2h-9v-2h9V5h-9zm1.6 4.6L13 6.2 18.8 12 13 17.8l-1.4-1.4 3.4-3.4H3v-2h12z"/>',
         check: '<path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/>',
-        bolt2: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'
+        bolt2: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+        upload: '<path d="M11 15V6.8L7.4 10.4 6 9l6-6 6 6-1.4 1.4L13 6.8V15zM4 14h2v4h12v-4h2v6H4z"/>',
+        pause: '<path d="M7 5h4v14H7zm6 0h4v14h-4z"/>',
+        drop: '<path d="M17.7 3.3a2.4 2.4 0 013.4 3.4l-2.5 2.5 1 1-1.4 1.4-1-1-7.6 7.6c-.5.5-1 .7-1.6.8l-2.6.4-1.2 1.2-1.4-1.4 1.2-1.2.4-2.6c.1-.6.3-1.1.8-1.6l7.6-7.6-1-1L13.2 4l1 1zM8.4 15.6l7-7-1.4-1.4-7 7-.3 1.7z"/>',
+        wand: '<path d="M14 2l1.1 2.9L18 6l-2.9 1.1L14 10l-1.1-2.9L10 6l2.9-1.1zM5 4l.7 1.8L7.5 6.5 5.7 7.2 5 9l-.7-1.8L2.5 6.5l1.8-.7zM16.6 10.6l1.4 1.4L6.4 23.6 5 22.2zM20 15l.7 1.8 1.8.7-1.8.7L20 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
+        video: '<path d="M3 5h13a1 1 0 011 1v3.5l4-2.5v10l-4-2.5V18a1 1 0 01-1 1H3a1 1 0 01-1-1V6a1 1 0 011-1z"/>'
     };
     function ic(name) { return O.ICON_SET[name] ? O.ICON_SET[name].p : UI[name]; }
     function svg(paths) { return '<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">' + paths + '</svg>'; }
 
     var SECTIONS = [
-        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'تنبيه يطلع على الشاشة لما يوصلك دعم أو متابعة أو شير أو أحد يدخل البث.' },
+        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'أليرتات الفيديو', desc: 'ارفع فيديو الأليرت حقك، فرّغ خلفيته، ويطلع على شاشتك مع كل هدية أو متابعة أو شير.' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
@@ -92,14 +97,6 @@
     ];
 
     var TOOLS = {
-        alerts: [
-            { label: 'كل التنبيهات', sub: 'هدايا ومتابعة وشير بأداة وحدة', type: 'alert', opts: { events: ['gift', 'follow', 'share'] } },
-            { label: 'تنبيه الهدايا', sub: 'اسم الداعم والهدية والماس', type: 'alert', opts: { events: ['gift'], color: '#ff5fa8' } },
-            { label: 'تنبيه المتابعين', sub: 'لكل متابع جديد', type: 'alert', opts: { events: ['follow'], color: '#4dd8ff' } },
-            { label: 'تنبيه الشير', sub: 'لكل من ينشر البث', type: 'alert', opts: { events: ['share'], color: '#c58bff' } },
-            { label: 'تنبيه الدخول', sub: 'شريط خفيف لمن يدخل', type: 'alert', opts: { events: ['join'], design: 'banner', color: '#7cff6b' } },
-            { label: 'تنبيه كبير', sub: 'بالوسط للهدايا والمتابعة', type: 'alert', opts: { events: ['gift', 'follow'], design: 'pop', color: '#ffd54a' } }
-        ],
         tops: [
             { label: 'توب المكبّسين', sub: 'منصة تتويج', type: 'top', opts: { section: 'likers' } },
             { label: 'توب الداعمين', sub: 'بالماس', type: 'top', opts: { section: 'gifters' } },
@@ -259,14 +256,15 @@
     }
 
     /** stay = تبقى بالصفحة الحالية (أول شاشة تنسوى تلقائياً). */
-    function createScreen(name, design, stay) {
+    function createScreen(name, design, stay, then) {
         if (screens.length >= maxScreens) { toast('وصلت للحد: ' + maxScreens + ' شاشة'); return; }
         api('POST', '/api/screens/create', { name: name || '', design: design || freshDesign() }).then(function (d) {
             if (!d.success) { toast(d.error === 'too_many_screens' ? 'وصلت للحد: ' + maxScreens + ' شاشة' : 'ما قدرنا نسوي الشاشة'); return; }
             screens.push(d.screen);
             // تكرار من صفحة الشاشات: الشاشة المفتوحة تبقى زي ما هي
             if (!stay || !cur) openScreen(d.screen);
-            if (stay) renderViews();
+            if (then) then();
+            else if (stay) renderViews();
             else go('editor', design ? null : 'alerts');
             toast('انضافت «' + d.screen.name + '» — رابطها جاهز بقسم «الشاشة»');
         }).catch(function () { toast('ما قدرنا نسوي الشاشة — تأكد من الاتصال'); });
@@ -507,6 +505,7 @@
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
         if (it.type === 'jar') return it.title || 'وعاء الهدايا';
+        if (O.isVideoAlert(it)) return 'أليرت فيديو: ' + (it.video.name || '');
         if (it.type === 'alert') return 'أليرت: ' + (it.events || []).map(function (k) { return (O.ALERT_EVENTS[k] || {}).label; }).filter(Boolean).join('، ');
         if (it.type === 'icon') return it.emoji ? 'ملصق ' + it.emoji : 'أيقونة ' + ((O.ICON_SET[it.icon] || {}).label || '');
         if (it.type === 'shape') return 'شكل: ' + ((O.SHAPES.filter(function (s) { return s.key === it.shape; })[0] || {}).label || '');
@@ -756,7 +755,7 @@
             var sec = SECTIONS.filter(function (s) { return s.key === section; })[0] || SECTIONS[0];
             panel.appendChild(head(sec.title, sec.desc));
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
-            if (sec.key === 'alerts') pb.appendChild(el('div', 'ob-hint', 'الأليرت يطلع بس وقت الحدث، وبالمعاينة هنا يطلع باهت عشان تشوف مكانه. اضغط عليه بعد ما تضيفه وجرّبه.'));
+            if (sec.key === 'alerts') videoAlertsPane(pb);
             if (sec.key === 'jar') pb.appendChild(el('div', 'ob-hint', 'يتعبّى بصور هدايا تيك توك نفسها (آخر 54 صورة)، والجديدة تطيح من فوق.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
@@ -915,6 +914,7 @@
         else if (it.type === 'goal') goalProps(it, box);
         else if (it.type === 'counter') counterProps(it, box);
         else if (it.type === 'jar') jarProps(it, box);
+        else if (O.isVideoAlert(it)) videoAlertProps(it, box);
         else if (it.type === 'alert') alertProps(it, box);
         else if (it.type === 'icon') iconProps(it, box);
         else if (it.type === 'shape') shapeProps(it, box);
@@ -1024,6 +1024,495 @@
         demo.appendChild(button('جرّب سقوط هدايا', 'ob-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'ob-btn ghost', function () { O.jarClearDemo(); }));
         box.appendChild(demo);
+    }
+
+    /* ---------------- أليرتات الفيديو: رفع + مكتبة + أداة التفريغ ---------------- */
+
+    var media = { list: [], max: 10, maxBytes: 20 * 1024 * 1024, loaded: false, loading: false, failed: false, uploading: null };
+    var UPLOAD_ERR = {
+        file_too_large: 'الملف أكبر من الحد المسموح',
+        too_many_files: 'وصلت لحد الملفات — احذف فيديو قديم',
+        unsupported_type: 'الملف لازم يكون فيديو MP4 أو WebM أو MOV',
+        empty_file: 'الملف فاضي',
+        storage_unavailable: 'التخزين بالسيرفر مو متاح الحين — جرّب بعد شوي',
+        not_streamer: 'أليرتات الفيديو لحسابات الستريمر'
+    };
+
+    function fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round((b || 0) / 1024)) + ' KB'; }
+    function fmtDur(d) { d = Math.round(Number(d) || 0); return Math.floor(d / 60) + ':' + ('0' + (d % 60)).slice(-2); }
+
+    function loadMedia(force) {
+        if (media.loading || (media.loaded && !force)) return;
+        media.loading = true;
+        api('GET', '/api/screens/media').then(function (d) {
+            if (d.success) {
+                media.list = d.media || [];
+                media.max = d.max || media.max;
+                media.maxBytes = d.maxBytes || media.maxBytes;
+                media.loaded = true;
+                media.failed = false;
+            } else media.failed = true;
+        }).catch(function () { media.failed = true; }).then(function () {
+            media.loading = false;
+            if (view === 'editor' && section === 'alerts' && !selectedId) renderPanel();
+        });
+    }
+
+    /** أبعاد الفيديو ومدته من المتصفح قبل الرفع (وتأكد إنه يشتغل). */
+    function readVideoMeta(file) {
+        return new Promise(function (resolve) {
+            var v = document.createElement('video');
+            var url = URL.createObjectURL(file);
+            var t = setTimeout(function () { done({ ok: null }); }, 10000);
+            function done(m) { clearTimeout(t); URL.revokeObjectURL(url); resolve(m); }
+            v.preload = 'metadata';
+            v.muted = true;
+            v.onloadedmetadata = function () { done({ ok: true, w: v.videoWidth, h: v.videoHeight, d: v.duration }); };
+            v.onerror = function () { done({ ok: false }); };
+            v.src = url;
+        });
+    }
+
+    function paintUpload() {
+        var u = media.uploading;
+        var bar = panel.querySelector('.vy-up-bar i');
+        var pct = panel.querySelector('.vy-up-pct');
+        if (u && bar) bar.style.width = u.pct + '%';
+        if (u && pct) pct.textContent = u.pct + '%';
+    }
+
+    function uploadVideo(file) {
+        if (!file || media.uploading) return;
+        if (media.list.length >= media.max) { toast(UPLOAD_ERR.too_many_files); return; }
+        if (!/^video\//.test(file.type) && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) { toast(UPLOAD_ERR.unsupported_type); return; }
+        if (file.size > media.maxBytes) { toast('حجم الملف ' + fmtSize(file.size) + ' — الحد ' + fmtSize(media.maxBytes)); return; }
+        readVideoMeta(file).then(function (m) {
+            if (m.ok === false) { toast('المتصفح ما قدر يشغّل هذا الفيديو — جرّب MP4 (H.264) أو WebM'); return; }
+            if (m.d > 60) { toast('الأليرت لازم يكون دقيقة أو أقل'); return; }
+            var name = file.name.replace(/\.[^.]+$/, '').slice(0, 60);
+            media.uploading = { name: name, pct: 0 };
+            renderPanel();
+            var q = '?name=' + encodeURIComponent(name) + '&w=' + (m.w || 0) + '&h=' + (m.h || 0) + '&d=' + (Number(m.d) || 0).toFixed(2);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', apiBase() + '/api/screens/media/upload' + q);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + token());
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.upload.onprogress = function (ev) {
+                if (ev.lengthComputable && media.uploading) { media.uploading.pct = Math.round(ev.loaded / ev.total * 100); paintUpload(); }
+            };
+            xhr.onload = function () {
+                var d = {};
+                try { d = JSON.parse(xhr.responseText); } catch (e) { d = {}; }
+                media.uploading = null;
+                if (d.success && d.media) {
+                    media.list.unshift(d.media);
+                    toast('انرفع «' + d.media.name + '» ✓ — اضغط «أضف للشاشة»');
+                } else toast(UPLOAD_ERR[d.error] || (xhr.status === 413 ? UPLOAD_ERR.file_too_large : 'ما انرفع الملف'));
+                renderPanel();
+            };
+            xhr.onerror = function () { media.uploading = null; toast('ما انرفع الملف — تأكد من الاتصال'); renderPanel(); };
+            xhr.send(file);
+        });
+    }
+
+    function mediaUsed(id) {
+        return screens.some(function (scr) {
+            return (designOf(scr).items || []).some(function (it) { return it.video && it.video.id === id; });
+        });
+    }
+
+    function deleteMedia(m) {
+        if (!window.confirm('تحذف «' + m.name + '»؟' + (mediaUsed(m.id) ? ' فيه أليرتات بشاشاتك تستخدمه وبتوقف.' : ''))) return;
+        api('POST', '/api/screens/media/delete', { id: m.id }).then(function (d) {
+            if (!d.success) { toast('ما قدرنا نحذفه'); return; }
+            media.list = media.list.filter(function (x) { return x.id !== m.id; });
+            toast('انحذف الفيديو');
+            renderPanel();
+        }).catch(function () { toast('ما قدرنا نحذفه'); });
+    }
+
+    function addVideoAlert(m) {
+        addItem(O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: ['gift'] }), [0.5, 0.5]);
+    }
+
+    function videoAlertsPane(box) {
+        loadMedia();
+        // خانة رفع الملف
+        var drop = el('label', 'vy-drop' + (media.uploading ? ' busy' : ''));
+        var inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v';
+        inp.hidden = true;
+        inp.addEventListener('change', function () { var f = inp.files && inp.files[0]; inp.value = ''; uploadVideo(f); });
+        drop.appendChild(inp);
+        if (media.uploading) {
+            drop.appendChild(el('b', null, 'يرفع «' + media.uploading.name + '»…'));
+            var bar = el('span', 'vy-up-bar');
+            var fill = el('i');
+            fill.style.width = media.uploading.pct + '%';
+            bar.appendChild(fill);
+            drop.appendChild(bar);
+            drop.appendChild(el('small', 'vy-up-pct', media.uploading.pct + '%'));
+        } else {
+            drop.appendChild(svgEl('upload'));
+            drop.appendChild(el('b', null, 'ارفع فيديو الأليرت'));
+            drop.appendChild(el('small', null, 'اسحب الملف هنا أو اضغط — MP4 أو WebM أو MOV، لين ' + fmtSize(media.maxBytes) + ' ودقيقة'));
+        }
+        ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+        ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.remove('over'); }); });
+        drop.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            uploadVideo(f);
+        });
+        box.appendChild(drop);
+
+        // الأليرتات اللي بالشاشة المفتوحة
+        var mine = S().items.filter(function (it) { return O.isVideoAlert(it); });
+        if (mine.length) {
+            box.appendChild(el('div', 'ob-gtitle', 'بالشاشة الحين'));
+            var lw = el('div', 'ob-layers');
+            mine.forEach(function (it) {
+                var r = el('div', 'ob-layer');
+                r.addEventListener('click', function () { select(it.id); });
+                var li = el('span', 'ob-lic');
+                li.innerHTML = svg(ic('video'));
+                r.appendChild(li);
+                r.appendChild(el('span', 'ob-lname', (it.video.name || 'فيديو') + ' — ' + (it.events || []).map(function (k) { return (O.ALERT_EVENTS[k] || {}).label; }).join('، ')));
+                var t = button('جرّب', 'ob-ib', function (e) { e.stopPropagation(); O.alertDemo(it.id, (it.events || ['gift'])[0]); });
+                t.style.width = 'auto';
+                t.style.padding = '0 10px';
+                r.appendChild(t);
+                lw.appendChild(r);
+            });
+            box.appendChild(lw);
+        }
+
+        // مكتبة الفيديوهات
+        var head = el('div', 'vy-lib-head');
+        head.appendChild(el('b', null, 'فيديوهاتك'));
+        head.appendChild(el('span', null, media.list.length + ' / ' + media.max));
+        box.appendChild(head);
+        if (!media.loaded) {
+            box.appendChild(el('div', 'ob-hint', media.failed ? 'ما قدرنا نجيب ملفاتك — حدّث الصفحة.' : 'يحمّل…'));
+            return;
+        }
+        if (!media.list.length) {
+            box.appendChild(el('div', 'ob-hint', 'ما رفعت أي فيديو للحين. لو خلفية الفيديو خضراء أو سوداء، تقدر تفرّغها بعد ما تضيفه للشاشة من «أداة التفريغ».'));
+            return;
+        }
+        var lib = el('div', 'vy-lib');
+        media.list.forEach(function (m) {
+            var c = el('div', 'vy-media');
+            var th = el('div', 'th');
+            var v = document.createElement('video');
+            v.muted = true;
+            v.preload = 'metadata';
+            v.playsInline = true;
+            v.loop = true;
+            v.crossOrigin = 'anonymous';
+            v.src = O.videoFileUrl(m.id) + '#t=0.4';
+            th.addEventListener('mouseenter', function () { v.play().catch(function () {}); });
+            th.addEventListener('mouseleave', function () { v.pause(); });
+            th.appendChild(v);
+            th.appendChild(el('span', 'dur', fmtDur(m.d)));
+            c.appendChild(th);
+            var info = el('div', 'mi');
+            info.appendChild(el('b', null, m.name));
+            info.appendChild(el('small', null, fmtSize(m.size) + (m.w ? ' · ' + m.w + '×' + m.h : '')));
+            c.appendChild(info);
+            var a = el('div', 'acts');
+            a.appendChild(iconBtn('أضف للشاشة', 'plus', 'primary', function () { addVideoAlert(m); }));
+            var rm = iconBtn('', 'trash', 'danger icon', function () { deleteMedia(m); });
+            rm.title = 'حذف';
+            rm.setAttribute('aria-label', 'حذف ' + m.name);
+            a.appendChild(rm);
+            c.appendChild(a);
+            lib.appendChild(c);
+        });
+        box.appendChild(lib);
+    }
+
+    var KEY_MODES = [{ label: 'لون (كروما)', value: 'color' }, { label: 'خلفية سوداء', value: 'black' }, { label: 'خلفية بيضاء', value: 'white' }];
+    function keySummary(k) {
+        if (!k.on) return 'بدون تفريغ';
+        return k.mode === 'black' ? 'مفرّغ: خلفية سوداء' : k.mode === 'white' ? 'مفرّغ: خلفية بيضاء' : 'مفرّغ: لون ' + k.color;
+    }
+
+    function videoAlertProps(it, box) {
+        var evs = Array.isArray(it.events) ? it.events : [];
+        var demo = el('div', 'ob-actions');
+        evs.forEach(function (k) {
+            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS[k].label, 'ob-btn primary', function () { O.alertDemo(it.id, k); }));
+        });
+        box.appendChild(demo);
+
+        var k = O.keyOf(it);
+        var kc = el('div', 'ob-card link');
+        var kh = el('div', 'vk-sum');
+        kh.appendChild(svgEl('wand'));
+        var kt = el('div');
+        kt.appendChild(el('h3', null, 'تفريغ الخلفية'));
+        kt.appendChild(el('div', 'ob-hint', keySummary(k)));
+        kh.appendChild(kt);
+        kc.appendChild(kh);
+        kc.appendChild(iconBtn('افتح أداة التفريغ', 'wand', 'primary', function () { openKeyTool(it); }));
+        box.appendChild(kc);
+
+        box.appendChild(row('يطلع لـ', pills(Object.keys(O.ALERT_EVENTS).map(function (x) { return { label: O.ALERT_EVENTS[x].label, value: x }; }), evs, function (v) {
+            var next = evs.indexOf(v) === -1 ? evs.concat([v]) : evs.filter(function (x) { return x !== v; });
+            if (!next.length) return;
+            update(it, 'events', next, true);
+        }, true), true));
+        if (evs.indexOf('gift') !== -1) {
+            box.appendChild(row('أقل هدية', pills([{ label: 'الكل', value: 0 }, { label: '10+', value: 10 }, { label: '100+', value: 100 }, { label: '1000+', value: 1000 }], Number(it.minDiamonds) || 0, function (v) {
+                update(it, 'minDiamonds', v, true);
+            }), false, 'بالماس'));
+        }
+        box.appendChild(row('الصوت', slider(0, 1, 0.05, it.volume == null ? 0.8 : it.volume, function (v) { it.volume = v; commit(); }), false, 'صوت الفيديو نفسه'));
+        box.appendChild(row('الحجم', slider(1, 14, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        box.appendChild(row('نص فوق الفيديو', toggle(it.showText !== false, function (v) { update(it, 'showText', v, true); }), false, 'اسم الداعم والهدية'));
+        if (it.showText !== false) {
+            box.appendChild(row('مكان النص', pills([{ label: 'فوق', value: 'top' }, { label: 'الوسط', value: 'middle' }, { label: 'تحت', value: 'bottom' }], it.textPos || 'bottom', function (v) { update(it, 'textPos', v, true); })));
+            it.msg = it.msg || {};
+            evs.forEach(function (x) {
+                box.appendChild(row('نص ' + O.ALERT_EVENTS[x].label, textInput(it.msg[x] || O.ALERT_EVENTS[x].msg, 80, function (v) {
+                    it.msg[x] = v; commit(); rebuildNode(it);
+                }), true));
+            });
+            box.appendChild(row('لون النص', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+            box.appendChild(el('div', 'ob-hint', 'بالنص: {name} اسم المشاهد، {gift} اسم الهدية، {count} العدد، {diamonds} الماس.'));
+        }
+        box.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. يشتغل كامل مع كل حدث، والأحداث اللي تجي وقتها تنتظر دورها.'));
+    }
+
+    /* أداة التفريغ: معاينة كبيرة + لون/أسود/أبيض + قطّارة + تلقائي + القوة والنعومة والانعكاس */
+    function openKeyTool(it) {
+        var draft = O.keyOf(it);
+        if (!draft.on) draft.on = true;
+        var orig = JSON.stringify(O.keyOf(it));
+        var before = false, picking = false, bgMode = 'checker';
+
+        var modal = el('div', 'vk-modal');
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'أداة تفريغ الأليرت');
+        var boxEl = el('div', 'vk-box glass');
+        modal.appendChild(boxEl);
+
+        var hd = el('div', 'vk-head');
+        var ht = el('div');
+        ht.appendChild(el('h2', null, 'أداة تفريغ الأليرت'));
+        ht.appendChild(el('p', null, (it.video.name || 'فيديو') + ' — يشيل خلفية الفيديو وتطلع شفافة على البث'));
+        hd.appendChild(ht);
+        var xb = button('', 'ob-x', function () { close(false); });
+        xb.innerHTML = svg(UI.close);
+        xb.setAttribute('aria-label', 'إغلاق');
+        hd.appendChild(xb);
+        boxEl.appendChild(hd);
+
+        var main = el('div', 'vk-main');
+        boxEl.appendChild(main);
+
+        // المعاينة
+        var viewEl = el('div', 'vk-view');
+        var stageEl = el('div', 'vk-stage bg-checker');
+        var media2 = el('div', 'vk-media');
+        var v = document.createElement('video');
+        v.crossOrigin = 'anonymous';
+        v.muted = true;
+        v.loop = true;
+        v.playsInline = true;
+        v.preload = 'auto';
+        v.src = O.videoFileUrl(it.video.id);
+        media2.appendChild(v);
+        var keyer = O.makeKeyer(v, function () { return draft; });
+        var warn = null;
+        if (keyer) {
+            media2.appendChild(keyer.canvas);
+            keyer.onfail = function () { paintKeyed(); showWarn('ما قدرنا نقرأ الفيديو للتفريغ (إعدادات السيرفر). التفريغ بيشتغل على البث لو السيرفر يسمح.'); };
+        }
+        stageEl.appendChild(media2);
+        var pickHint = el('div', 'vk-pickhint', 'اضغط على لون الخلفية بالفيديو');
+        stageEl.appendChild(pickHint);
+        viewEl.appendChild(stageEl);
+        function showWarn(t) { if (!warn) { warn = el('div', 'ob-warn'); viewEl.insertBefore(warn, viewEl.firstChild); } warn.textContent = t; }
+        if (!keyer) showWarn('متصفحك ما يدعم التفريغ (WebGL). التفريغ بيشتغل بـOBS وTikTok LIVE Studio عادي.');
+
+        // شريط التشغيل
+        var bar = el('div', 'vk-bar');
+        var playB = button('', 'ob-btn ghost icon', function () { if (v.paused) v.play().catch(function () {}); else v.pause(); });
+        playB.setAttribute('aria-label', 'تشغيل / إيقاف');
+        var seek = document.createElement('input');
+        seek.type = 'range';
+        seek.className = 'ob-range vk-seek';
+        seek.min = 0; seek.max = 1000; seek.value = 0;
+        seek.setAttribute('aria-label', 'مكان التشغيل');
+        seek.addEventListener('input', function () { if (v.duration) { v.pause(); v.currentTime = v.duration * seek.value / 1000; } });
+        var tm = el('span', 'vk-time', '0:00');
+        var cmp = button('قبل / بعد', 'ob-btn ghost', function () {});
+        cmp.title = 'اضغط مطوّل تشوف الفيديو الأصلي';
+        function setBefore(b) { before = b; cmp.classList.toggle('on', b); paintKeyed(); }
+        cmp.addEventListener('pointerdown', function () { setBefore(true); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (t) { cmp.addEventListener(t, function () { if (before) setBefore(false); }); });
+        var bgs = el('div', 'ob-seg vk-bgs');
+        [['checker', 'شفاف'], ['dark', 'داكن'], ['light', 'فاتح'], ['game', 'لعبة']].forEach(function (b) {
+            bgs.appendChild(button(b[1], b[0] === bgMode ? 'on' : '', function () {
+                bgMode = b[0];
+                stageEl.className = 'vk-stage bg-' + bgMode + (picking ? ' picking' : '');
+                Array.prototype.forEach.call(bgs.children, function (x) { x.classList.toggle('on', x.textContent === b[1]); });
+            }));
+        });
+        bar.appendChild(playB);
+        bar.appendChild(seek);
+        bar.appendChild(tm);
+        bar.appendChild(cmp);
+        bar.appendChild(bgs);
+        viewEl.appendChild(bar);
+        main.appendChild(viewEl);
+        function paintPlay() { playB.innerHTML = svg(ic(v.paused ? 'play' : 'pause')); }
+        v.addEventListener('play', paintPlay);
+        v.addEventListener('pause', paintPlay);
+        v.addEventListener('timeupdate', function () {
+            if (v.duration) seek.value = Math.round(v.currentTime / v.duration * 1000);
+            tm.textContent = fmtDur(v.currentTime) + ' / ' + fmtDur(v.duration);
+        });
+        paintPlay();
+        v.play().catch(function () {});
+
+        // قراءة ألوان من الفريم الحالي (للقطّارة والتلقائي)
+        var probe = document.createElement('canvas');
+        function frameData() {
+            if (!v.videoWidth) return null;
+            probe.width = v.videoWidth;
+            probe.height = v.videoHeight;
+            var cx = probe.getContext('2d', { willReadFrequently: true });
+            try { cx.drawImage(v, 0, 0); return cx.getImageData(0, 0, probe.width, probe.height); } catch (e) { return null; }
+        }
+        function avgAt(img, x, y, r) {
+            var s2 = [0, 0, 0], n = 0;
+            for (var yy = Math.max(0, y - r); yy <= Math.min(img.height - 1, y + r); yy++) {
+                for (var xx = Math.max(0, x - r); xx <= Math.min(img.width - 1, x + r); xx++) {
+                    var i = (yy * img.width + xx) * 4;
+                    s2[0] += img.data[i]; s2[1] += img.data[i + 1]; s2[2] += img.data[i + 2]; n++;
+                }
+            }
+            return n ? [s2[0] / n, s2[1] / n, s2[2] / n] : [0, 0, 0];
+        }
+        function hex(rgb) { return '#' + rgb.map(function (c) { return ('0' + Math.round(c).toString(16)).slice(-2); }).join(''); }
+        function lum(rgb) { return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255; }
+        function sat(rgb) { var mx = Math.max.apply(null, rgb), mn = Math.min.apply(null, rgb); return mx ? (mx - mn) / mx : 0; }
+
+        function autoKey() {
+            var img = frameData();
+            if (!img) { toast('ما قدرنا نقرأ الفيديو'); return; }
+            var W = img.width - 1, H = img.height - 1, r = Math.max(2, Math.round(Math.min(W, H) / 60));
+            var pts = [[r, r], [W - r, r], [r, H - r], [W - r, H - r], [W / 2, r], [W / 2, H - r], [r, H / 2], [W - r, H / 2]];
+            var samples = pts.map(function (p) { return avgAt(img, Math.round(p[0]), Math.round(p[1]), r); });
+            // نستبعد العينات البعيدة عن الأغلبية (لو الشخصية لامسة طرف)
+            var med = [0, 1, 2].map(function (c) { var a = samples.map(function (x) { return x[c]; }).sort(function (p, q) { return p - q; }); return a[Math.floor(a.length / 2)]; });
+            var good = samples.filter(function (x) { return Math.abs(x[0] - med[0]) + Math.abs(x[1] - med[1]) + Math.abs(x[2] - med[2]) < 90; });
+            var avg = [0, 1, 2].map(function (c) { return good.reduce(function (t, x) { return t + x[c]; }, 0) / (good.length || 1); });
+            draft.on = true;
+            if (lum(avg) < 0.14) { draft.mode = 'black'; draft.sim = 0.22; draft.smooth = 0.12; }
+            else if (lum(avg) > 0.88 && sat(avg) < 0.12) { draft.mode = 'white'; draft.sim = 0.2; draft.smooth = 0.1; }
+            else { draft.mode = 'color'; draft.color = hex(avg); draft.sim = 0.4; draft.smooth = 0.08; draft.spill = 0.1; }
+            toast(draft.mode === 'color' ? 'لقينا لون الخلفية ' + draft.color + ' ✓' : draft.mode === 'black' ? 'الخلفية سوداء ✓' : 'الخلفية بيضاء ✓');
+            paintControls();
+        }
+
+        function setPicking(on) {
+            picking = on;
+            stageEl.classList.toggle('picking', on);
+            pickBtn.classList.toggle('on', on);
+        }
+        media2.addEventListener('click', function (e) {
+            if (!picking) return;
+            var img = frameData();
+            if (!img) { toast('ما قدرنا نقرأ الفيديو'); setPicking(false); return; }
+            // مكان الضغطة داخل الفيديو (object-fit: contain)
+            var rc = media2.getBoundingClientRect();
+            var k2 = Math.min(rc.width / img.width, rc.height / img.height);
+            var ox = rc.left + (rc.width - img.width * k2) / 2, oy = rc.top + (rc.height - img.height * k2) / 2;
+            var x = Math.round((e.clientX - ox) / k2), y = Math.round((e.clientY - oy) / k2);
+            if (x < 0 || y < 0 || x >= img.width || y >= img.height) return;
+            var c = avgAt(img, x, y, 3);
+            draft.on = true;
+            draft.mode = 'color';
+            draft.color = hex(c);
+            setPicking(false);
+            paintControls();
+        });
+
+        // التحكم (العنوان يمين والتحكم يسار — قاعدة CLAUDE.md)
+        var side = el('div', 'vk-side');
+        main.appendChild(side);
+        var pickBtn = iconBtn('قطّارة', 'drop', 'ghost', function () { setPicking(!picking); });
+        var ctrls = el('div', 'vk-ctrls');
+        side.appendChild(ctrls);
+
+        /** «قبل/بعد» أو التفريغ مطفي: نعرض الفيديو الأصلي بدل الـcanvas. */
+        function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
+        function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
+        function paintControls() {
+            ctrls.textContent = '';
+            ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
+            ctrls.appendChild(el('div', 'ob-hint', 'يقرأ أطراف الفيديو ويعرف لون الخلفية لحاله. بعدها ظبّط القوة والنعومة.'));
+            ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
+            ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode, function (x) { setK('mode', x); paintControls(); }), true));
+            if (draft.mode === 'color') {
+                var cw = el('div', 'ob-sw');
+                [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#ff00ff', 'وردي']].forEach(function (c) {
+                    var b = button('', String(draft.color).toLowerCase() === c[0] ? 'on' : '', function () { setK('color', c[0]); setK('on', true); paintControls(); });
+                    b.style.background = c[0];
+                    b.title = c[1];
+                    b.setAttribute('aria-label', c[1]);
+                    cw.appendChild(b);
+                });
+                var pk = document.createElement('input');
+                pk.type = 'color';
+                pk.value = /^#[0-9a-f]{6}$/i.test(draft.color) ? draft.color : '#00ff00';
+                pk.title = 'لون مخصص';
+                pk.addEventListener('input', function () { setK('color', pk.value); });
+                cw.appendChild(pk);
+                cw.appendChild(pickBtn);
+                ctrls.appendChild(row('لون الخلفية', cw, true, 'أو اضغط «قطّارة» واختر اللون من الفيديو'));
+            }
+            ctrls.appendChild(row('القوة', slider(0, 1, 0.01, draft.sim, function (x) { setK('sim', x); }), false, 'كم لون قريب ينشال'));
+            ctrls.appendChild(row('النعومة', slider(0, 0.5, 0.01, draft.smooth, function (x) { setK('smooth', x); }), false, 'نعومة حواف الشخصية'));
+            if (draft.mode === 'color') ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل اللون الأخضر من الحواف'));
+            paintKeyed();
+        }
+        paintControls();
+
+        var acts = el('div', 'vk-acts');
+        acts.appendChild(button('حفظ التفريغ', 'ob-btn primary lg', function () { close(true); }));
+        acts.appendChild(button('إعادة ضبط', 'ob-btn ghost', function () { draft = Object.assign({}, O.KEY_DEFAULT, { on: true }); paintControls(); }));
+        acts.appendChild(button('إلغاء', 'ob-btn ghost', function () { close(false); }));
+        side.appendChild(acts);
+
+        function onKey(e) {
+            if (e.key === 'Escape') { e.stopPropagation(); if (picking) setPicking(false); else close(false); }
+            else if (e.key === ' ' && !/^(INPUT|TEXTAREA|BUTTON)$/.test(e.target.tagName)) { e.preventDefault(); if (v.paused) v.play().catch(function () {}); else v.pause(); }
+        }
+        document.addEventListener('keydown', onKey, true);
+        modal.addEventListener('pointerdown', function (e) { if (e.target === modal) close(false); });
+
+        function close(saveIt) {
+            document.removeEventListener('keydown', onKey, true);
+            v.pause();
+            v.removeAttribute('src');
+            v.load();
+            if (keyer) keyer.destroy();
+            modal.remove();
+            if (saveIt && JSON.stringify(draft) !== orig) {
+                update(it, 'key', Object.assign({}, draft), true);
+                toast(draft.on ? 'انحفظ التفريغ ✓' : 'انحفظ — بدون تفريغ');
+            }
+        }
+        document.body.appendChild(modal);
+        var first = modal.querySelector('.vk-auto');
+        if (first) first.focus();
     }
 
     function alertProps(it, box) {
@@ -1533,8 +2022,9 @@
             var first = screens.filter(function (x) { return x.id === want; })[0] || screens[0];
             if (first) openScreen(first);
             var v = viewFromUrl();
-            go(v.view, v.sec);
-            if (!screens.length) createScreen('شاشتي الأولى', null, true);
+            // حساب جديد: أول شاشة تنسوى، وبعدها يفتح القسم اللي بالرابط
+            if (!screens.length) { go('home'); createScreen('شاشتي الأولى', null, true, function () { go(v.view, v.sec); }); }
+            else go(v.view, v.sec);
         }).catch(function () { renderHome(); showGate('error'); });
     }
 
