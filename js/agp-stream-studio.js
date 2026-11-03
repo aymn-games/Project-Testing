@@ -5,9 +5,7 @@
  *
  * الرسم والبيانات والحفظ كلها من js/agp-stream-overlay.js (window.AGPStreamOverlay)
  * — نفس الكود اللي يرسم الأوفرلي فوق الألعاب، فالمعاينة = اللي يطلع بالبث.
- * كل تعديل ينحفظ فوراً (localStorage) ويوصل للألعاب المفتوحة بتبويب ثاني،
- * وينرفع للسيرفر (لو مسجّل دخول) عشان «رابط الأوفرلي» (overlay.html?k=) بـOBS
- * أو TikTok LIVE Studio يتحدّث — راجع backend/stats/stream-overlay-service.js.
+ * كل تعديل ينحفظ فوراً (localStorage) ويوصل للألعاب المفتوحة بتبويب ثاني.
  *
  * القائمة الجانبية: حالة الاتصال بالبث، وتبويبات «الأدوات / العناصر / الشاشة»،
  * ولما ينحدد عنصر تتحول لخصائصه. صفوف الإعدادات: العنوان يمين والتحكم يسار.
@@ -64,7 +62,6 @@
 
     function commit() {
         O.commit();
-        schedulePush();
         savedEl.textContent = 'تم الحفظ ✓';
         savedEl.classList.add('flash');
         clearTimeout(savedTimer);
@@ -338,119 +335,6 @@
         }
     }
 
-    /* ---------------- رابط الأوفرلي (OBS / TikTok LIVE Studio) ---------------- */
-
-    var cloud = { state: 'idle', key: null, tiktok: true, timer: null, pushing: false, again: false };
-    var cloudEl = null;
-
-    function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
-    function token() {
-        try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
-    }
-    function api(method, path, body) {
-        var opt = { method: method, headers: { 'Authorization': 'Bearer ' + token() } };
-        if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-        return fetch(apiBase() + path, opt).then(function (res) { return res.json(); });
-    }
-    function linkUrl() { return cloud.key ? new URL('overlay.html?k=' + cloud.key, location.href).href : ''; }
-
-    /** أول فتح: نسخة السيرفر لو أحدث من اللي بالجهاز، وإلا نرفع اللي بالجهاز. */
-    function cloudInit() {
-        if (!token()) { cloud.state = 'login'; paintCloud(); return; }
-        api('GET', '/api/stream/overlay').then(function (d) {
-            if (!d || !d.success) throw new Error('bad');
-            cloud.key = d.key;
-            cloud.tiktok = d.tiktokLinked !== false;
-            cloud.state = 'ok';
-            var remote = d.design;
-            var local = S();
-            var remoteNewer = remote && Array.isArray(remote.items) &&
-                ((Number(remote.savedAt) || 0) > (Number(local.savedAt) || 0) || (!local.items.length && remote.items.length));
-            if (remoteNewer) {
-                O.replaceState(remote);
-                enabledEl.checked = S().enabled !== false;
-                selectedId = null;
-                renderCanvas();
-                renderSide();
-            } else if (!remote || local.savedAt) {
-                if (!local.savedAt) O.commit(); // تصميم قبل الرابط: نعلّمه بوقت عشان أجهزة ثانية تعرف إنه الأحدث
-                pushNow();
-            }
-            paintCloud();
-        }).catch(function () { cloud.state = 'error'; paintCloud(); });
-    }
-
-    function schedulePush() {
-        if (cloud.state !== 'ok' && cloud.state !== 'saving' && cloud.state !== 'saveError') return;
-        clearTimeout(cloud.timer);
-        cloud.timer = setTimeout(pushNow, 1200);
-    }
-
-    function pushNow() {
-        if (cloud.pushing) { cloud.again = true; return; }
-        cloud.pushing = true;
-        cloud.state = 'saving';
-        paintCloud();
-        api('POST', '/api/stream/overlay', { design: S() }).then(function (d) {
-            cloud.state = d && d.success ? 'ok' : 'saveError';
-        }).catch(function () { cloud.state = 'saveError'; }).then(function () {
-            cloud.pushing = false;
-            if (cloud.again) { cloud.again = false; pushNow(); return; }
-            paintCloud();
-        });
-    }
-
-    function newKey() {
-        if (!window.confirm('الرابط القديم بيوقف على طول، ولازم تحط الرابط الجديد بـOBS. تكمل؟')) return;
-        api('POST', '/api/stream/overlay/new-key').then(function (d) {
-            if (d && d.success) { cloud.key = d.key; paintCloud(); }
-        }).catch(function () { /* ignore */ });
-    }
-
-    function cloudCard() {
-        var c = el('div', 'st-card');
-        c.appendChild(el('h3', null, 'رابط الأوفرلي — OBS و TikTok LIVE Studio'));
-        cloudEl = el('div', 'st-cloud');
-        c.appendChild(cloudEl);
-        paintCloud();
-        return c;
-    }
-
-    function paintCloud() {
-        if (!cloudEl) return;
-        cloudEl.textContent = '';
-        if (cloud.state === 'login') {
-            var p = el('div', 'st-hint', 'سجّل دخول بحسابك عشان تاخذ رابط الأوفرلي. ');
-            var a = el('a', null, 'تسجيل الدخول');
-            a.href = 'login.html';
-            p.appendChild(a);
-            cloudEl.appendChild(p);
-            return;
-        }
-        if (cloud.state === 'idle' || !cloud.key) {
-            cloudEl.appendChild(el('div', 'st-hint', cloud.state === 'error' ? 'ما قدرنا نجيب الرابط — حدّث الصفحة وجرّب مرة ثانية.' : 'جاري تجهيز الرابط…'));
-            return;
-        }
-        var input = el('input', 'st-input st-url');
-        input.readOnly = true;
-        input.value = linkUrl();
-        input.addEventListener('focus', function () { input.select(); });
-        cloudEl.appendChild(input);
-        var actions = el('div', 'st-actions');
-        var copyBtn = button('نسخ الرابط', 'st-btn primary', function () {
-            var done = function () { copyBtn.textContent = 'تم النسخ ✓'; setTimeout(function () { copyBtn.textContent = 'نسخ الرابط'; }, 1500); };
-            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(done, function () { input.select(); });
-            else { input.select(); try { document.execCommand('copy'); done(); } catch (e) { /* ignore */ } }
-        });
-        actions.appendChild(copyBtn);
-        actions.appendChild(button('رابط جديد', 'st-btn', newKey));
-        cloudEl.appendChild(actions);
-        var st = { ok: 'التصميم متزامن مع الرابط ✓', saving: 'يحفظ للرابط…', saveError: 'ما انحفظ للرابط — بنحاول مع التعديل الجاي' }[cloud.state] || '';
-        if (st) cloudEl.appendChild(el('div', 'st-cloud-st' + (cloud.state === 'saveError' ? ' bad' : ''), st));
-        if (!cloud.tiktok) cloudEl.appendChild(el('div', 'st-cloud-st bad', 'اربط حساب تيك توك من «حسابي» عشان تطلع أرقام البث بالرابط.'));
-        cloudEl.appendChild(el('div', 'st-hint', 'بـOBS: Browser Source بمقاس 1920×1080، واختر قالب «كمبيوتر / OBS» من تبويب «الشاشة». الأرقام تتحدّث وانت متصل بالبث من الموقع (لعبة أو مكتبة الألعاب). لا تنشر الرابط — اللي عنده يشوف أرقام بثك.'));
-    }
-
     function toolsPane() {
         var g = el('div', 'st-tools');
         TOOLS.forEach(function (t) {
@@ -718,7 +602,6 @@
             tabs.appendChild(button(t[1], t[0] === tab ? 'on' : '', function () { tab = t[0]; renderSide(); }));
         });
         side.appendChild(tabs);
-        if (tab === 'screen') side.appendChild(cloudCard());
         if (tab === 'tools') side.appendChild(toolsPane());
         else if (tab === 'layers') side.appendChild(layersPane());
         else side.appendChild(screenPane());
@@ -740,7 +623,6 @@
 
     renderSide();
     renderCanvas();
-    cloudInit();
     // الخطوط تتحمّل بعد أول رسم — نعيد القياس عشان المواقع تنضبط
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!drag) renderCanvas(); });
 }());

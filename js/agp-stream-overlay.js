@@ -30,10 +30,15 @@
  * - طول الشاشة ثابت (100vh) بدل innerHeight عشان العناصر ما تتزحزح لما شريط
  *   Safari يختفي ويرجع مع التمرير.
  *
- * <html data-agp-overlay-link> = «رابط الأوفرلي» (overlay.html?k=<رمز>) لـOBS/TikTok
- * LIVE Studio: التصميم من السيرفر (يحفظه الاستوديو) بدل localStorage، والبيانات
- * بالرمز بدون تسجيل دخول (/api/public/overlay*)، وما يفتح اتصال بث — يقرأ بس
- * اللي يحسبه اتصال اللعبة أو الأوفرلي بالموقع.
+ * «شاشات البث» (obs-studio.html + js/agp-obs-studio.js): المذيع يسوي شاشات
+ * لـOBS/TikTok LIVE Studio، ولكل شاشة رابط overlay.html?k=<رمز>:
+ * - <html data-agp-overlay-link> = صفحة الرابط: التصميم من السيرفر
+ *   (/api/public/screen، يتشيّك كل DESIGN_POLL_MS) بدل localStorage، والبيانات
+ *   بالرمز بدون تسجيل دخول، وما يفتح اتصال بث — يقرأ اللي يحسبه اتصال الموقع.
+ * - <html data-agp-studio data-agp-screens> = محرر الشاشات: زي الاستوديو بس
+ *   الحالة من المحرر (setState) وما تنحفظ بـlocalStorage.
+ * - أدوات خاصة فيها (تنرسم بأي مكان): «أليرتات» (alert — تنبيه هدية/متابعة/شير/
+ *   دخول من /api/public/screen/events)، «أيقونة» (icon — SVG أو إيموجي)، «شكل» (shape).
  *
  * <html data-agp-studio> = صفحة الاستوديو: ما ترسم طبقة البث، بس توفّر الرسم
  * والبيانات للمعاينة. النصوص تنعرض بـtextContent فقط. مستقل عن
@@ -60,6 +65,8 @@
     var Z = 2147483000;
     var STUDIO = document.documentElement.hasAttribute('data-agp-studio');
     var LINK = document.documentElement.hasAttribute('data-agp-overlay-link');
+    var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
+    var EVENTS_POLL_MS = 2000;
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -185,6 +192,7 @@
 
     function load() {
         if (LINK) return Object.assign(defaults(), { enabled: false }); // يوصل من السيرفر
+        if (SCREENS) return Object.assign(defaults(), { template: 'pc', editOrient: 'l' }); // المحرر يحط الشاشة
         try { return migrate(JSON.parse(localStorage.getItem(STORE_KEY) || 'null')) || defaults(); }
         catch (e) { return defaults(); } // تخزين غير متاح أو تالف
     }
@@ -214,10 +222,8 @@
         return null;
     }
 
-    /** savedAt = وقت آخر تعديل — الاستوديو يقارنه بنسخة السيرفر (أيها أحدث). */
     function save() {
-        if (LINK) return;
-        state.savedAt = Date.now();
+        if (LINK || SCREENS) return; // الرابط من السيرفر، والمحرر يحفظ للسيرفر بنفسه
         try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
     }
 
@@ -352,7 +358,7 @@
         if (!t && !LINK) { stats.status = 'login'; notify('stats'); return; }
         inflight = true;
         lastNeeds = q;
-        fetch(LINK ? apiBase() + '/api/public/overlay/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
+        fetch(LINK ? apiBase() + '/api/public/screen/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
             : apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
@@ -441,7 +447,7 @@
         if (!t && !LINK) return;
         jarInflight = true;
         var since = jar.sid ? jar.seq : 0;
-        fetch(LINK ? apiBase() + '/api/public/overlay/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
+        fetch(LINK ? apiBase() + '/api/public/screen/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
             : apiBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
@@ -713,6 +719,58 @@
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
+    // أليرتات «شاشات البث»: msg = النص الافتراضي ({name} {gift} {count} {diamonds})
+    var ALERT_EVENTS = {
+        gift: { label: 'الهدايا', title: 'هدية جديدة', icon: 'gift', msg: '{name} أرسل {gift} ×{count}' },
+        follow: { label: 'المتابعين', title: 'متابع جديد', icon: 'follow', msg: '{name} تابع البث' },
+        share: { label: 'الشير', title: 'شير جديد', icon: 'share', msg: '{name} نشر البث' },
+        join: { label: 'الدخول', title: 'نوّر البث', icon: 'eye', msg: '{name} دخل البث' }
+    };
+    var ALERT_DESIGNS = [{ key: 'card', label: 'بطاقة' }, { key: 'banner', label: 'شريط' }, { key: 'pop', label: 'كبير بالوسط' }];
+    var ALERT_ANIMS = [{ key: 'pop', label: 'قفزة' }, { key: 'slide', label: 'انزلاق' }, { key: 'fade', label: 'ظهور' }, { key: 'drop', label: 'سقوط' }];
+    // أيقونات «شاشات البث» (viewBox 24، fill-rule evenodd)
+    var ICON_SET = {
+        heart: { label: 'قلب', p: '<path d="M12 21s-7.6-4.7-9.7-9.3C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.7 1.2 4.4 2.5.7-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.3 7.2C19.6 16.3 12 21 12 21z"/>' },
+        star: { label: 'نجمة', p: '<path d="M12 2l3 6.6 7.2.7-5.4 4.9 1.6 7.1L12 17.6l-6.4 3.7 1.6-7.1-5.4-4.9L9 8.6z"/>' },
+        crown: { label: 'تاج', p: '<path d="M2 17h20l1.2-11-6.2 4.6L12 3 7 10.6.8 6zM3 18.6h18V21H3z"/>' },
+        fire: { label: 'نار', p: '<path d="M12 2c1 4 5.5 5.6 5.5 11.2A5.5 5.5 0 016.5 13.3c0-2.6 1.2-4.2 2.6-5.3.2 2 1 3.2 2.1 3.7C10.6 8.7 10 6 12 2z"/>' },
+        diamond: { label: 'ماسة', p: '<path d="M7 3h10l5 6.5L12 21 2 9.5z"/>' },
+        gift: { label: 'هدية', p: '<path d="M3 8h18v4H3zM5 13h14v8H5zM11 8h2v13h-2zM12 8C10 4.5 6.5 4 6.5 6.3 6.5 8 9.5 8 12 8zm0 0c2-3.5 5.5-4 5.5-1.7C17.5 8 14.5 8 12 8z"/>' },
+        trophy: { label: 'كأس', p: '<path d="M7 3h10v2h4c0 4.2-2 6.6-4.6 7A5 5 0 0113 15.8V19h4v2H7v-2h4v-3.2A5 5 0 017.6 12C5 11.6 3 9.2 3 5h4zm-2 4c.3 1.7 1 2.8 2 3.3V7zm14 0h-2v3.3c1-.5 1.7-1.6 2-3.3z"/>' },
+        bolt: { label: 'برق', p: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>' },
+        sparkle: { label: 'لمعة', p: '<path d="M12 2l2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2zM19 2l.8 2.2L22 5l-2.2.8L19 8l-.8-2.2L16 5l2.2-.8z"/>' },
+        rocket: { label: 'صاروخ', p: '<path d="M12 2c4 2.2 6 6.2 6 10.3l2 3-3 2.2-1-2H8l-1 2-3-2.2 2-3C6 8.2 8 4.2 12 2zm0 6a2 2 0 100 4 2 2 0 000-4zM10 19h4l-2 3.5z"/>' },
+        like: { label: 'لايك', p: '<path d="M2 10h4v11H2zM8 21h9a3 3 0 003-2.4l1.4-6A2.5 2.5 0 0019 10h-5l1-4.5A2 2 0 0011.3 4L8 10z"/>' },
+        follow: { label: 'متابعة', p: '<path d="M9 4a4 4 0 110 8 4 4 0 010-8zM1.5 20c0-4 3.4-6.5 7.5-6.5s7.5 2.5 7.5 6.5zM18 6h2v3h3v2h-3v3h-2v-3h-3V9h3z"/>' },
+        share: { label: 'شير', p: '<path d="M13 4l9 7.5-9 7.5v-4.5C7 14.5 4 16.5 2 20c.5-6 3.5-10.5 11-11.5z"/>' },
+        chat: { label: 'تعليق', p: '<path d="M4 4h16a2 2 0 012 2v10a2 2 0 01-2 2H10l-5 4v-4H4a2 2 0 01-2-2V6a2 2 0 012-2z"/>' },
+        eye: { label: 'مشاهدة', p: '<path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 3a4 4 0 110 8 4 4 0 010-8z"/>' },
+        bell: { label: 'جرس', p: '<path d="M12 2a6 6 0 016 6v5l2 3v1H4v-1l2-3V8a6 6 0 016-6zM9.5 19h5a2.5 2.5 0 01-5 0z"/>' },
+        game: { label: 'يد تحكم', p: '<path d="M7 7h10a5 5 0 014.9 6l-.8 4a3 3 0 01-5.3 1.2L14 16h-4l-1.8 2.2A3 3 0 012.9 17l-.8-4A5 5 0 017 7zm0 3v2H5v2h2v2h2v-2h2v-2H9v-2zm9 .5a1.2 1.2 0 100 2.4 1.2 1.2 0 000-2.4zm2 2.5a1.2 1.2 0 100 2.4 1.2 1.2 0 000-2.4z"/>' },
+        mic: { label: 'مايك', p: '<path d="M12 2a3 3 0 013 3v6a3 3 0 01-6 0V5a3 3 0 013-3zM5 11h2a5 5 0 0010 0h2a7 7 0 01-6 6.9V20h3v2H8v-2h3v-2.1A7 7 0 015 11z"/>' },
+        music: { label: 'موسيقى', p: '<path d="M9 5l11-2.5v13a3 3 0 11-2-2.8V6l-7 1.6v10a3 3 0 11-2-2.8z"/>' },
+        clock: { label: 'ساعة', p: '<path d="M12 2a10 10 0 110 20 10 10 0 010-20zm-1 4.5V13l5 3 1-1.7-4-2.4V6.5z"/>' },
+        check: { label: 'صح', p: '<path d="M9 16.2l-4.2-4.2-1.4 1.4L9 19 21 7l-1.4-1.4z"/>' },
+        smile: { label: 'وجه', p: '<path d="M12 2a10 10 0 110 20 10 10 0 010-20zM8.5 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm7 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM7 13.5a5 5 0 0010 0z"/>' },
+        down: { label: 'سهم تحت', p: '<path d="M10 3h4v10h5l-7 8-7-8h5z"/>' },
+        side: { label: 'سهم جنب', p: '<path d="M21 10v4H11v5l-8-7 8-7v5z"/>' }
+    };
+    var EMOJIS = ['🔥', '❤️', '😂', '😍', '🥳', '🎉', '👑', '💎', '🎁', '⭐', '🚀', '👏', '🙏', '💯', '⚽', '🏆', '🎮', '🎤', '🌙', '☕', '😎', '🤍', '💜', '🇸🇦'];
+    // أشكال: r = border-radius (بوحدة em = 1% من أصغر ضلع)
+    var SHAPES = [
+        { key: 'rect', label: 'مستطيل', r: '0' },
+        { key: 'round', label: 'حواف ناعمة', r: '2.5em' },
+        { key: 'pill', label: 'كبسولة', r: '999em' },
+        { key: 'circle', label: 'دائرة', r: '50%' }
+    ];
+    var SHAPE_FILLS = [
+        { key: 'glass', label: 'زجاجي' },
+        { key: 'solid', label: 'لون' },
+        { key: 'gradient', label: 'تدرّج' },
+        { key: 'outline', label: 'إطار' },
+        { key: 'neon', label: 'نيون' }
+    ];
+
     function title(node, text) { if (text) node.appendChild(el('div', 'agp-so-wtitle', text)); }
 
     function fillTop(node, it, preview) {
@@ -826,6 +884,9 @@
             else if (it.type === 'goal') fillGoal(n, it, preview);
             else if (it.type === 'counter') fillCounter(n, it, preview);
             else if (it.type === 'jar') buildJar(n, it, preview);
+            else if (it.type === 'alert') buildAlert(n, it, preview);
+            else if (it.type === 'icon') buildIcon(n, it);
+            else if (it.type === 'shape') buildShape(n, it);
         }
         return n;
     }
@@ -926,6 +987,226 @@
         paintJarNode(n, null, preview);
     }
 
+    /* ---------------- أيقونة وشكل ---------------- */
+
+    function animate(mv, it) {
+        var an = ANIMS.filter(function (a) { return a.key === it.anim; })[0];
+        if (an && an.d) {
+            mv.className += ' a-' + an.key;
+            mv.style.animationDuration = (an.d * (Number(it.speed) || 1)) + 's';
+        }
+    }
+
+    function buildIcon(n, it) {
+        var mv = el('span', 'agp-so-mv');
+        mv.style.setProperty('--agp-so-c', it.color || '#ffd54a');
+        animate(mv, it);
+        if (it.emoji) {
+            mv.appendChild(el('span', 'agp-so-emoji', String(it.emoji).slice(0, 8)));
+        } else {
+            var g = el('span', 'agp-so-glyph' + (it.glow ? ' glow' : ''));
+            g.style.color = it.color || '#ffd54a';
+            g.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">' + (ICON_SET[it.icon] || ICON_SET.star).p + '</svg>';
+            mv.appendChild(g);
+        }
+        n.appendChild(mv);
+    }
+
+    function buildShape(n, it) {
+        var sh = SHAPES.filter(function (x) { return x.key === it.shape; })[0] || SHAPES[1];
+        var fill = SHAPE_FILLS.filter(function (x) { return x.key === it.fill; })[0] || SHAPE_FILLS[0];
+        var b = el('div', 'agp-so-sbox f-' + fill.key);
+        b.style.width = clamp(Number(it.w) || 40, 1, 200) + 'em';
+        b.style.height = (sh.key === 'circle' ? clamp(Number(it.w) || 40, 1, 200) : clamp(Number(it.h) || 20, 0.5, 200)) + 'em';
+        b.style.borderRadius = sh.r;
+        b.style.opacity = String(clamp(Number(it.opacity) || 0.9, 0.05, 1));
+        n.appendChild(b);
+    }
+
+    /* ---------------- الأليرتات ---------------- */
+
+    var alertNodes = [];   // { node, preview } — أدوات الأليرتات المرسومة حالياً
+    var alertQ = {};       // itemId -> { list: [ev], busy: bool }
+    var evState = { init: false, sid: 0, seq: 0, timer: null, inflight: false };
+    var audioCtx = null;
+
+    function sampleEvent(type) {
+        var names = ['أبو فهد', 'نوره', 'سلطان', 'ريم'];
+        var e = { type: type, user: names[Math.floor(Math.random() * names.length)], avatar: null, at: Date.now(), demo: true };
+        if (type === 'gift') {
+            var g = Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length);
+            e.gift = ['وردة', 'قلب', 'نجمة', 'تاج', 'ماسة', 'صندوق'][g];
+            e.img = SAMPLE_GIFT_SVGS[g];
+            e.count = [1, 5, 10][Math.floor(Math.random() * 3)];
+            e.diamonds = e.count * 5;
+        }
+        return e;
+    }
+
+    function fillMsg(tpl, e) {
+        return String(tpl || '').replace(/\{name\}/g, e.user || '').replace(/\{gift\}/g, e.gift || '').replace(/\{count\}/g, String(e.count || 1)).replace(/\{diamonds\}/g, fmt(e.diamonds));
+    }
+
+    /** بطاقة التنبيه نفسها. */
+    function alertCard(it, e) {
+        var meta = ALERT_EVENTS[e.type] || ALERT_EVENTS.gift;
+        var design = ALERT_DESIGNS.filter(function (d) { return d.key === it.design; })[0] ? it.design : 'card';
+        var card = el('div', 'agp-so-acard d-' + design + ' t-' + e.type);
+        var media = el('div', 'agp-so-amedia');
+        if (e.type === 'gift' && (e.img || e.giftId)) {
+            media.appendChild(img2(https(e.img) || (/^data:image\/svg/.test(e.img || '') ? e.img : null), mediaUrl('g', e.giftId), 'agp-so-aimg', function (img) { img.replaceWith(icon('gift')); }));
+        } else if (e.avatar) {
+            media.className += ' av';
+            media.appendChild(img2(https(e.avatar), null, 'agp-so-aimg', function (img) { img.replaceWith(el('span', 'agp-so-ainit', (e.user || '?').charAt(0))); }));
+        } else {
+            media.appendChild(icon(meta.icon));
+        }
+        card.appendChild(media);
+        var txt = el('div', 'agp-so-atxt');
+        txt.appendChild(el('div', 'agp-so-atitle', meta.title));
+        var msg = (it.msg && it.msg[e.type]) || meta.msg;
+        txt.appendChild(el('div', 'agp-so-amsg', fillMsg(msg, e)));
+        if (e.type === 'gift' && e.diamonds && design !== 'banner') {
+            var d = el('div', 'agp-so-adia');
+            d.appendChild(icon('diamond'));
+            d.appendChild(el('span', null, fmt(e.diamonds)));
+            txt.appendChild(d);
+        }
+        card.appendChild(txt);
+        return card;
+    }
+
+    function liveAlertNodes(id) {
+        alertNodes = alertNodes.filter(function (a) { return a.node.isConnected; });
+        return alertNodes.filter(function (a) { return a.node._item && a.node._item.id === id; });
+    }
+
+    function idleAlert(n) {
+        var stage = n.querySelector('.agp-so-astage');
+        if (!stage) return;
+        stage.textContent = '';
+        // بالمحرر: نموذج باهت عشان المذيع يشوف مكانه ويسحبه
+        if (n._preview) {
+            var c = alertCard(n._item, { type: (n._item.events || ['gift'])[0] || 'gift', user: 'اسم المشاهد', gift: 'وردة', img: SAMPLE_GIFT_SVGS[0], count: 5, diamonds: 5 });
+            c.classList.add('agp-so-ghost');
+            stage.appendChild(c);
+        }
+        if (n._pos) place(n, n._pos, n._F);
+    }
+
+    function buildAlert(n, it, preview) {
+        n.className += ' agp-so-alert';
+        n._item = it;
+        n._preview = preview;
+        n.appendChild(el('div', 'agp-so-astage'));
+        alertNodes = alertNodes.filter(function (a) { return a.node.isConnected; });
+        alertNodes.push({ node: n, preview: preview });
+        var q = alertQ[it.id];
+        if (!q || !q.busy) idleAlert(n);
+    }
+
+    function chime() {
+        try {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            audioCtx = audioCtx || new AC();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            var t = audioCtx.currentTime;
+            [[880, 0], [1320, 0.12]].forEach(function (f) {
+                var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sine';
+                o.frequency.value = f[0];
+                g.gain.setValueAtTime(0.0001, t + f[1]);
+                g.gain.exponentialRampToValueAtTime(0.25, t + f[1] + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + f[1] + 0.45);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(t + f[1]); o.stop(t + f[1] + 0.5);
+            });
+        } catch (e) { /* ignore */ }
+    }
+
+    /** يضيف تنبيه لطابور الأداة. force = تجربة المحرر (بدون فلترة). */
+    function queueAlert(id, e, force) {
+        var q = alertQ[id] = alertQ[id] || { list: [], busy: false };
+        if (!force && e.type === 'join' && q.list.length >= 2) return; // الدخول كثير — ما نطوّل الطابور
+        if (q.list.length >= 15) q.list.shift();
+        q.list.push(e);
+        pumpAlert(id);
+    }
+
+    function pumpAlert(id) {
+        var q = alertQ[id];
+        if (!q || q.busy || !q.list.length) return;
+        var targets = liveAlertNodes(id);
+        if (!targets.length) { q.list = []; return; }
+        var e = q.list.shift();
+        var it = targets[0].node._item;
+        var dur = clamp(Number(it.duration) || 5, 2, 20) * 1000;
+        var anim = ALERT_ANIMS.filter(function (a) { return a.key === it.anim; })[0] ? it.anim : 'pop';
+        q.busy = true;
+        targets.forEach(function (t) {
+            var stage = t.node.querySelector('.agp-so-astage');
+            if (!stage) return;
+            stage.textContent = '';
+            var c = alertCard(it, e);
+            c.classList.add('in-' + anim);
+            stage.appendChild(c);
+            if (t.node._pos) place(t.node, t.node._pos, t.node._F);
+        });
+        if (it.sound) chime();
+        setTimeout(function () {
+            liveAlertNodes(id).forEach(function (t) {
+                var c = t.node.querySelector('.agp-so-acard');
+                if (c) c.classList.add('out');
+            });
+        }, dur - 450);
+        setTimeout(function () {
+            q.busy = false;
+            liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
+            setTimeout(function () { pumpAlert(id); }, 250);
+        }, dur);
+    }
+
+    function alertItems() { return activeItems().filter(function (it) { return it.type === 'alert'; }); }
+
+    /** رابط الشاشة: أحداث جديدة → تنبيهات. أول طلب (أو بث جديد) = نقطة بداية بدون تنبيهات. */
+    function fetchEvents() {
+        if (evState.inflight || !LINK) return;
+        evState.inflight = true;
+        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0))
+            .then(function (res) { return res.json(); })
+            .then(function (d) {
+                if (!d || !d.success) return;
+                if (!evState.init || d.sid !== evState.sid || d.seq < evState.seq) {
+                    evState.init = true;
+                    evState.sid = d.sid;
+                    evState.seq = d.seq;
+                    return;
+                }
+                evState.seq = d.seq;
+                (d.events || []).forEach(function (e) {
+                    alertItems().forEach(function (it) {
+                        if ((it.events || []).indexOf(e.type) === -1) return;
+                        if (e.type === 'gift' && (Number(e.diamonds) || 0) < (Number(it.minDiamonds) || 0)) return;
+                        queueAlert(it.id, e);
+                    });
+                });
+            })
+            .catch(function () { /* نحاول بالدورة الجاية */ })
+            .then(function () { evState.inflight = false; });
+    }
+
+    function syncEventsPolling() {
+        var want = LINK && state.enabled && alertItems().length > 0;
+        if (want && !evState.timer) {
+            fetchEvents();
+            evState.timer = setInterval(fetchEvents, EVENTS_POLL_MS);
+        } else if (!want && evState.timer) {
+            clearInterval(evState.timer);
+            evState.timer = null;
+        }
+    }
+
     function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter'; }
 
     /* ---------------- أدوات جديدة ---------------- */
@@ -944,6 +1225,14 @@
         if (type === 'goal') return Object.assign(base, { metric: 'likes', title: 'هدف التكبيسات', target: 10000, autoNext: true, design: 'bar', size: 3, color: '#ff4d6d' });
         if (type === 'counter') return Object.assign(base, { metrics: ['likes', 'diamonds', 'follows'], title: '', design: 'pills', size: 3, color: '#ffd54a' });
         if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', size: 2.6, color: '#ff5fa8' });
+        if (type === 'alert') {
+            var evs = Array.isArray(opts.events) && opts.events.length ? opts.events : ['gift', 'follow', 'share'];
+            var msg = {};
+            Object.keys(ALERT_EVENTS).forEach(function (k) { msg[k] = ALERT_EVENTS[k].msg; });
+            return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
+        }
+        if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
+        if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
         return base;
     }
 
@@ -954,7 +1243,7 @@
     function fetchDesign() {
         if (design.inflight) return;
         design.inflight = true;
-        fetch(apiBase() + '/api/public/overlay?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : ''))
+        fetch(apiBase() + '/api/public/screen?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : ''))
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -992,11 +1281,14 @@
                 var n = buildItem(it, F);
                 stage.appendChild(n);
                 nodes[it.id] = n;
-                place(n, posOf(it, key), F);
+                n._pos = posOf(it, key);
+                n._F = F;
+                place(n, n._pos, F);
             });
         }
         syncPolling();
         syncJarPolling();
+        syncEventsPolling();
         syncLink();
     }
 
@@ -1138,7 +1430,55 @@
         '.agp-so-counter.d-big .agp-so-ic{width:1.3em;height:1.3em}',
         '.agp-so-counter.d-big .agp-so-cnum{font-size:1.7em;line-height:1.1}',
         '.agp-so-counter.d-stack .agp-so-cbox{flex-direction:column;align-items:flex-start;gap:.2em}',
-        '.agp-so-counter.d-stack .agp-so-cm{text-shadow:-.05em -.05em 0 #000,.05em -.05em 0 #000,-.05em .05em 0 #000,.05em .05em 0 #000}'
+        '.agp-so-counter.d-stack .agp-so-cm{text-shadow:-.05em -.05em 0 #000,.05em -.05em 0 #000,-.05em .05em 0 #000,.05em .05em 0 #000}',
+        /* أيقونة */
+        '.agp-so-icon{line-height:1}',
+        '.agp-so-glyph{display:block;width:1em;height:1em}',
+        '.agp-so-glyph svg{display:block;width:100%;height:100%}',
+        '.agp-so-glyph.glow{filter:drop-shadow(0 0 .08em currentColor) drop-shadow(0 .04em .06em rgba(0,0,0,.6))}',
+        '.agp-so-emoji{display:block;font-size:1em;line-height:1.15;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;filter:drop-shadow(0 .04em .06em rgba(0,0,0,.45))}',
+        /* شكل */
+        '.agp-so-sbox{box-sizing:border-box;--c:var(--agp-so-c)}',
+        '.agp-so-sbox.f-solid{background:var(--c)}',
+        '.agp-so-sbox.f-glass{background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.04)),color-mix(in srgb,var(--c) 22%,rgba(8,8,16,.55));border:.18em solid color-mix(in srgb,var(--c) 55%,rgba(255,255,255,.35));-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 .6em 1.6em rgba(0,0,0,.35)}',
+        '.agp-so-sbox.f-gradient{background:linear-gradient(135deg,color-mix(in srgb,var(--c) 70%,#fff),var(--c) 45%,color-mix(in srgb,var(--c) 55%,#000))}',
+        '.agp-so-sbox.f-outline{border:.45em solid var(--c)}',
+        '.agp-so-sbox.f-neon{border:.3em solid color-mix(in srgb,var(--c) 40%,#fff);box-shadow:0 0 .6em var(--c),0 0 1.6em var(--c),inset 0 0 .8em var(--c)}',
+        /* أليرتات */
+        '.agp-so-alert{line-height:1.3}',
+        '.agp-so-astage{display:flex;justify-content:center}',
+        '.agp-so-acard{display:flex;align-items:center;gap:.7em;color:#fff;direction:rtl;text-shadow:0 .04em .1em rgba(0,0,0,.6);--c:var(--agp-so-c)}',
+        '.agp-so-acard.d-card{padding:.6em 1.1em .6em .7em;border-radius:1.2em;min-width:14em;max-width:24em;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 38%,rgba(12,12,22,.92)),rgba(12,12,22,.9) 70%);border:.08em solid color-mix(in srgb,var(--c) 70%,#fff);box-shadow:0 0 1.2em color-mix(in srgb,var(--c) 45%,transparent),0 .4em 1.2em rgba(0,0,0,.5)}',
+        '.agp-so-acard.d-banner{padding:.45em 1.6em .45em .6em;min-width:22em;max-width:40em;border-radius:.4em;background:linear-gradient(270deg,var(--c),color-mix(in srgb,var(--c) 55%,#000) 75%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.4)}',
+        '.agp-so-acard.d-pop{flex-direction:column;text-align:center;gap:.3em;min-width:16em;max-width:24em}',
+        '.agp-so-acard.d-pop .agp-so-atxt{align-items:center}',
+        '.agp-so-amedia{flex:none;width:3.2em;height:3.2em;display:flex;align-items:center;justify-content:center;color:var(--c);filter:drop-shadow(0 .1em .25em rgba(0,0,0,.5))}',
+        '.agp-so-amedia.av{border-radius:50%;overflow:hidden;border:.12em solid var(--c);background:#22243a}',
+        '.agp-so-amedia .agp-so-ic{width:2.2em;height:2.2em}',
+        '.agp-so-acard.d-pop .agp-so-amedia{width:6em;height:6em}',
+        '.agp-so-acard.d-pop .agp-so-amedia .agp-so-ic{width:4.5em;height:4.5em}',
+        '.agp-so-acard.d-banner .agp-so-amedia{width:2.4em;height:2.4em}',
+        '.agp-so-aimg{width:100%;height:100%;object-fit:contain;display:block}',
+        '.agp-so-amedia.av .agp-so-aimg{object-fit:cover}',
+        '.agp-so-ainit{font-weight:900;font-size:1.4em;color:#fff}',
+        '.agp-so-atxt{display:flex;flex-direction:column;gap:.1em;min-width:0}',
+        '.agp-so-atitle{font-size:.7em;font-weight:800;letter-spacing:.02em;color:color-mix(in srgb,var(--c) 60%,#fff)}',
+        '.agp-so-amsg{font-size:1.05em;font-weight:800;overflow-wrap:anywhere}',
+        '.agp-so-acard.d-pop .agp-so-amsg{font-size:1.5em;-webkit-text-stroke:.03em rgba(0,0,0,.5);text-shadow:0 .05em .2em rgba(0,0,0,.85)}',
+        '.agp-so-acard.d-pop .agp-so-atitle{font-size:.9em;color:var(--c)}',
+        '.agp-so-adia{display:inline-flex;align-items:center;gap:.25em;font-size:.75em;font-weight:800;color:#4dd8ff;direction:ltr}',
+        '.agp-so-acard.d-pop .agp-so-adia{align-self:center}',
+        '.agp-so-acard.in-pop{animation:agp-so-a-pop .55s cubic-bezier(.2,1.6,.4,1) both}',
+        '.agp-so-acard.in-slide{animation:agp-so-a-slide .5s cubic-bezier(.2,1,.3,1) both}',
+        '.agp-so-acard.in-fade{animation:agp-so-a-fade .5s ease both}',
+        '.agp-so-acard.in-drop{animation:agp-so-a-drop .7s cubic-bezier(.3,1.4,.5,1) both}',
+        '.agp-so-acard.out{animation:agp-so-a-out .45s ease both}',
+        '.agp-so-acard.in-pop .agp-so-amedia,.agp-so-acard.in-drop .agp-so-amedia{animation:agp-so-heartbeat 1.3s ease-in-out .5s infinite}',
+        '@keyframes agp-so-a-pop{0%{opacity:0;transform:scale(.3)}100%{opacity:1;transform:scale(1)}}',
+        '@keyframes agp-so-a-slide{0%{opacity:0;transform:translateX(60%)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-a-fade{0%{opacity:0;filter:blur(.3em)}100%{opacity:1;filter:none}}',
+        '@keyframes agp-so-a-drop{0%{opacity:0;transform:translateY(-120%)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}'
     ].join('\n');
 
     function ensureStyle() {
@@ -1190,7 +1530,7 @@
         });
         // تعديل من الاستوديو بتبويب ثاني
         window.addEventListener('storage', function (e) {
-            if (LINK) return; // تصميم الرابط من السيرفر بس
+            if (LINK || SCREENS) return; // التصميم من السيرفر / من المحرر
             if (e.key === CONN_KEY) { syncLink(); return; }
             if (e.key !== STORE_KEY) return;
             state = load();
@@ -1203,15 +1543,16 @@
         COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
-        /** الاستوديو: تبنّي تصميم من السيرفر (أحدث من المحفوظ بالجهاز). */
-        replaceState: function (s) {
-            var m = migrate(s);
-            if (!m) return false;
-            state = m;
-            try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+        /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
+        setState: function (s) {
+            state = migrate(s) || Object.assign(defaults(), { template: 'pc', editOrient: 'l' });
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
-            return true;
+            return state;
         },
+        ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
+        SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
+        /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
+        alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
         commit: function () { save(); if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); } },
         /** الاستوديو: هدايا تجريبية تطيح بالوعاء (بالمعاينة فقط، ما تنحفظ). */

@@ -256,10 +256,10 @@ function connectSide(m, i) {
             }
             try { liveSessionStats.recordGift(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
         },
-        onFollow: function () {
+        onFollow: function (data) {
             if (m.connectors[i] !== connector || m.ended) return;
             if (m.broadcastIds[i]) { try { authService.incrementBroadcastStat(m.broadcastIds[i], 'follow', 1); } catch (e) {} }
-            try { liveSessionStats.recordFollow(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {}
+            try { liveSessionStats.recordFollow(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
         },
         onViewerUpdate: function (data) {
             if (m.connectors[i] !== connector || m.ended) return;

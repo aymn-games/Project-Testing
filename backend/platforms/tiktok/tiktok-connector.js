@@ -7,7 +7,7 @@
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
  *     onGift({ id, name, giftName, giftId, giftValue, giftImage, repeatCount }),
- *     onFollow({ id, name }),
+ *     onFollow({ id, name, avatarUrls }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
  *     onLike({ id, name, count, avatarUrls }),  // اختياري — count = عدد التكبيسات بهذه الدفعة
  *     onShare({ id, name, avatarUrls }),        // اختياري
@@ -445,7 +445,7 @@ function createTikTokConnector() {
 
         _connection.on(TikTokLib.WebcastEvent.FOLLOW, function (data) {
             var user = extractUser(data);
-            _callbacks.onFollow({ id: user.id, name: user.name });
+            _callbacks.onFollow({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
         });
 
         // like/share/member — لإحصائيات البث فقط (stats/live-session-stats.js).

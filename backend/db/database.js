@@ -43,8 +43,8 @@
  *                    راجع backend/stats/platform-stats-service.js
  *   tickets / ticket_messages — تذاكر "الدعم والاقتراحات" ورسائلها —
  *                    راجع backend/support/support-service.js
- *   stream_overlays — «رابط الأوفرلي» (رمز سري + تصميم لكل حساب) — ينشأ من
- *                    backend/stats/stream-overlay-service.js
+ *   stream_screens — «شاشات البث» (تصميم + رمز رابط لكل شاشة) — ينشأ من
+ *                    backend/stats/stream-screens-service.js
  *   store_*        — المتجر: تصنيفات/استريمرز/منتجات/أكواد خصم/طلبات/
  *                    مقتنيات المشتري/المفضلة — راجع backend/store/store-service.js
  * ==========================================================================
