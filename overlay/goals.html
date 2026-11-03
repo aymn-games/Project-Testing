@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>أدوات الهدف للبث — Goal Widgets</title>
+<!--
+    «أدوات الهدف» — صفحة وحدة تنحط بـOBS (أو TikTok LIVE Studio) كـBrowser Source.
+    الخلفية شفافة. الشكل تختاره من الرابط:
+
+      ?style=bar       شريط تقدّم (الافتراضي) — هدف واحد، يتحدّث من StreamElements/Streamlabs/الويب هوك
+      ?style=heart     قلب يتعبّى بالماء — هدف واحد، نفس مصادر البيانات
+      ?style=potions   3 قوارير سحرية — current1&target1 ... لين 3
+      ?style=devil     قلوب بجناحين وقرنين — current1&target1 ... لين 3 (only=N لقلب واحد)
+
+    الشرح الكامل (كل المعاملات، الاستضافة، OBS، الويب هوك): overlay/goals-README.md
+    مستقلة عن نواة المنصة (AGP) وعن محرر «شاشات البث» (overlay/index.html) عمداً.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&family=Fredoka:wght@600;700&family=Quicksand:wght@600;700&display=swap">
+
+<!-- ===================== شريط / قلب (style=bar | heart) ===================== -->
+<style>
+/*
+ * goal.css — شكل «أداة الهدف».
+ *
+ * كل الألوان والمقاسات متغيرات CSS بالأعلى. لتخصيصها:
+ *   - عدّلها هنا مباشرة، أو
+ *   - الصقها بخانة «Custom CSS» بإعدادات Browser Source في OBS، مثلاً:
+ *       :root { --goal-accent: #ff3d7f; --goal-width: 560px; }
+ *   - أو مرّر ألوان سريعة بالرابط: ?accent=ff3d7f&fill1=ff3d7f&fill2=ffb347
+ */
+:root {
+    /* الخط والمقاس العام */
+    --goal-font: 'Tajawal', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --goal-width: 520px;
+    --goal-scale: 1;             /* تكبير/تصغير الأداة كلها */
+    --goal-padding: 18px 22px;
+    --goal-radius: 20px;
+
+    /* الكرت (الخلفية) */
+    --goal-bg: linear-gradient(135deg, rgba(20, 16, 38, .78), rgba(32, 22, 58, .62));
+    --goal-border: rgba(255, 255, 255, .14);
+    --goal-blur: 14px;
+    --goal-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+
+    /* النصوص */
+    --goal-text: #ffffff;
+    --goal-muted: rgba(255, 255, 255, .68);
+    --goal-title-size: 20px;
+    --goal-value-size: 15px;
+
+    /* اللون المميز وشريط التقدم */
+    --goal-accent: #8b5cf6;
+    --goal-fill-start: #8b5cf6;
+    --goal-fill-end: #ec4899;
+    --goal-track: rgba(255, 255, 255, .12);
+    --goal-bar-text: #ffffff;
+    --goal-bar-text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
+    --goal-bar-height: 26px;
+    --goal-bar-radius: 999px;
+    --goal-glow: 0 0 18px rgba(236, 72, 153, .55);
+
+    /* شكل القلب (?style=heart) — لون الماء متدرّج من فوق لتحت */
+    --goal-water-start: #ff6b8b;
+    --goal-water-end: #d6164a;
+    --goal-heart-size: 230px;
+    --goal-heart-stroke: rgba(255, 255, 255, .85);
+    --goal-heart-empty: rgba(255, 255, 255, .08);
+    --goal-heart-glow: drop-shadow(0 0 14px color-mix(in srgb, var(--goal-water-start) 60%, transparent));
+    --goal-wave-speed: 2.6s;
+
+    /* لون حالة «اكتمل الهدف» */
+    --goal-done-start: #22c55e;
+    --goal-done-end: #a3e635;
+}
+
+/* ===== ثيمات جاهزة: ?theme=neon | light | minimal ===== */
+:root[data-theme="neon"] {
+    --goal-bg: rgba(5, 5, 12, .85);
+    --goal-border: rgba(0, 255, 213, .45);
+    --goal-accent: #00ffd5;
+    --goal-fill-start: #00ffd5;
+    --goal-fill-end: #00a2ff;
+    --goal-glow: 0 0 22px rgba(0, 255, 213, .7);
+    --goal-shadow: 0 0 30px rgba(0, 255, 213, .18);
+}
+:root[data-theme="light"] {
+    --goal-bg: linear-gradient(135deg, rgba(255, 255, 255, .92), rgba(243, 240, 255, .88));
+    --goal-border: rgba(20, 16, 38, .10);
+    --goal-text: #1a1530;
+    --goal-muted: rgba(26, 21, 48, .6);
+    --goal-track: rgba(26, 21, 48, .10);
+    --goal-bar-text: #1a1530;
+    --goal-bar-text-shadow: 0 0 6px rgba(255, 255, 255, .9);
+    --goal-shadow: 0 14px 34px rgba(26, 21, 48, .18);
+    --goal-glow: 0 0 14px rgba(139, 92, 246, .35);
+}
+:root[data-theme="minimal"] {
+    --goal-bg: transparent;
+    --goal-border: transparent;
+    --goal-shadow: none;
+    --goal-blur: 0px;
+    --goal-padding: 4px 0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;   /* شفاف عشان يركب فوق البث */
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--goal-font);
+    color: var(--goal-text);
+    -webkit-font-smoothing: antialiased;
+}
+
+.goal {
+    width: var(--goal-width);
+    max-width: 100vw;
+    margin: 12px;
+    padding: var(--goal-padding);
+    border-radius: var(--goal-radius);
+    background: var(--goal-bg);
+    border: 1px solid var(--goal-border);
+    box-shadow: var(--goal-shadow);
+    -webkit-backdrop-filter: blur(var(--goal-blur));
+    backdrop-filter: blur(var(--goal-blur));
+    transform: scale(var(--goal-scale));
+    transform-origin: top right;
+    position: relative;
+    animation: goal-in .6s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+[dir="ltr"] .goal { transform-origin: top left; }
+
+/* ===== الصف العلوي: العنوان + النسبة ===== */
+.goal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.goal-title {
+    font-size: var(--goal-title-size);
+    font-weight: 800;
+    letter-spacing: .2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.goal-percent {
+    flex: none;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
+    color: var(--goal-text);
+    background: color-mix(in srgb, var(--goal-accent) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--goal-accent) 55%, transparent);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== شريط التقدم ===== */
+.goal-bar {
+    position: relative;
+    height: var(--goal-bar-height);
+    border-radius: var(--goal-bar-radius);
+    background: var(--goal-track);
+    overflow: hidden;
+}
+.goal-fill {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--goal-fill-start), var(--goal-fill-end));
+    box-shadow: var(--goal-glow);
+    transition: width 1.1s cubic-bezier(.22, 1, .36, 1);
+    overflow: hidden;
+}
+[dir="rtl"] .goal-fill { background: linear-gradient(270deg, var(--goal-fill-start), var(--goal-fill-end)); }
+
+/* لمعة تتحرك على الشريط */
+.goal-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .35) 50%, transparent 80%);
+    transform: translateX(-100%);
+    animation: goal-shine 2.8s ease-in-out infinite;
+}
+.goal-bar-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--goal-bar-text);
+    text-shadow: var(--goal-bar-text-shadow);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+/* ===== الصف السفلي: الحالي + الهدف ===== */
+.goal-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: var(--goal-value-size);
+    color: var(--goal-muted);
+    font-variant-numeric: tabular-nums;
+}
+.goal-current { color: var(--goal-text); font-weight: 800; }
+.goal-target b { color: var(--goal-text); }
+
+/* ===== فقاعة «+5» عند وصول دعم جديد ===== */
+.goal-pop {
+    position: absolute;
+    top: -6px;
+    inset-inline-end: 22px;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--goal-fill-start), var(--goal-fill-end));
+    box-shadow: var(--goal-glow);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: goal-pop 1.8s ease-out forwards;
+}
+.goal.is-bump .goal-bar { animation: goal-bump .5s ease; }
+
+/* ===== اكتمل الهدف ===== */
+.goal.is-complete {
+    --goal-fill-start: var(--goal-done-start);
+    --goal-fill-end: var(--goal-done-end);
+    --goal-glow: 0 0 22px color-mix(in srgb, var(--goal-done-start) 70%, transparent);
+}
+.goal.is-complete .goal-percent { animation: goal-pulse 1.4s ease-in-out infinite; }
+
+/* ===== شكل القلب (?style=heart) ===== */
+.goal-heart { display: none; }
+/* القلب بدون كرت خلفه: يركب على البث مباشرة، والنصوص بظل عشان تنقرأ فوق أي خلفية. */
+:root[data-style="heart"] {
+    --goal-bg: transparent;
+    --goal-border: transparent;
+    --goal-shadow: none;
+    --goal-blur: 0px;
+    --goal-muted: rgba(255, 255, 255, .9);
+}
+:root[data-style="heart"] .goal-title,
+:root[data-style="heart"] .goal-foot { text-shadow: 0 2px 6px rgba(0, 0, 0, .7); }
+:root[data-style="heart"] .goal {
+    width: auto;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+:root[data-style="heart"] .goal-head { flex-direction: column; gap: 8px; margin-bottom: 8px; }
+:root[data-style="heart"] .goal-percent { display: none; }
+:root[data-style="heart"] .goal.is-complete .goal-percent { display: block; }
+:root[data-style="heart"] .goal-bar { display: none; }
+:root[data-style="heart"] .goal-foot { gap: 18px; justify-content: center; }
+:root[data-style="heart"] .goal-pop { top: 50px; inset-inline: 0; width: fit-content; margin: 0 auto; z-index: 2; }
+:root[data-style="heart"] .goal-heart { display: block; }
+
+.goal-heart {
+    position: relative;
+    width: var(--goal-heart-size);
+    aspect-ratio: 212 / 186;
+    filter: var(--goal-heart-glow);
+}
+.goal-heart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.goal-heart-empty { fill: var(--goal-heart-empty); }
+.goal-heart-outline {
+    fill: none;
+    stroke: var(--goal-heart-stroke);
+    stroke-width: 4;
+    stroke-linejoin: round;
+}
+.goal-water-stop-a { stop-color: var(--goal-water-start); }
+.goal-water-stop-b { stop-color: var(--goal-water-end); }
+.goal-water { transform: translateY(180px); transition: transform 1.4s cubic-bezier(.22, 1, .36, 1); }
+.goal-wave { fill: url(#goal-water-grad); }
+.goal-wave-front { animation: goal-wave var(--goal-wave-speed) linear infinite; }
+.goal-wave-back {
+    opacity: .45;
+    transform: translate(-50px, -4px);
+    animation: goal-wave-back calc(var(--goal-wave-speed) * 1.6) linear infinite;
+}
+.goal-bubble { fill: rgba(255, 255, 255, .55); animation: goal-bubble 4.5s ease-in infinite; }
+.goal-bubble:nth-of-type(2) { animation-delay: 1.2s; animation-duration: 5.5s; }
+.goal-bubble:nth-of-type(3) { animation-delay: 2.4s; animation-duration: 4s; }
+.goal-bubble:nth-of-type(4) { animation-delay: 3.3s; animation-duration: 6s; }
+.goal-heart-text {
+    position: absolute;
+    inset: 0 0 12% 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, .55);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+.goal-heart-pct { font-size: calc(var(--goal-heart-size) * .19); font-weight: 800; line-height: 1; }
+.goal-heart-value { font-size: calc(var(--goal-heart-size) * .065); font-weight: 700; opacity: .92; }
+.goal.is-bump .goal-heart { animation: goal-beat .6s ease; }
+.goal.is-complete .goal-heart { animation: goal-beat 1.2s ease-in-out infinite; }
+
+/* مؤشر الاتصال (يظهر بس مع ?debug=1) */
+.goal-status {
+    display: none;
+    position: absolute;
+    top: 8px;
+    inset-inline-start: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+}
+.goal.is-debug .goal-status { display: block; }
+.goal-status[data-state="online"] { background: #22c55e; }
+.goal-status[data-state="error"] { background: #ef4444; }
+
+/* ===== الحركات ===== */
+@keyframes goal-in { from { opacity: 0; transform: translateY(-12px) scale(calc(var(--goal-scale) * .96)); } }
+@keyframes goal-shine { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(100%); } }
+@keyframes goal-bump { 0%, 100% { transform: scale(1); } 40% { transform: scaleY(1.18); } }
+@keyframes goal-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes goal-pop {
+    0% { opacity: 0; transform: translateY(8px) scale(.8); }
+    15% { opacity: 1; transform: translateY(-6px) scale(1.05); }
+    75% { opacity: 1; transform: translateY(-14px); }
+    100% { opacity: 0; transform: translateY(-26px); }
+}
+
+@keyframes goal-wave { from { transform: translateX(0); } to { transform: translateX(-100px); } }
+@keyframes goal-wave-back { from { transform: translate(-100px, -4px); } to { transform: translate(0, -4px); } }
+@keyframes goal-bubble {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translateY(-150px); opacity: 0; }
+}
+@keyframes goal-beat { 0%, 100% { transform: scale(1); } 25% { transform: scale(1.08); } 45% { transform: scale(.98); } 65% { transform: scale(1.05); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .goal, .goal-fill::after, .goal-pop, .goal.is-bump .goal-bar, .goal-wave, .goal-bubble,
+    .goal.is-bump .goal-heart, .goal.is-complete .goal-heart { animation: none; }
+}
+
+</style>
+
+<!-- ===================== القوارير (style=potions) ===================== -->
+<style>
+
+    :root {
+        --potion-size: 220px;
+        --potion-gap: 34px;
+        --potion-font: 'Fredoka', 'Tajawal', system-ui, sans-serif;
+        --potion-text: #ffffff;
+        --potion-line: #f6f1ff;        /* لون حدود الزجاج */
+        --potion-wave-speed: 3s;
+        --potion-fill-time: 1.8s;
+    }
+
+    .pg .shelf {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+        gap: var(--potion-gap);
+        padding: 20px 24px;
+    }
+
+    .pg .potion {
+        --c: #ff4fc8;   /* لون السائل */
+        --g: #ff5ad9;   /* لون النيون */
+        width: var(--potion-size);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: pg-potion-in .9s cubic-bezier(.2, .9, .3, 1.2) both;
+    }
+    .pg .potion:nth-child(2) { animation-delay: .12s; }
+    .pg .potion:nth-child(3) { animation-delay: .24s; }
+    .pg .potion svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+    /* ===== الزجاج ===== */
+    .pg .neon {
+        filter:
+            drop-shadow(0 0 3px var(--g))
+            drop-shadow(0 0 10px var(--g))
+            drop-shadow(0 0 24px color-mix(in srgb, var(--g) 70%, transparent))
+            drop-shadow(0 0 46px color-mix(in srgb, var(--g) 40%, transparent));
+    }
+    .pg .glass-line { fill: none; stroke: var(--potion-line); stroke-width: 11; stroke-linejoin: round; }
+    .pg .glass-rim { fill: color-mix(in srgb, var(--g) 55%, #ffffff); opacity: .4; }
+    .pg .hl { fill: #ffffff; opacity: .85; }
+    .pg .hl-soft { fill: #ffffff; opacity: .28; }
+    .pg .hl-line { fill: none; stroke: #ffffff; stroke-width: 5; stroke-linecap: round; opacity: .5; }
+
+    /* الحافة والفلّينة */
+    .pg .rim { fill: rgba(255, 255, 255, .22); stroke: var(--potion-line); stroke-width: 4.5; }
+    .pg .cork { fill: url(#cork-grad); stroke: #b4604f; stroke-width: 2.5; stroke-linejoin: round; }
+    .pg .cork-top { fill: #ffd3bd; stroke: #b4604f; stroke-width: 2.5; }
+    .pg .cork-dot { fill: #d9796a; }
+
+    /* ===== السائل ===== */
+    .pg .liquid { transition: transform var(--potion-fill-time) cubic-bezier(.22, 1, .36, 1); }
+    .pg .wave-a { animation: pg-wave var(--potion-wave-speed) linear infinite; }
+    .pg .wave-b { animation: pg-wave-rev calc(var(--potion-wave-speed) * 1.5) linear infinite; }
+    .pg .wave-c { animation: pg-wave calc(var(--potion-wave-speed) * 1.25) linear infinite; }
+    .pg .bubble { fill: #ffffff; opacity: 0; animation: pg-bubble 4.8s ease-in infinite; }
+    .pg .bubble:nth-of-type(2) { animation-delay: 1.2s; animation-duration: 5.6s; }
+    .pg .bubble:nth-of-type(3) { animation-delay: 2.4s; animation-duration: 4.1s; }
+    .pg .bubble:nth-of-type(4) { animation-delay: 3.5s; animation-duration: 6.3s; }
+    .pg .bubble:nth-of-type(5) { animation-delay: .7s;  animation-duration: 5.2s; }
+    .pg .bubble:nth-of-type(6) { animation-delay: 2.9s; animation-duration: 4.4s; }
+
+    /* ===== الزينة ===== */
+    .pg .deco { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--g) 55%, transparent)); }
+    .pg .float { animation: pg-float 4.5s ease-in-out infinite; }
+    .pg .float.b { animation-duration: 5.5s; animation-delay: -1.5s; }
+    .pg .float.c { animation-duration: 6.5s; animation-delay: -3s; }
+    .pg .sway { transform-box: fill-box; transform-origin: 50% 0%; animation: pg-sway 4s ease-in-out infinite; }
+
+    /* ===== النص ===== */
+    .pg .label, .pg .value {
+        text-align: center;
+        white-space: nowrap;
+        font-weight: 700;
+        color: #fff;
+        text-shadow:
+            0 0 6px color-mix(in srgb, var(--g) 90%, #fff),
+            0 0 16px var(--g),
+            0 0 30px color-mix(in srgb, var(--g) 60%, transparent),
+            0 2px 4px rgba(0, 0, 0, .55);
+    }
+    .pg .label { margin-top: 12px; font-size: calc(var(--potion-size) * .155); line-height: 1.1; }
+    .pg .value { margin-top: 2px;  font-size: calc(var(--potion-size) * .15); font-variant-numeric: tabular-nums; }
+
+    .pg .potion.is-full svg { animation: pg-full-pulse 1.8s ease-in-out infinite; }
+
+    @keyframes pg-wave { from { transform: translateX(0); }     to { transform: translateX(-120px); } }
+    @keyframes pg-wave-rev { from { transform: translateX(-120px); } to { transform: translateX(0); } }
+    @keyframes pg-bubble {
+        0%   { transform: translateY(0); opacity: 0; }
+        15%  { opacity: .75; }
+        100% { transform: translateY(-170px); opacity: 0; }
+    }
+    @keyframes pg-float { 0%, 100% { translate: 0 0; } 50% { translate: 5px -6px; } }
+    @keyframes pg-sway { 0%, 100% { rotate: -4deg; } 50% { rotate: 4deg; } }
+    @keyframes pg-potion-in { from { opacity: 0; transform: translateY(20px) scale(.94); } }
+    @keyframes pg-full-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pg .potion, .pg .wave-a, .pg .wave-b, .pg .wave-c, .pg .bubble, .pg .float, .pg .sway, .pg .potion.is-full svg { animation: none; }
+    }
+
+    .pg { font-family: var(--potion-font); color: var(--potion-text); }
+
+</style>
+
+<!-- ===================== القلوب بالأجنحة (style=devil) ===================== -->
+<style>
+
+    :root {
+        --heart-size: 240px;
+        --heart-gap: 80px;
+        --heart-font: 'Quicksand', 'Tajawal', system-ui, sans-serif;
+        --heart-wave-speed: 3s;
+        --heart-fill-time: 1.8s;
+    }
+
+    .dh .row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-end;
+        gap: var(--heart-gap);
+        padding: 40px 16px 20px;
+    }
+
+    .dh .dh-item {
+        --c: #8b4dff;   /* السائل */
+        --g: #a35cff;   /* التوهج */
+        --w: #5b2a9e;   /* الجناحين والقرنين والذيل */
+        width: var(--heart-size);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: dh-goal-in .9s cubic-bezier(.2, .9, .3, 1.2) both;
+    }
+    .dh .dh-item:nth-child(2) { animation-delay: .12s; }
+    .dh .dh-item:nth-child(3) { animation-delay: .24s; }
+    .dh .dh-item svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+    /* ===== الجناحين والقرنين والذيل ===== */
+    .dh .wing { fill: url(#WING); stroke: color-mix(in srgb, var(--w) 60%, #ffffff); stroke-width: 1.6; stroke-linejoin: round; }
+    .dh .wing-bone { fill: none; stroke: color-mix(in srgb, var(--w) 45%, #ffffff); stroke-width: 1.6; stroke-linecap: round; opacity: .8; }
+    /* الرفرفة على الجناح الداخلي؛ الجناح اليمين نفس اليسار بعد قلبه بمجموعة خارجية. */
+    .dh .flap { transform-box: view-box; transform-origin: 76px 126px; animation: dh-flap 3.2s ease-in-out infinite; }
+    .dh .horn { fill: color-mix(in srgb, var(--w) 70%, #120018); stroke: color-mix(in srgb, var(--w) 55%, #ffffff); stroke-width: 1.4; }
+    .dh .tail { fill: none; stroke: color-mix(in srgb, var(--w) 80%, #ffffff); stroke-width: 4.5; stroke-linecap: round; }
+    .dh .tail-tip { fill: color-mix(in srgb, var(--w) 80%, #ffffff); }
+    .dh .tail-g { transform-box: view-box; transform-origin: 160px 238px; animation: dh-tail 4s ease-in-out infinite; }
+    .dh .devil { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--g) 45%, transparent)); }
+
+    /* ===== الزجاج ===== */
+    .dh .glass-in { opacity: 1; }
+    .dh .glass-line { fill: none; stroke: color-mix(in srgb, var(--g) 25%, #f2eaff); stroke-width: 7; stroke-linejoin: round; opacity: .85; }
+    .dh .neon {
+        filter:
+            drop-shadow(0 0 4px var(--g))
+            drop-shadow(0 0 14px color-mix(in srgb, var(--g) 80%, transparent))
+            drop-shadow(0 0 32px color-mix(in srgb, var(--g) 50%, transparent));
+    }
+    .dh .hl { fill: #ffffff; opacity: .7; }
+    .dh .hl-soft { fill: #ffffff; opacity: .18; }
+
+    /* ===== السائل ===== */
+    .dh .liquid { transition: transform var(--heart-fill-time) cubic-bezier(.22, 1, .36, 1); }
+    .dh .wave-a { animation: dh-wave var(--heart-wave-speed) linear infinite; }
+    .dh .wave-b { animation: dh-wave-rev calc(var(--heart-wave-speed) * 1.5) linear infinite; }
+    .dh .wave-c { animation: dh-wave calc(var(--heart-wave-speed) * 1.25) linear infinite; }
+    .dh .sparkle { fill: #ffffff; animation: dh-twinkle 2.4s ease-in-out infinite; }
+    .dh .mini {
+        fill: color-mix(in srgb, var(--c) 30%, #ffd6ea);
+        opacity: 0;
+        animation: dh-rise 5s ease-in infinite;
+    }
+
+    /* قلوب طايرة فوق القلب لما يكتمل الهدف */
+    .dh .fly { opacity: 0; transition: opacity .6s; }
+    .dh .dh-item.is-full .fly { opacity: 1; }
+    .dh .fly path {
+        fill: color-mix(in srgb, var(--g) 35%, #ffc4e1);
+        opacity: 0;
+        animation: dh-fly 3.6s ease-out infinite;
+    }
+
+    .dh .dh-item.is-full .heart-body { animation: dh-beat 1.6s ease-in-out infinite; transform-box: view-box; transform-origin: 160px 160px; }
+
+    /* ===== النص ===== */
+    .dh .label, .dh .value {
+        text-align: center;
+        white-space: nowrap;
+        color: #fff;
+        text-shadow: 0 0 10px color-mix(in srgb, var(--g) 55%, transparent), 0 2px 4px rgba(0, 0, 0, .6);
+    }
+    .dh .label { margin-top: 6px; font-size: calc(var(--heart-size) * .1); font-weight: 700; }
+    .dh .value { margin-top: 2px; font-size: calc(var(--heart-size) * .085); font-weight: 700; font-variant-numeric: tabular-nums; opacity: .95; }
+
+    @keyframes dh-wave { from { transform: translateX(0); }      to { transform: translateX(-120px); } }
+    @keyframes dh-wave-rev { from { transform: translateX(-120px); } to { transform: translateX(0); } }
+    @keyframes dh-twinkle { 0%, 100% { opacity: .15; } 50% { opacity: .95; } }
+    @keyframes dh-rise {
+        0%   { transform: translateY(0); opacity: 0; }
+        15%  { opacity: .9; }
+        100% { transform: translateY(-150px); opacity: 0; }
+    }
+    @keyframes dh-fly {
+        0%   { transform: translateY(0) scale(.6); opacity: 0; }
+        20%  { opacity: .95; }
+        100% { transform: translateY(-80px) scale(1.1); opacity: 0; }
+    }
+    @keyframes dh-flap { 0%, 100% { rotate: 0deg; } 50% { rotate: 8deg; } }
+    @keyframes dh-tail { 0%, 100% { rotate: -5deg; } 50% { rotate: 6deg; } }
+    @keyframes dh-beat { 0%, 100% { scale: 1; } 25% { scale: 1.05; } 45% { scale: .99; } 65% { scale: 1.03; } }
+    @keyframes dh-goal-in { from { opacity: 0; transform: translateY(20px) scale(.94); } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dh .dh-item, .dh .wave-a, .dh .wave-b, .dh .wave-c, .dh .sparkle, .dh .mini, .dh .fly path, .dh .flap, .dh .tail-g, .dh .dh-item.is-full .heart-body { animation: none; }
+    }
+
+    .dh { font-family: var(--heart-font); }
+
+</style>
+</head>
+<body>
+<!-- كل شكل بحاويته؛ المبدّل تحت يشيل الحاويات اللي ما تنعرض. -->
+    <div class="goal" id="goal" role="status" aria-live="polite">
+        <span class="goal-status" id="goal-status" title="حالة الاتصال"></span>
+        <div class="goal-head">
+            <div class="goal-title" id="goal-title">الهدف</div>
+            <div class="goal-percent" id="goal-percent">0%</div>
+        </div>
+        <!-- شكل القلب (?style=heart): يتعبّى بالماء حسب نسبة الهدف -->
+        <div class="goal-heart" aria-hidden="true">
+            <svg viewBox="-6 -6 212 186">
+                <defs>
+                    <clipPath id="goal-heart-clip"><path d="M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z"/></clipPath>
+                    <linearGradient id="goal-water-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" class="goal-water-stop-a"/>
+                        <stop offset="1" class="goal-water-stop-b"/>
+                    </linearGradient>
+                </defs>
+                <path class="goal-heart-empty" d="M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z"/>
+                <g clip-path="url(#goal-heart-clip)">
+                    <g class="goal-water" id="goal-water">
+                        <path class="goal-wave goal-wave-back" d="M0 0 Q25 -7 50 0 T100 0 T150 0 T200 0 T250 0 T300 0 T350 0 T400 0 V200 H0 Z"/>
+                        <path class="goal-wave goal-wave-front" d="M0 0 Q25 -7 50 0 T100 0 T150 0 T200 0 T250 0 T300 0 T350 0 T400 0 V200 H0 Z"/>
+                        <circle class="goal-bubble" cx="70" cy="178" r="3.5"/>
+                        <circle class="goal-bubble" cx="105" cy="178" r="2.5"/>
+                        <circle class="goal-bubble" cx="130" cy="178" r="4"/>
+                        <circle class="goal-bubble" cx="88" cy="178" r="2"/>
+                    </g>
+                </g>
+                <path class="goal-heart-outline" d="M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z"/>
+            </svg>
+            <div class="goal-heart-text">
+                <span class="goal-heart-pct" id="goal-heart-pct">0%</span>
+                <bdi class="goal-heart-value" id="goal-heart-value"></bdi>
+            </div>
+        </div>
+        <div class="goal-bar">
+            <div class="goal-fill" id="goal-fill"></div>
+            <div class="goal-bar-text" id="goal-bar-text"></div>
+        </div>
+        <div class="goal-foot" id="goal-foot">
+            <span id="goal-remaining"></span>
+            <span id="goal-last"></span>
+        </div>
+    </div>
+
+<div class="pg" id="pg" dir="ltr">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <linearGradient id="cork-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#e08a72"/>
+            <stop offset=".45" stop-color="#f7b69b"/>
+            <stop offset="1" stop-color="#d47862"/>
+        </linearGradient>
+    </defs>
+</svg>
+<main class="shelf" id="shelf"></main>
+</div>
+
+<div class="dh" id="dh" dir="ltr">
+<main class="row" id="row"></main>
+</div>
+
+<!-- منطق الأحداث المشترك (يقرأه goals-server.js من هنا كمان — لا تغيّر id) -->
+<script id="goal-core">
+/*
+ * goal-core.js — منطق «أداة الهدف» المشترك بين الويدجت (المتصفح/OBS) وخادم
+ * الويب هوك (server.js على Node). بدون أي اعتماديات.
+ *
+ * وظيفته: تحويل أحداث Streamlabs / StreamElements / الويب هوك المخصّص إلى
+ * شكل موحّد { kind, amount, name, id }، ثم حساب كم يضيف كل حدث للهدف حسب
+ * نوعه (متابعين، اشتراكات، دعم مادي، بتس، مخصّص).
+ */
+(function (root, factory) {
+    'use strict';
+    if (typeof module === 'object' && module.exports) { module.exports = factory(); }
+    else { root.GoalCore = factory(); }
+}(typeof self !== 'undefined' ? self : this, function () {
+    'use strict';
+
+    /* أنواع الهدف المدعومة ونصوصها الافتراضية. */
+    var TYPES = {
+        follower:   { title: 'هدف المتابعين',  unit: 'متابع',  prefix: '' },
+        subscriber: { title: 'هدف الاشتراكات', unit: 'اشتراك', prefix: '' },
+        tip:        { title: 'هدف الدعم',      unit: '',       prefix: '$' },
+        cheer:      { title: 'هدف البتس',      unit: 'بت',     prefix: '' },
+        custom:     { title: 'الهدف',          unit: '',       prefix: '' }
+    };
+
+    /* أسماء الأحداث لكل مزوّد ← النوع الموحّد. */
+    var SE_KINDS = { follower: 'follower', follow: 'follower', subscriber: 'subscriber',
+        tip: 'tip', cheer: 'cheer', superchat: 'tip' };
+    var SL_KINDS = { follow: 'follower', subscription: 'subscriber', resub: 'subscriber',
+        donation: 'tip', superchat: 'tip', bits: 'cheer' };
+
+    function num(v) {
+        if (typeof v === 'number') { return isFinite(v) ? v : 0; }
+        var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
+        return isFinite(n) ? n : 0;
+    }
+
+    function round2(n) { return Math.round(n * 100) / 100; }
+
+    /*
+     * StreamElements (socket الحي): الحدث `event` شكله
+     * { _id, type: 'follower'|'tip'|..., data: { amount, username, displayName } }
+     * وحدث التجربة `event:test` شكله { listener: 'tip-latest', event: { amount, name } }.
+     */
+    function fromStreamElements(raw, isTest) {
+        if (!raw) { return []; }
+        var type, data, id;
+        if (isTest || raw.listener) {
+            type = String(raw.listener || '').replace(/-latest$/, '');
+            data = raw.event || {};
+            id = null;
+        } else {
+            type = raw.type;
+            data = raw.data || {};
+            id = raw._id || raw.activityId || null;
+        }
+        var kind = SE_KINDS[type];
+        if (!kind) { return []; }
+        var amount = (kind === 'tip' || kind === 'cheer') ? num(data.amount) : 1;
+        // اشتراكات مهداة دفعة وحدة (bulk): العدد بالحقل amount.
+        if (kind === 'subscriber' && data.bulkGifted) { amount = Math.max(1, num(data.amount)); }
+        return [{ kind: kind, amount: amount,
+            name: data.displayName || data.username || data.name || '', id: id }];
+    }
+
+    /*
+     * Streamlabs (socket الحي): الحدث `event` شكله
+     * { type: 'donation'|'follow'|..., for: '...', message: [ { amount, name, _id }, ... ] }
+     * السوبرتشات مبلغه بالمايكرو (÷ 1,000,000).
+     */
+    function fromStreamlabs(raw) {
+        if (!raw) { return []; }
+        var kind = SL_KINDS[raw.type];
+        if (!kind) { return []; }
+        var list = Array.isArray(raw.message) ? raw.message : (raw.message ? [raw.message] : []);
+        var out = [];
+        for (var i = 0; i < list.length; i++) {
+            var m = list[i] || {};
+            var amount = 1;
+            if (kind === 'tip' || kind === 'cheer') {
+                amount = num(m.amount);
+                if (raw.type === 'superchat') { amount = amount / 1000000; }
+            }
+            out.push({ kind: kind, amount: amount, name: m.name || m.from || '',
+                id: m._id || m.id || m.event_id || null });
+        }
+        return out;
+    }
+
+    /* ويب هوك مخصّص: { type|kind, amount, name, id } — الأبسط. */
+    function fromCustom(raw) {
+        if (!raw) { return []; }
+        var t = String(raw.kind || raw.type || 'custom').toLowerCase();
+        var kind = TYPES[t] ? t : (SE_KINDS[t] || SL_KINDS[t] || 'custom');
+        var amount = raw.amount == null ? 1 : num(raw.amount);
+        return [{ kind: kind, amount: amount, name: raw.name || raw.username || '', id: raw.id || null }];
+    }
+
+    /* يحوّل أي حدث خام لقائمة أحداث موحّدة. */
+    function normalize(provider, raw, isTest) {
+        switch (String(provider || '').toLowerCase()) {
+            case 'streamelements': case 'se': return fromStreamElements(raw, isTest);
+            case 'streamlabs': case 'sl': return fromStreamlabs(raw);
+            default: return fromCustom(raw);
+        }
+    }
+
+    /*
+     * كم يضيف الحدث للهدف: لازم نوع الحدث يطابق نوع الهدف. الهدف «custom»
+     * يقبل أي حدث بمبلغه كما هو.
+     */
+    function contribution(goalType, ev) {
+        if (!ev || !(ev.amount > 0)) { return 0; }
+        if (!goalType || goalType === 'custom' || goalType === ev.kind) { return round2(ev.amount); }
+        return 0;
+    }
+
+    function percent(current, goal) {
+        if (!(goal > 0)) { return 0; }
+        return Math.max(0, Math.min(100, (current / goal) * 100));
+    }
+
+    /* تنسيق الرقم: فواصل الآلاف، وخانتين عشريتين بس لو فيه كسور. */
+    function format(n, locale) {
+        var hasFrac = Math.abs(n - Math.round(n)) > 0.004;
+        try {
+            return Number(n).toLocaleString(locale || 'en-US', {
+                minimumFractionDigits: hasFrac ? 2 : 0, maximumFractionDigits: hasFrac ? 2 : 0 });
+        } catch (e) { return String(hasFrac ? n.toFixed(2) : Math.round(n)); }
+    }
+
+    return { TYPES: TYPES, num: num, normalize: normalize, contribution: contribution,
+        percent: percent, format: format };
+}));
+</script>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ===================== شريط / قلب ===================== */
+    function runBarHeart() {
+    /*
+     * goal.js — تشغيل «أداة الهدف» داخل OBS (Browser Source) أو أي متصفح.
+     *
+     * الإعدادات كلها من الرابط (?type=follower&goal=500&...) — الجدول الكامل
+     * بـ README.md. مصادر البيانات (provider):
+     *   - streamelements : اتصال حي بـ socket StreamElements بتوكن JWT.
+     *   - streamlabs     : اتصال حي بـ socket Streamlabs بـ Socket API Token.
+     *   - server         : يستقبل التحديثات من server.js (ويب هوك/API) عبر SSE.
+     *   - none           : قيمة ثابتة من الرابط (مع ?demo=1 للتجربة).
+     *
+     * ملاحظة: الأداة مستقلة عن نواة المنصة (AGP) عمداً، عشان تشتغل على أي
+     * استضافة أو من جهاز المذيع مباشرة بدون باقي ملفات الموقع.
+     */
+    (function (Core) {
+        'use strict';
+
+        var q = new URLSearchParams(window.location.search);
+        function param(name, def) { var v = q.get(name); return (v === null || v === '') ? def : v; }
+        function flag(name, def) { var v = q.get(name); return v === null ? def : !/^(0|false|no|off)$/i.test(v); }
+        function log() { if (cfg.debug && window.console) { console.log.apply(console, ['[goal]'].concat([].slice.call(arguments))); } }
+
+        var type = String(param('type', 'follower')).toLowerCase();
+        if (!Core.TYPES[type]) { type = 'custom'; }
+        var defs = Core.TYPES[type];
+
+        var cfg = {
+            type: type,
+            title: param('title', defs.title),
+            goal: Core.num(param('goal', 100)),
+            start: Core.num(param('start', 0)),
+            prefix: param('prefix', defs.prefix),
+            unit: param('unit', defs.unit),
+            provider: String(param('provider', 'none')).toLowerCase(),
+            token: param('token', ''),
+            server: String(param('server', '')).replace(/\/+$/, ''),
+            key: param('key', 'default'),
+            persist: flag('persist', true),
+            test: flag('test', false),
+            demo: flag('demo', false),
+            debug: flag('debug', false),
+            foot: flag('foot', true),
+            doneText: param('done', 'اكتمل الهدف 🎉'),
+            leftLabel: param('leftLabel', 'المتبقي:'),
+            lastLabel: param('lastLabel', 'آخر دعم:'),
+            locale: param('locale', 'en-US'),
+            eio: param('eio', '3')
+        };
+
+        /* ===== المظهر من الرابط (ثيم، اتجاه، ألوان سريعة) ===== */
+        var rootEl = document.documentElement;
+        if (param('theme', '')) { rootEl.setAttribute('data-theme', param('theme')); }
+        if (param('dir', '')) { rootEl.setAttribute('dir', param('dir') === 'ltr' ? 'ltr' : 'rtl'); }
+        var COLOR_PARAMS = { accent: '--goal-accent', fill1: '--goal-fill-start', fill2: '--goal-fill-end',
+            text: '--goal-text', track: '--goal-track', bg: '--goal-bg',
+            water: ['--goal-water-start', '--goal-water-end'], water1: '--goal-water-start',
+            water2: '--goal-water-end', heartStroke: '--goal-heart-stroke', heartEmpty: '--goal-heart-empty' };
+        Object.keys(COLOR_PARAMS).forEach(function (k) {
+            var v = q.get(k);
+            if (!v) { return; }
+            var color = /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v;
+            [].concat(COLOR_PARAMS[k]).forEach(function (name) { rootEl.style.setProperty(name, color); });
+        });
+        if (param('width', '')) { rootEl.style.setProperty('--goal-width', Core.num(param('width')) + 'px'); }
+        if (param('scale', '')) { rootEl.style.setProperty('--goal-scale', String(Core.num(param('scale')) || 1)); }
+
+        var $ = function (id) { return document.getElementById(id); };
+        var el = { box: $('goal'), title: $('goal-title'), percent: $('goal-percent'), fill: $('goal-fill'),
+            barText: $('goal-bar-text'), foot: $('goal-foot'), remaining: $('goal-remaining'),
+            last: $('goal-last'), status: $('goal-status'), water: $('goal-water'),
+            heartPct: $('goal-heart-pct'), heartValue: $('goal-heart-value') };
+        if (cfg.debug) { el.box.classList.add('is-debug'); }
+        if (!cfg.foot) { el.foot.style.display = 'none'; }
+
+        /* ===== الحالة + الحفظ المحلي (يبقى الرقم بعد إعادة تحميل OBS) ===== */
+        var STORE_KEY = 'goal-widget:' + cfg.key + ':' + cfg.type;
+        var state = { current: cfg.start, goal: cfg.goal, title: cfg.title, lastName: '' };
+        var shown = state.current;   // الرقم المعروض حالياً (للعدّ التدريجي)
+
+        function load() {
+            if (!cfg.persist || cfg.provider === 'server') { return; }
+            try {
+                if (flag('reset', false)) { localStorage.removeItem(STORE_KEY); return; }
+                var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+                // لو المذيع غيّر start بالرابط نعتبرها بداية جديدة ونتجاهل المحفوظ.
+                if (saved && saved.start === cfg.start && typeof saved.current === 'number') {
+                    state.current = saved.current;
+                    state.lastName = saved.lastName || '';
+                    shown = state.current;
+                }
+            } catch (e) { /* التخزين ممنوع: نكمل بدون حفظ */ }
+        }
+        function save() {
+            if (!cfg.persist || cfg.provider === 'server') { return; }
+            try { localStorage.setItem(STORE_KEY, JSON.stringify({ start: cfg.start,
+                current: state.current, lastName: state.lastName })); } catch (e) { /* تجاهل */ }
+        }
+
+        /* ===== الرسم ===== */
+        function money(n) { return cfg.prefix + Core.format(n, cfg.locale); }
+        function withUnit(text) { return cfg.unit ? text + ' ' + cfg.unit : text; }
+
+        function paint(value) {
+            var pct = Core.percent(value, state.goal);
+            var rawPct = state.goal > 0 ? (value / state.goal) * 100 : 0;
+            var done = state.goal > 0 && state.current >= state.goal;
+            el.title.textContent = state.title;
+            el.fill.style.width = pct.toFixed(2) + '%';
+            el.percent.textContent = done ? cfg.doneText : Math.floor(rawPct) + '%';
+            el.barText.innerHTML = '';
+            var bdi = document.createElement('bdi');
+            bdi.textContent = withUnit(money(value) + ' / ' + money(state.goal));
+            el.barText.appendChild(bdi);
+            el.heartPct.textContent = Math.floor(rawPct) + '%';
+            el.heartValue.textContent = bdi.textContent;
+            var left = Math.max(0, state.goal - value);
+            el.remaining.textContent = done ? '' : cfg.leftLabel + ' ' + withUnit(money(left));
+            el.last.textContent = state.lastName ? cfg.lastLabel + ' ' + state.lastName : '';
+            el.box.classList.toggle('is-complete', done);
+        }
+
+        /*
+         * مستوى الماء بالقلب: سطح الموجة عند y بإحداثيات الرسم (قاع القلب 170،
+         * وأعلاه 0)، فـ 0% ← 180 (مخفي تحت) و100% ← -10 (يغطي القلب كامل).
+         */
+        function setWater(pct) {
+            el.water.style.transform = 'translateY(' + (180 - pct * 1.9).toFixed(2) + 'px)';
+        }
+
+        /* العدّ التدريجي للرقم من القيمة القديمة للجديدة. */
+        var tweenId = 0;
+        function render() {
+            var from = shown, to = state.current, t0 = performance.now(), dur = 900, id = ++tweenId;
+            el.fill.style.width = Core.percent(to, state.goal).toFixed(2) + '%';
+            setWater(Core.percent(to, state.goal));
+            if (from === to) { paint(to); return; }
+            (function step(now) {
+                if (id !== tweenId) { return; }
+                var k = Math.min(1, (now - t0) / dur);
+                var e = 1 - Math.pow(1 - k, 3);
+                shown = k >= 1 ? to : from + (to - from) * e;
+                paint(shown);
+                if (k < 1) { requestAnimationFrame(step); }
+            }(t0));
+        }
+
+        function pop(amount) {
+            var b = document.createElement('div');
+            b.className = 'goal-pop';
+            b.dir = 'ltr';
+            b.textContent = '+' + money(amount);
+            el.box.appendChild(b);
+            el.box.classList.remove('is-bump');
+            void el.box.offsetWidth;   // إعادة تشغيل الحركة
+            el.box.classList.add('is-bump');
+            setTimeout(function () { b.remove(); }, 1900);
+        }
+
+        /* ===== استقبال الأحداث ===== */
+        var seen = [];
+        function isDuplicate(id) {
+            if (!id) { return false; }
+            if (seen.indexOf(id) !== -1) { return true; }
+            seen.push(id);
+            if (seen.length > 300) { seen.shift(); }
+            return false;
+        }
+
+        function addAmount(amount, name) {
+            if (!(amount > 0)) { return; }
+            state.current = Math.round((state.current + amount) * 100) / 100;
+            if (name) { state.lastName = name; }
+            save();
+            pop(amount);
+            render();
+        }
+
+        function handle(provider, raw, isTest) {
+            if (isTest && !cfg.test) { log('تجاهل حدث تجربة (فعّل ?test=1 لحسابها)', raw); return; }
+            Core.normalize(provider, raw, isTest).forEach(function (ev) {
+                if (isDuplicate(ev.id)) { return; }
+                var add = Core.contribution(cfg.type, ev);
+                log('حدث', ev, '← يضيف', add);
+                addAmount(add, ev.name);
+            });
+        }
+
+        function setStatus(s) { el.status.setAttribute('data-state', s); }
+
+        /*
+         * عميل Socket.IO مصغّر فوق WebSocket عادي — يكفي لاستقبال الأحداث من
+         * StreamElements وStreamlabs بدون تحميل مكتبة خارجية. يدعم Engine.IO
+         * الإصدار 3 (الافتراضي) و4 (?eio=4) مع إعادة الاتصال التلقائي.
+         */
+        function socketIO(baseUrl, query, handlers) {
+            var ws, pingTimer, retry = 0, closed = false;
+            function url() {
+                var u = baseUrl.replace(/^http/, 'ws') + '/socket.io/?EIO=' + cfg.eio + '&transport=websocket';
+                return query ? u + '&' + query : u;
+            }
+            function send(event, data) {
+                if (ws && ws.readyState === 1) { ws.send('42' + JSON.stringify([event, data])); }
+            }
+            function connect() {
+                setStatus('connecting');
+                ws = new WebSocket(url());
+                ws.onmessage = function (m) {
+                    var s = String(m.data), t = s.charAt(0);
+                    if (t === '0') {                       // open
+                        var info = {};
+                        try { info = JSON.parse(s.slice(1)); } catch (e) { /* تجاهل */ }
+                        clearInterval(pingTimer);
+                        if (cfg.eio === '3') {
+                            pingTimer = setInterval(function () { if (ws.readyState === 1) { ws.send('2'); } },
+                                info.pingInterval || 25000);
+                        } else {
+                            ws.send('40');
+                        }
+                    } else if (t === '2') {                // ping من السيرفر (EIO4)
+                        ws.send('3');
+                    } else if (s.slice(0, 2) === '40') {    // connected
+                        retry = 0;
+                        if (handlers.connect) { handlers.connect(send); }
+                    } else if (s.slice(0, 2) === '42') {    // event
+                        try {
+                            var arr = JSON.parse(s.slice(2));
+                            if (handlers[arr[0]]) { handlers[arr[0]](arr[1], send); }
+                        } catch (e) { log('رسالة غير مفهومة', s); }
+                    } else if (s.slice(0, 2) === '44') {    // error
+                        setStatus('error');
+                        log('خطأ من السيرفر', s);
+                    }
+                };
+                ws.onclose = function () {
+                    clearInterval(pingTimer);
+                    if (closed) { return; }
+                    setStatus('error');
+                    var wait = Math.min(30000, 1000 * Math.pow(2, retry++));
+                    log('انقطع الاتصال، إعادة المحاولة بعد', wait, 'ms');
+                    setTimeout(connect, wait);
+                };
+                ws.onerror = function () { setStatus('error'); };
+            }
+            connect();
+            return { close: function () { closed = true; if (ws) { ws.close(); } } };
+        }
+
+        function startStreamElements() {
+            if (!cfg.token) { log('provider=streamelements يحتاج ?token= (JWT)'); setStatus('error'); return; }
+            socketIO('https://realtime.streamelements.com', '', {
+                connect: function (send) { send('authenticate', { method: 'jwt', token: cfg.token }); },
+                authenticated: function () { setStatus('online'); log('StreamElements: تم التوثيق'); },
+                unauthorized: function (d) { setStatus('error'); log('StreamElements: التوكن مرفوض', d); },
+                'event': function (d) { handle('streamelements', d, false); },
+                'event:test': function (d) { handle('streamelements', d, true); }
+            });
+        }
+
+        function startStreamlabs() {
+            if (!cfg.token) { log('provider=streamlabs يحتاج ?token= (Socket API Token)'); setStatus('error'); return; }
+            socketIO('https://sockets.streamlabs.com', 'token=' + encodeURIComponent(cfg.token), {
+                connect: function () { setStatus('online'); log('Streamlabs: متصل'); },
+                'event': function (d) {
+                    // أحداث «Test» من لوحة Streamlabs ما لها علامة واضحة، فتنحسب عادي.
+                    handle('streamlabs', d, false);
+                }
+            });
+        }
+
+        /* وضع السيرفر: server.js هو مصدر الحقيقة، ويرسل الحالة كاملة عبر SSE. */
+        function startServer() {
+            if (!window.EventSource) { setStatus('error'); return; }
+            var base = cfg.server || '';
+            var src = new EventSource(base + '/api/goal/' + encodeURIComponent(cfg.key) + '/stream');
+            var first = true;
+            src.onopen = function () { setStatus('online'); };
+            src.onerror = function () { setStatus('error'); };   // EventSource يعيد الاتصال تلقائياً
+            src.onmessage = function (m) {
+                var s;
+                try { s = JSON.parse(m.data); } catch (e) { return; }
+                var prev = state.current;
+                if (typeof s.current === 'number') { state.current = s.current; }
+                if (s.goal > 0) { state.goal = s.goal; }
+                if (s.title) { state.title = s.title; }
+                // نوع الهدف المحفوظ بالسيرفر يحدد الوحدة والعملة، إلا لو الرابط حددها.
+                if (s.type && Core.TYPES[s.type] && !q.get('type')) {
+                    if (!q.get('unit')) { cfg.unit = Core.TYPES[s.type].unit; }
+                    if (!q.get('prefix')) { cfg.prefix = Core.TYPES[s.type].prefix; }
+                    if (!q.get('title') && !s.title) { state.title = Core.TYPES[s.type].title; }
+                }
+                if (s.lastName) { state.lastName = s.lastName; }
+                if (!first && state.current > prev) { pop(state.current - prev); }
+                if (first) { shown = state.current; }
+                first = false;
+                render();
+            };
+        }
+
+        /* وضع التجربة: يضيف أرقام عشوائية كل ثانيتين ونص. */
+        function startDemo() {
+            var names = ['سارة', 'Ahmed', 'نورة', 'خالد', 'Lina', 'فهد'];
+            setInterval(function () {
+                var amount = type === 'tip' ? Math.round(Math.random() * 2000) / 100 + 1
+                    : type === 'cheer' ? Math.ceil(Math.random() * 5) * 100 : 1;
+                if (state.current >= state.goal) { state.current = cfg.start; shown = state.current; }
+                addAmount(amount, names[Math.floor(Math.random() * names.length)]);
+            }, 2500);
+        }
+
+        load();
+        render();
+        switch (cfg.provider) {
+            case 'streamelements': case 'se': startStreamElements(); break;
+            case 'streamlabs': case 'sl': startStreamlabs(); break;
+            case 'server': startServer(); break;
+            default: setStatus('online');
+        }
+        if (cfg.demo) { startDemo(); }
+    }(window.GoalCore));
+    }
+
+    /* ===================== القوارير ===================== */
+    function runPotions() {
+    (function () {
+        'use strict';
+
+        var q = new URLSearchParams(location.search);
+        function param(name, def) { var v = q.get(name); return v === null || v === '' ? def : v; }
+        function num(v, def) { var n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : def; }
+        function hex(v) { return /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v; }
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+        function fmt(n) { return Math.abs(n - Math.round(n)) > .004 ? n.toFixed(2) : String(Math.round(n)); }
+
+        /* ================= الزينة ================= */
+        function strawberry(x, y, s, r) {
+            var seeds = [[-5, 0], [4, -2], [0, 6], [-6, 9], [6, 8], [0, 14], [-2, -4]].map(function (p) {
+                return '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="1.2" ry="1.7" fill="#ffe48a"/>';
+            }).join('');
+            return '<g transform="translate(' + x + ' ' + y + ') rotate(' + r + ') scale(' + s + ')">' +
+                '<path d="M0 -10 C10 -12 14 -2 12 6 C10 14 4 20 0 22 C-4 20 -10 14 -12 6 C-14 -2 -10 -12 0 -10Z" ' +
+                    'fill="#ff5b73" stroke="#a8243f" stroke-width="2.2"/>' +
+                '<path d="M-7 -4 C-6 -8 -2 -9 1 -8" fill="none" stroke="#ff9aa8" stroke-width="2" stroke-linecap="round"/>' +
+                seeds +
+                '<path d="M-10 -10 L-3 -7 L0 -15 L3 -7 L10 -10 L5 -3 L-5 -3Z" fill="#6cc47a" stroke="#2c7442" ' +
+                    'stroke-width="1.8" stroke-linejoin="round"/></g>';
+        }
+        function flower(x, y, s, r) {
+            var petals = '';
+            for (var k = 0; k < 5; k++) {
+                petals += '<ellipse cx="0" cy="-9" rx="7.5" ry="9.5" transform="rotate(' + (k * 72) + ')" ' +
+                    'fill="#ffc6da" stroke="#d9709a" stroke-width="1.8"/>';
+            }
+            var lines = '';
+            for (var j = 0; j < 5; j++) {
+                lines += '<path d="M0 -5 V-11" transform="rotate(' + (j * 72) + ')" stroke="#f08fb4" stroke-width="1.4" stroke-linecap="round"/>';
+            }
+            return '<g transform="translate(' + x + ' ' + y + ') rotate(' + (r || 0) + ') scale(' + s + ')">' + petals + lines +
+                '<circle r="4.5" fill="#ffe08a" stroke="#d99a36" stroke-width="1.6"/></g>';
+        }
+        function leaf(x, y, r, s) {
+            return '<g transform="translate(' + x + ' ' + y + ') rotate(' + r + ') scale(' + s + ')">' +
+                '<path d="M0 0 C6 -9 19 -9 26 0 C19 9 6 9 0 0Z" fill="#7fd08c" stroke="#2c7442" stroke-width="1.8"/>' +
+                '<path d="M2 0 H21" stroke="#2c7442" stroke-width="1.3" stroke-linecap="round"/></g>';
+        }
+        /* غيمة بحدّ خارجي بس: نرسم الحدود أول، وبعدها التعبئة فوقها. */
+        function cloud(x, y, s, cls) {
+            var shapes = '<circle cx="0" cy="0" r="13"/><circle cx="16" cy="-9" r="16"/><circle cx="35" cy="-3" r="13"/>' +
+                '<circle cx="48" cy="5" r="9"/><rect x="-12" y="0" width="66" height="14" rx="7"/>';
+            return '<g class="float ' + (cls || '') + '"><g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+                '<g fill="#8fb0ff" stroke="#8fb0ff" stroke-width="7">' + shapes + '</g>' +
+                '<g fill="#eef3ff">' + shapes + '</g>' +
+                '<path d="M8 6 a6 6 0 1 1 7 -6 a3 3 0 1 1 -3 3" fill="none" stroke="#8fb0ff" stroke-width="2.2" stroke-linecap="round"/>' +
+                '<path d="M34 7 a5 5 0 1 0 -4 -7" fill="none" stroke="#8fb0ff" stroke-width="2.2" stroke-linecap="round"/>' +
+                '</g></g>';
+        }
+        function bow(x, y, s) {
+            var st = 'fill="#ff9db7" stroke="#cf4f78" stroke-width="2" stroke-linejoin="round"';
+            return '<g class="sway" transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+                '<path d="M-4 3 L-15 26 L-8 23 L-4 30 L2 6Z" ' + st + '/>' +
+                '<path d="M4 3 L15 26 L8 23 L4 30 L-2 6Z" ' + st + '/>' +
+                '<path d="M0 0 C-10 -14 -30 -12 -28 2 C-26 15 -10 10 0 0Z" ' + st + '/>' +
+                '<path d="M0 0 C10 -14 30 -12 28 2 C26 15 10 10 0 0Z" ' + st + '/>' +
+                '<path d="M-6 -1 C-12 -6 -20 -6 -21 0" fill="none" stroke="#cf4f78" stroke-width="1.5" stroke-linecap="round"/>' +
+                '<path d="M6 -1 C12 -6 20 -6 21 0" fill="none" stroke="#cf4f78" stroke-width="1.5" stroke-linecap="round"/>' +
+                '<rect x="-6" y="-6" width="12" height="12" rx="5" ' + st + '/></g>';
+        }
+        /* فلّينة مخروطية (أعرض فوق) مع نقش نقاط. */
+        function cork(cx, top, h, wTop, wBot) {
+            var a = cx - wTop / 2, b = cx + wTop / 2, c = cx + wBot / 2, d = cx - wBot / 2, bot = top + h;
+            var dots = [[-12, .35], [6, .3], [-3, .55], [11, .62], [-9, .78], [3, .85]].map(function (p) {
+                return '<circle cx="' + (cx + p[0]) + '" cy="' + (top + h * p[1]) + '" r="2" class="cork-dot"/>';
+            }).join('');
+            return '<path class="cork" d="M' + a + ' ' + top + ' L' + d + ' ' + bot + ' Q' + cx + ' ' + (bot + 4) + ' ' + c + ' ' + bot +
+                ' L' + b + ' ' + top + 'Z"/>' + dots +
+                '<ellipse class="cork-top" cx="' + cx + '" cy="' + top + '" rx="' + (wTop / 2) + '" ry="6"/>' +
+                '<circle cx="' + (cx - 6) + '" cy="' + (top - 1) + '" r="1.8" class="cork-dot"/>' +
+                '<circle cx="' + (cx + 8) + '" cy="' + (top + 1) + '" r="1.5" class="cork-dot"/>';
+        }
+
+        /*
+         * أشكال القوارير (إحداثيات الرسم 240 × 320).
+         *   parts : أجزاء الزجاج (اتحادها = الداخل؛ حدّه الخارجي بس يُرسم).
+         *   الرقبة المائلة بالقارورة الدائرية تنرسم مائلة، والسائل يبقى أفقي دايماً.
+         *   bottom/top : مدى السائل (0% و100%).
+         */
+        var HEART = 'M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 ' +
+                    'C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z';
+        var SHAPES = {
+            round: {
+                parts: ['<circle cx="120" cy="205" r="78"/>',
+                        '<rect x="104" y="92" width="32" height="54" transform="rotate(32 120 205)"/>'],
+                bottom: 283, top: 124,
+                top_parts: '<g transform="rotate(32 120 205)">' +
+                    '<rect class="rim" x="97" y="84" width="46" height="14" rx="7"/>' + cork(120, 54, 32, 52, 36) + '</g>',
+                highlights: '<ellipse class="hl" cx="84" cy="160" rx="18" ry="10" transform="rotate(-35 84 160)"/>' +
+                    '<circle class="hl" cx="70" cy="184" r="5"/>' +
+                    '<path class="hl-line" d="M60 250 A70 70 0 0 0 96 274"/>' +
+                    '<ellipse class="hl-soft" cx="150" cy="250" rx="26" ry="14" transform="rotate(-20 150 250)"/>',
+                deco: '<g class="deco">' +
+                    '<path d="M196 212 C214 196 208 176 196 166" fill="none" stroke="#3f8f52" stroke-width="3" stroke-linecap="round"/>' +
+                    '<path d="M200 200 C190 236 172 262 146 282" fill="none" stroke="#3f8f52" stroke-width="3" stroke-linecap="round"/>' +
+                    leaf(198, 236, -60, .9) + leaf(160, 276, 200, .8) + leaf(188, 268, 20, .85) + leaf(204, 180, -100, .7) +
+                    '<g class="sway">' + strawberry(208, 160, .9, 10) + '</g>' +
+                    flower(176, 262, 1.15, 10) + flower(150, 294, .75, 30) + flower(200, 244, .6, 0) +
+                    strawberry(48, 272, .95, -25) + leaf(58, 262, -150, .7) +
+                    '</g>'
+            },
+            vial: {
+                parts: ['<path d="M104 72 V108 C104 124 72 128 72 158 V266 Q72 292 98 292 H142 Q168 292 168 266 V158 C168 128 136 124 136 108 V72 Z"/>'],
+                bottom: 293, top: 140,
+                top_parts: '<rect class="rim" x="97" y="62" width="46" height="14" rx="7"/>' + cork(120, 30, 34, 54, 38),
+                highlights: '<rect class="hl" x="86" y="150" width="11" height="34" rx="5.5" transform="rotate(8 92 167)"/>' +
+                    '<circle class="hl" cx="90" cy="196" r="4"/>' +
+                    '<path class="hl-line" d="M86 214 V268"/>' +
+                    '<rect class="hl-soft" x="112" y="80" width="6" height="24" rx="3"/>',
+                deco: '<g class="deco">' + cloud(160, 190, .8, '') + cloud(46, 246, .75, 'b') + cloud(140, 260, 1.05, 'c') + '</g>'
+            },
+            heart: {
+                parts: ['<path transform="translate(20 112)" d="' + HEART + '"/>',
+                        '<rect x="106" y="78" width="28" height="66"/>'],
+                bottom: 283, top: 114,
+                top_parts: '<rect class="rim" x="99" y="68" width="42" height="14" rx="7"/>' + cork(120, 38, 32, 50, 34),
+                highlights: '<ellipse class="hl" cx="66" cy="150" rx="16" ry="9" transform="rotate(-30 66 150)"/>' +
+                    '<circle class="hl" cx="50" cy="170" r="4.5"/>' +
+                    '<path class="hl-line" d="M44 200 C52 220 66 236 82 248"/>' +
+                    '<ellipse class="hl-soft" cx="176" cy="148" rx="14" ry="7" transform="rotate(30 176 148)"/>',
+                deco: '<g class="deco">' + bow(120, 112, 1.05) + '</g>'
+            }
+        };
+
+        /* موجة بفترة 120 — تنزاح 120 فتبان مستمرة. */
+        function wave(amp) {
+            var d = 'M-120 0', x;
+            for (x = -120; x < 480; x += 60) { d += ' Q' + (x + 30) + ' ' + (((x / 60) % 2 === 0) ? -amp : amp) + ' ' + (x + 60) + ' 0'; }
+            return d + ' V360 H-120 Z';
+        }
+        var WAVE_A = wave(6), WAVE_B = wave(8);
+
+        var DEFAULTS = [
+            { label: 'Cheer Goal',    color: 'ff4fc8', glow: 'ff5ad9', shape: 'round', display: 'count',    prefix: '' },
+            { label: 'Sub Goal',      color: '4d7bff', glow: '4fd8ff', shape: 'vial',  display: 'percent',  prefix: '' },
+            { label: 'Donation Goal', color: '8a4dff', glow: 'a46bff', shape: 'heart', display: 'fraction', prefix: '$' }
+        ];
+
+        if (param('size', '')) { document.documentElement.style.setProperty('--potion-size', num(param('size'), 220) + 'px'); }
+        if (param('gap', ''))  { document.documentElement.style.setProperty('--potion-gap', num(param('gap'), 34) + 'px'); }
+
+        function build(i) {
+            var d = DEFAULTS[i - 1];
+            var shape = SHAPES[param('shape' + i, d.shape)] || SHAPES[d.shape];
+            var color = hex(param('color' + i, d.color));
+            var glow = hex(param('glow' + i, d.glow));
+            var cfg = {
+                label: param('label' + i, d.label),
+                current: Math.max(0, num(param('current' + i, 0), 0)),
+                target: Math.max(0, num(param('target' + i, 100), 100)),
+                display: param('display' + i, param('display', d.display)),
+                prefix: param('prefix' + i, d.prefix)
+            };
+            var id = 'p' + i, parts = shape.parts.join('');
+            var light = 'color-mix(in srgb, ' + color + ' 45%, #ffffff)';
+            var deep = 'color-mix(in srgb, ' + color + ' 70%, #1a0030)';
+
+            var bubbles = [70, 98, 124, 146, 160, 86].map(function (x, k) {
+                return '<circle class="bubble" cx="' + x + '" cy="' + (60 + k * 9) + '" r="' + [3, 2.2, 3.6, 2, 2.6, 1.8][k] + '"/>';
+            }).join('');
+
+            var el = document.createElement('section');
+            el.className = 'potion';
+            el.style.setProperty('--c', color);
+            el.style.setProperty('--g', glow);
+            el.innerHTML =
+                '<svg viewBox="0 0 240 320" role="img" aria-label="' + esc(cfg.label) + '">' +
+                  '<defs>' +
+                    '<clipPath id="' + id + '-clip">' + parts + '</clipPath>' +
+                    '<mask id="' + id + '-out" maskUnits="userSpaceOnUse" x="-60" y="-60" width="360" height="440">' +
+                      '<rect x="-60" y="-60" width="360" height="440" fill="#fff"/><g fill="#000">' + parts + '</g></mask>' +
+                    '<linearGradient id="' + id + '-liq" x1="0" y1="0" x2="0" y2="1">' +
+                      '<stop offset="0" style="stop-color:' + color + '"/>' +
+                      '<stop offset=".55" style="stop-color:color-mix(in srgb, ' + color + ' 85%, #1a0030)"/>' +
+                      '<stop offset="1" style="stop-color:' + deep + '"/>' +
+                    '</linearGradient>' +
+                    // حافة داخلية للزجاج على حدّ الاتحاد بس (تآكل الشكل ثم طرحه من الأصل)
+                    '<filter id="' + id + '-inner" x="-10%" y="-10%" width="120%" height="120%">' +
+                      '<feMorphology in="SourceAlpha" operator="erode" radius="6" result="e"/>' +
+                      '<feComposite in="SourceGraphic" in2="e" operator="out" result="band"/>' +
+                      '<feGaussianBlur in="band" stdDeviation="1.2"/>' +
+                    '</filter>' +
+                    '<radialGradient id="' + id + '-glass" cx=".42" cy=".4" r=".75">' +
+                      '<stop offset="0" style="stop-color:rgba(255,255,255,.06)"/>' +
+                      '<stop offset=".7" style="stop-color:color-mix(in srgb, ' + glow + ' 14%, transparent)"/>' +
+                      '<stop offset="1" style="stop-color:color-mix(in srgb, ' + glow + ' 34%, transparent)"/>' +
+                    '</radialGradient>' +
+                  '</defs>' +
+                  // داخل الزجاج (لمعة لونية خفيفة)
+                  '<rect x="0" y="0" width="240" height="320" fill="url(#' + id + '-glass)" clip-path="url(#' + id + '-clip)"/>' +
+                  // السائل: طبقة خلفية فاتحة + طبقة سطح فاتحة + الجسم المتدرّج
+                  '<g clip-path="url(#' + id + '-clip)">' +
+                    '<g class="liquid" style="transform:translateY(' + (shape.bottom + 14) + 'px)">' +
+                      '<path class="wave-b" style="fill:' + light + ';opacity:.55" d="' + WAVE_B + '" transform="translate(0 -6)"/>' +
+                      '<path class="wave-a" style="fill:' + light + '" d="' + WAVE_A + '"/>' +
+                      '<g transform="translate(0 9)"><path class="wave-c" fill="url(#' + id + '-liq)" d="' + WAVE_A + '"/></g>' +
+                      '<ellipse cx="96" cy="70" rx="34" ry="16" fill="#ffffff" opacity=".18"/>' +
+                      bubbles +
+                    '</g>' +
+                    // حدّ داخلي ملوّن خفيف يعطي سماكة للزجاج
+                  '</g>' +
+                  '<g class="glass-rim" filter="url(#' + id + '-inner)">' + parts + '</g>' +
+                  // حدّ الزجاج الأبيض + توهج النيون
+                  '<g class="neon"><g class="glass-line" mask="url(#' + id + '-out)">' + parts + '</g>' +
+                    shape.top_parts + '</g>' +
+                  shape.highlights +
+                  shape.deco +
+                '</svg>' +
+                '<div class="label">' + esc(cfg.label) + '</div>' +
+                '<div class="value"></div>';
+
+            var liquid = el.querySelector('.liquid');
+            var valueEl = el.querySelector('.value');
+            var shown = 0;
+
+            function text(v) {
+                var p = cfg.target > 0 ? Math.floor(v / cfg.target * 100) : 0;
+                var a = cfg.prefix + fmt(v), b = cfg.prefix + fmt(cfg.target);
+                switch (cfg.display) {
+                    case 'percent':  return p + '%';
+                    case 'fraction': return a + ' • ' + b;
+                    case 'both':     return p + '% • ' + a + '/' + b;
+                    default:         return a;
+                }
+            }
+
+            /* يرفع/ينزل السائل بسلاسة ويعدّ الرقم تدريجياً. */
+            function set() {
+                var pct = cfg.target > 0 ? cfg.current / cfg.target * 100 : 0;
+                var lvl = Math.min(100, pct);
+                var y = shape.bottom + 14 - (shape.bottom + 14 - shape.top) * lvl / 100;
+                liquid.style.transform = 'translateY(' + y.toFixed(2) + 'px)';
+                el.classList.toggle('is-full', pct >= 100 && cfg.target > 0);
+                var from = shown, to = cfg.current, t0 = performance.now(), dur = 1700;
+                (function step(now) {
+                    var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+                    shown = from + (to - from) * e;
+                    valueEl.textContent = text(k >= 1 ? to : shown);
+                    if (k < 1) { requestAnimationFrame(step); }
+                }(t0));
+            }
+            valueEl.textContent = text(0);
+            return { el: el, set: set };
+        }
+
+        var count = Math.max(1, Math.min(3, Math.round(num(param('count', 3), 3))));
+        var shelf = document.getElementById('shelf');
+        var potions = [];
+        for (var i = 1; i <= count; i++) { var p = build(i); shelf.appendChild(p.el); potions.push(p); }
+        // السائل يرتفع من القاع وقت الظهور.
+        setTimeout(function () { potions.forEach(function (p) { p.set(); }); }, 300);
+    }());
+    }
+
+    /* ===================== القلوب بالأجنحة ===================== */
+    function runDevil() {
+    (function () {
+        'use strict';
+
+        var q = new URLSearchParams(location.search);
+        function param(name, def) { var v = q.get(name); return v === null || v === '' ? def : v; }
+        function num(v, def) { var n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? n : def; }
+        function hex(v) { return /^[0-9a-f]{3,8}$/i.test(v) ? '#' + v : v; }
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+        function fmt(n) { return Math.abs(n - Math.round(n)) > .004 ? n.toFixed(2) : String(Math.round(n)); }
+
+        var DEFAULTS = [
+            { label: 'Donation Goal',  color: '8b4dff', glow: 'a35cff', wing: '5b2a9e', prefix: '$', display: 'fraction' },
+            { label: 'Follow Goal',    color: 'ff1f3d', glow: 'ff2d4a', wing: '8e1b2c', prefix: '',  display: 'fraction' },
+            { label: 'Sub Goal',       color: 'ff4fb0', glow: 'ff6cc4', wing: '8a2563', prefix: '',  display: 'fraction' }
+        ];
+
+        /*
+         * الرسم (إحداثيات 320 × 320): القلب بين x 60..260 و y 70..240.
+         */
+        var HEART = 'M100 170 C40 125 0 95 0 55 C0 22 25 0 55 0 C75 0 92 12 100 28 ' +
+                    'C108 12 125 0 145 0 C175 0 200 22 200 55 C200 95 160 125 100 170 Z';
+        var HEART_T = 'translate(60 70)';
+        var BOTTOM = 240, TOP = 72;
+
+        // جناح خفاش (يسار)؛ اليمين نفسه معكوس.
+        // جناح خفاش يسار (حافة علوية مقوّسة وحافة سفلية مموّجة)، والمفصل عند (76,126).
+        var WING = 'M80 122 C64 86 26 52 -26 44 C-14 60 -12 74 -18 90 C-2 84 12 90 16 106 ' +
+                   'C30 96 46 102 50 120 C58 112 70 116 74 134 Z';
+        var BONES = 'M76 126 L-22 48 M76 126 L-16 88 M76 126 L16 104 M76 126 L50 118';
+        var HORN_L = 'M92 86 C84 66 90 48 104 40 C100 56 104 70 116 80 Z';
+        var HORN_R = 'M228 86 C236 66 230 48 216 40 C220 56 216 70 204 80 Z';
+        var TAIL = 'M160 236 C150 268 112 266 116 294 C120 318 152 316 154 298';
+        var TIP = 'M146 290 L166 296 L154 312 Z';
+        var MINI = 'M0 2 C-3 -1 -6 0 -6 3 C-6 6 -2 8 0 10 C2 8 6 6 6 3 C6 0 3 -1 0 2 Z';
+
+        function wave(amp) {
+            var d = 'M-120 0';
+            for (var x = -120; x < 480; x += 60) { d += ' Q' + (x + 30) + ' ' + (((x / 60) % 2 === 0) ? -amp : amp) + ' ' + (x + 60) + ' 0'; }
+            return d + ' V360 H-120 Z';
+        }
+        var WAVE_A = wave(5), WAVE_B = wave(7);
+
+        if (param('size', '')) { document.documentElement.style.setProperty('--heart-size', num(param('size'), 240) + 'px'); }
+        if (param('gap', ''))  { document.documentElement.style.setProperty('--heart-gap', num(param("gap"), 80) + 'px'); }
+
+        function build(i) {
+            var d = DEFAULTS[i - 1];
+            var color = hex(param('color' + i, d.color));
+            var glow = hex(param('glow' + i, d.glow));
+            var wing = hex(param('wing' + i, d.wing));
+            var cfg = {
+                label: param('label' + i, d.label),
+                current: Math.max(0, num(param('current' + i, 0), 0)),
+                target: Math.max(0, num(param('target' + i, i === 2 ? 10 : 100), 100)),
+                prefix: param('prefix' + i, d.prefix),
+                display: param('display' + i, param('display', d.display))
+            };
+            var id = 'h' + i;
+            var heart = '<path transform="' + HEART_T + '" d="' + HEART + '"/>';
+            var light = 'color-mix(in srgb, ' + color + ' 55%, #ffffff)';
+
+            var sparkles = [[96, 30, 1.6, 0], [130, 52, 1.2, .8], [180, 26, 1.8, 1.5], [210, 60, 1.3, .4],
+                            [150, 88, 1.5, 1.1], [112, 76, 1.1, 1.9], [196, 98, 1.6, .2], [166, 120, 1.2, 1.4],
+                            [138, 18, 1.1, 2.1], [226, 34, 1.2, 1.7]].map(function (s) {
+                return '<circle class="sparkle" cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] +
+                    '" style="animation-delay:' + s[3] + 's"/>';
+            }).join('');
+            var minis = [[120, 70, .9, 0], [176, 92, .7, 1.6], [200, 60, .8, 3], [146, 110, .6, 2.2]].map(function (m) {
+                return '<g transform="translate(' + m[0] + ' ' + m[1] + ') scale(' + m[2] + ')">' +
+                    '<path class="mini" d="' + MINI + '" style="animation-delay:' + m[3] + 's"/></g>';
+            }).join('');
+            var flyers = [[140, 60, .9, 0], [176, 48, 1.1, .9], [158, 36, .7, 1.8], [196, 66, .8, 2.6], [124, 44, .75, 1.3]].map(function (f) {
+                return '<g transform="translate(' + f[0] + ' ' + f[1] + ') scale(' + f[2] + ')">' +
+                    '<path d="' + MINI + '" style="animation-delay:' + f[3] + 's"/></g>';
+            }).join('');
+
+            var el = document.createElement('section');
+            el.className = 'dh-item';
+            el.style.setProperty('--c', color);
+            el.style.setProperty('--g', glow);
+            el.style.setProperty('--w', wing);
+            el.innerHTML =
+                '<svg viewBox="0 0 320 320" role="img" aria-label="' + esc(cfg.label) + '">' +
+                  '<defs>' +
+                    '<clipPath id="' + id + '-clip">' + heart + '</clipPath>' +
+                    '<mask id="' + id + '-out" maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="320">' +
+                      '<rect width="320" height="320" fill="#fff"/><g fill="#000">' + heart + '</g></mask>' +
+                    '<linearGradient id="' + id + '-wing" x1="1" y1="1" x2="0" y2="0">' +
+                      '<stop offset="0" style="stop-color:color-mix(in srgb, ' + wing + ' 60%, #0d0010)"/>' +
+                      '<stop offset="1" style="stop-color:' + wing + '"/>' +
+                    '</linearGradient>' +
+                    '<linearGradient id="' + id + '-liq" x1="0" y1="0" x2="0" y2="1">' +
+                      '<stop offset="0" style="stop-color:' + color + '"/>' +
+                      '<stop offset="1" style="stop-color:color-mix(in srgb, ' + color + ' 70%, #14001c)"/>' +
+                    '</linearGradient>' +
+                    '<radialGradient id="' + id + '-glass" cx=".4" cy=".35" r=".8">' +
+                      '<stop offset="0" style="stop-color:rgba(255,255,255,.05)"/>' +
+                      '<stop offset=".75" style="stop-color:color-mix(in srgb, ' + glow + ' 12%, transparent)"/>' +
+                      '<stop offset="1" style="stop-color:color-mix(in srgb, ' + glow + ' 30%, transparent)"/>' +
+                    '</radialGradient>' +
+                  '</defs>' +
+                  // الجناحين والذيل ورا القلب
+                  '<g class="devil">' +
+                    '<g><g class="flap"><path class="wing" d="' + WING + '"/><path class="wing-bone" d="' + BONES + '"/></g></g>' +
+                    '<g transform="translate(320 0) scale(-1 1)"><g class="flap">' +
+                      '<path class="wing" d="' + WING + '"/><path class="wing-bone" d="' + BONES + '"/></g></g>' +
+                    '<g class="tail-g"><path class="tail" d="' + TAIL + '"/><path class="tail-tip" d="' + TIP + '"/></g>' +
+                  '</g>' +
+                  '<g class="heart-body">' +
+                    '<rect width="320" height="320" fill="url(#' + id + '-glass)" clip-path="url(#' + id + '-clip)"/>' +
+                    '<g clip-path="url(#' + id + '-clip)">' +
+                      '<g class="liquid" style="transform:translateY(' + (BOTTOM + 12) + 'px)">' +
+                        '<path class="wave-b" style="fill:' + light + ';opacity:.5" d="' + WAVE_B + '" transform="translate(0 -5)"/>' +
+                        '<path class="wave-a" style="fill:' + light + '" d="' + WAVE_A + '"/>' +
+                        '<g transform="translate(0 7)"><path class="wave-c" fill="url(#' + id + '-liq)" d="' + WAVE_A + '"/></g>' +
+                        sparkles + minis +
+                      '</g>' +
+                    '</g>' +
+                    '<g class="neon"><g class="glass-line" mask="url(#' + id + '-out)">' + heart + '</g></g>' +
+                    '<ellipse class="hl" cx="96" cy="100" rx="15" ry="8" transform="rotate(-30 96 100)"/>' +
+                    '<circle class="hl" cx="82" cy="118" r="3.5"/>' +
+                    '<ellipse class="hl-soft" cx="214" cy="98" rx="13" ry="6" transform="rotate(30 214 98)"/>' +
+                    '<path class="hl-soft" d="M80 150 C88 172 104 190 124 204" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
+                  '</g>' +
+                  // القرنين فوق القلب
+                  '<g class="devil"><path class="horn" d="' + HORN_L + '"/><path class="horn" d="' + HORN_R + '"/></g>' +
+                  '<g class="fly">' + flyers + '</g>' +
+                '</svg>' +
+                '<div class="label">' + esc(cfg.label) + '</div>' +
+                '<div class="value"></div>';
+
+            // تدرّج الجناح خاص بكل قلب
+            el.querySelectorAll('.wing').forEach(function (w) { w.style.fill = 'url(#' + id + '-wing)'; });
+
+            var liquid = el.querySelector('.liquid');
+            var valueEl = el.querySelector('.value');
+            var shown = 0;
+
+            function text(v) {
+                var p = cfg.target > 0 ? Math.floor(v / cfg.target * 100) : 0;
+                var a = cfg.prefix + fmt(v), b = cfg.prefix + fmt(cfg.target);
+                if (cfg.display === 'percent') { return p + '%'; }
+                if (cfg.display === 'count') { return a; }
+                return a + ' · ' + b;
+            }
+
+            /* يرفع السائل بسلاسة ويعدّ الرقم تدريجياً. */
+            function set() {
+                var pct = cfg.target > 0 ? cfg.current / cfg.target * 100 : 0;
+                var lvl = Math.min(100, pct);
+                var y = BOTTOM + 12 - (BOTTOM + 12 - TOP + 6) * lvl / 100;
+                liquid.style.transform = 'translateY(' + y.toFixed(2) + 'px)';
+                el.classList.toggle('is-full', pct >= 100 && cfg.target > 0);
+                var from = shown, to = cfg.current, t0 = performance.now(), dur = 1700;
+                (function step(now) {
+                    var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+                    shown = from + (to - from) * e;
+                    valueEl.textContent = text(k >= 1 ? to : shown);
+                    if (k < 1) { requestAnimationFrame(step); }
+                }(t0));
+            }
+            valueEl.textContent = text(0);
+            return { el: el, set: set };
+        }
+
+        // only=N يعرض قلب واحد بس (لكل قلب Browser Source مستقل)، وإلا count قلوب من الأول.
+        var only = Math.round(num(param('only', 0), 0));
+        var list = [];
+        if (only >= 1 && only <= 3) { list = [only]; }
+        else {
+            var count = Math.max(1, Math.min(3, Math.round(num(param('count', 2), 2))));
+            for (var n = 1; n <= count; n++) { list.push(n); }
+        }
+        var row = document.getElementById('row');
+        var goals = list.map(function (n) { var g = build(n); row.appendChild(g.el); return g; });
+        setTimeout(function () { goals.forEach(function (g) { g.set(); }); }, 300);
+    }());
+    }
+
+    /* ===================== المبدّل ===================== */
+    var STYLES = { bar: 'goal', heart: 'goal', potions: 'pg', devil: 'dh' };
+    var style = String(new URLSearchParams(location.search).get('style') || 'bar').toLowerCase();
+    if (!STYLES[style]) { style = 'bar'; }
+    document.documentElement.setAttribute('data-style', style);
+    Object.keys(STYLES).forEach(function (k) {
+        var node = document.getElementById(STYLES[k]);
+        if (node && STYLES[k] !== STYLES[style]) { node.remove(); }
+    });
+    if (style === 'potions') { runPotions(); }
+    else if (style === 'devil') { runDevil(); }
+    else { runBarHeart(); }
+}());
+</script>
+</body>
+</html>

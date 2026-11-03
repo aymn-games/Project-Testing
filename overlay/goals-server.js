@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /*
- * server.js — خادم «أداة الهدف»: يستضيف ملفات الويدجت + يستقبل الويب هوك/API
- * ويدفع التحديث فوراً لكل ويدجت مفتوح (OBS) عبر Server-Sent Events.
- * Node.js فقط، بدون أي حزم (npm install مو مطلوب).
+ * goals-server.js — خادم «أدوات الهدف» (اختياري): يستضيف overlay/goals.html +
+ * يستقبل الويب هوك/API ويدفع التحديث فوراً لكل أداة مفتوحة (OBS) عبر
+ * Server-Sent Events (للشكلين style=bar و style=heart مع provider=server).
+ * Node.js فقط، بدون أي حزم (npm install مو مطلوب). مستقل عن سيرفر الموقع (backend/).
  *
- * التشغيل:   GOAL_SECRET=كلمة-سر-طويلة node server.js
+ * التشغيل:   GOAL_SECRET=كلمة-سر-طويلة node overlay/goals-server.js
  * المتغيرات:
  *   PORT         المنفذ (الافتراضي 3030)
  *   HOST         عنوان الاستماع (الافتراضي 0.0.0.0)
@@ -25,7 +26,21 @@ var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var crypto = require('crypto');
-var Core = require('./goal-core.js');
+var vm = require('vm');
+
+/*
+ * منطق الأحداث (GoalCore) مكتوب مرة وحدة داخل goals.html بـ<script id="goal-core">،
+ * فالسيرفر يقرأه من هناك عشان يبقى نفس المنطق بالصفحة والسيرفر.
+ */
+function loadCore() {
+    var html = fs.readFileSync(path.join(__dirname, 'goals.html'), 'utf8');
+    var m = html.match(/<script id="goal-core">([\s\S]*?)<\/script>/);
+    if (!m) { throw new Error('goal-core غير موجود في goals.html'); }
+    var sandbox = { module: { exports: {} } };
+    vm.runInNewContext(m[1], sandbox);
+    return sandbox.module.exports;
+}
+var Core = loadCore();
 
 var PORT = Number(process.env.PORT) || 3030;
 var HOST = process.env.HOST || '0.0.0.0';
@@ -37,7 +52,7 @@ var MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf
     '.js': 'application/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
     '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.md': 'text/plain; charset=utf-8' };
 // الملفات المسموح عرضها للمتصفح بس (ما نعرض server.js ولا ملف البيانات).
-var PUBLIC = { 'index.html': 1, 'goal.css': 1, 'goal.js': 1, 'goal-core.js': 1, 'README.md': 1 };
+var PUBLIC = { 'goals.html': 1, 'goals-README.md': 1 };
 
 /* ===== التخزين ===== */
 var goals = {};
@@ -163,7 +178,7 @@ function readBody(req, cb) {
 }
 
 function serveStatic(res, pathname) {
-    var name = pathname.replace(/^\/+/, '') || 'index.html';
+    var name = pathname.replace(/^\/+/, '') || 'goals.html';
     if (!PUBLIC[name]) { return send(res, 404, 'Not found'); }
     fs.readFile(path.join(ROOT, name), function (err, buf) {
         if (err) { return send(res, 404, 'Not found'); }
@@ -220,7 +235,7 @@ var server = http.createServer(function (req, res) {
 
 if (require.main === module) {
     server.listen(PORT, HOST, function () {
-        console.log('[goal] الويدجت شغّال: http://localhost:' + PORT + '/?provider=server');
+        console.log('[goal] الأداة شغّالة: http://localhost:' + PORT + '/goals.html?provider=server');
         if (!SECRET) { console.log('[goal] تنبيه: GOAL_SECRET غير محدد — التعديل مسموح من نفس الجهاز فقط.'); }
     });
 }

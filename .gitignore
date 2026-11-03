@@ -10,3 +10,6 @@ backend/agp-data.sqlite-*
 # Common OS/editor noise.
 .DS_Store
 *.log
+
+# أرقام «أدوات الهدف» المحفوظة وقت التشغيل (overlay/goals-server.js)
+overlay/data/
