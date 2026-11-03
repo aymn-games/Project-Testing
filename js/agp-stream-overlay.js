@@ -176,12 +176,22 @@
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
     // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
-    var THRONE_CROWN = '<svg viewBox="0 0 64 48" aria-hidden="true"><defs><linearGradient id="agp-so-cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c2"/><stop offset=".45" stop-color="#ffd25e"/><stop offset="1" stop-color="#c98a12"/></linearGradient></defs>' +
-        '<path d="M6 38 2 12l15 12L32 3l15 21 15-12-4 26z" fill="url(#agp-so-cg)" stroke="#8a5a08" stroke-width="1.5" stroke-linejoin="round"/>' +
-        '<rect x="6" y="38" width="52" height="7" rx="2.5" fill="url(#agp-so-cg)" stroke="#8a5a08" stroke-width="1.5"/>' +
-        '<circle cx="32" cy="27" r="4.2" fill="#ff4d7a"/><circle cx="17" cy="30" r="3" fill="#5ec8ff"/><circle cx="47" cy="30" r="3" fill="#5ec8ff"/>' +
-        '<circle cx="2.5" cy="11" r="2.6" fill="#fff3c2"/><circle cx="32" cy="3" r="2.8" fill="#fff3c2"/><circle cx="61.5" cy="11" r="2.6" fill="#fff3c2"/>' +
-        '<path d="M10 40.5h44" stroke="#fff6d6" stroke-width="1.4" stroke-linecap="round" opacity=".7"/></svg>';
+    // تاج «العرش»: تيارا وردي ذهبي (رسمة أصلية) — جوهرة بالوسط تلمع، وأقواس وزخارف
+    var THRONE_CROWN = '<svg viewBox="0 0 120 72" aria-hidden="true"><defs>' +
+        '<linearGradient id="agp-so-tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6ef"/><stop offset=".5" stop-color="#f3a6c0"/><stop offset="1" stop-color="#b4557a"/></linearGradient>' +
+        '<radialGradient id="agp-so-tgm" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffc6da"/><stop offset=".8" stop-color="#e2457d"/><stop offset="1" stop-color="#8a1d47"/></radialGradient></defs>' +
+        '<g fill="url(#agp-so-tg)" stroke="#7a2d4a" stroke-width=".7" stroke-linejoin="round">' +
+        '<path d="M60 1l3.6 22.5L60 20l-3.6 3.5z"/>' +
+        '<path d="M29 9c5 9 10 17 15 25l-3.6 2.2C35.6 28 31.6 19 29 9z"/><path d="M91 9c-5 9-10 17-15 25l3.6 2.2C84.4 28 88.4 19 91 9z"/>' +
+        '<path d="M6 21c7 7 13 15 17 25l-3.6 1.8C15.6 38.6 11 30 6 21z"/><path d="M114 21c-7 7-13 15-17 25l3.6 1.8c3.8-9.2 8.4-17.8 13.4-26.8z"/></g>' +
+        '<path d="M12 52c5-12 14-15 22-6 6-14 16-16 26-4 10-12 20-10 26 4 8-9 17-6 22 6" fill="none" stroke="url(#agp-so-tg)" stroke-width="3.4" stroke-linecap="round"/>' +
+        '<path d="M47 41c-6-1.5-8.5-9-3-11.5 4-1.6 6.6 2.6 3.4 4.8M73 41c6-1.5 8.5-9 3-11.5-4-1.6-6.6 2.6-3.4 4.8M26 48c-3-3-2-8 2-8M94 48c3-3 2-8-2-8" fill="none" stroke="#f7b9cf" stroke-width="2" stroke-linecap="round"/>' +
+        '<ellipse cx="60" cy="35" rx="9" ry="11.5" fill="none" stroke="url(#agp-so-tg)" stroke-width="3.2"/>' +
+        '<ellipse class="gem" cx="60" cy="35" rx="6.3" ry="8.8" fill="url(#agp-so-tgm)"/>' +
+        '<path d="M5 54c25 9 85 9 110 0l-1.6 7.5c-24 8.5-82.8 8.5-106.8 0z" fill="url(#agp-so-tg)" stroke="#7a2d4a" stroke-width=".8"/>' +
+        '<g fill="#fff3f7"><circle cx="20" cy="59" r="1.3"/><circle cx="34" cy="61.5" r="1.3"/><circle cx="47" cy="62.6" r="1.3"/><circle cx="60" cy="63" r="1.6"/><circle cx="73" cy="62.6" r="1.3"/><circle cx="86" cy="61.5" r="1.3"/><circle cx="100" cy="59" r="1.3"/></g>' +
+        '<path class="spk" d="M60 21l1.3 12.7L74 35l-12.7 1.3L60 49l-1.3-12.7L46 35l12.7-1.3z" fill="#fff"/>' +
+        '<path class="spk s2" d="M96 44l.8 5.2 5.2.8-5.2.8-.8 5.2-.8-5.2-5.2-.8 5.2-.8z" fill="#fff"/></svg>';
     var THRONE_ICONS = {
         likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
         gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
@@ -1665,9 +1675,9 @@
         /* العرش (Veyro) */
         '@property --agp-so-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
         '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
-        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.9em;padding-top:2.4em}',
-        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:6em}',
-        '.agp-so-tcol.rk1{width:7em;margin-bottom:.55em}',
+        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.15em;padding-top:2.6em}',
+        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:5.4em}',
+        '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em}',
         '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
         '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
         '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
@@ -1677,9 +1687,14 @@
         '.agp-so-tic svg{width:100%;height:100%;display:block}',
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
-        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;top:-58%;width:52%;transform:translateX(-50%);filter:drop-shadow(0 .06em .12em rgba(0,0,0,.55)) drop-shadow(0 0 .3em rgba(255,210,94,.55));animation:agp-so-crown 2.6s ease-in-out infinite}',
-        '.agp-so-tcrown svg{display:block;width:100%;height:auto}',
-        '@keyframes agp-so-crown{0%,100%{transform:translateX(-50%) translateY(0) rotate(-3deg)}50%{transform:translateX(-50%) translateY(-8%) rotate(3deg)}}',
+        '.agp-so-tcrown{position:absolute;z-index:6;left:50%;bottom:calc(100% - 3%);width:92%;transform:translateX(-50%);transform-origin:50% 100%;filter:drop-shadow(0 .05em .1em rgba(0,0,0,.6)) drop-shadow(0 0 .28em rgba(255,140,185,.6));animation:agp-so-crown 3.2s ease-in-out infinite}',
+        '.agp-so-tcrown svg{display:block;width:100%;height:auto;overflow:visible}',
+        '.agp-so-tcrown .spk{transform-box:fill-box;transform-origin:center;animation:agp-so-tspk 2.2s ease-in-out infinite}',
+        '.agp-so-tcrown .spk.s2{animation-delay:1.1s}',
+        '.agp-so-tcrown .gem{animation:agp-so-tgem 2.2s ease-in-out infinite}',
+        '@keyframes agp-so-crown{0%,100%{transform:translateX(-50%) rotate(-2deg)}50%{transform:translateX(-50%) rotate(2deg)}}',
+        '@keyframes agp-so-tspk{0%,100%{opacity:.2;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}',
+        '@keyframes agp-so-tgem{50%{filter:brightness(1.35) drop-shadow(0 0 2px #ff9cc2)}}',
         /* إطار «جناح الملاك» */
         '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
         '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
