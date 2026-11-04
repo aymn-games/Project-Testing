@@ -1107,8 +1107,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
             if (!token) { window.location.href = 'login.html'; return; }
-            var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || '';
-            window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
+            // توكن الجلسة يروح بالهيدر (tiktokLinkUrl) بدل ما ينحط بالرابط.
+            linkBtn.disabled = true;
+            window.AGPAuth.tiktokLinkUrl().then(function(r){
+              if (r && r.success && r.url) { window.location.href = r.url; return; }
+              linkBtn.disabled = false;
+              if (r && r.__httpStatus === 401) { window.location.href = 'login.html'; return; }
+              window.alert('تعذّر بدء ربط تيك توك، جرّب مرة ثانية.');
+            }).catch(function(){ linkBtn.disabled = false; window.alert('تعذّر الاتصال بالخادم، جرّب مرة ثانية.'); });
           });
         } else {
           // [إصلاح] "إلغاء الربط" ما كان مربوط بأي شي حقيقي أبداً — الدالة
@@ -1120,6 +1126,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             window.AGPAuth.unlinkTikTok().then(function(result){
               linkBtn.disabled = false;
               if (result && result.success) window.location.reload();
+              else if (result && result.error === 'tiktok_only_account') window.alert('حسابك أنشأته بتيك توك وما له طريقة دخول ثانية — لو ألغيت الربط ما تقدر تدخل حسابك. أضف إيميل وكلمة مرور أو اربط جوجل أولاً، بعدها تقدر تلغي الربط.');
               else window.alert('تعذّر إلغاء الربط: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
             }).catch(function(){ linkBtn.disabled = false; });
           });
