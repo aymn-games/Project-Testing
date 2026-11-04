@@ -981,19 +981,52 @@
             O.refreshStats();
         }, true), true, 'اختر واحد أو أكثر — أكثر من واحد يتبدّلون'));
         if (cur.length > 1) {
-            box.appendChild(row('مدة التبديل', pills(O.THRONE_CYCLES.map(function (n) { return { label: n + ' ث', value: n }; }), Number(it.cycle) || 10, function (v) {
+            var cyc = Number(it.cycle) || 10;
+            var cw = el('div', 'ob-pills');
+            O.THRONE_CYCLES.forEach(function (n) {
+                cw.appendChild(button(n + ' ث', 'ob-pill' + (cyc === n ? ' on' : ''), function () { update(it, 'cycle', n, true); }));
+            });
+            var cn = document.createElement('input');
+            cn.type = 'number';
+            cn.min = '3'; cn.max = '300'; cn.step = '1';
+            cn.inputMode = 'numeric';
+            cn.className = 'ob-input num';
+            cn.style.maxWidth = '84px';
+            cn.value = cyc;
+            cn.setAttribute('aria-label', 'مدة التبديل بالثواني');
+            cn.addEventListener('change', function () {
+                var v = Math.round(Number(cn.value));
+                if (!(v >= 3)) v = 3;
+                if (v > 300) v = 300;
+                cn.value = v;
                 update(it, 'cycle', v, true);
-            }), true, 'كل كم ثانية يتبدّل بين ' + cur.map(function (k) { return O.SECTIONS[k].label; }).join(' و')));
+            });
+            cw.appendChild(cn);
+            box.appendChild(row('مدة التبديل', cw, true, 'بالثواني (3–300) — كل كم ثانية يتبدّل بين ' + cur.map(function (k) { return O.SECTIONS[k].label; }).join(' و')));
+            box.appendChild(row('حركة التبديل', pills(O.THRONE_FX.map(function (f) { return { label: f.label, value: f.key }; }), it.transition || 'flip', function (v) {
+                update(it, 'transition', v, true);
+                setTimeout(function () { if (O.throneDemo) O.throneDemo(it.id); }, 900);
+            }), true, 'شكل الحركة لما يتبدّل القسم أو يتغيّر شخص'));
         }
         var fw = el('div', 'ob-sw');
         O.FRAME_COLORS.forEach(function (c) {
             var b = button('', (it.frameColor || 'ice') === c.key ? 'on' : '', function () { update(it, 'frameColor', c.key, true); });
+            if (it.frameColor === 'custom') b.className = '';
             b.style.background = c.sw;
             b.title = c.label;
             b.setAttribute('aria-label', 'إطار ' + c.label);
             fw.appendChild(b);
         });
-        box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور'));
+        var fp = document.createElement('input');
+        fp.type = 'color';
+        fp.value = /^#[0-9a-f]{6}$/i.test(it.frameCustom || '') ? it.frameCustom : '#7fd0ff';
+        fp.title = 'لون مخصص';
+        fp.setAttribute('aria-label', 'لون إطار مخصص');
+        if (it.frameColor === 'custom') fp.className = 'on';
+        fp.addEventListener('input', function () { it.frameCustom = fp.value; it.frameColor = 'custom'; commit(); rebuildNode(it); });
+        fp.addEventListener('change', function () { renderPanel(); });
+        fw.appendChild(fp);
+        box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور — أو اختر أي لون'));
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }], it.palette || 'medal', function (v) {
             update(it, 'palette', v, true);
         }), true, 'حدود الأرقام وأيقوناتها'));
