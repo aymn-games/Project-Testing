@@ -326,6 +326,13 @@ background:radial-gradient(120% 90% at 50% 100%,rgba(255,138,101,.18),transparen
 .cg{grid-template-columns:repeat(4,1fr);gap:12px}
 .cat{height:168px}
 .cat .tx{padding:0 14px}.cat .tx b{font-size:18px}
+
+.cg{gap:10px}
+.cat{height:142px}
+.cat .art{width:42%}
+.cat .tx b{font-size:17px;line-height:1.35}
+.ctitle{padding:0 0 10px}
+.cfoot{padding:10px 0 18px}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -409,7 +416,7 @@ const ON=new Set(['flags','spl','wc']);
 $('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
 // build board
 const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
-const BCATS=CATS.filter(c=>!['prophets','crests'].includes(c.k));
+const BCATS=['flags','games','songs','spl','wc','blur'].map(k=>CATS.find(c=>c.k===k));
 $('board').innerHTML=BCATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
  [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
   return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');

@@ -326,6 +326,13 @@ background:radial-gradient(120% 90% at 50% 100%,rgba(255,138,101,.18),transparen
 .cg{grid-template-columns:repeat(4,1fr);gap:12px}
 .cat{height:168px}
 .cat .tx{padding:0 14px}.cat .tx b{font-size:18px}
+
+.cg{gap:10px}
+.cat{height:142px}
+.cat .art{width:42%}
+.cat .tx b{font-size:17px;line-height:1.35}
+.ctitle{padding:0 0 10px}
+.cfoot{padding:10px 0 18px}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -388,6 +395,9 @@ const CATS=[
  {k:'games',t:'تحدي الألعاب',n:'120 سؤال',c1:'#a77bff',dk:'#4a2a9a'},
  {k:'songs',t:'الأغاني العربية',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'},
  {k:'blur',t:'الصورة المغبشة',n:'300 سؤال',c1:'#8b9dff',dk:'#2e3a8c'},
+ {k:'apps',t:'شعارات التطبيقات',n:'213 سؤال',c1:'#38e0c8',dk:'#145e5a'},
+ {k:'brands',t:'شعارات البراندات',n:'219 سؤال',c1:'#f6c66b',dk:'#7a5414'},
+ {k:'islamic',t:'أسئلة إسلامية',n:'213 سؤال',c1:'#7fd8a4',dk:'#1c5a3c'},
  {k:'prophets',t:'قصص الأنبياء',n:'204 سؤال',c1:'#5eead4',dk:'#1d5c63'},
  {k:'spl',t:'الدوري السعودي',n:'300 سؤال',c1:'#6fe3a5',dk:'#1f6550'},
  {k:'wc',t:'كأس العالم',n:'300 سؤال',c1:'#ffc83d',dk:'#7a4a1a'},
@@ -484,6 +494,27 @@ blur:(c,i)=>`
  <circle cx="128" cy="118" r="20" fill="${c.dk}"/><g clip-path="url(#lc${i})"><circle cx="118" cy="102" r="16" fill="#ff7ce8"/><rect x="100" y="118" width="60" height="22" fill="#6fe3a5"/></g>
  <circle cx="128" cy="118" r="20" fill="none" stroke="url(#gd${i})" stroke-width="5"/>
  <path d="M142,133L156,148" stroke="url(#gd${i})" stroke-width="8" stroke-linecap="round"/>`,
+apps:(c,i)=>`
+ <rect x="62" y="34" width="76" height="132" rx="16" fill="url(#w${i})"/>
+ <rect x="68" y="46" width="64" height="108" rx="8" fill="${c.dk}"/>
+ <rect x="74" y="54" width="22" height="22" rx="6" fill="${c.c1}"/><rect x="104" y="54" width="22" height="22" rx="6" fill="#ff7ce8"/>
+ <rect x="74" y="84" width="22" height="22" rx="6" fill="url(#gd${i})"/><rect x="104" y="84" width="22" height="22" rx="6" fill="#a77bff"/>
+ <rect x="74" y="114" width="22" height="22" rx="6" fill="#5ccfff"/><rect x="104" y="114" width="22" height="22" rx="6" fill="#fff" opacity=".85"/>
+ <rect x="90" y="40" width="20" height="3" rx="1.5" fill="${c.dk}"/>`,
+brands:(c,i)=>`
+ <path d="M58,80h84l-6,82h-72z" fill="url(#w${i})"/>
+ <path d="M80,80v-12a20,20 0 0 1 40,0v12" stroke="url(#gd${i})" stroke-width="6" fill="none" stroke-linecap="round"/>
+ <circle cx="80" cy="92" r="4" fill="${c.dk}"/><circle cx="120" cy="92" r="4" fill="${c.dk}"/>
+ <path d="M100,112l6,12 13,2-9.5,9 2.3,13-11.8-6.2-11.8,6.2 2.3-13-9.5-9 13-2z" fill="url(#gd${i})"/>
+ <g transform="rotate(18 146 70)"><path d="M132,56h22l8,14-8,14h-22z" fill="${c.c1}"/><circle cx="138" cy="70" r="3.5" fill="#fff"/></g>`,
+islamic:(c,i)=>`
+ <path d="M60,166V112h80v54z" fill="url(#w${i})"/>
+ <path d="M64,112c0-26 16-44 36-48c20,4 36,22 36,48z" fill="url(#gd${i})"/>
+ <path d="M100,64v-14" stroke="url(#gd${i})" stroke-width="3"/><path d="M100,34a8,8 0 1 0 6,12a6,6 0 1 1-6,-12z" fill="url(#gd${i})"/>
+ <path d="M86,166v-26a14,14 0 0 1 28,0v26z" fill="${c.dk}"/>
+ <rect x="38" y="84" width="12" height="82" rx="3" fill="url(#w${i})"/><path d="M36,84l8,-16 8,16z" fill="url(#gd${i})"/>
+ <rect x="150" y="84" width="12" height="82" rx="3" fill="url(#w${i})"/><path d="M148,84l8,-16 8,16z" fill="url(#gd${i})"/>
+ <rect x="68" y="124" width="10" height="16" rx="5" fill="${c.dk}" opacity=".6"/><rect x="122" y="124" width="10" height="16" rx="5" fill="${c.dk}" opacity=".6"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>
@@ -519,7 +550,7 @@ const ON=new Set(['flags','spl','wc']);
 $('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
 // build board
 const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
-const BCATS=CATS.filter(c=>!['prophets','crests'].includes(c.k));
+const BCATS=['flags','games','songs','spl','wc','blur'].map(k=>CATS.find(c=>c.k===k));
 $('board').innerHTML=BCATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
  [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
   return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');
