@@ -32,6 +32,7 @@ var registry = require('./connection-registry');
 var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
 var liveSessionStats = require('../stats/live-session-stats');
+var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 
 var STATS_FLUSH_INTERVAL_MS = 5000;
 var _statsFlushIntervalStarted = false;
@@ -314,7 +315,10 @@ function listLiveConnections() {
  * platforms/connector-router.js، وتربط استدعاءاته الراجعة (Callbacks)
  * بإرسال رسائل status/comment/gift/follow عبر نفس هذا الاتصال فقط.
  */
-function handleConnectMessage(connectionId, socket, payload) {
+/**
+ * @param {boolean} [skipLiveCheck] - داخلي: تحقق المكتبة رجع "غير معروف" فنفتح اتصال كامل
+ */
+function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   var entry = registry.get(connectionId);
   if (!entry) return;
 
@@ -355,6 +359,33 @@ function handleConnectMessage(connectionId, socket, payload) {
 
   // "connecting" تُرسَل هنا دائماً فوراً (موحّدة بصرف النظر عن الموصِّل)
   sendEnvelope(socket, builder.buildStatusMessage(platform, 'connecting'));
+
+  // تحقق مكتبة الألعاب (source: 'library'، ومنه agp-auto-connect.js): الصفحة
+  // تقفل الاتصال أول ما يوصل "connected" — فاتصال بث كامل هنا كان يحرق توقيع
+  // EulerStream على الفاضي (سبب رسالة "تيك توك حدّد عدد محاولات الاتصال").
+  // الصلاحية انفحصت فوق؛ يكفي نعرف هل يبث بطلب HTTP بدون توقيع. لو الفحص
+  // ما قدر يتأكد (null) نرجع للاتصال الكامل مثل قبل.
+  if (platform === 'tiktok' && payload.source === 'library' && !skipLiveCheck) {
+    var checkSeq = (entry.libraryCheckSeq || 0) + 1;
+    entry.libraryCheckSeq = checkSeq;
+    tiktokLiveCheck.isLive(payload.username).then(function (live) {
+      // الاتصال انسكّر أو وصل طلب اتصال أحدث — النتيجة ما عاد تهم
+      if (registry.get(connectionId) !== entry || entry.libraryCheckSeq !== checkSeq || entry.activeConnector) return;
+      if (live === true) {
+        sendEnvelope(socket, builder.buildStatusMessage(platform, 'connected'));
+      } else if (live === false) {
+        sendEnvelope(socket, builder.buildStatusMessage(platform, 'error', 'الحساب مو في بث مباشر الحين — ابدأ البث أولاً ثم اضغط اتصال.'));
+      } else {
+        handleConnectMessage(connectionId, socket, payload, true);
+      }
+    }, function (err) {
+      logger.error('WS Server: library live check failed:', err);
+      if (registry.get(connectionId) === entry && entry.libraryCheckSeq === checkSeq && !entry.activeConnector) {
+        handleConnectMessage(connectionId, socket, payload, true);
+      }
+    });
+    return;
+  }
 
   var connector = connectorRouter.createConnectorForPlatform(platform);
   if (!connector) {
@@ -505,6 +536,7 @@ function handleConnectMessage(connectionId, socket, payload) {
 function handleDisconnectMessage(connectionId, socket, payload) {
   var entry = registry.get(connectionId);
   if (!entry) return;
+  entry.libraryCheckSeq = (entry.libraryCheckSeq || 0) + 1; // يلغي أي تحقق مكتبة لسا ما رجع
 
   if (entry.activeConnector && typeof entry.activeConnector.disconnect === 'function') {
     entry.activeConnector.disconnect();
