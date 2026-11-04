@@ -26,6 +26,8 @@ var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var liveSessionStats = require('../stats/live-session-stats');
 var streamScreens = require('../stats/stream-screens-service');
+var screenMedia = require('../stats/screen-media-service');
+var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
@@ -176,6 +178,12 @@ var ROUTES = [
   { method: 'POST', path: '/api/screens/save', requireAuth: true, handler: handleSaveScreen },
   { method: 'POST', path: '/api/screens/delete', requireAuth: true, handler: handleDeleteScreen },
   { method: 'POST', path: '/api/screens/new-key', requireAuth: true, handler: handleRotateScreenKey },
+  // «أليرت الفيديو» (Veyro) — راجع stats/screen-media-service.js. الرفع جسمه الملف نفسه (rawBody)،
+  // والملف يقراه رابط الشاشة بدون حساب بمعرّف عشوائي طويل.
+  { method: 'GET', path: '/api/screens/media', requireAuth: true, handler: handleListScreenMedia },
+  { method: 'POST', path: '/api/screens/media/upload', requireAuth: true, rawBody: true, handler: handleUploadScreenMedia },
+  { method: 'POST', path: '/api/screens/media/delete', requireAuth: true, handler: handleDeleteScreenMedia },
+  { method: 'GET', path: '/api/screens/media/file', requireAuth: false, handler: handleScreenMediaFile },
   { method: 'GET', path: '/api/public/screen', requireAuth: false, handler: handlePublicScreenDesign },
   { method: 'GET', path: '/api/public/screen/stats', requireAuth: false, handler: handlePublicScreenStats },
   { method: 'GET', path: '/api/public/screen/gifts', requireAuth: false, handler: handlePublicScreenGifts },
@@ -978,6 +986,59 @@ function handleRotateScreenKey(req, res, body, user) {
   sendJson(res, r.success ? 200 : 404, r);
 }
 
+/** GET /api/screens/media → { success, media: [{id, name, mime, size, w, h, d}], max, maxBytes } */
+function handleListScreenMedia(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  sendJson(res, 200, { success: true, media: screenMedia.list(user.id), max: screenMedia.MAX_FILES, maxBytes: screenMedia.MAX_FILE_BYTES });
+}
+
+/** POST /api/screens/media/upload?name=&w=&h=&d= — الجسم = ملف الفيديو (MP4/WebM/MOV). */
+function handleUploadScreenMedia(req, res, body, user) {
+  if (!screensGate(res, user)) { req.resume(); return; }
+  var meta = { name: getQueryParam(req, 'name'), w: getQueryParam(req, 'w'), h: getQueryParam(req, 'h'), d: getQueryParam(req, 'd') };
+  var declared = Number(req.headers['content-length']) || 0;
+  return screenMedia.upload(user.id, meta, req, declared).then(function (r) {
+    var status = r.success ? 200 : (r.error === 'file_too_large' ? 413 : r.error === 'storage_unavailable' ? 500 : 400);
+    if (!res.headersSent) sendJson(res, status, r);
+  });
+}
+
+/** POST /api/screens/media/delete { id } */
+function handleDeleteScreenMedia(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var r = screenMedia.remove(user.id, body && body.id);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+
+/**
+ * GET /api/screens/media/file?id= — الفيديو نفسه، بدعم Range (التشغيل والتقديم
+ * بالمتصفح وOBS). المعرّف ما يتغيّر محتواه، فالتخزين المؤقت طويل.
+ */
+function handleScreenMediaFile(req, res) {
+  var m = screenMedia.find(getQueryParam(req, 'id'));
+  if (!m) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
+  var headers = { 'Content-Type': m.mime, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=31536000, immutable' };
+  var range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+  if (range && (range[1] || range[2])) {
+    var start = range[1] ? Number(range[1]) : Math.max(0, m.size - Number(range[2]));
+    var end = range[1] && range[2] ? Math.min(Number(range[2]), m.size - 1) : m.size - 1;
+    if (start >= m.size || start > end) {
+      res.writeHead(416, { 'Content-Range': 'bytes */' + m.size });
+      res.end();
+      return;
+    }
+    headers['Content-Range'] = 'bytes ' + start + '-' + end + '/' + m.size;
+    headers['Content-Length'] = end - start + 1;
+    res.writeHead(206, headers);
+    if (req.method === 'HEAD') { res.end(); return; }
+    fs.createReadStream(m.file, { start: start, end: end }).on('error', function () { res.destroy(); }).pipe(res);
+    return;
+  }
+  headers['Content-Length'] = m.size;
+  res.writeHead(200, headers);
+  fs.createReadStream(m.file).on('error', function () { res.destroy(); }).pipe(res);
+}
+
 /** صاحب الشاشة من ?k= — أو يرد 404 ويرجع null. */
 function screenFromKey(req, res) {
   var o = streamScreens.findByKey(getQueryParam(req, 'k'));
@@ -1506,7 +1567,9 @@ function handle(req, res) {
     }
   }
 
-  bodyParser.readJsonBody(req).then(function (body) {
+  // rawBody: الـ handler يقرأ الجسم بنفسه (رفع ملفات) بدل تحليل JSON بحد 100KB
+  var bodyPromise = route.rawBody ? Promise.resolve({}) : bodyParser.readJsonBody(req);
+  bodyPromise.then(function (body) {
     return route.handler(req, res, body || {}, user, token);
   }).catch(function (err) {
     if (err && (err.message === 'invalid_json' || err.message === 'body_too_large')) {

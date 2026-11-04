@@ -47,6 +47,11 @@
 (function () {
     'use strict';
 
+    // ملفات إطارات التوب (Veyro) جنب هذا الملف: js/ → assets/overlay-frames/
+    var FRAMES_BASE = (function () {
+        try { return new URL('../assets/overlay-frames/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/overlay-frames/'; }
+    }());
+
     if (window.AGPStreamOverlay) return;
 
     var STORE_KEY = 'agp:stream-overlay';
@@ -170,6 +175,16 @@
         eye: '<path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8z"/>'
     };
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
+    // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
+    var THRONE_ICONS = {
+        likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
+        gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
+    };
+    // فراشة «جناح الملاك»: جناحين يرفرفون (wl/wr)
+    var BUTTERFLY = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="agp-so-bw" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#a6e6ff"/><stop offset="1" stop-color="#2f8cff"/></radialGradient></defs>' +
+        '<g class="wl"><path d="M20 20C14 6 3 5 2 12c-1 6 7 9 18 8z" fill="url(#agp-so-bw)"/><path d="M20 21c-9 0-15 4-13 9 2 5 9 2 13-9z" fill="url(#agp-so-bw)" opacity=".85"/></g>' +
+        '<g class="wr"><path d="M20 20c6-14 17-15 18-8 1 6-7 9-18 8z" fill="url(#agp-so-bw)"/><path d="M20 21c9 0 15 4 13 9-2 5-9 2-13-9z" fill="url(#agp-so-bw)" opacity=".85"/></g>' +
+        '<rect x="19.2" y="13" width="1.6" height="15" rx=".8" fill="#e9f9ff"/></svg>';
     // بيانات تجريبية للمعاينة بالاستوديو لما ما فيه بث
     var SAMPLE_ROWS = [
         { name: 'الأول', count: 12400, diamonds: 5200 }, { name: 'الثاني', count: 8100, diamonds: 3100 },
@@ -338,7 +353,8 @@
     function needs() {
         var secs = {}, totals = false;
         activeItems().forEach(function (it) {
-            if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
+            if (it.type === 'top' && it.design === 'throne') throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, 3); });
+            else if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
             else if (it.type === 'goal' || it.type === 'counter') totals = true;
         });
         var keys = Object.keys(secs).sort();
@@ -710,12 +726,239 @@
         return { podium: podium, medals: medals, cards: cards, minimal: minimal };
     }
 
+    /* ---------------- «العرش» (Veyro) ----------------
+     * الثلاثة الأوائل: الأول بالوسط أكبر، الثاني يمين، الثالث يسار، وحول كل صورة
+     * إطار «جناح الملاك». الحالة على العنصر نفسه (node._throne)، وتحديث البيانات
+     * يغيّر الأرقام والأشخاص مكانهم بدون ما يعيد رسم كل شي (الحركة ما تنقطع).
+     * it.sections = الأقسام اللي يعرضها (أكثر من قسم = يتبدّل كل it.cycle ثانية)،
+     * it.palette = medal (ذهبي/فضي/برونزي) أو single (it.color)،
+     * it.frameColor = لون الإطار (FRAME_COLORS). */
+    var FRAME_COLORS = [
+        { key: 'ice', label: 'ثلجي', hue: 0, sw: '#7fd0ff' },
+        { key: 'purple', label: 'بنفسجي', hue: 65, sw: '#b48cff' },
+        { key: 'pink', label: 'وردي', hue: 125, sw: '#ff8fc8' },
+        { key: 'red', label: 'أحمر', hue: 160, sw: '#ff6b6b' },
+        { key: 'gold', label: 'ذهبي', hue: 195, sw: '#ffd36b' },
+        { key: 'green', label: 'أخضر', hue: -75, sw: '#7cf0a0' }
+    ];
+    var THRONE_CYCLES = [5, 8, 10, 15, 20, 30];
+    // حركة التبديل بين الأقسام (it.transition)
+    var THRONE_FX = [
+        { key: 'flip', label: 'قلب' }, { key: 'fade', label: 'تلاشي' }, { key: 'slide', label: 'انزلاق' },
+        { key: 'zoom', label: 'تكبير' }, { key: 'drop', label: 'سقوط' }, { key: 'spin', label: 'دوران' }, { key: 'flash', label: 'وميض' }
+    ];
+    var FRAME_BASE_HUE = 205; // لون إطار «جناح الملاك» الأصلي (أزرق ثلجي)
+    function hexHue(hex) {
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+        if (!m) return FRAME_BASE_HUE;
+        var r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+        var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+        if (!d) return FRAME_BASE_HUE;
+        if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+        return (h * 60 + 360) % 360;
+    }
+    /** دوران الألوان لإطار العرش: لون جاهز أو مخصص (frameColor = custom + frameCustom). */
+    function frameHue(it) {
+        if (it.frameColor === 'custom') return Math.round(hexHue(it.frameCustom) - FRAME_BASE_HUE);
+        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0] || FRAME_COLORS[0];
+        return fc.hue;
+    }
+    var throneNodes = [], throneTimer = null;
+
+    function throneSecs(it) {
+        var a = (Array.isArray(it.sections) ? it.sections : []).filter(function (k) { return SECTIONS[k]; });
+        return a.length ? a : [SECTIONS[it.section] ? it.section : 'likers'];
+    }
+    function throneIdx(it) {
+        var secs = throneSecs(it);
+        if (secs.length < 2) return 0;
+        var cyc = clamp(Number(it.cycle) || 10, 3, 300) * 1000;
+        return Math.floor(Date.now() / cyc) % secs.length;
+    }
+    function rowNum(sec, r) { return Number(sec === 'gifters' ? r.diamonds : r.count) || 0; }
+
+    function buildThrone(node, it, preview) {
+        title(node, it.title);
+        var body = el('div', 'agp-so-lbody');
+        var box = el('div', 'agp-so-throne' + (it.palette === 'single' ? ' pal-single' : ''));
+        box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
+        // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
+        // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
+        if (it.spacing != null) {
+            var sp = clamp(Number(it.spacing) || 0, -1, 6);
+            box.style.gap = Math.max(0, sp) + 'em';
+            box.style.setProperty('--agp-so-tov', Math.min(0, sp) + 'em');
+        }
+        var slots = {};
+        // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
+        [1, 0, 2].forEach(function (i) {
+            var slot = el('div', 'agp-so-tcol' + rkClass(i));
+            slot.style.setProperty('--d', [1, 0, 2].indexOf(i) * 0.12 + 's');
+            slots[i] = slot;
+            box.appendChild(slot);
+        });
+        var wait = el('div', 'agp-so-empty agp-so-twait');
+        body.appendChild(box);
+        body.appendChild(wait);
+        node.appendChild(body);
+        node._throne = { it: it, preview: preview, box: box, slots: slots, wait: wait, idx: -1 };
+        paintThrone(node, false);
+        throneNodes.push(node);
+        if (!throneTimer) throneTimer = setInterval(tickThrones, 400);
+    }
+
+    /** يرسم/يحدّث العرش. animate = تحديث بيانات أو تبديل قسم (حركة قلب للي تغيّر). */
+    function paintThrone(node, animate) {
+        var t = node._throne, it = t.it;
+        var secs = throneSecs(it), idx = throneIdx(it), sec = secs[idx];
+        var rows = (stats.sections[sec] || []).slice(0, 3);
+        var ghost = !rows.length && t.preview;
+        if (ghost) rows = SAMPLE_ROWS.slice(0, 3);
+        t.box.classList.toggle('agp-so-ghost', ghost);
+        t.wait.textContent = rows.length ? '' : 'بانتظار ' + SECTIONS[sec].label + '…';
+        t.wait.style.display = rows.length ? 'none' : '';
+        var switching = animate && t.idx !== -1 && t.idx !== idx;
+        t.idx = idx;
+        [1, 0, 2].forEach(function (i, order) {
+            var slot = t.slots[i], r = rows[i];
+            if (!r) { slot.style.visibility = 'hidden'; slot._sig = null; return; }
+            slot.style.visibility = '';
+            var sig = sec + '|' + nameOf(r) + '|' + (r.avatar ? String(r.avatar).length : 0);
+            if (!slot._sig) {
+                fillThroneCol(slot, r, sec, i);
+                // حركة الدخول بالبث بس (بالمحرر كل تعديل يعيد الرسم)
+                if (!animate && !t.preview) slot.classList.add('t-enter');
+            } else if (switching || slot._sig !== sig) {
+                flipCol(slot, function () { fillThroneCol(slot, r, sec, i); }, order * 90, it.transition);
+            } else {
+                tweenNum(slot.querySelector('.agp-so-tnum'), rowNum(sec, r));
+            }
+            slot._sig = sig;
+        });
+    }
+
+    function fillThroneCol(slot, r, sec, i) {
+        slot.textContent = '';
+        var inner = el('div', 'agp-so-tin');
+        inner.appendChild(angelFrame(r));
+        inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+        var c = el('span', 'agp-so-tcount');
+        var ic = el('span', 'agp-so-tic i-' + sec);
+        if (sec === 'gifters') {
+            // الدعم: عملة ذهبية (assets/overlay-frames/coin.webp)
+            var coin = document.createElement('img');
+            coin.src = FRAMES_BASE + 'coin.webp';
+            coin.alt = '';
+            coin.draggable = false;
+            ic.appendChild(coin);
+        } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
+        else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
+        c.appendChild(ic);
+        var num = el('span', 'agp-so-tnum', fmt(rowNum(sec, r)));
+        num._v = rowNum(sec, r);
+        c.appendChild(num);
+        inner.appendChild(c);
+        slot.appendChild(inner);
+    }
+
+    function flipCol(slot, swap, delay, fx) {
+        fx = THRONE_FX.filter(function (f) { return f.key === fx; })[0] ? fx : 'flip';
+        setTimeout(function () {
+            slot.className = slot.className.replace(/(^|\s)t-(enter|in|out)(-\w+)?/g, '');
+            slot.classList.add('t-out', 't-out-' + fx);
+            setTimeout(function () {
+                swap();
+                slot.classList.remove('t-out', 't-out-' + fx);
+                void slot.offsetWidth;
+                slot.classList.add('t-in', 't-in-' + fx);
+            }, 340);
+        }, delay || 0);
+    }
+
+    /** الرقم يعد لين القيمة الجديدة بدل ما يقفز. */
+    function tweenNum(elm, to) {
+        if (!elm) return;
+        var from = Number(elm._v) || 0;
+        elm._v = to;
+        if (from === to) return;
+        var t0 = performance.now(), dur = 700;
+        (function step(now) {
+            var k = Math.min(1, (now - t0) / dur);
+            var e = 1 - Math.pow(1 - k, 3);
+            elm.textContent = fmt(Math.round(from + (to - from) * e));
+            if (k < 1 && elm.isConnected) requestAnimationFrame(step);
+        }(t0));
+    }
+
+    function tickThrones() {
+        throneNodes = throneNodes.filter(function (n) { return n.isConnected; });
+        if (!throneNodes.length) { clearInterval(throneTimer); throneTimer = null; return; }
+        throneNodes.forEach(function (n) {
+            var t = n._throne;
+            if (t && throneIdx(t.it) !== t.idx) paintThrone(n, true);
+        });
+    }
+
+    /** المحرر: يعرض حركة التبديل المختارة على العرش (بدون ما يغيّر القسم). */
+    function throneDemo(id) {
+        throneNodes.forEach(function (n) {
+            if (!n.isConnected || n.getAttribute('data-id') !== id || !n._throne) return;
+            [1, 0, 2].forEach(function (i, order) {
+                var slot = n._throne.slots[i];
+                if (slot && slot._sig) flipCol(slot, function () {}, order * 90, n._throne.it.transition);
+            });
+        });
+    }
+
+    /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
+    function refreshItem(node, it) {
+        if (!node || !node._throne || !it || it.design !== 'throne') return false;
+        node._throne.it = it;
+        paintThrone(node, true);
+        return true;
+    }
+
+    /** إطار «جناح الملاك» حول صورة الشخص: الرسمة + ضوء يلف + شرار + فراشات. */
+    function angelFrame(r) {
+        var f = el('span', 'agp-so-fav fr-angel');
+        f.appendChild(avatar(r));
+        f.appendChild(el('span', 'agp-so-fcomet'));
+        var art = el('span', 'agp-so-fart');
+        ['glow', ''].forEach(function (c) {
+            var img = document.createElement('img');
+            img.src = FRAMES_BASE + 'angel.webp';
+            img.alt = '';
+            img.draggable = false;
+            if (c) img.className = c;
+            art.appendChild(img);
+        });
+        f.appendChild(art);
+        [[200, 0], [235, 0.7], [300, 1.4], [330, 2.1], [20, 0.35], [60, 1.05], [110, 1.75], [150, 2.45]].forEach(function (sp) {
+            var rad = sp[0] * Math.PI / 180;
+            var k = el('span', 'agp-so-fspk');
+            k.style.left = (50 + Math.cos(rad) * 55 - 2.5) + '%';
+            k.style.top = (50 + Math.sin(rad) * 55 - 2.5) + '%';
+            k.style.animationDelay = sp[1] + 's';
+            f.appendChild(k);
+        });
+        ['b1', 'b2'].forEach(function (b) {
+            var o = el('span', 'agp-so-fbfo ' + b);
+            var bf = el('span', 'agp-so-fbf');
+            bf.innerHTML = BUTTERFLY;
+            o.appendChild(bf);
+            f.appendChild(o);
+        });
+        return f;
+    }
+
     var DESIGNS = [
         { key: 'podium', label: 'منصة تتويج' },
         { key: 'medals', label: 'ميداليات' },
         { key: 'cards', label: 'بطاقات' },
         { key: 'minimal', label: 'بسيط' }
     ];
+    // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
+    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
@@ -774,6 +1017,11 @@
     function title(node, text) { if (text) node.appendChild(el('div', 'agp-so-wtitle', text)); }
 
     function fillTop(node, it, preview) {
+        if (it.design === 'throne') {
+            node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-throne';
+            buildThrone(node, it, preview);
+            return;
+        }
         var sec = SECTIONS[it.section] ? it.section : 'likers';
         var builders = makeTop(sec);
         var design = builders[it.design] ? it.design : 'podium';
@@ -1085,6 +1333,16 @@
         var stage = n.querySelector('.agp-so-astage');
         if (!stage) return;
         stage.textContent = '';
+        if (isVideoAlert(n._item)) {
+            // بالمحرر: أول فريم من الفيديو باهت (بنفس التفريغ) عشان يشوف مكانه وحجمه
+            if (n._preview) {
+                var vb = videoBox(n._item, null, true);
+                vb.root.classList.add('agp-so-ghost');
+                stage.appendChild(vb.root);
+            }
+            if (n._pos) place(n, n._pos, n._F);
+            return;
+        }
         // بالمحرر: نموذج باهت عشان المذيع يشوف مكانه ويسحبه
         if (n._preview) {
             var c = alertCard(n._item, { type: (n._item.events || ['gift'])[0] || 'gift', user: 'اسم المشاهد', gift: 'وردة', img: SAMPLE_GIFT_SVGS[0], count: 5, diamonds: 5 });
@@ -1125,6 +1383,196 @@
         } catch (e) { /* ignore */ }
     }
 
+    /* ---------------- أليرت الفيديو + تفريغ الخلفية (Veyro: veyro/) ----------------
+     * أداة «alert» فيها it.video = { id, w, h, d, name } (ملف مرفوع:
+     * /api/screens/media/file?id=) تشغّل الفيديو بدل البطاقة مع كل حدث.
+     * it.key = تفريغ الخلفية لحظياً بـWebGL (مثل Chroma Key بـOBS):
+     *   { on, mode: color|black|white, color, sim, smooth, spill }.
+     * أي أليرت بدون it.video يشتغل زي ما كان بالضبط. */
+
+    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1 };
+    function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
+    function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
+    function videoFileUrl(id) { return id ? apiBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
+    function hexRgb(hex) {
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+        return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
+    }
+
+    var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
+    var KEY_FS = [
+        'precision mediump float;',
+        'uniform sampler2D tex;uniform vec3 key;uniform float sim,smo,spill;uniform int mode;varying vec2 uv;',
+        // المسافة بين الألوان بقناتي اللون (CbCr) — الإضاءة ما تأثر، مثل OBS
+        'vec2 cc(vec3 c){return vec2(dot(c,vec3(-.169,-.331,.5)),dot(c,vec3(.5,-.419,-.081)));}',
+        'void main(){vec4 c=texture2D(tex,uv);float a=1.;',
+        ' if(mode==0){float t=sim*.5;float d=distance(cc(c.rgb),cc(key));a=smoothstep(t,t+smo*.5+.0001,d);',
+        '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
+        ' else{float l=dot(c.rgb,vec3(.299,.587,.114));float t=sim*.5;',
+        '  if(mode==1)a=smoothstep(t,t+smo+.0001,l);else a=1.-smoothstep(1.-t-smo-.0001,1.-t,l);}',
+        ' a*=c.a;gl_FragColor=vec4(c.rgb*a,a);}'
+    ].join('\n');
+
+    var keyers = [];
+    /** يطفي سياقات WebGL للعناصر اللي انشالت من الصفحة (المتصفح له حد لعددها). */
+    function sweepKeyers() {
+        keyers = keyers.filter(function (k) { if (k.canvas.isConnected) return true; k.destroy(); return false; });
+    }
+
+    /**
+     * تفريغ لحظي: canvas يرسم الفيديو بعد شيل الخلفية. getKey() يرجع إعدادات
+     * التفريغ (تنقرى كل فريم). يرجع null لو WebGL مو متاح.
+     */
+    function makeKeyer(video, getKey) {
+        sweepKeyers();
+        var cv = document.createElement('canvas');
+        var gl = null;
+        try { gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { gl = null; }
+        if (!gl) return null;
+        function sh(type, src) { var x = gl.createShader(type); gl.shaderSource(x, src); gl.compileShader(x); return x; }
+        var prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, KEY_VS));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, KEY_FS));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+        gl.useProgram(prog);
+        var buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        var loc = gl.getAttribLocation(prog, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        var tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        var U = {};
+        ['key', 'sim', 'smo', 'spill', 'mode'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        var k = { canvas: cv, failed: false, onfail: null };
+        var raf = 0, dead = false;
+        k.draw = function () {
+            if (dead || k.failed || video.readyState < 2 || !video.videoWidth) return;
+            var w = video.videoWidth, h = video.videoHeight;
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
+            try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video); } catch (e) {
+                // فيديو من مصدر ما يسمح بالقراءة (CORS): نعرض الفيديو بدون تفريغ
+                k.failed = true;
+                if (k.onfail) k.onfail();
+                return;
+            }
+            var key = getKey();
+            var rgb = hexRgb(key.color);
+            gl.uniform3f(U.key, rgb[0], rgb[1], rgb[2]);
+            gl.uniform1f(U.sim, clamp(Number(key.sim), 0, 1));
+            gl.uniform1f(U.smo, clamp(Number(key.smooth), 0, 1));
+            gl.uniform1f(U.spill, clamp(Number(key.spill), 0, 1));
+            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : 0);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        };
+        function loop() { if (dead) return; k.draw(); raf = requestAnimationFrame(loop); }
+        function start() { if (!raf && !dead) loop(); }
+        function stop() { cancelAnimationFrame(raf); raf = 0; k.draw(); }
+        video.addEventListener('play', start);
+        video.addEventListener('pause', stop);
+        video.addEventListener('ended', stop);
+        video.addEventListener('seeked', k.draw);
+        video.addEventListener('loadeddata', k.draw);
+        k.destroy = function () {
+            dead = true;
+            cancelAnimationFrame(raf);
+            video.removeEventListener('play', start);
+            try { var ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); } catch (e) { /* ignore */ }
+        };
+        keyers.push(k);
+        if (!video.paused) start();
+        return k;
+    }
+
+    function makeVideo(it) {
+        var v = document.createElement('video');
+        v.crossOrigin = 'anonymous'; // لازم عشان التفريغ يقرأ البكسلات
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.preload = 'auto';
+        v.src = videoFileUrl(it.video.id);
+        v.volume = clamp(it.volume == null ? 0.8 : Number(it.volume), 0, 1);
+        return v;
+    }
+
+    /** صندوق الفيديو (مع التفريغ والنص فوقه). preview = نموذج المحرر الواقف. */
+    function videoBox(it, e, preview) {
+        var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
+        var box = el('div', 'agp-so-vbox');
+        box.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
+        box.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
+        var v = makeVideo(it);
+        box.appendChild(v);
+        var key = keyOf(it);
+        var k = key.on ? makeKeyer(v, function () { return keyOf(it); }) : null;
+        if (k) {
+            box.className += ' keyed';
+            box.appendChild(k.canvas);
+            k.onfail = function () { box.classList.remove('keyed'); if (k.canvas.parentNode) k.canvas.remove(); };
+        }
+        if (it.showText !== false && e) {
+            var msg = (it.msg && it.msg[e.type]) || (ALERT_EVENTS[e.type] || ALERT_EVENTS.gift).msg;
+            var t = el('div', 'agp-so-vtxt ' + (it.textPos === 'top' ? 'top' : it.textPos === 'middle' ? 'middle' : 'bottom'), fillMsg(msg, e));
+            box.appendChild(t);
+        }
+        if (preview) {
+            v.muted = true;
+            v.addEventListener('loadedmetadata', function () {
+                try { v.currentTime = Math.min(0.6, (v.duration || 1) / 2); } catch (er) { /* ignore */ }
+            }, { once: true });
+        }
+        return { root: box, video: v, keyer: k };
+    }
+
+    function stopVideoBox(vb) {
+        try { vb.video.pause(); vb.video.removeAttribute('src'); vb.video.load(); } catch (e) { /* ignore */ }
+        if (vb.keyer) vb.keyer.destroy();
+    }
+
+    function playVideoAlert(id, it, e, targets) {
+        var q = alertQ[id];
+        var max = (clamp(Number(it.video.d) || 30, 1, 60) + 2) * 1000;
+        var ended = false, boxes = [], timer = null;
+        function done() {
+            if (ended) return;
+            ended = true;
+            clearTimeout(timer);
+            boxes.forEach(stopVideoBox);
+            q.busy = false;
+            liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
+            setTimeout(function () { pumpAlert(id); }, 250);
+        }
+        targets.forEach(function (t) {
+            var stage = t.node.querySelector('.agp-so-astage');
+            if (!stage) return;
+            stage.textContent = '';
+            var vb = videoBox(it, e, false);
+            vb.root.classList.add('in');
+            stage.appendChild(vb.root);
+            boxes.push(vb);
+            if (t.node._pos) place(t.node, t.node._pos, t.node._F);
+        });
+        if (!boxes.length) { done(); return; }
+        boxes.forEach(function (vb, i) {
+            var v = vb.video;
+            v.muted = i > 0 || Boolean(it.mute);
+            var p = v.play();
+            // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
+            if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(done); });
+        });
+        boxes[0].video.addEventListener('ended', done);
+        boxes[0].video.addEventListener('error', done);
+        timer = setTimeout(done, max);
+    }
+
     /** يضيف تنبيه لطابور الأداة. force = تجربة المحرر (بدون فلترة). */
     function queueAlert(id, e, force) {
         var q = alertQ[id] = alertQ[id] || { list: [], busy: false };
@@ -1141,6 +1589,7 @@
         if (!targets.length) { q.list = []; return; }
         var e = q.list.shift();
         var it = targets[0].node._item;
+        if (isVideoAlert(it)) { q.busy = true; playVideoAlert(id, it, e, targets); return; }
         var dur = clamp(Number(it.duration) || 5, 2, 20) * 1000;
         var anim = ALERT_ANIMS.filter(function (a) { return a.key === it.anim; })[0] ? it.anim : 'pop';
         q.busy = true;
@@ -1229,6 +1678,9 @@
             var evs = Array.isArray(opts.events) && opts.events.length ? opts.events : ['gift', 'follow', 'share'];
             var msg = {};
             Object.keys(ALERT_EVENTS).forEach(function (k) { msg[k] = ALERT_EVENTS[k].msg; });
+            if (opts.video) {
+                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: msg });
+            }
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
         if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
@@ -1299,6 +1751,7 @@
         activeItems().forEach(function (it) {
             var old = nodes[it.id];
             if (!old || !isDataItem(it) || it.type === 'jar') return;
+            if (refreshItem(old, it)) return;
             var n = buildItem(it, frameRect);
             stage.replaceChild(n, old);
             nodes[it.id] = n;
@@ -1372,6 +1825,77 @@
         '.agp-so-pcol.rk1 .agp-so-step{height:2.1em}',
         '.agp-so-pcol.rk2 .agp-so-step{height:1.5em}',
         '.agp-so-pcol.rk3 .agp-so-step{height:1.1em}',
+        /* العرش (Veyro) */
+        '@property --agp-so-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
+        '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
+        '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.15em;padding-top:1.4em}',
+        '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:5.4em}',
+        '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em;margin-inline:var(--agp-so-tov,0em);position:relative;z-index:1}',
+        '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
+        '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
+        '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
+        '.agp-so-tnum{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.72em;line-height:1.35;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 .05em .15em rgba(0,0,0,.7)}',
+        '.agp-so-tcol.rk1 .agp-so-tnum{font-size:.8em}',
+        '.agp-so-tic{display:inline-flex;width:.95em;height:.95em;flex:none;color:var(--rk);filter:drop-shadow(0 0 .18em rgba(255,60,120,.55))}',
+        '.agp-so-tic svg,.agp-so-tic img{width:100%;height:100%;display:block}',
+        '.agp-so-tic.i-gifters{width:1.15em;height:1.15em;margin:-.08em 0;filter:drop-shadow(0 0 .16em rgba(255,190,60,.6))}',
+        '.agp-so-tcol.rk1 .agp-so-tic.i-gifters{animation:agp-so-coin 3.2s ease-in-out infinite}',
+        '@keyframes agp-so-coin{0%,70%,100%{transform:perspective(4em) rotateY(0)}85%{transform:perspective(4em) rotateY(360deg)}}',
+        '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
+        '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
+        '.agp-so-throne.pal-single .agp-so-tcol{--rk:var(--agp-so-c)}',
+        '.agp-so-tin{display:flex;flex-direction:column;align-items:center;animation:agp-so-tbob 4.4s ease-in-out infinite;animation-delay:calc(var(--d) * -6)}',
+        '@keyframes agp-so-tbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.12em)}}',
+        '.agp-so-tcol.t-enter{animation:agp-so-tenter .8s cubic-bezier(.2,1.3,.4,1) both;animation-delay:var(--d)}',
+        '@keyframes agp-so-tenter{0%{opacity:0;transform:translateY(.8em) scale(.6)}100%{opacity:1;transform:none}}',
+        '.agp-so-tcol.t-out{transition:transform .32s ease-in,opacity .32s ease-in,filter .32s ease-in;opacity:0}',
+        '.agp-so-tcol.t-out-flip{transform:perspective(20em) rotateY(90deg) scale(.9)}',
+        '.agp-so-tcol.t-out-fade{filter:blur(.2em)}',
+        '.agp-so-tcol.t-out-slide{transform:translateX(1.4em)}',
+        '.agp-so-tcol.t-out-zoom{transform:scale(.25)}',
+        '.agp-so-tcol.t-out-drop{transform:translateY(1.2em)}',
+        '.agp-so-tcol.t-out-spin{transform:rotate(200deg) scale(.3)}',
+        '.agp-so-tcol.t-out-flash{transform:scale(1.25);filter:brightness(3) blur(.1em)}',
+        '.agp-so-tcol.t-in{animation:.55s cubic-bezier(.2,1.2,.4,1) both}',
+        '.agp-so-tcol.t-in-flip{animation-name:agp-so-tin-flip}',
+        '.agp-so-tcol.t-in-fade{animation-name:agp-so-tin-fade;animation-timing-function:ease-out}',
+        '.agp-so-tcol.t-in-slide{animation-name:agp-so-tin-slide}',
+        '.agp-so-tcol.t-in-zoom{animation-name:agp-so-tin-zoom}',
+        '.agp-so-tcol.t-in-drop{animation-name:agp-so-tin-drop;animation-duration:.7s}',
+        '.agp-so-tcol.t-in-spin{animation-name:agp-so-tin-spin;animation-duration:.7s}',
+        '.agp-so-tcol.t-in-flash{animation-name:agp-so-tin-flash;animation-timing-function:ease-out}',
+        '@keyframes agp-so-tin-flip{0%{opacity:0;transform:perspective(20em) rotateY(-90deg) scale(.9)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-tin-fade{0%{opacity:0;filter:blur(.2em)}100%{opacity:1;filter:none}}',
+        '@keyframes agp-so-tin-slide{0%{opacity:0;transform:translateX(-1.4em)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-tin-zoom{0%{opacity:0;transform:scale(.25)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-tin-drop{0%{opacity:0;transform:translateY(-1.6em)}60%{opacity:1;transform:translateY(.15em)}100%{transform:none}}',
+        '@keyframes agp-so-tin-spin{0%{opacity:0;transform:rotate(-200deg) scale(.3)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-tin-flash{0%{opacity:0;filter:brightness(3) blur(.1em);transform:scale(1.25)}100%{opacity:1;filter:none;transform:none}}',
+        '.agp-so-twait{margin-top:.4em}',
+        '.agp-so-throne .agp-so-fart,.agp-so-throne .agp-so-fspk{filter:hue-rotate(var(--agp-so-fhue,0deg))}',
+        '.agp-so-throne .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em #9fe0ff)}',
+        '.agp-so-throne .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em #8fd8ff) drop-shadow(0 0 .22em #3aa8ff)}',
+        /* إطار «جناح الملاك» */
+        '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
+        '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
+        '.agp-so-fav .agp-so-av{width:100%;height:100%;padding:0;background:none;box-shadow:none}',
+        '.agp-so-fart{position:absolute;z-index:3;width:149%;height:149%;left:-25.25%;top:-24.5%;pointer-events:none;transform-origin:50.5% 50%;animation:agp-so-f7float 4.2s ease-in-out infinite}',
+        '.agp-so-fart img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}',
+        '.agp-so-fart img.glow{filter:blur(.15em) brightness(1.4);opacity:.35;animation:agp-so-f7glow 2.6s ease-in-out infinite}',
+        '.agp-so-fcomet{position:absolute;z-index:4;inset:-3.6%;border-radius:50%;pointer-events:none;background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(190,235,255,.85) 95%,#fff 99%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .07em));mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .07em));filter:drop-shadow(0 0 .12em #9fe0ff);animation:agp-so-f7spin 3.4s linear infinite}',
+        '.agp-so-fspk{position:absolute;z-index:5;width:5%;height:5%;min-width:2px;min-height:2px;border-radius:50%;background:#e8f8ff;box-shadow:0 0 .2em #9fe0ff,0 0 .4em #4fb6ff;opacity:0;pointer-events:none;animation:agp-so-f7spark 2.8s ease-in-out infinite}',
+        '.agp-so-fbfo{position:absolute;inset:-14%;z-index:5;pointer-events:none;animation:agp-so-spin 11s linear infinite}',
+        '.agp-so-fbfo.b2{inset:-6%;animation-duration:15s;animation-direction:reverse}',
+        '.agp-so-fbf{position:absolute;top:0;left:50%;width:20%;height:20%;transform:translate(-50%,-50%) rotate(90deg);filter:drop-shadow(0 0 .1em #8fd8ff) drop-shadow(0 0 .22em #3aa8ff)}',
+        '.agp-so-fbfo.b2 .agp-so-fbf{transform:translate(-50%,-50%) rotate(-90deg) scale(.8)}',
+        '.agp-so-fbf svg{width:100%;height:100%;overflow:visible;display:block}',
+        '.agp-so-fbf .wl,.agp-so-fbf .wr{transform-origin:50% 50%;animation:agp-so-flap .32s ease-in-out infinite alternate}',
+        '@keyframes agp-so-flap{to{transform:scaleX(.25)}}',
+        '@keyframes agp-so-spin{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-f7spin{to{--agp-so-ang:360deg}}',
+        '@keyframes agp-so-f7float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.5%) rotate(-1.2deg)}}',
+        '@keyframes agp-so-f7glow{50%{opacity:.7}}',
+        '@keyframes agp-so-f7spark{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1;transform:translateY(-20%) scale(1)}100%{opacity:0;transform:translateY(-160%) scale(.3)}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
@@ -1447,6 +1971,14 @@
         /* أليرتات */
         '.agp-so-alert{line-height:1.3}',
         '.agp-so-astage{display:flex;justify-content:center}',
+        '.agp-so-vbox{position:relative;flex:none}',
+        '.agp-so-vbox video,.agp-so-vbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}',
+        '.agp-so-vbox.keyed video{opacity:0}',
+        '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
+        '.agp-so-vtxt{position:absolute;left:0;right:0;padding:0 .4em;text-align:center;direction:rtl;color:var(--agp-so-c,#fff);font-weight:800;font-size:1em;line-height:1.35;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.55)}',
+        '.agp-so-vtxt.top{top:4%}',
+        '.agp-so-vtxt.middle{top:50%;transform:translateY(-50%)}',
+        '.agp-so-vtxt.bottom{bottom:4%}',
         '.agp-so-acard{display:flex;align-items:center;gap:.7em;color:#fff;direction:rtl;text-shadow:0 .04em .1em rgba(0,0,0,.6);--c:var(--agp-so-c)}',
         '.agp-so-acard.d-card{padding:.6em 1.1em .6em .7em;border-radius:1.2em;min-width:14em;max-width:24em;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 38%,rgba(12,12,22,.92)),rgba(12,12,22,.9) 70%);border:.08em solid color-mix(in srgb,var(--c) 70%,#fff);box-shadow:0 0 1.2em color-mix(in srgb,var(--c) 45%,transparent),0 .4em 1.2em rgba(0,0,0,.5)}',
         '.agp-so-acard.d-banner{padding:.45em 1.6em .45em .6em;min-width:22em;max-width:40em;border-radius:.4em;background:linear-gradient(270deg,var(--c),color-mix(in srgb,var(--c) 55%,#000) 75%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.4)}',
@@ -1549,8 +2081,11 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
+        /** أليرت الفيديو والتفريغ (Veyro). */
+        KEY_DEFAULT: KEY_DEFAULT, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
