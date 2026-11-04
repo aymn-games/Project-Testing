@@ -113,6 +113,7 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 .jp{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 6px;border-radius:999px;background:rgba(12,11,18,.95);border:1px solid var(--bc);font:600 13px 'IBM Plex Sans Arabic';white-space:nowrap;box-shadow:0 10px 26px rgba(0,0,0,.4)}
 .jp .ja{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px 'IBM Plex Sans Arabic';color:#07060b}
 .jp b{color:#fff}.jp small{color:#a8a3b5;font:500 12px 'IBM Plex Sans Arabic'}
+.jp .stk{display:flex}.jp .stk span{width:22px;height:22px;border-radius:50%;margin-left:-7px;box-shadow:0 0 0 2px #0e0c16;display:grid;place-items:center;font:700 10px 'IBM Plex Sans Arabic';color:#07060b}.jp .stk span:last-child{margin-left:0}
 .jp.no{--bc:rgba(248,113,113,.55);color:#fca5a5}
 /* caption */
 #cap{position:fixed;bottom:16px;left:22px;z-index:90;height:32px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(12,11,18,.9);border:1px solid rgba(167,139,250,.3);font:600 13px 'IBM Plex Sans Arabic';color:#c4b5fd;opacity:0}
@@ -192,6 +193,16 @@ header::after{content:"";position:absolute;left:10%;right:10%;bottom:-1px;height
 .bp{background:linear-gradient(180deg,#9f7aea,#7c3aed);box-shadow:0 14px 34px -10px rgba(124,58,237,.75),inset 0 1px 0 rgba(255,255,255,.25);font-weight:600}
 .bs{border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);font-weight:500}
 #cap{border:0;box-shadow:inset 0 0 0 1px rgba(167,139,250,.25)}
+
+/* تنبيه الدخول — أوضح */
+.fd{top:calc(100% + 12px)}
+.jp{height:46px;gap:10px;padding:0 18px 0 7px;font-size:15px;background:linear-gradient(180deg,rgba(22,18,34,.97),rgba(12,10,20,.97));box-shadow:inset 0 0 0 1px var(--bc),0 0 26px -6px var(--bc),0 18px 36px -14px rgba(0,0,0,.85)}
+.jp .ja{width:32px;height:32px;font-size:14px;box-shadow:0 0 0 2px rgba(255,255,255,.12)}
+.jp b{font:700 16px 'IBM Plex Sans Arabic'}
+.jp small{font:500 14px 'IBM Plex Sans Arabic';color:#c9c3da}
+.jp .tag{height:22px;padding:0 8px;border-radius:999px;display:inline-flex;align-items:center;font:700 11px 'IBM Plex Sans Arabic';color:#07060b}
+.jp .stk span{width:28px;height:28px;font-size:12px}
+.jp.no small{color:#fca5a5}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -413,7 +424,7 @@ async function swapQuestion(){
 }
 async function joinPill(box,html,cls,bc){const p=document.createElement('div');p.className='jp '+(cls||'');if(bc)p.style.setProperty('--bc',bc);p.innerHTML=html;$(box).prepend(p);
  A(p,[{opacity:0,transform:'translateY(-10px) scale(.9)'},{opacity:1,transform:'none'}],{duration:380,easing:SPRING});
- setTimeout(()=>A(p,[{opacity:1},{opacity:0,transform:'translateY(6px)'}],{duration:350}).then(()=>p.remove()),2300);}
+ setTimeout(()=>A(p,[{opacity:1},{opacity:0,transform:'translateY(6px)'}],{duration:350}).then(()=>p.remove()),2800);}
 async function join(name,typed,team){const a=team==='A',col=a?'#5ccfff':'#f5b0ff';
  joinPill(a?'fA':'fB',`<span class="ja" style="background:${col}">${name[0].toUpperCase()}</span><b>${name}</b><small>كتب «${typed}» ← انضم</small>`,'',a?'rgba(92,207,255,.55)':'rgba(245,176,255,.55)');
  const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;A(n.parentElement,[{color:col,transform:'scale(1.15)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
@@ -445,9 +456,32 @@ async function joinDemo(){
  A($('mt'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});
  await sleep(1500);
 }
+async function joinMsg(name,team,msg){const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
+ joinPill(a?'fA':'fB',`<span class="ja" style="background:${col}">${name[0].toUpperCase()}</span><b>${name}</b><small>${msg||'انضم للفريق'}</small><span class="tag" style="background:${col}">${tn}</span>`,'',a?'rgba(92,207,255,.55)':'rgba(245,176,255,.55)');
+ const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;A(n.parentElement,[{color:col,transform:'scale(1.15)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
+ A($(a?'tA':'tB'),[{boxShadow:`0 0 0 1px ${col}00`},{boxShadow:`0 0 0 2px ${col}aa,0 0 30px ${col}44`},{boxShadow:`0 0 0 1px ${col}00`}],{duration:800,fill:'none'});}
+async function joinBurst(team,names){const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
+ const av=names.slice(0,3).map((n,i)=>`<span style="background:${col};filter:brightness(${1-i*.12})">${n[0].toUpperCase()}</span>`).join('');
+ joinPill(a?'fA':'fB',`<span class="stk">${av}</span><b>+${names.length} لاعبين</b><small>انضموا للفريق</small><span class="tag" style="background:${col}">${tn}</span>`,'',a?'rgba(92,207,255,.55)':'rgba(245,176,255,.55)');
+ const n=$(a?'nA':'nB'),from=+n.textContent;countUp(n,from,from+names.length,700);A(n.parentElement,[{color:col,transform:'scale(1.2)'},{color:'#8a8596',transform:'none'}],{duration:900,fill:'none'});
+ A($(a?'tA':'tB'),[{boxShadow:`0 0 0 1px ${col}00`},{boxShadow:`0 0 0 2px ${col}cc,0 0 40px ${col}66`},{boxShadow:`0 0 0 1px ${col}00`}],{duration:1000,fill:'none'});}
+async function joinDuringMatch(){
+ $('cats').style.display='none';$('aj').classList.add('on');$('mt').style.opacity=0;$('ji').style.opacity=1;
+ await boardIn();await pickAndOpen();
+ cap('أثناء السؤال · لاعب جديد ينضم');
+ const tk=tick(30,18,520);
+ await sleep(500);await joinMsg('khalid.x','B');
+ await sleep(1500);await joinMsg('reem_22','A');
+ await sleep(1700);
+ cap('دخول جماعي بنفس اللحظة ← تنبيه واحد مجمّع');
+ await joinBurst('B',['lama','omar','yazeed','hind']);
+ await sleep(1500);await joinBurst('A',['ali','sami','nora']);
+ await tk;await sleep(1800);
+}
 async function run(){
  await sleep(300);
  if(MODE==='join'){await joinDemo();}
+ else if(MODE==='joinq'){await joinDuringMatch();}
  else if(MODE==='steal'){
   await catsPhase();await boardIn();await pickAndOpen();await teamTimeRunsOut();await openPhase();
   cap('٦ · ١٥ ثانية مفتوحة للفريقين');await tick(15,12,420,'#ffc83d');
