@@ -26,9 +26,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeRig, loadClips } from '../birthday-party/rig3d.js';
-import { resolveLook, SKIN, HAIR } from '../birthday-party/crowd-common.js';
+import { resolveLook, SKIN, HAIR, OUTFIT } from '../birthday-party/crowd-common.js';
 import { makeHand } from './rps-hand.js';
-import { applyBoyFace } from './rps-face.js';
+import { styleChar, pickOutfit } from './rps-looks.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -392,10 +392,10 @@ export function createArena(container, opts = {}) {
         const n = idNum(p.id);
         // بنت أو ولد حسب الرقم، والباقي من الشكل الافتراضي المشتق من نفس الرقم (crowd-common.js)
         const g = p.g === 0 || p.g === 1 ? p.g : n % 2; // بنت أو ولد (عشوائي من الشاشة)
-        const look = resolveLook(n, 'guest', [-1, -1, -1, -1, -1, -1, -1, -1, g]);
+        const look = resolveLook(n, 'guest', [-1, pickOutfit(n), -1, -1, -1, -1, -1, -1, g]); // ألوان لبس واضحة بس
         const rig = makeRig({ look, role: 'guest', n });
         rig.root.visible = false; scene.add(rig.root);
-        const face = applyBoyFace(rig, { SKIN, HAIR }); // ملامح الأولاد الجديدة (بهاللعبة بس)
+        const face = styleChar(rig, { SKIN, HAIR, OUTFIT }, n); // ملامح وألوان وغرة (rps-looks.js — بهاللعبة بس)
         const tag = makeSprite(512, 104, .36); scene.add(tag);
         const bubble = makeSprite(420, 120, .27); bubble.visible = false; scene.add(bubble);
         const badge = makeSprite(420, 120, .27); badge.visible = false; scene.add(badge);
@@ -700,7 +700,7 @@ export function createArena(container, opts = {}) {
         let i = 0;
         for (const c of chars.values()) {
             const d = _v1.subVectors(c.target, c.pos); d.y = 0; const dist = d.length();
-            const far = c.kind === 'queue' && chars.size > 20;
+            const far = c.kind === 'queue' && (lite || chars.size > 20);
             c.walking = dist > .08;
             if (c.walking) {
                 const sp = Math.max(2.2, Math.min(5, dist / 1.2)); if (Math.abs(sp - (c.sp || 0)) > .3) { c.sp = sp; c.rig.setSpeed(sp); } const step = Math.min(dist, dt * sp); c.pos.addScaledVector(d.normalize(), step);
@@ -719,7 +719,7 @@ export function createArena(container, opts = {}) {
             // still: بعد ما يوقف بمكانه وتخلص نقلة الحركة (نص ثانية) نجمّده تماماً — بدون تنفّس ولا رمش
             const frozen = c.pose === 'still' && !c.walking && c.stillAt != null && now - c.stillAt > .5;
             if (c.pose === 'still' && !c.walking) { if (c.stillAt == null) c.stillAt = now; } else c.stillAt = null;
-            if (!frozen && (!far || (frame + i) % 2 === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
+            if (!frozen && (!far || (frame + i) % (lite && chars.size > 12 ? 3 : 2) === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
             if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' || c.pose === 'doom' ? 'scared' : 'smile');
             poseChar(c, dt);
             if (c.hl || c.hlFx) {
@@ -756,7 +756,20 @@ export function createArena(container, opts = {}) {
         WA += ((camMode === 'wide' ? 1 : 0) - WA) * (1 - Math.exp(-dt * 2.2));
         champK += ((phase === 'champion' ? 1 : 0) - champK) * (REDUCED ? 1 : 1 - Math.exp(-dt * 2.5));
         placeCamera(closeTick(dt), doomTick(dt), REDUCED ? (camMode === 'wide' ? 1 : 0) : ease(WA));
-        if (composer) composer.render(); else renderer.render(scene, camera);
+        if (composer && !lite) composer.render(); else renderer.render(scene, camera);
+        perf(dt);
+    }
+
+    // وضع خفيف تلقائي (نفس فكرة المافيا وسفينة النجاة): لو الإطارات نزلت تحت 45/ث بعد أول 3ث
+    // نطفي التوهّج، ونخلي الدقة 1، والطابور يتحدث أقل وبدون فيزياء الشعر والتنورة
+    let lite = false, pfT = 0, pfN = 0, pfS = 0;
+    function perf(dt) {
+        if (lite || document.hidden) return;
+        pfT += dt; if (pfT < 3) return;
+        pfN++; pfS += dt; if (pfS < 2) return;
+        const fps = pfN / pfS; pfN = 0; pfS = 0;
+        if (fps >= 45) return;
+        lite = true; renderer.setPixelRatio(1); resize();
     }
 
     function resize() {
