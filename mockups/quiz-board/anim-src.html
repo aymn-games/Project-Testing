@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>لوحة التحدي — الأنيميشن</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:720px;overflow:hidden;background:#07060b;font-family:'IBM Plex Sans Arabic',sans-serif;color:#f4f2f8}
+#fx{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+#fx .g{position:absolute;border-radius:50%;filter:blur(40px)}#fx .st{position:absolute;border-radius:50%}#fx .sq{position:absolute}
+header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 22px;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)}
+.exit{height:38px;padding:0 15px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font:600 14px 'IBM Plex Sans Arabic';border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5}
+header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
+.hl{display:flex;justify-content:flex-end}
+.live{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);font:600 12px 'IBM Plex Sans Arabic';color:#34d399}
+.live i{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+.panel{border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.badge{height:28px;padding:0 12px;border-radius:999px;display:inline-flex;align-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'IBM Plex Sans Arabic'}
+.L{position:absolute;left:78px;right:78px}
+/* cats */
+#cats{top:92px;bottom:0;display:flex;flex-direction:column}
+.ctitle{display:flex;justify-content:center;align-items:center;gap:14px;padding:6px 0 16px}
+.ctitle b{font:700 34px 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent}
+.cg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cat{position:relative;height:178px;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(18,16,26,.72);box-shadow:0 12px 30px rgba(0,0,0,.25);display:flex;transition:border-color .35s,background .35s,box-shadow .35s}
+.cat .art{position:relative;width:46%;flex:none;overflow:hidden;transition:filter .4s}
+.cat .art svg{position:absolute;inset:0;width:100%;height:100%}
+.cat .tx{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:0 20px}
+.cat .tx b{font:700 20px 'IBM Plex Sans Arabic';color:#8a8596;transition:color .35s}.cat .tx span{font:500 13px 'IBM Plex Sans Arabic';color:#6f6a7c}
+.cat.on{border-color:rgba(167,139,250,.6);background:linear-gradient(160deg,rgba(139,92,246,.24),rgba(124,58,237,.08));box-shadow:0 12px 34px rgba(139,92,246,.28)}
+.cat.on .tx b{color:#f4f2f8}.cat:not(.on) .art{filter:saturate(.5) brightness(.7)}
+.chk{position:absolute;top:12px;left:12px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid rgba(255,255,255,.2)}
+.chk i{position:absolute;inset:-1.5px;border-radius:50%;background:#8b5cf6;border:1.5px solid #a78bfa;display:grid;place-items:center;transform:scale(0)}
+.cat.on .chk i{transform:scale(1)}
+.cfoot{margin-top:auto;display:flex;justify-content:center;gap:10px;padding:16px 0 22px}
+.bp{width:440px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 19px 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2);opacity:.4;transition:opacity .4s}
+.bs{height:56px;padding:0 26px;border-radius:999px;display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 16px 'IBM Plex Sans Arabic'}
+/* teams */
+#teams{top:94px;height:66px;display:flex;justify-content:space-between;align-items:center;opacity:0}
+.team{display:flex;align-items:center;gap:14px;padding:8px 18px;min-width:280px;justify-content:space-between;border-radius:999px;position:relative;transition:border-color .5s,box-shadow .5s}
+.team .nm2{display:flex;align-items:center;gap:8px;font:700 16px 'IBM Plex Sans Arabic';min-height:24px}
+.team .dt{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+.team small{font:500 12px 'IBM Plex Sans Arabic';color:#8a8596}
+.team .sc{font:700 28px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;display:inline-block}
+.team.turn{border-color:rgba(167,139,250,.6);box-shadow:0 0 0 1px rgba(167,139,250,.25),0 12px 34px rgba(139,92,246,.28)}
+.turnb{height:22px;padding:0 9px;border-radius:999px;display:inline-flex;align-items:center;background:#8b5cf6;color:#fff;font:700 11px 'IBM Plex Sans Arabic'}
+.mtitle{font:700 30px 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent}
+/* board */
+#stage{top:172px;bottom:18px}
+#board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.col{display:flex;flex-direction:column;gap:7px}
+.ch{height:84px;flex:none;border-radius:18px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.08);opacity:0}
+.ch svg{position:absolute;inset:0;width:100%;height:100%}
+.ch .ct{position:absolute;bottom:0;left:0;right:0;text-align:center;font:700 14px 'IBM Plex Sans Arabic';padding:16px 4px 5px;background:linear-gradient(0deg,rgba(7,6,11,.9),transparent)}
+.tl{flex:1;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:6px;font:700 22px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;border:1px solid rgba(255,255,255,.08);background:rgba(18,16,26,.72);opacity:0;transition:border-color .25s,background .25s,box-shadow .25s}
+.tl.e{color:#a5e8ff}.tl.m{color:#c4b5fd}.tl.h{color:#f5b0ff}
+.tl.wa,.tl.wb{font-size:14px;color:#f4f2f8}
+.tl.wa{background:linear-gradient(160deg,rgba(92,207,255,.18),rgba(92,207,255,.05));border-color:rgba(92,207,255,.35)}
+.tl.wb{background:linear-gradient(160deg,rgba(245,176,255,.18),rgba(245,176,255,.05));border-color:rgba(245,176,255,.35)}
+.tl .d{width:7px;height:7px;border-radius:50%}
+.tl.hov{border-color:rgba(167,139,250,.75);background:linear-gradient(160deg,rgba(139,92,246,.3),rgba(124,58,237,.1));box-shadow:0 12px 34px rgba(139,92,246,.4)}
+/* question */
+#q{position:absolute;inset:0;display:none;padding:20px 28px;flex-direction:column;align-items:center;gap:12px}
+.qmeta{width:100%;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:8px;align-items:center}
+.mini{width:36px;height:36px;border-radius:12px;overflow:hidden;position:relative}.mini svg{position:absolute;inset:0;width:100%;height:100%}
+.pts{height:30px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);font:700 15px 'IBM Plex Sans Arabic';box-shadow:0 6px 18px rgba(139,92,246,.35)}
+.timer{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:700 28px 'IBM Plex Sans Arabic';position:relative;--p:100}
+.timer::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--tc,#a78bfa) calc(var(--p)*1%),rgba(255,255,255,.06) 0);-webkit-mask:radial-gradient(circle,transparent 31px,#000 32px);mask:radial-gradient(circle,transparent 31px,#000 32px)}
+.timer span{position:relative}
+.qimg{width:330px;height:220px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 14px 34px rgba(0,0,0,.45);flex:none}
+.qt{font:700 34px/1.6 'IBM Plex Sans Arabic';text-align:center}
+.qt span{display:inline-block;opacity:0}
+.who{width:100%;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;padding:11px 18px;background:rgba(92,207,255,.07);border:1px solid rgba(92,207,255,.28);font:700 15px 'IBM Plex Sans Arabic'}
+.who small{font:500 13px 'IBM Plex Sans Arabic';color:#a8a3b5}
+.ok{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:10px 20px;border-radius:999px;background:rgba(18,30,26,.9);border:1px solid rgba(52,211,153,.5);font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 12px 34px rgba(52,211,153,.2);opacity:0;white-space:nowrap}
+.ok b{color:#34d399}
+.av{width:28px;height:28px;border-radius:50%;flex:none;background:#6ee7b7}
+/* reveal */
+#rv{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.ans{font:700 60px/1.3 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent}
+.win{display:flex;align-items:center;gap:12px;padding:10px 22px;border-radius:999px;font:600 17px 'IBM Plex Sans Arabic'}
+.plus{font:700 30px 'IBM Plex Sans Arabic';color:#34d399;display:inline-block}
+.fly{position:fixed;z-index:80;font:700 30px 'IBM Plex Sans Arabic';color:#34d399;text-shadow:0 0 18px rgba(52,211,153,.6);pointer-events:none}
+.spark{position:fixed;z-index:80;width:7px;height:7px;border-radius:50%;pointer-events:none}
+.clone{position:fixed;z-index:30;border-radius:16px;border:1px solid rgba(167,139,250,.75);background:linear-gradient(160deg,rgba(139,92,246,.3),rgba(124,58,237,.1));display:flex;align-items:center;justify-content:center;font:700 22px 'IBM Plex Sans Arabic';color:#c4b5fd;overflow:hidden}
+/* caption */
+#cap{position:fixed;bottom:16px;left:22px;z-index:90;height:32px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(12,11,18,.9);border:1px solid rgba(167,139,250,.3);font:600 13px 'IBM Plex Sans Arabic';color:#c4b5fd;opacity:0}
+#cap i{width:7px;height:7px;border-radius:50%;background:#a78bfa;box-shadow:0 0 8px #a78bfa}
+#replay{position:fixed;bottom:16px;right:22px;z-index:90;height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#e7e3ef;font:700 13px 'IBM Plex Sans Arabic';cursor:pointer;display:none}
+</style></head><body>
+<div id="fx"></div>
+<header>
+ <div><span class="exit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>مكتبة الألعاب</span></div>
+ <img src="%%LOGO%%" alt="">
+ <div class="hl"><span class="live"><i></i>متصل بالبث</span></div>
+</header>
+
+<div id="cats" class="L">
+ <div class="ctitle"><b>اختر 6 فئات</b><span class="badge" id="cnt">3 مختارة</span></div>
+ <div class="cg" id="cg"></div>
+ <div class="cfoot"><span class="bs">رجوع</span><span class="bp" id="go">ابدأ اللعب</span></div>
+</div>
+
+<div id="teams" class="L">
+ <div class="panel team turn" id="tA" style="--c:#5ccfff"><div><div class="nm2"><span class="dt"></span>الفريق السماوي <span class="turnb" id="tbA">دوره يختار</span></div><small>23 لاعب</small></div><span class="sc" id="scA">1,400</span></div>
+ <span class="mtitle">لوحة التحدي</span>
+ <div class="panel team" id="tB" style="--c:#f5b0ff"><div><div class="nm2"><span class="dt"></span>الفريق الوردي <span class="turnb" id="tbB" style="display:none">دوره يختار</span></div><small>19 لاعب</small></div><span class="sc" id="scB">1,000</span></div>
+</div>
+
+<div id="stage" class="L">
+ <div id="board"></div>
+ <div id="q" class="panel">
+  <div class="qmeta"><div class="row" id="meta"><div class="mini" id="mini"></div><b style="font-size:17px">أعلام الدول</b><span class="pts">400</span><span class="badge">متوسط</span></div><div class="timer" id="tm"><span id="tmn">30</span></div></div>
+  <div class="qimg" id="flag"><svg viewBox="0 0 300 200" width="330" height="220"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
+  <div class="qt" id="qt"></div>
+  <div class="who" id="who">💬 الفريق السماوي يجاوب الحين بالشات <small>— أول جواب صح ياخذ النقاط</small></div>
+  <div class="ok" id="ok"><span class="av"></span><span><b>mj_10</b> كتب «اليمن»</span><b>✓ صح</b></div>
+ </div>
+ <div id="rv">
+  <span class="badge" id="rvb">أعلام الدول · 400 · متوسط</span>
+  <div class="qimg" id="rflag" style="width:240px;height:160px"><svg viewBox="0 0 300 200" width="240" height="160"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
+  <div class="ans" id="ans">اليمن</div>
+  <div class="panel win" id="win"><span class="av" style="width:36px;height:36px"></span><span><b>mj_10</b> جاوب صح للفريق السماوي</span><span class="plus" id="plus">+400</span></div>
+ </div>
+</div>
+<div id="cap"><i></i><span id="capt"></span></div>
+<button id="replay" onclick="location.reload()">↻ إعادة العرض</button>
+
+<script>
+%%ART%%
+(function(){const fx=document.getElementById('fx');let s=7;const R=()=>{s=(s*9301+49297)%233280;return s/233280},r=(a,b)=>a+R()*(b-a);
+fx.innerHTML=`<div class="g" style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle,rgba(124,58,237,.22),transparent 65%)"></div><div class="g" style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle,rgba(139,92,246,.12),transparent 65%)"></div><div class="g" style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle,rgba(168,85,247,.1),transparent 65%)"></div>`+
+Array.from({length:90},(_,i)=>`<span class="st" style="left:${r(0,100)}%;top:${r(0,100)}%;width:${i%9?1.5:3}px;height:${i%9?1.5:3}px;background:rgba(255,255,255,${r(.12,.35).toFixed(2)})"></span>`).join('')+
+[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,z,f])=>`<span class="sq" style="left:${x}%;top:${y}%;width:${z}px;height:${z}px;${f?'background:rgba(139,92,246,.45)':'border:1.5px solid rgba(139,92,246,.35)'}"></span>`).join('');})();
+
+const $=id=>document.getElementById(id);
+const E='cubic-bezier(.2,.8,.2,1)', SPRING='cubic-bezier(.34,1.56,.64,1)', IN='cubic-bezier(.6,0,.8,.2)';
+const A=(el,kf,o)=>el.animate(kf,Object.assign({fill:'both',easing:E},o)).finished;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const chk='<i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i>';
+async function cap(t){const c=$('cap');await A(c,[{opacity:1},{opacity:0}],{duration:150});$('capt').textContent=t;A(c,[{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:300});}
+
+// build cats
+const ON=new Set(['flags','spl','wc']);
+$('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
+// build board
+const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
+$('board').innerHTML=CATS.map((c,i)=>`<div class="col"><div class="ch">${svgFor(c,'c'+i)}<div class="ct">${c.t}</div></div>`+
+ [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
+  return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');
+$('mini').innerHTML=svgFor(CATS[0],'m');
+$('qt').innerHTML='ما اسم الدولة التي يمثلها هذا العلم؟'.split(' ').map(w=>`<span>${w}</span>`).join(' ');
+const tiles=[...document.querySelectorAll('.tl')], heads=[...document.querySelectorAll('.ch')];
+const T=(c,r)=>tiles.find(t=>t.dataset.c==c&&t.dataset.r==r);
+const fmt=n=>n.toLocaleString('en-US');
+
+async function countUp(el,from,to,ms){const t0=performance.now();return new Promise(res=>{const f=now=>{const k=Math.min(1,(now-t0)/ms),e=1-Math.pow(1-k,3);el.textContent=fmt(Math.round(from+(to-from)*e));k<1?requestAnimationFrame(f):res()};requestAnimationFrame(f)});}
+function burst(x,y){const cols=['#a78bfa','#5ccfff','#f5b0ff','#34d399','#ffc83d'];for(let i=0;i<14;i++){const s=document.createElement('span');s.className='spark';s.style.left=x+'px';s.style.top=y+'px';s.style.background=cols[i%5];s.style.boxShadow='0 0 8px '+cols[i%5];document.body.appendChild(s);const a=i/14*Math.PI*2,d=40+Math.random()*30;s.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*d}px),calc(-50% + ${Math.sin(a)*d}px)) scale(.2)`,opacity:0}],{duration:700,easing:E,fill:'both'}).finished.then(()=>s.remove());}}
+
+async function run(){
+ await sleep(400);
+ // ── 1. اختيار الفئات
+ cap('١ · اختيار الفئات');
+ A(document.querySelector('.ctitle'),[{opacity:0,transform:'translateY(-10px)'},{opacity:1,transform:'none'}],{duration:500});
+ document.querySelectorAll('.cat').forEach((c,i)=>A(c,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],{duration:550,delay:120+i*70}));
+ A(document.querySelector('.cfoot'),[{opacity:0},{opacity:1}],{duration:500,delay:500});
+ await sleep(1300);
+ let n=3;
+ for(const k of ['games','prophets','crests']){
+  const c=document.querySelector(`.cat[data-k="${k}"]`);
+  A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});
+  c.classList.add('on');
+  c.querySelector('.chk i').animate([{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:420,easing:SPRING,fill:'both'});
+  n++;$('cnt').textContent=n+' مختارة';A($('cnt'),[{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:300,fill:'none'});
+  await sleep(520);
+ }
+ $('go').style.opacity=1;
+ A($('go'),[{boxShadow:'0 10px 34px rgba(139,92,246,.45)'},{boxShadow:'0 10px 50px rgba(168,85,247,.85)'},{boxShadow:'0 10px 34px rgba(139,92,246,.45)'}],{duration:900,fill:'none'});
+ await sleep(800);
+ await A($('go'),[{transform:'scale(1)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:260,fill:'none'});
+ // exit cats
+ const cs=[...document.querySelectorAll('.cat')];
+ cs.forEach((c,i)=>A(c,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px) scale(.94)'}],{duration:380,delay:i*45,easing:IN}));
+ A(document.querySelector('.ctitle'),[{opacity:1},{opacity:0}],{duration:300});
+ await A(document.querySelector('.cfoot'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:350,delay:150});
+ $('cats').style.display='none';
+
+ // ── 2. ظهور اللوحة
+ cap('٢ · ظهور اللوحة');
+ A($('teams'),[{opacity:0,transform:'translateY(-16px)'},{opacity:1,transform:'none'}],{duration:550});
+ heads.forEach((h,i)=>A(h,[{opacity:0,transform:'translateY(-18px)'},{opacity:1,transform:'none'}],{duration:500,delay:150+i*70}));
+ tiles.forEach(t=>{const c=+t.dataset.c,r=+t.dataset.r;A(t,[{opacity:0,transform:'scale(.7)'},{opacity:1,transform:'none'}],{duration:450,delay:350+c*55+r*65,easing:SPRING})});
+ await sleep(1700);
+
+ // ── 3. اختيار سؤال
+ cap('٣ · الفريق يختار السؤال');
+ for(const [c,r] of [[3,4],[2,2],[1,2],[0,2]]){const t=T(c,r);t.classList.add('hov');await sleep(330);if(!(c==0&&r==2))t.classList.remove('hov');}
+ const tgt=T(0,2);
+ await A(tgt,[{transform:'scale(1)'},{transform:'scale(.92)'},{transform:'scale(1.04)'}],{duration:300,easing:SPRING});
+ cap('٤ · المربعات تختفي ويظهر السؤال');
+ const rc=tgt.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();
+ const cl=document.createElement('div');cl.className='clone';cl.textContent='400';Object.assign(cl.style,{left:rc.left+'px',top:rc.top+'px',width:rc.width+'px',height:rc.height+'px'});document.body.appendChild(cl);
+ tgt.style.visibility='hidden';
+ const cx=rc.left+rc.width/2,cy=rc.top+rc.height/2;
+ tiles.filter(t=>t!==tgt).forEach(t=>{const b=t.getBoundingClientRect(),d=Math.hypot(b.left+b.width/2-cx,b.top+b.height/2-cy);A(t,[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.6)'}],{duration:320,delay:d*.45,easing:IN})});
+ heads.forEach((h,i)=>A(h,[{opacity:1},{opacity:0,transform:'translateY(-10px)'}],{duration:300,delay:200+i*40}));
+ await sleep(650);
+ const txt=cl.animate([{opacity:1},{opacity:0}],{duration:200,fill:'both'});
+ await A(cl,[{left:rc.left+'px',top:rc.top+'px',width:rc.width+'px',height:rc.height+'px',borderRadius:'16px'},{left:sr.left+'px',top:sr.top+'px',width:sr.width+'px',height:sr.height+'px',borderRadius:'24px',background:'rgba(18,16,26,.72)',borderColor:'rgba(255,255,255,.08)'}],{duration:620,easing:'cubic-bezier(.65,0,.35,1)'});
+ $('board').style.visibility='hidden';
+ const q=$('q');q.style.display='flex';
+ [...q.children].forEach(c=>c.style.opacity=0);
+ cl.remove();
+ // question content in
+ $('meta').parentElement.style.opacity=1;
+ A($('meta'),[{opacity:0,transform:'translateX(30px)'},{opacity:1,transform:'none'}],{duration:450});
+ A($('tm'),[{opacity:0,transform:'scale(.5) rotate(-90deg)'},{opacity:1,transform:'none'}],{duration:550,easing:SPRING});
+ $('flag').style.opacity=1;
+ A($('flag'),[{opacity:0,transform:'scale(.8) translateY(16px)'},{opacity:1,transform:'none'}],{duration:600,delay:150,easing:SPRING});
+ $('qt').style.opacity=1;
+ [...$('qt').children].forEach((w,i)=>A(w,[{opacity:0,transform:'translateY(12px)',filter:'blur(6px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:420,delay:450+i*90}));
+ $('who').style.opacity=1;
+ A($('who'),[{opacity:0,transform:'translateY(16px)'},{opacity:1,transform:'none'}],{duration:450,delay:900});
+ await sleep(1200);
+
+ // ── 5. العداد
+ cap('٥ · العداد والانتظار');
+ for(let s=30;s>=23;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/30*100).toFixed(1));A($('tmn'),[{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:280,fill:'none'});await sleep(420);}
+ // answer arrives
+ cap('٦ · جواب صح');
+ const ok=$('ok');ok.style.opacity=1;
+ A(ok,[{opacity:0,transform:'translateX(-50%) translateY(20px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
+ $('tm').style.setProperty('--tc','#34d399');
+ A(q,[{boxShadow:'0 0 0 1px rgba(52,211,153,0),0 20px 60px rgba(0,0,0,.3)'},{boxShadow:'0 0 0 2px rgba(52,211,153,.6),0 0 60px rgba(52,211,153,.25)'},{boxShadow:'0 0 0 1px rgba(52,211,153,0),0 20px 60px rgba(0,0,0,.3)'}],{duration:1100,fill:'none'});
+ await sleep(1500);
+
+ // ── 6. كشف الإجابة
+ cap('٧ · كشف الإجابة');
+ [$('meta'),$('tm'),$('qt'),$('who'),ok].forEach((e,i)=>A(e,[{opacity:1},{opacity:0,transform:(e===ok?'translateX(-50%) ':'')+'translateY(-8px)'}],{duration:300,delay:i*40}));
+ await A($('flag'),[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.85)'}],{duration:320,delay:120});
+ q.style.display='none';
+ const rv=$('rv');rv.style.display='flex';
+ A($('rvb'),[{opacity:0,transform:'translateY(-8px)'},{opacity:1,transform:'none'}],{duration:400});
+ A($('rflag'),[{opacity:0,transform:'scale(.8)'},{opacity:1,transform:'none'}],{duration:500,delay:80,easing:SPRING});
+ A($('ans'),[{opacity:0,transform:'scale(1.6)',filter:'blur(12px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:650,delay:250});
+ await A($('win'),[{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'none'}],{duration:500,delay:550});
+ await sleep(500);
+
+ // ── 7. احتساب النقاط
+ cap('٨ · احتساب النقاط');
+ const pr=$('plus').getBoundingClientRect(),sc=$('scA').getBoundingClientRect();
+ A($('plus'),[{opacity:1},{opacity:.25}],{duration:300});
+ const f=document.createElement('div');f.className='fly';f.textContent='+400';Object.assign(f.style,{left:pr.left+'px',top:pr.top+'px'});document.body.appendChild(f);
+ const dx=sc.left-pr.left-10,dy=sc.top-pr.top;
+ await A(f,[{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx*.45}px,${dy*.55-60}px) scale(1.25)`,opacity:1,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(.6)`,opacity:.2}],{duration:900,easing:'cubic-bezier(.5,0,.3,1)'});
+ f.remove();
+ burst(sc.left+sc.width/2,sc.top+sc.height/2);
+ A($('tA'),[{boxShadow:'0 0 0 1px rgba(167,139,250,.25),0 12px 34px rgba(139,92,246,.28)'},{boxShadow:'0 0 0 2px rgba(52,211,153,.7),0 0 50px rgba(52,211,153,.4)'},{boxShadow:'0 0 0 1px rgba(167,139,250,.25),0 12px 34px rgba(139,92,246,.28)'}],{duration:1200,fill:'none'});
+ A($('scA'),[{transform:'scale(1)',color:'#f4f2f8'},{transform:'scale(1.3)',color:'#34d399',offset:.3},{transform:'scale(1)',color:'#f4f2f8'}],{duration:1100,fill:'none'});
+ await countUp($('scA'),1400,1800,950);
+ await sleep(500);
+
+ // ── 8. تبديل الدور
+ cap('٩ · تبديل الدور');
+ await A($('tbA'),[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.6)'}],{duration:280});
+ $('tbA').style.display='none';$('tA').classList.remove('turn');
+ $('tB').classList.add('turn');$('tbB').style.display='inline-flex';
+ A($('tbB'),[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
+ A($('tB'),[{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:500,fill:'none'});
+ await sleep(900);
+
+ // ── 9. الرجوع للوحة
+ cap('١٠ · الرجوع للوحة');
+ await Promise.all([...rv.children].map((e,i)=>A(e,[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.92)'}],{duration:300,delay:i*50,easing:IN})));
+ rv.style.display='none';
+ tgt.className='tl wa';tgt.innerHTML='<span class="d" style="background:#5ccfff"></span>400';tgt.style.visibility='visible';
+ $('board').style.visibility='visible';
+ heads.forEach((h,i)=>A(h,[{opacity:0,transform:'translateY(-10px)'},{opacity:1,transform:'none'}],{duration:400,delay:i*50}));
+ tiles.filter(t=>t!==tgt).forEach(t=>{const b=t.getBoundingClientRect(),d=Math.hypot(b.left+b.width/2-cx,b.top+b.height/2-cy);A(t,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:380,delay:d*.35,easing:SPRING})});
+ A(tgt,[{opacity:0,transform:'scale(1.5)'},{opacity:1,transform:'scale(1)'}],{duration:600,delay:150,easing:SPRING});
+ await sleep(1100);
+ burst(cx,cy);
+ await sleep(1800);
+ A($('cap'),[{opacity:1},{opacity:0}],{duration:300});
+ $('replay').style.display='block';
+}
+document.fonts.ready.then(run);
+</script></body></html>
