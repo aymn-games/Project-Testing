@@ -137,8 +137,9 @@ function accountOf(auth) {
     if (!u) return null;
     var tk = u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null, fr = null;
     if (tk) { try { fr = _frameOf(tk) || null; } catch (err) { logger.error('Mafia: frame lookup failed:', err); } }
-    // الاسم: اسم بروفايل تيك توك، وإلا يوزر تيك توك، وإلا اسم الحساب بالموقع
-    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || tk || u.username || ''), hasTkName: !!u.tiktok_display_name, avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
+    // الاسم: لو الحساب مربوط بتيك توك (موثّق) = اسم حساب تيك توك (اسم البروفايل، وإلا اليوزر لين ينجاب)،
+    // ولو مو مربوط = اسمه بالموقع (ما نستخدم اسم تيك توك محفوظ لحساب مو موثّق)
+    return { uid: String(u.id), name: cleanName(tk ? (u.tiktok_display_name || tk) : (u.username || '')), hasTkName: !!u.tiktok_display_name, avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
 }
 
 // ---- تكملة اسم وصورة تيك توك اللي ناقصة بالحساب (مرة وحدة لكل يوزر بكل تشغيل للسيرفر)
