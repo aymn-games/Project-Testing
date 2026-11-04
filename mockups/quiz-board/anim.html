@@ -237,6 +237,16 @@ box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.1),0 0 34px
 .jc .ph{width:44px;height:44px;margin-bottom:4px;flex:none}
 .jc b{display:block;line-height:1.3;flex:none}
 .jc .row2{flex:none}
+
+.pimg{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.av,.ph,.ja{overflow:hidden;padding:0!important}
+.mem{display:inline-flex;align-items:center;margin-inline-start:6px;vertical-align:middle}
+.mem img{width:20px;height:20px;border-radius:50%;margin-inline-start:-6px;box-shadow:0 0 0 2px #13101e}
+.mem img:first-child{margin-inline-start:0}
+.team small{display:inline-flex;align-items:center;gap:4px}
+
+.jc .ph .pimg,.ok .av .pimg,.win .av .pimg{width:100%;height:100%;border-radius:50%}
+.mem img{width:24px;height:24px}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -252,9 +262,9 @@ box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.1),0 0 34px
 </div>
 
 <div id="teams" class="L">
- <div class="panel team turn" id="tA" style="--c:#5ccfff"><div><div class="nm2"><span class="dt"></span>الفريق السماوي <span class="turnb" id="tbA">دوره يختار</span></div><small><span id="nA">23</span> لاعب</small></div><div class="fd" id="fA"></div><span class="sc" id="scA">1,400</span></div>
+ <div class="panel team turn" id="tA" style="--c:#5ccfff"><div><div class="nm2"><span class="dt"></span>الفريق السماوي <span class="turnb" id="tbA">دوره يختار</span></div><small><span class="mem" id="mA"></span><span id="nA">23</span> لاعب</small></div><div class="fd" id="fA"></div><span class="sc" id="scA">1,400</span></div>
  <div id="mid"><span class="mtitle" id="mt">لوحة التحدي</span><div id="ji"><div class="jt"><i></i>الدخول التلقائي مفعّل · اكتب اسم فريقك بالشات</div><div class="jk"><span class="kw a">السماوي</span><span class="or">أو</span><span class="kw b">الوردي</span></div></div></div>
- <div class="panel team" id="tB" style="--c:#f5b0ff"><div><div class="nm2"><span class="dt"></span>الفريق الوردي <span class="turnb" id="tbB" style="display:none">دوره يختار</span></div><small><span id="nB">19</span> لاعب</small></div><div class="fd" id="fB"></div><span class="sc" id="scB">1,000</span></div>
+ <div class="panel team" id="tB" style="--c:#f5b0ff"><div><div class="nm2"><span class="dt"></span>الفريق الوردي <span class="turnb" id="tbB" style="display:none">دوره يختار</span></div><small><span class="mem" id="mB"></span><span id="nB">19</span> لاعب</small></div><div class="fd" id="fB"></div><span class="sc" id="scB">1,000</span></div>
 </div>
 
 <div id="stage" class="L">
@@ -482,7 +492,7 @@ async function openPhase(){
 function setTurnB(){$('tA').classList.remove('turn');$('tB').classList.add('turn');[$('tA'),$('tB')].forEach(t=>t.style.borderColor='');$('tbA').style.display='none';$('tbB').style.display='inline-flex';$('tbB').textContent='دوره يختار';$('tbB').style.background='#8b5cf6';}
 async function correct(name,av,team,col,txt){
  cap('٧ · جواب صح من '+team);
- $('okn').textContent=name;$('okav').textContent=name[0].toUpperCase();$('okav').style.background=av;
+ $('okn').textContent=name;$('okav').innerHTML=pimg(name);$('okav').style.boxShadow='0 0 0 2px '+col;
  await A($('who'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:220});
  A($('openb'),[{opacity:1},{opacity:0}],{duration:250});
  const ok=$('ok');ok.style.opacity=1;
@@ -494,8 +504,8 @@ async function correct(name,av,team,col,txt){
  [$('meta'),$('tm'),$('qt'),ok].forEach((e,i)=>A(e,[{opacity:1},{opacity:0,transform:(e===ok?'translateX(-50%) ':'')+'translateY(-8px)'}],{duration:300,delay:i*40}));
  await A($('flag'),[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.85)'}],{duration:320,delay:120});
  $('q').style.display='none';const rv=$('rv');rv.style.display='flex';
- $('wn').textContent=name;$('wav').textContent=name[0].toUpperCase();$('wav').style.background=av;$('wav').style.boxShadow='0 0 0 3px '+col;
- $('wt').innerHTML=`<span style="color:${col}">●</span> جاوب صح لـ${team}`;
+ $('wn').textContent=name;$('wav').innerHTML=pimg(name);$('wav').style.boxShadow='0 0 0 3px '+col;
+ $('wt').innerHTML=`<span style="color:${col}">●</span> جاوب صح لل${team.slice(2)}`;
  A($('rvb'),[{opacity:0,transform:'translateY(-8px)'},{opacity:1,transform:'none'}],{duration:400});
  A($('rflag'),[{opacity:0,transform:'scale(.8)'},{opacity:1,transform:'none'}],{duration:500,delay:80,easing:SPRING});
  A($('ans'),[{opacity:0,transform:'scale(1.6)',filter:'blur(12px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:650,delay:250});
@@ -607,19 +617,45 @@ async function joinDuringMatch(){
  await sleep(1500);await joinBurst('A',['ali','sami','nora']);
  await tk;await sleep(1800);
 }
-const Q=[];
-function restack(){Q.forEach((c,i)=>{c.style.zIndex=10-i;c.style.opacity=i>2?0:(i===0?1:i===1?.8:.55);c.style.transform=`translateX(-50%) translateY(${i*12}px) scale(${1-i*.06})`;});}
-function pushJoin(name,team,opt={}){const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
- const c=document.createElement('div');c.className='jc'+(opt.no?' no':'');if(!opt.no)c.style.setProperty('--bc',col+'aa');
- c.style.setProperty('--tc',opt.no?'#f87171':col);
- c.innerHTML=`<span class="ph" style="background:${opt.av||col}">${name[0].toUpperCase()}</span><b>${name}</b><span class="row2">`+(opt.no?`${opt.msg}`:`دخل <span class="tm" style="background:${col}">الفريق ${tn}</span>`)+`</span><span class="bar"></span>`;
- $('jq').appendChild(c);Q.unshift(c);
- c.style.transform='translateX(-50%) translateY(14px) scale(.9)';c.style.opacity=0;requestAnimationFrame(()=>requestAnimationFrame(restack));
- if(!opt.keep)c.querySelector('.bar').animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:3000,fill:'both'});else c.querySelector('.bar').style.transform='scaleX(.55)';
- if(!opt.no){const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;A(n.parentElement,[{color:col,transform:'scale(1.15)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
+
+// ── صور اللاعبين (بديل مؤقت لصورة حساب تيك توك)
+function hsh(t){let h=7;for(const c of t)h=(h*31+c.charCodeAt(0))>>>0;return h;}
+function avatar(name){const h=hsh(name),P=(a)=>a[h%a.length],Q=(a,k)=>a[(h>>>k)%a.length];
+ const bgs=[['#7c3aed','#c4b5fd'],['#0ea5e9','#a5e8ff'],['#db2777','#f5b0ff'],['#059669','#6ee7b7'],['#d97706','#fde68a'],['#4f46e5','#a5b4fc']];
+ const [b1,b2]=P(bgs),skin=Q(['#f1c9a5','#e0ac83','#c68b5e','#a5714a','#f6d7bd'],3),style=(h>>>5)%4,shirt=Q(['#1e293b','#f8fafc','#334155','#7c3aed','#0f766e','#9f1239'],7),hair=Q(['#1f1611','#3b2a1e','#0f0f10','#5b3a24'],9),hj=Q(['#6d28d9','#0e7490','#be185d','#334155','#a16207'],11);
+ let pre='',post='';
+ if(style===0)post=`<path d="M18 27c0-9 6-14 14-14s14 5 14 14c-3-4-7-6-14-6s-11 2-14 6z" fill="${hair}"/>`;
+ if(style===1||style===2){const chk=style===2;pre=`<path d="M13 46c0-19 8-30 19-30s19 11 19 30l-5 14H18z" fill="#f8fafc"/>${chk?`<path d="M13 46c0-19 8-30 19-30s19 11 19 30" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="3 3"/>`:''}`;
+  post=`<path d="M19.5 29c0-9 5.5-14 12.5-14s12.5 5 12.5 14c-3.5-3-7.5-4.5-12.5-4.5s-9 1.5-12.5 4.5z" fill="#f8fafc"/>${chk?`<path d="M19.5 29c0-9 5.5-14 12.5-14s12.5 5 12.5 14" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="3 3"/>`:''}<rect x="19" y="16.5" width="26" height="4.5" rx="2.2" fill="#111"/>`;}
+ if(style===3){pre=`<path d="M13 44c0-19 8-30 19-30s19 11 19 30v20H13z" fill="${hj}"/>`;post=`<path d="M19.5 30c0-8 5.5-13 12.5-13s12.5 5 12.5 13" fill="none" stroke="${hj}" stroke-width="3.2"/>`;}
+ const face=`<circle cx="32" cy="31" r="12.5" fill="${skin}"/><circle cx="27.5" cy="31" r="1.6" fill="#1b1410"/><circle cx="36.5" cy="31" r="1.6" fill="#1b1410"/><path d="M27.5 37q4.5 3.5 9 0" stroke="#7a3e2b" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+ const body=`<path d="M10 64c2-12 11-17 22-17s20 5 22 17z" fill="${shirt}"/><rect x="28" y="40" width="8" height="8" fill="${skin}"/>`;
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${b2}"/><stop offset="1" stop-color="${b1}"/></linearGradient></defs><rect width="64" height="64" fill="url(#g)"/>${pre}${body}${face}${post}</svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
+const pimg=n=>`<img class="pimg" src="${avatar(n)}" alt="">`;
+const MEM={A:['sara_77','abo_nasser','mj_10','faisal'],B:['fahad.q','noura.k','reem','salem']};
+function drawMem(t){$('m'+t).innerHTML=MEM[t].slice(0,4).map(n=>`<img src="${avatar(n)}">`).join('');}
+drawMem('A');drawMem('B');
+// ── طابور تنبيهات الدخول: واحد بعد واحد، بفاصل ثانية
+const JQ=[];let jBusy=false;
+function pushJoin(name,team,opt={}){JQ.push([name,team,opt]);if(!jBusy)nextJoin();}
+async function nextJoin(){if(!JQ.length){jBusy=false;return;}jBusy=true;const [name,team,opt]=JQ.shift();
+ const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
+ const c=document.createElement('div');c.className='jc'+(opt.no?' no':'');if(!opt.no)c.style.setProperty('--bc',col+'aa');c.style.setProperty('--tc',opt.no?'#f87171':col);
+ c.innerHTML=`<span class="ph">${pimg(name)}</span><b>${name}</b><span class="row2">`+(opt.no?`${opt.msg}`:`دخل <span class="tm" style="background:${col}">الفريق ${tn}</span>`)+`</span><span class="bar"></span>`;
+ $('jq').appendChild(c);c.style.opacity=1;
+ await A(c,[{opacity:0,transform:'translateX(-50%) translateY(14px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:420,easing:SPRING});
+ if(!opt.no){const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;MEM[team].unshift(name);drawMem(team);
+  A($('m'+team).firstChild,[{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:450,easing:SPRING});
+  A(n,[{color:col,transform:'scale(1.25)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
   A($(a?'tA':'tB'),[{boxShadow:`0 0 0 1px ${col}00`},{boxShadow:`0 0 0 2px ${col}aa,0 0 30px ${col}44`},{boxShadow:`0 0 0 1px ${col}00`}],{duration:800,fill:'none'});}
  else A($(a?'tA':'tB'),[{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:360,fill:'none'});
- if(!opt.keep)setTimeout(()=>{c.style.transition='opacity .35s,transform .35s';c.style.opacity=0;c.style.transform+=' translateY(-6px)';setTimeout(()=>{c.remove();Q.splice(Q.indexOf(c),1);restack();},350);},3000);}
+ if(opt.keep){document.body.dataset.ready=1;return;}
+ c.querySelector('.bar').animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:3000,fill:'both'});
+ await sleep(3000);
+ await A(c,[{opacity:1,transform:'translateX(-50%) scale(1)'},{opacity:0,transform:'translateX(-50%) translateY(-8px) scale(.96)'}],{duration:350,easing:IN});c.remove();
+ await sleep(1000);nextJoin();}
+const joinIdle=async()=>{while(jBusy||JQ.length)await sleep(100);};
 async function joinDemo2(){
  $('cats').style.display='none';await boardIn();
  cap('الدخول التلقائي مقفل');await sleep(800);
@@ -630,11 +666,11 @@ async function joinDemo2(){
  [...document.querySelectorAll('.kw')].forEach((k,i)=>A(k,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:450,delay:200+i*160,easing:SPRING}));
  await sleep(1500);
  cap('لاعب يكتب اسم الفريق ← تنبيه صغير بالنص ٣ ثواني');
- pushJoin('fahad.q','B');await sleep(3600);
- cap('أكثر من لاعب ← التنبيهات تظهر ورا بعض');
- pushJoin('sara_77','A');await sleep(500);pushJoin('abo_nasser','A');await sleep(500);pushJoin('noura.k','B');await sleep(3800);
+ pushJoin('fahad.q','B');await joinIdle();
+ cap('أكثر من لاعب ← كل تنبيه بعد اللي قبله بثانية');
+ pushJoin('sara_77','A');pushJoin('abo_nasser','A');pushJoin('noura.k','B');await joinIdle();
  cap('لاعب بفريق يحاول يغيّر ← مرفوض');
- pushJoin('sara_77','A',{no:1,msg:'ما تقدر تغير فريقك'});await sleep(3600);
+ pushJoin('sara_77','A',{no:1,msg:'ما تقدر تغير فريقك'});await joinIdle();
  cap('إيقاف الدخول التلقائي');
  await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.remove('on');
  await A($('ji'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:300,easing:IN});
@@ -644,16 +680,15 @@ async function joinDuring2(){
  $('cats').style.display='none';$('aj').classList.add('on');$('mt').style.opacity=0;$('ji').style.opacity=1;
  await boardIn();await pickAndOpen();
  cap('أثناء السؤال · لاعب جديد يدخل');
- const tk=tick(30,16,560);
- await sleep(400);pushJoin('khalid.x','B');await sleep(3600);
- cap('دخول أكثر من لاعب ← ورا بعض');
- pushJoin('reem_22','A');await sleep(450);pushJoin('lama','B');await sleep(450);pushJoin('omar.s','A');await sleep(450);pushJoin('hind','B');
- await tk;await sleep(1500);
+ const tk=tick(30,10,700);
+ await sleep(400);pushJoin('khalid.x','B');
+ await sleep(1200);cap('دخل ٣ لاعبين بنفس اللحظة ← يظهرون واحد بعد واحد');
+ pushJoin('reem_22','A');pushJoin('lama','B');pushJoin('omar.s','A');
+ await joinIdle();await tk;await sleep(800);
 }
 async function still(n){$('cats').style.display='none';$('aj').classList.add('on');$('mt').style.opacity=0;$('ji').style.opacity=1;
  $('teams').style.opacity=1;heads.forEach(h=>h.style.opacity=1);tiles.forEach(t=>t.style.opacity=1);$('cap').style.display='none';
- if(n>1){pushJoin('noura.k','B',{keep:1});await sleep(150);pushJoin('abo_nasser','A',{keep:1});await sleep(150);}
- pushJoin('fahad.q','B',{keep:1});await sleep(900);document.body.dataset.ready=1;}
+ pushJoin(n>1?'noura.k':'fahad.q','B',{keep:1});}
 async function run(){
  await sleep(300);
  if(MODE==='still1'){await still(1);return;}
