@@ -397,6 +397,14 @@ db.exec(`
         value TEXT NOT NULL
     );
 
+    -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
+    CREATE TABLE IF NOT EXISTS user_seen_notices (
+        user_id TEXT NOT NULL,
+        notice TEXT NOT NULL,
+        seen_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, notice)
+    );
+
     -- نظام "الدعم والاقتراحات" — تذكرة لكل طلب، ورسائلها بجدول منفصل.
     -- راجع backend/support/support-service.js
     CREATE TABLE IF NOT EXISTS tickets (
