@@ -26,9 +26,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeRig, loadClips } from '../birthday-party/rig3d.js';
-import { resolveLook, SKIN, HAIR } from '../birthday-party/crowd-common.js';
+import { resolveLook, SKIN, HAIR, OUTFIT } from '../birthday-party/crowd-common.js';
 import { makeHand } from './rps-hand.js';
-import { applyBoyFace } from './rps-face.js';
+import { styleChar, pickOutfit } from './rps-looks.js';
+import { loadModels, makeVrmRig } from './rps-vrm.js';
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -388,19 +389,34 @@ export function createArena(container, opts = {}) {
         return { x, z, y: 0, ry: Math.atan2(-x, DZ - z) };
     }
 
+    // شخصيات VRM (rps-vrm.js) أول ما يخلص تحميلها، وقبلها (أو لو فشلت) الشخصيات المبنية بالكود
+    let MODELS = null;
+    function newRig(n, g) {
+        if (MODELS) { try { const rig = makeVrmRig(g ? MODELS.boy : MODELS.girl, { n }); rig.root.visible = false; scene.add(rig.root); return { rig, face: null }; } catch (e) { MODELS = null; } }
+        const look = resolveLook(n, 'guest', [-1, pickOutfit(n), -1, -1, -1, -1, -1, -1, g]); // ألوان لبس واضحة بس
+        const rig = makeRig({ look, role: 'guest', n });
+        rig.root.visible = false; scene.add(rig.root);
+        const face = styleChar(rig, { SKIN, HAIR, OUTFIT }, n); // ملامح وألوان وغرة (rps-looks.js — بهاللعبة بس)
+        return { rig, face };
+    }
+    function swapRig(c) {
+        removeHands(c); if (c.face) c.face.dispose();
+        const vis = c.rig.root.visible; c.rig.dispose();
+        const r = newRig(c.n, c.g); c.rig = r.rig; c.face = r.face; c.anim = -1; c.rig.root.visible = vis;
+        if (c.kind === 'duel') addHands(c);
+    }
+    loadModels().then(m => { if (!m || stopped) return; MODELS = m; for (const c of [...chars.values()]) swapRig(c); });
+
     function makeChar(p) {
         const n = idNum(p.id);
         // بنت أو ولد حسب الرقم، والباقي من الشكل الافتراضي المشتق من نفس الرقم (crowd-common.js)
         const g = p.g === 0 || p.g === 1 ? p.g : n % 2; // بنت أو ولد (عشوائي من الشاشة)
-        const look = resolveLook(n, 'guest', [-1, -1, -1, -1, -1, -1, -1, -1, g]);
-        const rig = makeRig({ look, role: 'guest', n });
-        rig.root.visible = false; scene.add(rig.root);
-        const face = applyBoyFace(rig, { SKIN, HAIR }); // ملامح الأولاد الجديدة (بهاللعبة بس)
+        const { rig, face } = newRig(n, g);
         const tag = makeSprite(512, 104, .36); scene.add(tag);
         const bubble = makeSprite(420, 120, .27); bubble.visible = false; scene.add(bubble);
         const badge = makeSprite(420, 120, .27); badge.visible = false; scene.add(badge);
         const c = { id: p.id, rig, slot: freeSlots.pop(), pos: new T.Vector3(), target: new T.Vector3(), ry: 0, tRy: 0, y: 0,
-            face, tag, bubble, badge, prop: null, propKind: 0, pick: 0, pose: 'idle', anim: -1, born: now, walking: false, poseAt: now, acc: 0, n };
+            face, tag, bubble, badge, prop: null, propKind: 0, pick: 0, pose: 'idle', anim: -1, born: now, walking: false, poseAt: now, acc: 0, n, g };
         chars.set(p.id, c);
         return c;
     }
@@ -571,7 +587,7 @@ export function createArena(container, opts = {}) {
         return { skin: SKIN[L.s] || SKIN[1] };
     }
     function addHands(c) {
-        if (c.fh) return;
+        if (c.fh || c.rig.vrm) return; // VRM: أصابع الموديل نفسه (handsUpdate)
         const { skin } = lookColors(c); c.fh = {};
         for (const S of ['Left', 'Right']) {
             const h = makeHand({ skin, left: S === 'Left', bare: true, env: ENV });
@@ -586,6 +602,7 @@ export function createArena(container, opts = {}) {
     }
     const _hx = new T.Vector3(), _hy = new T.Vector3(), _hz = new T.Vector3(), _hm = new T.Matrix4(), _hq = new T.Quaternion(), _hp = new T.Vector3(), _hf = new T.Vector3();
     function handsUpdate(c, dt, gesture) {
+        if (c.rig.vrm) { const S = c.hand || 'Right'; c.rig.gesture(S, gesture || 'relax'); c.rig.gesture(S === 'Left' ? 'Right' : 'Left', 'relax'); return; }
         if (!c.fh) return;
         for (const S of ['Left', 'Right']) {
             const h = c.fh[S], bone = c.rig.bones[S + 'Hand'];
@@ -684,6 +701,14 @@ export function createArena(container, opts = {}) {
         if (u > 1.1) c.badge.visible = false;
     }
 
+    // تعبير الوجه حسب حالة الشخصية (rps-looks.js / rps-face.js)
+    function moodOf(p) {
+        if (p === 'win' || p === 'cheer' || p === 'dance' || p === 'clap') return 'laugh';
+        if (p === 'ko' || p === 'doom') return 'scared';
+        if (p === 'ready' || p === 'shake' || p === 'reveal') return 'focus';
+        if (p === 'oops') return 'sad';
+        return 'smile';
+    }
     // ================================================================ الحلقة
     const clock = new T.Clock(); let raf = 0, frame = 0, stopped = false;
     function tick() {
@@ -700,7 +725,7 @@ export function createArena(container, opts = {}) {
         let i = 0;
         for (const c of chars.values()) {
             const d = _v1.subVectors(c.target, c.pos); d.y = 0; const dist = d.length();
-            const far = c.kind === 'queue' && chars.size > 20;
+            const far = c.kind === 'queue' && (lite || chars.size > 20);
             c.walking = dist > .08;
             if (c.walking) {
                 const sp = Math.max(2.2, Math.min(5, dist / 1.2)); if (Math.abs(sp - (c.sp || 0)) > .3) { c.sp = sp; c.rig.setSpeed(sp); } const step = Math.min(dist, dt * sp); c.pos.addScaledVector(d.normalize(), step);
@@ -719,9 +744,10 @@ export function createArena(container, opts = {}) {
             // still: بعد ما يوقف بمكانه وتخلص نقلة الحركة (نص ثانية) نجمّده تماماً — بدون تنفّس ولا رمش
             const frozen = c.pose === 'still' && !c.walking && c.stillAt != null && now - c.stillAt > .5;
             if (c.pose === 'still' && !c.walking) { if (c.stillAt == null) c.stillAt = now; } else c.stillAt = null;
-            if (!frozen && (!far || (frame + i) % 2 === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
-            if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' || c.pose === 'doom' ? 'scared' : 'smile');
+            if (!frozen && (!far || (frame + i) % (lite && chars.size > 12 ? 3 : 2) === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
+            if (c.rig.mood) c.rig.mood(moodOf(c.pose)); else if (c.face && !frozen) c.face.update(dt, moodOf(c.pose));
             poseChar(c, dt);
+            if (c.rig.sync) c.rig.sync(); // VRM: الوضعية النهائية للهيكل الفعلي
             if (c.hl || c.hlFx) {
                 const f = hlFor(c), want = c.hl ? 1 : 0; f.a += (want - f.a) * (1 - Math.exp(-dt * (c.hl ? 30 : 9)));
                 f.g.visible = f.a > .01; f.g.position.set(c.pos.x, .03, c.pos.z);
@@ -756,7 +782,20 @@ export function createArena(container, opts = {}) {
         WA += ((camMode === 'wide' ? 1 : 0) - WA) * (1 - Math.exp(-dt * 2.2));
         champK += ((phase === 'champion' ? 1 : 0) - champK) * (REDUCED ? 1 : 1 - Math.exp(-dt * 2.5));
         placeCamera(closeTick(dt), doomTick(dt), REDUCED ? (camMode === 'wide' ? 1 : 0) : ease(WA));
-        if (composer) composer.render(); else renderer.render(scene, camera);
+        if (composer && !lite) composer.render(); else renderer.render(scene, camera);
+        perf(dt);
+    }
+
+    // وضع خفيف تلقائي (نفس فكرة المافيا وسفينة النجاة): لو الإطارات نزلت تحت 45/ث بعد أول 3ث
+    // نطفي التوهّج، ونخلي الدقة 1، والطابور يتحدث أقل وبدون فيزياء الشعر والتنورة
+    let lite = false, pfT = 0, pfN = 0, pfS = 0;
+    function perf(dt) {
+        if (lite || document.hidden) return;
+        pfT += dt; if (pfT < 3) return;
+        pfN++; pfS += dt; if (pfS < 2) return;
+        const fps = pfN / pfS; pfN = 0; pfS = 0;
+        if (fps >= 45) return;
+        lite = true; renderer.setPixelRatio(1); resize();
     }
 
     function resize() {
