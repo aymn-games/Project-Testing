@@ -5,7 +5,7 @@
  * خشم صغير بظل خفيف، ابتسامة عريضة تبين الأسنان، خدود وردية، وأذنين.
  *
  * applyBoyFace(rig, {SKIN, HAIR}) ← { update(dt, mood), dispose() } أو null لو الشخصية بنت.
- *   mood: 'smile' (الافتراضي) · 'laugh' (فوز/رقص) · 'scared' (وقت الإقصاء)
+ *   mood: 'smile' (الافتراضي) · 'laugh' (فوز/رقص) · 'scared' (وقت الإقصاء) · 'focus' (الاختيار والعد) · 'sad' (خسر محاولة)
  *   الوجه يتبدّل كل إطار بعد rig.update (الشخصية نفسها ترسم وجهها القديم وإحنا نغطيه).
  * الخريطة نفس تقسيم وجه الحفلة: 512×256 تلف الراس كامل، ونص الوجه عند x=128.
  */
@@ -25,10 +25,11 @@ function faceTex(skin, hair, kind) {
     // خدود وردية ناعمة
     for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * 31, cy + 18, 0, cx + sx * 31, cy + 18, 15); gr.addColorStop(0, 'rgba(236,120,110,.32)'); gr.addColorStop(1, 'rgba(236,120,110,0)'); g.fillStyle = gr; g.fillRect(cx + sx * 31 - 16, cy + 2, 32, 32); }
 
-    // الحواجب: عريضة ومقوسة شوي (ترتفع مع الخوف)
-    const by = kind === 'scared' ? -27 : -23;
+    // الحواجب: عريضة ومقوسة شوي. الخوف: لفوق · التركيز: مقطّبة (الداخل ينزل) · الزعل: الداخل يرتفع
+    const focus = kind === 'focus', sad = kind === 'sad';
+    const by = kind === 'scared' ? -27 : focus ? -21 : sad ? -24 : -23;
     for (const sx of [-1, 1]) {
-        g.save(); g.translate(cx + sx * 21, cy + by); g.scale(sx, 1); g.rotate(kind === 'scared' ? .18 : -.06);
+        g.save(); g.translate(cx + sx * 21, cy + by); g.scale(sx, 1); g.rotate(kind === 'scared' ? .18 : focus ? -.3 : sad ? .3 : -.06); // + الداخل لفوق، − الداخل لتحت
         g.fillStyle = brow; g.beginPath(); g.moveTo(-11, 2.5); g.quadraticCurveTo(-2, -4.5, 11, -1.5); g.lineTo(11, 2.5); g.quadraticCurveTo(-1, -.5, -11, 5.5); g.closePath(); g.fill();
         g.restore();
     }
@@ -48,11 +49,18 @@ function faceTex(skin, hair, kind) {
         ir.addColorStop(0, '#8a5634'); ir.addColorStop(.7, '#5a331d'); ir.addColorStop(1, '#3b2112');
         g.fillStyle = ir; g.beginPath(); g.arc(ex, ey + 1, (kind === 'scared' ? 6 : 8) * big, 0, TAU); g.fill();
         g.fillStyle = '#140a05'; g.beginPath(); g.arc(ex, ey + 1, (kind === 'scared' ? 2.6 : 4.2), 0, TAU); g.fill();
+        // ضوء تحت القزحية (عمق)
+        const gl = g.createRadialGradient(ex, ey + 6, 0, ex, ey + 6, 6); gl.addColorStop(0, 'rgba(255,225,180,.4)'); gl.addColorStop(1, 'rgba(255,225,180,0)'); g.fillStyle = gl; g.beginPath(); g.arc(ex, ey + 1, 8 * big, 0, TAU); g.fill();
+        // التركيز/الزعل: الجفن العلوي نازل
+        const top = focus ? .3 : sad ? .14 : 0;
+        if (top) { g.save(); g.beginPath(); g.ellipse(ex, ey, 9.5, 10.5, 0, 0, TAU); g.clip(); g.fillStyle = skin; g.fillRect(ex - 10, ey - 10.5, 20, 21 * top); g.restore(); }
         // لمعتين
-        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ex - 3, ey - 3, 2.6, 0, TAU); g.fill();
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(ex - 3, ey - 3 + top * 8, 2.6, 0, TAU); g.fill();
         g.beginPath(); g.arc(ex + 2.6, ey + 3.4, 1.2, 0, TAU); g.fill();
         // الرمش العلوي (خط غامق سميك) وظل الجفن
-        g.strokeStyle = '#24140c'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.ellipse(ex, ey, 9.8 * big, 10.8 * big, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+        g.strokeStyle = '#24140c'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath();
+        if (top) { const ly = ey - 10.5 + 21 * top; g.moveTo(ex - 9.5, ly + 1.5); g.quadraticCurveTo(ex, ly - 1.5, ex + 9.5, ly + 1.5); } else g.ellipse(ex, ey, 9.8 * big, 10.8 * big, 0, Math.PI * 1.08, Math.PI * 1.92);
+        g.stroke();
         g.strokeStyle = shade; g.lineWidth = 1.4; g.beginPath(); g.ellipse(ex, ey - 2.5, 11 * big, 11.5 * big, 0, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
     }
 
@@ -64,6 +72,11 @@ function faceTex(skin, hair, kind) {
     const my = cy + 21;
     if (kind === 'scared') {
         g.fillStyle = '#6e2630'; g.beginPath(); g.ellipse(cx, my + 3, 5, 6.5, 0, 0, TAU); g.fill();
+    } else if (sad) {
+        g.strokeStyle = '#7d2c36'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 9, my + 6); g.quadraticCurveTo(cx, my - 1, cx + 9, my + 6); g.stroke();
+    } else if (focus) {
+        // ابتسامة جانبية واثقة
+        g.strokeStyle = '#7d2c36'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 9, my + 2); g.quadraticCurveTo(cx + 2, my + 6, cx + 11, my - 2); g.stroke();
     } else {
         const w = kind === 'laugh' ? 17 : 15.5, d = kind === 'laugh' ? 13 : 9.5;
         g.fillStyle = '#7d2c36'; g.beginPath(); g.moveTo(cx - w, my); g.quadraticCurveTo(cx, my + d * 1.9, cx + w, my); g.quadraticCurveTo(cx, my + 2, cx - w, my); g.closePath(); g.fill();
@@ -100,7 +113,7 @@ export function applyBoyFace(rig, { SKIN, HAIR }) {
         update(dt, mood) {
             blinkT -= dt; if (blinkT < 0) { blinking = .13; blinkT = 2.6 + Math.random() * 2.6; }
             if (blinking > 0) blinking -= dt;
-            const kind = mood === 'laugh' ? 'laugh' : mood === 'scared' ? 'scared' : blinking > 0 ? 'blink' : 'smile';
+            const kind = mood === 'laugh' || mood === 'scared' || mood === 'blink' ? mood : blinking > 0 ? 'blink' : mood === 'focus' || mood === 'sad' ? mood : 'smile';
             const tex = faceTex(skin, hair, kind);
             if (headMesh.material.map !== tex) { const first = !headMesh.material.map; headMesh.material.map = tex; if (first) headMesh.material.needsUpdate = true; }
         },

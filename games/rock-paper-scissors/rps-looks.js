@@ -69,71 +69,98 @@ function richenColors(rig, OUTFIT) {
 // ================================================================ ملامح البنات
 const cache = new Map();
 const IRIS = [['#9a6a3e', '#6b4022', '#3d230f'], ['#b07d3c', '#7a5020', '#4a2e10'], ['#5d7f9a', '#3e5a74', '#22364a']];
+// kind: smile · blink · laugh · scared · focus (تركيز وقت الاختيار والعد) · sad (خسرت محاولة)
 function girlFaceTex(skin, irisK, kind) {
     const key = skin + irisK + kind; if (cache.has(key)) return cache.get(key);
     const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
     g.fillStyle = skin; g.fillRect(0, 0, 512, 256);
-    const cx = 128, cy = 132, sk = new T.Color(skin), lid = sk.clone().multiplyScalar(.86).getStyle(), [i0, i1, i2] = IRIS[irisK];
-    g.save(); g.translate(cx, cy); g.scale(1.7, 1.56); g.translate(-cx, -cy);
+    const cx = 128, cy = 130, sk = new T.Color(skin), crease = sk.clone().multiplyScalar(.78).getStyle(), [i0, i1, i2] = IRIS[irisK];
+    const scared = kind === 'scared', focus = kind === 'focus', sad = kind === 'sad';
+    g.save(); g.translate(cx, cy); g.scale(1.72, 1.58); g.translate(-cx, -cy);
 
-    // خدود وردية أوضح
-    for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * 31, cy + 16, 0, cx + sx * 31, cy + 16, 16); gr.addColorStop(0, 'rgba(242,108,128,.42)'); gr.addColorStop(1, 'rgba(242,108,128,0)'); g.fillStyle = gr; g.fillRect(cx + sx * 31 - 17, cy - 1, 34, 34); }
+    // خدود وردية (أوضح مع الضحكة)
+    const blush = kind === 'laugh' ? .5 : .38;
+    for (const sx of [-1, 1]) { const gr = g.createRadialGradient(cx + sx * 31, cy + 17, 0, cx + sx * 31, cy + 17, 15); gr.addColorStop(0, `rgba(242,108,128,${blush})`); gr.addColorStop(1, 'rgba(242,108,128,0)'); g.fillStyle = gr; g.fillRect(cx + sx * 31 - 16, cy + 1, 32, 32); }
 
-    // الحواجب: رفيعة ومقوّسة (ترتفع مع الخوف)
-    const by = kind === 'scared' ? -29 : -25;
-    g.strokeStyle = 'rgba(70,40,26,.8)'; g.lineCap = 'round'; g.lineWidth = 2.4;
-    for (const sx of [-1, 1]) { g.beginPath(); const x0 = cx + sx * 12, x1 = cx + sx * 31; g.moveTo(x0, cy + by + 2 + (kind === 'scared' ? -2 : 0)); g.quadraticCurveTo(cx + sx * 22, cy + by - 4, x1, cy + by + 2 + (kind === 'scared' ? 2 : 0)); g.stroke(); }
+    // الحواجب: رفيعة ومقوّسة. الخوف: لفوق · التركيز: الداخل ينزل · الزعل: الداخل يرتفع
+    g.strokeStyle = 'rgba(66,36,22,.85)'; g.lineCap = 'round'; g.lineWidth = 2.6;
+    for (const sx of [-1, 1]) {
+        const by = cy + (scared ? -33 : -28), inY = scared ? -1 : focus ? 4 : sad ? -4 : 2, outY = scared ? 1 : focus ? -1 : sad ? 4 : 2;
+        g.beginPath(); g.moveTo(cx + sx * 11, by + inY); g.quadraticCurveTo(cx + sx * 21, by - 4 + (inY + outY) / 4, cx + sx * 31, by + outY); g.stroke();
+    }
 
     // العيون: كبيرة وطولية
     for (const sx of [-1, 1]) {
-        const ex = cx + sx * 20, ey = cy - 4;
+        const ex = cx + sx * 20, ey = cy - 6;
         if (kind === 'blink' || kind === 'laugh') {
-            g.strokeStyle = '#2a140c'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath();
-            if (kind === 'laugh') g.arc(ex, ey + 6, 9, Math.PI * 1.15, Math.PI * 1.85); else g.arc(ex, ey - 1, 10, Math.PI * .12, Math.PI * .88);
+            g.strokeStyle = '#2a140c'; g.lineWidth = 3.4; g.lineCap = 'round'; g.beginPath();
+            if (kind === 'laugh') g.arc(ex, ey + 7, 10, Math.PI * 1.15, Math.PI * 1.85); else g.arc(ex, ey - 1, 11, Math.PI * .12, Math.PI * .88);
             g.stroke();
-            // رمش صغير بالطرف
-            const tx = ex + sx * 9.5, ty = kind === 'laugh' ? ey + 2 : ey + 3;
-            g.lineWidth = 2; g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + sx * 4, ty + (kind === 'laugh' ? -3 : 2)); g.stroke();
+            // رمشين بالطرف
+            g.lineWidth = 2;
+            for (let k = 0; k < 2; k++) { const tx = ex + sx * (10 - k * 2.5), ty = kind === 'laugh' ? ey + 2.5 + k * 1.5 : ey + 4 + k; g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + sx * (4 - k), ty + (kind === 'laugh' ? -3 : 2.5)); g.stroke(); }
             continue;
         }
-        const big = kind === 'scared' ? 1.1 : 1, rx = 10 * big, ry = 12 * big;
-        g.fillStyle = '#fdfbf8'; g.beginPath(); g.ellipse(ex, ey, rx, ry, 0, 0, TAU); g.fill();
+        const big = scared ? 1.08 : 1, rx = 11 * big, ry = (focus ? 11.5 : 13) * big, top = focus ? .25 : sad ? .1 : 0; // التركيز: الجفن نازل شوي
         g.save(); g.beginPath(); g.ellipse(ex, ey, rx, ry, 0, 0, TAU); g.clip();
-        const ir = g.createLinearGradient(ex, ey - 9, ex, ey + 10); ir.addColorStop(0, i2); ir.addColorStop(.45, i1); ir.addColorStop(1, i0);
-        const irR = kind === 'scared' ? 6.2 : 8.6;
-        g.fillStyle = ir; g.beginPath(); g.ellipse(ex, ey + 1.5, irR, irR * 1.12, 0, 0, TAU); g.fill();
-        g.fillStyle = '#140a06'; g.beginPath(); g.ellipse(ex, ey + 1.5, kind === 'scared' ? 2.4 : 4, (kind === 'scared' ? 2.4 : 4) * 1.15, 0, 0, TAU); g.fill();
-        // ظل الجفن العلوي على العين
-        g.fillStyle = 'rgba(60,30,20,.18)'; g.fillRect(ex - rx, ey - ry, rx * 2, 4);
+        g.fillStyle = '#fdfbf8'; g.fillRect(ex - rx, ey - ry, rx * 2, ry * 2);
+        const irR = scared ? 6.6 : 9.4, iy = ey + 2;
+        const ir = g.createLinearGradient(ex, iy - irR, ex, iy + irR); ir.addColorStop(0, i2); ir.addColorStop(.5, i1); ir.addColorStop(1, i0);
+        g.fillStyle = ir; g.beginPath(); g.ellipse(ex, iy, irR, irR * 1.14, 0, 0, TAU); g.fill();
+        g.strokeStyle = i2; g.lineWidth = 1.2; g.stroke(); // حافة القزحية
+        // ضوء تحت القزحية (يعطي عمق)
+        const gl = g.createRadialGradient(ex, iy + irR * .6, 0, ex, iy + irR * .6, irR * .8); gl.addColorStop(0, 'rgba(255,230,190,.45)'); gl.addColorStop(1, 'rgba(255,230,190,0)'); g.fillStyle = gl; g.beginPath(); g.ellipse(ex, iy, irR, irR * 1.14, 0, 0, TAU); g.fill();
+        const pr = scared ? 2.6 : 4.3;
+        g.fillStyle = '#120804'; g.beginPath(); g.ellipse(ex, iy, pr, pr * 1.15, 0, 0, TAU); g.fill();
+        // ظل الجفن العلوي على العين، والجفن نفسه للتركيز/الزعل
+        g.fillStyle = 'rgba(70,35,22,.22)'; g.fillRect(ex - rx, ey - ry, rx * 2, 5);
+        if (top) { g.fillStyle = skin; g.fillRect(ex - rx, ey - ry, rx * 2, ry * 2 * top); }
         g.restore();
         // لمعتين
-        g.fillStyle = '#fff'; g.beginPath(); g.ellipse(ex - 3.2, ey - 3.5, 3, 3.4, -.3, 0, TAU); g.fill();
-        g.beginPath(); g.arc(ex + 3, ey + 5, 1.4, 0, TAU); g.fill();
-        // خط الرمش العلوي سميك وينتهي برموش للطرف
-        g.strokeStyle = '#1e0f08'; g.lineWidth = 3.4; g.lineCap = 'round';
-        g.beginPath(); g.ellipse(ex, ey, rx + .4, ry + .4, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
-        g.lineWidth = 2.2;
-        for (let k = 0; k < 2; k++) { const a = sx > 0 ? -.25 - k * .32 : Math.PI + .25 + k * .32, px = ex + Math.cos(a) * (rx + .4), py = ey + Math.sin(a) * (ry + .4); g.beginPath(); g.moveTo(px, py); g.lineTo(px + sx * (4.2 - k), py - 3 - k); g.stroke(); }
-        // خط تحت خفيف
-        g.strokeStyle = 'rgba(80,40,30,.35)'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(ex, ey, rx, ry, 0, Math.PI * .2, Math.PI * .8); g.stroke();
-        g.strokeStyle = lid; g.lineWidth = 1.4; g.beginPath(); g.ellipse(ex, ey - 2.5, rx + 1.6, ry + 1.2, 0, Math.PI * 1.22, Math.PI * 1.78); g.stroke();
+        g.fillStyle = '#fff'; g.beginPath(); g.ellipse(ex - 3.4, ey - 2.5 + top * 10, 3.2, 3.6, -.3, 0, TAU); g.fill();
+        g.beginPath(); g.arc(ex + 3.4, ey + 6, 1.5, 0, TAU); g.fill();
+        // خط الرمش العلوي سميك وينتهي بثلاث رموش للطرف
+        const ly = ey - ry + ry * 2 * top; // مكان الجفن
+        g.strokeStyle = '#1c0d06'; g.lineWidth = 3.6; g.lineCap = 'round';
+        if (top) { g.beginPath(); g.moveTo(ex - rx, ly + 2); g.quadraticCurveTo(ex, ly - 2, ex + rx, ly + 2); g.stroke(); }
+        else { g.beginPath(); g.ellipse(ex, ey, rx + .4, ry + .4, 0, Math.PI * 1.04, Math.PI * 1.96); g.stroke(); }
+        g.lineWidth = 2.1;
+        for (let k = 0; k < 3; k++) {
+            const a = sx > 0 ? -.18 - k * .3 : Math.PI + .18 + k * .3, px = ex + Math.cos(a) * (rx + .4), py = top ? ly + 1 - k * .5 : ey + Math.sin(a) * (ry + .4);
+            const qx = top ? ex + sx * (rx - k * 2.5) : px; g.beginPath(); g.moveTo(qx, py); g.lineTo(qx + sx * (4.6 - k * 1.1), py - 3.4 + k * .4); g.stroke();
+        }
+        // طيّة الجفن فوق العين، وخط تحت خفيف
+        g.strokeStyle = crease; g.lineWidth = 1.3; g.beginPath(); g.ellipse(ex, ey - 1.5, rx + 1.8, ry + 2.4, 0, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
+        g.strokeStyle = 'rgba(80,40,30,.32)'; g.lineWidth = 1.1; g.beginPath(); g.ellipse(ex, ey, rx, ry, 0, Math.PI * .22, Math.PI * .78); g.stroke();
+        // دمعة صغيرة للزعل
+        if (sad && sx > 0) { g.fillStyle = 'rgba(160,205,240,.85)'; g.beginPath(); g.ellipse(ex + 4, ey + ry + 2.5, 1.8, 2.6, 0, 0, TAU); g.fill(); }
     }
 
-    // الخشم: نقطة ظل صغيرة
-    g.strokeStyle = 'rgba(160,86,70,.38)'; g.lineWidth = 1.8; g.lineCap = 'round'; g.beginPath(); g.arc(cx, cy + 9, 2.6, Math.PI * .25, Math.PI * .75); g.stroke();
+    // الخشم: ظل ناعم صغير ولمعة
+    g.strokeStyle = 'rgba(160,86,70,.4)'; g.lineWidth = 1.8; g.lineCap = 'round'; g.beginPath(); g.arc(cx, cy + 10, 2.8, Math.PI * .2, Math.PI * .8); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(cx - .6, cy + 6.5, 1.2, 2, 0, 0, TAU); g.fill();
 
     // الفم
-    const my = cy + 20;
-    if (kind === 'scared') {
-        g.fillStyle = '#7a2a3a'; g.beginPath(); g.ellipse(cx, my + 2, 4, 5, 0, 0, TAU); g.fill();
+    const my = cy + 21;
+    if (scared) {
+        g.fillStyle = '#6e2433'; g.beginPath(); g.ellipse(cx, my + 2.5, 4.4, 5.6, 0, 0, TAU); g.fill();
+        g.fillStyle = '#d06a7a'; g.beginPath(); g.ellipse(cx, my + 5.5, 2.6, 1.6, 0, 0, TAU); g.fill();
     } else if (kind === 'laugh') {
-        g.fillStyle = '#8a2c40'; g.beginPath(); g.moveTo(cx - 12, my - 1); g.quadraticCurveTo(cx, my + 21, cx + 12, my - 1); g.quadraticCurveTo(cx, my + 1.5, cx - 12, my - 1); g.closePath(); g.fill();
-        g.save(); g.clip(); g.fillStyle = '#fbfaf6'; g.fillRect(cx - 12, my - 1, 24, 4.5); g.fillStyle = '#e0707e'; g.beginPath(); g.ellipse(cx, my + 10, 6, 3.6, 0, 0, TAU); g.fill(); g.restore();
+        g.fillStyle = '#86283c'; g.beginPath(); g.moveTo(cx - 13, my - 1); g.quadraticCurveTo(cx, my + 23, cx + 13, my - 1); g.quadraticCurveTo(cx, my + 1.5, cx - 13, my - 1); g.closePath(); g.fill();
+        g.save(); g.clip(); g.fillStyle = '#fbfaf6'; g.fillRect(cx - 13, my - 1, 26, 5); g.fillStyle = '#e0707e'; g.beginPath(); g.ellipse(cx, my + 11, 6.5, 4, 0, 0, TAU); g.fill(); g.restore();
+    } else if (sad) {
+        // مقلوبة لتحت
+        g.strokeStyle = '#a8405a'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(cx - 8, my + 5); g.quadraticCurveTo(cx, my - 1, cx + 8, my + 5); g.stroke();
+    } else if (focus) {
+        // شفايف مضمومة بثقة (ابتسامة جانبية صغيرة)
+        g.fillStyle = '#d65d78'; g.beginPath(); g.moveTo(cx - 7, my + 1); g.quadraticCurveTo(cx, my + 5, cx + 8, my - 1); g.quadraticCurveTo(cx, my + 1.5, cx - 7, my + 1); g.closePath(); g.fill();
+        g.strokeStyle = '#a8405a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx - 8, my + 1); g.quadraticCurveTo(cx, my + 3, cx + 9, my - 1.5); g.stroke();
     } else {
-        // ابتسامة بشفايف وردية
-        g.fillStyle = '#d95c78'; g.beginPath(); g.moveTo(cx - 9, my); g.quadraticCurveTo(cx, my + 9, cx + 9, my); g.quadraticCurveTo(cx, my + 3.5, cx - 9, my); g.closePath(); g.fill();
-        g.strokeStyle = '#a8405a'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(cx - 10, my - .5); g.quadraticCurveTo(cx, my + 4, cx + 10, my - .5); g.stroke();
-        g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.ellipse(cx + 2.5, my + 4.6, 2.2, 1, 0, 0, TAU); g.fill();
+        // ابتسامة بشفايف وردية وأسنان تبين شوي
+        g.fillStyle = '#9a3048'; g.beginPath(); g.moveTo(cx - 10.5, my); g.quadraticCurveTo(cx, my + 11, cx + 10.5, my); g.quadraticCurveTo(cx, my + 2.5, cx - 10.5, my); g.closePath(); g.fill();
+        g.save(); g.clip(); g.fillStyle = '#fbfaf6'; g.fillRect(cx - 10.5, my, 21, 3.2); g.restore();
+        g.strokeStyle = '#c4506c'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(cx - 11.5, my - .5); g.quadraticCurveTo(cx, my + 12.5, cx + 11.5, my - .5); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(cx + 2.5, my + 8.6, 2.4, .9, 0, 0, TAU); g.fill();
     }
     g.restore();
     const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; cache.set(key, t); return t;
@@ -164,17 +191,18 @@ function bangsGeo(L) {
     const list = [];
     // الغرة: خصل قصيرة متداخلة على الجبهة
     const N = 9;
-    for (let k = 0; k < N; k++) { const f = k / (N - 1) - .5, th = f * 2.1; list.push(lockGeo(th, Math.PI * .16, Math.PI * (.2 + (k % 2) * .03 - Math.abs(f) * .04), .036, .02)); }
+    for (let k = 0; k < N; k++) { const f = k / (N - 1) - .5, th = f * 2.1; list.push(lockGeo(th, Math.PI * .14, Math.PI * (.155 + (k % 2) * .025 - Math.abs(f) * .03), .036, .02)); } // تنتهي فوق الحواجب
     // خصلتين على جنب الوجه (أطول للشعر الطويل)
     const long = L.hs === 1 || L.hs === 3;
     for (const s of [1, -1]) { list.push(lockGeo(s * 1.32, Math.PI * .3, Math.PI * (long ? .42 : .3), .04, .06)); list.push(lockGeo(s * 1.05, Math.PI * .26, Math.PI * (long ? .36 : .26), .034, .04)); }
     return list;
 }
 // نضيف الخصل لقطعة الشعر/الإكسسوار نفسها (gear بـ rig3d.js: ألوان بالرؤوس، بدون index) — بدون أمر رسم زيادة
-function addToGear(head, list, hairHex) {
-    const gear = head.children.find(o => o.isMesh && o.material && o.material.vertexColors && o.geometry && !o.geometry.index && o.geometry.attributes.color);
+function findGear(head) { return head.children.find(o => o.isMesh && o.material && o.material.vertexColors && o.geometry && !o.geometry.index && o.geometry.attributes.color); }
+function addToGear(head, list, hairHex, tint = .06) {
+    const gear = findGear(head);
     if (!gear) { list.forEach(x => x.dispose()); return null; }
-    const old = gear.geometry, c = new T.Color(hairHex).lerp(new T.Color('#ffffff'), .06);
+    const old = gear.geometry, c = new T.Color(hairHex).lerp(new T.Color('#ffffff'), tint);
     const pos = [old.attributes.position.array], nor = [old.attributes.normal.array], col = [old.attributes.color.array];
     for (const g0 of list) {
         const g = g0.toNonIndexed(); g0.dispose();
@@ -200,7 +228,7 @@ function applyGirlFace(rig, { SKIN, HAIR }, n) {
         update(dt, mood) {
             blinkT -= dt; if (blinkT < 0) { blinking = .13; blinkT = 2.6 + Math.random() * 2.6; }
             if (blinking > 0) blinking -= dt;
-            const kind = mood === 'laugh' ? 'laugh' : mood === 'scared' ? 'scared' : blinking > 0 ? 'blink' : 'smile';
+            const kind = mood === 'laugh' || mood === 'scared' || mood === 'blink' ? mood : blinking > 0 ? 'blink' : mood === 'focus' || mood === 'sad' ? mood : 'smile';
             const tex = girlFaceTex(skin, irisK, kind);
             if (headMesh.material.map !== tex) { const first = !headMesh.material.map; headMesh.material.map = tex; if (first) headMesh.material.needsUpdate = true; }
         },
@@ -208,8 +236,20 @@ function applyGirlFace(rig, { SKIN, HAIR }, n) {
     };
 }
 
+// خشم صغير بارز (بنفس مكان ظل الخشم بالرسمة) — يعطي الوجه عمق من الجنب
+function noseGeo() {
+    const ph = Math.PI * .57, g = new T.SphereGeometry(.017, 12, 8);
+    g.scale(.95, .85, .7); g.translate(0, HEAD_C + Math.cos(ph) * HEAD_R * 1.1, Math.sin(ph) * HEAD_R * .98 - .002);
+    return g;
+}
+
 export function styleChar(rig, { SKIN, HAIR, OUTFIT }, n = 0) {
     try { richenColors(rig, OUTFIT); } catch (e) { /* الألوان الأصلية تبقى */ }
-    const L = rig.look || {};
+    const L = rig.look || {}, head = rig.bones.Head;
+    try {
+        // الشماغ والغترة كانت نازلة على العيون: نرفعها شوي عشان الملامح تبين
+        if (L.g === 1 && (L.acc === 1 || L.acc === 2)) { const gr = findGear(head); if (gr) gr.geometry.translate(0, -HEAD_C, 0).rotateX(-.3).translate(0, HEAD_C + .02, -.01); } // ميلة لورا على الجبهة
+        addToGear(head, [noseGeo()], SKIN[L.s] || SKIN[1], 0);
+    } catch (e) { /* بدون الخشم */ }
     return L.g === 1 ? applyBoyFace(rig, { SKIN, HAIR }) : applyGirlFace(rig, { SKIN, HAIR }, n);
 }

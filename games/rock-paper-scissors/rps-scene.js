@@ -684,6 +684,14 @@ export function createArena(container, opts = {}) {
         if (u > 1.1) c.badge.visible = false;
     }
 
+    // تعبير الوجه حسب حالة الشخصية (rps-looks.js / rps-face.js)
+    function moodOf(p) {
+        if (p === 'win' || p === 'cheer' || p === 'dance' || p === 'clap') return 'laugh';
+        if (p === 'ko' || p === 'doom') return 'scared';
+        if (p === 'ready' || p === 'shake' || p === 'reveal') return 'focus';
+        if (p === 'oops') return 'sad';
+        return 'smile';
+    }
     // ================================================================ الحلقة
     const clock = new T.Clock(); let raf = 0, frame = 0, stopped = false;
     function tick() {
@@ -720,7 +728,7 @@ export function createArena(container, opts = {}) {
             const frozen = c.pose === 'still' && !c.walking && c.stillAt != null && now - c.stillAt > .5;
             if (c.pose === 'still' && !c.walking) { if (c.stillAt == null) c.stillAt = now; } else c.stillAt = null;
             if (!frozen && (!far || (frame + i) % (lite && chars.size > 12 ? 3 : 2) === 0)) { c.rig.update(c.acc, !far); c.acc = 0; } else if (frozen) c.acc = 0;
-            if (c.face && !frozen) c.face.update(dt, c.pose === 'win' || c.pose === 'cheer' || c.pose === 'dance' || c.pose === 'clap' ? 'laugh' : c.pose === 'ko' || c.pose === 'doom' ? 'scared' : 'smile');
+            if (c.face && !frozen) c.face.update(dt, moodOf(c.pose));
             poseChar(c, dt);
             if (c.hl || c.hlFx) {
                 const f = hlFor(c), want = c.hl ? 1 : 0; f.a += (want - f.a) * (1 - Math.exp(-dt * (c.hl ? 30 : 9)));
