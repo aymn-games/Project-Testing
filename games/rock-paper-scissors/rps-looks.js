@@ -269,7 +269,35 @@ function noseGeo() {
     return g;
 }
 
+// شكل الوجه: بدل الكرة الكاملة، النص التحتي يضيق لحنك (مدبب للبنات بأسلوب أنمي، أعرض شوي للأولاد)،
+// والحنك ينزل وينسحب لقدام شوي. نفس الـ UV، فرسمة الوجه تبقى بمكانها
+const smooth = (x, a, b) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function shapeHead(rig, girl) {
+    const head = rig.bones.Head, m = head.children.find(o => o.isMesh && o.geometry && o.geometry.type === 'SphereGeometry');
+    if (!m) return;
+    const g = m.geometry, p = g.attributes.position, RY = HEAD_R * 1.1, RZ = HEAD_R * .98;
+    const A = girl ? .27 : .2, B = girl ? .12 : .08, F = girl ? .014 : .01;
+    for (let i = 0; i < p.count; i++) {
+        let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        const ny = y / RY, nz = z / RZ, t = smooth(-ny, .18, 1.05), front = Math.max(0, nz);
+        const cheek = 1 + .045 * Math.exp(-((ny + .12) ** 2) / .02) * (girl ? 1 : .6); // خدود ممتلئة شوي فوق الحنك
+        x *= (1 - A * Math.pow(t, 1.6)) * cheek;
+        z *= 1 - .12 * t * (1 - front); // الفك من ورا أنحف
+        y *= 1 + B * t * t * (.4 + .6 * front);
+        z += F * t * t * front;
+        p.setXYZ(i, x, y, z);
+    }
+    g.computeVertexNormals();
+    // درزة الكرة (نقاط مكررة بنفس المكان): نوحّد نورمالاتها عشان ما يبين خط
+    const nr = g.attributes.normal, map = new Map();
+    for (let i = 0; i < p.count; i++) { const k = p.getX(i).toFixed(5) + ',' + p.getY(i).toFixed(5) + ',' + p.getZ(i).toFixed(5); (map.get(k) || map.set(k, []).get(k)).push(i); }
+    const v = new T.Vector3();
+    for (const ids of map.values()) { if (ids.length < 2) continue; v.set(0, 0, 0); for (const i of ids) v.x += nr.getX(i), v.y += nr.getY(i), v.z += nr.getZ(i); v.normalize(); for (const i of ids) nr.setXYZ(i, v.x, v.y, v.z); }
+    nr.needsUpdate = true; p.needsUpdate = true; g.computeBoundingSphere();
+}
+
 export function styleChar(rig, { SKIN, HAIR, OUTFIT }, n = 0) {
+    try { shapeHead(rig, (rig.look || {}).g !== 1); } catch (e) { /* يبقى كروي */ }
     try { richenColors(rig, OUTFIT); } catch (e) { /* الألوان الأصلية تبقى */ }
     const L = rig.look || {}, head = rig.bones.Head;
     try {
