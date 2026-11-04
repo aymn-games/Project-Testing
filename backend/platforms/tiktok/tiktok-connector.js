@@ -54,6 +54,15 @@ var SIGN_RATE_LIMIT_COOLDOWN_MS = 60000; // دقيقة واحدة قبل إعا�
 function isSignRateLimitCrash(err) {
     return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
 }
+/** حد التوقيع: الكسر أعلاه، أو SignatureRateLimitError الصريح (لو المكتبة انصلحت). */
+function isSignRateLimit(err) {
+    return isSignRateLimitCrash(err) || (err && ((err.constructor && err.constructor.name) || err.name)) === 'SignatureRateLimitError';
+}
+// محاولات حد التوقيع منفصلة عن MAX_RECONNECT_ATTEMPTS: كانت تُحسب منها، فبعد
+// ٥ دقايق تقريباً يوقف الموصِّل نهائياً واللعبة تبقى بدون شات وبدون أي رسالة.
+var MAX_RATE_LIMIT_RETRIES = 15; // ~١٥ دقيقة
+var RATE_LIMIT_MESSAGE = 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال دقيقة تقريباً.';
+var RATE_LIMIT_GIVE_UP_MESSAGE = 'تعذّر الاتصال ببث تيك توك بسبب حد محاولات الاتصال — جرّب مرة ثانية بعد شوي.';
 
 // ⚠️ "Failed to retrieve Room ID from all sources." (InvalidResponseCompositeError
 // من fetchRoomId بالمكتبة): فشلت كل طرق جلب رقم الغرفة (HTML، API، Euler).
@@ -308,6 +317,7 @@ function createTikTokConnector() {
     var _intentionalDisconnect = false;
     var _reconnectAttempts = 0;
     var _roomIdRetries = 0; // إعادة محاولات الاتصال الأول بسبب فشل جلب Room ID
+    var _rateLimitRetries = 0; // إعادة محاولات بسبب حد توقيع EulerStream
     var _reconnectTimer = null;
     var _username = null;
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
@@ -531,6 +541,7 @@ function createTikTokConnector() {
                 _connected = true;
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
                 _roomIdRetries = 0;
+                _rateLimitRetries = 0;
                 logger.log('TikTok Connector: connected to real TikTok LIVE for "' + _username + '".');
                 _callbacks.onStatus('connected');
             })
@@ -540,14 +551,26 @@ function createTikTokConnector() {
                 _connected = false;
                 logger.error('TikTok Connector: connect() failed:', err);
 
-                if (isSignRateLimitCrash(err)) {
-                    // تيك توك رجّع rate-limit فعلي (429) على سيرفر التوقيع —
-                    // المكتبة تكسر برسالة TypeError غامضة بدل رسالة واضحة.
-                    // نبلّغ برسالة صريحة، ونعيد المحاولة تلقائياً بعد تهدئة
-                    // أطول (بدل الباك-أوف العادي) لتفادي زيادة الحظر.
-                    logger.error('TikTok Connector: TikTok sign-server rate limit hit (library crash on retry-after parsing).');
-                    _callbacks.onStatus('error', 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال دقيقة تقريباً.');
-                    attemptReconnect(SIGN_RATE_LIMIT_COOLDOWN_MS);
+                if (isSignRateLimit(err)) {
+                    // سيرفر التوقيع (EulerStream) رجّع 429 — الحد مشترك بين كل
+                    // البثوث. نبلّغ برسالة صريحة (reason: 'rate_limited' عشان
+                    // الواجهة تعرضها)، ونعيد المحاولة بعد تهدئة أطول بعدّاد
+                    // خاص، بدون ما نستهلك محاولات إعادة الاتصال العادية.
+                    logger.error('TikTok Connector: sign-server rate limit hit for "' + _username + '" (retry ' + (_rateLimitRetries + 1) + '/' + MAX_RATE_LIMIT_RETRIES + ').');
+                    if (_rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) {
+                        _callbacks.onStatus('error', RATE_LIMIT_GIVE_UP_MESSAGE, 'rate_limited');
+                        return;
+                    }
+                    _rateLimitRetries++;
+                    _callbacks.onStatus('error', RATE_LIMIT_MESSAGE, 'rate_limited');
+                    clearReconnectTimer();
+                    var retryAsReconnect = isReconnectAttempt;
+                    _reconnectTimer = setTimeout(function () {
+                        _reconnectTimer = null;
+                        if (_intentionalDisconnect) return;
+                        _callbacks.onStatus('connecting');
+                        startConnection(retryAsReconnect);
+                    }, SIGN_RATE_LIMIT_COOLDOWN_MS);
                     return;
                 }
 
@@ -593,6 +616,7 @@ function createTikTokConnector() {
             _intentionalDisconnect = false;
             _reconnectAttempts = 0;
             _roomIdRetries = 0;
+            _rateLimitRetries = 0;
 
             if (!TikTokLib) {
                 callbacks.onStatus('error', 'tiktok-live-connector is not installed.');

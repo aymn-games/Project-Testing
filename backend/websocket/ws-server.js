@@ -434,7 +434,8 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   }
 
   connector.connect(payload, {
-    onStatus: function (status, message) {
+    // reason (اختياري): مثل 'rate_limited' — الواجهة تعرض الرسالة بس لما يكون فيه reason
+    onStatus: function (status, message, reason) {
       if (entry.activeConnector === connector) updateLiveStatus(entry, status);
       // البث انتهى فعلياً في تيك توك (الموصِّل أوقف نفسه بدون إعادة اتصال):
       // يُختَم البث، ويوصل للواجهة كـ 'disconnected' مع reason 'stream_ended'
@@ -460,7 +461,9 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
           liveSessionStats.attach(entry.statsUsername, connector.getRoomId ? connector.getRoomId() : null, connectionId);
         }
       }
-      sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
+      var statusMsg = builder.buildStatusMessage(platform, status, message);
+      if (reason) statusMsg.payload.reason = reason;
+      sendEnvelope(socket, statusMsg);
     },
 
     onComment: function (data) {
