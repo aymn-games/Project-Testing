@@ -82,8 +82,11 @@ button { font-family: inherit; cursor: pointer; }
 .caption { position: absolute; bottom: 9%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90%; }
 .caption.on { opacity: 1; }
 /* وقت لوحة نتيجة التصويت (يمين): العنوان بالمساحة اللي يسارها عشان ما يتغطى */
-body.vres .caption { bottom: 26%; left: calc((100% - min(560px, 42%) - 28px) / 2); width: calc(100% - min(560px, 42%) - 60px); }
-body.vres .caption .k { font-size: 46px; }
+/* وقت النتيجة اللوحة تملى العرض: العنوان الكبير يطلع فوق بين المؤقت وبطاقة اليوم */
+body.vres .caption { top: 66px; bottom: auto; left: 50%; width: min(64%, 1100px); }
+body.vres .caption .k { font-size: 34px; }
+body.vres .caption .s { font-size: 17px; margin-top: 2px; }
+body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; }
 .caption .k { font-size: 58px; font-weight: 900; text-shadow: 0 4px 22px rgba(0,0,0,.85), 0 0 2px #000; }
 .caption .s { font-size: 24px; font-weight: 800; color: #f1ecff; text-shadow: 0 2px 12px rgba(0,0,0,.9); margin-top: 4px; }
 .caption .role { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 999px; font-size: 22px; font-weight: 900; }
@@ -132,9 +135,12 @@ body.vres .caption .k { font-size: 46px; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
 
 /* لوحة الأصوات (وقت التصويت): كل اللاعبين الأحياء وعدد الأصوات على كل واحد */
-.votes { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(560px, 42%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.92), rgba(10,9,15,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; }
-.votes.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
-.vgrid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; scrollbar-width: none; }
+.votes { position: absolute; top: 182px; right: 14px; left: 14px; bottom: 112px;   /* تملى العرض (الأسماء واضحة)، وتحتها مكان باركود الرجوع */ display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.92), rgba(10,9,15,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; }
+.votes.off { opacity: 0; transform: translateY(20px); pointer-events: none; }
+.vgrid { flex: 1; min-height: 0; overflow: hidden; padding: 12px; scrollbar-width: none; }
+.vgrid.scroll { overflow-y: auto; }
+/* المحتوى يتكبّر/يتصغّر (zoom) عشان يملى اللوحة بالضبط حسب عدد اللاعبين — fitVotes() */
+.vfit { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));   /* بطاقة أعرض = الاسم يبان كامل */ gap: 8px; align-content: start; }
 .vgrid::-webkit-scrollbar { display: none; }
 .vp { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); overflow: hidden; transition: background .3s, border-color .3s; }
 .vp .bar { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, rgba(226,72,61,.35), rgba(226,72,61,.08)); transition: width .4s; z-index: 0; }
@@ -148,7 +154,7 @@ body.vres .caption .k { font-size: 46px; }
 .vp.top { border-color: rgba(226,72,61,.7); background: rgba(226,72,61,.12); }
 .vp.skip .av { display: grid; place-items: center; font-size: 20px; }
 /* نتيجة التصويت: صف لكل خيار ومين صوّت له */
-.votes.res .vgrid { grid-template-columns: 1fr; gap: 10px; }
+.votes.res .vfit { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; align-items: start; }
 .vr { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); animation: vrIn .4s ease-out both; }
 .vr:nth-child(2) { animation-delay: .12s; } .vr:nth-child(3) { animation-delay: .24s; } .vr:nth-child(n+4) { animation-delay: .36s; }
 @keyframes vrIn { from { opacity: 0; transform: translateY(10px); } }
@@ -479,12 +485,13 @@ body.vres .caption .k { font-size: 46px; }
         var list = alive.slice().sort(function (a, b) { return (tally[b.id] || 0) - (tally[a.id] || 0) || a.seat - b.seat; });
         $('votesCount').textContent = voters + '/' + alive.length + ' صوّتوا';
         box_h().textContent = '🗳️ الأصوات';
-        $('vgrid').innerHTML = list.map(function (p) {
+        var vh = list.map(function (p) {
             var n = tally[p.id] || 0;
             return '<div class="vp' + (n ? ' has' : '') + (n && n === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? n / alive.length * 100 : 0) + '%"></span>' +
                 '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + '</small></span><span class="n">' + n + '</span></div>';
         }).join('');
-        if (sk) $('vgrid').insertAdjacentHTML(sk === max ? 'afterbegin' : 'beforeend', '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>');
+        if (sk) { var skH = '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>'; vh = sk === max ? skH + vh : vh + skH; }
+        setVgrid(vh);
     }
     // نتيجة التصويت (مرحلة النتائج): كل خيار عليه أصوات (لاعب أو تخطي) ومين صوّت له بالاسم، واللي ما صوّتوا
     function renderVoteResults(G) {
@@ -500,15 +507,33 @@ body.vres .caption .k { font-size: 46px; }
         var none = G.players.filter(function (p) { return !votes[p.id] && (p.alive || (p.cause === 'vote' && p.diedRound === G.round) || (p.cause === 'idle' && p.diedRound === G.round)); });
         $('votesCount').textContent = total + ' صوت';
         box_h().textContent = '🗳️ نتيجة التصويت';
-        $('vgrid').innerHTML = (keys.length ? keys.map(function (k) {
+        setVgrid((keys.length ? keys.map(function (k) {
             var n = groups[k].length, p = byId[k], win = k === winKey, tieTop = !winKey && V.tie && n === max;
             var head = k === 'skip' ? '<span class="av">⏭️</span><span class="nm">تخطي</span>'
                 : '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + (win ? ' · طُرد' : '') + '</small></span>';
             return '<div class="vr' + (win ? ' win' : tieTop ? ' tie' : '') + (k === 'skip' ? ' skip' : '') + '"><div class="vp has' + (win ? ' top' : '') + '"><span class="bar" style="width:' + (total ? n / total * 100 : 0) + '%"></span>' + head + '<span class="n">' + n + '</span></div>' +
                 '<div class="voters">' + groups[k].map(chip).join('') + '</div></div>';
         }).join('') : '<div class="vnone">ما أحد صوّت</div>') +
-            (none.length ? '<div class="vr idle"><div class="vlbl">😶 ما صوّتوا (' + none.length + ')</div><div class="voters">' + none.map(function (p) { return chip(p.id); }).join('') + '</div></div>' : '');
+            (none.length ? '<div class="vr idle"><div class="vlbl">😶 ما صوّتوا (' + none.length + ')</div><div class="voters">' + none.map(function (p) { return chip(p.id); }).join('') + '</div></div>' : ''));
     }
+    // لوحة الأصوات/النتيجة «بحكم الشاشة»: المحتوى يتكبّر لين يملى اللوحة (لاعبين قلة = بطاقات كبيرة)
+    // ويتصغّر لين يدخل كامل (لاعبين كثير = بدون ما ينقص شي تحت). لو حتى بأصغر حجم ما دخل، تسكرول.
+    var VFIT_MIN = 0.6, VFIT_MAX = 1.9;
+    function setVgrid(html) { $('vgrid').innerHTML = '<div class="vfit" id="vfit">' + html + '</div>'; fitVotes(); }
+    function fitVotes() {
+        var g = $('vgrid'), f = $('vfit'); if (!g || !f || $('votes').classList.contains('off')) return;
+        // نقيس الاثنين بنفس الطريقة (getBoundingClientRect) — شاشة البث فيها تكبير/تصغير عام (80%…) يخلّط clientHeight مع المقاس الظاهر
+        var cs = getComputedStyle(g), r = g.getBoundingClientRect(), k = g.offsetHeight ? r.height / g.offsetHeight : 1;
+        var H = r.height - (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)) * k;
+        if (H <= 0) return;
+        var fits = function (z) { f.style.zoom = z; return f.getBoundingClientRect().height <= H + 1; };
+        var lo = VFIT_MIN, hi = VFIT_MAX;
+        if (fits(hi)) lo = hi;
+        else if (!fits(lo)) hi = lo;
+        else for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+        g.classList.toggle('scroll', !fits(lo));   // fits() يثبّت الحجم النهائي بعد
+    }
+    addEventListener('resize', function () { fitVotes(); });
     function box_h() { return $('votes').querySelector('.chat-h b'); }
     // ملخص الليلة اللي فاتت + آخر طرد + عدد الأحياء
     var recapKey = '';
@@ -520,9 +545,11 @@ body.vres .caption .k { font-size: 46px; }
         recapKey = key;
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var N = G.lastNight || {}, html = '<h4>🌙 ملخص الليلة ' + (N.round || G.round) + '<small>وش صار</small></h4>';
-        if (N.victim && byId[N.victim]) { var v = byId[N.victim]; html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; }
-        else if (N.saved && byId[N.saved]) { var sv = byId[N.saved]; html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; }
-        else if (!N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
+        // المافيا ممكن يهاجمون شخصين (لو اختلفوا): victims/saveds قوائم، وvictim/saved للنسخ القديمة
+        var vics = N.victims || (N.victim ? [N.victim] : []), svs = N.saveds || (N.saved ? [N.saved] : []);
+        vics.forEach(function (id) { var v = byId[id]; if (v) html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; });
+        svs.forEach(function (id) { var sv = byId[id]; if (sv) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; });
+        if (!vics.length && !svs.length && !N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
         if (N.recruited) html += '<div class="rc-row dead"><div class="ic">🤝</div><div><b>تم تجنيد لاعب</b><span>مواطن صار مع المافيا</span></div></div>';
         var X = G.lastExile;
         if (X && byId[X.id]) {
@@ -606,7 +633,7 @@ body.vres .caption .k { font-size: 46px; }
         if (stage && stage.setViewShift && (!tickUI.vsAt || now - tickUI.vsAt > 250)) {
             tickUI.vsAt = now;
             var pw = function (id) { var el = $(id); if (el.classList.contains('off')) return 0; var r = el.getBoundingClientRect(); return r.width + 16; };
-            stage.setViewShift((pw('chat') + pw('votes') - pw('recap')) / 2 / innerWidth);
+            stage.setViewShift((pw('chat') - pw('recap')) / 2 / innerWidth);   // لوحة الأصوات تملى العرض فما تحرّك المشهد
         }
         // صوت مع كل دور ليل جديد
         var tk = G && G.phase === 'night' ? G.turn + G.round : '';
@@ -650,18 +677,24 @@ body.vres .caption .k { font-size: 46px; }
                 else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
                     // نفس توقيتات ATK بالمشهد (mafia-scene.js)
-                    if (u < 3200) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
-                    else if (u < 6000) caption('👁️ في أحد يراقب من الظلام…', '', '', '#ff8a80');
+                    if (u < 3200) caption('🌙 السوق بالليل…', sh.target2 ? 'اثنين يمشون بين الدكاكين' : 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
+                    else if (u < 6000) caption(sh.target2 ? '👁️ في اثنين يراقبون من الظلام…' : '👁️ في أحد يراقب من الظلام…', '', '', '#ff8a80');
                     else if (u < 6650) caption('انتبه وراك!', '', '', '#ff8a80');
-                    else if (u < 8200) caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
-                    else caption('المافيا هرب في الظلام…', nameOf(sh.target) + ' طايح بالسوق', '', '#ff8a80');
+                    else if (u < 8200) caption('هجوم على ' + nameOf(sh.target) + (sh.target2 ? ' و' + nameOf(sh.target2) : '') + '!', '', '', '#ff5a4d');
+                    else caption(sh.target2 ? 'المافيا هربوا في الظلام…' : 'المافيا هرب في الظلام…', nameOf(sh.target) + (sh.target2 ? ' و' + nameOf(sh.target2) + ' طايحين' : ' طايح') + ' بالسوق', '', '#ff8a80');
                     if (u > 6650 && u < 7250) flash('#c40000', 0.6 * (1 - (u - 6650) / 600));
-                } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
+                } else if (sh.k === 'save') {
+                    var rs = sh.rescue || [sh.target], lost = sh.target2 ? [sh.target, sh.target2].filter(function (id) { return rs.indexOf(id) < 0; }) : [];
+                    if (rs.length > 1) caption('🩺 الطبيبين وصلوا!', 'أنقذوا ' + rs.map(nameOf).join(' و') + ' في آخر لحظة', '', '#7ee2a6');
+                    else caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(rs[0]) + ' في آخر لحظة' + (lost.length ? '… بس ' + nameOf(lost[0]) + ' ما لحقوا عليه' : ''), '', '#7ee2a6');
+                }
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر', '', '#7ee2a6');
                 else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');
                 else if (sh.k === 'result') {
-                    if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
+                    var vl = sh.victims || (sh.victim ? [sh.victim] : []);
+                    if (vl.length > 1) caption('صباح حزين ☀️', vl.map(function (id) { var q = playerOf(id); return q ? q.name : ''; }).join(' و') + ' ما نجوا من الليلة', '', '#c4b5fd');
+                    else if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
                     else caption('طلع الصبح ☀️', sh.recruited ? '🤝 بس المافيا جنّدت مواطن!' : sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#c4b5fd');
                 }
             }
