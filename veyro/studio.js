@@ -102,8 +102,10 @@
             { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
-            { label: 'الداعمين — ميداليات', sub: 'قائمة بالترتيب', type: 'top', opts: { section: 'gifters' }, set: { design: 'medals', top: 5 } },
-            { label: 'المكبّسين — بطاقات', sub: 'صور جنب بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'cards' } }
+            // «القائمة» (L1): بطاقات تحت بعض لين توب 10
+            { label: 'القائمة — المكبّسين', sub: 'توب 10 بطاقات تحت بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
+            { label: 'القائمة — الداعمين', sub: 'توب 10 بالعملات', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
+            { label: 'القائمة — الاثنين', sub: 'توب 10 يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers', 'gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
@@ -1008,17 +1010,41 @@
                 setTimeout(function () { if (O.throneDemo) O.throneDemo(it.id); }, 900);
             }), true, 'شكل الحركة لما يتبدّل القسم أو يتغيّر شخص'));
         }
-        var fk = O.THRONE_FRAMES[it.frame] ? it.frame : 'angel';
-        box.appendChild(row('شكل الإطار', pills(Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; }), fk, function (v) {
+        var stack = it.design === 'stack';
+        if (stack) {
+            var cnt = Math.min(10, Math.max(1, Math.round(Number(it.top) || 10)));
+            var nw = el('div', 'ob-pills');
+            O.STACK_COUNTS.forEach(function (n) {
+                nw.appendChild(button('توب ' + n, 'ob-pill' + (cnt === n ? ' on' : ''), function () { update(it, 'top', n, true); O.refreshStats(); }));
+            });
+            var ni = document.createElement('input');
+            ni.type = 'number'; ni.min = '1'; ni.max = '10'; ni.step = '1'; ni.inputMode = 'numeric';
+            ni.className = 'ob-input num';
+            ni.style.cssText = 'width:64px;flex:none';
+            ni.value = cnt;
+            ni.setAttribute('aria-label', 'عدد الأشخاص');
+            ni.addEventListener('change', function () {
+                var v = Math.min(10, Math.max(1, Math.round(Number(ni.value) || 1)));
+                ni.value = v;
+                update(it, 'top', v, true);
+                O.refreshStats();
+            });
+            nw.appendChild(ni);
+            box.appendChild(row('عدد الأشخاص', nw, true, 'من 1 لين 10'));
+        }
+        var frameOpts = Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; });
+        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts, [{ label: 'بدون', value: 'none' }]);
+        var fk = O.THRONE_FRAMES[it.frame] || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
+        box.appendChild(row('شكل الإطار', pills(frameOpts, fk, function (v) {
             if (it.frameColor !== 'custom') it.frameColor = 'original';
             update(it, 'frame', v, true);
-        }), true, 'الرسمة اللي حول صورة كل واحد'));
+        }), true, 'اللي حول صورة كل واحد'));
         var curFc = it.frameColor || 'original';
         if (curFc === 'ice' && fk === 'angel') curFc = 'original';
         var fw = el('div', 'ob-sw');
         O.FRAME_COLORS.forEach(function (c) {
             var b = button('', curFc === c.key ? 'on' : '', function () { update(it, 'frameColor', c.key, true); });
-            b.style.background = c.sw || ('linear-gradient(135deg,#fff 0 30%,' + O.THRONE_FRAMES[fk].glow2 + ')');
+            b.style.background = c.sw || ('linear-gradient(135deg,#fff 0 30%,' + (O.THRONE_FRAMES[fk] ? O.THRONE_FRAMES[fk].glow2 : '#b28cf5') + ')');
             b.title = c.label;
             b.setAttribute('aria-label', 'إطار ' + c.label);
             fw.appendChild(b);
@@ -1032,21 +1058,28 @@
         fp.addEventListener('input', function () { it.frameCustom = fp.value; it.frameColor = 'custom'; commit(); rebuildNode(it); });
         fp.addEventListener('change', function () { renderPanel(); });
         fw.appendChild(fp);
-        box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور — أو اختر أي لون'));
+        // الحلقة الدوّارة لونها من ألوان المراكز — لون الإطار للرسمات بس
+        if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور — أو اختر أي لون'));
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }], it.palette || 'medal', function (v) {
             update(it, 'palette', v, true);
         }), true, 'حدود الأرقام وأيقوناتها'));
         if (it.palette === 'single') box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
-        box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
+        if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
+        else box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }
 
     function topProps(it, box) {
         var designs0 = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
-        if (it.design === 'throne') {
-            box.appendChild(row('التصميم', pills(opts(designs0), 'throne', function (v) {
-                if (v !== 'throne') { it.section = (it.sections && it.sections[0]) || it.section; update(it, 'design', v, true); O.refreshStats(); }
+        if (it.design === 'throne' || it.design === 'stack') {
+            box.appendChild(row('التصميم', pills(opts(designs0), it.design, function (v) {
+                if (v === it.design) return;
+                if (v === 'stack') { it.top = 10; it.frame = 'ring'; }
+                else if (v === 'throne') { it.top = 3; if (it.frame === 'ring' || it.frame === 'none') it.frame = 'angel'; }
+                else it.section = (it.sections && it.sections[0]) || it.section;
+                update(it, 'design', v, true);
+                O.refreshStats();
             }), true));
             throneProps(it, box);
             return;
@@ -1063,7 +1096,8 @@
         box.appendChild(row('التصميم', pills(opts(designs), curD.key, function (v) {
             var d = designs.filter(function (x) { return x.key === v; })[0];
             if (d && d.max && (Number(it.top) || 3) > d.max) it.top = d.max;
-            if (v === 'throne' && !it.sections) it.sections = [it.section || 'likers'];
+            if ((v === 'throne' || v === 'stack') && !it.sections) it.sections = [it.section || 'likers'];
+            if (v === 'stack') { it.top = 10; it.frame = 'ring'; }
             update(it, 'design', v, true);
             O.refreshStats();
         }), true));

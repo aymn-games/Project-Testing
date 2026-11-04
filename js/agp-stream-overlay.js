@@ -188,7 +188,9 @@
     // بيانات تجريبية للمعاينة بالاستوديو لما ما فيه بث
     var SAMPLE_ROWS = [
         { name: 'الأول', count: 12400, diamonds: 5200 }, { name: 'الثاني', count: 8100, diamonds: 3100 },
-        { name: 'الثالث', count: 4600, diamonds: 1450 }, { name: 'الرابع', count: 2100, diamonds: 600 }, { name: 'الخامس', count: 900, diamonds: 210 }
+        { name: 'الثالث', count: 4600, diamonds: 1450 }, { name: 'الرابع', count: 2100, diamonds: 600 }, { name: 'الخامس', count: 900, diamonds: 210 },
+        { name: 'السادس', count: 760, diamonds: 150 }, { name: 'السابع', count: 540, diamonds: 96 }, { name: 'الثامن', count: 410, diamonds: 60 },
+        { name: 'التاسع', count: 300, diamonds: 32 }, { name: 'العاشر', count: 180, diamonds: 15 }
     ];
     // صور هدايا تجريبية للمعاينة (مرسومة بالكود)
     var SAMPLE_GIFT_SVGS = [
@@ -353,7 +355,7 @@
     function needs() {
         var secs = {}, totals = false;
         activeItems().forEach(function (it) {
-            if (it.type === 'top' && it.design === 'throne') throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, 3); });
+            if (isTopLive(it)) throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, liveCount(it)); });
             else if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
             else if (it.type === 'goal' || it.type === 'counter') totals = true;
         });
@@ -752,7 +754,14 @@
         angel: { label: 'جناح الملاك', file: 'angel.webp', scale: 149, left: -25.25, top: -24.5, base: 205, ring: 53.6, spark: 55, fly: 'butterfly', glow: '#9fe0ff', glow2: '#3aa8ff' },
         pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
     };
-    function frameOf(it) { return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel'; }
+    function frameOf(it) {
+        if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
+        return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel';
+    }
+    // «القائمة» (stack): عدد الأشخاص لين 10، وإطار الصور: حلقة دوّارة / رسمة / بدون
+    var STACK_COUNTS = [3, 5, 7, 10];
+    function isTopLive(it) { return it && it.type === 'top' && (it.design === 'throne' || it.design === 'stack'); }
+    function liveCount(it) { return it.design === 'stack' ? clamp(Math.round(Number(it.top) || 10), 1, 10) : 3; }
     var THRONE_CYCLES = [5, 8, 10, 15, 20, 30];
     // حركة التبديل بين الأقسام (it.transition)
     var THRONE_FX = [
@@ -770,7 +779,8 @@
     }
     /** دوران الألوان لإطار العرش: لون جاهز أو مخصص (frameColor = custom + frameCustom). */
     function frameHue(it) {
-        var base = THRONE_FRAMES[frameOf(it)].base;
+        var fd = THRONE_FRAMES[frameOf(it)];
+        var base = fd ? fd.base : 270;
         if (it.frameColor === 'custom') return Math.round(hexHue(it.frameCustom) - base);
         var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0];
         return fc && fc.t != null ? fc.t - base : 0;
@@ -791,21 +801,25 @@
 
     function buildThrone(node, it, preview) {
         title(node, it.title);
+        var stack = it.design === 'stack';
         var body = el('div', 'agp-so-lbody');
-        var box = el('div', 'agp-so-throne fk-' + frameOf(it) + (it.palette === 'single' ? ' pal-single' : ''));
+        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + (it.palette === 'single' ? ' pal-single' : ''));
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
         if (it.spacing != null) {
             var sp = clamp(Number(it.spacing) || 0, -1, 6);
-            box.style.gap = Math.max(0, sp) + 'em';
-            box.style.setProperty('--agp-so-tov', Math.min(0, sp) + 'em');
+            if (stack) box.style.setProperty('--agp-so-sgap', clamp(sp, 0, 4) + 'em');
+            else {
+                box.style.gap = Math.max(0, sp) + 'em';
+                box.style.setProperty('--agp-so-tov', Math.min(0, sp) + 'em');
+            }
         }
         var slots = {};
-        // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
-        [1, 0, 2].forEach(function (i) {
-            var slot = el('div', 'agp-so-tcol' + rkClass(i));
-            slot.style.setProperty('--d', [1, 0, 2].indexOf(i) * 0.12 + 's');
+        var order = slotOrder(it);
+        order.forEach(function (i, k) {
+            var slot = el('div', (stack ? 'agp-so-scard' : 'agp-so-tcol') + rkClass(i));
+            slot.style.setProperty('--d', k * (stack ? 0.07 : 0.12) + 's');
             slots[i] = slot;
             box.appendChild(slot);
         });
@@ -813,35 +827,45 @@
         body.appendChild(box);
         body.appendChild(wait);
         node.appendChild(body);
-        node._throne = { it: it, preview: preview, box: box, slots: slots, wait: wait, idx: -1 };
+        node._throne = { it: it, preview: preview, box: box, slots: slots, wait: wait, idx: -1, n: liveCount(it), stack: stack };
         paintThrone(node, false);
         throneNodes.push(node);
         if (!throneTimer) throneTimer = setInterval(tickThrones, 400);
     }
 
-    /** يرسم/يحدّث العرش. animate = تحديث بيانات أو تبديل قسم (حركة قلب للي تغيّر). */
+    /** ترتيب الأماكن: العرش (RTL) الثاني يمين والأول بالوسط والثالث يسار، والقائمة من فوق لتحت. */
+    function slotOrder(it) {
+        if (it.design !== 'stack') return [1, 0, 2];
+        var a = [];
+        for (var i = 0; i < liveCount(it); i++) a.push(i);
+        return a;
+    }
+
+    /** يرسم/يحدّث العرش أو القائمة. animate = تحديث بيانات أو تبديل قسم (حركة للي تغيّر). */
     function paintThrone(node, animate) {
         var t = node._throne, it = t.it;
         var secs = throneSecs(it), idx = throneIdx(it), sec = secs[idx];
-        var rows = (stats.sections[sec] || []).slice(0, 3);
+        var rows = (stats.sections[sec] || []).slice(0, t.n);
         var ghost = !rows.length && t.preview;
-        if (ghost) rows = SAMPLE_ROWS.slice(0, 3);
+        if (ghost) rows = SAMPLE_ROWS.slice(0, t.n);
         t.box.classList.toggle('agp-so-ghost', ghost);
         t.wait.textContent = rows.length ? '' : 'بانتظار ' + SECTIONS[sec].label + '…';
         t.wait.style.display = rows.length ? 'none' : '';
         var switching = animate && t.idx !== -1 && t.idx !== idx;
         t.idx = idx;
-        [1, 0, 2].forEach(function (i, order) {
+        slotOrder(it).forEach(function (i, order) {
             var slot = t.slots[i], r = rows[i];
-            if (!r) { slot.style.visibility = 'hidden'; slot._sig = null; return; }
+            if (!slot) return;
+            if (!r) { slot.style.visibility = 'hidden'; if (t.stack) slot.style.display = 'none'; slot._sig = null; return; }
             slot.style.visibility = '';
+            slot.style.display = '';
             var sig = sec + '|' + nameOf(r) + '|' + (r.avatar ? String(r.avatar).length : 0);
             if (!slot._sig) {
                 fillThroneCol(slot, r, sec, i);
                 // حركة الدخول بالبث بس (بالمحرر كل تعديل يعيد الرسم)
                 if (!animate && !t.preview) slot.classList.add('t-enter');
             } else if (switching || slot._sig !== sig) {
-                flipCol(slot, function () { fillThroneCol(slot, r, sec, i); }, order * 90, it.transition);
+                flipCol(slot, function () { fillThroneCol(slot, r, sec, i); }, order * (t.stack ? 60 : 90), it.transition);
             } else {
                 tweenNum(slot.querySelector('.agp-so-tnum'), rowNum(sec, r));
             }
@@ -851,10 +875,22 @@
 
     function fillThroneCol(slot, r, sec, i) {
         slot.textContent = '';
-        var inner = el('div', 'agp-so-tin');
         var host = slot.closest && slot.closest('.agp-so-item');
-        inner.appendChild(throneFrame(r, frameOf(host && host._throne ? host._throne.it : null)));
-        inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+        var hit = host && host._throne ? host._throne.it : null;
+        var stack = hit && hit.design === 'stack';
+        var inner = el('div', stack ? 'agp-so-sin' : 'agp-so-tin');
+        if (stack) {
+            if (i === 0) slot.appendChild(el('span', 'agp-so-ssheen'));
+            inner.appendChild(el('span', 'agp-so-snum', String(i + 1)));
+            var fk = frameOf(hit);
+            if (fk === 'ring') inner.appendChild(ringFrame(r));
+            else if (fk === 'none') { var pl = el('span', 'agp-so-fav fr-none'); pl.appendChild(avatar(r)); inner.appendChild(pl); }
+            else inner.appendChild(throneFrame(r, fk));
+            inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
+        } else {
+            inner.appendChild(throneFrame(r, frameOf(hit)));
+            inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+        }
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
         if (sec === 'gifters') {
@@ -903,6 +939,14 @@
         }(t0));
     }
 
+    /** «حلقة دوّارة» حول الصورة بلون المركز (إطار القائمة الافتراضي). */
+    function ringFrame(r) {
+        var f = el('span', 'agp-so-fav fr-ring');
+        f.appendChild(avatar(r));
+        f.appendChild(el('span', 'agp-so-fring'));
+        return f;
+    }
+
     function tickThrones() {
         throneNodes = throneNodes.filter(function (n) { return n.isConnected; });
         if (!throneNodes.length) { clearInterval(throneTimer); throneTimer = null; return; }
@@ -916,16 +960,16 @@
     function throneDemo(id) {
         throneNodes.forEach(function (n) {
             if (!n.isConnected || n.getAttribute('data-id') !== id || !n._throne) return;
-            [1, 0, 2].forEach(function (i, order) {
+            slotOrder(n._throne.it).forEach(function (i, order) {
                 var slot = n._throne.slots[i];
-                if (slot && slot._sig) flipCol(slot, function () {}, order * 90, n._throne.it.transition);
+                if (slot && slot._sig) flipCol(slot, function () {}, order * (n._throne.stack ? 60 : 90), n._throne.it.transition);
             });
         });
     }
 
     /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
     function refreshItem(node, it) {
-        if (!node || !node._throne || !it || it.design !== 'throne') return false;
+        if (!node || !node._throne || !isTopLive(it) || it.design !== node._throne.it.design || liveCount(it) !== node._throne.n) return false;
         node._throne.it = it;
         paintThrone(node, true);
         return true;
@@ -983,7 +1027,7 @@
         { key: 'minimal', label: 'بسيط' }
     ];
     // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
-    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }];
+    var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }, { key: 'stack', label: 'القائمة', max: 10, multi: true }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
@@ -1042,8 +1086,8 @@
     function title(node, text) { if (text) node.appendChild(el('div', 'agp-so-wtitle', text)); }
 
     function fillTop(node, it, preview) {
-        if (it.design === 'throne') {
-            node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-throne';
+        if (isTopLive(it)) {
+            node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-' + it.design;
             buildThrone(node, it, preview);
             return;
         }
@@ -1868,27 +1912,55 @@
         '@keyframes agp-so-coin{0%,70%,100%{transform:perspective(4em) rotateY(0)}85%{transform:perspective(4em) rotateY(360deg)}}',
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
-        '.agp-so-throne.pal-single .agp-so-tcol{--rk:var(--agp-so-c)}',
+        '.agp-so-throne.pal-single .agp-so-tcol,.agp-so-stack.pal-single .agp-so-scard{--rk:var(--agp-so-c)}',
+        /* «القائمة» (Veyro L1): بطاقات تحت بعض لين 10 */
+        '.agp-so-top.d-stack .agp-so-lbody{gap:0}',
+        '.agp-so-stack{display:flex;flex-direction:column;gap:var(--agp-so-sgap,.32em);width:14em}',
+        '.agp-so-stack:not(.pal-single) .agp-so-scard.rkn{--rk:#cfc3dc}',
+        '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
+        '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
+        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
+        '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 26%,rgba(14,12,20,.8)),rgba(14,12,20,.62) 55%,rgba(14,12,20,.45));border:.05em solid color-mix(in srgb,var(--rk) 34%,rgba(255,255,255,.06));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
+        '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
+        '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
+        '.agp-so-scard.rk1 .agp-so-sin{padding:.42em .65em .42em .6em}',
+        '.agp-so-scard.rk1{background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 40%,rgba(14,12,20,.75)),rgba(14,12,20,.55))}',
+        '.agp-so-snum{width:1.1em;flex:none;text-align:center;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;font-size:.78em;color:var(--rk);text-shadow:0 .06em .25em rgba(0,0,0,.65)}',
+        '.agp-so-scard.rk1 .agp-so-snum{font-size:1.05em}',
+        '.agp-so-stack .agp-so-fav{--s:1.35em}',
+        '.agp-so-stack .agp-so-scard.rk1 .agp-so-fav{--s:1.8em}',
+        '.agp-so-stack.fk-pegasus .agp-so-fav{margin-inline:.35em}',
+        '.agp-so-sname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.6em;color:#fff;text-shadow:0 .06em .2em rgba(0,0,0,.9)}',
+        '.agp-so-scard.rk1 .agp-so-sname{font-size:.72em}',
+        '.agp-so-stack .agp-so-tcount{margin:0;font-size:.82em}',
+        '.agp-so-stack .agp-so-scard.rk1 .agp-so-tcount{font-size:.92em}',
+        '.agp-so-ssheen{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none}',
+        '.agp-so-ssheen::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.2) 48%,transparent 66%);transform:translateX(120%);animation:agp-so-ssheen 4s ease-in-out 1s infinite}',
+        '@keyframes agp-so-ssheen{0%,60%{transform:translateX(120%)}100%{transform:translateX(-120%)}}',
+        '.agp-so-scard.t-enter{animation:agp-so-senter .6s cubic-bezier(.2,1,.3,1) both;animation-delay:var(--d)}',
+        '@keyframes agp-so-senter{0%{opacity:0;transform:translateX(-1.2em)}100%{opacity:1;transform:none}}',
+        '.fr-ring .agp-so-av,.fr-none .agp-so-av{width:100%;height:100%;padding:0;background:none;box-shadow:none}',
+        '.agp-so-fring{position:absolute;inset:-12%;border-radius:50%;pointer-events:none;background:conic-gradient(from var(--agp-so-ang,0deg),var(--rk),transparent 30%,color-mix(in srgb,var(--rk) 50%,#fff) 50%,transparent 72%,var(--rk));-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .08em));mask:radial-gradient(farthest-side,transparent calc(100% - .09em),#000 calc(100% - .08em));filter:drop-shadow(0 0 .12em var(--rk));animation:agp-so-f7spin 2.6s linear infinite}',
         '.agp-so-tin{display:flex;flex-direction:column;align-items:center;animation:agp-so-tbob 4.4s ease-in-out infinite;animation-delay:calc(var(--d) * -6)}',
         '@keyframes agp-so-tbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-.12em)}}',
         '.agp-so-tcol.t-enter{animation:agp-so-tenter .8s cubic-bezier(.2,1.3,.4,1) both;animation-delay:var(--d)}',
         '@keyframes agp-so-tenter{0%{opacity:0;transform:translateY(.8em) scale(.6)}100%{opacity:1;transform:none}}',
-        '.agp-so-tcol.t-out{transition:transform .32s ease-in,opacity .32s ease-in,filter .32s ease-in;opacity:0}',
-        '.agp-so-tcol.t-out-flip{transform:perspective(20em) rotateY(90deg) scale(.9)}',
-        '.agp-so-tcol.t-out-fade{filter:blur(.2em)}',
-        '.agp-so-tcol.t-out-slide{transform:translateX(1.4em)}',
-        '.agp-so-tcol.t-out-zoom{transform:scale(.25)}',
-        '.agp-so-tcol.t-out-drop{transform:translateY(1.2em)}',
-        '.agp-so-tcol.t-out-spin{transform:rotate(200deg) scale(.3)}',
-        '.agp-so-tcol.t-out-flash{transform:scale(1.25);filter:brightness(3) blur(.1em)}',
-        '.agp-so-tcol.t-in{animation:.55s cubic-bezier(.2,1.2,.4,1) both}',
-        '.agp-so-tcol.t-in-flip{animation-name:agp-so-tin-flip}',
-        '.agp-so-tcol.t-in-fade{animation-name:agp-so-tin-fade;animation-timing-function:ease-out}',
-        '.agp-so-tcol.t-in-slide{animation-name:agp-so-tin-slide}',
-        '.agp-so-tcol.t-in-zoom{animation-name:agp-so-tin-zoom}',
-        '.agp-so-tcol.t-in-drop{animation-name:agp-so-tin-drop;animation-duration:.7s}',
-        '.agp-so-tcol.t-in-spin{animation-name:agp-so-tin-spin;animation-duration:.7s}',
-        '.agp-so-tcol.t-in-flash{animation-name:agp-so-tin-flash;animation-timing-function:ease-out}',
+        '.agp-so-tcol.t-out,.agp-so-scard.t-out{transition:transform .32s ease-in,opacity .32s ease-in,filter .32s ease-in;opacity:0}',
+        '.agp-so-tcol.t-out-flip,.agp-so-scard.t-out-flip{transform:perspective(20em) rotateY(90deg) scale(.9)}',
+        '.agp-so-tcol.t-out-fade,.agp-so-scard.t-out-fade{filter:blur(.2em)}',
+        '.agp-so-tcol.t-out-slide,.agp-so-scard.t-out-slide{transform:translateX(1.4em)}',
+        '.agp-so-tcol.t-out-zoom,.agp-so-scard.t-out-zoom{transform:scale(.25)}',
+        '.agp-so-tcol.t-out-drop,.agp-so-scard.t-out-drop{transform:translateY(1.2em)}',
+        '.agp-so-tcol.t-out-spin,.agp-so-scard.t-out-spin{transform:rotate(200deg) scale(.3)}',
+        '.agp-so-tcol.t-out-flash,.agp-so-scard.t-out-flash{transform:scale(1.25);filter:brightness(3) blur(.1em)}',
+        '.agp-so-tcol.t-in,.agp-so-scard.t-in{animation:.55s cubic-bezier(.2,1.2,.4,1) both}',
+        '.agp-so-tcol.t-in-flip,.agp-so-scard.t-in-flip{animation-name:agp-so-tin-flip}',
+        '.agp-so-tcol.t-in-fade,.agp-so-scard.t-in-fade{animation-name:agp-so-tin-fade;animation-timing-function:ease-out}',
+        '.agp-so-tcol.t-in-slide,.agp-so-scard.t-in-slide{animation-name:agp-so-tin-slide}',
+        '.agp-so-tcol.t-in-zoom,.agp-so-scard.t-in-zoom{animation-name:agp-so-tin-zoom}',
+        '.agp-so-tcol.t-in-drop,.agp-so-scard.t-in-drop{animation-name:agp-so-tin-drop;animation-duration:.7s}',
+        '.agp-so-tcol.t-in-spin,.agp-so-scard.t-in-spin{animation-name:agp-so-tin-spin;animation-duration:.7s}',
+        '.agp-so-tcol.t-in-flash,.agp-so-scard.t-in-flash{animation-name:agp-so-tin-flash;animation-timing-function:ease-out}',
         '@keyframes agp-so-tin-flip{0%{opacity:0;transform:perspective(20em) rotateY(-90deg) scale(.9)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-tin-fade{0%{opacity:0;filter:blur(.2em)}100%{opacity:1;filter:none}}',
         '@keyframes agp-so-tin-slide{0%{opacity:0;transform:translateX(-1.4em)}100%{opacity:1;transform:none}}',
@@ -1897,9 +1969,9 @@
         '@keyframes agp-so-tin-spin{0%{opacity:0;transform:rotate(-200deg) scale(.3)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-tin-flash{0%{opacity:0;filter:brightness(3) blur(.1em);transform:scale(1.25)}100%{opacity:1;filter:none;transform:none}}',
         '.agp-so-twait{margin-top:.4em}',
-        '.agp-so-throne .agp-so-fart,.agp-so-throne .agp-so-fspk{filter:hue-rotate(var(--agp-so-fhue,0deg))}',
-        '.agp-so-throne .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em var(--agp-so-fg1,#9fe0ff))}',
-        '.agp-so-throne .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em var(--agp-so-fg1,#8fd8ff)) drop-shadow(0 0 .22em var(--agp-so-fg2,#3aa8ff))}',
+        '.agp-so-tbox .agp-so-fart,.agp-so-tbox .agp-so-fspk{filter:hue-rotate(var(--agp-so-fhue,0deg))}',
+        '.agp-so-tbox .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em var(--agp-so-fg1,#9fe0ff))}',
+        '.agp-so-tbox .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em var(--agp-so-fg1,#8fd8ff)) drop-shadow(0 0 .22em var(--agp-so-fg2,#3aa8ff))}',
         /* «الحصان المجنح» رسمته أكبر (الأجنحة والحصان برا الدائرة): صورة أصغر وأعمدة أعرض ومسافة للاسم */
         '.agp-so-throne.fk-pegasus{padding-top:2.3em}',
         '.agp-so-throne.fk-pegasus .agp-so-tcol{width:6.6em}',
@@ -2118,7 +2190,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, refreshItem: refreshItem, throneDemo: throneDemo,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
