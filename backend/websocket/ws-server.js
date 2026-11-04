@@ -319,6 +319,9 @@ function handleConnectMessage(connectionId, socket, payload) {
   if (!entry) return;
 
   var platform = payload.platform;
+  // اليوزر بدون @ ومسافات — وإلا "@name" ما يطابق الحساب الموثَّق
+  // (findVerifiedUserByTikTok تحت) فما تنحسب ساعات البث ولا الإحصائيات.
+  if (typeof payload.username === 'string') payload.username = payload.username.trim().replace(/^@+/, '').trim();
 
   // ⚠️ أي موصِّل نشط سابق لنفس هذا الاتصال يُفصَل بالكامل أولاً قبل إنشاء
   // موصِّل جديد — يمنع بقاء الموصِّل القديم يعمل بالخلفية ويكتب على نفس

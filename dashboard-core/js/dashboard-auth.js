@@ -89,7 +89,11 @@
                 var username = (tiktokUsernameInput.value || '').trim();
                 if (!username) { setStatus(tiktokStatusEl, 'اكتب يوزرنيم تيك توك أولاً.', true); return; }
                 window.AGPAuth.linkTikTok(username).then(function (result) {
-                    setStatus(tiktokStatusEl, result.success ? 'تم الربط.' : 'تعذّر الربط.', !result.success);
+                    // تغيير يوزر حساب موثَّق يلغي توثيقه (حماية من انتحال يوزر ستريمر ثاني).
+                    var msg = !result.success ? 'تعذّر الربط.'
+                        : result.verificationReset ? 'تم حفظ اليوزر — لازم توثّقه من جديد (اطلب كود وحطه بالبايو ثم اضغط "تحقق").'
+                        : 'تم الربط.';
+                    setStatus(tiktokStatusEl, msg, !result.success);
                 });
             });
         }
@@ -115,7 +119,8 @@
                 if (!username) { setStatus(tiktokStatusEl, 'اكتب يوزرنيم تيك توك أولاً.', true); return; }
                 setStatus(tiktokStatusEl, 'جارٍ التحقق…', false);
                 window.AGPAuth.verifyTikTok(username).then(function (result) {
-                    setStatus(tiktokStatusEl, result.success ? 'تم التحقق من ملكية الحساب ✅' : ('تعذّر التحقق: ' + (result.error || 'unknown')), !result.success);
+                    var err = result.error === 'tiktok_linked_to_other_account' ? 'هذا اليوزر موثَّق بحساب ثاني عندنا' : (result.error || 'unknown');
+                    setStatus(tiktokStatusEl, result.success ? 'تم التحقق من ملكية الحساب ✅' : ('تعذّر التحقق: ' + err), !result.success);
                 });
             });
         }

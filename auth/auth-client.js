@@ -355,6 +355,11 @@ function linkTikTok(tiktokUsername) {
     return request('/api/auth/tiktok/link', { method: 'POST', body: { tiktokUsername: tiktokUsername } });
 }
 
+/** رابط موافقة تيك توك لربط الحساب (الجلسة بالهيدر، مو بالرابط). يرجع {success, url}. */
+function tiktokLinkUrl() {
+    return request('/api/auth/tiktok/oauth/url', { method: 'POST' });
+}
+
 function requestTikTokVerificationCode() {
     return request('/api/auth/tiktok/verification-code', { method: 'POST' });
 }
@@ -1051,6 +1056,7 @@ global.AGPAuth = {
     syncHeaderAccountLinks: syncHeaderAccountLinks,
     keepHeaderAccountLinkSynced: keepHeaderAccountLinkSynced,
     linkTikTok: linkTikTok,
+    tiktokLinkUrl: tiktokLinkUrl,
     requestTikTokVerificationCode: requestTikTokVerificationCode,
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,

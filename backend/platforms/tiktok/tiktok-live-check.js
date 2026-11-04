@@ -23,6 +23,10 @@ try {
     TikTokLib = null;
 }
 
+// نفس مفتاح EulerStream اللي يستخدمه tiktok-connector.js — بدونه الفحص
+// يستهلك من حد الطبقة المجانية نفسه اللي تحتاجه اتصالات البث.
+var EULERSTREAM_API_KEY = process.env.EULERSTREAM_API_KEY || null;
+
 var CACHE_MS = 30000;
 var TIMEOUT_MS = 15000;
 var _cache = {}; // username -> { live, at }
@@ -53,7 +57,7 @@ function isLive(username) {
     if (_inflight[u]) return _inflight[u];
 
     var p = Promise.resolve().then(function () {
-        var conn = new TikTokLib.TikTokLiveConnection(u);
+        var conn = new TikTokLib.TikTokLiveConnection(u, EULERSTREAM_API_KEY ? { signApiKey: EULERSTREAM_API_KEY } : {});
         return withTimeout(conn.fetchIsLive());
     }).then(function (live) {
         var result = live === true ? true : live === false ? false : null;

@@ -369,7 +369,19 @@ function createTikTokConnector() {
      * كل محاولة إعادة اتصال، بنفس المنطق تماماً.
      * @param {boolean} isReconnectAttempt
      */
+    /** يفصل الاتصال السابق (لو موجود) ويشيل مستمعاته — قبل بناء اتصال جديد بإعادة المحاولة. */
+    function disposeConnection() {
+        var old = _connection;
+        _connection = null;
+        if (!old) return;
+        try { if (typeof old.removeAllListeners === 'function') old.removeAllListeners(); } catch (err) {}
+        try { old.disconnect(); } catch (err) {}
+    }
+
     function startConnection(isReconnectAttempt) {
+        // إعادة المحاولة كانت تبني اتصال جديد وتترك القديم بمستمعاته — ممكن
+        // يطلق DISCONNECTED متأخر ويبدأ إعادة اتصال ثانية بنفس الوقت.
+        disposeConnection();
         try {
             _connection = new TikTokLib.TikTokLiveConnection(
                 _username,
@@ -515,6 +527,7 @@ function createTikTokConnector() {
         _connection.connect()
             .then(function () {
                 if (_intentionalDisconnect) return; // انقطاع فُصل يدوياً قبل اكتمال هذا الاتصال — تجاهل تماماً
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل بإعادة محاولة — تجاهل
                 _connected = true;
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
                 _roomIdRetries = 0;
@@ -523,6 +536,7 @@ function createTikTokConnector() {
             })
             .catch(function (err) {
                 if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل — نتيجته ما تهم
                 _connected = false;
                 logger.error('TikTok Connector: connect() failed:', err);
 
