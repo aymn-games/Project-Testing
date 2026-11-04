@@ -183,6 +183,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/screens/media', requireAuth: true, handler: handleListScreenMedia },
   { method: 'POST', path: '/api/screens/media/upload', requireAuth: true, rawBody: true, handler: handleUploadScreenMedia },
   { method: 'POST', path: '/api/screens/media/delete', requireAuth: true, handler: handleDeleteScreenMedia },
+  { method: 'POST', path: '/api/screens/media/update', requireAuth: true, handler: handleUpdateScreenMedia },
   { method: 'GET', path: '/api/screens/media/file', requireAuth: false, handler: handleScreenMediaFile },
   { method: 'GET', path: '/api/public/screen', requireAuth: false, handler: handlePublicScreenDesign },
   { method: 'GET', path: '/api/public/screen/stats', requireAuth: false, handler: handlePublicScreenStats },
@@ -1007,6 +1008,17 @@ function handleUploadScreenMedia(req, res, body, user) {
 function handleDeleteScreenMedia(req, res, body, user) {
   if (!screensGate(res, user)) return;
   var r = screenMedia.remove(user.id, body && body.id);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+
+/** POST /api/screens/media/update { id, name?, key? } — «مكتبتي»: اسم الملف وتفريغه المحفوظ. */
+function handleUpdateScreenMedia(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  body = body || {};
+  var patch = {};
+  if (typeof body.name === 'string') patch.name = body.name;
+  if ('key' in body) patch.key = body.key;
+  var r = screenMedia.update(user.id, body.id, patch);
   sendJson(res, r.success ? 200 : 404, r);
 }
 

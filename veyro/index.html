@@ -235,6 +235,7 @@
 
   .ob-body { display: grid; grid-template-columns: minmax(0, 1fr) var(--panel-w); gap: 12px; min-height: 0; transition: grid-template-columns .35s var(--ease); }
   .ob-body.closed { grid-template-columns: minmax(0, 1fr) 0; gap: 0; }
+  .ob-body.wide { --panel-w: min(640px, 50vw); }
   .ob-panel { border-radius: 20px; overflow: hidden; min-width: 0; display: flex; flex-direction: column; transition: opacity .25s; }
   .ob-body.closed .ob-panel { opacity: 0; border: 0; }
   .ob-phead { flex: none; display: flex; align-items: flex-start; gap: 10px; padding: 18px 18px 14px; border-bottom: 1px solid var(--line); min-width: var(--panel-w); }
@@ -350,6 +351,37 @@
   .vy-media .acts { display: flex; gap: 6px; align-items: center; }
   .vy-media .acts .ob-btn { padding: 7px 12px; font-size: 12.5px; }
   .vy-media .acts .ob-btn.icon { width: 34px; height: 34px; padding: 0; }
+  /* مكتبتي */
+  .vy-libgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .vy-libgrid.sm { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .vy-lcard { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); min-width: 0; text-align: right; color: inherit; font: inherit; transition: border-color .2s, transform .25s var(--ease); }
+  .vy-lcard:hover { border-color: var(--line-2); }
+  .vy-lcard.pick { cursor: pointer; }
+  .vy-lcard.pick:hover { transform: translateY(-2px); border-color: rgba(207,195,220,.5); }
+  .vy-lcard .th { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden; background: repeating-conic-gradient(rgba(169,155,184,.1) 0 25%, transparent 0 50%) 0 0 / 14px 14px, #0d0c12; }
+  .vy-lcard .th video, .vy-lcard .th canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+  .vy-lcard .th.keyed video { opacity: 0; }
+  .vy-lcard .th .dur { position: absolute; bottom: 5px; left: 5px; padding: 1px 6px; border-radius: 6px; background: rgba(10,9,13,.8); font-size: 11px; direction: ltr; }
+  .vy-lcard .th .kb { position: absolute; top: 5px; right: 5px; padding: 1px 7px; border-radius: 99px; background: rgba(10,9,13,.75); font-size: 10.5px; color: var(--muted); }
+  .vy-lcard .th .kb.on { color: #b9f5c9; }
+  .vy-lcard .mi { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .vy-lcard .mi b, .vy-lcard .mi .nm { display: block; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vy-lcard .mi .nm { all: unset; cursor: text; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vy-lcard .mi .nm:hover { text-decoration: underline dotted; }
+  .vy-lcard .mi small { font-size: 11.5px; color: var(--muted); }
+  .vy-lcard .acts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .vy-lcard .acts .ob-btn { padding: 7px 10px; font-size: 12.5px; flex: 1 1 auto; justify-content: center; }
+  .vy-lcard .acts .ob-btn.icon { flex: none; width: 34px; height: 34px; padding: 0; }
+  .ob-gtitle { font-size: 13px; font-weight: 800; color: var(--lav-l); margin: 6px 0 -2px; }
+  .va-rules { display: flex; flex-direction: column; gap: 8px; }
+  .va-rule { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); cursor: pointer; transition: border-color .2s, opacity .2s; }
+  .va-rule:hover { border-color: var(--line-2); }
+  .va-rule.off { opacity: .55; }
+  .va-rule .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .va-rule .tx b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .va-rule .tx small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .va-range { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .va-range span { font-size: 13px; color: var(--muted); }
   .vk-sum { display: flex; align-items: center; gap: 10px; }
   .vk-sum .ic { width: 38px; height: 38px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.12); color: var(--lav-l); }
   .vk-sum .ic svg { width: 20px; height: 20px; }

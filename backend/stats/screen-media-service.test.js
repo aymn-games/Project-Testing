@@ -65,3 +65,22 @@ test('per-user file limit, and only the owner can delete', async function () {
     assert.equal(t.s.find(first), null);
     assert.equal((await t.s.upload(7, {}, body(MP4))).success, true);
 });
+
+test('library: save keying settings and rename (owner only, cleaned values)', async function () {
+    var t = svc();
+    var r = await t.s.upload(7, { name: 'برق' }, body(WEBM));
+    var id = r.media.id;
+    assert.equal(r.media.key, null);
+    var u = t.s.update(7, id, { name: 'برق أزرق', key: { on: true, mode: 'screen', floor: '#010920', sim: 9, color: 'red', evil: '<x>' } });
+    assert.equal(u.success, true);
+    assert.equal(u.media.name, 'برق أزرق');
+    assert.equal(u.media.key.mode, 'screen');
+    assert.equal(u.media.key.floor, '#010920');
+    assert.equal(u.media.key.sim, 1);
+    assert.equal(u.media.key.color, '#00ff00');
+    assert.equal(u.media.key.evil, undefined);
+    assert.equal(t.s.list(7)[0].key.mode, 'screen');
+    assert.equal(t.s.update(8, id, { name: 'x' }).error, 'not_found');
+    assert.equal(t.s.update(7, id, { key: null }).media.key, null);
+    assert.equal(t.s.list(7)[0].name, 'برق أزرق');
+});

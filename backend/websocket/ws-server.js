@@ -492,6 +492,10 @@ function handleConnectMessage(connectionId, socket, payload) {
 
     onMember: function (data) {
       if (entry.statsUsername) liveSessionStats.recordMember(entry.statsUsername, connectionId, data);
+    },
+
+    onSubscribe: function (data) {
+      if (entry.statsUsername) liveSessionStats.recordSubscribe(entry.statsUsername, connectionId, data);
     }
   });
 }
