@@ -322,6 +322,10 @@ background:radial-gradient(120% 90% at 50% 100%,rgba(255,138,101,.18),transparen
 
 .vis2{width:660px;height:220px;position:relative;flex:none}
 .vis2 canvas{position:absolute;inset:0;width:100%;height:100%}
+
+.cg{grid-template-columns:repeat(4,1fr);gap:12px}
+.cat{height:168px}
+.cat .tx{padding:0 14px}.cat .tx b{font-size:18px}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -405,7 +409,8 @@ const ON=new Set(['flags','spl','wc']);
 $('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
 // build board
 const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
-$('board').innerHTML=CATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
+const BCATS=CATS.filter(c=>c.k!=='prophets');
+$('board').innerHTML=BCATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
  [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
   return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');
 $('mini').innerHTML=svgFor(CATS[0],'m');
@@ -426,7 +431,7 @@ async function catsPhase(){
  document.querySelectorAll('.cat').forEach((c,i)=>A(c,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],{duration:550,delay:120+i*70}));
  A(document.querySelector('.cfoot'),[{opacity:0},{opacity:1}],{duration:500,delay:500});
  await sleep(1200);let n=3;
- for(const k of ['games','prophets','crests']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');SFX('pop');
+ for(const k of ['games','songs','crests']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');SFX('pop');
   c.querySelector('.chk i').animate([{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:420,easing:SPRING,fill:'both'});n++;$('cnt').textContent=n+' مختارة';A($('cnt'),[{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:300,fill:'none'});await sleep(480);}
  $('go').style.opacity=1;A($('go'),[{boxShadow:'0 10px 34px rgba(139,92,246,.45)'},{boxShadow:'0 10px 50px rgba(168,85,247,.85)'},{boxShadow:'0 10px 34px rgba(139,92,246,.45)'}],{duration:900,fill:'none'});
  await sleep(700);SFX('select');await A($('go'),[{transform:'scale(1)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:260,fill:'none'});
@@ -726,10 +731,10 @@ async function uiDemo(){
  await sleep(1600);$('cur').style.opacity=0;
 }
 async function songDemo(){
- const SC={k:'songs',t:'تخمين الأغاني',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'};
+ const SC={k:'songs',t:'الأغاني العربية',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'};
  $('cats').style.display='none';$('teams').style.opacity=1;$('board').style.visibility='hidden';
  const q=$('q');q.style.display='flex';
- $('mini').innerHTML=svgFor(SC,'sg');$('meta').querySelector('b').textContent='تخمين الأغاني';$('meta').querySelector('.pts').textContent='200';$('meta').querySelectorAll('.badge')[0].textContent='سهل';
+ $('mini').innerHTML=svgFor(SC,'sg');$('meta').querySelector('b').textContent='الأغاني العربية';$('meta').querySelector('.pts').textContent='200';$('meta').querySelectorAll('.badge')[0].textContent='سهل';
  $('flag').outerHTML=`<div class="vis2" id="vis"><canvas id="wv" width="1320" height="440"></canvas></div>`;
  $('qt').innerHTML='خمّن اسم الأغنية';$('qt').style.opacity=1;$('qt').style.fontSize='28px';$('qt').style.lineHeight='1.3';
  q.insertAdjacentHTML('beforeend','<div class="yt" id="yt"><span class="pl"></span><small>المقطع يشتغل من يوتيوب</small></div>');
