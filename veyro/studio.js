@@ -1032,6 +1032,7 @@
         }), true, 'حدود الأرقام وأيقوناتها'));
         if (it.palette === 'single') box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
+        box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }
 

@@ -782,6 +782,13 @@
         var body = el('div', 'agp-so-lbody');
         var box = el('div', 'agp-so-throne' + (it.palette === 'single' ? ' pal-single' : ''));
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
+        // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
+        // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
+        if (it.spacing != null) {
+            var sp = clamp(Number(it.spacing) || 0, -1, 6);
+            box.style.gap = Math.max(0, sp) + 'em';
+            box.style.setProperty('--agp-so-tov', Math.min(0, sp) + 'em');
+        }
         var slots = {};
         // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
         [1, 0, 2].forEach(function (i) {
@@ -1823,7 +1830,7 @@
         '.agp-so-top.d-throne .agp-so-lbody{gap:0}',
         '.agp-so-throne{display:flex;align-items:flex-end;justify-content:center;gap:.15em;padding-top:1.4em}',
         '.agp-so-tcol{display:flex;flex-direction:column;align-items:center;width:5.4em}',
-        '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em}',
+        '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em;margin-inline:var(--agp-so-tov,0em);position:relative;z-index:1}',
         '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
         '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
         '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
