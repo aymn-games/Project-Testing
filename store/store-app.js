@@ -88,6 +88,11 @@ function streamersCat() { return cats().filter(function (c) { return c.kind === 
 function catById(id) { return cats().filter(function (c) { return c.id === id; })[0] || null; }
 function productById(id) { return products().filter(function (p) { return p.id === id; })[0] || null; }
 function visible() { return products().filter(function (p) { return !p.hidden; }); }
+// قسم «الإطارات»: تصنيفات الإطارات بس (اللي اسمها فيه «إطار» + تصنيف الاستريمرز).
+// باقي التصنيفات (اشتراكات، باقات، تأثيرات…) ما تطلع لين تتفعّل أقسامها.
+function isFrameCat(c) { return !!c && (c.kind === 'streamers' || String(c.name || '').indexOf('إطار') !== -1); }
+function frameCats() { return cats().filter(isFrameCat); }
+function frameProducts() { return visible().filter(function (p) { return isFrameCat(catById(p.categoryId)); }); }
 function catName(p) { if (p.plan) return PLAN_CATEGORY; var c = catById(p.categoryId); return c ? c.name : ''; }
 function cartIds() { return Object.keys(state.cart).map(Number).filter(function (id) { return !!productById(id); }); }
 function cartProducts() { return cartIds().map(productById); }
@@ -125,7 +130,7 @@ function applyHash() {
     } else if (hsh === 'success') {
         state.view = state.lastOrder ? 'success' : 'store';
     } else if ((m = /^c-(\d+)$/.exec(hsh))) {
-        state.cat = catById(Number(m[1])) ? Number(m[1]) : 'all';
+        state.cat = isFrameCat(catById(Number(m[1]))) ? Number(m[1]) : 'all';
     } else if ((m = /^s-(\d+)(?:-(\d+))?$/.exec(hsh))) {
         var sc = streamersCat();
         if (sc) {
@@ -376,10 +381,10 @@ function sectionBar() {
 
 function catTabs() {
     var sc = streamersCat();
-    var keys = ['all'].concat(cats().map(function (c) { return c.id; }));
+    var keys = ['all'].concat(frameCats().map(function (c) { return c.id; }));
     return keys.map(function (k) {
         var c = k === 'all' ? null : catById(k);
-        var count = k === 'all' ? visible().length
+        var count = k === 'all' ? frameProducts().length
             : (sc && k === sc.id) ? streamers().length
                 : visible().filter(function (p) { return p.categoryId === k; }).length;
         return h('button', { type: 'button', role: 'tab', 'aria-selected': state.cat === k ? 'true' : 'false', 'class': 'tab' + (state.cat === k ? ' on' : ''), onclick: function () { go(k === 'all' ? '' : '#c-' + k); } },
@@ -463,7 +468,7 @@ function viewStore() {
         }
         items = all.filter(function (p) { return state.sub == null || p.subcatId === state.sub; });
     } else {
-        items = visible().filter(function (p) { return state.cat === 'all' || p.categoryId === state.cat; });
+        items = frameProducts().filter(function (p) { return state.cat === 'all' || p.categoryId === state.cat; });
     }
     out.push(items.length ? h('div', { 'class': 'grid' }, items.map(productCard)) : h('div', { 'class': 'empty-box' }, 'ما فيه منتجات هنا للحين.'));
     return out;
