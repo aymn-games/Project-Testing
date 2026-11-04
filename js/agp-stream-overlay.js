@@ -1462,7 +1462,10 @@
     // mode: color (كروما) | black | white | screen (مؤثرات مضيئة على أسود)
     // protect = يشيل بس الخلفية المتصلة بأطراف الفيديو (الأجزاء الداكنة داخل الشخصية ما تنمسح)
     // choke = يقلّص الحواف (يشيل الهالة)
-    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1, protect: true, choke: 0 };
+    // floor = لون خلفية مقاطع المؤثرات (كحلي داكن مثلاً) ينطرح قبل حساب الشفافية (screen)
+    // keepBg = يرجّع جزء من الخلفية الأصلية (0 = مفرّغة كامل، 1 = الفيديو الأصلي) — لو التفريغ خرّب شي
+    // opacity = شفافية الفيديو كله
+    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1, protect: true, choke: 0, floor: '#000000', keepBg: 0, opacity: 1 };
     // الصورة والاسم والرسالة فوق الفيديو: x/y نسبة من الفيديو، s = الحجم (em)، c = اللون
     var PARTS_DEFAULT = {
         avatar: { on: true, x: 50, y: 68, s: 2.6 },
@@ -1488,20 +1491,24 @@
     var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
     var KEY_FS = [
         'precision mediump float;',
-        'uniform sampler2D tex,msk;uniform vec3 key;uniform float sim,smo,spill,choke,useMask;uniform int mode;varying vec2 uv;',
+        'uniform sampler2D tex,msk;uniform vec3 key,flo;uniform float sim,smo,spill,choke,useMask,keepBg,opac;uniform int mode;varying vec2 uv;',
         // المسافة بين الألوان بقناتي اللون (CbCr) — الإضاءة ما تأثر، مثل OBS
         'vec2 cc(vec3 c){return vec2(dot(c,vec3(-.169,-.331,.5)),dot(c,vec3(.5,-.419,-.081)));}',
-        'void main(){vec4 c=texture2D(tex,uv);float a=1.;',
+        'void main(){vec4 c=texture2D(tex,uv);vec4 o=c;float a=1.;',
         ' if(mode==0){float t=sim*.5;float d=distance(cc(c.rgb),cc(key));a=smoothstep(t,t+smo*.5+.0001,d);',
         '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
         // مؤثرات مضيئة على أسود: الشفافية من أقوى قناة، واللون يرجع بدون السواد (زي Screen)
-        ' else if(mode==3){float mx=max(c.r,max(c.g,c.b));float t=sim*.35;a=clamp((mx-t)/max(1.-t,.001),0.,1.);a=pow(a,1./(1.+smo*4.));c.rgb=clamp(c.rgb/max(mx,.001)*min(1.,mx/max(a,.001)),0.,1.);}',
+        // نطرح لون الخلفية (flo) أول، وبعدها الشفافية من أقوى قناة واللون يرجع بدون الخلفية
+        ' else if(mode==3){c.rgb=clamp((c.rgb-flo)/max(vec3(1.)-flo,vec3(.05)),0.,1.);float mx=max(c.r,max(c.g,c.b));float t=sim*.35;a=clamp((mx-t)/max(1.-t,.001),0.,1.);a=pow(a,1./(1.+smo*4.));c.rgb=clamp(c.rgb/max(mx,.001)*min(1.,mx/max(a,.001)),0.,1.);}',
         ' else{float l=dot(c.rgb,vec3(.299,.587,.114));float t=sim*.5;',
         '  if(mode==1)a=smoothstep(t,t+smo+.0001,l);else a=1.-smoothstep(1.-t-smo-.0001,1.-t,l);}',
         // حماية الشخصية: الشفافية بس داخل الخلفية المتصلة بالأطراف
         ' if(useMask>.5){float bg=texture2D(msk,uv).r;a=mix(1.,a,bg);}',
         ' if(choke>.001)a=clamp((a-choke)/(1.-choke),0.,1.);',
-        ' a*=c.a;gl_FragColor=vec4(c.rgb*a,a);}'
+        // إرجاع الخلفية: نخلط مع الفيديو الأصلي — وبعدها شفافية الفيديو كله
+        // (نخلط النسختين وهي مضروبة بالشفافية — كذا ما يطلع لون غريب بالأماكن الداكنة)
+        ' vec3 pm=mix(c.rgb*a,o.rgb,keepBg);float fa=mix(a,1.,keepBg);',
+        ' float k=c.a*opac;gl_FragColor=vec4(pm*k,fa*k);}'
     ].join('\n');
 
     var keyers = [];
@@ -1540,7 +1547,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         var U = {};
-        ['key', 'sim', 'smo', 'spill', 'mode', 'choke', 'useMask', 'tex', 'msk'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        ['key', 'flo', 'sim', 'smo', 'spill', 'mode', 'choke', 'useMask', 'keepBg', 'opac', 'tex', 'msk'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
         gl.uniform1i(U.tex, 0);
         gl.uniform1i(U.msk, 1);
         var mtex = gl.createTexture();
@@ -1616,6 +1623,11 @@
             gl.uniform1f(U.spill, clamp(Number(key.spill), 0, 1));
             gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : key.mode === 'screen' ? 3 : 0);
             gl.uniform1f(U.choke, clamp(Number(key.choke) || 0, 0, 0.9));
+            var fl = hexRgb(key.floor || '#000000');
+            if (!/^#?[0-9a-f]{6}$/i.test(key.floor || '')) fl = [0, 0, 0];
+            gl.uniform3f(U.flo, fl[0], fl[1], fl[2]);
+            gl.uniform1f(U.keepBg, clamp(Number(key.keepBg) || 0, 0, 1));
+            gl.uniform1f(U.opac, clamp(key.opacity == null ? 1 : Number(key.opacity), 0.05, 1));
             var useMask = key.protect !== false && key.mode !== 'screen' && maskOk;
             var mk = useMask ? buildMask(key, w, h) : null;
             if (mk) {
@@ -1673,6 +1685,8 @@
             box.appendChild(k.canvas);
             k.onfail = function () { box.classList.remove('keyed'); if (k.canvas.parentNode) k.canvas.remove(); };
         }
+        // شفافية الفيديو كله لو التفريغ مطفي (لو شغّال تنطبق داخل التفريغ)
+        if (!k && key.opacity != null && Number(key.opacity) < 1) v.style.opacity = String(clamp(Number(key.opacity), 0.05, 1));
         var parts = partsOf(it);
         if (parts && (e || preview)) {
             // بالمحرر (بدون حدث): مثال عشان يشوف أماكنها
