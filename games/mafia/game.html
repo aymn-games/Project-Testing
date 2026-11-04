@@ -450,15 +450,17 @@ button { font-family: inherit; cursor: pointer; }
         var tally = {}, voters = 0; Object.keys(G.votes || {}).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; voters++; });
         var alive = G.players.filter(function (p) { return p.alive; });
         var key = JSON.stringify([tally, alive.length]); if (key === votesKey) return; votesKey = key;
-        var max = 0; alive.forEach(function (p) { max = Math.max(max, tally[p.id] || 0); });
-        var tops = alive.filter(function (p) { return max > 0 && (tally[p.id] || 0) === max; }).length;
+        // «تخطي» ينافس مثل أي لاعب (لو أخذ أكثر الأصوات ما أحد يطلع)
+        var sk = tally.skip || 0, max = sk; alive.forEach(function (p) { max = Math.max(max, tally[p.id] || 0); });
+        var tops = alive.filter(function (p) { return max > 0 && (tally[p.id] || 0) === max; }).length + (max > 0 && sk === max ? 1 : 0);
         var list = alive.slice().sort(function (a, b) { return (tally[b.id] || 0) - (tally[a.id] || 0) || a.seat - b.seat; });
         $('votesCount').textContent = voters + '/' + alive.length + ' صوّتوا';
         $('vgrid').innerHTML = list.map(function (p) {
             var n = tally[p.id] || 0;
             return '<div class="vp' + (n ? ' has' : '') + (n && n === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? n / alive.length * 100 : 0) + '%"></span>' +
                 '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + '</small></span><span class="n">' + n + '</span></div>';
-        }).join('') + (tally.skip ? '<div class="vp skip has"><span class="av">⏭️</span><span class="nm">امتناع</span><span class="n">' + tally.skip + '</span></div>' : '');
+        }).join('');
+        if (sk) $('vgrid').insertAdjacentHTML(sk === max ? 'afterbegin' : 'beforeend', '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>');
     }
     // ملخص الليلة اللي فاتت + آخر طرد + عدد الأحياء
     var recapKey = '';
@@ -626,7 +628,8 @@ button { font-family: inherit; cursor: pointer; }
             if (V && V.id) {
                 var op = playerOf(V.id);
                 caption('المواطنين قرروا طرد ' + (op ? op.name : ''), uu > 4200 ? '' : 'القفص نازل…', uu > 4200 && op ? roleBadge(op) : '', '#c4b5fd');
-            } else caption(V && V.tie ? 'تعادل بالأصوات' : 'ما أحد طلع', 'ما اتفقوا هالمرة', '', '#c4b5fd');
+            } else if (V && V.skip) caption('الأغلبية اختارت التخطي ⏭️', 'ما أحد طلع هالمرة (' + V.votes + ' صوت)', '', '#c4b5fd');
+            else caption(V && V.tie ? 'تعادل بالأصوات' : 'ما أحد طلع', 'ما اتفقوا هالمرة', '', '#c4b5fd');
         } else if (G.phase === 'over') {
             banner('');
             renderOver(G);
