@@ -2,7 +2,7 @@
  * «حجرة ورقة مقص» — يد ثلاثية الأبعاد بأصابع ومفاصل (للقطة القريبة وقت الكشف بـ rps-scene.js).
  *
  * makeHand({ skin, sleeve, left, bare, env }) ← { group, setPose(name), snap(name), update(dt), dispose() }
- *   bare: بدون رسغ وكم (اليد تنركّب على ذراع الشخصية) · env: خريطة انعكاس للجلد والأظافر
+ *   bare: بدون رسغ وكم (اليد تنركّب على ذراع الشخصية) · env: خريطة انعكاس للأظافر
  *   - اليد بإحداثياتها: الأصابع لفوق (+Y)، باطن الكف لقدام (+Z)، الإبهام على +X (يد يمين).
  *   - كل إصبع 3 سلاميات (الإبهام: مشط + سلاميتين)، وكل مفصل يدور حول محوره، فالوضعيات
  *     (حجرة/ورقة/مقص) مجرد زوايا للمفاصل، والتنقّل بينها سلس (lerp).
@@ -45,9 +45,10 @@ function seg(len, r0, r1, mat) {
 }
 
 export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false, bare = false, env = null } = {}) {
-    const skinM = new T.MeshPhysicalMaterial({ color: skin, roughness: .62, metalness: 0, sheen: .25, sheenRoughness: .7, sheenColor: new T.Color('#ff9f87'), envMapIntensity: .35 });
-    const nailM = new T.MeshPhysicalMaterial({ color: new T.Color(skin).lerp(new T.Color('#f3cfc6'), .5), roughness: .3, clearcoat: .5, envMapIntensity: .5 });
-    const knuckleTone = new T.MeshPhysicalMaterial({ color: new T.Color(skin).multiplyScalar(.94), roughness: .64, sheen: .2, sheenColor: new T.Color('#ff9f87'), envMapIntensity: .35 });
+    // نفس خامة جسم الشخصية (Standard بدون انعكاس) عشان لون اليد يطابق الذراع، وأخف على الجوال
+    const skinM = new T.MeshStandardMaterial({ color: skin, roughness: .62, metalness: 0 });
+    const nailM = new T.MeshStandardMaterial({ color: new T.Color(skin).lerp(new T.Color('#f3cfc6'), .5), roughness: .32, envMapIntensity: .4 });
+    const knuckleTone = new T.MeshStandardMaterial({ color: new T.Color(skin).multiplyScalar(.94), roughness: .64, metalness: 0 });
 
     const group = new T.Group(), hand = new T.Group(); group.add(hand);
     if (left) group.scale.x = -1;
@@ -71,7 +72,7 @@ export function makeHand({ skin = '#e8b896', sleeve = '#2d3442', left = false, b
         const sleeveMesh = new T.Mesh(new T.CylinderGeometry(.36, .38, .7, 28), sleeveM); sleeveMesh.scale.z = .72; sleeveMesh.position.y = -.5; hand.add(sleeveMesh);
         const cuff = new T.Mesh(new T.TorusGeometry(.355, .035, 10, 32), sleeveM); cuff.rotation.x = Math.PI / 2; cuff.scale.y = .72; cuff.position.y = -.16; hand.add(cuff);
     }
-    if (env) [skinM, nailM, knuckleTone].forEach(m => { m.envMap = env; });
+    if (env) nailM.envMap = env; // الجلد بدون انعكاس (نفس الذراع)
 
     const joints = {};
     for (const [name, x, z, lens, r] of FINGERS) {
