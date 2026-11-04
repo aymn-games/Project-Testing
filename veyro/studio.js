@@ -1425,6 +1425,7 @@
             }), false, 'بالماس'));
         }
         box.appendChild(row('الصوت', slider(0, 1, 0.05, it.volume == null ? 0.8 : it.volume, function (v) { it.volume = v; commit(); }), false, 'صوت الفيديو نفسه'));
+        durationRows(it, box);
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
         box.appendChild(row('الحجم', slider(1, 20, 0.1, it.size, function (v) { update(it, 'size', v); })));
         var parts = O.partsOf(it);
@@ -1453,7 +1454,7 @@
             box.appendChild(row('لون النص', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
             box.appendChild(el('div', 'ob-hint', 'بالنص: {name} اسم المشاهد، {gift} اسم الهدية، {count} العدد، {diamonds} الماس.'));
         }
-        box.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. يشتغل كامل مع كل حدث، والأحداث اللي تجي وقتها تنتظر دورها.'));
+        box.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. الأحداث اللي تجي وقت الأليرت تنتظر دورها.'));
     }
 
     /** أزرار تضبط حجم الأليرت على الشاشة (حسب أبعاد الفيديو واتجاه الشاشة) وتوسّطه. */
@@ -1474,14 +1475,44 @@
         return w;
     }
 
+    /** مدة أليرت الفيديو: تلقائي (مدة الفيديو) أو مخصصة، ووش يصير لو أطول من الفيديو. */
+    function durationRows(it, box) {
+        var vd = Number(it.video.d) || 0;
+        var own = Number(it.vlen) > 0;
+        box.appendChild(row('مدة الأليرت', pills([{ label: 'تلقائي' + (vd ? ' (' + fmtSec(vd) + ')' : ''), value: 'auto' }, { label: 'أحددها', value: 'own' }], own ? 'own' : 'auto', function (v) {
+            if (v === 'auto') delete it.vlen;
+            else it.vlen = Math.max(1, Math.round((vd || 5) * 2) / 2);
+            commit(); rebuildNode(it); renderPanel();
+        }), true, vd ? 'مدة الفيديو ' + fmtSec(vd) : 'تنحسب من الفيديو'));
+        if (!own) return;
+        var lab = el('b', 'va-durv', fmtSec(it.vlen));
+        var s = slider(1, 60, 0.5, it.vlen, function (v) { it.vlen = v; lab.textContent = fmtSec(v); commit(); });
+        s.addEventListener('change', function () { renderPanel(); });
+        var wrap = el('div', 'va-dur');
+        wrap.appendChild(button('−', 'ob-pill', function () { it.vlen = Math.max(1, it.vlen - 0.5); commit(); renderPanel(); }));
+        wrap.appendChild(s);
+        wrap.appendChild(button('+', 'ob-pill', function () { it.vlen = Math.min(60, it.vlen + 0.5); commit(); renderPanel(); }));
+        wrap.appendChild(lab);
+        box.appendChild(row('المدة', wrap, true, 'تنقصها تنقص الفيديو، وتزودها يكمل بعد نهايته'));
+        if (vd && it.vlen > vd + 0.05) {
+            box.appendChild(row('بعد نهاية الفيديو', pills([{ label: 'يوقف على آخر لقطة', value: 'hold' }, { label: 'يعيد الفيديو', value: 'loop' }], it.vend === 'loop' ? 'loop' : 'hold', function (v) {
+                update(it, 'vend', v, true);
+            }), true));
+        }
+    }
+    function fmtSec(d) { d = Math.round((Number(d) || 0) * 10) / 10; return (d % 1 ? d.toFixed(1) : String(d)) + ' ث'; }
+
+    var PART_NAMES = { avatar: 'الصورة', name: 'الاسم', msg: 'الرسالة' };
+    var partSel = 'name';
+
     /**
      * ترتيب الصورة والاسم والرسالة فوق الفيديو: معاينة صغيرة بنفس النسب،
-     * تسحب كل عنصر لمكانه، ولكل عنصر إظهار وحجم ولون.
+     * تسحب كل عنصر لمكانه (أو تحركه بالأسهم)، ولكل عنصر خط ولون وحجم ووقت ظهور واختفاء.
      */
     function partsEditor(it, box, parts) {
         var card = el('div', 'ob-card va-parts');
         card.appendChild(el('h3', null, 'الصورة والاسم والرسالة'));
-        card.appendChild(el('div', 'ob-hint', 'اسحب أي عنصر لمكانه على الفيديو.'));
+        card.appendChild(el('div', 'ob-hint', 'اسحب أي عنصر لمكانه، أو اضغطه وعدّله تحت. ▶ يشغّل المعاينة بالتوقيت.'));
         var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
         var wEm = 18 * Math.min(1, vw / vh);
         var lay = el('div', 'va-lay');
@@ -1491,12 +1522,63 @@
         v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
         v.src = O.videoFileUrl(it.video.id) + '#t=0.6';
         lay.appendChild(v);
+        // مدة الفيديو تلقائي: لو الأليرت قديم وما فيه مدة، ناخذها من الفيديو ونحفظها
+        v.addEventListener('loadedmetadata', function () {
+            if (!(Number(it.video.d) > 0) && isFinite(v.duration) && v.duration > 0) {
+                it.video.d = Math.round(v.duration * 100) / 100;
+                commit(); renderPanel();
+            }
+        }, { once: true });
         var k = O.keyOf(it);
         if (k.on) {
             var kr = O.makeKeyer(v, function () { return O.keyOf(it); });
             if (kr) { lay.appendChild(kr.canvas); lay.className += ' keyed'; kr.onfail = function () { lay.classList.remove('keyed'); }; }
         }
         card.appendChild(lay);
+
+        // تشغيل المعاينة بالتوقيت
+        var bar = el('div', 'va-play');
+        var playB = button('▶ شغّل', 'ob-pill', function () { playing ? stopPlay() : startPlay(); });
+        var clock = el('span', 'va-clock', '0.0 ث');
+        bar.appendChild(playB);
+        bar.appendChild(clock);
+        card.appendChild(bar);
+        var playing = false, t0 = 0, raf = 0;
+        function len() { return O.videoAlertLen(it) || Number(it.video.d) || 5; }
+        function showAt(t) {
+            Object.keys(chips).forEach(function (key) {
+                var p = O.partsOf(it)[key], c = chips[key];
+                var vis = t == null || (t >= (Number(p.t) || 0) && (!(Number(p.e) > 0) || t < Number(p.e)));
+                c.classList.toggle('va-off', !vis);
+            });
+        }
+        function tick() {
+            if (!playing) return;
+            var t = (performance.now() - t0) / 1000;
+            if (t >= len()) { stopPlay(); return; }
+            var vd = Number(it.video.d) || v.duration || 0;
+            if (vd && t > vd && it.vend === 'loop' && v.ended) { v.currentTime = 0; v.play().catch(function () {}); }
+            clock.textContent = t.toFixed(1) + ' / ' + fmtSec(len());
+            showAt(t);
+            raf = requestAnimationFrame(tick);
+        }
+        function startPlay() {
+            playing = true; playB.textContent = '■ وقّف';
+            try { v.currentTime = 0; } catch (e) { /* ignore */ }
+            v.play().catch(function () {});
+            t0 = performance.now();
+            tick();
+        }
+        function stopPlay() {
+            playing = false; playB.textContent = '▶ شغّل';
+            cancelAnimationFrame(raf);
+            v.pause();
+            try { v.currentTime = 0.6; } catch (e) { /* ignore */ }
+            clock.textContent = fmtSec(len());
+            showAt(null);
+        }
+        clock.textContent = fmtSec(len());
+
         var ev = { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
         var chips = {};
         function emPx() { return lay.clientWidth / wEm; }
@@ -1506,21 +1588,28 @@
             c.style.display = p.on ? '' : 'none';
             c.style.left = p.x + '%';
             c.style.top = p.y + '%';
+            c.classList.toggle('sel', key === partSel);
             var px = emPx();
-            if (key === 'avatar') { c.style.width = c.style.height = (p.s * px) + 'px'; }
-            else { c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c; }
+            if (key === 'avatar') { c.style.width = c.style.height = (p.s * px) + 'px'; c.style.boxShadow = '0 0 0 2px ' + (p.c || '#fff'); }
+            else {
+                c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
+                var f = O.fontOf(p.f || 'notokufi'); O.loadFont(f);
+                c.style.fontFamily = O.fontStack(f); c.style.fontWeight = String(Math.max(700, f.b));
+            }
         }
         [['avatar', ''], ['name', ev.user], ['msg', (it.msg && it.msg[ev.type]) || O.PART_MSGS[ev.type]]].forEach(function (x) {
             var c = el('div', 'va-chip va-' + x[0], x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]);
             if (x[0] === 'avatar') c.appendChild(el('span', null, 'ا'));
-            c.title = x[0] === 'avatar' ? 'الصورة' : x[0] === 'name' ? 'الاسم' : 'الرسالة';
+            c.title = PART_NAMES[x[0]];
             chips[x[0]] = c;
             lay.appendChild(c);
             c.addEventListener('pointerdown', function (e) {
                 e.preventDefault();
                 c.setPointerCapture(e.pointerId);
                 c.classList.add('drag');
+                var moved = false;
                 function mv(ev2) {
+                    moved = true;
                     var r = lay.getBoundingClientRect();
                     var px2 = Math.max(0, Math.min(100, (ev2.clientX - r.left) / r.width * 100));
                     var py2 = Math.max(0, Math.min(100, (ev2.clientY - r.top) / r.height * 100));
@@ -1532,8 +1621,8 @@
                     c.removeEventListener('pointermove', mv);
                     c.removeEventListener('pointerup', up);
                     c.removeEventListener('pointercancel', up);
-                    commit();
-                    rebuildNode(it);
+                    if (moved) { commit(); rebuildNode(it); }
+                    if (partSel !== x[0]) { partSel = x[0]; renderPanel(); }
                 }
                 c.addEventListener('pointermove', mv);
                 c.addEventListener('pointerup', up);
@@ -1541,7 +1630,27 @@
             });
         });
         requestAnimationFrame(function () { Object.keys(chips).forEach(paintChip); });
+
+        // خط الوقت: متى يطلع ويختفي كل عنصر
+        var tl = el('div', 'va-tl');
+        var L = len();
+        Object.keys(PART_NAMES).forEach(function (key) {
+            var p = parts[key];
+            var r = el('div', 'va-tlr' + (key === partSel ? ' sel' : '') + (p.on ? '' : ' off'));
+            r.appendChild(el('span', 'va-tln', PART_NAMES[key]));
+            var track = el('div', 'va-tlt');
+            var a = Math.min(1, (Number(p.t) || 0) / L), b = Number(p.e) > 0 ? Math.min(1, Number(p.e) / L) : 1;
+            var fill = el('i');
+            fill.style.insetInlineStart = (a * 100) + '%';
+            fill.style.width = Math.max(2, (b - a) * 100) + '%';
+            track.appendChild(fill);
+            r.appendChild(track);
+            r.addEventListener('click', function () { partSel = key; renderPanel(); });
+            tl.appendChild(r);
+        });
+        card.appendChild(tl);
         box.appendChild(card);
+
         function setPart(key, field, val, repaint) {
             it.parts[key] = Object.assign({}, O.partsOf(it)[key]);
             it.parts[key][field] = val;
@@ -1550,13 +1659,66 @@
             paintChip(key);
             if (repaint) renderPanel();
         }
-        [['avatar', 'صورة الداعم', 1, 6], ['name', 'اسم الداعم', 0.4, 3], ['msg', 'الرسالة', 0.4, 3]].forEach(function (x) {
-            var p = parts[x[0]];
-            box.appendChild(row(x[1], toggle(p.on, function (val) { setPart(x[0], 'on', val, true); })));
-            if (!p.on) return;
-            box.appendChild(row('حجم ' + (x[0] === 'avatar' ? 'الصورة' : x[0] === 'name' ? 'الاسم' : 'الرسالة'), slider(x[2], x[3], 0.05, p.s, function (val) { setPart(x[0], 's', val); })));
-            if (x[0] !== 'avatar') box.appendChild(row('لون ' + (x[0] === 'name' ? 'الاسم' : 'الرسالة'), swatches(p.c, function (c) { setPart(x[0], 'c', c, true); }), true));
-        });
+
+        // اختيار العنصر
+        box.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); }), true));
+        var key = partSel, p = parts[key], nm = PART_NAMES[key];
+        box.appendChild(row('إظهار ' + nm, toggle(p.on, function (val) { setPart(key, 'on', val, true); })));
+        if (p.on) {
+            // التحريك الدقيق
+            var nudge = el('div', 'va-nudge');
+            [['↑', 0, -1, 'فوق'], ['↓', 0, 1, 'تحت'], ['→', 1, 0, 'يمين'], ['←', -1, 0, 'يسار']].forEach(function (d) {
+                var b = button(d[0], 'ob-pill', function () {
+                    var q = O.partsOf(it)[key];
+                    it.parts[key] = Object.assign({}, q, { x: Math.max(0, Math.min(100, Math.round((q.x + d[1]) * 10) / 10)), y: Math.max(0, Math.min(100, Math.round((q.y + d[2]) * 10) / 10)) });
+                    commit(); rebuildNode(it); paintChip(key);
+                });
+                b.setAttribute('aria-label', d[3]);
+                nudge.appendChild(b);
+            });
+            nudge.appendChild(button('بالنص', 'ob-pill', function () { setPart(key, 'x', 50); }));
+            box.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
+            var mn = key === 'avatar' ? 1 : 0.4, mx = key === 'avatar' ? 8 : 3;
+            box.appendChild(row('حجم ' + nm, slider(mn, mx, 0.05, p.s, function (val) { setPart(key, 's', val); })));
+            box.appendChild(row(key === 'avatar' ? 'لون إطار الصورة' : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
+            if (key !== 'avatar') {
+                var g = el('div', 'ob-fgrid');
+                var curF = p.f || 'notokufi';
+                O.FONTS.forEach(function (f) {
+                    O.loadFont(f);
+                    var fb = button('', 'ob-fbtn' + (f.key === curF ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
+                    var sample = el('span', null, key === 'name' ? 'أيمن' : 'شكراً');
+                    sample.style.fontFamily = O.fontStack(f);
+                    sample.style.fontWeight = String(f.b);
+                    fb.appendChild(sample);
+                    fb.appendChild(el('span', null, f.label));
+                    g.appendChild(fb);
+                });
+                box.appendChild(row('خط ' + nm, g, true));
+            }
+            // التوقيت
+            var tLab = el('b', 'va-durv', fmtSec(p.t || 0));
+            var tw = el('div', 'va-dur');
+            tw.appendChild(slider(0, Math.max(1, L), 0.1, Number(p.t) || 0, function (val) { tLab.textContent = fmtSec(val); setPart(key, 't', val); }));
+            tw.appendChild(tLab);
+            tw.lastChild.previousSibling.addEventListener('change', function () { renderPanel(); });
+            box.appendChild(row('يطلع بعد', tw, true, 'من بداية الأليرت'));
+            var eOn = Number(p.e) > 0;
+            box.appendChild(row('يختفي', pills([{ label: 'مع نهاية الأليرت', value: 0 }, { label: 'بوقت أحدده', value: 1 }], eOn ? 1 : 0, function (val) {
+                setPart(key, 'e', val ? Math.min(L, Math.max((Number(p.t) || 0) + 1, L - 1)) : 0, true);
+            }), true));
+            if (eOn) {
+                var eLab = el('b', 'va-durv', fmtSec(p.e));
+                var ew = el('div', 'va-dur');
+                var es = slider(0.5, Math.max(1, L), 0.1, Number(p.e), function (val) { eLab.textContent = fmtSec(val); setPart(key, 'e', val); });
+                es.addEventListener('change', function () { renderPanel(); });
+                ew.appendChild(es);
+                ew.appendChild(eLab);
+                box.appendChild(row('يختفي عند', ew, true));
+            }
+            box.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
+        }
+
         var evs = Array.isArray(it.events) ? it.events : [];
         it.msg = it.msg || {};
         evs.forEach(function (x) {
