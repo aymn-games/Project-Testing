@@ -587,8 +587,10 @@
         frame.style.width = box.w + 'px';
         frame.style.height = box.h + 'px';
         var pv = PREVIEWS.filter(function (p) { return p.key === st.preview; })[0] || PREVIEWS[0];
-        frame.className = 'ob-frame ' + (pv.img ? 'bg-img' : 'bg-' + pv.key);
-        frame.style.backgroundImage = pv.img ? 'url("' + pv.img + '")' : '';
+        // «صورتك»: خلفية من جهاز الستريمر للمعاينة بس — بالذاكرة، ما تنحفظ بالشاشة ولا تطلع بالرابط
+        var bgImg = localBg || pv.img;
+        frame.className = 'ob-frame ' + (bgImg ? 'bg-img' : 'bg-' + pv.key);
+        frame.style.backgroundImage = bgImg ? 'url("' + bgImg + '")' : '';
         frame.textContent = '';
         nodes = {};
         var tag = el('div', 'ob-ftag');
@@ -717,17 +719,44 @@
         }
     });
 
+    var localBg = null; // رابط blob: لصورة من الجهاز (بالذاكرة بس)
+    function setLocalBg(file) {
+        if (localBg) { try { URL.revokeObjectURL(localBg); } catch (e) { /* ignore */ } }
+        localBg = file ? URL.createObjectURL(file) : null;
+        renderCanvas();
+        renderZoom();
+        if (file) toast('خلفيتك للمعاينة بس — ما تنحفظ ولا تطلع برابط الشاشة');
+    }
     function renderZoom() {
         zoomBar.textContent = '';
         zoomBar.appendChild(el('span', null, 'خلفية المعاينة'));
         PREVIEWS.forEach(function (p) {
-            zoomBar.appendChild(button(p.label, 'ob-btn' + ((S().preview || 'checker') === p.key ? ' primary' : ' ghost'), function () {
+            zoomBar.appendChild(button(p.label, 'ob-btn' + (!localBg && (S().preview || 'checker') === p.key ? ' primary' : ' ghost'), function () {
+                if (localBg) setLocalBg(null);
                 S().preview = p.key;
                 commit();
                 renderCanvas();
                 renderZoom();
             }));
         });
+        var up = el('label', 'ob-btn' + (localBg ? ' primary' : ' ghost'));
+        up.title = 'صورة من جهازك تشوف عليها الشاشة وانت تصممها (ما تنحفظ)';
+        up.innerHTML = svg(ic('upload'));
+        up.appendChild(el('span', null, 'صورتك'));
+        var fin = document.createElement('input');
+        fin.type = 'file';
+        fin.accept = 'image/*';
+        fin.hidden = true;
+        fin.addEventListener('change', function () { var f = fin.files && fin.files[0]; fin.value = ''; if (f) setLocalBg(f); });
+        up.appendChild(fin);
+        zoomBar.appendChild(up);
+        if (localBg) {
+            var x = button('', 'ob-btn ghost icon', function () { setLocalBg(null); });
+            x.innerHTML = svg(UI.close);
+            x.title = 'شيل صورتك';
+            x.setAttribute('aria-label', 'شيل صورتك');
+            zoomBar.appendChild(x);
+        }
     }
 
     /* ---------------- اللوحة ---------------- */
@@ -1358,10 +1387,11 @@
         box.appendChild(lib);
     }
 
-    var KEY_MODES = [{ label: 'لون (كروما)', value: 'color' }, { label: 'خلفية سوداء', value: 'black' }, { label: 'خلفية بيضاء', value: 'white' }];
+    var KEY_MODES = [{ label: 'لون (كروما)', value: 'color' }, { label: 'خلفية سوداء', value: 'black' }, { label: 'خلفية بيضاء', value: 'white' }, { label: 'مؤثرات مضيئة', value: 'screen' }];
     function keySummary(k) {
         if (!k.on) return 'بدون تفريغ';
-        return k.mode === 'black' ? 'مفرّغ: خلفية سوداء' : k.mode === 'white' ? 'مفرّغ: خلفية بيضاء' : 'مفرّغ: لون ' + k.color;
+        var m = k.mode === 'black' ? 'خلفية سوداء' : k.mode === 'white' ? 'خلفية بيضاء' : k.mode === 'screen' ? 'مؤثرات مضيئة' : 'لون ' + k.color;
+        return 'مفرّغ: ' + m + (k.mode !== 'screen' && k.protect !== false ? ' · الشخصية محمية' : '');
     }
 
     function videoAlertProps(it, box) {
@@ -1395,9 +1425,24 @@
             }), false, 'بالماس'));
         }
         box.appendChild(row('الصوت', slider(0, 1, 0.05, it.volume == null ? 0.8 : it.volume, function (v) { it.volume = v; commit(); }), false, 'صوت الفيديو نفسه'));
-        box.appendChild(row('الحجم', slider(1, 14, 0.1, it.size, function (v) { update(it, 'size', v); })));
-        box.appendChild(row('نص فوق الفيديو', toggle(it.showText !== false, function (v) { update(it, 'showText', v, true); }), false, 'اسم الداعم والهدية'));
-        if (it.showText !== false) {
+        box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
+        box.appendChild(row('الحجم', slider(1, 20, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        var parts = O.partsOf(it);
+        if (parts) {
+            partsEditor(it, box, parts);
+        } else {
+            var conv = el('div', 'ob-card');
+            conv.appendChild(el('h3', null, 'الصورة والاسم والرسالة'));
+            conv.appendChild(el('div', 'ob-hint', 'خلّها عناصر منفصلة تحركها بأي مكان على الفيديو، كل وحدة بحجمها ولونها.'));
+            conv.appendChild(button('رتّبها بنفسي', 'ob-btn primary', function () {
+                it.parts = JSON.parse(JSON.stringify(O.PARTS_DEFAULT));
+                it.msg = Object.assign({}, O.PART_MSGS);
+                commit(); rebuildNode(it); renderPanel();
+            }));
+            box.appendChild(conv);
+        }
+        if (!parts) box.appendChild(row('نص فوق الفيديو', toggle(it.showText !== false, function (v) { update(it, 'showText', v, true); }), false, 'اسم الداعم والهدية'));
+        if (!parts && it.showText !== false) {
             box.appendChild(row('مكان النص', pills([{ label: 'فوق', value: 'top' }, { label: 'الوسط', value: 'middle' }, { label: 'تحت', value: 'bottom' }], it.textPos || 'bottom', function (v) { update(it, 'textPos', v, true); })));
             it.msg = it.msg || {};
             evs.forEach(function (x) {
@@ -1411,7 +1456,119 @@
         box.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. يشتغل كامل مع كل حدث، والأحداث اللي تجي وقتها تنتظر دورها.'));
     }
 
-    /* أداة التفريغ: معاينة كبيرة + لون/أسود/أبيض + قطّارة + تلقائي + القوة والنعومة والانعكاس */
+    /** أزرار تضبط حجم الأليرت على الشاشة (حسب أبعاد الفيديو واتجاه الشاشة) وتوسّطه. */
+    function sizeShortcuts(it) {
+        var w = el('div', 'ob-pills');
+        [['ملء الشاشة', 1], ['نص الشاشة', 0.5], ['ثلث', 0.34]].forEach(function (x) {
+            w.appendChild(button(x[0], 'ob-pill', function () {
+                var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
+                var wEm = 18 * Math.min(1, vw / vh), hEm = 18 * Math.min(1, vh / vw);
+                var Fw = orientNow() === 'l' ? 1920 : 1080, Fh = orientNow() === 'l' ? 1080 : 1920;
+                var size = x[1] * Math.min(Fw / wEm, Fh / hEm) * 100 / Math.min(Fw, Fh);
+                it.size = Math.round(size * 100) / 100;
+                it.pos[curKey()] = { x: 0.5, y: 0.5 };
+                commit(); rebuildNode(it); renderPanel();
+            }));
+        });
+        w.appendChild(button('بالوسط', 'ob-pill', function () { it.pos[curKey()] = { x: 0.5, y: 0.5 }; commit(); placeNode(it); }));
+        return w;
+    }
+
+    /**
+     * ترتيب الصورة والاسم والرسالة فوق الفيديو: معاينة صغيرة بنفس النسب،
+     * تسحب كل عنصر لمكانه، ولكل عنصر إظهار وحجم ولون.
+     */
+    function partsEditor(it, box, parts) {
+        var card = el('div', 'ob-card va-parts');
+        card.appendChild(el('h3', null, 'الصورة والاسم والرسالة'));
+        card.appendChild(el('div', 'ob-hint', 'اسحب أي عنصر لمكانه على الفيديو.'));
+        var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
+        var wEm = 18 * Math.min(1, vw / vh);
+        var lay = el('div', 'va-lay');
+        lay.style.aspectRatio = vw + ' / ' + vh;
+        if (vh > vw) lay.style.width = Math.round(220 * vw / vh) + 'px';
+        var v = document.createElement('video');
+        v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
+        v.src = O.videoFileUrl(it.video.id) + '#t=0.6';
+        lay.appendChild(v);
+        var k = O.keyOf(it);
+        if (k.on) {
+            var kr = O.makeKeyer(v, function () { return O.keyOf(it); });
+            if (kr) { lay.appendChild(kr.canvas); lay.className += ' keyed'; kr.onfail = function () { lay.classList.remove('keyed'); }; }
+        }
+        card.appendChild(lay);
+        var ev = { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
+        var chips = {};
+        function emPx() { return lay.clientWidth / wEm; }
+        function paintChip(key) {
+            var p = O.partsOf(it)[key], c = chips[key];
+            if (!c) return;
+            c.style.display = p.on ? '' : 'none';
+            c.style.left = p.x + '%';
+            c.style.top = p.y + '%';
+            var px = emPx();
+            if (key === 'avatar') { c.style.width = c.style.height = (p.s * px) + 'px'; }
+            else { c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c; }
+        }
+        [['avatar', ''], ['name', ev.user], ['msg', (it.msg && it.msg[ev.type]) || O.PART_MSGS[ev.type]]].forEach(function (x) {
+            var c = el('div', 'va-chip va-' + x[0], x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]);
+            if (x[0] === 'avatar') c.appendChild(el('span', null, 'ا'));
+            c.title = x[0] === 'avatar' ? 'الصورة' : x[0] === 'name' ? 'الاسم' : 'الرسالة';
+            chips[x[0]] = c;
+            lay.appendChild(c);
+            c.addEventListener('pointerdown', function (e) {
+                e.preventDefault();
+                c.setPointerCapture(e.pointerId);
+                c.classList.add('drag');
+                function mv(ev2) {
+                    var r = lay.getBoundingClientRect();
+                    var px2 = Math.max(0, Math.min(100, (ev2.clientX - r.left) / r.width * 100));
+                    var py2 = Math.max(0, Math.min(100, (ev2.clientY - r.top) / r.height * 100));
+                    it.parts[x[0]] = Object.assign({}, O.partsOf(it)[x[0]], { x: Math.round(px2 * 10) / 10, y: Math.round(py2 * 10) / 10 });
+                    paintChip(x[0]);
+                }
+                function up() {
+                    c.classList.remove('drag');
+                    c.removeEventListener('pointermove', mv);
+                    c.removeEventListener('pointerup', up);
+                    c.removeEventListener('pointercancel', up);
+                    commit();
+                    rebuildNode(it);
+                }
+                c.addEventListener('pointermove', mv);
+                c.addEventListener('pointerup', up);
+                c.addEventListener('pointercancel', up);
+            });
+        });
+        requestAnimationFrame(function () { Object.keys(chips).forEach(paintChip); });
+        box.appendChild(card);
+        function setPart(key, field, val, repaint) {
+            it.parts[key] = Object.assign({}, O.partsOf(it)[key]);
+            it.parts[key][field] = val;
+            commit();
+            rebuildNode(it);
+            paintChip(key);
+            if (repaint) renderPanel();
+        }
+        [['avatar', 'صورة الداعم', 1, 6], ['name', 'اسم الداعم', 0.4, 3], ['msg', 'الرسالة', 0.4, 3]].forEach(function (x) {
+            var p = parts[x[0]];
+            box.appendChild(row(x[1], toggle(p.on, function (val) { setPart(x[0], 'on', val, true); })));
+            if (!p.on) return;
+            box.appendChild(row('حجم ' + (x[0] === 'avatar' ? 'الصورة' : x[0] === 'name' ? 'الاسم' : 'الرسالة'), slider(x[2], x[3], 0.05, p.s, function (val) { setPart(x[0], 's', val); })));
+            if (x[0] !== 'avatar') box.appendChild(row('لون ' + (x[0] === 'name' ? 'الاسم' : 'الرسالة'), swatches(p.c, function (c) { setPart(x[0], 'c', c, true); }), true));
+        });
+        var evs = Array.isArray(it.events) ? it.events : [];
+        it.msg = it.msg || {};
+        evs.forEach(function (x) {
+            box.appendChild(row('رسالة ' + O.ALERT_EVENTS[x].label, textInput(it.msg[x] || O.PART_MSGS[x], 80, function (val) {
+                it.msg[x] = val; commit(); rebuildNode(it);
+            }), true));
+        });
+        box.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
+        box.appendChild(button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); }));
+    }
+
+    /* أداة التفريغ: معاينة كبيرة + لون/أسود/أبيض/مؤثرات + حماية الشخصية + قطّارة + تلقائي + القوة والنعومة والتقليص والانعكاس */
     function openKeyTool(it) {
         var draft = O.keyOf(it);
         if (!draft.on) draft.on = true;
@@ -1481,10 +1638,13 @@
         cmp.addEventListener('pointerdown', function () { setBefore(true); });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (t) { cmp.addEventListener(t, function () { if (before) setBefore(false); }); });
         var bgs = el('div', 'ob-seg vk-bgs');
-        [['checker', 'شفاف'], ['dark', 'داكن'], ['light', 'فاتح'], ['game', 'لعبة']].forEach(function (b) {
+        var bgList = [['checker', 'شفاف'], ['dark', 'داكن'], ['light', 'فاتح'], ['game', 'لعبة']];
+        if (localBg) bgList.push(['mine', 'صورتك']);
+        bgList.forEach(function (b) {
             bgs.appendChild(button(b[1], b[0] === bgMode ? 'on' : '', function () {
                 bgMode = b[0];
                 stageEl.className = 'vk-stage bg-' + bgMode + (picking ? ' picking' : '');
+                stageEl.style.backgroundImage = bgMode === 'mine' ? 'url("' + localBg + '")' : '';
                 Array.prototype.forEach.call(bgs.children, function (x) { x.classList.toggle('on', x.textContent === b[1]); });
             }));
         });
@@ -1539,9 +1699,9 @@
             var good = samples.filter(function (x) { return Math.abs(x[0] - med[0]) + Math.abs(x[1] - med[1]) + Math.abs(x[2] - med[2]) < 90; });
             var avg = [0, 1, 2].map(function (c) { return good.reduce(function (t, x) { return t + x[c]; }, 0) / (good.length || 1); });
             draft.on = true;
-            if (lum(avg) < 0.14) { draft.mode = 'black'; draft.sim = 0.22; draft.smooth = 0.12; }
-            else if (lum(avg) > 0.88 && sat(avg) < 0.12) { draft.mode = 'white'; draft.sim = 0.2; draft.smooth = 0.1; }
-            else { draft.mode = 'color'; draft.color = hex(avg); draft.sim = 0.4; draft.smooth = 0.08; draft.spill = 0.1; }
+            if (lum(avg) < 0.14) { draft.mode = 'black'; draft.sim = 0.22; draft.smooth = 0.12; draft.protect = true; draft.choke = 0.1; }
+            else if (lum(avg) > 0.88 && sat(avg) < 0.12) { draft.mode = 'white'; draft.sim = 0.2; draft.smooth = 0.1; draft.protect = true; draft.choke = 0.1; }
+            else { draft.mode = 'color'; draft.color = hex(avg); draft.sim = 0.4; draft.smooth = 0.08; draft.spill = 0.1; draft.protect = true; draft.choke = 0; }
             toast(draft.mode === 'color' ? 'لقينا لون الخلفية ' + draft.color + ' ✓' : draft.mode === 'black' ? 'الخلفية سوداء ✓' : 'الخلفية بيضاء ✓');
             paintControls();
         }
@@ -1603,8 +1763,14 @@
                 cw.appendChild(pickBtn);
                 ctrls.appendChild(row('لون الخلفية', cw, true, 'أو اضغط «قطّارة» واختر اللون من الفيديو'));
             }
-            ctrls.appendChild(row('القوة', slider(0, 1, 0.01, draft.sim, function (x) { setK('sim', x); }), false, 'كم لون قريب ينشال'));
-            ctrls.appendChild(row('النعومة', slider(0, 0.5, 0.01, draft.smooth, function (x) { setK('smooth', x); }), false, 'نعومة حواف الشخصية'));
+            if (draft.mode === 'screen') {
+                ctrls.appendChild(el('div', 'ob-hint', 'للنار والضوء والشرار على خلفية سوداء: السواد يختفي والضوء يبقى شفاف ومتوهّج.'));
+            } else {
+                ctrls.appendChild(row('حماية الشخصية', toggle(draft.protect !== false, function (x) { setK('protect', x); }), false, 'يشيل بس الخلفية المتصلة بأطراف الفيديو — الأجزاء ' + (draft.mode === 'white' ? 'البيضاء' : draft.mode === 'black' ? 'الداكنة' : 'اللي بنفس اللون') + ' داخل الشخصية تبقى'));
+            }
+            ctrls.appendChild(row(draft.mode === 'screen' ? 'قطع السواد' : 'القوة', slider(0, 1, 0.01, draft.sim, function (x) { setK('sim', x); }), false, draft.mode === 'screen' ? 'كم من الأسود ينشال' : 'كم لون قريب ينشال'));
+            ctrls.appendChild(row(draft.mode === 'screen' ? 'قوة التوهّج' : 'النعومة', slider(0, 0.5, 0.01, draft.smooth, function (x) { setK('smooth', x); }), false, draft.mode === 'screen' ? 'أعلى = الضوء أوضح' : 'نعومة حواف الشخصية'));
+            ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
             if (draft.mode === 'color') ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل اللون الأخضر من الحواف'));
             paintKeyed();
         }

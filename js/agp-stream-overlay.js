@@ -1459,7 +1459,24 @@
      *   { on, mode: color|black|white, color, sim, smooth, spill }.
      * أي أليرت بدون it.video يشتغل زي ما كان بالضبط. */
 
-    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1 };
+    // mode: color (كروما) | black | white | screen (مؤثرات مضيئة على أسود)
+    // protect = يشيل بس الخلفية المتصلة بأطراف الفيديو (الأجزاء الداكنة داخل الشخصية ما تنمسح)
+    // choke = يقلّص الحواف (يشيل الهالة)
+    var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1, protect: true, choke: 0 };
+    // الصورة والاسم والرسالة فوق الفيديو: x/y نسبة من الفيديو، s = الحجم (em)، c = اللون
+    var PARTS_DEFAULT = {
+        avatar: { on: true, x: 50, y: 68, s: 2.6 },
+        name: { on: true, x: 50, y: 83, s: 1.1, c: '#ffffff' },
+        msg: { on: true, x: 50, y: 92, s: 0.85, c: '#ffd54a' }
+    };
+    // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
+    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث' };
+    function partsOf(it) {
+        if (!it || !it.parts) return null;
+        var out = {};
+        Object.keys(PARTS_DEFAULT).forEach(function (k) { out[k] = Object.assign({}, PARTS_DEFAULT[k], it.parts[k] || {}); });
+        return out;
+    }
     function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
     function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
     function videoFileUrl(id) { return id ? apiBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
@@ -1471,14 +1488,19 @@
     var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
     var KEY_FS = [
         'precision mediump float;',
-        'uniform sampler2D tex;uniform vec3 key;uniform float sim,smo,spill;uniform int mode;varying vec2 uv;',
+        'uniform sampler2D tex,msk;uniform vec3 key;uniform float sim,smo,spill,choke,useMask;uniform int mode;varying vec2 uv;',
         // المسافة بين الألوان بقناتي اللون (CbCr) — الإضاءة ما تأثر، مثل OBS
         'vec2 cc(vec3 c){return vec2(dot(c,vec3(-.169,-.331,.5)),dot(c,vec3(.5,-.419,-.081)));}',
         'void main(){vec4 c=texture2D(tex,uv);float a=1.;',
         ' if(mode==0){float t=sim*.5;float d=distance(cc(c.rgb),cc(key));a=smoothstep(t,t+smo*.5+.0001,d);',
         '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
+        // مؤثرات مضيئة على أسود: الشفافية من أقوى قناة، واللون يرجع بدون السواد (زي Screen)
+        ' else if(mode==3){float mx=max(c.r,max(c.g,c.b));float t=sim*.35;a=clamp((mx-t)/max(1.-t,.001),0.,1.);a=pow(a,1./(1.+smo*4.));c.rgb=clamp(c.rgb/max(mx,.001)*min(1.,mx/max(a,.001)),0.,1.);}',
         ' else{float l=dot(c.rgb,vec3(.299,.587,.114));float t=sim*.5;',
         '  if(mode==1)a=smoothstep(t,t+smo+.0001,l);else a=1.-smoothstep(1.-t-smo-.0001,1.-t,l);}',
+        // حماية الشخصية: الشفافية بس داخل الخلفية المتصلة بالأطراف
+        ' if(useMask>.5){float bg=texture2D(msk,uv).r;a=mix(1.,a,bg);}',
+        ' if(choke>.001)a=clamp((a-choke)/(1.-choke),0.,1.);',
         ' a*=c.a;gl_FragColor=vec4(c.rgb*a,a);}'
     ].join('\n');
 
@@ -1518,7 +1540,62 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         var U = {};
-        ['key', 'sim', 'smo', 'spill', 'mode'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        ['key', 'sim', 'smo', 'spill', 'mode', 'choke', 'useMask', 'tex', 'msk'].forEach(function (n) { U[n] = gl.getUniformLocation(prog, n); });
+        gl.uniform1i(U.tex, 0);
+        gl.uniform1i(U.msk, 1);
+        var mtex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, mtex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.activeTexture(gl.TEXTURE0);
+        var mc = document.createElement('canvas'), mctx = null, maskOk = true;
+        /**
+         * «حماية الشخصية»: نصغّر الفريم (160 بكسل)، نعلّم البكسلات اللي شكلها خلفية،
+         * ونعبّي من أطراف الفيديو بس — أي لون خلفية داخل الشخصية ما يوصله التعبئة
+         * فيبقى ظاهر. النتيجة صورة صغيرة (1 = خلفية) تنفرد ناعمة بالـshader.
+         */
+        function buildMask(key, w, h) {
+            var mw = 160, mh = Math.max(2, Math.round(160 * h / w));
+            if (mc.width !== mw || mc.height !== mh) { mc.width = mw; mc.height = mh; mctx = mc.getContext('2d', { willReadFrequently: true }); }
+            mctx = mctx || mc.getContext('2d', { willReadFrequently: true });
+            var d;
+            try { mctx.drawImage(video, 0, 0, mw, mh); d = mctx.getImageData(0, 0, mw, mh).data; } catch (e) { maskOk = false; return null; }
+            var n = mw * mh, cand = new Uint8Array(n), bg = new Uint8Array(n);
+            var t = clamp(Number(key.sim), 0, 1) * 0.5 + clamp(Number(key.smooth), 0, 1) * 0.5;
+            var kr = hexRgb(key.color), kcb = -0.169 * kr[0] - 0.331 * kr[1] + 0.5 * kr[2], kcr = 0.5 * kr[0] - 0.419 * kr[1] - 0.081 * kr[2];
+            for (var i = 0, j = 0; i < n; i++, j += 4) {
+                var r = d[j] / 255, g = d[j + 1] / 255, b = d[j + 2] / 255;
+                if (key.mode === 'black') cand[i] = (0.299 * r + 0.587 * g + 0.114 * b) < t + 0.02 ? 1 : 0;
+                else if (key.mode === 'white') cand[i] = (0.299 * r + 0.587 * g + 0.114 * b) > 1 - t - 0.02 ? 1 : 0;
+                else {
+                    var cb = -0.169 * r - 0.331 * g + 0.5 * b - kcb, cr = 0.5 * r - 0.419 * g - 0.081 * b - kcr;
+                    cand[i] = Math.sqrt(cb * cb + cr * cr) < t ? 1 : 0;
+                }
+            }
+            var q = new Int32Array(n), qh = 0, qt = 0;
+            function push(x) { if (cand[x] && !bg[x]) { bg[x] = 1; q[qt++] = x; } }
+            for (var x0 = 0; x0 < mw; x0++) { push(x0); push((mh - 1) * mw + x0); }
+            for (var y0 = 0; y0 < mh; y0++) { push(y0 * mw); push(y0 * mw + mw - 1); }
+            while (qh < qt) {
+                var p = q[qh++], px = p % mw;
+                if (px > 0) push(p - 1);
+                if (px < mw - 1) push(p + 1);
+                if (p >= mw) push(p - mw);
+                if (p < n - mw) push(p + mw);
+            }
+            // نوسّع الخلفية بكسل عشان الحافة الناعمة يتكفّل فيها التفريغ نفسه
+            var out = new Uint8Array(n);
+            for (var y = 0; y < mh; y++) for (var x = 0; x < mw; x++) {
+                var o = y * mw + x, v = bg[o];
+                if (!v) v = (x > 0 && bg[o - 1]) || (x < mw - 1 && bg[o + 1]) || (y > 0 && bg[o - mw]) || (y < mh - 1 && bg[o + mw]);
+                out[o] = v ? 255 : 0;
+            }
+            return { w: mw, h: mh, data: out };
+        }
         var k = { canvas: cv, failed: false, onfail: null };
         var raf = 0, dead = false;
         k.draw = function () {
@@ -1537,7 +1614,16 @@
             gl.uniform1f(U.sim, clamp(Number(key.sim), 0, 1));
             gl.uniform1f(U.smo, clamp(Number(key.smooth), 0, 1));
             gl.uniform1f(U.spill, clamp(Number(key.spill), 0, 1));
-            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : 0);
+            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : key.mode === 'screen' ? 3 : 0);
+            gl.uniform1f(U.choke, clamp(Number(key.choke) || 0, 0, 0.9));
+            var useMask = key.protect !== false && key.mode !== 'screen' && maskOk;
+            var mk = useMask ? buildMask(key, w, h) : null;
+            if (mk) {
+                gl.activeTexture(gl.TEXTURE1);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, mk.w, mk.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, mk.data);
+                gl.activeTexture(gl.TEXTURE0);
+            }
+            gl.uniform1f(U.useMask, mk ? 1 : 0);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -1587,7 +1673,29 @@
             box.appendChild(k.canvas);
             k.onfail = function () { box.classList.remove('keyed'); if (k.canvas.parentNode) k.canvas.remove(); };
         }
-        if (it.showText !== false && e) {
+        var parts = partsOf(it);
+        if (parts && (e || preview)) {
+            // بالمحرر (بدون حدث): مثال عشان يشوف أماكنها
+            var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
+            if (parts.avatar.on) {
+                var pa = el('div', 'agp-so-vpart agp-so-vav');
+                pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em';
+                if (ev.avatar) pa.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
+                else pa.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
+                box.appendChild(pa);
+            }
+            if (parts.name.on) {
+                var pn = el('div', 'agp-so-vpart agp-so-vname', ev.user || '');
+                pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
+                box.appendChild(pn);
+            }
+            if (parts.msg.on) {
+                var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
+                var pm = el('div', 'agp-so-vpart agp-so-vmsg', fillMsg(tpl, ev));
+                pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
+                box.appendChild(pm);
+            }
+        } else if (it.showText !== false && e) {
             var msg = (it.msg && it.msg[e.type]) || (ALERT_EVENTS[e.type] || ALERT_EVENTS.gift).msg;
             var t = el('div', 'agp-so-vtxt ' + (it.textPos === 'top' ? 'top' : it.textPos === 'middle' ? 'middle' : 'bottom'), fillMsg(msg, e));
             box.appendChild(t);
@@ -1748,7 +1856,7 @@
             var msg = {};
             Object.keys(ALERT_EVENTS).forEach(function (k) { msg[k] = ALERT_EVENTS[k].msg; });
             if (opts.video) {
-                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: msg });
+                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: Object.assign({}, PART_MSGS), parts: JSON.parse(JSON.stringify(PARTS_DEFAULT)) });
             }
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
@@ -2086,6 +2194,12 @@
         '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
         '.agp-so-vtxt{position:absolute;left:0;right:0;padding:0 .4em;text-align:center;direction:rtl;color:var(--agp-so-c,#fff);font-weight:800;font-size:1em;line-height:1.35;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.55)}',
         '.agp-so-vtxt.top{top:4%}',
+        '.agp-so-vpart{position:absolute;z-index:3;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;direction:rtl;text-align:center}',
+        '.agp-so-vav{border-radius:50%;overflow:hidden;box-shadow:0 0 0 .08em rgba(255,255,255,.85),0 .15em .5em rgba(0,0,0,.55);background:#2a2338;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-vav img{width:100%;height:100%;object-fit:cover;display:block}',
+        '.agp-so-vini{font-weight:800;font-size:1.1em;color:#fff}',
+        '.agp-so-vname,.agp-so-vmsg{font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;line-height:1.3;text-shadow:0 .06em .22em rgba(0,0,0,.95),0 0 .6em rgba(0,0,0,.55)}',
+        '.agp-so-vmsg{font-weight:700}',
         '.agp-so-vtxt.middle{top:50%;transform:translateY(-50%)}',
         '.agp-so-vtxt.bottom{bottom:4%}',
         '.agp-so-acard{display:flex;align-items:center;gap:.7em;color:#fff;direction:rtl;text-shadow:0 .04em .1em rgba(0,0,0,.6);--c:var(--agp-so-c)}',
@@ -2194,7 +2308,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        KEY_DEFAULT: KEY_DEFAULT, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
