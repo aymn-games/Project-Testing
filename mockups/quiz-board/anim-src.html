@@ -247,12 +247,68 @@ box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.1),0 0 34px
 
 .jc .ph .pimg,.ok .av .pimg,.win .av .pimg{width:100%;height:100%;border-radius:50%}
 .mem img{width:24px;height:24px}
+
+/* ═══ هيدر: أزرار ═══ */
+.hr{display:flex;align-items:center;gap:10px}
+.hb{height:38px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font:500 13px 'IBM Plex Sans Arabic';color:#e7e3ef;cursor:pointer;position:relative;transition:box-shadow .3s,background .3s}
+.hb.ic{width:38px;padding:0;justify-content:center}
+.hb svg{flex:none}
+.hb .n{height:20px;min-width:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:rgba(139,92,246,.22);color:#ddd6fe;font:600 11px 'IBM Plex Sans Arabic'}
+.hb.act{background:rgba(139,92,246,.16);box-shadow:inset 0 0 0 1px rgba(196,181,253,.45),0 0 22px -4px rgba(139,92,246,.6)}
+/* ═══ شريط الفريقين أطول + مكان تنبيه الدخول فوق كلمات الدخول ═══ */
+#teams{top:88px;height:108px}
+#mid{height:108px}
+#stage{top:206px}
+.ch{height:98px}.ch .ca{height:60px}
+#jq{top:90px}
+.jc{height:104px;width:189px;padding:7px 10px 9px;gap:2px}
+.jc .ph{width:40px;height:40px;margin-bottom:2px}
+.jc b{font-size:16px}
+#mid #ji{transition:filter .3s,transform .3s}
+#mid.dim #ji{filter:opacity(.08) blur(1px);transform:scale(.96)}
+.kw{font-size:23px;padding:6px 20px 7px}
+/* ═══ نوافذ ═══ */
+.ov{position:fixed;inset:0;z-index:95;background:rgba(4,3,8,.62);backdrop-filter:blur(10px);display:none;place-items:center}
+.md{width:780px;max-height:560px;border-radius:28px;background:linear-gradient(180deg,rgba(28,23,44,.97),rgba(14,12,22,.98));box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),inset 0 1px 0 rgba(255,255,255,.08),0 40px 90px -20px rgba(0,0,0,.9),0 0 80px -30px rgba(139,92,246,.6);padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.mh{display:flex;align-items:center;justify-content:space-between}
+.mh b{font:600 22px 'IBM Plex Sans Arabic'}
+.mh .x{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);color:#c9c3da}
+.plc{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0}
+.plcol{border-radius:20px;background:rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:12px;display:flex;flex-direction:column;gap:6px;overflow:hidden;max-height:400px}
+.plt{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:2px;font:600 15px 'IBM Plex Sans Arabic'}
+.plt span{display:flex;align-items:center;gap:8px}.plt i{width:9px;height:9px;border-radius:50%}
+.plt small{font:500 12px 'IBM Plex Sans Arabic';color:#8a8596}
+.pr{display:flex;align-items:center;gap:10px;height:44px;padding:0 8px;border-radius:14px;overflow:hidden;transition:background .25s}
+.pr img{width:32px;height:32px;border-radius:50%;flex:none}
+.pr b{font:600 14px 'IBM Plex Sans Arabic';flex:1}
+.pr .k{height:28px;padding:0 12px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;background:rgba(248,113,113,.07);box-shadow:inset 0 0 0 1px rgba(248,113,113,.25);color:#fca5a5;font:600 12px 'IBM Plex Sans Arabic';transition:all .25s}
+.pr.hov{background:rgba(248,113,113,.06)}.pr.hov .k{background:rgba(248,113,113,.22);box-shadow:inset 0 0 0 1px rgba(248,113,113,.6);color:#fff}
+.more{font:500 12px 'IBM Plex Sans Arabic';color:#8a8596;text-align:center;padding-top:4px}
+.kt{position:fixed;top:216px;left:50%;transform:translateX(-50%);z-index:99;display:flex;align-items:center;gap:10px;height:46px;padding:0 18px 0 8px;border-radius:999px;background:rgba(28,12,16,.96);box-shadow:inset 0 0 0 1px rgba(248,113,113,.5),0 18px 40px -14px rgba(248,113,113,.45);font:600 15px 'IBM Plex Sans Arabic';color:#fecaca;opacity:0;white-space:nowrap}
+.kt img{width:32px;height:32px;border-radius:50%}
+/* settings modal */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sbox{border-radius:20px;background:rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);padding:12px 18px}
+.sbox .sh2{display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);font:600 15px 'IBM Plex Sans Arabic'}
+.sbox .num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:600 12px 'IBM Plex Sans Arabic'}
+.rw{display:flex;align-items:center;justify-content:space-between;min-height:48px;font:500 14px 'IBM Plex Sans Arabic';color:#e7e3ef}
+.rw small{display:block;font:400 11.5px 'IBM Plex Sans Arabic';color:#8a8596}
+.cntr{display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.cntr span{width:30px;height:30px;display:grid;place-items:center;color:#a8a3b5;font-size:18px}.cntr b{width:44px;text-align:center;font:600 15px 'IBM Plex Sans Arabic';color:#ddd6fe}
+.sg{display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.sg span{height:30px;padding:0 12px;border-radius:999px;display:flex;align-items:center;font:500 12.5px 'IBM Plex Sans Arabic';color:#a8a3b5}
+.sg span.on{background:linear-gradient(180deg,#9f7aea,#7c3aed);color:#fff}
+.sw{width:46px;height:26px;border-radius:999px;padding:3px;display:flex;justify-content:flex-start;background:linear-gradient(180deg,#a78bfa,#7c3aed)}.sw i{width:20px;height:20px;border-radius:50%;background:#fff}
+.vol{width:150px;height:6px;border-radius:999px;background:rgba(255,255,255,.1);position:relative}.vol i{position:absolute;right:0;top:0;bottom:0;width:65%;border-radius:999px;background:linear-gradient(90deg,#a78bfa,#7c3aed)}.vol i::after{content:"";position:absolute;left:-7px;top:-5px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#startov{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:rgba(4,3,8,.7);backdrop-filter:blur(8px)}
+#startov button{height:58px;padding:0 34px;border:0;border-radius:999px;background:linear-gradient(180deg,#9f7aea,#7c3aed);color:#fff;font:600 19px 'IBM Plex Sans Arabic';box-shadow:0 14px 34px -10px rgba(124,58,237,.8);cursor:pointer}
+.cursor{position:fixed;z-index:300;width:22px;height:22px;pointer-events:none;opacity:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
 </style></head><body>
 <div id="fx"></div>
 <header>
- <div><span class="exit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>مكتبة الألعاب</span></div>
+ <div class="hr"><span class="exit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>مكتبة الألعاب</span><span class="hb" id="bSet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>الإعدادات</span></div>
  <img src="%%LOGO%%" alt="">
- <div class="hl" style="gap:10px;align-items:center"><span class="live"><i></i>متصل بالبث</span><div class="aj" id="aj"><span>الدخول التلقائي</span><span class="tg2"><i></i></span></div></div>
+ <div class="hl" style="gap:10px;align-items:center"><span class="live"><i></i>متصل بالبث</span><span class="hb ic" id="bFs" title="ملء الشاشة"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></span><span class="hb" id="bPl"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>اللاعبين <span class="n" id="plN">42</span></span><div class="aj" id="aj"><span>الدخول التلقائي</span><span class="tg2"><i></i></span></div></div>
 </header>
 
 <div id="cats" class="L">
@@ -286,6 +342,20 @@ box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.1),0 0 34px
  </div>
 </div>
 <div id="jq"></div>
+<div class="ov" id="plOv"><div class="md" id="plMd"><div class="mh"><b>اللاعبين · <span id="plN2">42</span></b><span class="x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></div><div class="plc"><div class="plcol" id="plA"></div><div class="plcol" id="plB"></div></div></div></div>
+<div class="ov" id="stOv"><div class="md" id="stMd" style="width:820px"><div class="mh"><b>الإعدادات</b><span class="x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span></div>
+<div class="sgrid">
+ <div class="sbox"><div class="sh2"><span class="num">1</span>الوقت</div>
+  <div class="rw"><span>وقت الفريق صاحب الدور</span><div class="cntr"><span>−</span><b>30</b><span>+</span></div></div>
+  <div class="rw"><span>الوقت المفتوح للفريقين<small>بعد ما يخلص وقت الفريق</small></span><div class="cntr"><span>−</span><b>15</b><span>+</span></div></div>
+  <div class="rw"><span>محاولات كل لاعب</span><div class="sg"><span class="on">محاولة وحدة</span><span>مفتوح</span></div></div></div>
+ <div class="sbox"><div class="sh2"><span class="num">2</span>الصوت والفرق</div>
+  <div class="rw"><span>أصوات اللعبة</span><div class="sw"><i></i></div></div>
+  <div class="rw"><span>مستوى الصوت</span><div class="vol"><i></i></div></div>
+  <div class="rw"><span>أسماء الفريقين<small>هي نفسها كلمات الدخول</small></span><div class="sg"><span class="on">السماوي</span><span class="on" style="background:linear-gradient(180deg,#f5b0ff,#c026d3)">الوردي</span></div></div></div>
+</div></div></div>
+<div class="kt" id="kt"></div>
+<svg class="cursor" id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#111" stroke-width="1.2" stroke-linejoin="round"/></svg>
 <div id="cap"><i></i><span id="capt"></span></div>
 <button id="replay" onclick="location.reload()">↻ إعادة العرض</button>
 
@@ -296,6 +366,14 @@ fx.innerHTML=`<div class="g" style="top:-20%;right:-10%;width:900px;height:900px
 Array.from({length:90},(_,i)=>`<span class="st" style="left:${r(0,100)}%;top:${r(0,100)}%;width:${i%9?1.5:3}px;height:${i%9?1.5:3}px;background:rgba(255,255,255,${r(.12,.35).toFixed(2)})"></span>`).join('')+
 [[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,z,f])=>`<span class="sq" style="left:${x}%;top:${y}%;width:${z}px;height:${z}px;${f?'background:rgba(139,92,246,.45)':'border:1.5px solid rgba(139,92,246,.35)'}"></span>`).join('');})();
 
+
+// ═══ الأصوات ═══
+const SFXSPEC={"pick": [["sine", 1300, 1300, 0.04, 0.1, 0]], "select": [["sine", 660, 660, 0.07, 0.16, 0], ["sine", 990, 990, 0.12, 0.16, 0.06]], "whoosh": [["noise", 400, 2400, 0.38, 0.1, 0]], "swish": [["noise", 900, 3200, 0.22, 0.07, 0]], "chime": [["sine", 1046, 1046, 0.7, 0.1, 0], ["sine", 1318, 1318, 0.7, 0.07, 0.04], ["sine", 1568, 1568, 0.8, 0.07, 0.08]], "tick": [["square", 900, 900, 0.03, 0.035, 0]], "tickhi": [["square", 1300, 1300, 0.045, 0.06, 0]], "buzz": [["square", 160, 160, 0.45, 0.1, 0], ["square", 122, 122, 0.45, 0.07, 0]], "gong": [["sine", 392, 392, 1.2, 0.18, 0], ["sine", 784, 784, 0.9, 0.07, 0], ["sine", 588, 588, 1.0, 0.05, 0]], "correct": [["triangle", 523, 523, 0.14, 0.16, 0], ["triangle", 659, 659, 0.14, 0.16, 0.08], ["triangle", 784, 784, 0.14, 0.16, 0.16], ["triangle", 1046, 1046, 0.35, 0.16, 0.24]], "fail": [["triangle", 440, 220, 0.6, 0.16, 0]], "coin": [["square", 1568, 1568, 0.06, 0.06, 0], ["square", 2093, 2093, 0.16, 0.06, 0.05]], "count": [["sine", 1800, 1800, 0.025, 0.035, 0]], "pop": [["sine", 500, 900, 0.09, 0.16, 0]], "join": [["sine", 700, 1050, 0.09, 0.15, 0], ["sine", 1400, 1400, 0.14, 0.08, 0.07]], "reject": [["square", 220, 220, 0.1, 0.08, 0], ["square", 196, 196, 0.15, 0.08, 0.13]], "click": [["sine", 900, 900, 0.035, 0.09, 0]], "kick": [["sine", 180, 55, 0.28, 0.28, 0], ["noise", 300, 300, 0.12, 0.07, 0]], "open": [["noise", 600, 1800, 0.18, 0.05, 0], ["sine", 880, 880, 0.15, 0.05, 0.03]]};
+window.__sfx=[];let AC=null;window.__audioOn=false;
+function SFX(n){window.__sfx.push([performance.now(),n]);if(!window.__audioOn||!AC)return;const t0=AC.currentTime+.01;
+ for(const [w,f0,f1,d,v,off] of SFXSPEC[n]||[]){const t=t0+off,g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+d);g.connect(AC.destination);
+  if(w==='noise'){const b=AC.createBuffer(1,Math.ceil(AC.sampleRate*d),AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;const src=AC.createBufferSource();src.buffer=b;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.Q.value=1.2;bp.frequency.setValueAtTime(f0,t);bp.frequency.exponentialRampToValueAtTime(f1,t+d);src.connect(bp);bp.connect(g);src.start(t);src.stop(t+d);}
+  else{const o=AC.createOscillator();o.type=w;o.frequency.setValueAtTime(f0,t);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+d);o.connect(g);o.start(t);o.stop(t+d+.02);}}}
 const $=id=>document.getElementById(id);
 const E='cubic-bezier(.2,.8,.2,1)', SPRING='cubic-bezier(.34,1.56,.64,1)', IN='cubic-bezier(.6,0,.8,.2)';
 const A=(el,kf,o)=>el.animate(kf,Object.assign({fill:'both',easing:E},o)).finished;
@@ -320,8 +398,8 @@ const fmt=n=>n.toLocaleString('en-US');
 async function countUp(el,from,to,ms){const t0=performance.now();return new Promise(res=>{const f=now=>{const k=Math.min(1,(now-t0)/ms),e=1-Math.pow(1-k,3);el.textContent=fmt(Math.round(from+(to-from)*e));k<1?requestAnimationFrame(f):res()};requestAnimationFrame(f)});}
 function burst(x,y){const cols=['#a78bfa','#5ccfff','#f5b0ff','#34d399','#ffc83d'];for(let i=0;i<14;i++){const s=document.createElement('span');s.className='spark';s.style.left=x+'px';s.style.top=y+'px';s.style.background=cols[i%5];s.style.boxShadow='0 0 8px '+cols[i%5];document.body.appendChild(s);const a=i/14*Math.PI*2,d=40+Math.random()*30;s.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*d}px),calc(-50% + ${Math.sin(a)*d}px)) scale(.2)`,opacity:0}],{duration:700,easing:E,fill:'both'}).finished.then(()=>s.remove());}}
 
-const MODE=(location.hash.slice(1)||'steal');
-async function tick(from,to,step=420,color){for(let s=from;s>=to;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/TMAX*100).toFixed(1));if(color)$('tm').style.setProperty('--tc',color);else if(s<=5)$('tm').style.setProperty('--tc','#f87171');A($('tmn'),[{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:260,fill:'none'});await sleep(step);}}
+const HP=location.hash.slice(1).split('&'),MODE=HP[0]||'steal',REC=HP.includes('rec');
+async function tick(from,to,step=420,color){for(let s=from;s>=to;s--){SFX(s<=5?'tickhi':'tick');$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/TMAX*100).toFixed(1));if(color)$('tm').style.setProperty('--tc',color);else if(s<=5)$('tm').style.setProperty('--tc','#f87171');A($('tmn'),[{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:260,fill:'none'});await sleep(step);}}
 let TMAX=30;
 async function catsPhase(){
  cap('١ · اختيار الفئات');
@@ -329,17 +407,17 @@ async function catsPhase(){
  document.querySelectorAll('.cat').forEach((c,i)=>A(c,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],{duration:550,delay:120+i*70}));
  A(document.querySelector('.cfoot'),[{opacity:0},{opacity:1}],{duration:500,delay:500});
  await sleep(1200);let n=3;
- for(const k of ['games','prophets','crests']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');
+ for(const k of ['games','prophets','crests']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');SFX('pop');
   c.querySelector('.chk i').animate([{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:420,easing:SPRING,fill:'both'});n++;$('cnt').textContent=n+' مختارة';A($('cnt'),[{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:300,fill:'none'});await sleep(480);}
  $('go').style.opacity=1;A($('go'),[{boxShadow:'0 10px 34px rgba(139,92,246,.45)'},{boxShadow:'0 10px 50px rgba(168,85,247,.85)'},{boxShadow:'0 10px 34px rgba(139,92,246,.45)'}],{duration:900,fill:'none'});
- await sleep(700);await A($('go'),[{transform:'scale(1)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:260,fill:'none'});
- [...document.querySelectorAll('.cat')].forEach((c,i)=>A(c,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px) scale(.94)'}],{duration:380,delay:i*45,easing:IN}));
+ await sleep(700);SFX('select');await A($('go'),[{transform:'scale(1)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:260,fill:'none'});
+ SFX('whoosh');[...document.querySelectorAll('.cat')].forEach((c,i)=>A(c,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px) scale(.94)'}],{duration:380,delay:i*45,easing:IN}));
  A(document.querySelector('.ctitle'),[{opacity:1},{opacity:0}],{duration:300});
  await A(document.querySelector('.cfoot'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:350,delay:150});
  $('cats').style.display='none';
 }
 async function boardIn(){
- cap('٢ · ظهور اللوحة');$('cats').style.display='none';
+ cap('٢ · ظهور اللوحة');SFX('swish');setTimeout(()=>SFX('chime'),500);$('cats').style.display='none';
  A($('teams'),[{opacity:0,transform:'translateY(-16px)'},{opacity:1,transform:'none'}],{duration:550});
  heads.forEach((h,i)=>A(h,[{opacity:0,transform:'translateY(-18px)'},{opacity:1,transform:'none'}],{duration:500,delay:150+i*70}));
  tiles.forEach(t=>{const c=+t.dataset.c,r=+t.dataset.r;A(t,[{opacity:0,transform:'scale(.7)'},{opacity:1,transform:'none'}],{duration:450,delay:350+c*55+r*65,easing:SPRING})});
@@ -348,9 +426,9 @@ async function boardIn(){
 let tgt,cx,cy;
 async function pickAndOpen(){
  cap('٣ · الفريق يختار السؤال');
- for(const [c,r] of [[3,4],[2,2],[1,2],[0,2]]){const t=T(c,r);t.classList.add('hov');await sleep(300);if(!(c==0&&r==2))t.classList.remove('hov');}
- tgt=T(0,2);await A(tgt,[{transform:'scale(1)'},{transform:'scale(.92)'},{transform:'scale(1.04)'}],{duration:300,easing:SPRING});
- cap('٤ · المربعات تختفي ويظهر السؤال');
+ for(const [c,r] of [[3,4],[2,2],[1,2],[0,2]]){const t=T(c,r);t.classList.add('hov');SFX('pick');await sleep(300);if(!(c==0&&r==2))t.classList.remove('hov');}
+ tgt=T(0,2);SFX('select');await A(tgt,[{transform:'scale(1)'},{transform:'scale(.92)'},{transform:'scale(1.04)'}],{duration:300,easing:SPRING});
+ cap('٤ · المربعات تختفي ويظهر السؤال');SFX('whoosh');
  const rc=tgt.getBoundingClientRect(),sr=$('stage').getBoundingClientRect();
  const cl=document.createElement('div');cl.className='clone';cl.textContent='400';Object.assign(cl.style,{left:rc.left+'px',top:rc.top+'px',width:rc.width+'px',height:rc.height+'px'});document.body.appendChild(cl);
  tgt.style.visibility='hidden';cx=rc.left+rc.width/2;cy=rc.top+rc.height/2;
@@ -359,7 +437,7 @@ async function pickAndOpen(){
  await sleep(650);cl.animate([{opacity:1},{opacity:0}],{duration:200,fill:'both'});
  await A(cl,[{left:rc.left+'px',top:rc.top+'px',width:rc.width+'px',height:rc.height+'px',borderRadius:'16px'},{left:sr.left+'px',top:sr.top+'px',width:sr.width+'px',height:sr.height+'px',borderRadius:'24px',background:'rgba(18,16,26,.72)',borderColor:'rgba(255,255,255,.08)'}],{duration:620,easing:'cubic-bezier(.65,0,.35,1)'});
  $('board').style.visibility='hidden';const q=$('q');q.style.display='flex';[...q.children].forEach(c=>c.style.opacity=0);cl.remove();
- $('meta').parentElement.style.opacity=1;
+ SFX('chime');$('meta').parentElement.style.opacity=1;
  A($('meta'),[{opacity:0,transform:'translateX(30px)'},{opacity:1,transform:'none'}],{duration:450});
  A($('tm'),[{opacity:0,transform:'scale(.5) rotate(-90deg)'},{opacity:1,transform:'none'}],{duration:550,easing:SPRING});
  $('flag').style.opacity=1;A($('flag'),[{opacity:0,transform:'scale(.8) translateY(16px)'},{opacity:1,transform:'none'}],{duration:600,delay:150,easing:SPRING});
@@ -371,11 +449,11 @@ async function teamTimeRunsOut(){
  cap('٥ · وقت الفريق السماوي');
  TMAX=30;await tick(30,27,380);
  // تسريع للعرض
- for(let s=26;s>=0;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/30*100).toFixed(1));if(s<=5)$('tm').style.setProperty('--tc','#f87171');await sleep(s<=5?330:45);}
- await A($('tm'),[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:400,fill:'none'});
+ for(let s=26;s>=0;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/30*100).toFixed(1));if(s<=5){$('tm').style.setProperty('--tc','#f87171');SFX('tickhi');}await sleep(s<=5?330:45);}
+ SFX('buzz');await A($('tm'),[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(-4px)'},{transform:'translateX(0)'}],{duration:400,fill:'none'});
 }
 async function openPhase(){
- cap('٦ · خلص الوقت ← ١٥ ثانية مفتوحة للفريقين');
+ cap('٦ · خلص الوقت ← ١٥ ثانية مفتوحة للفريقين');SFX('gong');
  const ob=$('openb');ob.style.opacity=1;
  A(ob,[{opacity:0,transform:'translateX(-50%) translateY(-16px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
  // كل الفرق
@@ -401,12 +479,12 @@ async function correct(name,av,team,col,txt){
  $('okn').textContent=name;$('okav').innerHTML=pimg(name);$('okav').style.boxShadow='0 0 0 2px '+col;
  await A($('who'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:220});
  A($('openb'),[{opacity:1},{opacity:0}],{duration:250});
- const ok=$('ok');ok.style.opacity=1;
+ SFX('correct');const ok=$('ok');ok.style.opacity=1;
  A(ok,[{opacity:0,transform:'translateX(-50%) translateY(20px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
  $('tm').style.setProperty('--tc','#34d399');
  A($('q'),[{boxShadow:'0 0 0 1px rgba(52,211,153,0),0 20px 60px rgba(0,0,0,.3)'},{boxShadow:'0 0 0 2px rgba(52,211,153,.6),0 0 60px rgba(52,211,153,.25)'},{boxShadow:'0 0 0 1px rgba(52,211,153,0),0 20px 60px rgba(0,0,0,.3)'}],{duration:1100,fill:'none'});
  await sleep(1500);
- cap('٨ · كشف الإجابة');
+ cap('٨ · كشف الإجابة');setTimeout(()=>SFX('chime'),250);
  [$('meta'),$('tm'),$('qt'),ok].forEach((e,i)=>A(e,[{opacity:1},{opacity:0,transform:(e===ok?'translateX(-50%) ':'')+'translateY(-8px)'}],{duration:300,delay:i*40}));
  await A($('flag'),[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.85)'}],{duration:320,delay:120});
  $('q').style.display='none';const rv=$('rv');rv.style.display='flex';
@@ -422,43 +500,43 @@ async function points(scId,cardId,from,to){
  cap('٩ · احتساب النقاط');
  const pr=$('plus').getBoundingClientRect(),sc=$(scId).getBoundingClientRect();
  A($('plus'),[{opacity:1},{opacity:.25}],{duration:300});
- const f=document.createElement('div');f.className='fly';f.textContent='+400';Object.assign(f.style,{left:pr.left+'px',top:pr.top+'px'});document.body.appendChild(f);
+ SFX('swish');const f=document.createElement('div');f.className='fly';f.textContent='+400';Object.assign(f.style,{left:pr.left+'px',top:pr.top+'px'});document.body.appendChild(f);
  const dx=sc.left-pr.left-10,dy=sc.top-pr.top;
  await A(f,[{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx*.45}px,${dy*.55-60}px) scale(1.25)`,opacity:1,offset:.45},{transform:`translate(${dx}px,${dy}px) scale(.6)`,opacity:.2}],{duration:900,easing:'cubic-bezier(.5,0,.3,1)'});
- f.remove();burst(sc.left+sc.width/2,sc.top+sc.height/2);
+ f.remove();SFX('coin');burst(sc.left+sc.width/2,sc.top+sc.height/2);
  A($(cardId),[{boxShadow:'0 0 0 1px rgba(167,139,250,.25)'},{boxShadow:'0 0 0 2px rgba(52,211,153,.7),0 0 50px rgba(52,211,153,.4)'},{boxShadow:'0 0 0 1px rgba(167,139,250,.25)'}],{duration:1200,fill:'none'});
  A($(scId),[{transform:'scale(1)',color:'#f4f2f8'},{transform:'scale(1.3)',color:'#34d399',offset:.3},{transform:'scale(1)',color:'#f4f2f8'}],{duration:1100,fill:'none'});
- await countUp($(scId),from,to,950);await sleep(400);
+ const iv=setInterval(()=>SFX('count'),80);await countUp($(scId),from,to,950);clearInterval(iv);await sleep(400);
 }
 async function backToBoard(cls,dot){
- cap('١١ · الرجوع للوحة');const rv=$('rv');
+ cap('١١ · الرجوع للوحة');SFX('whoosh');const rv=$('rv');
  await Promise.all([...rv.children].map((e,i)=>A(e,[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.92)'}],{duration:300,delay:i*50,easing:IN})));
  rv.style.display='none';tgt.className='tl '+cls;tgt.innerHTML=`<span class="d" style="background:${dot}"></span>400`;tgt.style.visibility='visible';$('board').style.visibility='visible';
  heads.forEach((h,i)=>A(h,[{opacity:0,transform:'translateY(-10px)'},{opacity:1,transform:'none'}],{duration:400,delay:i*50}));
  tiles.filter(t=>t!==tgt).forEach(t=>{const b=t.getBoundingClientRect(),d=Math.hypot(b.left+b.width/2-cx,b.top+b.height/2-cy);A(t,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:380,delay:d*.35,easing:SPRING})});
  A(tgt,[{opacity:0,transform:'scale(1.5)'},{opacity:1,transform:'scale(1)'}],{duration:600,delay:150,easing:SPRING});
- await sleep(1100);burst(cx,cy);await sleep(1600);
+ await sleep(1100);SFX('pop');burst(cx,cy);await sleep(1600);
 }
 async function swapQuestion(){
  cap('٧ · خلص الوقت المفتوح بدون جواب صح');
- for(let s=14;s>=0;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/15*100).toFixed(1));if(s<=5)$('tm').style.setProperty('--tc','#f87171');await sleep(s<=4?330:70);}
- A($('tm'),[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:350,fill:'none'});
+ for(let s=14;s>=0;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/15*100).toFixed(1));if(s<=5){$('tm').style.setProperty('--tc','#f87171');SFX('tickhi');}await sleep(s<=4?330:70);}
+ SFX('buzz');A($('tm'),[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:350,fill:'none'});
  A($('openb'),[{opacity:1},{opacity:0}],{duration:250});
  await A($('who'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:220});
- const fl=$('fail');fl.style.opacity=1;
+ SFX('fail');const fl=$('fail');fl.style.opacity=1;
  A(fl,[{opacity:0,transform:'translateX(-50%) translateY(20px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
  A($('q'),[{boxShadow:'0 0 0 1px rgba(248,113,113,0)'},{boxShadow:'0 0 0 2px rgba(248,113,113,.55),0 0 50px rgba(248,113,113,.2)'},{boxShadow:'0 0 0 1px rgba(248,113,113,0)'}],{duration:1100,fill:'none'});
  await sleep(1400);
  cap('٨ · تبديل السؤال (نفس القسم ونفس النقاط)');
  // اقلب الصورة والسؤال
  [...$('qt').children].forEach((w,i)=>A(w,[{opacity:1,filter:'blur(0)'},{opacity:0,filter:'blur(6px)',transform:'translateY(-10px)'}],{duration:260,delay:i*30}));
- await A($('flag'),[{transform:'rotateY(0)'},{transform:'rotateY(90deg)'}],{duration:320,easing:IN});
+ SFX('swish');await A($('flag'),[{transform:'rotateY(0)'},{transform:'rotateY(90deg)'}],{duration:320,easing:IN});
  $('flagsvg').innerHTML='<rect width="300" height="200" fill="#ffd500"/><rect width="300" height="100" fill="#0057b7"/>';
  $('rflag').querySelector('svg').innerHTML='<rect width="300" height="200" fill="#ffd500"/><rect width="300" height="100" fill="#0057b7"/>';
  await A($('flag'),[{transform:'rotateY(-90deg)'},{transform:'rotateY(0)'}],{duration:420,easing:SPRING});
  [...$('qt').children].forEach((w,i)=>A(w,[{opacity:0,transform:'translateY(12px)',filter:'blur(6px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:380,delay:i*80}));
  A(fl,[{opacity:1},{opacity:0}],{duration:250});
- const alt=$('alt');alt.style.display='inline-flex';A(alt,[{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
+ SFX('chime');const alt=$('alt');alt.style.display='inline-flex';A(alt,[{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
  // يرجع الدور للفريق صاحب الاختيار بوقته الكامل
  $('tB').classList.remove('turn');$('tbB').style.display='none';$('tA').style.borderColor=$('tB').style.borderColor='';$('tbA').textContent='يجاوب';$('tbA').style.background='#8b5cf6';
  $('who').classList.remove('open');$('who').innerHTML='💬 الفريق السماوي يجاوب الحين بالشات <small>— سؤال جديد بنفس القسم والنقاط</small>';
@@ -479,7 +557,7 @@ async function joinDemo(){
  cap('الدخول التلقائي مقفل');await sleep(900);
  const aj=$('aj');
  await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});
- aj.classList.add('on');
+ aj.classList.add('on');SFX('click');
  cap('تفعيل الدخول التلقائي ← يظهر المؤشر فوق');
  await A($('mt'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:280,easing:IN});
  A($('ji'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
@@ -496,7 +574,7 @@ async function joinDemo(){
  await sleep(2600);
  cap('إيقاف الدخول التلقائي ← يختفي المؤشر');
  await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});
- aj.classList.remove('on');
+ aj.classList.remove('on');SFX('click');
  await A($('ji'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:300,easing:IN});
  A($('mt'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});
  await sleep(1500);
@@ -549,7 +627,7 @@ async function nextJoin(){if(!JQ.length){jBusy=false;return;}jBusy=true;const [n
  const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
  const c=document.createElement('div');c.className='jc'+(opt.no?' no':'');if(!opt.no)c.style.setProperty('--bc',col+'aa');c.style.setProperty('--tc',opt.no?'#f87171':col);
  c.innerHTML=`<span class="ph">${pimg(name)}</span><b>${name}</b><span class="row2">`+(opt.no?`${opt.msg}`:`دخل <span class="tm" style="background:${col}">الفريق ${tn}</span>`)+`</span><span class="bar"></span>`;
- $('jq').appendChild(c);c.style.opacity=1;
+ $('jq').appendChild(c);c.style.opacity=1;SFX(opt.no?'reject':'join');$('mid').classList.add('dim');
  await A(c,[{opacity:0,transform:'translateX(-50%) translateY(14px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:420,easing:SPRING});
  if(!opt.no){const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;MEM[team].unshift(name);drawMem(team);
   A($('m'+team).firstChild,[{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:450,easing:SPRING});
@@ -559,13 +637,13 @@ async function nextJoin(){if(!JQ.length){jBusy=false;return;}jBusy=true;const [n
  if(opt.keep){document.body.dataset.ready=1;return;}
  c.querySelector('.bar').animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:3000,fill:'both'});
  await sleep(3000);
- await A(c,[{opacity:1,transform:'translateX(-50%) scale(1)'},{opacity:0,transform:'translateX(-50%) translateY(-8px) scale(.96)'}],{duration:350,easing:IN});c.remove();
+ await A(c,[{opacity:1,transform:'translateX(-50%) scale(1)'},{opacity:0,transform:'translateX(-50%) translateY(-8px) scale(.96)'}],{duration:350,easing:IN});c.remove();$('mid').classList.remove('dim');
  await sleep(1000);nextJoin();}
 const joinIdle=async()=>{while(jBusy||JQ.length)await sleep(100);};
 async function joinDemo2(){
  $('cats').style.display='none';await boardIn();
  cap('الدخول التلقائي مقفل');await sleep(800);
- const aj=$('aj');await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.add('on');
+ const aj=$('aj');await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.add('on');SFX('click');
  cap('تفعيل ← كلمات الدخول تظهر فوق');
  await A($('mt'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:280,easing:IN});
  A($('ji'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
@@ -578,7 +656,7 @@ async function joinDemo2(){
  cap('لاعب بفريق يحاول يغيّر ← مرفوض');
  pushJoin('sara_77','A',{no:1,msg:'ما تقدر تغير فريقك'});await joinIdle();
  cap('إيقاف الدخول التلقائي');
- await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.remove('on');
+ await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.remove('on');SFX('click');
  await A($('ji'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:300,easing:IN});
  A($('mt'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});await sleep(1400);
 }
@@ -595,18 +673,53 @@ async function joinDuring2(){
 async function still(n){$('cats').style.display='none';$('aj').classList.add('on');$('mt').style.opacity=0;$('ji').style.opacity=1;
  $('teams').style.opacity=1;heads.forEach(h=>h.style.opacity=1);tiles.forEach(t=>t.style.opacity=1);$('cap').style.display='none';
  pushJoin(n>1?'noura.k':'fahad.q','B',{keep:1});}
+const LIST={A:['sara_77','abo_nasser','mj_10','faisal','reem_22','omar.s','turki','ali'],B:['fahad.q','noura.k','reem','salem','lama','hind','khalid.x','yazeed']};
+function drawPlayers(){for(const t of ['A','B']){const a=t==='A',col=a?'#5ccfff':'#f5b0ff';
+ $('pl'+t).innerHTML=`<div class="plt"><span><i style="background:${col};box-shadow:0 0 8px ${col}"></i>الفريق ${a?'السماوي':'الوردي'}</span><small><span id="pc${t}">${$('n'+t).textContent}</span> لاعب</small></div>`+
+  LIST[t].slice(0,7).map(n=>`<div class="pr" data-n="${n}"><img src="${avatar(n)}"><b>${n}</b><span class="k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/></svg> إقصاء</span></div>`).join('')+`<div class="more">+ ${+$('n'+t).textContent-7} لاعب آخر</div>`;}}
+function setPlN(){const n=+$('nA').textContent + +$('nB').textContent;$('plN').textContent=n;$('plN2').textContent=n;}
+async function moveCur(el,dx=0,dy=0){const r=el.getBoundingClientRect(),c=$('cur');const x=r.left+r.width/2+dx,y=r.top+r.height/2+dy;
+ const cs=getComputedStyle(c);if(c.style.opacity!=='1'){c.style.left=(x+60)+'px';c.style.top=(y+60)+'px';c.style.opacity=1;}
+ await A(c,[{left:c.style.left,top:c.style.top},{left:x+'px',top:y+'px'}],{duration:550,easing:'cubic-bezier(.4,0,.2,1)'});c.style.left=x+'px';c.style.top=y+'px';}
+async function press(el){SFX('click');await A(el,[{transform:'scale(1)'},{transform:'scale(.92)'},{transform:'scale(1)'}],{duration:220,fill:'none'});}
+async function openOv(id){const o=$(id);o.style.display='grid';SFX('open');A(o,[{opacity:0},{opacity:1}],{duration:260});await A(o.firstElementChild,[{opacity:0,transform:'translateY(24px) scale(.97)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});}
+async function closeOv(id){const o=$(id);SFX('click');A(o.firstElementChild,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(14px) scale(.98)'}],{duration:260,easing:IN});await A(o,[{opacity:1},{opacity:0}],{duration:280});o.style.display='none';}
+async function uiDemo(){
+ $('cats').style.display='none';await boardIn();setPlN();
+ cap('زر اللاعبين ← أسماء كل اللاعبين');
+ await moveCur($('bPl'));await press($('bPl'));drawPlayers();await openOv('plOv');await sleep(1600);
+ cap('إقصاء لاعب');
+ const row=document.querySelector('.pr[data-n="abo_nasser"]');await moveCur(row.querySelector('.k'));row.classList.add('hov');await sleep(500);await press(row.querySelector('.k'));
+ SFX('kick');await A(row,[{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});
+ await A(row,[{opacity:1,height:'44px'},{opacity:0,height:'0px',transform:'translateX(30px)'}],{duration:420,easing:IN});row.remove();
+ $('nA').textContent=+$('nA').textContent-1;$('pcA').textContent=$('nA').textContent;setPlN();A($('plN2'),[{color:'#fca5a5',transform:'scale(1.2)'},{color:'#fff',transform:'none'}],{duration:600,fill:'none'});
+ MEM.A=MEM.A.filter(n=>n!=='abo_nasser');drawMem('A');
+ const kt=$('kt');kt.innerHTML=`<img src="${avatar('abo_nasser')}"><span><b style="color:#fff">abo_nasser</b> تم إقصاؤه من اللعبة</span>`;kt.style.opacity=1;
+ A(kt,[{opacity:0,transform:'translateX(-50%) translateY(-10px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:420,easing:SPRING});
+ await sleep(1800);A(kt,[{opacity:1},{opacity:0}],{duration:300});
+ await moveCur(document.querySelector('#plMd .x'));await closeOv('plOv');await sleep(500);
+ cap('زر الإعدادات بجانب زر الخروج');
+ await moveCur($('bSet'));await press($('bSet'));await openOv('stOv');await sleep(2600);
+ await moveCur(document.querySelector('#stMd .x'));await closeOv('stOv');await sleep(400);
+ cap('زر ملء الشاشة');
+ await moveCur($('bFs'));await press($('bFs'));$('bFs').innerHTML=`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;$('bFs').classList.add('act');
+ SFX('swish');await A(document.body,[{transform:'scale(.965)',filter:'brightness(.85)'},{transform:'scale(1)',filter:'none'}],{duration:500,easing:SPRING});
+ try{document.documentElement.requestFullscreen&&window.__audioOn&&document.documentElement.requestFullscreen();}catch(e){}
+ await sleep(1600);$('cur').style.opacity=0;
+}
 async function run(){
  await sleep(300);
  if(MODE==='still1'){await still(1);return;}
  if(MODE==='still3'){await still(3);return;}
- if(MODE==='join'){await joinDemo2();}
+ if(MODE==='ui'){await uiDemo();}
+ else if(MODE==='join'){await joinDemo2();}
  else if(MODE==='joinq'){await joinDuring2();}
  else if(MODE==='steal'){
   await catsPhase();await boardIn();await pickAndOpen();await teamTimeRunsOut();await openPhase();
   cap('٦ · ١٥ ثانية مفتوحة للفريقين');await tick(15,12,420,'#ffc83d');
   await correct('noura.k','#f5b0ff','الفريق الوردي','#f5b0ff');
   await points('scB','tB',1000,1400);
-  cap('١٠ · الدور ينتقل للفريق الوردي');setTurnB();A($('tbB'),[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});await sleep(900);
+  cap('١٠ · الدور ينتقل للفريق الوردي');SFX('swish');setTurnB();A($('tbB'),[{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});await sleep(900);
   await backToBoard('wb','#f5b0ff');
  } else {
   $('cats').style.display='none';await boardIn();await pickAndOpen();await teamTimeRunsOut();await openPhase();
@@ -614,5 +727,7 @@ async function run(){
  }
  A($('cap'),[{opacity:1},{opacity:0}],{duration:300});$('replay').style.display='block';
 }
-document.fonts.ready.then(run);
+document.fonts.ready.then(()=>{if(REC||MODE.startsWith('still'))return run();
+ const o=document.createElement('div');o.id='startov';o.innerHTML='<button>▶ تشغيل العرض مع الصوت</button>';document.body.appendChild(o);
+ o.querySelector('button').onclick=()=>{AC=new (window.AudioContext||window.webkitAudioContext)();window.__audioOn=true;o.remove();run();};});
 </script></body></html>
