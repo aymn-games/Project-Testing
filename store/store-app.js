@@ -92,7 +92,17 @@ function visible() { return products().filter(function (p) { return !p.hidden; }
 // باقي التصنيفات (اشتراكات، باقات، تأثيرات…) ما تطلع لين تتفعّل أقسامها.
 function isFrameCat(c) { return !!c && (c.kind === 'streamers' || String(c.name || '').indexOf('إطار') !== -1); }
 function frameCats() { return cats().filter(isFrameCat); }
-function frameProducts() { return visible().filter(function (p) { return isFrameCat(catById(p.categoryId)); }); }
+// تبويبات البطاقات تحت «الإطارات»: تتجمّع حسب نوع البطاقة (cardType من الخادم)
+// مو حسب التصنيف — فبطاقة الإقصاء/الفوز تطلع بتبويبها وما تتكرر بتبويب الإطارات.
+var CARD_TABS = { elim: 'بطاقات الإقصاء', win: 'بطاقات الفوز' };
+function isCardTab(k) { return Object.prototype.hasOwnProperty.call(CARD_TABS, k); }
+function frameProducts() { return visible().filter(function (p) { return p.cardType || isFrameCat(catById(p.categoryId)); }); }
+function inTab(p, k) {
+    if (k === 'all') return true;
+    if (isCardTab(k)) return p.cardType === k;
+    return !p.cardType && p.categoryId === k;
+}
+function tabName(k) { return isCardTab(k) ? CARD_TABS[k] : ((catById(k) || {}).name || ''); }
 function catName(p) { if (p.plan) return PLAN_CATEGORY; var c = catById(p.categoryId); return c ? c.name : ''; }
 function cartIds() { return Object.keys(state.cart).map(Number).filter(function (id) { return !!productById(id); }); }
 function cartProducts() { return cartIds().map(productById); }
@@ -131,6 +141,8 @@ function applyHash() {
         state.view = state.lastOrder ? 'success' : 'store';
     } else if ((m = /^c-(\d+)$/.exec(hsh))) {
         state.cat = isFrameCat(catById(Number(m[1]))) ? Number(m[1]) : 'all';
+    } else if ((m = /^c-(elim|win)$/.exec(hsh))) {
+        state.cat = m[1];
     } else if ((m = /^s-(\d+)(?:-(\d+))?$/.exec(hsh))) {
         var sc = streamersCat();
         if (sc) {
@@ -381,14 +393,12 @@ function sectionBar() {
 
 function catTabs() {
     var sc = streamersCat();
-    var keys = ['all'].concat(frameCats().map(function (c) { return c.id; }));
+    var keys = ['all'].concat(frameCats().map(function (c) { return c.id; }), Object.keys(CARD_TABS));
     return keys.map(function (k) {
-        var c = k === 'all' ? null : catById(k);
-        var count = k === 'all' ? frameProducts().length
-            : (sc && k === sc.id) ? streamers().length
-                : visible().filter(function (p) { return p.categoryId === k; }).length;
+        var count = (sc && k === sc.id) ? streamers().length
+            : frameProducts().filter(function (p) { return inTab(p, k); }).length;
         return h('button', { type: 'button', role: 'tab', 'aria-selected': state.cat === k ? 'true' : 'false', 'class': 'tab' + (state.cat === k ? ' on' : ''), onclick: function () { go(k === 'all' ? '' : '#c-' + k); } },
-            h('span', null, c ? c.name : 'الكل'), h('span', { 'class': 'cnt' }, count));
+            h('span', null, k === 'all' ? 'الكل' : tabName(k)), h('span', { 'class': 'cnt' }, count));
     });
 }
 
@@ -424,9 +434,8 @@ function viewStore() {
     var cur = inStreamersCat && state.streamer ? streamers().filter(function (s) { return s.id === state.streamer; })[0] : null;
 
     if (state.cat !== 'all' && !cur) {
-        var c = catById(state.cat);
-        var count = inStreamersCat ? streamers().length + ' استريمرز' : visible().filter(function (p) { return p.categoryId === state.cat; }).length + ' منتجات';
-        out.push(h('div', { 'class': 'st-row cat-bar' }, backBtn('رجوع', function () { go(''); }), h('h2', null, c ? c.name : ''), h('span', { 'class': 'muted' }, count)));
+        var count = inStreamersCat ? streamers().length + ' استريمرز' : frameProducts().filter(function (p) { return inTab(p, state.cat); }).length + ' منتجات';
+        out.push(h('div', { 'class': 'st-row cat-bar' }, backBtn('رجوع', function () { go(''); }), h('h2', null, tabName(state.cat)), h('span', { 'class': 'muted' }, count)));
     }
 
     if (inStreamersCat && !cur) {
@@ -468,7 +477,7 @@ function viewStore() {
         }
         items = all.filter(function (p) { return state.sub == null || p.subcatId === state.sub; });
     } else {
-        items = frameProducts().filter(function (p) { return state.cat === 'all' || p.categoryId === state.cat; });
+        items = frameProducts().filter(function (p) { return inTab(p, state.cat); });
     }
     out.push(items.length ? h('div', { 'class': 'grid' }, items.map(productCard)) : h('div', { 'class': 'empty-box' }, 'ما فيه منتجات هنا للحين.'));
     return out;
