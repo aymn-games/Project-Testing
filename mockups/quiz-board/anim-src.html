@@ -36,7 +36,7 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 .bp{width:440px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 19px 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2);opacity:.4;transition:opacity .4s}
 .bs{height:56px;padding:0 26px;border-radius:999px;display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 16px 'IBM Plex Sans Arabic'}
 /* teams */
-#teams{top:94px;height:66px;display:flex;justify-content:space-between;align-items:center;opacity:0}
+#teams{z-index:20;top:94px;height:66px;display:flex;justify-content:space-between;align-items:center;opacity:0}
 .team{display:flex;align-items:center;gap:14px;padding:8px 18px;min-width:280px;justify-content:space-between;border-radius:999px;position:relative;transition:border-color .5s,box-shadow .5s}
 .team .nm2{display:flex;align-items:center;gap:8px;font:700 16px 'IBM Plex Sans Arabic';min-height:24px}
 .team .dt{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
@@ -93,6 +93,27 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 .fail{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:12px 24px;border-radius:999px;background:rgba(30,14,18,.94);border:1px solid rgba(248,113,113,.5);font:700 17px 'IBM Plex Sans Arabic';color:#fca5a5;opacity:0;white-space:nowrap}
 .alt{display:none;height:28px;padding:0 12px;border-radius:999px;align-items:center;background:rgba(255,200,61,.14);color:#ffc83d;font:700 13px 'IBM Plex Sans Arabic'}
 .qimg{perspective:800px}
+.aj{display:flex;align-items:center;gap:10px;height:38px;padding:0 14px 0 6px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:600 13px 'IBM Plex Sans Arabic';color:#e7e3ef;transition:border-color .3s,box-shadow .3s}
+.aj.on{border-color:rgba(167,139,250,.55);box-shadow:0 0 20px rgba(139,92,246,.3)}
+.tg2{width:46px;height:26px;border-radius:999px;padding:3px;display:flex;justify-content:flex-end;background:rgba(255,255,255,.12);transition:background .3s}
+.tg2 i{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.aj.on .tg2{background:linear-gradient(90deg,#7c3aed,#a855f7)}.aj.on .tg2 i{transform:translateX(20px)}
+#mid{position:relative;display:grid;place-items:center;width:520px;height:66px}
+#mid .mtitle{position:absolute}
+#ji{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;opacity:0}
+#ji .jt{display:flex;align-items:center;gap:8px;font:600 14px 'IBM Plex Sans Arabic';color:#c4b5fd}
+#ji .jt i{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;animation:pl 1.4s ease-in-out infinite}
+@keyframes pl{50%{opacity:.35;transform:scale(.7)}}
+.jk{display:flex;align-items:center;gap:10px}
+.kw{height:32px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;font:700 17px 'IBM Plex Sans Arabic'}
+.kw.a{color:#a5e8ff;border:1px solid rgba(92,207,255,.5);background:rgba(92,207,255,.1)}
+.kw.b{color:#f5b0ff;border:1px solid rgba(245,176,255,.5);background:rgba(245,176,255,.1)}
+.jk .or{font:500 13px 'IBM Plex Sans Arabic';color:#8a8596}
+.fd{position:absolute;top:calc(100% + 8px);right:0;left:0;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:60;pointer-events:none}
+.jp{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 6px;border-radius:999px;background:rgba(12,11,18,.95);border:1px solid var(--bc);font:600 13px 'IBM Plex Sans Arabic';white-space:nowrap;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+.jp .ja{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px 'IBM Plex Sans Arabic';color:#07060b}
+.jp b{color:#fff}.jp small{color:#a8a3b5;font:500 12px 'IBM Plex Sans Arabic'}
+.jp.no{--bc:rgba(248,113,113,.55);color:#fca5a5}
 /* caption */
 #cap{position:fixed;bottom:16px;left:22px;z-index:90;height:32px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(12,11,18,.9);border:1px solid rgba(167,139,250,.3);font:600 13px 'IBM Plex Sans Arabic';color:#c4b5fd;opacity:0}
 #cap i{width:7px;height:7px;border-radius:50%;background:#a78bfa;box-shadow:0 0 8px #a78bfa}
@@ -102,7 +123,7 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 <header>
  <div><span class="exit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>مكتبة الألعاب</span></div>
  <img src="%%LOGO%%" alt="">
- <div class="hl"><span class="live"><i></i>متصل بالبث</span></div>
+ <div class="hl" style="gap:10px;align-items:center"><span class="live"><i></i>متصل بالبث</span><div class="aj" id="aj"><span>الدخول التلقائي</span><span class="tg2"><i></i></span></div></div>
 </header>
 
 <div id="cats" class="L">
@@ -112,9 +133,9 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 </div>
 
 <div id="teams" class="L">
- <div class="panel team turn" id="tA" style="--c:#5ccfff"><div><div class="nm2"><span class="dt"></span>الفريق السماوي <span class="turnb" id="tbA">دوره يختار</span></div><small>23 لاعب</small></div><span class="sc" id="scA">1,400</span></div>
- <span class="mtitle">لوحة التحدي</span>
- <div class="panel team" id="tB" style="--c:#f5b0ff"><div><div class="nm2"><span class="dt"></span>الفريق الوردي <span class="turnb" id="tbB" style="display:none">دوره يختار</span></div><small>19 لاعب</small></div><span class="sc" id="scB">1,000</span></div>
+ <div class="panel team turn" id="tA" style="--c:#5ccfff"><div><div class="nm2"><span class="dt"></span>الفريق السماوي <span class="turnb" id="tbA">دوره يختار</span></div><small><span id="nA">23</span> لاعب</small></div><div class="fd" id="fA"></div><span class="sc" id="scA">1,400</span></div>
+ <div id="mid"><span class="mtitle" id="mt">لوحة التحدي</span><div id="ji"><div class="jt"><i></i>الدخول التلقائي مفعّل · اكتب اسم فريقك بالشات</div><div class="jk"><span class="kw a">السماوي</span><span class="or">أو</span><span class="kw b">الوردي</span></div></div></div>
+ <div class="panel team" id="tB" style="--c:#f5b0ff"><div><div class="nm2"><span class="dt"></span>الفريق الوردي <span class="turnb" id="tbB" style="display:none">دوره يختار</span></div><small><span id="nB">19</span> لاعب</small></div><div class="fd" id="fB"></div><span class="sc" id="scB">1,000</span></div>
 </div>
 
 <div id="stage" class="L">
@@ -316,9 +337,44 @@ async function swapQuestion(){
  A($('tm'),[{transform:'scale(.6)'},{transform:'scale(1.12)'},{transform:'none'}],{duration:500,easing:SPRING,fill:'none'});
  await sleep(900);await tick(30,27,450);await sleep(600);
 }
+async function joinPill(box,html,cls,bc){const p=document.createElement('div');p.className='jp '+(cls||'');if(bc)p.style.setProperty('--bc',bc);p.innerHTML=html;$(box).prepend(p);
+ A(p,[{opacity:0,transform:'translateY(-10px) scale(.9)'},{opacity:1,transform:'none'}],{duration:380,easing:SPRING});
+ setTimeout(()=>A(p,[{opacity:1},{opacity:0,transform:'translateY(6px)'}],{duration:350}).then(()=>p.remove()),2300);}
+async function join(name,typed,team){const a=team==='A',col=a?'#5ccfff':'#f5b0ff';
+ joinPill(a?'fA':'fB',`<span class="ja" style="background:${col}">${name[0].toUpperCase()}</span><b>${name}</b><small>كتب «${typed}» ← انضم</small>`,'',a?'rgba(92,207,255,.55)':'rgba(245,176,255,.55)');
+ const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;A(n.parentElement,[{color:col,transform:'scale(1.15)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
+ A($(a?'tA':'tB'),[{boxShadow:`0 0 0 1px ${col}00`},{boxShadow:`0 0 0 2px ${col}aa,0 0 30px ${col}44`},{boxShadow:`0 0 0 1px ${col}00`}],{duration:800,fill:'none'});}
+async function joinDemo(){
+ $('cats').style.display='none';await boardIn();
+ cap('الدخول التلقائي مقفل');await sleep(900);
+ const aj=$('aj');
+ await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});
+ aj.classList.add('on');
+ cap('تفعيل الدخول التلقائي ← يظهر المؤشر فوق');
+ await A($('mt'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:280,easing:IN});
+ A($('ji'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
+ [...document.querySelectorAll('.kw')].forEach((k,i)=>A(k,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:450,delay:200+i*160,easing:SPRING}));
+ await sleep(1400);
+ cap('اللاعبين يكتبون اسم الفريق ← ينضمون تلقائياً');
+ await join('fahad.q','الوردي','B');await sleep(650);
+ await join('sara_77','سماوي','A');await sleep(650);
+ await join('abo_nasser','السماوي','A');await sleep(650);
+ await join('noura.k','وردي','B');await sleep(1300);
+ cap('لاعب بفريق يحاول يغيّر ← مرفوض');
+ joinPill('fA','<span class="ja" style="background:#5ccfff">S</span><b>sara_77</b><small style="color:#fca5a5">كتبت «الوردي» · ما تقدر تغير فريقك</small>','no');
+ A($('tA'),[{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:360,fill:'none'});
+ await sleep(2600);
+ cap('إيقاف الدخول التلقائي ← يختفي المؤشر');
+ await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});
+ aj.classList.remove('on');
+ await A($('ji'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:300,easing:IN});
+ A($('mt'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});
+ await sleep(1500);
+}
 async function run(){
  await sleep(300);
- if(MODE==='steal'){
+ if(MODE==='join'){await joinDemo();}
+ else if(MODE==='steal'){
   await catsPhase();await boardIn();await pickAndOpen();await teamTimeRunsOut();await openPhase();
   cap('٦ · ١٥ ثانية مفتوحة للفريقين');await tick(15,12,420,'#ffc83d');
   await correct('noura.k','#f5b0ff','الفريق الوردي','#f5b0ff');
