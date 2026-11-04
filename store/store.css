@@ -70,6 +70,14 @@ option{background:#161124;color:#ece9f5;}
 .avatar-in img{width:100%;height:100%;object-fit:cover;display:block;}
 .avatar--glow{box-shadow:0 0 30px -6px rgba(124,77,255,0.8);}
 
+/* أقسام المتجر الرئيسية (الإطارات / الأليرتات / الاشتراكات) */
+.st-sections{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;}
+.st-section{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 22px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#c9c3dc;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.st-section.on{border-color:transparent;background:linear-gradient(135deg,#a47bff,#6d5cf0);color:#fff;box-shadow:0 10px 24px -12px rgba(124,77,255,0.8);}
+.st-section.soon{cursor:not-allowed;color:#7d7792;}
+.st-section .soon-badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(252,211,77,0.12);border:1px solid rgba(252,211,77,0.35);color:#fcd34d;}
+@media (max-width:480px){.st-section{flex:1 1 0;justify-content:center;padding:0 10px;font-size:14px;gap:6px;}.st-section .soon-badge{font-size:10px;padding:2px 6px;}}
+
 /* تبويبات كبسولة */
 .tabs{display:flex;gap:6px;padding:5px;border-radius:999px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);max-width:100%;overflow-x:auto;scrollbar-width:none;}
 .tabs::-webkit-scrollbar{display:none;}
