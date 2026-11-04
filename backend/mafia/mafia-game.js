@@ -21,6 +21,7 @@
  *   - المذيع (شاشة البث يشوفها الكل): ما يستلم أدوار الأحياء ولا اختيارات الليل ولا
  *     النتائج السرية ولا الكروت (إلا بالنهاية)، والشات العام فقط.
  *   - اللاعب: دوره، والمافيا يعرفون بعض (والمتخفي والمجنّد) ويشوفون الكروت واختيارات بعض،
+ *     والأطباء يعرفون بعض والمحققين يعرفون بعض (الحقل mate بكل لاعب يعرفه)،
  *     وإشعاراته الخاصة (نتائج المحقق، إنقاذ الطبيب، كشف الهوية، التجنيد).
  */
 'use strict';
@@ -459,11 +460,14 @@ function createGame(roster, settings, hooks) {
     function view(id) {
         var isHost = id === 'host', me = !isHost && P(id), over = G.phase === 'over';
         var meMafia = !!(me && me.alive && me.faction === 'mafia');
+        // زملاء الدور: الطبيب يشوف الأطباء الأحياء، والمحقق يشوف المحققين (والمجنّد يبقى معهم مثل شاتهم)
+        var mateRole = !over && me && me.alive ? (['doctor', 'detective'].filter(function (r) { return inRoleChat(me, r); })[0] || null) : null;
         var players = G.players.map(function (p) {
             var o = { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, seat: p.seat, district: p.district, alive: p.alive || hiddenDeath(p), cause: hiddenDeath(p) ? null : p.cause, diedRound: p.diedRound, role: null, team: null };
             if (over) { o.role = p.originalRole; o.finalRole = p.role; o.team = p.faction; o.recruited = !!p.recruitedRound; }
             else if (p === me) { o.role = p.role; o.team = p.faction; }
-            else if (meMafia && p.faction === 'mafia') { o.role = p.role; o.team = 'mafia'; }   // المافيا يعرفون بعض حتى المتخفي والمجنّد
+            else if (meMafia && p.faction === 'mafia') { o.role = p.role; o.team = 'mafia'; o.mate = 'mafia'; }   // المافيا يعرفون بعض حتى المتخفي والمجنّد
+            else if (mateRole && inRoleChat(p, mateRole)) { o.role = mateRole; o.mate = mateRole; }   // الأطباء يعرفون بعض، والمحققين كذلك (بدون كشف الفريق)
             else { var d = deadInfo(p); o.role = d.role || null; o.team = d.team || null; }
             return o;
         });
