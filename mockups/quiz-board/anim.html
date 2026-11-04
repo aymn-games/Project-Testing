@@ -303,6 +303,22 @@ box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.1),0 0 34px
 #startov{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:rgba(4,3,8,.7);backdrop-filter:blur(8px)}
 #startov button{height:58px;padding:0 34px;border:0;border-radius:999px;background:linear-gradient(180deg,#9f7aea,#7c3aed);color:#fff;font:600 19px 'IBM Plex Sans Arabic';box-shadow:0 14px 34px -10px rgba(124,58,237,.8);cursor:pointer}
 .cursor{position:fixed;z-index:300;width:22px;height:22px;pointer-events:none;opacity:0;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+
+.vis{width:560px;height:196px;border-radius:22px;position:relative;overflow:hidden;flex:none;
+background:radial-gradient(120% 90% at 50% 100%,rgba(255,138,101,.18),transparent 70%),linear-gradient(180deg,rgba(26,22,40,.9),rgba(13,11,21,.9));box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 30px 60px -20px rgba(0,0,0,.8),0 0 60px -20px rgba(255,138,101,.35)}
+.vis .bars{position:absolute;left:28px;right:28px;bottom:58px;top:26px;display:flex;align-items:flex-end;justify-content:space-between;gap:5px}
+.vis .bars i{flex:1;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,#ffd0bf,#ff8a65 55%,#c084fc);height:20%;box-shadow:0 0 14px -2px rgba(255,138,101,.55)}
+.vis .pb{position:absolute;left:28px;right:28px;bottom:26px;display:flex;align-items:center;gap:12px;font:600 13px 'IBM Plex Sans Arabic';color:#e7e3ef;direction:ltr}
+.vis .pb .tr{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}.vis .pb .tr i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#ff8a65,#c084fc)}
+.vis .note{position:absolute;top:16px;right:20px;height:28px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:7px;background:rgba(255,138,101,.12);box-shadow:inset 0 0 0 1px rgba(255,138,101,.35);font:600 12px 'IBM Plex Sans Arabic';color:#ffd0bf}
+.vis .note i{width:7px;height:7px;border-radius:50%;background:#ff8a65;box-shadow:0 0 8px #ff8a65;animation:pl 1s infinite}
+.yt{position:absolute;left:28px;top:118px;width:200px;height:112px;border-radius:14px;overflow:hidden;background:#000;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 14px 30px -10px rgba(0,0,0,.8)}
+.yt::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#2a1a3a,#0a0a0a)}
+.yt .pl{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:30px;border-radius:9px;background:rgba(255,255,255,.15);display:grid;place-items:center}
+.yt .pl::after{content:"";border-left:12px solid #fff;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px}
+.yt small{position:absolute;bottom:6px;right:8px;font:500 10.5px 'IBM Plex Sans Arabic';color:#c9c3da}
+.ctl{display:flex;gap:10px;margin-top:-4px}
+.ctl span{height:40px;padding:0 18px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);font:600 14px 'IBM Plex Sans Arabic';color:#e7e3ef}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -445,6 +461,13 @@ wc:(c,i)=>`
  <rect x="68" y="144" width="64" height="18" rx="4" fill="${c.dk}"/>
  <rect x="80" y="150" width="40" height="6" rx="3" fill="#ffe9b0" opacity=".8"/>
  <path d="M100,62l3.5,7 7.5,1-5.5,5 1.5,7.5-7-3.8-7,3.8 1.5-7.5-5.5-5 7.5-1z" fill="#fff"/>`,
+songs:(c,i)=>`
+ <rect x="50" y="118" width="12" height="34" rx="6" fill="url(#w${i})"/><rect x="68" y="98" width="12" height="54" rx="6" fill="url(#w${i})"/><rect x="120" y="104" width="12" height="48" rx="6" fill="url(#w${i})"/><rect x="138" y="124" width="12" height="28" rx="6" fill="url(#w${i})"/>
+ <path d="M92,58L126,48V112" stroke="url(#gd${i})" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M92,58V122" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>
+ <ellipse cx="84" cy="124" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 84 124)"/>
+ <ellipse cx="118" cy="114" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 118 114)"/>
+ <path d="M92,72L126,62" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>
@@ -800,11 +823,32 @@ async function uiDemo(){
  try{document.documentElement.requestFullscreen&&window.__audioOn&&document.documentElement.requestFullscreen();}catch(e){}
  await sleep(1600);$('cur').style.opacity=0;
 }
+async function songDemo(){
+ const SC={k:'songs',t:'تخمين الأغاني',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'};
+ $('cats').style.display='none';$('teams').style.opacity=1;$('board').style.visibility='hidden';
+ const q=$('q');q.style.display='flex';
+ $('mini').innerHTML=svgFor(SC,'sg');$('meta').querySelector('b').textContent='تخمين الأغاني';$('meta').querySelector('.pts').textContent='200';$('meta').querySelectorAll('.badge')[0].textContent='سهل';
+ $('flag').outerHTML=`<div class="vis" id="vis"><span class="note"><i></i>استمع للمقطع</span><div class="bars">${'<i></i>'.repeat(34)}</div><div class="pb"><span id="tcur">0:00</span><div class="tr"><i id="tbar"></i></div><span>0:15</span></div></div>`;
+ $('qt').innerHTML='خمّن اسم الأغنية';$('qt').style.opacity=1;$('qt').style.fontSize='28px';$('qt').style.lineHeight='1.3';
+ q.insertAdjacentHTML('beforeend','<div class="yt" id="yt"><span class="pl"></span><small>المقطع يشتغل من يوتيوب</small></div>');
+ $('who').insertAdjacentHTML('beforebegin','<div class="ctl" id="ctl"><span>⟲ إعادة المقطع</span><span>⏸ إيقاف</span></div>');
+ [...q.children].forEach(c=>c.style.opacity=1);['openb','ok','fail'].forEach(i=>$(i).style.opacity=0);$('alt').style.display='none';
+ cap('سؤال صوتي · المقطع ١٥ ثانية من يوتيوب');SFX('chime');
+ A($('vis'),[{opacity:0,transform:'scale(.9)'},{opacity:1,transform:'none'}],{duration:600,easing:SPRING});
+ TMAX=30;$('tm').style.setProperty('--p',100);$('tmn').textContent=30;
+ const bars=[...document.querySelectorAll('.vis .bars i')];let run=true,t0=performance.now(),ph=bars.map(()=>Math.random()*6);
+ (function an(now){if(!run)return;const t=(now-t0)/1000;bars.forEach((b,i)=>{const v=.18+.82*Math.abs(Math.sin(t*2.2+ph[i])*Math.sin(t*1.3+i*.45))*(.55+.45*Math.sin(i/34*Math.PI));b.style.height=(v*100).toFixed(1)+'%';});
+  const el=Math.min(15,t*1.6);$('tbar').style.width=(el/15*100)+'%';$('tcur').textContent='0:'+String(Math.floor(el)).padStart(2,'0');requestAnimationFrame(an);})(t0);
+ await sleep(400);await tick(30,24,520);
+ cap('الستريمر يقدر يعيد المقطع');const r=$('ctl').firstElementChild;await moveCur(r);await press(r);t0=performance.now();await sleep(1600);$('cur').style.opacity=0;
+ await tick(23,20,520);run=false;document.body.dataset.ready=1;await sleep(600);
+}
 async function run(){
  await sleep(300);
  if(MODE==='still1'){await still(1);return;}
  if(MODE==='still3'){await still(3);return;}
  if(MODE==='ui'){await uiDemo();}
+ else if(MODE==='song'){await songDemo();}
  else if(MODE==='join'){await joinDemo2();}
  else if(MODE==='joinq'){await joinDuring2();}
  else if(MODE==='steal'){

@@ -83,6 +83,13 @@ wc:(c,i)=>`
  <rect x="68" y="144" width="64" height="18" rx="4" fill="${c.dk}"/>
  <rect x="80" y="150" width="40" height="6" rx="3" fill="#ffe9b0" opacity=".8"/>
  <path d="M100,62l3.5,7 7.5,1-5.5,5 1.5,7.5-7-3.8-7,3.8 1.5-7.5-5.5-5 7.5-1z" fill="#fff"/>`,
+songs:(c,i)=>`
+ <rect x="50" y="118" width="12" height="34" rx="6" fill="url(#w${i})"/><rect x="68" y="98" width="12" height="54" rx="6" fill="url(#w${i})"/><rect x="120" y="104" width="12" height="48" rx="6" fill="url(#w${i})"/><rect x="138" y="124" width="12" height="28" rx="6" fill="url(#w${i})"/>
+ <path d="M92,58L126,48V112" stroke="url(#gd${i})" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M92,58V122" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>
+ <ellipse cx="84" cy="124" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 84 124)"/>
+ <ellipse cx="118" cy="114" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 118 114)"/>
+ <path d="M92,72L126,62" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>
