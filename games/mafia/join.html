@@ -478,7 +478,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
                 '<a class="btn" style="display:grid;place-items:center;text-decoration:none" href="' + loginUrl() + '">تسجيل الدخول / إنشاء حساب</a>';
             return;
         }
-        var name = u.tiktok_display_name || u.username || '', tk = u.tiktok_verified && u.tiktok_username;
+        var tk = u.tiktok_verified && u.tiktok_username, name = (tk ? u.tiktok_display_name || tk : u.username) || '';   // نفس قاعدة الخادم: مربوط = اسم تيك توك، غير كذا = اسم الموقع
         box.innerHTML = '<span class="who2"><span class="av">' + esc(name.slice(0, 1)) + (tk ? '<img src="' + esc(((window.AGPAuth && window.AGPAuth.API_BASE) || '') + '/api/public/streamer-avatar?u=' + encodeURIComponent(tk)) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0">' : '') + '</span>' +
             '<div><div class="nm2">' + esc(name) + '</div><div class="sub2">' + (tk ? '@' + esc(tk) + ' · <span style="color:#7ee2a6">تنحسب لك النقاط</span>' : 'حسابك مو موثّق بتيك توك — بدون نقاط ولا إطار') + '</div></div></span>';
     }
