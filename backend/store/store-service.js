@@ -79,6 +79,13 @@ function mapCategory(row) {
     return { id: row.id, name: row.name, kind: row.kind };
 }
 
+function cardTypeOf(delivery) {
+    delivery = delivery || '';
+    if (delivery.indexOf('elim:') === 0) return 'elim';
+    if (delivery.indexOf('win:') === 0) return 'win';
+    return null;
+}
+
 function mapProduct(row) {
     return {
         id: row.id,
@@ -93,6 +100,9 @@ function mapProduct(row) {
         subcatId: row.streamer_subcat_id || null,
         items: row.bundle_items ? parseJsonArray(row.bundle_items) : null,
         plan: row.plan || null,
+        // نوع البطاقة بس (مو قيمة التسليم كاملة) — عشان المتجر يعرض
+        // «بطاقات الإقصاء» و«بطاقات الفوز» كتبويبات مستقلة تحت الإطارات.
+        cardType: cardTypeOf(row.delivery),
         hidden: !!row.hidden
     };
 }
