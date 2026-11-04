@@ -134,6 +134,9 @@ function poseClip(name, dur, fn) {
 }
 const CLIPS = {}; for (const id in CODED) CLIPS[id] = poseClip('a' + id, ...CODED[id]);
 let clipsVersion = 0;
+// للألعاب اللي تشغّل نفس الحركات على هيكل ثاني بنفس أسماء العظام ووضع T (مثل موديلات VRM بحجرة ورقة مقص)
+export function getClip(a) { return CLIPS[a] || null; }
+export function getClipsVersion() { return clipsVersion; }
 
 // ---- الحركات المسجّلة: من JSON (فرق عالمي عن وضع T) إلى دوران محلي لهيكلنا ----
 function mocapClip(name, data) {
