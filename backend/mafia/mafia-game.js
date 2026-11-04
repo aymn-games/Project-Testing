@@ -27,7 +27,7 @@
 'use strict';
 
 var REVEAL_MS = 8000;
-var VERDICT_MS = 12000;
+var VERDICT_MS = 16000;   // وقت كافي للمشاهدين يقرون لوحة «نتيجة التصويت» (مين صوّت لمين)
 var CHAT_MAX = 300;
 var DISTRICT_SIZE = 25;
 var Settings = require('./mafia-settings');
