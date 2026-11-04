@@ -652,13 +652,17 @@ body.vres .caption .k { font-size: 46px; }
                 else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
                     // نفس توقيتات ATK بالمشهد (mafia-scene.js)
-                    if (u < 3200) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
-                    else if (u < 6000) caption('👁️ في أحد يراقب من الظلام…', '', '', '#ff8a80');
+                    if (u < 3200) caption('🌙 السوق بالليل…', sh.target2 ? 'اثنين يمشون بين الدكاكين' : 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
+                    else if (u < 6000) caption(sh.target2 ? '👁️ في اثنين يراقبون من الظلام…' : '👁️ في أحد يراقب من الظلام…', '', '', '#ff8a80');
                     else if (u < 6650) caption('انتبه وراك!', '', '', '#ff8a80');
-                    else if (u < 8200) caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
-                    else caption('المافيا هرب في الظلام…', nameOf(sh.target) + ' طايح بالسوق', '', '#ff8a80');
+                    else if (u < 8200) caption('هجوم على ' + nameOf(sh.target) + (sh.target2 ? ' و' + nameOf(sh.target2) : '') + '!', '', '', '#ff5a4d');
+                    else caption(sh.target2 ? 'المافيا هربوا في الظلام…' : 'المافيا هرب في الظلام…', nameOf(sh.target) + (sh.target2 ? ' و' + nameOf(sh.target2) + ' طايحين' : ' طايح') + ' بالسوق', '', '#ff8a80');
                     if (u > 6650 && u < 7250) flash('#c40000', 0.6 * (1 - (u - 6650) / 600));
-                } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
+                } else if (sh.k === 'save') {
+                    var rs = sh.rescue || [sh.target], lost = sh.target2 ? [sh.target, sh.target2].filter(function (id) { return rs.indexOf(id) < 0; }) : [];
+                    if (rs.length > 1) caption('🩺 الطبيبين وصلوا!', 'أنقذوا ' + rs.map(nameOf).join(' و') + ' في آخر لحظة', '', '#7ee2a6');
+                    else caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(rs[0]) + ' في آخر لحظة' + (lost.length ? '… بس ' + nameOf(lost[0]) + ' ما لحقوا عليه' : ''), '', '#7ee2a6');
+                }
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر', '', '#7ee2a6');
                 else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');

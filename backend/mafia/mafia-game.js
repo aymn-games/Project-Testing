@@ -257,12 +257,13 @@ function createGame(roster, settings, hooks) {
         function shot(k, extra) { seq.push(Object.assign({ k: k, at: at, dur: SHOT[k] }, extra || {})); at += SHOT[k]; }
         shot('intro');
         if (inspectShot) shot('inspect');   // المشتبه ما ينكشف على البث
-        if (op && op.op === 'kill') killTargets.forEach(function (t) {   // لقطة هجوم لكل هدف (لين شخصين)
-            var sv = saveds.indexOf(t) >= 0;
-            shot('attack', { target: t.id, saved: sv });
-            if (sv) shot('save', { target: t.id });
-        });
-        else shot('quiet');
+        if (op && op.op === 'kill') {
+            // لقطة هجوم وحدة: الهدف يمشي بالسوق والمافيا وراه — ولو هدفين (target2) يمشون الاثنين ووراهم مافيا ثاني.
+            // بعدها لقطة إنقاذ وحدة لو أحد انحمى: طبيب لكل واحد انحمى (rescue)، واللي ما انحمى يبقى طايح
+            var a = killTargets[0], b = killTargets[1] || null, rescue = saveds.map(function (t) { return t.id; });
+            shot('attack', b ? { target: a.id, target2: b.id, saved: saveds.indexOf(a) >= 0, saved2: saveds.indexOf(b) >= 0 } : { target: a.id, saved: saveds.indexOf(a) >= 0 });
+            if (rescue.length) shot('save', b ? { target: a.id, target2: b.id, rescue: rescue } : { target: a.id });
+        } else shot('quiet');
         // الطبيب: لو حمى أحد (وما صار إنقاذ) مشهد علاج بدون ما ينكشف مين، ولو ما اختار أحد نوضّح هالشي
         if (S.doctors > 0 && !saveds.length) {
             var docActed = G.players.some(function (p) { return p.role === 'doctor' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
@@ -449,8 +450,9 @@ function createGame(roster, settings, hooks) {
     // ضحية الليل تبقى «حية» بحالة البث لين تنتهي لقطة الهجوم، عشان ما ينكشف قبل المشهد
     function hiddenDeath(p) {
         if (G.phase !== 'dawn' || p.cause !== 'mafia' || p.diedRound !== G.round) return false;
-        var atk = G.seq.find(function (s) { return s.k === 'attack' && s.target === p.id; }) || G.seq.find(function (s) { return s.k === 'attack'; });
-        return !atk || Date.now() < G.phaseAt + atk.at + ATTACK_DOWN_MS;
+        var atk = G.seq.find(function (s) { return s.k === 'attack'; });
+        // الهدف الثاني يطيح بعد الأول بشوي (PAIR_DU بالمشهد)
+        return !atk || Date.now() < G.phaseAt + atk.at + ATTACK_DOWN_MS + (atk.target2 === p.id ? 400 : 0);
     }
 
     /** وش ينكشف عن لاعب ميت للكل: الدور كامل (fullReveal) أو الفريق للمطرود بالتصويت (القواعد). */

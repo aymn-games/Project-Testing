@@ -529,15 +529,21 @@ export function createStage(container, getFrame, opts) {
     (function () { const { c, tex } = qTag.userData, ctx = c.getContext('2d'); ctx.font = '900 130px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff4d4d'; ctx.fillText('?', 256, 86); tex.needsUpdate = true; })();
 
     // ---------- المافيا والطبيب (شخصيات المشاهد)
-    const mafioso = buildChar({}, { outfit: 'shadow' }); scene.add(mafioso.root); mafioso.root.visible = false;
-    standUp(mafioso);
-    const cloak = mesh(new THREE.ConeGeometry(0.78, 1.65, 20, 1, true), mat('#09090d', { side: THREE.DoubleSide, roughness: 1 }), 0, 0.82, 0); mafioso.body.add(cloak);
-    const knife = new THREE.Group();
-    knife.add(mesh(new THREE.BoxGeometry(0.05, 0.42, 0.11), mat('#d7dde6', { metalness: 0.9, roughness: 0.2 }), 0, -0.3, 0));
-    knife.add(mesh(new THREE.BoxGeometry(0.07, 0.18, 0.07), mat('#2a1a10'), 0, 0, 0));
-    knife.position.set(0, -0.56, 0); knife.scale.setScalar(1.3); mafioso.armR.add(knife);
+    // مافيا ثاني وطبيب ثاني لمشهد الهدفين (لو المافيا اختلفوا وهاجموا شخصين)
+    function makeMafioso() {
+        const m = buildChar({}, { outfit: 'shadow' }); scene.add(m.root); m.root.visible = false;
+        standUp(m);
+        m.body.add(mesh(new THREE.ConeGeometry(0.78, 1.65, 20, 1, true), mat('#09090d', { side: THREE.DoubleSide, roughness: 1 }), 0, 0.82, 0));   // العباية
+        const knife = new THREE.Group();
+        knife.add(mesh(new THREE.BoxGeometry(0.05, 0.42, 0.11), mat('#d7dde6', { metalness: 0.9, roughness: 0.2 }), 0, -0.3, 0));
+        knife.add(mesh(new THREE.BoxGeometry(0.07, 0.18, 0.07), mat('#2a1a10'), 0, 0, 0));
+        knife.position.set(0, -0.56, 0); knife.scale.setScalar(1.3); m.armR.add(knife);
+        return m;
+    }
+    const mafioso = makeMafioso(), mafioso2 = makeMafioso();
     const evilLight = new THREE.PointLight('#ff2a2a', 0, 7, 1.3); scene.add(evilLight);
     const doctor = buildChar({ skin: 2 }, { outfit: 'doctor' }); scene.add(doctor.root); doctor.root.visible = false; standUp(doctor);
+    const doctor2 = buildChar({ skin: 0 }, { outfit: 'doctor' }); scene.add(doctor2.root); doctor2.root.visible = false; standUp(doctor2);
 
     // ---------------------------------------------------------------- العيادة (الطبيب يحمي لاعب ما انهاجم)
     const CLINIC = new THREE.Vector3(-80, 0, 0);
@@ -656,16 +662,17 @@ export function createStage(container, getFrame, opts) {
     dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
     const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#8a7766', size: 0.12, transparent: true, opacity: 0, depthWrite: false }));
     market.add(dust);
-    // الضحية بالسوق: نسخة واقفة من شخصية اللاعب (بدون اسم)
-    let walker = null, walkerKey = '';
-    function marketWalker(look) {
+    // الضحية بالسوق: نسخة واقفة من شخصية اللاعب (بدون اسم) — خانتين لو الهدف شخصين
+    const walkers = [null, null], walkerKeys = ['', ''];
+    function marketWalker(look, i) {
+        i = i || 0;
         const key = JSON.stringify(look || {});
-        if (walker && walkerKey === key) return walker;
-        if (walker) market.remove(walker.wrap);
-        walker = buildChar(look); walker.sit(false); walkerKey = key;
-        walker.wrap = new THREE.Group(); walker.wrap.add(walker.root); market.add(walker.wrap);
-        walker.root.userData.base = walker.mats.map((m) => m.color.clone());
-        return walker;
+        if (walkers[i] && walkerKeys[i] === key) return walkers[i];
+        if (walkers[i]) market.remove(walkers[i].wrap);
+        const w = buildChar(look); w.sit(false); walkerKeys[i] = key; walkers[i] = w;
+        w.wrap = new THREE.Group(); w.wrap.add(w.root); market.add(w.wrap);
+        w.root.userData.base = w.mats.map((m) => m.color.clone());
+        return w;
     }
     function walkPose(c, t, amp) {
         const w = Math.sin(t);
@@ -681,6 +688,7 @@ export function createStage(container, getFrame, opts) {
     // · 6650 الطعنة · 7300–7900 يطيح · 8200 المافيا يهرب للزقاق
     const ATK = { walkEnd: 6000, eyes: 3200, out: 4000, follow: 4700, close: 6200, raise: 6000, strike: 6650, buckle: 6750, fall: 7300, down: 7900, flee: 8200, gone: 9800 };
     const WALK_FROM = -12, STOP_X = 0, STREET_Z = 0.6;
+    const PAIR_DZ = 1.25, PAIR_DU = 320;   // الهدف الثاني: حارة ورا الأول بـ1.25م ومتأخر عنه 0.32ث
     const walkX = (u) => lerp(WALK_FROM, STOP_X, 1 - Math.pow(1 - span(u, 0, ATK.walkEnd), 1.6));   // يبطّي بآخر خطوات
     const walkPhase = (u) => (walkX(u) - WALK_FROM) * 2.4;   // الخطوة على المسافة: بدون انزلاق رجول
     // مؤثرات كل لقطة: خطوات الضحية محسوبة من نفس دورة المشي
@@ -972,7 +980,7 @@ export function createStage(container, getFrame, opts) {
         });
 
         // ----- المشاهد الخاصة
-        mafioso.root.visible = false; doctor.root.visible = false; if (walker) walker.wrap.visible = false; evilLight.intensity = 0; healPts.visible = false; healRing.visible = false; healLight.intensity = 0;
+        mafioso.root.visible = false; mafioso2.root.visible = false; doctor.root.visible = false; doctor2.root.visible = false; walkers.forEach((w) => { if (w) w.wrap.visible = false; }); evilLight.intensity = 0; healPts.visible = false; healRing.visible = false; healLight.intensity = 0;
         cage.visible = false; verdictSpot.intensity = 0; confetti.visible = false; fireworks.visible = false; spotBeam.material.opacity = 0; dustRing.material.opacity = 0; phoneScreen.emissiveIntensity = 0;
         let cam = null;   // [px,py,pz, lx,ly,lz, snap]
 
@@ -1012,76 +1020,90 @@ export function createStage(container, getFrame, opts) {
                 else { const k = ease(span(u, 5200, s.dur)); cam = camRoom( [lerp(1.8, 2.5, k), lerp(2.3, 2.9, k), lerp(2.2, 3.0, k)], [-0.5, 1.05, 0.2], 0.004); }   // الجوال يضيء
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
                 // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
-                const w = marketWalker(vt.p.look), Z = STREET_Z;
-                w.wrap.visible = true; w.root.position.set(0, 0, 0); w.root.rotation.set(0, 0, 0); standPose(w);
-                w.head.rotation.set(0, 0, 0); w.body.position.y = 0; w.body.rotation.set(0, 0, 0); setGrey(w, 0);
-                w.eyes.forEach((e) => { e.scale.y = e.userData.sy; e.visible = true; });
-                w.wrap.rotation.y = Math.PI / 2;   // وجهه باتجاه +x (اتجاه المشي)
+                // لو المافيا اختلفوا وهاجموا شخصين (target2): الثاني يمشي بحارة ورا الأول ومعه مافيا ثاني، والكاميرا تبعد شوي عشان يبانون الاثنين
+                const vt2 = s.target2 && chars.get(s.target2), pair = !!vt2, Z = STREET_Z;
+                const slots = [{ w: marketWalker(vt.p.look, 0), z: Z, du: 0, m: mafioso, id: s.target }];
+                if (pair) slots.push({ w: marketWalker(vt2.p.look, 1), z: Z - PAIR_DZ, du: PAIR_DU, m: mafioso2, id: s.target2 });
+                slots.forEach((sl) => {
+                    const w = sl.w;
+                    w.wrap.visible = true; w.root.position.set(0, 0, 0); w.root.rotation.set(0, 0, 0); standPose(w);
+                    w.head.rotation.set(0, 0, 0); w.body.position.y = 0; w.body.rotation.set(0, 0, 0); setGrey(w, 0);
+                    w.eyes.forEach((e) => { e.scale.y = e.userData.sy; e.visible = true; });
+                    w.wrap.rotation.y = Math.PI / 2;   // وجهه باتجاه +x (اتجاه المشي)
+                });
                 // حركة كاميرا محمولة خفيفة (مو ثابتة جامدة)
                 const hand = (amp) => [Math.sin(u / 310) * amp + Math.sin(u / 170) * amp * 0.6, Math.sin(u / 260) * amp * 0.7, Math.cos(u / 230) * amp * 0.5];
                 const shotCam = (c, l, amp) => { const h = hand(amp || 0.03), c0 = mw(c[0] + h[0], c[1] + h[1], c[2] + h[2]), l0 = mw(l[0], l[1], l[2]); return [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; };
+                // تكبير الإطار لشخصين: الكاميرا ترجع لورا من نقطة النظر وتتوسّط بين الحارتين
+                const fit = (c, zMid, k) => { if (!c || (!zMid && k === 1)) return c; return [c[3] + (c[0] - c[3]) * k, c[4] + (c[1] - c[4]) * Math.min(k, 1.15), c[5] + zMid + (c[2] - c[5]) * k, c[3], c[4], c[5] + zMid]; };
                 dust.material.opacity = 0;
                 if (s.k === 'attack') {
-                    // ---- الضحية: يمشي ويتلفّت على البسطات، يبطّي، يحس بأحد، يلتفت، الطعنة، تنهار ركبه، يطيح على وجهه
-                    const vx = walkX(u), ph = walkPhase(u);
-                    w.wrap.position.set(vx, 0, Z);
-                    if (u < ATK.walkEnd) {
-                        const amp = 0.55 * (1 - span(u, ATK.walkEnd - 900, ATK.walkEnd) * 0.7);
-                        walkPose(w, ph, amp); w.root.position.y = Math.abs(Math.sin(ph)) * 0.05;
-                        w.body.rotation.z = Math.sin(ph) * 0.035;                                  // تمايل المشي
-                        w.head.rotation.y = Math.sin(u / 900) * 0.45 * (1 - span(u, 4800, 5600));  // يتفرج على البسطات
-                    }
-                    const look = ease(span(u, ATK.walkEnd, ATK.walkEnd + 450)) * (1 - ease(span(u, ATK.strike, ATK.strike + 150)));
-                    w.head.rotation.y += -look * 1.05; w.body.rotation.y = -look * 0.25;          // يلتفت ورا
-                    const hit = span(u, ATK.strike, ATK.strike + 120), buckle = ease(span(u, ATK.buckle, ATK.fall)), fall = ease(span(u, ATK.fall, ATK.down));
-                    if (hit > 0) {
-                        w.root.position.x = Math.sin(hit * Math.PI) * 0.08;                        // ارتداد الضربة
-                        w.armL.rotation.set(-0.3 - buckle * 0.8, 0, -0.5); w.armR.rotation.set(-0.3 - buckle * 0.8, 0, 0.5);
-                        w.head.rotation.x = -0.25 * (1 - buckle) + buckle * 0.3;
-                    }
-                    if (buckle > 0) {                                                              // الركب تنثني والجسم ينزل
-                        const kb = buckle * (1 - fall);
-                        w.legs.forEach((l) => { l.hip.rotation.x = -0.6 * kb; l.knee.rotation.x = 1.1 * kb; });
-                        w.body.position.y = -0.22 * kb;
-                    }
-                    if (fall > 0) { w.root.rotation.x = fall * Math.PI / 2 * 0.96; w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
-                    // غبار الطيحة
-                    const dk = span(u, ATK.down - 60, ATK.down + 900);
-                    if (dk > 0 && dk < 1) {
-                        dust.material.opacity = 0.55 * (1 - dk);
-                        for (let i = 0; i < DUST; i++) { const d = dustSeed[i]; dustPos[i * 3] = STOP_X + 0.9 + d.dx * dk; dustPos[i * 3 + 1] = 0.05 + d.dy * Math.sin(dk * Math.PI) * 0.6; dustPos[i * 3 + 2] = Z + d.dz * dk; }
-                        dustGeo.attributes.position.needsUpdate = true;
-                    }
+                    function attackSlot(w, m, Z, u, primary) {
+                        // ---- الضحية: يمشي ويتلفّت على البسطات، يبطّي، يحس بأحد، يلتفت، الطعنة، تنهار ركبه، يطيح على وجهه
+                        const vx = walkX(u), ph = walkPhase(u);   // u هنا وقت الخانة (الثاني متأخر شوي)
+                        w.wrap.position.set(vx, 0, Z);
+                        if (u < ATK.walkEnd) {
+                            const amp = 0.55 * (1 - span(u, ATK.walkEnd - 900, ATK.walkEnd) * 0.7);
+                            walkPose(w, ph, amp); w.root.position.y = Math.abs(Math.sin(ph)) * 0.05;
+                            w.body.rotation.z = Math.sin(ph) * 0.035;                                  // تمايل المشي
+                            w.head.rotation.y = Math.sin(u / 900) * 0.45 * (1 - span(u, 4800, 5600));  // يتفرج على البسطات
+                        }
+                        const look = ease(span(u, ATK.walkEnd, ATK.walkEnd + 450)) * (1 - ease(span(u, ATK.strike, ATK.strike + 150)));
+                        w.head.rotation.y += -look * 1.05; w.body.rotation.y = -look * 0.25;          // يلتفت ورا
+                        const hit = span(u, ATK.strike, ATK.strike + 120), buckle = ease(span(u, ATK.buckle, ATK.fall)), fall = ease(span(u, ATK.fall, ATK.down));
+                        if (hit > 0) {
+                            w.root.position.x = Math.sin(hit * Math.PI) * 0.08;                        // ارتداد الضربة
+                            w.armL.rotation.set(-0.3 - buckle * 0.8, 0, -0.5); w.armR.rotation.set(-0.3 - buckle * 0.8, 0, 0.5);
+                            w.head.rotation.x = -0.25 * (1 - buckle) + buckle * 0.3;
+                        }
+                        if (buckle > 0) {                                                              // الركب تنثني والجسم ينزل
+                            const kb = buckle * (1 - fall);
+                            w.legs.forEach((l) => { l.hip.rotation.x = -0.6 * kb; l.knee.rotation.x = 1.1 * kb; });
+                            w.body.position.y = -0.22 * kb;
+                        }
+                        if (fall > 0) { w.root.rotation.x = fall * Math.PI / 2 * 0.96; w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
+                        // غبار الطيحة
+                        const dk = span(u, ATK.down - 60, ATK.down + 900);
+                        if (primary && dk > 0 && dk < 1) {
+                            dust.material.opacity = 0.55 * (1 - dk);
+                            for (let i = 0; i < DUST; i++) { const d = dustSeed[i]; dustPos[i * 3] = STOP_X + 0.9 + d.dx * dk; dustPos[i * 3 + 1] = 0.05 + d.dy * Math.sin(dk * Math.PI) * 0.6; dustPos[i * 3 + 2] = Z + d.dz * dk; }
+                            dustGeo.attributes.position.needsUpdate = true;
+                        }
 
-                    // ---- المافيا: عيون بالزقاق ← يطلع ← يلحقه بخطوات هادية ← يرفع السكين ← يطعن ← يتلفّت ← يهرب
-                    mafioso.root.visible = u > ATK.eyes && u < ATK.gone;
-                    const inAlley = new THREE.Vector3(-6, 0, -6.8), mouth = new THREE.Vector3(-5.4, 0, -3.0), back = new THREE.Vector3(STOP_X - 0.9, 0, Z + 0.35), deep = new THREE.Vector3(-6, 0, -10);
-                    const chase = new THREE.Vector3(vx - 1.7, 0, Z + 0.95);   // ورا الضحية ومايل لجهة الكاميرا عشان يبان فوق كتفه
-                    let mp, dirV, gait = 0, pace = 120;
-                    if (u < ATK.out) { mp = inAlley.clone(); dirV = new THREE.Vector3(0.3, 0, 1); }
-                    else if (u < ATK.follow) { const k = ease(span(u, ATK.out, ATK.follow)); mp = inAlley.clone().lerp(mouth, k); dirV = mouth.clone().sub(inAlley); gait = 0.4; pace = 150; }
-                    else if (u < ATK.close) { const k = ease(span(u, ATK.follow, ATK.close)); mp = mouth.clone().lerp(chase, k); dirV = new THREE.Vector3(1, 0, 0.15); gait = 0.38; pace = 140; }
-                    else if (u < ATK.flee) { const k = ease(span(u, ATK.close, ATK.strike - 80)); mp = chase.clone().lerp(back, k); dirV = new THREE.Vector3(1, 0, 0); gait = k < 1 ? 0.3 : 0; }
-                    else { const k = span(u, ATK.flee, ATK.gone); mp = k < 0.45 ? back.clone().lerp(mouth, ease(k / 0.45)) : mouth.clone().lerp(deep, ease((k - 0.45) / 0.55)); dirV = k < 0.45 ? mouth.clone().sub(back) : deep.clone().sub(mouth); gait = 0.85; pace = 65; }
-                    mafioso.root.position.copy(mw(mp.x, 0, mp.z));
-                    mafioso.root.rotation.set(0, Math.atan2(dirV.x, dirV.z), 0);
-                    mafioso.root.scale.setScalar(1.05);
-                    standPose(mafioso); mafioso.body.rotation.set(0, 0, 0);
-                    if (gait) { walkPose(mafioso, u / pace, gait); mafioso.root.position.y = Math.abs(Math.sin(u / pace)) * (u > ATK.flee ? 0.1 : 0.03); }
-                    if (u > ATK.follow && u < ATK.strike) mafioso.body.rotation.x = 0.16;                 // ماشي منحني يتسلل
-                    const raise = ease(span(u, ATK.raise, ATK.raise + 500)), strike = ease(span(u, ATK.strike - 50, ATK.strike + 70));
-                    if (u > ATK.raise && u < ATK.flee) {
-                        mafioso.armR.rotation.set(-0.5 - raise * 2.65 + strike * 2.3, 0, 0.15); mafioso.armL.rotation.set(-0.4 - raise * 0.7 + strike * 0.3, 0, -0.25);
-                        mafioso.body.rotation.x = 0.1 - raise * 0.12 + strike * 0.28;
+                        // ---- المافيا: عيون بالزقاق ← يطلع ← يلحقه بخطوات هادية ← يرفع السكين ← يطعن ← يتلفّت ← يهرب
+                        m.root.visible = u > ATK.eyes && u < ATK.gone;
+                        const dzA = Z - STREET_Z, inAlley = new THREE.Vector3(-6, 0, -6.8 + dzA), mouth = new THREE.Vector3(-5.4, 0, -3.0 + dzA), back = new THREE.Vector3(STOP_X - 0.9, 0, Z + 0.35), deep = new THREE.Vector3(-6, 0, -10 + dzA);
+                        const chase = new THREE.Vector3(vx - 1.7, 0, Z + 0.95);   // ورا الضحية ومايل لجهة الكاميرا عشان يبان فوق كتفه
+                        let mp, dirV, gait = 0, pace = 120;
+                        if (u < ATK.out) { mp = inAlley.clone(); dirV = new THREE.Vector3(0.3, 0, 1); }
+                        else if (u < ATK.follow) { const k = ease(span(u, ATK.out, ATK.follow)); mp = inAlley.clone().lerp(mouth, k); dirV = mouth.clone().sub(inAlley); gait = 0.4; pace = 150; }
+                        else if (u < ATK.close) { const k = ease(span(u, ATK.follow, ATK.close)); mp = mouth.clone().lerp(chase, k); dirV = new THREE.Vector3(1, 0, 0.15); gait = 0.38; pace = 140; }
+                        else if (u < ATK.flee) { const k = ease(span(u, ATK.close, ATK.strike - 80)); mp = chase.clone().lerp(back, k); dirV = new THREE.Vector3(1, 0, 0); gait = k < 1 ? 0.3 : 0; }
+                        else { const k = span(u, ATK.flee, ATK.gone); mp = k < 0.45 ? back.clone().lerp(mouth, ease(k / 0.45)) : mouth.clone().lerp(deep, ease((k - 0.45) / 0.55)); dirV = k < 0.45 ? mouth.clone().sub(back) : deep.clone().sub(mouth); gait = 0.85; pace = 65; }
+                        m.root.position.copy(mw(mp.x, 0, mp.z));
+                        m.root.rotation.set(0, Math.atan2(dirV.x, dirV.z), 0);
+                        m.root.scale.setScalar(1.05);
+                        standPose(mafioso); m.body.rotation.set(0, 0, 0);
+                        if (gait) { walkPose(mafioso, u / pace, gait); m.root.position.y = Math.abs(Math.sin(u / pace)) * (u > ATK.flee ? 0.1 : 0.03); }
+                        if (u > ATK.follow && u < ATK.strike) m.body.rotation.x = 0.16;                 // ماشي منحني يتسلل
+                        const raise = ease(span(u, ATK.raise, ATK.raise + 500)), strike = ease(span(u, ATK.strike - 50, ATK.strike + 70));
+                        if (u > ATK.raise && u < ATK.flee) {
+                            m.armR.rotation.set(-0.5 - raise * 2.65 + strike * 2.3, 0, 0.15); m.armL.rotation.set(-0.4 - raise * 0.7 + strike * 0.3, 0, -0.25);
+                            m.body.rotation.x = 0.1 - raise * 0.12 + strike * 0.28;
+                        }
+                        const scan = span(u, ATK.down, ATK.flee);   // بعد الطيحة يتلفّت يمين ويسار
+                        m.head.rotation.set(0.15 - raise * 0.2, scan > 0 && scan < 1 ? Math.sin(scan * Math.PI * 2) * 0.7 : 0, 0);
+                        const eyeK = u < ATK.out ? ease(span(u, ATK.eyes + 100, ATK.eyes + 600)) : 1;      // العيون تفتح بالظلام
+                        m.eyes.forEach((e) => { e.material.emissiveIntensity = (0.2 + eyeK * 1.2) + raise * 1.6; e.scale.y = e.userData.sy * (u < ATK.eyes + 600 ? 0.25 + eyeK * 0.75 : 1); });
+                        if (primary) evilLight.position.copy(m.root.position).add(new THREE.Vector3(0.6, 2.4, 0.8));
+                        if (primary) evilLight.intensity = !m.root.visible ? 0 : u < ATK.out ? 1.5 * eyeK : 4 + raise * 7 + strike * 5;
+                        if (u > ATK.strike && u < ATK.strike + 260) shake = Math.max(shake, 0.28);
+                        if (u > ATK.down && u < ATK.down + 180) shake = Math.max(shake, 0.12);
+                        return vx;
+
                     }
-                    const scan = span(u, ATK.down, ATK.flee);   // بعد الطيحة يتلفّت يمين ويسار
-                    mafioso.head.rotation.set(0.15 - raise * 0.2, scan > 0 && scan < 1 ? Math.sin(scan * Math.PI * 2) * 0.7 : 0, 0);
-                    const eyeK = u < ATK.out ? ease(span(u, ATK.eyes + 100, ATK.eyes + 600)) : 1;      // العيون تفتح بالظلام
-                    mafioso.eyes.forEach((e) => { e.material.emissiveIntensity = (0.2 + eyeK * 1.2) + raise * 1.6; e.scale.y = e.userData.sy * (u < ATK.eyes + 600 ? 0.25 + eyeK * 0.75 : 1); });
-                    evilLight.position.copy(mafioso.root.position).add(new THREE.Vector3(0.6, 2.4, 0.8));
-                    evilLight.intensity = !mafioso.root.visible ? 0 : u < ATK.out ? 1.5 * eyeK : 4 + raise * 7 + strike * 5;
-                    if (u > ATK.strike && u < ATK.strike + 260) shake = 0.28;
-                    if (u > ATK.down && u < ATK.down + 180) shake = Math.max(shake, 0.12);
+                    const vx = attackSlot(slots[0].w, mafioso, Z, u, true);
+                    if (pair) attackSlot(slots[1].w, mafioso2, slots[1].z, u - PAIR_DU, false);
 
                     // ---- الكاميرا: 6 لقطات
                     if (u < ATK.eyes) {          // 1) تأسيس: كرين ينزل من فوق أسلاك اللمبات للشارع وهو يمشي
@@ -1102,34 +1124,53 @@ export function createStage(container, getFrame, opts) {
                         const k = ease(span(u, ATK.flee, s.dur));
                         cam = shotCam([6.6 + k * 0.6, 2.9 + k * 0.3, 2.6], [-2.4, 0.4, -1.6], 0.02);
                     }
+                    if (pair) cam = fit(cam, -PAIR_DZ / 2, 1.35);
                 } else {
-                    // الإنقاذ: الطبيب يركض بالسوق ← يتزحلق على ركبه جنبه ← هالة خضرا ونبض يرجع ← يقوم الاثنين
-                    w.wrap.position.set(STOP_X, 0, Z);
-                    const fall = 1 - ease(span(u, 4600, 5400));
-                    w.root.rotation.x = fall * Math.PI / 2 * 0.96;
-                    if (fall > 0) { w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
-                    else { const cheer = span(u, 5400, 6000); w.armL.rotation.set(-0.4 - Math.sin(cheer * Math.PI) * 1.6, 0, -0.3); w.head.rotation.set(-0.15, 0.6, 0); }
-                    const p = mw(STOP_X + 0.8, 0, Z);   // مكان جسم المصاب على الأرض
-                    doctor.root.visible = true; standPose(doctor); doctor.body.rotation.set(0, 0, 0);
-                    const run = ease(span(u, 0, 2000)), docX = lerp(9, STOP_X + 0.8, run);
-                    const from = mw(9, 0, Z + 0.9), to = mw(STOP_X + 0.8, 0, Z + 1.2);
-                    doctor.root.position.lerpVectors(from, to, run);
-                    if (run < 1) { walkPose(doctor, u / 70, 0.85); doctor.root.position.y = Math.abs(Math.sin(u / 70)) * 0.12; doctor.body.rotation.x = 0.12; }
-                    else doctor.armR.rotation.set(-1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
-                    doctor.root.lookAt(run < 1 ? to.x : p.x, 0, run < 1 ? to.z : p.z);
-                    const kneel = ease(span(u, 2000, 2300)) * (1 - ease(span(u, 5000, 5500)));
-                    doctor.root.position.y -= kneel * 0.25; doctor.body.rotation.x += kneel * 0.15;
+                    // الإنقاذ: الطبيب يركض بالسوق ← يتزحلق على ركبه جنبه ← هالة خضرا ونبض يرجع ← يقوم
+                    // لو هدفين: اللي انحمى يجيه طبيب (ولو الاثنين انحموا يجون طبيبين مع بعض)، واللي ما انحمى يبقى طايح
+                    const rescue = s.rescue || [s.target];
+                    const saved = slots.filter((sl) => rescue.indexOf(sl.id) >= 0);
+                    slots.forEach((sl) => {
+                        const w = sl.w, ok = rescue.indexOf(sl.id) >= 0;
+                        w.wrap.position.set(STOP_X, 0, sl.z);
+                        const fall = ok ? 1 - ease(span(u, 4600, 5400)) : 1;
+                        w.root.rotation.x = fall * Math.PI / 2 * 0.96;
+                        if (fall > 0) { w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
+                        else { const cheer = span(u, 5400, 6000); w.armL.rotation.set(-0.4 - Math.sin(cheer * Math.PI) * 1.6, 0, -0.3); w.head.rotation.set(-0.15, 0.6, 0); }
+                        if (!ok) setGrey(w, 0.6);   // ما لحقوا عليه
+                    });
+                    const docX = lerp(9, STOP_X + 0.8, ease(span(u, 0, 2000)));
+                    saved.forEach((sl, j) => {
+                        const d = j ? doctor2 : doctor, side = sl.z === Z ? 1 : -1;   // الطبيب الثاني من الجهة الثانية عشان ما يتداخلون
+                        const p = mw(STOP_X + 0.8, 0, sl.z);   // مكان جسم المصاب على الأرض
+                        d.root.visible = true; standPose(d); d.body.rotation.set(0, 0, 0);
+                        const run = ease(span(u, j * 150, 2000 + j * 150));
+                        const from = mw(9 + j * 0.9, 0, sl.z + 0.9 * side), to = mw(STOP_X + 0.8, 0, sl.z + 1.2 * side);
+                        d.root.position.lerpVectors(from, to, run);
+                        if (run < 1) { walkPose(d, u / 70, 0.85); d.root.position.y = Math.abs(Math.sin(u / 70)) * 0.12; d.body.rotation.x = 0.12; }
+                        else d.armR.rotation.set(-1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
+                        d.root.lookAt(run < 1 ? to.x : p.x, 0, run < 1 ? to.z : p.z);
+                        const kneel = ease(span(u, 2000, 2300)) * (1 - ease(span(u, 5000, 5500)));
+                        d.root.position.y -= kneel * 0.25; d.body.rotation.x += kneel * 0.15;
+                    });
                     const healK = span(u, 2300, 5000);
-                    if (healK > 0 && healK < 1) {
+                    if (healK > 0 && healK < 1 && saved.length) {
+                        // الهالة على المصاب (أو بين الاثنين لو انحموا الاثنين، وأوسع)
+                        const zc = saved.reduce((a, sl) => a + sl.z, 0) / saved.length, p = mw(STOP_X + 0.8, 0, zc), R = saved.length > 1 ? 1.6 : 1;
                         healPts.visible = true; healRing.visible = true;
                         healLight.position.set(p.x, 1.2, p.z); healLight.intensity = Math.sin(healK * Math.PI) * 25;
-                        for (let i = 0; i < HEAL; i++) { const q = (healK * 2 + i / HEAL) % 1, a = i * 2.4 + u / 500; healPos[i * 3] = p.x + Math.cos(a) * (0.9 - q * 0.6); healPos[i * 3 + 1] = q * 2.6; healPos[i * 3 + 2] = p.z + Math.sin(a) * (0.9 - q * 0.6); }
+                        for (let i = 0; i < HEAL; i++) { const q = (healK * 2 + i / HEAL) % 1, a = i * 2.4 + u / 500; healPos[i * 3] = p.x + Math.cos(a) * (0.9 - q * 0.6) * R; healPos[i * 3 + 1] = q * 2.6; healPos[i * 3 + 2] = p.z + Math.sin(a) * (0.9 - q * 0.6) * R; }
                         healGeo.attributes.position.needsUpdate = true;
-                        healRing.position.set(p.x, 0.05 + healK * 1.8, p.z); healRing.scale.setScalar(1 + healK); healRing.material.opacity = 1 - healK;
+                        healRing.position.set(p.x, 0.05 + healK * 1.8, p.z); healRing.scale.setScalar((1 + healK) * R); healRing.material.opacity = 1 - healK;
                     }
                     if (u < 2000) cam = shotCam([docX - 3.4, 1.05, Z + 2.3], [docX, 1.15, Z + 0.9], 0.04);                       // يركض نحونا
                     else if (u < 4600) { const a = lerp(0.35, 1.5, ease(span(u, 2000, 4600))); cam = shotCam([0.8 + Math.cos(a) * 2.5, 4.3, Z + Math.sin(a) * 2.5], [0.8, 0.35, Z + 0.4], 0.01); }   // من فوق تدور
                     else { const k = ease(span(u, 4600, s.dur)); cam = shotCam([lerp(2.9, 2.4, k), lerp(0.6, 0.8, k), Z - lerp(2.2, 1.8, k)], [0.3, lerp(0.8, 1.35, k), Z + 0.3], 0.02); }   // يقوم: لقطة بطولية من تحت (جهة الزقاق عشان الطبيب ما يغطيه)
+                    // هدفين: الكاميرا تتوسّط بين الاثنين وتبعد (ولو انحمى الثاني بس، تروح لحارته)
+                    if (pair && u >= 4600) {   // يقومون: لقطة عالية من جهة الكاميرا تبين الاثنين (اللقطة المنخفضة كان الطبيب يغطي فيها)
+                        const k = ease(span(u, 4600, s.dur)), zm = Z - PAIR_DZ / 2;
+                        cam = shotCam([lerp(4.9, 4.2, k), lerp(2.6, 2.2, k), zm + lerp(1.4, 1.0, k)], [0.3, 0.75, zm], 0.02);   // من آخر الشارع: الأطباء على الجنبين والناجين بالنص
+                    } else if (pair) { const zc = saved.length === 1 ? saved[0].z - Z : -PAIR_DZ / 2; cam = fit(cam, zc, saved.length === 1 ? 1.12 : 1.35); }
                 }
             } else if (s.k === 'heal') {
                 // العيادة: الطبيب يدخل ← يوقف جنب السرير ← هالة خضرا والنبض يقوى ← المريض يقعد (مجهول بدون اسم)
