@@ -707,7 +707,7 @@ body.in-game .brand img { height: 24px; }
             }); side = (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
-            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
+            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : V && V.skip ? '⏭️ الأغلبية اختارت التخطي' : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
                 (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') : 'شوف البث') + '</p></div>';
         } else if (ph === 'over') {
             var won = me.team === G.winner;

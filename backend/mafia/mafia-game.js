@@ -304,22 +304,24 @@ function createGame(roster, settings, hooks) {
     function resolveVote() {
         var tally = {}, best = 0, top = [];
         alive().forEach(function (p) {
-            var v = G.votes[p.id]; if (!v || v === 'skip') return;   // الامتناع ما ينحسب
-            var t = P(v); if (!t || !t.alive) return;
+            var v = G.votes[p.id]; if (!v) return;
+            // «تخطي» خيار ينافس مثل أي لاعب: لو أخذ أكثر الأصوات ما أحد يطلع (الأكثرية تحكم حتى لو كانت تخطي)
+            if (v !== 'skip') { var t = P(v); if (!t || !t.alive) return; }
             tally[v] = (tally[v] || 0) + 1;
         });
         Object.keys(tally).forEach(function (t) { if (tally[t] > best) { best = tally[t]; top = [t]; } else if (tally[t] === best) top.push(t); });
-        var out = top.length === 1 ? P(top[0]) : null;
-        G.verdict = { id: out ? out.id : null, tie: top.length > 1, tally: tally, team: out ? out.faction : null, votes: best };
+        var skipWon = top.length === 1 && top[0] === 'skip';
+        var out = top.length === 1 && !skipWon ? P(top[0]) : null;
+        G.verdict = { id: out ? out.id : null, tie: top.length > 1, skip: skipWon, tally: tally, team: out ? out.faction : null, votes: best };
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
             G.lastExile = { round: G.round, id: out.id, team: out.faction, role: S.fullReveal ? out.role : null };
             sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'مواطن') + ') بـ' + best + ' صوت.');
-        } else sys(top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
-        // ملخص الأصوات للمشاهدين (أعلى 3 + الممتنعين)
-        var ranked = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);
-        var abst = alive().filter(function (p) { return G.votes[p.id] === 'skip'; }).length;
-        if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'امتنع ' + abst : ''));
+        } else sys(skipWon ? 'لم يُقصَ أحد: «تخطي» أخذ أكثر الأصوات (' + best + ').' : top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
+        // ملخص الأصوات للمشاهدين (أعلى 3 + التخطي)
+        var ranked = Object.keys(tally).filter(function (k) { return k !== 'skip'; }).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);
+        var abst = tally.skip || 0;
+        if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'تخطي ' + abst : ''));
         G.silenced = [];
         // اللي ما صوّت ولا امتنع: مرتين ورا بعض = إقصاء لعدم النشاط
         if (S.kickIdle !== false) alive().forEach(function (p) {
