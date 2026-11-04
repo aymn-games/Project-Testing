@@ -27,6 +27,9 @@
         if (!auth || !auth.getToken || !auth.getToken()) return 'login';
         var user = auth.getCachedUser ? auth.getCachedUser() : null;
         if (!user) return 'login';
+        // صفحة تطلب حساب بالموقع بس (بدون ربط تيك توك) — مثل المافيا بوضع الديسكورد (games/mafia/mafia-mode.js).
+        // الافتراضي مطفي: باقي الألعاب ما تتأثر.
+        if (window.AGP_GUARD_LOGIN_ONLY === true) return null;
         if (auth.canPlayGames && auth.canPlayGames(user)) return null;
         if (auth.isStreamerAccount && !auth.isStreamerAccount(user)) return 'not_streamer';
         return 'tiktok';
@@ -39,6 +42,11 @@
         if (!reason) return;
         blocked = true;
         document.documentElement.style.visibility = 'hidden';
+        // صفحات «حساب بالموقع بس» (مثل المافيا بوضع الديسكورد): بدون تسجيل دخول نروح لصفحة الدخول ونرجع لنفس الصفحة
+        if (reason === 'login' && window.AGP_GUARD_LOGIN_ONLY === true && window.location.href.indexOf(root) === 0) {
+            window.location.replace(root + 'login.html?next=' + encodeURIComponent(window.location.href.slice(root.length)));
+            return;
+        }
         window.location.replace(root + 'games.html?locked=' + reason);
     }
 

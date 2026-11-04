@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="../../auth/auth-client.js"></script>
+<script src="mafia-mode.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <link rel="stylesheet" href="mafia-host.css">
@@ -117,7 +118,7 @@
     $('exitYes').onclick = function () {
         var h = NET.hostSession();
         if (h) { net.send({ t: 'host', code: h.code, token: h.token }); net.send({ t: 'close' }); NET.hostSession(null); }
-        setTimeout(function () { location.href = '../../games.html'; }, 200);
+        setTimeout(function () { location.href = window.MAFIA_HOME || '../../games.html'; }, 200);
     };
 })();
 </script>

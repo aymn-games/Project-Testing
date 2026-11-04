@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="../../auth/auth-client.js"></script>
+<script src="mafia-mode.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <link rel="stylesheet" href="mafia-host.css">
@@ -92,6 +93,8 @@
         </section>
 
         <div class="footer">
+            <!-- وضع الديسكورد: المضيف يقدر يلعب معهم من جواله (شاشته مشتركة بالديسكورد فدوره لازم يكون بجهاز ثاني) -->
+            <button class="cta cta-ghost dc-only" id="playBtn" type="button">🎮 العب معهم</button>
             <button class="cta" id="startBtn" type="button" disabled><span id="startTxt">ابدأ المباراة</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
         </div>
     </div>
@@ -103,6 +106,16 @@
         <b>الخروج؟</b>
         <p>بترجع لمكتبة الألعاب والغرفة بتنقفل</p>
         <div class="two"><button class="btn-ghost" type="button" data-close>إلغاء</button><button class="btn-red" type="button" id="exitYes">خروج</button></div>
+    </div>
+</div>
+<div class="ov" id="playOv">
+    <div class="dlg play-dlg">
+        <span class="ic">🎮</span>
+        <b>تبي تلعب معهم؟</b>
+        <p>امسح الباركود <b>من جوالك</b> وادخل بحسابك — تصير لاعب مثلهم ودورك يطلع بجوالك بس.</p>
+        <div class="play-qr"><img id="playQr" alt="باركود دخول اللاعبين"></div>
+        <p class="play-warn">⚠️ لا تفتح صفحة اللاعب على نفس الشاشة اللي تشاركها بالديسكورد — الكل بيشوف دورك.</p>
+        <div class="two"><button class="btn-ghost" type="button" data-close>تم</button><a class="btn-ghost" id="playTab" target="_blank" rel="noopener">فتح بتبويب ثاني</a></div>
     </div>
 </div>
 <div class="toast hide" id="toast" role="status"></div>
@@ -215,8 +228,11 @@
     function toast(text) { var t = $('toast'); t.textContent = text; t.classList.remove('hide'); clearTimeout(tt); tt = setTimeout(function () { t.classList.add('hide'); }, 3500); }
 
     $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
+    // «العب معهم» (وضع الديسكورد): نفس باركود اللوبي ورابطه
+    $('playBtn').onclick = function () { $('playQr').src = $('qrImg').src; $('playTab').href = siteJoin() + '?room=' + S.code; $('playOv').classList.add('on'); };
+    $('playOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
     $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
-    $('exitYes').onclick = function () { net.send({ t: 'close' }); NET.hostSession(null); setTimeout(function () { location.href = '../../games.html'; }, 200); };
+    $('exitYes').onclick = function () { net.send({ t: 'close' }); NET.hostSession(null); setTimeout(function () { location.href = window.MAFIA_HOME || '../../games.html'; }, 200); };
 })();
 </script>
 </body>
