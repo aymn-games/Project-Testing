@@ -2,6 +2,7 @@ const CATS=[
  {k:'flags',t:'أعلام الدول',n:'195 سؤال',c1:'#5ccfff',dk:'#2d4f9e'},
  {k:'games',t:'تحدي الألعاب',n:'120 سؤال',c1:'#a77bff',dk:'#4a2a9a'},
  {k:'songs',t:'الأغاني العربية',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'},
+ {k:'blur',t:'الصورة المغبشة',n:'300 سؤال',c1:'#8b9dff',dk:'#2e3a8c'},
  {k:'prophets',t:'قصص الأنبياء',n:'204 سؤال',c1:'#5eead4',dk:'#1d5c63'},
  {k:'spl',t:'الدوري السعودي',n:'300 سؤال',c1:'#6fe3a5',dk:'#1f6550'},
  {k:'wc',t:'كأس العالم',n:'300 سؤال',c1:'#ffc83d',dk:'#7a4a1a'},
@@ -91,6 +92,13 @@ songs:(c,i)=>`
  <ellipse cx="84" cy="124" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 84 124)"/>
  <ellipse cx="118" cy="114" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 118 114)"/>
  <path d="M92,72L126,62" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>`,
+blur:(c,i)=>`
+ <defs><filter id="bf${i}"><feGaussianBlur stdDeviation="5"/></filter><clipPath id="bc${i}"><rect x="50" y="56" width="100" height="80" rx="10"/></clipPath><clipPath id="lc${i}"><circle cx="128" cy="118" r="20"/></clipPath></defs>
+ <rect x="42" y="48" width="116" height="96" rx="16" fill="url(#w${i})"/>
+ <g clip-path="url(#bc${i})"><rect x="50" y="56" width="100" height="80" fill="${c.dk}"/><g filter="url(#bf${i})"><circle cx="82" cy="92" r="20" fill="${c.c1}"/><circle cx="118" cy="102" r="16" fill="#ff7ce8"/><rect x="50" y="118" width="100" height="20" fill="#6fe3a5"/></g></g>
+ <circle cx="128" cy="118" r="20" fill="${c.dk}"/><g clip-path="url(#lc${i})"><circle cx="118" cy="102" r="16" fill="#ff7ce8"/><rect x="100" y="118" width="60" height="22" fill="#6fe3a5"/></g>
+ <circle cx="128" cy="118" r="20" fill="none" stroke="url(#gd${i})" stroke-width="5"/>
+ <path d="M142,133L156,148" stroke="url(#gd${i})" stroke-width="8" stroke-linecap="round"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>

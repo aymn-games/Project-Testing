@@ -387,6 +387,7 @@ const CATS=[
  {k:'flags',t:'أعلام الدول',n:'195 سؤال',c1:'#5ccfff',dk:'#2d4f9e'},
  {k:'games',t:'تحدي الألعاب',n:'120 سؤال',c1:'#a77bff',dk:'#4a2a9a'},
  {k:'songs',t:'الأغاني العربية',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'},
+ {k:'blur',t:'الصورة المغبشة',n:'300 سؤال',c1:'#8b9dff',dk:'#2e3a8c'},
  {k:'prophets',t:'قصص الأنبياء',n:'204 سؤال',c1:'#5eead4',dk:'#1d5c63'},
  {k:'spl',t:'الدوري السعودي',n:'300 سؤال',c1:'#6fe3a5',dk:'#1f6550'},
  {k:'wc',t:'كأس العالم',n:'300 سؤال',c1:'#ffc83d',dk:'#7a4a1a'},
@@ -476,6 +477,13 @@ songs:(c,i)=>`
  <ellipse cx="84" cy="124" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 84 124)"/>
  <ellipse cx="118" cy="114" rx="13" ry="10" fill="url(#gd${i})" transform="rotate(-18 118 114)"/>
  <path d="M92,72L126,62" stroke="url(#gd${i})" stroke-width="7" stroke-linecap="round"/>`,
+blur:(c,i)=>`
+ <defs><filter id="bf${i}"><feGaussianBlur stdDeviation="5"/></filter><clipPath id="bc${i}"><rect x="50" y="56" width="100" height="80" rx="10"/></clipPath><clipPath id="lc${i}"><circle cx="128" cy="118" r="20"/></clipPath></defs>
+ <rect x="42" y="48" width="116" height="96" rx="16" fill="url(#w${i})"/>
+ <g clip-path="url(#bc${i})"><rect x="50" y="56" width="100" height="80" fill="${c.dk}"/><g filter="url(#bf${i})"><circle cx="82" cy="92" r="20" fill="${c.c1}"/><circle cx="118" cy="102" r="16" fill="#ff7ce8"/><rect x="50" y="118" width="100" height="20" fill="#6fe3a5"/></g></g>
+ <circle cx="128" cy="118" r="20" fill="${c.dk}"/><g clip-path="url(#lc${i})"><circle cx="118" cy="102" r="16" fill="#ff7ce8"/><rect x="100" y="118" width="60" height="22" fill="#6fe3a5"/></g>
+ <circle cx="128" cy="118" r="20" fill="none" stroke="url(#gd${i})" stroke-width="5"/>
+ <path d="M142,133L156,148" stroke="url(#gd${i})" stroke-width="8" stroke-linecap="round"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>
@@ -511,7 +519,7 @@ const ON=new Set(['flags','spl','wc']);
 $('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
 // build board
 const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
-const BCATS=CATS.filter(c=>c.k!=='prophets');
+const BCATS=CATS.filter(c=>!['prophets','crests'].includes(c.k));
 $('board').innerHTML=BCATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
  [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
   return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');
@@ -533,7 +541,7 @@ async function catsPhase(){
  document.querySelectorAll('.cat').forEach((c,i)=>A(c,[{opacity:0,transform:'translateY(18px) scale(.97)'},{opacity:1,transform:'none'}],{duration:550,delay:120+i*70}));
  A(document.querySelector('.cfoot'),[{opacity:0},{opacity:1}],{duration:500,delay:500});
  await sleep(1200);let n=3;
- for(const k of ['games','songs','crests']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');SFX('pop');
+ for(const k of ['games','songs','blur']){const c=document.querySelector(`.cat[data-k="${k}"]`);A(c,[{transform:'scale(1)'},{transform:'scale(.97)'},{transform:'scale(1)'}],{duration:320,fill:'none'});c.classList.add('on');SFX('pop');
   c.querySelector('.chk i').animate([{transform:'scale(0)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:420,easing:SPRING,fill:'both'});n++;$('cnt').textContent=n+' مختارة';A($('cnt'),[{transform:'scale(1.18)'},{transform:'scale(1)'}],{duration:300,fill:'none'});await sleep(480);}
  $('go').style.opacity=1;A($('go'),[{boxShadow:'0 10px 34px rgba(139,92,246,.45)'},{boxShadow:'0 10px 50px rgba(168,85,247,.85)'},{boxShadow:'0 10px 34px rgba(139,92,246,.45)'}],{duration:900,fill:'none'});
  await sleep(700);SFX('select');await A($('go'),[{transform:'scale(1)'},{transform:'scale(.95)'},{transform:'scale(1)'}],{duration:260,fill:'none'});
@@ -859,12 +867,38 @@ async function songDemo(){
  cap('الستريمر يقدر يعيد المقطع');const r=$('ctl').firstElementChild;await moveCur(r);await press(r);t0=performance.now();await sleep(1600);$('cur').style.opacity=0;
  await tick(23,20,520);run=false;document.body.dataset.ready=1;await sleep(600);
 }
+async function blurDemo(){
+ const BC=CATS.find(c=>c.k==='blur');
+ $('cats').style.display='none';$('teams').style.opacity=1;$('board').style.visibility='hidden';
+ const q=$('q');q.style.display='flex';
+ $('mini').innerHTML=svgFor(BC,'bm');$('meta').querySelector('b').textContent='الصورة المغبشة';$('meta').querySelector('.pts').textContent='400';$('meta').querySelectorAll('.badge')[0].textContent='متوسط';
+ $('flag').innerHTML=`<svg viewBox="0 0 330 220" width="330" height="220"><defs><radialGradient id="ap" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#ff8a8a"/><stop offset=".45" stop-color="#e11d2e"/><stop offset="1" stop-color="#7f0d18"/></radialGradient><linearGradient id="tb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3e7d3"/><stop offset="1" stop-color="#cdb795"/></linearGradient><linearGradient id="wl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c7d8e6"/><stop offset="1" stop-color="#e9eef2"/></linearGradient></defs><rect width="330" height="150" fill="url(#wl)"/><rect y="150" width="330" height="70" fill="url(#tb)"/><ellipse cx="165" cy="190" rx="70" ry="10" fill="#000" opacity=".18"/><path d="M165 70c-14-12-52-14-64 22-12 38 12 92 40 96 12 2 16-6 24-6s12 8 24 6c28-4 52-58 40-96-12-36-50-34-64-22z" fill="url(#ap)"/><ellipse cx="132" cy="102" rx="12" ry="20" fill="#fff" opacity=".35" transform="rotate(-20 132 102)"/><path d="M165 72c0-14 3-24 10-32" stroke="#5b3a1e" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M172 48c14-14 34-12 40-6-10 14-28 16-40 6z" fill="#3fa34d"/></svg>`;$('flag').style.width='384px';$('flag').style.height='256px';
+ const sv=$('flag').querySelector('svg');sv.setAttribute('width','384');sv.setAttribute('height','256');sv.style.filter='blur(16px)';sv.style.transform='scale(1.12)';
+ $('qt').innerHTML='وش الشي اللي بالصورة؟';$('qt').style.fontSize='30px';
+ [...q.children].forEach(c=>c.style.opacity=1);['openb','ok','fail'].forEach(i=>$(i).style.opacity=0);$('alt').style.display='none';
+ cap('سؤال الصورة المغبشة');SFX('chime');
+ A($('flag'),[{opacity:0,transform:'scale(.9)'},{opacity:1,transform:'none'}],{duration:600,easing:SPRING});
+ TMAX=30;$('tm').style.setProperty('--p',100);$('tmn').textContent=30;
+ await sleep(300);await tick(30,24,520);
+ cap('جواب صح ← الصورة تتوضح');
+ $('okn').textContent='lama';$('okav').innerHTML=pimg('lama');$('okav').style.boxShadow='0 0 0 2px #f5b0ff';$('ok').querySelector('span:nth-child(3)').textContent='كتبت «تفاح»';
+ await A($('who'),[{opacity:1},{opacity:0}],{duration:200});SFX('correct');
+ const ok=$('ok');ok.style.opacity=1;A(ok,[{opacity:0,transform:'translateX(-50%) translateY(20px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
+ $('tm').style.setProperty('--tc','#34d399');
+ await sleep(500);SFX('swish');
+ await A(sv,[{filter:'blur(16px)',transform:'scale(1.12)'},{filter:'blur(0px)',transform:'scale(1)'}],{duration:1100,easing:'cubic-bezier(.2,.8,.2,1)'});
+ A(ok,[{opacity:1},{opacity:0,transform:'translateX(-50%) translateY(10px)'}],{duration:300});
+ $('qt').innerHTML='<span style="opacity:1;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent;font-size:40px">تفاح</span>';
+ A($('qt'),[{opacity:0,transform:'scale(1.4)',filter:'blur(8px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:550});
+ document.body.dataset.ready=1;await sleep(2200);
+}
 async function run(){
  await sleep(300);
  if(MODE==='still1'){await still(1);return;}
  if(MODE==='still3'){await still(3);return;}
  if(MODE==='ui'){await uiDemo();}
  else if(MODE==='song'){await songDemo();}
+ else if(MODE==='blur'){await blurDemo();}
  else if(MODE==='join'){await joinDemo2();}
  else if(MODE==='joinq'){await joinDuring2();}
  else if(MODE==='steal'){
