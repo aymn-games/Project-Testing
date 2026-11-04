@@ -49,9 +49,10 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 #stage{top:172px;bottom:18px}
 #board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
 .col{display:flex;flex-direction:column;gap:7px}
-.ch{height:84px;flex:none;border-radius:18px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.08);opacity:0}
+.ch{height:104px;flex:none;border-radius:18px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.1);opacity:0;display:flex;flex-direction:column;background:rgba(18,16,26,.9)}
+.ch .ca{position:relative;height:64px;flex:none;overflow:hidden}
 .ch svg{position:absolute;inset:0;width:100%;height:100%}
-.ch .ct{position:absolute;bottom:0;left:0;right:0;text-align:center;font:700 14px 'IBM Plex Sans Arabic';padding:16px 4px 5px;background:linear-gradient(0deg,rgba(7,6,11,.9),transparent)}
+.ch .ct{flex:none;height:38px;display:grid;place-items:center;text-align:center;font:700 18px 'IBM Plex Sans Arabic';color:#fff;background:rgba(18,16,26,.95);border-top:1px solid rgba(255,255,255,.08);letter-spacing:.2px}
 .tl{flex:1;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:6px;font:700 22px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;border:1px solid rgba(255,255,255,.08);background:rgba(18,16,26,.72);opacity:0;transition:border-color .25s,background .25s,box-shadow .25s}
 .tl.e{color:#a5e8ff}.tl.m{color:#c4b5fd}.tl.h{color:#f5b0ff}
 .tl.wa,.tl.wb{font-size:14px;color:#f4f2f8}
@@ -63,8 +64,8 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 #q{position:absolute;inset:0;display:none;padding:20px 28px;flex-direction:column;align-items:center;gap:12px}
 .qmeta{width:100%;display:flex;justify-content:space-between;align-items:center}
 .row{display:flex;gap:8px;align-items:center}
-.mini{width:36px;height:36px;border-radius:12px;overflow:hidden;position:relative}.mini svg{position:absolute;inset:0;width:100%;height:100%}
-.pts{height:30px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);font:700 15px 'IBM Plex Sans Arabic';box-shadow:0 6px 18px rgba(139,92,246,.35)}
+.mini{width:52px;height:52px;border-radius:12px;overflow:hidden;position:relative}.mini svg{position:absolute;inset:0;width:100%;height:100%}
+.pts{height:34px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);font:700 15px 'IBM Plex Sans Arabic';box-shadow:0 6px 18px rgba(139,92,246,.35)}
 .timer{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:700 28px 'IBM Plex Sans Arabic';position:relative;--p:100}
 .timer::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--tc,#a78bfa) calc(var(--p)*1%),rgba(255,255,255,.06) 0);-webkit-mask:radial-gradient(circle,transparent 31px,#000 32px);mask:radial-gradient(circle,transparent 31px,#000 32px)}
 .timer span{position:relative}
@@ -73,13 +74,15 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 .qt span{display:inline-block;opacity:0}
 .who{width:100%;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;padding:11px 18px;background:rgba(92,207,255,.07);border:1px solid rgba(92,207,255,.28);font:700 15px 'IBM Plex Sans Arabic'}
 .who small{font:500 13px 'IBM Plex Sans Arabic';color:#a8a3b5}
-.ok{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:10px 20px;border-radius:999px;background:rgba(18,30,26,.9);border:1px solid rgba(52,211,153,.5);font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 12px 34px rgba(52,211,153,.2);opacity:0;white-space:nowrap}
-.ok b{color:#34d399}
+.ok{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 22px 10px 14px;border-radius:999px;background:rgba(18,30,26,.94);border:1px solid rgba(52,211,153,.5);font:600 18px 'IBM Plex Sans Arabic';box-shadow:0 12px 34px rgba(52,211,153,.2);opacity:0;white-space:nowrap}
+.ok b{color:#34d399}.ok .un{font:700 22px 'IBM Plex Sans Arabic';color:#fff}
 .av{width:28px;height:28px;border-radius:50%;flex:none;background:#6ee7b7}
 /* reveal */
 #rv{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-.ans{font:700 60px/1.3 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent}
-.win{display:flex;align-items:center;gap:12px;padding:10px 22px;border-radius:999px;font:600 17px 'IBM Plex Sans Arabic'}
+.ans{font:700 56px/1.3 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;color:transparent}
+.win{display:flex;align-items:center;gap:16px;padding:12px 28px 12px 14px;border-radius:999px;font:600 17px 'IBM Plex Sans Arabic'}
+.wn{display:flex;flex-direction:column;line-height:1.25}.wn b{font:700 30px 'IBM Plex Sans Arabic';color:#fff}.wn small{font:500 15px 'IBM Plex Sans Arabic';color:#a8a3b5}
+.win .plus{margin-right:10px;font-size:34px}
 .plus{font:700 30px 'IBM Plex Sans Arabic';color:#34d399;display:inline-block}
 .fly{position:fixed;z-index:80;font:700 30px 'IBM Plex Sans Arabic';color:#34d399;text-shadow:0 0 18px rgba(52,211,153,.6);pointer-events:none}
 .spark{position:fixed;z-index:80;width:7px;height:7px;border-radius:50%;pointer-events:none}
@@ -111,17 +114,17 @@ header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 <div id="stage" class="L">
  <div id="board"></div>
  <div id="q" class="panel">
-  <div class="qmeta"><div class="row" id="meta"><div class="mini" id="mini"></div><b style="font-size:17px">أعلام الدول</b><span class="pts">400</span><span class="badge">متوسط</span></div><div class="timer" id="tm"><span id="tmn">30</span></div></div>
+  <div class="qmeta"><div class="row" id="meta"><div class="mini" id="mini"></div><b style="font-size:26px;font-weight:700">أعلام الدول</b><span class="pts">400</span><span class="badge">متوسط</span></div><div class="timer" id="tm"><span id="tmn">30</span></div></div>
   <div class="qimg" id="flag"><svg viewBox="0 0 300 200" width="330" height="220"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
   <div class="qt" id="qt"></div>
   <div class="who" id="who">💬 الفريق السماوي يجاوب الحين بالشات <small>— أول جواب صح ياخذ النقاط</small></div>
-  <div class="ok" id="ok"><span class="av"></span><span><b>mj_10</b> كتب «اليمن»</span><b>✓ صح</b></div>
+  <div class="ok" id="ok"><span class="av" style="width:38px;height:38px;display:grid;place-items:center;font:700 16px 'IBM Plex Sans Arabic';color:#07060b">M</span><span class="un">mj_10</span><span style="color:#a8a3b5">كتب «اليمن»</span><b>✓ صح</b></div>
  </div>
  <div id="rv">
-  <span class="badge" id="rvb">أعلام الدول · 400 · متوسط</span>
+  <span class="badge" id="rvb" style="height:40px;padding:0 18px;font-size:18px;gap:8px"><b style="color:#fff">أعلام الدول</b> · 400 · متوسط</span>
   <div class="qimg" id="rflag" style="width:240px;height:160px"><svg viewBox="0 0 300 200" width="240" height="160"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
   <div class="ans" id="ans">اليمن</div>
-  <div class="panel win" id="win"><span class="av" style="width:36px;height:36px"></span><span><b>mj_10</b> جاوب صح للفريق السماوي</span><span class="plus" id="plus">+400</span></div>
+  <div class="panel win" id="win"><span class="av" style="width:58px;height:58px;display:grid;place-items:center;font:700 24px 'IBM Plex Sans Arabic';color:#07060b;box-shadow:0 0 0 3px rgba(92,207,255,.5)">M</span><span class="wn"><b>mj_10</b><small><span style="color:#5ccfff">●</span> جاوب صح للفريق السماوي</small></span><span class="plus" id="plus">+400</span></div>
  </div>
 </div>
 <div id="cap"><i></i><span id="capt"></span></div>
@@ -240,7 +243,7 @@ const ON=new Set(['flags','spl','wc']);
 $('cg').innerHTML=CATS.map((c,i)=>`<div class="cat ${ON.has(c.k)?'on':''}" data-k="${c.k}"><div class="art">${svgFor(c,'a'+i)}</div><div class="tx"><b>${c.t}</b><span>${c.n}</span></div><span class="chk">${chk}</span></div>`).join('');
 // build board
 const W={'1,4':'b','2,3':'a','3,1':'b','4,0':'a','5,2':'b'};
-$('board').innerHTML=CATS.map((c,i)=>`<div class="col"><div class="ch">${svgFor(c,'c'+i)}<div class="ct">${c.t}</div></div>`+
+$('board').innerHTML=CATS.map((c,i)=>`<div class="col"><div class="ch"><div class="ca">${svgFor(c,'c'+i)}</div><div class="ct">${c.t}</div></div>`+
  [200,200,400,400,600,600].map((p,j)=>{const cls=p==200?'e':p==400?'m':'h';const w=W[i+','+j];
   return w?`<div class="tl w${w}" data-c="${i}" data-r="${j}"><span class="d" style="background:${w=='a'?'#5ccfff':'#f5b0ff'}"></span>${p}</div>`:`<div class="tl ${cls}" data-c="${i}" data-r="${j}">${p}</div>`}).join('')+`</div>`).join('');
 $('mini').innerHTML=svgFor(CATS[0],'m');
@@ -323,6 +326,7 @@ async function run(){
  for(let s=30;s>=23;s--){$('tmn').textContent=s;$('tm').style.setProperty('--p',(s/30*100).toFixed(1));A($('tmn'),[{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:280,fill:'none'});await sleep(420);}
  // answer arrives
  cap('٦ · جواب صح');
+ await A($('who'),[{opacity:1},{opacity:0,transform:'translateY(10px)'}],{duration:220});
  const ok=$('ok');ok.style.opacity=1;
  A(ok,[{opacity:0,transform:'translateX(-50%) translateY(20px) scale(.9)'},{opacity:1,transform:'translateX(-50%) scale(1)'}],{duration:500,easing:SPRING});
  $('tm').style.setProperty('--tc','#34d399');
@@ -331,7 +335,7 @@ async function run(){
 
  // ── 6. كشف الإجابة
  cap('٧ · كشف الإجابة');
- [$('meta'),$('tm'),$('qt'),$('who'),ok].forEach((e,i)=>A(e,[{opacity:1},{opacity:0,transform:(e===ok?'translateX(-50%) ':'')+'translateY(-8px)'}],{duration:300,delay:i*40}));
+ [$('meta'),$('tm'),$('qt'),ok].forEach((e,i)=>A(e,[{opacity:1},{opacity:0,transform:(e===ok?'translateX(-50%) ':'')+'translateY(-8px)'}],{duration:300,delay:i*40}));
  await A($('flag'),[{opacity:1,transform:'none'},{opacity:0,transform:'scale(.85)'}],{duration:320,delay:120});
  q.style.display='none';
  const rv=$('rv');rv.style.display='flex';
