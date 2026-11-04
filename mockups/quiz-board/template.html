@@ -85,7 +85,7 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
 .tl .d{width:7px;height:7px;border-radius:50%}
 .tl.hov{border-color:rgba(167,139,250,.7);background:linear-gradient(160deg,rgba(139,92,246,.28),rgba(124,58,237,.1));box-shadow:0 12px 34px rgba(139,92,246,.35)}
 /* question */
-.qwrap{flex:1;min-height:0;display:grid;grid-template-columns:1fr 310px;gap:16px;padding-bottom:18px}
+.qwrap{flex:1;min-height:0;display:grid;grid-template-columns:1fr;gap:16px;padding-bottom:18px}
 .qbox{padding:20px 28px;display:flex;flex-direction:column;align-items:center;gap:12px}
 .qmeta{width:100%;display:flex;justify-content:space-between;align-items:center}
 .row{display:flex;gap:8px;align-items:center}
@@ -93,8 +93,8 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
 .pts{height:30px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);font:700 15px 'IBM Plex Sans Arabic';box-shadow:0 6px 18px rgba(139,92,246,.35)}
 .timer{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:700 28px 'IBM Plex Sans Arabic';background:conic-gradient(#a78bfa 0 62%,rgba(255,255,255,.06) 62% 100%);position:relative}
 .timer::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#100e18}.timer span{position:relative}
-.qimg{width:270px;height:180px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 14px 34px rgba(0,0,0,.45)}
-.qt{font:700 28px/1.6 'IBM Plex Sans Arabic';text-align:center}
+.qimg{width:330px;height:220px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.qt{font:700 34px/1.6 'IBM Plex Sans Arabic';text-align:center}
 .who{width:100%;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;padding:11px 18px;background:rgba(92,207,255,.07);border:1px solid rgba(92,207,255,.28);font:700 15px 'IBM Plex Sans Arabic'}
 .who small{font:500 13px 'IBM Plex Sans Arabic';color:#a8a3b5}
 .chat{padding:14px;display:flex;flex-direction:column;gap:7px}
@@ -153,18 +153,9 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
  <div class="qwrap">
   <div class="panel qbox">
    <div class="qmeta"><div class="row"><div class="mini" id="mini"></div><b style="font-size:17px">أعلام الدول</b><span class="pts">400</span><span class="badge">متوسط</span></div><div class="timer"><span>19</span></div></div>
-   <div class="qimg"><svg viewBox="0 0 300 200" width="270" height="180"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
+   <div class="qimg"><svg viewBox="0 0 300 200" width="330" height="220"><rect width="300" height="200" fill="#fff"/><rect width="300" height="67" fill="#ce1126"/><rect y="133" width="300" height="67" fill="#000"/></svg></div>
    <div class="qt">ما اسم الدولة التي يمثلها هذا العلم؟</div>
    <div class="who">💬 الفريق السماوي يجاوب الحين بالشات <small>— أول جواب صح ياخذ النقاط</small></div>
-  </div>
-  <div class="panel chat">
-   <div class="sh"><span class="num">💬</span><b>شات البث</b></div>
-   <div class="msg a"><div class="av" style="background:#5ccfff"></div><span class="u">sara_77</span> سوريا<span class="t">✕</span></div>
-   <div class="msg b ign"><div class="av" style="background:#f5b0ff"></div><span class="u">fahad.q</span> اليمن<span class="t">مو دوره</span></div>
-   <div class="msg a"><div class="av" style="background:#8fb8ff"></div><span class="u">abo_nasser</span> مصر<span class="t">✕</span></div>
-   <div class="msg a ok"><div class="av" style="background:#6ee7b7"></div><span class="u">mj_10</span> اليمن<span class="t">✓ صح</span></div>
-   <div class="msg ign"><div class="av" style="background:#555"></div><span class="u">guest_92</span> هلا والله</div>
-   <div class="note">تُحسب رسائل الفريق صاحب الدور فقط.</div>
   </div>
  </div>
 </section>
