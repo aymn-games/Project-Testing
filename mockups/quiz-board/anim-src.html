@@ -203,6 +203,22 @@ header::after{content:"";position:absolute;left:10%;right:10%;bottom:-1px;height
 .jp .tag{height:22px;padding:0 8px;border-radius:999px;display:inline-flex;align-items:center;font:700 11px 'IBM Plex Sans Arabic';color:#07060b}
 .jp .stk span{width:28px;height:28px;font-size:12px}
 .jp.no small{color:#fca5a5}
+
+/* كلمات الدخول — تبويبات مستطيلة بخط بارز */
+.kw{height:auto;padding:5px 18px 6px;border-radius:11px;font:700 21px/1.3 'IBM Plex Sans Arabic';letter-spacing:.3px}
+.kw.a{background:linear-gradient(180deg,rgba(92,207,255,.22),rgba(92,207,255,.08));color:#d6f4ff;box-shadow:inset 0 0 0 1px rgba(92,207,255,.55),inset 0 1px 0 rgba(255,255,255,.18),0 10px 24px -10px rgba(92,207,255,.7)}
+.kw.b{background:linear-gradient(180deg,rgba(245,176,255,.22),rgba(245,176,255,.08));color:#fde3ff;box-shadow:inset 0 0 0 1px rgba(245,176,255,.55),inset 0 1px 0 rgba(255,255,255,.18),0 10px 24px -10px rgba(245,176,255,.7)}
+#ji{gap:5px}#ji .jt{font-size:12.5px}
+/* تنبيه الدخول — تبويب صغير بالنص، 3 ثواني، فوق بعض */
+#jq{position:fixed;top:182px;left:50%;transform:translateX(-50%);width:0;height:0;z-index:70}
+.jc{position:absolute;top:0;left:50%;display:flex;align-items:center;gap:9px;height:40px;padding:0 6px 0 14px;border-radius:12px;white-space:nowrap;
+background:linear-gradient(180deg,rgba(26,22,40,.97),rgba(13,11,21,.97));box-shadow:inset 0 0 0 1px var(--bc),inset 0 1px 0 rgba(255,255,255,.08),0 0 24px -8px var(--bc),0 16px 34px -14px rgba(0,0,0,.9);
+transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .45s;font:500 13px 'IBM Plex Sans Arabic';color:#c9c3da}
+.jc img,.jc .ph{width:28px;height:28px;border-radius:8px;flex:none;display:grid;place-items:center;font:700 13px 'IBM Plex Sans Arabic';color:#07060b}
+.jc b{font:700 15px 'IBM Plex Sans Arabic';color:#fff}
+.jc .tm{height:24px;padding:0 9px;border-radius:7px;display:inline-flex;align-items:center;font:700 12px 'IBM Plex Sans Arabic';color:#07060b}
+.jc.no{--bc:rgba(248,113,113,.6)}.jc.no span.msg{color:#fca5a5}
+.jc .bar{position:absolute;left:10px;right:10px;bottom:3px;height:2px;border-radius:2px;background:var(--bc);transform-origin:right;opacity:.6}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -241,6 +257,7 @@ header::after{content:"";position:absolute;left:10%;right:10%;bottom:-1px;height
   <div class="panel win" id="win"><span class="av" id="wav" style="width:58px;height:58px;display:grid;place-items:center;font:700 24px 'IBM Plex Sans Arabic';color:#07060b;box-shadow:0 0 0 3px rgba(92,207,255,.5)">M</span><span class="wn"><b id="wn">mj_10</b><small id="wt"><span style="color:#5ccfff">●</span> جاوب صح للفريق السماوي</small></span><span class="plus" id="plus">+400</span></div>
  </div>
 </div>
+<div id="jq"></div>
 <div id="cap"><i></i><span id="capt"></span></div>
 <button id="replay" onclick="location.reload()">↻ إعادة العرض</button>
 
@@ -478,10 +495,52 @@ async function joinDuringMatch(){
  await sleep(1500);await joinBurst('A',['ali','sami','nora']);
  await tk;await sleep(1800);
 }
+const Q=[];
+function restack(){Q.forEach((c,i)=>{c.style.zIndex=10-i;c.style.opacity=i>2?0:(i===0?1:i===1?.8:.55);c.style.transform=`translateX(-50%) translateY(${i*10}px) scale(${1-i*.06})`;});}
+function pushJoin(name,team,opt={}){const a=team==='A',col=a?'#5ccfff':'#f5b0ff',tn=a?'السماوي':'الوردي';
+ const c=document.createElement('div');c.className='jc'+(opt.no?' no':'');if(!opt.no)c.style.setProperty('--bc',col+'aa');
+ c.innerHTML=`<span class="ph" style="background:${opt.av||col}">${name[0].toUpperCase()}</span><b>${name}</b><span class="msg">${opt.msg||'دخل'}</span>`+(opt.no?'':`<span class="tm" style="background:${col}">${tn}</span>`)+`<span class="bar"></span>`;
+ $('jq').appendChild(c);Q.unshift(c);
+ c.style.transform='translateX(-50%) translateY(14px) scale(.9)';c.style.opacity=0;requestAnimationFrame(()=>requestAnimationFrame(restack));
+ c.querySelector('.bar').animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:3000,fill:'both'});
+ if(!opt.no){const n=$(a?'nA':'nB');n.textContent=+n.textContent+1;A(n.parentElement,[{color:col,transform:'scale(1.15)'},{color:'#8a8596',transform:'none'}],{duration:700,fill:'none'});
+  A($(a?'tA':'tB'),[{boxShadow:`0 0 0 1px ${col}00`},{boxShadow:`0 0 0 2px ${col}aa,0 0 30px ${col}44`},{boxShadow:`0 0 0 1px ${col}00`}],{duration:800,fill:'none'});}
+ else A($(a?'tA':'tB'),[{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(5px)'},{transform:'translateX(0)'}],{duration:360,fill:'none'});
+ setTimeout(()=>{c.style.transition='opacity .35s,transform .35s';c.style.opacity=0;c.style.transform+=' translateY(-6px)';setTimeout(()=>{c.remove();Q.splice(Q.indexOf(c),1);restack();},350);},3000);}
+async function joinDemo2(){
+ $('cats').style.display='none';await boardIn();
+ cap('الدخول التلقائي مقفل');await sleep(800);
+ const aj=$('aj');await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.add('on');
+ cap('تفعيل ← كلمات الدخول تظهر فوق');
+ await A($('mt'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:280,easing:IN});
+ A($('ji'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:450,easing:SPRING});
+ [...document.querySelectorAll('.kw')].forEach((k,i)=>A(k,[{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'none'}],{duration:450,delay:200+i*160,easing:SPRING}));
+ await sleep(1500);
+ cap('لاعب يكتب اسم الفريق ← تنبيه صغير بالنص ٣ ثواني');
+ pushJoin('fahad.q','B');await sleep(3600);
+ cap('أكثر من لاعب ← التنبيهات تظهر ورا بعض');
+ pushJoin('sara_77','A');await sleep(500);pushJoin('abo_nasser','A');await sleep(500);pushJoin('noura.k','B');await sleep(3800);
+ cap('لاعب بفريق يحاول يغيّر ← مرفوض');
+ pushJoin('sara_77','A',{no:1,msg:'ما تقدر تغير فريقك'});await sleep(3600);
+ cap('إيقاف الدخول التلقائي');
+ await A(aj,[{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:240,fill:'none'});aj.classList.remove('on');
+ await A($('ji'),[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-14px)'}],{duration:300,easing:IN});
+ A($('mt'),[{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:SPRING});await sleep(1400);
+}
+async function joinDuring2(){
+ $('cats').style.display='none';$('aj').classList.add('on');$('mt').style.opacity=0;$('ji').style.opacity=1;
+ await boardIn();await pickAndOpen();
+ cap('أثناء السؤال · لاعب جديد يدخل');
+ const tk=tick(30,16,560);
+ await sleep(400);pushJoin('khalid.x','B');await sleep(3600);
+ cap('دخول أكثر من لاعب ← ورا بعض');
+ pushJoin('reem_22','A');await sleep(450);pushJoin('lama','B');await sleep(450);pushJoin('omar.s','A');await sleep(450);pushJoin('hind','B');
+ await tk;await sleep(1500);
+}
 async function run(){
  await sleep(300);
- if(MODE==='join'){await joinDemo();}
- else if(MODE==='joinq'){await joinDuringMatch();}
+ if(MODE==='join'){await joinDemo2();}
+ else if(MODE==='joinq'){await joinDuring2();}
  else if(MODE==='steal'){
   await catsPhase();await boardIn();await pickAndOpen();await teamTimeRunsOut();await openPhase();
   cap('٦ · ١٥ ثانية مفتوحة للفريقين');await tick(15,12,420,'#ffc83d');
