@@ -363,8 +363,8 @@ function createGame(roster, settings, hooks) {
         if (!text || !me.alive) return;
         if (ch === 'mafia') { if (me.faction !== 'mafia' || G.phase === 'over') return; }
         else if (ch === 'doctor' || ch === 'detective') {
-            // شات خاص للأطباء/المحققين وقت النقاش، لو عددهم بالإعدادات أكثر من واحد (الإسكات ما يشمله)
-            if (!roleChatOpen(ch) || !inRoleChat(me, ch) || G.phase !== 'day') return;
+            // شات خاص للأطباء/المحققين طول المباراة مثل المافيا (ينسّقون بالليل وقت دورهم)، لو عددهم أكثر من واحد (الإسكات ما يشمله)
+            if (!roleChatOpen(ch) || !inRoleChat(me, ch) || G.phase === 'over') return;
         } else if (ch === 'city' || ch === 'district') {
             if (G.phase !== 'day') return;                       // الشات العام وشات الحي بالنقاش فقط
             if (G.silenced.indexOf(me.id) >= 0) return;          // المسكَت يصوّت بس
