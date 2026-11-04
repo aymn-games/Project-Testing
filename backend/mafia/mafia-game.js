@@ -27,7 +27,7 @@
 'use strict';
 
 var REVEAL_MS = 8000;
-var VERDICT_MS = 12000;
+var VERDICT_MS = 16000;   // وقت كافي للمشاهدين يقرون لوحة «نتيجة التصويت» (مين صوّت لمين)
 var CHAT_MAX = 300;
 var DISTRICT_SIZE = 25;
 var Settings = require('./mafia-settings');
@@ -120,32 +120,8 @@ function createGame(roster, settings, hooks) {
         sys(TURN_TXT[turn]);
         go('night', ms);
     }
-    // ---- عدم النشاط: نعدّ اللي فاتهم دورهم بالليل والتصويت ورا بعض
-    var IDLE_LIMIT = 2;
-    function markTurnMisses(turn) {
-        if (!turn || S.kickIdle === false) return;
-        var N = G.night;
-        turnActors(turn).forEach(function (p) {
-            var did = turn === 'mafia' ? !!N.ops[p.id] : !!N.actions[p.id];
-            p.missNights = did ? 0 : (p.missNights || 0) + 1;
-        });
-    }
-    /** إقصاء لاعب لعدم نشاطه (بدون كشف دوره). why: 'offline' | 'vote' | 'night' */
-    function kickIdle(id, why) {
-        var p = P(id); if (!p || !p.alive || G.phase === 'over') return;
-        p.alive = false; p.diedRound = G.round; p.cause = 'idle';
-        sys('⏳ ' + p.name + ' انقصى بسبب عدم نشاطه');
-        notice(p, '⏳ انقصيت من اللعبة بسبب عدم نشاطك' + (why === 'offline' ? ' (قفلت الصفحة أكثر من دقيقة)' : why === 'vote' ? ' (فاتك التصويت مرتين)' : ' (فاتك دورك بالليل ليلتين)') + '.');
-        G.players.forEach(function (q) { if (q !== p && q.alive) notice(q, '⏳ ' + p.name + ' انقصى بسبب عدم نشاطه.'); });
-        if (G.phase !== 'dawn' && G.phase !== 'verdict' && G.phase !== 'night') { var w = winner(); if (w) finish(w); }
-        changed();
-    }
-    function kickNightIdlers() {
-        if (S.kickIdle === false) return;
-        G.players.forEach(function (p) { if (p.alive && (p.missNights || 0) >= IDLE_LIMIT) kickIdle(p.id, 'night'); });
-    }
+    // (انشال إقصاء غير النشطين: اللي يفوته دوره أو التصويت أو يقفل الصفحة يبقى باللعبة — دوره يمر بانتهاء الوقت)
     function nextTurn() {
-        markTurnMisses(G.turn);
         for (var j = TURNS.indexOf(G.turn) + 1; j < TURNS.length; j++) if (turnExists(TURNS[j])) return startTurn(TURNS[j]);
         G.turn = null; resolveNight();
     }
@@ -291,7 +267,6 @@ function createGame(roster, settings, hooks) {
     }
 
     function afterDawn() {
-        kickNightIdlers();   // اللي فاته دوره ليلتين ينقصى مع طلوع الصبح (مو بنص الليل)
         var w = winner(); if (w) return finish(w);
         G.votes = {};
         G.silenced = G.silenceNext; G.silenceNext = [];   // الإسكات يبدأ مع النهار ويحترق هنا
@@ -323,11 +298,6 @@ function createGame(roster, settings, hooks) {
         var abst = tally.skip || 0;
         if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'تخطي ' + abst : ''));
         G.silenced = [];
-        // اللي ما صوّت ولا امتنع: مرتين ورا بعض = إقصاء لعدم النشاط
-        if (S.kickIdle !== false) alive().forEach(function (p) {
-            p.missVotes = G.votes[p.id] ? 0 : (p.missVotes || 0) + 1;
-            if (p.missVotes >= IDLE_LIMIT) kickIdle(p.id, 'vote');
-        });
         go('verdict', VERDICT_MS);
     }
 
@@ -514,7 +484,7 @@ function createGame(roster, settings, hooks) {
 
     sys('بدأت المباراة: ' + G.players.length + ' لاعب' + (G.districts > 1 ? ' في ' + G.districts + ' أحياء' : '') + ' — شوفوا أدواركم على جوالاتكم');
     changed();
-    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, kickIdle: kickIdle, view: view, _available: available };
+    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, view: view, _available: available };
 }
 
 module.exports = { createGame: createGame, SHOT: SHOT, REVEAL_MS: REVEAL_MS, VERDICT_MS: VERDICT_MS, CARDS: CARDS, CARD_NAMES: CARD_NAMES, ROLE_NAMES: ROLE_NAMES, DISTRICT_SIZE: DISTRICT_SIZE };

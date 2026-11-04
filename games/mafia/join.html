@@ -261,6 +261,54 @@ body.in-game .brand img { height: 24px; }
 .notices-mini .res { font-size: 13.5px !important; color: #d9d4e6; }
 .note { font-size: 14px; border-radius: 14px; }
 .pt { border-radius: 18px; border-width: 1px; }
+
+/* ===== بطاقات الحالة (انتظار/دورك خلص/الصبح/النتائج/النهاية) + شاشة الانتقال بين المراحل ===== */
+.stage { --sr: 167,139,250; position: relative; width: 100%; max-width: 560px; margin: 14px auto 4px; padding: 26px 16px 20px; border-radius: 24px; text-align: center; overflow: hidden;
+    border: 1px solid rgba(var(--sr), .28); background: radial-gradient(120% 75% at 50% 0%, rgba(var(--sr), .22), transparent 62%), rgba(19,17,27,.78);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 22px 50px -26px rgba(var(--sr), .65); animation: stIn .45s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes stIn { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+.stage .orb { position: relative; width: 100px; height: 100px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; font-size: 46px; line-height: 1;
+    background: radial-gradient(circle at 50% 38%, rgba(var(--sr), .38), rgba(var(--sr), .06) 72%); box-shadow: 0 0 44px rgba(var(--sr), .35), inset 0 0 0 1px rgba(var(--sr), .45); }
+.stage .orb::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 62%, rgba(var(--sr), .95) 88%, transparent 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); animation: spin 2.4s linear infinite; }
+.stage.still .orb::before { animation: none; background: rgba(var(--sr), .75); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.stage .st-k { display: inline-block; margin-top: 16px; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .3px; color: rgb(var(--sr)); background: rgba(var(--sr), .12); border: 1px solid rgba(var(--sr), .3); }
+.stage .st-t { font-size: 25px; font-weight: 800; margin-top: 10px; line-height: 1.3; }
+.stage .st-s { font-size: 14.5px; color: #c9c3d8; font-weight: 500; margin-top: 6px; line-height: 1.55; }
+/* خطوات الليل: المافيا ← الطبيب ← المحقق ← الصبح */
+.steps { display: flex; align-items: flex-start; justify-content: center; margin-top: 20px; }
+.step { --c: 167,139,250; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 62px; font-size: 11.5px; font-weight: 700; color: var(--mute); position: relative; }
+.step .dot { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); transition: all .3s; }
+.step.done .dot { background: rgba(var(--c), .14); border-color: rgba(var(--c), .4); }
+.step.done .dot::after { content: "✓"; position: absolute; bottom: -3px; left: -3px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; font-size: 9px; font-weight: 800; color: #fff; background: rgb(var(--c)); }
+.step.now { color: #fff; }
+.step.now .dot { border-color: rgb(var(--c)); background: rgba(var(--c), .28); box-shadow: 0 0 0 4px rgba(var(--c), .14), 0 0 20px rgba(var(--c), .55); animation: dotP 1.6s ease-in-out infinite; }
+@keyframes dotP { 50% { box-shadow: 0 0 0 7px rgba(var(--c), .08), 0 0 26px rgba(var(--c), .7); } }
+.step .me { position: absolute; top: -9px; padding: 0 6px; border-radius: 999px; font-size: 9.5px; font-weight: 800; background: rgb(var(--c)); color: #fff; line-height: 15px; z-index: 1; }
+.sline { flex: 0 1 26px; height: 2px; margin-top: 17px; border-radius: 2px; background: rgba(255,255,255,.1); }
+.sline.done { background: rgba(255,255,255,.35); }
+/* شريط «دورك الحين» فوق شبكة الاختيار */
+.turnhead { --sr: 167,139,250; display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 14px; border-radius: 16px; border: 1px solid rgba(var(--sr), .45);
+    background: linear-gradient(135deg, rgba(var(--sr), .22), rgba(var(--sr), .05)); box-shadow: 0 10px 26px -16px rgba(var(--sr), .8); animation: stIn .4s ease-out both; }
+.turnhead i { width: 10px; height: 10px; flex: none; border-radius: 50%; background: rgb(var(--sr)); box-shadow: 0 0 0 0 rgba(var(--sr), .6); animation: live2 1.4s ease-out infinite; }
+@keyframes live2 { to { box-shadow: 0 0 0 10px rgba(var(--sr), 0); } }
+.turnhead b { font-size: 15.5px; font-weight: 800; }
+.turnhead small { margin-inline-start: auto; color: #d9d4e6; font-size: 12px; font-weight: 500; text-align: left; }
+/* شاشة الانتقال: تطلع ثانية ونص مع كل تغيير مرحلة/دور ثم تختفي (ما تمنع اللمس) */
+.flash { --sr: 167,139,250; position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; pointer-events: none; padding: 24px;
+    background: radial-gradient(circle at 50% 45%, rgba(var(--sr), .3), rgba(4,3,8,.86) 68%); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    animation: flIn .25s ease-out both, flOut .4s ease-in 1.5s forwards; }
+@keyframes flIn { from { opacity: 0; } } @keyframes flOut { to { opacity: 0; visibility: hidden; } }
+.flash .fc { text-align: center; animation: fcIn .55s cubic-bezier(.2,.9,.25,1.25) both; }
+@keyframes fcIn { from { opacity: 0; transform: scale(.85) translateY(10px); } }
+.flash .fi { font-size: 66px; line-height: 1; filter: drop-shadow(0 0 26px rgba(var(--sr), .85)); }
+.flash .fk { margin-top: 14px; font-size: 12.5px; font-weight: 700; letter-spacing: .4px; color: rgb(var(--sr)); }
+.flash .ft { font-size: 31px; font-weight: 800; margin-top: 4px; }
+.flash .fs { font-size: 15px; color: #e4dff0; font-weight: 500; margin-top: 6px; }
+.flash .fbar { width: 130px; height: 3px; margin: 16px auto 0; border-radius: 3px; background: rgb(var(--sr)); transform-origin: right; animation: fbar 1.7s linear both; }
+@keyframes fbar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .stage, .stage .orb::before, .step.now .dot, .turnhead, .turnhead i, .flash .fc, .flash .fbar { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -635,9 +683,59 @@ body.in-game .brand img { height: 24px; }
         return '<div class="sec-h"><h2>📬 إشعاراتك</h2></div><div class="notices-mini">' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('') + '</div>';
     }
 
+    // ---- بطاقات الحالة وخطوات الليل وشاشة الانتقال
+    var TONE = { mafia: '226,72,61', doctor: '47,179,106', detective: '62,142,240', night: '124,92,255', dawn: '251,146,60', day: '242,182,50', vote: '167,139,250', ok: '47,179,106', bad: '226,72,61', skip: '245,158,11' };
+    var TURN_N = { mafia: 'المافيا', doctor: 'الطبيب', detective: 'المحقق' }, TURN_I = { mafia: '🔪', doctor: '🩺', detective: '🕵️' };
+    var TURN_DO = { mafia: 'اختاروا ضحيتكم مع فريقك', doctor: 'اختار مين تحمي الليلة', detective: 'اختار مين تفحص الليلة' };
+    function turnsOf(G) { var st = G.settings || {}; return ['mafia'].concat(st.doctors > 0 ? ['doctor'] : [], st.detectives > 0 ? ['detective'] : []); }
+    function myTurnOf(me) { return me.team === 'mafia' ? 'mafia' : me.role === 'doctor' || me.role === 'detective' ? me.role : null; }
+    function stepsHtml(G, myTurn) {
+        var list = turnsOf(G).concat(['morning']), cur = G.phase === 'night' ? list.indexOf(G.turn) : list.length - 1;
+        return '<div class="steps">' + list.map(function (k, i) {
+            var c = k === 'morning' ? TONE.day : TONE[k], cls = i < cur ? ' done' : i === cur ? ' now' : '';
+            return (i ? '<span class="sline' + (i <= cur ? ' done' : '') + '"></span>' : '') + '<div class="step' + cls + '" style="--c:' + c + '">' + (k === myTurn ? '<span class="me">أنت</span>' : '') +
+                '<span class="dot">' + (k === 'morning' ? '☀️' : TURN_I[k]) + '</span>' + (k === 'morning' ? 'الصبح' : TURN_N[k]) + '</div>';
+        }).join('') + '</div>';
+    }
+    function stage(o) {
+        return '<div class="stage' + (o.still ? ' still' : '') + '" style="--sr:' + (TONE[o.tone] || o.tone || TONE.vote) + '"><div class="orb">' + o.ic + '</div>' +
+            (o.k ? '<div class="st-k">' + o.k + '</div>' : '') + '<div class="st-t">' + o.t + '</div>' + (o.s ? '<div class="st-s">' + o.s + '</div>' : '') + (o.extra || '') + '</div>';
+    }
+    // شاشة انتقال قصيرة مع كل تغيّر مرحلة أو دور ليل — تقول وش خلص ووش بدأ
+    S.flashKey = '';
+    function flashFor(G, prev) {
+        var me = G.me, mt = myTurnOf(me), alive = me.alive, ph = G.phase;
+        if (ph === 'night') {
+            var t = G.turn; if (!t) return null;
+            if (alive && mt === t) return { tone: t, ic: TURN_I[t], k: 'الليلة ' + G.round, t: 'دورك الحين!', s: TURN_DO[t] };
+            if (alive && prev && prev.phase === 'night' && prev.turn === mt) return { tone: 'ok', ic: '✅', k: 'خلّصت دورك', t: 'الحين دور ' + TURN_N[t], s: TURN_I[t] + ' ' + TURN_N[t] + ' يختار من جواله' };
+            return { tone: prev && prev.phase === 'night' ? t : 'night', ic: prev && prev.phase === 'night' ? TURN_I[t] : '🌙', k: prev && prev.phase === 'night' ? 'الليلة ' + G.round : 'نزل الليل', t: 'دور ' + TURN_N[t], s: alive && !mt ? 'نام يا مواطن… الصبح يكشف كل شي' : TURN_I[t] + ' ' + TURN_N[t] + ' يختار من جواله' };
+        }
+        if (ph === 'dawn') return { tone: 'dawn', ic: '🎬', k: 'طلع الصبح', t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين' };
+        if (ph === 'day') return { tone: 'day', ic: '☀️', k: 'اليوم ' + G.round, t: 'بدأ النقاش', s: 'ناقشوا… مين المافيا بينكم؟' };
+        if (ph === 'vote') return { tone: 'vote', ic: '🗳️', k: 'خلص النقاش', t: 'وقت التصويت', s: alive ? 'اختار مين يطلع — أو تخطي' : 'تابع التصويت' };
+        if (ph === 'verdict') return { tone: 'vote', ic: '⚖️', k: 'خلص التصويت', t: 'النتيجة', s: 'شوف مين طلع' };
+        return null;
+    }
+    function maybeFlash(G) {
+        var k = G.id + '|' + G.phase + '|' + (G.phase === 'night' ? G.turn : '') + '|' + G.round;
+        if (k === S.flashKey) return;
+        var prev = S.flashPrev, first = !S.flashKey || (prev && prev.id !== G.id);
+        S.flashKey = k; S.flashPrev = { id: G.id, phase: G.phase, turn: G.turn };
+        if (first) return;   // أول تحميل/مباراة جديدة: بدون شاشة انتقال
+        var f = flashFor(G, prev); if (!f) return;
+        var old = document.querySelector('.flash'); if (old) old.remove();
+        var el = document.createElement('div'); el.className = 'flash'; el.style.setProperty('--sr', TONE[f.tone] || TONE.vote);
+        el.innerHTML = '<div class="fc"><div class="fi">' + f.ic + '</div><div class="fk">' + esc(f.k || '') + '</div><div class="ft">' + esc(f.t) + '</div>' + (f.s ? '<div class="fs">' + esc(f.s) + '</div>' : '') + '<div class="fbar"></div></div>';
+        document.body.appendChild(el);
+        setTimeout(function () { el.remove(); }, 2000);
+        if (navigator.vibrate && f.t === 'دورك الحين!') navigator.vibrate([60, 40, 60]);
+    }
+
     var lastRenderKey = '';
     function renderGame() {
         var G = S.G; if (!G || !G.me) return;
+        maybeFlash(G);
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
         $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
         $('roleChip').style.background = S.hideRole ? '#2a2438' : R.c;
@@ -659,7 +757,7 @@ body.in-game .brand img { height: 24px; }
         if (S.privAuto && G.phase === 'day') { S.privAuto = false; S.privOpen = ''; }
         var html = teamBarHtml(G), main = '', side = '', ph = G.phase, alive = me.alive;
         var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
-        if (!alive && ph !== 'over') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
+        if (!alive && ph !== 'over' && ph !== 'night') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
         if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
 
         if (ph === 'reveal') {
@@ -669,32 +767,33 @@ body.in-game .brand img { height: 24px; }
                 (G.districts > 1 ? '<div class="note">أنت في الحي ' + me.district + ' — شات الحي لأهل حيّك بس.</div>' : '') +
                 '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
         } else if (ph === 'night') {
-            var myTurn = me.team === 'mafia' ? 'mafia' : me.role === 'doctor' || me.role === 'detective' ? me.role : null;
-            var ORDER = ['mafia', 'doctor', 'detective'], TN = { mafia: 'المافيا', doctor: 'الطبيب', detective: 'المحقق' };
-            var wait = function (ic, tt) { return '<div class="big"><div class="ic">' + ic + '</div><div class="tt">' + tt + '</div><p>دور ' + TN[G.turn] + '</p></div>'; };
-            if (!alive) html += wait('🌙', 'الليل');
+            var myTurn = myTurnOf(me), ORDER = turnsOf(G), TN = TURN_N, steps = stepsHtml(G, alive ? myTurn : null);
+            var turnHead = '<div class="turnhead" style="--sr:' + TONE[G.turn] + '"><i></i><b>' + TURN_I[G.turn] + ' دورك الحين</b><small>' + TURN_DO[G.turn] + '</small></div>';
+            if (!alive) html += stage({ tone: 'night', ic: '💀', k: 'الليلة ' + G.round + ' · دور ' + TN[G.turn], t: 'خرجت من اللعبة', s: 'تابع البث — ما تقدر تختار أو تتكلم', extra: steps, still: true });
             else if (myTurn && G.turn !== myTurn) {
-                html += ORDER.indexOf(G.turn) < ORDER.indexOf(myTurn) ? wait('⏳', 'دورك بعد شوي') : wait('✔️', 'خلّصت دورك');
+                html += ORDER.indexOf(G.turn) < ORDER.indexOf(myTurn)
+                    ? stage({ tone: G.turn, ic: '⏳', k: 'دورك بعد شوي', t: 'الحين دور ' + TN[G.turn], s: 'جهّز نفسك — دورك بعده', extra: steps })
+                    : stage({ tone: 'ok', ic: '✅', k: 'خلّصت دورك', t: 'الحين دور ' + TN[G.turn], s: 'استريح… الصبح قريب', extra: steps, still: true });
                 if (me.role === 'detective') html += inspections(G);
                 html += privateHtml(G);
             }
-            else if (me.team === 'mafia') { main = mafiaNight(G); side = privateHtml(G); }
+            else if (me.team === 'mafia') { main = turnHead + mafiaNight(G); side = privateHtml(G); }
             else if (me.role === 'doctor') {
-                main = '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
+                main = turnHead + '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
                     action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed); },
                     sel: function (p) { return me.protect === p.id; },
                     tag: function (p) { return me.protect === p.id ? '🛡️' : p.id === me.doctorPrev ? 'أمس' : ''; },
                     skip: { sel: me.protect === 'skip' }
                 }); side = privateHtml(G);
             } else if (me.role === 'detective') {
-                main = '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
+                main = turnHead + '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
                     action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
                     sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍' : ''; },
                     skip: { sel: me.inspect === 'skip', can: !me.inspect }
                 }); side = privateHtml(G) + inspections(G);
-            } else html += wait('😴', 'نام يا مواطن…');
+            } else html += stage({ tone: 'night', ic: '😴', k: 'الليلة ' + G.round, t: 'نام يا مواطن…', s: 'الحين دور ' + TN[G.turn] + ' — الصبح يكشف كل شي', extra: steps });
         } else if (ph === 'dawn') {
-            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div></div>' + noticesHtml(G);
+            html += stage({ tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين على البث', extra: stepsHtml(G, alive ? myTurnOf(me) : null) }) + noticesHtml(G);
         } else if (ph === 'day') {
             // الشات السري (لو مفتوح) فوق والعام تحته بنفس العمود؛ لو انقفل يرجع العام فوق
             main = recruitNote(G) + privateHtml(G) + chatHtml(G, chansFor(G)); side = noticesHtml(G) + inspections(G);
@@ -707,11 +806,14 @@ body.in-game .brand img { height: 24px; }
             }); side = (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
-            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : V && V.skip ? '⏭️ الأغلبية اختارت التخطي' : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
-                (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') : 'شوف البث') + '</p></div>';
+            html += stage({
+                tone: op ? (op.team === 'mafia' ? 'bad' : 'day') : V && V.skip ? 'skip' : 'vote', ic: op ? (op.team === 'mafia' ? '🔪' : '🏠') : V && V.skip ? '⏭️' : '⚖️', k: 'نتيجة التصويت', still: true,
+                t: op ? 'المواطنين طردوا ' + esc(op.name) : V && V.skip ? 'الأغلبية اختارت التخطي' : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع'),
+                s: op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا — صادوه 👏' : op.team === 'town' ? 'كان من المدينة… خسارة 💔' : 'شوف البث') : 'الليل جاي… انتبهوا'
+            });
         } else if (ph === 'over') {
             var won = me.team === G.winner;
-            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فاز المواطنين') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
+            html += stage({ tone: won ? 'ok' : 'bad', ic: won ? '🏆' : '💔', k: 'انتهت المباراة', t: G.winner === 'mafia' ? 'فازت المافيا' : 'فاز المواطنين', s: won ? 'مبروك! فريقك فاز 🎉' : 'حظ أوفر المرة الجاية', still: true }) +
                 (G.cards ? '<div class="note">🃏 كروت المافيا كانت: ' + G.cards.map(function (c) { return esc(c.name) + (c.used ? ' ✓' : ''); }).join('، ') + '</div>' : '') +
                 '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + (p.recruited ? ' ← جُنّد' : '') + '</span></div>'; }).join('') + '</div>' +
                 '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
