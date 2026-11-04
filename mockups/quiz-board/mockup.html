@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#0b0820;--bg2:#1c1240;--a:#7c3aed;--a2:#00c2ff;--pink:#ff4dff;--gold:#ffc83d;--blue:#2f8cff;--red:#ff4d6d;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1280px;height:720px;overflow:hidden;font-family:Cairo,sans-serif;color:#fff;direction:rtl;
+background:radial-gradient(900px 500px at 80% -10%,rgba(124,58,237,.45),transparent 60%),radial-gradient(700px 500px at 0% 110%,rgba(0,194,255,.25),transparent 60%),linear-gradient(160deg,var(--bg1),var(--bg2))}
+.screen{display:none;width:100%;height:100%;padding:22px 28px;flex-direction:column;gap:14px}
+.screen.on{display:flex}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-weight:900;font-size:30px;letter-spacing:.5px}
+.logo span{background:linear-gradient(90deg,var(--a2),var(--pink));-webkit-background-clip:text;color:transparent}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 16px;font-weight:700;font-size:15px}
+/* teams */
+.team{display:flex;align-items:center;gap:12px;padding:8px 18px;border-radius:16px;border:2px solid;min-width:250px;justify-content:space-between}
+.team.b{border-color:var(--blue);background:linear-gradient(90deg,rgba(47,140,255,.28),rgba(47,140,255,.05))}
+.team.r{border-color:var(--red);background:linear-gradient(90deg,rgba(255,77,109,.28),rgba(255,77,109,.05))}
+.team .n{font-weight:800;font-size:18px}.team .s{font-weight:900;font-size:30px}
+.team .m{font-size:12px;opacity:.75}
+.team.turn{box-shadow:0 0 0 4px rgba(255,200,61,.6),0 0 30px rgba(255,200,61,.35)}
+.turnTag{background:var(--gold);color:#2a1a00;font-weight:900;font-size:12px;border-radius:999px;padding:2px 10px}
+/* setup */
+.h{font-weight:900;font-size:26px}.sub{opacity:.7;font-size:15px}
+.cats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;flex:1}
+.cat{position:relative;border-radius:18px;background:var(--card);border:1.5px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:18px}
+.cat .ic{font-size:44px}
+.cat .q{font-size:12px;font-weight:600;opacity:.6}
+.cat.sel{border-color:var(--gold);background:linear-gradient(180deg,rgba(255,200,61,.22),rgba(255,200,61,.04));box-shadow:0 0 24px rgba(255,200,61,.25)}
+.cat.sel::after{content:attr(data-n);position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:var(--gold);color:#2a1a00;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:14px}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.btn{background:linear-gradient(90deg,var(--a),var(--pink));border-radius:14px;padding:12px 38px;font-weight:900;font-size:20px;box-shadow:0 8px 24px rgba(124,58,237,.45)}
+.count{font-weight:900;font-size:20px}.count b{color:var(--gold)}
+.row{display:flex;gap:12px;align-items:center}
+.inp{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:8px 16px;font-weight:700;min-width:170px}
+/* board */
+.board{flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.col{display:flex;flex-direction:column;gap:8px}
+.ch{height:78px;border-radius:14px;background:linear-gradient(180deg,rgba(124,58,237,.55),rgba(124,58,237,.2));border:1px solid rgba(255,255,255,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:17px}
+.ch .ic{font-size:28px;line-height:1.1}
+.tl{flex:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:28px;border:1px solid var(--line);background:var(--card)}
+.tl.e{color:#7ee2a8}.tl.m{color:var(--gold)}.tl.h{color:#ff7a8f}
+.tl.used{opacity:.25;font-size:16px;text-decoration:line-through}
+.tl.wb{background:rgba(47,140,255,.35);border-color:var(--blue);color:#fff;font-size:15px;opacity:.85}
+.tl.wr{background:rgba(255,77,109,.35);border-color:var(--red);color:#fff;font-size:15px;opacity:.85}
+.tl.hover{outline:3px solid var(--gold);transform:scale(1.04);box-shadow:0 0 30px rgba(255,200,61,.5)}
+.legend{display:flex;gap:16px;font-size:13px;opacity:.8;justify-content:center}
+/* question */
+.qwrap{flex:1;display:grid;grid-template-columns:1fr 330px;gap:18px}
+.qbox{border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid var(--line);padding:26px 34px;display:flex;flex-direction:column;gap:16px}
+.qmeta{display:flex;gap:10px;align-items:center}
+.pts{background:var(--gold);color:#2a1a00;font-weight:900;border-radius:999px;padding:4px 16px;font-size:18px}
+.lvl{border:1px solid var(--gold);color:var(--gold);border-radius:999px;padding:3px 12px;font-weight:700;font-size:14px}
+.qt{font-size:40px;font-weight:900;line-height:1.5;flex:1;display:flex;align-items:center}
+.who{display:flex;align-items:center;gap:12px;background:rgba(47,140,255,.15);border:1.5px solid var(--blue);border-radius:14px;padding:10px 16px;font-weight:800;font-size:18px}
+.who small{font-weight:600;opacity:.75;font-size:14px}
+.timer{width:96px;height:96px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:36px;background:conic-gradient(var(--gold) 0 62%,rgba(255,255,255,.1) 62% 100%);position:relative}
+.timer::before{content:"";position:absolute;inset:8px;border-radius:50%;background:#160f33}
+.timer span{position:relative}
+.chat{border-radius:18px;background:rgba(0,0,0,.28);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.chat h4{font-size:16px;font-weight:800;display:flex;justify-content:space-between}
+.msg{display:flex;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.04);font-size:14px}
+.av{width:26px;height:26px;border-radius:50%;flex:none}
+.msg .u{font-weight:800}.msg.b .u{color:#7db8ff}.msg.r .u{color:#ff8fa3}
+.msg.x{opacity:.45}
+.msg .t{margin-right:auto;font-size:12px}
+.msg.ok{background:rgba(52,211,153,.18);border:1px solid rgba(52,211,153,.6)}
+.msg.ign{opacity:.35}
+.note{font-size:12px;opacity:.6;margin-top:auto}
+/* result */
+.reveal{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+.ans{font-size:52px;font-weight:900;background:linear-gradient(90deg,#7ee2a8,var(--a2));-webkit-background-clip:text;color:transparent}
+.winner{display:flex;align-items:center;gap:14px;background:rgba(52,211,153,.12);border:2px solid rgba(52,211,153,.7);border-radius:18px;padding:14px 26px;font-size:22px;font-weight:800}
+.plus{font-size:42px;font-weight:900;color:var(--gold)}
+</style></head><body>
+
+<!-- 1. اختيار الفئات -->
+<section class="screen" id="s1">
+ <div class="top"><div class="logo">لوحة <span>التحدي</span></div>
+  <div class="row"><div class="inp">🔵 الفريق الأزرق — اكتب <b>1</b></div><div class="inp">🔴 الفريق الأحمر — اكتب <b>2</b></div></div></div>
+ <div><div class="h">اختاروا 6 فئات</div><div class="sub">كل فئة فيها 6 أسئلة: 2 سهل (200) · 2 متوسط (400) · 2 صعب (600)</div></div>
+ <div class="cats">
+  <div class="cat sel" data-n="1"><div class="ic">🌍</div>جغرافيا<div class="q">48 سؤال</div></div>
+  <div class="cat"><div class="ic">📜</div>تاريخ<div class="q">52 سؤال</div></div>
+  <div class="cat sel" data-n="2"><div class="ic">⚽</div>رياضة<div class="q">60 سؤال</div></div>
+  <div class="cat"><div class="ic">🔬</div>علوم<div class="q">40 سؤال</div></div>
+  <div class="cat sel" data-n="3"><div class="ic">🎬</div>أفلام ومسلسلات<div class="q">36 سؤال</div></div>
+  <div class="cat"><div class="ic">🕌</div>ديني<div class="q">44 سؤال</div></div>
+  <div class="cat sel" data-n="4"><div class="ic">🍲</div>أكلات<div class="q">30 سؤال</div></div>
+  <div class="cat"><div class="ic">🚗</div>سيارات<div class="q">28 سؤال</div></div>
+  <div class="cat sel" data-n="5"><div class="ic">🧩</div>ألغاز<div class="q">42 سؤال</div></div>
+  <div class="cat"><div class="ic">🎵</div>أغاني وشيلات<div class="q">33 سؤال</div></div>
+  <div class="cat"><div class="ic">💬</div>أمثال شعبية<div class="q">38 سؤال</div></div>
+  <div class="cat sel" data-n="6"><div class="ic">🎮</div>ألعاب فيديو<div class="q">35 سؤال</div></div>
+ </div>
+ <div class="bar"><div class="count">المختار: <b>6</b> / 6</div><div class="btn">ابدأ اللعب ◀</div></div>
+</section>
+
+<!-- 2. اللوحة -->
+<section class="screen" id="s2">
+ <div class="top">
+  <div class="team b turn"><div><div class="n">🔵 الفريق الأزرق <span class="turnTag">دوره يختار</span></div><div class="m">23 لاعب</div></div><div class="s">1,400</div></div>
+  <div class="logo">لوحة <span>التحدي</span></div>
+  <div class="team r"><div><div class="n">🔴 الفريق الأحمر</div><div class="m">19 لاعب</div></div><div class="s">1,000</div></div>
+ </div>
+ <div class="board">
+  <div class="col"><div class="ch"><div class="ic">🌍</div>جغرافيا</div><div class="tl wb">🔵 200</div><div class="tl e">200</div><div class="tl wr">🔴 400</div><div class="tl m">400</div><div class="tl h">600</div><div class="tl h">600</div></div>
+  <div class="col"><div class="ch"><div class="ic">⚽</div>رياضة</div><div class="tl e">200</div><div class="tl used">200</div><div class="tl m">400</div><div class="tl m hover">400</div><div class="tl h">600</div><div class="tl wb">🔵 600</div></div>
+  <div class="col"><div class="ch"><div class="ic">🎬</div>أفلام</div><div class="tl wr">🔴 200</div><div class="tl e">200</div><div class="tl m">400</div><div class="tl m">400</div><div class="tl h">600</div><div class="tl h">600</div></div>
+  <div class="col"><div class="ch"><div class="ic">🍲</div>أكلات</div><div class="tl e">200</div><div class="tl e">200</div><div class="tl wb">🔵 400</div><div class="tl m">400</div><div class="tl wr">🔴 600</div><div class="tl h">600</div></div>
+  <div class="col"><div class="ch"><div class="ic">🧩</div>ألغاز</div><div class="tl e">200</div><div class="tl e">200</div><div class="tl m">400</div><div class="tl m">400</div><div class="tl h">600</div><div class="tl h">600</div></div>
+  <div class="col"><div class="ch"><div class="ic">🎮</div>ألعاب فيديو</div><div class="tl wb">🔵 200</div><div class="tl e">200</div><div class="tl m">400</div><div class="tl used">400</div><div class="tl h">600</div><div class="tl h">600</div></div>
+ </div>
+ <div class="legend"><span style="color:#7ee2a8">● 200 سهل</span><span style="color:var(--gold)">● 400 متوسط</span><span style="color:#ff7a8f">● 600 صعب</span><span>المستخدم: 9 / 36</span></div>
+</section>
+
+<!-- 3. السؤال -->
+<section class="screen" id="s3">
+ <div class="top">
+  <div class="team b turn"><div><div class="n">🔵 الفريق الأزرق</div><div class="m">23 لاعب</div></div><div class="s">1,400</div></div>
+  <div class="logo">لوحة <span>التحدي</span></div>
+  <div class="team r"><div><div class="n">🔴 الفريق الأحمر</div><div class="m">19 لاعب</div></div><div class="s">1,000</div></div>
+ </div>
+ <div class="qwrap">
+  <div class="qbox">
+   <div class="qmeta" style="justify-content:space-between"><div class="row"><div class="chip">⚽ رياضة</div><div class="pts">400</div><div class="lvl">متوسط</div></div><div class="timer"><span>19</span></div></div>
+   <div class="qt">كم مرة فاز المنتخب البرازيلي بكأس العالم لكرة القدم؟</div>
+   <div class="who">💬 الفريق الأزرق يجاوب الحين بالشات <small>— أول جواب صح ياخذ النقاط</small></div>
+  </div>
+  <div class="chat">
+   <h4>شات البث <span class="chip" style="font-size:12px;padding:2px 10px">مباشر</span></h4>
+   <div class="msg b"><div class="av" style="background:#4f7cff"></div><span class="u">sara_77</span> 4<span class="t">❌</span></div>
+   <div class="msg ign r"><div class="av" style="background:#ff6b81"></div><span class="u">fahad.q</span> 5<span class="t">مو دوره</span></div>
+   <div class="msg b"><div class="av" style="background:#36c2ff"></div><span class="u">abo_nasser</span> ثلاث<span class="t">❌</span></div>
+   <div class="msg b"><div class="av" style="background:#8a7dff"></div><span class="u">noura.k</span> 6<span class="t">❌</span></div>
+   <div class="msg b ok"><div class="av" style="background:#2fd39a"></div><span class="u">mj_10</span> خمس<span class="t">✅</span></div>
+   <div class="msg ign"><div class="av" style="background:#999"></div><span class="u">guest_92</span> هلا والله<span class="t"></span></div>
+   <div class="note">رسائل الفريق الثاني ومن ما انضم تُتجاهل. «خمس» = «5».</div>
+  </div>
+ </div>
+</section>
+
+<!-- 4. كشف الإجابة -->
+<section class="screen" id="s4">
+ <div class="top">
+  <div class="team b"><div><div class="n">🔵 الفريق الأزرق</div><div class="m">23 لاعب</div></div><div class="s">1,800</div></div>
+  <div class="logo">لوحة <span>التحدي</span></div>
+  <div class="team r turn"><div><div class="n">🔴 الفريق الأحمر <span class="turnTag">دوره الجاي</span></div><div class="m">19 لاعب</div></div><div class="s">1,000</div></div>
+ </div>
+ <div class="reveal">
+  <div class="sub">⚽ رياضة · 400 · متوسط</div>
+  <div style="font-size:24px;font-weight:700;opacity:.85">كم مرة فاز المنتخب البرازيلي بكأس العالم لكرة القدم؟</div>
+  <div class="ans">5 مرات</div>
+  <div class="winner"><div class="av" style="background:#2fd39a;width:44px;height:44px"></div>mj_10 جاوب صح للفريق الأزرق <span class="plus">+400</span></div>
+  <div class="sub">لو خلص الوقت بدون جواب صح ← فرصة سرقة للفريق الثاني (10 ثواني)</div>
+ </div>
+</section>
+
+<script>document.getElementById(location.hash.slice(1)||'s1').classList.add('on')</script>
+</body></html>
