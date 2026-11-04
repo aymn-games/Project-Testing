@@ -134,7 +134,10 @@ body.vres .caption .k { font-size: 46px; }
 /* لوحة الأصوات (وقت التصويت): كل اللاعبين الأحياء وعدد الأصوات على كل واحد */
 .votes { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(560px, 42%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.92), rgba(10,9,15,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; }
 .votes.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
-.vgrid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; scrollbar-width: none; }
+.vgrid { flex: 1; min-height: 0; overflow: hidden; padding: 12px; scrollbar-width: none; }
+.vgrid.scroll { overflow-y: auto; }
+/* المحتوى يتكبّر/يتصغّر (zoom) عشان يملى اللوحة بالضبط حسب عدد اللاعبين — fitVotes() */
+.vfit { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; }
 .vgrid::-webkit-scrollbar { display: none; }
 .vp { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); overflow: hidden; transition: background .3s, border-color .3s; }
 .vp .bar { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, rgba(226,72,61,.35), rgba(226,72,61,.08)); transition: width .4s; z-index: 0; }
@@ -148,7 +151,7 @@ body.vres .caption .k { font-size: 46px; }
 .vp.top { border-color: rgba(226,72,61,.7); background: rgba(226,72,61,.12); }
 .vp.skip .av { display: grid; place-items: center; font-size: 20px; }
 /* نتيجة التصويت: صف لكل خيار ومين صوّت له */
-.votes.res .vgrid { grid-template-columns: 1fr; gap: 10px; }
+.votes.res .vfit { grid-template-columns: 1fr; gap: 10px; }
 .vr { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); animation: vrIn .4s ease-out both; }
 .vr:nth-child(2) { animation-delay: .12s; } .vr:nth-child(3) { animation-delay: .24s; } .vr:nth-child(n+4) { animation-delay: .36s; }
 @keyframes vrIn { from { opacity: 0; transform: translateY(10px); } }
@@ -479,12 +482,13 @@ body.vres .caption .k { font-size: 46px; }
         var list = alive.slice().sort(function (a, b) { return (tally[b.id] || 0) - (tally[a.id] || 0) || a.seat - b.seat; });
         $('votesCount').textContent = voters + '/' + alive.length + ' صوّتوا';
         box_h().textContent = '🗳️ الأصوات';
-        $('vgrid').innerHTML = list.map(function (p) {
+        var vh = list.map(function (p) {
             var n = tally[p.id] || 0;
             return '<div class="vp' + (n ? ' has' : '') + (n && n === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? n / alive.length * 100 : 0) + '%"></span>' +
                 '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + '</small></span><span class="n">' + n + '</span></div>';
         }).join('');
-        if (sk) $('vgrid').insertAdjacentHTML(sk === max ? 'afterbegin' : 'beforeend', '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>');
+        if (sk) { var skH = '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>'; vh = sk === max ? skH + vh : vh + skH; }
+        setVgrid(vh);
     }
     // نتيجة التصويت (مرحلة النتائج): كل خيار عليه أصوات (لاعب أو تخطي) ومين صوّت له بالاسم، واللي ما صوّتوا
     function renderVoteResults(G) {
@@ -500,15 +504,33 @@ body.vres .caption .k { font-size: 46px; }
         var none = G.players.filter(function (p) { return !votes[p.id] && (p.alive || (p.cause === 'vote' && p.diedRound === G.round) || (p.cause === 'idle' && p.diedRound === G.round)); });
         $('votesCount').textContent = total + ' صوت';
         box_h().textContent = '🗳️ نتيجة التصويت';
-        $('vgrid').innerHTML = (keys.length ? keys.map(function (k) {
+        setVgrid((keys.length ? keys.map(function (k) {
             var n = groups[k].length, p = byId[k], win = k === winKey, tieTop = !winKey && V.tie && n === max;
             var head = k === 'skip' ? '<span class="av">⏭️</span><span class="nm">تخطي</span>'
                 : '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + (win ? ' · طُرد' : '') + '</small></span>';
             return '<div class="vr' + (win ? ' win' : tieTop ? ' tie' : '') + (k === 'skip' ? ' skip' : '') + '"><div class="vp has' + (win ? ' top' : '') + '"><span class="bar" style="width:' + (total ? n / total * 100 : 0) + '%"></span>' + head + '<span class="n">' + n + '</span></div>' +
                 '<div class="voters">' + groups[k].map(chip).join('') + '</div></div>';
         }).join('') : '<div class="vnone">ما أحد صوّت</div>') +
-            (none.length ? '<div class="vr idle"><div class="vlbl">😶 ما صوّتوا (' + none.length + ')</div><div class="voters">' + none.map(function (p) { return chip(p.id); }).join('') + '</div></div>' : '');
+            (none.length ? '<div class="vr idle"><div class="vlbl">😶 ما صوّتوا (' + none.length + ')</div><div class="voters">' + none.map(function (p) { return chip(p.id); }).join('') + '</div></div>' : ''));
     }
+    // لوحة الأصوات/النتيجة «بحكم الشاشة»: المحتوى يتكبّر لين يملى اللوحة (لاعبين قلة = بطاقات كبيرة)
+    // ويتصغّر لين يدخل كامل (لاعبين كثير = بدون ما ينقص شي تحت). لو حتى بأصغر حجم ما دخل، تسكرول.
+    var VFIT_MIN = 0.6, VFIT_MAX = 1.9;
+    function setVgrid(html) { $('vgrid').innerHTML = '<div class="vfit" id="vfit">' + html + '</div>'; fitVotes(); }
+    function fitVotes() {
+        var g = $('vgrid'), f = $('vfit'); if (!g || !f || $('votes').classList.contains('off')) return;
+        // نقيس الاثنين بنفس الطريقة (getBoundingClientRect) — شاشة البث فيها تكبير/تصغير عام (80%…) يخلّط clientHeight مع المقاس الظاهر
+        var cs = getComputedStyle(g), r = g.getBoundingClientRect(), k = g.offsetHeight ? r.height / g.offsetHeight : 1;
+        var H = r.height - (parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)) * k;
+        if (H <= 0) return;
+        var fits = function (z) { f.style.zoom = z; return f.getBoundingClientRect().height <= H + 1; };
+        var lo = VFIT_MIN, hi = VFIT_MAX;
+        if (fits(hi)) lo = hi;
+        else if (!fits(lo)) hi = lo;
+        else for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+        g.classList.toggle('scroll', !fits(lo));   // fits() يثبّت الحجم النهائي بعد
+    }
+    addEventListener('resize', function () { fitVotes(); });
     function box_h() { return $('votes').querySelector('.chat-h b'); }
     // ملخص الليلة اللي فاتت + آخر طرد + عدد الأحياء
     var recapKey = '';
