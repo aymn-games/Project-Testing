@@ -354,6 +354,19 @@
   .vk-sum .ic { width: 38px; height: 38px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.12); color: var(--lav-l); }
   .vk-sum .ic svg { width: 20px; height: 20px; }
 
+  /* ترتيب الصورة والاسم والرسالة فوق فيديو الأليرت */
+  .va-lay { position: relative; width: 100%; max-width: 100%; margin: 2px auto 0; border-radius: 12px; overflow: hidden; touch-action: none; background: repeating-conic-gradient(#2a2633 0 25%, #1c1923 0 50%) 0 0 / 16px 16px; border: 1px solid var(--line-2); }
+  .va-lay video, .va-lay canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+  .va-lay canvas { display: none; }
+  .va-lay.keyed canvas { display: block; }
+  .va-lay.keyed video { opacity: 0; }
+  .va-chip { position: absolute; z-index: 2; transform: translate(-50%, -50%); cursor: grab; white-space: nowrap; font-family: "Noto Kufi Arabic", sans-serif; font-weight: 800; line-height: 1.3; text-shadow: 0 1px 4px rgba(0,0,0,.95); outline: 1.5px dashed rgba(255,255,255,.55); outline-offset: 3px; border-radius: 6px; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .va-chip.drag { cursor: grabbing; outline-color: var(--lav-l); outline-style: solid; }
+  .va-chip:hover { outline-color: #fff; }
+  .va-avatar { border-radius: 50%; background: linear-gradient(160deg, var(--lav-m), var(--lav-d)); box-shadow: 0 0 0 2px rgba(255,255,255,.85); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
+  .va-msg { font-weight: 700; }
+  .vk-stage.bg-mine { background-size: cover; background-position: center; }
+
   /* أداة التفريغ */
   .vk-modal { position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8,7,11,.72); animation: vy-fade .3s var(--ease); }
   .vk-box { width: min(1180px, 100%); height: min(760px, 100%); display: flex; flex-direction: column; border-radius: 24px; overflow: hidden; background: linear-gradient(160deg, rgba(36,31,46,.98), rgba(16,14,21,.98)); animation: vy-in .4s var(--ease); }
