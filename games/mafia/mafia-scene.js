@@ -377,9 +377,10 @@ function buildHair(head, style, hairM, mats, GEO) {
 export function createStage(container, getFrame, opts) {
     opts = opts || {};
     const onCue = opts.onCue || (() => {}), onAmbience = opts.onAmbience || (() => {});
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // خفة: بدون antialias (الصورة تمر على composer فما كان له أثر أصلاً)، دقة أقل شوي، وظلال PCF عادية بدل الناعمة
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.25));
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
@@ -393,7 +394,7 @@ export function createStage(container, getFrame, opts) {
     // ---------- إضاءة
     const hemi = new THREE.HemisphereLight('#8090ff', '#3a2016', 0.45); scene.add(hemi);
     const sky = new THREE.DirectionalLight('#9fb4ff', 0.5); sky.position.set(-14, 22, -10); sky.castShadow = true;
-    sky.shadow.mapSize.set(2048, 2048); Object.assign(sky.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 70 }); sky.shadow.bias = -0.0005;
+    sky.shadow.mapSize.set(1024, 1024); Object.assign(sky.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 70 }); sky.shadow.bias = -0.0005;
     scene.add(sky);
     const fireLight = new THREE.PointLight('#ff8a32', 30, 22, 1.6); fireLight.position.set(0, 1.4, 0); scene.add(fireLight);
 
@@ -462,7 +463,7 @@ export function createStage(container, getFrame, opts) {
     const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     moonGlow.scale.set(16, 16, 1); moonGlow.position.copy(moon.position); scene.add(moonGlow);
     const starGeo = new THREE.BufferGeometry(), sp = [];
-    for (let i = 0; i < 900; i++) { const a = Math.random() * TAU, e = 0.12 + Math.random() * 1.3, r = 90; sp.push(Math.cos(a) * Math.cos(e) * r, Math.sin(e) * r, Math.sin(a) * Math.cos(e) * r); }
+    for (let i = 0; i < 450; i++) { const a = Math.random() * TAU, e = 0.12 + Math.random() * 1.3, r = 90; sp.push(Math.cos(a) * Math.cos(e) * r, Math.sin(e) * r, Math.sin(a) * Math.cos(e) * r); }
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
     const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.35, transparent: true, fog: false }));
     scene.add(stars);
@@ -481,7 +482,7 @@ export function createStage(container, getFrame, opts) {
     });
     const fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ff8a3a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     fireGlow.scale.set(6, 6, 1); fireGlow.position.y = 1.1; fire.add(fireGlow);
-    const SPARKS = 80, sparkGeo = new THREE.BufferGeometry(), sparkPos = new Float32Array(SPARKS * 3), sparkSeed = [];
+    const SPARKS = 50, sparkGeo = new THREE.BufferGeometry(), sparkPos = new Float32Array(SPARKS * 3), sparkSeed = [];
     for (let i = 0; i < SPARKS; i++) sparkSeed.push({ a: Math.random() * TAU, r: Math.random() * 0.5, sp: 0.6 + Math.random(), off: Math.random() });
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
     const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ color: '#ffb347', size: 0.09, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -500,9 +501,10 @@ export function createStage(container, getFrame, opts) {
     const lampPivot = new THREE.Group(); lampPivot.position.set(0, 6, 0); room.add(lampPivot);
     lampPivot.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.6, 6), mat('#111'), 0, -1.3, 0));
     const shade = mesh(new THREE.ConeGeometry(0.45, 0.4, 20, 1, true), mat('#1d2a22', { side: THREE.DoubleSide }), 0, -2.75, 0); lampPivot.add(shade);
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshBasicMaterial({ color: '#fff4c8' })); bulb.position.y = -2.85; lampPivot.add(bulb);
-    const spot = new THREE.SpotLight('#ffe6a8', 110, 10, 0.62, 0.4, 1.1); spot.position.set(0, -2.8, 0); spot.castShadow = true; spot.shadow.mapSize.set(1024, 1024);
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.1, 2.9, 32, 1, true), new THREE.MeshBasicMaterial({ color: '#ffe6a8', transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    // لمبة غرفة التحقيق: حمرا وهادية (توهّج خفيف بدل الإشعاع القوي)
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshBasicMaterial({ color: '#c8382e' })); bulb.position.y = -2.85; lampPivot.add(bulb);
+    const spot = new THREE.SpotLight('#ff3b30', 40, 10, 0.62, 0.85, 1.1); spot.position.set(0, -2.8, 0); spot.castShadow = true; spot.shadow.mapSize.set(512, 512);
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.1, 2.9, 24, 1, true), new THREE.MeshBasicMaterial({ color: '#ff3b30', transparent: true, opacity: 0.012, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     beam.position.y = -4.3; lampPivot.add(beam);
     const roomFill = new THREE.PointLight('#ffb36b', 6, 12, 1.4); roomFill.position.set(3, 3.5, 3); room.add(roomFill);
     const roomRim = new THREE.PointLight('#5f7bff', 5, 10, 1.4); roomRim.position.set(-3.5, 3, -3.5); room.add(roomRim);
@@ -640,10 +642,10 @@ export function createStage(container, getFrame, opts) {
     [[-10, 3.4], [2, 3.4], [10, -3.4], [-14, -3.4]].forEach(([x, z]) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.4, 0.28), bulbM); l.position.set(x, 3.1, z); market.add(l); });
     // ضوء القمر على السوق بظلال حقيقية (الشمس/القمر العام ظلاله للساحة بس)
     const marketKey = new THREE.SpotLight('#9fb2ff', 70, 40, 0.55, 0.6, 1.1);
-    marketKey.position.set(6, 16, 9); marketKey.castShadow = true; marketKey.shadow.mapSize.set(1024, 1024); marketKey.shadow.bias = -0.0004;
+    marketKey.position.set(6, 16, 9); marketKey.castShadow = true; marketKey.shadow.mapSize.set(512, 512); marketKey.shadow.bias = -0.0004;
     market.add(marketKey); market.add(marketKey.target); marketKey.target.position.set(-2, 0, 0);
     // غبار وفراشات ليل تسبح بضوء الفوانيس
-    const MOTES = 140, moteGeo = new THREE.BufferGeometry(), motePos = new Float32Array(MOTES * 3), moteSeed = [];
+    const MOTES = 80, moteGeo = new THREE.BufferGeometry(), motePos = new Float32Array(MOTES * 3), moteSeed = [];
     for (let i = 0; i < MOTES; i++) moteSeed.push({ x: (Math.random() - 0.5) * 30, y: 0.4 + Math.random() * 4, z: (Math.random() - 0.5) * 8, s: 0.2 + Math.random() * 0.6, o: Math.random() * 10 });
     moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
     const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: '#ffd9a0', size: 0.05, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -742,13 +744,13 @@ export function createStage(container, getFrame, opts) {
     scene.add(dustRing);
 
     // ---------- احتفال
-    const CONF = 260, confGeo = new THREE.BufferGeometry(), confPos = new Float32Array(CONF * 3), confCol = new Float32Array(CONF * 3), confSeed = [];
+    const CONF = 160, confGeo = new THREE.BufferGeometry(), confPos = new Float32Array(CONF * 3), confCol = new Float32Array(CONF * 3), confSeed = [];
     const confPal = ['#ffd34d', '#ff5a7a', '#4dc3ff', '#7dff9a', '#c18cff'].map((c) => new THREE.Color(c));
     for (let i = 0; i < CONF; i++) { confSeed.push({ x: (Math.random() - 0.5) * 16, z: (Math.random() - 0.5) * 16, sp: 1 + Math.random() * 1.5, off: Math.random() * 10, w: Math.random() * TAU }); const c = confPal[i % confPal.length]; confCol.set([c.r, c.g, c.b], i * 3); }
     confGeo.setAttribute('position', new THREE.BufferAttribute(confPos, 3)); confGeo.setAttribute('color', new THREE.BufferAttribute(confCol, 3));
     const confetti = new THREE.Points(confGeo, new THREE.PointsMaterial({ size: 0.18, vertexColors: true })); confetti.visible = false; scene.add(confetti);
-    // ألعاب نارية: 6 انفجارات، كل واحد 90 شرارة (مواقعها وتوقيتها ثابتة من رقم الانفجار)
-    const FW = 6, FWN = 90, fwGeo = new THREE.BufferGeometry(), fwPos = new Float32Array(FW * FWN * 3), fwCol = new Float32Array(FW * FWN * 3), fwDir = [];
+    // ألعاب نارية: 6 انفجارات، كل واحد 60 شرارة (مواقعها وتوقيتها ثابتة من رقم الانفجار)
+    const FW = 6, FWN = 60, fwGeo = new THREE.BufferGeometry(), fwPos = new Float32Array(FW * FWN * 3), fwCol = new Float32Array(FW * FWN * 3), fwDir = [];
     for (let i = 0; i < FW * FWN; i++) { const th = Math.random() * TAU, ph = Math.acos(2 * Math.random() - 1), sp = 0.7 + Math.random() * 0.3; fwDir.push([Math.sin(ph) * Math.cos(th) * sp, Math.cos(ph) * sp, Math.sin(ph) * Math.sin(th) * sp]); }
     fwGeo.setAttribute('position', new THREE.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('color', new THREE.BufferAttribute(fwCol, 3));
     const fireworks = new THREE.Points(fwGeo, new THREE.PointsMaterial({ size: 0.6, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -854,7 +856,7 @@ export function createStage(container, getFrame, opts) {
     // ما بعد المعالجة: توهّج (bloom) للّمبات والنار والعيون، والتلوين النهائي بـ OutputPass
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.42, 0.4, 0.98);   // عتبة عالية: يتوهج اللي يطلع ضوء بس (لمبات، نار، عيون)
+    const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.3, 0.35, 0.98);   // عتبة عالية: يتوهج اللي يطلع ضوء بس (لمبات، نار، عيون)
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
@@ -1209,7 +1211,7 @@ export function createStage(container, getFrame, opts) {
                 cage.position.set(p.x, lerp(16, 0, drop) + lift * 16, p.z);
                 if (u > 2700 && u < 2900) shake = 0.1;
                 v.group.position.y = lift * 16;
-                verdictSpot.position.set(p.x, 12, p.z); verdictSpot.target.position.set(p.x, 0, p.z); verdictSpot.intensity = 220 * spotK;
+                verdictSpot.color.set('#fff2cc'); verdictSpot.position.set(p.x, 12, p.z); verdictSpot.target.position.set(p.x, 0, p.z); verdictSpot.intensity = 220 * spotK;
                 spotBeam.position.set(p.x, 6 + lift * 16, p.z); spotBeam.material.opacity = 0.07 * spotK;
                 const dk = span(u, 2700, 3700);   // حلقة الغبار
                 if (dk > 0 && dk < 1) {
@@ -1270,7 +1272,7 @@ export function createStage(container, getFrame, opts) {
                     healLight.position.set(0, 3, 0); healLight.intensity = 12 + Math.sin(t * 2) * 4;
                 } else if (tn === 'detective') {
                     const a = t * 0.45, R = Math.max(3.4, Math.min(outerR, 9));
-                    verdictSpot.position.set(0, 16, 0); verdictSpot.target.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); verdictSpot.intensity = 140;
+                    verdictSpot.color.set('#ff3b30'); verdictSpot.position.set(0, 16, 0); verdictSpot.target.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); verdictSpot.intensity = 70;   // كشاف المحقق: أحمر وهادي
                 }
                 orbit(t, 12, 4.2, 0.015);   // دوران بطيء جداً: أهدى للمشاهد وأخف
             }
@@ -1292,16 +1294,16 @@ export function createStage(container, getFrame, opts) {
         applyViewShift();
         composer.render();
     }
-    // وضع خفيف تلقائي: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 4ث) نطفي الظلال والتوهّج وننزل الدقة
+    // وضع خفيف تلقائي: لو متوسط الإطارات نزل تحت 45/ث (بعد أول 3ث) نطفي الظلال والتوهّج وننزل الدقة
     // (نفس فكرة ship3d.js بسفينة النجاة) — الجهاز الضعيف يكمل سلس بدل ما يتقطع
     let lite = false, pfT = 0, pfN = 0, pfS = 0;
     function perf(dt) {
         if (lite) return;
-        pfT += dt; if (pfT < 4) return;
+        pfT += dt; if (pfT < 3) return;
         pfN++; pfS += dt;
         if (pfS < 2) return;
         const fps = pfN / pfS; pfN = 0; pfS = 0;
-        if (fps >= 40) return;
+        if (fps >= 45) return;
         lite = true;
         renderer.shadowMap.enabled = false; bloom.enabled = false; renderer.setPixelRatio(1);
         scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });

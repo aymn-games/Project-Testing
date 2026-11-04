@@ -30,7 +30,6 @@ var Game = require('./mafia-game');
 // حدود ملامح الشخصية (لازم تطابق اللوحات في games/mafia/mafia-looks.js)
 var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6 };
 var HOST_GRACE_MS = 30 * 60 * 1000;
-var OFFLINE_KICK_MS = 60 * 1000;
 var TICK_MS = 100, LIVE_SEND_MS = 250, IDLE_SEND_MS = 1000;
 var MAX_MSG = 8 * 1024;
 
@@ -109,7 +108,6 @@ function closeRoom(room, reason) {
 }
 
 function startGame(room) {
-    room.offSince = {};
     room.game = Game.createGame(room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok }; }), room.settings, {
         onChange: function () { room.dirty = true; }
     });
@@ -301,15 +299,6 @@ function tickAll() {
         if (!room.hostConn && room.hostGoneAt && now - room.hostGoneAt > HOST_GRACE_MS) return closeRoom(room, 'host-timeout');
         if (!room.game) return;
         try { room.game.tick(now); } catch (err) { logger.error('Mafia: tick error:', err); }
-        // قفل صفحة اللعبة أكثر من دقيقة وسط المباراة = إقصاء لعدم النشاط
-        if (room.settings.kickIdle !== false && room.game.G.phase !== 'over') {
-            room.offSince = room.offSince || {};
-            room.players.forEach(function (p) {
-                if (isOnline(room, p.id)) { delete room.offSince[p.id]; return; }
-                if (!room.offSince[p.id]) room.offSince[p.id] = now;
-                else if (now - room.offSince[p.id] > OFFLINE_KICK_MS) { delete room.offSince[p.id]; try { room.game.kickIdle(p.id, 'offline'); } catch (e) { } }
-            });
-        }
         // الرومات الكبيرة (لين 200 لاعب): نجمع التغييرات بدل ما نرسل نسخة لكل لاعب مع كل رسالة شات
         var gap = now - room.lastSend, live = room.game.G.phase === 'dawn', minGap = room.players.length > 40 ? 500 : 0;
         if ((room.dirty && gap >= minGap) || gap >= (live ? LIVE_SEND_MS : IDLE_SEND_MS)) sendStates(room);

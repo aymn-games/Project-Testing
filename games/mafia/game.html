@@ -81,6 +81,9 @@ button { font-family: inherit; cursor: pointer; }
 /* عنوان اللقطة السينمائية */
 .caption { position: absolute; bottom: 9%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90%; }
 .caption.on { opacity: 1; }
+/* وقت لوحة نتيجة التصويت (يمين): العنوان بالمساحة اللي يسارها عشان ما يتغطى */
+body.vres .caption { bottom: 26%; left: calc((100% - min(560px, 42%) - 28px) / 2); width: calc(100% - min(560px, 42%) - 60px); }
+body.vres .caption .k { font-size: 46px; }
 .caption .k { font-size: 58px; font-weight: 900; text-shadow: 0 4px 22px rgba(0,0,0,.85), 0 0 2px #000; }
 .caption .s { font-size: 24px; font-weight: 800; color: #f1ecff; text-shadow: 0 2px 12px rgba(0,0,0,.9); margin-top: 4px; }
 .caption .role { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 999px; font-size: 22px; font-weight: 900; }
@@ -144,6 +147,23 @@ button { font-family: inherit; cursor: pointer; }
 .vp.has .n { background: #e2483d; color: #fff; box-shadow: 0 0 16px rgba(226,72,61,.5); }
 .vp.top { border-color: rgba(226,72,61,.7); background: rgba(226,72,61,.12); }
 .vp.skip .av { display: grid; place-items: center; font-size: 20px; }
+/* نتيجة التصويت: صف لكل خيار ومين صوّت له */
+.votes.res .vgrid { grid-template-columns: 1fr; gap: 10px; }
+.vr { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); animation: vrIn .4s ease-out both; }
+.vr:nth-child(2) { animation-delay: .12s; } .vr:nth-child(3) { animation-delay: .24s; } .vr:nth-child(n+4) { animation-delay: .36s; }
+@keyframes vrIn { from { opacity: 0; transform: translateY(10px); } }
+.vr.win { border-color: rgba(226,72,61,.55); background: rgba(226,72,61,.08); box-shadow: 0 0 24px rgba(226,72,61,.2); }
+.vr.skip.win { border-color: rgba(251,191,36,.6); background: rgba(251,191,36,.08); box-shadow: 0 0 24px rgba(251,191,36,.18); }
+.vr.skip.win .vp.top { border-color: rgba(251,191,36,.7); background: rgba(251,191,36,.12); }
+.vr.skip.win .vp.has .n { background: #f59e0b; box-shadow: 0 0 16px rgba(245,158,11,.5); }
+.vr.tie { border-color: rgba(196,181,253,.45); }
+.vr .vp { border: 0; background: transparent; padding: 4px 6px; }
+.voters { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 6px 4px; }
+.vchip { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px 0 3px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.vchip svg { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.08); }
+.vr.idle { background: transparent; border-style: dashed; opacity: .75; }
+.vlbl { font-size: 13px; font-weight: 800; color: var(--mute); padding: 4px 8px 0; }
+.vnone { text-align: center; color: var(--mute); font-weight: 800; padding: 20px; }
 
 /* ملخص الليلة (بالنقاش والتصويت): مين انقصى/أنقذه الطبيب، وآخر طرد، والأحياء */
 .recap { position: absolute; top: 180px; left: 18px; width: min(330px, 26%); padding: 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; transition: opacity .3s, transform .3s; }
@@ -444,9 +464,12 @@ button { font-family: inherit; cursor: pointer; }
     // لوحة الأصوات وقت التصويت: كل الأحياء مرتّبين بعدد الأصوات، وأعلى واحد مميّز
     var votesKey = '';
     function renderVotes(G) {
-        var show = G.phase === 'vote', box = $('votes');
+        var show = G.phase === 'vote' || G.phase === 'verdict', box = $('votes');
         box.classList.toggle('off', !show);
+        box.classList.toggle('res', G.phase === 'verdict');
+        document.body.classList.toggle('vres', G.phase === 'verdict');   // عنوان النتيجة يتزحزح يسار اللوحة
         if (!show) { votesKey = ''; return; }
+        if (G.phase === 'verdict') return renderVoteResults(G);
         var tally = {}, voters = 0; Object.keys(G.votes || {}).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; voters++; });
         var alive = G.players.filter(function (p) { return p.alive; });
         var key = JSON.stringify([tally, alive.length]); if (key === votesKey) return; votesKey = key;
@@ -455,6 +478,7 @@ button { font-family: inherit; cursor: pointer; }
         var tops = alive.filter(function (p) { return max > 0 && (tally[p.id] || 0) === max; }).length + (max > 0 && sk === max ? 1 : 0);
         var list = alive.slice().sort(function (a, b) { return (tally[b.id] || 0) - (tally[a.id] || 0) || a.seat - b.seat; });
         $('votesCount').textContent = voters + '/' + alive.length + ' صوّتوا';
+        box_h().textContent = '🗳️ الأصوات';
         $('vgrid').innerHTML = list.map(function (p) {
             var n = tally[p.id] || 0;
             return '<div class="vp' + (n ? ' has' : '') + (n && n === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? n / alive.length * 100 : 0) + '%"></span>' +
@@ -462,6 +486,30 @@ button { font-family: inherit; cursor: pointer; }
         }).join('');
         if (sk) $('vgrid').insertAdjacentHTML(sk === max ? 'afterbegin' : 'beforeend', '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>');
     }
+    // نتيجة التصويت (مرحلة النتائج): كل خيار عليه أصوات (لاعب أو تخطي) ومين صوّت له بالاسم، واللي ما صوّتوا
+    function renderVoteResults(G) {
+        var V = G.verdict || {}, votes = G.votes || {}, byId = {}, groups = {};
+        G.players.forEach(function (p) { byId[p.id] = p; });
+        Object.keys(votes).forEach(function (vid) { var t = votes[vid]; if (t !== 'skip' && !byId[t]) return; (groups[t] = groups[t] || []).push(vid); });
+        var key = JSON.stringify(['res', votes, V.id, V.skip, V.tie]); if (key === votesKey) return; votesKey = key;
+        var keys = Object.keys(groups).sort(function (a, b) { return groups[b].length - groups[a].length || (a === 'skip' ? 1 : b === 'skip' ? -1 : byId[a].seat - byId[b].seat); });
+        var max = keys.length ? groups[keys[0]].length : 0, total = Object.keys(votes).length;
+        var winKey = V.id || (V.skip ? 'skip' : null);
+        var chip = function (id) { var p = byId[id]; return p ? '<span class="vchip">' + L.avatarSVG(p.look, 22) + esc(p.name) + '</span>' : ''; };
+        // اللي كانوا أحياء وقت التصويت وما صوّتوا (المطرود الحين ميت بس كان حي، واللي انقصى لعدم النشاط سببه هذا)
+        var none = G.players.filter(function (p) { return !votes[p.id] && (p.alive || (p.cause === 'vote' && p.diedRound === G.round) || (p.cause === 'idle' && p.diedRound === G.round)); });
+        $('votesCount').textContent = total + ' صوت';
+        box_h().textContent = '🗳️ نتيجة التصويت';
+        $('vgrid').innerHTML = (keys.length ? keys.map(function (k) {
+            var n = groups[k].length, p = byId[k], win = k === winKey, tieTop = !winKey && V.tie && n === max;
+            var head = k === 'skip' ? '<span class="av">⏭️</span><span class="nm">تخطي</span>'
+                : '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + (win ? ' · طُرد' : '') + '</small></span>';
+            return '<div class="vr' + (win ? ' win' : tieTop ? ' tie' : '') + (k === 'skip' ? ' skip' : '') + '"><div class="vp has' + (win ? ' top' : '') + '"><span class="bar" style="width:' + (total ? n / total * 100 : 0) + '%"></span>' + head + '<span class="n">' + n + '</span></div>' +
+                '<div class="voters">' + groups[k].map(chip).join('') + '</div></div>';
+        }).join('') : '<div class="vnone">ما أحد صوّت</div>') +
+            (none.length ? '<div class="vr idle"><div class="vlbl">😶 ما صوّتوا (' + none.length + ')</div><div class="voters">' + none.map(function (p) { return chip(p.id); }).join('') + '</div></div>' : '');
+    }
+    function box_h() { return $('votes').querySelector('.chat-h b'); }
     // ملخص الليلة اللي فاتت + آخر طرد + عدد الأحياء
     var recapKey = '';
     function renderRecap(G) {
