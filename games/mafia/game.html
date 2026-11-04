@@ -82,8 +82,11 @@ button { font-family: inherit; cursor: pointer; }
 .caption { position: absolute; bottom: 9%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s, transform .4s; width: 90%; }
 .caption.on { opacity: 1; }
 /* وقت لوحة نتيجة التصويت (يمين): العنوان بالمساحة اللي يسارها عشان ما يتغطى */
-body.vres .caption { bottom: 26%; left: calc((100% - min(560px, 42%) - 28px) / 2); width: calc(100% - min(560px, 42%) - 60px); }
-body.vres .caption .k { font-size: 46px; }
+/* وقت النتيجة اللوحة تملى العرض: العنوان الكبير يطلع فوق بين المؤقت وبطاقة اليوم */
+body.vres .caption { top: 66px; bottom: auto; left: 50%; width: min(64%, 1100px); }
+body.vres .caption .k { font-size: 34px; }
+body.vres .caption .s { font-size: 17px; margin-top: 2px; }
+body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; }
 .caption .k { font-size: 58px; font-weight: 900; text-shadow: 0 4px 22px rgba(0,0,0,.85), 0 0 2px #000; }
 .caption .s { font-size: 24px; font-weight: 800; color: #f1ecff; text-shadow: 0 2px 12px rgba(0,0,0,.9); margin-top: 4px; }
 .caption .role { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 999px; font-size: 22px; font-weight: 900; }
@@ -132,12 +135,12 @@ body.vres .caption .k { font-size: 46px; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
 
 /* لوحة الأصوات (وقت التصويت): كل اللاعبين الأحياء وعدد الأصوات على كل واحد */
-.votes { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(560px, 42%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.92), rgba(10,9,15,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; }
-.votes.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
+.votes { position: absolute; top: 182px; right: 14px; left: 14px; bottom: 112px;   /* تملى العرض (الأسماء واضحة)، وتحتها مكان باركود الرجوع */ display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.92), rgba(10,9,15,.94)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; }
+.votes.off { opacity: 0; transform: translateY(20px); pointer-events: none; }
 .vgrid { flex: 1; min-height: 0; overflow: hidden; padding: 12px; scrollbar-width: none; }
 .vgrid.scroll { overflow-y: auto; }
 /* المحتوى يتكبّر/يتصغّر (zoom) عشان يملى اللوحة بالضبط حسب عدد اللاعبين — fitVotes() */
-.vfit { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; }
+.vfit { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));   /* بطاقة أعرض = الاسم يبان كامل */ gap: 8px; align-content: start; }
 .vgrid::-webkit-scrollbar { display: none; }
 .vp { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); overflow: hidden; transition: background .3s, border-color .3s; }
 .vp .bar { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, rgba(226,72,61,.35), rgba(226,72,61,.08)); transition: width .4s; z-index: 0; }
@@ -151,7 +154,7 @@ body.vres .caption .k { font-size: 46px; }
 .vp.top { border-color: rgba(226,72,61,.7); background: rgba(226,72,61,.12); }
 .vp.skip .av { display: grid; place-items: center; font-size: 20px; }
 /* نتيجة التصويت: صف لكل خيار ومين صوّت له */
-.votes.res .vfit { grid-template-columns: 1fr; gap: 10px; }
+.votes.res .vfit { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; align-items: start; }
 .vr { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.06); animation: vrIn .4s ease-out both; }
 .vr:nth-child(2) { animation-delay: .12s; } .vr:nth-child(3) { animation-delay: .24s; } .vr:nth-child(n+4) { animation-delay: .36s; }
 @keyframes vrIn { from { opacity: 0; transform: translateY(10px); } }
@@ -630,7 +633,7 @@ body.vres .caption .k { font-size: 46px; }
         if (stage && stage.setViewShift && (!tickUI.vsAt || now - tickUI.vsAt > 250)) {
             tickUI.vsAt = now;
             var pw = function (id) { var el = $(id); if (el.classList.contains('off')) return 0; var r = el.getBoundingClientRect(); return r.width + 16; };
-            stage.setViewShift((pw('chat') + pw('votes') - pw('recap')) / 2 / innerWidth);
+            stage.setViewShift((pw('chat') - pw('recap')) / 2 / innerWidth);   // لوحة الأصوات تملى العرض فما تحرّك المشهد
         }
         // صوت مع كل دور ليل جديد
         var tk = G && G.phase === 'night' ? G.turn + G.round : '';
