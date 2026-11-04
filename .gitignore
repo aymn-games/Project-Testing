@@ -6,6 +6,7 @@ node_modules/
 # committed (raw fallback if it existed anywhere before this file).
 backend/agp-data.sqlite
 backend/agp-data.sqlite-*
+backend/screen-media/
 
 # Common OS/editor noise.
 .DS_Store
