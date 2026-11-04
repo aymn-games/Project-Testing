@@ -46,7 +46,7 @@ body.in-game .brand img { height: 30px; }
 .lay .pt b { font-size: clamp(13px, calc(var(--ts) * .13), 19px); }
 .lay .pt.skip .pi { font-size: calc(var(--ts) * .3); }
 .pbtns { display: flex; flex-wrap: wrap; gap: 8px; }
-.lay .pbtn { align-self: flex-start; }
+
 body.in-game .top { position: static; background: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .hide { display: none !important; }
 h1 { font-size: 30px; font-weight: 900; margin: 16px 0 4px; }
@@ -112,8 +112,45 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .ct.sel { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(167,139,250,.4); }
 .ct[disabled] { opacity: .4; cursor: default; }
 .ct.none { border-style: dashed; }
-.pbtn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; margin-top: 10px; border-radius: 999px; border: 1px solid rgba(226,72,61,.45); background: rgba(226,72,61,.12); color: #fff; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
-.pbtn i { font-style: normal; background: #e2483d; border-radius: 999px; padding: 0 7px; font-size: 12px; }
+/* شريط الفريق: زملاءك + زر الشات السري — مضغوط وثابت فوق بكل المراحل */
+.teambar { --tc: #e2483d; --tr: 226,72,61; position: relative; margin-top: 10px; padding: 10px 12px; border-radius: 18px; overflow: hidden;
+    border: 1px solid rgba(var(--tr), .32); background: linear-gradient(135deg, rgba(var(--tr), .14), rgba(255,255,255,.015) 60%), rgba(19,17,27,.7);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 10px 30px -14px rgba(var(--tr), .55); }
+.teambar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--tc); box-shadow: 0 0 14px var(--tc); }
+.teambar.doctor { --tc: #2fb36a; --tr: 47,179,106; } .teambar.detective { --tc: #3e8ef0; --tr: 62,142,240; }
+.teambar-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.teambar-t { display: flex; flex-direction: column; min-width: 0; }
+.teambar-t b { font-size: 14px; font-weight: 700; letter-spacing: .2px; }
+.teambar-t small { color: var(--mute); font-size: 11.5px; font-weight: 500; }
+.mates-row { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; scrollbar-width: none; }
+.mates-row::-webkit-scrollbar { display: none; }
+.mate { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 3px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); font-size: 13px; font-weight: 600; }
+.mate svg { width: 24px; height: 24px; border-radius: 50%; background: var(--card2); box-shadow: 0 0 0 1.5px rgba(var(--tr), .7); }
+.mate.dead { opacity: .4; text-decoration: line-through; }
+.teambar .pbtns { flex: none; gap: 6px; }
+.pbtn { --tr: 226,72,61; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(var(--tr), .7); background: linear-gradient(135deg, rgba(var(--tr), .95), rgba(var(--tr), .7)); color: #fff; font: inherit; font-weight: 700; font-size: 13px; white-space: nowrap; cursor: pointer; box-shadow: 0 4px 14px -4px rgba(var(--tr), .7), inset 0 1px 0 rgba(255,255,255,.25); transition: transform .15s, background .2s; }
+.pbtn:active { transform: scale(.96); }
+.pbtn.doctor { --tr: 47,179,106; } .pbtn.detective { --tr: 62,142,240; }
+.pbtn[aria-expanded="true"] { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); box-shadow: none; color: var(--c3); }
+.pbtn i { font-style: normal; min-width: 18px; height: 18px; display: grid; place-items: center; background: #fff; color: rgb(var(--tr)); border-radius: 999px; padding: 0 5px; font-size: 11px; font-weight: 800; }
+.pbtn.ping { animation: ping 1.6s ease-in-out infinite; }
+@keyframes ping { 50% { box-shadow: 0 0 0 5px rgba(var(--tr), .18), 0 4px 14px -4px rgba(var(--tr), .7); } }
+/* عنوان كل شات: صغير ومرتب */
+.chead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.chead span { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: var(--c3); letter-spacing: .2px; }
+.chead span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7ee2a6; box-shadow: 0 0 8px #7ee2a6; }
+.chead small { color: var(--mute); font-size: 11.5px; font-weight: 500; }
+.chead.mafia span { color: #ffb4ab; } .chead.mafia span::before { background: #e2483d; box-shadow: 0 0 8px #e2483d; }
+.chead.doctor span { color: #7ee2a6; } .chead.detective span { color: #8ab4ff; } .chead.detective span::before { background: #3e8ef0; box-shadow: 0 0 8px #3e8ef0; }
+.chatbox.priv { border-color: rgba(226,72,61,.3); background: linear-gradient(180deg, rgba(226,72,61,.07), rgba(0,0,0,.25)); }
+.chatbox.priv.doctor { border-color: rgba(47,179,106,.3); background: linear-gradient(180deg, rgba(47,179,106,.07), rgba(0,0,0,.25)); }
+.chatbox.priv.detective { border-color: rgba(62,142,240,.3); background: linear-gradient(180deg, rgba(62,142,240,.07), rgba(0,0,0,.25)); }
+/* الشات السري لما ينفتح يطلع فوق والعام ينزل تحته (نفس العمود)، ويتقاسمون الطول */
+.notices-mini .res:nth-child(n+4) { display: none; }
+.lay.priv-on .notices-mini .res:nth-child(n+2) { display: none; }
+@media (orientation: landscape) and (min-width: 640px), (min-width: 900px) {
+    .notices-mini .res:nth-child(n+2) { display: flex !important; }
+}
 
 /* دور المافيا: ملخص، خطوات، كروت، نافذة اختيار */
 .msum { margin-top: 12px; padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(167,139,250,.3); background: rgba(139,92,246,.1); }
@@ -198,6 +235,32 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .big .tt { font-size: 28px; font-weight: 900; margin-top: 6px; }
 .status { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: var(--red); font-weight: 800; display: none; z-index: 9; }
 .status.on { display: block; }
+
+/* ===== طبقة «بريميوم» لشاشة اللعب: زجاج هادي، خطوط أنعم، مسافات مرتبة ===== */
+body.in-game .brand { opacity: .75; margin-top: 4px; font-size: 12px; }
+body.in-game .brand img { height: 24px; }
+.top { padding: 8px 0; }
+.me { font-size: 16px; font-weight: 700; gap: 10px; }
+.me svg { width: 38px; height: 38px; box-shadow: 0 0 0 2px rgba(167,139,250,.55), 0 0 16px rgba(139,92,246,.35); }
+.rolechip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; font-size: 13px; font-weight: 700; border: 1px solid rgba(255,255,255,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 6px 16px -6px rgba(0,0,0,.6); }
+.phase { padding: 10px 14px; border-radius: 18px; border: 1px solid rgba(255,255,255,.07); background: linear-gradient(135deg, rgba(139,92,246,.16), rgba(255,255,255,.02) 55%), rgba(19,17,27,.8); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+.phase b { font-size: 16px; font-weight: 700; letter-spacing: .2px; }
+.phase .t { min-width: 46px; font-size: 17px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(139,92,246,.18); border: 1px solid rgba(167,139,250,.35); color: #ede9fe; font-variant-numeric: tabular-nums; }
+.sec-h h2 { font-size: 15px; font-weight: 700; color: var(--c3); }
+.chatbox { gap: 6px; padding: 8px; border-radius: 16px; background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.07); margin-top: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.03); scrollbar-width: thin; scrollbar-color: rgba(167,139,250,.3) transparent; }
+.bm { gap: 2px; padding: 7px 11px 8px; border-radius: 14px 4px 14px 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05); }
+.bm.mine { background: linear-gradient(135deg, rgba(124,58,237,.24), rgba(168,85,247,.12)); border-color: rgba(167,139,250,.28); }
+.bm .hd b { font-size: 12.5px; font-weight: 700; }
+.bm .tx { font-size: 15px; font-weight: 500; line-height: 1.5; }
+.bm .rp { font-size: 11px; font-weight: 600; padding: 2px 9px; background: transparent; border: 1px solid rgba(255,255,255,.1); color: var(--mute); }
+.send { gap: 6px; margin-top: 8px; padding: 4px; border-radius: 16px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.08); }
+.send:focus-within { border-color: rgba(167,139,250,.55); box-shadow: 0 0 0 3px rgba(139,92,246,.15); }
+.send .field { height: 40px; font-size: 15px; font-weight: 500; border: 0; background: transparent; box-shadow: none; padding: 0 10px; }
+.send button { width: 64px; height: 40px; border-radius: 12px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 14px -4px rgba(139,92,246,.7); }
+.res { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); font-weight: 500; }
+.notices-mini .res { font-size: 13.5px !important; color: #d9d4e6; }
+.note { font-size: 14px; border-radius: 14px; }
+.pt { border-radius: 18px; border-width: 1px; }
 </style>
 </head>
 <body>
@@ -391,6 +454,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         return (big(G) ? '<input class="field" id="pf" placeholder="🔎 دوّر على اسم…" autocomplete="off" style="margin-top:10px;height:42px;font-size:16px" value="' + esc(S.filter) + '">' : '') +
             '<div class="grid">' + skip + list.map(function (p) {
                 var ok = opts.can(p), sel = opts.sel && opts.sel(p), t = opts.tag ? opts.tag(p) : '';
+                if (!t && p.mate && p.id !== G.me.id) t = (ROLE[p.mate] || ROLE.citizen).icon + ' زميلك';
                 return '<button type="button" class="pt' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + esc(opts.argOf ? opts.argOf(p) : p.id) + '"' : ' disabled') + '>' +
                     '<span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<b>' + esc(p.name) + '</b>' + (t ? '<em>' + t + '</em>' : '') + '</button>';
             }).join('') + (list.length ? '' : '<p>ما فيه أحد</p>') + '</div>';
@@ -421,7 +485,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
         var dayN = 0; for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
         var msgs = chatMsgs(G);
-        return '<div class="sec-h"><h2>💬 العام</h2></div>' + (chans.length > 1 ? '<div class="opts" style="margin-top:8px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
+        return '<div class="chead"><span>الشات العام</span><small>' + (canSend ? 'الكل يشوفه' : 'للقراءة بس') + '</small></div>' + (chans.length > 1 ? '<div class="opts" style="margin-top:8px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
             '<div class="chatbox" id="chatbox">' + (msgs || '<div class="cm sys">💬</div>') + '</div>' + (canSend
             ? replyBar(G, S.chan) + '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
     }
@@ -438,7 +502,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         return c;
     }
 
-    // ---- الشات الخاص بالدور: المافيا (طول المباراة)، والأطباء/المحققين لو أكثر من واحد (وقت النقاش)
+    // ---- الشات الخاص بالدور: المافيا، والأطباء/المحققين لو أكثر من واحد — كلهم طول المباراة
     // لوحة تنفتح وتنقفل تحت الشات العام، فيقدر يتابع الاثنين ويكتب بالاثنين
     var PRIV = { mafia: { n: '🔪 شات المافيا', h: 'كلّم فريقك بسرية…' }, doctor: { n: '🩺 شات الأطباء', h: 'نسّقوا مين تحمون…' }, detective: { n: '🕵️ شات المحققين', h: 'شاركوا نتائج الفحص…' } };
     // الشاتات الخاصة: المافيا، وشات الأطباء/المحققين (لو أكثر من واحد) — والمجنّد يبقى بشات دوره القديم كمان
@@ -449,16 +513,16 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var chans = privChans(G); if (!chans.length) return '';
         if (S.privOpen && chans.indexOf(S.privOpen) < 0) S.privOpen = '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var heads = privHeads(G, chans);
-        var ch = S.privOpen; if (!ch) return '<div class="pbtns">' + heads + '</div>';
-        var canSend = ch === 'mafia' || G.phase === 'day';
-        return '<div class="pbtns">' + heads + '</div><div class="chatbox" id="privbox" style="border-color:rgba(226,72,61,.35)">' + privMsgs(G) + '</div>' +
+        var ch = S.privOpen; if (!ch || S.hideRole) return '';
+        var canSend = G.phase !== 'over';
+        return '<div class="chead ' + ch + '"><span>' + PRIV[ch].n.replace(/^\S+ /, '') + ' السري 🔒</span><small>' + 'محد يشوفه غيركم' + '</small></div>' +
+            '<div class="chatbox priv ' + ch + '" id="privbox">' + privMsgs(G) + '</div>' +
             (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
     }
     function privMsgs(G) {
         var ch = S.privOpen; if (!ch) return '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = ch === 'mafia' || G.phase === 'day';
+        var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = G.phase !== 'over';
         return list.slice(-60).map(function (c) { return bubble(c, byId, canSend); }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>';
     }
     function privHeads(G, chans) {
@@ -467,8 +531,25 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             var last = list.length ? list[list.length - 1].n : 0, seen = S.privSeen[ch] || 0;
             if (open) S.privSeen[ch] = last;
             var unread = open ? 0 : list.filter(function (c) { return c.n > seen && c.from !== G.me.id; }).length;
-            return '<button type="button" class="pbtn" data-priv-toggle="' + ch + '" aria-expanded="' + open + '">🔒 ' + PRIV[ch].n.split(' ')[0] + (unread ? ' <i>' + unread + '</i>' : '') + ' ' + (open ? '▴' : '▾') + '</button>';
-        }).join(' ');
+            var label = (open ? '✕ اقفل ' : '🔒 ') + PRIV[ch].n.replace(/^\S+ /, '') + (open ? '' : ' السري');
+            return '<button type="button" class="pbtn ' + ch + (unread ? ' ping' : '') + '" data-priv-toggle="' + ch + '" aria-expanded="' + open + '">' + label + (unread ? '<i>' + unread + '</i>' : '') + '</button>';
+        }).join('');
+    }
+
+    // ---- شريط الفريق: مين معك (مافيا/أطباء/محققين) + زر الشات السري — فوق الشاشة بكل المراحل
+    var TEAM = { mafia: ['🔪 فريقك المافيا', '#e2483d', 'rgba(226,72,61,.16)'], doctor: ['🩺 الأطباء معك', '#2fb36a', 'rgba(47,179,106,.14)'], detective: ['🕵️ المحققين معك', '#3e8ef0', 'rgba(62,142,240,.14)'] };
+    function teamBarHtml(G) {
+        var me = G.me; if (!me || !me.alive || S.hideRole || G.phase === 'over') return '';
+        var mates = G.players.filter(function (p) { return p.mate && p.id !== me.id; });
+        var chans = privChans(G);
+        if (!mates.length && !chans.length) return '';
+        var kind = me.team === 'mafia' ? 'mafia' : (mates[0] && mates[0].mate) || chans[0] || 'mafia', T = TEAM[kind];
+        return '<div class="teambar ' + kind + '"><div class="teambar-h"><div class="teambar-t"><b>' + T[0] + '</b><small>' + (mates.length ? mates.length + ' معك · لا تفضحهم' : 'شاتكم السري') + '</small></div>' +
+            (chans.length ? '<div class="pbtns">' + privHeads(G, chans) + '</div>' : '') + '</div>' +
+            (mates.length ? '<div class="mates-row">' + mates.map(function (p) {
+                var r = ROLE[p.role] || ROLE[p.mate] || ROLE.citizen;
+                return '<span class="mate' + (p.alive ? '' : ' dead') + '">' + avatar(p, 28) + esc(p.name) + (p.role === 'disguised' ? ' 🎭' : '') + (p.alive ? '' : ' 💀') + '</span>';
+            }).join('') + '</div>' : '') + '</div>';
     }
 
     var CARD_INFO = {
@@ -551,7 +632,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 
     function noticesHtml(G) {
         var list = (G.me.notices || []).slice(-6).reverse(); if (!list.length) return '';
-        return '<div class="sec-h"><h2>📬 إشعاراتك</h2></div>' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('');
+        return '<div class="sec-h"><h2>📬 إشعاراتك</h2></div><div class="notices-mini">' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('') + '</div>';
     }
 
     var lastRenderKey = '';
@@ -565,7 +646,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
         // الشاشة تنبني من جديد بس لو تغيّر شي غير الشات؛ الرسائل الجديدة تحدّث صناديق الشات لحالها
         // (عشان الكتابة ما تتقطّع، والكيبورد ما يرمش، واللي يقرأ رسائل قديمة ما ينسحب لتحت غصب)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply]);
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply]);
         if (key === lastRenderKey) { patchChat(G); return; }
         lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
@@ -573,7 +654,10 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var focusId = document.activeElement && document.activeElement.id;
         var caret = document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement.selectionStart : 1e9;
 
-        var html = '', main = '', side = '', ph = G.phase, alive = me.alive;
+        // الشات السري (مافيا/أطباء/محققين) ينفتح لحاله أول ليلة (عشان الفريق يلقاه)، ويتسكّر لحاله أول نهار عشان الشات العام يبان — بعدها قرارك
+        if (S.autoPriv !== G.id && privChans(G).length && G.phase === 'night') { S.autoPriv = G.id; if (!S.privOpen) { S.privOpen = privChans(G)[0]; S.privAuto = true; } }
+        if (S.privAuto && G.phase === 'day') { S.privAuto = false; S.privOpen = ''; }
+        var html = teamBarHtml(G), main = '', side = '', ph = G.phase, alive = me.alive;
         var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
         if (!alive && ph !== 'over') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
         if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
@@ -601,18 +685,19 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                     sel: function (p) { return me.protect === p.id; },
                     tag: function (p) { return me.protect === p.id ? '🛡️' : p.id === me.doctorPrev ? 'أمس' : ''; },
                     skip: { sel: me.protect === 'skip' }
-                });
+                }); side = privateHtml(G);
             } else if (me.role === 'detective') {
                 main = '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
                     action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
                     sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍' : ''; },
                     skip: { sel: me.inspect === 'skip', can: !me.inspect }
-                }); side = inspections(G);
+                }); side = privateHtml(G) + inspections(G);
             } else html += wait('😴', 'نام يا مواطن…');
         } else if (ph === 'dawn') {
             html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div></div>' + noticesHtml(G);
         } else if (ph === 'day') {
-            main = recruitNote(G) + chatHtml(G, chansFor(G)); side = privateHtml(G) + noticesHtml(G) + inspections(G);
+            // الشات السري (لو مفتوح) فوق والعام تحته بنفس العمود؛ لو انقفل يرجع العام فوق
+            main = recruitNote(G) + privateHtml(G) + chatHtml(G, chansFor(G)); side = noticesHtml(G) + inspections(G);
         } else if (ph === 'vote') {
             var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
             main = '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + '</span></div>' + playerRows(G, {
@@ -622,7 +707,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             }); side = (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + privateHtml(G) + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
-            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
+            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المواطنين طردوا ' + esc(op.name) : V && V.skip ? '⏭️ الأغلبية اختارت التخطي' : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
                 (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') : 'شوف البث') + '</p></div>';
         } else if (ph === 'over') {
             var won = me.team === G.winner;
@@ -632,7 +717,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
         }
         // تقسيم مرن: البطاقات/الشات الرئيسي يملى المساحة، والشات الثاني تحته (طولي) أو جنبه (عرضي/آيباد)
-        if (main || side) html += '<div class="lay' + (side ? '' : ' solo') + '"><div class="pa">' + main + '</div>' + (side ? '<div class="pb">' + side + '</div>' : '') + '</div>';
+        if (main || side) html += '<div class="lay' + (side ? '' : ' solo') + (S.privOpen && !S.hideRole && privChans(G).indexOf(S.privOpen) >= 0 ? ' priv-on' : '') + '"><div class="pa">' + main + '</div>' + (side ? '<div class="pb">' + side + '</div>' : '') + '</div>';
         $('gameBody').innerHTML = html;
         fitGrids();
         var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
@@ -650,7 +735,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         if (box) { var h = chatMsgs(G) || '<div class="cm sys">💬</div>'; if (h !== lastChatHtml) { var st = stick(box); box.innerHTML = h; lastChatHtml = h; if (st) box.scrollTop = box.scrollHeight; } }
         var pb = $('privbox');
         if (pb) { var ph = privMsgs(G); if (ph !== lastPrivHtml) { var st2 = stick(pb); pb.innerHTML = ph; lastPrivHtml = ph; if (st2) pb.scrollTop = pb.scrollHeight; } }
-        var hb = document.querySelector('#gameBody .pbtns'), chans = privChans(G);
+        var hb = document.querySelector('#gameBody .teambar .pbtns'), chans = privChans(G);
         if (hb && chans.length) { var hh = privHeads(G, chans); if (hh !== lastHeads) { hb.innerHTML = hh; lastHeads = hh; } }
     }
 
@@ -672,7 +757,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         var ur = e.target.closest('[data-unreply]'); if (ur) { delete S.reply[ur.getAttribute('data-unreply')]; return renderGame(); }
         if (e.target.id === 'chatSend') sendChat();
         if (e.target.id === 'privSend') sendPriv();
-        var pt = e.target.closest('[data-priv-toggle]'); if (pt) { var pc = pt.getAttribute('data-priv-toggle'); S.privOpen = S.privOpen === pc ? '' : pc; lastRenderKey = ''; renderGame(); }
+        var pt = e.target.closest('[data-priv-toggle]'); if (pt) { var pc = pt.getAttribute('data-priv-toggle'); S.privOpen = S.privOpen === pc ? '' : pc; S.privAuto = false; lastRenderKey = ''; renderGame(); }
     });
     $('gameBody').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'chatIn') sendChat(); if (e.target.id === 'privIn') sendPriv(); });
     $('gameBody').addEventListener('input', function (e) { if (e.target.id === 'pf') { S.filter = e.target.value; renderGame(); } });

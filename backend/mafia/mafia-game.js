@@ -21,6 +21,7 @@
  *   - المذيع (شاشة البث يشوفها الكل): ما يستلم أدوار الأحياء ولا اختيارات الليل ولا
  *     النتائج السرية ولا الكروت (إلا بالنهاية)، والشات العام فقط.
  *   - اللاعب: دوره، والمافيا يعرفون بعض (والمتخفي والمجنّد) ويشوفون الكروت واختيارات بعض،
+ *     والأطباء يعرفون بعض والمحققين يعرفون بعض (الحقل mate بكل لاعب يعرفه)،
  *     وإشعاراته الخاصة (نتائج المحقق، إنقاذ الطبيب، كشف الهوية، التجنيد).
  */
 'use strict';
@@ -303,22 +304,24 @@ function createGame(roster, settings, hooks) {
     function resolveVote() {
         var tally = {}, best = 0, top = [];
         alive().forEach(function (p) {
-            var v = G.votes[p.id]; if (!v || v === 'skip') return;   // الامتناع ما ينحسب
-            var t = P(v); if (!t || !t.alive) return;
+            var v = G.votes[p.id]; if (!v) return;
+            // «تخطي» خيار ينافس مثل أي لاعب: لو أخذ أكثر الأصوات ما أحد يطلع (الأكثرية تحكم حتى لو كانت تخطي)
+            if (v !== 'skip') { var t = P(v); if (!t || !t.alive) return; }
             tally[v] = (tally[v] || 0) + 1;
         });
         Object.keys(tally).forEach(function (t) { if (tally[t] > best) { best = tally[t]; top = [t]; } else if (tally[t] === best) top.push(t); });
-        var out = top.length === 1 ? P(top[0]) : null;
-        G.verdict = { id: out ? out.id : null, tie: top.length > 1, tally: tally, team: out ? out.faction : null, votes: best };
+        var skipWon = top.length === 1 && top[0] === 'skip';
+        var out = top.length === 1 && !skipWon ? P(top[0]) : null;
+        G.verdict = { id: out ? out.id : null, tie: top.length > 1, skip: skipWon, tally: tally, team: out ? out.faction : null, votes: best };
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
             G.lastExile = { round: G.round, id: out.id, team: out.faction, role: S.fullReveal ? out.role : null };
             sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'مواطن') + ') بـ' + best + ' صوت.');
-        } else sys(top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
-        // ملخص الأصوات للمشاهدين (أعلى 3 + الممتنعين)
-        var ranked = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);
-        var abst = alive().filter(function (p) { return G.votes[p.id] === 'skip'; }).length;
-        if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'امتنع ' + abst : ''));
+        } else sys(skipWon ? 'لم يُقصَ أحد: «تخطي» أخذ أكثر الأصوات (' + best + ').' : top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
+        // ملخص الأصوات للمشاهدين (أعلى 3 + التخطي)
+        var ranked = Object.keys(tally).filter(function (k) { return k !== 'skip'; }).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);
+        var abst = tally.skip || 0;
+        if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'تخطي ' + abst : ''));
         G.silenced = [];
         // اللي ما صوّت ولا امتنع: مرتين ورا بعض = إقصاء لعدم النشاط
         if (S.kickIdle !== false) alive().forEach(function (p) {
@@ -362,8 +365,8 @@ function createGame(roster, settings, hooks) {
         if (!text || !me.alive) return;
         if (ch === 'mafia') { if (me.faction !== 'mafia' || G.phase === 'over') return; }
         else if (ch === 'doctor' || ch === 'detective') {
-            // شات خاص للأطباء/المحققين وقت النقاش، لو عددهم بالإعدادات أكثر من واحد (الإسكات ما يشمله)
-            if (!roleChatOpen(ch) || !inRoleChat(me, ch) || G.phase !== 'day') return;
+            // شات خاص للأطباء/المحققين طول المباراة مثل المافيا (ينسّقون بالليل وقت دورهم)، لو عددهم أكثر من واحد (الإسكات ما يشمله)
+            if (!roleChatOpen(ch) || !inRoleChat(me, ch) || G.phase === 'over') return;
         } else if (ch === 'city' || ch === 'district') {
             if (G.phase !== 'day') return;                       // الشات العام وشات الحي بالنقاش فقط
             if (G.silenced.indexOf(me.id) >= 0) return;          // المسكَت يصوّت بس
@@ -459,11 +462,14 @@ function createGame(roster, settings, hooks) {
     function view(id) {
         var isHost = id === 'host', me = !isHost && P(id), over = G.phase === 'over';
         var meMafia = !!(me && me.alive && me.faction === 'mafia');
+        // زملاء الدور: الطبيب يشوف الأطباء الأحياء، والمحقق يشوف المحققين (والمجنّد يبقى معهم مثل شاتهم)
+        var mateRole = !over && me && me.alive ? (['doctor', 'detective'].filter(function (r) { return inRoleChat(me, r); })[0] || null) : null;
         var players = G.players.map(function (p) {
             var o = { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, seat: p.seat, district: p.district, alive: p.alive || hiddenDeath(p), cause: hiddenDeath(p) ? null : p.cause, diedRound: p.diedRound, role: null, team: null };
             if (over) { o.role = p.originalRole; o.finalRole = p.role; o.team = p.faction; o.recruited = !!p.recruitedRound; }
             else if (p === me) { o.role = p.role; o.team = p.faction; }
-            else if (meMafia && p.faction === 'mafia') { o.role = p.role; o.team = 'mafia'; }   // المافيا يعرفون بعض حتى المتخفي والمجنّد
+            else if (meMafia && p.faction === 'mafia') { o.role = p.role; o.team = 'mafia'; o.mate = 'mafia'; }   // المافيا يعرفون بعض حتى المتخفي والمجنّد
+            else if (mateRole && inRoleChat(p, mateRole)) { o.role = mateRole; o.mate = mateRole; }   // الأطباء يعرفون بعض، والمحققين كذلك (بدون كشف الفريق)
             else { var d = deadInfo(p); o.role = d.role || null; o.team = d.team || null; }
             return o;
         });
