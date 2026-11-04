@@ -319,6 +319,9 @@ background:radial-gradient(120% 90% at 50% 100%,rgba(255,138,101,.18),transparen
 .yt small{position:absolute;bottom:6px;right:8px;font:500 10.5px 'IBM Plex Sans Arabic';color:#c9c3da}
 .ctl{display:flex;gap:10px;margin-top:-4px}
 .ctl span{height:40px;padding:0 18px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);font:600 14px 'IBM Plex Sans Arabic';color:#e7e3ef}
+
+.vis2{width:660px;height:220px;position:relative;flex:none}
+.vis2 canvas{position:absolute;inset:0;width:100%;height:100%}
 </style></head><body>
 <div id="fx"></div>
 <header>
@@ -828,7 +831,7 @@ async function songDemo(){
  $('cats').style.display='none';$('teams').style.opacity=1;$('board').style.visibility='hidden';
  const q=$('q');q.style.display='flex';
  $('mini').innerHTML=svgFor(SC,'sg');$('meta').querySelector('b').textContent='تخمين الأغاني';$('meta').querySelector('.pts').textContent='200';$('meta').querySelectorAll('.badge')[0].textContent='سهل';
- $('flag').outerHTML=`<div class="vis" id="vis"><span class="note"><i></i>استمع للمقطع</span><div class="bars">${'<i></i>'.repeat(34)}</div><div class="pb"><span id="tcur">0:00</span><div class="tr"><i id="tbar"></i></div><span>0:15</span></div></div>`;
+ $('flag').outerHTML=`<div class="vis2" id="vis"><canvas id="wv" width="1320" height="440"></canvas></div>`;
  $('qt').innerHTML='خمّن اسم الأغنية';$('qt').style.opacity=1;$('qt').style.fontSize='28px';$('qt').style.lineHeight='1.3';
  q.insertAdjacentHTML('beforeend','<div class="yt" id="yt"><span class="pl"></span><small>المقطع يشتغل من يوتيوب</small></div>');
  $('who').insertAdjacentHTML('beforebegin','<div class="ctl" id="ctl"><span>⟲ إعادة المقطع</span><span>⏸ إيقاف</span></div>');
@@ -836,9 +839,16 @@ async function songDemo(){
  cap('سؤال صوتي · المقطع ١٥ ثانية من يوتيوب');SFX('chime');
  A($('vis'),[{opacity:0,transform:'scale(.9)'},{opacity:1,transform:'none'}],{duration:600,easing:SPRING});
  TMAX=30;$('tm').style.setProperty('--p',100);$('tmn').textContent=30;
- const bars=[...document.querySelectorAll('.vis .bars i')];let run=true,t0=performance.now(),ph=bars.map(()=>Math.random()*6);
- (function an(now){if(!run)return;const t=(now-t0)/1000;bars.forEach((b,i)=>{const v=.18+.82*Math.abs(Math.sin(t*2.2+ph[i])*Math.sin(t*1.3+i*.45))*(.55+.45*Math.sin(i/34*Math.PI));b.style.height=(v*100).toFixed(1)+'%';});
-  const el=Math.min(15,t*1.6);$('tbar').style.width=(el/15*100)+'%';$('tcur').textContent='0:'+String(Math.floor(el)).padStart(2,'0');requestAnimationFrame(an);})(t0);
+ const cv=$('wv'),cx2=cv.getContext('2d');let run=true,t0=performance.now();
+ const W=cv.width,H=cv.height,L=[{c:['#ff8a65','#ffd0bf'],a:1,f:1.6,s:1.9,w:5},{c:['#a78bfa','#c4b5fd'],a:.75,f:2.3,s:-1.4,w:4},{c:['#5ccfff','#a5e8ff'],a:.55,f:3.1,s:2.6,w:3}];
+ (function an(now){if(!run)return;const t=(now-t0)/1000,amp=.55+.45*Math.abs(Math.sin(t*1.7))*(.6+.4*Math.sin(t*.9));
+  cx2.clearRect(0,0,W,H);cx2.globalCompositeOperation='lighter';
+  for(const l of L){const g=cx2.createLinearGradient(0,0,W,0);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(.18,l.c[0]);g.addColorStop(.5,l.c[1]);g.addColorStop(.82,l.c[0]);g.addColorStop(1,'rgba(0,0,0,0)');
+   for(const pass of [{w:l.w*5,al:.12,bl:18},{w:l.w,al:1,bl:0}]){cx2.beginPath();
+    for(let x=0;x<=W;x+=4){const u=x/W,env=Math.pow(Math.sin(u*Math.PI),2.2);
+     const y=H/2+Math.sin(u*Math.PI*2*l.f+t*l.s)*Math.cos(u*Math.PI*3.3-t*.8*l.s)*env*H*.44*amp*l.a;x?cx2.lineTo(x,y):cx2.moveTo(x,y);}
+    cx2.strokeStyle=g;cx2.lineWidth=pass.w;cx2.globalAlpha=pass.al;cx2.shadowBlur=pass.bl;cx2.shadowColor=l.c[0];cx2.lineCap='round';cx2.stroke();}}
+  cx2.globalAlpha=1;cx2.shadowBlur=0;requestAnimationFrame(an);})(t0);
  await sleep(400);await tick(30,24,520);
  cap('الستريمر يقدر يعيد المقطع');const r=$('ctl').firstElementChild;await moveCur(r);await press(r);t0=performance.now();await sleep(1600);$('cur').style.opacity=0;
  await tick(23,20,520);run=false;document.body.dataset.ready=1;await sleep(600);
