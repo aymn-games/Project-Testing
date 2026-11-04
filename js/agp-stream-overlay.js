@@ -552,6 +552,11 @@
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
         if (gameConnected()) { gameDownSince = null; return false; }
         if (gameConnector()) {
+            // اللعبة تحاول تتصل (أو تعيد المحاولة بعد حد التوقيع): اتصال ثاني من
+            // الأوفرلي ينافسها على نفس حد توقيع EulerStream ويأخّر اتصالها هي —
+            // واتصال اللعبة نفسه يغذّي إحصائيات البث أول ما يتصل.
+            var gs = gameConnector().getStatus('tiktok');
+            if (gs === 'connecting' || gs === 'error') { gameDownSince = null; return false; }
             // صفحة لعبة: نعطيها مهلة تتصل (أو ترجع تتصل) قبل ما نفتح اتصال ثاني
             if (!gameDownSince) gameDownSince = Date.now();
             if (Date.now() - gameDownSince < GAME_GRACE_MS) return link.ws !== null;
@@ -601,9 +606,11 @@
                 setTimeout(fetchStats, 2500);
             } else if (st === 'error' || st === 'disconnected') {
                 // reason = منع (حساب غير مربوط/مختلف) أو انتهاء البث: ما نعيد المحاولة لنفس الاتصال
-                link.state = reason === 'stream_ended' ? 'ended' : (reason ? 'denied' : 'error');
+                // rate_limited مؤقت (حد التوقيع) — مو منع، نعيد المحاولة عادي
+                var denied = reason && reason !== 'rate_limited';
+                link.state = reason === 'stream_ended' ? 'ended' : (denied ? 'denied' : 'error');
                 link.msg = env.payload.message || '';
-                if (reason) link.stopFor = connId(c);
+                if (denied) link.stopFor = connId(c);
                 try { ws.close(); } catch (err) { /* ignore */ }
             } else {
                 link.state = 'connecting';

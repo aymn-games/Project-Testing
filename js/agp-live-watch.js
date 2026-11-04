@@ -143,7 +143,34 @@
         var AGP = window.AymanGamesPlatform;
         if (AGP && AGP.events && typeof AGP.events.on === 'function') {
             AGP.events.on('stream:liveEnded', function () { end('stream_ended'); });
+            // فشل اتصال اللعبة برسالة من الخادم (مثل حد محاولات الاتصال): كثير
+            // من الألعاب تعرض اللوبي حتى لو ما اتصلت، فبدون هذا الشريط الستريمر
+            // ما يعرف ليش اللاعبين ما يدخلون.
+            AGP.events.on('stream:statusChanged', function (p) {
+                if (!p || p.platform !== 'tiktok') return;
+                if (p.status === 'error' && p.message) showConnBanner(p.message);
+                else if (p.status === 'connected' || p.status === 'disconnected') hideConnBanner();
+            });
         }
+    }
+
+    function hideConnBanner() {
+        var b = document.getElementById('agp-conn-banner');
+        if (b) b.remove();
+    }
+
+    function showConnBanner(message) {
+        if (!document.body) return;
+        var b = document.getElementById('agp-conn-banner');
+        if (!b) {
+            b = document.createElement('div');
+            b.id = 'agp-conn-banner';
+            b.setAttribute('dir', 'rtl');
+            b.setAttribute('role', 'status');
+            b.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147482000;max-width:min(560px,calc(100vw - 32px));box-sizing:border-box;padding:10px 16px;border-radius:14px;background:rgba(40,12,16,.95);border:1px solid rgba(248,113,113,.45);color:#fecaca;font:600 14px/1.6 "IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.5)';
+            document.body.appendChild(b);
+        }
+        b.textContent = message;
     }
 
     window.AGPLiveWatch = {
