@@ -1403,12 +1403,17 @@
         if (!stage) return;
         stage.textContent = '';
         if (isVideoAlert(n._item)) {
-            // بالمحرر: أول فريم من الفيديو باهت (بنفس التفريغ) عشان يشوف مكانه وحجمه
+            // بالمحرر: إطار فاضي بحجم الأليرت بس (يشوف مكانه ويسحبه) — بدون فيديو ولا اسم ولا رسالة،
+            // فأول ما يخلص الأليرت ما يبقى منه شي، وما يشغّل فيديو وتفريغ بالخلفية (أخف)
             if (n._preview) {
-                var vb = videoBox(n._item, null, true);
-                vb.root.classList.add('agp-so-ghost');
-                stage.appendChild(vb.root);
+                var vw = Number(n._item.video.w) || 16, vh = Number(n._item.video.h) || 9;
+                var ph = el('div', 'agp-so-vslot');
+                ph.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
+                ph.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
+                ph.appendChild(el('span', null, 'أليرت فيديو'));
+                stage.appendChild(ph);
             }
+            prefetchVideo(n._item.video.id);
             if (n._pos) place(n, n._pos, n._F);
             return;
         }
@@ -1466,12 +1471,20 @@
     // keepBg = يرجّع جزء من الخلفية الأصلية (0 = مفرّغة كامل، 1 = الفيديو الأصلي) — لو التفريغ خرّب شي
     // opacity = شفافية الفيديو كله
     var KEY_DEFAULT = { on: false, mode: 'color', color: '#00ff00', sim: 0.4, smooth: 0.08, spill: 0.1, protect: true, choke: 0, floor: '#000000', keepBg: 0, opacity: 1 };
-    // الصورة والاسم والرسالة فوق الفيديو: x/y نسبة من الفيديو، s = الحجم (em)، c = اللون
+    // الصورة والاسم والرسالة فوق الفيديو: x/y نسبة من الفيديو، s = الحجم (em)، c = اللون (للصورة: لون الإطار)
+    // f = الخط، t = يطلع بعد كم ثانية، e = يختفي عند كم ثانية (0 = لين نهاية الأليرت)، a = حركة الدخول
     var PARTS_DEFAULT = {
-        avatar: { on: true, x: 50, y: 68, s: 2.6 },
-        name: { on: true, x: 50, y: 83, s: 1.1, c: '#ffffff' },
-        msg: { on: true, x: 50, y: 92, s: 0.85, c: '#ffd54a' }
+        avatar: { on: true, x: 50, y: 68, s: 2.6, c: '#ffffff', t: 0, e: 0, a: 'pop' },
+        name: { on: true, x: 50, y: 83, s: 1.1, c: '#ffffff', f: 'notokufi', t: 0, e: 0, a: 'up' },
+        msg: { on: true, x: 50, y: 92, s: 0.85, c: '#ffd54a', f: 'notokufi', t: 0, e: 0, a: 'up' }
     };
+    var PART_ANIMS = [{ key: 'fade', label: 'تلاشي' }, { key: 'pop', label: 'تكبير' }, { key: 'up', label: 'من تحت' }, { key: 'down', label: 'من فوق' }, { key: 'none', label: 'بدون' }];
+    /** مدة أليرت الفيديو بالثواني: it.vlen لو محددة، وإلا مدة الفيديو نفسه (تلقائي). */
+    function videoAlertLen(it) {
+        var own = Number(it && it.vlen) || 0;
+        if (own > 0) return clamp(own, 1, 60);
+        return clamp(Number(it && it.video && it.video.d) || 0, 0, 60);
+    }
     // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
     var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث' };
     function partsOf(it) {
@@ -1604,7 +1617,7 @@
             return { w: mw, h: mh, data: out };
         }
         var k = { canvas: cv, failed: false, onfail: null };
-        var raf = 0, dead = false;
+        var raf = 0, vfc = 0, dead = false, frameN = 0, lastMask = null;
         k.draw = function () {
             if (dead || k.failed || video.readyState < 2 || !video.videoWidth) return;
             var w = video.videoWidth, h = video.videoHeight;
@@ -1629,20 +1642,35 @@
             gl.uniform1f(U.keepBg, clamp(Number(key.keepBg) || 0, 0, 1));
             gl.uniform1f(U.opac, clamp(key.opacity == null ? 1 : Number(key.opacity), 0.05, 1));
             var useMask = key.protect !== false && key.mode !== 'screen' && maskOk;
-            var mk = useMask ? buildMask(key, w, h) : null;
+            // الماسك (قراءة من الكرت) كل فريمين — يكفي للحركة ويخفف الحمل
+            var mk = null;
+            if (useMask) {
+                if (!lastMask || video.paused || (frameN++ & 1) === 0) { mk = buildMask(key, w, h); lastMask = mk; }
+            } else lastMask = null;
             if (mk) {
                 gl.activeTexture(gl.TEXTURE1);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, mk.w, mk.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, mk.data);
                 gl.activeTexture(gl.TEXTURE0);
             }
-            gl.uniform1f(U.useMask, mk ? 1 : 0);
+            gl.uniform1f(U.useMask, (mk || (useMask && lastMask)) ? 1 : 0);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         };
+        // نرسم مع كل فريم جديد من الفيديو بس (requestVideoFrameCallback) بدل كل تحديث للشاشة
+        var hasVFC = typeof video.requestVideoFrameCallback === 'function';
+        function onFrame() { vfc = 0; if (dead) return; k.draw(); if (!video.paused && !video.ended) vfc = video.requestVideoFrameCallback(onFrame); }
         function loop() { if (dead) return; k.draw(); raf = requestAnimationFrame(loop); }
-        function start() { if (!raf && !dead) loop(); }
-        function stop() { cancelAnimationFrame(raf); raf = 0; k.draw(); }
+        function start() {
+            if (dead) return;
+            if (hasVFC) { if (!vfc) vfc = video.requestVideoFrameCallback(onFrame); }
+            else if (!raf) loop();
+        }
+        function stop() {
+            cancelAnimationFrame(raf); raf = 0;
+            if (vfc && hasVFC) { try { video.cancelVideoFrameCallback(vfc); } catch (e) { /* ignore */ } vfc = 0; }
+            k.draw();
+        }
         video.addEventListener('play', start);
         video.addEventListener('pause', stop);
         video.addEventListener('ended', stop);
@@ -1651,6 +1679,7 @@
         k.destroy = function () {
             dead = true;
             cancelAnimationFrame(raf);
+            if (vfc && hasVFC) { try { video.cancelVideoFrameCallback(vfc); } catch (e) { /* ignore */ } }
             video.removeEventListener('play', start);
             try { var ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); } catch (e) { /* ignore */ }
         };
@@ -1659,15 +1688,64 @@
         return k;
     }
 
+    /*
+     * الفيديو ينحمّل مرة وحدة ويتخزن بالذاكرة (رابط blob) — كل أليرت بعدها يبدأ
+     * على طول بدون ما ينتظر الشبكة أو يقطّع. الحد: آخر 8 فيديوهات.
+     */
+    var vidBlobs = {}, vidOrder = [];
+    function prefetchVideo(id) {
+        if (!id || vidBlobs[id] || typeof fetch !== 'function' || !window.URL || !URL.createObjectURL) return;
+        var c = vidBlobs[id] = { url: null };
+        vidOrder.push(id);
+        while (vidOrder.length > 8) {
+            var old = vidOrder.shift();
+            if (vidBlobs[old] && vidBlobs[old].url) URL.revokeObjectURL(vidBlobs[old].url);
+            delete vidBlobs[old];
+        }
+        fetch(videoFileUrl(id))
+            .then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (b) { if (b && b.size && vidBlobs[id] === c) c.url = URL.createObjectURL(b); else if (!b) delete vidBlobs[id]; })
+            .catch(function () { if (vidBlobs[id] === c) delete vidBlobs[id]; });
+    }
+    function videoSrc(id) {
+        var c = vidBlobs[id];
+        if (c && c.url) return c.url;
+        prefetchVideo(id);
+        return videoFileUrl(id);
+    }
+
     function makeVideo(it) {
         var v = document.createElement('video');
         v.crossOrigin = 'anonymous'; // لازم عشان التفريغ يقرأ البكسلات
         v.playsInline = true;
         v.setAttribute('playsinline', '');
         v.preload = 'auto';
-        v.src = videoFileUrl(it.video.id);
+        v.src = videoSrc(it.video.id);
         v.volume = clamp(it.volume == null ? 0.8 : Number(it.volume), 0, 1);
         return v;
+    }
+
+    function partFont(n, p) {
+        var f = fontOf(p.f || 'notokufi');
+        loadFont(f);
+        n.style.fontFamily = fontStack(f);
+        n.style.fontWeight = String(Math.max(700, f.b));
+    }
+    /** توقيت العنصر: يتخبّى لين وقت ظهوره (playVideoAlert تظهره). بالمعاينة الواقفة يبان دايم. */
+    function partTiming(n, p, preview) {
+        n._t = Math.max(0, Number(p.t) || 0);
+        n._e = Math.max(0, Number(p.e) || 0);
+        n._a = PART_ANIMS.some(function (x) { return x.key === p.a; }) ? p.a : 'fade';
+        if (!preview) n.classList.add('wait');
+    }
+    /** يشغّل توقيت عناصر الصندوق من لحظة بداية الفيديو. يرجّع مؤقتاته عشان تنلغى. */
+    function runPartTimers(box) {
+        var timers = [];
+        Array.prototype.forEach.call(box.querySelectorAll('.agp-so-vpart'), function (n) {
+            timers.push(setTimeout(function () { n.classList.remove('wait'); n.classList.add('pin-' + n._a); }, n._t * 1000));
+            if (n._e > n._t) timers.push(setTimeout(function () { n.classList.add('pout'); }, n._e * 1000));
+        });
+        return timers;
     }
 
     /** صندوق الفيديو (مع التفريغ والنص فوقه). preview = نموذج المحرر الواقف. */
@@ -1693,7 +1771,8 @@
             var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
             if (parts.avatar.on) {
                 var pa = el('div', 'agp-so-vpart agp-so-vav');
-                pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em';
+                pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em;color:' + (parts.avatar.c || '#fff');
+                partTiming(pa, parts.avatar, preview);
                 if (ev.avatar) pa.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
                 else pa.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
                 box.appendChild(pa);
@@ -1701,12 +1780,16 @@
             if (parts.name.on) {
                 var pn = el('div', 'agp-so-vpart agp-so-vname', ev.user || '');
                 pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
+                partFont(pn, parts.name);
+                partTiming(pn, parts.name, preview);
                 box.appendChild(pn);
             }
             if (parts.msg.on) {
                 var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
                 var pm = el('div', 'agp-so-vpart agp-so-vmsg', fillMsg(tpl, ev));
                 pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
+                partFont(pm, parts.msg);
+                partTiming(pm, parts.msg, preview);
                 box.appendChild(pm);
             }
         } else if (it.showText !== false && e) {
@@ -1730,12 +1813,17 @@
 
     function playVideoAlert(id, it, e, targets) {
         var q = alertQ[id];
-        var max = (clamp(Number(it.video.d) || 30, 1, 60) + 2) * 1000;
-        var ended = false, boxes = [], timer = null;
+        // مدة محددة (vlen): الأليرت يخلص عندها بالضبط — لو أطول من الفيديو يعيده أو يوقف على آخر لقطة
+        var own = Number(it.vlen) > 0;
+        var len = videoAlertLen(it);
+        var max = own ? len * 1000 : (clamp(Number(it.video.d) || 30, 1, 60) + 2) * 1000;
+        var ended = false, boxes = [], timer = null, outT = null, partT = [], started = false;
         function done() {
             if (ended) return;
             ended = true;
             clearTimeout(timer);
+            clearTimeout(outT);
+            partT.forEach(clearTimeout);
             boxes.forEach(stopVideoBox);
             q.busy = false;
             liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
@@ -1754,14 +1842,31 @@
         if (!boxes.length) { done(); return; }
         boxes.forEach(function (vb, i) {
             var v = vb.video;
+            if (own && it.vend === 'loop') v.loop = true;
+            v.addEventListener('playing', function () {
+                if (vb._timed) return;
+                vb._timed = true;
+                partT = partT.concat(runPartTimers(vb.root));
+                if (!started) {
+                    started = true;
+                    // المدة تبدأ من أول ما يشتغل الفيديو فعلاً (مو من التحميل)
+                    clearTimeout(timer);
+                    timer = setTimeout(done, max);
+                    if (own) outT = setTimeout(function () { boxes.forEach(function (b) { b.root.classList.add('out'); }); }, Math.max(0, max - 350));
+                }
+            });
             v.muted = i > 0 || Boolean(it.mute);
             var p = v.play();
             // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
             if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(done); });
         });
-        boxes[0].video.addEventListener('ended', done);
+        if (!own) boxes[0].video.addEventListener('ended', function () {
+            boxes.forEach(function (b) { b.root.classList.add('out'); });
+            clearTimeout(timer);
+            timer = setTimeout(done, 340);
+        });
         boxes[0].video.addEventListener('error', done);
-        timer = setTimeout(done, max);
+        timer = setTimeout(done, max + 8000); // لو الفيديو ما اشتغل أبداً
     }
 
     /** يضيف تنبيه لطابور الأداة. force = تجربة المحرر (بدون فلترة). */
@@ -2203,13 +2308,27 @@
         '.agp-so-alert{line-height:1.3}',
         '.agp-so-astage{display:flex;justify-content:center}',
         '.agp-so-vbox{position:relative;flex:none}',
+        '.agp-so-vslot{position:relative;flex:none;box-sizing:border-box;border:.1em dashed rgba(255,255,255,.35);border-radius:.4em;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-vslot span{font-size:.7em;font-weight:700;color:rgba(255,255,255,.55);text-shadow:0 .05em .2em rgba(0,0,0,.8)}',
         '.agp-so-vbox video,.agp-so-vbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-vbox.keyed video{opacity:0}',
         '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
         '.agp-so-vtxt{position:absolute;left:0;right:0;padding:0 .4em;text-align:center;direction:rtl;color:var(--agp-so-c,#fff);font-weight:800;font-size:1em;line-height:1.35;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.55)}',
         '.agp-so-vtxt.top{top:4%}',
         '.agp-so-vpart{position:absolute;z-index:3;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;direction:rtl;text-align:center}',
-        '.agp-so-vav{border-radius:50%;overflow:hidden;box-shadow:0 0 0 .08em rgba(255,255,255,.85),0 .15em .5em rgba(0,0,0,.55);background:#2a2338;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-vpart.wait{opacity:0}',
+        '.agp-so-vpart.pin-fade{animation:agp-so-p-fade .45s ease both}',
+        '.agp-so-vpart.pin-pop{animation:agp-so-p-pop .5s cubic-bezier(.2,1.5,.4,1) both}',
+        '.agp-so-vpart.pin-up{animation:agp-so-p-up .5s cubic-bezier(.2,.9,.3,1) both}',
+        '.agp-so-vpart.pin-down{animation:agp-so-p-down .5s cubic-bezier(.2,.9,.3,1) both}',
+        '.agp-so-vpart.pout{animation:agp-so-p-out .35s ease both}',
+        '.agp-so-vbox.out{animation:agp-so-a-out .35s ease both}',
+        '@keyframes agp-so-p-fade{0%{opacity:0}100%{opacity:1}}',
+        '@keyframes agp-so-p-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}',
+        '@keyframes agp-so-p-up{0%{opacity:0;transform:translate(-50%,10%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
+        '@keyframes agp-so-p-down{0%{opacity:0;transform:translate(-50%,-110%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
+        '@keyframes agp-so-p-out{to{opacity:0}}',
+        '.agp-so-vav{border-radius:50%;overflow:hidden;box-shadow:0 0 0 .08em currentColor,0 .15em .5em rgba(0,0,0,.55);background:#2a2338;display:flex;align-items:center;justify-content:center}',
         '.agp-so-vav img{width:100%;height:100%;object-fit:cover;display:block}',
         '.agp-so-vini{font-weight:800;font-size:1.1em;color:#fff}',
         '.agp-so-vname,.agp-so-vmsg{font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;line-height:1.3;text-shadow:0 .06em .22em rgba(0,0,0,.95),0 0 .6em rgba(0,0,0,.55)}',
@@ -2322,7 +2441,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

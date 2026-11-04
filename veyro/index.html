@@ -365,6 +365,23 @@
   .va-chip:hover { outline-color: #fff; }
   .va-avatar { border-radius: 50%; background: linear-gradient(160deg, var(--lav-m), var(--lav-d)); box-shadow: 0 0 0 2px rgba(255,255,255,.85); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
   .va-msg { font-weight: 700; }
+  .va-chip.sel { outline-color: var(--lav-l); outline-style: solid; }
+  .va-chip.va-off { opacity: .12; }
+  .va-play { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .va-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; direction: ltr; }
+  .va-tl { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+  .va-tlr { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .va-tlr.sel { color: #fff; }
+  .va-tlr.off { opacity: .4; }
+  .va-tln { width: 48px; flex: none; }
+  .va-tlt { position: relative; flex: 1; height: 8px; border-radius: 99px; background: rgba(169,155,184,.12); overflow: hidden; }
+  .va-tlt i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: linear-gradient(90deg, var(--lav-m), var(--lav-l)); opacity: .55; }
+  .va-tlr.sel .va-tlt i { opacity: 1; }
+  .va-dur { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .va-dur .ob-range { flex: 1; min-width: 0; }
+  .va-durv { min-width: 44px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .va-nudge { display: flex; flex-wrap: wrap; gap: 6px; }
+  .va-nudge .ob-pill { min-width: 40px; }
   .vk-stage.bg-mine { background-size: cover; background-position: center; }
 
   /* أداة التفريغ */
