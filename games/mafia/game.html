@@ -520,9 +520,11 @@ body.vres .caption .k { font-size: 46px; }
         recapKey = key;
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var N = G.lastNight || {}, html = '<h4>🌙 ملخص الليلة ' + (N.round || G.round) + '<small>وش صار</small></h4>';
-        if (N.victim && byId[N.victim]) { var v = byId[N.victim]; html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; }
-        else if (N.saved && byId[N.saved]) { var sv = byId[N.saved]; html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; }
-        else if (!N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
+        // المافيا ممكن يهاجمون شخصين (لو اختلفوا): victims/saveds قوائم، وvictim/saved للنسخ القديمة
+        var vics = N.victims || (N.victim ? [N.victim] : []), svs = N.saveds || (N.saved ? [N.saved] : []);
+        vics.forEach(function (id) { var v = byId[id]; if (v) html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; });
+        svs.forEach(function (id) { var sv = byId[id]; if (sv) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; });
+        if (!vics.length && !svs.length && !N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
         if (N.recruited) html += '<div class="rc-row dead"><div class="ic">🤝</div><div><b>تم تجنيد لاعب</b><span>مواطن صار مع المافيا</span></div></div>';
         var X = G.lastExile;
         if (X && byId[X.id]) {
@@ -661,7 +663,9 @@ body.vres .caption .k { font-size: 46px; }
                 else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر', '', '#7ee2a6');
                 else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');
                 else if (sh.k === 'result') {
-                    if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
+                    var vl = sh.victims || (sh.victim ? [sh.victim] : []);
+                    if (vl.length > 1) caption('صباح حزين ☀️', vl.map(function (id) { var q = playerOf(id); return q ? q.name : ''; }).join(' و') + ' ما نجوا من الليلة', '', '#c4b5fd');
+                    else if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#c4b5fd'); }
                     else caption('طلع الصبح ☀️', sh.recruited ? '🤝 بس المافيا جنّدت مواطن!' : sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#c4b5fd');
                 }
             }

@@ -32,6 +32,10 @@ body.in-game .brand img { height: 30px; }
 .lay .pa { flex: 1.3 1 0; min-height: 220px; display: flex; flex-direction: column; }
 .lay .pb { flex: 0 0 auto; max-height: 45%; display: flex; flex-direction: column; overflow-y: auto; }
 .lay .pb:has(.chatbox) { flex: 1 1 0; min-height: 160px; max-height: none; }
+/* لو فيه شبكة اختيار (الليل/التصويت) بالجوال الطولي: الشبكة لها الأولوية والشات تحتها أصغر */
+.lay:has(.pa .grid) .pb:has(.chatbox) { flex: 0 1 auto; min-height: 0; max-height: 36%; }
+.lay:has(.pa .grid) .pb .chatbox { min-height: 80px; }
+.lay:has(.pa .grid) .pa { min-height: 300px; }
 .lay.solo .pa { flex: 1; }
 .lay .grid { flex: 1; max-height: none; min-height: 0; align-content: start; }
 .lay .chatbox { flex: 1; max-height: none; min-height: 110px; }
@@ -40,6 +44,8 @@ body.in-game .brand img { height: 30px; }
     .lay { flex-direction: row; }
     .lay .pa { flex: 1.5 1 0; min-height: 0; }
     .lay .pb { flex: 1 1 0; min-height: 0; }
+    .lay:has(.pa .grid) .pb:has(.chatbox) { flex: 1 1 0; max-height: none; }
+    .lay:has(.pa .grid) .pa { min-height: 0; }
 }
 .lay .grid { --ts: 110px; }
 .lay .pt svg { width: calc(var(--ts) * .46); height: calc(var(--ts) * .46); }
@@ -654,6 +660,18 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوفه: مواطن' }, reveal: { i: '👁️', d: 'تعرفون دوره' },
         mislead: { i: '🎭', d: 'المحقق يشوف: مافيا' }, silence: { i: '🤐', d: 'ما يكتب بكرة' }
     };
+    // حد الشخصين: لو زملاءك (غيرك) اختاروا شخصين مختلفين، تقدر تختار واحد منهم بس (الخادم يفرضها بعد)
+    function lockOf(picks, meId) {
+        var out = []; Object.keys(picks || {}).forEach(function (k) { var t = picks[k]; if (k !== meId && t && t !== 'skip' && out.indexOf(t) < 0) out.push(t); });
+        return out.length >= 2 ? out : null;
+    }
+    function lockNote(lock, G) {
+        if (!lock) return '';
+        var nm = function (id) { var p = G.players.find(function (q) { return q.id === id; }); return p ? esc(p.name) : '؟'; };
+        return '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🔒 فريقك اختار <b>' + nm(lock[0]) + '</b> و<b>' + nm(lock[1]) + '</b> — اختار واحد منهم (شخصين بالكثير)</div>';
+    }
+    function teamCount(picks, id) { return Object.keys(picks || {}).filter(function (k) { return picks[k] === id; }).length; }
+
     function mafiaNight(G) {
         var me = G.me, ops = me.ops || {}, cv = me.cardVotes || {}, cards = G.cards || [];
         var team = G.players.filter(function (p) { return p.team === 'mafia' && p.alive; });
@@ -664,14 +682,18 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         var opsK = team.map(function (m) { return key(ops[m.id]); }), cdK = team.map(function (m) { return key(cv[m.id]); });
         var recruitMine = ops[me.id] && ops[me.id].op === 'recruit';
         var agreed = opsK.every(function (k) { return k && k === opsK[0]; }) && (!anyCard || recruitMine || cdK.every(function (k) { return k && k === cdK[0]; }));
+        var picks = {}; Object.keys(ops).forEach(function (k) { picks[k] = ops[k].op === 'skip' ? 'skip' : ops[k].target; });
+        var lock = lockOf(picks, me.id), prev = me.mafiaPrev || [], allIn = team.every(function (m) { return ops[m.id]; });
+        var split = (function () { var l = []; team.forEach(function (m) { var o = ops[m.id]; if (o && o.op === 'kill' && l.indexOf(o.target) < 0) l.push(o.target); }); return l.length > 1; })();
         var done = team.filter(function (m) { return ops[m.id]; }).length;
         var cnt = function (fn) { return team.filter(function (m) { return fn(m.id); }).length; };
-        var html = '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : done + '/' + team.length) + '</span></div>' +
+        var html = '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : split && allIn ? '🎯 هدفين' : done + '/' + team.length) + '</span></div>' +
+            (split && !lock ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">⚠️ اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b> الليلة</div>' : '') + lockNote(lock, G) +
             (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
             playerRows(G, {
-                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && p.id !== me.mafiaPrev; },
+                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && prev.indexOf(p.id) < 0 && (!lock || lock.indexOf(p.id) >= 0); },
                 sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
-                tag: function (p) { if (p.team === 'mafia') return '🔪'; if (p.id === me.mafiaPrev) return 'أمس'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : ''; },
+                tag: function (p) { if (p.team === 'mafia') return '🔪'; if (prev.indexOf(p.id) >= 0) return 'أمس'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : lock && p.alive ? '🔒' : ''; },
                 skip: { id: 'skip', sel: ops[me.id] && ops[me.id].op === 'skip', tag: (function () { var n = cnt(function (id) { return ops[id] && ops[id].op === 'skip'; }); return n ? String(n) : ''; })() }
             });
         if (aux.length && !recruitMine) {
@@ -829,16 +851,18 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             }
             else if (me.team === 'mafia') { main = turnHead + mafiaNight(G); side = privateHtml(G); }
             else if (me.role === 'doctor') {
-                main = turnHead + '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + playerRows(G, {
-                    action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed); },
+                var dLock = lockOf(me.teamPicks, me.id);
+                main = turnHead + '<div class="sec-h"><h2>🩺 مين تحمي؟</h2></div>' + lockNote(dLock, G) + playerRows(G, {
+                    action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed) && (!dLock || dLock.indexOf(p.id) >= 0); },
                     sel: function (p) { return me.protect === p.id; },
-                    tag: function (p) { return me.protect === p.id ? '🛡️' : p.id === me.doctorPrev ? 'أمس' : ''; },
+                    tag: function (p) { var n = teamCount(me.teamPicks, p.id); return me.protect === p.id ? '🛡️' + (n > 1 ? ' ' + n : '') : p.id === me.doctorPrev ? 'أمس' : n ? '🛡️ ' + n : dLock && p.alive ? '🔒' : ''; },
                     skip: { sel: me.protect === 'skip' }
                 }); side = privateHtml(G);
             } else if (me.role === 'detective') {
-                main = turnHead + '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + playerRows(G, {
-                    action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
-                    sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍' : ''; },
+                var iLock = lockOf(me.teamPicks, me.id);
+                main = turnHead + '<div class="sec-h"><h2>🕵️ مين تفحص؟</h2></div>' + (me.inspect ? '' : lockNote(iLock, G)) + playerRows(G, {
+                    action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect && (!iLock || iLock.indexOf(p.id) >= 0); },
+                    sel: function (p) { return me.inspect === p.id; }, tag: function (p) { var n = teamCount(me.teamPicks, p.id); return me.inspect === p.id ? '🔍' + (n > 1 ? ' ' + n : '') : n ? '🔍 ' + n : iLock && !me.inspect && p.alive ? '🔒' : ''; },
                     skip: { sel: me.inspect === 'skip', can: !me.inspect }
                 }); side = privateHtml(G) + inspections(G);
             } else html += stage({ tone: 'night', ic: '😴', k: 'الليلة ' + G.round, t: 'نام يا مواطن…', s: 'الحين دور ' + TN[G.turn] + ' — الصبح يكشف كل شي', extra: steps });
