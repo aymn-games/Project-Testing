@@ -99,9 +99,9 @@
     var TOOLS = {
         tops: [
             // منصة التتويج = «العرش» بإطار «جناح الملاك» (الثلاثة الأوائل، بدون عنوان)
-            { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
-            { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
-            { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frameColor: 'ice', cycle: 10 } },
+            { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'الداعمين — ميداليات', sub: 'قائمة بالترتيب', type: 'top', opts: { section: 'gifters' }, set: { design: 'medals', top: 5 } },
             { label: 'المكبّسين — بطاقات', sub: 'صور جنب بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'cards' } }
         ],
@@ -1008,11 +1008,17 @@
                 setTimeout(function () { if (O.throneDemo) O.throneDemo(it.id); }, 900);
             }), true, 'شكل الحركة لما يتبدّل القسم أو يتغيّر شخص'));
         }
+        var fk = O.THRONE_FRAMES[it.frame] ? it.frame : 'angel';
+        box.appendChild(row('شكل الإطار', pills(Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; }), fk, function (v) {
+            if (it.frameColor !== 'custom') it.frameColor = 'original';
+            update(it, 'frame', v, true);
+        }), true, 'الرسمة اللي حول صورة كل واحد'));
+        var curFc = it.frameColor || 'original';
+        if (curFc === 'ice' && fk === 'angel') curFc = 'original';
         var fw = el('div', 'ob-sw');
         O.FRAME_COLORS.forEach(function (c) {
-            var b = button('', (it.frameColor || 'ice') === c.key ? 'on' : '', function () { update(it, 'frameColor', c.key, true); });
-            if (it.frameColor === 'custom') b.className = '';
-            b.style.background = c.sw;
+            var b = button('', curFc === c.key ? 'on' : '', function () { update(it, 'frameColor', c.key, true); });
+            b.style.background = c.sw || ('linear-gradient(135deg,#fff 0 30%,' + O.THRONE_FRAMES[fk].glow2 + ')');
             b.title = c.label;
             b.setAttribute('aria-label', 'إطار ' + c.label);
             fw.appendChild(b);

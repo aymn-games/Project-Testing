@@ -733,35 +733,47 @@
      * it.sections = الأقسام اللي يعرضها (أكثر من قسم = يتبدّل كل it.cycle ثانية)،
      * it.palette = medal (ذهبي/فضي/برونزي) أو single (it.color)،
      * it.frameColor = لون الإطار (FRAME_COLORS). */
+    // t = درجة اللون المطلوبة (الإطار يدوّر ألوانه من لونه الأصلي لها)، original = بدون تغيير
     var FRAME_COLORS = [
-        { key: 'ice', label: 'ثلجي', hue: 0, sw: '#7fd0ff' },
-        { key: 'purple', label: 'بنفسجي', hue: 65, sw: '#b48cff' },
-        { key: 'pink', label: 'وردي', hue: 125, sw: '#ff8fc8' },
-        { key: 'red', label: 'أحمر', hue: 160, sw: '#ff6b6b' },
-        { key: 'gold', label: 'ذهبي', hue: 195, sw: '#ffd36b' },
-        { key: 'green', label: 'أخضر', hue: -75, sw: '#7cf0a0' }
+        { key: 'original', label: 'الأصلي', t: null, sw: '' },
+        { key: 'ice', label: 'ثلجي', t: 205, sw: '#7fd0ff' },
+        { key: 'purple', label: 'بنفسجي', t: 270, sw: '#b48cff' },
+        { key: 'pink', label: 'وردي', t: 330, sw: '#ff8fc8' },
+        { key: 'red', label: 'أحمر', t: 365, sw: '#ff6b6b' },
+        { key: 'gold', label: 'ذهبي', t: 400, sw: '#ffd36b' },
+        { key: 'green', label: 'أخضر', t: 130, sw: '#7cf0a0' }
     ];
+    /**
+     * إطارات «العرش» (ملفات assets/overlay-frames/): الرسمة أكبر من الصورة —
+     * scale/left/top بنسبة من الصورة، base = درجة لون الرسمة الأصلية،
+     * ring = نصف قطر حلقة الضوء، spark = بُعد الشرار، fly = اللي يطير حولها، glow = لون التوهّج.
+     */
+    var THRONE_FRAMES = {
+        angel: { label: 'جناح الملاك', file: 'angel.webp', scale: 149, left: -25.25, top: -24.5, base: 205, ring: 53.6, spark: 55, fly: 'butterfly', glow: '#9fe0ff', glow2: '#3aa8ff' },
+        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 235, left: -74, top: -57.5, base: 45, ring: 56.5, spark: 62, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
+    };
+    function frameOf(it) { return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel'; }
     var THRONE_CYCLES = [5, 8, 10, 15, 20, 30];
     // حركة التبديل بين الأقسام (it.transition)
     var THRONE_FX = [
         { key: 'flip', label: 'قلب' }, { key: 'fade', label: 'تلاشي' }, { key: 'slide', label: 'انزلاق' },
         { key: 'zoom', label: 'تكبير' }, { key: 'drop', label: 'سقوط' }, { key: 'spin', label: 'دوران' }, { key: 'flash', label: 'وميض' }
     ];
-    var FRAME_BASE_HUE = 205; // لون إطار «جناح الملاك» الأصلي (أزرق ثلجي)
     function hexHue(hex) {
         var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
-        if (!m) return FRAME_BASE_HUE;
+        if (!m) return 205;
         var r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
         var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
-        if (!d) return FRAME_BASE_HUE;
+        if (!d) return 205;
         if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
         return (h * 60 + 360) % 360;
     }
     /** دوران الألوان لإطار العرش: لون جاهز أو مخصص (frameColor = custom + frameCustom). */
     function frameHue(it) {
-        if (it.frameColor === 'custom') return Math.round(hexHue(it.frameCustom) - FRAME_BASE_HUE);
-        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0] || FRAME_COLORS[0];
-        return fc.hue;
+        var base = THRONE_FRAMES[frameOf(it)].base;
+        if (it.frameColor === 'custom') return Math.round(hexHue(it.frameCustom) - base);
+        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0];
+        return fc && fc.t != null ? fc.t - base : 0;
     }
     var throneNodes = [], throneTimer = null;
 
@@ -780,7 +792,7 @@
     function buildThrone(node, it, preview) {
         title(node, it.title);
         var body = el('div', 'agp-so-lbody');
-        var box = el('div', 'agp-so-throne' + (it.palette === 'single' ? ' pal-single' : ''));
+        var box = el('div', 'agp-so-throne fk-' + frameOf(it) + (it.palette === 'single' ? ' pal-single' : ''));
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
@@ -840,7 +852,8 @@
     function fillThroneCol(slot, r, sec, i) {
         slot.textContent = '';
         var inner = el('div', 'agp-so-tin');
-        inner.appendChild(angelFrame(r));
+        var host = slot.closest && slot.closest('.agp-so-item');
+        inner.appendChild(throneFrame(r, frameOf(host && host._throne ? host._throne.it : null)));
         inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
@@ -918,15 +931,27 @@
         return true;
     }
 
-    /** إطار «جناح الملاك» حول صورة الشخص: الرسمة + ضوء يلف + شرار + فراشات. */
-    function angelFrame(r) {
-        var f = el('span', 'agp-so-fav fr-angel');
+    // ريشة ذهبية تطير حول إطار «الحصان المجنح»
+    var FEATHER = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="agp-so-fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset=".55" stop-color="#ffe7a8"/><stop offset="1" stop-color="#d9a63a"/></linearGradient></defs>' +
+        '<path d="M33 4C20 6 9 16 7 31l2 1c3-7 8-13 15-17-6 5-10 10-13 18l2 .8C17 23 26 13 33 4z" fill="url(#agp-so-fg)"/><path d="M33 4C22 12 14 22 9 33" stroke="#c99a35" stroke-width="1" fill="none"/></svg>';
+
+    /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
+    function throneFrame(r, kind) {
+        var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
+        var f = el('span', 'agp-so-fav fr-' + kind);
+        f.style.setProperty('--agp-so-fg1', d.glow);
+        f.style.setProperty('--agp-so-fg2', d.glow2);
         f.appendChild(avatar(r));
-        f.appendChild(el('span', 'agp-so-fcomet'));
+        var comet = el('span', 'agp-so-fcomet');
+        comet.style.inset = (50 - d.ring) + '%';
+        f.appendChild(comet);
         var art = el('span', 'agp-so-fart');
+        art.style.width = art.style.height = d.scale + '%';
+        art.style.left = d.left + '%';
+        art.style.top = d.top + '%';
         ['glow', ''].forEach(function (c) {
             var img = document.createElement('img');
-            img.src = FRAMES_BASE + 'angel.webp';
+            img.src = FRAMES_BASE + d.file;
             img.alt = '';
             img.draggable = false;
             if (c) img.className = c;
@@ -936,15 +961,15 @@
         [[200, 0], [235, 0.7], [300, 1.4], [330, 2.1], [20, 0.35], [60, 1.05], [110, 1.75], [150, 2.45]].forEach(function (sp) {
             var rad = sp[0] * Math.PI / 180;
             var k = el('span', 'agp-so-fspk');
-            k.style.left = (50 + Math.cos(rad) * 55 - 2.5) + '%';
-            k.style.top = (50 + Math.sin(rad) * 55 - 2.5) + '%';
+            k.style.left = (50 + Math.cos(rad) * d.spark - 2.5) + '%';
+            k.style.top = (50 + Math.sin(rad) * d.spark - 2.5) + '%';
             k.style.animationDelay = sp[1] + 's';
             f.appendChild(k);
         });
         ['b1', 'b2'].forEach(function (b) {
             var o = el('span', 'agp-so-fbfo ' + b);
-            var bf = el('span', 'agp-so-fbf');
-            bf.innerHTML = BUTTERFLY;
+            var bf = el('span', 'agp-so-fbf' + (d.fly === 'feather' ? ' feather' : ''));
+            bf.innerHTML = d.fly === 'feather' ? FEATHER : BUTTERFLY;
             o.appendChild(bf);
             f.appendChild(o);
         });
@@ -1873,8 +1898,20 @@
         '@keyframes agp-so-tin-flash{0%{opacity:0;filter:brightness(3) blur(.1em);transform:scale(1.25)}100%{opacity:1;filter:none;transform:none}}',
         '.agp-so-twait{margin-top:.4em}',
         '.agp-so-throne .agp-so-fart,.agp-so-throne .agp-so-fspk{filter:hue-rotate(var(--agp-so-fhue,0deg))}',
-        '.agp-so-throne .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em #9fe0ff)}',
-        '.agp-so-throne .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em #8fd8ff) drop-shadow(0 0 .22em #3aa8ff)}',
+        '.agp-so-throne .agp-so-fcomet{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .12em var(--agp-so-fg1,#9fe0ff))}',
+        '.agp-so-throne .agp-so-fbf{filter:hue-rotate(var(--agp-so-fhue,0deg)) drop-shadow(0 0 .1em var(--agp-so-fg1,#8fd8ff)) drop-shadow(0 0 .22em var(--agp-so-fg2,#3aa8ff))}',
+        /* «الحصان المجنح» رسمته أكبر (الأجنحة والحصان برا الدائرة): صورة أصغر وأعمدة أعرض ومسافة للاسم */
+        '.agp-so-throne.fk-pegasus{padding-top:2.3em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol{width:6.6em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1{width:7.4em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol .agp-so-fav{--s:2.05em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-fav{--s:2.75em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tname{margin-top:1.5em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.75em}',
+        '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
+        '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
+        '.fr-pegasus .agp-so-fspk{background:#fff8e0;box-shadow:0 0 .2em #ffe6a3,0 0 .4em #ffbf3a}',
+        '.fr-pegasus .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(255,230,160,.85) 95%,#fff 99%,transparent 100%)}',
         /* إطار «جناح الملاك» */
         '.agp-so-fav{--s:2.5em;position:relative;width:var(--s);height:var(--s);flex:none}',
         '.agp-so-tcol.rk1 .agp-so-fav{--s:3.8em}',
@@ -2081,7 +2118,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, refreshItem: refreshItem, throneDemo: throneDemo,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
