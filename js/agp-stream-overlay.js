@@ -750,7 +750,7 @@
      */
     var THRONE_FRAMES = {
         angel: { label: 'جناح الملاك', file: 'angel.webp', scale: 149, left: -25.25, top: -24.5, base: 205, ring: 53.6, spark: 55, fly: 'butterfly', glow: '#9fe0ff', glow2: '#3aa8ff' },
-        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 235, left: -74, top: -57.5, base: 45, ring: 56.5, spark: 62, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
+        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
     };
     function frameOf(it) { return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel'; }
     var THRONE_CYCLES = [5, 8, 10, 15, 20, 30];
@@ -1904,10 +1904,10 @@
         '.agp-so-throne.fk-pegasus{padding-top:2.3em}',
         '.agp-so-throne.fk-pegasus .agp-so-tcol{width:6.6em}',
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1{width:7.4em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tcol .agp-so-fav{--s:2.05em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-fav{--s:2.75em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tname{margin-top:1.5em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.75em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol .agp-so-fav{--s:2.35em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-fav{--s:3.15em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tname{margin-top:1.3em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.5em}',
         '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
         '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
         '.fr-pegasus .agp-so-fspk{background:#fff8e0;box-shadow:0 0 .2em #ffe6a3,0 0 .4em #ffbf3a}',
