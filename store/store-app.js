@@ -340,6 +340,7 @@ function viewStoreHeader() {
             h('div', { 'class': 'st-pill-label' }, h('span', { 'class': 'dot' }), h('span', null, 'متجر المنصة · منتجات رقمية')),
             h('h1', null, 'المتجر'),
             h('p', null, 'إطارات، باقات ألعاب، واشتراكات لبثّك. ادفع بالريال السعودي ويتفعّل المنتج على حسابك مباشرة.')),
+        sectionBar(),
         h('div', { 'class': 'toolbar' },
             h('div', { 'class': 'tabs', role: 'tablist' }, catTabs()),
             h('div', { 'class': 'toolbar-actions' },
@@ -349,6 +350,28 @@ function viewStoreHeader() {
                     S.bagIcon(18), h('span', null, 'السلة'), h('span', { 'class': 'count' }, cartIds().length),
                     h('span', { 'class': 'sep' }), S.money(S.price(t.total), 'total'))))
     ];
+}
+
+// أقسام المتجر الرئيسية: الإطارات شغّال، والأليرتات والاشتراكات «قريبًا»
+// (أزرار معطّلة لين تجهز). لتفعيل قسم: احذف soon منه واربطه بصفحته.
+var STORE_SECTIONS = [
+    { key: 'frames', label: 'الإطارات' },
+    { key: 'alerts', label: 'الأليرتات', soon: true },
+    { key: 'subs', label: 'الاشتراكات', soon: true }
+];
+
+function sectionBar() {
+    return h('nav', { 'class': 'st-sections', 'aria-label': 'أقسام المتجر' }, STORE_SECTIONS.map(function (sec) {
+        var on = sec.key === 'frames';
+        return h('button', {
+            type: 'button',
+            'class': 'st-section' + (on ? ' on' : '') + (sec.soon ? ' soon' : ''),
+            'aria-current': on ? 'page' : null,
+            'aria-disabled': sec.soon ? 'true' : null,
+            title: sec.soon ? 'قريبًا' : null,
+            onclick: sec.soon ? null : function () { go(''); }
+        }, h('span', null, sec.label), sec.soon ? h('span', { 'class': 'soon-badge' }, 'قريبًا') : null);
+    }));
 }
 
 function catTabs() {
