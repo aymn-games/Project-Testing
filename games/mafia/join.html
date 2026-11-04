@@ -357,6 +357,30 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
     .chatcol { display: flex; flex-direction: column; }
     .chatcol .chatbox { flex: 1; max-height: none; }
 }
+
+/* ===== «وش الجديد بالمافيا»: يطلع لكل حساب مرة وحدة (محفوظ بالخادم) ===== */
+.news-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4,3,8,.78); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: flIn .25s ease-out both; }
+.news { width: 100%; max-width: 560px; max-height: min(88dvh, 820px); display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; border: 1px solid rgba(167,139,250,.3);
+    background: radial-gradient(120% 50% at 50% 0%, rgba(139,92,246,.22), transparent 60%), #13111b; box-shadow: 0 30px 80px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.03) inset; animation: fcIn .45s cubic-bezier(.2,.9,.25,1.15) both; }
+.news-h { padding: 22px 20px 12px; text-align: center; }
+.news-h .tag { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #ddd6fe; background: rgba(139,92,246,.2); border: 1px solid rgba(167,139,250,.35); }
+.news-h h2 { margin: 10px 0 4px; font-size: 24px; font-weight: 800; }
+.news-h p { font-size: 13.5px; font-weight: 500; color: #c9c3d8; }
+.news-tabs { display: flex; gap: 6px; padding: 0 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.news-tabs::-webkit-scrollbar { display: none; }
+.news-tabs button { flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: #d9d4e6; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.news-tabs button.on { background: rgba(139,92,246,.3); border-color: rgba(167,139,250,.7); color: #fff; }
+.news-b { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+.nw { --c: 167,139,250; display: flex; gap: 12px; align-items: flex-start; padding: 13px 14px; border-radius: 18px; border: 1px solid rgba(var(--c), .28); background: linear-gradient(135deg, rgba(var(--c), .12), rgba(255,255,255,.015) 60%); }
+.nw .ni { flex: none; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; font-size: 22px; background: rgba(var(--c), .18); border: 1px solid rgba(var(--c), .35); }
+.nw .nt { font-size: 15.5px; font-weight: 800; margin-bottom: 3px; }
+.nw p b { color: #fff; font-weight: 800; }
+.nw p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.65; color: #d9d4e6; }
+.nw p + p { margin-top: 4px; }
+.nw .lim { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+.nw .lim span { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(var(--c), .2); border: 1px solid rgba(var(--c), .4); color: #fff; }
+.news-f { padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.06); }
+.news-f .btn { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -440,12 +464,15 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             renderRoomInfo();
         } else if (m.t === 'welcome') {
             S.me = { room: m.code, id: m.id, key: m.key }; NET.me(S.me);
+            S.news = !!m.news && !newsSeenLocal();
+            if (S.news === false && m.news && newsSeenLocal()) net.send({ t: 'news-seen' });   // قفله قبل وانقطع الاتصال: نبلّغ الخادم الحين
             if (!S.G) show('vWait');
+            maybeNews();
         } else if (m.t === 'room') {
             S.room = m.room; renderRoomInfo();
-            if (S.me && !m.room.started && S.view !== 'vProfile') { S.G = null; show('vWait'); renderWait(); }
+            if (S.me && !m.room.started && S.view !== 'vProfile') { S.G = null; show('vWait'); renderWait(); maybeNews(); }
         } else if (m.t === 'state') {
-            S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame();
+            S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame(); maybeNews();
         } else if (m.t === 'lobby') {
             S.G = null; show('vWait'); renderWait();
         } else if (m.t === 'err') {
@@ -456,6 +483,71 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             NET.me(null); S.me = null; S.G = null;
             show('vCode'); $('codeErr').textContent = m.t === 'kicked' || m.reason === 'kicked' ? 'المذيع طلّعك من الروم' : 'الروم انقفل';
         }
+    }
+
+
+    // ---------------------------------------------------------------- «وش الجديد بالمافيا» (مرة وحدة لكل حساب)
+    // الخادم يقول بالترحيب (news) إذا الحساب ما شافه؛ لما يقفله نرسل news-seen ونحفظه بالجهاز بعد (احتياط لو انقطع الاتصال).
+    // إعلان جديد مستقبلاً = غيّر NEWS_KEY هنا وبـbackend/mafia/mafia-server.js
+    var NEWS_KEY = 'mafia-news-2026-11', NEWS_LS = 'mafia-news-seen:' + NEWS_KEY;
+    function newsSeenLocal() { try { return localStorage.getItem(NEWS_LS) === '1'; } catch (e) { return false; } }
+    var NEWS = [
+        { k: 'targets', n: '🎯 شخص أو شخصين', items: [
+            { c: '167,139,250', i: '🎯', b: 'كل فريق يختار شخص أو شخصين بالليلة', p: ['المافيا والأطباء والمحققين: لو اتفقتوا = شخص واحد، ولو اختلفتوا = شخصين.', 'أكثر من شخصين <b>ممنوع</b>: أول ما يختار فريقك شخصين، باقي البطاقات تنقفل 🔒 وتقدر تختار واحد منهم بس.'], lim: ['اتفقتوا = 1', 'اختلفتوا = 2', 'أكثر = ممنوع'] }
+        ] },
+        { k: 'mafia', n: '🔪 المافيا', items: [
+            { c: '226,72,61', i: '🔪', b: 'لو اختلفتوا تهاجمون الاثنين', p: ['لو المافيا <b>اثنين أو أكثر</b> واختلفوا بين شخصين، الاثنين ينهجمون بنفس الليلة — يعني <b>أعلى حد للإقصاء بالليلة: شخصين</b>.', 'لو اتفقتوا ينهجم واحد بس. ولو أغلبكم اختار «تخطي» ما ينهجم أحد.', 'اللي هجمتوا عليهم الليلة ما تقدرون تستهدفونهم الليلة اللي بعدها.'], lim: ['مافيا 1 = شخص بالكثير', 'مافيا 2+ = شخصين بالكثير'] },
+            { c: '226,72,61', i: '🎬', b: 'على البث', p: ['لو الهدف شخصين: يطلعون الاثنين يمشون بالسوق ووراهم <b>مافيا اثنين</b>.'] }
+        ] },
+        { k: 'doctor', n: '🩺 الأطباء', items: [
+            { c: '47,179,106', i: '🩺', b: 'الحماية', p: ['كل طبيب يحمي شخص، وفريق الأطباء كله يحمي <b>شخصين بالكثير</b> بالليلة.', 'ما تحمي نفس الشخص ليلتين ورا بعض (بس تقدر ليلة إيه وليلة لا)، وتحمي نفسك <b>مرة وحدة</b> بالمباراة.', 'تشوف وش اختار زملاءك الأطباء (🛡️ + العدد على البطاقة).'], lim: ['شخصين بالكثير'] },
+            { c: '47,179,106', i: '💚', b: 'الإنقاذ على البث', p: ['لو المافيا هاجموا شخصين وانحمى واحد: يجيه طبيب والثاني يبقى طايح. لو انحموا الاثنين: يجون <b>طبيبين مع بعض</b>.'] }
+        ] },
+        { k: 'detective', n: '🕵️ المحققين', items: [
+            { c: '62,142,240', i: '🕵️', b: 'الفحص', p: ['كل محقق يفحص شخص، وفريق المحققين كله يفحص <b>شخصين بالكثير</b> بالليلة — وكل محقق تجيه نتيجة فحصه.', 'تشوف وش اختار زملاءك المحققين (🔍 + العدد).'], lim: ['شخصين بالكثير'] }
+        ] },
+        { k: 'chat', n: '🔒 الشات السري', items: [
+            { c: '226,72,61', i: '🔒', b: 'شات سري لكل فريق', p: ['<b>المافيا</b> مع بعض، و<b>الأطباء</b> مع بعض، و<b>المحققين</b> مع بعض (لو فيه أكثر من واحد بالدور).', 'يشتغل <b>طول المباراة حتى بالليل</b> وقت دوركم — نسّقوا مين تختارون.', 'محد يشوفه غيركم، ولا يطلع على البث.'] },
+            { c: '167,139,250', i: '👆', b: 'وين ألقاه؟', p: ['فوق الشاشة بشريط «فريقك» فيه أسماء زملاءك، وزر <b>«🔒 شات … السري»</b> — عليه عدد الرسائل الجديدة.', 'لما تفتحه يطلع فوق والشات العام ينزل تحته، ولما تقفله يرجع العام فوق.'] }
+        ] },
+        { k: 'more', n: '✨ وغيرها', items: [
+            { c: '242,182,50', i: '🗳️', b: 'التخطي ينحسب بالتصويت', p: ['«تخطي» خيار مثل أي لاعب: لو أخذ أكثر الأصوات ما أحد يطلع.'] },
+            { c: '47,179,106', i: '✅', b: 'ما فيه طرد لعدم النشاط', p: ['لو فاتك دورك أو التصويت أو قفلت الصفحة، تبقى باللعبة.'] }
+        ] }
+    ];
+    S.newsTab = 'targets';
+    function newsHtml() {
+        var tab = NEWS.find(function (t) { return t.k === S.newsTab; }) || NEWS[0];
+        return '<div class="news" role="dialog" aria-modal="true" aria-labelledby="newsT"><div class="news-h"><span class="tag">🆕 تحديث جديد</span><h2 id="newsT">وش الجديد بالمافيا؟</h2><p>تغييرات بقواعد الليل والشات السري — اقرأها قبل تلعب</p></div>' +
+            '<div class="news-tabs">' + NEWS.map(function (t) { return '<button type="button" data-ntab="' + t.k + '" class="' + (t === tab ? 'on' : '') + '">' + t.n + '</button>'; }).join('') + '</div>' +
+            '<div class="news-b">' + tab.items.map(function (it) {
+                return '<div class="nw" style="--c:' + it.c + '"><div class="ni">' + it.i + '</div><div><div class="nt">' + it.b + '</div>' + it.p.map(function (x) { return '<p>' + x + '</p>'; }).join('') +
+                    (it.lim ? '<div class="lim">' + it.lim.map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>' : '') + '</div></div>';
+            }).join('') + '</div>' +
+            '<div class="news-f"><button type="button" class="btn" id="newsOk">' + (NEWS.indexOf(tab) < NEWS.length - 1 ? 'التالي ←' : 'فهمت ✓') + '</button></div></div>';
+    }
+    // يطلع بس بلحظة هادية: الانتظار، أو بالمباراة وقت النقاش/الفجر/النتائج/النهاية (مو وسط دورك بالليل أو التصويت)
+    function maybeNews() {
+        if (!S.news || newsSeenLocal() || document.getElementById('newsBg')) return;
+        var ph = S.G && S.G.phase, calm = S.view === 'vWait' || (S.view === 'vGame' && ['day', 'dawn', 'verdict', 'over'].indexOf(ph) >= 0);
+        if (!calm) return;
+        var bg = document.createElement('div'); bg.className = 'news-bg'; bg.id = 'newsBg'; bg.innerHTML = newsHtml();
+        document.body.appendChild(bg);
+        bg.addEventListener('click', function (e) {
+            var tb = e.target.closest('[data-ntab]');
+            if (tb) { S.newsTab = tb.getAttribute('data-ntab'); bg.innerHTML = newsHtml(); bg.querySelector('.news-b').scrollTop = 0; return; }
+            if (e.target.id === 'newsOk') {
+                var i = NEWS.findIndex(function (t) { return t.k === S.newsTab; });
+                if (i < NEWS.length - 1) { S.newsTab = NEWS[i + 1].k; bg.innerHTML = newsHtml(); return; }
+                closeNews();
+            }
+        });
+    }
+    function closeNews() {
+        S.news = false;
+        try { localStorage.setItem(NEWS_LS, '1'); } catch (e) { }
+        net.send({ t: 'news-seen' });
+        var bg = document.getElementById('newsBg'); if (bg) bg.remove();
     }
 
     // ---------------------------------------------------------------- رقم الروم
