@@ -1520,8 +1520,9 @@
         if (vh > vw) lay.style.width = Math.round(220 * vw / vh) + 'px';
         var v = document.createElement('video');
         v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
-        v.src = O.videoFileUrl(it.video.id) + '#t=0.6';
+        v.src = O.videoSrc(it.video.id);
         lay.appendChild(v);
+        v.addEventListener('loadeddata', function () { if (v.paused && !v.currentTime) { try { v.currentTime = 0.6; } catch (e) { /* ignore */ } } }, { once: true });
         // مدة الفيديو تلقائي: لو الأليرت قديم وما فيه مدة، ناخذها من الفيديو ونحفظها
         v.addEventListener('loadedmetadata', function () {
             if (!(Number(it.video.d) > 0) && isFinite(v.duration) && v.duration > 0) {
@@ -1554,6 +1555,8 @@
         }
         function tick() {
             if (!playing) return;
+            // اللوحة انعاد رسمها: نوقف الفيديو القديم بدل ما يكمل بالخلفية
+            if (!lay.isConnected) { playing = false; v.pause(); v.removeAttribute('src'); v.load(); return; }
             var t = (performance.now() - t0) / 1000;
             if (t >= len()) { stopPlay(); return; }
             var vd = Number(it.video.d) || v.duration || 0;
@@ -1768,7 +1771,7 @@
         v.loop = true;
         v.playsInline = true;
         v.preload = 'auto';
-        v.src = O.videoFileUrl(it.video.id);
+        v.src = O.videoSrc(it.video.id);
         media2.appendChild(v);
         var keyer = O.makeKeyer(v, function () { return draft; });
         var warn = null;

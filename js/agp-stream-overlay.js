@@ -1403,12 +1403,17 @@
         if (!stage) return;
         stage.textContent = '';
         if (isVideoAlert(n._item)) {
-            // بالمحرر: أول فريم من الفيديو باهت (بنفس التفريغ) عشان يشوف مكانه وحجمه
+            // بالمحرر: إطار فاضي بحجم الأليرت بس (يشوف مكانه ويسحبه) — بدون فيديو ولا اسم ولا رسالة،
+            // فأول ما يخلص الأليرت ما يبقى منه شي، وما يشغّل فيديو وتفريغ بالخلفية (أخف)
             if (n._preview) {
-                var vb = videoBox(n._item, null, true);
-                vb.root.classList.add('agp-so-ghost');
-                stage.appendChild(vb.root);
+                var vw = Number(n._item.video.w) || 16, vh = Number(n._item.video.h) || 9;
+                var ph = el('div', 'agp-so-vslot');
+                ph.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
+                ph.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
+                ph.appendChild(el('span', null, 'أليرت فيديو'));
+                stage.appendChild(ph);
             }
+            prefetchVideo(n._item.video.id);
             if (n._pos) place(n, n._pos, n._F);
             return;
         }
@@ -1612,7 +1617,7 @@
             return { w: mw, h: mh, data: out };
         }
         var k = { canvas: cv, failed: false, onfail: null };
-        var raf = 0, dead = false;
+        var raf = 0, vfc = 0, dead = false, frameN = 0, lastMask = null;
         k.draw = function () {
             if (dead || k.failed || video.readyState < 2 || !video.videoWidth) return;
             var w = video.videoWidth, h = video.videoHeight;
@@ -1637,20 +1642,35 @@
             gl.uniform1f(U.keepBg, clamp(Number(key.keepBg) || 0, 0, 1));
             gl.uniform1f(U.opac, clamp(key.opacity == null ? 1 : Number(key.opacity), 0.05, 1));
             var useMask = key.protect !== false && key.mode !== 'screen' && maskOk;
-            var mk = useMask ? buildMask(key, w, h) : null;
+            // الماسك (قراءة من الكرت) كل فريمين — يكفي للحركة ويخفف الحمل
+            var mk = null;
+            if (useMask) {
+                if (!lastMask || video.paused || (frameN++ & 1) === 0) { mk = buildMask(key, w, h); lastMask = mk; }
+            } else lastMask = null;
             if (mk) {
                 gl.activeTexture(gl.TEXTURE1);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, mk.w, mk.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, mk.data);
                 gl.activeTexture(gl.TEXTURE0);
             }
-            gl.uniform1f(U.useMask, mk ? 1 : 0);
+            gl.uniform1f(U.useMask, (mk || (useMask && lastMask)) ? 1 : 0);
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         };
+        // نرسم مع كل فريم جديد من الفيديو بس (requestVideoFrameCallback) بدل كل تحديث للشاشة
+        var hasVFC = typeof video.requestVideoFrameCallback === 'function';
+        function onFrame() { vfc = 0; if (dead) return; k.draw(); if (!video.paused && !video.ended) vfc = video.requestVideoFrameCallback(onFrame); }
         function loop() { if (dead) return; k.draw(); raf = requestAnimationFrame(loop); }
-        function start() { if (!raf && !dead) loop(); }
-        function stop() { cancelAnimationFrame(raf); raf = 0; k.draw(); }
+        function start() {
+            if (dead) return;
+            if (hasVFC) { if (!vfc) vfc = video.requestVideoFrameCallback(onFrame); }
+            else if (!raf) loop();
+        }
+        function stop() {
+            cancelAnimationFrame(raf); raf = 0;
+            if (vfc && hasVFC) { try { video.cancelVideoFrameCallback(vfc); } catch (e) { /* ignore */ } vfc = 0; }
+            k.draw();
+        }
         video.addEventListener('play', start);
         video.addEventListener('pause', stop);
         video.addEventListener('ended', stop);
@@ -1659,6 +1679,7 @@
         k.destroy = function () {
             dead = true;
             cancelAnimationFrame(raf);
+            if (vfc && hasVFC) { try { video.cancelVideoFrameCallback(vfc); } catch (e) { /* ignore */ } }
             video.removeEventListener('play', start);
             try { var ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); } catch (e) { /* ignore */ }
         };
@@ -1667,13 +1688,39 @@
         return k;
     }
 
+    /*
+     * الفيديو ينحمّل مرة وحدة ويتخزن بالذاكرة (رابط blob) — كل أليرت بعدها يبدأ
+     * على طول بدون ما ينتظر الشبكة أو يقطّع. الحد: آخر 8 فيديوهات.
+     */
+    var vidBlobs = {}, vidOrder = [];
+    function prefetchVideo(id) {
+        if (!id || vidBlobs[id] || typeof fetch !== 'function' || !window.URL || !URL.createObjectURL) return;
+        var c = vidBlobs[id] = { url: null };
+        vidOrder.push(id);
+        while (vidOrder.length > 8) {
+            var old = vidOrder.shift();
+            if (vidBlobs[old] && vidBlobs[old].url) URL.revokeObjectURL(vidBlobs[old].url);
+            delete vidBlobs[old];
+        }
+        fetch(videoFileUrl(id))
+            .then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (b) { if (b && b.size && vidBlobs[id] === c) c.url = URL.createObjectURL(b); else if (!b) delete vidBlobs[id]; })
+            .catch(function () { if (vidBlobs[id] === c) delete vidBlobs[id]; });
+    }
+    function videoSrc(id) {
+        var c = vidBlobs[id];
+        if (c && c.url) return c.url;
+        prefetchVideo(id);
+        return videoFileUrl(id);
+    }
+
     function makeVideo(it) {
         var v = document.createElement('video');
         v.crossOrigin = 'anonymous'; // لازم عشان التفريغ يقرأ البكسلات
         v.playsInline = true;
         v.setAttribute('playsinline', '');
         v.preload = 'auto';
-        v.src = videoFileUrl(it.video.id);
+        v.src = videoSrc(it.video.id);
         v.volume = clamp(it.volume == null ? 0.8 : Number(it.volume), 0, 1);
         return v;
     }
@@ -1813,7 +1860,11 @@
             // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
             if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(done); });
         });
-        if (!own) boxes[0].video.addEventListener('ended', done);
+        if (!own) boxes[0].video.addEventListener('ended', function () {
+            boxes.forEach(function (b) { b.root.classList.add('out'); });
+            clearTimeout(timer);
+            timer = setTimeout(done, 340);
+        });
         boxes[0].video.addEventListener('error', done);
         timer = setTimeout(done, max + 8000); // لو الفيديو ما اشتغل أبداً
     }
@@ -2257,6 +2308,8 @@
         '.agp-so-alert{line-height:1.3}',
         '.agp-so-astage{display:flex;justify-content:center}',
         '.agp-so-vbox{position:relative;flex:none}',
+        '.agp-so-vslot{position:relative;flex:none;box-sizing:border-box;border:.1em dashed rgba(255,255,255,.35);border-radius:.4em;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-vslot span{font-size:.7em;font-weight:700;color:rgba(255,255,255,.55);text-shadow:0 .05em .2em rgba(0,0,0,.8)}',
         '.agp-so-vbox video,.agp-so-vbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-vbox.keyed video{opacity:0}',
         '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
@@ -2388,7 +2441,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
