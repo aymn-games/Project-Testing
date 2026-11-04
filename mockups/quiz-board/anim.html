@@ -395,6 +395,7 @@ const CATS=[
  {k:'games',t:'تحدي الألعاب',n:'120 سؤال',c1:'#a77bff',dk:'#4a2a9a'},
  {k:'songs',t:'الأغاني العربية',n:'300 سؤال',c1:'#ff8a65',dk:'#7a2e1f'},
  {k:'blur',t:'الصورة المغبشة',n:'300 سؤال',c1:'#8b9dff',dk:'#2e3a8c'},
+ {k:'general',t:'معلومات عامة',n:'329 سؤال',c1:'#b28cf5',dk:'#4a2a9a'},
  {k:'apps',t:'شعارات التطبيقات',n:'213 سؤال',c1:'#38e0c8',dk:'#145e5a'},
  {k:'brands',t:'شعارات البراندات',n:'219 سؤال',c1:'#f6c66b',dk:'#7a5414'},
  {k:'islamic',t:'أسئلة إسلامية',n:'213 سؤال',c1:'#7fd8a4',dk:'#1c5a3c'},
@@ -515,6 +516,13 @@ islamic:(c,i)=>`
  <rect x="38" y="84" width="12" height="82" rx="3" fill="url(#w${i})"/><path d="M36,84l8,-16 8,16z" fill="url(#gd${i})"/>
  <rect x="150" y="84" width="12" height="82" rx="3" fill="url(#w${i})"/><path d="M148,84l8,-16 8,16z" fill="url(#gd${i})"/>
  <rect x="68" y="124" width="10" height="16" rx="5" fill="${c.dk}" opacity=".6"/><rect x="122" y="124" width="10" height="16" rx="5" fill="${c.dk}" opacity=".6"/>`,
+general:(c,i)=>`
+ <circle cx="100" cy="88" r="40" fill="url(#gd${i})"/>
+ <path d="M80,116c0,10 6,14 6,22h28c0-8 6-12 6-22z" fill="url(#gd${i})"/>
+ <ellipse cx="88" cy="74" rx="9" ry="14" fill="#fff" opacity=".45" transform="rotate(-25 88 74)"/>
+ <path d="M90,108l10-22 10,22" stroke="#7a4a1a" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+ <rect x="84" y="140" width="32" height="8" rx="3" fill="url(#w${i})"/><rect x="86" y="150" width="28" height="8" rx="3" fill="url(#w${i})"/><rect x="92" y="160" width="16" height="6" rx="3" fill="${c.dk}"/>
+ <path d="M100,34v-12M60,48l-8-8M140,48l8-8M46,88h-12M154,88h12" stroke="url(#gd${i})" stroke-width="4" stroke-linecap="round"/>`,
 crests:(c,i)=>`
  <g transform="rotate(-16 64 100)"><path d="M64,62L90,70V96C90,114 78,126 64,132C50,126 38,114 38,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><path d="M50,74v40M64,72v54M78,74v40" stroke="#fff" stroke-opacity=".2" stroke-width="5"/></g>
  <g transform="rotate(16 136 100)"><path d="M136,62L162,70V96C162,114 150,126 136,132C122,126 110,114 110,96V70z" fill="${c.dk}" stroke="#fff" stroke-opacity=".4" stroke-width="1.5"/><circle cx="136" cy="96" r="12" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="4"/></g>
