@@ -1147,14 +1147,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
             if (!token) { window.location.href = 'login.html'; return; }
-            // توكن الجلسة يروح بالهيدر (tiktokLinkUrl) بدل ما ينحط بالرابط.
-            linkBtn.disabled = true;
-            window.AGPAuth.tiktokLinkUrl().then(function(r){
-              if (r && r.success && r.url) { window.location.href = r.url; return; }
-              linkBtn.disabled = false;
-              if (r && r.__httpStatus === 401) { window.location.href = 'login.html'; return; }
-              window.alert('تعذّر بدء ربط تيك توك، جرّب مرة ثانية.');
-            }).catch(function(){ linkBtn.disabled = false; window.alert('تعذّر الاتصال بالخادم، جرّب مرة ثانية.'); });
+            // ⚠️ انتقال مباشر لخادمنا وهو يحوّل (302) لتيك توك — نفس الطريقة
+            // اللي اشتغلت من البداية. جرّبنا نجيب رابط تيك توك بطلب بالخلفية
+            // (tiktokLinkUrl) وننتقل له، وطلعت شاشة بيضاء عند ناس كثير، فرجعنا لهذي.
+            var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || '';
+            window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
           });
         } else {
           // [إصلاح] "إلغاء الربط" ما كان مربوط بأي شي حقيقي أبداً — الدالة
