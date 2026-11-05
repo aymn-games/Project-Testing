@@ -208,6 +208,20 @@
     }
 
     /** بعد أي تعديل على S(): يحدّث البيانات ويجدول الحفظ. */
+    /**
+     * «جرّب»: يطلع هنا بالمعاينة، وبنفس اللحظة على رابط الشاشة المفتوح بـOBS / TikTok LIVE Studio
+     * (POST /api/screens/test-alert — الرابط يسحبه خلال ثانيتين). لو الأليرت جديد نحفظ أول.
+     */
+    var testToastShown = false;
+    function tryAlert(it, type) {
+        O.alertDemo(it.id, type);
+        if (!cur) return;
+        if (save.pending) flush();
+        api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
+            if (d && d.success && !testToastShown) { testToastShown = true; toast('التجربة طالعة بشاشة البث بعد ثواني ✓'); }
+        }).catch(function () { /* المعاينة اشتغلت؛ الرابط بس ما وصله */ });
+    }
+
     function commit() {
         markDirty();
         O.commit();
@@ -1545,7 +1559,7 @@
             tg.title = 'تشغيل / إيقاف';
             tg.addEventListener('click', function (e) { e.stopPropagation(); });
             r.appendChild(tg);
-            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); O.alertDemo(it.id, (it.events || ['gift'])[0]); }));
+            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); tryAlert(it, (it.events || ['gift'])[0]); }));
             r.appendChild(button('إعدادات', 'ob-pill', function (e) { e.stopPropagation(); select(it.id); }));
             r.addEventListener('click', function () { select(it.id); });
             lw.appendChild(r);
@@ -1582,7 +1596,7 @@
         var evs = Array.isArray(it.events) ? it.events : [];
         var demo = el('div', 'ob-actions');
         evs.forEach(function (k) {
-            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { O.alertDemo(it.id, k); }));
+            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { tryAlert(it, k); }));
         });
         box.appendChild(demo);
 
@@ -2219,7 +2233,7 @@
         var evs = Array.isArray(it.events) ? it.events : [];
         var demo = el('div', 'ob-actions');
         evs.forEach(function (k) {
-            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { O.alertDemo(it.id, k); }));
+            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { tryAlert(it, k); }));
         });
         box.appendChild(demo);
         triggerRows(it, box);

@@ -1364,7 +1364,7 @@
 
     var alertNodes = [];   // { node, preview } — أدوات الأليرتات المرسومة حالياً
     var alertQ = {};       // itemId -> { list: [ev], busy: bool }
-    var evState = { init: false, sid: 0, seq: 0, timer: null, inflight: false };
+    var evState = { init: false, sid: 0, seq: 0, timer: null, inflight: false, tinit: false, tseq: 0, tests: [] };
     var audioCtx = null;
 
     function sampleEvent(type) {
@@ -1456,7 +1456,13 @@
         alertNodes = alertNodes.filter(function (a) { return a.node.isConnected; });
         alertNodes.push({ node: n, preview: preview });
         var q = alertQ[it.id];
-        if (!q || !q.busy) idleAlert(n);
+        if (!q || !q.busy) { idleAlert(n); return; }
+        // الشاشة انعاد بناؤها (تحدّث التصميم) والأليرت شغّال: ننقله للعنصر الجديد بدل ما ينقطع
+        var orphan = (q.roots || []).filter(function (r) { return !r.isConnected; })[0];
+        if (orphan) {
+            n.querySelector('.agp-so-astage').appendChild(orphan);
+            if (n._pos) setTimeout(function () { if (n._pos) place(n, n._pos, n._F); }, 0);
+        }
     }
 
     function chime() {
@@ -1846,6 +1852,7 @@
             clearTimeout(timer);
             clearTimeout(outT);
             partT.forEach(clearTimeout);
+            q.roots = null;
             boxes.forEach(stopVideoBox);
             q.busy = false;
             liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
@@ -1862,6 +1869,7 @@
             if (t.node._pos) place(t.node, t.node._pos, t.node._F);
         });
         if (!boxes.length) { done(); return; }
+        q.roots = boxes.map(function (vb) { return vb.root; });
         boxes.forEach(function (vb, i) {
             var v = vb.video;
             if (own && it.vend === 'loop') v.loop = true;
@@ -1913,6 +1921,7 @@
         var dur = clamp(Number(it.duration) || 5, 2, 20) * 1000;
         var anim = ALERT_ANIMS.filter(function (a) { return a.key === it.anim; })[0] ? it.anim : 'pop';
         q.busy = true;
+        q.roots = [];
         targets.forEach(function (t) {
             var stage = t.node.querySelector('.agp-so-astage');
             if (!stage) return;
@@ -1920,6 +1929,7 @@
             var c = alertCard(it, e);
             c.classList.add('in-' + anim);
             stage.appendChild(c);
+            q.roots = (q.roots || []).concat([c]);
             if (t.node._pos) place(t.node, t.node._pos, t.node._F);
         });
         if (it.sound) chime();
@@ -1931,6 +1941,7 @@
         }, dur - 450);
         setTimeout(function () {
             q.busy = false;
+            q.roots = null;
             liveAlertNodes(id).forEach(function (t) { idleAlert(t.node); });
             setTimeout(function () { pumpAlert(id); }, 250);
         }, dur);
@@ -1969,10 +1980,17 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0))
+        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0))
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
+                // «جرّب» من المحرر: أول طلب = نقطة بداية (التجارب القديمة ما تشتغل)
+                if (!evState.tinit || (Number(d.tseq) || 0) < evState.tseq) { evState.tinit = true; evState.tseq = Number(d.tseq) || 0; }
+                else {
+                    evState.tseq = Number(d.tseq) || 0;
+                    (d.tests || []).forEach(function (t) { evState.tests.push({ itemId: t.itemId, type: t.type, at: Date.now() }); });
+                }
+                runTests();
                 if (!evState.init || d.sid !== evState.sid || d.seq < evState.seq) {
                     evState.init = true;
                     evState.sid = d.sid;
@@ -1989,6 +2007,19 @@
             })
             .catch(function () { /* نحاول بالدورة الجاية */ })
             .then(function () { evState.inflight = false; });
+    }
+
+    /**
+     * تجارب المحرر بانتظار أليرتها: لو الأليرت جديد ولسا ما وصل تصميمه للرابط
+     * (يتحدّث كل DESIGN_POLL_MS) نستنى لين 15 ثانية.
+     */
+    function runTests() {
+        var now = Date.now();
+        evState.tests = evState.tests.filter(function (t) {
+            var it = alertItems().filter(function (x) { return x.id === t.itemId; })[0];
+            if (it) { queueAlert(it.id, sampleEvent(t.type || (it.events || ['gift'])[0]), true); return false; }
+            return now - t.at < 15000;
+        });
     }
 
     function syncEventsPolling() {

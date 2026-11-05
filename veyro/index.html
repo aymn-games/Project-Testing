@@ -522,6 +522,10 @@
   .ob-frame .agp-so-item { cursor: grab; touch-action: none; border-radius: 6px; }
   .ob-frame .agp-so-item:hover { outline: 1.5px dashed rgba(255,255,255,.35); outline-offset: 5px; }
   .ob-frame .agp-so-item.ob-sel { outline: 2px solid var(--sky); outline-offset: 5px; }
+  /* الأليرت وهو ما يشتغل: الشاشة تبان كأنه مو موجود — يبان بس لما تختاره (أو تمر عليه بالماوس) عشان تحركه */
+  .ob-frame .agp-so-alert .agp-so-astage > .agp-so-vslot, .ob-frame .agp-so-alert .agp-so-astage > .agp-so-ghost { opacity: 0; transition: opacity .2s; }
+  .ob-frame .agp-so-alert:hover .agp-so-astage > .agp-so-vslot, .ob-frame .agp-so-alert:hover .agp-so-astage > .agp-so-ghost { opacity: .35; }
+  .ob-frame .agp-so-alert.ob-sel .agp-so-astage > .agp-so-vslot, .ob-frame .agp-so-alert.ob-sel .agp-so-astage > .agp-so-ghost { opacity: .6; }
   .ob-frame .agp-so-item.ob-hidden { opacity: .28; }
   .ob-handle { position: absolute; left: -12px; bottom: -12px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--lav-m); cursor: nesw-resize; touch-action: none; z-index: 3; }
   .ob-zoom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 6px; border-radius: 15px; background: rgba(24,21,31,.94); border: 1px solid var(--line); font-size: 12px; color: var(--muted); z-index: 3; white-space: nowrap; }
