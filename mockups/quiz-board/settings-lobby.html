@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>لوحة التحدي — الإعدادات واللوبي</title>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:720px;overflow:hidden;background:#07060b;font-family:'Zain',sans-serif;color:#f4f2f8}
+#fx{position:fixed;inset:0;pointer-events:none;overflow:hidden}#fx .g{position:absolute;border-radius:50%;filter:blur(40px)}#fx .st{position:absolute;border-radius:50%}#fx .sq{position:absolute}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:0 22px;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)}
+.hs{display:flex;gap:10px}.hs.l{justify-content:flex-end}
+.hbtn{height:40px;padding:0 15px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font:700 15px 'Zain';white-space:nowrap;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e7e3ef;backdrop-filter:blur(10px)}
+.hbtn.x{border-color:rgba(248,113,113,.25);color:#fca5a5}
+header img{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
+main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center}
+.wrap{width:100%;max-width:1080px;height:100%;padding:0 30px;display:flex;flex-direction:column}
+.screen{display:none;flex:1;min-height:0;flex-direction:column}.screen.on{display:flex}
+.ttl{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0 16px;text-align:center}
+.ttl .sub{font:600 18px 'Zain';color:#a8a3b5;letter-spacing:.5px}
+.ttl .nm{font:700 52px/1.1 'Zain';background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
+.live{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);font:600 13px 'Zain';color:#34d399}
+.live i{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+/* settings */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1;min-height:0;align-content:start}
+.sec{display:flex;flex-direction:column;padding:16px 24px;border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:rise .45s ease both}
+.sec.full{grid-column:1/-1}
+.sh{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06)}
+.num{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'Zain'}
+.sh b{font:800 22px 'Zain'}
+.dv{height:1px;background:rgba(255,255,255,.06)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:5px 0}
+.lab{display:flex;align-items:center;gap:8px;min-width:0}
+.lab .d{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lab b{display:block;font:700 19px 'Zain';color:#e7e3ef}
+.lab small{display:block;font:500 13px/1.5 'Zain';color:#8a8596}
+.inp{width:190px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);display:grid;place-items:center;font:700 17px 'Zain'}
+.seg{display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.seg span{height:34px;padding:0 14px;border-radius:999px;display:flex;align-items:center;white-space:nowrap;font:600 14px 'Zain';color:#a8a3b5}
+.seg span.on{background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 6px 20px rgba(139,92,246,.4)}
+.tg{width:52px;height:30px;flex-shrink:0;border-radius:999px;padding:3px;display:flex;justify-content:flex-start;background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.tg.off{background:rgba(255,255,255,.1);justify-content:flex-end}.tg i{width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.foot{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 18px}
+.bp{width:100%;max-width:440px;height:58px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:800 21px 'Zain';box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.bp.g{max-width:400px;background:linear-gradient(90deg,#16a34a,#22c55e);box-shadow:0 10px 34px rgba(34,197,94,.4),inset 0 1px 0 rgba(255,255,255,.2)}
+.back{font:700 17px 'Zain';color:#a8a3b5}
+/* lobby */
+.teams{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:6px}
+.tm{min-height:0;display:flex;flex-direction:column;border-radius:26px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1.5px solid var(--bs);box-shadow:0 20px 60px rgba(0,0,0,.3),0 0 50px var(--halo);overflow:hidden;position:relative}
+.tm .hal{position:absolute;top:-100px;left:50%;width:460px;height:200px;margin-left:-230px;border-radius:50%;background:var(--halo);filter:blur(44px)}
+.th{position:relative;display:flex;flex-direction:column;gap:12px;padding:18px 24px;border-bottom:1px solid rgba(255,255,255,.06)}
+.tr{display:flex;justify-content:space-between;align-items:center}
+.tn{display:flex;align-items:center;gap:10px;font:800 27px 'Zain';color:var(--c)}
+.tn i{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 14px var(--c)}
+.cnt{display:flex;align-items:baseline;gap:4px;padding:5px 14px;border-radius:999px;background:var(--soft);border:1px solid var(--bd)}
+.cnt b{font:800 24px 'Zain';color:var(--c)}.cnt span{font:700 18px 'Zain';color:#a8a3b5}
+.kwl{font:700 16px 'Zain';color:#a8a3b5}
+.kw{text-align:center;padding:8px 22px;border-radius:999px;background:var(--soft);border:1.5px dashed var(--c);font:700 34px/1.2 'Zain';color:var(--c)}
+.pl{position:relative;flex:1;min-height:0;overflow:hidden;padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;align-content:start}
+.p{display:flex;align-items:center;gap:10px;height:52px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both}
+.p img{width:40px;height:40px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--c)}
+.p b{flex:1;min-width:0;font:700 18px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .k{width:28px;height:28px;display:grid;place-items:center;color:#fca5a5;opacity:.75}
+.p.new{border-color:var(--c);box-shadow:0 0 22px -6px var(--c)}
+.more{grid-column:1/-1;text-align:center;font:600 14px 'Zain';color:#8a8596;padding-top:2px}
+
+#settings .ttl{padding:8px 0 10px;gap:6px;flex-direction:row;justify-content:center;gap:16px}
+#settings .ttl .nm{font-size:40px}
+#settings .grid{gap:12px;overflow:hidden}
+#settings .sec{padding:10px 22px}
+#settings .sh{padding-bottom:6px;margin-bottom:0}
+#settings .sh b{font-size:20px}
+#settings .row{min-height:44px;padding:3px 0}
+#settings .lab b{font-size:17px}
+#settings .lab small{font-size:12px;line-height:1.35}
+#settings .seg span{height:30px}
+#settings .inp{height:36px}
+#settings .foot{padding:10px 0 14px}
+#settings .bp{height:52px}
+</style></head><body>
+<div id="fx"></div>
+<header>
+ <div class="hs"><span class="hbtn x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>خروج</span><span class="hbtn lob"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>القائمة</span></div>
+ <img src="../../logo.png" alt="">
+ <div class="hs l"></div>
+</header>
+<main><div class="wrap">
+
+<section class="screen" id="settings">
+ <div class="ttl"><span class="nm">لوحة التحدي</span><span class="live"><i></i>متصل بالبث</span></div>
+ <div class="grid">
+  <div class="sec"><div class="sh"><span class="num">1</span><b>الفريق السماوي</b></div>
+   <div class="row"><div class="lab"><span class="d" style="background:#5ccfff;box-shadow:0 0 8px #5ccfff"></span><b>اسم الفريق</b></div><span class="inp">السماوي</span></div>
+   <div class="dv"></div>
+   <div class="row"><div class="lab"><div><b>الكلمة المفتاحية للانضمام</b><small>يكتبها اللاعب بالشات ويدخل</small></div></div><span class="inp" style="color:#a5e8ff">سماوي</span></div>
+  </div>
+  <div class="sec" style="animation-delay:.07s"><div class="sh"><span class="num">2</span><b>الفريق الوردي</b></div>
+   <div class="row"><div class="lab"><span class="d" style="background:#f5b0ff;box-shadow:0 0 8px #f5b0ff"></span><b>اسم الفريق</b></div><span class="inp">الوردي</span></div>
+   <div class="dv"></div>
+   <div class="row"><div class="lab"><div><b>الكلمة المفتاحية للانضمام</b><small>يكتبها اللاعب بالشات ويدخل</small></div></div><span class="inp" style="color:#f5b0ff">وردي</span></div>
+  </div>
+  <div class="sec full" style="animation-delay:.14s"><div class="sh"><span class="num">3</span><b>المباراة</b></div>
+   <div class="row"><div class="lab"><b>حجم الفريق</b></div><div class="seg"><span>10 ضد 10</span><span class="on">25 ضد 25</span><span>50 ضد 50</span><span>بدون حد</span></div></div>
+   <div class="dv"></div>
+   <div class="row"><div class="lab"><div><b>وقت الفريق صاحب الدور</b><small>الوقت اللي يجاوب فيه الفريق اللي اختار السؤال</small></div></div><div class="seg"><span>20 ث</span><span class="on">30 ث</span><span>45 ث</span><span>60 ث</span></div></div>
+   <div class="dv"></div>
+   <div class="row"><div class="lab"><div><b>الوقت المفتوح للفريقين</b><small>لو خلص وقت الفريق بدون جواب صح، الإجابة تنقبل من الفريقين</small></div></div><div class="seg"><span>10 ث</span><span class="on">15 ث</span><span>20 ث</span></div></div>
+   <div class="dv"></div>
+   <div class="row"><div class="lab"><div><b>الدخول التلقائي أثناء المباراة</b><small>اللاعب الجديد يكتب الكلمة المفتاحية ويدخل حتى بعد بداية المباراة</small></div></div><span class="tg"><i></i></span></div>
+  </div>
+ </div>
+ <div class="foot"><span class="bp">التالي: اختيار الفئات<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span></div>
+</section>
+
+<section class="screen" id="lobby">
+ <div class="ttl" style="padding:6px 0 14px"><span class="sub">لوحة التحدي</span><span class="nm">لوبي الدخول</span></div>
+ <div class="teams">
+  <div class="tm" id="tA" style="--c:#5ccfff;--soft:rgba(92,207,255,.10);--bd:rgba(92,207,255,.35);--bs:rgba(92,207,255,.45);--halo:rgba(92,207,255,.16)"><span class="hal"></span>
+   <div class="th"><div class="tr"><span class="tn"><i></i>الفريق السماوي</span><span class="cnt"><b>9</b><span>/ 25</span></span></div>
+    <span class="kwl">الكلمة المفتاحية · اكتبها في الشات للانضمام</span><span class="kw">سماوي</span></div>
+   <div class="pl" id="plA"></div></div>
+  <div class="tm" id="tB" style="--c:#f5b0ff;--soft:rgba(245,176,255,.10);--bd:rgba(245,176,255,.35);--bs:rgba(245,176,255,.45);--halo:rgba(245,176,255,.16)"><span class="hal"></span>
+   <div class="th"><div class="tr"><span class="tn"><i></i>الفريق الوردي</span><span class="cnt"><b>7</b><span>/ 25</span></span></div>
+    <span class="kwl">الكلمة المفتاحية · اكتبها في الشات للانضمام</span><span class="kw">وردي</span></div>
+   <div class="pl" id="plB"></div></div>
+ </div>
+ <div class="foot"><span class="bp g">الدخول للمباراة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span><span class="back">الرجوع للإعدادات</span></div>
+</section>
+
+</div></main>
+<script>
+(function(){const fx=document.getElementById('fx');let s=7;const R=()=>{s=(s*9301+49297)%233280;return s/233280},r=(a,b)=>a+R()*(b-a);
+fx.innerHTML=`<div class="g" style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle,rgba(124,58,237,.22),transparent 65%)"></div><div class="g" style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle,rgba(139,92,246,.12),transparent 65%)"></div><div class="g" style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle,rgba(168,85,247,.1),transparent 65%)"></div>`+
+Array.from({length:90},(_,i)=>`<span class="st" style="left:${r(0,100)}%;top:${r(0,100)}%;width:${i%9?1.5:3}px;height:${i%9?1.5:3}px;background:rgba(255,255,255,${r(.12,.35).toFixed(2)})"></span>`).join('')+
+[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,z,f])=>`<span class="sq" style="left:${x}%;top:${y}%;width:${z}px;height:${z}px;${f?'background:rgba(139,92,246,.45)':'border:1.5px solid rgba(139,92,246,.35)'}"></span>`).join('');})();
+function hsh(t){let h=7;for(const c of t)h=(h*31+c.charCodeAt(0))>>>0;return h;}
+function avatar(name){const h=hsh(name),P=(a)=>a[h%a.length],Q=(a,k)=>a[(h>>>k)%a.length];
+ const bgs=[['#7c3aed','#c4b5fd'],['#0ea5e9','#a5e8ff'],['#db2777','#f5b0ff'],['#059669','#6ee7b7'],['#d97706','#fde68a'],['#4f46e5','#a5b4fc']];
+ const [b1,b2]=P(bgs),skin=Q(['#f1c9a5','#e0ac83','#c68b5e','#a5714a','#f6d7bd'],3),style=(h>>>5)%4,shirt=Q(['#1e293b','#f8fafc','#334155','#7c3aed','#0f766e','#9f1239'],7),hair=Q(['#1f1611','#3b2a1e','#0f0f10','#5b3a24'],9),hj=Q(['#6d28d9','#0e7490','#be185d','#334155','#a16207'],11);
+ let pre='',post='';
+ if(style===0)post=`<path d="M18 27c0-9 6-14 14-14s14 5 14 14c-3-4-7-6-14-6s-11 2-14 6z" fill="${hair}"/>`;
+ if(style===1||style===2){const chk=style===2;pre=`<path d="M13 46c0-19 8-30 19-30s19 11 19 30l-5 14H18z" fill="#f8fafc"/>${chk?`<path d="M13 46c0-19 8-30 19-30s19 11 19 30" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-dasharray="3 3"/>`:''}`;
+  post=`<path d="M19.5 29c0-9 5.5-14 12.5-14s12.5 5 12.5 14c-3.5-3-7.5-4.5-12.5-4.5s-9 1.5-12.5 4.5z" fill="#f8fafc"/>${chk?`<path d="M19.5 29c0-9 5.5-14 12.5-14s12.5 5 12.5 14" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="3 3"/>`:''}<rect x="19" y="16.5" width="26" height="4.5" rx="2.2" fill="#111"/>`;}
+ if(style===3){pre=`<path d="M13 44c0-19 8-30 19-30s19 11 19 30v20H13z" fill="${hj}"/>`;post=`<path d="M19.5 30c0-8 5.5-13 12.5-13s12.5 5 12.5 13" fill="none" stroke="${hj}" stroke-width="3.2"/>`;}
+ const face=`<circle cx="32" cy="31" r="12.5" fill="${skin}"/><circle cx="27.5" cy="31" r="1.6" fill="#1b1410"/><circle cx="36.5" cy="31" r="1.6" fill="#1b1410"/><path d="M27.5 37q4.5 3.5 9 0" stroke="#7a3e2b" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+ const body=`<path d="M10 64c2-12 11-17 22-17s20 5 22 17z" fill="${shirt}"/><rect x="28" y="40" width="8" height="8" fill="${skin}"/>`;
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${b2}"/><stop offset="1" stop-color="${b1}"/></linearGradient></defs><rect width="64" height="64" fill="url(#g)"/>${pre}${body}${face}${post}</svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
+
+const X='<span class="k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>';
+const fill=(id,names,total,nw)=>{document.getElementById(id).innerHTML=names.map((n,i)=>`<div class="p ${i===0&&nw?'new':''}" style="animation-delay:${i*.04}s"><img src="${avatar(n)}"><b>${n}</b>${X}</div>`).join('')+(total>names.length?`<div class="more">+ ${total-names.length} لاعب آخر</div>`:'');};
+fill('plA',['reem_22','sara_77','abo_nasser','mj_10','faisal','omar.s'],9,1);
+fill('plB',['khalid.x','fahad.q','noura.k','reem','salem','lama'],7,0);
+const h=location.hash.slice(1)||'settings';document.getElementById(h).classList.add('on');
+if(h==='settings')document.querySelector('.lob').style.display='none';
+</script></body></html>
