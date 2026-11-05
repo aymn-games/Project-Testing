@@ -1130,7 +1130,7 @@
                 c.appendChild(el('div', 'ob-hint', (when ? when + ' · ' : '') + 'مدة ' + fmtDur(real.durationMs) + ' · ' + fmt((real.totals || {}).likes) + ' تكبيسة · ' + fmt((real.totals || {}).diamonds) + ' عملة'));
             } else {
                 c.appendChild(el('h3', null, 'مثال'));
-                c.appendChild(el('div', 'ob-hint', 'ما فيه بث محسوب لحسابك للحين — الصورة الحين بأسماء وأرقام مثال. فعّل «الحساب التلقائي» تحت وابدأ بثك.'));
+                c.appendChild(el('div', 'ob-hint', 'ما فيه بث محسوب لحسابك للحين — الصورة الحين بأسماء وأرقام مثال.' + (watch && watch.allowed === false ? '' : ' فعّل «الحساب التلقائي» تحت وابدأ بثك.')));
             }
             c.appendChild(btn('↻ حدّث الأرقام', 'ob-btn ghost', function () { Promise.all([fetchData(), fetchWatch()]).then(function () { paintSide(); prepare().then(redraw); deps.toast('تحدّثت ✓'); }); }));
             return c;
@@ -1139,6 +1139,7 @@
             var c = el('div', 'ob-card');
             c.appendChild(el('h3', null, 'الحساب التلقائي'));
             if (!watch) { c.appendChild(el('div', 'ob-hint', 'ما قدرنا نجيب الحالة — حدّث الصفحة.')); return c; }
+            if (watch.allowed === false) { c.appendChild(el('div', 'ob-hint', 'حسابك حساب تجربة: تقدر تستخدم الأدوات وتصمم وتجرب، بس الاتصال بالبث والحساب التلقائي مقفلين.')); return c; }
             if (!watch.linked) { c.appendChild(el('div', 'ob-hint', 'اربط حساب تيك توك وثّقه من البروفايل أول، وبعدها فعّل الحساب التلقائي.')); return c; }
             c.appendChild(row('احسب إحصائيات بثي لحالها', toggle(watch.on, function (v) {
                 deps.api('POST', '/api/stream/stats-watch', { on: v }).then(function (d) {

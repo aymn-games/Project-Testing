@@ -947,6 +947,10 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             <span style="font-size:13.5px">صلاحية إدارة أسئلة خلية الحروف</span>
             <button onClick="{{ du.toggleLetters }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tL.bg }}"><span style="position:absolute;top:3px;right:{{ du.tL.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
           </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">تجربة Veyro</span><span style="font-size:12px;color:#5b6274;text-wrap:pretty">يفتح aymngames.online/veyro ويجرب الأدوات — بدون الاتصال بالبث</span></div>
+            <button onClick="{{ du.toggleVeyro }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tV.bg }}"><span style="position:absolute;top:3px;right:{{ du.tV.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+          </div>
         </div>
 
         <sc-if value="{{ du.streamer }}">
@@ -1112,6 +1116,7 @@ class Component extends DCLogic {
     if(u.permissions&&u.permissions.can_run_games&&u.role!=='admin') perms.push('ستريمر');
     if(u.permissions&&u.permissions.can_manage_letters_cell) perms.push('أسئلة خلية الحروف');
     if(u.permissions&&u.permissions.stream_stats_watch) perms.push('مراقبة إحصائيات البث');
+    if(u.permissions&&u.permissions.veyro_tester) perms.push('تجربة Veyro');
     const pts=u.points?u.points.totalPoints:0, lvl=u.points&&u.points.currentLevel?(u.points.currentLevel.displayNameAr||u.points.currentLevel.slug):null;
     const st=u.stats||{};
     return { ...u, name:u.username, publicId:u.custom_id||'—', requested:!!u.is_streamer, streams:st.total_broadcasts||0,
@@ -1233,6 +1238,8 @@ class Component extends DCLogic {
           this.ask('تغيير الإيميل؟',`إيميل ${dRaw.username} بيتغيّر من ${dRaw.email} إلى ${v}، وينحفظ غير مؤكد.`,'تغيير الإيميل',()=>
             this.userAction('email',()=>A.adminSetEmail(dRaw.id,v),'تم تغيير الإيميل.',r=>r.error==='email_taken'?'هذا الإيميل مستخدم بحساب ثاني.':r.error==='invalid_email'?'الإيميل غير صحيح.':'تعذّر الحفظ: '+(r.error||'unknown'))); },
         toggleStreamer:()=>setPerm('can_run_games'), toggleLetters:()=>setPerm('can_manage_letters_cell'),
+        // «تجربة Veyro»: يفتح aymngames.online/veyro ويجرب الأدوات بدون الاتصال بالبث
+        tV:this.tog(perm('veyro_tester')||dRaw.role==='admin'), toggleVeyro:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح Veyro دائماً','err'); setPerm('veyro_tester'); },
         savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
           this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },
         viewProfile:()=>window.open('profile.html?id='+encodeURIComponent(dRaw.custom_id||''),'_blank'),
