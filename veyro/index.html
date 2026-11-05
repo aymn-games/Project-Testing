@@ -2,6 +2,11 @@
 <html lang="ar" dir="rtl" data-agp-studio data-agp-screens>
 <head>
 <meta charset="utf-8">
+<script>
+/* الرابط بدون / بالآخر (aymngames.online/veyro) يخلي ملفات الصفحة تنطلب من المجلد الغلط
+   (صفحة فاضية وشعار مكسور) — نحوّله لـ/veyro/ قبل ما يحمّل أي شي */
+(function () { var p = location.pathname; if (!/\/$/.test(p) && !/\.html?$/i.test(p)) location.replace(p + '/' + location.search + location.hash); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Veyro — شاشات البث</title>
