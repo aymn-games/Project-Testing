@@ -403,8 +403,10 @@ function createTikTokConnector() {
 
             // وضع الإحصائيات فقط (stats/stream-stats-watcher.js): بدون إطارات
             // ودخوليات وبطاقات — ما فيه لعبة تعرضها، فنوفّر استعلامات القاعدة.
+            // النص يُمرَّر (بدون استعلامات) لأوامر «التحكم بالشات» بمكتبة الألعاب
+            // (js/agp-remote-control.js) — ws-server يرسله بس لو الصفحة طلبته (payload.chat).
             if (_statsOnly) {
-                _callbacks.onComment({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data) });
                 return;
             }
 
