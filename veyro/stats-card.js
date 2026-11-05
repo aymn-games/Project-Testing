@@ -19,19 +19,20 @@
     var W = 1080, H = 1920;
     // منطقة الأمان: فوق 220 (اسم الحساب وشريط الستوري)، تحت 320 (الكومنت والوصف)، يمين ويسار 90 (أزرار تيك توك)
     var SAFE = { l: 90, r: 990, t: 220, b: 1600 };
-    var PREFS_KEY = 'veyro:stats-card';
+    var PREFS_KEY = 'veyro:stats-card:v2';
     var BG_KEY = 'veyro:stats-card-bg';
-    var SITE = 'aymngames.online';
+    var SITE_NAME = 'Veyro';
 
     var SECTIONS = [
-        { key: 'likers', title: 'المكبّسين', icon: '❤️', unit: 'تكبيسة', field: 'count', def: true, n: 5 },
-        { key: 'gifters', title: 'الداعمين', icon: '🎁', unit: 'coin', field: 'diamonds', def: true, n: 5 },
+        { key: 'likers', title: 'المكبّسين', icon: '❤️', unit: 'تكبيسة', field: 'count', def: true, n: 3 },
+        { key: 'gifters', title: 'الداعمين', icon: '🎁', unit: 'coin', field: 'diamonds', def: true, n: 3 },
         { key: 'sharers', title: 'المشيرين', icon: '🔁', unit: 'شير', field: 'count', def: true, n: 3 },
         { key: 'viewers', title: 'توب المشاهدات', icon: '👁️', unit: 'time', field: 'watchMs', def: false, n: 3 },
         { key: 'commenters', title: 'المتفاعلين', icon: '💬', unit: 'تعليق', field: 'count', def: false, n: 3 },
         { key: 'donations', title: 'داعمين الدونيشن', icon: '💵', unit: 'money', field: 'amount', def: false, n: 3, soon: true }
     ];
     var TEMPLATES = [
+        { key: 'classic', label: 'الأصلي' },
         { key: 'cards', label: 'بطاقات' },
         { key: 'podium', label: 'منصة التتويج' },
         { key: 'grid', label: 'عمودين' },
@@ -42,10 +43,10 @@
         { key: 'neon', label: 'نيون' }, { key: 'emerald', label: 'زمرّدي' }, { key: 'sunset', label: 'غروب' }, { key: 'mono', label: 'داكن' }
     ];
     var DEFAULTS = {
-        template: 'cards', bg: 'veyro', dim: 0.35, title: 'شكراً لكل اللي كانوا معي اليوم 💜', showStreamer: true, showTotals: true,
+        template: 'classic', bg: 's:galaxy', dim: 0.35, title: 'أنتم أجمل ما في البث، شكراً لكم', showStreamer: true, showTotals: true,
         sections: SECTIONS.map(function (s) { return { key: s.key, on: s.def, n: s.n }; }),
-        fonts: { title: 'lalezar', name: 'notokufi', num: 'readex' },
-        colors: { title: '#ffffff', name: '#ffffff', num: '#ffd54a', ring: '#cfc3dc', accent: '#a99bb8' }
+        fonts: { title: 'plex', name: 'plex', num: 'plex' },
+        colors: { title: '#ffffff', name: '#ffffff', num: '#c4b5fd', ring: '#c4b5fd', accent: '#c4b5fd' }
     };
     var COLOR_PRESETS = ['#ffffff', '#ffd54a', '#cfc3dc', '#a99bb8', '#ff5fa8', '#4dd8ff', '#7cff6b', '#ff8a3d', '#f5c46b', '#14121a'];
 
@@ -78,7 +79,8 @@
                 }
             }
         } catch (e) { /* الافتراضي */ }
-        if (p.bg === 'mine' && !loadBgData()) p.bg = 'veyro';
+        if (p.bg === 'mine' && !loadBgData()) p.bg = DEFAULTS.bg;
+        if (/^s:/.test(p.bg) && !sharedBg(p.bg)) p.bg = 'veyro';
         return p;
     }
     function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ } }
@@ -121,8 +123,27 @@
         ctx.globalAlpha = 1;
     }
 
+    /** خلفيات صورة الإحصائيات الأصلية (js/agp-stream-stats.js) بمفتاح 's:<key>'. */
+    function sharedBgs() {
+        var sh = window.AGPStreamStats && window.AGPStreamStats.shared;
+        return sh && Array.isArray(sh.BACKGROUNDS) ? sh.BACKGROUNDS : [];
+    }
+    function sharedBg(k) {
+        if (!/^s:/.test(k || '')) return null;
+        return sharedBgs().filter(function (b) { return 's:' + b.key === k; })[0] || null;
+    }
+
     function drawBg(ctx, p, mine) {
         var k = p.bg;
+        var sb = sharedBg(k);
+        if (sb) {
+            sb.paint(ctx, W, H);
+            // نفس تظليل الصورة الأصلية عشان النص يبان
+            var sh = ctx.createLinearGradient(0, 0, 0, H);
+            sh.addColorStop(0, 'rgba(0,0,0,.30)'); sh.addColorStop(0.35, 'rgba(0,0,0,.42)'); sh.addColorStop(1, 'rgba(0,0,0,.62)');
+            ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
+            return;
+        }
         if (k === 'mine' && mine) {
             var s = Math.max(W / mine.width, H / mine.height), dw = mine.width * s, dh = mine.height * s;
             ctx.drawImage(mine, (W - dw) / 2, (H - dh) / 2, dw, dh);
@@ -360,6 +381,174 @@
         }
     };
 
+    /**
+     * التذييل (داخل منطقة الأمان من تحت): اسم الموقع، وتحته «تحت مظلة منصة ألعاب أيمن» — بدون رابط.
+     * يرجّع أعلى نقطة فيه (نهاية مساحة الأقسام).
+     */
+    function drawFooter(ctx, p, F) {
+        var cx = W / 2, fy = SAFE.b;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        ctx.direction = 'rtl';
+        ctx.font = '500 23px ' + F.name; ctx.fillStyle = hexA(p.colors.name, 0.6);
+        ctx.fillText('تحت مظلة منصة ألعاب أيمن', cx, fy - 6);
+        ctx.direction = 'ltr';
+        ctx.font = '800 38px ' + F.num; ctx.fillStyle = p.colors.accent;
+        ctx.fillText(SITE_NAME, cx, fy - 46);
+        ctx.direction = 'rtl';
+        // نجمتين صغار على جنب الاسم
+        var tw = ctx.measureText(SITE_NAME).width;
+        sparkle(ctx, cx + tw / 2 + 22, fy - 58, 8, p.colors.accent);
+        sparkle(ctx, cx - tw / 2 - 22, fy - 58, 8, p.colors.accent);
+        return fy - 100;
+    }
+
+    /** نجمة رباعية (✦) مرسومة — نفس شكلها بكل الأجهزة. */
+    function sparkle(ctx, x, y, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.quadraticCurveTo(x, y, x, y + r);
+        ctx.quadraticCurveTo(x, y, x - r, y);
+        ctx.quadraticCurveTo(x, y, x, y - r);
+        ctx.fill();
+    }
+
+    /*
+     * «الأصلي»: نفس تنسيق صورة إحصائيات البث بمكتبة الألعاب (js/agp-stream-stats.js) —
+     * عنوان صغير، صورة كبيرة، الاسم واليوزر، الشكر ومدة البث، وكل قسم عنوانه بالنص
+     * بين نجمتين وخطوط تتلاشى، وصفوف بخط فاصل. هنا كله داخل منطقة الأمان.
+     */
+    var CL_HEADS = {
+        full: { caption: 26, avY: 150, avR: 104, name: 328, nameSize: 58, handle: 370, thanks: 432, thanksSize: 44, duration: 476, top: 510 },
+        compact: { caption: 26, avY: 112, avR: 70, name: 232, nameSize: 46, handle: 270, thanks: 322, thanksSize: 38, duration: 362, top: 392 }
+    };
+    var CL_SIDE = SAFE.l;
+    function clLayout(items, s, cols) {
+        var rowH = 70 * s, titleH = 122 * s, secGap = 46 * s, emptyH = 50 * s, colGap = 44 * s;
+        var full = SAFE.r - SAFE.l, y = 0, secs = [];
+        items.forEach(function (it) {
+            var rows = it.rows;
+            var c2 = cols === 2 && rows.length >= 5 ? 2 : 1;
+            var listW = c2 === 1 ? Math.min(820, full) : full;
+            var colW = (listW - (c2 - 1) * colGap) / c2;
+            var perCol = Math.ceil(rows.length / c2);
+            var top = y;
+            y += titleH;
+            var list = rows.map(function (r, i) {
+                var c = Math.floor(i / perCol), ri = i % perCol;
+                return { r: r, rank: i + 1, colW: colW, xRight: W / 2 + listW / 2 - c * (colW + colGap), y: y + ri * rowH, last: ri === perCol - 1 || i === rows.length - 1 };
+            });
+            y += rows.length ? perCol * rowH : emptyH;
+            secs.push({ it: it, top: top, rows: list });
+            y += secGap;
+        });
+        return { height: Math.max(0, y - secGap), secs: secs, titleH: titleH, rowH: rowH };
+    }
+
+    function renderClassic(ctx, p, data, A, extra, F) {
+        var accent = p.colors.accent, cx = W / 2;
+        var bottom = drawFooter(ctx, p, F) - 16;
+        var items = data.items;
+        function fit(top, cols) {
+            var avail = bottom - top, sc = 1.3, L = clLayout(items, sc, cols);
+            while (L.height > avail && sc > 0.35) { sc -= 0.05; L = clLayout(items, sc, cols); }
+            // لو ما دخل بعد: المقياس بالضبط عشان ما يطلع شي من منطقة الأمان
+            if (L.height > avail) { sc = sc * avail / L.height; L = clLayout(items, sc, cols); }
+            return { s: sc, L: L, avail: avail };
+        }
+        function best(top) {
+            var one = fit(top, 1);
+            if (one.s >= 0.85 && one.L.height <= one.avail) return one;
+            var two = fit(top, 2);
+            return two.s > one.s + 0.05 ? two : one;
+        }
+        var head = p.showStreamer ? CL_HEADS.full : null;
+        var top = SAFE.t + (head ? head.top : 120);
+        var pick = best(top);
+        if (head && pick.s < 0.7) {
+            var c = best(SAFE.t + CL_HEADS.compact.top);
+            if (c.s > pick.s) { head = CL_HEADS.compact; pick = c; top = SAFE.t + head.top; }
+        }
+        var s = pick.s, L = pick.L;
+        var y0 = top + Math.max(0, (pick.avail - L.height) / 2);
+        var T = SAFE.t;
+
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.direction = 'rtl';
+        ctx.fillStyle = accent;
+        ctx.font = '700 26px ' + F.name;
+        ctx.fillText(data.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', cx, T + 26);
+        var thanks = String(p.title || '').trim();
+        if (head) {
+            var st = data.streamer || {};
+            avatar(ctx, extra.streamerImg, st.name, cx, T + head.avY, head.avR, p.colors.ring, 7);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = p.colors.name;
+            ctx.font = '700 ' + head.nameSize + 'px ' + F.name;
+            ctx.fillText(fitText(ctx, st.name || '', SAFE.r - SAFE.l), cx, T + head.name);
+            if (data.username) {
+                ctx.direction = 'ltr'; ctx.fillStyle = accent; ctx.font = '600 28px ' + F.num;
+                ctx.fillText('@' + data.username, cx, T + head.handle);
+                ctx.direction = 'rtl';
+            }
+            if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 ' + head.thanksSize + 'px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + head.thanks); }
+            if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + head.duration); }
+        } else {
+            if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 44px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + 80); }
+            if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + 120); }
+        }
+
+        L.secs.forEach(function (b) {
+            var it = b.it, ty = y0 + b.top + 44 * s;
+            ctx.font = '700 ' + (40 * s) + 'px ' + F.title;
+            var tw = ctx.measureText(it.sec.title).width;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.fillStyle = p.colors.title;
+            ctx.fillText(it.sec.title, cx, ty);
+            sparkle(ctx, cx + tw / 2 + 26 * s, ty, 11 * s, accent);
+            sparkle(ctx, cx - tw / 2 - 26 * s, ty, 11 * s, accent);
+            [[CL_SIDE, cx - tw / 2 - 50 * s, 0], [cx + tw / 2 + 50 * s, W - CL_SIDE, 1]].forEach(function (seg) {
+                var g = ctx.createLinearGradient(seg[0], 0, seg[1], 0);
+                g.addColorStop(seg[2] ? 0 : 1, accent); g.addColorStop(seg[2] ? 1 : 0, 'rgba(255,255,255,0)');
+                ctx.strokeStyle = g; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(seg[0], ty); ctx.lineTo(seg[1], ty); ctx.stroke();
+            });
+            if (p.showTotals && !it.sec.soon) {
+                ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 ' + (20 * s) + 'px ' + F.name;
+                ctx.fillText(sectionTotal(it.sec, it.data), cx, ty + 38 * s);
+            }
+            if (!b.rows.length) {
+                ctx.fillStyle = hexA(p.colors.name, 0.55); ctx.font = '500 ' + (22 * s) + 'px ' + F.name;
+                ctx.fillText(it.empty, cx, y0 + b.top + L.titleH + 20 * s);
+            }
+            b.rows.forEach(function (row) {
+                var xr = row.xRight, w = row.colW, ry = y0 + row.y, cy = ry + L.rowH / 2, top3 = row.rank <= 3;
+                if (!row.last) {
+                    var g2 = ctx.createLinearGradient(xr - w, 0, xr, 0);
+                    g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(0.5, 'rgba(255,255,255,0.14)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.strokeStyle = g2; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(xr - w, ry + L.rowH); ctx.lineTo(xr, ry + L.rowH); ctx.stroke();
+                }
+                ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.direction = 'rtl';
+                ctx.fillStyle = top3 ? accent : 'rgba(255,255,255,0.55)';
+                ctx.font = '700 ' + (28 * s) + 'px ' + F.num;
+                ctx.fillText(String(row.rank), xr - 20 * s, cy);
+                var av = 25 * s, ax = xr - 48 * s - av;
+                avatar(ctx, A[row.r._ai], row.r.name, ax, cy, av, top3 ? p.colors.ring : 'rgba(255,255,255,0.3)', 2.5 * s);
+                var vw = valueText(ctx, it.sec, row.r, xr - w, cy, Math.round(25 * s), p, F, extra.coin, 'left');
+                ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+                ctx.fillStyle = p.colors.name;
+                ctx.font = (top3 ? '700 ' : '600 ') + (29 * s) + 'px ' + F.name;
+                var nameRight = ax - av - 16 * s;
+                ctx.fillText(fitText(ctx, row.r.name, nameRight - (xr - w) - vw - 24 * s), nameRight, cy);
+            });
+        });
+        if (!items.length) {
+            ctx.textAlign = 'center'; ctx.font = '600 32px ' + F.name; ctx.fillStyle = hexA(p.colors.name, 0.6);
+            ctx.fillText('اختر قسم واحد على الأقل', cx, (top + bottom) / 2);
+        }
+    }
+
     /** يرسم الصورة كاملة. data = ملخص البث (أو مثال)، A = صور البروفايل محمّلة. */
     function render(canvas, p, data, A, extra) {
         var ctx = canvas.getContext('2d');
@@ -369,6 +558,7 @@
         var O = window.AGPStreamOverlay;
         function fam(k) { var f = O.fontOf(k); return O.fontStack(f); }
         var F = { title: fam(p.fonts.title), name: fam(p.fonts.name), num: fam(p.fonts.num) };
+        if (p.template === 'classic') { renderClassic(ctx, p, data, A, extra, F); return; }
         var cx = W / 2, y = SAFE.t;
 
         // صاحب البث + العنوان
@@ -395,16 +585,7 @@
             y += 50;
         }
 
-        // التذييل (داخل منطقة الأمان من تحت)
-        var fy = SAFE.b;
-        ctx.textAlign = 'center'; ctx.direction = 'ltr';
-        ctx.font = '800 34px ' + F.num; ctx.fillStyle = p.colors.accent;
-        ctx.fillText(SITE, cx, fy - 18);
-        ctx.direction = 'rtl';
-        ctx.font = '600 24px ' + F.name; ctx.fillStyle = hexA(p.colors.name, 0.7);
-        ctx.fillText('صُمّمت بـ Veyro — منصة من ألعاب أيمن', cx, fy - 62);
-        ctx.fillStyle = hexA(p.colors.accent, 0.4); ctx.fillRect(cx - 60, fy - 98, 120, 3);
-        var bottom = fy - 120;
+        var bottom = drawFooter(ctx, p, F) - 20;
 
         // الأقسام: نقيس، ونصغّر لو ما دخلت، ونوسّط بالمساحة
         var L = LAYOUT[p.template] || LAYOUT.cards;
@@ -457,6 +638,7 @@
         function list(field, base, step) { return SAMPLE_NAMES.map(function (n, i) { var r = { name: n, count: 0, diamonds: 0, watchMs: 0, amount: 0 }; r[field] = Math.round(base - i * step); return r; }); }
         return {
             sample: true,
+            username: 'your_name',
             streamer: { name: 'اسم حسابك', avatar: null },
             durationMs: 2.5 * 3600000,
             totals: { likes: 48210, diamonds: 12850, shares: 96, comments: 2210, peakViewers: 340 },
@@ -564,7 +746,7 @@
             });
             var t = src.totals || {};
             data = {
-                streamer: src.streamer, items: items,
+                streamer: src.streamer, items: items, username: src.username || '', live: Boolean(src.live), durationMs: src.durationMs,
                 summaryLine: p.showTotals ? ['مدة البث ' + fmtDur(src.durationMs), fmt(t.likes) + ' تكبيسة', fmt(t.diamonds) + ' عملة'].join('  ·  ') : ''
             };
             var fonts = ['title', 'name', 'num'].map(function (k) { var f = O.fontOf(p.fonts[k]); O.loadFont(f); return document.fonts ? document.fonts.load(f.b + ' 40px "' + f.family + '"').catch(function () {}) : null; });
@@ -707,10 +889,15 @@
             } else if (tab === 'look') {
                 b.appendChild(row('شكل القالب', pills(TEMPLATES.map(function (x) { return { label: x.label, value: x.key }; }), p.template, function (v) { p.template = v; changed(true); }), true));
                 var g = el('div', 'vs-bgs');
-                BGS.forEach(function (bg) {
+                sharedBgs().map(function (b) { return { key: 's:' + b.key, label: b.name, accent: b.accent }; }).concat(BGS).forEach(function (bg) {
                     var c = el('canvas'); c.width = 108; c.height = 192;
                     var x = c.getContext('2d'); x.scale(0.1, 0.1); drawBg(x, Object.assign({}, p, { bg: bg.key }), null);
-                    var bb = btn('', 'vs-bg' + (p.bg === bg.key ? ' on' : ''), function () { p.bg = bg.key; changed(true); });
+                    var bb = btn('', 'vs-bg' + (p.bg === bg.key ? ' on' : ''), function () {
+                        p.bg = bg.key;
+                        // خلفيات الصورة الأصلية لها لونها المميّز: الأرقام والحدود والنجوم تاخذه
+                        if (bg.accent) { p.colors.accent = bg.accent; p.colors.num = bg.accent; p.colors.ring = bg.accent; }
+                        changed(true);
+                    });
                     bb.appendChild(c); bb.appendChild(el('span', null, bg.label)); g.appendChild(bb);
                 });
                 var up2 = el('label', 'vs-bg mine' + (p.bg === 'mine' ? ' on' : ''));
