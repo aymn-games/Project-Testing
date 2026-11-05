@@ -19,7 +19,7 @@
     var W = 1080, H = 1920;
     // منطقة الأمان: فوق 220 (اسم الحساب وشريط الستوري)، تحت 320 (الكومنت والوصف)، يمين ويسار 90 (أزرار تيك توك)
     var SAFE = { l: 90, r: 990, t: 220, b: 1600 };
-    var PREFS_KEY = 'veyro:stats-card:v3';
+    var PREFS_KEY = 'veyro:stats-card:v4';
     var BG_KEY = 'veyro:stats-card-bg';
     var SITE_NAME = 'Veyro';
 
@@ -44,8 +44,8 @@
     ];
     var DEFAULTS = {
         template: 'classic', bg: 'mesh', dim: 0.35, title: 'أنتم أجمل ما في البث، شكراً لكم', showStreamer: true, showTotals: true,
-        caption: 'إحصائيات البث', showHandle: true, frame: 'gradient',
-        views: { on: true, metric: 'total', style: 'pill', pos: 'tl', x: 0, y: 0, label: 'مشاهدة' },
+        caption: 'إحصائيات البث', showHandle: true, shape: 'circle', border: 'line',
+        views: { on: true, metric: 'total', label: 'مشاهدة' },
         sections: SECTIONS.map(function (s) { return { key: s.key, on: s.def, n: s.n }; }),
         fonts: { title: 'plex', name: 'plex', num: 'plex' },
         colors: { title: '#ffffff', name: '#ffffff', num: '#d9b8ff', ring: '#d9b8ff', accent: '#d9b8ff' }
@@ -68,8 +68,8 @@
         try {
             var s = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
             if (s && typeof s === 'object') {
-                ['template', 'bg', 'dim', 'title', 'showStreamer', 'showTotals', 'caption', 'showHandle', 'frame'].forEach(function (k) { if (s[k] != null) p[k] = s[k]; });
-                if (s.views && typeof s.views === 'object') Object.assign(p.views, s.views);
+                ['template', 'bg', 'dim', 'title', 'showStreamer', 'showTotals', 'caption', 'showHandle', 'shape', 'border'].forEach(function (k) { if (s[k] != null) p[k] = s[k]; });
+                if (s.views && typeof s.views === 'object') ['on', 'metric', 'label'].forEach(function (k) { if (s.views[k] != null) p.views[k] = s.views[k]; });
                 if (s.fonts) Object.assign(p.fonts, s.fonts);
                 if (s.colors) Object.assign(p.colors, s.colors);
                 if (Array.isArray(s.sections)) {
@@ -84,7 +84,7 @@
         } catch (e) { /* الافتراضي */ }
         if (p.bg === 'mine' && !loadBgData()) p.bg = DEFAULTS.bg;
         if (/^s:/.test(p.bg) && !sharedBg(p.bg)) p.bg = 'veyro';
-        if (!FRAMES.some(function (f) { return f.key === p.frame; })) p.frame = 'ring';
+        if (!SHAPES.some(function (f) { return f.key === p.shape; })) p.shape = 'circle';
         return p;
     }
     function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ } }
@@ -644,10 +644,7 @@
         }
         // بدون اليوزر: الشكر والمدة يطلعون فوق شوي
         var hs = p.showHandle === false ? 40 : 0;
-        // شارة المشاهدات: «تحت الاسم» تاخذ مكان فوق الأقسام، و«تحت» تاخذ مكان من تحت
-        var vw = placeViews(ctx, p, data, F, extra, 0, bottom);
-        var vTop = vw && p.views.pos === 'head' ? vw.sz.h + 18 : 0;
-        if (vw && (p.views.pos === 'bl' || p.views.pos === 'br')) bottom -= vw.sz.h + 16;
+        var vTop = 0;
         var head = p.showStreamer ? CL_HEADS.full : null;
         var top = SAFE.t + (head ? head.top - hs : 150) + vTop;
         var pick = best(top);
@@ -668,7 +665,8 @@
         var yHead;
         if (head) {
             var st = data.streamer || {};
-            streamerAvatar(ctx, extra.streamerImg, st.name, cx, T + head.avY, head.avR, p, extra.arts);
+            streamerAvatar(ctx, extra.streamerImg, st.name, cx, T + head.avY, head.avR * 0.92, p);
+            drawViewsSide(ctx, p, data, F, T + head.avY, cx - head.avR * 1.15);
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = p.colors.name;
             ctx.font = '700 ' + head.nameSize + 'px ' + F.name;
@@ -685,10 +683,6 @@
             if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 44px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + 80); }
             if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + 120); }
             yHead = T + 140;
-        }
-        if (vw) {
-            if (p.views.pos === 'head') { vw.y = yHead + vw.sz.h / 2; extra.viewsBox.y = vw.y; }
-            drawViews(ctx, vw.info, vw.x, vw.y, vw.sz, p, F);
         }
 
         L.secs.forEach(function (b) {
@@ -742,172 +736,125 @@
         }
     }
 
-    /* ---- إطار صورة صاحب البث ---- */
+    /* ---- شكل صورة صاحب البث (قالب الصورة نفسها، مو إطار حولها) ---- */
 
-    var FRAMES = [
-        // fit = كم تتصغّر الصورة عشان الإطار كله (الحلقات والأجنحة) ياخذ نفس المساحة
-        { key: 'ring', label: 'حلقة', fit: 1 }, { key: 'double', label: 'مزدوج', fit: 0.86 }, { key: 'glow', label: 'توهّج', fit: 0.94 },
-        { key: 'gradient', label: 'متدرّج', fit: 0.92 }, { key: 'orbit', label: 'مدار', fit: 0.82 }, { key: 'hex', label: 'سداسي', fit: 0.9 },
-        { key: 'angel', label: 'جناح الملاك', fit: 0.7, art: { file: 'angel.webp', scale: 149, left: -25.25, top: -24.5 } },
-        { key: 'pegasus', label: 'الحصان المجنح', fit: 0.6, art: { file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2 } }
+    var SHAPES = [
+        { key: 'circle', label: 'دائرية' }, { key: 'rounded', label: 'مربعة ناعمة' }, { key: 'squircle', label: 'أيقونة' },
+        { key: 'arch', label: 'قوس' }, { key: 'hex', label: 'سداسية' }, { key: 'diamond', label: 'معيّن' },
+        { key: 'blob', label: 'موجة' }, { key: 'leaf', label: 'ورقة' }
     ];
-    function frameDef(k) { return FRAMES.filter(function (f) { return f.key === k; })[0] || FRAMES[0]; }
-    var FRAMES_BASE = '../assets/overlay-frames/';
+    var BORDERS = [{ label: 'بدون', value: 'none' }, { label: 'خط', value: 'line' }, { label: 'توهّج', value: 'glow' }, { label: 'متدرّج', value: 'gradient' }];
+    function shapeDef(k) { return SHAPES.filter(function (f) { return f.key === k; })[0] || SHAPES[0]; }
 
-    function hexPath(ctx, cx, cy, r) {
+    /** مسار الشكل حول (cx, cy) بنص قطر r. */
+    function shapePath(ctx, key, cx, cy, r) {
         ctx.beginPath();
-        for (var i = 0; i < 6; i++) { var a = Math.PI / 6 + i * Math.PI / 3; var x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
-        ctx.closePath();
+        if (key === 'rounded') { rr(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.32); return; }
+        if (key === 'squircle') { rr(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.62); return; }
+        if (key === 'arch') {
+            var w = r * 0.86, b = r * 1.08;
+            ctx.moveTo(cx - w, cy + b - 22); ctx.lineTo(cx - w, cy - r + w);
+            ctx.arc(cx, cy - r + w, w, Math.PI, 0);
+            ctx.lineTo(cx + w, cy + b - 22); ctx.arcTo(cx + w, cy + b, cx + w - 22, cy + b, 22);
+            ctx.lineTo(cx - w + 22, cy + b); ctx.arcTo(cx - w, cy + b, cx - w, cy + b - 22, 22); ctx.closePath(); return;
+        }
+        if (key === 'hex') {
+            for (var i = 0; i < 6; i++) { var a = Math.PI / 6 + i * Math.PI / 3, x = cx + Math.cos(a) * r * 1.08, y = cy + Math.sin(a) * r * 1.08; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+            ctx.closePath(); return;
+        }
+        if (key === 'diamond') {
+            var d = r * 1.18, k = r * 0.22;
+            ctx.moveTo(cx, cy - d + k); ctx.quadraticCurveTo(cx, cy - d, cx + k, cy - d + k);
+            ctx.lineTo(cx + d - k, cy - k); ctx.quadraticCurveTo(cx + d, cy, cx + d - k, cy + k);
+            ctx.lineTo(cx + k, cy + d - k); ctx.quadraticCurveTo(cx, cy + d, cx - k, cy + d - k);
+            ctx.lineTo(cx - d + k, cy + k); ctx.quadraticCurveTo(cx - d, cy, cx - d + k, cy - k);
+            ctx.lineTo(cx - k, cy - d + k); ctx.quadraticCurveTo(cx, cy - d, cx, cy - d + k); ctx.closePath(); return;
+        }
+        if (key === 'blob') {
+            var pts = [1.02, 0.9, 1.06, 0.92, 1.04, 0.9, 1.05, 0.93], n = pts.length;
+            var P = pts.map(function (m, i) { var a = i / n * Math.PI * 2 - Math.PI / 2; return [cx + Math.cos(a) * r * m, cy + Math.sin(a) * r * m]; });
+            ctx.moveTo((P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2);
+            for (var j = 1; j <= n; j++) { var c = P[j % n], nx = P[(j + 1) % n]; ctx.quadraticCurveTo(c[0], c[1], (c[0] + nx[0]) / 2, (c[1] + nx[1]) / 2); }
+            ctx.closePath(); return;
+        }
+        if (key === 'leaf') {
+            var q = r * 1.02, t = r * 0.95;
+            ctx.moveTo(cx - q, cy - q + t); ctx.arcTo(cx - q, cy - q, cx - q + t, cy - q, t);
+            ctx.lineTo(cx + q, cy - q); ctx.lineTo(cx + q, cy + q - t);
+            ctx.arcTo(cx + q, cy + q, cx + q - t, cy + q, t); ctx.lineTo(cx - q, cy + q); ctx.closePath(); return;
+        }
+        ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.closePath();
     }
 
-    /** صورة صاحب البث بالإطار المختار. arts = صور إطارات «جناح الملاك» و«الحصان». */
-    function streamerAvatar(ctx, img, name, cx, cy, r, p, arts) {
-        var f = frameDef(p.frame), ring = p.colors.ring, acc = p.colors.accent;
-        r = r * (f.fit || 1);
-        if (f.art) {
-            avatar(ctx, img, name, cx, cy, r, ring, 0);
-            var art = arts && arts[f.key];
-            if (art) {
-                var D = r * 2.04, x0 = cx - D / 2, y0 = cy - D / 2, sz = D * f.art.scale / 100;
-                ctx.save(); ctx.shadowColor = hexA(ring, 0.6); ctx.shadowBlur = 30;
-                ctx.drawImage(art, x0 + D * f.art.left / 100, y0 + D * f.art.top / 100, sz, sz);
-                ctx.restore();
-            } else avatar(ctx, null, '', cx, cy, 0, ring, 0);
-            return;
-        }
-        if (f.key === 'hex') {
-            ctx.save(); hexPath(ctx, cx, cy, r * 1.08); ctx.clip();
-            ctx.fillStyle = '#2a2338'; ctx.fillRect(cx - r * 1.1, cy - r * 1.1, r * 2.2, r * 2.2);
-            if (img) ctx.drawImage(img, cx - r * 1.1, cy - r * 1.1, r * 2.2, r * 2.2);
-            else { ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 0.9) + 'px "Noto Kufi Arabic",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy); }
-            ctx.restore();
-            var hg = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
-            hg.addColorStop(0, ring); hg.addColorStop(0.5, '#ffffff'); hg.addColorStop(1, acc);
-            hexPath(ctx, cx, cy, r * 1.08); ctx.strokeStyle = hg; ctx.lineWidth = 7; ctx.stroke();
-            hexPath(ctx, cx, cy, r * 1.22); ctx.strokeStyle = hexA(ring, 0.35); ctx.lineWidth = 2; ctx.stroke();
-            return;
-        }
-        if (f.key === 'glow') {
-            ctx.save(); ctx.shadowColor = ring; ctx.shadowBlur = 50;
-            ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 6; ctx.stroke();
-            ctx.stroke(); ctx.restore();
-            avatar(ctx, img, name, cx, cy, r, '#ffffff', 2);
-            return;
-        }
-        avatar(ctx, img, name, cx, cy, r, ring, 0);
-        if (f.key === 'double') {
-            ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 6; ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx, cy, r + 20, 0, Math.PI * 2); ctx.strokeStyle = hexA(ring, 0.45); ctx.lineWidth = 2.5; ctx.stroke();
-            [0.25, 0.75, 1.25, 1.75].forEach(function (k) { var a = k * Math.PI; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * (r + 20), cy + Math.sin(a) * (r + 20), 5, 0, Math.PI * 2); ctx.fillStyle = ring; ctx.fill(); });
-        } else if (f.key === 'gradient') {
-            var g = ctx.createConicGradient ? ctx.createConicGradient(-Math.PI / 2, cx, cy) : null;
-            if (g) { g.addColorStop(0, ring); g.addColorStop(0.33, '#ffffff'); g.addColorStop(0.66, acc); g.addColorStop(1, ring); }
-            ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.strokeStyle = g || ring; ctx.lineWidth = 11; ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx, cy, r + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.5; ctx.stroke();
-        } else if (f.key === 'orbit') {
-            ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 4; ctx.stroke();
-            ctx.save(); ctx.setLineDash([3, 11]); ctx.lineCap = 'round';
-            ctx.beginPath(); ctx.arc(cx, cy, r + 24, 0, Math.PI * 2); ctx.strokeStyle = hexA(ring, 0.8); ctx.lineWidth = 3; ctx.stroke();
-            ctx.restore();
-            ctx.beginPath(); ctx.arc(cx, cy, r + 24, -2.6, -1.1); ctx.strokeStyle = acc; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
-            [[-1.1, 13], [2.2, 9], [0.6, 7]].forEach(function (sp) { sparkle(ctx, cx + Math.cos(sp[0]) * (r + 24), cy + Math.sin(sp[0]) * (r + 24), sp[1], '#ffffff'); });
+    /** صورة صاحب البث بالشكل المختار، والحد (بدون / خط / توهّج / متدرّج). */
+    function streamerAvatar(ctx, img, name, cx, cy, r, p) {
+        var key = shapeDef(p.shape).key, ring = p.colors.ring, acc = p.colors.accent, bd = p.border || 'none';
+        // ظل ناعم تحت الصورة (يفصلها عن الخلفية حتى بدون حد)
+        ctx.save(); shapePath(ctx, key, cx, cy, r);
+        ctx.shadowColor = bd === 'glow' ? ring : 'rgba(0,0,0,.55)'; ctx.shadowBlur = bd === 'glow' ? 60 : 40; ctx.shadowOffsetY = bd === 'glow' ? 0 : 14;
+        ctx.fillStyle = '#2a2338'; ctx.fill(); ctx.restore();
+        ctx.save(); shapePath(ctx, key, cx, cy, r); ctx.clip();
+        var s = r * 2.5;
+        if (img) {
+            var k = Math.max(s / img.width, s / img.height);
+            ctx.drawImage(img, cx - img.width * k / 2, cy - img.height * k / 2, img.width * k, img.height * k);
         } else {
-            ctx.beginPath(); ctx.arc(cx, cy, r + 3.5, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 7; ctx.stroke();
+            var g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, hexA(acc, 0.45)); g.addColorStop(1, '#1c1828');
+            ctx.fillStyle = g; ctx.fillRect(cx - s / 2, cy - s / 2, s, s);
+            ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 0.9) + 'px "Noto Kufi Arabic",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + r * 0.05);
         }
+        // لمعة خفيفة فوق
+        var sh = ctx.createLinearGradient(0, cy - r * 1.2, 0, cy);
+        sh.addColorStop(0, 'rgba(255,255,255,.14)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sh; ctx.fillRect(cx - s / 2, cy - s / 2, s, s / 2);
+        ctx.restore();
+        if (bd === 'none') return;
+        shapePath(ctx, key, cx, cy, r);
+        if (bd === 'gradient') {
+            var gg = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+            gg.addColorStop(0, ring); gg.addColorStop(0.5, '#ffffff'); gg.addColorStop(1, acc);
+            ctx.strokeStyle = gg; ctx.lineWidth = 8;
+        } else { ctx.strokeStyle = bd === 'glow' ? hexA(ring, 0.9) : ring; ctx.lineWidth = bd === 'glow' ? 4 : 6; }
+        ctx.stroke();
     }
 
-    /* ---- عدد المشاهدات ---- */
+    /* ---- عدد المشاهدات: يسار الصورة، بدون صندوق ---- */
 
     var VIEW_METRICS = [{ label: 'إجمالي المشاهدات', value: 'total' }, { label: 'أعلى تواجد', value: 'peak' }, { label: 'عدد المشاهدين', value: 'unique' }];
-    var VIEW_STYLES = [{ label: 'كبسولة', value: 'pill' }, { label: 'بطاقة', value: 'card' }, { label: 'دائرة', value: 'ring' }, { label: 'شريط', value: 'ribbon' }, { label: 'بسيط', value: 'minimal' }];
-    var VIEW_POS = [{ label: 'يسار فوق', value: 'tl' }, { label: 'يمين فوق', value: 'tr' }, { label: 'تحت الاسم', value: 'head' }, { label: 'يسار تحت', value: 'bl' }, { label: 'يمين تحت', value: 'br' }];
 
     function eyeIcon(ctx, cx, cy, s, color) {
-        ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = s * 0.11;
+        ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = s * 0.1;
         ctx.beginPath(); ctx.moveTo(cx - s * 0.55, cy); ctx.quadraticCurveTo(cx, cy - s * 0.55, cx + s * 0.55, cy); ctx.quadraticCurveTo(cx, cy + s * 0.55, cx - s * 0.55, cy); ctx.closePath(); ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, s * 0.17, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 
-    /** يقيس شارة المشاهدات (بدون رسم). */
-    function viewsSize(ctx, v, F) {
-        var st = v.style;
-        if (st === 'card') return { w: 230, h: 150 };
-        if (st === 'ring') return { w: 190, h: 190 };
-        ctx.font = '800 40px ' + F.num; var nw = ctx.measureText(v.num).width;
-        ctx.font = '600 24px ' + F.name; var lw = v.label ? ctx.measureText(v.label).width : 0;
-        if (st === 'minimal') return { w: nw + lw + 80, h: 60 };
-        return { w: nw + lw + 110, h: 76 };
-    }
-
-    /** يرسم الشارة بمركز (x, y). */
-    function drawViews(ctx, v, x, y, sz, p, F) {
-        var acc = p.colors.accent, st = v.style, w = sz.w, h = sz.h, L = x - w / 2, Tp = y - h / 2;
-        ctx.save(); ctx.textBaseline = 'middle';
-        if (st === 'card') {
-            rr(ctx, L, Tp, w, h, 26);
-            var g = ctx.createLinearGradient(0, Tp, 0, Tp + h); g.addColorStop(0, 'rgba(255,255,255,.12)'); g.addColorStop(1, 'rgba(255,255,255,.04)');
-            ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = hexA(acc, 0.5); ctx.lineWidth = 2; ctx.stroke();
-            eyeIcon(ctx, x, Tp + 30, 34, acc);
-            ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.fillStyle = p.colors.num; ctx.font = '800 46px ' + F.num;
-            ctx.fillText(fitText(ctx, v.num, w - 20), x, Tp + 80);
-            ctx.direction = 'rtl'; ctx.fillStyle = hexA(p.colors.name, 0.75); ctx.font = '600 22px ' + F.name;
-            ctx.fillText(fitText(ctx, v.label, w - 20), x, Tp + 122);
-        } else if (st === 'ring') {
-            var R = w / 2 - 6;
-            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fillStyle = 'rgba(10,9,16,.55)'; ctx.fill();
-            var cg = ctx.createConicGradient ? ctx.createConicGradient(-Math.PI / 2, x, y) : null;
-            if (cg) { cg.addColorStop(0, acc); cg.addColorStop(0.5, '#ffffff'); cg.addColorStop(1, acc); }
-            ctx.strokeStyle = cg || acc; ctx.lineWidth = 7; ctx.stroke();
-            eyeIcon(ctx, x, y - 48, 32, acc);
-            ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.fillStyle = p.colors.num; ctx.font = '800 42px ' + F.num;
-            ctx.fillText(fitText(ctx, v.num, R * 1.7), x, y + 4);
-            ctx.direction = 'rtl'; ctx.fillStyle = hexA(p.colors.name, 0.75); ctx.font = '600 20px ' + F.name;
-            ctx.fillText(fitText(ctx, v.label, R * 1.5), x, y + 46);
-        } else {
-            if (st === 'pill') {
-                rr(ctx, L, Tp, w, h, h / 2); ctx.fillStyle = 'rgba(10,9,16,.5)'; ctx.fill();
-                ctx.strokeStyle = hexA(acc, 0.6); ctx.lineWidth = 2; ctx.stroke();
-            } else if (st === 'ribbon') {
-                ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L + w, Tp); ctx.lineTo(L + w - 22, y); ctx.lineTo(L + w, Tp + h); ctx.lineTo(L, Tp + h); ctx.lineTo(L + 22, y); ctx.closePath();
-                var rg = ctx.createLinearGradient(L, 0, L + w, 0); rg.addColorStop(0, acc); rg.addColorStop(1, hexA(acc, 0.75));
-                ctx.fillStyle = rg; ctx.fill();
-            }
-            var dark = st === 'ribbon';
-            // من اليمين: العين، الرقم، الكلمة
-            var xr = L + w - (st === 'minimal' ? 10 : 36);
-            eyeIcon(ctx, xr - 18, y, 36, dark ? '#14121a' : acc);
-            ctx.direction = 'ltr'; ctx.textAlign = 'right'; ctx.font = '800 40px ' + F.num; ctx.fillStyle = dark ? '#14121a' : p.colors.num;
-            ctx.fillText(v.num, xr - 50, y + 2);
-            var nw = ctx.measureText(v.num).width;
-            ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.font = '600 24px ' + F.name; ctx.fillStyle = dark ? 'rgba(20,18,26,.8)' : hexA(p.colors.name, 0.75);
-            if (v.label) ctx.fillText(v.label, xr - 50 - nw - 14, y + 3);
-        }
-        ctx.restore();
-    }
-
     /**
-     * مكان الشارة: زوايا منطقة الأمان، تحت الاسم (head = yHead)، أو مكان يحدده بالسحب (custom).
-     * يرجّع المركز ويحفظ الصندوق بـextra.viewsBox (للسحب بالمعاينة).
+     * يسار الشاشة بمستوى صورة صاحب البث: العين، الرقم كبير، وتحته النص — بدون صندوق.
+     * x بمنتصف المسافة بين حافة الأمان والصورة.
      */
-    function placeViews(ctx, p, data, F, extra, yHead, bottom) {
+    function drawViewsSide(ctx, p, data, F, cy, avatarLeft) {
         var v = p.views;
-        if (!v || !v.on || !data.views) { extra.viewsBox = null; return null; }
+        if (!v || !v.on || !data.views) return;
         var val = data.views[v.metric] != null ? data.views[v.metric] : data.views.total;
-        var info = { num: fmt(val), label: String(v.label == null ? 'مشاهدة' : v.label).slice(0, 30), style: v.style };
-        var sz = viewsSize(ctx, info, F);
-        var x, y, pad = 8;
-        if (v.pos === 'tr') { x = SAFE.r - sz.w / 2 - pad; y = SAFE.t + sz.h / 2 + pad; }
-        else if (v.pos === 'head') { x = W / 2; y = yHead + sz.h / 2; }
-        else if (v.pos === 'bl') { x = SAFE.l + sz.w / 2 + pad; y = bottom - sz.h / 2; }
-        else if (v.pos === 'br') { x = SAFE.r - sz.w / 2 - pad; y = bottom - sz.h / 2; }
-        else if (v.pos === 'custom') { x = Number(v.x) || W / 2; y = Number(v.y) || H / 2; }
-        else { x = SAFE.l + sz.w / 2 + pad; y = SAFE.t + sz.h / 2 + pad; }
-        // ما تطلع من منطقة الأمان
-        x = Math.max(SAFE.l + sz.w / 2, Math.min(SAFE.r - sz.w / 2, x));
-        y = Math.max(SAFE.t + sz.h / 2, Math.min(SAFE.b - sz.h / 2, y));
-        extra.viewsBox = { x: x, y: y, w: sz.w, h: sz.h };
-        return { info: info, sz: sz, x: x, y: y };
+        var num = fmt(val), label = String(v.label == null ? 'مشاهدة' : v.label).slice(0, 30);
+        var x = SAFE.l + Math.max(110, (avatarLeft - SAFE.l) / 2 - 10), maxW = Math.max(160, (avatarLeft - SAFE.l) - 40);
+        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        eyeIcon(ctx, x, cy - 58, 40, p.colors.accent);
+        ctx.direction = 'ltr'; ctx.fillStyle = p.colors.num;
+        var size = 56; ctx.font = '800 ' + size + 'px ' + F.num;
+        while (ctx.measureText(num).width > maxW && size > 30) { size -= 2; ctx.font = '800 ' + size + 'px ' + F.num; }
+        ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 16;
+        ctx.fillText(num, x, cy + 2);
+        ctx.shadowBlur = 0;
+        ctx.direction = 'rtl'; ctx.fillStyle = hexA(p.colors.name, 0.75); ctx.font = '600 24px ' + F.name;
+        if (label) ctx.fillText(fitText(ctx, label, maxW), x, cy + 50);
+        // خط رفيع تحت
+        var g = ctx.createLinearGradient(x - 60, 0, x + 60, 0);
+        g.addColorStop(0, hexA(p.colors.accent, 0)); g.addColorStop(0.5, hexA(p.colors.accent, 0.7)); g.addColorStop(1, hexA(p.colors.accent, 0));
+        ctx.fillStyle = g; ctx.fillRect(x - 60, cy + 78, 120, 2);
+        ctx.restore();
     }
 
     /** يرسم الصورة كاملة. data = ملخص البث (أو مثال)، A = صور البروفايل محمّلة. */
@@ -925,7 +872,8 @@
         // صاحب البث + العنوان
         if (p.showStreamer) {
             var st = data.streamer || {};
-            streamerAvatar(ctx, extra.streamerImg, st.name, cx, y + 80, 76, p, extra.arts);
+            streamerAvatar(ctx, extra.streamerImg, st.name, cx, y + 80, 72, p);
+            drawViewsSide(ctx, p, data, F, y + 80, cx - 90);
             ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.font = '800 44px ' + F.name; ctx.fillStyle = p.colors.name;
             ctx.fillText(fitText(ctx, st.name || '', SAFE.r - SAFE.l), cx, y + 200);
@@ -952,12 +900,6 @@
         }
 
         var bottom = drawFooter(ctx, p, F) - 20;
-        var vw = placeViews(ctx, p, data, F, extra, y, bottom);
-        if (vw) {
-            if (p.views.pos === 'head') { vw.y = y + vw.sz.h / 2; extra.viewsBox.y = vw.y; y += vw.sz.h + 18; }
-            if (p.views.pos === 'bl' || p.views.pos === 'br') bottom -= vw.sz.h + 16;
-            drawViews(ctx, vw.info, vw.x, vw.y, vw.sz, p, F);
-        }
 
         // الأقسام: نقيس، ونصغّر لو ما دخلت، ونوسّط بالمساحة
         var L = LAYOUT[p.template] || LAYOUT.cards;
@@ -1097,28 +1039,6 @@
         wrap.appendChild(side);
         root.appendChild(wrap);
 
-        // سحب شارة المشاهدات بالمعاينة لأي مكان
-        var vDrag = null;
-        function toCanvas(e) { var r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
-        frame.addEventListener('pointerdown', function (e) {
-            var b = extra.viewsBox; if (!b) return;
-            var q = toCanvas(e);
-            if (Math.abs(q.x - b.x) > b.w / 2 + 10 || Math.abs(q.y - b.y) > b.h / 2 + 10) return;
-            e.preventDefault();
-            frame.setPointerCapture(e.pointerId);
-            vDrag = { dx: q.x - b.x, dy: q.y - b.y };
-            frame.classList.add('drag');
-        });
-        frame.addEventListener('pointermove', function (e) {
-            var b = extra.viewsBox, q = toCanvas(e);
-            if (!vDrag) { frame.classList.toggle('can-drag', Boolean(b && Math.abs(q.x - b.x) <= b.w / 2 + 10 && Math.abs(q.y - b.y) <= b.h / 2 + 10)); return; }
-            p.views.pos = 'custom'; p.views.x = Math.round(q.x - vDrag.dx); p.views.y = Math.round(q.y - vDrag.dy);
-            redraw();
-        });
-        function endDrag() { if (!vDrag) return; vDrag = null; frame.classList.remove('drag'); savePrefs(p); if (tab === 'head') paintSide(); }
-        frame.addEventListener('pointerup', endDrag);
-        frame.addEventListener('pointercancel', endDrag);
-
         var drawQ = 0;
         function redraw() {
             if (drawQ) return;
@@ -1148,8 +1068,6 @@
             var imgs = A.map(function (src2, i) { return loadImg(src2).then(function (im) { A[i] = im; }); });
             imgs.push(loadImg((src.streamer || {}).avatar).then(function (im) { extra.streamerImg = im; }));
             imgs.push(loadImg('../assets/overlay-frames/coin.webp').then(function (im) { extra.coin = im; }));
-            extra.arts = extra.arts || {};
-            FRAMES.forEach(function (f) { if (f.art && (p.frame === f.key || tab === 'head')) imgs.push(loadImg(FRAMES_BASE + f.art.file).then(function (im) { extra.arts[f.key] = im; })); });
             imgs.push(p.bg === 'mine' && mineUrl ? loadImg(mineUrl).then(function (im) { extra.mine = im; }) : Promise.resolve());
             return Promise.all(fonts.concat(imgs));
         }
@@ -1245,7 +1163,7 @@
             hd.appendChild(t);
             side.appendChild(hd);
             var tabs = el('div', 'ob-ptabs vs-tabs');
-            [['data', 'البيانات'], ['head', 'صورتك والمشاهدات'], ['sections', 'الأقسام'], ['look', 'القالب والخلفية'], ['style', 'الخطوط والألوان']].forEach(function (x) {
+            [['data', 'البيانات'], ['head', 'شكل صورتك'], ['sections', 'الأقسام'], ['look', 'القالب والخلفية'], ['style', 'الخطوط والألوان']].forEach(function (x) {
                 tabs.appendChild(btn(x[1], x[0] === tab ? 'on' : '', function () { tab = x[0]; paintSide(); }));
             });
             side.appendChild(tabs);
@@ -1263,38 +1181,30 @@
                 b.appendChild(row('العنوان الصغير فوق', cp, true, 'فاضي = ما يطلع'));
                 b.appendChild(row('اسمك وصورتك', toggle(p.showStreamer, function (v) { p.showStreamer = v; changed(false); })));
                 b.appendChild(row('اليوزر (@)', toggle(p.showHandle !== false, function (v) { p.showHandle = v; changed(false); }), false, data && data.username ? '@' + data.username : ''));
+                var vv = p.views;
+                b.appendChild(row('عدد المشاهدات', toggle(vv.on, function (x2) { vv.on = x2; changed(true); }), false, 'يطلع يسار صورتك'));
+                if (vv.on) {
+                    b.appendChild(row('الرقم', pills(VIEW_METRICS, vv.metric, function (x2) { vv.metric = x2; changed(true); }), true, 'إجمالي = كل اللي دخلوا البث، أعلى تواجد = أكثر عدد بنفس اللحظة'));
+                    var lb = document.createElement('input');
+                    lb.className = 'ob-input'; lb.maxLength = 30; lb.value = vv.label == null ? 'مشاهدة' : vv.label;
+                    lb.addEventListener('input', function () { vv.label = lb.value; changed(false); });
+                    b.appendChild(row('النص تحت الرقم', lb, true, 'مثلاً: مشاهدة، زائر، شخص نوّرونا'));
+                }
                 b.appendChild(row('الأرقام الإجمالية', toggle(p.showTotals, function (v) { p.showTotals = v; changed(false); }), false, 'مدة البث والمجاميع تحت العنوان وبكل قسم'));
             } else if (tab === 'head') {
                 var fg = el('div', 'vs-frames');
-                FRAMES.forEach(function (f) {
+                SHAPES.forEach(function (f) {
                     var c = el('canvas'); c.width = 150; c.height = 150;
                     var x = c.getContext('2d');
-                    var drawMini = function () {
-                        x.clearRect(0, 0, 150, 150);
-                        x.save(); x.translate(75, 75); x.scale(0.42, 0.42);
-                        streamerAvatar(x, extra.streamerImg, (data && data.streamer || {}).name, 0, 0, 104, Object.assign({}, p, { frame: f.key }), extra.arts);
-                        x.restore();
-                    };
-                    drawMini();
-                    if (f.art && !(extra.arts && extra.arts[f.key])) loadImg(FRAMES_BASE + f.art.file).then(function (im) { extra.arts = extra.arts || {}; extra.arts[f.key] = im; drawMini(); });
-                    var fb = btn('', 'vs-fr' + (p.frame === f.key ? ' on' : ''), function () { p.frame = f.key; changed(true); });
+                    x.save(); x.translate(75, 75); x.scale(0.5, 0.5);
+                    streamerAvatar(x, extra.streamerImg, (data && data.streamer || {}).name, 0, 0, 104, Object.assign({}, p, { shape: f.key }));
+                    x.restore();
+                    var fb = btn('', 'vs-fr' + (p.shape === f.key ? ' on' : ''), function () { p.shape = f.key; changed(true); });
                     fb.appendChild(c); fb.appendChild(el('span', null, f.label));
                     fg.appendChild(fb);
                 });
-                b.appendChild(row('إطار صورتك', fg, true, 'لونه من «حدود الصور» و«لون الأقسام» بالخطوط والألوان'));
-                var v = p.views;
-                b.appendChild(el('div', 'ob-gtitle', 'عدد المشاهدات'));
-                b.appendChild(row('يطلع بالصورة', toggle(v.on, function (x2) { v.on = x2; changed(true); })));
-                if (v.on) {
-                    b.appendChild(row('الرقم', pills(VIEW_METRICS, v.metric, function (x2) { v.metric = x2; changed(true); }), true,
-                        'إجمالي = كل اللي دخلوا البث، أعلى تواجد = أكثر عدد بنفس اللحظة'));
-                    b.appendChild(row('الشكل', pills(VIEW_STYLES, v.style, function (x2) { v.style = x2; changed(true); }), true));
-                    b.appendChild(row('المكان', pills(VIEW_POS.concat(v.pos === 'custom' ? [{ label: 'مكانك ✓', value: 'custom' }] : []), v.pos, function (x2) { v.pos = x2; changed(true); }), true, 'أو اسحبها بالمعاينة لأي مكان'));
-                    var lb = document.createElement('input');
-                    lb.className = 'ob-input'; lb.maxLength = 30; lb.value = v.label == null ? 'مشاهدة' : v.label;
-                    lb.addEventListener('input', function () { v.label = lb.value; changed(false); });
-                    b.appendChild(row('النص جنب الرقم', lb, true, 'مثلاً: مشاهدة، زائر، شخص نوّرونا'));
-                }
+                b.appendChild(row('شكل الصورة', fg, true));
+                b.appendChild(row('الحد', pills(BORDERS, p.border || 'none', function (x2) { p.border = x2; changed(true); }), true, 'لونه من «حدود الصور» بالخطوط والألوان'));
             } else if (tab === 'sections') {
                 b.appendChild(el('div', 'ob-hint', 'شغّل اللي تبيه يطلع بالصورة، وحدد كم شخص بكل قسم، ورتّبها بالأسهم.'));
                 p.sections.forEach(function (s, i) {
