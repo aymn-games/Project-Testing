@@ -119,6 +119,12 @@ function tick() {
 
 function startWatcher() {
   if (_started) return;
+  // مقفول افتراضياً (config.streamStatsWatcher) — كل مراقب يستهلك بث من حد
+  // EulerStream اليومي حتى لو الستريمر ما يلعب. للتشغيل: STREAM_STATS_WATCHER=1.
+  if (!require('../config').streamStatsWatcher) {
+    logger.info('Stats Watcher: disabled (set STREAM_STATS_WATCHER=1 to enable).');
+    return;
+  }
   _started = true;
   setTimeout(function () {
     tick();
