@@ -133,6 +133,12 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
 .cell>.fr{width:100%;min-width:0;display:flex;align-items:center}
 .trw,.trh{grid-template-columns:1fr 54px 64px 92px}
 .trw .pp.na{color:#8a8596;font-size:12px}
+
+.wb{height:46px;padding:0 22px;font:700 17px 'Zain';cursor:pointer;text-decoration:none;transition:filter .2s,background .2s,transform .15s}
+.wb:hover{background:rgba(255,255,255,.09)}.wb.p:hover{filter:brightness(1.1)}.wb:active{transform:scale(.97)}
+.smh .x{cursor:pointer}
+#stats .sm{animation:pop .45s cubic-bezier(.2,1.3,.35,1)}
+.bp,.back,.hbtn{cursor:pointer;text-decoration:none}
 </style><script>window.AymanGamesPlatform=window.AymanGamesPlatform||{};</script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
@@ -166,7 +172,7 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
    <div class="row"><div class="lab"><div><b>الدخول التلقائي أثناء المباراة</b><small>اللاعب الجديد يكتب الكلمة المفتاحية ويدخل حتى بعد بداية المباراة</small></div></div><span class="tg"><i></i></span></div>
   </div>
  </div>
- <div class="foot"><span class="bp">التالي: اختيار الفئات<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span></div>
+ <div class="foot"><span class="bp" data-go="lobby">التالي: اختيار الفئات<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span></div>
 </section>
 
 <section class="screen" id="lobby">
@@ -181,17 +187,21 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
     <span class="kwl">الكلمة المفتاحية · اكتبها في الشات للانضمام</span><span class="kw">وردي</span></div>
    <div class="pl" id="plB"></div></div>
  </div>
- <div class="foot"><span class="bp g">الدخول للمباراة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span><span class="back">الرجوع للإعدادات</span></div>
+ <div class="foot"><span class="bp g" data-go="win">الدخول للمباراة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span><span class="back" data-go="settings">الرجوع للإعدادات</span></div>
 </section>
 
 <section class="screen" id="win"><span class="ring"></span>
  <div class="wh"><span class="wpill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>2,600 نقطة</span><span class="wname">الفريق السماوي</span><span class="wsub">فاز بالمباراة</span></div>
  <div class="wstats"><div class="ws"><b>2,600 – 1,800</b><span>النتيجة</span></div><div class="ws"><b>1:08:24</b><span>مدة المباراة</span></div><div class="ws"><b>36</b><span>سؤال</span></div><div class="ws"><b>31</b><span>لاعب شارك</span></div><div class="ws gold"><b>+13</b><span>نقاط المنصة لكل فائز</span></div></div>
  <div class="wcards" id="wcards"></div>
- <div class="wbtns"><span class="wb p">↻ مباراة جديدة</span><span class="wb">📊 الإحصائيات</span><span class="wb">مكتبة الألعاب</span></div>
+ <div class="wbtns">
+  <button class="wb p" data-go="settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>مباراة جديدة</button>
+  <button class="wb" data-go="stats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="9"/></svg>الإحصائيات</button>
+  <a class="wb" href="https://aymngames.online/games.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>مكتبة الألعاب</a>
+ </div>
 </section>
 <section class="screen" id="stats"><div class="sm">
- <div class="smh"><b>إحصائيات المباراة</b><span class="x">✕</span></div>
+ <div class="smh"><b>إحصائيات المباراة</b><button class="x" data-go="win" aria-label="إغلاق">✕</button></div>
  <div class="kpis">
   <div class="kp"><span>مدة المباراة</span><b>1:08:24</b></div>
   <div class="kp"><span>ساعات لعب كاملة</span><b>1 <small style="font-size:13px;color:#22c55e">+4 نقاط</small></b></div>
@@ -235,7 +245,9 @@ function drawFrames(){const AGP=window.AymanGamesPlatform;if(!AGP.playerCard)ret
  f.innerHTML=AGP.playerCard.renderHtml({id:n,name:n,avatarUrl:avatar(n),frame:{imageFilename:FR[n]}},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w/4.96))});AGP.playerCard.fitAllNames(f);});}
 fill('plA',['reem_22','sara_77','abo_nasser','mj_10','faisal','omar.s'],9,1);
 fill('plB',['khalid.x','fahad.q','noura.k','reem','salem','lama'],7,0);
-const h=location.hash.slice(1)||'settings';document.getElementById(h).classList.add('on');
+const h=location.hash.slice(1)||'settings';
+addEventListener('hashchange',()=>location.reload());
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){e.preventDefault();location.hash=b.dataset.go;}});document.getElementById(h).classList.add('on');
 if(h==='lobby')requestAnimationFrame(drawFrames);
 const WIN=[['sara_77','rais-blue',6],['mj_10',null,5],['abo_nasser','sakura-pink',4],['reem_22',null,4],['faisal',null,3],['omar.s',null,2]];
 if(h==='win'||h==='stats'){document.getElementById('win').classList.add('on');document.querySelector('.lob').style.display='none';
