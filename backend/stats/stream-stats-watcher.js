@@ -87,7 +87,8 @@ function start(user) {
     onViewerUpdate: function (d) { liveSessionStats.recordViewers(username, id, d.current, d.totalUsers); },
     onLike: function (d) { liveSessionStats.recordLike(username, id, d); },
     onShare: function (d) { liveSessionStats.recordShare(username, id, d); },
-    onMember: function (d) { liveSessionStats.recordMember(username, id, d); }
+    onMember: function (d) { liveSessionStats.recordMember(username, id, d); },
+    onSubscribe: function (d) { liveSessionStats.recordSubscribe(username, id, d); }
   });
 }
 

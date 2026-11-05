@@ -11,7 +11,8 @@
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
  *     onLike({ id, name, count, avatarUrls }),  // اختياري — count = عدد التكبيسات بهذه الدفعة
  *     onShare({ id, name, avatarUrls }),        // اختياري
- *     onMember({ id, name, avatarUrls })        // اختياري — دخول مشاهد للبث
+ *     onMember({ id, name, avatarUrls }),       // اختياري — دخول مشاهد للبث
+ *     onSubscribe({ id, name, avatarUrls })     // اختياري — اشتراك / «سوبر فان» (subNotify + superFanJoin)
  *   }
  *
  * إعادة الاتصال (Reconnect):
@@ -496,6 +497,21 @@ function createTikTokConnector() {
                 var user = extractUser(data);
                 _callbacks.onMember({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
             });
+        }
+
+        // اشتراك بالبث (Subscription / Super Fan): نفس الشخص خلال 15 ثانية = حدث واحد
+        // (تيك توك أحياناً يرسل subNotify ورسالة superFanJoin لنفس الاشتراك)
+        if (_callbacks.onSubscribe) {
+            var subSeen = {};
+            var onSub = function (data) {
+                var user = extractUser(data);
+                if (!user || user.uniqueId === 'unknown') return;
+                var now = Date.now();
+                if (subSeen[user.id] && now - subSeen[user.id] < 15000) return;
+                subSeen[user.id] = now;
+                _callbacks.onSubscribe({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+            };
+            ['subNotify', 'superFanJoin'].forEach(function (ev) { _connection.on(ev, onSub); });
         }
 
         // roomUser -> عدد المشاهدين. فحص وجود onViewerUpdate دفاعياً.

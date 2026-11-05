@@ -67,7 +67,7 @@ var _avatarCache = new Map(); // url -> dataUrl|null
 // صور وعاء الهدايا: 'g:<giftId>' -> رابط تيك توك. تنملى بس من
 // أحداث الهدايا نفسها، فمسار /api/stream/media ما يجيب إلا روابط جات من البث.
 var _mediaUrls = new Map();
-var RECENT_EVENTS_MAX = 60; // أحداث الأليرتات المحفوظة لكل بث
+var RECENT_EVENTS_MAX = 120; // أحداث الأليرتات المحفوظة لكل بث
 var MEDIA_URLS_MAX = 3000;
 var _cleanupStarted = false;
 var _store = null;
@@ -229,6 +229,46 @@ function recordLike(username, connectionId, data) {
   s.totals.likes += n;
   var r = rec(s, s.lists.likers, data);
   if (r) r.count += n;
+  if (r) queueLikeEvent(s, r, data);
+}
+
+/*
+ * أليرتات التكبيس: تيك توك يرسل التكبيسات دفعات كثيرة، فنجمعها لكل شخص ونرسل
+ * حدث «like» واحد كل LIKE_EVENT_MS على الأكثر (ما يعبّي طابور الأحداث).
+ * الحدث فيه: count = تكبيساته من آخر حدث، total = مجموع تكبيساته بالبث،
+ * all = مجموع تكبيسات البث، allPrev = المجموع وقت آخر حدث تكبيس —
+ * والشاشة تقرر لو عدّى حد «كل N تكبيسة».
+ */
+var LIKE_EVENT_MS = 1500;
+function queueLikeEvent(s, r, data) {
+  if (!s.likeQ) { s.likeQ = new Map(); s.likeAll = s.totals.likes - (Number(data.count) || 1); }
+  var q = s.likeQ.get(r.id);
+  if (!q) { q = { base: r.count - (Number(data.count) || 1), data: data, r: r }; s.likeQ.set(r.id, q); }
+  q.data = data;
+  if (!s.likeTimer) {
+    s.likeTimer = setTimeout(function () { flushLikeEvents(s); }, LIKE_EVENT_MS);
+    if (s.likeTimer.unref) s.likeTimer.unref();
+  }
+}
+function flushLikeEvents(s) {
+  s.likeTimer = null;
+  if (!s.likeQ || !s.likeQ.size) return;
+  var q = s.likeQ;
+  s.likeQ = new Map();
+  q.forEach(function (x) {
+    var count = x.r.count - x.base;
+    if (count <= 0) return;
+    var prev = s.likeAll || 0;
+    s.likeAll = prev + count;
+    pushEvent(s, 'like', x.data, { count: count, total: x.r.count, all: s.likeAll, allPrev: prev });
+  });
+}
+
+function recordSubscribe(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  pushEvent(s, 'subscribe', data);
 }
 
 function recordShare(username, connectionId, data) {
@@ -252,7 +292,9 @@ function pushEvent(s, type, data, extra) {
   s.eventSeq++;
   var urls = Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data.avatarUrl ? [data.avatarUrl] : []);
   var avatar = urls.filter(function (u) { return typeof u === 'string' && /^https:\/\//.test(u); })[0] || null;
-  s.events.push(Object.assign({ seq: s.eventSeq, type: type, user: String(data.name || data.id || '').slice(0, 60), avatar: avatar, at: Date.now() }, extra || {}));
+  // uid = يوزر تيك توك (بدون tiktok: وبحروف صغيرة) — لأليرت دخول شخص معيّن
+  var uid = String(data.id || '').replace(/^tiktok:/, '').replace(/^@/, '').toLowerCase().slice(0, 60);
+  s.events.push(Object.assign({ seq: s.eventSeq, type: type, user: String(data.name || data.id || '').slice(0, 60), uid: uid, avatar: avatar, at: Date.now() }, extra || {}));
   if (s.events.length > RECENT_EVENTS_MAX) s.events.splice(0, s.events.length - RECENT_EVENTS_MAX);
 }
 
@@ -495,6 +537,7 @@ module.exports = {
   MAX_TOP: MAX_TOP,
   attach: attach,
   recordLike: recordLike,
+  recordSubscribe: recordSubscribe,
   recordShare: recordShare,
   recordGift: recordGift,
   recordComment: recordComment,

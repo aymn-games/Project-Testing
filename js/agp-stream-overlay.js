@@ -1053,6 +1053,11 @@
         share: { label: 'الشير', title: 'شير جديد', icon: 'share', msg: '{name} نشر البث' },
         join: { label: 'الدخول', title: 'نوّر البث', icon: 'eye', msg: '{name} دخل البث' }
     };
+    // أحداث Veyro بس (المحرر القديم overlay/ يعرض ALERT_EVENTS الأصلية بدونها)
+    var ALERT_EVENTS_ALL = Object.assign({}, ALERT_EVENTS, {
+        like: { label: 'التكبيس', title: 'تكبيس', icon: 'heart', msg: '{name} وصل {count} تكبيسة' },
+        subscribe: { label: 'الاشتراك', title: 'مشترك جديد', icon: 'star', msg: '{name} اشترك بالبث' }
+    });
     var ALERT_DESIGNS = [{ key: 'card', label: 'بطاقة' }, { key: 'banner', label: 'شريط' }, { key: 'pop', label: 'كبير بالوسط' }];
     var ALERT_ANIMS = [{ key: 'pop', label: 'قفزة' }, { key: 'slide', label: 'انزلاق' }, { key: 'fade', label: 'ظهور' }, { key: 'drop', label: 'سقوط' }];
     // أيقونات «شاشات البث» (viewBox 24، fill-rule evenodd)
@@ -1372,6 +1377,8 @@
             e.count = [1, 5, 10][Math.floor(Math.random() * 3)];
             e.diamonds = e.count * 5;
         }
+        if (type === 'like') { e.count = 100; e.total = 100; e.all = 100; e.allPrev = 0; }
+        if (type === 'join' || type === 'subscribe') e.uid = 'demo';
         return e;
     }
 
@@ -1381,7 +1388,7 @@
 
     /** بطاقة التنبيه نفسها. */
     function alertCard(it, e) {
-        var meta = ALERT_EVENTS[e.type] || ALERT_EVENTS.gift;
+        var meta = ALERT_EVENTS_ALL[e.type] || ALERT_EVENTS.gift;
         var design = ALERT_DESIGNS.filter(function (d) { return d.key === it.design; })[0] ? it.design : 'card';
         var card = el('div', 'agp-so-acard d-' + design + ' t-' + e.type);
         var media = el('div', 'agp-so-amedia');
@@ -1501,7 +1508,7 @@
         return clamp(Number(it && it.video && it.video.d) || 0, 0, 60);
     }
     // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
-    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث' };
+    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'اشترك بالبث' };
     function partsOf(it) {
         if (!it || !it.parts) return null;
         var out = {};
@@ -1808,7 +1815,7 @@
                 box.appendChild(pm);
             }
         } else if (it.showText !== false && e) {
-            var msg = (it.msg && it.msg[e.type]) || (ALERT_EVENTS[e.type] || ALERT_EVENTS.gift).msg;
+            var msg = (it.msg && it.msg[e.type]) || (ALERT_EVENTS_ALL[e.type] || ALERT_EVENTS.gift).msg;
             var t = el('div', 'agp-so-vtxt ' + (it.textPos === 'top' ? 'top' : it.textPos === 'middle' ? 'middle' : 'bottom'), fillMsg(msg, e));
             box.appendChild(t);
         }
@@ -1887,7 +1894,9 @@
     /** يضيف تنبيه لطابور الأداة. force = تجربة المحرر (بدون فلترة). */
     function queueAlert(id, e, force) {
         var q = alertQ[id] = alertQ[id] || { list: [], busy: false };
-        if (!force && e.type === 'join' && q.list.length >= 2) return; // الدخول كثير — ما نطوّل الطابور
+        var itq = alertNodes.filter(function (a) { return a.node._item && a.node._item.id === id; })[0];
+        var picky = itq && Array.isArray(itq.node._item.joinUsers) && itq.node._item.joinUsers.length;
+        if (!force && e.type === 'join' && !picky && q.list.length >= 2) return; // الدخول كثير — ما نطوّل الطابور
         if (q.list.length >= 15) q.list.shift();
         q.list.push(e);
         pumpAlert(id);
@@ -1927,6 +1936,33 @@
         }, dur);
     }
 
+    function cleanUser(u) { return String(u || '').trim().replace(/^@/, '').toLowerCase(); }
+
+    /**
+     * هل الحدث يشغّل هذا الأليرت؟
+     *  gift: minDiamonds ≤ العملات ≤ maxDiamonds (0 = بدون حد أعلى)
+     *  like: كل likeEvery تكبيسة — من نفس الشخص (likeScope 'user') أو مجموع البث ('all')
+     *  join/subscribe: joinUsers = يوزرات معيّنة بس (فاضي = الكل)
+     */
+    function alertMatches(it, e) {
+        if (it.hidden || (it.events || []).indexOf(e.type) === -1) return false;
+        if (e.type === 'gift') {
+            var d = Number(e.diamonds) || 0, mx = Number(it.maxDiamonds) || 0;
+            if (d < (Number(it.minDiamonds) || 0)) return false;
+            if (mx > 0 && d > mx) return false;
+        }
+        if (e.type === 'like') {
+            var n = Math.max(1, Math.round(Number(it.likeEvery) || 100));
+            var now = it.likeScope === 'all' ? Number(e.all) || 0 : Number(e.total) || 0;
+            var before = it.likeScope === 'all' ? Number(e.allPrev) || 0 : now - (Number(e.count) || 0);
+            if (Math.floor(now / n) <= Math.floor(before / n)) return false;
+        }
+        if ((e.type === 'join' || e.type === 'subscribe') && Array.isArray(it.joinUsers) && it.joinUsers.length) {
+            if (it.joinUsers.map(cleanUser).indexOf(cleanUser(e.uid)) === -1) return false;
+        }
+        return true;
+    }
+
     function alertItems() { return activeItems().filter(function (it) { return it.type === 'alert'; }); }
 
     /** رابط الشاشة: أحداث جديدة → تنبيهات. أول طلب (أو بث جديد) = نقطة بداية بدون تنبيهات. */
@@ -1946,8 +1982,7 @@
                 evState.seq = d.seq;
                 (d.events || []).forEach(function (e) {
                     alertItems().forEach(function (it) {
-                        if ((it.events || []).indexOf(e.type) === -1) return;
-                        if (e.type === 'gift' && (Number(e.diamonds) || 0) < (Number(it.minDiamonds) || 0)) return;
+                        if (!alertMatches(it, e)) return;
                         queueAlert(it.id, e);
                     });
                 });
@@ -1990,7 +2025,7 @@
             var msg = {};
             Object.keys(ALERT_EVENTS).forEach(function (k) { msg[k] = ALERT_EVENTS[k].msg; });
             if (opts.video) {
-                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: Object.assign({}, PART_MSGS), parts: JSON.parse(JSON.stringify(PARTS_DEFAULT)) });
+                return Object.assign(base, { events: evs, video: opts.video, key: Object.assign({}, KEY_DEFAULT, opts.key || {}), volume: 0.8, showText: true, textPos: 'bottom', minDiamonds: 0, sound: false, size: 3, color: '#ffffff', msg: Object.assign({}, PART_MSGS), parts: JSON.parse(JSON.stringify(PARTS_DEFAULT)) });
             }
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
@@ -2455,7 +2490,7 @@
             return state;
         },
         VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, refreshItem: refreshItem, throneDemo: throneDemo,
-        ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
+        ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         KEY_DEFAULT: KEY_DEFAULT, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
