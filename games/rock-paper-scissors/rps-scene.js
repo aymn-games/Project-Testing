@@ -3,7 +3,7 @@
  *
  * ساحة بطولة بالليل: أرضية LED دائرية، مدرجات بإضاءة نيون، أبراج كشافات،
  * ومجسمات حجرة وورقة ومقص عملاقة تطفو فوق الساحة. اللاعبين موديلات VRM
- * (models/girl.vrm و models/boy.vrm — rps-vrm.js) بحركات حفلة الميلاد (getClip بـ rig3d.js)،
+ * (assets/characters/ — js/agp-vrm-characters.js) بحركات حفلة الميلاد (getClip بـ rig3d.js)،
  * وما تطلع أي شخصية قبل ما يخلص تحميل الموديلات.
  *
  * المشهد عرض بس: الشاشة (game.html) تمسك القواعد والوقت وترسل الحالة:
@@ -27,7 +27,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { loadClips } from '../birthday-party/rig3d.js';
 import { makeHand } from './rps-hand.js';
-import { loadModels, makeVrmRig } from './rps-vrm.js';
+import { loadModels, makeVrmRig } from '../../js/agp-vrm-characters.js'; // شخصيات الأنمي المشتركة (docs/CHARACTERS.md)
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -387,7 +387,7 @@ export function createArena(container, opts = {}) {
         return { x, z, y: 0, ry: Math.atan2(-x, DZ - z) };
     }
 
-    // الشخصيات: موديلات VRM بس (rps-vrm.js). قبل ما يخلص تحميلها ما تطلع أي شخصية، ولو فشل
+    // الشخصيات: موديلات VRM بس (js/agp-vrm-characters.js). قبل ما يخلص تحميلها ما تطلع أي شخصية، ولو فشل
     // التحميل (نت المذيع أو السيرفر) نعيد المحاولة كل 5 ثواني. آخر حالة توصل تنحفظ وتنطبق بعد التحميل
     let MODELS = null, lastState = null;
     function newRig(n, g) { const rig = makeVrmRig(g ? MODELS.boy : MODELS.girl, { n }); rig.root.visible = false; scene.add(rig.root); return rig; }

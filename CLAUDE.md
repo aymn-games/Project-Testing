@@ -12,10 +12,12 @@
 | السيرفر (Node.js + SQLite، مستضاف على Render) | `backend/` — حسابات، نقاط، متجر، دعم، تحديات |
 | ربط بث تيك توك | `backend/platforms/tiktok/` ← WebSocket ← `adapters/agp-tiktok-adapter.js` |
 | تسجيل الدخول وتوثيق تيك توك (OAuth) | `backend/auth/` + `auth/auth-client.js` (`window.AGPAuth`) |
+| شخصيات الأنمي ثلاثية الأبعاد المشتركة (VRM: بنت وولد) | `assets/characters/` + `js/agp-vrm-characters.js` — الدليل `docs/CHARACTERS.md` |
 
 **قبل أي شغل اقرأ:**
 - `docs/CLAUDE.md` — فلسفة المشروع، طريقة كتابة الكود، ترتيب تحميل الملفات، وخطوات إضافة لعبة.
 - `docs/ARCHITECTURE.md` و`docs/BACKEND_ARCHITECTURE.md` — تفاصيل البنية.
+- `docs/CHARACTERS.md` — لو اللعبة تحتاج شخصيات ثلاثية الأبعاد: شخصيات الأنمي المشتركة (VRM) وطريقة تركيبها بأي لعبة.
 - `docs/CHANGELOG.md` — تاريخ كل تغيير (طويل؛ ابحث فيه عن اسم اللعبة أو الميزة بدل قراءته كاملاً).
 
 **طريقة العمل:** كل جلسة تشتغل على فرع مستقل وتُدمج عبر Pull Request؛
