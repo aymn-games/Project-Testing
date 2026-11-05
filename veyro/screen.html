@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-agp-overlay-link>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Veyro — أوفرلي البث</title>
+<link rel="icon" href="brand/favicon.ico" sizes="any">
+<!--
+  «رابط الأوفرلي»: يحطه المذيع بـOBS أو TikTok LIVE Studio كـBrowser Source
+  (veyro/screen.html?k=<رمز>&v=<نسخة> — ينسخه من Veyro veyro/).
+  ملف جديد بدل live.html: تطبيقات البث كانت تفتح نسخة قديمة مخزّنة من live.html وسكربتها
+  حتى بعد التحديث. هنا الرابط نفسه جديد (ومعه &v=)، والسكربت ينطلب بـ?t= كل مرة.
+  live.html باقي يشتغل للروابط القديمة. الخلفية شفافة، والتصميم
+  والبيانات من السيرفر بالرمز (js/agp-stream-overlay.js بوضع data-agp-overlay-link).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .ol-missing { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; font: 600 22px/1.8 "IBM Plex Sans Arabic", system-ui, sans-serif; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.9); }
+</style>
+</head>
+<body>
+<script>
+  // بدون رمز: رسالة بدل شاشة فاضية (ما نحمّل الأوفرلي)
+  if (!new URLSearchParams(location.search).get('k')) {
+    var m = document.createElement('div');
+    m.className = 'ol-missing';
+    m.textContent = 'الرابط ناقص — انسخ رابط الشاشة من «شاشات البث» بـVeyro';
+    document.body.appendChild(m);
+  } else {
+    var s = document.createElement('script');
+    // ?t= كل مرة: تطبيق البث (OBS / TikTok LIVE Studio) ياخذ آخر نسخة بدل نسخة قديمة مخزّنة
+    s.src = '../js/agp-stream-overlay.js?t=' + Date.now();
+    document.body.appendChild(s);
+  }
+</script>
+</body>
+</html>
