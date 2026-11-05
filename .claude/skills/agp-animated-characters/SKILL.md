@@ -7,6 +7,10 @@ description: Design and build animated characters, mascots and player avatars fo
 
 Characters on this platform are watched on a live stream: they must read in a second on a phone screen, react to what viewers do (join, gift, win, lose), and stay smooth with dozens on screen at once (Team War supports 30 players).
 
+## 0. Use the platform's shared anime characters first
+
+The platform owner's own VRoid anime characters (girl + boy, VRM 1.0) are ready for any 3D game: `assets/characters/girl.vrm` / `boy.vrm`, loaded with `js/agp-vrm-characters.js` (`loadModels()` + `makeVrmRig(model, { n })` — same bone names and clips as `games/birthday-party/rig3d.js`, face moods, finger gestures). Read `docs/CHARACTERS.md` before building new characters; the owner prefers these over code-built characters (the code-built ones were removed from Rock-Paper-Scissors at his request). Working example: `games/rock-paper-scissors/rps-scene.js`.
+
 ## 1. Pick the technique
 
 | Technique | Use when | Notes |

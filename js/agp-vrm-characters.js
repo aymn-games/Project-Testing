@@ -1,22 +1,32 @@
 /**
- * «حجرة ورقة مقص» — شخصيات VRM (موديلات أنمي من VRoid صممها صاحب المنصة: models/girl.vrm و models/boy.vrm).
+ * شخصيات الأنمي المشتركة (VRM) — لأي لعبة على المنصة. الدليل الكامل: docs/CHARACTERS.md
  *
- * loadModels(base) ← Promise<{ girl, boy }>: كل موديل ينحمّل مرة وحدة، وكل لاعب ياخذ نسخة منه
- *   (SkeletonUtils.clone: نفس الجيومتري والخامات والصور، فالذاكرة ما تتضاعف). لو فشل التحميل
- *   (المكتبة أو الملف) ترجع null، والمشهد يعيد المحاولة.
+ * الموديلات: assets/characters/girl.vrm و assets/characters/boy.vrm (صممها صاحب المنصة بـ VRoid Studio،
+ * ومخففة بـ tools/vrm-slim.py). أول من استخدمها: «حجرة ورقة مقص» (games/rock-paper-scissors/rps-scene.js).
  *
- * makeVrmRig(model, { n }) ← نفس واجهة makeRig بـ birthday-party/rig3d.js اللي يستخدمها rps-scene.js:
- *   { root, bones, play, setSpeed, update, express, dispose, look, anim } + زيادات VRM:
- *   - mood(kind): ملامح الوجه من تعابير الموديل نفسه (smile · laugh · scared · focus · sad) ورمشة تلقائية.
- *   - gesture(side, name): الأصابع الحقيقية للموديل (rock · paper · scissors · relax).
- *   - sync(): ينقل الوضعية للهيكل الفعلي — يُنادى بعد أي تعديل على العظام (poseChar).
- *   الحركات نفسها حركات الحفلة (getClip): الهيكل الموحّد بـ VRM (normalized) بوضع T ودوران راحة صفر،
- *   نفس هيكل rig3d، فنفس المسارات تنطبق بعد تسمية العظام بأسماء Mixamo.
+ * يحتاج بصفحة اللعبة importmap فيه: three (0.160.0) و three/addons/ و @pixiv/three-vrm (3.3.3).
+ *
+ * loadModels(base?) ← Promise<{ girl, boy } | null>: كل موديل ينحمّل مرة وحدة بالصفحة، وكل لاعب ياخذ نسخة
+ *   (SkeletonUtils.clone: نفس الجيومتري والخامات والصور، فالذاكرة ما تتضاعف). base الافتراضي مجلد
+ *   assets/characters/ نسبة لهذا الملف. لو فشل التحميل (المكتبة أو الملف) ترجع null، والفشل ما ينحفظ:
+ *   نداء ثاني يعيد المحاولة (الألعاب تعيد كل كم ثانية).
+ *
+ * makeVrmRig(model, { n }) ← شخصية وحدة:
+ *   root (Group تنضاف للمشهد) · bones (عظام بأسماء Mixamo: Hips, Spine, Head, RightArm, RightForeArm, RightHand ...)
+ *   play(a): حركات حفلة الميلاد (getClip بـ birthday-party/rig3d.js): 0 وقوف · 1 مشي · 2 سامبا · 3 تلويح
+ *     · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 ديسكو · 10 هيب هوب
+ *   setSpeed(mps) · update(dt) كل إطار · sync() بعد أي تعديل يدوي على bones (ينقل الوضعية للهيكل الفعلي)
+ *   mood('smile'|'laugh'|'scared'|'sad'|'focus'): ملامح الوجه من تعابير الموديل نفسه، ورمشة تلقائية
+ *   express(kind, sec): تعبير مؤقت ('laugh' أو 'open') · gesture(side, 'rock'|'paper'|'scissors'|'relax'): الأصابع
+ *   hideHand(side, on): يخفي يد الموديل (لو اللعبة تركّب يد خاصة فيها) · skin: لون البشرة · dispose()
+ *   الهيكل الموحّد بـ VRM (normalized) بوضع T ودوران راحة صفر، نفس هيكل rig3d، فنفس الحركات تنطبق.
  *   فيزياء الشعر والتنورة (spring bones) طافية عشان الأداء.
  */
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { getClip, getClipsVersion } from '../birthday-party/rig3d.js';
+import { getClip, getClipsVersion } from '../games/birthday-party/rig3d.js';
+
+const MODELS_BASE = new URL('../assets/characters/', import.meta.url).href;
 
 const T = THREE, TAU = Math.PI * 2, FADE = .25;
 const RIG_HIPS = .92; // ارتفاع الورك بوحدات حركات الحفلة (HIPS_Y بـ rig3d.js)
@@ -34,7 +44,7 @@ const LOOPED = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
 let VRMMod = null;
 const cache = {};
-export function loadModels(base = './models/') {
+export function loadModels(base = MODELS_BASE) {
     if (cache.p) return cache.p;
     cache.p = (async () => {
         const [{ GLTFLoader }, mod] = await Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('@pixiv/three-vrm')]);

@@ -14,6 +14,10 @@ description: Build 3D scenes, 3D game boards, 3D intros and 3D effects for AGP g
 
 Read the closer of the two before writing anything.
 
+## 0. Use the platform's shared anime characters first
+
+The platform owner's own VRoid anime characters (girl + boy, VRM 1.0) are ready for any 3D game: `assets/characters/girl.vrm` / `boy.vrm`, loaded with `js/agp-vrm-characters.js` (`loadModels()` + `makeVrmRig(model, { n })` — same bone names and clips as `games/birthday-party/rig3d.js`, face moods, finger gestures). Read `docs/CHARACTERS.md` before building new characters; the owner prefers these over code-built characters (the code-built ones were removed from Rock-Paper-Scissors at his request). Working example: `games/rock-paper-scissors/rps-scene.js`.
+
 ## Hard rules
 
 1. **Three.js version is pinned to `0.160.0`** — the version both existing scenes use. Load it from the CDN, never from npm (there is no build step):
