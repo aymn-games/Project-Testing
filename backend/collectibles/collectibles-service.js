@@ -556,6 +556,53 @@ function getWinCardForVerifiedTikTok(tiktokUsername) {
 }
 
 /* ----------------------------------------------------------------------
+ * شخصية الأنمي بالألعاب (VRM: بنت أو ولد) — مجانية لكل حساب، المستخدم
+ * يختارها من المقتنيات بالبروفايل، وتوصل للعبة مع تعليقه (حقل character)
+ * لو حسابه موثّق بتيك توك. بدون اختيار = اللعبة تعطيه شكل عشوائي.
+ * ---------------------------------------------------------------------- */
+
+var CHARACTER_KINDS = ['girl', 'boy'];
+
+/** @returns {'girl'|'boy'|null} */
+function getCharacter(userId) {
+  var row = db.prepare('SELECT kind FROM user_characters WHERE user_id = ?').get(userId);
+  return row && CHARACTER_KINDS.indexOf(row.kind) !== -1 ? row.kind : null;
+}
+
+/**
+ * kind: 'girl' أو 'boy'، أو null/'' يرجّع الشكل العشوائي.
+ * @returns {{success: boolean, character?: string|null, error?: string}}
+ */
+function setCharacter(userId, kind) {
+  if (kind === null || kind === undefined || kind === '' || kind === 'random') {
+    db.prepare('DELETE FROM user_characters WHERE user_id = ?').run(userId);
+    return { success: true, character: null };
+  }
+  kind = String(kind);
+  if (CHARACTER_KINDS.indexOf(kind) === -1) return { success: false, error: 'unknown_character' };
+  db.prepare(
+    'INSERT INTO user_characters (user_id, kind, updated_at) VALUES (?, ?, ?) ' +
+    'ON CONFLICT(user_id) DO UPDATE SET kind = excluded.kind, updated_at = excluded.updated_at'
+  ).run(userId, kind, now());
+  return { success: true, character: kind };
+}
+
+/**
+ * شخصية صاحب تعليق — فقط لحساب مسجَّل وثَّق نفس يوزرنيم التيك توك
+ * (نفس نمط getWinCardForVerifiedTikTok).
+ * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
+ * @returns {'girl'|'boy'|null}
+ */
+function getCharacterForVerifiedTikTok(tiktokUsername) {
+  tiktokUsername = (tiktokUsername || '').trim();
+  if (!tiktokUsername) return null;
+  var user = db.prepare(
+    'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
+  ).get(tiktokUsername);
+  return user ? getCharacter(user.id) : null;
+}
+
+/* ----------------------------------------------------------------------
  * فتح تلقائي عند بلوغ مستوى (يُستدعى من points-service.js بعد كل زيادة
  * بالنقاط — لا معرفة هنا بكيفية حساب النقاط نفسها).
  * ---------------------------------------------------------------------- */
@@ -1252,6 +1299,9 @@ module.exports = {
   getWinCards: getWinCards,
   setWinCardEnabled: setWinCardEnabled,
   getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
+  getCharacter: getCharacter,
+  setCharacter: setCharacter,
+  getCharacterForVerifiedTikTok: getCharacterForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,
   generateCardCodes: generateCardCodes,
   createBundle: createBundle,

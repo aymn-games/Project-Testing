@@ -390,6 +390,9 @@
     }
 
     // ---------------------------------------------------------------- الشات
+    // الشخصية: اللي اختارها اللاعب من المقتنيات بالبروفايل (character بالتعليق، لحساب تيك توك موثّق
+    // — docs/CHARACTERS.md)، وإلا عشوائي. 0 بنت · 1 ولد
+    function genderOf(p) { return p.character === 'boy' ? 1 : p.character === 'girl' ? 0 : (Math.random() < .5 ? 0 : 1); }
     function onComment(p) {
         if (!p || typeof p.text !== 'string' || !p.id) return;
         if (phase === 'join') {
@@ -397,7 +400,7 @@
             if (FOLLOWERS && !p.isFollower) return;
             if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
-            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = genderOf(p); G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
             return;
         }
@@ -406,7 +409,7 @@
             if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
             if (FOLLOWERS && !p.isFollower) return;
-            if (G.lateJoin({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { G.player(p.id).g = Math.random() < .5 ? 0 : 1; G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); toast(G.player(p.id).name + ' دخل البطولة'); render(); }
+            if (G.lateJoin({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { G.player(p.id).g = genderOf(p); G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); toast(G.player(p.id).name + ' دخل البطولة'); render(); }
             return;
         }
         var choice = E.parsePick(p.text);

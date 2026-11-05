@@ -767,6 +767,7 @@ function getPublicProfile(customId) {
         entrance: collectiblesService.getEntrance(user.id),
         elimCards: collectiblesService.getElimCards(user.id),
         winCards: collectiblesService.getWinCards(user.id),
+        character: collectiblesService.getCharacter(user.id),
         streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }
