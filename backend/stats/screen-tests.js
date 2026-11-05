@@ -50,18 +50,35 @@ function since(key, after) {
  * آخر مرة رابط الشاشة سأل السيرفر (كل ثانيتين لما يكون مفتوح بتطبيق البث) ونسخته —
  * المحرر يعرض «متصلة بتطبيق البث» أو لا، عشان يعرف إن الرابط اللي بالتطبيق هو نفس الشاشة.
  */
-var _seen = new Map(); // key -> { at, ver }
-function touch(key, ver) {
+// key -> { vers: { <ver>: at }, diag, diagAt } — لكل نسخة آخر وقت لحالها: لو التطبيق فاتح
+// نسختين (قديمة وجديدة) ما يتذبذب المؤشر بينهم
+var _seen = new Map();
+function touch(key, ver, dg) {
     key = String(key || '');
     if (!key) return;
+    var s = _seen.get(key) || { vers: {}, diag: '', diagAt: 0 };
     _seen.delete(key);
-    _seen.set(key, { at: Date.now(), ver: String(ver || '').slice(0, 20) });
+    var now = Date.now();
+    s.vers[String(ver || '').slice(0, 20)] = now;
+    Object.keys(s.vers).forEach(function (v) { if (now - s.vers[v] > 10 * 60 * 1000) delete s.vers[v]; });
+    if (dg) { s.diag = String(dg).slice(0, 120); s.diagAt = now; }
+    _seen.set(key, s);
     if (_seen.size > 5000) _seen.delete(_seen.keys().next().value);
 }
-/** { agoMs, ver } أو null لو ما انفتح من تشغيل السيرفر. */
+/**
+ * { agoMs, ver, vers: {<ver>: agoMs}, diag, diagAgoMs } أو null لو ما انفتح من تشغيل السيرفر.
+ * ver/agoMs = أحدث اتصال.
+ */
 function seen(key) {
     var s = _seen.get(String(key || ''));
-    return s ? { agoMs: Date.now() - s.at, ver: s.ver } : null;
+    if (!s) return null;
+    var now = Date.now(), vers = {}, best = null;
+    Object.keys(s.vers).forEach(function (v) {
+        vers[v] = now - s.vers[v];
+        if (!best || s.vers[v] > s.vers[best]) best = v;
+    });
+    if (best == null) return null;
+    return { agoMs: vers[best], ver: best, vers: vers, diag: s.diag, diagAgoMs: s.diagAt ? now - s.diagAt : null };
 }
 
 /** لما يتغيّر رابط الشاشة (new-key) تنحذف تجاربه. */

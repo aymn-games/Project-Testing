@@ -1158,7 +1158,7 @@ function handlePublicScreenEvents(req, res) {
   var username = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(o.userId));
   var r = username ? liveSessionStats.getRecentEvents(username, getQueryParam(req, 'since')) : null;
   var t = screenTests.since(getQueryParam(req, 'k'), getQueryParam(req, 't'));
-  screenTests.touch(getQueryParam(req, 'k'), getQueryParam(req, 'lv'));
+  screenTests.touch(getQueryParam(req, 'k'), getQueryParam(req, 'lv'), getQueryParam(req, 'dg'));
   var out = r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false };
   out.tseq = t.tseq;
   out.tests = t.tests;
@@ -1172,7 +1172,7 @@ function handleScreensLiveStatus(req, res, body, user) {
     success: true,
     screens: streamScreens.list(user.id).map(function (x) {
       var s = screenTests.seen(x.key);
-      return { id: x.id, agoMs: s ? s.agoMs : null, ver: s ? s.ver : '' };
+      return { id: x.id, agoMs: s ? s.agoMs : null, ver: s ? s.ver : '', vers: s ? s.vers : {}, diag: s ? s.diag : '', diagAgoMs: s ? s.diagAgoMs : null };
     })
   });
 }

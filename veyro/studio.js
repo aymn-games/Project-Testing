@@ -220,8 +220,29 @@
         api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
             if (!d || !d.success) { toast('التجربة اشتغلت هنا بس — ما وصلت لشاشة البث (حدّث الصفحة وجرّب)'); return; }
             var m = liveMsg();
-            toast(m.state === 'ok' ? 'التجربة طالعة بشاشة البث بعد ثواني ✓' : m.tip);
+            toast(m.state === 'ok' ? 'التجربة طالعة بشاشة البث بعد ثواني…' : m.tip);
+            if (m.state !== 'ok') return;
+            // بعد ثواني: رابط الشاشة يبلّغ وش صار بالتجربة (اشتغل الفيديو أو لا ولماذا)
+            var sent = Date.now();
+            setTimeout(function () { pollLive(function () { var r = testResult(sent); if (r) toast(r); }); }, 7000);
         }).catch(function () { toast('التجربة اشتغلت هنا بس — تأكد من الاتصال'); });
+    }
+
+    /** تشخيص رابط الشاشة: "mp4|webm|gl|آخر نتيجة|قبل كم ثانية". */
+    function diagOf(x) {
+        var a = String((x && x.diag) || '').split('|');
+        return { mp4: a[0] || '', webm: a[1] || '', gl: a[2] === '1', last: a[3] || '', lastAgo: a[4] === '' || a[4] == null ? null : Number(a[4]) };
+    }
+    function testResult(sent) {
+        var mine = cur && liveState.list.filter(function (x) { return String(x.id) === String(cur.id); })[0];
+        if (!mine) return null;
+        var d = diagOf(mine);
+        var age = (Date.now() - sent) / 1000;
+        if (d.lastAgo == null || d.lastAgo > age + 3) return 'التجربة وصلت للرابط بس ما بدأ أي أليرت — تأكد إن الأليرت مفعّل (مو مطفي) وجرّب مرة ثانية.';
+        if (d.last === 'played') return 'الأليرت اشتغل بشاشة البث ✓';
+        if (/^error/.test(d.last)) return 'تطبيق البث ما قدر يشغّل فيديو الأليرت (' + (d.mp4 === 'no' ? 'ما يدعم ملفات MP4' : 'خطأ ' + d.last.split(':')[1]) + ') — طلعت الصورة والاسم والرسالة بس.';
+        if (d.last === 'blocked') return 'تطبيق البث منع تشغيل الفيديو تلقائياً — طلعت الصورة والاسم والرسالة بس.';
+        return null;
     }
 
     /*
@@ -237,7 +258,12 @@
     function liveMsg() {
         var mine = cur && liveState.list.filter(function (x) { return String(x.id) === String(cur.id); })[0];
         var fresh = function (x) { return x && x.agoMs != null && x.agoMs < 12000; };
-        if (fresh(mine) && mine.ver === O.LIVE_VERSION) return { state: 'ok', label: 'متصلة بتطبيق البث', tip: 'هالشاشة مفتوحة الحين بتطبيق البث ✓ — أي «جرّب» يطلع فيها.' };
+        var cur2 = mine && mine.vers && mine.vers[O.LIVE_VERSION] != null && mine.vers[O.LIVE_VERSION] < 12000;
+        if (cur2) {
+            var d = diagOf(mine);
+            if (d.mp4 === 'no') return { state: 'old', label: 'التطبيق ما يشغّل MP4', tip: 'هالشاشة مفتوحة بتطبيق البث، بس التطبيق ما يقدر يشغّل فيديوهات MP4 — الأليرت يطلع بالصورة والاسم والرسالة بس. ارفع الأليرت بصيغة WebM.' };
+            return { state: 'ok', label: 'متصلة بتطبيق البث', tip: 'هالشاشة مفتوحة الحين بتطبيق البث ✓ — أي «جرّب» يطلع فيها.' + (d.gl ? '' : ' (التطبيق ما فيه WebGL، فالتفريغ ما يشتغل فيه.)') };
+        }
         if (fresh(mine)) return { state: 'old', label: 'الرابط قديم — انسخه من جديد', tip: 'تطبيق البث فاتح هالشاشة برابط قديم (نسخة مخزّنة ما تعرف التصاميم الجديدة ولا التجربة). اضغط «نسخ رابط الشاشة» والصقه بمكان الرابط القديم بالمصدر.' };
         var other = liveState.list.filter(function (x) { return fresh(x) && (!cur || String(x.id) !== String(cur.id)); })[0];
         var os = other && screens.filter(function (s) { return String(s.id) === String(other.id); })[0];
@@ -253,10 +279,11 @@
         liveChip.title = m.tip;
         liveChip.hidden = !cur;
     }
-    function pollLive() {
-        if (!cur || document.hidden || view !== 'editor') return;
+    function pollLive(then) {
+        if (!cur || (document.hidden && !then) || view !== 'editor') return;
         api('GET', '/api/screens/live-status').then(function (d) {
             if (d && d.success) { liveState.list = d.screens || []; liveState.at = Date.now(); paintLive(); }
+            if (then) then();
         }).catch(function () { /* الدورة الجاية */ });
     }
     setInterval(pollLive, 5000);

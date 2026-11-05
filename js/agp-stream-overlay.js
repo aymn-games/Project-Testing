@@ -1888,16 +1888,36 @@
                 }
             });
             v.muted = i > 0 || Boolean(it.mute);
+            if (i === 0) v.addEventListener('playing', function () { diagAlert('played'); }, { once: true });
             var p = v.play();
             // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
-            if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(done); });
+            if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(function () { if (!started) { diagAlert('blocked'); noVideo(); } }); });
         });
+        /*
+         * الفيديو ما اشتغل (تطبيق البث ما يدعم صيغته، أو منع التشغيل): بدل ما يختفي الأليرت
+         * بصمت، نعرض الصورة والاسم والرسالة 4 ثواني — ونبلّغ المحرر بالسبب (diag).
+         */
+        function noVideo() {
+            if (ended || started) return;
+            started = true;
+            boxes.forEach(function (b) {
+                b.root.classList.add('novideo');
+                partT = partT.concat(runPartTimers(b.root));
+            });
+            clearTimeout(timer);
+            timer = setTimeout(done, 4000);
+            outT = setTimeout(function () { boxes.forEach(function (b) { b.root.classList.add('out'); }); }, 3650);
+        }
         if (!own) boxes[0].video.addEventListener('ended', function () {
             boxes.forEach(function (b) { b.root.classList.add('out'); });
             clearTimeout(timer);
             timer = setTimeout(done, 340);
         });
-        boxes[0].video.addEventListener('error', done);
+        boxes[0].video.addEventListener('error', function () {
+            var er = boxes[0].video.error;
+            diagAlert('error:' + (er ? er.code : '?'));
+            noVideo();
+        });
         timer = setTimeout(done, max + 8000); // لو الفيديو ما اشتغل أبداً
     }
 
@@ -1982,7 +2002,7 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&lv=' + LIVE_VERSION)
+        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&lv=' + LIVE_VERSION + diagParam())
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -2015,6 +2035,28 @@
      * تجارب المحرر بانتظار أليرتها: لو الأليرت جديد ولسا ما وصل تصميمه للرابط
      * (يتحدّث كل DESIGN_POLL_MS) نستنى لين 15 ثانية.
      */
+    /*
+     * تشخيص رابط الشاشة (يوصل للمحرر مع طلب الأحداث): هل تطبيق البث يشغّل MP4 / WebM،
+     * هل فيه WebGL (التفريغ)، ووش صار بآخر أليرت (played / error:<رمز> / blocked).
+     */
+    var diag = null;
+    function diagBase() {
+        if (diag) return diag;
+        var v = document.createElement('video'), gl = false;
+        try { var c = document.createElement('canvas'); gl = Boolean(c.getContext('webgl')); } catch (e) { gl = false; }
+        diag = {
+            mp4: v.canPlayType ? v.canPlayType('video/mp4; codecs="avc1.42E01E"') || 'no' : '?',
+            webm: v.canPlayType ? v.canPlayType('video/webm; codecs="vp9"') || 'no' : '?',
+            gl: gl ? 1 : 0, last: '', lastAt: 0
+        };
+        return diag;
+    }
+    function diagAlert(result) { var d = diagBase(); d.last = result; d.lastAt = Date.now(); }
+    function diagParam() {
+        var d = diagBase();
+        return '&dg=' + encodeURIComponent([d.mp4, d.webm, d.gl, d.last, d.lastAt ? Math.round((Date.now() - d.lastAt) / 1000) : ''].join('|'));
+    }
+
     function runTests() {
         var now = Date.now();
         evState.tests = evState.tests.filter(function (t) {
@@ -2406,6 +2448,7 @@
         '.agp-so-vpart.pin-down{animation:agp-so-p-down .5s cubic-bezier(.2,.9,.3,1) both}',
         '.agp-so-vpart.pout{animation:agp-so-p-out .35s ease both}',
         '.agp-so-vbox.out{animation:agp-so-a-out .35s ease both}',
+        '.agp-so-vbox.novideo video,.agp-so-vbox.novideo canvas{display:none}',
         '@keyframes agp-so-p-fade{0%{opacity:0}100%{opacity:1}}',
         '@keyframes agp-so-p-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}',
         '@keyframes agp-so-p-up{0%{opacity:0;transform:translate(-50%,10%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
