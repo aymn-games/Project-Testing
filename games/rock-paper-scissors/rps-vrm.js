@@ -3,7 +3,7 @@
  *
  * loadModels(base) ← Promise<{ girl, boy }>: كل موديل ينحمّل مرة وحدة، وكل لاعب ياخذ نسخة منه
  *   (SkeletonUtils.clone: نفس الجيومتري والخامات والصور، فالذاكرة ما تتضاعف). لو فشل التحميل
- *   (المكتبة أو الملف) ترجع null والمشهد يكمل بالشخصيات القديمة.
+ *   (المكتبة أو الملف) ترجع null، والمشهد يعيد المحاولة.
  *
  * makeVrmRig(model, { n }) ← نفس واجهة makeRig بـ birthday-party/rig3d.js اللي يستخدمها rps-scene.js:
  *   { root, bones, play, setSpeed, update, express, dispose, look, anim } + زيادات VRM:
@@ -55,7 +55,7 @@ export function loadModels(base = './models/') {
         };
         const [girl, boy] = await Promise.all([one('girl'), one('boy')]);
         return { girl, boy };
-    })().catch(() => null);
+    })().catch(() => { cache.p = null; return null; }); // الفشل ما ينحفظ: المحاولة الجاية تعيد التحميل
     return cache.p;
 }
 
