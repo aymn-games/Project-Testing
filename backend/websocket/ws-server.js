@@ -464,8 +464,11 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     },
 
     onComment: function (data) {
-      // الأوفرلي ما يحتاج التعليقات/الهدايا نفسها — يقرأ الملخص من /api/stream/session-stats
+      // الأوفرلي ما يحتاج التعليقات/الهدايا نفسها — يقرأ الملخص من /api/stream/session-stats.
+      // الاستثناء: payload.chat = مكتبة الألعاب والتحكم بالشات مفعّل (js/agp-remote-control.js)
+      // → نرسل التعليق مختصر (المعرّف والاسم والنص) عشان أوامر المتحكم توصل.
       if (!isOverlay) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
+      else if (payload.chat && data.text) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, false, null, null, null, null));
 
       if (entry.live && entry.activeConnector === connector) entry.live.comments++;
       if (entry.statsUsername) liveSessionStats.recordComment(entry.statsUsername, connectionId, data);
