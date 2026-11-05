@@ -2765,7 +2765,7 @@
     }
 
     /**
-     * مرحلة التجربة: Veyro للإدارة بس (role = admin). الدور من السيرفر (/api/auth/me)
+     * مرحلة التجربة: Veyro للإدارة (role = admin) ولحسابات «تجربة Veyro» (permissions.veyro_tester). من السيرفر (/api/auth/me)
      * مو من الكاش. لفتحه للستريمرز: خلّ PREVIEW_ADMIN_ONLY = false.
      */
     var PREVIEW_ADMIN_ONLY = true;
@@ -2777,7 +2777,9 @@
         gateCheck.then(function (m) {
             if (!m) return loadScreens();
             if (m._status === 401) { renderHome(); showGate('login'); return; }
-            if (!m.success || !m.user || m.user.role !== 'admin') { renderHome(); showGate(m.success ? 'preview' : 'error'); return; }
+            // الأدمن، أو حساب عنده صلاحية «تجربة Veyro» (veyro_tester من لوحة الأدمن)
+            var okUser = m.success && m.user && (m.user.role === 'admin' || (m.user.permissions && m.user.permissions.veyro_tester));
+            if (!okUser) { renderHome(); showGate(m.success ? 'preview' : 'error'); return; }
             loadScreens();
         }).catch(function () { renderHome(); showGate('error'); });
     }

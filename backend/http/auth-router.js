@@ -946,6 +946,7 @@ function statsWatchState(user, on) {
   var watcher = require('../stats/stream-stats-watcher');
   return {
     success: true,
+    allowed: isStreamerUser(user),
     on: Boolean(on),
     linked: linked,
     username: linked ? tiktokLiveCheck.normalize(user.tiktok_username) : null,
@@ -960,6 +961,8 @@ function handleGetStatsWatch(req, res, body, user) {
 
 function handleSetStatsWatch(req, res, body, user) {
   if (!screensGate(res, user)) return;
+  // حساب «تجربة Veyro» بس (مو ستريمر): الاتصال بالبث مقفل
+  if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'tester_no_connections' }); return; }
   if (!(user.tiktok_verified && user.tiktok_username)) { sendJson(res, 400, { success: false, error: 'tiktok_not_linked' }); return; }
   var on = Boolean(body && body.on);
   var r = authService.setPermission(user.id, 'stream_stats_watch', on);
@@ -1000,8 +1003,15 @@ function isStreamerUser(user) {
   return user.role === 'admin' || Boolean(user.is_streamer) || Boolean(p.can_run_games) || Boolean(p.full_game_access);
 }
 
+/**
+ * «تجربة Veyro» (permissions.veyro_tester — من لوحة الأدمن): يفتح شاشات البث وأدواتها
+ * (تصميم، مكتبة، تفريغ، «جرّب»، صورة الإحصائيات) بدون ما يكون ستريمر — بس بدون الاتصال
+ * بالبث (الحساب التلقائي stats-watch مقفل له).
+ */
+function isVeyroTester(user) { return Boolean(user && user.permissions && user.permissions.veyro_tester); }
+
 function screensGate(res, user) {
-  if (isStreamerUser(user)) return true;
+  if (isStreamerUser(user) || isVeyroTester(user)) return true;
   sendJson(res, 403, { success: false, error: 'not_streamer' });
   return false;
 }
