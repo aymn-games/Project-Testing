@@ -3,7 +3,10 @@
  * تشغيل اللعبة كاملة بأوامر يكتبونها بشات البث: يفتح اللعبة، يكتب كلمة
  * الدخول، يغيّر الإعدادات، يبدأ اللوبي، يدخل شاشة اللعب، ويبدأ الجولات.
  *
- * يشتغل على روليت الإقصاء فقط (الشاشات اللي تستدعي attach).
+ * يشتغل على روليت الإقصاء فقط (الشاشات اللي تستدعي attach)، وبمكتبة الألعاب
+ * (games.html) أمر واحد: !روليت يفتح إعداداتها. المكتبة ما فيها اتصال لعبة،
+ * فالتعليقات توصلها من اتصال الإحصائيات (js/agp-stream-overlay.js، حدث
+ * 'agp:overlay-comment') لما الصفحة تطلب ذلك بـ overlayChat:true.
  *
  * التفعيل يدوي من المذيع فقط، من بروفايله (profile.html → تبويب
  * «معلومات الستريمر» → زر «التحكم بالشات»): نافذة فيها مفتاح التفعيل
@@ -100,7 +103,7 @@
     }
     function writeConfig(c) {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch (e) {}
-        try { window.dispatchEvent(new CustomEvent('agp:remote-control-changed', { detail: readConfig() })); } catch (e) {}
+        notifyChanged();
     }
     function setEnabled(on) {
         var c = readConfig();
@@ -138,8 +141,12 @@
 
     // ---------- الصفحة الحالية وأوامرها ----------
 
-    var _page = null; // {page, connect, commands}
+    var _page = null; // {page, connect, overlayChat, commands}
     var _unsub = null;
+
+    function notifyChanged() {
+        try { window.dispatchEvent(new CustomEvent('agp:remote-control-changed', { detail: readConfig() })); } catch (e) {}
+    }
 
     function globalCommands() {
         return [
@@ -194,6 +201,7 @@
         detach();
         _page = {
             page: (opts && opts.page) || '',
+            overlayChat: !!(opts && opts.overlayChat),
             connect: opts && opts.connect,
             commands: (opts && opts.commands) || []
         };
@@ -201,12 +209,14 @@
             _unsub = AGP.events.on('stream:commentReceived', onComment);
         }
         ensureConnected();
+        notifyChanged();
         return { detach: detach, setCommands: function (list) { if (_page) _page.commands = list || []; } };
     }
     function detach() {
         if (typeof _unsub === 'function') { try { _unsub(); } catch (e) {} }
         _unsub = null;
         _page = null;
+        notifyChanged();
     }
 
     // ---------- مساعدات للألعاب ----------
@@ -371,6 +381,7 @@
 
     // ملخص أوامر روليت الإقصاء بنافذة البروفايل
     var HELP_LINES = [
+        ['مكتبة الألعاب:', ['!روليت']],
         ['الإعدادات:', ['!كلمة صقر', '!الحد 30', '!الشكل سكرول', '!الوقت 25', '!الدعم وردة 2', '!ابدأ']],
         ['اللوبي:', ['!ابدأ', '!اللاعبين', '!طرد اسم', '!رجوع']],
         ['اللعب:', ['!لف', '!تلقائي', '!اقصاء 3', '!ارجاع 2', '!دخول', '!اعادة', '!جديدة', '!الحالة']]
@@ -410,7 +421,11 @@
     window.addEventListener('agp:stream-connected', ensureConnected);
     window.addEventListener('storage', function (e) {
         if (!e.key || e.key === 'agp:agp-stream-connection') ensureConnected();
-        if (!e.key || e.key === STORAGE_KEY) refreshUi();
+        if (!e.key || e.key === STORAGE_KEY) { refreshUi(); notifyChanged(); }
+    });
+    // مكتبة الألعاب: التعليقات من اتصال الإحصائيات (js/agp-stream-overlay.js)
+    window.addEventListener('agp:overlay-comment', function (e) {
+        if (_page && _page.overlayChat && e && e.detail) onComment(e.detail);
     });
 
     AGP.remoteControl = {
@@ -424,6 +439,8 @@
         toInt: toInt,
         norm: norm,
         isEnabled: function () { return readConfig().enabled; },
+        /** هل الصفحة الحالية (المكتبة) تحتاج نصوص التعليقات من اتصال الإحصائيات؟ */
+        wantsLibraryChat: function () { return !!(_page && _page.overlayChat && readConfig().enabled); },
         openPanel: openPanel,
         _parse: parse,
         _onComment: onComment

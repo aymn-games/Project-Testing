@@ -502,7 +502,7 @@
 
     /* ---------------- اتصال الإحصائيات (بدون لعبة متصلة) ---------------- */
 
-    var link = { ws: null, state: 'off', msg: '', retry: 0, timer: null, username: null, stopFor: null };
+    var link = { ws: null, state: 'off', msg: '', retry: 0, timer: null, username: null, stopFor: null, chat: false };
     var gameDownSince = null;
 
     function savedConn() {
@@ -533,10 +533,20 @@
      * الستريمر يظهر بـ«البثوث الشغّالة» (الأدمن وبطاقات المكتبة). */
     function presenceWanted() { return GAME_PAGE && !STUDIO && !gameConnector(); }
 
+    /**
+     * «التحكم بالشات» بمكتبة الألعاب (js/agp-remote-control.js): المكتبة ما فيها
+     * اتصال لعبة، فنفس اتصال الإحصائيات يطلب نصوص التعليقات (payload.chat)
+     * ويمررها كحدث 'agp:overlay-comment' عشان أوامر المتحكم توصل.
+     */
+    function chatWanted() {
+        var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
+        return !LINK && !STUDIO && !!(RC && typeof RC.wantsLibraryChat === 'function' && RC.wantsLibraryChat());
+    }
+
     function linkWanted() {
         if (LINK) return false; // رابط OBS يقرأ بس — الحساب من اتصال الموقع
         var c = savedConn();
-        if ((!dataWanted() && !presenceWanted()) || !token() || !c) return false;
+        if ((!dataWanted() && !presenceWanted() && !chatWanted()) || !token() || !c) return false;
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
         if (gameConnected()) { gameDownSince = null; return false; }
         if (gameConnector()) {
@@ -565,17 +575,22 @@
         try { ws = new WebSocket(BACKEND_WS_URL); } catch (e) { link.state = 'error'; scheduleLink(); return; }
         link.ws = ws;
         link.username = c.username;
+        link.chat = chatWanted();
         link.state = 'connecting';
         ws.onopen = function () {
             ws.send(JSON.stringify({
                 type: 'connect',
-                payload: { platform: 'tiktok', username: c.username, followersOnly: false, source: 'overlay', page: location.pathname, authToken: token() },
+                payload: { platform: 'tiktok', username: c.username, followersOnly: false, source: 'overlay', chat: link.chat, page: location.pathname, authToken: token() },
                 timestamp: Date.now()
             }));
         };
         ws.onmessage = function (e) {
             var env;
             try { env = JSON.parse(e.data); } catch (err) { return; }
+            if (env && env.type === 'comment' && env.payload && link.ws === ws) {
+                try { window.dispatchEvent(new CustomEvent('agp:overlay-comment', { detail: env.payload })); } catch (err) { /* ignore */ }
+                return;
+            }
             if (!env || env.type !== 'status' || !env.payload || link.ws !== ws) return;
             var st = env.payload.status, reason = env.payload.reason;
             if (st === 'connected') {
@@ -606,7 +621,7 @@
         var c = savedConn();
         if (c && link.stopFor && link.stopFor !== connId(c)) link.stopFor = null;
         var want = linkWanted();
-        if (want && link.ws && link.username !== c.username) closeLink();
+        if (want && link.ws && (link.username !== c.username || link.chat !== chatWanted())) closeLink();
         if (want && !link.ws && !link.timer) openLink(c);
         else if (!want && (link.ws || link.timer)) closeLink();
         notify('link');
@@ -2409,6 +2424,8 @@
         }
         // اتصال/قطع من زر المكتبة، واتصال اللعبة نفسها
         setInterval(syncLink, LINK_CHECK_MS);
+        // تفعيل/إطفاء التحكم بالشات (js/agp-remote-control.js)
+        window.addEventListener('agp:remote-control-changed', function () { setTimeout(syncLink, 0); });
         var A = window.AymanGamesPlatform;
         if (A && A.events && typeof A.events.on === 'function') A.events.on('stream:statusChanged', function () { setTimeout(syncLink, 0); });
         document.addEventListener('visibilitychange', function () {
