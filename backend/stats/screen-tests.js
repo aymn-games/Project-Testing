@@ -46,7 +46,25 @@ function since(key, after) {
     return { tseq: q.seq, tests: q.list.filter(function (t) { return t.seq > a; }) };
 }
 
+/*
+ * آخر مرة رابط الشاشة سأل السيرفر (كل ثانيتين لما يكون مفتوح بتطبيق البث) ونسخته —
+ * المحرر يعرض «متصلة بتطبيق البث» أو لا، عشان يعرف إن الرابط اللي بالتطبيق هو نفس الشاشة.
+ */
+var _seen = new Map(); // key -> { at, ver }
+function touch(key, ver) {
+    key = String(key || '');
+    if (!key) return;
+    _seen.delete(key);
+    _seen.set(key, { at: Date.now(), ver: String(ver || '').slice(0, 20) });
+    if (_seen.size > 5000) _seen.delete(_seen.keys().next().value);
+}
+/** { agoMs, ver } أو null لو ما انفتح من تشغيل السيرفر. */
+function seen(key) {
+    var s = _seen.get(String(key || ''));
+    return s ? { agoMs: Date.now() - s.at, ver: s.ver } : null;
+}
+
 /** لما يتغيّر رابط الشاشة (new-key) تنحذف تجاربه. */
 function drop(key) { _byKey.delete(String(key || '')); }
 
-module.exports = { push: push, since: since, drop: drop, TYPES: TYPES };
+module.exports = { push: push, since: since, drop: drop, touch: touch, seen: seen, TYPES: TYPES };

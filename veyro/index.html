@@ -521,6 +521,12 @@
   .ob-empty b { color: var(--text); font-size: 18px; font-family: "Noto Kufi Arabic", sans-serif; }
   .ob-frame .agp-so-item { cursor: grab; touch-action: none; border-radius: 6px; }
   .ob-frame .agp-so-item:hover { outline: 1.5px dashed rgba(255,255,255,.35); outline-offset: 5px; }
+  .ob-live { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(169,155,184,.05); color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+  .ob-live i { width: 8px; height: 8px; border-radius: 50%; background: #6b6478; flex: none; }
+  .ob-live.ok { color: #b9f5c9; border-color: rgba(120,230,160,.35); }
+  .ob-live.ok i { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+  .ob-live.old { color: #ffd98a; border-color: rgba(255,200,90,.35); }
+  .ob-live.old i { background: #fbbf24; }
   .ob-frame .agp-so-item.ob-sel { outline: 2px solid var(--sky); outline-offset: 5px; }
   /* الأليرت وهو ما يشتغل: الشاشة تبان كأنه مو موجود — يبان بس لما تختاره (أو تمر عليه بالماوس) عشان تحركه */
   .ob-frame .agp-so-alert .agp-so-astage > .agp-so-vslot, .ob-frame .agp-so-alert .agp-so-astage > .agp-so-ghost { opacity: 0; transition: opacity .2s; }
