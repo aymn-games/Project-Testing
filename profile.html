@@ -1718,6 +1718,78 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
     }
 
+    /* ---- شخصيتي بالألعاب (شخصيات الأنمي المشتركة — docs/CHARACTERS.md): بنت أو ولد أو عشوائي،
+     *      وتظهر مع صاحب الحساب بالألعاب الثري دي لو حسابه موثّق بتيك توك. بعد بطاقات الفوز ---- */
+    var winPanelEl = document.querySelector('[data-win-cards-panel]');
+    if (winPanelEl && !document.querySelector('[data-character-panel]')) {
+      wiredSomething = true;
+      var chPanel = winPanelEl.cloneNode(false);
+      chPanel.removeAttribute('data-win-cards-panel');
+      chPanel.setAttribute('data-character-panel', '1');
+      var chHeader = winPanelEl.children[0].cloneNode(true);
+      chHeader.children[0].textContent = 'شخصيتي بالألعاب';
+      var chNote = document.createElement('div');
+      chNote.style.cssText = 'margin-top:10px;font-size:12.5px;line-height:1.9;color:#8f88a3;';
+      chNote.textContent = 'الشخصية اللي تختارها تطلع معك لما تدخل الألعاب الثري دي (مثل حجرة ورقة مقص). لازم حسابك يكون موثّق بتيك توك. لو ما اخترت، تطلع لك شخصية عشوائية.';
+      var chGrid = document.createElement('div');
+      chGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:16px;';
+      chPanel.appendChild(chHeader);
+      chPanel.appendChild(chNote);
+      chPanel.appendChild(chGrid);
+      winPanelEl.parentNode.insertBefore(chPanel, winPanelEl.nextSibling);
+
+      var chCurrent = p.character === 'girl' || p.character === 'boy' ? p.character : null;
+      [
+        { kind: 'girl', name: 'بنت', img: 'assets/characters/girl.png' },
+        { kind: 'boy', name: 'ولد', img: 'assets/characters/boy.png' },
+        { kind: null, name: 'عشوائي', img: null }
+      ].forEach(function(opt){
+        var active = opt.kind === chCurrent;
+        var card = document.createElement('div');
+        card.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid ' + (active ? 'rgba(178,140,245,.6)' : 'rgba(255,255,255,.07)') + ';background:' + (active ? 'rgba(122,63,212,.16)' : 'rgba(255,255,255,.03)') + ';';
+        var box = document.createElement('div');
+        box.style.cssText = 'height:190px;border-radius:11px;background:radial-gradient(circle at 50% 35%,rgba(178,140,245,.18),rgba(23,19,38,.9) 70%);border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;';
+        if (opt.img) {
+          var im = document.createElement('img');
+          im.src = opt.img; im.alt = opt.name;
+          im.style.cssText = 'max-height:94%;max-width:94%;object-fit:contain;';
+          im.onerror = function(){ im.style.display = 'none'; };
+          box.appendChild(im);
+        } else {
+          var q = document.createElement('span');
+          q.style.cssText = 'font-family:\'Noto Kufi Arabic\',sans-serif;font-size:54px;font-weight:700;color:#b28cf5;';
+          q.textContent = '؟';
+          box.appendChild(q);
+        }
+        var nm = document.createElement('div');
+        nm.style.cssText = 'font-size:13px;color:#f4f2fb;';
+        nm.textContent = opt.name;
+        card.appendChild(box);
+        card.appendChild(nm);
+        if (isOwner) {
+          var btn = document.createElement('button');
+          var label = active ? 'مفعّلة الآن' : 'تفعيل';
+          btn.style.cssText = 'padding:8px 10px;border-radius:10px;cursor:' + (active ? 'default' : 'pointer') + ';font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:11.5px;border:1px solid ' + (active ? 'rgba(196,106,224,.7)' : 'rgba(178,140,245,.35)') + ';background:' + (active ? 'linear-gradient(135deg,#7a3fd4,#c46ae0)' : 'transparent') + ';color:' + (active ? '#fdf7ff' : '#c6b4f2') + ';';
+          btn.textContent = label;
+          if (!active) btn.addEventListener('click', function(){
+            btn.disabled = true;
+            btn.textContent = 'جارٍ...';
+            window.AGPAuth.setCharacter(opt.kind).then(function(result){
+              if (result && result.success) window.location.reload();
+              else { btn.disabled = false; btn.textContent = label; }
+            }).catch(function(){ btn.disabled = false; btn.textContent = label; });
+          });
+          card.appendChild(btn);
+        } else {
+          var st = document.createElement('div');
+          st.style.cssText = 'font-size:11px;color:' + (active ? '#7ee0a6' : '#8f88a3') + ';';
+          st.textContent = active ? 'مختارة ✅' : '—';
+          card.appendChild(st);
+        }
+        chGrid.appendChild(card);
+      });
+    }
+
     /* ---- زر لوحة التحكم (للأدمن فقط، بحساب نفسه) ---- */
     return wiredSomething;
   }

@@ -198,6 +198,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
   { method: 'POST', path: '/api/admin/win-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinCard },
   { method: 'POST', path: '/api/win-card/toggle', requireAuth: true, handler: handleToggleWinCard },
+  // شخصية الأنمي بالألعاب (بنت/ولد، أو null = عشوائي) — من المقتنيات بالبروفايل
+  { method: 'POST', path: '/api/character/set', requireAuth: true, handler: handleSetCharacter },
   // ---- مستوى الستريمر (SP). القراءة العامة لعتبات المستويات مسموحة
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
@@ -836,6 +838,11 @@ function handleAdminSetWinCard(req, res, body) {
 }
 
 /** تفعيل/إيقاف ذاتي لبطاقة فوز مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
+function handleSetCharacter(req, res, body, user) {
+  var result = collectiblesService.setCharacter(user.id, body && body.kind);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 function handleToggleWinCard(req, res, body, user) {
   var result = collectiblesService.setWinCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);

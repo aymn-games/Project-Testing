@@ -696,6 +696,11 @@ function toggleWinCard(cardKey, enabled) {
     return request('/api/win-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
+/** شخصية الأنمي بالألعاب: 'girl' أو 'boy'، أو null = شكل عشوائي (docs/CHARACTERS.md). */
+function setCharacter(kind) {
+    return request('/api/character/set', { method: 'POST', body: { kind: kind || null } });
+}
+
 /** Called on round/match end. participants: [{tiktokUsername, won}].
  * options.teamGame: true for two-team games (smaller per-player win bonus,
  * see backend/points/points-service.js). */
@@ -1119,6 +1124,7 @@ global.AGPAuth = {
     adminGrantWinCard: adminGrantWinCard,
     adminRevokeWinCard: adminRevokeWinCard,
     toggleWinCard: toggleWinCard,
+    setCharacter: setCharacter,
     reportRoundCompletion: reportRoundCompletion,
     reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,

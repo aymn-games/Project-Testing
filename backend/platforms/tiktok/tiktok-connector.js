@@ -5,7 +5,7 @@
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
  *   callbacks = {
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
- *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard, character }),
  *     onGift({ id, name, giftName, giftId, giftValue, giftImage, repeatCount }),
  *     onFollow({ id, name, avatarUrls }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
@@ -220,6 +220,20 @@ function extractElimCard(uniqueId) {
 }
 
 /**
+ * شخصية الأنمي اللي اختارها صاحب التعليق ('girl'|'boy') أو null (عشوائي).
+ * @param {string} uniqueId
+ * @returns {'girl'|'boy'|null}
+ */
+function extractCharacter(uniqueId) {
+    try {
+        return collectiblesService.getCharacterForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: character lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
  * بطاقة الفوز المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس extractElimCard.
  * @param {string} uniqueId
  * @returns {{cardKey: string}|null}
@@ -428,6 +442,7 @@ function createTikTokConnector() {
                 entrance: extractEquippedEntrance(user.uniqueId),
                 elimCard: extractElimCard(user.uniqueId),
                 winCard: extractWinCard(user.uniqueId),
+                character: extractCharacter(user.uniqueId),
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });

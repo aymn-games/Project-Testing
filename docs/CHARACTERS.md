@@ -10,6 +10,8 @@
 | الحركات (نفسها حق حفلة الميلاد) | `games/birthday-party/rig3d.js` (`getClip`) + `games/birthday-party/anims/` |
 | سكربت تخفيف موديل جديد | `tools/vrm-slim.py` |
 | مثال كامل شغّال | `games/rock-paper-scissors/rps-scene.js` (ابحث عن `makeVrmRig`) |
+| صور الاختيار بالبروفايل | `assets/characters/girl.png` و`boy.png` |
+| اختيار اللاعب (السيرفر) | جدول `user_characters` + `backend/collectibles/collectibles-service.js` |
 
 **الموديل:** VRM 1.0، فيه 13–15 ألف مثلث وخامتين، وحجمه تقريباً 2.9 ميقا بعد التخفيف.
 **التعابير:** happy, angry, sad, relaxed, surprised, blink، وحروف الفم aa/ih/ou/ee/oh.
@@ -59,6 +61,19 @@ rig.dispose();                            // لما يطلع اللاعب
 - **توجيه العظام:** العظام بوضع T، ودوران الراحة صفر، والوجه لـ+Z، واليسار +X. نفس هيكل `rig3d.js`، فأي حركة أو `aimBone` مكتوبة له تشتغل على VRM.
 - **أي لاعب ياخذ أي موديل:** اللعبة تقرر، مثلاً `g` عشوائي للاعب. كل البنات بنفس الموديل وكل الأولاد بنفس الموديل.
 - **يد خاصة:** لو اللعبة تبي يد خاصة فيها (مثل يد المواجهة الكبيرة بحجرة ورقة مقص، `games/rock-paper-scissors/rps-hand.js`)، تخفي يد الموديل بـ`rig.hideHand(side, true)` وتركّب يدها على `rig.bones.RightHand`. ولون البشرة بـ`rig.skin`.
+
+## اختيار اللاعب لشخصيته (من البروفايل)
+- **وين يختار:** صاحب الحساب يختار من **البروفايل ← المقتنيات ← «شخصيتي بالألعاب»**: بنت، أو ولد، أو عشوائي. مجانية لكل حساب، وصورها `assets/characters/girl.png` و`boy.png`.
+- **وين تنحفظ:** جدول `user_characters` (صف لكل مستخدم، وما فيه صف = عشوائي). الخدمة بـ`collectibles-service.js`: `getCharacter` و`setCharacter` و`getCharacterForVerifiedTikTok`. الرابط `POST /api/character/set {kind}`، ومن الواجهة `AGPAuth.setCharacter(kind)`.
+- **كيف توصل للعبة:** مع كل تعليق من البث يوصل الحقل **`character`** (`'girl'` أو `'boy'` أو `null`)، بس لو حساب صاحب التعليق موثّق بنفس يوزر تيك توك. يوصل بـ`stream:commentReceived`، وبـ`playerData` للألعاب اللي تستخدم `keywordManager`/`queueManager`.
+- **بأي لعبة:** استخدم اختيار اللاعب، وإلا عشوائي:
+
+```js
+var g = p.character === 'boy' ? 1 : p.character === 'girl' ? 0 : (Math.random() < .5 ? 0 : 1);
+makeVrmRig(g ? MODELS.boy : MODELS.girl, { n });
+```
+
+مثال: `genderOf(p)` بـ`games/rock-paper-scissors/game.html`.
 
 ## الأداء
 - كل شخصية أمرين رسم بس. 32 لاعب = تقريباً 150 أمر رسم بالمشهد كله (الشخصيات المبنية بالكود كانت 221).
