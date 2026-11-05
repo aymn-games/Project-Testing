@@ -2125,6 +2125,12 @@
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ أطراف الفيديو ويعرف لون الخلفية لحاله. بعدها ظبّط القوة والنعومة.'));
             ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
             ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode, function (x) { setK('mode', x); paintControls(); }), true));
+            // درجة التفريغ: كم تنشال الخلفية (100٪ = كلها) — الشخصية والمؤثرات ما يتغيّر فيها شي
+            var amt = el('div', 'va-dur');
+            var amtLab = el('b', 'va-durv', Math.round((1 - (draft.keepBg || 0)) * 100) + '٪');
+            amt.appendChild(slider(0, 100, 1, Math.round((1 - (draft.keepBg || 0)) * 100), function (x) { amtLab.textContent = x + '٪'; setK('keepBg', Math.round((100 - x)) / 100); }));
+            amt.appendChild(amtLab);
+            ctrls.appendChild(row('درجة تفريغ الخلفية', amt, true, '100٪ = الخلفية ' + (draft.mode === 'white' ? 'البيضاء' : draft.mode === 'color' ? 'الملوّنة' : 'السوداء') + ' تنشال كلها، 50٪ = تصير نص شفافة — والباقي بالفيديو ما يتغيّر لونه ولا شكله'));
             if (draft.mode === 'color') {
                 var cw = el('div', 'ob-sw');
                 [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#ff00ff', 'وردي']].forEach(function (c) {
@@ -2162,9 +2168,8 @@
             ctrls.appendChild(row(draft.mode === 'screen' ? 'قوة التوهّج' : 'النعومة', slider(0, 0.5, 0.01, draft.smooth, function (x) { setK('smooth', x); }), false, draft.mode === 'screen' ? 'أعلى = الضوء أوضح' : 'نعومة حواف الشخصية'));
             ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
             if (draft.mode === 'color') ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل اللون الأخضر من الحواف'));
-            ctrls.appendChild(el('div', 'ob-gtitle', 'لو التفريغ خرّب شي'));
-            ctrls.appendChild(row('إرجاع الخلفية', slider(0, 1, 0.01, draft.keepBg || 0, function (x) { setK('keepBg', x); }), false, '0 = مفرّغة كامل، وكل ما زاد ترجع الخلفية الأصلية'));
-            ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'أقل = الأليرت كله أخف'));
+            ctrls.appendChild(el('div', 'ob-gtitle', 'الأليرت كله'));
+            ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'هذي تخفف كل شي (الشخصية والخلفية) — للخلفية بس استخدم «درجة تفريغ الخلفية»'));
             paintKeyed();
         }
         paintControls();
