@@ -26,6 +26,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { loadClips } from '../birthday-party/rig3d.js';
+import { makeHand } from './rps-hand.js';
 import { loadModels, makeVrmRig } from './rps-vrm.js';
 
 const T = THREE, TAU = Math.PI * 2;
@@ -412,6 +413,7 @@ export function createArena(container, opts = {}) {
         return c;
     }
     function dropChar(c) {
+        removeHands(c);
         if (c.hlFx) { c.hlFx.g.removeFromParent(); c.hlFx.ring.material.dispose(); c.hlFx.beam.material.dispose(); }
         c.rig.dispose();
         [c.tag, c.bubble, c.badge].forEach(s => { s.removeFromParent(); s.material.map.dispose(); s.material.dispose(); });
@@ -459,6 +461,7 @@ export function createArena(container, opts = {}) {
             // اللي بالمواجهة اسمه بشريط VS فوق. واللوبي (stage) أسماؤه وصورهم HTML بالصفحة (heads())
             c.tagOk = c.kind === 'queue' && p.place && p.place.n <= 16 && !p.noTag;
             c.hl = p.hl || 0;
+            if (c.kind === 'duel') addHands(c); else removeHands(c);
         });
         for (const c of [...chars.values()]) if (!seen.has(c.id)) dropChar(c);
         // مراكز المواجهات من أماكن اللاعبين
@@ -552,7 +555,7 @@ export function createArena(container, opts = {}) {
     }
     const widePos = new T.Vector3(), wideLook = new T.Vector3(0, .9, 1.4), _wp = new T.Vector3(), _wl = new T.Vector3();
     const basePos = new T.Vector3(), closePos = new T.Vector3(), closeLook = new T.Vector3(0, 1.16, DZ), _cl = new T.Vector3();
-    const CHAMP_DROP = .24; let champK = 0;
+    const CHAMP_DROP = .15; let champK = 0; // (موديلات VRM أطول: مسافة فوق الراس تحت الشريط)
     function placeCamera(k, kd, kw) {
         camera.position.lerpVectors(basePos, closePos, k);
         _cl.lerpVectors(camLook, closeLook, k);
@@ -562,11 +565,51 @@ export function createArena(container, opts = {}) {
         camera.lookAt(_cl);
     }
     // ================================================================ الأيدي + التقريب
-    // الحجرة/الورقة/المقص بأصابع الموديل نفسه (rig.gesture بـ rps-vrm.js)، واليد الثانية مرتاحة.
-    // من بداية العد لين نهاية الكشف الكاميرا تقرّب على اليدين، وبعدها ترجع للقطة العادية.
-    const POSE_OF = { 1: 'rock', 2: 'paper', 3: 'scissors' };
+    // اللي بالمواجهة: يد كبيرة بأصابع ومفاصل (rps-hand.js) تتركّب على عظمة الكف مكان يد الموديل
+    // (تختفي بـ rig.hideHand)، والحجرة/الورقة/المقص تنعمل بأصابعها وباطن الكف للكاميرا عشان تنقرا.
+    // الباقين: أصابع الموديل نفسه مرتاحة. من بداية العد لين نهاية الكشف الكاميرا تقرّب على اليدين.
+    const HAND_S = .13, POSE_OF = { 1: 'rock', 2: 'paper', 3: 'scissors' };
+    const QMAP = {
+        // عظمة الكف بوضع الراحة: يمين الأصابع لـ -X والكف لتحت والإبهام لقدام؛ اليسار مرآة
+        Right: new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0, 0, 1), new T.Vector3(-1, 0, 0), new T.Vector3(0, -1, 0))),
+        Left: new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0, 0, -1), new T.Vector3(1, 0, 0), new T.Vector3(0, -1, 0))),
+    };
+    function addHands(c) {
+        if (c.fh) return;
+        c.fh = {};
+        for (const S of ['Left', 'Right']) {
+            const h = makeHand({ skin: c.rig.skin, left: S === 'Left', bare: true, env: ENV });
+            h.group.scale.multiplyScalar(HAND_S); scene.add(h.group); c.fh[S] = h;
+            // موديل VRM مضيء بأسلوب كرتوني (MToon): نضيء اليد من نفسها عشان لونها يطابق الذراع
+            h.group.traverse(o => { if (o.isMesh && o.material && o.material.emissive && !o.userData.toon) { o.userData.toon = true; o.material.emissive.copy(o.material.color).multiplyScalar(.55); } });
+            c.rig.hideHand(S, true);
+        }
+    }
+    function removeHands(c) {
+        if (!c.fh) return;
+        for (const S of ['Left', 'Right']) { const h = c.fh[S]; h.group.removeFromParent(); h.dispose(); c.rig.hideHand(S, false); }
+        c.fh = null;
+    }
+    const _hx = new T.Vector3(), _hy = new T.Vector3(), _hz = new T.Vector3(), _hm = new T.Matrix4(), _hq = new T.Quaternion(), _hp = new T.Vector3(), _hf = new T.Vector3();
     function handsUpdate(c, dt, gesture) {
-        const S = c.hand || 'Right'; c.rig.gesture(S, gesture || 'relax'); c.rig.gesture(S === 'Left' ? 'Right' : 'Left', 'relax');
+        if (!c.fh) { c.rig.gesture('Right', 'relax'); c.rig.gesture('Left', 'relax'); return; }
+        for (const S of ['Left', 'Right']) {
+            const h = c.fh[S], bone = c.rig.bones[S + 'Hand'];
+            bone.getWorldPosition(_hp); h.group.position.copy(_hp);
+            if (gesture && S === (c.hand || 'Right')) {
+                // اليد اللي تلعب: الأصابع على امتداد الساعد، وباطن الكف للكاميرا عشان الحركة تنقرا
+                c.rig.bones[S + 'ForeArm'].getWorldPosition(_hf);
+                _hy.subVectors(_hp, _hf).normalize();
+                _hz.subVectors(camera.position, _hp).addScaledVector(_hy, -_hz.copy(camera.position).sub(_hp).dot(_hy)).normalize();
+                _hx.crossVectors(_hy, _hz).normalize();
+                h.group.quaternion.setFromRotationMatrix(_hm.makeBasis(_hx, _hy, _hz));
+                h.setPose(gesture);
+            } else {
+                bone.getWorldQuaternion(_hq); h.group.quaternion.copy(_hq).multiply(QMAP[S]);
+                h.setPose('relax');
+            }
+            h.update(dt, 16);
+        }
     }
     const HO = { on: false, a: 0 };
     // تمهيد الإقصاء: شعاع أحمر من فوق الخاسر وحلقة تنبض تحته، والكاميرا تقرّب عليه
