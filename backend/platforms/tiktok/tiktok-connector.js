@@ -51,7 +51,7 @@ var MAX_RECONNECT_DELAY_MS = 30000;
 // SignatureRateLimitError فتكسر بـ "Cannot read properties of undefined
 // (reading 'retry-after')" — يخفي رسالة الـ rate-limit الحقيقية. نكتشف
 // هذا الخطأ هنا ونتعامل معه كـ rate-limit فعلي: رسالة واضحة + انتظار أطول.
-var SIGN_RATE_LIMIT_COOLDOWN_MS = 60000; // دقيقة واحدة قبل إعادة المحاولة
+var SIGN_RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000; // ٣ دقايق — كل محاولة مرفوضة تنحسب من حد الطلبات اليومي
 function isSignRateLimitCrash(err) {
     return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
 }
@@ -61,8 +61,8 @@ function isSignRateLimit(err) {
 }
 // محاولات حد التوقيع منفصلة عن MAX_RECONNECT_ATTEMPTS: كانت تُحسب منها، فبعد
 // ٥ دقايق تقريباً يوقف الموصِّل نهائياً واللعبة تبقى بدون شات وبدون أي رسالة.
-var MAX_RATE_LIMIT_RETRIES = 15; // ~١٥ دقيقة
-var RATE_LIMIT_MESSAGE = 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال دقيقة تقريباً.';
+var MAX_RATE_LIMIT_RETRIES = 10; // ~٣٠ دقيقة
+var RATE_LIMIT_MESSAGE = 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال ٣ دقايق تقريباً.';
 var RATE_LIMIT_GIVE_UP_MESSAGE = 'تعذّر الاتصال ببث تيك توك بسبب حد محاولات الاتصال — جرّب مرة ثانية بعد شوي.';
 
 // ⚠️ "Failed to retrieve Room ID from all sources." (InvalidResponseCompositeError
@@ -333,6 +333,8 @@ function createTikTokConnector() {
     var _reconnectAttempts = 0;
     var _roomIdRetries = 0; // إعادة محاولات الاتصال الأول بسبب فشل جلب Room ID
     var _rateLimitRetries = 0; // إعادة محاولات بسبب حد توقيع EulerStream
+    var _connecting = false; // connect() شغّال الحين (بين startConnection ونتيجته)
+    var _onAttempt = null; // options.onAttempt — عداد الاستهلاك (shared-connection-pool.js)
     var _reconnectTimer = null;
     var _username = null;
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
@@ -407,12 +409,16 @@ function createTikTokConnector() {
         // إعادة المحاولة كانت تبني اتصال جديد وتترك القديم بمستمعاته — ممكن
         // يطلق DISCONNECTED متأخر ويبدأ إعادة اتصال ثانية بنفس الوقت.
         disposeConnection();
+        _connecting = true;
+        // كل محاولة هنا = طلب توقيع من EulerStream
+        if (_onAttempt) { try { _onAttempt(); } catch (err) {} }
         try {
             _connection = new TikTokLib.TikTokLiveConnection(
                 _username,
                 EULERSTREAM_API_KEY ? { signApiKey: EULERSTREAM_API_KEY } : {}
             );
         } catch (err) {
+            _connecting = false;
             logger.error('TikTok Connector: failed to construct connection:', err);
             if (isReconnectAttempt) {
                 attemptReconnect();
@@ -571,6 +577,7 @@ function createTikTokConnector() {
             .then(function () {
                 if (_intentionalDisconnect) return; // انقطاع فُصل يدوياً قبل اكتمال هذا الاتصال — تجاهل تماماً
                 if (thisConnection !== _connection) return; // اتصال قديم استُبدل بإعادة محاولة — تجاهل
+                _connecting = false;
                 _connected = true;
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
                 _roomIdRetries = 0;
@@ -582,6 +589,7 @@ function createTikTokConnector() {
                 if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد
                 if (thisConnection !== _connection) return; // اتصال قديم استُبدل — نتيجته ما تهم
                 _connected = false;
+                _connecting = false;
                 logger.error('TikTok Connector: connect() failed:', err);
 
                 if (isSignRateLimit(err)) {
@@ -650,6 +658,7 @@ function createTikTokConnector() {
             _reconnectAttempts = 0;
             _roomIdRetries = 0;
             _rateLimitRetries = 0;
+            _onAttempt = (options && typeof options.onAttempt === 'function') ? options.onAttempt : null;
 
             if (!TikTokLib) {
                 callbacks.onStatus('error', 'tiktok-live-connector is not installed.');
@@ -682,6 +691,11 @@ function createTikTokConnector() {
 
         isConnected: function () {
             return _connected;
+        },
+
+        /** متصل، أو يحاول يتصل، أو ينتظر إعادة محاولة — false = الاتصال ميت نهائياً. */
+        isActive: function () {
+            return !_intentionalDisconnect && (_connected || _connecting || _reconnectTimer !== null);
         },
 
         /** رقم غرفة البث الحالي (يتغيّر مع كل بث جديد) أو null. */

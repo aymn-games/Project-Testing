@@ -398,7 +398,11 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     return;
   }
 
-  var connector = connectorRouter.createConnectorForPlatform(platform);
+  var usageGame = gameFromPage(payload.page);
+  var usageSource = payload.source === 'library' ? 'library'
+    : payload.source === 'overlay' ? 'overlay'
+    : 'game:' + (usageGame.slug || 'unknown');
+  var connector = connectorRouter.createConnectorForPlatform(platform, { source: usageSource, label: usageGame.name || null });
   if (!connector) {
     sendEnvelope(socket, builder.buildErrorMessage(platform, 'unsupported_platform', 'No connector registered for "' + platform + '".'));
     sendEnvelope(socket, builder.buildStatusMessage(platform, 'error'));

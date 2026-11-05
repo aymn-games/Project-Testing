@@ -57,7 +57,7 @@ function stop(username, reason) {
 
 function start(user) {
   var username = user.username;
-  var connector = connectorRouter.createConnectorForPlatform('tiktok');
+  var connector = connectorRouter.createConnectorForPlatform('tiktok', { source: 'watcher' });
   if (!connector) return;
   var id = liveSessionStats.WATCH_PREFIX + username + ':' + Date.now().toString(36);
   var w = { connector: connector, connectionId: id, status: 'connecting', startedAt: Date.now(), connectedAt: null, userId: user.userId };
