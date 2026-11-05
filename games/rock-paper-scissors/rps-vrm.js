@@ -21,6 +21,8 @@ import { getClip, getClipsVersion } from '../birthday-party/rig3d.js';
 const T = THREE, TAU = Math.PI * 2, FADE = .25;
 const RIG_HIPS = .92; // ارتفاع الورك بوحدات حركات الحفلة (HIPS_Y بـ rig3d.js)
 const HEIGHT = { girl: 1.62, boy: 1.7 };
+// لون بشرة الموديلين (لليد الكبيرة بالمواجهة)
+const SKIN = { girl: '#f6e0d4', boy: '#f3dacb' };
 
 // أسماء Mixamo (اللي تستخدمها الحركات و rps-scene.js) ← أسماء عظام VRM
 const MAP = { Hips: 'hips', Spine: 'spine', Spine1: 'chest', Spine2: 'upperChest', Neck: 'neck', Head: 'head' };
@@ -199,10 +201,12 @@ export function makeVrmRig(model, { n = 0 } = {}) {
         face(dt);
     }
     function sync() { humanoid.update(); }
+    // يد المواجهة الكبيرة (rps-hand.js) تتركّب مكان يد الموديل: نخفي يد الموديل وأصابعها بتصغير عظمتها الفعلية
+    function hideHand(side, on) { const nd = humanoid.getRawBoneNode(String(side).toLowerCase().startsWith('l') ? 'leftHand' : 'rightHand'); if (nd) nd.scale.setScalar(on ? .001 : 1); }
     function dispose() { mixer.stopAllAction(); mixer.uncacheRoot(humanoid.normalizedHumanBonesRoot); root.removeFromParent(); }
 
     play(0);
     root.userData.rig = true;
     const look = { g: model.kind === 'boy' ? 1 : 0, s: 0, vrm: true };
-    return { root, bones, play, setSpeed, update, sync, express, mood, gesture, dispose, vrm: true, get anim() { return cur; }, get look() { return look; } };
+    return { root, bones, play, setSpeed, update, sync, express, mood, gesture, hideHand, skin: SKIN[model.kind] || '#f4dccf', dispose, vrm: true, get anim() { return cur; }, get look() { return look; } };
 }
