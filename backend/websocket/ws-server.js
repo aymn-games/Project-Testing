@@ -245,10 +245,6 @@ var GAME_NAMES = {
 // صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/
 var GAME_PAGE_RE = /\/(?:discord-)?games\/([a-z0-9-]+)\//i;
 
-// ألعاب بدون اتصال شات خاص، ويبقى اتصال الأوفرلي شغّال لها حتى لو
-// OVERLAY_STREAM_CONNECT مقفول (شاشة المذيع، مو صفحة دخول اللاعبين).
-var OVERLAY_PRESENCE_PAGE_RE = /\/games\/(?:intruder|mafia)\/(?!join\.html|play\.html)/i;
-
 function gameFromPage(page) {
   var m = GAME_PAGE_RE.exec(String(page || ''));
   if (!m) return { slug: null, name: null };
@@ -365,10 +361,7 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   // اتصال الأوفرلي بنفسه مقفول افتراضياً (config.overlayStreamConnect): كل
   // بث يتصل فيه بدون لعبة ينحسب من حد EulerStream اليومي. reason يخلّي
   // الأوفرلي يوقف محاولاته لهذا الاتصال (js/agp-stream-overlay.js).
-  // استثناء: محطة سهيل والمافيا ما لهم اتصال شات خاص — اتصال الأوفرلي هو
-  // اللي يظهّر الستريمر بـ«البثوث الشغّالة» وقت اللعب، فيبقى شغّال لهم.
-  var overlayPresenceGame = OVERLAY_PRESENCE_PAGE_RE.test(String(payload.page || ''));
-  if (platform === 'tiktok' && payload.source === 'overlay' && !config.overlayStreamConnect && !overlayPresenceGame) {
+  if (platform === 'tiktok' && payload.source === 'overlay' && !config.overlayStreamConnect) {
     var offStatus = builder.buildStatusMessage(platform, 'error', 'اتصال الأوفرلي بالبث موقوف — البيانات تنحسب من اللعبة لما تكون متصلة بالبث.');
     offStatus.payload.reason = 'overlay_disabled';
     sendEnvelope(socket, offStatus);
