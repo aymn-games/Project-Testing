@@ -193,6 +193,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen', requireAuth: false, handler: handlePublicScreenDesign },
   { method: 'GET', path: '/api/public/screen/stats', requireAuth: false, handler: handlePublicScreenStats },
   { method: 'GET', path: '/api/public/screen/gifts', requireAuth: false, handler: handlePublicScreenGifts },
+  { method: 'GET', path: '/api/screens/live-status', requireAuth: true, handler: handleScreensLiveStatus },
   { method: 'POST', path: '/api/screens/test-alert', requireAuth: true, handler: handleScreenTestAlert },
   { method: 'GET', path: '/api/public/screen/events', requireAuth: false, handler: handlePublicScreenEvents },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
@@ -1120,6 +1121,7 @@ function handlePublicScreenDesign(req, res) {
   var o = screenFromKey(req, res);
   if (!o) return;
   var out = { success: true, updatedAt: o.updatedAt };
+  screenTests.touch(getQueryParam(req, 'k'), getQueryParam(req, 'lv'));
   if (String(o.updatedAt) !== getQueryParam(req, 'v')) out.design = o.design;
   sendJson(res, 200, out);
 }
@@ -1156,10 +1158,23 @@ function handlePublicScreenEvents(req, res) {
   var username = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(o.userId));
   var r = username ? liveSessionStats.getRecentEvents(username, getQueryParam(req, 'since')) : null;
   var t = screenTests.since(getQueryParam(req, 'k'), getQueryParam(req, 't'));
+  screenTests.touch(getQueryParam(req, 'k'), getQueryParam(req, 'lv'));
   var out = r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false };
   out.tseq = t.tseq;
   out.tests = t.tests;
   sendJson(res, 200, out);
+}
+
+/** GET /api/screens/live-status → { success, screens: [{ id, agoMs|null, ver }] } — أي شاشة مفتوحة بتطبيق البث الحين. */
+function handleScreensLiveStatus(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  sendJson(res, 200, {
+    success: true,
+    screens: streamScreens.list(user.id).map(function (x) {
+      var s = screenTests.seen(x.key);
+      return { id: x.id, agoMs: s ? s.agoMs : null, ver: s ? s.ver : '' };
+    })
+  });
 }
 
 /** POST /api/screens/test-alert { id, itemId, type } — «جرّب» يطلع على رابط الشاشة (OBS / TikTok LIVE Studio). */

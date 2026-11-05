@@ -212,15 +212,53 @@
      * «جرّب»: يطلع هنا بالمعاينة، وبنفس اللحظة على رابط الشاشة المفتوح بـOBS / TikTok LIVE Studio
      * (POST /api/screens/test-alert — الرابط يسحبه خلال ثانيتين). لو الأليرت جديد نحفظ أول.
      */
-    var testToastShown = false;
     function tryAlert(it, type) {
         O.alertDemo(it.id, type);
         if (!cur) return;
         if (save.pending) flush();
         api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
-            if (d && d.success && !testToastShown) { testToastShown = true; toast('التجربة طالعة بشاشة البث بعد ثواني ✓'); }
-        }).catch(function () { /* المعاينة اشتغلت؛ الرابط بس ما وصله */ });
+            if (!d || !d.success) { toast('التجربة اشتغلت هنا بس — ما وصلت لشاشة البث (حدّث الصفحة وجرّب)'); return; }
+            var m = liveMsg();
+            toast(m.state === 'ok' ? 'التجربة طالعة بشاشة البث بعد ثواني ✓' : m.tip);
+        }).catch(function () { toast('التجربة اشتغلت هنا بس — تأكد من الاتصال'); });
     }
+
+    /*
+     * «متصلة بتطبيق البث»: رابط الشاشة المفتوح بـOBS / TikTok LIVE Studio يسأل السيرفر كل
+     * ثانيتين، فنعرف هل الشاشة اللي تعدّلها هي نفسها اللي بالتطبيق (GET /api/screens/live-status).
+     */
+    var liveState = { list: [], at: 0 };
+    var liveChip = document.createElement('button');
+    liveChip.type = 'button';
+    liveChip.className = 'ob-live';
+    copyBtn.parentNode.insertBefore(liveChip, copyBtn);
+    liveChip.addEventListener('click', function () { toast(liveMsg().tip); });
+    function liveMsg() {
+        var mine = cur && liveState.list.filter(function (x) { return String(x.id) === String(cur.id); })[0];
+        var fresh = function (x) { return x && x.agoMs != null && x.agoMs < 12000; };
+        if (fresh(mine) && mine.ver === O.LIVE_VERSION) return { state: 'ok', label: 'متصلة بتطبيق البث', tip: 'هالشاشة مفتوحة الحين بتطبيق البث ✓ — أي «جرّب» يطلع فيها.' };
+        if (fresh(mine)) return { state: 'old', label: 'حدّث المصدر بالتطبيق', tip: 'هالشاشة مفتوحة بتطبيق البث بنسخة قديمة — بالتطبيق اضغط على المصدر وحدّثه (Refresh) أو احذفه وأضفه من جديد.' };
+        var other = liveState.list.filter(function (x) { return fresh(x) && (!cur || String(x.id) !== String(cur.id)); })[0];
+        var os = other && screens.filter(function (s) { return String(s.id) === String(other.id); })[0];
+        if (os) return { state: 'off', label: 'التطبيق فاتح شاشة ثانية', tip: 'تطبيق البث فاتح شاشة «' + os.name + '» مو هذي — يا تعدّل «' + os.name + '»، أو انسخ رابط هالشاشة وحطه بالمصدر بدال القديم.' };
+        return { state: 'off', label: 'مو مفتوحة بتطبيق البث', tip: 'رابط هالشاشة مو مفتوح بأي تطبيق بث الحين. انسخ الرابط («نسخ رابط الشاشة») وحطه بـOBS أو TikTok LIVE Studio كمصدر «رابط»، وخلّ التطبيق مفتوح.' };
+    }
+    function paintLive() {
+        var m = liveMsg();
+        liveChip.className = 'ob-live ' + m.state;
+        liveChip.textContent = '';
+        liveChip.appendChild(el('i'));
+        liveChip.appendChild(el('span', null, m.label));
+        liveChip.title = m.tip;
+        liveChip.hidden = !cur;
+    }
+    function pollLive() {
+        if (!cur || document.hidden || view !== 'editor') return;
+        api('GET', '/api/screens/live-status').then(function (d) {
+            if (d && d.success) { liveState.list = d.screens || []; liveState.at = Date.now(); paintLive(); }
+        }).catch(function () { /* الدورة الجاية */ });
+    }
+    setInterval(pollLive, 5000);
 
     function commit() {
         markDirty();
@@ -274,6 +312,8 @@
         renderCanvas();
         renderZoom();
         if (media.loaded) syncLibKeys(); else loadMedia();
+        paintLive();
+        pollLive();
     }
 
     /** stay = تبقى بالصفحة الحالية (أول شاشة تنسوى تلقائياً). */
