@@ -356,6 +356,42 @@
   .vy-media .acts { display: flex; gap: 6px; align-items: center; }
   .vy-media .acts .ob-btn { padding: 7px 12px; font-size: 12.5px; }
   .vy-media .acts .ob-btn.icon { width: 34px; height: 34px; padding: 0; }
+  /* إحصائيات البث (stats-card.js) */
+  .vs-wrap { display: grid; grid-template-columns: minmax(0, 1fr) min(460px, 42vw); gap: 16px; min-height: 100%; align-items: start; }
+  .vs-stage { position: sticky; top: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 4px; }
+  .vs-frame { position: relative; height: min(76vh, 900px); aspect-ratio: 9 / 16; border-radius: 22px; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,.8), 0 0 0 1px var(--line-2); background: #0d0c12; }
+  .vs-canvas { width: 100%; height: 100%; display: block; }
+  .vs-safe { position: absolute; border: 2px dashed rgba(255,213,74,.55); border-radius: 10px; pointer-events: none; }
+  .vs-safe span { position: absolute; top: -22px; right: 0; font-size: 11px; color: rgba(255,213,74,.85); background: rgba(10,9,13,.7); padding: 1px 7px; border-radius: 6px; }
+  .vs-sbar { display: flex; gap: 14px; align-items: center; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; justify-content: center; }
+  .vs-gtog { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text, #fff); }
+  .vs-acts { display: flex; gap: 8px; }
+  .vs-side { border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .vs-side .ob-phead { min-width: 0; }
+  .vs-tabs { flex-wrap: wrap; }
+  .vs-sec { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
+  .vs-sec.off { opacity: .55; }
+  .vs-sec .ic { font-size: 22px; width: 30px; text-align: center; }
+  .vs-sec .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .vs-sec .tx b { font-size: 14px; }
+  .vs-sec .tx small { font-size: 11.5px; color: var(--muted); }
+  .vs-cnt { display: flex; align-items: center; gap: 4px; }
+  .vs-cnt .ob-pill { min-width: 30px; padding: 4px 8px; }
+  .vs-cnt b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+  .vs-mv { display: flex; gap: 2px; }
+  .vs-bgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .vs-bg { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
+  .vs-bg canvas, .vs-bg img, .vs-bg i { width: 100%; aspect-ratio: 9 / 16; border-radius: 10px; border: 2px solid transparent; object-fit: cover; display: block; box-sizing: border-box; }
+  .vs-bg i { display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 26px; color: var(--lav-l); border: 1.5px dashed var(--line-2); }
+  .vs-bg.on canvas, .vs-bg.on img { border-color: var(--lav-l); }
+  .vs-bg.on span { color: #fff; }
+  .vs-fonts { max-height: 260px; overflow-y: auto; }
+  @media (max-width: 900px) {
+    .vs-wrap { grid-template-columns: 1fr; }
+    .vs-stage { position: static; }
+    .vs-frame { height: auto; width: min(100%, 360px); }
+  }
+
   /* مكتبتي */
   .vy-libgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
   .vy-libgrid.sm { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
@@ -607,6 +643,7 @@
 
     <section class="vy-view" id="vy-home" data-view="home"><div class="vy-scroll" id="vy-home-body"></div></section>
     <section class="vy-view" id="vy-screens" data-view="screens" hidden><div class="vy-scroll" id="vy-screens-body"></div></section>
+    <section class="vy-view" id="vy-stats" data-view="stats" hidden><div class="vy-scroll" id="vy-stats-body"></div></section>
 
     <section class="vy-view" id="vy-editor" data-view="editor" hidden>
       <div class="ob-editor">
@@ -639,6 +676,7 @@
 <div class="vy-tip" id="vy-tip"></div>
 <script src="../auth/auth-client.js"></script>
 <script src="../js/agp-stream-overlay.js"></script>
+<script src="stats-card.js"></script>
 <script src="studio.js"></script>
 </body>
 </html>

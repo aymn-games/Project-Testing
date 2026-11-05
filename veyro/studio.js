@@ -28,6 +28,8 @@
     var mtabs = document.getElementById('ob-mtabs');
     var homeBody = document.getElementById('vy-home-body');
     var screensBody = document.getElementById('vy-screens-body');
+    var statsBody = document.getElementById('vy-stats-body');
+    var statsUi = null;
     var userEl = document.getElementById('vy-user');
     var tipEl = document.getElementById('vy-tip');
     var mtitle = document.getElementById('vy-mtitle');
@@ -87,7 +89,7 @@
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
     var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'text', 'icons', 'shapes'];
-    var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', editor: 'أدوات البث' };
+    var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes' };
     var PREVIEWS = [
@@ -365,6 +367,7 @@
         var n = S().items.length;
         navEl.appendChild(navItem('الرئيسية', 'home', view === 'home', function () { go('home'); }));
         navEl.appendChild(navItem('الشاشات', 'screens', view === 'screens', function () { go('screens'); }, screens.length ? String(screens.length) : ''));
+        navEl.appendChild(navItem('إحصائيات البث', 'bars', view === 'stats', function () { go('stats'); }));
         navEl.appendChild(el('div', 'vy-group', 'أدوات البث'));
         TOOL_KEYS.forEach(function (k) {
             var sec = secOf(k);
@@ -391,7 +394,7 @@
         if (next === 'editor' && !cur) { if (screens[0]) openScreen(screens[0]); else { next = 'screens'; } }
         var changed = next !== view;
         view = next;
-        ['home', 'screens', 'editor'].forEach(function (v) {
+        ['home', 'screens', 'stats', 'editor'].forEach(function (v) {
             var sEl = document.getElementById('vy-' + v);
             sEl.hidden = v !== view;
             if (v === view && changed) { sEl.classList.remove('enter'); void sEl.offsetWidth; sEl.classList.add('enter'); }
@@ -403,6 +406,11 @@
         renderRail();
         // الرئيسية والشاشات ما تنعاد رسمتها إلا لو تغيّر شي (أسرع تنقّل)
         if (view === 'home') { if (dirty.home) renderHome(); }
+        else if (view === 'stats') {
+            // «إحصائيات البث» (stats-card.js): تنبني أول مرة، وبعدها تحدّث أرقامها بس
+            if (!statsUi && window.VeyroStats) statsUi = window.VeyroStats.mount(statsBody, { api: api, toast: toast });
+            else if (statsUi && changed) statsUi.refresh();
+        }
         else if (view === 'screens') { if (dirty.screens) renderScreensView(); }
         else {
             var wasClosed = body.classList.contains('closed');
@@ -2668,6 +2676,7 @@
         var m = /^tools\/(\w+)$/.exec(h);
         if (m && secOf(m[1])) return { view: 'editor', sec: m[1] };
         if (h === 'screens') return { view: 'screens' };
+        if (h === 'stats') return { view: 'stats' };
         if (h === 'tools') return { view: 'editor' };
         if (new URLSearchParams(location.search).get('s')) return { view: 'editor' };
         return { view: 'home' };
