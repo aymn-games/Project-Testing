@@ -204,7 +204,7 @@ function statsConnId(m, i) { return 'challenge:' + m.id + ':' + i; }
 function connectSide(m, i) {
     if (m.ended) return;
     if (m.connectors[i]) { try { m.connectors[i].disconnect(); } catch (e) {} }
-    var connector = connectorRouter.createConnectorForPlatform('tiktok');
+    var connector = connectorRouter.createConnectorForPlatform('tiktok', { source: 'challenge' });
     m.connectors[i] = connector;
     m.lastConnectAttempt[i] = now();
     m.stream[i] = 'connecting';

@@ -10,17 +10,21 @@
 'use strict';
 
 var mockConnector = require('./mock/mock-connector'); // يبقى متاحاً للاختبار المحلي، غير مستخدَم بالإنتاج الآن
-var tiktokConnector = require('./tiktok/tiktok-connector');
+var tiktokConnector = require('./tiktok/tiktok-connector'); // يُستخدَم عبر المجمّع تحت
+var connectionPool = require('./tiktok/shared-connection-pool');
 
 /**
  * جلب موصِّل جديد (نسخة مستقلة) للمنصة المطلوبة.
  * @param {string} platform - مثل 'tiktok'
  * @returns {{connect: function, disconnect: function, isConnected: function}|null}
  */
-function createConnectorForPlatform(platform) {
+function createConnectorForPlatform(platform, meta) {
     if (platform === 'tiktok') {
         // ⚠️ نقطة التبديل الوحيدة — راجع التعليق أعلى الملف.
-        return tiktokConnector.createTikTokConnector();
+        // موصِّل مشترك: اتصال تيك توك واحد لكل بث مهما كثرت الصفحات
+        // (shared-connection-pool.js) — يوفّر طلبات توقيع EulerStream.
+        // meta.source للعداد فقط (game:<slug>، library، watcher، challenge).
+        return connectionPool.createLease(meta);
     }
     return null;
 }
@@ -31,7 +35,7 @@ function createConnectorForPlatform(platform) {
  * بالإمكان التأكد من نوع الموصِّل النشط بمجرد فتح رابط الباك اند.
  */
 function getActiveConnectorName(platform) {
-    if (platform === 'tiktok') return 'tiktok-connector.js (real)';
+    if (platform === 'tiktok') return 'tiktok-connector.js (real, shared pool)';
     return 'none';
 }
 

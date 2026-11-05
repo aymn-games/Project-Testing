@@ -32,6 +32,7 @@ var registry = require('./connection-registry');
 var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
 var liveSessionStats = require('../stats/live-session-stats');
+var config = require('../config');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 
 var STATS_FLUSH_INTERVAL_MS = 5000;
@@ -357,6 +358,16 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     }
   }
 
+  // اتصال الأوفرلي بنفسه مقفول افتراضياً (config.overlayStreamConnect): كل
+  // بث يتصل فيه بدون لعبة ينحسب من حد EulerStream اليومي. reason يخلّي
+  // الأوفرلي يوقف محاولاته لهذا الاتصال (js/agp-stream-overlay.js).
+  if (platform === 'tiktok' && payload.source === 'overlay' && !config.overlayStreamConnect) {
+    var offStatus = builder.buildStatusMessage(platform, 'error', 'اتصال الأوفرلي بالبث موقوف — البيانات تنحسب من اللعبة لما تكون متصلة بالبث.');
+    offStatus.payload.reason = 'overlay_disabled';
+    sendEnvelope(socket, offStatus);
+    return;
+  }
+
   // "connecting" تُرسَل هنا دائماً فوراً (موحّدة بصرف النظر عن الموصِّل)
   sendEnvelope(socket, builder.buildStatusMessage(platform, 'connecting'));
 
@@ -387,7 +398,11 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     return;
   }
 
-  var connector = connectorRouter.createConnectorForPlatform(platform);
+  var usageGame = gameFromPage(payload.page);
+  var usageSource = payload.source === 'library' ? 'library'
+    : payload.source === 'overlay' ? 'overlay'
+    : 'game:' + (usageGame.slug || 'unknown');
+  var connector = connectorRouter.createConnectorForPlatform(platform, { source: usageSource, label: usageGame.name || null });
   if (!connector) {
     sendEnvelope(socket, builder.buildErrorMessage(platform, 'unsupported_platform', 'No connector registered for "' + platform + '".'));
     sendEnvelope(socket, builder.buildStatusMessage(platform, 'error'));

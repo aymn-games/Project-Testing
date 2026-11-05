@@ -1443,7 +1443,10 @@ function handleAdminLiveStreams(req, res) {
   try { matches = require('../challenge/challenge-match').listActiveMatches(); } catch (err) { logger.error('Admin live streams: matches failed:', err); }
   // مراقبات إحصائيات البث (stats/stream-stats-watcher.js) — بنفس شكل صفوف الاتصالات
   try { connections = connections.concat(listStatsWatchers()); } catch (err) { logger.error('Admin live streams: watchers failed:', err); }
-  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats() });
+  // استهلاك EulerStream اليوم (محاولات الاتصال الحقيقية والبثوث) — shared-connection-pool.js
+  var streamUsage = null;
+  try { streamUsage = require('../platforms/tiktok/shared-connection-pool').getUsage(); } catch (err) { logger.error('Admin live streams: usage failed:', err); }
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
 }
 
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة

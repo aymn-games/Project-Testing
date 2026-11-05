@@ -16,6 +16,16 @@ module.exports = {
 
     debug: process.env.NODE_ENV !== 'production',
 
+    // ⚠️ كل بث جديد يتصل فيه السيرفر ينحسب من حد EulerStream «Distinct LIVE
+    // rooms per day» (١٠٠ بالباقة المجانية). الاثنين تحت يفتحون اتصالات
+    // بث بدون لعبة شغّالة، فمقفولين افتراضياً. لتشغيلهم: القيمة 1 بـRender.
+    // اتصال أوفرلي البث بنفسه (source: 'overlay' — js/agp-stream-overlay.js).
+    // مقفول = الأوفرلي يعرض بياناته بس من اتصال اللعبة الشغّالة.
+    overlayStreamConnect: process.env.OVERLAY_STREAM_CONNECT === '1',
+    // مراقب الإحصائيات (stats/stream-stats-watcher.js) — يتصل ببث الستريمرز
+    // المفعّل لهم من لوحة الأدمن طول بثهم حتى بدون لعبة.
+    streamStatsWatcher: process.env.STREAM_STATS_WATCHER === '1',
+
     // «حفلة عيد الميلاد» (/ws/party) — مطفأة افتراضياً. تشتغل فقط بـ PARTY_ENABLED=1
     // (مفتاح إيقاف: أي مشكلة بالحفلة ← تشيل المتغير والموقع يكمل عادي).
     partyEnabled: process.env.PARTY_ENABLED === '1',

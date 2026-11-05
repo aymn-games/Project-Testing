@@ -57,7 +57,7 @@ function stop(username, reason) {
 
 function start(user) {
   var username = user.username;
-  var connector = connectorRouter.createConnectorForPlatform('tiktok');
+  var connector = connectorRouter.createConnectorForPlatform('tiktok', { source: 'watcher' });
   if (!connector) return;
   var id = liveSessionStats.WATCH_PREFIX + username + ':' + Date.now().toString(36);
   var w = { connector: connector, connectionId: id, status: 'connecting', startedAt: Date.now(), connectedAt: null, userId: user.userId };
@@ -119,6 +119,12 @@ function tick() {
 
 function startWatcher() {
   if (_started) return;
+  // مقفول افتراضياً (config.streamStatsWatcher) — كل مراقب يستهلك بث من حد
+  // EulerStream اليومي حتى لو الستريمر ما يلعب. للتشغيل: STREAM_STATS_WATCHER=1.
+  if (!require('../config').streamStatsWatcher) {
+    logger.info('Stats Watcher: disabled (set STREAM_STATS_WATCHER=1 to enable).');
+    return;
+  }
   _started = true;
   setTimeout(function () {
     tick();
