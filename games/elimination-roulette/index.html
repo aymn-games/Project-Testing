@@ -286,7 +286,7 @@ class Component extends DCLogic {
   // التحكم بالشات (js/agp-remote-control.js): لاعب يحدده المذيع يغيّر الإعدادات ويبدأ المباراة بأوامر الشات
   attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
     const rows=SETTINGS.flatMap(s=>s.rows);
-    this.rc=RC.attach({ page:'الإعدادات', panel:true, connect:ER.connect, commands:[
+    this.rc=RC.attach({ page:'الإعدادات', connect:ER.connect, commands:[
       ...RC.settingsCommands(SETTINGS,{get:k=>this.state.values[k],set:(k,v)=>this.set(k,v)}),
       { names:['الدعم'], args:'<اسم الهدية> [العدد] | ايقاف', desc:'الرجوع عن طريق الدعم', run:arg=>{
         const a=String(arg||'').trim(); if(RC.parseBool(a)===false){ this.set('supOn',false); return 'الرجوع عن طريق الدعم: ايقاف'; }

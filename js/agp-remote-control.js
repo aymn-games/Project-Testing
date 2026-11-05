@@ -3,22 +3,24 @@
  * تشغيل اللعبة كاملة بأوامر يكتبونها بشات البث: يفتح اللعبة، يكتب كلمة
  * الدخول، يغيّر الإعدادات، يبدأ اللوبي، يدخل شاشة اللعب، ويبدأ الجولات.
  *
- * التفعيل يدوي من المذيع فقط: زر «🎮 التحكم بالشات» بصفحة إعدادات
- * اللعبة (وشارة صغيرة باللوبي وشاشة اللعب لما يكون مفعّل) تفتح نافذة
- * فيها مفتاح التفعيل وقائمة يوزرات المتحكمين.
+ * يشتغل على روليت الإقصاء فقط (الشاشات اللي تستدعي attach).
+ *
+ * التفعيل يدوي من المذيع فقط، من بروفايله (profile.html → تبويب
+ * «معلومات الستريمر» → زر «التحكم بالشات»): نافذة فيها مفتاح التفعيل
+ * وقائمة يوزرات المتحكمين. ما فيه أي زر داخل شاشات اللعبة نفسها؛ لما
+ * يكون مفعّل يشتغل فيها تلقائياً.
  *
  * الأمان:
  *  - الأمر يُقبل فقط من تعليق معرّفه (payload.id) = 'tiktok:<يوزر>' لأحد
  *    اليوزرات المحفوظة — المعرّف الثابت من الخادم، لا الاسم الظاهر اللي
  *    ينتحل بسهولة.
  *  - الإعداد محفوظ بمتصفح المذيع فقط (localStorage 'agp:remote-control')،
- *    وينطفئ تلقائياً بعد EXPIRE_MS من التفعيل حتى ما تبقى الصلاحية منسية.
+ *    ويبقى مفعّل لين يطفيه المذيع من البروفايل.
  *  - الأوامر تبدأ بـ ! فما تختلط بكلمة الدخول أو أرقام اللاعبين بالشات.
  *
  * الاستخدام من صفحة لعبة (بعد تحميل agp-core + agp-events + الأدابتر):
  *   var rc = AGP.remoteControl.attach({
- *     page: 'settings',            // اسم الشاشة (يظهر بقائمة الأوامر)
- *     panel: true,                 // زر التفعيل دائم الظهور (صفحة الإعدادات)
+ *     page: 'الإعدادات',           // اسم الشاشة (يظهر بقائمة الأوامر)
  *     connect: ER.connect,         // اتصال الشات بالبث (اختياري)
  *     commands: [{ names:['ابدأ'], args:'', desc:'...', run: function (arg, ctx) {
  *         return 'تم'  |  { ok:false, msg:'السبب' }  }}]
@@ -38,20 +40,8 @@
     if (!AGP.log) { AGP.log = function () {}; }
 
     var STORAGE_KEY = 'agp:remote-control';
-    var EXPIRE_MS = 8 * 60 * 60 * 1000; // 8 ساعات
     var MAX_USERS = 5;
     var PREFIXES = ['!', '！', '¡'];
-
-    // مسار جذر الموقع من مكان هذا الملف (js/agp-remote-control.js)
-    var ROOT = (function () {
-        var sc = document.currentScript;
-        return sc && sc.src ? sc.src.replace(/js\/agp-remote-control\.js(\?.*)?$/, '') : '../../';
-    }());
-
-    /** الألعاب اللي تدعم التحكم بالشات — للأمر !افتح. */
-    var GAMES = [
-        { id: 'elimination-roulette', name: 'روليت الإقصاء', aliases: ['روليت الاقصاء', 'الاقصاء', 'روليت'], url: 'games/elimination-roulette/index.html' }
-    ];
 
     // ---------- أدوات ----------
 
@@ -106,17 +96,16 @@
         try { c = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { c = null; }
         c = c && typeof c === 'object' ? c : {};
         var users = Array.isArray(c.users) ? c.users.map(cleanUser).filter(Boolean).slice(0, MAX_USERS) : [];
-        var enabled = !!c.enabled && users.length > 0 && typeof c.enabledAt === 'number' && Date.now() - c.enabledAt < EXPIRE_MS;
-        return { enabled: enabled, enabledAt: enabled ? c.enabledAt : null, users: users };
+        return { enabled: !!c.enabled && users.length > 0, users: users };
     }
     function writeConfig(c) {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch (e) {}
+        try { window.dispatchEvent(new CustomEvent('agp:remote-control-changed', { detail: readConfig() })); } catch (e) {}
     }
     function setEnabled(on) {
         var c = readConfig();
         if (on && !c.users.length) return false;
         c.enabled = !!on;
-        c.enabledAt = on ? Date.now() : null;
         writeConfig(c);
         refreshUi();
         if (on) ensureConnected();
@@ -133,7 +122,7 @@
     function removeUser(u) {
         var c = readConfig(), x = cleanUser(u);
         c.users = c.users.filter(function (y) { return y !== x; });
-        if (!c.users.length) { c.enabled = false; c.enabledAt = null; }
+        if (!c.users.length) c.enabled = false;
         writeConfig(c);
         refreshUi();
     }
@@ -149,20 +138,12 @@
 
     // ---------- الصفحة الحالية وأوامرها ----------
 
-    var _page = null; // {page, panel, connect, commands}
+    var _page = null; // {page, connect, commands}
     var _unsub = null;
 
     function globalCommands() {
         return [
-            { names: ['اوامر', 'الاوامر', 'مساعده', 'help'], desc: 'يعرض أوامر هذه الشاشة', run: function () { showHelp(); return null; } },
-            { names: ['افتح', 'العب'], args: '<اسم اللعبة>', desc: 'يفتح صفحة إعدادات اللعبة', run: function (arg) {
-                var q = norm(arg);
-                if (!q) return { ok: false, msg: 'اكتب اسم اللعبة: ' + GAMES.map(function (g) { return g.name; }).join('، ') };
-                var g = GAMES.filter(function (x) { return [x.name].concat(x.aliases).some(function (a) { var n = norm(a); return n === q || n.indexOf(q) === 0; }); })[0];
-                if (!g) return { ok: false, msg: 'اللعبة غير مدعومة بالتحكم بالشات حالياً' };
-                setTimeout(function () { location.href = ROOT + g.url; }, 900);
-                return 'جارٍ فتح ' + g.name;
-            } }
+            { names: ['اوامر', 'الاوامر', 'مساعده', 'help'], desc: 'يعرض أوامر هذه الشاشة', run: function () { showHelp(); return null; } }
         ];
     }
     function allCommands() {
@@ -213,7 +194,6 @@
         detach();
         _page = {
             page: (opts && opts.page) || '',
-            panel: !!(opts && opts.panel),
             connect: opts && opts.connect,
             commands: (opts && opts.commands) || []
         };
@@ -221,14 +201,12 @@
             _unsub = AGP.events.on('stream:commentReceived', onComment);
         }
         ensureConnected();
-        mountUi();
         return { detach: detach, setCommands: function (list) { if (_page) _page.commands = list || []; } };
     }
     function detach() {
         if (typeof _unsub === 'function') { try { _unsub(); } catch (e) {} }
         _unsub = null;
         _page = null;
-        refreshUi();
     }
 
     // ---------- مساعدات للألعاب ----------
@@ -289,12 +267,6 @@
     // ---------- الواجهة ----------
 
     var CSS = '' +
-        '.agp-rc-chip{position:fixed;bottom:14px;left:14px;z-index:2147483000;direction:rtl;display:flex;align-items:center;gap:8px;' +
-        'padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(15,12,24,.82);backdrop-filter:blur(10px);' +
-        '-webkit-backdrop-filter:blur(10px);color:#d6d1e2;font:600 13px "IBM Plex Sans Arabic",system-ui,sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35)}' +
-        '.agp-rc-chip:hover{border-color:rgba(167,139,250,.5)}' +
-        '.agp-rc-chip .agp-rc-dot{width:8px;height:8px;border-radius:50%;background:#8a8596}' +
-        '.agp-rc-chip.is-on{border-color:rgba(52,211,153,.45)}.agp-rc-chip.is-on .agp-rc-dot{background:#34d399;box-shadow:0 0 8px #34d399}' +
         '.agp-rc-ov{position:fixed;inset:0;z-index:2147483001;background:rgba(5,3,10,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);' +
         'display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;direction:rtl}' +
         '.agp-rc-box{width:min(440px,100%);max-height:90vh;overflow:auto;box-sizing:border-box;padding:22px;border-radius:22px;' +
@@ -336,7 +308,7 @@
         '@keyframes agpRcIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}' +
         '@keyframes agpRcFade{from{opacity:0}to{opacity:1}}';
 
-    var _chip = null, _ov = null, _toasts = null, _help = null, _helpT = null;
+    var _ov = null, _toasts = null, _help = null, _helpT = null;
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -348,31 +320,13 @@
         st.textContent = CSS;
         (document.head || document.documentElement).appendChild(st);
     }
-    function mountUi() {
-        if (!document.body) { document.addEventListener('DOMContentLoaded', mountUi, { once: true }); return; }
-        injectCss();
-        if (!_chip) {
-            _chip = document.createElement('button');
-            _chip.type = 'button';
-            _chip.className = 'agp-rc-chip';
-            _chip.addEventListener('click', openPanel);
-            document.body.appendChild(_chip);
-        }
-        refreshUi();
-    }
     function refreshUi() {
-        if (!_chip) return;
-        var c = readConfig();
-        // صفحة الإعدادات: الزر دائم الظهور. باقي الشاشات (تظهر بالبث): بس لما يكون مفعّل.
-        var show = !!_page && (_page.panel || c.enabled);
-        _chip.style.display = show ? 'flex' : 'none';
-        _chip.classList.toggle('is-on', c.enabled);
-        _chip.innerHTML = '<span class="agp-rc-dot"></span><span>🎮 ' + (c.enabled ? 'التحكم بالشات مفعّل' : 'التحكم بالشات') + '</span>';
         if (_ov) renderPanel();
     }
 
     function openPanel() {
-        if (_ov) return;
+        if (_ov || !document.body) return;
+        injectCss();
         _ov = document.createElement('div');
         _ov.className = 'agp-rc-ov';
         _ov.addEventListener('click', function (e) { if (e.target === _ov) closePanel(); });
@@ -390,21 +344,19 @@
         var users = c.users.map(function (u) {
             return '<span class="agp-rc-user">@' + esc(u) + '<button type="button" data-rm="' + esc(u) + '" aria-label="حذف ' + esc(u) + '">✕</button></span>';
         }).join('');
-        var left = c.enabled ? Math.max(0, Math.round((EXPIRE_MS - (Date.now() - c.enabledAt)) / 60000)) : 0;
-        var leftTxt = left >= 60 ? Math.floor(left / 60) + ' ساعة' + (left % 60 ? ' و' + (left % 60) + ' دقيقة' : '') : left + ' دقيقة';
         _ov.innerHTML = '<div class="agp-rc-box" role="dialog" aria-label="التحكم بالشات">' +
             '<div class="agp-rc-head"><span class="agp-rc-title">🎮 التحكم بالشات</span><button type="button" class="agp-rc-x" data-close aria-label="إغلاق">✕</button></div>' +
-            '<p class="agp-rc-sub">اللاعبين اللي تضيفهم هنا يقدرون يشغّلون اللعبة كاملة بأوامر يكتبونها بشات البث: يغيّرون الإعدادات، يبدؤون المباراة، ويلفّون العجلة. ' +
-            'نتحقق من يوزر تيك توك نفسه (مو الاسم الظاهر)، والتحكم ينطفئ تلقائياً بعد 8 ساعات.</p>' +
+            '<p class="agp-rc-sub">يشتغل على <b>روليت الإقصاء</b>. اللاعبين اللي تضيفهم هنا يقدرون يشغّلون اللعبة كاملة بأوامر يكتبونها بشات البث: يغيّرون الإعدادات، يبدؤون المباراة، ويلفّون العجلة. ' +
+            'نتحقق من يوزر تيك توك نفسه (مو الاسم الظاهر)، ويبقى مفعّل لين تطفيه من هنا.</p>' +
             '<div class="agp-rc-row"><span class="agp-rc-label"><span>تفعيل التحكم بالشات</span><span class="agp-rc-desc">' +
-            (c.enabled ? 'مفعّل · ينطفئ بعد ' + leftTxt : c.users.length ? 'متوقف' : 'أضف يوزر لاعب أولاً') + '</span></span>' +
+            (c.enabled ? 'مفعّل' : c.users.length ? 'متوقف' : 'أضف يوزر لاعب أولاً') + '</span></span>' +
             '<button type="button" class="agp-rc-tg' + (c.enabled ? ' is-on' : '') + '" data-toggle aria-label="تفعيل التحكم بالشات"' + (c.users.length ? '' : ' disabled') + '></button></div>' +
             '<div class="agp-rc-row"><span class="agp-rc-label"><span>يوزر اللاعب</span><span class="agp-rc-desc">يوزر تيك توك بدون @ (حتى ' + MAX_USERS + ')</span></span>' +
             '<span class="agp-rc-add"><input class="agp-rc-in" type="text" placeholder="username" autocomplete="off" spellcheck="false" dir="ltr">' +
             '<button type="button" class="agp-rc-btn" data-add>إضافة</button></span></div>' +
             (users ? '<div class="agp-rc-users">' + users + '</div>' : '<p class="agp-rc-empty">ما فيه متحكمين بعد.</p>') +
             '<div class="agp-rc-cmds">الأوامر تبدأ بعلامة <b>!</b> — اللاعب يكتب <b>!اوامر</b> بالشات ويطلع له على الشاشة كل الأوامر المتاحة.' +
-            (_page && _page.commands.length ? '<br>' + cmdLines().slice(0, 6).map(function (l) { return '<b>' + esc(l[0]) + '</b> ' + esc(l[1]); }).join('<br>') : '') + '</div>' +
+            HELP_LINES.map(function (l) { return '<br><b>' + esc(l[0]) + '</b> ' + l[1].map(function (c) { return '<bdi dir="rtl" style="white-space:nowrap">' + esc(c) + '</bdi>'; }).join(' · '); }).join('') + '</div>' +
             '</div>';
         _ov.querySelector('[data-close]').onclick = closePanel;
         _ov.querySelector('[data-toggle]').onclick = function () { setEnabled(!readConfig().enabled); };
@@ -417,6 +369,12 @@
         });
     }
 
+    // ملخص أوامر روليت الإقصاء بنافذة البروفايل
+    var HELP_LINES = [
+        ['الإعدادات:', ['!كلمة صقر', '!الحد 30', '!الشكل سكرول', '!الوقت 25', '!الدعم وردة 2', '!ابدأ']],
+        ['اللوبي:', ['!ابدأ', '!اللاعبين', '!طرد اسم', '!رجوع']],
+        ['اللعب:', ['!لف', '!تلقائي', '!اقصاء 3', '!ارجاع 2', '!دخول', '!اعادة', '!جديدة', '!الحالة']]
+    ];
     function cmdLines() {
         return allCommands().map(function (c) {
             return ['!' + c.names[0] + (c.args ? ' ' + c.args : ''), c.desc || ''];
@@ -428,7 +386,7 @@
         _help = document.createElement('div');
         _help.className = 'agp-rc-help';
         _help.innerHTML = '<h4>🎮 أوامر التحكم' + (_page && _page.page ? ' — ' + esc(_page.page) : '') + '</h4>' +
-            cmdLines().map(function (l) { return '<div><b>' + esc(l[0]) + '</b><span>' + esc(l[1]) + '</span></div>'; }).join('');
+            cmdLines().map(function (l) { return '<div><b><bdi dir="rtl">' + esc(l[0]) + '</bdi></b><span>' + esc(l[1]) + '</span></div>'; }).join('');
         document.body.appendChild(_help);
         clearTimeout(_helpT);
         _helpT = setTimeout(function () { if (_help && _help.parentNode) _help.parentNode.removeChild(_help); _help = null; }, 12000);
@@ -454,8 +412,6 @@
         if (!e.key || e.key === 'agp:agp-stream-connection') ensureConnected();
         if (!e.key || e.key === STORAGE_KEY) refreshUi();
     });
-    // انتهاء مهلة التفعيل أثناء فتح الصفحة
-    setInterval(refreshUi, 60000);
 
     AGP.remoteControl = {
         attach: attach,
@@ -468,8 +424,7 @@
         toInt: toInt,
         norm: norm,
         isEnabled: function () { return readConfig().enabled; },
-        openPanel: function () { mountUi(); openPanel(); },
-        games: GAMES,
+        openPanel: openPanel,
         _parse: parse,
         _onComment: onComment
     };
