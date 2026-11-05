@@ -19,7 +19,7 @@
     var W = 1080, H = 1920;
     // منطقة الأمان: فوق 220 (اسم الحساب وشريط الستوري)، تحت 320 (الكومنت والوصف)، يمين ويسار 90 (أزرار تيك توك)
     var SAFE = { l: 90, r: 990, t: 220, b: 1600 };
-    var PREFS_KEY = 'veyro:stats-card:v2';
+    var PREFS_KEY = 'veyro:stats-card:v3';
     var BG_KEY = 'veyro:stats-card-bg';
     var SITE_NAME = 'Veyro';
 
@@ -43,10 +43,12 @@
         { key: 'neon', label: 'نيون' }, { key: 'emerald', label: 'زمرّدي' }, { key: 'sunset', label: 'غروب' }, { key: 'mono', label: 'داكن' }
     ];
     var DEFAULTS = {
-        template: 'classic', bg: 's:galaxy', dim: 0.35, title: 'أنتم أجمل ما في البث، شكراً لكم', showStreamer: true, showTotals: true,
+        template: 'classic', bg: 'mesh', dim: 0.35, title: 'أنتم أجمل ما في البث، شكراً لكم', showStreamer: true, showTotals: true,
+        caption: 'إحصائيات البث', showHandle: true, frame: 'gradient',
+        views: { on: true, metric: 'total', style: 'pill', pos: 'tl', x: 0, y: 0, label: 'مشاهدة' },
         sections: SECTIONS.map(function (s) { return { key: s.key, on: s.def, n: s.n }; }),
         fonts: { title: 'plex', name: 'plex', num: 'plex' },
-        colors: { title: '#ffffff', name: '#ffffff', num: '#c4b5fd', ring: '#c4b5fd', accent: '#c4b5fd' }
+        colors: { title: '#ffffff', name: '#ffffff', num: '#d9b8ff', ring: '#d9b8ff', accent: '#d9b8ff' }
     };
     var COLOR_PRESETS = ['#ffffff', '#ffd54a', '#cfc3dc', '#a99bb8', '#ff5fa8', '#4dd8ff', '#7cff6b', '#ff8a3d', '#f5c46b', '#14121a'];
 
@@ -66,7 +68,8 @@
         try {
             var s = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
             if (s && typeof s === 'object') {
-                ['template', 'bg', 'dim', 'title', 'showStreamer', 'showTotals'].forEach(function (k) { if (s[k] != null) p[k] = s[k]; });
+                ['template', 'bg', 'dim', 'title', 'showStreamer', 'showTotals', 'caption', 'showHandle', 'frame'].forEach(function (k) { if (s[k] != null) p[k] = s[k]; });
+                if (s.views && typeof s.views === 'object') Object.assign(p.views, s.views);
                 if (s.fonts) Object.assign(p.fonts, s.fonts);
                 if (s.colors) Object.assign(p.colors, s.colors);
                 if (Array.isArray(s.sections)) {
@@ -81,6 +84,7 @@
         } catch (e) { /* الافتراضي */ }
         if (p.bg === 'mine' && !loadBgData()) p.bg = DEFAULTS.bg;
         if (/^s:/.test(p.bg) && !sharedBg(p.bg)) p.bg = 'veyro';
+        if (!FRAMES.some(function (f) { return f.key === p.frame; })) p.frame = 'ring';
         return p;
     }
     function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ } }
@@ -123,6 +127,180 @@
         ctx.globalAlpha = 1;
     }
 
+    /* ---- خلفيات احترافية (مرسومة بالكود، بدون ملفات) ---- */
+
+    var grainTile = null;
+    /** حبيبات خفيفة (زي الصور المطبوعة) — تخلي التدرّجات تبان فخمة وما تتقطّع. */
+    function grain(ctx, a) {
+        if (!grainTile) {
+            grainTile = document.createElement('canvas'); grainTile.width = grainTile.height = 160;
+            var gx = grainTile.getContext('2d'), im = gx.createImageData(160, 160), rnd = seeded(99);
+            for (var i = 0; i < im.data.length; i += 4) { var v = Math.round(rnd() * 255); im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+            gx.putImageData(im, 0, 0);
+        }
+        ctx.save(); ctx.globalAlpha = a || 0.06; ctx.globalCompositeOperation = 'overlay';
+        ctx.fillStyle = ctx.createPattern(grainTile, 'repeat'); ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+    }
+    function vignette(ctx, a) {
+        var g = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.25, W / 2, H * 0.5, H * 0.8);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + a + ')');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+    function blob(ctx, x, y, r, color, a) {
+        var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, hexA(color, a)); g.addColorStop(0.45, hexA(color, a * 0.45)); g.addColorStop(1, hexA(color, 0));
+        ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+
+    var PRO_BGS = {
+        // تدرّج «ميش» عصري: بقع لون كبيرة ناعمة
+        mesh: function (ctx) {
+            lin(ctx, ['#0a0614', '#0d0a1c', '#07050f']);
+            ctx.save(); ctx.globalCompositeOperation = 'screen';
+            blob(ctx, 160, 260, 900, '#7b2ff7', 0.55); blob(ctx, 980, 760, 900, '#f107a3', 0.32);
+            blob(ctx, 420, 1500, 1000, '#2f6bff', 0.42); blob(ctx, 980, 1820, 700, '#00d4ff', 0.22);
+            ctx.restore();
+            vignette(ctx, 0.55); grain(ctx, 0.07);
+        },
+        // مسرح: إضاءات من فوق وضباب وأرضية تلمع
+        stage: function (ctx) {
+            lin(ctx, ['#05040a', '#0b0718', '#120a22']);
+            ctx.save(); ctx.globalCompositeOperation = 'lighter';
+            [[150, '#8a5cff'], [540, '#ffffff'], [930, '#ff4fd8']].forEach(function (sp, i) {
+                var x = sp[0];
+                [[-0.42, 0.42], [-0.25, 0.25]].forEach(function (k, j) {
+                    var g = ctx.createLinearGradient(x, -80, x, H * 0.85);
+                    g.addColorStop(0, hexA(sp[1], j ? 0.22 : 0.12)); g.addColorStop(1, hexA(sp[1], 0));
+                    ctx.fillStyle = g; ctx.beginPath();
+                    ctx.moveTo(x - 18, -80); ctx.lineTo(x + 18, -80);
+                    ctx.lineTo(x + (540 - x) * 0.25 + H * k[1] * 0.6, H * 0.85); ctx.lineTo(x + (540 - x) * 0.25 + H * k[0] * 0.6, H * 0.85);
+                    ctx.closePath(); ctx.fill();
+                });
+                blob(ctx, x, -40, 160, sp[1], 0.6 - i * 0.05);
+            });
+            ctx.restore();
+            blob(ctx, 540, 1880, 900, '#7a3fd4', 0.45);
+            ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff';
+            var rnd = seeded(23);
+            for (var i = 0; i < 160; i++) { ctx.globalAlpha = rnd() * 0.35; ctx.beginPath(); ctx.arc(rnd() * W, rnd() * H * 0.9, rnd() * 2.2 + 0.4, 0, Math.PI * 2); ctx.fill(); }
+            ctx.restore();
+            vignette(ctx, 0.6); grain(ctx, 0.07);
+        },
+        // حرير: شرائط ناعمة تتموّج بالعرض
+        silk: function (ctx) {
+            lin(ctx, ['#0b0916', '#120d24', '#08060f']);
+            ctx.save(); ctx.globalCompositeOperation = 'screen';
+            var cols = ['#7b5cff', '#c45cff', '#ff6ec7', '#5ca8ff', '#9a7bff'];
+            for (var k = 0; k < 5; k++) {
+                var y = 520 + k * 210, t = 130 + k * 18, d = (k % 2 ? -1 : 1) * 260;
+                var g = ctx.createLinearGradient(0, y - 300, W, y + 300);
+                g.addColorStop(0, hexA(cols[k], 0)); g.addColorStop(0.5, hexA(cols[k], 0.32)); g.addColorStop(1, hexA(cols[k], 0));
+                ctx.fillStyle = g; ctx.beginPath();
+                ctx.moveTo(-60, y); ctx.bezierCurveTo(300, y - d, 760, y + d, W + 60, y - 40);
+                ctx.lineTo(W + 60, y - 40 + t); ctx.bezierCurveTo(760, y + d + t * 1.4, 300, y - d + t * 0.6, -60, y + t);
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(-60, y); ctx.bezierCurveTo(300, y - d, 760, y + d, W + 60, y - 40); ctx.stroke();
+            }
+            ctx.restore();
+            vignette(ctx, 0.65); grain(ctx, 0.06);
+        },
+        // فخامة: أسود بخيوط ذهبية وأقواس وبريق
+        luxe: function (ctx) {
+            lin(ctx, ['#0a0805', '#14100a', '#070604']);
+            blob(ctx, 880, 220, 800, '#f5c46b', 0.22); blob(ctx, 120, 1700, 800, '#b8862b', 0.2);
+            ctx.save(); ctx.strokeStyle = 'rgba(245,196,107,.07)'; ctx.lineWidth = 1.2;
+            for (var i = -40; i < 60; i++) { ctx.beginPath(); ctx.moveTo(i * 38, 0); ctx.lineTo(i * 38 + H * 0.55, H); ctx.stroke(); }
+            [[1050, 120, 520], [30, 1820, 600], [1050, 120, 600]].forEach(function (c, j) {
+                var g = ctx.createLinearGradient(c[0] - c[2], c[1] - c[2], c[0] + c[2], c[1] + c[2]);
+                g.addColorStop(0, 'rgba(245,196,107,0)'); g.addColorStop(0.5, 'rgba(255,226,160,' + (j === 2 ? 0.25 : 0.5) + ')'); g.addColorStop(1, 'rgba(245,196,107,0)');
+                ctx.strokeStyle = g; ctx.lineWidth = j === 2 ? 1.5 : 3; ctx.beginPath(); ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2); ctx.stroke();
+            });
+            ctx.restore();
+            var rnd = seeded(41);
+            for (var b = 0; b < 26; b++) blob(ctx, rnd() * W, rnd() * H, 20 + rnd() * 70, '#ffd98a', 0.05 + rnd() * 0.12);
+            vignette(ctx, 0.7); grain(ctx, 0.08);
+        },
+        // منشور: شعاع ضوء ملوّن وزجاج
+        prism: function (ctx) {
+            lin(ctx, ['#05060c', '#0a0c18', '#05060c']);
+            if (ctx.createConicGradient) {
+                var cg = ctx.createConicGradient(Math.PI * 0.35, W / 2, -120);
+                ['#ff3d7f', '#ffb13d', '#fff23d', '#3dff8a', '#3dd8ff', '#7b3dff', '#ff3d7f'].forEach(function (c, i, a) { cg.addColorStop(i / (a.length - 1), hexA(c, 0.16)); });
+                ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
+            }
+            var fade = ctx.createLinearGradient(0, 0, 0, H);
+            fade.addColorStop(0, 'rgba(5,6,12,0)'); fade.addColorStop(0.55, 'rgba(5,6,12,.75)'); fade.addColorStop(1, 'rgba(5,6,12,.95)');
+            ctx.fillStyle = fade; ctx.fillRect(0, 0, W, H);
+            ctx.save();
+            [[260, 620, -0.35, 380, 620], [820, 980, 0.28, 420, 700], [480, 1500, -0.12, 520, 420]].forEach(function (g) {
+                ctx.save(); ctx.translate(g[0], g[1]); ctx.rotate(g[2]);
+                rr(ctx, -g[3] / 2, -g[4] / 2, g[3], g[4], 40);
+                var lg = ctx.createLinearGradient(-g[3] / 2, -g[4] / 2, g[3] / 2, g[4] / 2);
+                lg.addColorStop(0, 'rgba(255,255,255,.08)'); lg.addColorStop(1, 'rgba(255,255,255,.015)');
+                ctx.fillStyle = lg; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1.5; ctx.stroke();
+                ctx.restore();
+            });
+            ctx.restore();
+            blob(ctx, 540, -60, 420, '#ffffff', 0.35);
+            vignette(ctx, 0.5); grain(ctx, 0.06);
+        },
+        // سينث: شمس غروب وشبكة أرضية بالمنظور
+        synth: function (ctx) {
+            var hz = 1500;
+            lin(ctx, ['#0a0220', '#2a0845', '#7a1460', '#ff2e88'], 0, 0, 0, hz);
+            ctx.fillStyle = '#0a0418'; ctx.fillRect(0, hz, W, H - hz);
+            dots(ctx, 140, 61, 1.6, 0.6);
+            var sr = 260, sy = hz - 110;
+            ctx.save(); ctx.beginPath(); ctx.arc(540, sy, sr, 0, Math.PI * 2); ctx.clip();
+            var sg = ctx.createLinearGradient(0, sy - sr, 0, sy + sr); sg.addColorStop(0, '#ffe66b'); sg.addColorStop(0.6, '#ff4f9a'); sg.addColorStop(1, '#a01ad6');
+            ctx.fillStyle = sg; ctx.fillRect(540 - sr, sy - sr, sr * 2, sr * 2);
+            ctx.fillStyle = '#2a0845';
+            for (var i = 0; i < 7; i++) { var yy = sy + 20 + i * 34; ctx.fillRect(540 - sr, yy, sr * 2, 4 + i * 2.2); }
+            ctx.restore();
+            blob(ctx, 540, sy, 620, '#ff4f9a', 0.35);
+            ctx.save(); ctx.strokeStyle = 'rgba(255,79,216,.55)'; ctx.lineWidth = 2;
+            for (var gx = -18; gx <= 18; gx++) { ctx.beginPath(); ctx.moveTo(540 + gx * 40, hz); ctx.lineTo(540 + gx * 260, H); ctx.stroke(); }
+            for (var j = 1; j < 16; j++) { var t = Math.pow(j / 15, 2.2), y = hz + t * (H - hz); ctx.globalAlpha = 0.25 + t * 0.6; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            ctx.restore();
+            var hg = ctx.createLinearGradient(0, hz - 40, 0, hz + 120); hg.addColorStop(0, 'rgba(255,46,136,0)'); hg.addColorStop(0.4, 'rgba(255,46,136,.45)'); hg.addColorStop(1, 'rgba(255,46,136,0)');
+            ctx.fillStyle = hg; ctx.fillRect(0, hz - 40, W, 160);
+            var dk = ctx.createLinearGradient(0, 0, 0, H); dk.addColorStop(0, 'rgba(0,0,0,.25)'); dk.addColorStop(0.5, 'rgba(0,0,0,.35)'); dk.addColorStop(1, 'rgba(0,0,0,.55)');
+            ctx.fillStyle = dk; ctx.fillRect(0, 0, W, H);
+            grain(ctx, 0.07);
+        },
+        // ملكي: كحلي بزخرفة نجوم ثمانية ذهبية وإطار
+        royal: function (ctx) {
+            lin(ctx, ['#0b1230', '#08102a', '#050817']);
+            blob(ctx, 540, 700, 900, '#2b4fd6', 0.3);
+            ctx.save(); ctx.strokeStyle = 'rgba(232,196,110,.09)'; ctx.lineWidth = 1.5;
+            var s = 120;
+            for (var y = -s; y < H + s; y += s) for (var x = -s; x < W + s; x += s) {
+                ctx.beginPath();
+                for (var k = 0; k < 16; k++) {
+                    var a = k * Math.PI / 8, rr2 = k % 2 ? s * 0.26 : s * 0.42;
+                    var px = x + Math.cos(a) * rr2, py = y + Math.sin(a) * rr2;
+                    if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+                }
+                ctx.closePath(); ctx.stroke();
+            }
+            ctx.restore();
+            var fade = ctx.createRadialGradient(W / 2, H * 0.48, 200, W / 2, H * 0.5, 900);
+            fade.addColorStop(0, 'rgba(8,16,42,.9)'); fade.addColorStop(1, 'rgba(8,16,42,0)');
+            ctx.fillStyle = fade; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = 'rgba(232,196,110,.55)'; ctx.lineWidth = 3; rr(ctx, 36, 36, W - 72, H - 72, 30); ctx.stroke();
+            ctx.strokeStyle = 'rgba(232,196,110,.25)'; ctx.lineWidth = 1.5; rr(ctx, 52, 52, W - 104, H - 104, 22); ctx.stroke();
+            vignette(ctx, 0.55); grain(ctx, 0.07);
+        }
+    };
+    var PRO_LIST = [
+        { key: 'mesh', label: 'ميش', accent: '#d9b8ff' }, { key: 'stage', label: 'مسرح', accent: '#e6d4ff' },
+        { key: 'silk', label: 'حرير', accent: '#ffb8e6' }, { key: 'luxe', label: 'فخامة', accent: '#f5c46b' },
+        { key: 'prism', label: 'منشور', accent: '#9fe7ff' }, { key: 'synth', label: 'سينث', accent: '#ff8ad8' },
+        { key: 'royal', label: 'ملكي', accent: '#e8c46e' }
+    ];
+
     /** خلفيات صورة الإحصائيات الأصلية (js/agp-stream-stats.js) بمفتاح 's:<key>'. */
     function sharedBgs() {
         var sh = window.AGPStreamStats && window.AGPStreamStats.shared;
@@ -135,6 +313,7 @@
 
     function drawBg(ctx, p, mine) {
         var k = p.bg;
+        if (PRO_BGS[k]) { PRO_BGS[k](ctx); return; }
         var sb = sharedBg(k);
         if (sb) {
             sb.paint(ctx, W, H);
@@ -420,8 +599,8 @@
      * بين نجمتين وخطوط تتلاشى، وصفوف بخط فاصل. هنا كله داخل منطقة الأمان.
      */
     var CL_HEADS = {
-        full: { caption: 26, avY: 150, avR: 104, name: 328, nameSize: 58, handle: 370, thanks: 432, thanksSize: 44, duration: 476, top: 510 },
-        compact: { caption: 26, avY: 112, avR: 70, name: 232, nameSize: 46, handle: 270, thanks: 322, thanksSize: 38, duration: 362, top: 392 }
+        full: { caption: 26, avY: 160, avR: 104, name: 328, nameSize: 58, handle: 370, thanks: 432, thanksSize: 44, duration: 476, top: 510 },
+        compact: { caption: 26, avY: 118, avR: 70, name: 232, nameSize: 46, handle: 270, thanks: 322, thanksSize: 38, duration: 362, top: 392 }
     };
     var CL_SIDE = SAFE.l;
     function clLayout(items, s, cols) {
@@ -463,12 +642,18 @@
             var two = fit(top, 2);
             return two.s > one.s + 0.05 ? two : one;
         }
+        // بدون اليوزر: الشكر والمدة يطلعون فوق شوي
+        var hs = p.showHandle === false ? 40 : 0;
+        // شارة المشاهدات: «تحت الاسم» تاخذ مكان فوق الأقسام، و«تحت» تاخذ مكان من تحت
+        var vw = placeViews(ctx, p, data, F, extra, 0, bottom);
+        var vTop = vw && p.views.pos === 'head' ? vw.sz.h + 18 : 0;
+        if (vw && (p.views.pos === 'bl' || p.views.pos === 'br')) bottom -= vw.sz.h + 16;
         var head = p.showStreamer ? CL_HEADS.full : null;
-        var top = SAFE.t + (head ? head.top : 120);
+        var top = SAFE.t + (head ? head.top - hs : 150) + vTop;
         var pick = best(top);
         if (head && pick.s < 0.7) {
-            var c = best(SAFE.t + CL_HEADS.compact.top);
-            if (c.s > pick.s) { head = CL_HEADS.compact; pick = c; top = SAFE.t + head.top; }
+            var c = best(SAFE.t + CL_HEADS.compact.top - hs + vTop);
+            if (c.s > pick.s) { head = CL_HEADS.compact; pick = c; top = SAFE.t + head.top - hs + vTop; }
         }
         var s = pick.s, L = pick.L;
         var y0 = top + Math.max(0, (pick.avail - L.height) / 2);
@@ -477,25 +662,33 @@
         ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.direction = 'rtl';
         ctx.fillStyle = accent;
         ctx.font = '700 26px ' + F.name;
-        ctx.fillText(data.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', cx, T + 26);
+        var cap = String(p.caption == null ? 'إحصائيات البث' : p.caption).trim();
+        if (cap) ctx.fillText(fitText(ctx, data.live ? cap + ' · شغّال الآن' : cap, 520), cx, T + 26);
         var thanks = String(p.title || '').trim();
+        var yHead;
         if (head) {
             var st = data.streamer || {};
-            avatar(ctx, extra.streamerImg, st.name, cx, T + head.avY, head.avR, p.colors.ring, 7);
+            streamerAvatar(ctx, extra.streamerImg, st.name, cx, T + head.avY, head.avR, p, extra.arts);
             ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = p.colors.name;
             ctx.font = '700 ' + head.nameSize + 'px ' + F.name;
             ctx.fillText(fitText(ctx, st.name || '', SAFE.r - SAFE.l), cx, T + head.name);
-            if (data.username) {
+            if (data.username && p.showHandle !== false) {
                 ctx.direction = 'ltr'; ctx.fillStyle = accent; ctx.font = '600 28px ' + F.num;
                 ctx.fillText('@' + data.username, cx, T + head.handle);
                 ctx.direction = 'rtl';
             }
-            if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 ' + head.thanksSize + 'px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + head.thanks); }
-            if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + head.duration); }
+            if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 ' + head.thanksSize + 'px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + head.thanks - hs); }
+            if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + head.duration - hs); }
+            yHead = T + head.duration - hs + 22;
         } else {
             if (thanks) { ctx.fillStyle = p.colors.title; ctx.font = '700 44px ' + F.title; ctx.fillText(fitText(ctx, thanks, SAFE.r - SAFE.l), cx, T + 80); }
             if (p.showTotals) { ctx.fillStyle = hexA(p.colors.name, 0.6); ctx.font = '500 24px ' + F.name; ctx.fillText('مدة البث: ' + fmtDur(data.durationMs), cx, T + 120); }
+            yHead = T + 140;
+        }
+        if (vw) {
+            if (p.views.pos === 'head') { vw.y = yHead + vw.sz.h / 2; extra.viewsBox.y = vw.y; }
+            drawViews(ctx, vw.info, vw.x, vw.y, vw.sz, p, F);
         }
 
         L.secs.forEach(function (b) {
@@ -549,6 +742,174 @@
         }
     }
 
+    /* ---- إطار صورة صاحب البث ---- */
+
+    var FRAMES = [
+        // fit = كم تتصغّر الصورة عشان الإطار كله (الحلقات والأجنحة) ياخذ نفس المساحة
+        { key: 'ring', label: 'حلقة', fit: 1 }, { key: 'double', label: 'مزدوج', fit: 0.86 }, { key: 'glow', label: 'توهّج', fit: 0.94 },
+        { key: 'gradient', label: 'متدرّج', fit: 0.92 }, { key: 'orbit', label: 'مدار', fit: 0.82 }, { key: 'hex', label: 'سداسي', fit: 0.9 },
+        { key: 'angel', label: 'جناح الملاك', fit: 0.7, art: { file: 'angel.webp', scale: 149, left: -25.25, top: -24.5 } },
+        { key: 'pegasus', label: 'الحصان المجنح', fit: 0.6, art: { file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2 } }
+    ];
+    function frameDef(k) { return FRAMES.filter(function (f) { return f.key === k; })[0] || FRAMES[0]; }
+    var FRAMES_BASE = '../assets/overlay-frames/';
+
+    function hexPath(ctx, cx, cy, r) {
+        ctx.beginPath();
+        for (var i = 0; i < 6; i++) { var a = Math.PI / 6 + i * Math.PI / 3; var x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+        ctx.closePath();
+    }
+
+    /** صورة صاحب البث بالإطار المختار. arts = صور إطارات «جناح الملاك» و«الحصان». */
+    function streamerAvatar(ctx, img, name, cx, cy, r, p, arts) {
+        var f = frameDef(p.frame), ring = p.colors.ring, acc = p.colors.accent;
+        r = r * (f.fit || 1);
+        if (f.art) {
+            avatar(ctx, img, name, cx, cy, r, ring, 0);
+            var art = arts && arts[f.key];
+            if (art) {
+                var D = r * 2.04, x0 = cx - D / 2, y0 = cy - D / 2, sz = D * f.art.scale / 100;
+                ctx.save(); ctx.shadowColor = hexA(ring, 0.6); ctx.shadowBlur = 30;
+                ctx.drawImage(art, x0 + D * f.art.left / 100, y0 + D * f.art.top / 100, sz, sz);
+                ctx.restore();
+            } else avatar(ctx, null, '', cx, cy, 0, ring, 0);
+            return;
+        }
+        if (f.key === 'hex') {
+            ctx.save(); hexPath(ctx, cx, cy, r * 1.08); ctx.clip();
+            ctx.fillStyle = '#2a2338'; ctx.fillRect(cx - r * 1.1, cy - r * 1.1, r * 2.2, r * 2.2);
+            if (img) ctx.drawImage(img, cx - r * 1.1, cy - r * 1.1, r * 2.2, r * 2.2);
+            else { ctx.fillStyle = '#fff'; ctx.font = '800 ' + Math.round(r * 0.9) + 'px "Noto Kufi Arabic",sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy); }
+            ctx.restore();
+            var hg = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+            hg.addColorStop(0, ring); hg.addColorStop(0.5, '#ffffff'); hg.addColorStop(1, acc);
+            hexPath(ctx, cx, cy, r * 1.08); ctx.strokeStyle = hg; ctx.lineWidth = 7; ctx.stroke();
+            hexPath(ctx, cx, cy, r * 1.22); ctx.strokeStyle = hexA(ring, 0.35); ctx.lineWidth = 2; ctx.stroke();
+            return;
+        }
+        if (f.key === 'glow') {
+            ctx.save(); ctx.shadowColor = ring; ctx.shadowBlur = 50;
+            ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 6; ctx.stroke();
+            ctx.stroke(); ctx.restore();
+            avatar(ctx, img, name, cx, cy, r, '#ffffff', 2);
+            return;
+        }
+        avatar(ctx, img, name, cx, cy, r, ring, 0);
+        if (f.key === 'double') {
+            ctx.beginPath(); ctx.arc(cx, cy, r + 4, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 6; ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, r + 20, 0, Math.PI * 2); ctx.strokeStyle = hexA(ring, 0.45); ctx.lineWidth = 2.5; ctx.stroke();
+            [0.25, 0.75, 1.25, 1.75].forEach(function (k) { var a = k * Math.PI; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * (r + 20), cy + Math.sin(a) * (r + 20), 5, 0, Math.PI * 2); ctx.fillStyle = ring; ctx.fill(); });
+        } else if (f.key === 'gradient') {
+            var g = ctx.createConicGradient ? ctx.createConicGradient(-Math.PI / 2, cx, cy) : null;
+            if (g) { g.addColorStop(0, ring); g.addColorStop(0.33, '#ffffff'); g.addColorStop(0.66, acc); g.addColorStop(1, ring); }
+            ctx.beginPath(); ctx.arc(cx, cy, r + 6, 0, Math.PI * 2); ctx.strokeStyle = g || ring; ctx.lineWidth = 11; ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, r + 15, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.5; ctx.stroke();
+        } else if (f.key === 'orbit') {
+            ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 4; ctx.stroke();
+            ctx.save(); ctx.setLineDash([3, 11]); ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.arc(cx, cy, r + 24, 0, Math.PI * 2); ctx.strokeStyle = hexA(ring, 0.8); ctx.lineWidth = 3; ctx.stroke();
+            ctx.restore();
+            ctx.beginPath(); ctx.arc(cx, cy, r + 24, -2.6, -1.1); ctx.strokeStyle = acc; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke(); ctx.lineCap = 'butt';
+            [[-1.1, 13], [2.2, 9], [0.6, 7]].forEach(function (sp) { sparkle(ctx, cx + Math.cos(sp[0]) * (r + 24), cy + Math.sin(sp[0]) * (r + 24), sp[1], '#ffffff'); });
+        } else {
+            ctx.beginPath(); ctx.arc(cx, cy, r + 3.5, 0, Math.PI * 2); ctx.strokeStyle = ring; ctx.lineWidth = 7; ctx.stroke();
+        }
+    }
+
+    /* ---- عدد المشاهدات ---- */
+
+    var VIEW_METRICS = [{ label: 'إجمالي المشاهدات', value: 'total' }, { label: 'أعلى تواجد', value: 'peak' }, { label: 'عدد المشاهدين', value: 'unique' }];
+    var VIEW_STYLES = [{ label: 'كبسولة', value: 'pill' }, { label: 'بطاقة', value: 'card' }, { label: 'دائرة', value: 'ring' }, { label: 'شريط', value: 'ribbon' }, { label: 'بسيط', value: 'minimal' }];
+    var VIEW_POS = [{ label: 'يسار فوق', value: 'tl' }, { label: 'يمين فوق', value: 'tr' }, { label: 'تحت الاسم', value: 'head' }, { label: 'يسار تحت', value: 'bl' }, { label: 'يمين تحت', value: 'br' }];
+
+    function eyeIcon(ctx, cx, cy, s, color) {
+        ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = s * 0.11;
+        ctx.beginPath(); ctx.moveTo(cx - s * 0.55, cy); ctx.quadraticCurveTo(cx, cy - s * 0.55, cx + s * 0.55, cy); ctx.quadraticCurveTo(cx, cy + s * 0.55, cx - s * 0.55, cy); ctx.closePath(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, s * 0.17, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    /** يقيس شارة المشاهدات (بدون رسم). */
+    function viewsSize(ctx, v, F) {
+        var st = v.style;
+        if (st === 'card') return { w: 230, h: 150 };
+        if (st === 'ring') return { w: 190, h: 190 };
+        ctx.font = '800 40px ' + F.num; var nw = ctx.measureText(v.num).width;
+        ctx.font = '600 24px ' + F.name; var lw = v.label ? ctx.measureText(v.label).width : 0;
+        if (st === 'minimal') return { w: nw + lw + 80, h: 60 };
+        return { w: nw + lw + 110, h: 76 };
+    }
+
+    /** يرسم الشارة بمركز (x, y). */
+    function drawViews(ctx, v, x, y, sz, p, F) {
+        var acc = p.colors.accent, st = v.style, w = sz.w, h = sz.h, L = x - w / 2, Tp = y - h / 2;
+        ctx.save(); ctx.textBaseline = 'middle';
+        if (st === 'card') {
+            rr(ctx, L, Tp, w, h, 26);
+            var g = ctx.createLinearGradient(0, Tp, 0, Tp + h); g.addColorStop(0, 'rgba(255,255,255,.12)'); g.addColorStop(1, 'rgba(255,255,255,.04)');
+            ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = hexA(acc, 0.5); ctx.lineWidth = 2; ctx.stroke();
+            eyeIcon(ctx, x, Tp + 30, 34, acc);
+            ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.fillStyle = p.colors.num; ctx.font = '800 46px ' + F.num;
+            ctx.fillText(fitText(ctx, v.num, w - 20), x, Tp + 80);
+            ctx.direction = 'rtl'; ctx.fillStyle = hexA(p.colors.name, 0.75); ctx.font = '600 22px ' + F.name;
+            ctx.fillText(fitText(ctx, v.label, w - 20), x, Tp + 122);
+        } else if (st === 'ring') {
+            var R = w / 2 - 6;
+            ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fillStyle = 'rgba(10,9,16,.55)'; ctx.fill();
+            var cg = ctx.createConicGradient ? ctx.createConicGradient(-Math.PI / 2, x, y) : null;
+            if (cg) { cg.addColorStop(0, acc); cg.addColorStop(0.5, '#ffffff'); cg.addColorStop(1, acc); }
+            ctx.strokeStyle = cg || acc; ctx.lineWidth = 7; ctx.stroke();
+            eyeIcon(ctx, x, y - 48, 32, acc);
+            ctx.textAlign = 'center'; ctx.direction = 'ltr'; ctx.fillStyle = p.colors.num; ctx.font = '800 42px ' + F.num;
+            ctx.fillText(fitText(ctx, v.num, R * 1.7), x, y + 4);
+            ctx.direction = 'rtl'; ctx.fillStyle = hexA(p.colors.name, 0.75); ctx.font = '600 20px ' + F.name;
+            ctx.fillText(fitText(ctx, v.label, R * 1.5), x, y + 46);
+        } else {
+            if (st === 'pill') {
+                rr(ctx, L, Tp, w, h, h / 2); ctx.fillStyle = 'rgba(10,9,16,.5)'; ctx.fill();
+                ctx.strokeStyle = hexA(acc, 0.6); ctx.lineWidth = 2; ctx.stroke();
+            } else if (st === 'ribbon') {
+                ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L + w, Tp); ctx.lineTo(L + w - 22, y); ctx.lineTo(L + w, Tp + h); ctx.lineTo(L, Tp + h); ctx.lineTo(L + 22, y); ctx.closePath();
+                var rg = ctx.createLinearGradient(L, 0, L + w, 0); rg.addColorStop(0, acc); rg.addColorStop(1, hexA(acc, 0.75));
+                ctx.fillStyle = rg; ctx.fill();
+            }
+            var dark = st === 'ribbon';
+            // من اليمين: العين، الرقم، الكلمة
+            var xr = L + w - (st === 'minimal' ? 10 : 36);
+            eyeIcon(ctx, xr - 18, y, 36, dark ? '#14121a' : acc);
+            ctx.direction = 'ltr'; ctx.textAlign = 'right'; ctx.font = '800 40px ' + F.num; ctx.fillStyle = dark ? '#14121a' : p.colors.num;
+            ctx.fillText(v.num, xr - 50, y + 2);
+            var nw = ctx.measureText(v.num).width;
+            ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.font = '600 24px ' + F.name; ctx.fillStyle = dark ? 'rgba(20,18,26,.8)' : hexA(p.colors.name, 0.75);
+            if (v.label) ctx.fillText(v.label, xr - 50 - nw - 14, y + 3);
+        }
+        ctx.restore();
+    }
+
+    /**
+     * مكان الشارة: زوايا منطقة الأمان، تحت الاسم (head = yHead)، أو مكان يحدده بالسحب (custom).
+     * يرجّع المركز ويحفظ الصندوق بـextra.viewsBox (للسحب بالمعاينة).
+     */
+    function placeViews(ctx, p, data, F, extra, yHead, bottom) {
+        var v = p.views;
+        if (!v || !v.on || !data.views) { extra.viewsBox = null; return null; }
+        var val = data.views[v.metric] != null ? data.views[v.metric] : data.views.total;
+        var info = { num: fmt(val), label: String(v.label == null ? 'مشاهدة' : v.label).slice(0, 30), style: v.style };
+        var sz = viewsSize(ctx, info, F);
+        var x, y, pad = 8;
+        if (v.pos === 'tr') { x = SAFE.r - sz.w / 2 - pad; y = SAFE.t + sz.h / 2 + pad; }
+        else if (v.pos === 'head') { x = W / 2; y = yHead + sz.h / 2; }
+        else if (v.pos === 'bl') { x = SAFE.l + sz.w / 2 + pad; y = bottom - sz.h / 2; }
+        else if (v.pos === 'br') { x = SAFE.r - sz.w / 2 - pad; y = bottom - sz.h / 2; }
+        else if (v.pos === 'custom') { x = Number(v.x) || W / 2; y = Number(v.y) || H / 2; }
+        else { x = SAFE.l + sz.w / 2 + pad; y = SAFE.t + sz.h / 2 + pad; }
+        // ما تطلع من منطقة الأمان
+        x = Math.max(SAFE.l + sz.w / 2, Math.min(SAFE.r - sz.w / 2, x));
+        y = Math.max(SAFE.t + sz.h / 2, Math.min(SAFE.b - sz.h / 2, y));
+        extra.viewsBox = { x: x, y: y, w: sz.w, h: sz.h };
+        return { info: info, sz: sz, x: x, y: y };
+    }
+
     /** يرسم الصورة كاملة. data = ملخص البث (أو مثال)، A = صور البروفايل محمّلة. */
     function render(canvas, p, data, A, extra) {
         var ctx = canvas.getContext('2d');
@@ -564,11 +925,16 @@
         // صاحب البث + العنوان
         if (p.showStreamer) {
             var st = data.streamer || {};
-            avatar(ctx, extra.streamerImg, st.name, cx, y + 70, 70, p.colors.ring, 7);
+            streamerAvatar(ctx, extra.streamerImg, st.name, cx, y + 80, 76, p, extra.arts);
             ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.font = '800 44px ' + F.name; ctx.fillStyle = p.colors.name;
-            ctx.fillText(fitText(ctx, st.name || '', SAFE.r - SAFE.l), cx, y + 180);
-            y += 220;
+            ctx.fillText(fitText(ctx, st.name || '', SAFE.r - SAFE.l), cx, y + 200);
+            y += 236;
+            if (data.username && p.showHandle !== false) {
+                ctx.direction = 'ltr'; ctx.font = '600 28px ' + F.num; ctx.fillStyle = p.colors.accent;
+                ctx.fillText('@' + data.username, cx, y + 4); ctx.direction = 'rtl';
+                y += 44;
+            }
         }
         var title = String(p.title || '').trim();
         if (title) {
@@ -586,6 +952,12 @@
         }
 
         var bottom = drawFooter(ctx, p, F) - 20;
+        var vw = placeViews(ctx, p, data, F, extra, y, bottom);
+        if (vw) {
+            if (p.views.pos === 'head') { vw.y = y + vw.sz.h / 2; extra.viewsBox.y = vw.y; y += vw.sz.h + 18; }
+            if (p.views.pos === 'bl' || p.views.pos === 'br') bottom -= vw.sz.h + 16;
+            drawViews(ctx, vw.info, vw.x, vw.y, vw.sz, p, F);
+        }
 
         // الأقسام: نقيس، ونصغّر لو ما دخلت، ونوسّط بالمساحة
         var L = LAYOUT[p.template] || LAYOUT.cards;
@@ -641,7 +1013,7 @@
             username: 'your_name',
             streamer: { name: 'اسم حسابك', avatar: null },
             durationMs: 2.5 * 3600000,
-            totals: { likes: 48210, diamonds: 12850, shares: 96, comments: 2210, peakViewers: 340 },
+            totals: { likes: 48210, diamonds: 12850, shares: 96, comments: 2210, peakViewers: 340, totalViewers: 5230 },
             counts: { likers: 412, gifters: 58, sharers: 41, viewers: 1290, commenters: 230 },
             sections: { likers: list('count', 9800, 850), gifters: list('diamonds', 5200, 480), sharers: list('count', 12, 1), viewers: list('watchMs', 2.4 * 3600000, 600000), commenters: list('count', 420, 35), donations: list('amount', 100, 9) }
         };
@@ -725,6 +1097,28 @@
         wrap.appendChild(side);
         root.appendChild(wrap);
 
+        // سحب شارة المشاهدات بالمعاينة لأي مكان
+        var vDrag = null;
+        function toCanvas(e) { var r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+        frame.addEventListener('pointerdown', function (e) {
+            var b = extra.viewsBox; if (!b) return;
+            var q = toCanvas(e);
+            if (Math.abs(q.x - b.x) > b.w / 2 + 10 || Math.abs(q.y - b.y) > b.h / 2 + 10) return;
+            e.preventDefault();
+            frame.setPointerCapture(e.pointerId);
+            vDrag = { dx: q.x - b.x, dy: q.y - b.y };
+            frame.classList.add('drag');
+        });
+        frame.addEventListener('pointermove', function (e) {
+            var b = extra.viewsBox, q = toCanvas(e);
+            if (!vDrag) { frame.classList.toggle('can-drag', Boolean(b && Math.abs(q.x - b.x) <= b.w / 2 + 10 && Math.abs(q.y - b.y) <= b.h / 2 + 10)); return; }
+            p.views.pos = 'custom'; p.views.x = Math.round(q.x - vDrag.dx); p.views.y = Math.round(q.y - vDrag.dy);
+            redraw();
+        });
+        function endDrag() { if (!vDrag) return; vDrag = null; frame.classList.remove('drag'); savePrefs(p); if (tab === 'head') paintSide(); }
+        frame.addEventListener('pointerup', endDrag);
+        frame.addEventListener('pointercancel', endDrag);
+
         var drawQ = 0;
         function redraw() {
             if (drawQ) return;
@@ -747,12 +1141,15 @@
             var t = src.totals || {};
             data = {
                 streamer: src.streamer, items: items, username: src.username || '', live: Boolean(src.live), durationMs: src.durationMs,
+                views: { total: t.totalViewers || (src.counts || {}).viewers || 0, peak: t.peakViewers || 0, unique: (src.counts || {}).viewers || 0 },
                 summaryLine: p.showTotals ? ['مدة البث ' + fmtDur(src.durationMs), fmt(t.likes) + ' تكبيسة', fmt(t.diamonds) + ' عملة'].join('  ·  ') : ''
             };
             var fonts = ['title', 'name', 'num'].map(function (k) { var f = O.fontOf(p.fonts[k]); O.loadFont(f); return document.fonts ? document.fonts.load(f.b + ' 40px "' + f.family + '"').catch(function () {}) : null; });
             var imgs = A.map(function (src2, i) { return loadImg(src2).then(function (im) { A[i] = im; }); });
             imgs.push(loadImg((src.streamer || {}).avatar).then(function (im) { extra.streamerImg = im; }));
             imgs.push(loadImg('../assets/overlay-frames/coin.webp').then(function (im) { extra.coin = im; }));
+            extra.arts = extra.arts || {};
+            FRAMES.forEach(function (f) { if (f.art && (p.frame === f.key || tab === 'head')) imgs.push(loadImg(FRAMES_BASE + f.art.file).then(function (im) { extra.arts[f.key] = im; })); });
             imgs.push(p.bg === 'mine' && mineUrl ? loadImg(mineUrl).then(function (im) { extra.mine = im; }) : Promise.resolve());
             return Promise.all(fonts.concat(imgs));
         }
@@ -848,7 +1245,7 @@
             hd.appendChild(t);
             side.appendChild(hd);
             var tabs = el('div', 'ob-ptabs vs-tabs');
-            [['data', 'البيانات'], ['sections', 'الأقسام'], ['look', 'القالب والخلفية'], ['style', 'الخطوط والألوان']].forEach(function (x) {
+            [['data', 'البيانات'], ['head', 'صورتك والمشاهدات'], ['sections', 'الأقسام'], ['look', 'القالب والخلفية'], ['style', 'الخطوط والألوان']].forEach(function (x) {
                 tabs.appendChild(btn(x[1], x[0] === tab ? 'on' : '', function () { tab = x[0]; paintSide(); }));
             });
             side.appendChild(tabs);
@@ -860,8 +1257,44 @@
                 ti.className = 'ob-input'; ti.rows = 2; ti.maxLength = 80; ti.value = p.title;
                 ti.addEventListener('input', function () { p.title = ti.value; changed(false); });
                 b.appendChild(row('النص فوق', ti, true, 'عنوان الصورة — سطرين بالكثير'));
+                var cp = document.createElement('input');
+                cp.className = 'ob-input'; cp.maxLength = 40; cp.value = p.caption == null ? 'إحصائيات البث' : p.caption;
+                cp.addEventListener('input', function () { p.caption = cp.value; changed(false); });
+                b.appendChild(row('العنوان الصغير فوق', cp, true, 'فاضي = ما يطلع'));
                 b.appendChild(row('اسمك وصورتك', toggle(p.showStreamer, function (v) { p.showStreamer = v; changed(false); })));
+                b.appendChild(row('اليوزر (@)', toggle(p.showHandle !== false, function (v) { p.showHandle = v; changed(false); }), false, data && data.username ? '@' + data.username : ''));
                 b.appendChild(row('الأرقام الإجمالية', toggle(p.showTotals, function (v) { p.showTotals = v; changed(false); }), false, 'مدة البث والمجاميع تحت العنوان وبكل قسم'));
+            } else if (tab === 'head') {
+                var fg = el('div', 'vs-frames');
+                FRAMES.forEach(function (f) {
+                    var c = el('canvas'); c.width = 150; c.height = 150;
+                    var x = c.getContext('2d');
+                    var drawMini = function () {
+                        x.clearRect(0, 0, 150, 150);
+                        x.save(); x.translate(75, 75); x.scale(0.42, 0.42);
+                        streamerAvatar(x, extra.streamerImg, (data && data.streamer || {}).name, 0, 0, 104, Object.assign({}, p, { frame: f.key }), extra.arts);
+                        x.restore();
+                    };
+                    drawMini();
+                    if (f.art && !(extra.arts && extra.arts[f.key])) loadImg(FRAMES_BASE + f.art.file).then(function (im) { extra.arts = extra.arts || {}; extra.arts[f.key] = im; drawMini(); });
+                    var fb = btn('', 'vs-fr' + (p.frame === f.key ? ' on' : ''), function () { p.frame = f.key; changed(true); });
+                    fb.appendChild(c); fb.appendChild(el('span', null, f.label));
+                    fg.appendChild(fb);
+                });
+                b.appendChild(row('إطار صورتك', fg, true, 'لونه من «حدود الصور» و«لون الأقسام» بالخطوط والألوان'));
+                var v = p.views;
+                b.appendChild(el('div', 'ob-gtitle', 'عدد المشاهدات'));
+                b.appendChild(row('يطلع بالصورة', toggle(v.on, function (x2) { v.on = x2; changed(true); })));
+                if (v.on) {
+                    b.appendChild(row('الرقم', pills(VIEW_METRICS, v.metric, function (x2) { v.metric = x2; changed(true); }), true,
+                        'إجمالي = كل اللي دخلوا البث، أعلى تواجد = أكثر عدد بنفس اللحظة'));
+                    b.appendChild(row('الشكل', pills(VIEW_STYLES, v.style, function (x2) { v.style = x2; changed(true); }), true));
+                    b.appendChild(row('المكان', pills(VIEW_POS.concat(v.pos === 'custom' ? [{ label: 'مكانك ✓', value: 'custom' }] : []), v.pos, function (x2) { v.pos = x2; changed(true); }), true, 'أو اسحبها بالمعاينة لأي مكان'));
+                    var lb = document.createElement('input');
+                    lb.className = 'ob-input'; lb.maxLength = 30; lb.value = v.label == null ? 'مشاهدة' : v.label;
+                    lb.addEventListener('input', function () { v.label = lb.value; changed(false); });
+                    b.appendChild(row('النص جنب الرقم', lb, true, 'مثلاً: مشاهدة، زائر، شخص نوّرونا'));
+                }
             } else if (tab === 'sections') {
                 b.appendChild(el('div', 'ob-hint', 'شغّل اللي تبيه يطلع بالصورة، وحدد كم شخص بكل قسم، ورتّبها بالأسهم.'));
                 p.sections.forEach(function (s, i) {
@@ -889,7 +1322,7 @@
             } else if (tab === 'look') {
                 b.appendChild(row('شكل القالب', pills(TEMPLATES.map(function (x) { return { label: x.label, value: x.key }; }), p.template, function (v) { p.template = v; changed(true); }), true));
                 var g = el('div', 'vs-bgs');
-                sharedBgs().map(function (b) { return { key: 's:' + b.key, label: b.name, accent: b.accent }; }).concat(BGS).forEach(function (bg) {
+                PRO_LIST.concat(sharedBgs().map(function (b) { return { key: 's:' + b.key, label: b.name, accent: b.accent }; })).concat(BGS).forEach(function (bg) {
                     var c = el('canvas'); c.width = 108; c.height = 192;
                     var x = c.getContext('2d'); x.scale(0.1, 0.1); drawBg(x, Object.assign({}, p, { bg: bg.key }), null);
                     var bb = btn('', 'vs-bg' + (p.bg === bg.key ? ' on' : ''), function () {
