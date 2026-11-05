@@ -24,6 +24,7 @@ var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
+var screenTests = require('../stats/screen-tests');
 var liveSessionStats = require('../stats/live-session-stats');
 var streamScreens = require('../stats/stream-screens-service');
 var screenMedia = require('../stats/screen-media-service');
@@ -171,6 +172,8 @@ var ROUTES = [
   { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
   // زر «عرض إحصائيات البث» بمكتبة الألعاب — ملخص البث الحالي/الأخير (بالذاكرة).
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
+  { method: 'GET', path: '/api/stream/stats-watch', requireAuth: true, handler: handleGetStatsWatch },
+  { method: 'POST', path: '/api/stream/stats-watch', requireAuth: true, handler: handleSetStatsWatch },
   { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
   { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
   // «شاشات البث» (overlay/index.html) — كل شاشة لها رابط overlay/live.html?k= لـOBS/TikTok LIVE Studio.
@@ -190,6 +193,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen', requireAuth: false, handler: handlePublicScreenDesign },
   { method: 'GET', path: '/api/public/screen/stats', requireAuth: false, handler: handlePublicScreenStats },
   { method: 'GET', path: '/api/public/screen/gifts', requireAuth: false, handler: handlePublicScreenGifts },
+  { method: 'POST', path: '/api/screens/test-alert', requireAuth: true, handler: handleScreenTestAlert },
   { method: 'GET', path: '/api/public/screen/events', requireAuth: false, handler: handlePublicScreenEvents },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
@@ -930,6 +934,41 @@ function sendSessionStats(res, username, rawSections) {
 }
 
 /**
+ * «إحصائيات البث» (Veyro): الستريمر يفعّل لنفسه الحساب التلقائي — أول ما يبدأ
+ * يبث (بدون ما يفتح الموقع) المراقب (stats/stream-stats-watcher.js) يتصل ويحسب
+ * التكبيسات والدعم والشير والمشاهدين. نفس صلاحية الأدمن stream_stats_watch.
+ * GET → { success, on, linked, watching: {status, startedAt}|null }
+ * POST { on } → نفس الشكل.
+ */
+function statsWatchState(user, on) {
+  var linked = Boolean(user.tiktok_verified && user.tiktok_username);
+  var watcher = require('../stats/stream-stats-watcher');
+  return {
+    success: true,
+    on: Boolean(on),
+    linked: linked,
+    username: linked ? tiktokLiveCheck.normalize(user.tiktok_username) : null,
+    watching: linked ? watcher.statusOf(user.tiktok_username) : null
+  };
+}
+
+function handleGetStatsWatch(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  sendJson(res, 200, statsWatchState(user, user.permissions && user.permissions.stream_stats_watch));
+}
+
+function handleSetStatsWatch(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  if (!(user.tiktok_verified && user.tiktok_username)) { sendJson(res, 400, { success: false, error: 'tiktok_not_linked' }); return; }
+  var on = Boolean(body && body.on);
+  var r = authService.setPermission(user.id, 'stream_stats_watch', on);
+  if (!r.success) { sendJson(res, 404, r); return; }
+  // نفحص على طول بدل ما ننتظر الدورة الجاية (لو يبث الحين يبدأ يحسب)
+  try { require('../stats/stream-stats-watcher').tick(); } catch (e) { /* الدورة الجاية */ }
+  sendJson(res, 200, statsWatchState(user, on));
+}
+
+/**
  * GET /api/stream/recent-gifts?since=<seq> → { success, sid, seq, gifts: [...], totals, live } (sid = معرّف البث)
  * آخر الهدايا (حتى 72) بعد seq — لوعاء الهدايا بأوفرلي البث (js/agp-stream-overlay.js).
  * طلب خفيف (بدون صور بروفايل) يتكرر كل كم ثانية. نفس قواعد اليوزر بـsession-stats.
@@ -1107,12 +1146,30 @@ function handlePublicScreenGifts(req, res) {
   sendRecentGifts(res, username, getQueryParam(req, 'since'));
 }
 
-/** GET /api/public/screen/events?k=&since= → { success, sid, seq, events, live } — أليرتات الشاشة. */
+/**
+ * GET /api/public/screen/events?k=&since=&t= → { success, sid, seq, events, live, tseq, tests } — أليرتات الشاشة.
+ * tests = تجارب «جرّب» من المحرر (stats/screen-tests.js) بعد t — تشتغل حتى لو تيك توك مو مربوط.
+ */
 function handlePublicScreenEvents(req, res) {
-  var username = screenTikTok(req, res);
-  if (!username) return;
-  var r = liveSessionStats.getRecentEvents(username, getQueryParam(req, 'since'));
-  sendJson(res, 200, r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false });
+  var o = screenFromKey(req, res);
+  if (!o) return;
+  var username = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(o.userId));
+  var r = username ? liveSessionStats.getRecentEvents(username, getQueryParam(req, 'since')) : null;
+  var t = screenTests.since(getQueryParam(req, 'k'), getQueryParam(req, 't'));
+  var out = r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false };
+  out.tseq = t.tseq;
+  out.tests = t.tests;
+  sendJson(res, 200, out);
+}
+
+/** POST /api/screens/test-alert { id, itemId, type } — «جرّب» يطلع على رابط الشاشة (OBS / TikTok LIVE Studio). */
+function handleScreenTestAlert(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  body = body || {};
+  var scr = streamScreens.list(user.id).filter(function (x) { return String(x.id) === String(body.id); })[0];
+  if (!scr) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
+  var t = screenTests.push(scr.key, body.itemId, String(body.type || 'gift'));
+  sendJson(res, t ? 200 : 400, t ? { success: true } : { success: false, error: 'bad_item' });
 }
 
 /**

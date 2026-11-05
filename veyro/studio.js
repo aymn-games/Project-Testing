@@ -28,6 +28,8 @@
     var mtabs = document.getElementById('ob-mtabs');
     var homeBody = document.getElementById('vy-home-body');
     var screensBody = document.getElementById('vy-screens-body');
+    var statsBody = document.getElementById('vy-stats-body');
+    var statsUi = null;
     var userEl = document.getElementById('vy-user');
     var tipEl = document.getElementById('vy-tip');
     var mtitle = document.getElementById('vy-mtitle');
@@ -87,7 +89,7 @@
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
     var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'text', 'icons', 'shapes'];
-    var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', editor: 'أدوات البث' };
+    var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes' };
     var PREVIEWS = [
@@ -206,6 +208,20 @@
     }
 
     /** بعد أي تعديل على S(): يحدّث البيانات ويجدول الحفظ. */
+    /**
+     * «جرّب»: يطلع هنا بالمعاينة، وبنفس اللحظة على رابط الشاشة المفتوح بـOBS / TikTok LIVE Studio
+     * (POST /api/screens/test-alert — الرابط يسحبه خلال ثانيتين). لو الأليرت جديد نحفظ أول.
+     */
+    var testToastShown = false;
+    function tryAlert(it, type) {
+        O.alertDemo(it.id, type);
+        if (!cur) return;
+        if (save.pending) flush();
+        api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
+            if (d && d.success && !testToastShown) { testToastShown = true; toast('التجربة طالعة بشاشة البث بعد ثواني ✓'); }
+        }).catch(function () { /* المعاينة اشتغلت؛ الرابط بس ما وصله */ });
+    }
+
     function commit() {
         markDirty();
         O.commit();
@@ -365,6 +381,7 @@
         var n = S().items.length;
         navEl.appendChild(navItem('الرئيسية', 'home', view === 'home', function () { go('home'); }));
         navEl.appendChild(navItem('الشاشات', 'screens', view === 'screens', function () { go('screens'); }, screens.length ? String(screens.length) : ''));
+        navEl.appendChild(navItem('إحصائيات البث', 'bars', view === 'stats', function () { go('stats'); }));
         navEl.appendChild(el('div', 'vy-group', 'أدوات البث'));
         TOOL_KEYS.forEach(function (k) {
             var sec = secOf(k);
@@ -391,7 +408,7 @@
         if (next === 'editor' && !cur) { if (screens[0]) openScreen(screens[0]); else { next = 'screens'; } }
         var changed = next !== view;
         view = next;
-        ['home', 'screens', 'editor'].forEach(function (v) {
+        ['home', 'screens', 'stats', 'editor'].forEach(function (v) {
             var sEl = document.getElementById('vy-' + v);
             sEl.hidden = v !== view;
             if (v === view && changed) { sEl.classList.remove('enter'); void sEl.offsetWidth; sEl.classList.add('enter'); }
@@ -403,6 +420,11 @@
         renderRail();
         // الرئيسية والشاشات ما تنعاد رسمتها إلا لو تغيّر شي (أسرع تنقّل)
         if (view === 'home') { if (dirty.home) renderHome(); }
+        else if (view === 'stats') {
+            // «إحصائيات البث» (stats-card.js): تنبني أول مرة، وبعدها تحدّث أرقامها بس
+            if (!statsUi && window.VeyroStats) statsUi = window.VeyroStats.mount(statsBody, { api: api, toast: toast });
+            else if (statsUi && changed) statsUi.refresh();
+        }
         else if (view === 'screens') { if (dirty.screens) renderScreensView(); }
         else {
             var wasClosed = body.classList.contains('closed');
@@ -1537,7 +1559,7 @@
             tg.title = 'تشغيل / إيقاف';
             tg.addEventListener('click', function (e) { e.stopPropagation(); });
             r.appendChild(tg);
-            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); O.alertDemo(it.id, (it.events || ['gift'])[0]); }));
+            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); tryAlert(it, (it.events || ['gift'])[0]); }));
             r.appendChild(button('إعدادات', 'ob-pill', function (e) { e.stopPropagation(); select(it.id); }));
             r.addEventListener('click', function () { select(it.id); });
             lw.appendChild(r);
@@ -1574,7 +1596,7 @@
         var evs = Array.isArray(it.events) ? it.events : [];
         var demo = el('div', 'ob-actions');
         evs.forEach(function (k) {
-            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { O.alertDemo(it.id, k); }));
+            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { tryAlert(it, k); }));
         });
         box.appendChild(demo);
 
@@ -2125,6 +2147,12 @@
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ أطراف الفيديو ويعرف لون الخلفية لحاله. بعدها ظبّط القوة والنعومة.'));
             ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
             ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode, function (x) { setK('mode', x); paintControls(); }), true));
+            // درجة التفريغ: كم تنشال الخلفية (100٪ = كلها) — الشخصية والمؤثرات ما يتغيّر فيها شي
+            var amt = el('div', 'va-dur');
+            var amtLab = el('b', 'va-durv', Math.round((1 - (draft.keepBg || 0)) * 100) + '٪');
+            amt.appendChild(slider(0, 100, 1, Math.round((1 - (draft.keepBg || 0)) * 100), function (x) { amtLab.textContent = x + '٪'; setK('keepBg', Math.round((100 - x)) / 100); }));
+            amt.appendChild(amtLab);
+            ctrls.appendChild(row('درجة تفريغ الخلفية', amt, true, '100٪ = الخلفية ' + (draft.mode === 'white' ? 'البيضاء' : draft.mode === 'color' ? 'الملوّنة' : 'السوداء') + ' تنشال كلها، 50٪ = تصير نص شفافة — والباقي بالفيديو ما يتغيّر لونه ولا شكله'));
             if (draft.mode === 'color') {
                 var cw = el('div', 'ob-sw');
                 [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#ff00ff', 'وردي']].forEach(function (c) {
@@ -2162,9 +2190,8 @@
             ctrls.appendChild(row(draft.mode === 'screen' ? 'قوة التوهّج' : 'النعومة', slider(0, 0.5, 0.01, draft.smooth, function (x) { setK('smooth', x); }), false, draft.mode === 'screen' ? 'أعلى = الضوء أوضح' : 'نعومة حواف الشخصية'));
             ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
             if (draft.mode === 'color') ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل اللون الأخضر من الحواف'));
-            ctrls.appendChild(el('div', 'ob-gtitle', 'لو التفريغ خرّب شي'));
-            ctrls.appendChild(row('إرجاع الخلفية', slider(0, 1, 0.01, draft.keepBg || 0, function (x) { setK('keepBg', x); }), false, '0 = مفرّغة كامل، وكل ما زاد ترجع الخلفية الأصلية'));
-            ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'أقل = الأليرت كله أخف'));
+            ctrls.appendChild(el('div', 'ob-gtitle', 'الأليرت كله'));
+            ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'هذي تخفف كل شي (الشخصية والخلفية) — للخلفية بس استخدم «درجة تفريغ الخلفية»'));
             paintKeyed();
         }
         paintControls();
@@ -2206,7 +2233,7 @@
         var evs = Array.isArray(it.events) ? it.events : [];
         var demo = el('div', 'ob-actions');
         evs.forEach(function (k) {
-            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { O.alertDemo(it.id, k); }));
+            demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { tryAlert(it, k); }));
         });
         box.appendChild(demo);
         triggerRows(it, box);
@@ -2663,6 +2690,7 @@
         var m = /^tools\/(\w+)$/.exec(h);
         if (m && secOf(m[1])) return { view: 'editor', sec: m[1] };
         if (h === 'screens') return { view: 'screens' };
+        if (h === 'stats') return { view: 'stats' };
         if (h === 'tools') return { view: 'editor' };
         if (new URLSearchParams(location.search).get('s')) return { view: 'editor' };
         return { view: 'home' };

@@ -138,8 +138,15 @@ function listWatchers() {
   return out;
 }
 
+/** حالة مراقب يوزر واحد (لصفحة «إحصائيات البث» بـVeyro)، أو null لو ما عليه مراقب الحين. */
+function statusOf(username) {
+  var w = _watchers.get(tiktokLiveCheck.normalize(username));
+  return w ? { status: w.status, startedAt: w.startedAt, connectedAt: w.connectedAt || null } : null;
+}
+
 module.exports = {
   PERMISSION_KEY: PERMISSION_KEY,
+  statusOf: statusOf,
   startWatcher: startWatcher,
   listWatchers: listWatchers,
   tick: tick
