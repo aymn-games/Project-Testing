@@ -1,7 +1,7 @@
 /**
  * VEYRO — «شاشات البث» (veyro/index.html): محرر شاشات لـOBS وTikTok LIVE Studio
  * بهوية Veyro (من منظومة ألعاب أيمن). المذيع يسوي أكثر من شاشة، يرتّب فوق كل وحدة
- * الأدوات اللي يبيها، وينسخ رابطها (veyro/live.html?k=<رمز>) ويحطه بتطبيق البث.
+ * الأدوات اللي يبيها، وينسخ رابطها (veyro/screen.html?k=<رمز>&v=<نسخة>) ويحطه بتطبيق البث.
  *
  * - يسار الشاشة قائمة جانبية تنطوي (أيقونات بس) وتنفتح (أيقونة + اسم):
  *   الرئيسية ← الشاشات ← أدوات البث (الأليرتات، التوب، الأهداف، الوعاء، النصوص،
@@ -200,7 +200,8 @@
         });
     }
 
-    function linkUrl(scr) { return scr ? new URL('live.html?k=' + scr.key, location.href).href : ''; }
+    // screen.html (مو live.html) و&v=: رابط جديد = تطبيق البث يجيب آخر نسخة بدل نسخة قديمة مخزّنة
+    function linkUrl(scr) { return scr ? new URL('screen.html?k=' + scr.key + '&v=' + O.LIVE_VERSION, location.href).href : ''; }
 
     function setSaved(kind, text) {
         savedEl.className = 'ob-saved' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
@@ -237,7 +238,7 @@
         var mine = cur && liveState.list.filter(function (x) { return String(x.id) === String(cur.id); })[0];
         var fresh = function (x) { return x && x.agoMs != null && x.agoMs < 12000; };
         if (fresh(mine) && mine.ver === O.LIVE_VERSION) return { state: 'ok', label: 'متصلة بتطبيق البث', tip: 'هالشاشة مفتوحة الحين بتطبيق البث ✓ — أي «جرّب» يطلع فيها.' };
-        if (fresh(mine)) return { state: 'old', label: 'حدّث المصدر بالتطبيق', tip: 'هالشاشة مفتوحة بتطبيق البث بنسخة قديمة — بالتطبيق اضغط على المصدر وحدّثه (Refresh) أو احذفه وأضفه من جديد.' };
+        if (fresh(mine)) return { state: 'old', label: 'الرابط قديم — انسخه من جديد', tip: 'تطبيق البث فاتح هالشاشة برابط قديم (نسخة مخزّنة ما تعرف التصاميم الجديدة ولا التجربة). اضغط «نسخ رابط الشاشة» والصقه بمكان الرابط القديم بالمصدر.' };
         var other = liveState.list.filter(function (x) { return fresh(x) && (!cur || String(x.id) !== String(cur.id)); })[0];
         var os = other && screens.filter(function (s) { return String(s.id) === String(other.id); })[0];
         if (os) return { state: 'off', label: 'التطبيق فاتح شاشة ثانية', tip: 'تطبيق البث فاتح شاشة «' + os.name + '» مو هذي — يا تعدّل «' + os.name + '»، أو انسخ رابط هالشاشة وحطه بالمصدر بدال القديم.' };
