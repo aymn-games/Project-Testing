@@ -55,8 +55,9 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
 .cnt b{font:800 24px 'Zain';color:var(--c)}.cnt span{font:700 18px 'Zain';color:#a8a3b5}
 .kwl{font:700 16px 'Zain';color:#a8a3b5}
 .kw{text-align:center;padding:8px 22px;border-radius:999px;background:var(--soft);border:1.5px dashed var(--c);font:700 34px/1.2 'Zain';color:var(--c)}
-.pl{position:relative;flex:1;min-height:0;overflow:hidden;padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;align-content:start}
-.p{display:flex;align-items:center;gap:10px;height:52px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both}
+.pl{position:relative;flex:1;min-height:0;overflow:hidden;padding:10px 18px;display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;align-content:start}
+.cell{aspect-ratio:3/1;position:relative;display:flex;align-items:center;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both}.cell>.fr{width:100%}
+.p{width:100%;display:flex;align-items:center;gap:10px;height:52px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both}
 .p img{width:40px;height:40px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--c)}
 .p b{flex:1;min-width:0;font:700 18px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .p .k{width:28px;height:28px;display:grid;place-items:center;color:#fca5a5;opacity:.75}
@@ -76,7 +77,66 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
 #settings .inp{height:36px}
 #settings .foot{padding:10px 0 14px}
 #settings .bp{height:52px}
-</style></head><body>
+
+/* ═══ شاشة الفوز — نفس تنسيق أسرع إجابة ═══ */
+#win{position:fixed;inset:80px 0 0 0;z-index:30;background:#07060b;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:10px 40px 20px;overflow:hidden}
+#win .ring{position:absolute;top:-40%;left:50%;width:1300px;height:900px;margin-left:-650px;border-radius:50%;background:radial-gradient(ellipse,rgba(92,207,255,.25),transparent 62%);filter:blur(30px);pointer-events:none}
+.wh{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;animation:pop .8s cubic-bezier(.2,1.3,.35,1)}
+@keyframes pop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
+.wpill{display:flex;align-items:center;gap:8px;padding:6px 18px;border-radius:999px;border:1px solid rgba(92,207,255,.4);background:rgba(92,207,255,.1);font:700 19px 'Zain';color:#5ccfff}
+.wname{font:800 74px/1.05 'Zain';color:#5ccfff;text-shadow:0 0 60px rgba(92,207,255,.35)}
+.wsub{font:700 30px/1.2 'Zain';color:#f4f2f8}
+.wstats{position:relative;display:flex;gap:10px}
+.ws{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:128px;padding:7px 16px;border-radius:18px;background:rgba(18,16,26,.75);border:1px solid rgba(255,255,255,.08)}
+.ws b{font:800 21px 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums}.ws span{font:600 12.5px 'Zain';color:#8a8596}
+.ws.gold b{color:#ffc83d}
+.wcards{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:14px}
+.wc{display:flex;flex-direction:column;align-items:center;gap:7px;width:132px;padding:16px 10px 12px;border-radius:22px;background:rgba(18,16,26,.75);backdrop-filter:blur(14px);border:1px solid rgba(92,207,255,.35);box-shadow:0 20px 50px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);position:relative;overflow:hidden;animation:rise .6s cubic-bezier(.2,1.3,.4,1) both}
+.wc .gl{position:absolute;top:-50px;left:50%;width:160px;height:100px;margin-left:-80px;border-radius:50%;background:rgba(92,207,255,.33);filter:blur(28px)}
+.wc img{width:76px;height:76px;border-radius:50%;border:3px solid #5ccfff;box-shadow:0 0 26px rgba(92,207,255,.4);position:relative}
+.wc b{position:relative;max-width:100%;font:700 18px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wc .t{position:relative;padding:2px 10px;border-radius:999px;background:rgba(92,207,255,.1);border:1px solid rgba(92,207,255,.35);font:700 12px 'Zain';color:#5ccfff}
+.wc .ok{position:relative;font:600 12px 'Zain';color:#a8a3b5}
+.wcc{width:140px;line-height:0;animation:rise .6s cubic-bezier(.2,1.3,.4,1) both}
+.plat{position:absolute;top:-10px;left:50%;transform:translateX(-50%);z-index:3;white-space:nowrap;padding:2px 10px;border-radius:999px;background:linear-gradient(90deg,#16a34a,#22c55e);font:800 12px 'Zain';color:#fff;box-shadow:0 6px 16px rgba(34,197,94,.45);line-height:1.6}
+.cw{position:relative;padding-top:6px}
+.wbtns{position:relative;display:flex;gap:12px}
+.wb{height:52px;padding:0 30px;border-radius:999px;display:flex;align-items:center;gap:10px;font:700 19px 'Zain';border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#e7e3ef}
+.wb.p{background:linear-gradient(90deg,#7c3aed,#a855f7);border:0;color:#fff;box-shadow:0 8px 26px rgba(139,92,246,.4)}
+/* الإحصائيات */
+#stats{position:fixed;inset:80px 0 0 0;z-index:31;background:rgba(4,3,8,.6);backdrop-filter:blur(10px);align-items:center;justify-content:center}
+.sm{width:1100px;height:600px;border-radius:28px;background:linear-gradient(180deg,rgba(28,23,44,.97),rgba(14,12,22,.98));box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 40px 90px -20px rgba(0,0,0,.9);padding:18px 24px;display:flex;flex-direction:column;gap:12px}
+.smh{display:flex;justify-content:space-between;align-items:center}.smh b{font:800 26px 'Zain'}
+.smh .x{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#c9c3da;font:700 18px 'Zain'}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.kp{border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);padding:9px 12px;display:flex;flex-direction:column;gap:2px}
+.kp span{font:600 13px 'Zain';color:#8a8596}.kp b{font:800 23px 'Zain';font-variant-numeric:tabular-nums}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0}
+.tt{border-radius:20px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);padding:10px 12px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.tth{display:flex;justify-content:space-between;align-items:center;padding:0 6px 6px;border-bottom:1px solid rgba(255,255,255,.06);font:800 18px 'Zain'}
+.tth i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:6px}
+.tth small{font:700 14px 'Zain';color:#a8a3b5}
+.trw,.trh{display:grid;grid-template-columns:1fr 54px 64px 70px;align-items:center;gap:6px;padding:0 6px}
+.trh{font:600 12px 'Zain';color:#8a8596;padding-top:2px}
+.trw{height:40px;border-radius:12px;font:700 15px 'Zain'}
+.trw:nth-child(odd){background:rgba(255,255,255,.025)}
+.trw .nm{display:flex;align-items:center;gap:8px;min-width:0}.trw .nm img{width:28px;height:28px;border-radius:50%}
+.trw .nm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trw .c{text-align:center;font-variant-numeric:tabular-nums;color:#ddd6fe}
+.trw .pp{text-align:center;color:#22c55e}
+.trw .mvp{font:800 10px 'Zain';color:#2a1a00;background:#ffc83d;border-radius:999px;padding:0 6px;margin-right:4px}
+.note2{font:500 12.5px 'Zain';color:#8a8596;text-align:center}
+
+.wb{white-space:nowrap}
+.pl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+.cell{min-width:0;aspect-ratio:auto;height:78px}
+.cell>.fr{width:100%;min-width:0;display:flex;align-items:center}
+.trw,.trh{grid-template-columns:1fr 54px 64px 92px}
+.trw .pp.na{color:#8a8596;font-size:12px}
+</style><script>window.AymanGamesPlatform=window.AymanGamesPlatform||{};</script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
+</head><body>
 <div id="fx"></div>
 <header>
  <div class="hs"><span class="hbtn x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>خروج</span><span class="hbtn lob"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>القائمة</span></div>
@@ -124,6 +184,30 @@ main{position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction
  <div class="foot"><span class="bp g">الدخول للمباراة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span><span class="back">الرجوع للإعدادات</span></div>
 </section>
 
+<section class="screen" id="win"><span class="ring"></span>
+ <div class="wh"><span class="wpill"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>2,600 نقطة</span><span class="wname">الفريق السماوي</span><span class="wsub">فاز بالمباراة</span></div>
+ <div class="wstats"><div class="ws"><b>2,600 – 1,800</b><span>النتيجة</span></div><div class="ws"><b>1:08:24</b><span>مدة المباراة</span></div><div class="ws"><b>36</b><span>سؤال</span></div><div class="ws"><b>31</b><span>لاعب شارك</span></div><div class="ws gold"><b>+13</b><span>نقاط المنصة لكل فائز</span></div></div>
+ <div class="wcards" id="wcards"></div>
+ <div class="wbtns"><span class="wb p">↻ مباراة جديدة</span><span class="wb">📊 الإحصائيات</span><span class="wb">مكتبة الألعاب</span></div>
+</section>
+<section class="screen" id="stats"><div class="sm">
+ <div class="smh"><b>إحصائيات المباراة</b><span class="x">✕</span></div>
+ <div class="kpis">
+  <div class="kp"><span>مدة المباراة</span><b>1:08:24</b></div>
+  <div class="kp"><span>ساعات لعب كاملة</span><b>1 <small style="font-size:13px;color:#22c55e">+4 نقاط</small></b></div>
+  <div class="kp"><span>أسئلة انجاوبت</span><b>31 / 36</b></div>
+  <div class="kp"><span>بالوقت المفتوح</span><b>7</b></div>
+  <div class="kp"><span>أسرع جواب</span><b>2.1 ث</b></div>
+  <div class="kp"><span>أسئلة تبدّلت</span><b>5</b></div>
+ </div>
+ <div class="tabs2">
+  <div class="tt"><div class="tth"><span><i style="background:#5ccfff;box-shadow:0 0 8px #5ccfff"></i>الفريق السماوي · فائز</span><small>2,600 نقطة</small></div>
+   <div class="trh"><span>اللاعب</span><span style="text-align:center">إجابات</span><span style="text-align:center">نقاط</span><span style="text-align:center">نقاط المنصة</span></div><div id="stA"></div></div>
+  <div class="tt"><div class="tth"><span><i style="background:#f5b0ff;box-shadow:0 0 8px #f5b0ff"></i>الفريق الوردي</span><small>1,800 نقطة</small></div>
+   <div class="trh"><span>اللاعب</span><span style="text-align:center">إجابات</span><span style="text-align:center">نقاط</span><span style="text-align:center">نقاط المنصة</span></div><div id="stB"></div></div>
+ </div>
+ <div class="note2">نقاط المنصة: 4 لإكمال المباراة + 5 لكل لاعب بالفريق الفائز + 4 لكل ساعة لعب كاملة · الحد اليومي 100 · تنحسب لأصحاب الحسابات الموثّقة فقط</div>
+</div></section>
 </div></main>
 <script>
 (function(){const fx=document.getElementById('fx');let s=7;const R=()=>{s=(s*9301+49297)%233280;return s/233280},r=(a,b)=>a+R()*(b-a);
@@ -145,9 +229,22 @@ function avatar(name){const h=hsh(name),P=(a)=>a[h%a.length],Q=(a,k)=>a[(h>>>k)%
  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}
 
 const X='<span class="k"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>';
-const fill=(id,names,total,nw)=>{document.getElementById(id).innerHTML=names.map((n,i)=>`<div class="p ${i===0&&nw?'new':''}" style="animation-delay:${i*.04}s"><img src="${avatar(n)}"><b>${n}</b>${X}</div>`).join('')+(total>names.length?`<div class="more">+ ${total-names.length} لاعب آخر</div>`:'');};
+const FR={'sara_77':'frame-blue-kitty.png','khalid.x':'frame-club-hilal-crown.png','mj_10':'frame-country-ksa-falcon.png','noura.k':'frame-cool-boy.png'};
+const fill=(id,names,total,nw)=>{document.getElementById(id).innerHTML=names.map((n,i)=>`<div class="cell" data-n="${n}" style="animation-delay:${i*.04}s">${FR[n]?'<div class="fr"></div>':`<div class="p ${i===0&&nw?'new':''}"><img src="${avatar(n)}"><b>${n}</b>${X}</div>`}</div>`).join('')+(total>names.length?`<div class="more">+ ${total-names.length} لاعب آخر</div>`:'');};
+function drawFrames(){const AGP=window.AymanGamesPlatform;if(!AGP.playerCard)return;document.querySelectorAll('.cell .fr').forEach(f=>{const n=f.parentElement.dataset.n,w=f.parentElement.clientWidth;
+ f.innerHTML=AGP.playerCard.renderHtml({id:n,name:n,avatarUrl:avatar(n),frame:{imageFilename:FR[n]}},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w/4.96))});AGP.playerCard.fitAllNames(f);});}
 fill('plA',['reem_22','sara_77','abo_nasser','mj_10','faisal','omar.s'],9,1);
 fill('plB',['khalid.x','fahad.q','noura.k','reem','salem','lama'],7,0);
 const h=location.hash.slice(1)||'settings';document.getElementById(h).classList.add('on');
+if(h==='lobby')requestAnimationFrame(drawFrames);
+const WIN=[['sara_77','rais-blue',6],['mj_10',null,5],['abo_nasser','sakura-pink',4],['reem_22',null,4],['faisal',null,3],['omar.s',null,2]];
+if(h==='win'||h==='stats'){document.getElementById('win').classList.add('on');document.querySelector('.lob').style.display='none';
+ const AGP=window.AymanGamesPlatform;
+ document.getElementById('wcards').innerHTML=WIN.map(([n,card,ok],j)=>{const d=`animation-delay:${(.5+j*.08).toFixed(2)}s`;
+  if(card&&AGP.winCard){const pl={id:n,name:n,avatarUrl:avatar(n),winCard:{cardKey:card}};if(AGP.winCard.canShow(pl))return `<div class="cw"><span class="plat">+13 منصة</span><div class="wcc" style="${d}">${AGP.winCard.renderHtml(pl,['فوز الفريق السماوي',ok+' إجابات صح','لوحة التحدي'],{pop:false})}</div></div>`;}
+  return `<div class="cw"><span class="plat">+13 منصة</span><div class="wc" style="${d}"><span class="gl"></span><img src="${avatar(n)}"><b>${n}</b><span class="t">فائز</span><span class="ok">${ok} إجابات صح</span></div></div>`;}).join('');}
+if(h==='stats'){const row=(n,ok,pts,pp,mvp)=>`<div class="trw"><span class="nm"><img src="${avatar(n)}"><span>${n}</span>${mvp?'<em class="mvp">الأفضل</em>':''}</span><span class="c">${ok}</span><span class="c">${pts}</span><span class="pp ${pp==='—'?'na':''}">${pp==='—'?'غير موثّق':'+'+pp}</span></div>`;
+ document.getElementById('stA').innerHTML=[['sara_77',6,'1,000',13,1],['mj_10',5,'800',13],['abo_nasser',4,'600',13],['reem_22',4,'600',13],['faisal',3,'400',13],['omar.s',2,'200',13],['turki',0,'0',13]].map(r=>row(...r)).join('');
+ document.getElementById('stB').innerHTML=[['noura.k',5,'800',8,1],['fahad.q',4,'600',8],['khalid.x',3,'400',8],['lama',0,'0',8],['salem',0,'0',8],['hind',0,'0',8],['reem',0,'0','—']].map(r=>row(...r)).join('');}
 if(h==='settings')document.querySelector('.lob').style.display='none';
 </script></body></html>
