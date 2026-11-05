@@ -37,6 +37,10 @@ var _rooms = {};
 var _clients = {};
 var _validateSession = function (token) { return require('../auth/auth-service').validateSession(String(token || '')); };
 // الإطار المفعّل بحساب اللاعب (لحسابات تيك توك الموثّقة) — نفس مصدر بطاقات اللوبي بباقي الألعاب
+// «وش الجديد بالمافيا» يطلع لكل حساب مرة وحدة (محفوظ بحسابه). إعلان جديد = غيّر المفتاح (ونفس المفتاح بـjoin.html)
+var NEWS_KEY = 'mafia-news-2026-11';
+var _seen = require('../notices/seen-notices');
+function newsFor(uid) { return !_seen.hasSeen(uid, NEWS_KEY); }
 var _frameOf = function (tiktok) { return require('../collectibles/collectibles-service').getEquippedFrameForVerifiedTikTok(tiktok); };
 
 function rid(n) { return crypto.randomBytes(n || 12).toString('hex'); }
@@ -208,7 +212,7 @@ function onMessage(client, msg) {
             mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame; mine.photo = _photoOf(acc.uid) || mine.photo;
             roomClients(jr).forEach(function (c) { if (c.id === mine.id && c !== client) { send(c, { t: 'gone', reason: 'elsewhere' }); c.code = null; c.id = null; } });
             attach(client, jr, 'player', mine.id);
-            send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok });
+            send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok, news: newsFor(mine.uid) });
             return broadcastRoom(jr);
         }
         if (jr.players.length >= jr.settings.maxPlayers) return send(client, { t: 'err', err: 'الروم ممتلئ' });
@@ -218,7 +222,7 @@ function onMessage(client, msg) {
         var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame, photo: _photoOf(acc.uid) };
         jr.players.push(p); attach(client, jr, 'player', p.id);
         enrichPlayer(jr, p, acc);
-        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok });
+        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok, news: newsFor(acc.uid) });
         broadcastRoom(jr);
         return;
     }
@@ -226,8 +230,13 @@ function onMessage(client, msg) {
         var rr = _rooms[String(msg.code || '')], rp = rr && rr.players.find(function (q) { return q.id === msg.id && q.key === msg.key; });
         if (!rp) return send(client, { t: 'gone', reason: rr ? 'kicked' : 'closed' });
         attach(client, rr, 'player', rp.id);
-        send(client, { t: 'welcome', role: 'player', id: rp.id, key: rp.key, code: rr.code, tiktok: rp.tiktok });
+        send(client, { t: 'welcome', role: 'player', id: rp.id, key: rp.key, code: rr.code, tiktok: rp.tiktok, news: newsFor(rp.uid) });
         broadcastRoom(rr); if (rr.game) sendStates(rr);
+        return;
+    }
+    if (t === 'news-seen') {   // اللاعب قفل «وش الجديد» ← ما يطلع له مرة ثانية أبداً
+        var nr = client.code && _rooms[client.code], np = nr && nr.players.find(function (q) { return q.id === client.id; });
+        if (np && np.uid) _seen.markSeen(np.uid, NEWS_KEY);
         return;
     }
 
@@ -339,4 +348,4 @@ function handleUpgrade(req, socket) {
 /** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
 function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
 
-module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; }, _setSeenStore: function (s) { _seen = s; }, NEWS_KEY: NEWS_KEY };

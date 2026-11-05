@@ -640,7 +640,37 @@ function loginWithTikTok(tiktokUser, tokens, deviceId) {
  * في مربع الاتصال اليدوي، والستريمر يقدر يعدّله وقت الاتصال نفسه).
  */
 function linkTikTokUsername(userId, tiktokUsername) {
-    db.prepare('UPDATE users SET tiktok_username = ? WHERE id = ?').run((tiktokUsername || '').trim(), userId);
+    var newUsername = cleanTikTokUsername(tiktokUsername);
+    var row = db.prepare('SELECT tiktok_username, tiktok_verified FROM users WHERE id = ?').get(userId);
+    if (!row) return { success: false, error: 'user_not_found' };
+    var changed = newUsername.toLowerCase() !== cleanTikTokUsername(row.tiktok_username).toLowerCase();
+    // [أمان] كان يغيّر اليوزر ويخلي tiktok_verified = 1 — يعني أي حساب موثَّق
+    // يقدر يكتب يوزر ستريمر ثاني ويتصل ببثه وياخذ نقاطه وإطاراته. الحين أي
+    // تغيير لليوزر يلغي التوثيق، ولازم يوثّق اليوزر الجديد (كود البايو أو OAuth).
+    if (changed && row.tiktok_verified) {
+        db.prepare('UPDATE users SET tiktok_username = ?, tiktok_verified = 0 WHERE id = ?').run(newUsername || null, userId);
+        return { success: true, verificationReset: true };
+    }
+    db.prepare('UPDATE users SET tiktok_username = ? WHERE id = ?').run(newUsername || null, userId);
+    return { success: true, verificationReset: false };
+}
+
+/** يوزر تيك توك بدون @ ومسافات (بدون تصغير الأحرف — المقارنات تستخدم COLLATE NOCASE). */
+function cleanTikTokUsername(name) {
+    return String(name || '').trim().replace(/^@+/, '').trim();
+}
+
+/**
+ * حساب أُنشئ بالدخول بتيك توك وما له أي طريقة دخول ثانية (لا كلمة مرور،
+ * ولا جوجل، ولا إيميل حقيقي للاسترجاع) — tiktok_open_id هو مفتاح دخوله
+ * الوحيد، فلازم ما ينمسح أبداً وإلا ينقفل الحساب على صاحبه.
+ * @param {Object} user - صف users فيه email/password_hash/google_id
+ */
+function isTikTokOnlyAccount(user) {
+    if (!user) return false;
+    var email = String(user.email || '').toLowerCase();
+    var placeholder = email.slice(-TIKTOK_PLACEHOLDER_EMAIL_DOMAIN.length) === TIKTOK_PLACEHOLDER_EMAIL_DOMAIN;
+    return placeholder && !user.password_hash && !user.google_id;
 }
 
 /* ----------------------------------------------------------------------
@@ -737,6 +767,7 @@ function getPublicProfile(customId) {
         entrance: collectiblesService.getEntrance(user.id),
         elimCards: collectiblesService.getElimCards(user.id),
         winCards: collectiblesService.getWinCards(user.id),
+        character: collectiblesService.getCharacter(user.id),
         streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }
@@ -770,7 +801,9 @@ var https = require('https');
  */
 function generateVerificationCode(userId) {
     var code = 'AGP-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-    db.prepare('UPDATE users SET tiktok_verification_code = ?, tiktok_verified = 0 WHERE id = ?').run(code, userId);
+    // ما نلغي التوثيق الحالي هنا — طلب كود جديد ما يثبت شي، والتوثيق
+    // يتغيّر فقط لما ينجح التحقق من اليوزر الجديد (verifyTikTokOwnership).
+    db.prepare('UPDATE users SET tiktok_verification_code = ? WHERE id = ?').run(code, userId);
     return code;
 }
 
@@ -860,8 +893,14 @@ async function fetchPublicProfileHtml(tiktokUsername) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function verifyTikTokOwnership(userId, tiktokUsername) {
-    var user = db.prepare('SELECT tiktok_verification_code FROM users WHERE id = ?').get(userId);
+    tiktokUsername = cleanTikTokUsername(tiktokUsername);
+    if (!tiktokUsername) return { success: false, error: 'missing_tiktok_username' };
+    var user = db.prepare('SELECT tiktok_verification_code, tiktok_username, tiktok_open_id, email, password_hash, google_id FROM users WHERE id = ?').get(userId);
     if (!user || !user.tiktok_verification_code) return { success: false, error: 'no_pending_verification' };
+
+    // نفس اليوزر موثَّق بحساب ثاني — ما ننشئ توثيق مكرر.
+    var takenBy = db.prepare('SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE AND id != ?').get(tiktokUsername, userId);
+    if (takenBy) return { success: false, error: 'tiktok_linked_to_other_account' };
 
     var html;
     try {
@@ -892,9 +931,18 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
     var avatarUrl = extractProfileAvatarFromHtml(html);
     var displayName = extractProfileDisplayNameFromHtml(html);
 
+    // يوزر مختلف عن المربوط سابقاً؟ معرّف OAuth القديم (open_id) يخص حساب
+    // تيك توك ثاني — نمسحه عشان صاحب ذاك الحساب ما يقدر يدخل هنا بـ"الدخول
+    // بتيك توك". استثناء: حساب أُنشئ بتيك توك بلا طريقة دخول ثانية، open_id
+    // هو دخوله الوحيد فما نلمسه (وإلا ينقفل الحساب على صاحبه).
+    var sameUsername = cleanTikTokUsername(user.tiktok_username).toLowerCase() === tiktokUsername.toLowerCase();
+    var clearOpenId = Boolean(user.tiktok_open_id) && !sameUsername && !isTikTokOnlyAccount(user);
+
     db.prepare(
         // تصفير refresh token أي ربط OAuth سابق — قد يكون لحساب تيك توك ثاني.
-        'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ?, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL WHERE id = ?'
+        // tiktok_verification_code يُمسح بعد النجاح عشان ما يُعاد استخدامه.
+        'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ?, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL, tiktok_verification_code = NULL' +
+        (clearOpenId ? ', tiktok_open_id = NULL' : '') + ' WHERE id = ?'
     ).run(tiktokUsername, avatarUrl, displayName, userId);
 
     grantFoundersMonthFrameIfEligible(userId);
@@ -975,9 +1023,16 @@ function extractProfileDisplayNameFromHtml(html) {
  * @returns {{success: boolean}}
  */
 function unlinkTikTok(userId) {
+    var user = db.prepare('SELECT id, email, password_hash, google_id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    // حساب أُنشئ بتيك توك بلا طريقة دخول ثانية: إلغاء الربط يقفل الحساب على
+    // صاحبه نهائياً — نطلب منه يضيف إيميل/جوجل أولاً.
+    if (isTikTokOnlyAccount(user)) return { success: false, error: 'tiktok_only_account' };
     // تصفير tiktok_avatar_url/tiktok_display_name أيضاً — وإلا تبقى صورة/
     // اسم الحساب القديم عالقة لو ربط لاحقاً حساب تيك توك مختلف.
-    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL WHERE id = ?').run(userId);
+    // tiktok_open_id يُمسح كذلك: بدونه كان نفس حساب تيك توك ما يقدر ينربط
+    // بحساب ثاني ("مرتبط بحساب ثاني")، و"الدخول بتيك توك" كان يرجّع الربط تلقائياً.
+    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL, tiktok_open_id = NULL WHERE id = ?').run(userId);
     return { success: true };
 }
 

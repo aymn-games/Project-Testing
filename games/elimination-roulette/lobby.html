@@ -21,6 +21,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-elim-card.js"></script>
+<script src="../../js/agp-remote-control.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -165,8 +166,21 @@ class Component extends DCLogic {
   reg = ER.createRegistry();
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // الشات من البث المتصل بمكتبة الألعاب: كتابة كلمة الدخول = انضمام
-    ER.connect(); this.unsub=ER.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); clearTimeout(this.tt); }
+    ER.connect(); this.unsub=ER.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
+    this.attachRemote(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); this.rc?.detach(); clearTimeout(this.tt); }
+  // التحكم بالشات (js/agp-remote-control.js): بدء المباراة وطرد لاعب والرجوع للإعدادات بأوامر الشات
+  attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
+    const list=()=>this.state.roster[0]||[];
+    this.rc=RC.attach({ page:'اللوبي', connect:ER.connect, commands:[
+      { names:['ابدأ','ابدا','بدء','العب'], desc:'يبدأ المباراة بلاعبين اللوبي', run:()=>{ if(this._rcGo) return null;
+        const err=RC.captureToast(this,()=>this.renderVals().start()); if(err) return {ok:false,msg:err}; this._rcGo=true; return 'بدأت المباراة بـ '+list().length+' لاعب'; } },
+      { names:['اللاعبين','العدد'], desc:'عدد اللاعبين باللوبي', run:()=>'باللوبي '+list().length+' من '+TEAMS[0].max+' · كلمة الدخول: '+TEAMS[0].keyword },
+      { names:['طرد','اطرد','شيل'], args:'<اسم اللاعب>', desc:'يشيل لاعب من اللوبي', run:arg=>{ const q=RC.norm(arg); if(!q) return {ok:false,msg:'اكتب اسم اللاعب'};
+        const n=list().find(x=>RC.norm(x)===q)||list().find(x=>RC.norm(x).indexOf(q)===0)||list().find(x=>{ const id=this.reg.id(x); return id&&id.toLowerCase()==='tiktok:'+String(arg).trim().replace(/^@/,'').toLowerCase(); });
+        if(!n) return {ok:false,msg:'ما لقيت لاعب بهذا الاسم'}; this.setState(st=>({roster:st.roster.map((l,k)=>k===0?l.filter(x=>x!==n):l)})); return 'تم طرد '+n; } },
+      { names:['رجوع','الاعدادات','الإعدادات'], desc:'يرجع لشاشة الإعدادات', run:()=>{ setTimeout(()=>{ location.href='index.html'; },700); return 'رجوع للإعدادات'; } }
+    ]}); }
   // Called for every chat message. Writing the keyword joins (followers only when set); full lobby → toast.
   onChat(user,text,follower){ const k=TEAMS.findIndex(t=>t.keyword&&ER.norm(t.keyword)===ER.norm(text)); if(k<0) return;
     if(SETUP&&SETUP.who==='المتابعين فقط'&&!follower) return;

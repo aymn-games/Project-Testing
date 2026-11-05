@@ -396,6 +396,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="js/agp-frame-picker.js"></script>
 <script src="js/agp-stream-stats.js"></script>
 <script src="js/agp-profile-card.js"></script>
+<!-- التحكم بالشات (روليت الإقصاء): نافذة التفعيل ويوزرات المتحكمين — تحتاج نواة AGP فقط -->
+<script src="js/agp-core.js"></script>
+<script src="js/agp-remote-control.js"></script>
 <script>
 (function(){
   function findLeaf(text){
@@ -1013,9 +1016,46 @@ document.addEventListener('DOMContentLoaded', async function() {
     head.parentNode.insertBefore(row, head.nextSibling);
   }
 
+  // زر «التحكم بالشات» (js/agp-remote-control.js): المذيع يضيف يوزرات لاعبين
+  // ويفعّل التحكم، فيشغّلون روليت الإقصاء كاملة بأوامر الشات. نفس صف زر
+  // الإحصائيات، لصاحب الحساب الستريمر فقط، وينضاف مع كل تعبئة للتبويب.
+  function addRemoteControlButton(p){
+    var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
+    if (!p || !RC) return;
+    var me = null;
+    try { me = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
+    if (!me || !me.custom_id || me.custom_id !== p.custom_id) return;
+    if (!(p.is_streamer || p.can_run_games || p.role === 'admin')) return;
+    var title = findLeaf('إحصائيات البث');
+    var head = title && title.parentElement;
+    if (!head || !head.parentElement || head.parentElement.querySelector('[data-agp-remote-row]')) return;
+    var row = document.createElement('div');
+    row.setAttribute('data-agp-remote-row', '1');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;padding:14px 16px;border-radius:16px;border:1px solid rgba(52,211,153,.25);background:rgba(52,211,153,.06);';
+    var txt = document.createElement('span');
+    txt.style.cssText = 'flex:1 1 220px;min-width:0;text-align:right;font-size:13px;line-height:1.8;color:#c3bad6;';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nl-btn-glossy';
+    btn.setAttribute('data-agp-remote-btn', '1');
+    btn.style.cssText = 'flex:none;padding:10px 18px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f9f74,#34d399);color:#04140e;font-family:inherit;font-size:13.5px;font-weight:700;';
+    function paint(){
+      var on = RC.isEnabled();
+      txt.textContent = 'التحكم بالشات (روليت الإقصاء): تضيف يوزر لاعب أو أكثر، فيشغّلون اللعبة كاملة بأوامر يكتبونها بشات البث — الإعدادات وبدء المباراة ولف العجلة. الحالة: ' + (on ? 'مفعّل ✅' : 'متوقف');
+      btn.textContent = on ? 'إدارة التحكم بالشات' : 'تفعيل التحكم بالشات';
+    }
+    paint();
+    btn.addEventListener('click', function(){ RC.openPanel(); });
+    window.addEventListener('agp:remote-control-changed', paint);
+    row.appendChild(txt);
+    row.appendChild(btn);
+    head.parentNode.insertBefore(row, head.nextSibling);
+  }
+
   function fillStreamerTab(p){
     addStreamStatsButton(p);
     addScreensButton(p);
+    addRemoteControlButton(p);
     if (!p || !p.stats) return;
     var s = p.stats;
     function num(v){ return Number(v || 0).toLocaleString('en-US'); }
@@ -1107,8 +1147,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
             if (!token) { window.location.href = 'login.html'; return; }
-            var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || '';
-            window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
+            // توكن الجلسة يروح بالهيدر (tiktokLinkUrl) بدل ما ينحط بالرابط.
+            linkBtn.disabled = true;
+            window.AGPAuth.tiktokLinkUrl().then(function(r){
+              if (r && r.success && r.url) { window.location.href = r.url; return; }
+              linkBtn.disabled = false;
+              if (r && r.__httpStatus === 401) { window.location.href = 'login.html'; return; }
+              window.alert('تعذّر بدء ربط تيك توك، جرّب مرة ثانية.');
+            }).catch(function(){ linkBtn.disabled = false; window.alert('تعذّر الاتصال بالخادم، جرّب مرة ثانية.'); });
           });
         } else {
           // [إصلاح] "إلغاء الربط" ما كان مربوط بأي شي حقيقي أبداً — الدالة
@@ -1120,6 +1166,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             window.AGPAuth.unlinkTikTok().then(function(result){
               linkBtn.disabled = false;
               if (result && result.success) window.location.reload();
+              else if (result && result.error === 'tiktok_only_account') window.alert('حسابك أنشأته بتيك توك وما له طريقة دخول ثانية — لو ألغيت الربط ما تقدر تدخل حسابك. أضف إيميل وكلمة مرور أو اربط جوجل أولاً، بعدها تقدر تلغي الربط.');
               else window.alert('تعذّر إلغاء الربط: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
             }).catch(function(){ linkBtn.disabled = false; });
           });
@@ -1668,6 +1715,78 @@ document.addEventListener('DOMContentLoaded', async function() {
           wcCard.appendChild(wcBtn);
         }
         wcGrid.appendChild(wcCard);
+      });
+    }
+
+    /* ---- شخصيتي بالألعاب (شخصيات الأنمي المشتركة — docs/CHARACTERS.md): بنت أو ولد أو عشوائي،
+     *      وتظهر مع صاحب الحساب بالألعاب الثري دي لو حسابه موثّق بتيك توك. بعد بطاقات الفوز ---- */
+    var winPanelEl = document.querySelector('[data-win-cards-panel]');
+    if (winPanelEl && !document.querySelector('[data-character-panel]')) {
+      wiredSomething = true;
+      var chPanel = winPanelEl.cloneNode(false);
+      chPanel.removeAttribute('data-win-cards-panel');
+      chPanel.setAttribute('data-character-panel', '1');
+      var chHeader = winPanelEl.children[0].cloneNode(true);
+      chHeader.children[0].textContent = 'شخصيتي بالألعاب';
+      var chNote = document.createElement('div');
+      chNote.style.cssText = 'margin-top:10px;font-size:12.5px;line-height:1.9;color:#8f88a3;';
+      chNote.textContent = 'الشخصية اللي تختارها تطلع معك لما تدخل الألعاب الثري دي (مثل حجرة ورقة مقص). لازم حسابك يكون موثّق بتيك توك. لو ما اخترت، تطلع لك شخصية عشوائية.';
+      var chGrid = document.createElement('div');
+      chGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:16px;';
+      chPanel.appendChild(chHeader);
+      chPanel.appendChild(chNote);
+      chPanel.appendChild(chGrid);
+      winPanelEl.parentNode.insertBefore(chPanel, winPanelEl.nextSibling);
+
+      var chCurrent = p.character === 'girl' || p.character === 'boy' ? p.character : null;
+      [
+        { kind: 'girl', name: 'بنت', img: 'assets/characters/girl.png' },
+        { kind: 'boy', name: 'ولد', img: 'assets/characters/boy.png' },
+        { kind: null, name: 'عشوائي', img: null }
+      ].forEach(function(opt){
+        var active = opt.kind === chCurrent;
+        var card = document.createElement('div');
+        card.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid ' + (active ? 'rgba(178,140,245,.6)' : 'rgba(255,255,255,.07)') + ';background:' + (active ? 'rgba(122,63,212,.16)' : 'rgba(255,255,255,.03)') + ';';
+        var box = document.createElement('div');
+        box.style.cssText = 'height:190px;border-radius:11px;background:radial-gradient(circle at 50% 35%,rgba(178,140,245,.18),rgba(23,19,38,.9) 70%);border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;';
+        if (opt.img) {
+          var im = document.createElement('img');
+          im.src = opt.img; im.alt = opt.name;
+          im.style.cssText = 'max-height:94%;max-width:94%;object-fit:contain;';
+          im.onerror = function(){ im.style.display = 'none'; };
+          box.appendChild(im);
+        } else {
+          var q = document.createElement('span');
+          q.style.cssText = 'font-family:\'Noto Kufi Arabic\',sans-serif;font-size:54px;font-weight:700;color:#b28cf5;';
+          q.textContent = '؟';
+          box.appendChild(q);
+        }
+        var nm = document.createElement('div');
+        nm.style.cssText = 'font-size:13px;color:#f4f2fb;';
+        nm.textContent = opt.name;
+        card.appendChild(box);
+        card.appendChild(nm);
+        if (isOwner) {
+          var btn = document.createElement('button');
+          var label = active ? 'مفعّلة الآن' : 'تفعيل';
+          btn.style.cssText = 'padding:8px 10px;border-radius:10px;cursor:' + (active ? 'default' : 'pointer') + ';font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:11.5px;border:1px solid ' + (active ? 'rgba(196,106,224,.7)' : 'rgba(178,140,245,.35)') + ';background:' + (active ? 'linear-gradient(135deg,#7a3fd4,#c46ae0)' : 'transparent') + ';color:' + (active ? '#fdf7ff' : '#c6b4f2') + ';';
+          btn.textContent = label;
+          if (!active) btn.addEventListener('click', function(){
+            btn.disabled = true;
+            btn.textContent = 'جارٍ...';
+            window.AGPAuth.setCharacter(opt.kind).then(function(result){
+              if (result && result.success) window.location.reload();
+              else { btn.disabled = false; btn.textContent = label; }
+            }).catch(function(){ btn.disabled = false; btn.textContent = label; });
+          });
+          card.appendChild(btn);
+        } else {
+          var st = document.createElement('div');
+          st.style.cssText = 'font-size:11px;color:' + (active ? '#7ee0a6' : '#8f88a3') + ';';
+          st.textContent = active ? 'مختارة ✅' : '—';
+          card.appendChild(st);
+        }
+        chGrid.appendChild(card);
       });
     }
 

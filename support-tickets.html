@@ -210,6 +210,18 @@
 
     .loading { text-align: center; color: var(--text-muted); padding: 30px; }
     body.auth-checking main { visibility: hidden; }
+    /* زائر بدون حساب: الصفحة تفتح لأي أحد، والتذاكر تحتاج تسجيل دخول */
+    body.is-guest #tabs, body.is-guest .view { display: none !important; }
+    .guest-box { display: grid; gap: 14px; }
+    .guest-login { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+    .guest-login p { margin: 0; color: var(--text-muted); line-height: 1.8; flex: 1 1 260px; }
+    .guest-login b { color: var(--text); display: block; font-size: 1.05em; }
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .contact-card { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--border); background: var(--glass); transition: border-color .2s, background .2s; }
+    .contact-card:hover { border-color: var(--violet); background: rgba(124, 58, 237, 0.12); }
+    .contact-card .ic { font-size: 1.5em; flex: none; }
+    .contact-card b { display: block; }
+    .contact-card span { color: var(--text-muted); font-size: 0.9em; }
 
     @media (max-width: 600px) {
         body { font-size: 16px; }
@@ -238,6 +250,18 @@
 <main>
     <h1>الدعم والاقتراحات</h1>
     <p class="intro">عندك اقتراح، سؤال، أو واجهتك مشكلة تقنية؟ افتح تذكرة وفريقنا يرد عليك هنا وبإيميلك.</p>
+
+    <!-- يطلع للزائر بدون حساب: تواصل مباشر + تسجيل دخول لفتح تذكرة -->
+    <section class="guest-box" id="guest-box" hidden>
+        <div class="card guest-login">
+            <p><b>تبي تفتح تذكرة وتتابع الرد؟</b>سجّل دخولك عشان تنحفظ تذاكرك ويوصلك الرد هنا وبإيميلك.</p>
+            <a class="btn btn-primary" id="guest-login-btn" href="login.html">تسجيل الدخول</a>
+        </div>
+        <div class="contact-grid">
+            <a class="contact-card" href="mailto:aymngames1@gmail.com"><span class="ic" aria-hidden="true">✉️</span><div><b>البريد الإلكتروني</b><span dir="ltr">aymngames1@gmail.com</span></div></a>
+            <a class="contact-card" href="https://wa.me/966582411235" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">💬</span><div><b>واتساب</b><span dir="ltr">+966 58 241 1235</span></div></a>
+        </div>
+    </section>
 
     <div class="tabs" id="tabs">
         <button type="button" class="tab-btn is-active" data-tab="new">＋ تذكرة جديدة</button>
@@ -313,6 +337,7 @@
 
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-page-back.js"></script>
 <script>
 (function () {
     'use strict';
@@ -758,13 +783,26 @@
     }
     function redirectToLogin() { location.href = loginUrl(); }
 
-    if (!Auth) {
+    // الصفحة مفتوحة لأي أحد عنده الرابط: بدون حساب تطلع طرق التواصل
+    // وزر تسجيل الدخول بدل التحويل الإجباري لصفحة الدخول.
+    function showGuest() {
+        document.body.classList.add('is-guest');
         document.body.classList.remove('auth-checking');
-        toast('تعذّر تحميل نظام الحسابات.', 'error');
-        return;
+        $('guest-login-btn').href = loginUrl();
+        $('guest-box').hidden = false;
     }
-    Auth.requireAuth(loginUrl()).then(function (user) {
-        if (!user) return;
+
+    if (!Auth || !Auth.getToken()) { showGuest(); return; }
+    Auth.me().then(function (result) {
+        if (result && result.success) return result.user;
+        if (result && result.__httpStatus === 401) { Auth.clearSession(); return null; }
+        var cached = Auth.getCachedUser();
+        return (result && result.__httpStatus !== 401 && cached && cached.id) ? cached : null;
+    }, function () {
+        var cached = Auth.getCachedUser();
+        return cached && cached.id ? cached : null;
+    }).then(function (user) {
+        if (!user) { showGuest(); return; }
         document.body.classList.remove('auth-checking');
         route();
         Auth.supportListTickets().then(function (r) { if (r && r.success) updateCount(r.tickets.length); });

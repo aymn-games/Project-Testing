@@ -156,10 +156,16 @@ async function fetchTikTokUserInfo(accessToken) {
 function linkVerifiedAccount(userId, tiktokUser, tokens) {
     var existing = db.prepare('SELECT id FROM users WHERE tiktok_open_id = ? AND id != ?').get(tiktokUser.open_id, userId);
     if (existing) return { success: false, error: 'tiktok_account_already_linked_elsewhere' };
+    // نفس اليوزر موثَّق بحساب ثاني بطريقة كود البايو (بدون open_id) — بدون
+    // هذا الفحص يصير عندنا حسابين موثَّقين بنفس يوزر تيك توك.
+    var username = String(tiktokUser.username || '').trim().replace(/^@+/, '');
+    if (username && db.prepare('SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE AND id != ?').get(username, userId)) {
+        return { success: false, error: 'tiktok_account_already_linked_elsewhere' };
+    }
 
     db.prepare(
         'UPDATE users SET tiktok_open_id = ?, tiktok_username = ?, tiktok_display_name = ?, tiktok_avatar_url = ?, tiktok_verified = 1, tiktok_verification_code = NULL, tiktok_refresh_token = ?, tiktok_refresh_expires_at = ? WHERE id = ?'
-    ).run(tiktokUser.open_id, tiktokUser.username || null, tiktokUser.display_name || null, tiktokUser.avatar_url || null,
+    ).run(tiktokUser.open_id, username || null, tiktokUser.display_name || null, tiktokUser.avatar_url || null,
         (tokens && tokens.refreshToken) || null, (tokens && tokens.refreshExpiresAt) || null, userId);
     return { success: true };
 }

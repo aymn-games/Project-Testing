@@ -5,7 +5,7 @@
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
  *   callbacks = {
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
- *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard, character }),
  *     onGift({ id, name, giftName, giftId, giftValue, giftImage, repeatCount }),
  *     onFollow({ id, name, avatarUrls }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
@@ -221,6 +221,20 @@ function extractElimCard(uniqueId) {
 }
 
 /**
+ * شخصية الأنمي اللي اختارها صاحب التعليق ('girl'|'boy') أو null (عشوائي).
+ * @param {string} uniqueId
+ * @returns {'girl'|'boy'|null}
+ */
+function extractCharacter(uniqueId) {
+    try {
+        return collectiblesService.getCharacterForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: character lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
  * بطاقة الفوز المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس extractElimCard.
  * @param {string} uniqueId
  * @returns {{cardKey: string}|null}
@@ -370,7 +384,19 @@ function createTikTokConnector() {
      * كل محاولة إعادة اتصال، بنفس المنطق تماماً.
      * @param {boolean} isReconnectAttempt
      */
+    /** يفصل الاتصال السابق (لو موجود) ويشيل مستمعاته — قبل بناء اتصال جديد بإعادة المحاولة. */
+    function disposeConnection() {
+        var old = _connection;
+        _connection = null;
+        if (!old) return;
+        try { if (typeof old.removeAllListeners === 'function') old.removeAllListeners(); } catch (err) {}
+        try { old.disconnect(); } catch (err) {}
+    }
+
     function startConnection(isReconnectAttempt) {
+        // إعادة المحاولة كانت تبني اتصال جديد وتترك القديم بمستمعاته — ممكن
+        // يطلق DISCONNECTED متأخر ويبدأ إعادة اتصال ثانية بنفس الوقت.
+        disposeConnection();
         try {
             _connection = new TikTokLib.TikTokLiveConnection(
                 _username,
@@ -392,8 +418,10 @@ function createTikTokConnector() {
 
             // وضع الإحصائيات فقط (stats/stream-stats-watcher.js): بدون إطارات
             // ودخوليات وبطاقات — ما فيه لعبة تعرضها، فنوفّر استعلامات القاعدة.
+            // النص يُمرَّر (بدون استعلامات) لأوامر «التحكم بالشات» بمكتبة الألعاب
+            // (js/agp-remote-control.js) — ws-server يرسله بس لو الصفحة طلبته (payload.chat).
             if (_statsOnly) {
-                _callbacks.onComment({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data) });
                 return;
             }
 
@@ -415,6 +443,7 @@ function createTikTokConnector() {
                 entrance: extractEquippedEntrance(user.uniqueId),
                 elimCard: extractElimCard(user.uniqueId),
                 winCard: extractWinCard(user.uniqueId),
+                character: extractCharacter(user.uniqueId),
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });
@@ -531,6 +560,7 @@ function createTikTokConnector() {
         _connection.connect()
             .then(function () {
                 if (_intentionalDisconnect) return; // انقطاع فُصل يدوياً قبل اكتمال هذا الاتصال — تجاهل تماماً
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل بإعادة محاولة — تجاهل
                 _connected = true;
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
                 _roomIdRetries = 0;
@@ -539,6 +569,7 @@ function createTikTokConnector() {
             })
             .catch(function (err) {
                 if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل — نتيجته ما تهم
                 _connected = false;
                 logger.error('TikTok Connector: connect() failed:', err);
 

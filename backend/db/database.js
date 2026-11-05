@@ -215,6 +215,14 @@ db.exec(`
         UNIQUE(user_id, card_key)
     );
 
+    -- شخصية الأنمي (VRM) اللي يختارها المستخدم من المقتنيات تظهر معه بالألعاب الثري دي
+    -- (assets/characters/ — docs/CHARACTERS.md). صف واحد لكل مستخدم؛ ما فيه صف = شكل عشوائي.
+    CREATE TABLE IF NOT EXISTS user_characters (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK(kind IN ('girl', 'boy')),
+        updated_at INTEGER NOT NULL
+    );
+
     -- أكواد استرداد بطاقات الإقصاء والفوز — نفس فكرة frame_codes (وبنفس صيغة
     -- الكود AGP-XXXX-XXXX، والكود فريد عبر الجدولين)، بجدول منفصل بدل تعديل
     -- قيد CHECK(frame_type ...) بـframe_codes (يتطلب إعادة بناء الجدول بـSQLite).
@@ -395,6 +403,14 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+    );
+
+    -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
+    CREATE TABLE IF NOT EXISTS user_seen_notices (
+        user_id TEXT NOT NULL,
+        notice TEXT NOT NULL,
+        seen_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, notice)
     );
 
     -- نظام "الدعم والاقتراحات" — تذكرة لكل طلب، ورسائلها بجدول منفصل.

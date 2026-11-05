@@ -21,6 +21,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
+<script src="../../js/agp-remote-control.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -256,19 +257,19 @@ const GAME = {
 const SUPPORT_TYPES = ER.gifts();
 const SETTINGS = [
   { title:'الدخول', rows:[
-    { type:'text',   key:'keyword',    label:'كلمة الدخول', placeholder:'اكتب كلمة الدخول', default:'' },
-    { type:'number', key:'maxPlayers', label:'الحد الأقصى للاعبين', min:2, max:200, step:1, default:50 },
-    { type:'choice', key:'who',        label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
+    { type:'text',   key:'keyword',    rc:['كلمة','الكلمة'], label:'كلمة الدخول', placeholder:'اكتب كلمة الدخول', default:'' },
+    { type:'number', key:'maxPlayers', rc:['الحد','العدد'], label:'الحد الأقصى للاعبين', min:2, max:200, step:1, default:50 },
+    { type:'choice', key:'who',        rc:['المسموح'], label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
   ]},
   { title:'المباراة', rows:[
-    { type:'choice', key:'mode',     label:'شكل العجلة', options:['روليت','سكرول'], default:0 },
-    { type:'choice', key:'elimSec',  label:'وقت الإقصاء (ثانية)', options:['20','25','35'], default:1 },
-    { type:'toggle', key:'sound',    label:'الأصوات', default:true }
+    { type:'choice', key:'mode',     rc:['الشكل','العجلة'], label:'شكل العجلة', options:['روليت','سكرول'], default:0 },
+    { type:'choice', key:'elimSec',  rc:['الوقت'], label:'وقت الإقصاء (ثانية)', options:['20','25','35'], default:1 },
+    { type:'toggle', key:'sound',    rc:['الأصوات','الصوت'], label:'الأصوات', default:true }
   ]},
   { title:'الرجوع للعبة', full:true, rows:[
     { type:'toggle', key:'supOn',    label:'الرجوع عن طريق الدعم', hint:'اللاعب المُقصى يرجع للعبة إذا أرسل الدعم المحدد', default:false, dot:'#34d399' },
     { type:'support', key:'supType', showIf:'supOn', default:null },
-    { type:'toggle', key:'friendOn', label:'إرجاع صديق عند تكرار الاختيار', hint:'إذا توقفت العجلة على نفس اللاعب في دورتين متتاليتين، يختار لاعب مُقصى ليرجعه للعبة. وإذا ما فيه لاعب مُقصى، يختار لاعب ليقصيه', default:false, dot:'#60a5fa' }
+    { type:'toggle', key:'friendOn', rc:['الصديق'], label:'إرجاع صديق عند تكرار الاختيار', hint:'إذا توقفت العجلة على نفس اللاعب في دورتين متتاليتين، يختار لاعب مُقصى ليرجعه للعبة. وإذا ما فيه لاعب مُقصى، يختار لاعب ليقصيه', default:false, dot:'#60a5fa' }
   ]}
 ];
 
@@ -279,8 +280,27 @@ class Component extends DCLogic {
     this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.setState({live:!!ER.getSavedConnection()}); }; addEventListener('storage',this.onStore);
     this.onFocus=()=>this.setState({live:!!ER.getSavedConnection()}); addEventListener('focus',this.onFocus);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
-    addEventListener('agp:stream-ended',this.onFocus); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onFocus); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); }
+    addEventListener('agp:stream-ended',this.onFocus);
+    this.attachRemote(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onFocus); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); this.rc?.detach(); }
+  // التحكم بالشات (js/agp-remote-control.js): لاعب يحدده المذيع يغيّر الإعدادات ويبدأ المباراة بأوامر الشات
+  attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
+    const rows=SETTINGS.flatMap(s=>s.rows);
+    this.rc=RC.attach({ page:'الإعدادات', connect:ER.connect, commands:[
+      ...RC.settingsCommands(SETTINGS,{get:k=>this.state.values[k],set:(k,v)=>this.set(k,v)}),
+      { names:['الدعم'], args:'<اسم الهدية> [العدد] | ايقاف', desc:'الرجوع عن طريق الدعم', run:arg=>{
+        const a=String(arg||'').trim(); if(RC.parseBool(a)===false){ this.set('supOn',false); return 'الرجوع عن طريق الدعم: ايقاف'; }
+        const m=a.match(/^(.*?)\s*([0-9٠-٩]+)?$/), name=(m&&m[1]||'').trim(), cnt=m&&m[2]?RC.toInt(m[2]):null;
+        if(!name) return {ok:false,msg:'اكتب اسم الهدية، مثل: !الدعم وردة 2'};
+        const k=RC.matchOption(SUPPORT_TYPES.map(g=>g.name),name); if(k<0) return {ok:false,msg:'ما لقيت هدية بهذا الاسم'};
+        const g=SUPPORT_TYPES[k]; this.set('supOn',true); this.set('supType',g.id); if(cnt) this.setState({supCount:Math.max(1,Math.min(10,cnt))});
+        return 'الرجوع بالدعم: '+g.name+' × '+(cnt?Math.max(1,Math.min(10,cnt)):this.state.supCount); } },
+      { names:['الاعدادات','الإعدادات'], desc:'يعرض الإعدادات الحالية', run:()=>{ const V=this.state.values, st=SUPPORT_TYPES.find(x=>x.id===V.supType);
+        return rows.filter(r=>r.rc).map(r=>r.label+': '+RC.describe(r,V[r.key])).join(' · ')+' · الدعم: '+(V.supOn?(st?st.name+' × '+this.state.supCount:'بدون هدية'):'ايقاف'); } },
+      { names:['ابدأ','ابدا','بدء','لوبي'], desc:'يحفظ الإعدادات ويفتح اللوبي', run:()=>{
+        if(this.state.connOpen) return null; const err=RC.captureToast(this,()=>this.renderVals().start());
+        return err?{ok:false,msg:err}:'تم — جارٍ فتح اللوبي'; } }
+    ]}); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }

@@ -22,6 +22,7 @@
 <script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
+<script src="../../js/agp-remote-control.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
@@ -525,8 +526,47 @@ class Component extends DCLogic {
     this.q=[]; this.everIn=new Set(this.state.players); this.state.players.forEach(n=>this.numOf(n)); this.startMatch();
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
     this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
-    ER.connect(); this.unsub=ER.onComment(p=>this.onChat(p)); this.unsubGift=ER.onGift(p=>this.onGift(p)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearTimeout(this._at); clearInterval(this._ti); clearTimeout(this._kt); clearTimeout(this._rt); clearTimeout(this._lt); clearTimeout(this.tt); this.unsub?.(); this.unsubGift?.(); }
+    ER.connect(); this.unsub=ER.onComment(p=>this.onChat(p)); this.unsubGift=ER.onGift(p=>this.onGift(p)); this.attachRemote(); }
+  // التحكم بالشات (js/agp-remote-control.js): لف العجلة والتلقائي والإقصاء/الإرجاع وإعدادات المباراة بأوامر الشات
+  attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
+    // لاعب برقمه أو اسمه (أو @يوزره) من قائمة
+    const find=(arg,pool)=>{ const a=String(arg||'').trim(), k=RC.toInt(a), q=RC.norm(a); if(!a) return null;
+      if(k!=null&&/^[\s#0-9٠-٩۰-۹]+$/.test(a)) return pool.find(n=>this.numOf(n)===k)||null;
+      const u='tiktok:'+a.replace(/^@/,'').toLowerCase();
+      return pool.find(n=>RC.norm(n)===q)||pool.find(n=>(this.reg.id(n)||'').toLowerCase()===u)||pool.find(n=>RC.norm(n).indexOf(q)===0)||null; };
+    const onOff=(arg,cur)=>String(arg||'').trim()?RC.parseBool(arg):!cur;
+    this.rc=RC.attach({ page:'شاشة اللعب', connect:ER.connect, commands:[
+      { names:['لف','دور','ابدأ','ابدا'], desc:'يلف العجلة (جولة جديدة)', run:()=>{ const s=this.state; if(s.winOpen) return {ok:false,msg:'المباراة انتهت — !اعادة أو !جديدة'};
+        if(this.busy()) return {ok:false,msg:'انتظر لين يخلص الدور الحالي'}; const err=RC.captureToast(this,()=>this.spin()); return err?{ok:false,msg:err}:'العجلة تلف 🎡'; } },
+      { names:['تلقائي','اوتو'], args:'[تشغيل / ايقاف]', desc:'اللف التلقائي بعد كل دور', run:arg=>{ const s=this.state, v=onOff(arg,s.auto); if(v==null) return {ok:false,msg:'تلقائي: تشغيل أو ايقاف'};
+        if(s.winOpen) return {ok:false,msg:'المباراة انتهت'}; if(v!==!!s.auto) this.toggleAuto(); return 'اللف التلقائي: '+(v?'تشغيل':'ايقاف'); } },
+      { names:['اقصاء','اقص','طرد'], args:'<رقم أو اسم>', desc:'إقصاء لاعب يدوياً (بدون اسم: يقصي صاحب الدور)', run:arg=>{ const s=this.state; if(s.winOpen) return {ok:false,msg:'المباراة انتهت'};
+        if(!String(arg||'').trim()){ if(s.resOpen&&!s.resOpenOut&&s.landed){ this.eliminate(s.landed); return 'تم إقصاء '+s.landed; } return {ok:false,msg:'اكتب رقم اللاعب أو اسمه'}; }
+        const n=find(arg,s.players); if(!n) return {ok:false,msg:'ما لقيت لاعب بهذا الرقم/الاسم'};
+        if(s.resOpen&&!s.resOpenOut&&!s.revive&&n!==s.landed){ this.pick(n); return 'تم إقصاء '+n; }
+        this.setState(st=>({pending:[...st.pending.filter(x=>x!==n),n]}),()=>this.applyPending()); return this.busy()?'يُقصى '+n+' بعد انتهاء الدور':'تم إقصاء '+n; } },
+      { names:['ارجاع','رجع','انعاش'], args:'<رقم أو اسم>', desc:'يرجّع لاعب مُقصى', run:arg=>{ const s=this.state; if(s.winOpen) return {ok:false,msg:'المباراة انتهت'};
+        const n=find(arg,s.out); if(!n) return {ok:false,msg:'ما لقيت لاعب مُقصى بهذا الرقم/الاسم'};
+        this.later(()=>{ if(this.state.out.includes(n)) this.revive(n,'manual'); }); return 'رجوع '+n; } },
+      { names:['دخول','ادخال'], args:'[فتح / قفل]', desc:'نافذة دخول لاعبين جدد بكلمة الدخول', run:arg=>{ const s=this.state, open=!!s.joinOpen&&!s.joinOpenOut, v=onOff(arg,open); if(v==null) return {ok:false,msg:'دخول: فتح أو قفل'};
+        if(v&&!open){ if(s.winOpen) return {ok:false,msg:'المباراة انتهت'}; this.renderVals().openJoin(); return 'الدخول مفتوح — كلمة الدخول: '+((SETUP&&SETUP.keyword)||''); }
+        if(!v&&open){ const k=s.joined.length; this.closeJoin(); return 'تم قفل الدخول · انضم '+k; } return v?'الدخول مفتوح أصلاً':'الدخول مقفل أصلاً'; } },
+      { names:['اعادة','اعاده','نفس'], desc:'مباراة جديدة بنفس اللاعبين (بعد الفوز)', run:()=>{ if(!this.state.winOpen) return {ok:false,msg:'متاح بعد إعلان الفائز'}; this.replaySame(); return 'مباراة جديدة بنفس اللاعبين'; } },
+      { names:['جديدة','جديده','لوبي'], desc:'مباراة جديدة من اللوبي (بعد الفوز)', run:()=>{ if(!this.state.winOpen) return {ok:false,msg:'متاح بعد إعلان الفائز'}; setTimeout(()=>this.newMatch(),600); return 'رجوع للوبي'; } },
+      { names:['الشكل','العجلة'], args:'<روليت / سكرول>', desc:'شكل العجلة', run:arg=>{ const k=RC.matchOption(['روليت','سكرول'],arg); if(k<0) return {ok:false,msg:'الشكل: روليت أو سكرول'};
+        if(this.busy()) return {ok:false,msg:'غيّرها بعد انتهاء الدور'}; this.setState({mode:k?'scroll':'roulette'}); return 'شكل العجلة: '+(k?'سكرول':'روليت'); } },
+      { names:['الوقت'], args:'<20 / 25 / 35>', desc:'وقت الإقصاء بالثواني', run:arg=>{ const n=RC.toInt(arg); if([20,25,35].indexOf(n)<0) return {ok:false,msg:'الوقت: 20 أو 25 أو 35'}; this.setState({elimSec:n}); return 'وقت الإقصاء: '+n+' ثانية'; } },
+      { names:['الاصوات','الصوت'], args:'[تشغيل / ايقاف]', desc:'الأصوات', run:arg=>{ const v=onOff(arg,this.state.sound); if(v==null) return {ok:false,msg:'الأصوات: تشغيل أو ايقاف'}; this.setState({sound:v}); return 'الأصوات: '+(v?'تشغيل':'ايقاف'); } },
+      { names:['الصديق'], args:'[تشغيل / ايقاف]', desc:'إرجاع صديق عند تكرار الاختيار', run:arg=>{ const v=onOff(arg,this.state.friendOn); if(v==null) return {ok:false,msg:'الصديق: تشغيل أو ايقاف'}; this.setState({friendOn:v,prevLanded:null}); return 'إرجاع صديق: '+(v?'تشغيل':'ايقاف'); } },
+      { names:['الدعم'], args:'<اسم الهدية> [العدد] | ايقاف', desc:'الرجوع عن طريق الدعم', run:arg=>{ const a=String(arg||'').trim();
+        if(RC.parseBool(a)===false){ this.setState({supOn:false}); return 'الرجوع بالدعم: ايقاف'; }
+        const m=a.match(/^(.*?)\s*([0-9٠-٩]+)?$/), name=(m&&m[1]||'').trim(), cnt=m&&m[2]?Math.max(1,Math.min(10,RC.toInt(m[2]))):null;
+        if(!name){ if(!this.state.supType) return {ok:false,msg:'اكتب اسم الهدية، مثل: !الدعم وردة 2'}; this.setState({supOn:true}); return 'الرجوع بالدعم: تشغيل'; }
+        const k=RC.matchOption(GIFTS.map(g=>g.name),name); if(k<0) return {ok:false,msg:'ما لقيت هدية بهذا الاسم'};
+        this.setState(st=>({supOn:true,supType:GIFTS[k].id,supCount:cnt||st.supCount})); return 'الرجوع بالدعم: '+GIFTS[k].name+' × '+(cnt||this.state.supCount); } },
+      { names:['الحالة','الحاله'], desc:'حالة المباراة', run:()=>{ const s=this.state; return 'باقي '+s.players.length+' · مُقصى '+s.out.length+' · التلقائي '+(s.auto?'تشغيل':'ايقاف')+' · الشكل '+(s.mode==='scroll'?'سكرول':'روليت')+' · الوقت '+s.elimSec+' ث'; } }
+    ]}); }
+  componentWillUnmount(){ this.rc?.detach(); removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearTimeout(this._at); clearInterval(this._ti); clearTimeout(this._kt); clearTimeout(this._rt); clearTimeout(this._lt); clearTimeout(this.tt); this.unsub?.(); this.unsubGift?.(); }
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
   tone(fr,d,type='sine',v=.15){ if(!this.state.sound) return; try{ const A=this._ac||(this._ac=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(),g=A.createGain(); o.type=type; o.frequency.value=fr; g.gain.setValueAtTime(v,A.currentTime); g.gain.exponentialRampToValueAtTime(.001,A.currentTime+d); o.connect(g).connect(A.destination); o.start(); o.stop(A.currentTime+d); }catch(e){} }

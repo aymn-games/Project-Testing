@@ -98,6 +98,8 @@ var ROUTES = [
   // تنقّل متصفح خام — لا يقدران يرفقان ترويسة Authorization، لذا نتحقق
   // من الجلسة يدوياً داخل handleTikTokOAuthStart عبر ?token=.
   { method: 'GET', path: '/api/auth/tiktok/oauth/start', requireAuth: false, handler: handleTikTokOAuthStart },
+  // البديل الآمن لـoauth/start: الجلسة بهيدر Authorization (مو بالرابط)، ويرجع رابط تيك توك كـJSON.
+  { method: 'POST', path: '/api/auth/tiktok/oauth/url', requireAuth: true, handler: handleTikTokOAuthUrl },
   // الدخول/إنشاء حساب بتيك توك من login.html (بدون جلسة) — نفس الـcallback أعلاه.
   { method: 'GET', path: '/api/auth/tiktok/oauth/login-start', requireAuth: false, handler: handleTikTokLoginStart },
   { method: 'GET', path: '/api/auth/tiktok/oauth/callback', requireAuth: false, handler: handleTikTokOAuthCallback },
@@ -197,6 +199,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
   { method: 'POST', path: '/api/admin/win-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinCard },
   { method: 'POST', path: '/api/win-card/toggle', requireAuth: true, handler: handleToggleWinCard },
+  // شخصية الأنمي بالألعاب (بنت/ولد، أو null = عشوائي) — من المقتنيات بالبروفايل
+  { method: 'POST', path: '/api/character/set', requireAuth: true, handler: handleSetCharacter },
   // ---- مستوى الستريمر (SP). القراءة العامة لعتبات المستويات مسموحة
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
@@ -359,8 +363,8 @@ function handleCodenamesSpyClaim(req, res, body, user) {
 }
 
 function handleTikTokLink(req, res, body, user) {
-  authService.linkTikTokUsername(user.id, body.tiktokUsername);
-  sendJson(res, 200, { success: true });
+  var result = authService.linkTikTokUsername(user.id, body.tiktokUsername);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 function handleTikTokVerificationCode(req, res, body, user) {
@@ -391,6 +395,15 @@ function handleTikTokOAuthStart(req, res) {
   var authorizeUrl = tiktokOAuthService.buildAuthorizeUrl(user.id);
   res.writeHead(302, { Location: authorizeUrl });
   res.end();
+}
+
+/**
+ * رابط موافقة تيك توك لربط الحساب — الواجهة ترسل الجلسة بهيدر Authorization
+ * وتنتقل للرابط بنفسها. أفضل من oauth/start?token= اللي يحط توكن الجلسة
+ * بالرابط (يظهر بسجلات السيرفر وسجل المتصفح). oauth/start باقي للتوافق.
+ */
+function handleTikTokOAuthUrl(req, res, body, user) {
+  sendJson(res, 200, { success: true, url: tiktokOAuthService.buildAuthorizeUrl(user.id) });
 }
 
 /** زر "الدخول بتيك توك" بـlogin.html — ?device=&next= ويحوّل لصفحة موافقة تيك توك. */
@@ -474,7 +487,7 @@ async function handleTikTokOAuthCallback(req, res) {
 /** إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط. */
 function handleTikTokUnlink(req, res, body, user) {
   var result = authService.unlinkTikTok(user.id);
-  sendJson(res, 200, result);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 function handleCustomId(req, res, body, user) {
@@ -826,6 +839,11 @@ function handleAdminSetWinCard(req, res, body) {
 }
 
 /** تفعيل/إيقاف ذاتي لبطاقة فوز مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
+function handleSetCharacter(req, res, body, user) {
+  var result = collectiblesService.setCharacter(user.id, body && body.kind);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 function handleToggleWinCard(req, res, body, user) {
   var result = collectiblesService.setWinCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);

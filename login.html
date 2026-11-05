@@ -755,7 +755,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     tiktok_linked_to_other_account: 'يوزر تيك توك هذا مربوط بحساب ثاني عندنا — سجّل دخولك بحسابك واربط تيك توك من البروفايل',
     missing_code: 'تعذّر الدخول بتيك توك، حاول مرة ثانية',
     token_exchange_failed: 'تعذّر الدخول بتيك توك، حاول مرة ثانية',
-    user_info_failed: 'تعذّر جلب بيانات حسابك من تيك توك، حاول مرة ثانية'
+    user_info_failed: 'تعذّر جلب بيانات حسابك من تيك توك، حاول مرة ثانية',
+    missing_tiktok_user: 'تيك توك ما رجّع بيانات حسابك، حاول مرة ثانية',
+    login_failed: 'تعذّر الدخول بتيك توك، حاول مرة ثانية'
   };
   function isSignupMode(){
     return Array.prototype.some.call(document.querySelectorAll('button'), function(b){ return b.textContent.trim() === 'أنشئ الحساب'; });
