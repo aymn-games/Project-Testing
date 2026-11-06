@@ -14,7 +14,7 @@
  * makeVrmRig(model, { n }) ← شخصية وحدة:
  *   root (Group تنضاف للمشهد) · bones (عظام بأسماء Mixamo: Hips, Spine, Head, RightArm, RightForeArm, RightHand ...)
  *   play(a): حركات حفلة الميلاد (getClip بـ birthday-party/rig3d.js): 0 وقوف · 1 مشي · 2 سامبا · 3 تلويح
- *     · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 ديسكو · 10 هيب هوب · 'win' رقصة الفوز (خاصة بالبنت وخاصة بالولد)
+ *     · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 ديسكو · 10 هيب هوب · 'win' رقصة الفوز (خاصة بالبنت وخاصة بالولد) مع تأثيراتها (قلوب / نجوم)
  *   setSpeed(mps) · update(dt) كل إطار · sync() بعد أي تعديل يدوي على bones (ينقل الوضعية للهيكل الفعلي)
  *   mood('smile'|'laugh'|'scared'|'sad'|'focus'): ملامح الوجه من تعابير الموديل نفسه، ورمشة تلقائية
  *   express(kind, sec): تعبير مؤقت ('laugh' أو 'open') · gesture(side, 'rock'|'paper'|'scissors'|'relax'): الأصابع
@@ -92,6 +92,7 @@ export const THUMB = [[-.6, -.4, 0], [-.6, -.4, 0], [-.6, -.4, 0]];
 // كل رقصة مقاطع تتبدّل بانتقال ناعم (آخر .22ث من كل مقطع يندمج بأول المقطع اللي بعده) وتتكرر بدون قفزة.
 function seqPose(segs) {
     const K = POSE_KIT, W = .22, total = segs.reduce((a, s) => a + s[0], 0);
+    const bounds = []; segs.reduce((a, sg) => (bounds.push(a), a + sg[0]), 0);
     return [total, (t, P) => {
         let i = 0, u = t; while (i < segs.length - 1 && u >= segs[i][0]) { u -= segs[i][0]; i++; }
         const [dur, fn] = segs[i]; fn(u, P);
@@ -102,76 +103,149 @@ function seqPose(segs) {
             for (const b of K.BONES) P.q[b].slerp(Pn.q[b], k);
             P.hips.lerp(Pn.hips, k);
         }
-    }];
+    }, bounds];
 }
 const DANCE_DEF = {
-    // البنت «رقصة النجمة»: تمايل ويدين فوق تلوّح ← يدين على الخصر مع هزّة ← لفّة كاملة ويدين مفرودة
+    // البنت «رقصة الفراشة»: خطوات جانبية وقلب باليدين فوق الراس ← أجنحة فراشة ترفرف ← بوسة للكاميرا ← لفّة باليه
     girl: () => {
-        const { euler, arm, bend, standLegs, wave } = POSE_KIT, TAU2 = Math.PI * 2;
+        const { euler, arm, bend, standLegs, wave, HIPS_Y } = POSE_KIT, TAU2 = Math.PI * 2;
         return seqPose([
-            [2, (u, P) => {
-                const s = wave(u, 1);
-                euler(P, 'Hips', 0, s * .12, s * .07); euler(P, 'Spine', .02, -s * .1, -s * .08);
-                bend(P, .12 + .1 * Math.abs(wave(u, 2)), s > 0 ? 1 : -1); P.hips.x = s * .05;
-                for (const sd of [1, -1]) arm(P, sd, [.45, .95, .12], [.2 + .45 * wave(u, 2, sd > 0 ? 0 : Math.PI), 1, .1]);
-                euler(P, 'Head', .05, s * .1, -s * .12);
+            [1.6, (u, P) => {
+                const s = wave(u, 1.25), b = Math.abs(wave(u, 2.5));
+                euler(P, 'Hips', 0, 0, s * .08); euler(P, 'Spine', .02, 0, -s * .1);
+                bend(P, .1 + .14 * b, s > 0 ? 1 : -1); P.hips.x = s * .07;
+                for (const sd of [1, -1]) arm(P, sd, [.35, .92, .18], [-.62, .72, .3]); // قلب فوق الراس
+                euler(P, 'Head', .04, 0, -s * .16);
             }],
-            [1.2, (u, P) => {
-                const s = wave(u, 2);
-                euler(P, 'Hips', 0, 0, s * .1); euler(P, 'Spine', 0, 0, -s * .12);
-                standLegs(P); bend(P, .1 + .08 * Math.abs(s), s > 0 ? 1 : -1); P.hips.x = s * .06;
-                for (const sd of [1, -1]) arm(P, sd, [.75, -.55, -.1], [-.7, .25, .35]);
-                euler(P, 'Head', 0, 0, -s * .15);
+            [1.4, (u, P) => {
+                const f = wave(u, 3), hop = Math.max(0, wave(u, 1.5));
+                euler(P, 'Spine', -.06, 0, 0);
+                standLegs(P); bend(P, .06 + .1 * (1 - hop)); P.hips.y = HIPS_Y - .02 + hop * .06;
+                for (const sd of [1, -1]) arm(P, sd, [1, .15 + .45 * f, -.15], [1, .3 + .55 * f, -.1]); // أجنحة ترفرف
+                euler(P, 'Head', -.12, 0, 0);
             }],
-            [1.2, (u, P) => {
-                const k = u / 1.2, e = k * k * (3 - 2 * k);
-                euler(P, 'Hips', 0, e * TAU2, 0);
-                standLegs(P); bend(P, .08); P.hips.y += Math.sin(k * Math.PI) * .04;
-                for (const sd of [1, -1]) arm(P, sd, [1, .25, .05], [1, .45, .1]);
-                euler(P, 'Head', -.1, 0, 0);
+            [1.0, (u, P) => {
+                const k = Math.min(1, u / .45), e = k * k * (3 - 2 * k);
+                euler(P, 'Spine', .05 - .1 * e, -.15 * e, 0);
+                standLegs(P); bend(P, .1, 1); P.hips.x = .04;
+                arm(P, -1, [.25 + .1 * e, .35 - .55 * e, .9], [-.6 + 1 * e, .85 - .65 * e, .4 + .6 * e]); // من الشفايف لقدام
+                arm(P, 1, [.75, -.55, -.1], [-.7, .25, .35]); // يد على الخصر
+                euler(P, 'Head', -.05, -.15 * e, .12);
+            }],
+            [1.1, (u, P) => {
+                const k = u / 1.1, e = k * k * (3 - 2 * k);
+                euler(P, 'Hips', 0, -e * TAU2, 0);
+                standLegs(P); P.hips.y = HIPS_Y + Math.sin(k * Math.PI) * .05;
+                for (const sd of [1, -1]) arm(P, sd, [.18, 1, .05], [-.45, .9, .05]); // يدين فوق مثل الباليه
+                euler(P, 'Head', -.15, 0, 0);
             }],
         ]);
     },
-    // الولد «رقصة البطل»: يدفع يدينه لفوق مع نطّات ← خطوات شفل ← وضعية «داب» ← يد على الصدر ويأشّر للكاميرا
+    // الولد «رقصة الملك»: فلوس ← قفزات انتصار بقبضة لفوق ← استعراض العضلات ← ينفض كتوفه بثقة
     boy: () => {
         const { euler, arm, leg, bend, standLegs, wave, HIPS_Y } = POSE_KIT;
         return seqPose([
             [1.6, (u, P) => {
-                const p = Math.abs(wave(u, 2));
-                euler(P, 'Spine', .05, 0, 0);
-                bend(P, .15 + .2 * p);
-                for (const sd of [1, -1]) arm(P, sd, [.55, .55 + .35 * p, .15], [.1, 1, .05]);
-                euler(P, 'Head', .15 * p, 0, 0);
+                const s = wave(u, 2.5), h = wave(u, 1.25);
+                euler(P, 'Hips', 0, 0, -h * .1); euler(P, 'Spine', .05, 0, h * .08); P.hips.x = h * .07;
+                standLegs(P); bend(P, .12);
+                for (const sd of [1, -1]) arm(P, sd, [.3 - .55 * h * sd, -.9, s * .55], [.2 - .5 * h * sd, -.8, s * .6]); // فلوس
+                euler(P, 'Head', .05, h * .12, 0);
             }],
             [1.2, (u, P) => {
-                const s = wave(u, 2);
-                euler(P, 'Hips', 0, s * .15, 0); euler(P, 'Spine', .08, -s * .1, 0);
-                for (const sd of [1, -1]) { const k = Math.max(0, s * sd); leg(P, sd, [.05, -1, .5 * k], [0, -1, -.2 * k]); }
-                P.hips.y = HIPS_Y - .03 + Math.abs(s) * .03;
-                for (const sd of [1, -1]) arm(P, sd, [.25, -1, -.5 * s * sd], [.15, -.4, .8]);
+                const ph = (u / .6) % 1, up = Math.sin(ph * Math.PI), side = u < .6 ? -1 : 1;
+                standLegs(P); bend(P, .3 * (1 - up)); P.hips.y += up * .28;
+                for (const sd of [1, -1]) { if (up > 0) leg(P, sd, [.06, -1, .25 * up], [0, -1, -.45 * up]); }
+                arm(P, side, [.25, 1, .05], [.05, 1, 0]); // قبضة لفوق
+                arm(P, -side, [.35, -.6, .55], [-.3, .5, .8]);
+                euler(P, 'Head', -.15 * up, 0, 0);
             }],
-            [.9, (u, P) => {
-                euler(P, 'Spine', .12, .25, .05);
-                standLegs(P); bend(P, .12);
-                arm(P, -1, [.85, .55, .15], [.8, .62, .15]);
-                arm(P, 1, [-.35, .35, .85], [-.95, .25, .2]);
-                euler(P, 'Head', .45, .35, .15);
+            [1.0, (u, P) => {
+                const p = Math.abs(wave(u, 2));
+                euler(P, 'Spine', -.05, 0, 0);
+                standLegs(P); bend(P, .14 + .06 * p);
+                for (const sd of [1, -1]) arm(P, sd, [1, .1 + .08 * p, .1], [.1, 1, .25]); // عضلات
+                euler(P, 'Head', -.08, wave(u, 1) * .2, 0);
             }],
-            [.8, (u, P) => {
-                euler(P, 'Spine', -.08, 0, 0);
-                standLegs(P);
-                arm(P, 1, [.2, -.2, 1], [-.85, .25, .45]);
-                arm(P, -1, [.35, .15, 1], [.2, .1, 1]);
-                euler(P, 'Head', -.1, 0, 0);
+            [1.0, (u, P) => {
+                const sd = u < .5 ? 1 : -1, k = Math.sin(((u % .5) / .5) * Math.PI);
+                euler(P, 'Spine', 0, sd * -.15, 0);
+                standLegs(P); bend(P, .08);
+                arm(P, sd, [-.25, .2, .9], [-.95, .35 + .25 * k, .2]); // ينفض الكتف الثاني
+                arm(P, -sd, [.22, -1, .04], [.12, -1, .2]);
+                euler(P, 'Head', .1, sd * .35, sd * -.1);
             }],
         ]);
     },
 };
 const DANCES = {};
+// يرجع {clip, bounds}: bounds = بداية كل مقطع بالثواني (لدفعات التأثيرات مع كل حركة)
 function danceClip(kind) {
-    if (DANCES[kind]) return DANCES[kind];
-    const def = DANCE_DEF[kind] || DANCE_DEF.girl, [dur, fn] = def();
-    return (DANCES[kind] = POSE_KIT.poseClip('win-' + kind, dur, fn));
+    if (DANCES[kind]) return DANCES[kind].clip;
+    const def = DANCE_DEF[kind] || DANCE_DEF.girl, [dur, fn, bounds] = def();
+    DANCES[kind] = { clip: POSE_KIT.poseClip('win-' + kind, dur, fn), bounds, dur };
+    return DANCES[kind].clip;
+}
+
+// ================================================================ تأثيرات رقصة الفوز
+// البنت: قلوب ولمعات وردية تطلع لفوق وحلقة وردية على الأرض · الولد: نجوم ذهبية وشرار أزرق ينفجر وموجة ذهبية.
+// دفعة مع بداية كل حركة بالرقصة، ولمعات خفيفة طول الرقص. Points وحدة (أمر رسم واحد) + حلقة أرض.
+const FXTEX = {};
+function fxTex(kind) {
+    if (FXTEX[kind]) return FXTEX[kind];
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+    if (kind === 'heart') {
+        g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 56); g.bezierCurveTo(2, 34, 10, 6, 32, 20); g.bezierCurveTo(54, 6, 62, 34, 32, 56); g.fill();
+    } else if (kind === 'star') {
+        g.fillStyle = '#fff'; g.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 11 : 30, a = k / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } g.closePath(); g.fill();
+    } else {
+        const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(255,255,255,.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.fillRect(0, 0, 64, 64); g.fillStyle = '#fff'; g.fillRect(30, 4, 4, 56); g.fillRect(4, 30, 56, 4);
+    }
+    const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return (FXTEX[kind] = t);
+}
+const FX_STYLE = {
+    girl: { tex: 'heart', cols: ['#ff5fa2', '#ff8fc4', '#ffffff', '#ffb3d9'], ring: '#ff7ab8', rise: 1, spread: .6, size: .3, spark: 'sparkle' },
+    boy: { tex: 'star', cols: ['#ffd447', '#ffb020', '#7fd4ff', '#ffffff'], ring: '#ffc83a', rise: -1, spread: 1.6, size: .27, spark: 'sparkle' },
+};
+function createWinFx(kind) {
+    const S = FX_STYLE[kind] || FX_STYLE.girl, N = 90, group = new T.Group();
+    const geo = new T.BufferGeometry(), pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
+    const mat = new T.PointsMaterial({ map: fxTex(S.tex), size: S.size, vertexColors: true, transparent: true, depthWrite: false, blending: T.AdditiveBlending, sizeAttenuation: true });
+    const pts = new T.Points(geo, mat); pts.frustumCulled = false; group.add(pts);
+    const ring = new T.Mesh(new T.RingGeometry(.45, .6, 48).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: S.ring, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    ring.position.y = .02; group.add(ring);
+    const P = Array.from({ length: N }, () => ({ life: 0, max: 1, p: new T.Vector3(), v: new T.Vector3(), c: new T.Color() }));
+    let next = 0, ringT = 1, sparkT = 0;
+    function spawn(n, burst) {
+        for (let i = 0; i < n; i++) {
+            const q = P[next]; next = (next + 1) % N;
+            const a = Math.random() * Math.PI * 2, sp = burst ? S.spread * (.6 + Math.random() * .8) : .25;
+            q.p.set(Math.cos(a) * .2, .9 + Math.random() * .5, Math.sin(a) * .2);
+            q.v.set(Math.cos(a) * sp, (S.rise > 0 ? .8 : 1.8) + Math.random() * (burst ? 1.4 : .5), Math.sin(a) * sp);
+            q.c.set(S.cols[(Math.random() * S.cols.length) | 0]); q.max = burst ? 1.1 + Math.random() * .7 : .8; q.life = q.max;
+        }
+    }
+    function update(dt, active, beat) {
+        if (beat) { spawn(kind === 'boy' ? 34 : 26, true); ringT = 0; }
+        if (active) { sparkT -= dt; if (sparkT < 0) { sparkT = .12; spawn(2, false); } }
+        const grav = S.rise > 0 ? .35 : -2.6;
+        for (let i = 0; i < N; i++) {
+            const q = P[i];
+            if (q.life > 0) {
+                q.life -= dt; q.v.y += grav * dt; q.v.multiplyScalar(1 - dt * .9); q.p.addScaledVector(q.v, dt);
+                if (S.rise > 0) q.p.x += Math.sin((q.max - q.life) * 6 + i) * dt * .25; // القلوب تتمايل وهي طالعة
+                const k = Math.max(0, q.life / q.max), f = k * (k > .85 ? (1 - k) / .15 : 1);
+                pos.set([q.p.x, q.p.y, q.p.z], i * 3); col.set([q.c.r * f, q.c.g * f, q.c.b * f], i * 3);
+            } else col.set([0, 0, 0], i * 3);
+        }
+        geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
+        ringT = Math.min(1, ringT + dt / .9); const e = 1 - Math.pow(1 - ringT, 2);
+        ring.scale.setScalar(.6 + e * 2.4); ring.material.opacity = (1 - ringT) * .85;
+    }
+    function dispose() { group.removeFromParent(); geo.dispose(); mat.dispose(); ring.geometry.dispose(); ring.material.dispose(); }
+    return { group, update, dispose };
 }
 
 // مسار الحركة بارتفاع ورك الموديل. a رقم (حركات الحفلة) أو 'win' (رقصة الفوز الخاصة بالموديل)
@@ -290,9 +364,23 @@ export function makeVrmRig(model, { n = 0 } = {}) {
         }
     }
 
+    // تأثيرات رقصة الفوز: دفعة مع بداية كل حركة، ولمعات طول الرقص، وتختفي بهدوء بعدها
+    let fx = null, seg = -1;
+    function winFx(dt) {
+        const on = cur === 'win' && curAction;
+        if (!on && !fx) return;
+        if (!fx) { fx = createWinFx(model.kind); root.add(fx.group); }
+        let beat = false;
+        if (on) {
+            const D = DANCES[model.kind], t = curAction.time % D.dur; let i = 0; while (i < D.bounds.length - 1 && t >= D.bounds[i + 1]) i++;
+            if (i !== seg) { beat = true; seg = i; }
+        } else seg = -1;
+        fx.update(dt, !!on, beat);
+    }
     function update(dt) {
-        if (ver !== getClipsVersion() && cur >= 0) { const a = cur; cur = -1; play(a); } // وصلت الحركات المسجّلة
+        if (ver !== getClipsVersion() && typeof cur === 'number' && cur >= 0) { const a = cur; cur = -1; play(a); } // وصلت الحركات المسجّلة
         mixer.update(dt);
+        winFx(dt);
         wrist(dt);
         fingers(dt);
         face(dt);
@@ -300,7 +388,7 @@ export function makeVrmRig(model, { n = 0 } = {}) {
     function sync() { humanoid.update(); }
     // يد المواجهة الكبيرة (rps-hand.js) تتركّب مكان يد الموديل: نخفي يد الموديل وأصابعها بتصغير عظمتها الفعلية
     function hideHand(side, on) { const nd = humanoid.getRawBoneNode(String(side).toLowerCase().startsWith('l') ? 'leftHand' : 'rightHand'); if (nd) nd.scale.setScalar(on ? .001 : 1); }
-    function dispose() { mixer.stopAllAction(); mixer.uncacheRoot(humanoid.normalizedHumanBonesRoot); root.removeFromParent(); }
+    function dispose() { if (fx) fx.dispose(); mixer.stopAllAction(); mixer.uncacheRoot(humanoid.normalizedHumanBonesRoot); root.removeFromParent(); }
 
     play(0);
     root.userData.rig = true;
