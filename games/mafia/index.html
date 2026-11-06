@@ -112,7 +112,8 @@
         NET.setup(cur); render();
     });
 
-    $('goBtn').onclick = function () { NET.setup(cur); location.href = 'lobby.html'; };
+    $('goBtn').onclick = function () { NET.setup(cur); location.href = window.MAFIA_MODE === 'discord' ? 'join.html?create=1' : 'lobby.html'; };   // الديسكورد: ما فيه شاشة بث — صاحب الروم يدخل لاعب على طول
+    if (window.MAFIA_MODE === 'discord') $('goBtn').childNodes[0].nodeValue = 'سوّ الروم وادخل العب';
     $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
     $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
     $('exitYes').onclick = function () {

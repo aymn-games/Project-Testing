@@ -108,17 +108,3 @@ a { color: var(--c); } a:hover { color: var(--c2); }
 .spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid rgba(167,139,250,.18); border-top-color: var(--c); animation: spin .9s linear infinite; margin: 40px auto; }
 
 @media (max-width: 640px) { .hbtn .lbl-txt { display: none; } }
-
-/* ===== وضع الديسكورد (mafia-mode.js يضيف html.mode-discord) ===== */
-.dc-only { display: none !important; }
-html.mode-discord .dc-only { display: flex !important; }
-.cta-ghost { max-width: 240px; background: rgba(139,92,246,.12); border: 1px solid rgba(167,139,250,.45); box-shadow: none; color: #ede9fe; }
-.play-dlg { max-width: 420px; }
-.play-dlg .ic { font-size: 30px; }
-.play-qr { margin: 12px auto 4px; width: 200px; height: 200px; padding: 10px; border-radius: 16px; background: #fff; }
-.play-qr img { width: 100%; height: 100%; image-rendering: pixelated; }
-.play-warn { font-size: 13px !important; color: #fcd34d !important; }
-.play-dlg a.btn-ghost { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-.play-dlg .ic { background: rgba(139,92,246,.16); color: #ddd6fe; }
-.play-dlg p b { font: inherit; font-weight: 800; color: #fff; }
-.play-dlg a.btn-ghost { height: 48px; border-radius: 999px; font: 700 15px 'IBM Plex Sans Arabic', sans-serif; }

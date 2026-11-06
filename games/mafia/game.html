@@ -276,6 +276,13 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
     .banner .title { font-size: 22px; }
     .brand small { display: none; }
 }
+
+/* ===== شاشة المباراة على جهاز اللاعب (وضع الديسكورد ?watch=) — مشاهدة بس: بدون أزرار المذيع ولا باركود ===== */
+html.watch #ctlBtn, html.watch #exitBtn, html.watch #skipTalk, html.watch .qr-mini, html.watch #over .acts, html.watch #ctlModal { display: none !important; }
+.w-msg { display: none; }
+body.w-wait .w-msg { display: grid; position: fixed; inset: 0; z-index: 80; place-items: center; text-align: center; background: radial-gradient(circle at 50% 40%, rgba(124,58,237,.25), rgba(7,6,11,.96) 70%); color: #ede9fe; font: 700 20px 'IBM Plex Sans Arabic', sans-serif; padding: 20px; }
+body.w-wait .w-msg small { display: block; margin-top: 8px; color: #a8a3b5; font-size: 14px; font-weight: 500; }
+body.w-wait:not(.w-closed) .w-msg .closed, body.w-closed .w-msg .waiting { display: none; }
 </style>
 </head>
 <body>
@@ -298,6 +305,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 
     <div class="timer hide" id="timer"><svg viewBox="0 0 74 74"><circle cx="37" cy="37" r="32" stroke="rgba(255,255,255,.12)"/><circle id="timerArc" cx="37" cy="37" r="32" stroke="#c4b5fd" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="0"/></svg><span id="timerTxt">0</span></div>
     <div class="round hide" id="round"><span class="ico" id="roundIco">🌙</span><div><b id="roundTxt">الليلة 1</b><span id="aliveTxt"></span></div></div>
+    <div class="w-msg" aria-live="polite"><div><div class="waiting">⏳ بانتظار صاحب الروم يبدأ المباراة…<small>المشهد يطلع هنا أول ما تبدأ</small></div><div class="closed">🚪 الروم انقفلت<small>ارجع لصفحة اللعب</small></div></div></div>
     <div class="banner hide" id="banner"><div class="sub" id="bSub"></div><div class="title" id="bTitle"></div><div class="prog" id="bProg"></div><button class="skip-talk hide" id="skipTalk" type="button">⏭ تخطي النقاش وابدأ التصويت</button></div>
     <div class="caption" id="caption"><div class="k" id="capK"></div><div class="s" id="capS"></div><div id="capR"></div></div>
 
@@ -336,6 +344,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 
     // ---------------------------------------------------------------- الاتصال
     var net = NET.connect(onMsg, function () {
+        if (window.MAFIA_WATCH) return net.send({ t: 'watch', code: window.MAFIA_WATCH });   // شاشة المباراة على جهاز لاعب (وضع الديسكورد)
         var h = NET.hostSession() || {};
         net.send({ t: 'host', code: h.code, token: h.token });
     }, function (ok) { $('status').classList.toggle('on', !ok); });
@@ -343,21 +352,23 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
     function onMsg(m) {
         if (m.t === 'welcome') {
             S.code = m.code; S.token = m.token; S.schema = m.schema;
-            NET.hostSession({ code: m.code, token: m.token });
+            if (!window.MAFIA_WATCH) NET.hostSession({ code: m.code, token: m.token });
             makeQr();
         } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); overKey = '';
         } else if (m.t === 'room') {
             S.room = m.room;
             // صفحة المباراة بس — قبل البداية (أو بعد «رجوع للوبي») مكانه شاشة اللوبي
-            if (!m.room.started) return location.replace('lobby.html');
+            if (!m.room.started) { if (window.MAFIA_WATCH) { document.body.classList.add('w-wait'); return; } return location.replace('lobby.html'); }
+            document.body.classList.remove('w-wait');
             renderCtl();
         } else if (m.t === 'state') {
             S.G = m.G; onState();
         } else if (m.t === 'err') {
             $('status').textContent = m.err || ''; $('status').classList.add('on');
             clearTimeout(onMsg.et); onMsg.et = setTimeout(function () { $('status').classList.remove('on'); $('status').textContent = 'جاري الاتصال بالخادم…'; }, 4000);
-        } else if (m.t === 'gone') {
-            alert('شاشة البث انفتحت بمكان ثاني');
+        } else if (m.t === 'gone' || m.t === 'closed') {
+            if (window.MAFIA_WATCH) { document.body.classList.add('w-wait', 'w-closed'); return; }
+            if (m.t === 'gone') alert('شاشة البث انفتحت بمكان ثاني');
         }
     }
 
@@ -569,7 +580,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         renderCtl();
         renderChat(G); renderRecap(G); renderVotes(G);
         // نتيجة المباراة ← نقاط المنصة (مرة وحدة لكل مباراة)
-        if (G.phase === 'over' && G.winner) reportPoints(G);
+        if (G.phase === 'over' && G.winner && !window.MAFIA_WATCH) reportPoints(G);   // شاشة المشاهدة ما ترسل نقاط (صاحب الروم يرسلها)
     }
 
     function reportPoints(G) {

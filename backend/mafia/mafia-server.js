@@ -65,10 +65,13 @@ function publicRoom(room) {
     return {
         code: room.code, started: room.started, settings: room.settings, minPlayers: Settings.minPlayers(room.settings),
         hostOnline: !!room.hostConn,
+        // وضع الديسكورد: ما فيه شاشة بث — صاحب الروم لاعب (owner) ومعه أزرار المذيع، وكل لاعب يقدر يفتح «شاشة المباراة» (watch)
+        mode: room.mode || 'tiktok', owner: ownerId(room),
         players: room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, avatar: p.avatar, frame: p.frame, online: isOnline(room, p.id) }; }),
         chat: room.lobbyChat.slice(-40)
     };
 }
+function ownerId(room) { var o = room.ownerUid && room.players.find(function (p) { return p.uid === room.ownerUid; }); return o ? o.id : null; }
 function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); sendAvatars(room); }
 
 // صورة بروفايل اللاعب بالموقع (المرفوعة أو صورة تيك توك المحفوظة) — لشاشة المذيع بس (اللوبي وشاشة الفوز)،
@@ -77,11 +80,13 @@ function profilePhoto(uid) {
     try { var row = require('../db/database').prepare('SELECT avatar_image_base64 FROM users WHERE id = ?').get(uid); return (row && row.avatar_image_base64) || null; } catch (e) { return null; }
 }
 function sendAvatars(room) {
-    var h = room.hostConn; if (!h || h.closed) return;
-    h.avSent = h.avSent || {};
-    var map = {}, any = false;
-    room.players.forEach(function (p) { if (p.photo && h.avSent[p.id] !== p.photo.length) { map[p.id] = p.photo; h.avSent[p.id] = p.photo.length; any = true; } });
-    if (any) send(h, { t: 'avatars', map: map });
+    // لشاشة المذيع ولشاشات «المشاهدة» (وضع الديسكورد) — كل اتصال يستلم الصورة مرة وحدة
+    roomClients(room).filter(function (h) { return !h.closed && (h === room.hostConn || h.role === 'watch'); }).forEach(function (h) {
+        h.avSent = h.avSent || {};
+        var map = {}, any = false;
+        room.players.forEach(function (p) { if (p.photo && h.avSent[p.id] !== p.photo.length) { map[p.id] = p.photo; h.avSent[p.id] = p.photo.length; any = true; } });
+        if (any) send(h, { t: 'avatars', map: map });
+    });
 }
 
 function sendStates(room) {
@@ -201,6 +206,30 @@ function onMessage(client, msg) {
         client.code = pr.code; client.role = 'peek'; client.id = null;
         return send(client, { t: 'peek', ok: true, room: publicRoom(pr) });
     }
+    if (t === 'create') {
+        // وضع الديسكورد: صاحب الروم يسويها من جواله/جهازه ويدخل فيها لاعب على طول (ما فيه شاشة بث)
+        var cacc = accountOf(msg.auth);
+        if (!cacc) return send(client, { t: 'err', err: 'لازم تسجّل دخول بحساب الموقع عشان تسوي روم', step: 'auth' });
+        var cr = createRoom();
+        if (!cr) return send(client, { t: 'err', err: 'كل الرومات مشغولة، جرّب بعد شوي' });
+        cr.mode = 'discord'; cr.ownerUid = cacc.uid; cr.emptySince = 0;
+        if (msg.settings) cr.settings = Settings.validate(msg.settings);
+        var op = { id: 'p' + rid(5), key: rid(16), uid: cacc.uid, name: cacc.name.length >= 2 ? cacc.name : 'لاعب', look: cleanLook(msg.look), tiktok: cacc.tiktok, avatar: cacc.avatar, frame: cacc.frame, photo: _photoOf(cacc.uid) };
+        cr.players.push(op); attach(client, cr, 'player', op.id);
+        enrichPlayer(cr, op, cacc);
+        send(client, { t: 'welcome', role: 'player', id: op.id, key: op.key, code: cr.code, tiktok: cacc.tiktok, news: newsFor(cacc.uid), owner: true });
+        broadcastRoom(cr);
+        return;
+    }
+    if (t === 'watch') {
+        // «شاشة المباراة» على جهاز اللاعب (وضع الديسكورد): نفس اللي تشوفه شاشة البث (view('host') — ما فيها أسرار)، بدون أي تحكم
+        var wr = _rooms[String(msg.code || '')];
+        if (!wr) return send(client, { t: 'gone', reason: 'closed' });
+        attach(client, wr, 'watch', 'host');
+        send(client, { t: 'welcome', role: 'watch', id: 'host', code: wr.code, schema: Settings.SCHEMA });
+        broadcastRoom(wr); if (wr.game) sendStates(wr);
+        return;
+    }
     if (t === 'join') {
         var jr = _rooms[String(msg.code || '')]; if (!jr) return send(client, { t: 'err', err: 'الروم انقفل', step: 'code' });
         if (jr.started) return send(client, { t: 'err', err: 'المباراة بدأت، انتظر الجولة الجاية' });
@@ -212,7 +241,7 @@ function onMessage(client, msg) {
             mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame; mine.photo = _photoOf(acc.uid) || mine.photo;
             roomClients(jr).forEach(function (c) { if (c.id === mine.id && c !== client) { send(c, { t: 'gone', reason: 'elsewhere' }); c.code = null; c.id = null; } });
             attach(client, jr, 'player', mine.id);
-            send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok, news: newsFor(mine.uid) });
+            send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok, news: newsFor(mine.uid), owner: !!jr.ownerUid && jr.ownerUid === mine.uid });
             return broadcastRoom(jr);
         }
         if (jr.players.length >= jr.settings.maxPlayers) return send(client, { t: 'err', err: 'الروم ممتلئ' });
@@ -222,7 +251,7 @@ function onMessage(client, msg) {
         var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame, photo: _photoOf(acc.uid) };
         jr.players.push(p); attach(client, jr, 'player', p.id);
         enrichPlayer(jr, p, acc);
-        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok, news: newsFor(acc.uid) });
+        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok, news: newsFor(acc.uid), owner: !!jr.ownerUid && jr.ownerUid === acc.uid });
         broadcastRoom(jr);
         return;
     }
@@ -230,7 +259,7 @@ function onMessage(client, msg) {
         var rr = _rooms[String(msg.code || '')], rp = rr && rr.players.find(function (q) { return q.id === msg.id && q.key === msg.key; });
         if (!rp) return send(client, { t: 'gone', reason: rr ? 'kicked' : 'closed' });
         attach(client, rr, 'player', rp.id);
-        send(client, { t: 'welcome', role: 'player', id: rp.id, key: rp.key, code: rr.code, tiktok: rp.tiktok, news: newsFor(rp.uid) });
+        send(client, { t: 'welcome', role: 'player', id: rp.id, key: rp.key, code: rr.code, tiktok: rp.tiktok, news: newsFor(rp.uid), owner: !!rr.ownerUid && rr.ownerUid === rp.uid });
         broadcastRoom(rr); if (rr.game) sendStates(rr);
         return;
     }
@@ -242,10 +271,15 @@ function onMessage(client, msg) {
 
     if (!room || !client.id) return;
     var isHost = client.role === 'host' && room.hostConn === client;
+    // وضع الديسكورد: صاحب الروم (لاعب) معه نفس أزرار المذيع (يبدأ، ينهي المرحلة، جولة جديدة، يطلّع لاعب، يقفل الروم)
+    if (!isHost && room.ownerUid && client.role === 'player') { var me0 = room.players.find(function (q) { return q.id === client.id; }); isHost = !!me0 && me0.uid === room.ownerUid; }
 
     if (t === 'leave') {
         if (client.role === 'player') {
+            var leaving = room.players.find(function (q) { return q.id === client.id; });
             room.players = room.players.filter(function (q) { return q.id !== client.id; });
+            // صاحب روم الديسكورد طلع: الملكية تنتقل لأول لاعب باقي (عشان أحد يقدر يبدأ ويكمّل)
+            if (leaving && room.ownerUid && leaving.uid === room.ownerUid) room.ownerUid = room.players[0] ? room.players[0].uid : null;
             if (room.game) room.game.remove(client.id);
             client.code = null; client.id = null; broadcastRoom(room);
         }
@@ -307,6 +341,12 @@ function tickAll() {
     Object.keys(_rooms).forEach(function (code) {
         var room = _rooms[code];
         if (!room.hostConn && room.hostGoneAt && now - room.hostGoneAt > HOST_GRACE_MS) return closeRoom(room, 'host-timeout');
+        // روم الديسكورد ما لها شاشة مذيع: تنقفل لو ما فيها أي أحد متصل 30 دقيقة
+        if (room.mode === 'discord') {
+            if (roomClients(room).some(function (c) { return !c.closed; })) room.emptySince = 0;
+            else if (!room.emptySince) room.emptySince = now;
+            else if (now - room.emptySince > HOST_GRACE_MS) return closeRoom(room, 'empty');
+        }
         if (!room.game) return;
         try { room.game.tick(now); } catch (err) { logger.error('Mafia: tick error:', err); }
         // الرومات الكبيرة (لين 200 لاعب): نجمع التغييرات بدل ما نرسل نسخة لكل لاعب مع كل رسالة شات

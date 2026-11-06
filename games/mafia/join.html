@@ -374,6 +374,26 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
 .nw p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.65; color: #d9d4e6; }
 .news-f { padding: 10px 16px 16px; }
 .news-f .btn { margin-top: 0; }
+
+/* ===== وضع الديسكورد: صاحب الروم يلعب من نفس جهازه، و«شاشة المباراة» على جهاز كل لاعب ===== */
+.owner-box { text-align: center; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-color: rgba(167,139,250,.3); }
+.ob-code { display: flex; flex-direction: column; align-items: center; }
+.ob-code span { font-size: 12.5px; font-weight: 700; color: var(--mute); }
+.ob-code b { font-size: 44px; font-weight: 800; letter-spacing: 8px; direction: ltr; color: #fff; line-height: 1.1; text-shadow: 0 0 24px rgba(139,92,246,.6); }
+.ob-hint { font-size: 13px !important; font-weight: 500 !important; margin: 0 !important; }
+.owner-box .btn { margin-top: 2px; height: 48px; font-size: 17px; }
+.owner-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 14px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.35); }
+.owner-bar > span { font-size: 12.5px; font-weight: 700; color: #fcd34d; }
+.ob-b { flex: 1 1 auto; height: 38px; padding: 0 12px; border-radius: 999px; border: 0; background: linear-gradient(135deg, #d97706, #f59e0b); color: #1a1205; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.ob-b.ghost { background: rgba(255,255,255,.06); color: #fde68a; border: 1px solid rgba(251,191,36,.35); }
+.ob-b[disabled] { opacity: .5; }
+.top-r { display: flex; align-items: center; gap: 6px; }
+.watchbtn { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(167,139,250,.5); background: rgba(139,92,246,.18); color: #ede9fe; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.watch-ov { position: fixed; inset: 0; z-index: 70; background: #000; }
+.watch-ov iframe { width: 100%; height: 100%; border: 0; display: block; }
+.watch-x { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; z-index: 2; height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); background: rgba(10,9,15,.75); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.watch-tip { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(10,9,15,.75); color: #ddd6fe; font-size: 13px; font-weight: 600; pointer-events: none; animation: flOut .5s ease-in 4s forwards; }
+body.watching { overflow: hidden; }
 </style>
 </head>
 <body>
@@ -413,6 +433,8 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         <div class="cols">
             <div class="col-a">
                 <div class="card wait-card"><div class="preview" id="waitAv"></div><div class="tt">أنت جالس حول النار 🔥</div><p>شوف شخصيتك على البث! بانتظار المذيع يبدأ اللعبة…</p><p class="wait-n" id="waitCount"></p></div>
+                <!-- وضع الديسكورد: رقم الروم للدعوة، وأزرار صاحب الروم -->
+                <div class="card owner-box hide" id="ownerBox"></div>
                 <div class="wait-btns"><button class="btn ghost" id="editLook" type="button">🎨 غيّر شكلك</button><button class="btn ghost" id="leaveBtn" type="button">🚪 اطلع من الروم</button></div>
             </div>
             <div class="col-b chatcol">
@@ -425,7 +447,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
 
     <!-- 4) المباراة -->
     <section id="vGame" class="hide">
-        <div class="top"><div class="me" id="meBox"></div><button class="rolechip" id="roleChip" type="button"></button></div>
+        <div class="top"><div class="me" id="meBox"></div><div class="top-r"><button class="watchbtn hide" id="watchBtn" type="button" title="شاشة المباراة">📺 المشهد</button><button class="rolechip" id="roleChip" type="button"></button></div></div>
         <div class="phase"><b id="phaseTxt"></b><span class="t" id="phaseT"></span></div>
         <div id="gameBody"></div>
     </section>
@@ -441,12 +463,18 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
     var params = new URLSearchParams(location.search);
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: NET.look() || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
+    // وضع الديسكورد: join.html?create=1 من شاشة الإعدادات — صاحب الروم يسويها ويدخل لاعب على طول (ما فيه شاشة بث)
+    S.create = params.get('create') === '1' && !S.code;
+    if (S.create) S.me = null;
+    function discord() { return !!(S.room && S.room.mode === 'discord'); }
+    function isOwner() { return !!(S.me && S.room && S.room.owner === S.me.id); }
 
     function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame'); ['vCode', 'vProfile', 'vWait', 'vGame'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
 
     var net = NET.connect(onMsg, function () {
         if (S.me && (S.me.room === S.code || !S.code)) { S.code = S.me.room; net.send({ t: 'resume', code: S.me.room, id: S.me.id, key: S.me.key }); }
         else if (S.code) net.send({ t: 'peek', code: S.code });
+        else if (S.create) { if (S.view !== 'vProfile') openProfile(); }
         else show('vCode');
     }, function (ok) { $('status').classList.toggle('on', !ok); });
 
@@ -456,7 +484,8 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             S.room = m.room; if (S.view !== 'vProfile') openProfile();
             renderRoomInfo();
         } else if (m.t === 'welcome') {
-            S.me = { room: m.code, id: m.id, key: m.key }; NET.me(S.me);
+            S.me = { room: m.code, id: m.id, key: m.key }; NET.me(S.me); S.code = m.code;
+            if (S.create) { S.create = false; try { history.replaceState(null, '', 'join.html?room=' + m.code); } catch (e) { } }   // التحديث يرجّعه لنفس الروم
             S.news = !!m.news && !newsSeenLocal();
             if (S.news === false && m.news && newsSeenLocal()) net.send({ t: 'news-seen' });   // قفله قبل وانقطع الاتصال: نبلّغ الخادم الحين
             if (!S.G) show('vWait');
@@ -471,10 +500,12 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         } else if (m.t === 'err') {
             if (m.step === 'code') { show('vCode'); $('codeErr').textContent = m.err; }
             else if (m.step === 'auth') { $('joinErr').innerHTML = esc(m.err) + ' — <a href="' + loginUrl() + '" style="color:var(--gold)">سجّل دخول</a>'; }
+            else if (S.view === 'vWait' && $('ownerErr')) $('ownerErr').textContent = m.err;   // مثل «تحتاج 5 لاعبين» لصاحب الروم
             else $('joinErr').textContent = m.err;
         } else if (m.t === 'gone' || m.t === 'kicked' || m.t === 'closed') {
             NET.me(null); S.me = null; S.G = null;
-            show('vCode'); $('codeErr').textContent = m.t === 'kicked' || m.reason === 'kicked' ? 'المذيع طلّعك من الروم' : 'الروم انقفل';
+            closeWatch();
+            show('vCode'); $('codeErr').textContent = m.t === 'kicked' || m.reason === 'kicked' ? (discord() ? 'صاحب الروم طلّعك' : 'المذيع طلّعك من الروم') : 'الروم انقفل';
         }
     }
 
@@ -529,7 +560,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         $('roomInfo').textContent = 'روم ' + S.room.code + ' · ' + S.room.players.length + ' لاعب داخل';
         if (S.view === 'vWait') renderWait();
     }
-    function loginUrl() { return '../../login.html?next=' + encodeURIComponent('games/mafia/join.html?room=' + S.code); }
+    function loginUrl() { return '../../login.html?next=' + encodeURIComponent(S.create ? 'games/mafia/join.html?create=1' : 'games/mafia/join.html?room=' + S.code); }
     function account() { try { return window.AGPAuth && AGPAuth.getToken() ? AGPAuth.getCachedUser() : null; } catch (e) { return null; } }
     function renderAccount() {
         var u = account(), box = $('acct');
@@ -547,6 +578,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
     }
     function openProfile() {
         show('vProfile');
+        if (S.create) { $('roomInfo').textContent = '🎮 روم جديدة — أنت صاحبها، وتلعب معهم من نفس جهازك'; $('joinGo').textContent = 'سوّ الروم وادخل'; }
         renderAccount(); renderEditor();
         // تحديث بيانات الحساب من الخادم (الصورة/التوثيق/انتهاء الجلسة)
         try { if (window.AGPAuth && AGPAuth.getToken() && AGPAuth.refreshUser) AGPAuth.refreshUser().then(renderAccount, renderAccount); } catch (e) { }
@@ -577,12 +609,14 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         $('joinErr').textContent = ''; NET.look(S.look);
         if (S.me) { net.send({ t: 'look', look: S.look }); show('vWait'); renderWait(); return; }   // تعديل الشكل بعد الدخول
         if (!NET.authToken()) { location.href = loginUrl(); return; }
-        net.send({ t: 'join', code: S.code, look: S.look, auth: NET.authToken() });
+        if (S.create) net.send({ t: 'create', look: S.look, auth: NET.authToken(), settings: NET.setup() || undefined });
+        else net.send({ t: 'join', code: S.code, look: S.look, auth: NET.authToken() });
     };
 
     // ---------------------------------------------------------------- الانتظار
     function renderWait() {
         $('waitAv').innerHTML = L.avatarSVG(S.look, 130);
+        renderOwnerBox();
         $('waitCount').textContent = S.room ? 'داخل الروم: ' + S.room.players.length + ' لاعب' : '';
         var byId = {}, chat = (S.room && S.room.chat) || [], box = $('lobbyChat');
         (S.room ? S.room.players : []).forEach(function (p) { byId[p.id] = p; });
@@ -593,6 +627,31 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             box.scrollTop = box.scrollHeight;
         }
     }
+    // وضع الديسكورد: كل اللي بالروم يشوفون رقمها عشان يدعون أصحابهم، وصاحبها معه زر البداية
+    function renderOwnerBox() {
+        var box = $('ownerBox'), on = discord(); box.classList.toggle('hide', !on);
+        var waitP = document.querySelector('.wait-card p');
+        if (waitP) waitP.textContent = on ? (isOwner() ? 'أنت صاحب الروم — ابدأ أول ما يكتمل العدد' : 'بانتظار صاحب الروم يبدأ اللعبة…') : 'شوف شخصيتك على البث! بانتظار المذيع يبدأ اللعبة…';
+        if (!on) return;
+        var n = S.room.players.length, min = S.room.minPlayers || 5, link = new URL('join.html?room=' + S.room.code, location.href).href;
+        var ownerP = S.room.players.find(function (p) { return p.id === S.room.owner; });
+        box.innerHTML = '<div class="ob-code"><span>رقم الروم</span><b>' + esc(S.room.code) + '</b></div>' +
+            '<p class="ob-hint">ادعُ أصحابك: يدخلون الرقم من «دخول غرفة» بالموقع، أو يفتحون الرابط</p>' +
+            '<button type="button" class="btn ghost ob-copy" id="obCopy">🔗 نسخ رابط الدخول</button>' +
+            (isOwner()
+                ? '<button type="button" class="btn" id="obStart"' + (n < min ? ' disabled' : '') + '>▶ ابدأ المباراة (' + n + '/' + min + ')</button>' + (n < min ? '<p class="ob-hint">تحتاج ' + min + ' لاعبين على الأقل لهالإعدادات</p>' : '') + '<div class="err" id="ownerErr"></div>'
+                : '<p class="ob-hint">👑 صاحب الروم: ' + esc(ownerP ? ownerP.name : '—') + '</p>');
+        box.dataset.link = link;
+    }
+    $('ownerBox').addEventListener('click', function (e) {
+        if (e.target.id === 'obStart') { $('ownerErr').textContent = ''; net.send({ t: 'start' }); }
+        if (e.target.id === 'obCopy') {
+            var link = this.dataset.link, b = e.target;
+            var done = function () { b.textContent = '✓ انسخ الرابط'; setTimeout(function () { b.textContent = '🔗 نسخ رابط الدخول'; }, 1800); };
+            try { navigator.clipboard.writeText(link).then(done, function () { prompt('انسخ الرابط:', link); }); } catch (err) { prompt('انسخ الرابط:', link); }
+        }
+    });
+
     function sendLobby() { var i = $('lobbyIn'), t = i.value.trim(); if (!t) return; net.send({ t: 'lchat', text: t }); i.value = ''; i.focus(); }
     $('lobbySend').onclick = sendLobby;
     $('lobbyIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') sendLobby(); });
@@ -861,10 +920,50 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         if (navigator.vibrate && f.t === 'دورك الحين!') navigator.vibrate([60, 40, 60]);
     }
 
+    // ---- وضع الديسكورد: «شاشة المباراة» (المشهد الثلاثي الأبعاد اللي كان بشاشة البث) على جهاز اللاعب نفسه
+    // تنفتح فوق الشاشة كاملة (iframe لـgame.html?watch=) وتنقفل بزر — ولما تنقفل يوقف الرسم (يوفّر البطارية)
+    function openWatch() {
+        if (!S.code || $('watchOv')) return;
+        var ov = document.createElement('div'); ov.className = 'watch-ov'; ov.id = 'watchOv';
+        ov.innerHTML = '<iframe src="game.html?watch=' + encodeURIComponent(S.code) + '" title="شاشة المباراة" allow="autoplay; fullscreen"></iframe>' +
+            '<button type="button" class="watch-x" id="watchX">✕ رجوع لشاشتي</button>' + (innerHeight > innerWidth ? '<div class="watch-tip">📱 لف جوالك بالعرض لمشهد أكبر</div>' : '');
+        document.body.appendChild(ov); document.body.classList.add('watching');
+    }
+    function closeWatch() { var ov = $('watchOv'); if (ov) ov.remove(); document.body.classList.remove('watching'); }
+    $('watchBtn').onclick = openWatch;
+    document.addEventListener('click', function (e) { if (e.target.id === 'watchX') closeWatch(); if (e.target.closest && e.target.closest('[data-watch]')) openWatch(); });
+    // أزرار صاحب الروم وقت المباراة (بدل لوحة تحكم المذيع)
+    function ownerBar(G) {
+        if (!isOwner()) return '';
+        var b = [];
+        if (G.phase === 'day') b.push('<button type="button" class="ob-b" data-own="endStage">⏭ أنهِ النقاش وابدأ التصويت</button>');
+        else if (G.phase === 'vote') b.push('<button type="button" class="ob-b" data-own="endStage">⏭ أنهِ التصويت</button>');
+        else if (G.phase === 'over') b.push('<button type="button" class="ob-b" data-own="again">🔁 جولة جديدة</button>', '<button type="button" class="ob-b ghost" data-own="lobby">↩️ رجوع للانتظار</button>');
+        return b.length ? '<div class="owner-bar"><span>👑 صاحب الروم</span>' + b.join('') + '</div>' : '';
+    }
+    $('gameBody').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-own]'); if (!b) return;
+        var a = b.getAttribute('data-own');
+        if (a === 'lobby' && !confirm('ترجعون للانتظار؟')) return;
+        net.send({ t: a }); b.disabled = true;
+    });
+    // نقاط المنصة لما تخلص المباراة: بوضع الديسكورد صاحب الروم يرسلها (ما فيه شاشة بث ترسلها) — مرة وحدة لكل مباراة
+    function ownerReport(G) {
+        if (!isOwner() || G.phase !== 'over' || !G.winner) return;
+        var key = 'mafia-reported-' + G.id;
+        try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, '1'); } catch (e) { if (S['rep' + G.id]) return; S['rep' + G.id] = true; }
+        if (!(window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function')) return;
+        var verified = G.players.filter(function (p) { return p.tiktok; }); if (!verified.length) return;
+        var pid = function (p) { return 'tiktok:' + p.tiktok; };
+        window.AGPAuth.reportMatchPoints({ players: verified.map(function (p) { return { id: pid(p), name: p.name }; }), winnerIds: verified.filter(function (p) { return p.team === G.winner; }).map(pid), teamGame: true, durationMs: (G.endedAt || NET.now()) - G.startedAt });
+    }
+
     var lastRenderKey = '';
     function renderGame() {
         var G = S.G; if (!G || !G.me) return;
         maybeFlash(G);
+        $('watchBtn').classList.toggle('hide', !discord());
+        ownerReport(G);
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
         $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
         $('roleChip').style.background = S.hideRole ? '#2a2438' : R.c;
@@ -873,7 +972,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
         // الشاشة تنبني من جديد بس لو تغيّر شي غير الشات؛ الرسائل الجديدة تحدّث صناديق الشات لحالها
         // (عشان الكتابة ما تتقطّع، والكيبورد ما يرمش، واللي يقرأ رسائل قديمة ما ينسحب لتحت غصب)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply]);
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply, isOwner(), discord()]);
         if (key === lastRenderKey) { patchChat(G); return; }
         lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
@@ -884,7 +983,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
         // الشات السري (مافيا/أطباء/محققين) ينفتح لحاله أول ليلة (عشان الفريق يلقاه)، ويتسكّر لحاله أول نهار عشان الشات العام يبان — بعدها قرارك
         if (S.autoPriv !== G.id && privChans(G).length && G.phase === 'night') { S.autoPriv = G.id; if (!S.privOpen) { S.privOpen = privChans(G)[0]; S.privAuto = true; } }
         if (S.privAuto && G.phase === 'day') { S.privAuto = false; S.privOpen = ''; }
-        var html = teamBarHtml(G), main = '', side = '', ph = G.phase, alive = me.alive;
+        var html = ownerBar(G) + teamBarHtml(G), main = '', side = '', ph = G.phase, alive = me.alive;
         var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
         if (!alive && ph !== 'over' && ph !== 'night') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
         if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
@@ -924,7 +1023,9 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
                 }); side = privateHtml(G) + inspections(G);
             } else html += stage({ tone: 'night', ic: '😴', k: 'الليلة ' + G.round, t: 'نام يا مواطن…', s: 'الحين دور ' + TN[G.turn] + ' — الصبح يكشف كل شي', extra: steps });
         } else if (ph === 'dawn') {
-            html += stage({ tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين على البث', extra: stepsHtml(G, alive ? myTurnOf(me) : null) }) + noticesHtml(G);
+            html += stage(discord()
+                ? { tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'وش صار بالليل؟', s: 'افتح المشهد وشوف بنفسك', extra: '<button type="button" class="btn" data-watch style="max-width:320px;margin:16px auto 0">📺 افتح المشهد</button>' + stepsHtml(G, alive ? myTurnOf(me) : null) }
+                : { tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين على البث', extra: stepsHtml(G, alive ? myTurnOf(me) : null) }) + noticesHtml(G);
         } else if (ph === 'day') {
             // الشات السري (لو مفتوح) فوق والعام تحته بنفس العمود؛ لو انقفل يرجع العام فوق
             main = recruitNote(G) + privateHtml(G) + chatHtml(G, chansFor(G)); side = noticesHtml(G) + inspections(G);
@@ -947,7 +1048,7 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
             html += stage({ tone: won ? 'ok' : 'bad', ic: won ? '🏆' : '💔', k: 'انتهت المباراة', t: G.winner === 'mafia' ? 'فازت المافيا' : 'فاز المواطنين', s: won ? 'مبروك! فريقك فاز 🎉' : 'حظ أوفر المرة الجاية', still: true }) +
                 (G.cards ? '<div class="note">🃏 كروت المافيا كانت: ' + G.cards.map(function (c) { return esc(c.name) + (c.used ? ' ✓' : ''); }).join('، ') + '</div>' : '') +
                 '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + (p.recruited ? ' ← جُنّد' : '') + '</span></div>'; }).join('') + '</div>' +
-                '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
+                (isOwner() ? '' : '<p style="text-align:center;margin-top:10px">' + (discord() ? 'بانتظار صاحب الروم يبدأ جولة جديدة…' : 'بانتظار المذيع يبدأ جولة جديدة…') + '</p>');
         }
         // تقسيم مرن: البطاقات/الشات الرئيسي يملى المساحة، والشات الثاني تحته (طولي) أو جنبه (عرضي/آيباد)
         if (main || side) html += '<div class="lay' + (side ? '' : ' solo') + (S.privOpen && !S.hideRole && privChans(G).indexOf(S.privOpen) >= 0 ? ' priv-on' : '') + '"><div class="pa">' + main + '</div>' + (side ? '<div class="pb">' + side + '</div>' : '') + '</div>';

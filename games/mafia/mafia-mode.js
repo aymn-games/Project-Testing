@@ -12,6 +12,14 @@
 (function () {
     'use strict';
     var KEY = 'mafia-mode', q = /[?&]mode=discord\b/.test(location.search);
+    // «شاشة المباراة» على جهاز اللاعب (وضع الديسكورد): game.html?watch=<رقم الروم> — مشاهدة بس بدون أي تحكم
+    var watch = (location.search.match(/[?&]watch=(\d{4})\b/) || [])[1] || null;
+    if (watch) {
+        window.MAFIA_MODE = 'discord'; window.MAFIA_WATCH = watch; window.MAFIA_HOME = 'join.html?room=' + watch;
+        window.AGP_GUARD_LOGIN_ONLY = true;
+        document.documentElement.classList.add('mode-discord', 'watch');
+        return;
+    }
     var entry = /\/mafia\/(index\.html)?$/.test(location.pathname);
     var mode = 'tiktok';
     try {
