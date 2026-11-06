@@ -222,7 +222,6 @@ class Component extends DCLogic {
       out.push({x,y,z:40-r,k:+sc.toFixed(3)}); } return out; }
   relayout(){ const now=Date.now(); this.setState(s=>{ const live=s.chars.filter(c=>!c.leaving), sl=this.slots(live.length); let li=0;
       return {chars:s.chars.map(c=>{ if(c.leaving) return c; const t=sl[li++]; if(t.x===c.x&&t.y===c.y) return {...c,z:t.z,k:t.k}; const d=Math.hypot(t.x-c.x,t.y-c.y)/SPEED;
-        this.later(()=>this.forceUpdate(),d*1000+30); this.later(()=>this.forceUpdate(),d*1000+1700);
         return {...c,x:t.x,y:t.y,z:t.z,k:t.k,dur:+d.toFixed(2),walkUntil:now+d*1000}; })}; }); }
   later(f,ms){ (this.tm=this.tm||[]).push(setTimeout(f,ms)); }
   join(name){ const S=this.state; name=String(name||'').trim(); if(!name||S.chars.some(c=>c.name===name&&!c.leaving)) return;
@@ -256,7 +255,8 @@ class Component extends DCLogic {
       ...E,...mv,balD:'block',cardOp:1,dot:col[0],nBg:'rgba(10,14,44,.82)',nBd:'rgba(255,255,255,.18)',nSh:'0 6px 16px rgba(0,0,0,.3)',pips:[]}; }
   renderVals(){ const S=this.state, {W,H,G}=this.dims(), live=S.chars.filter(c=>!c.leaving), o=(i,out)=>S.exitOpenOut?out:i;
     return { scale:S.scale, logW:W, logH:H, groundTop:G, emptyTop:G+40, keyword:S.keyword, followers:S.followers,
-      chars:S.chars.map((c,i)=>({x:c.x,y:c.y,z:c.z,k:c.k||.72,dur:c.dur,p:this.pv(c,i)})),
+      // الشخصيات تنرسم بالمشهد الثري دي (ship3d.js ← sceneJson)، فما نحسب بيانات الشخصيات المرسومة القديمة (pv)
+      chars:[],
       ...this.camVals(W,H), liveN:live.length,
       chips:live.map((c,i)=>({n:i+1,name:c.name,dot:c.col[0],av:this.reg.avatar(c.name)||'',hideImg:e=>{ e.currentTarget.style.display='none'; },showImg:e=>{ e.currentTarget.style.display=''; },remove:e=>{ e.stopPropagation(); this.remove(c.id); },focus:()=>{ this.setState(s=>({focusName:s.focusName===c.name?null:c.name})); return; const {W:w,H:h}=this.dims(); const z=1.6; this.setCam({x:((w-400)/2-(c.x+90*(c.k||.72)))*z*0+((w)/2-(c.x+90*(c.k||.72)))*z-(w/2-w/2), y:(h*.6-(c.y+220*(c.k||.72)))*z-(h*.6-h*.6)*z, z},'.8s'); }})), countTxt:live.length?`${live.length} ${live.length===1?'لاعب':live.length<=10?'لاعبين':'لاعب'} داخل اللوبي`:'ما فيه لاعبين للحين', empty:!live.length,
       sceneJson:JSON.stringify({focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false,vrm:this.reg.vrm(c.name)}; })}),
