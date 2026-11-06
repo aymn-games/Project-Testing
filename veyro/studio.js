@@ -120,7 +120,8 @@
             { label: 'قائمة أرقام', sub: 'تحت بعض', type: 'counter', set: { design: 'stack', metrics: ['likes', 'diamonds', 'follows', 'shares'] } }
         ],
         jar: [
-            { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' }
+            { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
+            { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } }
         ],
         text: [
             { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
@@ -1259,9 +1260,56 @@
         num.addEventListener('input', function () { var v = Math.floor(Number(num.value)); if (v > 0) update(it, 'target', v); });
         box.appendChild(row('الهدف', num));
         box.appendChild(row('لما يوصل ينتقل للي بعده', toggle(it.autoNext, function (v) { update(it, 'autoNext', v); })));
-        box.appendChild(row('التصميم', pills(opts(O.GOAL_DESIGNS), it.design || 'bar', function (v) { update(it, 'design', v, true); })));
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); })));
+        box.appendChild(row('التصميم', pills(opts(O.GOAL_DESIGNS.concat(O.VEYRO_GOAL_DESIGNS)), it.design || 'bar', function (v) {
+            if (v === 'orb' && !it.palette) { it.palette = 'lavender'; it.speed = 'normal'; it.bubbles = true; }
+            update(it, 'design', v, true);
+        })));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, it.design === 'orb' ? 'فاضي = بدون عنوان' : ''));
+        if (it.design === 'orb') { orbProps(it, box); return; }
         sizeColor(it, box, 1.5, 9);
+    }
+
+    /** «كرة القمر»: الألوان (لوحات جاهزة + كل لون لحاله)، سرعة الموج، الفقاعات، والأرقام. */
+    function orbProps(it, box) {
+        box.appendChild(el('div', 'ob-hint', 'تتعبّى حسب ' + (it.metric === 'diamonds' ? 'دعم تيك توك (العملات)' : O.METRICS[it.metric] ? O.METRICS[it.metric].name : '') + '. دعم الدونيشن يتربط قريباً مع Streamlabs.'));
+        var pg = el('div', 'vo-pals');
+        Object.keys(O.ORB_PALETTES).forEach(function (k) {
+            var pal = O.ORB_PALETTES[k];
+            var b = button('', 'vo-pal' + ((it.palette || 'lavender') === k && !(it.orb && Object.keys(it.orb).length) ? ' on' : ''), function () { it.orb = {}; update(it, 'palette', k, true); });
+            var dot = el('i');
+            dot.style.background = 'linear-gradient(180deg,' + pal.top + ',' + pal.bottom + ')';
+            dot.style.boxShadow = '0 0 0 2px ' + pal.ring;
+            b.appendChild(dot);
+            b.appendChild(el('span', null, pal.label));
+            pg.appendChild(b);
+        });
+        box.appendChild(row('الألوان', pg, true));
+        var cur = O.orbColors(it);
+        function colorPick(label, key) {
+            var w = el('label', 'vo-cp');
+            var inp = document.createElement('input');
+            inp.type = 'color';
+            inp.value = cur[key];
+            inp.addEventListener('input', function () { it.orb = Object.assign({}, it.orb || {}); it.orb[key] = inp.value; commit(); rebuildNode(it); });
+            w.appendChild(inp);
+            w.appendChild(el('span', null, label));
+            return w;
+        }
+        var cg = el('div', 'vo-cps');
+        [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], ['الحلقة', 'ring'], ['التوهّج', 'glow'], ['القمر', 'moon'], ['الغيوم', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
+        box.appendChild(row('كل لون لحاله', cg, true, 'يبدأ من اللوحة اللي اخترتها'));
+        box.appendChild(row('حركة الموج', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], it.speed || 'normal', function (v) { update(it, 'speed', v, true); })));
+        box.appendChild(row('فقاعات', toggle(it.bubbles !== false, function (v) { update(it, 'bubbles', v); })));
+        box.appendChild(row('الأرقام تحت', toggle(it.showNums !== false, function (v) { update(it, 'showNums', v, true); })));
+        if (it.showNums !== false) box.appendChild(row('النسبة ٪', toggle(Boolean(it.showPct), function (v) { update(it, 'showPct', v); })));
+        box.appendChild(row('الحجم', slider(1.5, 12, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        box.appendChild(row('جرّب التعبئة', (function () {
+            var w = el('div', 'ob-pills');
+            [['ربع', 0.25], ['نص', 0.5], ['كامل', 1]].forEach(function (x) {
+                w.appendChild(button(x[0], 'ob-pill', function () { O.orbDemo(nodes[it.id], x[1]); }));
+            });
+            return w;
+        })(), true, 'يورّيك حركة السائل وهو يتعبّى (بالمعاينة بس)'));
     }
 
     function counterProps(it, box) {

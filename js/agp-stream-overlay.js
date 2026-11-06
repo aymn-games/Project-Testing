@@ -993,6 +993,13 @@
 
     /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
     function refreshItem(node, it) {
+        // كرة القمر: نحدّث المستوى بس (الموج يكمل) — لو تغيّر شكلها نعيد البناء
+        if (node && node._orb && it.type === 'goal' && it.design === 'orb') {
+            if (node._orb.sig !== JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title])) return false;
+            node._orb.it = it;
+            paintOrb(node, true);
+            return true;
+        }
         if (!node || !node._throne || !isTopLive(it) || it.design !== node._throne.it.design || liveCount(it) !== node._throne.n) return false;
         node._throne.it = it;
         paintThrone(node, true);
@@ -1053,6 +1060,8 @@
     // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
     var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }, { key: 'stack', label: 'القائمة', max: 10, multi: true }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
+    // تصاميم أهداف Veyro بس: «كرة القمر» (سائل يتعبّى)
+    var VEYRO_GOAL_DESIGNS = [{ key: 'orb', label: 'كرة القمر' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
     // أليرتات «شاشات البث»: msg = النص الافتراضي ({name} {gift} {count} {diamonds})
@@ -1143,7 +1152,139 @@
         return preview ? { t: SAMPLE_TOTALS, ghost: true } : { t: {}, ghost: false };
     }
 
+    /* ---------------- «كرة القمر»: هدف بسائل يتموّج ويتعبّى (Veyro) ---------------- */
+
+    // لوحات ألوان جاهزة: سائل (فوق ← تحت)، الحلقة، القمر، الغيوم، التوهّج
+    var ORB_PALETTES = {
+        lavender: { label: 'بنفسجي', top: '#a68bff', bottom: '#3b2a86', ring: '#c9b8f2', moon: '#f1ecff', cloud: '#2b2156', glow: '#9a7cff' },
+        rose: { label: 'وردي', top: '#ff8ac6', bottom: '#7a1e5c', ring: '#ffc2e0', moon: '#fff0f7', cloud: '#3a1530', glow: '#ff6fb5' },
+        ocean: { label: 'محيط', top: '#5fd4ff', bottom: '#0f3d86', ring: '#b5e8ff', moon: '#eefaff', cloud: '#10264a', glow: '#3cc3ff' },
+        gold: { label: 'ذهبي', top: '#ffd77a', bottom: '#8a5a12', ring: '#ffe7ad', moon: '#fff8e6', cloud: '#3a2a10', glow: '#ffc64a' },
+        mint: { label: 'نعناعي', top: '#7cffc8', bottom: '#0f6b5a', ring: '#b8ffe2', moon: '#effff8', cloud: '#103a33', glow: '#45f0b0' },
+        fire: { label: 'ناري', top: '#ffb347', bottom: '#b3122e', ring: '#ffd1a1', moon: '#fff3e8', cloud: '#3d1414', glow: '#ff6a3d' }
+    };
+    var ORB_SPEEDS = { slow: 1.6, normal: 1, fast: 0.6 };
+    var orbSeq = 0;
+
+    function orbColors(it) {
+        var pal = ORB_PALETTES[it.palette] || ORB_PALETTES.lavender;
+        var c = Object.assign({}, pal);
+        ['top', 'bottom', 'ring', 'moon', 'cloud', 'glow'].forEach(function (k) {
+            var v = it.orb && it.orb[k];
+            if (/^#[0-9a-f]{6}$/i.test(v || '')) c[k] = v;
+        });
+        return c;
+    }
+
+    /** موجة: من -200 لين 400 (طولها 600 = 3 دورات قابلة للتكرار)، y = 0 عند القمة. */
+    function wavePath(amp) {
+        var d = 'M-200 0';
+        for (var x = -200; x < 400; x += 100) d += ' q25 ' + (-amp) + ' 50 0 t50 0';
+        return d + ' L400 260 L-200 260 Z';
+    }
+
+    function buildOrb(node, it, preview) {
+        var id = 'agpso' + (++orbSeq);
+        var c = orbColors(it);
+        var sp = ORB_SPEEDS[it.speed] || 1;
+        node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-orb';
+        if (it.title) node.appendChild(el('div', 'agp-so-otitle', it.title));
+        var wrap = el('div', 'agp-so-orb');
+        wrap.style.setProperty('--og', c.glow);
+        wrap.style.setProperty('--osp', sp);
+        var stars = '';
+        [[132, 62, 3.4, 0], [158, 98, 2.6, 1.2], [118, 112, 2.2, 2.1], [150, 128, 2.8, .6], [86, 56, 2, 1.7], [168, 140, 1.8, 2.6], [70, 92, 1.6, .9]].forEach(function (s, i) {
+            stars += i === 0
+                ? '<path class="agp-so-otw" style="animation-delay:-' + s[3] + 's" d="M' + s[0] + ' ' + (s[1] - 14) + 'q2 12 14 14q-12 2 -14 14q-2 -12 -14 -14q12 -2 14 -14z" fill="#fff"/>'
+                : '<circle class="agp-so-otw" style="animation-delay:-' + s[3] + 's" cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] / 1.6 + '" fill="#fff"/>';
+        });
+        stars += '<path class="agp-so-otw" style="animation-delay:-1.4s" d="M126 104q1.2 6 7 7q-5.8 1 -7 7q-1.2 -6 -7 -7q5.8 -1 7 -7z" fill="#fff"/>';
+        var bubbles = '';
+        if (it.bubbles !== false) {
+            [[62, 9, 0], [96, 7, 2.2], [128, 11, 1.1], [146, 8, 3.1], [80, 10, 4.2], [112, 6, 5]].forEach(function (b) {
+                bubbles += '<circle class="agp-so-obub" style="animation-delay:-' + b[2] + 's;animation-duration:' + (b[1] * 0.75) + 's" cx="' + b[0] + '" cy="196" r="' + (2 + b[1] / 5) + '"/>';
+            });
+        }
+        wrap.innerHTML =
+            '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+            '<defs>' +
+            '<clipPath id="' + id + 'c"><circle cx="100" cy="100" r="88"/></clipPath>' +
+            '<linearGradient id="' + id + 'l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c.top + '"/><stop offset="1" stop-color="' + c.bottom + '"/></linearGradient>' +
+            '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + c.ring + '"/><stop offset=".5" stop-color="' + c.glow + '"/><stop offset="1" stop-color="' + c.ring + '"/></linearGradient>' +
+            '<linearGradient id="' + id + 'm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="' + c.moon + '"/></linearGradient>' +
+            '<mask id="' + id + 'k"><rect width="200" height="200" fill="#000"/><circle cx="92" cy="100" r="54" fill="#fff"/><circle cx="116" cy="88" r="46" fill="#000"/></mask>' +
+            '<radialGradient id="' + id + 'g" cx=".5" cy=".5" r=".5"><stop offset=".7" stop-color="' + c.glow + '" stop-opacity="0"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity=".55"/></radialGradient>' +
+            '</defs>' +
+            '<g clip-path="url(#' + id + 'c)">' +
+            '<rect width="200" height="200" fill="#07050f"/>' +
+            '<circle cx="100" cy="100" r="88" fill="url(#' + id + 'g)"/>' +
+            stars +
+            '<g class="agp-so-omoon"><rect width="200" height="200" fill="url(#' + id + 'm)" mask="url(#' + id + 'k)"/></g>' +
+            '<g class="agp-so-ocloud" fill="' + c.cloud + '" stroke="' + c.ring + '" stroke-opacity=".35" stroke-width="1.2">' +
+            '<path d="M8 150c0-14 12-24 26-22 4-12 20-17 30-8 8-8 24-5 27 7 12-2 22 8 20 20 10 1 16 10 14 19H8z"/>' +
+            '<path d="M120 172c-1-10 8-17 17-15 5-9 18-10 24-2 9-4 20 3 19 13 7 2 12 8 11 15h-71z"/>' +
+            '</g>' +
+            // السائل: مجموعة تنزل/تطلع حسب النسبة، وفيها موجتين تتحرك عكس بعض
+            '<g class="agp-so-olvl" style="transform:translateY(200px)">' +
+            '<g class="agp-so-ow2"><path d="' + wavePath(5) + '" fill="' + c.top + '" opacity=".45"/></g>' +
+            '<g class="agp-so-ow1"><path d="' + wavePath(7) + '" fill="url(#' + id + 'l)" opacity=".82"/></g>' +
+            '<g class="agp-so-obubs" fill="#fff" fill-opacity=".55">' + bubbles + '</g>' +
+            '</g>' +
+            // لمعة الزجاج
+            '<path d="M38 70a66 66 0 0 1 46-46" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>' +
+            '<path d="M34 92a68 68 0 0 1 3-10" stroke="#fff" stroke-opacity=".22" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+            '</g>' +
+            '<circle class="agp-so-oring" cx="100" cy="100" r="90" fill="none" stroke="url(#' + id + 'r)" stroke-width="3.2"/>' +
+            '</svg>';
+        node.appendChild(wrap);
+        var nums = el('div', 'agp-so-onums');
+        node.appendChild(nums);
+        node._orb = { it: it, preview: preview, wrap: wrap, lvl: wrap.querySelector('.agp-so-olvl'), nums: nums, pct: -1, sig: JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title]) };
+        paintOrb(node, false);
+    }
+
+    /** تجربة بالمحرر: السائل يطلع لنسبة p (مع موجة)، ويرجع للحقيقي بعد 4 ثواني. */
+    function orbDemo(node, p) {
+        var o = node && node._orb;
+        if (!o) return;
+        clearTimeout(o.demoT);
+        o.lvl.style.transform = 'translateY(' + (190 - clamp(p, 0, 1) * 182).toFixed(1) + 'px)';
+        o.wrap.classList.remove('bump'); void o.wrap.offsetWidth; o.wrap.classList.add('bump');
+        o.wrap.classList.toggle('full', p >= 1);
+        o.demoT = setTimeout(function () { o.pct = -1; paintOrb(node, false); }, 4000);
+    }
+
+    /** يحدّث مستوى السائل والأرقام (بدون ما يعيد بناء الرسمة — الموج يكمل حركته). */
+    function paintOrb(node, animate) {
+        var o = node._orb, it = o.it;
+        var m = METRICS[it.metric] ? it.metric : 'diamonds';
+        var tt = totalsFor(o.preview);
+        var cur = Number(tt.t[m]) || 0;
+        var target = Math.max(1, Number(it.target) || 1000);
+        if (it.autoNext && cur >= target) target = target * (Math.floor(cur / target) + 1);
+        var pct = clamp(cur / target, 0, 1);
+        // بالمعاينة بدون بيانات: نص الكرة عشان يبان شكل السائل
+        if (tt.ghost) pct = 0.55;
+        // المستوى: 0٪ = تحت الدائرة (y 190)، 100٪ = فوقها (y 8)
+        var y = 190 - pct * 182;
+        o.lvl.style.transform = 'translateY(' + y.toFixed(1) + 'px)';
+        if (animate && o.pct >= 0 && pct > o.pct) {
+            o.wrap.classList.remove('bump'); void o.wrap.offsetWidth; o.wrap.classList.add('bump');
+        }
+        o.wrap.classList.toggle('full', pct >= 1);
+        o.pct = pct;
+        o.nums.textContent = '';
+        if (it.showNums !== false) {
+            var done = cur >= target && !it.autoNext;
+            o.nums.appendChild(icon(METRICS[m].icon));
+            o.nums.appendChild(el('span', null, done ? 'اكتمل! ' + fmt(cur) : fmt(cur) + ' / ' + fmt(target)));
+            if (it.showPct) o.nums.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
+        }
+        node.classList.toggle('agp-so-ghost', Boolean(tt.ghost));
+    }
+
     function fillGoal(node, it, preview) {
+        if (it.design === 'orb') { buildOrb(node, it, preview); return; }
         var m = METRICS[it.metric] ? it.metric : 'likes';
         var tt = totalsFor(preview);
         var cur = Number(tt.t[m]) || 0;
@@ -2456,6 +2597,34 @@
         '.agp-so-vpart.pout{animation:agp-so-p-out .35s ease both}',
         '.agp-so-vbox.out{animation:agp-so-a-out .35s ease both}',
         '.agp-so-vbox.novideo video,.agp-so-vbox.novideo canvas{display:none}',
+        // كرة القمر
+        '.agp-so-goal.d-orb{display:flex;flex-direction:column;align-items:center;gap:.3em}',
+        '.agp-so-otitle{font-weight:800;font-size:.9em;color:#fff;text-shadow:0 .05em .2em rgba(0,0,0,.8)}',
+        '.agp-so-orb{position:relative;width:9em;height:9em;filter:drop-shadow(0 0 .5em color-mix(in srgb,var(--og) 45%,transparent))}',
+        '.agp-so-orb svg{width:100%;height:100%;display:block;overflow:visible}',
+        '.agp-so-olvl{transition:transform 1.8s cubic-bezier(.3,.9,.3,1)}',
+        '.agp-so-ow1{animation:agp-so-wave calc(5.5s*var(--osp)) linear infinite}',
+        '.agp-so-ow2{animation:agp-so-wave2 calc(8s*var(--osp)) linear infinite}',
+        '.agp-so-ow1 path,.agp-so-ow2 path{animation:agp-so-swell calc(4s*var(--osp)) ease-in-out infinite alternate;transform-origin:100px 0}',
+        '.agp-so-orb.bump .agp-so-ow1 path,.agp-so-orb.bump .agp-so-ow2 path{animation:agp-so-splash .9s ease-out}',
+        '.agp-so-obub{animation:agp-so-bub 6s linear infinite}',
+        '.agp-so-otw{animation:agp-so-tw 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
+        '.agp-so-omoon{animation:agp-so-float 7s ease-in-out infinite}',
+        '.agp-so-oring{transition:stroke-width .4s}',
+        '.agp-so-orb.full{animation:agp-so-ofull 2.2s ease-in-out infinite}',
+        '.agp-so-orb.full .agp-so-oring{stroke-width:4.6}',
+        '.agp-so-onums{display:inline-flex;align-items:center;gap:.35em;padding:.2em .8em;border-radius:999px;font-weight:800;font-size:.75em;direction:ltr;color:#fff;background:rgba(10,8,20,.6);border:.06em solid color-mix(in srgb,var(--og,#a68bff) 50%,transparent)}',
+        '.agp-so-onums:empty{display:none}',
+        '.agp-so-onums svg{width:1em;height:1em;color:var(--og,#a68bff)}',
+        '.agp-so-onums b{color:var(--og,#a68bff);margin-inline-start:.2em}',
+        '@keyframes agp-so-wave{from{transform:translateX(0)}to{transform:translateX(-100px)}}',
+        '@keyframes agp-so-wave2{from{transform:translateX(-100px)}to{transform:translateX(0)}}',
+        '@keyframes agp-so-swell{from{transform:scaleY(.7)}to{transform:scaleY(1.25)}}',
+        '@keyframes agp-so-splash{0%{transform:scaleY(1)}30%{transform:scaleY(2.6)}100%{transform:scaleY(1)}}',
+        '@keyframes agp-so-bub{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-150px);opacity:0}}',
+        '@keyframes agp-so-tw{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}',
+        '@keyframes agp-so-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}',
+        '@keyframes agp-so-ofull{0%,100%{filter:drop-shadow(0 0 .5em var(--og))}50%{filter:drop-shadow(0 0 1.3em var(--og))}}',
         '@keyframes agp-so-p-fade{0%{opacity:0}100%{opacity:1}}',
         '@keyframes agp-so-p-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}',
         '@keyframes agp-so-p-up{0%{opacity:0;transform:translate(-50%,10%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
@@ -2563,7 +2732,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
