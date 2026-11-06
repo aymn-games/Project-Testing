@@ -136,6 +136,8 @@ const CLIPS = {}; for (const id in CODED) CLIPS[id] = poseClip('a' + id, ...CODE
 let clipsVersion = 0;
 // للألعاب اللي تشغّل نفس الحركات على هيكل ثاني بنفس أسماء العظام ووضع T (مثل موديلات VRM بحجرة ورقة مقص)
 export function getClip(a) { return CLIPS[a] || null; }
+// أدوات بناء الوضعيات بالكود (نفس اللي فوق) — لحركات خاصة بألعاب ثانية، مثل رقصات الفوز بـ js/agp-vrm-characters.js
+export const POSE_KIT = { newPose, euler, aim, arm, leg, relaxedArms, standLegs, bend, poseClip, wave, HIPS_Y, BONES };
 export function getClipsVersion() { return clipsVersion; }
 
 // ---- الحركات المسجّلة: من JSON (فرق عالمي عن وضع T) إلى دوران محلي لهيكلنا ----

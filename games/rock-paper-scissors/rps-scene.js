@@ -494,7 +494,7 @@ export function createArena(container, opts = {}) {
         switch (c.pose) {
             case 'wave': return 3;
             case 'win': return now - c.poseAt < 1.1 ? 6 : 4;
-            case 'clap': case 'cheer': return 4;
+            case 'clap': case 'cheer': return c.kind === 'podium' ? 'win' : 4; // البطل على المنصة: رقصة الفوز الخاصة بشخصيته
             case 'dance': return 2;
             default: return 0;
         }

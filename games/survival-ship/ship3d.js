@@ -169,6 +169,7 @@ class Ship3D extends HTMLElement {
       const tg=f.target||f.home, dx=tg.x-f.g.position.x, dz=tg.z-f.g.position.z, dist=Math.hypot(dx,dz);
       if(dist>.05){ const st=Math.min(dist,dt*8), w=t*14+f.ph; f.g.position.x+=dx/dist*st; f.g.position.z+=dz/dist*st; f.g.position.y=tg.y; f.g.rotation.y=Math.atan2(dx,dz);
         U.legs[0].rotation.x=Math.sin(w)*.6; U.legs[1].rotation.x=-Math.sin(w)*.6; U.arms[0].rotation.x=-Math.sin(w)*.5; U.arms[1].rotation.x=Math.sin(w)*.5; U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18; continue; }
+      if(d.cheer!=null&&d.cheer===id&&d.win&&U.rig){ f.g.position.y=f.home.y; f.g.rotation.y=0; continue; } // شخصية أنمي فائزة: ثابتة وترقص رقصة الفوز (الكاميرا تدور حولها)
       if(d.cheer!=null&&d.cheer===id){ const c=t*7; f.g.position.y=f.home.y+Math.abs(Math.sin(c*.5))*1.1; U.arms[0].rotation.z=-2.7+Math.sin(c)*.35; U.arms[1].rotation.z=2.7-Math.sin(c)*.35; U.arms[0].rotation.x=U.arms[1].rotation.x=0; U.legs[0].rotation.x=Math.sin(c*.5)*.4; U.legs[1].rotation.x=-Math.sin(c*.5)*.4; f.g.rotation.y+=dt*5; U.head.rotation.z=Math.sin(c)*.15; continue; }
       const cur=focusF===f||(duelOn&&f.duel); f.g.position.y=f.home.y+Math.abs(Math.sin(ph*(cur?1.6:1)))*(cur?.12:.04);
       U.arms[0].rotation.x=Math.sin(ph)*(cur?.5:.15); U.arms[1].rotation.x=-Math.sin(ph)*(cur?.5:.15); U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18; U.head.rotation.z=Math.sin(ph*.5)*.06;
@@ -177,7 +178,7 @@ class Ship3D extends HTMLElement {
     for(const [id,f] of this.figs){ const U=f.g.userData, r=U.rig; if(!r||!f.g.visible) continue; let a=0, m='smile';
       if(f.fallT!=null){ a=f.fallT<1.4?1:5; m='scared'; }
       else { const tg=f.target||f.home; if(Math.hypot(tg.x-f.g.position.x,tg.z-f.g.position.z)>.05) a=1;
-        else if(d.cheer!=null&&d.cheer===id){ a=d.win?6:4; m='laugh'; } else if(focusF===f||(duelOn&&f.duel)) m='focus'; }
+        else if(d.cheer!=null&&d.cheer===id){ a=d.win?'win':4; m='laugh'; } else if(focusF===f||(duelOn&&f.duel)) m='focus'; }
       if(U.vrmAnim!==a){ r.play(a); U.vrmAnim=a; } r.mood(m); r.update(dt); r.sync(); }
     const duelFs=duelOn?d.duel.map(id=>this.figs.get(id)).filter(f=>f&&f.g.visible&&f.fallT==null):[], rings=[this.focusRing,this.focusRing2];
     const ringFs=fallF?[]:duelFs.length?duelFs:focusF?[focusF]:[];

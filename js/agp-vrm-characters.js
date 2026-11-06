@@ -14,7 +14,7 @@
  * makeVrmRig(model, { n }) ← شخصية وحدة:
  *   root (Group تنضاف للمشهد) · bones (عظام بأسماء Mixamo: Hips, Spine, Head, RightArm, RightForeArm, RightHand ...)
  *   play(a): حركات حفلة الميلاد (getClip بـ birthday-party/rig3d.js): 0 وقوف · 1 مشي · 2 سامبا · 3 تلويح
- *     · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 ديسكو · 10 هيب هوب
+ *     · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 ديسكو · 10 هيب هوب · 'win' رقصة الفوز (خاصة بالبنت وخاصة بالولد)
  *   setSpeed(mps) · update(dt) كل إطار · sync() بعد أي تعديل يدوي على bones (ينقل الوضعية للهيكل الفعلي)
  *   mood('smile'|'laugh'|'scared'|'sad'|'focus'): ملامح الوجه من تعابير الموديل نفسه، ورمشة تلقائية
  *   express(kind, sec): تعبير مؤقت ('laugh' أو 'open') · gesture(side, 'rock'|'paper'|'scissors'|'relax'): الأصابع
@@ -24,7 +24,7 @@
  */
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { getClip, getClipsVersion } from '../games/birthday-party/rig3d.js';
+import { getClip, getClipsVersion, POSE_KIT } from '../games/birthday-party/rig3d.js';
 
 const MODELS_BASE = new URL('../assets/characters/', import.meta.url).href;
 
@@ -87,11 +87,98 @@ const SPREAD = { Index: .12, Middle: 0, Ring: -.1, Little: -.2 }; // فتحة ا
 export const WRIST = { v: Math.PI / 2 };
 export const THUMB = [[-.6, -.4, 0], [-.6, -.4, 0], [-.6, -.4, 0]];
 
-// مسار الحركة بارتفاع ورك الموديل
+// ================================================================ رقصات الفوز (خاصة بكل شخصية)
+// rig.play('win'): رقصة البنت أو الولد حسب الموديل. مكتوبة بالكود بنفس أدوات حركات الحفلة (POSE_KIT)،
+// كل رقصة مقاطع تتبدّل بانتقال ناعم (آخر .22ث من كل مقطع يندمج بأول المقطع اللي بعده) وتتكرر بدون قفزة.
+function seqPose(segs) {
+    const K = POSE_KIT, W = .22, total = segs.reduce((a, s) => a + s[0], 0);
+    return [total, (t, P) => {
+        let i = 0, u = t; while (i < segs.length - 1 && u >= segs[i][0]) { u -= segs[i][0]; i++; }
+        const [dur, fn] = segs[i]; fn(u, P);
+        const r = dur - u;
+        if (r < W) {
+            const Pn = K.newPose(); segs[(i + 1) % segs.length][1](0, Pn);
+            const x = 1 - r / W, k = x * x * (3 - 2 * x);
+            for (const b of K.BONES) P.q[b].slerp(Pn.q[b], k);
+            P.hips.lerp(Pn.hips, k);
+        }
+    }];
+}
+const DANCE_DEF = {
+    // البنت «رقصة النجمة»: تمايل ويدين فوق تلوّح ← يدين على الخصر مع هزّة ← لفّة كاملة ويدين مفرودة
+    girl: () => {
+        const { euler, arm, bend, standLegs, wave } = POSE_KIT, TAU2 = Math.PI * 2;
+        return seqPose([
+            [2, (u, P) => {
+                const s = wave(u, 1);
+                euler(P, 'Hips', 0, s * .12, s * .07); euler(P, 'Spine', .02, -s * .1, -s * .08);
+                bend(P, .12 + .1 * Math.abs(wave(u, 2)), s > 0 ? 1 : -1); P.hips.x = s * .05;
+                for (const sd of [1, -1]) arm(P, sd, [.45, .95, .12], [.2 + .45 * wave(u, 2, sd > 0 ? 0 : Math.PI), 1, .1]);
+                euler(P, 'Head', .05, s * .1, -s * .12);
+            }],
+            [1.2, (u, P) => {
+                const s = wave(u, 2);
+                euler(P, 'Hips', 0, 0, s * .1); euler(P, 'Spine', 0, 0, -s * .12);
+                standLegs(P); bend(P, .1 + .08 * Math.abs(s), s > 0 ? 1 : -1); P.hips.x = s * .06;
+                for (const sd of [1, -1]) arm(P, sd, [.75, -.55, -.1], [-.7, .25, .35]);
+                euler(P, 'Head', 0, 0, -s * .15);
+            }],
+            [1.2, (u, P) => {
+                const k = u / 1.2, e = k * k * (3 - 2 * k);
+                euler(P, 'Hips', 0, e * TAU2, 0);
+                standLegs(P); bend(P, .08); P.hips.y += Math.sin(k * Math.PI) * .04;
+                for (const sd of [1, -1]) arm(P, sd, [1, .25, .05], [1, .45, .1]);
+                euler(P, 'Head', -.1, 0, 0);
+            }],
+        ]);
+    },
+    // الولد «رقصة البطل»: يدفع يدينه لفوق مع نطّات ← خطوات شفل ← وضعية «داب» ← يد على الصدر ويأشّر للكاميرا
+    boy: () => {
+        const { euler, arm, leg, bend, standLegs, wave, HIPS_Y } = POSE_KIT;
+        return seqPose([
+            [1.6, (u, P) => {
+                const p = Math.abs(wave(u, 2));
+                euler(P, 'Spine', .05, 0, 0);
+                bend(P, .15 + .2 * p);
+                for (const sd of [1, -1]) arm(P, sd, [.55, .55 + .35 * p, .15], [.1, 1, .05]);
+                euler(P, 'Head', .15 * p, 0, 0);
+            }],
+            [1.2, (u, P) => {
+                const s = wave(u, 2);
+                euler(P, 'Hips', 0, s * .15, 0); euler(P, 'Spine', .08, -s * .1, 0);
+                for (const sd of [1, -1]) { const k = Math.max(0, s * sd); leg(P, sd, [.05, -1, .5 * k], [0, -1, -.2 * k]); }
+                P.hips.y = HIPS_Y - .03 + Math.abs(s) * .03;
+                for (const sd of [1, -1]) arm(P, sd, [.25, -1, -.5 * s * sd], [.15, -.4, .8]);
+            }],
+            [.9, (u, P) => {
+                euler(P, 'Spine', .12, .25, .05);
+                standLegs(P); bend(P, .12);
+                arm(P, -1, [.85, .55, .15], [.8, .62, .15]);
+                arm(P, 1, [-.35, .35, .85], [-.95, .25, .2]);
+                euler(P, 'Head', .45, .35, .15);
+            }],
+            [.8, (u, P) => {
+                euler(P, 'Spine', -.08, 0, 0);
+                standLegs(P);
+                arm(P, 1, [.2, -.2, 1], [-.85, .25, .45]);
+                arm(P, -1, [.35, .15, 1], [.2, .1, 1]);
+                euler(P, 'Head', -.1, 0, 0);
+            }],
+        ]);
+    },
+};
+const DANCES = {};
+function danceClip(kind) {
+    if (DANCES[kind]) return DANCES[kind];
+    const def = DANCE_DEF[kind] || DANCE_DEF.girl, [dur, fn] = def();
+    return (DANCES[kind] = POSE_KIT.poseClip('win-' + kind, dur, fn));
+}
+
+// مسار الحركة بارتفاع ورك الموديل. a رقم (حركات الحفلة) أو 'win' (رقصة الفوز الخاصة بالموديل)
 function clipFor(model, a) {
     const ver = getClipsVersion(), key = a + ':' + ver;
     if (model.clips.has(key)) return model.clips.get(key);
-    const src = getClip(a); if (!src) return null;
+    const src = a === 'win' ? danceClip(model.kind) : getClip(a); if (!src) return null;
     const k = model.hipsY / RIG_HIPS;
     const tracks = src.tracks.map(t => {
         if (t.name !== 'Hips.position') return t;
@@ -129,7 +216,7 @@ export function makeVrmRig(model, { n = 0 } = {}) {
     function action(a) {
         if (ver !== getClipsVersion()) { for (const k in actions) { if (actions[k] !== curAction) mixer.uncacheAction(actions[k].getClip()); delete actions[k]; } ver = getClipsVersion(); }
         const clip = clipFor(model, a); if (!clip) return null;
-        return actions[a] || (actions[a] = mixer.clipAction(clip).setLoop(LOOPED.has(a) ? T.LoopRepeat : T.LoopOnce, Infinity));
+        return actions[a] || (actions[a] = mixer.clipAction(clip).setLoop(LOOPED.has(a) || a === 'win' ? T.LoopRepeat : T.LoopOnce, Infinity));
     }
     function play(a) {
         if (a === 11) a = 0;
