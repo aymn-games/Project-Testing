@@ -36,6 +36,11 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 button{font-family:inherit}
 input::placeholder{color:#6f6a7c}
 [data-noscroll]::-webkit-scrollbar{display:none}
+@keyframes reviveIn{0%{opacity:0;transform:scale(.55) translateY(30px);filter:grayscale(1) blur(6px)}60%{opacity:1;transform:scale(1.08);filter:none}100%{opacity:1;transform:none;filter:none}}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 6px rgba(52,211,153,.16), 0 0 30px rgba(52,211,153,.45)}50%{box-shadow:0 0 0 14px rgba(52,211,153,.08), 0 0 70px rgba(52,211,153,.75)}}
+@keyframes glowSweep{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+@keyframes heartBeat{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1.3)}45%{transform:scale(.95)}60%{transform:scale(1.15)}75%,100%{opacity:1;transform:scale(1)}}
+@keyframes heartFloat{0%{opacity:0;transform:translateY(0) scale(.6)}15%{opacity:.9}100%{opacity:0;transform:translateY(-260px) scale(1.1) rotate(var(--r))}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
 @keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
@@ -545,6 +550,27 @@ input::placeholder{color:#6f6a7c}
     </div>
   </sc-if>
 
+  <sc-if value="{{ revOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:80px 0 0 0;z-index:80;background:radial-gradient(circle at 50% 50%, rgba(16,185,129,.18), rgba(0,0,0,.6) 55%);backdrop-filter:blur(8px);display:grid;place-items:center;animation:{{ revOv }}">
+      <div style="position:relative;overflow:hidden;width:250px;height:350px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;padding:22px 18px 20px;border-radius:30px;background:linear-gradient(180deg, #0b2a21 0%, #08140f 70%);border:1px solid rgba(52,211,153,.45);box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 70px rgba(16,185,129,.28), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;animation:{{ revAn }}">
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 38%, rgba(52,211,153,.28), transparent 55%);pointer-events:none"></div>
+        <div style="position:absolute;left:-30%;right:-30%;bottom:-45%;height:70%;background:radial-gradient(ellipse at 50% 100%, rgba(52,211,153,.3), transparent 65%);pointer-events:none;animation:glowSweep 1s ease both"></div>
+        {{ revHearts }}
+        <span style="position:relative;display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'IBM Plex Sans Arabic';color:#6ee7b7;letter-spacing:.3px;animation:glowSweep .4s ease both">عودة للعبة</span>
+        <div style="position:relative;flex:1;display:grid;place-items:center">
+          <div style="position:relative;width:128px;height:128px;display:grid;place-items:center;animation:reviveIn .8s cubic-bezier(.2,1.2,.35,1) .15s both">
+            <span style="position:absolute;inset:0;border-radius:50%;border:1.5px dashed rgba(110,231,183,.45)"></span>
+            <span style="width:108px;height:108px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#10b981,#065f46);border:3px solid #34d399;font:700 44px 'IBM Plex Sans Arabic';color:#fff;animation:ringPulse 1.4s ease-in-out 1s infinite;position:relative;overflow:hidden">{{ revIni }}<img src="{{ revAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:{{ revOp }}"></span>
+            {{ revHeart }}
+          </div>
+        </div>
+        <span style="position:relative;max-width:100%;font:700 24px/1.3 'IBM Plex Sans Arabic';color:#ecfdf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:glowSweep .5s ease .45s both">{{ revName }}</span>
+        <span style="position:relative;width:40px;height:2px;margin:10px 0;border-radius:2px;background:linear-gradient(90deg,transparent,#34d399,transparent);animation:glowSweep .5s ease .55s both"></span>
+        <span style="position:relative;font:600 14px 'IBM Plex Sans Arabic';color:#6ee7b7;animation:glowSweep .5s ease .65s both">{{ revBadge }}</span>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:96px;left:50%;transform:translateX(-50%);z-index:80;padding:12px 24px;border-radius:999px;background:rgba(12,11,18,.95);border:1px solid rgba(255,255,255,.14);color:#f4f2f8;font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .3s ease;white-space:nowrap">{{ toast }}</div>
   </sc-if>
@@ -592,7 +618,7 @@ class Component extends DCLogic {
     this.state.players.forEach(p=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(p.name)); }catch(e){} });
     this._iv=setInterval(()=>this.tick(),1000); this._av=setInterval(()=>{ if(this.canAuto()) this.spin(); },250);
     RR.connect(); this.unsub=RR.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=RR.onGift(p=>this.onGift(p)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearTimeout(this._rvt); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
   // بداية المباراة الفعلية (للنقاط) + كل من شارك فيها
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players.map(p=>p.name)); }
   // اللعب التلقائي: ينتظر ثانيتين بعد انتهاء الدور واختفاء كل النوافذ
@@ -607,7 +633,7 @@ class Component extends DCLogic {
   P(id){ return this.state.players.find(p=>p.id===id); }
   alive(s=this.state){ return s.players.filter(p=>p.alive); }
   wheelList(s=this.state){ return s.order.map(id=>s.players.find(p=>p.id===id)).filter(p=>p&&p.alive); }
-  busy(s=this.state){ return s.spinning||!!s.phase||!!s.awaiting||!!s.warn; }
+  busy(s=this.state){ return s.spinning||!!s.phase||!!s.awaiting||!!s.warn||!!s.revOpen; }
   now(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   addLog(e){ this.setState(s=>({log:[{...e,time:this.now()},...s.log]})); }
 
@@ -696,9 +722,12 @@ class Component extends DCLogic {
   flushSup(){ if(!this._supQ||!this._supQ.size||this.busy()||this.state.phase==='win') return; const ids=[...this._supQ]; this._supQ.clear(); ids.forEach(id=>this.supRevive(id)); }
   supRevive(id){ const s=this.state, t=this.P(id); if(!t||t.alive||!s.supOn||(s.supUsed[id]||0)>=s.supCount) return; this.participants.add(t.name);
     this.setState(st=>({players:st.players.map(p=>p.id===id?{...p,alive:true,hearts:st.cfg.chambers}:p),supUsed:{...st.supUsed,[id]:(st.supUsed[id]||0)+1},idleAt:Date.now()}));
-    const g=GIFTS.find(x=>x.id===s.supType); this.addLog({type:'support',a:t.name,v:'رجع للعبة عن طريق الدعم',tail:g?'('+g.name+')':''}); this.toastMsg(`${t.name} رجع للعبة عن طريق الدعم`);
-    [523.25,783.99].forEach((f,i)=>setTimeout(()=>this.tone(f,.18,'sine',.12),i*120)); }
-  revive(id){ if(this.busy()) return this.toastMsg('انتظر انتهاء الدور الحالي'); const t=this.P(id); this.participants.add(t.name); this.setState(st=>({players:st.players.map(p=>p.id===id?{...p,alive:true,hearts:st.cfg.chambers}:p)})); this.addLog({type:'revive',a:'تم إرجاع',b:t.name,tail:'يدوياً'}); this.toastMsg(`${t.name} رجع للعبة`); }
+    const g=GIFTS.find(x=>x.id===s.supType); this.addLog({type:'support',a:t.name,v:'رجع للعبة عن طريق الدعم',tail:g?'('+g.name+')':''}); this.showRevive(t.name,'support'); }
+  // بطاقة «عودة للعبة» (نفس روليت الإقصاء) — 3 ثواني، والدور التالي ينتظرها (busy)
+  showRevive(name,kind){ clearTimeout(this._rvt); this.setState(s=>({revOpen:true,revOpenOut:false,revName:name,revKind:kind,revRun:(s.revRun||0)+1}));
+    this.tone(660,.12,'triangle'); setTimeout(()=>this.tone(990,.25,'triangle'),110);
+    this._rvt=setTimeout(()=>{ this.shut('revOpen'); setTimeout(()=>this.setState({idleAt:Date.now()}),280); },3000); }
+  revive(id){ if(this.busy()) return this.toastMsg('انتظر انتهاء الدور الحالي'); const t=this.P(id); this.participants.add(t.name); this.setState(st=>({players:st.players.map(p=>p.id===id?{...p,alive:true,hearts:st.cfg.chambers}:p)})); this.addLog({type:'revive',a:'تم إرجاع',b:t.name,tail:'يدوياً'}); if(this.state.setOpen) this.shut('setOpen'); setTimeout(()=>this.showRevive(t.name,'manual'),this.state.setOpen?280:0); }
   saveSettings=()=>{ const s=this.state, d=s.draft; if(d.bullets>d.chambers) return this.toastMsg('عدد الطلقات لازم ما يزيد عن حجم الساقية');
     const hit=this.alive().filter(p=>d.chambers-(s.cfg.chambers-p.hearts)<=0); if(hit.length) return this.setState({warn:hit.map(p=>p.id)}); this.applySettings(); };
   applySettings(){ const s=this.state, d=s.draft, old=s.cfg.chambers, out=[];
@@ -789,6 +818,10 @@ class Component extends DCLogic {
           openSup:()=>this.setState({supPick:true}), supPick:!!s.supPick, closeSup:()=>this.shut('supPick'),
           supOv:s.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:s.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
           supCols:innerWidth>=900?6:5, supList:GIFTS.map(x=>({name:x.name,img:x.img,coins:x.coins,bd:x.id===s.supType?'#a78bfa':'rgba(255,255,255,.08)',bg:x.id===s.supType?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.setState({supType:x.id,supOn:true}); this.shut('supPick'); }})) }; })(),
+      revOpen:!!s.revOpen, revName:s.revName||'', revIni:ini(s.revName), revAv:A(s.revName).av, revOp:A(s.revName).op, revBadge:s.revKind==='support'?'عاد عن طريق الدعم':'أرجعه الاستريمر',
+      revOv:s.revOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', revAn:s.revOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
+      revHeart:React.createElement('span',{key:'hb'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',bottom:-2,left:-2,width:42,height:42,borderRadius:'50%',display:'grid',placeItems:'center',background:'#08140f',border:'2px solid rgba(52,211,153,.6)',fontSize:22,lineHeight:1,animation:'heartBeat 1s cubic-bezier(.2,1.3,.4,1) .7s both'}},'💚'),
+      revHearts:React.createElement('div',{key:'hf'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none'}},[[18,.6,'-12deg',14],[72,.9,'10deg',18],[40,1.2,'-6deg',12],[85,1.4,'14deg',14],[8,1.1,'8deg',16],[58,.75,'-14deg',12]].map(([x,d,r,fs],i)=>React.createElement('span',{key:i,style:{position:'absolute',left:x+'%',bottom:20,fontSize:fs,'--r':r,animation:`heartFloat 1.6s ease-out ${d}s both`}},'💚'))),
       tabSettings:s.tab==='settings', tabPlayers:s.tab==='players', saveSettings:this.saveSettings, saveOp:JSON.stringify(d)===JSON.stringify(c)?.5:1,
       setRows:[
         row({label:'شكل الاختيار',isSeg:true,hint:'يتغيّر فوراً · ما يشتغل أثناء الدوران أو دور مفتوح',opts:[['wheel','روليت'],['reel','سكرول']].map(([id,l])=>({label:l,pick:()=>{ if(this.busy()) return this.toastMsg('انتظر انتهاء الدور الحالي'); this.setState({mode:id,landedId:null}); },bg:s.mode===id?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:s.mode===id?'#fff':'#a8a3b5'}))}),
