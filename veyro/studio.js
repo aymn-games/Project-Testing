@@ -121,6 +121,7 @@
         ],
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
+            { label: 'آخر داعم', sub: 'كبسولة لامعة: اسمه يتحرك وقيمة دعمه ثابتة، وفراشات حولها', type: 'jar', set: { design: 'last', title: '', palette: 'silver', nameAnim: 'marquee', altText: 'آخر داعم 💜', cycle: 4, speed: 1, wave: true, butterflies: 2, width: 16, size: 2.6 } },
             { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } }
         ],
         text: [
@@ -1325,6 +1326,7 @@
     }
 
     function jarProps(it, box) {
+        if (it.design === 'last') { lastProps(it, box); return; }
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري'));
         box.appendChild(row('تحت الوعاء', pills([{ label: 'مجموع الماس', value: 'diamonds' }, { label: 'عدد الهدايا', value: 'gifts' }, { label: 'بدون', value: 'none' }], it.counter || 'diamonds', function (v) { update(it, 'counter', v, true); }), true));
         sizeColor(it, box, 1, 8);
@@ -1332,6 +1334,63 @@
         demo.appendChild(button('جرّب سقوط هدايا', 'ob-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'ob-btn ghost', function () { O.jarClearDemo(); }));
         box.appendChild(demo);
+    }
+
+    /** «آخر داعم»: حركة الاسم، النص الثاني، الألوان والتموّج، الفراشات، والعرض. */
+    function lastProps(it, box) {
+        var demo = el('div', 'ob-actions');
+        demo.appendChild(button('جرّب داعم جديد', 'ob-btn primary', function () { O.lastDemo(); }));
+        box.appendChild(demo);
+        box.appendChild(el('div', 'ob-hint', 'يطلع فيها آخر واحد دعم بعملات تيك توك (اسمه وقيمة هديته). دعم الدونيشن ينضاف لما نربط Streamlabs.'));
+        box.appendChild(row('حركة الاسم', pills(opts(O.LAST_ANIMS), it.nameAnim || 'marquee', function (v) { update(it, 'nameAnim', v, true); }), true));
+        box.appendChild(row(it.nameAnim === 'marquee' || !it.nameAnim ? 'نص يمشي مع الاسم' : 'يتبدّل مع الاسم', textInput(it.altText == null ? 'آخر داعم 💜' : it.altText, 40, function (v) { update(it, 'altText', v); }), true, 'فاضي = الاسم بس'));
+        if (it.nameAnim === 'marquee' || !it.nameAnim) {
+            box.appendChild(row('سرعة الشريط', pills([{ label: 'سريع', value: 0.6 }, { label: 'عادي', value: 1 }, { label: 'هادي', value: 1.6 }], Number(it.speed) || 1, function (v) { update(it, 'speed', v, true); })));
+        } else if (it.nameAnim !== 'shine') {
+            box.appendChild(row('كل كم ثانية يتبدّل', pills([2, 3, 4, 6, 8].map(function (n) { return { label: n + ' ث', value: n }; }), Number(it.cycle) || 4, function (v) { update(it, 'cycle', v, true); })));
+        }
+        var pg = el('div', 'vo-pals');
+        Object.keys(O.LAST_PALETTES).forEach(function (k) {
+            var pal = O.LAST_PALETTES[k];
+            var b = button('', 'vo-pal' + ((it.palette || 'silver') === k && !(it.lc && Object.keys(it.lc).length) ? ' on' : ''), function () { it.lc = {}; update(it, 'palette', k, true); });
+            var dot = el('i');
+            dot.style.background = 'linear-gradient(180deg,' + pal.l1 + ',' + pal.l3 + ')';
+            dot.style.boxShadow = '0 0 0 2px ' + pal.lo;
+            b.appendChild(dot);
+            b.appendChild(el('span', null, pal.label));
+            pg.appendChild(b);
+        });
+        box.appendChild(row('الألوان', pg, true));
+        var cur = O.lastColors(it);
+        var cg = el('div', 'vo-cps');
+        [['فوق', 'l1'], ['النص', 'l2'], ['تحت', 'l3'], ['الإطار', 'lo'], ['الاسم', 'txt'], ['القيمة', 'val'], ['تموّج ١', 'w1'], ['تموّج ٢', 'w2'], ['تموّج ٣', 'w3']].forEach(function (x) {
+            var w = el('label', 'vo-cp');
+            var inp = document.createElement('input');
+            inp.type = 'color';
+            inp.value = cur[x[1]];
+            inp.addEventListener('input', function () { it.lc = Object.assign({}, it.lc || {}); it.lc[x[1]] = inp.value; commit(); rebuildNode(it); });
+            w.appendChild(inp);
+            w.appendChild(el('span', null, x[0]));
+            cg.appendChild(w);
+        });
+        box.appendChild(row('كل لون لحاله', cg, true, 'يبدأ من اللوحة اللي اخترتها'));
+        box.appendChild(row('تموّج الألوان', toggle(it.wave !== false, function (v) { update(it, 'wave', v); }), false, 'ألوان تمشي على الكبسولة'));
+        box.appendChild(row('الفراشات', pills([0, 1, 2, 3, 4].map(function (n) { return { label: n ? String(n) : 'بدون', value: n }; }), it.butterflies == null ? 2 : Number(it.butterflies), function (v) { update(it, 'butterflies', v, true); })));
+        if ((it.butterflies == null ? 2 : Number(it.butterflies)) > 0) {
+            var bw = el('div', 'vo-cps');
+            var bl = el('label', 'vo-cp');
+            var bi = document.createElement('input');
+            bi.type = 'color';
+            bi.value = /^#[0-9a-f]{6}$/i.test(it.bfColor || '') ? it.bfColor : cur.bf;
+            bi.addEventListener('input', function () { it.bfColor = bi.value; commit(); rebuildNode(it); });
+            bl.appendChild(bi);
+            bl.appendChild(el('span', null, 'لون الفراشات'));
+            bw.appendChild(bl);
+            box.appendChild(row('', bw, true));
+        }
+        box.appendChild(row('العرض', slider(10, 30, 0.5, Number(it.width) || 16, function (v) { update(it, 'width', v); })));
+        box.appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        box.appendChild(row('العنوان فوقها', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري'));
     }
 
     /* ---------------- أليرتات الفيديو: رفع + مكتبة + أداة التفريغ ---------------- */

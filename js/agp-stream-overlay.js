@@ -420,9 +420,9 @@
     function loadJarCache() {
         try {
             var c = JSON.parse(sessionStorage.getItem(JAR_CACHE_KEY) || 'null');
-            if (c && Array.isArray(c.icons)) return { sid: c.sid || 0, seq: Number(c.seq) || 0, icons: c.icons, totals: c.totals || null };
+            if (c && Array.isArray(c.icons)) return { sid: c.sid || 0, seq: Number(c.seq) || 0, icons: c.icons, totals: c.totals || null, recent: Array.isArray(c.recent) ? c.recent : [] };
         } catch (e) { /* ignore */ }
-        return { sid: 0, seq: 0, icons: [], totals: null };
+        return { sid: 0, seq: 0, icons: [], totals: null, recent: [] };
     }
 
     function https(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : null; }
@@ -476,10 +476,13 @@
                 if (d.sid !== jar.sid) {
                     // أول مرة أو بث جديد: اللي موجود يطلع مستقر بدون سقوط
                     jar.icons = expandGifts(d.gifts || []);
+                    jar.recent = [];
                 } else {
                     fresh = expandGifts(d.gifts || []);
                     jar.icons = jar.icons.concat(fresh);
                 }
+                // آخر الهدايا بأسماء أصحابها («آخر داعم»)
+                jar.recent = (jar.recent || []).concat((d.gifts || []).map(function (g) { return { seq: g.seq, user: g.user, diamonds: g.diamonds, count: g.count, name: g.name }; })).slice(-20);
                 if (jar.icons.length > JAR_CAP) jar.icons = jar.icons.slice(jar.icons.length - JAR_CAP);
                 jar.sid = d.sid;
                 jar.seq = Number(d.seq) || 0;
@@ -1412,6 +1415,7 @@
 
     /** يحدّث صور الوعاء: يشيل اللي طلع ويضيف الجديد (fresh = يطيح من فوق). */
     function paintJarNode(node, fresh, preview) {
+        if (node._last) { paintLast(node); return; }
         var pile = node.querySelector('.agp-so-jpile');
         if (!pile) return;
         var real = jar.icons;
@@ -1457,8 +1461,131 @@
         jarNodes.forEach(function (j) { paintJarNode(j.node, fresh, j.preview); });
     }
 
+    /* ---------------- «آخر داعم»: كبسولة لامعة فيها الاسم والقيمة (Veyro — jar.design = 'last') ---------------- */
+
+    // l1/l2/l3 = تدرّج المعدن، lo = الإطار، txt = الاسم، val = القيمة، w = ألوان التموّج، bf = الفراشات
+    var LAST_PALETTES = {
+        silver: { label: 'فضي', l1: '#f6f6f8', l2: '#dcdce2', l3: '#c3c3cb', lo: '#26262c', txt: '#25252d', val: '#18181f', w1: '#c9b8ff', w2: '#8fd8ff', w3: '#ffc2e0', bf: '#b9a8ff' },
+        gold: { label: 'ذهبي', l1: '#fff4cc', l2: '#f3cf69', l3: '#d6a334', lo: '#4d3308', txt: '#3a2504', val: '#261701', w1: '#fff1a8', w2: '#ffb84d', w3: '#ffe08a', bf: '#ffcf4d' },
+        rose: { label: 'وردي', l1: '#ffe6f1', l2: '#f6aacb', l3: '#e47fab', lo: '#541632', txt: '#47112b', val: '#360b20', w1: '#ffd1e6', w2: '#ff8ac6', w3: '#c9b8ff', bf: '#ff7ab8' },
+        lavender: { label: 'بنفسجي', l1: '#f1ecff', l2: '#cbbaf3', l3: '#ab95e4', lo: '#271d50', txt: '#251b4d', val: '#18113a', w1: '#e3d9ff', w2: '#a68bff', w3: '#8fd8ff', bf: '#a68bff' },
+        ocean: { label: 'محيط', l1: '#e6f8ff', l2: '#a3def6', l3: '#69bfe5', lo: '#0d3a56', txt: '#0b2f46', val: '#072234', w1: '#c8f1ff', w2: '#5fd4ff', w3: '#7cffc8', bf: '#5fd4ff' },
+        onyx: { label: 'أسود', l1: '#55545f', l2: '#25242c', l3: '#141319', lo: '#000000', txt: '#ffffff', val: '#ffd54a', w1: '#a68bff', w2: '#ff6fb5', w3: '#5fd4ff', bf: '#c9b8ff' }
+    };
+    var LAST_ANIMS = [
+        { key: 'marquee', label: 'شريط متحرك' }, { key: 'slide', label: 'تبديل لفوق' }, { key: 'fade', label: 'تلاشي' },
+        { key: 'flip', label: 'قلب' }, { key: 'type', label: 'كتابة' }, { key: 'shine', label: 'لمعة' }
+    ];
+    var LAST_SAMPLE = { user: 'أبو فهد', diamonds: 1250, gift: 'وردة', count: 5 };
+
+    function lastColors(it) {
+        var c = Object.assign({}, LAST_PALETTES[it.palette] || LAST_PALETTES.silver);
+        Object.keys(c).forEach(function (k) {
+            var v = it.lc && it.lc[k];
+            if (k !== 'label' && /^#[0-9a-f]{6}$/i.test(v || '')) c[k] = v;
+        });
+        return c;
+    }
+
+    /** آخر داعم من بيانات الوعاء (آخر هدايا البث)، أو مثال بالمعاينة. */
+    var lastDemoGift = null; // «جرّب داعم جديد» بالمحرر (ما ينحفظ)
+    function lastSupporter(preview) {
+        if (preview && lastDemoGift) return lastDemoGift;
+        var r = jar.recent || [];
+        var g = r[r.length - 1];
+        if (g && g.user) return { user: g.user, diamonds: Number(g.diamonds) || 0, gift: g.name, count: g.count, seq: g.seq, sample: false };
+        return preview ? Object.assign({ seq: 'sample', sample: true }, LAST_SAMPLE) : null;
+    }
+
+    var BUTTERFLY = '<svg viewBox="0 0 40 30" aria-hidden="true">' +
+        '<g class="agp-so-bw l"><path d="M20 15C13 2 2 1 3 10c1 5 7 6 10 6-5 2-8 7-4 10 4 2 9-4 11-11z"/></g>' +
+        '<g class="agp-so-bw r"><path d="M20 15C27 2 38 1 37 10c-1 5-7 6-10 6 5 2 8 7 4 10-4 2-9-4-11-11z"/></g>' +
+        '<ellipse cx="20" cy="15.5" rx="1.3" ry="6" fill="#2a2338"/></svg>';
+
+    function buildLast(n, it, preview) {
+        var c = lastColors(it);
+        n.className = n.className.replace(/(^|\s)d-\w+/g, '') + ' d-last';
+        title(n, it.title);
+        var wrap = el('div', 'agp-so-lwrap');
+        var pill = el('div', 'agp-so-lpill' + (it.wave !== false ? ' wave' : ''));
+        [['--l1', c.l1], ['--l2', c.l2], ['--l3', c.l3], ['--lo', c.lo], ['--ltx', c.txt], ['--lval', c.val], ['--w1', c.w1], ['--w2', c.w2], ['--w3', c.w3]].forEach(function (v) { pill.style.setProperty(v[0], v[1]); });
+        pill.style.width = clamp(Number(it.width) || 16, 10, 30) + 'em';
+        var nameBox = el('div', 'agp-so-lname');
+        var val = el('div', 'agp-so-lval');
+        pill.appendChild(nameBox);
+        pill.appendChild(val);
+        wrap.appendChild(pill);
+        var bfN = it.butterflies == null ? 2 : clamp(Math.round(Number(it.butterflies) || 0), 0, 4);
+        for (var i = 0; i < bfN; i++) {
+            var b = el('span', 'agp-so-lbf f' + (i % 4));
+            b.style.color = /^#[0-9a-f]{6}$/i.test(it.bfColor || '') ? it.bfColor : c.bf;
+            b.innerHTML = BUTTERFLY;
+            wrap.appendChild(b);
+        }
+        n.appendChild(wrap);
+        n._last = { it: it, preview: preview, pill: pill, nameBox: nameBox, val: val, sig: null, timer: null };
+        jarNodes = jarNodes.filter(function (j) { return j.node.isConnected; });
+        jarNodes.push({ node: n, preview: preview });
+        paintLast(n);
+    }
+
+    /** يرسم الاسم بحركته (يتعاد بس لما يجي داعم جديد) والقيمة الثابتة. */
+    function paintLast(n) {
+        var L = n._last, it = L.it;
+        var s = lastSupporter(L.preview);
+        n.classList.toggle('agp-so-ghost', Boolean(s && s.sample));
+        var sig = s ? s.seq + '|' + s.user : 'none';
+        if (sig === L.sig) return;
+        var fresh = L.sig != null && s && !s.sample;
+        L.sig = sig;
+        clearInterval(L.timer);
+        var name = s ? s.user : 'بانتظار أول داعم…';
+        var alt = String(it.altText == null ? 'آخر داعم 💜' : it.altText).trim();
+        var mode = LAST_ANIMS.some(function (a) { return a.key === it.nameAnim; }) ? it.nameAnim : 'marquee';
+        var box = L.nameBox;
+        box.className = 'agp-so-lname m-' + mode;
+        box.textContent = '';
+        if (mode === 'marquee') {
+            var mq = el('div', 'agp-so-lmq');
+            mq.appendChild(el('span', null, name));
+            mq.appendChild(el('span', null, alt ? alt : name));
+            mq.appendChild(el('span', null, name));
+            mq.appendChild(el('span', null, alt ? alt : name));
+            mq.style.animationDuration = clamp(Number(it.speed) || 1, 0.4, 3) * Math.max(6, (name.length + alt.length) * 0.55) + 's';
+            box.appendChild(mq);
+        } else if (mode === 'shine') {
+            box.appendChild(el('span', 'agp-so-lt shine', name));
+        } else {
+            // تبديل بين الاسم والنص الثاني كل cycle ثانية
+            var texts = alt ? [name, alt] : [name];
+            var i = 0;
+            var show = function () {
+                if (!box.isConnected && L.timer) { clearInterval(L.timer); return; }
+                var t = el('span', 'agp-so-lt in-' + mode, texts[i % texts.length]);
+                if (mode === 'type') t.style.setProperty('--n', String(texts[i % texts.length]).length);
+                var old = box.querySelector('.agp-so-lt:not(.out)');
+                if (old) { old.classList.add('out', 'out-' + mode); setTimeout(function () { if (old.parentNode) old.remove(); }, 650); }
+                box.appendChild(t);
+                i++;
+            };
+            show();
+            if (texts.length > 1) L.timer = setInterval(show, clamp(Number(it.cycle) || 4, 2, 20) * 1000);
+        }
+        // القيمة ثابتة: عملة + الرقم
+        L.val.textContent = '';
+        if (s) {
+            var coin = document.createElement('img');
+            coin.src = FRAMES_BASE + 'coin.webp'; coin.alt = ''; coin.draggable = false;
+            L.val.appendChild(coin);
+            L.val.appendChild(el('b', null, fmt(s.diamonds)));
+        }
+        L.val.style.display = s ? '' : 'none';
+        if (fresh) { L.pill.classList.remove('flash'); void L.pill.offsetWidth; L.pill.classList.add('flash'); }
+    }
+
     function buildJar(n, it, preview) {
         n.className += ' agp-so-jar';
+        if (it.design === 'last') { buildLast(n, it, preview); return; }
         n._item = it;
         title(n, it.title);
         var wrap = el('div', 'agp-so-jwrap');
@@ -2597,6 +2724,51 @@
         '.agp-so-vpart.pout{animation:agp-so-p-out .35s ease both}',
         '.agp-so-vbox.out{animation:agp-so-a-out .35s ease both}',
         '.agp-so-vbox.novideo video,.agp-so-vbox.novideo canvas{display:none}',
+        // آخر داعم
+        '.agp-so-jar.d-last{display:flex;flex-direction:column;align-items:center;gap:.25em}',
+        '.agp-so-lwrap{position:relative;padding:1.3em 1.4em}',
+        '.agp-so-lpill{position:relative;display:flex;align-items:center;gap:.6em;height:3.2em;box-sizing:border-box;padding:0 .45em 0 1.1em;border-radius:999px;overflow:hidden;direction:rtl;background:linear-gradient(180deg,var(--l1) 0%,var(--l2) 46%,var(--l3) 54%,var(--l2) 82%,var(--l1) 100%);box-shadow:0 0 0 .13em var(--lo),0 0 0 .2em rgba(255,255,255,.35),inset 0 .1em .08em rgba(255,255,255,.95),inset 0 -.16em .22em rgba(0,0,0,.28),0 .4em .9em -.25em rgba(0,0,0,.7)}',
+        '.agp-so-lpill::before{content:"";position:absolute;inset:.22em .9em auto .9em;height:42%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.08));pointer-events:none;z-index:2}',
+        '.agp-so-lpill.wave::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,var(--w1),var(--w2),var(--w3),var(--w1),var(--w2));background-size:300% 100%;mix-blend-mode:soft-light;opacity:.9;animation:agp-so-lwave 6s linear infinite;pointer-events:none;z-index:1}',
+        '.agp-so-lpill.flash{animation:agp-so-lflash .9s ease-out}',
+        '.agp-so-lname{position:relative;z-index:3;flex:1;min-width:0;height:100%;overflow:hidden;display:flex;align-items:center;color:var(--ltx);font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;font-size:1.05em;text-shadow:0 .05em 0 rgba(255,255,255,.55)}',
+        '.agp-so-lname.m-marquee{-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
+        '.agp-so-lmq{display:flex;gap:2.2em;white-space:nowrap;animation:agp-so-lmq 10s linear infinite;padding-inline-start:1em}',
+        '.agp-so-lt{position:absolute;inset-inline:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-lt.shine{position:static;background:linear-gradient(100deg,var(--ltx) 35%,#fff 50%,var(--ltx) 65%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:agp-so-lshine 3s linear infinite}',
+        '.agp-so-lt.in-slide{animation:agp-so-lin-slide .55s cubic-bezier(.2,.9,.3,1) both}',
+        '.agp-so-lt.out-slide{animation:agp-so-lout-slide .5s ease-in both}',
+        '.agp-so-lt.in-fade{animation:agp-so-lin-fade .6s ease both}',
+        '.agp-so-lt.out-fade{animation:agp-so-lout-fade .5s ease both}',
+        '.agp-so-lt.in-flip{animation:agp-so-lin-flip .6s ease both;transform-origin:50% 50%}',
+        '.agp-so-lt.out-flip{animation:agp-so-lout-flip .45s ease-in both;transform-origin:50% 50%}',
+        '.agp-so-lt.in-type{animation:agp-so-ltype calc(var(--n,8)*.09s) steps(var(--n,8)) both}',
+        '.agp-so-lt.out-type{animation:agp-so-lout-fade .3s ease both}',
+        '.agp-so-lval{position:relative;z-index:3;flex:none;display:flex;align-items:center;gap:.3em;height:2.35em;padding:0 .8em 0 .6em;border-radius:999px;direction:ltr;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.15));box-shadow:inset 0 0 0 .07em rgba(0,0,0,.18),inset 0 .08em .05em rgba(255,255,255,.8)}',
+        '.agp-so-lval img{width:1.35em;height:1.35em;object-fit:contain;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.4))}',
+        '.agp-so-lval b{font-weight:900;font-size:1.05em;color:var(--lval);font-variant-numeric:tabular-nums}',
+        '.agp-so-lbf{position:absolute;width:2em;height:1.5em;z-index:4;pointer-events:none;filter:drop-shadow(0 0 .25em currentColor)}',
+        '.agp-so-lbf svg{width:100%;height:100%;overflow:visible;fill:currentColor}',
+        '.agp-so-bw{animation:agp-so-flap .32s ease-in-out infinite alternate;transform-origin:20px 15px}',
+        '.agp-so-lbf.f0{animation:agp-so-bf0 9s ease-in-out infinite}',
+        '.agp-so-lbf.f1{animation:agp-so-bf1 12s ease-in-out infinite;animation-delay:-4s;width:1.6em;height:1.2em}',
+        '.agp-so-lbf.f2{animation:agp-so-bf0 14s ease-in-out infinite reverse;animation-delay:-7s;width:1.4em;height:1.05em}',
+        '.agp-so-lbf.f3{animation:agp-so-bf1 10s ease-in-out infinite reverse;animation-delay:-2s;width:1.7em;height:1.3em}',
+        '@keyframes agp-so-lwave{from{background-position:0 0}to{background-position:-300% 0}}',
+        '@keyframes agp-so-lflash{0%{filter:brightness(1.6) saturate(1.3)}100%{filter:none}}',
+        '@keyframes agp-so-lmq{from{transform:translateX(0)}to{transform:translateX(50%)}}',
+        '@keyframes agp-so-lshine{from{background-position:120% 0}to{background-position:-120% 0}}',
+        '@keyframes agp-so-lin-slide{from{opacity:0;transform:translateY(90%)}to{opacity:1;transform:none}}',
+        '@keyframes agp-so-lout-slide{to{opacity:0;transform:translateY(-90%)}}',
+        '@keyframes agp-so-lin-fade{from{opacity:0;filter:blur(.15em)}to{opacity:1;filter:none}}',
+        '@keyframes agp-so-lout-fade{to{opacity:0}}',
+        '@keyframes agp-so-lin-flip{from{opacity:0;transform:rotateX(90deg)}to{opacity:1;transform:none}}',
+        '@keyframes agp-so-lout-flip{to{opacity:0;transform:rotateX(-90deg)}}',
+        '@keyframes agp-so-ltype{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}',
+        '@keyframes agp-so-flap{from{transform:scaleX(1)}to{transform:scaleX(.28)}}',
+        // الفراشات تلف حول الكبسولة بمسار بيضاوي ناعم
+        '@keyframes agp-so-bf0{0%{left:4%;top:8%;transform:rotate(-15deg)}20%{left:45%;top:-4%;transform:rotate(8deg)}40%{left:92%;top:18%;transform:rotate(25deg)}55%{left:88%;top:72%;transform:rotate(160deg) scaleY(-1)}75%{left:40%;top:84%;transform:rotate(190deg) scaleY(-1)}90%{left:0%;top:55%;transform:rotate(250deg) scaleY(-1)}100%{left:4%;top:8%;transform:rotate(-15deg)}}',
+        '@keyframes agp-so-bf1{0%{left:70%;top:-6%;transform:rotate(10deg)}25%{left:96%;top:45%;transform:rotate(80deg)}50%{left:55%;top:86%;transform:rotate(175deg) scaleY(-1)}75%{left:2%;top:40%;transform:rotate(260deg) scaleY(-1)}100%{left:70%;top:-6%;transform:rotate(370deg)}}',
         // كرة القمر
         '.agp-so-goal.d-orb{display:flex;flex-direction:column;align-items:center;gap:.3em}',
         '.agp-so-otitle{font-weight:800;font-size:.9em;color:#fff;text-shadow:0 .05em .2em rgba(0,0,0,.8)}',
@@ -2761,7 +2933,14 @@
             if (jarDemo.length > JAR_CAP) jarDemo = jarDemo.slice(jarDemo.length - JAR_CAP);
             paintJars(fresh);
         },
-        jarClearDemo: function () { jarDemo = []; paintJars(null); },
+        jarClearDemo: function () { jarDemo = []; lastDemoGift = null; paintJars(null); },
+        // «آخر داعم»: داعم تجريبي جديد بالمحرر
+        lastDemo: function () {
+            var names = ['أبو فهد', 'نوره', 'سلطان العتيبي', 'ريم', 'عبدالرحمن الشمري', 'جود'];
+            lastDemoGift = { user: names[Math.floor(Math.random() * names.length)], diamonds: [5, 99, 299, 1000, 5000][Math.floor(Math.random() * 5)], seq: 'demo' + Date.now(), sample: false };
+            paintJars(null);
+        },
+        LAST_PALETTES: LAST_PALETTES, LAST_ANIMS: LAST_ANIMS, lastColors: lastColors,
         /** للنافذة العائمة (js/agp-stream-pip.js): صور الوعاء والإجماليات. */
         jarData: function () { return { icons: jar.icons.concat(jarDemo), totals: jar.totals }; },
         mediaUrl: mediaUrl,
