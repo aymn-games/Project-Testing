@@ -9,6 +9,9 @@
 <title>محطة سهيل — المباراة</title>
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<!-- أوفرلي البث لشاشة المذيع فقط (جوال اللاعب فيه ?id=): يبقي اتصال الحضور
+     مفتوح طول المباراة عشان الستريمر يظل ظاهر بـ«البثوث الشغّالة الآن». -->
+<script>if(!new URLSearchParams(location.search).get('id'))document.write('<script src="../../js/agp-stream-overlay.js"><\/script>');</script>
 <script src="station-net.js"></script>
 <script src="./support.js"></script>
 </head>
