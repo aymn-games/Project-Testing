@@ -1226,8 +1226,8 @@
             '</g>' +
             // السائل: مجموعة تنزل/تطلع حسب النسبة، وفيها موجتين تتحرك عكس بعض
             '<g class="agp-so-olvl" style="transform:translateY(200px)">' +
-            '<g class="agp-so-ow2"><path d="' + wavePath(5) + '" fill="' + c.top + '" opacity=".45"/></g>' +
-            '<g class="agp-so-ow1"><path d="' + wavePath(7) + '" fill="url(#' + id + 'l)" opacity=".82"/></g>' +
+            '<g class="agp-so-ow2"><path d="' + wavePath(5) + '" fill="' + c.top + '" opacity=".65"/></g>' +
+            '<g class="agp-so-ow1"><path d="' + wavePath(7) + '" fill="url(#' + id + 'l)" opacity=".94"/></g>' +
             '<g class="agp-so-obubs" fill="#fff" fill-opacity=".55">' + bubbles + '</g>' +
             '</g>' +
             // لمعة الزجاج
@@ -2420,7 +2420,7 @@
         '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
         '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
-        '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 26%,rgba(14,12,20,.8)),rgba(14,12,20,.62) 55%,rgba(14,12,20,.45));border:.05em solid color-mix(in srgb,var(--rk) 34%,rgba(255,255,255,.06));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
+        '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
         '.agp-so-scard.rk1 .agp-so-sin{padding:.42em .65em .42em .6em}',
