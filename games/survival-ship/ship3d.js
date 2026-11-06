@@ -1,4 +1,6 @@
-// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring}], focus:id|null, duel:[id,id]|null}
+// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring,vrm}], focus:id|null, duel:[id,id]|null}
+// vrm: 'girl'|'boy' = شخصية أنمي مشتركة (js/agp-vrm-characters.js — docs/CHARACTERS.md) لأصحاب الحسابات الموثّقة، وإلا الشخصية المرسومة هنا.
+//   الموديلات تنحمّل بس لو فيه لاعب عنده vrm، ولين تخلص (أو لو فشلت) يطلع الشكل القديم. يحتاج importmap بالصفحة (game.html / lobby.html).
 class Ship3D extends HTMLElement {
   static get observedAttributes(){ return ['scene']; }
   constructor(){ super(); this.data={players:[],focus:null}; this.figs=new Map(); this.ang=0; }
@@ -71,7 +73,7 @@ class Ship3D extends HTMLElement {
   splash(p){ const T=this.T; this.splashT=0; this.splashP=p.clone(); this.drops.visible=this.wave.visible=true; this.wave.position.set(p.x,.45,p.z);
     this.dropV=Array.from({length:90},()=>{ const a=Math.random()*Math.PI*2, s=2+Math.random()*5; return {p:p.clone(),v:new T.Vector3(Math.cos(a)*s*.6,5+Math.random()*9,Math.sin(a)*s*.6),k:.6+Math.random()*1.2}; }); }
   label(name){ return this.tex(512,128,(g,w,h)=>{ g.font='900 60px Zain, sans-serif'; const tw=Math.min(w-20,g.measureText(name).width+56); g.fillStyle='rgba(8,14,46,.88)'; g.beginPath(); g.roundRect((w-tw)/2,14,tw,100,50); g.fill(); g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle'; g.direction='rtl'; g.fillText(name,w/2,66,w-60); }); }
-  figure(d){ const T=this.T, G=new T.Group(), M=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.55,...o}),
+  figure(d,vrm){ const T=this.T, G=new T.Group(), M=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.55,...o}),
     add=(geo,c,x,y,z,par=G,o)=>{ const m=new T.Mesh(geo,typeof c==='string'?M(c,o):c); m.position.set(x,y,z); m.castShadow=true; par.add(m); return m; };
     const skin=M(d.skin,{roughness:.5}), shade=new T.Color(d.outfit).multiplyScalar(.75).getStyle();
     const legs=[]; for(const x of [-.17,.17]){ const l=new T.Group(); l.position.set(x,.78,0); add(new T.CapsuleGeometry(.13,.42,4,10),d.pants,0,-.32,0,l); const sh=add(new T.SphereGeometry(.19,14,10),'#f8fafc',0,-.7,.07,l); sh.scale.set(1,.62,1.35); add(new T.CylinderGeometry(.19,.19,.05,14),'#334155',0,-.77,.07,l); G.add(l); legs.push(l); }
@@ -106,7 +108,19 @@ class Ship3D extends HTMLElement {
       g.fillStyle='#fff'; g.beginPath(); g.moveTo(32,2); g.lineTo(36,28); g.lineTo(62,32); g.lineTo(36,36); g.lineTo(32,62); g.lineTo(28,36); g.lineTo(2,32); g.lineTo(28,28); g.closePath(); g.fill(); }));
     const stars=[0,1,2].map(i=>{ const st=new T.Sprite(new T.SpriteMaterial({map:star,transparent:true,depthWrite:false,blending:T.AdditiveBlending})); st.scale.setScalar(.38); buoy.add(st); return st; });
     const sp=new T.Sprite(new T.SpriteMaterial({map:this.label(d.name),depthTest:false,transparent:true})); sp.scale.set(3.4,.85,1); sp.position.y=3.4; sp.renderOrder=10; G.add(sp);
-    G.userData={legs,arms,head,sp,buoy,spin,glow,stars}; return G; }
+    G.userData={legs,arms,head,sp,buoy,spin,glow,stars}; if(vrm) this.attachVrm(G,vrm,d); return G; }
+  // ---- شخصيات الأنمي (VRM): تحميل مرة وحدة، وإعادة المحاولة كل 5ث لو فشل
+  loadVrm(){ if(this.vrmP||this.V) return; const base=document.baseURI;
+    this.vrmP=Promise.all([import(new URL('../../js/agp-vrm-characters.js',base).href),import(new URL('../birthday-party/rig3d.js',base).href)]).then(([V,R])=>{
+      R.loadClips(new URL('../birthday-party/anims/',base).href).catch(()=>{});
+      return V.loadModels().then(M=>{ if(!M) throw new Error('vrm models'); this.V={make:V.makeVrmRig,M}; this.vrmP=null; if(this.T) this.sync(); }); })
+      .catch(()=>{ this.vrmP=null; setTimeout(()=>{ if(this.isConnected) this.loadVrm(); },5000); }); }
+  // الجسم المرسوم يختفي (الاسم والطوق يبقون) والموديل ياخذ مكانه بنفس طول شخصيات السفينة
+  attachVrm(G,kind,d){ const U=G.userData, keep=new Set([U.sp,U.buoy]); G.children.forEach(o=>{ if(!keep.has(o)) o.visible=false; });
+    let h=0; const id=String(d.id); for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))|0;
+    const rig=this.V.make(this.V.M[kind],{n:Math.abs(h)}); rig.root.scale.setScalar(kind==='boy'?2.65/1.7:2.5/1.62); rig.root.visible=true;
+    rig.root.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); G.add(rig.root); U.rig=rig; U.vrmAnim=-1; }
+  dropFig(f){ this.crew.remove(f.g); const r=f.g.userData.rig; if(r) r.dispose(); }
   slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67,17/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4,7.3/(rows-1)):0;
     for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
   // نمط المواجهة: مكان الثنائي جنب بعض بمقدمة السطح (الأول يمين الشاشة والثاني يساره)
@@ -114,8 +128,10 @@ class Ship3D extends HTMLElement {
   sync(){ const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id)), D=Array.isArray(this.data.duel)?this.data.duel:null;
     const sk=+Math.min(3.4,1.5*Math.max(1,Math.sqrt(ps.length/12))).toFixed(2); if(sk!==this.sk){ this.sk=sk; this.ship.scale.setScalar(sk); this.crew.scale.setScalar(1/sk); this.plankEnd.set(4*sk,1.7*sk,8.3*sk); }
     const sl=this.slots(ps.length);
-    for(const [id,f] of this.figs) if(!keep.has(id)){ this.crew.remove(f.g); this.figs.delete(id); }
-    ps.forEach((p,i)=>{ let f=this.figs.get(p.id), born=false; if(!f||f.name!==p.name){ if(f) this.crew.remove(f.g); f={g:this.figure(p),name:p.name,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); born=true; }
+    for(const [id,f] of this.figs) if(!keep.has(id)){ this.dropFig(f); this.figs.delete(id); }
+    if(ps.some(p=>p.vrm)) this.loadVrm();
+    ps.forEach((p,i)=>{ let f=this.figs.get(p.id), born=false; const vrm=(p.vrm==='girl'||p.vrm==='boy')&&this.V?p.vrm:null;
+      if(!f||f.name!==p.name||f.vrm!==vrm){ const was=f&&f.g.position.clone(); if(f) this.dropFig(f); f={g:this.figure(p,vrm),name:p.name,vrm,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); born=!was; if(was) f.g.position.copy(was); }
       // target = المكان اللي يمشي له اللاعب (مكانه الأصلي أو مكان المواجهة) — tick() يحركه له بخطوات
       const di=D?D.indexOf(p.id):-1; f.home=sl[i]; f.duel=di>=0; f.target=di>=0?this.duelSpot(di):sl[i]; if(born) f.g.position.copy(f.target);
       if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ if(f.fallT!=null) f.g.position.copy(f.target); f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
@@ -157,6 +173,12 @@ class Ship3D extends HTMLElement {
       const cur=focusF===f||(duelOn&&f.duel); f.g.position.y=f.home.y+Math.abs(Math.sin(ph*(cur?1.6:1)))*(cur?.12:.04);
       U.arms[0].rotation.x=Math.sin(ph)*(cur?.5:.15); U.arms[1].rotation.x=-Math.sin(ph)*(cur?.5:.15); U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18; U.head.rotation.z=Math.sin(ph*.5)*.06;
       U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=cur?Math.sin(t)*.15:Math.sin(ph*.3)*.2; }
+    // شخصيات الأنمي: الحركة (وقوف · مشي · تصفيق/قفز للاحتفال) والوجه (ابتسامة · تركيز بالمواجهة · ضحكة · خوف وقت السقوط)
+    for(const [id,f] of this.figs){ const U=f.g.userData, r=U.rig; if(!r||!f.g.visible) continue; let a=0, m='smile';
+      if(f.fallT!=null){ a=f.fallT<1.4?1:5; m='scared'; }
+      else { const tg=f.target||f.home; if(Math.hypot(tg.x-f.g.position.x,tg.z-f.g.position.z)>.05) a=1;
+        else if(d.cheer!=null&&d.cheer===id){ a=d.win?6:4; m='laugh'; } else if(focusF===f||(duelOn&&f.duel)) m='focus'; }
+      if(U.vrmAnim!==a){ r.play(a); U.vrmAnim=a; } r.mood(m); r.update(dt); r.sync(); }
     const duelFs=duelOn?d.duel.map(id=>this.figs.get(id)).filter(f=>f&&f.g.visible&&f.fallT==null):[], rings=[this.focusRing,this.focusRing2];
     const ringFs=fallF?[]:duelFs.length?duelFs:focusF?[focusF]:[];
     rings.forEach((r,i)=>{ const f=ringFs[i]; r.visible=!!f; if(f){ r.position.set(f.g.position.x,1.53*this.sk,f.g.position.z); r.material.opacity=.6+Math.sin(t*5)*.3; } });

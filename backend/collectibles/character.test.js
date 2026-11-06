@@ -36,6 +36,8 @@ test('الشخصية توصل لصاحب التعليق بس لو تيك توك 
     try {
         svc.setCharacter(ok, 'boy'); svc.setCharacter(no, 'girl');
         assert.equal(svc.getCharacterForVerifiedTikTok(tag + '_OK'), 'boy'); // بدون حساسية للأحرف
+        svc.setCharacter(ok, null);
+        assert.equal(svc.getCharacterForVerifiedTikTok(tag + '_ok'), 'any'); // عضو ما اختار
         assert.equal(svc.getCharacterForVerifiedTikTok(tag + '_no'), null);
         assert.equal(svc.getCharacterForVerifiedTikTok('nobody_' + tag), null);
         assert.equal(svc.getCharacterForVerifiedTikTok(''), null);
@@ -46,6 +48,7 @@ test('رسالة التعليق تحمل الشخصية (والقيم الغري
     var msg = function (c) { var e = builder.buildCommentMessage('tiktok', 'tiktok:x', 'x', 'hi', false, null, null, null, null, c); return (e.payload || e.data || e).character; };
     assert.equal(msg('girl'), 'girl');
     assert.equal(msg('boy'), 'boy');
+    assert.equal(msg('any'), 'any');
     assert.equal(msg('dragon'), null);
     assert.equal(msg(undefined), null);
 });

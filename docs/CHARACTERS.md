@@ -65,7 +65,11 @@ rig.dispose();                            // لما يطلع اللاعب
 ## اختيار اللاعب لشخصيته (من البروفايل)
 - **وين يختار:** صاحب الحساب يختار من **البروفايل ← المقتنيات ← «شخصيتي بالألعاب»**: بنت، أو ولد، أو عشوائي. مجانية لكل حساب، وصورها `assets/characters/girl.png` و`boy.png`.
 - **وين تنحفظ:** جدول `user_characters` (صف لكل مستخدم، وما فيه صف = عشوائي). الخدمة بـ`collectibles-service.js`: `getCharacter` و`setCharacter` و`getCharacterForVerifiedTikTok`. الرابط `POST /api/character/set {kind}`، ومن الواجهة `AGPAuth.setCharacter(kind)`.
-- **كيف توصل للعبة:** مع كل تعليق من البث يوصل الحقل **`character`** (`'girl'` أو `'boy'` أو `null`)، بس لو حساب صاحب التعليق موثّق بنفس يوزر تيك توك. يوصل بـ`stream:commentReceived`، وبـ`playerData` للألعاب اللي تستخدم `keywordManager`/`queueManager`.
+- **كيف توصل للعبة:** مع كل تعليق من البث يوصل الحقل **`character`**، ويوصل بـ`stream:commentReceived`، وبـ`playerData` للألعاب اللي تستخدم `keywordManager`/`queueManager`. قيمه:
+  - `'girl'` أو `'boy'`: صاحب حساب موثّق بنفس يوزر تيك توك، واختار شخصيته.
+  - `'any'`: صاحب حساب موثّق، بس ما اختار، فاللعبة تعطيه وحدة من الثنتين عشوائي.
+  - `null`: ما عنده حساب موثّق.
+- **قاعدة صاحب المنصة:** شخصيات الأنمي لأصحاب الحسابات. اللي بدون حساب (`null`) ياخذ الشخصية القديمة حق اللعبة لو عندها وحدة، مثل سفينة النجاة. واللعبة اللي ما عندها شخصيات قديمة، مثل حجرة ورقة مقص، تعطيه شخصية أنمي عشوائية.
 - **بأي لعبة:** استخدم اختيار اللاعب، وإلا عشوائي:
 
 ```js
@@ -73,7 +77,9 @@ var g = p.character === 'boy' ? 1 : p.character === 'girl' ? 0 : (Math.random() 
 makeVrmRig(g ? MODELS.boy : MODELS.girl, { n });
 ```
 
-مثال: `genderOf(p)` بـ`games/rock-paper-scissors/game.html`.
+أمثلة:
+- `genderOf(p)` بـ`games/rock-paper-scissors/game.html`: كل اللاعبين شخصيات أنمي.
+- **سفينة النجاة:** `reg.vrm(name)` بـ`games/survival-ship/sh-platform.js` يرجع `'girl'` أو `'boy'` أو `null`، و`'any'` تصير وحدة ثابتة من id الحساب. وفي `games/survival-ship/ship3d.js`، `attachVrm` تخفي جسم الشخصية القديمة وتحط الموديل مكانه. السفينة تستخدم three من unpkg، فـimportmap حقها يحوّل `three` ورابط jsdelivr لنفس نسخة unpkg، عشان يبقى three واحد بالصفحة.
 
 ## الأداء
 - كل شخصية أمرين رسم بس. 32 لاعب = تقريباً 150 أمر رسم بالمشهد كله (الشخصيات المبنية بالكود كانت 221).

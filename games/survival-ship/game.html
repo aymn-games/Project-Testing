@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- شخصيات الأنمي (VRM) لأصحاب الحسابات: three واحد للمشهد (ship3d.js من unpkg) وللموديلات وحركات الحفلة -->
+<script type="importmap">{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+  "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js"
+} }</script>
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <title>سفينة النجاة — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
@@ -703,7 +710,7 @@ class Component extends DCLogic {
       roundTxt:S.round||'—', aliveN,
       hudLetter:S.q&&S.q.letter||(S.shuf&&S.shuf.lock?S.shuf.letter:'؟'),
       ansCat:S.q?TYPES[S.q.ti].label:'', ansCatC:S.q?TYPES[S.q.ti].c:'#fff', ansLetter:S.q?S.q.letter:'',
-      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.duel?null:S.cam,duel:S.phase==='over'?null:S.duel||null,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping,ring:!!p.gold}))}),
+      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.duel?null:S.cam,duel:S.phase==='over'?null:S.duel||null,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping,ring:!!p.gold,vrm:this.reg.vrm(p.name)}))}),
       tOffB:(527.8*(1-(S.total?S.left/S.total:1))).toFixed(1),
       ...(()=>{ const nx=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).filter(p=>p&&!p.out&&!p.popping), n=nx[0]; return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextLbl:S.duel?'المواجهة التالية':'اللاعب التالي', nextName:n?(S.duel&&nx[1]?`${n.name} ضد ${nx[1].name}`:n.name):'', nextAv:n?this.reg.avatar(n.name)||'':'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
       turnName:curP&&ph!=='ready'?curP.name:'—', turnAv:curP&&ph!=='ready'?this.reg.avatar(curP.name)||'':'', hideImg:e=>{ e.currentTarget.style.display='none'; }, showImg:e=>{ e.currentTarget.style.display=''; }, turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
