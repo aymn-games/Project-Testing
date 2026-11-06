@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- شخصيات الأنمي (VRM) لأصحاب الحسابات: three واحد للمشهد (ship3d.js من unpkg) وللموديلات وحركات الحفلة -->
+<script type="importmap">{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+  "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js"
+} }</script>
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <title>سفينة النجاة — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
@@ -252,7 +259,7 @@ class Component extends DCLogic {
       chars:S.chars.map((c,i)=>({x:c.x,y:c.y,z:c.z,k:c.k||.72,dur:c.dur,p:this.pv(c,i)})),
       ...this.camVals(W,H), liveN:live.length,
       chips:live.map((c,i)=>({n:i+1,name:c.name,dot:c.col[0],av:this.reg.avatar(c.name)||'',hideImg:e=>{ e.currentTarget.style.display='none'; },showImg:e=>{ e.currentTarget.style.display=''; },remove:e=>{ e.stopPropagation(); this.remove(c.id); },focus:()=>{ this.setState(s=>({focusName:s.focusName===c.name?null:c.name})); return; const {W:w,H:h}=this.dims(); const z=1.6; this.setCam({x:((w-400)/2-(c.x+90*(c.k||.72)))*z*0+((w)/2-(c.x+90*(c.k||.72)))*z-(w/2-w/2), y:(h*.6-(c.y+220*(c.k||.72)))*z-(h*.6-h*.6)*z, z},'.8s'); }})), countTxt:live.length?`${live.length} ${live.length===1?'لاعب':live.length<=10?'لاعبين':'لاعب'} داخل اللوبي`:'ما فيه لاعبين للحين', empty:!live.length,
-      sceneJson:JSON.stringify({focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false}; })}),
+      sceneJson:JSON.stringify({focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false,vrm:this.reg.vrm(c.name)}; })}),
       startOp:live.length>=2?1:.45, toast:S.toast,
       start:()=>{ if(live.length<2) return this.toastMsg('لازم لاعبين اثنين على الأقل عشان تبدأ'); const list=live.map(c=>c.name), all=this.reg.all(); SHIP.writeJSON(SHIP.keys.roster,list); SHIP.writeJSON(SHIP.keys.players,Object.fromEntries(list.filter(n=>all[n]).map(n=>[n,all[n]]))); location.href=GAME_URL; },
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),

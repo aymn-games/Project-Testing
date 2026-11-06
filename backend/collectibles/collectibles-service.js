@@ -589,9 +589,11 @@ function setCharacter(userId, kind) {
 
 /**
  * شخصية صاحب تعليق — فقط لحساب مسجَّل وثَّق نفس يوزرنيم التيك توك
- * (نفس نمط getWinCardForVerifiedTikTok).
+ * (نفس نمط getWinCardForVerifiedTikTok). 'any' = عنده حساب موثّق بس ما اختار
+ * (اللعبة تعطيه وحدة من الشخصيتين عشوائي)، و null = ما عنده حساب (الشكل القديم
+ * للعبة). بطلب صاحب المنصة: الشخصيات الجديدة لأصحاب الحسابات بس.
  * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
- * @returns {'girl'|'boy'|null}
+ * @returns {'girl'|'boy'|'any'|null}
  */
 function getCharacterForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();
@@ -599,7 +601,7 @@ function getCharacterForVerifiedTikTok(tiktokUsername) {
   var user = db.prepare(
     'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
   ).get(tiktokUsername);
-  return user ? getCharacter(user.id) : null;
+  return user ? (getCharacter(user.id) || 'any') : null;
 }
 
 /* ----------------------------------------------------------------------

@@ -28,7 +28,7 @@ module.exports = {
         // الأمامية (راجع js/agp-player-card.js). elimCard: بطاقة الإقصاء
         // المفعّلة {cardKey} أو null (راجع js/agp-elim-card.js). winCard: بطاقة
         // الفوز المفعّلة {cardKey} أو null (راجع js/agp-win-card.js). character:
-        // شخصية الأنمي اللي اختارها ('girl'|'boy') أو null = عشوائي (docs/CHARACTERS.md).
+        // شخصية الأنمي: 'girl'|'boy' اختاره، 'any' عنده حساب وما اختار، null ما عنده حساب (docs/CHARACTERS.md).
         return buildEnvelope(MESSAGE_TYPES.COMMENT, {
             platform: platform, id: id, name: name, text: text,
             isFollower: Boolean(isFollower),
@@ -36,7 +36,7 @@ module.exports = {
             frame: frame || null,
             elimCard: elimCard || null,
             winCard: winCard || null,
-            character: character === 'girl' || character === 'boy' ? character : null
+            character: character === 'girl' || character === 'boy' || character === 'any' ? character : null
         });
     },
 

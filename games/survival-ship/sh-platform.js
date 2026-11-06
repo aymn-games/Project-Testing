@@ -133,13 +133,14 @@
                     if (payload.frame !== undefined) known.frame = payload.frame || null;
                     if (payload.elimCard !== undefined) known.elimCard = payload.elimCard || null;
                     if (payload.winCard !== undefined) known.winCard = payload.winCard || null;
+                    if (payload.character !== undefined) known.character = payload.character || null;
                     var wv = winVideoOf(payload); if (wv) known.winVideo = wv;
                     return byId[payload.id];
                 }
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, elimCard: payload.elimCard || null, winCard: payload.winCard || null, winVideo: winVideoOf(payload) };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, elimCard: payload.elimCard || null, winCard: payload.winCard || null, character: payload.character || null, winVideo: winVideoOf(payload) };
                 byId[payload.id] = name;
                 return name;
             },
@@ -147,6 +148,16 @@
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
             winVideo: function (name) { return (byName[name] && byName[name].winVideo) || null; },
+            // شخصية الأنمي (VRM) بمشهد السفينة: بس لأصحاب الحسابات الموثّقة (character بالتعليق — docs/CHARACTERS.md).
+            // 'girl'/'boy' = اختياره بالبروفايل · 'any' = عضو ما اختار ← وحدة منهم ثابتة من id حسابه
+            // (نفسها باللوبي والمباراة) · بدون حساب = null ← الشخصية القديمة حق السفينة
+            vrm: function (name) {
+                var p = byName[name], c = p && p.character;
+                if (c === 'girl' || c === 'boy') return c;
+                if (c !== 'any') return null;
+                var h = 0, id = String(p.id || name); for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+                return (h & 1) ? 'boy' : 'girl';
+            },
             // اللاعب بصيغة AGP ({id, name, avatarUrl}) — لنقاط المنصة
             player: function (name) {
                 var p = byName[name] || {};
