@@ -725,7 +725,8 @@ class Component extends DCLogic {
   renderVals(){
     const S=this.state, o=(k,i,out)=>S[k+'Out']?out:i, ph=S.phase;
     const seg=on=>({bg:on?'linear-gradient(90deg, #0ea5e9, #6366f1)':'transparent',c:on?'#fff':'#a5b4fc',sh:on?'0 6px 18px rgba(99,102,241,.35)':'none'});
-    const shown=S.players.filter(p=>!p.out), heavy=shown.length>12, players=shown.map((p)=>{ const v=this.pv(p,p.id); if(heavy&&S.cur!==p.id&&!p.popping) Object.assign(v,{armAn:'none',arm2An:'none',legLAn:'none',legRAn:'none',fl:'none'}); return v; });
+    // الشخصيات تنرسم بالمشهد الثري دي (ship3d.js ← sceneJson)، فما نحسب بيانات الشخصيات المرسومة القديمة (pv) كل ثانية
+    const players=[];
     const CF=S.camFall, camP=!CF&&S.cam!=null&&S.players.find(p=>p.id===S.cam), zs=CF?1.15:camP?Math.min(3.4,1.75/camP.pos.sc):1, ccx=CF?CF.x:camP?camP.pos.cx:960, ccy=CF?CF.y:camP?camP.pos.cy-40*camP.pos.sc:500;
     const camT=`translate(${Math.round(960-ccx*zs)}px, ${Math.round(630-ccy*zs)}px) scale(${zs.toFixed(3)})`.replace('translate(0px, 60px) scale(1.000)','none');
     const curP=S.players.find(p=>p.id===S.cur), aliveN=S.players.filter(p=>!p.out&&!p.popping).length;
@@ -805,7 +806,7 @@ class Component extends DCLogic {
           const dx=bx-ax, dy=by-ay, len=Math.round(Math.hypot(dx,dy)), ang=Math.atan2(dx,-dy)*180/Math.PI;
           const w=Math.round(78+Math.random()*34), h=Math.round(w*1.18), c=C[i%C.length];
           out.push({ax,ay,len,ang:ang.toFixed(1),nang:(-ang).toFixed(1),w,h,hw:Math.round(w/2),top:len+h-4,c1:c[0],c2:c[1],c3:c[2],dl:(2.3+i*.06).toFixed(2),sd:(2.2+Math.random()*1.4).toFixed(1),sdl:(-Math.random()*2).toFixed(1)}); }
-        return out; })()), winP:winPl?{...this.pv(winPl,0),spotOp:0,y:0,balD:'none',cardOp:0,haloD:'none',armAn:'armIdle .45s ease-in-out infinite',arm2An:'arm2Tug .45s ease-in-out infinite',legLAn:'legA .45s ease-in-out infinite',legRAn:'legB .45s ease-in-out infinite'}:{pips:[]}, winName:winPl?winPl.name:'', winAv:winPl?this.reg.avatar(winPl.name)||'':'', winBg:winPl?bgOf(winPl.col):'transparent',
+        return out; })()), winP:{pips:[]}, winName:winPl?winPl.name:'', winAv:winPl?this.reg.avatar(winPl.name)||'':'', winBg:winPl?bgOf(winPl.col):'transparent',
       replay:()=>this.replay(), toLobby:()=>{ location.href=LOBBY_URL; },
       toastOn:!!S.toast, toastTxt:S.toast,
       settingsOpen:S.settingsOpen, openSettings:()=>this.setState({settingsOpen:true}), closeSettings:()=>this.shut('settingsOpen'),

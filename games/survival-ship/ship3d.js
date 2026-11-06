@@ -4,7 +4,8 @@
 class Ship3D extends HTMLElement {
   static get observedAttributes(){ return ['scene']; }
   constructor(){ super(); this.data={players:[],focus:null}; this.figs=new Map(); this.ang=0; }
-  attributeChangedCallback(n,_,v){ try{ this.data=JSON.parse(v)||this.data; }catch(e){} if(this.T) this.sync(); }
+  // نفس المشهد (الصفحة تعيد الرسم كل ثانية مع العدّاد) = ما نعيد المزامنة
+  attributeChangedCallback(n,_,v){ if(v===this.lastScene) return; this.lastScene=v; try{ this.data=JSON.parse(v)||this.data; }catch(e){} if(this.T) this.sync(); }
   set scene(v){ this.attributeChangedCallback('scene',null,typeof v==='string'?v:JSON.stringify(v)); }
   connectedCallback(){
     this.style.cssText='display:block;position:absolute;inset:0;overflow:hidden';
@@ -28,7 +29,8 @@ class Ship3D extends HTMLElement {
     spark.material.map.wrapS=spark.material.map.wrapT=T.RepeatWrapping; spark.material.map.repeat.set(14,14); spark.rotation.x=-Math.PI/2; spark.position.y=.35; sc.add(spark); this.spark=spark;
     this.buildShip(); this.buildFx();
     this.ro=new ResizeObserver(()=>{ const w=this.clientWidth||1,h=this.clientHeight||1; r.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); }); this.ro.observe(this);
-    this.clock=new T.Clock(); this.camLook=new T.Vector3(0,2,0); const loop=()=>{ this.raf=requestAnimationFrame(loop); this.tick(); }; loop();
+    this.clock=new T.Clock(); this.camLook=new T.Vector3(0,2,0); // حد 30 إطار/ث: البث نفسه 30، فالرسم الزايد على شاشات 60/144 هرتز يستهلك كرت الشاشة بدون فايدة (نص الشغل تقريباً)
+    let last=-1e9; const loop=now=>{ this.raf=requestAnimationFrame(loop); if(now-last<29) return; last=now; this.tick(); }; this.raf=requestAnimationFrame(loop);
   }
   mat(c,o={}){ return new this.T.MeshStandardMaterial({color:c,roughness:.75,flatShading:true,...o}); }
   box(w,h,d,c,x,y,z,p){ const m=new this.T.Mesh(new this.T.BoxGeometry(w,h,d),this.mat(c)); m.position.set(x,y,z); m.castShadow=m.receiveShadow=true; (p||this.ship).add(m); return m; }
@@ -137,10 +139,10 @@ class Ship3D extends HTMLElement {
       if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ if(f.fallT!=null) f.g.position.copy(f.target); f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
       // ring: يطلع الطوق بقفزة (ringIn) ويختفي بانكماش (ringOut) — الحركة في tick()
       if(!!p.ring!==!!f.ring){ f.ring=!!p.ring; f.ringT=born?1:0; } f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
-  // وضع الأداء: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
+  // وضع الأداء: لو متوسط الإطارات نزل تحت 22/ث (والهدف 30) (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
   perf(raw){ if(this.lite||raw>.5) return; const p=this.pf||(this.pf={n:0,s:0,w:0}); p.w+=raw; if(p.w<3) return; p.n++; p.s+=raw;
-    if(p.s>=2){ const fps=p.n/p.s; p.n=0; p.s=0; if(fps<40) this.goLite(); } }
-  goLite(){ this.lite=true; this.sun.castShadow=false; this.r.shadowMap.enabled=false; this.sc.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ m.needsUpdate=true; }); });
+    if(p.s>=2){ const fps=p.n/p.s; p.n=0; p.s=0; if(fps<22) this.goLite(); } }
+  goLite(){ this.lite=true; this.sun.castShadow=false; this.r.shadowMap.enabled=false; this.r.setPixelRatio(.75); this.r.setSize(this.clientWidth||1,this.clientHeight||1,false); this.sc.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ m.needsUpdate=true; }); });
     try{ document.documentElement.classList.add('ship-lite'); }catch(e){} }
   tick(){ const T=this.T, raw=this.clock.getDelta(), dt=Math.min(raw,.05), t=this.clock.elapsedTime, d=this.data;
     const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.perf(raw);
