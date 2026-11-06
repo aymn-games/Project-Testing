@@ -203,7 +203,7 @@ input::placeholder{color:#6f6a7c}
             <span style="font:700 52px/1.2 'IBM Plex Sans Arabic';color:#f4f2f8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ chName }}</span>
             <div style="display:flex;align-items:center;gap:12px">
               <span style="padding:3px 14px;border-radius:11px;background:linear-gradient(160deg,#5b21b6,#3b0f7a);box-shadow:0 0 0 1px rgba(167,139,250,.3), 0 3px 10px rgba(46,16,101,.45);font:800 26px 'IBM Plex Sans Arabic';color:#ede9fe">رقم {{ chNum }}</span>
-              <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
+              <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:8px;animation:{{ cdAn }}">
@@ -230,7 +230,7 @@ input::placeholder{color:#6f6a7c}
                 <span style="position:relative;overflow:hidden;flex-shrink:0;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:2px solid rgba(167,139,250,.35);box-sizing:border-box;color:#fff;font:700 19px 'IBM Plex Sans Arabic'">{{ c.ini }}<img src="{{ c.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }}"></span>
                 <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
                   <span style="font:800 25px/1.25 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
-                  <span style="display:flex;gap:2px"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
+                  <span style="display:flex;gap:2px"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
                 </span>
                 <span style="flex-shrink:0;margin-inline-start:auto;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;line-height:1;padding-top:3px;box-sizing:border-box;background:linear-gradient(160deg,#5b21b6,#3b0f7a);box-shadow:0 0 0 1px rgba(167,139,250,.3), 0 3px 10px rgba(46,16,101,.45);color:#ede9fe;font:800 38px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ c.num }}</span>
               </button>
@@ -402,13 +402,13 @@ input::placeholder{color:#6f6a7c}
         </div>
         <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 22px 16px;display:flex;flex-direction:column;gap:8px">
           <sc-for list="{{ pList }}" as="p" hint-placeholder-count="8">
-            <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;height:58px;padding:0 10px;border-radius:14px;background:{{ p.bg }};border:1px solid {{ p.bd }};opacity:{{ p.op }}">
-              <span style="flex-shrink:0;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:{{ p.numBg }};color:#fff;font:800 17px/1 'IBM Plex Sans Arabic'">{{ p.num }}</span>
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:12px;height:68px;padding:0 12px;border-radius:14px;background:{{ p.bg }};border:1px solid {{ p.bd }};opacity:{{ p.op }}">
+              <span style="flex-shrink:0;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;padding-top:2px;box-sizing:border-box;background:{{ p.numBg }};box-shadow:{{ p.numSh }};color:{{ p.numFg }};font:800 24px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ p.num }}</span>
               <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
-                <span style="font:600 16px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ p.deco }}">{{ p.name }}</span>
+                <span style="font:800 21px/1.25 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ p.deco }}">{{ p.name }}</span>
                 <span style="display:flex;gap:2px">
                   <sc-for list="{{ p.hearts }}" as="h" hint-placeholder-count="4">
-                    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
+                    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
                   </sc-for>
                 </span>
               </span>
@@ -735,7 +735,7 @@ class Component extends DCLogic {
 
       q:s.q, onQ:e=>this.setState({q:e.target.value}),
       filters:[['all','الكل'],['alive','الأحياء'],['out','المُقصين']].map(([k,l])=>({label:l,pick:()=>this.setState({filter:k}),bg:s.filter===k?'rgba(139,92,246,.2)':'transparent',bd:s.filter===k?'rgba(167,139,250,.55)':'rgba(255,255,255,.1)',fg:s.filter===k?'#ddd6fe':'#a8a3b5'})),
-      pList:list.map(p=>({num:p.num,name:p.name,alive:p.alive,out:!p.alive,hearts:this.hearts(p.hearts,c.chambers),op:p.alive?1:.65,deco:p.alive?'none':'line-through',numBg:p.alive?'#7c3aed':'rgba(255,255,255,.12)',bg:'rgba(255,255,255,.03)',bd:'rgba(255,255,255,.06)',act:()=>p.alive?this.manualKick(p.id):this.revive(p.id)})),
+      pList:list.map(p=>({num:p.num,name:p.name,alive:p.alive,out:!p.alive,hearts:this.hearts(p.hearts,c.chambers),op:p.alive?1:.65,deco:p.alive?'none':'line-through',numBg:p.alive?'linear-gradient(160deg,#5b21b6,#3b0f7a)':'rgba(255,255,255,.12)',numSh:p.alive?'0 0 0 1px rgba(167,139,250,.3), 0 3px 10px rgba(46,16,101,.45)':'none',numFg:p.alive?'#ede9fe':'#fff',bg:'rgba(255,255,255,.03)',bd:'rgba(255,255,255,.06)',act:()=>p.alive?this.manualKick(p.id):this.revive(p.id)})),
       pEmpty:!list.length, kw:c.keyword, joinOpen:!!s.joinOpen, jList:(s.jList||[]).map(id=>this.P(id)).filter(Boolean).map(p=>({name:p.name,ini:ini(p.name),...A(p.name),num:p.num})), jCount:(s.jList||[]).length, jEmpty:!(s.jList||[]).length,
       joinOv:s.joinOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', joinAn:s.joinOpenOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
       openJoin:this.openJoin, closeJoin:()=>{ this.shut('joinOpen'); this.setState({idleAt:Date.now()}); },
