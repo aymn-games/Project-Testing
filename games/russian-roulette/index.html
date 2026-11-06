@@ -20,6 +20,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="rr-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -99,8 +100,8 @@ input::placeholder{color:#6f6a7c}
                 <sc-if value="{{ row.isSupport }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;align-items:center;gap:16px;padding:12px 0 8px;animation:fade .25s ease">
                     <button onClick="{{ row.open }}" aria-label="اختيار نوع الدعم" style="flex-shrink:0;width:100px;height:100px;border-radius:20px;box-sizing:border-box;border:1.5px dashed {{ row.boxBd }};background:{{ row.boxBg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:inherit;transition:transform .2s" style-hover="transform:scale(1.04)" style-active="transform:scale(.97)">
-                      <span style="font:700 34px/1 'IBM Plex Sans Arabic';color:#fff">{{ row.boxIni }}</span>
-                      <span style="font:600 12px 'IBM Plex Sans Arabic';color:#fff;opacity:.9">{{ row.boxName }}</span>
+                      <sc-if value="{{ row.chosen }}" hint-placeholder-val="{{ false }}"><img src="{{ row.boxImg }}" alt="" style="width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))"></sc-if><sc-if value="{{ row.notChosen }}" hint-placeholder-val="{{ true }}"><span style="font:700 34px/1 'IBM Plex Sans Arabic';color:#fff">+</span></sc-if>
+                      <span style="max-width:90px;font:600 12px 'IBM Plex Sans Arabic';color:#fff;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.boxName }}</span>
                     </button>
                     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
                       <div style="display:flex;flex-direction:column;gap:2px">
@@ -195,16 +196,17 @@ input::placeholder{color:#6f6a7c}
 
   <sc-if value="{{ supPick }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeSup }}" style="position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);display:grid;place-items:center;padding:12px;animation:{{ supOv }}">
-      <div onClick="{{ stop }}" style="width:min(600px, calc(100vw - 24px));height:min(400px, calc(100dvh - 24px));box-sizing:border-box;padding:22px 24px 24px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:16px;animation:{{ supAn }}">
+      <div onClick="{{ stop }}" style="width:min(860px, calc(100vw - 24px));max-height:calc(100dvh - 24px);box-sizing:border-box;padding:20px 22px 22px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:16px;animation:{{ supAn }}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font:700 20px 'IBM Plex Sans Arabic'">اختر نوع الدعم</span>
           <button onClick="{{ closeSup }}" aria-label="إغلاق" style="width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
-        <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:12px">
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat({{ supCols }},minmax(0,1fr));grid-auto-rows:96px;align-content:start;gap:10px">
           <sc-for list="{{ supList }}" as="g" hint-placeholder-count="6">
-            <button onClick="{{ g.pick }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border-radius:18px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
-              <span style="width:60px;height:60px;border-radius:16px;display:grid;place-items:center;background:{{ g.c }};color:#fff;font:700 26px 'IBM Plex Sans Arabic'">{{ g.ini }}</span>
-              <span style="font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">{{ g.name }}</span>
+            <button onClick="{{ g.pick }}" style="min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;box-sizing:border-box;border-radius:14px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
+              <img src="{{ g.img }}" alt="" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))">
+              <span style="max-width:100%;font:600 12px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
+              <span style="font:600 11px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ g.coins }} 🪙</span>
             </button>
           </sc-for>
         </div>
@@ -251,7 +253,8 @@ const GAME = {
   lobbyUrl: 'lobby.html',
   requireLive: true
 };
-const SUPPORT_TYPES = [];
+// أنواع الدعم = هدايا تيك توك الحقيقية بصورها (assets/tiktok-gifts عبر RR.gifts) — نفس قائمة روليت الإقصاء
+const SUPPORT_TYPES = RR.gifts();
 const SETTINGS = [
   { title:'الدخول', rows:[
     { type:'text',   key:'keyword',    label:'الكلمة المفتاحية للدخول', placeholder:'اكتب الكلمة المفتاحية', default:'' },
@@ -265,6 +268,10 @@ const SETTINGS = [
   { title:'مرحلة الاختيار', full:true, rows:[
     { type:'choice', key:'chooseSec', label:'مدة مرحلة الاختيار', options:['20 ثانية','25 ثانية','30 ثانية','40 ثانية'], default:2 },
     { type:'choice', key:'onTimeout', label:'عند انتهاء وقت الاختيار', options:['يُقصى صاحب الدور','يُغلق الاختيار فقط'], default:0 }
+  ]},
+  { title:'الرجوع للعبة', full:true, rows:[
+    { type:'toggle', key:'supOn',    label:'الرجوع عن طريق الدعم', hint:'اللاعب المُقصى يرجع للعبة بقلوب كاملة إذا أرسل الدعم المحدد', default:false, dot:'#34d399' },
+    { type:'support', key:'supType', showIf:'supOn', default:null }
   ]}
 ];
 
@@ -293,12 +300,12 @@ class Component extends DCLogic {
     if(t==='multi') row.opts=r.options.map((l,k)=>{ const on=v.includes(k); return {label:l,
       pick:()=>this.set(r.key,on?(v.length>(r.minPick??0)?v.filter(x=>x!==k):v):[...v,k]),
       bd:on?'rgba(167,139,250,.55)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.16)':'rgba(255,255,255,.02)',fg:on?'#ddd6fe':'#8a8596',dot:on?'#a78bfa':'rgba(255,255,255,.2)'}; });
-    if(t==='support'){ const st=SUPPORT_TYPES.find(x=>x.id===v); Object.assign(row,{chosen:!!st,boxBg:st?st.c:'rgba(255,255,255,.03)',boxBd:st?'transparent':'rgba(167,139,250,.55)',boxIni:st?st.name[0]:'+',boxName:st?st.name:'اختيار',title:st?st.name:'اختر نوع الدعم',sub:st?'اضغط على المربع للتغيير':'اضغط على المربع لاختيار الدعم',open:()=>this.setState({supPick:true}),count:this.state.supCount,dec:()=>this.setState(s=>({supCount:Math.max(1,s.supCount-1)})),inc:()=>this.setState(s=>({supCount:Math.min(10,s.supCount+1)}))}); }
+    if(t==='support'){ const st=SUPPORT_TYPES.find(x=>x.id===v); Object.assign(row,{chosen:!!st,notChosen:!st,boxImg:st?st.img:'',boxBg:st?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)',boxBd:st?'transparent':'rgba(167,139,250,.55)',boxName:st?st.name:'اختيار',title:st?st.name:'اختر نوع الدعم',sub:st?'اضغط على المربع للتغيير':'اضغط على المربع لاختيار الدعم',open:()=>this.setState({supPick:true}),count:this.state.supCount,dec:()=>this.setState(s=>({supCount:Math.max(1,s.supCount-1)})),inc:()=>this.setState(s=>({supCount:Math.min(10,s.supCount+1)}))}); }
     return row; }
 
-  rrValues(v){ return { keyword:String(v.keyword||'').trim(), maxPlayers:Math.max(1,Math.min(200,+v.maxPlayers||30)), who:v.who, chambers:parseInt(v.chambers)||4, bullets:parseInt(v.bullets)||1, chooseSec:parseInt(v.chooseSec)||30, onTimeout:v.onTimeout==='يُغلق الاختيار فقط'?'close':'eliminate' }; }
+  rrValues(v){ return { keyword:String(v.keyword||'').trim(), maxPlayers:Math.max(1,Math.min(200,+v.maxPlayers||30)), who:v.who, chambers:parseInt(v.chambers)||4, bullets:parseInt(v.bullets)||1, chooseSec:parseInt(v.chooseSec)||30, onTimeout:v.onTimeout==='يُغلق الاختيار فقط'?'close':'eliminate', supOn:!!(v.supOn&&v.supType), supType:v.supType||null, supCount:Math.max(1,Math.min(10,+v.supCount||1)) }; }
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
-    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):r.type==='support'?(SUPPORT_TYPES.find(x=>x.id===v)||{}).name||null:v; } out.supCount=this.state.supCount; return out; }
+    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):r.type==='support'?((g=>g?{id:g.id,name:g.name}:null)(SUPPORT_TYPES.find(x=>x.id===v))):v; } out.supCount=this.state.supCount; return out; }
 
   buildFx(){
     if(this._fx) return this._fx;
@@ -320,12 +327,13 @@ class Component extends DCLogic {
       offline:!S.live, online:S.live,
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':'غير متصل بالبث', libraryUrl:GAME.libraryUrl, connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الاتصال بالبث':'جارٍ الاتصال بالبث…', connSub:S.connStep?'جارٍ الانتقال للوبي':'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
-      supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
-      supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {name:x.name,ini:x.name[0],c:x.c,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
+      supCols:innerWidth>=900?6:5, supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
+      supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {name:x.name,img:x.img,coins:x.coins,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!RR.getSavedConnection(); if(live!==S.live) this.setState({live});
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); if(!String(S.values.keyword||'').trim()) return this.setState({kwErr:true},()=>this.toastMsg('اكتب الكلمة المفتاحية للدخول'));
         if(S.values.maxPlayers===''||+S.values.maxPlayers<1) return this.toastMsg('الحد الأقصى لعدد اللاعبين من 1 إلى 200');
+        if(S.values.supOn&&!S.values.supType) return this.toastMsg('اختر نوع الدعم أو أوقف الرجوع عن طريق الدعم');
         const values=this.readValues(), rr=this.rrValues(values); if(rr.bullets>rr.chambers) return this.toastMsg('عدد الطلقات لازم ما يزيد عن حجم الساقية');
         RR.writeJSON(RR.keys.setup,rr); try{ localStorage.removeItem(RR.keys.roster); localStorage.removeItem(RR.keys.players); }catch(e){} this.props.onStart?.(values);
         this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
