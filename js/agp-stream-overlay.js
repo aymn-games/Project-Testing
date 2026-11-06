@@ -2725,7 +2725,7 @@
         '.agp-so-vbox.out{animation:agp-so-a-out .35s ease both}',
         '.agp-so-vbox.novideo video,.agp-so-vbox.novideo canvas{display:none}',
         // آخر داعم
-        '.agp-so-jar.d-last{display:flex;flex-direction:column;align-items:center;gap:.25em}',
+        '.agp-so-jar.d-last{display:flex;flex-direction:column;align-items:center;gap:.25em;width:max-content}',
         '.agp-so-lwrap{position:relative;padding:1.3em 1.4em}',
         '.agp-so-lpill{position:relative;display:flex;align-items:center;gap:.6em;height:3.2em;box-sizing:border-box;padding:0 .45em 0 1.1em;border-radius:999px;overflow:hidden;direction:rtl;background:linear-gradient(180deg,var(--l1) 0%,var(--l2) 46%,var(--l3) 54%,var(--l2) 82%,var(--l1) 100%);box-shadow:0 0 0 .13em var(--lo),0 0 0 .2em rgba(255,255,255,.35),inset 0 .1em .08em rgba(255,255,255,.95),inset 0 -.16em .22em rgba(0,0,0,.28),0 .4em .9em -.25em rgba(0,0,0,.7)}',
         '.agp-so-lpill::before{content:"";position:absolute;inset:.22em .9em auto .9em;height:42%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.08));pointer-events:none;z-index:2}',

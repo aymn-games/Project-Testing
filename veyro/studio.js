@@ -102,6 +102,8 @@
 
     var TOOLS = {
         tops: [
+            // «آخر داعم»: كبسولة لامعة (jar.design = 'last' — بياناتها من آخر هدايا البث)
+            { label: 'آخر داعم', sub: 'كبسولة لامعة: اسمه يتحرك وقيمة دعمه ثابتة، وفراشات حولها', type: 'jar', set: { design: 'last', title: '', palette: 'silver', nameAnim: 'marquee', altText: 'آخر داعم 💜', cycle: 4, speed: 1, wave: true, butterflies: 2, width: 16, size: 2.6 } },
             // منصة التتويج = «العرش» بإطار «جناح الملاك» (الثلاثة الأوائل، بدون عنوان)
             { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
@@ -121,7 +123,6 @@
         ],
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
-            { label: 'آخر داعم', sub: 'كبسولة لامعة: اسمه يتحرك وقيمة دعمه ثابتة، وفراشات حولها', type: 'jar', set: { design: 'last', title: '', palette: 'silver', nameAnim: 'marquee', altText: 'آخر داعم 💜', cycle: 4, speed: 1, wave: true, butterflies: 2, width: 16, size: 2.6 } },
             { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } }
         ],
         text: [
@@ -927,12 +928,15 @@
     }
 
     function fitPreview(pv, wrap, n) {
-        requestAnimationFrame(function () {
+        function fit() {
             var w = n.offsetWidth, h = n.offsetHeight;
-            if (!w || !h) return;
+            if (!w || !h || !pv.clientWidth) return;
             var k = Math.min(1.4, (pv.clientWidth - 18) / w, (pv.clientHeight - 14) / h);
             wrap.style.transform = 'scale(' + k + ')';
-        });
+        }
+        requestAnimationFrame(fit);
+        // بعد ما تخلص حركة اللوحة (عرضها يتغيّر) والخطوط تتحمّل
+        setTimeout(fit, 450);
     }
 
     function iconsPane(box) {
