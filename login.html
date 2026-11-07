@@ -801,13 +801,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       btn.id = 'agp-tiktok-login';
       btn.href = '#';
       btn.innerHTML = tiktokIconSvg() + '<span></span>';
-      btn.addEventListener('click', function(e){
-        e.preventDefault();
-        if (!window.AGPAuth || !window.AGPAuth.tiktokLoginUrl) { setNote('تعذّر تحميل نظام الحسابات', false); return; }
-        var next = getSafeNextUrl();
-        setNote('جارٍ تحويلك لتيك توك…', true);
-        window.location.href = window.AGPAuth.tiktokLoginUrl(next === './' ? '' : next);
-      });
       wrap.appendChild(badge); wrap.appendChild(btn);
     }
     if (wrap.previousElementSibling !== googleBox) googleBox.insertAdjacentElement('afterend', wrap);
@@ -815,6 +808,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     var text = isSignupMode() ? 'أنشئ حساب بتيك توك' : 'سجّل دخولك بتيك توك';
     if (label.textContent !== text) label.textContent = text;
   }
+  // الضغط مربوط على document (مو على الزر نفسه): القالب يعيد رسم الصفحة
+  // وينسخ الزر بنسخة جديدة بدون مستمع الضغط، فكان الزر يطلع وما يسوي شي.
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('#agp-tiktok-login') : null;
+    if (!btn) return;
+    e.preventDefault();
+    if (!window.AGPAuth || !window.AGPAuth.tiktokLoginUrl) { setNote('تعذّر تحميل نظام الحسابات', false); return; }
+    var next = getSafeNextUrl();
+    setNote('جارٍ تحويلك لتيك توك…', true);
+    window.location.href = window.AGPAuth.tiktokLoginUrl(next === './' ? '' : next);
+  });
   new MutationObserver(ensureTikTokButton).observe(document, { childList: true, subtree: true, characterData: true });
   ensureTikTokButton();
 
