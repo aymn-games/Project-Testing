@@ -63,7 +63,11 @@ function authorizeUrlWithState(state) {
         scope: 'user.info.basic,user.info.profile',
         response_type: 'code',
         redirect_uri: config.tiktokRedirectUri,
-        state: state
+        state: state,
+        // صفحة الموافقة تطلع دايماً. بدونها، اللي وافق قبل (فك الربط وأعاده،
+        // أو ربط نفس تيك توك بحساب ثاني) يدخل بالموافقة التلقائية، وتعلق
+        // صفحة تيك توك على علامة التحميل عند بعض المستخدمين.
+        disable_auto_auth: '1'
     });
     return AUTHORIZE_URL + '?' + params.toString();
 }
