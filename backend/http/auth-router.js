@@ -1446,7 +1446,12 @@ function handleAdminLiveStreams(req, res) {
   // استهلاك EulerStream اليوم (محاولات الاتصال الحقيقية والبثوث) — shared-connection-pool.js
   var streamUsage = null;
   try { streamUsage = require('../platforms/tiktok/shared-connection-pool').getUsage(); } catch (err) { logger.error('Admin live streams: usage failed:', err); }
-  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
+  // سجل الاتصالات الدائم (connection-log-store.js): وش اللي حسب «غرفة جديدة» — ?logDay=YYYY-MM-DD لأيام سابقة
+  var connectionLog = null;
+  var logDay = getQueryParam(req, 'logDay');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(logDay || '')) logDay = null;
+  try { connectionLog = require('../platforms/tiktok/shared-connection-pool').getConnectionLog(logDay); } catch (err) { logger.error('Admin live streams: connection log failed:', err); }
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage, connectionLog: connectionLog });
 }
 
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة

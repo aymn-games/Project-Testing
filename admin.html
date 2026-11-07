@@ -846,6 +846,60 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </table></div>
             </div>
           </sc-if>
+          <sc-if value="{{ live.log.has }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+              <div><div style="font-weight:600">سجل الاتصالات بتيك توك — وش اللي يحسب «غرفة جديدة»</div>
+              <div style="font-size:12px;color:#9199ab;margin-top:4px">كل محاولة اتصال حقيقية = طلب توقيع من EulerStream. «غرفة جديدة» = أول مرة يظهر رقم البث هذا باليوم (UTC)، وهي اللي تنحسب من حد Distinct LIVE rooms. السجل ما يتصفّر مع النشر، ويُحذف بعد ٧ أيام.</div></div>
+              <select value="{{ live.log.day }}" onChange="{{ live.log.onDay }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><sc-for list="{{ live.log.days }}" as="d"><option value="{{ d.day }}">{{ d.label }}</option></sc-for></select>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:#262a37">
+              <sc-for list="{{ live.log.cards }}" as="c"><div style="background:#14161d;padding:14px 18px"><div style="font-size:12px;color:#9199ab">{{ c.k }}</div><div style="font-size:22px;font-weight:600;margin-top:4px;font-family:'IBM Plex Mono',monospace">{{ c.v }}</div></div></sc-for>
+            </div>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">حسب المصدر (أي لعبة / خدمة)</div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المصدر</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">محاولات</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">نجحت</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">غرف جديدة</th></tr></thead>
+              <tbody><sc-for list="{{ live.log.bySource }}" as="r"><tr><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.name }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.attempts }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.ok }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.rooms }}</td></tr></sc-for></tbody>
+            </table></div>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">حسب نوع المحاولة</div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">النوع</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">محاولات</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">غرف جديدة</th></tr></thead>
+              <tbody><sc-for list="{{ live.log.byKind }}" as="r"><tr><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.name }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.attempts }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.rooms }}</td></tr></sc-for></tbody>
+            </table></div>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">حسب الستريمر</div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الستريمر</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">محاولات</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">بثوث مختلفة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">غرف جديدة</th></tr></thead>
+              <tbody><sc-for list="{{ live.log.byUser }}" as="r"><tr><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.handle }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.attempts }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.rooms }}</td><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.newRooms }}</td></tr></sc-for></tbody>
+            </table></div>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="font-weight:600">آخر المحاولات (أحدث ٣٠٠)</div>
+              <button onClick="{{ live.log.toggleNew }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ live.log.filterBorder }};background:{{ live.log.filterBg }};color:#e7e9ee;font-size:12.5px;cursor:pointer">{{ live.log.filterText }}</button>
+            </div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:900px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الوقت (جهازك)</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الستريمر</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">رقم الغرفة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">غرفة جديدة؟</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المصدر</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">النوع</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">النتيجة</th></tr></thead>
+              <tbody><sc-for list="{{ live.log.entries }}" as="r"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.time }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.handle }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.room }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-weight:600;color:{{ r.newColor }}">{{ r.newRoom }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.source }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.kind }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px"><span style="color:{{ r.resultColor }};font-weight:600">{{ r.result }}</span><sc-if value="{{ r.error }}"><div style="font-size:11px;color:#9199ab;margin-top:3px;max-width:360px;word-break:break-word">{{ r.error }}</div></sc-if></td>
+              </tr></sc-for></tbody>
+            </table></div>
+            <sc-if value="{{ live.log.empty }}"><div style="padding:16px 18px;color:#9199ab;font-size:13px">ما فيه محاولات مسجّلة لهذا اليوم.</div></sc-if>
+          </div>
+          </div>
+          </sc-if>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">البثوث المتصلة</div>
             <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:860px">
@@ -1074,7 +1128,7 @@ class Component extends DCLogic {
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
     theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
     levels:null, lvEdits:{},
-    statsTab:'streamers', streamerStats:null, userStats:null, live:null, liveErr:false,
+    statsTab:'streamers', streamerStats:null, userStats:null, live:null, liveErr:false, logDay:'', logOnlyNew:false,
     tickets:null, ticketsTotal:0, newCount:0, ticketId: h.page==='support'&&/^\d+$/.test(h.arg||'')?Number(h.arg):null, ticket:null, statusDraft:'new',
     tType:'', tStatus:'', tQ:'', reply:'', busy:{}
   }; })();
@@ -1181,7 +1235,7 @@ class Component extends DCLogic {
   }
 
   // ---------- البثوث الشغّالة الآن ----------
-  loadLive(){ return A.getAdminLiveStreams().then(r=>{
+  loadLive(){ return A.getAdminLiveStreams(this.state.logDay).then(r=>{
     if(!r||!r.success) return this.setState({ liveErr:true });
     // فرق ساعة الجهاز عن الخادم — عشان مدة البث تطلع صحيحة.
     this.setState({ liveErr:false, live:{ ...r, skew:Date.now()-(r.now||Date.now()), at:Date.now() } });
@@ -1380,6 +1434,32 @@ class Component extends DCLogic {
         stream:(LV_STATUS[sd.stream]||['غير متصل'])[0], streamColor:(LV_STATUS[sd.stream]||['','#9199ab'])[1], screen:sd.screenOpen?'الشاشة مفتوحة':'الشاشة مسكّرة' })) }));
     const games={}; lvConns.forEach(c=>{ if(c.status==='connected'&&c.gameName) games[c.gameName]=(games[c.gameName]||0)+1; });
     const lat=lv&&lv.chatLatency;
+    // سجل الاتصالات الدائم (connection-log-store.js): كل محاولة اتصال بتيك توك ووش اللي حسب «غرفة جديدة»
+    const cl=lv&&lv.connectionLog;
+    const KIND={ first:'أول اتصال', reconnect:'إعادة بعد انقطاع', rate_retry:'إعادة بعد حد التوقيع', roomid_retry:'إعادة بعد فشل جلب الغرفة' };
+    const logView={
+      has:!!cl, day:cl?cl.day:'',
+      days:(()=>{ const ds=(cl?cl.days:[]).map(d=>({ day:d.day, label:d.day+' — '+(d.new_rooms||0)+' غرفة جديدة / '+d.attempts+' محاولة' }));
+        if(cl&&!ds.some(d=>d.day===cl.day)) ds.unshift({ day:cl.day, label:cl.day+' — ما فيه محاولات' }); return ds; })(),
+      onDay:e=>this.setState({ logDay:e.target.value },()=>this.loadLive()),
+      toggleNew:()=>this.setState({ logOnlyNew:!s.logOnlyNew }),
+      filterText:s.logOnlyNew?'✓ الغرف الجديدة بس':'عرض الغرف الجديدة بس', filterBg:s.logOnlyNew?'#3b2a63':'#0b0d12', filterBorder:s.logOnlyNew?'#7c3aed':'#2f3342',
+      cards:cl?(()=>{ const t=(cl.days||[]).find(d=>d.day===cl.day)||{}; return [
+        { k:'غرف جديدة (Distinct rooms)', v:t.new_rooms||0 },
+        { k:'محاولات اتصال (طلبات توقيع)', v:t.attempts||0 },
+        { k:'محاولات نجحت', v:t.ok||0 },
+        { k:'محاولات بعد إعادة تشغيل السيرفر', v:t.after_restart||0 }
+      ]; })():[],
+      bySource:(cl?cl.bySource:[]).map(b=>({ name:b.label||b.source, attempts:b.attempts, ok:b.ok||0, rooms:b.new_rooms||0 })),
+      byKind:(cl?cl.byKind:[]).map(b=>({ name:(KIND[b.kind]||b.kind)+(b.after_restart?' (بعد إعادة تشغيل السيرفر)':''), attempts:b.attempts, rooms:b.new_rooms||0 })),
+      byUser:(cl?cl.byUser:[]).map(b=>({ handle:'@'+b.username, attempts:b.attempts, rooms:b.rooms||0, newRooms:b.new_rooms||0 })),
+      entries:(cl?cl.entries:[]).filter(e=>!s.logOnlyNew||e.newRoom).map(e=>({
+        time:new Date(e.at).toLocaleTimeString('en-GB'), handle:'@'+e.username, room:e.roomId||'—', source:e.sourceLabel||e.source,
+        kind:(KIND[e.kind]||e.kind)+(e.afterRestart?' · بعد إعادة تشغيل':''),
+        result:e.ok?'نجح':'فشل', resultColor:e.ok?'#4ade80':'#f87171', error:e.error||'',
+        newRoom:e.newRoom?'جديدة':'—', newColor:e.newRoom?'#fbbf24':'#5b6274' }))
+    };
+    logView.empty=logView.has&&!logView.entries.length;
     const liveView={
       loaded:!!lv, err:s.liveErr,
       cards:[
@@ -1404,6 +1484,7 @@ class Component extends DCLogic {
       hasGames:Object.keys(games).length>0,
       rows:liveRows, empty:lv&&!liveRows.length?'ما فيه أحد يبث ويلعب الحين.':'',
       matches:liveMatches, hasMatches:liveMatches.length>0,
+      log:logView,
       updated:lv?new Date(lv.at).toLocaleTimeString('en-GB'):'…'
     };
 

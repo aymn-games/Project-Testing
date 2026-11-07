@@ -45,6 +45,9 @@
  *                    راجع backend/support/support-service.js
  *   stream_screens — «شاشات البث» (تصميم + رمز رابط لكل شاشة) — ينشأ من
  *                    backend/stats/stream-screens-service.js
+ *   tiktok_connection_log — كل محاولة اتصال بتيك توك (طلب توقيع EulerStream) ورقم
+ *                    غرفتها، يُحذف بعد ٧ أيام — ينشأ من
+ *                    backend/platforms/tiktok/connection-log-store.js
  *   store_*        — المتجر: تصنيفات/استريمرز/منتجات/أكواد خصم/طلبات/
  *                    مقتنيات المشتري/المفضلة — راجع backend/store/store-service.js
  * ==========================================================================

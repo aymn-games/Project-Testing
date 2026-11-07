@@ -59,6 +59,14 @@ function isSignRateLimitCrash(err) {
 function isSignRateLimit(err) {
     return isSignRateLimitCrash(err) || (err && ((err.constructor && err.constructor.name) || err.name)) === 'SignatureRateLimitError';
 }
+/** نص قصير لسبب فشل محاولة اتصال — لسجل الاتصالات بلوحة الأدمن. */
+function describeAttemptError(err) {
+    if (!err) return null;
+    var name = (err.constructor && err.constructor.name) || err.name || '';
+    var msg = err.message || String(err);
+    return ((name && name !== 'Error' ? name + ': ' : '') + msg).slice(0, 300);
+}
+
 // محاولات حد التوقيع منفصلة عن MAX_RECONNECT_ATTEMPTS: كانت تُحسب منها، فبعد
 // ٥ دقايق تقريباً يوقف الموصِّل نهائياً واللعبة تبقى بدون شات وبدون أي رسالة.
 var MAX_RATE_LIMIT_RETRIES = 10; // ~٣٠ دقيقة
@@ -335,6 +343,7 @@ function createTikTokConnector() {
     var _rateLimitRetries = 0; // إعادة محاولات بسبب حد توقيع EulerStream
     var _connecting = false; // connect() شغّال الحين (بين startConnection ونتيجته)
     var _onAttempt = null; // options.onAttempt — عداد الاستهلاك (shared-connection-pool.js)
+    var _onAttemptResult = null; // options.onAttemptResult — سجل الاتصالات (connection-log-store.js)
     var _reconnectTimer = null;
     var _username = null;
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
@@ -412,6 +421,21 @@ function createTikTokConnector() {
         _connecting = true;
         // كل محاولة هنا = طلب توقيع من EulerStream
         if (_onAttempt) { try { _onAttempt(); } catch (err) {} }
+        // نوع المحاولة لسجل الاتصالات: أول اتصال، أو إعادة بعد انقطاع، أو بعد حد التوقيع، أو بعد فشل جلب Room ID
+        var attemptKind = _rateLimitRetries > 0 ? 'rate_retry' : isReconnectAttempt ? 'reconnect' : _roomIdRetries > 0 ? 'roomid_retry' : 'first';
+        function reportAttempt(ok, err) {
+            if (!_onAttemptResult) return;
+            var roomId = null;
+            try { roomId = (_connection && _connection.roomId) || null; } catch (e) {}
+            try {
+                _onAttemptResult({
+                    ok: ok,
+                    kind: attemptKind,
+                    roomId: roomId ? String(roomId) : null,
+                    error: ok ? null : describeAttemptError(err)
+                });
+            } catch (e) {}
+        }
         try {
             _connection = new TikTokLib.TikTokLiveConnection(
                 _username,
@@ -419,6 +443,7 @@ function createTikTokConnector() {
             );
         } catch (err) {
             _connecting = false;
+            reportAttempt(false, err);
             logger.error('TikTok Connector: failed to construct connection:', err);
             if (isReconnectAttempt) {
                 attemptReconnect();
@@ -579,6 +604,7 @@ function createTikTokConnector() {
                 if (thisConnection !== _connection) return; // اتصال قديم استُبدل بإعادة محاولة — تجاهل
                 _connecting = false;
                 _connected = true;
+                reportAttempt(true, null);
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
                 _roomIdRetries = 0;
                 _rateLimitRetries = 0;
@@ -590,6 +616,7 @@ function createTikTokConnector() {
                 if (thisConnection !== _connection) return; // اتصال قديم استُبدل — نتيجته ما تهم
                 _connected = false;
                 _connecting = false;
+                reportAttempt(false, err);
                 logger.error('TikTok Connector: connect() failed:', err);
 
                 if (isSignRateLimit(err)) {
@@ -659,6 +686,7 @@ function createTikTokConnector() {
             _roomIdRetries = 0;
             _rateLimitRetries = 0;
             _onAttempt = (options && typeof options.onAttempt === 'function') ? options.onAttempt : null;
+            _onAttemptResult = (options && typeof options.onAttemptResult === 'function') ? options.onAttemptResult : null;
 
             if (!TikTokLib) {
                 callbacks.onStatus('error', 'tiktok-live-connector is not installed.');

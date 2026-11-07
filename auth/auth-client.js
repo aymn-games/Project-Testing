@@ -853,8 +853,8 @@ function getAdminUserStats() {
 }
 
 /** Admin only — streams connected right now from inside games + live challenge matches. */
-function getAdminLiveStreams() {
-    return request('/api/admin/live-streams', { method: 'GET' });
+function getAdminLiveStreams(logDay) {
+    return request('/api/admin/live-streams' + (logDay ? '?logDay=' + encodeURIComponent(logDay) : ''), { method: 'GET' });
 }
 
 function getTopSupporters() {

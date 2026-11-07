@@ -30,6 +30,38 @@ var tiktokConnector = require('./tiktok-connector');
 
 var GRACE_MS = 2 * 60 * 1000;
 
+/* ---------------- سجل الاتصالات الدائم (connection-log-store.js) ---------------- */
+
+// محاولة خلال أول ١٠ دقايق من تشغيل السيرفر = غالباً إعادة اتصال بسبب نشر/إعادة تشغيل
+var BOOT_AT = Date.now();
+var AFTER_RESTART_MS = 10 * 60 * 1000;
+var _connLog; // undefined = ما انفتح بعد، null = غير متاح
+
+function connectionLog() {
+    if (_connLog !== undefined) return _connLog;
+    _connLog = null;
+    try { _connLog = require('./connection-log-store').createStore(require('../../db/database')); }
+    catch (err) { logger.error('Connection pool: connection log unavailable:', err); }
+    return _connLog;
+}
+
+function logAttemptResult(entry, info) {
+    var log = connectionLog();
+    if (!log) return;
+    try {
+        log.record({
+            username: entry.username,
+            roomId: info && info.roomId,
+            source: entry.source,
+            sourceLabel: labelOf(entry.source),
+            kind: info && info.kind,
+            afterRestart: Date.now() - BOOT_AT < AFTER_RESTART_MS,
+            ok: Boolean(info && info.ok),
+            error: info && info.error
+        });
+    } catch (err) { logger.error('Connection pool: connection log write failed:', err); }
+}
+
 var _pool = new Map(); // key -> entry
 
 function normalize(username) {
@@ -151,7 +183,8 @@ function createEntry(key, options, source) {
     _pool.set(key, entry);
 
     var realOptions = Object.assign({}, options, {
-        onAttempt: function () { recordAttempt(entry.username, entry.source); }
+        onAttempt: function () { recordAttempt(entry.username, entry.source); },
+        onAttemptResult: function (info) { logAttemptResult(entry, info); }
     });
 
     real.connect(realOptions, {
@@ -262,9 +295,17 @@ function createLease(meta) {
     };
 }
 
+/** سجل الاتصالات ليوم (UTC، الافتراضي اليوم) — للوحة الأدمن. */
+function getConnectionLog(day) {
+    var log = connectionLog();
+    if (!log) return null;
+    return log.report(day);
+}
+
 module.exports = {
     createLease: createLease,
     getUsage: getUsage,
+    getConnectionLog: getConnectionLog,
     GRACE_MS: GRACE_MS,
     _pool: _pool // للاختبارات
 };
