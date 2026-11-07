@@ -597,6 +597,16 @@ function loginWithTikTok(tiktokUser, tokens, deviceId) {
     var isNew = false;
 
     var existing = db.prepare('SELECT * FROM users WHERE tiktok_open_id = ?').get(tiktokUser.open_id);
+    // حساب (إيميل/جوجل) موثَّق بنفس اليوزر بطريقة كود البايو — ما عنده
+    // open_id، فكان يطلع «مرتبط بحساب ثاني». تيك توك أكّد إن هذا اليوزر
+    // لصاحب الطلب، فندخّله على حسابه ونحفظ open_id للمرات الجاية.
+    if (!existing && tiktokUsername) {
+        existing = db.prepare('SELECT * FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE AND tiktok_open_id IS NULL').get(tiktokUsername);
+        if (existing) {
+            db.prepare('UPDATE users SET tiktok_open_id = ? WHERE id = ?').run(tiktokUser.open_id, existing.id);
+            logger.log('Auth: TikTok login matched bio-verified user ' + existing.id + ' by username — open_id saved.');
+        }
+    }
     if (existing) {
         // تحديث بيانات تيك توك (اليوزر ممكن تغيّر) + refresh token الجديد.
         db.prepare(
