@@ -481,13 +481,19 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
 
 /* ===== «📺 المشهد»: مشاهد البث ملء الشاشة على الجوال ===== */
 .top-r { display: flex; align-items: center; gap: 6px; }
+.scenebtn.off { opacity: .55; border-style: dashed; }
+.sc-r { display: flex; gap: 6px; }
+.sc-sheet { display: flex; flex-direction: column; gap: 10px; }
+.sc-sheet p { font-size: 14.5px; font-weight: 500; line-height: 1.65; color: #d9d4e6; }
+.sc-sheet .btn { margin-top: 0; }
 .scenebtn { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(167,139,250,.5); background: rgba(139,92,246,.18); color: #ede9fe; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 body.watching { overflow: hidden; }
 .scene-ov { position: fixed; inset: 0; z-index: 70; background: #07060b; }
 .sc-stage { position: absolute; inset: 0; }
 .sc-stage canvas { width: 100% !important; height: 100% !important; display: block; }
 .sc-load { position: absolute; inset: 0; display: grid; place-items: center; color: #c9c3d8; font-size: 15px; font-weight: 600; text-align: center; padding: 20px; }
-.sc-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; z-index: 2; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+.sc-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+.sc-r { pointer-events: none; flex-wrap: wrap; justify-content: flex-end; }
 .sc-btn { pointer-events: auto; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); background: rgba(10,9,15,.75); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .sc-cap { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(92%, 640px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .35s; }
 .sc-cap.on { opacity: 1; }
@@ -562,7 +568,7 @@ body.watching { overflow: hidden; }
 
     <!-- 4) المباراة -->
     <section id="vGame" class="hide">
-        <div class="g-hdr"><div class="top"><div class="me" id="meBox"></div><div class="top-r"><button class="scenebtn" id="sceneBtn" type="button" title="شوف مشاهد البث هنا">📺 المشهد</button><button class="rolechip" id="roleChip" type="button"></button></div></div>
+        <div class="g-hdr"><div class="top"><div class="me" id="meBox"></div><div class="top-r"><button class="scenebtn off" id="sceneBtn" type="button" title="المشاهد مقفلة — اضغط عشان تفعّلها">📺 المشهد</button><button class="rolechip" id="roleChip" type="button"></button></div></div>
         <div class="phase"><b id="phaseTxt"></b><span class="t" id="phaseT"></span></div></div>
         <div id="gTrail"></div>
         <div id="gameBody"></div>
@@ -1194,8 +1200,9 @@ body.watching { overflow: hidden; }
                     : stage({ tone: 'ok', ic: '✅', k: 'خلّصت دورك', t: 'الحين دور ' + TN[G.turn], s: 'استريح… الصبح قريب', still: true }) + latestNotices(G);
             } else html += stage({ tone: 'night', ic: '😴', k: 'الليلة ' + G.round, t: 'نام يا مواطن…', s: 'الحين دور ' + TN[G.turn] + ' — الصبح يكشف كل شي' });
         } else if (ph === 'dawn') {
-            html += stage({ tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف وش صار بالليل!', s: 'المشاهد على البث الحين — أو شوفها هنا على جوالك',
-                extra: '<button type="button" class="btn" data-scene style="max-width:320px;margin:14px auto 0">📺 شوف المشهد هنا</button>' }) + latestNotices(G);
+            html += stage(S.scenesOn
+                ? { tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف وش صار بالليل!', s: 'المشاهد على البث الحين — أو شوفها هنا على جوالك', extra: '<button type="button" class="btn" data-scene style="max-width:320px;margin:14px auto 0">📺 شوف المشهد هنا</button>' }
+                : { tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين على البث' }) + latestNotices(G);
         } else if (ph === 'day') {
             html += recruitNote(G) + recapHtml(G) + stage({ tone: 'day', ic: '💬', k: 'اليوم ' + G.round, t: 'النقاش شغّال', s: S.tablet ? 'اكتبوا بالشات العام جنبك: مين تشكّون فيه؟' : 'اكتبوا بالشات العام: مين تشكّون فيه؟',
                 extra: S.tablet ? '' : '<button type="button" class="btn" data-gtab="city" style="max-width:320px;margin:14px auto 0">💬 افتح الشات العام</button>' }) + latestNotices(G) + inspections(G);
@@ -1341,11 +1348,32 @@ body.watching { overflow: hidden; }
         return ['', ''];
     }
     S.scene = null;
+    // المشاهد خيار يفعّله اللاعب (مقفل افتراضياً): وهو مقفل ما يتحمّل أي شي ولا يتأثر الجوال القديم.
+    // ينحفظ بالجهاز نفسه (لأن الموضوع قدرة الجهاز)، ويقدر يقفله من شاشة المشهد
+    var SCENES_LS = 'mafia-scenes-on';
+    S.scenesOn = (function () { try { return localStorage.getItem(SCENES_LS) === '1'; } catch (e) { return false; } })();
+    function setScenes(on) {
+        S.scenesOn = !!on; try { localStorage.setItem(SCENES_LS, on ? '1' : '0'); } catch (e) { }
+        var b = $('sceneBtn'); if (b) { b.classList.toggle('off', !on); b.title = on ? 'شوف مشاهد البث هنا' : 'المشاهد مقفلة — اضغط عشان تفعّلها'; }
+        lastRenderKey = ''; renderGame();
+    }
+    // نافذة التفعيل (لما يضغط الزر والمشاهد مقفلة)
+    function sceneSheet() {
+        if ($('sceneSheet')) return;
+        var bg = document.createElement('div'); bg.className = 'pick-bg'; bg.id = 'sceneSheet';
+        bg.innerHTML = '<div class="pick sc-sheet"><div class="pick-h"><b>📺 مشاهد البث على جوالك</b><button type="button" data-scsheet-close aria-label="إغلاق">✕</button></div>' +
+            '<p>تقدر تشوف نفس مشاهد البث (الهجوم، الإنقاذ، الطرد…) على جوالك بدون ما تروح للبث.</p>' +
+            '<div class="note">⚠️ المشاهد ثلاثية الأبعاد وتحتاج جهاز حديث شوي. لو جوالك قديم خلّها مقفلة — اللعبة تشتغل عادي بدونها.<br>وتقدر تقفلها بأي وقت من شاشة المشهد.</div>' +
+            '<button type="button" class="btn" id="scEnable">✅ فعّل المشاهد وشوفها</button><button type="button" class="btn ghost" data-scsheet-close>لا، خلها مقفلة</button></div>';
+        document.body.appendChild(bg);
+    }
+    function closeSceneSheet() { var e = $('sceneSheet'); if (e) e.remove(); }
     function openScene() {
+        if (!S.scenesOn) return sceneSheet();
         if ($('sceneOv') || !S.G) return;
         var ov = document.createElement('div'); ov.className = 'scene-ov'; ov.id = 'sceneOv';
         ov.innerHTML = '<div class="sc-stage" id="sceneStage"><div class="sc-load" id="scLoad">⏳ جاري تحميل المشهد…</div></div>' +
-            '<div class="sc-top"><button type="button" class="sc-btn" id="scClose">✕ رجوع للعب</button><button type="button" class="sc-btn" id="scSnd" aria-label="الصوت">🔇 الصوت</button></div>' +
+            '<div class="sc-top"><button type="button" class="sc-btn" id="scClose">✕ رجوع للعب</button><span class="sc-r"><button type="button" class="sc-btn" id="scSnd" aria-label="الصوت">🔇 الصوت</button><button type="button" class="sc-btn" id="scOff" title="يقفل المشاهد بهالجهاز">⏻ إيقاف المشاهد</button></span></div>' +
             '<div class="sc-cap" id="scCap"><b></b><span></span></div>' + (innerHeight > innerWidth ? '<div class="sc-tip">📱 لف جوالك بالعرض لمشهد أكبر</div>' : '');
         document.body.appendChild(ov); document.body.classList.add('watching');
         var frame = function () { return { G: sceneG(S.G), room: S.room, now: NET.now() }; };
@@ -1380,9 +1408,13 @@ body.watching { overflow: hidden; }
         if (window.MafiaSFX) return go();
         var sc = document.createElement('script'); sc.src = 'mafia-sfx.js'; sc.onload = go; document.head.appendChild(sc);
     }
+    if (S.scenesOn) $('sceneBtn').classList.remove('off'), $('sceneBtn').title = 'شوف مشاهد البث هنا';
     document.addEventListener('click', function (e) {
         if (e.target.closest('[data-scene]') || e.target.id === 'sceneBtn') return openScene();
         if (e.target.id === 'scClose') return closeScene();
+        if (e.target.id === 'scOff') { closeScene(); return setScenes(false); }
+        if (e.target.id === 'scEnable') { closeSceneSheet(); setScenes(true); return openScene(); }
+        if (e.target.id === 'sceneSheet' || e.target.closest('[data-scsheet-close]')) return closeSceneSheet();
         if (e.target.id === 'scSnd') return toggleSceneSound(e.target);
     });
 
