@@ -119,6 +119,8 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 .msg.cont .av { height: 0; }
 .msg .av { width: 40px; height: 40px; flex: none; border-radius: 50%; background: rgba(255,255,255,.06); overflow: hidden; box-shadow: 0 0 0 2px var(--pc); }
 .msg .av svg { width: 40px; height: 40px; }
+.msg .av { position: relative; }
+.msg .av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .msg .col { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .msg .who { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 900; color: var(--pc); }
 .msg .who em { font-style: normal; font-size: 11px; font-weight: 900; color: #fff; background: var(--pc); padding: 0 7px; border-radius: 999px; opacity: .85; }
@@ -344,7 +346,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             S.code = m.code; S.token = m.token; S.schema = m.schema;
             NET.hostSession({ code: m.code, token: m.token });
             makeQr();
-        } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); overKey = '';
+        } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); overKey = ''; lastChatN = '';   // الصور الجديدة تطلع بالشات على طول
         } else if (m.t === 'room') {
             S.room = m.room;
             // صفحة المباراة بس — قبل البداية (أو بعد «رجوع للوبي») مكانه شاشة اللوبي
@@ -429,6 +431,10 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         r = Math.round(r + (255 - r) * k); g = Math.round(g + (255 - g) * k); b = Math.round(b + (255 - b) * k);
         return 'rgb(' + r + ',' + g + ',' + b + ')';
     }
+    function chatPhoto(p) {
+        var src = PHOTOS[p.id];
+        return L.avatarSVG(p.look, 40) + (src ? '<img src="' + esc(src) + '" alt="" onerror="this.remove()">' : '');   // الشخصية تحت الصورة: لو الصورة ما تحمّلت تبان هي
+    }
     // النقاش والتصويت: الشات العام بس (رسائل اللاعبين مع الردود) · باقي المراحل: سجل أحداث المباراة
     function renderChat(G) {
         var talk = G.phase === 'day' || G.phase === 'vote';
@@ -437,7 +443,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
         // بدون نقاش: أحداث المباراة المهمة بس (بداية، نتيجة كل ليلة، الطرد)
         var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city' && c.n > dayN; })
-            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت|عدم نشاطه/.test(c.text); });
+            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|استهدفت|ليلة هادية|جنّدت|طلع بالتصويت|عدم نشاطه/.test(c.text); });
         var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
@@ -452,7 +458,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             var roles = [['🔪', st.mafia, 'مافيا' + (st.disguised ? ' (' + st.disguised + ' متخفي)' : '')], ['🩺', st.doctors, 'طبيب'], ['🕵️', st.detectives, 'محقق'], ['🏠', cit, 'مواطن']]
                 .filter(function (r) { return r[1] > 0; }).map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b> ' + r[2] + '</span>'; }).join('');
             box.innerHTML = '<div class="roles-sum">' + roles + '</div>' + (list.length ? list.slice(-12).map(function (c) {
-                return '<div class="ev' + (/إقصاء|طرد|جنّدت/.test(c.text) && !/دون/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/\s*—.*$/, '')) + '</div>';
+                return '<div class="ev' + (/ما نجا|طلع بالتصويت|جنّدت/.test(c.text) && !/ما أحد/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/^بدأت المباراة([^—]*)—.*$/, 'بدأت المباراة$1')) + '</div>';
             }).join('') : '<div class="empty-talk">المباراة بدأت للتو…</div>');
             box.scrollTop = box.scrollHeight;
             return;
@@ -462,7 +468,8 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             var p = byId[c.from] || { name: '؟' }, pc = playerColor(p), cont = prev === c.from && !c.re;
             prev = c.from;
             var re = c.re ? (function () { var rp = byId[c.re.from] || { name: '؟' }; return '<div class="re" style="--rc:' + playerColor(rp) + '">↩ <b>' + esc(rp.name) + '</b>: ' + esc(c.re.text) + '</div>'; })() : '';
-            return '<div class="msg' + (cont ? ' cont' : '') + '" style="--pc:' + pc + '"><div class="av">' + L.avatarSVG(p.look, 40) + '</div><div class="col">' +
+            // صورة اللاعب: صورة تيك توك لو حسابه مربوط، وإلا صورة بروفايله بالموقع (الخادم يحددها)، وإلا شخصيته المرسومة
+            return '<div class="msg' + (cont ? ' cont' : '') + '" style="--pc:' + pc + '"><div class="av">' + chatPhoto(p) + '</div><div class="col">' +
                 '<div class="who">' + esc(p.name) + (p.seat != null ? ' <em>' + (p.seat + 1) + '</em>' : '') + '</div><div class="bd">' + re + '<div class="tx">' + esc(c.text) + '</div></div></div></div>';
         }).join('');
         box.scrollTop = box.scrollHeight;

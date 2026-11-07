@@ -1337,14 +1337,17 @@ export function createStage(container, getFrame, opts) {
     }
     // وضع خفيف تلقائي: لو متوسط الإطارات نزل تحت 45/ث (بعد أول 3ث) نطفي الظلال والتوهّج وننزل الدقة
     // (نفس فكرة ship3d.js بسفينة النجاة) — الجهاز الضعيف يكمل سلس بدل ما يتقطع
+    // opts.lite (جوال اللاعب): يبدأ خفيف على طول — بدون ظلال وتوهّج وبدقة 1، عشان البطارية والحرارة
     let lite = false, pfT = 0, pfN = 0, pfS = 0;
     function perf(dt) {
         if (lite) return;
-        pfT += dt; if (pfT < 3) return;
-        pfN++; pfS += dt;
-        if (pfS < 2) return;
-        const fps = pfN / pfS; pfN = 0; pfS = 0;
-        if (fps >= 45) return;
+        if (!opts.lite) {
+            pfT += dt; if (pfT < 3) return;
+            pfN++; pfS += dt;
+            if (pfS < 2) return;
+            const fps = pfN / pfS; pfN = 0; pfS = 0;
+            if (fps >= 45) return;
+        }
         lite = true;
         renderer.shadowMap.enabled = false; bloom.enabled = false; renderer.setPixelRatio(1);
         scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
@@ -1357,6 +1360,7 @@ export function createStage(container, getFrame, opts) {
         /** موضع لاعب على الشاشة (0..1) — لعرض عناصر HTML فوق الشخصية إذا احتجنا */
         setViewShift(f) { viewShiftTarget = Math.max(-0.25, Math.min(0.25, +f || 0)); },
         screenOf(id) { const v = chars.get(id); if (!v) return null; const p = v.group.position.clone(); p.y += 2.5; p.project(camera); return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 }; },
-        dispose() { stopped = true; removeEventListener('resize', resize); renderer.dispose(); }
+        // إيقاف كامل: يوقف الرسم ويرجّع ذاكرة كرت الشاشة (مهم بالجوال لما يقفل المشهد)
+        dispose() { stopped = true; removeEventListener('resize', resize); onAmbience(null); try { composer.dispose && composer.dispose(); } catch (e) { } renderer.dispose(); try { renderer.forceContextLoss(); } catch (e) { } if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); }
     };
 }
