@@ -8,6 +8,7 @@
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 <script src="../../auth/auth-client.js"></script>
 <script src="mafia-net.js"></script>
 <script src="mafia-looks.js"></script>
@@ -478,6 +479,22 @@ body.portrait .split > .gview:not(.fill) { flex: 1 1 0; }
 body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختيار البطاقات أهم */
 @media (prefers-reduced-motion: reduce) { .gtab.need::before, .waitline i, .result { animation: none !important; } }
 
+/* ===== «📺 المشهد»: مشاهد البث ملء الشاشة على الجوال ===== */
+.top-r { display: flex; align-items: center; gap: 6px; }
+.scenebtn { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(167,139,250,.5); background: rgba(139,92,246,.18); color: #ede9fe; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+body.watching { overflow: hidden; }
+.scene-ov { position: fixed; inset: 0; z-index: 70; background: #07060b; }
+.sc-stage { position: absolute; inset: 0; }
+.sc-stage canvas { width: 100% !important; height: 100% !important; display: block; }
+.sc-load { position: absolute; inset: 0; display: grid; place-items: center; color: #c9c3d8; font-size: 15px; font-weight: 600; text-align: center; padding: 20px; }
+.sc-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; z-index: 2; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+.sc-btn { pointer-events: auto; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25); background: rgba(10,9,15,.75); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.sc-cap { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(92%, 640px); text-align: center; pointer-events: none; opacity: 0; transition: opacity .35s; }
+.sc-cap.on { opacity: 1; }
+.sc-cap b { display: block; font-size: clamp(22px, 6vw, 40px); font-weight: 800; text-shadow: 0 3px 16px rgba(0,0,0,.9), 0 0 2px #000; }
+.sc-cap span { display: block; margin-top: 4px; font-size: clamp(14px, 3.6vw, 20px); font-weight: 700; color: #f1ecff; text-shadow: 0 2px 10px rgba(0,0,0,.9); }
+.sc-tip { position: absolute; top: calc(60px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(10,9,15,.75); color: #ddd6fe; font-size: 13px; font-weight: 600; pointer-events: none; white-space: nowrap; animation: flOut .5s ease-in 4s forwards; }
+
 /* ===== «وش الجديد بالمافيا»: يطلع لكل حساب مرة وحدة (محفوظ بالخادم) ===== */
 .news-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4,3,8,.78); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: flIn .25s ease-out both; }
 .news { width: 100%; max-width: 440px; max-height: min(88dvh, 820px); display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; border: 1px solid rgba(167,139,250,.3);
@@ -545,7 +562,7 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
 
     <!-- 4) المباراة -->
     <section id="vGame" class="hide">
-        <div class="g-hdr"><div class="top"><div class="me" id="meBox"></div><button class="rolechip" id="roleChip" type="button"></button></div>
+        <div class="g-hdr"><div class="top"><div class="me" id="meBox"></div><div class="top-r"><button class="scenebtn" id="sceneBtn" type="button" title="شوف مشاهد البث هنا">📺 المشهد</button><button class="rolechip" id="roleChip" type="button"></button></div></div>
         <div class="phase"><b id="phaseTxt"></b><span class="t" id="phaseT"></span></div></div>
         <div id="gTrail"></div>
         <div id="gameBody"></div>
@@ -588,13 +605,13 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
         } else if (m.t === 'state') {
             S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame(); maybeNews();
         } else if (m.t === 'lobby') {
-            S.G = null; show('vWait'); renderWait();
+            closeScene(); S.G = null; show('vWait'); renderWait();
         } else if (m.t === 'err') {
             if (m.step === 'code') { show('vCode'); $('codeErr').textContent = m.err; }
             else if (m.step === 'auth') { $('joinErr').innerHTML = esc(m.err) + ' — <a href="' + loginUrl() + '" style="color:var(--gold)">سجّل دخول</a>'; }
             else $('joinErr').textContent = m.err;
         } else if (m.t === 'gone' || m.t === 'kicked' || m.t === 'closed') {
-            NET.me(null); S.me = null; S.G = null;
+            closeScene(); NET.me(null); S.me = null; S.G = null;
             show('vCode'); $('codeErr').textContent = m.t === 'kicked' || m.reason === 'kicked' ? 'المذيع طلّعك من الروم' : 'الروم انقفل';
         }
     }
@@ -1177,7 +1194,8 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
                     : stage({ tone: 'ok', ic: '✅', k: 'خلّصت دورك', t: 'الحين دور ' + TN[G.turn], s: 'استريح… الصبح قريب', still: true }) + latestNotices(G);
             } else html += stage({ tone: 'night', ic: '😴', k: 'الليلة ' + G.round, t: 'نام يا مواطن…', s: 'الحين دور ' + TN[G.turn] + ' — الصبح يكشف كل شي' });
         } else if (ph === 'dawn') {
-            html += stage({ tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف البث!', s: 'وش صار بالليل يطلع الحين على البث' }) + latestNotices(G);
+            html += stage({ tone: 'dawn', ic: '🎬', k: 'طلع الصبح · مشاهد الليلة ' + G.round, t: 'شوف وش صار بالليل!', s: 'المشاهد على البث الحين — أو شوفها هنا على جوالك',
+                extra: '<button type="button" class="btn" data-scene style="max-width:320px;margin:14px auto 0">📺 شوف المشهد هنا</button>' }) + latestNotices(G);
         } else if (ph === 'day') {
             html += recruitNote(G) + recapHtml(G) + stage({ tone: 'day', ic: '💬', k: 'اليوم ' + G.round, t: 'النقاش شغّال', s: S.tablet ? 'اكتبوا بالشات العام جنبك: مين تشكّون فيه؟' : 'اكتبوا بالشات العام: مين تشكّون فيه؟',
                 extra: S.tablet ? '' : '<button type="button" class="btn" data-gtab="city" style="max-width:320px;margin:14px auto 0">💬 افتح الشات العام</button>' }) + latestNotices(G) + inspections(G);
@@ -1264,6 +1282,110 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
         var pb = $('privbox'); if (pb) pb.scrollTop = pb.scrollHeight;
         var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); var sp = Math.min(caret, fe.value.length); fe.setSelectionRange(sp, sp); }
     }
+    // ================================================================ «📺 المشهد»: مشاهد البث على جوال اللاعب
+    // نفس المشهد الثلاثي الأبعاد اللي على شاشة البث، يتحمّل بس لما يضغط الزر ويوقف وينمسح من الذاكرة لما يقفله.
+    // يشتغل من نفس اتصال اللاعب (الحالة اللي توصله أصلاً) — بدون أي اتصال أو بيانات زيادة من السيرفر،
+    // وبالوضع الخفيف (بدون ظلال وتوهّج)، وبالأسماء بدون صور، والصوت مطفي لين يشغّله.
+    // قبل ما نعطيه للمشهد ننظّف الحالة لنفس اللي تشوفه شاشة البث: بدون دور اللاعب وأدوار زملاءه، والشات العام بس
+    var sceneCache = { src: null, out: null };
+    function sceneG(G) {
+        if (!G) return null;
+        if (sceneCache.src === G) return sceneCache.out;
+        var over = G.phase === 'over', st = G.settings || {}, me = G.me || {};
+        var out = Object.assign({}, G);
+        out.players = G.players.map(function (p) {
+            var o = Object.assign({}, p); delete o.mate;
+            if (!over && (p.id === me.id || p.mate || (me.team === 'mafia' && p.team === 'mafia'))) {
+                if (p.alive) { o.role = null; o.team = null; }
+                else if (!(st.fullReveal && p.cause !== 'left')) { o.role = null; o.team = p.cause === 'vote' ? p.team : null; }
+            }
+            return o;
+        });
+        out.chat = G.chat.filter(function (m) { return m.sys || m.ch === 'city'; });
+        delete out.me; if (!over) out.cards = null;
+        sceneCache = { src: G, out: out };
+        return out;
+    }
+    // عناوين المشهد (نفس نصوص شاشة البث وتوقيتاتها)
+    function sceneCaption(G, info, now) {
+        if (!G) return ['', ''];
+        var nm = function (id) { return pname(G, id); }, ph = G.phase, sh = info && info.s, u = info ? info.u : 0;
+        if (ph === 'reveal') return ['توزيع الأدوار', 'كل لاعب يشوف دوره على جواله'];
+        if (ph === 'night') return [{ mafia: '🔪 دور المافيا', doctor: '🩺 دور الطبيب', detective: '🕵️ دور المحقق' }[G.turn] || '🌙 الليل', 'الكل نايم… والمختارين يختارون من جوالاتهم'];
+        if (ph === 'dawn' && sh) {
+            if (sh.k === 'intro') return ['الليلة ' + G.round, 'المواطنين نايمين… والمافيا صاحية'];
+            if (sh.k === 'inspect') return ['🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس'];
+            if (sh.k === 'attack') {
+                var two = !!sh.target2, names = nm(sh.target) + (two ? ' و' + nm(sh.target2) : '');
+                if (u < 3200) return ['🌙 السوق بالليل…', two ? 'اثنين يمشون بين الدكاكين' : 'أحد يمشي لحاله بين الدكاكين'];
+                if (u < 6000) return [two ? '👁️ في اثنين يراقبون من الظلام…' : '👁️ في أحد يراقب من الظلام…', ''];
+                if (u < 6650) return ['انتبه وراك!', ''];
+                if (u < 8200) return ['هجوم على ' + names + '!', ''];
+                return [two ? 'المافيا هربوا في الظلام…' : 'المافيا هرب في الظلام…', names + (two ? ' طايحين' : ' طايح') + ' بالسوق'];
+            }
+            if (sh.k === 'save') { var rs = sh.rescue || [sh.target]; return [rs.length > 1 ? '🩺 الطبيبين وصلوا!' : '🩺 الطبيب وصل!', 'أنقذ ' + rs.map(nm).join(' و') + ' في آخر لحظة']; }
+            if (sh.k === 'quiet') return ['ليلة هادية', 'المافيا ما اختارت أحد…'];
+            if (sh.k === 'heal') return ['🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر'];
+            if (sh.k === 'noheal') return ['🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة'];
+            if (sh.k === 'result') { var vl = sh.victims || (sh.victim ? [sh.victim] : []); return vl.length ? ['صباح حزين ☀️', vl.map(nm).join(' و') + (vl.length > 1 ? ' ما نجوا من الليلة' : ' ما نجا من الليلة')] : ['طلع الصبح ☀️', sh.recruited ? '🤝 بس المافيا جنّدت مواطن!' : sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة']; }
+        }
+        if (ph === 'dawn') return ['🎬 مشاهد الليلة', ''];
+        if (ph === 'day') return ['النقاش: مين المافيا؟', 'اكتبوا بالشات العام من تبويب الشات'];
+        if (ph === 'vote') return ['التصويت: مين يطلع؟', G.players.filter(function (p) { return p.alive && G.votes[p.id]; }).length + ' صوّتوا من ' + G.players.filter(function (p) { return p.alive; }).length];
+        if (ph === 'verdict') {
+            var V = G.verdict || {}, uu = now - G.phaseAt;
+            if (V.id) return ['المواطنين قرروا طرد ' + nm(V.id), uu > 4200 ? (V.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان مواطن 🏠') : 'القفص نازل…'];
+            return [V.skip ? 'الأغلبية اختارت التخطي ⏭️' : V.tie ? 'تعادل بالأصوات' : 'ما أحد طلع', 'ما أحد طلع هالمرة'];
+        }
+        if (ph === 'over') return [G.winner === 'mafia' ? '🔪 فازت المافيا!' : '🏠 فاز المواطنين!', ''];
+        return ['', ''];
+    }
+    S.scene = null;
+    function openScene() {
+        if ($('sceneOv') || !S.G) return;
+        var ov = document.createElement('div'); ov.className = 'scene-ov'; ov.id = 'sceneOv';
+        ov.innerHTML = '<div class="sc-stage" id="sceneStage"><div class="sc-load" id="scLoad">⏳ جاري تحميل المشهد…</div></div>' +
+            '<div class="sc-top"><button type="button" class="sc-btn" id="scClose">✕ رجوع للعب</button><button type="button" class="sc-btn" id="scSnd" aria-label="الصوت">🔇 الصوت</button></div>' +
+            '<div class="sc-cap" id="scCap"><b></b><span></span></div>' + (innerHeight > innerWidth ? '<div class="sc-tip">📱 لف جوالك بالعرض لمشهد أكبر</div>' : '');
+        document.body.appendChild(ov); document.body.classList.add('watching');
+        var frame = function () { return { G: sceneG(S.G), room: S.room, now: NET.now() }; };
+        import('./mafia-scene.js').then(function (m) {
+            if (!$('sceneOv')) return;
+            var l = $('scLoad'); if (l) l.remove();
+            S.scene = m.createStage($('sceneStage'), frame, {
+                lite: true, photoOf: function () { return null; },
+                onCue: function (k, d) { if (S.sceneSnd && window.MafiaSFX) window.MafiaSFX.cue(k, d); },
+                onAmbience: function (md) { if (window.MafiaSFX) window.MafiaSFX.ambience(S.sceneSnd ? md : null); }
+            });
+            (function loop() {
+                if (!S.scene || !$('sceneOv')) return;
+                var c = sceneCaption(S.G, S.scene.shotInfo(), NET.now()), cap = $('scCap');
+                if (cap.dataset.k !== c[0] + c[1]) { cap.dataset.k = c[0] + c[1]; cap.querySelector('b').textContent = c[0]; cap.querySelector('span').textContent = c[1]; cap.classList.toggle('on', !!c[0]); }
+                requestAnimationFrame(loop);
+            })();
+        }).catch(function () { var l = $('scLoad'); if (l) l.textContent = 'ما قدرنا نحمّل المشهد — تأكد من النت وجرّب مرة ثانية'; });
+    }
+    function closeScene() {
+        var ov = $('sceneOv'); if (!ov) return;
+        if (S.scene) { try { S.scene.dispose(); } catch (e) { } S.scene = null; }
+        if (window.MafiaSFX) window.MafiaSFX.ambience(null);
+        ov.remove(); document.body.classList.remove('watching');
+    }
+    // الصوت: ملف المؤثرات يتحمّل أول مرة يشغّله بس
+    function toggleSceneSound(btn) {
+        S.sceneSnd = !S.sceneSnd;
+        btn.textContent = S.sceneSnd ? '🔊 الصوت' : '🔇 الصوت';
+        if (!S.sceneSnd) { if (window.MafiaSFX) window.MafiaSFX.ambience(null); return; }
+        var go = function () { window.MafiaSFX.setMuted(false); window.MafiaSFX.unlock(); };
+        if (window.MafiaSFX) return go();
+        var sc = document.createElement('script'); sc.src = 'mafia-sfx.js'; sc.onload = go; document.head.appendChild(sc);
+    }
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-scene]') || e.target.id === 'sceneBtn') return openScene();
+        if (e.target.id === 'scClose') return closeScene();
+        if (e.target.id === 'scSnd') return toggleSceneSound(e.target);
+    });
+
     // تحديث الرسائل بس: يحافظ على مكان القراءة (إلا لو كان تحت أصلاً) وما يلمس خانة الكتابة
     var lastChatHtml = '', lastPrivHtml = '', lastHeads = '';
     function patchChat(G) {
