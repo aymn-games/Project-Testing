@@ -436,7 +436,9 @@ body:not(.in-game) .wrap { min-height: calc(100dvh - 16px - env(safe-area-inset-
 .evr { padding: 10px 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); font-size: 14px; font-weight: 500; line-height: 1.55; }
 .evr small { display: block; font-size: 11.5px; color: var(--c2); }
 .evr.priv { border-style: dashed; border-color: rgba(167,139,250,.5); background: rgba(139,92,246,.07); }
-.evr.big { border-color: rgba(226,72,61,.45); }
+.evr.big { border-color: rgba(226,72,61,.45); background: rgba(226,72,61,.07); }
+.evr.saved { border-color: rgba(47,179,106,.5); background: rgba(47,179,106,.08); }
+.evr { white-space: pre-line; }   /* «مين صوّت لمين» سطر لكل خيار */
 .teamnote { display: flex; flex-direction: column; gap: 6px; }
 .teamnote .trow { padding: 6px 10px; }
 .nlist { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 560px; margin: 0 auto; }
@@ -1002,10 +1004,14 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
     function secretTone(G) { var c = privChans(G)[0]; return TURN_C[c] || TURN_C.vote; }
 
     // ---- الأحداث: أحداث المباراة العامة + إشعاراتك وإشعارات فريقك، مرتبة بالجولة
-    var EV_KEEP = /بدأت المباراة|الليلة \d|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت|بدأ النقاش|بدأ التصويت|لم يُقصَ|الأصوات|فازت|تخلّصوا|طلع من اللعبة/;
+    // أحداث المباراة لكل اللاعبين: كل ليلة مين استهدفته المافيا ونجا (الطبيب حماه) أو ما نجا، والتجنيد، ومين طلع بالتصويت ومين صوّت لمين
+    var EV_KEEP = /بدأت المباراة|الليلة \d|استهدفت|ليلة هادية|جنّدت|بدأ النقاش|بدأ التصويت|طلع بالتصويت|صوّت لمين|فازت|تخلّصوا|طلع من اللعبة/;
+    var EV_NIGHT = /استهدفت|ليلة هادية|جنّدت/;
     function eventsList(G) {
         var items = [];
-        G.chat.forEach(function (c) { if (c.sys && EV_KEEP.test(c.text)) items.push({ at: c.at, n: c.n, t: c.text }); });
+        // وقت مشاهد الصبح على البث: نتايج الليلة ما تطلع بالجوال قبل ما تنعرض (عشان ما تحرق المشهد)
+        var nightN = 0; if (G.phase === 'dawn') G.chat.forEach(function (c) { if (c.sys && /🌙 الليلة \d/.test(c.text)) nightN = c.n; });
+        G.chat.forEach(function (c) { if (c.sys && EV_KEEP.test(c.text) && !(nightN && c.n > nightN && EV_NIGHT.test(c.text))) items.push({ at: c.at, n: c.n, t: c.text }); });
         (G.me.notices || []).forEach(function (n, i) { items.push({ at: n.at, n: 1e9 + i, t: n.text, priv: !n.team, team: !!n.team }); });
         items.sort(function (a, b) { return a.at - b.at || a.n - b.n; });
         var label = 'قبل المباراة';
@@ -1017,7 +1023,7 @@ body.portrait .split.picking > .pane { flex: .7 1 0; }   /* وقت الاختي�
         h += '<div class="evfilter"><button type="button" data-evf="all" class="' + (S.evf === 'all' ? 'on' : '') + '">كل الأحداث</button><button type="button" data-evf="me" class="' + (S.evf === 'me' ? 'on' : '') + '">🔒 الخاص فيني وفريقي</button></div>';
         list.reverse().forEach(function (e) {
             if (e.rd !== last) { h += '<div class="round-h">' + esc(e.rd) + '</div>'; last = e.rd; }
-            h += '<div class="evr' + (e.priv ? ' priv' : e.team ? ' priv team' : '') + (/إقصاء|طرد|مافيا 🔪/.test(e.t) && !/دون|لم يُقصَ/.test(e.t) ? ' big' : '') + '"><div>' + esc(e.t) + (e.priv ? '<small>🔒 خاص فيك</small>' : e.team ? '<small>🔒 لفريقك بس</small>' : '') + '</div></div>';
+            h += '<div class="evr' + (e.priv ? ' priv' : e.team ? ' priv team' : '') + (/ما نجا|طلع بالتصويت|مافيا 🔪/.test(e.t) && !/ما أحد/.test(e.t) ? ' big' : /الطبيب حماه/.test(e.t) ? ' saved' : '') + '"><div>' + esc(e.t) + (e.priv ? '<small>🔒 خاص فيك</small>' : e.team ? '<small>🔒 لفريقك بس</small>' : '') + '</div></div>';
         });
         return list.length ? h : h + '<div class="lockmsg">ما فيه أحداث للحين</div>';
     }

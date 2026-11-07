@@ -308,10 +308,12 @@ function createGame(roster, settings, hooks) {
         shot('result', { victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), recruited: !!recruited });
 
         G.lastNight = { round: G.round, victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
-        victims.forEach(function (v) { sys('🌙 تم إقصاء ' + v.name + ' أثناء الليل.'); });
-        saveds.forEach(function (v) { sys('💊 الطبيب أنقذ ' + v.name + ' من هجوم المافيا!'); });
-        if (!victims.length && !saveds.length) sys('🌙 انتهى الليل دون إقصاء أحد.');
-        if (recruited) sys('🤝 المافيا جنّدت مواطن الليلة!');
+        // وش صار بالليلة — يوصل لكل اللاعبين («الأحداث» بالجوال) ولسجل شاشة البث. مين من المافيا اختار يبقى سر،
+        // وحماية الطبيب تنكشف بس لو المافيا هاجموا نفس الشخص فعلاً
+        victims.forEach(function (v) { sys('🔪 المافيا استهدفت ' + v.name + ' — ما نجا وطلع من اللعبة'); });
+        saveds.forEach(function (v) { sys('🛡️ المافيا استهدفت ' + v.name + ' — بس الطبيب حماه ونجا 💚'); });
+        if (recruited) sys('🤝 المافيا جنّدت لاعب الليلة — مين؟ سر');
+        if (!victims.length && !saveds.length && !recruited) sys('🌙 ليلة هادية — المافيا ما استهدفت أحد');
 
         G.seq = seq;
         go('dawn', at);
@@ -355,12 +357,15 @@ function createGame(roster, settings, hooks) {
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
             G.lastExile = { round: G.round, id: out.id, team: out.faction, role: S.fullReveal ? out.role : null };
-            sys('🗳️ تم طرد ' + out.name + ' (' + (out.faction === 'mafia' ? 'مافيا' : 'مواطن') + ') بـ' + best + ' صوت.');
-        } else sys(skipWon ? 'لم يُقصَ أحد: «تخطي» أخذ أكثر الأصوات (' + best + ').' : top.length > 1 ? 'لم يُقصَ أحد: تعادل في التصويت.' : 'لم يُقصَ أحد: ما فيه أصوات.');
-        // ملخص الأصوات للمشاهدين (أعلى 3 + التخطي)
-        var ranked = Object.keys(tally).filter(function (k) { return k !== 'skip'; }).sort(function (a, b) { return tally[b] - tally[a]; }).slice(0, 3);
-        var abst = tally.skip || 0;
-        if (ranked.length || abst) sys('📊 الأصوات: ' + ranked.map(function (id) { return P(id).name + ' ' + tally[id]; }).join(' · ') + (abst ? (ranked.length ? ' · ' : '') + 'تخطي ' + abst : ''));
+            sys('⚖️ ' + out.name + ' طلع بالتصويت بـ' + best + ' صوت — كان ' + (S.fullReveal ? ROLE_NAMES[out.role] : out.faction === 'mafia' ? 'من المافيا 🔪' : 'مواطن 🏠'));
+        } else sys(skipWon ? '⏭️ ما أحد طلع بالتصويت — «تخطي» أخذ أكثر الأصوات (' + best + ')' : top.length > 1 ? '⚖️ ما أحد طلع بالتصويت — تعادل بالأصوات' : '⚖️ ما أحد طلع بالتصويت — ما فيه أصوات');
+        // مين صوّت لمين (سطر لكل خيار بأكثر الأصوات) — لكل اللاعبين بـ«الأحداث»
+        var groups = {};
+        Object.keys(G.votes).forEach(function (vid) { var t = G.votes[vid], vp = P(vid); if (!vp || (t !== 'skip' && !P(t))) return; (groups[t] = groups[t] || []).push(vp.name); });
+        var gk = Object.keys(groups).sort(function (a, b) { return groups[b].length - groups[a].length; });
+        if (gk.length) sys('🗳️ مين صوّت لمين:\n' + gk.map(function (k) {
+            var l = groups[k]; return (k === 'skip' ? '⏭️ تخطي' : P(k).name) + ' (' + l.length + '): ' + l.slice(0, 12).join('، ') + (l.length > 12 ? ' +' + (l.length - 12) : '');
+        }).join('\n'));
         G.silenced = [];
         go('verdict', VERDICT_MS);
     }

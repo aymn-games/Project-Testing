@@ -443,7 +443,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
         // بدون نقاش: أحداث المباراة المهمة بس (بداية، نتيجة كل ليلة، الطرد)
         var list = talk ? G.chat.filter(function (c) { return !c.sys && c.ch === 'city' && c.n > dayN; })
-            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|إقصاء|أنقذ|دون إقصاء|تم طرد|جنّدت|عدم نشاطه/.test(c.text); });
+            : G.chat.filter(function (c) { return c.sys && /بدأت المباراة|استهدفت|ليلة هادية|جنّدت|طلع بالتصويت|عدم نشاطه/.test(c.text); });
         var key = G.id + (talk ? 't' : 'e') + ':' + (list.length ? list[list.length - 1].n : 0);
         if (key === lastChatN) return;
         lastChatN = key;
@@ -458,7 +458,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             var roles = [['🔪', st.mafia, 'مافيا' + (st.disguised ? ' (' + st.disguised + ' متخفي)' : '')], ['🩺', st.doctors, 'طبيب'], ['🕵️', st.detectives, 'محقق'], ['🏠', cit, 'مواطن']]
                 .filter(function (r) { return r[1] > 0; }).map(function (r) { return '<span>' + r[0] + ' <b>' + r[1] + '</b> ' + r[2] + '</span>'; }).join('');
             box.innerHTML = '<div class="roles-sum">' + roles + '</div>' + (list.length ? list.slice(-12).map(function (c) {
-                return '<div class="ev' + (/إقصاء|طرد|جنّدت/.test(c.text) && !/دون/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/\s*—.*$/, '')) + '</div>';
+                return '<div class="ev' + (/ما نجا|طلع بالتصويت|جنّدت/.test(c.text) && !/ما أحد/.test(c.text) ? ' big' : '') + '">' + esc(c.text.replace(/^بدأت المباراة([^—]*)—.*$/, 'بدأت المباراة$1')) + '</div>';
             }).join('') : '<div class="empty-talk">المباراة بدأت للتو…</div>');
             box.scrollTop = box.scrollHeight;
             return;
