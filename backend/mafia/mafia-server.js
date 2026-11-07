@@ -13,7 +13,7 @@
  *                                       (auth = توكن حساب الموقع — إلزامي. الاسم والصورة والإطار من الحساب،
  *                                        والموثّق بتيك توك تنحسب له النقاط)
  *   عميل → resume {code,id,key} · leave · look {look} · lchat {text} (شات الانتظار، باللوبي) · ping {k}
- *   اللاعب → act {a,arg}   a: kill|recruit|card ('كرت|هدف' أو 'none')|protect|inspect|vote|chat ('city|district|mafia' + '|' + النص)
+ *   اللاعب → act {a,arg}   a: kill|recruit|card ('كرت|هدف' أو 'none')|protect|inspect|vote|confirm (تأكيد الاختيار: نهائي)|chat ('city|district|mafia' + '|' + النص)
  *   المذيع → settings {settings} · kick {id} · endStage · start · again · lobby · close
  *   خادم → welcome · room {room} · state {G,now} · err {err} · kicked · lobby · closed · gone · pong
  */
@@ -76,6 +76,10 @@ function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; 
 function profilePhoto(uid) {
     try { var row = require('../db/database').prepare('SELECT avatar_image_base64 FROM users WHERE id = ?').get(uid); return (row && row.avatar_image_base64) || null; } catch (e) { return null; }
 }
+// الاسم الظاهر بحساب الموقع (display_name — يتعدّل من صفحة البروفايل). validateSession ما يرجعه، فنقراه هنا
+var _siteNameOf = function (uid) {
+    try { var row = require('../db/database').prepare('SELECT display_name FROM users WHERE id = ?').get(uid); return (row && String(row.display_name || '').trim()) || null; } catch (e) { return null; }
+};
 function sendAvatars(room) {
     var h = room.hostConn; if (!h || h.closed) return;
     h.avSent = h.avSent || {};
@@ -141,9 +145,12 @@ function accountOf(auth) {
     if (!u) return null;
     var tk = u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null, fr = null;
     if (tk) { try { fr = _frameOf(tk) || null; } catch (err) { logger.error('Mafia: frame lookup failed:', err); } }
-    // الاسم: لو الحساب مربوط بتيك توك (موثّق) = اسم حساب تيك توك (اسم البروفايل، وإلا اليوزر لين ينجاب)،
-    // ولو مو مربوط = اسمه بالموقع (ما نستخدم اسم تيك توك محفوظ لحساب مو موثّق)
-    return { uid: String(u.id), name: cleanName(tk ? (u.tiktok_display_name || tk) : (u.username || '')), hasTkName: !!u.tiktok_display_name, avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
+    // الاسم (بالشات واللوبي وفوق الشخصية): لو الحساب مربوط بتيك توك (موثّق) = الاسم الظاهر بحساب تيك توك
+    // (مو اليوزر)، ولو مو مربوط = الاسم الظاهر بحسابه بموقع ألعاب أيمن (مو اسم المستخدم).
+    // اليوزر يبقى آخر احتياط بس لو ما فيه اسم ظاهر أبداً (ولتيك توك يتكمّل من البروفايل العام بالخلفية — enrichPlayer)
+    var siteName = _siteNameOf(u.id);
+    var name = tk ? (u.tiktok_display_name || siteName || tk) : (siteName || u.username || '');
+    return { uid: String(u.id), name: cleanName(name), hasTkName: !!u.tiktok_display_name, tkAvatarUrl: tk ? u.tiktok_avatar_url || null : null, avatar: tk ? '/api/public/streamer-avatar?u=' + encodeURIComponent(tk) : null, tiktok: tk, frame: fr };   // روابط صور تيك توك تنتهي، فنستخدم الصورة المحفوظة عند الخادم
 }
 
 // ---- تكملة اسم وصورة تيك توك اللي ناقصة بالحساب (مرة وحدة لكل يوزر بكل تشغيل للسيرفر)
@@ -173,9 +180,27 @@ function enrichPlayer(room, p, acc) {
             try { db.prepare('UPDATE users SET tiktok_display_name = ? WHERE id = ? AND tiktok_display_name IS NULL').run(prof.name, acc.uid); } catch (e) { }
             if (!room.started) { var nm = cleanName(prof.name); if (nm.length >= 2 && !room.players.some(function (q) { return q !== p && q.name.toLowerCase() === nm.toLowerCase(); })) p.name = nm; }
         }
-        if (needAv && prof.avatar) jobs.push(require('../auth/tiktok-avatar-sync').saveAvatarIfMissing(acc.uid, prof.avatar).then(function (ok) { if (ok) { p.avatar = p.avatar.split('&v=')[0] + '&v=' + Date.now(); p.photo = _photoOf(acc.uid) || p.photo; } }));
+        if (needAv && prof.avatar) jobs.push(require('../auth/tiktok-avatar-sync').saveAvatarIfMissing(acc.uid, prof.avatar).then(function (ok) { if (ok) { p.avatar = p.avatar.split('&v=')[0] + '&v=' + Date.now(); if (!p.tkPhoto) p.photo = _photoOf(acc.uid) || p.photo; } }));
         return Promise.all(jobs).then(function () { if (_rooms[room.code] === room) broadcastRoom(room); });
     }).catch(function (err) { logger.error('Mafia: TikTok profile fetch failed for ' + p.tiktok + ': ' + (err && err.message)); });
+}
+
+// ---- صورة اللاعب (بالشات وفوق الشخصية وشاشة الفوز): لو الحساب مربوط بتيك توك = صورة حساب تيك توك أولاً،
+// وإلا (أو لو ما انجابت) = صورة البروفايل بالموقع (p.photo من البداية)، وإلا الشخصية المرسومة بالمتصفح.
+// صورة تيك توك تنجاب بالخلفية (رابطها المحفوظ، ولو انتهى من البروفايل العام) كـData URL، وتوصل لشاشة البث بـ'avatars'
+var _tkPhotoOf = function (url, tk) {
+    var stats = require('../stats/live-session-stats');
+    return stats.cachedAvatar(url).then(function (a) {
+        return a || _profileFetcher(tk).then(function (prof) { return prof && prof.avatar ? stats.cachedAvatar(prof.avatar) : null; });
+    });
+};
+function tiktokPhoto(room, p, acc) {
+    if (!p.tiktok) return;
+    Promise.resolve().then(function () { return _tkPhotoOf(acc.tkAvatarUrl, p.tiktok); }).then(function (d) {
+        if (!d || !/^data:image\//.test(d) || d === p.photo) return;
+        p.photo = d; p.tkPhoto = true;
+        if (_rooms[room.code] === room) broadcastRoom(room);
+    }).catch(function (err) { logger.error('Mafia: TikTok photo failed for ' + p.tiktok + ': ' + (err && err.message)); });
 }
 
 function onMessage(client, msg) {
@@ -209,7 +234,8 @@ function onMessage(client, msg) {
         if (!acc) return send(client, { t: 'err', err: 'لازم تسجّل دخول بحساب الموقع عشان تلعب', step: 'auth' });
         var mine = jr.players.find(function (q) { return q.uid === acc.uid; });
         if (mine) {   // نفس الحساب من جهاز ثاني ← يكمل بنفس اللاعب
-            mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame; mine.photo = _photoOf(acc.uid) || mine.photo;
+            mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame; if (!mine.tkPhoto) mine.photo = _photoOf(acc.uid) || mine.photo;
+            tiktokPhoto(jr, mine, acc);
             roomClients(jr).forEach(function (c) { if (c.id === mine.id && c !== client) { send(c, { t: 'gone', reason: 'elsewhere' }); c.code = null; c.id = null; } });
             attach(client, jr, 'player', mine.id);
             send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok, news: newsFor(mine.uid) });
@@ -222,6 +248,7 @@ function onMessage(client, msg) {
         var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame, photo: _photoOf(acc.uid) };
         jr.players.push(p); attach(client, jr, 'player', p.id);
         enrichPlayer(jr, p, acc);
+        tiktokPhoto(jr, p, acc);
         send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok, news: newsFor(acc.uid) });
         broadcastRoom(jr);
         return;
@@ -348,4 +375,4 @@ function handleUpgrade(req, socket) {
 /** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
 function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
 
-module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; }, _setSeenStore: function (s) { _seen = s; }, NEWS_KEY: NEWS_KEY };
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _setSiteNameLookup: function (fn) { _siteNameOf = fn; }, _setTikTokPhotoLookup: function (fn) { _tkPhotoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; }, _setSeenStore: function (s) { _seen = s; }, NEWS_KEY: NEWS_KEY };

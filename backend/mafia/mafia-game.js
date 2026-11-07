@@ -86,7 +86,7 @@ function createGame(roster, settings, hooks) {
         }),
         cards: shuffle(Settings.enabledCards(S, roster.length)).slice(0, S.cardsCount == null ? 3 : S.cardsCount),   // المفعّلة واللي لها فايدة بهالمباراة
         usedCards: [], effects: [], silenced: [], silenceNext: [],
-        night: null, seq: [], chat: [], votes: {}, verdict: null, winner: null, mafiaPrev: []
+        night: null, seq: [], chat: [], votes: {}, voteOk: {}, verdict: null, winner: null, mafiaPrev: []
     };
     var chatSeq = 0;
 
@@ -97,7 +97,8 @@ function createGame(roster, settings, hooks) {
     function aliveMafia() { return alive().filter(function (p) { return p.faction === 'mafia'; }); }
     function go(phase, ms) { G.phase = phase; G.phaseAt = Date.now(); G.endsAt = ms ? G.phaseAt + ms : 0; changed(); }
     function available(card) { return G.cards.indexOf(card) >= 0 && G.usedCards.indexOf(card) < 0 && G.round >= (card === 'recruit' ? 3 : 2); }
-    function notice(p, text) { p.notices.push({ round: G.round, text: text, at: Date.now() }); if (p.notices.length > 40) p.notices.shift(); }
+    // team = إشعار عن زميل بالفريق (اختياره/نتيجته) — الجوال يعرضه «لفريقك بس» بدل «خاص فيك»
+    function notice(p, text, team) { var n = { round: G.round, text: text, at: Date.now() }; if (team) n.team = true; p.notices.push(n); if (p.notices.length > 40) p.notices.shift(); }
 
     function sys(text) { G.chat.push({ n: ++chatSeq, sys: true, ch: 'city', text: text, at: Date.now() }); trimChat(); }
     function trimChat() { if (G.chat.length > CHAT_MAX) G.chat.splice(0, G.chat.length - CHAT_MAX); }
@@ -122,13 +123,19 @@ function createGame(roster, settings, hooks) {
     }
     // (انشال إقصاء غير النشطين: اللي يفوته دوره أو التصويت أو يقفل الصفحة يبقى باللعبة — دوره يمر بانتهاء الوقت)
     function nextTurn() {
+        // نهاية الدور: اللي حدد وما أكّد ينحسب اختياره
+        if (G.turn === 'mafia') resolveMafiaDecision();
+        if (G.turn === 'detective') aliveRole('detective').forEach(function (d) { deliverReport(d); });
         for (var j = TURNS.indexOf(G.turn) + 1; j < TURNS.length; j++) if (turnExists(TURNS[j])) return startTurn(TURNS[j]);
         G.turn = null; resolveNight();
     }
 
     function startNight() {
         G.round++;
-        G.night = { ops: {}, cards: {}, actions: {} };
+        // confirmed: مين أكّد اختياره (التأكيد نهائي، والدور يخلص بدري لو الكل أكّد) · reports: المحققين اللي استلموا نتيجتهم
+        // unscanned: المتخفين اللي ما انفحصوا قبل الليلة — كل المحققين بنفس الليلة يطلع لهم «مواطن»
+        G.night = { ops: {}, cards: {}, actions: {}, confirmed: {}, reports: {}, triggered: [], dec: null, unscanned: {} };
+        alive().forEach(function (p) { if (p.role === 'disguised' && !p.disguisedScanned) G.night.unscanned[p.id] = true; });
         G.votes = {}; G.verdict = null; G.seq = []; G.silenced = [];
         sys('🌙 الليلة ' + G.round + ' — الكل يغمّض عيونه');
         G.turn = null; startTurn('mafia');
@@ -136,19 +143,56 @@ function createGame(roster, settings, hooks) {
 
     function anyAuxCard() { return ['shield', 'reveal', 'mislead', 'silence'].some(available); }
 
-    /** خلّص أصحاب الدور الحالي اختيارهم؟ */
+    /** أكّدوا كل أصحاب الدور الحالي؟ (تأكيد واحد ما ينهي دور زميله — الدور يخلص بدري بس لو الكل أكّد) */
     function turnDone() {
-        var N = G.night, aux = anyAuxCard(), actors = turnActors(G.turn);
+        var actors = turnActors(G.turn);
         if (!actors.length) return false;   // دور وهمي (صاحبه ميت): يكمّل مدته
-        // المافيا: الدور يخلص بدري بس لو الكل اختار واتفقوا على نفس الهدف ونفس الكرت — غير كذا ينتظر الوقت (والأكثرية تتنفّذ)
-        if (G.turn === 'mafia') {
-            var same = function (list) { return list.every(function (x) { return JSON.stringify(x) === JSON.stringify(list[0]); }); };
-            if (!actors.every(function (m) { return N.ops[m.id] && (!aux || N.cards[m.id]); })) return false;
-            // الهدف ما يلزم يتفقون عليه (اختلافهم = شخصين)، بس نوع العملية والكرت لازم يتفقون عليه عشان ينتهي بدري
-            var ops = actors.map(function (m) { return N.ops[m.id]; }), kinds = ops.map(function (o) { return o.op; });
-            return same(kinds) && (!aux || kinds[0] === 'recruit' || same(actors.map(function (m) { return N.cards[m.id]; })));
-        }
-        return actors.every(function (d) { return N.actions[d.id]; });
+        return actors.every(function (a) { return G.night.confirmed[a.id]; });
+    }
+    function picked(N, id) { return G.turn === 'mafia' ? !!N.ops[id] : !!N.actions[id]; }
+
+    /** تأكيد الاختيار: نهائي، والنتيجة تطلع على طول (المحقق نتيجته، الطبيب الحماية، المافيا الهدف) ويدري فيها الفريق */
+    function confirm(me) {
+        var N = G.night, turn = G.turn;
+        if (N.confirmed[me.id] || turnActors(turn).indexOf(me) < 0 || !picked(N, me.id)) return;
+        N.confirmed[me.id] = true;
+        if (turn === 'mafia') {
+            if (anyAuxCard() && !N.cards[me.id] && N.ops[me.id].op !== 'recruit') N.cards[me.id] = { card: 'none' };   // الكرت اختياري
+            var o = N.ops[me.id], t = o.op === 'skip' ? null : P(o.target);
+            var txt = o.op === 'skip' ? 'تخطى الليلة' : (o.op === 'recruit' ? 'يبي يجنّد ' : 'الهدف: ') + t.name;
+            notice(me, o.op === 'skip' ? '⏭️ تخطيت الليلة' : (o.op === 'recruit' ? '🤝 اخترت تجنيد ' : '🔪 اخترت ') + (t ? t.name : ''));
+            aliveMafia().forEach(function (m) { if (m !== me) notice(m, '🔪 زميلك ' + me.name + ' · ' + txt, true); });
+        } else if (turn === 'doctor') {
+            var dt = N.actions[me.id], dp = dt === 'skip' ? null : P(dt);
+            notice(me, dp ? '🛡️ تمّت حماية ' + (dp === me ? 'نفسك' : dp.name) + ' الليلة' : '⏭️ ما حميت أحد الليلة');
+            aliveRole('doctor').forEach(function (d) { if (d !== me) notice(d, '🛡️ زميلك ' + me.name + ' · ' + (dp ? 'حماية: ' + dp.name : 'تخطى الليلة'), true); });
+        } else if (turn === 'detective') deliverReport(me);
+        changed();
+        if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 600); changed(); }
+    }
+
+    /** نتيجة فحص المحقق — تطلع لحظة التأكيد (أو نهاية الدور لو ما أكّد)، والمحققين الثانيين يعرفونها */
+    function deliverReport(d) {
+        var N = G.night, tid = N.actions[d.id];
+        if (!tid || N.reports[d.id]) return;
+        N.reports[d.id] = true;
+        if (tid === 'skip') { notice(d, '⏭️ ما فحصت أحد الليلة'); return; }
+        var t = P(tid); if (!t) return;
+        var shield = G.effects.find(function (e) { return e.card === 'shield' && e.target === t.id; });
+        var mislead = G.effects.find(function (e) { return e.card === 'mislead' && e.target === t.id; });
+        var res;
+        if (shield) { res = 'town'; N.triggered.push(shield); }   // الحماية: عضو المافيا يطلع للمحقق «من المدينة»
+        else if (mislead) { res = 'mafia'; N.triggered.push(mislead); }
+        else if (N.unscanned[t.id]) { res = 'town'; t.disguisedScanned = true; }
+        else res = t.faction === 'mafia' ? 'mafia' : 'town';
+        var word = res === 'mafia' ? 'مافيا 🔪' : 'مواطن ✓';
+        d.inspections.push({ round: G.round, id: t.id, res: res });
+        notice(d, '🔍 نتيجة فحص ' + t.name + ': ' + word);
+        aliveRole('detective').forEach(function (o) {
+            if (o === d) return;
+            o.inspections.push({ round: G.round, id: t.id, res: res, by: d.id });   // المحققين يعرفون فحوصات بعض
+            notice(o, '🔍 زميلك ' + d.name + ' · فحص ' + t.name + ': ' + word, true);
+        });
     }
 
     // ---- حد الشخصين: الفريق (المافيا/الأطباء/المحققين) يختار شخص واحد لو اتفقوا، أو شخصين لو اختلفوا — أكثر ممنوع.
@@ -163,8 +207,10 @@ function createGame(roster, settings, hooks) {
     function opPicks(N) { var o = {}; Object.keys(N.ops).forEach(function (k) { o[k] = N.ops[k].op === 'skip' ? 'skip' : N.ops[k].target; }); return o; }
     function rolePicks(N, role) { var o = {}; aliveRole(role).forEach(function (d) { if (N.actions[d.id]) o[d.id] = N.actions[d.id]; }); return o; }
 
-    function resolveNight() {
-        var N = G.night, mafs = aliveMafia();
+    // قرار المافيا ينحسب بنهاية دورهم (عشان كرت الحماية/التضليل يأثر على فحص المحقق اللي بعدهم)
+    function resolveMafiaDecision() {
+        var N = G.night; if (N.dec) return N.dec;
+        var mafs = aliveMafia();
         // عملية المافيا: نوع العملية بالأكثرية (قتل/تجنيد/تخطي)، والقتل يشمل كل الأهداف المختلفة (شخص أو شخصين لو اختلفوا)
         var mops = mafs.map(function (m) { return N.ops[m.id]; }).filter(Boolean);
         var nKill = mops.filter(function (o) { return o.op === 'kill'; }).length, nRec = mops.filter(function (o) { return o.op === 'recruit'; }).length, nSkip = mops.length - nKill - nRec;
@@ -195,6 +241,13 @@ function createGame(roster, settings, hooks) {
             if (card.card === 'silence') G.silenceNext = [card.target];
             mafs.forEach(function (m) { notice(m, '🃏 استخدمتوا كرت ' + CARD_NAMES[card.card] + ' على ' + cardTarget.name + '.'); });
         }
+        N.dec = { op: op, killTargets: killTargets, opTarget: opTarget, card: card, cardTarget: cardTarget };
+        return N.dec;
+    }
+
+    function resolveNight() {
+        var N = G.night, mafs = aliveMafia(), D = resolveMafiaDecision();
+        var op = D.op, killTargets = D.killTargets, opTarget = D.opTarget, card = D.card, cardTarget = D.cardTarget;
 
         // ---- الأطباء
         var protectedIds = {};
@@ -206,23 +259,10 @@ function createGame(roster, settings, hooks) {
             if (t === d.id) d.doctorSelfUsed = true;
         });
 
-        // ---- المحققين (قبل التجنيد: المجنّد يسجّل قدرته قبل ما يتحول)
-        var unscanned = {};
-        alive().forEach(function (p) { if (p.role === 'disguised' && !p.disguisedScanned) unscanned[p.id] = true; });
-        var triggered = [], reports = [], inspectShot = false;
-        aliveRole('detective').forEach(function (d) {
-            var t = P(N.actions[d.id]); if (!t) return;
-            inspectShot = true;
-            var shield = G.effects.find(function (e) { return e.card === 'shield' && e.target === t.id; });
-            var mislead = G.effects.find(function (e) { return e.card === 'mislead' && e.target === t.id; });
-            var res;
-            if (shield) { res = 'town'; triggered.push(shield); }   // الحماية: عضو المافيا يطلع للمحقق «من المدينة»
-            else if (mislead) { res = 'mafia'; triggered.push(mislead); }
-            else if (unscanned[t.id]) { res = 'town'; t.disguisedScanned = true; }   // كل المحققين بنفس الليلة يطلع لهم «من المدينة»
-            else res = t.faction === 'mafia' ? 'mafia' : 'town';
-            reports.push({ d: d, t: t, res: res });
-        });
-        G.effects = G.effects.filter(function (e) { return triggered.indexOf(e) < 0 && e.expires > G.round; });
+        // ---- المحققين: نتائجهم وصلت وقت دورهم (deliverReport) — هنا نحرق التأثيرات اللي انكشفت بس
+        aliveRole('detective').forEach(function (d) { deliverReport(d); });   // احتياط (لو دورهم ما مرّ)
+        var inspectShot = G.players.some(function (p) { return p.role === 'detective' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
+        G.effects = G.effects.filter(function (e) { return N.triggered.indexOf(e) < 0 && e.expires > G.round; });
 
         // ---- عملية المافيا
         var victims = [], saveds = [], recruited = null;
@@ -244,12 +284,6 @@ function createGame(roster, settings, hooks) {
             } else mafs.forEach(function (m) { notice(m, 'التجنيد ما تنفّذ لأن المافيا بتتجاوز 30% من الأحياء — الكرت محفوظ.'); });
         }
 
-        // ---- النتائج السرية بعد الليل
-        reports.forEach(function (r) {
-            if (!r.d.alive) return;   // المحقق المقتول ما يستلم نتيجته
-            r.d.inspections.push({ round: G.round, id: r.t.id, res: r.res });
-            notice(r.d, '🔍 نتيجة فحص ' + r.t.name + ': ' + (r.res === 'mafia' ? 'مافيا' : r.res === 'town' ? 'مواطن' : 'تعذر التحقيق') + '.');
-        });
         if (card && card.card === 'reveal') aliveMafia().forEach(function (m) { notice(m, '🃏 كشف الهوية: ' + cardTarget.name + ' دوره ' + ROLE_NAMES[cardTarget.role] + '.'); });
 
         // ---- مشاهد البث (مين انجنّد سر، بس الكل يعرف إن فيه تجنيد)
@@ -304,7 +338,7 @@ function createGame(roster, settings, hooks) {
         go('day', S.talkSec * 1000);
     }
 
-    function startVote() { G.votes = {}; sys('🗳️ بدأ التصويت.'); go('vote', S.voteSec * 1000); }
+    function startVote() { G.votes = {}; G.voteOk = {}; sys('🗳️ بدأ التصويت.'); go('vote', S.voteSec * 1000); }
 
     function resolveVote() {
         var tally = {}, best = 0, top = [];
@@ -394,6 +428,8 @@ function createGame(roster, settings, hooks) {
         var N = G.night;
         if (G.phase === 'night') {
             var turn = G.turn;
+            if (a === 'confirm') return confirm(me);
+            if (N.confirmed[id]) return;   // بعد التأكيد ما يتغيّر شي
             if (a === 'kill' && arg === 'skip' && me.faction === 'mafia' && turn === 'mafia') N.ops[id] = { op: 'skip' };   // تخطي: ما يقتلون أحد
             else if ((a === 'kill' || a === 'recruit') && me.faction === 'mafia' && turn === 'mafia') {
                 var t = P(String(arg || ''));
@@ -410,7 +446,6 @@ function createGame(roster, settings, hooks) {
                     N.cards[id] = { card: c, target: ct.id };
                 }
             } else if ((a === 'protect' || a === 'inspect') && arg === 'skip' && me.role === (a === 'protect' ? 'doctor' : 'detective') && turn === me.role) {
-                if (a === 'inspect' && N.actions[id]) return;
                 N.actions[id] = 'skip';   // تخطي الليلة
             } else if (a === 'protect' && me.role === 'doctor' && turn === 'doctor') {
                 var dt = P(String(arg || ''));
@@ -419,19 +454,21 @@ function createGame(roster, settings, hooks) {
                 N.actions[id] = dt.id;
             } else if (a === 'inspect' && me.role === 'detective' && turn === 'detective') {
                 var it = P(String(arg || ''));
-                if (!it || !it.alive || it.id === id || N.actions[id]) return;   // فحص واحد بالليلة وما يتغيّر
+                if (!it || !it.alive || it.id === id) return;   // يقدر يغيّر لين يأكّد
                 if (!targetAllowed(rolePicks(N, 'detective'), id, it.id)) return;   // المحققين: شخصين بالكثير
                 N.actions[id] = it.id;
             } else return;
             changed();
-            if (turnDone()) { G.endsAt = Math.min(G.endsAt, Date.now() + 600); changed(); }   // أول ما يختارون (والمافيا يتفقون) ينتهي الدور
             return;
         }
-        if (G.phase === 'vote' && a === 'vote') {
-            if (arg === 'skip') G.votes[id] = 'skip';
+        if (G.phase === 'vote' && (a === 'vote' || a === 'confirm')) {
+            if (G.voteOk[id]) return;   // التصويت المؤكَّد ما يتغيّر
+            if (a === 'confirm') { if (!G.votes[id]) return; G.voteOk[id] = true; }
+            else if (arg === 'skip') G.votes[id] = 'skip';
             else { var vt = P(String(arg || '')); if (!vt || !vt.alive || vt.id === id) return; G.votes[id] = vt.id; }
             changed();
-            if (alive().every(function (p) { return G.votes[p.id]; })) { G.endsAt = Math.min(G.endsAt, Date.now() + 2000); changed(); }
+            // الكل أكّد ← النتيجة بعد ثانيتين (اللي صوّت وما أكّد ينحسب صوته بنهاية الوقت)
+            if (alive().every(function (p) { return G.voteOk[p.id]; })) { G.endsAt = Math.min(G.endsAt, Date.now() + 2000); changed(); }
         }
     }
 
@@ -506,12 +543,16 @@ function createGame(roster, settings, hooks) {
             };
             if (me.role === 'doctor') { v.me.doctorPrev = me.doctorPrev; v.me.doctorSelfUsed = me.doctorSelfUsed; }
             if (G.phase === 'night' && G.night) {
+                v.me.confirmed = !!G.night.confirmed[me.id];
+                // مين من فريقي أكّد (المافيا يشوفون المافيا، والأطباء الأطباء، والمحققين المحققين)
+                var mates = meMafia ? aliveMafia() : aliveRole(me.role);
+                if (meMafia || me.role === 'doctor' || me.role === 'detective') { v.me.teamDone = {}; mates.forEach(function (p) { v.me.teamDone[p.id] = !!G.night.confirmed[p.id]; }); }
                 if (meMafia) { v.me.ops = G.night.ops; v.me.cardVotes = G.night.cards; v.me.mafiaPrev = G.mafiaPrev; }
                 if (me.role === 'doctor') { v.me.protect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'doctor'); }
                 if (me.role === 'detective') { v.me.inspect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'detective'); }
             }
             if (meMafia && !over) v.cards = G.cards.map(function (c) { return { id: c, name: CARD_NAMES[c], used: G.usedCards.indexOf(c) >= 0, available: available(c) }; });
-            if (G.phase === 'vote' || G.phase === 'verdict') v.me.vote = G.votes[me.id] || null;
+            if (G.phase === 'vote' || G.phase === 'verdict') { v.me.vote = G.votes[me.id] || null; v.me.voteOk = !!G.voteOk[me.id]; }
         }
         return v;
     }
