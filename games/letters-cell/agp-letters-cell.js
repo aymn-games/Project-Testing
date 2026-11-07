@@ -596,10 +596,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<input type="text" id="' + id + '" class="lc-input" value="' + escapeAttr(value) + '" placeholder="' + escapeAttr(placeholder) + '">';
     }
 
+    // العناصر اللي ممكن تتمرّر بشاشة الإعدادات (حسب حجم الشاشة).
+    var SETTINGS_SCROLL_SELECTORS = ['.lc-scroll', '.lc-main'];
+
     function renderSettingsScreen() {
+        // إعادة الرسم بعد اختيار أي خيار تبني الشاشة من جديد، فنحفظ موضع
+        // التمرير ونرجّعه بعدها عشان ما يرجع المستخدم لأعلى الشاشة.
+        var keepScroll = _screen === 'settings';
         _screen = 'settings';
         ensureBody();
         var root = ensureRoot();
+        var prevScroll = keepScroll ? saveScrollPositions(root) : null;
 
         var team1Rows =
             rowHtml('اسم الفريق', textInputHtml('lc-input-team1name', _settings.team1Name, 'مثلاً: الصقور'), _settings.team1Color) +
@@ -642,6 +649,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         wireSettingsHandlers();
+        if (prevScroll) restoreScrollPositions(root, prevScroll);
     }
 
     /**
@@ -691,6 +699,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('lc-connect-btn').addEventListener('click', handleConnectClick);
 
         refreshConnectionBadge();
+    }
+
+    function saveScrollPositions(root) {
+        var saved = {};
+        SETTINGS_SCROLL_SELECTORS.forEach(function (sel) {
+            var node = root.querySelector(sel);
+            if (node) saved[sel] = node.scrollTop;
+        });
+        return saved;
+    }
+
+    function restoreScrollPositions(root, saved) {
+        SETTINGS_SCROLL_SELECTORS.forEach(function (sel) {
+            var node = root.querySelector(sel);
+            if (node && saved[sel]) node.scrollTop = saved[sel];
+        });
     }
 
     function showSettingsError(msg) { showToast(msg); }

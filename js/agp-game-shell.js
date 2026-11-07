@@ -495,8 +495,54 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // بشاشة الإعدادات الأولى قبل إعادة الرسم.
     window.addEventListener('storage', function (e) {
         if (e.key !== STREAM_CONNECTION_STORAGE_KEY) return;
-        if (!_lastIsReopened && document.getElementById('agp-connect-btn')) renderSettingsScreen(false);
+        if (!_lastIsReopened && document.getElementById('agp-connect-btn')) rerenderSettingsKeepScroll();
     });
+
+    /** يعيد رسم شاشة الإعدادات المفتوحة حالياً مع الحفاظ على موضع التمرير.
+     * renderSettingsScreen تبني الشاشة كاملة من جديد (innerHTML)، فبدون هذا
+     * أي ضغطة على خيار ترجع المستخدم لأعلى الشاشة ويضطر ينزل كل مرة.
+     * فتح الإعدادات من جديد (زر الترس، أول تحميل) يبقى يستدعي
+     * renderSettingsScreen مباشرة فيبدأ من الأعلى كالمعتاد. */
+    function rerenderSettingsKeepScroll() {
+        var box = el('agp-shell-box');
+        var saved = box ? saveShellScroll(box) : [];
+        renderSettingsScreen(_lastIsReopened);
+        if (!box || !saved.length) return;
+        restoreShellScroll(box, saved);
+        // بعض الألعاب تنقل الحقول لحاوية تمرير خاصة فيها بعد الرسم (عبر
+        // MutationObserver)، فنعيد الاسترجاع بعد ما تخلص قبل رسم الإطار.
+        Promise.resolve().then(function () { restoreShellScroll(box, saved); });
+        if (window.requestAnimationFrame) window.requestAnimationFrame(function () { restoreShellScroll(box, saved); });
+    }
+
+    /** يحفظ موضع التمرير للصندوق نفسه ولأي حاوية تمرير داخله، معرّفة
+     * بالـid أو بأسماء الكلاسات (العناصر نفسها تنبني من جديد بعد الرسم). */
+    function shellScrollSignature(node) {
+        if (node.id) return '#' + node.id;
+        var cls = (typeof node.className === 'string' ? node.className : '').trim().split(/\s+/).filter(Boolean);
+        return cls.length ? node.tagName.toLowerCase() + '.' + cls.join('.') : null;
+    }
+
+    function saveShellScroll(box) {
+        var saved = [];
+        if (box.scrollTop) saved.push({ sig: null, top: box.scrollTop });
+        box.querySelectorAll('*').forEach(function (node) {
+            if (!node.scrollTop) return;
+            var sig = shellScrollSignature(node);
+            if (sig) saved.push({ sig: sig, top: node.scrollTop });
+        });
+        return saved;
+    }
+
+    function restoreShellScroll(box, saved) {
+        saved.forEach(function (item) {
+            var node = item.sig === null ? box : null;
+            if (!node) {
+                try { node = box.querySelector(item.sig); } catch (e) { node = null; }
+            }
+            if (node && node.scrollTop !== item.top) node.scrollTop = item.top;
+        });
+    }
 
     function renderSettingsScreen(isReopened) {
         _lastIsReopened = Boolean(isReopened);
@@ -575,7 +621,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     if (typeof _config.midMatchToggleButton.onToggle === 'function') {
                         _config.midMatchToggleButton.onToggle(_midMatchToggleActive);
                     }
-                    renderSettingsScreen(_lastIsReopened);
+                    rerenderSettingsKeepScroll();
                 };
             }
             showRelocatedControls();
@@ -714,7 +760,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var raw = btn.getAttribute('data-value');
                 var parsed = raw === 'true' ? true : (raw === 'false' ? false : (isNaN(Number(raw)) ? raw : Number(raw)));
                 _settingsValues[key] = parsed;
-                renderSettingsScreen(_lastIsReopened);
+                rerenderSettingsKeepScroll();
             };
         });
         _overlayEl.querySelectorAll('.agp-shell-counter-row button').forEach(function (btn) {
@@ -724,7 +770,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fieldConfig = (_config.settingsFields || []).filter(function (f) { return f.key === key; })[0];
                 var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
                 _settingsValues[key] = Math.max(min, (_settingsValues[key] || 0) + delta);
-                renderSettingsScreen(_lastIsReopened);
+                rerenderSettingsKeepScroll();
             };
         });
         _overlayEl.querySelectorAll('.agp-count-input').forEach(function (input) {
@@ -734,7 +780,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
                 var typed = parseInt(input.value, 10);
                 _settingsValues[key] = isNaN(typed) ? min : Math.max(min, typed);
-                renderSettingsScreen(_lastIsReopened);
+                rerenderSettingsKeepScroll();
             };
         });
         _overlayEl.querySelectorAll('.agp-slider-input').forEach(function (input) {
@@ -744,7 +790,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var valEl = el('agp-slider-val-' + key);
                 if (valEl) valEl.textContent = input.value;
             };
-            input.onchange = function () { renderSettingsScreen(_lastIsReopened); };
+            input.onchange = function () { rerenderSettingsKeepScroll(); };
         });
         _overlayEl.querySelectorAll('.agp-modal-trigger-btn').forEach(function (btn) {
             btn.onclick = function () {
@@ -920,7 +966,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setSetting: function (key, value) {
             _settingsValues[key] = value;
             if (_overlayEl && _overlayEl.style.display !== 'none') {
-                renderSettingsScreen(_lastIsReopened);
+                rerenderSettingsKeepScroll();
             }
         },
 
@@ -929,7 +975,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setMidMatchToggleActive: function (active) {
             _midMatchToggleActive = Boolean(active);
             if (_overlayEl && _overlayEl.style.display !== 'none' && _lastIsReopened) {
-                renderSettingsScreen(_lastIsReopened);
+                rerenderSettingsKeepScroll();
             }
         }
     };
