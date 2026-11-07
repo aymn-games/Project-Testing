@@ -571,6 +571,136 @@
   .ob-toast { position: fixed; bottom: 28px; left: 50%; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 60; padding: 11px 18px; border-radius: 13px; background: rgba(36,31,45,.92); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--line-2); font-size: 13.5px; font-weight: 600; transition: opacity .3s, transform .3s var(--ease); box-shadow: 0 20px 40px -20px rgba(0,0,0,.9); }
   .ob-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+  /* ---------- مقاسات متجاوبة: الصفحة تتمدد وتعبّي الشاشة، والخيارات أكبر وتكبر مع الشاشة ---------- */
+  :root { --nav-w: clamp(250px, 15vw, 320px); --nav-w-mini: 84px; --panel-w: clamp(370px, 25vw, 500px); --r: 20px; }
+  .vy-app { padding: clamp(10px, .9vw, 20px); gap: clamp(10px, .9vw, 20px); }
+  .vy-scroll { padding: 4px clamp(6px, .8vw, 16px) 32px; }
+  .vy-wrap { max-width: none; width: 100%; gap: clamp(18px, 1.3vw, 28px); }
+  .vy-hero { padding: clamp(28px, 2.6vw, 56px) clamp(26px, 2.8vw, 60px); min-height: clamp(300px, 32vh, 460px); }
+  .vy-hero h1 { font-size: clamp(30px, 3.2vw, 60px); }
+  .vy-hero p { font-size: clamp(16px, 1vw, 20px); max-width: 600px; }
+  .vy-brand { height: 86px; }
+  .vy-brand img.full { width: 190px; }
+  .vy-group { font-size: 12px; }
+  .vy-item { height: 50px; gap: 13px; padding: 0 15px; font-size: 15px; border-radius: 14px; }
+  .vy-item svg { width: 22px; height: 22px; }
+  .vy-item .badge { font-size: 12px; height: 22px; }
+  .vy-user .av { width: 40px; height: 40px; }
+  .vy-user .who b { font-size: 14.5px; }
+  .vy-user .who small { font-size: 12.5px; }
+  .ob-btn { padding: 12px 20px; font-size: 14.5px; border-radius: 14px; }
+  .ob-btn svg { width: 18px; height: 18px; }
+  .ob-btn.lg { padding: 15px 24px; font-size: 16px; border-radius: 16px; }
+  .ob-btn.icon { width: 44px; height: 44px; }
+  .vy-stat { padding: clamp(18px, 1.4vw, 26px); }
+  .vy-stat .ic { width: 46px; height: 46px; }
+  .vy-stat b { font-size: clamp(24px, 1.7vw, 32px); }
+  .vy-stat span { font-size: 13.5px; }
+  .vy-sechead h2 { font-size: clamp(19px, 1.25vw, 24px); }
+  .vy-sechead p { font-size: 14px; }
+  .vy-tools { grid-template-columns: repeat(auto-fill, minmax(clamp(210px, 14vw, 280px), 1fr)); gap: 14px; }
+  .vy-tool { padding: 20px; }
+  .vy-tool .ic { width: 50px; height: 50px; }
+  .vy-tool b { font-size: 16px; }
+  .vy-tool small { font-size: 13.5px; }
+  .vy-screens { grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 19vw, 400px), 1fr)); gap: 16px; }
+  .vy-scr .info b { font-size: 16px; }
+  .vy-scr .info small { font-size: 13px; }
+  .vy-scr .acts .ob-btn { padding: 10px 14px; font-size: 13.5px; }
+  .vy-scr .acts .ob-btn.icon { width: 40px; height: 40px; }
+  .vy-guide h3 { font-size: 15.5px; }
+  .ob-top { padding: 10px 12px 10px 14px; }
+  .ob-ttl b { font-size: 16px; }
+  .ob-ttl small { font-size: 12.5px; }
+  .ob-chip { padding: 10px 16px; font-size: 14px; }
+  .ob-status, .ob-saved { font-size: 13.5px; }
+  .ob-phead { padding: 20px 20px 16px; }
+  .ob-phead h2 { font-size: 18px; }
+  .ob-phead p { font-size: 13.5px; }
+  .ob-x { width: 38px; height: 38px; }
+  .ob-pbody { padding: 16px 18px 26px; gap: 14px; }
+  .ob-tool .pv { height: 118px; }
+  .ob-tools.one .ob-tool .pv { height: 136px; }
+  .ob-tool .meta { padding: 10px 12px 12px; }
+  .ob-tool b { font-size: 14.5px; }
+  .ob-tool small { font-size: 12.5px; }
+  .ob-seg button, .ob-ptabs button { padding: 10px 8px; font-size: 14px; }
+  .ob-row { padding: 13px 15px; gap: 14px; }
+  .ob-row > .ob-label { font-size: 14.5px; }
+  .ob-row > .ob-label small { font-size: 12.5px; }
+  .ob-pill { padding: 9px 15px; font-size: 13.5px; }
+  .ob-sw button { width: 30px; height: 30px; }
+  .ob-sw input[type=color] { width: 34px; height: 34px; }
+  .ob-input { font-size: 16px; padding: 11px 13px; border-radius: 12px; }
+  .ob-range { max-width: 230px; }
+  .ob-toggle { width: 52px; height: 30px; }
+  .ob-toggle span::after { width: 24px; height: 24px; }
+  .ob-toggle input:checked + span::after { transform: translateX(-22px); }
+  .ob-hint, .ob-steps, .ob-warn { font-size: 13.5px; }
+  .ob-card { padding: 17px; }
+  .ob-card h3 { font-size: 15px; }
+  .ob-url { font-size: 13.5px; padding: 12px; }
+  .ob-layer { padding: 10px 12px; }
+  .ob-lname { font-size: 14.5px; }
+  .ob-ib { width: 34px; height: 34px; }
+  .ob-zoom .ob-btn { padding: 8px 14px; font-size: 13.5px; }
+  .vy-lcard .mi b, .vy-lcard .mi .nm, .va-rule .tx b, .vs-sec .tx b { font-size: 14.5px; }
+  .vs-wrap { grid-template-columns: minmax(0, 1fr) clamp(400px, 30vw, 580px); }
+  .vs-frame { height: min(80vh, 1100px); }
+  .vk-box { width: min(1500px, 100%); height: min(960px, 100%); }
+  .vk-main { grid-template-columns: minmax(0, 1fr) clamp(340px, 24vw, 440px); }
+
+  /* شاشات كبيرة (2K / 4K): كل شي يكبر خطوة زيادة */
+  @media (min-width: 1800px) {
+    .vy-item { height: 56px; font-size: 16px; }
+    .vy-item svg { width: 24px; height: 24px; }
+    .ob-btn { font-size: 15.5px; padding: 13px 22px; }
+    .ob-btn.lg { font-size: 17px; }
+    .ob-row > .ob-label { font-size: 15.5px; }
+    .ob-pill, .ob-seg button, .ob-ptabs button, .ob-chip { font-size: 14.5px; }
+    .ob-input { font-size: 17px; }
+    .ob-phead h2 { font-size: 20px; }
+    .ob-tool b { font-size: 15.5px; }
+    .ob-tool .pv { height: 140px; }
+    .vy-tool b, .vy-scr .info b { font-size: 17.5px; }
+    .vy-tool small, .ob-hint, .ob-phead p { font-size: 14.5px; }
+  }
+  @media (min-width: 2500px) {
+    .vy-item { height: 64px; font-size: 18px; }
+    .ob-btn { font-size: 17px; }
+    .ob-row > .ob-label, .ob-input { font-size: 17.5px; }
+    .ob-pill, .ob-seg button, .ob-ptabs button, .ob-chip { font-size: 16px; }
+    .ob-tool .pv { height: 168px; }
+    .vy-tool b, .vy-scr .info b { font-size: 19px; }
+  }
+
+  /* نموذج الدخول داخل البوابة (بنفس حساب ألعاب أيمن) */
+  .ob-gbox { width: min(1060px, 100%); max-height: 100%; overflow-y: auto; }
+  .ob-gbrand { padding: clamp(28px, 3vw, 48px); }
+  .ob-gbrand li { font-size: 14.5px; }
+  .ob-gform { padding: clamp(28px, 3vw, 50px); }
+  .ob-gform h2 { font-size: clamp(23px, 1.7vw, 30px); }
+  .ob-gform p { font-size: 15px; margin-bottom: 18px; }
+  .ob-glogin { display: flex; flex-direction: column; gap: 14px; }
+  .ob-field { display: flex; flex-direction: column; gap: 8px; }
+  .ob-field > span { font-size: 14px; font-weight: 600; color: var(--lav-l); }
+  .ob-field .ob-input { width: 100%; flex: none; font-size: 16px; padding: 14px 16px; border-radius: 14px; resize: none; }
+  .ob-field .ob-input.ltr { direction: ltr; text-align: left; }
+  .ob-pw { position: relative; }
+  .ob-pw .ob-input { padding-left: 84px; }
+  .ob-pw button { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); border: 0; border-radius: 10px; padding: 7px 12px; background: rgba(169,155,184,.12); color: var(--lav-l); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ob-pw button:hover { color: #fff; background: rgba(169,155,184,.2); }
+  .ob-glinks { display: flex; justify-content: flex-start; font-size: 13.5px; margin-top: -4px; }
+  .ob-gnote { min-height: 22px; font-size: 14px; text-align: center; color: var(--bad); line-height: 1.7; }
+  .ob-gnote.ok { color: var(--ok); }
+  .ob-gform button.ob-btn[disabled] { opacity: .6; cursor: progress; transform: none; }
+  .ob-google { display: flex; justify-content: center; min-height: 44px; }
+  .ob-google:empty { display: none; }
+  .ob-gform .ob-btn.tt svg { width: 20px; height: 20px; }
+  .ob-gform .or { margin: 6px 0; }
+  .ob-gform .ob-gsignup { margin-top: 4px; text-align: center; font-size: 14px; color: var(--muted); }
+  .ob-gform .ob-gsignup a { font-weight: 700; }
+
   .vy-scrim { display: none; }
 
   @media (max-width: 1100px) {
