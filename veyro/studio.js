@@ -2680,8 +2680,7 @@
         userEl.textContent = '';
         try { me = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) { me = null; }
         if (!token() || !me) {
-            var b = el('a', 'ob-btn primary');
-            b.href = loginUrl();
+            var b = button('', 'ob-btn primary', function () { app.classList.remove('drawer'); showGate('login'); });
             b.innerHTML = svg(ic('login'));
             b.appendChild(el('span', 'lbl', 'تسجيل الدخول'));
             b.setAttribute('data-tip', 'تسجيل الدخول');
@@ -2704,7 +2703,6 @@
         userEl.appendChild(u);
     }
     function initial() { var n = me && (me.display_name || me.username) || 'V'; return String(n).trim().charAt(0).toUpperCase(); }
-    function loginUrl() { return '../login.html?next=' + encodeURIComponent('veyro/index.html'); }
 
     // لمعة تتبع الماوس على الأزرار والبطاقات، وتوهّج الخلفية، وميلان بطاقة LIVE
     var glowEl = document.getElementById('vy-glow');
@@ -2766,17 +2764,7 @@
         br.appendChild(ul);
         var f = el('div', 'ob-gform');
         if (kind === 'login') {
-            f.appendChild(el('h2', null, 'سجّل دخولك'));
-            f.appendChild(el('p', null, 'شاشات البث مربوطة بحسابك، عشان تنحفظ تصاميمك وتاخذ رابط لكل شاشة.'));
-            var a = el('a', 'ob-btn primary lg');
-            a.href = loginUrl();
-            a.innerHTML = svg(ic('login'));
-            a.appendChild(el('span', null, 'تسجيل الدخول'));
-            f.appendChild(a);
-            f.appendChild(el('div', 'or', 'أو'));
-            var sg = el('a', 'ob-btn ghost lg', 'إنشاء حساب جديد');
-            sg.href = '../signup.html';
-            f.appendChild(sg);
+            buildLoginForm(f);
         } else if (kind === 'preview') {
             f.appendChild(el('h2', null, 'قريباً'));
             f.appendChild(el('p', null, 'Veyro بمرحلة التجربة الحين ومتاح للإدارة بس. شاشات البث الحالية شغّالة زي ما هي من حسابك.'));
@@ -2798,6 +2786,133 @@
         gbox.appendChild(br);
         gbox.appendChild(f);
         gate.hidden = false;
+    }
+
+    /**
+     * الدخول داخل Veyro نفسه بنفس حساب ألعاب أيمن (نفس السيرفر و AGPAuth) — بدون تحويل لصفحة login.html.
+     * الإيميل/اليوزر + كلمة المرور، وجوجل. تيك توك يمر على صفحة موافقة تيك توك ويرجع هنا تلقائياً.
+     * ولو المستخدم داخل أصلاً بموقع ألعاب أيمن، الجلسة نفسها تنقرى هنا وما تطلع البوابة.
+     */
+    var GOOGLE_CLIENT_ID = '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com'; // نفس login.html
+    var LOGIN_ERRORS = {
+        invalid_credentials: 'البيانات غلط — تأكد من الإيميل أو اليوزر وكلمة المرور',
+        device_locked: 'هذا الحساب وصل للحد الأقصى من الأجهزة (3 أجهزة). تواصل مع الإدارة للسماح بجهاز جديد.'
+    };
+
+    function buildLoginForm(f) {
+        f.appendChild(el('h2', null, 'سجّل دخولك'));
+        f.appendChild(el('p', null, 'ادخل بنفس حسابك في ألعاب أيمن، وتنفتح شاشاتك على طول.'));
+        var form = el('form', 'ob-glogin');
+        form.noValidate = true;
+
+        function field(label, type, auto, ph, ltr) {
+            var w = el('label', 'ob-field');
+            w.appendChild(el('span', null, label));
+            var inp = el('input', 'ob-input' + (ltr ? ' ltr' : ''));
+            inp.type = type; inp.autocomplete = auto; inp.placeholder = ph; inp.spellcheck = false;
+            inp.setAttribute('autocapitalize', 'off');
+            w.appendChild(inp);
+            form.appendChild(w);
+            return { wrap: w, input: inp };
+        }
+        var idF = field('البريد الإلكتروني أو اسم المستخدم', 'text', 'username', 'name@mail.com أو username', true);
+        var pwF = field('كلمة المرور', 'password', 'current-password', '••••••••', true);
+        // زر إظهار/إخفاء كلمة المرور
+        var pwBox = el('div', 'ob-pw');
+        pwF.wrap.insertBefore(pwBox, pwF.input);
+        pwBox.appendChild(pwF.input);
+        var eye = button('إظهار', null, function () {
+            var show = pwF.input.type === 'password';
+            pwF.input.type = show ? 'text' : 'password';
+            eye.textContent = show ? 'إخفاء' : 'إظهار';
+        });
+        pwBox.appendChild(eye);
+
+        var links = el('div', 'ob-glinks');
+        var forgot = el('a', null, 'نسيت كلمة المرور؟');
+        forgot.href = '../login.html';
+        links.appendChild(forgot);
+        form.appendChild(links);
+
+        var submit = el('button', 'ob-btn primary lg');
+        submit.type = 'submit';
+        submit.innerHTML = svg(ic('login'));
+        submit.appendChild(el('span', null, 'دخول'));
+        form.appendChild(submit);
+        var note = el('div', 'ob-gnote');
+        note.setAttribute('role', 'status');
+        form.appendChild(note);
+        function say(msg, ok) { note.textContent = msg || ''; note.classList.toggle('ok', !!ok); }
+
+        var busy = false;
+        function setBusy(on) { busy = on; submit.disabled = on; }
+        function finish(r) {
+            setBusy(false);
+            if (r && r.success) { say('أهلاً فيك ✓', true); gate.hidden = true; start(); return; }
+            say(LOGIN_ERRORS[r && r.error] || (r && r.message) || 'تعذّر تسجيل الدخول، حاول مرة ثانية', false);
+        }
+        function failNet() { setBusy(false); say('تعذّر الوصول للخادم — تأكد من الاتصال بالإنترنت', false); }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (busy) return;
+            var id = idF.input.value.trim().replace(/^@+/, '');
+            var pw = pwF.input.value;
+            if (!id) { say('اكتب الإيميل أو اسم المستخدم', false); idF.input.focus(); return; }
+            if (!pw) { say('اكتب كلمة المرور', false); pwF.input.focus(); return; }
+            if (!window.AGPAuth || !window.AGPAuth.login) { say('تعذّر تحميل نظام الحسابات — حدّث الصفحة', false); return; }
+            setBusy(true);
+            say('جارٍ تسجيل الدخول…', true);
+            window.AGPAuth.login(id, pw).then(finish, failNet);
+        });
+
+        form.appendChild(el('div', 'or', 'أو'));
+        var gbtn = el('div', 'ob-google');
+        form.appendChild(gbtn);
+        // تيك توك: صفحة موافقة تيك توك ثم يرجع لـVeyro تلقائياً (?next=)
+        if (window.AGPAuth && window.AGPAuth.tiktokLoginUrl) {
+            var tt = el('a', 'ob-btn ghost lg tt');
+            tt.href = window.AGPAuth.tiktokLoginUrl('veyro/index.html');
+            tt.innerHTML = svg('<path d="M16.6 5.82A4.28 4.28 0 0115.54 3h-3.09v12.4a2.59 2.59 0 01-2.59 2.5 2.6 2.6 0 01-2.59-2.6 2.6 2.6 0 013.37-2.48V9.66a5.73 5.73 0 00-.78-.05A5.68 5.68 0 004.18 15.3 5.68 5.68 0 009.86 21a5.68 5.68 0 005.68-5.7V9.01a7.35 7.35 0 004.3 1.38V7.3a4.29 4.29 0 01-3.24-1.48z"/>');
+            tt.appendChild(el('span', null, 'الدخول بتيك توك'));
+            form.appendChild(tt);
+        }
+        var sg = el('div', 'ob-gsignup', 'ما عندك حساب؟ ');
+        var sgA = el('a', null, 'أنشئ حساب جديد');
+        sgA.href = '../signup.html';
+        sg.appendChild(sgA);
+        form.appendChild(sg);
+        f.appendChild(form);
+
+        // بعد ما تنعرض البوابة: زر جوجل (يحتاج عرض العنصر) والتركيز على أول خانة
+        setTimeout(function () {
+            mountGoogle(gbtn, function (resp) {
+                if (busy || !resp || !resp.credential || !window.AGPAuth || !window.AGPAuth.loginWithGoogle) return;
+                setBusy(true);
+                say('جارٍ الدخول بحساب جوجل…', true);
+                window.AGPAuth.loginWithGoogle(resp.credential).then(finish, failNet);
+            });
+            if (window.innerWidth > 900) idF.input.focus();
+        }, 0);
+    }
+
+    function mountGoogle(box, onCredential) {
+        function render() {
+            try {
+                window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onCredential });
+                window.google.accounts.id.renderButton(box, { type: 'standard', theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with', locale: 'ar', width: Math.max(220, Math.min(box.offsetWidth || 320, 400)) });
+            } catch (e) { box.textContent = ''; }
+        }
+        if (window.google && window.google.accounts && window.google.accounts.id) { render(); return; }
+        var s = document.querySelector('script[data-vy-gsi]');
+        if (!s) {
+            s = document.createElement('script');
+            s.src = 'https://accounts.google.com/gsi/client';
+            s.async = true;
+            s.setAttribute('data-vy-gsi', '1');
+            document.head.appendChild(s);
+        }
+        s.addEventListener('load', render);
     }
 
     /** الصفحة من الرابط: #home، #screens، #tools/<قسم> (أو ?s=<شاشة> = المحرر). */
