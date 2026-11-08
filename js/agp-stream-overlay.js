@@ -2200,8 +2200,11 @@
             // مدى المبلغ بالدولار (0 = بدون حد أعلى) — عملة غير الدولار تطلع بأي أليرت دونيشن بدون حد
             var a = Number(e.amount) || 0, ma = Number(it.maxAmount) || 0;
             if (String(e.currency || 'USD').toUpperCase() === 'USD') {
-                if (a < (Number(it.minAmount) || 0)) return false;
-                if (ma > 0 && a > ma) return false;
+                if (it.amountMode === 'exact') { if (Math.abs(a - (Number(it.exactAmount) || 0)) > 0.004) return false; }
+                else {
+                    if (a < (Number(it.minAmount) || 0)) return false;
+                    if (ma > 0 && a > ma) return false;
+                }
             }
         }
         if (e.type === 'like') {
