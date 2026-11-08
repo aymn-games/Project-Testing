@@ -110,9 +110,8 @@
             { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             // «العرش» بإطار «الأجنحة الكريستالية»
-            { label: 'العرش الكريستالي — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
-            { label: 'العرش الكريستالي — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
-            { label: 'العرش الكريستالي — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            // أداة وحدة: يختار من داخلها الداعمين أو المكبّسين أو الاثنين أو الكل («التوب» بالخصائص)
+            { label: 'العرش الكريستالي', sub: 'أجنحة ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             // «القائمة» (L1): بطاقات تحت بعض لين توب 10
             { label: 'القائمة — المكبّسين', sub: 'توب 10 بطاقات تحت بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة — الداعمين', sub: 'توب 10 بالعملات', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
@@ -1138,6 +1137,21 @@
     function throneProps(it, box) {
         var all = Object.keys(O.SECTIONS);
         var cur = (Array.isArray(it.sections) && it.sections.length ? it.sections : [it.section || 'likers']).filter(function (k) { return O.SECTIONS[k]; });
+        // اختيار سريع: الداعمين / المكبّسين / الاثنين / الكل (وتحت «يعرض» للتحكم الكامل)
+        var QUICK = [
+            { label: 'الداعمين', value: 'gifters', list: ['gifters'] },
+            { label: 'المكبّسين', value: 'likers', list: ['likers'] },
+            { label: 'الاثنين', value: 'both', list: ['gifters', 'likers'] },
+            { label: 'الكل', value: 'all', list: all.slice() }
+        ];
+        var same = function (a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) !== -1; }); };
+        var quickCur = (QUICK.filter(function (q) { return same(q.list, cur); })[0] || {}).value || '';
+        box.appendChild(row('التوب', pills(QUICK.map(function (q) { return { label: q.label, value: q.value }; }), quickCur, function (v) {
+            var q = QUICK.filter(function (x) { return x.value === v; })[0];
+            it.section = q.list[0];
+            update(it, 'sections', q.list.slice(), true);
+            O.refreshStats();
+        })));
         box.appendChild(row('يعرض', pills(all.map(function (k) { return { label: O.SECTIONS[k].label, value: k }; }), cur, function (v) {
             var next = cur.indexOf(v) === -1 ? cur.concat([v]) : cur.filter(function (x) { return x !== v; });
             if (!next.length) return;

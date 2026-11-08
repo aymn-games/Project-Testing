@@ -779,7 +779,7 @@
         pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' },
         // «الأجنحة الكريستالية» (من صاحب المنصة، الخلفية السوداء انشالت): حلقة قوس قزح بأجنحة ريش وكريستال.
         // القياس من الصورة الأصلية 1200px: مركز الحلقة (598.5، 591.4) وحافتها الداخلية 390px — الصورة تعبّيها بالضبط.
-        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff' }
+        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', wings: true }
     };
     function frameOf(it) {
         if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
@@ -1031,14 +1031,29 @@
         art.style.width = art.style.height = d.scale + '%';
         art.style.left = d.left + '%';
         art.style.top = d.top + '%';
-        ['glow', ''].forEach(function (c) {
+        function artImg(cls) {
             var img = document.createElement('img');
             img.src = FRAMES_BASE + d.file;
             img.alt = '';
             img.draggable = false;
-            if (c) img.className = c;
-            art.appendChild(img);
-        });
+            if (cls) img.className = cls;
+            return img;
+        }
+        if (d.wings) {
+            // أجنحة ترفرف: نفس الصورة بثلاث طبقات بأقنعة — الحلقة واللي داخلها ثابتة،
+            // وكل جناح (برا الحلقة على الطرفين) يتحرك حول مكان التصاقه بالحلقة
+            art.className += ' wings';
+            art.appendChild(artImg('glow core'));
+            art.appendChild(artImg('core'));
+            ['wl', 'wr'].forEach(function (w) {
+                var wing = el('span', 'agp-so-fwing ' + w);
+                wing.appendChild(artImg());
+                art.appendChild(wing);
+            });
+        } else {
+            art.appendChild(artImg('glow'));
+            art.appendChild(artImg(''));
+        }
         f.appendChild(art);
         [[200, 0], [235, 0.7], [300, 1.4], [330, 2.1], [20, 0.35], [60, 1.05], [110, 1.75], [150, 2.45]].forEach(function (sp) {
             var rad = sp[0] * Math.PI / 180;
@@ -2821,6 +2836,17 @@
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.5em}',
         '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
         '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
+        /* «الأجنحة الكريستالية»: الحلقة ثابتة (داخل الدائرة + الشريط الأوسط)، والجناحين يرفرفون */
+        '.agp-so-fart.wings img.core{-webkit-mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,#000 98%,transparent 100%),linear-gradient(90deg,transparent 25.5%,#000 27%,#000 73%,transparent 74.5%);mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,#000 98%,transparent 100%),linear-gradient(90deg,transparent 25.5%,#000 27%,#000 73%,transparent 74.5%)}',
+        '.agp-so-fwing{position:absolute;inset:0;pointer-events:none;will-change:transform}',
+        '.agp-so-fwing img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}',
+        '.agp-so-fwing.wl img{-webkit-mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,transparent 98%,#000 100%),linear-gradient(90deg,#000 25.5%,transparent 27%);-webkit-mask-composite:source-in;mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,transparent 98%,#000 100%),linear-gradient(90deg,#000 25.5%,transparent 27%);mask-composite:intersect}',
+        '.agp-so-fwing.wr img{-webkit-mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,transparent 98%,#000 100%),linear-gradient(90deg,transparent 73%,#000 74.5%);-webkit-mask-composite:source-in;mask:radial-gradient(ellipse 35.6% 35.6% at 49.9% 49.3%,transparent 98%,#000 100%),linear-gradient(90deg,transparent 73%,#000 74.5%);mask-composite:intersect}',
+        '.agp-so-fwing.wl{transform-origin:17% 52%;animation:agp-so-flapL 1.9s ease-in-out infinite}',
+        '.agp-so-fwing.wr{transform-origin:83% 52%;animation:agp-so-flapR 1.9s ease-in-out infinite}',
+        '@keyframes agp-so-flapL{0%,100%{transform:rotate(0) scaleX(1)}45%{transform:rotate(9deg) scaleX(.9)}}',
+        '@keyframes agp-so-flapR{0%,100%{transform:rotate(0) scaleX(1)}45%{transform:rotate(-9deg) scaleX(.9)}}',
+        '.fr-crystal .agp-so-fart img.glow{animation-duration:1.9s;opacity:.5}',
         '.fr-crystal .agp-so-fspk{background:#fbf6ff;box-shadow:0 0 .2em #efe2ff,0 0 .4em #b48cff}',
         '.fr-crystal .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(214,190,255,.85) 95%,#fff 99%,transparent 100%)}',
         '.fr-pegasus .agp-so-fspk{background:#fff8e0;box-shadow:0 0 .2em #ffe6a3,0 0 .4em #ffbf3a}',
