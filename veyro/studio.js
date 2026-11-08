@@ -109,6 +109,10 @@
             { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
+            // «العرش» بإطار «الأجنحة الكريستالية»
+            { label: 'العرش الكريستالي — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش الكريستالي — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش الكريستالي — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             // «القائمة» (L1): بطاقات تحت بعض لين توب 10
             { label: 'القائمة — المكبّسين', sub: 'توب 10 بطاقات تحت بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة — الداعمين', sub: 'توب 10 بالعملات', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
@@ -1224,7 +1228,7 @@
         }), true, 'حدود الأرقام وأيقوناتها'));
         if (it.palette === 'single') box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
-        if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
+        if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'crystal' ? 0.6 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
         else box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }

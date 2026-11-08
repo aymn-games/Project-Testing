@@ -776,7 +776,10 @@
      */
     var THRONE_FRAMES = {
         angel: { label: 'جناح الملاك', file: 'angel.webp', scale: 149, left: -25.25, top: -24.5, base: 205, ring: 53.6, spark: 55, fly: 'butterfly', glow: '#9fe0ff', glow2: '#3aa8ff' },
-        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
+        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' },
+        // «الأجنحة الكريستالية» (من صاحب المنصة، الخلفية السوداء انشالت): حلقة قوس قزح بأجنحة ريش وكريستال.
+        // القياس من الصورة الأصلية 1200px: مركز الحلقة (598.5، 591.4) وحافتها الداخلية 390px — الصورة تعبّيها بالضبط.
+        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff' }
     };
     function frameOf(it) {
         if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
@@ -1010,6 +1013,10 @@
     var FEATHER = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="agp-so-fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset=".55" stop-color="#ffe7a8"/><stop offset="1" stop-color="#d9a63a"/></linearGradient></defs>' +
         '<path d="M33 4C20 6 9 16 7 31l2 1c3-7 8-13 15-17-6 5-10 10-13 18l2 .8C17 23 26 13 33 4z" fill="url(#agp-so-fg)"/><path d="M33 4C22 12 14 22 9 33" stroke="#c99a35" stroke-width="1" fill="none"/></svg>';
 
+    // ريشة بيضاء لافندر لإطار «الأجنحة الكريستالية» (نفس شكل FEATHER، ألوان ثانية)
+    var FEATHER_LAV = FEATHER.replace('id="agp-so-fg"', 'id="agp-so-fgl"').replace('url(#agp-so-fg)', 'url(#agp-so-fgl)')
+        .replace('#fffaf0', '#ffffff').replace('#ffe7a8', '#efe2ff').replace('#d9a63a', '#b48cff').replace('#c99a35', '#9b7fd6');
+
     /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
     function throneFrame(r, kind) {
         var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
@@ -1043,8 +1050,9 @@
         });
         ['b1', 'b2'].forEach(function (b) {
             var o = el('span', 'agp-so-fbfo ' + b);
-            var bf = el('span', 'agp-so-fbf' + (d.fly === 'feather' ? ' feather' : ''));
-            bf.innerHTML = d.fly === 'feather' ? FEATHER : BUTTERFLY;
+            var feather = d.fly === 'feather' || d.fly === 'featherLav';
+            var bf = el('span', 'agp-so-fbf' + (feather ? ' feather' : ''));
+            bf.innerHTML = d.fly === 'featherLav' ? FEATHER_LAV : feather ? FEATHER : BUTTERFLY;
             o.appendChild(bf);
             f.appendChild(o);
         });
@@ -2749,7 +2757,8 @@
         '.agp-so-stack:not(.pal-single) .agp-so-scard.rkn{--rk:#cfc3dc}',
         '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
-        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
+        '.agp-so-stack.fk-crystal{--agp-so-sgap0:.6em}',
+        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
         '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
@@ -2812,6 +2821,8 @@
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.5em}',
         '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
         '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
+        '.fr-crystal .agp-so-fspk{background:#fbf6ff;box-shadow:0 0 .2em #efe2ff,0 0 .4em #b48cff}',
+        '.fr-crystal .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(214,190,255,.85) 95%,#fff 99%,transparent 100%)}',
         '.fr-pegasus .agp-so-fspk{background:#fff8e0;box-shadow:0 0 .2em #ffe6a3,0 0 .4em #ffbf3a}',
         '.fr-pegasus .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(255,230,160,.85) 95%,#fff 99%,transparent 100%)}',
         /* إطار «جناح الملاك» */
