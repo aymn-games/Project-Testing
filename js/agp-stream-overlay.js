@@ -179,7 +179,14 @@
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
     // «العرش»: تاج ذهبي بجواهر، وأيقونات الأرقام بتدرّج (قلب ينبض، ماسة)
     var THRONE_ICONS = {
-        likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8db3"/><stop offset="1" stop-color="#ff2d6f"/></linearGradient></defs><path d="M12 21.3s-8.3-5-10.3-10C.4 7.6 2.6 3.6 6.6 3.6c2.3 0 4.2 1.3 5.4 3 1.2-1.7 3.1-3 5.4-3 4 0 6.2 4 4.9 7.7-2 5-10.3 10-10.3 10z" fill="url(#agp-so-hg)"/><path d="M6.4 6.4c-1.6.3-2.5 1.7-2.3 3.3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".75"/></svg>',
+        // قلب لامع ثلاثي الأبعاد (لمعة + انعكاس + نجمة صغيرة)
+        likers: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="agp-so-hg" cx="35%" cy="28%" r="85%"><stop offset="0" stop-color="#ffc2d9"/><stop offset=".42" stop-color="#ff4d8d"/><stop offset="1" stop-color="#b80f4a"/></radialGradient>' +
+            '<linearGradient id="agp-so-hs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +
+            '<path d="M12 21.2C6.2 17.3 2 13.7 2 8.9 2 5.9 4.3 3.6 7.2 3.6c1.9 0 3.6 1 4.8 2.6 1.2-1.6 2.9-2.6 4.8-2.6 2.9 0 5.2 2.3 5.2 5.3 0 4.8-4.2 8.4-10 12.3z" fill="url(#agp-so-hg)" stroke="#8f0d3c" stroke-width=".45"/>' +
+            '<path d="M12 19.6c4.6-3.2 8-6.2 8.3-9.6" stroke="#7a0632" stroke-opacity=".35" stroke-width="1.2" stroke-linecap="round" fill="none"/>' +
+            '<path d="M4.6 7.4c.8-1.6 2.6-2.2 4.1-1.4" stroke="url(#agp-so-hs)" stroke-width="1.5" stroke-linecap="round" fill="none"/>' +
+            '<ellipse cx="6.6" cy="10" rx="1.3" ry=".8" fill="#fff" opacity=".5" transform="rotate(-35 6.6 10)"/>' +
+            '<path d="M18.9 3.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="#fff"/></svg>',
         gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
     };
     // فراشة «جناح الملاك»: جناحين يرفرفون (wl/wr)
@@ -776,7 +783,10 @@
      */
     var THRONE_FRAMES = {
         angel: { label: 'جناح الملاك', file: 'angel.webp', scale: 149, left: -25.25, top: -24.5, base: 205, ring: 53.6, spark: 55, fly: 'butterfly', glow: '#9fe0ff', glow2: '#3aa8ff' },
-        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' }
+        pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' },
+        // «الأجنحة الكريستالية» (من صاحب المنصة، الخلفية السوداء انشالت): حلقة قوس قزح بأجنحة ريش وكريستال.
+        // القياس من الصورة الأصلية 1200px: مركز الحلقة (598.5، 591.4) وحافتها الداخلية 390px — الصورة تعبّيها بالضبط.
+        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', shine: true }
     };
     function frameOf(it) {
         if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
@@ -827,8 +837,15 @@
         title(node, it.title);
         var stack = it.design === 'stack';
         var body = el('div', 'agp-so-lbody');
-        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + (it.palette === 'single' ? ' pal-single' : ''));
+        var pal = it.palette === 'single' ? ' pal-single' : it.palette === 'custom' ? ' pal-custom' : '';
+        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + pal);
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
+        // ألوان يختارها الستريمر (المحرر): المراكز الثلاثة، الاسم، الرقم، خلفية الكبسولة
+        var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        if (it.palette === 'custom') (Array.isArray(it.rankColors) ? it.rankColors : []).slice(0, 3).forEach(function (c, k) { if (hex(c)) box.style.setProperty('--agp-so-rk' + (k + 1), c); });
+        if (hex(it.nameColor)) box.style.setProperty('--agp-so-namec', it.nameColor);
+        if (hex(it.numColor)) box.style.setProperty('--agp-so-numc', it.numColor);
+        if (hex(it.pillColor)) box.style.setProperty('--agp-so-pillbg', 'color-mix(in srgb,' + it.pillColor + ' 78%,transparent)');
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
         if (it.spacing != null) {
@@ -912,15 +929,20 @@
             else inner.appendChild(throneFrame(r, fk));
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
-            inner.appendChild(throneFrame(r, frameOf(hit)));
+            var fr = throneFrame(r, frameOf(hit));
+            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز
+            var rk = el('span', 'agp-so-trank');
+            rk.appendChild(el('b', null, String(i + 1)));
+            fr.appendChild(rk);
+            inner.appendChild(fr);
             inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
         }
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
         if (sec === 'gifters') {
-            // الدعم: عملة ذهبية (assets/overlay-frames/coin.webp)
+            // الدعم: عملة تيك توك الذهبية (assets/overlay-frames/tiktok-coin.webp، من صاحب المنصة)
             var coin = document.createElement('img');
-            coin.src = FRAMES_BASE + 'coin.webp';
+            coin.src = FRAMES_BASE + 'tiktok-coin.webp';
             coin.alt = '';
             coin.draggable = false;
             ic.appendChild(coin);
@@ -1010,6 +1032,10 @@
     var FEATHER = '<svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="agp-so-fg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset=".55" stop-color="#ffe7a8"/><stop offset="1" stop-color="#d9a63a"/></linearGradient></defs>' +
         '<path d="M33 4C20 6 9 16 7 31l2 1c3-7 8-13 15-17-6 5-10 10-13 18l2 .8C17 23 26 13 33 4z" fill="url(#agp-so-fg)"/><path d="M33 4C22 12 14 22 9 33" stroke="#c99a35" stroke-width="1" fill="none"/></svg>';
 
+    // ريشة بيضاء لافندر لإطار «الأجنحة الكريستالية» (نفس شكل FEATHER، ألوان ثانية)
+    var FEATHER_LAV = FEATHER.replace('id="agp-so-fg"', 'id="agp-so-fgl"').replace('url(#agp-so-fg)', 'url(#agp-so-fgl)')
+        .replace('#fffaf0', '#ffffff').replace('#ffe7a8', '#efe2ff').replace('#d9a63a', '#b48cff').replace('#c99a35', '#9b7fd6');
+
     /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
     function throneFrame(r, kind) {
         var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
@@ -1024,14 +1050,24 @@
         art.style.width = art.style.height = d.scale + '%';
         art.style.left = d.left + '%';
         art.style.top = d.top + '%';
-        ['glow', ''].forEach(function (c) {
+        function artImg(cls) {
             var img = document.createElement('img');
             img.src = FRAMES_BASE + d.file;
             img.alt = '';
             img.draggable = false;
-            if (c) img.className = c;
-            art.appendChild(img);
-        });
+            if (cls) img.className = cls;
+            return img;
+        }
+        art.appendChild(artImg('glow'));
+        art.appendChild(artImg(''));
+        if (d.shine) {
+            // لمعة ضوء تمر على الرسمة نفسها (مقصوصة بشكلها) — الإطار ثابت والضوء يتحرك
+            var sh = el('span', 'agp-so-fshine');
+            var mk = 'url("' + FRAMES_BASE + d.file + '")';
+            sh.style.webkitMaskImage = mk;
+            sh.style.maskImage = mk;
+            art.appendChild(sh);
+        }
         f.appendChild(art);
         [[200, 0], [235, 0.7], [300, 1.4], [330, 2.1], [20, 0.35], [60, 1.05], [110, 1.75], [150, 2.45]].forEach(function (sp) {
             var rad = sp[0] * Math.PI / 180;
@@ -1043,8 +1079,9 @@
         });
         ['b1', 'b2'].forEach(function (b) {
             var o = el('span', 'agp-so-fbfo ' + b);
-            var bf = el('span', 'agp-so-fbf' + (d.fly === 'feather' ? ' feather' : ''));
-            bf.innerHTML = d.fly === 'feather' ? FEATHER : BUTTERFLY;
+            var feather = d.fly === 'feather' || d.fly === 'featherLav';
+            var bf = el('span', 'agp-so-fbf' + (feather ? ' feather' : ''));
+            bf.innerHTML = d.fly === 'featherLav' ? FEATHER_LAV : feather ? FEATHER : BUTTERFLY;
             o.appendChild(bf);
             f.appendChild(o);
         });
@@ -2732,6 +2769,15 @@
         '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em;margin-inline:var(--agp-so-tov,0em);position:relative;z-index:1}',
         '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
         '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
+        /* رقم المركز: ماسة كريستال بلون المركز (ذهبي/فضي/برونزي) ملاصقة للإطار الدائري تحت يمين */
+        '.agp-so-trank{position:absolute;z-index:7;left:85.4%;top:85.4%;width:34%;height:34%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:agp-so-rpop 3.2s ease-in-out infinite}',
+        '.agp-so-trank::before{content:"";position:absolute;inset:8%;transform:rotate(45deg);border-radius:18%;background:linear-gradient(135deg,rgba(255,255,255,.95),var(--rk,#efe2ff) 45%,var(--rk2,#b48cff));box-shadow:0 0 .35em var(--rk,#efe2ff),0 0 .7em rgba(180,140,255,.55),inset 0 0 .12em rgba(255,255,255,.9)}',
+        '.agp-so-trank::after{content:"";position:absolute;inset:8%;transform:rotate(45deg);border-radius:18%;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.85) 50%,transparent 65%);background-size:300% 100%;animation:agp-so-rshine 2.8s ease-in-out infinite}',
+        '.rk2 .agp-so-trank::after,.rk2 .agp-so-trank{animation-delay:.5s}',
+        '.rk3 .agp-so-trank::after,.rk3 .agp-so-trank{animation-delay:1s}',
+        '@keyframes agp-so-rpop{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.08)}}',
+        '@keyframes agp-so-rshine{0%,55%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '.agp-so-trank b{position:relative;z-index:1;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s,2.2em) * .2);line-height:1;color:#2a1f3d;text-shadow:0 .03em 0 rgba(255,255,255,.6)}',
         '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
         '.agp-so-tnum{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.72em;line-height:1.35;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 .05em .15em rgba(0,0,0,.7)}',
         '.agp-so-tcol.rk1 .agp-so-tnum{font-size:.8em}',
@@ -2743,13 +2789,20 @@
         '.agp-so-tcol.rk1 .agp-so-tic{animation:agp-so-beat 1.4s ease-in-out infinite}',
         '@keyframes agp-so-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.22)}30%{transform:scale(1)}45%{transform:scale(1.14)}}',
         '.agp-so-throne.pal-single .agp-so-tcol,.agp-so-stack.pal-single .agp-so-scard{--rk:var(--agp-so-c)}',
+        '.agp-so-tbox.pal-custom .rk1{--rk:var(--agp-so-rk1,#ffd54a);--rk2:color-mix(in srgb,var(--agp-so-rk1,#ffd54a) 55%,#000)}',
+        '.agp-so-tbox.pal-custom .rk2{--rk:var(--agp-so-rk2,#eef2f7);--rk2:color-mix(in srgb,var(--agp-so-rk2,#eef2f7) 55%,#000)}',
+        '.agp-so-tbox.pal-custom .rk3{--rk:var(--agp-so-rk3,#ffb27a);--rk2:color-mix(in srgb,var(--agp-so-rk3,#ffb27a) 55%,#000)}',
+        '.agp-so-tbox .agp-so-tname,.agp-so-tbox .agp-so-sname{color:var(--agp-so-namec,#fff)}',
+        '.agp-so-tbox .agp-so-tnum{color:var(--agp-so-numc,#fff)}',
+        '.agp-so-tbox .agp-so-tcount{background:var(--agp-so-pillbg,rgba(10,8,16,.42))}',
         /* «القائمة» (Veyro L1): بطاقات تحت بعض لين 10 */
         '.agp-so-top.d-stack .agp-so-lbody{gap:0}',
         '.agp-so-stack{display:flex;flex-direction:column;gap:var(--agp-so-sgap,.32em);width:14em}',
         '.agp-so-stack:not(.pal-single) .agp-so-scard.rkn{--rk:#cfc3dc}',
         '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
-        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
+        '.agp-so-stack.fk-crystal{--agp-so-sgap0:.6em}',
+        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
         '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
@@ -2812,6 +2865,15 @@
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.5em}',
         '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
         '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
+        /* «الأجنحة الكريستالية»: الإطار ثابت، والحركة ضوء — لمعة تمر عليه، توهّج يتنفّس، وشرار يلمع. ألوانه أنعم */
+        '.agp-so-fshine{position:absolute;inset:0;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.0) 42%,rgba(255,255,255,.85) 50%,rgba(255,255,255,0) 58%,transparent 62%);background-size:300% 100%;mix-blend-mode:screen;animation:agp-so-fsweep 3.6s cubic-bezier(.4,0,.2,1) infinite}',
+        '@keyframes agp-so-fsweep{0%,30%{background-position:130% 0}100%{background-position:-130% 0}}',
+        '.fr-crystal .agp-so-fart img:not(.glow){filter:saturate(.8) brightness(1.03)}',
+        '.fr-crystal .agp-so-fart img.glow{filter:blur(.18em) saturate(.7) brightness(1.3);animation:agp-so-cbreath 3.6s ease-in-out infinite}',
+        '@keyframes agp-so-cbreath{0%,100%{opacity:.18}50%{opacity:.5}}',
+        '.fr-crystal .agp-so-fspk{animation-duration:3.2s}',
+        '.fr-crystal .agp-so-fspk{background:#fbf6ff;box-shadow:0 0 .2em #efe2ff,0 0 .4em #b48cff}',
+        '.fr-crystal .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(214,190,255,.85) 95%,#fff 99%,transparent 100%)}',
         '.fr-pegasus .agp-so-fspk{background:#fff8e0;box-shadow:0 0 .2em #ffe6a3,0 0 .4em #ffbf3a}',
         '.fr-pegasus .agp-so-fcomet{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 78%,rgba(255,230,160,.85) 95%,#fff 99%,transparent 100%)}',
         /* إطار «جناح الملاك» */
