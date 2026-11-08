@@ -36,8 +36,11 @@ button{font-family:inherit;cursor:pointer}
 .tb.danger{border-color:rgba(248,113,113,.25);color:#fca5a5}.tb.danger:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)}
 .tb.set{border-color:rgba(167,139,250,.3);background:rgba(139,92,246,.08);color:#ddd6fe}.tb.set:hover{background:rgba(139,92,246,.16)}
 .tb svg{width:16px;height:16px;flex-shrink:0}
-.tb.aj .dot{width:8px;height:8px;border-radius:50%;background:#8a8596;flex-shrink:0;transition:all .2s}
-.tb.aj.on{border-color:rgba(52,211,153,.4);background:rgba(16,185,129,.1);color:#a7f3d0}.tb.aj.on .dot{background:#34d399;box-shadow:0 0 8px #34d399}
+.tb.aj{gap:10px}
+.tb.aj .sw{position:relative;width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);flex-shrink:0;transition:background .2s,border-color .2s}
+.tb.aj .sw::after{content:'';position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#cfcad9;box-shadow:0 1px 4px rgba(0,0,0,.4);transition:right .2s,background .2s}
+.tb.aj.on{border-color:rgba(52,211,153,.4);background:rgba(16,185,129,.1);color:#a7f3d0}
+.tb.aj.on .sw{background:#10b981;border-color:#34d399}.tb.aj.on .sw::after{right:18px;background:#fff}
 .ajk{height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,.9vw,16px);border-radius:999px;display:none;align-items:center;gap:8px;max-width:clamp(140px,18vw,320px);font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';color:#a8a3b5;background:rgba(139,92,246,.1);border:1.5px dashed #a78bfa;white-space:nowrap;overflow:hidden}
 .ajk b{font:700 clamp(14px,1vw,18px) 'IBM Plex Sans Arabic';color:#c4b5fd;overflow:hidden;text-overflow:ellipsis}
 .sub{position:fixed;top:94px;right:20px;z-index:20;display:flex;gap:10px;align-items:center}
@@ -198,7 +201,7 @@ button{font-family:inherit;cursor:pointer}
 <header class="top">
   <div class="side r">
     <button class="tb" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span id="fsLbl">ملء الشاشة</span></button>
-    <button class="tb aj" id="ajBtn" aria-pressed="false"><i class="dot"></i><span id="ajLbl">الدخول التلقائي: مغلق</span></button>
+    <button class="tb aj" id="ajBtn" role="switch" aria-checked="false" aria-label="الدخول التلقائي"><span>الدخول التلقائي</span><i class="sw"></i></button>
     <span class="ajk" id="ajKey"><span>كلمة الدخول</span><b id="ajKw"></b></span>
   </div>
   <img class="logo" src="../../logo.png" alt="" onerror="this.style.visibility='hidden'">
@@ -500,8 +503,8 @@ function closeDrawer(){ $('setD').style.display='none'; S.menu=false; if(S.pendi
 $('setD').onclick=e=>{ if(e.target===$('setD')) closeDrawer(); }; $('setD').querySelector('[data-dclose]').onclick=closeDrawer;
 $('skipBtn').onclick=()=>{ if(S.phase!=='play') return toast('ما فيه أدوار حالية'); closeDrawer(); S.slots.forEach((s,i)=>{ if(s.p&&!s.busy){ s.busy=true; endTurn(i,s.rolled&&s.turnPts>0); } }); };
 // الدخول التلقائي (زر بالهيدر): مفعّل = أي لاعب جديد يكتب كلمة الدخول بالشات ينضم للعبة مباشرة · مغلق = ما يدخل أحد
-function renderAutoJoin(){ const on=S.autoJoin; $('ajBtn').classList.toggle('on',on); $('ajBtn').setAttribute('aria-pressed',on?'true':'false');
-  $('ajLbl').textContent='الدخول التلقائي: '+(on?'مفعّل':'مغلق'); $('ajKw').textContent=cfg.keyword; $('ajKey').style.display=on?'flex':'none'; }
+function renderAutoJoin(){ const on=S.autoJoin; $('ajBtn').classList.toggle('on',on); $('ajBtn').setAttribute('aria-checked',on?'true':'false');
+  $('ajKw').textContent=cfg.keyword; $('ajKey').style.display=on?'flex':'none'; }
 $('ajBtn').onclick=()=>{ if(!S.autoJoin&&!cfg.keyword) return toast('ما فيه كلمة دخول بالإعدادات'); S.autoJoin=!S.autoJoin; renderAutoJoin(); };
 renderAutoJoin();
 
