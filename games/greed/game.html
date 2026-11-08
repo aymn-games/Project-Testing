@@ -52,10 +52,8 @@ button{font-family:inherit;cursor:pointer}
 .info small{font:600 12px 'IBM Plex Sans Arabic';color:var(--muted)}
 .info b{font:700 26px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums}
 .join{position:fixed;top:160px;left:50%;transform:translateX(-50%);z-index:20;padding:8px 20px;border-radius:999px;background:rgba(34,211,238,.12);border:1px dashed var(--cyan);font:700 15px 'IBM Plex Sans Arabic';color:#cffafe;display:none}
-.hint{position:fixed;top:160px;left:50%;transform:translateX(-50%);z-index:19;padding:10px 26px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font:700 17px 'IBM Plex Sans Arabic';white-space:nowrap;display:none}
-.hint .y{color:var(--gold)}.hint .r{color:#fda4af}
 /* لوحة النقاط على شاشة المسرح */
-@media (max-height:780px){.info{top:86px;padding:4px 20px;gap:20px}.info b{font-size:20px}.info small{font-size:11px}.hint{top:134px;padding:6px 18px;font-size:13px}.sub{top:88px}.pause{top:88px}.live{height:30px;font-size:12px}}
+@media (max-height:780px){.info{top:86px;padding:4px 20px;gap:20px}.info b{font-size:20px}.info small{font-size:11px}.sub{top:88px}.pause{top:88px}.live{height:30px;font-size:12px}}
 #board{position:fixed;z-index:10;display:none;flex-direction:column;overflow:hidden;pointer-events:none}
 #board .bh{display:flex;align-items:center;justify-content:space-between;padding:0 2.2em;height:3.8em;background:rgba(7,6,11,.55)}
 #board .bt{font:700 2.6em 'IBM Plex Sans Arabic'}
@@ -207,7 +205,7 @@ button{font-family:inherit;cursor:pointer}
 #heads{position:fixed;inset:0;z-index:9;pointer-events:none}
 .hd{position:absolute;transform:translate(-50%,-100%);display:none}
 .hd .av{font-size:var(--s,14px);width:2.6em;height:2.6em;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-@media (max-width:900px){.tb span{display:none}.info{gap:16px;padding:6px 18px}.hint{font-size:13px;white-space:normal;width:calc(100vw - 32px);text-align:center}}
+@media (max-width:900px){.tb span{display:none}.info{gap:16px;padding:6px 18px}}
 </style>
 </head>
 <body>
@@ -231,7 +229,6 @@ button{font-family:inherit;cursor:pointer}
 <div class="info"><div><small>الهدف</small><b id="iTarget">50</b></div><div><small>الجولة</small><b id="iRound">—</b></div></div>
 <div class="cmdc spin" id="cmdSpin"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></i><small>اكتب</small><b>لف</b><span>لرقم جديد</span></div>
 <div class="cmdc stop" id="cmdStop"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></i><small>اكتب</small><b>توقف</b><span>لتحفظ نقاط دورك</span></div>
-<div class="hint" id="hint">اكتب <span class="y">لف</span> لرقم جديد · <span class="y">توقف</span> لتحفظ نقاط دورك · <span class="r">رقم 1 يضيّع نقاط الدور</span></div>
 
 <div id="board"><div class="bh"><span class="bt">الطمع</span><span class="first" id="bFirst"></span><span class="chip">الهدف <b id="bTarget">50</b></span></div><div class="list" id="bList"></div></div>
 <div id="heads"></div>
@@ -332,7 +329,9 @@ mesh(new T.BoxGeometry(80,.06,.12),glow('#7c3aed'),0,.03,-2.7).castShadow=false;
 mesh(new T.BoxGeometry(60,16,.4),M('#2a1c4c'),0,8,-8.4);
 const SCR={w:15,h:6.4,y:5,z:-8.05};
 mesh(new T.BoxGeometry(SCR.w+.5,SCR.h+.5,.12),glow('#a78bfa'),0,SCR.y,-8.18);
-mesh(new T.PlaneGeometry(SCR.w,SCR.h),new T.MeshBasicMaterial({color:'#33235e'}),0,SCR.y,SCR.z);
+// شاشة المسرح الخلفية: لوحة ترتيب اللاعبين (بطاقات) تُرسم على الشاشة نفسها وقت اللعب، فالماكينات تبقى قدّامها
+const scrC=document.createElement('canvas'); scrC.width=2048; scrC.height=Math.round(2048*SCR.h/SCR.w); const scrT=new T.CanvasTexture(scrC); scrT.colorSpace=T.SRGBColorSpace; scrT.anisotropy=4;
+mesh(new T.PlaneGeometry(SCR.w,SCR.h),new T.MeshBasicMaterial({map:scrT}),0,SCR.y,SCR.z);
 for(const s of [-1,1]){ mesh(new T.BoxGeometry(.9,14,.9),M('#30205a'),s*10.4,7,-7.6); mesh(new T.BoxGeometry(.16,10,.16),glow(s<0?'#a78bfa':'#c084fc'),s*10.4+(s*-.5),5,-7.1); }
 // إضاءات السقف
 for(let i=-3;i<=3;i++) mesh(new T.SphereGeometry(.32,14,10),new T.MeshStandardMaterial({color:'#e2e8f0',emissive:'#94a3b8',emissiveIntensity:.6}),i*3.4,10.6,-6.8);
@@ -411,13 +410,49 @@ function renderBoard(){ const hl=S.phase==='order'?S.order.slice(0,slotCount()):
   const L=$('bList'); L.style.gridTemplateColumns=`repeat(${cols},auto)`; L.innerHTML=rowsHtml(shown,hl)+(list.length>10?`<div class="more" style="grid-column:1/-1">+${list.length-10} لاعب</div>`:'');
   const f=$('bFirst'); if(hl){ f.style.display='flex'; f.innerHTML=`يلعب أولًا · ${esc(hl.join('، '))}`; } else f.style.display='none';
   $('bTarget').textContent=cfg.target; }
+// ---------- لوحة الترتيب على شاشة المسرح ----------
+// الأعمدة تنرسم بالمساحات اللي ما تغطيها ماكينات «رقم الحظ» (تُحسب من مكان الكاميرا)، والترتيب من صاحب أعلى نقاط
+const MACH=[-1.5,1.65], MACH_Z=1.4;
+function freeCols(){ const cz=cam.position.z, cx=cam.position.x, k=(cz-SCR.z)/(cz-MACH_Z), half=SCR.w/2, n=slotCount(), xs=PODX[n]||PODX[1];
+  const occ=xs.map(x=>[cx+(x+MACH[0]-cx)*k, cx+(x+MACH[1]-cx)*k]).sort((a,b)=>a[0]-b[0]); let cur=-half; const free=[];
+  occ.forEach(([a,b])=>{ if(a>cur) free.push([cur,Math.min(a,half)]); cur=Math.max(cur,b); }); if(cur<half) free.push([cur,half]);
+  const out=[]; free.filter(([a,b])=>b-a>2.6).forEach(([a,b])=>{ if(b-a>6){ const m=(a+b)/2; out.push([a,m],[m,b]); } else out.push([a,b]); }); // المساحة العريضة تنقسم عمودين
+  return out.sort((a,b)=>b[0]-a[0]); } // يمين ← يسار
+function rrect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function fitTxt(c,t,w){ if(c.measureText(t).width<=w) return t; let a=[...t]; while(a.length&&c.measureText(a.join('')+'…').width>w) a.pop(); return a.join('')+'…'; }
+const MEDAL=[['#fde68a','#f59e0b'],['#e5e7eb','#9ca3af'],['#fdba74','#c2410c']];
+let scrKey='';
+function drawScreen(force){ const ph=S.phase, show=ph==='play'||ph==='over', cols=show?freeCols():[], W=scrC.width, H=scrC.height;
+  const list=show?ranked():[], key=show?cols.map(c=>c.map(v=>v.toFixed(1)).join(',')).join('|')+'#'+list.map(p=>p.name+':'+p.total).join(';'):'off';
+  if(!force&&key===scrKey) return; scrKey=key;
+  const c=scrC.getContext('2d'); const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#3a2870'); g.addColorStop(1,'#2a1c55'); c.fillStyle=g; c.fillRect(0,0,W,H);
+  if(show&&cols.length){ const top=110, bot=Math.round(H*.8), ch=86, gap=14, rows=Math.max(1,Math.floor((bot-top+gap)/(ch+gap))), cap=rows*cols.length, more=list.length>cap, shown=list.slice(0,more?cap-1:cap);
+    const toX=x=>(x+SCR.w/2)/SCR.w*W; c.direction='rtl'; c.textBaseline='middle';
+    cols.forEach(([a,b],ci)=>{ const x0=toX(a)+28, x1=toX(b)-28, w=x1-x0;
+      for(let r=0;r<rows;r++){ const idx=ci*rows+r, y=top+r*(ch+gap);
+        if(more&&idx===cap-1){ c.fillStyle='rgba(255,255,255,.06)'; rrect(c,x0,y,w,ch,24); c.fill(); c.fillStyle='#cfcad9'; c.font='700 34px "IBM Plex Sans Arabic", sans-serif'; c.textAlign='center'; c.fillText(`و ${list.length-cap+1} لاعبين آخرين`,x0+w/2,y+ch/2+2); break; }
+        const p=shown[idx]; if(!p) break; const m=MEDAL[idx];
+        // البطاقة
+        const bg=c.createLinearGradient(x0,y,x1,y+ch); bg.addColorStop(0,m?'rgba(255,255,255,.16)':'rgba(255,255,255,.09)'); bg.addColorStop(1,'rgba(255,255,255,.04)');
+        c.fillStyle=bg; rrect(c,x0,y,w,ch,24); c.fill(); c.lineWidth=m?4:2; c.strokeStyle=m?m[1]:'rgba(196,181,253,.35)'; c.stroke();
+        // رقم الترتيب (يمين)
+        const rx=x1-ch/2-6; c.beginPath(); c.arc(rx,y+ch/2,30,0,Math.PI*2); if(m){ const mg=c.createLinearGradient(rx,y+12,rx,y+ch-12); mg.addColorStop(0,m[0]); mg.addColorStop(1,m[1]); c.fillStyle=mg; } else c.fillStyle='rgba(139,92,246,.35)'; c.fill();
+        c.fillStyle=m?'#1c1233':'#ede9fe'; c.font='700 34px "IBM Plex Sans Arabic", sans-serif'; c.textAlign='center'; c.fillText(String(idx+1),rx,y+ch/2+2);
+        // النقاط (يسار)
+        c.font='700 42px "IBM Plex Sans Arabic", sans-serif'; const pt=String(p.total), pw=Math.max(92,c.measureText(pt).width+40);
+        c.fillStyle=m?m[1]:'rgba(124,58,237,.75)'; rrect(c,x0+12,y+12,pw,ch-24,18); c.fill(); c.fillStyle=m?'#1c1233':'#fff'; c.fillText(pt,x0+12+pw/2,y+ch/2+3);
+        // الاسم
+        c.fillStyle='#fff'; c.font='700 40px "IBM Plex Sans Arabic", sans-serif'; c.textAlign='right'; const nx=rx-46; c.fillText(fitTxt(c,p.name,nx-(x0+24+pw)),nx,y+ch/2+3);
+      } }); }
+  scrT.needsUpdate=true; }
+try{ document.fonts&&document.fonts.ready.then(()=>drawScreen(true)); }catch(e){}
 function renderUI(){ const ph=S.phase;
   $('iTarget').textContent=cfg.target; $('iRound').textContent=round()||'—';
   $('board').style.display=ph==='ready'||ph==='order'?'flex':'none'; if(ph==='ready'||ph==='order') renderBoard();
   $('ready').style.display=ph==='ready'?'flex':'none'; $('order').style.display=ph==='order'?'flex':'none';
   $('readyTxt').textContent=`${S.players.length} لاعب · ${slotCount()} على المسرح معًا · أول من يصل ${cfg.target} نقطة يفوز`;
   if(ph==='order'){ const first=S.order.slice(0,slotCount()); $('orderNames').textContent=first.join('، '); $('orderCnt').textContent=`${slotCount()} على المسرح معًا`; }
-  $('hint').style.display=ph==='play'?'block':'none'; $('pauseBtn').style.display=ph==='play'?'flex':'none';
+  $('pauseBtn').style.display=ph==='play'?'flex':'none';
   $('cmdSpin').style.display=$('cmdStop').style.display=ph==='play'?'flex':'none'; placePods(); }
 
 // ---------- منطق الأدوار ----------
@@ -464,7 +499,7 @@ function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res
 function timeout(i){ const s=S.slots[i]; s.busy=true; s.ring='bad'; SND.timeout(); fx(i,s.turnPts>0?'انتهى الوقت · ضاعت نقاط الدور':'انتهى الوقت · ضاع الدور','#fca5a5'); s.turnPts=0; react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1200); }
 
 function win(p,i){ if(S.phase==='over') return; S.phase='over'; S.winner=p; S.pts='pending'; S.slots.forEach((s,k)=>{ if(s&&s.p&&s.p!==p){ const f=figs.get(s.p.name); if(f&&f.home) walkTo(f,f.home,1.1); } S.slots[k]={p:null}; });
-  renderUI(); $('hint').style.display='none'; $('cmdSpin').style.display=$('cmdStop').style.display='none';
+  renderUI(); $('cmdSpin').style.display=$('cmdStop').style.display='none';
   setTimeout(()=>{ if(S.phase==='over') showWin(); },1600);
   report(p); }
 // شاشة الفوز — نفس روليت الإقصاء: فيديو الفوز (لو موجود)، بطاقة الفوز المملوكة (js/agp-win-card.js) أو بطاقة الفائز العادية
@@ -582,6 +617,7 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
   else if(ph==='over'&&S.winner){ const f=figs.get(S.winner.name), w=f?f.g.position:new T.Vector3(); const a=Math.sin(t*.3)*.6; P.set(w.x+Math.sin(a)*12,5.2,w.z+Math.cos(a)*12); L.set(w.x,2.6,w.z); }
   else { P.set(0,4.4,cam.aspect<1.3?24:16.5); L.set(0,3.9,-6); }
   const k=1-Math.exp(-dt*2); cam.position.lerp(P,k); camLook.lerp(L,k); cam.lookAt(camLook);
+  if(!(drawScreen.t>0)||t-drawScreen.t>.25){ drawScreen.t=t; drawScreen(); }
   R.render(scene,cam);
   // لوحة النقاط فوق شاشة المسرح
   if(ph==='ready'||ph==='order'){ const a=project(new T.Vector3(-SCR.w/2,SCR.y+SCR.h/2,SCR.z)), b=project(new T.Vector3(SCR.w/2,SCR.y-SCR.h/2,SCR.z)), B=$('board');
