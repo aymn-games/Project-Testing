@@ -48,6 +48,8 @@
 
     var UI = {
         text: '<path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/>',
+        speaker: '<path d="M3 9h4l5-4v14l-5-4H3zM15.5 8.5a5 5 0 010 7l-1.4-1.4a3 3 0 000-4.2zM18.4 5.6a9 9 0 010 12.8L17 17a7 7 0 000-9.9z"/>',
+        note: '<path d="M20 3v12.5a3.5 3.5 0 11-2-3.16V7.3l-9 2.25v8.95A3.5 3.5 0 117 15.34V5.78a1 1 0 01.76-.97l11-2.75A1 1 0 0120 3z"/>',
         bars: '<path d="M3 13h4v8H3zM10 8h4v13h-4zM17 3h4v18h-4z"/>',
         shapes: '<path d="M3 3h9v9H3zM17.5 3a4.5 4.5 0 110 9 4.5 4.5 0 010-9zM12 13.5l5.5 8.5h-11z"/>',
         layers: '<path d="M12 2l10 5-10 5L2 7zM4.4 10.2L12 14l7.6-3.8L22 11.5l-10 5-10-5zm0 4.5L12 18.5l7.6-3.8L22 16l-10 5-10-5z"/>',
@@ -80,6 +82,7 @@
         { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، اشتراك…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
+        { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
         { key: 'icons', label: 'الأيقونات', icon: 'star', title: 'الأيقونات والملصقات', desc: 'أيقونات وإيموجي تزيّن فيها شاشتك.' },
@@ -88,10 +91,10 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'text', 'icons', 'shapes'];
+    var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
-    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل' };
-    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes' };
+    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني' };
+    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note' };
     var PREVIEWS = [
         { key: 'checker', label: 'شفاف' },
         { key: 'dark', label: 'داكن' },
@@ -118,6 +121,10 @@
             { label: 'عدّادات كبسولات', sub: 'تكبيسات وماس ومتابعين', type: 'counter' },
             { label: 'أرقام كبيرة', sub: 'للزاوية', type: 'counter', set: { design: 'big', metrics: ['likes', 'diamonds'] } },
             { label: 'قائمة أرقام', sub: 'تحت بعض', type: 'counter', set: { design: 'stack', metrics: ['likes', 'diamonds', 'follows', 'shares'] } }
+        ],
+        audio: [
+            { label: 'القارئ الصوتي', sub: 'يقرأ رسائل الشات بصوت عالي، رسالة ورى رسالة', type: 'tts', at: [0.12, 0.85] },
+            { label: 'مشغّل الأغاني', sub: 'المشاهد يكتب «!تشغيل» واسم الأغنية وتشتغل', type: 'music', at: [0.85, 0.12] }
         ],
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
@@ -602,6 +609,8 @@
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
         if (it.type === 'jar') return it.title || 'وعاء الهدايا';
+        if (it.type === 'tts') return 'القارئ الصوتي' + (it.enabled === false ? ' (موقف)' : '');
+        if (it.type === 'music') return 'مشغّل الأغاني' + (it.enabled === false ? ' (موقف)' : '');
         if (O.isVideoAlert(it)) return 'أليرت فيديو: ' + (it.video.name || '');
         if (it.type === 'alert') return 'أليرت: ' + (it.events || []).map(function (k) { return (O.ALERT_EVENTS_ALL[k] || {}).label; }).filter(Boolean).join('، ');
         if (it.type === 'icon') return it.emoji ? 'ملصق ' + it.emoji : 'أيقونة ' + ((O.ICON_SET[it.icon] || {}).label || '');
@@ -869,11 +878,22 @@
         return h;
     }
 
+    /*
+     * اللوحة تنعاد رسمتها مع أي تعديل (مفتاح، زر، اختيار). عشان ما ترجع لأولها كل مرة،
+     * نحفظ مكان التمرير ونرجّعه — بس لو نفس المحتوى (نفس العنصر أو نفس القسم).
+     */
+    var panelScroll = { ctx: null, top: 0 };
     function renderPanel() {
+        var oldPb = panel.querySelector('.ob-pbody');
+        if (oldPb && panelScroll.ctx) panelScroll.top = oldPb.scrollTop;
         panel.textContent = '';
         if (!cur) return;
         var it = selectedId && find(selectedId);
+        var ctx = it ? 'i:' + it.id : 's:' + section;
+        var keep = ctx === panelScroll.ctx ? panelScroll.top : 0;
+        panelScroll.ctx = ctx;
         var pb = el('div', 'ob-pbody');
+        requestAnimationFrame(function () { if (keep && pb.isConnected) pb.scrollTop = keep; });
         if (it) {
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
             propsPane(it, pb);
@@ -885,6 +905,7 @@
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
             if (sec.key === 'jar') pb.appendChild(el('div', 'ob-hint', 'يتعبّى بصور هدايا تيك توك نفسها (آخر 54 صورة)، والجديدة تطيح من فوق.'));
+            if (sec.key === 'audio') pb.appendChild(el('div', 'ob-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio، والمعاينة هنا صامتة. الأوامر تشتغل وأنت تبث.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
             if (sec.key === 'screen') screenPane(pb);
@@ -1056,6 +1077,8 @@
         else if (it.type === 'alert') alertProps(it, box);
         else if (it.type === 'icon') iconProps(it, box);
         else if (it.type === 'shape') shapeProps(it, box);
+        else if (it.type === 'tts') ttsProps(it, box);
+        else if (it.type === 'music') musicProps(it, box);
         var a = el('div', 'ob-actions');
         a.appendChild(button('لفوق', 'ob-btn ghost', function () { moveItem(it, 1); }));
         a.appendChild(button('لتحت', 'ob-btn ghost', function () { moveItem(it, -1); }));
@@ -1332,6 +1355,101 @@
         demo.appendChild(button('جرّب سقوط هدايا', 'ob-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'ob-btn ghost', function () { O.jarClearDemo(); }));
         box.appendChild(demo);
+    }
+
+    /* ---------------- أدوات الصوت: القارئ الصوتي ومشغّل الأغاني ---------------- */
+
+    /** «جرّب»/«تخطي»/«إيقاف» يوصل لرابط الشاشة (المحرر صامت). */
+    function tryAudio(it, type, okMsg) {
+        if (!cur) return;
+        if (save.pending) flush();
+        api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
+            if (!d || !d.success) { toast('ما وصلت لشاشة البث — حدّث الصفحة وجرّب'); return; }
+            var m = liveMsg();
+            toast(m.state === 'ok' ? okMsg : m.tip);
+        }).catch(function () { toast('ما وصلت لشاشة البث — تأكد من الاتصال'); });
+    }
+
+    function enabledRow(it, box, label) {
+        box.appendChild(row(label, toggle(it.enabled !== false, function (on) { update(it, 'enabled', on, true); })));
+    }
+
+    function volumeRow(it, box, def) {
+        var v = it.volume == null ? def : Number(it.volume);
+        box.appendChild(row('مستوى الصوت', slider(0, 1, 0.05, v, function (x) { update(it, 'volume', x); })));
+    }
+
+    function ttsProps(it, box) {
+        enabledRow(it, box, 'تشغيل القارئ');
+        box.appendChild(row('الصوت', pills([{ label: 'نسائي', value: 'f' }, { label: 'رجالي', value: 'm' }], it.voice === 'm' ? 'm' : 'f', function (v) { update(it, 'voice', v, true); })));
+        box.appendChild(row('السرعة', pills([{ label: 'بطيء', value: 0.8 }, { label: 'عادي', value: 1 }, { label: 'سريع', value: 1.25 }], Number(it.rate) || 1, function (v) { update(it, 'rate', v, true); })));
+        volumeRow(it, box, 0.9);
+        box.appendChild(row('يقرأ الاسم', toggle(it.readName !== false, function (on) { update(it, 'readName', on); }), false, '«فهد يقول: …» قبل الرسالة'));
+        box.appendChild(row('أقل طول', numInput(it.minLen || 2, 1, 50, '2', function (n) { update(it, 'minLen', n || 2); }), false, 'الرسائل الأقصر ما تنقرى'));
+        box.appendChild(row('أقصى طول', numInput(it.maxLen || 200, 10, 200, '200', function (n) { update(it, 'maxLen', n || 200); }), false, 'الأطول تنقص'));
+        box.appendChild(row('تجاهل الأوامر', toggle(it.skipCommands !== false, function (on) { update(it, 'skipCommands', on); }), false, 'الرسائل اللي تبدأ بـ!'));
+        box.appendChild(row('تجاهل الروابط', toggle(it.skipLinks !== false, function (on) { update(it, 'skipLinks', on); })));
+        var banned = Array.isArray(it.banned) ? it.banned.join('، ') : String(it.banned || '');
+        box.appendChild(row('كلمات ممنوعة', textInput(banned, 600, function (v) {
+            update(it, 'banned', v.split(/[,،\n]/).map(function (w) { return w.trim(); }).filter(Boolean).slice(0, 60));
+        }, true), true, 'افصل بينها بفاصلة — الرسالة اللي فيها وحدة منها ما تنقرى'));
+        box.appendChild(row('فقاعة الرسالة', toggle(it.bubble !== false, function (on) { update(it, 'bubble', on); }), false, 'تعرض الاسم والرسالة وقت القراءة'));
+        sizeColor(it, box, 1, 8);
+        var a = el('div', 'ob-actions');
+        a.appendChild(button('جرّب على شاشة البث', 'ob-btn primary', function () { tryAudio(it, 'tts', 'التجربة بتنقرى بشاشة البث بعد ثواني…'); }));
+        box.appendChild(a);
+    }
+
+    var audioKey = { loaded: false, loading: false, has: false };
+    function loadAudioKey() {
+        if (audioKey.loaded || audioKey.loading) return;
+        audioKey.loading = true;
+        api('GET', '/api/screens/audio-key').then(function (d) {
+            audioKey.loading = false;
+            audioKey.loaded = true;
+            audioKey.has = Boolean(d && d.hasKey);
+            renderPanel();
+        }).catch(function () { audioKey.loading = false; });
+    }
+    function saveAudioKey(value) {
+        api('POST', '/api/screens/audio-key', { youtubeKey: value || null }).then(function (d) {
+            if (!d || !d.success) { toast(d && d.error === 'invalid_key' ? 'المفتاح شكله غلط — انسخه كامل من Google Cloud' : 'ما انحفظ المفتاح، جرّب مرة ثانية'); return; }
+            audioKey.has = Boolean(d.hasKey);
+            toast(d.hasKey ? 'انحفظ مفتاحك ✓' : 'انمسح مفتاحك — يرجع يستخدم مفتاح المنصة');
+            renderPanel();
+        }).catch(function () { toast('ما انحفظ المفتاح — تأكد من الاتصال'); });
+    }
+
+    function musicProps(it, box) {
+        enabledRow(it, box, 'تشغيل المشغّل');
+        box.appendChild(row('أمر التشغيل', textInput(it.playCmd || '!تشغيل', 20, function (v) { update(it, 'playCmd', v.trim() || '!تشغيل'); }), false, 'المشاهد يكتبه وبعده اسم الأغنية'));
+        box.appendChild(row('أمر التخطي', textInput(it.skipCmd || '!تخطي', 20, function (v) { update(it, 'skipCmd', v.trim() || '!تخطي'); }), false, 'لك أنت بس'));
+        volumeRow(it, box, 0.6);
+        box.appendChild(row('أقصى مدة', numInput(Math.round((Number(it.maxDurSec) || 360) / 60), 1, 60, '6', function (n) { update(it, 'maxDurSec', (n || 6) * 60); }), false, 'بالدقايق — الأطول ما تشتغل'));
+        box.appendChild(row('حد الطابور', numInput(it.maxQueue || 10, 1, 50, '10', function (n) { update(it, 'maxQueue', n || 10); }), false, 'كل مشاهد له طلب واحد بالطابور'));
+        box.appendChild(row('الشكل', pills([{ label: 'أيقونة + اسم الأغنية', value: 'card' }, { label: 'أيقونة بس', value: 'icon' }], it.design === 'icon' ? 'icon' : 'card', function (v) { update(it, 'design', v, true); }), true));
+        sizeColor(it, box, 1, 8);
+        var a = el('div', 'ob-actions');
+        a.appendChild(button('جرّب أغنية', 'ob-btn primary', function () { tryAudio(it, 'music', 'أغنية التجربة بتشتغل بشاشة البث بعد ثواني…'); }));
+        a.appendChild(button('تخطي', 'ob-btn ghost', function () { tryAudio(it, 'music-skip', 'تم التخطي بشاشة البث'); }));
+        a.appendChild(button('إيقاف وتفريغ الطابور', 'ob-btn ghost', function () { tryAudio(it, 'music-stop', 'وقف المشغّل بشاشة البث'); }));
+        box.appendChild(a);
+
+        loadAudioKey();
+        var kc = el('div', 'ob-card');
+        kc.appendChild(el('h3', null, 'مفتاح يوتيوب الخاص (اختياري)'));
+        kc.appendChild(el('div', 'ob-hint', 'المنصة عندها مفتاح مشترك بحد يومي. لو تبي طلبات أكثر، حط مفتاح YouTube Data API v3 من حسابك بـGoogle Cloud. مفتاحك ينحفظ بالسيرفر وما يطلع لأحد.'));
+        var kin = textInput('', 60, function () {});
+        kin.dir = 'ltr';
+        kin.placeholder = audioKey.has ? 'محفوظ ✓ — اكتب مفتاح جديد لتغييره' : 'AIza…';
+        kc.appendChild(row(audioKey.has ? 'المفتاح: محفوظ ✓' : 'المفتاح', kin, true));
+        var ka = el('div', 'ob-actions');
+        ka.appendChild(button('حفظ المفتاح', 'ob-btn primary', function () { if (kin.value.trim()) saveAudioKey(kin.value.trim()); }));
+        if (audioKey.has) ka.appendChild(button('مسح مفتاحي', 'ob-btn danger', function () { saveAudioKey(null); }));
+        kc.appendChild(ka);
+        box.appendChild(kc);
+
+        box.appendChild(el('div', 'ob-warn', 'تيك توك ممكن يكتم صوت البث أو ينذرك بسبب حقوق الأغاني.'));
     }
 
     /* ---------------- أليرتات الفيديو: رفع + مكتبة + أداة التفريغ ---------------- */
@@ -2258,6 +2376,8 @@
         function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
         function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
         function paintControls() {
+            var top = ctrls.scrollTop; // نرجّع مكان التمرير بعد إعادة الرسم
+            requestAnimationFrame(function () { ctrls.scrollTop = top; });
             ctrls.textContent = '';
             ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ أطراف الفيديو ويعرف لون الخلفية لحاله. بعدها ظبّط القوة والنعومة.'));
@@ -2432,11 +2552,142 @@
     function itemsOf(scr) { return scr && scr.design && Array.isArray(scr.design.items) ? scr.design.items : []; }
     function itemsCount(scr) { return scr === cur ? S().items.length : itemsOf(scr).length; }
 
+    /*
+     * «اتصل بالبث»: الستريمر يكتب يوزر تيك توك (لازم يكون الموثّق بحسابه) والسيرفر يتصل
+     * بالبث ويبقى متصل لين ينتهي البث أو يضغط «قطع» — بدون ما يخلي أي صفحة مفتوحة.
+     * كل الأدوات (الأليرتات، التوب، الأهداف، الشات، الأغاني) تشتغل على هالاتصال.
+     */
+    var conn = { loaded: false, loading: false, username: null, state: 'idle', msg: '', ok: false, busy: false, timer: null };
+    var CONN_ERR = {
+        not_live: 'حسابك مو في بث الحين — ابدأ البث بتيك توك وجرّب مرة ثانية',
+        not_your_account: 'هذا مو حساب تيك توك الموثّق بحسابك',
+        invalid_username: 'صيغة اليوزر غلط',
+        not_linked: 'حسابك مو مربوط بتيك توك — اربطه من «حسابي» أول',
+        not_streamer: 'الاتصال لحسابات الستريمر'
+    };
+
+    function loadConnection() {
+        if (conn.loading) return;
+        conn.loading = true;
+        api('GET', '/api/screens/connection').then(function (d) {
+            conn.loading = false;
+            if (!d || !d.success) return;
+            var first = !conn.loaded;
+            conn.loaded = true;
+            var was = conn.state;
+            conn.username = d.username;
+            conn.state = d.state || 'idle';
+            if (was !== conn.state) conn.msg = '';
+            if (was === 'connected' && conn.state === 'idle') { conn.msg = 'انقطع الاتصال — غالباً البث انتهى'; conn.ok = false; }
+            if (first || was !== conn.state) paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.loading = false; });
+    }
+
+    /** نتابع الحالة كل 6 ثواني وهو يتصل أو متصل (عشان نعرف لما يتصل أو ينتهي البث). */
+    function syncConnTimer() {
+        var want = view === 'home' && (conn.state === 'connecting' || conn.state === 'connected');
+        if (want && !conn.timer) conn.timer = setInterval(function () { if (view !== 'home') { syncConnTimer(); return; } loadConnection(); }, 6000);
+        else if (!want && conn.timer) { clearInterval(conn.timer); conn.timer = null; }
+    }
+
+    function doConnect(raw) {
+        var u = String(raw || '').trim().replace(/^@+/, '');
+        if (!u) { conn.msg = 'اكتب يوزر تيك توك'; conn.ok = false; paintConnect(); return; }
+        conn.busy = true; conn.msg = 'نتأكد إنك تبث ونتصل…'; conn.ok = true;
+        paintConnect();
+        api('POST', '/api/screens/connect', { username: u }).then(function (d) {
+            conn.busy = false;
+            if (!d || !d.success) {
+                conn.ok = false;
+                conn.msg = (d && CONN_ERR[d.error]) || 'ما قدرنا نتصل — جرّب بعد شوي';
+                if (d && d.error === 'not_your_account' && d.username) conn.msg += ' (@' + d.username + ')';
+                paintConnect();
+                return;
+            }
+            conn.state = d.state || 'connecting';
+            conn.msg = conn.state === 'connected' ? 'متصل ✓ — كل أدواتك شغّالة على بثك' : 'يتصل ببثك… ثواني';
+            paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.busy = false; conn.ok = false; conn.msg = 'تعذّر الوصول للسيرفر'; paintConnect(); });
+    }
+
+    function doDisconnect() {
+        conn.busy = true;
+        paintConnect();
+        api('POST', '/api/screens/disconnect', {}).then(function () {
+            conn.busy = false; conn.state = 'idle'; conn.msg = 'انقطع الاتصال'; conn.ok = false;
+            paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.busy = false; paintConnect(); });
+    }
+
+    function connectCard() {
+        var c = el('div', 'vy-connect glass');
+        c.id = 'vy-connect';
+        if (!conn.loaded) loadConnection();
+        fillConnect(c);
+        syncConnTimer();
+        return c;
+    }
+
+    function paintConnect() {
+        var c = document.getElementById('vy-connect');
+        if (c) fillConnect(c);
+        var ds = document.getElementById('vy-data-stat');
+        if (ds) paintDataStat(ds);
+    }
+
+    function fillConnect(c) {
+        c.textContent = '';
+        var st = conn.state;
+        c.className = 'vy-connect glass s-' + st;
+        var info = el('div', 'ci');
+        var dot = el('span', 'dot');
+        info.appendChild(dot);
+        var tx = el('div');
+        tx.appendChild(el('b', null, st === 'connected' ? 'متصل بالبث' : st === 'connecting' ? 'يتصل بالبث…' : 'اتصل بالبث'));
+        var note = conn.msg || (conn.loaded && !conn.username ? 'حسابك مو مربوط بتيك توك — اربطه مرة وحدة وبعدها تتصل من هنا' : st === 'connected' ? 'الأليرتات والتوب والأهداف والشات والأغاني كلها شغّالة على بثك — حتى لو سكّرت الصفحة'
+            : 'اكتب يوزر تيك توك حقك واتصل — يبقى متصل لين ينتهي البث');
+        tx.appendChild(el('small', 'note' + (conn.msg && !conn.ok ? ' bad' : ''), note));
+        info.appendChild(tx);
+        c.appendChild(info);
+
+        var ctl = el('div', 'cc');
+        if (conn.loaded && !conn.username) {
+            var lk = el('a', 'ob-btn primary', 'اربط تيك توك من «حسابي»');
+            lk.href = '../profile.html';
+            ctl.appendChild(lk);
+        } else if (st === 'connected' || st === 'connecting') {
+            ctl.appendChild(el('span', 'who', '@' + (conn.username || '')));
+            var off = button('قطع الاتصال', 'ob-btn ghost', doDisconnect);
+            off.disabled = conn.busy;
+            ctl.appendChild(off);
+        } else {
+            var box = el('label', 'uin');
+            box.appendChild(el('span', null, '@'));
+            var inp = document.createElement('input');
+            inp.className = 'ob-input';
+            inp.dir = 'ltr';
+            inp.placeholder = 'username';
+            inp.autocomplete = 'off';
+            inp.spellcheck = false;
+            inp.value = conn.username || '';
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) doConnect(inp.value); });
+            box.appendChild(inp);
+            ctl.appendChild(box);
+            var go2 = button(conn.busy ? 'يتصل…' : 'اتصل', 'ob-btn primary', function () { doConnect(inp.value); });
+            go2.disabled = conn.busy;
+            ctl.appendChild(go2);
+        }
+        c.appendChild(ctl);
+    }
+
     function paintDataStat(card) {
-        var ok = O.linkOk();
+        var ok = O.linkOk() || conn.state === 'connected';
         card.className = 'vy-stat glass ' + (ok ? 'ok' : 'warn');
         card.querySelector('b').textContent = ok ? 'متصلة' : 'غير متصلة';
-        card.querySelector('.sub').textContent = ok ? 'أرقام البث توصل للروابط' : 'اتصل بالبث من الموقع';
+        card.querySelector('.sub').textContent = ok ? 'أرقام البث توصل للروابط' : 'اضغط «اتصل» فوق';
     }
 
     function stat(icon, value, label, id) {
@@ -2448,8 +2699,15 @@
         return c;
     }
 
+    /** إعادة رسم الصفحة ما ترجّعها لأولها: نرجّع مكان التمرير بعد الرسم. */
+    function keepScroll(box) {
+        var top = box.scrollTop;
+        if (top) requestAnimationFrame(function () { box.scrollTop = top; });
+    }
+
     function renderHome() {
         dirty.home = false;
+        keepScroll(homeBody);
         homeBody.textContent = '';
         var w = el('div', 'vy-wrap');
 
@@ -2481,6 +2739,7 @@
         live.appendChild(st2);
         hero.appendChild(live);
         w.appendChild(hero);
+        w.appendChild(connectCard());
 
         // أرقام سريعة
         var stats = el('div', 'vy-stats');
@@ -2606,6 +2865,7 @@
 
     function renderScreensView() {
         dirty.screens = false;
+        keepScroll(screensBody);
         screensBody.textContent = '';
         var w = el('div', 'vy-wrap');
         var hd = secHead('الشاشات', 'كل شاشة لها تصميم ورابط خاص — تقدر تسوي لين ' + maxScreens + ' شاشة.');

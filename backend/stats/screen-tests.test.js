@@ -19,3 +19,15 @@ test('screen tests: push and read after a sequence, per screen key', function ()
     assert.equal(tests.push(k, 'bad id!', 'gift'), null);
     assert.equal(tests.push(k, 'i4', 'nope').type, 'gift');
 });
+
+test('screen tests: audio test types and recently seen keys', function () {
+    var k = 'audio_' + Date.now();
+    assert.equal(tests.push(k, 'm1', 'music-skip').type, 'music-skip');
+    assert.equal(tests.push(k, 'm1', 'music-stop').type, 'music-stop');
+    assert.equal(tests.push(k, 't1', 'tts').type, 'tts');
+    assert.equal(tests.push(k, 'm1', 'music').type, 'music');
+    assert.equal(tests.seenKeys(60000).indexOf(k), -1);
+    tests.touch(k, 'v1');
+    assert.notEqual(tests.seenKeys(60000).indexOf(k), -1);
+    assert.equal(tests.seenKeys(-1).indexOf(k), -1);
+});

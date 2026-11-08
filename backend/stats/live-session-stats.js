@@ -68,6 +68,8 @@ var _avatarCache = new Map(); // url -> dataUrl|null
 // أحداث الهدايا نفسها، فمسار /api/stream/media ما يجيب إلا روابط جات من البث.
 var _mediaUrls = new Map();
 var RECENT_EVENTS_MAX = 120; // أحداث الأليرتات المحفوظة لكل بث
+var RECENT_CHAT_MAX = 50;     // آخر رسائل الشات لأدوات الصوت (القارئ ومشغّل الأغاني)
+var CHAT_TEXT_MAX = 200;
 var MEDIA_URLS_MAX = 3000;
 var _cleanupStarted = false;
 var _store = null;
@@ -93,7 +95,10 @@ function newSession(username, roomId, connectionId) {
     giftSeq: 0,
     // آخر الأحداث (هدية/متابعة/شير/دخول) لأليرتات «شاشات البث» — بالذاكرة بس، ما تنحفظ
     events: [],
-    eventSeq: 0
+    eventSeq: 0,
+    // آخر رسائل الشات لأدوات الصوت بشاشات البث — بالذاكرة بس، ما تنحفظ
+    chat: [],
+    chatSeq: 0
   };
   Object.keys(SECTIONS).forEach(function (k) { s.lists[k] = new Map(); });
   return s;
@@ -369,6 +374,38 @@ function recordComment(username, connectionId, data) {
   s.totals.comments++;
   var r = rec(s, s.lists.commenters, data);
   if (r) r.count++;
+  pushChat(s, data);
+}
+
+/**
+ * رسالة شات لأدوات الصوت بشاشات البث (القارئ الصوتي ومشغّل الأغاني). عكس
+ * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل.
+ */
+function pushChat(s, data) {
+  var text = String((data && data.text) || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_TEXT_MAX);
+  if (!text) return;
+  if (!s.chat) { s.chat = []; s.chatSeq = 0; }
+  s.chatSeq++;
+  s.chat.push({
+    seq: s.chatSeq,
+    user: String(data.name || data.id || '').slice(0, 60),
+    uid: String(data.id || '').replace(/^tiktok:/, '').replace(/^@/, '').toLowerCase().slice(0, 60),
+    text: text,
+    owner: normalize(data.id) === s.username || normalize(String(data.id || '').replace(/^tiktok:/, '')) === s.username,
+    at: Date.now()
+  });
+  if (s.chat.length > RECENT_CHAT_MAX) s.chat.splice(0, s.chat.length - RECENT_CHAT_MAX);
+}
+
+/** رسائل الشات بعد since → { sid, cseq, chat } أو null. seq أكبر من الحالي (السيرفر رجع) = الكل. */
+function getRecentChat(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var list = s.chat || [];
+  var seq = s.chatSeq || 0;
+  var after = Number(since) || 0;
+  if (after > seq) after = 0;
+  return { sid: s.startedAt, cseq: seq, chat: list.filter(function (m) { return m.seq > after; }) };
 }
 
 function recordMember(username, connectionId, data) {
@@ -548,6 +585,7 @@ module.exports = {
   getSummary: getSummary,
   getRecentGifts: getRecentGifts,
   getRecentEvents: getRecentEvents,
+  getRecentChat: getRecentChat,
   getMediaDataUrl: getMediaDataUrl,
   flush: flush,
   cachedAvatar: cachedAvatar

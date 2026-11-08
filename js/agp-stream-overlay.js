@@ -1374,6 +1374,8 @@
             else if (it.type === 'alert') buildAlert(n, it, preview);
             else if (it.type === 'icon') buildIcon(n, it);
             else if (it.type === 'shape') buildShape(n, it);
+            else if (it.type === 'tts') buildTts(n, it, preview);
+            else if (it.type === 'music') buildMusic(n, it, preview);
         }
         return n;
     }
@@ -2150,10 +2152,11 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&lv=' + LIVE_VERSION + diagParam())
+        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
+                if ('cseq' in d) handleChat(d);
                 // «جرّب» من المحرر: أول طلب = نقطة بداية (التجارب القديمة ما تشتغل)
                 if (!evState.tinit || (Number(d.tseq) || 0) < evState.tseq) { evState.tinit = true; evState.tseq = Number(d.tseq) || 0; }
                 else {
@@ -2208,6 +2211,7 @@
     function runTests() {
         var now = Date.now();
         evState.tests = evState.tests.filter(function (t) {
+            if (audioTest(t)) return false;
             var it = alertItems().filter(function (x) { return x.id === t.itemId; })[0];
             if (it) { queueAlert(it.id, sampleEvent(t.type || (it.events || ['gift'])[0]), true); return false; }
             return now - t.at < 15000;
@@ -2215,7 +2219,7 @@
     }
 
     function syncEventsPolling() {
-        var want = LINK && state.enabled && alertItems().length > 0;
+        var want = LINK && state.enabled && (alertItems().length > 0 || audioItems('tts').length > 0 || audioItems('music').length > 0);
         if (want && !evState.timer) {
             fetchEvents();
             evState.timer = setInterval(fetchEvents, EVENTS_POLL_MS);
@@ -2253,8 +2257,334 @@
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
         if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
+        if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
+        if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
         if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
         return base;
+    }
+
+    /* ---------------- أدوات الصوت: القارئ الصوتي («سيري») ومشغّل الأغاني ----------------
+     * تشتغل برابط الشاشة بس (OBS / TikTok LIVE Studio)، والمحرر صامت دايماً (معاينة).
+     * الشات يوصل مع طلب الأحداث (cseq/chat — السيرفر يرسله بس لو بالشاشة أداة صوت).
+     * القارئ: كل رسالة → /api/public/screen/tts (صوت Google بالسيرفر) → <audio> بطابور.
+     * المشغّل: «!تشغيل <اسم>» → /api/public/screen/music/search → مشغّل يوتيوب مخفي بطابور.
+     * حالة الصوت (الطابور والمشغّل) برا عناصر الرسم، لأن الرسم ينعاد مع كل تحديث للتصميم. */
+
+    var AUDIO_ON = LINK && !STUDIO;
+    var TTS_Q_MAX = 15;
+    var SEARCH_GAP_MS = 3200;
+    var chatState = { init: false, sid: 0, seq: 0 };
+    var tts = { q: [], busy: false, audio: null, cur: null, timer: null };
+    var music = { queue: [], cur: null, player: null, waiters: [], apiLoading: false, searches: [], searching: false, lastSearchAt: 0, endTimer: null, tick: null };
+    var audioBlocked = false, unlockBtn = null;
+    var WAVE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5v17a1 1 0 01-2 0v-17a1 1 0 012 0zm4 4v9a1 1 0 01-2 0v-9a1 1 0 012 0zm-8 2v5a1 1 0 01-2 0v-5a1 1 0 012 0zm12 0v5a1 1 0 01-2 0v-5a1 1 0 012 0zM3 11v2a1 1 0 01-2 0v-2a1 1 0 012 0zm20 0v2a1 1 0 01-2 0v-2a1 1 0 012 0z"/></svg>';
+    var NOTE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 3v12.5a3.5 3.5 0 11-2-3.16V7.3l-9 2.25v8.95A3.5 3.5 0 117 15.34V5.78a1 1 0 01.76-.97l11-2.75A1 1 0 0120 3z"/></svg>';
+
+    function audioItems(type) { return activeItems().filter(function (it) { return it.type === type && it.enabled !== false && !it.hidden; }); }
+    function vol(it, def) { var v = Number(it && it.volume); return clamp(isFinite(v) && it.volume !== '' && it.volume != null ? v : def, 0, 1); }
+
+    /** النص اللي القارئ يقرأه لرسالة شات، أو null لو الرسالة تنتجاهل. */
+    function ttsFilter(it, m) {
+        if (!m || !m.text) return null;
+        var t = String(m.text).replace(/\s+/g, ' ').trim();
+        if (!t) return null;
+        if (it.skipCommands !== false && /^[!！]/.test(t)) return null;
+        if (it.skipLinks !== false && /(https?:\/\/|www\.|[\w-]+\.(com|net|org|io|me|ly|gg|tv|sa|app|link)\b)/i.test(t)) return null;
+        if (!/[\p{L}\p{N}]/u.test(t)) return null; // كلها رموز أو إيموجي
+        if (t.length < clamp(Number(it.minLen) || 2, 1, 50)) return null;
+        var banned = (Array.isArray(it.banned) ? it.banned : String(it.banned || '').split(/[,،\n]/))
+            .map(function (w) { return String(w).trim().toLowerCase(); }).filter(Boolean);
+        var low = t.toLowerCase();
+        if (banned.some(function (w) { return low.indexOf(w) !== -1; })) return null;
+        t = t.slice(0, clamp(Number(it.maxLen) || 200, 10, 200));
+        return it.readName !== false && m.user ? String(m.user).slice(0, 40) + ' يقول: ' + t : t;
+    }
+
+    /** أمر المشغّل برسالة: { kind:'play', q } أو { kind:'skip' } (صاحب البث بس) أو null. */
+    function parseMusicCommand(it, m) {
+        if (!m || !m.text) return null;
+        var t = String(m.text).replace(/\s+/g, ' ').trim();
+        var play = String(it.playCmd || '!تشغيل').trim();
+        var skip = String(it.skipCmd || '!تخطي').trim();
+        if (play && (t === play || t.indexOf(play + ' ') === 0)) {
+            var q = t.slice(play.length).trim().slice(0, 100);
+            return q ? { kind: 'play', q: q } : null;
+        }
+        if (skip && (t === skip || t.indexOf(skip + ' ') === 0)) return m.owner ? { kind: 'skip' } : null;
+        return null;
+    }
+
+    function handleChat(d) {
+        var cs = Number(d.cseq) || 0;
+        if (!chatState.init || d.sid !== chatState.sid || cs < chatState.seq) {
+            chatState.init = true; chatState.sid = d.sid; chatState.seq = cs;
+            return; // أول طلب / بث جديد / السيرفر رجع: نقطة بداية بدون قراءة القديم
+        }
+        chatState.seq = cs;
+        if (!AUDIO_ON) return;
+        (d.chat || []).forEach(onChat);
+    }
+
+    function onChat(m) {
+        var ti = audioItems('tts')[0];
+        if (ti) {
+            var text = ttsFilter(ti, m);
+            if (text) ttsEnqueue({ text: text, user: m.user, msg: m.text });
+        }
+        var mi = audioItems('music')[0];
+        if (mi) {
+            var cmd = parseMusicCommand(mi, m);
+            if (cmd && cmd.kind === 'play') musicRequest(mi, m.user, m.uid, cmd.q);
+            else if (cmd && cmd.kind === 'skip') musicSkip();
+        }
+    }
+
+    /** «جرّب» من المحرر (screen-tests): يرجّع true لو التجربة لأداة صوت. */
+    function audioTest(t) {
+        var it = activeItems().filter(function (x) { return x.id === t.itemId && (x.type === 'tts' || x.type === 'music'); })[0];
+        if (!it) return false;
+        if (!AUDIO_ON) return true;
+        if (t.type === 'tts' && it.type === 'tts') ttsEnqueue({ text: ttsFilter(Object.assign({}, it, { banned: [] }), { user: 'سارة', text: 'هلا والله، هذي تجربة للقارئ الصوتي' }), user: 'سارة', msg: 'هلا والله، هذي تجربة للقارئ الصوتي' });
+        else if (t.type === 'music') musicRequest(it, 'تجربة', '__test__', 'محمد عبده الأماكن');
+        else if (t.type === 'music-skip') musicSkip();
+        else if (t.type === 'music-stop') musicStop();
+        return true;
+    }
+
+    /* ---- القارئ ---- */
+
+    function ttsEnqueue(job) {
+        if (!job.text) return;
+        tts.q.push(job);
+        if (tts.q.length > TTS_Q_MAX) tts.q.splice(0, tts.q.length - TTS_Q_MAX);
+        ttsNext();
+    }
+
+    function ttsNext() {
+        if (tts.busy || audioBlocked || !tts.q.length) return;
+        var it = audioItems('tts')[0];
+        if (!it) { tts.q = []; return; }
+        var job = tts.q.shift();
+        var a = new Audio();
+        tts.busy = true; tts.audio = a; tts.cur = job;
+        a.volume = vol(it, 0.9);
+        a.src = apiBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
+            '&v=' + (it.voice === 'm' ? 'm' : 'f') + '&r=' + clamp(Number(it.rate) || 1, 0.5, 2);
+        paintTts();
+        function done() {
+            if (tts.audio !== a) return;
+            clearTimeout(tts.timer);
+            tts.busy = false; tts.audio = null; tts.cur = null;
+            paintTts();
+            setTimeout(ttsNext, 300);
+        }
+        a.onended = done;
+        a.onerror = done;
+        tts.timer = setTimeout(done, 40000);
+        var p = a.play();
+        if (p && p.catch) p.catch(function (e) {
+            if (e && e.name === 'NotAllowedError') {
+                clearTimeout(tts.timer);
+                tts.q.unshift(job); tts.busy = false; tts.audio = null; tts.cur = null;
+                paintTts();
+                blockAudio();
+            } else done();
+        });
+    }
+
+    function buildTts(n, it, preview) {
+        var ic = el('span', 'agp-so-aic');
+        ic.innerHTML = WAVE_SVG;
+        var job = preview ? { user: 'أبو فهد', msg: 'السلام عليكم، كيف الحال؟' } : tts.cur;
+        if (job) n.className += ' talking';
+        n.appendChild(ic);
+        if (it.bubble !== false && job) {
+            var b = el('span', 'agp-so-tbub');
+            b.appendChild(el('b', null, job.user || ''));
+            b.appendChild(el('span', null, String(job.msg || '').slice(0, 140)));
+            n.appendChild(b);
+        }
+    }
+
+    function paintTts() { repaintAudio('tts'); }
+
+    /* ---- مشغّل الأغاني ---- */
+
+    function musicRequest(it, user, uid, q) {
+        var max = clamp(Number(it.maxQueue) || 10, 1, 50);
+        var inLine = music.queue.length + music.searches.length;
+        if (inLine >= max) return;
+        var mine = function (x) { return x.uid === uid; };
+        if (uid !== '__test__' && (music.queue.some(mine) || music.searches.some(mine))) return; // طلب واحد لكل مشاهد
+        music.searches.push({ user: user, uid: uid, q: q });
+        runSearches();
+    }
+
+    function runSearches() {
+        if (music.searching || !music.searches.length) return;
+        var wait = music.lastSearchAt + SEARCH_GAP_MS - Date.now();
+        if (wait > 0) { setTimeout(runSearches, wait); return; }
+        var job = music.searches.shift();
+        music.searching = true;
+        music.lastSearchAt = Date.now();
+        fetch(apiBase() + '/api/public/screen/music/search?k=' + encodeURIComponent(LINK_KEY) + '&q=' + encodeURIComponent(job.q))
+            .then(function (res) { return res.json(); })
+            .then(function (d) {
+                var it = audioItems('music')[0];
+                if (!it || !d || !d.success) return;
+                var maxDur = clamp(Number(it.maxDurSec) || 360, 30, 3600);
+                var pick = (d.results || []).filter(function (r) { return r && r.id && r.durationSec > 0 && r.durationSec <= maxDur; })[0];
+                if (!pick) return;
+                music.queue.push({ id: pick.id, title: pick.title, channel: pick.channel, dur: pick.durationSec, user: job.user, uid: job.uid });
+                musicNext();
+            })
+            .catch(function () { /* نتجاهل الطلب */ })
+            .then(function () { music.searching = false; runSearches(); paintMusic(); });
+    }
+
+    function ytReady(cb) {
+        if (window.YT && window.YT.Player) { cb(); return; }
+        music.waiters.push(cb);
+        if (music.apiLoading) return;
+        music.apiLoading = true;
+        // مكتبة يوتيوب تنادي هذي الدالة العامة لما تجهز (شرطها، ما نقدر نغيّر اسمها)
+        var prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () {
+            if (typeof prev === 'function') { try { prev(); } catch (e) { /* ignore */ } }
+            var w = music.waiters; music.waiters = [];
+            w.forEach(function (f) { f(); });
+        };
+        var sc = document.createElement('script');
+        sc.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(sc);
+    }
+
+    function musicNext() {
+        if (music.cur || !music.queue.length) { paintMusic(); return; }
+        var it = audioItems('music')[0];
+        if (!it) { music.queue = []; paintMusic(); return; }
+        var cur = music.cur = music.queue.shift();
+        cur.startedAt = Date.now();
+        paintMusic();
+        clearTimeout(music.endTimer);
+        music.endTimer = setTimeout(function () { if (music.cur === cur) musicEnd(); }, (cur.dur + 20) * 1000);
+        var v = Math.round(vol(it, 0.6) * 100);
+        ytReady(function () {
+            if (music.cur !== cur) return;
+            if (!music.player) {
+                var host = el('div');
+                var wrap = el('div', 'agp-so-ythost');
+                wrap.appendChild(host);
+                document.body.appendChild(wrap);
+                music.player = new window.YT.Player(host, {
+                    width: 2, height: 2, videoId: cur.id,
+                    playerVars: { autoplay: 1, controls: 0, disablekb: 1, playsinline: 1, rel: 0, fs: 0 },
+                    events: {
+                        onReady: function (e) { e.target.setVolume(v); e.target.playVideo(); checkPlaying(cur); },
+                        onStateChange: function (e) { if (e.data === window.YT.PlayerState.ENDED && music.cur) musicEnd(); },
+                        onError: function () { if (music.cur) musicEnd(); }
+                    }
+                });
+            } else {
+                music.player.setVolume(v);
+                music.player.loadVideoById(cur.id);
+                checkPlaying(cur);
+            }
+        });
+        if (!music.tick) music.tick = setInterval(paintProgress, 1000);
+    }
+
+    /** المتصفح العادي يمنع التشغيل بدون ضغطة (OBS يسمح) → زر «تفعيل الصوت». */
+    function checkPlaying(cur) {
+        setTimeout(function () {
+            if (music.cur !== cur || !music.player || !music.player.getPlayerState) return;
+            var st = music.player.getPlayerState();
+            if (st === window.YT.PlayerState.UNSTARTED || st === window.YT.PlayerState.CUED) blockAudio();
+        }, 4000);
+    }
+
+    function musicEnd() {
+        clearTimeout(music.endTimer);
+        music.cur = null;
+        if (!music.queue.length) {
+            if (music.player && music.player.stopVideo) { try { music.player.stopVideo(); } catch (e) { /* ignore */ } }
+            if (music.tick) { clearInterval(music.tick); music.tick = null; }
+        }
+        musicNext();
+    }
+
+    function musicSkip() { if (music.cur) musicEnd(); }
+
+    function musicStop() {
+        music.queue = []; music.searches = [];
+        if (music.cur) musicEnd(); else paintMusic();
+    }
+
+    function buildMusic(n, it, preview) {
+        var cur = preview ? { title: 'الأماكن', channel: 'محمد عبده', user: 'أبو فهد' } : music.cur;
+        var card = it.design !== 'icon';
+        n.className += cur ? ' playing' : ' idle';
+        var ic = el('span', 'agp-so-aic');
+        ic.innerHTML = NOTE_SVG;
+        n.appendChild(ic);
+        if (!card || !cur) return;
+        var tx = el('span', 'agp-so-mtx');
+        tx.appendChild(el('b', null, cur.title || ''));
+        tx.appendChild(el('small', null, 'طلب: ' + (cur.user || '')));
+        var bar = el('span', 'agp-so-mbar');
+        var fill = el('i');
+        fill.style.width = preview ? '42%' : progressPct() + '%';
+        bar.appendChild(fill);
+        tx.appendChild(bar);
+        n.appendChild(tx);
+    }
+
+    function progressPct() {
+        var p = music.player, c = music.cur;
+        if (!c) return 0;
+        try {
+            if (p && p.getCurrentTime && p.getDuration && p.getDuration() > 0) return clamp(p.getCurrentTime() / p.getDuration() * 100, 0, 100);
+        } catch (e) { /* ignore */ }
+        return clamp((Date.now() - c.startedAt) / 1000 / (c.dur || 1) * 100, 0, 100);
+    }
+
+    function paintProgress() {
+        if (!music.cur) return;
+        Object.keys(nodes).forEach(function (id) {
+            var f = nodes[id] && nodes[id].querySelector && nodes[id].querySelector('.agp-so-music .agp-so-mbar i, .agp-so-mbar i');
+            if (f) f.style.width = progressPct() + '%';
+        });
+    }
+
+    function paintMusic() { repaintAudio('music'); }
+
+    /** يعيد رسم أدوات الصوت بس (بدون لمس باقي الشاشة). */
+    function repaintAudio(type) {
+        if (!layer || !state.enabled || !frameRect) return;
+        var key = keyFor(state.template, orient());
+        activeItems().forEach(function (it) {
+            if (it.type !== type || !nodes[it.id]) return;
+            var n = buildItem(it, frameRect);
+            stage.replaceChild(n, nodes[it.id]);
+            nodes[it.id] = n;
+            place(n, posOf(it, key), frameRect);
+        });
+    }
+
+    function blockAudio() {
+        if (audioBlocked) return;
+        audioBlocked = true;
+        if (unlockBtn || !document.body) return;
+        unlockBtn = el('button', 'agp-so-unlock', '🔊 تفعيل الصوت');
+        unlockBtn.type = 'button';
+        unlockBtn.addEventListener('click', function () {
+            audioBlocked = false;
+            if (unlockBtn && unlockBtn.parentNode) unlockBtn.parentNode.removeChild(unlockBtn);
+            unlockBtn = null;
+            if (music.player && music.cur && music.player.playVideo) music.player.playVideo();
+            ttsNext();
+        });
+        document.body.appendChild(unlockBtn);
     }
 
     /* ---------------- رابط الأوفرلي: التصميم من السيرفر ---------------- */
@@ -2668,7 +2998,22 @@
         '@keyframes agp-so-a-slide{0%{opacity:0;transform:translateX(60%)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-a-fade{0%{opacity:0;filter:blur(.3em)}100%{opacity:1;filter:none}}',
         '@keyframes agp-so-a-drop{0%{opacity:0;transform:translateY(-120%)}100%{opacity:1;transform:none}}',
-        '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}'
+        '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}',
+        /* أدوات الصوت: القارئ الصوتي ومشغّل الأغاني */
+        '.agp-so-tts,.agp-so-music{display:flex;align-items:center;gap:.45em;direction:rtl;color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
+        '.agp-so-aic{flex:none;width:2.2em;height:2.2em;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.28),transparent 60%),linear-gradient(160deg,var(--agp-so-c,#cfc3dc),#42394f);box-shadow:0 .2em .7em rgba(0,0,0,.45),0 0 0 .08em rgba(255,255,255,.25) inset}',
+        '.agp-so-aic svg{width:1.15em;height:1.15em;filter:drop-shadow(0 .05em .1em rgba(0,0,0,.4))}',
+        '.agp-so-tts.talking .agp-so-aic,.agp-so-music.playing .agp-so-aic{animation:agp-so-apulse 1.2s ease-in-out infinite}',
+        '@keyframes agp-so-apulse{50%{box-shadow:0 .2em .7em rgba(0,0,0,.45),0 0 0 .35em rgba(207,195,220,.25)}}',
+        '.agp-so-tbub,.agp-so-mtx{display:flex;flex-direction:column;gap:.12em;max-width:16em;padding:.45em .75em;border-radius:.9em;background:linear-gradient(160deg,rgba(36,31,46,.88),rgba(16,14,21,.82));border:.06em solid rgba(207,195,220,.3);box-shadow:0 .3em 1em rgba(0,0,0,.45);animation:agp-so-a-fade .35s ease both}',
+        '.agp-so-tbub b,.agp-so-mtx b{font-size:.8em;font-weight:700;color:var(--agp-so-c,#cfc3dc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-tbub span{font-size:.72em;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
+        '.agp-so-mtx b{color:#fff;font-size:.78em}',
+        '.agp-so-mtx small{font-size:.62em;color:rgba(231,224,240,.75)}',
+        '.agp-so-mbar{display:block;height:.22em;border-radius:1em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.15em}',
+        '.agp-so-mbar i{display:block;height:100%;border-radius:inherit;background:var(--agp-so-c,#cfc3dc);transition:width 1s linear}',
+        '.agp-so-ythost{position:fixed;left:-10px;top:-10px;width:2px;height:2px;overflow:hidden;opacity:0;pointer-events:none}',
+        '.agp-so-unlock{position:fixed;left:12px;bottom:12px;z-index:99;padding:10px 16px;border-radius:12px;border:0;background:#6e617f;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer}'
     ].join('\n');
 
     function ensureStyle() {
@@ -2769,6 +3114,8 @@
         tpl: tpl, keyFor: keyFor, frameIn: frameIn, posOf: posOf, place: place, orient: orient,
         fontOf: fontOf, loadFont: loadFont, fontStack: fontStack,
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,
+        /** أدوات الصوت (Veyro): فلتر القارئ وأوامر المشغّل — للمحرر والاختبارات. */
+        ttsFilter: ttsFilter, parseMusicCommand: parseMusicCommand,
         stats: function () { return stats; },
         refreshStats: fetchStats,
         linkOk: linkOk, linkText: linkText,

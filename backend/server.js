@@ -41,6 +41,8 @@ function start() {
         require('./auth/tiktok-avatar-sync').startBackfill();
         // مراقبة إحصائيات البث للستريمرز المفعّلين من الأدمن (بدون فتح الموقع).
         require('./stats/stream-stats-watcher').startWatcher();
+        // اتصال البث لشاشات Veyro اللي فيها أدوات صوت (القارئ/مشغّل الأغاني) — SCREEN_AUDIO_CONNECT.
+        require('./stats/screen-audio-watcher').startScreenAudioWatcher();
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 
