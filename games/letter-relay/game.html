@@ -153,8 +153,8 @@ body:not(.aj-on) .th .kw{display:none}
   <div class="side r">
     <button class="tb" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span id="fsLbl">ملء الشاشة</span></button>
     <button class="tb aj on" id="ajBtn" role="switch" aria-checked="true" aria-label="الدخول التلقائي"><span>الدخول التلقائي</span><i class="sw"></i></button>
-    <span class="ajk ta"><i></i><span>الأزرق</span><b>1</b></span>
-    <span class="ajk tbb"><i></i><span>الأحمر</span><b>2</b></span>
+    <span class="ajk ta"><i></i><span id="ajN1">الفريق الأزرق</span><b id="ajK1">1</b></span>
+    <span class="ajk tbb"><i></i><span id="ajN2">الفريق الأحمر</span><b id="ajK2">2</b></span>
   </div>
   <img class="logo" src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.visibility='hidden'">
   <div class="side l">
@@ -195,6 +195,13 @@ body:not(.aj-on) .th .kw{display:none}
     { cls:'tbb', name:'الفريق الأحمر', kw:'2', score:2, players:28, progress:0, reset:true,
       last:{ letter:'ج', note:'كرّر حرف — من البداية' }, typing:-1 }
   ];
+  // أسماء الفرق وكلمات الدخول من شاشة الإعدادات (index.html → localStorage 'letter-relay-setup')
+  var SETUP = {};
+  try { SETUP = JSON.parse(localStorage.getItem('letter-relay-setup') || '{}') || {}; } catch (e) {}
+  if (SETUP.team1) TEAMS[0].name = SETUP.team1;
+  if (SETUP.team2) TEAMS[1].name = SETUP.team2;
+  if (SETUP.kw1) TEAMS[0].kw = SETUP.kw1;
+  if (SETUP.kw2) TEAMS[1].kw = SETUP.kw2;
   var SHOW = 29; // كم صورة تبين قبل خانة +العدد
 
   // صور تجريبية (SVG) — باللعب الفعلي تكون avatarUrl صورة حساب اللاعب بتيك توك
@@ -249,8 +256,8 @@ body:not(.aj-on) .th .kw{display:none}
     return '' +
       '<section class="team ' + t.cls + (t.lead ? ' lead' : '') + (t.reset ? ' reset' : '') + '">' +
         '<div class="th">' +
-          '<div class="nm"><i></i><div><b>' + t.name + '</b><small>' + t.players + ' لاعب</small></div>' +
-            '<span class="kw">للدخول اكتب <b>' + t.kw + '</b></span></div>' +
+          '<div class="nm"><i></i><div><b>' + esc(t.name) + '</b><small>' + t.players + ' لاعب</small></div>' +
+            '<span class="kw">للدخول اكتب <b>' + esc(t.kw) + '</b></span></div>' +
           '<div class="sc"><b>' + t.score + '</b><span>نقطة</span></div>' +
         '</div>' +
         '<div class="prog">' +
@@ -268,6 +275,12 @@ body:not(.aj-on) .th .kw{display:none}
         '</div>' +
       '</section>';
   }).join('');
+
+  // كلمات الدخول بالهيدر بأسماء الفرق
+  [1, 2].forEach(function (n) {
+    document.getElementById('ajN' + n).textContent = TEAMS[n - 1].name;
+    document.getElementById('ajK' + n).textContent = TEAMS[n - 1].kw;
+  });
 
   // ===== تحجيم المسرح =====
   function fit() {
