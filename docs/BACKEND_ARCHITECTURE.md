@@ -395,6 +395,24 @@ on the actual production origin before fully relying on them.
 
 ---
 
+## 11. Stream Screens Audio Tools (Veyro TTS reader + song player)
+
+Screen links (`veyro/live.html?k=`, `overlay/live.html?k=`) can carry two audio
+tools: `tts` (reads chat aloud) and `music` (plays YouTube songs requested with
+`!تشغيل <name>`). Server pieces:
+
+| Piece | File | Notes |
+|---|---|---|
+| Chat ring per live session | `stats/live-session-stats.js` (`getRecentChat`) | memory only, last 50, text ≤ 200, `owner` flag for the streamer's own messages |
+| Chat on the events feed | `GET /api/public/screen/events?...&c=<cseq>` | adds `cseq` + `chat` only when the screen design has an enabled audio tool |
+| YouTube search | `GET /api/public/screen/music/search?k=&q=` | `stats/screen-audio-service.js`; streamer key first, platform `YOUTUBE_API_KEY` fallback; 1 search / 3 s / screen; 25 platform-key searches / streamer / UTC day; 24 h cache |
+| Text to speech | `GET /api/public/screen/tts?k=&t=&v=f\|m&r=` | Google Cloud TTS `ar-XA` Standard voices, `GOOGLE_TTS_API_KEY`, MP3, 1 h cache |
+| Streamer YouTube key | `GET/POST /api/screens/audio-key` | table `screen_audio_keys`; the key is never returned, only `hasKey` |
+| Live connection without a game | `stats/screen-audio-watcher.js` | every 30 s: open audio screens (`screenTests.seenKeys`) of live streamers → statsOnly connection through the shared pool; closes 2 min after the screen stops polling. `SCREEN_AUDIO_CONNECT=0` disables it |
+
+Editor buttons («جرّب», skip, stop) reach the link through `screen-tests.js`
+types `tts`, `music`, `music-skip`, `music-stop`.
+
 ## Summary
 
 `backend/` is a standalone Node process; its only contract with AGP is
