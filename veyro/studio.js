@@ -2552,11 +2552,142 @@
     function itemsOf(scr) { return scr && scr.design && Array.isArray(scr.design.items) ? scr.design.items : []; }
     function itemsCount(scr) { return scr === cur ? S().items.length : itemsOf(scr).length; }
 
+    /*
+     * «اتصل بالبث»: الستريمر يكتب يوزر تيك توك (لازم يكون الموثّق بحسابه) والسيرفر يتصل
+     * بالبث ويبقى متصل لين ينتهي البث أو يضغط «قطع» — بدون ما يخلي أي صفحة مفتوحة.
+     * كل الأدوات (الأليرتات، التوب، الأهداف، الشات، الأغاني) تشتغل على هالاتصال.
+     */
+    var conn = { loaded: false, loading: false, username: null, state: 'idle', msg: '', ok: false, busy: false, timer: null };
+    var CONN_ERR = {
+        not_live: 'حسابك مو في بث الحين — ابدأ البث بتيك توك وجرّب مرة ثانية',
+        not_your_account: 'هذا مو حساب تيك توك الموثّق بحسابك',
+        invalid_username: 'صيغة اليوزر غلط',
+        not_linked: 'حسابك مو مربوط بتيك توك — اربطه من «حسابي» أول',
+        not_streamer: 'الاتصال لحسابات الستريمر'
+    };
+
+    function loadConnection() {
+        if (conn.loading) return;
+        conn.loading = true;
+        api('GET', '/api/screens/connection').then(function (d) {
+            conn.loading = false;
+            if (!d || !d.success) return;
+            var first = !conn.loaded;
+            conn.loaded = true;
+            var was = conn.state;
+            conn.username = d.username;
+            conn.state = d.state || 'idle';
+            if (was !== conn.state) conn.msg = '';
+            if (was === 'connected' && conn.state === 'idle') { conn.msg = 'انقطع الاتصال — غالباً البث انتهى'; conn.ok = false; }
+            if (first || was !== conn.state) paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.loading = false; });
+    }
+
+    /** نتابع الحالة كل 6 ثواني وهو يتصل أو متصل (عشان نعرف لما يتصل أو ينتهي البث). */
+    function syncConnTimer() {
+        var want = view === 'home' && (conn.state === 'connecting' || conn.state === 'connected');
+        if (want && !conn.timer) conn.timer = setInterval(function () { if (view !== 'home') { syncConnTimer(); return; } loadConnection(); }, 6000);
+        else if (!want && conn.timer) { clearInterval(conn.timer); conn.timer = null; }
+    }
+
+    function doConnect(raw) {
+        var u = String(raw || '').trim().replace(/^@+/, '');
+        if (!u) { conn.msg = 'اكتب يوزر تيك توك'; conn.ok = false; paintConnect(); return; }
+        conn.busy = true; conn.msg = 'نتأكد إنك تبث ونتصل…'; conn.ok = true;
+        paintConnect();
+        api('POST', '/api/screens/connect', { username: u }).then(function (d) {
+            conn.busy = false;
+            if (!d || !d.success) {
+                conn.ok = false;
+                conn.msg = (d && CONN_ERR[d.error]) || 'ما قدرنا نتصل — جرّب بعد شوي';
+                if (d && d.error === 'not_your_account' && d.username) conn.msg += ' (@' + d.username + ')';
+                paintConnect();
+                return;
+            }
+            conn.state = d.state || 'connecting';
+            conn.msg = conn.state === 'connected' ? 'متصل ✓ — كل أدواتك شغّالة على بثك' : 'يتصل ببثك… ثواني';
+            paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.busy = false; conn.ok = false; conn.msg = 'تعذّر الوصول للسيرفر'; paintConnect(); });
+    }
+
+    function doDisconnect() {
+        conn.busy = true;
+        paintConnect();
+        api('POST', '/api/screens/disconnect', {}).then(function () {
+            conn.busy = false; conn.state = 'idle'; conn.msg = 'انقطع الاتصال'; conn.ok = false;
+            paintConnect();
+            syncConnTimer();
+        }).catch(function () { conn.busy = false; paintConnect(); });
+    }
+
+    function connectCard() {
+        var c = el('div', 'vy-connect glass');
+        c.id = 'vy-connect';
+        if (!conn.loaded) loadConnection();
+        fillConnect(c);
+        syncConnTimer();
+        return c;
+    }
+
+    function paintConnect() {
+        var c = document.getElementById('vy-connect');
+        if (c) fillConnect(c);
+        var ds = document.getElementById('vy-data-stat');
+        if (ds) paintDataStat(ds);
+    }
+
+    function fillConnect(c) {
+        c.textContent = '';
+        var st = conn.state;
+        c.className = 'vy-connect glass s-' + st;
+        var info = el('div', 'ci');
+        var dot = el('span', 'dot');
+        info.appendChild(dot);
+        var tx = el('div');
+        tx.appendChild(el('b', null, st === 'connected' ? 'متصل بالبث' : st === 'connecting' ? 'يتصل بالبث…' : 'اتصل بالبث'));
+        var note = conn.msg || (conn.loaded && !conn.username ? 'حسابك مو مربوط بتيك توك — اربطه مرة وحدة وبعدها تتصل من هنا' : st === 'connected' ? 'الأليرتات والتوب والأهداف والشات والأغاني كلها شغّالة على بثك — حتى لو سكّرت الصفحة'
+            : 'اكتب يوزر تيك توك حقك واتصل — يبقى متصل لين ينتهي البث');
+        tx.appendChild(el('small', 'note' + (conn.msg && !conn.ok ? ' bad' : ''), note));
+        info.appendChild(tx);
+        c.appendChild(info);
+
+        var ctl = el('div', 'cc');
+        if (conn.loaded && !conn.username) {
+            var lk = el('a', 'ob-btn primary', 'اربط تيك توك من «حسابي»');
+            lk.href = '../profile.html';
+            ctl.appendChild(lk);
+        } else if (st === 'connected' || st === 'connecting') {
+            ctl.appendChild(el('span', 'who', '@' + (conn.username || '')));
+            var off = button('قطع الاتصال', 'ob-btn ghost', doDisconnect);
+            off.disabled = conn.busy;
+            ctl.appendChild(off);
+        } else {
+            var box = el('label', 'uin');
+            box.appendChild(el('span', null, '@'));
+            var inp = document.createElement('input');
+            inp.className = 'ob-input';
+            inp.dir = 'ltr';
+            inp.placeholder = 'username';
+            inp.autocomplete = 'off';
+            inp.spellcheck = false;
+            inp.value = conn.username || '';
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.isComposing) doConnect(inp.value); });
+            box.appendChild(inp);
+            ctl.appendChild(box);
+            var go2 = button(conn.busy ? 'يتصل…' : 'اتصل', 'ob-btn primary', function () { doConnect(inp.value); });
+            go2.disabled = conn.busy;
+            ctl.appendChild(go2);
+        }
+        c.appendChild(ctl);
+    }
+
     function paintDataStat(card) {
-        var ok = O.linkOk();
+        var ok = O.linkOk() || conn.state === 'connected';
         card.className = 'vy-stat glass ' + (ok ? 'ok' : 'warn');
         card.querySelector('b').textContent = ok ? 'متصلة' : 'غير متصلة';
-        card.querySelector('.sub').textContent = ok ? 'أرقام البث توصل للروابط' : 'اتصل بالبث من الموقع';
+        card.querySelector('.sub').textContent = ok ? 'أرقام البث توصل للروابط' : 'اضغط «اتصل» فوق';
     }
 
     function stat(icon, value, label, id) {
@@ -2608,6 +2739,7 @@
         live.appendChild(st2);
         hero.appendChild(live);
         w.appendChild(hero);
+        w.appendChild(connectCard());
 
         // أرقام سريعة
         var stats = el('div', 'vy-stats');

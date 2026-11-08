@@ -38,7 +38,8 @@ function setup(opts) {
             recordComment: function () {}, recordGift: function () {}, recordFollow: function () {}, recordViewers: function () {},
             recordLike: function () {}, recordShare: function () {}, recordMember: function () {}, recordSubscribe: function () {}
         },
-        gapMs: 0
+        gapMs: 0,
+        autoAudio: opts.autoAudio
     });
     return { w: w, st: st };
 }
@@ -83,4 +84,54 @@ test('audio watcher: disconnects when the screen closes or the stream ends', asy
     await e.w.tick();
     e.st.connectors[0].callbacks.onStatus('ended');
     assert.deepEqual(e.w.active(), []);
+});
+
+test('manual connect: connects without any open screen and stays until the stream ends', async function () {
+    var t = setup({ seen: [] });
+    var r = t.w.connectManual('Streamer_One');
+    assert.equal(r.state, 'connecting');
+    assert.equal(t.st.connectors.length, 1);
+    assert.equal(t.w.status('streamer_one'), 'connecting');
+    t.st.connectors[0].callbacks.onStatus('connected');
+    assert.equal(t.w.status('streamer_one'), 'connected');
+    await t.w.tick(); // ما فيه شاشة مفتوحة — الاتصال اليدوي يبقى
+    assert.equal(t.st.connectors[0].disconnected, false);
+    assert.equal(t.w.connectManual('streamer_one').state, 'connected'); // ما يفتح اتصال ثاني
+    assert.equal(t.st.connectors.length, 1);
+    t.st.connectors[0].callbacks.onStatus('ended');
+    assert.equal(t.w.status('streamer_one'), 'idle');
+    await t.w.tick();
+    assert.equal(t.st.connectors.length, 1); // ما يرجع يتصل بعد نهاية البث
+});
+
+test('manual connect: disconnect stops it, and an offline stream drops the request', async function () {
+    var t = setup({ seen: [] });
+    t.w.connectManual('streamer_one');
+    t.w.disconnectManual('streamer_one');
+    assert.equal(t.st.connectors[0].disconnected, true);
+    assert.equal(t.w.status('streamer_one'), 'idle');
+    await t.w.tick();
+    assert.equal(t.st.connectors.length, 1);
+
+    var o = setup({ seen: [], live: false });
+    o.w.connectManual('streamer_one');
+    o.st.connectors[0].callbacks.onStatus('error');
+    await o.w.tick(); // مو يبث → الطلب ينشال، ما يعيد المحاولة
+    await o.w.tick();
+    assert.equal(o.st.connectors.length, 1);
+    assert.equal(o.w.status('streamer_one'), 'idle');
+});
+
+test('manual connect: a stats-watched streamer reports connected without a second connection', function () {
+    var t = setup({ seen: [], statsWatched: ['streamer_one'] });
+    assert.equal(t.w.connectManual('streamer_one').state, 'connected');
+    assert.equal(t.st.connectors.length, 0);
+});
+
+test('audio auto-connect can be turned off while manual connect still works', async function () {
+    var t = setup({ autoAudio: false });
+    await t.w.tick();
+    assert.equal(t.st.connectors.length, 0);
+    t.w.connectManual('streamer_one');
+    assert.equal(t.st.connectors.length, 1);
 });

@@ -11,6 +11,10 @@
  * لنفس البث ما ينفتح اتصال تيك توك ثاني. معرّفه يبدأ بـ WATCH_PREFIX عشان يكون
  * هو صاحب أحداث الجلسة (ما تنحسب مرتين). ستريمر عليه مراقب الإحصائيات = يكفي، ما نفتح.
  * مفعّل افتراضياً — SCREEN_AUDIO_CONNECT=0 يقفله.
+ *
+ * الاتصال اليدوي («اتصل بالبث» برئيسية Veyro): الستريمر يطلبه بيوزره الموثّق
+ * (POST /api/screens/connect) ويبقى شغّال من السيرفر لين ينتهي البث أو يضغط «قطع»،
+ * بدون ما يحتاج أي صفحة مفتوحة. يشتغل حتى لو SCREEN_AUDIO_CONNECT=0.
  */
 
 'use strict';
@@ -34,7 +38,9 @@ function createWatcher(deps) {
     var log = deps.logger || { log: function () {}, error: function () {} };
     var gapMs = deps.gapMs == null ? CHECK_GAP_MS : deps.gapMs;
     var stats = deps.stats;
-    var _active = new Map(); // username -> { connector, id }
+    var autoAudio = deps.autoAudio !== false;
+    var _active = new Map(); // username -> { connector, id, status }
+    var _manual = new Set(); // يوزرات طلبوا «اتصل بالبث» يدوياً
     var _ticking = false;
 
     function delay(ms) { return ms ? new Promise(function (r) { setTimeout(r, ms); }) : Promise.resolve(); }
@@ -52,7 +58,7 @@ function createWatcher(deps) {
         var connector = deps.createConnector();
         if (!connector) return;
         var id = stats.WATCH_PREFIX + 'audio:' + username + ':' + Date.now().toString(36);
-        var a = { connector: connector, id: id };
+        var a = { connector: connector, id: id, status: 'connecting' };
         _active.set(username, a);
         stats.setWatching(username, true);
         log.log('Screen Audio: "' + username + '" is live with an audio screen open — connecting.');
@@ -60,6 +66,8 @@ function createWatcher(deps) {
         connector.connect({ username: username, statsOnly: true }, {
             onStatus: function (status) {
                 if (!mine()) return;
+                a.status = status;
+                if (status === 'ended') _manual.delete(username);
                 if (status === 'connected') stats.attach(username, connector.getRoomId ? connector.getRoomId() : null, id);
                 else if (status === 'ended') { stats.markEnded(username, id); stop(username, 'stream ended'); }
                 else if (status === 'error') stop(username, 'connection error — retry next check');
@@ -77,7 +85,8 @@ function createWatcher(deps) {
 
     /** اليوزرات اللي عندهم شاشة صوت مفتوحة الحين */
     function wanted() {
-        var set = new Set();
+        var set = new Set(_manual);
+        if (!autoAudio) return set;
         deps.seenKeys(IDLE_MS).forEach(function (key) {
             var o = deps.findByKey(key);
             if (!o) return;
@@ -99,6 +108,7 @@ function createWatcher(deps) {
         return pending.reduce(function (chain, u) {
             return chain.then(function () {
                 return Promise.resolve(deps.isLive(u)).then(function (live) {
+                    if (live === false) _manual.delete(u); // البث خلص — الطلب اليدوي ينتهي
                     if (live === true && !_active.has(u)) start(u);
                 }).then(function () { return delay(gapMs); });
             });
@@ -107,23 +117,52 @@ function createWatcher(deps) {
         }).then(function () { _ticking = false; });
     }
 
-    return { tick: tick, active: function () { return Array.from(_active.keys()); } };
+    /** «اتصل بالبث» يدوياً (السيرفر تأكد إنه يوزره الموثّق) → { state } */
+    function connectManual(username) {
+        var u = normalize(username);
+        if (!u) return { state: 'idle' };
+        _manual.add(u);
+        if (!_active.has(u) && !deps.statsWatcherActive(u)) start(u);
+        return { state: status(u) };
+    }
+
+    function disconnectManual(username) {
+        var u = normalize(username);
+        if (!u) return;
+        _manual.delete(u);
+        stop(u, 'disconnected by streamer');
+    }
+
+    /** idle | connecting | connected (مراقب الإحصائيات شغّال = connected) */
+    function status(username) {
+        var u = normalize(username);
+        var a = u && _active.get(u);
+        if (a) return a.status === 'connected' ? 'connected' : 'connecting';
+        return u && deps.statsWatcherActive(u) ? 'connected' : 'idle';
+    }
+
+    return {
+        tick: tick,
+        active: function () { return Array.from(_active.keys()); },
+        connectManual: connectManual,
+        disconnectManual: disconnectManual,
+        status: status
+    };
 }
 
+var _instance = null;
 var _started = false;
-function startScreenAudioWatcher() {
-    if (_started) return;
+
+/** النسخة المشتركة (للمسارات والتشغيل). */
+function get() {
+    if (_instance) return _instance;
     var config = require('../config');
     var logger = require('../utils/logger');
-    if (!config.screenAudioConnect) {
-        logger.info('Screen Audio: live connection for audio screens disabled (SCREEN_AUDIO_CONNECT=0).');
-        return;
-    }
-    _started = true;
     var screenTests = require('./screen-tests');
     var streamScreens = require('./stream-screens-service');
     var statsWatcher = require('./stream-stats-watcher');
-    var w = createWatcher({
+    _instance = createWatcher({
+        autoAudio: config.screenAudioConnect,
         seenKeys: screenTests.seenKeys,
         findByKey: streamScreens.findByKey,
         ownerTikTok: streamScreens.ownerTikTok,
@@ -133,6 +172,14 @@ function startScreenAudioWatcher() {
         stats: require('./live-session-stats'),
         logger: logger
     });
+    if (!config.screenAudioConnect) logger.info('Screen Audio: auto connection for audio screens disabled (SCREEN_AUDIO_CONNECT=0) — manual connect still works.');
+    return _instance;
+}
+
+function startScreenAudioWatcher() {
+    if (_started) return;
+    _started = true;
+    var w = get();
     setTimeout(function () {
         w.tick();
         var timer = setInterval(w.tick, CHECK_MS);
@@ -140,4 +187,4 @@ function startScreenAudioWatcher() {
     }, START_DELAY_MS);
 }
 
-module.exports = { createWatcher: createWatcher, startScreenAudioWatcher: startScreenAudioWatcher };
+module.exports = { createWatcher: createWatcher, startScreenAudioWatcher: startScreenAudioWatcher, get: get };

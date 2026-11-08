@@ -202,6 +202,10 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen/tts', requireAuth: false, handler: handlePublicScreenTts },
   { method: 'GET', path: '/api/screens/audio-key', requireAuth: true, handler: handleGetScreenAudioKey },
   { method: 'POST', path: '/api/screens/audio-key', requireAuth: true, handler: handleSetScreenAudioKey },
+  // «اتصل بالبث» برئيسية Veyro: اتصال من السيرفر بيوزر تيك توك الموثّق — stats/screen-audio-watcher.js
+  { method: 'GET', path: '/api/screens/connection', requireAuth: true, handler: handleScreenConnectionStatus },
+  { method: 'POST', path: '/api/screens/connect', requireAuth: true, handler: handleScreenConnect },
+  { method: 'POST', path: '/api/screens/disconnect', requireAuth: true, handler: handleScreenDisconnect },
   { method: 'GET', path: '/api/public/screen/events', requireAuth: false, handler: handlePublicScreenEvents },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
@@ -1209,6 +1213,39 @@ function handlePublicScreenTts(req, res) {
     res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
     res.end(r.audio);
   });
+}
+
+/** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected } */
+function handleScreenConnectionStatus(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var u = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(user.id));
+  sendJson(res, 200, { success: true, username: u || null, state: u ? require('../stats/screen-audio-watcher').get().status(u) : 'idle' });
+}
+
+/**
+ * POST /api/screens/connect { username } → { success, state } — اليوزر لازم يكون حساب تيك توك
+ * الموثّق بحساب الستريمر (not_linked / not_your_account)، ويبث الحين (not_live).
+ */
+function handleScreenConnect(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var mine = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(user.id));
+  if (!mine) { sendJson(res, 400, { success: false, error: 'not_linked' }); return; }
+  var typed = tiktokLiveCheck.normalize(body && body.username);
+  if (!typed) { sendJson(res, 400, { success: false, error: 'invalid_username' }); return; }
+  if (typed !== mine) { sendJson(res, 400, { success: false, error: 'not_your_account', username: mine }); return; }
+  tiktokLiveCheck.isLive(mine).then(function (live) {
+    if (live === false) { sendJson(res, 409, { success: false, error: 'not_live' }); return; }
+    var r = require('../stats/screen-audio-watcher').get().connectManual(mine);
+    sendJson(res, 200, { success: true, username: mine, state: r.state });
+  });
+}
+
+/** POST /api/screens/disconnect → { success } */
+function handleScreenDisconnect(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var mine = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(user.id));
+  if (mine) require('../stats/screen-audio-watcher').get().disconnectManual(mine);
+  sendJson(res, 200, { success: true, state: 'idle' });
 }
 
 /** GET /api/screens/audio-key → { success, hasKey } — هل الستريمر حاط مفتاح يوتيوب خاص (المفتاح نفسه ما يرجع أبداً). */

@@ -155,6 +155,23 @@
   .vy-live .stat span { padding: 6px 10px; border-radius: 10px; background: rgba(20,18,26,.55); border: 1px solid var(--line); font-size: 12px; color: var(--lav-l); }
   @keyframes vy-pulse { 50% { opacity: .35; } }
 
+  /* «اتصل بالبث» بالرئيسية: النص يمين والتحكم يسار */
+  .vy-connect { border-radius: var(--r); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .vy-connect .ci { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 280px; }
+  .vy-connect .dot { flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--muted-2); }
+  .vy-connect.s-connecting .dot { background: var(--warn); box-shadow: 0 0 10px var(--warn); animation: vy-pulse 1.2s ease-in-out infinite; }
+  .vy-connect.s-connected .dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .vy-connect.s-connected { border-color: rgba(116,214,161,.35); }
+  .vy-connect .ci b { display: block; font-family: "Noto Kufi Arabic", sans-serif; font-size: 17px; }
+  .vy-connect .ci .note { display: block; margin-top: 3px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+  .vy-connect .ci .note.bad { color: var(--bad); }
+  .vy-connect .cc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .vy-connect .uin { display: flex; align-items: center; gap: 4px; padding: 0 4px 0 12px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(12,11,16,.45); direction: ltr; }
+  .vy-connect .uin span { color: var(--muted); font-size: 15px; }
+  .vy-connect .uin .ob-input { border: 0; background: transparent; box-shadow: none; width: 200px; padding: 11px 6px; text-align: left; }
+  .vy-connect .who { direction: ltr; font-weight: 700; color: var(--lav-l); }
+  .vy-connect .ob-btn[disabled] { opacity: .6; cursor: progress; }
+  @media (max-width: 600px) { .vy-connect .cc, .vy-connect .uin { width: 100%; } .vy-connect .uin .ob-input { flex: 1; width: auto; } }
   .vy-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .vy-stat { border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
   .vy-stat .ic { width: 42px; height: 42px; border-radius: 13px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.1); border: 1px solid var(--line); color: var(--lav-l); }
