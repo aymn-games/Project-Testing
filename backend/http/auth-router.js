@@ -211,6 +211,9 @@ var ROUTES = [
   { method: 'POST', path: '/api/streamlabs/reset', requireAuth: true, handler: handleStreamlabsReset },
   { method: 'POST', path: '/api/streamlabs/settings', requireAuth: true, handler: handleStreamlabsSettings },
   { method: 'GET', path: '/api/streamlabs/donations', requireAuth: true, handler: handleStreamlabsDonations },
+  // زر «اربط Streamlabs» (OAuth) — يشتغل بس لما STREAMLABS_CLIENT_ID/SECRET موجودين
+  { method: 'GET', path: '/api/streamlabs/oauth/start', requireAuth: true, handler: handleStreamlabsOAuthStart },
+  { method: 'GET', path: '/api/streamlabs/oauth/callback', requireAuth: false, handler: handleStreamlabsOAuthCallback },
   // «اتصل بالبث» برئيسية Veyro: اتصال من السيرفر بيوزر تيك توك الموثّق — stats/screen-audio-watcher.js
   { method: 'GET', path: '/api/screens/connection', requireAuth: true, handler: handleScreenConnectionStatus },
   { method: 'POST', path: '/api/screens/connect', requireAuth: true, handler: handleScreenConnect },
@@ -1251,10 +1254,10 @@ function handlePublicScreenTts(req, res) {
 function streamlabsState(userId) {
   var store = require('../streamlabs/donations-store').get();
   var l = store.getLink(userId);
-  if (!l) return { success: true, linked: false };
+  if (!l) return { success: true, linked: false, oauth: require('../streamlabs/streamlabs-oauth').get().enabled() };
   var mgr = require('../streamlabs/streamlabs-manager').get();
   var st = mgr.status(userId);
-  return { success: true, linked: true, status: st === 'idle' ? l.status : st, lastError: l.lastError, linkedAt: l.linkedAt, lastEventAt: l.lastEventAt, counterFrom: l.counterFrom, autoReset: l.autoReset };
+  return { success: true, oauth: require('../streamlabs/streamlabs-oauth').get().enabled(), linked: true, status: st === 'idle' ? l.status : st, lastError: l.lastError, linkedAt: l.linkedAt, lastEventAt: l.lastEventAt, counterFrom: l.counterFrom, autoReset: l.autoReset };
 }
 
 /** GET /api/streamlabs → { success, linked, status, lastError, lastEventAt, counterFrom, autoReset } */
@@ -1270,6 +1273,36 @@ function handleStreamlabsLink(req, res, body, user) {
     if (!r.success) { sendJson(res, 400, r); return; }
     sendJson(res, 200, streamlabsState(user.id));
   });
+}
+
+/** GET /api/streamlabs/oauth/start → { success, url } — رابط صفحة موافقة Streamlabs للستريمر. */
+function handleStreamlabsOAuthStart(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var oauth = require('../streamlabs/streamlabs-oauth').get();
+  if (!oauth.enabled()) { sendJson(res, 404, { success: false, error: 'oauth_disabled' }); return; }
+  sendJson(res, 200, { success: true, url: oauth.authorizeUrl(user.id) });
+}
+
+/**
+ * GET /api/streamlabs/oauth/callback?code=&state= (رجوع Streamlabs) → socket token → نفس ربط لصق الرمز،
+ * ويرجّع الستريمر لـVeyro: veyro/index.html?sl=<ok|cancelled|expired|failed|invalid_token>#tools/donations
+ */
+function handleStreamlabsOAuthCallback(req, res) {
+  function back(status) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/veyro/index.html?sl=' + encodeURIComponent(status) + '#tools/donations' });
+    res.end();
+  }
+  var oauth = require('../streamlabs/streamlabs-oauth').get();
+  if (!oauth.enabled()) return back('failed');
+  if (getQueryParam(req, 'error')) return back('cancelled');
+  var userId = oauth.verifyState(getQueryParam(req, 'state'));
+  if (!userId) return back('expired');
+  oauth.socketTokenFromCode(getQueryParam(req, 'code')).then(function (r) {
+    if (!r.success) { logger.error('Streamlabs OAuth: ' + r.error + ' for user ' + userId); return back('failed'); }
+    return require('../streamlabs/streamlabs-manager').get().link(userId, r.socketToken).then(function (l) {
+      back(l.success ? 'ok' : (l.error || 'failed'));
+    });
+  }).catch(function () { back('failed'); });
 }
 
 /** POST /api/streamlabs/unlink — يقطع ويمسح الرمز (الدونيشن المحفوظ يبقى). */
