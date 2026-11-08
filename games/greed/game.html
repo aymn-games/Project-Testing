@@ -115,6 +115,14 @@ button{font-family:inherit;cursor:pointer}
 #order .cnt{color:#cfcad9;font:500 16px 'IBM Plex Sans Arabic'}
 #order .cta{width:220px}
 .pause{position:fixed;top:94px;left:20px;z-index:20;display:none}
+/* أوامر الشات على جانبي الشاشة: لف يسار · توقف يمين */
+.cmdc{position:fixed;top:50%;transform:translateY(-50%);z-index:13;display:none;flex-direction:column;align-items:center;gap:6px;width:clamp(110px,13vw,220px);padding:clamp(14px,1.6vw,26px) 10px;border-radius:28px;background:var(--panel);backdrop-filter:blur(12px);text-align:center;pointer-events:none}
+.cmdc small{font:600 clamp(12px,1vw,17px) 'IBM Plex Sans Arabic';color:#cfcad9}
+.cmdc b{font:700 clamp(40px,5vw,84px)/1.1 'IBM Plex Sans Arabic'}
+.cmdc span{font:600 clamp(11px,.95vw,16px)/1.4 'IBM Plex Sans Arabic';color:#cfcad9}
+.cmdc.spin{left:clamp(10px,1.4vw,28px);border:2px solid rgba(167,139,250,.75);box-shadow:0 0 40px rgba(139,92,246,.35)}.cmdc.spin b{color:#c4b5fd}
+.cmdc.stop{right:clamp(10px,1.4vw,28px);border:2px solid rgba(52,211,153,.7);box-shadow:0 0 40px rgba(16,185,129,.3)}.cmdc.stop b{color:#6ee7b7}
+@media (max-height:520px){.cmdc{top:60%;width:clamp(90px,13vw,150px);padding:8px 6px;gap:2px;border-radius:18px}.cmdc b{font-size:clamp(28px,4vw,40px)}.cmdc small,.cmdc span{font-size:11px}}
 /* النوافذ */
 .modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:none;place-items:center;padding:16px}
 .modal .box{width:min(460px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:26px;border-radius:24px;background:rgba(12,11,18,.96);border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:16px}
@@ -216,6 +224,8 @@ button{font-family:inherit;cursor:pointer}
 <div class="sub"><span class="live" id="live"><i></i><span>متصل بالبث</span></span></div>
 <button class="tb pause" id="pauseBtn"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg><span>إيقاف مؤقت</span></button>
 <div class="info"><div><small>الهدف</small><b id="iTarget">50</b></div><div><small>الجولة</small><b id="iRound">—</b></div></div>
+<div class="cmdc spin" id="cmdSpin"><small>اكتب</small><b>لف</b><span>لرقم جديد</span></div>
+<div class="cmdc stop" id="cmdStop"><small>اكتب</small><b>توقف</b><span>لتحفظ نقاط دورك</span></div>
 <div class="hint" id="hint">اكتب <span class="y">لف</span> لرقم جديد · <span class="y">توقف</span> لتحفظ نقاط دورك · <span class="r">رقم 1 يضيّع نقاط الدور</span></div>
 
 <div id="board"><div class="bh"><span class="bt">الطمع</span><span class="first" id="bFirst"></span><span class="chip">الهدف <b id="bTarget">50</b></span></div><div class="list" id="bList"></div></div>
@@ -402,7 +412,8 @@ function renderUI(){ const ph=S.phase;
   $('ready').style.display=ph==='ready'?'flex':'none'; $('order').style.display=ph==='order'?'flex':'none';
   $('readyTxt').textContent=`${S.players.length} لاعب · ${slotCount()} على المسرح معًا · أول من يصل ${cfg.target} نقطة يفوز`;
   if(ph==='order'){ const first=S.order.slice(0,slotCount()); $('orderNames').textContent=first.join('، '); $('orderCnt').textContent=`${slotCount()} على المسرح معًا`; }
-  $('hint').style.display=ph==='play'?'block':'none'; $('pauseBtn').style.display=ph==='play'?'flex':'none'; placePods(); }
+  $('hint').style.display=ph==='play'?'block':'none'; $('pauseBtn').style.display=ph==='play'?'flex':'none';
+  $('cmdSpin').style.display=$('cmdStop').style.display=ph==='play'?'flex':'none'; placePods(); }
 
 // ---------- منطق الأدوار ----------
 function nextName(){ const act=new Set(activeNames()); for(let k=0;k<S.order.length;k++){ const n=S.order[S.next%S.order.length]; S.next++; if(!act.has(n)) return n; } return null; }
@@ -448,7 +459,7 @@ function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res
 function timeout(i){ const s=S.slots[i]; s.busy=true; s.ring='bad'; SND.timeout(); fx(i,s.turnPts>0?'انتهى الوقت · ضاعت نقاط الدور':'انتهى الوقت · ضاع الدور','#fca5a5'); s.turnPts=0; react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1200); }
 
 function win(p,i){ if(S.phase==='over') return; S.phase='over'; S.winner=p; S.pts='pending'; S.slots.forEach((s,k)=>{ if(s&&s.p&&s.p!==p){ const f=figs.get(s.p.name); if(f&&f.home) walkTo(f,f.home,1.1); } S.slots[k]={p:null}; });
-  renderUI(); $('hint').style.display='none';
+  renderUI(); $('hint').style.display='none'; $('cmdSpin').style.display=$('cmdStop').style.display='none';
   setTimeout(()=>{ if(S.phase==='over') showWin(); },1600);
   report(p); }
 // شاشة الفوز — نفس روليت الإقصاء: فيديو الفوز (لو موجود)، بطاقة الفوز المملوكة (js/agp-win-card.js) أو بطاقة الفائز العادية
