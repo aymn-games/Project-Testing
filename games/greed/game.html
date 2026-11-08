@@ -36,6 +36,10 @@ button{font-family:inherit;cursor:pointer}
 .tb.danger{border-color:rgba(248,113,113,.25);color:#fca5a5}.tb.danger:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)}
 .tb.set{border-color:rgba(167,139,250,.3);background:rgba(139,92,246,.08);color:#ddd6fe}.tb.set:hover{background:rgba(139,92,246,.16)}
 .tb svg{width:16px;height:16px;flex-shrink:0}
+.tb.aj .dot{width:8px;height:8px;border-radius:50%;background:#8a8596;flex-shrink:0;transition:all .2s}
+.tb.aj.on{border-color:rgba(52,211,153,.4);background:rgba(16,185,129,.1);color:#a7f3d0}.tb.aj.on .dot{background:#34d399;box-shadow:0 0 8px #34d399}
+.ajk{height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,.9vw,16px);border-radius:999px;display:none;align-items:center;gap:8px;max-width:clamp(140px,18vw,320px);font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';color:#a8a3b5;background:rgba(139,92,246,.1);border:1.5px dashed #a78bfa;white-space:nowrap;overflow:hidden}
+.ajk b{font:700 clamp(14px,1vw,18px) 'IBM Plex Sans Arabic';color:#c4b5fd;overflow:hidden;text-overflow:ellipsis}
 .sub{position:fixed;top:94px;right:20px;z-index:20;display:flex;gap:10px;align-items:center}
 .live{height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:8px;font:600 13px 'IBM Plex Sans Arabic';color:#6ee7b7;background:rgba(16,185,129,.08);border:1px solid rgba(52,211,153,.3)}
 .live.off{color:#fca5a5;background:rgba(248,113,113,.07);border-color:rgba(248,113,113,.3)}
@@ -180,17 +184,6 @@ button{font-family:inherit;cursor:pointer}
 .prow .pp{font:700 14px 'IBM Plex Sans Arabic';color:#c4b5fd;font-variant-numeric:tabular-nums}
 .kick{width:34px;height:34px;border-radius:999px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#fca5a5;display:grid;place-items:center}
 .undo{height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:rgba(139,92,246,.15);color:#ddd6fe;font:700 13px 'IBM Plex Sans Arabic'}
-#joinM .box{width:min(500px,100%);height:min(700px,calc(100dvh - 16px));padding:0;gap:0;background:rgba(12,11,18,.4);backdrop-filter:blur(22px);border:2px solid rgba(167,139,250,.7);border-radius:28px;box-shadow:0 0 0 6px rgba(139,92,246,.12),0 0 60px rgba(139,92,246,.3),0 40px 120px rgba(0,0,0,.6);overflow:hidden}
-.jh{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:clamp(18px,5vw,28px) clamp(16px,5vw,28px) clamp(14px,4vw,22px)}
-.jh .tg{align-self:flex-start;display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:500 13px 'IBM Plex Sans Arabic';color:#c4b5fd}
-.jk{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 clamp(16px,5vw,28px) clamp(14px,4vw,22px);padding:16px 12px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
-.jl{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:clamp(14px,4vw,20px) clamp(16px,5vw,28px);display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(167,139,250,.25)}
-.jg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;align-items:center}
-.jp{min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
-.jf{position:relative;min-width:0;height:100px;display:flex;align-items:center;justify-content:center;direction:ltr;overflow:visible}
-.jf .jfc{line-height:0}
-.jf .jx{position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(12,11,18,.8);color:#fca5a5;display:grid;place-items:center;z-index:2}
-.jp .av{font-size:14px}.jp span.n{flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
 #heads{position:fixed;inset:0;z-index:9;pointer-events:none}
@@ -205,6 +198,8 @@ button{font-family:inherit;cursor:pointer}
 <header class="top">
   <div class="side r">
     <button class="tb" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span id="fsLbl">ملء الشاشة</span></button>
+    <button class="tb aj" id="ajBtn" aria-pressed="false"><i class="dot"></i><span id="ajLbl">الدخول التلقائي: مغلق</span></button>
+    <span class="ajk" id="ajKey"><span>كلمة الدخول</span><b id="ajKw"></b></span>
   </div>
   <img class="logo" src="../../logo.png" alt="" onerror="this.style.visibility='hidden'">
   <div class="side l">
@@ -237,15 +232,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="sc2"><div class="t"><b>تخطّي الأدوار الحالية</b><small>ينهي دور اللاعبين على المسرح الآن ويدخل اللي بعدهم (تُحفظ نقاط من لفّ)</small></div><button class="ghost" id="skipBtn">تخطّي الأدوار</button></div>
   </div>
   <div class="db" id="tab1" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px 6px"><span style="font:700 15px 'IBM Plex Sans Arabic';color:#cfcad9">قائمة اللاعبين</span><span style="font:700 14px 'IBM Plex Sans Arabic';color:#a78bfa" id="pCount"></span></div><div id="pRows" style="display:flex;flex-direction:column;gap:8px"></div></div>
-  <div class="df" id="setFoot"><button class="big" id="joinBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>إدخال لاعب جديد</button></div>
 </aside></div>
-<div class="modal" id="joinM"><div class="box">
-  <div class="jh"><div style="display:flex;flex-direction:column;gap:8px"><span class="tg"><i style="width:6px;height:6px;border-radius:50%;background:#a78bfa"></i>لاعبين جدد</span><span style="font:700 clamp(19px,5vw,26px)/1.35 'IBM Plex Sans Arabic'">دخول لاعبين جدد لم يسبق لهم الدخول</span><span style="font:500 clamp(14px,3.6vw,17px)/1.6 'IBM Plex Sans Arabic';color:#cfcad9">اكتب كلمة الدخول بشات البث للانضمام إلى اللعبة</span></div><button class="xb" id="joinX" aria-label="إغلاق"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
-  <div class="jk"><span style="font:600 14px 'IBM Plex Sans Arabic';color:#a8a3b5">كلمة الدخول</span><span id="jKey" style="font:700 clamp(15px,4vw,22px) 'IBM Plex Sans Arabic';color:#c4b5fd"></span></div>
-  <div class="jl"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#cfcad9">اللاعبون المنضمون</span><span id="jCount" style="font:700 15px 'IBM Plex Sans Arabic';color:#a78bfa">0</span></div>
-    <div id="jEmpty" style="flex:1;min-height:120px;display:grid;place-items:center;border-radius:20px;border:1.5px dashed rgba(167,139,250,.3);color:#8a8596;font:500 16px 'IBM Plex Sans Arabic'">بانتظار انضمام اللاعبين…</div><div class="jg" id="jList"></div></div>
-  <div style="flex-shrink:0;padding:clamp(14px,4vw,20px) clamp(16px,5vw,28px) clamp(16px,5vw,28px)"><button class="big" id="joinDone" style="height:56px;font-size:18px">إكمال المباراة</button></div>
-</div></div>
 <div class="modal" id="pauseM" style="top:80px;z-index:55"><div class="box"><h3>لوحة النقاط</h3><div class="mlist" id="pList"></div><div class="mb" style="grid-template-columns:1fr"><button class="blue" id="resumeBtn">متابعة اللعب</button></div></div></div>
 <div class="modal" id="exitM"><div class="box"><h3>الخروج من المباراة؟</h3><p>بترجع لمكتبة الألعاب وتنتهي المباراة الحالية</p><div class="mb"><button data-close>إلغاء</button><button class="red" id="exitYes">خروج</button></div></div></div>
 <div id="win"><div class="wrap">
@@ -292,7 +279,7 @@ const initial=n=>[...String(n)].find(ch=>/[^\s_\d]/.test(ch))||'?';
 const avHtml=n=>{ const a=reg.avatar(n); return esc(initial(n))+(a?`<img src="${esc(a)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''); };
 
 // ---------- حالة اللعبة ----------
-const S={ phase:'ready', players:[], order:[], next:0, turns:0, slots:[], paused:false, menu:false, joinOpen:false, joined:[], pending:[], winner:null, startedAt:0, reported:false };
+const S={ phase:'ready', players:[], order:[], next:0, turns:0, slots:[], paused:false, menu:false, autoJoin:false, pending:[], winner:null, startedAt:0, reported:false };
 const frozen=()=>S.paused||S.menu;
 let lookIdx=0;
 function addPlayer(name){ if(S.players.some(p=>p.name===name)) return null; const p={name,total:0,look:LOOKS[lookIdx++%LOOKS.length]}; S.players.push(p); return p; }
@@ -497,7 +484,7 @@ let setTab=0;
 function seg(el,vals,get,set,fmt){ el.innerHTML=vals.map(v=>`<button data-v="${v}" class="${get()===v?'on':''}">${fmt(v)}</button>`).join(''); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ set(+b.dataset.v); seg(el,vals,get,set,fmt); renderUI(); }); }
 function setVol(v){ cfg.vol=Math.max(0,Math.min(100,v)); $('volV').textContent=cfg.vol+'%'; try{ GR.writeJSON(GR.keys.setup,{...GR.readJSON(GR.keys.setup,{}),volume:cfg.vol}); }catch(e){} SND.good(); }
 function renderDrawer(){ $('volV').textContent=cfg.vol+'%'; $('setTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.tab===setTab));
-  $('tab0').style.display=setTab===0?'flex':'none'; $('tab1').style.display=setTab===1?'flex':'none'; $('setFoot').style.display=setTab===0?'block':'none';
+  $('tab0').style.display=setTab===0?'flex':'none'; $('tab1').style.display=setTab===1?'flex':'none';
   seg($('cTarget'),TARGETS,()=>cfg.target,v=>{ cfg.target=v; },v=>v); seg($('cTime'),TIMES,()=>cfg.time,v=>{ cfg.time=v; },v=>v+' ث');
   $('pCount').textContent=S.players.length+' لاعب';
   $('pRows').innerHTML=S.players.length?ranked().map((p,i)=>{ const pd=S.pending.includes(p.name); return `<div class="prow${pd?' pd':''}"><span class="no">${i+1}</span><span class="pn">${esc(p.name)}</span><span class="pp">${p.total}</span>${pd?`<button class="undo" data-undo="${esc(p.name)}">تراجع</button>`:`<button class="kick" data-kick="${esc(p.name)}" aria-label="إخراج"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`}</div>`; }).join(''):'<div style="padding:40px 0;text-align:center;color:#8a8596;font-size:15px">لا يوجد لاعبين</div>';
@@ -512,29 +499,19 @@ function removePlayer(n){ const i=S.slots.findIndex(s=>s.p&&s.p.name===n); S.pla
 function closeDrawer(){ $('setD').style.display='none'; S.menu=false; if(S.pending.length){ S.pending.forEach(removePlayer); S.pending=[]; layoutWaiting(); renderUI(); } }
 $('setD').onclick=e=>{ if(e.target===$('setD')) closeDrawer(); }; $('setD').querySelector('[data-dclose]').onclick=closeDrawer;
 $('skipBtn').onclick=()=>{ if(S.phase!=='play') return toast('ما فيه أدوار حالية'); closeDrawer(); S.slots.forEach((s,i)=>{ if(s.p&&!s.busy){ s.busy=true; endTurn(i,s.rolled&&s.turnPts>0); } }); };
-// إدخال لاعب جديد: نافذة تجمع المنضمين بكلمة الدخول، وينضافون للعبة عند «إكمال المباراة»
-const XSVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
-// اللاعب صاحب الإطار المفعّل يظهر ببطاقة إطاره من المنصة (AGP.playerCard — نفس بطاقات اللوبي)
-function renderJoin(){ $('jKey').textContent=cfg.keyword||'—'; $('jCount').textContent=S.joined.length; $('jEmpty').style.display=S.joined.length?'none':'grid';
-  const PC=window.AymanGamesPlatform&&window.AymanGamesPlatform.playerCard, L=$('jList');
-  L.innerHTML=S.joined.map(n=>PC&&reg.framed(n)?`<div class="jf" data-fn="${esc(n)}"><div class="jfc"></div><button class="jx" data-jx="${esc(n)}" aria-label="إزالة">${XSVG}</button></div>`
-    :`<div class="jp"><span class="av">${avHtml(n)}</span><span class="n">${esc(n)}</span><button class="kick" data-jx="${esc(n)}" style="border:none;background:transparent" aria-label="إزالة">${XSVG}</button></div>`).join('');
-  L.querySelectorAll('.jf').forEach(el=>{ const fr=reg.framed(el.dataset.fn), c=el.querySelector('.jfc');
-    c.innerHTML=PC.renderHtml({id:fr.id,name:fr.name,avatarUrl:fr.avatar||null,frame:fr.frame},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(el.clientWidth/4.96))});
-    c.querySelectorAll('[data-agp-pcard-name="1"]').forEach(pl=>{ const ph=pl.clientHeight; if(ph){ pl.style.fontSize=Math.max(9,Math.min(14,Math.round(ph*.65)))+'px'; pl.style.lineHeight='1.2'; } }); });
-  if(PC) PC.fitAllNames(L);
-  L.querySelectorAll('[data-jx]').forEach(b=>b.onclick=()=>{ S.joined=S.joined.filter(n=>n!==b.dataset.jx); renderJoin(); }); }
-$('joinBtn').onclick=()=>{ if(!cfg.keyword) return toast('ما فيه كلمة دخول بالإعدادات'); closeDrawer(); S.menu=true; S.joinOpen=true; S.joined=[]; renderJoin(); open('joinM',true); };
-function closeJoin(){ open('joinM',false); S.joinOpen=false; S.menu=false; S.joined.forEach(n=>{ if(!pl(n)){ addPlayer(n); if(S.order.length) S.order.push(n); } }); S.joined=[]; layoutWaiting(); renderUI(); }
-$('joinDone').onclick=closeJoin; $('joinX').onclick=closeJoin; $('joinM').onclick=e=>{ if(e.target===$('joinM')) closeJoin(); };
+// الدخول التلقائي (زر بالهيدر): مفعّل = أي لاعب جديد يكتب كلمة الدخول بالشات ينضم للعبة مباشرة · مغلق = ما يدخل أحد
+function renderAutoJoin(){ const on=S.autoJoin; $('ajBtn').classList.toggle('on',on); $('ajBtn').setAttribute('aria-pressed',on?'true':'false');
+  $('ajLbl').textContent='الدخول التلقائي: '+(on?'مفعّل':'مغلق'); $('ajKw').textContent=cfg.keyword; $('ajKey').style.display=on?'flex':'none'; }
+$('ajBtn').onclick=()=>{ if(!S.autoJoin&&!cfg.keyword) return toast('ما فيه كلمة دخول بالإعدادات'); S.autoJoin=!S.autoJoin; renderAutoJoin(); };
+renderAutoJoin();
 
 // ---------- الشات ----------
 const live=!!GR.getSavedConnection(); $('live').classList.toggle('off',!live); $('live').lastChild.textContent=live?'متصل بالبث':'غير متصل بالبث';
 GR.connect();
 const SPIN=new Set(['لف','spin','دور']), STOP=new Set(['توقف','وقف','stop','ستوب']);
 GR.onComment(p=>{ const name=reg.nameFor(p), t=GR.norm(p.text);
-  if(S.joinOpen&&cfg.keyword&&t===GR.norm(cfg.keyword)){ if(cfg.followers&&!p.isFollower) return; if(pl(name)||S.joined.includes(name)) return; if(S.players.length+S.joined.length>=cfg.max) return toast('اكتمل العدد');
-    S.joined.push(name); renderJoin(); return; }
+  if(cfg.keyword&&t===GR.norm(cfg.keyword)){ if(!S.autoJoin||S.phase==='over'||pl(name)) return; if(cfg.followers&&!p.isFollower) return; if(S.players.length>=cfg.max) return toast('اكتمل العدد');
+    addPlayer(name); if(S.order.length) S.order.push(name); layoutWaiting(); renderUI(); return; }
   if(S.phase!=='play'||frozen()) return; const i=S.slots.findIndex(s=>s.p&&s.p.name===name); if(i<0) return;
   if(SPIN.has(t)) cmd(i,'spin'); else if(STOP.has(t)) cmd(i,'stop'); });
 
