@@ -25,6 +25,15 @@ module.exports = {
     // مراقب الإحصائيات (stats/stream-stats-watcher.js) — يتصل ببث الستريمرز
     // المفعّل لهم من لوحة الأدمن طول بثهم حتى بدون لعبة.
     streamStatsWatcher: process.env.STREAM_STATS_WATCHER === '1',
+    // أدوات الصوت بشاشات Veyro (القارئ الصوتي ومشغّل الأغاني) — stats/screen-audio-watcher.js:
+    // يتصل ببث الستريمر لما شاشة فيها أداة صوت مفتوحة بتطبيق البث، حتى بدون لعبة.
+    // مفعّل افتراضياً؛ SCREEN_AUDIO_CONNECT=0 يقفله (الأدوات تشتغل وقت اللعبة بس).
+    screenAudioConnect: process.env.SCREEN_AUDIO_CONNECT !== '0',
+    // مفتاح YouTube Data API v3 للمنصة (بحث مشغّل الأغاني). فارغ = المشغّل معطّل
+    // إلا للستريمر اللي حاط مفتاحه الخاص. راجع stats/screen-audio-service.js.
+    youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
+    // مفتاح Google Cloud Text-to-Speech (القارئ الصوتي). فارغ = القارئ معطّل بأمان.
+    googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
 
     // «حفلة عيد الميلاد» (/ws/party) — مطفأة افتراضياً. تشتغل فقط بـ PARTY_ENABLED=1
     // (مفتاح إيقاف: أي مشكلة بالحفلة ← تشيل المتغير والموقع يكمل عادي).
