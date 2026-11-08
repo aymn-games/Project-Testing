@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>حرف ورا حرف — ألعاب أيمن</title>
+<!-- شاشة اللعب لـ«حرف ورا حرف» (تصميم فقط — بيانات تجريبية، بدون منطق اللعبة أو ربط البث بعد).
+     فريقين، تطلع كلمة (مثلاً «جوال»)، ولاعبين كل فريق يكتبون حروفها بالترتيب حرف بحرف بالشات.
+     لو لاعب كتب حرف انكتب قبل بنفس المحاولة، يرجع فريقه للصفر بنفس الكلمة.
+     أول فريق يكمّل الكلمة ياخذ النقطة وتبدأ كلمة جديدة.
+     الهوية نفس أسرع إجابة/الطمع: خلفية #07060b، بنفسجي، IBM Plex Sans Arabic، هيدر 80px. -->
+<link rel="icon" href="../../favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07060b;--panel:rgba(18,16,26,.72);--line:rgba(255,255,255,.08);
+  --text:#f4f2f8;--muted:#8a8596;--soft:#a8a3b5;
+  --acc:linear-gradient(90deg,#7c3aed,#a855f7);
+  --a:#38bdf8;--a-rgb:56,189,248;   /* الفريق الأزرق */
+  --b:#fb7185;--b-rgb:251,113,133;  /* الفريق الأحمر */
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans Arabic',sans-serif}
+button{font-family:inherit;cursor:pointer}
+bdi{unicode-bidi:isolate}
+
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--t-rgb),.0),0 0 24px rgba(var(--t-rgb),.35)}50%{box-shadow:0 0 0 10px rgba(var(--t-rgb),.12),0 0 24px rgba(var(--t-rgb),.35)}}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
+
+/* ===== الخلفية ===== */
+.fx{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.fx .g{position:absolute;border-radius:50%;filter:blur(60px)}
+
+/* ===== الهيدر (نفس الطمع/أسرع إجابة) ===== */
+.top{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.top .logo{height:60px;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
+.top .side{display:flex;align-items:center;gap:clamp(6px,.5vw,10px);min-width:0}
+.top .side.l{justify-content:flex-end}
+.tb{height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,.45vw,8px);font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;transition:all .2s;backdrop-filter:blur(10px);color:#e7e3ef;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);flex-shrink:0}
+.tb:hover{background:rgba(255,255,255,.08)}
+.tb:active{transform:scale(.97)}
+.tb.danger{border-color:rgba(248,113,113,.25);color:#fca5a5}.tb.danger:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)}
+.tb.set{border-color:rgba(167,139,250,.3);background:rgba(139,92,246,.08);color:#ddd6fe}.tb.set:hover{background:rgba(139,92,246,.16)}
+.tb.ev{border:none;background:var(--acc);color:#fff;box-shadow:0 8px 26px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.tb.ev .dot{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399}
+.tb svg{width:16px;height:16px;flex-shrink:0}
+/* مفتاح الدخول التلقائي */
+.tb.aj{gap:10px}
+.tb.aj .sw{position:relative;width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);flex-shrink:0;transition:background .2s,border-color .2s}
+.tb.aj .sw::after{content:'';position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#cfcad9;box-shadow:0 1px 4px rgba(0,0,0,.4);transition:right .2s,background .2s}
+.tb.aj.on{border-color:rgba(52,211,153,.4);background:rgba(16,185,129,.1);color:#a7f3d0}
+.tb.aj.on .sw{background:#10b981;border-color:#34d399}.tb.aj.on .sw::after{right:18px;background:#fff}
+/* كلمات الدخول للفريقين (تظهر بس والدخول التلقائي مفعّل) */
+.ajk{height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,.8vw,14px);border-radius:999px;display:none;align-items:center;gap:8px;font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';color:var(--soft);white-space:nowrap;flex-shrink:0;
+  background:rgba(var(--t-rgb),.1);border:1.5px dashed rgba(var(--t-rgb),.75)}
+.ajk i{width:8px;height:8px;border-radius:50%;background:var(--t);box-shadow:0 0 8px var(--t)}
+.ajk b{font:700 clamp(14px,1vw,18px) 'IBM Plex Sans Arabic';color:var(--t)}
+body.aj-on .ajk{display:flex;animation:pop .3s ease both}
+.ta{--t:var(--a);--t-rgb:var(--a-rgb)}
+.tbb{--t:var(--b);--t-rgb:var(--b-rgb)}
+
+/* ===== المسرح (1920×1080 يتصغّر حسب الشاشة) ===== */
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--sc,1));padding:104px 40px 32px;display:flex;flex-direction:column;gap:22px;z-index:1}
+
+.meta{display:flex;justify-content:center;align-items:center;gap:14px}
+.pill{display:flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:var(--soft)}
+.pill.main{border-color:rgba(167,139,250,.3);background:rgba(139,92,246,.08);font-weight:600;color:#c4b5fd}
+.pill.main i{width:7px;height:7px;border-radius:50%;background:#a78bfa}
+.pill.live{border-color:rgba(52,211,153,.3);background:rgba(16,185,129,.08);color:#6ee7b7;font-weight:600}
+.pill.live i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.pill b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ===== بطاقة الكلمة ===== */
+.word{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:16px;padding:22px 30px 22px;border-radius:30px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.word::before{content:'';position:absolute;top:-130px;left:50%;width:700px;height:240px;margin-left:-350px;border-radius:50%;background:rgba(167,139,250,.22);filter:blur(40px);pointer-events:none}
+.word .lbl{position:relative;font:600 18px 'IBM Plex Sans Arabic';color:var(--muted);letter-spacing:.5px}
+.word .tiles{position:relative;display:flex;gap:16px;direction:rtl}
+.word .tile{width:118px;height:128px;border-radius:26px;display:grid;place-items:center;font:700 78px/1 'IBM Plex Sans Arabic';color:#fff;
+  background:linear-gradient(180deg,rgba(167,139,250,.22),rgba(124,58,237,.12));border:1.5px solid rgba(167,139,250,.45);box-shadow:0 14px 40px rgba(124,58,237,.25),inset 0 1px 0 rgba(255,255,255,.15)}
+.word .rules{position:relative;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.word .rules span{display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);font:600 15px 'IBM Plex Sans Arabic';color:var(--soft)}
+.word .rules span em{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(139,92,246,.18);color:#c4b5fd;font:700 12px 'IBM Plex Sans Arabic'}
+.word .rules span.warn{border-color:rgba(248,113,113,.25);color:#fca5a5;background:rgba(248,113,113,.06)}
+
+/* ===== الفريقين ===== */
+.teams{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.team{position:relative;overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:18px;padding:24px 28px;border-radius:30px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.team::before{content:'';position:absolute;top:-120px;left:50%;width:460px;height:240px;margin-left:-230px;border-radius:50%;background:rgba(var(--t-rgb),.2);filter:blur(40px);pointer-events:none}
+.team > *{position:relative}
+.team.lead{border-color:rgba(var(--t-rgb),.4)}
+
+.th{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.th .nm{display:flex;align-items:center;gap:14px;min-width:0}
+.th .nm > i{width:14px;height:14px;border-radius:50%;background:var(--t);box-shadow:0 0 16px var(--t);flex-shrink:0}
+.th .nm b{display:block;font:700 30px/1.2 'IBM Plex Sans Arabic';white-space:nowrap}
+.th .nm small{display:block;font:500 16px 'IBM Plex Sans Arabic';color:var(--muted)}
+.th .kw{margin-inline-start:6px;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px dashed rgba(var(--t-rgb),.6);background:rgba(var(--t-rgb),.08);font:600 14px 'IBM Plex Sans Arabic';color:var(--soft)}
+body:not(.aj-on) .th .kw{display:none}
+.th .kw b{font:700 16px 'IBM Plex Sans Arabic';color:var(--t);display:inline}
+.th .sc{display:flex;align-items:baseline;gap:8px}
+.th .sc b{font:700 68px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:var(--t)}
+.th .sc span{font:500 18px 'IBM Plex Sans Arabic';color:var(--muted)}
+
+/* تقدّم الفريق بالكلمة */
+.prog{display:flex;align-items:center;gap:18px;padding:16px 20px;border-radius:24px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05)}
+.prog .slots{display:flex;gap:12px;direction:rtl}
+.slot{width:78px;height:86px;border-radius:20px;display:grid;place-items:center;font:700 48px/1 'IBM Plex Sans Arabic';
+  background:rgba(255,255,255,.03);border:1.5px dashed rgba(255,255,255,.14);color:transparent;transition:all .3s}
+.slot.done{color:#fff;background:linear-gradient(180deg,rgba(var(--t-rgb),.45),rgba(var(--t-rgb),.18));border:1.5px solid rgba(var(--t-rgb),.8);box-shadow:0 8px 26px rgba(var(--t-rgb),.3)}
+.slot.next{border:2px solid var(--t);background:rgba(var(--t-rgb),.08);animation:pulse 1.6s ease-in-out infinite}
+.slot.bad{color:#fff;background:rgba(248,113,113,.22);border:1.5px solid #f87171;box-shadow:0 8px 26px rgba(248,113,113,.3)}
+.prog .st{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.prog .st small{font:600 15px 'IBM Plex Sans Arabic';color:var(--muted)}
+.prog .last{display:flex;align-items:center;gap:10px;height:52px;padding:0 8px 0 18px;border-radius:999px;background:rgba(var(--t-rgb),.1);border:1px solid rgba(var(--t-rgb),.35)}
+.prog .last .av{width:40px;height:40px;border-width:2px}
+.prog .last b{font:700 26px 'IBM Plex Sans Arabic';color:var(--t)}
+.prog .last span{font:600 15px 'IBM Plex Sans Arabic';color:var(--soft)}
+.prog .bar{width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.prog .bar i{display:block;height:100%;border-radius:999px;background:var(--t);box-shadow:0 0 12px var(--t)}
+
+/* حالة الرجوع للصفر */
+.team.reset .prog{border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.07);animation:shake .5s ease}
+.team.reset .prog .last{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.45)}
+.team.reset .prog .last b{color:#fca5a5}
+.reset-tag{display:none;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:rgba(248,113,113,.14);border:1px solid rgba(248,113,113,.45);font:700 15px 'IBM Plex Sans Arabic';color:#fca5a5}
+.team.reset .reset-tag{display:inline-flex}
+
+/* تبويب صور اللاعبين (بدون أسماء) */
+.crew{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:24px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.05)}
+.crew .ch{display:flex;justify-content:space-between;align-items:center}
+.crew .tab{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:rgba(var(--t-rgb),.12);border:1px solid rgba(var(--t-rgb),.35);font:600 15px 'IBM Plex Sans Arabic';color:var(--text)}
+.crew .tab svg{width:16px;height:16px;color:var(--t)}
+.crew .ch small{font:500 14px 'IBM Plex Sans Arabic';color:var(--muted)}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(10,1fr);grid-auto-rows:max-content;gap:12px;align-content:start;justify-items:center}
+.av{position:relative;width:62px;height:62px;border-radius:50%;overflow:hidden;flex-shrink:0;display:grid;place-items:center;background:linear-gradient(135deg,rgba(var(--t-rgb),.9),rgba(var(--t-rgb),.35));border:2.5px solid rgba(var(--t-rgb),.7);box-shadow:0 6px 18px rgba(0,0,0,.35);animation:pop .35s ease both}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.av.typing{border-color:#fff;box-shadow:0 0 0 3px rgba(var(--t-rgb),.6),0 0 20px rgba(var(--t-rgb),.6)}
+.av.more{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.2);font:700 18px 'IBM Plex Sans Arabic';color:var(--soft)}
+</style>
+</head>
+<body class="aj-on">
+<div class="fx" aria-hidden="true">
+  <div class="g" style="width:620px;height:620px;right:-160px;top:20%;background:rgba(56,189,248,.10)"></div>
+  <div class="g" style="width:620px;height:620px;left:-160px;top:30%;background:rgba(251,113,133,.10)"></div>
+  <div class="g" style="width:800px;height:380px;left:50%;margin-left:-400px;top:6%;background:rgba(139,92,246,.14)"></div>
+</div>
+
+<header class="top">
+  <div class="side r">
+    <button class="tb" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span id="fsLbl">ملء الشاشة</span></button>
+    <button class="tb aj on" id="ajBtn" role="switch" aria-checked="true" aria-label="الدخول التلقائي"><span>الدخول التلقائي</span><i class="sw"></i></button>
+    <span class="ajk ta"><i></i><span>الأزرق</span><b>1</b></span>
+    <span class="ajk tbb"><i></i><span>الأحمر</span><b>2</b></span>
+  </div>
+  <img class="logo" src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.visibility='hidden'">
+  <div class="side l">
+    <button class="tb ev"><span class="dot"></span><span>أحداث المباراة</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></button>
+    <button class="tb set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.820l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>إعدادات المباراة</span></button>
+    <button class="tb danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>خروج من المباراة</span></button>
+  </div>
+</header>
+
+<div id="stage">
+  <div class="meta">
+    <span class="pill live"><i></i>متصل بالبث</span>
+    <span class="pill main"><i></i>حرف ورا حرف · الكلمة <b id="mRound">4</b></span>
+    <span class="pill">الفوز عند <b id="mTarget">5</b> كلمات</span>
+  </div>
+
+  <section class="word">
+    <span class="lbl">الكلمة الحالية</span>
+    <div class="tiles" id="wordTiles"></div>
+    <div class="rules">
+      <span><em>1</em>كل لاعب يكتب حرف واحد</span>
+      <span><em>2</em>الحروف بالترتيب</span>
+      <span class="warn"><em>!</em>تكرار حرف انكتب = ترجعون من الصفر</span>
+    </div>
+  </section>
+
+  <div class="teams" id="teams"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  // ===== بيانات تجريبية للتصميم فقط =====
+  var WORD = 'جوال';
+  var TEAMS = [
+    { cls:'ta', name:'الفريق الأزرق', kw:'1', score:3, players:34, progress:3, lead:true,
+      last:{ letter:'ا', note:'آخر حرف' }, typing:4 },
+    { cls:'tbb', name:'الفريق الأحمر', kw:'2', score:2, players:28, progress:0, reset:true,
+      last:{ letter:'ج', note:'كرّر حرف — من البداية' }, typing:-1 }
+  ];
+  var SHOW = 29; // كم صورة تبين قبل خانة +العدد
+
+  // صور رمزية تجريبية (SVG) مكان صور حسابات تيك توك
+  var SKIN = ['#f1c27d','#e0ac69','#c68642','#8d5524','#ffdbac'];
+  var HAIR = ['#1f1a17','#3b2a20','#6b4423','#111','#4a3728'];
+  var BG = ['#7c3aed','#0ea5e9','#f43f5e','#10b981','#f59e0b','#6366f1','#ec4899','#14b8a6'];
+  function face(i) {
+    var s = SKIN[i % 5], h = HAIR[(i * 3) % 5], bg = BG[(i * 7) % 8];
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="' + bg + '"/>' +
+      '<circle cx="32" cy="70" r="26" fill="' + h + '" opacity=".9"/>' +
+      '<circle cx="32" cy="28" r="13" fill="' + s + '"/>' +
+      '<path d="M19 26c0-9 6-14 13-14s13 5 13 14c-3-5-8-7-13-7s-10 2-13 7z" fill="' + h + '"/></svg>';
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
+  var letters = Array.from(WORD);
+  document.getElementById('wordTiles').innerHTML = letters.map(function (c) { return '<span class="tile">' + c + '</span>'; }).join('');
+
+  var ICON_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
+  document.getElementById('teams').innerHTML = TEAMS.map(function (t, ti) {
+    var slots = letters.map(function (c, i) {
+      var k = i < t.progress ? 'done' : (i === t.progress && !t.reset ? 'next' : '');
+      if (t.reset && i === 0) k = 'next';
+      return '<span class="slot ' + k + '">' + (i < t.progress ? c : '') + '</span>';
+    }).join('');
+    var pct = Math.round(t.progress / letters.length * 100);
+    var avs = '';
+    var n = Math.min(t.players, SHOW);
+    for (var i = 0; i < n; i++) {
+      avs += '<span class="av' + (i === t.typing ? ' typing' : '') + '" style="animation-delay:' + (i * 15) + 'ms"><img src="' + face(i + ti * 50) + '" alt=""></span>';
+    }
+    if (t.players > SHOW) avs += '<span class="av more"><bdi dir="ltr">+' + (t.players - SHOW) + '</bdi></span>';
+    return '' +
+      '<section class="team ' + t.cls + (t.lead ? ' lead' : '') + (t.reset ? ' reset' : '') + '">' +
+        '<div class="th">' +
+          '<div class="nm"><i></i><div><b>' + t.name + '</b><small>' + t.players + ' لاعب</small></div>' +
+            '<span class="kw">للدخول اكتب <b>' + t.kw + '</b></span></div>' +
+          '<div class="sc"><b>' + t.score + '</b><span>نقطة</span></div>' +
+        '</div>' +
+        '<div class="prog">' +
+          '<div class="slots">' + slots + '</div>' +
+          '<div class="st">' +
+            '<small>' + (t.reset ? '' : 'وصلوا ' + t.progress + ' من ' + letters.length) + '</small>' +
+            (t.reset ? '<span class="reset-tag">↺ رجعوا من الصفر</span>' : '') +
+            '<div class="last"><span class="av"><img src="' + face((t.typing < 0 ? 7 : t.typing) + ti * 50) + '" alt=""></span><b>' + t.last.letter + '</b><span>' + t.last.note + '</span></div>' +
+            '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="crew">' +
+          '<div class="ch"><span class="tab">' + ICON_USERS + 'اللاعبين</span><small>' + t.players + ' مشارك</small></div>' +
+          '<div class="grid">' + avs + '</div>' +
+        '</div>' +
+      '</section>';
+  }).join('');
+
+  // ===== تحجيم المسرح =====
+  function fit() {
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    document.getElementById('stage').style.setProperty('--sc', s);
+  }
+  window.addEventListener('resize', fit); fit();
+
+  // ===== الدخول التلقائي =====
+  var aj = document.getElementById('ajBtn');
+  function setAj(on) {
+    aj.classList.toggle('on', on); aj.setAttribute('aria-checked', on ? 'true' : 'false');
+    document.body.classList.toggle('aj-on', on);
+  }
+  aj.addEventListener('click', function () { setAj(!aj.classList.contains('on')); });
+  if (/[?&]aj=0/.test(location.search)) setAj(false);
+
+  // ===== ملء الشاشة =====
+  var fsLbl = document.getElementById('fsLbl');
+  document.getElementById('fsBtn').addEventListener('click', function () {
+    if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {});
+  });
+  document.addEventListener('fullscreenchange', function () { fsLbl.textContent = document.fullscreenElement ? 'خروج من ملء الشاشة' : 'ملء الشاشة'; });
+})();
+</script>
+</body>
+</html>
