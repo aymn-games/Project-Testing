@@ -109,7 +109,7 @@
             // وأكثر من واحد يتبدّلون («مدة التبديل» و«حركة التبديل»). الافتراضي: الاثنين.
             { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
-            { label: 'العرش الكريستالي', sub: 'أجنحة ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
         goals: [
@@ -1129,6 +1129,15 @@
     }
 
     /** «العرش»: الأقسام (واحد أو أكثر يتبدّلون)، مدة التبديل، لون الإطار، ألوان المراكز. */
+    /** لون اختياري: «الأصلي» أو أي لون (it[key] = '#rrggbb' أو بدون). */
+    function optColor(it, box, key, label, sub) {
+        var w = el('div', 'ob-sw');
+        w.appendChild(button('الأصلي', 'ob-pill' + (it[key] ? '' : ' on'), function () { delete it[key]; update(it, key, undefined, true); }));
+        var sw = swatches(it[key], function (c) { update(it, key, c, true); });
+        while (sw.firstChild) w.appendChild(sw.firstChild);
+        box.appendChild(row(label, w, true, sub));
+    }
+
     function throneProps(it, box) {
         var all = Object.keys(O.SECTIONS);
         var cur = (Array.isArray(it.sections) && it.sections.length ? it.sections : [it.section || 'likers']).filter(function (k) { return O.SECTIONS[k]; });
@@ -1231,11 +1240,24 @@
         fp.addEventListener('change', function () { renderPanel(); });
         fw.appendChild(fp);
         // الحلقة الدوّارة لونها من ألوان المراكز — لون الإطار للرسمات بس
-        if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار', fw, true, 'الضوء والفراشات والشرار حول الصور — أو اختر أي لون'));
-        box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }], it.palette || 'medal', function (v) {
+        if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
+        box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }, { label: 'مخصص', value: 'custom' }], it.palette || 'medal', function (v) {
+            if (v === 'custom' && !Array.isArray(it.rankColors)) it.rankColors = ['#ffd54a', '#eef2f7', '#ffb27a'];
             update(it, 'palette', v, true);
         }), true, 'حدود الأرقام وأيقوناتها'));
         if (it.palette === 'single') box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+        if (it.palette === 'custom') {
+            ['الأول', 'الثاني', 'الثالث'].forEach(function (lbl, k) {
+                box.appendChild(row('لون ' + lbl, swatches((it.rankColors || [])[k], function (c) {
+                    var a = (Array.isArray(it.rankColors) ? it.rankColors : ['#ffd54a', '#eef2f7', '#ffb27a']).slice();
+                    a[k] = c;
+                    update(it, 'rankColors', a, true);
+                }), true, 'ماسة الرقم وحدود الكبسولة'));
+            });
+        }
+        optColor(it, box, 'nameColor', 'لون الاسم');
+        optColor(it, box, 'numColor', 'لون الرقم', 'عدد التكبيسات أو الدعم');
+        optColor(it, box, 'pillColor', 'خلفية الكبسولة', 'الكبسولة اللي فيها العدد');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
         if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'crystal' ? 0.6 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
         else box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
