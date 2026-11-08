@@ -916,7 +916,13 @@
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
             inner.appendChild(throneFrame(r, frameOf(hit)));
-            inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+            // الاسم + رقم المركز (1/2/3) جنبه — يطلع بإطار «الأجنحة الكريستالية» بس (CSS)
+            var nr = el('span', 'agp-so-tnrow');
+            var rk = el('span', 'agp-so-trank');
+            rk.appendChild(el('b', null, String(i + 1)));
+            nr.appendChild(rk);
+            nr.appendChild(el('span', 'agp-so-tname', nameOf(r)));
+            inner.appendChild(nr);
         }
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
@@ -2755,6 +2761,19 @@
         '.agp-so-tcol.rk1{width:6.2em;margin-bottom:.55em;margin-inline:var(--agp-so-tov,0em);position:relative;z-index:1}',
         '.agp-so-tname{margin-top:.95em;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.78em;line-height:1.5;color:#fff;letter-spacing:.01em;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.45)}',
         '.agp-so-tcol.rk1 .agp-so-tname{font-size:.92em}',
+        /* الاسم ورقم المركز بسطر واحد (RTL: الرقم يمين الاسم) */
+        '.agp-so-tnrow{display:flex;align-items:center;justify-content:center;gap:.32em;max-width:100%;margin-top:.95em}',
+        '.agp-so-tnrow .agp-so-tname{margin-top:0;min-width:0}',
+        '.agp-so-trank{display:none}',
+        /* «الأجنحة الكريستالية»: رقم المركز داخل ماسة كريستال بلون المركز (ذهبي/فضي/برونزي) */
+        '.fk-crystal .agp-so-trank{display:inline-flex;flex:none;position:relative;align-items:center;justify-content:center;width:1.12em;height:1.12em;font-size:.78em}',
+        '.fk-crystal .rk1 .agp-so-trank{font-size:.92em}',
+        '.fk-crystal .agp-so-trank::before{content:"";position:absolute;inset:.06em;transform:rotate(45deg);border-radius:.2em;background:linear-gradient(135deg,rgba(255,255,255,.95),var(--rk,#efe2ff) 45%,var(--rk2,#b48cff));box-shadow:0 0 .35em var(--rk,#efe2ff),0 0 .7em rgba(180,140,255,.55),inset 0 0 .12em rgba(255,255,255,.9)}',
+        '.fk-crystal .agp-so-trank::after{content:"";position:absolute;inset:.06em;transform:rotate(45deg);border-radius:.2em;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.85) 50%,transparent 65%);background-size:300% 100%;animation:agp-so-rshine 2.8s ease-in-out infinite}',
+        '.fk-crystal .rk2 .agp-so-trank::after{animation-delay:.5s}',
+        '.fk-crystal .rk3 .agp-so-trank::after{animation-delay:1s}',
+        '@keyframes agp-so-rshine{0%,55%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '.fk-crystal .agp-so-trank b{position:relative;z-index:1;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:.72em;line-height:1;color:#2a1f3d;text-shadow:0 .03em 0 rgba(255,255,255,.6)}',
         '.agp-so-tcount{display:inline-flex;align-items:center;gap:.28em;margin-top:.15em;padding:.12em .55em .12em .45em;border-radius:999px;direction:ltr;background:rgba(10,8,16,.42);border:.05em solid color-mix(in srgb,var(--rk) 45%,transparent);box-shadow:0 .1em .4em rgba(0,0,0,.35)}',
         '.agp-so-tnum{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:700;font-size:.72em;line-height:1.35;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em;text-shadow:0 .05em .15em rgba(0,0,0,.7)}',
         '.agp-so-tcol.rk1 .agp-so-tnum{font-size:.8em}',
@@ -2832,8 +2851,8 @@
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1{width:7.4em}',
         '.agp-so-throne.fk-pegasus .agp-so-tcol .agp-so-fav{--s:2.35em}',
         '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-fav{--s:3.15em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tname{margin-top:1.3em}',
-        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tname{margin-top:1.5em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tnrow{margin-top:1.3em}',
+        '.agp-so-throne.fk-pegasus .agp-so-tcol.rk1 .agp-so-tnrow{margin-top:1.5em}',
         '.agp-so-fbf.feather svg{animation:agp-so-feather 2.4s ease-in-out infinite;transform-origin:30% 80%}',
         '@keyframes agp-so-feather{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(16deg) translateY(-6%)}}',
         /* «الأجنحة الكريستالية»: الحلقة ثابتة (داخل الدائرة + الشريط الأوسط)، والجناحين يرفرفون */
