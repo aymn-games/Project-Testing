@@ -79,6 +79,8 @@ button{font-family:inherit;cursor:pointer}
 .slot .ln{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
 .slot .av{font-size:24px;border-width:2.5px}
 .slot .nm{flex:1;min-width:0;font:700 32px/1.25 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(139,92,246,.5)}
+.slot .kk{width:34px;height:34px;flex-shrink:0;border-radius:999px;display:grid;place-items:center;padding:0;border:1px solid rgba(248,113,113,.45);background:rgba(248,113,113,.14);color:#fca5a5;transition:all .2s}
+.slot .kk:hover{background:rgba(248,113,113,.3);color:#fff}
 .slot .st{display:flex;gap:8px;flex-shrink:0}
 .slot .st div{width:100px;display:flex;flex-direction:column;align-items:center;padding:6px 0 4px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2)}
 .slot .st small{font:600 15px 'IBM Plex Sans Arabic';color:#f1edff}
@@ -383,7 +385,7 @@ for(let i=0;i<3;i++) pods.push(buildPod());
 function placePods(){ const n=slotCount(), xs=PODX[n]||PODX[1]; pods.forEach((p,i)=>{ p.g.visible=i<n&&S.phase==='play'||S.phase==='over'&&i<n; if(xs[i]!=null) p.g.position.set(xs[i],0,1.6); p.m.visible=S.phase==='play'; }); }
 
 // ---------- الواجهة ----------
-const slotEls=[0,1,2].map(i=>{ const d=document.createElement('div'); d.className='slot'; d.innerHTML=`<span class="badge"></span><div class="srow"><div class="ln"><span class="av"></span><span class="nm"></span></div><div class="st"><div><small>الرصيد</small><b class="tt">0</b></div><div class="tp"><small>نقاط الدور</small><b class="tpv">0</b></div></div></div><div class="tm"><div class="bar"><i></i></div><span class="sec"></span></div>`; $('slots').appendChild(d); return d; });
+const slotEls=[0,1,2].map(i=>{ const d=document.createElement('div'); d.className='slot'; d.innerHTML=`<span class="badge"></span><div class="srow"><div class="ln"><span class="av"></span><span class="nm"></span><button class="kk" title="إقصاء اللاعب" aria-label="إقصاء اللاعب"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div><div class="st"><div><small>الرصيد</small><b class="tt">0</b></div><div class="tp"><small>نقاط الدور</small><b class="tpv">0</b></div></div></div><div class="tm"><div class="bar"><i></i></div><span class="sec"></span></div>`; $('slots').appendChild(d); d.querySelector('.kk').onclick=()=>kickActive(i); return d; });
 function toast(t){ const e=$('toast'); e.textContent=t; e.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>e.style.display='none',2400); }
 function open(id,on){ $(id).style.display=on?'grid':'none'; }
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').style.display='none');
@@ -442,7 +444,7 @@ function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res
   if(r===1){ SND.bad(); drawDisp(pods[i],'1','#f87171'); fx(i,s.turnPts>0?`رقم 1 · ضاعت ${s.turnPts}`:'رقم 1 · ضاع الدور','#fca5a5'); s.turnPts=0; s.ring='bad'; burst(i,true); react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1700); return; }
   drawDisp(pods[i],String(r),'#4ade80'); s.turnPts+=r; s.ring='good'; fx(i,`+${r}`,'#86efac'); react(s.p,'cheer',1.2); SND.good(); burst(i);
   if(s.p.total+s.turnPts>=cfg.target){ s.p.total+=s.turnPts; s.turnPts=0; return setTimeout(()=>win(s.p,i),700); }
-  s.left=cfg.time; s.busy=false; if(s.queued){ const c=s.queued; s.queued=null; setTimeout(()=>cmd(i,c),500); } }
+  s.left=cfg.time; s.busy=false; if(s.queued){ const c=s.queued; s.queued=null; setTimeout(()=>{ if(S.slots[i]===s) cmd(i,c); },500); } }
 function timeout(i){ const s=S.slots[i]; s.busy=true; s.ring='bad'; SND.timeout(); fx(i,s.turnPts>0?'انتهى الوقت · ضاعت نقاط الدور':'انتهى الوقت · ضاع الدور','#fca5a5'); s.turnPts=0; react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1200); }
 
 function win(p,i){ if(S.phase==='over') return; S.phase='over'; S.winner=p; S.pts='pending'; S.slots.forEach((s,k)=>{ if(s&&s.p&&s.p!==p){ const f=figs.get(s.p.name); if(f&&f.home) walkTo(f,f.home,1.1); } S.slots[k]={p:null}; });
@@ -499,6 +501,12 @@ $('setBtn').onclick=()=>{ if(S.phase==='over') return; S.menu=true; setTab=0; S.
 // إخراج اللاعبين المعلّمين يُطبَّق بعد إغلاق الدرج (مع إمكانية التراجع قبله)
 function removePlayer(n){ const i=S.slots.findIndex(s=>s.p&&s.p.name===n); S.players=S.players.filter(p=>p.name!==n); S.order=S.order.filter(x=>x!==n);
   const f=figs.get(n); if(f){ scene.remove(f.g); f.head?.remove(); figs.delete(n); } if(i>=0){ S.slots[i]={p:null}; setTimeout(()=>fillSlot(i),400); } }
+// إقصاء صاحب الدور الخامل (زر × جنب اسمه): تختفي شخصيته ويجي مكانه اللاعب اللي بعده
+function kickActive(i){ const s=S.slots[i]; if(S.phase!=='play'||!s||!s.p||frozen()) return; if(s.busy||s.rolling>0) return toast('انتظر يخلص اللفّة');
+  if(S.players.length<=2) return toast('لازم يبقى لاعبين اثنين على الأقل');
+  // نحافظ على مكان الطابور: لو المُقصى قبل مؤشر الدور، يرجع المؤشر خطوة عشان ما يتخطّى أحد
+  const L=S.order.length, at=S.order.indexOf(s.p.name); if(L&&at>=0){ const cur=S.next%L; S.next=at<cur?cur-1:cur; }
+  removePlayer(s.p.name); layoutWaiting(); renderUI(); }
 function closeDrawer(){ $('setD').style.display='none'; S.menu=false; if(S.pending.length){ S.pending.forEach(removePlayer); S.pending=[]; layoutWaiting(); renderUI(); } }
 $('setD').onclick=e=>{ if(e.target===$('setD')) closeDrawer(); }; $('setD').querySelector('[data-dclose]').onclick=closeDrawer;
 $('skipBtn').onclick=()=>{ if(S.phase!=='play') return toast('ما فيه أدوار حالية'); closeDrawer(); S.slots.forEach((s,i)=>{ if(s.p&&!s.busy){ s.busy=true; endTurn(i,s.rolled&&s.turnPts>0); } }); };
