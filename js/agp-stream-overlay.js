@@ -149,13 +149,25 @@
     var TOPS = [1, 3, 5];
 
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+    /** مبلغ دونيشن (دولار): $1,250 أو $12.50 — وعملة ثانية: «50 EUR». */
+    function fmtMoney(v, currency) {
+        var n = Number(v) || 0;
+        var cents = Math.round(n * 100) % 100 !== 0;
+        var s = n.toLocaleString('en-US', { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: 2 });
+        var c = String(currency || 'USD').toUpperCase();
+        return c === 'USD' ? '$' + s : s + ' ' + c;
+    }
+    /** رقم قسم/مقياس: الدونيشن بالدولار، والباقي أرقام عادية. */
+    function fmtKind(kind, v) { return kind === 'donors' || kind === 'donations' ? fmtMoney(v) : fmt(v); }
 
     // أقسام التوب (نفس أقسام live-session-stats.js)
     var SECTIONS = {
         likers: { label: 'المكبّسين', title: 'توب المكبّسين', icon: 'heart', value: function (r) { return fmt(r.count); } },
         gifters: { label: 'الداعمين', title: 'توب الداعمين', icon: 'diamond', value: function (r) { return fmt(r.diamonds); } },
         commenters: { label: 'المتفاعلين', title: 'أكثر المتفاعلين', icon: 'chat', value: function (r) { return fmt(r.count); } },
-        sharers: { label: 'الشير', title: 'توب الشير', icon: 'share', value: function (r) { return fmt(r.count); } }
+        sharers: { label: 'الشير', title: 'توب الشير', icon: 'share', value: function (r) { return fmt(r.count); } },
+        // الدونيشن (Streamlabs — كريترز وغيره): من السيرفر بقسم donors، المبلغ بالدولار (r.amount)
+        donors: { label: 'الدونيشن', title: 'أعلى الداعمين بالدونيشن', icon: 'dollar', value: function (r) { return fmtMoney(r.amount); } }
     };
     // مقاييس الهدف والعدّادات = totals بملخص البث
     var METRICS = {
@@ -165,9 +177,11 @@
         follows: { name: 'المتابعين الجدد', unit: 'متابع جديد', icon: 'follow' },
         shares: { name: 'الشير', unit: 'شير', icon: 'share' },
         comments: { name: 'التعليقات', unit: 'تعليق', icon: 'chat' },
-        peakViewers: { name: 'أعلى مشاهدة', unit: 'أعلى مشاهدة', icon: 'eye' }
+        peakViewers: { name: 'أعلى مشاهدة', unit: 'أعلى مشاهدة', icon: 'eye' },
+        donations: { name: 'الدونيشن', unit: 'دولار', icon: 'dollar' }
     };
     var ICONS = {
+        dollar: '<path d="M12 2a10 10 0 110 20 10 10 0 010-20zm.9 4.2h-1.8v1.4c-1.7.3-2.9 1.4-2.9 3 0 1.9 1.5 2.6 3.4 3.1 1.4.4 1.9.7 1.9 1.3 0 .6-.6 1-1.6 1-1.1 0-2.1-.4-2.9-1l-.9 1.6c.8.6 1.9 1 3 1.1v1.4h1.8v-1.4c1.8-.3 3-1.4 3-3.1 0-1.9-1.4-2.6-3.5-3.2-1.3-.4-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.9 0 1.8.3 2.5.8l.9-1.6c-.7-.5-1.6-.8-2.5-.9z"/>',
         heart: '<path d="M12 21s-7.6-4.7-9.7-9.3C.8 8.3 2.9 4.5 6.6 4.5c2.1 0 3.7 1.2 4.4 2.5.7-1.3 2.3-2.5 4.4-2.5 3.7 0 5.8 3.8 4.3 7.2C19.6 16.3 12 21 12 21z"/>',
         diamond: '<path d="M7 3h10l5 6.5L12 21 2 9.5z"/>',
         gift: '<path d="M3 8h18v4H3zM5 12h14v9H5z"/><path d="M12 8v13M12 8c-1.5-3-5-4-5.5-1.8C6 8 9 8 12 8c3 0 6 0 5.5-1.8C17 4 13.5 5 12 8z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
@@ -187,6 +201,8 @@
             '<path d="M4.6 7.4c.8-1.6 2.6-2.2 4.1-1.4" stroke="url(#agp-so-hs)" stroke-width="1.5" stroke-linecap="round" fill="none"/>' +
             '<ellipse cx="6.6" cy="10" rx="1.3" ry=".8" fill="#fff" opacity=".5" transform="rotate(-35 6.6 10)"/>' +
             '<path d="M18.9 3.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="#fff"/></svg>',
+        // الدونيشن: عملة دولار ذهبية لامعة
+        donors: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="agp-so-ug" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#fff6c4"/><stop offset=".5" stop-color="#ffcf3a"/><stop offset="1" stop-color="#c98a07"/></radialGradient></defs><circle cx="12" cy="12" r="10.5" fill="url(#agp-so-ug)" stroke="#a86f05" stroke-width=".6"/><circle cx="12" cy="12" r="8.2" fill="none" stroke="#fff3b0" stroke-opacity=".55" stroke-width=".7"/><path d="M12.8 6.4h-1.6v1.2c-1.5.3-2.5 1.2-2.5 2.6 0 1.7 1.3 2.3 3 2.7 1.2.3 1.6.6 1.6 1.1 0 .5-.5.9-1.4.9-1 0-1.8-.4-2.5-.9l-.8 1.4c.7.5 1.6.9 2.6 1v1.2h1.6v-1.2c1.6-.3 2.6-1.2 2.6-2.7 0-1.7-1.2-2.3-3-2.8-1.1-.3-1.6-.5-1.6-1 0-.4.4-.8 1.2-.8.8 0 1.5.3 2.1.7l.8-1.4c-.6-.4-1.3-.7-2.1-.8z" fill="#8a5a00"/></svg>',
         gifters: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="agp-so-dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9f4ff"/><stop offset="1" stop-color="#2fa6ff"/></linearGradient></defs><path d="M7 3h10l5 6.5L12 21 2 9.5z" fill="url(#agp-so-dg)"/><path d="M2 9.5h20M7 3l3 6.5L12 21l2-11.5L17 3" stroke="#fff" stroke-width="1" fill="none" opacity=".6"/></svg>'
     };
     // فراشة «جناح الملاك»: جناحين يرفرفون (wl/wr)
@@ -196,8 +212,8 @@
         '<rect x="19.2" y="13" width="1.6" height="15" rx=".8" fill="#e9f9ff"/></svg>';
     // بيانات تجريبية للمعاينة بالاستوديو لما ما فيه بث
     var SAMPLE_ROWS = [
-        { name: 'الأول', count: 12400, diamonds: 5200 }, { name: 'الثاني', count: 8100, diamonds: 3100 },
-        { name: 'الثالث', count: 4600, diamonds: 1450 }, { name: 'الرابع', count: 2100, diamonds: 600 }, { name: 'الخامس', count: 900, diamonds: 210 },
+        { name: 'الأول', count: 12400, diamonds: 5200, amount: 250 }, { name: 'الثاني', count: 8100, diamonds: 3100, amount: 120 },
+        { name: 'الثالث', count: 4600, diamonds: 1450, amount: 75 }, { name: 'الرابع', count: 2100, diamonds: 600 }, { name: 'الخامس', count: 900, diamonds: 210 },
         { name: 'السادس', count: 760, diamonds: 150 }, { name: 'السابع', count: 540, diamonds: 96 }, { name: 'الثامن', count: 410, diamonds: 60 },
         { name: 'التاسع', count: 300, diamonds: 32 }, { name: 'العاشر', count: 180, diamonds: 15 }
     ];
@@ -210,7 +226,7 @@
         '<path d="M10 6h20l8 10-18 20L2 16z" fill="#4dd8ff"/><path d="M10 6l4 10h12l4-10M2 16h36" stroke="#b8f1ff" stroke-width="1.5" fill="none"/>',
         '<rect x="6" y="16" width="28" height="20" rx="3" fill="#9b5cf6"/><rect x="4" y="11" width="32" height="7" rx="2" fill="#b78bff"/><path d="M20 11v25" stroke="#ffd54a" stroke-width="4"/><path d="M20 11c-4-7-11-6-9-1 1 2 5 1 9 1 4 0 8 1 9-1 2-5-5-6-9 1z" fill="#ffd54a"/>'
     ].map(function (svg) { return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">' + svg + '</svg>'); });
-    var SAMPLE_TOTALS = { likes: 4320, diamonds: 860, gifts: 57, follows: 23, shares: 12, comments: 340, peakViewers: 185 };
+    var SAMPLE_TOTALS = { likes: 4320, diamonds: 860, gifts: 57, follows: 23, shares: 12, comments: 340, peakViewers: 185, donations: 340, lastDonation: { name: 'أبو فهد', amount: 25, currency: 'USD', message: 'كفو والله، استمر 💜' } };
 
     /* ---------------- الحالة والتخزين ---------------- */
 
@@ -366,7 +382,7 @@
         activeItems().forEach(function (it) {
             if (isTopLive(it)) throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, liveCount(it)); });
             else if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
-            else if (it.type === 'goal' || it.type === 'counter') totals = true;
+            else if (it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation') totals = true;
         });
         var keys = Object.keys(secs).sort();
         if (!keys.length && !totals) return null;
@@ -831,7 +847,7 @@
         var cyc = clamp(Number(it.cycle) || 10, 3, 300) * 1000;
         return Math.floor(Date.now() / cyc) % secs.length;
     }
-    function rowNum(sec, r) { return Number(sec === 'gifters' ? r.diamonds : r.count) || 0; }
+    function rowNum(sec, r) { return Number(sec === 'gifters' ? r.diamonds : sec === 'donors' ? r.amount : r.count) || 0; }
 
     function buildThrone(node, it, preview) {
         title(node, it.title);
@@ -949,7 +965,8 @@
         } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
-        var num = el('span', 'agp-so-tnum', fmt(rowNum(sec, r)));
+        var num = el('span', 'agp-so-tnum', fmtKind(sec, rowNum(sec, r)));
+        num._kind = sec;
         num._v = rowNum(sec, r);
         c.appendChild(num);
         inner.appendChild(c);
@@ -980,7 +997,8 @@
         (function step(now) {
             var k = Math.min(1, (now - t0) / dur);
             var e = 1 - Math.pow(1 - k, 3);
-            elm.textContent = fmt(Math.round(from + (to - from) * e));
+            var v = from + (to - from) * e;
+            elm.textContent = elm._kind === 'donors' ? fmtMoney(k < 1 ? Math.round(v) : to) : fmt(Math.round(v));
             if (k < 1 && elm.isConnected) requestAnimationFrame(step);
         }(t0));
     }
@@ -1111,7 +1129,9 @@
     // أحداث Veyro بس (المحرر القديم overlay/ يعرض ALERT_EVENTS الأصلية بدونها)
     var ALERT_EVENTS_ALL = Object.assign({}, ALERT_EVENTS, {
         like: { label: 'التكبيس', title: 'تكبيس', icon: 'heart', msg: '{name} وصل {count} تكبيسة' },
-        subscribe: { label: 'الاشتراك', title: 'مشترك جديد', icon: 'star', msg: '{name} اشترك بالبث' }
+        subscribe: { label: 'الاشتراك', title: 'مشترك جديد', icon: 'star', msg: '{name} اشترك بالبث' },
+        // الدونيشن من Streamlabs (كريترز وغيره) — {amount} = $25، {message} = رسالة الداعم (لو مفعّلة)
+        donation: { label: 'الدونيشن', title: 'دعم جديد', icon: 'dollar', msg: '{name} دعم بـ{amount}' }
     });
     var ALERT_DESIGNS = [{ key: 'card', label: 'بطاقة' }, { key: 'banner', label: 'شريط' }, { key: 'pop', label: 'كبير بالوسط' }];
     var ALERT_ANIMS = [{ key: 'pop', label: 'قفزة' }, { key: 'slide', label: 'انزلاق' }, { key: 'fade', label: 'ظهور' }, { key: 'drop', label: 'سقوط' }];
@@ -1314,7 +1334,7 @@
         if (it.showNums !== false) {
             var done = cur >= target && !it.autoNext;
             o.nums.appendChild(icon(METRICS[m].icon));
-            o.nums.appendChild(el('span', null, done ? 'اكتمل! ' + fmt(cur) : fmt(cur) + ' / ' + fmt(target)));
+            o.nums.appendChild(el('span', null, done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
             if (it.showPct) o.nums.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
         }
         node.classList.toggle('agp-so-ghost', Boolean(tt.ghost));
@@ -1335,7 +1355,7 @@
         title(node, it.title);
         var nums = el('span', 'agp-so-gnums');
         nums.appendChild(icon(METRICS[m].icon));
-        nums.appendChild(el('span', null, done && !it.autoNext ? 'اكتمل الهدف! ' + fmt(cur) : fmt(cur) + ' / ' + fmt(target)));
+        nums.appendChild(el('span', null, done && !it.autoNext ? 'اكتمل الهدف! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
         if (design === 'ring') {
             var ring = el('div', 'agp-so-ring');
             ring.style.setProperty('--p', (pct * 100).toFixed(1));
@@ -1411,6 +1431,7 @@
             else if (it.type === 'alert') buildAlert(n, it, preview);
             else if (it.type === 'icon') buildIcon(n, it);
             else if (it.type === 'shape') buildShape(n, it);
+            else if (it.type === 'lastdonation') buildLastDonation(n, it, preview);
             else if (it.type === 'tts') buildTts(n, it, preview);
             else if (it.type === 'music') buildMusic(n, it, preview);
         }
@@ -1568,11 +1589,13 @@
         }
         if (type === 'like') { e.count = 100; e.total = 100; e.all = 100; e.allPrev = 0; }
         if (type === 'join' || type === 'subscribe') e.uid = 'demo';
+        if (type === 'donation') { e.amount = [5, 25, 100][Math.floor(Math.random() * 3)]; e.currency = 'USD'; e.message = 'كفو والله، استمر 💜'; }
         return e;
     }
 
     function fillMsg(tpl, e) {
-        return String(tpl || '').replace(/\{name\}/g, e.user || '').replace(/\{gift\}/g, e.gift || '').replace(/\{count\}/g, String(e.count || 1)).replace(/\{diamonds\}/g, fmt(e.diamonds));
+        return String(tpl || '').replace(/\{name\}/g, e.user || '').replace(/\{gift\}/g, e.gift || '').replace(/\{count\}/g, String(e.count || 1)).replace(/\{diamonds\}/g, fmt(e.diamonds))
+            .replace(/\{amount\}/g, e.type === 'donation' ? fmtMoney(e.amount, e.currency) : '').replace(/\{message\}/g, e.message || '').replace(/\s+$/, '');
     }
 
     /** بطاقة التنبيه نفسها. */
@@ -1594,6 +1617,8 @@
         txt.appendChild(el('div', 'agp-so-atitle', meta.title));
         var msg = (it.msg && it.msg[e.type]) || meta.msg;
         txt.appendChild(el('div', 'agp-so-amsg', fillMsg(msg, e)));
+        // رسالة الداعم (لو الأداة مفعّلتها) تحت النص لو القالب ما فيه {message}
+        if (e.type === 'donation' && e.message && String(msg).indexOf('{message}') === -1) txt.appendChild(el('div', 'agp-so-amsg agp-so-dmsg', '«' + String(e.message).slice(0, 120) + '»'));
         if (e.type === 'gift' && e.diamonds && design !== 'banner') {
             var d = el('div', 'agp-so-adia');
             d.appendChild(icon('diamond'));
@@ -1703,7 +1728,7 @@
         return clamp(Number(it && it.video && it.video.d) || 0, 0, 60);
     }
     // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
-    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'اشترك بالبث' };
+    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'اشترك بالبث', donation: 'دعم بـ{amount} {message}' };
     function partsOf(it) {
         if (!it || !it.parts) return null;
         var out = {};
@@ -2171,6 +2196,14 @@
             if (d < (Number(it.minDiamonds) || 0)) return false;
             if (mx > 0 && d > mx) return false;
         }
+        if (e.type === 'donation') {
+            // مدى المبلغ بالدولار (0 = بدون حد أعلى) — عملة غير الدولار تطلع بأي أليرت دونيشن بدون حد
+            var a = Number(e.amount) || 0, ma = Number(it.maxAmount) || 0;
+            if (String(e.currency || 'USD').toUpperCase() === 'USD') {
+                if (a < (Number(it.minAmount) || 0)) return false;
+                if (ma > 0 && a > ma) return false;
+            }
+        }
         if (e.type === 'like') {
             var n = Math.max(1, Math.round(Number(it.likeEvery) || 100));
             var now = it.likeScope === 'all' ? Number(e.all) || 0 : Number(e.total) || 0;
@@ -2189,11 +2222,12 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
+        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&d=' + (donState.init ? donState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
                 if ('cseq' in d) handleChat(d);
+                if ('dseq' in d) handleDonations(d);
                 // «جرّب» من المحرر: أول طلب = نقطة بداية (التجارب القديمة ما تشتغل)
                 if (!evState.tinit || (Number(d.tseq) || 0) < evState.tseq) { evState.tinit = true; evState.tseq = Number(d.tseq) || 0; }
                 else {
@@ -2250,13 +2284,13 @@
         evState.tests = evState.tests.filter(function (t) {
             if (audioTest(t)) return false;
             var it = alertItems().filter(function (x) { return x.id === t.itemId; })[0];
-            if (it) { queueAlert(it.id, sampleEvent(t.type || (it.events || ['gift'])[0]), true); return false; }
+            if (it) { queueAlert(it.id, forItem(it, sampleEvent(t.type || (it.events || ['gift'])[0])), true); return false; }
             return now - t.at < 15000;
         });
     }
 
     function syncEventsPolling() {
-        var want = LINK && state.enabled && (alertItems().length > 0 || audioItems('tts').length > 0 || audioItems('music').length > 0);
+        var want = LINK && state.enabled && (alertItems().length > 0 || audioItems('tts').length > 0 || audioItems('music').length > 0 || donationTools());
         if (want && !evState.timer) {
             fetchEvents();
             evState.timer = setInterval(fetchEvents, EVENTS_POLL_MS);
@@ -2266,7 +2300,70 @@
         }
     }
 
-    function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter'; }
+    function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation'; }
+
+    /* ---------------- الدونيشن (Streamlabs — كريترز وغيره) ----------------
+     * يوصل مع طلب الأحداث (dseq/donations) لو الشاشة فيها أداة دونيشن. كل دونيشن جديد: أليرت
+     * للأليرتات المطابقة (مدى المبلغ)، وتحديث «آخر دعم»، وطلب الإحصائيات فوراً (التوب والهدف). */
+    var donState = { init: false, seq: 0 };
+    var lastDon = null; // آخر دونيشن وصل بالرابط (أحدث من ملخص الإحصائيات)
+
+    function donationTools() {
+        return activeItems().some(function (it) {
+            if (it.type === 'alert') return (it.events || []).indexOf('donation') !== -1;
+            if (it.type === 'top') return throneSecs(it).indexOf('donors') !== -1;
+            if (it.type === 'goal') return it.metric === 'donations';
+            return it.type === 'lastdonation';
+        });
+    }
+
+    /** نسخة الحدث لأداة معيّنة: رسالة الداعم تنشال لو الأداة ما فعّلتها (showMessage). */
+    function forItem(it, e) {
+        if (e.type !== 'donation' || it.showMessage) return e;
+        return Object.assign({}, e, { message: '' });
+    }
+
+    function handleDonations(d) {
+        var ds = Number(d.dseq) || 0;
+        if (!donState.init || ds < donState.seq) { donState.init = true; donState.seq = ds; return; }
+        donState.seq = ds;
+        var list = d.donations || [];
+        if (!list.length) return;
+        list.forEach(function (e) {
+            alertItems().forEach(function (it) {
+                if (alertMatches(it, e)) queueAlert(it.id, forItem(it, e));
+            });
+            if (!e.isTest && String(e.currency || 'USD').toUpperCase() === 'USD') lastDon = { name: e.user, amount: e.amount, currency: e.currency, message: e.message || '', at: e.at };
+        });
+        repaintData();
+        fetchStats();
+    }
+
+    /** «آخر دعم»: الاسم والمبلغ (والرسالة لو مفعّلة). */
+    function buildLastDonation(n, it, preview) {
+        var t = (stats.totals && stats.totals.lastDonation) || null;
+        var d = lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
+        var ghost = !d && preview;
+        if (ghost) d = SAMPLE_TOTALS.lastDonation;
+        n.classList.toggle('agp-so-ghost', Boolean(ghost));
+        title(n, it.title);
+        var card = el('div', 'agp-so-ldbox');
+        var ic = el('span', 'agp-so-ldic');
+        ic.innerHTML = THRONE_ICONS.donors;
+        card.appendChild(ic);
+        var tx = el('div', 'agp-so-ldtx');
+        if (d) {
+            var row = el('div', 'agp-so-ldrow');
+            row.appendChild(el('b', 'agp-so-ldname', d.name || ''));
+            row.appendChild(el('span', 'agp-so-ldamt', fmtMoney(d.amount, d.currency)));
+            tx.appendChild(row);
+            if (it.showMessage && d.message) tx.appendChild(el('span', 'agp-so-ldmsg', String(d.message).slice(0, 120)));
+        } else {
+            tx.appendChild(el('span', 'agp-so-ldwait', 'بانتظار أول دعم…'));
+        }
+        card.appendChild(tx);
+        n.appendChild(card);
+    }
 
     /* ---------------- أدوات جديدة ---------------- */
 
@@ -2294,6 +2391,7 @@
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
         if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
+        if (type === 'lastdonation') return Object.assign(base, { title: 'آخر دعم', showMessage: false, size: 3, color: '#ffd54a' });
         if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
         if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
         if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
@@ -2971,6 +3069,7 @@
         '.agp-so-sbox.f-neon{border:.3em solid color-mix(in srgb,var(--c) 40%,#fff);box-shadow:0 0 .6em var(--c),0 0 1.6em var(--c),inset 0 0 .8em var(--c)}',
         /* أليرتات */
         '.agp-so-alert{line-height:1.3}',
+        '.agp-so-dmsg{font-size:.78em;opacity:.85;font-weight:500}',
         '.agp-so-astage{display:flex;justify-content:center}',
         '.agp-so-vbox{position:relative;flex:none}',
         '.agp-so-vslot{position:relative;flex:none;box-sizing:border-box;border:.1em dashed rgba(255,255,255,.35);border-radius:.4em;display:flex;align-items:center;justify-content:center}',
@@ -3061,6 +3160,17 @@
         '@keyframes agp-so-a-fade{0%{opacity:0;filter:blur(.3em)}100%{opacity:1;filter:none}}',
         '@keyframes agp-so-a-drop{0%{opacity:0;transform:translateY(-120%)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}',
+        /* «آخر دعم» (الدونيشن) */
+        '.agp-so-lastdonation{color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
+        '.agp-so-ldbox{display:flex;align-items:center;gap:.5em;padding:.45em .8em .45em .55em;border-radius:1em;background:linear-gradient(160deg,rgba(36,31,46,.86),rgba(16,14,21,.8));border:.06em solid color-mix(in srgb,var(--agp-so-c,#ffd54a) 55%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.45),0 0 .8em color-mix(in srgb,var(--agp-so-c,#ffd54a) 25%,transparent)}',
+        '.agp-so-ldic{flex:none;width:1.7em;height:1.7em;filter:drop-shadow(0 0 .25em rgba(255,200,60,.6));animation:agp-so-coin 3.2s ease-in-out infinite}',
+        '.agp-so-ldic svg{width:100%;height:100%;display:block}',
+        '.agp-so-ldtx{display:flex;flex-direction:column;gap:.1em;min-width:0}',
+        '.agp-so-ldrow{display:flex;align-items:baseline;gap:.45em;white-space:nowrap}',
+        '.agp-so-ldname{font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-size:.85em;max-width:9em;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-ldamt{font-weight:800;font-size:.95em;color:var(--agp-so-c,#ffd54a);direction:ltr;text-shadow:0 0 .4em color-mix(in srgb,var(--agp-so-c,#ffd54a) 50%,transparent)}',
+        '.agp-so-ldmsg{font-size:.62em;color:rgba(231,224,240,.85);max-width:16em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+        '.agp-so-ldwait{font-size:.7em;color:rgba(231,224,240,.7)}',
         /* أدوات الصوت: القارئ الصوتي ومشغّل الأغاني */
         '.agp-so-tts,.agp-so-music{display:flex;align-items:center;gap:.45em;direction:rtl;color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
         '.agp-so-aic{flex:none;width:2.2em;height:2.2em;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.28),transparent 60%),linear-gradient(160deg,var(--agp-so-c,#cfc3dc),#42394f);box-shadow:0 .2em .7em rgba(0,0,0,.45),0 0 0 .08em rgba(255,255,255,.25) inset}',
@@ -3178,6 +3288,8 @@
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,
         /** أدوات الصوت (Veyro): فلتر القارئ وأوامر المشغّل — للمحرر والاختبارات. */
         ttsFilter: ttsFilter, parseMusicCommand: parseMusicCommand,
+        /** الدونيشن: تنسيق المبلغ ($25) — للمحرر وصورة الإحصائيات. */
+        fmtMoney: fmtMoney,
         stats: function () { return stats; },
         refreshStats: fetchStats,
         linkOk: linkOk, linkText: linkText,
