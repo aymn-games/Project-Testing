@@ -1155,7 +1155,12 @@
             return c;
         }
 
+        var sideScroll = { tab: null, top: 0 };
         function paintSide() {
+            // إعادة الرسم مع كل تعديل ما ترجّع اللوحة لأولها (نفس التبويب = نفس المكان)
+            var oldB = side.querySelector('.ob-pbody');
+            var keep = oldB && sideScroll.tab === tab ? oldB.scrollTop : 0;
+            sideScroll.tab = tab;
             side.textContent = '';
             var hd = el('div', 'ob-phead');
             var t = el('div');
@@ -1169,6 +1174,7 @@
             });
             side.appendChild(tabs);
             var b = el('div', 'ob-pbody');
+            if (keep) requestAnimationFrame(function () { if (b.isConnected) b.scrollTop = keep; });
             if (tab === 'data') {
                 b.appendChild(statusCard());
                 b.appendChild(watchCard());

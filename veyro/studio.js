@@ -878,11 +878,22 @@
         return h;
     }
 
+    /*
+     * اللوحة تنعاد رسمتها مع أي تعديل (مفتاح، زر، اختيار). عشان ما ترجع لأولها كل مرة،
+     * نحفظ مكان التمرير ونرجّعه — بس لو نفس المحتوى (نفس العنصر أو نفس القسم).
+     */
+    var panelScroll = { ctx: null, top: 0 };
     function renderPanel() {
+        var oldPb = panel.querySelector('.ob-pbody');
+        if (oldPb && panelScroll.ctx) panelScroll.top = oldPb.scrollTop;
         panel.textContent = '';
         if (!cur) return;
         var it = selectedId && find(selectedId);
+        var ctx = it ? 'i:' + it.id : 's:' + section;
+        var keep = ctx === panelScroll.ctx ? panelScroll.top : 0;
+        panelScroll.ctx = ctx;
         var pb = el('div', 'ob-pbody');
+        requestAnimationFrame(function () { if (keep && pb.isConnected) pb.scrollTop = keep; });
         if (it) {
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
             propsPane(it, pb);
@@ -2365,6 +2376,8 @@
         function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
         function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
         function paintControls() {
+            var top = ctrls.scrollTop; // نرجّع مكان التمرير بعد إعادة الرسم
+            requestAnimationFrame(function () { ctrls.scrollTop = top; });
             ctrls.textContent = '';
             ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ أطراف الفيديو ويعرف لون الخلفية لحاله. بعدها ظبّط القوة والنعومة.'));
@@ -2555,8 +2568,15 @@
         return c;
     }
 
+    /** إعادة رسم الصفحة ما ترجّعها لأولها: نرجّع مكان التمرير بعد الرسم. */
+    function keepScroll(box) {
+        var top = box.scrollTop;
+        if (top) requestAnimationFrame(function () { box.scrollTop = top; });
+    }
+
     function renderHome() {
         dirty.home = false;
+        keepScroll(homeBody);
         homeBody.textContent = '';
         var w = el('div', 'vy-wrap');
 
@@ -2713,6 +2733,7 @@
 
     function renderScreensView() {
         dirty.screens = false;
+        keepScroll(screensBody);
         screensBody.textContent = '';
         var w = el('div', 'vy-wrap');
         var hd = secHead('الشاشات', 'كل شاشة لها تصميم ورابط خاص — تقدر تسوي لين ' + maxScreens + ' شاشة.');

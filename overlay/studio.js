@@ -643,11 +643,19 @@
         return h;
     }
 
+    /* إعادة رسم اللوحة مع أي تعديل ما ترجّعها لأولها: نفس العنصر/القسم = نفس مكان التمرير */
+    var panelScroll = { ctx: null, top: 0 };
     function renderPanel() {
+        var oldPb = panel.querySelector('.ob-pbody');
+        if (oldPb && panelScroll.ctx) panelScroll.top = oldPb.scrollTop;
         panel.textContent = '';
         if (!cur) return;
         var it = selectedId && find(selectedId);
+        var ctx = it ? 'i:' + it.id : 's:' + section;
+        var keep = ctx === panelScroll.ctx ? panelScroll.top : 0;
+        panelScroll.ctx = ctx;
         var pb = el('div', 'ob-pbody');
+        requestAnimationFrame(function () { if (keep && pb.isConnected) pb.scrollTop = keep; });
         if (it) {
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
             propsPane(it, pb);
