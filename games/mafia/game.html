@@ -241,6 +241,9 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 .over .hero .crown { position: absolute; top: -18px; left: 50%; transform: translateX(-50%) rotate(-8deg); font-size: 30px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.6)); }
 .over .hero b { max-width: 100%; font-size: 20px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .over .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 12px; border-radius: 999px; font-size: 14px; font-weight: 800; background: color-mix(in srgb, var(--rc) 22%, rgba(0,0,0,.4)); border: 1px solid color-mix(in srgb, var(--rc) 60%, transparent); color: #fff; white-space: nowrap; }
+.vp .ph, .vchip .ph { position: relative; display: block; flex: none; border-radius: 50%; overflow: hidden; }
+.vp .ph svg, .vchip .ph svg { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+.vp .ph img, .vchip .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .over .ph { position: relative; display: block; flex: none; border-radius: 50%; overflow: hidden; }
 .over .ph svg { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 .over .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -346,7 +349,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             S.code = m.code; S.token = m.token; S.schema = m.schema;
             NET.hostSession({ code: m.code, token: m.token });
             makeQr();
-        } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); overKey = ''; lastChatN = '';   // الصور الجديدة تطلع بالشات على طول
+        } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); overKey = ''; lastChatN = ''; votesKey = '';   // الصور الجديدة تطلع بالشات على طول
         } else if (m.t === 'room') {
             S.room = m.room;
             // صفحة المباراة بس — قبل البداية (أو بعد «رجوع للوبي») مكانه شاشة اللوبي
@@ -485,7 +488,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         if (G.phase === 'verdict') return renderVoteResults(G);
         var tally = {}, voters = 0; Object.keys(G.votes || {}).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; voters++; });
         var alive = G.players.filter(function (p) { return p.alive; });
-        var key = JSON.stringify([tally, alive.length]); if (key === votesKey) return; votesKey = key;
+        var key = JSON.stringify([tally, alive.length, photosKey(alive)]); if (key === votesKey) return; votesKey = key;
         // «تخطي» ينافس مثل أي لاعب (لو أخذ أكثر الأصوات ما أحد يطلع)
         var sk = tally.skip || 0, max = sk; alive.forEach(function (p) { max = Math.max(max, tally[p.id] || 0); });
         var tops = alive.filter(function (p) { return max > 0 && (tally[p.id] || 0) === max; }).length + (max > 0 && sk === max ? 1 : 0);
@@ -495,7 +498,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         var vh = list.map(function (p) {
             var n = tally[p.id] || 0;
             return '<div class="vp' + (n ? ' has' : '') + (n && n === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? n / alive.length * 100 : 0) + '%"></span>' +
-                '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + '</small></span><span class="n">' + n + '</span></div>';
+                '<span class="av">' + photoHtml(p, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + '</small></span><span class="n">' + n + '</span></div>';
         }).join('');
         if (sk) { var skH = '<div class="vp skip has' + (sk === max && tops === 1 ? ' top' : '') + '"><span class="bar" style="width:' + (alive.length ? sk / alive.length * 100 : 0) + '%"></span><span class="av">⏭️</span><span class="nm">تخطي</span><span class="n">' + sk + '</span></div>'; vh = sk === max ? skH + vh : vh + skH; }
         setVgrid(vh);
@@ -505,11 +508,11 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         var V = G.verdict || {}, votes = G.votes || {}, byId = {}, groups = {};
         G.players.forEach(function (p) { byId[p.id] = p; });
         Object.keys(votes).forEach(function (vid) { var t = votes[vid]; if (t !== 'skip' && !byId[t]) return; (groups[t] = groups[t] || []).push(vid); });
-        var key = JSON.stringify(['res', votes, V.id, V.skip, V.tie]); if (key === votesKey) return; votesKey = key;
+        var key = JSON.stringify(['res', votes, V.id, V.skip, V.tie, photosKey(G.players)]); if (key === votesKey) return; votesKey = key;
         var keys = Object.keys(groups).sort(function (a, b) { return groups[b].length - groups[a].length || (a === 'skip' ? 1 : b === 'skip' ? -1 : byId[a].seat - byId[b].seat); });
         var max = keys.length ? groups[keys[0]].length : 0, total = Object.keys(votes).length;
         var winKey = V.id || (V.skip ? 'skip' : null);
-        var chip = function (id) { var p = byId[id]; return p ? '<span class="vchip">' + L.avatarSVG(p.look, 22) + esc(p.name) + '</span>' : ''; };
+        var chip = function (id) { var p = byId[id]; return p ? '<span class="vchip">' + photoHtml(p, 22) + esc(p.name) + '</span>' : ''; };
         // اللي كانوا أحياء وقت التصويت وما صوّتوا (المطرود الحين ميت بس كان حي، واللي انقصى لعدم النشاط سببه هذا)
         var none = G.players.filter(function (p) { return !votes[p.id] && (p.alive || (p.cause === 'vote' && p.diedRound === G.round) || (p.cause === 'idle' && p.diedRound === G.round)); });
         $('votesCount').textContent = total + ' صوت';
@@ -517,7 +520,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         setVgrid((keys.length ? keys.map(function (k) {
             var n = groups[k].length, p = byId[k], win = k === winKey, tieTop = !winKey && V.tie && n === max;
             var head = k === 'skip' ? '<span class="av">⏭️</span><span class="nm">تخطي</span>'
-                : '<span class="av">' + L.avatarSVG(p.look, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + (win ? ' · طُرد' : '') + '</small></span>';
+                : '<span class="av">' + photoHtml(p, 34) + '</span><span class="nm">' + esc(p.name) + '<small>#' + (p.seat + 1) + (win ? ' · طُرد' : '') + '</small></span>';
             return '<div class="vr' + (win ? ' win' : tieTop ? ' tie' : '') + (k === 'skip' ? ' skip' : '') + '"><div class="vp has' + (win ? ' top' : '') + '"><span class="bar" style="width:' + (total ? n / total * 100 : 0) + '%"></span>' + head + '<span class="n">' + n + '</span></div>' +
                 '<div class="voters">' + groups[k].map(chip).join('') + '</div></div>';
         }).join('') : '<div class="vnone">ما أحد صوّت</div>') +
@@ -734,6 +737,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         var svg = L.avatarSVG(p.look, size);
         return src ? '<span class="ph" style="width:' + size + 'px;height:' + size + 'px">' + svg + '<img src="' + esc(src) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()"></span>' : svg;
     }
+    function photosKey(list) { return list.map(function (p) { return PHOTOS[p.id] ? PHOTOS[p.id].length : 0; }).join(','); }
     function handleOf(p) { return p.tiktok ? '<span class="tk">@' + esc(p.tiktok) + '</span>' : ''; }
     function roleChip(p) {
         var R = ROLE[p.role] || ROLE.citizen;

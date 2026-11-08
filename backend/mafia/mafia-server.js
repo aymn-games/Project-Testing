@@ -80,12 +80,15 @@ function profilePhoto(uid) {
 var _siteNameOf = function (uid) {
     try { var row = require('../db/database').prepare('SELECT display_name FROM users WHERE id = ?').get(uid); return (row && String(row.display_name || '').trim()) || null; } catch (e) { return null; }
 };
+// صور اللاعبين لشاشة المذيع وجوالات اللاعبين (بطاقات التصويت): كل صورة توصل مرة وحدة لكل اتصال
 function sendAvatars(room) {
-    var h = room.hostConn; if (!h || h.closed) return;
-    h.avSent = h.avSent || {};
-    var map = {}, any = false;
-    room.players.forEach(function (p) { if (p.photo && h.avSent[p.id] !== p.photo.length) { map[p.id] = p.photo; h.avSent[p.id] = p.photo.length; any = true; } });
-    if (any) send(h, { t: 'avatars', map: map });
+    roomClients(room).forEach(function (h) {
+        if (h.closed || !(h.role === 'player' || (h.role === 'host' && room.hostConn === h))) return;
+        h.avSent = h.avSent || {};
+        var map = {}, any = false;
+        room.players.forEach(function (p) { if (p.photo && h.avSent[p.id] !== p.photo.length) { map[p.id] = p.photo; h.avSent[p.id] = p.photo.length; any = true; } });
+        if (any) send(h, { t: 'avatars', map: map });
+    });
 }
 
 function sendStates(room) {

@@ -98,6 +98,9 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 44vh; overflow-y: auto; margin-top: 10px; padding: 2px; scrollbar-width: thin; overscroll-behavior: contain; }
 .pt { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; border-radius: 16px; border: 1.5px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); color: #fff; font: inherit; cursor: pointer; min-width: 0; }
 .pt svg { width: 42px; height: 42px; border-radius: 50%; background: var(--card2); }
+.pt .ph { position: relative; display: block; flex: none; border-radius: 50%; overflow: hidden; }
+.pt .ph svg { display: block; }
+.pt .ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .pt b { max-width: 100%; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pt em { font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(139,92,246,.25); color: var(--c3); }
 .pt .num { position: absolute; top: 6px; right: 6px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.3); font-size: 11px; font-weight: 700; }
@@ -608,6 +611,8 @@ body.watching { overflow: hidden; }
         } else if (m.t === 'room') {
             S.room = m.room; renderRoomInfo();
             if (S.me && !m.room.started && S.view !== 'vProfile') { S.G = null; show('vWait'); renderWait(); maybeNews(); }
+        } else if (m.t === 'avatars') {
+            Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); if (S.G && S.view === 'vGame') renderGame();
         } else if (m.t === 'state') {
             S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame(); maybeNews();
         } else if (m.t === 'lobby') {
@@ -748,6 +753,14 @@ body.watching { overflow: hidden; }
     S.opMode = 'kill'; S.cardSel = null; S.chan = 'city'; S.filter = '';
     function plist(G) { return G.players.slice().sort(function (a, b) { return a.seat - b.seat; }); }
     function avatar(p, s) { return L.avatarSVG(p.look, s || 40); }
+    // صورة حساب اللاعب (بروفايل الموقع أو تيك توك من الخادم)، وإلا شخصيته المرسومة — لبطاقات التصويت
+    var PHOTOS = {};
+    function photoAvatar(p) {
+        var rp = S.room && S.room.players && S.room.players.find(function (q) { return q.id === p.id; });
+        var src = PHOTOS[p.id] || (rp && rp.avatar ? (rp.avatar.charAt(0) === '/' ? ((window.AGPAuth && window.AGPAuth.API_BASE) || '') + rp.avatar : rp.avatar) : null);
+        var svg = avatar(p);
+        return src ? '<span class="ph">' + svg + '<img src="' + esc(src) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()"></span>' : svg;
+    }
     function act(a, arg) { net.send({ t: 'act', a: a, arg: arg }); }
     function big(G) { return G.players.length > 25; }
 
@@ -761,7 +774,7 @@ body.watching { overflow: hidden; }
                 var ok = opts.can(p), sel = opts.sel && opts.sel(p), t = opts.tag ? opts.tag(p) : '';
                 if (!t && p.mate && p.id !== G.me.id) t = (ROLE[p.mate] || ROLE.citizen).icon + ' زميلك';
                 return '<button type="button" class="pt' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + esc(opts.argOf ? opts.argOf(p) : p.id) + '"' : ' disabled') + '>' +
-                    '<span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<b>' + esc(p.name) + '</b>' + (t ? '<em>' + t + '</em>' : '') + '</button>';
+                    '<span class="num">' + (p.seat + 1) + '</span>' + (opts.photos ? photoAvatar(p) : avatar(p)) + '<b>' + esc(p.name) + '</b>' + (t ? '<em>' + t + '</em>' : '') + '</button>';
             }).join('') + (list.length ? '' : '<p>ما فيه أحد</p>') + '</div>';
     }
 
@@ -1212,7 +1225,7 @@ body.watching { overflow: hidden; }
             else {
                 var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
                 html += hintHtml('vote') + '<div class="sec-h"><h2>🗳️ مين يطلع؟</h2><span class="st">' + Object.keys(G.votes).length + '/' + G.players.filter(function (p) { return p.alive; }).length + ' صوّتوا</span></div>' + '<div class="gwrap">' + playerRows(G, {
-                    action: 'vote', can: function (p) { return p.alive && p.id !== me.id; },
+                    action: 'vote', photos: true, can: function (p) { return p.alive && p.id !== me.id; },
                     sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; },
                     skip: { sel: me.vote === 'skip', tag: tally.skip ? String(tally.skip) : '' }
                 }) + '</div>' + confirmBar(G, 'vote');
@@ -1263,7 +1276,7 @@ body.watching { overflow: hidden; }
         var U = unread(G);
         // نعيد بناء الشاشة بس لو تغيّر شي يهم؛ الرسائل الجديدة بالتبويب المفتوح تحدّث صناديق الشات لحالها
         // (عشان الكتابة ما تتقطّع، والكيبورد ما يرمش، واللي يقرأ رسائل قديمة ما ينسحب لتحت غصب)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, G.lastNight, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply, S.gtab, S.pane, S.tablet, U, S.evf, G.chat.filter(function (c) { return c.sys; }).length]);
+        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, G.lastNight, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply, S.gtab, S.pane, S.tablet, U, S.evf, Object.keys(PHOTOS).map(function (k) { return PHOTOS[k].length; }), G.chat.filter(function (c) { return c.sys; }).length]);
         if (key === lastRenderKey) { patchChat(G); return; }
         lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
