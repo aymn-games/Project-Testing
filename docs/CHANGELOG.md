@@ -22,6 +22,22 @@
   - الأعمدة تنحط بالمساحات اللي ما تغطيها ماكينات «رقم الحظ»، سواء كان على المسرح لاعب أو 2 أو 3. تنحسب من مكان الكاميرا، وتتحدّث مع كل تغيير بالنقاط.
   - إذا اللاعبين أكثر من المساحة، آخر بطاقة تقول «و N لاعبين آخرين».
 
+## [1.8.1] — Veyro: زر «اربط Streamlabs» (مخفي لين تسجيل التطبيق)
+
+### أُضيف (Added)
+- **زر «اربط Streamlabs»** (OAuth)، الملف `backend/streamlabs/streamlabs-oauth.js`. الستريمر يضغط الزر، وتنفتح صفحة موافقة Streamlabs، ويرجع لـVeyro وهو متصل، بدون ما ينسخ أي رمز.
+  - السيرفر يبدّل `code` بـaccess token، وبعدها ياخذ socket token ويكمل بنفس ربط لصق الرمز. الـaccess token ما ينحفظ.
+- **مخفي** لين نضيف بـRender `STREAMLABS_CLIENT_ID` و`STREAMLABS_CLIENT_SECRET` من تطبيق مسجّل عند Streamlabs. ولصق الرمز يبقى شغّال كبديل.
+- **المسارات الجديدة:** `GET /api/streamlabs/oauth/start` و`GET /api/streamlabs/oauth/callback`، والأخير هو رابط الرجوع المسجّل عند Streamlabs.
+  - `state` موقّع بـHMAC ويبقى صالح 10 دقايق.
+  - الرجوع يكون لـ`veyro/index.html?sl=<النتيجة>#tools/donations` مع رسالة بالنتيجة.
+- **متغيّرات البيئة:**
+  - `STREAMLABS_CLIENT_ID`
+  - `STREAMLABS_CLIENT_SECRET`
+  - `STREAMLABS_REDIRECT_URI`: اختياري، الافتراضي `https://project-testing-akds.onrender.com/api/streamlabs/oauth/callback`
+- ⚠️ مسارات Streamlabs API v2.0 (`/authorize`، `/token`، `/socket/token`، الصلاحية `socket.token`) نتأكد منها وقت تسجيل التطبيق.
+
+---
 ## [1.8.0] — Veyro: ربط Streamlabs والدونيشن (كريترز/دكان تب وغيره)
 
 ### أُضيف (Added)
