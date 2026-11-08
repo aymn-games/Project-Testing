@@ -12,7 +12,8 @@ var TESTS_MAX = 20;
 var TTL_MS = 60 * 1000;
 var _byKey = new Map(); // key -> { seq, list: [{seq, itemId, type, at}] }
 
-var TYPES = ['gift', 'follow', 'share', 'join', 'like', 'subscribe'];
+// tts/music = «جرّب» لأدوات الصوت، music-skip/music-stop = أزرار المشغّل بالمحرر
+var TYPES = ['gift', 'follow', 'share', 'join', 'like', 'subscribe', 'tts', 'music', 'music-skip', 'music-stop'];
 
 function prune(q, now) {
     q.list = q.list.filter(function (t) { return now - t.at < TTL_MS; });
@@ -84,4 +85,15 @@ function seen(key) {
 /** لما يتغيّر رابط الشاشة (new-key) تنحذف تجاربه. */
 function drop(key) { _byKey.delete(String(key || '')); }
 
-module.exports = { push: push, since: since, drop: drop, touch: touch, seen: seen, TYPES: TYPES };
+/** رموز الشاشات اللي سألت السيرفر خلال maxAgeMs (مفتوحة بتطبيق البث) — لمراقب أدوات الصوت. */
+function seenKeys(maxAgeMs) {
+    var now = Date.now(), out = [];
+    _seen.forEach(function (s, key) {
+        var latest = 0;
+        Object.keys(s.vers).forEach(function (v) { if (s.vers[v] > latest) latest = s.vers[v]; });
+        if (latest && now - latest <= maxAgeMs) out.push(key);
+    });
+    return out;
+}
+
+module.exports = { push: push, since: since, drop: drop, touch: touch, seen: seen, seenKeys: seenKeys, TYPES: TYPES };

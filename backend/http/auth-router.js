@@ -28,6 +28,8 @@ var screenTests = require('../stats/screen-tests');
 var liveSessionStats = require('../stats/live-session-stats');
 var streamScreens = require('../stats/stream-screens-service');
 var screenMedia = require('../stats/screen-media-service');
+var screenAudio = require('../stats/screen-audio-service');
+var hasAudioTools = require('../stats/screen-audio-design').hasAudioTools;
 var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
@@ -195,6 +197,11 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen/gifts', requireAuth: false, handler: handlePublicScreenGifts },
   { method: 'GET', path: '/api/screens/live-status', requireAuth: true, handler: handleScreensLiveStatus },
   { method: 'POST', path: '/api/screens/test-alert', requireAuth: true, handler: handleScreenTestAlert },
+  // أدوات الصوت (Veyro): القارئ الصوتي ومشغّل الأغاني — راجع stats/screen-audio-service.js.
+  { method: 'GET', path: '/api/public/screen/music/search', requireAuth: false, handler: handlePublicScreenMusicSearch },
+  { method: 'GET', path: '/api/public/screen/tts', requireAuth: false, handler: handlePublicScreenTts },
+  { method: 'GET', path: '/api/screens/audio-key', requireAuth: true, handler: handleGetScreenAudioKey },
+  { method: 'POST', path: '/api/screens/audio-key', requireAuth: true, handler: handleSetScreenAudioKey },
   { method: 'GET', path: '/api/public/screen/events', requireAuth: false, handler: handlePublicScreenEvents },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
@@ -1172,7 +1179,49 @@ function handlePublicScreenEvents(req, res) {
   var out = r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false };
   out.tseq = t.tseq;
   out.tests = t.tests;
+  // أدوات الصوت بالشاشة → نص الشات بعد c= (الشاشات العادية ما يوصلها الشات)
+  var audio = hasAudioTools(o.design);
+  if (audio.tts || audio.music) {
+    var c = username ? liveSessionStats.getRecentChat(username, getQueryParam(req, 'c')) : null;
+    out.cseq = c ? c.cseq : 0;
+    out.chat = c ? c.chat : [];
+  }
   sendJson(res, 200, out);
+}
+
+/** GET /api/public/screen/music/search?k=&q= → { success, results: [{id, title, channel, durationSec}] } — مشغّل الأغاني. */
+function handlePublicScreenMusicSearch(req, res) {
+  var o = screenFromKey(req, res);
+  if (!o) return;
+  if (!hasAudioTools(o.design).music) { sendJson(res, 400, { success: false, error: 'no_music_tool' }); return; }
+  screenAudio.get().searchMusic(getQueryParam(req, 'k'), o.userId, getQueryParam(req, 'q')).then(function (r) {
+    sendJson(res, r.success ? 200 : (r.error === 'rate_limited' ? 429 : r.error === 'empty_query' ? 400 : 503), r);
+  });
+}
+
+/** GET /api/public/screen/tts?k=&t=&v=f|m&r= → audio/mpeg — القارئ الصوتي. */
+function handlePublicScreenTts(req, res) {
+  var o = screenFromKey(req, res);
+  if (!o) return;
+  if (!hasAudioTools(o.design).tts) { sendJson(res, 400, { success: false, error: 'no_tts_tool' }); return; }
+  screenAudio.get().tts(getQueryParam(req, 'k'), getQueryParam(req, 't'), getQueryParam(req, 'v'), getQueryParam(req, 'r')).then(function (r) {
+    if (!r.success) { sendJson(res, r.error === 'empty_text' ? 400 : 503, r); return; }
+    res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
+    res.end(r.audio);
+  });
+}
+
+/** GET /api/screens/audio-key → { success, hasKey } — هل الستريمر حاط مفتاح يوتيوب خاص (المفتاح نفسه ما يرجع أبداً). */
+function handleGetScreenAudioKey(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  sendJson(res, 200, { success: true, hasKey: screenAudio.get().hasUserYoutubeKey(user.id) });
+}
+
+/** POST /api/screens/audio-key { youtubeKey|null } → { success, hasKey } */
+function handleSetScreenAudioKey(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var r = screenAudio.get().setUserYoutubeKey(user.id, body && body.youtubeKey ? String(body.youtubeKey) : null);
+  sendJson(res, r.success ? 200 : 400, r);
 }
 
 /** GET /api/screens/live-status → { success, screens: [{ id, agoMs|null, ver }] } — أي شاشة مفتوحة بتطبيق البث الحين. */
