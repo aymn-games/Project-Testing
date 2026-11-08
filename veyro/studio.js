@@ -83,6 +83,7 @@
         { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، اشتراك…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
+        { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): الربط، الهدف، آخر دعم، وتوب الداعمين.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
@@ -92,7 +93,7 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -113,12 +114,17 @@
             { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
+        donations: [
+            { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
+            { label: 'هدف الدونيشن — دائرة', sub: 'نسبة الهدف بدائرة', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'ring', color: '#ffd54a' } },
+            { label: 'آخر دعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
+            { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
+        ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
             { label: 'هدف الماس', sub: 'دائرة', type: 'goal', set: { metric: 'diamonds', title: 'هدف الماس', target: 1000, design: 'ring', color: '#4dd8ff' } },
             { label: 'هدف المتابعين', sub: 'شريط', type: 'goal', set: { metric: 'follows', title: 'هدف المتابعين', target: 100, color: '#7cff6b' } },
-            { label: 'هدف الدونيشن', sub: 'يتعبّى بالدولار من Streamlabs', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
-            { label: 'آخر دعم', sub: 'آخر داعم بالدونيشن ومبلغه', type: 'lastdonation' },
             { label: 'عدّادات كبسولات', sub: 'تكبيسات وماس ومتابعين', type: 'counter' },
             { label: 'أرقام كبيرة', sub: 'للزاوية', type: 'counter', set: { design: 'big', metrics: ['likes', 'diamonds'] } },
             { label: 'قائمة أرقام', sub: 'تحت بعض', type: 'counter', set: { design: 'stack', metrics: ['likes', 'diamonds', 'follows', 'shares'] } }
@@ -907,6 +913,11 @@
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
             if (sec.key === 'jar') pb.appendChild(el('div', 'ob-hint', 'يتعبّى بصور هدايا تيك توك نفسها (آخر 54 صورة)، والجديدة تطيح من فوق.'));
+            if (sec.key === 'donations') {
+                pb.insertBefore(streamlabsCard(), pb.firstChild);
+                pb.appendChild(el('div', 'ob-hint', 'أليرت لكل مبلغ: من «الأليرتات» افتح إعدادات أي أليرت، واختر «الدونيشن» من «يشتغل مع»، وحدد «من $ / إلى $».'));
+                pb.appendChild(button('روح للأليرتات', 'ob-btn ghost', function () { pickSection('alerts'); }));
+            }
             if (sec.key === 'audio') pb.appendChild(el('div', 'ob-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio، والمعاينة هنا صامتة. الأوامر تشتغل وأنت تبث.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
