@@ -1205,7 +1205,7 @@ function handlePublicScreenTts(req, res) {
   if (!o) return;
   if (!hasAudioTools(o.design).tts) { sendJson(res, 400, { success: false, error: 'no_tts_tool' }); return; }
   screenAudio.get().tts(getQueryParam(req, 'k'), getQueryParam(req, 't'), getQueryParam(req, 'v'), getQueryParam(req, 'r')).then(function (r) {
-    if (!r.success) { sendJson(res, r.error === 'empty_text' ? 400 : 503, r); return; }
+    if (!r.success) { sendJson(res, r.error === 'empty_text' ? 400 : r.error === 'rate_limited' ? 429 : 503, r); return; }
     res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
     res.end(r.audio);
   });

@@ -18,6 +18,7 @@ var SEARCH_CACHE_MAX = 500;
 var TTS_CACHE_TTL_MS = 3600 * 1000;
 var TTS_CACHE_MAX = 200;
 var TTS_TEXT_MAX = 200;
+var TTS_PER_MINUTE = 30;                  // طلبات صوت جديدة (مو من الكاش) لكل شاشة بالدقيقة — حماية تكلفة Google TTS
 var PLATFORM_DAILY_PER_USER = 25;
 var KEY_RE = /^[\w-]{20,60}$/;
 var YT = 'https://www.googleapis.com/youtube/v3';
@@ -70,6 +71,7 @@ function createService(db, opts) {
     var searchCache = lru(SEARCH_CACHE_MAX, SEARCH_CACHE_TTL_MS, now);
     var ttsCache = lru(TTS_CACHE_MAX, TTS_CACHE_TTL_MS, now);
     var lastSearch = new Map();   // screenKey -> وقت آخر طلب بحث
+    var ttsHits = new Map();      // screenKey -> [أوقات طلبات الصوت خلال آخر دقيقة]
     var daily = { day: '', counts: new Map() }; // userId -> عدد بحوث مفتاح المنصة اليوم
 
     function userKey(userId) {
@@ -175,6 +177,13 @@ function createService(db, opts) {
         var ck = name + '|' + r + '|' + t;
         var hit = ttsCache.get(ck);
         if (hit) return Promise.resolve({ success: true, audio: hit });
+        var t0 = now();
+        var hits = (ttsHits.get(screenKey) || []).filter(function (x) { return t0 - x < 60000; });
+        if (hits.length >= TTS_PER_MINUTE) { ttsHits.set(screenKey, hits); return Promise.resolve({ success: false, error: 'rate_limited' }); }
+        hits.push(t0);
+        ttsHits.delete(screenKey);
+        ttsHits.set(screenKey, hits);
+        if (ttsHits.size > 5000) ttsHits.delete(ttsHits.keys().next().value);
         return doFetch(TTS_URL + encodeURIComponent(opts.ttsKey), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -207,6 +216,7 @@ function get() {
 
 module.exports = {
     PLATFORM_DAILY_PER_USER: PLATFORM_DAILY_PER_USER,
+    TTS_PER_MINUTE: TTS_PER_MINUTE,
     createService: createService,
     get: get
 };

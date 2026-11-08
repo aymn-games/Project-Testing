@@ -162,3 +162,14 @@ test('music search: daily cap per streamer on the platform key only', async func
     s.clock.t += 24 * 3600 * 1000;
     assert.equal((await s.searchMusic('k1', 1, 'next day')).success, true);
 });
+
+test('tts: per-screen limit of requests per minute (cache hits are free)', async function () {
+    var f = fakeFetch(function () { return res(200, { audioContent: Buffer.from('x').toString('base64') }); });
+    var s = svc({ fetch: f });
+    for (var i = 0; i < audio.TTS_PER_MINUTE; i++) assert.equal((await s.tts('k1', 'رسالة ' + i, 'f', 1)).success, true);
+    assert.deepEqual(await s.tts('k1', 'رسالة زيادة', 'f', 1), { success: false, error: 'rate_limited' });
+    assert.equal((await s.tts('k1', 'رسالة 0', 'f', 1)).success, true);   // من الكاش
+    assert.equal((await s.tts('k2', 'شاشة ثانية', 'f', 1)).success, true);
+    s.clock.t += 61000;
+    assert.equal((await s.tts('k1', 'بعد دقيقة', 'f', 1)).success, true);
+});
