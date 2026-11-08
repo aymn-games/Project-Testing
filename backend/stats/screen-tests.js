@@ -13,7 +13,7 @@ var TTL_MS = 60 * 1000;
 var _byKey = new Map(); // key -> { seq, list: [{seq, itemId, type, at}] }
 
 // tts/music = «جرّب» لأدوات الصوت، music-skip/music-stop = أزرار المشغّل بالمحرر
-var TYPES = ['gift', 'follow', 'share', 'join', 'like', 'subscribe', 'tts', 'music', 'music-skip', 'music-stop'];
+var TYPES = ['gift', 'follow', 'share', 'join', 'like', 'subscribe', 'tts', 'music', 'music-skip', 'music-stop', 'donation'];
 
 function prune(q, now) {
     q.list = q.list.filter(function (t) { return now - t.at < TTL_MS; });
