@@ -29,7 +29,7 @@
         { key: 'sharers', title: 'المشيرين', icon: '🔁', unit: 'شير', field: 'count', def: true, n: 3 },
         { key: 'viewers', title: 'توب المشاهدات', icon: '👁️', unit: 'time', field: 'watchMs', def: false, n: 3 },
         { key: 'commenters', title: 'المتفاعلين', icon: '💬', unit: 'تعليق', field: 'count', def: false, n: 3 },
-        { key: 'donations', title: 'داعمين الدونيشن', icon: '💵', unit: 'money', field: 'amount', def: false, n: 3, soon: true }
+        { key: 'donations', title: 'داعمين الدونيشن', icon: '💵', unit: 'money', field: 'amount', def: false, n: 3 }
     ];
     var TEMPLATES = [
         { key: 'classic', label: 'الأصلي' },
@@ -1111,10 +1111,11 @@
         }
 
         function fetchData() {
-            var q = p.sections.filter(function (s) { return s.key !== 'donations'; }).map(function (s) { return s.key + ':10'; }).join(',');
+            // الدونيشن (Streamlabs): السيرفر يرجّعه بقسم donors → نعرضه بقسم donations
+            var q = p.sections.map(function (s) { return (s.key === 'donations' ? 'donors' : s.key) + ':10'; }).join(',');
             return deps.api('GET', '/api/stream/session-stats?sections=' + q).then(function (d) {
                 real = d && d.success && d.stats ? Object.assign({}, d.stats, { streamer: d.streamer }) : null;
-                if (real) real.sections.donations = [];
+                if (real) { real.sections = Object.assign({}, real.sections); real.sections.donations = real.sections.donors || []; }
                 if (d && d.error === 'tiktok_not_linked') real = null;
             }).catch(function () { real = null; });
         }

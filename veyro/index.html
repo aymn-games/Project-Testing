@@ -172,6 +172,23 @@
   .vy-connect .who { direction: ltr; font-weight: 700; color: var(--lav-l); }
   .vy-connect .ob-btn[disabled] { opacity: .6; cursor: progress; }
   @media (max-width: 600px) { .vy-connect .cc, .vy-connect .uin { width: 100%; } .vy-connect .uin .ob-input { flex: 1; width: auto; } }
+  /* Streamlabs (الدونيشن) */
+  .vy-sl-home { border-radius: var(--r); padding: 4px; }
+  .vy-sl-home .ob-card { border: 0; background: transparent; }
+  .vy-sl-head { display: flex; align-items: center; gap: 10px; }
+  .vy-sl-head h3 { flex: 1; margin: 0; }
+  .vy-sl-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted-2); flex: none; }
+  .vy-sl-head .dot.s-connected { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+  .vy-sl-head .dot.s-connecting { background: var(--warn); animation: vy-pulse 1.2s ease-in-out infinite; }
+  .vy-sl-head .dot.s-invalid_token, .vy-sl-head .dot.s-error { background: var(--bad); }
+  .vy-sl-st { font-size: 13px; color: var(--muted); }
+  .vy-sl-ok { color: var(--ok); }
+  .vy-sl-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+  .vy-sl-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 13.5px; }
+  .vy-sl-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vy-sl-row .amt { font-weight: 800; color: #ffd54a; direction: ltr; }
+  .vy-sl-row .tag { color: var(--warn); }
+  .vy-sl-row .when { color: var(--muted-2); direction: ltr; }
   .vy-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .vy-stat { border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
   .vy-stat .ic { width: 42px; height: 42px; border-radius: 13px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.1); border: 1px solid var(--line); color: var(--lav-l); }

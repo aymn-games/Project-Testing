@@ -48,6 +48,7 @@
 
     var UI = {
         text: '<path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/>',
+        dollar: '<path d="M12 2a10 10 0 110 20 10 10 0 010-20zm.9 4.2h-1.8v1.4c-1.7.3-2.9 1.4-2.9 3 0 1.9 1.5 2.6 3.4 3.1 1.4.4 1.9.7 1.9 1.3 0 .6-.6 1-1.6 1-1.1 0-2.1-.4-2.9-1l-.9 1.6c.8.6 1.9 1 3 1.1v1.4h1.8v-1.4c1.8-.3 3-1.4 3-3.1 0-1.9-1.4-2.6-3.5-3.2-1.3-.4-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.9 0 1.8.3 2.5.8l.9-1.6c-.7-.5-1.6-.8-2.5-.9z"/>',
         speaker: '<path d="M3 9h4l5-4v14l-5-4H3zM15.5 8.5a5 5 0 010 7l-1.4-1.4a3 3 0 000-4.2zM18.4 5.6a9 9 0 010 12.8L17 17a7 7 0 000-9.9z"/>',
         note: '<path d="M20 3v12.5a3.5 3.5 0 11-2-3.16V7.3l-9 2.25v8.95A3.5 3.5 0 117 15.34V5.78a1 1 0 01.76-.97l11-2.75A1 1 0 0120 3z"/>',
         bars: '<path d="M3 13h4v8H3zM10 8h4v13h-4zM17 3h4v18h-4z"/>',
@@ -82,6 +83,7 @@
         { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، اشتراك…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
+        { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
@@ -91,10 +93,10 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
-    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني' };
-    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note' };
+    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
+    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
     var PREVIEWS = [
         { key: 'checker', label: 'شفاف' },
         { key: 'dark', label: 'داكن' },
@@ -110,7 +112,13 @@
             { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
             { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
-            { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
+            { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
+            // الدونيشن (Streamlabs): التوب وآخر داعم والهدف — الأليرتات بقسم «الدونيشن»
+            { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
+            { label: 'هدف الدونيشن — دائرة', sub: 'نسبة الهدف بدائرة', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'ring', color: '#ffd54a' } },
+            { label: 'آخر داعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
+            { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
@@ -607,6 +615,7 @@
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
         if (it.type === 'jar') return it.title || 'وعاء الهدايا';
+        if (it.type === 'lastdonation') return it.title || 'آخر دعم';
         if (it.type === 'tts') return 'القارئ الصوتي' + (it.enabled === false ? ' (موقف)' : '');
         if (it.type === 'music') return 'مشغّل الأغاني' + (it.enabled === false ? ' (موقف)' : '');
         if (O.isVideoAlert(it)) return 'أليرت فيديو: ' + (it.video.name || '');
@@ -903,6 +912,11 @@
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
             if (sec.key === 'jar') pb.appendChild(el('div', 'ob-hint', 'يتعبّى بصور هدايا تيك توك نفسها (آخر 54 صورة)، والجديدة تطيح من فوق.'));
+            if (sec.key === 'donations') {
+                pb.appendChild(streamlabsCard());
+                videoAlertsPane(pb, 'donation');
+                pb.appendChild(el('div', 'ob-hint', 'التوب وآخر داعم وهدف الدونيشن تلقاها بقسم «التوب».'));
+            }
             if (sec.key === 'audio') pb.appendChild(el('div', 'ob-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio، والمعاينة هنا صامتة. الأوامر تشتغل وأنت تبث.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
@@ -1006,6 +1020,7 @@
 
     function screenPane(box) {
         var st = S();
+        box.appendChild(streamlabsCard());
         var link = el('div', 'ob-card link');
         link.appendChild(el('h3', null, 'رابط «' + cur.name + '»'));
         var url = el('input', 'ob-url');
@@ -1075,6 +1090,7 @@
         else if (it.type === 'alert') alertProps(it, box);
         else if (it.type === 'icon') iconProps(it, box);
         else if (it.type === 'shape') shapeProps(it, box);
+        else if (it.type === 'lastdonation') lastDonationProps(it, box);
         else if (it.type === 'tts') ttsProps(it, box);
         else if (it.type === 'music') musicProps(it, box);
         var a = el('div', 'ob-actions');
@@ -1146,6 +1162,7 @@
             { label: 'الداعمين', value: 'gifters', list: ['gifters'] },
             { label: 'المكبّسين', value: 'likers', list: ['likers'] },
             { label: 'الاثنين', value: 'both', list: ['gifters', 'likers'] },
+            { label: 'الدونيشن', value: 'donors', list: ['donors'] },
             { label: 'الكل', value: 'all', list: all.slice() }
         ];
         var same = function (a, b) { return a.length === b.length && a.every(function (x) { return b.indexOf(x) !== -1; }); };
@@ -1305,7 +1322,7 @@
     }
 
     function goalProps(it, box) {
-        box.appendChild(row('يحسب', pills(metricOpts(['likes', 'diamonds', 'follows', 'gifts', 'shares', 'comments']), it.metric, function (v) {
+        box.appendChild(row('يحسب', pills(metricOpts(['likes', 'diamonds', 'donations', 'follows', 'gifts', 'shares', 'comments']), it.metric, function (v) {
             if (!it.title || /^هدف /.test(it.title)) it.title = 'هدف ' + O.METRICS[v].name;
             update(it, 'metric', v, true);
         }), true));
@@ -1390,6 +1407,111 @@
         demo.appendChild(button('جرّب سقوط هدايا', 'ob-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'ob-btn ghost', function () { O.jarClearDemo(); }));
         box.appendChild(demo);
+    }
+
+    /* ---------------- Streamlabs (الدونيشن — كريترز/دكان تب وغيره) ----------------
+     * الستريمر يلصق «Socket API Token» من Streamlabs مرة وحدة، والسيرفر يتصل بحسابه طول الوقت.
+     * الرمز ما يرجع للواجهة أبداً — نعرض الحالة بس. */
+    var slState = { loaded: false, loading: false, data: null, list: [], busy: false, msg: '', ok: false };
+    var SL_ERR = {
+        invalid_token: 'الرمز غلط أو انلغى — انسخه من جديد من Streamlabs',
+        timeout: 'ما رد Streamlabs — تأكد من الرمز وجرّب مرة ثانية',
+        not_linked: 'حسابك مو مربوط بـStreamlabs',
+        not_streamer: 'الربط لحسابات الستريمر'
+    };
+    function slRepaint() {
+        var cards = document.querySelectorAll('.vy-sl');
+        for (var i = 0; i < cards.length; i++) fillStreamlabs(cards[i]);
+    }
+    function loadStreamlabs(force) {
+        if (slState.loading || (slState.loaded && !force)) return;
+        slState.loading = true;
+        Promise.all([api('GET', '/api/streamlabs'), api('GET', '/api/streamlabs/donations?limit=20')]).then(function (r) {
+            slState.loading = false;
+            slState.loaded = true;
+            if (r[0] && r[0].success) slState.data = r[0];
+            slState.list = (r[1] && r[1].donations) || [];
+            slRepaint();
+        }).catch(function () { slState.loading = false; });
+    }
+    function slCall(path, body, okMsg) {
+        slState.busy = true; slState.msg = ''; slRepaint();
+        return api('POST', path, body || {}).then(function (d) {
+            slState.busy = false;
+            if (!d || !d.success) { slState.ok = false; slState.msg = (d && SL_ERR[d.error]) || 'ما قدرنا نحفظ — جرّب بعد شوي'; slRepaint(); return; }
+            slState.data = d; slState.ok = true; slState.msg = okMsg || '';
+            loadStreamlabs(true);
+        }).catch(function () { slState.busy = false; slState.ok = false; slState.msg = 'تعذّر الوصول للسيرفر'; slRepaint(); });
+    }
+    function streamlabsCard() {
+        var c = el('div', 'ob-card vy-sl');
+        loadStreamlabs();
+        fillStreamlabs(c);
+        return c;
+    }
+    function fmtUsd(a, cur0) { return O.fmtMoney ? O.fmtMoney(a, cur0) : '$' + a; }
+    function fillStreamlabs(c) {
+        c.textContent = '';
+        var d = slState.data || {};
+        var st = !slState.loaded ? 'loading' : !d.linked ? 'none' : d.status || 'connecting';
+        var head = el('div', 'vy-sl-head');
+        var dot = el('span', 'dot s-' + st);
+        head.appendChild(dot);
+        head.appendChild(el('h3', null, 'Streamlabs — الدونيشن'));
+        head.appendChild(el('span', 'vy-sl-st', { loading: '…', none: 'مو مربوط', connecting: 'يتصل…', connected: 'متصل ✓', invalid_token: 'الرمز مرفوض', error: 'خطأ' }[st] || st));
+        c.appendChild(head);
+        c.appendChild(el('div', 'ob-hint', 'أي دعم يوصل لحسابك في Streamlabs (من كريترز/دكان تب، PayPal وغيرها) يطلع بأليرتاتك والتوب والهدف و«آخر دعم» — حتى لو كنت مو في بث.'));
+        if (st === 'none' || st === 'invalid_token') {
+            var steps = el('ol', 'ob-steps');
+            ['افتح streamlabs.com وسجّل دخول', 'Settings ← API Settings ← تبويب API Tokens', 'انسخ «Your Socket API Token»', 'الصقه هنا واضغط «ربط»'].forEach(function (t) { steps.appendChild(el('li', null, t)); });
+            c.appendChild(steps);
+            var inp = document.createElement('input');
+            inp.className = 'ob-input';
+            inp.dir = 'ltr';
+            inp.placeholder = 'Socket API Token';
+            inp.autocomplete = 'off';
+            inp.spellcheck = false;
+            c.appendChild(row('الرمز', inp, true));
+            var a = el('div', 'ob-actions');
+            var b = button(slState.busy ? 'يتأكد من الرمز…' : 'ربط', 'ob-btn primary', function () {
+                if (!inp.value.trim()) { slState.ok = false; slState.msg = 'الصق الرمز أول'; slRepaint(); return; }
+                slCall('/api/streamlabs/link', { token: inp.value.trim() }, 'انربط ✓ — الدونيشن بيوصل لشاشاتك');
+            });
+            b.disabled = slState.busy;
+            a.appendChild(b);
+            c.appendChild(a);
+        } else {
+            c.appendChild(row('تصفير تلقائي مع كل بث', toggle(d.autoReset, function (on) { slCall('/api/streamlabs/settings', { autoReset: on }); }), false, 'التوب والهدف يبدون من الصفر مع كل بث جديد'));
+            var since = d.counterFrom ? new Date(d.counterFrom).toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+            var a2 = el('div', 'ob-actions');
+            a2.appendChild(button('تصفير عدّاد الدونيشن', 'ob-btn ghost', function () { if (confirm('التوب والهدف والإحصائيات للدونيشن بيبدون من الصفر. السجل يبقى. تكمل؟')) slCall('/api/streamlabs/reset', {}, 'تصفّر العدّاد ✓'); }));
+            a2.appendChild(button('فصل Streamlabs', 'ob-btn danger', function () { if (confirm('يوقف وصول الدونيشن لـVeyro. تكمل؟')) slCall('/api/streamlabs/unlink', {}, 'انفصل'); }));
+            c.appendChild(a2);
+            if (since) c.appendChild(el('div', 'ob-hint', 'العدّاد يحسب من: ' + since));
+        }
+        if (slState.msg) c.appendChild(el('div', slState.ok ? 'ob-hint vy-sl-ok' : 'ob-warn', slState.msg));
+        if (d.linked) {
+            c.appendChild(el('div', 'ob-gtitle', 'آخر الدونيشن'));
+            if (!slState.list.length) c.appendChild(el('div', 'ob-hint', 'ما وصل شي للحين — جرّب «Test Donation» من Streamlabs.'));
+            var lst = el('div', 'vy-sl-list');
+            slState.list.forEach(function (x) {
+                var r0 = el('div', 'vy-sl-row');
+                r0.appendChild(el('b', null, x.name));
+                r0.appendChild(el('span', 'amt', fmtUsd(x.amount, x.currency)));
+                var tag = x.isTest ? 'تجربة' : String(x.currency).toUpperCase() !== 'USD' ? 'عملة مختلفة — ما تنحسب' : '';
+                if (tag) r0.appendChild(el('small', 'tag', tag));
+                r0.appendChild(el('small', 'when', new Date(x.at).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })));
+                lst.appendChild(r0);
+            });
+            c.appendChild(lst);
+        }
+    }
+
+    function lastDonationProps(it, box) {
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
+        box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
+        sizeColor(it, box, 1, 8);
+        box.appendChild(streamlabsCard());
     }
 
     /* ---------------- أدوات الصوت: القارئ الصوتي ومشغّل الأغاني ---------------- */
@@ -1516,7 +1638,7 @@
         }).catch(function () { media.failed = true; }).then(function () {
             media.loading = false;
             syncLibKeys();
-            if (view === 'editor' && (section === 'alerts' || section === 'library') && !selectedId) renderPanel();
+            if (view === 'editor' && (section === 'alerts' || section === 'library' || section === 'donations') && !selectedId) renderPanel();
         });
     }
 
@@ -1625,6 +1747,14 @@
                 return lab;
             }
             if (k === 'like') return 'كل ' + fmtNum(Number(it.likeEvery) || 100) + ' تكبيسة' + (it.likeScope === 'all' ? ' (البث)' : '');
+            if (k === 'donation') {
+                if (it.amountMode === 'exact') return lab + ' $' + fmtNum(Number(it.exactAmount) || 0) + ' بالضبط';
+                var a = Number(it.minAmount) || 0, b = Number(it.maxAmount) || 0;
+                if (a && b) return lab + ' $' + fmtNum(a) + '–$' + fmtNum(b);
+                if (a) return lab + ' $' + fmtNum(a) + '+';
+                if (b) return lab + ' لين $' + fmtNum(b);
+                return lab;
+            }
             if ((k === 'join' || k === 'subscribe') && it.joinUsers && it.joinUsers.length) return lab + ' @' + it.joinUsers.slice(0, 2).join(' @') + (it.joinUsers.length > 2 ? '…' : '');
             return lab;
         }).join('، ');
@@ -1646,6 +1776,26 @@
             g.appendChild(el('span', null, 'إلى'));
             g.appendChild(numInput(it.maxDiamonds, 0, 1000000, 'بدون حد', function (n) { it.maxDiamonds = n; commit(); }));
             box.appendChild(row('عدد العملات (الهدايا)', g, true, 'الأليرت يشتغل لو الهدية بين الحدين — «إلى» فاضي = بدون حد أعلى'));
+        }
+        if (evs.indexOf('donation') !== -1) {
+            // الدونيشن (Streamlabs — كريترز وغيره): مدى المبلغ بالدولار — أليرت مختلف لكل مبلغ
+            var exact = it.amountMode === 'exact';
+            box.appendChild(row('شرط المبلغ', pills([{ label: 'من وإلى', value: 'range' }, { label: 'مبلغ محدد', value: 'exact' }], exact ? 'exact' : 'range', function (v) { update(it, 'amountMode', v, true); })));
+            var dg = el('div', 'va-range');
+            if (exact) {
+                dg.appendChild(el('span', null, '$'));
+                dg.appendChild(numInput(it.exactAmount, 1, 1000000, '10', function (n) { it.exactAmount = n; commit(); }));
+                box.appendChild(row('المبلغ', dg, true, 'الأليرت يشتغل بس لو الدعم بهالمبلغ بالضبط (بالدولار)'));
+            } else {
+                dg.appendChild(el('span', null, 'من $'));
+                dg.appendChild(numInput(it.minAmount, 0, 1000000, '0', function (n) { it.minAmount = n; commit(); }));
+                dg.appendChild(el('span', null, 'إلى $'));
+                dg.appendChild(numInput(it.maxAmount, 0, 1000000, 'بدون حد', function (n) { it.maxAmount = n; commit(); }));
+                box.appendChild(row('مبلغ الدونيشن', dg, true, 'بالدولار — الأليرت يشتغل لو الدعم بين الحدين، و«إلى» فاضي = بدون حد. سوّ أليرت لكل مبلغ'));
+            }
+            box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
+            if (!slState.loaded) loadStreamlabs();
+            if (slState.loaded && !(slState.data && slState.data.linked)) box.appendChild(el('div', 'ob-warn', 'حسابك مو مربوط بـStreamlabs — اربطه من «الرابط والإعدادات» عشان يوصل الدونيشن.'));
         }
         if (evs.indexOf('like') !== -1) {
             var l = el('div', 'va-range');
@@ -1800,20 +1950,24 @@
     }
 
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
-    function newAlertFrom(m) {
-        var it = O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: ['gift'], key: m.key || null });
+    function newAlertFrom(m, kind) {
+        var don = kind === 'donation';
+        var it = O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: [don ? 'donation' : 'gift'], key: m.key || null });
         it.minDiamonds = 0;
         it.maxDiamonds = 0;
-        section = 'alerts';
+        if (don) { it.minAmount = 0; it.maxAmount = 0; it.amountMode = 'range'; }
+        section = don ? 'donations' : 'alerts';
         addItem(it, [0.5, 0.5]);
     }
 
     /** قسم «الأليرتات»: أليرتات الشاشة بشروطها + أليرت جديد من المكتبة. */
-    function videoAlertsPane(box) {
+    /** kind = 'donation': أليرتات الدونيشن بس (قسم «الدونيشن»)، والجديد يشتغل مع الدونيشن. */
+    function videoAlertsPane(box, kind) {
         loadMedia();
-        var mine = S().items.filter(function (it) { return it.type === 'alert'; });
-        box.appendChild(el('div', 'ob-gtitle', 'أليرتات هذي الشاشة'));
-        if (!mine.length) box.appendChild(el('div', 'ob-hint', 'ما فيه أليرتات للحين — اختر فيديو من مكتبتك تحت.'));
+        var don = kind === 'donation';
+        var mine = S().items.filter(function (it) { return it.type === 'alert' && (!don || (it.events || []).indexOf('donation') !== -1); });
+        box.appendChild(el('div', 'ob-gtitle', don ? 'أليرتات الدونيشن بهذي الشاشة' : 'أليرتات هذي الشاشة'));
+        if (!mine.length) box.appendChild(el('div', 'ob-hint', don ? 'ما فيه أليرت دونيشن للحين — اختر فيديو من مكتبتك تحت، وبعدها حدد مبلغه.' : 'ما فيه أليرتات للحين — اختر فيديو من مكتبتك تحت.'));
         var lw = el('div', 'va-rules');
         mine.forEach(function (it) {
             var r = el('div', 'va-rule' + (it.hidden ? ' off' : ''));
@@ -1828,14 +1982,14 @@
             tg.title = 'تشغيل / إيقاف';
             tg.addEventListener('click', function (e) { e.stopPropagation(); });
             r.appendChild(tg);
-            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); tryAlert(it, (it.events || ['gift'])[0]); }));
+            r.appendChild(button('جرّب', 'ob-pill', function (e) { e.stopPropagation(); tryAlert(it, don ? 'donation' : (it.events || ['gift'])[0]); }));
             r.appendChild(button('إعدادات', 'ob-pill', function (e) { e.stopPropagation(); select(it.id); }));
             r.addEventListener('click', function () { select(it.id); });
             lw.appendChild(r);
         });
         box.appendChild(lw);
 
-        box.appendChild(el('div', 'ob-gtitle', 'أليرت جديد من مكتبتي'));
+        box.appendChild(el('div', 'ob-gtitle', don ? 'أليرت دونيشن جديد من مكتبتي' : 'أليرت جديد من مكتبتي'));
         if (!media.loaded) { box.appendChild(el('div', 'ob-hint', media.failed ? 'ما قدرنا نجيب مكتبتك — حدّث الصفحة.' : 'يحمّل…')); return; }
         if (!media.list.length) {
             box.appendChild(el('div', 'ob-hint', 'مكتبتك فاضية — ارفع أليرتك وفرّغه أول.'));
@@ -1844,7 +1998,7 @@
         }
         var g = el('div', 'vy-libgrid sm');
         media.list.forEach(function (m) {
-            var c = button('', 'vy-lcard pick', function () { newAlertFrom(m); });
+            var c = button('', 'vy-lcard pick', function () { newAlertFrom(m, don ? 'donation' : null); });
             c.appendChild(libThumb(m));
             var info = el('div', 'mi');
             info.appendChild(el('b', null, m.name));
@@ -2775,6 +2929,9 @@
         hero.appendChild(live);
         w.appendChild(hero);
         w.appendChild(connectCard());
+        var slw = el('div', 'vy-sl-home glass');
+        slw.appendChild(streamlabsCard());
+        w.appendChild(slw);
 
         // أرقام سريعة
         var stats = el('div', 'vy-stats');

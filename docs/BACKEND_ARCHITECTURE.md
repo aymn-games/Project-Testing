@@ -413,6 +413,22 @@ tools: `tts` (reads chat aloud) and `music` (plays YouTube songs requested with
 Editor buttons («جرّب», skip, stop) reach the link through `screen-tests.js`
 types `tts`, `music`, `music-skip`, `music-stop`.
 
+## 12. Streamlabs Donations (Veyro)
+
+Streamers link Streamlabs by pasting their **Socket API Token** (Streamlabs →
+Settings → API Settings → API Tokens). Donations from any source connected to
+Streamlabs (Creators/Dukkan Tip, PayPal, …) reach Veyro screens.
+
+| Piece | File | Notes |
+|---|---|---|
+| Storage | `streamlabs/donations-store.js` | `streamlabs_links` (token, status, `counter_from`, `auto_reset`), `donations` (cents, `UNIQUE(user_id, sl_id)`) |
+| Connection | `streamlabs/streamlabs-manager.js` | one `socket.io-client@2.5.0` socket per linked user, always on; `link()` waits for accept/reject (10 s) before saving; rejected token → `invalid_token`, no retry loop; in-memory `recent()` feed (50/user) |
+| Merge into stats | `streamlabs/donations-stats.js` | `sections.donors`, `totals.donations`, `totals.lastDonation` — USD, non-test, from the counter start |
+| Routes | `http/auth-router.js` | `GET /api/streamlabs`, `POST /api/streamlabs/link|unlink|reset|settings`, `GET /api/streamlabs/donations`; `/api/public/screen/events` adds `dseq`/`donations` when the screen uses donation tools (`usesDonations`) |
+
+The token never leaves the server. Totals count USD only; other currencies and
+Streamlabs test donations still alert and appear in the log.
+
 ## Summary
 
 `backend/` is a standalone Node process; its only contract with AGP is

@@ -30,6 +30,8 @@ var streamScreens = require('../stats/stream-screens-service');
 var screenMedia = require('../stats/screen-media-service');
 var screenAudio = require('../stats/screen-audio-service');
 var hasAudioTools = require('../stats/screen-audio-design').hasAudioTools;
+var usesDonations = require('../stats/screen-audio-design').usesDonations;
+var mergeDonations = require('../streamlabs/donations-stats').mergeDonations;
 var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
@@ -202,6 +204,13 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen/tts', requireAuth: false, handler: handlePublicScreenTts },
   { method: 'GET', path: '/api/screens/audio-key', requireAuth: true, handler: handleGetScreenAudioKey },
   { method: 'POST', path: '/api/screens/audio-key', requireAuth: true, handler: handleSetScreenAudioKey },
+  // Streamlabs (الدونيشن — كريترز وغيره): ربط برمز Socket API — streamlabs/
+  { method: 'GET', path: '/api/streamlabs', requireAuth: true, handler: handleStreamlabsState },
+  { method: 'POST', path: '/api/streamlabs/link', requireAuth: true, handler: handleStreamlabsLink },
+  { method: 'POST', path: '/api/streamlabs/unlink', requireAuth: true, handler: handleStreamlabsUnlink },
+  { method: 'POST', path: '/api/streamlabs/reset', requireAuth: true, handler: handleStreamlabsReset },
+  { method: 'POST', path: '/api/streamlabs/settings', requireAuth: true, handler: handleStreamlabsSettings },
+  { method: 'GET', path: '/api/streamlabs/donations', requireAuth: true, handler: handleStreamlabsDonations },
   // «اتصل بالبث» برئيسية Veyro: اتصال من السيرفر بيوزر تيك توك الموثّق — stats/screen-audio-watcher.js
   { method: 'GET', path: '/api/screens/connection', requireAuth: true, handler: handleScreenConnectionStatus },
   { method: 'POST', path: '/api/screens/connect', requireAuth: true, handler: handleScreenConnect },
@@ -922,20 +931,35 @@ function handleStreamSessionStats(req, res, body, user) {
     sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
     return;
   }
-  return sendSessionStats(res, username, getQueryParam(req, 'sections'));
+  // الدونيشن (Streamlabs) لحساب الستريمر نفسه بس — مو لما الأدمن يطلب يوزر ثاني
+  return sendSessionStats(res, username, getQueryParam(req, 'sections'), requested ? null : user.id);
 }
 
-/** ملخص بث username بالأقسام المطلوبة — مشترك بين session-stats ورابط الأوفرلي. */
-function sendSessionStats(res, username, rawSections) {
+/** ملخص الدونيشن لصاحب الحساب لو مربوط بـStreamlabs (من بداية عدّاده) — أو null. */
+function donationSummary(userId, username, topN) {
+  if (!userId) return null;
+  var store = require('../streamlabs/donations-store').get();
+  var link = store.getLink(userId);
+  if (!link) return null;
+  var ev = username ? liveSessionStats.getRecentEvents(username, 0) : null;
+  return store.summary(userId, store.effectiveFrom(link, ev && ev.live ? ev.sid : null), topN || 0);
+}
+
+/** ملخص بث username بالأقسام المطلوبة — مشترك بين session-stats ورابط الأوفرلي. userId = صاحبه (للدونيشن). */
+function sendSessionStats(res, username, rawSections, userId) {
   var tops = null;
+  var donors = 0;
   if (rawSections) {
     tops = {};
     String(rawSections).split(',').forEach(function (part) {
       var kv = part.split(':');
-      if (liveSessionStats.SECTIONS.indexOf(kv[0]) !== -1) tops[kv[0]] = Number(kv[1]) || 0;
+      if (kv[0] === 'donors') donors = Math.min(20, Number(kv[1]) || 0);
+      else if (liveSessionStats.SECTIONS.indexOf(kv[0]) !== -1) tops[kv[0]] = Number(kv[1]) || 0;
     });
   }
+  var don = donationSummary(userId, username, donors);
   return liveSessionStats.getSummary(username, tops, Boolean(tops)).then(function (stats) {
+    if (don) stats = mergeDonations(stats, don, donors);
     if (!stats || !tops) return { stats: stats, streamer: null };
     return liveSessionStats.getStreamerProfile(username).then(function (streamer) {
       return { stats: stats, streamer: streamer };
@@ -1157,9 +1181,10 @@ function screenTikTok(req, res) {
 
 /** GET /api/public/screen/stats?k=&sections= — نفس /api/stream/session-stats لصاحب الشاشة. */
 function handlePublicScreenStats(req, res) {
+  var o = streamScreens.findByKey(getQueryParam(req, 'k'));
   var username = screenTikTok(req, res);
   if (!username) return;
-  return sendSessionStats(res, username, getQueryParam(req, 'sections'));
+  return sendSessionStats(res, username, getQueryParam(req, 'sections'), o && o.userId);
 }
 
 /** GET /api/public/screen/gifts?k=&since= — نفس /api/stream/recent-gifts لصاحب الشاشة. */
@@ -1184,6 +1209,12 @@ function handlePublicScreenEvents(req, res) {
   out.tseq = t.tseq;
   out.tests = t.tests;
   // أدوات الصوت بالشاشة → نص الشات بعد c= (الشاشات العادية ما يوصلها الشات)
+  // الدونيشن (Streamlabs) لو الشاشة فيها أداة تستخدمه — للأليرتات و«آخر دعم»
+  if (usesDonations(o.design)) {
+    var dn = require('../streamlabs/streamlabs-manager').get().recent(o.userId, getQueryParam(req, 'd'));
+    out.dseq = dn.dseq;
+    out.donations = dn.donations;
+  }
   var audio = hasAudioTools(o.design);
   if (audio.tts || audio.music) {
     var c = username ? liveSessionStats.getRecentChat(username, getQueryParam(req, 'c')) : null;
@@ -1213,6 +1244,67 @@ function handlePublicScreenTts(req, res) {
     res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
     res.end(r.audio);
   });
+}
+
+/* ---------------- Streamlabs (الدونيشن) — الرمز ما يرجع للواجهة أبداً ---------------- */
+
+function streamlabsState(userId) {
+  var store = require('../streamlabs/donations-store').get();
+  var l = store.getLink(userId);
+  if (!l) return { success: true, linked: false };
+  var mgr = require('../streamlabs/streamlabs-manager').get();
+  var st = mgr.status(userId);
+  return { success: true, linked: true, status: st === 'idle' ? l.status : st, lastError: l.lastError, linkedAt: l.linkedAt, lastEventAt: l.lastEventAt, counterFrom: l.counterFrom, autoReset: l.autoReset };
+}
+
+/** GET /api/streamlabs → { success, linked, status, lastError, lastEventAt, counterFrom, autoReset } */
+function handleStreamlabsState(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  sendJson(res, 200, streamlabsState(user.id));
+}
+
+/** POST /api/streamlabs/link { token } — يتصل بـStreamlabs ويستنى القبول قبل الحفظ. */
+function handleStreamlabsLink(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  require('../streamlabs/streamlabs-manager').get().link(user.id, body && body.token).then(function (r) {
+    if (!r.success) { sendJson(res, 400, r); return; }
+    sendJson(res, 200, streamlabsState(user.id));
+  });
+}
+
+/** POST /api/streamlabs/unlink — يقطع ويمسح الرمز (الدونيشن المحفوظ يبقى). */
+function handleStreamlabsUnlink(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  require('../streamlabs/streamlabs-manager').get().disconnect(user.id);
+  require('../streamlabs/donations-store').get().removeLink(user.id);
+  sendJson(res, 200, { success: true, linked: false });
+}
+
+/** POST /api/streamlabs/reset — عدّاد الدونيشن (التوب/الهدف/الإحصائيات) يبدأ من الحين. */
+function handleStreamlabsReset(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var store = require('../streamlabs/donations-store').get();
+  if (!store.getLink(user.id)) { sendJson(res, 400, { success: false, error: 'not_linked' }); return; }
+  store.reset(user.id);
+  sendJson(res, 200, streamlabsState(user.id));
+}
+
+/** POST /api/streamlabs/settings { autoReset } */
+function handleStreamlabsSettings(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var store = require('../streamlabs/donations-store').get();
+  if (!store.getLink(user.id)) { sendJson(res, 400, { success: false, error: 'not_linked' }); return; }
+  store.setAutoReset(user.id, Boolean(body && body.autoReset));
+  sendJson(res, 200, streamlabsState(user.id));
+}
+
+/** GET /api/streamlabs/donations?limit= → { success, donations } — السجل (الأحدث أول). */
+function handleStreamlabsDonations(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  var list = require('../streamlabs/donations-store').get().list(user.id, Number(getQueryParam(req, 'limit')) || 30);
+  sendJson(res, 200, { success: true, donations: list.map(function (d) {
+    return { name: d.name, amount: d.amountCents / 100, currency: d.currency, message: d.message, isTest: d.isTest, at: d.receivedAt };
+  }) });
 }
 
 /** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected } */
