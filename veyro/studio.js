@@ -105,17 +105,12 @@
 
     var TOOLS = {
         tops: [
-            // منصة التتويج = «العرش» بإطار «جناح الملاك» (الثلاثة الأوائل، بدون عنوان)
-            { label: 'العرش — المكبّسين', sub: 'توب 3 بالتكبيسات', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
-            { label: 'العرش — الداعمين', sub: 'توب 3 بالماس', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
-            { label: 'العرش — الاثنين', sub: 'يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'throne', sections: ['likers', 'gifters'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
-            // «العرش» بإطار «الأجنحة الكريستالية»
-            // أداة وحدة: يختار من داخلها الداعمين أو المكبّسين أو الاثنين أو الكل («التوب» بالخصائص)
+            // كل تصميم أداة وحدة: يختار من داخلها («التوب») الداعمين أو المكبّسين أو الاثنين أو الكل،
+            // وأكثر من واحد يتبدّلون («مدة التبديل» و«حركة التبديل»). الافتراضي: الاثنين.
+            { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
+            { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
             { label: 'العرش الكريستالي', sub: 'أجنحة ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
-            // «القائمة» (L1): بطاقات تحت بعض لين توب 10
-            { label: 'القائمة — المكبّسين', sub: 'توب 10 بطاقات تحت بعض', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
-            { label: 'القائمة — الداعمين', sub: 'توب 10 بالعملات', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
-            { label: 'القائمة — الاثنين', sub: 'توب 10 يتبدّل بين المكبّسين والداعمين', type: 'top', opts: { section: 'likers' }, set: { design: 'stack', sections: ['likers', 'gifters'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
+            { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
