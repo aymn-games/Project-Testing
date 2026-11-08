@@ -73,12 +73,12 @@ body.aj-on .ajk{display:flex;animation:pop .3s ease both}
 .pill b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
 
 /* ===== بطاقة الكلمة ===== */
-.word{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:16px;padding:22px 30px 22px;border-radius:30px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.word{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 30px 18px;border-radius:30px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.35)}
 .word::before{content:'';position:absolute;top:-130px;left:50%;width:700px;height:240px;margin-left:-350px;border-radius:50%;background:rgba(167,139,250,.22);filter:blur(40px);pointer-events:none}
 .word .lbl{position:relative;font:600 18px 'IBM Plex Sans Arabic';color:var(--muted);letter-spacing:.5px}
-.word .tiles{position:relative;display:flex;gap:16px;direction:rtl}
-.word .tile{width:118px;height:128px;border-radius:26px;display:grid;place-items:center;font:700 78px/1 'IBM Plex Sans Arabic';color:#fff;
-  background:linear-gradient(180deg,rgba(167,139,250,.22),rgba(124,58,237,.12));border:1.5px solid rgba(167,139,250,.45);box-shadow:0 14px 40px rgba(124,58,237,.25),inset 0 1px 0 rgba(255,255,255,.15)}
+.word .wtxt{position:relative;min-width:420px;padding:0 60px 12px;border-radius:28px;text-align:center;font:700 88px/1.25 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;
+  background:linear-gradient(180deg,rgba(167,139,250,.22),rgba(124,58,237,.10));border:1.5px solid rgba(167,139,250,.45);box-shadow:0 14px 40px rgba(124,58,237,.25),inset 0 1px 0 rgba(255,255,255,.15);text-shadow:0 0 30px rgba(167,139,250,.55)}
+.word .wtxt.new{animation:pop .45s ease both}
 .word .rules{position:relative;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .word .rules span{display:flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);font:600 15px 'IBM Plex Sans Arabic';color:var(--soft)}
 .word .rules span em{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(139,92,246,.18);color:#c4b5fd;font:700 12px 'IBM Plex Sans Arabic'}
@@ -128,14 +128,16 @@ body:not(.aj-on) .th .kw{display:none}
 .team.reset .reset-tag{display:inline-flex}
 
 /* تبويب صور اللاعبين (بدون أسماء) */
-.crew{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:24px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.05)}
+.crew{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:24px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.05)}
 .crew .ch{display:flex;justify-content:space-between;align-items:center}
 .crew .tab{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:rgba(var(--t-rgb),.12);border:1px solid rgba(var(--t-rgb),.35);font:600 15px 'IBM Plex Sans Arabic';color:var(--text)}
 .crew .tab svg{width:16px;height:16px;color:var(--t)}
 .crew .ch small{font:500 14px 'IBM Plex Sans Arabic';color:var(--muted)}
 .grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(10,1fr);grid-auto-rows:max-content;gap:12px;align-content:start;justify-items:center}
 .av{position:relative;width:62px;height:62px;border-radius:50%;overflow:hidden;flex-shrink:0;display:grid;place-items:center;background:linear-gradient(135deg,rgba(var(--t-rgb),.9),rgba(var(--t-rgb),.35));border:2.5px solid rgba(var(--t-rgb),.7);box-shadow:0 6px 18px rgba(0,0,0,.35);animation:pop .35s ease both}
+.av{font:700 24px 'IBM Plex Sans Arabic';color:#fff}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.prog .last .av{font-size:16px}
 .av.typing{border-color:#fff;box-shadow:0 0 0 3px rgba(var(--t-rgb),.6),0 0 20px rgba(var(--t-rgb),.6)}
 .av.more{background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.2);font:700 18px 'IBM Plex Sans Arabic';color:var(--soft)}
 </style>
@@ -171,7 +173,7 @@ body:not(.aj-on) .th .kw{display:none}
 
   <section class="word">
     <span class="lbl">الكلمة الحالية</span>
-    <div class="tiles" id="wordTiles"></div>
+    <div class="wtxt" id="wordTxt"></div>
     <div class="rules">
       <span><em>1</em>كل لاعب يكتب حرف واحد</span>
       <span><em>2</em>الحروف بالترتيب</span>
@@ -195,7 +197,8 @@ body:not(.aj-on) .th .kw{display:none}
   ];
   var SHOW = 29; // كم صورة تبين قبل خانة +العدد
 
-  // صور رمزية تجريبية (SVG) مكان صور حسابات تيك توك
+  // صور تجريبية (SVG) — باللعب الفعلي تكون avatarUrl صورة حساب اللاعب بتيك توك
+  // (نفس الحقل اللي يرسله adapters/agp-tiktok-adapter.js مع كل تعليق، مثل باقي الألعاب).
   var SKIN = ['#f1c27d','#e0ac69','#c68642','#8d5524','#ffdbac'];
   var HAIR = ['#1f1a17','#3b2a20','#6b4423','#111','#4a3728'];
   var BG = ['#7c3aed','#0ea5e9','#f43f5e','#10b981','#f59e0b','#6366f1','#ec4899','#14b8a6'];
@@ -208,8 +211,25 @@ body:not(.aj-on) .th .kw{display:none}
     return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
   }
 
+  var NAMES = ['سارة','فهد','نورة','خالد','ريم','عبدالله','لمى','سلطان','هيا','ماجد'];
+  TEAMS.forEach(function (t, ti) {
+    t.list = [];
+    for (var i = 0; i < t.players; i++) {
+      t.list.push({ id: 'tiktok:demo' + ti + '_' + i, name: NAMES[(i + ti * 3) % NAMES.length],
+        avatarUrl: (i % 11 === 6) ? null : face(i + ti * 50) }); // بعضهم بدون صورة ← يطلع أول حرف من اسمه
+    }
+  });
+
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+  // صورة اللاعب: أول حرف من اسمه تحت، وصورة حسابه بتيك توك فوقه (تختفي لو ما تحمّلت).
+  function avatar(p, cls, style) {
+    var initial = Array.from(String(p.name || '?').trim())[0] || '?';
+    return '<span class="av' + (cls ? ' ' + cls : '') + '"' + (style ? ' style="' + style + '"' : '') + '>' + esc(initial) +
+      (p.avatarUrl ? '<img src="' + esc(p.avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+  }
+
   var letters = Array.from(WORD);
-  document.getElementById('wordTiles').innerHTML = letters.map(function (c) { return '<span class="tile">' + c + '</span>'; }).join('');
+  document.getElementById('wordTxt').textContent = WORD; // الكلمة متصلة (بدون تفريق الحروف)
 
   var ICON_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 
@@ -223,7 +243,7 @@ body:not(.aj-on) .th .kw{display:none}
     var avs = '';
     var n = Math.min(t.players, SHOW);
     for (var i = 0; i < n; i++) {
-      avs += '<span class="av' + (i === t.typing ? ' typing' : '') + '" style="animation-delay:' + (i * 15) + 'ms"><img src="' + face(i + ti * 50) + '" alt=""></span>';
+      avs += avatar(t.list[i], i === t.typing ? 'typing' : '', 'animation-delay:' + (i * 15) + 'ms');
     }
     if (t.players > SHOW) avs += '<span class="av more"><bdi dir="ltr">+' + (t.players - SHOW) + '</bdi></span>';
     return '' +
@@ -238,7 +258,7 @@ body:not(.aj-on) .th .kw{display:none}
           '<div class="st">' +
             '<small>' + (t.reset ? '' : 'وصلوا ' + t.progress + ' من ' + letters.length) + '</small>' +
             (t.reset ? '<span class="reset-tag">↺ رجعوا من الصفر</span>' : '') +
-            '<div class="last"><span class="av"><img src="' + face((t.typing < 0 ? 7 : t.typing) + ti * 50) + '" alt=""></span><b>' + t.last.letter + '</b><span>' + t.last.note + '</span></div>' +
+            '<div class="last">' + avatar(t.list[t.typing < 0 ? 7 : t.typing]) + '<b>' + t.last.letter + '</b><span>' + t.last.note + '</span></div>' +
             '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
           '</div>' +
         '</div>' +
@@ -271,6 +291,52 @@ body:not(.aj-on) .th .kw{display:none}
     if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {});
   });
   document.addEventListener('fullscreenchange', function () { fsLbl.textContent = document.fullscreenElement ? 'خروج من ملء الشاشة' : 'ملء الشاشة'; });
+
+  // ===== الأصوات (Web Audio بدون ملفات — نفس أسلوب أسرع إجابة والطمع) =====
+  // تُستدعى من منطق اللعبة وقت ربطها بالبث:
+  //   SFX.play('join')            لاعب انضم لفريق
+  //   SFX.play('letter', i, n)    حرف صحيح بالترتيب (i = رقم الحرف من 0، n = طول الكلمة) — النغمة تطلع مع التقدّم
+  //   SFX.play('reset')           لاعب كرّر حرف انكتب ← الفريق رجع للصفر
+  //   SFX.play('word')            فريق كمّل الكلمة وأخذ النقطة
+  //   SFX.play('newWord')         طلعت كلمة جديدة
+  //   SFX.play('win')             فريق وصل لعدد كلمات الفوز
+  // المتصفح ما يسمح بالصوت إلا بعد أول ضغطة بالصفحة، فالصوت يتفعّل مع أول ضغطة.
+  var SFX = (function () {
+    var ctx = null, muted = false;
+    function ac() {
+      if (!ctx) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+    function tone(f, d, type, v, f2, delay) {
+      try {
+        var a = ac(); if (!a) return;
+        var t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+        o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+        if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v || .12, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+        o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + .02);
+      } catch (e) {}
+    }
+    var SCALE = [523, 587, 659, 784, 880, 988, 1047, 1175, 1319];
+    var SOUNDS = {
+      join: function () { tone(660, .09, 'sine', .1, 990); tone(990, .12, 'sine', .07, null, .07); },
+      letter: function (i, n) { var k = Math.min(SCALE.length - 1, Math.round((i || 0) * (SCALE.length - 1) / Math.max(1, (n || 1) - 1)));
+        tone(SCALE[k], .16, 'triangle', .16); tone(SCALE[k] * 2, .1, 'sine', .05, null, .03); },
+      reset: function () { tone(330, .18, 'sawtooth', .08, 220); tone(220, .32, 'sawtooth', .08, 110, .16); tone(90, .3, 'square', .04, null, .16); },
+      word: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .3, 'triangle', .15, null, i * .09); }); tone(1568, .5, 'sine', .06, null, .36); },
+      newWord: function () { tone(300, .4, 'sine', .1, 1200); tone(1200, .25, 'triangle', .06, null, .28); },
+      win: function () { [523, 659, 784, 1047, 784, 1047, 1319].forEach(function (f, i) { tone(f, .4, 'triangle', .16, null, i * .13); }); }
+    };
+    function unlock() { ac(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); }
+    window.addEventListener('pointerdown', unlock); window.addEventListener('keydown', unlock);
+    return {
+      play: function (k) { if (muted || !SOUNDS[k]) return; SOUNDS[k].apply(null, Array.prototype.slice.call(arguments, 1)); },
+      setMuted: function (m) { muted = !!m; },
+      isMuted: function () { return muted; }
+    };
+  })();
+  window.LetterRelaySfx = SFX;
 })();
 </script>
 </body>
