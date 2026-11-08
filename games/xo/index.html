@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -275,9 +276,12 @@ const SETTINGS = [
   ]}
 ];
 
+// كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({keyword:'keywordSolo',team1Name:'team1',team1Keyword:'keyword1',team2Name:'team2',team2Keyword:'keyword2'});
+
 class Component extends DCLogic {
-  state = { giftOpen:false, giftKey:null, liveOpen:false, plat:0, handle:'', values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!XO.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  state = { giftOpen:false, giftKey:null, liveOpen:false, plat:0, handle:'', values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!XO.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onLiveChange=()=>this.setState({live:!!XO.getSavedConnection()}); addEventListener('agp:stream-ended',this.onLiveChange); addEventListener('agp:stream-connected',this.onLiveChange); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); }
@@ -304,7 +308,7 @@ class Component extends DCLogic {
       bd:on?'rgba(167,139,250,.55)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.16)':'rgba(255,255,255,.02)',fg:on?'#ddd6fe':'#8a8596',dot:on?'#a78bfa':'rgba(255,255,255,.2)'}; });
     return row; }
 
-  goLobby(){ const values=this.readValues(); try{ localStorage.setItem(GAME.storageKey||'fa-setup',JSON.stringify(values)); }catch(e){} this.props.onStart?.(values); location.href=GAME.lobbyUrl; }
+  goLobby(){ const values=this.readValues(); try{ localStorage.setItem(GAME.storageKey||'fa-setup',JSON.stringify(values)); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values); location.href=GAME.lobbyUrl; }
   shown(x){ if(x.type==='hidden') return false; const c=x.showIf; if(!c) return true; return (Array.isArray(c)?c:[c]).every(k=>this.state.values[k.key]===k.eq); }
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
     out[r.key]=r.type==='gift'?(GIFTS.find(g=>g.id===v)||null):r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } return out; }

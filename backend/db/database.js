@@ -639,6 +639,9 @@ ensureColumn('users', 'password_reset_expires', 'INTEGER');
 // آخر مرة غيّر فيها المستخدم اسم المستخدم من البروفايل (ms) — مرة كل 7 أيام
 // (auth-service.updateUsername). NULL = ما غيّره أبداً.
 ensureColumn('users', 'username_changed_at', 'INTEGER');
+// إعدادات الألعاب المشتركة للستريمر (كلمة الدخول + أسماء/كلمات الفريقين) —
+// JSON، راجع game-prefs/game-prefs-service.js. NULL = ما كتب شي بعد.
+ensureColumn('users', 'game_prefs', 'TEXT');
 
 // تأكيد الإيميل (auth-service: sendSignupCode / sendEmailVerification /
 // verifyEmail). email_verified = 1 لما يأكّد صاحب الحساب الإيميل برمز.

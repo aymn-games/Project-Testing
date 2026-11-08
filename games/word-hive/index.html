@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -217,9 +218,12 @@ const GAME = {
 const BANK = WordHiveEngine.buildBank(WordHiveRounds);
 const ROUND_OPTS = BANK.approved.map((r,i)=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${r.count} كلمة` }));
 
+// كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({keyword:'keyword'});
+
 class Component extends DCLogic {
-  state = { values:WHSettings.sanitize(WH.readJSON(WH.keys.setup, null)), live:!!WH.getSavedConnection(), narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  state = { values:SHARED.fill(WHSettings.sanitize(WH.readJSON(WH.keys.setup, null))), live:!!WH.getSavedConnection(), narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // حالة الاتصال من مكتبة الألعاب — تتحدث فوراً لو اتصل/قطع من تبويب المكتبة
     this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.setState({live:!!WH.getSavedConnection()}); }; addEventListener('storage',this.onStore);
     this.onFocus=()=>this.setState({live:!!WH.getSavedConnection()}); addEventListener('focus',this.onFocus);
@@ -257,7 +261,7 @@ class Component extends DCLogic {
         if(S.values.maxPlayers===''||+S.values.maxPlayers<1) return this.toastMsg('الحد الأقصى للاعبين من 1 إلى 200');
         if(v.roundPick==='manual'&&!BANK.approved.some(r=>r.id===v.roundId)) return this.toastMsg('اختر الجولة المحددة أو غيّر الاختيار إلى عشوائية');
         if(!BANK.approved.length) return this.toastMsg('لا توجد جولات معتمدة في البنك');
-        WH.writeJSON(WH.keys.setup,v); try{ localStorage.removeItem(WH.keys.roster); localStorage.removeItem(WH.keys.players); }catch(e){} this.props.onStart?.(v);
+        WH.writeJSON(WH.keys.setup,v); try{ localStorage.removeItem(WH.keys.roster); localStorage.removeItem(WH.keys.players); }catch(e){} SHARED.save(v); this.props.onStart?.(v);
         this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),900); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },1500); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },

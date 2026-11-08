@@ -34,6 +34,7 @@ var usesDonations = require('../stats/screen-audio-design').usesDonations;
 var mergeDonations = require('../streamlabs/donations-stats').mergeDonations;
 var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
+var gamePrefsService = require('../game-prefs/game-prefs-service');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
 var config = require('../config');
@@ -93,6 +94,9 @@ var ROUTES = [
   { method: 'POST', path: '/api/auth/google', requireAuth: false, handler: handleGoogleLogin },
   { method: 'POST', path: '/api/auth/logout', requireAuth: true, handler: handleLogout },
   { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: handleMe },
+  // كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب — js/agp-shared-prefs.js
+  { method: 'GET', path: '/api/game-prefs', requireAuth: true, handler: handleGetGamePrefs },
+  { method: 'POST', path: '/api/game-prefs', requireAuth: true, handler: handleSaveGamePrefs },
   // كود نيمز: باركود خاص لكل سباي ماستر مرتبط بحسابه (codenames/spy-slots-service.js)
   { method: 'POST', path: '/api/codenames/spy-slots', requireAuth: true, handler: handleCodenamesSpySlots },
   { method: 'POST', path: '/api/codenames/spy-claim', requireAuth: true, handler: handleCodenamesSpyClaim },
@@ -967,6 +971,17 @@ function sendSessionStats(res, username, rawSections, userId) {
   }).then(function (r) {
     sendJson(res, 200, { success: true, stats: r.stats, streamer: r.streamer });
   });
+}
+
+/** GET /api/game-prefs → { success, prefs } */
+function handleGetGamePrefs(req, res, body, user) {
+  sendJson(res, 200, { success: true, prefs: gamePrefsService.get(user.id) });
+}
+
+/** POST /api/game-prefs { keyword?, team1Name?, team1Keyword?, team2Name?, team2Keyword? } → { success, prefs } */
+function handleSaveGamePrefs(req, res, body, user) {
+  var r = gamePrefsService.save(user.id, body);
+  sendJson(res, r.success ? 200 : (r.error === 'not_found' ? 404 : 400), r);
 }
 
 /**

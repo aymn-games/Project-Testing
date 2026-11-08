@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -231,9 +232,12 @@ const SETTINGS = [
 // الفئات لها شاشة خاصة بعد الإعدادات (قبل اللوبي) — الأسماء نفسها اللي يقرأها game.html.
 const CATS = ['مسألة رياضية','صورة واكتب الاسم','اعكس الكلمة','اكتب الرقم','عاصمة الدولة','أكمل المثل','ترتيب الحروف','علم الدولة','أكمل الكلمة','اكتشف المختلف'];
 
+// كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({keyword:'keywordS',team1Name:'team1',team1Keyword:'keyword1',team2Name:'team2',team2Keyword:'keyword2'});
+
 class Component extends DCLogic {
-  state = { liveOpen:false, plat:0, handle:'', values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!FA.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null, step:'settings', cats:CATS.map((_,k)=>k), fontTick:0 };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  state = { liveOpen:false, plat:0, handle:'', values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!FA.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null, step:'settings', cats:CATS.map((_,k)=>k), fontTick:0 };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     document.fonts?.ready?.then(()=>{ this._catW=null; this.setState(s=>({fontTick:s.fontTick+1})); });
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onLiveChange=()=>this.setState({live:!!FA.getSavedConnection()}); addEventListener('agp:stream-ended',this.onLiveChange); addEventListener('agp:stream-connected',this.onLiveChange); }
@@ -265,7 +269,7 @@ class Component extends DCLogic {
     return this._catW=Math.ceil(Math.max(w+32,120)); }
   toggleCat(k){ const v=this.state.cats; if(v.includes(k)){ if(v.length<=1) return this.toastMsg('اختر فئة وحدة على الأقل'); this.setState({cats:v.filter(x=>x!==k)}); } else this.setState({cats:[...v,k].sort((a,b)=>a-b)}); }
 
-  goLobby(){ const values=this.readValues(); try{ localStorage.setItem('fa-setup',JSON.stringify(values)); }catch(e){} this.props.onStart?.(values); location.href=GAME.lobbyUrl; }
+  goLobby(){ const values=this.readValues(); try{ localStorage.setItem('fa-setup',JSON.stringify(values)); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values); location.href=GAME.lobbyUrl; }
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
     out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.cats=this.state.cats.map(k=>CATS[k]); return out; }
 
