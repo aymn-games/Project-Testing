@@ -6,7 +6,7 @@
  *   → verdict (النتائج ومشهد الطرد) → night … حتى over.
  *
  * الأدوار: مواطن · مافيا · متخفي (من المافيا؛ أول فحص ناجح له يطلع «من المدينة») ·
- *   طبيب (ما يكرر نفس الشخص ليلتين ورا بعض، ويحمي نفسه مرة وحدة بالمباراة) ·
+ *   طبيب (يقدر يحمي نفس الشخص كل ليلة، ويحمي نفسه مرة وحدة بالمباراة) ·
  *   محقق (النتيجة: مافيا / من المدينة — كرت الحماية يطلّع المافيا «من المدينة»). الفريق: faction = 'mafia' | 'town'.
  *
  * كروت المافيا: 3 مختلفة عشوائياً من 5، مخزون مشترك وكل كرت مرة وحدة:
@@ -80,7 +80,7 @@ function createGame(roster, settings, hooks) {
                 district: Math.floor(districtOrder.indexOf(i) / DISTRICT_SIZE) + 1,
                 role: r, originalRole: r, faction: r === 'mafia' || r === 'disguised' ? 'mafia' : 'town',
                 alive: true, diedRound: 0, cause: null, recruitedRound: 0,
-                disguisedScanned: false, doctorPrev: null, doctorSelfUsed: false,
+                disguisedScanned: false, doctorSelfUsed: false,
                 mafiaSince: 0, notices: [], inspections: []
             };
         }),
@@ -253,9 +253,8 @@ function createGame(roster, settings, hooks) {
         var protectedIds = {};
         aliveRole('doctor').forEach(function (d) {
             var t = N.actions[d.id];
-            if (!t || t === 'skip') { d.doctorPrev = null; return; }
+            if (!t || t === 'skip') return;
             protectedIds[t] = (protectedIds[t] || []).concat(d);
-            d.doctorPrev = t;
             if (t === d.id) d.doctorSelfUsed = true;
         });
 
@@ -454,7 +453,7 @@ function createGame(roster, settings, hooks) {
                 N.actions[id] = 'skip';   // تخطي الليلة
             } else if (a === 'protect' && me.role === 'doctor' && turn === 'doctor') {
                 var dt = P(String(arg || ''));
-                if (!dt || !dt.alive || dt.id === me.doctorPrev || (dt.id === id && me.doctorSelfUsed)) return;
+                if (!dt || !dt.alive || (dt.id === id && me.doctorSelfUsed)) return;
                 if (!targetAllowed(rolePicks(N, 'doctor'), id, dt.id)) return;   // الأطباء: شخصين بالكثير
                 N.actions[id] = dt.id;
             } else if (a === 'inspect' && me.role === 'detective' && turn === 'detective') {
@@ -546,7 +545,7 @@ function createGame(roster, settings, hooks) {
                 silenced: G.phase === 'day' && G.silenced.indexOf(me.id) >= 0,
                 notices: me.notices.slice(-20), inspections: me.role === 'detective' || me.inspections.length ? me.inspections : undefined
             };
-            if (me.role === 'doctor') { v.me.doctorPrev = me.doctorPrev; v.me.doctorSelfUsed = me.doctorSelfUsed; }
+            if (me.role === 'doctor') v.me.doctorSelfUsed = me.doctorSelfUsed;
             if (G.phase === 'night' && G.night) {
                 v.me.confirmed = !!G.night.confirmed[me.id];
                 // مين من فريقي أكّد (المافيا يشوفون المافيا، والأطباء الأطباء، والمحققين المحققين)

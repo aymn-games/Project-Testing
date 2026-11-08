@@ -1180,9 +1180,9 @@ body.watching { overflow: hidden; }
                 else if (me.role === 'doctor') {
                     var dLock = lockOf(me.teamPicks, me.id);
                     html += hintHtml('doctor') + teamDoneNote(G, 'doctor') + lockNote(dLock, G) + '<div class="gwrap">' + playerRows(G, {
-                        action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed) && (!dLock || dLock.indexOf(p.id) >= 0); },
+                        action: 'protect', can: function (p) { return p.alive && !(p.id === me.id && me.doctorSelfUsed) && (!dLock || dLock.indexOf(p.id) >= 0); },
                         sel: function (p) { return me.protect === p.id; },
-                        tag: function (p) { var n = teamCount(me.teamPicks, p.id); return p.id === me.doctorPrev ? 'أمس' : n && me.protect !== p.id ? '🛡️ ' + n : dLock && p.alive ? '🔒' : ''; },
+                        tag: function (p) { var n = teamCount(me.teamPicks, p.id); return n && me.protect !== p.id ? '🛡️ ' + n : dLock && p.alive ? '🔒' : ''; },
                         skip: { sel: me.protect === 'skip' }
                     }) + '</div>' + confirmBar(G, 'doctor');
                 } else if (me.role === 'detective') {
