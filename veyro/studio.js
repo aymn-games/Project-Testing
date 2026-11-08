@@ -1461,6 +1461,20 @@
         head.appendChild(el('span', 'vy-sl-st', { loading: '…', none: 'مو مربوط', connecting: 'يتصل…', connected: 'متصل ✓', invalid_token: 'الرمز مرفوض', error: 'خطأ' }[st] || st));
         c.appendChild(head);
         c.appendChild(el('div', 'ob-hint', 'أي دعم يوصل لحسابك في Streamlabs (من كريترز/دكان تب، PayPal وغيرها) يطلع بأليرتاتك والتوب والهدف و«آخر دعم» — حتى لو كنت مو في بث.'));
+        if ((st === 'none' || st === 'invalid_token') && d.oauth) {
+            // زر «اربط Streamlabs» (OAuth) — يطلع بس لما المنصة سجّلت تطبيقها عند Streamlabs
+            var ob = button(slState.busy ? 'يفتح Streamlabs…' : 'اربط Streamlabs', 'ob-btn primary lg', function () {
+                slState.busy = true; slRepaint();
+                api('GET', '/api/streamlabs/oauth/start').then(function (r) {
+                    if (r && r.success && r.url) { location.href = r.url; return; }
+                    slState.busy = false; slState.ok = false; slState.msg = 'الربط بزر Streamlabs مو متاح الحين — استخدم لصق الرمز تحت'; slRepaint();
+                }).catch(function () { slState.busy = false; slState.ok = false; slState.msg = 'تعذّر الوصول للسيرفر'; slRepaint(); });
+            });
+            ob.disabled = slState.busy;
+            ob.style.width = '100%';
+            c.appendChild(ob);
+            c.appendChild(el('div', 'ob-hint', 'تسجّل دخول بـStreamlabs وتوافق، وترجع هنا متصل. أو الصق الرمز يدوياً:'));
+        }
         if (st === 'none' || st === 'invalid_token') {
             var steps = el('ol', 'ob-steps');
             ['افتح streamlabs.com وسجّل دخول', 'Settings ← API Settings ← تبويب API Tokens', 'انسخ «Your Socket API Token»', 'الصقه هنا واضغط «ربط»'].forEach(function (t) { steps.appendChild(el('li', null, t)); });
@@ -1506,6 +1520,19 @@
             c.appendChild(lst);
         }
     }
+
+    // رجوع من صفحة موافقة Streamlabs (OAuth): veyro/index.html?sl=<نتيجة>#tools/donations
+    (function slOAuthReturn() {
+        var q = new URLSearchParams(location.search);
+        var r = q.get('sl');
+        if (!r) return;
+        q.delete('sl');
+        try { history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q.toString() : '') + location.hash); } catch (e) { /* ignore */ }
+        var M = { ok: 'انربط Streamlabs ✓ — الدونيشن بيوصل لشاشاتك', cancelled: 'ألغيت الربط من Streamlabs', expired: 'انتهت مهلة الربط — جرّب مرة ثانية', invalid_token: 'Streamlabs رفض الرمز — جرّب مرة ثانية', timeout: 'ما رد Streamlabs — جرّب بعد شوي', failed: 'ما قدرنا نكمل الربط — جرّب مرة ثانية أو الصق الرمز يدوياً' };
+        slState.ok = r === 'ok';
+        slState.msg = M[r] || M.failed;
+        setTimeout(function () { toast(slState.msg); }, 800);
+    }());
 
     function lastDonationProps(it, box) {
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));

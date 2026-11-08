@@ -34,6 +34,11 @@ module.exports = {
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     // مفتاح Google Cloud Text-to-Speech (القارئ الصوتي). فارغ = القارئ معطّل بأمان.
     googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
+    // زر «اربط Streamlabs» (OAuth) — من تطبيق مسجّل عند Streamlabs. فارغ = الزر مخفي، والربط بلصق
+    // الرمز يكمل عادي. الـSecret سري تماماً (Render بس). راجع streamlabs/streamlabs-oauth.js.
+    streamlabsClientId: process.env.STREAMLABS_CLIENT_ID || '',
+    streamlabsClientSecret: process.env.STREAMLABS_CLIENT_SECRET || '',
+    streamlabsRedirectUri: process.env.STREAMLABS_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/streamlabs/oauth/callback',
 
     // «حفلة عيد الميلاد» (/ws/party) — مطفأة افتراضياً. تشتغل فقط بـ PARTY_ENABLED=1
     // (مفتاح إيقاف: أي مشكلة بالحفلة ← تشيل المتغير والموقع يكمل عادي).
