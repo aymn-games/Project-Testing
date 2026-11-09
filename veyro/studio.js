@@ -121,6 +121,7 @@
             { label: 'آخر داعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
             { label: 'آخر داعم — خط متوهّج', sub: 'الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه — بدون نصوص', type: 'lastdonation', set: { design: 'line', title: '' } },
             { label: 'آخر داعم — شريط الموج', sub: 'شريط غامق بتوهّج وموج حرير يتحرك داخله، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'wave', motion: 'static', title: '' } },
+            { label: 'آخر داعم — شريط الفراشات', sub: 'نفس شريط الموج بس داخله فراشات تطير، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'flutter', motion: 'static', title: '' } },
             { label: 'آخر داعم — كبسولة مقسومة', sub: 'نصها للمبلغ بلون ونصها للاسم، ونقطة تومض — بدون نصوص', type: 'lastdonation', set: { design: 'split', title: '' } },
             { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
@@ -1553,19 +1554,20 @@
     }());
 
     function lastDonationProps(it, box) {
-        var des = it.design === 'line' || it.design === 'split' || it.design === 'wave' ? it.design : 'card';
-        box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }, { label: 'شريط الموج', value: 'wave' }], des, function (v) {
+        var des = ['line', 'split', 'wave', 'flutter'].indexOf(it.design) !== -1 ? it.design : 'card';
+        box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }, { label: 'شريط الموج', value: 'wave' }, { label: 'شريط الفراشات', value: 'flutter' }], des, function (v) {
             update(it, 'design', v, true);
         }), true));
-        if (des === 'wave') box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'تبديل', value: 'swap' }, { label: 'كتابة', value: 'type' }], it.motion || 'static', function (v) {
+        if (des === 'wave' || des === 'flutter') box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'تبديل', value: 'swap' }, { label: 'كتابة', value: 'type' }], it.motion || 'static', function (v) {
             update(it, 'motion', v, true);
         }), true, 'شريط = يمشي، تبديل = الاسم ثم المبلغ، كتابة = ينكتب وينمسح'));
         if (des !== 'card') {
             // التصاميم البسيطة: الاسم والمبلغ بس، وكل ألوانها تتغيّر
             optColor(it, box, 'nameColor', 'لون الاسم');
             optColor(it, box, 'amtColor', 'لون المبلغ');
-            if (des === 'wave') {
-                optColor(it, box, 'accent1', 'لون الموج', 'الافتراضي بنفسجي');
+            if (des === 'wave' || des === 'flutter') {
+                if (des === 'flutter') optColor(it, box, 'accent1', 'لون الفراشات', 'الافتراضي بنفسجي فاتح');
+                else optColor(it, box, 'accent1', 'لون الموج', 'الافتراضي بنفسجي');
                 optColor(it, box, 'accent2', 'لون التوهّج', 'الضوء فوق وتحت الشريط');
                 optColor(it, box, 'boxColor', 'خلفية الشريط', 'الافتراضي أسود');
             } else if (des === 'line') {

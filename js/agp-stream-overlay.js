@@ -2592,6 +2592,31 @@
         });
         return wrap;
     }
+    /**
+     * «شريط الفراشات»: نفس «شريط الموج» بس داخله فراشات واقعية (bfSvg) تطير عرض الشريط
+     * يمين ويسار بأحجام وسرعات وارتفاعات مختلفة، ترفرف وتطلع وتنزل.
+     */
+    function ldButterflies() {
+        var wrap = el('span', 'ldf');
+        // [الارتفاع %, الحجم em, مدة العبور s, تأخير s, اتجاه, مدة الطلوع والنزول s, شفافية]
+        [[44, 1.6, 9, 0, 'r', 1.4, .95], [66, 1.2, 11, -6, 'l', 1.1, .8], [36, 1, 13, -3.5, 'r', .95, .65],
+         [62, 1.45, 10, -7.5, 'r', 1.6, .9], [40, 1.1, 12, -2, 'l', 1.2, .75], [56, .9, 15, -11, 'l', .9, .6]].forEach(function (b) {
+            var o = el('span', 'ldf-b ' + b[4]);
+            o.style.top = b[0] + '%';
+            o.style.setProperty('--z', b[1] + 'em');
+            o.style.animationDuration = b[2] + 's';
+            o.style.animationDelay = b[3] + 's';
+            o.style.opacity = b[6];
+            var bob = el('span', 'ldf-bob');
+            bob.style.animationDuration = b[5] + 's';
+            var w = el('span', 'agp-so-bfw');
+            w.innerHTML = bfSvg();
+            bob.appendChild(w);
+            o.appendChild(bob);
+            wrap.appendChild(o);
+        });
+        return wrap;
+    }
     /** صف الاسم والمبلغ (يرجع عناصر المبلغ عشان العدّ). */
     function ldRow(d, amts) {
         var r = el('span', 'ldw-row');
@@ -2609,7 +2634,10 @@
         box.classList.add('m-' + mo);
         box.appendChild(el('span', 'ldw-halo'));
         var bar = el('span', 'ldw-bar');
-        bar.appendChild(ldWaves());
+        if (it.design === 'flutter') {
+            box.classList.add('ld-wave');
+            bar.appendChild(ldButterflies());
+        } else bar.appendChild(ldWaves());
         var tx = el('span', 'ldw-tx');
         if (mo === 'marquee') {
             // نسختين ورا بعض: تتحرك من اليسار لليمين وترجع لنفس المكان (بدون قفزة)
@@ -2658,7 +2686,7 @@
         var nm = el('span', 'agp-so-ld2n', d.name || '');
         var amt = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
         var amts = [amt];
-        if (it.design === 'wave') amts = buildLdWave(box, it, d);
+        if (it.design === 'wave' || it.design === 'flutter') amts = buildLdWave(box, it, d);
         else if (it.design === 'line') {
             var top = el('div', 'agp-so-ld2t');
             top.appendChild(nm);
@@ -2695,7 +2723,7 @@
         var ghost = !d && preview;
         if (ghost) d = SAMPLE_TOTALS.lastDonation;
         n.classList.toggle('agp-so-ghost', Boolean(ghost));
-        if (it.design === 'line' || it.design === 'split' || it.design === 'wave') { buildLdSlim(n, it, d, real, preview); return; }
+        if (it.design === 'line' || it.design === 'split' || it.design === 'wave' || it.design === 'flutter') { buildLdSlim(n, it, d, real, preview); return; }
         title(n, it.title);
         var card = el('div', 'agp-so-ldbox');
         var ic = el('span', 'agp-so-ldic');
@@ -3627,6 +3655,23 @@
         '.ld-wave .agp-so-ld2n{font-size:.95em;text-shadow:0 0 .4em rgba(0,0,0,.9),0 .05em .15em rgba(0,0,0,.9)}',
         '.ld-wave .agp-so-ld2a{font-size:1em;color:var(--lda,color-mix(in srgb,var(--ld1) 35%,#fff));text-shadow:0 0 .5em color-mix(in srgb,var(--ld1) 70%,transparent),0 .05em .15em rgba(0,0,0,.9)}',
         '.ldw-sep{width:.25em;height:.25em;border-radius:50%;background:color-mix(in srgb,var(--ld1) 50%,#fff);box-shadow:0 0 .3em var(--ld1)}',
+        /* «شريط الفراشات» (ld-flutter): --ld1 لون الفراشات */
+        '.ld-flutter{--ld1:#b98cff}',
+        '.ldf{position:absolute;inset:0;pointer-events:none;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
+        '.ldf-b{position:absolute;left:-12%;width:var(--z);height:calc(var(--z) * .83);margin-top:calc(var(--z) * -.41);animation:agp-so-ldfr 10s linear infinite}',
+        '.ldf-b.l{animation-name:agp-so-ldfl}',
+        '.ldf-bob{display:block;width:100%;height:100%;--r:18deg;animation:agp-so-ldfbob 1.2s ease-in-out infinite alternate}',
+        '.ldf-b.l .ldf-bob{--r:-18deg}',
+        '.ld-flutter .agp-so-bfw{--bff:var(--ld1)}',
+        '.ldf .agp-so-bfw .wl{animation:agp-so-ldfflap 1.1s ease-in-out infinite}',
+        '.ldf .agp-so-bfw .wr{animation:agp-so-ldfflapr 1.1s ease-in-out infinite}',
+        '.ldf-b:nth-child(2n) .agp-so-bfw .wl,.ldf-b:nth-child(2n) .agp-so-bfw .wr{animation-duration:.9s;animation-delay:-.3s}',
+        /* رفرفة بطيئة: الجناح يسكّر بسرعة ويفتح على راحته (تبان الأجنحة أغلب الوقت) */
+        '@keyframes agp-so-ldfflap{0%,55%,100%{transform:scaleX(1) skewY(0)}25%{transform:scaleX(.18) skewY(6deg)}}',
+        '@keyframes agp-so-ldfflapr{0%,55%,100%{transform:scaleX(1) skewY(0)}25%{transform:scaleX(.18) skewY(-6deg)}}',
+        '@keyframes agp-so-ldfr{from{left:-12%}to{left:104%}}',
+        '@keyframes agp-so-ldfl{from{left:104%}to{left:-12%}}',
+        '@keyframes agp-so-ldfbob{0%{transform:translateY(-22%) rotate(calc(var(--r) - 8deg))}100%{transform:translateY(22%) rotate(calc(var(--r) + 8deg))}}',
         /* شريط: النص يمشي من اليسار لليمين */
         '.ld-wave.m-marquee .ldw-bar{width:15em;padding:0}',
         '.ld-wave.m-marquee .ldw-tx{overflow:hidden;justify-content:flex-start;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
