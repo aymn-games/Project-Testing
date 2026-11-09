@@ -886,6 +886,8 @@
             box.style.setProperty('--agp-so-bfc', bfAccent(it));
             box.style.setProperty('--agp-so-bff', hex(it.flyColor) || bfAccent(it));
             if (hex(it.ringColor)) box.style.setProperty('--agp-so-bfr', it.ringColor);
+            if (hex(it.coinColor)) box.style.setProperty('--agp-so-coinc', it.coinColor);
+            if (hex(it.rankText)) box.style.setProperty('--agp-so-rkt', it.rankText);
         }
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
@@ -1096,8 +1098,8 @@
     var bfSeq = 0;
     // عملة تيك توك مسطّحة (بدون تدرّج ولا انحناء) لإطار «الفراشات»
     var BF_NOTE = 'M13 5h2.6c.2 1.7 1.4 3 3.2 3.2v2.6c-1.2 0-2.3-.4-3.2-1v5.2a4 4 0 1 1-4-4c.2 0 .5 0 .7.1v2.7a1.4 1.4 0 1 0 .7 1.2z';
-    var BF_COIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="#f2b705"/><circle cx="12" cy="12" r="9.6" fill="#ffd23f"/>' +
-        '<circle cx="12" cy="12" r="9.6" fill="none" stroke="#ffe680" stroke-width=".6"/>' +
+    var BF_COIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" style="fill:color-mix(in srgb,var(--agp-so-coinc,#ffd23f) 80%,#a86f00)"/><circle cx="12" cy="12" r="9.6" style="fill:var(--agp-so-coinc,#ffd23f)"/>' +
+        '<circle cx="12" cy="12" r="9.6" fill="none" stroke-width=".6" style="stroke:color-mix(in srgb,var(--agp-so-coinc,#ffd23f) 55%,#fff)"/>' +
         '<g transform="translate(-1.2 -.1) scale(.92) translate(1 1)"><path d="' + BF_NOTE + '" fill="#25f4ee" transform="translate(-.7 -.5)"/>' +
         '<path d="' + BF_NOTE + '" fill="#fe2c55" transform="translate(.7 .5)"/><path d="' + BF_NOTE + '" fill="#1a1206"/></g></svg>';
     function bfSvg() {
@@ -3195,7 +3197,7 @@
         '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
         '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
         /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
-        '.agp-so-bfrk{--sf:color-mix(in srgb,color-mix(in srgb,var(--rk) 72%,var(--bfc)) 62%,#fff);position:absolute;z-index:7;left:73.2%;top:99.8%;width:27%;height:27%;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s) * .15);line-height:1;color:color-mix(in srgb,var(--bfc) 45%,#1c1030);background:radial-gradient(circle at 35% 28%,#fff,var(--sf) 55%,color-mix(in srgb,var(--sf) 80%,var(--bfc)));border:calc(var(--s) * .014) solid color-mix(in srgb,var(--bfr) 85%,transparent);box-shadow:0 0 .1em color-mix(in srgb,var(--bfc) 70%,transparent),0 0 .3em color-mix(in srgb,var(--rk) 35%,transparent);animation:agp-so-bfrkp 3.4s ease-in-out infinite}',
+        '.agp-so-bfrk{--sf:color-mix(in srgb,color-mix(in srgb,var(--rk) 72%,var(--bfc)) 62%,#fff);position:absolute;z-index:7;left:73.2%;top:99.8%;width:27%;height:27%;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s) * .15);line-height:1;color:var(--agp-so-rkt,color-mix(in srgb,var(--bfc) 45%,#1c1030));background:radial-gradient(circle at 35% 28%,#fff,var(--sf) 55%,color-mix(in srgb,var(--sf) 80%,var(--bfc)));border:calc(var(--s) * .014) solid color-mix(in srgb,var(--bfr) 85%,transparent);box-shadow:0 0 .1em color-mix(in srgb,var(--bfc) 70%,transparent),0 0 .3em color-mix(in srgb,var(--rk) 35%,transparent);animation:agp-so-bfrkp 3.4s ease-in-out infinite}',
         '@keyframes agp-so-bfrkp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.06)}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',

@@ -1263,6 +1263,8 @@
             box.appendChild(row('لون قوس الضوء', fw, true, 'القوس والغبار اللي حول الحلقة — أو اختر أي لون'));
             optColor(it, box, 'flyColor', 'لون الفراشات', 'فاضي = نفس لون القوس');
             optColor(it, box, 'ringColor', 'لون الحلقة', 'الافتراضي أبيض');
+            optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الحلقة');
+            optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
         } else if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }, { label: 'مخصص', value: 'custom' }], it.palette || 'medal', function (v) {
             if (v === 'custom' && !Array.isArray(it.rankColors)) it.rankColors = ['#ffd54a', '#eef2f7', '#ffb27a'];
@@ -1275,7 +1277,7 @@
                     var a = (Array.isArray(it.rankColors) ? it.rankColors : ['#ffd54a', '#eef2f7', '#ffb27a']).slice();
                     a[k] = c;
                     update(it, 'rankColors', a, true);
-                }), true, fk === 'butterfly' ? 'حدود الكبسولة' : 'ماسة الرقم وحدود الكبسولة'));
+                }), true, fk === 'butterfly' ? 'دائرة الترتيب وحدود المربع' : 'ماسة الرقم وحدود الكبسولة'));
             });
         }
         optColor(it, box, 'nameColor', 'لون الاسم');
