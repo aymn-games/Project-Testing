@@ -984,7 +984,10 @@
         }
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
-        if (sec === 'gifters') {
+        // «الفراشات»: الرقم مختصر (1.4K) والعملة مسطّحة (BF_COIN)
+        var bfly = !stack && frameOf(hit) === 'butterfly';
+        if (sec === 'gifters' && bfly) ic.innerHTML = BF_COIN;
+        else if (sec === 'gifters') {
             // الدعم: عملة تيك توك الذهبية (assets/overlay-frames/tiktok-coin.webp، من صاحب المنصة)
             var coin = document.createElement('img');
             coin.src = FRAMES_BASE + 'tiktok-coin.webp';
@@ -994,8 +997,6 @@
         } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
-        // «الفراشات»: الرقم مختصر (1.4K)
-        var bfly = !stack && frameOf(hit) === 'butterfly';
         var short = bfly && sec !== 'donors';
         var num = el('span', 'agp-so-tnum', short ? fmtShort(rowNum(sec, r)) : fmtKind(sec, rowNum(sec, r)));
         num._kind = sec;
@@ -1093,6 +1094,12 @@
      * كل نسخة لها id تدرّج خاص (ألوان الفراشات تختلف من أداة لأداة بنفس الصفحة).
      */
     var bfSeq = 0;
+    // عملة تيك توك مسطّحة (بدون تدرّج ولا انحناء) لإطار «الفراشات»
+    var BF_NOTE = 'M13 5h2.6c.2 1.7 1.4 3 3.2 3.2v2.6c-1.2 0-2.3-.4-3.2-1v5.2a4 4 0 1 1-4-4c.2 0 .5 0 .7.1v2.7a1.4 1.4 0 1 0 .7 1.2z';
+    var BF_COIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" fill="#f2b705"/><circle cx="12" cy="12" r="9.6" fill="#ffd23f"/>' +
+        '<circle cx="12" cy="12" r="9.6" fill="none" stroke="#ffe680" stroke-width=".6"/>' +
+        '<g transform="translate(-1.2 -.1) scale(.92) translate(1 1)"><path d="' + BF_NOTE + '" fill="#25f4ee" transform="translate(-.7 -.5)"/>' +
+        '<path d="' + BF_NOTE + '" fill="#fe2c55" transform="translate(.7 .5)"/><path d="' + BF_NOTE + '" fill="#1a1206"/></g></svg>';
     function bfSvg() {
         var id = 'agp-so-bfg' + (++bfSeq);
         var mir = function (d) { return d.replace(/(-?[\d.]+),(-?[\d.]+)/g, function (m, x, y) { return +(60 - x).toFixed(2) + ',' + y; }); };
@@ -3180,9 +3187,11 @@
         '@keyframes agp-so-bfstar{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.55) rotate(0)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(45deg)}}',
         '@keyframes agp-so-bfbreath{0%,100%{opacity:.55}50%{opacity:1}}',
         /* كبسولة العدد بإطار «الفراشات»: زجاجية بلون المركز، العملة تلف حول نفسها بنعومة (بدون ثري دي)، ورقم المركز بدائرة على اليمين */
-        '.agp-so-throne.fk-butterfly .agp-so-tcount{gap:.32em;margin-top:.3em;padding:.14em .2em .14em .3em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
+        '.agp-so-throne.fk-butterfly .agp-so-tcount{gap:.36em;margin-top:.3em;padding:.2em .5em .2em .32em;border-radius:.24em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
         '.agp-so-throne.fk-butterfly .agp-so-tbox .agp-so-tcount,.agp-so-tbox.fk-butterfly .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
-        '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.25em;height:1.25em;margin:-.1em 0;filter:drop-shadow(0 0 .1em rgba(255,200,70,.55));animation:agp-so-spin 6s linear infinite}',
+        /* العملة: لفّة وحدة حول نفسها وبعدها توقف، وتعيد كل 5 ثواني (الأول ثم الثاني ثم الثالث) */
+        '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.2em;height:1.2em;margin:-.1em 0;filter:none;animation:agp-so-bfcoin 5s infinite;animation-delay:calc(var(--d) * 2)}',
+        '@keyframes agp-so-bfcoin{0%{transform:rotate(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}22%,100%{transform:rotate(360deg)}}',
         '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
         '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
         /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
