@@ -1655,57 +1655,112 @@
      * التخصيص: bnColor (اللوحة)، bnDots (النقط)، bnBunny/bnKitten (لون الشخصيات)، bnChars (الاثنين/أرنب/قطة/بدون)،
      * bnPos (يمين/وسط/يسار)، bnCharAnim (تطل/ثابتة)، bnBg (حركة الخلفية)، bnMotion (حركة النص)، bnWidth، bnRound.
      */
-    var BN_BG = ['none', 'shimmer', 'dots', 'gradient', 'breathe', 'bubbles'];
+    var BN_BG = ['none', 'shimmer', 'sparkle', 'gradient', 'breathe', 'bubbles'];
     var BN_MOTIONS = ['static', 'marquee', 'type', 'pop', 'float'];
-    var BN_LINE = 'stroke="#2a2233" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"';
-    function bnFace(cx, cy) {
-        return '<g class="ey"><ellipse cx="' + (cx - 7) + '" cy="' + cy + '" rx="1.7" ry="2" fill="#2a2233"/><ellipse cx="' + (cx + 7) + '" cy="' + cy + '" rx="1.7" ry="2" fill="#2a2233"/>' +
-            '<circle cx="' + (cx - 6.4) + '" cy="' + (cy - .7) + '" r=".6" fill="#fff"/><circle cx="' + (cx + 7.6) + '" cy="' + (cy - .7) + '" r=".6" fill="#fff"/></g>' +
-            '<ellipse cx="' + (cx - 11) + '" cy="' + (cy + 5) + '" rx="3" ry="1.8" fill="#ff9ec4" opacity=".55"/><ellipse cx="' + (cx + 11) + '" cy="' + (cy + 5) + '" rx="3" ry="1.8" fill="#ff9ec4" opacity=".55"/>';
+    var bnSeq = 0;
+    /** فلتر الفرو: يخلي الحواف ناعمة شعرية، ويضيف ملمس خفيف فوق اللون. */
+    function bnFur(id, scale) {
+        return '<filter id="' + id + 'f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="n"/>' +
+            '<feDisplacementMap in="SourceGraphic" in2="n" scale="' + scale + '" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+            '<feTurbulence type="fractalNoise" baseFrequency="1.6 .35" numOctaves="2" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -.9 .62" result="ta"/>' +
+            '<feComposite in="ta" in2="d" operator="in" result="tx"/><feMerge><feMergeNode in="d"/><feMergeNode in="tx"/></feMerge></filter>';
     }
-    function bnPaws(y, fill) {
-        return [21, 39].map(function (x) {
-            return '<path d="M' + (x - 5) + ' ' + (y + 9) + 'v-5a5 5 0 0 1 10 0v5z" style="fill:' + fill + '" ' + BN_LINE + '/>' +
-                '<path d="M' + (x - 1.7) + ' ' + (y + 9) + 'v-2.6M' + (x + 1.7) + ' ' + (y + 9) + 'v-2.6" ' + BN_LINE + ' stroke-width="1" fill="none"/>';
-        }).join('');
+    /** عين واقعية: قزحية بتدرّج، بؤبؤ، حد غامق، ولمعتين. */
+    function bnEye(id, cx, cy, rx, ry, slit) {
+        return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (rx + 1.2) + '" ry="' + (ry + 1.2) + '" fill="#1d120c" opacity=".85"/>' +
+            '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="url(#' + id + 'i)"/>' +
+            (slit ? '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (rx * .26) + '" ry="' + (ry * .82) + '" fill="#0a0604"/>' : '<circle cx="' + cx + '" cy="' + cy + '" r="' + (rx * .55) + '" fill="#0a0604"/>') +
+            '<path d="M' + (cx - rx) + ' ' + (cy - ry * .2) + 'Q' + cx + ' ' + (cy - ry * 1.25) + ' ' + (cx + rx) + ' ' + (cy - ry * .2) + '" fill="#000" opacity=".22"/>' +
+            '<ellipse cx="' + (cx + rx * .32) + '" cy="' + (cy - ry * .38) + '" rx="' + (rx * .26) + '" ry="' + (ry * .2) + '" fill="#fff" opacity=".95"/>' +
+            '<circle cx="' + (cx - rx * .35) + '" cy="' + (cy + ry * .4) + '" r="' + (rx * .1) + '" fill="#fff" opacity=".7"/>';
     }
-    // أرنب أبيض: أذنين طويلة (اليمنى تتحرك)، خدود وردية، أنف وفم صغير
-    var BN_BUNNY = '<svg viewBox="0 0 60 66" aria-hidden="true">' +
-        '<g class="ear"><path d="M20 30C14 18 14 4 20 2c6-2 8 14 6 27z" style="fill:var(--bnr)" ' + BN_LINE + '/><path d="M20.5 26c-3-8-3-17 0-19 3-1 4 9 3.5 18z" fill="#ffc2da"/></g>' +
-        '<g class="ear ear-r"><path d="M40 30c6-12 6-26 0-28-6-2-8 14-6 27z" style="fill:var(--bnr)" ' + BN_LINE + '/><path d="M39.5 26c3-8 3-17 0-19-3-1-4 9-3.5 18z" fill="#ffc2da"/></g>' +
-        '<ellipse cx="30" cy="42" rx="19" ry="15.5" style="fill:var(--bnr)" ' + BN_LINE + '/>' + bnFace(30, 40) +
-        '<path d="M28.6 45h2.8l-1.4 1.6z" fill="#ff8fb8" stroke="#2a2233" stroke-width=".6" stroke-linejoin="round"/><path d="M30 46.6c-.6 1.6-2.4 1.8-3.2.8M30 46.6c.6 1.6 2.4 1.8 3.2.8" ' + BN_LINE + ' stroke-width="1" fill="none"/>' +
-        bnPaws(53, 'var(--bnr)') + '</svg>';
-    // قطة: أذنين مثلث، خطوط على الجبهة، شوارب، فم w
-    var BN_KITTEN = '<svg viewBox="0 0 60 60" aria-hidden="true">' +
-        '<path d="M13 30 15 9l14 12z" style="fill:var(--bnk)" ' + BN_LINE + '/><path d="M16 25 17 14l7 7z" fill="#ffc2da"/>' +
-        '<path d="M47 30 45 9 31 21z" style="fill:var(--bnk)" ' + BN_LINE + '/><path d="M44 25 43 14l-7 7z" fill="#ffc2da"/>' +
-        '<ellipse cx="30" cy="35" rx="20" ry="16" style="fill:var(--bnk)" ' + BN_LINE + '/>' +
-        '<path d="M30 20.5v4.5M25.5 21.5l1 3.8M34.5 21.5l-1 3.8" stroke-width="1.6" stroke-linecap="round" style="stroke:color-mix(in srgb,var(--bnk) 55%,#8a4b1f)"/>' + bnFace(30, 34) +
-        '<path d="M28.6 38.6h2.8l-1.4 1.5z" fill="#ff8fb8" stroke="#2a2233" stroke-width=".6" stroke-linejoin="round"/><path d="M30 40.1c-.5 1.5-2.3 1.7-3 .7M30 40.1c.5 1.5 2.3 1.7 3 .7" ' + BN_LINE + ' stroke-width="1" fill="none"/>' +
-        '<path d="M14 36.5 6 35M14 39 6.5 40M46 36.5l8-1.5M46 39l7.5 1" stroke="#2a2233" stroke-width=".7" stroke-linecap="round" opacity=".6"/>' +
-        bnPaws(47, 'var(--bnk)') + '</svg>';
+    function bnWhisk(cx, cy, dir) {
+        var o = '';
+        [[-4, -1], [0, 0], [4, 1.5]].forEach(function (w) { o += '<path d="M' + cx + ' ' + (cy + w[0] * .4) + 'q' + (dir * 14) + ' ' + (w[0] - 2) + ' ' + (dir * 26) + ' ' + (w[0] * 1.6 + w[1]) + '"/>'; });
+        return '<g stroke="#fff" stroke-width=".55" fill="none" opacity=".85" stroke-linecap="round">' + o + '</g>';
+    }
+    /** القطة (رأس فقط — يطلّ من ورا اللوحة). اللون --bnk. */
+    function bnKittenHead(id) {
+        return '<svg viewBox="0 0 120 104" aria-hidden="true"><defs>' + bnFur(id, 2.6) +
+            '<radialGradient id="' + id + 'g" cx="50%" cy="62%" r="62%"><stop offset="0" stop-color="#fff6ea"/><stop offset=".42" style="stop-color:color-mix(in srgb,var(--bnk) 70%,#fff)"/><stop offset=".78" style="stop-color:var(--bnk)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--bnk) 62%,#5a2a0a)"/></radialGradient>' +
+            '<radialGradient id="' + id + 'i" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#e8f7a0"/><stop offset=".5" stop-color="#9cc23a"/><stop offset="1" stop-color="#47621a"/></radialGradient>' +
+            '<linearGradient id="' + id + 'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b8c4"/><stop offset="1" stop-color="#d98896"/></linearGradient></defs>' +
+            '<g filter="url(#' + id + 'f)">' +
+            '<path d="M22 56 27 10Q30 6 34 9L56 36Z" fill="url(#' + id + 'g)"/><path d="M98 56 93 10Q90 6 86 9L64 36Z" fill="url(#' + id + 'g)"/>' +
+            '<path d="M29 46 31 18Q32 16 34 18L48 36Z" fill="url(#' + id + 'e)" opacity=".85"/><path d="M91 46 89 18Q88 16 86 18L72 36Z" fill="url(#' + id + 'e)" opacity=".85"/>' +
+            '<path d="M60 26C88 26 104 44 104 66 104 88 86 104 60 104S16 88 16 66C16 44 32 26 60 26Z" fill="url(#' + id + 'g)"/>' +
+            '<g style="fill:color-mix(in srgb,var(--bnk) 45%,#5a2a0a)" opacity=".55"><path d="M60 28c-2 6-2 12 0 18 2-6 2-12 0-18z"/><path d="M50 30c-3 5-3 10-1 15 2-5 3-10 1-15z"/><path d="M70 30c3 5 3 10 1 15-2-5-3-10-1-15z"/><path d="M19 64c6-1 11 0 15 2-5 1-10 0-15-2z"/><path d="M101 64c-6-1-11 0-15 2 5 1 10 0 15-2z"/></g>' +
+            '<ellipse cx="51" cy="82" rx="12" ry="9" fill="#fffaf3" opacity=".92"/><ellipse cx="69" cy="82" rx="12" ry="9" fill="#fffaf3" opacity=".92"/><ellipse cx="60" cy="90" rx="9" ry="6" fill="#fffaf3" opacity=".8"/></g>' +
+            '<g class="ey">' + bnEye(id, 44, 62, 8.4, 8, true) + bnEye(id, 76, 62, 8.4, 8, true) + '</g>' +
+            '<path d="M55 74Q60 71.5 65 74Q63 79 60 80Q57 79 55 74Z" fill="url(#' + id + 'e)"/><path d="M57.5 74.6q2.5-1 5 0" stroke="#fff" stroke-width=".8" opacity=".6" fill="none"/>' +
+            '<path d="M60 80v3.4M60 83.4q-3.6 3.6-7.4 1M60 83.4q3.6 3.6 7.4 1" stroke="#4a2c1c" stroke-width="1.1" fill="none" stroke-linecap="round"/>' +
+            bnWhisk(48, 82, -1) + bnWhisk(72, 82, 1) + '</svg>';
+    }
+    /** الأرنب (رأس وأذنين — يطلّ من ورا اللوحة). اللون --bnr. */
+    function bnBunnyHead(id) {
+        return '<svg viewBox="0 0 120 150" aria-hidden="true"><defs>' + bnFur(id, 2.4) +
+            '<radialGradient id="' + id + 'g" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".6" style="stop-color:var(--bnr)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--bnr) 72%,#6a5a70)"/></radialGradient>' +
+            '<radialGradient id="' + id + 'i" cx="42%" cy="38%" r="65%"><stop offset="0" stop-color="#7a5040"/><stop offset=".55" stop-color="#3a2218"/><stop offset="1" stop-color="#140a06"/></radialGradient>' +
+            '<linearGradient id="' + id + 'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8c6d2" stop-opacity=".75"/><stop offset=".6" stop-color="#f2a3b8"/><stop offset="1" stop-color="#e48aa2"/></linearGradient></defs>' +
+            '<g filter="url(#' + id + 'f)">' +
+            '<g class="ear"><path d="M46 78C34 50 32 14 42 5c10-8 18 30 16 70z" fill="url(#' + id + 'g)"/><path d="M47 70C39 48 38 20 44 13c6-5 10 25 9 55z" fill="url(#' + id + 'e)"/></g>' +
+            '<g class="ear ear-r"><path d="M74 78c10-28 14-62 6-72-9-9-19 28-18 70z" fill="url(#' + id + 'g)"/><path d="M73 70c7-22 10-48 5-56-6-6-11 23-11 54z" fill="url(#' + id + 'e)"/></g>' +
+            '<path d="M60 64C86 64 98 82 98 102 98 124 82 140 60 140S22 124 22 102C22 82 34 64 60 64Z" fill="url(#' + id + 'g)"/>' +
+            '<ellipse cx="50" cy="116" rx="13" ry="10" fill="#fff" opacity=".9"/><ellipse cx="70" cy="116" rx="13" ry="10" fill="#fff" opacity=".9"/></g>' +
+            '<g stroke="#e8a9bb" stroke-width=".5" opacity=".55" fill="none"><path d="M46 62C42 46 41 30 44 20"/><path d="M75 62c3-16 5-32 3-42"/></g>' +
+            '<g class="ey">' + bnEye(id, 42, 98, 7, 7.6, false) + bnEye(id, 78, 98, 7, 7.6, false) + '</g>' +
+            '<path d="M56 110q4-2.6 8 0-1.6 3.4-4 3.6-2.4-.2-4-3.6z" fill="url(#' + id + 'e)"/>' +
+            '<path d="M60 113.6v3M60 116.6q-3 3-6.4 1M60 116.6q3 3 6.4 1" stroke="#7a5a62" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+            bnWhisk(49, 116, -1) + bnWhisk(71, 116, 1) + '</svg>';
+    }
+    /** كفّين على حافة اللوحة (فوقها)، مع ظل تلامس. fill = لون الحيوان. */
+    function bnPawsSvg(id, fill) {
+        var paw = function (x) {
+            return '<path d="M' + (x - 11) + ' 22C' + (x - 12) + ' 9 ' + (x - 6) + ' 4 ' + x + ' 4S' + (x + 12) + ' 9 ' + (x + 11) + ' 22Z" fill="url(#' + id + 'p)"/>' +
+                '<path d="M' + (x - 3.6) + ' 22v-5M' + (x + 3.6) + ' 22v-5" stroke="#000" stroke-opacity=".18" stroke-width="1.1" stroke-linecap="round"/>';
+        };
+        return '<svg viewBox="0 0 120 26" aria-hidden="true"><defs>' + bnFur(id, 1.8) +
+            '<linearGradient id="' + id + 'p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".5" style="stop-color:color-mix(in srgb,' + fill + ' 85%,#fff)"/><stop offset="1" style="stop-color:color-mix(in srgb,' + fill + ' 80%,#5a4a50)"/></linearGradient>' +
+            '<filter id="' + id + 's" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="2"/></filter></defs>' +
+            '<ellipse cx="42" cy="23" rx="13" ry="3" fill="#000" opacity=".28" filter="url(#' + id + 's)"/><ellipse cx="78" cy="23" rx="13" ry="3" fill="#000" opacity=".28" filter="url(#' + id + 's)"/>' +
+            '<g filter="url(#' + id + 'f)">' + paw(42) + paw(78) + '</g></svg>';
+    }
 
     function buildBanner(it, tx) {
         var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
-        var bg = BN_BG.indexOf(it.bnBg) !== -1 ? it.bnBg : 'none';
+        var bg = it.bnBg === 'dots' ? 'sparkle' : BN_BG.indexOf(it.bnBg) !== -1 ? it.bnBg : 'none';
         var mo = BN_MOTIONS.indexOf(it.bnMotion) !== -1 ? it.bnMotion : 'static';
         var b = el('span', 'agp-so-bn bg-' + bg + ' m-' + mo + ' r-' + (['sharp', 'soft', 'round'].indexOf(it.bnRound) !== -1 ? it.bnRound : 'soft'));
-        [['bnColor', '--bnc'], ['bnDots', '--bnd'], ['bnBunny', '--bnr'], ['bnKitten', '--bnk']].forEach(function (c) {
+        [['bnColor', '--bnc'], ['bnBunny', '--bnr'], ['bnKitten', '--bnk']].forEach(function (c) {
             if (hex(it[c[0]])) b.style.setProperty(c[1], it[c[0]]);
         });
         if (Number(it.bnWidth) > 0) b.style.setProperty('--bnw', Math.min(40, Number(it.bnWidth)) + 'em');
-        b.appendChild(el('span', 'bn-dl t'));
-        b.appendChild(el('span', 'bn-dl b'));
+        var who = ['both', 'bunny', 'kitten', 'none'].indexOf(it.bnChars) !== -1 ? it.bnChars : 'both';
+        var pos = ['right', 'center', 'left'].indexOf(it.bnPos) !== -1 ? it.bnPos : 'center';
+        var list = who === 'none' ? [] : who === 'bunny' ? ['bunny'] : who === 'kitten' ? ['kitten'] : ['kitten', 'bunny'];
+        // الرؤوس ورا اللوحة (تطل من فوقها)، والكفوف فوق حافتها
+        var heads = el('span', 'bn-ch bn-heads p-' + pos + (it.bnCharAnim === 'still' ? ' still' : ''));
+        var paws = el('span', 'bn-ch bn-paws p-' + pos);
+        list.forEach(function (k) {
+            var id = 'agp-so-bn' + (++bnSeq);
+            var h = el('span', 'bn-c ' + k);
+            h.innerHTML = k === 'bunny' ? bnBunnyHead(id) : bnKittenHead(id);
+            heads.appendChild(h);
+            var pw = el('span', 'bn-pw ' + k);
+            pw.innerHTML = bnPawsSvg(id + 'p', k === 'bunny' ? 'var(--bnr)' : 'var(--bnk)');
+            paws.appendChild(pw);
+        });
+        if (list.length) b.appendChild(heads);
         var bar = el('span', 'bn-bar');
-        if (bg === 'bubbles') {
-            var bw = el('span', 'bn-bub');
+        if (bg === 'bubbles' || bg === 'sparkle') {
+            var bw = el('span', bg === 'bubbles' ? 'bn-bub' : 'bn-spk');
             for (var k = 0; k < 7; k++) {
                 var c = el('i');
                 c.style.left = (8 + k * 13 + seeded(k + 3) * 6) + '%';
                 c.style.animationDelay = (-seeded(k + 9) * 5).toFixed(2) + 's';
-                c.style.animationDuration = (3.5 + seeded(k + 20) * 2.5).toFixed(2) + 's';
-                var z = (.25 + seeded(k + 30) * .35).toFixed(2) + 'em';
+                c.style.animationDuration = (bg === 'bubbles' ? 3.5 + seeded(k + 20) * 2.5 : 1.8 + seeded(k + 20) * 1.6).toFixed(2) + 's';
+                if (bg === 'sparkle') c.style.top = (18 + seeded(k + 40) * 64) + '%';
+                var z = (bg === 'bubbles' ? .25 + seeded(k + 30) * .35 : .3 + seeded(k + 30) * .25).toFixed(2) + 'em';
                 c.style.width = c.style.height = z;
                 bw.appendChild(c);
             }
@@ -1724,13 +1779,7 @@
         }
         bar.appendChild(tw);
         b.appendChild(bar);
-        var who = ['both', 'bunny', 'kitten', 'none'].indexOf(it.bnChars) !== -1 ? it.bnChars : 'both';
-        if (who !== 'none') {
-            var ch = el('span', 'bn-ch p-' + (['right', 'center', 'left'].indexOf(it.bnPos) !== -1 ? it.bnPos : 'center') + (it.bnCharAnim === 'still' ? ' still' : ''));
-            if (who !== 'kitten') { var r1 = el('span', 'bn-c bunny'); r1.innerHTML = BN_BUNNY; ch.appendChild(r1); }
-            if (who !== 'bunny') { var r2 = el('span', 'bn-c kitten'); r2.innerHTML = BN_KITTEN; ch.appendChild(r2); }
-            b.appendChild(ch);
-        }
+        if (list.length) b.appendChild(paws);
         return b;
     }
 
@@ -3318,35 +3367,39 @@
         '.agp-so-tx.s-3d{text-shadow:.02em .02em 0 rgba(0,0,0,.55),.04em .04em 0 rgba(0,0,0,.5),.06em .06em 0 rgba(0,0,0,.45),.08em .08em 0 rgba(0,0,0,.4),.1em .1em .12em rgba(0,0,0,.6)}',
         '.agp-so-tx.s-hollow{color:transparent !important;-webkit-text-stroke:.035em var(--agp-so-c);filter:drop-shadow(0 .03em .06em rgba(0,0,0,.8))}',
         '.agp-so-mv{display:inline-block}',
-        /* «لوحة الأصدقاء» */
-        '.agp-so-bn{--bnc:#c9b3e0;--bnd:#2a2233;--bnr:#ffffff;--bnk:#f6cf9f;position:relative;display:inline-block;margin:1.5em .4em .45em;white-space:nowrap}',
-        '.bn-bar{position:relative;display:flex;align-items:center;justify-content:center;min-width:var(--bnw,6em);padding:.42em 1.2em;border-radius:.3em;background:var(--bnc);box-shadow:0 .1em .3em rgba(0,0,0,.18),inset 0 .06em 0 rgba(255,255,255,.35);overflow:hidden;box-sizing:border-box}',
-        '.agp-so-bn.r-sharp .bn-bar{border-radius:.06em}.agp-so-bn.r-round .bn-bar{border-radius:1.2em}',
-        '.bn-dl{position:absolute;left:-.1em;right:-.1em;height:.1em;background:radial-gradient(circle,var(--bnd) 38%,transparent 44%) 0 50%/.19em .1em repeat-x;z-index:1}',
-        '.bn-dl.t{top:-.17em}.bn-dl.b{bottom:-.17em}',
+        /* «لوحة الأصدقاء» (بريميوم): لوحة ساتان بإضاءة وعمق، وحيوانات تطل من وراها وكفوفها على حافتها */
+        '.agp-so-bn{--bnc:#c9b3e0;--bnr:#f4f1f6;--bnk:#e9a96a;position:relative;display:inline-block;margin:1.9em .4em .5em;white-space:nowrap}',
+        '.bn-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-width:var(--bnw,6em);padding:.46em 1.3em;border-radius:.34em;background:linear-gradient(180deg,color-mix(in srgb,var(--bnc) 62%,#fff) 0%,var(--bnc) 42%,color-mix(in srgb,var(--bnc) 84%,#1a0f24) 100%);border:.03em solid color-mix(in srgb,var(--bnc) 45%,#fff);box-shadow:0 .4em .9em -.25em color-mix(in srgb,var(--bnc) 55%,#000),0 .06em .14em rgba(0,0,0,.28),inset 0 .05em 0 rgba(255,255,255,.75),inset 0 -.1em .2em rgba(0,0,0,.14);overflow:hidden;box-sizing:border-box}',
+        '.bn-bar::before{content:"";position:absolute;left:.08em;right:.08em;top:.04em;height:48%;border-radius:.3em .3em .6em .6em;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0));pointer-events:none}',
+        '.agp-so-bn.r-sharp .bn-bar{border-radius:.08em}.agp-so-bn.r-round .bn-bar{border-radius:1.2em}',
         '.bn-tw{position:relative;z-index:1;display:flex;justify-content:center;max-width:100%}',
-        '.bn-t{display:inline-block;position:relative;padding:0;text-shadow:0 .03em 0 rgba(255,255,255,.35)}',
-        '.bn-ch{position:absolute;bottom:calc(100% - .3em);z-index:2;display:flex;align-items:flex-end;gap:.04em;pointer-events:none}',
+        '.bn-t{display:inline-block;position:relative;padding:0;text-shadow:0 .02em 0 rgba(255,255,255,.4),0 .04em .08em rgba(0,0,0,.12)}',
+        '.bn-ch{position:absolute;display:flex;align-items:flex-end;gap:.15em;pointer-events:none}',
+        '.bn-heads{z-index:0;bottom:calc(100% - .55em)}',
+        '.bn-paws{z-index:2;bottom:calc(100% - .32em)}',
         '.bn-ch.p-center{left:50%;transform:translateX(-50%)}.bn-ch.p-right{right:10%}.bn-ch.p-left{left:10%}',
-        '.bn-c{display:block;width:1.75em;transform-origin:50% 100%;animation:agp-so-bnpeek 4.2s ease-in-out infinite}',
-        '.bn-c.kitten{width:1.75em;animation-delay:-2.1s}',
-        '.bn-c svg{width:100%;display:block;overflow:visible;filter:drop-shadow(0 .03em .05em rgba(0,0,0,.18))}',
-        '.bn-c .ey{transform-box:fill-box;transform-origin:center;animation:agp-so-bnblink 3.8s infinite}',
-        '.bn-c.kitten .ey{animation-delay:-1.3s}',
-        '.bn-c .ear-r{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-bnear 5s ease-in-out infinite}',
-        '.bn-ch.still .bn-c,.bn-ch.still .ear-r{animation:none}',
-        '@keyframes agp-so-bnpeek{0%,55%,100%{transform:translateY(0) rotate(0)}65%{transform:translateY(-12%) rotate(-5deg)}75%{transform:translateY(-6%) rotate(4deg)}85%{transform:translateY(0) rotate(0)}}',
-        '@keyframes agp-so-bnblink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}',
-        '@keyframes agp-so-bnear{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-14deg)}92%{transform:rotate(5deg)}}',
+        '.bn-c,.bn-pw{display:block;width:2.2em;flex:none}',
+        '.bn-c{transform-origin:50% 100%;animation:agp-so-bnpeek 4.6s ease-in-out infinite}',
+        '.bn-c.bunny{margin-bottom:0}.bn-c.kitten{margin-bottom:.34em;animation-delay:-2.3s}',
+        '.bn-c svg,.bn-pw svg{width:100%;display:block;overflow:visible}',
+        '.bn-c svg{filter:drop-shadow(0 .04em .06em rgba(0,0,0,.25))}',
+        '.bn-c .ey{transform-box:fill-box;transform-origin:center;animation:agp-so-bnblink 4.2s infinite}',
+        '.bn-c.kitten .ey{animation-delay:-1.5s}',
+        '.bn-c .ear-r{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-bnear 5.5s ease-in-out infinite}',
+        '.bn-heads.still .bn-c,.bn-heads.still .ear-r{animation:none}',
+        '@keyframes agp-so-bnpeek{0%,50%,100%{transform:translateY(0) rotate(0)}62%{transform:translateY(-7%) rotate(-4deg)}74%{transform:translateY(-4%) rotate(3deg)}86%{transform:translateY(0) rotate(0)}}',
+        '@keyframes agp-so-bnblink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}',
+        '@keyframes agp-so-bnear{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-10deg)}92%{transform:rotate(4deg)}}',
         /* حركات الخلفية */
-        '.agp-so-bn.bg-shimmer .bn-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);background-size:260% 100%;animation:agp-so-bnsh 3.6s ease-in-out infinite}',
-        '.agp-so-bn.bg-dots .bn-dl.t{animation:agp-so-bndots 1.4s linear infinite}.agp-so-bn.bg-dots .bn-dl.b{animation:agp-so-bndots 1.4s linear infinite reverse}',
-        '.agp-so-bn.bg-gradient .bn-bar{background:linear-gradient(90deg,var(--bnc),color-mix(in srgb,var(--bnc) 65%,#fff),color-mix(in srgb,var(--bnc) 80%,#ff8fc8),var(--bnc));background-size:300% 100%;animation:agp-so-bngr 5s ease-in-out infinite alternate}',
-        '.agp-so-bn.bg-breathe .bn-bar{animation:agp-so-bnbr 2.8s ease-in-out infinite}',
+        '.agp-so-bn.bg-shimmer .bn-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.5) 50%,transparent 60%);background-size:260% 100%;animation:agp-so-bnsh 3.8s ease-in-out infinite}',
+        '.bn-spk{position:absolute;inset:0;pointer-events:none}',
+        '.bn-spk i{position:absolute;transform:translate(-50%,-50%) scale(0);background:linear-gradient(90deg,transparent 44%,#fff 50%,transparent 56%),linear-gradient(0deg,transparent 44%,#fff 50%,transparent 56%),radial-gradient(closest-side,#fff,rgba(255,255,255,0) 60%);-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:agp-so-bnspk 2.4s ease-in-out infinite}',
+        '@keyframes agp-so-bnspk{0%,100%{transform:translate(-50%,-50%) scale(0) rotate(0)}50%{transform:translate(-50%,-50%) scale(1) rotate(45deg)}}',
+        '.agp-so-bn.bg-gradient .bn-bar{background:linear-gradient(90deg,var(--bnc),color-mix(in srgb,var(--bnc) 62%,#fff),color-mix(in srgb,var(--bnc) 80%,#ff9fd0),var(--bnc));background-size:300% 100%;animation:agp-so-bngr 5s ease-in-out infinite alternate}',
+        '.agp-so-bn.bg-breathe .bn-bar{animation:agp-so-bnbr 3s ease-in-out infinite}',
         '.bn-bub{position:absolute;inset:0;pointer-events:none}',
         '.bn-bub i{position:absolute;bottom:-.4em;border-radius:50%;background:rgba(255,255,255,.45);box-shadow:inset -.04em -.04em .06em rgba(255,255,255,.6);animation:agp-so-bnbub 4s ease-in infinite}',
         '@keyframes agp-so-bnsh{0%,40%{background-position:120% 0}100%{background-position:-120% 0}}',
-        '@keyframes agp-so-bndots{to{background-position-x:.57em}}',
         '@keyframes agp-so-bngr{to{background-position:100% 0}}',
         '@keyframes agp-so-bnbr{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.025);filter:brightness(1.08)}}',
         '@keyframes agp-so-bnbub{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-3em) scale(1.1);opacity:0}}',

@@ -154,7 +154,7 @@
             { label: 'زجاجي', type: 'text', set: { text: 'اكتب سؤالك بالشات', style: 'glass', font: 'tajawal', size: 4.5 } },
             { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } },
             { label: 'لوحة الأصدقاء', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', style: 'plain', color: '#3a2a4a', font: 'cairo', size: 4, bnBg: 'shimmer', bnMotion: 'static' } },
-            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', style: 'plain', color: '#3a2a4a', font: 'cairo', size: 4, bnBg: 'dots', bnMotion: 'marquee', bnWidth: 12 } }
+            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', style: 'plain', color: '#3a2a4a', font: 'cairo', size: 4, bnBg: 'sparkle', bnMotion: 'marquee', bnWidth: 12 } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -1162,12 +1162,11 @@
             box.appendChild(row('مكانهم', pills([{ label: 'يمين', value: 'right' }, { label: 'وسط', value: 'center' }, { label: 'يسار', value: 'left' }], it.bnPos || 'center', function (v) { update(it, 'bnPos', v, true); }), true));
             box.appendChild(row('حركتهم', pills([{ label: 'يطلّون ويرمشون', value: 'peek' }, { label: 'ثابتين', value: 'still' }], it.bnCharAnim || 'peek', function (v) { update(it, 'bnCharAnim', v, true); }), true));
         }
-        box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'نقط تمشي', value: 'dots' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
+        box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'بريق', value: 'sparkle' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg === 'dots' ? 'sparkle' : it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
         box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'كتابة', value: 'type' }, { label: 'ظهور', value: 'pop' }, { label: 'طفو', value: 'float' }], it.bnMotion || 'static', function (v) { update(it, 'bnMotion', v, true); }), true, 'شريط = يمشي، كتابة = ينكتب وينمسح، ظهور = ينط كل شوي'));
         optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = بنفسجي فاتح');
-        optColor(it, box, 'bnDots', 'لون النقط', 'الخطين فوق وتحت');
         if (it.bnChars !== 'none' && it.bnChars !== 'kitten') optColor(it, box, 'bnBunny', 'لون الأرنب', 'الأصلي = أبيض');
-        if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي فاتح');
+        if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي (شقراء)');
         box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
         box.appendChild(row('عرض اللوحة', slider(0, 30, 0.5, Number(it.bnWidth) || 0, function (v) { update(it, 'bnWidth', v); }), false, '0 = على قد النص'));
         box.appendChild(el('div', 'ob-hint', 'لون النص وحجمه من «النص»، والخط من «الخط»، وحركة اللوحة كاملة من «الحركة».'));
