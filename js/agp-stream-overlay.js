@@ -159,6 +159,15 @@
     }
     /** رقم قسم/مقياس: الدونيشن بالدولار، والباقي أرقام عادية. */
     function fmtKind(kind, v) { return kind === 'donors' || kind === 'donations' ? fmtMoney(v) : fmt(v); }
+    /** رقم مختصر: 950 / 1.4K / 12K / 2.3M (إطار «الفراشات»). */
+    function fmtShort(v) {
+        var n = Number(v) || 0, a = Math.abs(n);
+        var cut = function (x, u) { return (x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10).toString().replace(/\.0$/, '') + u; };
+        if (a >= 1e9) return cut(n / 1e9, 'B');
+        if (a >= 1e6) return cut(n / 1e6, 'M');
+        if (a >= 1e3) return cut(n / 1e3, 'K');
+        return String(Math.round(n));
+    }
 
     // أقسام التوب (نفس أقسام live-session-stats.js)
     var SECTIONS = {
@@ -802,10 +811,26 @@
         pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' },
         // «الأجنحة الكريستالية» (من صاحب المنصة، الخلفية السوداء انشالت): حلقة قوس قزح بأجنحة ريش وكريستال.
         // القياس من الصورة الأصلية 1200px: مركز الحلقة (598.5، 591.4) وحافتها الداخلية 390px — الصورة تعبّيها بالضبط.
-        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', shine: true }
+        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', shine: true },
+        // «الفراشات» (من صورة صاحب المنصة): حلقة بيضاء وقوس ضوء بنفسجي فيه غبار نجوم، وفراشات ترفرف.
+        // مرسومة بالكود (butterflyFrame) مو صورة، عشان كل ألوانها تتغيّر: frameColor (القوس والغبار)،
+        // flyColor (الفراشات)، ringColor (الحلقة). ورقم المركز داخل فراشة بلون المركز.
+        butterfly: { label: 'الفراشات', code: true, base: 270, glow: '#e9d8ff', glow2: '#b47cff' },
+        // «الغبار الذهبي» (من صورة صاحب المنصة): مذنّبين ضوء يلفّون حول الصورة ويتركون وراهم غبار لامع.
+        // مرسوم بالكود (stardustFrame): frameColor = لون المذنّبين، dustColor = لون الغبار.
+        stardust: { label: 'الغبار الذهبي', code: true, base: 45, glow: '#fff1c4', glow2: '#ffcc4d' }
     };
+    /** إطار مرسوم بالكود (الفراشات، الغبار الذهبي): للتوب 3 بس، ومعه رقم المركز على الحلقة والعملة المسطّحة. */
+    function codeFrame(k) { return !!(THRONE_FRAMES[k] && THRONE_FRAMES[k].code); }
+    /** لون قوس الضوء والغبار بإطار «الفراشات» (لون جاهز أو مخصص). */
+    function bfAccent(it) {
+        if (it.frameColor === 'custom' && /^#[0-9a-f]{6}$/i.test(String(it.frameCustom || ''))) return it.frameCustom;
+        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0];
+        return fc && fc.sw ? fc.sw : (THRONE_FRAMES[frameOf(it)] || THRONE_FRAMES.butterfly).glow2;
+    }
     function frameOf(it) {
-        if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
+        // «الفراشات» للتوب 3 (العرش) بس
+        if (it && it.design === 'stack') return it.frame === 'none' || (THRONE_FRAMES[it.frame] && !codeFrame(it.frame)) ? it.frame : 'ring';
         return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel';
     }
     // «القائمة» (stack): عدد الأشخاص لين 10، وإطار الصور: حلقة دوّارة / رسمة / بدون
@@ -854,7 +879,7 @@
         var stack = it.design === 'stack';
         var body = el('div', 'agp-so-lbody');
         var pal = it.palette === 'single' ? ' pal-single' : it.palette === 'custom' ? ' pal-custom' : '';
-        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + pal);
+        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + (codeFrame(frameOf(it)) ? ' fx-code' : '') + pal);
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
         // ألوان يختارها الستريمر (المحرر): المراكز الثلاثة، الاسم، الرقم، خلفية الكبسولة
         var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
@@ -862,6 +887,14 @@
         if (hex(it.nameColor)) box.style.setProperty('--agp-so-namec', it.nameColor);
         if (hex(it.numColor)) box.style.setProperty('--agp-so-numc', it.numColor);
         if (hex(it.pillColor)) box.style.setProperty('--agp-so-pillbg', 'color-mix(in srgb,' + it.pillColor + ' 78%,transparent)');
+        if (codeFrame(frameOf(it))) {
+            box.style.setProperty('--agp-so-bfc', bfAccent(it));
+            box.style.setProperty('--agp-so-bff', hex(it.flyColor) || bfAccent(it));
+            box.style.setProperty('--agp-so-sdd', hex(it.dustColor) || bfAccent(it));
+            if (hex(it.ringColor)) box.style.setProperty('--agp-so-bfr', it.ringColor);
+            if (hex(it.coinColor)) box.style.setProperty('--agp-so-coinc', it.coinColor);
+            if (hex(it.rankText)) box.style.setProperty('--agp-so-rkt', it.rankText);
+        }
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
         if (it.spacing != null) {
@@ -946,16 +979,23 @@
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
             var fr = throneFrame(r, frameOf(hit));
-            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز
-            var rk = el('span', 'agp-so-trank');
-            rk.appendChild(el('b', null, String(i + 1)));
-            fr.appendChild(rk);
+            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز،
+            // وبإطار «الفراشات» دائرة ناعمة على الحلقة تحت يمين (لونها بين لون المركز ولون القوس)
+            if (codeFrame(frameOf(hit))) fr.appendChild(el('span', 'agp-so-bfrk', String(i + 1)));
+            else {
+                var rk = el('span', 'agp-so-trank');
+                rk.appendChild(el('b', null, String(i + 1)));
+                fr.appendChild(rk);
+            }
             inner.appendChild(fr);
             inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
         }
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
-        if (sec === 'gifters') {
+        // «الفراشات»: الرقم مختصر (1.4K) والعملة مسطّحة (BF_COIN)
+        var bfly = !stack && codeFrame(frameOf(hit));
+        if (sec === 'gifters' && bfly) ic.innerHTML = BF_COIN;
+        else if (sec === 'gifters') {
             // الدعم: عملة تيك توك الذهبية (assets/overlay-frames/tiktok-coin.webp، من صاحب المنصة)
             var coin = document.createElement('img');
             coin.src = FRAMES_BASE + 'tiktok-coin.webp';
@@ -965,8 +1005,10 @@
         } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
-        var num = el('span', 'agp-so-tnum', fmtKind(sec, rowNum(sec, r)));
+        var short = bfly && sec !== 'donors';
+        var num = el('span', 'agp-so-tnum', short ? fmtShort(rowNum(sec, r)) : fmtKind(sec, rowNum(sec, r)));
         num._kind = sec;
+        num._short = short;
         num._v = rowNum(sec, r);
         c.appendChild(num);
         inner.appendChild(c);
@@ -998,7 +1040,7 @@
             var k = Math.min(1, (now - t0) / dur);
             var e = 1 - Math.pow(1 - k, 3);
             var v = from + (to - from) * e;
-            elm.textContent = elm._kind === 'donors' ? fmtMoney(k < 1 ? Math.round(v) : to) : fmt(Math.round(v));
+            elm.textContent = elm._kind === 'donors' ? fmtMoney(k < 1 ? Math.round(v) : to) : elm._short ? fmtShort(Math.round(v)) : fmt(Math.round(v));
             if (k < 1 && elm.isConnected) requestAnimationFrame(step);
         }(t0));
     }
@@ -1033,6 +1075,8 @@
 
     /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
     function refreshItem(node, it) {
+        // «آخر دعم» البسيط: ما نعيد الرسم إلا لو تغيّر الداعم أو الشكل (عشان الحركة ما تنقطع)
+        if (node && node._ld && it.type === 'lastdonation') return node._ld.sig === ldSig(curLastDon()) && node._ld.cfg === ldCfg(it);
         // كرة القمر: نحدّث المستوى بس (الموج يكمل) — لو تغيّر شكلها نعيد البناء
         if (node && node._orb && it.type === 'goal' && it.design === 'orb') {
             if (node._orb.sig !== JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title])) return false;
@@ -1054,8 +1098,174 @@
     var FEATHER_LAV = FEATHER.replace('id="agp-so-fg"', 'id="agp-so-fgl"').replace('url(#agp-so-fg)', 'url(#agp-so-fgl)')
         .replace('#fffaf0', '#ffffff').replace('#ffe7a8', '#efe2ff').replace('#d9a63a', '#b48cff').replace('#c99a35', '#9b7fd6');
 
+    /**
+     * فراشة واقعية (إطار «الفراشات»): جناح أمامي مدبّب وخلفي مموّج، عروق، نقط بيضاء على الحافة،
+     * عين على الجناح الخلفي، وجسم بقرون. اللون currentColor (تدرّج أبيض قرب الجسم ← اللون ← غامق بالأطراف).
+     * كل نسخة لها id تدرّج خاص (ألوان الفراشات تختلف من أداة لأداة بنفس الصفحة).
+     */
+    var bfSeq = 0;
+    // عملة تيك توك مسطّحة (بدون تدرّج ولا انحناء) لإطار «الفراشات»
+    var BF_NOTE = 'M13 5h2.6c.2 1.7 1.4 3 3.2 3.2v2.6c-1.2 0-2.3-.4-3.2-1v5.2a4 4 0 1 1-4-4c.2 0 .5 0 .7.1v2.7a1.4 1.4 0 1 0 .7 1.2z';
+    var BF_COIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.5" style="fill:color-mix(in srgb,var(--agp-so-coinc,#ffd23f) 80%,#a86f00)"/><circle cx="12" cy="12" r="9.6" style="fill:var(--agp-so-coinc,#ffd23f)"/>' +
+        '<circle cx="12" cy="12" r="9.6" fill="none" stroke-width=".6" style="stroke:color-mix(in srgb,var(--agp-so-coinc,#ffd23f) 55%,#fff)"/>' +
+        '<g transform="translate(-1.2 -.1) scale(.92) translate(1 1)"><path d="' + BF_NOTE + '" fill="#25f4ee" transform="translate(-.7 -.5)"/>' +
+        '<path d="' + BF_NOTE + '" fill="#fe2c55" transform="translate(.7 .5)"/><path d="' + BF_NOTE + '" fill="#1a1206"/></g></svg>';
+    function bfSvg() {
+        var id = 'agp-so-bfg' + (++bfSeq);
+        var mir = function (d) { return d.replace(/(-?[\d.]+),(-?[\d.]+)/g, function (m, x, y) { return +(60 - x).toFixed(2) + ',' + y; }); };
+        var FW = 'M29,19.5 C24,12 15,6 5.5,4.3 C3.2,3.9 1.8,5.4 2.5,7.2 C4,11.5 6,16.5 8.8,21 C13.5,24 21,24 29,22.2 Z';
+        var HW = 'M29,23 C22,23 14.5,24.2 10.3,27.6 C7.3,30.2 7.4,35.6 9.6,38.6 C10.8,40.4 12.6,41.6 14.6,41.2 C16.4,42.8 19,42.6 20.6,40.8 C23.8,37.6 27,32 29,26 Z';
+        var FV = 'M28,20.5 C20,13 12,8 5,6 M27.5,20.8 C19,16 10,12.5 3.8,10.5 M27,21.2 C18,19 10.5,17 5.5,15.6 M27,21.6 C19,21.8 12.5,21 8.5,20';
+        var HV = 'M28,24 C21,25.5 14.5,27.5 10,30.5 M28,24.5 C21,28 15,32 11,37.5 M28.3,25 C23,30 18.5,35.5 15.5,40.5 M28.6,25.5 C25,31 22,36 19.8,40.5';
+        var spots = function (pts, r) { return pts.map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>'; }).join(''); };
+        var FS = [[4.3, 6.6], [4.1, 9.4], [4.9, 12.3], [6, 15.2], [7.3, 18]], HS = [[9.4, 31.5], [9.3, 35.2], [11, 39.2], [14.6, 40.4], [18.6, 40.2]];
+        var wing = function (side) {
+            var m = side === 'r' ? mir : function (d) { return d; };
+            var sp = function (a) { return side === 'r' ? a.map(function (p) { return [60 - p[0], p[1]]; }) : a; };
+            var eye = sp([[16, 33.5]])[0];
+            return '<path d="' + m(HW) + '" fill="url(#' + id + ')" fill-opacity=".9"/>' +
+                '<path d="' + m(HV) + '" stroke="#fff" stroke-opacity=".28" stroke-width=".35" fill="none"/>' +
+                '<circle cx="' + eye[0] + '" cy="' + eye[1] + '" r="2.3" fill="#1a0f26" fill-opacity=".75"/><circle cx="' + eye[0] + '" cy="' + eye[1] + '" r="1.5" fill="currentColor"/><circle cx="' + (eye[0] - .4) + '" cy="' + (eye[1] - .4) + '" r=".5" fill="#fff"/>' +
+                '<g fill="#fff" fill-opacity=".75">' + spots(sp(HS), .55) + '</g>' +
+                '<path d="' + m(FW) + '" fill="url(#' + id + ')" fill-opacity=".95"/>' +
+                '<path d="' + m(FV) + '" stroke="#fff" stroke-opacity=".32" stroke-width=".35" fill="none"/>' +
+                '<g fill="#fff" fill-opacity=".85">' + spots(sp(FS), .6) + '</g>';
+        };
+        return '<svg viewBox="0 0 60 50" aria-hidden="true"><defs><radialGradient id="' + id + '" gradientUnits="userSpaceOnUse" cx="30" cy="22" r="29">' +
+            '<stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".22" style="stop-color:color-mix(in srgb,currentColor 55%,#fff)"/>' +
+            '<stop offset=".55" stop-color="currentColor"/><stop offset=".86" style="stop-color:color-mix(in srgb,currentColor 55%,#14051f)"/>' +
+            '<stop offset="1" style="stop-color:color-mix(in srgb,currentColor 30%,#0a0210)"/></radialGradient></defs>' +
+            '<g class="wl">' + wing('l') + '</g><g class="wr">' + wing('r') + '</g>' +
+            '<g class="bd"><path d="M29.4,16.4 C28.4,11.5 26.6,8.2 23.8,6.4 M30.6,16.4 C31.6,11.5 33.4,8.2 36.2,6.4" stroke="#2a1d38" stroke-width=".45" fill="none" stroke-linecap="round"/>' +
+            '<circle cx="23.7" cy="6.3" r=".65" fill="#2a1d38"/><circle cx="36.3" cy="6.3" r=".65" fill="#2a1d38"/>' +
+            '<ellipse cx="30" cy="31" rx="1.25" ry="7.5" fill="#241832"/><path d="M28.9,27 h2.2 M28.8,30 h2.4 M28.9,33 h2.2" stroke="#fff" stroke-opacity=".18" stroke-width=".3"/>' +
+            '<ellipse cx="30" cy="21.5" rx="1.75" ry="3.6" fill="#2e2040"/><circle cx="30" cy="17" r="1.45" fill="#2e2040"/>' +
+            '<ellipse cx="29.5" cy="20.5" rx=".5" ry="1.8" fill="#fff" fill-opacity=".22"/></g></svg>';
+    }
+    // ترتيب ثابت (مو Math.random) عشان الغبار ما يتغيّر مكانه مع كل تحديث
+    function seeded(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
+
+    /** إطار «الفراشات»: حلقة + قوس ضوء بغبار نجوم + فراشتين ترفرف تحت يسار + فراشة صغيرة تطير حول الحلقة. */
+    function butterflyFrame(r) {
+        var f = el('span', 'agp-so-fav fr-butterfly');
+        f.appendChild(avatar(r));
+        var glow = el('span', 'agp-so-bfglow');
+        f.appendChild(glow);
+        // القوس والغبار والنجوم يتمايلون مع بعض (مجموعة وحدة)
+        var arc = el('span', 'agp-so-bfarcw');
+        arc.appendChild(el('span', 'agp-so-bfarc'));
+        arc.appendChild(el('span', 'agp-so-bfarc hot'));
+        // زاوية 0 = فوق، مع عقارب الساعة. القوس من 335° لين 150° تقريباً (مثل الصورة)
+        for (var k = 0; k < 90; k++) {
+            var a = (-28 + seeded(k + 1) * 185) * Math.PI / 180;
+            var mid = 1 - Math.abs((a * 180 / Math.PI - 60) / 95); // أكثف بالنص
+            var rad = 55 + seeded(k + 51) * (4 + 9 * Math.max(0, mid));
+            var dt = el('span', 'agp-so-bfdot');
+            var sz = .7 + Math.pow(seeded(k + 101), 2.2) * 2.6;
+            dt.style.width = dt.style.height = sz + '%';
+            dt.style.left = (50 + Math.sin(a) * rad - sz / 2) + '%';
+            dt.style.top = (50 - Math.cos(a) * rad - sz / 2) + '%';
+            dt.style.animationDelay = (-seeded(k + 151) * 3).toFixed(2) + 's';
+            dt.style.animationDuration = (1.8 + seeded(k + 201) * 2.4).toFixed(2) + 's';
+            arc.appendChild(dt);
+        }
+        [[-20, 0], [42, 1.1], [92, 2.2]].forEach(function (s) {
+            var a = s[0] * Math.PI / 180;
+            var st = el('span', 'agp-so-bfstar');
+            st.style.left = (50 + Math.sin(a) * 55) + '%';
+            st.style.top = (50 - Math.cos(a) * 55) + '%';
+            st.style.animationDelay = s[1] + 's';
+            arc.appendChild(st);
+        });
+        f.appendChild(arc);
+        f.appendChild(el('span', 'agp-so-bfring'));
+        // فراشتين تحت يسار الحلقة (ترفرف وتتمايل) + شرار حولها
+        ['f1', 'f2'].forEach(function (c) {
+            var o = el('span', 'agp-so-bfly ' + c);
+            var w = el('span', 'agp-so-bfw');
+            w.innerHTML = bfSvg();
+            o.appendChild(w);
+            f.appendChild(o);
+        });
+        [[-14, 52, 0], [-4, 64, .8], [-20, 82, 1.5], [4, 104, .4], [-8, 100, 2], [-2, 46, 1.2]].forEach(function (p) {
+            var s = el('span', 'agp-so-bfspk');
+            s.style.left = p[0] + '%';
+            s.style.top = p[1] + '%';
+            s.style.animationDelay = p[2] + 's';
+            f.appendChild(s);
+        });
+        // فراشة صغيرة تلف حول الحلقة
+        var orb = el('span', 'agp-so-bforb');
+        var ob = el('span', 'agp-so-bfly f3');
+        var ow = el('span', 'agp-so-bfw');
+        ow.innerHTML = bfSvg();
+        ob.appendChild(ow);
+        orb.appendChild(ob);
+        f.appendChild(orb);
+        return f;
+    }
+
+    /**
+     * إطار «الغبار الذهبي»: مذنّبين (رأس ضوء أبيض وذيل يتلاشى) متقابلين يلفّون حول الصورة،
+     * وغبار لامع ينتشر برا الذيل ويلمع. الزوايا: 0 = فوق، مع عقارب الساعة.
+     */
+    function stardustFrame(r) {
+        var f = el('span', 'agp-so-fav fr-stardust');
+        f.appendChild(avatar(r));
+        f.appendChild(el('span', 'agp-so-sdglow'));
+        // كل مذنّب بمجموعة لحاله (g0 ثم g1): يطلق ويوقف بمكانه، وبعد ما يوصل يبدأ اللي بعده
+        [15, 195].forEach(function (head, n) {
+            var w = el('span', 'agp-so-sdw g' + n);
+            var dust = el('span', 'agp-so-sddust g' + n);
+            var c = el('span', 'agp-so-sdc');
+            c.style.setProperty('--h', head + 'deg');
+            w.appendChild(c);
+            var core = el('span', 'agp-so-sdc core');
+            core.style.setProperty('--h', head + 'deg');
+            w.appendChild(core);
+            var a = head * Math.PI / 180;
+            var hd = el('span', 'agp-so-sdhead');
+            hd.style.left = (50 + Math.sin(a) * 57) + '%';
+            hd.style.top = (50 - Math.cos(a) * 57) + '%';
+            hd.style.animationDelay = (n * 1.3) + 's';
+            w.appendChild(hd);
+            // الغبار: أكثف قرب الرأس، وينتشر أكثر كل ما بعد بالذيل
+            for (var k = 0; k < 95; k++) {
+                var sd = n * 500 + k;
+                var t = Math.pow(seeded(sd + 1), .75);
+                var ang = (head - 6 - t * 160) * Math.PI / 180;
+                var g = (seeded(sd + 2) + seeded(sd + 3) - 1);
+                var rad = 57 + g * (2.5 + 19 * t) + t * 2;
+                var dt = el('span', 'agp-so-sddot');
+                var sz = .5 + Math.pow(seeded(sd + 4), 2.5) * 2.3;
+                dt.style.width = dt.style.height = sz + '%';
+                dt.style.left = (50 + Math.sin(ang) * rad - sz / 2) + '%';
+                dt.style.top = (50 - Math.cos(ang) * rad - sz / 2) + '%';
+                dt.style.opacity = (1 - t * .55).toFixed(2);
+                dt.style.animationDelay = (-seeded(sd + 5) * 3).toFixed(2) + 's';
+                dt.style.animationDuration = (1.4 + seeded(sd + 6) * 2.2).toFixed(2) + 's';
+                dust.appendChild(dt);
+            }
+            // نجوم صغيرة (أربع رؤوس) بين الغبار
+            [.15, .4, .7].forEach(function (t, j) {
+                var ang = (head - 10 - t * 150) * Math.PI / 180;
+                var rad = 57 + (j % 2 ? 7 : -3);
+                var st = el('span', 'agp-so-sdstar');
+                st.style.left = (50 + Math.sin(ang) * rad) + '%';
+                st.style.top = (50 - Math.cos(ang) * rad) + '%';
+                st.style.animationDelay = (j * .9 + n * .5) + 's';
+                dust.appendChild(st);
+            });
+            w.appendChild(dust);
+            f.appendChild(w);
+        });
+        return f;
+    }
+
     /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
     function throneFrame(r, kind) {
+        if (kind === 'butterfly') return butterflyFrame(r);
+        if (kind === 'stardust') return stardustFrame(r);
         var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
         var f = el('span', 'agp-so-fav fr-' + kind);
         f.style.setProperty('--agp-so-fg1', d.glow);
@@ -1419,7 +1629,8 @@
                 mv.style.animationDuration = (an.d * (Number(it.speed) || 1)) + 's';
             }
             tx.textContent = it.text || ' ';
-            mv.appendChild(tx);
+            if (it.banner === 'peek') mv.appendChild(buildBanner(it, tx));
+            else mv.appendChild(tx);
             n.appendChild(mv);
         } else {
             n.className += ' agp-so-widget agp-so-' + it.type;
@@ -1436,6 +1647,161 @@
             else if (it.type === 'music') buildMusic(n, it, preview);
         }
         return n;
+    }
+
+    /* ---------------- النص داخل «لوحة الأصدقاء» ---------------- */
+    /*
+     * لوحة بلون فاتح بخطين نقط فوقها وتحتها، وفوقها شخصيتين (أرنب وقطة، رسم أصلي) يطلّون ويرمشون.
+     * التخصيص: bnColor (اللوحة)، bnDots (النقط)، bnBunny/bnKitten (لون الشخصيات)، bnChars (الاثنين/أرنب/قطة/بدون)،
+     * bnPos (يمين/وسط/يسار)، bnCharAnim (تطل/ثابتة)، bnBg (حركة الخلفية)، bnMotion (حركة النص)، bnWidth، bnRound.
+     */
+    var BN_BG = ['none', 'shimmer', 'sparkle', 'gradient', 'breathe', 'bubbles'];
+    var BN_MOTIONS = ['static', 'marquee', 'type', 'pop', 'float'];
+    // خامات اللوحة (شكل حقيقي، مو واجهة إلكترونية) ولونها الأصلي
+    var BN_MATS = { velvet: '#a98bcf', linen: '#e6dccb', wood: '#9a6a3e', leather: '#6e4128', paper: '#efe5d3', satin: '#c9b3e0' };
+    var BN_TFX = ['deboss', 'emboss', 'foil', 'plain'];
+    /** ملمس الخامة: ضجيج SVG كصورة خلفية (نقط غامقة شفافة). f = التردد، a = الكثافة. */
+    function BN_NOISE(f, oct, a, w, h) {
+        w = w || 180; h = h || 180;
+        var svgS = "<svg xmlns='http://www.w3.org/2000/svg' width='" + w + "' height='" + h + "'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='" + f + "' numOctaves='" + oct + "' stitchTiles='stitch'/>" +
+            "<feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  " + a + " 0 0 0 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
+        return 'url("data:image/svg+xml,' + encodeURIComponent(svgS).replace(/'/g, '%27') + '")';
+    }
+    var bnSeq = 0;
+    /** فلتر الفرو: يخلي الحواف ناعمة شعرية، ويضيف ملمس خفيف فوق اللون. */
+    function bnFur(id, scale) {
+        return '<filter id="' + id + 'f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="n"/>' +
+            '<feDisplacementMap in="SourceGraphic" in2="n" scale="' + scale + '" xChannelSelector="R" yChannelSelector="G" result="d"/>' +
+            '<feTurbulence type="fractalNoise" baseFrequency="1.6 .35" numOctaves="2" seed="7" result="t"/><feColorMatrix in="t" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -.9 .62" result="ta"/>' +
+            '<feComposite in="ta" in2="d" operator="in" result="tx"/><feMerge><feMergeNode in="d"/><feMergeNode in="tx"/></feMerge></filter>';
+    }
+    /** عين واقعية: قزحية بتدرّج، بؤبؤ، حد غامق، ولمعتين. */
+    function bnEye(id, cx, cy, rx, ry, slit) {
+        return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (rx + 1.2) + '" ry="' + (ry + 1.2) + '" fill="#1d120c" opacity=".85"/>' +
+            '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="url(#' + id + 'i)"/>' +
+            (slit ? '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (rx * .26) + '" ry="' + (ry * .82) + '" fill="#0a0604"/>' : '<circle cx="' + cx + '" cy="' + cy + '" r="' + (rx * .55) + '" fill="#0a0604"/>') +
+            '<path d="M' + (cx - rx) + ' ' + (cy - ry * .2) + 'Q' + cx + ' ' + (cy - ry * 1.25) + ' ' + (cx + rx) + ' ' + (cy - ry * .2) + '" fill="#000" opacity=".22"/>' +
+            '<ellipse cx="' + (cx + rx * .32) + '" cy="' + (cy - ry * .38) + '" rx="' + (rx * .26) + '" ry="' + (ry * .2) + '" fill="#fff" opacity=".95"/>' +
+            '<circle cx="' + (cx - rx * .35) + '" cy="' + (cy + ry * .4) + '" r="' + (rx * .1) + '" fill="#fff" opacity=".7"/>';
+    }
+    function bnWhisk(cx, cy, dir) {
+        var o = '';
+        [[-4, -1], [0, 0], [4, 1.5]].forEach(function (w) { o += '<path d="M' + cx + ' ' + (cy + w[0] * .4) + 'q' + (dir * 14) + ' ' + (w[0] - 2) + ' ' + (dir * 26) + ' ' + (w[0] * 1.6 + w[1]) + '"/>'; });
+        return '<g stroke="#fff" stroke-width=".55" fill="none" opacity=".85" stroke-linecap="round">' + o + '</g>';
+    }
+    /** القطة (رأس فقط — يطلّ من ورا اللوحة). اللون --bnk. */
+    function bnKittenHead(id) {
+        return '<svg viewBox="0 0 120 104" aria-hidden="true"><defs>' + bnFur(id, 2.6) +
+            '<radialGradient id="' + id + 'g" cx="50%" cy="62%" r="62%"><stop offset="0" stop-color="#fff6ea"/><stop offset=".42" style="stop-color:color-mix(in srgb,var(--bnk) 70%,#fff)"/><stop offset=".78" style="stop-color:var(--bnk)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--bnk) 62%,#5a2a0a)"/></radialGradient>' +
+            '<radialGradient id="' + id + 'i" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#e8f7a0"/><stop offset=".5" stop-color="#9cc23a"/><stop offset="1" stop-color="#47621a"/></radialGradient>' +
+            '<linearGradient id="' + id + 'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b8c4"/><stop offset="1" stop-color="#d98896"/></linearGradient></defs>' +
+            '<g filter="url(#' + id + 'f)">' +
+            '<path d="M22 56 27 10Q30 6 34 9L56 36Z" fill="url(#' + id + 'g)"/><path d="M98 56 93 10Q90 6 86 9L64 36Z" fill="url(#' + id + 'g)"/>' +
+            '<path d="M29 46 31 18Q32 16 34 18L48 36Z" fill="url(#' + id + 'e)" opacity=".85"/><path d="M91 46 89 18Q88 16 86 18L72 36Z" fill="url(#' + id + 'e)" opacity=".85"/>' +
+            '<path d="M60 26C88 26 104 44 104 66 104 88 86 104 60 104S16 88 16 66C16 44 32 26 60 26Z" fill="url(#' + id + 'g)"/>' +
+            '<g style="fill:color-mix(in srgb,var(--bnk) 45%,#5a2a0a)" opacity=".55"><path d="M60 28c-2 6-2 12 0 18 2-6 2-12 0-18z"/><path d="M50 30c-3 5-3 10-1 15 2-5 3-10 1-15z"/><path d="M70 30c3 5 3 10 1 15-2-5-3-10-1-15z"/><path d="M19 64c6-1 11 0 15 2-5 1-10 0-15-2z"/><path d="M101 64c-6-1-11 0-15 2 5 1 10 0 15-2z"/></g>' +
+            '<ellipse cx="51" cy="82" rx="12" ry="9" fill="#fffaf3" opacity=".92"/><ellipse cx="69" cy="82" rx="12" ry="9" fill="#fffaf3" opacity=".92"/><ellipse cx="60" cy="90" rx="9" ry="6" fill="#fffaf3" opacity=".8"/></g>' +
+            // خياطة الدمية: خط بالنص وحول الخدود
+            '<g fill="none" stroke-dasharray="2.2 1.8" stroke-width=".9" stroke-linecap="round" style="stroke:color-mix(in srgb,var(--bnk) 55%,#3a1a08)" opacity=".75"><path d="M60 27v18"/><path d="M37 88q23 14 46 0"/></g>' +
+            '<g class="ey">' + bnEye(id, 44, 62, 8.4, 8, true) + bnEye(id, 76, 62, 8.4, 8, true) + '</g>' +
+            '<path d="M55 74Q60 71.5 65 74Q63 79 60 80Q57 79 55 74Z" fill="url(#' + id + 'e)"/><g stroke="#b45a6e" stroke-width=".55" opacity=".7"><path d="M56.6 74.4 60 79.2M58 73.6l2 5.6M60 73.4v5.8M62 73.6l-2 5.6M63.4 74.4 60 79.2"/></g>' +
+            '<path d="M60 80v3.4M60 83.4q-3.6 3.6-7.4 1M60 83.4q3.6 3.6 7.4 1" stroke="#4a2c1c" stroke-width="1.1" fill="none" stroke-linecap="round"/>' +
+            bnWhisk(48, 82, -1) + bnWhisk(72, 82, 1) + '</svg>';
+    }
+    /** الأرنب (رأس وأذنين — يطلّ من ورا اللوحة). اللون --bnr. */
+    function bnBunnyHead(id) {
+        return '<svg viewBox="0 0 120 150" aria-hidden="true"><defs>' + bnFur(id, 2.4) +
+            '<radialGradient id="' + id + 'g" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".6" style="stop-color:var(--bnr)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--bnr) 72%,#6a5a70)"/></radialGradient>' +
+            '<radialGradient id="' + id + 'i" cx="42%" cy="38%" r="65%"><stop offset="0" stop-color="#7a5040"/><stop offset=".55" stop-color="#3a2218"/><stop offset="1" stop-color="#140a06"/></radialGradient>' +
+            '<linearGradient id="' + id + 'e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8c6d2" stop-opacity=".75"/><stop offset=".6" stop-color="#f2a3b8"/><stop offset="1" stop-color="#e48aa2"/></linearGradient></defs>' +
+            '<g filter="url(#' + id + 'f)">' +
+            '<g class="ear"><path d="M46 78C34 50 32 14 42 5c10-8 18 30 16 70z" fill="url(#' + id + 'g)"/><path d="M47 70C39 48 38 20 44 13c6-5 10 25 9 55z" fill="url(#' + id + 'e)"/></g>' +
+            '<g class="ear ear-r"><path d="M74 78c10-28 14-62 6-72-9-9-19 28-18 70z" fill="url(#' + id + 'g)"/><path d="M73 70c7-22 10-48 5-56-6-6-11 23-11 54z" fill="url(#' + id + 'e)"/></g>' +
+            '<path d="M60 64C86 64 98 82 98 102 98 124 82 140 60 140S22 124 22 102C22 82 34 64 60 64Z" fill="url(#' + id + 'g)"/>' +
+            '<ellipse cx="50" cy="116" rx="13" ry="10" fill="#fff" opacity=".9"/><ellipse cx="70" cy="116" rx="13" ry="10" fill="#fff" opacity=".9"/></g>' +
+            '<g stroke="#e8a9bb" stroke-width=".5" opacity=".55" fill="none"><path d="M46 62C42 46 41 30 44 20"/><path d="M75 62c3-16 5-32 3-42"/></g>' +
+            '<g fill="none" stroke-dasharray="2.2 1.8" stroke-width=".9" stroke-linecap="round" stroke="#b9a9b8" opacity=".8"><path d="M60 66v20"/><path d="M38 122q22 12 44 0"/></g>' +
+            '<g class="ey">' + bnEye(id, 42, 98, 7, 7.6, false) + bnEye(id, 78, 98, 7, 7.6, false) + '</g>' +
+            '<path d="M56 110q4-2.6 8 0-1.6 3.4-4 3.6-2.4-.2-4-3.6z" fill="url(#' + id + 'e)"/><g stroke="#c0607a" stroke-width=".5" opacity=".7"><path d="M57 110.2 60 113.4M58.6 109.4l1.4 4M60 109.2v4.4M61.4 109.4l-1.4 4M63 110.2 60 113.4"/></g>' +
+            '<path d="M60 113.6v3M60 116.6q-3 3-6.4 1M60 116.6q3 3 6.4 1" stroke="#7a5a62" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+            bnWhisk(49, 116, -1) + bnWhisk(71, 116, 1) + '</svg>';
+    }
+    /** كفّين على حافة اللوحة (فوقها)، مع ظل تلامس. fill = لون الحيوان. */
+    function bnPawsSvg(id, fill) {
+        var paw = function (x) {
+            return '<path d="M' + (x - 11) + ' 22C' + (x - 12) + ' 9 ' + (x - 6) + ' 4 ' + x + ' 4S' + (x + 12) + ' 9 ' + (x + 11) + ' 22Z" fill="url(#' + id + 'p)"/>' +
+                '<path d="M' + (x - 3.6) + ' 22v-5M' + (x + 3.6) + ' 22v-5" stroke="#000" stroke-opacity=".18" stroke-width="1.1" stroke-linecap="round"/>';
+        };
+        return '<svg viewBox="0 0 120 26" aria-hidden="true"><defs>' + bnFur(id, 1.8) +
+            '<linearGradient id="' + id + 'p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".5" style="stop-color:color-mix(in srgb,' + fill + ' 85%,#fff)"/><stop offset="1" style="stop-color:color-mix(in srgb,' + fill + ' 80%,#5a4a50)"/></linearGradient>' +
+            '<filter id="' + id + 's" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="2"/></filter></defs>' +
+            '<ellipse cx="42" cy="23" rx="13" ry="3" fill="#000" opacity=".28" filter="url(#' + id + 's)"/><ellipse cx="78" cy="23" rx="13" ry="3" fill="#000" opacity=".28" filter="url(#' + id + 's)"/>' +
+            '<g filter="url(#' + id + 'f)">' + paw(42) + paw(78) + '</g></svg>';
+    }
+
+    function buildBanner(it, tx) {
+        var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        var bg = it.bnBg === 'dots' ? 'sparkle' : BN_BG.indexOf(it.bnBg) !== -1 ? it.bnBg : 'none';
+        var mo = BN_MOTIONS.indexOf(it.bnMotion) !== -1 ? it.bnMotion : 'static';
+        var mat = BN_MATS[it.bnMat] ? it.bnMat : 'velvet';
+        var tfx = BN_TFX.indexOf(it.bnTextFx) !== -1 ? it.bnTextFx : (mat === 'satin' ? 'plain' : mat === 'linen' || mat === 'paper' ? 'deboss' : mat === 'velvet' ? 'emboss' : 'deboss');
+        var b = el('span', 'agp-so-bn bg-' + bg + ' m-' + mo + ' mt-' + mat + ' tf-' + tfx + ' r-' + (['sharp', 'soft', 'round'].indexOf(it.bnRound) !== -1 ? it.bnRound : 'soft'));
+        b.style.setProperty('--bnc', BN_MATS[mat]);
+        if (hex(it.bnStitch)) b.style.setProperty('--bns', it.bnStitch);
+        [['bnColor', '--bnc'], ['bnBunny', '--bnr'], ['bnKitten', '--bnk']].forEach(function (c) {
+            if (hex(it[c[0]])) b.style.setProperty(c[1], it[c[0]]);
+        });
+        if (Number(it.bnWidth) > 0) b.style.setProperty('--bnw', Math.min(40, Number(it.bnWidth)) + 'em');
+        var who = ['both', 'bunny', 'kitten', 'none'].indexOf(it.bnChars) !== -1 ? it.bnChars : 'both';
+        var pos = ['right', 'center', 'left'].indexOf(it.bnPos) !== -1 ? it.bnPos : 'center';
+        var list = who === 'none' ? [] : who === 'bunny' ? ['bunny'] : who === 'kitten' ? ['kitten'] : ['kitten', 'bunny'];
+        // الرؤوس ورا اللوحة (تطل من فوقها)، والكفوف فوق حافتها
+        var heads = el('span', 'bn-ch bn-heads p-' + pos + (it.bnCharAnim === 'still' ? ' still' : ''));
+        var paws = el('span', 'bn-ch bn-paws p-' + pos);
+        list.forEach(function (k) {
+            var id = 'agp-so-bn' + (++bnSeq);
+            var h = el('span', 'bn-c ' + k);
+            h.innerHTML = k === 'bunny' ? bnBunnyHead(id) : bnKittenHead(id);
+            heads.appendChild(h);
+            var pw = el('span', 'bn-pw ' + k);
+            pw.innerHTML = bnPawsSvg(id + 'p', k === 'bunny' ? 'var(--bnr)' : 'var(--bnk)');
+            paws.appendChild(pw);
+        });
+        if (list.length) b.appendChild(heads);
+        var bar = el('span', 'bn-bar');
+        if (bg === 'bubbles' || bg === 'sparkle') {
+            var bw = el('span', bg === 'bubbles' ? 'bn-bub' : 'bn-spk');
+            for (var k = 0; k < 7; k++) {
+                var c = el('i');
+                c.style.left = (8 + k * 13 + seeded(k + 3) * 6) + '%';
+                c.style.animationDelay = (-seeded(k + 9) * 5).toFixed(2) + 's';
+                c.style.animationDuration = (bg === 'bubbles' ? 3.5 + seeded(k + 20) * 2.5 : 1.8 + seeded(k + 20) * 1.6).toFixed(2) + 's';
+                if (bg === 'sparkle') c.style.top = (18 + seeded(k + 40) * 64) + '%';
+                var z = (bg === 'bubbles' ? .25 + seeded(k + 30) * .35 : .3 + seeded(k + 30) * .25).toFixed(2) + 'em';
+                c.style.width = c.style.height = z;
+                bw.appendChild(c);
+            }
+            bar.appendChild(bw);
+        }
+        // تفاصيل الخامة: خياطة (مخمل/كتان/جلد)، مسامير نحاس (خشب)، إطار ذهبي (ورق)
+        if (mat === 'velvet' || mat === 'linen' || mat === 'leather') bar.appendChild(el('span', 'bn-stitch'));
+        else if (mat === 'paper') bar.appendChild(el('span', 'bn-foil'));
+        else if (mat === 'wood') ['tl', 'tr', 'bl', 'br'].forEach(function (k) { bar.appendChild(el('span', 'bn-nail ' + k)); });
+        var tw = el('span', 'bn-tw');
+        tx.className = 'agp-so-tx s-plain bn-t';
+        if (mo === 'marquee') {
+            var tr = el('span', 'bn-track');
+            tr.appendChild(tx);
+            tr.appendChild(tx.cloneNode(true));
+            tw.appendChild(tr);
+        } else {
+            tw.appendChild(tx);
+            if (mo === 'type') tx.appendChild(el('span', 'bn-cur'));
+        }
+        bar.appendChild(tw);
+        b.appendChild(bar);
+        if (list.length) b.appendChild(paws);
+        return b;
     }
 
     /* ---------------- وعاء الهدايا: الرسم ---------------- */
@@ -2342,18 +2708,226 @@
         fetchStats();
     }
 
+    /** آخر دونيشن فعلي (من الرابط أو ملخص الإحصائيات — الأحدث). */
+    function curLastDon() {
+        var t = (stats.totals && stats.totals.lastDonation) || null;
+        return lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
+    }
+    function ldSig(d) { return d ? [d.name, d.amount, d.currency, d.at].join('|') : ''; }
+    function ldCfg(it) { return JSON.stringify([it.design, it.motion, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size, it.font, it.amtFont, it.ldIcon, it.markIcon, it.iconColor]); }
+    // أيقونات «آخر دعم» اللي يختار منها الستريمر (أيقونة المبلغ والعلامة)
+    var LD_ICONS = ['dollar', 'heart', 'star', 'crown', 'diamond', 'fire', 'gift', 'sparkle', 'bolt', 'trophy', 'rocket'];
+    /** أيقونة «آخر دعم»: dollar = عملة الدولار الذهبية، والباقي من ICON_SET بلون --ldi. */
+    function ldIco(name, cls) {
+        var s = el('span', cls || 'agp-so-ld2i');
+        if (name === 'dollar') s.innerHTML = THRONE_ICONS.donors;
+        else if (ICON_SET[name]) s.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + ICON_SET[name].p + '</svg>';
+        else return null;
+        return s;
+    }
+    /** الخطوط والألوان المشتركة لكل تصاميم «آخر دعم» (على عنصر الأداة نفسه). */
+    function ldFonts(n, it) {
+        [['font', '--ldfn', '--ldwn'], ['amtFont', '--ldfa', '--ldwa']].forEach(function (k) {
+            if (!it[k[0]]) return;
+            var f = fontOf(it[k[0]]);
+            loadFont(f);
+            n.style.setProperty(k[1], fontStack(f));
+            n.style.setProperty(k[2], String(f.b));
+        });
+        if (/^#[0-9a-f]{6}$/i.test(String(it.iconColor || ''))) n.style.setProperty('--ldi', it.iconColor);
+    }
+    var LD_MOTIONS = ['static', 'marquee', 'swap', 'type'];
+
+    /**
+     * موج الحرير داخل «شريط الموج»: 4 طبقات (شرايط بين منحنيين جيبيين) تتحرك أفقياً بسرعات مختلفة
+     * وتتمايل فوق وتحت. كل طبقة SVG عرضه ضعف الشريط ودورته نص العرض (الحركة -50% ترجع لنفس الشكل).
+     */
+    var ldwSeq = 0;
+    function ldWaves() {
+        var id = 'agp-so-ldw' + (++ldwSeq);
+        var wrap = el('span', 'ldw-waves');
+        var LAYERS = [[17, 34, 0, .42], [12, 17, 1.7, .62], [23, 10, 3.1, .42], [14, 2, 4.3, 1]];
+        var html = '<defs><linearGradient id="' + id + '" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="0" spreadMethod="repeat">' +
+            '<stop offset="0" style="stop-color:color-mix(in srgb,var(--ld1) 55%,#000)"/><stop offset=".5" style="stop-color:color-mix(in srgb,var(--ld1) 60%,#fff)"/>' +
+            '<stop offset="1" style="stop-color:color-mix(in srgb,var(--ld1) 55%,#000)"/></linearGradient></defs>';
+        LAYERS.forEach(function (L, i) {
+            var A = L[0], T = L[1], ph = L[2], top = [], bot = [];
+            for (var x = 0; x <= 800; x += 10) {
+                var a = 2 * Math.PI * x / 400;
+                var y = 50 + A * Math.sin(a + ph);
+                var th = T * (.6 + .4 * Math.sin(a + ph * 1.7));
+                top.push(x + ' ' + (y - th / 2).toFixed(1));
+                bot.unshift(x + ' ' + (y + th / 2).toFixed(1));
+            }
+            var d = 'M' + top.join(' L') + ' L' + bot.join(' L') + 'Z';
+            var line = 'M' + top.join(' L');
+            var ly = el('span', 'ldw-ly l' + i);
+            ly.innerHTML = '<svg viewBox="0 0 800 100" preserveAspectRatio="none" aria-hidden="true">' + html.replace(/agp-so-ldw\d+/g, id) +
+                '<path d="' + d + '" fill="url(#' + id + ')" opacity="' + L[3] + '"/>' +
+                '<path d="' + line + '" fill="none" stroke="#fff" stroke-opacity="' + (i === 3 ? .55 : .22) + '" stroke-width="' + (i === 3 ? 1.2 : .8) + '" vector-effect="non-scaling-stroke"/></svg>';
+            wrap.appendChild(ly);
+        });
+        return wrap;
+    }
+    /**
+     * «شريط الفراشات»: نفس «شريط الموج» بس داخله فراشات واقعية (bfSvg) تطير عرض الشريط
+     * يمين ويسار بأحجام وسرعات وارتفاعات مختلفة، ترفرف وتطلع وتنزل.
+     */
+    function ldButterflies() {
+        var wrap = el('span', 'ldf');
+        // [الارتفاع %, الحجم em, مدة العبور s, تأخير s, اتجاه, مدة الطلوع والنزول s, شفافية]
+        [[44, 1.6, 9, 0, 'r', 1.4, .95], [66, 1.2, 11, -6, 'l', 1.1, .8], [36, 1, 13, -3.5, 'r', .95, .65],
+         [62, 1.45, 10, -7.5, 'r', 1.6, .9], [40, 1.1, 12, -2, 'l', 1.2, .75], [56, .9, 15, -11, 'l', .9, .6]].forEach(function (b) {
+            var o = el('span', 'ldf-b ' + b[4]);
+            o.style.top = b[0] + '%';
+            o.style.setProperty('--z', b[1] + 'em');
+            o.style.animationDuration = b[2] + 's';
+            o.style.animationDelay = b[3] + 's';
+            o.style.opacity = b[6];
+            var bob = el('span', 'ldf-bob');
+            bob.style.animationDuration = b[5] + 's';
+            var w = el('span', 'agp-so-bfw');
+            w.innerHTML = bfSvg();
+            bob.appendChild(w);
+            o.appendChild(bob);
+            wrap.appendChild(o);
+        });
+        return wrap;
+    }
+    /** صف الاسم والمبلغ (يرجع عناصر المبلغ عشان العدّ). */
+    function ldRow(d, amts) {
+        var r = el('span', 'ldw-row');
+        r.appendChild(el('span', 'agp-so-ld2n', d.name || ''));
+        r.appendChild(el('i', 'ldw-sep'));
+        var a = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+        amts.push(a);
+        r.appendChild(a);
+        return r;
+    }
+    /** «شريط الموج»: الخلفية والتوهّج والموج، والنص حسب it.motion (ثابت/شريط/تبديل/كتابة). */
+    function buildLdWave(box, it, d) {
+        var amts = [];
+        var mo = LD_MOTIONS.indexOf(it.motion) !== -1 ? it.motion : 'static';
+        box.classList.add('m-' + mo);
+        box.appendChild(el('span', 'ldw-halo'));
+        var bar = el('span', 'ldw-bar');
+        if (it.design === 'flutter') {
+            box.classList.add('ld-wave');
+            bar.appendChild(ldButterflies());
+        } else bar.appendChild(ldWaves());
+        var tx = el('span', 'ldw-tx');
+        if (mo === 'marquee') {
+            // نسختين ورا بعض: تتحرك من اليسار لليمين وترجع لنفس المكان (بدون قفزة)
+            var tr = el('span', 'ldw-track');
+            for (var k = 0; k < 2; k++) tr.appendChild(ldRow(d, amts));
+            tx.appendChild(tr);
+        } else if (mo === 'swap') {
+            var a = el('span', 'ldw-sw s1');
+            a.appendChild(el('span', 'agp-so-ld2n', d.name || ''));
+            var b = el('span', 'ldw-sw s2');
+            var am = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+            amts.push(am);
+            b.appendChild(am);
+            tx.appendChild(a);
+            tx.appendChild(b);
+        } else {
+            var row = ldRow(d, amts);
+            if (mo === 'type') row.appendChild(el('span', 'ldw-cur'));
+            tx.appendChild(row);
+        }
+        bar.appendChild(tx);
+        box.appendChild(bar);
+        return amts;
+    }
+    // آخر دعم رسمته كل أداة (عشان حركة «داعم جديد» تطلع مرة وحدة بس لما يتغيّر)
+    var ldSeen = {};
+
+    /**
+     * تصاميم «آخر دعم» البسيطة (بدون نصوص ثابتة — الاسم والمبلغ بس):
+     * line = الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه، split = كبسولة نصها للمبلغ بلون ونصها للاسم.
+     * الألوان: nameColor، amtColor، accent1/accent2 (الخط أو جزء المبلغ)، dotColor (النجمة/النقطة)، boxColor (خلفية الاسم).
+     */
+    function buildLdSlim(n, it, d, real, preview) {
+        var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        var box = el('div', 'agp-so-ld2 ld-' + it.design);
+        [['nameColor', '--ldn'], ['amtColor', '--lda'], ['accent1', '--ld1'], ['accent2', '--ld2'], ['dotColor', '--ldd'], ['boxColor', '--ldb']].forEach(function (c) {
+            if (hex(it[c[0]])) box.style.setProperty(c[1], it[c[0]]);
+        });
+        var sig = ldSig(real);
+        var prev = ldSeen[it.id];
+        ldSeen[it.id] = sig;
+        var isNew = !preview && real && prev !== undefined && prev !== sig;
+        if (isNew) box.classList.add('new');
+        n._ld = { sig: sig, cfg: ldCfg(it) };
+        if (!d) { n.appendChild(box); box.style.display = 'none'; return; }
+        var nm = el('span', 'agp-so-ld2n', d.name || '');
+        var amt = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+        var amts = [amt];
+        if (it.design === 'wave' || it.design === 'flutter') amts = buildLdWave(box, it, d);
+        else if (it.design === 'line') {
+            var top = el('div', 'agp-so-ld2t');
+            top.appendChild(nm);
+            top.appendChild(amt);
+            box.appendChild(top);
+            var ln = el('div', 'agp-so-ld2l');
+            ln.appendChild(el('i'));
+            box.appendChild(ln);
+        } else {
+            box.appendChild(el('span', 'agp-so-ld2g'));
+            box.appendChild(nm);
+            var ap = el('span', 'agp-so-ld2p');
+            ap.appendChild(el('span', 'agp-so-ld2d'));
+            ap.appendChild(amt);
+            box.appendChild(ap);
+        }
+        // أيقونة جنب المبلغ (اختيارية)
+        if (it.ldIcon && it.ldIcon !== 'none') amts.forEach(function (a) {
+            var ico = ldIco(it.ldIcon);
+            if (!ico || !a.parentNode) return;
+            var wv = el('span', 'agp-so-ld2av');
+            a.parentNode.replaceChild(wv, a);
+            wv.appendChild(ico);
+            wv.appendChild(a);
+        });
+        // العلامة (النجمة اللي تمشي / النقطة / الفاصل) بأيقونة بدل الشكل الأصلي
+        if (it.markIcon && ICON_SET[it.markIcon]) {
+            box.querySelectorAll('.agp-so-ld2l i,.agp-so-ld2d,.ldw-sep').forEach(function (m) {
+                m.classList.add('mk');
+                m.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + ICON_SET[it.markIcon].p + '</svg>';
+            });
+        }
+        // داعم جديد: المبلغ يعدّ من صفر لين قيمته
+        if (isNew && String(d.currency || 'USD').toUpperCase() === 'USD') {
+            amts.forEach(function (a) {
+                a._kind = 'donors';
+                a._v = 0;
+                a.textContent = fmtMoney(0);
+                // بعد ما تنضاف للصفحة (tweenNum يوقف لو العنصر مو بالصفحة)
+                requestAnimationFrame(function () { tweenNum(a, Number(d.amount) || 0); });
+            });
+        }
+        n.appendChild(box);
+    }
+
     /** «آخر دعم»: الاسم والمبلغ (والرسالة لو مفعّلة). */
     function buildLastDonation(n, it, preview) {
-        var t = (stats.totals && stats.totals.lastDonation) || null;
-        var d = lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
+        var real = curLastDon();
+        var d = real;
         var ghost = !d && preview;
         if (ghost) d = SAMPLE_TOTALS.lastDonation;
         n.classList.toggle('agp-so-ghost', Boolean(ghost));
+        ldFonts(n, it);
+        if (it.design === 'line' || it.design === 'split' || it.design === 'wave' || it.design === 'flutter') { buildLdSlim(n, it, d, real, preview); return; }
         title(n, it.title);
         var card = el('div', 'agp-so-ldbox');
-        var ic = el('span', 'agp-so-ldic');
-        ic.innerHTML = THRONE_ICONS.donors;
-        card.appendChild(ic);
+        var hx = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        if (hx(it.boxColor)) card.style.background = 'linear-gradient(160deg,' + it.boxColor + ',color-mix(in srgb,' + it.boxColor + ' 70%,#000))';
+        if (hx(it.nameColor)) card.style.setProperty('--ldn', it.nameColor);
+        if (hx(it.amtColor)) card.style.setProperty('--lda', it.amtColor);
+        if (it.ldIcon !== 'none') {
+            var ic = ldIco(it.ldIcon && it.ldIcon !== 'dollar' ? it.ldIcon : 'dollar', 'agp-so-ldic');
+            if (ic) card.appendChild(ic);
+        }
         var tx = el('div', 'agp-so-ldtx');
         if (d) {
             var row = el('div', 'agp-so-ldrow');
@@ -2805,7 +3379,7 @@
         '.agp-so-tx.s-shadow{text-shadow:0 .05em .2em rgba(0,0,0,.9)}',
         '.agp-so-tx.s-outline{text-shadow:-.04em -.04em 0 #000,.04em -.04em 0 #000,-.04em .04em 0 #000,.04em .04em 0 #000,0 .06em .15em rgba(0,0,0,.6)}',
         '.agp-so-tx.s-pill{background:rgba(0,0,0,.6);padding:.15em .6em;border-radius:.6em}',
-        '.agp-so-tx.s-glass{background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.3);padding:.15em .6em;border-radius:.6em;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);text-shadow:0 .04em .12em rgba(0,0,0,.5)}',
+        '.agp-so-tx.s-glass{background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,.05));box-shadow:inset 0 0 0 .04em rgba(255,255,255,.3);padding:.15em .6em;border-radius:.6em;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);text-shadow:0 .04em .12em rgba(0,0,0,.5)}',
         '.agp-so-tx.s-neon{color:#fff !important;text-shadow:0 0 .04em #fff,0 0 .12em var(--agp-so-c),0 0 .3em var(--agp-so-c),0 0 .6em var(--agp-so-c)}',
         '.agp-so-tx.s-fire{color:#fff6d0 !important;text-shadow:0 0 .06em #fff,0 -.06em .15em #ffd54a,0 -.12em .3em #ff9800,0 -.2em .45em #ff3d00,0 -.3em .7em #b71c1c}',
         '.agp-so-tx.s-gradient{background:linear-gradient(180deg,#fff 10%,var(--agp-so-c) 90%);-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.7))}',
@@ -2814,6 +3388,73 @@
         '.agp-so-tx.s-3d{text-shadow:.02em .02em 0 rgba(0,0,0,.55),.04em .04em 0 rgba(0,0,0,.5),.06em .06em 0 rgba(0,0,0,.45),.08em .08em 0 rgba(0,0,0,.4),.1em .1em .12em rgba(0,0,0,.6)}',
         '.agp-so-tx.s-hollow{color:transparent !important;-webkit-text-stroke:.035em var(--agp-so-c);filter:drop-shadow(0 .03em .06em rgba(0,0,0,.8))}',
         '.agp-so-mv{display:inline-block}',
+        /* «لوحة الأصدقاء» (بريميوم): لوحة ساتان بإضاءة وعمق، وحيوانات تطل من وراها وكفوفها على حافتها */
+        '.agp-so-bn{--bnc:#c9b3e0;--bnr:#f4f1f6;--bnk:#e9a96a;position:relative;display:inline-block;margin:1.9em .4em .5em;white-space:nowrap}',
+        '.bn-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;min-width:var(--bnw,6em);padding:.46em 1.3em;border-radius:.34em;background:linear-gradient(180deg,color-mix(in srgb,var(--bnc) 62%,#fff) 0%,var(--bnc) 42%,color-mix(in srgb,var(--bnc) 84%,#1a0f24) 100%);border:.03em solid color-mix(in srgb,var(--bnc) 45%,#fff);box-shadow:0 .4em .9em -.25em color-mix(in srgb,var(--bnc) 55%,#000),0 .06em .14em rgba(0,0,0,.28),inset 0 .05em 0 rgba(255,255,255,.75),inset 0 -.1em .2em rgba(0,0,0,.14);overflow:hidden;box-sizing:border-box}',
+        '.bn-bar::before{content:"";position:absolute;left:.08em;right:.08em;top:.04em;height:48%;border-radius:.3em .3em .6em .6em;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0));pointer-events:none}',
+        /* خامات حقيقية: ملمس (ضجيج SVG) + إضاءة. --bnc لون الخامة */
+        '.agp-so-bn.mt-velvet .bn-bar,.agp-so-bn.mt-linen .bn-bar,.agp-so-bn.mt-wood .bn-bar,.agp-so-bn.mt-leather .bn-bar,.agp-so-bn.mt-paper .bn-bar{border:0}',
+        '.agp-so-bn.mt-velvet .bn-bar,.agp-so-bn.mt-linen .bn-bar,.agp-so-bn.mt-wood .bn-bar,.agp-so-bn.mt-leather .bn-bar,.agp-so-bn.mt-paper .bn-bar{padding:.55em 1.45em}',
+        '.agp-so-bn.mt-velvet .bn-bar,.agp-so-bn.mt-linen .bn-bar,.agp-so-bn.mt-wood .bn-bar,.agp-so-bn.mt-leather .bn-bar,.agp-so-bn.mt-paper .bn-bar{box-shadow:0 .45em .9em -.3em rgba(0,0,0,.6),0 .08em .16em rgba(0,0,0,.35)}',
+        '.agp-so-bn.mt-velvet .bn-bar::before,.agp-so-bn.mt-linen .bn-bar::before,.agp-so-bn.mt-wood .bn-bar::before,.agp-so-bn.mt-leather .bn-bar::before,.agp-so-bn.mt-paper .bn-bar::before{display:none}',
+        '.agp-so-bn.mt-velvet .bn-bar{background:' + BN_NOISE('.95', 2, '.42') + ',radial-gradient(120% 140% at 28% -10%,color-mix(in srgb,var(--bnc) 55%,#fff) 0%,transparent 55%),linear-gradient(180deg,color-mix(in srgb,var(--bnc) 88%,#fff),var(--bnc) 40%,color-mix(in srgb,var(--bnc) 62%,#120818));box-shadow:0 .45em .9em -.3em rgba(0,0,0,.6),0 .08em .16em rgba(0,0,0,.35),inset 0 0 .35em rgba(0,0,0,.45),inset 0 .04em .06em rgba(255,255,255,.25)}',
+        '.agp-so-bn.mt-linen .bn-bar{background:repeating-linear-gradient(0deg,rgba(255,255,255,.12) 0 .025em,transparent .025em .06em),repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 .025em,transparent .025em .06em),' + BN_NOISE('.7', 3, '.22') + ',linear-gradient(180deg,color-mix(in srgb,var(--bnc) 92%,#fff),var(--bnc) 55%,color-mix(in srgb,var(--bnc) 82%,#3a2a1a));box-shadow:0 .45em .9em -.3em rgba(0,0,0,.55),0 .08em .16em rgba(0,0,0,.3),inset 0 0 .25em rgba(80,60,30,.25)}',
+        '.agp-so-bn.mt-wood .bn-bar{background:' + BN_NOISE('.012 .42', 3, '.6', 420, 160) + ',linear-gradient(180deg,rgba(255,240,210,.22),transparent 35%,rgba(0,0,0,.18)),linear-gradient(90deg,color-mix(in srgb,var(--bnc) 88%,#000),var(--bnc) 30%,color-mix(in srgb,var(--bnc) 85%,#fff) 55%,var(--bnc) 80%,color-mix(in srgb,var(--bnc) 82%,#000));background-size:100% 100%;box-shadow:0 .45em .9em -.3em rgba(0,0,0,.6),0 .08em .16em rgba(0,0,0,.35),inset 0 .05em .04em rgba(255,235,200,.35),inset 0 -.06em .08em rgba(0,0,0,.35)}',
+        '.agp-so-bn.mt-leather .bn-bar{background:' + BN_NOISE('.55', 3, '.55') + ',radial-gradient(130% 160% at 30% -20%,color-mix(in srgb,var(--bnc) 60%,#fff) 0%,transparent 50%),linear-gradient(180deg,color-mix(in srgb,var(--bnc) 90%,#fff),var(--bnc) 45%,color-mix(in srgb,var(--bnc) 60%,#000));box-shadow:0 .45em .9em -.3em rgba(0,0,0,.65),0 .08em .16em rgba(0,0,0,.4),inset 0 0 .3em rgba(0,0,0,.4),inset 0 .04em .05em rgba(255,255,255,.18)}',
+        '.agp-so-bn.mt-paper .bn-bar{background:' + BN_NOISE('.85', 3, '.16') + ',radial-gradient(150% 120% at 50% 40%,transparent 55%,rgba(120,90,50,.18)),linear-gradient(180deg,color-mix(in srgb,var(--bnc) 94%,#fff),var(--bnc));box-shadow:0 .4em .8em -.3em rgba(0,0,0,.5),0 .06em .12em rgba(0,0,0,.25)}',
+        '.bn-stitch{position:absolute;inset:.16em;border:.05em dashed var(--bns,color-mix(in srgb,var(--bnc) 35%,#fff));border-radius:inherit;pointer-events:none;filter:drop-shadow(0 .025em 0 rgba(0,0,0,.45));opacity:.9}',
+        '.agp-so-bn.mt-leather .bn-stitch{border-width:.06em;border-color:var(--bns,#e9cf9a)}',
+        '.agp-so-bn.r-soft .bn-stitch{border-radius:.22em}.agp-so-bn.r-round .bn-stitch{border-radius:1em}.agp-so-bn.r-sharp .bn-stitch{border-radius:.04em}',
+        '.bn-foil{position:absolute;inset:.14em;border:.04em solid transparent;border-radius:.2em;background:linear-gradient(135deg,#f7e7a8,#c8962e 30%,#fff1c0 50%,#b07a18 70%,#f3d77d) border-box;-webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}',
+        '.bn-nail{position:absolute;width:.2em;height:.2em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6d6,#d4a64a 45%,#6e4a12);box-shadow:0 .03em .04em rgba(0,0,0,.55);pointer-events:none}',
+        '.bn-nail.tl{top:.2em;left:.25em}.bn-nail.tr{top:.2em;right:.25em}.bn-nail.bl{bottom:.2em;left:.25em}.bn-nail.br{bottom:.2em;right:.25em}',
+        /* لمسة النص: محفور، بارز، ذهب، عادي */
+        '.agp-so-bn.tf-deboss .bn-t{text-shadow:0 .03em .01em rgba(255,255,255,.35),0 -.025em .02em rgba(0,0,0,.45)}',
+        '.agp-so-bn.tf-emboss .bn-t{text-shadow:0 -.02em 0 rgba(255,255,255,.4),0 .05em .06em rgba(0,0,0,.45)}',
+        '.agp-so-bn.tf-foil .bn-t{color:transparent!important;background:linear-gradient(180deg,#fff4c6,#e9c25b 35%,#a8761a 55%,#f6dc8a 75%,#c08a26);-webkit-background-clip:text;background-clip:text;text-shadow:none;filter:drop-shadow(0 .03em .02em rgba(0,0,0,.45))}',
+        '.agp-so-bn.r-sharp .bn-bar{border-radius:.08em}.agp-so-bn.r-round .bn-bar{border-radius:1.2em}',
+        '.bn-tw{position:relative;z-index:1;display:flex;justify-content:center;max-width:100%}',
+        '.bn-t{display:inline-block;position:relative;padding:0;text-shadow:0 .02em 0 rgba(255,255,255,.4),0 .04em .08em rgba(0,0,0,.12)}',
+        '.bn-ch{position:absolute;display:flex;align-items:flex-end;gap:.15em;pointer-events:none}',
+        '.bn-heads{z-index:0;bottom:calc(100% - .55em)}',
+        '.bn-paws{z-index:2;bottom:calc(100% - .32em)}',
+        '.bn-ch.p-center{left:50%;transform:translateX(-50%)}.bn-ch.p-right{right:10%}.bn-ch.p-left{left:10%}',
+        '.bn-c,.bn-pw{display:block;width:2.2em;flex:none}',
+        '.bn-c{transform-origin:50% 100%;animation:agp-so-bnpeek 4.6s ease-in-out infinite}',
+        '.bn-c.bunny{margin-bottom:0}.bn-c.kitten{margin-bottom:.34em;animation-delay:-2.3s}',
+        '.bn-c svg,.bn-pw svg{width:100%;display:block;overflow:visible}',
+        '.bn-c svg{filter:drop-shadow(0 .04em .06em rgba(0,0,0,.25))}',
+        '.bn-c .ey{transform-box:fill-box;transform-origin:center;animation:agp-so-bnblink 4.2s infinite}',
+        '.bn-c.kitten .ey{animation-delay:-1.5s}',
+        '.bn-c .ear-r{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-bnear 5.5s ease-in-out infinite}',
+        '.bn-heads.still .bn-c,.bn-heads.still .ear-r{animation:none}',
+        '@keyframes agp-so-bnpeek{0%,50%,100%{transform:translateY(0) rotate(0)}62%{transform:translateY(-7%) rotate(-4deg)}74%{transform:translateY(-4%) rotate(3deg)}86%{transform:translateY(0) rotate(0)}}',
+        '@keyframes agp-so-bnblink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}',
+        '@keyframes agp-so-bnear{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-10deg)}92%{transform:rotate(4deg)}}',
+        /* حركات الخلفية */
+        '.agp-so-bn.bg-shimmer .bn-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.5) 50%,transparent 60%);background-size:260% 100%;animation:agp-so-bnsh 3.8s ease-in-out infinite}',
+        '.bn-spk{position:absolute;inset:0;pointer-events:none}',
+        '.bn-spk i{position:absolute;transform:translate(-50%,-50%) scale(0);background:linear-gradient(90deg,transparent 44%,#fff 50%,transparent 56%),linear-gradient(0deg,transparent 44%,#fff 50%,transparent 56%),radial-gradient(closest-side,#fff,rgba(255,255,255,0) 60%);-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:agp-so-bnspk 2.4s ease-in-out infinite}',
+        '@keyframes agp-so-bnspk{0%,100%{transform:translate(-50%,-50%) scale(0) rotate(0)}50%{transform:translate(-50%,-50%) scale(1) rotate(45deg)}}',
+        '.agp-so-bn.bg-gradient .bn-bar{background:linear-gradient(90deg,var(--bnc),color-mix(in srgb,var(--bnc) 62%,#fff),color-mix(in srgb,var(--bnc) 80%,#ff9fd0),var(--bnc));background-size:300% 100%;animation:agp-so-bngr 5s ease-in-out infinite alternate}',
+        '.agp-so-bn.bg-breathe .bn-bar{animation:agp-so-bnbr 3s ease-in-out infinite}',
+        '.bn-bub{position:absolute;inset:0;pointer-events:none}',
+        '.bn-bub i{position:absolute;bottom:-.4em;border-radius:50%;background:rgba(255,255,255,.45);box-shadow:inset -.04em -.04em .06em rgba(255,255,255,.6);animation:agp-so-bnbub 4s ease-in infinite}',
+        '@keyframes agp-so-bnsh{0%,40%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '@keyframes agp-so-bngr{to{background-position:100% 0}}',
+        '@keyframes agp-so-bnbr{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.025);filter:brightness(1.08)}}',
+        '@keyframes agp-so-bnbub{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-3em) scale(1.1);opacity:0}}',
+        /* حركات النص */
+        '.agp-so-bn.m-marquee .bn-bar{width:var(--bnw,11em);padding-left:0;padding-right:0}',
+        '.agp-so-bn.m-marquee .bn-tw{overflow:hidden;width:100%;justify-content:flex-start;-webkit-mask:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}',
+        '.bn-track{display:flex;direction:ltr;width:max-content;animation:agp-so-ldmq 8s linear infinite}',
+        '.bn-track .bn-t{direction:rtl;padding:0 1.4em}',
+        '.agp-so-bn.m-type .bn-t{animation:agp-so-ldtype 7s ease-in-out infinite}',
+        '.bn-cur{position:absolute;top:.05em;bottom:.05em;width:.07em;border-radius:.07em;background:currentColor;animation:agp-so-ldcur 7s ease-in-out infinite}',
+        '.agp-so-bn.m-pop .bn-t{animation:agp-so-bnpop 4s cubic-bezier(.2,1.4,.4,1) infinite}',
+        '.agp-so-bn.m-float .bn-t{animation:agp-so-bnfl 3s ease-in-out infinite}',
+        '@keyframes agp-so-bnpop{0%{transform:scale(.4);opacity:0}12%{transform:scale(1.08);opacity:1}20%,100%{transform:scale(1);opacity:1}}',
+        '@keyframes agp-so-bnfl{0%,100%{transform:translateY(.05em) rotate(-1deg)}50%{transform:translateY(-.07em) rotate(1deg)}}',
         '.agp-so-mv[class*=" a-"]{animation-iteration-count:infinite;animation-timing-function:ease-in-out;will-change:transform}',
         '.agp-so-mv.a-pulse{animation-name:agp-so-pulse}',
         '.agp-so-mv.a-heartbeat{animation-name:agp-so-heartbeat}',
@@ -2904,7 +3545,7 @@
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
         '.agp-so-stack.fk-crystal{--agp-so-sgap0:.6em}',
         '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
-        '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
+        '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));box-shadow:inset 0 0 0 .05em color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1)),inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
         '.agp-so-scard.rk1 .agp-so-sin{padding:.42em .65em .42em .6em}',
@@ -2998,6 +3639,83 @@
         '@keyframes agp-so-f7float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.5%) rotate(-1.2deg)}}',
         '@keyframes agp-so-f7glow{50%{opacity:.7}}',
         '@keyframes agp-so-f7spark{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1;transform:translateY(-20%) scale(1)}100%{opacity:0;transform:translateY(-160%) scale(.3)}}',
+        /* إطار «الفراشات» — مرسوم بالكود. --agp-so-bfc لون القوس، --agp-so-bff الفراشات، --agp-so-bfr الحلقة */
+        '.fr-butterfly{--bfc:var(--agp-so-bfc,#b47cff);--bff:var(--agp-so-bff,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
+        /* إطار «الغبار الذهبي» — --agp-so-bfc لون المذنّبين، --agp-so-sdd لون الغبار */
+        '.fr-stardust{--bfc:var(--agp-so-bfc,#ffcc4d);--sdd:var(--agp-so-sdd,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
+        '.fr-stardust .agp-so-av{position:relative;z-index:1}',
+        '.agp-so-sdglow{position:absolute;inset:-10%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 80%,color-mix(in srgb,var(--bfc) 9%,transparent) 88%,transparent);animation:agp-so-bfbreath 3.6s ease-in-out infinite}',
+        /* الحركة بالترتيب (دورة 9 ثواني): المذنّب الأول يطلق ويوقف، يطلع غباره، بعدها الثاني، يلمعون شوي، يختفون، وتعيد */
+        '.agp-so-sdw{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;animation:agp-so-sdgo0 9s infinite}',
+        '.agp-so-sdw.g1{animation-name:agp-so-sdgo1}',
+        '.agp-so-sddust{position:absolute;inset:0;opacity:0;animation:agp-so-sddust0 9s infinite}',
+        '.agp-so-sddust.g1{animation-name:agp-so-sddust1}',
+        '@keyframes agp-so-sdgo0{0%{transform:rotate(-210deg);opacity:0;animation-timing-function:cubic-bezier(.2,.7,.25,1)}3%{opacity:1}16%{transform:rotate(0)}84%{opacity:1;transform:rotate(0)}94%,100%{opacity:0;transform:rotate(0)}}',
+        '@keyframes agp-so-sdgo1{0%,17%{transform:rotate(-210deg);opacity:0;animation-timing-function:cubic-bezier(.2,.7,.25,1)}20%{opacity:1}33%{transform:rotate(0)}84%{opacity:1;transform:rotate(0)}94%,100%{opacity:0;transform:rotate(0)}}',
+        '@keyframes agp-so-sddust0{0%,13%{opacity:0;transform:scale(.88)}22%{opacity:1;transform:scale(1)}84%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1.04)}}',
+        '@keyframes agp-so-sddust1{0%,30%{opacity:0;transform:scale(.88)}39%{opacity:1;transform:scale(1)}84%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1.04)}}',
+        /* المذنّب: ذيل طوله 175° يبدأ شفاف ويقوى لين الرأس الأبيض */
+        '.agp-so-sdc{position:absolute;inset:-12%;border-radius:50%;background:conic-gradient(from calc(var(--h) - 150deg),transparent 0,color-mix(in srgb,var(--bfc) 4%,transparent) 12%,color-mix(in srgb,var(--bfc) 22%,transparent) 24%,color-mix(in srgb,var(--bfc) 70%,transparent) 33%,var(--bfc) 38%,color-mix(in srgb,var(--bfc) 40%,#fff) 40.5%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));filter:blur(calc(var(--s) * .014)) drop-shadow(0 0 .2em var(--bfc));opacity:.85}',
+        '.agp-so-sdc.core{background:conic-gradient(from calc(var(--h) - 150deg),transparent 0 22%,color-mix(in srgb,var(--bfc) 60%,transparent) 32%,color-mix(in srgb,var(--bfc) 30%,#fff) 38%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));filter:drop-shadow(0 0 .08em #fff);opacity:1}',
+        '.agp-so-sdhead{position:absolute;width:20%;height:20%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,#fff,#fff 12%,color-mix(in srgb,var(--bfc) 70%,transparent) 32%,transparent 70%),linear-gradient(90deg,transparent 47%,#fff 50%,transparent 53%),linear-gradient(0deg,transparent 48%,rgba(255,255,255,.8) 50%,transparent 52%);-webkit-mask:radial-gradient(closest-side,#000 35%,transparent);mask:radial-gradient(closest-side,#000 35%,transparent);animation:agp-so-sdflare 2.6s ease-in-out infinite}',
+        '.agp-so-sddot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--sdd) 55%,#fff);box-shadow:0 0 .1em var(--sdd);animation:agp-so-bftw 2.4s ease-in-out infinite}',
+        '.agp-so-sdstar{position:absolute;width:9%;height:9%;transform:translate(-50%,-50%);background:linear-gradient(90deg,transparent 45%,#fff 50%,transparent 55%),linear-gradient(0deg,transparent 45%,#fff 50%,transparent 55%),radial-gradient(closest-side,#fff,color-mix(in srgb,var(--sdd) 60%,transparent) 35%,transparent 70%);-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:agp-so-bfstar 2.8s ease-in-out infinite}',
+        '@keyframes agp-so-sdflare{0%,100%{transform:translate(-50%,-50%) scale(.85) rotate(0)}50%{transform:translate(-50%,-50%) scale(1.2) rotate(20deg)}}',
+        '.fr-butterfly .agp-so-av{position:relative;z-index:1}',
+        '.agp-so-bfglow{position:absolute;inset:-14%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 72%,color-mix(in srgb,var(--bfc) 40%,transparent) 84%,transparent);-webkit-mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);animation:agp-so-bfbreath 3.4s ease-in-out infinite}',
+        '.agp-so-bfring{position:absolute;inset:-5%;z-index:3;border-radius:50%;pointer-events:none;border:calc(var(--s) * .022) solid var(--bfr);box-shadow:0 0 .06em var(--bfr),0 0 .18em color-mix(in srgb,var(--bfr) 55%,transparent),inset 0 0 .1em color-mix(in srgb,var(--bfr) 50%,transparent)}',
+        '.agp-so-bfarcw{position:absolute;inset:0;z-index:2;pointer-events:none;animation:agp-so-bfsway 7s ease-in-out infinite}',
+        '.agp-so-bfarc{position:absolute;inset:-9%;border-radius:50%;background:conic-gradient(from 325deg,transparent 0,color-mix(in srgb,var(--bfc) 70%,#fff) 4%,var(--bfc) 20%,color-mix(in srgb,var(--bfc) 85%,transparent) 36%,transparent 50%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .1)),#000 calc(100% - calc(var(--s) * .065)),#000 calc(100% - calc(var(--s) * .045)),transparent);mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .1)),#000 calc(100% - calc(var(--s) * .065)),#000 calc(100% - calc(var(--s) * .045)),transparent);filter:blur(calc(var(--s) * .01)) drop-shadow(0 0 .12em var(--bfc)) drop-shadow(0 0 .3em var(--bfc))}',
+        /* ضوء أبيض يجري على القوس */
+        '.agp-so-bfarc.hot{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 84%,color-mix(in srgb,var(--bfc) 50%,#fff) 95%,#fff 99%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .065)),transparent calc(100% - calc(var(--s) * .04)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .065)),transparent calc(100% - calc(var(--s) * .04)));filter:drop-shadow(0 0 .1em #fff);opacity:1;animation:agp-so-bfrun 4.6s linear infinite}',
+        '.agp-so-bfdot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--bfc) 45%,#fff);box-shadow:0 0 .12em var(--bfc);animation:agp-so-bftw 2.6s ease-in-out infinite}',
+        '.agp-so-bfstar{position:absolute;width:16%;height:16%;transform:translate(-50%,-50%) scale(.6);opacity:.4;background:radial-gradient(closest-side,#fff,color-mix(in srgb,var(--bfc) 60%,transparent) 30%,transparent 70%),linear-gradient(90deg,transparent 46%,#fff 50%,transparent 54%),linear-gradient(0deg,transparent 47%,#fff 50%,transparent 53%);-webkit-mask:radial-gradient(closest-side,#000 40%,transparent);mask:radial-gradient(closest-side,#000 40%,transparent);animation:agp-so-bfstar 3.3s ease-in-out infinite}',
+        '.agp-so-bfly{position:absolute;z-index:6;pointer-events:none}',
+        '.agp-so-bfly.f1{left:-28%;top:42%;width:48%;height:40%;animation:agp-so-bfhover1 9s ease-in-out infinite}',
+        '.agp-so-bfly.f2{left:-8%;top:67%;width:40%;height:33%;animation:agp-so-bfhover2 11s ease-in-out infinite}',
+        '.agp-so-bfw{display:block;width:100%;height:100%;color:var(--bff);filter:drop-shadow(0 0 .05em color-mix(in srgb,var(--bff) 80%,#fff)) drop-shadow(0 0 .16em color-mix(in srgb,var(--bff) 60%,transparent))}',
+        '.agp-so-bfw svg{width:100%;height:100%;overflow:visible;display:block}',
+        /* رفرفة مثل الحقيقية: ضربتين سريعة وبعدها تفرد جناحها وتنزلق (f1)، والثانية واقفة تفتح وتسكّر ببطء (f2) */
+        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 44%;animation:agp-so-bfflap 1.9s ease-in-out infinite}',
+        '.agp-so-bfw .wr{animation-name:agp-so-bfflapr}',
+        '.agp-so-bfly.f1 .agp-so-bfw{animation:agp-so-bflift 1.9s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wl{animation:agp-so-bfrest 4.6s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wr{animation:agp-so-bfrestr 4.6s ease-in-out infinite}',
+        '.agp-so-bfly.f1 .agp-so-bfw{--rot:-14deg;transform:rotate(-14deg)}',
+        '.agp-so-bfly.f2 .agp-so-bfw{transform:rotate(10deg)}',
+        '.agp-so-bfspk{position:absolute;z-index:6;width:3.4%;height:3.4%;border-radius:50%;pointer-events:none;background:#fff;box-shadow:0 0 .1em #fff,0 0 .25em var(--bff);opacity:0;animation:agp-so-f7spark 2.6s ease-in-out infinite}',
+        '.agp-so-bforb{position:absolute;inset:-17%;z-index:6;pointer-events:none;animation:agp-so-spin 18s linear infinite}',
+        '.agp-so-bfly.f3{left:50%;top:0;width:24%;height:20%;transform:translate(-50%,-50%) rotate(90deg)}',
+        '.agp-so-bfly.f3 .agp-so-bfw{animation:agp-so-bfbob 2.3s ease-in-out infinite}',
+        '.agp-so-bfly.f3 .wl{animation:agp-so-bfquick .5s ease-in-out infinite}',
+        '.agp-so-bfly.f3 .wr{animation:agp-so-bfquickr .5s ease-in-out infinite}',
+        /* f1: ثلاث ضربات (ترتفع) وبعدها تفرد جناحها وتنزل بهدوء. f2: واقفة تفتح وتسكّر ببطء، وبعدها رفّة سريعة */
+        '@keyframes agp-so-bfflap{0%,48%,100%{transform:scaleX(1) skewY(0)}8%,24%,40%{transform:scaleX(.1) skewY(7deg)}16%,32%{transform:scaleX(.98) skewY(-2deg)}74%{transform:scaleX(.82) skewY(2deg)}}',
+        '@keyframes agp-so-bfflapr{0%,48%,100%{transform:scaleX(1) skewY(0)}8%,24%,40%{transform:scaleX(.1) skewY(-7deg)}16%,32%{transform:scaleX(.98) skewY(2deg)}74%{transform:scaleX(.82) skewY(-2deg)}}',
+        '@keyframes agp-so-bflift{0%,100%{transform:rotate(-14deg) translateY(0)}45%{transform:rotate(-18deg) translateY(-12%)}}',
+        '@keyframes agp-so-bfrest{0%,30%,100%{transform:scaleX(1) skewY(0)}48%,58%{transform:scaleX(.08) skewY(8deg)}72%,88%{transform:scaleX(1) skewY(0)}76%,84%{transform:scaleX(.15) skewY(6deg)}80%{transform:scaleX(.95)}}',
+        '@keyframes agp-so-bfrestr{0%,30%,100%{transform:scaleX(1) skewY(0)}48%,58%{transform:scaleX(.08) skewY(-8deg)}72%,88%{transform:scaleX(1) skewY(0)}76%,84%{transform:scaleX(.15) skewY(-6deg)}80%{transform:scaleX(.95)}}',
+        '@keyframes agp-so-bfquick{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.12) skewY(7deg)}}',
+        '@keyframes agp-so-bfquickr{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.12) skewY(-7deg)}}',
+        '@keyframes agp-so-bfhover1{0%,100%{transform:translate(0,0) rotate(0)}18%{transform:translate(6%,-10%) rotate(-6deg)}37%{transform:translate(-4%,-16%) rotate(4deg)}55%{transform:translate(-9%,-4%) rotate(7deg)}74%{transform:translate(3%,6%) rotate(-3deg)}88%{transform:translate(-2%,2%) rotate(2deg)}}',
+        '@keyframes agp-so-bfhover2{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-4%,5%) rotate(3deg)}50%{transform:translate(3%,-3%) rotate(-3deg)}75%{transform:translate(-2%,-6%) rotate(2deg)}}',
+        '@keyframes agp-so-bfbob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-30%) rotate(-8deg)}50%{transform:translateY(-8%) rotate(4deg)}75%{transform:translateY(-38%) rotate(-4deg)}}',
+        '@keyframes agp-so-bfsway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(8deg)}}',
+        '@keyframes agp-so-bfrun{0%{--agp-so-ang:330deg;opacity:0}12%,80%{opacity:1}100%{--agp-so-ang:512deg;opacity:0}}',
+        '@keyframes agp-so-bftw{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}',
+        '@keyframes agp-so-bfstar{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.55) rotate(0)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(45deg)}}',
+        '@keyframes agp-so-bfbreath{0%,100%{opacity:.55}50%{opacity:1}}',
+        /* كبسولة العدد بإطار «الفراشات»: زجاجية بلون المركز، العملة تلف حول نفسها بنعومة (بدون ثري دي)، ورقم المركز بدائرة على اليمين */
+        '.agp-so-throne.fx-code .agp-so-tcount{gap:.36em;margin-top:.3em;padding:.2em .5em .2em .32em;border-radius:.24em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
+        '.agp-so-tbox.fx-code .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
+        /* العملة: لفّة وحدة بالطول (حول محورها العمودي، بدون منظور) وبعدها توقف، وتعيد كل 5 ثواني (الأول ثم الثاني ثم الثالث) */
+        '.agp-so-throne.fx-code .agp-so-tic.i-gifters,.agp-so-throne.fx-code .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.2em;height:1.2em;margin:-.1em 0;filter:none;animation:agp-so-bfcoin 5s infinite;animation-delay:calc(var(--d) * 2)}',
+        '@keyframes agp-so-bfcoin{0%{transform:rotateY(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}22%,100%{transform:rotateY(360deg)}}',
+        '.agp-so-throne.fx-code .agp-so-tic:not(.i-gifters){animation:none}',
+        '.agp-so-throne.fx-code .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
+        /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
+        '.agp-so-bfrk{--sf:color-mix(in srgb,color-mix(in srgb,var(--rk) 72%,var(--bfc)) 62%,#fff);position:absolute;z-index:7;left:73.2%;top:99.8%;width:27%;height:27%;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s) * .15);line-height:1;color:var(--agp-so-rkt,color-mix(in srgb,var(--bfc) 45%,#1c1030));background:radial-gradient(circle at 35% 28%,#fff,var(--sf) 55%,color-mix(in srgb,var(--sf) 80%,var(--bfc)));border:calc(var(--s) * .014) solid color-mix(in srgb,var(--bfr) 85%,transparent);box-shadow:0 0 .1em color-mix(in srgb,var(--bfc) 70%,transparent),0 0 .3em color-mix(in srgb,var(--rk) 35%,transparent);animation:agp-so-bfrkp 3.4s ease-in-out infinite}',
+        '@keyframes agp-so-bfrkp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.06)}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
@@ -3163,11 +3881,111 @@
         '@keyframes agp-so-a-fade{0%{opacity:0;filter:blur(.3em)}100%{opacity:1;filter:none}}',
         '@keyframes agp-so-a-drop{0%{opacity:0;transform:translateY(-120%)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}',
+        /* «آخر دعم» البسيط: خط متوهّج (ld-line) وكبسولة مقسومة (ld-split) */
+        '.agp-so-ld2{--ldn:#fff;--ld1:#ff5fa8;--ld2:#7b5cff;--ldd:#fff;--ldb:#1a1426;position:relative;direction:rtl;color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
+        '.agp-so-ld2n{font-family:var(--ldfn,"Noto Kufi Arabic",system-ui,sans-serif);font-weight:var(--ldwn,700);white-space:nowrap;max-width:12em;overflow:hidden;text-overflow:ellipsis;color:var(--ldn)}',
+        '.agp-so-ld2av{display:inline-flex;align-items:center;gap:.25em;direction:ltr}',
+        '.agp-so-ld2i{display:inline-flex;flex:none;width:1em;height:1em;color:var(--ldi,var(--lda,currentColor));filter:drop-shadow(0 0 .2em color-mix(in srgb,var(--ldi,#ffd36b) 60%,transparent))}',
+        '.agp-so-ld2i svg{width:100%;height:100%;display:block}',
+        '.ld-line .agp-so-ld2i{font-size:.96em}.ld-split .agp-so-ld2i{position:relative;z-index:1;font-size:.88em}',
+        '.mk svg{width:100%;height:100%;display:block}',
+        '.ld-line .agp-so-ld2l i.mk{width:.95em;height:.95em;background:none;border-radius:0;box-shadow:none;color:var(--ldd);transform:translate(-50%,-50%);filter:drop-shadow(0 0 .25em var(--ldd)) drop-shadow(0 0 .5em var(--ld1))}',
+        '.ld-split .agp-so-ld2d.mk{width:.75em;height:.75em;background:none;box-shadow:none;color:var(--ldd);filter:drop-shadow(0 0 .2em var(--ldd))}',
+        '.ldw-sep.mk{width:.7em;height:.7em;background:none;box-shadow:none;border-radius:0;color:color-mix(in srgb,var(--ld1) 50%,#fff);filter:drop-shadow(0 0 .25em var(--ld1))}',
+        '.agp-so-ld2a{font-family:var(--ldfa,inherit);direction:ltr;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}',
+        '.ld-line{display:flex;flex-direction:column;align-items:stretch;gap:.33em;min-width:10em}',
+        '.ld-line .agp-so-ld2t{display:flex;align-items:baseline;justify-content:space-between;gap:1.1em;padding:0 .17em}',
+        '.ld-line .agp-so-ld2n{font-size:.92em;text-shadow:0 .08em .4em rgba(0,0,0,.7)}',
+        '.ld-line .agp-so-ld2a{font-size:.96em;color:var(--lda,color-mix(in srgb,var(--ld1) 45%,#fff));text-shadow:0 0 .6em color-mix(in srgb,var(--ld1) 55%,transparent);animation:agp-so-ldglow 2.4s ease-in-out infinite}',
+        '.ld-line .agp-so-ld2l{position:relative;height:.13em;border-radius:.13em;background:linear-gradient(90deg,transparent,var(--ld1) 30%,var(--ld2) 70%,transparent);box-shadow:0 0 .5em color-mix(in srgb,var(--ld1) 60%,transparent)}',
+        '.ld-line .agp-so-ld2l i{position:absolute;top:50%;width:.58em;height:.58em;border-radius:.08em;background:var(--ldd);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 .4em var(--ldd),0 0 .9em var(--ld1);animation:agp-so-ldwalk 4.5s ease-in-out infinite alternate}',
+        '.ld-line.new .agp-so-ld2l{animation:agp-so-lddraw .6s ease-out}',
+        '.ld-line.new .agp-so-ld2t{animation:agp-so-ldup .5s .15s ease-out both}',
+        '.ld-split{display:flex;align-items:stretch;height:2.1em;border-radius:.58em;overflow:hidden;box-shadow:0 .33em 1.1em rgba(0,0,0,.45),0 0 0 .04em rgba(255,255,255,.08)}',
+        '.ld-split .agp-so-ld2n{display:flex;align-items:center;padding:0 .92em;font-size:.88em;background:linear-gradient(180deg,color-mix(in srgb,var(--ldb) 92%,#fff),var(--ldb));opacity:.96}',
+        '.ld-split .agp-so-ld2p{position:relative;display:flex;align-items:center;gap:.33em;padding:0 .75em 0 .67em;background:linear-gradient(135deg,var(--ld1,#8a63ff),color-mix(in srgb,var(--ld1,#8a63ff) 65%,#000))}',
+        '.ld-split{--ld1:#8a63ff}',
+        '.ld-split .agp-so-ld2p::after{content:"";position:absolute;top:0;bottom:0;right:-.42em;width:.83em;background:linear-gradient(135deg,var(--ld1),color-mix(in srgb,var(--ld1) 65%,#000));transform:skewX(-14deg)}',
+        '.ld-split .agp-so-ld2a{position:relative;z-index:1;font-size:.92em;color:var(--lda,#fff)}',
+        '.ld-split .agp-so-ld2d{position:relative;z-index:1;width:.33em;height:.33em;border-radius:50%;background:var(--ldd,#7dffb0);box-shadow:0 0 .33em var(--ldd,#7dffb0);animation:agp-so-ldblink 1.6s ease-in-out infinite}',
+        '.ld-split{--ldd:#7dffb0}',
+        '.ld-split .agp-so-ld2g{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);background-size:250% 100%;animation:agp-so-ldsh 5s ease-in-out infinite}',
+        '.ld-split.new .agp-so-ld2p{animation:agp-so-ldslide .55s cubic-bezier(.2,1,.3,1) both}',
+        '.ld-split.new .agp-so-ld2n{animation:agp-so-ldup .45s .2s ease-out both}',
+        '.ld-split.new .agp-so-ld2d{animation:agp-so-ldflash .9s ease-out,agp-so-ldblink 1.6s .9s ease-in-out infinite}',
+        /* «شريط الموج» (ld-wave): --ld1 لون الموج، --ld2 لون التوهّج، --ldb خلفية الشريط */
+        '.ld-wave{--ld1:#9b6bff;--ld2:#3a1aff;--ldb:#000;display:inline-block;padding:1em .4em}',
+        '.ld-wave .ldw-halo{position:absolute;left:24%;right:24%;top:.05em;bottom:.05em;border-radius:50%;background:radial-gradient(closest-side,var(--ld2),var(--ld2) 35%,color-mix(in srgb,var(--ld2) 45%,transparent) 62%,transparent 100%);filter:blur(.3em);animation:agp-so-ldhalo 3.2s ease-in-out infinite}',
+        '.ld-wave .ldw-halo::after{content:"";position:absolute;left:-30%;right:-30%;top:30%;bottom:30%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--ld2) 70%,transparent),transparent);filter:blur(.25em)}',
+        '.ld-wave .ldw-bar{position:relative;display:flex;align-items:center;justify-content:center;height:2.4em;min-width:13em;padding:0 1.3em;border-radius:.55em;overflow:hidden;background:linear-gradient(100deg,color-mix(in srgb,var(--ld2) 42%,var(--ldb)) 0%,var(--ldb) 50%,color-mix(in srgb,var(--ld2) 28%,var(--ldb)) 100%);box-shadow:inset 0 0 0 .04em rgba(255,255,255,.06),0 .3em 1em rgba(0,0,0,.5)}',
+        '.ldw-waves{position:absolute;inset:0;pointer-events:none;-webkit-mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);filter:drop-shadow(0 0 .2em var(--ld1));mix-blend-mode:screen}',
+        '.ldw-ly{position:absolute;left:0;top:0;width:200%;height:100%;animation:agp-so-ldwx 9s linear infinite}',
+        '.ldw-ly svg{width:100%;height:100%;display:block;animation:agp-so-ldwy 5s ease-in-out infinite alternate}',
+        '.ldw-ly.l1{animation-duration:6.5s;animation-direction:reverse}.ldw-ly.l1 svg{animation-duration:3.8s}',
+        '.ldw-ly.l2{animation-duration:12s}.ldw-ly.l2 svg{animation-duration:6.2s;animation-delay:-2s}',
+        '.ldw-ly.l3{animation-duration:7.5s}.ldw-ly.l3 svg{animation-duration:4.4s;animation-delay:-1s}',
+        '.ldw-tx{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%}',
+        '.ldw-row{position:relative;display:inline-flex;align-items:center;gap:.5em;white-space:nowrap}',
+        '.ld-wave .agp-so-ld2n{font-size:.95em;text-shadow:0 0 .4em rgba(0,0,0,.9),0 .05em .15em rgba(0,0,0,.9)}',
+        '.ld-wave .agp-so-ld2a{font-size:1em;color:var(--lda,color-mix(in srgb,var(--ld1) 35%,#fff));text-shadow:0 0 .5em color-mix(in srgb,var(--ld1) 70%,transparent),0 .05em .15em rgba(0,0,0,.9)}',
+        '.ldw-sep{width:.25em;height:.25em;border-radius:50%;background:color-mix(in srgb,var(--ld1) 50%,#fff);box-shadow:0 0 .3em var(--ld1)}',
+        /* «شريط الفراشات» (ld-flutter): --ld1 لون الفراشات */
+        '.ld-flutter{--ld1:#b98cff}',
+        '.ldf{position:absolute;inset:0;pointer-events:none;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
+        '.ldf-b{position:absolute;left:-12%;width:var(--z);height:calc(var(--z) * .83);margin-top:calc(var(--z) * -.41);animation:agp-so-ldfr 10s linear infinite}',
+        '.ldf-b.l{animation-name:agp-so-ldfl}',
+        '.ldf-bob{display:block;width:100%;height:100%;--r:18deg;animation:agp-so-ldfbob 1.2s ease-in-out infinite alternate}',
+        '.ldf-b.l .ldf-bob{--r:-18deg}',
+        '.ld-flutter .agp-so-bfw{--bff:var(--ld1)}',
+        '.ldf .agp-so-bfw .wl{animation:agp-so-ldfflap 1.1s ease-in-out infinite}',
+        '.ldf .agp-so-bfw .wr{animation:agp-so-ldfflapr 1.1s ease-in-out infinite}',
+        '.ldf-b:nth-child(2n) .agp-so-bfw .wl,.ldf-b:nth-child(2n) .agp-so-bfw .wr{animation-duration:.9s;animation-delay:-.3s}',
+        /* رفرفة بطيئة: الجناح يسكّر بسرعة ويفتح على راحته (تبان الأجنحة أغلب الوقت) */
+        '@keyframes agp-so-ldfflap{0%,55%,100%{transform:scaleX(1) skewY(0)}25%{transform:scaleX(.18) skewY(6deg)}}',
+        '@keyframes agp-so-ldfflapr{0%,55%,100%{transform:scaleX(1) skewY(0)}25%{transform:scaleX(.18) skewY(-6deg)}}',
+        '@keyframes agp-so-ldfr{from{left:-12%}to{left:104%}}',
+        '@keyframes agp-so-ldfl{from{left:104%}to{left:-12%}}',
+        '@keyframes agp-so-ldfbob{0%{transform:translateY(-22%) rotate(calc(var(--r) - 8deg))}100%{transform:translateY(22%) rotate(calc(var(--r) + 8deg))}}',
+        /* شريط: النص يمشي من اليسار لليمين */
+        '.ld-wave.m-marquee .ldw-bar{width:15em;padding:0}',
+        '.ld-wave.m-marquee .ldw-tx{overflow:hidden;justify-content:flex-start;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
+        '.ldw-track{display:flex;direction:ltr;width:max-content;animation:agp-so-ldmq 9s linear infinite}',
+        '.ldw-track .ldw-row{direction:rtl;padding:0 1.6em}',
+        /* تبديل: الاسم ثم المبلغ */
+        '.ldw-sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;animation:agp-so-ldsw 6s ease-in-out infinite}',
+        '.ldw-sw.s2{animation-delay:3s}',
+        '.ld-wave.m-swap .agp-so-ld2a{font-size:1.15em}',
+        /* كتابة: النص ينكشف من اليمين لليسار ومعه مؤشر ضوء، يثبت، وبعدين ينمسح ويعيد */
+        '.ld-wave.m-type .ldw-row{animation:agp-so-ldtype 7s ease-in-out infinite}',
+        '.ldw-cur{position:absolute;top:-.15em;bottom:-.15em;width:.08em;border-radius:.08em;background:#fff;box-shadow:0 0 .3em #fff,0 0 .6em var(--ld1);animation:agp-so-ldcur 7s ease-in-out infinite}',
+        /* داعم جديد */
+        '.ld-wave.new .ldw-bar{animation:agp-so-ldpop .7s cubic-bezier(.2,1.4,.4,1)}',
+        '.ld-wave.new .ldw-halo{animation:agp-so-ldflare 1.2s ease-out,agp-so-ldhalo 3.2s 1.2s ease-in-out infinite}',
+        '@keyframes agp-so-ldhalo{0%,100%{opacity:.85;transform:scaleX(.92)}50%{opacity:1;transform:scaleX(1.06)}}',
+        '@keyframes agp-so-ldflare{0%{opacity:1;transform:scale(1.6);filter:blur(.2em) brightness(1.8)}100%{opacity:.75;transform:none}}',
+        '@keyframes agp-so-ldpop{0%{transform:scale(.88);filter:brightness(1.7)}100%{transform:none;filter:none}}',
+        '@keyframes agp-so-ldwx{to{transform:translateX(-50%)}}',
+        '@keyframes agp-so-ldwy{0%{transform:translateY(-7%) scaleY(.9)}100%{transform:translateY(7%) scaleY(1.1)}}',
+        '@keyframes agp-so-ldmq{from{transform:translateX(-50%)}to{transform:translateX(0)}}',
+        '@keyframes agp-so-ldsw{0%{opacity:0;transform:translateY(60%);filter:blur(.08em)}8%,44%{opacity:1;transform:none;filter:none}52%,100%{opacity:0;transform:translateY(-60%);filter:blur(.08em)}}',
+        '@keyframes agp-so-ldtype{0%{clip-path:inset(-20% -5% -20% 100%)}28%,82%{clip-path:inset(-20% -5% -20% 0)}96%,100%{clip-path:inset(-20% 100% -20% 0)}}',
+        '@keyframes agp-so-ldcur{0%{right:0;opacity:1}28%{right:100%;opacity:1}34%,82%{right:100%;opacity:0}83%{right:100%;opacity:1}96%{right:0;opacity:1}100%{right:0;opacity:0}}',
+        '@keyframes agp-so-ldglow{50%{text-shadow:0 0 .9em color-mix(in srgb,var(--ld1) 90%,transparent)}}',
+        '@keyframes agp-so-ldwalk{0%{left:12%}100%{left:88%}}',
+        '@keyframes agp-so-lddraw{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}',
+        '@keyframes agp-so-ldup{0%{opacity:0;transform:translateY(.4em)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-ldblink{50%{opacity:.35;box-shadow:0 0 .08em var(--ldd)}}',
+        '@keyframes agp-so-ldsh{0%,55%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '@keyframes agp-so-ldslide{0%{transform:translateX(-110%)}100%{transform:none}}',
+        '@keyframes agp-so-ldflash{0%{transform:scale(3);box-shadow:0 0 .75em var(--ldd)}100%{transform:none}}',
         /* «آخر دعم» (الدونيشن) */
         '.agp-so-lastdonation{color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
         '.agp-so-ldbox{display:flex;align-items:center;gap:.5em;padding:.45em .8em .45em .55em;border-radius:1em;background:linear-gradient(160deg,rgba(36,31,46,.86),rgba(16,14,21,.8));border:.06em solid color-mix(in srgb,var(--agp-so-c,#ffd54a) 55%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.45),0 0 .8em color-mix(in srgb,var(--agp-so-c,#ffd54a) 25%,transparent)}',
         '.agp-so-ldic{flex:none;width:1.7em;height:1.7em;filter:drop-shadow(0 0 .25em rgba(255,200,60,.6));animation:agp-so-coin 3.2s ease-in-out infinite}',
         '.agp-so-ldic svg{width:100%;height:100%;display:block}',
+        '.agp-so-ldic{color:var(--ldi,var(--agp-so-c,#ffd54a))}',
+        '.agp-so-ldbox .agp-so-ldname{font-family:var(--ldfn,"Noto Kufi Arabic",system-ui,sans-serif);font-weight:var(--ldwn,700);color:var(--ldn,inherit)}',
+        '.agp-so-ldbox .agp-so-ldamt{font-family:var(--ldfa,inherit);color:var(--lda,var(--agp-so-c,#ffd54a))}',
         '.agp-so-ldtx{display:flex;flex-direction:column;gap:.1em;min-width:0}',
         '.agp-so-ldrow{display:flex;align-items:baseline;gap:.45em;white-space:nowrap}',
         '.agp-so-ldname{font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-size:.85em;max-width:9em;overflow:hidden;text-overflow:ellipsis}',
@@ -3261,7 +4079,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, refreshItem: refreshItem, throneDemo: throneDemo,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, LD_ICONS: LD_ICONS, BN_BG: BN_BG, BN_MOTIONS: BN_MOTIONS, BN_MATS: BN_MATS, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
