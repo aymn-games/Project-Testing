@@ -135,12 +135,25 @@
         markSeen();
     }
 
+    /**
+     * تنويه ثاني بالمكتبة («تنويه التعليق المؤقت» — #agp-freeze-notice بـgames.html) ممكن يكون
+     * مفتوح: ننتظره يتقفل وبعدها نطلّع تنبيهنا، عشان ما تطلع نافذتين فوق بعض.
+     */
+    function whenClear(fn) {
+        if (!document.getElementById('agp-freeze-notice')) { fn(); return; }
+        var t = setInterval(function () {
+            if (document.getElementById('agp-freeze-notice')) return;
+            clearInterval(t);
+            setTimeout(fn, 500);
+        }, 400);
+    }
+
     function start() {
         if (preview) { show(); return; }
         if (localSeen()) return;
-        if (!loggedIn() || !A.request) { show(); return; }
+        if (!loggedIn() || !A.request) { whenClear(show); return; }
         A.request('/api/notices/seen?key=' + encodeURIComponent(NOTICE_KEY)).then(function (r) {
-            if (r && r.success && !r.seen) show();
+            if (r && r.success && !r.seen) whenClear(show);
             else if (r && r.success) setLocalSeen();
         }).catch(function () {});
     }
