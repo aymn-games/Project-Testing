@@ -1211,8 +1211,10 @@
         var f = el('span', 'agp-so-fav fr-stardust');
         f.appendChild(avatar(r));
         f.appendChild(el('span', 'agp-so-sdglow'));
-        var w = el('span', 'agp-so-sdw');
+        // كل مذنّب بمجموعة لحاله (g0 ثم g1): يطلق ويوقف بمكانه، وبعد ما يوصل يبدأ اللي بعده
         [15, 195].forEach(function (head, n) {
+            var w = el('span', 'agp-so-sdw g' + n);
+            var dust = el('span', 'agp-so-sddust g' + n);
             var c = el('span', 'agp-so-sdc');
             c.style.setProperty('--h', head + 'deg');
             w.appendChild(c);
@@ -1240,7 +1242,7 @@
                 dt.style.opacity = (1 - t * .55).toFixed(2);
                 dt.style.animationDelay = (-seeded(sd + 5) * 3).toFixed(2) + 's';
                 dt.style.animationDuration = (1.4 + seeded(sd + 6) * 2.2).toFixed(2) + 's';
-                w.appendChild(dt);
+                dust.appendChild(dt);
             }
             // نجوم صغيرة (أربع رؤوس) بين الغبار
             [.15, .4, .7].forEach(function (t, j) {
@@ -1250,10 +1252,11 @@
                 st.style.left = (50 + Math.sin(ang) * rad) + '%';
                 st.style.top = (50 - Math.cos(ang) * rad) + '%';
                 st.style.animationDelay = (j * .9 + n * .5) + 's';
-                w.appendChild(st);
+                dust.appendChild(st);
             });
+            w.appendChild(dust);
+            f.appendChild(w);
         });
-        f.appendChild(w);
         return f;
     }
 
@@ -3209,7 +3212,15 @@
         '.fr-stardust{--bfc:var(--agp-so-bfc,#ffcc4d);--sdd:var(--agp-so-sdd,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
         '.fr-stardust .agp-so-av{position:relative;z-index:1}',
         '.agp-so-sdglow{position:absolute;inset:-10%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 80%,color-mix(in srgb,var(--bfc) 9%,transparent) 88%,transparent);animation:agp-so-bfbreath 3.6s ease-in-out infinite}',
-        '.agp-so-sdw{position:absolute;inset:0;z-index:2;pointer-events:none;animation:agp-so-spin 10s linear infinite}',
+        /* الحركة بالترتيب (دورة 9 ثواني): المذنّب الأول يطلق ويوقف، يطلع غباره، بعدها الثاني، يلمعون شوي، يختفون، وتعيد */
+        '.agp-so-sdw{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;animation:agp-so-sdgo0 9s infinite}',
+        '.agp-so-sdw.g1{animation-name:agp-so-sdgo1}',
+        '.agp-so-sddust{position:absolute;inset:0;opacity:0;animation:agp-so-sddust0 9s infinite}',
+        '.agp-so-sddust.g1{animation-name:agp-so-sddust1}',
+        '@keyframes agp-so-sdgo0{0%{transform:rotate(-210deg);opacity:0;animation-timing-function:cubic-bezier(.2,.7,.25,1)}3%{opacity:1}16%{transform:rotate(0)}84%{opacity:1;transform:rotate(0)}94%,100%{opacity:0;transform:rotate(0)}}',
+        '@keyframes agp-so-sdgo1{0%,17%{transform:rotate(-210deg);opacity:0;animation-timing-function:cubic-bezier(.2,.7,.25,1)}20%{opacity:1}33%{transform:rotate(0)}84%{opacity:1;transform:rotate(0)}94%,100%{opacity:0;transform:rotate(0)}}',
+        '@keyframes agp-so-sddust0{0%,13%{opacity:0;transform:scale(.88)}22%{opacity:1;transform:scale(1)}84%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1.04)}}',
+        '@keyframes agp-so-sddust1{0%,30%{opacity:0;transform:scale(.88)}39%{opacity:1;transform:scale(1)}84%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1.04)}}',
         /* المذنّب: ذيل طوله 175° يبدأ شفاف ويقوى لين الرأس الأبيض */
         '.agp-so-sdc{position:absolute;inset:-12%;border-radius:50%;background:conic-gradient(from calc(var(--h) - 150deg),transparent 0,color-mix(in srgb,var(--bfc) 4%,transparent) 12%,color-mix(in srgb,var(--bfc) 22%,transparent) 24%,color-mix(in srgb,var(--bfc) 70%,transparent) 33%,var(--bfc) 38%,color-mix(in srgb,var(--bfc) 40%,#fff) 40.5%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));filter:blur(calc(var(--s) * .014)) drop-shadow(0 0 .2em var(--bfc));opacity:.85}',
         '.agp-so-sdc.core{background:conic-gradient(from calc(var(--h) - 150deg),transparent 0 22%,color-mix(in srgb,var(--bfc) 60%,transparent) 32%,color-mix(in srgb,var(--bfc) 30%,#fff) 38%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));filter:drop-shadow(0 0 .08em #fff);opacity:1}',
