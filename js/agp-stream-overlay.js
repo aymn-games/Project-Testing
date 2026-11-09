@@ -971,8 +971,10 @@
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
             var fr = throneFrame(r, frameOf(hit));
-            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز (إطار «الفراشات» بدون رقم)
-            if (frameOf(hit) !== 'butterfly') {
+            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز،
+            // وبإطار «الفراشات» دائرة ناعمة على الحلقة تحت يمين (لونها بين لون المركز ولون القوس)
+            if (frameOf(hit) === 'butterfly') fr.appendChild(el('span', 'agp-so-bfrk', String(i + 1)));
+            else {
                 var rk = el('span', 'agp-so-trank');
                 rk.appendChild(el('b', null, String(i + 1)));
                 fr.appendChild(rk);
@@ -992,7 +994,7 @@
         } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
-        // «الفراشات»: الرقم مختصر (1.4K) ورقم المركز بدائرة بلونه على يمين الكبسولة
+        // «الفراشات»: الرقم مختصر (1.4K)
         var bfly = !stack && frameOf(hit) === 'butterfly';
         var short = bfly && sec !== 'donors';
         var num = el('span', 'agp-so-tnum', short ? fmtShort(rowNum(sec, r)) : fmtKind(sec, rowNum(sec, r)));
@@ -1000,7 +1002,6 @@
         num._short = short;
         num._v = rowNum(sec, r);
         c.appendChild(num);
-        if (bfly) c.appendChild(el('span', 'agp-so-trk', String(i + 1)));
         inner.appendChild(c);
         slot.appendChild(inner);
     }
@@ -3184,8 +3185,9 @@
         '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.25em;height:1.25em;margin:-.1em 0;filter:drop-shadow(0 0 .1em rgba(255,200,70,.55));animation:agp-so-spin 6s linear infinite}',
         '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
         '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
-        '.agp-so-trk{display:inline-flex;align-items:center;justify-content:center;width:1.3em;height:1.3em;flex:none;border-radius:50%;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:.7em;line-height:1;color:#1d1328;background:radial-gradient(circle at 35% 30%,#fff,var(--rk) 45%,var(--rk2));border:.06em solid rgba(255,255,255,.75);box-shadow:0 0 .3em color-mix(in srgb,var(--rk) 70%,transparent),inset 0 -.08em .15em rgba(0,0,0,.25)}',
-        '.agp-so-tcol.rk1 .agp-so-trk{font-size:.78em}',
+        /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
+        '.agp-so-bfrk{--sf:color-mix(in srgb,color-mix(in srgb,var(--rk) 72%,var(--bfc)) 62%,#fff);position:absolute;z-index:7;left:73.2%;top:99.8%;width:27%;height:27%;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s) * .15);line-height:1;color:color-mix(in srgb,var(--bfc) 45%,#1c1030);background:radial-gradient(circle at 35% 28%,#fff,var(--sf) 55%,color-mix(in srgb,var(--sf) 80%,var(--bfc)));border:calc(var(--s) * .014) solid color-mix(in srgb,var(--bfr) 85%,transparent);box-shadow:0 0 .1em color-mix(in srgb,var(--bfc) 70%,transparent),0 0 .3em color-mix(in srgb,var(--rk) 35%,transparent);animation:agp-so-bfrkp 3.4s ease-in-out infinite}',
+        '@keyframes agp-so-bfrkp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.06)}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
