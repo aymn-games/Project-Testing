@@ -327,7 +327,8 @@ var ELIM_CARD_CATALOG = [
   // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
   { key: 'pink-swan', displayNameAr: 'بطاقة الإقصاء — البجعة الوردية (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-pink-swan.png', limited: true },
   { key: 'azooz', displayNameAr: 'بطاقة الإقصاء — عزوز (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-azooz.png', limited: true },
-  { key: 'blue-kitty', displayNameAr: 'بطاقة الإقصاء — القطة الزرقاء (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-blue-kitty.png', limited: true }
+  { key: 'blue-kitty', displayNameAr: 'بطاقة الإقصاء — القطة الزرقاء (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-blue-kitty.png', limited: true },
+  { key: 'black-pegasus', displayNameAr: 'بطاقة الإقصاء — الفرس المجنّح الأسود (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-black-pegasus.png', limited: true }
 ];
 
 function getElimCardCatalog() {

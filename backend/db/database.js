@@ -758,16 +758,18 @@ migrateSingleCardTable('user_win_cards');
 // الأدمن ويقدر يولّد لها كود استرداد يمنح الثلاث دفعة وحدة. مفاتيح البطاقات
 // معرّفة بـbackend/collectibles/collectibles-service.js.
 [
-    { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' }
+    { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' },
+    // إطار + بطاقة إقصاء بس (ما لها بطاقة فوز للحين).
+    { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true }
 ].forEach(function (bundle) {
     if (db.prepare('SELECT id FROM bundles WHERE name = ?').get(bundle.name)) return;
     var frame = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(bundle.frameImage);
     if (!frame) return;
     var items = [
         { kind: 'frame', frameType: 'custom', frameRef: String(frame.id) },
-        { kind: 'elim', cardKey: bundle.cardKey },
-        { kind: 'win', cardKey: bundle.cardKey }
+        { kind: 'elim', cardKey: bundle.cardKey }
     ];
+    if (!bundle.noWinCard) items.push({ kind: 'win', cardKey: bundle.cardKey });
     db.prepare('INSERT INTO bundles (name, items, created_at) VALUES (?, ?, ?)')
         .run(bundle.name, JSON.stringify(items), Date.now());
 });

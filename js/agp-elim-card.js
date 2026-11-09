@@ -118,6 +118,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             holeBleed: 8,
             avatarBg: '#dce7f7',
             sound: 'elim-card-blue-kitty.mp3'
+        },
+        // الفرس المجنّح الأسود — منح محدود (باكج مع إطار frame-black-pegasus.png).
+        // الأصل JPG 1080×1135 بخلفية بيضاء ومربعات شفافية مرسومة بالدائرتين:
+        // فُرّغت الخلفية والدائرتين لشفافية حقيقية، وقُص الفراغ ووُسّط على
+        // 1642×958. ما فيها "عملية إقصاء" مطبوعة، فالجملة "X أقصى Y" تنكتب
+        // داخل اللوح الأسود الأوسط (رفيع → fontScale) بتدرّج ذهبي. بدون صوت حالياً.
+        'black-pegasus': {
+            image: 'elim-card-black-pegasus.png',
+            width: 1642,
+            height: 958,
+            actorHole: { x: 1190, y: 430, w: 304, h: 292 },  // right circle
+            targetHole: { x: 145, y: 432, w: 306, h: 290 },  // left circle
+            holeBleed: 8,
+            textBox: { x: 521, y: 539, w: 599, h: 62 },      // inside the black plate
+            textColor: 'linear-gradient(180deg,#fff3c4 0%,#e9c77b 45%,#b8863b 100%)',
+            fontScale: 0.85,
+            avatarBg: '#111216'
         }
     };
 
