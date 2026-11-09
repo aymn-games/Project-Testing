@@ -1294,11 +1294,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.AGPAuth.request('/api/remote-control/access').then(function(r){
           var list = (r && r.success && r.streamers) || [];
           if (!list.length) return;
+          // أكثر من ستريمر أعطوه الصلاحية: عنوان «اختر البث» وزر لكل ستريمر بصورته واسمه
+          var many = list.length > 1;
+          if (many) {
+            var head = document.createElement('div');
+            head.style.cssText = 'margin-top:4px;font-size:12.5px;font-weight:700;color:#a7f3d0;text-align:right;';
+            head.textContent = '🎮 لوحة التحكم — اختر البث';
+            rcBox.appendChild(head);
+          }
           list.forEach(function(st){
             var a = document.createElement('a');
             a.href = 'control.html?s=' + encodeURIComponent(st.id);
-            a.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:10px;background:linear-gradient(135deg,#0f9f74,#34d399);color:#04140e;font-size:13.5px;font-weight:700;text-align:center;text-decoration:none;box-shadow:0 10px 24px -12px rgba(52,211,153,.8);';
-            a.textContent = '🎮 لوحة التحكم — ' + (st.name || 'ستريمر');
+            a.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 18px;border-radius:10px;background:linear-gradient(135deg,#0f9f74,#34d399);color:#04140e;font-size:13.5px;font-weight:700;text-align:center;text-decoration:none;box-shadow:0 10px 24px -12px rgba(52,211,153,.8);';
+            if (many) {
+              var av = document.createElement(st.avatar ? 'img' : 'span');
+              av.style.cssText = 'flex:none;width:26px;height:26px;border-radius:50%;object-fit:cover;background:rgba(4,20,14,.25);display:inline-flex;align-items:center;justify-content:center;font-size:13px;';
+              if (st.avatar) { av.src = st.avatar; av.alt = ''; } else { av.textContent = (st.name || '؟').charAt(0); }
+              a.appendChild(av);
+              a.appendChild(document.createTextNode(st.name || 'ستريمر'));
+            } else {
+              a.textContent = '🎮 لوحة التحكم — ' + (st.name || 'ستريمر');
+            }
             rcBox.appendChild(a);
           });
           rcBox.style.display = 'flex';

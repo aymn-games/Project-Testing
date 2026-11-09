@@ -966,7 +966,8 @@
                     '<button type="button" class="agp-rc-del" data-rm="' + esc(x.username) + '" aria-label="حذف @' + esc(x.username) + '"' + (_busy ? ' disabled' : '') + '>✕</button></span></div>';
             }).join('');
             body = '<div class="agp-rc-row"><span class="agp-rc-label"><span>تفعيل التحكم عن بعد</span><span class="agp-rc-desc">' +
-                (c.enabled ? 'مفعّل — المتحكمين المفعّلين تحت يقدرون يتحكمون' : 'متوقف عن الكل') + '</span></span>' +
+                (c.enabled ? 'مفعّل — المتحكمين المفعّلين تحت يقدرون يتحكمون'
+                    : c.controllers.length ? '<b style="color:#fca5a5">متوقف — المتحكمين ما يشوفون «لوحة التحكم» لين تشغّله</b>' : 'متوقف عن الكل') + '</span></span>' +
                 '<button type="button" class="agp-rc-tg' + (c.enabled ? ' is-on' : '') + '" data-master aria-label="تفعيل التحكم عن بعد"' + (_busy ? ' disabled' : '') + '></button></div>' +
                 '<div class="agp-rc-row"><span class="agp-rc-label"><span>إضافة متحكم</span><span class="agp-rc-desc">يوزر تيك توك بدون @ (حتى ' + c.max + ')</span></span>' +
                 '<span class="agp-rc-add"><input class="agp-rc-in" type="text" placeholder="username" autocomplete="off" spellcheck="false" dir="ltr">' +
