@@ -2558,7 +2558,82 @@
         return lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
     }
     function ldSig(d) { return d ? [d.name, d.amount, d.currency, d.at].join('|') : ''; }
-    function ldCfg(it) { return JSON.stringify([it.design, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size]); }
+    function ldCfg(it) { return JSON.stringify([it.design, it.motion, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size]); }
+    var LD_MOTIONS = ['static', 'marquee', 'swap', 'type'];
+
+    /**
+     * موج الحرير داخل «شريط الموج»: 4 طبقات (شرايط بين منحنيين جيبيين) تتحرك أفقياً بسرعات مختلفة
+     * وتتمايل فوق وتحت. كل طبقة SVG عرضه ضعف الشريط ودورته نص العرض (الحركة -50% ترجع لنفس الشكل).
+     */
+    var ldwSeq = 0;
+    function ldWaves() {
+        var id = 'agp-so-ldw' + (++ldwSeq);
+        var wrap = el('span', 'ldw-waves');
+        var LAYERS = [[17, 34, 0, .42], [12, 17, 1.7, .62], [23, 10, 3.1, .42], [14, 2, 4.3, 1]];
+        var html = '<defs><linearGradient id="' + id + '" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="0" spreadMethod="repeat">' +
+            '<stop offset="0" style="stop-color:color-mix(in srgb,var(--ld1) 55%,#000)"/><stop offset=".5" style="stop-color:color-mix(in srgb,var(--ld1) 60%,#fff)"/>' +
+            '<stop offset="1" style="stop-color:color-mix(in srgb,var(--ld1) 55%,#000)"/></linearGradient></defs>';
+        LAYERS.forEach(function (L, i) {
+            var A = L[0], T = L[1], ph = L[2], top = [], bot = [];
+            for (var x = 0; x <= 800; x += 10) {
+                var a = 2 * Math.PI * x / 400;
+                var y = 50 + A * Math.sin(a + ph);
+                var th = T * (.6 + .4 * Math.sin(a + ph * 1.7));
+                top.push(x + ' ' + (y - th / 2).toFixed(1));
+                bot.unshift(x + ' ' + (y + th / 2).toFixed(1));
+            }
+            var d = 'M' + top.join(' L') + ' L' + bot.join(' L') + 'Z';
+            var line = 'M' + top.join(' L');
+            var ly = el('span', 'ldw-ly l' + i);
+            ly.innerHTML = '<svg viewBox="0 0 800 100" preserveAspectRatio="none" aria-hidden="true">' + html.replace(/agp-so-ldw\d+/g, id) +
+                '<path d="' + d + '" fill="url(#' + id + ')" opacity="' + L[3] + '"/>' +
+                '<path d="' + line + '" fill="none" stroke="#fff" stroke-opacity="' + (i === 3 ? .55 : .22) + '" stroke-width="' + (i === 3 ? 1.2 : .8) + '" vector-effect="non-scaling-stroke"/></svg>';
+            wrap.appendChild(ly);
+        });
+        return wrap;
+    }
+    /** صف الاسم والمبلغ (يرجع عناصر المبلغ عشان العدّ). */
+    function ldRow(d, amts) {
+        var r = el('span', 'ldw-row');
+        r.appendChild(el('span', 'agp-so-ld2n', d.name || ''));
+        r.appendChild(el('i', 'ldw-sep'));
+        var a = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+        amts.push(a);
+        r.appendChild(a);
+        return r;
+    }
+    /** «شريط الموج»: الخلفية والتوهّج والموج، والنص حسب it.motion (ثابت/شريط/تبديل/كتابة). */
+    function buildLdWave(box, it, d) {
+        var amts = [];
+        var mo = LD_MOTIONS.indexOf(it.motion) !== -1 ? it.motion : 'static';
+        box.classList.add('m-' + mo);
+        box.appendChild(el('span', 'ldw-halo'));
+        var bar = el('span', 'ldw-bar');
+        bar.appendChild(ldWaves());
+        var tx = el('span', 'ldw-tx');
+        if (mo === 'marquee') {
+            // نسختين ورا بعض: تتحرك من اليسار لليمين وترجع لنفس المكان (بدون قفزة)
+            var tr = el('span', 'ldw-track');
+            for (var k = 0; k < 2; k++) tr.appendChild(ldRow(d, amts));
+            tx.appendChild(tr);
+        } else if (mo === 'swap') {
+            var a = el('span', 'ldw-sw s1');
+            a.appendChild(el('span', 'agp-so-ld2n', d.name || ''));
+            var b = el('span', 'ldw-sw s2');
+            var am = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+            amts.push(am);
+            b.appendChild(am);
+            tx.appendChild(a);
+            tx.appendChild(b);
+        } else {
+            var row = ldRow(d, amts);
+            if (mo === 'type') row.appendChild(el('span', 'ldw-cur'));
+            tx.appendChild(row);
+        }
+        bar.appendChild(tx);
+        box.appendChild(bar);
+        return amts;
+    }
     // آخر دعم رسمته كل أداة (عشان حركة «داعم جديد» تطلع مرة وحدة بس لما يتغيّر)
     var ldSeen = {};
 
@@ -2582,7 +2657,9 @@
         if (!d) { n.appendChild(box); box.style.display = 'none'; return; }
         var nm = el('span', 'agp-so-ld2n', d.name || '');
         var amt = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
-        if (it.design === 'line') {
+        var amts = [amt];
+        if (it.design === 'wave') amts = buildLdWave(box, it, d);
+        else if (it.design === 'line') {
             var top = el('div', 'agp-so-ld2t');
             top.appendChild(nm);
             top.appendChild(amt);
@@ -2600,11 +2677,13 @@
         }
         // داعم جديد: المبلغ يعدّ من صفر لين قيمته
         if (isNew && String(d.currency || 'USD').toUpperCase() === 'USD') {
-            amt._kind = 'donors';
-            amt._v = 0;
-            amt.textContent = fmtMoney(0);
-            // بعد ما تنضاف للصفحة (tweenNum يوقف لو العنصر مو بالصفحة)
-            requestAnimationFrame(function () { tweenNum(amt, Number(d.amount) || 0); });
+            amts.forEach(function (a) {
+                a._kind = 'donors';
+                a._v = 0;
+                a.textContent = fmtMoney(0);
+                // بعد ما تنضاف للصفحة (tweenNum يوقف لو العنصر مو بالصفحة)
+                requestAnimationFrame(function () { tweenNum(a, Number(d.amount) || 0); });
+            });
         }
         n.appendChild(box);
     }
@@ -2616,7 +2695,7 @@
         var ghost = !d && preview;
         if (ghost) d = SAMPLE_TOTALS.lastDonation;
         n.classList.toggle('agp-so-ghost', Boolean(ghost));
-        if (it.design === 'line' || it.design === 'split') { buildLdSlim(n, it, d, real, preview); return; }
+        if (it.design === 'line' || it.design === 'split' || it.design === 'wave') { buildLdSlim(n, it, d, real, preview); return; }
         title(n, it.title);
         var card = el('div', 'agp-so-ldbox');
         var ic = el('span', 'agp-so-ldic');
@@ -3532,6 +3611,46 @@
         '.ld-split.new .agp-so-ld2p{animation:agp-so-ldslide .55s cubic-bezier(.2,1,.3,1) both}',
         '.ld-split.new .agp-so-ld2n{animation:agp-so-ldup .45s .2s ease-out both}',
         '.ld-split.new .agp-so-ld2d{animation:agp-so-ldflash .9s ease-out,agp-so-ldblink 1.6s .9s ease-in-out infinite}',
+        /* «شريط الموج» (ld-wave): --ld1 لون الموج، --ld2 لون التوهّج، --ldb خلفية الشريط */
+        '.ld-wave{--ld1:#9b6bff;--ld2:#3a1aff;--ldb:#000;display:inline-block;padding:1em .4em}',
+        '.ld-wave .ldw-halo{position:absolute;left:24%;right:24%;top:.05em;bottom:.05em;border-radius:50%;background:radial-gradient(closest-side,var(--ld2),var(--ld2) 35%,color-mix(in srgb,var(--ld2) 45%,transparent) 62%,transparent 100%);filter:blur(.3em);animation:agp-so-ldhalo 3.2s ease-in-out infinite}',
+        '.ld-wave .ldw-halo::after{content:"";position:absolute;left:-30%;right:-30%;top:30%;bottom:30%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--ld2) 70%,transparent),transparent);filter:blur(.25em)}',
+        '.ld-wave .ldw-bar{position:relative;display:flex;align-items:center;justify-content:center;height:2.4em;min-width:13em;padding:0 1.3em;border-radius:.55em;overflow:hidden;background:linear-gradient(100deg,color-mix(in srgb,var(--ld2) 42%,var(--ldb)) 0%,var(--ldb) 50%,color-mix(in srgb,var(--ld2) 28%,var(--ldb)) 100%);box-shadow:inset 0 0 0 .04em rgba(255,255,255,.06),0 .3em 1em rgba(0,0,0,.5)}',
+        '.ldw-waves{position:absolute;inset:0;pointer-events:none;-webkit-mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);filter:drop-shadow(0 0 .2em var(--ld1));mix-blend-mode:screen}',
+        '.ldw-ly{position:absolute;left:0;top:0;width:200%;height:100%;animation:agp-so-ldwx 9s linear infinite}',
+        '.ldw-ly svg{width:100%;height:100%;display:block;animation:agp-so-ldwy 5s ease-in-out infinite alternate}',
+        '.ldw-ly.l1{animation-duration:6.5s;animation-direction:reverse}.ldw-ly.l1 svg{animation-duration:3.8s}',
+        '.ldw-ly.l2{animation-duration:12s}.ldw-ly.l2 svg{animation-duration:6.2s;animation-delay:-2s}',
+        '.ldw-ly.l3{animation-duration:7.5s}.ldw-ly.l3 svg{animation-duration:4.4s;animation-delay:-1s}',
+        '.ldw-tx{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%}',
+        '.ldw-row{position:relative;display:inline-flex;align-items:center;gap:.5em;white-space:nowrap}',
+        '.ld-wave .agp-so-ld2n{font-size:.95em;text-shadow:0 0 .4em rgba(0,0,0,.9),0 .05em .15em rgba(0,0,0,.9)}',
+        '.ld-wave .agp-so-ld2a{font-size:1em;color:var(--lda,color-mix(in srgb,var(--ld1) 35%,#fff));text-shadow:0 0 .5em color-mix(in srgb,var(--ld1) 70%,transparent),0 .05em .15em rgba(0,0,0,.9)}',
+        '.ldw-sep{width:.25em;height:.25em;border-radius:50%;background:color-mix(in srgb,var(--ld1) 50%,#fff);box-shadow:0 0 .3em var(--ld1)}',
+        /* شريط: النص يمشي من اليسار لليمين */
+        '.ld-wave.m-marquee .ldw-bar{width:15em;padding:0}',
+        '.ld-wave.m-marquee .ldw-tx{overflow:hidden;justify-content:flex-start;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}',
+        '.ldw-track{display:flex;direction:ltr;width:max-content;animation:agp-so-ldmq 9s linear infinite}',
+        '.ldw-track .ldw-row{direction:rtl;padding:0 1.6em}',
+        /* تبديل: الاسم ثم المبلغ */
+        '.ldw-sw{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;animation:agp-so-ldsw 6s ease-in-out infinite}',
+        '.ldw-sw.s2{animation-delay:3s}',
+        '.ld-wave.m-swap .agp-so-ld2a{font-size:1.15em}',
+        /* كتابة: النص ينكشف من اليمين لليسار ومعه مؤشر ضوء، يثبت، وبعدين ينمسح ويعيد */
+        '.ld-wave.m-type .ldw-row{animation:agp-so-ldtype 7s ease-in-out infinite}',
+        '.ldw-cur{position:absolute;top:-.15em;bottom:-.15em;width:.08em;border-radius:.08em;background:#fff;box-shadow:0 0 .3em #fff,0 0 .6em var(--ld1);animation:agp-so-ldcur 7s ease-in-out infinite}',
+        /* داعم جديد */
+        '.ld-wave.new .ldw-bar{animation:agp-so-ldpop .7s cubic-bezier(.2,1.4,.4,1)}',
+        '.ld-wave.new .ldw-halo{animation:agp-so-ldflare 1.2s ease-out,agp-so-ldhalo 3.2s 1.2s ease-in-out infinite}',
+        '@keyframes agp-so-ldhalo{0%,100%{opacity:.85;transform:scaleX(.92)}50%{opacity:1;transform:scaleX(1.06)}}',
+        '@keyframes agp-so-ldflare{0%{opacity:1;transform:scale(1.6);filter:blur(.2em) brightness(1.8)}100%{opacity:.75;transform:none}}',
+        '@keyframes agp-so-ldpop{0%{transform:scale(.88);filter:brightness(1.7)}100%{transform:none;filter:none}}',
+        '@keyframes agp-so-ldwx{to{transform:translateX(-50%)}}',
+        '@keyframes agp-so-ldwy{0%{transform:translateY(-7%) scaleY(.9)}100%{transform:translateY(7%) scaleY(1.1)}}',
+        '@keyframes agp-so-ldmq{from{transform:translateX(-50%)}to{transform:translateX(0)}}',
+        '@keyframes agp-so-ldsw{0%{opacity:0;transform:translateY(60%);filter:blur(.08em)}8%,44%{opacity:1;transform:none;filter:none}52%,100%{opacity:0;transform:translateY(-60%);filter:blur(.08em)}}',
+        '@keyframes agp-so-ldtype{0%{clip-path:inset(-20% -5% -20% 100%)}28%,82%{clip-path:inset(-20% -5% -20% 0)}96%,100%{clip-path:inset(-20% 100% -20% 0)}}',
+        '@keyframes agp-so-ldcur{0%{right:0;opacity:1}28%{right:100%;opacity:1}34%,82%{right:100%;opacity:0}83%{right:100%;opacity:1}96%{right:0;opacity:1}100%{right:0;opacity:0}}',
         '@keyframes agp-so-ldglow{50%{text-shadow:0 0 .9em color-mix(in srgb,var(--ld1) 90%,transparent)}}',
         '@keyframes agp-so-ldwalk{0%{left:12%}100%{left:88%}}',
         '@keyframes agp-so-lddraw{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}',
