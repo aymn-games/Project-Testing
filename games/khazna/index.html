@@ -15,6 +15,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -655,6 +656,9 @@ input::placeholder{color:#6b6578}
 //  الاتصال والشات: KZ (khazna-platform.js) · كلمة الدخول باللوبي ونافذة «إدخال لاعب جديد»
 //  الإجابات: رسائل الشات وقت الجولة (مع عدّاد وقت الإجابة لو مفعّل) · النقاط: AGPAuth.reportMatchPoints عند الفوز
 // ============================================================
+// كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const KZ_SHARED = AGPSharedPrefs.bind({keyword:'keyword'});
+
 class Component extends DCLogic {
   AV=['linear-gradient(135deg,#6d28d9,#2e1065)','linear-gradient(135deg,#0ea5e9,#1e3a8a)','linear-gradient(135deg,#db2777,#581c87)','linear-gradient(135deg,#10b981,#064e3b)','linear-gradient(135deg,#f59e0b,#7c2d12)','linear-gradient(135deg,#8b5cf6,#312e81)','linear-gradient(135deg,#ef4444,#7f1d1d)'];
   RULES=['لكل لاعب إجابة وحدة، وأول رسالة صحيحة الصيغة هي المحسوبة.','إذا جاوب المستهدف صح، يُقصى كل لاعب إجابته غلط أو ما جاوب.','إذا جاوب المستهدف صح وكانت إجابات كل الباقين صح، يُقصى المستهدف وحده.','إذا جاوب المستهدف غلط، يُقصى ومعه كل من إجابته غلط أو ما جاوب.','إذا جاوب كل الباقين قبل المستهدف، تنتهي الجولة ويُقصى المستهدف ومعه أصحاب الإجابات الغلط.'];
@@ -663,11 +667,11 @@ class Component extends DCLogic {
   T=[];
   TICKS=Array.from({length:60},(_,i)=>{const m=i%5===0,q=i%15===0;return {r:i*6,w:q?8:m?5:2,l:q?-4:m?-2.5:-1,h:q?26:m?18:8,c:m?'#2a2210':'rgba(42,34,16,.45)'};});
   TICKS_S=Array.from({length:12},(_,i)=>{const q=i%3===0;return {r:i*30,w:q?5:3,l:q?-2.5:-1.5,h:q?14:9};});
-  state={ scale:1, logo:false, screen:'setup', keyword:'', joinMode:'all', err:'', pop:null, popErr:'', conn:'ok', players:[], nid:1, round:0, target:null, roundIds:[],
+  state={ scale:1, logo:false, screen:'setup', keyword:KZ_SHARED.fill({keyword:''}).keyword||'', joinMode:'all', err:'', pop:null, popErr:'', conn:'ok', players:[], nid:1, round:0, target:null, roundIds:[],
     reel:[], reelIdx:1, reelAnim:false, reelDur:0, spinning:false, settled:false, fly:false, phase:'pre', clocks:[12,9,7], answers:{}, order:[], decided:false, outcome:null,
     help:false, rules:false, drawer:false, dTab:0, q:'', filt:'all', mini:false, miniNew:[], confirm:null, pts:'pending', ansTime:30, roundTime:0, left:0 };
   // ---------- المنصة: الاتصال بالبث والشات ----------
-  componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080)}); this.fit(); addEventListener('resize',this.fit);
+  componentDidMount(){ KZ_SHARED.watch(()=>({keyword:this.state.keyword}),p=>this.setState({keyword:p.keyword})); this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080)}); this.fit(); addEventListener('resize',this.fit);
     this.refreshLive=()=>this.setState({liveRun:(this.state.liveRun||0)+1}); addEventListener('storage',this.refreshLive); addEventListener('agp:stream-connected',this.refreshLive);
     this.unsub=KZ.onComment(p=>this.chatIn(p)); this.unsubSt=KZ.onStatus((st,msg)=>this.onStatus(st,msg)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.refreshLive); removeEventListener('agp:stream-connected',this.refreshLive); this.clearT(); clearTimeout(this._ct); this.unsub?.(); this.unsubSt?.(); }
@@ -697,7 +701,7 @@ class Component extends DCLogic {
   shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
   act(){ return this.state.players.filter(p=>!p.out); }
   // ---------- التسلسل ----------
-  connect=()=>{ const s=this.state; if(!s.keyword.trim()) return this.setState({err:'لازم تكتب الكلمة المفتاحية'}); this.setState({err:''});
+  connect=()=>{ const s=this.state; if(!s.keyword.trim()) return this.setState({err:'لازم تكتب الكلمة المفتاحية'}); this.setState({err:''}); KZ_SHARED.save({keyword:s.keyword});
     if(!this.saved()) return this.setState({pop:'error',popErr:'لازم تكون في بث مباشر عشان نقدر نتصل'});
     if(KZ.isConnected()) return this.goLobby();
     this.setState({pop:'loading'}); KZ.connect(); clearTimeout(this._ct);

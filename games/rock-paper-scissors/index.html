@@ -175,6 +175,7 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
@@ -219,7 +220,11 @@
         show();
     });
     // كلمة الدخول (إجبارية)
-    var kw = $('keyword'); kw.value = s.keyword || '';
+    // المحفوظة من آخر لعبة تنكتب تلقائياً (js/agp-shared-prefs.js)
+    var shared = window.AGPSharedPrefs ? AGPSharedPrefs.bind({ keyword: 'keyword' }) : null;
+    var kw = $('keyword'); kw.value = (shared ? shared.fill({ keyword: s.keyword || '' }).keyword : s.keyword) || '';
+    s.keyword = kw.value.trim();
+    if (shared) shared.watch(function () { return { keyword: kw.value }; }, function (p) { kw.value = p.keyword; s.keyword = p.keyword; save(); });
     kw.addEventListener('input', function () { s.keyword = kw.value.trim(); kw.classList.remove('err'); save(); });
     function toast(t) { var el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 2600); }
     save();
@@ -236,6 +241,7 @@
     $('start').addEventListener('click', function () {
         s.keyword = kw.value.trim();
         if (!s.keyword) { kw.classList.add('err'); kw.focus(); return toast('اكتب كلمة الدخول'); }
+        if (shared) shared.save(s);
         delete s.joinSec; save(); location.href = 'game.html';
     });
 }());

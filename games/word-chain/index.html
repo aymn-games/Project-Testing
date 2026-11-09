@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -227,9 +228,12 @@ const SETTINGS = [
   ]}
 ];
 
+// كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({keyword:'keyword'});
+
 class Component extends DCLogic {
-  state = { values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!WCH.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  state = { values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!WCH.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // حالة الاتصال من مكتبة الألعاب — تتحدث فوراً لو اتصل/قطع من تبويب المكتبة
     this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.setState({live:!!WCH.getSavedConnection()}); }; addEventListener('storage',this.onStore);
     this.onFocus=()=>this.setState({live:!!WCH.getSavedConnection()}); addEventListener('focus',this.onFocus);
@@ -285,7 +289,7 @@ class Component extends DCLogic {
         if(!String(S.values.keyword||'').trim()) return this.toastMsg('اكتب كلمة الدخول');
         if(S.values.winPoints===''||+S.values.winPoints<10) return this.toastMsg('نقاط الفوز من 10 إلى 200');
         const values=this.readValues(); values.winPoints=Math.max(10,Math.min(200,+values.winPoints||30)); values.answerSec=+values.answerSec; values.keyword=String(values.keyword).trim();
-        WCH.writeJSON(WCH.keys.setup,values); try{ localStorage.removeItem(WCH.keys.roster); localStorage.removeItem(WCH.keys.players); }catch(e){} this.props.onStart?.(values);
+        WCH.writeJSON(WCH.keys.setup,values); try{ localStorage.removeItem(WCH.keys.roster); localStorage.removeItem(WCH.keys.players); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values);
         this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },

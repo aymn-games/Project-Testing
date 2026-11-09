@@ -15,6 +15,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -232,9 +233,12 @@ const SETTINGS = [
   ]}
 ];
 
+// كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({keyword:'keyword'});
+
 class Component extends DCLogic {
-  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!LC.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/680)}); this.fit(); addEventListener('resize',this.fit);
+  state = { supCount:1, supPick:false, values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!LC.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/680)}); this.fit(); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onEnded=()=>this.setState({live:!!LC.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); clearTimeout(this.tt); (this.nav||[]).forEach(clearTimeout); }
@@ -287,7 +291,7 @@ class Component extends DCLogic {
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!LC.getSavedConnection(); if(live!==S.live) this.setState({live});
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); if(!LC.norm(S.values.keyword)) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام');
-        const values=this.readValues(); LC.writeJSON(LC.keys.setup,values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0});
+        const values=this.readValues(); LC.writeJSON(LC.keys.setup,values); SHARED.save(this.state.values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0});
         this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>LC.go(GAME.libraryUrl),

@@ -16,6 +16,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -270,9 +271,12 @@ const SETTINGS = [
   ]}
 ];
 
+// كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({team1Name:'nameA',team1Keyword:'keyA',team2Name:'nameB',team2Keyword:'keyB'});
+
 class Component extends DCLogic {
-  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!DT.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  state = { supCount:1, supPick:false, values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!DT.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onEnded=()=>this.setState({live:!!DT.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); removeEventListener('agp:stream-connected',this.onEnded); clearTimeout(this.tt); (this.nav||[]).forEach(clearTimeout); }
@@ -327,7 +331,7 @@ class Component extends DCLogic {
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); const V0=S.values; if(!String(V0.nameA||'').trim()||!String(V0.nameB||'').trim()) return this.toastMsg('اكتب اسم كل فريق'); if(!String(V0.keyA||'').trim()||!String(V0.keyB||'').trim()) return this.toastMsg('اكتب كلمة دخول لكل فريق'); if(DT.norm(V0.keyA)===DT.norm(V0.keyB)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين');
         const values=this.readValues(); try{ const V=S.values, cur=JSON.parse(localStorage.getItem('dots-settings')||'{}');
         localStorage.setItem('dots-settings',JSON.stringify({...cur,rows:4+V.size,cols:4+V.size,mode:V.mode===1?'free':'turns',turnSec:[10,15,20,30][V.turnSec],nums:!!V.nums,chain3:!!V.chain3,sound:!!V.sound,policy:'choose'}));
-        localStorage.setItem('dots-join',JSON.stringify({nameA:V.nameA.trim(),keyA:V.keyA.trim(),nameB:V.nameB.trim(),keyB:V.keyB.trim(),maxPlayers:50,who:values.who,policy:'choose'})); localStorage.removeItem('dots-game'); localStorage.removeItem('dots-teams'); localStorage.removeItem('dots-tidx'); localStorage.removeItem('dots-players'); localStorage.removeItem('dots-left'); localStorage.removeItem('dots-started'); }catch(e){} this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
+        localStorage.setItem('dots-join',JSON.stringify({nameA:V.nameA.trim(),keyA:V.keyA.trim(),nameB:V.nameB.trim(),keyB:V.keyB.trim(),maxPlayers:50,who:values.who,policy:'choose'})); localStorage.removeItem('dots-game'); localStorage.removeItem('dots-teams'); localStorage.removeItem('dots-tidx'); localStorage.removeItem('dots-players'); localStorage.removeItem('dots-left'); localStorage.removeItem('dots-started'); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>DT.go(GAME.libraryUrl),
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')

@@ -503,7 +503,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // Preserve username/keyword field values across the full re-render
         // triggered by any toggle click (conditional field visibility).
         var preservedUsername = (el('agp-tiktok-username') && el('agp-tiktok-username').value) || '';
-        var preservedKeyword = (el('agp-keyword') && el('agp-keyword').value) || '';
+        // أول عرض: كلمة الدخول المحفوظة من آخر لعبة (js/agp-shared-prefs.js)
+        var sharedPrefs = window.AGPSharedPrefs ? window.AGPSharedPrefs.bind({ keyword: 'keyword' }) : null;
+        var preservedKeyword = el('agp-keyword') ? el('agp-keyword').value :
+            (sharedPrefs ? (sharedPrefs.fill({ keyword: '' }).keyword || '') : '');
 
         var fieldsHtml = (_config.settingsFields || []).map(renderField).join('');
         var box = el('agp-shell-box');
@@ -564,6 +567,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!isReopened) {
             document.getElementById('agp-connect-btn').onclick = handleConnectClick;
             hideRelocatedControls();
+            // لو وصلت كلمة أحدث من حساب الستريمر والحقل ما انلمس — نحدّثه
+            if (sharedPrefs) {
+                sharedPrefs.watch(function () {
+                    return { keyword: el('agp-keyword') ? el('agp-keyword').value : null };
+                }, function (patch) {
+                    if (el('agp-keyword') && patch.keyword) el('agp-keyword').value = patch.keyword;
+                });
+            }
         } else {
             renderSettingsPlayerList();
             document.getElementById('agp-reopen-registration-btn').onclick = handleReopenRegistrationClick;
@@ -824,6 +835,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.gameManager.openRegistration();
         AGP.keywordManager.setKeyword(keyword);
         AGP.keywordManager.activate();
+        // تنحفظ لباقي الألعاب (js/agp-shared-prefs.js)
+        if (window.AGPSharedPrefs) window.AGPSharedPrefs.save({ keyword: keyword });
 
         var connectOptions = { username: username };
         if (_settingsValues.followersOnly !== undefined) connectOptions.followersOnly = _settingsValues.followersOnly;
