@@ -51,7 +51,6 @@
 (function (AGP) {
     'use strict';
 
-    if (!AGP) return;
     if (!AGP.log) { AGP.log = function () {}; }
 
     var STORAGE_KEY = 'agp:remote-control';
@@ -146,8 +145,9 @@
 
     // ---------- الصفحة الحالية وأوامرها ----------
 
-    var _page = null; // {game, page, connect, overlayChat, status, commands}
+    var _page = null; // {game, page, connect, overlayChat, status, commands, mirror}
     var _unsub = null;
+    var _explicit = false; // الصفحة ربطت نفسها (attach) — ما نسوي ربط تلقائي فوقها
 
     function notifyChanged() {
         try { window.dispatchEvent(new CustomEvent('agp:remote-control-changed', { detail: readConfig() })); } catch (e) {}
@@ -170,7 +170,9 @@
         ];
     }
     function allCommands() {
-        return ((_page && _page.commands) || []).concat(globalCommands());
+        var list = ((_page && _page.commands) || []).concat(globalCommands());
+        if (_page && _page.mirror) list = list.concat(mirrorCommands());
+        return list;
     }
     function findCommand(word) {
         var w = norm(word), list = allCommands();
@@ -180,13 +182,21 @@
         return null;
     }
 
-    /** "!كلمة صقر" → {cmd:'كلمة', arg:'صقر'} أو null لو ما هو أمر. */
+    /**
+     * "!كلمة صقر" → {cmd:'كلمة', arg:'صقر'} أو null لو ما هو أمر. اسم الأمر
+     * ممكن يكون أكثر من كلمة ("!كلمة الدخول صقر"): نجرب أطول بداية تطابق أمر.
+     */
     function parse(text) {
         var t = String(text == null ? '' : text).trim();
         var p = PREFIXES.filter(function (x) { return t.indexOf(x) === 0; })[0];
         if (!p) return null;
         t = t.slice(p.length).trim();
         if (!t) return null;
+        var words = t.split(/\s+/);
+        for (var k = Math.min(4, words.length); k > 1; k--) {
+            var name = words.slice(0, k).join(' ');
+            if (findCommand(name)) return { cmd: name, arg: words.slice(k).join(' ') };
+        }
         var m = t.match(/^(\S+)\s*([\s\S]*)$/);
         return m ? { cmd: m[1], arg: (m[2] || '').trim() } : null;
     }
@@ -243,8 +253,12 @@
             overlayChat: !!(opts && opts.overlayChat),
             connect: opts && opts.connect,
             status: opts && opts.status,
-            commands: (opts && opts.commands) || []
+            commands: (opts && opts.commands) || [],
+            mirror: !!(opts && opts.mirror),
+            mirrorExclude: (opts && opts.mirrorExclude) || '',
+            auto: !!(opts && opts._auto)
         };
+        if (!_page.auto) _explicit = true;
         if (AGP.events && typeof AGP.events.on === 'function') {
             _unsub = AGP.events.on('stream:commentReceived', onComment);
         }
@@ -352,6 +366,7 @@
             return raw == null ? null : String(raw);
         }
         if (ui.type === 'toggle') return !!raw;
+        if (ui.type === 'multi') return (Array.isArray(raw) ? raw : []).map(function (k) { return typeof k === 'number' && ui.options ? ui.options[k] : k; }).filter(function (x) { return x != null; });
         if (ui.type === 'number') return raw === '' || raw == null ? null : Number(raw);
         return raw == null ? '' : String(raw);
     }
@@ -362,6 +377,7 @@
         var sections = [], bySec = {}, actions = [];
         (_page.commands || []).forEach(function (c) {
             if (!c || !c.names || !c.names.length || c.phone === false) return;
+            if (typeof c.when === 'function') { try { if (!c.when()) return; } catch (e) { return; } }
             var name = c.names[0];
             if (c.ui) {
                 var raw = null;
@@ -369,16 +385,21 @@
                 var sec = c.section || 'الإعدادات';
                 if (!bySec[sec]) { bySec[sec] = { title: sec, items: [] }; sections.push(bySec[sec]); }
                 bySec[sec].items.push({
-                    cmd: name, label: c.label || c.desc || name, type: c.ui.type,
+                    id: name, cmd: name, label: c.label || c.desc || name, type: c.ui.type, desc: c.ui.desc || '',
                     options: c.ui.options || null, min: c.ui.min, max: c.ui.max, step: c.ui.step,
                     placeholder: c.ui.placeholder || '', value: uiValue(c.ui, raw)
                 });
                 return;
             }
-            var a = { cmd: name, label: c.label || c.desc || name, desc: c.label ? (c.desc || '') : '', args: c.args || '', tone: c.tone || '', confirm: c.confirm || '' };
+            var a = { cmd: name, label: c.label || c.desc || name, desc: c.label ? (c.desc || '') : '', args: c.args || '', tone: c.tone || '', confirm: c.confirm || '', icon: c.icon || '' };
             if (typeof c.pick === 'function') { try { a.pick = (c.pick() || []).slice(0, 200).map(String); } catch (e) {} }
             actions.push(a);
         });
+        if (_page.mirror) {
+            var scr = scanScreen(_page.mirrorExclude);
+            scr.actions.forEach(function (a) { actions.push(a); });
+            if (scr.items.length) sections.push({ title: 'خانات الشاشة', items: scr.items });
+        }
         var status = '';
         if (typeof _page.status === 'function') { try { status = String(_page.status() || ''); } catch (e) { status = ''; } }
         var g = _page.game && AGP.remoteGames && AGP.remoteGames.find ? AGP.remoteGames.find(_page.game) : null;
@@ -394,7 +415,8 @@
         };
     }
     function push() {
-        if (!_wsReady) return;
+        // أكثر من تبويب مفتوح عند الستريمر: التبويب الظاهر هو اللي يستلم التحكم (الخادم يوجّه للي أرسل آخر وصف)
+        if (!_wsReady || document.hidden) return;
         var s = snapshot();
         if (!s) return;
         var j = JSON.stringify(s);
@@ -406,6 +428,303 @@
         _pushT = setTimeout(push, ms || 0);
         if (!_pushLoop) _pushLoop = setInterval(push, PUSH_EVERY_MS); // تغييرات الستريمر نفسه من الشاشة
     }
+
+
+    // ---------- قالب الألعاب (إعدادات ← لوبي) ----------
+
+    var SETTING_TYPES = ['text', 'number', 'choice', 'toggle', 'multi'];
+    function labelName(l) { return String(l || '').replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim(); }
+    function settingHint(r) {
+        return r.type === 'choice' || r.type === 'multi' ? r.options.join(' / ') : r.type === 'toggle' ? 'تشغيل / ايقاف'
+            : r.type === 'number' ? ((r.min != null ? r.min : 0) + '–' + (r.max != null ? r.max : 999)) : 'نص';
+    }
+
+    /**
+     * شاشة إعدادات القالب (games/<id>/index.html — SETTINGS + class Component
+     * فيها state.values و set(k,v) و renderVals().start()): كل صف يطلع بالجوال
+     * بقيمته، وكل صف أمر شات باسمه ("!الحد الأقصى للاعبين 30")، وزر «ابدأ».
+     * الاستخدام بـ componentDidMount: AGP.remoteControl.templateSettings(this, SETTINGS, {game:'bomb'})
+     */
+    function templateSettings(comp, SETTINGS, opts) {
+        opts = opts || {};
+        var api = { get: function (k) { return comp.state.values[k]; }, set: function (k, v) { comp.set(k, v); } };
+        var cmds = [];
+        (SETTINGS || []).forEach(function (sec) {
+            (sec.rows || []).forEach(function (r) {
+                if (!r || !r.key || SETTING_TYPES.indexOf(r.type) < 0) return;
+                var nm = labelName(r.label);
+                cmds.push({
+                    names: (r.rc || []).concat([nm]), args: '<' + settingHint(r) + '>', desc: r.label, section: sec.title || 'الإعدادات',
+                    when: r.showIf ? function () { return !!comp.state.values[r.showIf]; } : null,
+                    ui: { type: r.type, options: r.options || null, min: r.min, max: r.max, step: r.step, placeholder: r.placeholder || '', desc: r.hint || '', get: function () { return comp.state.values[r.key]; } },
+                    run: function (arg) { return settingRun(r, arg, api); }
+                });
+            });
+        });
+        cmds.push({ names: ['ابدأ', 'ابدا', 'بدء'], label: opts.startLabel || 'ابدأ — افتح اللوبي', desc: 'يحفظ الإعدادات ويكمل', tone: 'primary', icon: '▶', run: function () {
+            if (comp.state.connOpen) return null;
+            var vals = typeof comp.renderVals === 'function' ? comp.renderVals() : null;
+            if (!vals || typeof vals.start !== 'function') return { ok: false, msg: 'ابدأ من الشاشة' };
+            var err = typeof comp.toastMsg === 'function' ? captureToast(comp, function () { vals.start(); }) : (vals.start(), null);
+            return err ? { ok: false, msg: err } : 'تم — جارٍ الانتقال';
+        } });
+        return attach({
+            game: opts.game, page: opts.page || 'الإعدادات', connect: opts.connect,
+            commands: cmds.concat(opts.commands || []),
+            status: opts.status || function () { return 'live' in comp.state ? (comp.state.live ? '🟢 متصل بالبث' : '🔴 غير متصل بالبث — الستريمر يبدأ البث ونتصل تلقائياً') : ''; }
+        });
+    }
+
+    /**
+     * لوبي القالب (games/<id>/lobby.html — TEAMS + state.roster:[[أسماء], …]
+     * و renderVals().start()): الحالة (العدد وكلمة الدخول لكل فريق)، «ابدأ
+     * المباراة»، «طرد لاعب» من قائمة الأسماء، و«رجوع للإعدادات».
+     */
+    function templateLobby(comp, TEAMS, opts) {
+        opts = opts || {};
+        var roster = function () { return Array.isArray(comp.state.roster) ? comp.state.roster : []; };
+        var all = function () { var out = []; roster().forEach(function (l) { (l || []).forEach(function (n) { out.push(n); }); }); return out; };
+        var teams = TEAMS || [];
+        return attach({
+            game: opts.game, page: opts.page || 'اللوبي', connect: opts.connect,
+            status: function () {
+                return teams.map(function (t, i) {
+                    var n = (roster()[i] || []).length;
+                    return (teams.length > 1 ? (t.name || t.label || ('فريق ' + (i + 1))) + ': ' : 'باللوبي ') + n + (t.max ? ' من ' + t.max : '') + (t.keyword ? ' · كلمة الدخول «' + t.keyword + '»' : '');
+                }).join(' — ');
+            },
+            commands: [
+                { names: ['ابدأ', 'ابدا', 'بدء', 'العب'], label: 'ابدأ المباراة', desc: 'بلاعبين اللوبي', tone: 'primary', icon: '▶', run: function () {
+                    if (comp._rcGo) return null;
+                    var vals = comp.renderVals(), err = typeof comp.toastMsg === 'function' ? captureToast(comp, function () { vals.start(); }) : (vals.start(), null);
+                    if (err) return { ok: false, msg: err };
+                    comp._rcGo = true;
+                    return 'بدأت المباراة بـ ' + all().length + ' لاعب';
+                } },
+                { names: ['طرد', 'اطرد', 'شيل'], args: '<اسم اللاعب>', label: 'طرد لاعب', desc: 'يشيله من اللوبي', tone: 'danger', icon: '✕', pick: all, run: function (arg) {
+                    var q = norm(arg); if (!q) return { ok: false, msg: 'اكتب اسم اللاعب' };
+                    var list = all(), n = list.filter(function (x) { return norm(x) === q; })[0] || list.filter(function (x) { return norm(x).indexOf(q) === 0; })[0];
+                    if (!n) return { ok: false, msg: 'ما لقيت لاعب بهذا الاسم' };
+                    comp.setState(function (st) { return { roster: st.roster.map(function (l) { return (l || []).filter(function (x) { return x !== n; }); }) }; });
+                    return 'تم طرد ' + n;
+                } },
+                { names: ['رجوع', 'الاعدادات'], label: 'رجوع للإعدادات', icon: '↩', run: function () { setTimeout(function () { location.href = 'index.html'; }, 700); return 'رجوع للإعدادات'; } }
+            ].concat(opts.commands || [])
+        });
+    }
+
+    // ---------- ألعاب agp-game-shell.js (settingsFields) ----------
+
+    function shellCommands() {
+        var GS = AGP.gameShell, cfg = GS && GS.getConfig ? GS.getConfig() : null;
+        if (!cfg) return [];
+        return (cfg.settingsFields || []).map(function (f) {
+            if (!f || !f.key) return null;
+            var get = function () { return GS.getSettings()[f.key]; };
+            var when = f.showWhen ? function () { return GS.getSettings()[f.showWhen.key] === f.showWhen.equals; } : null;
+            var base = { names: [labelName(f.label)], desc: f.label, section: 'الإعدادات', when: when };
+            if (f.type === 'pill-choice' || f.type === 'pill-group') {
+                var labels = (f.options || []).map(function (o) { return String(o.label); });
+                return Object.assign(base, { args: '<' + labels.join(' / ') + '>', ui: { type: 'choice', options: labels, desc: f.description || '', get: function () {
+                    var v = get(), o = (f.options || []).filter(function (x) { return x.value === v; })[0]; return o ? String(o.label) : null; } },
+                    run: function (arg) { var k = matchOption(labels, arg); if (k < 0) return { ok: false, msg: f.label + ': ' + labels.join(' / ') };
+                        GS.setSetting(f.key, f.options[k].value); return f.label + ': ' + labels[k]; } });
+            }
+            if (f.type === 'counter' || f.type === 'slider') {
+                var mn = typeof f.min === 'number' ? f.min : 0, mx = typeof f.max === 'number' ? f.max : (f.type === 'slider' ? 10 : 999);
+                return Object.assign(base, { args: '<' + mn + '–' + mx + '>', ui: { type: 'number', min: mn, max: mx, step: f.step || 1, desc: f.description || '', get: get },
+                    run: function (arg) { var n = toInt(arg); if (n == null || n < mn || n > mx) return { ok: false, msg: f.label + ' من ' + mn + ' إلى ' + mx };
+                        GS.setSetting(f.key, n); return f.label + ': ' + n; } });
+            }
+            if (f.type === 'toggle') {
+                return Object.assign(base, { args: '[تشغيل / ايقاف]', ui: { type: 'toggle', desc: f.description || '', get: get },
+                    run: function (arg) { var v = String(arg || '').trim() ? parseBool(arg) : !get(); if (v == null) return { ok: false, msg: f.label + ': تشغيل أو ايقاف' };
+                        GS.setSetting(f.key, v); return f.label + ': ' + (v ? 'تشغيل' : 'ايقاف'); } });
+            }
+            return null;
+        }).filter(Boolean);
+    }
+
+    // ---------- «أزرار الشاشة»: كل زر وخانة ظاهرة عند الستريمر تطلع بالجوال ----------
+
+    var MIRROR_SKIP = '.agp-rc-ov,.agp-rc-toasts,.agp-rc-help,[data-rc-skip]';
+    var _mirrorMap = {}, _mirrorSeq = 0;
+
+    function txt(t) { return String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); }
+    function shown(el) {
+        if (!el.getClientRects().length) return false;
+        var r = el.getBoundingClientRect();
+        if (r.width < 6 || r.height < 6) return false;
+        for (var n = el, i = 0; n && n.nodeType === 1 && i < 8; n = n.parentElement, i++) {
+            var cs = getComputedStyle(n);
+            if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) < 0.08) return false;
+            if (i === 0 && cs.pointerEvents === 'none') return false;
+        }
+        return true;
+    }
+    function labelOf(el) {
+        var t = txt(el.getAttribute('aria-label')) || txt(el.getAttribute('title')) || txt(el.innerText || el.textContent);
+        if (!t && el.labels && el.labels[0]) t = txt(el.labels[0].innerText);
+        if (!t) t = txt(el.getAttribute('placeholder')) || txt(el.getAttribute('name'));
+        if (t.length > 42) t = t.slice(0, 40) + '…';
+        return /[\p{L}\p{N}\p{Extended_Pictographic}]/u.test(t) ? t : '';
+    }
+    var FIELD_SEL = 'button,input,select,textarea,[role="button"]';
+    /** عنوان الصف اللي فيه العنصر: أول نص قصير بجانبه (مو داخل زر أو خانة) — «وقت الإجابة» لزر «15 ث». */
+    function rowLabel(el) {
+        for (var n = el, p = el.parentElement, i = 0; p && i < 4 && p !== document.body; n = p, p = p.parentElement, i++) {
+            for (var k = 0; k < p.children.length; k++) {
+                var ch = p.children[k];
+                if (ch === n || ch.matches(FIELD_SEL) || ch.querySelector(FIELD_SEL)) continue;
+                var t = shortText(ch);
+                if (t) return t;
+            }
+        }
+        return '';
+    }
+    /** نص قصير لعنصر: كله لو قصير، وإلا أول سطر فيه (العنوان بدون الوصف). */
+    function shortText(node) {
+        for (var i = 0; node && i < 4; i++, node = node.firstElementChild) {
+            var t = txt(node.textContent);
+            if (t && t.length <= 40) return t;
+        }
+        return '';
+    }
+    /** زر ضمن مجموعة خيارات (زرين أو أكثر إخوان، مو بهيدر الشاشة)؟ */
+    function inGroup(el) {
+        var p = el.parentElement, c = 0;
+        if (!p || el.closest('header,nav') || el.getBoundingClientRect().top < 90) return false;
+        for (var k = 0; k < p.children.length; k++) if (p.children[k].matches(FIELD_SEL)) c++;
+        return c >= 2 && c <= 8 && p.children.length === c;
+    }
+    function toneOf(l) {
+        if (/حذف|خروج|انه|إنه|إقصاء|اقصاء|طرد|إلغاء|الغاء|إغلاق|اغلاق|إيقاف|ايقاف/.test(l)) return 'danger';
+        if (/ابدأ|ابدا|بدء|تأكيد|تاكيد|التالي|اللوبي|العب|لف|دور|جولة/.test(l)) return 'primary';
+        return '';
+    }
+    /** يقرأ الشاشة: أزرار (actions) وخانات (items) — مع مفتاح ثابت لكل عنصر. */
+    function scanScreen(exclude) {
+        var actions = [], items = [], count = {}, map = {};
+        var els = document.querySelectorAll('button, [role="button"], a[href], input, select, textarea');
+        for (var i = 0; i < els.length && (actions.length < 48 || items.length < 16); i++) {
+            var el = els[i];
+            if (el.closest(MIRROR_SKIP) || (exclude && el.closest(exclude))) continue;
+            if (el.disabled || el.getAttribute('aria-disabled') === 'true' || !shown(el)) continue;
+            var tag = el.tagName, type = (el.getAttribute('type') || '').toLowerCase();
+            if (tag === 'INPUT' && (type === 'hidden' || type === 'file' || type === 'password' || type === 'color')) continue;
+            if (tag === 'A') {
+                var href = el.getAttribute('href') || '';
+                if (href.charAt(0) === '#' || /^(mailto|tel|javascript):/i.test(href) || el.target === '_blank') continue;
+                try { if (new URL(href, location.href).origin !== location.origin) continue; } catch (e) { continue; }
+            }
+            var label = labelOf(el);
+            var isField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+            if (isField && !txt(el.getAttribute('aria-label')) && !(el.labels && el.labels[0])) label = rowLabel(el) || label;
+            else if (!isField && inGroup(el)) { var ctx = rowLabel(el); if (ctx && ctx !== label) label = ctx + ': ' + label; }
+            if (!label) continue;
+            var key = el.__agpRcKey || (el.__agpRcKey = 'm' + (++_mirrorSeq).toString(36));
+            map[key] = el;
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+                if (items.length >= 16) continue;
+                var it = { id: key, key: key, cmd: '__set', label: label };
+                if (type === 'checkbox' || type === 'radio') { it.type = 'toggle'; it.value = !!el.checked; }
+                else if (tag === 'SELECT') { it.type = 'choice'; it.options = Array.prototype.map.call(el.options, function (o) { return txt(o.text); }); it.value = el.selectedIndex >= 0 ? txt(el.options[el.selectedIndex].text) : null; }
+                else if (type === 'number' || type === 'range') {
+                    it.type = 'number'; it.value = el.value === '' ? null : Number(el.value);
+                    it.min = el.min !== '' ? Number(el.min) : undefined; it.max = el.max !== '' ? Number(el.max) : undefined; it.step = el.step && el.step !== 'any' ? Number(el.step) : 1;
+                } else { it.type = 'text'; it.value = el.value || ''; it.placeholder = el.getAttribute('placeholder') || ''; }
+                items.push(it);
+                continue;
+            }
+            if (actions.length >= 48) continue;
+            count[label] = (count[label] || 0) + 1;
+            actions.push({ cmd: '__press', key: key, label: label, desc: '', args: '', tone: toneOf(label), confirm: /خروج|إنهاء|انهاء|حذف/.test(label) ? label + '؟' : '', screen: true });
+        }
+        // أسماء مكررة (زر لكل لاعب مثلاً) → نرقّمها
+        var seen = {};
+        actions.forEach(function (a) { if (count[a.label] > 1) { seen[a.label] = (seen[a.label] || 0) + 1; a.label = a.label + ' (' + seen[a.label] + ')'; } });
+        _mirrorMap = map;
+        return { actions: actions, items: items };
+    }
+    function nativeSet(el, v) {
+        var proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+        var d = Object.getOwnPropertyDescriptor(proto, 'value');
+        if (d && d.set) d.set.call(el, v); else el.value = v;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    function liveEl(key) {
+        var el = _mirrorMap[key];
+        return el && document.contains(el) && shown(el) && !el.disabled ? el : null;
+    }
+    function pressKey(key) {
+        var el = liveEl(String(key || '').trim());
+        if (!el) { schedulePush(50); return { ok: false, msg: 'الشاشة تغيّرت — جرّب مرة ثانية' }; }
+        var l = labelOf(el);
+        el.click();
+        return 'تم: ' + l;
+    }
+    function setKey(arg) {
+        var a = String(arg || ''), i = a.indexOf('|');
+        var el = liveEl(i < 0 ? a : a.slice(0, i)), v = i < 0 ? '' : a.slice(i + 1);
+        if (!el) { schedulePush(50); return { ok: false, msg: 'الشاشة تغيّرت — جرّب مرة ثانية' }; }
+        var l = labelOf(el), type = (el.getAttribute('type') || '').toLowerCase();
+        if (type === 'checkbox' || type === 'radio') {
+            var want = parseBool(v); if (want == null) want = !el.checked;
+            if (el.checked !== want) el.click();
+            return l + ': ' + (want ? 'تشغيل' : 'ايقاف');
+        }
+        if (el.tagName === 'SELECT') {
+            var k = matchOption(Array.prototype.map.call(el.options, function (o) { return txt(o.text); }), v);
+            if (k < 0) return { ok: false, msg: 'خيار غير موجود' };
+            nativeSet(el, el.options[k].value);
+            return l + ': ' + txt(el.options[k].text);
+        }
+        nativeSet(el, v);
+        return l + ': ' + (v || '—');
+    }
+    function mirrorCommands() {
+        return [
+            { names: ['__press'], phone: false, run: pressKey },
+            { names: ['__set'], phone: false, run: setKey },
+            { names: ['اضغط', 'زر'], args: '<اسم الزر>', desc: 'يضغط زر من أزرار الشاشة', phone: false, run: function (arg) {
+                var scr = scanScreen(_page && _page.mirrorExclude);
+                var k = matchOption(scr.actions.map(function (a) { return a.label; }), arg);
+                if (k < 0) return { ok: false, msg: 'ما لقيت زر بهذا الاسم — الأزرار: ' + scr.actions.slice(0, 12).map(function (a) { return a.label; }).join(' / ') };
+                return pressKey(scr.actions[k].key);
+            } }
+        ];
+    }
+
+    // ---------- ربط تلقائي لأي صفحة لعبة ما ربطت نفسها ----------
+
+    /** صفحة لعبة (games/<id>/…) حمّلت هالملف وما استدعت attach → «أزرار الشاشة» (+ إعدادات game-shell). */
+    function autoAttach() {
+        if (_explicit || _page) return;
+        var m = location.pathname.match(/\/(?:discord-)?games\/([a-z0-9-]+)\/([^\/]*)$/i);
+        if (!m) return;
+        var id = m[1].toLowerCase(), file = (m[2] || 'index.html').toLowerCase();
+        if (/^(join|spymaster|admin)/.test(file)) return;
+        var page = /^lobby/.test(file) ? 'اللوبي' : /^(game|play)/.test(file) ? 'شاشة اللعب' : /^(index|$)/.test(file) ? 'الشاشة الرئيسية'
+            : (txt(document.title).split(/[—-]/)[1] || txt(document.title)).trim();
+        var shell = AGP.gameShell && AGP.gameShell.getConfig && AGP.gameShell.getConfig();
+        attach({ game: id, page: shell ? 'اللعبة' : page, commands: shell ? shellCommands() : [], mirror: true, mirrorExclude: shell ? '.agp-shell-row' : '', _auto: true });
+        if (_page) _page.shell = !!shell;
+    }
+    /** بعد ما تجهز الصفحة: ربط تلقائي، وإذا game-shell جهز بعده نعيد الربط بإعداداته. */
+    function autoLoop() {
+        var tries = 0;
+        var t = setInterval(function () {
+            tries++;
+            if (_explicit || tries > 12) { clearInterval(t); return; }
+            var shellNow = !!(AGP.gameShell && AGP.gameShell.getConfig && AGP.gameShell.getConfig());
+            if (!_page) autoAttach();
+            else if (_page.auto && shellNow && !_page.shell) { detach(); autoAttach(); }
+            if (_page && (_page.shell || tries > 6)) clearInterval(t);
+        }, 1200);
+    }
+    if (document.readyState !== 'loading') setTimeout(autoLoop, 1200);
+    else document.addEventListener('DOMContentLoaded', function () { setTimeout(autoLoop, 1200); });
 
     // ---------- مساعدات للألعاب ----------
 
@@ -430,29 +749,43 @@
             } : null;
             return {
                 names: r.rc, args: '<' + hint + '>', desc: r.label, section: x.section || 'الإعدادات', ui: ui,
-                run: function (arg) {
-                    var v;
-                    if (r.type === 'text') {
-                        v = String(arg || '').trim().slice(0, 40);
-                        if (!v) return { ok: false, msg: 'اكتب ' + r.label + ' بعد الأمر' };
-                    } else if (r.type === 'number') {
-                        v = toInt(arg);
-                        var mn = r.min != null ? r.min : 0, mx = r.max != null ? r.max : 999;
-                        if (v == null || v < mn || v > mx) return { ok: false, msg: r.label + ' من ' + mn + ' إلى ' + mx };
-                    } else if (r.type === 'choice') {
-                        v = matchOption(r.options, arg);
-                        if (v < 0) return { ok: false, msg: r.label + ': ' + r.options.join(' / ') };
-                    } else if (r.type === 'toggle') {
-                        v = String(arg || '').trim() ? parseBool(arg) : !api.get(r.key);
-                        if (v == null) return { ok: false, msg: r.label + ': تشغيل أو ايقاف' };
-                    } else {
-                        return { ok: false, msg: 'هذا الإعداد ما يتغير من الشات' };
-                    }
-                    api.set(r.key, v);
-                    return r.label + ': ' + describe(r, v);
-                }
+                run: function (arg) { return settingRun(r, arg, api); }
             };
         });
+    }
+    /**
+     * تغيير صف إعداد من نص الأمر. للـ choice القيمة رقم الخيار، للـ toggle
+     * true/false، للـ number رقم ضمن min/max، للـ multi يقلب الخيار المذكور.
+     */
+    function settingRun(r, arg, api) {
+        var v;
+        if (r.type === 'text') {
+            v = String(arg || '').trim().slice(0, 40);
+            if (!v) return { ok: false, msg: 'اكتب ' + r.label + ' بعد الأمر' };
+        } else if (r.type === 'number') {
+            v = toInt(arg);
+            var mn = r.min != null ? r.min : 0, mx = r.max != null ? r.max : 999;
+            if (v == null || v < mn || v > mx) return { ok: false, msg: r.label + ' من ' + mn + ' إلى ' + mx };
+        } else if (r.type === 'choice') {
+            v = matchOption(r.options, arg);
+            if (v < 0) return { ok: false, msg: r.label + ': ' + r.options.join(' / ') };
+        } else if (r.type === 'toggle') {
+            v = String(arg || '').trim() ? parseBool(arg) : !api.get(r.key);
+            if (v == null) return { ok: false, msg: r.label + ': تشغيل أو ايقاف' };
+        } else if (r.type === 'multi') {
+            var k = matchOption(r.options, arg);
+            if (k < 0) return { ok: false, msg: r.label + ': ' + r.options.join(' / ') };
+            var cur = (api.get(r.key) || []).slice();
+            if (cur.indexOf(k) >= 0) {
+                if (cur.length <= (r.minPick || 0)) return { ok: false, msg: r.label + ': لازم يبقى ' + (r.minPick || 1) + ' على الأقل' };
+                cur = cur.filter(function (x) { return x !== k; });
+            } else cur.push(k);
+            v = cur;
+        } else {
+            return { ok: false, msg: 'هذا الإعداد ما يتغير من الشات' };
+        }
+        api.set(r.key, v);
+        return r.label + ': ' + describe(r, v);
     }
     /** قيمة صف إعداد كنص مقروء. */
     function describe(r, v) {
@@ -653,7 +986,7 @@
     }
 
     function cmdLines() {
-        return allCommands().map(function (c) {
+        return allCommands().filter(function (c) { return c.names[0].indexOf('__') !== 0; }).map(function (c) {
             return ['!' + c.names[0] + (c.args ? ' ' + c.args : ''), c.desc || ''];
         });
     }
@@ -684,6 +1017,8 @@
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);
     }
 
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { _lastSent = ''; schedulePush(50); } });
+
     // اتصال البث جاء بعد فتح الصفحة (agp-auto-connect.js) → نفعّل الشات
     window.addEventListener('agp:stream-connected', ensureConnected);
     window.addEventListener('storage', function (e) {
@@ -699,6 +1034,8 @@
         attach: attach,
         detach: detach,
         settingsCommands: settingsCommands,
+        templateSettings: templateSettings,
+        templateLobby: templateLobby,
         describe: describe,
         captureToast: captureToast,
         matchOption: matchOption,
@@ -719,4 +1056,4 @@
 
     AGP.log('AGP Remote Control loaded.');
 
-}(window.AymanGamesPlatform));
+}(window.AymanGamesPlatform = window.AymanGamesPlatform || {}));

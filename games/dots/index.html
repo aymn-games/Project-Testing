@@ -16,6 +16,8 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
 <script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
@@ -276,7 +278,7 @@ const SHARED = AGPSharedPrefs.bind({team1Name:'nameA',team1Keyword:'keyA',team2N
 
 class Component extends DCLogic {
   state = { supCount:1, supPick:false, values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!DT.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  componentDidMount(){ const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(_rc) _rc.templateSettings(this,SETTINGS,{game:'dots'});  SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onEnded=()=>this.setState({live:!!DT.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); removeEventListener('agp:stream-connected',this.onEnded); clearTimeout(this.tt); (this.nav||[]).forEach(clearTimeout); }
