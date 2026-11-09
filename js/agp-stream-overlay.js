@@ -3189,9 +3189,9 @@
         /* كبسولة العدد بإطار «الفراشات»: زجاجية بلون المركز، العملة تلف حول نفسها بنعومة (بدون ثري دي)، ورقم المركز بدائرة على اليمين */
         '.agp-so-throne.fk-butterfly .agp-so-tcount{gap:.36em;margin-top:.3em;padding:.2em .5em .2em .32em;border-radius:.24em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
         '.agp-so-throne.fk-butterfly .agp-so-tbox .agp-so-tcount,.agp-so-tbox.fk-butterfly .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
-        /* العملة: لفّة وحدة حول نفسها وبعدها توقف، وتعيد كل 5 ثواني (الأول ثم الثاني ثم الثالث) */
+        /* العملة: لفّة وحدة بالطول (حول محورها العمودي، بدون منظور) وبعدها توقف، وتعيد كل 5 ثواني (الأول ثم الثاني ثم الثالث) */
         '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.2em;height:1.2em;margin:-.1em 0;filter:none;animation:agp-so-bfcoin 5s infinite;animation-delay:calc(var(--d) * 2)}',
-        '@keyframes agp-so-bfcoin{0%{transform:rotate(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}22%,100%{transform:rotate(360deg)}}',
+        '@keyframes agp-so-bfcoin{0%{transform:rotateY(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}22%,100%{transform:rotateY(360deg)}}',
         '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
         '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
         /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
