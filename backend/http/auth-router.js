@@ -36,6 +36,7 @@ var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var gamePrefsService = require('../game-prefs/game-prefs-service');
 var remoteControlService = require('../remote-control/remote-control-service');
+var seenNotices = require('../notices/seen-notices');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
 var config = require('../config');
@@ -102,6 +103,9 @@ var ROUTES = [
   { method: 'GET', path: '/api/remote-control/config', requireAuth: true, handler: handleGetRemoteControl },
   { method: 'POST', path: '/api/remote-control/config', requireAuth: true, handler: handleSaveRemoteControl },
   { method: 'GET', path: '/api/remote-control/access', requireAuth: true, handler: handleRemoteControlAccess },
+  // إعلانات «تطلع مرة وحدة» محفوظة بالحساب (notices/seen-notices.js) — مثل تنبيه مكتبة الألعاب
+  { method: 'GET', path: '/api/notices/seen', requireAuth: true, handler: handleGetNoticeSeen },
+  { method: 'POST', path: '/api/notices/seen', requireAuth: true, handler: handleMarkNoticeSeen },
   // كود نيمز: باركود خاص لكل سباي ماستر مرتبط بحسابه (codenames/spy-slots-service.js)
   { method: 'POST', path: '/api/codenames/spy-slots', requireAuth: true, handler: handleCodenamesSpySlots },
   { method: 'POST', path: '/api/codenames/spy-claim', requireAuth: true, handler: handleCodenamesSpyClaim },
@@ -1016,6 +1020,26 @@ function handleSaveRemoteControl(req, res, body, user) {
   else if (a === 'remove') r = remoteControlService.removeController(user.id, body.username);
   else r = { success: false, error: 'bad_action' };
   sendJson(res, r.success ? 200 : 400, Object.assign({}, remoteControlService.getConfig(user.id), r));
+}
+
+/** مفتاح إعلان: حروف إنجليزية وأرقام وشرطات، حتى 64. */
+function noticeKey(k) {
+  k = String(k || '').trim();
+  return /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(k) ? k : '';
+}
+
+/** GET /api/notices/seen?key=<مفتاح> → { success, seen } */
+function handleGetNoticeSeen(req, res, body, user) {
+  var key = noticeKey(getQueryParam(req, 'key'));
+  if (!key) { sendJson(res, 400, { success: false, error: 'bad_key' }); return; }
+  sendJson(res, 200, { success: true, seen: seenNotices.hasSeen(user.id, key) });
+}
+
+/** POST /api/notices/seen { key } → { success } */
+function handleMarkNoticeSeen(req, res, body, user) {
+  var key = noticeKey(body && body.key);
+  if (!key) { sendJson(res, 400, { success: false, error: 'bad_key' }); return; }
+  sendJson(res, 200, { success: seenNotices.markSeen(user.id, key) });
 }
 
 /** GET /api/remote-control/access → { success, tiktokLinked, streamers:[{id, customId, name, avatar}] } */
