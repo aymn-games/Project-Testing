@@ -1,38 +1,50 @@
 /**
- * التحكم بالشات (AGP.remoteControl) — المذيع يعطي لاعب أو أكثر صلاحية
- * تشغيل اللعبة كاملة بأوامر يكتبونها بشات البث: يفتح اللعبة، يكتب كلمة
- * الدخول، يغيّر الإعدادات، يبدأ اللوبي، يدخل شاشة اللعب، ويبدأ الجولات.
+ * «التحكم عن بعد» (AGP.remoteControl) — الستريمر يعطي لاعب أو أكثر صلاحية
+ * تشغيل ألعابه كاملة: من شاشة جوالهم/آيبادهم (control.html — أزرار
+ * وإعدادات) أو بأوامر يكتبونها بشات البث. الاثنين نفس الأوامر بالضبط.
  *
- * يشتغل على روليت الإقصاء فقط (الشاشات اللي تستدعي attach)، وبمكتبة الألعاب
- * (games.html) أمر واحد: !روليت يفتح إعداداتها. المكتبة ما فيها اتصال لعبة،
- * فالتعليقات توصلها من اتصال الإحصائيات (js/agp-stream-overlay.js، حدث
- * 'agp:overlay-comment') لما الصفحة تطلب ذلك بـ overlayChat:true.
- *
- * التفعيل يدوي من المذيع فقط، من بروفايله (profile.html → تبويب
- * «معلومات الستريمر» → زر «التحكم بالشات»): نافذة فيها مفتاح التفعيل
- * وقائمة يوزرات المتحكمين. ما فيه أي زر داخل شاشات اللعبة نفسها؛ لما
- * يكون مفعّل يشتغل فيها تلقائياً.
+ * كيف يشتغل:
+ *  - الستريمر يدير المتحكمين من بروفايله (profile.html → «معلومات الستريمر»
+ *    → «التحكم عن بعد»): مفتاح عام، وحتى 5 يوزرات تيك توك لكل واحد مفتاح
+ *    تشغيل/إيقاف. محفوظ بالخادم (backend/remote-control/).
+ *  - المتحكم (حساب موثّق بنفس يوزر تيك توك) يطلع له زر «لوحة التحكم»
+ *    ببروفايله يفتح control.html.
+ *  - كل صفحة لعبة مربوطة تستدعي attach({game, page, commands, status}).
+ *    هالملف يفتح اتصال '/ws/remote' (صفحة الستريمر = host)، يرسل للجوال وصف
+ *    الشاشة الحالية (الإعدادات بقيمها، الأزرار، الأوامر)، وينفّذ اللي يوصل
+ *    من الجوال. وأوامر الشات تنفحص بقائمة المتحكمين اللي يرسلها الخادم.
+ *  - الجوال يقدر يختار لعبة: الصفحة تنتقل لإعداداتها (AGP.remoteGames).
  *
  * الأمان:
- *  - الأمر يُقبل فقط من تعليق معرّفه (payload.id) = 'tiktok:<يوزر>' لأحد
- *    اليوزرات المحفوظة — المعرّف الثابت من الخادم، لا الاسم الظاهر اللي
- *    ينتحل بسهولة.
- *  - الإعداد محفوظ بمتصفح المذيع فقط (localStorage 'agp:remote-control')،
- *    ويبقى مفعّل لين يطفيه المذيع من البروفايل.
- *  - الأوامر تبدأ بـ ! فما تختلط بكلمة الدخول أو أرقام اللاعبين بالشات.
+ *  - أمر الشات يُقبل بس من تعليق معرّفه (payload.id) = 'tiktok:<يوزر>' لأحد
+ *    المتحكمين الفعّالين — المعرّف الثابت من الخادم، مو الاسم الظاهر.
+ *  - قائمة المتحكمين من الخادم بس (src:'server' بالتخزين المحلي)؛ أي إيقاف
+ *    من الستريمر يوصل كل صفحاته المفتوحة فوراً ويقفل جوال المتحكم.
+ *  - الأوامر بالشات تبدأ بـ ! فما تختلط بكلمة الدخول أو أرقام اللاعبين.
  *
- * الاستخدام من صفحة لعبة (بعد تحميل agp-core + agp-events + الأدابتر):
+ * الاستخدام من صفحة لعبة (بعد تحميل agp-core + agp-events + الأدابتر + auth-client):
  *   var rc = AGP.remoteControl.attach({
- *     page: 'الإعدادات',           // اسم الشاشة (يظهر بقائمة الأوامر)
- *     connect: ER.connect,         // اتصال الشات بالبث (اختياري)
- *     commands: [{ names:['ابدأ'], args:'', desc:'...', run: function (arg, ctx) {
- *         return 'تم'  |  { ok:false, msg:'السبب' }  }}]
+ *     game: 'elimination-roulette',  // معرّف اللعبة بـ AGP.remoteGames
+ *     page: 'الإعدادات',             // اسم الشاشة
+ *     connect: ER.connect,           // اتصال الشات بالبث (اختياري)
+ *     status: function () { return 'باقي 12 لاعب'; },   // سطر حالة للجوال (اختياري)
+ *     commands: [{
+ *       names: ['ابدأ'],             // أول اسم = اسم الأمر بالجوال
+ *       args: '<اسم>' | '[تشغيل / ايقاف]',  // <> إلزامي، [] اختياري
+ *       desc: 'شرح',  label: 'نص الزر بالجوال (اختياري)',
+ *       tone: 'primary' | 'danger',  confirm: 'سؤال تأكيد بالجوال (اختياري)',
+ *       pick: function () { return ['اسم1', 'اسم2']; },   // خيارات للـ args بالجوال
+ *       ui: { type: 'choice'|'toggle'|'number'|'text', options, min, max, step, get },  // يطلع كإعداد بقيمته
+ *       section: 'عنوان قسم الإعداد',  phone: false (ما يطلع بالجوال — للشات بس),
+ *       run: function (arg, ctx) { return 'تم' | { ok: false, msg: 'السبب' } | null; }
+ *     }]
  *   });
- *   rc.detach();
+ *   rc.detach();  rc.push();  // push = أرسل وصف الشاشة للجوال الحين
  *
  * مساعدات للأوامر:
- *   AGP.remoteControl.settingsCommands(rows, {get, set}) — أوامر جاهزة من
- *     تعريف صفوف الإعدادات (text/number/choice/toggle) لأي صف فيه rc:[أسماء].
+ *   AGP.remoteControl.settingsCommands(sections, {get, set}) — أوامر جاهزة من
+ *     تعريف صفوف الإعدادات (text/number/choice/toggle) لأي صف فيه rc:[أسماء]،
+ *     وتطلع بالجوال كإعدادات بقيمها.
  *   AGP.remoteControl.captureToast(obj, fn) — يشغّل fn ويرجع أول رسالة
  *     toastMsg طلعت أثناءه (رسائل الخطأ الموجودة باللعبة) أو null.
  */
@@ -45,6 +57,12 @@
     var STORAGE_KEY = 'agp:remote-control';
     var MAX_USERS = 5;
     var PREFIXES = ['!', '！', '¡'];
+    var PUSH_EVERY_MS = 1000;
+
+    // جذر الموقع من مكان هالملف (js/ ← ../)
+    var SITE_ROOT = (function () {
+        try { return new URL('../', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '/'; }
+    }());
 
     // ---------- أدوات ----------
 
@@ -71,8 +89,8 @@
         var n = parseInt(t, 10);
         return isNaN(n) ? null : n;
     }
-    var ON_WORDS = ['تشغيل', 'شغل', 'شغله', 'فعل', 'تفعيل', 'نعم', 'اي', 'ايه', 'on', '1'];
-    var OFF_WORDS = ['ايقاف', 'وقف', 'اوقف', 'طفي', 'اطفي', 'قفل', 'الغاء', 'لا', 'off', '0'];
+    var ON_WORDS = ['تشغيل', 'شغل', 'شغله', 'فعل', 'تفعيل', 'فتح', 'افتح', 'نعم', 'اي', 'ايه', 'on', '1'];
+    var OFF_WORDS = ['ايقاف', 'وقف', 'اوقف', 'طفي', 'اطفي', 'قفل', 'اقفل', 'الغاء', 'لا', 'off', '0'];
     /** تشغيل/إيقاف من نص → true/false، أو null لو غير واضح. */
     function parseBool(s) {
         var n = norm(s);
@@ -91,43 +109,30 @@
         for (i = 0; i < N.length; i++) if (N[i].indexOf(q) >= 0) return i;
         return -1;
     }
+    function auth() { return window.AGPAuth || null; }
 
-    // ---------- الإعداد المحفوظ ----------
+    // ---------- قائمة المتحكمين (من الخادم) ----------
 
+    /** آخر قائمة وصلت من الخادم. نسخة قديمة بدون src:'server' (النظام القديم) ما تُعتمد. */
     function readConfig() {
         var c = null;
         try { c = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { c = null; }
-        c = c && typeof c === 'object' ? c : {};
-        var users = Array.isArray(c.users) ? c.users.map(cleanUser).filter(Boolean).slice(0, MAX_USERS) : [];
-        return { enabled: !!c.enabled && users.length > 0, users: users };
+        if (!c || typeof c !== 'object' || c.src !== 'server') return { enabled: false, users: [] };
+        var users = Array.isArray(c.users) ? c.users.map(cleanUser).filter(Boolean) : [];
+        return { enabled: users.length > 0, users: users };
     }
-    function writeConfig(c) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch (e) {}
-        notifyChanged();
+    /** قائمة النظام القديم (محفوظة بالمتصفح بس) — تنتقل للخادم مرة وحدة من نافذة البروفايل. */
+    function readLegacyUsers() {
+        var c = null;
+        try { c = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { c = null; }
+        if (!c || c.src === 'server' || !Array.isArray(c.users)) return [];
+        return c.users.map(cleanUser).filter(Boolean).slice(0, MAX_USERS);
     }
-    function setEnabled(on) {
-        var c = readConfig();
-        if (on && !c.users.length) return false;
-        c.enabled = !!on;
-        writeConfig(c);
-        refreshUi();
-        if (on) ensureConnected();
-        return true;
-    }
-    function addUser(u) {
-        var c = readConfig(), x = cleanUser(u);
-        if (!x || c.users.indexOf(x) >= 0 || c.users.length >= MAX_USERS) return false;
-        c.users.push(x);
-        writeConfig(c);
-        refreshUi();
-        return true;
-    }
-    function removeUser(u) {
-        var c = readConfig(), x = cleanUser(u);
-        c.users = c.users.filter(function (y) { return y !== x; });
-        if (!c.users.length) c.enabled = false;
-        writeConfig(c);
-        refreshUi();
+    function writeActive(users) {
+        var before = JSON.stringify(readConfig());
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ src: 'server', users: users || [], at: Date.now() })); } catch (e) {}
+        if (JSON.stringify(readConfig()) !== before) notifyChanged();
+        if (readConfig().enabled) ensureConnected();
     }
     function isController(payload) {
         if (!payload || typeof payload.id !== 'string') return null;
@@ -141,16 +146,27 @@
 
     // ---------- الصفحة الحالية وأوامرها ----------
 
-    var _page = null; // {page, connect, overlayChat, commands}
+    var _page = null; // {game, page, connect, overlayChat, status, commands}
     var _unsub = null;
 
     function notifyChanged() {
         try { window.dispatchEvent(new CustomEvent('agp:remote-control-changed', { detail: readConfig() })); } catch (e) {}
     }
 
+    function games() { return AGP.remoteGames || []; }
+    function readyGames() { return games().filter(function (g) { return g.ready; }); }
+
     function globalCommands() {
         return [
-            { names: ['اوامر', 'الاوامر', 'مساعده', 'help'], desc: 'يعرض أوامر هذه الشاشة', run: function () { showHelp(); return null; } }
+            { names: ['اوامر', 'الاوامر', 'مساعده', 'help'], desc: 'يعرض أوامر هذه الشاشة', phone: false, run: function () { showHelp(); return null; } },
+            { names: ['لعبه', 'العاب', 'افتح'], args: '<اسم اللعبة>', desc: 'يفتح إعدادات لعبة', phone: false, run: function (arg) {
+                var list = readyGames();
+                if (!String(arg || '').trim()) return { ok: false, msg: 'الألعاب: ' + list.map(function (g) { return g.name; }).join(' / ') };
+                var k = matchOption(list.map(function (g) { return g.name; }), arg);
+                if (k < 0) return { ok: false, msg: 'ما لقيت لعبة بهذا الاسم — الألعاب: ' + list.map(function (g) { return g.name; }).join(' / ') };
+                return openGame(list[k].id);
+            } },
+            { names: ['المكتبه', 'مكتبه'], desc: 'يرجع لمكتبة الألعاب', phone: false, run: function () { return openGame('library'); } }
         ];
     }
     function allCommands() {
@@ -175,21 +191,28 @@
         return m ? { cmd: m[1], arg: (m[2] || '').trim() } : null;
     }
 
+    /** ينفّذ أمر (من الشات أو الجوال) ويرجع {ok, msg} أو null (ما يحتاج رد). */
+    function execute(cmdWord, arg, user, payload) {
+        var c = findCommand(cmdWord);
+        if (!c) return { ok: false, msg: 'أمر غير معروف — اكتب !اوامر' };
+        var res;
+        try { res = c.run(arg, { user: user, payload: payload || null }); } catch (e) {
+            AGP.log('Remote control: command failed', e);
+            res = { ok: false, msg: 'تعذّر تنفيذ الأمر' };
+        }
+        schedulePush(200);
+        if (res == null) return null;
+        return typeof res === 'string' ? { ok: true, msg: res } : res;
+    }
+
     function onComment(payload) {
         if (!_page || !payload || typeof payload.text !== 'string') return;
         var user = isController(payload);
         if (!user) return;
         var p = parse(payload.text);
         if (!p) return;
-        var c = findCommand(p.cmd);
-        if (!c) { feedback(user, { ok: false, msg: 'أمر غير معروف — اكتب !اوامر' }); return; }
-        var res;
-        try { res = c.run(p.arg, { user: user, payload: payload }); } catch (e) {
-            AGP.log('Remote control: command failed', e);
-            res = { ok: false, msg: 'تعذّر تنفيذ الأمر' };
-        }
-        if (res == null) return;
-        feedback(user, typeof res === 'string' ? { ok: true, msg: res } : res);
+        var res = execute(p.cmd, p.arg, user, payload);
+        if (res) feedback(user, res);
     }
 
     function ensureConnected() {
@@ -197,20 +220,44 @@
         try { _page.connect(); } catch (e) {}
     }
 
+    /** يفتح لعبة (أو المكتبة) بنفس التبويب. */
+    function openGame(id) {
+        if (id === 'library') {
+            if (!_page || !_page.game) return { ok: true, msg: 'أنت بمكتبة الألعاب' };
+            setTimeout(function () { location.href = SITE_ROOT + 'games.html'; }, 700);
+            return { ok: true, msg: 'رجوع لمكتبة الألعاب' };
+        }
+        var g = AGP.remoteGames && AGP.remoteGames.find ? AGP.remoteGames.find(id) : null;
+        if (!g) return { ok: false, msg: 'لعبة غير معروفة' };
+        if (!g.ready) return { ok: false, msg: g.name + ': التحكم فيها قريباً' };
+        if (_page && _page.game === g.id) return { ok: true, msg: g.name + ' مفتوحة الحين' };
+        setTimeout(function () { location.href = SITE_ROOT + g.url; }, 700);
+        return { ok: true, msg: 'جارٍ فتح ' + g.name };
+    }
+
     function attach(opts) {
         detach();
         _page = {
+            game: (opts && opts.game) || null,
             page: (opts && opts.page) || '',
             overlayChat: !!(opts && opts.overlayChat),
             connect: opts && opts.connect,
+            status: opts && opts.status,
             commands: (opts && opts.commands) || []
         };
         if (AGP.events && typeof AGP.events.on === 'function') {
             _unsub = AGP.events.on('stream:commentReceived', onComment);
         }
+        loadGames();
         ensureConnected();
         notifyChanged();
-        return { detach: detach, setCommands: function (list) { if (_page) _page.commands = list || []; } };
+        hostStart();
+        schedulePush(300);
+        return {
+            detach: detach,
+            push: function () { schedulePush(50); },
+            setCommands: function (list) { if (_page) { _page.commands = list || []; schedulePush(100); } }
+        };
     }
     function detach() {
         if (typeof _unsub === 'function') { try { _unsub(); } catch (e) {} }
@@ -219,22 +266,170 @@
         notifyChanged();
     }
 
+    /** قائمة الألعاب (js/agp-remote-games.js) لو الصفحة ما حمّلتها. */
+    function loadGames() {
+        if (AGP.remoteGames || document.getElementById('agp-remote-games-js')) return;
+        var s = document.createElement('script');
+        s.id = 'agp-remote-games-js';
+        s.src = SITE_ROOT + 'js/agp-remote-games.js';
+        s.onload = function () { schedulePush(50); };
+        (document.head || document.documentElement).appendChild(s);
+    }
+
+    // ---------- اتصال صفحة الستريمر بالخادم (/ws/remote) ----------
+
+    var _ws = null, _wsTries = 0, _wsRetryT = 0, _wsPingT = 0, _wsStop = false, _wsReady = false;
+    var _lastSent = '', _pushT = 0, _pushLoop = 0;
+
+    function wsUrl() {
+        try { var q = new URLSearchParams(location.search).get('rcws'); if (q) return q; } catch (e) {}
+        var h = location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return 'ws://' + h + ':8787/ws/remote';
+        var base = (auth() && auth().API_BASE) || 'https://project-testing-akds.onrender.com';
+        return base.replace(/^http/, 'ws') + '/ws/remote';
+    }
+    function canHost() {
+        var A = auth();
+        if (!A || !A.getToken || !A.getToken()) return false;
+        var u = A.getCachedUser ? A.getCachedUser() : null;
+        return !u || (A.isStreamerAccount ? A.isStreamerAccount(u) : true);
+    }
+    function wsSend(obj) {
+        if (_ws && _ws.readyState === 1 && _wsReady) { try { _ws.send(JSON.stringify(obj)); return true; } catch (e) {} }
+        return false;
+    }
+    function hostStart() {
+        if (_wsStop || _ws || !canHost() || typeof WebSocket !== 'function') return;
+        var ws;
+        try { ws = new WebSocket(wsUrl()); } catch (e) { hostRetry(); return; }
+        _ws = ws; _wsReady = false;
+        ws.onopen = function () {
+            try { ws.send(JSON.stringify({ t: 'host', auth: auth().getToken() })); } catch (e) {}
+        };
+        ws.onmessage = function (ev) {
+            var m;
+            try { m = JSON.parse(ev.data); } catch (e) { return; }
+            if (!m) return;
+            if (m.t === 'hosted') {
+                _wsReady = true; _wsTries = 0; _lastSent = '';
+                writeActive(m.controllers);
+                schedulePush(50);
+                clearInterval(_wsPingT);
+                _wsPingT = setInterval(function () { wsSend({ t: 'ping' }); }, 20000);
+            } else if (m.t === 'controllers') {
+                writeActive(m.list);
+            } else if (m.t === 'cmd') {
+                var res = _page ? execute(m.cmd, m.arg, m.from, null) : { ok: false, msg: 'الشاشة تنتقل — جرّب بعد لحظة' };
+                wsSend({ t: 'res', c: m.c, id: m.id, ok: !res || res.ok !== false, msg: res ? res.msg : 'تم' });
+                if (res && m.from) feedback(m.from, res);
+            } else if (m.t === 'open') {
+                var r = openGame(m.game);
+                wsSend({ t: 'res', c: m.c, id: m.id, ok: r.ok !== false, msg: r.msg });
+                if (m.from) feedback(m.from, r);
+            } else if (m.t === 'err') {
+                // ما هو حساب ستريمر/جلسة منتهية — ما نعيد المحاولة بهالصفحة
+                if (m.err === 'login' || m.err === 'not_streamer') _wsStop = true;
+            }
+        };
+        ws.onclose = function () {
+            if (_ws === ws) { _ws = null; _wsReady = false; }
+            clearInterval(_wsPingT);
+            hostRetry();
+        };
+        ws.onerror = function () { try { ws.close(); } catch (e) {} };
+    }
+    function hostRetry() {
+        if (_wsStop || _wsRetryT || !_page) return;
+        var d = Math.min(1000 * Math.pow(2, _wsTries), 30000);
+        _wsTries++;
+        _wsRetryT = setTimeout(function () { _wsRetryT = 0; hostStart(); }, d);
+    }
+
+    /** قيمة إعداد للجوال: للاختيار نص الخيار، للتبديل true/false. */
+    function uiValue(ui, raw) {
+        if (ui.type === 'choice') {
+            if (typeof raw === 'number') return ui.options && ui.options[raw] != null ? ui.options[raw] : null;
+            return raw == null ? null : String(raw);
+        }
+        if (ui.type === 'toggle') return !!raw;
+        if (ui.type === 'number') return raw === '' || raw == null ? null : Number(raw);
+        return raw == null ? '' : String(raw);
+    }
+
+    /** وصف الشاشة الحالية للجوال: الإعدادات بقيمها، الأزرار، الأوامر. */
+    function snapshot() {
+        if (!_page) return null;
+        var sections = [], bySec = {}, actions = [];
+        (_page.commands || []).forEach(function (c) {
+            if (!c || !c.names || !c.names.length || c.phone === false) return;
+            var name = c.names[0];
+            if (c.ui) {
+                var raw = null;
+                try { raw = typeof c.ui.get === 'function' ? c.ui.get() : null; } catch (e) { raw = null; }
+                var sec = c.section || 'الإعدادات';
+                if (!bySec[sec]) { bySec[sec] = { title: sec, items: [] }; sections.push(bySec[sec]); }
+                bySec[sec].items.push({
+                    cmd: name, label: c.label || c.desc || name, type: c.ui.type,
+                    options: c.ui.options || null, min: c.ui.min, max: c.ui.max, step: c.ui.step,
+                    placeholder: c.ui.placeholder || '', value: uiValue(c.ui, raw)
+                });
+                return;
+            }
+            var a = { cmd: name, label: c.label || c.desc || name, desc: c.label ? (c.desc || '') : '', args: c.args || '', tone: c.tone || '', confirm: c.confirm || '' };
+            if (typeof c.pick === 'function') { try { a.pick = (c.pick() || []).slice(0, 200).map(String); } catch (e) {} }
+            actions.push(a);
+        });
+        var status = '';
+        if (typeof _page.status === 'function') { try { status = String(_page.status() || ''); } catch (e) { status = ''; } }
+        var g = _page.game && AGP.remoteGames && AGP.remoteGames.find ? AGP.remoteGames.find(_page.game) : null;
+        return {
+            v: 1,
+            game: _page.game,
+            gameName: g ? g.name : (_page.game ? _page.game : 'مكتبة الألعاب'),
+            page: _page.page,
+            status: status.slice(0, 300),
+            sections: sections,
+            actions: actions,
+            help: cmdLines().filter(function (l) { return l[0] !== '!اوامر'; })
+        };
+    }
+    function push() {
+        if (!_wsReady) return;
+        var s = snapshot();
+        if (!s) return;
+        var j = JSON.stringify(s);
+        if (j === _lastSent) return;
+        if (wsSend({ t: 'state', s: s })) _lastSent = j;
+    }
+    function schedulePush(ms) {
+        clearTimeout(_pushT);
+        _pushT = setTimeout(push, ms || 0);
+        if (!_pushLoop) _pushLoop = setInterval(push, PUSH_EVERY_MS); // تغييرات الستريمر نفسه من الشاشة
+    }
+
     // ---------- مساعدات للألعاب ----------
 
     /**
      * أوامر من صفوف الإعدادات (نفس شكل SETTINGS بالألعاب): أي صف فيه
-     * rc:['اسم','اسم ثاني'] يصير أمر يغيّر قيمته. للصف choice القيمة
-     * المحفوظة رقم الخيار، وللـ toggle true/false، وللـ number رقم ضمن
-     * min/max، وللـ text النص كما هو.
+     * rc:['اسم','اسم ثاني'] يصير أمر يغيّر قيمته، ويطلع بالجوال كإعداد
+     * بقيمته الحالية. للصف choice القيمة المحفوظة رقم الخيار، وللـ toggle
+     * true/false، وللـ number رقم ضمن min/max، وللـ text النص كما هو.
      */
     function settingsCommands(sections, api) {
         var rows = [];
-        (sections || []).forEach(function (s) { (s.rows || [s]).forEach(function (r) { if (r && r.rc && r.key) rows.push(r); }); });
-        return rows.map(function (r) {
+        (sections || []).forEach(function (s) {
+            (s.rows || [s]).forEach(function (r) { if (r && r.rc && r.key) rows.push({ r: r, section: s.rows ? s.title : '' }); });
+        });
+        return rows.map(function (x) {
+            var r = x.r;
             var hint = r.type === 'choice' ? r.options.join(' / ') : r.type === 'toggle' ? 'تشغيل / ايقاف'
                 : r.type === 'number' ? ((r.min != null ? r.min : 0) + '–' + (r.max != null ? r.max : 999)) : 'نص';
+            var ui = (r.type === 'choice' || r.type === 'toggle' || r.type === 'number' || r.type === 'text') ? {
+                type: r.type, options: r.options || null, min: r.min, max: r.max, step: r.step,
+                placeholder: r.placeholder || '', get: function () { return api.get(r.key); }
+            } : null;
             return {
-                names: r.rc, args: '<' + hint + '>', desc: r.label,
+                names: r.rc, args: '<' + hint + '>', desc: r.label, section: x.section || 'الإعدادات', ui: ui,
                 run: function (arg) {
                     var v;
                     if (r.type === 'text') {
@@ -274,12 +469,12 @@
         return first;
     }
 
-    // ---------- الواجهة ----------
+    // ---------- الواجهة (نافذة الإدارة بالبروفايل + رسائل الشاشة) ----------
 
     var CSS = '' +
         '.agp-rc-ov{position:fixed;inset:0;z-index:2147483001;background:rgba(5,3,10,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);' +
         'display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;direction:rtl}' +
-        '.agp-rc-box{width:min(440px,100%);max-height:90vh;overflow:auto;box-sizing:border-box;padding:22px;border-radius:22px;' +
+        '.agp-rc-box{width:min(460px,100%);max-height:90vh;overflow:auto;box-sizing:border-box;padding:22px;border-radius:22px;' +
         'background:linear-gradient(180deg,#171225,#0e0b17);border:1px solid rgba(167,139,250,.25);color:#f4f2f8;' +
         'font:500 14px "IBM Plex Sans Arabic",system-ui,sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.6)}' +
         '.agp-rc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}' +
@@ -288,23 +483,28 @@
         '.agp-rc-sub{color:#9a95a8;font-size:13px;line-height:1.7;text-align:right;margin:0 0 14px}' +
         '.agp-rc-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:10px;border-radius:16px;' +
         'border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015))}' +
+        '.agp-rc-row.is-off{opacity:.6}' +
         '.agp-rc-label{text-align:right;display:flex;flex-direction:column;gap:2px;min-width:0}' +
+        '.agp-rc-label b{direction:ltr;unicode-bidi:isolate;text-align:right;overflow:hidden;text-overflow:ellipsis}' +
         '.agp-rc-desc{color:#8a8596;font-size:12px;font-weight:400}' +
+        '.agp-rc-desc.ok{color:#6ee7b7}.agp-rc-desc.warn{color:#fbbf24}' +
+        '.agp-rc-ctl{display:flex;align-items:center;gap:8px;flex-shrink:0}' +
         '.agp-rc-tg{flex-shrink:0;width:48px;height:28px;border-radius:999px;border:none;cursor:pointer;position:relative;background:rgba(255,255,255,.12);transition:background .2s}' +
         '.agp-rc-tg::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s}' +
         '.agp-rc-tg.is-on{background:linear-gradient(90deg,#7c3aed,#a855f7)}.agp-rc-tg.is-on::after{left:23px}' +
         '.agp-rc-tg:disabled{opacity:.4;cursor:not-allowed}' +
+        '.agp-rc-del{width:30px;height:30px;border-radius:50%;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#fca5a5;cursor:pointer;font-size:13px}' +
         '.agp-rc-add{display:flex;gap:8px;flex-shrink:0;direction:ltr}' +
         '.agp-rc-in{width:150px;height:38px;box-sizing:border-box;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);' +
         'color:#f4f2f8;padding:0 14px;font:600 14px "IBM Plex Sans Arabic",system-ui,sans-serif;outline:none}' +
         '.agp-rc-in:focus{border-color:rgba(167,139,250,.55)}' +
         '.agp-rc-btn{height:38px;padding:0 16px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 13px "IBM Plex Sans Arabic",system-ui,sans-serif}' +
-        '.agp-rc-users{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}' +
-        '.agp-rc-user{display:flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;border-radius:999px;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35);color:#ddd6fe;font-size:13px;direction:ltr}' +
-        '.agp-rc-user button{width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#fca5a5;cursor:pointer;font-size:12px;line-height:1}' +
+        '.agp-rc-btn:disabled{opacity:.5;cursor:default}' +
+        '.agp-rc-h{margin:16px 0 8px;font-size:13px;color:#a8a3b5;text-align:right;font-weight:700}' +
         '.agp-rc-empty{color:#6f6a7c;font-size:13px;text-align:right;margin:0 0 12px}' +
-        '.agp-rc-cmds{margin:0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);color:#b9b3c7;font-size:13px;line-height:1.9;text-align:right}' +
-        '.agp-rc-cmds b{color:#e9e5f3;font-weight:700;direction:rtl}' +
+        '.agp-rc-err{color:#fca5a5;font-size:13px;text-align:right;margin:0 0 10px;min-height:1px}' +
+        '.agp-rc-cmds{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);color:#b9b3c7;font-size:13px;line-height:1.9;text-align:right}' +
+        '.agp-rc-cmds b{color:#e9e5f3;font-weight:700}' +
         '.agp-rc-toasts{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483002;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;direction:rtl;width:min(560px,calc(100% - 32px))}' +
         '.agp-rc-toast{max-width:100%;box-sizing:border-box;padding:10px 18px;border-radius:18px;background:rgba(15,12,24,.92);border:1px solid rgba(52,211,153,.45);' +
         'color:#f4f2f8;font:600 14px "IBM Plex Sans Arabic",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45);animation:agpRcIn .3s ease both;text-align:center}' +
@@ -319,6 +519,7 @@
         '@keyframes agpRcFade{from{opacity:0}to{opacity:1}}';
 
     var _ov = null, _toasts = null, _help = null, _helpT = null;
+    var _cfg = null, _cfgErr = '', _busy = false;
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -330,8 +531,58 @@
         st.textContent = CSS;
         (document.head || document.documentElement).appendChild(st);
     }
-    function refreshUi() {
-        if (_ov) renderPanel();
+
+    var ERRORS = {
+        invalid: 'اليوزر غير صحيح — حروف إنجليزية وأرقام ونقطة وشرطة سفلية بس',
+        self: 'هذا يوزرك أنت',
+        exists: 'اليوزر مضاف أصلاً',
+        limit: 'الحد ' + MAX_USERS + ' متحكمين',
+        not_found: 'ما لقيت اليوزر',
+        not_streamer: 'هذي الميزة لحسابات الستريمر',
+        unauthorized: 'سجّل دخولك أولاً'
+    };
+
+    /** يحفظ آخر إعدادات من الخادم، ويحدّث القائمة الفعّالة لصفحات هالمتصفح. */
+    function applyConfig(r) {
+        if (!r || !Array.isArray(r.controllers)) return;
+        _cfg = { enabled: !!r.enabled, controllers: r.controllers, max: r.max || MAX_USERS };
+        writeActive(_cfg.enabled ? _cfg.controllers.filter(function (c) { return c.enabled; }).map(function (c) { return c.username; }) : []);
+    }
+    function api(method, body) {
+        var A = auth();
+        if (!A || !A.request) return Promise.resolve({ success: false, error: 'unauthorized' });
+        return A.request('/api/remote-control/config', method === 'POST' ? { method: 'POST', body: body } : {})
+            .catch(function () { return { success: false, error: 'network' }; });
+    }
+    function loadConfig() {
+        return api('GET').then(function (r) {
+            if (r && r.success) {
+                applyConfig(r);
+                return migrateLegacy();
+            }
+            _cfgErr = ERRORS[r && r.error] || 'تعذّر تحميل الإعدادات';
+        });
+    }
+    /** النظام القديم كان يحفظ اليوزرات بالمتصفح بس — ننقلها للخادم مرة وحدة. */
+    function migrateLegacy() {
+        var old = readLegacyUsers();
+        if (!old.length || !_cfg || _cfg.controllers.length) return Promise.resolve();
+        return old.reduce(function (p, u) {
+            return p.then(function () { return api('POST', { action: 'add', username: u }).then(function (r) { if (r && r.controllers) applyConfig(r); }); });
+        }, Promise.resolve());
+    }
+    function act(body) {
+        if (_busy) return;
+        _busy = true; _cfgErr = '';
+        renderPanel();
+        api('POST', body).then(function (r) {
+            _busy = false;
+            if (r && r.controllers) applyConfig(r);
+            if (!r || !r.success) _cfgErr = ERRORS[r && r.error] || 'ما تم — حاول مرة ثانية';
+            renderPanel();
+            var inp = _ov && _ov.querySelector('.agp-rc-in');
+            if (inp && body.action === 'add' && r && r.success) inp.focus();
+        });
     }
 
     function openPanel() {
@@ -341,51 +592,66 @@
         _ov.className = 'agp-rc-ov';
         _ov.addEventListener('click', function (e) { if (e.target === _ov) closePanel(); });
         document.body.appendChild(_ov);
+        _cfg = null; _cfgErr = '';
         renderPanel();
-        var inp = _ov.querySelector('.agp-rc-in');
-        if (inp) inp.focus();
+        loadConfig().then(function () { if (_ov) renderPanel(); });
     }
     function closePanel() {
         if (_ov && _ov.parentNode) _ov.parentNode.removeChild(_ov);
         _ov = null;
     }
     function renderPanel() {
-        var c = readConfig();
-        var users = c.users.map(function (u) {
-            return '<span class="agp-rc-user">@' + esc(u) + '<button type="button" data-rm="' + esc(u) + '" aria-label="حذف ' + esc(u) + '">✕</button></span>';
-        }).join('');
-        _ov.innerHTML = '<div class="agp-rc-box" role="dialog" aria-label="التحكم بالشات">' +
-            '<div class="agp-rc-head"><span class="agp-rc-title">🎮 التحكم بالشات</span><button type="button" class="agp-rc-x" data-close aria-label="إغلاق">✕</button></div>' +
-            '<p class="agp-rc-sub">يشتغل على <b>روليت الإقصاء</b>. اللاعبين اللي تضيفهم هنا يقدرون يشغّلون اللعبة كاملة بأوامر يكتبونها بشات البث: يغيّرون الإعدادات، يبدؤون المباراة، ويلفّون العجلة. ' +
-            'نتحقق من يوزر تيك توك نفسه (مو الاسم الظاهر)، ويبقى مفعّل لين تطفيه من هنا.</p>' +
-            '<div class="agp-rc-row"><span class="agp-rc-label"><span>تفعيل التحكم بالشات</span><span class="agp-rc-desc">' +
-            (c.enabled ? 'مفعّل' : c.users.length ? 'متوقف' : 'أضف يوزر لاعب أولاً') + '</span></span>' +
-            '<button type="button" class="agp-rc-tg' + (c.enabled ? ' is-on' : '') + '" data-toggle aria-label="تفعيل التحكم بالشات"' + (c.users.length ? '' : ' disabled') + '></button></div>' +
-            '<div class="agp-rc-row"><span class="agp-rc-label"><span>يوزر اللاعب</span><span class="agp-rc-desc">يوزر تيك توك بدون @ (حتى ' + MAX_USERS + ')</span></span>' +
-            '<span class="agp-rc-add"><input class="agp-rc-in" type="text" placeholder="username" autocomplete="off" spellcheck="false" dir="ltr">' +
-            '<button type="button" class="agp-rc-btn" data-add>إضافة</button></span></div>' +
-            (users ? '<div class="agp-rc-users">' + users + '</div>' : '<p class="agp-rc-empty">ما فيه متحكمين بعد.</p>') +
-            '<div class="agp-rc-cmds">الأوامر تبدأ بعلامة <b>!</b> — اللاعب يكتب <b>!اوامر</b> بالشات ويطلع له على الشاشة كل الأوامر المتاحة.' +
-            HELP_LINES.map(function (l) { return '<br><b>' + esc(l[0]) + '</b> ' + l[1].map(function (c) { return '<bdi dir="rtl" style="white-space:nowrap">' + esc(c) + '</bdi>'; }).join(' · '); }).join('') + '</div>' +
+        if (!_ov) return;
+        var c = _cfg;
+        var body;
+        if (!c) {
+            body = _cfgErr ? '<p class="agp-rc-err">' + esc(_cfgErr) + '</p>' : '<p class="agp-rc-empty">جارٍ التحميل…</p>';
+        } else {
+            var list = c.controllers.map(function (x) {
+                var acc = x.account
+                    ? '<span class="agp-rc-desc ok">حسابه بالموقع: ' + esc(x.account.name) + ' — تطلع له «لوحة التحكم» ببروفايله</span>'
+                    : '<span class="agp-rc-desc warn">ما عنده حساب موثّق بهذا اليوزر بالموقع — يتحكم بالشات بس لين يسجّل</span>';
+                return '<div class="agp-rc-row' + (x.enabled ? '' : ' is-off') + '"><span class="agp-rc-label"><b>@' + esc(x.username) + '</b>' + acc + '</span>' +
+                    '<span class="agp-rc-ctl"><button type="button" class="agp-rc-tg' + (x.enabled ? ' is-on' : '') + '" data-tg="' + esc(x.username) + '" aria-label="تفعيل @' + esc(x.username) + '"' + (_busy ? ' disabled' : '') + '></button>' +
+                    '<button type="button" class="agp-rc-del" data-rm="' + esc(x.username) + '" aria-label="حذف @' + esc(x.username) + '"' + (_busy ? ' disabled' : '') + '>✕</button></span></div>';
+            }).join('');
+            body = '<div class="agp-rc-row"><span class="agp-rc-label"><span>تفعيل التحكم عن بعد</span><span class="agp-rc-desc">' +
+                (c.enabled ? 'مفعّل — المتحكمين المفعّلين تحت يقدرون يتحكمون' : 'متوقف عن الكل') + '</span></span>' +
+                '<button type="button" class="agp-rc-tg' + (c.enabled ? ' is-on' : '') + '" data-master aria-label="تفعيل التحكم عن بعد"' + (_busy ? ' disabled' : '') + '></button></div>' +
+                '<div class="agp-rc-row"><span class="agp-rc-label"><span>إضافة متحكم</span><span class="agp-rc-desc">يوزر تيك توك بدون @ (حتى ' + c.max + ')</span></span>' +
+                '<span class="agp-rc-add"><input class="agp-rc-in" type="text" placeholder="username" autocomplete="off" spellcheck="false" dir="ltr">' +
+                '<button type="button" class="agp-rc-btn" data-add' + (_busy || c.controllers.length >= c.max ? ' disabled' : '') + '>إضافة</button></span></div>' +
+                '<p class="agp-rc-err">' + esc(_cfgErr) + '</p>' +
+                '<div class="agp-rc-h">المتحكمين (' + c.controllers.length + '/' + c.max + ')</div>' +
+                (list || '<p class="agp-rc-empty">ما فيه متحكمين بعد.</p>');
+        }
+        _ov.innerHTML = '<div class="agp-rc-box" role="dialog" aria-label="التحكم عن بعد">' +
+            '<div class="agp-rc-head"><span class="agp-rc-title">🎮 التحكم عن بعد</span><button type="button" class="agp-rc-x" data-close aria-label="إغلاق">✕</button></div>' +
+            '<p class="agp-rc-sub">المتحكم يشغّل ألعابك كاملة: يختار اللعبة، يضبط الإعدادات والدخول، يبدأ وينهي المباراة. ' +
+            'من «لوحة التحكم» ببروفايله على جواله أو آيباده، أو بأوامر يكتبها بشات البث. ' +
+            'تقدر توقفه عن الكل بالمفتاح العام، أو عن شخص واحد بمفتاحه، ويتقفل عنه فوراً.</p>' +
+            body +
+            '<div class="agp-rc-cmds">شاشة اللعبة لازم تكون مفتوحة عندك عشان التحكم يوصلها. الأوامر بالشات تبدأ بعلامة <b>!</b>، ' +
+            'والمتحكم يكتب <b>!اوامر</b> ويطلع على الشاشة كل أوامر الشاشة الحالية، و<b>!لعبه</b> واسم اللعبة يفتحها.</div>' +
             '</div>';
         _ov.querySelector('[data-close]').onclick = closePanel;
-        _ov.querySelector('[data-toggle]').onclick = function () { setEnabled(!readConfig().enabled); };
+        if (!c) return;
+        _ov.querySelector('[data-master]').onclick = function () { act({ action: 'enable', on: !c.enabled }); };
         var inp = _ov.querySelector('.agp-rc-in');
-        var add = function () { if (addUser(inp.value)) { renderPanel(); var n = _ov && _ov.querySelector('.agp-rc-in'); if (n) n.focus(); } };
+        var add = function () { var v = cleanUser(inp.value); if (!v) { _cfgErr = ERRORS.invalid; renderPanel(); return; } act({ action: 'add', username: v }); };
         _ov.querySelector('[data-add]').onclick = add;
         inp.onkeydown = function (e) { if (e.key === 'Enter') add(); };
+        Array.prototype.forEach.call(_ov.querySelectorAll('[data-tg]'), function (b) {
+            b.onclick = function () {
+                var u = b.getAttribute('data-tg'), x = c.controllers.filter(function (y) { return y.username === u; })[0];
+                act({ action: 'toggle', username: u, on: !(x && x.enabled) });
+            };
+        });
         Array.prototype.forEach.call(_ov.querySelectorAll('[data-rm]'), function (b) {
-            b.onclick = function () { removeUser(b.getAttribute('data-rm')); };
+            b.onclick = function () { act({ action: 'remove', username: b.getAttribute('data-rm') }); };
         });
     }
 
-    // ملخص أوامر روليت الإقصاء بنافذة البروفايل
-    var HELP_LINES = [
-        ['مكتبة الألعاب:', ['!روليت']],
-        ['الإعدادات:', ['!كلمة صقر', '!الحد 30', '!الشكل سكرول', '!الوقت 25', '!الدعم وردة 2', '!ابدأ']],
-        ['اللوبي:', ['!ابدأ', '!اللاعبين', '!طرد اسم', '!رجوع']],
-        ['اللعب:', ['!لف', '!تلقائي', '!اقصاء 3', '!ارجاع 2', '!دخول', '!اعادة', '!جديدة', '!الحالة']]
-    ];
     function cmdLines() {
         return allCommands().map(function (c) {
             return ['!' + c.names[0] + (c.args ? ' ' + c.args : ''), c.desc || ''];
@@ -403,6 +669,7 @@
         _helpT = setTimeout(function () { if (_help && _help.parentNode) _help.parentNode.removeChild(_help); _help = null; }, 12000);
     }
     function feedback(user, res) {
+        if (!document.body) return;
         injectCss();
         if (!_toasts) {
             _toasts = document.createElement('div');
@@ -421,7 +688,7 @@
     window.addEventListener('agp:stream-connected', ensureConnected);
     window.addEventListener('storage', function (e) {
         if (!e.key || e.key === 'agp:agp-stream-connection') ensureConnected();
-        if (!e.key || e.key === STORAGE_KEY) { refreshUi(); notifyChanged(); }
+        if (!e.key || e.key === STORAGE_KEY) { notifyChanged(); ensureConnected(); }
     });
     // مكتبة الألعاب: التعليقات من اتصال الإحصائيات (js/agp-stream-overlay.js)
     window.addEventListener('agp:overlay-comment', function (e) {
@@ -441,9 +708,13 @@
         isEnabled: function () { return readConfig().enabled; },
         /** هل الصفحة الحالية (المكتبة) تحتاج نصوص التعليقات من اتصال الإحصائيات؟ */
         wantsLibraryChat: function () { return !!(_page && _page.overlayChat && readConfig().enabled); },
+        /** إعدادات الستريمر من الخادم (لزر البروفايل) — Promise بـ {enabled, controllers} أو null. */
+        loadConfig: function () { return loadConfig().then(function () { return _cfg; }); },
         openPanel: openPanel,
         _parse: parse,
-        _onComment: onComment
+        _onComment: onComment,
+        _snapshot: snapshot,
+        _execute: execute
     };
 
     AGP.log('AGP Remote Control loaded.');

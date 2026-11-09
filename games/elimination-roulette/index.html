@@ -287,21 +287,23 @@ class Component extends DCLogic {
     addEventListener('agp:stream-ended',this.onFocus);
     this.attachRemote(); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onFocus); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); this.rc?.detach(); }
-  // التحكم بالشات (js/agp-remote-control.js): لاعب يحدده المذيع يغيّر الإعدادات ويبدأ المباراة بأوامر الشات
+  // التحكم عن بعد (js/agp-remote-control.js): متحكم يحدده المذيع يغيّر الإعدادات ويبدأ المباراة — من جواله أو بأوامر الشات
   attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
     const rows=SETTINGS.flatMap(s=>s.rows);
-    this.rc=RC.attach({ page:'الإعدادات', connect:ER.connect, commands:[
+    const supText=()=>{ const V=this.state.values, st=SUPPORT_TYPES.find(x=>x.id===V.supType); return V.supOn?(st?st.name+' × '+this.state.supCount:'بدون هدية'):'ايقاف'; };
+    this.rc=RC.attach({ game:'elimination-roulette', page:'الإعدادات', connect:ER.connect,
+      status:()=>(this.state.live?'🟢 متصل بالبث':'🔴 غير متصل بالبث')+' · الرجوع بالدعم: '+supText(), commands:[
       ...RC.settingsCommands(SETTINGS,{get:k=>this.state.values[k],set:(k,v)=>this.set(k,v)}),
-      { names:['الدعم'], args:'<اسم الهدية> [العدد] | ايقاف', desc:'الرجوع عن طريق الدعم', run:arg=>{
+      { names:['الدعم'], args:'<اسم الهدية> [العدد] | ايقاف', desc:'الرجوع عن طريق الدعم', label:'الرجوع بالدعم (اختر الهدية)', pick:()=>['ايقاف',...SUPPORT_TYPES.map(g=>g.name)], run:arg=>{
         const a=String(arg||'').trim(); if(RC.parseBool(a)===false){ this.set('supOn',false); return 'الرجوع عن طريق الدعم: ايقاف'; }
         const m=a.match(/^(.*?)\s*([0-9٠-٩]+)?$/), name=(m&&m[1]||'').trim(), cnt=m&&m[2]?RC.toInt(m[2]):null;
         if(!name) return {ok:false,msg:'اكتب اسم الهدية، مثل: !الدعم وردة 2'};
         const k=RC.matchOption(SUPPORT_TYPES.map(g=>g.name),name); if(k<0) return {ok:false,msg:'ما لقيت هدية بهذا الاسم'};
         const g=SUPPORT_TYPES[k]; this.set('supOn',true); this.set('supType',g.id); if(cnt) this.setState({supCount:Math.max(1,Math.min(10,cnt))});
         return 'الرجوع بالدعم: '+g.name+' × '+(cnt?Math.max(1,Math.min(10,cnt)):this.state.supCount); } },
-      { names:['الاعدادات','الإعدادات'], desc:'يعرض الإعدادات الحالية', run:()=>{ const V=this.state.values, st=SUPPORT_TYPES.find(x=>x.id===V.supType);
+      { names:['الاعدادات','الإعدادات'], desc:'يعرض الإعدادات الحالية', phone:false, run:()=>{ const V=this.state.values, st=SUPPORT_TYPES.find(x=>x.id===V.supType);
         return rows.filter(r=>r.rc).map(r=>r.label+': '+RC.describe(r,V[r.key])).join(' · ')+' · الدعم: '+(V.supOn?(st?st.name+' × '+this.state.supCount:'بدون هدية'):'ايقاف'); } },
-      { names:['ابدأ','ابدا','بدء','لوبي'], desc:'يحفظ الإعدادات ويفتح اللوبي', run:()=>{
+      { names:['ابدأ','ابدا','بدء','لوبي'], desc:'يحفظ الإعدادات ويفتح اللوبي', label:'ابدأ — افتح اللوبي', tone:'primary', run:()=>{
         if(this.state.connOpen) return null; const err=RC.captureToast(this,()=>this.renderVals().start());
         return err?{ok:false,msg:err}:'تم — جارٍ فتح اللوبي'; } }
     ]}); }
