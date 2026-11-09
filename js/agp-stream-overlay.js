@@ -1075,6 +1075,8 @@
 
     /** تحديث عنصر بمكانه بدون إعادة رسم (يرجع true لو تحدّث). */
     function refreshItem(node, it) {
+        // «آخر دعم» البسيط: ما نعيد الرسم إلا لو تغيّر الداعم أو الشكل (عشان الحركة ما تنقطع)
+        if (node && node._ld && it.type === 'lastdonation') return node._ld.sig === ldSig(curLastDon()) && node._ld.cfg === ldCfg(it);
         // كرة القمر: نحدّث المستوى بس (الموج يكمل) — لو تغيّر شكلها نعيد البناء
         if (node && node._orb && it.type === 'goal' && it.design === 'orb') {
             if (node._orb.sig !== JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title])) return false;
@@ -2550,13 +2552,71 @@
         fetchStats();
     }
 
+    /** آخر دونيشن فعلي (من الرابط أو ملخص الإحصائيات — الأحدث). */
+    function curLastDon() {
+        var t = (stats.totals && stats.totals.lastDonation) || null;
+        return lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
+    }
+    function ldSig(d) { return d ? [d.name, d.amount, d.currency, d.at].join('|') : ''; }
+    function ldCfg(it) { return JSON.stringify([it.design, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size]); }
+    // آخر دعم رسمته كل أداة (عشان حركة «داعم جديد» تطلع مرة وحدة بس لما يتغيّر)
+    var ldSeen = {};
+
+    /**
+     * تصاميم «آخر دعم» البسيطة (بدون نصوص ثابتة — الاسم والمبلغ بس):
+     * line = الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه، split = كبسولة نصها للمبلغ بلون ونصها للاسم.
+     * الألوان: nameColor، amtColor، accent1/accent2 (الخط أو جزء المبلغ)، dotColor (النجمة/النقطة)، boxColor (خلفية الاسم).
+     */
+    function buildLdSlim(n, it, d, real, preview) {
+        var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        var box = el('div', 'agp-so-ld2 ld-' + it.design);
+        [['nameColor', '--ldn'], ['amtColor', '--lda'], ['accent1', '--ld1'], ['accent2', '--ld2'], ['dotColor', '--ldd'], ['boxColor', '--ldb']].forEach(function (c) {
+            if (hex(it[c[0]])) box.style.setProperty(c[1], it[c[0]]);
+        });
+        var sig = ldSig(real);
+        var prev = ldSeen[it.id];
+        ldSeen[it.id] = sig;
+        var isNew = !preview && real && prev !== undefined && prev !== sig;
+        if (isNew) box.classList.add('new');
+        n._ld = { sig: sig, cfg: ldCfg(it) };
+        if (!d) { n.appendChild(box); box.style.display = 'none'; return; }
+        var nm = el('span', 'agp-so-ld2n', d.name || '');
+        var amt = el('span', 'agp-so-ld2a', fmtMoney(d.amount, d.currency));
+        if (it.design === 'line') {
+            var top = el('div', 'agp-so-ld2t');
+            top.appendChild(nm);
+            top.appendChild(amt);
+            box.appendChild(top);
+            var ln = el('div', 'agp-so-ld2l');
+            ln.appendChild(el('i'));
+            box.appendChild(ln);
+        } else {
+            box.appendChild(el('span', 'agp-so-ld2g'));
+            box.appendChild(nm);
+            var ap = el('span', 'agp-so-ld2p');
+            ap.appendChild(el('span', 'agp-so-ld2d'));
+            ap.appendChild(amt);
+            box.appendChild(ap);
+        }
+        // داعم جديد: المبلغ يعدّ من صفر لين قيمته
+        if (isNew && String(d.currency || 'USD').toUpperCase() === 'USD') {
+            amt._kind = 'donors';
+            amt._v = 0;
+            amt.textContent = fmtMoney(0);
+            // بعد ما تنضاف للصفحة (tweenNum يوقف لو العنصر مو بالصفحة)
+            requestAnimationFrame(function () { tweenNum(amt, Number(d.amount) || 0); });
+        }
+        n.appendChild(box);
+    }
+
     /** «آخر دعم»: الاسم والمبلغ (والرسالة لو مفعّلة). */
     function buildLastDonation(n, it, preview) {
-        var t = (stats.totals && stats.totals.lastDonation) || null;
-        var d = lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
+        var real = curLastDon();
+        var d = real;
         var ghost = !d && preview;
         if (ghost) d = SAMPLE_TOTALS.lastDonation;
         n.classList.toggle('agp-so-ghost', Boolean(ghost));
+        if (it.design === 'line' || it.design === 'split') { buildLdSlim(n, it, d, real, preview); return; }
         title(n, it.title);
         var card = el('div', 'agp-so-ldbox');
         var ic = el('span', 'agp-so-ldic');
@@ -3448,6 +3508,38 @@
         '@keyframes agp-so-a-fade{0%{opacity:0;filter:blur(.3em)}100%{opacity:1;filter:none}}',
         '@keyframes agp-so-a-drop{0%{opacity:0;transform:translateY(-120%)}100%{opacity:1;transform:none}}',
         '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}',
+        /* «آخر دعم» البسيط: خط متوهّج (ld-line) وكبسولة مقسومة (ld-split) */
+        '.agp-so-ld2{--ldn:#fff;--ld1:#ff5fa8;--ld2:#7b5cff;--ldd:#fff;--ldb:#1a1426;position:relative;direction:rtl;color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
+        '.agp-so-ld2n{font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:700;white-space:nowrap;max-width:12em;overflow:hidden;text-overflow:ellipsis;color:var(--ldn)}',
+        '.agp-so-ld2a{direction:ltr;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}',
+        '.ld-line{display:flex;flex-direction:column;align-items:stretch;gap:.33em;min-width:10em}',
+        '.ld-line .agp-so-ld2t{display:flex;align-items:baseline;justify-content:space-between;gap:1.1em;padding:0 .17em}',
+        '.ld-line .agp-so-ld2n{font-size:.92em;text-shadow:0 .08em .4em rgba(0,0,0,.7)}',
+        '.ld-line .agp-so-ld2a{font-size:.96em;color:var(--lda,color-mix(in srgb,var(--ld1) 45%,#fff));text-shadow:0 0 .6em color-mix(in srgb,var(--ld1) 55%,transparent);animation:agp-so-ldglow 2.4s ease-in-out infinite}',
+        '.ld-line .agp-so-ld2l{position:relative;height:.13em;border-radius:.13em;background:linear-gradient(90deg,transparent,var(--ld1) 30%,var(--ld2) 70%,transparent);box-shadow:0 0 .5em color-mix(in srgb,var(--ld1) 60%,transparent)}',
+        '.ld-line .agp-so-ld2l i{position:absolute;top:50%;width:.58em;height:.58em;border-radius:.08em;background:var(--ldd);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 .4em var(--ldd),0 0 .9em var(--ld1);animation:agp-so-ldwalk 4.5s ease-in-out infinite alternate}',
+        '.ld-line.new .agp-so-ld2l{animation:agp-so-lddraw .6s ease-out}',
+        '.ld-line.new .agp-so-ld2t{animation:agp-so-ldup .5s .15s ease-out both}',
+        '.ld-split{display:flex;align-items:stretch;height:2.1em;border-radius:.58em;overflow:hidden;box-shadow:0 .33em 1.1em rgba(0,0,0,.45),0 0 0 .04em rgba(255,255,255,.08)}',
+        '.ld-split .agp-so-ld2n{display:flex;align-items:center;padding:0 .92em;font-size:.88em;background:linear-gradient(180deg,color-mix(in srgb,var(--ldb) 92%,#fff),var(--ldb));opacity:.96}',
+        '.ld-split .agp-so-ld2p{position:relative;display:flex;align-items:center;gap:.33em;padding:0 .75em 0 .67em;background:linear-gradient(135deg,var(--ld1,#8a63ff),color-mix(in srgb,var(--ld1,#8a63ff) 65%,#000))}',
+        '.ld-split{--ld1:#8a63ff}',
+        '.ld-split .agp-so-ld2p::after{content:"";position:absolute;top:0;bottom:0;right:-.42em;width:.83em;background:linear-gradient(135deg,var(--ld1),color-mix(in srgb,var(--ld1) 65%,#000));transform:skewX(-14deg)}',
+        '.ld-split .agp-so-ld2a{position:relative;z-index:1;font-size:.92em;color:var(--lda,#fff)}',
+        '.ld-split .agp-so-ld2d{position:relative;z-index:1;width:.33em;height:.33em;border-radius:50%;background:var(--ldd,#7dffb0);box-shadow:0 0 .33em var(--ldd,#7dffb0);animation:agp-so-ldblink 1.6s ease-in-out infinite}',
+        '.ld-split{--ldd:#7dffb0}',
+        '.ld-split .agp-so-ld2g{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);background-size:250% 100%;animation:agp-so-ldsh 5s ease-in-out infinite}',
+        '.ld-split.new .agp-so-ld2p{animation:agp-so-ldslide .55s cubic-bezier(.2,1,.3,1) both}',
+        '.ld-split.new .agp-so-ld2n{animation:agp-so-ldup .45s .2s ease-out both}',
+        '.ld-split.new .agp-so-ld2d{animation:agp-so-ldflash .9s ease-out,agp-so-ldblink 1.6s .9s ease-in-out infinite}',
+        '@keyframes agp-so-ldglow{50%{text-shadow:0 0 .9em color-mix(in srgb,var(--ld1) 90%,transparent)}}',
+        '@keyframes agp-so-ldwalk{0%{left:12%}100%{left:88%}}',
+        '@keyframes agp-so-lddraw{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}',
+        '@keyframes agp-so-ldup{0%{opacity:0;transform:translateY(.4em)}100%{opacity:1;transform:none}}',
+        '@keyframes agp-so-ldblink{50%{opacity:.35;box-shadow:0 0 .08em var(--ldd)}}',
+        '@keyframes agp-so-ldsh{0%,55%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '@keyframes agp-so-ldslide{0%{transform:translateX(-110%)}100%{transform:none}}',
+        '@keyframes agp-so-ldflash{0%{transform:scale(3);box-shadow:0 0 .75em var(--ldd)}100%{transform:none}}',
         /* «آخر دعم» (الدونيشن) */
         '.agp-so-lastdonation{color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
         '.agp-so-ldbox{display:flex;align-items:center;gap:.5em;padding:.45em .8em .45em .55em;border-radius:1em;background:linear-gradient(160deg,rgba(36,31,46,.86),rgba(16,14,21,.8));border:.06em solid color-mix(in srgb,var(--agp-so-c,#ffd54a) 55%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.45),0 0 .8em color-mix(in srgb,var(--agp-so-c,#ffd54a) 25%,transparent)}',

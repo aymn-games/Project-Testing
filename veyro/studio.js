@@ -119,6 +119,8 @@
             { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
             { label: 'هدف الدونيشن — دائرة', sub: 'نسبة الهدف بدائرة', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'ring', color: '#ffd54a' } },
             { label: 'آخر داعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
+            { label: 'آخر داعم — خط متوهّج', sub: 'الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه — بدون نصوص', type: 'lastdonation', set: { design: 'line', title: '' } },
+            { label: 'آخر داعم — كبسولة مقسومة', sub: 'نصها للمبلغ بلون ونصها للاسم، ونقطة تومض — بدون نصوص', type: 'lastdonation', set: { design: 'split', title: '' } },
             { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
         ],
@@ -1550,6 +1552,27 @@
     }());
 
     function lastDonationProps(it, box) {
+        var des = it.design === 'line' || it.design === 'split' ? it.design : 'card';
+        box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }], des, function (v) {
+            update(it, 'design', v, true);
+        }), true));
+        if (des !== 'card') {
+            // التصاميم البسيطة: الاسم والمبلغ بس، وكل ألوانها تتغيّر
+            optColor(it, box, 'nameColor', 'لون الاسم');
+            optColor(it, box, 'amtColor', 'لون المبلغ');
+            if (des === 'line') {
+                optColor(it, box, 'accent1', 'لون الخط (البداية)', 'الافتراضي وردي');
+                optColor(it, box, 'accent2', 'لون الخط (النهاية)', 'الافتراضي بنفسجي');
+                optColor(it, box, 'dotColor', 'لون النجمة', 'اللي تمشي على الخط');
+            } else {
+                optColor(it, box, 'accent1', 'خلفية المبلغ', 'الافتراضي بنفسجي');
+                optColor(it, box, 'boxColor', 'خلفية الاسم', 'الافتراضي غامق');
+                optColor(it, box, 'dotColor', 'لون النقطة', 'اللي تومض جنب المبلغ');
+            }
+            box.appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
+            box.appendChild(streamlabsCard());
+            return;
+        }
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
         box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
         sizeColor(it, box, 1, 8);
