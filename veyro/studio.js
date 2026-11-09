@@ -112,6 +112,7 @@
             { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
             { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'عرش الغبار الذهبي', sub: 'مذنّبين ضوء يلفّون حول الصورة بغبار لامع — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'stardust', frameColor: 'original', cycle: 10 } },
             { label: 'عرش الفراشات', sub: 'حلقة ضوء وفراشات ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'butterfly', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
             // الدونيشن (Streamlabs): التوب وآخر داعم والهدف — الأليرتات بقسم «الدونيشن»
@@ -1233,8 +1234,8 @@
         }
         var frameOpts = Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; });
         // «الفراشات» للتوب 3 بس
-        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts.filter(function (o) { return o.value !== 'butterfly'; }), [{ label: 'بدون', value: 'none' }]);
-        var fk = (O.THRONE_FRAMES[it.frame] && !(stack && it.frame === 'butterfly')) || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
+        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts.filter(function (o) { return !O.THRONE_FRAMES[o.value].code; }), [{ label: 'بدون', value: 'none' }]);
+        var fk = (O.THRONE_FRAMES[it.frame] && !(stack && O.THRONE_FRAMES[it.frame].code)) || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
         box.appendChild(row('شكل الإطار', pills(frameOpts, fk, function (v) {
             if (it.frameColor !== 'custom') it.frameColor = 'original';
             update(it, 'frame', v, true);
@@ -1265,6 +1266,12 @@
             optColor(it, box, 'ringColor', 'لون الحلقة', 'الافتراضي أبيض');
             optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الحلقة');
             optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
+        } else if (fk === 'stardust') {
+            box.appendChild(row('لون المذنّبين', fw, true, 'الضوء اللي يلف حول الصورة — أو اختر أي لون'));
+            optColor(it, box, 'dustColor', 'لون الغبار', 'فاضي = نفس لون المذنّبين');
+            optColor(it, box, 'ringColor', 'حد دائرة الترتيب', 'الافتراضي أبيض');
+            optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الإطار');
+            optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
         } else if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }, { label: 'مخصص', value: 'custom' }], it.palette || 'medal', function (v) {
             if (v === 'custom' && !Array.isArray(it.rankColors)) it.rankColors = ['#ffd54a', '#eef2f7', '#ffb27a'];
@@ -1277,7 +1284,7 @@
                     var a = (Array.isArray(it.rankColors) ? it.rankColors : ['#ffd54a', '#eef2f7', '#ffb27a']).slice();
                     a[k] = c;
                     update(it, 'rankColors', a, true);
-                }), true, fk === 'butterfly' ? 'دائرة الترتيب وحدود المربع' : 'ماسة الرقم وحدود الكبسولة'));
+                }), true, O.THRONE_FRAMES[fk] && O.THRONE_FRAMES[fk].code ? 'دائرة الترتيب وحدود المربع' : 'ماسة الرقم وحدود الكبسولة'));
             });
         }
         optColor(it, box, 'nameColor', 'لون الاسم');

@@ -815,17 +815,22 @@
         // «الفراشات» (من صورة صاحب المنصة): حلقة بيضاء وقوس ضوء بنفسجي فيه غبار نجوم، وفراشات ترفرف.
         // مرسومة بالكود (butterflyFrame) مو صورة، عشان كل ألوانها تتغيّر: frameColor (القوس والغبار)،
         // flyColor (الفراشات)، ringColor (الحلقة). ورقم المركز داخل فراشة بلون المركز.
-        butterfly: { label: 'الفراشات', code: true, base: 270, glow: '#e9d8ff', glow2: '#b47cff' }
+        butterfly: { label: 'الفراشات', code: true, base: 270, glow: '#e9d8ff', glow2: '#b47cff' },
+        // «الغبار الذهبي» (من صورة صاحب المنصة): مذنّبين ضوء يلفّون حول الصورة ويتركون وراهم غبار لامع.
+        // مرسوم بالكود (stardustFrame): frameColor = لون المذنّبين، dustColor = لون الغبار.
+        stardust: { label: 'الغبار الذهبي', code: true, base: 45, glow: '#fff1c4', glow2: '#ffcc4d' }
     };
+    /** إطار مرسوم بالكود (الفراشات، الغبار الذهبي): للتوب 3 بس، ومعه رقم المركز على الحلقة والعملة المسطّحة. */
+    function codeFrame(k) { return !!(THRONE_FRAMES[k] && THRONE_FRAMES[k].code); }
     /** لون قوس الضوء والغبار بإطار «الفراشات» (لون جاهز أو مخصص). */
     function bfAccent(it) {
         if (it.frameColor === 'custom' && /^#[0-9a-f]{6}$/i.test(String(it.frameCustom || ''))) return it.frameCustom;
         var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0];
-        return fc && fc.sw ? fc.sw : '#b47cff';
+        return fc && fc.sw ? fc.sw : (THRONE_FRAMES[frameOf(it)] || THRONE_FRAMES.butterfly).glow2;
     }
     function frameOf(it) {
         // «الفراشات» للتوب 3 (العرش) بس
-        if (it && it.design === 'stack') return it.frame === 'none' || (THRONE_FRAMES[it.frame] && it.frame !== 'butterfly') ? it.frame : 'ring';
+        if (it && it.design === 'stack') return it.frame === 'none' || (THRONE_FRAMES[it.frame] && !codeFrame(it.frame)) ? it.frame : 'ring';
         return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel';
     }
     // «القائمة» (stack): عدد الأشخاص لين 10، وإطار الصور: حلقة دوّارة / رسمة / بدون
@@ -874,7 +879,7 @@
         var stack = it.design === 'stack';
         var body = el('div', 'agp-so-lbody');
         var pal = it.palette === 'single' ? ' pal-single' : it.palette === 'custom' ? ' pal-custom' : '';
-        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + pal);
+        var box = el('div', (stack ? 'agp-so-stack' : 'agp-so-throne') + ' agp-so-tbox fk-' + frameOf(it) + (codeFrame(frameOf(it)) ? ' fx-code' : '') + pal);
         box.style.setProperty('--agp-so-fhue', frameHue(it) + 'deg');
         // ألوان يختارها الستريمر (المحرر): المراكز الثلاثة، الاسم، الرقم، خلفية الكبسولة
         var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
@@ -882,9 +887,10 @@
         if (hex(it.nameColor)) box.style.setProperty('--agp-so-namec', it.nameColor);
         if (hex(it.numColor)) box.style.setProperty('--agp-so-numc', it.numColor);
         if (hex(it.pillColor)) box.style.setProperty('--agp-so-pillbg', 'color-mix(in srgb,' + it.pillColor + ' 78%,transparent)');
-        if (frameOf(it) === 'butterfly') {
+        if (codeFrame(frameOf(it))) {
             box.style.setProperty('--agp-so-bfc', bfAccent(it));
             box.style.setProperty('--agp-so-bff', hex(it.flyColor) || bfAccent(it));
+            box.style.setProperty('--agp-so-sdd', hex(it.dustColor) || bfAccent(it));
             if (hex(it.ringColor)) box.style.setProperty('--agp-so-bfr', it.ringColor);
             if (hex(it.coinColor)) box.style.setProperty('--agp-so-coinc', it.coinColor);
             if (hex(it.rankText)) box.style.setProperty('--agp-so-rkt', it.rankText);
@@ -975,7 +981,7 @@
             var fr = throneFrame(r, frameOf(hit));
             // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز،
             // وبإطار «الفراشات» دائرة ناعمة على الحلقة تحت يمين (لونها بين لون المركز ولون القوس)
-            if (frameOf(hit) === 'butterfly') fr.appendChild(el('span', 'agp-so-bfrk', String(i + 1)));
+            if (codeFrame(frameOf(hit))) fr.appendChild(el('span', 'agp-so-bfrk', String(i + 1)));
             else {
                 var rk = el('span', 'agp-so-trank');
                 rk.appendChild(el('b', null, String(i + 1)));
@@ -987,7 +993,7 @@
         var c = el('span', 'agp-so-tcount');
         var ic = el('span', 'agp-so-tic i-' + sec);
         // «الفراشات»: الرقم مختصر (1.4K) والعملة مسطّحة (BF_COIN)
-        var bfly = !stack && frameOf(hit) === 'butterfly';
+        var bfly = !stack && codeFrame(frameOf(hit));
         if (sec === 'gifters' && bfly) ic.innerHTML = BF_COIN;
         else if (sec === 'gifters') {
             // الدعم: عملة تيك توك الذهبية (assets/overlay-frames/tiktok-coin.webp، من صاحب المنصة)
@@ -1197,9 +1203,64 @@
         return f;
     }
 
+    /**
+     * إطار «الغبار الذهبي»: مذنّبين (رأس ضوء أبيض وذيل يتلاشى) متقابلين يلفّون حول الصورة،
+     * وغبار لامع ينتشر برا الذيل ويلمع. الزوايا: 0 = فوق، مع عقارب الساعة.
+     */
+    function stardustFrame(r) {
+        var f = el('span', 'agp-so-fav fr-stardust');
+        f.appendChild(avatar(r));
+        f.appendChild(el('span', 'agp-so-sdglow'));
+        var w = el('span', 'agp-so-sdw');
+        [15, 195].forEach(function (head, n) {
+            var c = el('span', 'agp-so-sdc');
+            c.style.setProperty('--h', head + 'deg');
+            w.appendChild(c);
+            var core = el('span', 'agp-so-sdc core');
+            core.style.setProperty('--h', head + 'deg');
+            w.appendChild(core);
+            var a = head * Math.PI / 180;
+            var hd = el('span', 'agp-so-sdhead');
+            hd.style.left = (50 + Math.sin(a) * 57) + '%';
+            hd.style.top = (50 - Math.cos(a) * 57) + '%';
+            hd.style.animationDelay = (n * 1.3) + 's';
+            w.appendChild(hd);
+            // الغبار: أكثف قرب الرأس، وينتشر أكثر كل ما بعد بالذيل
+            for (var k = 0; k < 95; k++) {
+                var sd = n * 500 + k;
+                var t = Math.pow(seeded(sd + 1), .75);
+                var ang = (head - 6 - t * 160) * Math.PI / 180;
+                var g = (seeded(sd + 2) + seeded(sd + 3) - 1);
+                var rad = 57 + g * (2.5 + 19 * t) + t * 2;
+                var dt = el('span', 'agp-so-sddot');
+                var sz = .5 + Math.pow(seeded(sd + 4), 2.5) * 2.3;
+                dt.style.width = dt.style.height = sz + '%';
+                dt.style.left = (50 + Math.sin(ang) * rad - sz / 2) + '%';
+                dt.style.top = (50 - Math.cos(ang) * rad - sz / 2) + '%';
+                dt.style.opacity = (1 - t * .55).toFixed(2);
+                dt.style.animationDelay = (-seeded(sd + 5) * 3).toFixed(2) + 's';
+                dt.style.animationDuration = (1.4 + seeded(sd + 6) * 2.2).toFixed(2) + 's';
+                w.appendChild(dt);
+            }
+            // نجوم صغيرة (أربع رؤوس) بين الغبار
+            [.15, .4, .7].forEach(function (t, j) {
+                var ang = (head - 10 - t * 150) * Math.PI / 180;
+                var rad = 57 + (j % 2 ? 7 : -3);
+                var st = el('span', 'agp-so-sdstar');
+                st.style.left = (50 + Math.sin(ang) * rad) + '%';
+                st.style.top = (50 - Math.cos(ang) * rad) + '%';
+                st.style.animationDelay = (j * .9 + n * .5) + 's';
+                w.appendChild(st);
+            });
+        });
+        f.appendChild(w);
+        return f;
+    }
+
     /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
     function throneFrame(r, kind) {
         if (kind === 'butterfly') return butterflyFrame(r);
+        if (kind === 'stardust') return stardustFrame(r);
         var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
         var f = el('span', 'agp-so-fav fr-' + kind);
         f.style.setProperty('--agp-so-fg1', d.glow);
@@ -3144,6 +3205,18 @@
         '@keyframes agp-so-f7spark{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1;transform:translateY(-20%) scale(1)}100%{opacity:0;transform:translateY(-160%) scale(.3)}}',
         /* إطار «الفراشات» — مرسوم بالكود. --agp-so-bfc لون القوس، --agp-so-bff الفراشات، --agp-so-bfr الحلقة */
         '.fr-butterfly{--bfc:var(--agp-so-bfc,#b47cff);--bff:var(--agp-so-bff,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
+        /* إطار «الغبار الذهبي» — --agp-so-bfc لون المذنّبين، --agp-so-sdd لون الغبار */
+        '.fr-stardust{--bfc:var(--agp-so-bfc,#ffcc4d);--sdd:var(--agp-so-sdd,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
+        '.fr-stardust .agp-so-av{position:relative;z-index:1}',
+        '.agp-so-sdglow{position:absolute;inset:-10%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 80%,color-mix(in srgb,var(--bfc) 9%,transparent) 88%,transparent);animation:agp-so-bfbreath 3.6s ease-in-out infinite}',
+        '.agp-so-sdw{position:absolute;inset:0;z-index:2;pointer-events:none;animation:agp-so-spin 10s linear infinite}',
+        /* المذنّب: ذيل طوله 175° يبدأ شفاف ويقوى لين الرأس الأبيض */
+        '.agp-so-sdc{position:absolute;inset:-12%;border-radius:50%;background:conic-gradient(from calc(var(--h) - 150deg),transparent 0,color-mix(in srgb,var(--bfc) 4%,transparent) 12%,color-mix(in srgb,var(--bfc) 22%,transparent) 24%,color-mix(in srgb,var(--bfc) 70%,transparent) 33%,var(--bfc) 38%,color-mix(in srgb,var(--bfc) 40%,#fff) 40.5%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .13)),#000 calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .07)),transparent calc(100% - calc(var(--s) * .02)));filter:blur(calc(var(--s) * .014)) drop-shadow(0 0 .2em var(--bfc));opacity:.85}',
+        '.agp-so-sdc.core{background:conic-gradient(from calc(var(--h) - 150deg),transparent 0 22%,color-mix(in srgb,var(--bfc) 60%,transparent) 32%,color-mix(in srgb,var(--bfc) 30%,#fff) 38%,#fff 41.4%,transparent 41.7%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .092)),#000 calc(100% - calc(var(--s) * .082)),#000 calc(100% - calc(var(--s) * .074)),transparent calc(100% - calc(var(--s) * .064)));filter:drop-shadow(0 0 .08em #fff);opacity:1}',
+        '.agp-so-sdhead{position:absolute;width:20%;height:20%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,#fff,#fff 12%,color-mix(in srgb,var(--bfc) 70%,transparent) 32%,transparent 70%),linear-gradient(90deg,transparent 47%,#fff 50%,transparent 53%),linear-gradient(0deg,transparent 48%,rgba(255,255,255,.8) 50%,transparent 52%);-webkit-mask:radial-gradient(closest-side,#000 35%,transparent);mask:radial-gradient(closest-side,#000 35%,transparent);animation:agp-so-sdflare 2.6s ease-in-out infinite}',
+        '.agp-so-sddot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--sdd) 55%,#fff);box-shadow:0 0 .1em var(--sdd);animation:agp-so-bftw 2.4s ease-in-out infinite}',
+        '.agp-so-sdstar{position:absolute;width:9%;height:9%;transform:translate(-50%,-50%);background:linear-gradient(90deg,transparent 45%,#fff 50%,transparent 55%),linear-gradient(0deg,transparent 45%,#fff 50%,transparent 55%),radial-gradient(closest-side,#fff,color-mix(in srgb,var(--sdd) 60%,transparent) 35%,transparent 70%);-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:agp-so-bfstar 2.8s ease-in-out infinite}',
+        '@keyframes agp-so-sdflare{0%,100%{transform:translate(-50%,-50%) scale(.85) rotate(0)}50%{transform:translate(-50%,-50%) scale(1.2) rotate(20deg)}}',
         '.fr-butterfly .agp-so-av{position:relative;z-index:1}',
         '.agp-so-bfglow{position:absolute;inset:-14%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 72%,color-mix(in srgb,var(--bfc) 40%,transparent) 84%,transparent);-webkit-mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);animation:agp-so-bfbreath 3.4s ease-in-out infinite}',
         '.agp-so-bfring{position:absolute;inset:-5%;z-index:3;border-radius:50%;pointer-events:none;border:calc(var(--s) * .022) solid var(--bfr);box-shadow:0 0 .06em var(--bfr),0 0 .18em color-mix(in srgb,var(--bfr) 55%,transparent),inset 0 0 .1em color-mix(in srgb,var(--bfr) 50%,transparent)}',
@@ -3189,13 +3262,13 @@
         '@keyframes agp-so-bfstar{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.55) rotate(0)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(45deg)}}',
         '@keyframes agp-so-bfbreath{0%,100%{opacity:.55}50%{opacity:1}}',
         /* كبسولة العدد بإطار «الفراشات»: زجاجية بلون المركز، العملة تلف حول نفسها بنعومة (بدون ثري دي)، ورقم المركز بدائرة على اليمين */
-        '.agp-so-throne.fk-butterfly .agp-so-tcount{gap:.36em;margin-top:.3em;padding:.2em .5em .2em .32em;border-radius:.24em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
-        '.agp-so-throne.fk-butterfly .agp-so-tbox .agp-so-tcount,.agp-so-tbox.fk-butterfly .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
+        '.agp-so-throne.fx-code .agp-so-tcount{gap:.36em;margin-top:.3em;padding:.2em .5em .2em .32em;border-radius:.24em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
+        '.agp-so-tbox.fx-code .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
         /* العملة: لفّة وحدة بالطول (حول محورها العمودي، بدون منظور) وبعدها توقف، وتعيد كل 5 ثواني (الأول ثم الثاني ثم الثالث) */
-        '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.2em;height:1.2em;margin:-.1em 0;filter:none;animation:agp-so-bfcoin 5s infinite;animation-delay:calc(var(--d) * 2)}',
+        '.agp-so-throne.fx-code .agp-so-tic.i-gifters,.agp-so-throne.fx-code .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.2em;height:1.2em;margin:-.1em 0;filter:none;animation:agp-so-bfcoin 5s infinite;animation-delay:calc(var(--d) * 2)}',
         '@keyframes agp-so-bfcoin{0%{transform:rotateY(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}22%,100%{transform:rotateY(360deg)}}',
-        '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
-        '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
+        '.agp-so-throne.fx-code .agp-so-tic:not(.i-gifters){animation:none}',
+        '.agp-so-throne.fx-code .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
         /* رقم المركز بإطار «الفراشات»: دائرة ناعمة ملاصقة للحلقة تحت يمين (زاوية 155°) */
         '.agp-so-bfrk{--sf:color-mix(in srgb,color-mix(in srgb,var(--rk) 72%,var(--bfc)) 62%,#fff);position:absolute;z-index:7;left:73.2%;top:99.8%;width:27%;height:27%;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:calc(var(--s) * .15);line-height:1;color:var(--agp-so-rkt,color-mix(in srgb,var(--bfc) 45%,#1c1030));background:radial-gradient(circle at 35% 28%,#fff,var(--sf) 55%,color-mix(in srgb,var(--sf) 80%,var(--bfc)));border:calc(var(--s) * .014) solid color-mix(in srgb,var(--bfr) 85%,transparent);box-shadow:0 0 .1em color-mix(in srgb,var(--bfc) 70%,transparent),0 0 .3em color-mix(in srgb,var(--rk) 35%,transparent);animation:agp-so-bfrkp 3.4s ease-in-out infinite}',
         '@keyframes agp-so-bfrkp{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.06)}}',
