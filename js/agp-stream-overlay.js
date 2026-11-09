@@ -159,6 +159,15 @@
     }
     /** رقم قسم/مقياس: الدونيشن بالدولار، والباقي أرقام عادية. */
     function fmtKind(kind, v) { return kind === 'donors' || kind === 'donations' ? fmtMoney(v) : fmt(v); }
+    /** رقم مختصر: 950 / 1.4K / 12K / 2.3M (إطار «الفراشات»). */
+    function fmtShort(v) {
+        var n = Number(v) || 0, a = Math.abs(n);
+        var cut = function (x, u) { return (x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10).toString().replace(/\.0$/, '') + u; };
+        if (a >= 1e9) return cut(n / 1e9, 'B');
+        if (a >= 1e6) return cut(n / 1e6, 'M');
+        if (a >= 1e3) return cut(n / 1e3, 'K');
+        return String(Math.round(n));
+    }
 
     // أقسام التوب (نفس أقسام live-session-stats.js)
     var SECTIONS = {
@@ -983,10 +992,15 @@
         } else if (THRONE_ICONS[sec]) ic.innerHTML = THRONE_ICONS[sec];
         else ic.appendChild(icon((SECTIONS[sec] || SECTIONS.likers).icon));
         c.appendChild(ic);
-        var num = el('span', 'agp-so-tnum', fmtKind(sec, rowNum(sec, r)));
+        // «الفراشات»: الرقم مختصر (1.4K) ورقم المركز بدائرة بلونه على يمين الكبسولة
+        var bfly = !stack && frameOf(hit) === 'butterfly';
+        var short = bfly && sec !== 'donors';
+        var num = el('span', 'agp-so-tnum', short ? fmtShort(rowNum(sec, r)) : fmtKind(sec, rowNum(sec, r)));
         num._kind = sec;
+        num._short = short;
         num._v = rowNum(sec, r);
         c.appendChild(num);
+        if (bfly) c.appendChild(el('span', 'agp-so-trk', String(i + 1)));
         inner.appendChild(c);
         slot.appendChild(inner);
     }
@@ -1016,7 +1030,7 @@
             var k = Math.min(1, (now - t0) / dur);
             var e = 1 - Math.pow(1 - k, 3);
             var v = from + (to - from) * e;
-            elm.textContent = elm._kind === 'donors' ? fmtMoney(k < 1 ? Math.round(v) : to) : fmt(Math.round(v));
+            elm.textContent = elm._kind === 'donors' ? fmtMoney(k < 1 ? Math.round(v) : to) : elm._short ? fmtShort(Math.round(v)) : fmt(Math.round(v));
             if (k < 1 && elm.isConnected) requestAnimationFrame(step);
         }(t0));
     }
@@ -3130,34 +3144,48 @@
         '.agp-so-bfdot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--bfc) 45%,#fff);box-shadow:0 0 .12em var(--bfc);animation:agp-so-bftw 2.6s ease-in-out infinite}',
         '.agp-so-bfstar{position:absolute;width:16%;height:16%;transform:translate(-50%,-50%) scale(.6);opacity:.4;background:radial-gradient(closest-side,#fff,color-mix(in srgb,var(--bfc) 60%,transparent) 30%,transparent 70%),linear-gradient(90deg,transparent 46%,#fff 50%,transparent 54%),linear-gradient(0deg,transparent 47%,#fff 50%,transparent 53%);-webkit-mask:radial-gradient(closest-side,#000 40%,transparent);mask:radial-gradient(closest-side,#000 40%,transparent);animation:agp-so-bfstar 3.3s ease-in-out infinite}',
         '.agp-so-bfly{position:absolute;z-index:6;pointer-events:none}',
-        '.agp-so-bfly.f1{left:-28%;top:42%;width:48%;height:40%;animation:agp-so-bfhover1 5.2s ease-in-out infinite}',
-        '.agp-so-bfly.f2{left:-8%;top:67%;width:40%;height:33%;animation:agp-so-bfhover2 6.1s ease-in-out infinite}',
+        '.agp-so-bfly.f1{left:-28%;top:42%;width:48%;height:40%;animation:agp-so-bfhover1 9s ease-in-out infinite}',
+        '.agp-so-bfly.f2{left:-8%;top:67%;width:40%;height:33%;animation:agp-so-bfhover2 11s ease-in-out infinite}',
         '.agp-so-bfw{display:block;width:100%;height:100%;color:var(--bff);filter:drop-shadow(0 0 .05em color-mix(in srgb,var(--bff) 80%,#fff)) drop-shadow(0 0 .16em color-mix(in srgb,var(--bff) 60%,transparent))}',
         '.agp-so-bfw svg{width:100%;height:100%;overflow:visible;display:block}',
         /* رفرفة مثل الحقيقية: ضربتين سريعة وبعدها تفرد جناحها وتنزلق (f1)، والثانية واقفة تفتح وتسكّر ببطء (f2) */
-        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 44%;animation:agp-so-bfflap 2.2s cubic-bezier(.45,0,.55,1) infinite}',
+        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 44%;animation:agp-so-bfflap 1.9s ease-in-out infinite}',
         '.agp-so-bfw .wr{animation-name:agp-so-bfflapr}',
-        '.agp-so-bfly.f2 .wl{animation:agp-so-bfrest 3.4s ease-in-out infinite}',
-        '.agp-so-bfly.f2 .wr{animation:agp-so-bfrestr 3.4s ease-in-out infinite}',
-        '.agp-so-bfly.f1 .agp-so-bfw{transform:rotate(-14deg)}',
+        '.agp-so-bfly.f1 .agp-so-bfw{animation:agp-so-bflift 1.9s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wl{animation:agp-so-bfrest 4.6s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wr{animation:agp-so-bfrestr 4.6s ease-in-out infinite}',
+        '.agp-so-bfly.f1 .agp-so-bfw{--rot:-14deg;transform:rotate(-14deg)}',
         '.agp-so-bfly.f2 .agp-so-bfw{transform:rotate(10deg)}',
         '.agp-so-bfspk{position:absolute;z-index:6;width:3.4%;height:3.4%;border-radius:50%;pointer-events:none;background:#fff;box-shadow:0 0 .1em #fff,0 0 .25em var(--bff);opacity:0;animation:agp-so-f7spark 2.6s ease-in-out infinite}',
-        '.agp-so-bforb{position:absolute;inset:-17%;z-index:6;pointer-events:none;animation:agp-so-spin 16s linear infinite}',
+        '.agp-so-bforb{position:absolute;inset:-17%;z-index:6;pointer-events:none;animation:agp-so-spin 18s linear infinite}',
         '.agp-so-bfly.f3{left:50%;top:0;width:24%;height:20%;transform:translate(-50%,-50%) rotate(90deg)}',
-        '.agp-so-bfly.f3 .agp-so-bfw{animation:agp-so-bfbob 1.6s ease-in-out infinite}',
-        '.agp-so-bfly.f3 .wl,.agp-so-bfly.f3 .wr{animation-duration:1.1s}',
-        '@keyframes agp-so-bfflap{0%,40%,100%{transform:scaleX(1) skewY(0)}10%,30%{transform:scaleX(.12) skewY(6deg)}20%{transform:scaleX(.95) skewY(-2deg)}}',
-        '@keyframes agp-so-bfflapr{0%,40%,100%{transform:scaleX(1) skewY(0)}10%,30%{transform:scaleX(.12) skewY(-6deg)}20%{transform:scaleX(.95) skewY(2deg)}}',
-        '@keyframes agp-so-bfrest{0%,100%{transform:scaleX(1) skewY(0)}45%,60%{transform:scaleX(.08) skewY(8deg)}}',
-        '@keyframes agp-so-bfrestr{0%,100%{transform:scaleX(1) skewY(0)}45%,60%{transform:scaleX(.08) skewY(-8deg)}}',
-        '@keyframes agp-so-bfhover1{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(4%,-9%) rotate(-5deg)}50%{transform:translate(-3%,-4%) rotate(3deg)}75%{transform:translate(2%,6%) rotate(-2deg)}}',
-        '@keyframes agp-so-bfhover2{0%,100%{transform:translate(0,0) rotate(0)}30%{transform:translate(-5%,7%) rotate(4deg)}60%{transform:translate(5%,-6%) rotate(-4deg)}}',
-        '@keyframes agp-so-bfbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-35%)}}',
+        '.agp-so-bfly.f3 .agp-so-bfw{animation:agp-so-bfbob 2.3s ease-in-out infinite}',
+        '.agp-so-bfly.f3 .wl{animation:agp-so-bfquick .5s ease-in-out infinite}',
+        '.agp-so-bfly.f3 .wr{animation:agp-so-bfquickr .5s ease-in-out infinite}',
+        /* f1: ثلاث ضربات (ترتفع) وبعدها تفرد جناحها وتنزل بهدوء. f2: واقفة تفتح وتسكّر ببطء، وبعدها رفّة سريعة */
+        '@keyframes agp-so-bfflap{0%,48%,100%{transform:scaleX(1) skewY(0)}8%,24%,40%{transform:scaleX(.1) skewY(7deg)}16%,32%{transform:scaleX(.98) skewY(-2deg)}74%{transform:scaleX(.82) skewY(2deg)}}',
+        '@keyframes agp-so-bfflapr{0%,48%,100%{transform:scaleX(1) skewY(0)}8%,24%,40%{transform:scaleX(.1) skewY(-7deg)}16%,32%{transform:scaleX(.98) skewY(2deg)}74%{transform:scaleX(.82) skewY(-2deg)}}',
+        '@keyframes agp-so-bflift{0%,100%{transform:rotate(-14deg) translateY(0)}45%{transform:rotate(-18deg) translateY(-12%)}}',
+        '@keyframes agp-so-bfrest{0%,30%,100%{transform:scaleX(1) skewY(0)}48%,58%{transform:scaleX(.08) skewY(8deg)}72%,88%{transform:scaleX(1) skewY(0)}76%,84%{transform:scaleX(.15) skewY(6deg)}80%{transform:scaleX(.95)}}',
+        '@keyframes agp-so-bfrestr{0%,30%,100%{transform:scaleX(1) skewY(0)}48%,58%{transform:scaleX(.08) skewY(-8deg)}72%,88%{transform:scaleX(1) skewY(0)}76%,84%{transform:scaleX(.15) skewY(-6deg)}80%{transform:scaleX(.95)}}',
+        '@keyframes agp-so-bfquick{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.12) skewY(7deg)}}',
+        '@keyframes agp-so-bfquickr{0%,100%{transform:scaleX(1) skewY(0)}50%{transform:scaleX(.12) skewY(-7deg)}}',
+        '@keyframes agp-so-bfhover1{0%,100%{transform:translate(0,0) rotate(0)}18%{transform:translate(6%,-10%) rotate(-6deg)}37%{transform:translate(-4%,-16%) rotate(4deg)}55%{transform:translate(-9%,-4%) rotate(7deg)}74%{transform:translate(3%,6%) rotate(-3deg)}88%{transform:translate(-2%,2%) rotate(2deg)}}',
+        '@keyframes agp-so-bfhover2{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-4%,5%) rotate(3deg)}50%{transform:translate(3%,-3%) rotate(-3deg)}75%{transform:translate(-2%,-6%) rotate(2deg)}}',
+        '@keyframes agp-so-bfbob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-30%) rotate(-8deg)}50%{transform:translateY(-8%) rotate(4deg)}75%{transform:translateY(-38%) rotate(-4deg)}}',
         '@keyframes agp-so-bfsway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(8deg)}}',
         '@keyframes agp-so-bfrun{0%{--agp-so-ang:330deg;opacity:0}12%,80%{opacity:1}100%{--agp-so-ang:512deg;opacity:0}}',
         '@keyframes agp-so-bftw{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}',
         '@keyframes agp-so-bfstar{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.55) rotate(0)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(45deg)}}',
         '@keyframes agp-so-bfbreath{0%,100%{opacity:.55}50%{opacity:1}}',
+        /* كبسولة العدد بإطار «الفراشات»: زجاجية بلون المركز، العملة تلف حول نفسها بنعومة (بدون ثري دي)، ورقم المركز بدائرة على اليمين */
+        '.agp-so-throne.fk-butterfly .agp-so-tcount{gap:.32em;margin-top:.3em;padding:.14em .2em .14em .3em;background:linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82)));border:.05em solid color-mix(in srgb,var(--rk) 65%,transparent);box-shadow:0 .12em .45em rgba(0,0,0,.45),inset 0 .05em .1em rgba(255,255,255,.12),0 0 .35em color-mix(in srgb,var(--rk) 25%,transparent)}',
+        '.agp-so-throne.fk-butterfly .agp-so-tbox .agp-so-tcount,.agp-so-tbox.fk-butterfly .agp-so-tcount{background:var(--agp-so-pillbg,linear-gradient(90deg,rgba(14,8,24,.82),color-mix(in srgb,var(--rk) 22%,rgba(14,8,24,.82))))}',
+        '.agp-so-throne.fk-butterfly .agp-so-tic.i-gifters,.agp-so-throne.fk-butterfly .agp-so-tcol.rk1 .agp-so-tic.i-gifters{width:1.25em;height:1.25em;margin:-.1em 0;filter:drop-shadow(0 0 .1em rgba(255,200,70,.55));animation:agp-so-spin 6s linear infinite}',
+        '.agp-so-throne.fk-butterfly .agp-so-tic:not(.i-gifters){animation:none}',
+        '.agp-so-throne.fk-butterfly .agp-so-tnum{min-width:2.2em;text-align:center;font-weight:800}',
+        '.agp-so-trk{display:inline-flex;align-items:center;justify-content:center;width:1.3em;height:1.3em;flex:none;border-radius:50%;font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:800;font-size:.7em;line-height:1;color:#1d1328;background:radial-gradient(circle at 35% 30%,#fff,var(--rk) 45%,var(--rk2));border:.06em solid rgba(255,255,255,.75);box-shadow:0 0 .3em color-mix(in srgb,var(--rk) 70%,transparent),inset 0 -.08em .15em rgba(0,0,0,.25)}',
+        '.agp-so-tcol.rk1 .agp-so-trk{font-size:.78em}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
