@@ -802,8 +802,18 @@
         pegasus: { label: 'الحصان المجنح', file: 'pegasus.webp', scale: 204, left: -57.6, top: -43.2, base: 45, ring: 56.6, spark: 60, fly: 'feather', glow: '#ffe6a3', glow2: '#ffbf3a' },
         // «الأجنحة الكريستالية» (من صاحب المنصة، الخلفية السوداء انشالت): حلقة قوس قزح بأجنحة ريش وكريستال.
         // القياس من الصورة الأصلية 1200px: مركز الحلقة (598.5، 591.4) وحافتها الداخلية 390px — الصورة تعبّيها بالضبط.
-        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', shine: true }
+        crystal: { label: 'الأجنحة الكريستالية', file: 'crystal.webp', scale: 153.85, left: -26.73, top: -25.82, base: 275, ring: 52.3, spark: 57, fly: 'featherLav', glow: '#efe2ff', glow2: '#b48cff', shine: true },
+        // «الفراشات» (من صورة صاحب المنصة): حلقة بيضاء وقوس ضوء بنفسجي فيه غبار نجوم، وفراشات ترفرف.
+        // مرسومة بالكود (butterflyFrame) مو صورة، عشان كل ألوانها تتغيّر: frameColor (القوس والغبار)،
+        // flyColor (الفراشات)، ringColor (الحلقة). ورقم المركز داخل فراشة بلون المركز.
+        butterfly: { label: 'الفراشات', code: true, base: 270, glow: '#e9d8ff', glow2: '#b47cff' }
     };
+    /** لون قوس الضوء والغبار بإطار «الفراشات» (لون جاهز أو مخصص). */
+    function bfAccent(it) {
+        if (it.frameColor === 'custom' && /^#[0-9a-f]{6}$/i.test(String(it.frameCustom || ''))) return it.frameCustom;
+        var fc = FRAME_COLORS.filter(function (c) { return c.key === it.frameColor; })[0];
+        return fc && fc.sw ? fc.sw : '#b47cff';
+    }
     function frameOf(it) {
         if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
         return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel';
@@ -862,6 +872,11 @@
         if (hex(it.nameColor)) box.style.setProperty('--agp-so-namec', it.nameColor);
         if (hex(it.numColor)) box.style.setProperty('--agp-so-numc', it.numColor);
         if (hex(it.pillColor)) box.style.setProperty('--agp-so-pillbg', 'color-mix(in srgb,' + it.pillColor + ' 78%,transparent)');
+        if (frameOf(it) === 'butterfly') {
+            box.style.setProperty('--agp-so-bfc', bfAccent(it));
+            box.style.setProperty('--agp-so-bff', hex(it.flyColor) || bfAccent(it));
+            if (hex(it.ringColor)) box.style.setProperty('--agp-so-bfr', it.ringColor);
+        }
         // التباعد بين الثلاثة (it.spacing بوحدة em، الافتراضي .15)
         // أقل من صفر = يتقاربون أكثر (gap ما يقبل سالب، فنستخدم هامش سالب للأوسط)
         if (it.spacing != null) {
@@ -938,17 +953,22 @@
         var inner = el('div', stack ? 'agp-so-sin' : 'agp-so-tin');
         if (stack) {
             if (i === 0) slot.appendChild(el('span', 'agp-so-ssheen'));
-            inner.appendChild(el('span', 'agp-so-snum', String(i + 1)));
             var fk = frameOf(hit);
+            if (fk === 'butterfly') inner.appendChild(bfBadge('agp-so-snum bf', i));
+            else inner.appendChild(el('span', 'agp-so-snum', String(i + 1)));
             if (fk === 'ring') inner.appendChild(ringFrame(r));
             else if (fk === 'none') { var pl = el('span', 'agp-so-fav fr-none'); pl.appendChild(avatar(r)); inner.appendChild(pl); }
             else inner.appendChild(throneFrame(r, fk));
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
             var fr = throneFrame(r, frameOf(hit));
-            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز
-            var rk = el('span', 'agp-so-trank');
-            rk.appendChild(el('b', null, String(i + 1)));
+            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز (أو فراشة بإطار «الفراشات»)
+            var rk;
+            if (frameOf(hit) === 'butterfly') rk = bfBadge('agp-so-trank bf', i);
+            else {
+                rk = el('span', 'agp-so-trank');
+                rk.appendChild(el('b', null, String(i + 1)));
+            }
             fr.appendChild(rk);
             inner.appendChild(fr);
             inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
@@ -1054,8 +1074,97 @@
     var FEATHER_LAV = FEATHER.replace('id="agp-so-fg"', 'id="agp-so-fgl"').replace('url(#agp-so-fg)', 'url(#agp-so-fgl)')
         .replace('#fffaf0', '#ffffff').replace('#ffe7a8', '#efe2ff').replace('#d9a63a', '#b48cff').replace('#c99a35', '#9b7fd6');
 
+    /** فراشة ناعمة (إطار «الفراشات»): لونها currentColor، والجناحين (wl/wr) يرفرفون من الجسم. */
+    function bfSvg() {
+        var UL = 'M24 18C21 10 15 3 8 2 3 1.5 1 5 2.5 9 4 14 9 18 14 19.5 18 20.5 22 20 24 19z';
+        var LL = 'M24 21c-4 0-10 1-13 5-2.5 3.5-1.5 8 2 8.5 4 .5 7.5-3.5 9.5-7.5 1-2 1.5-4 1.5-6z';
+        var UR = 'M24 18C27 10 33 3 40 2c5-.5 7 3 5.5 7C44 14 39 18 34 19.5 30 20.5 26 20 24 19z';
+        var LR = 'M24 21c4 0 10 1 13 5 2.5 3.5 1.5 8-2 8.5-4 .5-7.5-3.5-9.5-7.5-1-2-1.5-4-1.5-6z';
+        // نسخة أصغر بيضاء داخل كل جناح = لمعة ناعمة
+        var wing = function (u, l) {
+            return '<path d="' + u + '" fill="currentColor" opacity=".88"/><path d="' + l + '" fill="currentColor" opacity=".72"/>' +
+                '<g transform="matrix(.6 0 0 .6 9.6 7.6)" fill="#fff" opacity=".3"><path d="' + u + '"/><path d="' + l + '"/></g>';
+        };
+        return '<svg viewBox="0 0 48 40" aria-hidden="true">' +
+            '<g class="wl">' + wing(UL, LL) + '</g><g class="wr">' + wing(UR, LR) + '</g>' +
+            '<g class="bd"><ellipse cx="24" cy="21" rx="1" ry="6.5" fill="#fff" opacity=".9"/>' +
+            '<path d="M23.5 15C22.3 11.5 21 10 19.5 9.3M24.5 15C25.7 11.5 27 10 28.5 9.3" stroke="#fff" stroke-width=".5" fill="none" opacity=".75" stroke-linecap="round"/></g></svg>';
+    }
+    /** رقم المركز داخل فراشة بلون المركز (--rk). */
+    function bfBadge(cls, i) {
+        var b = el('span', cls);
+        var w = el('span', 'agp-so-bfb');
+        w.innerHTML = bfSvg();
+        b.appendChild(w);
+        b.appendChild(el('b', null, String(i + 1)));
+        return b;
+    }
+    // ترتيب ثابت (مو Math.random) عشان الغبار ما يتغيّر مكانه مع كل تحديث
+    function seeded(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
+
+    /** إطار «الفراشات»: حلقة + قوس ضوء بغبار نجوم + فراشتين ترفرف تحت يسار + فراشة صغيرة تطير حول الحلقة. */
+    function butterflyFrame(r) {
+        var f = el('span', 'agp-so-fav fr-butterfly');
+        f.appendChild(avatar(r));
+        var glow = el('span', 'agp-so-bfglow');
+        f.appendChild(glow);
+        // القوس والغبار والنجوم يتمايلون مع بعض (مجموعة وحدة)
+        var arc = el('span', 'agp-so-bfarcw');
+        arc.appendChild(el('span', 'agp-so-bfarc'));
+        arc.appendChild(el('span', 'agp-so-bfarc hot'));
+        // زاوية 0 = فوق، مع عقارب الساعة. القوس من 335° لين 150° تقريباً (مثل الصورة)
+        for (var k = 0; k < 90; k++) {
+            var a = (-28 + seeded(k + 1) * 185) * Math.PI / 180;
+            var mid = 1 - Math.abs((a * 180 / Math.PI - 60) / 95); // أكثف بالنص
+            var rad = 55 + seeded(k + 51) * (4 + 9 * Math.max(0, mid));
+            var dt = el('span', 'agp-so-bfdot');
+            var sz = .7 + Math.pow(seeded(k + 101), 2.2) * 2.6;
+            dt.style.width = dt.style.height = sz + '%';
+            dt.style.left = (50 + Math.sin(a) * rad - sz / 2) + '%';
+            dt.style.top = (50 - Math.cos(a) * rad - sz / 2) + '%';
+            dt.style.animationDelay = (-seeded(k + 151) * 3).toFixed(2) + 's';
+            dt.style.animationDuration = (1.8 + seeded(k + 201) * 2.4).toFixed(2) + 's';
+            arc.appendChild(dt);
+        }
+        [[-20, 0], [42, 1.1], [92, 2.2]].forEach(function (s) {
+            var a = s[0] * Math.PI / 180;
+            var st = el('span', 'agp-so-bfstar');
+            st.style.left = (50 + Math.sin(a) * 55) + '%';
+            st.style.top = (50 - Math.cos(a) * 55) + '%';
+            st.style.animationDelay = s[1] + 's';
+            arc.appendChild(st);
+        });
+        f.appendChild(arc);
+        f.appendChild(el('span', 'agp-so-bfring'));
+        // فراشتين تحت يسار الحلقة (ترفرف وتتمايل) + شرار حولها
+        ['f1', 'f2'].forEach(function (c) {
+            var o = el('span', 'agp-so-bfly ' + c);
+            var w = el('span', 'agp-so-bfw');
+            w.innerHTML = bfSvg();
+            o.appendChild(w);
+            f.appendChild(o);
+        });
+        [[-14, 52, 0], [-4, 64, .8], [-20, 82, 1.5], [4, 104, .4], [-8, 100, 2], [-2, 46, 1.2]].forEach(function (p) {
+            var s = el('span', 'agp-so-bfspk');
+            s.style.left = p[0] + '%';
+            s.style.top = p[1] + '%';
+            s.style.animationDelay = p[2] + 's';
+            f.appendChild(s);
+        });
+        // فراشة صغيرة تلف حول الحلقة
+        var orb = el('span', 'agp-so-bforb');
+        var ob = el('span', 'agp-so-bfly f3');
+        var ow = el('span', 'agp-so-bfw');
+        ow.innerHTML = bfSvg();
+        ob.appendChild(ow);
+        orb.appendChild(ob);
+        f.appendChild(orb);
+        return f;
+    }
+
     /** إطار حول صورة الشخص (THRONE_FRAMES): الرسمة + ضوء يلف + شرار + اللي يطير حولها. */
     function throneFrame(r, kind) {
+        if (kind === 'butterfly') return butterflyFrame(r);
         var d = THRONE_FRAMES[kind] || THRONE_FRAMES.angel;
         var f = el('span', 'agp-so-fav fr-' + kind);
         f.style.setProperty('--agp-so-fg1', d.glow);
@@ -2903,7 +3012,8 @@
         '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
         '.agp-so-stack.fk-crystal{--agp-so-sgap0:.6em}',
-        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
+        '.agp-so-stack.fk-butterfly{--agp-so-sgap0:.7em}',
+        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal,.agp-so-stack.fk-butterfly{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
         '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
@@ -2998,6 +3108,51 @@
         '@keyframes agp-so-f7float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-1.5%) rotate(-1.2deg)}}',
         '@keyframes agp-so-f7glow{50%{opacity:.7}}',
         '@keyframes agp-so-f7spark{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1;transform:translateY(-20%) scale(1)}100%{opacity:0;transform:translateY(-160%) scale(.3)}}',
+        /* إطار «الفراشات» — مرسوم بالكود. --agp-so-bfc لون القوس، --agp-so-bff الفراشات، --agp-so-bfr الحلقة */
+        '.fr-butterfly{--bfc:var(--agp-so-bfc,#b47cff);--bff:var(--agp-so-bff,var(--bfc));--bfr:var(--agp-so-bfr,#fff)}',
+        '.fr-butterfly .agp-so-av{position:relative;z-index:1}',
+        '.agp-so-bfglow{position:absolute;inset:-14%;z-index:0;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,transparent 72%,color-mix(in srgb,var(--bfc) 40%,transparent) 84%,transparent);-webkit-mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);mask:conic-gradient(from 320deg,#000,#000 45%,transparent 60%,transparent 92%,#000);animation:agp-so-bfbreath 3.4s ease-in-out infinite}',
+        '.agp-so-bfring{position:absolute;inset:-5%;z-index:3;border-radius:50%;pointer-events:none;border:calc(var(--s) * .022) solid var(--bfr);box-shadow:0 0 .06em var(--bfr),0 0 .18em color-mix(in srgb,var(--bfr) 55%,transparent),inset 0 0 .1em color-mix(in srgb,var(--bfr) 50%,transparent)}',
+        '.agp-so-bfarcw{position:absolute;inset:0;z-index:2;pointer-events:none;animation:agp-so-bfsway 7s ease-in-out infinite}',
+        '.agp-so-bfarc{position:absolute;inset:-9%;border-radius:50%;background:conic-gradient(from 325deg,transparent 0,color-mix(in srgb,var(--bfc) 70%,#fff) 4%,var(--bfc) 20%,color-mix(in srgb,var(--bfc) 85%,transparent) 36%,transparent 50%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .1)),#000 calc(100% - calc(var(--s) * .065)),#000 calc(100% - calc(var(--s) * .045)),transparent);mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .1)),#000 calc(100% - calc(var(--s) * .065)),#000 calc(100% - calc(var(--s) * .045)),transparent);filter:blur(calc(var(--s) * .01)) drop-shadow(0 0 .12em var(--bfc)) drop-shadow(0 0 .3em var(--bfc))}',
+        /* ضوء أبيض يجري على القوس */
+        '.agp-so-bfarc.hot{background:conic-gradient(from var(--agp-so-ang,0deg),transparent 0 84%,color-mix(in srgb,var(--bfc) 50%,#fff) 95%,#fff 99%,transparent 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .065)),transparent calc(100% - calc(var(--s) * .04)));mask:radial-gradient(farthest-side,transparent calc(100% - calc(var(--s) * .085)),#000 calc(100% - calc(var(--s) * .065)),transparent calc(100% - calc(var(--s) * .04)));filter:drop-shadow(0 0 .1em #fff);opacity:1;animation:agp-so-bfrun 4.6s linear infinite}',
+        '.agp-so-bfdot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--bfc) 45%,#fff);box-shadow:0 0 .12em var(--bfc);animation:agp-so-bftw 2.6s ease-in-out infinite}',
+        '.agp-so-bfstar{position:absolute;width:16%;height:16%;transform:translate(-50%,-50%) scale(.6);opacity:.4;background:radial-gradient(closest-side,#fff,color-mix(in srgb,var(--bfc) 60%,transparent) 30%,transparent 70%),linear-gradient(90deg,transparent 46%,#fff 50%,transparent 54%),linear-gradient(0deg,transparent 47%,#fff 50%,transparent 53%);-webkit-mask:radial-gradient(closest-side,#000 40%,transparent);mask:radial-gradient(closest-side,#000 40%,transparent);animation:agp-so-bfstar 3.3s ease-in-out infinite}',
+        '.agp-so-bfly{position:absolute;z-index:6;pointer-events:none}',
+        '.agp-so-bfly.f1{left:-24%;top:45%;width:42%;height:35%;animation:agp-so-bfhover1 5.2s ease-in-out infinite}',
+        '.agp-so-bfly.f2{left:-6%;top:68%;width:36%;height:30%;animation:agp-so-bfhover2 6.1s ease-in-out infinite}',
+        '.agp-so-bfw{display:block;width:100%;height:100%;color:var(--bff);filter:blur(calc(var(--s) * .006)) drop-shadow(0 0 .06em var(--bff)) drop-shadow(0 0 .18em color-mix(in srgb,var(--bff) 70%,transparent))}',
+        '.agp-so-bfw svg,.agp-so-bfb svg{width:100%;height:100%;overflow:visible;display:block}',
+        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 50%;animation:agp-so-bfflap 1.15s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wl,.agp-so-bfly.f2 .wr{animation-duration:.95s;animation-delay:-.4s}',
+        '.agp-so-bfly.f1 .agp-so-bfw{transform:rotate(-14deg)}',
+        '.agp-so-bfly.f2 .agp-so-bfw{transform:rotate(10deg)}',
+        '.agp-so-bfspk{position:absolute;z-index:6;width:3.4%;height:3.4%;border-radius:50%;pointer-events:none;background:#fff;box-shadow:0 0 .1em #fff,0 0 .25em var(--bff);opacity:0;animation:agp-so-f7spark 2.6s ease-in-out infinite}',
+        '.agp-so-bforb{position:absolute;inset:-17%;z-index:6;pointer-events:none;animation:agp-so-spin 16s linear infinite}',
+        '.agp-so-bfly.f3{left:50%;top:0;width:20%;height:17%;transform:translate(-50%,-50%) rotate(90deg)}',
+        '.agp-so-bfly.f3 .agp-so-bfw{animation:agp-so-bfbob 1.6s ease-in-out infinite}',
+        '.agp-so-bfly.f3 .wl,.agp-so-bfly.f3 .wr{animation-duration:.42s}',
+        /* رقم المركز داخل فراشة */
+        '.agp-so-trank.bf{left:50%;top:100%;width:46%;height:40%}',
+        '.agp-so-trank.bf::before,.agp-so-trank.bf::after{display:none}',
+        '.agp-so-bfb .bd{display:none}',
+        '.agp-so-bfb{position:absolute;inset:0;color:var(--rk,#e9d8ff);filter:drop-shadow(0 0 .05em #fff) drop-shadow(0 0 .14em var(--rk,#b47cff)) drop-shadow(0 .03em .06em rgba(0,0,0,.6))}',
+        '.agp-so-bfb .wl,.agp-so-bfb .wr{transform-origin:50% 50%;animation:agp-so-bfbadge 2.4s ease-in-out infinite}',
+        '.agp-so-trank.bf b{font-size:calc(var(--s,2.2em) * .17);color:#fff;text-shadow:0 0 .15em rgba(0,0,0,.85),0 .04em .08em rgba(0,0,0,.9)}',
+        '.agp-so-snum.bf{position:relative;width:1.75em;height:1.45em;display:flex;align-items:center;justify-content:center;color:#fff}',
+        '.agp-so-snum.bf b{position:relative;z-index:1;font-size:.8em;text-shadow:0 0 .15em rgba(0,0,0,.85),0 .04em .08em rgba(0,0,0,.9)}',
+        '.agp-so-scard.rk1 .agp-so-snum.bf{font-size:.9em}',
+        '@keyframes agp-so-bfflap{0%,100%{transform:scaleX(1)}45%{transform:scaleX(.22)}55%{transform:scaleX(.22)}}',
+        '@keyframes agp-so-bfbadge{0%,70%,100%{transform:scaleX(1)}80%{transform:scaleX(.55)}90%{transform:scaleX(1)}}',
+        '@keyframes agp-so-bfhover1{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(4%,-9%) rotate(-5deg)}50%{transform:translate(-3%,-4%) rotate(3deg)}75%{transform:translate(2%,6%) rotate(-2deg)}}',
+        '@keyframes agp-so-bfhover2{0%,100%{transform:translate(0,0) rotate(0)}30%{transform:translate(-5%,7%) rotate(4deg)}60%{transform:translate(5%,-6%) rotate(-4deg)}}',
+        '@keyframes agp-so-bfbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-35%)}}',
+        '@keyframes agp-so-bfsway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(8deg)}}',
+        '@keyframes agp-so-bfrun{0%{--agp-so-ang:330deg;opacity:0}12%,80%{opacity:1}100%{--agp-so-ang:512deg;opacity:0}}',
+        '@keyframes agp-so-bftw{0%,100%{opacity:.25;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}',
+        '@keyframes agp-so-bfstar{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.55) rotate(0)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(45deg)}}',
+        '@keyframes agp-so-bfbreath{0%,100%{opacity:.55}50%{opacity:1}}',
         /* ميداليات */
         '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
         '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
