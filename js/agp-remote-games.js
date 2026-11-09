@@ -24,7 +24,7 @@
         { id: 'greed', name: 'الطمع', icon: '🎰', url: 'games/greed/index.html', ready: true },
         { id: 'snakes-ladders', name: 'السلم والثعبان', icon: '🐍', url: 'games/snakes-ladders/index.html', ready: true },
         { id: 'memory-challenge', name: 'تحدي الذاكرة', icon: '🧠', url: 'games/memory-challenge/index.html', ready: true },
-        { id: 'luck-color', name: 'حظ و لون', icon: '🎨', url: 'games/luck-color/index.html', ready: true },
+        { id: 'luck-color', name: 'حظ و لون', icon: '🎨', url: 'games/luck-color/index.html' }, // تحت التجربة: تفتح للأدمن بس (lc-platform.js)
         { id: 'survival-ship', name: 'سفينة النجاة', icon: '🚢', url: 'games/survival-ship/index.html', ready: true },
         { id: 'rock-paper-scissors', name: 'حجرة ورقة مقص', icon: '✊', url: 'games/rock-paper-scissors/index.html', ready: true },
         { id: 'team-war', name: 'حرب الفريقين', icon: '⚔️', url: 'games/team-war/index.html', ready: true },

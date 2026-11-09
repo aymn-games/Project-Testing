@@ -490,7 +490,7 @@
             status: function () {
                 return teams.map(function (t, i) {
                     var n = (roster()[i] || []).length;
-                    return (teams.length > 1 ? (t.name || t.label || ('فريق ' + (i + 1))) + ': ' : 'باللوبي ') + n + (t.max ? ' من ' + t.max : '') + (t.keyword ? ' · كلمة الدخول «' + t.keyword + '»' : '');
+                    return (teams.length > 1 ? (t.name || t.label || ('فريق ' + (i + 1))) + ': ' : 'باللوبي ') + n + (t.max && t.max < 999 ? ' من ' + t.max : '') + (t.keyword ? ' · كلمة الدخول «' + t.keyword + '»' : '');
                 }).join(' — ');
             },
             commands: [
@@ -638,8 +638,25 @@
             }
             if (actions.length >= 48) continue;
             count[label] = (count[label] || 0) + 1;
-            actions.push({ cmd: '__press', key: key, label: label, desc: '', args: '', tone: toneOf(label), confirm: /خروج|إنهاء|انهاء|حذف/.test(label) ? label + '؟' : '', screen: true });
+            actions.push({ cmd: '__press', key: key, label: label, desc: '', args: '', tone: toneOf(label), confirm: /خروج|إنهاء|انهاء|حذف/.test(label) ? label + '؟' : '', screen: true, _el: el });
         }
+        // مجموعة خيارات: الزر اللي شكله يختلف عن إخوانه (خلفية/لون) هو المختار — يطلع مضيء بالجوال
+        var byParent = [];
+        actions.forEach(function (a) {
+            var par = a._el.parentElement, g = byParent.filter(function (x) { return x.p === par; })[0];
+            if (!g) { g = { p: par, list: [] }; byParent.push(g); }
+            g.list.push(a);
+        });
+        byParent.forEach(function (g) {
+            if (g.list.length < 2 || !inGroup(g.list[0]._el)) return;
+            var sig = g.list.map(function (a) { var cs = getComputedStyle(a._el); return cs.backgroundImage + '|' + cs.backgroundColor + '|' + cs.color; });
+            var odd = sig.filter(function (x) { return sig.filter(function (y) { return y === x; }).length === 1; });
+            if (odd.length === 1 && g.list.length > 2) { g.list[sig.indexOf(odd[0])].on = true; return; }
+            // زرين: المختار هو الوحيد اللي له خلفية ملوّنة
+            var filled = g.list.filter(function (a, i) { var p = sig[i].split('|'); return p[0] !== 'none' || !/rgba\(\d+, \d+, \d+, 0\)|transparent/.test(p[1]); });
+            if (filled.length === 1) filled[0].on = true;
+        });
+        actions.forEach(function (a) { delete a._el; });
         // أسماء مكررة (زر لكل لاعب مثلاً) → نرقّمها
         var seen = {};
         actions.forEach(function (a) { if (count[a.label] > 1) { seen[a.label] = (seen[a.label] || 0) + 1; a.label = a.label + ' (' + seen[a.label] + ')'; } });

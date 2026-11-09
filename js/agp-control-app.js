@@ -233,7 +233,7 @@
             order.forEach(function (k) {
                 if (groups[k].length < 2) { singles.push(groups[k][0].x); return; }
                 rows += '<div class="row"><span class="lbl"><span>' + esc(k) + '</span></span><span class="seg">' + groups[k].map(function (g) {
-                    return '<button type="button" class="opt" data-act="' + g.x.i + '">' + esc(g.opt) + '</button>';
+                    return '<button type="button" class="opt' + (g.x.a.on ? ' on' : '') + '" data-act="' + g.x.i + '">' + esc(g.opt) + '</button>';
                 }).join('') + '</span></div>';
             });
             singles.sort(function (x, y) { return rank(x) - rank(y) || x.i - y.i; });
