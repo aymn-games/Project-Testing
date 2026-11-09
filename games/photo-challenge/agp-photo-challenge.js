@@ -307,6 +307,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         errEl.style.display = 'block';
     }
 
+    var _sharedPrefs = window.AGPSharedPrefs ?
+        window.AGPSharedPrefs.bind({ team1Name: 'team1Name', team1Keyword: 'team1Keyword', team2Name: 'team2Name', team2Keyword: 'team2Keyword' }) : null;
+
     function handleConnectClick() {
         var saved = getSavedStreamConnection();
         var kw1 = normalizeArabicText(_settings.team1Keyword);
@@ -317,6 +320,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (kw1 === kw2) return showSettingsError('الكلمتان المفتاحيتان لازم تكونان مختلفتين عن بعض.');
 
         _settings.tiktokUsername = saved.username;
+        if (_sharedPrefs) _sharedPrefs.save(_settings);
         AGP.streamConnector.connect('tiktok', { username: saved.username });
     }
 
@@ -1317,6 +1321,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireAnswerCheckingListener();
         wireGuestAnswerListener();
         loadChallengeBank();
+        // أسماء وكلمات الفريقين المحفوظة من آخر لعبة فريقين (js/agp-shared-prefs.js)
+        if (_sharedPrefs) {
+            Object.assign(_settings, _sharedPrefs.fill(_settings));
+            _sharedPrefs.watch(function () { return _settings; }, function (patch) {
+                Object.assign(_settings, patch);
+                if (_screen === 'settings' && el('pc-input-team1Name')) renderSettingsScreen();
+            });
+        }
         renderSettingsScreen();
     }
 

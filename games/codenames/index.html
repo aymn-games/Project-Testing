@@ -15,6 +15,9 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -236,9 +239,12 @@ const SETTINGS = [
 ];
 const AR = CN.norm;
 
+// كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+const SHARED = AGPSharedPrefs.bind({team1Name:'name1',team1Keyword:'kw1',team2Name:'name2',team2Keyword:'kw2'});
+
 class Component extends DCLogic {
-  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!CN.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/850)}); this.fit(); addEventListener('resize',this.fit);
+  state = { supCount:1, supPick:false, values:SHARED.fill(Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default]))), live:!!CN.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(_rc) _rc.templateSettings(this,SETTINGS,{game:'codenames'});  SHARED.watch(()=>this.state.values,p=>this.setState(s=>({values:{...s.values,...p}}))); this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/850)}); this.fit(); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onEnded=()=>this.setState({live:!!CN.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); }
@@ -292,7 +298,7 @@ class Component extends DCLogic {
       start:()=>{ const V=S.values; if(GAME.requireLive&&!S.live) return this.toastMsg('لازم تكون في بث مباشر على حساب تيك توك المربوط بحسابك — نتصل تلقائياً أول ما تبدأ البث.');
         if(!AR(V.kw1)) return this.toastMsg('لازم تكتب الكلمة المفتاحية للفريق الأحمر.');
         if(!AR(V.kw2)) return this.toastMsg('لازم تكتب الكلمة المفتاحية للفريق الأزرق.');
-        if(AR(V.kw1)===AR(V.kw2)) return this.toastMsg('لازم الكلمتين المفتاحيتين تكونان مختلفتين.'); const values=this.readValues(); try{ localStorage.setItem('codenames-settings',JSON.stringify(values)); }catch(e){} this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); setTimeout(()=>this.setState({connStep:1}),1600); setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
+        if(AR(V.kw1)===AR(V.kw2)) return this.toastMsg('لازم الكلمتين المفتاحيتين تكونان مختلفتين.'); const values=this.readValues(); try{ localStorage.setItem('codenames-settings',JSON.stringify(values)); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); setTimeout(()=>this.setState({connStep:1}),1600); setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')

@@ -16,6 +16,8 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
@@ -163,7 +165,7 @@ const TEAMS = [
 class Component extends DCLogic {
   state = { lobbyTab:0, roster:[[]], values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   reg = GR.createRegistry();
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+  componentDidMount(){ const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(_rc) _rc.templateLobby(this,TEAMS,{game:'greed'});  this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // الشات من البث المتصل بمكتبة الألعاب: كتابة كلمة الدخول = انضمام
     GR.connect(); this.unsub=GR.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); clearTimeout(this.tt); }

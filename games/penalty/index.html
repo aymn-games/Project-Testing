@@ -187,6 +187,9 @@
 </div>
 
 <script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
 <script src="../../js/agp-challenge-lobby.js"></script>
@@ -225,8 +228,10 @@
         var d = { team1: '', team2: '', followersOnly: false, roundMinutes: 4, shotSec: 10, lobbySec: 60 }, raw = null;
         try { raw = JSON.parse(localStorage.getItem(SOLO_KEY) || 'null'); } catch (e) {}
         if (raw && typeof raw === 'object') for (var k in d) if (raw[k] !== undefined) d[k] = raw[k];
-        return d;
+        // أسماء الفريقين المحفوظة من آخر لعبة فريقين (js/agp-shared-prefs.js)
+        return SHARED ? SHARED.fill(d) : d;
     }
+    var SHARED = window.AGPSharedPrefs ? AGPSharedPrefs.bind({ team1Name: 'team1', team2Name: 'team2' }) : null;
     function savedConn() {
         try { var c = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); return c && c.username ? c : null; } catch (e) { return null; }
     }
@@ -502,10 +507,16 @@
         else setMsg(out.other.name + ' جاهز ✓', 'good');
     }
 
+    if (SHARED) SHARED.watch(function () { return state.solo; }, function (p) {
+        Object.assign(state.solo, p);
+        if (state.view === 'solo') redraw();
+    });
+
     $('cta').addEventListener('click', function () {
         if ($('cta').disabled) return;
         var j = guestMode();
         if (!j && state.view === 'solo') {
+            if (SHARED) SHARED.save(state.solo);
             try { localStorage.setItem(SOLO_KEY, JSON.stringify(state.solo)); } catch (e) {}
             location.href = 'game.html?mode=solo';
             return;

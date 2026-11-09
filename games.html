@@ -391,21 +391,27 @@ document.addEventListener('DOMContentLoaded', async function() {
   </script>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
-<!-- التحكم بالشات (js/agp-remote-control.js): لو المذيع مفعّله من البروفايل، المتحكم يكتب
-     !روليت بالشات فتنفتح إعدادات روليت الإقصاء. التعليقات توصل من اتصال الإحصائيات
-     (agp-stream-overlay.js يطلبها بـ chat:true بس لما التحكم مفعّل). -->
+<!-- التحكم عن بعد (js/agp-remote-control.js): لو المذيع مفعّله من البروفايل، المتحكم يختار
+     لعبة من «لوحة التحكم» بجواله (control.html) أو يكتب !لعبه <اسمها> بالشات فتنفتح إعداداتها.
+     التعليقات توصل من اتصال الإحصائيات (agp-stream-overlay.js يطلبها بـ chat:true بس لما التحكم مفعّل). -->
 <script src="js/agp-core.js"></script>
+<script src="js/agp-remote-games.js"></script>
 <script src="js/agp-remote-control.js"></script>
+<!-- تنبيه «مرة وحدة» بالمكتبة: إطلاق التحكم عن بعد (js/agp-library-notice.js) -->
+<script src="js/agp-library-notice.js"></script>
 <script>
 (function(){
   var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
   if (!RC) return;
-  RC.attach({ page: 'مكتبة الألعاب', overlayChat: true, commands: [
-    { names: ['روليت', 'الاقصاء', 'افتح', 'العب'], desc: 'يفتح إعدادات روليت الإقصاء', run: function () {
-      setTimeout(function () { location.href = 'games/elimination-roulette/index.html'; }, 900);
-      return 'جارٍ فتح روليت الإقصاء';
-    } }
-  ] });
+  RC.attach({ page: 'مكتبة الألعاب', overlayChat: true,
+    status: function () { return 'اختر لعبة من الشبكة تحت'; },
+    commands: [
+      // الاسم القديم من أول نسخة (قبل !لعبه) — يبقى للي متعودين عليه
+      { names: ['روليت', 'الاقصاء'], desc: 'يفتح إعدادات روليت الإقصاء', phone: false, run: function () {
+        setTimeout(function () { location.href = 'games/elimination-roulette/index.html'; }, 700);
+        return 'جارٍ فتح روليت الإقصاء';
+      } }
+    ] });
 })();
 </script>
 <script src="js/agp-challenge-lobby.js"></script>

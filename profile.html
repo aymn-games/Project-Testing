@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="js/agp-frame-picker.js"></script>
 <script src="js/agp-stream-stats.js"></script>
 <script src="js/agp-profile-card.js"></script>
-<!-- التحكم بالشات (روليت الإقصاء): نافذة التفعيل ويوزرات المتحكمين — تحتاج نواة AGP فقط -->
+<!-- التحكم عن بعد: نافذة الستريمر (المفتاح العام + المتحكمين)، وزر «لوحة التحكم» للمتحكم — تحتاج نواة AGP فقط -->
 <script src="js/agp-core.js"></script>
 <script src="js/agp-remote-control.js"></script>
 <script>
@@ -1018,9 +1018,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     head.parentNode.insertBefore(row, head.nextSibling);
   }
 
-  // زر «التحكم بالشات» (js/agp-remote-control.js): المذيع يضيف يوزرات لاعبين
-  // ويفعّل التحكم، فيشغّلون روليت الإقصاء كاملة بأوامر الشات. نفس صف زر
-  // الإحصائيات، لصاحب الحساب الستريمر فقط، وينضاف مع كل تعبئة للتبويب.
+  // زر «التحكم عن بعد» (js/agp-remote-control.js): المذيع يضيف يوزرات متحكمين
+  // ويفعّل التحكم (عام أو لكل شخص)، فيشغّلون ألعابه من «لوحة التحكم» بجوالهم
+  // أو بأوامر الشات. نفس صف زر الإحصائيات، لصاحب الحساب الستريمر فقط،
+  // وينضاف مع كل تعبئة للتبويب. الحالة من الخادم (/api/remote-control/config).
   function addRemoteControlButton(p){
     var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
     if (!p || !RC) return;
@@ -1043,10 +1044,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     btn.style.cssText = 'flex:none;padding:10px 18px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f9f74,#34d399);color:#04140e;font-family:inherit;font-size:13.5px;font-weight:700;';
     function paint(){
       var on = RC.isEnabled();
-      txt.textContent = 'التحكم بالشات (روليت الإقصاء): تضيف يوزر لاعب أو أكثر، فيشغّلون اللعبة كاملة بأوامر يكتبونها بشات البث — الإعدادات وبدء المباراة ولف العجلة. الحالة: ' + (on ? 'مفعّل ✅' : 'متوقف');
-      btn.textContent = on ? 'إدارة التحكم بالشات' : 'تفعيل التحكم بالشات';
+      txt.textContent = 'التحكم عن بعد: تضيف يوزر تيك توك لشخص أو أكثر، فيشغّلون ألعابك كاملة من «لوحة التحكم» بجوالهم أو بأوامر الشات — يختارون اللعبة، يضبطون الإعدادات والدخول، ويبدؤون وينهون المباراة. الحالة: ' + (on ? 'مفعّل ✅' : 'متوقف');
+      btn.textContent = on ? 'إدارة التحكم عن بعد' : 'تفعيل التحكم عن بعد';
     }
     paint();
+    if (RC.loadConfig) RC.loadConfig().then(paint, paint);
     btn.addEventListener('click', function(){ RC.openPanel(); });
     window.addEventListener('agp:remote-control-changed', paint);
     row.appendChild(txt);
@@ -1276,6 +1278,31 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
           }).catch(function(){});
         }
+      }
+    }
+
+    /* ---- زر «لوحة التحكم» (التحكم عن بعد): يطلع لصاحب الحساب لما يكون
+       ستريمر أعطى يوزر تيك توك حقه صلاحية التحكم بألعابه وهي مفعّلة
+       (GET /api/remote-control/access). زر لكل ستريمر يفتح control.html. ---- */
+    if (isOwner && !document.querySelector('[data-remote-access]') && window.AGPAuth && window.AGPAuth.request) {
+      var topRightBoxRc = heading ? heading.parentElement.parentElement.parentElement : null;
+      if (topRightBoxRc) {
+        var rcBox = document.createElement('div');
+        rcBox.setAttribute('data-remote-access', '1');
+        rcBox.style.cssText = 'display:none;flex-direction:column;gap:8px;margin-top:10px;';
+        topRightBoxRc.appendChild(rcBox);
+        window.AGPAuth.request('/api/remote-control/access').then(function(r){
+          var list = (r && r.success && r.streamers) || [];
+          if (!list.length) return;
+          list.forEach(function(st){
+            var a = document.createElement('a');
+            a.href = 'control.html?s=' + encodeURIComponent(st.id);
+            a.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:10px;background:linear-gradient(135deg,#0f9f74,#34d399);color:#04140e;font-size:13.5px;font-weight:700;text-align:center;text-decoration:none;box-shadow:0 10px 24px -12px rgba(52,211,153,.8);';
+            a.textContent = '🎮 لوحة التحكم — ' + (st.name || 'ستريمر');
+            rcBox.appendChild(a);
+          });
+          rcBox.style.display = 'flex';
+        }).catch(function(){});
       }
     }
 
