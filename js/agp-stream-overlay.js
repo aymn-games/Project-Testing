@@ -1629,7 +1629,8 @@
                 mv.style.animationDuration = (an.d * (Number(it.speed) || 1)) + 's';
             }
             tx.textContent = it.text || ' ';
-            mv.appendChild(tx);
+            if (it.banner === 'peek') mv.appendChild(buildBanner(it, tx));
+            else mv.appendChild(tx);
             n.appendChild(mv);
         } else {
             n.className += ' agp-so-widget agp-so-' + it.type;
@@ -1646,6 +1647,91 @@
             else if (it.type === 'music') buildMusic(n, it, preview);
         }
         return n;
+    }
+
+    /* ---------------- النص داخل «لوحة الأصدقاء» ---------------- */
+    /*
+     * لوحة بلون فاتح بخطين نقط فوقها وتحتها، وفوقها شخصيتين (أرنب وقطة، رسم أصلي) يطلّون ويرمشون.
+     * التخصيص: bnColor (اللوحة)، bnDots (النقط)، bnBunny/bnKitten (لون الشخصيات)، bnChars (الاثنين/أرنب/قطة/بدون)،
+     * bnPos (يمين/وسط/يسار)، bnCharAnim (تطل/ثابتة)، bnBg (حركة الخلفية)، bnMotion (حركة النص)، bnWidth، bnRound.
+     */
+    var BN_BG = ['none', 'shimmer', 'dots', 'gradient', 'breathe', 'bubbles'];
+    var BN_MOTIONS = ['static', 'marquee', 'type', 'pop', 'float'];
+    var BN_LINE = 'stroke="#2a2233" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"';
+    function bnFace(cx, cy) {
+        return '<g class="ey"><ellipse cx="' + (cx - 7) + '" cy="' + cy + '" rx="1.7" ry="2" fill="#2a2233"/><ellipse cx="' + (cx + 7) + '" cy="' + cy + '" rx="1.7" ry="2" fill="#2a2233"/>' +
+            '<circle cx="' + (cx - 6.4) + '" cy="' + (cy - .7) + '" r=".6" fill="#fff"/><circle cx="' + (cx + 7.6) + '" cy="' + (cy - .7) + '" r=".6" fill="#fff"/></g>' +
+            '<ellipse cx="' + (cx - 11) + '" cy="' + (cy + 5) + '" rx="3" ry="1.8" fill="#ff9ec4" opacity=".55"/><ellipse cx="' + (cx + 11) + '" cy="' + (cy + 5) + '" rx="3" ry="1.8" fill="#ff9ec4" opacity=".55"/>';
+    }
+    function bnPaws(y, fill) {
+        return [21, 39].map(function (x) {
+            return '<path d="M' + (x - 5) + ' ' + (y + 9) + 'v-5a5 5 0 0 1 10 0v5z" style="fill:' + fill + '" ' + BN_LINE + '/>' +
+                '<path d="M' + (x - 1.7) + ' ' + (y + 9) + 'v-2.6M' + (x + 1.7) + ' ' + (y + 9) + 'v-2.6" ' + BN_LINE + ' stroke-width="1" fill="none"/>';
+        }).join('');
+    }
+    // أرنب أبيض: أذنين طويلة (اليمنى تتحرك)، خدود وردية، أنف وفم صغير
+    var BN_BUNNY = '<svg viewBox="0 0 60 66" aria-hidden="true">' +
+        '<g class="ear"><path d="M20 30C14 18 14 4 20 2c6-2 8 14 6 27z" style="fill:var(--bnr)" ' + BN_LINE + '/><path d="M20.5 26c-3-8-3-17 0-19 3-1 4 9 3.5 18z" fill="#ffc2da"/></g>' +
+        '<g class="ear ear-r"><path d="M40 30c6-12 6-26 0-28-6-2-8 14-6 27z" style="fill:var(--bnr)" ' + BN_LINE + '/><path d="M39.5 26c3-8 3-17 0-19-3-1-4 9-3.5 18z" fill="#ffc2da"/></g>' +
+        '<ellipse cx="30" cy="42" rx="19" ry="15.5" style="fill:var(--bnr)" ' + BN_LINE + '/>' + bnFace(30, 40) +
+        '<path d="M28.6 45h2.8l-1.4 1.6z" fill="#ff8fb8" stroke="#2a2233" stroke-width=".6" stroke-linejoin="round"/><path d="M30 46.6c-.6 1.6-2.4 1.8-3.2.8M30 46.6c.6 1.6 2.4 1.8 3.2.8" ' + BN_LINE + ' stroke-width="1" fill="none"/>' +
+        bnPaws(53, 'var(--bnr)') + '</svg>';
+    // قطة: أذنين مثلث، خطوط على الجبهة، شوارب، فم w
+    var BN_KITTEN = '<svg viewBox="0 0 60 60" aria-hidden="true">' +
+        '<path d="M13 30 15 9l14 12z" style="fill:var(--bnk)" ' + BN_LINE + '/><path d="M16 25 17 14l7 7z" fill="#ffc2da"/>' +
+        '<path d="M47 30 45 9 31 21z" style="fill:var(--bnk)" ' + BN_LINE + '/><path d="M44 25 43 14l-7 7z" fill="#ffc2da"/>' +
+        '<ellipse cx="30" cy="35" rx="20" ry="16" style="fill:var(--bnk)" ' + BN_LINE + '/>' +
+        '<path d="M30 20.5v4.5M25.5 21.5l1 3.8M34.5 21.5l-1 3.8" stroke-width="1.6" stroke-linecap="round" style="stroke:color-mix(in srgb,var(--bnk) 55%,#8a4b1f)"/>' + bnFace(30, 34) +
+        '<path d="M28.6 38.6h2.8l-1.4 1.5z" fill="#ff8fb8" stroke="#2a2233" stroke-width=".6" stroke-linejoin="round"/><path d="M30 40.1c-.5 1.5-2.3 1.7-3 .7M30 40.1c.5 1.5 2.3 1.7 3 .7" ' + BN_LINE + ' stroke-width="1" fill="none"/>' +
+        '<path d="M14 36.5 6 35M14 39 6.5 40M46 36.5l8-1.5M46 39l7.5 1" stroke="#2a2233" stroke-width=".7" stroke-linecap="round" opacity=".6"/>' +
+        bnPaws(47, 'var(--bnk)') + '</svg>';
+
+    function buildBanner(it, tx) {
+        var hex = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        var bg = BN_BG.indexOf(it.bnBg) !== -1 ? it.bnBg : 'none';
+        var mo = BN_MOTIONS.indexOf(it.bnMotion) !== -1 ? it.bnMotion : 'static';
+        var b = el('span', 'agp-so-bn bg-' + bg + ' m-' + mo + ' r-' + (['sharp', 'soft', 'round'].indexOf(it.bnRound) !== -1 ? it.bnRound : 'soft'));
+        [['bnColor', '--bnc'], ['bnDots', '--bnd'], ['bnBunny', '--bnr'], ['bnKitten', '--bnk']].forEach(function (c) {
+            if (hex(it[c[0]])) b.style.setProperty(c[1], it[c[0]]);
+        });
+        if (Number(it.bnWidth) > 0) b.style.setProperty('--bnw', Math.min(40, Number(it.bnWidth)) + 'em');
+        b.appendChild(el('span', 'bn-dl t'));
+        b.appendChild(el('span', 'bn-dl b'));
+        var bar = el('span', 'bn-bar');
+        if (bg === 'bubbles') {
+            var bw = el('span', 'bn-bub');
+            for (var k = 0; k < 7; k++) {
+                var c = el('i');
+                c.style.left = (8 + k * 13 + seeded(k + 3) * 6) + '%';
+                c.style.animationDelay = (-seeded(k + 9) * 5).toFixed(2) + 's';
+                c.style.animationDuration = (3.5 + seeded(k + 20) * 2.5).toFixed(2) + 's';
+                var z = (.25 + seeded(k + 30) * .35).toFixed(2) + 'em';
+                c.style.width = c.style.height = z;
+                bw.appendChild(c);
+            }
+            bar.appendChild(bw);
+        }
+        var tw = el('span', 'bn-tw');
+        tx.className = 'agp-so-tx s-plain bn-t';
+        if (mo === 'marquee') {
+            var tr = el('span', 'bn-track');
+            tr.appendChild(tx);
+            tr.appendChild(tx.cloneNode(true));
+            tw.appendChild(tr);
+        } else {
+            tw.appendChild(tx);
+            if (mo === 'type') tx.appendChild(el('span', 'bn-cur'));
+        }
+        bar.appendChild(tw);
+        b.appendChild(bar);
+        var who = ['both', 'bunny', 'kitten', 'none'].indexOf(it.bnChars) !== -1 ? it.bnChars : 'both';
+        if (who !== 'none') {
+            var ch = el('span', 'bn-ch p-' + (['right', 'center', 'left'].indexOf(it.bnPos) !== -1 ? it.bnPos : 'center') + (it.bnCharAnim === 'still' ? ' still' : ''));
+            if (who !== 'kitten') { var r1 = el('span', 'bn-c bunny'); r1.innerHTML = BN_BUNNY; ch.appendChild(r1); }
+            if (who !== 'bunny') { var r2 = el('span', 'bn-c kitten'); r2.innerHTML = BN_KITTEN; ch.appendChild(r2); }
+            b.appendChild(ch);
+        }
+        return b;
     }
 
     /* ---------------- وعاء الهدايا: الرسم ---------------- */
@@ -3232,6 +3318,49 @@
         '.agp-so-tx.s-3d{text-shadow:.02em .02em 0 rgba(0,0,0,.55),.04em .04em 0 rgba(0,0,0,.5),.06em .06em 0 rgba(0,0,0,.45),.08em .08em 0 rgba(0,0,0,.4),.1em .1em .12em rgba(0,0,0,.6)}',
         '.agp-so-tx.s-hollow{color:transparent !important;-webkit-text-stroke:.035em var(--agp-so-c);filter:drop-shadow(0 .03em .06em rgba(0,0,0,.8))}',
         '.agp-so-mv{display:inline-block}',
+        /* «لوحة الأصدقاء» */
+        '.agp-so-bn{--bnc:#c9b3e0;--bnd:#2a2233;--bnr:#ffffff;--bnk:#f6cf9f;position:relative;display:inline-block;margin:1.5em .4em .45em;white-space:nowrap}',
+        '.bn-bar{position:relative;display:flex;align-items:center;justify-content:center;min-width:var(--bnw,6em);padding:.42em 1.2em;border-radius:.3em;background:var(--bnc);box-shadow:0 .1em .3em rgba(0,0,0,.18),inset 0 .06em 0 rgba(255,255,255,.35);overflow:hidden;box-sizing:border-box}',
+        '.agp-so-bn.r-sharp .bn-bar{border-radius:.06em}.agp-so-bn.r-round .bn-bar{border-radius:1.2em}',
+        '.bn-dl{position:absolute;left:-.1em;right:-.1em;height:.1em;background:radial-gradient(circle,var(--bnd) 38%,transparent 44%) 0 50%/.19em .1em repeat-x;z-index:1}',
+        '.bn-dl.t{top:-.17em}.bn-dl.b{bottom:-.17em}',
+        '.bn-tw{position:relative;z-index:1;display:flex;justify-content:center;max-width:100%}',
+        '.bn-t{display:inline-block;position:relative;padding:0;text-shadow:0 .03em 0 rgba(255,255,255,.35)}',
+        '.bn-ch{position:absolute;bottom:calc(100% - .3em);z-index:2;display:flex;align-items:flex-end;gap:.04em;pointer-events:none}',
+        '.bn-ch.p-center{left:50%;transform:translateX(-50%)}.bn-ch.p-right{right:10%}.bn-ch.p-left{left:10%}',
+        '.bn-c{display:block;width:1.75em;transform-origin:50% 100%;animation:agp-so-bnpeek 4.2s ease-in-out infinite}',
+        '.bn-c.kitten{width:1.75em;animation-delay:-2.1s}',
+        '.bn-c svg{width:100%;display:block;overflow:visible;filter:drop-shadow(0 .03em .05em rgba(0,0,0,.18))}',
+        '.bn-c .ey{transform-box:fill-box;transform-origin:center;animation:agp-so-bnblink 3.8s infinite}',
+        '.bn-c.kitten .ey{animation-delay:-1.3s}',
+        '.bn-c .ear-r{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-bnear 5s ease-in-out infinite}',
+        '.bn-ch.still .bn-c,.bn-ch.still .ear-r{animation:none}',
+        '@keyframes agp-so-bnpeek{0%,55%,100%{transform:translateY(0) rotate(0)}65%{transform:translateY(-12%) rotate(-5deg)}75%{transform:translateY(-6%) rotate(4deg)}85%{transform:translateY(0) rotate(0)}}',
+        '@keyframes agp-so-bnblink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}',
+        '@keyframes agp-so-bnear{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-14deg)}92%{transform:rotate(5deg)}}',
+        /* حركات الخلفية */
+        '.agp-so-bn.bg-shimmer .bn-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);background-size:260% 100%;animation:agp-so-bnsh 3.6s ease-in-out infinite}',
+        '.agp-so-bn.bg-dots .bn-dl.t{animation:agp-so-bndots 1.4s linear infinite}.agp-so-bn.bg-dots .bn-dl.b{animation:agp-so-bndots 1.4s linear infinite reverse}',
+        '.agp-so-bn.bg-gradient .bn-bar{background:linear-gradient(90deg,var(--bnc),color-mix(in srgb,var(--bnc) 65%,#fff),color-mix(in srgb,var(--bnc) 80%,#ff8fc8),var(--bnc));background-size:300% 100%;animation:agp-so-bngr 5s ease-in-out infinite alternate}',
+        '.agp-so-bn.bg-breathe .bn-bar{animation:agp-so-bnbr 2.8s ease-in-out infinite}',
+        '.bn-bub{position:absolute;inset:0;pointer-events:none}',
+        '.bn-bub i{position:absolute;bottom:-.4em;border-radius:50%;background:rgba(255,255,255,.45);box-shadow:inset -.04em -.04em .06em rgba(255,255,255,.6);animation:agp-so-bnbub 4s ease-in infinite}',
+        '@keyframes agp-so-bnsh{0%,40%{background-position:120% 0}100%{background-position:-120% 0}}',
+        '@keyframes agp-so-bndots{to{background-position-x:.57em}}',
+        '@keyframes agp-so-bngr{to{background-position:100% 0}}',
+        '@keyframes agp-so-bnbr{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.025);filter:brightness(1.08)}}',
+        '@keyframes agp-so-bnbub{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:translateY(-3em) scale(1.1);opacity:0}}',
+        /* حركات النص */
+        '.agp-so-bn.m-marquee .bn-bar{width:var(--bnw,11em);padding-left:0;padding-right:0}',
+        '.agp-so-bn.m-marquee .bn-tw{overflow:hidden;width:100%;justify-content:flex-start;-webkit-mask:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}',
+        '.bn-track{display:flex;direction:ltr;width:max-content;animation:agp-so-ldmq 8s linear infinite}',
+        '.bn-track .bn-t{direction:rtl;padding:0 1.4em}',
+        '.agp-so-bn.m-type .bn-t{animation:agp-so-ldtype 7s ease-in-out infinite}',
+        '.bn-cur{position:absolute;top:.05em;bottom:.05em;width:.07em;border-radius:.07em;background:currentColor;animation:agp-so-ldcur 7s ease-in-out infinite}',
+        '.agp-so-bn.m-pop .bn-t{animation:agp-so-bnpop 4s cubic-bezier(.2,1.4,.4,1) infinite}',
+        '.agp-so-bn.m-float .bn-t{animation:agp-so-bnfl 3s ease-in-out infinite}',
+        '@keyframes agp-so-bnpop{0%{transform:scale(.4);opacity:0}12%{transform:scale(1.08);opacity:1}20%,100%{transform:scale(1);opacity:1}}',
+        '@keyframes agp-so-bnfl{0%,100%{transform:translateY(.05em) rotate(-1deg)}50%{transform:translateY(-.07em) rotate(1deg)}}',
         '.agp-so-mv[class*=" a-"]{animation-iteration-count:infinite;animation-timing-function:ease-in-out;will-change:transform}',
         '.agp-so-mv.a-pulse{animation-name:agp-so-pulse}',
         '.agp-so-mv.a-heartbeat{animation-name:agp-so-heartbeat}',
@@ -3856,7 +3985,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, LD_ICONS: LD_ICONS, refreshItem: refreshItem, throneDemo: throneDemo,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, LD_ICONS: LD_ICONS, BN_BG: BN_BG, BN_MOTIONS: BN_MOTIONS, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
