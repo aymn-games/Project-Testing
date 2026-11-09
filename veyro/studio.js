@@ -112,7 +112,7 @@
             { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
             { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
-            { label: 'عرش الفراشات', sub: 'حلقة ضوء وفراشات ترفرف، والرقم بفراشة — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'butterfly', frameColor: 'original', cycle: 10 } },
+            { label: 'عرش الفراشات', sub: 'حلقة ضوء وفراشات ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'butterfly', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
             // الدونيشن (Streamlabs): التوب وآخر داعم والهدف — الأليرتات بقسم «الدونيشن»
             { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
@@ -1232,8 +1232,9 @@
             box.appendChild(row('عدد الأشخاص', nw, true, 'من 1 لين 10'));
         }
         var frameOpts = Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; });
-        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts, [{ label: 'بدون', value: 'none' }]);
-        var fk = O.THRONE_FRAMES[it.frame] || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
+        // «الفراشات» للتوب 3 بس
+        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts.filter(function (o) { return o.value !== 'butterfly'; }), [{ label: 'بدون', value: 'none' }]);
+        var fk = (O.THRONE_FRAMES[it.frame] && !(stack && it.frame === 'butterfly')) || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
         box.appendChild(row('شكل الإطار', pills(frameOpts, fk, function (v) {
             if (it.frameColor !== 'custom') it.frameColor = 'original';
             update(it, 'frame', v, true);
@@ -1274,14 +1275,14 @@
                     var a = (Array.isArray(it.rankColors) ? it.rankColors : ['#ffd54a', '#eef2f7', '#ffb27a']).slice();
                     a[k] = c;
                     update(it, 'rankColors', a, true);
-                }), true, fk === 'butterfly' ? 'فراشة الرقم وحدود الكبسولة' : 'ماسة الرقم وحدود الكبسولة'));
+                }), true, fk === 'butterfly' ? 'حدود الكبسولة' : 'ماسة الرقم وحدود الكبسولة'));
             });
         }
         optColor(it, box, 'nameColor', 'لون الاسم');
         optColor(it, box, 'numColor', 'لون الرقم', 'عدد التكبيسات أو الدعم');
         optColor(it, box, 'pillColor', 'خلفية الكبسولة', 'الكبسولة اللي فيها العدد');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
-        if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'crystal' ? 0.6 : fk === 'butterfly' ? 0.7 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
+        if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'crystal' ? 0.6 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
         else box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }

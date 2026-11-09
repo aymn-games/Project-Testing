@@ -815,7 +815,8 @@
         return fc && fc.sw ? fc.sw : '#b47cff';
     }
     function frameOf(it) {
-        if (it && it.design === 'stack') return it.frame === 'none' || THRONE_FRAMES[it.frame] ? it.frame : 'ring';
+        // «الفراشات» للتوب 3 (العرش) بس
+        if (it && it.design === 'stack') return it.frame === 'none' || (THRONE_FRAMES[it.frame] && it.frame !== 'butterfly') ? it.frame : 'ring';
         return THRONE_FRAMES[it && it.frame] ? it.frame : 'angel';
     }
     // «القائمة» (stack): عدد الأشخاص لين 10، وإطار الصور: حلقة دوّارة / رسمة / بدون
@@ -953,23 +954,20 @@
         var inner = el('div', stack ? 'agp-so-sin' : 'agp-so-tin');
         if (stack) {
             if (i === 0) slot.appendChild(el('span', 'agp-so-ssheen'));
+            inner.appendChild(el('span', 'agp-so-snum', String(i + 1)));
             var fk = frameOf(hit);
-            if (fk === 'butterfly') inner.appendChild(bfBadge('agp-so-snum bf', i));
-            else inner.appendChild(el('span', 'agp-so-snum', String(i + 1)));
             if (fk === 'ring') inner.appendChild(ringFrame(r));
             else if (fk === 'none') { var pl = el('span', 'agp-so-fav fr-none'); pl.appendChild(avatar(r)); inner.appendChild(pl); }
             else inner.appendChild(throneFrame(r, fk));
             inner.appendChild(el('span', 'agp-so-sname', nameOf(r)));
         } else {
             var fr = throneFrame(r, frameOf(hit));
-            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز (أو فراشة بإطار «الفراشات»)
-            var rk;
-            if (frameOf(hit) === 'butterfly') rk = bfBadge('agp-so-trank bf', i);
-            else {
-                rk = el('span', 'agp-so-trank');
+            // رقم المركز (1/2/3) ملاصق للإطار الدائري — ماسة بلون المركز (إطار «الفراشات» بدون رقم)
+            if (frameOf(hit) !== 'butterfly') {
+                var rk = el('span', 'agp-so-trank');
                 rk.appendChild(el('b', null, String(i + 1)));
+                fr.appendChild(rk);
             }
-            fr.appendChild(rk);
             inner.appendChild(fr);
             inner.appendChild(el('span', 'agp-so-tname', nameOf(r)));
         }
@@ -1074,30 +1072,43 @@
     var FEATHER_LAV = FEATHER.replace('id="agp-so-fg"', 'id="agp-so-fgl"').replace('url(#agp-so-fg)', 'url(#agp-so-fgl)')
         .replace('#fffaf0', '#ffffff').replace('#ffe7a8', '#efe2ff').replace('#d9a63a', '#b48cff').replace('#c99a35', '#9b7fd6');
 
-    /** فراشة ناعمة (إطار «الفراشات»): لونها currentColor، والجناحين (wl/wr) يرفرفون من الجسم. */
+    /**
+     * فراشة واقعية (إطار «الفراشات»): جناح أمامي مدبّب وخلفي مموّج، عروق، نقط بيضاء على الحافة،
+     * عين على الجناح الخلفي، وجسم بقرون. اللون currentColor (تدرّج أبيض قرب الجسم ← اللون ← غامق بالأطراف).
+     * كل نسخة لها id تدرّج خاص (ألوان الفراشات تختلف من أداة لأداة بنفس الصفحة).
+     */
+    var bfSeq = 0;
     function bfSvg() {
-        var UL = 'M24 18C21 10 15 3 8 2 3 1.5 1 5 2.5 9 4 14 9 18 14 19.5 18 20.5 22 20 24 19z';
-        var LL = 'M24 21c-4 0-10 1-13 5-2.5 3.5-1.5 8 2 8.5 4 .5 7.5-3.5 9.5-7.5 1-2 1.5-4 1.5-6z';
-        var UR = 'M24 18C27 10 33 3 40 2c5-.5 7 3 5.5 7C44 14 39 18 34 19.5 30 20.5 26 20 24 19z';
-        var LR = 'M24 21c4 0 10 1 13 5 2.5 3.5 1.5 8-2 8.5-4 .5-7.5-3.5-9.5-7.5-1-2-1.5-4-1.5-6z';
-        // نسخة أصغر بيضاء داخل كل جناح = لمعة ناعمة
-        var wing = function (u, l) {
-            return '<path d="' + u + '" fill="currentColor" opacity=".88"/><path d="' + l + '" fill="currentColor" opacity=".72"/>' +
-                '<g transform="matrix(.6 0 0 .6 9.6 7.6)" fill="#fff" opacity=".3"><path d="' + u + '"/><path d="' + l + '"/></g>';
+        var id = 'agp-so-bfg' + (++bfSeq);
+        var mir = function (d) { return d.replace(/(-?[\d.]+),(-?[\d.]+)/g, function (m, x, y) { return +(60 - x).toFixed(2) + ',' + y; }); };
+        var FW = 'M29,19.5 C24,12 15,6 5.5,4.3 C3.2,3.9 1.8,5.4 2.5,7.2 C4,11.5 6,16.5 8.8,21 C13.5,24 21,24 29,22.2 Z';
+        var HW = 'M29,23 C22,23 14.5,24.2 10.3,27.6 C7.3,30.2 7.4,35.6 9.6,38.6 C10.8,40.4 12.6,41.6 14.6,41.2 C16.4,42.8 19,42.6 20.6,40.8 C23.8,37.6 27,32 29,26 Z';
+        var FV = 'M28,20.5 C20,13 12,8 5,6 M27.5,20.8 C19,16 10,12.5 3.8,10.5 M27,21.2 C18,19 10.5,17 5.5,15.6 M27,21.6 C19,21.8 12.5,21 8.5,20';
+        var HV = 'M28,24 C21,25.5 14.5,27.5 10,30.5 M28,24.5 C21,28 15,32 11,37.5 M28.3,25 C23,30 18.5,35.5 15.5,40.5 M28.6,25.5 C25,31 22,36 19.8,40.5';
+        var spots = function (pts, r) { return pts.map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>'; }).join(''); };
+        var FS = [[4.3, 6.6], [4.1, 9.4], [4.9, 12.3], [6, 15.2], [7.3, 18]], HS = [[9.4, 31.5], [9.3, 35.2], [11, 39.2], [14.6, 40.4], [18.6, 40.2]];
+        var wing = function (side) {
+            var m = side === 'r' ? mir : function (d) { return d; };
+            var sp = function (a) { return side === 'r' ? a.map(function (p) { return [60 - p[0], p[1]]; }) : a; };
+            var eye = sp([[16, 33.5]])[0];
+            return '<path d="' + m(HW) + '" fill="url(#' + id + ')" fill-opacity=".9"/>' +
+                '<path d="' + m(HV) + '" stroke="#fff" stroke-opacity=".28" stroke-width=".35" fill="none"/>' +
+                '<circle cx="' + eye[0] + '" cy="' + eye[1] + '" r="2.3" fill="#1a0f26" fill-opacity=".75"/><circle cx="' + eye[0] + '" cy="' + eye[1] + '" r="1.5" fill="currentColor"/><circle cx="' + (eye[0] - .4) + '" cy="' + (eye[1] - .4) + '" r=".5" fill="#fff"/>' +
+                '<g fill="#fff" fill-opacity=".75">' + spots(sp(HS), .55) + '</g>' +
+                '<path d="' + m(FW) + '" fill="url(#' + id + ')" fill-opacity=".95"/>' +
+                '<path d="' + m(FV) + '" stroke="#fff" stroke-opacity=".32" stroke-width=".35" fill="none"/>' +
+                '<g fill="#fff" fill-opacity=".85">' + spots(sp(FS), .6) + '</g>';
         };
-        return '<svg viewBox="0 0 48 40" aria-hidden="true">' +
-            '<g class="wl">' + wing(UL, LL) + '</g><g class="wr">' + wing(UR, LR) + '</g>' +
-            '<g class="bd"><ellipse cx="24" cy="21" rx="1" ry="6.5" fill="#fff" opacity=".9"/>' +
-            '<path d="M23.5 15C22.3 11.5 21 10 19.5 9.3M24.5 15C25.7 11.5 27 10 28.5 9.3" stroke="#fff" stroke-width=".5" fill="none" opacity=".75" stroke-linecap="round"/></g></svg>';
-    }
-    /** رقم المركز داخل فراشة بلون المركز (--rk). */
-    function bfBadge(cls, i) {
-        var b = el('span', cls);
-        var w = el('span', 'agp-so-bfb');
-        w.innerHTML = bfSvg();
-        b.appendChild(w);
-        b.appendChild(el('b', null, String(i + 1)));
-        return b;
+        return '<svg viewBox="0 0 60 50" aria-hidden="true"><defs><radialGradient id="' + id + '" gradientUnits="userSpaceOnUse" cx="30" cy="22" r="29">' +
+            '<stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".22" style="stop-color:color-mix(in srgb,currentColor 55%,#fff)"/>' +
+            '<stop offset=".55" stop-color="currentColor"/><stop offset=".86" style="stop-color:color-mix(in srgb,currentColor 55%,#14051f)"/>' +
+            '<stop offset="1" style="stop-color:color-mix(in srgb,currentColor 30%,#0a0210)"/></radialGradient></defs>' +
+            '<g class="wl">' + wing('l') + '</g><g class="wr">' + wing('r') + '</g>' +
+            '<g class="bd"><path d="M29.4,16.4 C28.4,11.5 26.6,8.2 23.8,6.4 M30.6,16.4 C31.6,11.5 33.4,8.2 36.2,6.4" stroke="#2a1d38" stroke-width=".45" fill="none" stroke-linecap="round"/>' +
+            '<circle cx="23.7" cy="6.3" r=".65" fill="#2a1d38"/><circle cx="36.3" cy="6.3" r=".65" fill="#2a1d38"/>' +
+            '<ellipse cx="30" cy="31" rx="1.25" ry="7.5" fill="#241832"/><path d="M28.9,27 h2.2 M28.8,30 h2.4 M28.9,33 h2.2" stroke="#fff" stroke-opacity=".18" stroke-width=".3"/>' +
+            '<ellipse cx="30" cy="21.5" rx="1.75" ry="3.6" fill="#2e2040"/><circle cx="30" cy="17" r="1.45" fill="#2e2040"/>' +
+            '<ellipse cx="29.5" cy="20.5" rx=".5" ry="1.8" fill="#fff" fill-opacity=".22"/></g></svg>';
     }
     // ترتيب ثابت (مو Math.random) عشان الغبار ما يتغيّر مكانه مع كل تحديث
     function seeded(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
@@ -3012,8 +3023,7 @@
         '.agp-so-stack.fk-angel{--agp-so-sgap0:.55em}',
         '.agp-so-stack.fk-pegasus{--agp-so-sgap0:.95em;width:15em}',
         '.agp-so-stack.fk-crystal{--agp-so-sgap0:.6em}',
-        '.agp-so-stack.fk-butterfly{--agp-so-sgap0:.7em}',
-        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal,.agp-so-stack.fk-butterfly{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
+        '.agp-so-stack.fk-angel,.agp-so-stack.fk-pegasus,.agp-so-stack.fk-crystal{gap:var(--agp-so-sgap,var(--agp-so-sgap0))}',
         '.agp-so-scard{position:relative;border-radius:.75em;background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,rgba(14,12,20,.94)),rgba(14,12,20,.9) 55%,rgba(14,12,20,.84));border:.05em solid color-mix(in srgb,var(--rk) 45%,rgba(255,255,255,.1));box-shadow:inset 0 .04em 0 rgba(255,255,255,.07),0 .3em .7em -.45em rgba(0,0,0,.9)}',
         '.agp-so-scard::before{content:"";position:absolute;top:18%;bottom:18%;right:0;width:.1em;border-radius:.1em 0 0 .1em;background:var(--rk);box-shadow:0 0 .35em var(--rk)}',
         '.agp-so-sin{display:flex;align-items:center;gap:.5em;padding:.3em .6em .3em .55em}',
@@ -3120,31 +3130,26 @@
         '.agp-so-bfdot{position:absolute;border-radius:50%;background:color-mix(in srgb,var(--bfc) 45%,#fff);box-shadow:0 0 .12em var(--bfc);animation:agp-so-bftw 2.6s ease-in-out infinite}',
         '.agp-so-bfstar{position:absolute;width:16%;height:16%;transform:translate(-50%,-50%) scale(.6);opacity:.4;background:radial-gradient(closest-side,#fff,color-mix(in srgb,var(--bfc) 60%,transparent) 30%,transparent 70%),linear-gradient(90deg,transparent 46%,#fff 50%,transparent 54%),linear-gradient(0deg,transparent 47%,#fff 50%,transparent 53%);-webkit-mask:radial-gradient(closest-side,#000 40%,transparent);mask:radial-gradient(closest-side,#000 40%,transparent);animation:agp-so-bfstar 3.3s ease-in-out infinite}',
         '.agp-so-bfly{position:absolute;z-index:6;pointer-events:none}',
-        '.agp-so-bfly.f1{left:-24%;top:45%;width:42%;height:35%;animation:agp-so-bfhover1 5.2s ease-in-out infinite}',
-        '.agp-so-bfly.f2{left:-6%;top:68%;width:36%;height:30%;animation:agp-so-bfhover2 6.1s ease-in-out infinite}',
-        '.agp-so-bfw{display:block;width:100%;height:100%;color:var(--bff);filter:blur(calc(var(--s) * .006)) drop-shadow(0 0 .06em var(--bff)) drop-shadow(0 0 .18em color-mix(in srgb,var(--bff) 70%,transparent))}',
-        '.agp-so-bfw svg,.agp-so-bfb svg{width:100%;height:100%;overflow:visible;display:block}',
-        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 50%;animation:agp-so-bfflap 1.15s ease-in-out infinite}',
-        '.agp-so-bfly.f2 .wl,.agp-so-bfly.f2 .wr{animation-duration:.95s;animation-delay:-.4s}',
+        '.agp-so-bfly.f1{left:-28%;top:42%;width:48%;height:40%;animation:agp-so-bfhover1 5.2s ease-in-out infinite}',
+        '.agp-so-bfly.f2{left:-8%;top:67%;width:40%;height:33%;animation:agp-so-bfhover2 6.1s ease-in-out infinite}',
+        '.agp-so-bfw{display:block;width:100%;height:100%;color:var(--bff);filter:drop-shadow(0 0 .05em color-mix(in srgb,var(--bff) 80%,#fff)) drop-shadow(0 0 .16em color-mix(in srgb,var(--bff) 60%,transparent))}',
+        '.agp-so-bfw svg{width:100%;height:100%;overflow:visible;display:block}',
+        /* رفرفة مثل الحقيقية: ضربتين سريعة وبعدها تفرد جناحها وتنزلق (f1)، والثانية واقفة تفتح وتسكّر ببطء (f2) */
+        '.agp-so-bfw .wl,.agp-so-bfw .wr{transform-origin:50% 44%;animation:agp-so-bfflap 2.2s cubic-bezier(.45,0,.55,1) infinite}',
+        '.agp-so-bfw .wr{animation-name:agp-so-bfflapr}',
+        '.agp-so-bfly.f2 .wl{animation:agp-so-bfrest 3.4s ease-in-out infinite}',
+        '.agp-so-bfly.f2 .wr{animation:agp-so-bfrestr 3.4s ease-in-out infinite}',
         '.agp-so-bfly.f1 .agp-so-bfw{transform:rotate(-14deg)}',
         '.agp-so-bfly.f2 .agp-so-bfw{transform:rotate(10deg)}',
         '.agp-so-bfspk{position:absolute;z-index:6;width:3.4%;height:3.4%;border-radius:50%;pointer-events:none;background:#fff;box-shadow:0 0 .1em #fff,0 0 .25em var(--bff);opacity:0;animation:agp-so-f7spark 2.6s ease-in-out infinite}',
         '.agp-so-bforb{position:absolute;inset:-17%;z-index:6;pointer-events:none;animation:agp-so-spin 16s linear infinite}',
-        '.agp-so-bfly.f3{left:50%;top:0;width:20%;height:17%;transform:translate(-50%,-50%) rotate(90deg)}',
+        '.agp-so-bfly.f3{left:50%;top:0;width:24%;height:20%;transform:translate(-50%,-50%) rotate(90deg)}',
         '.agp-so-bfly.f3 .agp-so-bfw{animation:agp-so-bfbob 1.6s ease-in-out infinite}',
-        '.agp-so-bfly.f3 .wl,.agp-so-bfly.f3 .wr{animation-duration:.42s}',
-        /* رقم المركز داخل فراشة */
-        '.agp-so-trank.bf{left:50%;top:100%;width:46%;height:40%}',
-        '.agp-so-trank.bf::before,.agp-so-trank.bf::after{display:none}',
-        '.agp-so-bfb .bd{display:none}',
-        '.agp-so-bfb{position:absolute;inset:0;color:var(--rk,#e9d8ff);filter:drop-shadow(0 0 .05em #fff) drop-shadow(0 0 .14em var(--rk,#b47cff)) drop-shadow(0 .03em .06em rgba(0,0,0,.6))}',
-        '.agp-so-bfb .wl,.agp-so-bfb .wr{transform-origin:50% 50%;animation:agp-so-bfbadge 2.4s ease-in-out infinite}',
-        '.agp-so-trank.bf b{font-size:calc(var(--s,2.2em) * .17);color:#fff;text-shadow:0 0 .15em rgba(0,0,0,.85),0 .04em .08em rgba(0,0,0,.9)}',
-        '.agp-so-snum.bf{position:relative;width:1.75em;height:1.45em;display:flex;align-items:center;justify-content:center;color:#fff}',
-        '.agp-so-snum.bf b{position:relative;z-index:1;font-size:.8em;text-shadow:0 0 .15em rgba(0,0,0,.85),0 .04em .08em rgba(0,0,0,.9)}',
-        '.agp-so-scard.rk1 .agp-so-snum.bf{font-size:.9em}',
-        '@keyframes agp-so-bfflap{0%,100%{transform:scaleX(1)}45%{transform:scaleX(.22)}55%{transform:scaleX(.22)}}',
-        '@keyframes agp-so-bfbadge{0%,70%,100%{transform:scaleX(1)}80%{transform:scaleX(.55)}90%{transform:scaleX(1)}}',
+        '.agp-so-bfly.f3 .wl,.agp-so-bfly.f3 .wr{animation-duration:1.1s}',
+        '@keyframes agp-so-bfflap{0%,40%,100%{transform:scaleX(1) skewY(0)}10%,30%{transform:scaleX(.12) skewY(6deg)}20%{transform:scaleX(.95) skewY(-2deg)}}',
+        '@keyframes agp-so-bfflapr{0%,40%,100%{transform:scaleX(1) skewY(0)}10%,30%{transform:scaleX(.12) skewY(-6deg)}20%{transform:scaleX(.95) skewY(2deg)}}',
+        '@keyframes agp-so-bfrest{0%,100%{transform:scaleX(1) skewY(0)}45%,60%{transform:scaleX(.08) skewY(8deg)}}',
+        '@keyframes agp-so-bfrestr{0%,100%{transform:scaleX(1) skewY(0)}45%,60%{transform:scaleX(.08) skewY(-8deg)}}',
         '@keyframes agp-so-bfhover1{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(4%,-9%) rotate(-5deg)}50%{transform:translate(-3%,-4%) rotate(3deg)}75%{transform:translate(2%,6%) rotate(-2deg)}}',
         '@keyframes agp-so-bfhover2{0%,100%{transform:translate(0,0) rotate(0)}30%{transform:translate(-5%,7%) rotate(4deg)}60%{transform:translate(5%,-6%) rotate(-4deg)}}',
         '@keyframes agp-so-bfbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-35%)}}',
