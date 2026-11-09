@@ -17,9 +17,13 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <style>
   html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  /* البث = المحرر بالضبط: نفس قاعدة المحرر (veyro/index.html)، وبدون حد 96vw على الأدوات (بالمحرر ما يأثر لأن الشاشة أصغر من الصفحة) */
+  * { box-sizing: border-box; }
+  #agp-so-stage .agp-so-item { max-width: none; }
+  svg { display: block; }
   .ol-missing { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; font: 600 22px/1.8 "IBM Plex Sans Arabic", system-ui, sans-serif; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.9); }
 </style>
 </head>
