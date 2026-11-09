@@ -710,6 +710,11 @@ module.exports = {
         require('../mafia/mafia-server').handleUpgrade(req, socket);
         return;
       }
+      if (pathname === '/ws/remote') {
+        // «التحكم عن بعد»: جوال المتحكم ↔ صفحة اللعبة عند الستريمر
+        require('../remote-control/remote-control-server').handleUpgrade(req, socket);
+        return;
+      }
       if (pathname === '/ws/party') {
         require('../party/party-server').handleUpgrade(req, socket);
         return;

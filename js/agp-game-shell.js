@@ -928,6 +928,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         init: init,
         getSettings: function () { return Object.assign({}, _settingsValues); },
 
+        /** إعدادات init() (قراءة فقط) — «التحكم عن بعد» (js/agp-remote-control.js)
+         * يقرأ منها settingsFields ويطلّعها بجوال المتحكم. */
+        getConfig: function () { return _config; },
+
         /** Lets a game update a setting from outside this file (e.g. after a
          * modal-trigger field's custom modal), re-rendering settings to match. */
         setSetting: function (key, value) {

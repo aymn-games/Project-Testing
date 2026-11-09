@@ -35,6 +35,7 @@ var mergeDonations = require('../streamlabs/donations-stats').mergeDonations;
 var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var gamePrefsService = require('../game-prefs/game-prefs-service');
+var remoteControlService = require('../remote-control/remote-control-service');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
 var config = require('../config');
@@ -97,6 +98,10 @@ var ROUTES = [
   // كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب — js/agp-shared-prefs.js
   { method: 'GET', path: '/api/game-prefs', requireAuth: true, handler: handleGetGamePrefs },
   { method: 'POST', path: '/api/game-prefs', requireAuth: true, handler: handleSaveGamePrefs },
+  // «التحكم عن بعد» — الستريمر يدير المتحكمين، والمتحكم يشوف مين أعطاه صلاحية (remote-control/)
+  { method: 'GET', path: '/api/remote-control/config', requireAuth: true, handler: handleGetRemoteControl },
+  { method: 'POST', path: '/api/remote-control/config', requireAuth: true, handler: handleSaveRemoteControl },
+  { method: 'GET', path: '/api/remote-control/access', requireAuth: true, handler: handleRemoteControlAccess },
   // كود نيمز: باركود خاص لكل سباي ماستر مرتبط بحسابه (codenames/spy-slots-service.js)
   { method: 'POST', path: '/api/codenames/spy-slots', requireAuth: true, handler: handleCodenamesSpySlots },
   { method: 'POST', path: '/api/codenames/spy-claim', requireAuth: true, handler: handleCodenamesSpyClaim },
@@ -985,6 +990,41 @@ function handleGetGamePrefs(req, res, body, user) {
 function handleSaveGamePrefs(req, res, body, user) {
   var r = gamePrefsService.save(user.id, body);
   sendJson(res, r.success ? 200 : (r.error === 'not_found' ? 404 : 400), r);
+}
+
+/* -----------------------------------------------------------------------
+ * «التحكم عن بعد» — راجع remote-control/remote-control-service.js
+ * ----------------------------------------------------------------------- */
+
+/** GET /api/remote-control/config → { success, enabled, max, controllers:[{username, enabled, createdAt, account}] } */
+function handleGetRemoteControl(req, res, body, user) {
+  if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'not_streamer' }); return; }
+  sendJson(res, 200, Object.assign({ success: true }, remoteControlService.getConfig(user.id)));
+}
+
+/**
+ * POST /api/remote-control/config
+ *   { action: 'enable', on } | { action: 'add', username } | { action: 'toggle', username, on } | { action: 'remove', username }
+ * → { success, error?, ...config }   (error: invalid | self | exists | limit | not_found | bad_action)
+ */
+function handleSaveRemoteControl(req, res, body, user) {
+  if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'not_streamer' }); return; }
+  var a = body && body.action, r;
+  if (a === 'enable') r = remoteControlService.setEnabled(user.id, !!body.on);
+  else if (a === 'add') r = remoteControlService.addController(user, body.username);
+  else if (a === 'toggle') r = remoteControlService.setControllerEnabled(user.id, body.username, !!body.on);
+  else if (a === 'remove') r = remoteControlService.removeController(user.id, body.username);
+  else r = { success: false, error: 'bad_action' };
+  sendJson(res, r.success ? 200 : 400, Object.assign({}, remoteControlService.getConfig(user.id), r));
+}
+
+/** GET /api/remote-control/access → { success, tiktokLinked, streamers:[{id, customId, name, avatar}] } */
+function handleRemoteControlAccess(req, res, body, user) {
+  sendJson(res, 200, {
+    success: true,
+    tiktokLinked: Boolean(user.tiktok_verified && user.tiktok_username),
+    streamers: remoteControlService.accessFor(user)
+  });
 }
 
 /**

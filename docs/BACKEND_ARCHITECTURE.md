@@ -429,6 +429,15 @@ Streamlabs (Creators/Dukkan Tip, PayPal, …) reach Veyro screens.
 The token never leaves the server. Totals count USD only; other currencies and
 Streamlabs test donations still alert and appear in the log.
 
+## 13. Remote Control («التحكم عن بعد»)
+
+`backend/remote-control/` — a streamer grants up to 5 TikTok usernames control over their games, from a phone screen (`control.html`) or chat commands.
+
+- **Permissions** (`remote-control-service.js`): tables `remote_control_settings` (streamer master switch) and `remote_controllers` (per-username switch). A site account controls a streamer when its verified `tiktok_username` is in the list, its switch is on, and the master switch is on.
+- **HTTP:** `GET/POST /api/remote-control/config` (streamer: `enable` / `add` / `toggle` / `remove`), `GET /api/remote-control/access` (which streamers granted me access).
+- **WebSocket `/ws/remote`** (`remote-control-server.js`): a pure relay with no game logic. The streamer's open game page joins as `host` and publishes a description of the current screen (`state`). The phone joins as `ctl` and sends `cmd {cmd, arg}` / `open {game}`, which are forwarded to the host page, and the host replies with `res`. Permission is re-checked on every command, and any config change revokes affected phones immediately and pushes the new controller list to the streamer's pages. Commands sent while the host page is navigating wait up to 8 seconds.
+- Tests: `node --test backend/remote-control/remote-control.test.js`.
+
 ## Summary
 
 `backend/` is a standalone Node process; its only contract with AGP is

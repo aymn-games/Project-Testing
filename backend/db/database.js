@@ -405,6 +405,23 @@ db.exec(`
         value TEXT NOT NULL
     );
 
+    -- «التحكم عن بعد»: الستريمر يعطي يوزرات تيك توك صلاحية تشغيل ألعابه
+    -- من جوالهم (control.html) أو بأوامر الشات. راجع backend/remote-control/.
+    -- enabled بالأول = المفتاح العام للستريمر، وبالثاني = لكل متحكم لحاله.
+    CREATE TABLE IF NOT EXISTS remote_control_settings (
+        streamer_id INTEGER PRIMARY KEY,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS remote_controllers (
+        streamer_id INTEGER NOT NULL,
+        tiktok_username TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, tiktok_username)
+    );
+    CREATE INDEX IF NOT EXISTS idx_remote_controllers_user ON remote_controllers(tiktok_username);
+
     -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
     CREATE TABLE IF NOT EXISTS user_seen_notices (
         user_id TEXT NOT NULL,
