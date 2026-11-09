@@ -38,7 +38,12 @@ test('service: add / limit / self / exists, and access needs master + own switch
     ['omar_1', 'u3', 'u4', 'u5'].forEach(function (u) { assert.equal(svc.addController(STREAMER, u).success, true); });
     assert.equal(svc.addController(STREAMER, 'u6').error, 'limit');
 
-    // المفتاح العام مطفي → ما أحد يتحكم
+    // المفتاح العام مفعّل افتراضياً (الستريمر ما لمسه) → المتحكم يقدر على طول
+    assert.equal(svc.getConfig(1).enabled, true);
+    assert.equal(svc.canControl(SARA, 1), true);
+    assert.equal(svc.accessFor(SARA).length, 1);
+    // الستريمر يطفيه → ما أحد يتحكم، ويرجّعه → يرجعون
+    svc.setEnabled(1, false);
     assert.equal(svc.canControl(SARA, 1), false);
     assert.deepEqual(svc.accessFor(SARA), []);
     svc.setEnabled(1, true);
@@ -55,6 +60,13 @@ test('service: add / limit / self / exists, and access needs master + own switch
     // الستريمر ما يتحكم بنفسه، وحساب بدون توثيق تيك توك ما يتحكم
     assert.equal(svc.canControl(STREAMER, 1), false);
     assert.equal(svc.canControl({ id: 9, tiktok_username: 'omar_1', tiktok_verified: false }, 1), false);
+
+    // نفس المتحكم من ستريمر ثاني (ما لمس مفتاحه العام) → يطلع له الاثنين
+    var STREAMER3 = { id: 3, tiktok_username: 'omar_1', tiktok_verified: true };
+    svc.addController(STREAMER3, 'sara.tt');
+    svc.setControllerEnabled(1, 'sara.tt', true);
+    assert.deepEqual(svc.accessFor(SARA).map(function (x) { return x.id; }), [1, 3]);
+    svc.setControllerEnabled(1, 'sara.tt', false);
 
     svc.removeController(1, 'omar_1');
     assert.equal(svc.canControl(OMAR, 1), false);
