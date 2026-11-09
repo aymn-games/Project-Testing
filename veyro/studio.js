@@ -84,6 +84,7 @@
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
         { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
+        { key: 'lastsup', label: 'آخر داعم', icon: 'crown', title: 'آخر داعم', desc: 'آخر واحد دعمك بالدونيشن (Streamlabs): اسمه ومبلغه، ويتحدّث مع كل دعم.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
@@ -93,7 +94,7 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -118,13 +119,16 @@
             // الدونيشن (Streamlabs): التوب وآخر داعم والهدف — الأليرتات بقسم «الدونيشن»
             { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
             { label: 'هدف الدونيشن — دائرة', sub: 'نسبة الهدف بدائرة', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'ring', color: '#ffd54a' } },
-            { label: 'آخر داعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
-            { label: 'آخر داعم — خط متوهّج', sub: 'الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه — بدون نصوص', type: 'lastdonation', set: { design: 'line', title: '' } },
-            { label: 'آخر داعم — شريط الموج', sub: 'شريط غامق بتوهّج وموج حرير يتحرك داخله، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'wave', motion: 'static', title: '' } },
-            { label: 'آخر داعم — شريط الفراشات', sub: 'نفس شريط الموج بس داخله فراشات تطير، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'flutter', motion: 'static', title: '' } },
-            { label: 'آخر داعم — كبسولة مقسومة', sub: 'نصها للمبلغ بلون ونصها للاسم، ونقطة تومض — بدون نصوص', type: 'lastdonation', set: { design: 'split', title: '' } },
             { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
+        ],
+        // قسم «آخر داعم»: كل تصاميمه
+        lastsup: [
+            { label: 'بطاقة', sub: 'بطاقة فيها عنوان واسم الداعم ومبلغه، والرسالة اختيارية', type: 'lastdonation' },
+            { label: 'خط متوهّج', sub: 'الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه — بدون نصوص', type: 'lastdonation', set: { design: 'line', title: '' } },
+            { label: 'شريط الموج', sub: 'شريط غامق بتوهّج وموج حرير يتحرك داخله، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'wave', motion: 'static', title: '' } },
+            { label: 'شريط الفراشات', sub: 'نفس شريط الموج بس داخله فراشات تطير، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'flutter', motion: 'static', title: '' } },
+            { label: 'كبسولة مقسومة', sub: 'نصها للمبلغ بلون ونصها للاسم، ونقطة تومض — بدون نصوص', type: 'lastdonation', set: { design: 'split', title: '' } },
         ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
@@ -921,8 +925,9 @@
             if (sec.key === 'donations') {
                 pb.appendChild(streamlabsCard());
                 videoAlertsPane(pb, 'donation');
-                pb.appendChild(el('div', 'ob-hint', 'التوب وآخر داعم وهدف الدونيشن تلقاها بقسم «التوب».'));
+                pb.appendChild(el('div', 'ob-hint', 'آخر داعم له قسمه «آخر داعم»، والتوب وهدف الدونيشن بقسم «التوب».'));
             }
+            if (sec.key === 'lastsup') pb.appendChild(streamlabsCard());
             if (sec.key === 'audio') pb.appendChild(el('div', 'ob-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio، والمعاينة هنا صامتة. الأوامر تشتغل وأنت تبث.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
@@ -1553,6 +1558,57 @@
         setTimeout(function () { toast(slState.msg); }, 800);
     }());
 
+    /** اختيار أيقونة: «الأصلي» (بدون قيمة)، و«بدون» لو allowNone، والباقي O.LD_ICONS. */
+    function iconPick(it, box, key, label, sub, allowNone) {
+        var g = el('div', 'ob-igrid sm');
+        var opts0 = [''].concat(allowNone ? ['none'] : [], key === 'markIcon' ? O.LD_ICONS.filter(function (k) { return k !== 'dollar'; }) : O.LD_ICONS);
+        opts0.forEach(function (k) {
+            var b = button(k === '' ? 'الأصلي' : k === 'none' ? 'بدون' : '', 'ob-ibtn' + ((it[key] || '') === k ? ' on' : '') + (k === '' || k === 'none' ? ' txt' : ''), function () {
+                if (k) update(it, key, k, true);
+                else { delete it[key]; update(it, key, undefined, true); }
+            });
+            if (k && k !== 'none') {
+                b.innerHTML = k === 'dollar' ? svg(ic('dollar')) : svg(O.ICON_SET[k].p);
+                b.title = k === 'dollar' ? 'دولار' : O.ICON_SET[k].label;
+                b.setAttribute('aria-label', b.title);
+            }
+            g.appendChild(b);
+        });
+        box.appendChild(row(label, g, true, sub));
+    }
+    /** اختيار خط (يفتح عند الضغط عشان اللوحة ما تطول). */
+    var ldFontOpen = null;
+    function fontPick(it, box, key, label) {
+        var curF = O.FONTS.filter(function (f) { return f.key === it[key]; })[0];
+        var w = el('div', 'ob-sw');
+        var tb = button(curF ? curF.label : 'الأصلي', 'ob-pill' + (ldFontOpen === key ? ' on' : ''), function () { ldFontOpen = ldFontOpen === key ? null : key; renderPanel(); });
+        if (curF) { O.loadFont(curF); tb.style.fontFamily = O.fontStack(curF); }
+        w.appendChild(tb);
+        if (it[key]) w.appendChild(button('الأصلي', 'ob-pill', function () { delete it[key]; update(it, key, undefined, true); }));
+        box.appendChild(row(label, w, true));
+        if (ldFontOpen !== key) return;
+        var g = el('div', 'ob-fgrid');
+        O.FONTS.forEach(function (f) {
+            O.loadFont(f);
+            var b = button('', 'ob-fbtn' + (f.key === it[key] ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
+            var sample = el('span', null, key === 'amtFont' ? '$25' : 'حياكم');
+            sample.style.fontFamily = O.fontStack(f);
+            sample.style.fontWeight = String(f.b);
+            b.appendChild(sample);
+            b.appendChild(el('span', null, f.label));
+            g.appendChild(b);
+        });
+        box.appendChild(g);
+    }
+    /** الأيقونات والخطوط (لكل تصاميم «آخر داعم»). */
+    function ldStyleRows(it, box, des) {
+        iconPick(it, box, 'ldIcon', 'أيقونة المبلغ', des === 'card' ? 'الأصلي = عملة دولار' : 'الأصلي = بدون', true);
+        if (des !== 'card') iconPick(it, box, 'markIcon', des === 'line' ? 'النجمة اللي تمشي' : des === 'split' ? 'النقطة' : 'الفاصل', 'الأصلي = الشكل الافتراضي', false);
+        optColor(it, box, 'iconColor', 'لون الأيقونة', 'أيقونة المبلغ (عملة الدولار لونها ثابت)');
+        fontPick(it, box, 'font', 'خط الاسم');
+        fontPick(it, box, 'amtFont', 'خط المبلغ');
+    }
+
     function lastDonationProps(it, box) {
         var des = ['line', 'split', 'wave', 'flutter'].indexOf(it.design) !== -1 ? it.design : 'card';
         box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }, { label: 'شريط الموج', value: 'wave' }, { label: 'شريط الفراشات', value: 'flutter' }], des, function (v) {
@@ -1579,10 +1635,15 @@
                 optColor(it, box, 'boxColor', 'خلفية الاسم', 'الافتراضي غامق');
                 optColor(it, box, 'dotColor', 'لون النقطة', 'اللي تومض جنب المبلغ');
             }
+            ldStyleRows(it, box, des);
             box.appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
             box.appendChild(streamlabsCard());
             return;
         }
+        optColor(it, box, 'nameColor', 'لون الاسم');
+        optColor(it, box, 'amtColor', 'لون المبلغ', 'الأصلي = نفس «اللون» تحت');
+        optColor(it, box, 'boxColor', 'خلفية البطاقة', 'الأصلي = غامق');
+        ldStyleRows(it, box, 'card');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
         box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
         sizeColor(it, box, 1, 8);

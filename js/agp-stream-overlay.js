@@ -2558,7 +2558,28 @@
         return lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
     }
     function ldSig(d) { return d ? [d.name, d.amount, d.currency, d.at].join('|') : ''; }
-    function ldCfg(it) { return JSON.stringify([it.design, it.motion, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size]); }
+    function ldCfg(it) { return JSON.stringify([it.design, it.motion, it.nameColor, it.amtColor, it.accent1, it.accent2, it.dotColor, it.boxColor, it.size, it.font, it.amtFont, it.ldIcon, it.markIcon, it.iconColor]); }
+    // أيقونات «آخر دعم» اللي يختار منها الستريمر (أيقونة المبلغ والعلامة)
+    var LD_ICONS = ['dollar', 'heart', 'star', 'crown', 'diamond', 'fire', 'gift', 'sparkle', 'bolt', 'trophy', 'rocket'];
+    /** أيقونة «آخر دعم»: dollar = عملة الدولار الذهبية، والباقي من ICON_SET بلون --ldi. */
+    function ldIco(name, cls) {
+        var s = el('span', cls || 'agp-so-ld2i');
+        if (name === 'dollar') s.innerHTML = THRONE_ICONS.donors;
+        else if (ICON_SET[name]) s.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + ICON_SET[name].p + '</svg>';
+        else return null;
+        return s;
+    }
+    /** الخطوط والألوان المشتركة لكل تصاميم «آخر دعم» (على عنصر الأداة نفسه). */
+    function ldFonts(n, it) {
+        [['font', '--ldfn', '--ldwn'], ['amtFont', '--ldfa', '--ldwa']].forEach(function (k) {
+            if (!it[k[0]]) return;
+            var f = fontOf(it[k[0]]);
+            loadFont(f);
+            n.style.setProperty(k[1], fontStack(f));
+            n.style.setProperty(k[2], String(f.b));
+        });
+        if (/^#[0-9a-f]{6}$/i.test(String(it.iconColor || ''))) n.style.setProperty('--ldi', it.iconColor);
+    }
     var LD_MOTIONS = ['static', 'marquee', 'swap', 'type'];
 
     /**
@@ -2703,6 +2724,22 @@
             ap.appendChild(amt);
             box.appendChild(ap);
         }
+        // أيقونة جنب المبلغ (اختيارية)
+        if (it.ldIcon && it.ldIcon !== 'none') amts.forEach(function (a) {
+            var ico = ldIco(it.ldIcon);
+            if (!ico || !a.parentNode) return;
+            var wv = el('span', 'agp-so-ld2av');
+            a.parentNode.replaceChild(wv, a);
+            wv.appendChild(ico);
+            wv.appendChild(a);
+        });
+        // العلامة (النجمة اللي تمشي / النقطة / الفاصل) بأيقونة بدل الشكل الأصلي
+        if (it.markIcon && ICON_SET[it.markIcon]) {
+            box.querySelectorAll('.agp-so-ld2l i,.agp-so-ld2d,.ldw-sep').forEach(function (m) {
+                m.classList.add('mk');
+                m.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + ICON_SET[it.markIcon].p + '</svg>';
+            });
+        }
         // داعم جديد: المبلغ يعدّ من صفر لين قيمته
         if (isNew && String(d.currency || 'USD').toUpperCase() === 'USD') {
             amts.forEach(function (a) {
@@ -2723,12 +2760,18 @@
         var ghost = !d && preview;
         if (ghost) d = SAMPLE_TOTALS.lastDonation;
         n.classList.toggle('agp-so-ghost', Boolean(ghost));
+        ldFonts(n, it);
         if (it.design === 'line' || it.design === 'split' || it.design === 'wave' || it.design === 'flutter') { buildLdSlim(n, it, d, real, preview); return; }
         title(n, it.title);
         var card = el('div', 'agp-so-ldbox');
-        var ic = el('span', 'agp-so-ldic');
-        ic.innerHTML = THRONE_ICONS.donors;
-        card.appendChild(ic);
+        var hx = function (v) { return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : null; };
+        if (hx(it.boxColor)) card.style.background = 'linear-gradient(160deg,' + it.boxColor + ',color-mix(in srgb,' + it.boxColor + ' 70%,#000))';
+        if (hx(it.nameColor)) card.style.setProperty('--ldn', it.nameColor);
+        if (hx(it.amtColor)) card.style.setProperty('--lda', it.amtColor);
+        if (it.ldIcon !== 'none') {
+            var ic = ldIco(it.ldIcon && it.ldIcon !== 'dollar' ? it.ldIcon : 'dollar', 'agp-so-ldic');
+            if (ic) card.appendChild(ic);
+        }
         var tx = el('div', 'agp-so-ldtx');
         if (d) {
             var row = el('div', 'agp-so-ldrow');
@@ -3617,8 +3660,16 @@
         '@keyframes agp-so-a-out{to{opacity:0;transform:scale(.85) translateY(.6em)}}',
         /* «آخر دعم» البسيط: خط متوهّج (ld-line) وكبسولة مقسومة (ld-split) */
         '.agp-so-ld2{--ldn:#fff;--ld1:#ff5fa8;--ld2:#7b5cff;--ldd:#fff;--ldb:#1a1426;position:relative;direction:rtl;color:#fff;font-family:"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif}',
-        '.agp-so-ld2n{font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-weight:700;white-space:nowrap;max-width:12em;overflow:hidden;text-overflow:ellipsis;color:var(--ldn)}',
-        '.agp-so-ld2a{direction:ltr;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}',
+        '.agp-so-ld2n{font-family:var(--ldfn,"Noto Kufi Arabic",system-ui,sans-serif);font-weight:var(--ldwn,700);white-space:nowrap;max-width:12em;overflow:hidden;text-overflow:ellipsis;color:var(--ldn)}',
+        '.agp-so-ld2av{display:inline-flex;align-items:center;gap:.25em;direction:ltr}',
+        '.agp-so-ld2i{display:inline-flex;flex:none;width:1em;height:1em;color:var(--ldi,var(--lda,currentColor));filter:drop-shadow(0 0 .2em color-mix(in srgb,var(--ldi,#ffd36b) 60%,transparent))}',
+        '.agp-so-ld2i svg{width:100%;height:100%;display:block}',
+        '.ld-line .agp-so-ld2i{font-size:.96em}.ld-split .agp-so-ld2i{position:relative;z-index:1;font-size:.88em}',
+        '.mk svg{width:100%;height:100%;display:block}',
+        '.ld-line .agp-so-ld2l i.mk{width:.95em;height:.95em;background:none;border-radius:0;box-shadow:none;color:var(--ldd);transform:translate(-50%,-50%);filter:drop-shadow(0 0 .25em var(--ldd)) drop-shadow(0 0 .5em var(--ld1))}',
+        '.ld-split .agp-so-ld2d.mk{width:.75em;height:.75em;background:none;box-shadow:none;color:var(--ldd);filter:drop-shadow(0 0 .2em var(--ldd))}',
+        '.ldw-sep.mk{width:.7em;height:.7em;background:none;box-shadow:none;border-radius:0;color:color-mix(in srgb,var(--ld1) 50%,#fff);filter:drop-shadow(0 0 .25em var(--ld1))}',
+        '.agp-so-ld2a{font-family:var(--ldfa,inherit);direction:ltr;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}',
         '.ld-line{display:flex;flex-direction:column;align-items:stretch;gap:.33em;min-width:10em}',
         '.ld-line .agp-so-ld2t{display:flex;align-items:baseline;justify-content:space-between;gap:1.1em;padding:0 .17em}',
         '.ld-line .agp-so-ld2n{font-size:.92em;text-shadow:0 .08em .4em rgba(0,0,0,.7)}',
@@ -3709,6 +3760,9 @@
         '.agp-so-ldbox{display:flex;align-items:center;gap:.5em;padding:.45em .8em .45em .55em;border-radius:1em;background:linear-gradient(160deg,rgba(36,31,46,.86),rgba(16,14,21,.8));border:.06em solid color-mix(in srgb,var(--agp-so-c,#ffd54a) 55%,transparent);box-shadow:0 .3em 1em rgba(0,0,0,.45),0 0 .8em color-mix(in srgb,var(--agp-so-c,#ffd54a) 25%,transparent)}',
         '.agp-so-ldic{flex:none;width:1.7em;height:1.7em;filter:drop-shadow(0 0 .25em rgba(255,200,60,.6));animation:agp-so-coin 3.2s ease-in-out infinite}',
         '.agp-so-ldic svg{width:100%;height:100%;display:block}',
+        '.agp-so-ldic{color:var(--ldi,var(--agp-so-c,#ffd54a))}',
+        '.agp-so-ldbox .agp-so-ldname{font-family:var(--ldfn,"Noto Kufi Arabic",system-ui,sans-serif);font-weight:var(--ldwn,700);color:var(--ldn,inherit)}',
+        '.agp-so-ldbox .agp-so-ldamt{font-family:var(--ldfa,inherit);color:var(--lda,var(--agp-so-c,#ffd54a))}',
         '.agp-so-ldtx{display:flex;flex-direction:column;gap:.1em;min-width:0}',
         '.agp-so-ldrow{display:flex;align-items:baseline;gap:.45em;white-space:nowrap}',
         '.agp-so-ldname{font-family:"Noto Kufi Arabic",system-ui,sans-serif;font-size:.85em;max-width:9em;overflow:hidden;text-overflow:ellipsis}',
@@ -3802,7 +3856,7 @@
             if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
             return state;
         },
-        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, refreshItem: refreshItem, throneDemo: throneDemo,
+        VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, LD_ICONS: LD_ICONS, refreshItem: refreshItem, throneDemo: throneDemo,
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
