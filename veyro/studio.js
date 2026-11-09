@@ -153,8 +153,10 @@
             { label: 'نار', type: 'text', set: { text: 'تحدي اليوم', style: 'fire', font: 'cairo', size: 7 } },
             { label: 'زجاجي', type: 'text', set: { text: 'اكتب سؤالك بالشات', style: 'glass', font: 'tajawal', size: 4.5 } },
             { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } },
-            { label: 'لوحة الأصدقاء', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', style: 'plain', color: '#3a2a4a', font: 'cairo', size: 4, bnBg: 'shimmer', bnMotion: 'static' } },
-            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', style: 'plain', color: '#3a2a4a', font: 'cairo', size: 4, bnBg: 'sparkle', bnMotion: 'marquee', bnWidth: 12 } }
+            { label: 'لوحة الأصدقاء — مخمل', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'velvet', style: 'plain', color: '#f6eefe', font: 'cairo', size: 4, bnBg: 'shimmer', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — خشب', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'wood', style: 'plain', color: '#3a220e', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — ورق فاخر', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'paper', bnTextFx: 'foil', style: 'plain', color: '#3a2a1a', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', bnMat: 'linen', style: 'plain', color: '#3a2e22', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'marquee', bnWidth: 12 } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -1153,18 +1155,21 @@
     function bannerProps(it, box) {
         var on = it.banner === 'peek';
         box.appendChild(row('اللوحة', pills([{ label: 'بدون', value: 'none' }, { label: 'لوحة الأصدقاء', value: 'peek' }], on ? 'peek' : 'none', function (v) {
-            if (v === 'peek') { it.style = 'plain'; if (!it.color || it.color === '#ffffff') it.color = '#3a2a4a'; update(it, 'banner', 'peek', true); }
+            if (v === 'peek') { it.style = 'plain'; it.bnMat = it.bnMat || 'velvet'; if (!it.color || it.color === '#ffffff') it.color = '#f6eefe'; update(it, 'banner', 'peek', true); }
             else { delete it.banner; update(it, 'banner', undefined, true); }
         }), true, 'النص يطلع داخل لوحة وفوقها شخصيات'));
         if (!on) return;
-        box.appendChild(row('الشخصيات', pills([{ label: 'الاثنين', value: 'both' }, { label: 'الأرنب', value: 'bunny' }, { label: 'القطة', value: 'kitten' }, { label: 'بدون', value: 'none' }], it.bnChars || 'both', function (v) { update(it, 'bnChars', v, true); }), true));
+        box.appendChild(row('الخامة', pills([{ label: 'مخمل', value: 'velvet' }, { label: 'كتان', value: 'linen' }, { label: 'خشب', value: 'wood' }, { label: 'جلد', value: 'leather' }, { label: 'ورق فاخر', value: 'paper' }, { label: 'ساتان', value: 'satin' }], it.bnMat || 'velvet', function (v) { delete it.bnColor; update(it, 'bnMat', v, true); }), true, 'شكل اللوحة الحقيقي: ملمسها وإضاءتها وتفاصيلها'));
+        box.appendChild(row('لمسة النص', pills([{ label: 'الأصلي', value: '' }, { label: 'محفور', value: 'deboss' }, { label: 'بارز', value: 'emboss' }, { label: 'ذهب', value: 'foil' }, { label: 'عادي', value: 'plain' }], it.bnTextFx || '', function (v) { if (v) update(it, 'bnTextFx', v, true); else { delete it.bnTextFx; update(it, 'bnTextFx', undefined, true); } }), true, 'ذهب = رقائق ذهبية (يتجاهل لون النص)'));
+        box.appendChild(row('الشخصيات', pills([{ label: 'الاثنين', value: 'both' }, { label: 'الأرنب', value: 'bunny' }, { label: 'القطة', value: 'kitten' }, { label: 'بدون', value: 'none' }], it.bnChars || 'both', function (v) { update(it, 'bnChars', v, true); }), true, 'دمى قطيفة'));
         if (it.bnChars !== 'none') {
             box.appendChild(row('مكانهم', pills([{ label: 'يمين', value: 'right' }, { label: 'وسط', value: 'center' }, { label: 'يسار', value: 'left' }], it.bnPos || 'center', function (v) { update(it, 'bnPos', v, true); }), true));
             box.appendChild(row('حركتهم', pills([{ label: 'يطلّون ويرمشون', value: 'peek' }, { label: 'ثابتين', value: 'still' }], it.bnCharAnim || 'peek', function (v) { update(it, 'bnCharAnim', v, true); }), true));
         }
         box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'بريق', value: 'sparkle' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg === 'dots' ? 'sparkle' : it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
         box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'كتابة', value: 'type' }, { label: 'ظهور', value: 'pop' }, { label: 'طفو', value: 'float' }], it.bnMotion || 'static', function (v) { update(it, 'bnMotion', v, true); }), true, 'شريط = يمشي، كتابة = ينكتب وينمسح، ظهور = ينط كل شوي'));
-        optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = بنفسجي فاتح');
+        optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = لون الخامة');
+        if (['velvet', 'linen', 'leather'].indexOf(it.bnMat || 'velvet') !== -1) optColor(it, box, 'bnStitch', 'لون الخياطة');
         if (it.bnChars !== 'none' && it.bnChars !== 'kitten') optColor(it, box, 'bnBunny', 'لون الأرنب', 'الأصلي = أبيض');
         if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي (شقراء)');
         box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
