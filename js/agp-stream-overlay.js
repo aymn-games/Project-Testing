@@ -2124,13 +2124,21 @@
     var ART_R = 34.6, artSeq = 0;
     function artPt(deg, r) { var a = deg * Math.PI / 180; return [+(50 + r * Math.cos(a)).toFixed(2), +(50 + r * Math.sin(a)).toFixed(2)]; }
     function n2(v) { return (+v).toFixed(2); }
-    /** تدرّجات مشتركة: توهّج ناعم (g)، شعاع يتلاشى (r)، ذهب شمباني (au)، لؤلؤ (pl)، وألماسة (dm). */
-    function artDefs(P) {
+    /** لون hex ممزوج مع لون ثاني بنسبة t (0..1) — لدرجات الذهب من «لون الزخارف». */
+    function mixHex(a, b, t) {
+        var x = hexRgb(a), y = hexRgb(b);
+        return '#' + [0, 1, 2].map(function (i) { return ('0' + Math.round((x[i] + (y[i] - x[i]) * t) * 255).toString(16)).slice(-2); }).join('');
+    }
+    /** تدرّجات مشتركة: توهّج ناعم (g)، شعاع يتلاشى (r)، ذهب شمباني أو «لون الزخارف» (au)، لؤلؤ (pl)، وألماسة (dm). */
+    function artDefs(P, ac) {
+        var au = /^#[0-9a-f]{6}$/i.test(ac || '')
+            ? [mixHex(ac, '#ffffff', 0.78), mixHex(ac, '#ffffff', 0.2), mixHex(ac, '#000000', 0.38), mixHex(ac, '#ffffff', 0.55), mixHex(ac, '#000000', 0.12)]
+            : ['#fff4d6', '#e9c47c', '#a87b33', '#f7e3ab', '#c39443'];
         return '<radialGradient id="' + P + 'g"><stop offset="0" stop-color="#fff"/><stop offset=".1" stop-color="#fff" stop-opacity=".92"/>' +
             '<stop offset=".32" stop-color="currentColor" stop-opacity=".42"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient>' +
             '<linearGradient id="' + P + 'r"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
-            '<linearGradient id="' + P + 'au" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4d6"/><stop offset=".3" stop-color="#e9c47c"/>' +
-            '<stop offset=".5" stop-color="#a87b33"/><stop offset=".72" stop-color="#f7e3ab"/><stop offset="1" stop-color="#c39443"/></linearGradient>' +
+            '<linearGradient id="' + P + 'au" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + au[0] + '"/><stop offset=".3" stop-color="' + au[1] + '"/>' +
+            '<stop offset=".5" stop-color="' + au[2] + '"/><stop offset=".72" stop-color="' + au[3] + '"/><stop offset="1" stop-color="' + au[4] + '"/></linearGradient>' +
             '<radialGradient id="' + P + 'pl" cx=".36" cy=".32" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#f1ecf4"/>' +
             '<stop offset=".85" stop-color="#bdb3c7"/><stop offset="1" stop-color="#8f8599"/></radialGradient>' +
             '<linearGradient id="' + P + 'dm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#dff1ff"/>' +
@@ -2159,7 +2167,7 @@
     /** خط ذهب شمباني رفيع، ولمعة بيضاء تنزلق عليه ببطء (pathLength 100 عشان الحركة ما تعتمد على المقاس). */
     function artGoldLine(P, r, w, dur, delay) {
         return '<circle cx="50" cy="50" r="' + n2(r) + '" fill="none" stroke="url(#' + P + 'au)" stroke-width="' + n2(w) + '"/>' +
-            '<circle class="ao-shine" cx="50" cy="50" r="' + n2(r) + '" pathLength="100" fill="none" stroke="#fff" stroke-width="' + n2(w * 1.6) + '" stroke-linecap="round" stroke-dasharray="9 91" opacity=".9" style="animation-duration:' + dur + 's;animation-delay:' + (delay || 0) + 's"/>';
+            '<circle class="ao-shine" cx="50" cy="50" r="' + n2(r) + '" pathLength="100" fill="none" stroke="#fff" stroke-width="' + n2(w * 1.6) + '" stroke-linecap="round" stroke-dasharray="9 91" opacity=".9" style="animation-duration:calc(var(--vk,1) * ' + dur + 's);animation-delay:' + (delay || 0) + 's"/>';
     }
     /** لؤلؤة: كرة بلمعة وظل خفيف. */
     function artPearl(P, x, y, r) {
@@ -2198,32 +2206,32 @@
 
     var FRAME_ART = {
         // حلقة ضوء: خيط ضوء بطبقات، خطين ذهب شمباني (داخل وبرا) تنزلق عليهم لمعة، لمعتين عدسة تلف، وبوكيه
-        flare: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R, a = artPt(225, R), b = artPt(45, R);
-            return svgWrap('<defs>' + artDefs(P) + '<linearGradient id="' + P + 'h" x1="0" y1="0" x2="1" y2="1">' +
+        flare: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R, a = artPt(225, R), b = artPt(45, R), off = o.off;
+            return svgWrap('<defs>' + artDefs(P, o.ac) + '<linearGradient id="' + P + 'h" x1="0" y1="0" x2="1" y2="1">' +
                 '<stop offset=".12" stop-color="#fff"/><stop offset=".34" stop-color="#fff" stop-opacity="0"/><stop offset=".66" stop-color="#fff" stop-opacity="0"/><stop offset=".88" stop-color="#fff"/></linearGradient></defs>' +
-                artBokeh(P, 16, R + 5, R + 14, 20) +
-                artGoldLine(P, R + 3.3, 0.32, 7, 0) + artGoldLine(P, R - 1.7, 0.22, 9, -4) +
+                (off.bokeh ? '' : artBokeh(P, 16, R + 5, R + 14, 20)) +
+                (off.gold ? '' : artGoldLine(P, R + 3.3, 0.32, 7, 0) + artGoldLine(P, R - 1.7, 0.22, 9, -4)) +
                 artGlowRing(R, 0.8) +
-                '<g class="ao-rot" style="animation-duration:18s">' +
+                '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 18s)">' +
                 '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="url(#' + P + 'h)" stroke-width="1.5" opacity=".9"/>' +
-                artSpark(P, a[0], a[1], 18, 0) + artSpark(P, b[0], b[1], 14, -1.3) +
+                (off.spark ? '' : artSpark(P, a[0], a[1], 18, 0) + artSpark(P, b[0], b[1], 14, -1.3) +
                 artSpark(P, artPt(236, R + 8)[0], artPt(236, R + 8)[1], 3.4, -0.6) + artSpark(P, artPt(34, R + 9)[0], artPt(34, R + 9)[1], 2.8, -1.8) +
-                artSpark(P, artPt(56, R + 12)[0], artPt(56, R + 12)[1], 2.3, -0.9) + '</g>');
+                artSpark(P, artPt(56, R + 12)[0], artPt(56, R + 12)[1], 2.3, -0.9)) + '</g>');
         },
         // حلقة فضية: معدن كروم (HTML)، خط ذهب داخلي وخارجي، 8 ألماسات تلمع على الخط الخارجي، بوكيه ولمعتين
-        silver: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R + 1.4, gems = '', i;
+        silver: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R + 1.4, gems = '', i, off = o.off;
             for (i = 0; i < 8; i++) { var g = artPt(i * 45 + 22.5, R + 3.5); gems += artGem(P, g[0], g[1], 0.95, i * 45 + 22.5 + 90, n2(-i * 0.4)); }
             var a = artPt(-58, R), b = artPt(14, R);
             return '<div class="ao-metal"><i class="m-base"></i><i class="m-tint"></i><i class="m-bevel"></i><i class="m-shine"></i></div>' +
-                svgWrap('<defs>' + artDefs(P) + '</defs>' + artBokeh(P, 22, R + 5, R + 13, 70) +
-                    artGoldLine(P, R + 3.5, 0.3, 8, 0) + artGoldLine(P, R - 2.4, 0.24, 10, -5) + gems +
-                    artSpark(P, a[0], a[1], 12, 0) + artSpark(P, b[0], b[1], 8, -1.4));
+                svgWrap('<defs>' + artDefs(P, o.ac) + '</defs>' + (off.bokeh ? '' : artBokeh(P, 22, R + 5, R + 13, 70)) +
+                    (off.gold ? '' : artGoldLine(P, R + 3.5, 0.3, 8, 0) + artGoldLine(P, R - 2.4, 0.24, 10, -5)) + (off.gem ? '' : gems) +
+                    (off.spark ? '' : artSpark(P, a[0], a[1], 12, 0) + artSpark(P, b[0], b[1], 8, -1.4)));
         },
         // غصن ورق: دائرة كاملة من ورق بلمعة صدف وأطراف ذهبية، لؤلؤ على الغصن، وخط ذهب داخلي — والكل يدور ببطء
-        vine: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R, leaves = '', pearls = '', buds = '', i, N = 30, rs = R + 1.6;
+        vine: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R, leaves = '', pearls = '', buds = '', i, N = 30, rs = R + 1.6, off = o.off;
             function bud(q, r) {
                 return '<g transform="translate(' + q[0] + ' ' + q[1] + ') rotate(' + n2(r) + ')"><ellipse rx="1.15" ry="2.2" fill="url(#' + P + 'lf)"/><path d="M0 2.1L0 3.6" stroke="url(#' + P + 'au)" stroke-width=".35"/></g>';
             }
@@ -2235,24 +2243,28 @@
                 if (i % 3 === 1) { var pq = artPt(ang + 6, rs); pearls += artPearl(P, pq[0], pq[1], 0.62); }
                 if (i % 6 === 4) { var bq = artPt(ang + 4, rs + 3.6); buds += bud(bq, ang + 90); }
             }
-            return svgWrap('<defs>' + artDefs(P) +
+            return svgWrap('<defs>' + artDefs(P, o.ac) +
                 '<radialGradient id="' + P + 'rim"><stop offset=".86" stop-color="#fff" stop-opacity="0"/><stop offset=".955" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity=".62"/></radialGradient>' +
                 '<linearGradient id="' + P + 'lf"><stop offset="0" stop-color="#fff" stop-opacity=".98"/><stop offset=".45" stop-color="#f6eedd" stop-opacity=".92"/>' +
                 '<stop offset=".8" stop-color="currentColor" stop-opacity=".7"/><stop offset="1" stop-color="#e2c27e" stop-opacity=".85"/></linearGradient></defs>' +
-                '<circle class="ao-breathe" cx="50" cy="50" r="' + n2(R + 0.5) + '" fill="url(#' + P + 'rim)"/>' + artGlowRing(R, 0.9) + artGoldLine(P, R - 1.5, 0.24, 9, 0) +
-                '<g class="ao-rot" style="animation-duration:40s"><circle cx="50" cy="50" r="' + rs + '" fill="none" stroke="url(#' + P + 'au)" stroke-width=".7" opacity=".95"/>' +
-                leaves + buds + pearls + '</g>');
+                '<circle class="ao-breathe" cx="50" cy="50" r="' + n2(R + 0.5) + '" fill="url(#' + P + 'rim)"/>' + artGlowRing(R, 0.9) + (off.gold ? '' : artGoldLine(P, R - 1.5, 0.24, 9, 0)) +
+                '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 40s)"><circle cx="50" cy="50" r="' + rs + '" fill="none" stroke="' + (off.gold ? '#fff' : 'url(#' + P + 'au)') + '" stroke-width=".7" opacity=".95"/>' +
+                leaves + buds + (off.pearl ? '' : pearls) + '</g>');
         },
         // زخارف تدور: خط ذهب عليه 12 لؤلؤة تلف بعكس اللمعات، ولمعات عدسة تلف وتومض
-        orbit: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R + 0.6, s = '', pearls = '', i;
+        orbit: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R + 0.6, s = '', pearls = '', i, off = o.off;
             [[45, 12, 0], [135, 8, -0.8], [225, 11, -1.5], [315, 8, -0.4]].forEach(function (k) { var q = artPt(k[0], R + 2.6); s += artSpark(P, q[0], q[1], k[1], k[2]); });
             for (i = 0; i < 12; i++) { var q = artPt(i * 30 + 15, R + 2.6); pearls += artPearl(P, q[0], q[1], 0.85); }
-            return svgWrap('<defs>' + artDefs(P) + '</defs>' + artGoldLine(P, R + 2.6, 0.3, 8, 0) +
-                '<g class="ao-rot ao-rev" style="animation-duration:36s">' + pearls + '</g>' +
-                '<g class="ao-rot" style="animation-duration:14s">' + s + '</g>');
+            return svgWrap('<defs>' + artDefs(P, o.ac) + '</defs>' + (off.gold ? '' : artGoldLine(P, R + 2.6, 0.3, 8, 0)) +
+                (off.pearl ? '' : '<g class="ao-rot ao-rev" style="animation-duration:calc(var(--vk,1) * 36s)">' + pearls + '</g>') +
+                (off.spark ? '' : '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 14s)">' + s + '</g>'));
         }
     };
+    /** العناصر اللي تنطفي/تشتغل بكل رسمة (فورم المحرر يعرض بس اللي موجود بالإطار المختار). */
+    var FRAME_FX_LABELS = { spark: 'لمعات', bokeh: 'ضوء ناعم', gold: 'خطوط ذهب', gem: 'ألماس', pearl: 'لؤلؤ' };
+    var FRAME_FX = { flare: ['spark', 'bokeh', 'gold'], silver: ['spark', 'bokeh', 'gold', 'gem'], vine: ['gold', 'pearl'], orbit: ['spark', 'pearl', 'gold'] };
+    var FRAME_SPEEDS = [{ label: 'هادية', value: 1.7 }, { label: 'عادية', value: 1 }, { label: 'سريعة', value: 0.6 }];
     /** وردة من 8 بتلات (حواف مموجة) بحجم المربع كامل. */
     function rosePolygon() {
         var pts = [];
@@ -2274,6 +2286,9 @@
         var shp = fdef.round ? avatarShape('circle') : avatarShape(part.sh);
         var w = el('div', 'agp-so-vav fr-' + frm);
         w.style.color = part.c || '#fff';
+        // التخصيص: fspd = سرعة الحركة (أكبر = أبطأ)، fac = لون الزخارف، foff = عناصر مطفية
+        var spd = Number(part.fspd) > 0 ? clamp(Number(part.fspd), 0.3, 3) : 1;
+        if (spd !== 1) w.style.setProperty('--vk', String(spd));
         var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
         [vf, vi].forEach(function (q) { if (shp.cp) q.style.clipPath = q.style.webkitClipPath = shp.cp; else q.style.borderRadius = shp.br; });
         if (frm === 'spin') { vf.appendChild(el('i', 'vav-base')); vf.appendChild(el('i', 'vav-spin')); } // لون خفيف + الضوء اللي يلف (والصورة فوقهم)
@@ -2291,7 +2306,9 @@
         w.appendChild(vf);
         if (FRAME_ART[frm]) {
             var art = el('div', 'vav-art');
-            art.innerHTML = FRAME_ART[frm]();
+            var offMap = {};
+            (Array.isArray(part.foff) ? part.foff : []).forEach(function (k) { offMap[k] = true; });
+            art.innerHTML = FRAME_ART[frm]({ off: offMap, ac: part.fac || null });
             w.appendChild(art);
         }
         return w;
@@ -4212,13 +4229,13 @@
         // الإطارات المتحركة — ضوء يلف: تدرّج مخروطي يدور داخل الإطار (الإطار يقصّه بشكل الصورة)
         '.agp-so-vav.fr-spin .vav-f{background:#14101c;overflow:hidden}',
         '.agp-so-vav.fr-spin .vav-base{position:absolute;inset:0;background:currentColor;opacity:.3}',
-        '.agp-so-vav.fr-spin .vav-spin{position:absolute;left:50%;top:50%;width:150%;height:150%;margin:-75% 0 0 -75%;background:conic-gradient(from 0deg,transparent 0 22%,currentColor 40%,#fff 48%,transparent 50% 72%,currentColor 90%,#fff 98%,transparent 100%);animation:agp-so-vspin 3.2s linear infinite}',
+        '.agp-so-vav.fr-spin .vav-spin{position:absolute;left:50%;top:50%;width:150%;height:150%;margin:-75% 0 0 -75%;background:conic-gradient(from 0deg,transparent 0 22%,currentColor 40%,#fff 48%,transparent 50% 72%,currentColor 90%,#fff 98%,transparent 100%);animation:agp-so-vspin calc(var(--vk,1) * 3.2s) linear infinite}',
         '.agp-so-vav.fr-spin .vav-i{inset:.14em}',
         '.agp-so-vav.fr-spin{filter:drop-shadow(0 0 .12em currentColor) drop-shadow(0 .1em .25em rgba(0,0,0,.6))}',
         // نابض: الحدود تتوهّج وتهدى
         '.agp-so-vav.fr-pulse .vav-i{inset:.1em}',
-        '.agp-so-vav.fr-pulse{animation:agp-so-vpulse 2.6s ease-in-out infinite}',
-        '.agp-so-vav .vav-rip{position:absolute;inset:0;background:currentColor;opacity:0;animation:agp-so-vrip 2.6s ease-out infinite}',
+        '.agp-so-vav.fr-pulse{animation:agp-so-vpulse calc(var(--vk,1) * 2.6s) ease-in-out infinite}',
+        '.agp-so-vav .vav-rip{position:absolute;inset:0;background:currentColor;opacity:0;animation:agp-so-vrip calc(var(--vk,1) * 2.6s) ease-out infinite}',
         '@keyframes agp-so-vrip{0%{transform:scale(1);opacity:.42}100%{transform:scale(1.3);opacity:0}}',
         // زخارف تدور: إطار رفيع بشكل الصورة، واللمعات فوقه
         '.agp-so-vav.fr-orbit .vav-i{inset:.06em}',
@@ -4234,19 +4251,19 @@
         '.vav-art .m-base{background:conic-gradient(from 18deg,#f7f8fb,#9a9ea8 7%,#33353c 13%,#b9bdc6 19%,#fff 24%,#80848e 33%,#26272d 41%,#c9ccd4 51%,#fff 57%,#737781 67%,#2c2d33 76%,#dfe2e8 86%,#f7f8fb)}',
         '.vav-art .m-tint{background:currentColor;mix-blend-mode:multiply;opacity:.55}',
         '.vav-art .m-bevel{background:radial-gradient(closest-side,transparent 88.5%,rgba(0,0,0,.62) 89.6%,rgba(0,0,0,0) 92.5%,rgba(255,255,255,0) 95.5%,rgba(255,255,255,.8) 98.3%,rgba(0,0,0,.4) 99.6%)}',
-        '.vav-art .m-shine{background:conic-gradient(transparent 0 76%,rgba(255,255,255,0) 79%,rgba(255,255,255,.95) 84%,rgba(255,255,255,0) 89%,transparent 100%);mix-blend-mode:screen;animation:agp-so-vspin 4.2s linear infinite}',
-        '.vav-art .ao-rot{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-vspin 16s linear infinite}',
-        '.vav-art .ao-tw{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-atw 2.4s ease-in-out infinite}',
-        '.vav-art .ao-shine{animation:agp-so-ashine 3.2s linear infinite}',
-        '.vav-art .ao-gl{animation:agp-so-agl 2.4s ease-in-out infinite}',
-        '.vav-art .ao-bk{animation:agp-so-abk 4.2s ease-in-out infinite}',
-        '.vav-art .ao-gem{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-agem 3.2s ease-in-out infinite}',
+        '.vav-art .m-shine{background:conic-gradient(transparent 0 76%,rgba(255,255,255,0) 79%,rgba(255,255,255,.95) 84%,rgba(255,255,255,0) 89%,transparent 100%);mix-blend-mode:screen;animation:agp-so-vspin calc(var(--vk,1) * 4.2s) linear infinite}',
+        '.vav-art .ao-rot{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-vspin calc(var(--vk,1) * 16s) linear infinite}',
+        '.vav-art .ao-tw{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-atw calc(var(--vk,1) * 2.4s) ease-in-out infinite}',
+        '.vav-art .ao-shine{animation:agp-so-ashine calc(var(--vk,1) * 3.2s) linear infinite}',
+        '.vav-art .ao-gl{animation:agp-so-agl calc(var(--vk,1) * 2.4s) ease-in-out infinite}',
+        '.vav-art .ao-bk{animation:agp-so-abk calc(var(--vk,1) * 4.2s) ease-in-out infinite}',
+        '.vav-art .ao-gem{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-agem calc(var(--vk,1) * 3.2s) ease-in-out infinite}',
         '.vav-art .ao-rev{animation-direction:reverse}',
         '@keyframes agp-so-abk{0%,100%{opacity:.08}50%{opacity:.6}}',
         '@keyframes agp-so-agem{0%,70%,100%{transform:scale(1);filter:none}80%{transform:scale(1.25);filter:drop-shadow(0 0 .6px #fff) drop-shadow(0 0 1.6px #fff)}}',
-        '.vav-art .ao-breathe{animation:agp-so-abr 3s ease-in-out infinite}',
-        '.vav-art .ao-leaf{transform-box:fill-box;transform-origin:0% 50%;animation:agp-so-aleaf 3.4s ease-in-out infinite}',
-        '.vav-art .ao-vine{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-avine 6s ease-in-out infinite}',
+        '.vav-art .ao-breathe{animation:agp-so-abr calc(var(--vk,1) * 3s) ease-in-out infinite}',
+        '.vav-art .ao-leaf{transform-box:fill-box;transform-origin:0% 50%;animation:agp-so-aleaf calc(var(--vk,1) * 3.4s) ease-in-out infinite}',
+        '.vav-art .ao-vine{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-avine calc(var(--vk,1) * 6s) ease-in-out infinite}',
         '@keyframes agp-so-atw{0%,100%{transform:scale(.55) rotate(0);opacity:.55}50%{transform:scale(1.12) rotate(20deg);opacity:1}}',
         '@keyframes agp-so-ashine{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}',
         '@keyframes agp-so-agl{0%,100%{opacity:.15}50%{opacity:1}}',
@@ -4496,7 +4513,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, avatarFrame: avatarFrame, hueDist: hueDist, calibrateHue: calibrateHue,
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, avatarFrame: avatarFrame, FRAME_FX: FRAME_FX, FRAME_FX_LABELS: FRAME_FX_LABELS, FRAME_SPEEDS: FRAME_SPEEDS, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },

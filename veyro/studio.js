@@ -2824,6 +2824,27 @@
                 var frRound = O.AVATAR_FRAMES.filter(function (f) { return f.key === (p.fr || 'ring'); })[0];
                 gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true,
                     frRound && frRound.round ? 'هذا الإطار دائري — الصورة تطلع دائرة معه، و«لون الإطار» = لون التوهّج' : 'المتحركة تمشي على شكل الصورة'));
+                // تخصيص الإطار المتحرك: السرعة، لون الزخارف (الذهب)، ووش يطلع فيه
+                if (frRound && frRound.anim) {
+                    var spd = Number(p.fspd) > 0 ? Number(p.fspd) : 1;
+                    gS.appendChild(row('سرعة الحركة', pills(O.FRAME_SPEEDS, O.FRAME_SPEEDS.some(function (x) { return x.value === spd; }) ? spd : 1, function (val) { setPart(key, 'fspd', val, true); })));
+                }
+                var fxList = O.FRAME_FX[p.fr || 'ring'];
+                if (fxList) {
+                    if (fxList.indexOf('gold') !== -1 || p.fr === 'vine') {
+                        var acw = el('div', 'ob-sw');
+                        acw.appendChild(button('ذهبي', 'ob-pill' + (p.fac ? '' : ' on'), function () { setPart(key, 'fac', null, true); }));
+                        var acs = swatches(p.fac, function (c) { setPart(key, 'fac', c, true); });
+                        while (acs.firstChild) acw.appendChild(acs.firstChild);
+                        gS.appendChild(row('لون الزخارف', acw, true, 'الخطوط الذهبية والغصن — «لون الإطار» فوق للتوهّج'));
+                    }
+                    var off = Array.isArray(p.foff) ? p.foff : [];
+                    gS.appendChild(row('وش يطلع بالإطار', pills(fxList.map(function (k) { return { label: O.FRAME_FX_LABELS[k], value: k }; }),
+                        fxList.filter(function (k) { return off.indexOf(k) === -1; }), function (k) {
+                            var next = off.indexOf(k) === -1 ? off.concat([k]) : off.filter(function (x) { return x !== k; });
+                            setPart(key, 'foff', next, true);
+                        }, true), true, 'اضغط أي عنصر تطفيه أو تشغّله'));
+                }
             }
             gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
