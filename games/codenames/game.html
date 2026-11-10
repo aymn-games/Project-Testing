@@ -24,6 +24,7 @@
 <script src="../../js/agp-win-card.js"></script>
 <script src="codenames-easy-words.js"></script>
 <script src="codenames-words.js"></script>
+<script src="codenames-chars.js"></script>
 <!-- مكتبة توليد QR (نفس طريقة اللعبة السابقة) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="codenames-platform.js"></script>
@@ -223,7 +224,7 @@ input:focus{outline:none}
 
           <div style="position:relative;flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:12px">
             <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="25">
-              <div onClick="{{ t.tap }}" style="position:relative;min-width:0;min-height:0;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ t.bg }};background-blend-mode:{{ t.blend }};box-shadow:{{ t.sh }};opacity:{{ t.op }};z-index:{{ t.z }};animation:{{ t.an }};transition:background .45s ease, box-shadow .45s ease, opacity .3s">
+              <div onClick="{{ t.tap }}" style="position:relative;min-width:0;min-height:0;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.sh }};opacity:{{ t.op }};z-index:{{ t.z }};animation:{{ t.an }};transition:background .45s ease, box-shadow .45s ease, opacity .3s">
                 <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}">
                   <span aria-hidden="true" style="position:absolute;inset:-5px;border-radius:20px;border:4px solid #fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,.25), 0 0 26px rgba(251,191,36,.55);pointer-events:none;animation:pulse 1.4s ease-in-out infinite"></span>
                   <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:4;height:26px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:linear-gradient(90deg, #f59e0b, #fbbf24);color:#2a1a10;font:900 14px 'Zain';white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35)">✋ {{ t.pickN }}</span>
@@ -659,7 +660,6 @@ const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; re
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
-const tileImg = b => b.t===-1?'images/tile-assassin.png':b.t===0?'images/tile-neutral.png':`images/tile-${b.t===1?'red':'blue'}-${b.img===2?2:1}.png`;
 // أوامر الشات: أي أرقام (عربية ٠-٩ / فارسية ۰-۹ / إنجليزية)، الرقم لازق بالكلمة أو مفصول، وفواصل (، , - و) بين الأرقام.
 // DIGITS: يحوّل الأرقام ويفصل الرقم عن الكلمة («تأكيد12» ← «تأكيد 12»، «1مدن3» ← «1 مدن 3») مع إبقاء الكلمة كما كُتبت (للتلميح).
 const DIGITS = s => String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
@@ -735,8 +735,6 @@ class Component extends DCLogic {
     // جوالات السباي ماستر: المقبول فقط يستلم اللوحة (مشفّرة له وحده — CN.secure)
     this.approved={}; this.rejected=new Set(); this.seq=0; this.slots={1:null,2:null}; this.slotHello={}; this._slotRun=0; this.gk=CN.secure.supported()?CN.secure.newPair().catch(()=>null):Promise.resolve(null);
     this.rl=CN.relay(this.room,m=>this.onRelay(m));
-    // تحميل صور البطاقات مسبقاً حتى تطلع فوراً لحظة الكشف
-    ['red-1','red-2','blue-1','blue-2','neutral','assassin'].forEach(n=>{ const im=new Image(); im.src='images/tile-'+n+'.png'; });
     this.sync();
   }
   // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
@@ -757,7 +755,7 @@ class Component extends DCLogic {
   // ---- spymaster relay — WebSocket عبر CN.relay (backend/websocket/room-relay-server.js) ----
   send(msg){ try{ this.rl&&this.rl.send(msg); }catch(e){} }
   sync(){ this._syncedBoard=this.state.board; const b=this.boardPayload(); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} Object.keys(this.approved||{}).forEach(id=>this.sendBoardTo(id)); [1,2].forEach(t=>this.sendBoardToSlot(this.slots&&this.slots[t])); }
-  // img: أي صورة من صورتي الفريق (1|2) — نفس صورة الصندوق بشاشة اللعب، لجوال السباي ماستر
+  // img: أي شخصية من شخصيتي الفريق (1|2) — نفس شخصية البطاقة بشاشة اللعب، لجوال السباي ماستر (codenames-chars.js)
   boardPayload(){ return this.state.board.map(x=>({w:x.w,t:x.t,img:x.img||0,open:x.open||x.auto})); }
   teamNames(){ return {1:this.state.teams[1].name,2:this.state.teams[2].name}; }
   // اللوحة الملونة لجوال مقبول واحد: مشفّرة بمفتاح مشترك بين اللعبة وهذا الجوال فقط
@@ -987,18 +985,10 @@ class Component extends DCLogic {
     const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
     const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
     const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v),photo:this.reg.avatar(v)||null})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
-      if(!rev) return {...base,bg:'linear-gradient(165deg, #fdecdb, #f2d4b6)',blend:'normal',sh:'0 5px 0 #d8ae89, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.65)',stripBg:'linear-gradient(180deg, #fffdf9, #fbf1e6)',stripSh:'inset 0 -2px 0 rgba(120,80,40,.08), 0 2px 6px rgba(120,80,40,.08)',wordC:'#3a2414',numBg:'#3a2414',numBd:'rgba(255,255,255,.9)',numC:'#fff'};
-      // ألوان البطاقة بعد الفتح — طبقات CSS فوق صورة الصندوق (images/) بدون تعديل الصور:
-      //   الأحمر/الأزرق: لمسة ناعمة فوق الصورة · المحايد: الصورة الرمادية تتلوّن رملي فاتح (blend: color)
-      //   الأسود: الصورة تصير رمادي-أسود (saturation) ومعتمة، وحوافها توهّج أحمر — فما يتلخبط مع المحايد
-      const img=`url(${tileImg(b)}) center/cover no-repeat`;
-      const col=b.t===-1?{layers:`radial-gradient(ellipse at 50% 42%, transparent 38%, rgba(185,28,28,.6) 100%), linear-gradient(rgba(6,4,10,.32), rgba(6,4,10,.32)), linear-gradient(#000, #000), ${img}, #0b0910`,blend:'normal, normal, saturation, normal',
-            sh:'0 5px 0 #000, 0 0 0 1.5px rgba(239,68,68,.55), 0 0 30px rgba(239,68,68,.45)',frame:'rgba(248,113,113,.6)',strip:'linear-gradient(180deg, rgba(20,8,12,.92), rgba(45,8,16,.92))',word:'#fecaca',num:'#b91c1c',burst:'#ef4444'}
-        :b.t===0?{layers:`linear-gradient(165deg, rgba(255,250,240,.38), rgba(255,244,225,.12)), linear-gradient(165deg, #f2dcae, #d6b27a), ${img}, #e9d5ae`,blend:'normal, color, normal',
-            sh:'0 5px 0 #b8935c, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.6)',strip:'linear-gradient(180deg, rgba(255,251,243,.94), rgba(250,238,215,.94))',word:'#5b3d16',num:'#7a5626',burst:'#fde68a'}
-        :{layers:`linear-gradient(165deg, ${TC[b.t].c2}24, transparent 55%, ${TC[b.t].dk}33), ${img}, ${TC[b.t].c}`,blend:'normal, normal',
-            sh:`0 5px 0 ${TC[b.t].dk}, 0 12px 26px ${TC[b.t].c}40`,frame:TC[b.t].c2+'73',strip:`linear-gradient(180deg, ${TC[b.t].dk}73, ${TC[b.t].dk}a6)`,word:'#fff',num:TC[b.t].dk,burst:TC[b.t].c2};
-      return {...base,bg:col.layers,blend:col.blend,sh:col.sh,frame:col.frame,icon:null,pat:null,
+      if(!rev) return {...base,bg:'linear-gradient(165deg, #fdecdb, #f2d4b6)',sh:'0 5px 0 #d8ae89, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.65)',stripBg:'linear-gradient(180deg, #fffdf9, #fbf1e6)',stripSh:'inset 0 -2px 0 rgba(120,80,40,.08), 0 2px 6px rgba(120,80,40,.08)',wordC:'#3a2414',numBg:'#3a2414',numBd:'rgba(255,255,255,.9)',numC:'#fff'};
+      // البطاقة بعد الفتح: شخصية «ستيكر كوميك» لكل نوع (codenames-chars.js) — الأحمر والأزرق شخصيتين لكل فريق (b.img)
+      const col=window.CN_CHARS.tile(b.t,b.img);
+      return {...base,bg:col.bg,sh:col.sh,frame:col.frame,icon:null,pat:null,
         op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:col.burst,
         stripBg:col.strip,stripSh:'inset 0 1px 0 rgba(255,255,255,.12)',wordC:col.word,numBg:col.num,numBd:'rgba(255,255,255,.8)',numC:'#fff'}; });
     const urgent=(ph==='hint'||ph==='guess')&&S.left<=10, picks=ph==='guess'?(S.picks||[]).filter(i=>S.board[i]&&!S.board[i].open):[];

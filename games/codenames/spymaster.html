@@ -8,6 +8,7 @@
 <!-- صفحة جوال السباي ماستر (تُفتح من QR): بدون auth/game-access-guard.js لأنها للاعبين وليست للاستريمر -->
 <script src="../../auth/auth-client.js"></script>
 <script src="codenames-platform.js"></script>
+<script src="codenames-chars.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
 <script>
@@ -264,9 +265,7 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 // الاتصال عبر WebSocket: CN.relay → wss://project-testing-akds.onrender.com/ws/room-relay
 // الرسائل: join (للقناة) · sync_request · spymaster_request · spymaster_approve · spymaster_reject · board_update
 const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
-// صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
-const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
-// قبل الفتح: لون واحد لكل نوع · بعد الفتح: صورة الصندوق (نفس شاشة اللعب)
+// قبل الفتح: لون واحد لكل نوع · بعد الفتح: نفس شخصية البطاقة بشاشة اللعب (codenames-chars.js)
 const FLAT = { 1:'linear-gradient(160deg, #b91c1c, #7f1d1d)', 2:'linear-gradient(160deg, #1d4ed8, #172554)', 0:'linear-gradient(160deg, #b8a27a, #8a7553)', '-1':'linear-gradient(160deg, #1c1726, #08060c)' };
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
@@ -391,7 +390,8 @@ class Component extends DCLogic {
       counts:[[S.teams[1],1],[S.teams[2],2],['الأسود',-1]].map(([t,k])=>{ const mine=k===S.myTeam, c=k===-1?'#f87171':COLORS[k];
         return {t,n:k===-1?(left(-1)?'💀':'—'):left(k),sub:k===-1?(left(-1)?'لا تقربونه':'انفتح'):'باقي',c:k===-1?'#fca5a5':c,bar:c,
           bg:mine?`linear-gradient(180deg, ${c}33, ${c}0d)`:'linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))',bd:mine?c+'99':'rgba(255,255,255,.08)'}; }),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:c.open?`url(${TILE_IMG(c)}) center/cover no-repeat, ${FLAT[c.t]}`:FLAT[c.t],sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:'none'}; }),
+      cells:b.map((c,i)=>{ const T=TILE[c.t], O=c.open?window.CN_CHARS.tile(c.t,c.img):null;
+        return {n:i+1,w:c.w,open:!!c.open,bg:O?O.bg:FLAT[c.t],sh:T[1],icon:'',strip:O?O.strip:T[3],fg:O?O.word:T[4],numBg:O?O.num:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:'none'}; }),
       ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
