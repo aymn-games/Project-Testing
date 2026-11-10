@@ -249,7 +249,7 @@ input:focus{outline:none}
                   </sc-for>
                 </div>
                 <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
-                  <span style="max-width:100%;font:900 32px/1 'Zain';color:{{ t.wordC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.w }}</span>
+                  <span style="max-width:100%;font:900 {{ t.fs }}/1 'Zain';color:{{ t.wordC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.w }}</span>
                 </div>
               </div>
             </sc-for>
@@ -658,6 +658,8 @@ const FALLBACK_WORDS = 'أسد نمر فيل زرافة حصان جمل قرد �
 const AR = s => String(s||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[\u064B-\u0652\u0640]/g,'').replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();
 const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; return AVC[h%AVC.length]; };
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
+// حجم خط الكلمة على البطاقة حسب طولها: القصيرة أكبر (تنقرى بالبث)، والطويلة تصغر شوي بدل ما تنقص بـ«…»
+const WORD_FS = w => { const n=[...String(w||'')].length; return (n<=5?44:n===6?42:n===7?40:n===8?38:36)+'px'; };
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
 // أوامر الشات: أي أرقام (عربية ٠-٩ / فارسية ۰-۹ / إنجليزية)، الرقم لازق بالكلمة أو مفصول، وفواصل (، , - و) بين الأرقام.
@@ -984,7 +986,7 @@ class Component extends DCLogic {
         log:S.logs[team].slice(0,6).map(e=>({t:e.t,c:e.kind==='good'?'#6ee7b7':e.kind==='bad'?'#fca5a5':'#e7e3ef',bg:e.kind==='good'?'rgba(16,185,129,.08)':e.kind==='bad'?'rgba(239,68,68,.08)':'rgba(255,255,255,.04)'}))}; });
     const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
     const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
-    const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v),photo:this.reg.avatar(v)||null})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
+    const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,fs:WORD_FS(b.w),votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v),photo:this.reg.avatar(v)||null})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
       if(!rev) return {...base,bg:'linear-gradient(165deg, #fdecdb, #f2d4b6)',sh:'0 5px 0 #d8ae89, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.65)',stripBg:'linear-gradient(180deg, #fffdf9, #fbf1e6)',stripSh:'inset 0 -2px 0 rgba(120,80,40,.08), 0 2px 6px rgba(120,80,40,.08)',wordC:'#3a2414',numBg:'#3a2414',numBd:'rgba(255,255,255,.9)',numC:'#fff'};
       // البطاقة بعد الفتح: شخصية «ستيكر كوميك» لكل نوع (codenames-chars.js) — الأحمر والأزرق شخصيتين لكل فريق (b.img)
       const col=window.CN_CHARS.tile(b.t,b.img);
