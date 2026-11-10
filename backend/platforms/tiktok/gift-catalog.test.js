@@ -37,7 +37,7 @@ test('noteGift: هدية من البث تنضاف، وما تمسح صورة أ�
     var m = make();
     m.c.saveList([{ id: 7, name: 'Galaxy', diamond_count: 1000, image: { url_list: ['https://a/g.png'] } }]);
     assert.strictEqual(m.c.noteGift({ giftId: 7, giftName: 'Galaxy', giftValue: 0, giftImage: null }), true);
-    assert.deepStrictEqual(m.c.get('7'), { id: '7', name: 'Galaxy', diamonds: 1000, image: 'https://a/g.png' });
+    assert.deepStrictEqual(m.c.get('7'), { id: '7', name: 'Galaxy', nameAr: null, diamonds: 1000, image: 'https://a/g.png' });
     assert.strictEqual(m.c.noteGift({ giftId: 9, giftName: 'Heart', giftValue: 5, giftImage: 'https://a/h.png' }), true);
     assert.strictEqual(m.c.noteGift({ giftId: 9, giftName: 'Heart', giftValue: 5, giftImage: 'https://a/h.png' }), false, 'نفس الهدية ما تنكتب مرتين');
     var heart = m.c.list().filter(function (g) { return g.id === '9'; })[0];
@@ -59,4 +59,41 @@ test('refreshWith: مرة باليوم، وبعد فشل تستنى 3 ساعات
     m.clock.t += 3 * 3600 * 1000;
     assert.strictEqual(m.c.shouldRefresh(), true);
     assert.strictEqual(m.c.listUpdatedAt(), 1000000);
+});
+
+test('saveList بالعربي: الاسم العربي بالمعرّف، وما ينمسح بحدث بث', function () {
+    var m = make();
+    m.c.saveList([{ id: 5655, name: 'Rose', diamond_count: 1 }, { id: 5269, name: 'TikTok', diamond_count: 1 }],
+        [{ id: 5655, name: 'وردة', diamond_count: 1 }, { id: 5269, name: '‏TikTok', diamond_count: 1 }]);
+    assert.strictEqual(m.c.get('5655').nameAr, 'وردة');
+    assert.strictEqual(m.c.get('5269').nameAr, null, 'اسم إنجليزي بالقائمة العربية ما ينحسب عربي');
+    m.c.noteGift({ giftId: 5655, giftName: 'Rose', giftValue: 1, giftImage: 'https://a/r.png' });
+    assert.strictEqual(m.c.get('5655').nameAr, 'وردة');
+    assert.strictEqual(m.c.arabicName('5655'), 'وردة');
+    assert.strictEqual(m.c.arabicName('nope'), null);
+    assert.strictEqual(giftCatalog.cleanName('‏TikTok '), 'TikTok');
+});
+
+test('fetchPublicBoth: الإنجليزي والعربي، والعربي اختياري', async function () {
+    var urls = [];
+    function fakeFetch(url) {
+        urls.push(url);
+        var ar = /app_language=ar/.test(url);
+        return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ data: { gifts: [{ id: 1, name: ar ? 'وردة' : 'Rose', diamond_count: 1 }] } }); } });
+    }
+    var r = await giftCatalog.fetchPublicBoth(fakeFetch);
+    assert.strictEqual(r.gifts[0].name, 'Rose');
+    assert.strictEqual(r.ar[0].name, 'وردة');
+    assert.ok(/webcast\.tiktok\.com\/webcast\/gift\/list\//.test(urls[0]));
+    var n = 0;
+    var r2 = await giftCatalog.fetchPublicBoth(function (url) {
+        n++;
+        if (/app_language=ar/.test(url)) return Promise.resolve({ ok: false, status: 500 });
+        return fakeFetch(url);
+    });
+    assert.deepStrictEqual(r2.ar, []);
+    await assert.rejects(giftCatalog.fetchPublicBoth(function () { return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ data: { gifts: [] } }); } }); }));
+    var m = make();
+    assert.strictEqual(await m.c.refreshWith(function () { return giftCatalog.fetchPublicBoth(fakeFetch); }), 1);
+    assert.strictEqual(m.c.get('1').nameAr, 'وردة');
 });

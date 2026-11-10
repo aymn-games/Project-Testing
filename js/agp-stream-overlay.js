@@ -1949,7 +1949,7 @@
         if (type === 'gift' && it && pickedGifts(it)) {
             // أليرت هدية معيّنة: التجربة بوحدة من هداياه، باسمها وصورتها وسعرها
             var pg = it.gifts[Math.floor(Math.random() * it.gifts.length)];
-            e.gift = pg.name; e.giftId = String(pg.id); e.img = pg.image || null; e.count = 1; e.diamonds = Number(pg.diamonds) || 0;
+            e.gift = pg.name; e.giftAr = pg.nameAr || null; e.giftId = String(pg.id); e.img = pg.image || null; e.count = 1; e.diamonds = Number(pg.diamonds) || 0;
         } else if (type === 'gift') {
             var g = Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length);
             e.gift = ['وردة', 'قلب', 'نجمة', 'تاج', 'ماسة', 'صندوق'][g];
@@ -1964,7 +1964,7 @@
     }
 
     function fillMsg(tpl, e) {
-        return String(tpl || '').replace(/\{name\}/g, e.user || '').replace(/\{gift\}/g, e.gift || '').replace(/\{count\}/g, String(e.count || 1)).replace(/\{diamonds\}/g, fmt(e.diamonds))
+        return String(tpl || '').replace(/\{name\}/g, e.user || '').replace(/\{gift\}/g, e.giftAr || e.gift || '').replace(/\{count\}/g, String(e.count || 1)).replace(/\{diamonds\}/g, fmt(e.diamonds))
             .replace(/\{amount\}/g, e.type === 'donation' ? fmtMoney(e.amount, e.currency) : '').replace(/\{message\}/g, e.message || '').replace(/\s+$/, '');
     }
 
@@ -2662,9 +2662,13 @@
         if (e.type === 'gift' && it.giftMode === 'pick' && !pickedGifts(it)) return false; // «هدايا معيّنة» وما اختار شي = ما يشتغل
         if (e.type === 'gift' && pickedGifts(it)) {
             // هدايا معيّنة: بالمعرّف، أو بالاسم لو الحدث ما فيه معرّف
+            // بالمعرّف، أو بالاسم (تيك توك عنده هدايا بنفس الاسم والسعر بأكثر من معرّف)
             var ids = it.gifts.map(function (g) { return String(g.id); });
-            if (e.giftId != null && e.giftId !== '') { if (ids.indexOf(String(e.giftId)) === -1) return false; }
-            else if (it.gifts.map(function (g) { return cleanUser(g.name); }).indexOf(cleanUser(e.gift)) === -1) return false;
+            var gnames = [];
+            it.gifts.forEach(function (g) { if (g.name) gnames.push(cleanUser(g.name)); if (g.nameAr) gnames.push(cleanUser(g.nameAr)); });
+            var byId = e.giftId != null && e.giftId !== '' && ids.indexOf(String(e.giftId)) !== -1;
+            var byName = (e.gift && gnames.indexOf(cleanUser(e.gift)) !== -1) || (e.giftAr && gnames.indexOf(cleanUser(e.giftAr)) !== -1);
+            if (!byId && !byName) return false;
         } else if (e.type === 'gift') {
             var d = Number(e.diamonds) || 0, mx = Number(it.maxDiamonds) || 0;
             if (d < (Number(it.minDiamonds) || 0)) return false;

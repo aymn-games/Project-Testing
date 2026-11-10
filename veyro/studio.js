@@ -2012,7 +2012,7 @@
         return (it.events || []).map(function (k) {
             var lab = (E[k] || {}).label || k;
             if (k === 'gift' && it.giftMode === 'pick' && Array.isArray(it.gifts) && it.gifts.length) {
-                return it.gifts.slice(0, 3).map(function (g) { return g.name; }).join('، ') + (it.gifts.length > 3 ? ' +' + (it.gifts.length - 3) : '');
+                return it.gifts.slice(0, 3).map(function (g) { return g.nameAr || g.name; }).join('، ') + (it.gifts.length > 3 ? ' +' + (it.gifts.length - 3) : '');
             }
             if (k === 'gift') {
                 var mn = Number(it.minDiamonds) || 0, mx = Number(it.maxDiamonds) || 0;
@@ -2064,6 +2064,17 @@
         return img;
     }
     function coinTxt(n) { return fmtNum(n) + ' عملة'; }
+    function giftLabel(g) { return g.nameAr || g.name; }
+    /** تيك توك عنده نفس الهدية (نفس الاسم والسعر) بأكثر من معرّف — نعرض وحدة، والمطابقة بالاسم تغطي الباقي. */
+    function uniqueGifts(list) {
+        var seen = {};
+        return list.filter(function (g) {
+            var k = String(g.name).toLowerCase() + '|' + g.diamonds;
+            if (seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
 
     function giftPicker(it, box) {
         loadGiftCatalog();
@@ -2071,10 +2082,11 @@
         var chosenIds = chosen.map(function (g) { return String(g.id); });
         function toggleGift(g) {
             var i = chosenIds.indexOf(String(g.id));
+            if (i === -1) i = chosen.map(function (x) { return String(x.name).toLowerCase() + '|' + x.diamonds; }).indexOf(String(g.name).toLowerCase() + '|' + g.diamonds);
             var next = chosen.slice();
             if (i === -1) {
                 if (next.length >= GIFT_PICK_MAX) { toast('الحد ' + GIFT_PICK_MAX + ' هدية للأليرت الواحد'); return; }
-                next.push({ id: String(g.id), name: g.name, diamonds: Number(g.diamonds) || 0, image: g.image || null });
+                next.push({ id: String(g.id), name: g.name, nameAr: g.nameAr || null, diamonds: Number(g.diamonds) || 0, image: g.image || null });
             } else next.splice(i, 1);
             update(it, 'gifts', next, true);
         }
@@ -2087,7 +2099,7 @@
             c.title = 'شيلها';
             c.appendChild(giftImg(g));
             var t = el('span');
-            t.appendChild(el('b', null, g.name));
+            t.appendChild(el('b', null, giftLabel(g)));
             t.appendChild(el('small', null, coinTxt(g.diamonds)));
             c.appendChild(t);
             c.appendChild(el('i', null, '×'));
@@ -2101,7 +2113,7 @@
         var q = document.createElement('input');
         q.type = 'search';
         q.className = 'ob-input';
-        q.placeholder = 'ابحث باسم الهدية (Rose, Lion…) أو السعر';
+        q.placeholder = 'ابحث بالاسم (وردة، Lion…) أو السعر';
         q.value = giftCat.q;
         tools.appendChild(q);
         tools.appendChild(pills([{ label: 'الأرخص', value: 'asc' }, { label: 'الأغلى', value: 'desc' }], giftCat.sort, function (v) { giftCat.sort = v; renderPanel(); }));
@@ -2114,16 +2126,18 @@
         function paint() {
             grid.textContent = '';
             var term = giftCat.q.trim().toLowerCase();
-            var list = giftCat.list.filter(function (g) {
-                return !term || String(g.name).toLowerCase().indexOf(term) !== -1 || String(g.diamonds) === term;
-            }).slice().sort(function (a, b) { return giftCat.sort === 'desc' ? b.diamonds - a.diamonds : a.diamonds - b.diamonds; });
+            var chosenKeys = chosen.map(function (x) { return String(x.name).toLowerCase() + '|' + x.diamonds; });
+            var list = uniqueGifts(giftCat.list).filter(function (g) {
+                return !term || String(g.name).toLowerCase().indexOf(term) !== -1 || String(g.nameAr || '').indexOf(term) !== -1 || String(g.diamonds) === term;
+            }).sort(function (a, b) { return giftCat.sort === 'desc' ? b.diamonds - a.diamonds : a.diamonds - b.diamonds; });
             list.slice(0, 240).forEach(function (g) {
-                var on = chosenIds.indexOf(String(g.id)) !== -1;
+                var on = chosenIds.indexOf(String(g.id)) !== -1 || chosenKeys.indexOf(String(g.name).toLowerCase() + '|' + g.diamonds) !== -1;
                 var b = button('', 'vg-gift' + (on ? ' on' : ''), function () { toggleGift(g); });
-                b.title = g.name + ' — ' + coinTxt(g.diamonds);
+                b.title = giftLabel(g) + (g.nameAr ? ' (' + g.name + ')' : '') + ' — ' + coinTxt(g.diamonds);
                 b.setAttribute('aria-pressed', String(on));
                 b.appendChild(giftImg(g));
-                b.appendChild(el('b', null, g.name));
+                b.appendChild(el('b', null, giftLabel(g)));
+                if (g.nameAr) b.appendChild(el('i', null, g.name));
                 b.appendChild(el('small', null, fmtNum(g.diamonds)));
                 grid.appendChild(b);
             });
