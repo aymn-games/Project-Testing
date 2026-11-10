@@ -286,6 +286,16 @@ function isStreamOwner(user, streamUsername) {
     return norm(user.uniqueId) === norm(streamUsername);
 }
 
+/**
+ * هل كاتب التعليق مشرف (Moderator) ببث الستريمر؟ — تيك توك يرسلها مع الرسالة
+ * (user.userIdentity.isModeratorOfAnchor). تستخدمها أدوات Veyro (مشغّل الأغاني:
+ * «المشرفين بس»).
+ */
+function extractIsModerator(data) {
+    var id = data && data.user && data.user.userIdentity;
+    return Boolean(id && id.isModeratorOfAnchor);
+}
+
 function extractFollowDebugInfo(data) {
     var followInfo = data && data.user && data.user.followInfo;
     var userIdentity = data && data.user && data.user.userIdentity;
@@ -437,7 +447,7 @@ function createTikTokConnector() {
             // النص يُمرَّر (بدون استعلامات) لأوامر «التحكم بالشات» بمكتبة الألعاب
             // (js/agp-remote-control.js) — ws-server يرسله بس لو الصفحة طلبته (payload.chat).
             if (_statsOnly) {
-                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data) });
+                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data), isModerator: extractIsModerator(data) });
                 return;
             }
 
@@ -453,6 +463,7 @@ function createTikTokConnector() {
                 name: user.name,
                 text: commentText,
                 isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
+                isModerator: extractIsModerator(data),
                 avatarUrl: avatarUrl,
                 avatarUrls: extractAvatarUrls(data),
                 frame: extractEquippedFrame(user.uniqueId),

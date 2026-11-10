@@ -1748,7 +1748,19 @@
     function musicProps(it, box) {
         enabledRow(it, box, 'تشغيل المشغّل');
         box.appendChild(row('أمر التشغيل', textInput(it.playCmd || '!تشغيل', 20, function (v) { update(it, 'playCmd', v.trim() || '!تشغيل'); }), false, 'المشاهد يكتبه وبعده اسم الأغنية'));
-        box.appendChild(row('أمر التخطي', textInput(it.skipCmd || '!تخطي', 20, function (v) { update(it, 'skipCmd', v.trim() || '!تخطي'); }), false, 'لك أنت بس'));
+        box.appendChild(row('أمر التخطي', textInput(it.skipCmd || '!تخطي', 20, function (v) { update(it, 'skipCmd', v.trim() || '!تخطي'); }), false, 'يقفل الأغنية الحالية على طول'));
+        box.appendChild(row('أمر الصوت', textInput(it.volCmd || '!صوت', 20, function (v) { update(it, 'volCmd', v.trim() || '!صوت'); }), false, 'مثال: ' + (it.volCmd || '!صوت') + '30 — من 0 لـ100'));
+        var whoOpts = [{ label: 'الكل', value: 'all' }, { label: 'المشرفين', value: 'mods' }, { label: 'أشخاص معيّنين', value: 'list' }, { label: 'المشرفين + المعيّنين', value: 'mods_list' }];
+        box.appendChild(row('مين يطلب أغاني', pills(whoOpts, it.who || 'all', function (v) { update(it, 'who', v, true); }), true));
+        box.appendChild(row('مين يتخطى ويغيّر الصوت', pills([{ label: 'أنا بس', value: 'owner' }].concat(whoOpts), it.ctrlWho || 'owner', function (v) { update(it, 'ctrlWho', v, true); }), true, 'أنت (صاحب البث) تقدر دائماً'));
+        var who = it.who || 'all', ctrl = it.ctrlWho || 'owner';
+        if (/list/.test(who) || /list/.test(ctrl)) {
+            var al = textInput(it.allow || '', 600, function (v) { update(it, 'allow', v); }, true);
+            al.dir = 'ltr';
+            al.placeholder = 'sara.tt, @omar_1';
+            box.appendChild(row('الأشخاص المعيّنين', al, true, 'يوزرات تيك توك، افصل بينها بفاصلة أو سطر'));
+        }
+        if (/mods/.test(who) || /mods/.test(ctrl)) box.appendChild(el('div', 'ob-hint', 'المشرفين = اللي معطيهم إشراف ببثك بتيك توك.'));
         volumeRow(it, box, 0.6);
         box.appendChild(row('أقصى مدة', numInput(Math.round((Number(it.maxDurSec) || 360) / 60), 1, 60, '6', function (n) { update(it, 'maxDurSec', (n || 6) * 60); }), false, 'بالدقايق — الأطول ما تشتغل'));
         box.appendChild(row('حد الطابور', numInput(it.maxQueue || 10, 1, 50, '10', function (n) { update(it, 'maxQueue', n || 10); }), false, 'كل مشاهد له طلب واحد بالطابور'));

@@ -3068,7 +3068,7 @@
         if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
         if (type === 'lastdonation') return Object.assign(base, { title: 'آخر دعم', showMessage: false, size: 3, color: '#ffd54a' });
         if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
-        if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
+        if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volCmd: '!صوت', who: 'all', ctrlWho: 'owner', allow: '', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
         if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
         return base;
     }
@@ -3110,17 +3110,56 @@
         return it.readName !== false && m.user ? String(m.user).slice(0, 40) + ' يقول: ' + t : t;
     }
 
-    /** أمر المشغّل برسالة: { kind:'play', q } أو { kind:'skip' } (صاحب البث بس) أو null. */
+    /** قائمة يوزرات تيك توك («أشخاص معيّنين») بشكل موحّد: بدون @ وحروف صغيرة. */
+    function musicAllowList(it) {
+        return (Array.isArray(it.allow) ? it.allow : String(it.allow || '').split(/[\s,،]+/))
+            .map(function (u) { return String(u).trim().replace(/^@+/, '').toLowerCase(); }).filter(Boolean);
+    }
+
+    /**
+     * هل كاتب الرسالة مسموح له؟ who: 'all' الكل | 'mods' المشرفين | 'list' أشخاص معيّنين
+     * | 'mods_list' المشرفين + المعيّنين | 'owner' صاحب البث بس. صاحب البث مسموح له دائماً.
+     */
+    function musicAllowed(it, who, m) {
+        if (m.owner) return true;
+        who = who || 'all';
+        if (who === 'all') return true;
+        if ((who === 'mods' || who === 'mods_list') && m.mod) return true;
+        if (who === 'list' || who === 'mods_list') {
+            var u = String(m.uid || '').replace(/^@+/, '').toLowerCase();
+            return !!u && musicAllowList(it).indexOf(u) !== -1;
+        }
+        return false;
+    }
+
+    /** يطابق «!أمر» أو «!أمر نص» ويرجّع النص بعده، أو null. */
+    function cmdRest(t, cmd) {
+        cmd = String(cmd || '').trim();
+        if (!cmd) return null;
+        if (t === cmd) return '';
+        return t.indexOf(cmd + ' ') === 0 ? t.slice(cmd.length).trim() : null;
+    }
+
+    /**
+     * أمر المشغّل برسالة: { kind:'play', q } أو { kind:'skip' } أو { kind:'vol', v:0..100 } أو null.
+     * الطلب لـ who، والتخطي والصوت لـ ctrlWho (صاحب البث دائماً). الصوت يقبل «!صوت10» و«!صوت 10» وأرقام عربية.
+     */
     function parseMusicCommand(it, m) {
         if (!m || !m.text) return null;
         var t = String(m.text).replace(/\s+/g, ' ').trim();
-        var play = String(it.playCmd || '!تشغيل').trim();
-        var skip = String(it.skipCmd || '!تخطي').trim();
-        if (play && (t === play || t.indexOf(play + ' ') === 0)) {
-            var q = t.slice(play.length).trim().slice(0, 100);
-            return q ? { kind: 'play', q: q } : null;
+        var q = cmdRest(t, it.playCmd || '!تشغيل');
+        if (q !== null) {
+            q = q.slice(0, 100);
+            return q && musicAllowed(it, it.who, m) ? { kind: 'play', q: q } : null;
         }
-        if (skip && (t === skip || t.indexOf(skip + ' ') === 0)) return m.owner ? { kind: 'skip' } : null;
+        if (cmdRest(t, it.skipCmd || '!تخطي') !== null) return musicAllowed(it, it.ctrlWho || 'owner', m) ? { kind: 'skip' } : null;
+        var vc = String(it.volCmd || '!صوت').trim();
+        if (vc && t.indexOf(vc) === 0) {
+            var num = t.slice(vc.length).trim().replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+                .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); }).replace(/[%٪]$/, '');
+            if (!/^\d{1,3}$/.test(num)) return null;
+            return musicAllowed(it, it.ctrlWho || 'owner', m) ? { kind: 'vol', v: Math.min(100, Number(num)) } : null;
+        }
         return null;
     }
 
@@ -3146,7 +3185,15 @@
             var cmd = parseMusicCommand(mi, m);
             if (cmd && cmd.kind === 'play') musicRequest(mi, m.user, m.uid, cmd.q);
             else if (cmd && cmd.kind === 'skip') musicSkip();
+            else if (cmd && cmd.kind === 'vol') musicSetVolume(mi, cmd.v);
         }
+    }
+
+    /** «!صوت10» من الشات: يغيّر صوت المشغّل الحين (يبقى لين تتحدّث الصفحة أو يتغيّر الصوت من المحرر). */
+    function musicSetVolume(it, v) {
+        music.volBase = it.volume;
+        music.liveVol = clamp(Number(v) || 0, 0, 100);
+        if (music.player && music.player.setVolume) { try { music.player.setVolume(music.liveVol); } catch (e) { /* ignore */ } }
     }
 
     /** «جرّب» من المحرر (screen-tests): يرجّع true لو التجربة لأداة صوت. */
@@ -3278,7 +3325,8 @@
         paintMusic();
         clearTimeout(music.endTimer);
         music.endTimer = setTimeout(function () { if (music.cur === cur) musicEnd(); }, (cur.dur + 20) * 1000);
-        var v = Math.round(vol(it, 0.6) * 100);
+        if (music.volBase !== it.volume) { music.volBase = it.volume; music.liveVol = null; } // تغيّر من المحرر → يرجع له
+        var v = music.liveVol != null ? music.liveVol : Math.round(vol(it, 0.6) * 100);
         ytReady(function () {
             if (music.cur !== cur) return;
             if (!music.player) {
@@ -4215,7 +4263,7 @@
         fontOf: fontOf, loadFont: loadFont, fontStack: fontStack,
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,
         /** أدوات الصوت (Veyro): فلتر القارئ وأوامر المشغّل — للمحرر والاختبارات. */
-        ttsFilter: ttsFilter, parseMusicCommand: parseMusicCommand,
+        ttsFilter: ttsFilter, parseMusicCommand: parseMusicCommand, musicAllowed: musicAllowed,
         /** الدونيشن: تنسيق المبلغ ($25) — للمحرر وصورة الإحصائيات. */
         fmtMoney: fmtMoney,
         stats: function () { return stats; },

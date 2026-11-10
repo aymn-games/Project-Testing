@@ -379,7 +379,7 @@ function recordComment(username, connectionId, data) {
 
 /**
  * رسالة شات لأدوات الصوت بشاشات البث (القارئ الصوتي ومشغّل الأغاني). عكس
- * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل.
+ * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل، ومعها mod (مشرف بالبث).
  */
 function pushChat(s, data) {
   var text = String((data && data.text) || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_TEXT_MAX);
@@ -392,6 +392,8 @@ function pushChat(s, data) {
     uid: String(data.id || '').replace(/^tiktok:/, '').replace(/^@/, '').toLowerCase().slice(0, 60),
     text: text,
     owner: normalize(data.id) === s.username || normalize(String(data.id || '').replace(/^tiktok:/, '')) === s.username,
+    // مشرف ببث الستريمر (تيك توك) — لأدوات الشاشة: مشغّل الأغاني «المشرفين بس»
+    mod: Boolean(data && data.isModerator),
     at: Date.now()
   });
   if (s.chat.length > RECENT_CHAT_MAX) s.chat.splice(0, s.chat.length - RECENT_CHAT_MAX);
