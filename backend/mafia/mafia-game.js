@@ -261,7 +261,10 @@ function createGame(roster, settings, hooks) {
 
         // ---- المحققين: نتائجهم وصلت وقت دورهم (deliverReport) — هنا نحرق التأثيرات اللي انكشفت بس
         aliveRole('detective').forEach(function (d) { deliverReport(d); });   // احتياط (لو دورهم ما مرّ)
-        var inspectShot = G.players.some(function (p) { return p.role === 'detective' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
+        // مين سأل عنه المحقق الليلة — الاسم ينكشف للكل، بس النتيجة (دوره) تبقى بجوال المحقق
+        var inspected = [];
+        G.players.forEach(function (p) { var t = p.role === 'detective' && N.actions[p.id]; t = t && t !== 'skip' && P(t); if (t && inspected.indexOf(t) < 0) inspected.push(t); });
+        var inspectShot = inspected.length > 0;
         G.effects = G.effects.filter(function (e) { return N.triggered.indexOf(e) < 0 && e.expires > G.round; });
 
         // ---- عملية المافيا
@@ -290,7 +293,7 @@ function createGame(roster, settings, hooks) {
         var seq = [], at = 0;
         function shot(k, extra) { seq.push(Object.assign({ k: k, at: at, dur: SHOT[k] }, extra || {})); at += SHOT[k]; }
         shot('intro');
-        if (inspectShot) shot('inspect');   // المشتبه ما ينكشف على البث
+        if (inspectShot) shot('inspect', { suspects: inspected.map(function (t) { return t.id; }) });   // الاسم يطلع، ودوره لا
         if (op && op.op === 'kill') {
             // لقطة هجوم وحدة: الهدف يمشي بالسوق والمافيا وراه — ولو هدفين (target2) يمشون الاثنين ووراهم مافيا ثاني.
             // بعدها لقطة إنقاذ وحدة لو أحد انحمى: طبيب لكل واحد انحمى (rescue)، واللي ما انحمى يبقى طايح
@@ -306,12 +309,13 @@ function createGame(roster, settings, hooks) {
         // victim/saved = أول واحد (للتوافق مع الشاشات القديمة)، victims/saveds = القائمة كاملة، guarded = انحمى بدون هجوم
         shot('result', { victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), guarded: ids(guarded), recruited: !!recruited });
 
-        G.lastNight = { round: G.round, victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), guarded: ids(guarded), recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
+        G.lastNight = { round: G.round, victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), guarded: ids(guarded), inspected: ids(inspected), recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
         // وش صار بالليلة — يوصل لكل اللاعبين («الأحداث» بالجوال) ولسجل شاشة البث. مين من المافيا اختار يبقى سر،
         // واسم اللي حماه الطبيب ينكشف كل ليلة
         victims.forEach(function (v) { sys('🔪 المافيا استهدفت ' + v.name + ' — ما نجا وطلع من اللعبة'); });
         saveds.forEach(function (v) { sys('🛡️ المافيا استهدفت ' + v.name + ' — بس الطبيب حماه ونجا 💚'); });
         guarded.forEach(function (v) { sys('🩺 الطبيب حمى ' + v.name + ' الليلة'); });
+        inspected.forEach(function (v) { sys('🕵️ المحقق سأل عن ' + v.name + ' الليلة — والنتيجة سر'); });
         if (recruited) sys('🤝 المافيا جنّدت لاعب الليلة — مين؟ سر');
         if (!victims.length && !saveds.length && !recruited) sys('🌙 ليلة هادية — المافيا ما استهدفت أحد');
 
