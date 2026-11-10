@@ -267,8 +267,8 @@
     }
     function followersSeg(attr, on) { return seg(attr, [['1', 'المتابعين فقط'], ['0', 'الجميع']], on ? '1' : '0'); }
     function modeText(m) { return m === 'solo' ? 'فردي' : 'فريقين'; }
-    function modeHint(m) { return m === 'solo' ? 'أي لاعب منضم يجاوب، وأسرعهم ياخذ نقطة لبثه' : 'كل جولة لاعب من كل فريق'; }
-    function pointsHint(m) { return m === 'solo' ? 'أسرع إجابة صحيحة = نقطة' : 'أول إجابة صحيحة = نقطتين'; }
+    function modeHint(m) { return m === 'solo' ? 'أي لاعب منضم يجاوب، وأسرع 3 ياخذون نقاط لبثهم' : 'كل جولة لاعب من كل فريق'; }
+    function pointsHint(m) { return m === 'solo' ? 'أسرع 3 إجابات: 2 · 1.5 · 1' : 'أول إجابة صحيحة = نقطتين'; }
     function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
     function catList(ids) { return (ids || []).map(catName).join('، '); }
     // اختيار الفئات: 3 فئات بالضبط لكل ستريمر. taken = فئات المنشئ (مقفولة على الخصم).
