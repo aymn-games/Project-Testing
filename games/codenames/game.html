@@ -25,6 +25,7 @@
 <script src="codenames-easy-words.js"></script>
 <script src="codenames-words.js"></script>
 <script src="codenames-chars.js"></script>
+<script src="codenames-sfx.js"></script>
 <!-- مكتبة توليد QR (نفس طريقة اللعبة السابقة) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="codenames-platform.js"></script>
@@ -840,9 +841,8 @@ class Component extends DCLogic {
 
   // ---- sounds ----
   tone(f,d=.15,type='sine',v=.08){ const vol=.7; if(!vol) return; try{ const a=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(v*vol,a.currentTime); g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+d); }catch(e){} }
-  sfx(k){ if(k==='correct') [660,880].forEach((f,i)=>this.after(i*90,()=>this.tone(f,.18,'triangle',.1)));
-    if(k==='wrong') [300,220].forEach((f,i)=>this.after(i*130,()=>this.tone(f,.25,'sawtooth',.06)));
-    if(k==='assassin') [220,165,110].forEach((f,i)=>this.after(i*220,()=>this.tone(f,.5,'sawtooth',.09))); }
+  // الأصوات من codenames-sfx.js: shake · burst · correct · opponent · neutral · assassin · hint · tick · timeup · turn
+  sfx(k,o){ if(window.CN_SFX) window.CN_SFX.play(k,o); }
 
   banner(text,ms=2000,kind='turn',sub=null){ clearTimeout(this.bt); this.setState({banner:{text,kind,sub,team:this.state.turn}}); this.bt=setTimeout(()=>this.setState({banner:null}),ms); }
   log(team,t,kind='info'){ this.setState(s=>({logs:{...s.logs,[team]:[{t,kind,key:Math.random()},...s.logs[team]].slice(0,20)}})); }
@@ -850,27 +850,28 @@ class Component extends DCLogic {
   remaining(board,team){ return board.filter(b=>b.t===team&&!b.open).length; }
 
   runTimer(sec){ clearInterval(this.iv); this.setState({left:sec}); this.iv=setInterval(()=>{ const l=this.state.left-1;
-    if(l>0){ this.setState({left:l}); if(l<=10) this.tone(880,.06,'square',.03); return; }
-    clearInterval(this.iv); this.setState({left:0}); const ph=this.state.phase, tm=this.state.turn;
+    if(l>0){ this.setState({left:l}); if(l<=10) this.sfx('tick',{left:l}); return; }
+    clearInterval(this.iv); this.setState({left:0}); this.sfx('timeup'); const ph=this.state.phase, tm=this.state.turn;
     if(ph==='hint'){ this.log(tm,'ما أرسل السباي ماستر التلميح بالوقت المحدد -- انتقل الدور','bad'); this.endTurn(); }
     if(ph==='guess'){ this.log(tm,'انتهى وقت الاختيار قبل التأكيد الكامل -- انتقل الدور','bad'); this.endTurn(); } },1000); }
   start(){ if(this.state.phase!=='ready') return; if(this.state.flow) this.setState({flow:null}); this.matchStartedAt=Date.now(); this.beginTurn(this.state.turn); }
-  beginTurn(team){ this.opened=0; this.turnId=(this.turnId||0)+1; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
+  beginTurn(team){ this.opened=0; this.sfx('turn'); this.turnId=(this.turnId||0)+1; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
   endTurn(){ if(this.state.phase==='pending'||this.state.phase==='over') return; this.beginTurn(this.state.turn===1?2:1); }
-  giveHint(n,w,old=0){ const tm=this.state.turn; this.setState({hint:{n,w,old},hintGiven:true,phase:'guess'}); this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (منها ${old} قديم)`:''}`,'info'); this.banner(w,2000,'hint',`التلميح · ${n}${old?` · منها ${old} قديم`:''}`); this.runTimer(this.state.guessT); }
+  giveHint(n,w,old=0){ const tm=this.state.turn; this.setState({hint:{n,w,old},hintGiven:true,phase:'guess'}); this.sfx('hint'); this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (منها ${old} قديم)`:''}`,'info'); this.banner(w,2000,'hint',`التلميح · ${n}${old?` · منها ${old} قديم`:''}`); this.runTimer(this.state.guessT); }
   vote(name,i,add){ this.setState(s=>({board:s.board.map((b,k)=>{ if(k!==i||b.open) return b; const has=b.votes.includes(name);
     if(add&&!has) return {...b,votes:[...b.votes,name]}; if(!add&&has) return {...b,votes:b.votes.filter(x=>x!==name)}; return b; })})); }
   confirm(nums){ const go=(j)=>{ if(j>=nums.length) return; const S=this.state; if(S.phase!=='guess') return; const i=nums[j]-1, b=S.board[i]; if(!b||b.open) return go(j+1);
-      const tm=S.turn, opp=tm===1?2:1, board=S.board.map((x,k)=>k===i?{...x,open:true,fresh:true,votes:[]}:x); this.setState({board}); this.after(REVEAL_MS+1100,()=>this.setState(s=>({board:s.board.map((x,k)=>k===i?{...x,fresh:false}:x)})));
+      const tm=S.turn, opp=tm===1?2:1, board=S.board.map((x,k)=>k===i?{...x,open:true,fresh:true,votes:[]}:x); this.setState({board}); this.sfx('shake',{ms:REVEAL_MS}); this.after(REVEAL_MS+1100,()=>this.setState(s=>({board:s.board.map((x,k)=>k===i?{...x,fresh:false}:x)})));
       // الصوت والنتيجة لحظة الانبثاق (بعد الاهتزاز)
       this.after(REVEAL_MS,()=>{ const P=this.state.phase; if(P==='pending'||P==='over') return;
       // الوقت ممكن يخلص أثناء الاهتزاز وينتقل الدور — وقتها ما ننهي الدور مرة ثانية (النتيجة والفوز تنحسب عادي)
       const board=this.state.board, live=()=>this.state.turn===tm&&this.state.phase==='guess', next=fn=>{ if(live()) fn(); };
+      this.sfx('burst');
       if(b.t===tm){ this.sfx('correct'); this.log(tm,`كشف «${b.w}» ✓`,'good'); if(!this.remaining(board,tm)) return this.pendingWin(tm,'boxes',board);
         this.opened=(this.opened||0)+1; const n=S.hint?S.hint.n:99; if(this.opened>=n){ this.log(tm,`فتحوا ${n} صناديق حسب التلميح -- انتهى الدور`,'info'); return this.after(900,()=>next(()=>this.endTurn())); }
         this.after(550,()=>next(()=>go(j+1))); }
-      else if(b.t===0){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>next(()=>this.endTurn())); }
-      else if(b.t===opp){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق ${S.teams[opp].name}، انتهى الدور`,'bad'); if(!this.remaining(board,opp)) return this.pendingWin(opp,'boxes',board); this.after(900,()=>next(()=>this.endTurn())); }
+      else if(b.t===0){ this.sfx('neutral'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>next(()=>this.endTurn())); }
+      else if(b.t===opp){ this.sfx('opponent'); this.log(tm,`كشف «${b.w}» -- صندوق ${S.teams[opp].name}، انتهى الدور`,'bad'); if(!this.remaining(board,opp)) return this.pendingWin(opp,'boxes',board); this.after(900,()=>next(()=>this.endTurn())); }
       else { this.sfx('assassin'); this.log(tm,'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀','bad'); this.pendingWin(opp,'assassin',board); } }); };
     go(0); }
   pendingWin(team,reason,board){ clearInterval(this.iv); this.setState({phase:'pending',win:{team,reason},hint:null,board:board.map(b=>b.open?b:{...b,auto:true,votes:[]})}); }
