@@ -255,26 +255,32 @@ input::placeholder{color:#6f6a7c}
 
     <sc-if value="{{ clashOpen }}" hint-placeholder-val="{{ false }}">
       <!-- مرحلة الاشتباك: الهدف بالنص كبير والمسدس موجّه له — صاحب الاختيار ما يظهر هنا (لا اسم ولا صورة) -->
-      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 55%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;animation:fade .2s ease">
-        <span style="padding:8px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);font:700 22px 'IBM Plex Sans Arabic';color:#e7e3ef">مرحلة الاشتباك</span>
-        <span style="font:800 72px/1.1 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 40px {{ clashTitleG }}">{{ clashTitle }}</span>
+      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 55%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;animation:fade .2s ease">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+          <span style="padding:6px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);font:700 17px 'IBM Plex Sans Arabic';color:#cfc9db;letter-spacing:.2px">مرحلة الاشتباك</span>
+          <span style="font:800 52px/1.15 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 34px {{ clashTitleG }}">{{ clashTitle }}</span>
+          <span style="padding:6px 20px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);font:600 20px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span>
+        </div>
         <div style="direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:16px;width:560px">
-            <span style="position:relative;width:380px;height:380px">
-              <span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:8px solid #f87171;box-shadow:0 0 0 14px rgba(248,113,113,.12), 0 0 90px rgba(239,68,68,.45);font:700 150px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:26px;width:440px">
+            <span style="position:relative;width:290px;height:290px">
+              <span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:7px solid {{ tgRing }};box-shadow:0 0 0 12px {{ tgRingSoft }}, 0 0 80px {{ tgRingGlow }};transition:border-color .3s,box-shadow .3s;font:700 116px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
+              <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}">
+                <span aria-hidden="true" style="position:absolute;top:-22px;left:50%;margin-left:-28px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#059669);border:4px solid #07060b;box-shadow:0 0 24px rgba(52,211,153,.6);animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+              </sc-if>
               <sc-if value="{{ clashAim }}" hint-placeholder-val="{{ true }}">
-                <svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;inset:-34px;width:calc(100% + 68px);height:calc(100% + 68px);pointer-events:none;animation:crossLock 1.3s cubic-bezier(.2,.8,.3,1) both"><circle cx="50" cy="50" r="47" fill="none" stroke="#ef4444" stroke-width="1.1" stroke-dasharray="10 5"></circle><g stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"><line x1="50" y1="0" x2="50" y2="12"></line><line x1="50" y1="88" x2="50" y2="100"></line><line x1="0" y1="50" x2="12" y2="50"></line><line x1="88" y1="50" x2="100" y2="50"></line></g></svg>
+                <svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px);pointer-events:none;animation:crossLock 1.3s cubic-bezier(.2,.8,.3,1) both"><circle cx="50" cy="50" r="47" fill="none" stroke="#ef4444" stroke-width="1.1" stroke-dasharray="10 5"></circle><g stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"><line x1="50" y1="0" x2="50" y2="12"></line><line x1="50" y1="88" x2="50" y2="100"></line><line x1="0" y1="50" x2="12" y2="50"></line><line x1="88" y1="50" x2="100" y2="50"></line></g></svg>
               </sc-if>
             </span>
-            <span style="max-width:100%;font:800 64px/1.2 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
+            <span style="max-width:100%;font:800 48px/1.2 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
             <span style="display:flex;gap:8px">
               <sc-for list="{{ tgHearts }}" as="h" hint-placeholder-count="4">
-                <svg width="38" height="38" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
               </sc-for>
             </span>
           </div>
-          <div style="position:relative;width:620px;height:360px;display:flex;align-items:center;justify-content:center">
-            <svg viewBox="0 0 320 170" width="620" height="330" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 24px 40px rgba(0,0,0,.7));transform-origin:80% 60%;animation:{{ gunAn }}">
+          <div style="position:relative;width:840px;height:430px;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 320 170" width="840" height="446" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 24px 40px rgba(0,0,0,.7));transform-origin:80% 60%;animation:{{ gunAn }}">
               <defs>
                 <linearGradient id="rrSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"></stop><stop offset=".35" stop-color="#9ca3af"></stop><stop offset=".7" stop-color="#374151"></stop><stop offset="1" stop-color="#111827"></stop></linearGradient>
                 <linearGradient id="rrDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7280"></stop><stop offset=".5" stop-color="#1f2937"></stop><stop offset="1" stop-color="#030712"></stop></linearGradient>
@@ -298,11 +304,10 @@ input::placeholder{color:#6f6a7c}
                 <g style="transform-origin:4px 60px;animation:muzzle .5s ease-out both"><polygon points="4,60 -34,34 -24,52 -70,46 -30,62 -72,80 -24,70 -36,92" fill="url(#rrFlash)"></polygon><circle cx="-8" cy="60" r="22" fill="url(#rrFlash)"></circle></g>
               </sc-if>
             </svg>
-            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;direction:rtl;top:6px;left:40px;padding:8px 26px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);background:rgba(0,0,0,.4);font:800 34px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
-            <div style="position:absolute;bottom:-30px;left:200px;opacity:.95">{{ cylEl }}</div>
+            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;direction:rtl;top:0;left:70px;padding:8px 26px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);background:rgba(0,0,0,.4);font:800 34px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
+            <div style="position:absolute;bottom:-20px;left:290px;opacity:.95">{{ cylEl }}</div>
           </div>
         </div>
-        <span style="font:600 26px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span>
       </div>
     </sc-if>
 
@@ -829,11 +834,11 @@ class Component extends DCLogic {
       left:s.left, cdOff:(452.4*(1-s.left/c.chooseSec)).toFixed(1), cdCol:s.left<=5?'#f87171':'#a78bfa', cdAn:s.left<=5?'warnPulse 1s ease-in-out infinite':'none', timeTxt:'00:'+String(s.left).padStart(2,'0'), timePct:(s.left/c.chooseSec*100).toFixed(1), candCount:Math.max(0,W.length-1),
       cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
       kickChooser:()=>ch&&this.eliminate(ch.id,{by:'المذيع',type:'manual',host:true,tag:'إقصاء يدوي'}), resume:()=>this.endTurn(),
-      clashOpen:s.phase==='clash'&&!!tg, clashAim:!!(s.clash&&s.clash.stage==='aim'), gunAn:!s.clash||s.clash.stage==='aim'?'gunAim .6s cubic-bezier(.2,.9,.3,1) both, gunSway 1.4s ease-in-out .6s infinite':s.clash.stage==='hit'?'gunRecoil .45s cubic-bezier(.2,.8,.3,1) both':'missFlash .6s ease', tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
+      clashOpen:s.phase==='clash'&&!!tg, clashAim:!!(s.clash&&s.clash.stage==='aim'), gunAn:!s.clash||s.clash.stage==='aim'?'gunAim .6s cubic-bezier(.2,.9,.3,1) both, gunSway 1.4s ease-in-out .6s infinite':s.clash.stage==='hit'?'gunRecoil .45s cubic-bezier(.2,.8,.3,1) both':'missFlash .6s ease', tgRing:s.clash&&s.clash.stage==='miss'?'#34d399':'#f87171', tgRingSoft:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.16)':'rgba(248,113,113,.12)', tgRingGlow:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.5)':'rgba(239,68,68,.45)', tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
       clashHit:!!(s.clash&&s.clash.stage==='hit'), clashMiss:!!(s.clash&&s.clash.stage==='miss'),
-      clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'…',
-      clashTitleC:!s.clash||s.clash.stage==='aim'?'#f4f2f8':s.clash.stage==='hit'?'#f87171':'#e5e7eb', clashTitleG:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.6)':'rgba(255,255,255,.2)',
-      clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(255,255,255,.08)':'rgba(76,29,149,.35)',
+      clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'في مرمى النار',
+      clashTitleC:!s.clash||s.clash.stage==='aim'?'#f4f2f8':s.clash.stage==='hit'?'#f87171':'#6ee7b7', clashTitleG:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.6)':'rgba(255,255,255,.2)',
+      clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(6,95,70,.35)':'rgba(76,29,149,.35)',
       cylEl:this.cylinder(120,s.clash?s.clash.run:0,!!(s.clash&&s.clash.stage==='aim')),
       tgtAn:s.clash&&s.clash.stage==='hit'?'hitFlash 1s ease forwards':s.clash&&s.clash.stage==='miss'?'missFlash .6s ease':'none',
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
