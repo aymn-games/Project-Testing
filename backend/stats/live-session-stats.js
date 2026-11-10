@@ -344,6 +344,10 @@ function noteGiftMedia(g) {
 function getMediaDataUrl(kind, id) {
   if (kind !== 'g') return Promise.resolve(null);
   var url = _mediaUrls.get('g:' + String(id || ''));
+  // هدية ما وصلت بالبث الحالي (مثل صور كتالوج الهدايا بمحرر Veyro): صورتها من الكتالوج
+  if (!url) {
+    try { var g = require('../platforms/tiktok/gift-catalog').get().get(id); url = g && g.image; } catch (e) { url = null; }
+  }
   return url ? cachedAvatar(url) : Promise.resolve(null);
 }
 

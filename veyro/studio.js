@@ -2011,6 +2011,9 @@
         var E = O.ALERT_EVENTS_ALL;
         return (it.events || []).map(function (k) {
             var lab = (E[k] || {}).label || k;
+            if (k === 'gift' && it.giftMode === 'pick' && Array.isArray(it.gifts) && it.gifts.length) {
+                return it.gifts.slice(0, 3).map(function (g) { return g.name; }).join('، ') + (it.gifts.length > 3 ? ' +' + (it.gifts.length - 3) : '');
+            }
             if (k === 'gift') {
                 var mn = Number(it.minDiamonds) || 0, mx = Number(it.maxDiamonds) || 0;
                 if (mn && mx) return lab + ' ' + fmtNum(mn) + '–' + fmtNum(mx) + ' عملة';
@@ -2032,6 +2035,109 @@
         }).join('، ');
     }
 
+    /* ---------------- كتالوج هدايا تيك توك (لأليرت هدية معيّنة) ----------------
+     * من السيرفر (/api/tiktok/gifts): اسم كل هدية وسعرها وصورتها. يتعبّى من البثوث نفسها،
+     * وقائمة تيك توك الكاملة تتحدّث مرة باليوم — راجع backend/platforms/tiktok/gift-catalog.js. */
+    var giftCat = { loaded: false, loading: false, failed: false, list: [], q: '', sort: 'asc' };
+    var GIFT_PICK_MAX = 30;
+    function loadGiftCatalog(force) {
+        if (giftCat.loading || (giftCat.loaded && !force)) return;
+        giftCat.loading = true;
+        giftCat.failed = false;
+        api('GET', '/api/tiktok/gifts').then(function (d) {
+            giftCat.loading = false;
+            giftCat.loaded = true;
+            if (d && d.success) giftCat.list = Array.isArray(d.gifts) ? d.gifts : [];
+            else giftCat.failed = true;
+            renderPanel();
+        }).catch(function () { giftCat.loading = false; giftCat.failed = true; renderPanel(); });
+    }
+    function giftImg(g) {
+        var img = el('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        var proxy = apiBase() + '/api/stream/media?k=g&id=' + encodeURIComponent(g.id);
+        img.src = g.image || proxy;
+        img.addEventListener('error', function () { if (img.src !== proxy) img.src = proxy; else img.style.visibility = 'hidden'; });
+        return img;
+    }
+    function coinTxt(n) { return fmtNum(n) + ' عملة'; }
+
+    function giftPicker(it, box) {
+        loadGiftCatalog();
+        var chosen = Array.isArray(it.gifts) ? it.gifts : [];
+        var chosenIds = chosen.map(function (g) { return String(g.id); });
+        function toggleGift(g) {
+            var i = chosenIds.indexOf(String(g.id));
+            var next = chosen.slice();
+            if (i === -1) {
+                if (next.length >= GIFT_PICK_MAX) { toast('الحد ' + GIFT_PICK_MAX + ' هدية للأليرت الواحد'); return; }
+                next.push({ id: String(g.id), name: g.name, diamonds: Number(g.diamonds) || 0, image: g.image || null });
+            } else next.splice(i, 1);
+            update(it, 'gifts', next, true);
+        }
+
+        // المختارة
+        var sel = el('div', 'vg-chosen');
+        if (!chosen.length) sel.appendChild(el('div', 'ob-hint', 'ما اخترت ولا هدية — اضغط على أي هدية تحت.'));
+        chosen.forEach(function (g) {
+            var c = button('', 'vg-chip', function () { toggleGift(g); });
+            c.title = 'شيلها';
+            c.appendChild(giftImg(g));
+            var t = el('span');
+            t.appendChild(el('b', null, g.name));
+            t.appendChild(el('small', null, coinTxt(g.diamonds)));
+            c.appendChild(t);
+            c.appendChild(el('i', null, '×'));
+            sel.appendChild(c);
+        });
+        box.appendChild(row('الهدايا المختارة' + (chosen.length ? ' (' + chosen.length + ')' : ''), sel, true));
+
+        // القائمة
+        var wrap = el('div', 'vg-pick');
+        var tools = el('div', 'vg-tools');
+        var q = document.createElement('input');
+        q.type = 'search';
+        q.className = 'ob-input';
+        q.placeholder = 'ابحث باسم الهدية (Rose, Lion…) أو السعر';
+        q.value = giftCat.q;
+        tools.appendChild(q);
+        tools.appendChild(pills([{ label: 'الأرخص', value: 'asc' }, { label: 'الأغلى', value: 'desc' }], giftCat.sort, function (v) { giftCat.sort = v; renderPanel(); }));
+        wrap.appendChild(tools);
+        var grid = el('div', 'vg-grid');
+        var info = el('div', 'ob-hint');
+        wrap.appendChild(grid);
+        wrap.appendChild(info);
+
+        function paint() {
+            grid.textContent = '';
+            var term = giftCat.q.trim().toLowerCase();
+            var list = giftCat.list.filter(function (g) {
+                return !term || String(g.name).toLowerCase().indexOf(term) !== -1 || String(g.diamonds) === term;
+            }).slice().sort(function (a, b) { return giftCat.sort === 'desc' ? b.diamonds - a.diamonds : a.diamonds - b.diamonds; });
+            list.slice(0, 240).forEach(function (g) {
+                var on = chosenIds.indexOf(String(g.id)) !== -1;
+                var b = button('', 'vg-gift' + (on ? ' on' : ''), function () { toggleGift(g); });
+                b.title = g.name + ' — ' + coinTxt(g.diamonds);
+                b.setAttribute('aria-pressed', String(on));
+                b.appendChild(giftImg(g));
+                b.appendChild(el('b', null, g.name));
+                b.appendChild(el('small', null, fmtNum(g.diamonds)));
+                grid.appendChild(b);
+            });
+            if (giftCat.loading && !giftCat.list.length) info.textContent = 'نجيب قائمة الهدايا…';
+            else if (giftCat.failed) info.textContent = 'ما قدرنا نجيب قائمة الهدايا — حدّث الصفحة وجرّب.';
+            else if (!giftCat.list.length) info.textContent = 'قائمة الهدايا لسا فاضية: تتعبّى أول ما يتصل بث (من «اتصل بالبث» بالرئيسية أو أي لعبة)، وكل هدية توصل تنضاف. ارجع هنا بعد ما تبدأ البث.';
+            else if (!list.length) info.textContent = 'ما فيه هدية بهالاسم.';
+            else info.textContent = list.length > 240 ? 'أول 240 من ' + list.length + ' — ابحث بالاسم عشان تلقى الباقي.' : list.length + ' هدية · الرقم تحت كل هدية = سعرها بالعملات.';
+        }
+        q.addEventListener('input', function () { giftCat.q = q.value; paint(); });
+        paint();
+        box.appendChild(row('اختر من هدايا تيك توك', wrap, true, 'الأسماء والأسعار والصور من تيك توك نفسه'));
+    }
+
     /** «يشتغل مع» + شرط كل حدث: العملات من/إلى، كل كم تكبيسة، يوزرات معيّنة. */
     function triggerRows(it, box) {
         var evs = Array.isArray(it.events) ? it.events : [];
@@ -2042,6 +2148,15 @@
             update(it, 'events', next, true);
         }, true), true));
         if (evs.indexOf('gift') !== -1) {
+            var pick = it.giftMode === 'pick';
+            box.appendChild(row('أي هدية؟', pills([{ label: 'بعدد العملات', value: 'range' }, { label: 'هدايا معيّنة', value: 'pick' }], pick ? 'pick' : 'range', function (v) {
+                if (v === 'pick') { it.gifts = Array.isArray(it.gifts) ? it.gifts : []; update(it, 'giftMode', 'pick', true); }
+                else { delete it.giftMode; update(it, 'giftMode', undefined, true); }
+            }), true, pick ? 'الأليرت يشتغل بس مع الهدايا اللي تختارها، وله الأولوية على أليرتات «بعدد العملات»' : 'أي هدية سعرها بين حدين'));
+        }
+        if (evs.indexOf('gift') !== -1 && it.giftMode === 'pick') {
+            giftPicker(it, box);
+        } else if (evs.indexOf('gift') !== -1) {
             var g = el('div', 'va-range');
             g.appendChild(el('span', null, 'من'));
             g.appendChild(numInput(it.minDiamonds, 0, 1000000, '0', function (n) { it.minDiamonds = n; commit(); }));

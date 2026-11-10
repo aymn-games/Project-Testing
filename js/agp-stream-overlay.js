@@ -73,7 +73,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '3'; // 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '4'; // 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -1943,10 +1943,14 @@
     var evState = { init: false, sid: 0, seq: 0, timer: null, inflight: false, tinit: false, tseq: 0, tests: [] };
     var audioCtx = null;
 
-    function sampleEvent(type) {
+    function sampleEvent(type, it) {
         var names = ['أبو فهد', 'نوره', 'سلطان', 'ريم'];
         var e = { type: type, user: names[Math.floor(Math.random() * names.length)], avatar: null, at: Date.now(), demo: true };
-        if (type === 'gift') {
+        if (type === 'gift' && it && pickedGifts(it)) {
+            // أليرت هدية معيّنة: التجربة بوحدة من هداياه، باسمها وصورتها وسعرها
+            var pg = it.gifts[Math.floor(Math.random() * it.gifts.length)];
+            e.gift = pg.name; e.giftId = String(pg.id); e.img = pg.image || null; e.count = 1; e.diamonds = Number(pg.diamonds) || 0;
+        } else if (type === 'gift') {
             var g = Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length);
             e.gift = ['وردة', 'قلب', 'نجمة', 'تاج', 'ماسة', 'صندوق'][g];
             e.img = SAMPLE_GIFT_SVGS[g];
@@ -2649,13 +2653,19 @@
 
     /**
      * هل الحدث يشغّل هذا الأليرت؟
-     *  gift: minDiamonds ≤ العملات ≤ maxDiamonds (0 = بدون حد أعلى)
+     *  gift: هدايا معيّنة (giftMode 'pick' + gifts: [{id, name, diamonds, image}] من كتالوج الهدايا) أو minDiamonds ≤ العملات ≤ maxDiamonds (0 = بدون حد أعلى)
      *  like: كل likeEvery تكبيسة — من نفس الشخص (likeScope 'user') أو مجموع البث ('all')
      *  join/subscribe: joinUsers = يوزرات معيّنة بس (فاضي = الكل)
      */
     function alertMatches(it, e) {
         if (it.hidden || (it.events || []).indexOf(e.type) === -1) return false;
-        if (e.type === 'gift') {
+        if (e.type === 'gift' && it.giftMode === 'pick' && !pickedGifts(it)) return false; // «هدايا معيّنة» وما اختار شي = ما يشتغل
+        if (e.type === 'gift' && pickedGifts(it)) {
+            // هدايا معيّنة: بالمعرّف، أو بالاسم لو الحدث ما فيه معرّف
+            var ids = it.gifts.map(function (g) { return String(g.id); });
+            if (e.giftId != null && e.giftId !== '') { if (ids.indexOf(String(e.giftId)) === -1) return false; }
+            else if (it.gifts.map(function (g) { return cleanUser(g.name); }).indexOf(cleanUser(e.gift)) === -1) return false;
+        } else if (e.type === 'gift') {
             var d = Number(e.diamonds) || 0, mx = Number(it.maxDiamonds) || 0;
             if (d < (Number(it.minDiamonds) || 0)) return false;
             if (mx > 0 && d > mx) return false;
@@ -2685,6 +2695,18 @@
 
     function alertItems() { return activeItems().filter(function (it) { return it.type === 'alert'; }); }
 
+    function pickedGifts(it) { return it.giftMode === 'pick' && Array.isArray(it.gifts) && it.gifts.length > 0; }
+
+    /** الأليرتات اللي يشغّلها الحدث. هدية لها أليرت خاص = أليرتها بس (بدل أليرتات «أي هدية بعدد عملات»). */
+    function alertsFor(e) {
+        var hit = alertItems().filter(function (it) { return alertMatches(it, e); });
+        if (e.type === 'gift') {
+            var own = hit.filter(pickedGifts);
+            if (own.length) return own;
+        }
+        return hit;
+    }
+
     /** رابط الشاشة: أحداث جديدة → تنبيهات. أول طلب (أو بث جديد) = نقطة بداية بدون تنبيهات. */
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
@@ -2710,10 +2732,7 @@
                 }
                 evState.seq = d.seq;
                 (d.events || []).forEach(function (e) {
-                    alertItems().forEach(function (it) {
-                        if (!alertMatches(it, e)) return;
-                        queueAlert(it.id, e);
-                    });
+                    alertsFor(e).forEach(function (it) { queueAlert(it.id, e); });
                 });
             })
             .catch(function () { /* نحاول بالدورة الجاية */ })
@@ -2751,7 +2770,7 @@
         evState.tests = evState.tests.filter(function (t) {
             if (audioTest(t)) return false;
             var it = alertItems().filter(function (x) { return x.id === t.itemId; })[0];
-            if (it) { queueAlert(it.id, forItem(it, sampleEvent(t.type || (it.events || ['gift'])[0])), true); return false; }
+            if (it) { queueAlert(it.id, forItem(it, sampleEvent(t.type || (it.events || ['gift'])[0], it)), true); return false; }
             return now - t.at < 15000;
         });
     }
@@ -4234,13 +4253,13 @@
             return state;
         },
         VEYRO_DESIGNS: VEYRO_DESIGNS, FRAME_COLORS: FRAME_COLORS, THRONE_CYCLES: THRONE_CYCLES, THRONE_FX: THRONE_FX, THRONE_FRAMES: THRONE_FRAMES, STACK_COUNTS: STACK_COUNTS, LD_ICONS: LD_ICONS, BN_BG: BN_BG, BN_MOTIONS: BN_MOTIONS, BN_MATS: BN_MATS, refreshItem: refreshItem, throneDemo: throneDemo,
-        ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
+        ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
-        alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
+        alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
         commit: function () { save(); if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); } },
         /** الاستوديو: هدايا تجريبية تطيح بالوعاء (بالمعاينة فقط، ما تنحفظ). */

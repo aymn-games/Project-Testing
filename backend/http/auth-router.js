@@ -42,6 +42,7 @@ var chatLatency = require('../utils/chat-latency');
 var config = require('../config');
 var response = require('./response');
 var bodyParser = require('./body-parser');
+var giftCatalog = require('../platforms/tiktok/gift-catalog');
 
 var sendJson = response.sendJson;
 
@@ -193,6 +194,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/stream/stats-watch', requireAuth: true, handler: handleSetStatsWatch },
   { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
   { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
+  // كتالوج هدايا تيك توك (الاسم والسعر والصورة) — Veyro يختار منه هدية لأليرت. راجع platforms/tiktok/gift-catalog.js
+  { method: 'GET', path: '/api/tiktok/gifts', requireAuth: true, handler: handleTikTokGifts },
   // «شاشات البث» (overlay/index.html) — كل شاشة لها رابط overlay/live.html?k= لـOBS/TikTok LIVE Studio.
   // راجع stats/stream-screens-service.js. الإدارة لحسابات الستريمر، والرابط يقرأ بالرمز بس.
   { method: 'GET', path: '/api/screens', requireAuth: true, handler: handleListScreens },
@@ -1485,6 +1488,17 @@ function handleScreenTestAlert(req, res, body, user) {
   if (!scr) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
   var t = screenTests.push(scr.key, body.itemId, String(body.type || 'gift'));
   sendJson(res, t ? 200 : 400, t ? { success: true } : { success: false, error: 'bad_item' });
+}
+
+/** GET /api/tiktok/gifts → { success, gifts: [{id, name, diamonds, image, official}], updatedAt } */
+function handleTikTokGifts(req, res) {
+  try {
+    var c = giftCatalog.get();
+    sendJson(res, 200, { success: true, gifts: c.list(), updatedAt: c.listUpdatedAt() });
+  } catch (err) {
+    logger.error('TikTok gifts: list failed:', err);
+    sendJson(res, 500, { success: false, error: 'server_error' });
+  }
 }
 
 /**
