@@ -45,6 +45,9 @@ input:focus{outline:none}
 @keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes cnShake{0%{transform:none}10%{transform:translateX(-3px) rotate(-1.2deg)}20%{transform:translateX(3px) rotate(1.2deg)}30%{transform:translateX(-5px) rotate(-2.2deg)}40%{transform:translateX(5px) rotate(2.2deg)}50%{transform:translateX(-6px) rotate(-3deg) scale(1.02)}60%{transform:translateX(6px) rotate(3deg) scale(1.03)}70%{transform:translateX(-7px) rotate(-3.4deg) scale(1.04)}80%{transform:translateX(7px) rotate(3.4deg) scale(1.06)}90%{transform:translateX(-3px) rotate(-1.5deg) scale(1.08)}100%{transform:scale(1.1)}}
+@keyframes cnCoverOut{0%{opacity:1;transform:none;filter:brightness(1)}30%{opacity:1;transform:scale(1.04);filter:brightness(3) saturate(0)}100%{opacity:0;transform:scale(1.12);filter:brightness(3.5) saturate(0)}}
+@keyframes cnShowAt{0%{visibility:hidden}100%{visibility:visible}}
 @keyframes popBurst{0%{transform:scale(.55);filter:brightness(2)}45%{transform:scale(1.16);filter:brightness(1.4)}70%{transform:scale(.96)}100%{transform:none;filter:none}}
 @keyframes ringOut{0%{opacity:.95;transform:scale(.7)}100%{opacity:0;transform:scale(1.55)}}
 @keyframes sparkOut{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
@@ -230,10 +233,12 @@ input:focus{outline:none}
                   <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:4;height:26px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:linear-gradient(90deg, #f59e0b, #fbbf24);color:#2a1a10;font:900 14px 'Zain';white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35)">✋ {{ t.pickN }}</span>
                 </sc-if>
                 <sc-if value="{{ t.burst }}" hint-placeholder-val="{{ false }}">
-                  <span aria-hidden="true" style="position:absolute;inset:-6px;border-radius:20px;border:4px solid {{ t.burstC }};box-shadow:0 0 30px {{ t.burstC }};pointer-events:none;animation:ringOut .8s ease-out forwards"></span>
+                  <span aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;z-index:6;animation:cnShowAt {{ t.delay }} steps(1,end) both">
+                  <span aria-hidden="true" style="position:absolute;inset:-6px;border-radius:20px;border:4px solid {{ t.burstC }};box-shadow:0 0 30px {{ t.burstC }};pointer-events:none;animation:ringOut .8s ease-out {{ t.delay }} forwards"></span>
                   <sc-for list="{{ t.sparks }}" as="sp" hint-placeholder-count="0">
-                    <span aria-hidden="true" style="position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:{{ t.burstC }};box-shadow:0 0 10px {{ t.burstC }};pointer-events:none;--dx:{{ sp.dx }};--dy:{{ sp.dy }};animation:sparkOut .75s ease-out forwards"></span>
+                    <span aria-hidden="true" style="position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:{{ t.burstC }};box-shadow:0 0 10px {{ t.burstC }};pointer-events:none;--dx:{{ sp.dx }};--dy:{{ sp.dy }};animation:sparkOut .75s ease-out {{ t.delay }} forwards"></span>
                   </sc-for>
+                  </span>
                 </sc-if>
                 <span aria-hidden="true" style="position:absolute;inset:7px;border-radius:11px;border:2px solid {{ t.frame }};pointer-events:none"></span>
                 <sc-if value="{{ t.pat }}" hint-placeholder-val="{{ false }}">
@@ -251,6 +256,13 @@ input:focus{outline:none}
                 <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;container-type:inline-size;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
                   <span style="font:900 {{ t.fs }}/1.5 'Zain';color:{{ t.wordC }};white-space:nowrap">{{ t.w }}</span>
                 </div>
+                <sc-if value="{{ t.cover }}" hint-placeholder-val="{{ false }}">
+                  <div aria-hidden="true" style="position:absolute;inset:0;z-index:5;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;background:{{ t.coverBg }};pointer-events:none;animation:cnCoverOut .26s ease-out {{ t.delay }} forwards">
+                    <span style="position:absolute;inset:7px;border-radius:11px;border:2px solid rgba(255,255,255,.65)"></span>
+                    <div style="position:relative;flex:1"><span style="position:absolute;top:2px;right:2px;min-width:46px;height:40px;padding:0 8px;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;background:#3a2414;border:2px solid rgba(255,255,255,.9);font:900 26px/1 'Zain';color:#fff">{{ t.n }}</span></div>
+                    <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;container-type:inline-size;background:linear-gradient(180deg, #fffdf9, #fbf1e6)"><span style="font:900 {{ t.fs }}/1.5 'Zain';color:#3a2414;white-space:nowrap">{{ t.w }}</span></div>
+                  </div>
+                </sc-if>
               </div>
             </sc-for>
 
@@ -660,6 +672,8 @@ const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; re
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
 // حجم خط الكلمة: القصيرة كبيرة (تنقرى بالبث)، وأي كلمة تصغر لحالها على عرض شريطها الفعلي (cqi = عرض الشريط)
 // فما تنقص ولا ينقطع منها شي مهما كان طولها أو حجم الشاشة. السطر 1.5 عشان النقاط والحروف النازلة تبان كاملة.
+// مدة اهتزاز الصندوق قبل ما ينفتح — الصوت والنتيجة تنتظر نفس المدة
+const REVEAL_MS = 600;
 const WORD_FS = w => { const n=Math.max(2,[...String(w||'')].length); return `min(44px, ${(92/(n*.62)).toFixed(1)}cqi)`; };
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
@@ -847,13 +861,17 @@ class Component extends DCLogic {
   vote(name,i,add){ this.setState(s=>({board:s.board.map((b,k)=>{ if(k!==i||b.open) return b; const has=b.votes.includes(name);
     if(add&&!has) return {...b,votes:[...b.votes,name]}; if(!add&&has) return {...b,votes:b.votes.filter(x=>x!==name)}; return b; })})); }
   confirm(nums){ const go=(j)=>{ if(j>=nums.length) return; const S=this.state; if(S.phase!=='guess') return; const i=nums[j]-1, b=S.board[i]; if(!b||b.open) return go(j+1);
-      const tm=S.turn, opp=tm===1?2:1, board=S.board.map((x,k)=>k===i?{...x,open:true,fresh:true,votes:[]}:x); this.setState({board}); this.after(1000,()=>this.setState(s=>({board:s.board.map((x,k)=>k===i?{...x,fresh:false}:x)})));
+      const tm=S.turn, opp=tm===1?2:1, board=S.board.map((x,k)=>k===i?{...x,open:true,fresh:true,votes:[]}:x); this.setState({board}); this.after(REVEAL_MS+1100,()=>this.setState(s=>({board:s.board.map((x,k)=>k===i?{...x,fresh:false}:x)})));
+      // الصوت والنتيجة لحظة الانبثاق (بعد الاهتزاز)
+      this.after(REVEAL_MS,()=>{ const P=this.state.phase; if(P==='pending'||P==='over') return;
+      // الوقت ممكن يخلص أثناء الاهتزاز وينتقل الدور — وقتها ما ننهي الدور مرة ثانية (النتيجة والفوز تنحسب عادي)
+      const board=this.state.board, live=()=>this.state.turn===tm&&this.state.phase==='guess', next=fn=>{ if(live()) fn(); };
       if(b.t===tm){ this.sfx('correct'); this.log(tm,`كشف «${b.w}» ✓`,'good'); if(!this.remaining(board,tm)) return this.pendingWin(tm,'boxes',board);
-        this.opened=(this.opened||0)+1; const n=S.hint?S.hint.n:99; if(this.opened>=n){ this.log(tm,`فتحوا ${n} صناديق حسب التلميح -- انتهى الدور`,'info'); return this.after(900,()=>this.endTurn()); }
-        this.after(550,()=>go(j+1)); }
-      else if(b.t===0){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>this.endTurn()); }
-      else if(b.t===opp){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق ${S.teams[opp].name}، انتهى الدور`,'bad'); if(!this.remaining(board,opp)) return this.pendingWin(opp,'boxes',board); this.after(900,()=>this.endTurn()); }
-      else { this.sfx('assassin'); this.log(tm,'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀','bad'); this.pendingWin(opp,'assassin',board); } };
+        this.opened=(this.opened||0)+1; const n=S.hint?S.hint.n:99; if(this.opened>=n){ this.log(tm,`فتحوا ${n} صناديق حسب التلميح -- انتهى الدور`,'info'); return this.after(900,()=>next(()=>this.endTurn())); }
+        this.after(550,()=>next(()=>go(j+1))); }
+      else if(b.t===0){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>next(()=>this.endTurn())); }
+      else if(b.t===opp){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق ${S.teams[opp].name}، انتهى الدور`,'bad'); if(!this.remaining(board,opp)) return this.pendingWin(opp,'boxes',board); this.after(900,()=>next(()=>this.endTurn())); }
+      else { this.sfx('assassin'); this.log(tm,'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀','bad'); this.pendingWin(opp,'assassin',board); } }); };
     go(0); }
   pendingWin(team,reason,board){ clearInterval(this.iv); this.setState({phase:'pending',win:{team,reason},hint:null,board:board.map(b=>b.open?b:{...b,auto:true,votes:[]})}); }
   announce(){ const S=this.state; if(S.phase!=='pending') return; this.setState({phase:'over'});
@@ -992,7 +1010,9 @@ class Component extends DCLogic {
       // البطاقة بعد الفتح: شخصية «ستيكر كوميك» لكل نوع (codenames-chars.js) — الأحمر والأزرق شخصيتين لكل فريق (b.img)
       const col=window.CN_CHARS.tile(b.t,b.img);
       return {...base,bg:col.bg,sh:col.sh,frame:col.frame,icon:null,pat:null,
-        op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:col.burst,
+        // فتح الصندوق: يهتز وهو مقفول (REVEAL_MS) ← ينبثق بوميض وحلقة وشرارات ← تطلع الشخصية
+        op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?`cnShake ${REVEAL_MS}ms ease-in-out, popBurst .65s cubic-bezier(.2,1.3,.35,1) ${REVEAL_MS}ms`:'none'),burst:b.fresh&&!b.auto,
+        cover:b.fresh&&!b.auto,coverBg:'linear-gradient(165deg, #fdecdb, #f2d4b6)',delay:REVEAL_MS+'ms',sparks:b.fresh&&!b.auto?SPARKS:[],burstC:col.burst,
         stripBg:col.strip,stripSh:'inset 0 1px 0 rgba(255,255,255,.12)',wordC:col.word,numBg:col.num,numBd:'rgba(255,255,255,.8)',numC:'#fff'}; });
     const urgent=(ph==='hint'||ph==='guess')&&S.left<=10, picks=ph==='guess'?(S.picks||[]).filter(i=>S.board[i]&&!S.board[i].open):[];
     const bn=S.banner, bnT=bn&&TC[bn.team];
