@@ -124,6 +124,9 @@ input:focus{outline:none}
                 <div style="position:relative;min-width:0;height:80px;padding:9px 10px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;justify-content:space-between;background:{{ rc.bg }};border:1.5px {{ rc.bdS }} {{ rc.bd }}">
                   <span style="font:800 13px 'Zain';color:{{ rc.lc }}">{{ rc.icon }} {{ rc.label }}</span>
                   <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                    <sc-if value="{{ rc.set }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:relative;overflow:hidden;width:24px;height:24px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 11px 'Zain';color:#fff;background:{{ rc.av }}">{{ rc.ini }}<sc-if value="{{ rc.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ rc.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                    </sc-if>
                     <span style="flex:1;min-width:0;font:800 15px 'Zain';color:{{ rc.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rc.who }}</span>
                     <sc-if value="{{ rc.set }}" hint-placeholder-val="{{ false }}">
                       <button onClick="{{ rc.clear }}" aria-label="إلغاء الدور" style="width:26px;height:26px;flex-shrink:0;border-radius:50%;border:none;background:rgba(0,0,0,.25);color:#fff;cursor:pointer;font:700 13px/1 'Zain'" style-hover="background:rgba(239,68,68,.6)">✕</button>
@@ -141,7 +144,7 @@ input:focus{outline:none}
               <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px">
                 <sc-for list="{{ P.players }}" as="p" hint-placeholder-count="4">
                   <div style="flex-shrink:0;height:50px;padding:0 6px 0 8px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)">
-                    <span style="width:36px;height:36px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 2px {{ p.ring }}">{{ p.ini }}</span>
+                    <span style="position:relative;overflow:hidden;width:36px;height:36px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 2px {{ p.ring }}">{{ p.ini }}<sc-if value="{{ p.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ p.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                     <span style="flex:1;min-width:0;font:700 15px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
                     <sc-if value="{{ p.showSpy }}" hint-placeholder-val="{{ true }}">
                       <button onClick="{{ p.spy }}" aria-label="سباي ماستر" title="سباي ماستر" style="width:32px;height:32px;flex-shrink:0;border-radius:9px;cursor:pointer;border:1px solid {{ p.spyBd }};background:{{ p.spyBg }};font:400 17px/1 'Zain';transition:all .2s" style-hover="filter:brightness(1.3)">🕵</button>
@@ -309,7 +312,7 @@ input:focus{outline:none}
           <div style="display:flex;flex-direction:column;gap:8px">
             <sc-for list="{{ joinReqs }}" as="j" hint-placeholder-count="0">
               <div style="height:54px;padding:0 10px 0 12px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
-                <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ j.av }}">{{ j.ini }}</span>
+                <span style="position:relative;overflow:hidden;width:38px;height:38px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ j.av }}">{{ j.ini }}<sc-if value="{{ j.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ j.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                 <span style="flex:1;min-width:0;font:700 17px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
                 <span style="padding:4px 12px;border-radius:999px;background:{{ j.soft }};border:1px solid {{ j.c }};font:800 13px 'Zain';color:{{ j.c }}">{{ j.team }}</span>
                 <button onClick="{{ j.remove }}" aria-label="رفض" style="width:30px;height:30px;border:none;background:transparent;color:#fca5a5;cursor:pointer;font:700 16px 'Zain'">✕</button>
@@ -997,9 +1000,9 @@ class Component extends DCLogic {
       return { col:team===1?1:3, name:S.teams[team].name, sub:S.starter===team?'يبدأ · 9 صناديق':'8 صناديق', left:this.remaining(S.board,team), c2:C.c2, count:S.players[team].length,
         headBg:`linear-gradient(135deg, ${C.c}, ${C.dk})`, headBd:active?'#fff':'transparent', headSh:active?`0 0 0 4px ${C.c}55, 0 16px 40px ${C.c}55`:'0 10px 30px rgba(0,0,0,.3)',
         roleCards:[['spy','🕵','سباي ماستر'],['conf','✓','تأكيد الأجوبة']].map(([k,icon,label])=>{ const who=R[k];
-          return {icon,label,who:who||'-- غير معيّن --',set:!!who,clear:()=>setRole(team,k,who),bg:who?C.soft:'rgba(255,255,255,.025)',bd:who?C.c:'rgba(255,255,255,.12)',bdS:who?'solid':'dashed',lc:who?C.c2:'#8a8596',nc:who?'#fff':'#6f6a7c'}; }),
+          return {icon,label,who:who||'-- غير معيّن --',set:!!who,...(who?{...avOf(who),photo:this.reg.avatar(who)||null}:{av:'none',ini:'',photo:null}),clear:()=>setRole(team,k,who),bg:who?C.soft:'rgba(255,255,255,.025)',bd:who?C.c:'rgba(255,255,255,.12)',bdS:who?'solid':'dashed',lc:who?C.c2:'#8a8596',nc:who?'#fff':'#6f6a7c'}; }),
         players:S.players[team].map(n=>{ const isSpy=R.spy===n, isConf=R.conf===n;
-          return {name:n,...avOf(n),ring:isSpy||isConf?C.c:'transparent',
+          return {name:n,...avOf(n),photo:this.reg.avatar(n)||null,ring:isSpy||isConf?C.c:'transparent',
             showSpy:!R.spy||isSpy, spy:()=>setRole(team,'spy',n), spyBg:isSpy?C.c:'rgba(255,255,255,.04)', spyBd:isSpy?'#fff':'rgba(255,255,255,.1)',
             showConf:!R.conf||isConf, conf:()=>setRole(team,'conf',n), confBg:isConf?'#10b981':'rgba(255,255,255,.04)', confBd:isConf?'#fff':'rgba(255,255,255,.1)', confC:isConf?'#fff':'#a8a3b5'}; }),
         noLog:!S.logs[team].length,
@@ -1058,7 +1061,7 @@ class Component extends DCLogic {
       modalOpen:!!S.modal, closeModal:()=>this.shut('modal'), mOv:o('fade .25s ease','fadeOut .26s ease forwards'), mAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
       mTitle:modals[S.modal]||'', mW:S.modal==='how'?760:S.modal==='qr'?680:520,
       mJoin:S.modal==='join', mQr:S.modal==='qr', mReqs:S.modal==='reqs', mTime:S.modal==='time', mHow:S.modal==='how', mExit:S.modal==='exit',
-      noJoinReqs:!S.joinReqs.length, joinReqs:S.joinReqs.map(j=>({name:j.name,...avOf(j.name),team:S.teams[j.team].name,c:TC[j.team].c2,soft:TC[j.team].soft,remove:()=>this.setState(s=>({joinReqs:s.joinReqs.filter(x=>x.name!==j.name)}))})),
+      noJoinReqs:!S.joinReqs.length, joinReqs:S.joinReqs.map(j=>({name:j.name,...avOf(j.name),photo:this.reg.avatar(j.name)||null,team:S.teams[j.team].name,c:TC[j.team].c2,soft:TC[j.team].soft,remove:()=>this.setState(s=>({joinReqs:s.joinReqs.filter(x=>x.name!==j.name)}))})),
       saveJoin:()=>{ this.setState(s=>{ const P={1:s.players[1].slice(),2:s.players[2].slice()}; s.joinReqs.forEach(j=>{ if(!P[1].includes(j.name)&&!P[2].includes(j.name)) P[j.team].push(j.name); }); return {players:P,joinReqs:[]}; }); this.shut('modal'); },
       qrSrc:S.modal==='qr'?CN.qrDataUrl(spyUrl,300):'', spyUrl,
       // باركود لكل فريق: خاص بالسباي ماستر المعيّن (يفتح له مباشرة لو مسجّل دخول بحسابه)، أو باركود الطلب العام لو ما تعيّن أحد
