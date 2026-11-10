@@ -64,7 +64,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       <button onClick="{{ toggleAutoJoin }}" role="switch" aria-checked="{{ autoJoinAria }}" title="الدخول التلقائي: عند التفعيل يدخل أي لاعب جديد بكتابة كلمة الدخول بالشات" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(8px,0.7vw,12px) 0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(8px,0.6vw,12px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid {{ autoJoinBd }};background:{{ autoJoinBg }};color:#e7e3ef" style-active="transform:scale(.97)"><span style="display:{{ lblDisp }}">الدخول التلقائي</span><span style="width:40px;height:22px;flex-shrink:0;border-radius:999px;position:relative;background:{{ autoJoinTrack }};transition:background .25s"><span style="position:absolute;top:3px;right:{{ autoJoinKnob }};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:right .25s cubic-bezier(.2,1,.3,1)"></span></span></button>
       </sc-if>
       <sc-if value="{{ showJoinKw }}" hint-placeholder-val="{{ false }}">
-        <span style="height:clamp(32px,2.3vw,42px);box-sizing:border-box;padding:0 clamp(6px,0.5vw,8px) 0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.08);color:#c4b5fd;backdrop-filter:blur(10px);animation:fade .3s ease"><span style="display:{{ lblDisp }}">كلمة الدخول</span><sc-for list="{{ joinKws }}" as="k" hint-placeholder-count="1"><span style="display:flex;align-items:center;padding:2px clamp(8px,0.7vw,12px);border-radius:999px;border:1.5px dashed {{ k.color }};background:{{ k.soft }};font:700 clamp(12px,0.85vw,16px) 'IBM Plex Sans Arabic';color:#f4f2f8">{{ k.label }}</span></sc-for></span>
+        <span style="display:flex;align-items:center;gap:clamp(8px,0.7vw,14px);white-space:nowrap;padding:0 clamp(4px,0.4vw,8px);animation:fade .3s ease"><span style="display:{{ lblDisp }};font:600 clamp(12px,0.8vw,15px) 'IBM Plex Sans Arabic';color:#a8a3b5">كلمة الدخول</span><sc-for list="{{ joinKws }}" as="k" hint-placeholder-count="1"><span style="font:700 clamp(18px,1.45vw,28px)/1 'IBM Plex Sans Arabic';color:{{ k.color }};text-shadow:0 0 18px {{ k.soft }}">{{ k.label }}</span></sc-for></span>
       </sc-if>
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
@@ -189,6 +189,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
               <sc-if value="{{ q.emoji }}" hint-placeholder-val="{{ false }}">
                 <span style="font-size:110px;line-height:1">{{ q.emoji }}</span>
               </sc-if>
+              <sc-if value="{{ qHasWords }}" hint-placeholder-val="{{ false }}">
+                <span style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:14px;padding:0 20px"><sc-for list="{{ qWords }}" as="w" hint-placeholder-count="3"><span style="padding:6px 22px;border-radius:18px;background:rgba(139,92,246,.14);border:1.5px solid rgba(167,139,250,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);font:700 {{ qWordFs }} 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap">{{ w.t }}</span></sc-for></span>
+              </sc-if>
               <sc-if value="{{ q.prompt }}" hint-placeholder-val="{{ true }}">
                 <span dir="{{ q.dir }}" style="font:700 {{ qFs }}/1.2 'IBM Plex Sans Arabic';text-align:center;padding:0 20px;letter-spacing:{{ q.ls }}">{{ q.prompt }}</span>
               </sc-if>
@@ -252,6 +255,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             </sc-if>
             <sc-if value="{{ q.emoji }}" hint-placeholder-val="{{ false }}">
               <span style="font-size:190px;line-height:1">{{ q.emoji }}</span>
+            </sc-if>
+            <sc-if value="{{ qHasWords }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:14px;padding:0 20px"><sc-for list="{{ qWords }}" as="w" hint-placeholder-count="3"><span style="padding:10px 28px;border-radius:18px;background:rgba(139,92,246,.14);border:1.5px solid rgba(167,139,250,.45);box-shadow:0 8px 24px rgba(0,0,0,.35);font:700 64px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap">{{ w.t }}</span></sc-for></span>
             </sc-if>
             <sc-if value="{{ q.prompt }}" hint-placeholder-val="{{ true }}">
               <span dir="{{ q.dir }}" style="font:700 {{ qFsBig }}/1.3 'IBM Plex Sans Arabic';text-align:center;text-wrap:balance;letter-spacing:{{ q.ls }}">{{ q.prompt }}</span>
@@ -586,7 +592,7 @@ class Component extends DCLogic {
     if(id==='currency'){ const [c,a,alt=[]]=this.pickNew(id,D.currency); return {...base,sub:'ما عملة هذه الدولة؟',prompt:c,answer:a,accept:[a,...alt]}; }
     // رتّب الجملة: الكلمات تنعرض مبعثرة (مو بنفس ترتيب أي إجابة صحيحة)
     if(id==='sentence'){ const [t,alt=[]]=this.pickNew(id,D.sentence), ok=[t,...alt].map(x=>this.norm(x)), w=t.split(' '); let m,k=0; do{ m=[...w].sort(()=>Math.random()-.5); }while(ok.includes(this.norm(m.join(' ')))&&++k<30);
-      return {...base,sub:'رتّب الكلمات',prompt:m.join(' / '),answer:t,accept:[t,...alt]}; }
+      return {...base,sub:'رتّب الكلمات',prompt:'',words:m,answer:t,accept:[t,...alt]}; }
     const [code,a,alt=[]]=this.pick(D.flag); return {...base,sub:'لمن هذا العلم؟',img:`https://flagcdn.com/w640/${code}.png`,answer:a,accept:[a,...alt]};
   }
 
@@ -747,7 +753,7 @@ class Component extends DCLogic {
             h('span',{style:{font:"500 15px 'IBM Plex Sans Arabic'",color:'#c4b5fd',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},BOARD?'دخل':s.teams[n.team].name)),
           h('span',{style:{position:'absolute',bottom:0,right:0,height:3,background:c,animation:`joinBar ${this.JOIN_MS}ms linear forwards`}})); })(),
       // كلمة الدخول اللي حددها الستريمر بشاشة الإعدادات — تظهر وقت ما يكون الدخول التلقائي مفعّل
-      showJoinKw:!CHALLENGE&&s.autoJoin, showChips:!BOARD, joinKws:this.KW.map((w,i)=>({label:BOARD?w:s.teams[i].name+': '+w,color:col(i),soft:col(i)+'1a'})),
+      showJoinKw:!CHALLENGE&&s.autoJoin, showChips:!BOARD, joinKws:this.KW.map((w,i)=>({label:w,color:BOARD?'#ddd6fe':col(i),soft:col(i)+'88'})),
       answerWho:this.solo?'يجاوب: كل المشاركين':'يجاوب:', joinHint:BOARD?'اكتب كلمة الدخول بشات البث':'اكتب كلمة الدخول الخاصة بفريقك بشات البث', scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
       catBand:cs.stopped&&cspun?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)', statusTitle:titles[P][0], statusText:titles[P][1],
       spinOp:P==='ready'?1:.35, spinAnim:P==='ready'?'glow 1.8s infinite':'none', spin:this.spin,
@@ -756,7 +762,7 @@ class Component extends DCLogic {
           h('span',{style:{font:"600 28px 'IBM Plex Sans Arabic'",color:'#c4b5fd',padding:'8px 22px',borderRadius:999,border:'1px solid rgba(167,139,250,.35)',background:'rgba(139,92,246,.1)'}},catName),
           h('span',{style:{font:"700 300px/1 'IBM Plex Sans Arabic'",background:'linear-gradient(180deg, #ddd6fe, #8b5cf6)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 40px rgba(139,92,246,.5))'}},String(s.countdown)))):null,
       showModal:!soloQ&&(P==='question'||P==='results')&&!!s.q, isResults:P==='results', resultLabel:s.answers.length?(s.timeLeft>0?'وصلت كل الإجابات':'انتهى الوقت'):'لا توجد إجابة صحيحة',
-      q:s.q||{}, ...(L=>({qFs:L<=14?'72px':L<=24?'56px':L<=36?'44px':'36px',qFsBig:L<=12?'96px':L<=22?'72px':L<=34?'56px':'46px'}))(String((s.q&&s.q.prompt)||'').length), timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':'#a78bfa',
+      q:s.q||{}, qHasWords:!!(s.q&&s.q.words&&s.q.words.length), qWords:((s.q&&s.q.words)||[]).map(t=>({t})), qWordFs:((s.q&&s.q.words)||[]).length>4?'40px':'50px', ...(L=>({qFs:L<=14?'72px':L<=24?'56px':L<=36?'44px':'36px',qFsBig:L<=12?'96px':L<=22?'72px':L<=34?'56px':'46px'}))(String((s.q&&s.q.prompt)||'').length), timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':'#a78bfa',
       chosen:this.solo?[]:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55',...this.avItem(r.chosen,col(i))})), received:s.received,
       answers:s.answers.map(a=>({...a,pts:fmt(a.pts),color:col(a.team),bg:col(a.team)+'26',glow:col(a.team)+'40',...this.avItem(a.user,col(a.team))})),
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); if(CHALLENGE){ this.chSend('leave'); location.href='versus.html'; return; } location.href=FA.libraryUrl; },

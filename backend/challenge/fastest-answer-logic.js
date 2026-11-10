@@ -166,7 +166,7 @@ function genQuestion(catId) {
         x = pickNew(cat.id, D.sentence);
         var okS = [x[0]].concat(x[1] || []).map(norm), w = x[0].split(' '), m, k = 0;
         do { m = w.slice().sort(function () { return Math.random() - 0.5; }); } while (okS.indexOf(norm(m.join(' '))) >= 0 && ++k < 30);
-        return q({ sub: 'رتّب الكلمات', prompt: m.join(' / '), answer: x[0], accept: [x[0]].concat(x[1] || []) });
+        return q({ sub: 'رتّب الكلمات', prompt: '', words: m, answer: x[0], accept: [x[0]].concat(x[1] || []) });
     }
     x = pick(D.flag);
     return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });
@@ -249,7 +249,7 @@ function createFastestAnswer(settings, hooks) {
     }
 
     function publicQuestion(q) {
-        return { catName: q.catName, sub: q.sub, prompt: q.prompt || null, emoji: q.emoji || null, img: q.img || null, dir: q.dir, ls: q.ls };
+        return { catName: q.catName, sub: q.sub, prompt: q.prompt || null, words: q.words || null, emoji: q.emoji || null, img: q.img || null, dir: q.dir, ls: q.ls };
     }
 
     function endRound(token) {
