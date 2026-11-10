@@ -53,7 +53,6 @@ input::placeholder{color:#6f6a7c}
 @keyframes evIn{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes evOut{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes warnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-@keyframes cylSpin{0%{transform:rotate(0)}100%{transform:rotate(1080deg)}}
 @keyframes hitFlash{0%{filter:none;opacity:1;transform:none}15%{filter:brightness(2) sepia(1) saturate(6) hue-rotate(-30deg);transform:scale(1.08)}40%{filter:brightness(1.4) sepia(1) saturate(5) hue-rotate(-30deg);opacity:1}100%{filter:grayscale(1) blur(4px);opacity:0;transform:scale(.7)}}
 @keyframes missFlash{0%{filter:none}20%{filter:brightness(2.6);transform:scale(1.05)}100%{filter:none;transform:none}}
 @keyframes heartBreak{0%{transform:none;opacity:1}30%{transform:scale(1.5) rotate(-12deg)}100%{transform:scale(1) rotate(0);opacity:1}}
@@ -258,7 +257,7 @@ input::placeholder{color:#6f6a7c}
       <div style="position:absolute;inset:0;z-index:45;padding-top:130px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 38%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:30px;animation:fade .2s ease">
         <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
           <span style="font:800 52px/1.15 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 34px {{ clashTitleG }}">{{ clashTitle }}</span>
-          <span style="padding:6px 20px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);font:600 20px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span>
+          <sc-if value="{{ clashSubOn }}" hint-placeholder-val="{{ true }}"><span style="padding:6px 20px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);font:600 20px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span></sc-if>
         </div>
         <div style="direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px">
           <div style="display:flex;flex-direction:column;align-items:center;gap:26px;width:440px">
@@ -304,7 +303,6 @@ input::placeholder{color:#6f6a7c}
               </sc-if>
             </svg>
             <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;direction:rtl;top:0;left:70px;padding:8px 26px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);background:rgba(0,0,0,.4);font:800 34px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
-            <div style="position:absolute;bottom:-20px;left:290px;opacity:.95">{{ cylEl }}</div>
           </div>
         </div>
       </div>
@@ -777,11 +775,6 @@ class Component extends DCLogic {
     const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:rnd(0,100)+'%',top:rnd(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${rnd(.12,.35).toFixed(2)})`}}));
     const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
     return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]); }
-  cylinder(size,run,spinning){ const h=React.createElement, s=this.state, N=s.cfg.chambers, B=s.cfg.bullets, r=size*.3, c=size*.24;
-    return h('div',{key:'cy'+run,'aria-hidden':true,style:{position:'relative',width:size,height:size,borderRadius:'50%',background:'conic-gradient(from 200deg,#9ca3af,#374151 20%,#111827 40%,#6b7280 55%,#e5e7eb 62%,#374151 75%,#111827 90%,#9ca3af)',boxShadow:'0 20px 50px rgba(0,0,0,.6), inset 0 0 0 6px rgba(0,0,0,.35)',animation:spinning?'cylSpin 1.3s cubic-bezier(.2,.7,.3,1) both':'none'}},
-      [...Array.from({length:N},(_,i)=>{ const ang=(i/N)*Math.PI*2-Math.PI/2; return h('span',{key:i,style:{position:'absolute',left:size/2+r*Math.cos(ang)-c/2,top:size/2+r*Math.sin(ang)-c/2,width:c,height:c,borderRadius:'50%',boxSizing:'border-box',border:'3px solid #0b0b10',background:i<B?'radial-gradient(circle at 35% 30%,#fde68a,#b45309 70%)':'radial-gradient(circle,#000 40%,#1f2937)'}}); }),
-       h('span',{key:'pin',style:{position:'absolute',left:'50%',top:'50%',width:size*.16,height:size*.16,margin:`-${size*.08}px 0 0 -${size*.08}px`,borderRadius:'50%',background:'radial-gradient(circle at 35% 30%,#e5e7eb,#4b5563)'}})]); }
-
   renderVals(){ const s=this.state, c=s.cfg, W=this.wheelList(), N=Math.max(W.length,1), a=360/N, busy=this.busy();
     const li=s.landedId!=null?W.findIndex(p=>p.id===s.landedId):-1;
     const ch=this.P(s.chooser), tg=this.P(s.target), win=this.P(s.winner);
@@ -838,10 +831,9 @@ class Component extends DCLogic {
       clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'في مرمى النار',
       clashTitleC:!s.clash||s.clash.stage==='aim'?'#f4f2f8':s.clash.stage==='hit'?'#f87171':'#6ee7b7', clashTitleG:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.6)':'rgba(255,255,255,.2)',
       clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(6,95,70,.35)':'rgba(76,29,149,.35)',
-      cylEl:this.cylinder(120,s.clash?s.clash.run:0,!!(s.clash&&s.clash.stage==='aim')),
       tgtAn:s.clash&&s.clash.stage==='hit'?'hitFlash 1s ease forwards':s.clash&&s.clash.stage==='miss'?'missFlash .6s ease':'none',
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
-      clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?`${tg?tg.name:''} خسر قلب واحد ونجا`:`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
+      clashSubOn:!!(s.clash&&s.clash.stage!=='miss'), clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?'':`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
       elimOpen:s.phase==='elim'&&!!s.elim, ...this.elimCardView(s.elim), elTitle:s.elim?`${s.elim.byName} أقصى ${s.elim.tgName}!`:'', elByName:s.elim?s.elim.byName:'', elByIni:s.elim&&!s.elim.host?ini(s.elim.byName):'', elByHost:!!(s.elim&&s.elim.host), elByTag:s.elim?s.elim.tag:'', elTgName:s.elim?s.elim.tgName:'', elTgIni:ini(s.elim&&s.elim.tgName), elByAv:s.elim&&!s.elim.host?A(s.elim.byName).av:'', elByOp:s.elim&&!s.elim.host?A(s.elim.byName).op:0, elTgAv:A(s.elim&&s.elim.tgName).av, elTgOp:A(s.elim&&s.elim.tgName).op,
       winOpen:s.phase==='win', hasWinner:!!win, noWinner:!win, winName:win?win.name:'', winIni:ini(win&&win.name), winAv:A(win&&win.name).av, winOp:A(win&&win.name).op, ptsMain, ptsSub, ptsSize:typeof pts==='number'?'44px':'30px', hasWinVideo:!!vid, winVideoEl, ...this.winCardView(s.phase==='win'?win:null),
       tabs:[tabBtn(s.tab==='settings','الإعدادات',()=>this.setState({tab:'settings'})),tabBtn(s.tab==='players','اللاعبين',()=>this.setState({tab:'players'}))],
