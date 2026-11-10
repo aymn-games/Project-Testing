@@ -49,6 +49,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes slideUp{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-14px) scale(.97)}}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
 @keyframes pop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
+@keyframes joinBar{from{width:100%}to{width:0}}
 @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
@@ -76,6 +77,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     <div style="display:flex;justify-content:center;align-items:center;gap:14px">
       <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.3);background:rgba(139,92,246,.08);font:600 18px 'IBM Plex Sans Arabic';color:#c4b5fd"><span style="width:7px;height:7px;border-radius:50%;background:#a78bfa"></span>أسرع إجابة · الجولة {{ round }}</span>
       <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الفوز عند {{ target }} نقطة</span>
+      <sc-if value="{{ showJoinKw }}" hint-placeholder-val="{{ false }}">
+        <span style="display:flex;align-items:center;gap:10px;padding:6px 8px 6px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:500 18px 'IBM Plex Sans Arabic';color:#c4b5fd;animation:fade .3s ease">للدخول اكتب بالشات<sc-for list="{{ joinKws }}" as="k" hint-placeholder-count="1"><span style="display:flex;align-items:center;gap:6px;padding:3px 14px;border-radius:999px;border:1.5px dashed {{ k.color }};background:{{ k.soft }};font:700 18px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap">{{ k.label }}</span></sc-for></span>
+      </sc-if>
     </div>
 
     <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
@@ -304,17 +308,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </sc-if>
   </div>
 
-  <sc-if value="{{ joinNote }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;top:96px;left:50%;transform:translateX(-50%);z-index:91;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none">
-      <sc-for list="{{ joinNotes }}" as="n" hint-placeholder-count="1">
-        <div style="display:flex;align-items:center;gap:12px;padding:6px 22px 6px 6px;border-radius:999px;background:rgba(12,11,18,.92);border:1px solid {{ n.bd }};box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 30px {{ n.glow }};backdrop-filter:blur(14px);animation:slideDown .4s cubic-bezier(.2,1,.3,1)">
-          <span style="width:42px;height:42px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ n.avBg }};border:2px solid {{ n.color }};box-sizing:border-box;font:700 18px 'IBM Plex Sans Arabic';color:#fff">{{ n.initial }}<img src="{{ n.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ n.imgOp }}"></span>
-          <span style="font:700 19px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap">{{ n.name }}</span>
-          <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5;white-space:nowrap">{{ n.text }}</span>
-        </div>
-      </sc-for>
-    </div>
-  </sc-if>
+  {{ joinEl }}
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:100px;left:50%;transform:translateX(-50%);z-index:90;padding:12px 24px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid rgba(248,113,113,.4);color:#fca5a5;font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .35s ease">{{ toast }}</div>
   </sc-if>
@@ -452,7 +446,7 @@ class Component extends DCLogic {
   // صورة اللاعب (أو أول حرف من اسمه لو ما عنده صورة) — لشاشة السؤال.
   avItem(n,c){ const av=n?this.avatar(n):null; return {avatar:av||'',imgOp:av?1:0,initial:[...(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'',avBg:`linear-gradient(135deg, ${c}, ${c}66)`}; }
   blankReel(){ return {items:[],offset:0,trans:'none',stopped:false,chosen:null,ci:-1}; }
-  state = { narrow:innerWidth<820, scale:1, logo:false, settingsOpen:false, eventsOpen:false, exitOpen:false, setTab:0, pending:[], autoJoin:FA.readJSON('fa-auto-join',true)!==false, joinNotes:[],
+  state = { narrow:innerWidth<820, scale:1, logo:false, settingsOpen:false, eventsOpen:false, exitOpen:false, setTab:0, pending:[], autoJoin:FA.readJSON('fa-auto-join',true)!==false, joinQ:[],
     teams:BOARD?[{name:'المشاركين',players:[...(ROSTER[0]||[])],score:0}]:[0,1].map(i=>({name:[SETUP?.team1,SETUP?.team2][i]||'الفريق '+(i+1),players:[...(ROSTER[i]||[])],score:0})), phase:'ready', round:0, scores:{},
     reels:(BOARD?[0]:[0,1]).map(()=>this.blankReel()), cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1},
     q:null, timeLeft:this.DUR, answers:[], received:0, answered:{}, target:+SETUP?.target||15, winner:null, toast:null, countdown:null, log:[] };
@@ -460,7 +454,7 @@ class Component extends DCLogic {
   componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     if(CHALLENGE){ this.chConnect(); return; }
     FA.connect(); this.unsub=FA.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); this.unsub?.(); this.chClosed=true; try{ this.ws&&this.ws.close(); }catch(e){} }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearTimeout(this.jt); this.unsub?.(); this.chClosed=true; try{ this.ws&&this.ws.close(); }catch(e){} }
 
   // ---------- [تحدي البثوث] ----------
   chConnect(){ const base=String((window.AGPAuth&&window.AGPAuth.API_BASE)||'https://project-testing-akds.onrender.com').replace(/^http/,'ws');
@@ -645,9 +639,10 @@ class Component extends DCLogic {
     this.setState(patch);
     if(patch.answers&&(this.solo?patch.answers.length>=this.SOLO_PTS.length:Object.keys(patch.answered).length>=2)) setTimeout(()=>this.endRound(),600);
   }
-  // إشعار الدخول أعلى الشاشة بالوسط (يختفي بعد ثوانٍ)
-  joinNote(name,team){ const id=Math.random(); this.setState(st=>({joinNotes:[...st.joinNotes,{id,name,team}].slice(-2)}));
-    setTimeout(()=>this.setState(st=>({joinNotes:st.joinNotes.filter(n=>n.id!==id)})),3200); }
+  // إشعار الدخول أعلى الشاشة بالوسط: بطاقة وحدة كل مرة تبقى 3 ثواني، والباقين بالدور وراها.
+  JOIN_MS = 3000;
+  joinNote(name,team){ const first=!this.state.joinQ.length; this.setState(st=>({joinQ:[...st.joinQ,{id:Math.random(),name,team}]})); if(first) this.joinNext(); }
+  joinNext(){ clearTimeout(this.jt); this.jt=setTimeout(()=>{ const rest=this.state.joinQ.slice(1); this.setState({joinQ:rest}); if(rest.length) this.joinNext(); },this.JOIN_MS); }
   toggleAutoJoin=()=>{ const on=!this.state.autoJoin; this.snd(on?'open':'close'); try{ localStorage.setItem('fa-auto-join',JSON.stringify(on)); }catch(e){}
     this.setState({autoJoin:on}); this.toastMsg(on?'الدخول التلقائي مفعّل — اكتب كلمة الدخول بالشات':'الدخول التلقائي مقفول'); }
 
@@ -715,7 +710,17 @@ class Component extends DCLogic {
     const soloQ=BOARD&&(P==='question'||P==='results')&&!!s.q;
     return { ...this.anims(), showTeams:!BOARD, showBoard:BOARD, board, boardEmpty:!board.length, showSoloQ:soloQ, showCatArea:!soloQ, podium, podiumTitle:P==='results'?'نتيجة الجولة':'أسرع 3 إجابات صحيحة',
       showAutoJoin:!CHALLENGE, toggleAutoJoin:this.toggleAutoJoin, autoJoinAria:String(s.autoJoin), autoJoinTrack:s.autoJoin?'linear-gradient(90deg, #7c3aed, #a855f7)':'rgba(255,255,255,.14)', autoJoinKnob:s.autoJoin?'21px':'3px', autoJoinBd:s.autoJoin?'rgba(167,139,250,.45)':'rgba(255,255,255,.1)', autoJoinBg:s.autoJoin?'rgba(139,92,246,.12)':'rgba(255,255,255,.03)',
-      joinNote:s.joinNotes.length>0, joinNotes:s.joinNotes.map(n=>{ const c=col(n.team); return {name:n.name,text:BOARD?'دخل اللعبة':'انضم لـ '+s.teams[n.team].name,color:c,bd:c+'66',glow:c+'33',...this.avItem(n.name,c)}; }),
+      joinEl:(()=>{ const n=s.joinQ[0]; if(!n) return null; const c=col(n.team), av=this.avItem(n.name,c);
+        return h('div',{key:n.id,style:{position:'fixed',top:96,left:'50%',marginLeft:-100,width:200,height:100,boxSizing:'border-box',zIndex:91,borderRadius:22,padding:'0 14px',display:'flex',alignItems:'center',gap:12,overflow:'hidden',pointerEvents:'none',
+            background:`linear-gradient(180deg, ${c}47, #0c0b12)`,border:`1px solid ${c}99`,boxShadow:`0 10px 30px rgba(0,0,0,.6), 0 0 24px ${c}59`,animation:'slideDown .4s cubic-bezier(.2,1,.3,1)'}},
+          h('span',{style:{width:64,height:64,flexShrink:0,borderRadius:'50%',position:'relative',overflow:'hidden',display:'grid',placeItems:'center',background:'linear-gradient(135deg, #7c3aed, #4c1d95)',border:'2px solid #c4b5fd',boxSizing:'border-box',font:"700 26px 'IBM Plex Sans Arabic'",color:'#fff'}},
+            av.initial, h('img',{src:av.avatar,alt:'',style:{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:av.imgOp}})),
+          h('span',{style:{minWidth:0,display:'flex',flexDirection:'column',lineHeight:1.15}},
+            h('span',{style:{font:"700 22px 'IBM Plex Sans Arabic'",color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},n.name),
+            h('span',{style:{font:"500 15px 'IBM Plex Sans Arabic'",color:'#c4b5fd',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},BOARD?'دخل':s.teams[n.team].name)),
+          h('span',{style:{position:'absolute',bottom:0,right:0,height:3,background:c,animation:`joinBar ${this.JOIN_MS}ms linear forwards`}})); })(),
+      // كلمة الدخول اللي حددها الستريمر بشاشة الإعدادات — تظهر وقت ما يكون الدخول التلقائي مفعّل
+      showJoinKw:!CHALLENGE&&s.autoJoin, joinKws:this.KW.map((w,i)=>({label:BOARD?w:s.teams[i].name+': '+w,color:col(i),soft:col(i)+'1a'})),
       answerWho:this.solo?'يجاوب: كل المشاركين':'يجاوب:', joinHint:BOARD?'اكتب كلمة الدخول بشات البث':'اكتب كلمة الدخول الخاصة بفريقك بشات البث', scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
       catBand:cs.stopped&&cspun?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)', statusTitle:titles[P][0], statusText:titles[P][1],
       spinOp:P==='ready'?1:.35, spinAnim:P==='ready'?'glow 1.8s infinite':'none', spin:this.spin,
