@@ -53,8 +53,10 @@ html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
 </helmet>
 <div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#070b24;font-family:'Zain',sans-serif;color:#f4f2f8">
   <header style="position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)">
-    <div style="display:flex;justify-content:flex-start">
+    <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-start">
       <button onClick="{{ onExit }}" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+      <!-- الرسومات: ثري دي ⇄ تو دي (أخف على الجهاز) — يتبدّل المشهد مباشرة وينحفظ لـ ship-settings -->
+      <button onClick="{{ toggleGfx }}" title="الرسومات: ثري دي أو تو دي (أخف على الجهاز)" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid rgba(196,181,253,.3);background:rgba(139,92,246,.08);color:#ede9fe" style-hover="background:rgba(139,92,246,.16);border-color:rgba(196,181,253,.55)" style-active="transform:scale(.97)"><span aria-hidden="true">{{ gfxIcon }}</span><span style="display:{{ lblDisp }}">{{ gfxLabel }}</span></button>
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
       <span style="font:400 clamp(11px,0.75vw,14px) 'Zain';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
@@ -206,7 +208,7 @@ const bgOf=c=>`radial-gradient(circle at 34% 26%, ${c[1]} 0%, ${c[0]} 36%, ${c[2
 const PER_ROW=8, SPEED=320, GAPX=230, ROWY=95;
 class Component extends DCLogic {
   reg=SHIP.createRegistry();
-  state={cam:{x:0,y:0,z:1},camDur:'.45s',chars:[],keyword:(JOIN&&JOIN.keyword)||'',followers:!!JOIN&&JOIN.who==='المتابعون فقط',scale:1,vw:innerWidth,vh:innerHeight-80,narrow:innerWidth<820,logo:false,exitOpen:false,toast:null};
+  state={gfx:(SHIP.readJSON(SHIP.keys.setup,{})||{}).gfx==='2d'?'2d':'3d', cam:{x:0,y:0,z:1},camDur:'.45s',chars:[],keyword:(JOIN&&JOIN.keyword)||'',followers:!!JOIN&&JOIN.who==='المتابعون فقط',scale:1,vw:innerWidth,vh:innerHeight-80,narrow:innerWidth<820,logo:false,exitOpen:false,toast:null};
   componentDidMount(){
     this.fit=()=>this.setState({narrow:innerWidth<820,vw:innerWidth,vh:innerHeight-80,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000)},()=>this.relayout()); this.fit(); addEventListener('resize',this.fit);
     // كل تعليق من الشات: الكلمة المفتاحية = انضمام (نفس تطبيع SHIP.norm) · المتابعين فقط لو محدد · المكرر يُتجاهل
@@ -261,9 +263,10 @@ class Component extends DCLogic {
       chars:[],
       ...this.camVals(W,H), liveN:live.length,
       chips:live.map((c,i)=>({n:i+1,name:c.name,dot:c.col[0],av:this.reg.avatar(c.name)||'',hideImg:e=>{ e.currentTarget.style.display='none'; },showImg:e=>{ e.currentTarget.style.display=''; },remove:e=>{ e.stopPropagation(); this.remove(c.id); },focus:()=>{ this.setState(s=>({focusName:s.focusName===c.name?null:c.name})); return; const {W:w,H:h}=this.dims(); const z=1.6; this.setCam({x:((w-400)/2-(c.x+90*(c.k||.72)))*z*0+((w)/2-(c.x+90*(c.k||.72)))*z-(w/2-w/2), y:(h*.6-(c.y+220*(c.k||.72)))*z-(h*.6-h*.6)*z, z},'.8s'); }})), countTxt:live.length?`${live.length} ${live.length===1?'لاعب':live.length<=10?'لاعبين':'لاعب'} داخل اللوبي`:'ما فيه لاعبين للحين', empty:!live.length,
-      sceneJson:JSON.stringify({focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false,vrm:this.reg.vrm(c.name)}; })}),
+      sceneJson:JSON.stringify({gfx:S.gfx,focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false,vrm:this.reg.vrm(c.name)}; })}),
       startOp:live.length>=2?1:.45, toast:S.toast,
       start:()=>{ if(live.length<2) return this.toastMsg('لازم لاعبين اثنين على الأقل عشان تبدأ'); const list=live.map(c=>c.name), all=this.reg.all(); SHIP.writeJSON(SHIP.keys.roster,list); SHIP.writeJSON(SHIP.keys.players,Object.fromEntries(list.filter(n=>all[n]).map(n=>[n,all[n]]))); location.href=GAME_URL; },
+      gfxIcon:S.gfx==='2d'?'🎨':'🧊', gfxLabel:S.gfx==='2d'?'تو دي':'ثري دي', toggleGfx:()=>{ const g=this.state.gfx==='2d'?'3d':'2d'; this.setState({gfx:g}); SHIP.writeJSON(SHIP.keys.setup,{...(SHIP.readJSON(SHIP.keys.setup,{})||{}),gfx:g}); },
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>SHIP.go(LIBRARY_URL),

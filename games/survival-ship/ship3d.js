@@ -1,4 +1,6 @@
-// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring,vrm}], focus:id|null, duel:[id,id]|null}
+// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring,vrm}], focus:id|null, duel:[id,id]|null, gfx:'3d'|'2d'}
+// gfx:'2d' = رسومات خفيفة: البحر صورة موج مرسومة تتحرك (بدل حساب الموج كل إطار)، والسفينة بألوان مسطّحة وحدود مرسومة، وبدون ظلال.
+//   الشخصيات والكاميرا ما تتغيّر. يتبدّل مباشرة وقت اللعب بدون إعادة تحميل (setGfx).
 // vrm: 'girl'|'boy' = شخصية أنمي مشتركة (js/agp-vrm-characters.js — docs/CHARACTERS.md) لأصحاب الحسابات الموثّقة، وإلا الشخصية المرسومة هنا.
 //   الموديلات تنحمّل بس لو فيه لاعب عنده vrm، ولين تخلص (أو لو فشلت) يطلع الشكل القديم. يحتاج importmap بالصفحة (game.html / lobby.html).
 class Ship3D extends HTMLElement {
@@ -26,8 +28,15 @@ class Ship3D extends HTMLElement {
     const sg=this.seaG=new T.PlaneGeometry(420,420,55,55); sg.rotateX(-Math.PI/2); this.seaBase=sg.attributes.position.array.slice();
     const sea=new T.Mesh(sg,new T.MeshStandardMaterial({color:'#14b4cc',roughness:.35,metalness:.05,flatShading:true})); sea.receiveShadow=true; sc.add(sea);
     const spark=new T.Mesh(new T.PlaneGeometry(420,420),new T.MeshBasicMaterial({map:this.tex(512,512,(g,w,h)=>{ g.fillStyle='rgba(255,255,255,.55)'; for(let i=0;i<260;i++){ g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,3+Math.random()*7,1+Math.random()*1.5,0,0,7); g.fill(); } }),transparent:true,depthWrite:false}));
-    spark.material.map.wrapS=spark.material.map.wrapT=T.RepeatWrapping; spark.material.map.repeat.set(14,14); spark.rotation.x=-Math.PI/2; spark.position.y=.35; sc.add(spark); this.spark=spark;
-    this.buildShip(); this.buildFx();
+    spark.material.map.wrapS=spark.material.map.wrapT=T.RepeatWrapping; spark.material.map.repeat.set(14,14); spark.rotation.x=-Math.PI/2; spark.position.y=.35; sc.add(spark); this.spark=spark; this.sea3=sea;
+    // بحر الرسومات الخفيفة (gfx 2d): لوح مسطّح بموج كرتوني مرسوم يتحرك بالإزاحة بس — بدون حساب نقاط ولا إضاءة ولا ظلال
+    const seaTex=this.seaTex=this.tex(512,512,(g,w,h)=>{ g.fillStyle='#16b4cc'; g.fillRect(0,0,w,h); g.lineCap='round';
+      for(let i=0;i<70;i++){ const L=18+Math.random()*30, x=8+Math.random()*(w-L-16), y=10+Math.random()*(h-20); g.strokeStyle=i%3?'rgba(255,255,255,.45)':'rgba(10,110,150,.35)'; g.lineWidth=i%3?3:4; g.beginPath(); g.moveTo(x,y); g.quadraticCurveTo(x+L/4,y-6,x+L/2,y); g.quadraticCurveTo(x+L*.75,y+6,x+L,y); g.stroke(); }
+      g.fillStyle='rgba(255,255,255,.5)'; for(let i=0;i<120;i++){ g.beginPath(); g.ellipse(8+Math.random()*(w-16),8+Math.random()*(h-16),2+Math.random()*5,1+Math.random(),0,0,7); g.fill(); } });
+    seaTex.wrapS=seaTex.wrapT=T.RepeatWrapping; seaTex.repeat.set(16,16);
+    const sea2=this.sea2=new T.Mesh(new T.PlaneGeometry(420,420),new T.MeshBasicMaterial({map:seaTex})); sea2.rotation.x=-Math.PI/2; sea2.visible=false; sc.add(sea2);
+    const foam=this.foam=new T.Mesh(new T.RingGeometry(1,1.25,48),new T.MeshBasicMaterial({color:'#e8fbff',transparent:true,opacity:.75,depthWrite:false})); foam.rotation.x=-Math.PI/2; foam.position.set(1,.05,0); foam.visible=false; sc.add(foam);
+    this.buildShip(); this.prep2d(); this.buildFx();
     this.ro=new ResizeObserver(()=>{ const w=this.clientWidth||1,h=this.clientHeight||1; r.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); }); this.ro.observe(this);
     this.clock=new T.Clock(); this.camLook=new T.Vector3(0,2,0); // حد 30 إطار/ث: البث نفسه 30، فالرسم الزايد على شاشات 60/144 هرتز يستهلك كرت الشاشة بدون فايدة (نص الشغل تقريباً)
     let last=-1e9; const loop=now=>{ this.raf=requestAnimationFrame(loop); if(now-last<29) return; last=now; this.tick(); }; this.raf=requestAnimationFrame(loop);
@@ -127,7 +136,7 @@ class Ship3D extends HTMLElement {
     for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
   // نمط المواجهة: مكان الثنائي جنب بعض بمقدمة السطح (الأول يمين الشاشة والثاني يساره)
   duelSpot(i){ const sk=this.sk; return new this.T.Vector3(3.3*sk+(i?-1.1:1.1),1.5*sk,3.3*sk); }
-  sync(){ const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id)), D=Array.isArray(this.data.duel)?this.data.duel:null;
+  sync(){ this.setGfx(this.data.gfx); const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id)), D=Array.isArray(this.data.duel)?this.data.duel:null;
     const sk=+Math.min(3.4,1.5*Math.max(1,Math.sqrt(ps.length/12))).toFixed(2); if(sk!==this.sk){ this.sk=sk; this.ship.scale.setScalar(sk); this.crew.scale.setScalar(1/sk); this.plankEnd.set(4*sk,1.7*sk,8.3*sk); }
     const sl=this.slots(ps.length);
     for(const [id,f] of this.figs) if(!keep.has(id)){ this.dropFig(f); this.figs.delete(id); }
@@ -139,14 +148,26 @@ class Ship3D extends HTMLElement {
       if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ if(f.fallT!=null) f.g.position.copy(f.target); f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
       // ring: يطلع الطوق بقفزة (ringIn) ويختفي بانكماش (ringOut) — الحركة في tick()
       if(!!p.ring!==!!f.ring){ f.ring=!!p.ring; f.ringT=born?1:0; } f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
+  // الرسومات الخفيفة: لكل قطعة بالسفينة مادة ثانية (ألوان مسطّحة بدرجتين، أو لون ثابت للي فيها صورة) وحدود مرسومة مخفية — نبدّل بينها بـ setGfx
+  prep2d(){ const T=this.T, g=new T.DataTexture(new Uint8Array([150,255]),2,1,T.RedFormat), line=new T.LineBasicMaterial({color:'#3a2a1a'}), list=this.shipMs=[]; g.needsUpdate=true;
+    this.ship.traverse(o=>{ if(o.isMesh&&o.material&&o.material.isMeshStandardMaterial) list.push(o); });
+    list.forEach(o=>{ const m=o.material; o.userData.m3=m; o.userData.m2=m.map?new T.MeshBasicMaterial({map:m.map,side:m.side}):new T.MeshToonMaterial({color:m.color,gradientMap:g,side:m.side});
+      if(o!==this.sail&&o!==this.flag){ const l=o.userData.edge=new T.LineSegments(new T.EdgesGeometry(o.geometry,35),line); l.visible=false; o.add(l); } }); }
+  setGfx(v){ const two=v==='2d'; if(two===!!this.two) return; this.two=two;
+    this.sea3.visible=this.spark.visible=!two; this.sea2.visible=this.foam.visible=two;
+    this.shipMs.forEach(o=>{ o.material=two?o.userData.m2:o.userData.m3; if(o.userData.edge) o.userData.edge.visible=two; });
+    const sh=!two&&!this.lite; this.sun.castShadow=sh; this.r.shadowMap.enabled=sh;
+    this.sc.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ m.needsUpdate=true; }); }); }
   // وضع الأداء: لو متوسط الإطارات نزل تحت 22/ث (والهدف 30) (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
   perf(raw){ if(this.lite||raw>.5) return; const p=this.pf||(this.pf={n:0,s:0,w:0}); p.w+=raw; if(p.w<3) return; p.n++; p.s+=raw;
     if(p.s>=2){ const fps=p.n/p.s; p.n=0; p.s=0; if(fps<22) this.goLite(); } }
   goLite(){ this.lite=true; this.sun.castShadow=false; this.r.shadowMap.enabled=false; this.r.setPixelRatio(.75); this.r.setSize(this.clientWidth||1,this.clientHeight||1,false); this.sc.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ m.needsUpdate=true; }); });
     try{ document.documentElement.classList.add('ship-lite'); }catch(e){} }
   tick(){ const T=this.T, raw=this.clock.getDelta(), dt=Math.min(raw,.05), t=this.clock.elapsedTime, d=this.data;
-    const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.perf(raw);
-    this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12;
+    if(!this.two){ const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; }
+    this.perf(raw);
+    if(this.two){ this.seaTex.offset.set(t*.01+Math.sin(t*.5)*.006,t*.014); const fs=1+Math.sin(t*1.6)*.03; this.foam.scale.set(18*fs*this.sk/1.5,7.5*fs*this.sk/1.5,1); }
+    else { this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12; }
     this.ship.position.y=Math.sin(t*.8)*.14; this.ship.rotation.z=Math.sin(t*.6)*.008; this.ship.rotation.x=Math.cos(t*.5)*.01; this.flag.rotation.y=Math.sin(t*3)*.3;
     // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
     for(const [,f] of this.figs) if(f.g.userData.sp) f.g.userData.sp.visible=d.names!==false;
