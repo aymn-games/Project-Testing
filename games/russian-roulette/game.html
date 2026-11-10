@@ -78,7 +78,13 @@ input::placeholder{color:#6f6a7c}
       <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
       <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
     </div>
-    <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end">
+    <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end;align-items:center">
+      <!-- الدخول التلقائي: لما يتفعّل، أي لاعب جديد يكتب كلمة الدخول ينضم مباشرة بدون فتح نافذة الإدخال -->
+      <div style="height:clamp(32px,2.3vw,42px);padding:0 clamp(6px,0.5vw,8px) 0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.5vw,10px);box-sizing:border-box;border:1px solid {{ ajBd }};background:{{ ajBg }};backdrop-filter:blur(10px);transition:all .2s;white-space:nowrap">
+        <span style="font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';color:#e7e3ef;display:{{ lblDisp }}">الدخول التلقائي</span>
+        <span title="كلمة الدخول" style="max-width:clamp(60px,7vw,140px);overflow:hidden;text-overflow:ellipsis;padding:2px 10px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);font:700 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';color:#fde68a">{{ kw }}</span>
+        <button onClick="{{ toggleAutoJoin }}" role="switch" aria-checked="{{ ajOnS }}" aria-label="الدخول التلقائي" style="flex-shrink:0;width:44px;height:26px;border-radius:999px;border:none;padding:3px;box-sizing:border-box;display:flex;justify-content:{{ ajJust }};background:{{ ajTbg }};cursor:pointer;transition:background .2s"><span style="width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></span></button>
+      </div>
       <button onClick="{{ toggleEvents }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(52,211,153,.28);background:{{ evBtnBg }};color:#a7f3d0" style-hover="background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.5)" style-active="transform:scale(.97)"><span style="width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span><span style="display:{{ lblDisp }}">أحداث المباراة</span></button>
     </div>
   </header>
@@ -570,6 +576,18 @@ input::placeholder{color:#6f6a7c}
     </div>
   </sc-if>
 
+  <sc-if value="{{ ajShow }}" hint-placeholder-val="{{ false }}">
+    <!-- بطاقة دخول لاعب (الدخول التلقائي): لاعب واحد كل مرة، 3 ثواني، 200×100 -->
+    <div style="position:fixed;top:92px;left:50%;margin-left:-100px;z-index:81;width:200px;height:100px;box-sizing:border-box;padding:10px 12px;border-radius:18px;background:linear-gradient(160deg,rgba(30,22,52,.97),rgba(12,11,18,.97));border:1px solid rgba(52,211,153,.45);box-shadow:0 18px 40px rgba(0,0,0,.55), 0 0 24px rgba(52,211,153,.18);display:flex;align-items:center;gap:10px;direction:rtl;animation:{{ ajAn }}">
+      <span style="position:relative;flex-shrink:0;overflow:hidden;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:2px solid #34d399;font:700 24px 'IBM Plex Sans Arabic';color:#fff">{{ ajIni }}<img src="{{ ajAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ ajOp }}"></span>
+      <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 12px 'IBM Plex Sans Arabic';color:#6ee7b7">انضم للعبة</span>
+        <span style="font:800 17px/1.2 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ajName }}</span>
+        <span style="align-self:flex-start;padding:1px 9px;border-radius:999px;background:linear-gradient(180deg,#5b21b6,#3b0f7a);font:800 13px 'IBM Plex Sans Arabic';color:#ede9fe">رقم {{ ajNum }}</span>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:96px;left:50%;transform:translateX(-50%);z-index:80;padding:12px 24px;border-radius:999px;background:rgba(12,11,18,.95);border:1px solid rgba(255,255,255,.14);color:#f4f2f8;font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .3s ease;white-space:nowrap">{{ toast }}</div>
   </sc-if>
@@ -608,7 +626,7 @@ class Component extends DCLogic {
       rot:0,spinning:false,landedId:null,lastChooser:null,mode:'wheel',sIdx:null,sAnim:false,sDur:0,auto:false,idleAt:Date.now(),
       phase:null,chooser:null,target:null,left:0,clash:null,elim:null,winner:null,pts:null,
       eventsOpen:true,eventsOpenOut:false,gunOpen:false,
-      supOn:!!(c.supOn&&c.supType), supType:(c.supType&&c.supType.id)||null, supCount:Math.max(1,Math.min(10,+c.supCount||1)), supUsed:{}, supPick:false,setOpen:false,setOpenOut:false,tab:'settings',q:'',filter:'all',warn:null,joinOpen:false,
+      supOn:!!(c.supOn&&c.supType), supType:(c.supType&&c.supType.id)||null, supCount:Math.max(1,Math.min(10,+c.supCount||1)), supUsed:{}, supPick:false,setOpen:false,setOpenOut:false,tab:'settings',q:'',filter:'all',warn:null,joinOpen:false,autoJoin:false,ajCur:null,ajOut:false,
       exitOpen:false,exitOpenOut:false,toast:null,hold:false,logo:false,scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}; }
 
   componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); addEventListener('resize',this.fit);
@@ -617,7 +635,7 @@ class Component extends DCLogic {
     this.state.players.forEach(p=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(p.name)); }catch(e){} });
     this._iv=setInterval(()=>this.tick(),1000); this._av=setInterval(()=>{ if(this.canAuto()) this.spin(); },250);
     RR.connect(); this.unsub=RR.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=RR.onGift(p=>this.onGift(p)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearTimeout(this._rvt); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearTimeout(this._rvt); clearInterval(this._av); clearTimeout(this._ajT); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
   // بداية المباراة الفعلية (للنقاط) + كل من شارك فيها
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players.map(p=>p.name)); }
   // اللعب التلقائي: ينتظر ثانيتين بعد انتهاء الدور واختفاء كل النوافذ
@@ -637,14 +655,21 @@ class Component extends DCLogic {
   addLog(e){ this.setState(s=>({log:[{...e,time:this.now()},...s.log]})); }
 
   onChat(u,text,follower){ const s=this.state;
+    // الدخول التلقائي: كلمة الدخول من لاعب جديد (ما سبق له الدخول بهالمباراة) ← ينضم بأي وقت. أثناء الدوران/الدور يتأجّل لين يفضى
+    if(s.autoJoin&&!s.joinOpen&&s.phase!=='win'&&s.cfg.keyword&&norm(text)===norm(s.cfg.keyword)){ if(s.cfg.who==='المتابعين فقط'&&!follower) return;
+      if(!u||s.players.some(p=>p.name===u)||(this.participants&&this.participants.has(u))) return; (this._ajPend=this._ajPend||[]); if(!this._ajPend.includes(u)) this._ajPend.push(u); this.flushAutoJoin(); return; }
     if(s.phase==='choose'){ const ch=this.P(s.chooser); if(ch&&u===ch.name){ const d=RR.chatNumber(text); if(d){ const t=s.players.find(p=>p.alive&&p.num===d&&p.id!==s.chooser); if(t) this.pickTarget(t.id); } } return; }
     if(s.joinOpen&&!s.joinOpenOut&&s.cfg.keyword&&norm(text)===norm(s.cfg.keyword)){ if(s.cfg.who==='المتابعين فقط'&&!follower) return; this.join(u); } }
+  flushAutoJoin(){ if(!this._ajPend||!this._ajPend.length||this.busy()||this.state.phase==='win') return; const list=this._ajPend.splice(0); list.forEach(u=>this.join(u,true)); }
+  // بطاقات الدخول تطلع وحدة وحدة: كل لاعب 3 ثواني ثم اللي بعده
+  ajNext(){ if(this.state.ajCur||!this._ajQ||!this._ajQ.length) return; const cur=this._ajQ.shift(); this.setState({ajCur:{...cur,k:Date.now()},ajOut:false});
+    clearTimeout(this._ajT); this._ajT=setTimeout(()=>{ this.setState({ajOut:true}); this._ajT=setTimeout(()=>{ this.setState({ajCur:null,ajOut:false},()=>this.ajNext()); },260); },3000); }
   openJoin=()=>{ this.setState({joinOpen:true,joinOpenOut:false,jList:[]}); };
-  join(u){ const s=this.state; if(!u||s.players.some(p=>p.name===u)) return; if(this.alive().length>=s.cfg.maxPlayers) return this.toastMsg('اكتمل العدد');
+  join(u,auto){ const s=this.state; if(!u||s.players.some(p=>p.name===u)) return; if(this.alive().length>=s.cfg.maxPlayers) return this.toastMsg('اكتمل العدد');
     const p={id:Date.now()+Math.random(),num:s.nextNum,name:u,hearts:s.cfg.chambers,alive:true}; this.participants.add(u); try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(u)); }catch(e){}
-    this.setState(st=>({players:[...st.players,p],order:[...st.order,p.id],nextNum:st.nextNum+1,jList:st.joinOpen?[...(st.jList||[]),p.id]:st.jList})); this.addLog({type:'join',a:u,v:'انضم للعبة'}); this.toastMsg(`${u} انضم للعبة · رقم ${p.num}`); }
+    this.setState(st=>({players:[...st.players,p],order:[...st.order,p.id],nextNum:st.nextNum+1,jList:st.joinOpen?[...(st.jList||[]),p.id]:st.jList})); this.addLog({type:'join',a:u,v:'انضم للعبة'}); if(auto){ (this._ajQ=this._ajQ||[]).push({name:u,num:p.num}); this.ajNext(); } else this.toastMsg(`${u} انضم للعبة · رقم ${p.num}`); }
 
-  tick(){ const s=this.state; this.flushSup(); if(s.hold) return;
+  tick(){ const s=this.state; this.flushSup(); this.flushAutoJoin(); if(s.hold) return;
     if(s.phase==='choose'){ const l=s.left-1; if(l<=0){ this.setState({left:0}); this.timeout(); } else { if(l<=5) this.tone(880,.06,'square',.05); this.setState({left:l}); } return; }
     if(this.canAuto()) this.spin(); }
 
@@ -790,6 +815,9 @@ class Component extends DCLogic {
       sRows:s.mode==='reel'?Array.from({length:10*N},(_,i)=>{ const p=W[i%N]||{name:'',num:''}, on=s.landedId===p.id&&i===(s.sIdx??2*N); return {name:p.name,num:p.num,ini:ini(p.name),...A(p.name),c:on?'#fff':'#b9b3c7',fs:on?60:50,numBg:on?'#7c3aed':'rgba(124,58,237,.35)',ring:on?'#c4b5fd':'transparent'}; }):[],
       modes:[['wheel','عجلة'],['reel','سكرول']].map(([id,l])=>({label:l,pick:()=>{ if(!this.busy()) this.setState({mode:id,landedId:null}); },bg:s.mode===id?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:s.mode===id?'#fff':'#a8a3b5'})),
       shuffle:()=>{ if(this.busy()) return; const o=[...s.order]; for(let i=o.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [o[i],o[j]]=[o[j],o[i]]; } this.setState({order:o,landedId:null,sIdx:null}); this.tone(700,.08,'triangle'); },
+      toggleAutoJoin:()=>this.setState(x=>{ const on=!x.autoJoin; if(!on&&this._ajPend) this._ajPend.length=0; return {autoJoin:on}; }), ajOnS:String(!!s.autoJoin), ajJust:s.autoJoin?'flex-start':'flex-end', ajTbg:s.autoJoin?'linear-gradient(90deg, #059669, #34d399)':'rgba(255,255,255,.14)',
+      ajBd:s.autoJoin?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)', ajBg:s.autoJoin?'rgba(52,211,153,.1)':'rgba(255,255,255,.03)',
+      ajShow:!!s.ajCur, ajKey:s.ajCur?s.ajCur.k:0, ajName:s.ajCur?s.ajCur.name:'', ajNum:s.ajCur?s.ajCur.num:'', ajIni:ini(s.ajCur&&s.ajCur.name), ajAv:A(s.ajCur&&s.ajCur.name).av, ajOp:A(s.ajCur&&s.ajCur.name).op, ajAn:s.ajOut?'popOut .26s ease forwards':'popIn .35s cubic-bezier(.2,1.25,.35,1)',
       toggleAuto:()=>this.setState(x=>({auto:!x.auto,idleAt:Date.now()})), autoOn:String(!!s.auto), autoState:s.auto?'مفعّل':'متوقف', autoDot:s.auto?'#34d399':'#8a8596', autoBd:s.auto?'rgba(52,211,153,.55)':'rgba(255,255,255,.12)', autoBg:s.auto?'rgba(52,211,153,.1)':'rgba(255,255,255,.04)',
       chambers:Array.from({length:c.chambers},(_,i)=>{ const ang=(i/c.chambers)*Math.PI*2-Math.PI/2; return {x:(50+30*Math.cos(ang)).toFixed(2),y:(50+30*Math.sin(ang)).toFixed(2),bg:i<c.bullets?'radial-gradient(circle at 35% 30%,#fde68a,#b45309 70%)':'radial-gradient(circle,#000 40%,#1f2937)',sh:i<c.bullets?'0 0 14px rgba(251,191,36,.45)':'inset 0 4px 8px rgba(0,0,0,.8)'}; }),
       gunOpen:s.gunOpen!==false, gunOpenS:String(s.gunOpen!==false), gunRot:s.gunOpen!==false?180:0, toggleGun:()=>this.setState(x=>({gunOpen:x.gunOpen===false})),
