@@ -558,6 +558,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         var vics = N.victims || (N.victim ? [N.victim] : []), svs = N.saveds || (N.saved ? [N.saved] : []);
         vics.forEach(function (id) { var v = byId[id]; if (v) html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; });
         svs.forEach(function (id) { var sv = byId[id]; if (sv) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; });
+        (N.guarded || []).forEach(function (id) { var gp = byId[id]; if (gp) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(gp.look, 44) + '</div><div><b>' + esc(gp.name) + '</b><span>🩺 الطبيب حماه الليلة</span></div></div>'; });
         if (!vics.length && !svs.length && !N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
         if (N.recruited) html += '<div class="rc-row dead"><div class="ic">🤝</div><div><b>تم تجنيد لاعب</b><span>مواطن صار مع المافيا</span></div></div>';
         var X = G.lastExile;
@@ -698,7 +699,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
                     else caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(rs[0]) + ' في آخر لحظة' + (lost.length ? '… بس ' + nameOf(lost[0]) + ' ما لحقوا عليه' : ''), '', '#7ee2a6');
                 }
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
-                else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر', '', '#7ee2a6');
+                else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', sh.protect && sh.protect.length ? 'حمى الليلة: ' + sh.protect.map(nameOf).join(' و') : 'يعالج شخص اختاره يحميه الليلة', '', '#7ee2a6');
                 else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');
                 else if (sh.k === 'result') {
                     var vl = sh.victims || (sh.victim ? [sh.victim] : []);

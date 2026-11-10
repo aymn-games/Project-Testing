@@ -298,20 +298,20 @@ function createGame(roster, settings, hooks) {
             shot('attack', b ? { target: a.id, target2: b.id, saved: saveds.indexOf(a) >= 0, saved2: saveds.indexOf(b) >= 0 } : { target: a.id, saved: saveds.indexOf(a) >= 0 });
             if (rescue.length) shot('save', b ? { target: a.id, target2: b.id, rescue: rescue } : { target: a.id });
         } else shot('quiet');
-        // الطبيب: لو حمى أحد (وما صار إنقاذ) مشهد علاج بدون ما ينكشف مين، ولو ما اختار أحد نوضّح هالشي
-        if (S.doctors > 0 && !saveds.length) {
-            var docActed = G.players.some(function (p) { return p.role === 'doctor' && N.actions[p.id] && N.actions[p.id] !== 'skip'; });
-            shot(docActed ? 'heal' : 'noheal');
-        }
+        // مين حماه الطبيب الليلة (ينكشف اسمه للكل) — اللي انحموا وما هاجمتهم المافيا
         var ids = function (l) { return l.map(function (t) { return t.id; }); };
-        // victim/saved = أول واحد (للتوافق مع الشاشات القديمة)، victims/saveds = القائمة كاملة
-        shot('result', { victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), recruited: !!recruited });
+        var guarded = Object.keys(protectedIds).map(P).filter(function (p) { return p && saveds.indexOf(p) < 0; });
+        // الطبيب: لو حمى أحد (وما صار إنقاذ) مشهد علاج ويطلع اسم اللي انحمى، ولو ما اختار أحد نوضّح هالشي
+        if (S.doctors > 0 && !saveds.length) shot(guarded.length ? 'heal' : 'noheal', guarded.length ? { protect: ids(guarded) } : null);
+        // victim/saved = أول واحد (للتوافق مع الشاشات القديمة)، victims/saveds = القائمة كاملة، guarded = انحمى بدون هجوم
+        shot('result', { victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), guarded: ids(guarded), recruited: !!recruited });
 
-        G.lastNight = { round: G.round, victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
+        G.lastNight = { round: G.round, victim: victims[0] ? victims[0].id : null, saved: saveds[0] ? saveds[0].id : null, victims: ids(victims), saveds: ids(saveds), guarded: ids(guarded), recruited: !!recruited };   // ملخص الليلة لشاشة النقاش
         // وش صار بالليلة — يوصل لكل اللاعبين («الأحداث» بالجوال) ولسجل شاشة البث. مين من المافيا اختار يبقى سر،
-        // وحماية الطبيب تنكشف بس لو المافيا هاجموا نفس الشخص فعلاً
+        // واسم اللي حماه الطبيب ينكشف كل ليلة
         victims.forEach(function (v) { sys('🔪 المافيا استهدفت ' + v.name + ' — ما نجا وطلع من اللعبة'); });
         saveds.forEach(function (v) { sys('🛡️ المافيا استهدفت ' + v.name + ' — بس الطبيب حماه ونجا 💚'); });
+        guarded.forEach(function (v) { sys('🩺 الطبيب حمى ' + v.name + ' الليلة'); });
         if (recruited) sys('🤝 المافيا جنّدت لاعب الليلة — مين؟ سر');
         if (!victims.length && !saveds.length && !recruited) sys('🌙 ليلة هادية — المافيا ما استهدفت أحد');
 
