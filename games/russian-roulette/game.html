@@ -60,6 +60,11 @@ input::placeholder{color:#6f6a7c}
 @keyframes markPop{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.3)}100%{opacity:1;transform:scale(1)}}
 @keyframes skullIn{0%{opacity:0;transform:scale(.3) rotate(-25deg)}60%{opacity:1;transform:scale(1.2) rotate(6deg)}100%{opacity:1;transform:none}}
 @keyframes elimOut{0%{opacity:1;transform:none;filter:none}100%{opacity:0;transform:scale(.55) translateY(30px);filter:grayscale(1) blur(6px)}}
+@keyframes gunAim{0%{transform:translateX(60px) rotate(-14deg);opacity:0}25%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes gunSway{0%,100%{transform:rotate(0)}50%{transform:rotate(-1.6deg) translateY(-3px)}}
+@keyframes gunRecoil{0%{transform:none}15%{transform:translateX(34px) rotate(16deg)}100%{transform:none}}
+@keyframes muzzle{0%{opacity:0;transform:scale(.2)}20%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1.5)}}
+@keyframes crossLock{0%{opacity:0;transform:scale(1.5) rotate(-60deg)}100%{opacity:1;transform:none}}
 @keyframes crossIn{from{opacity:0;transform:scale(1.6)}to{opacity:1;transform:none}}
 @keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
 @keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
@@ -249,32 +254,55 @@ input::placeholder{color:#6f6a7c}
     </sc-if>
 
     <sc-if value="{{ clashOpen }}" hint-placeholder-val="{{ false }}">
-      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 50% 55%, {{ clashGlow }}, rgba(5,4,10,.92) 60%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;animation:fade .2s ease">
+      <!-- مرحلة الاشتباك: الهدف بالنص كبير والمسدس موجّه له — صاحب الاختيار ما يظهر هنا (لا اسم ولا صورة) -->
+      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 55%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;animation:fade .2s ease">
         <span style="padding:8px 24px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);font:700 22px 'IBM Plex Sans Arabic';color:#e7e3ef">مرحلة الاشتباك</span>
         <span style="font:800 72px/1.1 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 40px {{ clashTitleG }}">{{ clashTitle }}</span>
-        <div style="display:grid;grid-template-columns:420px 260px 420px;align-items:center;gap:30px">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
-            <span style="position:relative;overflow:hidden;width:200px;height:200px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:6px solid #a78bfa;box-shadow:0 0 0 10px rgba(167,139,250,.12), 0 0 60px rgba(139,92,246,.45);font:700 84px 'IBM Plex Sans Arabic';color:#fff">{{ shIni }}<img src="{{ shAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ shOp }}"></span>
-            <span style="max-width:100%;font:700 40px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ shName }}</span>
-            <span style="padding:4px 16px;border-radius:999px;background:rgba(167,139,250,.14);font:700 18px 'IBM Plex Sans Arabic';color:#ddd6fe">المُطلِق</span>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
-            {{ cylEl }}
-            <sc-if value="{{ clashHit }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-size:72px;line-height:1;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">💥</span></sc-if>
-            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="padding:8px 22px;border-radius:999px;border:1.5px solid rgba(255,255,255,.4);font:800 28px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
-            <span style="position:relative;overflow:hidden;width:200px;height:200px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:6px solid #f87171;box-shadow:0 0 0 10px rgba(248,113,113,.12), 0 0 60px rgba(239,68,68,.4);font:700 84px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
-            <span style="max-width:100%;font:700 40px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
-            <span style="display:flex;gap:6px">
+        <div style="direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:16px;width:560px">
+            <span style="position:relative;width:380px;height:380px">
+              <span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:8px solid #f87171;box-shadow:0 0 0 14px rgba(248,113,113,.12), 0 0 90px rgba(239,68,68,.45);font:700 150px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
+              <sc-if value="{{ clashAim }}" hint-placeholder-val="{{ true }}">
+                <svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;inset:-34px;width:calc(100% + 68px);height:calc(100% + 68px);pointer-events:none;animation:crossLock 1.3s cubic-bezier(.2,.8,.3,1) both"><circle cx="50" cy="50" r="47" fill="none" stroke="#ef4444" stroke-width="1.1" stroke-dasharray="10 5"></circle><g stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"><line x1="50" y1="0" x2="50" y2="12"></line><line x1="50" y1="88" x2="50" y2="100"></line><line x1="0" y1="50" x2="12" y2="50"></line><line x1="88" y1="50" x2="100" y2="50"></line></g></svg>
+              </sc-if>
+            </span>
+            <span style="max-width:100%;font:800 64px/1.2 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
+            <span style="display:flex;gap:8px">
               <sc-for list="{{ tgHearts }}" as="h" hint-placeholder-count="4">
-                <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
+                <svg width="38" height="38" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
               </sc-for>
             </span>
-            <span style="padding:4px 16px;border-radius:999px;background:rgba(248,113,113,.12);font:700 18px 'IBM Plex Sans Arabic';color:#fca5a5">الهدف</span>
+          </div>
+          <div style="position:relative;width:620px;height:360px;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 320 170" width="620" height="330" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 24px 40px rgba(0,0,0,.7));transform-origin:80% 60%;animation:{{ gunAn }}">
+              <defs>
+                <linearGradient id="rrSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"></stop><stop offset=".35" stop-color="#9ca3af"></stop><stop offset=".7" stop-color="#374151"></stop><stop offset="1" stop-color="#111827"></stop></linearGradient>
+                <linearGradient id="rrDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7280"></stop><stop offset=".5" stop-color="#1f2937"></stop><stop offset="1" stop-color="#030712"></stop></linearGradient>
+                <linearGradient id="rrWood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b45309"></stop><stop offset=".5" stop-color="#7c2d12"></stop><stop offset="1" stop-color="#3b1406"></stop></linearGradient>
+                <radialGradient id="rrFlash"><stop offset="0" stop-color="#fff"></stop><stop offset=".3" stop-color="#fde68a"></stop><stop offset=".65" stop-color="#f97316"></stop><stop offset="1" stop-color="#dc2626" stop-opacity="0"></stop></radialGradient>
+              </defs>
+              <rect x="12" y="44" width="160" height="22" rx="4" fill="url(#rrSteel)" stroke="#030712" stroke-width="2"></rect>
+              <rect x="12" y="66" width="140" height="12" rx="3" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></rect>
+              <rect x="18" y="35" width="8" height="11" rx="2" fill="#4b5563" stroke="#030712" stroke-width="1.5"></rect>
+              <rect x="8" y="42" width="8" height="38" rx="2" fill="#1f2937" stroke="#030712" stroke-width="2"></rect>
+              <path d="M160 36 L250 36 Q262 36 262 48 L262 96 L222 104 L200 104 L192 92 L160 92 Z" fill="url(#rrSteel)" stroke="#030712" stroke-width="2"></path>
+              <rect x="168" y="38" width="64" height="52" rx="12" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></rect>
+              <g stroke="#9ca3af" stroke-width="2" opacity=".55"><line x1="180" y1="44" x2="180" y2="84"></line><line x1="200" y1="42" x2="200" y2="86"></line><line x1="220" y1="44" x2="220" y2="84"></line></g>
+              <path d="M248 36 L262 16 Q268 10 274 16 L270 24 L262 40 Z" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></path>
+              <path d="M196 96 Q192 132 222 132 Q238 132 240 104" fill="none" stroke="#1f2937" stroke-width="6" stroke-linecap="round"></path>
+              <path d="M216 98 Q212 114 220 124" fill="none" stroke="#9ca3af" stroke-width="5" stroke-linecap="round"></path>
+              <path d="M236 92 L262 88 Q300 120 306 158 Q308 168 296 168 L262 168 Q252 168 250 158 Q244 128 230 106 Z" fill="url(#rrWood)" stroke="#030712" stroke-width="2"></path>
+              <g stroke="#fbbf24" stroke-width="1.2" opacity=".25"><line x1="262" y1="110" x2="290" y2="160"></line><line x1="254" y1="118" x2="278" y2="162"></line></g>
+              <circle cx="270" cy="132" r="4" fill="#d1d5db" stroke="#030712" stroke-width="1.5"></circle>
+              <sc-if value="{{ clashHit }}" hint-placeholder-val="{{ false }}">
+                <g style="transform-origin:4px 60px;animation:muzzle .5s ease-out both"><polygon points="4,60 -34,34 -24,52 -70,46 -30,62 -72,80 -24,70 -36,92" fill="url(#rrFlash)"></polygon><circle cx="-8" cy="60" r="22" fill="url(#rrFlash)"></circle></g>
+              </sc-if>
+            </svg>
+            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;direction:rtl;top:6px;left:40px;padding:8px 26px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);background:rgba(0,0,0,.4);font:800 34px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
+            <div style="position:absolute;bottom:-30px;left:200px;opacity:.95">{{ cylEl }}</div>
           </div>
         </div>
-        <span style="font:600 22px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ clashSub }}</span>
+        <span style="font:600 26px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span>
       </div>
     </sc-if>
 
@@ -801,12 +829,12 @@ class Component extends DCLogic {
       left:s.left, cdOff:(452.4*(1-s.left/c.chooseSec)).toFixed(1), cdCol:s.left<=5?'#f87171':'#a78bfa', cdAn:s.left<=5?'warnPulse 1s ease-in-out infinite':'none', timeTxt:'00:'+String(s.left).padStart(2,'0'), timePct:(s.left/c.chooseSec*100).toFixed(1), candCount:Math.max(0,W.length-1),
       cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
       kickChooser:()=>ch&&this.eliminate(ch.id,{by:'المذيع',type:'manual',host:true,tag:'إقصاء يدوي'}), resume:()=>this.endTurn(),
-      clashOpen:s.phase==='clash'&&!!tg, shName:ch?ch.name:'', shIni:ini(ch&&ch.name), shAv:A(ch&&ch.name).av, shOp:A(ch&&ch.name).op, tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
+      clashOpen:s.phase==='clash'&&!!tg, clashAim:!!(s.clash&&s.clash.stage==='aim'), gunAn:!s.clash||s.clash.stage==='aim'?'gunAim .6s cubic-bezier(.2,.9,.3,1) both, gunSway 1.4s ease-in-out .6s infinite':s.clash.stage==='hit'?'gunRecoil .45s cubic-bezier(.2,.8,.3,1) both':'missFlash .6s ease', tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
       clashHit:!!(s.clash&&s.clash.stage==='hit'), clashMiss:!!(s.clash&&s.clash.stage==='miss'),
       clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'…',
       clashTitleC:!s.clash||s.clash.stage==='aim'?'#f4f2f8':s.clash.stage==='hit'?'#f87171':'#e5e7eb', clashTitleG:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.6)':'rgba(255,255,255,.2)',
       clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(255,255,255,.08)':'rgba(76,29,149,.35)',
-      cylEl:this.cylinder(170,s.clash?s.clash.run:0,!!(s.clash&&s.clash.stage==='aim')),
+      cylEl:this.cylinder(120,s.clash?s.clash.run:0,!!(s.clash&&s.clash.stage==='aim')),
       tgtAn:s.clash&&s.clash.stage==='hit'?'hitFlash 1s ease forwards':s.clash&&s.clash.stage==='miss'?'missFlash .6s ease':'none',
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
       clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?`${tg?tg.name:''} خسر قلب واحد ونجا`:`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
