@@ -38,3 +38,13 @@ test('chat ring: owner flag, trimming, empty text and the 50 message cap', funct
 test('chat ring: unknown streamer returns null', function () {
     assert.equal(stats.getRecentChat('nobody_' + Date.now(), 0), null);
 });
+
+test('chat ring: moderator flag from TikTok (isModerator) for the song player permissions', function () {
+    var u = 'chatmod_' + Date.now();
+    stats.attach(u, 'room1', 'c1');
+    stats.recordComment(u, 'c1', { id: 'tiktok:mod1', name: 'مشرف', text: '!تخطي', isModerator: true });
+    stats.recordComment(u, 'c1', { id: 'tiktok:v', name: 'v', text: '!تخطي' });
+    var c = stats.getRecentChat(u, 0).chat;
+    assert.equal(c[0].mod, true);
+    assert.equal(c[1].mod, false);
+});
