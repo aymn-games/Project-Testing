@@ -414,28 +414,48 @@ input:focus{outline:none}
   <sc-if value="{{ flowRoles }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:86;background:rgba(5,4,10,.82);backdrop-filter:blur(12px);display:grid;place-items:center;padding:16px;animation:fade .25s ease">
       <div style="width:min(980px, calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box;padding:24px 28px;border-radius:30px;background:#110e19;border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 110px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:18px;animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <span style="font:900 28px 'Zain'">{{ rolesTitle }}</span>
-          <div style="display:flex;gap:6px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            <span style="font:900 28px/1.2 'Zain'">{{ rolesTitle }}</span>
+            <span style="font:600 16px 'Zain';color:#a8a3b5">{{ rolesSub }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;padding:5px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
             <sc-for list="{{ rolesSteps }}" as="rs" hint-placeholder-count="2">
-              <span style="height:34px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:800 14px 'Zain';background:{{ rs.bg }};color:{{ rs.fg }};border:1px solid {{ rs.bd }}">{{ rs.t }}</span>
+              <sc-if value="{{ rs.sep }}" hint-placeholder-val="{{ false }}"><span style="width:22px;height:2px;border-radius:2px;background:{{ rs.sepBg }}"></span></sc-if>
+              <span style="height:38px;padding:0 14px 0 8px;border-radius:999px;display:flex;align-items:center;gap:8px;font:800 15px 'Zain';white-space:nowrap;background:{{ rs.bg }};color:{{ rs.fg }};border:1px solid {{ rs.bd }};box-shadow:{{ rs.sh }};transition:all .25s">
+                <span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:900 13px 'Zain';background:{{ rs.numBg }};color:{{ rs.numC }}">{{ rs.num }}</span>
+                <span>{{ rs.icon }} {{ rs.t }}</span>
+              </span>
             </sc-for>
           </div>
         </div>
-        <span style="font:600 16px 'Zain';color:#a8a3b5">{{ rolesSub }}</span>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px">
           <sc-for list="{{ rolesTeams }}" as="rt" hint-placeholder-count="2">
-            <div style="display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:22px;background:{{ rt.soft }};border:1.5px solid {{ rt.c }}">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px 4px">
-                <span style="font:900 20px 'Zain';color:{{ rt.c2 }}">{{ rt.name }}</span>
-                <span style="font:800 14px 'Zain';color:{{ rt.pickC }}">{{ rt.picked }}</span>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:24px;background:linear-gradient(180deg, {{ rt.soft }}, rgba(255,255,255,.015));border:1.5px solid {{ rt.c }}66;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding:0 4px">
+                <span style="display:flex;align-items:baseline;gap:8px;min-width:0">
+                  <span style="font:900 21px 'Zain';color:{{ rt.c2 }}">{{ rt.name }}</span>
+                  <span style="font:700 13px 'Zain';color:#8a8596">{{ rt.count }}</span>
+                </span>
+                <sc-if value="{{ rt.hasPick }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:flex;align-items:center;gap:6px;height:34px;padding:0 4px 0 12px;max-width:55%;border-radius:999px;background:{{ rt.pickBg }};border:1px solid {{ rt.pickBd }};animation:popIn .3s cubic-bezier(.2,1.25,.35,1)">
+                    <span style="position:relative;overflow:hidden;width:26px;height:26px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 12px 'Zain';color:#fff;background:{{ rt.pickAv }}">{{ rt.pickIni }}<sc-if value="{{ rt.pickPhoto }}" hint-placeholder-val="{{ false }}"><img src="{{ rt.pickPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                    <span style="font:800 14px 'Zain';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rt.pickIcon }} {{ rt.pickName }}</span>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ rt.noPick }}" hint-placeholder-val="{{ true }}">
+                  <span style="height:32px;padding:0 12px;display:flex;align-items:center;border-radius:999px;border:1px dashed rgba(255,255,255,.2);font:700 13px 'Zain';color:#8a8596">لم يُختر بعد</span>
+                </sc-if>
               </div>
-              <div data-noscroll="" style="max-height:340px;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:6px">
+              <div data-noscroll="" style="max-height:356px;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:7px">
                 <sc-for list="{{ rt.players }}" as="rp" hint-placeholder-count="4">
-                  <button onClick="{{ rp.pick }}" style="height:52px;padding:0 8px 0 12px;border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:right;border:1.5px solid {{ rp.bd }};background:{{ rp.bg }};color:#f4f2f8;transition:all .15s">
-                    <span style="width:36px;height:36px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ rp.av }}">{{ rp.ini }}</span>
-                    <span style="flex:1;min-width:0;font:800 17px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rp.name }}</span>
-                    <span style="font:800 13px 'Zain';color:{{ rp.tagC }}">{{ rp.tag }}</span>
+                  <button onClick="{{ rp.pick }}" style="min-height:60px;padding:8px 10px 8px 12px;border-radius:16px;cursor:pointer;display:flex;align-items:center;gap:12px;text-align:right;border:1.5px solid {{ rp.bd }};background:{{ rp.bg }};box-shadow:{{ rp.sh }};color:#f4f2f8;transition:background .18s, border-color .18s, box-shadow .18s, transform .12s" style-hover="border-color:rgba(255,255,255,.28);transform:translateY(-1px)" style-active="transform:scale(.985)">
+                    <span style="position:relative;overflow:hidden;width:44px;height:44px;flex-shrink:0;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;font:800 18px 'Zain';color:#fff;background:{{ rp.av }};border:2px solid {{ rp.ring }};box-shadow:0 3px 10px rgba(0,0,0,.35)">{{ rp.ini }}<sc-if value="{{ rp.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ rp.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                    <span style="flex:1;min-width:0;font:800 18px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rp.name }}</span>
+                    <sc-if value="{{ rp.tag }}" hint-placeholder-val="{{ false }}">
+                      <span style="flex-shrink:0;height:26px;padding:0 10px;display:flex;align-items:center;border-radius:999px;font:800 13px 'Zain';background:{{ rp.tagBg }};color:{{ rp.tagC }}">{{ rp.tag }}</span>
+                    </sc-if>
+                    <span style="width:24px;height:24px;flex-shrink:0;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;font:900 13px 'Zain';color:#fff;border:2px solid {{ rp.dotBd }};background:{{ rp.dotBg }};transition:all .18s">{{ rp.dot }}</span>
                   </button>
                 </sc-for>
               </div>
@@ -841,10 +861,23 @@ class Component extends DCLogic {
       flowRoles:S.flow==='roles'&&!S.introOpen, flowQr:S.flow==='qr'&&!S.introOpen,
       rolesTitle:step===1?'🕵 اختر السباي ماستر':'✓ اختر المؤكّد',
       rolesSub:step===1?'السباي ماستر يشوف الألوان بجواله ويلمّح لفريقه':'المؤكّد يفتح الصناديق بكتابة «تأكيد + الرقم»',
-      rolesSteps:[['1 · السباي ماستر',1],['2 · المؤكّد',2]].map(([t,n])=>({t,bg:n===step?'rgba(139,92,246,.22)':'transparent',fg:n===step?'#fff':'#8a8596',bd:n===step?'#a78bfa':'rgba(255,255,255,.1)'})),
+      // شريط الخطوتين: الحالية مضيئة، والمنتهية ✓ أخضر، وبينهم خط يتلوّن لما تنتهي الأولى
+      rolesSteps:[['السباي ماستر','🕵',1],['المؤكّد','✓',2]].map(([t,icon,n])=>{ const on=n===step, done=n<step;
+        return {t,icon,num:done?'✓':String(n),sep:n>1,sepBg:step>1?'linear-gradient(90deg, #34d399, #a78bfa)':'rgba(255,255,255,.12)',
+          bg:on?'linear-gradient(135deg, rgba(124,58,237,.55), rgba(168,85,247,.3))':'transparent',bd:on?'rgba(196,181,253,.7)':'transparent',sh:on?'0 6px 18px rgba(124,58,237,.35)':'none',
+          fg:on?'#fff':done?'#a7f3d0':'#8a8596',numBg:on?'#fff':done?'#10b981':'rgba(255,255,255,.08)',numC:on?'#6d28d9':done?'#fff':'#8a8596'}; }),
       rolesTeams:[1,2].map(team=>{ const C=TC[team], cur=S.roles[team][key], other=step===2?S.roles[team].spy:null;
-        return {name:S.teams[team].name,c:C.c,c2:C.c2,soft:C.soft,picked:cur?`✓ ${cur}`:'لم يُختر بعد',pickC:cur?C.c2:'#8a8596',
-          players:S.players[team].map(n=>{ const on=cur===n; return {name:n,...avOf(n),pick:()=>setR(team,n),bg:on?C.c:'rgba(255,255,255,.035)',bd:on?'#fff':'rgba(255,255,255,.08)',tag:on?(step===1?'🕵 سباي ماستر':'✓ المؤكّد'):n===other?'🕵':'',tagC:'#fff'}; })}; }),
+        // صورة اللاعب من حسابه (this.reg.avatar) فوق الحرف الأول — لو ما له صورة يبقى الحرف
+        return {name:S.teams[team].name,c:C.c,c2:C.c2,soft:C.soft,count:`${S.players[team].length} لاعب`,
+          hasPick:!!cur,noPick:!cur,pickName:cur||'',pickPhoto:cur?this.reg.avatar(cur)||null:null,...(cur?{pickAv:avOf(cur).av,pickIni:avOf(cur).ini}:{pickAv:'none',pickIni:''}),
+          pickIcon:step===1?'🕵':'✓',pickBg:C.c+'2e',pickBd:C.c+'99',
+          players:S.players[team].map(n=>{ const on=cur===n, isOther=n===other;
+            return {name:n,...avOf(n),photo:this.reg.avatar(n)||null,pick:()=>setR(team,n),
+              bg:on?`linear-gradient(90deg, ${C.c}55, ${C.c}1f)`:'rgba(255,255,255,.03)',bd:on?C.c:'rgba(255,255,255,.07)',
+              sh:on?`0 8px 22px ${C.c}40, inset 0 1px 0 rgba(255,255,255,.12)`:'none',ring:on?C.c2:'rgba(255,255,255,.14)',
+              tag:on?(step===1?'🕵 سباي ماستر':'✓ المؤكّد'):isOther?'🕵 السباي':'',
+              tagBg:on?'#fff':'rgba(255,255,255,.07)',tagC:on?C.dk:'#a8a3b5',
+              dotBd:on?'#fff':'rgba(255,255,255,.22)',dotBg:on?C.c:'transparent',dot:on?'✓':''}; })}; }),
       rolesBack:step===2?()=>this.setState({rolesStep:1}):null,
       rolesNextTxt:step===1?'التالي ←':'تم · افتح الباركود', rolesNextOp:ready?1:.4,
       rolesNext:()=>{ if(!ready) return; if(step===1) this.setState({rolesStep:2}); else this.setState({flow:'qr',rolesStep:1}); },
