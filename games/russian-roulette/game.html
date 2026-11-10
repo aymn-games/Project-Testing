@@ -255,9 +255,8 @@ input::placeholder{color:#6f6a7c}
 
     <sc-if value="{{ clashOpen }}" hint-placeholder-val="{{ false }}">
       <!-- مرحلة الاشتباك: الهدف بالنص كبير والمسدس موجّه له — صاحب الاختيار ما يظهر هنا (لا اسم ولا صورة) -->
-      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 55%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;animation:fade .2s ease">
+      <div style="position:absolute;inset:0;z-index:45;padding-top:130px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 38%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:30px;animation:fade .2s ease">
         <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
-          <span style="padding:6px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);font:700 17px 'IBM Plex Sans Arabic';color:#cfc9db;letter-spacing:.2px">مرحلة الاشتباك</span>
           <span style="font:800 52px/1.15 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 34px {{ clashTitleG }}">{{ clashTitle }}</span>
           <span style="padding:6px 20px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);font:600 20px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span>
         </div>
