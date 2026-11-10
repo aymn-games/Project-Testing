@@ -59,13 +59,15 @@
     // تُعاد عيّنتها كل STEP متر. نفس البيانات للمشهد ثلاثي الأبعاد وللخريطة.
     // ------------------------------------------------------------------
     var CONTROL = [
-        [-260, 0], [-60, 0], [140, 0], [300, 0],             // الخط المستقيم الرئيسي
-        [390, -25], [410, -110], [360, -170],                // المنعطف الأول الطويل
-        [270, -175], [220, -230], [150, -250],                // الإس
-        [60, -215], [-20, -265], [-130, -300],               // الشيكين والمستقيم الخلفي
-        [-250, -300], [-330, -250], [-300, -185],            // الهيربين
-        [-230, -160], [-260, -100], [-360, -85],
-        [-420, -40], [-380, 0]                               // المنعطف الأخير
+        [-260, 0], [-60, 0], [140, 0], [320, 0],             // الخط المستقيم الرئيسي
+        [420, -20], [465, -100], [425, -175],                // المنعطف الأول الطويل
+        [335, -195], [285, -255], [305, -335],               // الإس
+        [385, -385], [405, -465], [345, -525],               // الهيربين العلوي
+        [245, -515], [165, -455], [80, -480],                // المنحنيات المتتالية
+        [0, -545], [-100, -525], [-160, -455],
+        [-120, -385], [-180, -320], [-285, -330],            // الشيكين
+        [-375, -385], [-465, -345], [-490, -255],
+        [-430, -180], [-465, -100], [-425, -30], [-350, 0]   // المنعطف الأخير
     ];
     var STEP = 2;
     var ROAD_WIDTH = 14;
@@ -191,7 +193,8 @@
         winner: null,
         reported: false,
         cam: { mode: settings.autoCam ? 'auto' : 'tv', focus: null, locked: false, autoT: 0, autoMode: 'tv' },
-        finishTimer: 0
+        finishTimer: 0,
+        countToken: 0
     };
     var scene = null;        // واجهة f1-scene.js (أو null لو فشل الثري دي)
 
@@ -215,7 +218,7 @@
             id: p.id, name: String(p.name || p.id).slice(0, 24), avatar: p.avatarUrl || null,
             color: color, number: S.cars.length + 1,
             dist: slot.dist, lane: slot.lane, laneT: slot.lane, speed: 0, throttle: 0,
-            fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0,
+            fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0, tapBank: 0,
             bot: !!p.bot
         };
         S.cars.push(car); S.byId[car.id] = car;
@@ -237,13 +240,20 @@
     // ------------------------------------------------------------------
     // التكبيس والدعم
     // ------------------------------------------------------------------
+    var TAPS_PER_NITRO = 50;
     function onLike(id, count) {
-        var c = S.byId[id]; if (!c || c.finished) return;
+        var c = S.byId[id]; if (!c || c.finished || S.phase !== 'race') return;
         count = Math.max(1, Math.min(200, Number(count) || 1));
         c.likes += count;
         // كل تكبيسة ترفع دواسة الوقود، والحد ١
         c.throttle = Math.min(1, c.throttle + count * 0.045);
-        if (scene && count >= 15) scene.burst(c.id, 'tap');
+        // كل 50 تكبيسة = نيترو
+        c.tapBank += count;
+        if (c.tapBank >= TAPS_PER_NITRO) {
+            c.tapBank %= TAPS_PER_NITRO;
+            applyEffect(c, 'nitro', true);
+            if (!c.bot) toast(NITRO.icon + ' <b>' + esc(c.name) + '</b> ← نيترو من التكبيس', NITRO.color);
+        } else if (scene && count >= 15) scene.burst(c.id, 'tap');
     }
 
     /** يوقف السيارة (صاروخ/صاعقة) — الدرع يصدّ أول ضربة ويختفي. ترجع true لو أصابت. */
@@ -262,8 +272,8 @@
         return ahead.concat(behind).slice(0, n);
     }
 
-    function applyEffect(c, id) {
-        c.gifts++;
+    function applyEffect(c, id, fromTaps) {
+        if (!fromTaps) c.gifts++;
         var extra = '';
         if (id === 'nitro') { c.fx.nitro = 2; c.throttle = 1; }
         else if (id === 'shield') { c.fx.shield = 10; }
@@ -300,7 +310,7 @@
     // ------------------------------------------------------------------
     // المحاكاة
     // ------------------------------------------------------------------
-    var BASE_SPEED = 22;       // م/ث (~٨٠ كم/س) بدون تكبيس
+    var BASE_SPEED = 32;       // م/ث (~٨٠ كم/س) بدون تكبيس
     var BOOST_SPEED = 58;      // م/ث إضافية بالدواسة الكاملة (~٢٩٠ كم/س إجمالي)
 
     function simulate(dt) {
@@ -310,7 +320,8 @@
             var fx = c.fx;
             for (var k in fx) if (fx[k] > 0) fx[k] = Math.max(0, fx[k] - dt);
             if (c.finished) { c.speed *= Math.exp(-dt * 0.8); c.dist += c.speed * dt; return; }
-            if (c.bot && fx.stop <= 0) c.throttle = Math.min(1, c.throttle + (Math.random() < dt * 3 ? 0.25 + Math.random() * 0.3 : 0));
+            // متسابقين التجربة يكبّسون عشوائياً (نفس مسار التكبيس الحقيقي)
+            if (c.bot && fx.stop <= 0 && Math.random() < dt * 4) onLike(c.id, 2 + Math.floor(Math.random() * 7));
             c.throttle = Math.max(0, c.throttle - dt * 0.28);
             // إبطاء بالمنعطفات الحادة (يعطي إحساس الكبح)
             var idx = Math.floor((((c.dist % L) + L) % L) / TRACK.step) % TRACK.count;
@@ -339,6 +350,7 @@
             }
         });
     }
+    function lapOf(c) { return Math.min(settings.laps, Math.max(1, Math.floor(c.dist / TRACK.length) + 1)); }
     function finishedCount() { return S.cars.filter(function (c) { return c.finished; }).length; }
 
     function standings() {
@@ -357,11 +369,19 @@
         { id: 'tv', name: 'تلفزيونية', key: '2' },
         { id: 'onboard', name: 'داخل السيارة', key: '3' },
         { id: 'heli', name: 'هليكوبتر', key: '4' },
-        { id: 'trackside', name: 'جانب المضمار', key: '5' }
+        { id: 'trackside', name: 'جانب المضمار', key: '5' },
+        { id: 'track', name: 'المضمار كامل', key: '6' }
     ];
     function setCamMode(id) {
         S.cam.mode = id; S.cam.autoT = 99;
         renderCamBar();
+    }
+    /** الأسهم تحت بطاقة اللاعب: ينتقل للاعب اللي قبله/بعده بالترتيب ويثبّت الكاميرا عليه. */
+    function stepFocus(dir) {
+        var st = standings(); if (!st.length) return;
+        var i = st.indexOf(S.byId[S.cam.focus]);
+        i = (i + dir + st.length) % st.length;
+        setFocus(st[i].id, true);
     }
     function setFocus(id, lock) {
         if (!S.byId[id]) return;
@@ -396,7 +416,7 @@
             effective = 'orbit';
         }
         if (scene) scene.setCamera(effective, S.cam.focus);
-        $('camNow').textContent = camLabel(effective);
+        $('camNow').textContent = S.cam.mode === 'auto' && S.phase !== 'lobby' ? 'تلقائي' : camLabel(effective);
     }
     function camLabel(id) {
         if (id === 'orbit') return 'الشبكة';
@@ -420,10 +440,13 @@
             }
         }
         camTick(dt);
-        if (scene) scene.update(S.cars.map(function (c) {
-            var p = trackPoint(c.dist, c.lane);
-            return { id: c.id, x: p.x, z: p.z, heading: p.heading, speed: c.speed, throttle: c.throttle, fx: c.fx };
-        }));
+        if (scene) {
+            var order = standings();
+            scene.update(S.cars.map(function (c) {
+                var p = trackPoint(c.dist, c.lane);
+                return { id: c.id, x: p.x, z: p.z, heading: p.heading, speed: c.speed, throttle: c.throttle, fx: c.fx, pos: order.indexOf(c) + 1, d: c.dist, lane: c.lane };
+            }));
+        }
         hudTick(dt);
         requestAnimationFrame(frame);
     }
@@ -436,15 +459,21 @@
         S.phase = 'countdown';
         document.body.dataset.phase = 'countdown';
         $('lights').classList.add('show');
-        var n = 0;
+        var n = 0, token = ++S.countToken;
         var lit = function () {
+            if (token !== S.countToken || S.phase !== 'countdown') return;
             n++;
             setLights(n);
+            showCount(6 - n);
             beep(440, 0.15);
             if (n < 5) setTimeout(lit, 900);
-            else setTimeout(go, 900 + Math.random() * 1400);
+            else setTimeout(function () { if (token === S.countToken && S.phase === 'countdown') go(); }, 900 + Math.random() * 1400);
         };
         setTimeout(lit, 700);
+    }
+    function showCount(k) {
+        var el = $('countNum');
+        el.textContent = k; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
     }
     function setLights(n) {
         var pods = $('lights').querySelectorAll('.pod:not(.dim)');
@@ -457,6 +486,7 @@
         $('goText').classList.add('show');
         setTimeout(function () { $('goText').classList.remove('show'); $('lights').classList.remove('show'); }, 1400);
         S.phase = 'race'; document.body.dataset.phase = 'race';
+        if (scene) scene.setPhase('race');
         S.startedAt = Date.now(); S.raceClock = 0; S.finishTimer = 0;
         S.cars.forEach(function (c) { c.throttle = Math.max(c.throttle, 0.35); });
         S.cam.autoT = 99;
@@ -483,6 +513,15 @@
         });
     }
 
+    /** «إنهاء اللعبة»: يوقف السباق ويعرض الترتيب الحالي (النقاط تنرسل فقط لو فيه فائز وصل). */
+    function endNow() {
+        if (S.phase !== 'race' && S.phase !== 'countdown') return;
+        if (!window.confirm('إنهاء السباق الحين وعرض الترتيب؟')) return;
+        S.countToken++;
+        setLights(0); $('lights').classList.remove('show');
+        endRace();
+    }
+
     function endRace() {
         S.phase = 'finish'; document.body.dataset.phase = 'finish';
         var st = standings();
@@ -493,7 +532,7 @@
             el.className = 'step p' + (i + 1);
             el.style.setProperty('--team', c.color);
             el.innerHTML = '<div class="pod-av">' + avatarHtml(c) + '</div><div class="pod-name">' + esc(c.name) + '</div>' +
-                '<div class="pod-time">' + (i === 0 ? '<span dir="ltr">' + fmtTime(c.finishAt) + '</span>' : (c.finished ? gapTxt(c.finishAt - st[0].finishAt) : 'لم يكمل')) + '</div>' +
+                '<div class="pod-time">' + (!c.finished ? 'لم يكمل' : i === 0 ? '<span dir="ltr">' + fmtTime(c.finishAt) + '</span>' : (c.finished ? gapTxt(c.finishAt - st[0].finishAt) : 'لم يكمل')) + '</div>' +
                 '<div class="pod-block"><span>' + (i + 1) + '</span></div>';
             pod.appendChild(el);
         });
@@ -513,7 +552,7 @@
         S.cars.forEach(function (c, i) {
             var sl = gridSlot(i);
             c.dist = sl.dist; c.lane = c.laneT = sl.lane; c.speed = 0; c.throttle = 0; c.finished = false; c.finishAt = 0;
-            c.fx = freshFx(); c.likes = 0; c.gifts = 0;
+            c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0;
         });
         $('podium').classList.remove('show');
         if (scene) { scene.setPhase('lobby'); scene.setCars(S.cars); }
@@ -590,15 +629,16 @@
             r.querySelector('.tpos').textContent = i + 1;
             var gap;
             if (S.phase === 'lobby' || S.phase === 'countdown') gap = '#' + c.number;
-            else if (i === 0) gap = c.finished ? '🏁' : 'القائد';
-            else if (c.finished) gap = '+' + (c.finishAt - leader.finishAt).toFixed(1);
-            else gap = '+' + ((leader.dist - c.dist) / Math.max(c.speed, 15)).toFixed(1);
+            else if (i === 0) gap = c.finished ? '🏁' : 'L' + lapOf(c) + '/' + settings.laps;
+            else if (c.finished) gap = '+' + (c.finishAt - leader.finishAt).toFixed(1) + 'ث';
+            else gap = '+' + Math.max(0, Math.round(leader.dist - c.dist)) + 'م';
             r.querySelector('.tgap').textContent = gap;
             var fx = c.fx, icon = fx.stop > 0 ? '⛔' : fx.shuttle > 0 ? '🚀' : fx.nitro > 0 ? '💨' : fx.shield > 0 ? '🛡️' : '';
             r.querySelector('.tfx').textContent = icon;
             r.classList.toggle('focus', S.cam.focus === c.id);
             r.classList.toggle('locked', S.cam.focus === c.id && S.cam.locked);
         });
+        $('towerCount').textContent = st.length + ' سائق';
         var first = tower.firstElementChild;
         tower.style.height = (st.length * (first ? first.offsetHeight : 38)) + 'px';
     }
@@ -611,11 +651,12 @@
         renderTower(false);
         var st = standings(), lead = st[0];
         if (lead && (S.phase === 'race' || S.phase === 'finish')) {
-            var lap = Math.min(settings.laps, Math.max(1, Math.floor(lead.dist / TRACK.length) + 1));
-            $('lapNow').textContent = lap; $('lapTotal').textContent = settings.laps;
+            $('lapNow').textContent = lapOf(lead); $('lapTotal').textContent = settings.laps;
             $('raceClock').textContent = fmtTime(S.raceClock);
+            $('raceProg').style.transform = 'scaleX(' + Math.max(0, Math.min(1, lead.dist / (settings.laps * TRACK.length))).toFixed(3) + ')';
         } else {
             $('lapNow').textContent = 0; $('lapTotal').textContent = settings.laps; $('raceClock').textContent = '0:00.0';
+            $('raceProg').style.transform = 'scaleX(0)';
         }
         // بطاقة المتسابق المركّز عليه
         var f = S.byId[S.cam.focus];
@@ -624,11 +665,10 @@
             $('focusCard').style.setProperty('--team-ink', isLight(f.color) ? '#111' : '#fff');
             $('fName').textContent = f.name;
             $('fPos').textContent = 'P' + (st.indexOf(f) + 1);
-            $('fNum').textContent = f.number;
             $('fAv').innerHTML = avatarHtml(f);
             $('fSpeed').textContent = Math.round(f.speed * 3.6);
-            $('fThrottle').style.transform = 'scaleX(' + f.throttle.toFixed(3) + ')';
-            $('fLikes').textContent = f.likes;
+            $('fTaps').textContent = f.tapBank;
+            $('fNitro').style.transform = 'scaleX(' + (f.tapBank / TAPS_PER_NITRO).toFixed(3) + ')';
             $('fLock').style.display = S.cam.locked ? '' : 'none';
             var fx = f.fx, act = [];
             [['shield', 'shield'], ['nitro', 'nitro'], ['shuttle', 'shuttle']].forEach(function (k) {
@@ -691,18 +731,25 @@
             });
         }
         Array.prototype.forEach.call(bar.children, function (b) { b.classList.toggle('on', b.dataset.mode === S.cam.mode); });
+        $('camTrack').classList.toggle('on', S.cam.mode === 'track');
     }
 
-    /** لوحة «كيف تفوز؟» بالسباق: كل تأثير بصورة هديته المختارة. */
+    /** لوحة «طريقة اللعب»: التكبيس، النيترو، ثم كل تأثير بصورة هديته المختارة. */
     function renderPerks() {
-        var rows = [];
+        var row = function (cls, c, ic, small, big) {
+            return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><small>' + small + '</small><b>' + big + '</b></span></div>';
+        };
+        var rows = [
+            row('tap', '#e10600', '👆', 'كبّس على الشاشة', 'سرعة أعلى'),
+            row('', NITRO.color, NITRO.icon, 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'), 'نيترو')
+        ];
         if (settings.giftsOn) {
             EFFECTS.forEach(function (e) {
                 var g = giftById(settings.gifts[e.id]);
-                rows.push('<div class="perk" style="--c:' + e.color + '"><span class="perk-ic">' + (g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon) + '</span><span class="perk-txt"><b>' + e.icon + ' ' + e.name + '</b><small>' + e.desc + '</small></span><span class="perk-coins">' + (g ? esc(g.name) : '') + '</span></div>');
+                rows.push(row('', e.color, g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon, g ? esc(g.name) : '', '<i>' + e.icon + '</i> ' + e.name));
             });
+            rows.push(row('', NITRO.color, '🎁', 'أي دعم ثاني', 'نيترو'));
         }
-        rows.push('<div class="perk" style="--c:' + NITRO.color + '"><span class="perk-ic">' + NITRO.icon + '</span><span class="perk-txt"><b>' + NITRO.name + '</b><small>' + NITRO.desc + '</small></span><span class="perk-coins">' + (settings.giftsOn ? 'أي دعم ثاني' : 'أي دعم') + '</span></div>');
         $('perkList').innerHTML = rows.join('');
     }
 
@@ -743,7 +790,7 @@
         $('giftRows').classList.toggle('off', !settings.giftsOn);
         pills('setJoin', settings.joinMode); pills('setQuality', settings.quality);
         $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword;
-        $('qualityVal').textContent = qualityName(settings.quality);
+        pills('ctrlQuality', settings.quality);
         renderGiftRows(); renderPerks();
     }
     function pills(id, v) { Array.prototype.forEach.call($(id).children, function (b) { b.classList.toggle('on', b.dataset.v === v); }); }
@@ -771,10 +818,7 @@
             if (scene) scene.setQuality(settings.quality);
             syncSettingsUI(); renderLobby();
         };
-        $('qualityBtn').onclick = function () {
-            var order = ['light', 'balanced', 'cinematic'];
-            setQuality(order[(order.indexOf(settings.quality) + 1) % order.length]);
-        };
+        Array.prototype.forEach.call($('ctrlQuality').children, function (b) { b.onclick = function () { setQuality(b.dataset.v); }; });
         $('giftRows').addEventListener('click', function (e) { var b = e.target.closest('[data-pick]'); if (b) openPicker(b.dataset.pick); });
         $('pickerClose').onclick = closePicker;
         $('picker').addEventListener('click', function (e) {
@@ -895,16 +939,25 @@
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
         $('lobbyGrid').addEventListener('click', function (e) { var b = e.target.closest('.slot-x'); if (b) removeCar(b.dataset.id); });
         $('hudToggle').onclick = function () { document.body.classList.toggle('clean'); };
+        $('endBtn').onclick = endNow;
+        $('ctrlBtn').onclick = function (e) { e.stopPropagation(); $('ctrlMenu').classList.toggle('show'); $('ctrlBtn').classList.toggle('on', $('ctrlMenu').classList.contains('show')); };
+        document.addEventListener('click', function (e) {
+            if (!$('ctrlMenu').classList.contains('show') || e.target.closest('#ctrlMenu') || e.target.closest('#ctrlBtn')) return;
+            $('ctrlMenu').classList.remove('show'); $('ctrlBtn').classList.remove('on');
+        });
+        $('prevCar').onclick = function () { stepFocus(-1); };
+        $('nextCar').onclick = function () { stepFocus(1); };
+        // زر اللقطة يتنقل بين اللقطات (بدون «المضمار كامل» — له زر خاص)
+        $('camCycle').onclick = function () {
+            var ids = CAM_MODES.map(function (m) { return m.id; }).filter(function (id) { return id !== 'track'; });
+            setCamMode(ids[(ids.indexOf(S.cam.mode) + 1) % ids.length]);
+        };
+        $('camTrack').onclick = function () { setCamMode(S.cam.mode === 'track' ? 'auto' : 'track'); };
         document.addEventListener('keydown', function (e) {
             if (e.target && /input|textarea/i.test(e.target.tagName)) return;
             var m = CAM_MODES.filter(function (x) { return x.key === e.key; })[0];
             if (m) { setCamMode(m.id); return; }
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                var st = standings(); if (!st.length) return;
-                var i = st.indexOf(S.byId[S.cam.focus]);
-                i = (i + (e.key === 'ArrowDown' ? 1 : -1) + st.length) % st.length;
-                setFocus(st[i].id, true); e.preventDefault();
-            }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { stepFocus(e.key === 'ArrowDown' ? 1 : -1); e.preventDefault(); }
             if (e.key === 'Escape') { S.cam.locked = false; renderTower(true); }
             if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('clean');
         });

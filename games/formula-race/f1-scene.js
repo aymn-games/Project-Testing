@@ -141,39 +141,71 @@ function sharedCarGeos() {
     return SHARED;
 }
 
-function makeLabel(car) {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+/**
+ * دبوس اللاعب فوق سيارته: صورته داخل دائرة بلون فريقه + رقم مركزه.
+ * يُعاد رسمه فقط لما يتغير المركز (setPos).
+ */
+function makePin(car) {
+    const c = document.createElement('canvas'); c.width = 192; c.height = 224;
     const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-    const draw = (img) => {
+    let img = null, pos = 0;
+    const draw = () => {
         const ctx = c.getContext('2d');
-        ctx.clearRect(0, 0, 512, 128);
-        ctx.fillStyle = 'rgba(10,10,14,.82)';
-        roundRect(ctx, 8, 24, 496, 80, 40); ctx.fill();
-        ctx.fillStyle = car.color; roundRect(ctx, 408, 24, 96, 80, 40); ctx.fill();
-        ctx.fillRect(408, 24, 40, 80);
-        ctx.fillStyle = luminance(car.color) > 0.6 ? '#111' : '#fff';
-        ctx.font = `800 48px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(String(car.number), 462, 66);
-        // الصورة
-        ctx.save(); ctx.beginPath(); ctx.arc(64, 64, 34, 0, Math.PI * 2); ctx.clip();
-        if (img) ctx.drawImage(img, 30, 30, 68, 68);
-        else { ctx.fillStyle = car.color; ctx.fillRect(30, 30, 68, 68); ctx.fillStyle = '#fff'; ctx.font = `700 36px ${FONT}`; ctx.fillText(String(car.name).trim().charAt(0) || '?', 64, 66); }
+        ctx.clearRect(0, 0, 192, 224);
+        // السهم تحت الدائرة
+        ctx.fillStyle = car.color;
+        ctx.beginPath(); ctx.moveTo(78, 168); ctx.lineTo(114, 168); ctx.lineTo(96, 210); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(96, 100, 76, 0, Math.PI * 2); ctx.fillStyle = car.color; ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(96, 100, 64, 0, Math.PI * 2); ctx.clip();
+        if (img) ctx.drawImage(img, 32, 36, 128, 128);
+        else {
+            ctx.fillStyle = '#16181f'; ctx.fillRect(32, 36, 128, 128);
+            ctx.fillStyle = '#fff'; ctx.font = `700 64px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(String(car.name).trim().charAt(0) || '?', 96, 104);
+        }
         ctx.restore();
-        ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
-        let size = 40; ctx.font = `700 ${size}px ${FONT}`;
-        while (ctx.measureText(car.name).width > 290 && size > 22) { size -= 2; ctx.font = `700 ${size}px ${FONT}`; }
-        ctx.fillText(car.name, 252, 66);
+        if (pos) {
+            ctx.beginPath(); ctx.arc(40, 34, 30, 0, Math.PI * 2); ctx.fillStyle = car.color; ctx.fill();
+            ctx.lineWidth = 6; ctx.strokeStyle = '#0d0f15'; ctx.stroke();
+            ctx.fillStyle = luminance(car.color) > 0.6 ? '#111' : '#fff';
+            ctx.font = `800 36px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(String(pos), 40, 37);
+        }
         tex.needsUpdate = true;
     };
-    draw(null);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw(null));
+    draw();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
     if (car.avatar) {
-        const img = new Image(); img.crossOrigin = 'anonymous';
-        img.onload = () => { try { draw(img); } catch (e) { draw(null); } };
-        img.src = car.avatar;
+        const im = new Image(); im.crossOrigin = 'anonymous';
+        im.onload = () => { img = im; try { draw(); } catch (e) { img = null; draw(); } };
+        im.src = car.avatar;
     }
     const s = new T.Sprite(new T.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-    s.scale.set(4.4, 1.1, 1); s.position.y = 2.6; s.renderOrder = 10;
+    s.center.set(0.5, 0); s.renderOrder = 10;
+    s.userData.setPos = (p) => { if (p !== pos) { pos = p; draw(); } };
+    return s;
+}
+
+/** كبسولة الاسم — تظهر فوق اللاعب اللي الكاميرا تتابعه. */
+function makeNameTag(car) {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 112;
+    const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
+    const draw = () => {
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, 512, 112);
+        ctx.fillStyle = 'rgba(12,16,26,.9)'; roundRect(ctx, 6, 6, 500, 84, 42); ctx.fill();
+        ctx.lineWidth = 6; ctx.strokeStyle = car.color; ctx.stroke();
+        ctx.fillStyle = 'rgba(12,16,26,.9)'; ctx.beginPath(); ctx.moveTo(236, 90); ctx.lineTo(276, 90); ctx.lineTo(256, 110); ctx.closePath(); ctx.fill();
+        ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+        let size = 44; ctx.font = `700 ${size}px ${FONT}`;
+        while (ctx.measureText(car.name).width > 440 && size > 22) { size -= 2; ctx.font = `700 ${size}px ${FONT}`; }
+        ctx.fillText(car.name, 256, 50);
+        tex.needsUpdate = true;
+    };
+    draw();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+    const s = new T.Sprite(new T.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    s.center.set(0.5, 0); s.renderOrder = 11; s.visible = false;
     return s;
 }
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -200,14 +232,16 @@ function buildCar(car) {
     const rain = new T.Mesh(new T.BoxGeometry(0.2, 0.12, 0.05), new T.MeshBasicMaterial({ color: 0xff2020 })); rain.position.set(0, 0.62, -2.62); g.add(rain);
     const dome = new T.Mesh(G.dome, new T.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.18, blending: T.AdditiveBlending, depthWrite: false }));
     dome.visible = false; g.add(dome);
-    const label = makeLabel(car); g.add(label);
-    return { group: g, wheels, flame, flameMat, ring, dome, label, paint, helmet, rain, spin: 0, data: car };
+    const pin = makePin(car); g.add(pin);
+    const tag = makeNameTag(car); g.add(tag);
+    return { group: g, wheels, flame, flameMat, ring, dome, pin, tag, paint, helmet, rain, spin: 0, data: car };
 }
 
 function disposeCar(o) {
     o.paint.dispose(); o.helmet.material.dispose(); o.flameMat.dispose(); o.ring.material.dispose(); o.dome.material.dispose();
     o.rain.geometry.dispose(); o.rain.material.dispose();
-    o.label.material.map.dispose(); o.label.material.dispose();
+    o.pin.material.map.dispose(); o.pin.material.dispose();
+    o.tag.material.map.dispose(); o.tag.material.dispose();
 }
 
 // ---------- المشهد ----------
@@ -223,17 +257,17 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     el.appendChild(r.domElement);
 
     const scene = new T.Scene();
-    const SKY = 0xbcd3e8;
+    const SKY = 0xcfe7f7;
     scene.background = canvasTex(4, 256, (ctx, w, h) => {
         const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, '#3d7fc4'); g.addColorStop(0.55, '#9cc3e6'); g.addColorStop(1, '#e9eef2');
+        g.addColorStop(0, '#3f9bff'); g.addColorStop(0.5, '#9fd3ff'); g.addColorStop(1, '#eaf6ff');
         ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     });
-    scene.fog = new T.Fog(SKY, 260, 900);
-    const camera = new T.PerspectiveCamera(55, W() / H(), 0.1, 2000);
+    scene.fog = new T.Fog(SKY, 400, 1500);
+    const camera = new T.PerspectiveCamera(55, W() / H(), 0.1, 3200);
     camera.position.set(0, 60, 120);
 
-    scene.add(new T.HemisphereLight(0xdfefff, 0x4c6b3a, 0.9));
+    scene.add(new T.HemisphereLight(0xeaf6ff, 0x5c8a3a, 1.15));
     const sun = new T.DirectionalLight(0xfff1dc, 2.4);
     sun.position.set(80, 140, 60); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -244,11 +278,11 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const decor = [];   // أشياء تنخفي بوضع الرسوم الخفيف
     // ---- الأرض (عشب مقصوص بخطوط) ----
     const grassTex = canvasTex(256, 256, (ctx, w, h) => {
-        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#4e8a3a' : '#57963f'; ctx.fillRect(0, i * h / 8, w, h / 8); }
-        for (let i = 0; i < 1800; i++) { ctx.fillStyle = `rgba(${20 + Math.random() * 40},${60 + Math.random() * 60},20,.25)`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#5fbf45' : '#68c94d'; ctx.fillRect(0, i * h / 8, w, h / 8); }
+        for (let i = 0; i < 1400; i++) { ctx.fillStyle = `rgba(${40 + Math.random() * 40},${120 + Math.random() * 60},40,.22)`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
     }, true);
-    grassTex.repeat.set(60, 60);
-    const ground = new T.Mesh(new T.PlaneGeometry(3000, 3000), new T.MeshStandardMaterial({ map: grassTex, roughness: 1 }));
+    grassTex.repeat.set(90, 90);
+    const ground = new T.Mesh(new T.PlaneGeometry(4400, 4400), new T.MeshStandardMaterial({ map: grassTex, roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.02, -150); ground.receiveShadow = true;
     scene.add(ground);
 
@@ -379,26 +413,69 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         pit.position.set(p.x, 0, p.z); pit.rotation.y = p.heading - Math.PI / 2 + Math.PI;
         scene.add(pit);
     }
-    // ---- الأشجار (Instanced) ----
+    // ---- النهر (شريط متعرّج جنوب الحلبة) ----
+    const riverZ = x => 175 + Math.sin(x / 260) * 45 + Math.sin(x / 97) * 12;
     {
-        const trunkG = new T.CylinderGeometry(0.4, 0.5, 3, 5), topG = new T.ConeGeometry(3.4, 9, 7);
+        const pos = [], idx = [], W2 = 22;
+        for (let i = 0, x = -1800; x <= 1800; x += 20, i++) {
+            const z = riverZ(x), dz = (riverZ(x + 1) - z), n = Math.hypot(1, dz), nx = -dz / n, nz = 1 / n;
+            pos.push(x - nx * W2, 0.02, z - nz * W2, x + nx * W2, 0.02, z + nz * W2);
+            if (i) { const p = (i - 1) * 2; idx.push(p, p + 1, p + 2, p + 1, p + 3, p + 2); }
+        }
+        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        const water = new T.Mesh(g, new T.MeshStandardMaterial({ color: 0x3aa8e8, roughness: 0.25, metalness: 0.1, emissive: 0x0b4a7a, emissiveIntensity: 0.35, side: T.DoubleSide }));
+        scene.add(water);
+    }
+    // ---- الجبال البعيدة (بدون ضباب عشان تبان) ----
+    {
+        const green = [], snow = [];
+        let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        for (let i = 0; i < 22; i++) {
+            const a = i / 22 * Math.PI * 2 + rnd() * 0.15, R0 = 1350 + rnd() * 350;
+            const r = 170 + rnd() * 160, h = 200 + rnd() * 260;
+            const x = Math.cos(a) * R0, z = -260 + Math.sin(a) * R0;
+            green.push([new T.ConeGeometry(r, h, 7), M(x, h / 2 - 5, z, 0, rnd() * 3, 0)]);
+            if (h > 330) snow.push([new T.ConeGeometry(r * 0.3, h * 0.3, 7), M(x, h - h * 0.15 - 4, z, 0, rnd() * 3, 0)]);
+        }
+        scene.add(new T.Mesh(merge(green), new T.MeshLambertMaterial({ color: 0x5f9e6e, flatShading: true, fog: false })));
+        if (snow.length) scene.add(new T.Mesh(merge(snow), new T.MeshLambertMaterial({ color: 0xf4f8fb, flatShading: true, fog: false })));
+    }
+    // ---- الأشجار (Instanced): صنوبر + أشجار مزهرة ملوّنة ----
+    {
         const pts = [];
         let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-        for (let tries = 0; pts.length < 260 && tries < 6000; tries++) {
-            const x = -700 + rnd() * 1400, z = -650 + rnd() * 900;
+        for (let tries = 0; pts.length < 420 && tries < 9000; tries++) {
+            const x = -900 + rnd() * 1800, z = -850 + rnd() * 1250;
+            if (Math.abs(z - riverZ(x)) < 40) continue;
             let near = Infinity;
             for (let k = 0; k < track.count; k += 6) near = Math.min(near, Math.hypot(track.x[k] - x, track.z[k] - z));
-            if (near > 48 && !(Math.abs(z) < 70 && x > -320 && x < 360)) pts.push([x, z, 0.7 + rnd() * 0.7]);
+            if (near > 48 && !(Math.abs(z) < 70 && x > -320 && x < 360)) pts.push([x, z, 0.7 + rnd() * 0.7, rnd()]);
         }
-        const trunks = new T.InstancedMesh(trunkG, new T.MeshStandardMaterial({ color: 0x5b3b22 }), pts.length);
-        const tops = new T.InstancedMesh(topG, new T.MeshStandardMaterial({ color: 0x2f6b2c, flatShading: true }), pts.length);
-        pts.forEach(([x, z, s], i) => {
-            trunks.setMatrixAt(i, M(x, 1.5 * s, z, 0, 0, 0, s, s, s));
-            tops.setMatrixAt(i, M(x, (3 + 4.5) * s, z, 0, i, 0, s, s, s));
+        const pines = pts.filter(p => p[3] < 0.4), round = pts.filter(p => p[3] >= 0.4);
+        const trunks = new T.InstancedMesh(new T.CylinderGeometry(0.4, 0.55, 3, 5), new T.MeshStandardMaterial({ color: 0x6b4426 }), pts.length);
+        const tops = new T.InstancedMesh(new T.ConeGeometry(3.4, 9, 7), new T.MeshStandardMaterial({ color: 0x2f8a3a, flatShading: true }), Math.max(1, pines.length));
+        const crowns = new T.InstancedMesh(new T.IcosahedronGeometry(3.6, 0), new T.MeshStandardMaterial({ color: 0xffffff, flatShading: true }), Math.max(1, round.length));
+        const CROWN = [0x4ade80, 0x22c55e, 0x86efac, 0xf9a8d4, 0xf472b6, 0xfb923c, 0x65a30d];
+        const col = new T.Color();
+        pts.forEach(([x, z, s], i) => trunks.setMatrixAt(i, M(x, 1.5 * s, z, 0, 0, 0, s, s, s)));
+        pines.forEach(([x, z, s], i) => tops.setMatrixAt(i, M(x, 7.5 * s, z, 0, i, 0, s, s, s)));
+        round.forEach(([x, z, s, r], i) => {
+            crowns.setMatrixAt(i, M(x, 5.6 * s, z, 0, i, 0, s, s * 0.9, s));
+            crowns.setColorAt(i, col.setHex(CROWN[Math.floor(r * 1000) % CROWN.length]));
         });
-        tops.castShadow = false; scene.add(trunks, tops);
-        decor.push(trunks, tops);
+        tops.count = pines.length; crowns.count = round.length;
+        scene.add(trunks, tops, crowns);
+        decor.push(trunks, tops, crowns);
     }
+
+    // ---- لقطة «المضمار كامل» ----
+    const trackView = (() => {
+        let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+        for (let i = 0; i < track.count; i++) { a = Math.min(a, track.x[i]); b = Math.max(b, track.x[i]); c = Math.min(c, track.z[i]); d = Math.max(d, track.z[i]); }
+        const cx = (a + b) / 2, cz = (c + d) / 2, ext = Math.max(b - a, (d - c) * 1.6) / 2 + 60;
+        const fov = 45, h = ext / Math.tan(fov * Math.PI / 360);
+        return { pos: new T.Vector3(cx, h * 0.92, cz + h * 0.38), look: new T.Vector3(cx, 0, cz + 20), fov };
+    })();
 
     // ---- كاميرات جانب المضمار ----
     const trackCams = [];
@@ -468,8 +545,18 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             if (o.dome.visible) o.dome.material.opacity = 0.16 + Math.sin(performance.now() / 120) * 0.06;
             o.rain.material.color.setScalar(0); o.rain.material.color.r = (Math.floor(performance.now() / 120) % 2 || s.speed < 30) ? 1 : 0.25;
             const inside = camMode === 'onboard' && s.id === focusId;
-            o.label.visible = !inside; o.helmet.visible = !inside;
-            g.userData.speed = s.speed;
+            o.helmet.visible = !inside;
+            // الدبوس يكبر مع بعد الكاميرا عشان يبان باللقطات البعيدة
+            o.pin.visible = !inside;
+            if (s.pos) o.pin.userData.setPos(s.pos);
+            const dist = camera.position.distanceTo(g.position);
+            const zoom = Math.tan(camera.fov * Math.PI / 360);   // اللقطة المقرّبة (fov صغير) ما تكبّر الدبوس
+            const ps = Math.max(1.1, dist * zoom * (camMode === 'track' ? 0.07 : 0.075));
+            o.pin.scale.set(ps, ps * 224 / 192, 1); o.pin.position.y = 1.6 + ps * 0.15;
+            const focused = s.id === focusId && !inside && camMode !== 'track' && phase !== 'lobby';
+            o.tag.visible = focused;
+            if (focused) { o.tag.scale.set(ps * 2.4, ps * 2.4 * 112 / 512, 1); o.tag.position.y = o.pin.position.y + ps * 1.2; }
+            g.userData.speed = s.speed; g.userData.d = s.d; g.userData.lane = s.lane || 0;
         }
     }
 
@@ -506,7 +593,10 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         const k = 1 - Math.exp(-dt * (camMode === 'onboard' ? 30 : 4.5));
         const jump = lastMode !== camMode; lastMode = camMode;
         let targetPos, targetLook, fov = 55;
-        if (camMode === 'orbit' || !o) {
+        if (camMode === 'track') {
+            // المضمار كامل: من فوق بزاوية، كل الحلبة والسيارات
+            targetPos = trackView.pos; targetLook = trackView.look; fov = trackView.fov;
+        } else if (camMode === 'orbit' || !o) {
             // دوران حول شبكة الانطلاق
             orbitT += dt * 0.12;
             const c = trackPoint(-50, 0);
@@ -518,9 +608,16 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             const g = o.group, fwd = new T.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y));
             const spd = g.userData.speed || 0;
             if (camMode === 'tv') {
-                targetPos = g.position.clone().addScaledVector(fwd, -11 - spd * 0.04).setY(4.2);
-                targetLook = g.position.clone().addScaledVector(fwd, 6).setY(1.2);
-                fov = 58 + Math.min(14, spd * 0.15);
+                // خلف السيارة على مسار المضمار نفسه (ما تطلع الكاميرا برا الحواجز بالمنعطفات)
+                const d0 = g.userData.d, ln = g.userData.lane * 0.5;
+                if (d0 != null) {
+                    const b = trackPoint(d0 - 15 - spd * 0.05, ln), f = trackPoint(d0 + 14, ln);
+                    targetPos = new T.Vector3(b.x, 6.2, b.z); targetLook = new T.Vector3(f.x, 1, f.z);
+                } else {
+                    targetPos = g.position.clone().addScaledVector(fwd, -14).setY(6);
+                    targetLook = g.position.clone().addScaledVector(fwd, 12).setY(1);
+                }
+                fov = 56 + Math.min(12, spd * 0.12);
             } else if (camMode === 'onboard') {
                 targetPos = g.position.clone().addScaledVector(fwd, 0.15).setY(1.22);
                 targetLook = g.position.clone().addScaledVector(fwd, 20).setY(1.0);
@@ -540,6 +637,8 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         if (jump || camMode === 'trackside') { if (jump) camPos.copy(targetPos); else camPos.lerp(targetPos, 1 - Math.exp(-dt * 20)); camLook.copy(targetLook); }
         else { camPos.lerp(targetPos, k); camLook.lerp(targetLook, camMode === 'onboard' ? k : 1 - Math.exp(-dt * 8)); }
         camFov += (fov - camFov) * (jump ? 1 : 1 - Math.exp(-dt * 3));
+        // لقطة المضمار كامل بعيدة: نشيل الضباب عشان الحلبة كلها تبان
+        scene.fog.near = camMode === 'track' ? 3000 : 400; scene.fog.far = camMode === 'track' ? 6000 : fogFar;
         camera.position.copy(camPos);
         if (camMode === 'onboard' && o) camera.position.y += Math.sin(performance.now() / 30) * 0.008 * Math.min(1, (o.group.userData.speed || 0) / 40);
         camera.lookAt(camLook);
@@ -549,12 +648,13 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         sun.target.position.copy(focusP); sun.position.copy(focusP).add(new T.Vector3(60, 120, 40));
     }
 
+    let fogFar = 1500;
     // ---- وضع الرسوم (خفيف / متوازن / سينمائي) — يتغير وقت السباق بدون إعادة تحميل ----
     function setQuality(q) {
         const Q = {
-            light: { pr: 0.75, shadow: false, map: 512, decor: false, fogFar: 520 },
-            balanced: { pr: 1, shadow: true, map: 1024, decor: true, fogFar: 900 },
-            cinematic: { pr: 2, shadow: true, map: 2048, decor: true, fogFar: 1300 }
+            light: { pr: 0.75, shadow: false, map: 512, decor: false, fogFar: 1100 },
+            balanced: { pr: 1, shadow: true, map: 1024, decor: true, fogFar: 1500 },
+            cinematic: { pr: 2, shadow: true, map: 2048, decor: true, fogFar: 2000 }
         }[q] || null;
         if (!Q) return;
         r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
@@ -562,7 +662,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         sun.castShadow = Q.shadow;
         if (sun.shadow.mapSize.x !== Q.map) { sun.shadow.mapSize.set(Q.map, Q.map); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
         decor.forEach(o => { o.visible = Q.decor; });
-        scene.fog.far = Q.fogFar; camera.far = Q.fogFar + 300; camera.updateProjectionMatrix();
+        fogFar = Q.fogFar;
     }
     setQuality(quality);
 

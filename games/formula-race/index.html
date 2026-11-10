@@ -31,91 +31,112 @@ button{font-family:inherit;cursor:pointer}
 #stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
 
 /* ---------- الشريط العلوي ---------- */
-.top{position:fixed;top:0;left:0;right:0;z-index:20;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 16px;
+.top{position:fixed;top:0;left:0;right:0;z-index:20;height:60px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;
   background:linear-gradient(rgba(6,7,10,.85),rgba(6,7,10,0))}
 .top-r{display:flex;align-items:center;gap:10px}
-.top-l{display:flex;justify-content:flex-end;align-items:center;gap:8px}
-.btn-ghost{height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#eee;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
+.top-l{display:flex;align-items:center;gap:8px}
+.btn-ghost{height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(12,13,18,.6);color:#eee;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
 .btn-ghost:hover{background:rgba(255,255,255,.1)}
+.btn-ghost.on{border-color:var(--agp-accent);background:rgba(225,6,0,.18)}
 .btn-exit{border-color:rgba(248,113,113,.3);color:#fca5a5}
+.btn-end{border-color:rgba(248,113,113,.4);color:#fca5a5;background:rgba(127,29,29,.35)}
+body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:none}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
 .brand i{display:block;width:30px;height:18px;background:linear-gradient(135deg,#e10600 0 55%,transparent 55%);transform:skewX(-20deg);border-radius:2px}
 .live{height:32px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#fca5a5;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25)}
 .live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
 .live.on{color:#4ade80;background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.3)}
 
-/* لوحة اللفة والوقت (وسط أعلى) */
-.lapbox{display:flex;align-items:stretch;border-radius:10px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);height:44px}
-.lapbox .lb-tag{background:var(--agp-accent);display:grid;place-items:center;padding:0 12px;font-weight:700;font-size:13px}
-.lapbox .lb-lap{display:flex;align-items:center;gap:6px;padding:0 14px;font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
-.lapbox .lb-lap small{color:var(--mut);font-size:12px;font-weight:600}
-.lapbox .lb-clock{display:flex;align-items:center;padding:0 14px;border-inline-start:1px solid var(--line);font-variant-numeric:tabular-nums;font-weight:600;color:#ddd;direction:ltr}
+/* قائمة «التحكم» */
+#ctrlMenu{position:fixed;top:64px;left:16px;z-index:45;width:300px;padding:12px;border-radius:16px;background:rgba(14,15,20,.96);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:none}
+#ctrlMenu.show{display:block;animation:tin .2s both}
+#ctrlMenu h4{margin:4px 2px 8px;font-size:12px;color:var(--mut);font-weight:600}
+#ctrlMenu h4+*{margin-bottom:12px}
+.cm-cams{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cm-cams button,.cm-q button,.cm-row button{height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.cm-cams button.on,.cm-q button.on{background:var(--agp-accent);border-color:var(--agp-accent);color:#fff}
+.cm-cams kbd{font:600 10px 'IBM Plex Sans Arabic';opacity:.6;border:1px solid currentColor;border-radius:4px;padding:0 4px}
+.cm-q{display:flex;gap:6px}.cm-q button{flex:1;justify-content:center}
+.cm-row{display:flex;gap:6px}.cm-row button{flex:1;justify-content:center}
 
-/* ---------- برج الترتيب (يمين) ---------- */
-.tower{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:12px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.tower-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:linear-gradient(90deg,#1a1b22,#121318);font-size:12px;font-weight:700}
-.tower-h span:last-child{color:var(--mut);font-weight:500}
+/* اللفة والزمن (وسط أعلى) */
+.lapbox{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:15;display:flex;align-items:center;gap:22px;padding:8px 22px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px)}
+.lapbox>div{display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.lapbox small{font-size:11px;color:var(--mut);font-weight:600}
+.lapbox b{font-size:24px;font-variant-numeric:tabular-nums;direction:ltr}
+.lapbox .lb-lap b{color:#ff4d45}
+.lapbox .lb-lap b span:last-child{font-size:15px;color:#cfd0d8}
+.lb-prog{position:absolute;left:14px;right:14px;bottom:6px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
+.lb-prog i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#e10600,#ff8a80);transition:transform .2s linear}
+body[data-phase="lobby"] .lapbox{display:none}
+
+/* ---------- لوحة الصدارة (يسار) ---------- */
+.tower{position:fixed;top:78px;left:14px;z-index:15;width:280px;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
+.tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,#1a1b22,#121318);font-size:13px;font-weight:700}
+.tower-h span:last-child{color:var(--mut);font-weight:500;font-size:11.5px}
 #towerRows{position:relative;transition:height .3s}
-.trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);
+.trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
   background:transparent;color:var(--txt);text-align:right;transition:transform .45s cubic-bezier(.3,.8,.3,1),background .2s}
 .trow:hover{background:rgba(255,255,255,.06)}
 .trow.focus{background:linear-gradient(270deg,color-mix(in srgb,var(--team) 38%,transparent),rgba(255,255,255,.03))}
 .trow.locked .tpos::after{content:"📌";position:absolute;font-size:9px;transform:translate(10px,-10px)}
 .tpos{position:relative;width:22px;text-align:center;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
-.tbar{width:4px;height:20px;border-radius:2px;background:var(--team)}
-.tav{width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700}
+.tav{width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700;border:2px solid var(--team)}
 .tav img{width:100%;height:100%;object-fit:cover}
 .tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}
-.tgap{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;direction:ltr;min-width:44px;text-align:left}
+.tgap{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
 .tfx{width:18px;font-size:13px;text-align:center}
 
-/* ---------- المزايا (يسار) ---------- */
-.perks{position:fixed;top:78px;left:14px;z-index:15;width:270px;border-radius:12px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
-.perks h3{margin:0 0 4px;font-size:13px;display:flex;align-items:center;gap:6px}
-.tap-hint{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:6px 0 8px;border-radius:10px;background:linear-gradient(90deg,rgba(225,6,0,.22),rgba(225,6,0,.05));border:1px solid rgba(225,6,0,.35);font-size:12px}
-.tap-hint b{font-size:13px}
-.tap-ic{font-size:22px;animation:tap 1s ease-in-out infinite}
-@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
-.perk{display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:9px}
+/* ---------- طريقة اللعب (يمين) ---------- */
+.perks{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
+.perks h3{margin:2px 4px 6px;font-size:14px;color:#ff6b63}
+.perk{display:flex;align-items:center;gap:10px;padding:6px 6px;border-radius:10px}
 .perk+.perk{border-top:1px solid rgba(255,255,255,.05)}
-.perk-ic{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:color-mix(in srgb,var(--c) 22%,transparent);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);font-size:15px;flex-shrink:0}
+.perk-ic{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
+.perk-ic img{width:28px;height:28px;object-fit:contain}
 .perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
-.perk-txt b{font-size:12.5px;color:var(--c)}
 .perk-txt small{font-size:10.5px;color:var(--mut)}
-.perk-coins{font-size:11px;font-weight:600;color:#ffd76a;direction:ltr;white-space:nowrap}
+.perk-txt b{font-size:13.5px;color:#fff}
+.perk-txt b i{font-style:normal;color:var(--c)}
+.perk.tap .perk-ic{animation:tap 1s ease-in-out infinite}
+@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
-/* ---------- الخريطة ---------- */
-.mapbox{position:fixed;left:14px;bottom:14px;z-index:15;width:270px;height:170px;border-radius:12px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);overflow:hidden}
+/* ---------- الخريطة (يمين تحت) ---------- */
+.mapbox{position:fixed;right:14px;bottom:14px;z-index:15;width:280px;height:190px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);overflow:hidden}
+.mapbox-h{position:absolute;top:8px;right:12px;left:12px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;pointer-events:none}
+.mapbox-h span:last-child{color:#4ade80;font-weight:600;font-size:11px}
 #minimap{width:100%;height:100%;display:block}
-body.no3d .mapbox{left:50%;top:50%;bottom:auto;transform:translate(-50%,-45%);width:min(760px,70vw);height:min(480px,60vh)}
+body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);width:min(760px,70vw);height:min(480px,60vh)}
 
-/* ---------- بطاقة المتسابق + أزرار الكاميرا (أسفل) ---------- */
-.bottom{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:16;display:flex;flex-direction:column;align-items:center;gap:8px;width:min(620px,calc(100vw - 600px))}
-.fcard{width:100%;display:flex;align-items:stretch;border-radius:12px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.f-num{width:56px;display:grid;place-items:center;background:var(--team);font-size:26px;font-weight:700;color:var(--team-ink,#fff)}
-.f-main{flex:1;min-width:0;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
-.f-row{display:flex;align-items:center;gap:8px}
-.f-av{width:28px;height:28px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:12px;flex-shrink:0}
-.f-av img{width:100%;height:100%;object-fit:cover}
+/* ---------- بطاقة متابعة اللاعب (يسار تحت) ---------- */
+.bottom{position:fixed;bottom:14px;left:14px;z-index:16;width:330px}
+.fcard{border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:12px;border-top:3px solid var(--team)}
+.fc-top{display:flex;align-items:center;gap:10px}
+.f-pos{font-weight:800;font-size:26px;font-style:italic;color:#ffd76a;line-height:1}
+.fc-who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.fc-who small{font-size:10.5px;color:#4ade80}
 .f-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.f-pos{font-weight:700;font-size:13px;color:#ffd76a;padding:1px 8px;border-radius:6px;background:rgba(255,215,106,.12)}
-.f-lock{font-size:11px;color:#93c5fd;padding:1px 8px;border-radius:6px;background:rgba(147,197,253,.12)}
-.f-fx{display:flex;gap:6px;margin-inline-start:auto}
+.f-av{width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
+.f-av img{width:100%;height:100%;object-fit:cover}
+.f-lock{font-size:11px;color:#93c5fd;padding:1px 6px;border-radius:6px;background:rgba(147,197,253,.12)}
+.fc-mid{display:flex;align-items:flex-end;gap:8px;margin-top:8px}
+.f-speed{display:flex;flex-direction:column;line-height:1}
+.f-speed b{font-size:34px;font-variant-numeric:tabular-nums}
+.f-speed small{font-size:10px;color:var(--mut);margin-top:3px}
+.f-taps{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;direction:ltr;margin-bottom:6px}
+.f-nitro{margin-inline-start:auto;font-size:12px;font-weight:700;color:#22d3ee;margin-bottom:6px}
+.nitro-bar{position:relative;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px}
+.nitro-bar i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#0ea5e9,#22d3ee);transition:transform .15s linear}
+.f-fx{display:flex;flex-wrap:wrap;gap:6px;min-height:0;margin-top:6px}
+.f-fx:empty{display:none}
 .f-fx span{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);animation:pulse .6s ease-in-out infinite alternate}
 @keyframes pulse{to{filter:brightness(1.5)}}
-.throttle{position:relative;height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
-.throttle i{position:absolute;inset:0;transform-origin:right;background:linear-gradient(270deg,#22c55e,#eab308 60%,#e10600);transition:transform .1s linear}
-.f-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--mut)}
-.f-speed{width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-inline-start:1px solid var(--line);background:rgba(0,0,0,.25)}
-.f-speed b{font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
-.f-speed small{font-size:10px;color:var(--mut);margin-top:2px}
-.cambar{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.cambar button{height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#cfd0d8;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.cambar button:hover{background:rgba(255,255,255,.07)}
-.cambar button.on{background:var(--agp-accent);color:#fff}
-.cambar kbd{font:600 10px 'IBM Plex Sans Arabic';opacity:.6;border:1px solid currentColor;border-radius:4px;padding:0 4px}
-.camnow{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:14;font-size:11px;font-weight:700;letter-spacing:.3px;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.55);color:#fff;display:flex;gap:6px;align-items:center}
-.camnow::before{content:"";width:7px;height:7px;border-radius:50%;background:#e10600;animation:pulse .8s infinite alternate}
+.fc-cam{display:flex;gap:6px;margin-top:10px}
+.fc-cam button{height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e5e5ea;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap}
+.fc-cam button:hover{border-color:rgba(255,255,255,.3)}
+.fc-cam .arr{width:34px;padding:0;font-size:18px}
+.fc-cam .grow{flex:1}
+.fc-cam button.on{background:#2563eb;border-color:#2563eb;color:#fff}
 
 /* ---------- التنبيهات ---------- */
 #toasts{position:fixed;top:128px;left:50%;transform:translateX(-50%);z-index:17;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;width:min(520px,90vw)}
@@ -129,19 +150,25 @@ body.no3d .mapbox{left:50%;top:50%;bottom:auto;transform:translate(-50%,-45%);wi
 /* ---------- أضواء البداية ---------- */
 #lights{position:fixed;top:22%;left:50%;transform:translate(-50%,-20px);z-index:30;display:flex;gap:14px;padding:16px 20px;border-radius:16px;background:#0b0b0e;border:2px solid #222;box-shadow:0 20px 60px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:all .35s}
 #lights.show{opacity:1;transform:translate(-50%,0)}
+#lights{direction:ltr}
 #lights .col{display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:10px;background:#16161a}
 #lights .pod{width:46px;height:46px;border-radius:50%;background:#2a0505;box-shadow:inset 0 3px 8px rgba(0,0,0,.8);transition:all .08s}
 #lights .pod.on{background:radial-gradient(circle at 40% 35%,#ff8a8a,#ff0000 45%,#a00000);box-shadow:0 0 28px 6px rgba(255,0,0,.75)}
 #lights .pod.dim{background:#2a0505}
+#countNum{position:fixed;top:60%;left:50%;transform:translate(-50%,-50%);z-index:30;font-size:clamp(90px,16vw,200px);font-weight:800;font-style:italic;color:#fff;text-shadow:0 8px 0 rgba(0,0,0,.35),0 0 40px rgba(255,40,40,.6);pointer-events:none;opacity:0}
+#countNum.pop{animation:cpop .8s ease both}
+@keyframes cpop{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}25%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.9)}}
 #goText{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.6);z-index:31;font-size:clamp(48px,9vw,120px);font-weight:700;font-style:italic;color:#fff;
   text-shadow:0 0 30px rgba(34,197,94,.9),0 6px 0 #0b5d29;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.2,1.4,.4,1)}
 #goText.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#goText{display:flex;flex-direction:column;align-items:center;line-height:1.05;padding:14px 34px 20px;border-radius:20px;background:rgba(10,12,20,.75);border:2px solid rgba(34,197,94,.6)}
+#goText small{font-size:clamp(14px,2vw,22px);font-style:normal;font-weight:600;color:#bbf7d0;text-shadow:none}
 
 /* ---------- اللوبي ---------- */
 .lobby{position:fixed;inset:64px 0 0 0;z-index:25;display:flex;justify-content:center;align-items:flex-start;padding:22px 16px;overflow-y:auto;
   background:linear-gradient(180deg,rgba(6,7,10,.55),rgba(6,7,10,.2) 40%,rgba(6,7,10,.65))}
 body:not([data-phase="lobby"]) .lobby{display:none}
-body[data-phase="lobby"] .perks,body[data-phase="lobby"] .bottom,body[data-phase="lobby"] .tower,body[data-phase="lobby"] .camnow,body[data-phase="lobby"] .mapbox{display:none}
+body[data-phase="lobby"] .perks,body[data-phase="lobby"] .bottom,body[data-phase="lobby"] .tower,body[data-phase="lobby"] .mapbox{display:none}
 .lobby-wrap{width:min(1080px,100%);display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
 .card{border-radius:20px;background:rgba(12,13,18,.82);border:1px solid var(--line);backdrop-filter:blur(14px);padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 .hero{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;
@@ -245,33 +272,31 @@ body.testing .live::after{content:" · تجربة";}
 .rest-gap{color:var(--mut)}
 
 /* إخفاء الواجهة (H) — لقطة بث نظيفة */
-body.clean .perks,body.clean .mapbox,body.clean .cambar{display:none}
-body.no3d .cambar,body.no3d .camnow{display:none}
+body.clean .perks,body.clean .mapbox{display:none}
+body.no3d .fc-cam{display:none}
 
 @media (max-width:1100px){
   .perks{display:none}
-  .bottom{width:min(620px,calc(100vw - 300px));left:auto;right:290px;transform:none}
 }
 @media (max-width:760px){
-  .top{height:56px;padding:0 10px}
+  .top{height:54px;padding:0 10px}
   .brand span{display:none}
-  .lapbox .lb-tag{display:none}
   .top-l .btn-ghost span,.btn-exit span{display:none}
   .live{width:32px;padding:0;justify-content:center}.live span{display:none}
-  .lapbox{height:38px}.lapbox .lb-lap{font-size:17px;padding:0 10px}.lapbox .lb-clock{padding:0 10px;font-size:13px}
-  .tower{top:62px;right:8px;width:158px;border-radius:10px}
+  body.testing .live::after{content:none}
+  .lapbox{top:56px;gap:14px;padding:5px 14px 11px}.lapbox b{font-size:18px}.lapbox small{font-size:10px}
+  #ctrlMenu{left:8px;right:8px;width:auto;top:56px}
+  .tower{top:112px;left:8px;width:158px;border-radius:10px}
   .tower-h{padding:5px 10px}.tower-h span:last-child{display:none}
   .trow{height:27px;gap:5px;padding:0 6px}.tname{font-size:12px}.tpos{font-size:12px;width:16px}.tgap{font-size:10.5px;min-width:34px}.tfx{width:14px;font-size:11px}
-  .tav,.tbar{display:none}
-  #toasts{left:8px;right:174px;width:auto;transform:none;top:170px;align-items:flex-end}
+  .tav{display:none}
+  #toasts{right:8px;left:174px;width:auto;transform:none;top:224px;align-items:flex-start}
   .toast{font-size:12px;padding:6px 10px}
   #lights{top:30%}
-  .mapbox{width:150px;height:100px;left:8px;bottom:auto;top:64px}
-  .bottom{left:8px;right:8px;bottom:8px;width:auto;transform:none}
-  .cambar{overflow-x:auto;max-width:100%;scrollbar-width:none}
-  .cambar kbd{display:none}
-  .camnow{top:auto;bottom:150px}
-  .lobby{inset:56px 0 0 0}
+  .mapbox{width:150px;height:104px;right:8px;bottom:auto;top:112px}.mapbox-h{display:none}
+  .bottom{left:8px;right:8px;bottom:8px;width:auto}
+  .fcard{padding:9px}.f-speed b{font-size:26px}.f-pos{font-size:22px}
+  .lobby{inset:54px 0 0 0}
   .lobby-wrap{grid-template-columns:1fr}
   .hero{flex-direction:column;align-items:stretch;text-align:center;background:linear-gradient(160deg,rgba(225,6,0,.92),rgba(110,4,0,.9))}
   .howto{grid-template-columns:1fr}
@@ -293,17 +318,28 @@ body.no3d .cambar,body.no3d .camnow{display:none}
     <button class="btn-ghost btn-exit" id="exitBtn" type="button">✕ <span>خروج</span></button>
     <div class="brand"><i></i><span>سباق الفورمولا</span></div>
   </div>
-  <div class="lapbox" aria-label="اللفة">
-    <div class="lb-tag">اللفة</div>
-    <div class="lb-lap"><span id="lapNow">0</span><small>/ <span id="lapTotal">3</span></small></div>
-    <div class="lb-clock" id="raceClock">0:00.0</div>
-  </div>
   <div class="top-l">
-    <button class="btn-ghost" id="qualityBtn" type="button" title="وضع الرسوم">🎨 <span>الرسوم: <b id="qualityVal">متوازن</b></span></button>
-    <button class="btn-ghost" id="hudToggle" type="button" title="إخفاء/إظهار اللوحات (H)">👁 <span>الواجهة</span></button>
+    <button class="btn-ghost btn-end" id="endBtn" type="button">⏻ <span>إنهاء اللعبة</span></button>
+    <button class="btn-ghost" id="ctrlBtn" type="button">⚙ <span>التحكم</span></button>
     <div class="live" id="liveBadge"><span>غير متصل بالبث</span></div>
   </div>
 </header>
+
+<div class="lapbox" aria-label="اللفة والزمن">
+  <div class="lb-time"><small>الزمن</small><b id="raceClock">0:00.0</b></div>
+  <div class="lb-lap"><small>اللفة</small><b><span id="lapNow">0</span><span>/<span id="lapTotal">3</span></span></b></div>
+  <div class="lb-prog"><i id="raceProg"></i></div>
+</div>
+
+<!-- قائمة التحكم: الكاميرا، الرسوم، إخفاء اللوحات -->
+<div id="ctrlMenu">
+  <h4>الكاميرا</h4>
+  <div class="cm-cams" id="camBar"></div>
+  <h4>وضع الرسوم</h4>
+  <div class="cm-q" id="ctrlQuality"><button type="button" data-v="light">خفيف</button><button type="button" data-v="balanced">متوازن</button><button type="button" data-v="cinematic">سينمائي</button></div>
+  <h4>الشاشة</h4>
+  <div class="cm-row"><button type="button" id="hudToggle">👁 إخفاء/إظهار اللوحات (H)</button></div>
+</div>
 
 <!-- اللوبي + الإعدادات -->
 <section class="lobby">
@@ -341,7 +377,7 @@ body.no3d .cambar,body.no3d .camnow{display:none}
         <div class="pills" id="setJoin"><button type="button" data-v="all">الجميع</button><button type="button" data-v="followers">المتابعون فقط</button></div>
       </div>
       <div class="set-row">
-        <span class="set-label"><b>وضع الرسوم</b><small>يمكن تغييره أثناء السباق من زر «الرسوم» فوق</small></span>
+        <span class="set-label"><b>وضع الرسوم</b><small>يمكن تغييره أثناء السباق من زر «التحكم» فوق</small></span>
         <div class="pills" id="setQuality"><button type="button" data-v="light">الخفيف · للأجهزة الضعيفة</button><button type="button" data-v="balanced">المتوازن</button><button type="button" data-v="cinematic">السينمائي · أعلى جودة</button></div>
       </div>
       <div class="set-row">
@@ -371,44 +407,46 @@ body.no3d .cambar,body.no3d .camnow{display:none}
 </section>
 
 <!-- واجهة السباق -->
-<div class="camnow"><span id="camNow">الشبكة</span></div>
-
 <aside class="tower">
-  <div class="tower-h"><span>الترتيب</span><span>اضغط على اسم لتثبيت الكاميرا</span></div>
+  <div class="tower-h"><span>لوحة الصدارة</span><span id="towerCount">0 سائق</span></div>
   <div id="towerRows"></div>
 </aside>
 
 <aside class="perks">
-  <h3>🏎️ كيف تفوز؟</h3>
-  <div class="tap-hint"><span class="tap-ic">👆</span><span><b>كبّس كبّس كبّس!</b><br>كل تكبيسة تزوّد دواسة البنزين</span></div>
+  <h3>طريقة اللعب</h3>
   <div id="perkList"></div>
 </aside>
 
-<div class="mapbox"><canvas id="minimap"></canvas></div>
+<div class="mapbox"><div class="mapbox-h"><span>المضمار</span><span>حلبة أيمن</span></div><canvas id="minimap"></canvas></div>
 
 <div class="bottom">
   <div class="fcard" id="focusCard">
-    <div class="f-num" id="fNum">1</div>
-    <div class="f-main">
-      <div class="f-row">
-        <span class="f-av" id="fAv"></span>
-        <span class="f-name" id="fName">—</span>
-        <span class="f-pos" id="fPos">P1</span>
-        <span class="f-lock" id="fLock" style="display:none">📌 كاميرا مثبتة</span>
-        <span class="f-fx" id="fFx"></span>
-      </div>
-      <div class="throttle"><i id="fThrottle" style="transform:scaleX(0)"></i></div>
-      <div class="f-meta"><span>دواسة البنزين (التكبيس)</span><span>👆 <b id="fLikes">0</b></span></div>
+    <div class="fc-top">
+      <span class="f-pos" id="fPos">P1</span>
+      <span class="fc-who"><small>متابعة اللاعب <span class="f-lock" id="fLock" style="display:none">📌 مثبتة</span></small><span class="f-name" id="fName">—</span></span>
+      <span class="f-av" id="fAv"></span>
     </div>
-    <div class="f-speed"><b id="fSpeed">0</b><small>كم/س</small></div>
+    <div class="fc-mid">
+      <span class="f-speed"><b id="fSpeed">0</b><small>كم/س</small></span>
+      <span class="f-taps"><b id="fTaps">0</b> / 50</span>
+      <span class="f-nitro">💨 نيترو</span>
+    </div>
+    <div class="nitro-bar"><i id="fNitro"></i></div>
+    <div class="f-fx" id="fFx"></div>
+    <div class="fc-cam">
+      <button class="arr" id="prevCar" type="button" title="اللاعب اللي قبله">›</button>
+      <button class="grow" id="camCycle" type="button" title="تغيير اللقطة">🎥 <span id="camNow">تلقائي</span></button>
+      <button class="grow" id="camTrack" type="button">🗺 المضمار كامل</button>
+      <button class="arr" id="nextCar" type="button" title="اللاعب اللي بعده">‹</button>
+    </div>
   </div>
-  <div class="cambar" id="camBar"></div>
 </div>
 
 <div id="toasts"></div>
 
 <div id="lights"><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div></div>
-<div id="goText">انطلق!</div>
+<div id="countNum"></div>
+<div id="goText"><small>الأضواء انطفأت</small>انطلق!</div>
 
 <section id="podium">
   <h2>🏆 منصة التتويج</h2>
