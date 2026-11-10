@@ -182,7 +182,7 @@
     var POLL_MS = 3000;
     var LIVE_MS = 30000;
     // نفس فئات أسرع إجابة العادية (backend/challenge/fastest-answer-logic.js: ALL_CATS).
-    var CATS = [['math','مسألة رياضية'],['image','صورة واكتب الاسم'],['reverse','اعكس الكلمة'],['number','اكتب الرقم'],['capital','عاصمة الدولة'],['proverb','أكمل المثل'],['scramble','ترتيب الحروف'],['flag','علم الدولة'],['complete','أكمل الكلمة'],['odd','اكتشف المختلف']];
+    var CATS = [['math','مسألة رياضية'],['image','صورة واكتب الاسم'],['reverse','اعكس الكلمة'],['number','اكتب الرقم'],['capital','عاصمة الدولة'],['proverb','أكمل المثل'],['scramble','ترتيب الحروف'],['flag','علم الدولة'],['complete','أكمل الكلمة'],['odd','اكتشف المختلف'],['plural','جمع الكلمة'],['opposite','عكس المعنى'],['currency','عملة الدولة'],['sentence','رتّب الجملة'],['color','لون الشيء'],['sound','صوت الحيوان'],['baby','صغير الحيوان'],['count','كم العدد؟'],['letter','أول حرف'],['synonym','مرادف الكلمة']];
     var ALL_IDS = CATS.map(function (c) { return c[0]; });
     var ANSWER_SEC = 20;
     var PER_SIDE = 3;   // كل ستريمر يختار 3 فئات بالضبط، والخصم ما يختار فئات المنشئ
@@ -267,8 +267,8 @@
     }
     function followersSeg(attr, on) { return seg(attr, [['1', 'المتابعين فقط'], ['0', 'الجميع']], on ? '1' : '0'); }
     function modeText(m) { return m === 'solo' ? 'فردي' : 'فريقين'; }
-    function modeHint(m) { return m === 'solo' ? 'أي لاعب منضم يجاوب، وأسرعهم ياخذ نقطة لبثه' : 'كل جولة لاعب من كل فريق'; }
-    function pointsHint(m) { return m === 'solo' ? 'أسرع إجابة صحيحة = نقطة' : 'أول إجابة صحيحة = نقطتين'; }
+    function modeHint(m) { return m === 'solo' ? 'أي لاعب منضم يجاوب، وأسرع 3 ياخذون نقاط لبثهم' : 'كل جولة لاعب من كل فريق'; }
+    function pointsHint(m) { return m === 'solo' ? 'أسرع 3 إجابات: 2 · 1.5 · 1' : 'أول إجابة صحيحة = نقطتين'; }
     function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
     function catList(ids) { return (ids || []).map(catName).join('، '); }
     // اختيار الفئات: 3 فئات بالضبط لكل ستريمر. taken = فئات المنشئ (مقفولة على الخصم).

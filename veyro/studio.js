@@ -84,6 +84,7 @@
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
         { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
+        { key: 'lastsup', label: 'آخر داعم', icon: 'crown', title: 'آخر داعم', desc: 'آخر واحد دعمك بالدونيشن (Streamlabs): اسمه ومبلغه، ويتحدّث مع كل دعم.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
@@ -93,7 +94,7 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -112,13 +113,22 @@
             { label: 'العرش — جناح الملاك', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'angel', frameColor: 'original', cycle: 10 } },
             { label: 'العرش — الحصان المجنح', sub: 'توب 3 — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'pegasus', frameColor: 'original', cycle: 10 } },
             { label: 'العرش الكريستالي', sub: 'لمعة ضوء تمر على الإطار — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
+            { label: 'عرش الغبار الذهبي', sub: 'مذنّبين ضوء يلفّون حول الصورة بغبار لامع — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'stardust', frameColor: 'original', cycle: 10 } },
+            { label: 'عرش الفراشات', sub: 'حلقة ضوء وفراشات ترفرف — تختار من داخل: الداعمين أو المكبّسين أو الاثنين', type: 'top', opts: { section: 'gifters' }, set: { design: 'throne', sections: ['gifters', 'likers'], top: 3, title: '', palette: 'medal', frame: 'butterfly', frameColor: 'original', cycle: 10 } },
             { label: 'القائمة', sub: 'لين توب 10 بطاقات تحت بعض — تختار من داخل وش تعرض', type: 'top', opts: { section: 'gifters' }, set: { design: 'stack', sections: ['gifters', 'likers'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } },
             // الدونيشن (Streamlabs): التوب وآخر داعم والهدف — الأليرتات بقسم «الدونيشن»
             { label: 'هدف الدونيشن', sub: 'شريط يتعبّى بالدولار', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'bar', color: '#ffd54a' } },
             { label: 'هدف الدونيشن — دائرة', sub: 'نسبة الهدف بدائرة', type: 'goal', set: { metric: 'donations', title: 'هدف الدعم', target: 100, design: 'ring', color: '#ffd54a' } },
-            { label: 'آخر داعم', sub: 'آخر داعم ومبلغه — يتحدّث مع كل دعم', type: 'lastdonation' },
             { label: 'توب الدونيشن', sub: 'العرش الكريستالي — أعلى 3 داعمين بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'throne', sections: ['donors'], top: 3, title: '', palette: 'medal', frame: 'crystal', frameColor: 'original', cycle: 10 } },
             { label: 'قائمة الدونيشن', sub: 'لين توب 10 بالدولار', type: 'top', opts: { section: 'donors' }, set: { design: 'stack', sections: ['donors'], top: 10, title: '', palette: 'medal', frame: 'ring', frameColor: 'original', cycle: 10 } }
+        ],
+        // قسم «آخر داعم»: كل تصاميمه
+        lastsup: [
+            { label: 'بطاقة', sub: 'بطاقة فيها عنوان واسم الداعم ومبلغه، والرسالة اختيارية', type: 'lastdonation' },
+            { label: 'خط متوهّج', sub: 'الاسم والمبلغ فوق خط ضوء ونجمة تمشي عليه — بدون نصوص', type: 'lastdonation', set: { design: 'line', title: '' } },
+            { label: 'شريط الموج', sub: 'شريط غامق بتوهّج وموج حرير يتحرك داخله، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'wave', motion: 'static', title: '' } },
+            { label: 'شريط الفراشات', sub: 'نفس شريط الموج بس داخله فراشات تطير، والنص ثابت أو يمشي — بدون نصوص', type: 'lastdonation', set: { design: 'flutter', motion: 'static', title: '' } },
+            { label: 'كبسولة مقسومة', sub: 'نصها للمبلغ بلون ونصها للاسم، ونقطة تومض — بدون نصوص', type: 'lastdonation', set: { design: 'split', title: '' } },
         ],
         goals: [
             { label: 'هدف التكبيسات', sub: 'شريط يتعبّى', type: 'goal' },
@@ -142,7 +152,11 @@
             { label: 'بخلفية', type: 'text', set: { text: 'تابعني 💜', style: 'pill', font: 'cairo', size: 5 } },
             { label: 'نار', type: 'text', set: { text: 'تحدي اليوم', style: 'fire', font: 'cairo', size: 7 } },
             { label: 'زجاجي', type: 'text', set: { text: 'اكتب سؤالك بالشات', style: 'glass', font: 'tajawal', size: 4.5 } },
-            { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } }
+            { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } },
+            { label: 'لوحة الأصدقاء — مخمل', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'velvet', style: 'plain', color: '#f6eefe', font: 'cairo', size: 4, bnBg: 'shimmer', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — خشب', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'wood', style: 'plain', color: '#3a220e', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — ورق فاخر', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'paper', bnTextFx: 'foil', style: 'plain', color: '#3a2a1a', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
+            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', bnMat: 'linen', style: 'plain', color: '#3a2e22', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'marquee', bnWidth: 12 } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -915,8 +929,9 @@
             if (sec.key === 'donations') {
                 pb.appendChild(streamlabsCard());
                 videoAlertsPane(pb, 'donation');
-                pb.appendChild(el('div', 'ob-hint', 'التوب وآخر داعم وهدف الدونيشن تلقاها بقسم «التوب».'));
+                pb.appendChild(el('div', 'ob-hint', 'آخر داعم له قسمه «آخر داعم»، والتوب وهدف الدونيشن بقسم «التوب».'));
             }
+            if (sec.key === 'lastsup') pb.appendChild(streamlabsCard());
             if (sec.key === 'audio') pb.appendChild(el('div', 'ob-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio، والمعاينة هنا صامتة. الأوامر تشتغل وأنت تبث.'));
             if (sec.key === 'icons') iconsPane(pb);
             if (sec.key === 'layers') layersPane(pb);
@@ -1105,7 +1120,7 @@
 
     function textProps(it, box) {
         var tabs = el('div', 'ob-ptabs');
-        [['text', 'النص'], ['font', 'الخط'], ['fx', 'التأثير'], ['anim', 'الحركة']].forEach(function (t) {
+        [['text', 'النص'], ['banner', 'اللوحة'], ['font', 'الخط'], ['fx', 'التأثير'], ['anim', 'الحركة']].forEach(function (t) {
             tabs.appendChild(button(t[1], t[0] === textTab ? 'on' : '', function () { textTab = t[0]; renderPanel(); }));
         });
         box.appendChild(tabs);
@@ -1127,11 +1142,39 @@
                 g.appendChild(b);
             });
             box.appendChild(g);
+        } else if (textTab === 'banner') {
+            bannerProps(it, box);
         } else if (textTab === 'fx') {
             box.appendChild(row('التأثير', pills(opts(O.TEXT_STYLES), it.style || 'outline', function (v) { update(it, 'style', v, true); }), true));
         } else {
             animRows(it, box);
         }
+    }
+
+    /** «لوحة الأصدقاء»: لوحة بنقط فوق وتحت، وأرنب وقطة يطلّون — كل شي فيها يتخصص. */
+    function bannerProps(it, box) {
+        var on = it.banner === 'peek';
+        box.appendChild(row('اللوحة', pills([{ label: 'بدون', value: 'none' }, { label: 'لوحة الأصدقاء', value: 'peek' }], on ? 'peek' : 'none', function (v) {
+            if (v === 'peek') { it.style = 'plain'; it.bnMat = it.bnMat || 'velvet'; if (!it.color || it.color === '#ffffff') it.color = '#f6eefe'; update(it, 'banner', 'peek', true); }
+            else { delete it.banner; update(it, 'banner', undefined, true); }
+        }), true, 'النص يطلع داخل لوحة وفوقها شخصيات'));
+        if (!on) return;
+        box.appendChild(row('الخامة', pills([{ label: 'مخمل', value: 'velvet' }, { label: 'كتان', value: 'linen' }, { label: 'خشب', value: 'wood' }, { label: 'جلد', value: 'leather' }, { label: 'ورق فاخر', value: 'paper' }, { label: 'ساتان', value: 'satin' }], it.bnMat || 'velvet', function (v) { delete it.bnColor; update(it, 'bnMat', v, true); }), true, 'شكل اللوحة الحقيقي: ملمسها وإضاءتها وتفاصيلها'));
+        box.appendChild(row('لمسة النص', pills([{ label: 'الأصلي', value: '' }, { label: 'محفور', value: 'deboss' }, { label: 'بارز', value: 'emboss' }, { label: 'ذهب', value: 'foil' }, { label: 'عادي', value: 'plain' }], it.bnTextFx || '', function (v) { if (v) update(it, 'bnTextFx', v, true); else { delete it.bnTextFx; update(it, 'bnTextFx', undefined, true); } }), true, 'ذهب = رقائق ذهبية (يتجاهل لون النص)'));
+        box.appendChild(row('الشخصيات', pills([{ label: 'الاثنين', value: 'both' }, { label: 'الأرنب', value: 'bunny' }, { label: 'القطة', value: 'kitten' }, { label: 'بدون', value: 'none' }], it.bnChars || 'both', function (v) { update(it, 'bnChars', v, true); }), true, 'دمى قطيفة'));
+        if (it.bnChars !== 'none') {
+            box.appendChild(row('مكانهم', pills([{ label: 'يمين', value: 'right' }, { label: 'وسط', value: 'center' }, { label: 'يسار', value: 'left' }], it.bnPos || 'center', function (v) { update(it, 'bnPos', v, true); }), true));
+            box.appendChild(row('حركتهم', pills([{ label: 'يطلّون ويرمشون', value: 'peek' }, { label: 'ثابتين', value: 'still' }], it.bnCharAnim || 'peek', function (v) { update(it, 'bnCharAnim', v, true); }), true));
+        }
+        box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'بريق', value: 'sparkle' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg === 'dots' ? 'sparkle' : it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
+        box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'كتابة', value: 'type' }, { label: 'ظهور', value: 'pop' }, { label: 'طفو', value: 'float' }], it.bnMotion || 'static', function (v) { update(it, 'bnMotion', v, true); }), true, 'شريط = يمشي، كتابة = ينكتب وينمسح، ظهور = ينط كل شوي'));
+        optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = لون الخامة');
+        if (['velvet', 'linen', 'leather'].indexOf(it.bnMat || 'velvet') !== -1) optColor(it, box, 'bnStitch', 'لون الخياطة');
+        if (it.bnChars !== 'none' && it.bnChars !== 'kitten') optColor(it, box, 'bnBunny', 'لون الأرنب', 'الأصلي = أبيض');
+        if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي (شقراء)');
+        box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
+        box.appendChild(row('عرض اللوحة', slider(0, 30, 0.5, Number(it.bnWidth) || 0, function (v) { update(it, 'bnWidth', v); }), false, '0 = على قد النص'));
+        box.appendChild(el('div', 'ob-hint', 'لون النص وحجمه من «النص»، والخط من «الخط»، وحركة اللوحة كاملة من «الحركة».'));
     }
 
     function animRows(it, box) {
@@ -1231,8 +1274,9 @@
             box.appendChild(row('عدد الأشخاص', nw, true, 'من 1 لين 10'));
         }
         var frameOpts = Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; });
-        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts, [{ label: 'بدون', value: 'none' }]);
-        var fk = O.THRONE_FRAMES[it.frame] || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
+        // «الفراشات» للتوب 3 بس
+        if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts.filter(function (o) { return !O.THRONE_FRAMES[o.value].code; }), [{ label: 'بدون', value: 'none' }]);
+        var fk = (O.THRONE_FRAMES[it.frame] && !(stack && O.THRONE_FRAMES[it.frame].code)) || (stack && (it.frame === 'none' || it.frame === 'ring')) ? it.frame : (stack ? 'ring' : 'angel');
         box.appendChild(row('شكل الإطار', pills(frameOpts, fk, function (v) {
             if (it.frameColor !== 'custom') it.frameColor = 'original';
             update(it, 'frame', v, true);
@@ -1257,7 +1301,19 @@
         fp.addEventListener('change', function () { renderPanel(); });
         fw.appendChild(fp);
         // الحلقة الدوّارة لونها من ألوان المراكز — لون الإطار للرسمات بس
-        if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
+        if (fk === 'butterfly') {
+            box.appendChild(row('لون قوس الضوء', fw, true, 'القوس والغبار اللي حول الحلقة — أو اختر أي لون'));
+            optColor(it, box, 'flyColor', 'لون الفراشات', 'فاضي = نفس لون القوس');
+            optColor(it, box, 'ringColor', 'لون الحلقة', 'الافتراضي أبيض');
+            optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الحلقة');
+            optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
+        } else if (fk === 'stardust') {
+            box.appendChild(row('لون المذنّبين', fw, true, 'الضوء اللي يلف حول الصورة — أو اختر أي لون'));
+            optColor(it, box, 'dustColor', 'لون الغبار', 'فاضي = نفس لون المذنّبين');
+            optColor(it, box, 'ringColor', 'حد دائرة الترتيب', 'الافتراضي أبيض');
+            optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الإطار');
+            optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
+        } else if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }, { label: 'مخصص', value: 'custom' }], it.palette || 'medal', function (v) {
             if (v === 'custom' && !Array.isArray(it.rankColors)) it.rankColors = ['#ffd54a', '#eef2f7', '#ffb27a'];
             update(it, 'palette', v, true);
@@ -1269,7 +1325,7 @@
                     var a = (Array.isArray(it.rankColors) ? it.rankColors : ['#ffd54a', '#eef2f7', '#ffb27a']).slice();
                     a[k] = c;
                     update(it, 'rankColors', a, true);
-                }), true, 'ماسة الرقم وحدود الكبسولة'));
+                }), true, O.THRONE_FRAMES[fk] && O.THRONE_FRAMES[fk].code ? 'دائرة الترتيب وحدود المربع' : 'ماسة الرقم وحدود الكبسولة'));
             });
         }
         optColor(it, box, 'nameColor', 'لون الاسم');
@@ -1534,7 +1590,92 @@
         setTimeout(function () { toast(slState.msg); }, 800);
     }());
 
+    /** اختيار أيقونة: «الأصلي» (بدون قيمة)، و«بدون» لو allowNone، والباقي O.LD_ICONS. */
+    function iconPick(it, box, key, label, sub, allowNone) {
+        var g = el('div', 'ob-igrid sm');
+        var opts0 = [''].concat(allowNone ? ['none'] : [], key === 'markIcon' ? O.LD_ICONS.filter(function (k) { return k !== 'dollar'; }) : O.LD_ICONS);
+        opts0.forEach(function (k) {
+            var b = button(k === '' ? 'الأصلي' : k === 'none' ? 'بدون' : '', 'ob-ibtn' + ((it[key] || '') === k ? ' on' : '') + (k === '' || k === 'none' ? ' txt' : ''), function () {
+                if (k) update(it, key, k, true);
+                else { delete it[key]; update(it, key, undefined, true); }
+            });
+            if (k && k !== 'none') {
+                b.innerHTML = k === 'dollar' ? svg(ic('dollar')) : svg(O.ICON_SET[k].p);
+                b.title = k === 'dollar' ? 'دولار' : O.ICON_SET[k].label;
+                b.setAttribute('aria-label', b.title);
+            }
+            g.appendChild(b);
+        });
+        box.appendChild(row(label, g, true, sub));
+    }
+    /** اختيار خط (يفتح عند الضغط عشان اللوحة ما تطول). */
+    var ldFontOpen = null;
+    function fontPick(it, box, key, label) {
+        var curF = O.FONTS.filter(function (f) { return f.key === it[key]; })[0];
+        var w = el('div', 'ob-sw');
+        var tb = button(curF ? curF.label : 'الأصلي', 'ob-pill' + (ldFontOpen === key ? ' on' : ''), function () { ldFontOpen = ldFontOpen === key ? null : key; renderPanel(); });
+        if (curF) { O.loadFont(curF); tb.style.fontFamily = O.fontStack(curF); }
+        w.appendChild(tb);
+        if (it[key]) w.appendChild(button('الأصلي', 'ob-pill', function () { delete it[key]; update(it, key, undefined, true); }));
+        box.appendChild(row(label, w, true));
+        if (ldFontOpen !== key) return;
+        var g = el('div', 'ob-fgrid');
+        O.FONTS.forEach(function (f) {
+            O.loadFont(f);
+            var b = button('', 'ob-fbtn' + (f.key === it[key] ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
+            var sample = el('span', null, key === 'amtFont' ? '$25' : 'حياكم');
+            sample.style.fontFamily = O.fontStack(f);
+            sample.style.fontWeight = String(f.b);
+            b.appendChild(sample);
+            b.appendChild(el('span', null, f.label));
+            g.appendChild(b);
+        });
+        box.appendChild(g);
+    }
+    /** الأيقونات والخطوط (لكل تصاميم «آخر داعم»). */
+    function ldStyleRows(it, box, des) {
+        iconPick(it, box, 'ldIcon', 'أيقونة المبلغ', des === 'card' ? 'الأصلي = عملة دولار' : 'الأصلي = بدون', true);
+        if (des !== 'card') iconPick(it, box, 'markIcon', des === 'line' ? 'النجمة اللي تمشي' : des === 'split' ? 'النقطة' : 'الفاصل', 'الأصلي = الشكل الافتراضي', false);
+        optColor(it, box, 'iconColor', 'لون الأيقونة', 'أيقونة المبلغ (عملة الدولار لونها ثابت)');
+        fontPick(it, box, 'font', 'خط الاسم');
+        fontPick(it, box, 'amtFont', 'خط المبلغ');
+    }
+
     function lastDonationProps(it, box) {
+        var des = ['line', 'split', 'wave', 'flutter'].indexOf(it.design) !== -1 ? it.design : 'card';
+        box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }, { label: 'شريط الموج', value: 'wave' }, { label: 'شريط الفراشات', value: 'flutter' }], des, function (v) {
+            update(it, 'design', v, true);
+        }), true));
+        if (des === 'wave' || des === 'flutter') box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'تبديل', value: 'swap' }, { label: 'كتابة', value: 'type' }], it.motion || 'static', function (v) {
+            update(it, 'motion', v, true);
+        }), true, 'شريط = يمشي، تبديل = الاسم ثم المبلغ، كتابة = ينكتب وينمسح'));
+        if (des !== 'card') {
+            // التصاميم البسيطة: الاسم والمبلغ بس، وكل ألوانها تتغيّر
+            optColor(it, box, 'nameColor', 'لون الاسم');
+            optColor(it, box, 'amtColor', 'لون المبلغ');
+            if (des === 'wave' || des === 'flutter') {
+                if (des === 'flutter') optColor(it, box, 'accent1', 'لون الفراشات', 'الافتراضي بنفسجي فاتح');
+                else optColor(it, box, 'accent1', 'لون الموج', 'الافتراضي بنفسجي');
+                optColor(it, box, 'accent2', 'لون التوهّج', 'الضوء فوق وتحت الشريط');
+                optColor(it, box, 'boxColor', 'خلفية الشريط', 'الافتراضي أسود');
+            } else if (des === 'line') {
+                optColor(it, box, 'accent1', 'لون الخط (البداية)', 'الافتراضي وردي');
+                optColor(it, box, 'accent2', 'لون الخط (النهاية)', 'الافتراضي بنفسجي');
+                optColor(it, box, 'dotColor', 'لون النجمة', 'اللي تمشي على الخط');
+            } else {
+                optColor(it, box, 'accent1', 'خلفية المبلغ', 'الافتراضي بنفسجي');
+                optColor(it, box, 'boxColor', 'خلفية الاسم', 'الافتراضي غامق');
+                optColor(it, box, 'dotColor', 'لون النقطة', 'اللي تومض جنب المبلغ');
+            }
+            ldStyleRows(it, box, des);
+            box.appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
+            box.appendChild(streamlabsCard());
+            return;
+        }
+        optColor(it, box, 'nameColor', 'لون الاسم');
+        optColor(it, box, 'amtColor', 'لون المبلغ', 'الأصلي = نفس «اللون» تحت');
+        optColor(it, box, 'boxColor', 'خلفية البطاقة', 'الأصلي = غامق');
+        ldStyleRows(it, box, 'card');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
         box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
         sizeColor(it, box, 1, 8);

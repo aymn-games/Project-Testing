@@ -2,7 +2,8 @@
  * «التحكم عن بعد» — صلاحيات المتحكمين لكل ستريمر.
  *
  * الستريمر (من بروفايله) يضيف حتى MAX_CONTROLLERS يوزر تيك توك، ولكل
- * واحد مفتاح تشغيل/إيقاف، وفوقهم مفتاح عام. المتحكم الفعّال هو اللي:
+ * واحد مفتاح تشغيل/إيقاف، وفوقهم مفتاح عام (مفعّل افتراضياً: الستريمر اللي
+ * يضيف متحكم يقصد يعطيه الصلاحية، ويقدر يطفيه عن الكل بأي وقت). المتحكم الفعّال هو اللي:
  * المفتاح العام مفعّل + مفتاحه هو مفعّل. صاحب الحساب الموثّق بنفس يوزر
  * تيك توك يطلع له زر «لوحة التحكم» ببروفايله، ويتحكم من جواله
  * (control.html عبر remote-control-server.js)، وأوامره بالشات تنقبل.
@@ -34,9 +35,10 @@ function emit(streamerId) {
     _listeners.forEach(function (fn) { try { fn(streamerId); } catch (e) {} });
 }
 
+/** المفتاح العام: مفعّل لين يطفيه الستريمر بنفسه (ما فيه صف = ما لمسه = مفعّل). */
 function isMasterOn(streamerId) {
     var row = db().prepare('SELECT enabled FROM remote_control_settings WHERE streamer_id = ?').get(streamerId);
-    return !!(row && row.enabled);
+    return !row || !!row.enabled;
 }
 
 /**
@@ -133,9 +135,9 @@ function accessFor(user) {
     if (!u) return [];
     return db().prepare(
         'SELECT u.id, u.custom_id, u.username, u.tiktok_display_name, u.tiktok_avatar_url FROM remote_controllers c ' +
-        'JOIN remote_control_settings s ON s.streamer_id = c.streamer_id AND s.enabled = 1 ' +
+        'LEFT JOIN remote_control_settings s ON s.streamer_id = c.streamer_id ' +
         'JOIN users u ON u.id = c.streamer_id ' +
-        'WHERE c.tiktok_username = ? AND c.enabled = 1 AND u.id != ? ORDER BY c.created_at ASC, c.rowid ASC'
+        'WHERE c.tiktok_username = ? AND c.enabled = 1 AND COALESCE(s.enabled, 1) = 1 AND u.id != ? ORDER BY c.created_at ASC, c.rowid ASC'
     ).all(u, user.id).map(function (r) {
         return { id: r.id, customId: r.custom_id || null, name: r.tiktok_display_name || r.username || 'ستريمر', avatar: r.tiktok_avatar_url || null };
     });
