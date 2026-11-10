@@ -56,7 +56,7 @@
         }).catch(function () { return { waiting: [], idle: [] }; });
     }
 
-    var CAT_NAMES = { math: 'مسألة رياضية', image: 'صورة واكتب الاسم', reverse: 'اعكس الكلمة', number: 'اكتب الرقم', capital: 'عاصمة الدولة', proverb: 'أكمل المثل', scramble: 'ترتيب الحروف', flag: 'علم الدولة', complete: 'أكمل الكلمة', odd: 'اكتشف المختلف', plural: 'جمع الكلمة', opposite: 'عكس المعنى', currency: 'عملة الدولة', sentence: 'رتّب الجملة' };
+    var CAT_NAMES = { math: 'مسألة رياضية', image: 'صورة واكتب الاسم', reverse: 'اعكس الكلمة', number: 'اكتب الرقم', capital: 'عاصمة الدولة', proverb: 'أكمل المثل', scramble: 'ترتيب الحروف', flag: 'علم الدولة', complete: 'أكمل الكلمة', odd: 'اكتشف المختلف', plural: 'جمع الكلمة', opposite: 'عكس المعنى', currency: 'عملة الدولة', sentence: 'رتّب الجملة', color: 'لون الشيء', sound: 'صوت الحيوان', baby: 'صغير الحيوان', count: 'كم العدد؟', letter: 'أول حرف', synonym: 'مرادف الكلمة' };
     function summary(w) {
         var s = w.settings || {};
         if (w.game === 'penalty') return 'الجولة ' + (s.roundMinutes || 4) + ' دقائق · الركلة ' + (s.shotSec || 10) + ' ث';
