@@ -41,6 +41,12 @@ var logger = require('../../utils/logger');
 var chatLatency = require('../../utils/chat-latency');
 var collectiblesService = require('../../collectibles/collectibles-service');
 var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
+var giftCatalog = require('./gift-catalog');
+
+/** كتالوج الهدايا (Veyro يختار منه هدية لأليرت) — أي خطأ فيه ما يأثر على البث. */
+function catalogSafe(fn) {
+    try { fn(giftCatalog.get()); } catch (err) { logger.error('TikTok Connector: gift catalog failed:', err); }
+}
 
 var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
@@ -487,13 +493,16 @@ function createTikTokConnector() {
             // أرسل فقط عند اكتمال التسلسل — حدث واحد نهائي فقط.
             if (giftInfo.type === 1 && !repeatEnd) return;
 
+            var giftImage = extractGiftImage(data);
+            catalogSafe(function (c) { c.noteGift({ giftId: data && data.giftId, giftName: giftInfo.name, giftValue: giftInfo.value, giftImage: giftImage }); });
+
             _callbacks.onGift({
                 id: user.id,
                 name: user.name,
                 giftName: giftInfo.name,
                 giftId: (data && data.giftId) || null,
                 giftValue: giftInfo.value,
-                giftImage: extractGiftImage(data),
+                giftImage: giftImage,
                 repeatCount: (data && data.repeatCount) || 1,
                 avatarUrl: extractAvatarUrl(data),
                 avatarUrls: extractAvatarUrls(data)
@@ -595,6 +604,12 @@ function createTikTokConnector() {
                 _rateLimitRetries = 0;
                 logger.log('TikTok Connector: connected to real TikTok LIVE for "' + _username + '".');
                 _callbacks.onStatus('connected');
+                // قائمة هدايا تيك توك الكاملة: مرة باليوم لكل السيرفر (طلب موقّع ينحسب من حد التوقيع)
+                catalogSafe(function (c) {
+                    c.refreshWith(function () { return thisConnection.fetchAvailableGifts(); }).then(function (n) {
+                        if (n) logger.log('TikTok Connector: gift catalog refreshed (' + n + ' gifts).');
+                    });
+                });
             })
             .catch(function (err) {
                 if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد

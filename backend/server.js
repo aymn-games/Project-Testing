@@ -45,6 +45,8 @@ function start() {
         require('./stats/screen-audio-watcher').startScreenAudioWatcher();
         // Streamlabs: اتصال لكل ستريمر مربوط (الدونيشن — كريترز وغيره) — streamlabs/streamlabs-manager.js
         require('./streamlabs/streamlabs-manager').startStreamlabs();
+        // كتالوج هدايا تيك توك (الأسماء بالعربي والإنجليزي، الأسعار، الصور) — مرة باليوم من تيك توك نفسه.
+        require('./platforms/tiktok/gift-catalog').startAutoRefresh(logger);
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 
