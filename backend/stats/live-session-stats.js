@@ -391,6 +391,12 @@ function recordComment(username, connectionId, data) {
  * رسالة شات لأدوات الصوت بشاشات البث (القارئ الصوتي ومشغّل الأغاني). عكس
  * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل، ومعها mod (مشرف بالبث).
  */
+function chatAvatar(data) {
+  var urls = data && Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data && data.avatarUrl ? [data.avatarUrl] : []);
+  var u = urls.filter(function (x) { return typeof x === 'string' && /^https:\/\//.test(x); })[0];
+  return u ? u.slice(0, 1000) : null;
+}
+
 function pushChat(s, data) {
   var text = String((data && data.text) || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_TEXT_MAX);
   if (!text) return;
@@ -404,6 +410,8 @@ function pushChat(s, data) {
     owner: normalize(data.id) === s.username || normalize(String(data.id || '').replace(/^tiktok:/, '')) === s.username,
     // مشرف ببث الستريمر (تيك توك) — لأدوات الشاشة: مشغّل الأغاني «المشرفين بس»
     mod: Boolean(data && data.isModerator),
+    // صورة الكاتب (رابط تيك توك https) — مشغّل الأغاني يعرض صورة اللي طلب الأغنية
+    avatar: chatAvatar(data),
     at: Date.now()
   });
   if (s.chat.length > RECENT_CHAT_MAX) s.chat.splice(0, s.chat.length - RECENT_CHAT_MAX);

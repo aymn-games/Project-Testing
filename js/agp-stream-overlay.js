@@ -3411,7 +3411,7 @@
         var mi = audioItems('music')[0];
         if (mi) {
             var cmd = parseMusicCommand(mi, m);
-            if (cmd && cmd.kind === 'play') musicRequest(mi, m.user, m.uid, cmd.q);
+            if (cmd && cmd.kind === 'play') musicRequest(mi, m.user, m.uid, cmd.q, m.avatar);
             else if (cmd && cmd.kind === 'skip') musicSkip();
             else if (cmd && cmd.kind === 'vol') musicSetVolume(mi, cmd.v);
         }
@@ -3495,13 +3495,13 @@
 
     /* ---- مشغّل الأغاني ---- */
 
-    function musicRequest(it, user, uid, q) {
+    function musicRequest(it, user, uid, q, avatar) {
         var max = clamp(Number(it.maxQueue) || 10, 1, 50);
         var inLine = music.queue.length + music.searches.length;
         if (inLine >= max) return;
         var mine = function (x) { return x.uid === uid; };
         if (uid !== '__test__' && (music.queue.some(mine) || music.searches.some(mine))) return; // طلب واحد لكل مشاهد
-        music.searches.push({ user: user, uid: uid, q: q });
+        music.searches.push({ user: user, uid: uid, q: q, avatar: typeof avatar === 'string' && /^https:\/\//.test(avatar) ? avatar : null });
         runSearches();
     }
 
@@ -3521,7 +3521,7 @@
                 // durationSec 0 + link = طلب برابط والمدة ما انعرفت بالسيرفر (مفتاح يوتيوب خلص حده) → نتأكد منها وقت التشغيل
                 var pick = (d.results || []).filter(function (r) { return r && r.id && ((r.durationSec > 0 && r.durationSec <= maxDur) || (r.link && !(r.durationSec > 0))); })[0];
                 if (!pick) return;
-                music.queue.push({ id: pick.id, title: pick.title, channel: pick.channel, dur: pick.durationSec || 0, maxDur: maxDur, user: job.user, uid: job.uid });
+                music.queue.push({ id: pick.id, title: pick.title, channel: pick.channel, dur: pick.durationSec || 0, maxDur: maxDur, user: job.user, uid: job.uid, avatar: job.avatar });
                 musicNext();
             })
             .catch(function () { /* نتجاهل الطلب */ })
@@ -3621,14 +3621,33 @@
     }
 
     /*
-     * مشغّل الأغاني: وقت التشغيل كرت صغير — فيديو الأغنية ظاهر (شرط سياسات يوتيوب: المشغّل ظاهر
-     * و200×200 بكسل على الأقل، وما ينفصل الصوت عن الصورة) وتحته اسم الأغنية واللي طلبها وشريط التقدّم.
-     * مشغّل يوتيوب نفسه عنصر واحد ثابت (agp-so-ythost) ينحط فوق خانة الفيديو (agp-so-mvid) — كذا
-     * ما ينعاد تحميله كل ما الأداة تنرسم. بدون أغنية: الأيقونة بس.
+     * مشغّل الأغاني: كرت «يشتغل الحين» بشكل مشغّل الجوال — مربع فيديو الأغنية (مشغّل يوتيوب نفسه،
+     * 200×200 بكسل أقل شي: شرط سياسات يوتيوب، والصوت ما ينفصل عن الصورة)، اسم الأغنية والقناة وموجة،
+     * صورة واسم اللي طلبها (حلقة ملوّنة تدور + شارة نوتة)، الوقت وشريط التقدّم، وأزرار للشكل.
+     * مشغّل يوتيوب عنصر واحد ثابت (agp-so-ythost) ينحط فوق المربع (agp-so-mvid). بدون أغنية: الأيقونة بس.
+     * design 'icon' = «مختصر»: بدون الوقت والأزرار.
      */
+    var MP_ICONS = {
+        prev: '<svg viewBox="0 0 58 34" fill="currentColor"><path d="M28 3v28L4 17zM54 3v28L30 17z"/></svg>',
+        pause: '<svg viewBox="0 0 44 54" fill="currentColor"><rect x="4" y="2" width="13" height="50" rx="4"/><rect x="27" y="2" width="13" height="50" rx="4"/></svg>',
+        next: '<svg viewBox="0 0 58 34" fill="currentColor"><path d="M4 3v28l24-14zM30 3v28l24-14z"/></svg>',
+        phones: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4.5" height="7" rx="1.8" fill="currentColor"/><rect x="16.5" y="14" width="4.5" height="7" rx="1.8" fill="currentColor"/></svg>',
+        note: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 3v12.5a3.5 3.5 0 11-2-3.16V7.3l-9 2.25v8.95A3.5 3.5 0 117 15.34V5.78a1 1 0 01.76-.97l11-2.75A1 1 0 0120 3z"/></svg>'
+    };
+    function mmss(sec) { sec = Math.max(0, Math.round(Number(sec) || 0)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+    /** الوقت اللي مضى والباقي (ثواني) — من مشغّل يوتيوب، وإلا من وقت البداية. */
+    function musicTimes() {
+        var c = music.cur, p = music.player, at = 0, dur = c ? c.dur || 0 : 0;
+        if (!c) return { at: 0, dur: 0 };
+        try {
+            if (p && p.getCurrentTime && p.getDuration && p.getDuration() > 0) { at = p.getCurrentTime(); dur = p.getDuration(); }
+            else at = (Date.now() - c.startedAt) / 1000;
+        } catch (e) { at = (Date.now() - c.startedAt) / 1000; }
+        return { at: Math.min(at, dur || at), dur: dur };
+    }
     function buildMusic(n, it, preview) {
         var cur = preview ? { title: 'الأماكن', channel: 'محمد عبده', user: 'أبو فهد' } : music.cur;
-        var card = it.design !== 'icon';
+        var full = it.design !== 'icon';
         n.className += cur ? ' playing' : ' idle';
         if (!cur) {
             var ic = el('span', 'agp-so-aic');
@@ -3636,34 +3655,60 @@
             n.appendChild(ic);
             return;
         }
-        var box = el('div', 'agp-so-mcard' + (card ? '' : ' vonly') + (preview ? ' pv' : ''));
+        var card = el('div', 'agp-so-np' + (full ? '' : ' mini') + (preview ? ' pv' : ''));
+        var top = el('div', 'agp-so-nptop');
+        // مربع الفيديو: بالمحرر مثال، وبالبث مشغّل يوتيوب ينحط فوقه (ما نحط شي فوق المشغّل نفسه)
         var vid = el('div', 'agp-so-mvid' + (preview ? ' pv' : ''));
-        if (preview) {
-            // المحرر: مكان الفيديو بشكل مثال (المشغّل الحقيقي بس برابط الشاشة)
-            var ph = el('span', 'agp-so-mph');
-            ph.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-            vid.appendChild(ph);
-        } else vid.setAttribute('data-live', '1');
-        box.appendChild(vid);
-        if (card) {
-            var tx = el('div', 'agp-so-minfo');
-            var row = el('div', 'agp-so-mrow');
-            var ic2 = el('span', 'agp-so-mic');
-            ic2.innerHTML = NOTE_SVG;
-            row.appendChild(ic2);
-            var tt = el('div', 'agp-so-mtt');
-            tt.appendChild(el('b', null, cur.title || ''));
-            tt.appendChild(el('small', null, 'طلب: ' + (cur.user || '')));
-            row.appendChild(tt);
-            tx.appendChild(row);
-            var bar = el('span', 'agp-so-mbar');
+        if (!preview) vid.setAttribute('data-live', '1');
+        top.appendChild(vid);
+        var meta = el('div', 'agp-so-npmeta');
+        var head = el('div', 'agp-so-nphead');
+        var tt = el('div', 'agp-so-nptt');
+        tt.appendChild(el('b', null, cur.title || ''));
+        tt.appendChild(el('span', null, cur.channel || ''));
+        head.appendChild(tt);
+        var wave = el('div', 'agp-so-npwave');
+        for (var i = 0; i < 5; i++) wave.appendChild(el('i'));
+        head.appendChild(wave);
+        meta.appendChild(head);
+        // اللي طلب الأغنية: صورته بحلقة ملوّنة تدور + شارة نوتة، و«طلب الأغنية» فوق اسمه
+        var req = el('div', 'agp-so-npreq');
+        var avw = el('div', 'agp-so-npav');
+        var ring = el('div', 'agp-so-npring');
+        var initial = function () { return el('span', 'agp-so-npini', String(cur.user || '?').trim().charAt(0) || '?'); };
+        ring.appendChild(cur.avatar ? img2(https(cur.avatar), null, null, function (im) { im.replaceWith(initial()); }) : initial());
+        avw.appendChild(ring);
+        var badge = el('span', 'agp-so-npbadge');
+        badge.innerHTML = MP_ICONS.note;
+        avw.appendChild(badge);
+        req.appendChild(avw);
+        var rt = el('div', 'agp-so-npreqt');
+        rt.appendChild(el('small', null, 'طلب الأغنية'));
+        rt.appendChild(el('b', null, cur.user || ''));
+        req.appendChild(rt);
+        meta.appendChild(req);
+        top.appendChild(meta);
+        card.appendChild(top);
+        if (full) {
+            var tm = preview ? { at: 93, dur: 254 } : musicTimes();
+            var prog = el('div', 'agp-so-npprog');
+            prog.appendChild(el('span', 'agp-so-npt1', mmss(tm.at)));
+            var bar = el('div', 'agp-so-mbar');
             var fill = el('i');
-            fill.style.width = preview ? '42%' : progressPct() + '%';
+            fill.style.width = (preview ? 37 : progressPct()) + '%';
             bar.appendChild(fill);
-            tx.appendChild(bar);
-            box.appendChild(tx);
+            prog.appendChild(bar);
+            prog.appendChild(el('span', 'agp-so-npt2', tm.dur ? '−' + mmss(tm.dur - tm.at) : '--:--'));
+            card.appendChild(prog);
+            var ctl = el('div', 'agp-so-npctl');
+            [['prev', 'dim'], ['pause', 'on'], ['next', 'on'], ['phones', 'dim']].forEach(function (b) {
+                var x = el('span', 'agp-so-npb ' + b[0] + ' ' + b[1]);
+                x.innerHTML = MP_ICONS[b[0]];
+                ctl.appendChild(x);
+            });
+            card.appendChild(ctl);
         }
-        n.appendChild(box);
+        n.appendChild(card);
         if (!preview) requestAnimationFrame(syncYtHost);
     }
 
@@ -3698,9 +3743,16 @@
 
     function paintProgress() {
         if (!music.cur) return;
+        var tm = musicTimes();
         Object.keys(nodes).forEach(function (id) {
-            var f = nodes[id] && nodes[id].querySelector && nodes[id].querySelector('.agp-so-music .agp-so-mbar i, .agp-so-mbar i');
-            if (f) f.style.width = progressPct() + '%';
+            var n = nodes[id];
+            if (!n || !n.querySelector) return;
+            var f = n.querySelector('.agp-so-music .agp-so-mbar i');
+            if (!f) return;
+            f.style.width = progressPct() + '%';
+            var t1 = n.querySelector('.agp-so-npt1'), t2 = n.querySelector('.agp-so-npt2');
+            if (t1) t1.textContent = mmss(tm.at);
+            if (t2) t2.textContent = tm.dur ? '−' + mmss(tm.dur - tm.at) : '--:--';
         });
     }
 
@@ -4497,27 +4549,48 @@
         '.agp-so-mtx small{font-size:.62em;color:rgba(231,224,240,.75)}',
         '.agp-so-mbar{display:block;height:.22em;border-radius:1em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.15em}',
         '.agp-so-mbar i{display:block;height:100%;border-radius:inherit;background:var(--agp-so-c,#cfc3dc);transition:width 1s linear}',
-        // كرت المشغّل: فيديو 16:9 بحواف ناعمة وتوهّج بلون الأداة، وتحته الاسم واللي طلبها والشريط
+        // كرت «يشتغل الحين» بشكل مشغّل الجوال (بـem عشان «الحجم» يكبّره ويصغّره كله — 1em ≈ 30px بالحجم 3)
         '.agp-so-music.playing{display:block}',
-        '.agp-so-mcard{display:flex;flex-direction:column;gap:.5em;width:11em;padding:.45em;border-radius:1.05em;background:linear-gradient(160deg,rgba(36,31,46,.9),rgba(14,12,19,.86));border:.05em solid rgba(207,195,220,.28);box-shadow:0 .4em 1.4em rgba(0,0,0,.5),0 0 1.2em -.4em var(--agp-so-c,#cfc3dc);animation:agp-so-a-fade .4s ease both}',
-        '.agp-so-mcard.vonly{width:auto;padding:.3em}',
-        // برابط الشاشة: الكرت ما يصغر عن الفيديو (356 بكسل + الحواف)
-        '.agp-so-mcard:not(.pv):not(.vonly){min-width:calc(356px + .9em)}',
-        // 356×200 بكسل أقل شي برابط الشاشة (شرط يوتيوب 200×200) — بالمحرر (pv) يصغر مع المعاينة عادي
-        '.agp-so-mvid{position:relative;width:100%;aspect-ratio:16/9;border-radius:.7em;overflow:hidden;background:#000;box-shadow:0 0 0 .05em rgba(255,255,255,.14) inset}',
-        '.agp-so-mvid:not(.pv){min-width:356px;min-height:200px}',
-        '.agp-so-mcard.vonly .agp-so-mvid{width:10.4em}',
-        '.agp-so-mvid.pv{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.18),transparent 55%),linear-gradient(135deg,#3b2f57,#151020 70%)}',
-        '.agp-so-mph{position:absolute;inset:0;margin:auto;width:2.2em;height:1.55em;border-radius:.45em;background:rgba(255,255,255,.9);color:#151020;display:flex;align-items:center;justify-content:center}',
-        '.agp-so-mph svg{width:.95em;height:.95em}',
-        '.agp-so-minfo{display:flex;flex-direction:column;gap:.35em;padding:0 .2em .1em}',
-        '.agp-so-mrow{display:flex;align-items:center;gap:.45em;min-width:0}',
-        '.agp-so-mic{flex:none;width:1.45em;height:1.45em;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,var(--agp-so-c,#cfc3dc),#42394f);animation:agp-so-apulse 1.2s ease-in-out infinite}',
-        '.agp-so-mic svg{width:.8em;height:.8em}',
-        '.agp-so-mtt{display:flex;flex-direction:column;min-width:0;gap:.05em}',
-        '.agp-so-mtt b{font-size:.74em;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-        '.agp-so-mtt small{font-size:.58em;color:rgba(231,224,240,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-        '.agp-so-mcard .agp-so-mbar{margin:0}',
+        '.agp-so-np{width:21.3em;padding:.87em .93em .73em;border-radius:1.27em;direction:rtl;color:#fff;background:linear-gradient(180deg,rgba(44,44,48,.94),rgba(28,28,31,.95));box-shadow:0 1em 2.3em rgba(0,0,0,.55),0 0 0 .035em rgba(255,255,255,.06) inset;animation:agp-so-a-fade .4s ease both}',
+        '.agp-so-np.mini{padding-bottom:.87em}',
+        '.agp-so-nptop{display:flex;gap:.73em;align-items:stretch}',
+        // مربع الفيديو: 200×200 بكسل أقل شي برابط الشاشة (شرط يوتيوب) — بالمحرر (pv) مثال يصغر مع المعاينة
+        '.agp-so-mvid{position:relative;flex:none;width:6.67em;height:6.67em;border-radius:.67em;overflow:hidden;background:#000;box-shadow:0 .33em .87em rgba(0,0,0,.5)}',
+        '.agp-so-mvid:not(.pv){min-width:200px;min-height:200px}',
+        '.agp-so-mvid.pv{background:radial-gradient(circle at 30% 70%,rgba(255,220,170,.35),transparent 40%),radial-gradient(circle at 75% 30%,rgba(120,180,255,.25),transparent 45%),linear-gradient(120deg,#1b2a4a,#6b2f5b,#c46a3a)}',
+        '.agp-so-npmeta{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:.2em 0 .13em;gap:.5em}',
+        '.agp-so-nphead{display:flex;align-items:flex-start;gap:.47em}',
+        '.agp-so-nptt{flex:1;min-width:0;display:flex;flex-direction:column}',
+        '.agp-so-nptt b{font-size:1.13em;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-nptt span{font-size:.83em;color:rgba(235,235,245,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-npwave{flex:none;display:flex;align-items:center;gap:.13em;height:1em;margin-top:.33em}',
+        '.agp-so-npwave i{width:.13em;border-radius:.1em;background:rgba(235,235,245,.6);animation:agp-so-npw 1s ease-in-out infinite}',
+        '.agp-so-npwave i:nth-child(1){height:.33em;animation-delay:-.2s}.agp-so-npwave i:nth-child(2){height:.73em;animation-delay:-.5s}.agp-so-npwave i:nth-child(3){height:.53em;animation-delay:-.1s}.agp-so-npwave i:nth-child(4){height:.87em;animation-delay:-.7s}.agp-so-npwave i:nth-child(5){height:.4em;animation-delay:-.35s}',
+        '@keyframes agp-so-npw{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}',
+        // اللي طلبها (نسخة أ): حلقة ملوّنة تدور حول صورته، وشارة نوتة، و«طلب الأغنية» فوق اسمه
+        '.agp-so-npreq{display:flex;align-items:center;gap:.53em;align-self:flex-start;max-width:100%}',
+        '.agp-so-npav{position:relative;flex:none;width:2.13em;height:2.13em}',
+        '.agp-so-npring{width:100%;height:100%;border-radius:50%;padding:.1em;box-sizing:border-box;background:conic-gradient(from 200deg,#ff5f8f,#ffb36b,#b28cf5,#5ad1ff,#ff5f8f);animation:agp-so-vspin 6s linear infinite}',
+        '.agp-so-npring img,.agp-so-npring .agp-so-npini{width:100%;height:100%;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:.1em solid #26262a;background:linear-gradient(160deg,#6a5aa0,#302548);font-size:.85em;font-weight:700;color:#fff;animation:agp-so-vspin 6s linear infinite reverse}',
+        '.agp-so-npbadge{position:absolute;left:-.13em;bottom:-.13em;width:.87em;height:.87em;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;color:#1d1d20;box-shadow:0 .07em .27em rgba(0,0,0,.45)}',
+        '.agp-so-npbadge svg{width:.47em;height:.47em}',
+        '.agp-so-npreqt{display:flex;flex-direction:column;line-height:1.25;min-width:0}',
+        '.agp-so-npreqt small{font-size:.57em;color:rgba(235,235,245,.5)}',
+        '.agp-so-npreqt b{font-size:.83em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        // الوقت وشريط التقدّم (من اليسار لليمين مثل مشغّل الجوال)
+        '.agp-so-npprog{display:flex;align-items:center;gap:.6em;margin-top:.87em;direction:ltr}',
+        '.agp-so-npprog span{font-size:.73em;color:rgba(235,235,245,.6);font-variant-numeric:tabular-nums;min-width:3em}',
+        '.agp-so-npprog .agp-so-npt2{text-align:right}',
+        '.agp-so-np .agp-so-mbar{flex:1;height:.33em;margin:0;border-radius:.33em;background:rgba(255,255,255,.18)}',
+        '.agp-so-np .agp-so-mbar i{background:rgba(235,235,245,.72)}',
+        // الأزرار: للشكل بس (شاشة البث ما تنضغط)
+        '.agp-so-npctl{display:flex;align-items:center;justify-content:space-between;margin-top:.73em;padding:0 1em;direction:ltr}',
+        '.agp-so-npb{display:block;color:rgba(235,235,245,.38)}',
+        '.agp-so-npb.on{color:#fff}',
+        '.agp-so-npb svg{display:block;width:100%;height:100%}',
+        '.agp-so-npb.prev,.agp-so-npb.next{width:1.93em;height:1.13em}',
+        '.agp-so-npb.pause{width:1.47em;height:1.8em}',
+        '.agp-so-npb.phones{width:1.47em;height:1.47em}',
         // مشغّل يوتيوب: مخفي لين في أغنية، وبعدها فوق خانة الفيديو بالضبط (syncYtHost)
         '.agp-so-ythost{position:fixed;left:-9999px;top:0;width:356px;height:200px;overflow:hidden;pointer-events:none;z-index:60}',
         '.agp-so-ythost.on{left:0}',
