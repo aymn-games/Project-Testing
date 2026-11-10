@@ -80,7 +80,7 @@
 
     var SECTIONS = [
         { key: 'library', label: 'مكتبتي', icon: 'library', title: 'مكتبتي', desc: 'أليرتاتك المحفوظة: ارفع الفيديو، فرّغ خلفيته، ويصير جاهز تستخدمه بأي شاشة.' },
-        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، اشتراك…' },
+        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، أفضل معجب…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
         { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
@@ -94,7 +94,9 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
+    // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -2215,7 +2217,7 @@
             }, true);
             ta.placeholder = '@username';
             ta.dir = 'ltr';
-            box.appendChild(row(evs.indexOf('join') !== -1 ? 'دخولية لأشخاص معيّنين' : 'لمشتركين معيّنين', ta, true, 'يوزر تيك توك، كل واحد بسطر — فاضي = يشتغل للكل'));
+            box.appendChild(row(evs.indexOf('join') !== -1 ? 'دخولية لأشخاص معيّنين' : 'أفضل معجب لأشخاص معيّنين', ta, true, 'يوزر تيك توك، كل واحد بسطر — فاضي = يشتغل للكل'));
         }
     }
 
@@ -2435,6 +2437,18 @@
         kh.appendChild(kt);
         kc.appendChild(kh);
         kc.appendChild(iconBtn('افتح أداة التفريغ', 'wand', 'primary', function () { openKeyTool(it); }));
+        if (k.on) {
+            // اختصار: شفافية الخلفية بس (keepBg) — الشخصية وألوان الأليرت ما تخف. نفس الخيار اللي داخل أداة التفريغ
+            var bgv = Math.round((1 - (Number(k.keepBg) || 0)) * 100);
+            var bgS = slider(0, 100, 1, bgv, function (x) {
+                it.key = Object.assign({}, O.keyOf(it), { keepBg: Math.round(100 - x) / 100 });
+                commit(); rebuildNode(it);
+            });
+            var bgR = row('شفافية الخلفية', bgS, false, '100 = الخلفية تختفي، 50 = نص شفافة، 0 = كاملة — الشخصية ما تتأثر');
+            bgR.querySelector('.ob-rval').textContent = bgv + '٪';
+            bgS.addEventListener('input', function () { bgR.querySelector('.ob-rval').textContent = bgS.value + '٪'; });
+            kc.appendChild(bgR);
+        }
         box.appendChild(kc);
 
         var root = box;
@@ -2705,7 +2719,27 @@
             if (repaint) renderPanel();
         }
 
-        // وقت الظهور: خيار واحد للصورة والاسم والرسالة كلها (it.partsTime)
+        // ١) العناصر: الصورة والاسم والرسالة جنب بعض — كل وحدة بمفتاحها وحجمها
+        var gEl = group(box, 'العناصر', 'إظهار وحجم كل وحدة');
+        Object.keys(PART_NAMES).forEach(function (k2) {
+            var q = parts[k2];
+            var r = el('div', 'ob-row va-el' + (k2 === partSel ? ' sel' : '') + (q.on ? '' : ' off'));
+            var lb = button('', 'va-el-n', function () { partSel = k2; renderPanel(); });
+            lb.appendChild(el('b', null, PART_NAMES[k2]));
+            lb.appendChild(el('small', null, k2 === partSel ? 'تعدّل شكلها تحت' : 'اضغط لتعديل شكلها'));
+            r.appendChild(lb);
+            var ctl = el('div', 'va-el-c');
+            var mn2 = k2 === 'avatar' ? 1 : 0.4, mx2 = k2 === 'avatar' ? 8 : 3;
+            var sz = withValue(slider(mn2, mx2, 0.05, q.s, function (val) { setPart(k2, 's', val); }));
+            if (!q.on) sz.classList.add('dis');
+            sz.setAttribute('aria-label', 'حجم ' + PART_NAMES[k2]);
+            ctl.appendChild(sz);
+            ctl.appendChild(toggle(q.on, function (val) { setPart(k2, 'on', val, true); }));
+            r.appendChild(ctl);
+            gEl.appendChild(r);
+        });
+
+        // ٢) وقت الظهور: خيار واحد للصورة والاسم والرسالة كلها (it.partsTime)
         var pt = it.partsTime || { t: parts.avatar.t || 0, e: parts.avatar.e || 0 };
         function setTime(field, val, rerender) {
             it.partsTime = Object.assign({ t: pt.t || 0, e: pt.e || 0 }, it.partsTime || {});
@@ -2713,16 +2747,16 @@
             commit(); rebuildNode(it);
             if (rerender) renderPanel();
         }
-        box.appendChild(el('div', 'ob-gtitle', 'وقت ظهور الصورة والاسم والرسالة'));
+        var gT = group(box, 'وقت الظهور بالأليرت', 'الثلاثة مع بعض');
         var tLab = el('b', 'va-durv', fmtSec(pt.t || 0));
         var tw = el('div', 'va-dur');
         var ts = slider(0, Math.max(1, L), 0.1, Number(pt.t) || 0, function (val) { tLab.textContent = fmtSec(val); setTime('t', val); });
         ts.addEventListener('change', function () { renderPanel(); });
         tw.appendChild(ts);
         tw.appendChild(tLab);
-        box.appendChild(row('تطلع بعد', tw, true, 'من بداية الأليرت — الثلاثة مع بعض'));
+        gT.appendChild(row('تطلع بعد', tw, true, 'من بداية الأليرت'));
         var eOn = Number(pt.e) > 0;
-        box.appendChild(row('تختفي', pills([{ label: 'مع نهاية الأليرت', value: 0 }, { label: 'بوقت أحدده', value: 1 }], eOn ? 1 : 0, function (val) {
+        gT.appendChild(row('تختفي', pills([{ label: 'مع نهاية الأليرت', value: 0 }, { label: 'بوقت أحدده', value: 1 }], eOn ? 1 : 0, function (val) {
             setTime('e', val ? Math.min(L, Math.max((Number(pt.t) || 0) + 1, L - 1)) : 0, true);
         }), true));
         if (eOn) {
@@ -2732,14 +2766,14 @@
             es.addEventListener('change', function () { renderPanel(); });
             ew.appendChild(es);
             ew.appendChild(eLab);
-            box.appendChild(row('تختفي عند', ew, true));
+            gT.appendChild(row('تختفي عند', ew, true));
         }
 
-        // اختيار العنصر
-        box.appendChild(el('div', 'ob-gtitle', 'شكل كل عنصر'));
-        box.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); }), true));
+        // ٣) شكل العنصر المختار
         var key = partSel, p = parts[key], nm = PART_NAMES[key];
-        box.appendChild(row('إظهار ' + nm, toggle(p.on, function (val) { setPart(key, 'on', val, true); })));
+        var gS = group(box, 'شكل العنصر');
+        gS.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); })));
+        if (!p.on) gS.appendChild(el('div', 'ob-hint', nm + ' مخفية — شغّلها من «العناصر» فوق.'));
         if (p.on) {
             // التحريك الدقيق
             var nudge = el('div', 'va-nudge');
@@ -2753,9 +2787,7 @@
                 nudge.appendChild(b);
             });
             nudge.appendChild(button('بالنص', 'ob-pill', function () { setPart(key, 'x', 50); }));
-            box.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
-            var mn = key === 'avatar' ? 1 : 0.4, mx = key === 'avatar' ? 8 : 3;
-            box.appendChild(row('حجم ' + nm, slider(mn, mx, 0.05, p.s, function (val) { setPart(key, 's', val); })));
+            gS.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
             if (key === 'avatar') {
                 // شكل الصورة: أزرار فيها معاينة الشكل نفسه
                 var sg = el('div', 'ob-shapes');
@@ -2767,14 +2799,12 @@
                     sb.appendChild(el('span', null, shp.label));
                     sg.appendChild(sb);
                 });
-                box.appendChild(row('شكل الصورة', sg, true));
-                box.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                gS.appendChild(row('شكل الصورة', sg, true));
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
             }
-            box.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
+            gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
-                box.appendChild(row('ستايل ' + nm, pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
-            }
-            if (key !== 'avatar') {
+                gS.appendChild(row('ستايل ' + nm, pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
                 var g = el('div', 'ob-fgrid');
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
@@ -2787,19 +2817,21 @@
                     fb.appendChild(el('span', null, f.label));
                     g.appendChild(fb);
                 });
-                box.appendChild(row('خط ' + nm, g, true));
+                gS.appendChild(row('خط ' + nm, g, true));
             }
-            box.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
+            gS.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
         }
 
+        // ٤) نص الرسالة
+        var gM = group(box, 'نص الرسالة');
         var evs = Array.isArray(it.events) ? it.events : [];
         it.msg = it.msg || {};
         evs.forEach(function (x) {
-            box.appendChild(row('رسالة ' + O.ALERT_EVENTS_ALL[x].label, textInput(it.msg[x] || O.PART_MSGS[x], 80, function (val) {
+            gM.appendChild(row('رسالة ' + O.ALERT_EVENTS_ALL[x].label, textInput(it.msg[x] || O.PART_MSGS[x], 80, function (val) {
                 it.msg[x] = val; commit(); rebuildNode(it);
             }), true));
         });
-        box.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
+        gM.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
         box.appendChild(button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); }));
     }
 
@@ -3045,15 +3077,18 @@
         /** «قبل/بعد» أو التفريغ مطفي: نعرض الفيديو الأصلي بدل الـcanvas. */
         function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
         function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
-        var advOpen = false;
         function paintControls() {
             var top = ctrls.scrollTop; // نرجّع مكان التمرير بعد إعادة الرسم
             requestAnimationFrame(function () { ctrls.scrollTop = top; });
             ctrls.textContent = '';
             var isHue = draft.mode === 'hue' || draft.mode === 'color';
+            // الأداة بشاشة كاملة: كل الخيارات ظاهرة بثلاث مجموعات (بدون «خيارات متقدمة» مسكّرة)
+            var root = ctrls;
+            ctrls = group(root, 'الخلفية', 'وش ينشال');
             ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ الفيديو ويعرف لون الخلفية ويظبط القوة لحاله — غالباً ما تحتاج غيره.'));
             ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
+            ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true, 'لون (أخضر، أزرق، أحمر…)، أسود، أبيض، أو مؤثرات مضيئة على أسود'));
             if (isHue) {
                 var cw = el('div', 'ob-sw');
                 [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#e01b24', 'أحمر'], ['#ff00ff', 'وردي']].forEach(function (c) {
@@ -3084,6 +3119,7 @@
                 fw2.appendChild(pickBtn);
                 ctrls.appendChild(row('لون الخلفية', fw2, true, 'للبرق والنار والضوء على خلفية داكنة'));
             }
+            ctrls = group(root, 'الضبط', 'القوة والحواف والشفافية');
             // القوة: «لون الخلفية» حساس، فمداه أضيق (أدق)
             var simMax = draft.mode === 'hue' ? 0.6 : 1;
             ctrls.appendChild(row(draft.mode === 'screen' ? 'قطع السواد' : 'قوة التفريغ', slider(0, simMax, 0.005, Math.min(simMax, draft.sim), function (x) { setK('sim', x); }), true, draft.mode === 'screen' ? 'كم من الأسود ينشال' : 'لو باقي خلفية ارفعها، ولو انشال جزء من الشخصية نزّلها'));
@@ -3096,16 +3132,14 @@
             amt.appendChild(amtLab);
             ctrls.appendChild(row('شفافية الخلفية', amt, true, '100٪ = الخلفية تختفي كلها، 50٪ = نص شفافة — الشخصية وباقي ألوان الأليرت ما تتأثر ولا تخف'));
 
-            // الباقي تحت «خيارات متقدمة» — مسكّرة افتراضياً
-            var adv = button((advOpen ? '▾' : '▸') + ' خيارات متقدمة', 'ob-btn ghost vk-adv', function () { advOpen = !advOpen; paintControls(); });
-            ctrls.appendChild(adv);
-            if (advOpen) {
-                ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true));
+            ctrls = group(root, 'تفاصيل الحواف', 'لو باقي هالة أو لون حول الشخصية');
+            {
                 if (draft.mode !== 'screen') ctrls.appendChild(row('حماية الشخصية', toggle(draft.protect !== false, function (x) { setK('protect', x); }), false, 'يشيل بس الخلفية المتصلة بأطراف الفيديو، فاللي بنفس اللون داخل الشخصية يبقى'));
                 ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
                 if (isHue) ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل لون الخلفية اللي ينعكس على حواف الشخصية'));
                 ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'تخفف الأليرت كله (الشخصية والخلفية) — للخلفية بس استخدم «شفافية الخلفية» فوق'));
             }
+            ctrls = root;
             paintKeyed();
         }
         paintControls();
