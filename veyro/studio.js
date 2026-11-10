@@ -94,7 +94,9 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
+    // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -3075,15 +3077,18 @@
         /** «قبل/بعد» أو التفريغ مطفي: نعرض الفيديو الأصلي بدل الـcanvas. */
         function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
         function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
-        var advOpen = false;
         function paintControls() {
             var top = ctrls.scrollTop; // نرجّع مكان التمرير بعد إعادة الرسم
             requestAnimationFrame(function () { ctrls.scrollTop = top; });
             ctrls.textContent = '';
             var isHue = draft.mode === 'hue' || draft.mode === 'color';
+            // الأداة بشاشة كاملة: كل الخيارات ظاهرة بثلاث مجموعات (بدون «خيارات متقدمة» مسكّرة)
+            var root = ctrls;
+            ctrls = group(root, 'الخلفية', 'وش ينشال');
             ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ الفيديو ويعرف لون الخلفية ويظبط القوة لحاله — غالباً ما تحتاج غيره.'));
             ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
+            ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true, 'لون (أخضر، أزرق، أحمر…)، أسود، أبيض، أو مؤثرات مضيئة على أسود'));
             if (isHue) {
                 var cw = el('div', 'ob-sw');
                 [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#e01b24', 'أحمر'], ['#ff00ff', 'وردي']].forEach(function (c) {
@@ -3114,6 +3119,7 @@
                 fw2.appendChild(pickBtn);
                 ctrls.appendChild(row('لون الخلفية', fw2, true, 'للبرق والنار والضوء على خلفية داكنة'));
             }
+            ctrls = group(root, 'الضبط', 'القوة والحواف والشفافية');
             // القوة: «لون الخلفية» حساس، فمداه أضيق (أدق)
             var simMax = draft.mode === 'hue' ? 0.6 : 1;
             ctrls.appendChild(row(draft.mode === 'screen' ? 'قطع السواد' : 'قوة التفريغ', slider(0, simMax, 0.005, Math.min(simMax, draft.sim), function (x) { setK('sim', x); }), true, draft.mode === 'screen' ? 'كم من الأسود ينشال' : 'لو باقي خلفية ارفعها، ولو انشال جزء من الشخصية نزّلها'));
@@ -3126,16 +3132,14 @@
             amt.appendChild(amtLab);
             ctrls.appendChild(row('شفافية الخلفية', amt, true, '100٪ = الخلفية تختفي كلها، 50٪ = نص شفافة — الشخصية وباقي ألوان الأليرت ما تتأثر ولا تخف'));
 
-            // الباقي تحت «خيارات متقدمة» — مسكّرة افتراضياً
-            var adv = button((advOpen ? '▾' : '▸') + ' خيارات متقدمة', 'ob-btn ghost vk-adv', function () { advOpen = !advOpen; paintControls(); });
-            ctrls.appendChild(adv);
-            if (advOpen) {
-                ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true));
+            ctrls = group(root, 'تفاصيل الحواف', 'لو باقي هالة أو لون حول الشخصية');
+            {
                 if (draft.mode !== 'screen') ctrls.appendChild(row('حماية الشخصية', toggle(draft.protect !== false, function (x) { setK('protect', x); }), false, 'يشيل بس الخلفية المتصلة بأطراف الفيديو، فاللي بنفس اللون داخل الشخصية يبقى'));
                 ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
                 if (isHue) ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل لون الخلفية اللي ينعكس على حواف الشخصية'));
                 ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'تخفف الأليرت كله (الشخصية والخلفية) — للخلفية بس استخدم «شفافية الخلفية» فوق'));
             }
+            ctrls = root;
             paintKeyed();
         }
         paintControls();
