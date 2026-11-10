@@ -821,11 +821,41 @@
         body.classList.toggle('closed', !panelOpen);
     }
 
+    /*
+     * أي عنصر قصد المستخدم بالضغطة؟ الأليرتات (مربع كبير ما يبان إلا وقت التنبيه) والأشكال (خلفيات)
+     * تغطي غيرها، فكانت الضغطة على أيقونة أو توب تحتها تختار الأليرت. نجمع كل العناصر تحت المؤشر:
+     * الأدوات العادية قبل الأليرتات والأشكال، والأصغر قبل الأكبر. العنصر المختار يبقى لو هو أداة عادية
+     * (عشان تقدر تسحبه حتى لو فوقه شي).
+     */
+    function isCover(it) { return it.type === 'alert' || it.type === 'shape'; }
+    function pickAt(x, y, fallback) {
+        var seen = {}, hits = [];
+        (document.elementsFromPoint ? document.elementsFromPoint(x, y) : []).forEach(function (elx) {
+            var nx = elx.closest && elx.closest('.agp-so-item');
+            if (!nx || !frame.contains(nx)) return;
+            var id = nx.getAttribute('data-id');
+            if (seen[id]) return;
+            seen[id] = true;
+            var itx = find(id);
+            if (!itx) return;
+            var rr = nx.getBoundingClientRect();
+            hits.push({ n: nx, it: itx, area: rr.width * rr.height });
+        });
+        if (!hits.length) return fallback;
+        var sel = hits.filter(function (h) { return h.it.id === selectedId && !isCover(h.it); })[0];
+        if (sel) return sel.n;
+        var tools = hits.filter(function (h) { return !isCover(h.it); });
+        var pool = tools.length ? tools : hits;
+        pool.sort(function (a, b) { return a.area - b.area; });
+        return pool[0].n;
+    }
+
     frame.addEventListener('pointerdown', function (e) {
         var handle = e.target.closest && e.target.closest('.ob-handle');
         var n = e.target.closest && e.target.closest('.agp-so-item');
         if (!n) { if (selectedId) select(null); return; }
         e.preventDefault();
+        if (!handle) n = pickAt(e.clientX, e.clientY, n);
         var it = find(n.getAttribute('data-id'));
         if (!it) return;
         if (handle) {
