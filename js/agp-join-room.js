@@ -29,6 +29,7 @@
         intruder: { name: 'محطة سهيل', url: 'games/intruder/join.html?room=' },
         party: { name: 'حفلة الميلاد', url: 'games/birthday-party/join.html?code=' },
         mafia: { name: 'المافيا', url: 'games/mafia/join.html?room=' },
+        codenames: { name: 'كود نيمز (السباي ماستر)', url: 'games/codenames/spymaster.html?code=' },
         billiards: { name: 'بلياردو ٨', url: 'https://billiards.aymngames.online/?room=' },
         impostor: { name: 'من الأمبوستر؟', url: 'discord-games/impostor/?room=' }
     };

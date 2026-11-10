@@ -8,8 +8,73 @@
 <!-- صفحة جوال السباي ماستر (تُفتح من QR): بدون auth/game-access-guard.js لأنها للاعبين وليست للاستريمر -->
 <script src="../../auth/auth-client.js"></script>
 <script src="codenames-platform.js"></script>
+<script src="codenames-chars.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
+<script>
+// الدخول برقم السباي ماستر (4 أرقام من شاشة الباركود — backend/codenames/spy-codes-service.js):
+//   ?code=1523 (من خانة «عندك رقم غرفة؟» بالرئيسية، js/agp-join-room.js) ← نحوّله لرابط الباركود نفسه ونكمل.
+//   بدون room وبدون code ← خانة يكتب فيها الرقم.
+(function () {
+  var QS = new URLSearchParams(location.search);
+  if (QS.get('room')) return;
+  var digits = function (v) { return String(v || '').replace(/[٠-٩]/g, function (d) { return d.charCodeAt(0) - 0x0660; }).replace(/[۰-۹]/g, function (d) { return d.charCodeAt(0) - 0x06F0; }).replace(/\D/g, '').slice(0, 4); };
+  var start = digits(QS.get('code'));
+  var css = '#cn-code{position:fixed;inset:0;z-index:9999;overflow-y:auto;display:grid;place-items:center;padding:20px;box-sizing:border-box;direction:rtl;font-family:Zain,system-ui,sans-serif;color:#f4f2f8;background:radial-gradient(ellipse at 50% -10%, rgba(124,58,237,.35), transparent 60%), #07060b}' +
+    '#cn-code .box{width:min(380px,100%);display:flex;flex-direction:column;gap:14px;padding:26px 22px;box-sizing:border-box;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));border:1px solid rgba(167,139,250,.3);box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;animation:cnIn .45s cubic-bezier(.2,.8,.2,1)}' +
+    '#cn-code .ic{align-self:center;width:64px;height:64px;border-radius:20px;display:grid;place-items:center;font-size:32px;background:linear-gradient(135deg, #7c3aed, #a855f7);box-shadow:0 12px 30px rgba(124,58,237,.45)}' +
+    '#cn-code h1{margin:0;font-size:26px;font-weight:900}#cn-code p{margin:0;font-size:15px;font-weight:600;color:#a8a3b5}' +
+    '#cn-code .digits{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;direction:ltr}' +
+    '#cn-code .d{height:76px;border-radius:20px;display:grid;place-items:center;font:900 38px Zain,system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.3);border:1.5px solid rgba(255,255,255,.12);box-shadow:inset 0 2px 8px rgba(0,0,0,.3);transition:border-color .2s, background .2s, transform .2s}' +
+    '#cn-code .d.on{border-color:#a78bfa;background:rgba(167,139,250,.1);box-shadow:0 0 0 4px rgba(167,139,250,.15)}#cn-code .d.full{border-color:rgba(167,139,250,.45);animation:cnPop .25s ease}' +
+    '#cn-code .d.on::after{content:"";width:2px;height:34px;border-radius:2px;background:#c4b5fd;animation:cnBlink 1s steps(2) infinite}' +
+    '#cn-code input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;font-size:16px;color:transparent;caret-color:transparent;background:transparent}' +
+    '@keyframes cnPop{0%{transform:scale(.9)}100%{transform:none}}@keyframes cnBlink{0%{opacity:1}100%{opacity:0}}' +
+    '#cn-code.bad .digits{animation:cnShake .35s ease}#cn-code.bad .d{border-color:rgba(248,113,113,.6)}@keyframes cnShake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}' +
+    '#cn-code button{height:58px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 19px Zain,system-ui,sans-serif;box-shadow:0 10px 26px rgba(139,92,246,.4);transition:opacity .2s, transform .15s}#cn-code button:active{transform:scale(.98)}#cn-code button:disabled{opacity:.6}' +
+    '#cn-code .err{min-height:22px;font-size:15px;font-weight:800;color:#fca5a5}' +
+    '@keyframes cnIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}';
+  function build() {
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    var w = document.createElement('div'); w.id = 'cn-code';
+    w.innerHTML = '<form class="box" novalidate><span class="ic">🕵️</span><h1>دخول السباي ماستر</h1>' +
+      '<p>اكتب الرقم اللي تحت باركود فريقك بشاشة اللعب</p>' +
+      '<div class="digits"><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span>' +
+      '<input inputmode="numeric" autocomplete="one-time-code" maxlength="4" aria-label="رقم السباي ماستر"></div>' +
+      '<span class="err" role="alert"></span><button type="submit">دخول</button></form>';
+    document.body.appendChild(w);
+    var form = w.querySelector('form'), input = w.querySelector('input'), err = w.querySelector('.err'), btn = w.querySelector('button');
+    var boxes = w.querySelectorAll('.d');
+    function paint() {
+      var v = input.value, focus = document.activeElement === input;
+      for (var i = 0; i < 4; i++) { boxes[i].textContent = v[i] || ''; boxes[i].className = 'd' + (v[i] ? ' full' : '') + (focus && i === Math.min(v.length, 3) && !v[i] ? ' on' : ''); }
+    }
+    input.value = start; paint();
+    input.addEventListener('input', function () { input.value = digits(input.value); err.textContent = ''; w.classList.remove('bad'); paint(); if (input.value.length === 4) go(); });
+    input.addEventListener('focus', paint); input.addEventListener('blur', paint);
+    function go() {
+      if (btn.disabled) return;
+      var code = digits(input.value);
+      if (code.length !== 4) { err.textContent = 'الرقم 4 أرقام'; input.focus(); return; }
+      btn.disabled = true; btn.textContent = 'جارٍ الدخول…'; err.textContent = '';
+      window.CN.spyCodes.resolve(code).then(function (r) {
+        if (r && r.room) {
+          var q = 'room=' + encodeURIComponent(r.room) + '&t=' + (r.team === 2 ? 2 : 1);
+          if (r.slot) q += '&s=' + encodeURIComponent(r.slot) + '&n=' + encodeURIComponent(r.name || '');
+          location.replace('spymaster.html?' + q);
+          return;
+        }
+        btn.disabled = false; btn.textContent = 'دخول';
+        err.textContent = r === false ? 'تعذّر الاتصال، جرّب مرة ثانية' : 'الرقم غير موجود — تأكد منه بشاشة اللعب';
+        if (r !== false) { w.classList.add('bad'); input.select(); }
+      });
+    }
+    form.addEventListener('submit', function (e) { e.preventDefault(); go(); });
+    if (start.length === 4) go(); else { input.focus(); paint(); }
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+}());
+</script>
 </head>
 <body>
 <x-dc>
@@ -22,136 +87,210 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes smRing{0%{transform:scale(.7);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes smFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes smPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+@keyframes smPop{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes smTile{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+.sm-card{width:100%;max-width:420px;box-sizing:border-box;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));border:1px solid rgba(167,139,250,.2);box-shadow:0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+.sm-btn{transition:transform .15s ease, filter .2s ease, opacity .2s ease}.sm-btn:active{transform:scale(.97)}
+.sm-in{transition:border-color .2s ease, background .2s ease}
+/* ===== تنسيق حسب الجهاز والاتجاه: جوال/آيباد · طولي/عرضي ===== */
+.sm-head{width:100%;max-width:420px}
+.sm-map{width:100%;max-width:560px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.sm-a,.sm-b{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sm-board{width:100%;box-sizing:border-box}
+.sm-cell{aspect-ratio:.82;--wfs:16px;--strip:clamp(22px,6.4vw,30px);transition:filter .4s ease, transform .2s ease}
+.sm-exit{margin-inline-start:auto;flex-shrink:0;height:42px;padding:0 16px;border-radius:999px;display:flex;align-items:center;gap:6px;text-decoration:none;font:800 15px 'Zain';color:#f4f2f8 !important;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);transition:background .2s ease}
+.sm-exit:hover{background:rgba(239,68,68,.16);border-color:rgba(248,113,113,.4)}
+/* آيباد طولي */
+@media (min-width:700px) and (orientation:portrait){
+  .sm-head{max-width:780px}.sm-map{max-width:780px;gap:16px}.sm-card{max-width:540px !important}
+  .sm-board{gap:9px !important;padding:14px !important}.sm-cell{aspect-ratio:1;--wfs:24px;--strip:44px}
+}
+/* أي جهاز بالعرض: اللوحة جنب لوحة التلميح */
+@media (orientation:landscape) and (min-width:560px){
+  .sm-head{max-width:1280px}
+  .sm-map{max-width:1280px;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);grid-template-areas:"board a" "board b";align-items:start;column-gap:18px}
+  .sm-board{grid-area:board;justify-self:center;max-width:calc((100dvh - 118px) * 1.05)}
+  .sm-a{grid-area:a}.sm-b{grid-area:b}
+  .sm-cell{aspect-ratio:1.05;--wfs:18px;--strip:clamp(18px,5.2vh,34px)}
+}
+/* جوال بالعرض (شاشة قصيرة): نصغّر الهيدر والمسافات */
+@media (orientation:landscape) and (max-height:520px){
+  .sm-root{padding:10px 14px 14px !important;gap:10px !important}
+  .sm-head .sm-logo{width:40px !important;height:40px !important;font-size:20px !important}
+  .sm-head .sm-title{font-size:19px !important}
+  .sm-board{padding:7px !important;gap:5px !important;max-width:calc((100dvh - 84px) * 1.05)}
+  .sm-cell{--wfs:13px;border-radius:9px !important}
+}
+/* آيباد بالعرض */
+@media (orientation:landscape) and (min-height:700px){ .sm-cell{--wfs:24px;--strip:44px}.sm-board{gap:9px !important;padding:14px !important} }.sm-in:focus{border-color:#a78bfa !important;background:rgba(167,139,250,.08) !important}
 </style>
 </helmet>
-<div dir="rtl" data-screen-label="Spymaster" style="min-height:100dvh;box-sizing:border-box;padding:18px 14px 28px;background:radial-gradient(ellipse at 50% -10%, rgba(124,58,237,.3), transparent 60%), #07060b;font-family:'Zain',sans-serif;color:#f4f2f8;display:flex;flex-direction:column;align-items:center;gap:16px">
-  <div style="display:flex;align-items:center;gap:10px">
-    <span style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font:400 22px 'Zain';background:linear-gradient(135deg, #7c3aed, #a855f7)">🕵️</span>
-    <div style="display:flex;flex-direction:column">
-      <span style="font:900 22px/1.1 'Zain'">{{ title }}</span>
-      <span style="font:500 13px 'Zain';color:#8a8596">كود نيمز · صفحة السباي ماستر</span>
+<div dir="rtl" data-screen-label="Spymaster" class="sm-root" style="min-height:100dvh;box-sizing:border-box;padding:20px 14px 32px;background:radial-gradient(ellipse at 50% -12%, rgba(124,58,237,.38), transparent 58%), radial-gradient(ellipse at 100% 100%, rgba(59,130,246,.08), transparent 50%), #07060b;font-family:'Zain',sans-serif;color:#f4f2f8;display:flex;flex-direction:column;align-items:center;gap:16px">
+  <div class="sm-head" style="display:flex;align-items:center;gap:12px;animation:rise .4s ease">
+    <span class="sm-logo" style="width:50px;height:50px;flex-shrink:0;border-radius:16px;display:grid;place-items:center;font:400 25px 'Zain';background:linear-gradient(135deg, #8b5cf6, #6d28d9);box-shadow:0 10px 26px rgba(124,58,237,.45), inset 0 1px 0 rgba(255,255,255,.3)">🕵️</span>
+    <div style="display:flex;flex-direction:column;min-width:0">
+      <span class="sm-title" style="font:900 23px/1.15 'Zain'">{{ title }}</span>
+      <span style="font:600 13px 'Zain';color:#8a8596">كود نيمز · صفحة السباي ماستر</span>
     </div>
+    <a href="../../index.html" class="sm-exit" aria-label="خروج للموقع">خروج ↩</a>
   </div>
 
   <sc-if value="{{ isLost }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:22px 20px;border-radius:22px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);text-align:center;font:700 16px 'Zain';color:#fde68a">انقطع الاتصال -- يعيد الاتصال تلقائياً...</div>
+    <div style="position:sticky;top:10px;z-index:5;width:100%;max-width:420px;box-sizing:border-box;padding:12px 16px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(40,30,8,.92);backdrop-filter:blur(10px);border:1px solid rgba(251,191,36,.45);box-shadow:0 10px 30px rgba(0,0,0,.4);font:800 15px 'Zain';color:#fde68a;animation:smPop .3s ease">
+      <span style="width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(251,191,36,.25);border-top-color:#fbbf24;animation:spin .8s linear infinite"></span>انقطع الاتصال · يرجع تلقائياً…
+    </div>
   </sc-if>
 
   <sc-if value="{{ isBad }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:26px 20px;border-radius:22px;background:rgba(239,68,68,.08);border:1px solid rgba(248,113,113,.35);text-align:center;font:700 17px/1.6 'Zain';color:#fca5a5">{{ badMsg }}</div>
+    <div class="sm-card" style="padding:30px 22px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border-color:rgba(248,113,113,.3)">
+      <span style="width:72px;height:72px;border-radius:24px;display:grid;place-items:center;font:400 36px 'Zain';background:linear-gradient(135deg, rgba(239,68,68,.25), rgba(239,68,68,.08));border:1px solid rgba(248,113,113,.35)">{{ badIcon }}</span>
+      <span style="font:900 22px 'Zain';color:#fecaca">{{ badTitle }}</span>
+      <span style="font:700 16px/1.6 'Zain';color:#c9c4d6">{{ badMsg }}</span>
+    </div>
   </sc-if>
 
   <sc-if value="{{ notice }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:16px 18px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);display:flex;flex-direction:column;gap:10px;animation:rise .35s ease">
-      <span style="font:900 17px/1.4 'Zain';color:#fde68a">{{ notice }}</span>
-      <sc-for list="{{ noticePts }}" as="pt" hint-placeholder-count="2">
-        <span style="display:flex;align-items:center;gap:8px;font:700 15px/1.4 'Zain';color:#f4f2f8"><span style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#fbbf24"></span>{{ pt }}</span>
-      </sc-for>
+    <div class="sm-card" style="padding:20px 18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(251,191,36,.12), rgba(255,255,255,.02) 70%);border-color:rgba(251,191,36,.35)">
+      <span style="font:900 19px/1.4 'Zain';color:#fde68a">{{ notice }}</span>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ noticePts }}" as="pt" hint-placeholder-count="2">
+          <span style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);font:700 15px/1.4 'Zain';color:#f4f2f8"><span style="width:8px;height:8px;flex-shrink:0;border-radius:50%;background:#fbbf24;box-shadow:0 0 10px #fbbf24"></span>{{ pt }}</span>
+        </sc-for>
+      </div>
       <sc-if value="{{ loginUrl }}" hint-placeholder-val="{{ false }}">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <a href="{{ loginUrl }}" style="height:46px;border-radius:999px;display:grid;place-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول</a>
-          <button onClick="{{ showReq }}" style="height:46px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:{{ reqBtnBg }};color:#f4f2f8;font:800 15px 'Zain'">ما عندي حساب</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <a href="{{ loginUrl }}" class="sm-btn" style="height:52px;border-radius:999px;display:grid;place-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 16px 'Zain';box-shadow:0 10px 24px rgba(139,92,246,.4)">تسجيل الدخول</a>
+          <button onClick="{{ showReq }}" class="sm-btn" style="height:52px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:{{ reqBtnBg }};color:#f4f2f8;font:800 16px 'Zain'">ما عندي حساب</button>
         </div>
       </sc-if>
     </div>
   </sc-if>
 
   <sc-if value="{{ isCheck }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:30px 20px;border-radius:24px;background:rgba(18,16,26,.85);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
-      <span style="width:44px;height:44px;border-radius:50%;border:4px solid rgba(167,139,250,.2);border-top-color:#a78bfa;animation:spin .9s linear infinite"></span>
-      <span style="font:800 18px 'Zain'">{{ checkTxt }}</span>
+    <div class="sm-card" style="padding:36px 22px 30px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+      <span style="position:relative;width:92px;height:92px;display:grid;place-items:center">
+        <span style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(167,139,250,.5);animation:smRing 1.8s ease-out infinite"></span>
+        <span style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(167,139,250,.5);animation:smRing 1.8s ease-out .9s infinite"></span>
+        <span style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font:400 32px 'Zain';background:linear-gradient(135deg, #8b5cf6, #6d28d9);box-shadow:0 12px 30px rgba(124,58,237,.5)">🔐</span>
+      </span>
+      <span style="font:900 21px 'Zain'">{{ checkTxt }}</span>
+      <span style="font:600 15px 'Zain';color:#a8a3b5">{{ checkSub }}</span>
     </div>
   </sc-if>
 
   <sc-if value="{{ isForm }}" hint-placeholder-val="{{ true }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:22px 18px;border-radius:24px;background:rgba(18,16,26,.85);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:14px;animation:rise .35s ease">
-      <label style="display:flex;flex-direction:column;gap:6px">
-        <span style="font:800 15px 'Zain'">اسمك</span>
-        <input value="{{ name }}" onChange="{{ setName }}" placeholder="اكتب اسمك" style="height:52px;box-sizing:border-box;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#f4f2f8;font:700 17px 'Zain'">
+    <div class="sm-card" style="padding:22px 18px;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:900 20px 'Zain'">أرسل طلبك للمذيع</span>
+        <span style="font:600 14px 'Zain';color:#a8a3b5">يقبلك ← تطلع لك كلمات فريقك وتكتب لهم التلميح</span>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:8px">
+        <span style="font:800 15px 'Zain';color:#ddd6fe">اسمك</span>
+        <input value="{{ name }}" onChange="{{ setName }}" placeholder="اكتب اسمك" maxlength="30" class="sm-in" style="height:56px;box-sizing:border-box;padding:0 18px;border-radius:18px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25);color:#f4f2f8;font:800 18px 'Zain'">
       </label>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <span style="font:800 15px 'Zain'">أي فريق؟</span>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font:800 15px 'Zain';color:#ddd6fe">أي فريق؟</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <sc-for list="{{ teams }}" as="t" hint-placeholder-count="2">
-            <button onClick="{{ t.pick }}" style="height:54px;border-radius:14px;cursor:pointer;font:800 16px 'Zain';border:2px solid {{ t.bd }};background:{{ t.bg }};color:#fff;transition:all .2s">{{ t.label }}</button>
+            <button onClick="{{ t.pick }}" class="sm-btn" style="position:relative;height:74px;padding:0 12px;border-radius:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font:900 17px 'Zain';border:1.5px solid {{ t.bd }};background:{{ t.bg }};box-shadow:{{ t.sh }};color:#fff;transition:all .3s ease">
+              <span style="position:absolute;top:8px;left:8px;width:22px;height:22px;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;font:900 12px 'Zain';border:2px solid {{ t.dotBd }};background:{{ t.dotBg }};color:{{ t.dotC }};transition:all .3s ease">{{ t.dot }}</span>
+              {{ t.label }}
+            </button>
           </sc-for>
         </div>
       </div>
       <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}">
-        <span role="alert" style="font:700 14px 'Zain';color:#fca5a5">{{ err }}</span>
+        <span role="alert" style="padding:10px 14px;border-radius:14px;background:rgba(239,68,68,.1);border:1px solid rgba(248,113,113,.3);font:800 14px 'Zain';color:#fca5a5;animation:smPop .25s ease">{{ err }}</span>
       </sc-if>
-      <button onClick="{{ submit }}" style="height:56px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 18px 'Zain';box-shadow:0 10px 26px rgba(139,92,246,.4)" style-active="transform:scale(.98)">إرسال طلب سباي ماستر</button>
+      <button onClick="{{ submit }}" class="sm-btn" style="height:58px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 19px 'Zain';box-shadow:0 12px 28px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.25)">إرسال الطلب</button>
     </div>
   </sc-if>
 
   <sc-if value="{{ isWait }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:30px 20px;border-radius:24px;background:rgba(18,16,26,.85);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
-      <span style="width:44px;height:44px;border-radius:50%;border:4px solid rgba(167,139,250,.2);border-top-color:#a78bfa;animation:spin .9s linear infinite"></span>
-      <span style="font:800 18px 'Zain'">بانتظار موافقة الاستريمر...</span>
+    <div class="sm-card" style="padding:36px 22px 28px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+      <span style="position:relative;width:96px;height:96px;display:grid;place-items:center">
+        <span style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ waitC }}88;animation:smRing 2s ease-out infinite"></span>
+        <span style="position:absolute;inset:0;border-radius:50%;border:2px solid {{ waitC }}88;animation:smRing 2s ease-out 1s infinite"></span>
+        <span style="width:74px;height:74px;border-radius:50%;display:grid;place-items:center;font:400 34px 'Zain';background:linear-gradient(135deg, {{ waitC }}, {{ waitC }}99);box-shadow:0 12px 30px {{ waitC }}66;animation:smFloat 2.4s ease-in-out infinite">⏳</span>
+      </span>
+      <span style="font:900 22px 'Zain'">وصل طلبك للمذيع</span>
+      <span style="font:600 15px 'Zain';color:#a8a3b5">أول ما يقبلك تطلع لك كلمات فريقك هنا</span>
+      <span style="display:flex;align-items:center;gap:8px;margin-top:4px;padding:8px 16px;border-radius:999px;background:{{ waitC }}22;border:1px solid {{ waitC }}66;font:800 15px 'Zain'"><span style="width:8px;height:8px;border-radius:50%;background:{{ waitC }};animation:smPulse 1.4s ease-in-out infinite"></span>{{ waitName }} · {{ waitTeam }}</span>
     </div>
   </sc-if>
 
   <sc-if value="{{ isRejected }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:26px 20px;border-radius:24px;background:rgba(18,16,26,.85);border:1px solid rgba(248,113,113,.3);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
-      <span style="font:800 18px 'Zain';color:#fca5a5">ما تمت الموافقة على طلبك.</span>
-      <button onClick="{{ retry }}" style="height:48px;padding:0 26px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f4f2f8;font:800 16px 'Zain'">حاول مرة ثانية</button>
+    <div class="sm-card" style="padding:32px 22px 26px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border-color:rgba(248,113,113,.3)">
+      <span style="width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:900 34px 'Zain';color:#fca5a5;background:linear-gradient(135deg, rgba(239,68,68,.25), rgba(239,68,68,.06));border:1px solid rgba(248,113,113,.4);animation:smPop .35s ease">✕</span>
+      <span style="font:900 21px 'Zain'">ما انقبل طلبك</span>
+      <span style="font:600 15px 'Zain';color:#a8a3b5">تأكد من اسمك وفريقك وجرّب مرة ثانية</span>
+      <button onClick="{{ retry }}" class="sm-btn" style="margin-top:4px;height:52px;padding:0 30px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.16);background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03));color:#f4f2f8;font:800 16px 'Zain'">حاول مرة ثانية</button>
     </div>
   </sc-if>
 
   <sc-if value="{{ isMap }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px;animation:rise .35s ease">
-      <span style="align-self:center;padding:5px 14px;border-radius:999px;background:{{ myBg }};font:800 14px 'Zain';color:#fff">أنت سباي ماستر {{ myTeam }}</span>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+    <div class="sm-map" style="animation:rise .45s cubic-bezier(.2,.8,.2,1)">
+      <div class="sm-a">
+      <span style="align-self:center;display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;background:linear-gradient(135deg, {{ myC }}, {{ myC }}aa);box-shadow:0 8px 24px {{ myC }}55, inset 0 1px 0 rgba(255,255,255,.3);font:900 15px 'Zain';color:#fff">🕵 أنت سباي ماستر {{ myTeam }}</span>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
         <sc-for list="{{ counts }}" as="k" hint-placeholder-count="3">
-          <div style="padding:8px 6px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:2px;background:{{ k.bg }};border:1px solid {{ k.bd }}">
-            <span style="font:900 22px/1 'Zain';color:{{ k.c }};font-variant-numeric:tabular-nums">{{ k.n }}</span>
-            <span style="font:700 11px 'Zain';color:#c9c4d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ k.t }}</span>
+          <div style="position:relative;overflow:hidden;padding:12px 6px 10px;border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:3px;background:{{ k.bg }};border:1px solid {{ k.bd }};box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
+            <span style="position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:{{ k.bar }}"></span>
+            <span style="font:900 26px/1 'Zain';color:{{ k.c }};font-variant-numeric:tabular-nums">{{ k.n }}</span>
+            <span style="font:700 11px 'Zain';color:#a8a3b5">{{ k.sub }}</span>
+            <span style="font:800 12px 'Zain';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ k.t }}</span>
           </div>
         </sc-for>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;padding:8px;border-radius:18px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06)">
+      </div>
+      <div class="sm-board" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:10px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.25));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.35)">
         <sc-for list="{{ cells }}" as="c" hint-placeholder-count="25">
-          <div style="position:relative;aspect-ratio:.82;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;background:{{ c.bg }};box-shadow:inset 0 0 0 1.5px {{ c.ring }}, 0 3px 0 {{ c.sh }};opacity:{{ c.op }};filter:{{ c.fl }}">
-            <span style="position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:{{ c.numBg }};font:800 10px/1 'Zain';color:#fff">{{ c.n }}</span>
+          <div class="sm-cell" style="position:relative;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;background:{{ c.bg }};box-shadow:inset 0 0 0 1.5px {{ c.ring }}, inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 {{ c.sh }}, 0 6px 12px rgba(0,0,0,.25);opacity:{{ c.op }};filter:{{ c.fl }};animation:smTile .4s ease both">
+            <span style="position:absolute;top:4px;right:4px;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:{{ c.numBg }};font:800 10px/1 'Zain';color:#fff">{{ c.n }}</span>
             <span style="flex:1;display:grid;place-items:center;font:400 clamp(14px,4.6vw,22px)/1 'Zain'">{{ c.icon }}</span>
-            <span style="margin:0 3px 3px;height:clamp(20px,6vw,28px);border-radius:6px;display:grid;place-items:center;padding:0 2px;background:{{ c.strip }}">
-              <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};text-decoration:{{ c.deco }};text-decoration-thickness:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
+            <span style="margin:0 3px 3px;height:var(--strip);border-radius:8px;display:grid;place-items:center;padding:0 3px;container-type:inline-size;background:{{ c.strip }};backdrop-filter:blur(2px)">
+              <span style="font:900 {{ c.fs }}/1.5 'Zain';color:{{ c.fg }};text-decoration:{{ c.deco }};text-decoration-thickness:2px;white-space:nowrap">{{ c.w }}</span>
             </span>
             <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
-              <span style="position:absolute;inset:0 0 calc(clamp(20px,6vw,28px) + 3px);display:grid;place-items:center;pointer-events:none"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              <span style="position:absolute;inset:0 0 calc(var(--strip) + 3px);display:grid;place-items:center;pointer-events:none"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
             </sc-if>
           </div>
         </sc-for>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:rgba(18,16,26,.85);border:1.5px solid {{ hintBd }}">
-        <span style="font:900 16px 'Zain';color:{{ hintTitleC }}">{{ hintTitle }}</span>
+      <div class="sm-b">
+      <div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:24px;background:{{ hintBg }};border:1.5px solid {{ hintBd }};box-shadow:{{ hintSh }};transition:all .4s ease">
+        <span style="display:flex;align-items:center;gap:10px;font:900 17px 'Zain';color:{{ hintTitleC }}"><span style="width:10px;height:10px;flex-shrink:0;border-radius:50%;background:{{ hintDot }};box-shadow:0 0 12px {{ hintDot }};animation:{{ hintDotAn }}"></span>{{ hintTitle }}</span>
         <sc-if value="{{ canHint }}" hint-placeholder-val="{{ false }}">
-          <input value="{{ hintW }}" onChange="{{ setHintW }}" placeholder="اكتب التلميح (كلمة وحدة)" maxlength="30" style="height:50px;box-sizing:border-box;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f4f2f8;font:800 18px 'Zain'">
-          <span style="font:700 13px 'Zain';color:#a8a3b5">كم كلمة تلمّح لها؟</span>
+          <input value="{{ hintW }}" onChange="{{ setHintW }}" placeholder="اكتب التلميح (كلمة وحدة)" maxlength="30" class="sm-in" style="height:58px;box-sizing:border-box;padding:0 18px;border-radius:18px;border:1.5px solid rgba(255,255,255,.14);background:rgba(0,0,0,.28);color:#fff;font:900 20px 'Zain'">
+          <span style="font:800 14px 'Zain';color:#c9c4d6">كم كلمة تلمّح لها؟</span>
           <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
             <sc-for list="{{ hintNums }}" as="hn" hint-placeholder-count="7">
-              <button onClick="{{ hn.pick }}" style="height:44px;border-radius:12px;cursor:pointer;font:900 18px 'Zain';border:1.5px solid {{ hn.bd }};background:{{ hn.bg }};color:{{ hn.fg }};transition:all .15s">{{ hn.n }}</button>
+              <button onClick="{{ hn.pick }}" class="sm-btn" style="height:48px;border-radius:14px;cursor:pointer;font:900 19px 'Zain';border:1.5px solid {{ hn.bd }};background:{{ hn.bg }};color:{{ hn.fg }};transition:all .2s ease">{{ hn.n }}</button>
             </sc-for>
           </div>
           <sc-if value="{{ showOld }}" hint-placeholder-val="{{ false }}">
-            <span style="font:700 13px 'Zain';color:#a8a3b5">منها قديم؟ (صناديق من تلميح سابق)</span>
+            <span style="font:800 14px 'Zain';color:#c9c4d6">منها قديم؟ <span style="font-weight:600;color:#8a8596">(صناديق من تلميح سابق)</span></span>
             <div style="display:flex;flex-wrap:wrap;gap:6px">
               <sc-for list="{{ oldNums }}" as="on" hint-placeholder-count="3">
-                <button onClick="{{ on.pick }}" style="min-width:44px;height:40px;padding:0 10px;border-radius:12px;cursor:pointer;font:900 16px 'Zain';border:1.5px solid {{ on.bd }};background:{{ on.bg }};color:{{ on.fg }}">{{ on.n }}</button>
+                <button onClick="{{ on.pick }}" class="sm-btn" style="min-width:48px;height:44px;padding:0 12px;border-radius:14px;cursor:pointer;font:900 16px 'Zain';border:1.5px solid {{ on.bd }};background:{{ on.bg }};color:{{ on.fg }};transition:all .2s ease">{{ on.n }}</button>
               </sc-for>
             </div>
           </sc-if>
-          <sc-if value="{{ hintErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font:700 14px 'Zain';color:#fca5a5">{{ hintErr }}</span></sc-if>
-          <button onClick="{{ sendHint }}" style="height:52px;border:none;border-radius:999px;cursor:pointer;background:{{ sendBg }};color:#fff;font:900 18px 'Zain';box-shadow:0 8px 22px rgba(139,92,246,.35);opacity:{{ sendOp }}">{{ sendTxt }}</button>
+          <sc-if value="{{ hintErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="padding:10px 14px;border-radius:14px;background:rgba(239,68,68,.1);border:1px solid rgba(248,113,113,.3);font:800 14px 'Zain';color:#fca5a5">{{ hintErr }}</span></sc-if>
+          <button onClick="{{ sendHint }}" class="sm-btn" style="height:58px;border:none;border-radius:999px;cursor:pointer;background:{{ sendBg }};color:#fff;font:900 19px 'Zain';box-shadow:0 12px 28px rgba(139,92,246,.4), inset 0 1px 0 rgba(255,255,255,.25);opacity:{{ sendOp }}">{{ sendTxt }}</button>
         </sc-if>
-        <sc-if value="{{ hintInfo }}" hint-placeholder-val="{{ false }}"><span style="font:700 15px 'Zain';color:#e7e3ef">{{ hintInfo }}</span></sc-if>
+        <sc-if value="{{ hintInfo }}" hint-placeholder-val="{{ false }}"><span style="padding:12px 14px;border-radius:16px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08);font:800 16px 'Zain';color:#f4f2f8">{{ hintInfo }}</span></sc-if>
       </div>
-      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;font:700 13px 'Zain';color:#c9c4d6">
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px">
         <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
-          <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:{{ l.c }};border:1px solid rgba(255,255,255,.2)"></span>{{ l.t }}</span>
+          <span style="display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:700 13px 'Zain';color:#c9c4d6"><span style="width:14px;height:14px;border-radius:5px;background:{{ l.c }};border:1px solid rgba(255,255,255,.25)"></span>{{ l.t }}</span>
         </sc-for>
       </div>
-      <span style="text-align:center;font:500 12px 'Zain';color:#8a8596">✓ = صندوق انفتح · نفس ترتيب وأرقام الشاشة · تتحدث تلقائياً</span>
+      <span style="text-align:center;font:600 12px 'Zain';color:#8a8596">✓ = صندوق انفتح · نفس ترتيب وأرقام الشاشة · تتحدث تلقائياً</span>
+      </div>
     </div>
   </sc-if>
 
@@ -162,10 +301,6 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 // الاتصال عبر WebSocket: CN.relay → wss://project-testing-akds.onrender.com/ws/room-relay
 // الرسائل: join (للقناة) · sync_request · spymaster_request · spymaster_approve · spymaster_reject · board_update
 const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
-// صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
-const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
-// قبل الفتح: لون واحد لكل نوع · بعد الفتح: صورة الصندوق (نفس شاشة اللعب)
-const FLAT = { 1:'linear-gradient(160deg, #b91c1c, #7f1d1d)', 2:'linear-gradient(160deg, #1d4ed8, #172554)', 0:'linear-gradient(160deg, #b8a27a, #8a7553)', '-1':'linear-gradient(160deg, #1c1726, #08060c)' };
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
@@ -276,21 +411,36 @@ class Component extends DCLogic {
       showReq:()=>this.setState({reqOpen:true}), reqBtnBg:S.reqOpen?'rgba(139,92,246,.2)':'rgba(255,255,255,.05)',
       isForm:!bad&&S.stage==='form'&&(S.claim!=='login'||S.reqOpen), isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,
-      teams:[1,2].map(t=>({label:S.teams[t],pick:()=>this.setState({team:t,err:null}),bg:S.team===t?COLORS[t]:'rgba(255,255,255,.04)',bd:S.team===t?'#fff':COLORS[t]})),
+      // اختيار الفريق: بطاقتين بلون الفريق — المختارة متدرّجة ومضيئة وعليها ✓
+      teams:[1,2].map(t=>{ const on=S.team===t, c=COLORS[t]; return {label:S.teams[t],pick:()=>this.setState({team:t,err:null}),
+        bg:on?`linear-gradient(135deg, ${c}e6, ${c}8c)`:`linear-gradient(135deg, ${c}26, rgba(255,255,255,.03))`,bd:on?'rgba(255,255,255,.7)':c+'59',
+        sh:on?`0 10px 26px ${c}55, inset 0 1px 0 rgba(255,255,255,.3)`:'inset 0 1px 0 rgba(255,255,255,.05)',dot:on?'✓':'',dotBg:on?'#fff':'transparent',dotC:c,dotBd:on?'#fff':'rgba(255,255,255,.3)'}; }),
+      waitName:S.name.trim(), waitTeam:S.teams[S.team]||'', waitC:COLORS[S.team]||'#a78bfa',
+      badIcon:S.expired?'⏳':'⚠️', badTitle:S.expired?'انتهت الجلسة':S.noCrypto?'المتصفح غير مدعوم':'رابط غير صالح',
+      checkSub:S.claim==='ok'||this.slotMode?'ثواني وتطلع لك كلمات فريقك':'نتأكد إن الباركود خاص بحسابك',
+      myC:COLORS[S.myTeam]||'#7c3aed',
       submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
-      counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:c.open?`url(${TILE_IMG(c)}) center/cover no-repeat, ${FLAT[c.t]}`:FLAT[c.t],sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:'none'}; }),
+      counts:[[S.teams[1],1],[S.teams[2],2],['الأسود',-1]].map(([t,k])=>{ const mine=k===S.myTeam, c=k===-1?'#f87171':COLORS[k];
+        return {t,n:k===-1?(left(-1)?'💀':'—'):left(k),sub:k===-1?(left(-1)?'لا تقربونه':'انفتح'):'باقي',c:k===-1?'#fca5a5':c,bar:c,
+          bg:mine?`linear-gradient(180deg, ${c}33, ${c}0d)`:'linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))',bd:mine?c+'99':'rgba(255,255,255,.08)'}; }),
+      // كل بطاقة بشخصيتها ولونها (نفس بطاقات شاشة اللعب، codenames-chars.js) — السباي ماستر يشوف الكل، واللي انفتح يبهت وعليه ✓
+      cells:b.map((c,i)=>{ const T=TILE[c.t], O=window.CN_CHARS.tile(c.t,c.img), len=Math.max(2,[...String(c.w||'')].length);
+        return {n:i+1,w:c.w,fs:`min(var(--wfs), ${(92/(len*.62)).toFixed(1)}cqi)`,open:!!c.open,bg:O.bg,sh:T[1],icon:'',strip:O.strip,fg:O.word,numBg:O.num,
+          ring:c.open?'rgba(255,255,255,.08)':c.t===S.myTeam?'#fff':c.t===-1?'rgba(255,255,255,.45)':'rgba(255,255,255,.14)',op:1,fl:c.open?'grayscale(.75) brightness(.5)':'none',deco:'none'}; }),
       ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
-        return { canHint, hintTitle:title, hintTitleC:canHint?'#fde68a':'#e7e3ef', hintBd:canHint?'#fbbf24':'rgba(255,255,255,.08)',
-          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n}${st.hint.old?` (منها ${st.hint.old} قديم)`:''}`:null,
+        return { canHint, hintTitle:title, hintTitleC:canHint?'#fde68a':'#e7e3ef', hintBd:canHint?'rgba(251,191,36,.6)':'rgba(255,255,255,.08)',
+          hintBg:canHint?'linear-gradient(180deg, rgba(251,191,36,.12), rgba(255,255,255,.02) 60%)':'linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))',
+          hintSh:canHint?'0 16px 40px rgba(251,191,36,.12), inset 0 1px 0 rgba(255,255,255,.08)':'inset 0 1px 0 rgba(255,255,255,.06)',
+          hintDot:canHint?'#fbbf24':st&&st.phase==='guess'&&mine?'#34d399':'#8a8596', hintDotAn:canHint?'smPulse 1.4s ease-in-out infinite':'none',
+          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n} كلمات${st.hint.old?` · فيه ${st.hint.old} كلمة قديمة`:''}`:null,
           hintW:S.hintW, setHintW:e=>this.setState({hintW:e.target.value,hintErr:null}), hintErr:S.hintErr,
           hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState(s=>({hintN:n,hintOld:Math.min(s.hintOld,n),hintErr:null})),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
           showOld:!!S.hintN, oldNums:Array.from({length:(S.hintN||0)+1},(_,k)=>k).map(k=>({n:k===0?'بدون':k,pick:()=>this.setState({hintOld:k}),bg:S.hintOld===k?'linear-gradient(135deg, #b45309, #f59e0b)':'rgba(255,255,255,.04)',bd:S.hintOld===k?'#fde68a':'rgba(255,255,255,.12)',fg:S.hintOld===k?'#fff':'#c9c4d6'})),
           sendHint:()=>this.sendHint(), sendTxt:S.hintSending?'جارٍ الإرسال…':'إرسال التلميح', sendOp:S.hintSending?.6:1, sendBg:'linear-gradient(90deg, #7c3aed, #a855f7)' }; })(),
-      legend:[[S.teams[1],FLAT[1]],[S.teams[2],FLAT[2]],['محايد',FLAT[0]],['القاتل 💀',FLAT[-1]]].map(([t,c])=>({t,c}))
+      legend:[[S.teams[1],'#ef4444'],[S.teams[2],'#3b82f6'],['محايد','#c9ced8'],['الأسود','#000']].map(([t,c])=>({t,c}))
     };
   }
 }

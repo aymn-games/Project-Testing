@@ -295,6 +295,23 @@
         loggedIn: function () { var A = window.AGPAuth; return !!(A && A.getToken && A.getToken()); }
     };
 
+    /**
+     * رقم دخول (4 أرقام) لكل سباي ماستر — مرتبط بنظام الغرف (backend/codenames/spy-codes-service.js).
+     * الرقم يتكتب بخانة «عندك رقم غرفة؟» بالرئيسية (js/agp-join-room.js) ← spymaster.html?code=
+     */
+    var spyCodes = {
+        /** شاشة اللعب: تسجيل/تجديد [{team, slot?, name?}] ← {success, codes:{1,2}} أو null. */
+        register: function (room, teams) { return api('/api/codenames/spy-codes', { room: room, teams: teams }); },
+        /** الجوال (بدون حساب): الرقم ← {room, team, slot, name}، أو null لو الرقم مو موجود، أو false لو ما فيه اتصال. */
+        resolve: function (code) {
+            var base = (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
+            return fetch(base + '/api/codenames/spy-code?code=' + encodeURIComponent(code))
+                .then(function (r) { return r.status === 404 ? { success: false } : r.ok ? r.json() : false; })
+                .then(function (d) { return d === false ? false : d && d.success && d.room ? d : null; })
+                .catch(function () { return false; });
+        }
+    };
+
     /** باركود (نفس طريقة اللعبة السابقة: مكتبة qrcodejs) كـ data URL لعنصر img. */
     var _qrCache = {};
     function qrDataUrl(text, size) {
@@ -367,6 +384,7 @@
         relay: relay,
         secure: secure,
         spySlots: spySlots,
+        spyCodes: spyCodes,
         qrDataUrl: qrDataUrl,
         createRegistry: createRegistry
     };
