@@ -2657,15 +2657,11 @@
             c.classList.toggle('sel', key === partSel);
             var px = emPx();
             if (key === 'avatar') {
-                // نفس شكل وإطار الصورة على البث: إطار بشكل الصورة (لونه) والصورة داخله بنفس الشكل
+                // نفس كود البث (O.avatarFrame): الشكل والإطار والحركة تطلع هنا زي ما تطلع على البث بالضبط
                 c.style.width = c.style.height = (p.s * px) + 'px';
-                var shp = O.AVATAR_SHAPES.filter(function (q) { return q.key === (p.sh || 'circle'); })[0] || O.AVATAR_SHAPES[0];
-                var fr = p.fr || 'ring', col = p.c || '#fff';
-                var af = c.querySelector('.va-av-f'), ai = c.querySelector('.va-av-i');
-                [af, ai].forEach(function (q) { q.style.clipPath = q.style.webkitClipPath = shp.cp || ''; q.style.borderRadius = shp.cp ? '' : shp.br; });
-                af.style.background = fr === 'ring' ? col : 'transparent';
-                ai.style.inset = fr === 'ring' ? '2px' : '0';
-                c.style.filter = fr === 'glow' ? 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')' : fr === 'none' ? '' : 'drop-shadow(0 2px 5px rgba(0,0,0,.7))';
+                c.style.fontSize = px + 'px';
+                c.textContent = '';
+                c.appendChild(O.avatarFrame(p, el('span', 'agp-so-vini', 'ا')));
             }
             else {
                 c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
@@ -2681,12 +2677,7 @@
         }
         [['avatar', ''], ['name', ev.user], ['msg', (it.msg && it.msg[ev.type]) || O.PART_MSGS[ev.type]]].forEach(function (x) {
             var c = el('div', 'va-chip va-' + x[0]);
-            if (x[0] === 'avatar') {
-                var af = el('span', 'va-av-f'), ai = el('span', 'va-av-i');
-                ai.appendChild(el('span', null, 'ا'));
-                af.appendChild(ai);
-                c.appendChild(af);
-            } else {
+            if (x[0] !== 'avatar') {
                 c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]));
             }
             c.title = PART_NAMES[x[0]];
