@@ -31,7 +31,9 @@ var ALL_CATS = [
     { id: 'reverse', name: 'اعكس الكلمة' }, { id: 'number', name: 'اكتب الرقم' },
     { id: 'capital', name: 'عاصمة الدولة' }, { id: 'proverb', name: 'أكمل المثل' },
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
-    { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' }
+    { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' },
+    { id: 'plural', name: 'جمع الكلمة' }, { id: 'opposite', name: 'عكس المعنى' },
+    { id: 'currency', name: 'عملة الدولة' }, { id: 'sentence', name: 'رتّب الجملة' }
 ];
 // إعدادات ثابتة لتحدي البثوث: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم،
 // 20 ثانية للإجابة، و25 لاعب كحد أقصى لكل فريق (شرط أساسي ما يتعدّل). كل
@@ -47,6 +49,8 @@ var SPIN_MS = 6250;
 // النمط الفردي: بكرة الفئة بس (2.65 ث) — نفس توقيت game.html.
 var SPIN_MS_SOLO = 2650;
 var COUNTDOWN_MS = 3900;
+// النمط الفردي: أول 3 إجابات صحيحة تُقبل — الأول نقطتين، الثاني نقطة ونص، الثالث نقطة (نفس game.html).
+var SOLO_PTS = [2, 1.5, 1];
 var MAX_LOG = 60;
 
 // مثل FA.norm في games/fastest-answer/fa-platform.js، مع قبول الأرقام العربية (١ = 1).
@@ -154,6 +158,16 @@ function genQuestion(catId) {
         x = pickNew(cat.id, D.odd);
         return q({ sub: 'اكتب اسم الشيء المختلف', prompt: x[0].slice().sort(function () { return Math.random() - 0.5; }).join(' '), answer: x[1] + ' ' + x[2], accept: [x[2]].concat(x[3] || []) });
     }
+    if (cat.id === 'plural') { x = pickNew(cat.id, D.plural); return q({ sub: 'اكتب جمع الكلمة', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'opposite') { x = pickNew(cat.id, D.opposite); return q({ sub: 'اكتب عكس الكلمة', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'currency') { x = pickNew(cat.id, D.currency); return q({ sub: 'ما عملة هذه الدولة؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'sentence') {
+        // رتّب الجملة: الكلمات تنعرض مبعثرة (مو بنفس ترتيب أي إجابة صحيحة)
+        x = pickNew(cat.id, D.sentence);
+        var okS = [x[0]].concat(x[1] || []).map(norm), w = x[0].split(' '), m, k = 0;
+        do { m = w.slice().sort(function () { return Math.random() - 0.5; }); } while (okS.indexOf(norm(m.join(' '))) >= 0 && ++k < 30);
+        return q({ sub: 'رتّب الكلمات', prompt: m.join(' / '), answer: x[0], accept: [x[0]].concat(x[1] || []) });
+    }
     x = pick(D.flag);
     return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });
 }
@@ -180,7 +194,7 @@ function createFastestAnswer(settings, hooks) {
         question: null,   // للعرض (بدون الإجابات المقبولة)
         answer: null,     // يظهر بعد نهاية الجولة
         phaseEndsAt: null,
-        answers: [],      // [{user, team, pts, rank}]
+        answers: [],      // [{user, team, pts, rank, ms}] — ms: وقت وصول الإجابة من ظهور السؤال
         received: 0,
         winner: null,     // رقم الفريق الفائز
         lobbyEndsAt: null,  // يبدأ العد لما يتصل البثين
@@ -195,6 +209,7 @@ function createFastestAnswer(settings, hooks) {
     var lastPick = [null, null];
     var currentQ = null;        // السؤال الكامل (مع accept)
     var answered = {};
+    var questionAt = 0;
     var roundToken = 0;
     var matchStartedAt = null;
     var catIds = settings.cats;
@@ -304,18 +319,18 @@ function createFastestAnswer(settings, hooks) {
 
             // الإجابة: بس اللاعب صاحب الدور (أو أي لاعب منضم بالنمط الفردي)، ومن شات بثه.
             if (S.phase !== 'question' || !currentQ || sideById[id] !== side || !inTeam) return false;
-            if (solo ? S.answers.length > 0 : (S.chosen[side] !== user || answered[user])) return false;
+            if (solo ? (S.answers.length >= SOLO_PTS.length || answered[user]) : (S.chosen[side] !== user || answered[user])) return false;
             S.received++;
             if (checkAnswer(text, currentQ)) {
-                var rank = S.answers.length, pts = solo ? 1 : (rank === 0 ? 2 : 0);
+                var rank = S.answers.length, pts = solo ? SOLO_PTS[rank] : (rank === 0 ? 2 : 0);
                 answered[user] = true;
-                S.answers.push({ user: user, team: side, pts: pts, rank: rank + 1 });
+                S.answers.push({ user: user, team: side, pts: pts, rank: rank + 1, ms: Date.now() - questionAt });
                 team.score += pts;
                 var ps = S.playerStats[user] || (S.playerStats[user] = { pts: 0, correct: 0 });
                 ps.pts += pts;
                 ps.correct++;
-                log('correct', user + ' أجاب ' + (rank === 0 ? 'أولاً' : 'ثانياً') + ' · ' + team.name + (pts ? ' +' + pts : ''));
-                if (solo || Object.keys(answered).length >= 2) {
+                log('correct', user + ' أجاب ' + ['أولاً', 'ثانياً', 'ثالثاً'][rank] + ' · ' + team.name + (pts ? ' +' + pts : ''));
+                if (solo ? S.answers.length >= SOLO_PTS.length : Object.keys(answered).length >= 2) {
                     var tk = roundToken;
                     hooks.schedule(function () { endRound(tk); }, 600);
                 }
@@ -392,6 +407,7 @@ function createFastestAnswer(settings, hooks) {
                     if (token !== roundToken) return;
                     S.phase = 'question';
                     S.question = publicQuestion(currentQ);
+                    questionAt = Date.now();
                     S.phaseEndsAt = Date.now() + settings.dur * 1000;
                     hooks.onChange();
                     hooks.schedule(function () { endRound(token); }, settings.dur * 1000);
