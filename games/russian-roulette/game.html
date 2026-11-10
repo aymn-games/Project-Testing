@@ -264,7 +264,7 @@ input::placeholder{color:#6f6a7c}
             <span style="position:relative;width:290px;height:290px">
               <span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:7px solid {{ tgRing }};box-shadow:0 0 0 12px {{ tgRingSoft }}, 0 0 80px {{ tgRingGlow }};transition:border-color .3s,box-shadow .3s;font:700 116px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
               <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}">
-                <span aria-hidden="true" style="position:absolute;top:-22px;left:50%;margin-left:-28px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#059669);border:4px solid #07060b;box-shadow:0 0 24px rgba(52,211,153,.6);animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                <span aria-hidden="true" style="position:absolute;top:-6px;left:188px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#059669);border:4px solid #07060b;box-shadow:0 0 24px rgba(52,211,153,.6);animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
               </sc-if>
               <sc-if value="{{ clashAim }}" hint-placeholder-val="{{ true }}">
                 <svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px);pointer-events:none;animation:crossLock 1.3s cubic-bezier(.2,.8,.3,1) both"><circle cx="50" cy="50" r="47" fill="none" stroke="#ef4444" stroke-width="1.1" stroke-dasharray="10 5"></circle><g stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"><line x1="50" y1="0" x2="50" y2="12"></line><line x1="50" y1="88" x2="50" y2="100"></line><line x1="0" y1="50" x2="12" y2="50"></line><line x1="88" y1="50" x2="100" y2="50"></line></g></svg>
@@ -280,24 +280,36 @@ input::placeholder{color:#6f6a7c}
           <div style="position:relative;width:840px;height:430px;display:flex;align-items:center;justify-content:center">
             <svg viewBox="0 0 320 170" width="840" height="446" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 24px 40px rgba(0,0,0,.7));transform-origin:80% 60%;animation:{{ gunAn }}">
               <defs>
-                <linearGradient id="rrSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e5e7eb"></stop><stop offset=".35" stop-color="#9ca3af"></stop><stop offset=".7" stop-color="#374151"></stop><stop offset="1" stop-color="#111827"></stop></linearGradient>
-                <linearGradient id="rrDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7280"></stop><stop offset=".5" stop-color="#1f2937"></stop><stop offset="1" stop-color="#030712"></stop></linearGradient>
-                <linearGradient id="rrWood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b45309"></stop><stop offset=".5" stop-color="#7c2d12"></stop><stop offset="1" stop-color="#3b1406"></stop></linearGradient>
+                <linearGradient id="rrMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa3b2"></stop><stop offset=".22" stop-color="#4b5563"></stop><stop offset=".6" stop-color="#1f2937"></stop><stop offset="1" stop-color="#05070c"></stop></linearGradient>
+                <linearGradient id="rrMetal2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b7280"></stop><stop offset=".5" stop-color="#111827"></stop><stop offset="1" stop-color="#020306"></stop></linearGradient>
+                <linearGradient id="rrGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fef3c7"></stop><stop offset=".35" stop-color="#fbbf24"></stop><stop offset=".75" stop-color="#b45309"></stop><stop offset="1" stop-color="#78350f"></stop></linearGradient>
+                <linearGradient id="rrGrip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3f3f46"></stop><stop offset=".45" stop-color="#18181b"></stop><stop offset="1" stop-color="#030303"></stop></linearGradient>
+                <pattern id="rrCheck" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><path d="M0 0H6M0 0V6" stroke="#52525b" stroke-width=".8" opacity=".7"></path></pattern>
                 <radialGradient id="rrFlash"><stop offset="0" stop-color="#fff"></stop><stop offset=".3" stop-color="#fde68a"></stop><stop offset=".65" stop-color="#f97316"></stop><stop offset="1" stop-color="#dc2626" stop-opacity="0"></stop></radialGradient>
               </defs>
-              <rect x="12" y="44" width="160" height="22" rx="4" fill="url(#rrSteel)" stroke="#030712" stroke-width="2"></rect>
-              <rect x="12" y="66" width="140" height="12" rx="3" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></rect>
-              <rect x="18" y="35" width="8" height="11" rx="2" fill="#4b5563" stroke="#030712" stroke-width="1.5"></rect>
-              <rect x="8" y="42" width="8" height="38" rx="2" fill="#1f2937" stroke="#030712" stroke-width="2"></rect>
-              <path d="M160 36 L250 36 Q262 36 262 48 L262 96 L222 104 L200 104 L192 92 L160 92 Z" fill="url(#rrSteel)" stroke="#030712" stroke-width="2"></path>
-              <rect x="168" y="38" width="64" height="52" rx="12" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></rect>
-              <g stroke="#9ca3af" stroke-width="2" opacity=".55"><line x1="180" y1="44" x2="180" y2="84"></line><line x1="200" y1="42" x2="200" y2="86"></line><line x1="220" y1="44" x2="220" y2="84"></line></g>
-              <path d="M248 36 L262 16 Q268 10 274 16 L270 24 L262 40 Z" fill="url(#rrDark)" stroke="#030712" stroke-width="2"></path>
-              <path d="M196 96 Q192 132 222 132 Q238 132 240 104" fill="none" stroke="#1f2937" stroke-width="6" stroke-linecap="round"></path>
-              <path d="M216 98 Q212 114 220 124" fill="none" stroke="#9ca3af" stroke-width="5" stroke-linecap="round"></path>
-              <path d="M236 92 L262 88 Q300 120 306 158 Q308 168 296 168 L262 168 Q252 168 250 158 Q244 128 230 106 Z" fill="url(#rrWood)" stroke="#030712" stroke-width="2"></path>
-              <g stroke="#fbbf24" stroke-width="1.2" opacity=".25"><line x1="262" y1="110" x2="290" y2="160"></line><line x1="254" y1="118" x2="278" y2="162"></line></g>
-              <circle cx="270" cy="132" r="4" fill="#d1d5db" stroke="#030712" stroke-width="1.5"></circle>
+              <!-- مسدس ريفولفر داكن بلمسات ذهبية -->
+              <path d="M30 70 H162 V84 Q162 89 157 89 H35 Q30 89 30 84 Z" fill="url(#rrMetal2)" stroke="#000" stroke-width="2"></path>
+              <rect x="12" y="47" width="156" height="24" rx="3" fill="url(#rrMetal)" stroke="#000" stroke-width="2"></rect>
+              <rect x="16" y="40" width="150" height="8" rx="2" fill="url(#rrMetal2)" stroke="#000" stroke-width="1.6"></rect>
+              <g fill="#000" opacity=".55"><rect x="40" y="42" width="10" height="4" rx="1"></rect><rect x="62" y="42" width="10" height="4" rx="1"></rect><rect x="84" y="42" width="10" height="4" rx="1"></rect><rect x="106" y="42" width="10" height="4" rx="1"></rect><rect x="128" y="42" width="10" height="4" rx="1"></rect></g>
+              <rect x="18" y="52" width="142" height="3" rx="1.5" fill="#fff" opacity=".28"></rect>
+              <rect x="6" y="44" width="10" height="30" rx="3" fill="url(#rrMetal2)" stroke="#000" stroke-width="2"></rect>
+              <rect x="20" y="45" width="5" height="44" rx="1.5" fill="url(#rrGold)" stroke="#000" stroke-width="1"></rect>
+              <path d="M20 40 L24 30 L30 30 L30 40 Z" fill="url(#rrGold)" stroke="#000" stroke-width="1.2"></path>
+              <path d="M158 38 L248 36 Q263 36 265 50 L267 92 Q267 101 258 103 L214 105 L204 96 L158 92 Z" fill="url(#rrMetal)" stroke="#000" stroke-width="2"></path>
+              <rect x="168" y="41" width="70" height="54" rx="15" fill="url(#rrMetal2)" stroke="#000" stroke-width="2"></rect>
+              <g fill="#000" opacity=".6"><rect x="176" y="49" width="54" height="7" rx="3.5"></rect><rect x="176" y="64" width="54" height="7" rx="3.5"></rect><rect x="176" y="79" width="54" height="7" rx="3.5"></rect></g>
+              <g fill="#9ca3af" opacity=".35"><rect x="178" y="58" width="50" height="2" rx="1"></rect><rect x="178" y="73" width="50" height="2" rx="1"></rect></g>
+              <rect x="166" y="41" width="4" height="54" rx="2" fill="url(#rrGold)"></rect>
+              <path d="M250 40 L264 20 Q270 13 279 17 Q283 20 279 26 L264 46 Z" fill="url(#rrMetal2)" stroke="#000" stroke-width="2"></path>
+              <g stroke="#fbbf24" stroke-width="1" opacity=".7"><line x1="268" y1="20" x2="276" y2="24"></line><line x1="265" y1="24" x2="274" y2="28"></line></g>
+              <path d="M200 100 Q194 138 226 138 Q248 138 248 104" fill="none" stroke="url(#rrGold)" stroke-width="5" stroke-linecap="round"></path>
+              <path d="M224 103 Q217 118 225 130" fill="none" stroke="#d1d5db" stroke-width="5" stroke-linecap="round"></path>
+              <path d="M238 96 L266 91 Q305 124 311 160 Q313 170 301 170 H266 Q256 170 254 160 Q248 130 232 108 Z" fill="url(#rrGrip)" stroke="url(#rrGold)" stroke-width="2.2"></path>
+              <path d="M248 106 L264 100 Q294 128 298 158 L270 160 Q264 132 248 106 Z" fill="url(#rrCheck)"></path>
+              <circle cx="276" cy="134" r="7.5" fill="url(#rrGold)" stroke="#000" stroke-width="1.4"></circle>
+              <circle cx="276" cy="134" r="3" fill="#78350f" opacity=".6"></circle>
+              <circle cx="252" cy="58" r="3" fill="url(#rrGold)" stroke="#000" stroke-width="1"></circle>
               <sc-if value="{{ clashHit }}" hint-placeholder-val="{{ false }}">
                 <g style="transform-origin:4px 60px;animation:muzzle .5s ease-out both"><polygon points="4,60 -34,34 -24,52 -70,46 -30,62 -72,80 -24,70 -36,92" fill="url(#rrFlash)"></polygon><circle cx="-8" cy="60" r="22" fill="url(#rrFlash)"></circle></g>
               </sc-if>
