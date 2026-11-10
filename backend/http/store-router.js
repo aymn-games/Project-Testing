@@ -58,6 +58,9 @@ var routes = [
     return send(res, storeService.getOrderStatus(user, getQueryParam(req, 'id')));
   } },
   // إشعارات البوابات (Webhook). دائماً 200 عشان ما تعيد المحاولة بلا داعي.
+  { method: 'POST', path: '/api/store/tap/webhook', requireAuth: false, handler: function (req, res, body) {
+    return storeService.handleTapWebhook(body).then(function (r) { sendJson(res, 200, r); }, function () { sendJson(res, 200, { success: true }); });
+  } },
   { method: 'POST', path: '/api/store/moyasar/webhook', requireAuth: false, handler: function (req, res, body) {
     return storeService.handleMoyasarWebhook(body).then(function (r) { sendJson(res, 200, r); }, function () { sendJson(res, 200, { success: true }); });
   } },

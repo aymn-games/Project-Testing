@@ -24,6 +24,7 @@ var logger = require('../utils/logger');
 var collectiblesService = require('../collectibles/collectibles-service');
 var paylink = require('./paylink-client');
 var moyasar = require('./moyasar-client');
+var tap = require('./tap-client');
 
 var FIRST_ORDER_ID = 482100;
 var MAX_NAME_LENGTH = 80;
@@ -169,12 +170,13 @@ function getPublicStore(user) {
 
 function isAdmin(user) { return !!(user && user.role === 'admin'); }
 
-var GATEWAYS = { moyasar: moyasar, paylink: paylink };
+var GATEWAYS = { tap: tap, moyasar: moyasar, paylink: paylink };
 
-/** البوابة المستخدمة: PAYMENT_GATEWAY لو محددة ومفعّلة، وإلا ميسّر ثم بيلينك. */
+/** البوابة المستخدمة: PAYMENT_GATEWAY لو محددة ومفعّلة، وإلا تاب ثم ميسّر ثم بيلينك. */
 function activeGateway() {
     var wanted = String(config.paymentGateway || '').toLowerCase();
     if (GATEWAYS[wanted]) return GATEWAYS[wanted].isEnabled() ? wanted : null;
+    if (tap.isEnabled()) return 'tap';
     if (moyasar.isEnabled()) return 'moyasar';
     if (paylink.isEnabled()) return 'paylink';
     return null;
@@ -421,7 +423,8 @@ function checkout(user, input) {
     var names = priced.rows.map(function (r) { return r.name; }).join('، ');
     var gateway = activeGateway();
     db.prepare('UPDATE store_orders SET payment_gateway = ? WHERE id = ?').run(gateway, orderId);
-    var created = gateway === 'moyasar' ? createMoyasarInvoice(user, orderId, priced, names, mobile)
+    var created = gateway === 'tap' ? createTapCharge(user, orderId, priced, names, mobile)
+        : gateway === 'moyasar' ? createMoyasarInvoice(user, orderId, priced, names, mobile)
         : createPaylinkInvoice(user, orderId, priced, names, mobile);
     return created.then(function (redirectUrl) {
         return { success: true, orderId: orderId, redirectUrl: redirectUrl };
@@ -447,6 +450,24 @@ function createMoyasarInvoice(user, orderId, priced, names, mobile) {
         db.prepare('UPDATE store_orders SET moyasar_invoice_id = ?, payment_ref = ? WHERE id = ?').run(inv.id, inv.id, orderId);
         logger.log('Store: order #' + orderId + ' pending Moyasar payment (' + priced.total + ' SAR, ' + moyasar.env() + ')');
         return inv.url;
+    });
+}
+
+function createTapCharge(user, orderId, priced, names, mobile) {
+    return tap.createCharge({
+        amount: priced.total,
+        orderId: orderId,
+        description: ('طلب متجر ألعاب أيمن #' + orderId + ' — ' + names).slice(0, 250),
+        customerName: cleanText(user.tiktok_display_name || user.username || 'عميل', 60),
+        email: user.email || '',
+        mobile: mobile,
+        postUrl: String(config.publicApiBaseUrl || '').replace(/\/+$/, '') + '/api/store/tap/webhook',
+        redirectUrl: storeUrl('?order=' + orderId),
+        metadata: { order_id: String(orderId), user_id: String(user.id) }
+    }).then(function (ch) {
+        db.prepare('UPDATE store_orders SET tap_charge_id = ?, payment_ref = ? WHERE id = ?').run(ch.id, ch.id, orderId);
+        logger.log('Store: order #' + orderId + ' pending Tap payment (' + priced.total + ' SAR, ' + tap.env() + ')');
+        return ch.url;
     });
 }
 
@@ -477,6 +498,7 @@ function createPaylinkInvoice(user, orderId, priced, names, mobile) {
 function verifyOrder(orderId) {
     var order = db.prepare('SELECT * FROM store_orders WHERE id = ?').get(orderId);
     if (!order) return Promise.resolve('not_found');
+    if (order.tap_charge_id) return verifyTapOrder(order);
     if (order.moyasar_invoice_id) return verifyMoyasarOrder(order);
     if (order.status !== 'pending' || !order.paylink_transaction_no || !paylink.isEnabled()) return Promise.resolve(order.status);
     return paylink.getInvoice(order.paylink_transaction_no).then(function (inv) {
@@ -524,6 +546,31 @@ function verifyMoyasarOrder(order) {
     });
 }
 
+/** نفس verifyOrder لكن من تاب: العملية 'CAPTURED' وبنفس المبلغ والعملة. */
+var TAP_FAILED = ['failed', 'declined', 'cancelled', 'canceled', 'abandoned', 'restricted', 'void', 'timedout', 'unknown'];
+function verifyTapOrder(order) {
+    var orderId = order.id;
+    if (order.status !== 'pending' || !tap.isEnabled()) return Promise.resolve(order.status);
+    return tap.getCharge(order.tap_charge_id).then(function (ch) {
+        if (ch.status === 'captured') {
+            if (Math.abs(ch.amount - order.total) > 0.01 || ch.currency !== 'SAR') {
+                logger.error('Store: Tap amount mismatch for order #' + orderId + ' (paid ' + ch.amount + ' ' + ch.currency + ', expected ' + order.total + ')');
+                return 'pending';
+            }
+            if (finalizeOrder(orderId)) logger.log('Store: order #' + orderId + ' paid via Tap and delivered');
+            return 'completed';
+        }
+        if (TAP_FAILED.indexOf(ch.status) !== -1) {
+            db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
+            return 'failed';
+        }
+        return 'pending';
+    }, function (err) {
+        logger.error('Store: Tap verify failed for order #' + orderId + ':', err && err.message);
+        return 'pending';
+    });
+}
+
 function getOrderForUser(user, orderId) {
     var row = db.prepare('SELECT * FROM store_orders WHERE id = ? AND user_id = ?').get(orderId, user.id);
     return row ? mapOrder(row) : null;
@@ -564,6 +611,20 @@ function handleMoyasarWebhook(body) {
     var orderId = toId(meta.order_id);
     var row = invoiceId ? db.prepare('SELECT id FROM store_orders WHERE moyasar_invoice_id = ?').get(invoiceId) : null;
     if (!row && orderId) row = db.prepare('SELECT id FROM store_orders WHERE id = ? AND moyasar_invoice_id IS NOT NULL').get(orderId);
+    if (!row) return Promise.resolve({ success: true, ignored: true });
+    return verifyOrder(row.id).then(function (status) { return { success: true, status: status }; });
+}
+
+/**
+ * إشعار تاب (post.url للعملية). نفس الفكرة: نستخرج رقم العملية/الطلب فقط
+ * ونتحقق من تاب مباشرة — ما نعتمد على محتوى الإشعار.
+ */
+function handleTapWebhook(body) {
+    body = body || {};
+    var chargeId = cleanText(String(body.id || '').indexOf('chg_') === 0 ? body.id : '', 80);
+    var orderId = toId((body.reference && body.reference.order) || (body.metadata && body.metadata.order_id));
+    var row = chargeId ? db.prepare('SELECT id FROM store_orders WHERE tap_charge_id = ?').get(chargeId) : null;
+    if (!row && orderId) row = db.prepare('SELECT id FROM store_orders WHERE id = ? AND tap_charge_id IS NOT NULL').get(orderId);
     if (!row) return Promise.resolve({ success: true, ignored: true });
     return verifyOrder(row.id).then(function (status) { return { success: true, status: status }; });
 }
@@ -1206,6 +1267,7 @@ module.exports = {
     getOrderStatus: getOrderStatus,
     handlePaylinkWebhook: handlePaylinkWebhook,
     handleMoyasarWebhook: handleMoyasarWebhook,
+    handleTapWebhook: handleTapWebhook,
     listMyOrders: listMyOrders,
     setFavorite: setFavorite,
     getStreamerStats: getStreamerStats,

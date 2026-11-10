@@ -90,7 +90,12 @@ module.exports = {
     // MOYASAR_MODE=production يفتح الدفع الحقيقي للكل (غير ذلك للأدمن فقط).
     moyasarSecretKey: process.env.MOYASAR_SECRET_KEY || '',
     moyasarMode: process.env.MOYASAR_MODE || '',
-    // أي بوابة يستخدمها المتجر: moyasar | paylink. فارغ = ميسّر لو مفعّل، وإلا بيلينك.
+    // بوابة الدفع تاب (backend/store/tap-client.js). TAP_SECRET_KEY سري تماماً،
+    // بلا قيمة افتراضية (sk_test_ = تجربة للأدمن، sk_live_ = حقيقي).
+    // TAP_MODE=production يفتح الدفع الحقيقي للكل (غير ذلك للأدمن فقط).
+    tapSecretKey: process.env.TAP_SECRET_KEY || '',
+    tapMode: process.env.TAP_MODE || '',
+    // أي بوابة يستخدمها المتجر: tap | moyasar | paylink. فارغ = تاب لو مفعّل، ثم ميسّر، ثم بيلينك.
     paymentGateway: process.env.PAYMENT_GATEWAY || '',
     // رابط هذا السيرفر نفسه (لإشعارات بوابة الدفع).
     publicApiBaseUrl: process.env.PUBLIC_API_BASE_URL || 'https://project-testing-akds.onrender.com',
