@@ -1155,7 +1155,6 @@ body.watching { overflow: hidden; }
         vics.forEach(function (id) { var p = pOf(G, id); if (p) h += '<div class="trow dead">' + avatar(p, 36) + '<div><b>' + esc(p.name) + '</b><small>انقصى بالليل — المافيا وصلوا له</small></div></div>'; });
         svs.forEach(function (id) { var p = pOf(G, id); if (p) h += '<div class="trow saved">' + avatar(p, 36) + '<div><b>' + esc(p.name) + '</b><small>💚 المافيا هاجموه والطبيب أنقذه</small></div></div>'; });
         var quiet = !h;
-        (N.inspected || []).forEach(function (id) { var p = pOf(G, id); if (p) h += '<div class="trow">' + avatar(p, 36) + '<div><b>' + esc(p.name) + '</b><small>🕵️ المحقق سأل عنه — والنتيجة سر</small></div></div>'; });
         (N.guarded || []).forEach(function (id) { var p = pOf(G, id); if (p) h += '<div class="trow saved">' + avatar(p, 36) + '<div><b>' + esc(p.name) + '</b><small>🩺 الطبيب حماه الليلة</small></div></div>'; });
         if (quiet) h += '<div class="trow"><span class="ic">✨</span><div><b>ليلة هادية</b><small>ما انقصى أحد</small></div></div>';
         return '<div class="teamh"><b>🌙 ملخص الليلة ' + N.round + '</b><small>' + G.players.filter(function (p) { return p.alive; }).length + ' أحياء</small></div>' + h;
@@ -1324,7 +1323,7 @@ body.watching { overflow: hidden; }
         if (ph === 'night') return [{ mafia: '🔪 دور المافيا', doctor: '🩺 دور الطبيب', detective: '🕵️ دور المحقق' }[G.turn] || '🌙 الليل', 'الكل نايم… والمختارين يختارون من جوالاتهم'];
         if (ph === 'dawn' && sh) {
             if (sh.k === 'intro') return ['الليلة ' + G.round, 'المواطنين نايمين… والمافيا صاحية'];
-            if (sh.k === 'inspect') return ['🕵️ غرفة التحقيق', (sh.suspects && sh.suspects.length ? 'المحقق سأل عن ' + sh.suspects.map(nm).join(' و') : 'المحقق يستجوب مشتبهاً') + '… والنتيجة وصلت لجواله بس'];
+            if (sh.k === 'inspect') return ['🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس'];
             if (sh.k === 'attack') {
                 var two = !!sh.target2, names = nm(sh.target) + (two ? ' و' + nm(sh.target2) : '');
                 if (u < 3200) return ['🌙 السوق بالليل…', two ? 'اثنين يمشون بين الدكاكين' : 'أحد يمشي لحاله بين الدكاكين'];
