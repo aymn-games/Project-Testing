@@ -63,6 +63,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       <sc-if value="{{ showAutoJoin }}" hint-placeholder-val="{{ true }}">
       <button onClick="{{ toggleAutoJoin }}" role="switch" aria-checked="{{ autoJoinAria }}" title="الدخول التلقائي: عند التفعيل يدخل أي لاعب جديد بكتابة كلمة الدخول بالشات" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(8px,0.7vw,12px) 0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(8px,0.6vw,12px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid {{ autoJoinBd }};background:{{ autoJoinBg }};color:#e7e3ef" style-active="transform:scale(.97)"><span style="display:{{ lblDisp }}">الدخول التلقائي</span><span style="width:40px;height:22px;flex-shrink:0;border-radius:999px;position:relative;background:{{ autoJoinTrack }};transition:background .25s"><span style="position:absolute;top:3px;right:{{ autoJoinKnob }};width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:right .25s cubic-bezier(.2,1,.3,1)"></span></span></button>
       </sc-if>
+      <sc-if value="{{ showJoinKw }}" hint-placeholder-val="{{ false }}">
+        <span style="height:clamp(32px,2.3vw,42px);box-sizing:border-box;padding:0 clamp(6px,0.5vw,8px) 0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.08);color:#c4b5fd;backdrop-filter:blur(10px);animation:fade .3s ease"><span style="display:{{ lblDisp }}">كلمة الدخول</span><sc-for list="{{ joinKws }}" as="k" hint-placeholder-count="1"><span style="display:flex;align-items:center;padding:2px clamp(8px,0.7vw,12px);border-radius:999px;border:1.5px dashed {{ k.color }};background:{{ k.soft }};font:700 clamp(12px,0.85vw,16px) 'IBM Plex Sans Arabic';color:#f4f2f8">{{ k.label }}</span></sc-for></span>
+      </sc-if>
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
       <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
@@ -74,13 +77,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
   </header>
 
   <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:108px 40px 36px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px">
+    <sc-if value="{{ showChips }}" hint-placeholder-val="{{ true }}">
     <div style="display:flex;justify-content:center;align-items:center;gap:14px">
       <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.3);background:rgba(139,92,246,.08);font:600 18px 'IBM Plex Sans Arabic';color:#c4b5fd"><span style="width:7px;height:7px;border-radius:50%;background:#a78bfa"></span>أسرع إجابة · الجولة {{ round }}</span>
       <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الفوز عند {{ target }} نقطة</span>
-      <sc-if value="{{ showJoinKw }}" hint-placeholder-val="{{ false }}">
-        <span style="display:flex;align-items:center;gap:10px;padding:6px 8px 6px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:500 18px 'IBM Plex Sans Arabic';color:#c4b5fd;animation:fade .3s ease">للدخول اكتب بالشات<sc-for list="{{ joinKws }}" as="k" hint-placeholder-count="1"><span style="display:flex;align-items:center;gap:6px;padding:3px 14px;border-radius:999px;border:1.5px dashed {{ k.color }};background:{{ k.soft }};font:700 18px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap">{{ k.label }}</span></sc-for></span>
-      </sc-if>
     </div>
+    </sc-if>
 
     <sc-if value="{{ showSides }}" hint-placeholder-val="{{ false }}">
       <sc-for list="{{ sides }}" as="sd" hint-placeholder-count="2">
@@ -745,7 +747,7 @@ class Component extends DCLogic {
             h('span',{style:{font:"500 15px 'IBM Plex Sans Arabic'",color:'#c4b5fd',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},BOARD?'دخل':s.teams[n.team].name)),
           h('span',{style:{position:'absolute',bottom:0,right:0,height:3,background:c,animation:`joinBar ${this.JOIN_MS}ms linear forwards`}})); })(),
       // كلمة الدخول اللي حددها الستريمر بشاشة الإعدادات — تظهر وقت ما يكون الدخول التلقائي مفعّل
-      showJoinKw:!CHALLENGE&&s.autoJoin, joinKws:this.KW.map((w,i)=>({label:BOARD?w:s.teams[i].name+': '+w,color:col(i),soft:col(i)+'1a'})),
+      showJoinKw:!CHALLENGE&&s.autoJoin, showChips:!BOARD, joinKws:this.KW.map((w,i)=>({label:BOARD?w:s.teams[i].name+': '+w,color:col(i),soft:col(i)+'1a'})),
       answerWho:this.solo?'يجاوب: كل المشاركين':'يجاوب:', joinHint:BOARD?'اكتب كلمة الدخول بشات البث':'اكتب كلمة الدخول الخاصة بفريقك بشات البث', scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
       catBand:cs.stopped&&cspun?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)', statusTitle:titles[P][0], statusText:titles[P][1],
       spinOp:P==='ready'?1:.35, spinAnim:P==='ready'?'glow 1.8s infinite':'none', spin:this.spin,
