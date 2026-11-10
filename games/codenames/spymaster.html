@@ -401,7 +401,7 @@ class Component extends DCLogic {
           hintBg:canHint?'linear-gradient(180deg, rgba(251,191,36,.12), rgba(255,255,255,.02) 60%)':'linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))',
           hintSh:canHint?'0 16px 40px rgba(251,191,36,.12), inset 0 1px 0 rgba(255,255,255,.08)':'inset 0 1px 0 rgba(255,255,255,.06)',
           hintDot:canHint?'#fbbf24':st&&st.phase==='guess'&&mine?'#34d399':'#8a8596', hintDotAn:canHint?'smPulse 1.4s ease-in-out infinite':'none',
-          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n}${st.hint.old?` (منها ${st.hint.old} قديم)`:''}`:null,
+          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n} كلمات${st.hint.old?` (${st.hint.n-st.hint.old} جديد + ${st.hint.old} قديم${st.hint.oldWords&&st.hint.oldWords.length?` من «${st.hint.oldWords.join('»، «')}»`:''})`:''}`:null,
           hintW:S.hintW, setHintW:e=>this.setState({hintW:e.target.value,hintErr:null}), hintErr:S.hintErr,
           hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState(s=>({hintN:n,hintOld:Math.min(s.hintOld,n),hintErr:null})),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
           showOld:!!S.hintN, oldNums:Array.from({length:(S.hintN||0)+1},(_,k)=>k).map(k=>({n:k===0?'بدون':k,pick:()=>this.setState({hintOld:k}),bg:S.hintOld===k?'linear-gradient(135deg, #b45309, #f59e0b)':'rgba(255,255,255,.04)',bd:S.hintOld===k?'#fde68a':'rgba(255,255,255,.12)',fg:S.hintOld===k?'#fff':'#c9c4d6'})),
