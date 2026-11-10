@@ -45,21 +45,24 @@ class Ship3D extends HTMLElement {
   box(w,h,d,c,x,y,z,p){ const m=new this.T.Mesh(new this.T.BoxGeometry(w,h,d),this.mat(c)); m.position.set(x,y,z); m.castShadow=m.receiveShadow=true; (p||this.ship).add(m); return m; }
   buildShip(){
     const T=this.T, ship=this.ship=new T.Group(); this.sc.add(ship);
-    const shape=new T.Shape(); shape.moveTo(-15,-5); shape.lineTo(8,-5); shape.quadraticCurveTo(15,-4.2,17,0); shape.quadraticCurveTo(15,4.2,8,5); shape.lineTo(-15,5); shape.lineTo(-15,-5);
+    // مقاس السفينة: L = الطول (مقدمة ⇄ مؤخرة)، W = العرض (سور ⇄ سور). كل المقاسات تحت مضروبة فيها، والشخصيات (slots) والسقوط والكاميرا تقرأها
+    const L=this.L=1.2, W=this.W=1.4, rz=4.75*W;
+    const shape=new T.Shape(); shape.moveTo(-15*L,-5*W); shape.lineTo(8*L,-5*W); shape.quadraticCurveTo(15*L,-4.2*W,17*L,0); shape.quadraticCurveTo(15*L,4.2*W,8*L,5*W); shape.lineTo(-15*L,5*W); shape.lineTo(-15*L,-5*W);
     const ext=(d,c,y,s=1,mat)=>{ const g=new T.ExtrudeGeometry(shape,{depth:d,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new T.Mesh(g,mat||this.mat(c)); m.scale.set(s,1,s); m.position.y=y; m.castShadow=m.receiveShadow=true; ship.add(m); return m; };
     ext(2.4,'#f1e2b6',-1);
     ext(.35,'#2aa8a6',.55,1.012);
     const plank=this.tex(512,512,(g,w,h)=>{ g.fillStyle='#efd9a4'; g.fillRect(0,0,w,h); g.strokeStyle='rgba(150,105,55,.45)'; g.lineWidth=3; for(let y=0;y<h;y+=32){ g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); } for(let i=0;i<40;i++){ const y=Math.floor(Math.random()*16)*32, x=Math.random()*w; g.beginPath(); g.moveTo(x,y); g.lineTo(x,y+32); g.stroke(); } });
     plank.wrapS=plank.wrapT=T.RepeatWrapping; plank.repeat.set(.12,.12);
     ext(.1,'#fff',1.4,.97,new T.MeshStandardMaterial({map:plank,roughness:.85}));
-    for(const z of [-4.75,4.75]){ this.box(23.5,.28,.32,'#b8693a',-3,2.65,z); for(let x=-14.5;x<=8.5;x+=2.1) this.box(.26,1.15,.26,'#f3ead2',x,2.05,z); this.box(23.5,.12,.2,'#f3ead2',-3,1.95,z); }
-    this.box(.32,.28,9.5,'#b8693a',-14.75,2.65,0);
-    // cabin
-    this.box(6,2.6,8,'#eef0ea',-10.5,2.8,0); this.box(6.8,.45,8.8,'#2aa8a6',-10.5,4.32,0);
-    for(const z of [-2.2,.2]) this.box(.1,.9,1.3,'#1f7f86',-7.47,3.1,z); this.box(.1,1.8,1.4,'#8f6329',-7.47,2.4,2.6);
-    for(let i=0;i<4;i++) this.box(1.6,.22,2.4,'#d9b67a',-6.6+i*.0,1.6+i*.0,0).visible=false;
+    const rl=23.5*L, rx=-14.75*L+rl/2;
+    for(const z of [-rz,rz]){ this.box(rl,.28,.32,'#b8693a',rx,2.65,z); for(let x=-14.5*L;x<=-14.75*L+rl-.2;x+=2.1) this.box(.26,1.15,.26,'#f3ead2',x,2.05,z); this.box(rl,.12,.2,'#f3ead2',rx,1.95,z); }
+    this.box(.32,.28,rz*2,'#b8693a',-14.75*L,2.65,0);
+    // cabin (لاصقة بالمؤخرة، وعرضها مع عرض السفينة)
+    const cx=-15*L+4.5, cf=cx+3.03; this.cabinFront=cf;
+    this.box(6,2.6,8*W,'#eef0ea',cx,2.8,0); this.box(6.8,.45,8.8*W,'#2aa8a6',cx,4.32,0);
+    for(const z of [-2.2*W,.2*W]) this.box(.1,.9,1.3,'#1f7f86',cf,3.1,z); this.box(.1,1.8,1.4,'#8f6329',cf,2.4,2.6*W);
     // stairs
-    for(let i=0;i<4;i++) this.box(.7,.25,2.2,'#d6b06e',-7.1+i*.7,1.62+(3-i)*.32,-.6);
+    for(let i=0;i<4;i++) this.box(.7,.25,2.2,'#d6b06e',cf+.37+i*.7,1.62+(3-i)*.32,-.6);
     // mast + sail
     const mast=new T.Mesh(new T.CylinderGeometry(.22,.3,15,10),this.mat('#7a4a22')); mast.position.set(-3,8.9,0); mast.castShadow=true; ship.add(mast);
     const boom=new T.Mesh(new T.CylinderGeometry(.12,.12,9,8),this.mat('#7a4a22')); boom.rotation.z=Math.PI/2; boom.position.set(1.3,4.6,0); ship.add(boom);
@@ -68,11 +71,11 @@ class Ship3D extends HTMLElement {
     const sail=this.sail=new T.Mesh(sg,new T.MeshStandardMaterial({map:stripes,side:T.DoubleSide,roughness:.9})); sail.position.set(1.3,9.3,0); sail.castShadow=true; ship.add(sail);
     const flag=new T.Mesh(new T.PlaneGeometry(1.8,1),new T.MeshStandardMaterial({color:'#14b8a6',side:T.DoubleSide})); flag.position.set(-2.1,16.1,0); ship.add(flag); this.flag=flag;
     // barrel, ring, plank
-    const bar=new T.Mesh(new T.CylinderGeometry(1,1.1,1.8,12),this.mat('#c98a48')); bar.position.set(11,2.35,1.5); bar.castShadow=true; ship.add(bar);
-    for(const y of [1.85,2.85]){ const b=new T.Mesh(new T.TorusGeometry(1.06,.07,6,16),this.mat('#2a6f74')); b.rotation.x=Math.PI/2; b.position.set(11,y,1.5); ship.add(b); }
-    const ring=new T.Mesh(new T.TorusGeometry(.8,.28,10,20),this.mat('#f2876a')); ring.position.set(-13,2.4,4.95); ship.add(ring);
-    this.box(1.3,.18,4,'#b07a45',4,1.6,6.6); for(const x of [3.4,4.6]) this.box(.18,.7,.18,'#f3ead2',x,1.95,4.9);
-    this.plankEnd=new T.Vector3(6,2.55,12.45);
+    const bar=new T.Mesh(new T.CylinderGeometry(1,1.1,1.8,12),this.mat('#c98a48')); bar.position.set(11*L,2.35,1.5*W); bar.castShadow=true; ship.add(bar);
+    for(const y of [1.85,2.85]){ const b=new T.Mesh(new T.TorusGeometry(1.06,.07,6,16),this.mat('#2a6f74')); b.rotation.x=Math.PI/2; b.position.set(11*L,y,1.5*W); ship.add(b); }
+    const ring=new T.Mesh(new T.TorusGeometry(.8,.28,10,20),this.mat('#f2876a')); ring.position.set(cx-1.5,2.4,rz+.2); ship.add(ring);
+    this.box(1.3,.18,4,'#b07a45',4,1.6,rz+1.85); for(const x of [3.4,4.6]) this.box(.18,.7,.18,'#f3ead2',x,1.95,rz+.15);
+    this.plankEnd=new T.Vector3(6,2.55,(rz+3.55)*1.5);
     this.sk=1.5; ship.scale.setScalar(1.5); const crew=this.crew=new T.Group(); crew.scale.setScalar(1/1.5); ship.add(crew);
     // focus ring
     const fr=this.focusRing=new T.Mesh(new T.RingGeometry(.9,1.15,32),new T.MeshBasicMaterial({color:'#fde68a',transparent:true,opacity:.9,side:T.DoubleSide})); fr.rotation.x=-Math.PI/2; fr.visible=false; this.crew.add(fr);
@@ -132,12 +135,12 @@ class Ship3D extends HTMLElement {
     const rig=this.V.make(this.V.M[kind],{n:Math.abs(h)}); rig.root.scale.setScalar(kind==='boy'?2.65/1.7:2.5/1.62); rig.root.visible=true;
     rig.root.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); G.add(rig.root); U.rig=rig; U.vrmAnim=-1; }
   dropFig(f){ this.crew.remove(f.g); const r=f.g.userData.rig; if(r) r.dispose(); }
-  slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67,17/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4,7.3/(rows-1)):0;
-    for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
+  slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67*this.L,17*this.L/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4*this.W,7.3*this.W/(rows-1)):0;
+    for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3*this.L+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
   // نمط المواجهة: مكان الثنائي جنب بعض بمقدمة السطح (الأول يمين الشاشة والثاني يساره)
-  duelSpot(i){ const sk=this.sk; return new this.T.Vector3(3.3*sk+(i?-1.1:1.1),1.5*sk,3.3*sk); }
+  duelSpot(i){ const sk=this.sk; return new this.T.Vector3(3.3*sk+(i?-1.1:1.1),1.5*sk,3.3*this.W*sk); }
   sync(){ this.setGfx(this.data.gfx); const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id)), D=Array.isArray(this.data.duel)?this.data.duel:null;
-    const sk=+Math.min(3.4,1.5*Math.max(1,Math.sqrt(ps.length/12))).toFixed(2); if(sk!==this.sk){ this.sk=sk; this.ship.scale.setScalar(sk); this.crew.scale.setScalar(1/sk); this.plankEnd.set(4*sk,1.7*sk,8.3*sk); }
+    const sk=+Math.min(3.4,1.5*Math.max(1,Math.sqrt(ps.length/12))).toFixed(2); if(sk!==this.sk){ this.sk=sk; this.ship.scale.setScalar(sk); this.crew.scale.setScalar(1/sk); this.plankEnd.set(4*sk,1.7*sk,(4.75*this.W+3.55)*sk); }
     const sl=this.slots(ps.length);
     for(const [id,f] of this.figs) if(!keep.has(id)){ this.dropFig(f); this.figs.delete(id); }
     if(ps.some(p=>p.vrm)) this.loadVrm();
@@ -166,7 +169,7 @@ class Ship3D extends HTMLElement {
   tick(){ const T=this.T, raw=this.clock.getDelta(), dt=Math.min(raw,.05), t=this.clock.elapsedTime, d=this.data;
     if(!this.two){ const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; }
     this.perf(raw);
-    if(this.two){ this.seaTex.offset.set(t*.01+Math.sin(t*.5)*.006,t*.014); const fs=1+Math.sin(t*1.6)*.03; this.foam.scale.set(18*fs*this.sk/1.5,7.5*fs*this.sk/1.5,1); }
+    if(this.two){ this.seaTex.offset.set(t*.01+Math.sin(t*.5)*.006,t*.014); const fs=1+Math.sin(t*1.6)*.03; this.foam.scale.set(18*this.L*fs*this.sk/1.5,7.5*this.W*fs*this.sk/1.5,1); }
     else { this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12; }
     this.ship.position.y=Math.sin(t*.8)*.14; this.ship.rotation.z=Math.sin(t*.6)*.008; this.ship.rotation.x=Math.cos(t*.5)*.01; this.flag.rotation.y=Math.sin(t*3)*.3;
     // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
@@ -181,7 +184,7 @@ class Ship3D extends HTMLElement {
       U.stars.forEach((st,i)=>{ const a=t*1.6+i*Math.PI*2/3+f.ph; st.position.set(Math.cos(a)*.95,Math.sin(t*2.2+i*2)*.35,Math.sin(a)*.95); st.material.opacity=.55+Math.sin(t*6+i*2)*.45; st.scale.setScalar(.3+Math.sin(t*5+i)*.08); }); }
     let fallF=null, focusF=d.focus!=null?this.figs.get(d.focus):null; const duelOn=Array.isArray(d.duel);
     for(const [id,f] of this.figs){ const U=f.g.userData, ph=t*2+f.ph;
-      if(f.fallT!=null){ f.fallT+=dt; const k=f.fallT, s=new T.Vector3(4*this.sk,1.5*this.sk,4.3*this.sk), e=this.plankEnd; if(k<3.4) fallF=f;
+      if(f.fallT!=null){ f.fallT+=dt; const k=f.fallT, s=new T.Vector3(4*this.sk,1.5*this.sk,(4.75*this.W-.45)*this.sk), e=this.plankEnd; if(k<3.4) fallF=f;
         if(k<.8){ f.g.position.lerpVectors(f.from,s,k/.8); f.g.rotation.y=Math.atan2(s.x-f.from.x,s.z-f.from.z)||0; U.legs[0].rotation.x=Math.sin(k*18)*.6; U.legs[1].rotation.x=-Math.sin(k*18)*.6; }
         else if(k<1.4){ f.g.position.lerpVectors(s,new T.Vector3(e.x,1.6*this.sk,e.z),(k-.8)/.6); f.g.rotation.y=0; U.legs[0].rotation.x=Math.sin(k*14)*.4; U.legs[1].rotation.x=-Math.sin(k*14)*.4; U.arms[0].rotation.z=-1.2; U.arms[1].rotation.z=1.2; }
         else { const q=Math.min(1,(k-1.4)/.7); f.g.position.set(e.x,1.6*this.sk+Math.sin(q*Math.PI*.5)*1.2-q*q*(1.6*this.sk+3),e.z+q*3.9); f.g.rotation.x=q*1.4; U.arms[0].rotation.z=-2.6; U.arms[1].rotation.z=2.6;
@@ -218,7 +221,7 @@ class Ship3D extends HTMLElement {
     else if(duelFs.length&&!d.win){ const M=new T.Vector3(), w=new T.Vector3(); duelFs.forEach(f=>{ f.g.getWorldPosition(w); M.add(w); }); M.divideScalar(duelFs.length);
       P.set(M.x+Math.sin(t*.25)*.4,M.y+4.6,M.z+7.4); L.set(M.x,M.y+1.3,M.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.4,w.y+4.2,w.z+5.6); L.set(w.x,w.y+1.3,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
-    else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.07:.04); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*.5,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
+    else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)*1.15/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.07:.04); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*1.15*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*.5,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
     const k=1-Math.exp(-dt*rate); cam.position.lerp(P,k); this.camLook.lerp(L,k); cam.lookAt(this.camLook);
     // صاحب الدور (قبل الفوز) ينزل لأسفل الكادر عشان بطاقة السؤال فوق ما تغطي اسمه وشخصيته
     const vt=(focusF||duelFs.length)&&!d.win&&!fallF?.2:0; this.vo=(this.vo||0)+(vt-(this.vo||0))*k; const vw=this.clientWidth||1, vh=this.clientHeight||1;
