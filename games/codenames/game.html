@@ -223,7 +223,7 @@ input:focus{outline:none}
 
           <div style="position:relative;flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:12px">
             <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="25">
-              <div onClick="{{ t.tap }}" style="position:relative;min-width:0;min-height:0;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.sh }};opacity:{{ t.op }};z-index:{{ t.z }};animation:{{ t.an }};transition:background .3s, opacity .3s">
+              <div onClick="{{ t.tap }}" style="position:relative;min-width:0;min-height:0;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ t.bg }};background-blend-mode:{{ t.blend }};box-shadow:{{ t.sh }};opacity:{{ t.op }};z-index:{{ t.z }};animation:{{ t.an }};transition:background .45s ease, box-shadow .45s ease, opacity .3s">
                 <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}">
                   <span aria-hidden="true" style="position:absolute;inset:-5px;border-radius:20px;border:4px solid #fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,.25), 0 0 26px rgba(251,191,36,.55);pointer-events:none;animation:pulse 1.4s ease-in-out infinite"></span>
                   <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:4;height:26px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:linear-gradient(90deg, #f59e0b, #fbbf24);color:#2a1a10;font:900 14px 'Zain';white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35)">✋ {{ t.pickN }}</span>
@@ -987,13 +987,20 @@ class Component extends DCLogic {
     const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
     const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
     const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v),photo:this.reg.avatar(v)||null})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
-      if(!rev) return {...base,bg:'#fcd5b5',sh:'0 6px 0 #d9a47c, 0 14px 26px rgba(0,0,0,.35)',frame:'rgba(255,255,255,.55)',stripBg:'#fff',stripSh:'inset 0 -3px 0 rgba(0,0,0,.08)',wordC:'#2a1a10',numBg:'#2a1a10',numBd:'#fff',numC:'#fff'};
-      const col=b.t===-1?{bg:'#17131f',sh:'0 6px 0 #000, 0 0 30px rgba(239,68,68,.35)',icon:'💀'}:b.t===0?{bg:'#e6d6b4',sh:'0 6px 0 #b9a47c, 0 14px 26px rgba(0,0,0,.35)',icon:'🧍'}:{bg:`linear-gradient(160deg, ${TC[b.t].c}, ${TC[b.t].dk})`,sh:`0 6px 0 ${TC[b.t].dk}, 0 14px 26px rgba(0,0,0,.35)`,icon:'🕵️'};
-      const dark=b.t!==0;
-      // صور البطاقات (نفس صور اللعبة السابقة — images/) بدل الأيقونة والنقش، واللون احتياط لين تتحمّل الصورة
-      return {...base,bg:`url(${tileImg(b)}) center/cover no-repeat, ${col.bg}`,sh:col.sh,frame:dark?'rgba(255,255,255,.3)':'rgba(255,255,255,.5)',icon:null,pat:null,
-        op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:b.t===-1?'#ef4444':b.t===0?'#fde68a':TC[b.t].c2,
-        stripBg:dark?'rgba(0,0,0,.28)':'rgba(255,255,255,.75)',stripSh:'none',wordC:dark?'#fff':'#3b2a12',numBg:dark?'rgba(0,0,0,.45)':'#3b2a12',numBd:'rgba(255,255,255,.75)',numC:'#fff'}; });
+      if(!rev) return {...base,bg:'linear-gradient(165deg, #fdecdb, #f2d4b6)',blend:'normal',sh:'0 5px 0 #d8ae89, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.65)',stripBg:'linear-gradient(180deg, #fffdf9, #fbf1e6)',stripSh:'inset 0 -2px 0 rgba(120,80,40,.08), 0 2px 6px rgba(120,80,40,.08)',wordC:'#3a2414',numBg:'#3a2414',numBd:'rgba(255,255,255,.9)',numC:'#fff'};
+      // ألوان البطاقة بعد الفتح — طبقات CSS فوق صورة الصندوق (images/) بدون تعديل الصور:
+      //   الأحمر/الأزرق: لمسة ناعمة فوق الصورة · المحايد: الصورة الرمادية تتلوّن رملي فاتح (blend: color)
+      //   الأسود: الصورة تصير رمادي-أسود (saturation) ومعتمة، وحوافها توهّج أحمر — فما يتلخبط مع المحايد
+      const img=`url(${tileImg(b)}) center/cover no-repeat`;
+      const col=b.t===-1?{layers:`radial-gradient(ellipse at 50% 42%, transparent 38%, rgba(185,28,28,.6) 100%), linear-gradient(rgba(6,4,10,.32), rgba(6,4,10,.32)), linear-gradient(#000, #000), ${img}, #0b0910`,blend:'normal, normal, saturation, normal',
+            sh:'0 5px 0 #000, 0 0 0 1.5px rgba(239,68,68,.55), 0 0 30px rgba(239,68,68,.45)',frame:'rgba(248,113,113,.6)',strip:'linear-gradient(180deg, rgba(20,8,12,.92), rgba(45,8,16,.92))',word:'#fecaca',num:'#b91c1c',burst:'#ef4444'}
+        :b.t===0?{layers:`linear-gradient(165deg, rgba(255,250,240,.38), rgba(255,244,225,.12)), linear-gradient(165deg, #f2dcae, #d6b27a), ${img}, #e9d5ae`,blend:'normal, color, normal',
+            sh:'0 5px 0 #b8935c, 0 12px 24px rgba(0,0,0,.28)',frame:'rgba(255,255,255,.6)',strip:'linear-gradient(180deg, rgba(255,251,243,.94), rgba(250,238,215,.94))',word:'#5b3d16',num:'#7a5626',burst:'#fde68a'}
+        :{layers:`linear-gradient(165deg, ${TC[b.t].c2}24, transparent 55%, ${TC[b.t].dk}33), ${img}, ${TC[b.t].c}`,blend:'normal, normal',
+            sh:`0 5px 0 ${TC[b.t].dk}, 0 12px 26px ${TC[b.t].c}40`,frame:TC[b.t].c2+'73',strip:`linear-gradient(180deg, ${TC[b.t].dk}73, ${TC[b.t].dk}a6)`,word:'#fff',num:TC[b.t].dk,burst:TC[b.t].c2};
+      return {...base,bg:col.layers,blend:col.blend,sh:col.sh,frame:col.frame,icon:null,pat:null,
+        op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:col.burst,
+        stripBg:col.strip,stripSh:'inset 0 1px 0 rgba(255,255,255,.12)',wordC:col.word,numBg:col.num,numBd:'rgba(255,255,255,.8)',numC:'#fff'}; });
     const urgent=(ph==='hint'||ph==='guess')&&S.left<=10, picks=ph==='guess'?(S.picks||[]).filter(i=>S.board[i]&&!S.board[i].open):[];
     const bn=S.banner, bnT=bn&&TC[bn.team];
     const W=S.win, WC=W&&TC[W.team];
