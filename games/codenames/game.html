@@ -202,13 +202,10 @@ input:focus{outline:none}
                   <span style="padding:0 26px;font:900 38px/1 'Zain';color:#2a1a10;white-space:nowrap">{{ hintW }}</span>
                   <span style="height:100%;min-width:84px;padding:0 12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-inline-start:2px dashed rgba(42,26,16,.15)">
                     <span style="font:900 36px/1 'Zain';color:{{ turnC }}">{{ hintN }}</span>
-                    <span style="font:800 13px 'Zain';color:#7a5a40;white-space:nowrap">{{ hintCountSub }}</span>
+                    <span style="font:800 13px 'Zain';color:#7a5a40;white-space:nowrap">كلمات</span>
                   </span>
                   <sc-if value="{{ hasOld }}" hint-placeholder-val="{{ false }}">
-                    <span style="height:100%;max-width:220px;padding:0 14px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;background:linear-gradient(180deg, #fef3c7, #fde68a);border-inline-start:2px dashed rgba(146,64,14,.25)">
-                      <span style="font:900 15px 'Zain';color:#92400e;white-space:nowrap">🕰 {{ hintOld }} قديم من</span>
-                      <span style="max-width:100%;font:900 19px/1.3 'Zain';color:#78350f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hintOldWords }}</span>
-                    </span>
+                    <span style="height:100%;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;gap:6px;background:linear-gradient(180deg, #fef3c7, #fde68a);border-inline-start:2px dashed rgba(146,64,14,.25);font:900 19px 'Zain';color:#78350f;white-space:nowrap">🕰 فيه {{ hintOld }} كلمة قديمة</span>
                   </sc-if>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;height:68px;padding:0 8px 0 18px;box-sizing:border-box;border-radius:999px;background:{{ tBg }};border:1.5px solid {{ tBd }};box-shadow:{{ tSh }};transition:all .3s;animation:{{ tAn }}">
@@ -289,10 +286,7 @@ input:focus{outline:none}
                     </span>
                   </div>
                   <sc-if value="{{ bh.hasOld }}" hint-placeholder-val="{{ false }}">
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 22px;border-radius:20px;background:linear-gradient(180deg, #fef3c7, #fde68a);box-shadow:0 8px 24px rgba(0,0,0,.25);animation:bannerIn .5s cubic-bezier(.2,1.25,.35,1) .25s both">
-                      <span style="font:900 26px 'Zain';color:#78350f">🕰 فيه كلمات قديمة من: {{ bh.oldTxt }}</span>
-                      <span style="font:800 18px 'Zain';color:#92400e">{{ bh.oldExplain }}</span>
-                    </div>
+                    <div style="padding:12px 28px;border-radius:20px;background:linear-gradient(180deg, #fef3c7, #fde68a);box-shadow:0 8px 24px rgba(0,0,0,.25);font:900 30px 'Zain';color:#78350f;animation:bannerIn .5s cubic-bezier(.2,1.25,.35,1) .25s both">🕰 فيه {{ bh.old }} كلمة قديمة</div>
                   </sc-if>
                 </div>
               </div>
@@ -695,12 +689,6 @@ const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; re
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
 // حجم خط الكلمة: القصيرة كبيرة (تنقرى بالبث)، وأي كلمة تصغر لحالها على عرض شريطها الفعلي (cqi = عرض الشريط)
 // فما تنقص ولا ينقطع منها شي مهما كان طولها أو حجم الشاشة. السطر 1.5 عشان النقاط والحروف النازلة تبان كاملة.
-// عدد الصناديق بالعربي: صندوق واحد · صندوقين · 3 صناديق · 11 صندوق
-const BOXES = n => n===1?'صندوق واحد':n===2?'صندوقين':n>=3&&n<=10?`${n} صناديق`:`${n} صندوق`;
-// الكلمات القديمة: من سجل تلميحات الفريق [{w,n,old,got}] نحسب أي تلميح سابق باقي له صناديق ما انفتحت.
-// صناديق التلميح الجديدة = n-old؛ اللي ينفتح زيادة عنها يُحسب من أقدم تلميح باقي له صناديق.
-const hintLeftovers = log => { const q=[]; (log||[]).forEach(e=>{ const newT=Math.max(0,e.n-(e.old||0)), got=e.got||0, useNew=Math.min(got,newT); let extra=got-useNew;
-  for(const x of q){ if(extra<=0) break; const t=Math.min(x.left,extra); x.left-=t; extra-=t; } if(newT-useNew>0) q.push({w:e.w,left:newT-useNew}); }); return q.filter(x=>x.left>0); };
 // مدة اهتزاز الصندوق قبل ما ينفتح — الصوت والنتيجة تنتظر نفس المدة
 const REVEAL_MS = 600;
 const WORD_FS = w => { const n=Math.max(2,[...String(w||'')].length); return `min(44px, ${(92/(n*.62)).toFixed(1)}cqi)`; };
@@ -737,7 +725,7 @@ class Component extends DCLogic {
     this.room=room;
     this.state={ teams:{1:{name:c.name1,kw:c.kw1},2:{name:c.name2,kw:c.kw2}}, followers:c.followers, hintT:c.hintT, guessT:c.guessT,
       players:{1:r.t1,2:r.t2}, roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}, logs:{1:[],2:[]},
-      ...this.newBoard(this.nextStarter()), phase:'ready', hint:null, hintGiven:false, hintLog:{1:[],2:[]}, left:0, banner:null, win:null,
+      ...this.newBoard(this.nextStarter()), phase:'ready', hint:null, hintGiven:false, left:0, banner:null, win:null,
       introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, guideOpen:false, guideHide:false, flow:'roles', rolesStep:1, joinTick:0, joinReqs:[], spyReqs:[], spyCodes:{}, menuOpen:false, modal:null, reconnecting:false,
       plat:null, scale:1, narrow:innerWidth<820, logo:false };
   }
@@ -835,7 +823,7 @@ class Component extends DCLogic {
   revokeApproved(team){ let n=0; Object.keys(this.approved||{}).forEach(id=>{ if(team&&this.approved[id].team!==team) return; this.send({type:'spymaster_revoke',id}); delete this.approved[id]; n++; });
     if(n) this.setState(s=>({joinTick:s.joinTick+1})); }
   // حالة الدور لجوالات السباي ماستر: مين دوره، المرحلة، التلميح الحالي، ورقم الدور (يمنع إعادة إرسال تلميح قديم)
-  statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n,old:S.hint.old||0,oldWords:S.hint.oldWords||[]}:null,turnId:this.turnId||0}; }
+  statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n,old:S.hint.old||0}:null,turnId:this.turnId||0}; }
   // تلميح من جوال السباي ماستر (مربع النص + عدد الكلمات 1–7): مشفّر بمفتاح الجوال نفسه، فما أحد غيره يقدر يرسله
   onPhoneHint(m){ let team, name, keyP, to;
     if(m.slot){ const sl=[1,2].map(t=>this.slots[t]).find(x=>x&&x.id===m.slot); if(!sl) return; team=sl.team; name=sl.name; to={slot:sl.id}; if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key); keyP=sl.aes; }
@@ -885,11 +873,10 @@ class Component extends DCLogic {
   start(){ if(this.state.phase!=='ready') return; if(this.state.flow) this.setState({flow:null}); this.matchStartedAt=Date.now(); this.beginTurn(this.state.turn); }
   beginTurn(team){ this.opened=0; this.sfx('turn'); this.turnId=(this.turnId||0)+1; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
   endTurn(){ if(this.state.phase==='pending'||this.state.phase==='over') return; this.beginTurn(this.state.turn===1?2:1); }
-  // التلميح: n عدد الصناديق، old كم منها من تلميحات سابقة. نحفظه بسجل الفريق ونطلّع أسماء التلميحات القديمة اللي باقي لها صناديق.
-  giveHint(n,w,old=0){ const tm=this.state.turn, prev=this.state.hintLog[tm]||[], oldWords=old?hintLeftovers(prev).map(x=>x.w).slice(-3):[];
-    this.setState(s=>({hint:{n,w,old,oldWords},hintGiven:true,phase:'guess',hintLog:{...s.hintLog,[tm]:[...(s.hintLog[tm]||[]),{w,n,old,got:0}]}})); this.sfx('hint');
-    this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (منها ${old} قديم${oldWords.length?` من «${oldWords.join('»، «')}»`:''})`:''}`,'info');
-    this.banner(w,old?3600:2800,'hint',null,{n,old,oldWords,spy:this.state.roles[tm].spy||''}); this.runTimer(this.state.guessT); }
+  // التلميح: n عدد الكلمات، old كم منها كلمات قديمة (من تلميحات سابقة)
+  giveHint(n,w,old=0){ const tm=this.state.turn; this.setState({hint:{n,w,old},hintGiven:true,phase:'guess'}); this.sfx('hint');
+    this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (فيه ${old} كلمة قديمة)`:''}`,'info');
+    this.banner(w,old?3200:2800,'hint',null,{n,old,spy:this.state.roles[tm].spy||''}); this.runTimer(this.state.guessT); }
   vote(name,i,add){ this.setState(s=>({board:s.board.map((b,k)=>{ if(k!==i||b.open) return b; const has=b.votes.includes(name);
     if(add&&!has) return {...b,votes:[...b.votes,name]}; if(!add&&has) return {...b,votes:b.votes.filter(x=>x!==name)}; return b; })})); }
   confirm(nums){ const go=(j)=>{ if(j>=nums.length) return; const S=this.state; if(S.phase!=='guess') return; const i=nums[j]-1, b=S.board[i]; if(!b||b.open) return go(j+1);
@@ -899,7 +886,7 @@ class Component extends DCLogic {
       // الوقت ممكن يخلص أثناء الاهتزاز وينتقل الدور — وقتها ما ننهي الدور مرة ثانية (النتيجة والفوز تنحسب عادي)
       const board=this.state.board, live=()=>this.state.turn===tm&&this.state.phase==='guess', next=fn=>{ if(live()) fn(); };
       this.sfx('burst');
-      if(b.t===tm){ this.setState(s=>({hintLog:{...s.hintLog,[tm]:(s.hintLog[tm]||[]).map((e,k,a)=>k===a.length-1?{...e,got:(e.got||0)+1}:e)}})); this.sfx('correct'); this.log(tm,`كشف «${b.w}» ✓`,'good'); if(!this.remaining(board,tm)) return this.pendingWin(tm,'boxes',board);
+      if(b.t===tm){ this.sfx('correct'); this.log(tm,`كشف «${b.w}» ✓`,'good'); if(!this.remaining(board,tm)) return this.pendingWin(tm,'boxes',board);
         this.opened=(this.opened||0)+1; const n=S.hint?S.hint.n:99; if(this.opened>=n){ this.log(tm,`فتحوا ${n} صناديق حسب التلميح -- انتهى الدور`,'info'); return this.after(900,()=>next(()=>this.endTurn())); }
         this.after(550,()=>next(()=>go(j+1))); }
       else if(b.t===0){ this.sfx('neutral'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>next(()=>this.endTurn())); }
@@ -926,7 +913,7 @@ class Component extends DCLogic {
     return {pts:'+'+a.added+' نقطة',total:'المجموع: '+a.totalPoints}; }
   // «إعادة المباراة» و«مباراة جديدة»: لوحة جديدة ويرجع لتحديد الأدوار من البداية (الإعادة تبقي اختيارات الأدوار السابقة محددة)
   resetBoard(keepRoles){ if(!keepRoles) this.revokeApproved(); clearInterval(this.iv); clearTimeout(this.bt); clearTimeout(this._autoT); this._autoT=null; (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
-    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,hintLog:{1:[],2:[]},win:null,banner:null,plat:null,picks:[],bump:null,flow:'roles',rolesStep:1,modal:null,menuOpen:false,guideOpen:false,left:0,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
+    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,flow:'roles',rolesStep:1,modal:null,menuOpen:false,guideOpen:false,left:0,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
 
   onChat(user,text,isFollower=true){
     const S=this.state; if(!user) return; const t=CMD(text), tm=this.teamOf(user);
@@ -1083,14 +1070,12 @@ class Component extends DCLogic {
       openPicks:()=>{ const nums=picks.map(i=>i+1); this.setState({picks:[]}); this.log(S.turn,`الاستريمر أكّد يدوياً: ${nums.join(' ')}`,'info'); this.confirm(nums); },
       isReady:ph==='ready', isHintWait:ph==='hint', isGuess:ph==='guess', isPending:ph==='pending', start:()=>this.start(),
       hintW:S.hint&&S.hint.w, hintN:S.hint&&S.hint.n, hasOld:!!(S.hint&&S.hint.old), hintOld:S.hint&&S.hint.old,
-      hintCountSub:S.hint&&S.hint.old?`${S.hint.n-S.hint.old} جديد + ${S.hint.old} قديم`:'كلمات',
-      hintOldWords:S.hint&&S.hint.oldWords&&S.hint.oldWords.length?`«${S.hint.oldWords.join('» «')}»`:'من تلميح سابق', timeTxt:mmss(S.left),
+ timeTxt:mmss(S.left),
       tC:urgent?'#fecaca':'#fff', tLbl:urgent?'#fca5a5':'#e7e3ef', tIcon:urgent?'⏰':'⏳', tBg:urgent?'linear-gradient(90deg, rgba(239,68,68,.28), rgba(127,29,29,.35))':'linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.03))', tBd:urgent?'rgba(248,113,113,.7)':'rgba(255,255,255,.14)', tSh:urgent?'0 0 30px rgba(239,68,68,.35)':'0 10px 26px rgba(0,0,0,.3)', tRing:urgent?'#f87171':(S.left/((ph==='hint'?S.hintT:S.guessT)||1)>.5?'#34d399':'#fbbf24'), tOff:(138.2*(1-Math.max(0,Math.min(1,S.left/((ph==='hint'?S.hintT:S.guessT)||1))))).toFixed(1), tAn:urgent?'pulse 1s ease-in-out infinite':'none',
       pendingTxt:W?(W.reason==='assassin'?`💀 الصندوق الأسود — ${S.teams[W.team].name} يفوز`:`✅ ${S.teams[W.team].name} كشف كل صناديقه`):'', announce:()=>this.announce(),
       bannerOn:!!bn, bnHint:!!(bn&&bn.kind==='hint'&&bn.extra), bnPlain:!!(bn&&!(bn.kind==='hint'&&bn.extra)),
-      bh:bn&&bn.kind==='hint'&&bn.extra?(()=>{ const x=bn.extra; return {spy:x.spy?`🕵 ${x.spy}`:'🕵 السباي ماستر',n:x.n,hasOld:!!x.old,old:x.old,newN:x.n-x.old,
-        oldTxt:x.oldWords&&x.oldWords.length?`«${x.oldWords.join('» و«')}»`:'تلميح سابق',
-        oldExplain:x.n-x.old>0?`يعني ${BOXES(x.n-x.old)} للتلميح الجديد، و${BOXES(x.old)} من تلميح ما خلصتوه`:`كل الصناديق من تلميحات قديمة ما خلصتوها`,bg:`linear-gradient(160deg, ${bnT.c}, ${bnT.dk})`,c:bnT.dk,glow:bnT.c+'66'}; })():{},
+      bh:bn&&bn.kind==='hint'&&bn.extra?(()=>{ const x=bn.extra; return {spy:x.spy?`🕵 ${x.spy}`:'🕵 السباي ماستر',n:x.n,hasOld:!!x.old,old:x.old,
+bg:`linear-gradient(160deg, ${bnT.c}, ${bnT.dk})`,c:bnT.dk,glow:bnT.c+'66'}; })():{},
       bn:bn?{text:bn.text,sub:bn.sub,bg:bn.kind==='warn'?'linear-gradient(135deg, #b45309, #78350f)':`linear-gradient(135deg, ${bnT.c}, ${bnT.dk})`,bd:'rgba(255,255,255,.4)',glow:bn.kind==='warn'?'rgba(245,158,11,.4)':bnT.c+'66'}:{},
       reconnecting:S.reconnecting,
       modalOpen:!!S.modal, closeModal:()=>this.shut('modal'), mOv:o('fade .25s ease','fadeOut .26s ease forwards'), mAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
