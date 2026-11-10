@@ -558,6 +558,8 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
         var vics = N.victims || (N.victim ? [N.victim] : []), svs = N.saveds || (N.saved ? [N.saved] : []);
         vics.forEach(function (id) { var v = byId[id]; if (v) html += '<div class="rc-row dead"><div class="av">' + L.avatarSVG(v.look, 44) + '</div><div><b>' + esc(v.name) + '</b><span>انقصى بالليل — المافيا وصلوا له</span></div></div>'; });
         svs.forEach(function (id) { var sv = byId[id]; if (sv) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(sv.look, 44) + '</div><div><b>' + esc(sv.name) + '</b><span>💚 المافيا هاجموه والطبيب أنقذه</span></div></div>'; });
+        (N.inspected || []).forEach(function (id) { var ip = byId[id]; if (ip) html += '<div class="rc-row"><div class="av">' + L.avatarSVG(ip.look, 44) + '</div><div><b>' + esc(ip.name) + '</b><span>🕵️ المحقق سأل عنه — والنتيجة سر</span></div></div>'; });
+        (N.guarded || []).forEach(function (id) { var gp = byId[id]; if (gp) html += '<div class="rc-row saved"><div class="av">' + L.avatarSVG(gp.look, 44) + '</div><div><b>' + esc(gp.name) + '</b><span>🩺 الطبيب حماه الليلة</span></div></div>'; });
         if (!vics.length && !svs.length && !N.recruited) html += '<div class="rc-row"><div class="ic">✨</div><div><b>ليلة هادية</b><span>ما انقصى أحد</span></div></div>';
         if (N.recruited) html += '<div class="rc-row dead"><div class="ic">🤝</div><div><b>تم تجنيد لاعب</b><span>مواطن صار مع المافيا</span></div></div>';
         var X = G.lastExile;
@@ -683,7 +685,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             var sh = info.s, u = info.u;
             if (sh) {
                 if (sh.k === 'intro') caption('الليلة ' + G.round, 'المواطنين نايمين… والمافيا صاحية', '', '#9fb4ff');
-                else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
+                else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', sh.suspects && sh.suspects.length ? 'المحقق سأل عن ' + sh.suspects.map(nameOf).join(' و') + '… والنتيجة وصلت لجواله بس' : 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
                     // نفس توقيتات ATK بالمشهد (mafia-scene.js)
                     if (u < 3200) caption('🌙 السوق بالليل…', sh.target2 ? 'اثنين يمشون بين الدكاكين' : 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
@@ -698,7 +700,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
                     else caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(rs[0]) + ' في آخر لحظة' + (lost.length ? '… بس ' + nameOf(lost[0]) + ' ما لحقوا عليه' : ''), '', '#7ee2a6');
                 }
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
-                else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', 'يعالج شخص اختاره يحميه الليلة… ومين هو؟ سر', '', '#7ee2a6');
+                else if (sh.k === 'heal') caption('🩺 الطبيب في العيادة', sh.protect && sh.protect.length ? 'حمى الليلة: ' + sh.protect.map(nameOf).join(' و') : 'يعالج شخص اختاره يحميه الليلة', '', '#7ee2a6');
                 else if (sh.k === 'noheal') caption('🩺 الطبيب ما اختار أحد', 'ما فيه حماية الليلة', '', '#9fb4ff');
                 else if (sh.k === 'result') {
                     var vl = sh.victims || (sh.victim ? [sh.victim] : []);
