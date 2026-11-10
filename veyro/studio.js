@@ -821,11 +821,41 @@
         body.classList.toggle('closed', !panelOpen);
     }
 
+    /*
+     * أي عنصر قصد المستخدم بالضغطة؟ الأليرتات (مربع كبير ما يبان إلا وقت التنبيه) والأشكال (خلفيات)
+     * تغطي غيرها، فكانت الضغطة على أيقونة أو توب تحتها تختار الأليرت. نجمع كل العناصر تحت المؤشر:
+     * الأدوات العادية قبل الأليرتات والأشكال، والأصغر قبل الأكبر. العنصر المختار يبقى لو هو أداة عادية
+     * (عشان تقدر تسحبه حتى لو فوقه شي).
+     */
+    function isCover(it) { return it.type === 'alert' || it.type === 'shape'; }
+    function pickAt(x, y, fallback) {
+        var seen = {}, hits = [];
+        (document.elementsFromPoint ? document.elementsFromPoint(x, y) : []).forEach(function (elx) {
+            var nx = elx.closest && elx.closest('.agp-so-item');
+            if (!nx || !frame.contains(nx)) return;
+            var id = nx.getAttribute('data-id');
+            if (seen[id]) return;
+            seen[id] = true;
+            var itx = find(id);
+            if (!itx) return;
+            var rr = nx.getBoundingClientRect();
+            hits.push({ n: nx, it: itx, area: rr.width * rr.height });
+        });
+        if (!hits.length) return fallback;
+        var sel = hits.filter(function (h) { return h.it.id === selectedId && !isCover(h.it); })[0];
+        if (sel) return sel.n;
+        var tools = hits.filter(function (h) { return !isCover(h.it); });
+        var pool = tools.length ? tools : hits;
+        pool.sort(function (a, b) { return a.area - b.area; });
+        return pool[0].n;
+    }
+
     frame.addEventListener('pointerdown', function (e) {
         var handle = e.target.closest && e.target.closest('.ob-handle');
         var n = e.target.closest && e.target.closest('.agp-so-item');
         if (!n) { if (selectedId) select(null); return; }
         e.preventDefault();
+        if (!handle) n = pickAt(e.clientX, e.clientY, n);
         var it = find(n.getAttribute('data-id'));
         if (!it) return;
         if (handle) {
@@ -2627,15 +2657,11 @@
             c.classList.toggle('sel', key === partSel);
             var px = emPx();
             if (key === 'avatar') {
-                // نفس شكل وإطار الصورة على البث: إطار بشكل الصورة (لونه) والصورة داخله بنفس الشكل
+                // نفس كود البث (O.avatarFrame): الشكل والإطار والحركة تطلع هنا زي ما تطلع على البث بالضبط
                 c.style.width = c.style.height = (p.s * px) + 'px';
-                var shp = O.AVATAR_SHAPES.filter(function (q) { return q.key === (p.sh || 'circle'); })[0] || O.AVATAR_SHAPES[0];
-                var fr = p.fr || 'ring', col = p.c || '#fff';
-                var af = c.querySelector('.va-av-f'), ai = c.querySelector('.va-av-i');
-                [af, ai].forEach(function (q) { q.style.clipPath = q.style.webkitClipPath = shp.cp || ''; q.style.borderRadius = shp.cp ? '' : shp.br; });
-                af.style.background = fr === 'ring' ? col : 'transparent';
-                ai.style.inset = fr === 'ring' ? '2px' : '0';
-                c.style.filter = fr === 'glow' ? 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')' : fr === 'none' ? '' : 'drop-shadow(0 2px 5px rgba(0,0,0,.7))';
+                c.style.fontSize = px + 'px';
+                c.textContent = '';
+                c.appendChild(O.avatarFrame(p, el('span', 'agp-so-vini', 'ا')));
             }
             else {
                 c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
@@ -2651,12 +2677,7 @@
         }
         [['avatar', ''], ['name', ev.user], ['msg', (it.msg && it.msg[ev.type]) || O.PART_MSGS[ev.type]]].forEach(function (x) {
             var c = el('div', 'va-chip va-' + x[0]);
-            if (x[0] === 'avatar') {
-                var af = el('span', 'va-av-f'), ai = el('span', 'va-av-i');
-                ai.appendChild(el('span', null, 'ا'));
-                af.appendChild(ai);
-                c.appendChild(af);
-            } else {
+            if (x[0] !== 'avatar') {
                 c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]));
             }
             c.title = PART_NAMES[x[0]];
@@ -2800,7 +2821,30 @@
                     sg.appendChild(sb);
                 });
                 gS.appendChild(row('شكل الصورة', sg, true));
-                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                var frRound = O.AVATAR_FRAMES.filter(function (f) { return f.key === (p.fr || 'ring'); })[0];
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true,
+                    frRound && frRound.round ? 'هذا الإطار دائري — الصورة تطلع دائرة معه، و«لون الإطار» = لون التوهّج' : 'المتحركة تمشي على شكل الصورة'));
+                // تخصيص الإطار المتحرك: السرعة، لون الزخارف (الذهب)، ووش يطلع فيه
+                if (frRound && frRound.anim) {
+                    var spd = Number(p.fspd) > 0 ? Number(p.fspd) : 1;
+                    gS.appendChild(row('سرعة الحركة', pills(O.FRAME_SPEEDS, O.FRAME_SPEEDS.some(function (x) { return x.value === spd; }) ? spd : 1, function (val) { setPart(key, 'fspd', val, true); })));
+                }
+                var fxList = O.FRAME_FX[p.fr || 'ring'];
+                if (fxList) {
+                    if (fxList.indexOf('gold') !== -1 || p.fr === 'vine') {
+                        var acw = el('div', 'ob-sw');
+                        acw.appendChild(button('ذهبي', 'ob-pill' + (p.fac ? '' : ' on'), function () { setPart(key, 'fac', null, true); }));
+                        var acs = swatches(p.fac, function (c) { setPart(key, 'fac', c, true); });
+                        while (acs.firstChild) acw.appendChild(acs.firstChild);
+                        gS.appendChild(row('لون الزخارف', acw, true, 'الخطوط الذهبية والغصن — «لون الإطار» فوق للتوهّج'));
+                    }
+                    var off = Array.isArray(p.foff) ? p.foff : [];
+                    gS.appendChild(row('وش يطلع بالإطار', pills(fxList.map(function (k) { return { label: O.FRAME_FX_LABELS[k], value: k }; }),
+                        fxList.filter(function (k) { return off.indexOf(k) === -1; }), function (k) {
+                            var next = off.indexOf(k) === -1 ? off.concat([k]) : off.filter(function (x) { return x !== k; });
+                            setPart(key, 'foff', next, true);
+                        }, true), true, 'اضغط أي عنصر تطفيه أو تشغّله'));
+                }
             }
             gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {

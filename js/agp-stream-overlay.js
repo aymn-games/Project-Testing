@@ -73,7 +73,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '4'; // 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '5'; // 5: إطارات صورة الداعم المتحركة + شكل الوردة — 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2102,10 +2102,217 @@
         { key: 'diamond', label: 'معيّن', cp: 'polygon(50% 0,100% 50%,50% 100%,0 50%)' },
         { key: 'shield', label: 'درع', cp: 'polygon(50% 0,96% 14%,92% 62%,50% 100%,8% 62%,4% 14%)' },
         { key: 'heart', label: 'قلب', cp: heartPolygon() },
-        { key: 'star', label: 'نجمة', cp: starPolygon() }
+        { key: 'star', label: 'نجمة', cp: starPolygon() },
+        { key: 'rose', label: 'وردة', cp: rosePolygon() }
     ];
-    // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون
-    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
+    // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون — والمتحركة:
+    // ضوء يلف على الحدود، حدود نابضة، وزخارف تدور بالزوايا. كلها تتبع شكل الصورة ولون الإطار.
+    var AVATAR_FRAMES = [
+        { key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' },
+        { key: 'spin', label: 'ضوء يلف', anim: true }, { key: 'pulse', label: 'نابض', anim: true },
+        { key: 'orbit', label: 'زخارف تدور', anim: true },
+        // رسمات دائرية (الصورة دائماً دائرة معها): FRAME_ART تحت
+        { key: 'flare', label: 'حلقة ضوء', anim: true, round: true }, { key: 'silver', label: 'حلقة فضية', anim: true, round: true },
+        { key: 'vine', label: 'غصن ورق', anim: true, round: true }
+    ];
+
+    /*
+     * رسمات الإطارات (SVG أصلية بشكل واقعي: تدرّجات ضوء تتلاشى، معدن بانعكاسات، ورق وورد بظلال وعروق).
+     * الطبقة أكبر من الصورة بـ25٪ من كل جهة، فنص قطر الصورة بإحداثيات الرسمة = 50/1.5 ≈ 33.3، والحلقة على 34.6.
+     * اللون الرئيسي currentColor (لون الإطار). كل نسخة لها معرّفات تدرّج خاصة (artSeq) عشان ما تتداخل.
+     */
+    var ART_R = 34.6, artSeq = 0;
+    function artPt(deg, r) { var a = deg * Math.PI / 180; return [+(50 + r * Math.cos(a)).toFixed(2), +(50 + r * Math.sin(a)).toFixed(2)]; }
+    function n2(v) { return (+v).toFixed(2); }
+    /** لون hex ممزوج مع لون ثاني بنسبة t (0..1) — لدرجات الذهب من «لون الزخارف». */
+    function mixHex(a, b, t) {
+        var x = hexRgb(a), y = hexRgb(b);
+        return '#' + [0, 1, 2].map(function (i) { return ('0' + Math.round((x[i] + (y[i] - x[i]) * t) * 255).toString(16)).slice(-2); }).join('');
+    }
+    /** تدرّجات مشتركة: توهّج ناعم (g)، شعاع يتلاشى (r)، ذهب شمباني أو «لون الزخارف» (au)، لؤلؤ (pl)، وألماسة (dm). */
+    function artDefs(P, ac) {
+        var au = /^#[0-9a-f]{6}$/i.test(ac || '')
+            ? [mixHex(ac, '#ffffff', 0.78), mixHex(ac, '#ffffff', 0.2), mixHex(ac, '#000000', 0.38), mixHex(ac, '#ffffff', 0.55), mixHex(ac, '#000000', 0.12)]
+            : ['#fff4d6', '#e9c47c', '#a87b33', '#f7e3ab', '#c39443'];
+        return '<radialGradient id="' + P + 'g"><stop offset="0" stop-color="#fff"/><stop offset=".1" stop-color="#fff" stop-opacity=".92"/>' +
+            '<stop offset=".32" stop-color="currentColor" stop-opacity=".42"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient>' +
+            '<linearGradient id="' + P + 'r"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+            '<linearGradient id="' + P + 'au" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + au[0] + '"/><stop offset=".3" stop-color="' + au[1] + '"/>' +
+            '<stop offset=".5" stop-color="' + au[2] + '"/><stop offset=".72" stop-color="' + au[3] + '"/><stop offset="1" stop-color="' + au[4] + '"/></linearGradient>' +
+            '<radialGradient id="' + P + 'pl" cx=".36" cy=".32" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#f1ecf4"/>' +
+            '<stop offset=".85" stop-color="#bdb3c7"/><stop offset="1" stop-color="#8f8599"/></radialGradient>' +
+            '<linearGradient id="' + P + 'dm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#dff1ff"/>' +
+            '<stop offset=".55" stop-color="#9fc4e8"/><stop offset="1" stop-color="#fff"/></linearGradient>';
+    }
+    /** لمعة عدسة: توهّج ناعم، أشعة رفيعة تتلاشى (أفقي أطول)، أشعة قطرية خفيفة، وخط أفقي طويل باهت، ونقطة ساطعة. */
+    function artSpark(P, x, y, sz, delay) {
+        function ray(len, th, rot, op) {
+            return '<rect x="' + n2(-len) + '" y="' + n2(-th / 2) + '" width="' + n2(len * 2) + '" height="' + n2(th) + '" fill="url(#' + P + 'r)"' +
+                (rot ? ' transform="rotate(' + rot + ')"' : '') + (op < 1 ? ' opacity="' + op + '"' : '') + '/>';
+        }
+        return '<g transform="translate(' + n2(x) + ' ' + n2(y) + ')"><g class="ao-tw" style="animation-delay:' + delay + 's">' +
+            '<circle r="' + n2(sz * 0.55) + '" fill="url(#' + P + 'g)"/>' +
+            ray(sz * 1.9, sz * 0.022, 0, 0.32) + ray(sz, sz * 0.07, 0, 1) + ray(sz * 0.72, sz * 0.055, 90, 1) +
+            ray(sz * 0.5, sz * 0.04, 45, 0.55) + ray(sz * 0.5, sz * 0.04, -45, 0.55) +
+            '<circle r="' + n2(sz * 0.075) + '" fill="#fff"/></g></g>';
+    }
+    /** حلقة ضوء بطبقات: هالة عريضة باهتة ← وسط ← خيط أبيض ساطع (الضوء يتلاشى بدل لون واحد). */
+    function artGlowRing(R, k) {
+        k = k || 1;
+        return '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="currentColor" stroke-width="' + n2(5.5 * k) + '" opacity=".06"/>' +
+            '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="currentColor" stroke-width="' + n2(2.6 * k) + '" opacity=".16"/>' +
+            '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="currentColor" stroke-width="' + n2(1.1 * k) + '" opacity=".5"/>' +
+            '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="#fff" stroke-width="' + n2(0.42 * k) + '"/>';
+    }
+    /** خط ذهب شمباني رفيع، ولمعة بيضاء تنزلق عليه ببطء (pathLength 100 عشان الحركة ما تعتمد على المقاس). */
+    function artGoldLine(P, r, w, dur, delay) {
+        return '<circle cx="50" cy="50" r="' + n2(r) + '" fill="none" stroke="url(#' + P + 'au)" stroke-width="' + n2(w) + '"/>' +
+            '<circle class="ao-shine" cx="50" cy="50" r="' + n2(r) + '" pathLength="100" fill="none" stroke="#fff" stroke-width="' + n2(w * 1.6) + '" stroke-linecap="round" stroke-dasharray="9 91" opacity=".9" style="animation-duration:calc(var(--vk,1) * ' + dur + 's);animation-delay:' + (delay || 0) + 's"/>';
+    }
+    /** لؤلؤة: كرة بلمعة وظل خفيف. */
+    function artPearl(P, x, y, r) {
+        return '<circle cx="' + n2(x + r * 0.18) + '" cy="' + n2(y + r * 0.28) + '" r="' + n2(r) + '" fill="rgba(0,0,0,.35)"/>' +
+            '<circle cx="' + n2(x) + '" cy="' + n2(y) + '" r="' + n2(r) + '" fill="url(#' + P + 'pl)"/>';
+    }
+    /** ألماسة صغيرة بقصّة (أوجه فاتحة وغامقة) تلمع. */
+    function artGem(P, x, y, s, rot, delay) {
+        return '<g transform="translate(' + n2(x) + ' ' + n2(y) + ') rotate(' + n2(rot) + ') scale(' + n2(s) + ')"><g class="ao-gem" style="animation-delay:' + delay + 's">' +
+            '<path d="M0 -1.6L1.15 0L0 1.6L-1.15 0Z" fill="url(#' + P + 'dm)" stroke="#fff" stroke-width=".12"/>' +
+            '<path d="M0 -1.6L.45 0L0 1.6Z" fill="#fff" opacity=".55"/><path d="M-1.15 0L.45 0L0 -1.6Z" fill="#7aa6d1" opacity=".35"/></g></g>';
+    }
+    /** نقاط ضوء ناعمة (بوكيه) حول الحلقة تومض بهدوء. */
+    function artBokeh(P, n, r0, r1, seed) {
+        var s = '', i;
+        for (i = 0; i < n; i++) {
+            var ang = (i * 137.5 + (seed || 0)) % 360, rr = r0 + ((i * 7) % 11) / 10 * (r1 - r0), q = artPt(ang, rr);
+            s += '<circle class="ao-bk" cx="' + q[0] + '" cy="' + q[1] + '" r="' + n2(0.9 + (i % 4) * 0.55) + '" fill="url(#' + P + 'g)" style="animation-delay:' + n2(-(i % 7) * 0.6) + 's"/>';
+        }
+        return s;
+    }
+    function svgWrap(inner) { return '<svg viewBox="0 0 100 100" aria-hidden="true">' + inner + '</svg>'; }
+
+    /** ورقة واقعية: شكل رمحي، تدرّج من القاعدة للطرف بلمعة صدف، عرق نص وعروق جانبية. outline = ورقة مفرّغة. */
+    function artLeaf(P, x, y, rot, sc, delay, opts) {
+        opts = opts || {};
+        var body = 'M0 0C2.4 -2.9 7.2 -3.4 10.4 0C7.2 3.4 2.4 2.9 0 0Z';
+        var veins = 'M.6 0L9.6 0M3 0L4.9 -1.55M5.4 0L7.1 -1.35M3 0L4.9 1.55M5.4 0L7.1 1.35';
+        var inner = opts.outline
+            ? '<path d="' + body + '" fill="#fff" fill-opacity=".06" stroke="url(#' + P + 'au)" stroke-width=".3"/><path d="' + veins + '" stroke="#fff" stroke-opacity=".55" stroke-width=".16" fill="none"/>'
+            : '<path d="' + body + '" fill="url(#' + P + 'lf)"/><path d="' + veins + '" stroke="rgba(120,90,40,.32)" stroke-width=".2" fill="none"/>' +
+              '<path d="M1 -.6C3 -2 6.5 -2.4 9 -.8" stroke="#fff" stroke-opacity=".5" stroke-width=".2" fill="none"/>';
+        return '<g transform="translate(' + n2(x) + ' ' + n2(y) + ') rotate(' + n2(rot) + ') scale(' + n2(sc) + ')"' + (opts.op ? ' opacity="' + opts.op + '"' : '') + '>' +
+            '<g class="ao-leaf" style="animation-delay:' + delay + 's">' + inner + '</g></g>';
+    }
+
+    var FRAME_ART = {
+        // حلقة ضوء: خيط ضوء بطبقات، خطين ذهب شمباني (داخل وبرا) تنزلق عليهم لمعة، لمعتين عدسة تلف، وبوكيه
+        flare: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R, a = artPt(225, R), b = artPt(45, R), off = o.off;
+            return svgWrap('<defs>' + artDefs(P, o.ac) + '<linearGradient id="' + P + 'h" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset=".12" stop-color="#fff"/><stop offset=".34" stop-color="#fff" stop-opacity="0"/><stop offset=".66" stop-color="#fff" stop-opacity="0"/><stop offset=".88" stop-color="#fff"/></linearGradient></defs>' +
+                (off.bokeh ? '' : artBokeh(P, 16, R + 5, R + 14, 20)) +
+                (off.gold ? '' : artGoldLine(P, R + 3.3, 0.32, 7, 0) + artGoldLine(P, R - 1.7, 0.22, 9, -4)) +
+                artGlowRing(R, 0.8) +
+                '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 18s)">' +
+                '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="url(#' + P + 'h)" stroke-width="1.5" opacity=".9"/>' +
+                (off.spark ? '' : artSpark(P, a[0], a[1], 18, 0) + artSpark(P, b[0], b[1], 14, -1.3) +
+                artSpark(P, artPt(236, R + 8)[0], artPt(236, R + 8)[1], 3.4, -0.6) + artSpark(P, artPt(34, R + 9)[0], artPt(34, R + 9)[1], 2.8, -1.8) +
+                artSpark(P, artPt(56, R + 12)[0], artPt(56, R + 12)[1], 2.3, -0.9)) + '</g>');
+        },
+        // حلقة فضية: معدن كروم (HTML)، خط ذهب داخلي وخارجي، 8 ألماسات تلمع على الخط الخارجي، بوكيه ولمعتين
+        silver: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R + 1.4, gems = '', i, off = o.off;
+            for (i = 0; i < 8; i++) { var g = artPt(i * 45 + 22.5, R + 3.5); gems += artGem(P, g[0], g[1], 0.95, i * 45 + 22.5 + 90, n2(-i * 0.4)); }
+            var a = artPt(-58, R), b = artPt(14, R);
+            return '<div class="ao-metal"><i class="m-base"></i><i class="m-tint"></i><i class="m-bevel"></i><i class="m-shine"></i></div>' +
+                svgWrap('<defs>' + artDefs(P, o.ac) + '</defs>' + (off.bokeh ? '' : artBokeh(P, 22, R + 5, R + 13, 70)) +
+                    (off.gold ? '' : artGoldLine(P, R + 3.5, 0.3, 8, 0) + artGoldLine(P, R - 2.4, 0.24, 10, -5)) + (off.gem ? '' : gems) +
+                    (off.spark ? '' : artSpark(P, a[0], a[1], 12, 0) + artSpark(P, b[0], b[1], 8, -1.4)));
+        },
+        // غصن ورق: دائرة كاملة من ورق بلمعة صدف وأطراف ذهبية، لؤلؤ على الغصن، وخط ذهب داخلي — والكل يدور ببطء
+        vine: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R, leaves = '', pearls = '', buds = '', i, N = 30, rs = R + 1.6, off = o.off;
+            function bud(q, r) {
+                return '<g transform="translate(' + q[0] + ' ' + q[1] + ') rotate(' + n2(r) + ')"><ellipse rx="1.15" ry="2.2" fill="url(#' + P + 'lf)"/><path d="M0 2.1L0 3.6" stroke="url(#' + P + 'au)" stroke-width=".35"/></g>';
+            }
+            for (i = 0; i < N; i++) {
+                var ang = i * 360 / N, side = i % 2 ? 1 : -1;
+                var base = artPt(ang, rs + 0.3 + (i % 3) * 0.35);
+                var sc = 0.74 + ((i * 5) % 4) * 0.13;
+                leaves += artLeaf(P, base[0], base[1], ang + side * (32 + (i % 3) * 8), sc, n2(-i * 0.29), { outline: i % 4 === 3, op: i % 5 === 2 ? 0.6 : 0 });
+                if (i % 3 === 1) { var pq = artPt(ang + 6, rs); pearls += artPearl(P, pq[0], pq[1], 0.62); }
+                if (i % 6 === 4) { var bq = artPt(ang + 4, rs + 3.6); buds += bud(bq, ang + 90); }
+            }
+            return svgWrap('<defs>' + artDefs(P, o.ac) +
+                '<radialGradient id="' + P + 'rim"><stop offset=".86" stop-color="#fff" stop-opacity="0"/><stop offset=".955" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity=".62"/></radialGradient>' +
+                '<linearGradient id="' + P + 'lf"><stop offset="0" stop-color="#fff" stop-opacity=".98"/><stop offset=".45" stop-color="#f6eedd" stop-opacity=".92"/>' +
+                '<stop offset=".8" stop-color="currentColor" stop-opacity=".7"/><stop offset="1" stop-color="#e2c27e" stop-opacity=".85"/></linearGradient></defs>' +
+                '<circle class="ao-breathe" cx="50" cy="50" r="' + n2(R + 0.5) + '" fill="url(#' + P + 'rim)"/>' + artGlowRing(R, 0.9) + (off.gold ? '' : artGoldLine(P, R - 1.5, 0.24, 9, 0)) +
+                '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 40s)"><circle cx="50" cy="50" r="' + rs + '" fill="none" stroke="' + (off.gold ? '#fff' : 'url(#' + P + 'au)') + '" stroke-width=".7" opacity=".95"/>' +
+                leaves + buds + (off.pearl ? '' : pearls) + '</g>');
+        },
+        // زخارف تدور: خط ذهب عليه 12 لؤلؤة تلف بعكس اللمعات، ولمعات عدسة تلف وتومض
+        orbit: function (o) {
+            var P = 'ao' + (++artSeq) + '-', R = ART_R + 0.6, s = '', pearls = '', i, off = o.off;
+            [[45, 12, 0], [135, 8, -0.8], [225, 11, -1.5], [315, 8, -0.4]].forEach(function (k) { var q = artPt(k[0], R + 2.6); s += artSpark(P, q[0], q[1], k[1], k[2]); });
+            for (i = 0; i < 12; i++) { var q = artPt(i * 30 + 15, R + 2.6); pearls += artPearl(P, q[0], q[1], 0.85); }
+            return svgWrap('<defs>' + artDefs(P, o.ac) + '</defs>' + (off.gold ? '' : artGoldLine(P, R + 2.6, 0.3, 8, 0)) +
+                (off.pearl ? '' : '<g class="ao-rot ao-rev" style="animation-duration:calc(var(--vk,1) * 36s)">' + pearls + '</g>') +
+                (off.spark ? '' : '<g class="ao-rot" style="animation-duration:calc(var(--vk,1) * 14s)">' + s + '</g>'));
+        }
+    };
+    /** العناصر اللي تنطفي/تشتغل بكل رسمة (فورم المحرر يعرض بس اللي موجود بالإطار المختار). */
+    var FRAME_FX_LABELS = { spark: 'لمعات', bokeh: 'ضوء ناعم', gold: 'خطوط ذهب', gem: 'ألماس', pearl: 'لؤلؤ' };
+    var FRAME_FX = { flare: ['spark', 'bokeh', 'gold'], silver: ['spark', 'bokeh', 'gold', 'gem'], vine: ['gold', 'pearl'], orbit: ['spark', 'pearl', 'gold'] };
+    var FRAME_SPEEDS = [{ label: 'هادية', value: 1.7 }, { label: 'عادية', value: 1 }, { label: 'سريعة', value: 0.6 }];
+    /** وردة من 8 بتلات (حواف مموجة) بحجم المربع كامل. */
+    function rosePolygon() {
+        var pts = [];
+        for (var i = 0; i < 96; i++) {
+            var t = i / 96 * Math.PI * 2;
+            var r = 50 * (0.84 + 0.16 * Math.abs(Math.cos(4 * t)));
+            pts.push((50 + r * Math.cos(t)).toFixed(1) + '% ' + (50 + r * Math.sin(t)).toFixed(1) + '%');
+        }
+        return 'polygon(' + pts.join(',') + ')';
+    }
+    /**
+     * صورة الداعم بإطارها (للبث والمحرر): غلاف بالشكل واللون ← إطار (vav-f) ← الصورة (vav-i).
+     * part = { sh, fr, c } ، content = عنصر الصورة (أو الحرف الأول).
+     */
+    function avatarFrame(part, content) {
+        var frm = part.fr || 'ring';
+        if (!AVATAR_FRAMES.some(function (f) { return f.key === frm; })) frm = 'ring'; // «ورود» انشال — المحفوظ قبل يرجع إطار عادي
+        var fdef = AVATAR_FRAMES.filter(function (f) { return f.key === frm; })[0] || {};
+        var shp = fdef.round ? avatarShape('circle') : avatarShape(part.sh);
+        var w = el('div', 'agp-so-vav fr-' + frm);
+        w.style.color = part.c || '#fff';
+        // التخصيص: fspd = سرعة الحركة (أكبر = أبطأ)، fac = لون الزخارف، foff = عناصر مطفية
+        var spd = Number(part.fspd) > 0 ? clamp(Number(part.fspd), 0.3, 3) : 1;
+        if (spd !== 1) w.style.setProperty('--vk', String(spd));
+        var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
+        [vf, vi].forEach(function (q) { if (shp.cp) q.style.clipPath = q.style.webkitClipPath = shp.cp; else q.style.borderRadius = shp.br; });
+        if (frm === 'spin') { vf.appendChild(el('i', 'vav-base')); vf.appendChild(el('i', 'vav-spin')); } // لون خفيف + الضوء اللي يلف (والصورة فوقهم)
+        if (content) vi.appendChild(content);
+        vf.appendChild(vi);
+        if (frm === 'pulse') {
+            // موجتين ضوء بنفس شكل الصورة تكبر وتتلاشى (ورا الإطار)
+            [0, 1].forEach(function (k) {
+                var rp = el('i', 'vav-rip');
+                if (shp.cp) rp.style.clipPath = rp.style.webkitClipPath = shp.cp; else rp.style.borderRadius = shp.br;
+                if (k) rp.style.animationDelay = '-1.3s';
+                w.appendChild(rp);
+            });
+        }
+        w.appendChild(vf);
+        if (FRAME_ART[frm]) {
+            var art = el('div', 'vav-art');
+            var offMap = {};
+            (Array.isArray(part.foff) ? part.foff : []).forEach(function (k) { offMap[k] = true; });
+            art.innerHTML = FRAME_ART[frm]({ off: offMap, ac: part.fac || null });
+            w.appendChild(art);
+        }
+        return w;
+    }
     function heartPolygon() {
         var pts = [];
         for (var i = 0; i < 40; i++) {
@@ -2474,16 +2681,13 @@
             var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
             if (parts.avatar.on) {
                 // غلاف (الحركة والتوهّج) ← إطار بشكل الصورة (بلون الإطار) ← الصورة نفسها بنفس الشكل
-                var shp = avatarShape(parts.avatar.sh), frm = parts.avatar.fr || 'ring';
-                var pa = el('div', 'agp-so-vpart agp-so-vav fr-' + frm);
-                pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em;color:' + (parts.avatar.c || '#fff');
-                var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
-                [vf, vi].forEach(function (q) { if (shp.cp) q.style.clipPath = q.style.webkitClipPath = shp.cp; else q.style.borderRadius = shp.br; });
+                var pa = el('div', 'agp-so-vpart agp-so-vavw');
+                pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em';
                 partTiming(pa, parts.avatar, preview);
-                if (ev.avatar) vi.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
-                else vi.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
-                vf.appendChild(vi);
-                pa.appendChild(vf);
+                var face = ev.avatar
+                    ? img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); })
+                    : el('span', 'agp-so-vini', (ev.user || '?').charAt(0));
+                pa.appendChild(avatarFrame(parts.avatar, face));
                 box.appendChild(pa);
             }
             if (parts.name.on) {
@@ -4013,6 +4217,7 @@
         '@keyframes agp-so-p-down{0%{opacity:0;transform:translate(-50%,-110%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
         '@keyframes agp-so-p-out{to{opacity:0}}',
         // الصورة: الإطار (vav-f) بلون الإطار وبشكل الصورة، والصورة (vav-i) داخله بنفس الشكل
+        '.agp-so-vav{position:relative;width:100%;height:100%}',
         '.agp-so-vav .vav-f{position:absolute;inset:0;background:currentColor}',
         '.agp-so-vav .vav-i{position:absolute;inset:.085em;overflow:hidden;background:#2a2338;display:flex;align-items:center;justify-content:center}',
         '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f{background:transparent}',
@@ -4021,6 +4226,53 @@
         '.agp-so-vav.fr-shadow{filter:drop-shadow(0 .14em .35em rgba(0,0,0,.75))}',
         '.agp-so-vav.fr-glow{filter:drop-shadow(0 0 .14em currentColor) drop-shadow(0 0 .4em currentColor)}',
         '.agp-so-vav img{width:100%;height:100%;object-fit:cover;display:block}',
+        // الإطارات المتحركة — ضوء يلف: تدرّج مخروطي يدور داخل الإطار (الإطار يقصّه بشكل الصورة)
+        '.agp-so-vav.fr-spin .vav-f{background:#14101c;overflow:hidden}',
+        '.agp-so-vav.fr-spin .vav-base{position:absolute;inset:0;background:currentColor;opacity:.3}',
+        '.agp-so-vav.fr-spin .vav-spin{position:absolute;left:50%;top:50%;width:150%;height:150%;margin:-75% 0 0 -75%;background:conic-gradient(from 0deg,transparent 0 22%,currentColor 40%,#fff 48%,transparent 50% 72%,currentColor 90%,#fff 98%,transparent 100%);animation:agp-so-vspin calc(var(--vk,1) * 3.2s) linear infinite}',
+        '.agp-so-vav.fr-spin .vav-i{inset:.14em}',
+        '.agp-so-vav.fr-spin{filter:drop-shadow(0 0 .12em currentColor) drop-shadow(0 .1em .25em rgba(0,0,0,.6))}',
+        // نابض: الحدود تتوهّج وتهدى
+        '.agp-so-vav.fr-pulse .vav-i{inset:.1em}',
+        '.agp-so-vav.fr-pulse{animation:agp-so-vpulse calc(var(--vk,1) * 2.6s) ease-in-out infinite}',
+        '.agp-so-vav .vav-rip{position:absolute;inset:0;background:currentColor;opacity:0;animation:agp-so-vrip calc(var(--vk,1) * 2.6s) ease-out infinite}',
+        '@keyframes agp-so-vrip{0%{transform:scale(1);opacity:.42}100%{transform:scale(1.3);opacity:0}}',
+        // زخارف تدور: إطار رفيع بشكل الصورة، واللمعات فوقه
+        '.agp-so-vav.fr-orbit .vav-i{inset:.06em}',
+        '.agp-so-vav.fr-orbit{filter:drop-shadow(0 .08em .2em rgba(0,0,0,.6))}',
+        // الرسمات الدائرية (حلقة ضوء، فضية، غصن ورق): الصورة دائرة بدون إطار، والرسمة فوقها أكبر بـ25٪ من كل جهة
+        '.agp-so-vav.fr-flare .vav-f,.agp-so-vav.fr-silver .vav-f,.agp-so-vav.fr-vine .vav-f{background:transparent}',
+        '.agp-so-vav.fr-flare .vav-i,.agp-so-vav.fr-silver .vav-i,.agp-so-vav.fr-vine .vav-i{inset:0}',
+        '.agp-so-vav .vav-art{position:absolute;inset:-25%;pointer-events:none}',
+        '.agp-so-vav .vav-art svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 0 .05em currentColor)}',
+        // الحلقة الفضية: معدن من HTML (تدرّج دائري conic + قناع حلقة)، لون الإطار يصبغه (multiply)، ولمعة تلف (screen)
+        '.vav-art .ao-metal{position:absolute;inset:12.8%;filter:drop-shadow(0 .05em .12em rgba(0,0,0,.65))}',
+        '.vav-art .ao-metal i{position:absolute;inset:0;border-radius:50%;-webkit-mask:radial-gradient(closest-side,transparent 88.5%,#000 89.6%,#000 99%,transparent 100%);mask:radial-gradient(closest-side,transparent 88.5%,#000 89.6%,#000 99%,transparent 100%)}',
+        '.vav-art .m-base{background:conic-gradient(from 18deg,#f7f8fb,#9a9ea8 7%,#33353c 13%,#b9bdc6 19%,#fff 24%,#80848e 33%,#26272d 41%,#c9ccd4 51%,#fff 57%,#737781 67%,#2c2d33 76%,#dfe2e8 86%,#f7f8fb)}',
+        '.vav-art .m-tint{background:currentColor;mix-blend-mode:multiply;opacity:.55}',
+        '.vav-art .m-bevel{background:radial-gradient(closest-side,transparent 88.5%,rgba(0,0,0,.62) 89.6%,rgba(0,0,0,0) 92.5%,rgba(255,255,255,0) 95.5%,rgba(255,255,255,.8) 98.3%,rgba(0,0,0,.4) 99.6%)}',
+        '.vav-art .m-shine{background:conic-gradient(transparent 0 76%,rgba(255,255,255,0) 79%,rgba(255,255,255,.95) 84%,rgba(255,255,255,0) 89%,transparent 100%);mix-blend-mode:screen;animation:agp-so-vspin calc(var(--vk,1) * 4.2s) linear infinite}',
+        '.vav-art .ao-rot{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-vspin calc(var(--vk,1) * 16s) linear infinite}',
+        '.vav-art .ao-tw{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-atw calc(var(--vk,1) * 2.4s) ease-in-out infinite}',
+        '.vav-art .ao-shine{animation:agp-so-ashine calc(var(--vk,1) * 3.2s) linear infinite}',
+        '.vav-art .ao-gl{animation:agp-so-agl calc(var(--vk,1) * 2.4s) ease-in-out infinite}',
+        '.vav-art .ao-bk{animation:agp-so-abk calc(var(--vk,1) * 4.2s) ease-in-out infinite}',
+        '.vav-art .ao-gem{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-agem calc(var(--vk,1) * 3.2s) ease-in-out infinite}',
+        '.vav-art .ao-rev{animation-direction:reverse}',
+        '@keyframes agp-so-abk{0%,100%{opacity:.08}50%{opacity:.6}}',
+        '@keyframes agp-so-agem{0%,70%,100%{transform:scale(1);filter:none}80%{transform:scale(1.25);filter:drop-shadow(0 0 .6px #fff) drop-shadow(0 0 1.6px #fff)}}',
+        '.vav-art .ao-breathe{animation:agp-so-abr calc(var(--vk,1) * 3s) ease-in-out infinite}',
+        '.vav-art .ao-leaf{transform-box:fill-box;transform-origin:0% 50%;animation:agp-so-aleaf calc(var(--vk,1) * 3.4s) ease-in-out infinite}',
+        '.vav-art .ao-vine{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-avine calc(var(--vk,1) * 6s) ease-in-out infinite}',
+        '@keyframes agp-so-atw{0%,100%{transform:scale(.55) rotate(0);opacity:.55}50%{transform:scale(1.12) rotate(20deg);opacity:1}}',
+        '@keyframes agp-so-ashine{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}',
+        '@keyframes agp-so-agl{0%,100%{opacity:.15}50%{opacity:1}}',
+        '@keyframes agp-so-abr{0%,100%{opacity:.3;stroke-width:2.4}50%{opacity:.75;stroke-width:4}}',
+        '@keyframes agp-so-aleaf{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}',
+        '@keyframes agp-so-avine{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}',
+        '@keyframes agp-so-vspin{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-vpulse{0%,100%{filter:drop-shadow(0 0 .04em currentColor) drop-shadow(0 .1em .25em rgba(0,0,0,.6))}50%{filter:drop-shadow(0 0 .2em currentColor) drop-shadow(0 0 .55em currentColor)}}',
+        '@keyframes agp-so-vbreathe{0%,100%{transform:scale(.82) rotate(-8deg)}50%{transform:scale(1.08) rotate(8deg)}}',
         '.agp-so-vini{font-weight:800;font-size:1.1em;color:#fff}',
         '.agp-so-vname,.agp-so-vmsg{font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;line-height:1.3;text-shadow:0 .06em .22em rgba(0,0,0,.95),0 0 .6em rgba(0,0,0,.55)}',
         '.agp-so-vmsg{font-weight:700}',
@@ -4261,7 +4513,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, avatarFrame: avatarFrame, FRAME_FX: FRAME_FX, FRAME_FX_LABELS: FRAME_FX_LABELS, FRAME_SPEEDS: FRAME_SPEEDS, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
