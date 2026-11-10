@@ -1339,7 +1339,8 @@
     // أحداث Veyro بس (المحرر القديم overlay/ يعرض ALERT_EVENTS الأصلية بدونها)
     var ALERT_EVENTS_ALL = Object.assign({}, ALERT_EVENTS, {
         like: { label: 'التكبيس', title: 'تكبيس', icon: 'heart', msg: '{name} وصل {count} تكبيسة' },
-        subscribe: { label: 'الاشتراك', title: 'مشترك جديد', icon: 'star', msg: '{name} اشترك بالبث' },
+        // «أفضل معجب» (Super Fan بتيك توك): الكونكتور يحوّل superFanJoin وsubNotify لحدث subscribe
+        subscribe: { label: 'أفضل معجب', title: 'أفضل معجب جديد', icon: 'star', msg: '{name} صار من أفضل المعجبين' },
         // الدونيشن من Streamlabs (كريترز وغيره) — {amount} = $25، {message} = رسالة الداعم (لو مفعّلة)
         donation: { label: 'الدونيشن', title: 'دعم جديد', icon: 'dollar', msg: '{name} دعم بـ{amount}' }
     });
@@ -2131,7 +2132,7 @@
         return clamp(Number(it && it.video && it.video.d) || 0, 0, 60);
     }
     // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
-    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'اشترك بالبث', donation: 'دعم بـ{amount} {message}' };
+    var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'صار من أفضل المعجبين', donation: 'دعم بـ{amount} {message}' };
     /**
      * عناصر الأليرت بقيمها. it.partsTime = {t, e}: وقت ظهور واحد للصورة والاسم والرسالة كلها
      * (من خيار واحد بالمحرر) — لو موجود يغلب توقيت كل عنصر لحاله (القديم).
