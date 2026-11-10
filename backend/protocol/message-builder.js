@@ -51,6 +51,11 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.FOLLOW, { platform: platform, id: id, name: name });
     },
 
+    /** تكبيس (لايكات) — تيك توك يجمّعها بدفعات، count = عدد التكبيسات بالدفعة. */
+    buildLikeMessage: function (platform, id, name, count) {
+        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Number(count) || 1 });
+    },
+
     buildErrorMessage: function (platform, code, message) {
         return buildEnvelope(MESSAGE_TYPES.ERROR, { platform: platform, code: code, message: message });
     }

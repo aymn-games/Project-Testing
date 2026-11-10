@@ -9,6 +9,7 @@
  *   comment:    { platform, id, name, text, isFollower, avatarUrl, frame }
  *   gift:       { platform, id, name, giftName, giftId, giftValue, repeatCount }
  *   follow:     { platform, id, name }
+ *   like:       { platform, id, name, count }
  *   error:      { platform, code, message }
  */
 

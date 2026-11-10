@@ -3,7 +3,7 @@
  * idea whether the data is mocked or real (that's the backend's decision
  * in backend/platforms/connector-router.js). It opens one WebSocket to
  * the backend, sends connect/disconnect on request, and routes incoming
- * status/comment/gift/follow/error messages to the same AGP entry points
+ * status/comment/gift/follow/like/error messages to the same AGP entry points
  * documented in docs/BACKEND_ARCHITECTURE.md §10-12 — meaning once the
  * backend's tiktok-connector.js goes from stub to real implementation,
  * this file needs no changes at all.
@@ -113,6 +113,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('stream:followReceived', payload);
     }
 
+    // التكبيس (لايكات البث بدفعات): { id, name, count }
+    function handleIncomingLike(payload) {
+        AGP.events.emit('stream:likeReceived', payload);
+    }
+
     function handleIncomingStatus(payload) {
         if (!AGP.streamConnector || typeof AGP.streamConnector.reportStatus !== 'function') return;
         // Only access-denial messages (they carry a reason code) are meant for
@@ -151,6 +156,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             case 'comment': handleIncomingComment(envelope.payload); break;
             case 'gift': handleIncomingGift(envelope.payload); break;
             case 'follow': handleIncomingFollow(envelope.payload); break;
+            case 'like': handleIncomingLike(envelope.payload); break;
             case 'error': handleIncomingError(envelope.payload); break;
             default: AGP.log('TikTok Adapter: unknown message type from backend:', envelope.type);
         }

@@ -536,8 +536,10 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
       }
     },
 
-    // لايكات وشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
+    // اللايكات (التكبيس) تُرسل للمتصفح (stream:likeReceived — سباق الفورمولا) وتُسجَّل للإحصائيات.
+    // الشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
     onLike: function (data) {
+      if (!isOverlay) sendEnvelope(socket, builder.buildLikeMessage(platform, data.id, data.name, data.count));
       if (entry.statsUsername) liveSessionStats.recordLike(entry.statsUsername, connectionId, data);
     },
 

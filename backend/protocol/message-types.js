@@ -8,7 +8,8 @@
  * النصوص الحرفية ('comment', 'gift'...) في أكثر من مكان.
  *
  *   Browser → Backend (تحكّم فقط):  CONNECT, DISCONNECT
- *   Backend → Browser (بيانات/دورة حياة): STATUS, COMMENT, GIFT, FOLLOW, ERROR
+ *   Backend → Browser (بيانات/دورة حياة): STATUS, COMMENT, GIFT, FOLLOW, LIKE, ERROR
+ *   (LIKE أُضيف لاحقاً للتكبيس — سباق الفورمولا)
  * ==========================================================================
  */
 
@@ -21,6 +22,7 @@ var MESSAGE_TYPES = {
     COMMENT: 'comment',
     GIFT: 'gift',
     FOLLOW: 'follow',
+    LIKE: 'like',
     ERROR: 'error'
 };
 
