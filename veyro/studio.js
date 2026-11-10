@@ -2821,7 +2821,9 @@
                     sg.appendChild(sb);
                 });
                 gS.appendChild(row('شكل الصورة', sg, true));
-                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                var frRound = O.AVATAR_FRAMES.filter(function (f) { return f.key === (p.fr || 'ring'); })[0];
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true,
+                    frRound && frRound.round ? 'هذا الإطار دائري — الصورة تطلع دائرة معه، و«لون الإطار» = لون التوهّج' : 'المتحركة تمشي على شكل الصورة'));
             }
             gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
