@@ -127,7 +127,9 @@
     } else {
       r = { bg: svgUrl(assassin({ cloak: '#0d0d10', fold: '#1b1b20', rim: 'rgba(255,255,255,.35)', eye: '#ffffff', id: 'a' })) + ' ' + ART +
               ', ' + rays('rgba(255,255,255,.028)') + ', ' + dots('rgba(255,255,255,.04)') + ', #000',
-            frame: 'rgba(255,255,255,.14)', strip: '#000', word: '#fff', num: '#000', sh: '0 5px 0 #000, 0 12px 24px rgba(0,0,0,.7)', burst: '#ffffff' };
+            frame: 'rgba(255,255,255,.3)', strip: '#000', word: '#fff', num: '#000',
+            // حدود واضحة للصندوق الأسود عشان ما يذوب بخلفية الشاشة الغامقة
+            sh: '0 0 0 2.5px rgba(255,255,255,.55), 0 5px 0 #000, 0 12px 24px rgba(0,0,0,.7)', burst: '#ffffff' };
     }
     cache[k] = r;
     return r;

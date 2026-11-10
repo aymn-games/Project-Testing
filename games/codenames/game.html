@@ -248,8 +248,8 @@ input:focus{outline:none}
                     <span title="{{ v.name }}" style="position:relative;overflow:hidden;width:34px;height:34px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 15px 'Zain';color:#fff;background:{{ v.av }};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);margin-inline-start:-8px;animation:voteIn .25s cubic-bezier(.2,1.4,.4,1)">{{ v.ini }}<sc-if value="{{ v.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ v.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   </sc-for>
                 </div>
-                <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
-                  <span style="max-width:100%;font:900 {{ t.fs }}/1 'Zain';color:{{ t.wordC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.w }}</span>
+                <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;container-type:inline-size;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
+                  <span style="font:900 {{ t.fs }}/1.5 'Zain';color:{{ t.wordC }};white-space:nowrap">{{ t.w }}</span>
                 </div>
               </div>
             </sc-for>
@@ -658,8 +658,9 @@ const FALLBACK_WORDS = 'أسد نمر فيل زرافة حصان جمل قرد �
 const AR = s => String(s||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[\u064B-\u0652\u0640]/g,'').replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();
 const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; return AVC[h%AVC.length]; };
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
-// حجم خط الكلمة على البطاقة حسب طولها: القصيرة أكبر (تنقرى بالبث)، والطويلة تصغر شوي بدل ما تنقص بـ«…»
-const WORD_FS = w => { const n=[...String(w||'')].length; return (n<=5?44:n===6?42:n===7?40:n===8?38:36)+'px'; };
+// حجم خط الكلمة: القصيرة كبيرة (تنقرى بالبث)، وأي كلمة تصغر لحالها على عرض شريطها الفعلي (cqi = عرض الشريط)
+// فما تنقص ولا ينقطع منها شي مهما كان طولها أو حجم الشاشة. السطر 1.5 عشان النقاط والحروف النازلة تبان كاملة.
+const WORD_FS = w => { const n=Math.max(2,[...String(w||'')].length); return `min(44px, ${(92/(n*.62)).toFixed(1)}cqi)`; };
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
 // أوامر الشات: أي أرقام (عربية ٠-٩ / فارسية ۰-۹ / إنجليزية)، الرقم لازق بالكلمة أو مفصول، وفواصل (، , - و) بين الأرقام.
