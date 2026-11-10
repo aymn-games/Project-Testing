@@ -321,8 +321,14 @@ function recordGift(username, connectionId, data) {
   };
   s.recentGifts.push(g);
   noteGiftMedia(g);
-  pushEvent(s, 'gift', data, { gift: g.name, img: g.img, giftId: g.giftId, count: repeat, diamonds: diamonds });
+  pushEvent(s, 'gift', data, { gift: g.name, giftAr: giftArabicName(g.giftId), img: g.img, giftId: g.giftId, count: repeat, diamonds: diamonds });
   if (s.recentGifts.length > RECENT_GIFTS_MAX) s.recentGifts.splice(0, s.recentGifts.length - RECENT_GIFTS_MAX);
+}
+
+/** اسم الهدية بالعربي من كتالوج الهدايا ({gift} بنص الأليرت)، أو null. */
+function giftArabicName(id) {
+  if (!id) return null;
+  try { return require('../platforms/tiktok/gift-catalog').get().arabicName(id); } catch (e) { return null; }
 }
 
 function noteMedia(key, url) {
@@ -344,6 +350,10 @@ function noteGiftMedia(g) {
 function getMediaDataUrl(kind, id) {
   if (kind !== 'g') return Promise.resolve(null);
   var url = _mediaUrls.get('g:' + String(id || ''));
+  // هدية ما وصلت بالبث الحالي (مثل صور كتالوج الهدايا بمحرر Veyro): صورتها من الكتالوج
+  if (!url) {
+    try { var g = require('../platforms/tiktok/gift-catalog').get().get(id); url = g && g.image; } catch (e) { url = null; }
+  }
   return url ? cachedAvatar(url) : Promise.resolve(null);
 }
 

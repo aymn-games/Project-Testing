@@ -80,7 +80,7 @@
 
     var SECTIONS = [
         { key: 'library', label: 'مكتبتي', icon: 'library', title: 'مكتبتي', desc: 'أليرتاتك المحفوظة: ارفع الفيديو، فرّغ خلفيته، ويصير جاهز تستخدمه بأي شاشة.' },
-        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، اشتراك…' },
+        { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، أفضل معجب…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
         { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
@@ -94,7 +94,9 @@
         { key: 'layers', label: 'الطبقات', icon: 'layers', title: 'الطبقات', desc: 'كل عناصر الشاشة — فوق القائمة = فوق الشاشة.' },
         { key: 'screen', label: 'الرابط والإعدادات', icon: 'gear', title: 'الشاشة والرابط', desc: 'رابط الشاشة لتطبيق البث، والاتجاه والاسم.' }
     ];
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'icons', 'shapes'];
+    // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
+    // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -553,12 +555,58 @@
     /* ---------------- عناصر الإعدادات ---------------- */
 
     function row(label, control, col, sub) {
+        // أكثر من 3 خيارات ما توسع جنب العنوان — تنزل تحته بأعمدة متساوية
+        if (!col && control && control.classList && control.classList.contains('ob-pills') && control.children.length > 3) col = true;
         var r = el('div', 'ob-row' + (col ? ' col' : ''));
         var l = el('span', 'ob-label', label);
         if (sub) l.appendChild(el('small', null, sub));
         r.appendChild(l);
+        // شريط التمرير لحاله ما يبيّن القيمة — نحط جنبه رقمها ويتحدّث وأنت تسحب
+        if (control && control.classList && control.classList.contains('ob-range')) control = withValue(control);
         r.appendChild(control);
         return r;
+    }
+    /** قيمة الشريط: 0–1 = نسبة ٪، والباقي رقم بعدد خانات الخطوة. */
+    function rangeText(s) {
+        var v = Number(s.value), max = Number(s.max), step = Number(s.step) || 1;
+        if (Number(s.min) >= 0 && max <= 1) return Math.round(v * 100) + '٪';
+        var dec = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+        return String(Number(v.toFixed(dec)));
+    }
+    function withValue(s) {
+        var w = el('div', 'ob-rng');
+        var b = el('output', 'ob-rval', rangeText(s));
+        s.addEventListener('input', function () { b.textContent = rangeText(s); });
+        w.appendChild(s);
+        w.appendChild(b);
+        return w;
+    }
+
+    /*
+     * مجموعة إعدادات بعنوان (المحتوى، الشكل، الألوان…) تنطوي بالضغط على عنوانها.
+     * ترجع جسم المجموعة: الصفوف تنضاف له بدل اللوحة. حالة الطي تبقى لين تسكّر الصفحة.
+     */
+    var grpShut = {};
+    function group(box, title, sub) {
+        var key = (selectedId ? (find(selectedId) || {}).type : section) + ':' + title;
+        var g = el('section', 'ob-grp' + (grpShut[key] ? ' shut' : ''));
+        var h = button('', 'ob-grp-h', function () {
+            var shut = g.classList.toggle('shut');
+            grpShut[key] = shut;
+            h.setAttribute('aria-expanded', String(!shut));
+        });
+        h.setAttribute('aria-expanded', String(!grpShut[key]));
+        var t = el('span', 'ob-grp-t', title);
+        if (sub) t.appendChild(el('small', null, sub));
+        h.appendChild(t);
+        var chev = el('i', 'ob-grp-c');
+        chev.innerHTML = svg('<path d="M15.4 7.4L14 6l-6 6 6 6 1.4-1.4L10.8 12z"/>');
+        h.appendChild(chev);
+        var b = el('div', 'ob-grp-b');
+        g.appendChild(h);
+        g.appendChild(b);
+        box.appendChild(g);
+        return b;
     }
     function pills(options, current, onPick, multi) {
         var g = el('div', 'ob-pills');
@@ -917,6 +965,7 @@
         requestAnimationFrame(function () { if (keep && pb.isConnected) pb.scrollTop = keep; });
         if (it) {
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
+            panel.appendChild(itemBar(it));
             propsPane(it, pb);
         } else {
             var sec = SECTIONS.filter(function (s) { return s.key === section; })[0] || SECTIONS[0];
@@ -1108,14 +1157,28 @@
         else if (it.type === 'lastdonation') lastDonationProps(it, box);
         else if (it.type === 'tts') ttsProps(it, box);
         else if (it.type === 'music') musicProps(it, box);
-        var a = el('div', 'ob-actions');
-        a.appendChild(button('لفوق', 'ob-btn ghost', function () { moveItem(it, 1); }));
-        a.appendChild(button('لتحت', 'ob-btn ghost', function () { moveItem(it, -1); }));
-        a.appendChild(button('تكرار', 'ob-btn ghost', function () { duplicate(it); }));
-        a.appendChild(button(it.hidden ? 'إظهار' : 'إخفاء', 'ob-btn ghost', function () { it.hidden = !it.hidden; commit(); renderCanvas(); renderPanel(); }));
-        a.appendChild(button('حذف', 'ob-btn danger', function () { removeItem(it); }));
-        box.appendChild(a);
         box.appendChild(el('div', 'ob-hint', 'اسحبه بالمعاينة لأي مكان، وكبّره من النقطة اللي بزاويته. بالكيبورد: الأسهم للتحريك، Delete للحذف، Ctrl+D للتكرار.'));
+    }
+
+    /** أزرار العنصر (ترتيب، تكرار، إخفاء، حذف): ثابتة فوق اللوحة، ما تحتاج تنزل لآخرها. */
+    function itemBar(it) {
+        var bar = el('div', 'ob-ibar');
+        function b(label, icon, cls, fn) {
+            var x = button('', 'ob-ibar-b' + (cls ? ' ' + cls : ''), fn);
+            x.innerHTML = svg(icon);
+            x.appendChild(el('span', null, label));
+            x.title = label;
+            bar.appendChild(x);
+        }
+        b('لفوق', '<path d="M12 4l7 7-1.4 1.4L13 7.8V20h-2V7.8l-4.6 4.6L5 11z"/>', '', function () { moveItem(it, 1); });
+        b('لتحت', '<path d="M12 20l-7-7 1.4-1.4 4.6 4.6V4h2v12.2l4.6-4.6L19 13z"/>', '', function () { moveItem(it, -1); });
+        b('تكرار', UI.dup, '', function () { duplicate(it); });
+        b(it.hidden ? 'إظهار' : 'إخفاء', it.hidden
+            ? '<path d="M2.8 4.2l1.4-1.4 17 17-1.4 1.4-3.2-3.2A10.6 10.6 0 0112 19C6.5 19 2.7 15 1 12c.8-1.5 2-3.2 3.7-4.6zM12 5c5.5 0 9.3 4 11 7a15 15 0 01-3 3.8L16.9 12.7A5 5 0 0011.3 7.1L9 4.8C10 5 11 5 12 5z"/>'
+            : '<path d="M12 5c5.5 0 9.3 4 11 7-1.7 3-5.5 7-11 7S2.7 15 1 12c1.7-3 5.5-7 11-7zm0 3a4 4 0 100 8 4 4 0 000-8z"/>',
+            it.hidden ? 'on' : '', function () { it.hidden = !it.hidden; commit(); renderCanvas(); renderPanel(); });
+        b('حذف', UI.trash, 'bad', function () { removeItem(it); });
+        return bar;
     }
 
     function textProps(it, box) {
@@ -1159,22 +1222,27 @@
             else { delete it.banner; update(it, 'banner', undefined, true); }
         }), true, 'النص يطلع داخل لوحة وفوقها شخصيات'));
         if (!on) return;
+        var root = box;
+        box = group(root, 'اللوحة');
         box.appendChild(row('الخامة', pills([{ label: 'مخمل', value: 'velvet' }, { label: 'كتان', value: 'linen' }, { label: 'خشب', value: 'wood' }, { label: 'جلد', value: 'leather' }, { label: 'ورق فاخر', value: 'paper' }, { label: 'ساتان', value: 'satin' }], it.bnMat || 'velvet', function (v) { delete it.bnColor; update(it, 'bnMat', v, true); }), true, 'شكل اللوحة الحقيقي: ملمسها وإضاءتها وتفاصيلها'));
         box.appendChild(row('لمسة النص', pills([{ label: 'الأصلي', value: '' }, { label: 'محفور', value: 'deboss' }, { label: 'بارز', value: 'emboss' }, { label: 'ذهب', value: 'foil' }, { label: 'عادي', value: 'plain' }], it.bnTextFx || '', function (v) { if (v) update(it, 'bnTextFx', v, true); else { delete it.bnTextFx; update(it, 'bnTextFx', undefined, true); } }), true, 'ذهب = رقائق ذهبية (يتجاهل لون النص)'));
+        box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
+        box.appendChild(row('عرض اللوحة', slider(0, 30, 0.5, Number(it.bnWidth) || 0, function (v) { update(it, 'bnWidth', v); }), false, '0 = على قد النص'));
+        box = group(root, 'الشخصيات');
         box.appendChild(row('الشخصيات', pills([{ label: 'الاثنين', value: 'both' }, { label: 'الأرنب', value: 'bunny' }, { label: 'القطة', value: 'kitten' }, { label: 'بدون', value: 'none' }], it.bnChars || 'both', function (v) { update(it, 'bnChars', v, true); }), true, 'دمى قطيفة'));
         if (it.bnChars !== 'none') {
             box.appendChild(row('مكانهم', pills([{ label: 'يمين', value: 'right' }, { label: 'وسط', value: 'center' }, { label: 'يسار', value: 'left' }], it.bnPos || 'center', function (v) { update(it, 'bnPos', v, true); }), true));
             box.appendChild(row('حركتهم', pills([{ label: 'يطلّون ويرمشون', value: 'peek' }, { label: 'ثابتين', value: 'still' }], it.bnCharAnim || 'peek', function (v) { update(it, 'bnCharAnim', v, true); }), true));
         }
+        box = group(root, 'الحركة');
         box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'بريق', value: 'sparkle' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg === 'dots' ? 'sparkle' : it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
         box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'كتابة', value: 'type' }, { label: 'ظهور', value: 'pop' }, { label: 'طفو', value: 'float' }], it.bnMotion || 'static', function (v) { update(it, 'bnMotion', v, true); }), true, 'شريط = يمشي، كتابة = ينكتب وينمسح، ظهور = ينط كل شوي'));
+        box = group(root, 'الألوان');
         optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = لون الخامة');
         if (['velvet', 'linen', 'leather'].indexOf(it.bnMat || 'velvet') !== -1) optColor(it, box, 'bnStitch', 'لون الخياطة');
         if (it.bnChars !== 'none' && it.bnChars !== 'kitten') optColor(it, box, 'bnBunny', 'لون الأرنب', 'الأصلي = أبيض');
         if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي (شقراء)');
-        box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
-        box.appendChild(row('عرض اللوحة', slider(0, 30, 0.5, Number(it.bnWidth) || 0, function (v) { update(it, 'bnWidth', v); }), false, '0 = على قد النص'));
-        box.appendChild(el('div', 'ob-hint', 'لون النص وحجمه من «النص»، والخط من «الخط»، وحركة اللوحة كاملة من «الحركة».'));
+        root.appendChild(el('div', 'ob-hint', 'لون النص وحجمه من «النص»، والخط من «الخط»، وحركة اللوحة كاملة من «الحركة».'));
     }
 
     function animRows(it, box) {
@@ -1197,7 +1265,7 @@
         box.appendChild(row(label, w, true, sub));
     }
 
-    function throneProps(it, box) {
+    function throneProps(it, root, box) {
         var all = Object.keys(O.SECTIONS);
         var cur = (Array.isArray(it.sections) && it.sections.length ? it.sections : [it.section || 'likers']).filter(function (k) { return O.SECTIONS[k]; });
         // اختيار سريع: الداعمين / المكبّسين / الاثنين / الكل (وتحت «يعرض» للتحكم الكامل)
@@ -1273,6 +1341,7 @@
             nw.appendChild(ni);
             box.appendChild(row('عدد الأشخاص', nw, true, 'من 1 لين 10'));
         }
+        box = group(root, 'الإطار');
         var frameOpts = Object.keys(O.THRONE_FRAMES).map(function (k) { return { label: O.THRONE_FRAMES[k].label, value: k }; });
         // «الفراشات» للتوب 3 بس
         if (stack) frameOpts = [{ label: 'حلقة دوّارة', value: 'ring' }].concat(frameOpts.filter(function (o) { return !O.THRONE_FRAMES[o.value].code; }), [{ label: 'بدون', value: 'none' }]);
@@ -1314,6 +1383,7 @@
             optColor(it, box, 'rankText', 'لون رقم الترتيب', 'الرقم داخل الدائرة اللي على الإطار');
             optColor(it, box, 'coinColor', 'لون العملة', 'الافتراضي ذهبي');
         } else if (O.THRONE_FRAMES[fk]) box.appendChild(row('لون الإطار والتوهّج', fw, true, 'الرسمة والضوء اللي يلف والشرار حول الصور — أو اختر أي لون'));
+        box = group(root, 'الألوان');
         box.appendChild(row('ألوان المراكز', pills([{ label: 'ذهبي وفضي وبرونزي', value: 'medal' }, { label: 'لون واحد', value: 'single' }, { label: 'مخصص', value: 'custom' }], it.palette || 'medal', function (v) {
             if (v === 'custom' && !Array.isArray(it.rankColors)) it.rankColors = ['#ffd54a', '#eef2f7', '#ffb27a'];
             update(it, 'palette', v, true);
@@ -1331,14 +1401,16 @@
         optColor(it, box, 'nameColor', 'لون الاسم');
         optColor(it, box, 'numColor', 'لون الرقم', 'عدد التكبيسات أو الدعم');
         optColor(it, box, 'pillColor', 'خلفية الكبسولة', 'الكبسولة اللي فيها العدد');
+        box = group(root, 'العنوان والحجم');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
         if (stack) box.appendChild(row('التباعد', slider(0, 2, 0.02, it.spacing == null ? (fk === 'pegasus' ? 0.95 : fk === 'crystal' ? 0.6 : fk === 'angel' ? 0.55 : 0.32) : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين البطاقات'));
         else box.appendChild(row('التباعد', slider(-0.8, 5, 0.05, it.spacing == null ? 0.15 : it.spacing, function (v) { update(it, 'spacing', v); }), false, 'المسافة بين الثلاثة'));
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }
 
-    function topProps(it, box) {
+    function topProps(it, root) {
         var designs0 = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
+        var box = group(root, 'التصميم والمحتوى');
         if (it.design === 'throne' || it.design === 'stack') {
             box.appendChild(row('التصميم', pills(opts(designs0), it.design, function (v) {
                 if (v === it.design) return;
@@ -1348,7 +1420,7 @@
                 update(it, 'design', v, true);
                 O.refreshStats();
             }), true));
-            throneProps(it, box);
+            throneProps(it, root, box);
             return;
         }
         box.appendChild(row('القسم', pills(sectionOpts(), it.section, function (v) {
@@ -1374,10 +1446,11 @@
             update(it, 'top', v, true);
             O.refreshStats();
         }), false, curD.max ? 'الحد ' + curD.max : ''));
-        sizeColor(it, box, 1.5, 9);
+        sizeColor(it, group(root, 'الحجم واللون'), 1.5, 9);
     }
 
-    function goalProps(it, box) {
+    function goalProps(it, root) {
+        var box = group(root, 'الهدف');
         box.appendChild(row('يحسب', pills(metricOpts(['likes', 'diamonds', 'donations', 'follows', 'gifts', 'shares', 'comments']), it.metric, function (v) {
             if (!it.title || /^هدف /.test(it.title)) it.title = 'هدف ' + O.METRICS[v].name;
             update(it, 'metric', v, true);
@@ -1391,17 +1464,18 @@
         num.addEventListener('input', function () { var v = Math.floor(Number(num.value)); if (v > 0) update(it, 'target', v); });
         box.appendChild(row('الهدف', num));
         box.appendChild(row('لما يوصل ينتقل للي بعده', toggle(it.autoNext, function (v) { update(it, 'autoNext', v); })));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, it.design === 'orb' ? 'فاضي = بدون عنوان' : ''));
+        box = group(root, 'الشكل');
         box.appendChild(row('التصميم', pills(opts(O.GOAL_DESIGNS.concat(O.VEYRO_GOAL_DESIGNS)), it.design || 'bar', function (v) {
             if (v === 'orb' && !it.palette) { it.palette = 'lavender'; it.speed = 'normal'; it.bubbles = true; }
             update(it, 'design', v, true);
-        })));
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, it.design === 'orb' ? 'فاضي = بدون عنوان' : ''));
-        if (it.design === 'orb') { orbProps(it, box); return; }
+        }), true));
+        if (it.design === 'orb') { orbProps(it, root, box); return; }
         sizeColor(it, box, 1.5, 9);
     }
 
     /** «كرة القمر»: الألوان (لوحات جاهزة + كل لون لحاله)، سرعة الموج، الفقاعات، والأرقام. */
-    function orbProps(it, box) {
+    function orbProps(it, root, box) {
         box.appendChild(el('div', 'ob-hint', 'تتعبّى حسب ' + (it.metric === 'diamonds' ? 'دعم تيك توك (العملات)' : O.METRICS[it.metric] ? O.METRICS[it.metric].name : '') + '. دعم الدونيشن يتربط قريباً مع Streamlabs.'));
         var pg = el('div', 'vo-pals');
         Object.keys(O.ORB_PALETTES).forEach(function (k) {
@@ -1414,7 +1488,8 @@
             b.appendChild(el('span', null, pal.label));
             pg.appendChild(b);
         });
-        box.appendChild(row('الألوان', pg, true));
+        box = group(root, 'الألوان');
+        box.appendChild(row('اللوحة الجاهزة', pg, true));
         var cur = O.orbColors(it);
         function colorPick(label, key) {
             var w = el('label', 'vo-cp');
@@ -1429,6 +1504,7 @@
         var cg = el('div', 'vo-cps');
         [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], ['الحلقة', 'ring'], ['التوهّج', 'glow'], ['القمر', 'moon'], ['الغيوم', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
         box.appendChild(row('كل لون لحاله', cg, true, 'يبدأ من اللوحة اللي اخترتها'));
+        box = group(root, 'الحركة والأرقام');
         box.appendChild(row('حركة الموج', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], it.speed || 'normal', function (v) { update(it, 'speed', v, true); })));
         box.appendChild(row('فقاعات', toggle(it.bubbles !== false, function (v) { update(it, 'bubbles', v); })));
         box.appendChild(row('الأرقام تحت', toggle(it.showNums !== false, function (v) { update(it, 'showNums', v, true); })));
@@ -1443,22 +1519,26 @@
         })(), true, 'يورّيك حركة السائل وهو يتعبّى (بالمعاينة بس)'));
     }
 
-    function counterProps(it, box) {
+    function counterProps(it, root) {
+        var box = group(root, 'المحتوى');
         var cur2 = Array.isArray(it.metrics) ? it.metrics : [];
         box.appendChild(row('العدّادات', pills(metricOpts(Object.keys(O.METRICS)), cur2, function (v) {
             var next = cur2.indexOf(v) === -1 ? cur2.concat([v]) : cur2.filter(function (m) { return m !== v; });
             if (!next.length) return;
             update(it, 'metrics', next, true);
         }, true), true));
-        box.appendChild(row('التصميم', pills(opts(O.COUNTER_DESIGNS), it.design || 'pills', function (v) { update(it, 'design', v, true); })));
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري'));
+        box = group(root, 'الشكل');
+        box.appendChild(row('التصميم', pills(opts(O.COUNTER_DESIGNS), it.design || 'pills', function (v) { update(it, 'design', v, true); }), true));
         sizeColor(it, box, 1.5, 9);
     }
 
-    function jarProps(it, box) {
+    function jarProps(it, root) {
+        var box = group(root, 'المحتوى');
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري'));
         box.appendChild(row('تحت الوعاء', pills([{ label: 'مجموع الماس', value: 'diamonds' }, { label: 'عدد الهدايا', value: 'gifts' }, { label: 'بدون', value: 'none' }], it.counter || 'diamonds', function (v) { update(it, 'counter', v, true); }), true));
-        sizeColor(it, box, 1, 8);
+        sizeColor(it, group(root, 'الحجم واللون'), 1, 8);
+        box = root;
         var demo = el('div', 'ob-actions');
         demo.appendChild(button('جرّب سقوط هدايا', 'ob-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'ob-btn ghost', function () { O.jarClearDemo(); }));
@@ -1641,7 +1721,8 @@
         fontPick(it, box, 'amtFont', 'خط المبلغ');
     }
 
-    function lastDonationProps(it, box) {
+    function lastDonationProps(it, root) {
+        var box = group(root, 'التصميم والمحتوى');
         var des = ['line', 'split', 'wave', 'flutter'].indexOf(it.design) !== -1 ? it.design : 'card';
         box.appendChild(row('التصميم', pills([{ label: 'بطاقة', value: 'card' }, { label: 'خط متوهّج', value: 'line' }, { label: 'كبسولة مقسومة', value: 'split' }, { label: 'شريط الموج', value: 'wave' }, { label: 'شريط الفراشات', value: 'flutter' }], des, function (v) {
             update(it, 'design', v, true);
@@ -1651,6 +1732,7 @@
         }), true, 'شريط = يمشي، تبديل = الاسم ثم المبلغ، كتابة = ينكتب وينمسح'));
         if (des !== 'card') {
             // التصاميم البسيطة: الاسم والمبلغ بس، وكل ألوانها تتغيّر
+            box = group(root, 'الألوان');
             optColor(it, box, 'nameColor', 'لون الاسم');
             optColor(it, box, 'amtColor', 'لون المبلغ');
             if (des === 'wave' || des === 'flutter') {
@@ -1667,19 +1749,20 @@
                 optColor(it, box, 'boxColor', 'خلفية الاسم', 'الافتراضي غامق');
                 optColor(it, box, 'dotColor', 'لون النقطة', 'اللي تومض جنب المبلغ');
             }
-            ldStyleRows(it, box, des);
-            box.appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
-            box.appendChild(streamlabsCard());
+            ldStyleRows(it, group(root, 'الأيقونات والخطوط'), des);
+            group(root, 'الحجم').appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
+            root.appendChild(streamlabsCard());
             return;
         }
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
+        box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
+        box = group(root, 'الألوان');
         optColor(it, box, 'nameColor', 'لون الاسم');
         optColor(it, box, 'amtColor', 'لون المبلغ', 'الأصلي = نفس «اللون» تحت');
         optColor(it, box, 'boxColor', 'خلفية البطاقة', 'الأصلي = غامق');
-        ldStyleRows(it, box, 'card');
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
-        box.appendChild(row('رسالة الداعم', toggle(it.showMessage, function (on) { update(it, 'showMessage', on); }), false, 'الرسالة اللي يكتبها الداعم تطلع على البث — مقفلة افتراضياً'));
-        sizeColor(it, box, 1, 8);
-        box.appendChild(streamlabsCard());
+        ldStyleRows(it, group(root, 'الأيقونات والخطوط'), 'card');
+        sizeColor(it, group(root, 'الحجم واللون'), 1, 8);
+        root.appendChild(streamlabsCard());
     }
 
     /* ---------------- أدوات الصوت: القارئ الصوتي ومشغّل الأغاني ---------------- */
@@ -1704,22 +1787,27 @@
         box.appendChild(row('مستوى الصوت', slider(0, 1, 0.05, v, function (x) { update(it, 'volume', x); })));
     }
 
-    function ttsProps(it, box) {
+    function ttsProps(it, root) {
+        var box = group(root, 'التشغيل');
         enabledRow(it, box, 'تشغيل القارئ');
         box.appendChild(row('الصوت', pills([{ label: 'نسائي', value: 'f' }, { label: 'رجالي', value: 'm' }], it.voice === 'm' ? 'm' : 'f', function (v) { update(it, 'voice', v, true); })));
         box.appendChild(row('السرعة', pills([{ label: 'بطيء', value: 0.8 }, { label: 'عادي', value: 1 }, { label: 'سريع', value: 1.25 }], Number(it.rate) || 1, function (v) { update(it, 'rate', v, true); })));
         volumeRow(it, box, 0.9);
+        box = group(root, 'وش يقرأ');
         box.appendChild(row('يقرأ الاسم', toggle(it.readName !== false, function (on) { update(it, 'readName', on); }), false, '«فهد يقول: …» قبل الرسالة'));
         box.appendChild(row('أقل طول', numInput(it.minLen || 2, 1, 50, '2', function (n) { update(it, 'minLen', n || 2); }), false, 'الرسائل الأقصر ما تنقرى'));
         box.appendChild(row('أقصى طول', numInput(it.maxLen || 200, 10, 200, '200', function (n) { update(it, 'maxLen', n || 200); }), false, 'الأطول تنقص'));
+        box = group(root, 'الفلترة');
         box.appendChild(row('تجاهل الأوامر', toggle(it.skipCommands !== false, function (on) { update(it, 'skipCommands', on); }), false, 'الرسائل اللي تبدأ بـ!'));
         box.appendChild(row('تجاهل الروابط', toggle(it.skipLinks !== false, function (on) { update(it, 'skipLinks', on); })));
         var banned = Array.isArray(it.banned) ? it.banned.join('، ') : String(it.banned || '');
         box.appendChild(row('كلمات ممنوعة', textInput(banned, 600, function (v) {
             update(it, 'banned', v.split(/[,،\n]/).map(function (w) { return w.trim(); }).filter(Boolean).slice(0, 60));
         }, true), true, 'افصل بينها بفاصلة — الرسالة اللي فيها وحدة منها ما تنقرى'));
+        box = group(root, 'الشكل');
         box.appendChild(row('فقاعة الرسالة', toggle(it.bubble !== false, function (on) { update(it, 'bubble', on); }), false, 'تعرض الاسم والرسالة وقت القراءة'));
         sizeColor(it, box, 1, 8);
+        box = root;
         var a = el('div', 'ob-actions');
         a.appendChild(button('جرّب على شاشة البث', 'ob-btn primary', function () { tryAudio(it, 'tts', 'التجربة بتنقرى بشاشة البث بعد ثواني…'); }));
         box.appendChild(a);
@@ -1745,12 +1833,16 @@
         }).catch(function () { toast('ما انحفظ المفتاح — تأكد من الاتصال'); });
     }
 
-    function musicProps(it, box) {
+    function musicProps(it, root) {
+        var box = group(root, 'التشغيل');
         enabledRow(it, box, 'تشغيل المشغّل');
+        volumeRow(it, box, 0.6);
+        box = group(root, 'أوامر الشات');
         box.appendChild(row('أمر التشغيل', textInput(it.playCmd || '!تشغيل', 20, function (v) { update(it, 'playCmd', v.trim() || '!تشغيل'); }), false, 'المشاهد يكتبه وبعده اسم الأغنية'));
         box.appendChild(row('أمر التخطي', textInput(it.skipCmd || '!تخطي', 20, function (v) { update(it, 'skipCmd', v.trim() || '!تخطي'); }), false, 'يقفل الأغنية الحالية على طول'));
         box.appendChild(row('أمر الصوت', textInput(it.volCmd || '!صوت', 20, function (v) { update(it, 'volCmd', v.trim() || '!صوت'); }), false, 'مثال: ' + (it.volCmd || '!صوت') + '30 — من 0 لـ100'));
         var whoOpts = [{ label: 'الكل', value: 'all' }, { label: 'المشرفين', value: 'mods' }, { label: 'أشخاص معيّنين', value: 'list' }, { label: 'المشرفين + المعيّنين', value: 'mods_list' }];
+        box = group(root, 'الصلاحيات');
         box.appendChild(row('مين يطلب أغاني', pills(whoOpts, it.who || 'all', function (v) { update(it, 'who', v, true); }), true));
         box.appendChild(row('مين يتخطى ويغيّر الصوت', pills([{ label: 'أنا بس', value: 'owner' }].concat(whoOpts), it.ctrlWho || 'owner', function (v) { update(it, 'ctrlWho', v, true); }), true, 'أنت (صاحب البث) تقدر دائماً'));
         var who = it.who || 'all', ctrl = it.ctrlWho || 'owner';
@@ -1761,11 +1853,13 @@
             box.appendChild(row('الأشخاص المعيّنين', al, true, 'يوزرات تيك توك، افصل بينها بفاصلة أو سطر'));
         }
         if (/mods/.test(who) || /mods/.test(ctrl)) box.appendChild(el('div', 'ob-hint', 'المشرفين = اللي معطيهم إشراف ببثك بتيك توك.'));
-        volumeRow(it, box, 0.6);
+        box = group(root, 'الطابور');
         box.appendChild(row('أقصى مدة', numInput(Math.round((Number(it.maxDurSec) || 360) / 60), 1, 60, '6', function (n) { update(it, 'maxDurSec', (n || 6) * 60); }), false, 'بالدقايق — الأطول ما تشتغل'));
         box.appendChild(row('حد الطابور', numInput(it.maxQueue || 10, 1, 50, '10', function (n) { update(it, 'maxQueue', n || 10); }), false, 'كل مشاهد له طلب واحد بالطابور'));
+        box = group(root, 'الشكل');
         box.appendChild(row('الشكل', pills([{ label: 'أيقونة + اسم الأغنية', value: 'card' }, { label: 'أيقونة بس', value: 'icon' }], it.design === 'icon' ? 'icon' : 'card', function (v) { update(it, 'design', v, true); }), true));
         sizeColor(it, box, 1, 8);
+        box = root;
         var a = el('div', 'ob-actions');
         a.appendChild(button('جرّب أغنية', 'ob-btn primary', function () { tryAudio(it, 'music', 'أغنية التجربة بتشتغل بشاشة البث بعد ثواني…'); }));
         a.appendChild(button('تخطي', 'ob-btn ghost', function () { tryAudio(it, 'music-skip', 'تم التخطي بشاشة البث'); }));
@@ -1919,6 +2013,9 @@
         var E = O.ALERT_EVENTS_ALL;
         return (it.events || []).map(function (k) {
             var lab = (E[k] || {}).label || k;
+            if (k === 'gift' && it.giftMode === 'pick' && Array.isArray(it.gifts) && it.gifts.length) {
+                return it.gifts.slice(0, 3).map(function (g) { return g.nameAr || g.name; }).join('، ') + (it.gifts.length > 3 ? ' +' + (it.gifts.length - 3) : '');
+            }
             if (k === 'gift') {
                 var mn = Number(it.minDiamonds) || 0, mx = Number(it.maxDiamonds) || 0;
                 if (mn && mx) return lab + ' ' + fmtNum(mn) + '–' + fmtNum(mx) + ' عملة';
@@ -1940,6 +2037,123 @@
         }).join('، ');
     }
 
+    /* ---------------- كتالوج هدايا تيك توك (لأليرت هدية معيّنة) ----------------
+     * من السيرفر (/api/tiktok/gifts): اسم كل هدية وسعرها وصورتها. يتعبّى من البثوث نفسها،
+     * وقائمة تيك توك الكاملة تتحدّث مرة باليوم — راجع backend/platforms/tiktok/gift-catalog.js. */
+    var giftCat = { loaded: false, loading: false, failed: false, list: [], q: '', sort: 'asc' };
+    var GIFT_PICK_MAX = 30;
+    function loadGiftCatalog(force) {
+        if (giftCat.loading || (giftCat.loaded && !force)) return;
+        giftCat.loading = true;
+        giftCat.failed = false;
+        api('GET', '/api/tiktok/gifts').then(function (d) {
+            giftCat.loading = false;
+            giftCat.loaded = true;
+            if (d && d.success) giftCat.list = Array.isArray(d.gifts) ? d.gifts : [];
+            else giftCat.failed = true;
+            renderPanel();
+        }).catch(function () { giftCat.loading = false; giftCat.failed = true; renderPanel(); });
+    }
+    function giftImg(g) {
+        var img = el('img');
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        var proxy = apiBase() + '/api/stream/media?k=g&id=' + encodeURIComponent(g.id);
+        img.src = g.image || proxy;
+        img.addEventListener('error', function () { if (img.src !== proxy) img.src = proxy; else img.style.visibility = 'hidden'; });
+        return img;
+    }
+    function coinTxt(n) { return fmtNum(n) + ' عملة'; }
+    function giftLabel(g) { return g.nameAr || g.name; }
+    /** تيك توك عنده نفس الهدية (نفس الاسم والسعر) بأكثر من معرّف — نعرض وحدة، والمطابقة بالاسم تغطي الباقي. */
+    function uniqueGifts(list) {
+        var seen = {};
+        return list.filter(function (g) {
+            var k = String(g.name).toLowerCase() + '|' + g.diamonds;
+            if (seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
+
+    function giftPicker(it, box) {
+        loadGiftCatalog();
+        var chosen = Array.isArray(it.gifts) ? it.gifts : [];
+        var chosenIds = chosen.map(function (g) { return String(g.id); });
+        function toggleGift(g) {
+            var i = chosenIds.indexOf(String(g.id));
+            if (i === -1) i = chosen.map(function (x) { return String(x.name).toLowerCase() + '|' + x.diamonds; }).indexOf(String(g.name).toLowerCase() + '|' + g.diamonds);
+            var next = chosen.slice();
+            if (i === -1) {
+                if (next.length >= GIFT_PICK_MAX) { toast('الحد ' + GIFT_PICK_MAX + ' هدية للأليرت الواحد'); return; }
+                next.push({ id: String(g.id), name: g.name, nameAr: g.nameAr || null, diamonds: Number(g.diamonds) || 0, image: g.image || null });
+            } else next.splice(i, 1);
+            update(it, 'gifts', next, true);
+        }
+
+        // المختارة
+        var sel = el('div', 'vg-chosen');
+        if (!chosen.length) sel.appendChild(el('div', 'ob-hint', 'ما اخترت ولا هدية — اضغط على أي هدية تحت.'));
+        chosen.forEach(function (g) {
+            var c = button('', 'vg-chip', function () { toggleGift(g); });
+            c.title = 'شيلها';
+            c.appendChild(giftImg(g));
+            var t = el('span');
+            t.appendChild(el('b', null, giftLabel(g)));
+            t.appendChild(el('small', null, coinTxt(g.diamonds)));
+            c.appendChild(t);
+            c.appendChild(el('i', null, '×'));
+            sel.appendChild(c);
+        });
+        box.appendChild(row('الهدايا المختارة' + (chosen.length ? ' (' + chosen.length + ')' : ''), sel, true));
+
+        // القائمة
+        var wrap = el('div', 'vg-pick');
+        var tools = el('div', 'vg-tools');
+        var q = document.createElement('input');
+        q.type = 'search';
+        q.className = 'ob-input';
+        q.placeholder = 'ابحث بالاسم (وردة، Lion…) أو السعر';
+        q.value = giftCat.q;
+        tools.appendChild(q);
+        tools.appendChild(pills([{ label: 'الأرخص', value: 'asc' }, { label: 'الأغلى', value: 'desc' }], giftCat.sort, function (v) { giftCat.sort = v; renderPanel(); }));
+        wrap.appendChild(tools);
+        var grid = el('div', 'vg-grid');
+        var info = el('div', 'ob-hint');
+        wrap.appendChild(grid);
+        wrap.appendChild(info);
+
+        function paint() {
+            grid.textContent = '';
+            var term = giftCat.q.trim().toLowerCase();
+            var chosenKeys = chosen.map(function (x) { return String(x.name).toLowerCase() + '|' + x.diamonds; });
+            var list = uniqueGifts(giftCat.list).filter(function (g) {
+                return !term || String(g.name).toLowerCase().indexOf(term) !== -1 || String(g.nameAr || '').indexOf(term) !== -1 || String(g.diamonds) === term;
+            }).sort(function (a, b) { return giftCat.sort === 'desc' ? b.diamonds - a.diamonds : a.diamonds - b.diamonds; });
+            list.slice(0, 240).forEach(function (g) {
+                var on = chosenIds.indexOf(String(g.id)) !== -1 || chosenKeys.indexOf(String(g.name).toLowerCase() + '|' + g.diamonds) !== -1;
+                var b = button('', 'vg-gift' + (on ? ' on' : ''), function () { toggleGift(g); });
+                b.title = giftLabel(g) + (g.nameAr ? ' (' + g.name + ')' : '') + ' — ' + coinTxt(g.diamonds);
+                b.setAttribute('aria-pressed', String(on));
+                b.appendChild(giftImg(g));
+                b.appendChild(el('b', null, giftLabel(g)));
+                if (g.nameAr) b.appendChild(el('i', null, g.name));
+                b.appendChild(el('small', null, fmtNum(g.diamonds)));
+                grid.appendChild(b);
+            });
+            if (giftCat.loading && !giftCat.list.length) info.textContent = 'نجيب قائمة الهدايا…';
+            else if (giftCat.failed) info.textContent = 'ما قدرنا نجيب قائمة الهدايا — حدّث الصفحة وجرّب.';
+            else if (!giftCat.list.length) info.textContent = 'قائمة الهدايا لسا فاضية: تتعبّى أول ما يتصل بث (من «اتصل بالبث» بالرئيسية أو أي لعبة)، وكل هدية توصل تنضاف. ارجع هنا بعد ما تبدأ البث.';
+            else if (!list.length) info.textContent = 'ما فيه هدية بهالاسم.';
+            else info.textContent = list.length > 240 ? 'أول 240 من ' + list.length + ' — ابحث بالاسم عشان تلقى الباقي.' : list.length + ' هدية · الرقم تحت كل هدية = سعرها بالعملات.';
+        }
+        q.addEventListener('input', function () { giftCat.q = q.value; paint(); });
+        paint();
+        box.appendChild(row('اختر من هدايا تيك توك', wrap, true, 'الأسماء والأسعار والصور من تيك توك نفسه'));
+    }
+
     /** «يشتغل مع» + شرط كل حدث: العملات من/إلى، كل كم تكبيسة، يوزرات معيّنة. */
     function triggerRows(it, box) {
         var evs = Array.isArray(it.events) ? it.events : [];
@@ -1950,6 +2164,15 @@
             update(it, 'events', next, true);
         }, true), true));
         if (evs.indexOf('gift') !== -1) {
+            var pick = it.giftMode === 'pick';
+            box.appendChild(row('أي هدية؟', pills([{ label: 'بعدد العملات', value: 'range' }, { label: 'هدايا معيّنة', value: 'pick' }], pick ? 'pick' : 'range', function (v) {
+                if (v === 'pick') { it.gifts = Array.isArray(it.gifts) ? it.gifts : []; update(it, 'giftMode', 'pick', true); }
+                else { delete it.giftMode; update(it, 'giftMode', undefined, true); }
+            }), true, pick ? 'الأليرت يشتغل بس مع الهدايا اللي تختارها، وله الأولوية على أليرتات «بعدد العملات»' : 'أي هدية سعرها بين حدين'));
+        }
+        if (evs.indexOf('gift') !== -1 && it.giftMode === 'pick') {
+            giftPicker(it, box);
+        } else if (evs.indexOf('gift') !== -1) {
             var g = el('div', 'va-range');
             g.appendChild(el('span', null, 'من'));
             g.appendChild(numInput(it.minDiamonds, 0, 1000000, '0', function (n) { it.minDiamonds = n; commit(); }));
@@ -1994,7 +2217,7 @@
             }, true);
             ta.placeholder = '@username';
             ta.dir = 'ltr';
-            box.appendChild(row(evs.indexOf('join') !== -1 ? 'دخولية لأشخاص معيّنين' : 'لمشتركين معيّنين', ta, true, 'يوزر تيك توك، كل واحد بسطر — فاضي = يشتغل للكل'));
+            box.appendChild(row(evs.indexOf('join') !== -1 ? 'دخولية لأشخاص معيّنين' : 'أفضل معجب لأشخاص معيّنين', ta, true, 'يوزر تيك توك، كل واحد بسطر — فاضي = يشتغل للكل'));
         }
     }
 
@@ -2214,13 +2437,29 @@
         kh.appendChild(kt);
         kc.appendChild(kh);
         kc.appendChild(iconBtn('افتح أداة التفريغ', 'wand', 'primary', function () { openKeyTool(it); }));
+        if (k.on) {
+            // اختصار: شفافية الخلفية بس (keepBg) — الشخصية وألوان الأليرت ما تخف. نفس الخيار اللي داخل أداة التفريغ
+            var bgv = Math.round((1 - (Number(k.keepBg) || 0)) * 100);
+            var bgS = slider(0, 100, 1, bgv, function (x) {
+                it.key = Object.assign({}, O.keyOf(it), { keepBg: Math.round(100 - x) / 100 });
+                commit(); rebuildNode(it);
+            });
+            var bgR = row('شفافية الخلفية', bgS, false, '100 = الخلفية تختفي، 50 = نص شفافة، 0 = كاملة — الشخصية ما تتأثر');
+            bgR.querySelector('.ob-rval').textContent = bgv + '٪';
+            bgS.addEventListener('input', function () { bgR.querySelector('.ob-rval').textContent = bgS.value + '٪'; });
+            kc.appendChild(bgR);
+        }
         box.appendChild(kc);
 
-        triggerRows(it, box);
+        var root = box;
+        triggerRows(it, group(root, 'متى يشتغل'));
+        box = group(root, 'الصوت والمدة');
         box.appendChild(row('الصوت', slider(0, 1, 0.05, it.volume == null ? 0.8 : it.volume, function (v) { it.volume = v; commit(); }), false, 'صوت الفيديو نفسه'));
         durationRows(it, box);
+        box = group(root, 'الحجم والمكان');
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
         box.appendChild(row('الحجم', slider(1, 20, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        box = root;
         var parts = O.partsOf(it);
         if (parts) {
             partsEditor(it, box, parts);
@@ -2235,6 +2474,7 @@
             }));
             box.appendChild(conv);
         }
+        if (!parts) box = group(root, 'النص فوق الفيديو');
         if (!parts) box.appendChild(row('نص فوق الفيديو', toggle(it.showText !== false, function (v) { update(it, 'showText', v, true); }), false, 'اسم الداعم والهدية'));
         if (!parts && it.showText !== false) {
             box.appendChild(row('مكان النص', pills([{ label: 'فوق', value: 'top' }, { label: 'الوسط', value: 'middle' }, { label: 'تحت', value: 'bottom' }], it.textPos || 'bottom', function (v) { update(it, 'textPos', v, true); })));
@@ -2247,7 +2487,7 @@
             box.appendChild(row('لون النص', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
             box.appendChild(el('div', 'ob-hint', 'بالنص: {name} اسم المشاهد، {gift} اسم الهدية، {count} العدد، {diamonds} الماس.'));
         }
-        box.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. الأحداث اللي تجي وقت الأليرت تنتظر دورها.'));
+        root.appendChild(el('div', 'ob-hint', 'الفيديو: ' + (it.video.name || '') + ' · ' + fmtDur(it.video.d) + '. الأحداث اللي تجي وقت الأليرت تنتظر دورها.'));
     }
 
     /** أزرار تضبط حجم الأليرت على الشاشة (حسب أبعاد الفيديو واتجاه الشاشة) وتوسّطه. */
@@ -2479,7 +2719,27 @@
             if (repaint) renderPanel();
         }
 
-        // وقت الظهور: خيار واحد للصورة والاسم والرسالة كلها (it.partsTime)
+        // ١) العناصر: الصورة والاسم والرسالة جنب بعض — كل وحدة بمفتاحها وحجمها
+        var gEl = group(box, 'العناصر', 'إظهار وحجم كل وحدة');
+        Object.keys(PART_NAMES).forEach(function (k2) {
+            var q = parts[k2];
+            var r = el('div', 'ob-row va-el' + (k2 === partSel ? ' sel' : '') + (q.on ? '' : ' off'));
+            var lb = button('', 'va-el-n', function () { partSel = k2; renderPanel(); });
+            lb.appendChild(el('b', null, PART_NAMES[k2]));
+            lb.appendChild(el('small', null, k2 === partSel ? 'تعدّل شكلها تحت' : 'اضغط لتعديل شكلها'));
+            r.appendChild(lb);
+            var ctl = el('div', 'va-el-c');
+            var mn2 = k2 === 'avatar' ? 1 : 0.4, mx2 = k2 === 'avatar' ? 8 : 3;
+            var sz = withValue(slider(mn2, mx2, 0.05, q.s, function (val) { setPart(k2, 's', val); }));
+            if (!q.on) sz.classList.add('dis');
+            sz.setAttribute('aria-label', 'حجم ' + PART_NAMES[k2]);
+            ctl.appendChild(sz);
+            ctl.appendChild(toggle(q.on, function (val) { setPart(k2, 'on', val, true); }));
+            r.appendChild(ctl);
+            gEl.appendChild(r);
+        });
+
+        // ٢) وقت الظهور: خيار واحد للصورة والاسم والرسالة كلها (it.partsTime)
         var pt = it.partsTime || { t: parts.avatar.t || 0, e: parts.avatar.e || 0 };
         function setTime(field, val, rerender) {
             it.partsTime = Object.assign({ t: pt.t || 0, e: pt.e || 0 }, it.partsTime || {});
@@ -2487,16 +2747,16 @@
             commit(); rebuildNode(it);
             if (rerender) renderPanel();
         }
-        box.appendChild(el('div', 'ob-gtitle', 'وقت ظهور الصورة والاسم والرسالة'));
+        var gT = group(box, 'وقت الظهور بالأليرت', 'الثلاثة مع بعض');
         var tLab = el('b', 'va-durv', fmtSec(pt.t || 0));
         var tw = el('div', 'va-dur');
         var ts = slider(0, Math.max(1, L), 0.1, Number(pt.t) || 0, function (val) { tLab.textContent = fmtSec(val); setTime('t', val); });
         ts.addEventListener('change', function () { renderPanel(); });
         tw.appendChild(ts);
         tw.appendChild(tLab);
-        box.appendChild(row('تطلع بعد', tw, true, 'من بداية الأليرت — الثلاثة مع بعض'));
+        gT.appendChild(row('تطلع بعد', tw, true, 'من بداية الأليرت'));
         var eOn = Number(pt.e) > 0;
-        box.appendChild(row('تختفي', pills([{ label: 'مع نهاية الأليرت', value: 0 }, { label: 'بوقت أحدده', value: 1 }], eOn ? 1 : 0, function (val) {
+        gT.appendChild(row('تختفي', pills([{ label: 'مع نهاية الأليرت', value: 0 }, { label: 'بوقت أحدده', value: 1 }], eOn ? 1 : 0, function (val) {
             setTime('e', val ? Math.min(L, Math.max((Number(pt.t) || 0) + 1, L - 1)) : 0, true);
         }), true));
         if (eOn) {
@@ -2506,14 +2766,14 @@
             es.addEventListener('change', function () { renderPanel(); });
             ew.appendChild(es);
             ew.appendChild(eLab);
-            box.appendChild(row('تختفي عند', ew, true));
+            gT.appendChild(row('تختفي عند', ew, true));
         }
 
-        // اختيار العنصر
-        box.appendChild(el('div', 'ob-gtitle', 'شكل كل عنصر'));
-        box.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); }), true));
+        // ٣) شكل العنصر المختار
         var key = partSel, p = parts[key], nm = PART_NAMES[key];
-        box.appendChild(row('إظهار ' + nm, toggle(p.on, function (val) { setPart(key, 'on', val, true); })));
+        var gS = group(box, 'شكل العنصر');
+        gS.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); })));
+        if (!p.on) gS.appendChild(el('div', 'ob-hint', nm + ' مخفية — شغّلها من «العناصر» فوق.'));
         if (p.on) {
             // التحريك الدقيق
             var nudge = el('div', 'va-nudge');
@@ -2527,9 +2787,7 @@
                 nudge.appendChild(b);
             });
             nudge.appendChild(button('بالنص', 'ob-pill', function () { setPart(key, 'x', 50); }));
-            box.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
-            var mn = key === 'avatar' ? 1 : 0.4, mx = key === 'avatar' ? 8 : 3;
-            box.appendChild(row('حجم ' + nm, slider(mn, mx, 0.05, p.s, function (val) { setPart(key, 's', val); })));
+            gS.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
             if (key === 'avatar') {
                 // شكل الصورة: أزرار فيها معاينة الشكل نفسه
                 var sg = el('div', 'ob-shapes');
@@ -2541,14 +2799,12 @@
                     sb.appendChild(el('span', null, shp.label));
                     sg.appendChild(sb);
                 });
-                box.appendChild(row('شكل الصورة', sg, true));
-                box.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                gS.appendChild(row('شكل الصورة', sg, true));
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
             }
-            box.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
+            gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
-                box.appendChild(row('ستايل ' + nm, pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
-            }
-            if (key !== 'avatar') {
+                gS.appendChild(row('ستايل ' + nm, pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
                 var g = el('div', 'ob-fgrid');
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
@@ -2561,19 +2817,21 @@
                     fb.appendChild(el('span', null, f.label));
                     g.appendChild(fb);
                 });
-                box.appendChild(row('خط ' + nm, g, true));
+                gS.appendChild(row('خط ' + nm, g, true));
             }
-            box.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
+            gS.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
         }
 
+        // ٤) نص الرسالة
+        var gM = group(box, 'نص الرسالة');
         var evs = Array.isArray(it.events) ? it.events : [];
         it.msg = it.msg || {};
         evs.forEach(function (x) {
-            box.appendChild(row('رسالة ' + O.ALERT_EVENTS_ALL[x].label, textInput(it.msg[x] || O.PART_MSGS[x], 80, function (val) {
+            gM.appendChild(row('رسالة ' + O.ALERT_EVENTS_ALL[x].label, textInput(it.msg[x] || O.PART_MSGS[x], 80, function (val) {
                 it.msg[x] = val; commit(); rebuildNode(it);
             }), true));
         });
-        box.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
+        gM.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
         box.appendChild(button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); }));
     }
 
@@ -2819,15 +3077,18 @@
         /** «قبل/بعد» أو التفريغ مطفي: نعرض الفيديو الأصلي بدل الـcanvas. */
         function paintKeyed() { media2.classList.toggle('keyed', Boolean(keyer && !keyer.failed && draft.on && !before)); if (keyer) keyer.draw(); }
         function setK(k2, v2) { draft[k2] = v2; paintKeyed(); }
-        var advOpen = false;
         function paintControls() {
             var top = ctrls.scrollTop; // نرجّع مكان التمرير بعد إعادة الرسم
             requestAnimationFrame(function () { ctrls.scrollTop = top; });
             ctrls.textContent = '';
             var isHue = draft.mode === 'hue' || draft.mode === 'color';
+            // الأداة بشاشة كاملة: كل الخيارات ظاهرة بثلاث مجموعات (بدون «خيارات متقدمة» مسكّرة)
+            var root = ctrls;
+            ctrls = group(root, 'الخلفية', 'وش ينشال');
             ctrls.appendChild(iconBtn('تفريغ تلقائي', 'wand', 'primary lg vk-auto', autoKey));
             ctrls.appendChild(el('div', 'ob-hint', 'يقرأ الفيديو ويعرف لون الخلفية ويظبط القوة لحاله — غالباً ما تحتاج غيره.'));
             ctrls.appendChild(row('تفريغ الخلفية', toggle(draft.on, function (x) { setK('on', x); paintControls(); })));
+            ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true, 'لون (أخضر، أزرق، أحمر…)، أسود، أبيض، أو مؤثرات مضيئة على أسود'));
             if (isHue) {
                 var cw = el('div', 'ob-sw');
                 [['#00ff00', 'أخضر'], ['#00b140', 'أخضر كروما'], ['#0047bb', 'أزرق'], ['#e01b24', 'أحمر'], ['#ff00ff', 'وردي']].forEach(function (c) {
@@ -2858,6 +3119,7 @@
                 fw2.appendChild(pickBtn);
                 ctrls.appendChild(row('لون الخلفية', fw2, true, 'للبرق والنار والضوء على خلفية داكنة'));
             }
+            ctrls = group(root, 'الضبط', 'القوة والحواف والشفافية');
             // القوة: «لون الخلفية» حساس، فمداه أضيق (أدق)
             var simMax = draft.mode === 'hue' ? 0.6 : 1;
             ctrls.appendChild(row(draft.mode === 'screen' ? 'قطع السواد' : 'قوة التفريغ', slider(0, simMax, 0.005, Math.min(simMax, draft.sim), function (x) { setK('sim', x); }), true, draft.mode === 'screen' ? 'كم من الأسود ينشال' : 'لو باقي خلفية ارفعها، ولو انشال جزء من الشخصية نزّلها'));
@@ -2870,16 +3132,14 @@
             amt.appendChild(amtLab);
             ctrls.appendChild(row('شفافية الخلفية', amt, true, '100٪ = الخلفية تختفي كلها، 50٪ = نص شفافة — الشخصية وباقي ألوان الأليرت ما تتأثر ولا تخف'));
 
-            // الباقي تحت «خيارات متقدمة» — مسكّرة افتراضياً
-            var adv = button((advOpen ? '▾' : '▸') + ' خيارات متقدمة', 'ob-btn ghost vk-adv', function () { advOpen = !advOpen; paintControls(); });
-            ctrls.appendChild(adv);
-            if (advOpen) {
-                ctrls.appendChild(row('الطريقة', pills(KEY_MODES, draft.mode === 'color' ? 'hue' : draft.mode, function (x) { setK('mode', x); if (x === 'hue') calibrateNow(); paintControls(); }), true));
+            ctrls = group(root, 'تفاصيل الحواف', 'لو باقي هالة أو لون حول الشخصية');
+            {
                 if (draft.mode !== 'screen') ctrls.appendChild(row('حماية الشخصية', toggle(draft.protect !== false, function (x) { setK('protect', x); }), false, 'يشيل بس الخلفية المتصلة بأطراف الفيديو، فاللي بنفس اللون داخل الشخصية يبقى'));
                 ctrls.appendChild(row('تقليص الحواف', slider(0, 0.6, 0.01, draft.choke || 0, function (x) { setK('choke', x); }), false, 'يشيل الهالة اللي حول الشخصية'));
                 if (isHue) ctrls.appendChild(row('إزالة الانعكاس', slider(0, 1, 0.01, draft.spill, function (x) { setK('spill', x); }), false, 'يشيل لون الخلفية اللي ينعكس على حواف الشخصية'));
                 ctrls.appendChild(row('شفافية الفيديو', slider(0.1, 1, 0.01, draft.opacity == null ? 1 : draft.opacity, function (x) { setK('opacity', x); }), false, 'تخفف الأليرت كله (الشخصية والخلفية) — للخلفية بس استخدم «شفافية الخلفية» فوق'));
             }
+            ctrls = root;
             paintKeyed();
         }
         paintControls();
@@ -2924,11 +3184,14 @@
             demo.appendChild(button('جرّب ' + O.ALERT_EVENTS_ALL[k].label, 'ob-btn primary', function () { tryAlert(it, k); }));
         });
         box.appendChild(demo);
-        triggerRows(it, box);
-        box.appendChild(row('التصميم', pills(opts(O.ALERT_DESIGNS), it.design || 'card', function (v) { update(it, 'design', v, true); })));
-        box.appendChild(row('الدخول', pills(opts(O.ALERT_ANIMS), it.anim || 'pop', function (v) { update(it, 'anim', v, true); O.alertDemo(it.id, evs[0]); })));
+        var root = box;
+        triggerRows(it, group(root, 'متى يشتغل'));
+        box = group(root, 'الشكل والحركة');
+        box.appendChild(row('التصميم', pills(opts(O.ALERT_DESIGNS), it.design || 'card', function (v) { update(it, 'design', v, true); }), true));
+        box.appendChild(row('الدخول', pills(opts(O.ALERT_ANIMS), it.anim || 'pop', function (v) { update(it, 'anim', v, true); O.alertDemo(it.id, evs[0]); }), true));
         box.appendChild(row('المدة', pills([3, 5, 8, 12].map(function (n) { return { label: n + ' ث', value: n }; }), Number(it.duration) || 5, function (v) { update(it, 'duration', v, true); })));
         box.appendChild(row('صوت', toggle(it.sound, function (v) { update(it, 'sound', v); }), false, 'نغمة قصيرة مع كل تنبيه'));
+        box = group(root, 'النصوص');
         it.msg = it.msg || {};
         evs.forEach(function (k) {
             box.appendChild(row('نص ' + O.ALERT_EVENTS_ALL[k].label, textInput(it.msg[k] || O.ALERT_EVENTS_ALL[k].msg, 80, function (v) {
@@ -2936,7 +3199,7 @@
             }), true));
         });
         box.appendChild(el('div', 'ob-hint', 'بالنص: {name} اسم المشاهد، {gift} اسم الهدية، {count} العدد، {diamonds} الماس.'));
-        sizeColor(it, box, 1.5, 9);
+        sizeColor(it, group(root, 'الحجم واللون'), 1.5, 9);
     }
 
     function iconProps(it, box) {
@@ -2960,19 +3223,22 @@
                 g.appendChild(b);
             });
             box.appendChild(g);
-            sizeColor(it, box, 2, 30);
-            box.appendChild(row('توهّج', toggle(it.glow, function (v) { update(it, 'glow', v); })));
+            var gs = group(box, 'الحجم واللون');
+            sizeColor(it, gs, 2, 30);
+            gs.appendChild(row('توهّج', toggle(it.glow, function (v) { update(it, 'glow', v); })));
         }
-        animRows(it, box);
+        animRows(it, group(box, 'الحركة'));
     }
 
-    function shapeProps(it, box) {
+    function shapeProps(it, root) {
+        var box = group(root, 'الشكل');
         box.appendChild(row('الشكل', pills(opts(O.SHAPES), it.shape || 'round', function (v) { update(it, 'shape', v, true); }), true));
         box.appendChild(row('التعبئة', pills(opts(O.SHAPE_FILLS), it.fill || 'glass', function (v) { update(it, 'fill', v, true); }), true));
+        box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+        box = group(root, 'المقاس');
         box.appendChild(row(it.shape === 'circle' ? 'القطر' : 'العرض', slider(2, 178, 1, it.w, function (v) { update(it, 'w', v); })));
         if (it.shape !== 'circle') box.appendChild(row('الطول', slider(1, 100, 0.5, it.h, function (v) { update(it, 'h', v); })));
         box.appendChild(row('الشفافية', slider(0.1, 1, 0.05, it.opacity, function (v) { update(it, 'opacity', v); })));
-        box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
     }
 
     /* ---------------- حالة البيانات ---------------- */
