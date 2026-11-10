@@ -73,7 +73,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '2';
+    var LIVE_VERSION = '3'; // 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2072,7 +2072,9 @@
      *   { on, mode: color|black|white, color, sim, smooth, spill }.
      * أي أليرت بدون it.video يشتغل زي ما كان بالضبط. */
 
-    // mode: color (كروما) | black | white | screen (مؤثرات مضيئة على أسود)
+    // mode: hue (لون الخلفية — الطريقة الجديدة: زاوية اللون + التشبّع، تمسك الخلفية بدرجاتها الفاتحة
+    //   والغامقة وما تلمس البشرة حتى مع خلفية حمراء) | color (كروما قديم — للتفريغات المحفوظة قبل)
+    //   | black | white | screen (مؤثرات مضيئة على أسود)
     // protect = يشيل بس الخلفية المتصلة بأطراف الفيديو (الأجزاء الداكنة داخل الشخصية ما تنمسح)
     // choke = يقلّص الحواف (يشيل الهالة)
     // floor = لون خلفية مقاطع المؤثرات (كحلي داكن مثلاً) ينطرح قبل حساب الشفافية (screen)
@@ -2086,6 +2088,37 @@
         name: { on: true, x: 50, y: 83, s: 1.1, c: '#ffffff', f: 'notokufi', t: 0, e: 0, a: 'up' },
         msg: { on: true, x: 50, y: 92, s: 0.85, c: '#ffd54a', f: 'notokufi', t: 0, e: 0, a: 'up' }
     };
+    // أشكال الصورة: br = حواف دائرية (border-radius)، أو cp = قصّ بشكل (clip-path)
+    var AVATAR_SHAPES = [
+        { key: 'circle', label: 'دائرة', br: '50%' },
+        { key: 'rounded', label: 'مربع ناعم', br: '24%' },
+        { key: 'square', label: 'مربع', br: '6%' },
+        { key: 'hex', label: 'سداسي', cp: 'polygon(25% 3%,75% 3%,99% 50%,75% 97%,25% 97%,1% 50%)' },
+        { key: 'diamond', label: 'معيّن', cp: 'polygon(50% 0,100% 50%,50% 100%,0 50%)' },
+        { key: 'shield', label: 'درع', cp: 'polygon(50% 0,96% 14%,92% 62%,50% 100%,8% 62%,4% 14%)' },
+        { key: 'heart', label: 'قلب', cp: heartPolygon() },
+        { key: 'star', label: 'نجمة', cp: starPolygon() }
+    ];
+    // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون
+    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
+    function heartPolygon() {
+        var pts = [];
+        for (var i = 0; i < 40; i++) {
+            var t = i / 40 * Math.PI * 2;
+            var x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            pts.push((50 + x * 3.05).toFixed(1) + '% ' + (44 - y * 3.05).toFixed(1) + '%');
+        }
+        return 'polygon(' + pts.join(',') + ')';
+    }
+    function starPolygon() {
+        var pts = [];
+        for (var i = 0; i < 10; i++) {
+            var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 22 : 50;
+            pts.push((50 + r * Math.cos(a)).toFixed(1) + '% ' + (53 + r * Math.sin(a)).toFixed(1) + '%');
+        }
+        return 'polygon(' + pts.join(',') + ')';
+    }
+    function avatarShape(k) { return AVATAR_SHAPES.filter(function (x) { return x.key === k; })[0] || AVATAR_SHAPES[0]; }
     var PART_ANIMS = [{ key: 'fade', label: 'تلاشي' }, { key: 'pop', label: 'تكبير' }, { key: 'up', label: 'من تحت' }, { key: 'down', label: 'من فوق' }, { key: 'none', label: 'بدون' }];
     /** مدة أليرت الفيديو بالثواني: it.vlen لو محددة، وإلا مدة الفيديو نفسه (تلقائي). */
     function videoAlertLen(it) {
@@ -2095,10 +2128,18 @@
     }
     // نصوص الرسالة لما الاسم عنصر لحاله (بدون {name})
     var PART_MSGS = { gift: 'أرسل {gift} ×{count}', follow: 'تابع البث', share: 'نشر البث', join: 'دخل البث', like: 'وصل {count} تكبيسة', subscribe: 'اشترك بالبث', donation: 'دعم بـ{amount} {message}' };
+    /**
+     * عناصر الأليرت بقيمها. it.partsTime = {t, e}: وقت ظهور واحد للصورة والاسم والرسالة كلها
+     * (من خيار واحد بالمحرر) — لو موجود يغلب توقيت كل عنصر لحاله (القديم).
+     */
     function partsOf(it) {
         if (!it || !it.parts) return null;
         var out = {};
-        Object.keys(PARTS_DEFAULT).forEach(function (k) { out[k] = Object.assign({}, PARTS_DEFAULT[k], it.parts[k] || {}); });
+        var pt = it.partsTime && typeof it.partsTime === 'object' ? it.partsTime : null;
+        Object.keys(PARTS_DEFAULT).forEach(function (k) {
+            out[k] = Object.assign({}, PARTS_DEFAULT[k], it.parts[k] || {});
+            if (pt) { out[k].t = Math.max(0, Number(pt.t) || 0); out[k].e = Math.max(0, Number(pt.e) || 0); }
+        });
         return out;
     }
     function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
@@ -2120,17 +2161,55 @@
         '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
         // مؤثرات مضيئة على أسود: الشفافية من أقوى قناة، واللون يرجع بدون السواد (زي Screen)
         // نطرح لون الخلفية (flo) أول، وبعدها الشفافية من أقوى قناة واللون يرجع بدون الخلفية
+        // «لون الخلفية» (hue): الفرق بزاوية اللون بمستوى CbCr (0..1) + عقوبة لو التشبّع أقل من ربع تشبّع
+        // لون الخلفية (الرمادي والأبيض والأسود ما ينحسبون خلفية). الإضاءة ما تأثر: الأحمر الفاتح والغامق نفس الشي
+        ' else if(mode==4){vec2 kc=cc(key),pc=cc(c.rgb);float ks=max(length(kc),.0001),ps=length(pc);',
+        '  float ang=acos(clamp(dot(pc,kc)/(max(ps,.0001)*ks),-1.,1.))/3.14159;float lo=clamp((.28-ps/ks)/.28,0.,1.);float d=ang+lo*.6;',
+        '  float t=sim*.5;a=smoothstep(t,t+smo*.5+.0001,d);',
+        '  float s=clamp((d-t)/max(spill*.5,.0001),0.,1.);float l=dot(c.rgb,vec3(.2126,.7152,.0722));c.rgb=mix(vec3(l),c.rgb,s);}',
         ' else if(mode==3){c.rgb=clamp((c.rgb-flo)/max(vec3(1.)-flo,vec3(.05)),0.,1.);float mx=max(c.r,max(c.g,c.b));float t=sim*.35;a=clamp((mx-t)/max(1.-t,.001),0.,1.);a=pow(a,1./(1.+smo*4.));c.rgb=clamp(c.rgb/max(mx,.001)*min(1.,mx/max(a,.001)),0.,1.);}',
         ' else{float l=dot(c.rgb,vec3(.299,.587,.114));float t=sim*.5;',
         '  if(mode==1)a=smoothstep(t,t+smo+.0001,l);else a=1.-smoothstep(1.-t-smo-.0001,1.-t,l);}',
         // حماية الشخصية: الشفافية بس داخل الخلفية المتصلة بالأطراف
-        ' if(useMask>.5){float bg=texture2D(msk,uv).r;a=mix(1.,a,bg);}',
+        // داخل الشخصية (بعيد عن الخلفية): الشفافية كاملة واللون الأصلي يرجع (إزالة الانعكاس بس على الحواف)
+        ' if(useMask>.5){float bg=texture2D(msk,uv).r;a=mix(1.,a,bg);c.rgb=mix(o.rgb,c.rgb,bg);}',
         ' if(choke>.001)a=clamp((a-choke)/(1.-choke),0.,1.);',
         // درجة التفريغ (keepBg = كم يبقى من الخلفية): الخلفية بس ترجع ورا الشخصية — الشخصية نفسها
         // (c*a) ما يتغيّر لونها ولا شكلها ولا شفافيتها. لون الخلفية: الأصلي، أو لون الخلفية بالمؤثرات
         ' vec3 bgc=mode==3?flo:o.rgb;vec3 pm=c.rgb*a+bgc*(1.-a)*keepBg;float fa=a+(1.-a)*keepBg;',
         ' float k=c.a*opac;gl_FragColor=vec4(pm*k,fa*k);}'
     ].join('\n');
+
+    /**
+     * مسافة «لون الخلفية» (نفس اللي بالـshader، mode 4) بين بكسل (0..1) ولون الخلفية kr=[r,g,b] (0..1):
+     * فرق زاوية اللون بمستوى CbCr (0..1) + عقوبة لو البكسل باهت (رمادي/أبيض/أسود ما ينحسب خلفية).
+     */
+    function hueDist(r, g, b, kr) {
+        var kcb = -0.169 * kr[0] - 0.331 * kr[1] + 0.5 * kr[2], kcr = 0.5 * kr[0] - 0.419 * kr[1] - 0.081 * kr[2];
+        var pcb = -0.169 * r - 0.331 * g + 0.5 * b, pcr = 0.5 * r - 0.419 * g - 0.081 * b;
+        var ks = Math.max(Math.sqrt(kcb * kcb + kcr * kcr), 0.0001), ps = Math.sqrt(pcb * pcb + pcr * pcr);
+        var cos = (pcb * kcb + pcr * kcr) / (Math.max(ps, 0.0001) * ks);
+        var ang = Math.acos(Math.max(-1, Math.min(1, cos))) / Math.PI;
+        var lo = clamp((0.28 - ps / ks) / 0.28, 0, 1);
+        return ang + lo * 0.6;
+    }
+    /**
+     * معايرة «لون الخلفية» من الفيديو نفسه: bg = بكسلات من أطراف الفيديو (خلفية)، fg = بكسلات من الوسط
+     * (فيها الشخصية). يحسب أقل قوة تشيل الخلفية كلها (أعلى 97٪ من مسافات الأطراف) وتبعد عن ألوان
+     * الشخصية، ويرجع { sim, smooth } جاهزة. كل بكسل [r,g,b] 0..255.
+     */
+    function calibrateHue(bg, fg, keyHex) {
+        var kr = hexRgb(keyHex);
+        function d(px) { return hueDist(px[0] / 255, px[1] / 255, px[2] / 255, kr); }
+        function pctl(a, q) { if (!a.length) return 0; var s2 = a.slice().sort(function (x, y) { return x - y; }); return s2[Math.min(s2.length - 1, Math.floor(q * s2.length))]; }
+        var bd = bg.map(d), bgT = pctl(bd, 0.97);
+        var fd = fg.map(d).filter(function (x) { return x > bgT * 1.4 + 0.02; });
+        var fgT = fd.length > 20 ? pctl(fd, 0.04) : bgT + 0.2;
+        var t = Math.min(bgT * 1.2 + 0.015, (bgT + fgT) / 2);
+        t = clamp(t, 0.03, 0.4);
+        var w = clamp((fgT - t) * 0.6, 0.015, 0.1);
+        return { sim: Math.round(t * 2 * 1000) / 1000, smooth: Math.round(w * 2 * 1000) / 1000, bgT: bgT, fgT: fgT };
+    }
 
     var keyers = [];
     /** يطفي سياقات WebGL للعناصر اللي انشالت من الصفحة (المتصفح له حد لعددها). */
@@ -2187,7 +2266,7 @@
          * فيبقى ظاهر. النتيجة صورة صغيرة (1 = خلفية) تنفرد ناعمة بالـshader.
          */
         function buildMask(key, w, h) {
-            var mw = 160, mh = Math.max(2, Math.round(160 * h / w));
+            var mw = 200, mh = Math.max(2, Math.round(200 * h / w));
             if (mc.width !== mw || mc.height !== mh) { mc.width = mw; mc.height = mh; mctx = mc.getContext('2d', { willReadFrequently: true }); }
             mctx = mctx || mc.getContext('2d', { willReadFrequently: true });
             var d;
@@ -2197,7 +2276,8 @@
             var kr = hexRgb(key.color), kcb = -0.169 * kr[0] - 0.331 * kr[1] + 0.5 * kr[2], kcr = 0.5 * kr[0] - 0.419 * kr[1] - 0.081 * kr[2];
             for (var i = 0, j = 0; i < n; i++, j += 4) {
                 var r = d[j] / 255, g = d[j + 1] / 255, b = d[j + 2] / 255;
-                if (key.mode === 'black') cand[i] = (0.299 * r + 0.587 * g + 0.114 * b) < t + 0.02 ? 1 : 0;
+                if (key.mode === 'hue') cand[i] = hueDist(r, g, b, kr) < t ? 1 : 0;
+                else if (key.mode === 'black') cand[i] = (0.299 * r + 0.587 * g + 0.114 * b) < t + 0.02 ? 1 : 0;
                 else if (key.mode === 'white') cand[i] = (0.299 * r + 0.587 * g + 0.114 * b) > 1 - t - 0.02 ? 1 : 0;
                 else {
                     var cb = -0.169 * r - 0.331 * g + 0.5 * b - kcb, cr = 0.5 * r - 0.419 * g - 0.081 * b - kcr;
@@ -2242,7 +2322,7 @@
             gl.uniform1f(U.sim, clamp(Number(key.sim), 0, 1));
             gl.uniform1f(U.smo, clamp(Number(key.smooth), 0, 1));
             gl.uniform1f(U.spill, clamp(Number(key.spill), 0, 1));
-            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : key.mode === 'screen' ? 3 : 0);
+            gl.uniform1i(U.mode, key.mode === 'black' ? 1 : key.mode === 'white' ? 2 : key.mode === 'screen' ? 3 : key.mode === 'hue' ? 4 : 0);
             gl.uniform1f(U.choke, clamp(Number(key.choke) || 0, 0, 0.9));
             var fl = hexRgb(key.floor || '#000000');
             if (!/^#?[0-9a-f]{6}$/i.test(key.floor || '')) fl = [0, 0, 0];
@@ -2333,6 +2413,16 @@
         return v;
     }
 
+    /** نص الاسم/الرسالة بستايل من TEXT_STYLES (p.st) — بدون ستايل يبقى الشكل القديم (ظل قوي). */
+    function partText(n, text, p) {
+        var st = TEXT_STYLES.some(function (x) { return x.key === p.st; }) ? p.st : '';
+        if (!st) { n.textContent = text; return; }
+        n.classList.add('styled');
+        var tx = el('span', 'agp-so-tx s-' + st, text);
+        tx.style.color = p.c || '#fff';
+        tx.style.setProperty('--agp-so-c', p.c || '#fff');
+        n.appendChild(tx);
+    }
     function partFont(n, p) {
         var f = fontOf(p.f || 'notokufi');
         loadFont(f);
@@ -2378,24 +2468,32 @@
             // بالمحرر (بدون حدث): مثال عشان يشوف أماكنها
             var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
             if (parts.avatar.on) {
-                var pa = el('div', 'agp-so-vpart agp-so-vav');
+                // غلاف (الحركة والتوهّج) ← إطار بشكل الصورة (بلون الإطار) ← الصورة نفسها بنفس الشكل
+                var shp = avatarShape(parts.avatar.sh), frm = parts.avatar.fr || 'ring';
+                var pa = el('div', 'agp-so-vpart agp-so-vav fr-' + frm);
                 pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em;color:' + (parts.avatar.c || '#fff');
+                var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
+                [vf, vi].forEach(function (q) { if (shp.cp) q.style.clipPath = q.style.webkitClipPath = shp.cp; else q.style.borderRadius = shp.br; });
                 partTiming(pa, parts.avatar, preview);
-                if (ev.avatar) pa.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
-                else pa.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
+                if (ev.avatar) vi.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
+                else vi.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
+                vf.appendChild(vi);
+                pa.appendChild(vf);
                 box.appendChild(pa);
             }
             if (parts.name.on) {
-                var pn = el('div', 'agp-so-vpart agp-so-vname', ev.user || '');
+                var pn = el('div', 'agp-so-vpart agp-so-vname');
                 pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
+                partText(pn, ev.user || '', parts.name);
                 partFont(pn, parts.name);
                 partTiming(pn, parts.name, preview);
                 box.appendChild(pn);
             }
             if (parts.msg.on) {
                 var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
-                var pm = el('div', 'agp-so-vpart agp-so-vmsg', fillMsg(tpl, ev));
+                var pm = el('div', 'agp-so-vpart agp-so-vmsg');
                 pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
+                partText(pm, fillMsg(tpl, ev), parts.msg);
                 partFont(pm, parts.msg);
                 partTiming(pm, parts.msg, preview);
                 box.appendChild(pm);
@@ -3842,11 +3940,19 @@
         '@keyframes agp-so-p-up{0%{opacity:0;transform:translate(-50%,10%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
         '@keyframes agp-so-p-down{0%{opacity:0;transform:translate(-50%,-110%)}100%{opacity:1;transform:translate(-50%,-50%)}}',
         '@keyframes agp-so-p-out{to{opacity:0}}',
-        '.agp-so-vav{border-radius:50%;overflow:hidden;box-shadow:0 0 0 .08em currentColor,0 .15em .5em rgba(0,0,0,.55);background:#2a2338;display:flex;align-items:center;justify-content:center}',
+        // الصورة: الإطار (vav-f) بلون الإطار وبشكل الصورة، والصورة (vav-i) داخله بنفس الشكل
+        '.agp-so-vav .vav-f{position:absolute;inset:0;background:currentColor}',
+        '.agp-so-vav .vav-i{position:absolute;inset:.085em;overflow:hidden;background:#2a2338;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f{background:transparent}',
+        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i{inset:0}',
+        '.agp-so-vav.fr-ring{filter:drop-shadow(0 .12em .3em rgba(0,0,0,.6))}',
+        '.agp-so-vav.fr-shadow{filter:drop-shadow(0 .14em .35em rgba(0,0,0,.75))}',
+        '.agp-so-vav.fr-glow{filter:drop-shadow(0 0 .14em currentColor) drop-shadow(0 0 .4em currentColor)}',
         '.agp-so-vav img{width:100%;height:100%;object-fit:cover;display:block}',
         '.agp-so-vini{font-weight:800;font-size:1.1em;color:#fff}',
         '.agp-so-vname,.agp-so-vmsg{font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;line-height:1.3;text-shadow:0 .06em .22em rgba(0,0,0,.95),0 0 .6em rgba(0,0,0,.55)}',
         '.agp-so-vmsg{font-weight:700}',
+        '.agp-so-vname.styled,.agp-so-vmsg.styled{text-shadow:none}',
         '.agp-so-vtxt.middle{top:50%;transform:translateY(-50%)}',
         '.agp-so-vtxt.bottom{bottom:4%}',
         '.agp-so-acard{display:flex;align-items:center;gap:.7em;color:#fff;direction:rtl;text-shadow:0 .04em .1em rgba(0,0,0,.6);--c:var(--agp-so-c)}',
@@ -4083,6 +4189,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { queueAlert(itemId, sampleEvent(type || 'gift'), true); },
