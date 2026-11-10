@@ -3518,9 +3518,10 @@
                 var it = audioItems('music')[0];
                 if (!it || !d || !d.success) return;
                 var maxDur = clamp(Number(it.maxDurSec) || 360, 30, 3600);
-                var pick = (d.results || []).filter(function (r) { return r && r.id && r.durationSec > 0 && r.durationSec <= maxDur; })[0];
+                // durationSec 0 + link = طلب برابط والمدة ما انعرفت بالسيرفر (مفتاح يوتيوب خلص حده) → نتأكد منها وقت التشغيل
+                var pick = (d.results || []).filter(function (r) { return r && r.id && ((r.durationSec > 0 && r.durationSec <= maxDur) || (r.link && !(r.durationSec > 0))); })[0];
                 if (!pick) return;
-                music.queue.push({ id: pick.id, title: pick.title, channel: pick.channel, dur: pick.durationSec, user: job.user, uid: job.uid });
+                music.queue.push({ id: pick.id, title: pick.title, channel: pick.channel, dur: pick.durationSec || 0, maxDur: maxDur, user: job.user, uid: job.uid });
                 musicNext();
             })
             .catch(function () { /* نتجاهل الطلب */ })
@@ -3552,7 +3553,7 @@
         cur.startedAt = Date.now();
         paintMusic();
         clearTimeout(music.endTimer);
-        music.endTimer = setTimeout(function () { if (music.cur === cur) musicEnd(); }, (cur.dur + 20) * 1000);
+        music.endTimer = setTimeout(function () { if (music.cur === cur) musicEnd(); }, ((cur.dur || cur.maxDur || 360) + 20) * 1000);
         if (music.volBase !== it.volume) { music.volBase = it.volume; music.liveVol = null; } // تغيّر من المحرر → يرجع له
         var v = music.liveVol != null ? music.liveVol : Math.round(vol(it, 0.6) * 100);
         ytReady(function () {
@@ -3586,6 +3587,17 @@
             if (music.cur !== cur || !music.player || !music.player.getPlayerState) return;
             var st = music.player.getPlayerState();
             if (st === window.YT.PlayerState.UNSTARTED || st === window.YT.PlayerState.CUED) blockAudio();
+            // طلب برابط ومدته ما انعرفت: ناخذها من المشغّل — الأطول من «أقصى مدة» ينقفل على طول
+            if (!cur.dur && music.player.getDuration) {
+                var d = Math.round(Number(music.player.getDuration()) || 0);
+                if (d > 0) {
+                    if (cur.maxDur && d > cur.maxDur) { musicEnd(); return; }
+                    cur.dur = d;
+                    clearTimeout(music.endTimer);
+                    music.endTimer = setTimeout(function () { if (music.cur === cur) musicEnd(); }, (d - (Date.now() - cur.startedAt) / 1000 + 20) * 1000);
+                    paintMusic();
+                }
+            }
         }, 4000);
     }
 
@@ -3631,7 +3643,7 @@
         try {
             if (p && p.getCurrentTime && p.getDuration && p.getDuration() > 0) return clamp(p.getCurrentTime() / p.getDuration() * 100, 0, 100);
         } catch (e) { /* ignore */ }
-        return clamp((Date.now() - c.startedAt) / 1000 / (c.dur || 1) * 100, 0, 100);
+        return c.dur ? clamp((Date.now() - c.startedAt) / 1000 / c.dur * 100, 0, 100) : 0; // مدة ما انعرفت (رابط) = الشريط فاضي لين تنعرف
     }
 
     function paintProgress() {

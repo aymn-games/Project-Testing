@@ -7,7 +7,12 @@
  *   لو مفتاحه خلص حده أو غلط نرجع لمفتاح المنصة. مفتاح المنصة مشترك (~100 بحث
  *   باليوم للمنصة كلها) فله حد يومي لكل ستريمر (PLATFORM_DAILY_PER_USER).
  * - كاش بالذاكرة: نفس البحث/النص ما يستهلك الحد مرتين.
- * - الجدول (screen_audio_keys) ينشأ هنا عشان الخدمة تنختبر بقاعدة بيانات بالذاكرة.
+ * - كاش دائم ومشترك للبحث (music_search_cache، 30 يوم): نفس الأغنية عند أي ستريمر، وبعد
+ *   إعادة تشغيل السيرفر، ما تستهلك الحد مرة ثانية. البحث بالاسم = ~101 وحدة من 10,000 باليوم.
+ * - طلب برابط يوتيوب (watch?v= / youtu.be / shorts / music.youtube.com): بيانات الفيديو نفسه
+ *   (وحدة وحدة بس، وما تنحسب من حد الستريمر اليومي)، ولو المفاتيح خلصت حدها: رابط oEmbed
+ *   العام (بدون مفتاح، صفر وحدات) — المدة ما تنعرف منه (durationSec 0 + link)، والشاشة تتأكد منها وقت التشغيل.
+ * - الجداول (screen_audio_keys، music_search_cache) تنشأ هنا عشان الخدمة تنختبر بقاعدة بيانات بالذاكرة.
  */
 
 'use strict';
@@ -15,6 +20,8 @@
 var SEARCH_GAP_MS = 3000;                 // طلب بحث واحد كل 3 ثواني لكل شاشة
 var SEARCH_CACHE_TTL_MS = 24 * 3600 * 1000;
 var SEARCH_CACHE_MAX = 500;
+var DB_CACHE_TTL_MS = 30 * 24 * 3600 * 1000;   // الكاش الدائم: 30 يوم
+var OEMBED = 'https://www.youtube.com/oembed?format=json&url=';
 var TTS_CACHE_TTL_MS = 3600 * 1000;
 var TTS_CACHE_MAX = 200;
 var TTS_TEXT_MAX = 200;
@@ -33,6 +40,13 @@ function isoDuration(s) {
 }
 
 function normQuery(q) { return String(q || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 120); }
+
+/** معرّف فيديو يوتيوب من رابط (watch?v= / youtu.be / shorts / embed / live / music.youtube.com)، أو null. */
+function youtubeId(q) {
+    var t = String(q || '').trim();
+    var m = /(?:youtube\.com\/(?:watch\?(?:[^\s#]*&)?v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([\w-]{11})(?![\w-])/i.exec(t);
+    return m ? m[1] : null;
+}
 
 /** Map بحد أقصى وانتهاء صلاحية — الأقدم ينشال */
 function lru(max, ttl, now) {
@@ -65,8 +79,33 @@ function createService(db, opts) {
         '    user_id INTEGER PRIMARY KEY,' +
         '    youtube_key TEXT,' +
         '    updated_at INTEGER NOT NULL' +
-        ');'
+        ');' +
+        'CREATE TABLE IF NOT EXISTS music_search_cache (q TEXT PRIMARY KEY, results TEXT NOT NULL, at INTEGER NOT NULL);'
     );
+    var dbGet = db.prepare('SELECT results, at FROM music_search_cache WHERE q = ?');
+    var dbPut = db.prepare('INSERT INTO music_search_cache (q, results, at) VALUES (?, ?, ?) ON CONFLICT(q) DO UPDATE SET results = excluded.results, at = excluded.at');
+    var dbOld = db.prepare('DELETE FROM music_search_cache WHERE at < ?');
+    var lastPrune = 0;
+    /** الكاش: بالذاكرة أول، وبعدها الداتابيس (ويرجع للذاكرة). نتيجة فاضية ما تنحفظ بالداتابيس. */
+    function cacheGet(k) {
+        var v = searchCache.get(k);
+        if (v) return v;
+        var r = dbGet.get(k);
+        if (!r || now() - r.at > DB_CACHE_TTL_MS) return null;
+        try { v = JSON.parse(r.results); } catch (e) { return null; }
+        if (!Array.isArray(v)) return null;
+        searchCache.set(k, v);
+        return v;
+    }
+    function cacheSet(k, v) {
+        searchCache.set(k, v);
+        if (!v.length) return;
+        var t = now();
+        try {
+            dbPut.run(k, JSON.stringify(v), t);
+            if (t - lastPrune > 24 * 3600 * 1000) { lastPrune = t; dbOld.run(t - DB_CACHE_TTL_MS); }
+        } catch (e) { /* الكاش الدائم اختياري */ }
+    }
 
     var searchCache = lru(SEARCH_CACHE_MAX, SEARCH_CACHE_TTL_MS, now);
     var ttsCache = lru(TTS_CACHE_MAX, TTS_CACHE_TTL_MS, now);
@@ -114,6 +153,24 @@ function createService(db, opts) {
         return errs.some(function (e) { return /quota|limit|keyinvalid|keyexpired|forbidden|accessnotconfigured/i.test(String(e.reason || '')); }) || resp.status === 403;
     }
 
+    /** فيديو واحد بمعرّفه: العنوان والقناة والمدة، ولازم يسمح بالتضمين — وحدة وحدة من الحد. */
+    function videoWith(key, id) {
+        return getJson(YT + '/videos?part=snippet,contentDetails,status&id=' + id + '&key=' + encodeURIComponent(key)).then(function (resp) {
+            if (!resp.ok) return { keyProblem: isKeyProblem(resp) };
+            var v = ((resp.body && resp.body.items) || [])[0];
+            if (!v || (v.status && v.status.embeddable === false)) return { results: [] };
+            return { results: [{ id: v.id, title: String((v.snippet && v.snippet.title) || '').slice(0, 120), channel: String((v.snippet && v.snippet.channelTitle) || '').slice(0, 80), durationSec: isoDuration(v.contentDetails && v.contentDetails.duration) }] };
+        });
+    }
+
+    /** رابط oEmbed العام (بدون مفتاح ولا حد): العنوان والقناة بس — المدة تنعرف بالشاشة. 401/403 = ممنوع تضمينه. */
+    function videoOembed(id) {
+        return getJson(OEMBED + encodeURIComponent('https://www.youtube.com/watch?v=' + id)).then(function (resp) {
+            if (!resp.ok || !resp.body || !resp.body.title) return { results: [] };
+            return { results: [{ id: id, title: String(resp.body.title).slice(0, 120), channel: String(resp.body.author_name || '').slice(0, 80), durationSec: 0, link: true }] };
+        });
+    }
+
     function searchWith(key, q) {
         var url = YT + '/search?part=snippet&type=video&videoEmbeddable=true&maxResults=5&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(key);
         return getJson(url).then(function (resp) {
@@ -134,18 +191,33 @@ function createService(db, opts) {
     function searchMusic(screenKey, userId, q) {
         var nq = normQuery(q);
         if (!nq) return Promise.resolve({ success: false, error: 'empty_query' });
-        var cached = searchCache.get(nq);
+        var vid = youtubeId(q);
+        var ck = vid ? 'v:' + vid : nq;
+        var cached = cacheGet(ck);
         if (cached) return Promise.resolve({ success: true, results: cached });
 
         var own = userKey(userId);
         var platform = opts.platformYoutubeKey || null;
-        if (!own && !platform) return Promise.resolve({ success: false, error: 'disabled' });
+        if (!own && !platform && !vid) return Promise.resolve({ success: false, error: 'disabled' });
 
         var t = now();
         var last = lastSearch.get(screenKey);
         if (last != null && t - last < SEARCH_GAP_MS) return Promise.resolve({ success: false, error: 'rate_limited' });
         lastSearch.set(screenKey, t);
         if (lastSearch.size > 5000) lastSearch.delete(lastSearch.keys().next().value);
+
+        if (vid) {
+            // رابط: وحدة وحدة بأي مفتاح (ما تنحسب من حد الستريمر)، وإذا المفاتيح خلصت: oEmbed المجاني
+            var lkeys = [own, platform].filter(Boolean);
+            var tryLink = function (i) {
+                if (i >= lkeys.length) return videoOembed(vid).then(function (r) { if (r.results.length) cacheSet(ck, r.results); return { success: true, results: r.results }; });
+                return videoWith(lkeys[i], vid).then(function (r) {
+                    if (r.results) { cacheSet(ck, r.results); return { success: true, results: r.results }; }
+                    return tryLink(i + 1);
+                });
+            };
+            return Promise.resolve().then(function () { return tryLink(0); }).catch(function () { return { success: false, error: 'failed' }; });
+        }
 
         var keys = [];
         if (own) keys.push({ key: own, platform: false });
@@ -158,7 +230,7 @@ function createService(db, opts) {
             if (keys[i].platform) platformCount(userId, 1);
             return searchWith(keys[i].key, nq).then(function (r) {
                 if (r.results) {
-                    searchCache.set(nq, r.results);
+                    cacheSet(nq, r.results);
                     return { success: true, results: r.results };
                 }
                 if (r.keyProblem) sawKeyProblem = true;
@@ -216,6 +288,7 @@ function get() {
 
 module.exports = {
     PLATFORM_DAILY_PER_USER: PLATFORM_DAILY_PER_USER,
+    youtubeId: youtubeId,
     TTS_PER_MINUTE: TTS_PER_MINUTE,
     createService: createService,
     get: get

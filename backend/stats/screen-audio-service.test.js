@@ -173,3 +173,73 @@ test('tts: per-screen limit of requests per minute (cache hits are free)', async
     s.clock.t += 61000;
     assert.equal((await s.tts('k1', 'بعد دقيقة', 'f', 1)).success, true);
 });
+
+test('youtubeId: every common link form, and plain names are not links', function () {
+    var id = 'dQw4w9WgXcQ';
+    ['https://www.youtube.com/watch?v=' + id, 'youtube.com/watch?feature=share&v=' + id + '&t=10', 'https://youtu.be/' + id + '?si=abc',
+        'https://m.youtube.com/shorts/' + id, 'https://music.youtube.com/watch?v=' + id + '&list=RD', 'شغل https://youtu.be/' + id + ' لو سمحت']
+        .forEach(function (u) { assert.equal(audio.youtubeId(u), id, u); });
+    assert.equal(audio.youtubeId('محمد عبده الأماكن'), null);
+    assert.equal(audio.youtubeId('dQw4w9WgXcQ'), null);
+    assert.equal(audio.youtubeId('https://youtube.com/watch?v=short'), null);
+});
+
+test('music link: one cheap videos call (not counted in the daily cap), embeddable only, then cached', async function () {
+    var f = fakeFetch(function (url) {
+        if (url.indexOf('/videos?') !== -1 && url.indexOf('id=dQw4w9WgXcQ') !== -1) {
+            return res(200, { items: [{ id: 'dQw4w9WgXcQ', snippet: { title: 'أغنية', channelTitle: 'قناة' }, contentDetails: { duration: 'PT3M33S' }, status: { embeddable: true } }] });
+        }
+        if (url.indexOf('/videos?') !== -1) return res(200, { items: [{ id: 'xxxxxxxxxxx', snippet: { title: 'x' }, contentDetails: { duration: 'PT1M' }, status: { embeddable: false } }] });
+        return res(500, {});
+    });
+    var s = svc({ fetch: f });
+    var r = await s.searchMusic('k1', 1, 'https://youtu.be/dQw4w9WgXcQ');
+    assert.deepEqual(r, { success: true, results: [{ id: 'dQw4w9WgXcQ', title: 'أغنية', channel: 'قناة', durationSec: 213 }] });
+    assert.equal(f.calls.length, 1);
+    assert.match(f.calls[0].url, /part=snippet,contentDetails,status/);
+    assert.doesNotMatch(f.calls[0].url, /\/search\?/);
+    s.clock.t += 5000;
+    assert.deepEqual((await s.searchMusic('k2', 1, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')).results, r.results);
+    assert.equal(f.calls.length, 1, 'same video by another link = cache');
+    s.clock.t += 5000;
+    assert.deepEqual((await s.searchMusic('k1', 1, 'https://youtu.be/xxxxxxxxxxx')).results, [], 'not embeddable');
+    // الروابط ما تنحسب من حد الستريمر اليومي (25)
+    for (var i = 0; i < 30; i++) { s.clock.t += 5000; await s.searchMusic('k1', 7, 'https://youtu.be/' + ('a' + i + 'bcdefghijk').slice(0, 11)); }
+    s.clock.t += 5000;
+    await s.searchMusic('k1', 7, 'اسم أغنية');
+    assert.ok(f.calls.some(function (c) { return c.url.indexOf('/search?') !== -1; }), 'name search still allowed after 30 links');
+});
+
+test('music link: keys out of quota → free oEmbed (no duration, marked link); no keys at all still works', async function () {
+    var f = fakeFetch(function (url) {
+        if (url.indexOf('/videos?') !== -1) return ytError(403, 'quotaExceeded');
+        if (url.indexOf('youtube.com/oembed') !== -1) return res(200, { title: 'بالرابط', author_name: 'قناة' });
+        return res(500, {});
+    });
+    var s = svc({ fetch: f });
+    var r = await s.searchMusic('k1', 1, 'https://youtu.be/dQw4w9WgXcQ');
+    assert.deepEqual(r, { success: true, results: [{ id: 'dQw4w9WgXcQ', title: 'بالرابط', channel: 'قناة', durationSec: 0, link: true }] });
+    assert.match(f.calls[f.calls.length - 1].url, /oembed\?format=json&url=https%3A%2F%2Fwww\.youtube\.com%2Fwatch%3Fv%3DdQw4w9WgXcQ/);
+    var f2 = fakeFetch(function (url) { return url.indexOf('oembed') !== -1 ? res(401, {}) : res(500, {}); });
+    var s2 = svc({ fetch: f2, platformYoutubeKey: '' });
+    assert.deepEqual(await s2.searchMusic('k1', 1, 'https://youtu.be/dQw4w9WgXcQ'), { success: true, results: [] }, 'oEmbed 401 = embedding disabled');
+    assert.equal(f2.calls.length, 1);
+});
+
+test('music search: persistent shared cache survives a restart (same db), expires after 30 days', async function () {
+    var db = new Database(':memory:');
+    var clock = { t: 1000000 };
+    var f = fakeFetch(okSearch);
+    function make() { return audio.createService(db, { fetch: f, platformYoutubeKey: PLATFORM_KEY, now: function () { return clock.t; } }); }
+    var a = make();
+    var r = await a.searchMusic('k1', 1, 'محمد عبده الأماكن');
+    assert.equal(f.calls.length, 2);
+    var b = make(); // «إعادة تشغيل»: ذاكرة جديدة، نفس الداتابيس
+    clock.t += 3600 * 1000;
+    assert.deepEqual((await b.searchMusic('other-screen', 99, 'محمد عبده الأماكن')).results, r.results);
+    assert.equal(f.calls.length, 2, 'another streamer, after restart, no quota used');
+    var c = make();
+    clock.t += 31 * 24 * 3600 * 1000;
+    await c.searchMusic('k1', 1, 'محمد عبده الأماكن');
+    assert.equal(f.calls.length, 4, 'expired after 30 days');
+});
