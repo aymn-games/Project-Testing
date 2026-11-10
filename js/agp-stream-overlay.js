@@ -2106,11 +2106,11 @@
         { key: 'rose', label: 'وردة', cp: rosePolygon() }
     ];
     // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون — والمتحركة:
-    // ضوء يلف على الحدود، حدود نابضة، زخارف تدور بالزوايا، وورود حول الصورة. كلها تتبع شكل الصورة ولون الإطار.
+    // ضوء يلف على الحدود، حدود نابضة، وزخارف تدور بالزوايا. كلها تتبع شكل الصورة ولون الإطار.
     var AVATAR_FRAMES = [
         { key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' },
         { key: 'spin', label: 'ضوء يلف', anim: true }, { key: 'pulse', label: 'نابض', anim: true },
-        { key: 'orbit', label: 'زخارف تدور', anim: true }, { key: 'roses', label: 'ورود', anim: true },
+        { key: 'orbit', label: 'زخارف تدور', anim: true },
         // رسمات دائرية (الصورة دائماً دائرة معها): FRAME_ART تحت
         { key: 'flare', label: 'حلقة ضوء', anim: true, round: true }, { key: 'silver', label: 'حلقة فضية', anim: true, round: true },
         { key: 'vine', label: 'غصن ورق', anim: true, round: true }
@@ -2166,27 +2166,6 @@
             '<g class="ao-leaf" style="animation-delay:' + delay + 's">' + inner + '</g></g>';
     }
 
-    /** وردة واقعية: بتلات خارجية ووسطى بظل من القاعدة ولمعة على الحافة، ووسط ملفوف غامق. */
-    function artRose(P, x, y, sc, rot, delay) {
-        var petal = 'M0 0C-3.4 -1.6 -3.6 -7 0 -8.4C3.6 -7 3.4 -1.6 0 0Z', out = '', mid = '', i;
-        for (i = 0; i < 6; i++) {
-            var t = 'rotate(' + (i * 60 + 12) + ')';
-            out += '<g transform="' + t + '"><path d="' + petal + '" fill="currentColor"/><path d="' + petal + '" fill="url(#' + P + 'ps)"/>' +
-                '<path d="M-2.9 -6.6C-1.6 -8.3 1.6 -8.3 2.9 -6.6" fill="none" stroke="#fff" stroke-opacity=".4" stroke-width=".3"/></g>';
-        }
-        for (i = 0; i < 5; i++) {
-            var t2 = 'rotate(' + (i * 72 + 40) + ') scale(.68)';
-            mid += '<g transform="' + t2 + '"><path d="' + petal + '" fill="currentColor"/><path d="' + petal + '" fill="url(#' + P + 'ps)"/>' +
-                '<path d="M-2.9 -6.6C-1.6 -8.3 1.6 -8.3 2.9 -6.6" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width=".35"/></g>';
-        }
-        return '<g transform="translate(' + n2(x) + ' ' + n2(y) + ') rotate(' + rot + ') scale(' + n2(sc) + ')">' +
-            '<g class="ao-bloom" style="animation-delay:' + delay + 's">' +
-            '<circle r="8.6" fill="rgba(0,0,0,.35)" transform="translate(.6 .9)"/>' + out + mid +
-            '<circle r="2.9" fill="currentColor"/><circle r="2.9" fill="url(#' + P + 'rc)"/>' +
-            '<path d="M.1 -.3a.75 .75 0 1 1 -.85 .55a1.5 1.5 0 1 1 2.2 1a2.3 2.3 0 1 1 -3.4 -1.5" fill="none" stroke="rgba(0,0,0,.5)" stroke-width=".38" stroke-linecap="round"/>' +
-            '<ellipse cx="-2.6" cy="-3.4" rx="2" ry="1" fill="#fff" opacity=".18" transform="rotate(-30 -2.6 -3.4)"/></g></g>';
-    }
-
     var FRAME_ART = {
         // حلقة ضوء: خيط ضوء رفيع بطبقات، وجزء أسطع من الحلقة مع لمعتين عدسة متقابلتين يلفون ببطء
         flare: function () {
@@ -2215,52 +2194,30 @@
         },
         // غصن ورق: حافة زجاجية متوهجة من الداخل، وغصن بورق مظلّل وعروق (بعضه مفرّغ)، والورق يتمايل
         vine: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R, leaves = '', i;
-            var from = -78, to = 74, rs = R + 1.6;
-            var p0 = artPt(from, rs), p1 = artPt(to, rs); // الغصن على قوس الحلقة نفسها (مو خط يقطع الصورة)
-            for (i = 0; i < 16; i++) {
-                var ang = from + 5 + i * (to - from - 8) / 15, side = i % 2 ? 1 : -1;
-                var base = artPt(ang, rs + 0.3 + (i % 3) * 0.35);
-                var sc = 0.78 + ((i * 5) % 4) * 0.14;
-                leaves += artLeaf(P, base[0], base[1], ang + side * (32 + (i % 3) * 8), sc, n2(-i * 0.29), { outline: i % 4 === 3, op: i % 5 === 2 ? 0.6 : 0 });
-            }
-            var b1 = artPt(from - 3, rs + 1.2), b2 = artPt(from + 3, rs + 4.2), b3 = artPt(to + 3, rs + 1.5);
+            // الغصن دائرة كاملة حول الصورة، والورق موزّع عليها كلها، والكل يدور ببطء (والورق يتمايل)
+            var P = 'ao' + (++artSeq) + '-', R = ART_R, leaves = '', buds = '', i, N = 30, rs = R + 1.6;
             function bud(q, r) {
-                return '<g transform="translate(' + q[0] + ' ' + q[1] + ') rotate(' + r + ')"><ellipse rx="1.15" ry="2.2" fill="url(#' + P + 'lf)"/><path d="M0 2.1L0 3.6" stroke="#fff" stroke-width=".35"/></g>';
+                return '<g transform="translate(' + q[0] + ' ' + q[1] + ') rotate(' + n2(r) + ')"><ellipse rx="1.15" ry="2.2" fill="url(#' + P + 'lf)"/><path d="M0 2.1L0 3.6" stroke="#fff" stroke-width=".35"/></g>';
+            }
+            for (i = 0; i < N; i++) {
+                var ang = i * 360 / N, side = i % 2 ? 1 : -1;
+                var base = artPt(ang, rs + 0.3 + (i % 3) * 0.35);
+                var sc = 0.74 + ((i * 5) % 4) * 0.13;
+                leaves += artLeaf(P, base[0], base[1], ang + side * (32 + (i % 3) * 8), sc, n2(-i * 0.29), { outline: i % 4 === 3, op: i % 5 === 2 ? 0.6 : 0 });
+                if (i % 6 === 1) { var bq = artPt(ang + 4, rs + 3.6); buds += bud(bq, ang + 90); }
             }
             return svgWrap('<defs>' + artDefs(P) +
                 '<radialGradient id="' + P + 'rim"><stop offset=".86" stop-color="#fff" stop-opacity="0"/><stop offset=".955" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity=".62"/></radialGradient>' +
                 '<linearGradient id="' + P + 'lf"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".55" stop-color="#fff" stop-opacity=".82"/><stop offset="1" stop-color="currentColor" stop-opacity=".55"/></linearGradient></defs>' +
                 '<circle class="ao-breathe" cx="50" cy="50" r="' + n2(R + 0.5) + '" fill="url(#' + P + 'rim)"/>' + artGlowRing(R, 0.9) +
-                '<g class="ao-vine"><path d="M' + p0[0] + ' ' + p0[1] + 'A' + rs + ' ' + rs + ' 0 0 1 ' + p1[0] + ' ' + p1[1] + '" fill="none" stroke="#fff" stroke-width=".75" stroke-linecap="round" opacity=".9"/>' +
-                leaves + bud(b1, from - 10) + bud(b2, from + 25) + bud(b3, to + 40) + '</g>');
+                '<g class="ao-rot" style="animation-duration:30s"><circle cx="50" cy="50" r="' + rs + '" fill="none" stroke="#fff" stroke-width=".75" opacity=".9"/>' +
+                leaves + buds + '</g>');
         },
         // زخارف تدور: لمعات عدسة حقيقية (مو نجوم مرسومة) تلف حول الصورة وتومض
         orbit: function () {
             var P = 'ao' + (++artSeq) + '-', R = ART_R + 0.6, s = '';
             [[45, 12, 0], [135, 8, -0.8], [225, 11, -1.5], [315, 8, -0.4]].forEach(function (k) { var q = artPt(k[0], R); s += artSpark(P, q[0], q[1], k[1], k[2]); });
             return svgWrap('<defs>' + artDefs(P) + '</defs><g class="ao-rot" style="animation-duration:12s">' + s + '</g>');
-        },
-        // ورود: باقة صغيرة واقعية على جنب الإطار (3 ورود بظلال + ورق أخضر + براعم)، تتمايل بهدوء
-        roses: function () {
-            var P = 'ao' + (++artSeq) + '-', R = ART_R + 1;
-            var r1 = artPt(128, R), r2 = artPt(150, R + 1.5), r3 = artPt(106, R + 1);
-            var l1 = artPt(165, R + 2), l2 = artPt(92, R + 3), l3 = artPt(140, R + 8), l4 = artPt(116, R + 8);
-            var b1 = artPt(176, R + 1), b2 = artPt(84, R + 1);
-            function bud(q, r) {
-                return '<g transform="translate(' + q[0] + ' ' + q[1] + ') rotate(' + r + ')"><path d="M0 -3C1.6 -2 1.6 1 0 1.8C-1.6 1 -1.6 -2 0 -3Z" fill="currentColor"/>' +
-                    '<path d="M0 -3C1.6 -2 1.6 1 0 1.8C-1.6 1 -1.6 -2 0 -3Z" fill="url(#' + P + 'ps)"/><path d="M-1.4 .8L0 3.4L1.4 .8" fill="url(#' + P + 'lg)"/></g>';
-            }
-            return svgWrap('<defs>' + artDefs(P) +
-                '<linearGradient id="' + P + 'ps" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".62"/><stop offset=".55" stop-color="#000" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity=".18"/></linearGradient>' +
-                '<radialGradient id="' + P + 'rc"><stop offset="0" stop-color="#000" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity=".1"/></radialGradient>' +
-                '<linearGradient id="' + P + 'lg"><stop offset="0" stop-color="#2d6b33"/><stop offset="1" stop-color="#7fbf6a"/></linearGradient></defs>' +
-                '<g class="ao-sway">' +
-                artLeaf(P, l1[0], l1[1], 190, 1.05, -0.4, { green: true }) + artLeaf(P, l2[0], l2[1], 60, 1, -1.1, { green: true }) +
-                artLeaf(P, l3[0], l3[1], 150, 0.85, -0.7, { green: true }) + artLeaf(P, l4[0], l4[1], 105, 0.8, -1.6, { green: true }) +
-                bud(b1, -100) + bud(b2, 10) +
-                artRose(P, r2[0], r2[1], 0.78, 20, -0.5) + artRose(P, r3[0], r3[1], 0.68, -15, -1.2) + artRose(P, r1[0], r1[1], 1.02, 5, 0) +
-                artSpark(P, artPt(118, R + 11)[0], artPt(118, R + 11)[1], 4, -0.7) + '</g>');
         }
     };
     /** وردة من 8 بتلات (حواف مموجة) بحجم المربع كامل. */
@@ -2279,6 +2236,7 @@
      */
     function avatarFrame(part, content) {
         var frm = part.fr || 'ring';
+        if (!AVATAR_FRAMES.some(function (f) { return f.key === frm; })) frm = 'ring'; // «ورود» انشال — المحفوظ قبل يرجع إطار عادي
         var fdef = AVATAR_FRAMES.filter(function (f) { return f.key === frm; })[0] || {};
         var shp = fdef.round ? avatarShape('circle') : avatarShape(part.sh);
         var w = el('div', 'agp-so-vav fr-' + frm);
@@ -4218,15 +4176,14 @@
         // نابض: الحدود تتوهّج وتهدى
         '.agp-so-vav.fr-pulse .vav-i{inset:.1em}',
         '.agp-so-vav.fr-pulse{animation:agp-so-vpulse 1.6s ease-in-out infinite}',
-        // زخارف تدور / ورود: إطار رفيع بشكل الصورة، والرسمة (لمعات / باقة ورد) فوقه
-        '.agp-so-vav.fr-orbit .vav-i,.agp-so-vav.fr-roses .vav-i{inset:.06em}',
-        '.agp-so-vav.fr-orbit,.agp-so-vav.fr-roses{filter:drop-shadow(0 .08em .2em rgba(0,0,0,.6))}',
+        // زخارف تدور: إطار رفيع بشكل الصورة، واللمعات فوقه
+        '.agp-so-vav.fr-orbit .vav-i{inset:.06em}',
+        '.agp-so-vav.fr-orbit{filter:drop-shadow(0 .08em .2em rgba(0,0,0,.6))}',
         // الرسمات الدائرية (حلقة ضوء، فضية، غصن ورق): الصورة دائرة بدون إطار، والرسمة فوقها أكبر بـ25٪ من كل جهة
         '.agp-so-vav.fr-flare .vav-f,.agp-so-vav.fr-silver .vav-f,.agp-so-vav.fr-vine .vav-f{background:transparent}',
         '.agp-so-vav.fr-flare .vav-i,.agp-so-vav.fr-silver .vav-i,.agp-so-vav.fr-vine .vav-i{inset:0}',
         '.agp-so-vav .vav-art{position:absolute;inset:-25%;pointer-events:none}',
         '.agp-so-vav .vav-art svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 0 .05em currentColor)}',
-        '.agp-so-vav.fr-roses .vav-art svg{filter:drop-shadow(0 .05em .09em rgba(0,0,0,.55))}',
         // الحلقة الفضية: معدن من HTML (تدرّج دائري conic + قناع حلقة)، لون الإطار يصبغه (multiply)، ولمعة تلف (screen)
         '.vav-art .ao-metal{position:absolute;inset:12.8%;filter:drop-shadow(0 .05em .12em rgba(0,0,0,.65))}',
         '.vav-art .ao-metal i{position:absolute;inset:0;border-radius:50%;-webkit-mask:radial-gradient(closest-side,transparent 88.5%,#000 89.6%,#000 99%,transparent 100%);mask:radial-gradient(closest-side,transparent 88.5%,#000 89.6%,#000 99%,transparent 100%)}',
@@ -4241,9 +4198,6 @@
         '.vav-art .ao-breathe{animation:agp-so-abr 3s ease-in-out infinite}',
         '.vav-art .ao-leaf{transform-box:fill-box;transform-origin:0% 50%;animation:agp-so-aleaf 3.4s ease-in-out infinite}',
         '.vav-art .ao-vine{transform-box:view-box;transform-origin:50% 50%;animation:agp-so-avine 6s ease-in-out infinite}',
-        '.vav-art .ao-sway{transform-box:view-box;transform-origin:30% 72%;animation:agp-so-avine 5s ease-in-out infinite}',
-        '.vav-art .ao-bloom{transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-abloom 4s ease-in-out infinite}',
-        '@keyframes agp-so-abloom{0%,100%{transform:scale(.97) rotate(-2deg)}50%{transform:scale(1.03) rotate(2deg)}}',
         '@keyframes agp-so-atw{0%,100%{transform:scale(.55) rotate(0);opacity:.55}50%{transform:scale(1.12) rotate(20deg);opacity:1}}',
         '@keyframes agp-so-ashine{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}',
         '@keyframes agp-so-agl{0%,100%{opacity:.15}50%{opacity:1}}',
