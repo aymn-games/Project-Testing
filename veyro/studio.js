@@ -1887,7 +1887,8 @@
         box.appendChild(row('أقصى مدة', numInput(Math.round((Number(it.maxDurSec) || 360) / 60), 1, 60, '6', function (n) { update(it, 'maxDurSec', (n || 6) * 60); }), false, 'بالدقايق — الأطول ما تشتغل'));
         box.appendChild(row('حد الطابور', numInput(it.maxQueue || 10, 1, 50, '10', function (n) { update(it, 'maxQueue', n || 10); }), false, 'كل مشاهد له طلب واحد بالطابور'));
         box = group(root, 'الشكل');
-        box.appendChild(row('الشكل', pills([{ label: 'أيقونة + اسم الأغنية', value: 'card' }, { label: 'أيقونة بس', value: 'icon' }], it.design === 'icon' ? 'icon' : 'card', function (v) { update(it, 'design', v, true); }), true));
+        box.appendChild(row('الشكل', pills([{ label: 'فيديو + اسم الأغنية', value: 'card' }, { label: 'فيديو بس', value: 'icon' }], it.design === 'icon' ? 'icon' : 'card', function (v) { update(it, 'design', v, true); }), true,
+            'فيديو الأغنية يطلع على البث وقت التشغيل (شرط يوتيوب)، وبدون أغنية تطلع الأيقونة بس'));
         sizeColor(it, box, 1, 8);
         box = root;
         var a = el('div', 'ob-actions');

@@ -73,7 +73,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '5'; // 5: إطارات صورة الداعم المتحركة + شكل الوردة — 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '5'; // 5: إطارات صورة الداعم المتحركة + شكل الوردة + فيديو الأغنية ظاهر بمشغّل الأغاني — 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -3313,7 +3313,7 @@
     var SEARCH_GAP_MS = 3200;
     var chatState = { init: false, sid: 0, seq: 0 };
     var tts = { q: [], busy: false, audio: null, cur: null, timer: null };
-    var music = { queue: [], cur: null, player: null, waiters: [], apiLoading: false, searches: [], searching: false, lastSearchAt: 0, endTimer: null, tick: null };
+    var music = { queue: [], cur: null, player: null, waiters: [], apiLoading: false, searches: [], searching: false, lastSearchAt: 0, endTimer: null, tick: null, host: null, raf: 0 };
     var audioBlocked = false, unlockBtn = null;
     var WAVE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5v17a1 1 0 01-2 0v-17a1 1 0 012 0zm4 4v9a1 1 0 01-2 0v-9a1 1 0 012 0zm-8 2v5a1 1 0 01-2 0v-5a1 1 0 012 0zm12 0v5a1 1 0 01-2 0v-5a1 1 0 012 0zM3 11v2a1 1 0 01-2 0v-2a1 1 0 012 0zm20 0v2a1 1 0 01-2 0v-2a1 1 0 012 0z"/></svg>';
     var NOTE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 3v12.5a3.5 3.5 0 11-2-3.16V7.3l-9 2.25v8.95A3.5 3.5 0 117 15.34V5.78a1 1 0 01.76-.97l11-2.75A1 1 0 0120 3z"/></svg>';
@@ -3563,8 +3563,9 @@
                 var wrap = el('div', 'agp-so-ythost');
                 wrap.appendChild(host);
                 document.body.appendChild(wrap);
+                music.host = wrap;
                 music.player = new window.YT.Player(host, {
-                    width: 2, height: 2, videoId: cur.id,
+                    width: 356, height: 200, videoId: cur.id,
                     playerVars: { autoplay: 1, controls: 0, disablekb: 1, playsinline: 1, rel: 0, fs: 0 },
                     events: {
                         onReady: function (e) { e.target.setVolume(v); e.target.playVideo(); checkPlaying(cur); },
@@ -3579,6 +3580,7 @@
             }
         });
         if (!music.tick) music.tick = setInterval(paintProgress, 1000);
+        if (!music.raf) music.raf = requestAnimationFrame(ytLoop);
     }
 
     /** المتصفح العادي يمنع التشغيل بدون ضغطة (OBS يسمح) → زر «تفعيل الصوت». */
@@ -3618,23 +3620,71 @@
         if (music.cur) musicEnd(); else paintMusic();
     }
 
+    /*
+     * مشغّل الأغاني: وقت التشغيل كرت صغير — فيديو الأغنية ظاهر (شرط سياسات يوتيوب: المشغّل ظاهر
+     * و200×200 بكسل على الأقل، وما ينفصل الصوت عن الصورة) وتحته اسم الأغنية واللي طلبها وشريط التقدّم.
+     * مشغّل يوتيوب نفسه عنصر واحد ثابت (agp-so-ythost) ينحط فوق خانة الفيديو (agp-so-mvid) — كذا
+     * ما ينعاد تحميله كل ما الأداة تنرسم. بدون أغنية: الأيقونة بس.
+     */
     function buildMusic(n, it, preview) {
         var cur = preview ? { title: 'الأماكن', channel: 'محمد عبده', user: 'أبو فهد' } : music.cur;
         var card = it.design !== 'icon';
         n.className += cur ? ' playing' : ' idle';
-        var ic = el('span', 'agp-so-aic');
-        ic.innerHTML = NOTE_SVG;
-        n.appendChild(ic);
-        if (!card || !cur) return;
-        var tx = el('span', 'agp-so-mtx');
-        tx.appendChild(el('b', null, cur.title || ''));
-        tx.appendChild(el('small', null, 'طلب: ' + (cur.user || '')));
-        var bar = el('span', 'agp-so-mbar');
-        var fill = el('i');
-        fill.style.width = preview ? '42%' : progressPct() + '%';
-        bar.appendChild(fill);
-        tx.appendChild(bar);
-        n.appendChild(tx);
+        if (!cur) {
+            var ic = el('span', 'agp-so-aic');
+            ic.innerHTML = NOTE_SVG;
+            n.appendChild(ic);
+            return;
+        }
+        var box = el('div', 'agp-so-mcard' + (card ? '' : ' vonly') + (preview ? ' pv' : ''));
+        var vid = el('div', 'agp-so-mvid' + (preview ? ' pv' : ''));
+        if (preview) {
+            // المحرر: مكان الفيديو بشكل مثال (المشغّل الحقيقي بس برابط الشاشة)
+            var ph = el('span', 'agp-so-mph');
+            ph.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+            vid.appendChild(ph);
+        } else vid.setAttribute('data-live', '1');
+        box.appendChild(vid);
+        if (card) {
+            var tx = el('div', 'agp-so-minfo');
+            var row = el('div', 'agp-so-mrow');
+            var ic2 = el('span', 'agp-so-mic');
+            ic2.innerHTML = NOTE_SVG;
+            row.appendChild(ic2);
+            var tt = el('div', 'agp-so-mtt');
+            tt.appendChild(el('b', null, cur.title || ''));
+            tt.appendChild(el('small', null, 'طلب: ' + (cur.user || '')));
+            row.appendChild(tt);
+            tx.appendChild(row);
+            var bar = el('span', 'agp-so-mbar');
+            var fill = el('i');
+            fill.style.width = preview ? '42%' : progressPct() + '%';
+            bar.appendChild(fill);
+            tx.appendChild(bar);
+            box.appendChild(tx);
+        }
+        n.appendChild(box);
+        if (!preview) requestAnimationFrame(syncYtHost);
+    }
+
+    /** يحط مشغّل يوتيوب فوق خانة الفيديو بالضبط (مكانها وحجمها وحوافها) — كل فريم وقت التشغيل. */
+    function syncYtHost() {
+        var host = music.host;
+        if (!host) return;
+        var slot = music.cur && document.querySelector('.agp-so-mvid[data-live]');
+        if (!slot) { host.style.cssText = ''; host.classList.remove('on'); return; }
+        var r = slot.getBoundingClientRect();
+        host.classList.add('on');
+        host.style.left = r.left + 'px';
+        host.style.top = r.top + 'px';
+        host.style.width = r.width + 'px';
+        host.style.height = r.height + 'px';
+        host.style.borderRadius = getComputedStyle(slot).borderRadius;
+    }
+    function ytLoop() {
+        if (!music.cur || !music.host) { music.raf = 0; syncYtHost(); return; }
+        syncYtHost();
+        music.raf = requestAnimationFrame(ytLoop);
     }
 
     function progressPct() {
@@ -4447,7 +4497,31 @@
         '.agp-so-mtx small{font-size:.62em;color:rgba(231,224,240,.75)}',
         '.agp-so-mbar{display:block;height:.22em;border-radius:1em;background:rgba(255,255,255,.15);overflow:hidden;margin-top:.15em}',
         '.agp-so-mbar i{display:block;height:100%;border-radius:inherit;background:var(--agp-so-c,#cfc3dc);transition:width 1s linear}',
-        '.agp-so-ythost{position:fixed;left:-10px;top:-10px;width:2px;height:2px;overflow:hidden;opacity:0;pointer-events:none}',
+        // كرت المشغّل: فيديو 16:9 بحواف ناعمة وتوهّج بلون الأداة، وتحته الاسم واللي طلبها والشريط
+        '.agp-so-music.playing{display:block}',
+        '.agp-so-mcard{display:flex;flex-direction:column;gap:.5em;width:11em;padding:.45em;border-radius:1.05em;background:linear-gradient(160deg,rgba(36,31,46,.9),rgba(14,12,19,.86));border:.05em solid rgba(207,195,220,.28);box-shadow:0 .4em 1.4em rgba(0,0,0,.5),0 0 1.2em -.4em var(--agp-so-c,#cfc3dc);animation:agp-so-a-fade .4s ease both}',
+        '.agp-so-mcard.vonly{width:auto;padding:.3em}',
+        // برابط الشاشة: الكرت ما يصغر عن الفيديو (356 بكسل + الحواف)
+        '.agp-so-mcard:not(.pv):not(.vonly){min-width:calc(356px + .9em)}',
+        // 356×200 بكسل أقل شي برابط الشاشة (شرط يوتيوب 200×200) — بالمحرر (pv) يصغر مع المعاينة عادي
+        '.agp-so-mvid{position:relative;width:100%;aspect-ratio:16/9;border-radius:.7em;overflow:hidden;background:#000;box-shadow:0 0 0 .05em rgba(255,255,255,.14) inset}',
+        '.agp-so-mvid:not(.pv){min-width:356px;min-height:200px}',
+        '.agp-so-mcard.vonly .agp-so-mvid{width:10.4em}',
+        '.agp-so-mvid.pv{background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.18),transparent 55%),linear-gradient(135deg,#3b2f57,#151020 70%)}',
+        '.agp-so-mph{position:absolute;inset:0;margin:auto;width:2.2em;height:1.55em;border-radius:.45em;background:rgba(255,255,255,.9);color:#151020;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-mph svg{width:.95em;height:.95em}',
+        '.agp-so-minfo{display:flex;flex-direction:column;gap:.35em;padding:0 .2em .1em}',
+        '.agp-so-mrow{display:flex;align-items:center;gap:.45em;min-width:0}',
+        '.agp-so-mic{flex:none;width:1.45em;height:1.45em;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(160deg,var(--agp-so-c,#cfc3dc),#42394f);animation:agp-so-apulse 1.2s ease-in-out infinite}',
+        '.agp-so-mic svg{width:.8em;height:.8em}',
+        '.agp-so-mtt{display:flex;flex-direction:column;min-width:0;gap:.05em}',
+        '.agp-so-mtt b{font-size:.74em;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-mtt small{font-size:.58em;color:rgba(231,224,240,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '.agp-so-mcard .agp-so-mbar{margin:0}',
+        // مشغّل يوتيوب: مخفي لين في أغنية، وبعدها فوق خانة الفيديو بالضبط (syncYtHost)
+        '.agp-so-ythost{position:fixed;left:-9999px;top:0;width:356px;height:200px;overflow:hidden;pointer-events:none;z-index:60}',
+        '.agp-so-ythost.on{left:0}',
+        '.agp-so-ythost iframe{width:100%!important;height:100%!important;border:0;display:block}',
         '.agp-so-unlock{position:fixed;left:12px;bottom:12px;z-index:99;padding:10px 16px;border-radius:12px;border:0;background:#6e617f;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer}'
     ].join('\n');
 
