@@ -131,6 +131,7 @@ function sharedCarGeos() {
     SHARED.helmet = new T.SphereGeometry(0.2, 14, 10);
     SHARED.flame = new T.ConeGeometry(0.22, 1.6, 10, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -0.8);
     SHARED.ring = new T.TorusGeometry(1.6, 0.08, 6, 32).rotateX(Math.PI / 2);
+    SHARED.dome = new T.SphereGeometry(3.2, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.75, 0.55, 1);
     SHARED.carbonMat = new T.MeshStandardMaterial({ color: 0x15161a, roughness: 0.55, metalness: 0.3, flatShading: true });
     SHARED.tyreTex = canvasTex(128, 32, (ctx, w, h) => {
         ctx.fillStyle = '#16171a'; ctx.fillRect(0, 0, w, h);
@@ -197,18 +198,20 @@ function buildCar(car) {
     const ringMat = new T.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false });
     const ring = new T.Mesh(G.ring, ringMat); ring.position.y = 0.08; ring.visible = false; g.add(ring);
     const rain = new T.Mesh(new T.BoxGeometry(0.2, 0.12, 0.05), new T.MeshBasicMaterial({ color: 0xff2020 })); rain.position.set(0, 0.62, -2.62); g.add(rain);
+    const dome = new T.Mesh(G.dome, new T.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.18, blending: T.AdditiveBlending, depthWrite: false }));
+    dome.visible = false; g.add(dome);
     const label = makeLabel(car); g.add(label);
-    return { group: g, wheels, flame, flameMat, ring, label, paint, helmet, rain, wingFlap: null, spin: 0, data: car };
+    return { group: g, wheels, flame, flameMat, ring, dome, label, paint, helmet, rain, spin: 0, data: car };
 }
 
 function disposeCar(o) {
-    o.paint.dispose(); o.helmet.material.dispose(); o.flameMat.dispose(); o.ring.material.dispose();
+    o.paint.dispose(); o.helmet.material.dispose(); o.flameMat.dispose(); o.ring.material.dispose(); o.dome.material.dispose();
     o.rain.geometry.dispose(); o.rain.material.dispose();
     o.label.material.map.dispose(); o.label.material.dispose();
 }
 
 // ---------- المشهد ----------
-export function mountRace(el, { track, trackPoint }) {
+export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const W = () => el.clientWidth || 1, H = () => el.clientHeight || 1;
     const r = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -238,6 +241,7 @@ export function mountRace(el, { track, trackPoint }) {
     sun.shadow.bias = -0.0005;
     scene.add(sun, sun.target);
 
+    const decor = [];   // أشياء تنخفي بوضع الرسوم الخفيف
     // ---- الأرض (عشب مقصوص بخطوط) ----
     const grassTex = canvasTex(256, 256, (ctx, w, h) => {
         for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#4e8a3a' : '#57963f'; ctx.fillRect(0, i * h / 8, w, h / 8); }
@@ -287,7 +291,7 @@ export function mountRace(el, { track, trackPoint }) {
     }, true);
     const fenceMat = new T.MeshBasicMaterial({ map: fenceTex, transparent: true, side: T.DoubleSide, depthWrite: false, alphaTest: 0.05 });
     const fence = new T.Mesh(wall(track, half + 9.3, 4, 2), fenceMat); fence.position.y = 1.25; fence.geometry.scale(1, 0.7, 1);
-    scene.add(fence);
+    scene.add(fence); decor.push(fence);
 
     // ---- خط البداية (رقعة شطرنج) + علامات الشبكة ----
     const p0 = trackPoint(0, 0);
@@ -297,7 +301,7 @@ export function mountRace(el, { track, trackPoint }) {
     startLine.rotation.set(-Math.PI / 2, p0.heading, 0, 'YXZ');
     startLine.position.set(p0.x, 0.035, p0.z); startLine.receiveShadow = true; scene.add(startLine);
     const gridParts = [];
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 30; i++) {
         const d = -14 - i * 9 + 3.2, lane = i % 2 === 0 ? 3 : -3, p = trackPoint(d, lane);
         gridParts.push([new T.BoxGeometry(2.6, 0.01, 0.25), M(p.x, 0.04, p.z, 0, p.heading, 0)]);
         const pl = trackPoint(d - 0.8, lane + 1.2), pr = trackPoint(d - 0.8, lane - 1.2);
@@ -393,6 +397,7 @@ export function mountRace(el, { track, trackPoint }) {
             tops.setMatrixAt(i, M(x, (3 + 4.5) * s, z, 0, i, 0, s, s, s));
         });
         tops.castShadow = false; scene.add(trunks, tops);
+        decor.push(trunks, tops);
     }
 
     // ---- كاميرات جانب المضمار ----
@@ -416,7 +421,7 @@ export function mountRace(el, { track, trackPoint }) {
         s.visible = false; scene.add(s); parts.push({ s, v: new T.Vector3(), life: 0, max: 1 });
     }
     let partIdx = 0;
-    const BURST = { tap: [0xff3b6b, 8], nitro: [0x38bdf8, 18], drs: [0x22c55e, 18], turbo: [0xf97316, 26], jump: [0xeab308, 30], safety: [0xe10600, 36], win: [0xffd400, 60] };
+    const BURST = { tap: [0xff3b6b, 8], nitro: [0x22d3ee, 16], shield: [0x38bdf8, 22], portal: [0xa855f7, 34], shuttle: [0xf97316, 26], rocket: [0xef4444, 14], lightning: [0xeab308, 14], hit: [0xef4444, 22], win: [0xffd400, 60] };
 
     // ---- السيارات ----
     const cars = new Map();
@@ -449,14 +454,18 @@ export function mountRace(el, { track, trackPoint }) {
             o.spin += s.speed * dt / 0.37;
             for (const w of o.wheels) w.rotation.x = o.spin;
             const fx = s.fx || {};
-            const fire = fx.turbo > 0 || fx.nitro > 0;
+            // لهب: المكوك برتقالي، النيترو أزرق
+            const fire = (fx.shuttle > 0 || fx.nitro > 0) && !(fx.stop > 0);
             o.flame.visible = fire;
             if (fire) {
-                o.flameMat.color.set(fx.turbo > 0 ? 0xff6a00 : 0x38bdf8);
-                o.flame.scale.set(1, 1, (fx.turbo > 0 ? 1.6 : 1.1) * (0.8 + Math.random() * 0.45));
+                o.flameMat.color.set(fx.shuttle > 0 ? 0xff6a00 : 0x38bdf8);
+                o.flame.scale.set(1, 1, (fx.shuttle > 0 ? 1.7 : 1.1) * (0.8 + Math.random() * 0.45));
             }
-            o.ring.visible = fx.drs > 0 || fx.slow > 0;
-            if (o.ring.visible) { o.ring.material.color.set(fx.slow > 0 ? 0xe10600 : 0x22c55e); o.ring.rotation.y += dt * 2; o.ring.scale.setScalar(1 + Math.sin(performance.now() / 150) * 0.06); }
+            // حلقة: أحمر = متوقف (صاروخ/صاعقة)، سماوي = درع الحماية
+            o.ring.visible = fx.stop > 0 || fx.shield > 0;
+            if (o.ring.visible) { o.ring.material.color.set(fx.stop > 0 ? 0xef4444 : 0x38bdf8); o.ring.rotation.y += dt * 2; o.ring.scale.setScalar(1 + Math.sin(performance.now() / 150) * 0.06); }
+            o.dome.visible = fx.shield > 0;
+            if (o.dome.visible) o.dome.material.opacity = 0.16 + Math.sin(performance.now() / 120) * 0.06;
             o.rain.material.color.setScalar(0); o.rain.material.color.r = (Math.floor(performance.now() / 120) % 2 || s.speed < 30) ? 1 : 0.25;
             const inside = camMode === 'onboard' && s.id === focusId;
             o.label.visible = !inside; o.helmet.visible = !inside;
@@ -540,6 +549,23 @@ export function mountRace(el, { track, trackPoint }) {
         sun.target.position.copy(focusP); sun.position.copy(focusP).add(new T.Vector3(60, 120, 40));
     }
 
+    // ---- وضع الرسوم (خفيف / متوازن / سينمائي) — يتغير وقت السباق بدون إعادة تحميل ----
+    function setQuality(q) {
+        const Q = {
+            light: { pr: 0.75, shadow: false, map: 512, decor: false, fogFar: 520 },
+            balanced: { pr: 1, shadow: true, map: 1024, decor: true, fogFar: 900 },
+            cinematic: { pr: 2, shadow: true, map: 2048, decor: true, fogFar: 1300 }
+        }[q] || null;
+        if (!Q) return;
+        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
+        r.setSize(W(), H(), false);
+        sun.castShadow = Q.shadow;
+        if (sun.shadow.mapSize.x !== Q.map) { sun.shadow.mapSize.set(Q.map, Q.map); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+        decor.forEach(o => { o.visible = Q.decor; });
+        scene.fog.far = Q.fogFar; camera.far = Q.fogFar + 300; camera.updateProjectionMatrix();
+    }
+    setQuality(quality);
+
     // ---- الحلقة ----
     const clock = new T.Clock();
     let raf = 0, running = true;
@@ -559,7 +585,7 @@ export function mountRace(el, { track, trackPoint }) {
     document.addEventListener('visibilitychange', onVis);
 
     return {
-        setCars, update, burst, setLights,
+        setCars, update, burst, setLights, setQuality,
         setCamera(mode, id) { camMode = phase === 'finish' ? 'orbit' : mode; if (id) focusId = id; },
         setPhase(p) { phase = p; },
         stop() {

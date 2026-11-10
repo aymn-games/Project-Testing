@@ -5,7 +5,8 @@
  *  - المشاهد يكتب كلمة الدخول بالشات (الافتراضي «سباق») فيأخذ سيارة فورمولا بالشبكة.
  *  - التكبيس (لايكات البث) يرفع دواسة الوقود لسيارة صاحبه ← سرعة أعلى، وتنزل
  *    تدريجياً لو وقف التكبيس.
- *  - كل دعم (هدية) يعطي ميزة حسب قيمته بالكوينز (جدول PERKS تحت).
+ *  - كل تأثير (درع، بوابة، مكوك، صاروخ، صاعقة) مربوط بهدية يختارها الاستريمر (EFFECTS تحت)،
+ *    وأي دعم غير مربوط = نيترو.
  *  - الاستريمر يغيّر الكاميرا (تلفزيونية / داخل السيارة / هليكوبتر / جانب المضمار /
  *    مخرج تلقائي) ويثبّتها على أي متسابق بالضغط على اسمه ببرج الترتيب.
  *
@@ -24,14 +25,34 @@
     var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
     var SETTINGS_KEY = 'formula-race-settings';
     var DEMO = /[?&]demo=1/.test(location.search);
+    var GAME_DIR = (function () { var sc = document.currentScript; return sc && sc.src ? sc.src.replace(/f1-game\.js(\?.*)?$/, '') : ''; }());
 
     // ------------------------------------------------------------------
     // الإعدادات
     // ------------------------------------------------------------------
-    var DEFAULTS = { laps: 3, maxDrivers: 12, keyword: 'سباق', autoCam: true };
+    var DEFAULT_GIFTS = { shield: 'rose', portal: 'finger-heart', shuttle: 'perfume', rocket: 'hat-and-mustache', lightning: 'corgi' };
+    var DEFAULTS = {
+        laps: 3, maxDrivers: 12, keyword: 'سباق', autoCam: true,
+        joinMode: 'all',            // all | followers
+        quality: 'balanced',        // light | balanced | cinematic
+        giftsOn: true,              // عند الإيقاف: التكبيس + النيترو فقط
+        gifts: DEFAULT_GIFTS        // تأثير ← معرّف الهدية
+    };
+    var MAX_DRIVERS_LIMIT = 30, MAX_LAPS = 20;
     function readJSON(key, fb) { try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fb; } catch (e) { return fb; } }
     function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
-    var settings = Object.assign({}, DEFAULTS, readJSON(SETTINGS_KEY, {}));
+    function loadSettings() {
+        var saved = readJSON(SETTINGS_KEY, {}) || {};
+        var out = Object.assign({}, DEFAULTS, saved);
+        out.gifts = Object.assign({}, DEFAULT_GIFTS, saved.gifts || {});
+        out.laps = clampInt(out.laps, 1, MAX_LAPS, DEFAULTS.laps);
+        out.maxDrivers = clampInt(out.maxDrivers, 1, MAX_DRIVERS_LIMIT, DEFAULTS.maxDrivers);
+        if (['light', 'balanced', 'cinematic'].indexOf(out.quality) === -1) out.quality = DEFAULTS.quality;
+        if (['all', 'followers'].indexOf(out.joinMode) === -1) out.joinMode = DEFAULTS.joinMode;
+        return out;
+    }
+    function clampInt(v, a, b, fb) { v = parseInt(v, 10); return isNaN(v) ? fb : Math.max(a, Math.min(b, v)); }
+    var settings = loadSettings();
 
     // ------------------------------------------------------------------
     // المضمار — نقاط تحكم (متر) لحلبة مغلقة، تُنعَّم بمنحنى Catmull-Rom ثم
@@ -110,18 +131,51 @@
     }
 
     // ------------------------------------------------------------------
-    // مزايا الدعم — حسب مجموع الكوينز بالهدية (القيمة × التكرار)
+    // هدايا السباق — كل تأثير مربوط بهدية يختارها الاستريمر (الافتراضي DEFAULT_GIFTS).
+    // أي دعم غير مربوط بتأثير = نيترو. ولو هدايا السباق مطفأة: كل دعم = نيترو.
     // ------------------------------------------------------------------
-    var PERKS = [
-        { id: 'nitro', min: 1, max: 9, name: 'نيترو', desc: 'دفعة سرعة سريعة ثانيتين', icon: '💨', color: '#38bdf8' },
-        { id: 'drs', min: 10, max: 99, name: 'DRS', desc: 'فتح الجناح: سرعة قصوى أعلى ٥ ثواني', icon: '🪽', color: '#22c55e' },
-        { id: 'turbo', min: 100, max: 499, name: 'توربو', desc: 'انطلاقة نارية ٤ ثواني', icon: '🔥', color: '#f97316' },
-        { id: 'jump', min: 500, max: 4999, name: 'تجاوز فوري', desc: 'تقفز قدّام السيارة اللي قبلك', icon: '⚡', color: '#eab308' },
-        { id: 'safety', min: 5000, max: Infinity, name: 'سيارة الأمان', desc: 'كل المنافسين يبطّون ٥ ثواني وأنت توربو', icon: '🚨', color: '#e10600' }
+    var EFFECTS = [
+        { id: 'shield', name: 'درع الحماية', desc: '10 ثوانٍ أو أول ضربة', icon: '🛡️', color: '#38bdf8' },
+        { id: 'portal', name: 'البوابة', desc: 'انتقال إلى الأمام', icon: '🌀', color: '#a855f7' },
+        { id: 'shuttle', name: 'المكوك', desc: 'سحب سريع إلى الأمام', icon: '🚀', color: '#f97316' },
+        { id: 'rocket', name: 'الصاروخ', desc: 'إيقاف منافس 3 ثوانٍ', icon: '🎯', color: '#ef4444' },
+        { id: 'lightning', name: 'الصاعقة', desc: 'إيقاف 3 منافسين 5 ثوانٍ', icon: '⚡', color: '#eab308' }
     ];
-    function perkFor(coins) {
-        for (var i = 0; i < PERKS.length; i++) if (coins >= PERKS[i].min && coins <= PERKS[i].max) return PERKS[i];
-        return PERKS[0];
+    var NITRO = { id: 'nitro', name: 'نيترو', desc: 'دفعة سرعة ثانيتين', icon: '💨', color: '#22d3ee' };
+    function effectById(id) { for (var i = 0; i < EFFECTS.length; i++) if (EFFECTS[i].id === id) return EFFECTS[i]; return id === 'nitro' ? NITRO : null; }
+
+    // قائمة الهدايا: المشتركة (assets/tiktok-gifts) + العطر (مو موجود بالمشتركة)
+    var _gifts = null;
+    function giftList() {
+        if (_gifts) return _gifts;
+        var G = AGP.tiktokGifts, out = [];
+        if (G && G.list) G.list.forEach(function (g) { out.push({ id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) }); });
+        if (!out.some(function (g) { return g.id === 'perfume'; })) out.push({ id: 'perfume', name: 'عطر', coins: 20, img: GAME_DIR + 'gift_icons/perfume.webp' });
+        out.sort(function (a, b) { return a.coins - b.coins; });
+        return (_gifts = out);
+    }
+    function giftById(id) { var l = giftList(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
+    // أسماء تيك توك الإنجليزية (giftName) لما تختلف عن المعرّف
+    var GIFT_NAMES = {
+        'ice-cream': ['Ice Cream Cone'], 'donut': ['Doughnut'], 'finger-heart': ['Finger Heart'],
+        'heart-in-your-hands-a': ['Heart In Your Hands'], 'heart-in-your-hands-b': ['Heart In Your Hands'],
+        'kings-scepter': ["King's Scepter", 'Scepter'], 'hat-and-mustache': ['Hat and Mustache', 'Hat & Mustache'],
+        'love-saudi': ['Love Saudi', 'I Love KSA'], 'saudi-in-heart': ['Saudi in Heart', 'KSA in my heart'],
+        'diving-with-whales': ['Diving with Whales'], 'cake-slice': ['Cake Slice'], 'paper-crane': ['Paper Crane']
+    };
+    function gkey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+    function giftNameMatches(giftId, name) {
+        var k = gkey(name); if (!k) return false;
+        if (k === gkey(giftId)) return true;
+        return (GIFT_NAMES[giftId] || []).some(function (n) { return gkey(n) === k; });
+    }
+    /** التأثير المربوط بالهدية القادمة من البث (بالاسم أولاً، ثم بقيمة الكوينز)، أو null. */
+    function effectForGift(payload) {
+        var ids = Object.keys(settings.gifts), i;
+        for (i = 0; i < ids.length; i++) if (giftNameMatches(settings.gifts[ids[i]], payload.giftName)) return ids[i];
+        var v = Number(payload.giftValue);
+        if (v > 0) for (i = 0; i < ids.length; i++) { var g = giftById(settings.gifts[ids[i]]); if (g && g.coins === v) return ids[i]; }
+        return null;
     }
 
     // ------------------------------------------------------------------
@@ -143,6 +197,8 @@
 
     function hashStr(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
+    function freshFx() { return { nitro: 0, shield: 0, shuttle: 0, stop: 0, portal: 0 }; }
+
     function gridSlot(i) {
         // صفّين متداخلين خلف خط البداية (مثل شبكة الفورمولا)
         return { dist: -14 - i * 9, lane: (i % 2 === 0 ? 3 : -3) };
@@ -159,7 +215,7 @@
             id: p.id, name: String(p.name || p.id).slice(0, 24), avatar: p.avatarUrl || null,
             color: color, number: S.cars.length + 1,
             dist: slot.dist, lane: slot.lane, laneT: slot.lane, speed: 0, throttle: 0,
-            fx: { nitro: 0, drs: 0, turbo: 0, slow: 0 }, finished: false, finishAt: 0, likes: 0, gifts: 0,
+            fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0,
             bot: !!p.bot
         };
         S.cars.push(car); S.byId[car.id] = car;
@@ -190,33 +246,54 @@
         if (scene && count >= 15) scene.burst(c.id, 'tap');
     }
 
-    function applyPerk(c, perk) {
+    /** يوقف السيارة (صاروخ/صاعقة) — الدرع يصدّ أول ضربة ويختفي. ترجع true لو أصابت. */
+    function hit(o, secs) {
+        if (o.finished) return false;
+        if (o.fx.shield > 0) { o.fx.shield = 0; if (scene) scene.burst(o.id, 'shield'); toast('🛡️ درع <b>' + esc(o.name) + '</b> صدّ الضربة', '#38bdf8'); return false; }
+        o.fx.stop = Math.max(o.fx.stop, secs);
+        if (scene) scene.burst(o.id, 'hit');
+        return true;
+    }
+    /** أقرب منافسين قدّامك، ولو ما كفوا نكمّل من اللي وراك. */
+    function nearestRivals(c, n) {
+        var others = S.cars.filter(function (o) { return o !== c && !o.finished; });
+        var ahead = others.filter(function (o) { return o.dist > c.dist; }).sort(function (a, b) { return a.dist - b.dist; });
+        var behind = others.filter(function (o) { return o.dist <= c.dist; }).sort(function (a, b) { return b.dist - a.dist; });
+        return ahead.concat(behind).slice(0, n);
+    }
+
+    function applyEffect(c, id) {
         c.gifts++;
-        if (perk.id === 'nitro') { c.fx.nitro = 2; c.throttle = 1; }
-        else if (perk.id === 'drs') { c.fx.drs = 5; c.throttle = Math.max(c.throttle, 0.8); }
-        else if (perk.id === 'turbo') { c.fx.turbo = 4; c.throttle = 1; }
-        else if (perk.id === 'jump') {
+        var extra = '';
+        if (id === 'nitro') { c.fx.nitro = 2; c.throttle = 1; }
+        else if (id === 'shield') { c.fx.shield = 10; }
+        else if (id === 'portal') {
             var ahead = null;
             S.cars.forEach(function (o) { if (o !== c && !o.finished && o.dist > c.dist && (!ahead || o.dist < ahead.dist)) ahead = o; });
             c.dist = ahead ? ahead.dist + 12 : c.dist + 160;
             c.lane = c.laneT = ahead ? (ahead.lane > 0 ? -3 : 3) : c.lane;
-            c.fx.nitro = 2; c.throttle = 1;
-        } else if (perk.id === 'safety') {
-            S.cars.forEach(function (o) { if (o !== c && !o.finished) o.fx.slow = 5; });
-            c.fx.turbo = 5; c.throttle = 1;
+            c.fx.portal = 1; c.throttle = Math.max(c.throttle, 0.8);
+        } else if (id === 'shuttle') { c.fx.shuttle = 3; c.throttle = 1; }
+        else if (id === 'rocket') {
+            var t = nearestRivals(c, 1);
+            if (t[0] && hit(t[0], 3)) extra = ' على <b>' + esc(t[0].name) + '</b>';
+        } else if (id === 'lightning') {
+            var hitNames = nearestRivals(c, 3).filter(function (o) { return hit(o, 5); }).map(function (o) { return esc(o.name); });
+            if (hitNames.length) extra = ' على <b>' + hitNames.join('، ') + '</b>';
         }
-        if (scene) scene.burst(c.id, perk.id);
+        if (scene) scene.burst(c.id, id);
+        return extra;
     }
 
     function onGift(payload) {
         var c = S.byId[payload.id];
-        if (!c && S.phase === 'lobby') c = addCar(payload);
+        if (!c && S.phase === 'lobby' && (settings.joinMode !== 'followers' || payload.isFollower)) c = addCar(payload);
         if (!c || c.finished) return;
-        var coins = Math.max(1, (Number(payload.giftValue) || 1) * (Number(payload.repeatCount) || 1));
-        if (S.phase !== 'race') { toast('🎁 <b>' + esc(c.name) + '</b> دعم — المزايا تشتغل بعد الانطلاق', c.color); return; }
-        var perk = perkFor(coins);
-        applyPerk(c, perk);
-        toast(perk.icon + ' <b>' + esc(c.name) + '</b> ← ' + perk.name + (payload.giftName ? ' <span class="t-sub">(' + esc(payload.giftName) + ')</span>' : ''), perk.color);
+        if (S.phase !== 'race') { toast('🎁 <b>' + esc(c.name) + '</b> دعم — التأثيرات تشتغل بعد الانطلاق', c.color); return; }
+        var id = settings.giftsOn ? (effectForGift(payload) || 'nitro') : 'nitro';
+        var ef = effectById(id);
+        var extra = applyEffect(c, id);
+        toast(ef.icon + ' <b>' + esc(c.name) + '</b> ← ' + ef.name + extra, ef.color);
         if (!S.cam.locked && S.cam.mode === 'auto') { S.cam.focus = c.id; S.cam.autoT = 0; }
     }
 
@@ -233,17 +310,16 @@
             var fx = c.fx;
             for (var k in fx) if (fx[k] > 0) fx[k] = Math.max(0, fx[k] - dt);
             if (c.finished) { c.speed *= Math.exp(-dt * 0.8); c.dist += c.speed * dt; return; }
-            if (c.bot) c.throttle = Math.min(1, c.throttle + (Math.random() < dt * 3 ? 0.25 + Math.random() * 0.3 : 0));
+            if (c.bot && fx.stop <= 0) c.throttle = Math.min(1, c.throttle + (Math.random() < dt * 3 ? 0.25 + Math.random() * 0.3 : 0));
             c.throttle = Math.max(0, c.throttle - dt * 0.28);
             // إبطاء بالمنعطفات الحادة (يعطي إحساس الكبح)
             var idx = Math.floor((((c.dist % L) + L) % L) / TRACK.step) % TRACK.count;
             var corner = Math.min(1, Math.abs(TRACK.curvature[idx]) * 18);
             var target = BASE_SPEED + c.throttle * BOOST_SPEED * (1 - corner * 0.35);
-            if (fx.drs > 0) target *= 1.25;
-            if (fx.nitro > 0) target *= 1.18;
-            if (fx.turbo > 0) target *= 1.55;
-            if (fx.slow > 0) target *= 0.45;
-            var acc = target > c.speed ? (fx.turbo > 0 || fx.nitro > 0 ? 4 : 1.6) : 2.4;
+            if (fx.nitro > 0) target *= 1.2;
+            if (fx.shuttle > 0) target *= 1.7;
+            if (fx.stop > 0) target = 0;
+            var acc = fx.stop > 0 ? 5 : target > c.speed ? (fx.shuttle > 0 || fx.nitro > 0 ? 4.5 : 1.6) : 2.4;
             c.speed += (target - c.speed) * (1 - Math.exp(-dt * acc));
             // تجاوز: لو فيه سيارة قريبة قدامي بنفس المسار أغيّر المسار
             sorted.forEach(function (o) {
@@ -342,8 +418,6 @@
                 var allDone = S.cars.every(function (c) { return c.finished; });
                 if (allDone || S.finishTimer > 12) endRace();
             }
-        } else if (DEMO && S.phase === 'lobby' && S.cars.length === 0) {
-            demoFill();
         }
         camTick(dt);
         if (scene) scene.update(S.cars.map(function (c) {
@@ -400,7 +474,7 @@
     function reportPoints(winner) {
         if (S.reported) return; S.reported = true;
         var A = window.AGPAuth;
-        if (DEMO || !A || typeof A.reportMatchPoints !== 'function') return;
+        if (S.demo || !A || typeof A.reportMatchPoints !== 'function') return;
         A.reportMatchPoints({
             players: S.cars.map(function (c) { return { id: c.id, name: c.name }; }),
             winnerIds: [winner.id],
@@ -439,7 +513,7 @@
         S.cars.forEach(function (c, i) {
             var sl = gridSlot(i);
             c.dist = sl.dist; c.lane = c.laneT = sl.lane; c.speed = 0; c.throttle = 0; c.finished = false; c.finishAt = 0;
-            c.fx = { nitro: 0, drs: 0, turbo: 0, slow: 0 }; c.likes = 0; c.gifts = 0;
+            c.fx = freshFx(); c.likes = 0; c.gifts = 0;
         });
         $('podium').classList.remove('show');
         if (scene) { scene.setPhase('lobby'); scene.setCars(S.cars); }
@@ -520,7 +594,7 @@
             else if (c.finished) gap = '+' + (c.finishAt - leader.finishAt).toFixed(1);
             else gap = '+' + ((leader.dist - c.dist) / Math.max(c.speed, 15)).toFixed(1);
             r.querySelector('.tgap').textContent = gap;
-            var fx = c.fx, icon = fx.slow > 0 ? '🐢' : fx.turbo > 0 ? '🔥' : fx.drs > 0 ? '🪽' : fx.nitro > 0 ? '💨' : '';
+            var fx = c.fx, icon = fx.stop > 0 ? '⛔' : fx.shuttle > 0 ? '🚀' : fx.nitro > 0 ? '💨' : fx.shield > 0 ? '🛡️' : '';
             r.querySelector('.tfx').textContent = icon;
             r.classList.toggle('focus', S.cam.focus === c.id);
             r.classList.toggle('locked', S.cam.focus === c.id && S.cam.locked);
@@ -557,8 +631,10 @@
             $('fLikes').textContent = f.likes;
             $('fLock').style.display = S.cam.locked ? '' : 'none';
             var fx = f.fx, act = [];
-            PERKS.forEach(function (p) { if ((p.id === 'nitro' && fx.nitro > 0) || (p.id === 'drs' && fx.drs > 0) || (p.id === 'turbo' && fx.turbo > 0)) act.push('<span style="--c:' + p.color + '">' + p.icon + ' ' + p.name + '</span>'); });
-            if (fx.slow > 0) act.push('<span style="--c:#e10600">🐢 سيارة الأمان</span>');
+            [['shield', 'shield'], ['nitro', 'nitro'], ['shuttle', 'shuttle']].forEach(function (k) {
+                if (fx[k[0]] > 0) { var e = effectById(k[1]); act.push('<span style="--c:' + e.color + '">' + e.icon + ' ' + e.name + '</span>'); }
+            });
+            if (fx.stop > 0) act.push('<span style="--c:#ef4444">⛔ متوقف</span>');
             $('fFx').innerHTML = act.join('');
         }
         drawMinimap();
@@ -617,11 +693,17 @@
         Array.prototype.forEach.call(bar.children, function (b) { b.classList.toggle('on', b.dataset.mode === S.cam.mode); });
     }
 
+    /** لوحة «كيف تفوز؟» بالسباق: كل تأثير بصورة هديته المختارة. */
     function renderPerks() {
-        $('perkList').innerHTML = PERKS.map(function (p) {
-            var range = p.max === Infinity ? p.min + '+' : p.min + '–' + p.max;
-            return '<div class="perk" style="--c:' + p.color + '"><span class="perk-ic">' + p.icon + '</span><span class="perk-txt"><b>' + p.name + '</b><small>' + p.desc + '</small></span><span class="perk-coins">' + range + ' 🪙</span></div>';
-        }).join('');
+        var rows = [];
+        if (settings.giftsOn) {
+            EFFECTS.forEach(function (e) {
+                var g = giftById(settings.gifts[e.id]);
+                rows.push('<div class="perk" style="--c:' + e.color + '"><span class="perk-ic">' + (g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon) + '</span><span class="perk-txt"><b>' + e.icon + ' ' + e.name + '</b><small>' + e.desc + '</small></span><span class="perk-coins">' + (g ? esc(g.name) : '') + '</span></div>');
+            });
+        }
+        rows.push('<div class="perk" style="--c:' + NITRO.color + '"><span class="perk-ic">' + NITRO.icon + '</span><span class="perk-txt"><b>' + NITRO.name + '</b><small>' + NITRO.desc + '</small></span><span class="perk-coins">' + (settings.giftsOn ? 'أي دعم ثاني' : 'أي دعم') + '</span></div>');
+        $('perkList').innerHTML = rows.join('');
     }
 
     var toastQ = 0;
@@ -650,29 +732,87 @@
     // ------------------------------------------------------------------
     // الإعدادات (صف لكل خيار: العنوان يمين والعنصر يسار — قاعدة CLAUDE.md)
     // ------------------------------------------------------------------
-    function bindSettings() {
-        var laps = $('setLaps');
-        var upd = function () {
-            $('lapsVal').textContent = settings.laps;
-            Array.prototype.forEach.call($('setMax').children, function (b) { b.classList.toggle('on', Number(b.dataset.v) === settings.maxDrivers); });
-            $('setAutoCam').checked = !!settings.autoCam;
-            $('setKw').value = settings.keyword;
-            writeJSON(SETTINGS_KEY, settings);
-            renderLobby();
-        };
-        laps.querySelector('[data-d="-1"]').onclick = function () { settings.laps = Math.max(1, settings.laps - 1); upd(); };
-        laps.querySelector('[data-d="1"]').onclick = function () { settings.laps = Math.min(10, settings.laps + 1); upd(); };
-        Array.prototype.forEach.call($('setMax').children, function (b) {
-            b.onclick = function () {
-                var v = Number(b.dataset.v);
-                if (v < S.cars.length) return;
-                settings.maxDrivers = v; upd();
-            };
-        });
-        $('setAutoCam').onchange = function () { settings.autoCam = this.checked; S.cam.mode = settings.autoCam ? 'auto' : 'tv'; renderCamBar(); upd(); };
-        $('setKw').oninput = function () { var v = this.value.trim(); if (v) { settings.keyword = v.slice(0, 20); writeJSON(SETTINGS_KEY, settings); $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword; } };
-        upd();
+    function saveSettings() { writeJSON(SETTINGS_KEY, settings); }
+    function syncSettingsUI() {
+        $('setLaps').value = settings.laps;
+        $('setMax').value = settings.maxDrivers;
+        $('setKw').value = settings.keyword;
+        $('setAutoCam').checked = !!settings.autoCam;
+        $('setGiftsOn').checked = !!settings.giftsOn;
+        $('giftsOnTxt').textContent = settings.giftsOn ? 'مفعّل' : 'متوقف';
+        $('giftRows').classList.toggle('off', !settings.giftsOn);
+        pills('setJoin', settings.joinMode); pills('setQuality', settings.quality);
+        $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword;
+        $('qualityVal').textContent = qualityName(settings.quality);
+        renderGiftRows(); renderPerks();
     }
+    function pills(id, v) { Array.prototype.forEach.call($(id).children, function (b) { b.classList.toggle('on', b.dataset.v === v); }); }
+    function qualityName(q) { return { light: 'خفيف', balanced: 'متوازن', cinematic: 'سينمائي' }[q] || ''; }
+    function setQuality(q) {
+        settings.quality = q; saveSettings();
+        if (scene) scene.setQuality(q);
+        syncSettingsUI();
+    }
+
+    function bindSettings() {
+        $('setLaps').onchange = function () { settings.laps = clampInt(this.value, 1, MAX_LAPS, settings.laps); saveSettings(); syncSettingsUI(); };
+        $('setMax').onchange = function () {
+            settings.maxDrivers = clampInt(this.value, Math.max(1, S.cars.length), MAX_DRIVERS_LIMIT, settings.maxDrivers);
+            saveSettings(); syncSettingsUI(); renderLobby();
+        };
+        $('setKw').oninput = function () { var v = this.value.trim(); if (v) { settings.keyword = v.slice(0, 20); saveSettings(); $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword; } };
+        $('setAutoCam').onchange = function () { settings.autoCam = this.checked; S.cam.mode = settings.autoCam ? 'auto' : 'tv'; saveSettings(); renderCamBar(); };
+        Array.prototype.forEach.call($('setJoin').children, function (b) { b.onclick = function () { settings.joinMode = b.dataset.v; saveSettings(); syncSettingsUI(); }; });
+        Array.prototype.forEach.call($('setQuality').children, function (b) { b.onclick = function () { setQuality(b.dataset.v); }; });
+        $('setGiftsOn').onchange = function () { settings.giftsOn = this.checked; saveSettings(); syncSettingsUI(); };
+        $('resetSettings').onclick = function () {
+            settings = Object.assign({}, DEFAULTS, { gifts: Object.assign({}, DEFAULT_GIFTS), maxDrivers: Math.max(DEFAULTS.maxDrivers, S.cars.length) });
+            saveSettings(); S.cam.mode = settings.autoCam ? 'auto' : 'tv'; renderCamBar();
+            if (scene) scene.setQuality(settings.quality);
+            syncSettingsUI(); renderLobby();
+        };
+        $('qualityBtn').onclick = function () {
+            var order = ['light', 'balanced', 'cinematic'];
+            setQuality(order[(order.indexOf(settings.quality) + 1) % order.length]);
+        };
+        $('giftRows').addEventListener('click', function (e) { var b = e.target.closest('[data-pick]'); if (b) openPicker(b.dataset.pick); });
+        $('pickerClose').onclick = closePicker;
+        $('picker').addEventListener('click', function (e) {
+            if (e.target === $('picker')) return closePicker();
+            var g = e.target.closest('[data-gift]'); if (!g || !pickFor) return;
+            // نفس الهدية ما تنربط بتأثيرين: لو مستخدمة نبدّل بينهم
+            var prev = settings.gifts[pickFor], gid = g.dataset.gift;
+            Object.keys(settings.gifts).forEach(function (k) { if (k !== pickFor && settings.gifts[k] === gid) settings.gifts[k] = prev; });
+            settings.gifts[pickFor] = gid;
+            saveSettings(); closePicker(); syncSettingsUI();
+        });
+        syncSettingsUI();
+    }
+
+    function renderGiftRows() {
+        $('giftRows').innerHTML = EFFECTS.map(function (e) {
+            var g = giftById(settings.gifts[e.id]);
+            return '<div class="set-row gift-row" style="--c:' + e.color + '">' +
+                '<span class="set-label"><b>' + e.icon + ' ' + e.name + ' · ' + e.desc + '</b></span>' +
+                '<button type="button" class="gift-pick" data-pick="' + e.id + '">' +
+                (g ? '<img src="' + esc(g.img) + '" alt=""><span class="gp-txt"><b>' + esc(g.name) + '</b><small>' + g.coins + ' عملة</small></span>' : '<span class="gp-txt"><b>اختر هدية</b></span>') +
+                '<span class="gp-change">تغيير الهدية</span></button></div>';
+        }).join('');
+    }
+    var pickFor = null;
+    function openPicker(effectId) {
+        pickFor = effectId;
+        var e = effectById(effectId);
+        $('pickerTitle').textContent = 'هدية ' + e.name;
+        $('pickerGrid').innerHTML = giftList().map(function (g) {
+            var usedBy = null;
+            Object.keys(settings.gifts).forEach(function (k) { if (settings.gifts[k] === g.id) usedBy = effectById(k); });
+            return '<button type="button" class="pk' + (settings.gifts[effectId] === g.id ? ' on' : '') + '" data-gift="' + esc(g.id) + '"><img src="' + esc(g.img) + '" alt=""><b>' + esc(g.name) + '</b><small>' + g.coins + ' عملة</small>' +
+                (usedBy && usedBy.id !== effectId ? '<em>' + usedBy.name + '</em>' : '') + '</button>';
+        }).join('');
+        $('picker').classList.add('show');
+    }
+    function closePicker() { pickFor = null; $('picker').classList.remove('show'); }
 
     // ------------------------------------------------------------------
     // ربط البث
@@ -686,7 +826,9 @@
         if (!AGP.events || typeof AGP.events.on !== 'function') return;
         AGP.events.on('stream:commentReceived', function (p) {
             if (!p || !p.id || typeof p.text !== 'string') return;
-            if (S.phase === 'lobby' && norm(p.text) === norm(settings.keyword)) addCar(p);
+            if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
+            if (settings.joinMode === 'followers' && !p.isFollower) return;
+            addCar(p);
         });
         AGP.events.on('stream:giftReceived', function (p) { if (p && p.id) onGift(p); });
         AGP.events.on('stream:likeReceived', function (p) { if (p && p.id) onLike(p.id, p.count); });
@@ -713,18 +855,33 @@
         el.querySelector('span').textContent = on ? 'متصل بالبث' : (_connected ? 'جاري الاتصال…' : 'غير متصل بالبث');
     }
 
-    // وضع التجربة (?demo=1): متسابقين وهميين لمعاينة التصميم بدون بث
-    function demoFill() {
-        var names = ['أبو فهد', 'نورة', 'سلطان', 'ريم ⚡', 'ماجد', 'Lama', 'خالد ٧', 'جود', 'تركي', 'سارا'];
-        names.forEach(function (n, i) { addCar({ id: 'demo:' + i, name: n, bot: true }); });
+    // «تجربة اللعبة»: متسابقين وهميين يكمّلون الشبكة، تكبيس ودعم عشوائي، وبدون نقاط.
+    // نفس الشي من الرابط: ?demo=1 (و&autostart=1 يبدأ السباق على طول).
+    var demoTimer = 0;
+    function startTest(autostart) {
+        if (S.phase !== 'lobby') return;
+        S.demo = true; document.body.classList.add('testing');
+        var names = ['أبو فهد', 'نورة', 'سلطان', 'ريم ⚡', 'ماجد', 'Lama', 'خالد ٧', 'جود', 'تركي', 'سارا', 'فيصل', 'هيا', 'بندر', 'دانة', 'عزوز', 'مشاعل'];
+        for (var i = 0; S.cars.length < Math.min(settings.maxDrivers, 10) && i < 60; i++) addCar({ id: 'demo:' + i, name: names[i % names.length] + (i >= names.length ? ' ' + (Math.floor(i / names.length) + 1) : ''), bot: true });
         $('toasts').innerHTML = '';
-        if (/[?&]autostart=1/.test(location.search)) setTimeout(startCountdown, 600);
-        if (/[?&]autostart=1/.test(location.search)) setInterval(function () {
-            if (S.phase !== 'race') return;
+        clearInterval(demoTimer);
+        demoTimer = setInterval(function () {
+            if (S.phase !== 'race' || !S.cars.length) return;
             var c = S.cars[Math.floor(Math.random() * S.cars.length)];
-            var coins = [1, 5, 30, 199, 1000, 5000][Math.floor(Math.random() * (Math.random() < 0.85 ? 4 : 6))];
-            onGift({ id: c.id, giftValue: coins, repeatCount: 1, giftName: coins >= 5000 ? 'Lion' : coins >= 500 ? 'Money Gun' : coins >= 100 ? 'Perfume' : coins >= 10 ? 'Doughnut' : 'Rose' });
-        }, 3500);
+            var ids = Object.keys(settings.gifts), pick = Math.random() < 0.2 ? null : settings.gifts[ids[Math.floor(Math.random() * ids.length)]];
+            var g = pick ? giftById(pick) : { id: 'tiktok', name: 'TikTok', coins: 1 };
+            onGift({ id: c.id, giftName: g.id, giftValue: g.coins, repeatCount: 1 });
+        }, 3200);
+        if (autostart) setTimeout(startCountdown, 600);
+    }
+    function stopTest() {
+        if (!S.demo) return;
+        S.demo = false; document.body.classList.remove('testing'); clearInterval(demoTimer);
+        S.cars.filter(function (c) { return c.bot; }).forEach(function (c) { delete S.byId[c.id]; });
+        S.cars = S.cars.filter(function (c) { return !c.bot; });
+        S.cars.forEach(function (car, i) { var sl = gridSlot(i); car.number = i + 1; car.dist = sl.dist; car.lane = car.laneT = sl.lane; });
+        if (scene) scene.setCars(S.cars);
+        renderLobby();
     }
 
     // ------------------------------------------------------------------
@@ -733,7 +890,8 @@
     function bindUI() {
         $('startBtn').onclick = startCountdown;
         $('clearBtn').onclick = clearDrivers;
-        $('againBtn').onclick = resetRace;
+        $('againBtn').onclick = function () { resetRace(); stopTest(); };
+        $('testBtn').onclick = function () { startTest(true); };
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
         $('lobbyGrid').addEventListener('click', function (e) { var b = e.target.closest('.slot-x'); if (b) removeCar(b.dataset.id); });
         $('hudToggle').onclick = function () { document.body.classList.toggle('clean'); };
@@ -755,7 +913,7 @@
     function mount3D() {
         var host = $('stage');
         import('./f1-scene.js').then(function (mod) {
-            scene = mod.mountRace(host, { track: TRACK, trackPoint: trackPoint });
+            scene = mod.mountRace(host, { track: TRACK, trackPoint: trackPoint, quality: settings.quality });
             scene.setCars(S.cars);
             scene.setPhase(S.phase === 'finish' ? 'finish' : 'lobby');
         }).catch(function (e) {
@@ -766,12 +924,13 @@
     }
 
     function init() {
-        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, settings: settings };
+        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; } };
         document.body.dataset.phase = 'lobby';
         bindUI(); bindSettings(); renderPerks(); renderCamBar(); renderLobby();
         bindStream();
         mount3D();
         requestAnimationFrame(frame);
+        if (DEMO) startTest(/[?&]autostart=1/.test(location.search));
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 }());
