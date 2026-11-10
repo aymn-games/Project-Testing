@@ -53,20 +53,13 @@ input::placeholder{color:#6f6a7c}
 @keyframes evIn{from{transform:translateX(-100%)}to{transform:none}}
 @keyframes evOut{from{transform:none}to{transform:translateX(-100%)}}
 @keyframes warnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes cylSpin{0%{transform:rotate(0)}100%{transform:rotate(1080deg)}}
 @keyframes hitFlash{0%{filter:none;opacity:1;transform:none}15%{filter:brightness(2) sepia(1) saturate(6) hue-rotate(-30deg);transform:scale(1.08)}40%{filter:brightness(1.4) sepia(1) saturate(5) hue-rotate(-30deg);opacity:1}100%{filter:grayscale(1) blur(4px);opacity:0;transform:scale(.7)}}
 @keyframes missFlash{0%{filter:none}20%{filter:brightness(2.6);transform:scale(1.05)}100%{filter:none;transform:none}}
 @keyframes heartBreak{0%{transform:none;opacity:1}30%{transform:scale(1.5) rotate(-12deg)}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes markPop{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.3)}100%{opacity:1;transform:scale(1)}}
 @keyframes skullIn{0%{opacity:0;transform:scale(.3) rotate(-25deg)}60%{opacity:1;transform:scale(1.2) rotate(6deg)}100%{opacity:1;transform:none}}
 @keyframes elimOut{0%{opacity:1;transform:none;filter:none}100%{opacity:0;transform:scale(.55) translateY(30px);filter:grayscale(1) blur(6px)}}
-@keyframes gunAim{0%{transform:translateX(60px) rotate(-14deg);opacity:0}25%{opacity:1}100%{transform:none;opacity:1}}
-@keyframes gunSway{0%,100%{transform:rotate(0)}50%{transform:rotate(-1.6deg) translateY(-3px)}}
-@keyframes gunRecoil{0%{transform:none}15%{transform:translateX(26px) rotate(7deg)}100%{transform:none}}
-@keyframes bangPop{0%{opacity:0;transform:scale(.2)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
-@keyframes dialSpin{0%{transform:rotate(0)}100%{transform:rotate(1080deg)}}
-@keyframes beamShoot{0%{transform:scaleX(0);opacity:0}30%{opacity:1}100%{transform:scaleX(1);opacity:1}}
-@keyframes muzzle{0%{opacity:0;transform:scale(.2)}20%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1.5)}}
-@keyframes crossLock{0%{opacity:0;transform:scale(1.5) rotate(-60deg)}100%{opacity:1;transform:none}}
 @keyframes crossIn{from{opacity:0;transform:scale(1.6)}to{opacity:1;transform:none}}
 @keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
 @keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
@@ -256,82 +249,29 @@ input::placeholder{color:#6f6a7c}
     </sc-if>
 
     <sc-if value="{{ clashOpen }}" hint-placeholder-val="{{ false }}">
-      <!-- مرحلة الاشتباك: الهدف بالنص كبير والمسدس موجّه له — صاحب الاختيار ما يظهر هنا (لا اسم ولا صورة) -->
-      <div style="position:absolute;inset:0;z-index:45;padding-top:130px;box-sizing:border-box;background:radial-gradient(ellipse at 40% 38%, {{ clashGlow }}, rgba(5,4,10,.94) 62%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:30px;animation:fade .2s ease">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
-          <span style="font:800 52px/1.15 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 34px {{ clashTitleG }}">{{ clashTitle }}</span>
-          <sc-if value="{{ clashSubOn }}" hint-placeholder-val="{{ true }}"><span style="padding:6px 20px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);font:600 20px 'IBM Plex Sans Arabic';color:#c4bfd0">{{ clashSub }}</span></sc-if>
-        </div>
-        <div style="direction:ltr;display:flex;align-items:center;justify-content:center;gap:10px">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:26px;width:440px">
-            <span style="position:relative;width:290px;height:290px">
-              <span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:7px solid {{ tgRing }};box-shadow:0 0 0 12px {{ tgRingSoft }}, 0 0 80px {{ tgRingGlow }};transition:border-color .3s,box-shadow .3s;font:700 116px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span>
-              <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}">
-                <span aria-hidden="true" style="position:absolute;top:-6px;left:188px;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#059669);border:4px solid #07060b;box-shadow:0 0 24px rgba(52,211,153,.6);animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-              </sc-if>
-              <sc-if value="{{ clashAim }}" hint-placeholder-val="{{ true }}">
-                <svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px);pointer-events:none;animation:crossLock 1.3s cubic-bezier(.2,.8,.3,1) both"><circle cx="50" cy="50" r="47" fill="none" stroke="#ef4444" stroke-width="1.1" stroke-dasharray="10 5"></circle><g stroke="#ef4444" stroke-width="1.6" stroke-linecap="round"><line x1="50" y1="0" x2="50" y2="12"></line><line x1="50" y1="88" x2="50" y2="100"></line><line x1="0" y1="50" x2="12" y2="50"></line><line x1="88" y1="50" x2="100" y2="50"></line></g></svg>
-              </sc-if>
-            </span>
-            <span style="max-width:100%;font:800 48px/1.2 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
-            <span style="display:flex;gap:8px">
+      <div style="position:absolute;inset:0;z-index:45;padding-top:80px;box-sizing:border-box;background:radial-gradient(ellipse at 50% 55%, {{ clashGlow }}, rgba(5,4,10,.92) 60%);backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;animation:fade .2s ease">
+        <span style="font:800 56px/1.1 'IBM Plex Sans Arabic';color:{{ clashTitleC }};text-shadow:0 0 40px {{ clashTitleG }}">{{ clashTitle }}</span>
+        <div style="display:grid;grid-template-columns:420px 260px 420px;align-items:center;gap:30px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+            <span style="position:relative;overflow:hidden;width:200px;height:200px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:6px solid #a78bfa;box-shadow:0 0 0 10px rgba(167,139,250,.12), 0 0 60px rgba(139,92,246,.45);font:700 84px 'IBM Plex Sans Arabic';color:#fff">{{ shIni }}<img src="{{ shAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ shOp }}"></span>
+            <span style="max-width:100%;font:700 40px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ shName }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+            {{ cylEl }}
+            <sc-if value="{{ clashHit }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="font-size:72px;line-height:1;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">💥</span></sc-if>
+            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="padding:8px 22px;border-radius:999px;border:1.5px solid rgba(255,255,255,.4);font:800 28px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+            <span style="position:relative;width:200px;height:200px"><span style="position:absolute;inset:0;overflow:hidden;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#6d28d9,#2e1065);border:6px solid {{ tgRing }};box-shadow:0 0 0 10px {{ tgRingSoft }}, 0 0 60px {{ tgRingGlow }};transition:border-color .3s,box-shadow .3s;font:700 84px 'IBM Plex Sans Arabic';color:#fff;animation:{{ tgtAn }}">{{ tgIni }}<img src="{{ tgAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ tgOp }}"></span><sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position:absolute;top:-6px;left:128px;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#34d399,#059669);border:4px solid #07060b;box-shadow:0 0 20px rgba(52,211,153,.6);animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></sc-if></span>
+            <span style="max-width:100%;font:700 40px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tgName }}</span>
+            <span style="display:flex;gap:6px">
               <sc-for list="{{ tgHearts }}" as="h" hint-placeholder-count="4">
-                <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
+                <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true" style="animation:{{ h.an }}"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg>
               </sc-for>
             </span>
           </div>
-          <div style="position:relative;width:840px;height:430px;display:flex;align-items:center;justify-content:center">
-            <sc-if value="{{ lookToy }}" hint-placeholder-val="{{ true }}">
-            <!-- مسدس لعبة كرتوني (رأس برتقالي + ألوان فاقعة) — أقل شبهاً بالسلاح الحقيقي -->
-            <svg viewBox="0 0 320 170" width="840" height="446" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 24px 40px rgba(0,0,0,.6));transform-origin:80% 60%;animation:{{ gunAn }}">
-              <defs>
-                <linearGradient id="tyBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4b5fd"></stop><stop offset=".5" stop-color="#8b5cf6"></stop><stop offset="1" stop-color="#5b21b6"></stop></linearGradient>
-                <linearGradient id="tyBarrel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#99f6e4"></stop><stop offset=".5" stop-color="#2dd4bf"></stop><stop offset="1" stop-color="#0f766e"></stop></linearGradient>
-                <linearGradient id="tyGrip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f9a8d4"></stop><stop offset="1" stop-color="#db2777"></stop></linearGradient>
-                <linearGradient id="tyTip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdba74"></stop><stop offset="1" stop-color="#ea580c"></stop></linearGradient>
-              </defs>
-              <path d="M226 92 L262 88 Q298 118 300 152 Q301 166 286 166 L262 166 Q248 166 246 152 Q242 122 222 104 Z" fill="url(#tyGrip)" stroke="#500724" stroke-width="3" stroke-linejoin="round"></path>
-              <path d="M196 96 Q190 132 220 134 Q242 135 244 104" fill="none" stroke="#500724" stroke-width="7" stroke-linecap="round"></path>
-              <path d="M196 96 Q190 132 220 134 Q242 135 244 104" fill="none" stroke="#fde047" stroke-width="4" stroke-linecap="round"></path>
-              <rect x="40" y="44" width="150" height="36" rx="16" fill="url(#tyBarrel)" stroke="#134e4a" stroke-width="3"></rect>
-              <g fill="#fde047" stroke="#713f12" stroke-width="2"><rect x="72" y="44" width="10" height="36" rx="3"></rect><rect x="104" y="44" width="10" height="36" rx="3"></rect><rect x="136" y="44" width="10" height="36" rx="3"></rect></g>
-              <rect x="50" y="50" width="130" height="6" rx="3" fill="#fff" opacity=".45"></rect>
-              <rect x="10" y="40" width="40" height="44" rx="13" fill="url(#tyTip)" stroke="#7c2d12" stroke-width="3"></rect>
-              <rect x="16" y="46" width="26" height="6" rx="3" fill="#fff" opacity=".5"></rect>
-              <rect x="164" y="30" width="112" height="68" rx="26" fill="url(#tyBody)" stroke="#2e1065" stroke-width="3"></rect>
-              <path d="M196 30 Q204 12 222 12 Q238 12 240 30 Z" fill="url(#tyTip)" stroke="#7c2d12" stroke-width="3"></path>
-              <circle cx="220" cy="64" r="20" fill="#fde047" stroke="#713f12" stroke-width="3"></circle>
-              <circle cx="213" cy="57" r="6" fill="#fff" opacity=".7"></circle>
-              <rect x="176" y="38" width="80" height="7" rx="3.5" fill="#fff" opacity=".35"></rect>
-              <circle cx="262" cy="80" r="5" fill="#fde047" stroke="#713f12" stroke-width="2"></circle>
-              <sc-if value="{{ clashHit }}" hint-placeholder-val="{{ false }}">
-                <g style="transform-origin:30px 42px;animation:bangPop .5s cubic-bezier(.2,1.4,.4,1) both">
-                  <line x1="30" y1="42" x2="30" y2="14" stroke="#e5e7eb" stroke-width="3" stroke-linecap="round"></line>
-                  <path d="M30 14 L-46 10 L-38 -3 L-48 -16 L30 -12 Z" fill="#fde047" stroke="#713f12" stroke-width="3" stroke-linejoin="round"></path>
-                  <text x="-8" y="6" text-anchor="middle" style="font:900 19px 'Zain','IBM Plex Sans Arabic',sans-serif;fill:#dc2626;letter-spacing:1px">BANG!</text>
-                </g>
-              </sc-if>
-            </svg>
-            </sc-if>
-            <sc-if value="{{ lookDial }}" hint-placeholder-val="{{ false }}">
-            <!-- بدون سلاح: قرص الحظ (٦ خانات) يدور ويؤشّر على الهدف -->
-            <div style="position:absolute;left:-120px;top:50%;width:440px;height:14px;margin-top:-7px;border-radius:7px;background:linear-gradient(90deg,{{ beamC }},transparent);opacity:{{ beamOp }};transform-origin:right center;animation:{{ beamAn }}"></div>
-            <div style="position:relative;width:360px;height:360px;margin-left:200px">
-              <svg viewBox="0 0 100 100" width="360" height="360" aria-hidden="true" style="position:absolute;inset:0;overflow:visible;filter:drop-shadow(0 20px 40px rgba(0,0,0,.6)) drop-shadow(0 0 30px {{ dialGlow }});animation:{{ dialAn }}">
-                <circle cx="50" cy="50" r="46" fill="#160f2b" stroke="{{ dialRing }}" stroke-width="3"></circle>
-                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"></circle>
-                <sc-for list="{{ dialSlots }}" as="d" hint-placeholder-count="6">
-                  <circle cx="{{ d.x }}" cy="{{ d.y }}" r="9" fill="{{ d.fill }}" stroke="{{ d.stroke }}" stroke-width="2"></circle>
-                </sc-for>
-                <circle cx="50" cy="50" r="10" fill="{{ dialRing }}"></circle>
-                <circle cx="50" cy="50" r="4" fill="#160f2b"></circle>
-              </svg>
-              <svg viewBox="0 0 40 40" width="64" height="64" aria-hidden="true" style="position:absolute;left:-40px;top:50%;margin-top:-32px"><path d="M2 20 L36 4 L30 20 L36 36 Z" fill="{{ dialRing }}" stroke="#0b0716" stroke-width="2" stroke-linejoin="round"></path></svg>
-            </div>
-            </sc-if>
-            <sc-if value="{{ clashMiss }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;direction:rtl;top:0;left:70px;padding:8px 26px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);background:rgba(0,0,0,.4);font:800 34px 'IBM Plex Sans Arabic';color:#fff;animation:markPop .45s cubic-bezier(.2,1.4,.4,1) both">كليك…</span></sc-if>
-          </div>
         </div>
+        <sc-if value="{{ clashSubOn }}" hint-placeholder-val="{{ true }}"><span style="font:600 22px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ clashSub }}</span></sc-if>
       </div>
     </sc-if>
 
@@ -645,7 +585,6 @@ input::placeholder{color:#6f6a7c}
 //  محرك الاحتمال: إصابة = الطلقات ÷ الغرف، وقلب واحد باقي = إصابة مضمونة
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند إعلان الفائز
 // ============================================================
-const LOOK = new URLSearchParams(location.search).get('look')||'toy'; // مؤقت لمقارنة الشكلين
 const SETUP = RR.readJSON(RR.keys.setup, null);
 const ROSTER = RR.readJSON(RR.keys.roster, null);
 // أنواع الدعم (الرجوع عن طريق الدعم) = نفس هدايا روليت الإقصاء بصورها
@@ -803,6 +742,11 @@ class Component extends DCLogic {
     const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:rnd(0,100)+'%',top:rnd(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${rnd(.12,.35).toFixed(2)})`}}));
     const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
     return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]); }
+  cylinder(size,run,spinning){ const h=React.createElement, s=this.state, N=s.cfg.chambers, B=s.cfg.bullets, r=size*.3, c=size*.24;
+    return h('div',{key:'cy'+run,'aria-hidden':true,style:{position:'relative',width:size,height:size,borderRadius:'50%',background:'conic-gradient(from 200deg,#9ca3af,#374151 20%,#111827 40%,#6b7280 55%,#e5e7eb 62%,#374151 75%,#111827 90%,#9ca3af)',boxShadow:'0 20px 50px rgba(0,0,0,.6), inset 0 0 0 6px rgba(0,0,0,.35)',animation:spinning?'cylSpin 1.3s cubic-bezier(.2,.7,.3,1) both':'none'}},
+      [...Array.from({length:N},(_,i)=>{ const ang=(i/N)*Math.PI*2-Math.PI/2; return h('span',{key:i,style:{position:'absolute',left:size/2+r*Math.cos(ang)-c/2,top:size/2+r*Math.sin(ang)-c/2,width:c,height:c,borderRadius:'50%',boxSizing:'border-box',border:'3px solid #0b0b10',background:i<B?'radial-gradient(circle at 35% 30%,#fde68a,#b45309 70%)':'radial-gradient(circle,#000 40%,#1f2937)'}}); }),
+       h('span',{key:'pin',style:{position:'absolute',left:'50%',top:'50%',width:size*.16,height:size*.16,margin:`-${size*.08}px 0 0 -${size*.08}px`,borderRadius:'50%',background:'radial-gradient(circle at 35% 30%,#e5e7eb,#4b5563)'}})]); }
+
   renderVals(){ const s=this.state, c=s.cfg, W=this.wheelList(), N=Math.max(W.length,1), a=360/N, busy=this.busy();
     const li=s.landedId!=null?W.findIndex(p=>p.id===s.landedId):-1;
     const ch=this.P(s.chooser), tg=this.P(s.target), win=this.P(s.winner);
@@ -854,16 +798,12 @@ class Component extends DCLogic {
       left:s.left, cdOff:(452.4*(1-s.left/c.chooseSec)).toFixed(1), cdCol:s.left<=5?'#f87171':'#a78bfa', cdAn:s.left<=5?'warnPulse 1s ease-in-out infinite':'none', timeTxt:'00:'+String(s.left).padStart(2,'0'), timePct:(s.left/c.chooseSec*100).toFixed(1), candCount:Math.max(0,W.length-1),
       cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
       kickChooser:()=>ch&&this.eliminate(ch.id,{by:'المذيع',type:'manual',host:true,tag:'إقصاء يدوي'}), resume:()=>this.endTurn(),
-      clashOpen:s.phase==='clash'&&!!tg, lookToy:LOOK!=='dial', lookDial:LOOK==='dial',
-      dialAn:!s.clash||s.clash.stage==='aim'?'dialSpin 1.3s cubic-bezier(.2,.7,.3,1) both':s.clash.stage==='hit'?'missFlash .5s ease':'none',
-      dialRing:s.clash&&s.clash.stage==='hit'?'#f87171':s.clash&&s.clash.stage==='miss'?'#9ca3af':'#a78bfa', dialGlow:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.7)':'rgba(139,92,246,.45)',
-      dialSlots:Array.from({length:c.chambers},(_,i)=>{ const a=(i/c.chambers)*Math.PI*2+Math.PI; const on=s.clash&&s.clash.stage==='hit'&&i===0; return {x:(50+28*Math.cos(a)).toFixed(2),y:(50+28*Math.sin(a)).toFixed(2),fill:on?'#ef4444':'#05030a',stroke:on?'#fecaca':'rgba(167,139,250,.5)'}; }),
-      beamC:'#ef4444', beamOp:s.clash&&s.clash.stage==='hit'?1:0, beamAn:s.clash&&s.clash.stage==='hit'?'beamShoot .35s ease-out both':'none',
-      clashAim:!!(s.clash&&s.clash.stage==='aim'), gunAn:!s.clash||s.clash.stage==='aim'?'gunAim .6s cubic-bezier(.2,.9,.3,1) both, gunSway 1.4s ease-in-out .6s infinite':s.clash.stage==='hit'?'gunRecoil .45s cubic-bezier(.2,.8,.3,1) both':'missFlash .6s ease', tgRing:s.clash&&s.clash.stage==='miss'?'#34d399':'#f87171', tgRingSoft:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.16)':'rgba(248,113,113,.12)', tgRingGlow:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.5)':'rgba(239,68,68,.45)', tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
+      clashOpen:s.phase==='clash'&&!!tg, shName:ch?ch.name:'', shIni:ini(ch&&ch.name), shAv:A(ch&&ch.name).av, shOp:A(ch&&ch.name).op, tgRing:s.clash&&s.clash.stage==='miss'?'#34d399':'#f87171', tgRingSoft:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.16)':'rgba(248,113,113,.12)', tgRingGlow:s.clash&&s.clash.stage==='miss'?'rgba(52,211,153,.5)':'rgba(239,68,68,.4)', tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
       clashHit:!!(s.clash&&s.clash.stage==='hit'), clashMiss:!!(s.clash&&s.clash.stage==='miss'),
-      clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'لحظة الحسم',
+      clashTitle:!s.clash?'':s.clash.stage==='hit'?'إصابة!':s.clash.stage==='miss'?'لم ينجح الاستهداف':'…',
       clashTitleC:!s.clash||s.clash.stage==='aim'?'#f4f2f8':s.clash.stage==='hit'?'#f87171':'#6ee7b7', clashTitleG:s.clash&&s.clash.stage==='hit'?'rgba(239,68,68,.6)':'rgba(255,255,255,.2)',
-      clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(6,95,70,.35)':'rgba(76,29,149,.35)',
+      clashGlow:s.clash&&s.clash.stage==='hit'?'rgba(127,29,29,.55)':s.clash&&s.clash.stage==='miss'?'rgba(255,255,255,.08)':'rgba(76,29,149,.35)',
+      cylEl:this.cylinder(170,s.clash?s.clash.run:0,!!(s.clash&&s.clash.stage==='aim')),
       tgtAn:s.clash&&s.clash.stage==='hit'?'hitFlash 1s ease forwards':s.clash&&s.clash.stage==='miss'?'missFlash .6s ease':'none',
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
       clashSubOn:!!(s.clash&&s.clash.stage!=='miss'), clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?'':`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
