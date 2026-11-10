@@ -22,6 +22,7 @@ var lettersCellQuestionsService = require('../letters-cell/letters-cell-question
 var platformStatsService = require('../stats/platform-stats-service');
 var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
+var codenamesSpyCodes = require('../codenames/spy-codes-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var screenTests = require('../stats/screen-tests');
@@ -109,6 +110,9 @@ var ROUTES = [
   // كود نيمز: باركود خاص لكل سباي ماستر مرتبط بحسابه (codenames/spy-slots-service.js)
   { method: 'POST', path: '/api/codenames/spy-slots', requireAuth: true, handler: handleCodenamesSpySlots },
   { method: 'POST', path: '/api/codenames/spy-claim', requireAuth: true, handler: handleCodenamesSpyClaim },
+  // كود نيمز: رقم دخول (4 أرقام) لكل سباي ماستر — الشاشة تسجّله، والجوال يحوّله لرابط (codenames/spy-codes-service.js)
+  { method: 'POST', path: '/api/codenames/spy-codes', requireAuth: true, handler: handleCodenamesSpyCodes },
+  { method: 'GET', path: '/api/codenames/spy-code', requireAuth: false, handler: handleCodenamesSpyCode },
   { method: 'POST', path: '/api/auth/tiktok/link', requireAuth: true, handler: handleTikTokLink },
   { method: 'POST', path: '/api/auth/tiktok/verification-code', requireAuth: true, handler: handleTikTokVerificationCode },
   // ---- تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — البديل الموصى به
@@ -401,6 +405,23 @@ function handleCodenamesSpyClaim(req, res, body, user) {
   if (r.ok) { sendJson(res, 200, { success: true, team: r.team, name: r.name, key: r.key }); return; }
   if (r.error === 'not_owner') { sendJson(res, 200, { success: false, error: 'not_owner', name: r.name, team: r.team }); return; }
   sendJson(res, 404, { success: false, error: r.error });
+}
+
+/** شاشة لعب كود نيمز تسجّل/تجدد رقم السباي ماستر لكل فريق — ترجع الأرقام. */
+function handleCodenamesSpyCodes(req, res, body, user) {
+  var r = codenamesSpyCodes.register(user, String(body.room || ''), body.teams);
+  if (!r.ok) {
+    sendJson(res, r.error === 'forbidden' ? 403 : r.error === 'busy' ? 503 : 400, { success: false, error: r.error });
+    return;
+  }
+  sendJson(res, 200, { success: true, codes: r.codes });
+}
+
+/** جوال السباي ماستر كتب رقمه — بدون حساب، يرجع بيانات الرابط (نفس اللي بالباركود الظاهر بالبث). */
+function handleCodenamesSpyCode(req, res) {
+  var r = codenamesSpyCodes.resolve(String(getQueryParam(req, 'code') || '').trim());
+  if (!r) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
+  sendJson(res, 200, { success: true, room: r.room, team: r.team, slot: r.slot, name: r.name });
 }
 
 function handleTikTokLink(req, res, body, user) {

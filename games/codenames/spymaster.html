@@ -10,6 +10,55 @@
 <script src="codenames-platform.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
+<script>
+// الدخول برقم السباي ماستر (4 أرقام من شاشة الباركود — backend/codenames/spy-codes-service.js):
+//   ?code=1523 (من خانة «عندك رقم غرفة؟» بالرئيسية، js/agp-join-room.js) ← نحوّله لرابط الباركود نفسه ونكمل.
+//   بدون room وبدون code ← خانة يكتب فيها الرقم.
+(function () {
+  var QS = new URLSearchParams(location.search);
+  if (QS.get('room')) return;
+  var digits = function (v) { return String(v || '').replace(/[٠-٩]/g, function (d) { return d.charCodeAt(0) - 0x0660; }).replace(/[۰-۹]/g, function (d) { return d.charCodeAt(0) - 0x06F0; }).replace(/\D/g, '').slice(0, 4); };
+  var start = digits(QS.get('code'));
+  var css = '#cn-code{position:fixed;inset:0;z-index:9999;overflow-y:auto;display:grid;place-items:center;padding:20px;box-sizing:border-box;direction:rtl;font-family:Zain,system-ui,sans-serif;color:#f4f2f8;background:radial-gradient(ellipse at 50% -10%, rgba(124,58,237,.35), transparent 60%), #07060b}' +
+    '#cn-code .box{width:min(380px,100%);display:flex;flex-direction:column;gap:14px;padding:26px 22px;box-sizing:border-box;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));border:1px solid rgba(167,139,250,.3);box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;animation:cnIn .45s cubic-bezier(.2,.8,.2,1)}' +
+    '#cn-code .ic{align-self:center;width:64px;height:64px;border-radius:20px;display:grid;place-items:center;font-size:32px;background:linear-gradient(135deg, #7c3aed, #a855f7);box-shadow:0 12px 30px rgba(124,58,237,.45)}' +
+    '#cn-code h1{margin:0;font-size:26px;font-weight:900}#cn-code p{margin:0;font-size:15px;font-weight:600;color:#a8a3b5}' +
+    '#cn-code input{width:100%;min-width:0;box-sizing:border-box;padding:0;height:72px;border-radius:20px;border:1.5px solid rgba(167,139,250,.35);background:rgba(0,0,0,.3);color:#fff;text-align:center;font:900 40px Zain,system-ui,sans-serif;letter-spacing:12px;direction:ltr;outline:none;transition:border-color .2s}#cn-code input:focus{border-color:#a78bfa}' +
+    '#cn-code button{height:58px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 19px Zain,system-ui,sans-serif;box-shadow:0 10px 26px rgba(139,92,246,.4);transition:opacity .2s, transform .15s}#cn-code button:active{transform:scale(.98)}#cn-code button:disabled{opacity:.6}' +
+    '#cn-code .err{min-height:22px;font-size:15px;font-weight:800;color:#fca5a5}' +
+    '@keyframes cnIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}';
+  function build() {
+    var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    var w = document.createElement('div'); w.id = 'cn-code';
+    w.innerHTML = '<form class="box" novalidate><span class="ic">🕵️</span><h1>دخول السباي ماستر</h1>' +
+      '<p>اكتب الرقم اللي تحت باركود فريقك بشاشة اللعب</p>' +
+      '<input inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000" aria-label="رقم السباي ماستر">' +
+      '<span class="err" role="alert"></span><button type="submit">دخول</button></form>';
+    document.body.appendChild(w);
+    var form = w.querySelector('form'), input = w.querySelector('input'), err = w.querySelector('.err'), btn = w.querySelector('button');
+    input.value = start;
+    input.addEventListener('input', function () { input.value = digits(input.value); err.textContent = ''; });
+    function go() {
+      var code = digits(input.value);
+      if (code.length !== 4) { err.textContent = 'الرقم 4 أرقام'; input.focus(); return; }
+      btn.disabled = true; btn.textContent = 'جارٍ الدخول…'; err.textContent = '';
+      window.CN.spyCodes.resolve(code).then(function (r) {
+        if (r && r.room) {
+          var q = 'room=' + encodeURIComponent(r.room) + '&t=' + (r.team === 2 ? 2 : 1);
+          if (r.slot) q += '&s=' + encodeURIComponent(r.slot) + '&n=' + encodeURIComponent(r.name || '');
+          location.replace('spymaster.html?' + q);
+          return;
+        }
+        btn.disabled = false; btn.textContent = 'دخول';
+        err.textContent = r === false ? 'تعذّر الاتصال، جرّب مرة ثانية' : 'الرقم غير موجود — تأكد منه بشاشة اللعب';
+      });
+    }
+    form.addEventListener('submit', function (e) { e.preventDefault(); go(); });
+    if (start.length === 4) go(); else input.focus();
+  }
+  if (document.body) build(); else document.addEventListener('DOMContentLoaded', build);
+}());
+</script>
 </head>
 <body>
 <x-dc>

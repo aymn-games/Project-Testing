@@ -312,6 +312,7 @@ input:focus{outline:none}
                 <span style="font:900 18px 'Zain';color:{{ q.c }}">{{ q.title }}</span>
                 <span style="font:700 14px 'Zain';color:{{ q.subC }};text-align:center">{{ q.sub }}</span>
                 <div style="padding:12px;border-radius:18px;background:#fff"><img src="{{ q.src }}" alt="باركود السباي ماستر" width="240" height="240" style="display:block;width:240px;height:240px;max-width:100%"></div>
+                <sc-if value="{{ q.hasCode }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:8px;font:700 13px 'Zain';color:#a8a3b5">أو الرقم <b dir="ltr" style="font:900 26px 'Zain';letter-spacing:4px;color:#fff">{{ q.code }}</b></span></sc-if>
                 <a href="{{ q.url }}" target="_blank" style="font:600 12px 'Zain';color:#8a8596">فتح الصفحة في تبويب جديد (للتجربة)</a>
               </div>
             </sc-for>
@@ -490,7 +491,7 @@ input:focus{outline:none}
   <sc-if value="{{ flowQr }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:86;background:radial-gradient(ellipse at 50% 42%, rgba(91,33,182,.2), transparent 60%), rgba(5,4,10,.93);backdrop-filter:blur(14px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr);align-items:center;gap:24px;padding:24px clamp(16px,3vw,56px);box-sizing:border-box;animation:fade .3s ease">
       <sc-for list="{{ qrSides }}" as="qs" hint-placeholder-count="2">
-        <div style="grid-column:{{ qs.col }};grid-row:1;justify-self:{{ qs.justify }};width:min(360px,100%);display:flex;flex-direction:column;align-items:stretch;gap:14px;padding:18px;box-sizing:border-box;border-radius:30px;background:linear-gradient(180deg, {{ qs.soft }}, rgba(17,14,25,.92) 55%);border:1.5px solid {{ qs.bd }};box-shadow:0 24px 60px rgba(0,0,0,.45), 0 0 60px {{ qs.glow }}, inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .5s ease, box-shadow .5s ease;animation:{{ qs.an }} .6s cubic-bezier(.2,.8,.2,1) both">
+        <div style="grid-column:{{ qs.col }};grid-row:1;justify-self:{{ qs.justify }};width:min(420px,100%);display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:18px;box-sizing:border-box;border-radius:30px;background:linear-gradient(180deg, {{ qs.soft }}, rgba(17,14,25,.92) 55%);border:1.5px solid {{ qs.bd }};box-shadow:0 24px 60px rgba(0,0,0,.45), 0 0 60px {{ qs.glow }}, inset 0 1px 0 rgba(255,255,255,.08);transition:border-color .5s ease, box-shadow .5s ease;animation:{{ qs.an }} .6s cubic-bezier(.2,.8,.2,1) both">
           <span style="font:900 23px 'Zain';color:{{ qs.c2 }};text-align:center">{{ qs.team }}</span>
           <div style="display:flex;align-items:center;gap:12px;min-height:68px;padding:8px 14px 8px 10px;box-sizing:border-box;border-radius:20px;background:linear-gradient(100deg, rgba(255,255,255,.07), {{ qs.c }}0d);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">
             <span style="position:relative;overflow:hidden;width:50px;height:50px;flex-shrink:0;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;font:900 20px 'Zain';color:#fff;background:{{ qs.spyAv }};border:2.5px solid {{ qs.spyRing }};box-shadow:0 4px 14px rgba(0,0,0,.3);transition:border-color .5s ease">{{ qs.spyIni }}<sc-if value="{{ qs.spyPhoto }}" hint-placeholder-val="{{ false }}"><img src="{{ qs.spyPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
@@ -501,11 +502,17 @@ input:focus{outline:none}
           </div>
           <span style="align-self:center;margin-bottom:-4px;font:700 14px 'Zain';color:#c9c4d6">{{ qs.sub }}</span>
           <div style="position:relative;align-self:center;padding:12px;border-radius:22px;background:#fff;box-shadow:0 0 0 4px {{ qs.qrFrame }}, 0 14px 34px rgba(0,0,0,.4);transition:box-shadow .5s ease">
-            <img src="{{ qs.src }}" alt="باركود السباي ماستر" style="display:block;width:min(236px,17vw);height:min(236px,17vw);opacity:{{ qs.qrOp }};transition:opacity .5s ease">
+            <img src="{{ qs.src }}" alt="باركود السباي ماستر" style="display:block;width:min(310px,22vw,36vh);height:min(310px,22vw,36vh);opacity:{{ qs.qrOp }};transition:opacity .5s ease">
             <sc-if value="{{ qs.qrIn }}" hint-placeholder-val="{{ false }}">
               <span style="position:absolute;inset:0;display:grid;place-items:center;animation:popIn .45s cubic-bezier(.2,1.25,.35,1)"><span style="width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg, #34d399, #10b981);color:#fff;font:900 44px/1 'Zain';box-shadow:0 12px 30px rgba(16,185,129,.45)">✓</span></span>
             </sc-if>
           </div>
+          <sc-if value="{{ qs.hasCode }}" hint-placeholder-val="{{ true }}">
+            <div style="align-self:center;display:flex;align-items:center;gap:12px;padding:6px 8px 6px 16px;border-radius:18px;background:linear-gradient(100deg, rgba(255,255,255,.08), {{ qs.c }}14);border:1px solid {{ qs.c2 }}4d;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
+              <span style="display:flex;flex-direction:column;line-height:1.25;text-align:right"><span style="font:800 14px 'Zain';color:#e7e3ef">أو اكتب الرقم</span><span style="font:600 12px 'Zain';color:#a8a3b5">بالموقع ← دخول غرفة</span></span>
+              <span dir="ltr" style="padding:4px 14px;border-radius:12px;background:rgba(0,0,0,.28);font:900 40px/1.15 'Zain';letter-spacing:6px;color:#fff;text-shadow:0 2px 10px {{ qs.c }}66">{{ qs.code }}</span>
+            </div>
+          </sc-if>
           <span style="align-self:center;height:40px;padding:0 18px;border-radius:999px;display:flex;align-items:center;gap:8px;font:900 16px 'Zain';background:{{ qs.stBg }};color:{{ qs.stC }};border:1px solid {{ qs.stBd }};transition:all .4s ease">
             <sc-if value="{{ qs.stWait }}" hint-placeholder-val="{{ true }}"><span style="display:flex;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:{{ qs.c2 }};animation:cnWait 1.2s ease-in-out infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:{{ qs.c2 }};animation:cnWait 1.2s ease-in-out .2s infinite"></span><span style="width:6px;height:6px;border-radius:50%;background:{{ qs.c2 }};animation:cnWait 1.2s ease-in-out .4s infinite"></span></span></sc-if>
             {{ qs.st }}
@@ -685,7 +692,7 @@ class Component extends DCLogic {
     this.state={ teams:{1:{name:c.name1,kw:c.kw1},2:{name:c.name2,kw:c.kw2}}, followers:c.followers, hintT:c.hintT, guessT:c.guessT,
       players:{1:r.t1,2:r.t2}, roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}, logs:{1:[],2:[]},
       ...this.newBoard(this.nextStarter()), phase:'ready', hint:null, hintGiven:false, left:0, banner:null, win:null,
-      introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, guideOpen:false, guideHide:false, flow:'roles', rolesStep:1, joinTick:0, joinReqs:[], spyReqs:[], menuOpen:false, modal:null, reconnecting:false,
+      introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, guideOpen:false, guideHide:false, flow:'roles', rolesStep:1, joinTick:0, joinReqs:[], spyReqs:[], spyCodes:{}, menuOpen:false, modal:null, reconnecting:false,
       plat:null, scale:1, narrow:innerWidth<820, logo:false };
   }
   cfg(){ let c={}; try{ c=JSON.parse(localStorage.getItem('codenames-settings')||'{}')||{}; }catch(e){}
@@ -743,7 +750,7 @@ class Component extends DCLogic {
     const allIn=S.flow==='qr'&&S.phase==='ready'&&!!this.enteredOf(1)&&!!this.enteredOf(2);
     if(allIn&&!this._autoT){ this._autoT=setTimeout(()=>{ this._autoT=null; if(this.state.phase==='ready'&&this.state.flow==='qr'&&this.enteredOf(1)&&this.enteredOf(2)) this.startOrGuide(); },1800); }
     if(!allIn&&this._autoT){ clearTimeout(this._autoT); this._autoT=null; } }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearInterval(this.codeIv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:null,[k+'Out']:false}),260); }
 
@@ -760,14 +767,20 @@ class Component extends DCLogic {
   // ---- باركود خاص لكل سباي ماستر مرتبط بحسابه بالمنصة (backend/codenames/spy-slots-service.js) ----
   // لكل فريق «خانة»: رقم عشوائي + يوزر تيك توك السباي ماستر المعيّن + مفتاح تشفير. الخادم يعطي المفتاح
   // فقط لجوال مسجّل دخول بنفس حساب تيك توك؛ غيره يرسل طلب عادي. تغيير السباي ماستر = خانة جديدة والقديمة تبطل.
-  updateSlots(){ if(!CN.secure.supported()) return; let changed=false;
+  updateSlots(){ if(!CN.secure.supported()) return this.syncCodes(); let changed=false;
     [1,2].forEach(team=>{ const spy=this.state.roles[team].spy, id=String((spy&&this.reg.id(spy))||''), tt=id.indexOf('tiktok:')===0?id.slice(7):'', old=this.slots[team];
       if(old&&old.tiktok===tt.toLowerCase()&&old.name===spy) return;
       if(old){ this.send({type:'slot_revoked',slot:old.id}); this.slots[team]=null; changed=true; }
       if(spy&&tt){ const r=crypto.getRandomValues(new Uint32Array(3)); this.slots[team]={id:'s'+[...r].map(x=>x.toString(36)).join(''),team,tiktok:tt.toLowerCase(),name:spy,key:CN.secure.randomKey()}; changed=true; } });
-    if(!changed) return; const list=[1,2].map(t=>this.slots[t]).filter(Boolean);
+    if(!changed) return this.syncCodes(); const list=[1,2].map(t=>this.slots[t]).filter(Boolean);
     this.setState({slotSync:list.length?'pending':null});
-    const run=++this._slotRun; CN.spySlots.register(this.room,list.map(x=>({id:x.id,team:x.team,tiktok:x.tiktok,name:x.name,key:x.key}))).then(r=>{ if(run!==this._slotRun) return; this.setState({slotSync:list.length?(r&&r.success?'ok':'fail'):null}); }); }
+    const run=++this._slotRun; CN.spySlots.register(this.room,list.map(x=>({id:x.id,team:x.team,tiktok:x.tiktok,name:x.name,key:x.key}))).then(r=>{ if(run!==this._slotRun) return; this.setState({slotSync:list.length?(r&&r.success?'ok':'fail'):null}); this.syncCodes(); }); }
+  // رقم دخول لكل سباي ماستر (backend/codenames/spy-codes-service.js): يتكتب بخانة «عندك رقم غرفة؟» بالرئيسية
+  // ويفتح نفس رابط باركود فريقه. نفس الرقم طول الجلسة، ونجدد التسجيل كل 5 دقايق عشان ما ينتهي (ينتهي بعد 20 دقيقة بدون تجديد).
+  syncCodes(force){ const teams=[1,2].map(team=>{ const sl=this.slots&&this.slots[team]; return {team,slot:sl?sl.id:null,name:sl?sl.name:''}; });
+    const sig=JSON.stringify(teams); if(!force&&sig===this._codeSig) return; this._codeSig=sig;
+    if(!this.codeIv) this.codeIv=setInterval(()=>this.syncCodes(true),5*60*1000);
+    CN.spyCodes.register(this.room,teams).then(r=>{ if(r&&r.success&&r.codes) this.setState({spyCodes:r.codes}); else if(this._codeSig===sig) this._codeSig=null; }); }
   // تبويب «كيف تلعبون؟» للاعبين قبل أول دور (يتخفى بـ«لا تظهر مرة ثانية») — المباراة تبدأ بعد «فهمت»
   startOrGuide(){ let hide=false; try{ hide=localStorage.getItem('codenames-play-guide-hide')==='1'; }catch(e){}
     if(hide){ this.setState({flow:null}); this.start(); } else this.setState({flow:null,guideOpen:true,guideHide:false}); }
@@ -930,7 +943,8 @@ class Component extends DCLogic {
           bd:inName?'rgba(52,211,153,.7)':C.c+'59',glow:inName?'rgba(52,211,153,.22)':C.c+'26',
           spyName:spy||'ما تعيّن سباي ماستر',spyNameC:spy?'#fff':'#8a8596',spyAv:A.av,spyIni:A.ini,spyPhoto:spy?this.reg.avatar(spy)||null:null,spyRing:inName?'#6ee7b7':C.c2,
           sub:sl?'🔐 باركود خاص بحسابه':'✉ باركود الطلبات',
-          src:S.flow==='qr'?CN.qrDataUrl(url,260):'', qrOp:inName?.18:1, qrIn:!!inName, qrFrame:inName?'rgba(52,211,153,.55)':C.c2+'66',
+          code:(S.spyCodes||{})[team]||'', hasCode:!!(S.spyCodes||{})[team],
+          src:S.flow==='qr'?CN.qrDataUrl(url,320):'', qrOp:inName?.18:1, qrIn:!!inName, qrFrame:inName?'rgba(52,211,153,.55)':C.c2+'66',
           st:inName?`✓ ${inName} دخل`:'بانتظار الدخول', stWait:!inName, stBg:inName?'rgba(16,185,129,.16)':'rgba(255,255,255,.05)', stC:inName?'#a7f3d0':'#d6d1e2', stBd:inName?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)',
           reqs:S.spyReqs.filter(r=>r.team===team).map(r=>({name:r.name,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)}))}; }),
       // وسط المباراة (من ⚙ الإعدادات): نفس الشاشة لرجوع جوال انقطع أو سباي ماستر جديد — بدون «تبدأ الحين»
@@ -1028,7 +1042,7 @@ class Component extends DCLogic {
       qrSrc:S.modal==='qr'?CN.qrDataUrl(spyUrl,300):'', spyUrl,
       // باركود لكل فريق: خاص بالسباي ماستر المعيّن (يفتح له مباشرة لو مسجّل دخول بحسابه)، أو باركود الطلب العام لو ما تعيّن أحد
       qrCards:S.modal!=='qr'?[]:[1,2].map(team=>{ const sl=this.slots[team], url=sl?new URL(`spymaster.html?room=${this.room}&s=${sl.id}&t=${team}&n=${encodeURIComponent(sl.name)}`,location.href).href:spyUrl;
-        return {title:S.teams[team].name,c:TC[team].c2,bd:TC[team].c,sub:sl?`🕵 خاص بـ ${sl.name}`:'ما تعيّن سباي ماستر · باركود الطلبات',subC:sl?'#e7e3ef':'#8a8596',src:CN.qrDataUrl(url,240),url}; }),
+        return {title:S.teams[team].name,c:TC[team].c2,bd:TC[team].c,sub:sl?`🕵 خاص بـ ${sl.name}`:'ما تعيّن سباي ماستر · باركود الطلبات',subC:sl?'#e7e3ef':'#8a8596',src:CN.qrDataUrl(url,240),url,code:(S.spyCodes||{})[team]||'',hasCode:!!(S.spyCodes||{})[team]}; }),
       slotNote:S.slotSync==='fail'?'⚠️ تعذّر الربط بالحسابات · يشتغل بطلب تقبله أنت':S.slotSync==='pending'?'جارٍ ربط الباركود بحسابات المنصة…':'مسجّل دخول بحسابه ← تنفتح له مباشرة · غيره ← طلب تقبله أنت',
       slotNoteC:S.slotSync==='fail'?'#fca5a5':'#8a8596',
       noSpyReqs:!S.spyReqs.length, spyReqs:S.spyReqs.map(r=>({name:r.name,team:S.teams[r.team].name,c:TC[r.team].c2,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)})),
