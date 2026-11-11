@@ -460,7 +460,7 @@ class Component extends DCLogic {
   // النمط الفردي المحلي: أول 3 إجابات صحيحة تُقبل — الأول نقطتين، الثاني نقطة ونص، الثالث نقطة.
   SOLO_PTS = [2,1.5,1];
   KW = BOARD ? [SETUP?.keywordS||''] : [SETUP?.keyword1||'', SETUP?.keyword2||'']; MAX = +SETUP?.maxPlayers||20; followersOnly = SETUP?.who==='المتابعين فقط'; muted = SETUP?.sound===false;
-  ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'},{id:'complete',name:'أكمل الكلمة'},{id:'odd',name:'اكتشف المختلف'},{id:'plural',name:'جمع الكلمة'},{id:'opposite',name:'عكس المعنى'},{id:'currency',name:'عملة الدولة'},{id:'sentence',name:'رتّب الجملة'},{id:'color',name:'لون الشيء'},{id:'sound',name:'صوت الحيوان'},{id:'baby',name:'صغير الحيوان'},{id:'count',name:'كم العدد؟'},{id:'synonym',name:'مرادف الكلمة'}];
+  ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'},{id:'complete',name:'أكمل الكلمة'},{id:'odd',name:'اكتشف المختلف'},{id:'plural',name:'جمع الكلمة'},{id:'opposite',name:'عكس المعنى'},{id:'currency',name:'عملة الدولة'},{id:'sentence',name:'رتّب الجملة'},{id:'color',name:'لون الشيء'},{id:'count',name:'كم العدد؟'},{id:'synonym',name:'مرادف الكلمة'}];
   CATS = (c=>c.length?c:this.ALL_CATS)(this.ALL_CATS.filter(c=>(SETUP?.cats||[]).includes(c.name)));
   DATA = window.FA_QUESTIONS; // بنك الأسئلة لكل الفئات — fa-questions.js
   reg = FA.createRegistry(PLAYERS);
@@ -595,8 +595,6 @@ class Component extends DCLogic {
     if(id==='sentence'){ const [t,alt=[]]=this.pickNew(id,D.sentence), ok=[t,...alt].map(x=>this.norm(x)), w=t.split(' '); let m,k=0; do{ m=[...w].sort(()=>Math.random()-.5); }while(ok.includes(this.norm(m.join(' ')))&&++k<30);
       return {...base,sub:'رتّب الكلمات',prompt:'',words:m,answer:t,accept:[t,...alt]}; }
     if(id==='color'){ const [e,a,alt=[]]=this.pickNew(id,D.color); return {...base,sub:'ما لون هذا الشيء؟',emoji:e,answer:a,accept:[a,...alt]}; }
-    if(id==='sound'){ const [w,a,alt=[]]=this.pickNew(id,D.sound); return {...base,sub:'ما اسم صوت هذا الحيوان؟',prompt:w,answer:a,accept:[a,...alt]}; }
-    if(id==='baby'){ const [w,a,alt=[]]=this.pickNew(id,D.baby); return {...base,sub:'ما اسم صغير هذا الحيوان؟',prompt:w,answer:a,accept:[a,...alt]}; }
     if(id==='count'){ const [w,n]=this.pickNew(id,D.count); return {...base,sub:'كم عددها؟ اكتب الرقم',prompt:w,answer:String(n),accept:[String(n)]}; }
     if(id==='synonym'){ const [w,a,alt=[]]=this.pickNew(id,D.synonym); return {...base,sub:'اكتب مرادف الكلمة',prompt:w,answer:a,accept:[a,...alt]}; }
     const [code,a,alt=[]]=this.pick(D.flag); return {...base,sub:'لمن هذا العلم؟',img:`https://flagcdn.com/w640/${code}.png`,answer:a,accept:[a,...alt]};
