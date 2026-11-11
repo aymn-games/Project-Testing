@@ -11,6 +11,8 @@
 import * as THREE from 'three';
 
 const T = THREE;
+// المسافة بين اللاعبين: مريحة (1م) للعدد القليل، وما تقل عن 0.62م حتى مع 18 لاعب
+const stepFor = n => Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1)));
 const SHIFT = 3.2;          // المسافة من النص لخط الفوز (pos = ±100)
 const FONT = '"IBM Plex Sans Arabic", "Zain", Tahoma, sans-serif';
 const hash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -67,7 +69,7 @@ export function createTugScene(container, opts = {}) {
     container.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
     const sc = new T.Scene();
     sc.background = tex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0b0816'); gr.addColorStop(.6, '#1a1030'); gr.addColorStop(1, '#2a1846'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-    sc.fog = new T.Fog('#160f28', 18, 40);
+    sc.fog = new T.Fog('#160f28', 22, 55);
     const cam = new T.PerspectiveCamera(36, 1, .1, 100); cam.position.set(0, 3.6, 11); cam.lookAt(0, 1.25, 0);
     sc.add(new T.HemisphereLight('#d9ccff', '#1b1230', 1.05));
     const sun = new T.DirectionalLight('#fff4e6', 2.1); sun.position.set(3, 10, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
@@ -76,12 +78,12 @@ export function createTugScene(container, opts = {}) {
     const glowR = new T.PointLight(colors[1], 18, 14); glowR.position.set(6, 3, 2); sc.add(glowR);
 
     // ---- الأرضية: منصة غامقة، نصّين بلون الفريقين، خط نص، وخطّين فوز
-    const floorTex = tex(1024, 480, (g, w, h) => {
+    const floorTex = tex(1024, 1200, (g, w, h) => {
         const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, colors[0]); gr.addColorStop(.38, '#1b1530'); gr.addColorStop(.62, '#1b1530'); gr.addColorStop(1, colors[1]);
         g.fillStyle = '#120e20'; g.fillRect(0, 0, w, h); g.globalAlpha = .35; g.fillStyle = gr; g.fillRect(0, 0, w, h); g.globalAlpha = 1;
         g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } });
-    const floor = new T.Mesh(new T.BoxGeometry(26, .3, 12), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 2.5); floor.receiveShadow = true; sc.add(floor);
-    const edge = new T.Mesh(new T.BoxGeometry(26.2, .06, 12.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 2.5); sc.add(edge);
+    const floor = new T.Mesh(new T.BoxGeometry(46, .3, 30), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 11.5); floor.receiveShadow = true; sc.add(floor);
+    const edge = new T.Mesh(new T.BoxGeometry(46.2, .06, 30.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 11.5); sc.add(edge);
     const lineM = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: .95 });
     const mid = new T.Mesh(new T.PlaneGeometry(.06, 6), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.y = .01; sc.add(mid);
     for (const k of [0, 1]) { const wl = new T.Mesh(new T.PlaneGeometry(.12, 6), lineM(colors[k])); wl.rotation.x = -Math.PI / 2; wl.position.set((k ? 1 : -1) * SHIFT, .012, 0); sc.add(wl);
@@ -91,8 +93,8 @@ export function createTugScene(container, opts = {}) {
     const mover = new T.Group(); sc.add(mover);
     let ropeY = 1.0;
     const ropeTex = tex(256, 32, (g, w, h) => { for (let x = -h; x < w; x += 16) { g.fillStyle = (x / 16) % 2 ? '#a87a3f' : '#c89b5c'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 16, 0); g.lineTo(x + 16 + h, h); g.lineTo(x + h, h); g.fill(); } });
-    ropeTex.wrapS = T.RepeatWrapping; ropeTex.repeat.set(40, 1);
-    const rope = new T.Mesh(new T.CylinderGeometry(.055, .055, 22, 12), new T.MeshStandardMaterial({ map: ropeTex, roughness: .9 })); rope.rotation.z = Math.PI / 2; rope.castShadow = true; mover.add(rope);
+    ropeTex.wrapS = T.RepeatWrapping; ropeTex.repeat.set(72, 1);
+    const rope = new T.Mesh(new T.CylinderGeometry(.055, .055, 40, 12), new T.MeshStandardMaterial({ map: ropeTex, roughness: .9 })); rope.rotation.z = Math.PI / 2; rope.castShadow = true; mover.add(rope);
     const flag = new T.Group(); mover.add(flag);
     const fTex = tex(64, 128, (g, w, h) => { g.fillStyle = colors[0]; g.fillRect(0, 0, w / 2, h); g.fillStyle = colors[1]; g.fillRect(w / 2, 0, w / 2, h); });
     const fl = new T.Mesh(new T.PlaneGeometry(.32, .55), new T.MeshBasicMaterial({ map: fTex, side: T.DoubleSide })); fl.position.y = -.33; flag.add(fl);
@@ -116,11 +118,11 @@ export function createTugScene(container, opts = {}) {
     function sync() {
         const seen = new Set();
         state.teams.forEach((list, k) => {
-            const dir = k ? 1 : -1, n = list.length, step = Math.min(.82, 4.6 / Math.max(1, n - 1));
+            const dir = k ? 1 : -1, n = list.length, step = stepFor(n);
             list.forEach((p, i) => {
                 const id = p.id || p.name; seen.add(id); let f = figs.get(id);
                 if (!f || f.k !== k) { if (f) drop(f); f = makeFig(p, k); if (!f) return; figs.set(id, f); }
-                f.x = dir * (1.15 + i * step); f.z = i % 2 ? .22 : -.22; f.frozen = !!p.frozen;
+                f.x = dir * (1.15 + i * step); f.z = i % 2 ? .3 : -.3; f.frozen = !!p.frozen;
                 f.outer.position.set(f.x, 0, f.z); f.ly = 2.2 + (i % 2) * .42; // الأسماء بطابقين عشان ما تتراكب
             });
         });
@@ -130,9 +132,9 @@ export function createTugScene(container, opts = {}) {
     // الكاميرا تقرّب أو تبعد حسب عدد اللاعبين وعرض الملعب: أبعد لاعب + أقصى سحبة لازم يبانون
     let spanX = 6;
     function fitCam() {
-        const n = Math.max(1, state.teams[0].length, state.teams[1].length), step = Math.min(.82, 4.6 / Math.max(1, n - 1));
+        const n = Math.max(1, state.teams[0].length, state.teams[1].length), step = stepFor(n);
         spanX = 1.15 + (n - 1) * step + SHIFT * .8 + .9;
-        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(14, spanX / (halfH * Math.max(.5, cam.aspect))));
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(19, spanX / (halfH * Math.max(.5, cam.aspect))));
         cam.position.set(0, 1.2 + dist * .2, dist); cam.lookAt(0, 1.0 + dist * .02, 0); cam.updateProjectionMatrix();
     }
     function drop(f) { f.outer.removeFromParent(); }

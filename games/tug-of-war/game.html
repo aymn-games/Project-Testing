@@ -117,7 +117,6 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
       </sc-for>
 
       <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px">
-        <span dir="rtl" style="padding:6px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:600 19px 'IBM Plex Sans Arabic';color:#e7e3ef;font-variant-numeric:tabular-nums">⏱ {{ clock }}</span>
         <div style="position:relative;width:100%;height:26px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);overflow:hidden">
           <div style="position:absolute;top:0;bottom:0;left:0;width:{{ meterL }}%;background:linear-gradient(90deg, {{ colorL }}, {{ colorL }}aa);transition:width .25s ease"></div>
           <div style="position:absolute;top:0;bottom:0;right:0;width:{{ meterR }}%;background:linear-gradient(270deg, {{ colorR }}, {{ colorR }}aa);transition:width .25s ease"></div>
@@ -415,7 +414,6 @@ class Component extends DCLogic {
       sideL:this.sideVals(0), sideR:this.sideVals(1), colorL:L.color, colorR:R.color,
       leadColor:S.phase==='countdown'||Math.abs(S.pos)<1?'#a8a3b5':(S.pos>0?R.color:L.color),
       meterL:Math.max(0,Math.min(50,-S.pos/2)), meterR:Math.max(0,Math.min(50,S.pos/2)), leadText:S.phase==='countdown'?'استعدوا…':lead,
-      clock:String(Math.floor(el/60)).padStart(2,'0')+':'+String(el%60).padStart(2,'0'),
       arena:this.sceneFailed?this.buildArena():this.arena3d(),
       chOn:!!(S.ch&&S.phase==='play'), chText:S.ch?S.ch.text:'', chPct:S.ch?Math.max(0,Math.min(100,(S.ch.until-S.now)/S.ch.dur*100)):0,
       feed:S.feed.map((f,i)=>({icon:f.icon,text:f.text,bd:(f.color||'#a78bfa')+'66',op:Math.max(.4,1-i*.25)})),
