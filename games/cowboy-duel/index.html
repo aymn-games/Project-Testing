@@ -56,18 +56,28 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 .poster.dead{filter:grayscale(.6)}
 
 /* اللوحة المعلّقة اللي تنزل بالرقم */
-/* لوحة الرقم على الأرض الفاضية بين المتواجهين (تحت)، عشان ما تغطي برج الساعة بآخر الشارع */
-#sign{position:fixed;left:50%;top:57vh;z-index:6;transform:translate(-50%,-130%) rotate(-10deg);transform-origin:50% -40px;transition:transform .2s;pointer-events:none;text-align:center}
-#sign .ropes{display:none;position:absolute;top:-60px;left:18%;right:18%;height:66px;border-left:3px solid #7a5a3a;border-right:3px solid #7a5a3a}
-#sign .board{padding:6px 34px 10px;min-width:clamp(200px,24vw,300px)}
+/* اللوحة المعلّقة بالأعلى ومايلة: أول تنبيه بأسلوب الكاوبوي، ثم «ارسم!»، ثم الرقم */
+#sign{position:fixed;left:50%;top:clamp(80px,calc(9vh + 22px),116px);z-index:6;transform:translate(-50%,-130%) rotate(-10deg);transform-origin:50% -40px;transition:transform .2s;pointer-events:none;text-align:center}
+#sign .ropes{position:absolute;top:-34px;height:40px !important;left:18%;right:18%;height:66px;border-left:3px solid #7a5a3a;border-right:3px solid #7a5a3a}
+#sign .board{padding:6px 34px 10px;min-width:clamp(220px,26vw,340px);transform:rotate(-4deg);transform-origin:50% 0}
+#sign .ropes{transform:rotate(-4deg);transform-origin:50% 100%}
 #sign .lbl{font:400 clamp(14px,1.5vw,19px) Rakkas,serif;color:#f3d9a8}
 #sign .num{font:400 clamp(64px,9vw,118px)/1 Rye,serif;direction:ltr;background:linear-gradient(180deg,#fff2c4,#f2c14e 45%,#b9761f);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #2a170b) drop-shadow(0 0 16px rgba(242,193,78,.45))}
-#sign .wait{display:none;font:400 clamp(26px,3.4vw,44px)/1.3 Rakkas,serif;color:#f3d9a8;padding:4px 0}
+#sign .wait{display:none;font:400 clamp(20px,2.5vw,32px)/1.35 Rakkas,serif;color:#f3d9a8;padding:6px 0;max-width:min(78vw,520px);white-space:normal}
+#sign .wait.swap{animation:swapIn .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes swapIn{from{opacity:0;transform:translateY(-8px) scale(.94)}}
+#sign .draw{display:none;font:400 clamp(44px,6.5vw,84px)/1.1 Rakkas,serif;color:#ffdf8a;text-shadow:0 3px 0 #2a170b,0 0 22px rgba(255,120,40,.7);padding:2px 0}
+#sign .draw small{display:block;font:400 clamp(12px,1.3vw,16px) Rye,serif;letter-spacing:4px;color:#e9c99a;direction:ltr;text-shadow:none}
 #sign:not([data-state]),#sign[data-state=""]{visibility:hidden}
 #sign[data-state="ready"]{transform:translate(-50%,0) rotate(0);transition:transform .7s cubic-bezier(.3,1.5,.5,1)}
 #sign[data-state="ready"] .num,#sign[data-state="ready"] .lbl{display:none}
-#sign[data-state="ready"] .wait{display:block;animation:pulse 1s ease-in-out infinite}
+#sign[data-state="ready"] .wait{display:block}
+#sign[data-state="draw"]{transform:translate(-50%,0);animation:shake .5s linear}
+#sign[data-state="draw"] .num,#sign[data-state="draw"] .lbl,#sign[data-state="draw"] .wait{display:none}
+#sign[data-state="draw"] .draw{display:block}
+@keyframes shake{0%,100%{transform:translate(-50%,0)}20%{transform:translate(calc(-50% - 6px),2px)}40%{transform:translate(calc(-50% + 6px),-2px)}60%{transform:translate(calc(-50% - 4px),1px)}80%{transform:translate(calc(-50% + 3px),0)}}
 #sign[data-state="show"]{animation:drop .9s cubic-bezier(.25,1.5,.45,1) both}
+#sign[data-state="show"] .wait,#sign[data-state="show"] .draw{display:none}
 #sign[data-state="gone"]{transform:translate(-50%,-140%) rotate(8deg);opacity:0;transition:transform .35s ease-in,opacity .3s .1s}
 @keyframes drop{0%{transform:translate(-50%,-30%) rotate(-12deg) scale(.8)}40%{transform:translate(-50%,6%) rotate(6deg) scale(1.08)}65%{transform:translate(-50%,0) rotate(-3deg)}85%{transform:translate(-50%,0) rotate(1.5deg)}100%{transform:translate(-50%,0) rotate(0) scale(1)}}
 @keyframes pulse{50%{opacity:.55}}
@@ -126,7 +136,6 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 @media (max-width:640px){
   #counter{top:auto;bottom:calc(9vh + 8px);right:auto;left:16px;display:none}
   .poster{width:96px;padding:6px}.poster .rw,.poster .en{display:none}
-  #sign{top:63vh}
   #chat{width:min(230px,58vw)} .msg{font-size:12px;padding:3px 8px} .msg:nth-last-child(n+5){display:none}
   #demo{bottom:auto;top:24vh}
 }
@@ -145,7 +154,7 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 <div class="poster" id="poster-a"><h3>مطلوب</h3><div class="en">WANTED</div><div class="pava">؟</div><div class="pname">—</div><div class="rw">$500</div><div class="x">أُقصي</div></div>
 <div class="poster" id="poster-b"><h3>مطلوب</h3><div class="en">WANTED</div><div class="pava">؟</div><div class="pname">—</div><div class="rw">$500</div><div class="x">أُقصي</div></div>
 
-<div id="sign"><div class="ropes"></div><div class="board plank"><div class="wait">استعد…</div><div class="lbl">اكتب الرقم بالشات!</div><div class="num">00</div></div></div>
+<div id="sign"><div class="ropes"></div><div class="board plank"><div class="wait">استعد…</div><div class="draw">ارسم!<small>DRAW!</small></div><div class="lbl">اكتب الرقم بالشات!</div><div class="num">00</div></div></div>
 <div id="banner"></div>
 <div id="chat"></div>
 

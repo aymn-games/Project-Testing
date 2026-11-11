@@ -51,7 +51,15 @@ function iris(closing, ms = 700, cx = 50, cy = 50) { const el = $('#iris'); retu
     requestAnimationFrame(step); }); }
 function poster(slot, p) { const el = $('#poster-' + slot); if (!p) { el.classList.remove('in'); return; }
     el.querySelector('.pname').textContent = p.name; el.querySelector('.pava').textContent = [...p.name.replace(/^أبو\s*/, '')][0] || '؟'; el.classList.remove('dead'); el.classList.add('in'); }
-function sign(state, n) { const el = $('#sign'); el.dataset.state = state || ''; if (n != null) el.querySelector('.num').textContent = n; }
+function sign(state, n, text) { const el = $('#sign'); el.dataset.state = state || ''; if (n != null) el.querySelector('.num').textContent = n;
+    if (text != null) { const w = el.querySelector('.wait'); w.textContent = text; w.classList.remove('swap'); void w.offsetWidth; w.classList.add('swap'); } }
+// تنبيهات قبل الرقم بأسلوب رعاة البقر (تنعرض بالترتيب: تهدئة ← تحذير ← «لا ترمش»)
+const WARN = [
+    ['اهدأ يا راعي… خلّ يدك قريبة من الجراب 🤠', 'الشمس فوق راسكم… والصبر قبل الرصاص', 'هذي البلدة ما تشيل اثنين… واحد بس يبقى'],
+    ['عيونك على خصمك… لا تلتفت', 'الريح سكتت… والسوق كله يطالع', 'اللي يتردد اليوم ما يشوف بكره'],
+    ['لا ترمش… الرقم جاي!', 'جهّز أصابعك… اللحظة قرّبت!', 'ساعة الظهيرة دقّت… استعد!']
+];
+const pickOne = a => a[Math.floor(Math.random() * a.length)];
 function banner(html, ms = 2600) { const el = $('#banner'); el.innerHTML = html; el.classList.add('in'); clearTimeout(banner.t); banner.t = setTimeout(() => el.classList.remove('in'), ms); }
 function updateCount() { $('#count').textContent = G.phase === 'lobby' ? G.players.length : G.alive.length; $('#countLbl').textContent = G.phase === 'lobby' ? 'بالسوق' : 'باقين'; }
 function renderLobby() {
@@ -92,10 +100,15 @@ async function runRound() {
     const ok = await G.scene.duelIntro(a.id, b.id, { short });
     if (!ok || G.phase !== 'intro') return;
     G.scene.standoff(); bars('wide'); grade('');
-    G.phase = 'standoff'; sign('ready');
-    // تيك تيك… ثم الجرس ونزول اللوحة بالرقم
-    const wait = rnd(1300, 2900); for (let t = 0; t < wait; t += 480) later(t, () => SFX.tick());
-    later(wait, reveal);
+    G.phase = 'standoff'; warnThenReveal();
+}
+// تنبيه ← تنبيه ← «لا ترمش» ← «ارسم!» ← الرقم (توقيت آخر خطوة عشوائي عشان ما أحد يحفظ الإيقاع)
+function warnThenReveal(again) {
+    const lines = again ? ['ولا أحد سحب… الرقم الجاي لا يفوتك!', pickOne(WARN[2])] : WARN.map(pickOne);
+    lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
+    const t = lines.length * 1700 + rnd(200, 1400);
+    later(t, () => { sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
+    later(t + 750, reveal);
 }
 function reveal() {
     G.number = Math.floor(rnd(10, 100)); G.revealAt = performance.now(); G.phase = 'armed';
@@ -105,7 +118,7 @@ function reveal() {
     if (G.bots) G.pair.forEach(p => { if (!p.bot) return; const d = rnd(900, 3600);
         if (Math.random() < .25) later(d * .6, () => answer(p.id, String(G.number + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9)))));
         later(d, () => answer(p.id, String(G.number))); });
-    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; chat('🌵', 'ولا أحد سحب! رقم جديد…', 'sys'); sign('ready'); G.phase = 'standoff'; later(1400, reveal); });
+    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; chat('🌵', 'ولا أحد سحب! رقم جديد…', 'sys'); G.phase = 'standoff'; warnThenReveal(true); });
 }
 function toDigits(s) { return String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\D/g, ''); }
 function answer(id, text) {

@@ -79,7 +79,7 @@ export async function mountDuel(el, opts = {}) {
     sc.add(new T.HemisphereLight('#ffe2b8', '#7a4a2a', .95));
     const sun = new T.DirectionalLight('#ffc98a', 2.7); sun.position.copy(sunDir).multiplyScalar(60); sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .03;
-    Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 40, bottom: -40, near: 1, far: 160 }); sc.add(sun); sc.add(sun.target);
+    Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 50, bottom: -50, near: 1, far: 200 }); sc.add(sun); sc.add(sun.target);
     const rim = new T.DirectionalLight('#ffd7b0', .85); rim.position.set(-40, 18, 30); sc.add(rim);
 
     // ---------- الأرض الترابية + الشارع بآثار العجلات والحوافر
@@ -96,9 +96,9 @@ export async function mountDuel(el, opts = {}) {
         g.strokeStyle = 'rgba(85,50,25,.45)'; g.lineWidth = 5; for (const y of [38, 52, 76, 90]) { g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= w; x += 32) g.lineTo(x, y + Math.sin(x * .02 + y) * 2.5); g.stroke(); }
         g.fillStyle = 'rgba(85,50,25,.35)'; for (let i = 0; i < 160; i++) { g.beginPath(); g.ellipse(Math.random() * w, 20 + Math.random() * 88, 4, 3, 0, 0, 7); g.fill(); }
     });
-    ruts.wrapS = T.RepeatWrapping; ruts.repeat.set(4, 1);
-    const street = new T.Mesh(new T.PlaneGeometry(150, 19), new T.MeshStandardMaterial({ map: ruts, transparent: true, depthWrite: false, roughness: 1 }));
-    street.rotation.x = -Math.PI / 2; street.position.y = .02; street.receiveShadow = true; sc.add(street);
+    ruts.wrapS = T.RepeatWrapping; ruts.repeat.set(6, 1);
+    const street = new T.Mesh(new T.PlaneGeometry(240, 26), new T.MeshStandardMaterial({ map: ruts, transparent: true, depthWrite: false, roughness: 1 }));
+    street.rotation.x = -Math.PI / 2; street.position.set(-25, .02, 0); street.receiveShadow = true; sc.add(street);
 
     // ---------- خامات الخشب المشتركة
     const grain = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 32) { g.fillStyle = 'rgba(60,35,15,.28)'; g.fillRect(0, y, w, 3); } for (let i = 0; i < 260; i++) { g.strokeStyle = `rgba(80,50,25,${.05 + Math.random() * .12})`; g.lineWidth = 1; const y = Math.random() * h; g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * .3, y + Math.random() * 6 - 3, w * .6, y + Math.random() * 6 - 3, w, y); g.stroke(); } });
@@ -111,17 +111,19 @@ export async function mountDuel(el, opts = {}) {
 
     // ---------- السوق: صفّين محلات متقابلة على الشارع
     const B = new Batch();
-    const ZF = 14; // واجهات المحلات على بعد 14 من منتصف الشارع (شارع عريض يتسع للكاميرا)
-    const SHOPS = [
-        [-38, -1, 9, 8, '#9c6b3f', '#e8d8b8', 'الإسطبل', 'STABLE'], [-27.5, -1, 10, 9.5, '#a0522d', '#f0e2c4', 'فندق الصحراء', 'HOTEL'],
-        [-16.5, -1, 10, 8.5, '#7d4b2a', '#e8c27a', 'الصالون', 'SALOON'], [-6, -1, 9, 9, '#c19a6b', '#5a3a22', 'البنك', 'BANK'],
-        [3.5, -1, 8, 7.5, '#6e3b2a', '#e8d8b8', 'الحلّاق', 'BARBER'], [12.5, -1, 8.5, 8, '#b5653a', '#3d2817', 'البريد', 'POST OFFICE'],
-        [22, -1, 9, 9, '#8b5a2b', '#f0e2c4', 'متجر عام', 'GENERAL STORE'], [32, -1, 9, 7.5, '#a67b5b', '#3d2817', 'الحدّاد', 'BLACKSMITH'],
-        [-37, 1, 9, 8, '#8b5a2b', '#e8d8b8', 'مكتب الشريف', 'SHERIFF'], [-26.5, 1, 10, 8.5, '#c19a6b', '#3d2817', 'تاجر السلاح', 'GUNSMITH'],
-        [-16, 1, 9, 9.5, '#6e3b2a', '#e8c27a', 'قهوة الوادي', 'COFFEE'], [-6, 1, 9, 7.5, '#a0522d', '#f0e2c4', 'الخيّاط', 'TAILOR'],
-        [4, 1, 9, 9, '#7d4b2a', '#e8d8b8', 'المطعم', 'EATS'], [13.5, 1, 8, 8, '#b5653a', '#3d2817', 'العطّار', 'APOTHECARY'],
-        [23, 1, 9, 8.5, '#9c6b3f', '#f0e2c4', 'التلغراف', 'TELEGRAPH'], [33, 1, 9, 7.5, '#c19a6b', '#5a3a22', 'شركة المنجم', 'MINING CO.']
-    ];
+    // سوق طويل وعريض: صفّين محلات من x=-84 لين x=66، والبرج بعيد بنهاية الشارع (TX)
+    const ZF = 18, X0 = -84, X1 = 66; // واجهات المحلات على بعد 18 من منتصف الشارع
+    const NAMES = [['الإسطبل', 'STABLE'], ['فندق الصحراء', 'HOTEL'], ['الصالون', 'SALOON'], ['البنك', 'BANK'], ['الحلّاق', 'BARBER'], ['البريد', 'POST OFFICE'],
+        ['متجر عام', 'GENERAL STORE'], ['الحدّاد', 'BLACKSMITH'], ['مكتب الشريف', 'SHERIFF'], ['تاجر السلاح', 'GUNSMITH'], ['قهوة الوادي', 'COFFEE'], ['الخيّاط', 'TAILOR'],
+        ['المطعم', 'EATS'], ['العطّار', 'APOTHECARY'], ['التلغراف', 'TELEGRAPH'], ['شركة المنجم', 'MINING CO.'], ['مخزن الحبوب', 'FEED & SEED'], ['صانع السروج', 'SADDLERY'],
+        ['المخبز', 'BAKERY'], ['الطبيب', 'DOCTOR'], ['المدرسة', 'SCHOOLHOUSE'], ['مكتب الأراضي', 'LAND OFFICE'], ['فاحص الذهب', 'ASSAY OFFICE'], ['الجريدة', 'GAZETTE'],
+        ['دار الضيافة', 'BOARDING HOUSE'], ['مركز التجارة', 'TRADING POST'], ['صانع العجلات', 'WHEELWRIGHT'], ['محطة العربات', 'STAGECOACH'], ['الإسكافي', 'COBBLER'], ['تاجر الجلود', 'FUR TRADER'],
+        ['الصيدلية', 'DRUG STORE'], ['البقّالة', 'GROCERY']];
+    const BODY = ['#9c6b3f', '#a0522d', '#7d4b2a', '#c19a6b', '#6e3b2a', '#b5653a', '#8b5a2b', '#a67b5b'], TRIM = ['#e8d8b8', '#f0e2c4', '#e8c27a', '#5a3a22', '#3d2817'];
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const SHOPS = []; let ni = 0;
+    for (const s of [-1, 1]) { let x = X0 + (s > 0 ? 3 : 0); while (x < X1) { const w = 7.5 + Math.floor(rnd() * 6) * .5, h = 7.5 + Math.floor(rnd() * 5) * .5;
+        const [ar, en] = NAMES[ni++ % NAMES.length]; SHOPS.push([x + w / 2, s, w, h, BODY[ni % BODY.length], TRIM[(ni * 3) % TRIM.length], ar, en]); x += w + .6 + rnd() * .8; } }
     const signGeo = [], posterSpots = [];
     SHOPS.forEach(([x, s, w, h, col, trim, ar, en], idx) => {
         const zf = s * ZF, o = -s, D = 10;
@@ -144,18 +146,16 @@ export async function mountDuel(el, opts = {}) {
         if (en === 'HOTEL') { B.box(w, .2, 1.5, '#6b4a2b', x, 4.45, zf + o * .8); B.box(w, .1, .1, trim, x, 5.25, zf + o * 1.5); for (let bx = -w / 2 + .3; bx <= w / 2 - .3; bx += .55) B.box(.07, .8, .07, trim, x + bx, 4.9, zf + o * 1.5); }
         signGeo.push({ x, y: h - 1.4, z: zf + o * .24, s, w: Math.min(w * .82, 7.6), ar, en, dark: idx % 3 === 1 });
     });
-    // أعمدة ربط الخيول + أحواض ماء + براميل + صناديق + تبن
-    for (const [x, s] of [[-31, 1], [-11, -1], [9, 1], [27, -1], [-20, -1], [18, 1]]) {
-        const z = s * 9.4; for (const dx of [-1.6, 1.6]) B.box(.22, 1.3, .22, '#5a3a22', x + dx, .65, z); B.box(3.6, .14, .14, '#6b4a2b', x, 1.15, z);
-        B.box(2.2, .7, .9, '#7a5230', x + 3.2, .35, z + s * .2); B.box(2, .1, .7, '@#4b7c8c', x + 3.2, .62, z + s * .2);
-    }
+    // أعمدة ربط الخيول + أحواض ماء + براميل + صناديق + تبن على طول السوق (بعيد عن نص الشارع وين المواجهة)
     const barrel = (x, z) => { B.cyl(.45, .42, 1.05, 12, '#7a4a22', x, .88, z); for (const y of [.58, 1.2]) B.cyl(.47, .47, .07, 12, '@#2f2f2f', x, y, z); };
-    [[-33.6, -13.1], [-22.4, -13.3], [-11.2, -13.2], [8.6, -13.1], [17.4, -13.3], [27.2, -13.1], [-32.2, 13.1], [-21, 13.3], [-1.2, 13.2], [18.1, 13.1], [28.2, 13.3], [-41.5, -11], [38, 11.6]].forEach(([x, z]) => barrel(x, z));
-    [[-34.5, -12.8, .4], [7.8, 12.9, 0], [27.9, 12.7, .3], [-1.4, -12.9, .2], [37.4, -12.7, .1]].forEach(([x, z, r]) => { B.box(.95, .95, .95, '#a87a4a', x, .84, z, 0, r, 0); B.box(.7, .7, .7, '#b88a56', x + .1, 1.66, z, 0, r + .4, 0); });
-    [[-23, 12.9], [-12, -12.9], [36.5, -12.9], [41, 7]].forEach(([x, z]) => { B.cyl(.62, .62, 1.3, 12, '@#d4b048', x, .98, z, 0, 0, Math.PI / 2); });
+    for (let x = X0 + 6; x < X1 - 4; x += 9) for (const s of [-1, 1]) { const r = rnd(), xx = x + rnd() * 4;
+        if (r < .3 && Math.abs(xx) > 6) { const z = s * (ZF - 4.6); for (const dx of [-1.6, 1.6]) B.box(.22, 1.3, .22, '#5a3a22', xx + dx, .65, z); B.box(3.6, .14, .14, '#6b4a2b', xx, 1.15, z); B.box(2.2, .7, .9, '#7a5230', xx + 3.2, .35, z + s * .2); B.box(2, .1, .7, '@#4b7c8c', xx + 3.2, .62, z + s * .2); }
+        else if (r < .6) barrel(xx, s * (ZF - .9));
+        else if (r < .8) { B.box(.95, .95, .95, '#a87a4a', xx, .84, s * (ZF - 1.2), 0, r, 0); B.box(.7, .7, .7, '#b88a56', xx + .1, 1.66, s * (ZF - 1.2), 0, r + .4, 0); }
+        else B.cyl(.62, .62, 1.3, 12, '@#d4b048', xx, .98, s * (ZF - 1.1), 0, 0, Math.PI / 2); }
 
     // برج الساعة بنهاية الشارع (لقطة «الظهيرة»)
-    const TX = -52;
+    const TX = -112; // البرج بعيد بآخر الشارع
     B.box(7, 13, 7, '#b5653a', TX, 6.5, 0); B.box(7.6, .5, 7.6, '#f0e2c4', TX, 13.2, 0); B.box(7.8, .5, 7.8, '#f0e2c4', TX, 6.8, 0);
     B.geo(new T.ConeGeometry(5.7, 4.5, 4), '@#5a3a22', TX, 15.7, 0, 0, Math.PI / 4, 0);
     B.box(.2, 3.4, 2.2, '#2e1c10', TX + 3.55, 1.7, 0);
@@ -166,7 +166,7 @@ export async function mountDuel(el, opts = {}) {
     const hourHand = mkHand(1.05, .14), minHand = mkHand(1.65, .09); hourHand.rotation.x = .02; minHand.rotation.x = .21;
 
     // طاحونة هواء خلف الصف الجنوبي (شفراتها تدور)
-    const WX = -29, WZ = 29;
+    const WX = -29, WZ = 33;
     for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) B.box(.25, 16.4, .25, '@#6b4a2b', WX + dx * 1.2, 8, WZ + dz * 1.2, dz * .08, 0, -dx * .08);
     for (const y of [4, 8, 12]) { B.box(2.6 - y * .08, .15, .15, '@#6b4a2b', WX, y, WZ - 1.2 + y * .07); B.box(2.6 - y * .08, .15, .15, '@#6b4a2b', WX, y, WZ + 1.2 - y * .07); }
     B.box(1.2, 1, 1.6, '@#5a3a22', WX, 16.4, WZ); B.box(.1, 1.6, 2.6, '@#b5653a', WX, 16.6, WZ + 2);
@@ -175,14 +175,14 @@ export async function mountDuel(el, opts = {}) {
     for (let i = 0; i < 12; i++) { const b = new T.Mesh(new T.BoxGeometry(.5, 2.6, .06), bladeM); const a = i / 12 * Math.PI * 2; b.position.set(Math.sin(a) * 1.9, Math.cos(a) * 1.9, 0); b.rotation.z = -a; b.rotation.y = .4; b.castShadow = true; blades.add(b); }
 
     // خزان ماء خلف الصف الشمالي
-    for (const [dx, dz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) B.box(.35, 8.4, .35, '@#5a3a22', 26 + dx, 4.2, -29 + dz);
-    B.cyl(2.8, 2.8, 3.6, 16, '#8a5a32', 26, 10.2, -29); for (const y of [9, 11.4]) B.cyl(2.86, 2.86, .12, 16, '@#2f2f2f', 26, y, -29);
-    B.geo(new T.ConeGeometry(3.1, 1.6, 16), '@#5a3a22', 26, 12.8, -29);
+    for (const [dx, dz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) B.box(.35, 8.4, .35, '@#5a3a22', 26 + dx, 4.2, -33 + dz);
+    B.cyl(2.8, 2.8, 3.6, 16, '#8a5a32', 26, 10.2, -33); for (const y of [9, 11.4]) B.cyl(2.86, 2.86, .12, 16, '@#2f2f2f', 26, y, -33);
+    B.geo(new T.ConeGeometry(3.1, 1.6, 16), '@#5a3a22', 26, 12.8, -33);
 
     // صبّار + صخور + هضاب حمرا بالأفق
     const cactus = (x, z, s) => { const c = '@#5f8a3e'; B.cyl(.32 * s, .38 * s, 3.4 * s, 8, c, x, 1.7 * s, z); B.cyl(.2 * s, .2 * s, .9 * s, 8, c, x + .55 * s, 1.6 * s, z, 0, 0, Math.PI / 2); B.cyl(.2 * s, .2 * s, 1.2 * s, 8, c, x + .95 * s, 2.15 * s, z); B.cyl(.18 * s, .18 * s, .7 * s, 8, c, x - .5 * s, 2.2 * s, z, 0, 0, Math.PI / 2); B.cyl(.18 * s, .18 * s, 1 * s, 8, c, x - .82 * s, 2.7 * s, z); };
-    [[46, 9, 1.1], [52, -12, 1.4], [61, 4, 1], [44, -15, .9], [-46, 16, 1], [70, -6, 1.6], [-60, -16, 1.2], [58, 18, 1.3], [5, 34, 1.5], [-8, -36, 1.4]].forEach(a => cactus(...a));
-    for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 60, s = .5 + Math.random() * 1.6; const x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(z) < 26 && Math.abs(x) < 45) continue; B.geo(new T.DodecahedronGeometry(s, 0), '@#a2643b', x, s * .4, z, Math.random(), Math.random(), 0); }
+    [[74, 9, 1.1], [80, -12, 1.4], [90, 4, 1], [72, -15, .9], [-100, 16, 1], [96, -6, 1.6], [-104, -15, 1.2], [84, 18, 1.3], [5, 38, 1.5], [-8, -40, 1.4], [-122, 9, 1.3], [-126, -8, 1]].forEach(a => cactus(...a));
+    for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 60, s = .5 + Math.random() * 1.6; const x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(z) < 30 && x > -120 && x < 72) continue; B.geo(new T.DodecahedronGeometry(s, 0), '@#a2643b', x, s * .4, z, Math.random(), Math.random(), 0); }
     for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + Math.random() * .2, d = 200 + Math.random() * 140, w = 22 + Math.random() * 40, h = 18 + Math.random() * 36; const x = Math.cos(a) * d, z = Math.sin(a) * d, c = ['@#b85c34', '@#a34e2c', '@#c86f40'][i % 3];
         B.geo(new T.CylinderGeometry(w * .72, w, h, 7), c, x, h / 2, z, 0, Math.random(), 0); B.geo(new T.CylinderGeometry(w * .45, w * .6, h * .35, 6), c, x + w * .2, h + h * .17, z, 0, Math.random(), 0); }
     B.build(sc, matFor);
@@ -216,7 +216,7 @@ export async function mountDuel(el, opts = {}) {
     // ---------- غبار معلّق بالجو (ذرات ذهبية بضوء الشمس)
     const soft = canvasTex(64, 64, (g, w, h) => { const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(.4, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h); });
     texList.push(soft);
-    const DN = 500, dPos = new Float32Array(DN * 3); for (let i = 0; i < DN; i++) { dPos[i * 3] = (Math.random() - .5) * 90; dPos[i * 3 + 1] = Math.random() * 9; dPos[i * 3 + 2] = (Math.random() - .5) * 24; }
+    const DN = 500, dPos = new Float32Array(DN * 3); for (let i = 0; i < DN; i++) { dPos[i * 3] = (Math.random() - .5) * 110; dPos[i * 3 + 1] = Math.random() * 9; dPos[i * 3 + 2] = (Math.random() - .5) * 32; }
     const dGeo = new T.BufferGeometry(); dGeo.setAttribute('position', new T.BufferAttribute(dPos, 3));
     const motes = new T.Points(dGeo, new T.PointsMaterial({ size: .14, map: soft, color: '#ffd9a0', transparent: true, opacity: .6, depthWrite: false, blending: T.AdditiveBlending })); sc.add(motes);
 
@@ -326,7 +326,7 @@ export async function mountDuel(el, opts = {}) {
     function crowdSpot(i, n) {
         const north = Math.ceil(n / 2), side = i % 2 ? 1 : -1, slot = Math.floor(i / 2), cnt = side < 0 ? north : n - north;
         const sp = Math.min(5.2, 54 / Math.max(1, cnt - 1)), x = (slot - (cnt - 1) / 2) * sp + (side > 0 ? 1.3 : -1.3);
-        return V(x, .36, side * 12.2);
+        return V(x, .36, side * (ZF - 1.8));
     }
     function homeOf(id) { const i = crowdOrder.indexOf(id); return crowdSpot(Math.max(0, i), crowdOrder.length); }
     function setPlayers(list) {
@@ -405,15 +405,15 @@ export async function mountDuel(el, opts = {}) {
     function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
 
     // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه بنص الشارع
-    const A_MARK = V(0, 0, 4.5), B_MARK = V(0, 0, -4.5);
+    const A_MARK = V(0, 0, 7), B_MARK = V(0, 0, -7); // بعيدين عن بعض بعرض الشارع
     // لقطة واسعة تجمع الاثنين: بروفايل جانبي للشاشات العريضة، وزاوية مائلة (3/4) للشاشات الطولية (بث الجوال)
     // اللقطة الأساسية: الكاميرا بالشارع تطالع جهة برج الساعة — السوق كامل والبرج بآخره والمتواجهين يمين ويسار.
     // المسافة تنحسب من عرض الشاشة عشان الاثنين يطلعون كاملين بأي جهاز (الشارع طويل فما فيه شي يسد ورا الكاميرا)
-    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 7 : 5.8) / Math.tan(hf / 2);
-        const d = Math.min(34, Math.max(10.5, need)) - push * k * .25; c.pos.set(d, 1.7 + d * .025, Math.sin(t * .25) * .3); c.look.set(-12, cam.aspect >= 1.1 ? 2.1 : 3, 0); c.fov = vf; c.roll = 0; c.wide = true; }
+    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 10.6 : 8.6) / Math.tan(hf / 2);
+        const d = Math.min(44, Math.max(14, need)) - push * k * .25; c.pos.set(d, 1.7 + d * .025, Math.sin(t * .25) * .3); c.look.set(-12, cam.aspect >= 1.1 ? 2.1 : 3, 0); c.fov = vf; c.roll = 0; c.wide = true; }
     function duelIntro(aId, bId, o = {}) {
         const A = figs.get(String(aId)), Bf = figs.get(String(bId)); if (!A || !Bf) return Promise.resolve(false);
-        const short = !!o.short, startX = o.instant ? 4.5 : short ? 10 : 12.2; // instant: يبدون على العلامات مباشرة (تخطي المشي)
+        const short = !!o.short, startX = o.instant ? 7 : short ? 13 : ZF - 1.8; // instant: يبدون على العلامات مباشرة (تخطي المشي)
         [[A, 1, A_MARK], [Bf, -1, B_MARK]].forEach(([f, s, m]) => { f.duelist = true; f.twitch = false; f.g.position.set(s * .6, startX > 5 ? .36 : 0, s * startX); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = m.clone(); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); });
         for (const [, f] of figs) if (f !== A && f !== Bf) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const headA = () => wp(A.U.head), headB = () => wp(Bf.U.head);
@@ -483,7 +483,7 @@ export async function mountDuel(el, opts = {}) {
         const raw = clock3.getDelta(), real = Math.min(raw, .05), dt = real * TS; fpsN++; fpsS += raw; if (fpsS > 1) { fpsNow = fpsN / fpsS; fpsN = 0; fpsS = 0; } tTotal += dt; const t = tTotal;
         blades.rotation.z += dt * .9;
         // غبار معلّق
-        const a = dGeo.attributes.position.array; for (let i = 0; i < DN; i++) { a[i * 3] += dt * (.6 + (i % 7) * .08); a[i * 3 + 1] += Math.sin(t + i) * dt * .05; if (a[i * 3] > 45) a[i * 3] = -45; } dGeo.attributes.position.needsUpdate = true;
+        const a = dGeo.attributes.position.array; for (let i = 0; i < DN; i++) { a[i * 3] += dt * (.6 + (i % 7) * .08); a[i * 3 + 1] += Math.sin(t + i) * dt * .05; if (a[i * 3] > 55) a[i * 3] = -55; } dGeo.attributes.position.needsUpdate = true;
         for (const P of puffs) { if (!P.s.visible) continue; P.life += dt; const k = P.life / P.max; if (k >= 1) { P.s.visible = false; continue; } P.s.position.addScaledVector(P.v, dt); P.v.multiplyScalar(1 - dt * 1.5); P.s.scale.setScalar(P.g0 + (P.g1 - P.g0) * easeOut(k)); P.s.material.opacity = P.o * (1 - k); }
         if (flashT < 1) { flashT += real; const k = flashT / .12; flash.material.opacity = Math.max(0, 1 - k); flashL.intensity = Math.max(0, 40 * (1 - flashT / .18)); if (k >= 1) flash.visible = false; }
         if (BUL.on) { BUL.p += BUL.speed * dt; const k = Math.min(1, BUL.p / BUL.len); bullet.position.lerpVectors(BUL.from, BUL.to, k); bullet.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { BUL.on = false; BUL.onHit && BUL.onHit(); } }
