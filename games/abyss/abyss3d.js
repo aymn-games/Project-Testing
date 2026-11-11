@@ -243,13 +243,13 @@
       const standZ = rowZ(Math.max(-1, (cur || 0) - 1)), nextZ = rowZ(Math.max(0, cur || 0)), midZ = (standZ + nextZ) / 2;
       if (d.cam === 'overview') { const zm = (rowZ(-1) + rowZ(Math.max(0, rows - 1))) / 2, a = t * .05; P.set(26 + Math.sin(a) * 6, 26, rowZ(-1) + 26); L.set(0, -3, zm * .55); rate = 1; }
       else if (d.cam === 'win') { const zE = d.finish ? this.endZ() : standZ, a = t * .15; P.set(Math.sin(a) * 15, 7.5, zE + Math.cos(a) * 15); L.set(0, 2, zE); rate = 1.6; }
-      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.5, 11, standZ + 12); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
-      else { P.set(1.5 + Math.sin(t * .2) * .5, 10.5, standZ + 11.5); L.set(0, -.6, nextZ - 1); rate = 1.6; } // قريبة ونازلة: ورا اللاعبين مباشرة
+      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.2, 12.5, standZ + 10); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
+      else { P.set(1.2 + Math.sin(t * .2) * .4, 12, standZ + 9); L.set(0, -1.2, nextZ - 1); rate = 1.6; } // عالية وقريبة ورا اللاعبين، وخط النهاية ما يبان
       const k = 1 - Math.exp(-dt * rate); cam.position.lerp(P, k); this.camLook.lerp(L, k);
       if (this.shakeK > .01) cam.position.add(new T.Vector3((Math.random() - .5) * this.shakeK, (Math.random() - .5) * this.shakeK, 0));
       cam.lookAt(this.camLook);
       // أثناء اللعب الكادر ينزل لتحت عشان بطاقة السؤال فوق ما تغطي اللاعبين
-      const vt = d.cam === 'play' ? .27 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
+      const vt = d.cam === 'play' ? .14 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
       if (this.vo > .001) cam.setViewOffset(vw, vh, 0, -vh * this.vo, vw, vh); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
       this.sun.target.position.set(0, 0, standZ); this.sun.position.set(-30, 45, standZ - 60);
       this.r.render(this.sc, cam);

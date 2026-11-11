@@ -113,8 +113,6 @@
         $('aliveN').textContent = n;
         $('stepsN').textContent = CFG.mode === 'steps' ? Math.min(S.row + 1, CFG.steps) + '/' + CFG.steps : S.row + 1;
         if (q && (ph === 'question' || ph === 'reveal')) {
-            $('qStep').textContent = CFG.mode === 'steps' ? 'الخطوة ' + (S.row + 1) + ' من ' + CFG.steps : 'الخطوة ' + (S.row + 1) + ' · آخر ناجي';
-            $('qType').textContent = isTF(q) ? 'صح أو خطأ' : 'اختر 1 أو 2';
             $('qText').textContent = q.q;
             [0, 1].forEach(function (l) {
                 $('o' + l + 't').textContent = isTF(q) ? (l ? 'خطأ' : 'صح') : q.a[l];
