@@ -223,7 +223,8 @@
      * بفريقه، n أكبر عدد بالفريقين). الحبل يتحرك SHIFT متر لما pos = ±100.
      * اللاعب ينقصى لما الحبل يسحبه لين يتعدى خط النص: slot < |shift| بجهة الخصم. */
     var SHIFT = 3.2;
-    function stepFor(n) { return Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1))); }
+    // كل فريق صف واحد: مسافة 1.25م للعدد القليل، وما تقل عن 0.95م (عرض الشخصية مايلة) عشان ما يتراكبون
+    function stepFor(n) { return Math.max(.95, Math.min(1.25, 9 / Math.max(1, n - 1))); }
     function slot(i, n) { return 1.15 + i * stepFor(n); }
 
     function onGift(cb) {

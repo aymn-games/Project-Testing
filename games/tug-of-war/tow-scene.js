@@ -17,7 +17,7 @@ import * as THREE from 'three';
 const T = THREE;
 // المسافة بين اللاعبين ومكان كل لاعب: نفس دوال TOW (tow-platform.js) عشان الإقصاء يطابق اللي يبان
 const TOWG = window.TOW || {};
-const stepFor = TOWG.stepFor || (n => Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1))));
+const stepFor = TOWG.stepFor || (n => Math.max(.95, Math.min(1.25, 9 / Math.max(1, n - 1))));
 const slot = TOWG.slot || ((i, n) => 1.15 + i * stepFor(n));
 const SHIFT = TOWG.SHIFT || 3.2;          // المسافة من النص لخط الفوز (pos = ±100)
 const FONT = '"IBM Plex Sans Arabic", "Zain", Tahoma, sans-serif';
@@ -75,7 +75,7 @@ export function createTugScene(container, opts = {}) {
     container.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
     const sc = new T.Scene();
     sc.background = tex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0b0816'); gr.addColorStop(.6, '#1a1030'); gr.addColorStop(1, '#2a1846'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-    sc.fog = new T.Fog('#160f28', 22, 55);
+    sc.fog = new T.Fog('#1a1236', 30, 80);
     const cam = new T.PerspectiveCamera(36, 1, .1, 100); cam.position.set(0, 3.6, 11); cam.lookAt(0, 1.25, 0);
     sc.add(new T.HemisphereLight('#d9ccff', '#1b1230', 1.05));
     const sun = new T.DirectionalLight('#fff4e6', 2.1); sun.position.set(3, 10, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
@@ -94,6 +94,49 @@ export function createTugScene(container, opts = {}) {
     const mid = new T.Mesh(new T.PlaneGeometry(.06, 6), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.y = .01; sc.add(mid);
     for (const k of [0, 1]) { const wl = new T.Mesh(new T.PlaneGeometry(.12, 6), lineM(colors[k])); wl.rotation.x = -Math.PI / 2; wl.position.set((k ? 1 : -1) * SHIFT, .012, 0); sc.add(wl);
         const glow = new T.Mesh(new T.PlaneGeometry(.7, 6), new T.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: .18, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.set(wl.position.x, .011, 0); sc.add(glow); }
+
+    // ---- الخلفية: ساحة ليلية ثري دي ثابتة (بدون أي حركة): سماء بنجوم، أرض عشب صناعي،
+    //      مدرجات فاضية بلون الفريقين، جدار خلفي بلوحة «شد الحبل»، وأعمدة إضاءة.
+    (function backdrop() {
+        const M = (c, o = {}) => new T.MeshStandardMaterial({ color: c, roughness: .85, ...o });
+        // سماء: تدرّج + نجوم ثابتة على قبة بعيدة
+        sc.background = tex(4, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#07061a'); gr.addColorStop(.45, '#141038'); gr.addColorStop(.75, '#2a1a4e'); gr.addColorStop(1, '#3a2358'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+        const sp = [], rnd = (a, b) => a + Math.random() * (b - a);
+        for (let i = 0; i < 260; i++) { const a = rnd(-1.2, 1.2), e = rnd(.12, .9), R = 70; sp.push(Math.sin(a) * Math.cos(e) * R, Math.sin(e) * R * .8 + 4, -Math.cos(a) * Math.cos(e) * R); }
+        const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(sp, 3));
+        sc.add(new T.Points(sg, new T.PointsMaterial({ color: '#e9e4ff', size: .35, sizeAttenuation: true, transparent: true, opacity: .8, fog: false })));
+        // أرض خلف المنصة (عشب صناعي غامق بخطوط)
+        const turf = tex(512, 512, (g, w, h) => { g.fillStyle = '#16301f'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 64) { g.fillStyle = (y / 64) % 2 ? '#1a3823' : '#14301d'; g.fillRect(0, y, w, 64); } });
+        turf.wrapS = turf.wrapT = T.RepeatWrapping; turf.repeat.set(6, 3);
+        const field = new T.Mesh(new T.PlaneGeometry(90, 60), new T.MeshStandardMaterial({ map: turf, roughness: 1 })); field.rotation.x = -Math.PI / 2; field.position.set(0, -.32, -4); field.receiveShadow = true; sc.add(field);
+        // مدرجات: درجات خرسانية + كراسي بلون كل فريق (كل نص بلون فريقه)
+        const ROWS = 9, SEATS = 34, Z0 = -14, seatGeo = new T.BoxGeometry(.7, .45, .55);
+        for (let r = 0; r < ROWS; r++) {
+            const z = Z0 - r * 1.1, y = r * .75;
+            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#2a2540' : '#24203a')); step.position.set(0, y + .05, z); step.receiveShadow = true; sc.add(step);
+            for (const k of [0, 1]) {
+                const inst = new T.InstancedMesh(seatGeo, M(shade(colors[k], r % 2 ? .42 : .5), { roughness: .7 }), SEATS / 2), m4 = new T.Matrix4();
+                for (let i = 0; i < SEATS / 2; i++) { const x = (k ? 1 : -1) * (1.2 + i * 1.5); m4.makeTranslation(x, y + .65, z + .15); inst.setMatrixAt(i, m4); }
+                sc.add(inst);
+            }
+        }
+        const topY = ROWS * .75, backZ = Z0 - ROWS * 1.1;
+        // جدار خلفي + لوحة الاسم بالنص + شريطين بلون الفريقين
+        const wall = new T.Mesh(new T.BoxGeometry(60, 6, .6), M('#1b1630')); wall.position.set(0, topY + 2.6, backZ - .4); sc.add(wall);
+        for (const k of [0, 1]) { const band = new T.Mesh(new T.BoxGeometry(26, .5, .1), new T.MeshBasicMaterial({ color: colors[k] })); band.position.set((k ? 1 : -1) * 15, topY + .9, backZ - .05); sc.add(band); }
+        const sign = tex(1024, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#3b2a6e'); gr.addColorStop(1, '#5b3fa0'); g.fillStyle = gr; g.beginPath(); g.roundRect(8, 8, w - 16, h - 16, 60); g.fill();
+            g.strokeStyle = '#c4b5fd'; g.lineWidth = 8; g.stroke(); g.fillStyle = '#fff'; g.font = '800 130px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText('شد الحبل', w / 2, h / 2 + 8); });
+        const board = new T.Mesh(new T.PlaneGeometry(9, 2.25), new T.MeshBasicMaterial({ map: sign })); board.position.set(0, topY + 3.2, backZ + .05); sc.add(board);
+        // أعمدة إضاءة ثابتة (كشافات مضيئة بدون حركة)
+        const lamp = new T.MeshBasicMaterial({ color: '#fff4d6' });
+        for (const x of [-24, -12, 12, 24]) {
+            const pole = new T.Mesh(new T.CylinderGeometry(.18, .25, topY + 9, 8), M('#3a3550', { metalness: .4 })); pole.position.set(x, (topY + 9) / 2, backZ - 1.2); sc.add(pole);
+            const head = new T.Mesh(new T.BoxGeometry(3, 1.2, .4), M('#2a2540')); head.position.set(x, topY + 9.2, backZ - 1); sc.add(head);
+            for (let i = 0; i < 6; i++) { const b = new T.Mesh(new T.CircleGeometry(.2, 12), lamp); b.position.set(x - 1.1 + (i % 3) * 1.1, topY + 9.45 - Math.floor(i / 3) * .5, backZ - .78); sc.add(b); }
+            const halo = new T.Sprite(new T.SpriteMaterial({ map: tex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,244,214,.9)'); gr.addColorStop(1, 'rgba(255,244,214,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }), transparent: true, depthWrite: false, blending: T.AdditiveBlending, fog: false }));
+            halo.scale.set(7, 4.5, 1); halo.position.set(x, topY + 9.2, backZ - .6); sc.add(halo);
+        }
+    })();
 
     // ---- الحبل وكل اللاعبين داخل mover (يتحرك مع pos)
     const mover = new T.Group(); sc.add(mover);
@@ -129,10 +172,10 @@ export function createTugScene(container, opts = {}) {
             list.forEach((p, i) => {
                 const id = p.id || p.name; seen.add(id); let f = figs.get(id);
                 if (!f || f.k !== k) { if (f) drop(f); f = makeFig(p, k); if (!f) return; figs.set(id, f); }
-                f.x = dir * slot(i, n); f.z = i % 2 ? .3 : -.3; f.frozen = !!p.frozen;
+                f.x = dir * slot(i, n); f.z = 0; f.frozen = !!p.frozen; // صف واحد على الحبل
                 if (p.out && !f.outAt) { f.outAt = clock.elapsedTime; burstAt(f, '#f97316', 46, 4.2); burstAt(f, '#fde68a', 22, 3); }
                 if (!p.out) { f.outAt = 0; f.outer.visible = true; f.outer.scale.setScalar(1); }
-                if (!f.outAt) f.outer.position.set(f.x, 0, f.z); f.ly = 2.2 + (i % 2) * .42; // الأسماء بطابقين عشان ما تتراكب
+                if (!f.outAt) f.outer.position.set(f.x, 0, f.z); { const lw = Math.min(1.9, stepFor(n) * 1.7); f.sp.scale.set(lw, lw / 4, 1); f.ly = 2.25 + (i % 2) * (lw / 4 + .08); } // الأسماء كبيرة، وبطابقين متبادلين عشان ما تتراكب
             });
         });
         for (const [id, f] of figs) if (!seen.has(id)) { drop(f); figs.delete(id); }
@@ -143,7 +186,7 @@ export function createTugScene(container, opts = {}) {
     function fitCam() {
         const n = Math.max(1, state.teams[0].length, state.teams[1].length);
         spanX = slot(n - 1, n) + SHIFT * .45 + .5; // أقرب: آخر لاعب + جزء من أقصى سحبة
-        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(5.2, Math.min(17, spanX / (halfH * Math.max(.5, cam.aspect))));
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(5.2, Math.min(24, spanX / (halfH * Math.max(.5, cam.aspect))));
         // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
         const d = far ? dist * 1.75 : dist;
         camGoal.pos.set(0, 1.2 + d * (far ? .32 : .2), d); camGoal.look.set(0, 1.0 + d * .02, 0);
