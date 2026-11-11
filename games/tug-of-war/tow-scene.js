@@ -1,11 +1,10 @@
 /**
- * «شد الحبل» — مشهد ثلاثي الأبعاد (Three.js 0.160)، بشكلين للشخصيات:
- *   style 'ship'  = شخصيات سفينة النجاة المرسومة بالكود (games/survival-ship/ship3d.js)، وقميصها بلون الفريق.
- *   style 'anime' = شخصيات الأنمي المشتركة VRM (حجرة ورقة مقص — docs/CHARACTERS.md)، وتحتها حلقة بلون الفريق.
+ * «شد الحبل» — الملعب ثلاثي الأبعاد (Three.js 0.160) بشخصيات سفينة النجاة
+ * (نسخة من figure() بـ games/survival-ship/ship3d.js)، قميصها وعصابتها بلون الفريق.
  *
- * يحتاج importmap فيه three و three/addons/ (و @pixiv/three-vrm لشكل anime).
+ * يحتاج importmap فيه three (game.html).
  *
- * createTugScene(container, { style, colors:[يسار، يمين] }) ← { ready, setState, stop }
+ * createTugScene(container, { colors:[يسار، يمين] }) ← { ready, setState, pull, stop }
  *   setState({ teams:[[{id,name,g,frozen}],[...]], pos:-100..100, boost:[bool,bool], winner:-1|0|1 })
  *   pull(id): سحبة لاعب (حركة شد قوية لحظية)
  */
@@ -61,7 +60,6 @@ function shipFigure(d) {
 }
 
 export function createTugScene(container, opts = {}) {
-    const style = opts.style === 'anime' ? 'anime' : 'ship';
     const colors = (opts.colors || ['#ff5b45', '#19a7ff']).slice();
     const r = new T.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: !!opts.capture });
     r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
@@ -102,30 +100,14 @@ export function createTugScene(container, opts = {}) {
 
     // ---- اللاعبين
     const figs = new Map();
-    let MODELS = null, vrmMod = null, state = { teams: [[], []], pos: 0, boost: [false, false], winner: -1 };
-    const ready = style === 'anime'
-        ? Promise.all([import('../../js/agp-vrm-characters.js'), import('../birthday-party/rig3d.js')]).then(([V, R]) => { vrmMod = V; try { R.loadClips('../birthday-party/anims/'); } catch (e) {} return V.loadModels(); }).then(m => { MODELS = m; if (!m) throw new Error('vrm'); sync(); })
-        : Promise.resolve().then(sync);
+    let state = { teams: [[], []], pos: 0, boost: [false, false], winner: -1 };
+    const ready = Promise.resolve().then(sync);
 
     function makeFig(p, k) {
         const outer = new T.Group(), h = hash(p.id || p.name), girl = p.g != null ? !p.g : (h & 1) === 0;
-        let f;
-        if (style === 'anime') {
-            if (!MODELS) return null;
-            const rig = vrmMod.makeVrmRig(girl ? MODELS.girl : MODELS.boy, { n: h % 1000 });
-            rig.play(0); rig.mood('focus');
-            rig.root.traverse(o => { if (o.isMesh) o.castShadow = true; });
-            rig.root.scale.setScalar(1.22); outer.add(rig.root); f = { rig, kind: 'anime' };
-            // عصابة راس وحزام بلون الفريق (الموديل نفسه لبسه ثابت)
-            const tm = new T.MeshStandardMaterial({ color: colors[k], emissive: colors[k], emissiveIntensity: .45, roughness: .4 });
-            const band = new T.Mesh(new T.TorusGeometry(.098, .017, 8, 28), tm); band.rotation.x = Math.PI / 2 - .2; band.position.set(0, .1, .005); rig.bones.Head && rig.bones.Head.add(band);
-            const belt = new T.Mesh(new T.TorusGeometry(.15, .028, 8, 28), tm); belt.rotation.x = Math.PI / 2; belt.scale.set(1, .8, 1); belt.position.y = .02; rig.bones.Spine && rig.bones.Spine.add(belt);
-            const ring = new T.Mesh(new T.RingGeometry(.28, .4, 32), new T.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: .85, side: T.DoubleSide, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = .02; outer.add(ring);
-        } else {
-            f = shipFigure({ skin: SKINS[h % SKINS.length], hair: HAIRS[(h >> 3) % HAIRS.length], girl, outfit: colors[k], pants: shade(colors[k], .45) });
-            outer.add(f.root);
-        }
-        const sp = new T.Sprite(new T.SpriteMaterial({ map: label(p.name, colors[k]), depthTest: false, transparent: true })); sp.scale.set(1.5, .375, 1); sp.position.y = style === 'anime' ? 2.55 : 2.2; sp.renderOrder = 10; outer.add(sp);
+        const f = shipFigure({ skin: SKINS[h % SKINS.length], hair: HAIRS[(h >>> 3) % HAIRS.length], girl, outfit: colors[k], pants: shade(colors[k], .45) });
+        outer.add(f.root);
+        const sp = new T.Sprite(new T.SpriteMaterial({ map: label(p.name, colors[k]), depthTest: false, transparent: true })); sp.scale.set(1.5, .375, 1); sp.position.y = 2.2; sp.renderOrder = 10; outer.add(sp);
         const ice = new T.Mesh(new T.BoxGeometry(.8, 1.9, .8), new T.MeshStandardMaterial({ color: '#bae6fd', transparent: true, opacity: .42, roughness: .1, metalness: .1, emissive: '#7dd3fc', emissiveIntensity: .35, depthWrite: false })); ice.position.y = .95; ice.visible = false; outer.add(ice);
         outer.rotation.y = k ? -Math.PI / 2 : Math.PI / 2; // يطالع النص
         mover.add(outer);
@@ -139,24 +121,36 @@ export function createTugScene(container, opts = {}) {
                 const id = p.id || p.name; seen.add(id); let f = figs.get(id);
                 if (!f || f.k !== k) { if (f) drop(f); f = makeFig(p, k); if (!f) return; figs.set(id, f); }
                 f.x = dir * (1.15 + i * step); f.z = i % 2 ? .22 : -.22; f.frozen = !!p.frozen;
-                f.outer.position.set(f.x, 0, f.z);
+                f.outer.position.set(f.x, 0, f.z); f.ly = 2.2 + (i % 2) * .42; // الأسماء بطابقين عشان ما تتراكب
             });
         });
         for (const [id, f] of figs) if (!seen.has(id)) { drop(f); figs.delete(id); }
+        fitCam();
     }
-    function drop(f) { if (f.rig) f.rig.dispose(); f.outer.removeFromParent(); }
+    // الكاميرا تقرّب أو تبعد حسب عدد اللاعبين وعرض الملعب: أبعد لاعب + أقصى سحبة لازم يبانون
+    let spanX = 6;
+    function fitCam() {
+        const n = Math.max(1, state.teams[0].length, state.teams[1].length), step = Math.min(.82, 4.6 / Math.max(1, n - 1));
+        spanX = 1.15 + (n - 1) * step + SHIFT * .8 + .9;
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(14, spanX / (halfH * Math.max(.5, cam.aspect))));
+        cam.position.set(0, 1.2 + dist * .2, dist); cam.lookAt(0, 1.0 + dist * .02, 0); cam.updateProjectionMatrix();
+    }
+    function drop(f) { f.outer.removeFromParent(); }
 
     // وضعية الشد: الجسم مايل لورا، الركب منثنية، اليدين قدام على الحبل
     const E = (b, x, y, z) => { if (b) b.rotation.set(x, y, z); };
-    function poseAnime(f, lean, t) {
-        const B = f.rig.bones, w = Math.sin(t * 2.2 + f.ph) * .03;
-        E(B.Hips, -lean - w, 0, 0); E(B.Spine, .12, 0, 0); E(B.Spine1, .08, 0, 0); E(B.Spine2, .05, 0, 0); E(B.Neck, .1 + lean * .3, 0, 0); E(B.Head, .12, 0, 0);
-        E(B.LeftUpLeg, -.55 + lean * .4, 0, -.06); E(B.RightUpLeg, -.25 + lean * .4, 0, .06); E(B.LeftLeg, .75, 0, 0); E(B.RightLeg, .45, 0, 0); E(B.LeftFoot, -.25, 0, 0); E(B.RightFoot, -.2, 0, 0);
-        E(B.LeftShoulder, 0, 0, 0); E(B.RightShoulder, 0, 0, 0);
-        E(B.LeftArm, 0, -1.68, -.95 + lean * .55); E(B.RightArm, 0, 1.68, .95 - lean * .55);
-        E(B.LeftForeArm, 0, -.35, .15); E(B.RightForeArm, 0, .35, -.15);
-    }
-    function poseShip(f, lean, t) {
+    function poseShip(f, lean, t, mode) {
+        if (mode === 'win') { // الفايز: يدينه فوق ويهتف
+            const c = Math.sin(t * 9 + f.ph);
+            f.inner.rotation.x = 0; f.legs[0].rotation.x = f.legs[1].rotation.x = 0; f.head.rotation.x = -.15;
+            for (const [i, a] of f.arms.entries()) { a.rotation.x = 0; a.rotation.z = (i ? -1 : 1) * (2.6 + c * .25); }
+            return;
+        }
+        if (mode === 'lose') { // الخسران: طايح على ظهره
+            f.inner.rotation.x = -1.2; f.legs[0].rotation.x = f.legs[1].rotation.x = -.6; f.head.rotation.x = .2;
+            for (const [i, a] of f.arms.entries()) { a.rotation.x = -.4; a.rotation.z = (i ? -1 : 1) * 1.1; }
+            return;
+        }
         const w = Math.sin(t * 2.2 + f.ph) * .03;
         f.inner.rotation.x = -lean * .9 - w;
         f.legs[0].rotation.x = -.55 + lean * .3; f.legs[1].rotation.x = -.2 + lean * .3;
@@ -177,22 +171,19 @@ export function createTugScene(container, opts = {}) {
             const boost = state.boost[f.k] ? .08 : 0;
             const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + f.jerk * .35 + (won ? -.3 : 0);
             f.ice.visible = !!f.frozen;
-            if (f.kind === 'anime') {
-                if (won) { f.rig.play('win'); f.rig.mood('laugh'); f.rig.update(dt); }
-                else { if (f.rig.anim !== 0) f.rig.play(0); f.rig.mood(lost ? 'sad' : f.frozen ? 'scared' : 'focus'); f.rig.update(dt); poseAnime(f, lean, t); }
-                f.rig.sync();
-            } else poseShip(f, won ? 0 : lean, t);
+            poseShip(f, lean, t, won ? 'win' : lost ? 'lose' : null);
+            f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
             if (won) f.outer.position.y = Math.abs(Math.sin(t * 6 + f.ph)) * .25; else f.outer.position.y = 0;
         }
         // ارتفاع الحبل = ارتفاع يدين أول لاعب (مرة وحدة بعد ما تطلع الشخصيات)
         if (!measured && figs.size) { const f = figs.values().next().value; f.outer.updateMatrixWorld(true);
-            const hand = f.kind === 'anime' ? f.rig.bones.LeftHand : f.arms[0].children[1];
+            const hand = f.arms[0].children[1];
             if (hand) { const v = hand.getWorldPosition(new T.Vector3()); if (v.y > .4) { ropeY = v.y; rope.position.y = ropeY; measured = true; } } }
         r.render(sc, cam);
     }
     const ro = new ResizeObserver(() => { const w = container.clientWidth || 1, h = container.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h;
         // الشاشات الضيقة: الكاميرا ترجع لورا عشان يبان الملعب كامل
-        cam.position.set(0, 3.6, 11 * Math.max(1, 1.9 / cam.aspect)); cam.lookAt(0, 1.25, 0); cam.updateProjectionMatrix(); });
+        fitCam(); });
     ro.observe(container); rope.position.y = ropeY;
     raf = requestAnimationFrame(frame);
 

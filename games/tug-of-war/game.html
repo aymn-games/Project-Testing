@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <title>شد الحبل — ألعاب أيمن</title>
+<!-- three.js للملعب الثري دي (tow-scene.js) -->
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }</script>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -73,98 +78,94 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
 
   <div dir="ltr" style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:104px 40px 30px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
 
+    <!-- فوق: الهدايا الثلاث وخاصية كل وحدة -->
+    <div dir="rtl" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+      <sc-for list="{{ legend }}" as="g" hint-placeholder-count="3">
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:12px 20px 12px 14px;border-radius:22px;background:linear-gradient(135deg, {{ g.soft }}, rgba(18,16,26,.82) 55%);border:1.5px solid {{ g.bd }};box-shadow:0 14px 40px rgba(0,0,0,.3)">
+          <span style="flex-shrink:0;width:72px;height:72px;border-radius:18px;display:grid;place-items:center;background:#16131f;border:1px solid rgba(255,255,255,.08);box-shadow:0 0 26px {{ g.glow }}"><img src="{{ g.img }}" alt="" style="width:64px;height:64px;object-fit:contain"></span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+            <span style="display:flex;align-items:center;gap:8px;font:700 24px/1.2 'IBM Plex Sans Arabic';color:{{ g.color }}">{{ g.icon }} {{ g.effect }}</span>
+            <span style="font:600 16px/1.4 'IBM Plex Sans Arabic';color:#cfcad9">{{ g.desc }}</span>
+          </span>
+          <span style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+            <span style="font:600 12px 'IBM Plex Sans Arabic';color:#a8a3b5">أرسل</span>
+            <span style="font:700 16px 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap">{{ g.name }}</span>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+
     <!-- لوحة النتيجة: الفريق الأيسر يسار والأيمن يمين، والمؤشر بالنص -->
-    <div style="flex-shrink:0;display:grid;grid-template-columns:420px minmax(0,1fr) 420px;align-items:stretch;gap:24px">
+    <div style="flex-shrink:0;display:grid;grid-template-columns:500px minmax(0,1fr) 500px;align-items:stretch;gap:24px">
       <sc-for list="{{ sideL }}" as="t" hint-placeholder-count="1">
-        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:18px 22px;border-radius:26px;background:rgba(18,16,26,.72);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
-            <span style="flex-shrink:0;font:700 40px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">{{ t.pct }}<span style="font-size:20px;color:#a8a3b5">%</span></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="padding:5px 12px;border-radius:999px;background:{{ t.soft }};border:1px solid {{ t.bd }};font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">👥 {{ t.count }} / {{ t.max }}</span>
-            <span style="padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">كلمة الدخول: <b style="color:{{ t.color }}">{{ t.keyword }}</b></span>
-            <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
-              <span style="padding:5px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
-            </sc-if>
-            <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
-              <span style="padding:5px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
-            </sc-if>
+        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:24px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
+          <span style="flex-shrink:0;min-width:96px;text-align:center;font:700 52px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid {{ t.bd }};font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">👥 {{ t.count }} / {{ t.max }}</span>
+              <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">اكتب <b style="color:{{ t.color }}">{{ t.keyword }}</b> للانضمام</span>
+              <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
+              </sc-if>
+              <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
+              </sc-if>
+            </div>
           </div>
         </div>
       </sc-for>
 
-      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px">
-        <div dir="rtl" style="display:flex;align-items:center;gap:12px">
-          <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.3);background:rgba(139,92,246,.08);font:600 19px 'IBM Plex Sans Arabic';color:#c4b5fd"><span style="width:7px;height:7px;border-radius:50%;background:#a78bfa"></span>شد الحبل · {{ modeLabel }}</span>
-          <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:600 19px 'IBM Plex Sans Arabic';color:#e7e3ef;font-variant-numeric:tabular-nums">⏱ {{ clock }}</span>
-        </div>
-        <div style="position:relative;width:100%;max-width:860px;height:30px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);overflow:hidden">
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px">
+        <span dir="rtl" style="padding:6px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:600 19px 'IBM Plex Sans Arabic';color:#e7e3ef;font-variant-numeric:tabular-nums">⏱ {{ clock }}</span>
+        <div style="position:relative;width:100%;height:26px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);overflow:hidden">
           <div style="position:absolute;top:0;bottom:0;left:0;width:{{ meterL }}%;background:linear-gradient(90deg, {{ colorL }}, {{ colorL }}aa);transition:width .25s ease"></div>
           <div style="position:absolute;top:0;bottom:0;right:0;width:{{ meterR }}%;background:linear-gradient(270deg, {{ colorR }}, {{ colorR }}aa);transition:width .25s ease"></div>
           <div style="position:absolute;top:-2px;bottom:-2px;left:50%;width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 10px #fff"></div>
         </div>
-        <span dir="rtl" style="font:600 17px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ leadText }}</span>
+        <span dir="rtl" style="font:700 19px 'IBM Plex Sans Arabic';color:{{ leadColor }}">{{ leadText }}</span>
       </div>
-
       <sc-for list="{{ sideR }}" as="t" hint-placeholder-count="1">
-        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:18px 22px;border-radius:26px;background:rgba(18,16,26,.72);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
-            <span style="flex-shrink:0;font:700 40px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">{{ t.pct }}<span style="font-size:20px;color:#a8a3b5">%</span></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="padding:5px 12px;border-radius:999px;background:{{ t.soft }};border:1px solid {{ t.bd }};font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">👥 {{ t.count }} / {{ t.max }}</span>
-            <span style="padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">كلمة الدخول: <b style="color:{{ t.color }}">{{ t.keyword }}</b></span>
-            <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
-              <span style="padding:5px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
-            </sc-if>
-            <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
-              <span style="padding:5px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
-            </sc-if>
+        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:24px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
+          <span style="flex-shrink:0;min-width:96px;text-align:center;font:700 52px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid {{ t.bd }};font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">👥 {{ t.count }} / {{ t.max }}</span>
+              <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">اكتب <b style="color:{{ t.color }}">{{ t.keyword }}</b> للانضمام</span>
+              <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
+              </sc-if>
+              <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
+              </sc-if>
+            </div>
           </div>
         </div>
       </sc-for>
     </div>
 
-    <!-- الملعب -->
-    <div style="position:relative;flex:1;min-height:0">
+    <!-- الملعب (ثري دي بشخصيات سفينة النجاة — tow-scene.js) -->
+    <div style="position:relative;flex:1;min-height:0;border-radius:30px;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.4)">
       {{ arena }}
 
       <sc-if value="{{ chOn }}" hint-placeholder-val="{{ false }}">
-        <div dir="rtl" style="position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:6;min-width:520px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 34px 18px;border-radius:24px;background:rgba(12,11,18,.9);border:1.5px solid rgba(167,139,250,.5);box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 50px rgba(139,92,246,.25);animation:popIn .35s cubic-bezier(.2,1.3,.4,1)">
+        <div dir="rtl" style="position:absolute;top:22px;left:50%;transform:translateX(-50%);z-index:6;min-width:520px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 34px 18px;border-radius:24px;background:rgba(12,11,18,.9);border:1.5px solid rgba(167,139,250,.5);box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 50px rgba(139,92,246,.25);animation:popIn .35s cubic-bezier(.2,1.3,.4,1)">
           <span style="font:600 18px 'IBM Plex Sans Arabic';color:#c4b5fd">⚡ أسرع واحد يكتب بالشات</span>
           <span style="font:700 64px/1.15 'IBM Plex Sans Arabic';color:#fff;letter-spacing:1px">{{ chText }}</span>
           <div style="width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ chPct }}%;background:linear-gradient(90deg,#7c3aed,#a855f7);transition:width .25s linear"></div></div>
         </div>
       </sc-if>
 
-      <div dir="rtl" style="position:absolute;bottom:42px;left:50%;transform:translateX(-50%);z-index:5;width:620px;display:flex;flex-direction:column-reverse;align-items:center;gap:8px;pointer-events:none">
+      <div dir="rtl" style="position:absolute;top:20px;right:24px;z-index:5;width:520px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none">
         <sc-for list="{{ feed }}" as="f" hint-placeholder-count="0">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:16px;background:rgba(12,11,18,.86);border:1px solid {{ f.bd }};box-shadow:0 10px 30px rgba(0,0,0,.4);font:600 17px 'IBM Plex Sans Arabic';color:#f4f2f8;opacity:{{ f.op }};animation:feedIn .35s ease both">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:16px;background:rgba(12,11,18,.88);border:1px solid {{ f.bd }};box-shadow:0 10px 30px rgba(0,0,0,.4);font:600 18px 'IBM Plex Sans Arabic';color:#f4f2f8;opacity:{{ f.op }};animation:feedIn .35s ease both">
             <span style="font-size:22px">{{ f.icon }}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.text }}</span>
           </div>
         </sc-for>
       </div>
-    </div>
 
-    <!-- أسفل: هدايا المباراة + طريقة الانضمام -->
-    <div dir="rtl" style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:18px">
-      <div style="display:flex;gap:14px">
-        <sc-for list="{{ legend }}" as="g" hint-placeholder-count="3">
-          <div style="display:flex;align-items:center;gap:12px;padding:10px 18px 10px 12px;border-radius:20px;background:rgba(18,16,26,.72);border:1px solid rgba(255,255,255,.08)">
-            <span style="width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:#16131f"><img src="{{ g.img }}" alt="" style="width:50px;height:50px;object-fit:contain"></span>
-            <span style="display:flex;flex-direction:column;gap:2px">
-              <span style="font:700 18px 'IBM Plex Sans Arabic';color:#fff">{{ g.icon }} {{ g.effect }}</span>
-              <span style="font:600 14px 'IBM Plex Sans Arabic';color:#a8a3b5">أرسل {{ g.name }} · {{ g.desc }}</span>
-            </span>
-          </div>
-        </sc-for>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding:12px 20px;border-radius:20px;background:rgba(139,92,246,.08);border:1px solid rgba(167,139,250,.3)">
-        <span style="font:700 19px 'IBM Plex Sans Arabic';color:#ddd6fe">{{ howTo }}</span>
-        <span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ joinHint }}</span>
-      </div>
+      <div dir="rtl" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;padding:8px 20px;border-radius:999px;background:rgba(12,11,18,.82);border:1px solid rgba(167,139,250,.35);font:700 18px 'IBM Plex Sans Arabic';color:#ddd6fe;white-space:nowrap">{{ howTo }}</div>
     </div>
   </div>
 
@@ -265,7 +266,16 @@ class Component extends DCLogic {
       {names:['اعادة','إعادة'],label:'إعادة بنفس اللاعبين',icon:'🔁',run:()=>{ this.rematch(); return 'بدأت مباراة جديدة'; }}
     ]}); }catch(e){}
     this.startCountdown(); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.clockT); clearInterval(this.cdT); clearInterval(this.demoT); clearTimeout(this.chT); this.unsub?.(); this.unsubGift?.(); }
+  // الملعب الثري دي (tow-scene.js، شخصيات سفينة النجاة). لو فشل (WebGL أو النت) يرجع الملعب ثنائي الأبعاد.
+  mountScene(el){ if(!el||this.scene||this.sceneFailed) return;
+    import(new URL('tow-scene.js',document.baseURI).href).then(M=>{ if(!el.isConnected) return;
+      this.scene=M.createTugScene(el,{colors:this.T.map(t=>t.color)}); this.pushScene();
+      this.scene.ready.catch(e=>this.failScene(e)); }).catch(e=>this.failScene(e)); }
+  failScene(e){ const A=window.AymanGamesPlatform; if(A&&A.log) A.log('شد الحبل: الملعب الثري دي ما اشتغل — '+(e&&e.message)); try{ this.scene&&this.scene.stop(); }catch(e){} this.scene=null; this.sceneFailed=true; this.forceUpdate(); }
+  pushScene(){ const S=this.state, n=Date.now(); if(!this.scene) return;
+    this.scene.setState({ pos:S.pos, boost:[0,1].map(k=>S.boost[k]>n), winner:S.phase==='win'?S.winner:-1,
+      teams:S.teams.map(l=>l.map(name=>({id:name,name,frozen:(S.frozen[name]||0)>n}))) }); }
+  componentWillUnmount(){ try{ this.scene&&this.scene.stop(); }catch(e){} removeEventListener('resize',this.fit); clearInterval(this.clockT); clearInterval(this.cdT); clearInterval(this.demoT); clearTimeout(this.chT); this.unsub?.(); this.unsubGift?.(); }
 
   /* ---------- الصوت (Web Audio بدون ملفات) ---------- */
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
@@ -291,12 +301,12 @@ class Component extends DCLogic {
   teamOf(name){ const t=this.state.teams; return t[0].includes(name)?0:t[1].includes(name)?1:-1; }
   isFrozen(name){ return (this.state.frozen[name]||0)>Date.now(); }
   boosted(k){ return this.state.boost[k]>Date.now(); }
-  pushFeed(icon,text,color){ this._fid=(this._fid||0)+1; const id=this._fid; this.setState(s=>({feed:[{id,icon,text,color,at:Date.now()},...s.feed].slice(0,4)})); }
+  pushFeed(icon,text,color){ this._fid=(this._fid||0)+1; const id=this._fid; this.setState(s=>({feed:[{id,icon,text,color,at:Date.now()},...s.feed].slice(0,3)})); }
 
   // سحبة لفريق k (0 الأيسر ← pos ينقص، 1 الأيمن ← pos يزيد)
   pull(k,amount,who){ if(this.state.phase!=='play') return; const amt=amount*(this.boosted(k)?2:1);
-    this.setState(s=>{ const pos=Math.max(-100,Math.min(100,s.pos+(k?amt:-amt))); const pulls=who?{...s.pulls,[who]:(s.pulls[who]||0)+amt}:s.pulls; const flash=who?{...s.flash,[who]:Date.now()}:s.flash; return {pos,pulls,flash}; },
-      ()=>{ if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
+    this.setState(s=>{ const pos=Math.max(-100,Math.min(100,s.pos+(k?amt:-amt))); const pulls=who?{...s.pulls,[who]:(s.pulls[who]||0)+amt}:s.pulls; const flash=who?{...s.flash,[who]:Date.now()}:s.flash; return {pos,pulls,flash}; }, 
+      ()=>{ if(who&&this.scene) this.scene.pull(who); if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
 
   onChat(user,text,follower){ const S=this.state, k=this.teamOf(user);
     if(k<0){ // انضمام متأخر بكلمة الفريق (بدون تبديل فريق أثناء المباراة)
@@ -386,27 +396,29 @@ class Component extends DCLogic {
     const empty=!S.teams[0].length&&!S.teams[1].length?h('div',{key:'e',dir:'rtl',style:{position:'absolute',left:0,right:0,top:ropeY+110,textAlign:'center',font:"600 22px 'IBM Plex Sans Arabic'",color:'#8a8596'}},'بانتظار انضمام اللاعبين بكلمة الدخول'):null;
     return h('div',{key:'arena',ref:el=>{ if(el&&el.clientHeight&&Math.abs(el.clientHeight-(this.arenaH||0))>4){ this.arenaH=el.clientHeight; setTimeout(()=>this.forceUpdate(),0); } },style:{position:'absolute',left:0,top:0,width:W,height:'100%',borderRadius:34,overflow:'hidden'}},[ground,mover,...boosts,empty]); }
 
+  arena3d(){ return this._a3||(this._a3=React.createElement('div',{key:'arena3d',ref:el=>this.mountScene(el),style:{position:'absolute',inset:0,background:'#120e20'}})); }
   buildConfetti(){ if(this._conf) return this._conf; const h=React.createElement, c=this.state.winner>=0?this.T[this.state.winner].color:'#a78bfa', cols=[c,'#fbbf24','#a78bfa','#fff'];
     return this._conf=h('div',{key:'cf','aria-hidden':true,style:{position:'fixed',inset:0,pointerEvents:'none',overflow:'hidden'}},Array.from({length:70},(_,i)=>h('span',{key:i,style:{position:'absolute',top:'-20px',left:Math.random()*100+'%',width:8,height:14,borderRadius:2,background:cols[i%4],'--dx':(Math.random()*200-100)+'px','--r':(Math.random()*720-360)+'deg',animation:`confetti ${2.5+Math.random()*2}s ${Math.random()*1.2}s linear forwards`}}))); }
 
   sideVals(k){ const S=this.state, t=this.T[k], c=t.color, n=S.now, b=S.boost[k]>n, fz=S.teams[k].filter(p=>(S.frozen[p]||0)>n).length, pct=Math.round(50+(k?S.pos:-S.pos)/2);
     return [{name:t.name,color:c,keyword:t.keyword,count:S.teams[k].length,max:this.MAX,pct,bd:c+(b?'cc':'66'),halo:c+(b?'55':'22'),soft:c+'18',boostOn:b,boostSec:Math.ceil((S.boost[k]-n)/1000),frozenTxt:fz?fz+' مجمّد':null,anim:b?'boostGlow 1s ease-in-out infinite':'none'}]; }
 
-  renderVals(){ const S=this.state, o=(i,out)=>S.exitOpenOut?out:i, [L,R]=this.T, G=this.G, el=S.phase==='play'||S.phase==='win'?Math.floor(((S.phase==='win'?S.endedAt:S.now)-S.startedAt)/1000):0;
+  renderVals(){ this.pushScene(); const S=this.state, o=(i,out)=>S.exitOpenOut?out:i, [L,R]=this.T, G=this.G, el=S.phase==='play'||S.phase==='win'?Math.floor(((S.phase==='win'?S.endedAt:S.now)-S.startedAt)/1000):0;
     const lead=Math.abs(S.pos)<1?'متعادلين — اسحبوا!':(S.pos>0?R.name:L.name)+' متقدم';
     const win=S.phase==='win', w=S.winner, wt=w>=0?this.T[w]:null;
     let mvp=null; if(win&&wt){ const best=S.teams[w].slice().sort((a,b)=>(S.pulls[b]||0)-(S.pulls[a]||0))[0]; if(best&&S.pulls[best]) mvp=best; }
     const mvpCard=mvp?TOW.winCard(this.reg.player(mvp),['نجم '+wt.name,'شد الحبل'],'wc-mvp',220):null;
-    const legend=[[G.freeze,'❄️','تجميد خصم','يتجمد لاعب عشوائي من الفريق الثاني 8 ث'],[G.double,'⚡','قوة ×2','سحب فريقك يتضاعف 10 ث'],[G.hook,'🪝','خطاف الاندفاع','سحبة قوية فورية لفريقك']]
-      .filter(x=>x[0]).map(([g,icon,effect,desc])=>({img:(TOW.giftById(g.id)||g).img,name:g.name,icon,effect,desc}));
+    const legend=[[G.freeze,'❄️','تجميد خصم','يتجمد لاعب عشوائي من الفريق الثاني 8 ثواني','#7dd3fc'],[G.double,'⚡','قوة الفريق ×2','سحب فريقك يتضاعف لمدة 10 ثواني','#fbbf24'],[G.hook,'🪝','خطاف الاندفاع','سحبة قوية فورية لصالح فريقك','#f472b6']]
+      .filter(x=>x[0]).map(([g,icon,effect,desc,c])=>({img:(TOW.giftById(g.id)||g).img,name:g.name,icon,effect,desc,color:c,soft:c+'26',bd:c+'55',glow:c+'55'}));
     return {
       fx:this.buildFx(), scale:S.scale, lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), isDemo:DEMO,
       sideL:this.sideVals(0), sideR:this.sideVals(1), colorL:L.color, colorR:R.color,
+      leadColor:S.phase==='countdown'||Math.abs(S.pos)<1?'#a8a3b5':(S.pos>0?R.color:L.color),
       meterL:Math.max(0,Math.min(50,-S.pos/2)), meterR:Math.max(0,Math.min(50,S.pos/2)), leadText:S.phase==='countdown'?'استعدوا…':lead,
-      modeLabel:this.MODE==='speed'?'السرعة والتحدي':'التكبيس والدعم', clock:String(Math.floor(el/60)).padStart(2,'0')+':'+String(el%60).padStart(2,'0'),
-      arena:this.buildArena(),
+      clock:String(Math.floor(el/60)).padStart(2,'0')+':'+String(el%60).padStart(2,'0'),
+      arena:this.sceneFailed?this.buildArena():this.arena3d(),
       chOn:!!(S.ch&&S.phase==='play'), chText:S.ch?S.ch.text:'', chPct:S.ch?Math.max(0,Math.min(100,(S.ch.until-S.now)/S.ch.dur*100)):0,
-      feed:S.feed.map((f,i)=>({icon:f.icon,text:f.text,bd:(f.color||'#a78bfa')+'66',op:Math.max(.35,1-i*.2)})),
+      feed:S.feed.map((f,i)=>({icon:f.icon,text:f.text,bd:(f.color||'#a78bfa')+'66',op:Math.max(.4,1-i*.25)})),
       legend, howTo:this.MODE==='speed'?'⚡ أول واحد يكتب الكلمة يسحب لفريقه':'💪 كل رسالة بالشات = سحبة لفريقك',
       joinHint:'للانضمام اكتب: '+L.keyword+' ('+L.name+') أو '+R.keyword+' ('+R.name+')',
       cdOn:S.phase==='countdown', cdText:S.cd>0?String(S.cd):'اسحب!',
