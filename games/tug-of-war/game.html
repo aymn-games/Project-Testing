@@ -58,6 +58,7 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
 @keyframes gfxFly{0%{opacity:0;transform:translateX(var(--fx0)) rotate(-30deg) scale(.7)}15%{opacity:1}75%{opacity:1;transform:translateX(0) rotate(15deg) scale(1.2)}100%{opacity:0;transform:translateX(0) scale(1.6)}}
 @keyframes gfxRing{0%{opacity:.9;transform:translate(-50%,-50%) scale(.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}}
 @keyframes gfxRay{0%{opacity:0;transform:rotate(var(--r)) scaleY(.2)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--r)) scaleY(1.4)}}
+@keyframes startGlow{0%,100%{box-shadow:0 14px 40px rgba(143,132,220,.3), inset 0 1px 0 rgba(255,255,255,.35)}50%{box-shadow:0 14px 50px rgba(143,132,220,.55), 0 0 0 8px rgba(179,166,242,.10), inset 0 1px 0 rgba(255,255,255,.35)}}
 @keyframes kwPulse{0%,100%{box-shadow:0 0 0 0 var(--kc)}50%{box-shadow:0 0 22px 2px var(--kc)}}
 @keyframes hookFly{0%{opacity:0;transform:translateX(var(--from)) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translateX(0) scale(1.3)}}
 </style>
@@ -189,7 +190,6 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
         </sc-for>
       </div>
 
-      <div dir="rtl" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;padding:8px 20px;border-radius:999px;background:rgba(12,11,18,.82);border:1px solid rgba(167,139,250,.35);font:700 18px 'IBM Plex Sans Arabic';color:#ddd6fe;white-space:nowrap">{{ howTo }}</div>
     </div>
 
     <!-- شاشة الفوز: بطاقات صغيرة ثابتة (بنمط أسرع إجابة)، حجمها يصغر مع العدد عشان كل البطاقات والأزرار تبان -->
@@ -228,14 +228,10 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
     </sc-if>
   </div>
 
-  <!-- قبل البداية: زر «ابدأ» كبير بالنص (الكاميرا بعيدة، والانضمام بكلمة الفريق شغّال) -->
+  <!-- قبل البداية: زر «ابدأ» بس، تحت بالنص (الكاميرا بعيدة، والانضمام بكلمة الفريق شغّال) -->
   <sc-if value="{{ readyOn }}" hint-placeholder-val="{{ false }}">
-    <div dir="rtl" style="position:fixed;left:50%;bottom:clamp(30px,9vh,110px);transform:translateX(-50%);z-index:55;display:flex;flex-direction:column;align-items:center;gap:12px;animation:rise .4s ease both">
-      <span style="padding:8px 18px;border-radius:999px;background:rgba(12,11,18,.85);border:1px solid rgba(255,255,255,.12);font:700 clamp(13px,1.1vw,17px) 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap">{{ readyHint }}</span>
-      <div style="display:flex;gap:10px">
-        <button onClick="{{ openIntro }}" style="height:clamp(52px,6vh,66px);padding:0 22px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.16);background:rgba(12,11,18,.85);color:#e7e3ef;font:700 clamp(15px,1.3vw,19px) 'IBM Plex Sans Arabic';white-space:nowrap" style-hover="background:rgba(255,255,255,.08)">طريقة اللعب</button>
-        <button onClick="{{ startMatch }}" style="height:clamp(52px,6vh,66px);min-width:clamp(180px,16vw,260px);padding:0 36px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 clamp(20px,1.8vw,26px) 'IBM Plex Sans Arabic';box-shadow:0 12px 40px rgba(139,92,246,.55), inset 0 1px 0 rgba(255,255,255,.2);white-space:nowrap" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="7 4 20 12 7 20 7 4"></polygon></svg>ابدأ</button>
-      </div>
+    <div style="position:fixed;left:0;right:0;bottom:clamp(28px,6vh,72px);z-index:55;display:flex;justify-content:center;pointer-events:none;animation:rise .45s ease both">
+      <button onClick="{{ startMatch }}" style="pointer-events:auto;height:clamp(58px,7vh,74px);min-width:clamp(200px,17vw,280px);padding:0 44px;border:1px solid rgba(255,255,255,.18);border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg, #8f84dc, #b3a6f2);color:#fff;font:800 clamp(22px,2vw,28px) 'IBM Plex Sans Arabic';letter-spacing:.5px;box-shadow:0 14px 40px rgba(143,132,220,.35), inset 0 1px 0 rgba(255,255,255,.35);animation:startGlow 2.6s ease-in-out infinite;transition:filter .2s, transform .15s" style-hover="filter:brightness(1.06)" style-active="transform:scale(.97)"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"></path></svg>ابدأ</button>
     </div>
   </sc-if>
 
@@ -584,13 +580,12 @@ class Component extends DCLogic {
       arena:this.sceneFailed?this.buildArena():this.arena3d(),
       chOn:!!(S.ch&&S.phase==='play'), chText:S.ch?S.ch.text:'', chPct:S.ch?Math.max(0,Math.min(100,(S.ch.until-S.now)/S.ch.dur*100)):0,
       feed:S.feed.map((f,i)=>({icon:f.icon,text:f.text,bd:(f.color||'#a78bfa')+'66',op:Math.max(.4,1-i*.25)})),
-      legend, howTo:this.MODE==='speed'?'أول واحد يكتب الكلمة يسحب لفريقه':'كل تكبيسة أو رسالة بالشات = سحبة لفريقك · اللي يتعدى الخط ينقصى', gfx:this.buildGfx(),
+      legend, gfx:this.buildGfx(),
       autoOn:S.autoJoin, autoTrack:S.autoJoin?'linear-gradient(90deg, #059669, #34d399)':'rgba(255,255,255,.14)', autoKnob:S.autoJoin?'flex-start':'flex-end', autoBd:S.autoJoin?'rgba(52,211,153,.5)':'rgba(255,255,255,.1)', autoBg:S.autoJoin?'rgba(52,211,153,.1)':'rgba(255,255,255,.03)',
       toggleAuto:()=>{ const v=!S.autoJoin; try{ localStorage.setItem(AUTO_KEY,v?'1':'0'); }catch(e){} this.setState({autoJoin:v}); this.pushFeed(icon('join',22),v?'الدخول التلقائي مفعّل — اكتب كلمة فريقك للانضمام':'الدخول التلقائي مقفل',COLORS.join); },
       joinHint:'للانضمام اكتب: '+L.keyword+' ('+L.name+') أو '+R.keyword+' ('+R.name+')',
       cdOn:S.phase==='countdown', cdText:S.cd>0?String(S.cd):'اسحب!',
-      readyOn:S.phase==='ready'&&!S.introOn, startMatch:()=>this.startMatch(), openIntro:()=>this.setState({introOn:true}),
-      readyHint:(S.teams[0].length+S.teams[1].length)+' لاعب جاهز'+(S.autoJoin?' · اللي يبي ينضم يكتب كلمة فريقه':'')+' · اضغط ابدأ',
+      readyOn:S.phase==='ready'&&!S.introOn, startMatch:()=>this.startMatch(),
       introOn:S.introOn, introHide:S.introHide, introTick:S.introHide?icon('tick',16,'#fff'):'', introChkBd:S.introHide?'#8b7fd6':'rgba(255,255,255,.25)', introChkBg:S.introHide?'#8b7fd6':'transparent',
       toggleIntroHide:()=>this.setState({introHide:!S.introHide}),
       closeIntro:()=>{ if(S.introHide){ try{ localStorage.setItem(INTRO_KEY,'1'); }catch(e){} } this.setState({introOn:false}); },
