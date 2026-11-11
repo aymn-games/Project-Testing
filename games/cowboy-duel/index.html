@@ -35,8 +35,8 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 #lids i{position:absolute;left:-15%;right:-15%;height:60%;background:#0d0704;filter:blur(18px)}
 #lids .t{top:-60%;border-radius:0 0 50% 50%/0 0 70% 70%}
 #lids .b{bottom:-60%;border-radius:50% 50% 0 0/70% 70% 0 0}
-#lids.on .t{animation:lidT 2.4s ease-in-out both}
-#lids.on .b{animation:lidB 2.4s ease-in-out both}
+#lids.on .t{animation:lidT var(--lid,2.4s) ease-in-out both}
+#lids.on .b{animation:lidB var(--lid,2.4s) ease-in-out both}
 @keyframes lidT{0%{transform:translateY(92%)}14%{transform:translateY(8%)}34%{transform:translateY(66%)}50%{transform:translateY(62%)}68%{transform:translateY(68%)}84%{transform:translateY(8%)}100%{transform:translateY(0)}}
 @keyframes lidB{0%{transform:translateY(-92%)}14%{transform:translateY(-8%)}34%{transform:translateY(-58%)}50%{transform:translateY(-54%)}68%{transform:translateY(-60%)}84%{transform:translateY(-8%)}100%{transform:translateY(0)}}
 body[data-grade="pov"] :is(.poster,#chat,#title,#counter,#demo,#banner){opacity:0 !important;transition:opacity .25s}
@@ -90,6 +90,42 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 @keyframes shake{0%,100%{transform:translate(-50%,0)}20%{transform:translate(calc(-50% - 6px),2px)}40%{transform:translate(calc(-50% + 6px),-2px)}60%{transform:translate(calc(-50% - 4px),1px)}80%{transform:translate(calc(-50% + 3px),0)}}
 #sign[data-state="show"]{animation:drop .9s cubic-bezier(.25,1.5,.45,1) both}
 #sign[data-state="show"] .wait,#sign[data-state="show"] .draw{display:none}
+/* كلمة بدل الرقم: خط عربي */
+#sign.word .num{font:400 clamp(48px,6.5vw,88px)/1.15 Rakkas,serif;direction:rtl;padding:0 6px}
+/* الخدعة الحمراء: نفس اللوحة بس أحمر */
+#sign[data-state="decoy"]{animation:drop .7s cubic-bezier(.25,1.5,.45,1) both}
+#sign[data-state="decoy"] .wait,#sign[data-state="decoy"] .draw,#sign[data-state="decoy"] .lbl{display:none}
+#sign[data-state="decoy"] .board{background:linear-gradient(180deg,#7a2418,#5a160e 55%,#45100a);border-color:#2a0805}
+#sign[data-state="decoy"] .num{background:linear-gradient(180deg,#ffd0c4,#ff5a3c 45%,#b3160b);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 0 #2a0805) drop-shadow(0 0 18px rgba(255,60,40,.55))}
+/* قائمة الأسرع (كل المبارزات في وقت واحد) */
+#feed{position:fixed;left:16px;top:calc(9vh + 12px);z-index:6;display:flex;flex-direction:column;gap:6px;width:min(300px,44vw);pointer-events:none}
+.frow{display:flex;align-items:center;gap:8px;padding:6px 12px;background:linear-gradient(90deg,rgba(43,24,12,.92),rgba(43,24,12,.7));border:1px solid rgba(242,193,78,.45);border-radius:8px;animation:slamRow .4s cubic-bezier(.2,1.6,.4,1)}
+.frow b{flex:1;font:400 17px Rakkas,serif;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .ft{font:400 17px Rye,Rakkas,serif;color:#fff2c4}.frow .fs{font-size:12px;color:#e9c99a;direction:ltr}
+@keyframes slamRow{from{opacity:0;transform:translateX(-30px) scale(1.2)}}
+/* شاشة الإعدادات — نفس شكل كروت المنصة: كرت لكل إعداد، أيقونة + عنوان يمين، خيارات تحته، ووصف رمادي */
+#settings{position:fixed;inset:0;z-index:15;display:none;overflow:auto;background:rgba(5,8,22,.86);backdrop-filter:blur(6px);direction:rtl;font-family:"IBM Plex Sans Arabic",sans-serif}
+#settings.in{display:block}
+.swrap{max-width:1000px;margin:0 auto;padding:22px 16px 30px}
+.stop{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.stop h2{margin:0;font:700 22px "IBM Plex Sans Arabic";color:#fff}
+.stop button{background:none;border:1px solid #22305a;color:#8d9bc4;border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer}
+#setGrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;padding:22px;background:#0b1129;border:1px solid #17224a;border-radius:24px}
+.scard{background:#0c132e;border:1px solid #1a2850;border-radius:22px;padding:22px 22px 20px}
+.shead{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.sico{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:12px;background:#121a44;border:1px solid #2a3a85}
+.sico svg{width:22px;height:22px;fill:none;stroke:#8b97ff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shead h3{margin:0;font:700 18px "IBM Plex Sans Arabic";color:#fff}
+.spills{display:grid;gap:12px}
+.spill{min-height:60px;padding:8px 10px;border-radius:14px;border:1px solid #22305a;background:#0b1430;color:#8d9bc4;font:700 16px "IBM Plex Sans Arabic";cursor:pointer;transition:all .15s}
+.spill:hover{border-color:#34478a;color:#c9d2f3}
+.spill.on{background:#1b1a55;border-color:#5560ff;color:#fff;box-shadow:0 0 0 1px rgba(85,96,255,.35),0 6px 22px rgba(70,80,255,.25)}
+.sdesc{margin:16px 0 0;color:#8d9bc4;font-size:15px;line-height:1.9}
+.snum{width:100%;height:64px;box-sizing:border-box;border-radius:14px;border:1px solid #22305a;background:#0b1430;color:#fff;font:600 20px "IBM Plex Sans Arabic";padding:0 20px;direction:ltr;text-align:left;outline:none}
+.snum:focus{border-color:#5560ff}
+.sbar{display:flex;justify-content:flex-end;margin-top:18px}
+.sbar button{min-width:220px;height:54px;border:0;border-radius:14px;background:linear-gradient(90deg,#2563eb,#4f46e5);color:#fff;font:700 17px "IBM Plex Sans Arabic";cursor:pointer;box-shadow:0 8px 26px rgba(79,70,229,.4)}
+@media (max-width:820px){#setGrid{grid-template-columns:1fr;padding:12px;gap:14px}.scard{padding:16px}.spill{min-height:52px;font-size:14px}}
 #sign[data-state="gone"]{transform:translate(-50%,-140%) rotate(8deg);opacity:0;transition:transform .35s ease-in,opacity .3s .1s}
 @keyframes drop{0%{transform:translate(-50%,-30%) rotate(-12deg) scale(.8)}40%{transform:translate(-50%,6%) rotate(6deg) scale(1.08)}65%{transform:translate(-50%,0) rotate(-3deg)}85%{transform:translate(-50%,0) rotate(1.5deg)}100%{transform:translate(-50%,0) rotate(0) scale(1)}}
 @keyframes pulse{50%{opacity:.55}}
@@ -122,6 +158,7 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 #lobby.hide{opacity:0;pointer-events:none;transform:translate(-50%,30px)}
 #lobby p{margin:0 0 10px;font-size:14px;color:#f3d9a8}
 #lobby p b{color:var(--gold)}
+#lobby .lmax{margin:10px 0 0;font-size:12px;color:#d9bf94}
 #roster{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;max-height:84px;overflow:auto}
 .chip{background:rgba(0,0,0,.28);border:1px solid rgba(242,193,78,.35);border-radius:999px;padding:2px 10px;font-size:13px}
 .btns{display:flex;gap:10px;justify-content:center}
@@ -183,7 +220,8 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 <div id="lobby" class="plank">
   <p>اكتب <b>دخول</b> بالشات وادخل السوق — كل شوي مواجهة بين راعيين، <b>أول من يكتب الرقم يطلق</b> والثاني يُقصى.</p>
   <div id="roster"></div>
-  <div class="btns"><button class="btn" id="startBtn">ابدأ المواجهات</button><button class="btn ghost" id="addBot">+ راعي تجريبي</button></div>
+  <div class="btns"><button class="btn" id="startBtn">ابدأ المواجهات</button><button class="btn ghost" id="addBot">+ راعي تجريبي</button><button class="btn ghost" id="setBtn">⚙ الإعدادات</button></div>
+  <p class="lmax">الحد الأقصى: <b id="lobbyMax">64</b> لاعب</p>
 </div>
 
 <div id="champ"><div class="star"><span>SHERIFF</span></div><h2 id="champName">—</h2><p>بطل الغرب 🏆</p><button class="btn" id="againBtn">جولة جديدة</button></div>
@@ -201,6 +239,13 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 <div id="flash"></div><div id="iris"></div>
 <div id="loading">🤠 السوق يتجهّز…</div>
 <div id="fallback" hidden>تعذّر تشغيل الثري دي على هذا الجهاز.</div>
+<div id="feed"></div>
+<div id="settings"><div class="swrap">
+  <div class="stop"><h2>إعدادات المبارزة</h2><button id="setClose" type="button" aria-label="إغلاق">✕</button></div>
+  <div id="setGrid"></div>
+  <div class="sbar"><button id="setSave" type="button">حفظ ومتابعة</button></div>
+</div></div>
+<script src="cd-settings.js"></script>
 <script type="module" src="duel-game.js"></script>
 </body>
 </html>

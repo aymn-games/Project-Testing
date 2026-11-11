@@ -236,7 +236,9 @@ export async function mountDuel(el, opts = {}) {
       // حلقات هواء حول الرصاصة (تبان بالتصوير البطيء)
       const ringM = new T.MeshBasicMaterial({ color: '#fff3d6', transparent: true, opacity: .35, depthWrite: false, side: T.DoubleSide });
       bullet.userData.rings = [0, 1, 2].map(i => { const m = new T.Mesh(new T.RingGeometry(.09, .13, 24), ringM.clone()); m.rotation.y = Math.PI / 2; m.position.x = -.4 - i * .5; bullet.add(m); return m; }); }
-    const BUL = { on: false, from: V(), to: V(), dir: V(), p: 0, len: 1, speed: 85, onHit: null };
+    // مجمّع رصاص: بالمبارزات بنفس الوقت ممكن أكثر من رصاصة تطير سوا
+    const bullets = [bullet]; bullet.userData.B = { on: false, from: V(), to: V(), dir: V(), p: 0, len: 1, onHit: null };
+    function getBullet() { let b = bullets.find(x => !x.userData.B.on); if (!b) { const ud = bullet.userData; bullet.userData = {}; b = bullet.clone(); bullet.userData = ud; b.userData = { rings: b.children.filter(c => c.geometry && c.geometry.type === 'RingGeometry'), B: { on: false, from: V(), to: V(), dir: V(), p: 0, len: 1, onHit: null } }; sc.add(b); bullets.push(b); } return b; }
 
     const tumble = new T.Group(); tumble.visible = false; sc.add(tumble);
     { const m = new T.MeshStandardMaterial({ color: '#9c7a4a', wireframe: true }); tumble.add(new T.Mesh(new T.IcosahedronGeometry(.75, 1), m)); const i2 = new T.Mesh(new T.IcosahedronGeometry(.55, 1), m); i2.rotation.set(.5, .3, .2); tumble.add(i2); const i3 = new T.Mesh(new T.DodecahedronGeometry(.4, 0), new T.MeshStandardMaterial({ color: '#7a5a32', wireframe: true })); tumble.add(i3); }
@@ -347,7 +349,6 @@ export async function mountDuel(el, opts = {}) {
     function setState(f, st) { const U = f.U, was = U.gun.visible; f.state = st; f.t = 0;
         const gun = st === 'draw' || st === 'win' || st === 'armed' || st === 'champ' || ((st === 'slowdraw' || st === 'dead') && was);
         U.gun.visible = gun; U.holGun.visible = !gun; if (!gun || st === 'armed') U.gun.rotation.set(0, 0, 0); }
-    function drawGuns(ids) { ids.forEach((id, i) => setTimeout(() => { const f = figs.get(String(id)); if (!f || f.state !== 'ready') return; setState(f, 'armed'); f.spinT = 1; emit('spin', f.g.position.z > 0 ? -.6 : .6); }, i * 450)); }
 
     // وضعيات الجسم: كل إطار نحسب الهدف ونقرّب له (انتقال ناعم بين الحالات)
     const tmp = { rA: [0, 0], lA: [0, 0], lg: [0, 0, 0, 0], hx: 0, sq: 1, br: 0, mo: 1 };
@@ -404,81 +405,95 @@ export async function mountDuel(el, opts = {}) {
     const camPos = V(0, 12, 30), camLook = V(0, 1.5, 0); let camFov = 40, camRoll = 0, shake = 0;
     let shot = null, shotT = 0, queue = [], qDone = null, labels = true, TS = 1;
     function play(list) { return new Promise(res => { if (qDone) qDone(false); queue = list.slice(); qDone = res; next(); }); }
-    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name); }
+    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
     function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
 
-    // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه بنص الشارع
-    const A_MARK = V(0, 0, 7), B_MARK = V(0, 0, -7); // بعيدين عن بعض بعرض الشارع
-    // لقطة واسعة تجمع الاثنين: بروفايل جانبي للشاشات العريضة، وزاوية مائلة (3/4) للشاشات الطولية (بث الجوال)
+    // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه (بعيدين بعرض الشارع).
+    // «كل المبارزات في وقت واحد»: كل زوج بمكان على طول الشارع (الأقرب للكاميرا x=0 والباقي باتجاه البرج)
+    const LANE_Z = 7;
+    const laneX = (i, n) => n > 1 ? -i * Math.min(9, 96 / (n - 1)) : 0;
     // اللقطة الأساسية: الكاميرا بالشارع تطالع جهة برج الساعة — السوق كامل والبرج بآخره والمتواجهين يمين ويسار.
-    // المسافة تنحسب من عرض الشاشة عشان الاثنين يطلعون كاملين بأي جهاز (الشارع طويل فما فيه شي يسد ورا الكاميرا)
+    // المسافة تنحسب من عرض الشاشة عشان أقرب زوج يطلع كامل بأي جهاز (الشارع طويل فما فيه شي يسد ورا الكاميرا)
     function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 10.6 : 8.6) / Math.tan(hf / 2);
         const d = Math.min(44, Math.max(14, need)) - push * k * .25; c.pos.set(d, 1.7 + d * .025, Math.sin(t * .25) * .3); c.look.set(-12, cam.aspect >= 1.1 ? 2.1 : 3, 0); c.fov = vf; c.roll = 0; c.wide = true; }
-    function duelIntro(aId, bId, o = {}) {
-        const A = figs.get(String(aId)), Bf = figs.get(String(bId)); if (!A || !Bf) return Promise.resolve(false);
-        const short = !!o.short, startX = o.instant ? 7 : short ? 13 : ZF - 1.8; // instant: يبدون على العلامات مباشرة (تخطي المشي)
-        [[A, 1, A_MARK], [Bf, -1, B_MARK]].forEach(([f, s, m]) => { f.duelist = true; f.twitch = false; f.g.position.set(s * .6, startX > 5 ? .36 : 0, s * startX); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = m.clone(); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); });
-        for (const [, f] of figs) if (f !== A && f !== Bf) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
-        const headA = () => wp(A.U.head), headB = () => wp(Bf.U.head);
-        const SH = {
-            crane: { name: 'crane', dur: short ? 2.2 : 2.8, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; /* من فوق الشارع تنزل لين مستوى الناس وهي تطالع البرج */ c.roll = 0; } },
-            boots: { name: 'boots', dur: short ? 1.6 : 2.1, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } },
-            profile: { name: 'profile', dur: 2.6, labels: true, start() { tumbleweed(V(12, .75, .4), V(-16, .75, -.6), 3.4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } },
-            eyesA: { name: 'eyesA', dur: 1.4, labels: false, cam(k, t, c) { const H = headA(), f = fwd(A); c.pos.copy(H).addScaledVector(f, 3.6 - k * .45); c.pos.y += .05; c.look.copy(H); c.look.y += .08; c.fov = 17; c.roll = 0; } },
-            eyesB: { name: 'eyesB', dur: 1.4, labels: false, cam(k, t, c) { const H = headB(), f = fwd(Bf); c.pos.copy(H).addScaledVector(f, 3.6 - k * .45); c.pos.y += .05; c.look.copy(H); c.look.y += .08; c.fov = 17; c.roll = 0; } },
-            hand: { name: 'hand', dur: 1.3, labels: false, start() { A.twitch = true; }, cam(k, t, c) { const hp = wp(A.U.holGun); c.pos.copy(hp).addScaledVector(fwd(A), 2.1).addScaledVector(rightOf(A), 1.15); c.pos.y += .25 - k * .1; c.look.copy(hp); c.fov = 30; c.roll = -.04; } },
-            clock: { name: 'clock', dur: 1.5, labels: false, start() { minHand.rotation.x = .07; }, cam(k, t, c) { c.pos.set(TX + 3.6 + 7.5 - k * 1.3, 9.3, 1.2); c.look.set(TX + 3.6, 10, 0); c.fov = 30; c.roll = 0; if (k > .55 && minHand.rotation.x > 0) { minHand.rotation.x = 0; emit('tick'); } } },
-            overB: { name: 'overB', dur: 1.5, labels: false, start() { A.twitch = false; }, cam(k, t, c) { const p = Bf.g.position, f = fwd(Bf), rr = rightOf(Bf); c.pos.copy(p).addScaledVector(f, -2.4).addScaledVector(rr, 1.25); c.pos.y = 2.2; c.look.copy(A.g.position); c.look.y = 1.7; c.fov = 28 - k * 3; c.roll = 0; } }
-        };
-        minHand.rotation.x = .21;
-        // من منظور كل لاعب: الكاميرا مكان عيونه (تحت حافة قبعته) تطالع خصمه، والصفحة ترسم الجفون وهو يضيّق عينه ويفتحها (shot: povA/povB)
-        const pov = (me, him, name) => ({ name, dur: 2.4, labels: false, start() { [A, Bf].forEach(f => { if (f.g.position.distanceTo(f.target) > .3) { f.g.position.x = f.target.x; f.g.position.z = f.target.z; f.walking = false; } }); },
+    let duelists = [];
+    function arriveAll() { duelists.forEach(f => { if (f.target && f.g.position.distanceTo(f.target) > .3) { f.g.position.x = f.target.x; f.g.position.z = f.target.z; f.g.position.y = 0; f.walking = false; } }); }
+    // pairs: [[aId, bId], ...] — o.len: 'short' (~4ث) | 'full' (~9ث) — o.instant: على العلامات مباشرة (للاختبار)
+    function duelIntro(pairs, o = {}) {
+        if (!Array.isArray(pairs[0])) pairs = [pairs]; // توافق: duelIntro([a, b])
+        const P = pairs.map(([a, b]) => [figs.get(String(a)), figs.get(String(b))]).filter(([a, b]) => a && b); if (!P.length) return Promise.resolve(false);
+        const short = o.len !== 'full', multi = P.length > 1, startZ = o.instant ? LANE_Z : short ? LANE_Z + 3 : ZF - 1.8;
+        duelists = [];
+        P.forEach(([A, Bf], i) => { const x = laneX(i, P.length);
+            [[A, 1], [Bf, -1]].forEach(([f, s]) => { f.duelist = true; f.twitch = false; f.wasted = false; f.g.position.set(x + s * .6, startZ > 9 ? .36 : 0, s * startZ); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = V(x, 0, s * LANE_Z); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); duelists.push(f); }); });
+        for (const [, f] of figs) if (!f.duelist) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
+        const [A, Bf] = P[0]; // الزوج الأقرب للكاميرا
+        const crane = { name: 'crane', dur: short ? 1.6 : 2.4, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
+        const boots = { name: 'boots', dur: 1.8, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } };
+        const profile = { name: 'profile', dur: 2.4, labels: true, start() { arriveAll(); tumbleweed(V(12, .75, .4), V(-30, .75, -.6), 4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } };
+        // من منظور كل لاعب: الكاميرا مكان عيونه (تحت حافة قبعته) تطالع خصمه، والصفحة ترسم الجفون وهو يضيّق عينه ويفتحها
+        const pov = (me, him, name, dur) => ({ name, dur, labels: false, start: arriveAll,
             cam(k, t, c) { const H = wp(me.U.head), f = fwd(me), O = wp(him.U.head); c.pos.copy(H).addScaledVector(f, .5); c.pos.y += .02 + Math.sin(t * 1.7) * .015; c.pos.x += Math.sin(t * 1.3) * .02; c.look.copy(O); c.look.y -= .35; c.fov = 34 - k * 12; c.roll = Math.sin(t * .9) * .015; } });
-        SH.povA = pov(A, Bf, 'povA'); SH.povB = pov(Bf, A, 'povB');
         let list;
-        if (short) list = [SH.crane, SH.boots, SH.povA, SH.povB];
-        else list = [SH.crane, SH.boots, SH.profile, SH.povA, SH.povB];
-        // نضمن وصولهم للعلامات قبل آخر لقطة
-        const last = list[list.length - 1], st0 = last.start; last.start = () => { st0 && st0(); [A, Bf].forEach(f => { if (f.g.position.distanceTo(f.target) > .5) { f.g.position.x = f.target.x; f.g.position.z = f.target.z; } }); };
+        if (!multi) list = short ? [crane, pov(A, Bf, 'povA', 1.2), pov(Bf, A, 'povB', 1.2)] : [crane, boots, pov(A, Bf, 'povA', 2.4), pov(Bf, A, 'povB', 2.4)];
+        else list = short ? [crane, profile] : [crane, boots, profile, pov(A, Bf, 'povA', 1.2), pov(Bf, A, 'povB', 1.2)];
         return play(list);
     }
-    function standoff() {
-        play([{ name: 'standoff', dur: 0, labels: true, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]);
-    }
+    function standoff() { arriveAll(); play([{ name: 'standoff', dur: 0, labels: true, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]); }
+    // كل اللي بالمواجهة يطلعون مسدساتهم ويدوّرون الحشوة (بتوقيت مختلف شوي لكل واحد)
+    function drawGuns(ids) { ids.forEach((id, i) => setTimeout(() => { const f = figs.get(String(id)); if (!f || f.state !== 'ready') return; setState(f, 'armed'); f.spinT = 1; emit('spin', f.g.position.z > 0 ? -.6 : .6); }, ids.length > 2 ? Math.random() * 700 : i * 450)); }
+    // الخدعة الحمراء: اللي كتبها يطلق بالهوا ويضيّع طلقته
+    function wasteShot(id) { const f = figs.get(String(id)); if (!f) return; f.recoil = 1; f.wasted = true; const m = wp(f.U.muzzle); for (let i = 0; i < 5; i++) puff(m.clone(), '#ece6da', .2, V((Math.random() - .5) * .3, .6 + Math.random() * .4, (Math.random() - .5) * .3), 1.6, .55, 3); emit('dud'); }
+    // مبارزة وحدة بتصوير كامل: السحب ← الرصاصة البطيئة ← السقوط ← البطل ينفخ الدخان ← يمشي (مشهد سريع)
     function fire(sId, tId) {
         const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return Promise.resolve(false);
         const dir = V().subVectors(Tg.g.position, S.g.position).setY(0).normalize(), side = V(-dir.z, 0, dir.x);
-        let fired = false;
+        let fired = false, b = null;
         const list = [
             { name: 'draw', dur: .62, labels: false, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
               cam(k, t, c) { const p = S.g.position; c.pos.copy(p).addScaledVector(fwd(S), 2.5).addScaledVector(rightOf(S), 1.35); c.pos.y = 1.55; c.look.copy(p); c.look.y = 1.35; c.fov = 34; c.roll = .04;
-                if (!fired && t > .26) { fired = true; shootFx(S, Tg); TS = .07; } } },
-            { name: 'bullet', dur: 0, labels: false, until: () => !BUL.on,
-              cam(k, t, c) { const b = bullet.position; c.pos.copy(b).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = b.y + .22; c.look.copy(b).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
+                if (!fired && t > .26) { fired = true; b = shootFx(S, Tg); TS = .07; } } },
+            { name: 'bullet', dur: 0, labels: false, until: () => fired && (!b || !b.userData.B.on),
+              cam(k, t, c) { const bp = b ? b.position : S.g.position; c.pos.copy(bp).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = bp.y + .22; c.look.copy(bp).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
             { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
-              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },  // السقوط باللقطة الأساسية (جهة البرج): الاثنين بالكادر
+              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },
             // الكاميرا تقرّب من صاحب الطلقة: يرفع المسدس وينفخ فيه والدخان يطلع
-            { name: 'hero', dur: 2.9, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg) setState(f, 'cheer'); emit('hero'); },
+            { name: 'hero', dur: 2.9, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); },
               cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = .15 + e * .35, d = 5 - e * 1.9; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .8 + e * 1.3; c.look.copy(p).addScaledVector(rr, e * .3); c.look.y = 1.7 + e * .7; c.fov = 36 - e * 2; c.roll = .03; /* من جهة يده اللي فيها المسدس */ } },
-            // مشهد سريع: يمشي راجع لجهته والخاسر يختفي بالغبار — بعدها دور جديد
+            // مشهد سريع: يمشي راجع لجهته والخاسر يختفي بالغبار
             { name: 'leave', dur: 1.6, labels: false, start() { removePlayer(Tg.id); returnToCrowd(S.id); S.speed = 5; TS = 2.2; emit('leave'); },
               cam(k, t, c) { const p = S.g.position; c.pos.set(p.x + 9 - k * 2, 3.2, p.z * .4); c.look.set(p.x - 4, 1.4, p.z * .8); c.fov = 42; c.roll = 0; } }
         ];
         return play(list);
     }
+    // «كل المبارزات في وقت واحد»: كل زوج يُحسم لحاله بدون قطع للكاميرا (توجيه + طلقة + سقوط)
+    function quickFire(sId, tId) { const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return;
+        setState(S, 'draw'); setState(Tg, 'slowdraw'); setTimeout(() => { if (S.state === 'draw') shootFx(S, Tg); }, 170); }
+    // بعد ما تنحسم كل المبارزات: الفايزين ينفخون الدخان، ثم الكل يمشي بمشهد سريع
+    function multiOutro(winIds, loseIds) {
+        const W = winIds.map(id => figs.get(String(id))).filter(Boolean), Lz = loseIds.map(id => figs.get(String(id))).filter(Boolean), H = W[0];
+        return play([
+            { name: 'heroAll', dur: 2.6, labels: false, start() { TS = 1; W.forEach(f => { setState(f, 'win'); f.blown = false; f.puffed = false; f.t = Math.random() * .3; }); emit('hero'); },
+              cam(k, t, c) { if (!H) return wide(c, 0, t, 0); const p = H.g.position, f = fwd(H), rr = rightOf(H), e = ease(k), d = 6.5 - e * 2.5; c.pos.copy(p).addScaledVector(f, d * .8).addScaledVector(rr, d * .6); c.pos.x += 2; c.pos.y = 1.4 + e * .8; c.look.copy(p); c.look.x -= 6; c.look.y = 1.9; c.fov = 40; c.roll = .02; } },
+            { name: 'leave', dur: 1.6, labels: false, start() { Lz.forEach(f => removePlayer(f.id)); W.forEach(f => { returnToCrowd(f.id); f.speed = 5; }); TS = 2.2; emit('leave'); },
+              cam(k, t, c) { wide(c, 0, t, 0); c.pos.y += 3 + k * 2; c.fov += 6; } }
+        ]);
+    }
     function shootFx(S, Tg) {
-        const m = wp(S.U.muzzle); S.recoil = 1; shake = .25; emit('bang');
+        const m = wp(S.U.muzzle); S.recoil = 1; shake = Math.max(shake, .25); emit('bang', S.g.position.z > 0 ? -.6 : .6);
         flash.position.copy(m); flash.scale.setScalar(1.6); flash.visible = true; flash.material.rotation = Math.random() * 3; flashL.position.copy(m); flashL.intensity = 40; flashT = 0;
         for (let i = 0; i < 6; i++) puff(m.clone(), '#ece6da', .25 + i * .05, V((Math.random() - .5) * .4, .3 + Math.random() * .3, (Math.random() - .5) * .4).addScaledVector(fwd(S), .8), 2.2, .55, 3.5);
         const hit = wp(Tg.U.body); hit.y = Tg.g.position.y + 1.25;
-        BUL.on = true; BUL.from.copy(m); BUL.to.copy(hit); BUL.dir.subVectors(hit, m); BUL.len = BUL.dir.length(); BUL.dir.normalize(); BUL.p = 0;
-        bullet.position.copy(m); bullet.visible = true; bullet.rotation.set(0, Math.atan2(-BUL.dir.z, BUL.dir.x), Math.asin(BUL.dir.y));
-        BUL.onHit = () => { bullet.visible = false; setState(Tg, 'dead'); Tg.landed = false; emit('hit');
-            for (let i = 0; i < 8; i++) puff(BUL.to.clone(), '#f2d7a8', .2, V((Math.random() - .5) * 2, Math.random() * 1.5, (Math.random() - .5) * 2), .8, .7, 2.5);
-            const hat = Tg.U.hat; sc.attach(hat); Tg.flyHat = { o: hat, v: V(BUL.dir.x * 2.5, 5.5, BUL.dir.z * 2.5 + (Math.random() - .5)), s: V(-7, 0, 4), landed: false }; };
+        const b = getBullet(), Q = b.userData.B;
+        Q.on = true; Q.from.copy(m); Q.to.copy(hit); Q.dir.subVectors(hit, m); Q.len = Q.dir.length(); Q.dir.normalize(); Q.p = 0;
+        b.position.copy(m); b.visible = true; b.rotation.set(0, Math.atan2(-Q.dir.z, Q.dir.x), Math.asin(Q.dir.y));
+        Q.onHit = () => { setState(Tg, 'dead'); Tg.landed = false; emit('hit', Tg.id);
+            for (let i = 0; i < 8; i++) puff(Q.to.clone(), '#f2d7a8', .2, V((Math.random() - .5) * 2, Math.random() * 1.5, (Math.random() - .5) * 2), .8, .7, 2.5);
+            const hat = Tg.U.hat; sc.attach(hat); Tg.flyHat = { o: hat, v: V(Q.dir.x * 2.5, 5.5, Q.dir.z * 2.5 + (Math.random() - .5)), s: V(-7, 0, 4), landed: false }; };
+        return b;
     }
     function removePlayer(id) { const f = figs.get(String(id)); if (!f || f.state === 'poof') return; const p = f.g.position.clone(); dustBurst(V(p.x, 0, p.z).addScaledVector(fwd(f), -1.1), 14, 1.4); if (f.flyHat) { dustBurst(f.flyHat.o.position, 4, .7); sc.remove(f.flyHat.o); f.flyHat = null; } setState(f, 'poof'); crowdOrder = crowdOrder.filter(x => x !== String(id)); }
-    function returnToCrowd(id) { const f = figs.get(String(id)); if (!f) return; f.duelist = false; f.twitch = false; setState(f, 'idle'); f.g.rotation.x = 0; f.speed = 3.6; const h = homeOf(String(id)); f.target = h; f.face = Math.atan2(-h.x * .25, -h.z); }
+    function returnToCrowd(id) { const f = figs.get(String(id)); if (!f) return; f.duelist = false; f.twitch = false; f.wasted = false; duelists = duelists.filter(x => x !== f); setState(f, 'idle'); f.g.rotation.x = 0; f.speed = 3.6; const h = homeOf(String(id)); f.target = h; f.face = Math.atan2(-h.x * .25, -h.z); }
     function champion(id) {
         const f = figs.get(String(id)); if (!f) return; f.target = V(0, 0, 0); f.face = 0; f.speed = 3.6; setState(f, 'champ'); startCoins(V(0, 0, 0)); emit('champion');
         play([{ name: 'champion', dur: 0, labels: true, cam(k, t, c) { const a = t * .32, p = f.g.position; c.pos.set(p.x + Math.sin(a) * 6.2, 1.6 + Math.sin(t * .4) * .5, p.z + Math.cos(a) * 6.2); c.look.set(p.x, 1.9, p.z); c.fov = 38; c.roll = 0; } }]);
@@ -497,7 +512,7 @@ export async function mountDuel(el, opts = {}) {
         const a = dGeo.attributes.position.array; for (let i = 0; i < DN; i++) { a[i * 3] += dt * (.6 + (i % 7) * .08); a[i * 3 + 1] += Math.sin(t + i) * dt * .05; if (a[i * 3] > 55) a[i * 3] = -55; } dGeo.attributes.position.needsUpdate = true;
         for (const P of puffs) { if (!P.s.visible) continue; P.life += dt; const k = P.life / P.max; if (k >= 1) { P.s.visible = false; continue; } P.s.position.addScaledVector(P.v, dt); P.v.multiplyScalar(1 - dt * 1.5); P.s.scale.setScalar(P.g0 + (P.g1 - P.g0) * easeOut(k)); P.s.material.opacity = P.o * (1 - k); }
         if (flashT < 1) { flashT += real; const k = flashT / .12; flash.material.opacity = Math.max(0, 1 - k); flashL.intensity = Math.max(0, 40 * (1 - flashT / .18)); if (k >= 1) flash.visible = false; }
-        if (BUL.on) { BUL.p += BUL.speed * dt; const k = Math.min(1, BUL.p / BUL.len); bullet.position.lerpVectors(BUL.from, BUL.to, k); bullet.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { BUL.on = false; BUL.onHit && BUL.onHit(); } }
+        for (const b of bullets) { const Q = b.userData.B; if (!Q.on) continue; Q.p += 85 * dt; const k = Math.min(1, Q.p / Q.len); b.position.lerpVectors(Q.from, Q.to, k); b.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { Q.on = false; b.visible = false; Q.onHit && Q.onHit(); } }
         if (TW.on) { TW.t += dt; const k = TW.t / TW.dur; if (k >= 1) { TW.on = false; tumble.visible = false; } else { tumble.position.lerpVectors(TW.from, TW.to, k); tumble.position.y = .75 + Math.abs(Math.sin(k * 14)) * .5; tumble.rotation.x += dt * 6; tumble.rotation.z -= dt * 2; } }
         else if (!shot && (tw8 += dt) > 11) { tw8 = 0; const z = (Math.random() - .5) * 8; tumbleweed(V(-40, .75, z), V(40, .75, z + (Math.random() - .5) * 6), 9); }
         if (coinsOn) { for (let i = 0; i < COINS; i++) { const c = coinD[i]; c.p.y += c.v * dt; c.r.x += c.s.x * dt; c.r.y += c.s.y * dt; if (c.p.y < .05) { c.p.y = 14 + Math.random() * 8; c.p.x = coinC.x + (Math.random() - .5) * 9; c.p.z = coinC.z + (Math.random() - .5) * 9; } q.setFromEuler(new T.Euler(c.r.x, c.r.y, 0)); mtx.compose(c.p, q, one); coinMesh.setMatrixAt(i, mtx); } coinMesh.instanceMatrix.needsUpdate = true; }
@@ -524,5 +539,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, fire, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }

@@ -1,6 +1,8 @@
-// «مواجهة الغرب» — منطق اللعبة (نموذج أولي).
-// كل جولة: يُختار راعيين عشوائياً ← مشهد دخول سينمائي ← لوحة معلّقة تنزل برقم عشوائي 10–99
-// ← أول واحد منهم يكتب الرقم بالشات يسحب ويطلق ← الثاني يطيح ويُقصى ← الدور ينتقل لاثنين غيرهم… لين يبقى بطل واحد.
+// «مواجهة الغرب» — منطق اللعبة.
+// الإعدادات (cd-settings.js): ما يظهر عند الجرس (أرقام/كلمات/مختلط)، الخدعة الحمراء، طريقة المبارزات
+// (مبارزة بعد مبارزة / كل المبارزات في وقت واحد)، طول مشهد الدخول، الحد الأقصى، ومن يمكنه الانضمام.
+// كل جولة: الباقين يتوزّعون أزواج (الفردي يتأهل) ← مشهد دخول ← تنبيهات + سحب المسدسات ← الجرس ← أسرع واحد بكل زوج يطلق
+// ← الخاسرين يُقصون ← الجولة الجاية… لين يبقى بطل واحد.
 // المشهد الثري دي (duel3d.js) عرض فقط: هنا القواعد والمؤقتات والشات والنقاط.
 import { mountDuel } from './duel3d.js';
 
@@ -8,10 +10,10 @@ const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const BOT_NAMES = ['أبو فهد', 'سعود', 'نورة', 'ريم', 'خالد', 'مشاري', 'جود', 'تركي', 'لمى', 'فيصل', 'هيا', 'بندر', 'العنود', 'ذيب', 'مها', 'راكان'];
-const ANSWER_MS = 15000;          // ما أحد كتب الرقم = رقم جديد
-const JAM_MS = 1200;              // رقم غلط = المسدس يعلّق شوي
+const ANSWER_MS = 15000;          // ما أحد كتب = جرس جديد
+const JAM_MS = 1200;              // إجابة غلط = المسدس يعلّق شوي
 
-const G = { players: [], alive: [], duels: {}, phase: 'loading', pair: null, number: 0, revealAt: 0, jam: {}, timers: [], round: 0, startedAt: 0, scene: null, bots: true };
+const G = { players: [], alive: [], byes: {}, phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null };
 
 // ---------- الصوت (WebAudio مولّد بالكود — بدون ملفات)
 const SFX = (() => {
@@ -41,6 +43,9 @@ const SFX = (() => {
             click(t + .12, .9, 2200); click(t + .2, .7, 1500); },
         stamp() { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + .2); g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + .25); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .26); },
         blow() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(.7), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = .8; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.3, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + .65); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
+        // الخدعة الحمراء: طلقة بالهوا (أخف من الطلقة الحقيقية) + صفير الرصاصة الضايعة
+        dud() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(.4), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'lowpass'; f.frequency.value = 2500; g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + .35); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
+            const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(2400, t + .05); o.frequency.exponentialRampToValueAtTime(700, t + .7); og.gain.setValueAtTime(.0001, t); og.gain.exponentialRampToValueAtTime(.08, t + .1); og.gain.exponentialRampToValueAtTime(.0001, t + .7); o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + .72); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
         wind(on) { const a = ctx(); if (!a) return; if (!windG) { const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .7; windG = a.createGain(); windG.gain.value = 0; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); }
             windG.gain.setTargetAtTime(on ? .09 : .025, a.currentTime, .8); }
@@ -78,91 +83,144 @@ function updateCount() { $('#count').textContent = G.phase === 'lobby' ? G.playe
 function renderLobby() {
     const list = $('#roster'); list.innerHTML = '';
     G.players.forEach(p => { const c = document.createElement('span'); c.className = 'chip'; c.textContent = p.name; list.appendChild(c); });
-    $('#startBtn').disabled = G.players.length < 2; updateCount();
+    $('#startBtn').disabled = G.players.length < 2; $('#lobbyMax').textContent = G.settings.maxPlayers; updateCount();
 }
 
-// ---------- اللاعبين
+// ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
 function addPlayer(id, name, bot = false) {
-    if (G.phase !== 'lobby' || G.players.some(p => p.id === id) || G.players.length >= 16) return;
+    if (G.phase !== 'lobby' || G.players.some(p => p.id === id)) return;
+    if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; chat('🚫', `السوق ممتلئ (${G.settings.maxPlayers} لاعب)`, 'bad'); } return; }
     G.players.push({ id, name, bot }); G.scene && G.scene.setPlayers(G.players); renderLobby();
     chat(name, 'دخل السوق 🤠', 'sys');
 }
 function addBot() { const used = new Set(G.players.map(p => p.name)), name = BOT_NAMES.find(n => !used.has(n)) || ('راعي ' + (G.players.length + 1)); addPlayer('bot:' + name, name, true); }
 
-// ---------- الجولات
+// ---------- ما يظهر عند الجرس: رقم 10–99 أو كلمة من عالم الغرب
+const WORDS = ['حصان', 'مسدس', 'قبعة', 'رصاصة', 'شريف', 'صحراء', 'صبار', 'سرج', 'حبل', 'ذهب', 'صالون', 'برميل', 'عربة', 'مهماز', 'جزمة', 'ثور', 'ذئب', 'نسر', 'قطار', 'منجم', 'نجمة', 'وادي', 'غبار', 'بارود', 'خيمة', 'بقرة', 'جرس', 'سهم', 'كنز', 'مزرعة', 'لاسو', 'فأس', 'صقر', 'خنجر', 'مطر', 'ظهيرة'];
+// تطبيع الكتابة: الهمزات ← ا/و/ي، التاء المربوطة ← ه، الألف المقصورة ← ي، بدون تشكيل ولا تطويل ولا «ال» بالبداية
+function norm(s) { return String(s).trim().replace(/[ً-ْـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, '').replace(/^ال(?=..)/, ''); }
+function toDigits(s) { return String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\D/g, ''); }
+function makeChallenge(avoid) {
+    const kind = G.settings.bell === 'mixed' ? (Math.random() < .5 ? 'num' : 'word') : G.settings.bell === 'words' ? 'word' : 'num';
+    for (let i = 0; i < 20; i++) { const c = kind === 'num' ? { type: 'num', value: String(Math.floor(rnd(10, 100))) } : { type: 'word', value: pickOne(WORDS) }; if (!avoid || norm(c.value) !== norm(avoid.value)) return c; }
+    return { type: 'num', value: '77' };
+}
+function matches(text, c) { if (!c) return false; return c.type === 'num' ? toDigits(text) === c.value : norm(text) === norm(c.value); }
+
+// ---------- الجولات: كل جولة يتوزّع الباقين أزواج (الفردي يتأهل مباشرة)، والفايزين يكملون للجولة الجاية
 function clearTimers() { G.timers.forEach(clearTimeout); G.timers = []; }
 function later(ms, fn) { G.timers.push(setTimeout(fn, ms)); }
-function nextPair() {
-    // الأقل مواجهات أولاً (عشان كل واحد ياخذ دوره)، وبعدين عشوائي
-    const pool = G.alive.slice().sort((a, b) => (G.duels[a.id] || 0) - (G.duels[b.id] || 0) || Math.random() - .5);
-    const a = pool[0], rest = pool.slice(1).sort(() => Math.random() - .5); return [a, rest[0]].sort(() => Math.random() - .5);
+function makePairs(list) {
+    const pool = list.slice().sort(() => Math.random() - .5); let bye = null;
+    if (pool.length % 2) { pool.sort((a, b) => (G.byes[a.id] || 0) - (G.byes[b.id] || 0)); bye = pool.shift(); G.byes[bye.id] = (G.byes[bye.id] || 0) + 1; pool.sort(() => Math.random() - .5); }
+    const pairs = []; for (let i = 0; i < pool.length; i += 2) pairs.push({ a: pool[i], b: pool[i + 1], done: false, wasted: {}, jam: {} });
+    return { pairs, bye };
 }
 async function startMatch() {
     if (G.players.length < 2) return; SFX.unlock(); SFX.wind(false);
-    G.alive = G.players.slice(); G.duels = {}; G.round = 0; G.startedAt = Date.now();
+    G.alive = G.players.slice(); G.byes = {}; G.round = 0; G.startedAt = Date.now();
     $('#lobby').classList.add('hide'); G.phase = 'intro'; updateCount();
     await iris(true, 600); await sleep(150); await iris(false, 600);
-    runRound();
+    nextRound();
 }
-async function runRound() {
-    G.round++; const [a, b] = nextPair(); G.pair = [a, b]; G.duels[a.id] = (G.duels[a.id] || 0) + 1; G.duels[b.id] = (G.duels[b.id] || 0) + 1; G.jam = {};
-    G.phase = 'intro'; updateCount(); $('#demoA').textContent = a.name; $('#demoB').textContent = b.name;
-    banner(`<small>المواجهة ${G.round}</small>${esc(a.name)} <i>ضد</i> ${esc(b.name)}`, 2600);
-    poster('a', a); poster('b', b); bars('wide'); SFX.wind(true);
-    const short = G.round > 1 && Math.random() < .65;
-    const ok = await G.scene.duelIntro(a.id, b.id, { short });
-    if (!ok || G.phase !== 'intro') return;
-    G.scene.standoff(); bars('wide'); grade('');
-    G.phase = 'standoff'; warnThenReveal();
+async function nextRound() {
+    G.round++; const { pairs, bye } = makePairs(G.alive), all = G.settings.mode === 'all';
+    banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 2400);
+    if (bye) { chat('🍀', `${bye.name} يتأهل مباشرة للجولة الجاية`, 'sys'); }
+    await sleep(1400);
+    const winners = [];
+    if (all) winners.push(...await runDuels(pairs));
+    else for (let i = 0; i < pairs.length; i++) { if (i) await sleep(500); winners.push(...await runDuels([pairs[i]])); }
+    G.alive = winners.concat(bye ? [bye] : []); updateCount();
+    if (G.alive.length <= 1) return crown(G.alive[0]);
+    await sleep(600); nextRound();
 }
-// تنبيه ← تنبيه ← «لا ترمش» ← «ارسم!» ← الرقم (توقيت آخر خطوة عشوائي عشان ما أحد يحفظ الإيقاع)
+// يشغّل مبارزة وحدة (بتصوير كامل) أو كل مبارزات الجولة سوا، ويرجع الفايزين
+function runDuels(duels) { return new Promise(async done => {
+    clearTimers(); G.active = duels; G.finish = done; G.phase = 'intro'; updateCount();
+    const one = duels.length === 1, d0 = duels[0];
+    $('#demoA').textContent = d0.a.name; $('#demoB').textContent = d0.b.name;
+    if (one) { banner(`<small>الجولة ${G.round}</small>${esc(d0.a.name)} <i>ضد</i> ${esc(d0.b.name)}`, 2400); poster('a', d0.a); poster('b', d0.b); }
+    else { poster('a'); poster('b'); }
+    bars('wide'); SFX.wind(true);
+    await G.scene.duelIntro(duels.map(d => [d.a.id, d.b.id]), { len: G.settings.intro });
+    if (G.phase !== 'intro') return;
+    G.scene.standoff(); grade(''); G.phase = 'standoff'; warnThenReveal();
+}); }
+const activeIds = () => G.active.filter(d => !d.done).flatMap(d => [d.a.id, d.b.id]);
+// تنبيه ← تنبيه (يطلعون المسدسات ويدوّرون الحشوة) ← «لا ترمش» ← [الخدعة الحمراء أحياناً] ← «ارسم!» ← الجرس
 function warnThenReveal(again) {
-    const lines = again ? ['ولا أحد سحب… الرقم الجاي لا يفوتك!', pickOne(WARN[2])] : WARN.map(pickOne);
+    const lines = again ? ['ولا أحد سحب… الجرس الجاي لا يفوتك!', pickOne(WARN[2])] : WARN.map(pickOne);
     lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
-    // مع التنبيه الثاني: الاثنين يطلعون مسدساتهم ويدوّرون الحشوة (الصوت من حدث spin بالمشهد)
-    if (!again) later(1700 + 300, () => G.scene.drawGuns(G.pair.map(p => p.id)));
-    const t = lines.length * 1700 + rnd(200, 1400);
-    later(t, () => { sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
+    if (!again) later(1700 + 300, () => G.scene.drawGuns(activeIds()));
+    let t = lines.length * 1700 + rnd(200, 1200);
+    if (G.settings.trick && Math.random() < .55) { const tt = t; later(tt, decoy); t += 1700; }
+    later(t, () => { G.phase = 'standoff'; sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
     later(t + 750, reveal);
 }
-function reveal() {
-    G.number = Math.floor(rnd(10, 100)); G.revealAt = performance.now(); G.phase = 'armed';
-    sign('show', G.number); SFX.bell(); flash('rgba(255,220,150,.55)', 260);
-    chat('🔔', `الرقم ${G.number} — اكتبه بسرعة!`, 'sys');
-    // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول
-    if (G.bots) G.pair.forEach(p => { if (!p.bot) return; const d = rnd(900, 3600);
-        if (Math.random() < .25) later(d * .6, () => answer(p.id, String(G.number + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9)))));
-        later(d, () => answer(p.id, String(G.number))); });
-    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; chat('🌵', 'ولا أحد سحب! رقم جديد…', 'sys'); G.phase = 'standoff'; warnThenReveal(true); });
+// الخدعة الحمراء: رقم/كلمة بالأحمر — اللي يكتبها يطلق بالهوا ويضيّع طلقته
+function decoy() {
+    G.decoy = makeChallenge(); G.phase = 'decoy';
+    sign('decoy', G.decoy.value); $('#sign').classList.toggle('word', G.decoy.type === 'word'); SFX.tick();
+    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (p.bot && Math.random() < .22) later(rnd(350, 1300), () => answer(p.id, G.decoy.value)); }));
 }
-function toDigits(s) { return String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\D/g, ''); }
+function reveal() {
+    G.ch = makeChallenge(G.decoy); G.decoy = null; G.revealAt = performance.now(); G.phase = 'armed';
+    // الاثنين ضيّعوا طلقتهم؟ يرجع لهم الحق بالجرس هذا
+    G.active.forEach(d => { if (!d.done && d.wasted[d.a.id] && d.wasted[d.b.id]) { d.wasted = {}; chat('🌵', `${d.a.name} و${d.b.name} ضيّعوا طلقاتهم… عبّوا من جديد`, 'sys'); } });
+    sign('show', G.ch.value); $('#sign').classList.toggle('word', G.ch.type === 'word');
+    $('#sign .lbl').textContent = G.ch.type === 'word' ? 'اكتب الكلمة بالشات!' : 'اكتب الرقم بالشات!';
+    SFX.bell(); flash('rgba(255,220,150,.55)', 260);
+    chat('🔔', `${G.ch.type === 'word' ? 'الكلمة' : 'الرقم'}: ${G.ch.value} — اكتبه بسرعة!`, 'sys');
+    // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول
+    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (!p.bot || d.wasted[p.id]) return; const ms = rnd(900, 3800);
+        if (Math.random() < .25) later(ms * .6, () => answer(p.id, G.ch.type === 'num' ? String(+G.ch.value + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9))) : pickOne(WORDS)));
+        later(ms, () => answer(p.id, G.ch.value)); }));
+    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; chat('🌵', 'ولا أحد سحب! جرس جديد…', 'sys'); G.active.forEach(d => { d.wasted = {}; }); G.phase = 'standoff'; warnThenReveal(true); });
+}
 function answer(id, text) {
     const p = G.players.find(x => x.id === id); if (!p) return;
     chat(p.name, text);
-    if (G.phase !== 'armed' || !G.pair || !G.pair.some(x => x.id === id)) return;
-    if (G.jam[id] && performance.now() < G.jam[id]) return;
-    const n = toDigits(text); if (!n) return;
-    if (+n !== G.number) { G.jam[id] = performance.now() + JAM_MS; chat('❌', `${p.name} غلط — المسدس علّق!`, 'bad'); return; }
-    resolve(p, n);
+    const d = G.active && G.active.find(x => !x.done && (x.a.id === id || x.b.id === id)); if (!d) return;
+    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); chat('💨', `${p.name} طاح بالخدعة وضيّع طلقته!`, 'bad'); } return; }
+    if (G.phase !== 'armed') return;
+    if (d.wasted[id]) return; // مسدسه فاضي لين الجرس الجاي
+    if (d.jam[id] && performance.now() < d.jam[id]) return;
+    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; chat('❌', `${p.name} غلط — المسدس علّق!`, 'bad'); } return; }
+    win(d, p, text.trim());
 }
-// الأسرع كتب الرقم: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح ← يقرّب على البطل ينفخ الدخان ← يمشي (مشهد سريع) ← دور جديد
-async function resolve(shooter, typed) {
-    G.phase = 'resolve'; clearTimers();
-    const target = G.pair.find(x => x.id !== shooter.id), secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
-    G.target = target; sign('gone');
-    showAnswer(shooter, typed, secs); SFX.stamp();
-    await sleep(1700); $('#answer').classList.remove('in');
-    grade('duel');
-    await G.scene.fire(shooter.id, target.id);
-    G.alive = G.alive.filter(x => x.id !== target.id); updateCount();
-    // انتقال سريع للدور الجاي
+// الأسرع: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح
+async function win(d, shooter, typed) {
+    const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
+    d.done = true; d.winner = shooter; d.loser = target;
+    if (G.active.length === 1) { // مبارزة بعد مبارزة: تصوير كامل
+        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone');
+        showAnswer(shooter, typed, secs); SFX.stamp();
+        await sleep(1700); $('#answer').classList.remove('in'); grade('duel');
+        await G.scene.fire(shooter.id, target.id);
+        return endDuels();
+    }
+    // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
+    G.scene.quickFire(shooter.id, target.id); feed(shooter, typed, secs);
+    if (G.active.every(x => x.done)) {
+        G.phase = 'resolve'; clearTimers(); sign('gone');
+        await sleep(1800); $('#feed').classList.remove('in');
+        await G.scene.multiOutro(G.active.map(x => x.winner.id), G.active.map(x => x.loser.id));
+        endDuels();
+    }
+}
+async function endDuels() {
+    const winners = G.active.map(d => d.winner);
     await iris(true, 420, 50, 50);
-    G.scene.lobby(); poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false);
-    if (G.alive.length <= 1) { await iris(false, 500); return crown(G.alive[0] || shooter); }
-    G.phase = 'between'; await sleep(120); iris(false, 420); runRound();
+    G.scene.lobby(); poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = '';
+    G.phase = 'between'; await sleep(120); iris(false, 420);
+    const f = G.finish; G.finish = null; f && f(winners);
 }
 function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
     el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
+function feed(p, typed, secs) { const box = $('#feed'), row = document.createElement('div'); row.className = 'frow';
+    row.innerHTML = '<b></b><span class="ft"></span><span class="fs"></span>'; row.querySelector('b').textContent = '🔫 ' + p.name; row.querySelector('.ft').textContent = typed; row.querySelector('.fs').textContent = secs + ' ث';
+    box.appendChild(row); while (box.children.length > 8) box.firstChild.remove(); box.classList.add('in'); SFX.stamp(); }
 async function crown(p) {
     G.phase = 'champ'; G.scene.champion(p.id); bars('wide');
     $('#champName').textContent = p.name; $('#champ').classList.add('in'); SFX.bell();
@@ -171,39 +229,72 @@ async function crown(p) {
 }
 async function newGame() {
     $('#champ').classList.remove('in'); await iris(true, 600);
-    G.phase = 'lobby'; G.players = G.players.slice(); G.scene.setPlayers([]); G.scene.lobby(); bars(''); G.scene.setPlayers(G.players);
+    G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); bars(''); G.scene.setPlayers(G.players);
     $('#lobby').classList.remove('hide'); renderLobby(); await iris(false, 600);
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// ---------- شات تيك توك الحقيقي (لو اللعبة محمّلة داخل المنصة مع AGP): «دخول» للانضمام، والأرقام للمواجهة
+// ---------- شاشة الإعدادات (نفس شكل كروت المنصة: أيقونة + عنوان + خيارات + وصف)
+const ICONS = {
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    userplus: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M19 8v6M16 11h6"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>'
+};
+function renderSettings() {
+    const v = G.draft, grid = $('#setGrid'); grid.innerHTML = '';
+    CDSettings.FIELDS.forEach(f => {
+        const card = document.createElement('div'); card.className = 'scard';
+        card.innerHTML = `<div class="shead"><span class="sico"><svg viewBox="0 0 24 24">${ICONS[f.icon] || ICONS.clock}</svg></span><h3></h3></div>`;
+        card.querySelector('h3').textContent = f.label;
+        if (f.type === 'number') {
+            const inp = document.createElement('input'); inp.type = 'number'; inp.min = f.min; inp.max = f.max; inp.value = v[f.key]; inp.className = 'snum';
+            inp.oninput = () => { G.draft[f.key] = inp.value; }; inp.onblur = () => { G.draft = CDSettings.sanitize(G.draft); inp.value = G.draft[f.key]; };
+            card.appendChild(inp);
+        } else {
+            const row = document.createElement('div'); row.className = 'spills'; row.style.gridTemplateColumns = `repeat(${f.options.length},1fr)`;
+            f.options.forEach(([val, txt]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'spill' + (v[f.key] === val ? ' on' : ''); b.textContent = txt; b.onclick = () => { G.draft[f.key] = val; renderSettings(); }; row.appendChild(b); });
+            card.appendChild(row);
+        }
+        const desc = f.descs ? f.descs[v[f.key]] : f.desc;
+        if (desc) { const p = document.createElement('p'); p.className = 'sdesc'; p.textContent = desc; card.appendChild(p); }
+        grid.appendChild(card);
+    });
+}
+function openSettings() { G.draft = Object.assign({}, G.settings); renderSettings(); $('#settings').classList.add('in'); }
+function saveSettings() {
+    G.settings = CDSettings.save(G.draft); $('#settings').classList.remove('in');
+    if (G.players.length > G.settings.maxPlayers) { G.players = G.players.slice(0, G.settings.maxPlayers); G.scene.setPlayers(G.players); }
+    addPlayer.warned = false; renderLobby();
+}
+
+// ---------- شات تيك توك الحقيقي (لو اللعبة محمّلة داخل المنصة مع AGP): «دخول» للانضمام، والباقي إجابات
 function hookStream() {
     const A = window.AymanGamesPlatform || window.AGP; if (!A || !A.events || typeof A.events.on !== 'function') return;
     A.events.on('stream:commentReceived', pl => { if (!pl || !pl.id || typeof pl.text !== 'string') return; const id = 'tiktok:' + (pl.username || pl.uniqueId || pl.id), name = pl.nickname || pl.name || pl.username || 'راعي';
-        if (/^\s*(دخول|join)\s*$/i.test(pl.text)) addPlayer(id, name); else answer(id, pl.text); });
+        if (/^\s*(دخول|join)\s*$/i.test(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
 (async function boot() {
     let scene = null;
-    try { scene = await mountDuel($('#stage'), { onEvent: (e, d) => {
-        if (e === 'bang') { SFX.bang(); flash('#fff8e0', 140); }
-        else if (e === 'hit') { SFX.thud(); flash('rgba(255,255,255,.7)', 120); }
+    try { scene = await mountDuel($('#stage'), { onEvent: (e, d, dur) => {
+        const many = G.active && G.active.length > 1; // كل المبارزات سوا: بدون وميض الشاشة عشان ما تومض كثير
+        if (e === 'bang') { SFX.bang(); if (!many) flash('#fff8e0', 140); }
+        else if (e === 'dud') SFX.dud();
+        else if (e === 'hit') { SFX.thud(); if (!many) flash('rgba(255,255,255,.7)', 120); if (G.active && G.active.length === 1 && G.target) $('#poster-' + (G.active[0].a === G.target ? 'a' : 'b')).classList.add('dead'); }
         else if (e === 'thud') SFX.thud();
         else if (e === 'tick') SFX.tick();
         else if (e === 'step') SFX.step(d);
         else if (e === 'spin') SFX.spin(d);
         else if (e === 'blow') SFX.blow();
-        else if (e === 'hit' && G.target) $('#poster-' + (G.pair[0] === G.target ? 'a' : 'b')).classList.add('dead');
         else if (e === 'pop') SFX.bang();
         else if (e === 'shot') { // ستارة السينما + تدرّج الألوان حسب اللقطة
             if (d !== 'povA' && d !== 'povB') $('#lids').classList.remove('on');
-            if (d === 'povA' || d === 'povB') { bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); void L.offsetWidth; L.classList.add('on'); }
-            else if (d === 'eyesA' || d === 'eyesB') { bars('tight'); grade('eyes'); }
+            if (d === 'povA' || d === 'povB') { bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); L.style.setProperty('--lid', (dur || 2.4) + 's'); void L.offsetWidth; L.classList.add('on'); }
             else if (d === 'bullet') { bars('tight'); grade('slow'); SFX.whoosh(); }
-            else if (d === 'hand' || d === 'clock' || d === 'overB' || d === 'boots') { bars('wide'); grade('duel'); }
-            else if (d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
-            else if (d === 'hero') { bars('wide'); grade('hero'); }
+            else if (d === 'boots' || d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
+            else if (d === 'hero' || d === 'heroAll') { bars('wide'); grade('hero'); }
             else if (d === 'leave') { bars('wide'); grade(''); SFX.whoosh(); }
             else if (d === 'crane' || d === 'profile' || d === 'standoff') { bars('wide'); grade(''); }
         } } }); } catch (e) { console.error(e); }
@@ -212,11 +303,13 @@ function hookStream() {
     for (let i = 0; i < 8; i++) addBot();
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = newGame;
-    // لوحة التجربة: اكتب الرقم بدال أي راعي من الاثنين
-    const send = (slot, inp) => { const p = G.pair && G.pair[slot]; if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
+    $('#setBtn').onclick = openSettings; $('#setSave').onclick = saveSettings; $('#setClose').onclick = () => $('#settings').classList.remove('in');
+    // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
+    const send = (slot, inp) => { const d = G.active && (G.active.find(x => !x.done) || G.active[0]), p = d && (slot ? d.b : d.a); if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
     [['#inA', 0], ['#inB', 1]].forEach(([s, i]) => { const inp = $(s); inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(i, inp); }); inp.nextElementSibling.onclick = () => send(i, inp); });
     $('#botsTgl').onchange = e => { G.bots = e.target.checked; };
     $('#demoToggle').onclick = () => $('#demo').classList.toggle('open');
-    hookStream();
+    hookStream(); renderLobby();
+    openSettings(); // الإعدادات أول شي، بعدها اللوبي
     window.__duel = G; // للاختبار
 })();
