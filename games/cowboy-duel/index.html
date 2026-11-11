@@ -56,8 +56,9 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 .poster.dead{filter:grayscale(.6)}
 
 /* اللوحة المعلّقة اللي تنزل بالرقم */
-#sign{position:fixed;left:50%;top:clamp(84px,calc(9vh + 26px),120px);z-index:6;transform:translate(-50%,-130%) rotate(-10deg);transform-origin:50% -40px;transition:transform .2s;pointer-events:none;text-align:center}
-#sign .ropes{position:absolute;top:-60px;left:18%;right:18%;height:66px;border-left:3px solid #7a5a3a;border-right:3px solid #7a5a3a}
+/* لوحة الرقم على الأرض الفاضية بين المتواجهين (تحت)، عشان ما تغطي برج الساعة بآخر الشارع */
+#sign{position:fixed;left:50%;top:57vh;z-index:6;transform:translate(-50%,-130%) rotate(-10deg);transform-origin:50% -40px;transition:transform .2s;pointer-events:none;text-align:center}
+#sign .ropes{display:none;position:absolute;top:-60px;left:18%;right:18%;height:66px;border-left:3px solid #7a5a3a;border-right:3px solid #7a5a3a}
 #sign .board{padding:6px 34px 10px;min-width:clamp(200px,24vw,300px)}
 #sign .lbl{font:400 clamp(14px,1.5vw,19px) Rakkas,serif;color:#f3d9a8}
 #sign .num{font:400 clamp(64px,9vw,118px)/1 Rye,serif;direction:ltr;background:linear-gradient(180deg,#fff2c4,#f2c14e 45%,#b9761f);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #2a170b) drop-shadow(0 0 16px rgba(242,193,78,.45))}
@@ -125,8 +126,9 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 @media (max-width:640px){
   #counter{top:auto;bottom:calc(9vh + 8px);right:auto;left:16px;display:none}
   .poster{width:96px;padding:6px}.poster .rw,.poster .en{display:none}
+  #sign{top:63vh}
   #chat{width:min(230px,58vw)} .msg{font-size:12px;padding:3px 8px} .msg:nth-last-child(n+5){display:none}
-  #demo{bottom:auto;top:calc(9vh + 190px)}
+  #demo{bottom:auto;top:24vh}
 }
 @media (prefers-reduced-motion:reduce){.grain{animation:none}.star,.star span{animation:none}}
 </style>

@@ -118,9 +118,8 @@ export async function mountDuel(el, opts = {}) {
         [3.5, -1, 8, 7.5, '#6e3b2a', '#e8d8b8', 'الحلّاق', 'BARBER'], [12.5, -1, 8.5, 8, '#b5653a', '#3d2817', 'البريد', 'POST OFFICE'],
         [22, -1, 9, 9, '#8b5a2b', '#f0e2c4', 'متجر عام', 'GENERAL STORE'], [32, -1, 9, 7.5, '#a67b5b', '#3d2817', 'الحدّاد', 'BLACKSMITH'],
         [-37, 1, 9, 8, '#8b5a2b', '#e8d8b8', 'مكتب الشريف', 'SHERIFF'], [-26.5, 1, 10, 8.5, '#c19a6b', '#3d2817', 'تاجر السلاح', 'GUNSMITH'],
-        [-16, 1, 9, 9.5, '#6e3b2a', '#e8c27a', 'قهوة الوادي', 'COFFEE'],
-        // وسط الصف الجنوبي ساحة فاضية (بدون محلات): الكاميرا ترجع فيها لورا عشان اللقطة الجانبية تجمع المتواجهين كاملين حتى بالشاشة الطولية
-        [13.5, 1, 8, 8, '#b5653a', '#3d2817', 'العطّار', 'APOTHECARY'],
+        [-16, 1, 9, 9.5, '#6e3b2a', '#e8c27a', 'قهوة الوادي', 'COFFEE'], [-6, 1, 9, 7.5, '#a0522d', '#f0e2c4', 'الخيّاط', 'TAILOR'],
+        [4, 1, 9, 9, '#7d4b2a', '#e8d8b8', 'المطعم', 'EATS'], [13.5, 1, 8, 8, '#b5653a', '#3d2817', 'العطّار', 'APOTHECARY'],
         [23, 1, 9, 8.5, '#9c6b3f', '#f0e2c4', 'التلغراف', 'TELEGRAPH'], [33, 1, 9, 7.5, '#c19a6b', '#5a3a22', 'شركة المنجم', 'MINING CO.']
     ];
     const signGeo = [], posterSpots = [];
@@ -145,15 +144,13 @@ export async function mountDuel(el, opts = {}) {
         if (en === 'HOTEL') { B.box(w, .2, 1.5, '#6b4a2b', x, 4.45, zf + o * .8); B.box(w, .1, .1, trim, x, 5.25, zf + o * 1.5); for (let bx = -w / 2 + .3; bx <= w / 2 - .3; bx += .55) B.box(.07, .8, .07, trim, x + bx, 4.9, zf + o * 1.5); }
         signGeo.push({ x, y: h - 1.4, z: zf + o * .24, s, w: Math.min(w * .82, 7.6), ar, en, dark: idx % 3 === 1 });
     });
-    // الساحة الفاضية بدون سياج: أي شي فيها يغطي رجول المتواجهين باللقطة الجانبية
-    [[-8, 21], [6.5, 23], [-3, 26]].forEach(([x, z]) => B.cyl(.62, .62, 1.3, 12, '@#d4b048', x, .62, z, Math.PI / 2, .4, 0));
     // أعمدة ربط الخيول + أحواض ماء + براميل + صناديق + تبن
     for (const [x, s] of [[-31, 1], [-11, -1], [9, 1], [27, -1], [-20, -1], [18, 1]]) {
         const z = s * 9.4; for (const dx of [-1.6, 1.6]) B.box(.22, 1.3, .22, '#5a3a22', x + dx, .65, z); B.box(3.6, .14, .14, '#6b4a2b', x, 1.15, z);
         B.box(2.2, .7, .9, '#7a5230', x + 3.2, .35, z + s * .2); B.box(2, .1, .7, '@#4b7c8c', x + 3.2, .62, z + s * .2);
     }
     const barrel = (x, z) => { B.cyl(.45, .42, 1.05, 12, '#7a4a22', x, .88, z); for (const y of [.58, 1.2]) B.cyl(.47, .47, .07, 12, '@#2f2f2f', x, y, z); };
-    [[-33.6, -13.1], [-22.4, -13.3], [-11.2, -13.2], [8.6, -13.1], [17.4, -13.3], [27.2, -13.1], [-32.2, 13.1], [-21, 13.3], [18.1, 13.1], [28.2, 13.3], [-41.5, -11], [38, 11.6]].forEach(([x, z]) => barrel(x, z));
+    [[-33.6, -13.1], [-22.4, -13.3], [-11.2, -13.2], [8.6, -13.1], [17.4, -13.3], [27.2, -13.1], [-32.2, 13.1], [-21, 13.3], [-1.2, 13.2], [18.1, 13.1], [28.2, 13.3], [-41.5, -11], [38, 11.6]].forEach(([x, z]) => barrel(x, z));
     [[-34.5, -12.8, .4], [7.8, 12.9, 0], [27.9, 12.7, .3], [-1.4, -12.9, .2], [37.4, -12.7, .1]].forEach(([x, z, r]) => { B.box(.95, .95, .95, '#a87a4a', x, .84, z, 0, r, 0); B.box(.7, .7, .7, '#b88a56', x + .1, 1.66, z, 0, r + .4, 0); });
     [[-23, 12.9], [-12, -12.9], [36.5, -12.9], [41, 7]].forEach(([x, z]) => { B.cyl(.62, .62, 1.3, 12, '@#d4b048', x, .98, z, 0, 0, Math.PI / 2); });
 
@@ -328,9 +325,7 @@ export async function mountDuel(el, opts = {}) {
     let crowdOrder = [];
     function crowdSpot(i, n) {
         const north = Math.ceil(n / 2), side = i % 2 ? 1 : -1, slot = Math.floor(i / 2), cnt = side < 0 ? north : n - north;
-        if (side > 0) { // الصف الجنوبي: على ممشى المحلات يمين ويسار الساحة، مو قدام الكاميرا الجانبية
-            const u = cnt > 1 ? slot / (cnt - 1) * 34 : 0, x = u < 17 ? -30 + u : 13 + (u - 17); return V(cnt > 1 ? x : -14, .36, 12.2); }
-        const sp = Math.min(5.2, 54 / Math.max(1, cnt - 1)), x = (slot - (cnt - 1) / 2) * sp - 1.3;
+        const sp = Math.min(5.2, 54 / Math.max(1, cnt - 1)), x = (slot - (cnt - 1) / 2) * sp + (side > 0 ? 1.3 : -1.3);
         return V(x, .36, side * 12.2);
     }
     function homeOf(id) { const i = crowdOrder.indexOf(id); return crowdSpot(Math.max(0, i), crowdOrder.length); }
@@ -409,21 +404,23 @@ export async function mountDuel(el, opts = {}) {
     function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name); }
     function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
 
-    const A_MARK = V(-4.5, 0, 0), B_MARK = V(4.5, 0, 0);
+    // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه بنص الشارع
+    const A_MARK = V(0, 0, 4.5), B_MARK = V(0, 0, -4.5);
     // لقطة واسعة تجمع الاثنين: بروفايل جانبي للشاشات العريضة، وزاوية مائلة (3/4) للشاشات الطولية (بث الجوال)
-    // اللقطة الجانبية: المسافة تنحسب من عرض الشاشة عشان المتواجهين الاثنين يطلعون كاملين (من راسهم لرجولهم) بأي شاشة
-    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 7 : 5.7) / Math.tan(hf / 2);
-        const d = Math.min(34, Math.max(10.4, need)) - push * k * .25; c.pos.set(Math.sin(t * .25) * .4, 1.3 + Math.max(0, d - 10.6) * .04, d); c.look.set(0, cam.aspect >= 1.1 ? 1.55 : 2.6, 0); c.fov = vf; c.roll = 0; c.wide = true; }
+    // اللقطة الأساسية: الكاميرا بالشارع تطالع جهة برج الساعة — السوق كامل والبرج بآخره والمتواجهين يمين ويسار.
+    // المسافة تنحسب من عرض الشاشة عشان الاثنين يطلعون كاملين بأي جهاز (الشارع طويل فما فيه شي يسد ورا الكاميرا)
+    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 7 : 5.8) / Math.tan(hf / 2);
+        const d = Math.min(34, Math.max(10.5, need)) - push * k * .25; c.pos.set(d, 1.7 + d * .025, Math.sin(t * .25) * .3); c.look.set(-12, cam.aspect >= 1.1 ? 2.1 : 3, 0); c.fov = vf; c.roll = 0; c.wide = true; }
     function duelIntro(aId, bId, o = {}) {
         const A = figs.get(String(aId)), Bf = figs.get(String(bId)); if (!A || !Bf) return Promise.resolve(false);
-        const short = !!o.short, startX = o.instant ? 4.5 : short ? 11 : 16; // instant: يبدون على العلامات مباشرة (تخطي المشي)
-        [[A, -1, A_MARK], [Bf, 1, B_MARK]].forEach(([f, s, m]) => { f.duelist = true; f.twitch = false; f.g.position.set(s * startX, 0, -s * 1.1); f.g.rotation.set(0, s < 0 ? Math.PI / 2 : -Math.PI / 2, 0); f.target = m.clone(); f.face = s < 0 ? Math.PI / 2 : -Math.PI / 2; f.speed = 2.6; setState(f, 'ready'); });
+        const short = !!o.short, startX = o.instant ? 4.5 : short ? 10 : 12.2; // instant: يبدون على العلامات مباشرة (تخطي المشي)
+        [[A, 1, A_MARK], [Bf, -1, B_MARK]].forEach(([f, s, m]) => { f.duelist = true; f.twitch = false; f.g.position.set(s * .6, startX > 5 ? .36 : 0, s * startX); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = m.clone(); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); });
         for (const [, f] of figs) if (f !== A && f !== Bf) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const headA = () => wp(A.U.head), headB = () => wp(Bf.U.head);
         const SH = {
-            crane: { name: 'crane', dur: short ? 2.2 : 2.8, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(-2 + e * 2, 28 - e * 23.5, 4 + e * 6); c.look.set(0, e * 1.5, -7 + e * 7); c.fov = 50 - e * 10; c.roll = 0; } },
-            boots: { name: 'boots', dur: short ? 1.6 : 2.1, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.set(p.x - 1.7, .32, p.z + 1.05); c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } },
-            profile: { name: 'profile', dur: 2.6, labels: true, start() { tumbleweed(V(.5, .75, -11), V(-1.5, .75, 16), 3.2); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } },
+            crane: { name: 'crane', dur: short ? 2.2 : 2.8, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; /* من فوق الشارع تنزل لين مستوى الناس وهي تطالع البرج */ c.roll = 0; } },
+            boots: { name: 'boots', dur: short ? 1.6 : 2.1, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } },
+            profile: { name: 'profile', dur: 2.6, labels: true, start() { tumbleweed(V(12, .75, .4), V(-16, .75, -.6), 3.4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } },
             eyesA: { name: 'eyesA', dur: 1.4, labels: false, cam(k, t, c) { const H = headA(), f = fwd(A); c.pos.copy(H).addScaledVector(f, 3.6 - k * .45); c.pos.y += .05; c.look.copy(H); c.look.y += .08; c.fov = 17; c.roll = 0; } },
             eyesB: { name: 'eyesB', dur: 1.4, labels: false, cam(k, t, c) { const H = headB(), f = fwd(Bf); c.pos.copy(H).addScaledVector(f, 3.6 - k * .45); c.pos.y += .05; c.look.copy(H); c.look.y += .08; c.fov = 17; c.roll = 0; } },
             hand: { name: 'hand', dur: 1.3, labels: false, start() { A.twitch = true; }, cam(k, t, c) { const hp = wp(A.U.holGun); c.pos.copy(hp).addScaledVector(fwd(A), 2.1).addScaledVector(rightOf(A), 1.15); c.pos.y += .25 - k * .1; c.look.copy(hp); c.fov = 30; c.roll = -.04; } },
@@ -452,7 +449,7 @@ export async function mountDuel(el, opts = {}) {
             { name: 'bullet', dur: 0, labels: false, until: () => !BUL.on,
               cam(k, t, c) { const b = bullet.position; c.pos.copy(b).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = b.y + .22; c.look.copy(b).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
             { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
-              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },  // السقوط من الجنب: الاثنين بالكادر
+              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },  // السقوط باللقطة الأساسية (جهة البرج): الاثنين بالكادر
             { name: 'hero', dur: 3.2, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; for (const [, f] of figs) if (f !== S && f !== Tg) setState(f, 'cheer'); emit('hero'); },
               cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), a = -.65 + k * .8; c.pos.copy(p).addScaledVector(f, Math.cos(a) * 4.8).addScaledVector(rr, Math.sin(a) * 4.8); c.pos.y = .5; c.look.copy(p); c.look.y = 1.75; c.fov = 36; c.roll = .04; } }
         ];
