@@ -145,9 +145,7 @@ export async function mountDuel(el, opts = {}) {
         if (en === 'HOTEL') { B.box(w, .2, 1.5, '#6b4a2b', x, 4.45, zf + o * .8); B.box(w, .1, .1, trim, x, 5.25, zf + o * 1.5); for (let bx = -w / 2 + .3; bx <= w / 2 - .3; bx += .55) B.box(.07, .8, .07, trim, x + bx, 4.9, zf + o * 1.5); }
         signGeo.push({ x, y: h - 1.4, z: zf + o * .24, s, w: Math.min(w * .82, 7.6), ar, en, dark: idx % 3 === 1 });
     });
-    // سياج الساحة الفاضية (منخفض عشان ما يغطي اللقطة الجانبية)
-    for (let x = -11; x <= 9.01; x += 2.5) B.box(.2, 1, .2, '#5a3a22', x, .5, ZF);
-    for (const y of [.45, .85]) B.box(20, .1, .08, '#6b4a2b', -1, y, ZF);
+    // الساحة الفاضية بدون سياج: أي شي فيها يغطي رجول المتواجهين باللقطة الجانبية
     [[-8, 21], [6.5, 23], [-3, 26]].forEach(([x, z]) => B.cyl(.62, .62, 1.3, 12, '@#d4b048', x, .62, z, Math.PI / 2, .4, 0));
     // أعمدة ربط الخيول + أحواض ماء + براميل + صناديق + تبن
     for (const [x, s] of [[-31, 1], [-11, -1], [9, 1], [27, -1], [-20, -1], [18, 1]]) {
@@ -155,7 +153,7 @@ export async function mountDuel(el, opts = {}) {
         B.box(2.2, .7, .9, '#7a5230', x + 3.2, .35, z + s * .2); B.box(2, .1, .7, '@#4b7c8c', x + 3.2, .62, z + s * .2);
     }
     const barrel = (x, z) => { B.cyl(.45, .42, 1.05, 12, '#7a4a22', x, .88, z); for (const y of [.58, 1.2]) B.cyl(.47, .47, .07, 12, '@#2f2f2f', x, y, z); };
-    [[-33.6, -13.1], [-22.4, -13.3], [-11.2, -13.2], [8.6, -13.1], [17.4, -13.3], [27.2, -13.1], [-32.2, 13.1], [-21, 13.3], [-1.2, 13.2], [18.1, 13.1], [28.2, 13.3], [-41.5, -11], [38, 11.6]].forEach(([x, z]) => barrel(x, z));
+    [[-33.6, -13.1], [-22.4, -13.3], [-11.2, -13.2], [8.6, -13.1], [17.4, -13.3], [27.2, -13.1], [-32.2, 13.1], [-21, 13.3], [18.1, 13.1], [28.2, 13.3], [-41.5, -11], [38, 11.6]].forEach(([x, z]) => barrel(x, z));
     [[-34.5, -12.8, .4], [7.8, 12.9, 0], [27.9, 12.7, .3], [-1.4, -12.9, .2], [37.4, -12.7, .1]].forEach(([x, z, r]) => { B.box(.95, .95, .95, '#a87a4a', x, .84, z, 0, r, 0); B.box(.7, .7, .7, '#b88a56', x + .1, 1.66, z, 0, r + .4, 0); });
     [[-23, 12.9], [-12, -12.9], [36.5, -12.9], [41, 7]].forEach(([x, z]) => { B.cyl(.62, .62, 1.3, 12, '@#d4b048', x, .98, z, 0, 0, Math.PI / 2); });
 
@@ -414,11 +412,11 @@ export async function mountDuel(el, opts = {}) {
     const A_MARK = V(-4.5, 0, 0), B_MARK = V(4.5, 0, 0);
     // لقطة واسعة تجمع الاثنين: بروفايل جانبي للشاشات العريضة، وزاوية مائلة (3/4) للشاشات الطولية (بث الجوال)
     // اللقطة الجانبية: المسافة تنحسب من عرض الشاشة عشان المتواجهين الاثنين يطلعون كاملين (من راسهم لرجولهم) بأي شاشة
-    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = 7 / Math.tan(hf / 2);
-        const d = Math.min(34, Math.max(10.4, need)) - push * k * .25; c.pos.set(Math.sin(t * .25) * .4, 1.3 + Math.max(0, d - 10.6) * .06, d); c.look.set(0, 1.55, 0); c.fov = vf; c.roll = 0; c.wide = true; }
+    function wide(c, k, t, push) { const vf = cam.aspect >= 1.1 ? 40 : 50, hf = 2 * Math.atan(Math.tan(vf * Math.PI / 360) * cam.aspect), need = (cam.aspect >= 1.1 ? 7 : 5.7) / Math.tan(hf / 2);
+        const d = Math.min(34, Math.max(10.4, need)) - push * k * .25; c.pos.set(Math.sin(t * .25) * .4, 1.3 + Math.max(0, d - 10.6) * .04, d); c.look.set(0, cam.aspect >= 1.1 ? 1.55 : 2.6, 0); c.fov = vf; c.roll = 0; c.wide = true; }
     function duelIntro(aId, bId, o = {}) {
         const A = figs.get(String(aId)), Bf = figs.get(String(bId)); if (!A || !Bf) return Promise.resolve(false);
-        const short = !!o.short, startX = short ? 11 : 16;
+        const short = !!o.short, startX = o.instant ? 4.5 : short ? 11 : 16; // instant: يبدون على العلامات مباشرة (تخطي المشي)
         [[A, -1, A_MARK], [Bf, 1, B_MARK]].forEach(([f, s, m]) => { f.duelist = true; f.twitch = false; f.g.position.set(s * startX, 0, -s * 1.1); f.g.rotation.set(0, s < 0 ? Math.PI / 2 : -Math.PI / 2, 0); f.target = m.clone(); f.face = s < 0 ? Math.PI / 2 : -Math.PI / 2; f.speed = 2.6; setState(f, 'ready'); });
         for (const [, f] of figs) if (f !== A && f !== Bf) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const headA = () => wp(A.U.head), headB = () => wp(Bf.U.head);
