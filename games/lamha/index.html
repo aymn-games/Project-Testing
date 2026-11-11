@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لمحة — ألعاب أيمن</title>
+<!--
+    صفحة لعبة «لمحة»: نفس هيكل وترتيب سكربتات games/memory-challenge/index.html
+    (نواة AGP كاملة، ثم بطاقة اللاعب والشل المشترك، ثم بنك الأسئلة وملف اللعبة).
+-->
+    <script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<!-- Accounts/points layer — independent of AGP.*, used only to report end-of-match points -->
+<script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
+<script src="../../js/agp-shared-prefs.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
+
+<!-- Shared player card (lobby cards + winner trophy card) -->
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
+
+<!-- "Entrance" animation on the lobby screen -->
+<script src="../../js/agp-entrance.js"></script>
+
+<!-- Settings screen + TikTok connection + lobby (shared, pre-existing) -->
+<script src="../../js/agp-game-shell.js"></script>
+
+<!-- بنك الأسئلة + منطق اللعبة -->
+<script src="lamha-questions.js"></script>
+<script src="agp-lamha.js"></script>
+
+</body>
+</html>
