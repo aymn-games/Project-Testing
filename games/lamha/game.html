@@ -439,7 +439,10 @@ class Component extends DCLogic {
   // auto=true (بعد زر «اللاعبين التالين»): العد التنازلي يبدأ لحاله بعد ما تخلص الحركة.
   prepareRound(auto){ const s=this.state;
     if(s.qIdx>=s.queue.length){ this.finishStage(); return; }
-    const names=s.queue.slice(s.qIdx,s.qIdx+PER_ROUND), n=(this.flipN=(this.flipN||0)+1);
+    // توزيع متوازن: لو باقي 4 لاعبين تكون آخر جولتين 2 و2 بدل 3 و1 (ما فيه جولة بلاعب واحد).
+    // ينحسب قبل كل جولة على العدد الباقي وقتها، فيشمل اللي دخلوا أثناء اللعب.
+    const left=s.queue.length-s.qIdx, take=left===4?2:Math.min(PER_ROUND,left);
+    const names=s.queue.slice(s.qIdx,s.qIdx+take), n=(this.flipN=(this.flipN||0)+1);
     this.setState({round:s.round+1,qIdx:s.qIdx+names.length,phase:'ready',auto:!!auto,showRes:false,slotAnim:'in',flipN:n,slots:names.map(nm=>({name:nm,q:null,done:false,feed:'',feedC:'#8a8596',delta:null,flash:null}))});
     if(this._ac) [0,1,2].forEach(k=>setTimeout(()=>this.snd('flip'),k*150+120));
     clearTimeout(this.animT); this.animT=setTimeout(()=>this.setState({slotAnim:null}),1050);
@@ -602,7 +605,7 @@ class Component extends DCLogic {
         ]):null}; });
     // لوحة النقاط
     const wait=s.queue.slice(s.qIdx);
-    const waitRows=wait.slice(0,PER_ROUND).map((n,j)=>({name:n,rank:j+1,bd:'rgba(167,139,250,.45)',val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#a8a3b5',bg:'rgba(255,255,255,.06)',bd:'rgba(255,255,255,.14)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
+    const nextTake=wait.length===4?2:Math.min(PER_ROUND,wait.length), waitRows=wait.slice(0,nextTake).map((n,j)=>({name:n,rank:j+1,bd:'rgba(167,139,250,.45)',val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#a8a3b5',bg:'rgba(255,255,255,.06)',bd:'rgba(255,255,255,.14)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
     const lastRound=s.qIdx>=s.queue.length;
     const btnLabel=P==='ready'?'ابدأ الجولة '+s.round:P==='roundEnd'?(lastRound?(!CUP||s.queue.length<=PER_ROUND?'إعلان الفائز':'نتيجة المرحلة'):'اللاعبين التالين'):P==='stageEnd'?'عرض النتيجة':'';
     const F=s.final, eg=this.eventGroups();
