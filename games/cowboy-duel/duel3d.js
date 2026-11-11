@@ -240,10 +240,17 @@ export async function mountDuel(el, opts = {}) {
     const bullets = [bullet]; bullet.userData.B = { on: false, from: V(), to: V(), dir: V(), p: 0, len: 1, onHit: null };
     function getBullet() { let b = bullets.find(x => !x.userData.B.on); if (!b) { const ud = bullet.userData; bullet.userData = {}; b = bullet.clone(); bullet.userData = ud; b.userData = { rings: b.children.filter(c => c.geometry && c.geometry.type === 'RingGeometry'), B: { on: false, from: V(), to: V(), dir: V(), p: 0, len: 1, onHit: null } }; sc.add(b); bullets.push(b); } return b; }
 
-    const tumble = new T.Group(); tumble.visible = false; sc.add(tumble);
-    { const m = new T.MeshStandardMaterial({ color: '#9c7a4a', wireframe: true }); tumble.add(new T.Mesh(new T.IcosahedronGeometry(.75, 1), m)); const i2 = new T.Mesh(new T.IcosahedronGeometry(.55, 1), m); i2.rotation.set(.5, .3, .2); tumble.add(i2); const i3 = new T.Mesh(new T.DodecahedronGeometry(.4, 0), new T.MeshStandardMaterial({ color: '#7a5a32', wireframe: true })); tumble.add(i3); }
-    const TW = { on: false, from: V(), to: V(), t: 0, dur: 4 };
-    function tumbleweed(from, to, dur = 4) { TW.on = true; TW.from.copy(from); TW.to.copy(to); TW.t = 0; TW.dur = dur; tumble.visible = true; }
+    // كرات شوك تتدحرج بالشارع طول الوقت (4 بالمجمّع)
+    const twM1 = new T.MeshStandardMaterial({ color: '#9c7a4a', wireframe: true }), twM2 = new T.MeshStandardMaterial({ color: '#7a5a32', wireframe: true });
+    const TWS = [0, 1, 2, 3].map(() => { const g = new T.Group(); g.add(new T.Mesh(new T.IcosahedronGeometry(.75, 1), twM1)); const i2 = new T.Mesh(new T.IcosahedronGeometry(.55, 1), twM1); i2.rotation.set(.5, .3, .2); g.add(i2); g.add(new T.Mesh(new T.DodecahedronGeometry(.4, 0), twM2)); g.visible = false; sc.add(g); return { g, on: false, from: V(), to: V(), t: 0, dur: 4, s: 1 }; });
+    function tumbleweed(from, to, dur = 4) { const w = TWS.find(x => !x.on) || TWS[0]; w.on = true; w.from.copy(from); w.to.copy(to); w.t = 0; w.dur = dur; w.s = .7 + Math.random() * .6; w.g.scale.setScalar(w.s); w.g.visible = true; }
+    function randomTumble() { const across = Math.random() < .55, x = -40 + Math.random() * 50, z = (Math.random() - .5) * 20;
+        if (across) tumbleweed(V(x, .75, -ZF), V(x + (Math.random() - .5) * 14, .75, ZF), 5 + Math.random() * 3); else tumbleweed(V(30, .75, z), V(-70, .75, z + (Math.random() - .5) * 8), 9 + Math.random() * 4); }
+    // قش وأوراق يابسة صغيرة تنجرف مع الريح على الأرض (InstancedMesh واحد)
+    const DB = 70, debris = new T.InstancedMesh(new T.PlaneGeometry(.22, .1), new T.MeshStandardMaterial({ side: T.DoubleSide, roughness: 1 }), DB); sc.add(debris);
+    const dbD = Array.from({ length: DB }, (_, i) => { const c = new T.Color(['#c9a15a', '#a67b4a', '#e0c48a', '#8a6a3a'][i % 4]); debris.setColorAt(i, c);
+        return { p: V(-60 + Math.random() * 90, 0, (Math.random() - .5) * 30), v: 1.2 + Math.random() * 2.4, z: (Math.random() - .5) * .6, ph: Math.random() * 6, r: V(Math.random() * 3, Math.random() * 3, Math.random() * 3), h: .15 + Math.random() * .5 }; });
+    debris.instanceColor.needsUpdate = true;
 
     // موجة غبار على الأرض لما يطيح الخاسر (تأثير بعد السقوط)
     const shocks = [0, 1, 2, 3].map(() => { const m = new T.Mesh(new T.RingGeometry(.55, 1, 48), new T.MeshBasicMaterial({ color: '#f0c890', transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 9; sc.add(m); return m; });
@@ -410,7 +417,7 @@ export async function mountDuel(el, opts = {}) {
     function play(list) { return new Promise(res => { if (qDone) qDone(false); queue = list.slice(); qDone = res; next(); }); }
     // انتقال ناعم بين اللقطات: نصوّر آخر إطار على لوحة فوق المشهد ونخليها تذوب (بدل القطع الحاد والدايرة السودا)
     const xf = document.createElement('canvas'); xf.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0'; el.appendChild(xf);
-    const XF = { answerCam: 260, drawWide: 450, bullet: 220, fall: 320, winCam: 450, aftermath: 550 };
+    const XF = { answerCam: 260, drawWide: 0, bullet: 220, fall: 320, winCam: 380, walkback: 420, aftermath: 550 };
     function crossfade(ms = 600) { try { const c = r.domElement; if (xf.width !== c.width || xf.height !== c.height) { xf.width = c.width; xf.height = c.height; }
         r.render(sc, cam); xf.getContext('2d').drawImage(c, 0, 0); xf.style.transition = 'none'; xf.style.opacity = 1; void xf.offsetWidth; xf.style.transition = `opacity ${ms}ms ease-in-out`; xf.style.opacity = 0; } catch (e) { } }
     function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } { const ms = XF[s.name] ?? 600; if (ms) crossfade(ms); } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
@@ -461,21 +468,21 @@ export async function mountDuel(el, opts = {}) {
     // مشهد الطلقة: الكاميرا ترجع للقطة الواسعة ← يوجّه ويطلق ← الرصاصة بالتصوير البطيء ← السقوط ← ينفخ الدخان ويمشي لجهته (الكاميرا ثابتة)
     function fire(sId, tId) {
         const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return Promise.resolve(false);
-        const dir = V().subVectors(Tg.g.position, S.g.position).setY(0).normalize(), side = V(-dir.z, 0, dir.x);
-        let fired = false, b = null, doneCb; const done = new Promise(r => doneCb = r);
+        let fired = false, doneCb; const done = new Promise(r => doneCb = r);
         const list = [
-            { name: 'drawWide', dur: 1.1, labels: false, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
-              cam(k, t, c) { still(c); if (!fired && t > .55) { fired = true; b = shootFx(S, Tg); TS = .07; } } },
-            { name: 'bullet', dur: 0, labels: false, until: () => fired && (!b || !b.userData.B.on),
-              cam(k, t, c) { const bp = b ? b.position : S.g.position; c.pos.copy(bp).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = bp.y + .22; c.look.copy(bp).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
-            { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
-              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); still(c); } },
+            // من نفس اللقطة الواسعة: يوجّه ويطلق والثاني يطيح (بدون قطع وبدون تصوير بطيء)
+            { name: 'drawWide', dur: 0, labels: false, until: () => fired && Tg.landed, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
+              cam(k, t, c) { still(c); if (!fired && t > .3) { fired = true; shootFx(S, Tg); } if (t > 4) Tg.landed = true; } },
+            // الكاميرا على الفايز وهو يحتفل — الصفحة تعرض تبويب الفوز
             { name: 'winCam', dur: 0, labels: false, start() { TS = 1; setState(S, 'champ'); for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); if (doneCb) { const d = doneCb; doneCb = null; d(true); } },
-              cam(k, t, c) { const p = S.g.position, e = Math.min(1, t / 3); c.pos.copy(p).addScaledVector(fwd(S), 5.6 - e * 1.2).addScaledVector(rightOf(S), 1.5 - e * .5); c.pos.y = 1.5 + e * .3; c.look.copy(p); c.look.y = 1.9; c.fov = 36; c.roll = .02; } }
+              cam(k, t, c) { const p = S.g.position, e = Math.min(1, t / 2.5); c.pos.copy(p).addScaledVector(fwd(S), 7 - e * .8).addScaledVector(rightOf(S), 1.8); c.pos.y = 2.2; c.look.copy(p); c.look.y = 2.6; c.fov = 34; c.roll = .02; } }
         ];
         play(list).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
         return done;
     }
+    // الفايز يرجع للمكان اللي جا منه (يمشي بسرعة واللقطة واسعة)، والوعد يرجع لما يوصل تقريباً
+    function walkBack(ids) { const W = ids.map(id => figs.get(String(id))).filter(Boolean);
+        return new Promise(res => { play([{ name: 'walkback', dur: 1.6, labels: false, start() { W.forEach(f => { setState(f, 'idle'); returnToCrowd(f.id); f.speed = 6.5; }); }, cam(k, t, c) { still(c); } }]).then(() => res()); }); }
     // «كل المبارزات في وقت واحد»: كل زوج يُحسم لحاله بدون قطع للكاميرا (توجيه + طلقة + سقوط)
     function quickFire(sId, tId) { const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return;
         setState(S, 'draw'); setState(Tg, 'slowdraw'); setTimeout(() => { if (S.state === 'draw') shootFx(S, Tg); }, 170); }
@@ -546,8 +553,13 @@ export async function mountDuel(el, opts = {}) {
         for (const P of puffs) { if (!P.s.visible) continue; P.life += dt; const k = P.life / P.max; if (k >= 1) { P.s.visible = false; continue; } P.s.position.addScaledVector(P.v, dt); P.v.multiplyScalar(1 - dt * 1.5); P.s.scale.setScalar(P.g0 + (P.g1 - P.g0) * easeOut(k)); P.s.material.opacity = P.o * (1 - k); }
         if (flashT < 1) { flashT += real; const k = flashT / .12; flash.material.opacity = Math.max(0, 1 - k); flashL.intensity = Math.max(0, 40 * (1 - flashT / .18)); if (k >= 1) flash.visible = false; }
         for (const b of bullets) { const Q = b.userData.B; if (!Q.on) continue; Q.p += 85 * dt; const k = Math.min(1, Q.p / Q.len); b.position.lerpVectors(Q.from, Q.to, k); b.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { Q.on = false; b.visible = false; Q.onHit && Q.onHit(); } }
-        if (TW.on) { TW.t += dt; const k = TW.t / TW.dur; if (k >= 1) { TW.on = false; tumble.visible = false; } else { tumble.position.lerpVectors(TW.from, TW.to, k); tumble.position.y = .75 + Math.abs(Math.sin(k * 14)) * .5; tumble.rotation.x += dt * 6; tumble.rotation.z -= dt * 2; } }
-        else if (!shot && (tw8 += dt) > 11) { tw8 = 0; const z = (Math.random() - .5) * 8; tumbleweed(V(-40, .75, z), V(40, .75, z + (Math.random() - .5) * 6), 9); }
+        for (const w of TWS) { if (!w.on) continue; w.t += dt; const k = w.t / w.dur; if (k >= 1) { w.on = false; w.g.visible = false; continue; }
+            w.g.position.lerpVectors(w.from, w.to, k); w.g.position.y = .75 * w.s + Math.abs(Math.sin(k * w.dur * 3.2)) * .55 * w.s; w.g.rotation.x += dt * 6 / w.s; w.g.rotation.z -= dt * 2; }
+        if ((tw8 += dt) > 2.8) { tw8 = Math.random() * 1.5; if (TWS.some(x => !x.on)) randomTumble(); }
+        for (let i = 0; i < DB; i++) { const d = dbD[i], gust = .6 + Math.max(0, Math.sin(t * .35 + i * .1)) * 1.6; d.p.x += d.v * gust * dt; d.p.z += d.z * dt; d.ph += dt * (4 + d.v);
+            if (d.p.x > 32) { d.p.x = -62; d.p.z = (Math.random() - .5) * 30; }
+            const y = .05 + Math.abs(Math.sin(d.ph)) * d.h * gust * .6; q.setFromEuler(new T.Euler(d.r.x + d.ph * .7, d.r.y + d.ph * .4, d.r.z)); mtx.compose(V(d.p.x, y, d.p.z), q, one); debris.setMatrixAt(i, mtx); }
+        debris.instanceMatrix.needsUpdate = true;
         for (const m of shocks) { if (m.userData.t >= 1) continue; m.userData.t = Math.min(1, m.userData.t + dt / .9); const k = m.userData.t; m.scale.setScalar(1 + easeOut(k) * 6); m.material.opacity = .75 * (1 - k); if (k >= 1) m.visible = false; }
         if (coinsOn) { for (let i = 0; i < COINS; i++) { const c = coinD[i]; c.p.y += c.v * dt; c.r.x += c.s.x * dt; c.r.y += c.s.y * dt; if (c.p.y < .05) { c.p.y = 14 + Math.random() * 8; c.p.x = coinC.x + (Math.random() - .5) * 9; c.p.z = coinC.z + (Math.random() - .5) * 9; } q.setFromEuler(new T.Euler(c.r.x, c.r.y, 0)); mtx.compose(c.p, q, one); coinMesh.setMatrixAt(i, mtx); } coinMesh.instanceMatrix.needsUpdate = true; }
         for (const [, f] of [...figs]) poseFig(f, dt, t);
@@ -573,5 +585,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, focusOn, fire, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, focusOn, fire, walkBack, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }

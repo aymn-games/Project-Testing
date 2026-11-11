@@ -53,7 +53,8 @@ const SFX = (() => {
         // بعد السقوط: جرس عميق واحد
         toll() { const a = ctx(); if (!a) return; const t = a.currentTime; [[98, .5], [196, .3], [294, .12], [523, .06]].forEach(([fq, v]) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = fq; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + 3); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 3); }); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
-        wind() { }, // الهوا المتصل انشال (كان مزعج) — بداله أصوات قصيرة لكل مرحلة تحت
+        // صوت خلفية: ريح خفيفة جداً (منخفضة عشان ما تزعج)
+        wind() { const a = ctx(); if (!a || windG) return; const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 380; f.Q.value = .6; windG = a.createGain(); windG.gain.value = .012; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); },
         // موسيقى دخول قصيرة: صفير غربي (لحن أصلي) + أوتار منتوفة — مرة وحدة مع وصول اللاعبين
         motif() { const a = ctx(); if (!a) return; const t0 = a.currentTime, out = a.createGain(); out.gain.value = .9; out.connect(a.destination); out.connect(echo);
             const pluck = (f, t, d = .9, v = .35) => { const o = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.setValueAtTime(2400, t); lp.frequency.exponentialRampToValueAtTime(300, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(lp); lp.connect(g); g.connect(out); o.start(t); o.stop(t + d + .05); };
@@ -207,32 +208,27 @@ function answer(id, text) {
 async function win(d, shooter, typed) {
     const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
     d.done = true; d.winner = shooter; d.loser = target; d.secs = secs;
-    if (G.active.length === 1) { // مبارزة بعد مبارزة
-        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone');
-        // الكاميرا على اللي جاوب + بطاقة مايلة بإجابته ووقته لمدة 3 ثواني
-        G.scene.focusOn(shooter.id); showAnswer(shooter, typed, secs); SFX.stamp();
-        await sleep(3000); $('#answer').classList.remove('in'); grade('duel');
-        await G.scene.fire(shooter.id, target.id);           // ترجع الكاميرا ← الطلقة ← السقوط ← الكاميرا على الفايز
-        return afterDuels();
+    if (G.active.length === 1) { // مبارزة بعد مبارزة — سريعة: يطلق ← يطيح ← الكاميرا على الفايز + تبويب فوزه ← يرجع مكانه ← المواجهة الجاية
+        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone'); grade('duel');
+        await G.scene.fire(shooter.id, target.id);
+        showWin(shooter, typed, secs); SFX.victory();
+        await sleep(2500); $('#answer').classList.remove('in');
+        await G.scene.walkBack([shooter.id]);
+        return endDuels();
     }
     // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
     G.scene.quickFire(shooter.id, target.id); feed(shooter, typed, secs);
     if (G.active.every(x => x.done)) {
         G.phase = 'resolve'; clearTimers(); sign('gone');
-        await sleep(1800); $('#feed').classList.remove('in');
+        await sleep(1300); $('#feed').classList.remove('in');
         await G.scene.multiOutro(G.active.map(x => x.winner.id));   // الفايزين يحتفلون
-        afterDuels();
+        await winnerCard(G.active);
+        await G.scene.walkBack(G.active.map(x => x.winner.id));
+        endDuels();
     }
 }
-// الكاميرا ثابتة واللاعب يمشي ← زر «التالي» أسفل الشاشة ← إعلان المبارزة/الجولة الجاية
-async function afterDuels() {
-    await winnerCard(G.active);                 // احتفال + بطاقة الفوز 3 ثواني
-    G.scene.aftermath(); grade('');             // ترجع الشاشة للمشهد الكامل
-    await nextButton(G.info.next);              // زر «المواجهة التالية»
-    endDuels();
-}
-// بطاقة الإجابة (نفس هوية اللعبة ومايلة): اسم اللي جاوب + إجابته + وقته
-function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
+// تبويب الفوز (نفس هوية اللعبة ومايل): «فاز بالمواجهة» + اسمه + إجابته + وقته — المشهد الوحيد لإعلان الفوز
+function showWin(p, typed, secs) { const el = $('#answer'); el.querySelector('.tag').textContent = '🏆 فاز بالمواجهة'; el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
     el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
 async function endDuels() {
     const winners = G.active.map(d => d.winner);
@@ -261,7 +257,7 @@ function winnerCard(duels) { return new Promise(res => {
         ? `<div class="wtag">🏆 فاز بالمواجهة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.loser.name)} · سحب بـ <b>${d.secs}</b> ث</p>`
         : `<div class="wtag">🏆 الفايزين بالمواجهات</div><div class="wlist">${duels.map(x => `<div class="wrow">${avatarHtml(x.winner, 'sm')}<b>${esc(x.winner.name)}</b><small>${x.secs} ث</small></div>`).join('')}</div>`;
     el.classList.add('in'); SFX.victory();
-    setTimeout(() => { el.classList.remove('in'); res(); }, 3000);
+    setTimeout(() => { el.classList.remove('in'); res(); }, 2500);
 }); }
 function nextButton(label) { return new Promise(res => { const b = $('#nextBtn'); b.textContent = label + ' ←'; b.classList.add('in'); waitClick(b, () => { b.classList.remove('in'); res(); }); }); }
 // زر واحد ينتظر ضغطة (أو Enter/مسافة من كيبورد الستريمر)
@@ -359,7 +355,8 @@ function hookStream() {
             else if (d === 'boots' || d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
             else if (d === 'answerCam') { bars('wide'); grade('hero'); }
             else if (d === 'drawWide') { bars('wide'); grade('duel'); }
-            else if (d === 'winCam') { bars('wide'); grade('hero'); }
+            else if (d === 'winCam') { bars('wide'); grade('hero'); clearTimeout(G.fxT); document.body.dataset.fx = ''; }
+            else if (d === 'walkback') { bars('wide'); grade(''); }
             else if (d === 'leave') { bars('wide'); grade(''); SFX.whoosh(); }
             else if (d === 'crane' || d === 'profile' || d === 'standoff') { bars('wide'); grade(''); }
         } } }); } catch (e) { console.error(e); }
