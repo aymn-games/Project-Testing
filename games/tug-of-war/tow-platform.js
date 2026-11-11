@@ -89,8 +89,13 @@
         var sc = document.currentScript;
         return sc && sc.src ? sc.src.replace(/tow-platform\.js(\?.*)?$/, '../elimination-roulette/') : '../elimination-roulette/';
     }());
+    // أيقونة «جي جي» الخاصة بشد الحبل (حروف GG) — أيقونة روليت الإقصاء القديمة كانت مايك
+    var OWN_DIR = (function () {
+        var sc = document.currentScript;
+        return sc && sc.src ? sc.src.replace(/tow-platform\.js(\?.*)?$/, '') : '';
+    }());
     var EXTRA_GIFTS = [
-        { id: 'gg', name: 'جي جي', coins: 1, file: 'gift_icons/gg.svg' },
+        { id: 'gg', name: 'جي جي', coins: 1, file: 'gift_icons/gg.svg', own: true },
         { id: 'drama-queen', name: 'ملكة الدراما', coins: 5, file: 'gift_icons/drama-queen.svg' },
         { id: 'perfume', name: 'عطر', coins: 20, file: 'gift_icons/perfume.webp' },
         { id: 'little-crown', name: 'تاج صغير', coins: 99, file: 'gift_icons/little-crown.svg' },
@@ -108,7 +113,7 @@
         var G = AGP.tiktokGifts, out = [];
         if (G && G.list) G.list.forEach(function (g) { out.push({ id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) }); });
         EXTRA_GIFTS.forEach(function (g) {
-            if (!out.some(function (x) { return x.id === g.id; })) out.push({ id: g.id, name: g.name, coins: g.coins, img: GAME_DIR + g.file });
+            if (!out.some(function (x) { return x.id === g.id; })) out.push({ id: g.id, name: g.name, coins: g.coins, img: (g.own ? OWN_DIR : GAME_DIR) + g.file });
         });
         out.sort(function (a, b) { return a.coins - b.coins; });
         return (_gifts = out);
