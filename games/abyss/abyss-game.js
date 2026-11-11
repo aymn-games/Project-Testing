@@ -62,7 +62,8 @@
     var pool = [];
     function nextQuestion() { if (!pool.length) pool = shuffle(AGP.abyssQuestions || []); return pool.pop(); }
     function isTF(q) { return !!q && typeof q.tf === 'boolean'; }
-    function labelsOf(q) { return isTF(q) ? ['صح', 'خطأ'] : ['1', '2']; }
+    // كل لوح زجاج عليه رقمه (1 يمين · 2 يسار) حتى بأسئلة صح وخطأ
+    function labelsOf() { return ['1', '2']; }
     function correctLane(q) { return isTF(q) ? (q.tf ? 0 : 1) : q.c; }
     function ensureRows(n) { while (S.qs.length < n) { var q = nextQuestion(); S.qs.push(q); S.rows.push({ labels: labelsOf(q), broken: null, safe: null }); } }
     function alive() { return S.players.filter(function (p) { return p.alive; }); }
@@ -101,7 +102,6 @@
         var ph = S.phase, q = S.qs[S.row], n = alive().length;
         show('join', ph === 'join');
         show('q', ph === 'question' || ph === 'reveal');
-        show('o0', ph === 'question' || ph === 'reveal'); show('o1', ph === 'question' || ph === 'reveal');
         show('hint', ph === 'question');
         show('alive', ph !== 'join'); show('steps', ph !== 'join');
         show('over', ph === 'over');
@@ -115,14 +115,12 @@
             $('qStep').textContent = CFG.mode === 'steps' ? 'الخطوة ' + (S.row + 1) + ' من ' + CFG.steps : 'الخطوة ' + (S.row + 1) + ' · آخر ناجي';
             $('qType').textContent = isTF(q) ? 'صح أو خطأ' : 'اختر 1 أو 2';
             $('qText').textContent = q.q;
-            var L = labelsOf(q);
             [0, 1].forEach(function (l) {
-                $('o' + l + 'n').textContent = isTF(q) ? (l ? '✗' : '✓') : L[l];
-                $('o' + l + 't').textContent = isTF(q) ? L[l] : q.a[l];
+                $('o' + l + 't').textContent = isTF(q) ? (l ? 'خطأ' : 'صح') : q.a[l];
                 $('o' + l + 'c').textContent = alive().filter(function (p) { return p.ans === l; }).length + S.players.filter(function (p) { return p.fall && p.lane === l && p.row === S.row; }).length;
                 var o = $('o' + l); o.classList.toggle('ok', ph === 'reveal' && S.broke && correctLane(q) === l); o.classList.toggle('bad', ph === 'reveal' && S.broke && correctLane(q) !== l);
             });
-            $('hintTx').innerHTML = isTF(q) ? 'اكتب <span class="kbd">صح</span> أو <span class="kbd">خطأ</span> — أو <span class="kbd">1</span> <span class="kbd">2</span> بالشات' : 'اكتب <span class="kbd">1</span> أو <span class="kbd">2</span> بالشات';
+            $('hintTx').innerHTML = isTF(q) ? 'اكتب <span class="kbd">1</span> صح أو <span class="kbd">2</span> خطأ بالشات' : 'اكتب <span class="kbd">1</span> أو <span class="kbd">2</span> بالشات';
             $('qTm').textContent = Math.max(0, Math.ceil(S.left));
             $('qTm').classList.toggle('low', ph === 'question' && S.left <= 5);
             $('qBar').style.width = (ph === 'question' ? Math.max(0, S.left / CFG.answerSec * 100) : 0) + '%';

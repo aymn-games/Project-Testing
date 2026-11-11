@@ -141,6 +141,12 @@
       const T = this.T; this.shardGeo = new T.BufferGeometry(); const v = new Float32Array([0, 0, 0, .9, 0, .2, .3, 0, .8, 0, 0, 0, .3, 0, .8, -.5, 0, .5]); this.shardGeo.setAttribute('position', new T.BufferAttribute(v, 3)); this.shardGeo.computeVertexNormals();
       this.shardMat = new T.MeshPhysicalMaterial({ color: '#d7f5ff', roughness: .05, transparent: true, opacity: .75, side: T.DoubleSide, emissive: '#7dd3fc', emissiveIntensity: .25, depthWrite: false });
       this.flash = new T.PointLight('#bae6fd', 0, 18, 2); this.sc.add(this.flash);
+      // رقم كبير يطفو فوق اللوحين اللي المفروض ينطون عليها الحين (1 يمين · 2 يسار)
+      this.marks = [0, 1].map(l => { const c = l ? ['#c084fc', '#6d28d9'] : ['#38bdf8', '#1d4ed8'];
+        const sp = new T.Sprite(new T.SpriteMaterial({ map: this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, c[0]); gr.addColorStop(1, c[1]);
+          g.shadowColor = c[0]; g.shadowBlur = 28; g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, 96, 0, 7); g.fill(); g.shadowBlur = 0; g.lineWidth = 8; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
+          g.fillStyle = '#fff'; g.font = '900 150px Zain, "IBM Plex Sans Arabic", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(l + 1), w / 2, h / 2 + 12); }), depthTest: false, transparent: true }));
+        sp.scale.setScalar(2.4); sp.renderOrder = 20; sp.visible = false; this.sc.add(sp); return sp; });
     }
     shatter(t) {
       const T = this.T, n = 46, im = new T.InstancedMesh(this.shardGeo, this.shardMat, n), w = new T.Vector3(); t.g.getWorldPosition(w); this.sc.add(im);
@@ -198,6 +204,8 @@
       for (const [, f] of this.figs) if (f.g.userData.sp) f.g.userData.sp.visible = d.names !== false && f.fallT == null;
       // المربعات: نبض الصف الحالي، رجفة ثم كسر المربع الغلط
       const cur = d.row;
+      const mrow = this.tiles[cur], showM = d.cam === 'play' && mrow && !mrow[0].broken && !mrow[1].broken && !mrow[0].safe && !mrow[1].safe;
+      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 2.4 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.6 + b, rowZ(cur)); m.scale.setScalar(pu); } });
       this.tiles.forEach((pair, i) => pair.forEach(tl => {
         if (tl.shakeT != null) { tl.shakeT += dt; tl.g.position.x = laneX(tl.lane) + Math.sin(tl.shakeT * 90) * .07 * (1 - tl.shakeT / .45); if (tl.shakeT > .45) { tl.shakeT = null; tl.g.visible = false; this.shatter(tl); } return; }
         if (!tl.safe && !tl.broken) { const on = i === cur; tl.edge.material.opacity = on ? .65 + Math.sin(t * 4) * .35 : .55; tl.glass.emissiveIntensity = on ? .18 + Math.sin(t * 4) * .08 : .08; }
@@ -234,13 +242,13 @@
       const standZ = rowZ(Math.max(-1, (cur || 0) - 1)), nextZ = rowZ(Math.max(0, cur || 0)), midZ = (standZ + nextZ) / 2;
       if (d.cam === 'overview') { const zm = (rowZ(-1) + rowZ(Math.max(0, rows - 1))) / 2, a = t * .05; P.set(26 + Math.sin(a) * 6, 26, rowZ(-1) + 26); L.set(0, -3, zm * .55); rate = 1; }
       else if (d.cam === 'win') { const zE = d.finish ? this.endZ() : standZ, a = t * .15; P.set(Math.sin(a) * 15, 7.5, zE + Math.cos(a) * 15); L.set(0, 2, zE); rate = 1.6; }
-      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * 1.2 + 6, 13, midZ + 15); L.set(w.x * .6, Math.max(-10, w.y * .5), nextZ); rate = 2.2; }
-      else { P.set(5 + Math.sin(t * .2) * 1.2, 15, midZ + 17); L.set(0, -1, nextZ - 2); rate = 1.6; }
+      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.5, 8.5, standZ + 11); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
+      else { P.set(1.5 + Math.sin(t * .2) * .5, 7.5, standZ + 10.5); L.set(0, 1, nextZ - 1); rate = 1.6; } // قريبة ونازلة: ورا اللاعبين مباشرة
       const k = 1 - Math.exp(-dt * rate); cam.position.lerp(P, k); this.camLook.lerp(L, k);
       if (this.shakeK > .01) cam.position.add(new T.Vector3((Math.random() - .5) * this.shakeK, (Math.random() - .5) * this.shakeK, 0));
       cam.lookAt(this.camLook);
       // أثناء اللعب الكادر ينزل لتحت عشان بطاقة السؤال فوق ما تغطي اللاعبين
-      const vt = d.cam === 'play' ? .14 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
+      const vt = d.cam === 'play' ? .24 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
       if (this.vo > .001) cam.setViewOffset(vw, vh, 0, -vh * this.vo, vw, vh); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
       this.sun.target.position.set(0, 0, standZ); this.sun.position.set(-30, 45, standZ - 60);
       this.r.render(this.sc, cam);

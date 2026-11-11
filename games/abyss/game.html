@@ -65,7 +65,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ac);box-shadow:0 0 10px var(--ac)}
 
 /* بطاقة السؤال */
-#q{position:absolute;top:var(--top,104px);left:50%;width:1180px;margin-left:-590px;border-radius:32px;padding:22px 40px 26px;text-align:center;animation:pop .5s cubic-bezier(.2,1,.3,1)}
+#q{position:absolute;top:var(--top,104px);left:50%;width:1240px;margin-left:-620px;border-radius:32px;padding:22px 40px 26px;text-align:center;animation:pop .5s cubic-bezier(.2,1,.3,1)}
 #q .top{display:flex;justify-content:center;gap:12px;margin-bottom:12px}
 #q h2{margin:0;font:700 46px/1.35 'IBM Plex Sans Arabic';text-wrap:balance}
 #q .bar{margin-top:18px;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -74,17 +74,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 #q .tm.low{border-color:var(--bad);color:#fda4af;animation:shake .5s infinite}
 
 /* بطاقات الخيارين: يمين = 1 ، يسار = 2 (نفس مكان المربع بالجسر) */
-.opt{position:absolute;bottom:96px;width:520px;border-radius:30px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all .35s;animation:pop .5s cubic-bezier(.2,1,.3,1) both}
-.opt.r{right:60px}.opt.l{left:60px;animation-delay:.08s}
-.opt .n{width:86px;height:86px;flex-shrink:0;border-radius:24px;display:grid;place-items:center;font:800 50px/1 'Zain','IBM Plex Sans Arabic';color:#fff}
-.opt.r .n{background:linear-gradient(135deg,#0ea5e9,#2563eb);box-shadow:0 10px 30px rgba(56,189,248,.45)}
-.opt.l .n{background:linear-gradient(135deg,#a855f7,#6d28d9);box-shadow:0 10px 30px rgba(168,85,247,.45)}
-.opt .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.opt .tx b{font:700 32px/1.3 'IBM Plex Sans Arabic';overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.opt .tx span{font:500 19px 'IBM Plex Sans Arabic';color:var(--mut)}
-.opt .cnt{font:700 54px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#e0f2fe;min-width:70px;text-align:center}
-.opt .cnt small{display:block;font:500 16px 'IBM Plex Sans Arabic';color:var(--mut);margin-top:4px}
-.opt.ok{border-color:rgba(74,222,128,.7);background:linear-gradient(180deg,rgba(20,83,45,.85),rgba(6,40,22,.8));box-shadow:0 0 60px rgba(34,197,94,.45)}
+/* الخيارين تحت السؤال: يمين = 1 ، يسار = 2 (نفس مكان اللوحين بالجسر) */
+.opts{display:flex;gap:16px;margin-top:18px}
+.opt{flex:1;min-width:0;border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:16px;text-align:right;transition:all .35s;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+.opt .n{width:64px;height:64px;flex-shrink:0;border-radius:18px;display:grid;place-items:center;font:800 42px/1 'Zain','IBM Plex Sans Arabic';color:#fff}
+.opt.r .n{background:linear-gradient(135deg,#0ea5e9,#2563eb);box-shadow:0 8px 24px rgba(56,189,248,.45)}
+.opt.l .n{background:linear-gradient(135deg,#a855f7,#6d28d9);box-shadow:0 8px 24px rgba(168,85,247,.45)}
+.opt .tx{flex:1;min-width:0;font:700 32px/1.3 'IBM Plex Sans Arabic';overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .cnt{display:flex;align-items:baseline;gap:6px;font:700 38px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#e0f2fe}
+.opt .cnt small{font:500 16px 'IBM Plex Sans Arabic';color:var(--mut)}
+.opt.ok{border-color:rgba(74,222,128,.7);background:linear-gradient(180deg,rgba(20,83,45,.85),rgba(6,40,22,.8));box-shadow:0 0 40px rgba(34,197,94,.45)}
 .opt.ok .n{background:linear-gradient(135deg,#22c55e,#15803d)}
 .opt.bad{border-color:rgba(244,63,94,.6);background:linear-gradient(180deg,rgba(88,16,32,.85),rgba(40,6,16,.8));opacity:.9}
 .opt.bad .n{background:linear-gradient(135deg,#f43f5e,#9f1239)}
@@ -180,12 +179,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
   <section id="q" class="glass" hidden>
     <div class="top"><span class="chip"><span class="dot"></span><span id="qStep">الخطوة 1</span></span><span class="chip m" id="qType">سؤال اختيارين</span></div>
     <h2 id="qText"></h2>
+    <div class="opts">
+      <div class="opt r" id="o0"><span class="n">1</span><span class="tx" id="o0t"></span><span class="cnt"><span id="o0c">0</span><small>لاعب</small></span></div>
+      <div class="opt l" id="o1"><span class="n">2</span><span class="tx" id="o1t"></span><span class="cnt"><span id="o1c">0</span><small>لاعب</small></span></div>
+    </div>
     <div class="bar"><i id="qBar" style="width:100%"></i></div>
     <div class="tm" id="qTm">15</div>
   </section>
-
-  <div class="opt r glass" id="o0" hidden><span class="n" id="o0n">1</span><span class="tx"><b id="o0t"></b><span>المربع اليمين</span></span><span class="cnt"><span id="o0c">0</span><small>لاعب</small></span></div>
-  <div class="opt l glass" id="o1" hidden><span class="n" id="o1n">2</span><span class="tx"><b id="o1t"></b><span>المربع اليسار</span></span><span class="cnt"><span id="o1c">0</span><small>لاعب</small></span></div>
 
   <div id="hint" hidden><span class="chip m" id="hintTx">اكتب <span class="kbd">1</span> أو <span class="kbd">2</span> بالشات</span></div>
 
