@@ -51,6 +51,11 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.FOLLOW, { platform: platform, id: id, name: name });
     },
 
+    // تكبيسات (لايكات) مشاهد: count = مجموع التكبيسات بالدفعة (تيك توك يجمّعها، والخادم يجمّعها أكثر كل ~300ms).
+    buildLikeMessage: function (platform, id, name, count) {
+        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Math.max(1, Number(count) || 1) });
+    },
+
     buildErrorMessage: function (platform, code, message) {
         return buildEnvelope(MESSAGE_TYPES.ERROR, { platform: platform, code: code, message: message });
     }

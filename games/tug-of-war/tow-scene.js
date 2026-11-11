@@ -4,16 +4,22 @@
  *
  * يحتاج importmap فيه three (game.html).
  *
- * createTugScene(container, { colors:[يسار، يمين] }) ← { ready, setState, pull, stop }
- *   setState({ teams:[[{id,name,g,frozen}],[...]], pos:-100..100, boost:[bool,bool], winner:-1|0|1 })
+ * createTugScene(container, { colors:[يسار، يمين] }) ← { ready, setState, pull, effect, stop }
+ *   setState({ teams:[[{id,name,g,frozen,out}],[...]], pos:-100..100, boost:[bool,bool], winner:-1|0|1 })
+ *     out = اللاعب انقصى (تعدّى خط النص): ينقذف للجهة الثانية ويختفي بانفجار
  *   pull(id): سحبة لاعب (حركة شد قوية لحظية)
+ *   effect(kind, k, ids): تأثير هدية — 'freeze' (ثلج على ids) · 'boost' (شرار ذهبي على فريق k)
+ *     · 'hook' (خطاف يطير على الحبل لجهة فريق k) · 'support' (دفعة بلون الفريق عند ids)
+ * أماكن اللاعبين وخط الإقصاء من TOW.slot/TOW.SHIFT (tow-platform.js) — نفس حساب منطق المباراة.
  */
 import * as THREE from 'three';
 
 const T = THREE;
-// المسافة بين اللاعبين: مريحة (1م) للعدد القليل، وما تقل عن 0.62م حتى مع 18 لاعب
-const stepFor = n => Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1)));
-const SHIFT = 3.2;          // المسافة من النص لخط الفوز (pos = ±100)
+// المسافة بين اللاعبين ومكان كل لاعب: نفس دوال TOW (tow-platform.js) عشان الإقصاء يطابق اللي يبان
+const TOWG = window.TOW || {};
+const stepFor = TOWG.stepFor || (n => Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1))));
+const slot = TOWG.slot || ((i, n) => 1.15 + i * stepFor(n));
+const SHIFT = TOWG.SHIFT || 3.2;          // المسافة من النص لخط الفوز (pos = ±100)
 const FONT = '"IBM Plex Sans Arabic", "Zain", Tahoma, sans-serif';
 const hash = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 
@@ -117,13 +123,16 @@ export function createTugScene(container, opts = {}) {
     }
     function sync() {
         const seen = new Set();
+        const n = Math.max(state.teams[0].length, state.teams[1].length);
         state.teams.forEach((list, k) => {
-            const dir = k ? 1 : -1, n = list.length, step = stepFor(n);
+            const dir = k ? 1 : -1;
             list.forEach((p, i) => {
                 const id = p.id || p.name; seen.add(id); let f = figs.get(id);
                 if (!f || f.k !== k) { if (f) drop(f); f = makeFig(p, k); if (!f) return; figs.set(id, f); }
-                f.x = dir * (1.15 + i * step); f.z = i % 2 ? .3 : -.3; f.frozen = !!p.frozen;
-                f.outer.position.set(f.x, 0, f.z); f.ly = 2.2 + (i % 2) * .42; // الأسماء بطابقين عشان ما تتراكب
+                f.x = dir * slot(i, n); f.z = i % 2 ? .3 : -.3; f.frozen = !!p.frozen;
+                if (p.out && !f.outAt) { f.outAt = clock.elapsedTime; burstAt(f, '#f97316', 46, 4.2); burstAt(f, '#fde68a', 22, 3); }
+                if (!p.out) { f.outAt = 0; f.outer.visible = true; f.outer.scale.setScalar(1); }
+                if (!f.outAt) f.outer.position.set(f.x, 0, f.z); f.ly = 2.2 + (i % 2) * .42; // الأسماء بطابقين عشان ما تتراكب
             });
         });
         for (const [id, f] of figs) if (!seen.has(id)) { drop(f); figs.delete(id); }
@@ -132,8 +141,8 @@ export function createTugScene(container, opts = {}) {
     // الكاميرا تقرّب أو تبعد حسب عدد اللاعبين وعرض الملعب: أبعد لاعب + أقصى سحبة لازم يبانون
     let spanX = 6;
     function fitCam() {
-        const n = Math.max(1, state.teams[0].length, state.teams[1].length), step = stepFor(n);
-        spanX = 1.15 + (n - 1) * step + SHIFT * .8 + .9;
+        const n = Math.max(1, state.teams[0].length, state.teams[1].length);
+        spanX = slot(n - 1, n) + SHIFT * .8 + .9;
         const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(19, spanX / (halfH * Math.max(.5, cam.aspect))));
         cam.position.set(0, 1.2 + dist * .2, dist); cam.lookAt(0, 1.0 + dist * .02, 0); cam.updateProjectionMatrix();
     }
@@ -160,6 +169,35 @@ export function createTugScene(container, opts = {}) {
         f.head.rotation.x = lean * .45;
     }
 
+    // ---- جزيئات التأثيرات (شرار، ثلج، انفجار): Sprites بإضاءة جمعية، وحد أقصى عشان الأداء
+    const dot = tex(64, 64, (g, w, h) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    const flake = tex(64, 64, (g) => { g.strokeStyle = '#fff'; g.lineWidth = 5; g.lineCap = 'round'; g.translate(32, 32); for (let i = 0; i < 6; i++) { g.rotate(Math.PI / 3); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 26); g.moveTo(0, 14); g.lineTo(-8, 21); g.moveTo(0, 14); g.lineTo(8, 21); g.stroke(); } });
+    const parts = [], fx = new T.Group(); sc.add(fx);
+    function spawn(pos, color, n, speed, o = {}) {
+        for (let i = 0; i < n && parts.length < 420; i++) {
+            const m = new T.Sprite(new T.SpriteMaterial({ map: o.map || dot, color, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+            const a = Math.random() * Math.PI * 2, u = Math.random() * .9 + .1, sz = (o.size || .22) * (.6 + Math.random() * .8);
+            m.position.copy(pos); m.scale.setScalar(sz); fx.add(m);
+            parts.push({ m, v: new T.Vector3(Math.cos(a) * speed * u, (o.up != null ? o.up : speed * .8) * (.5 + Math.random()), Math.sin(a) * speed * u * .6), life: o.life || 1.1, age: 0, g: o.g != null ? o.g : 6, sz, spin: (Math.random() - .5) * 6 });
+        }
+    }
+    const _v = new T.Vector3();
+    function burstAt(f, color, n, speed, o) { f.outer.getWorldPosition(_v); _v.y += 1.1; spawn(_v.clone(), color, n, speed, o); }
+    // الخطاف: رأس معدني لامع يطير على الحبل من طرف فريقه للنص
+    const hookMesh = new T.Group(); hookMesh.visible = false; sc.add(hookMesh);
+    { const hm = new T.MeshStandardMaterial({ color: '#f9a8d4', emissive: '#ec4899', emissiveIntensity: 1.2, metalness: .6, roughness: .25 });
+      const arc = new T.Mesh(new T.TorusGeometry(.32, .07, 10, 24, Math.PI * 1.25), hm); arc.rotation.z = Math.PI * .9; hookMesh.add(arc);
+      const shaft = new T.Mesh(new T.CylinderGeometry(.06, .06, .9, 10), hm); shaft.position.set(.32, .45, 0); hookMesh.add(shaft);
+      const tip = new T.Mesh(new T.ConeGeometry(.12, .25, 10), hm); tip.position.set(-.3, -.1, 0); tip.rotation.z = Math.PI * .75; hookMesh.add(tip); }
+    let hookAnim = null, flash = { k: -1, t: 0, c: null };
+    function effect(kind, k, ids) {
+        const list = (ids || []).map(id => figs.get(id)).filter(Boolean);
+        if (kind === 'freeze') { for (const f of list) { burstAt(f, '#bae6fd', 26, 2.6, { map: flake, size: .34, g: 1.5, life: 1.6 }); burstAt(f, '#7dd3fc', 30, 3.2); } flash = { k: 1 - k, t: 1, c: '#7dd3fc' }; }
+        if (kind === 'boost') { for (const f of figs.values()) if (f.k === k && !f.outAt) burstAt(f, '#fbbf24', 14, 2.4, { up: 3.5, g: 2 }); flash = { k, t: 1, c: '#fbbf24' }; }
+        if (kind === 'hook') { const dir = k ? 1 : -1; hookAnim = { k, t: 0, from: dir * 11, to: 0 }; hookMesh.visible = true; hookMesh.scale.set(dir > 0 ? 1.6 : -1.6, 1.6, 1.6); for (const f of figs.values()) if (f.k === k) f.jerk = 1; }
+        if (kind === 'support') { for (const f of list) burstAt(f, colors[k], 30, 3); for (const f of figs.values()) if (f.k === k) f.jerk = Math.max(f.jerk, .6); }
+    }
+
     const clock = new T.Clock(); let raf = 0, last = -1e9, posX = 0, measured = false;
     function frame(now) {
         raf = requestAnimationFrame(frame); if (now - last < 29) return; last = now; // 30 إطار/ث (نفس البث)
@@ -168,6 +206,13 @@ export function createTugScene(container, opts = {}) {
         posX += (target - posX) * (1 - Math.exp(-dt * 7)); mover.position.x = posX;
         flag.position.set(0, ropeY, 0);
         for (const f of figs.values()) {
+            if (f.outAt) { // منقصى: ينقذف لجهة الخصم وهو يلف، ويصغر لين يختفي
+                const u = Math.min(1, (t - f.outAt) / 1.1), dir = f.k ? -1 : 1;
+                f.outer.position.set(f.x + dir * u * 3.2, Math.sin(u * Math.PI) * 1.8, f.z + u * 1.2);
+                f.outer.rotation.z = dir * u * 5; f.outer.scale.setScalar(Math.max(.001, 1 - u * u)); f.outer.visible = u < 1;
+                poseShip(f, 0, t, 'win'); continue;
+            }
+            if (state.boost[f.k] && state.winner < 0 && Math.random() < dt * 2.5) burstAt(f, '#fbbf24', 2, 1.2, { up: 2.6, g: 1, life: .9, size: .16 });
             f.jerk = Math.max(0, f.jerk - dt * 3.5);
             const won = state.winner === f.k, lost = state.winner >= 0 && !won;
             const boost = state.boost[f.k] ? .08 : 0;
@@ -177,10 +222,18 @@ export function createTugScene(container, opts = {}) {
             f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
             if (won) f.outer.position.y = Math.abs(Math.sin(t * 6 + f.ph)) * .25; else f.outer.position.y = 0;
         }
+        for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.age += dt; const a = p.age / p.life;
+            if (a >= 1) { fx.remove(p.m); p.m.material.dispose(); parts.splice(i, 1); continue; }
+            p.v.y -= p.g * dt; p.m.position.addScaledVector(p.v, dt); p.m.material.opacity = 1 - a * a; p.m.material.rotation += p.spin * dt; p.m.scale.setScalar(p.sz * (1 - a * .4)); }
+        if (hookAnim) { hookAnim.t += dt / .55; const u = Math.min(1, hookAnim.t);
+            hookMesh.position.set(hookAnim.from + (hookAnim.to - hookAnim.from) * (1 - Math.pow(1 - u, 3)) + posX, ropeY + .25 + Math.sin(u * Math.PI) * .6, 0); hookMesh.rotation.y = u * Math.PI * 2;
+            spawn(hookMesh.position.clone(), '#f472b6', 2, .8, { up: .5, g: 0, life: .5, size: .2 });
+            if (u >= 1) { spawn(new T.Vector3(posX, ropeY, 0), '#f472b6', 50, 4.5); spawn(new T.Vector3(posX, ropeY, 0), '#ffffff', 20, 3); hookMesh.visible = false; hookAnim = null; } }
+        if (flash.t > 0) { flash.t = Math.max(0, flash.t - dt * 1.4); const L = flash.k ? glowR : glowL; L.color.set(flash.c); L.intensity = 18 + flash.t * 90; if (flash.t === 0) L.color.set(colors[flash.k]); }
         // ارتفاع الحبل = ارتفاع يدين أول لاعب (مرة وحدة بعد ما تطلع الشخصيات)
-        if (!measured && figs.size) { const f = figs.values().next().value; f.outer.updateMatrixWorld(true);
+        if (!measured && figs.size) { const f = [...figs.values()].find(x => !x.outAt); if (f) { f.outer.updateMatrixWorld(true);
             const hand = f.arms[0].children[1];
-            if (hand) { const v = hand.getWorldPosition(new T.Vector3()); if (v.y > .4) { ropeY = v.y; rope.position.y = ropeY; measured = true; } } }
+            if (hand) { const v = hand.getWorldPosition(new T.Vector3()); if (v.y > .4) { ropeY = v.y; rope.position.y = ropeY; measured = true; } } } }
         r.render(sc, cam);
     }
     const ro = new ResizeObserver(() => { const w = container.clientWidth || 1, h = container.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h;
@@ -193,6 +246,7 @@ export function createTugScene(container, opts = {}) {
         ready,
         setState(s) { state = { ...state, ...s }; sync(); },
         pull(id) { const f = figs.get(id); if (f) f.jerk = 1; },
+        effect,
         stop() { cancelAnimationFrame(raf); ro.disconnect(); for (const f of figs.values()) drop(f); r.dispose(); r.domElement.remove(); }
     };
 }

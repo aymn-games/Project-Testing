@@ -204,6 +204,23 @@
             cb(payload);
         });
     }
+    /** cb({id, name, count}) لكل دفعة تكبيسات (لايكات) — من الخادم مجمّعة كل ~300ms. */
+    function onLike(cb) {
+        if (!AGP.events || typeof AGP.events.on !== 'function') return function () {};
+        return AGP.events.on('stream:likeReceived', function (payload) {
+            if (!payload || !payload.id) return;
+            cb(payload);
+        });
+    }
+
+    /* ============ هندسة الملعب (مشتركة بين منطق المباراة والمشهد الثري دي) ============
+     * كل لاعب له مكان ثابت على الحبل: slot(i, n) = بعده عن النص بالمتر (i ترتيبه
+     * بفريقه، n أكبر عدد بالفريقين). الحبل يتحرك SHIFT متر لما pos = ±100.
+     * اللاعب ينقصى لما الحبل يسحبه لين يتعدى خط النص: slot < |shift| بجهة الخصم. */
+    var SHIFT = 3.2;
+    function stepFor(n) { return Math.max(.62, Math.min(1, 6.2 / Math.max(1, n - 1))); }
+    function slot(i, n) { return 1.15 + i * stepFor(n); }
+
     function onGift(cb) {
         if (!AGP.events || typeof AGP.events.on !== 'function') return function () {};
         return AGP.events.on('stream:giftReceived', function (payload) {
@@ -266,6 +283,10 @@
         connect: connect,
         onComment: onComment,
         onGift: onGift,
+        onLike: onLike,
+        SHIFT: SHIFT,
+        stepFor: stepFor,
+        slot: slot,
         createRegistry: createRegistry
     };
 }());
