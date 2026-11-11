@@ -605,20 +605,6 @@
     function fmtTime(s) { var m = Math.floor(s / 60), r = s - m * 60; return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1); }
 
     function renderLobby() {
-        $('lobbyCount').textContent = S.cars.length + ' / ' + settings.maxDrivers;
-        var grid = $('lobbyGrid'); grid.innerHTML = '';
-        for (var i = 0; i < settings.maxDrivers; i++) {
-            var c = S.cars[i];
-            var el = document.createElement('div');
-            el.className = 'slot' + (c ? ' filled' : '');
-            if (c) {
-                el.style.setProperty('--team', c.color);
-                el.innerHTML = '<span class="slot-num">' + c.number + '</span><span class="slot-av">' + avatarHtml(c) + '</span><span class="slot-name">' + esc(c.name) + '</span><button class="slot-x" title="إزالة" data-id="' + esc(c.id) + '">×</button>';
-            } else {
-                el.innerHTML = '<span class="slot-num">' + (i + 1) + '</span><span class="slot-empty">مقعد فاضي</span>';
-            }
-            grid.appendChild(el);
-        }
         $('startBtn').disabled = S.cars.length < 1;
         $('startBtn2').disabled = S.cars.length < 1;
         renderReady();
@@ -988,11 +974,8 @@
         $('settingsBtn').onclick = function () { openSettings(true); };
         $('settingsClose').onclick = function () { openSettings(false); };
         $('testBtn2').onclick = function () { startTest(true); };
-        $('clearBtn').onclick = clearDrivers;
         $('againBtn').onclick = function () { resetRace(); stopTest(); };
-        $('testBtn').onclick = function () { openSettings(false); startTest(true); };
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
-        $('lobbyGrid').addEventListener('click', function (e) { var b = e.target.closest('.slot-x'); if (b) removeCar(b.dataset.id); });
         $('hudToggle').onclick = function () { document.body.classList.toggle('clean'); };
         $('endBtn').onclick = endNow;
         $('ctrlBtn').onclick = function (e) { e.stopPropagation(); $('ctrlMenu').classList.toggle('show'); $('ctrlBtn').classList.toggle('on', $('ctrlMenu').classList.contains('show')); };
