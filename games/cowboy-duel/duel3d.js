@@ -527,7 +527,7 @@ export async function mountDuel(el, opts = {}) {
         cam.position.copy(camPos); if (shake > 0) { cam.position.x += (Math.random() - .5) * shake; cam.position.y += (Math.random() - .5) * shake; shake = Math.max(0, shake - real * 1.2); }
         cam.lookAt(camLook); if (camRoll) cam.rotateZ(camRoll); if (Math.abs(cam.fov - camFov) > .01) { cam.fov = camFov; cam.updateProjectionMatrix(); }
         for (const [, f] of figs) f.U.label.visible = labels && f.state !== 'dead' && f.state !== 'poof' && cam.position.distanceTo(f.g.position) > 6;
-        r.render(sc, cam);
+        if (!window.__cap) r.render(sc, cam); // تسجيل الفيديو: الرسم مرة وحدة لكل إطار (render())
         if (shot && ((shot.dur && shotT >= shot.dur) || (shot.until && shot.until()))) next();
     }
     raf = requestAnimationFrame(tick);
@@ -539,5 +539,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }

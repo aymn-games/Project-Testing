@@ -13,18 +13,22 @@ const BOT_NAMES = ['أبو فهد', 'سعود', 'نورة', 'ريم', 'خالد'
 const ANSWER_MS = 15000;          // ما أحد كتب = جرس جديد
 const JAM_MS = 1200;              // إجابة غلط = المسدس يعلّق شوي
 
-const G = { players: [], alive: [], byes: {}, phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null };
+const G = { players: [], alive: [], byes: {}, phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null, force: {} }; // force: لتسجيل فيديو العرض فقط (decoy: نعم/لا، fall: الأول يطيح بالخدعة)
 
 // ---------- الصوت (WebAudio مولّد بالكود — بدون ملفات)
 const SFX = (() => {
     let ac = null, echo = null, windG = null;
-    function ctx() { if (ac) return ac; try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+    function ctx() { if (ac) return ac; try {
+        // تسجيل فيديو العرض (tools/cowboy-duel-video): الأصوات تنكتب بـ OfflineAudioContext على نفس وقت اللعبة (performance.now المزيّف)
+        const cap = window.__capAudio;
+        if (cap) ac = new Proxy(cap.ctx, { get(o, k) { if (k === 'currentTime') return Math.max(0, (performance.now() - cap.t0) / 1000); const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; } });
+        else ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
         // صدى الوادي للطلقة
         const d = ac.createDelay(1); d.delayTime.value = .32; const fb = ac.createGain(); fb.gain.value = .38; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
         d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(ac.destination); echo = d; return ac; }
     function noise(sec) { const a = ctx(), b = a.createBuffer(1, a.sampleRate * sec, a.sampleRate), c = b.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1; const s = a.createBufferSource(); s.buffer = b; return s; }
     return {
-        unlock() { const a = ctx(); a && a.state === 'suspended' && a.resume(); },
+        unlock() { if (window.__capAudio) return; const a = ctx(); a && a.state === 'suspended' && a.resume(); },
         bang() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(.7), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + .5); g.gain.setValueAtTime(1.1, t); g.gain.exponentialRampToValueAtTime(.001, t + .55); n.connect(f); f.connect(g); g.connect(a.destination); g.connect(echo); n.start(t);
             const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(40, t + .25); og.gain.setValueAtTime(.9, t); og.gain.exponentialRampToValueAtTime(.001, t + .3); o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + .3); },
         bell() { const a = ctx(); if (!a) return; const t = a.currentTime; [[620, .35], [620 * 2.76, .16], [620 * 5.4, .08], [310, .2]].forEach(([fq, v]) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = fq; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + 2.4); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 2.4); }); },
@@ -53,12 +57,8 @@ const SFX = (() => {
 })();
 
 // ---------- واجهة: شات، لافتات، ملصقات مطلوب، ستارة سينما، انتقالات
-function chat(name, text, kind = '') {
-    const box = $('#chat'), el = document.createElement('div'); el.className = 'msg ' + kind;
-    el.innerHTML = `<b></b><span></span>`; el.querySelector('b').textContent = name; el.querySelector('span').textContent = text;
-    box.appendChild(el); while (box.children.length > 7) box.firstChild.remove();
-    setTimeout(() => el.classList.add('old'), 6000);
-}
+// تنبيه قصير بنص الشاشة (بدل الشات): تأهل مباشر، طلقة ضايعة، ما أحد سحب…
+function notice(text) { const el = $('#notice'); el.textContent = text; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(notice.t); notice.t = setTimeout(() => el.classList.remove('in'), 2600); }
 function bars(mode) { document.body.dataset.bars = mode || ''; }
 function grade(mode) { document.body.dataset.grade = mode || ''; }
 async function flash(color = '#fff', ms = 160) { const f = $('#flash'); f.style.background = color; f.style.transition = 'none'; f.style.opacity = 1; await sleep(30); f.style.transition = `opacity ${ms}ms ease-out`; f.style.opacity = 0; }
@@ -89,9 +89,8 @@ function renderLobby() {
 // ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
 function addPlayer(id, name, bot = false) {
     if (G.phase !== 'lobby' || G.players.some(p => p.id === id)) return;
-    if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; chat('🚫', `السوق ممتلئ (${G.settings.maxPlayers} لاعب)`, 'bad'); } return; }
+    if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; notice(`🚫 السوق ممتلئ (${G.settings.maxPlayers} لاعب)`); } return; }
     G.players.push({ id, name, bot }); G.scene && G.scene.setPlayers(G.players); renderLobby();
-    chat(name, 'دخل السوق 🤠', 'sys');
 }
 function addBot() { const used = new Set(G.players.map(p => p.name)), name = BOT_NAMES.find(n => !used.has(n)) || ('راعي ' + (G.players.length + 1)); addPlayer('bot:' + name, name, true); }
 
@@ -126,7 +125,7 @@ async function startMatch() {
 async function nextRound() {
     G.round++; const { pairs, bye } = makePairs(G.alive), all = G.settings.mode === 'all';
     banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 2400);
-    if (bye) { chat('🍀', `${bye.name} يتأهل مباشرة للجولة الجاية`, 'sys'); }
+    if (bye) { notice(`🍀 ${bye.name} يتأهل مباشرة للجولة الجاية`); }
     await sleep(1400);
     const winners = [];
     if (all) winners.push(...await runDuels(pairs));
@@ -154,7 +153,7 @@ function warnThenReveal(again) {
     lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
     if (!again) later(1700 + 300, () => G.scene.drawGuns(activeIds()));
     let t = lines.length * 1700 + rnd(200, 1200);
-    if (G.settings.trick && Math.random() < .55) { const tt = t; later(tt, decoy); t += 1700; }
+    if (G.settings.trick && (G.force.decoy != null ? G.force.decoy : Math.random() < .55)) { const tt = t; later(tt, decoy); t += 1700; }
     later(t, () => { G.phase = 'standoff'; sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
     later(t + 750, reveal);
 }
@@ -162,31 +161,29 @@ function warnThenReveal(again) {
 function decoy() {
     G.decoy = makeChallenge(); G.phase = 'decoy';
     sign('decoy', G.decoy.value); $('#sign').classList.toggle('word', G.decoy.type === 'word'); SFX.tick();
-    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (p.bot && Math.random() < .22) later(rnd(350, 1300), () => answer(p.id, G.decoy.value)); }));
+    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { const fall = G.force.fall != null ? (G.force.fall && p === d.a) : Math.random() < .22; if (p.bot && fall) later(rnd(350, 1300), () => answer(p.id, G.decoy.value)); }));
 }
 function reveal() {
     G.ch = makeChallenge(G.decoy); G.decoy = null; G.revealAt = performance.now(); G.phase = 'armed';
     // الاثنين ضيّعوا طلقتهم؟ يرجع لهم الحق بالجرس هذا
-    G.active.forEach(d => { if (!d.done && d.wasted[d.a.id] && d.wasted[d.b.id]) { d.wasted = {}; chat('🌵', `${d.a.name} و${d.b.name} ضيّعوا طلقاتهم… عبّوا من جديد`, 'sys'); } });
+    G.active.forEach(d => { if (!d.done && d.wasted[d.a.id] && d.wasted[d.b.id]) { d.wasted = {}; notice(`🌵 ${d.a.name} و${d.b.name} ضيّعوا طلقاتهم… عبّوا من جديد`); } });
     sign('show', G.ch.value); $('#sign').classList.toggle('word', G.ch.type === 'word');
     $('#sign .lbl').textContent = G.ch.type === 'word' ? 'اكتب الكلمة بالشات!' : 'اكتب الرقم بالشات!';
     SFX.bell(); flash('rgba(255,220,150,.55)', 260);
-    chat('🔔', `${G.ch.type === 'word' ? 'الكلمة' : 'الرقم'}: ${G.ch.value} — اكتبه بسرعة!`, 'sys');
     // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول
     if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (!p.bot || d.wasted[p.id]) return; const ms = rnd(900, 3800);
         if (Math.random() < .25) later(ms * .6, () => answer(p.id, G.ch.type === 'num' ? String(+G.ch.value + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9))) : pickOne(WORDS)));
         later(ms, () => answer(p.id, G.ch.value)); }));
-    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; chat('🌵', 'ولا أحد سحب! جرس جديد…', 'sys'); G.active.forEach(d => { d.wasted = {}; }); G.phase = 'standoff'; warnThenReveal(true); });
+    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; notice('🌵 ولا أحد سحب! جرس جديد…'); G.active.forEach(d => { d.wasted = {}; }); G.phase = 'standoff'; warnThenReveal(true); });
 }
 function answer(id, text) {
     const p = G.players.find(x => x.id === id); if (!p) return;
-    chat(p.name, text);
     const d = G.active && G.active.find(x => !x.done && (x.a.id === id || x.b.id === id)); if (!d) return;
-    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); chat('💨', `${p.name} طاح بالخدعة وضيّع طلقته!`, 'bad'); } return; }
+    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
     if (G.phase !== 'armed') return;
     if (d.wasted[id]) return; // مسدسه فاضي لين الجرس الجاي
     if (d.jam[id] && performance.now() < d.jam[id]) return;
-    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; chat('❌', `${p.name} غلط — المسدس علّق!`, 'bad'); } return; }
+    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; } return; }
     win(d, p, text.trim());
 }
 // الأسرع: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح
