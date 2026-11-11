@@ -33,7 +33,7 @@ var ALL_CATS = [
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
     { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' },
     { id: 'plural', name: 'جمع الكلمة' }, { id: 'opposite', name: 'عكس المعنى' },
-    { id: 'currency', name: 'عملة الدولة' }, { id: 'sentence', name: 'رتّب الجملة' },
+    { id: 'currency', name: 'عملة الدولة' },
     { id: 'color', name: 'لون الشيء' }, { id: 'count', name: 'كم العدد؟' },
     { id: 'synonym', name: 'مرادف الكلمة' }
 ];
