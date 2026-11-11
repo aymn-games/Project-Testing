@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
-<title>لمحة — ألعاب أيمن</title>
+<title>حنكة — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -163,7 +163,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
     <!-- شريط التحكم: التعليمات + زر بدء الجولة / الجولة التالية -->
     <div style="flex-shrink:0;height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 18px 0 30px;box-sizing:border-box;border-radius:999px;background:rgba(18,16,26,.7);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08)">
-      <span style="font:500 22px 'IBM Plex Sans Arabic';color:#a8a3b5">الجواب الصح بالشات <b style="color:#6ee7b7">+1</b> · اكتب <b style="color:#ddd6fe">تخطي</b> لسؤال جديد <b style="color:#fdba74">−0.5</b> · وقت كل لاعب <b style="color:#ddd6fe">{{ turnLabel }}</b></span>
+      <span style="font:500 22px 'IBM Plex Sans Arabic';color:#a8a3b5">الجواب الصح بالشات <b style="color:#6ee7b7">+1</b> · اكتب <b style="color:#ddd6fe">تخطي</b> لسؤال جديد <b style="color:#fca5a5">−0.5</b> · وقت كل لاعب <b style="color:#ddd6fe">{{ turnLabel }}</b></span>
       <sc-if value="{{ showBtn }}" hint-placeholder-val="{{ true }}">
         <button onClick="{{ primary }}" style="height:72px;min-width:340px;padding:0 48px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 28px 'IBM Plex Sans Arabic';animation:glow 1.8s infinite;box-shadow:0 10px 30px rgba(139,92,246,.4)" style-hover="filter:brightness(1.08)" style-active="transform:scale(.96)">{{ btnLabel }}<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       </sc-if>
@@ -186,7 +186,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
                 <span style="width:110px;height:110px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:3px solid {{ p.color }};box-shadow:0 0 30px {{ p.glow }};font:700 48px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
                 <span style="position:relative;max-width:100%;font:700 26px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
                 <span style="display:flex;align-items:baseline;gap:8px"><span style="font:700 72px/1 'IBM Plex Sans Arabic';color:{{ p.color }};direction:ltr">{{ p.score }}</span><span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">نقطة</span></span>
-                <span style="display:flex;gap:10px;font:600 16px 'IBM Plex Sans Arabic'"><span style="color:#6ee7b7">{{ p.correct }} صح</span><span style="color:#5d586a">·</span><span style="color:#fdba74">{{ p.skips }} تخطي</span></span>
+                <span style="display:flex;gap:10px;font:600 16px 'IBM Plex Sans Arabic'"><span style="color:#6ee7b7">{{ p.correct }} صح</span><span style="color:#5d586a">·</span><span style="color:#fca5a5">{{ p.skips }} تخطي</span></span>
               </div>
             </sc-for>
           </div>
@@ -349,7 +349,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 // ============================================================
-//  لمحة — شاشة اللعب (نفس قالب أسرع إجابة: games/fastest-answer/game.html)
+//  حنكة — شاشة اللعب (نفس قالب أسرع إجابة: games/fastest-answer/game.html)
 //  كل جولة 3 لاعبين بنفس الوقت، لكل واحد سؤاله ووقته ونقاطه:
 //   · الجواب الصح بالشات = +1 وسؤال جديد على طول
 //   · «تخطي» = −0.5 وسؤال جديد · الجواب الغلط ما يخصم شي
@@ -362,7 +362,8 @@ if(!SETUP) location.replace('index.html');
 const ROSTER = LM.readJSON('lm-roster', [[]]);
 const PLAYERS = LM.readJSON('lm-players', {});
 const BANK = (window.AymanGamesPlatform && window.AymanGamesPlatform.lamhaQuestions) || [];
-const SLOT_COLORS = ['#a78bfa','#38bdf8','#f472b6'];
+// هوية ألعاب أيمن: لون بنفسجي واحد لكل الخانات (بدل ثلاث ألوان)
+const SLOT_COLORS = ['#a78bfa','#a78bfa','#a78bfa'];
 const PER_ROUND = 3, CORRECT_PTS = 1, SKIP_PTS = 0.5;
 const SKIP_WORDS = ['تخطي','skip'];
 // التصفية: كم لاعب يتأهل حسب عدد اللاعبين بالمرحلة
@@ -481,7 +482,7 @@ class Component extends DCLogic {
     if(!key) return;
     if(SKIP_WORDS.includes(key)){
       this.snd('skip');
-      this.setSlot(i,{q:this.nextQ(),feed:'تخطّى · الجواب كان: '+sl.q.a,feedC:'#fdba74',delta:{id:Math.random(),txt:'−0.5',c:'#fdba74'},flash:'skip'},{...t,score:t.score-SKIP_PTS,skips:t.skips+1},user);
+      this.setSlot(i,{q:this.nextQ(),feed:'تخطّى · الجواب كان: '+sl.q.a,feedC:'#fca5a5',delta:{id:Math.random(),txt:'−0.5',c:'#fca5a5'},flash:'skip'},{...t,score:t.score-SKIP_PTS,skips:t.skips+1},user);
       this.addLog('skip',`${user} تخطّى (−0.5)`); return; }
     if(this.check(text,sl.q.a)){
       this.snd('correct');
@@ -519,7 +520,7 @@ class Component extends DCLogic {
     return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
   }
   eventGroups(){
-    const T={join:['انضمام','#a78bfa'],correct:['إجابة صحيحة','#34d399'],skip:['تخطي','#fb923c'],kick:['إقصاء','#f87171'],points:['نقاط','#fbbf24'],round:['بداية الجولة','#38bdf8'],stage:['التصفية','#c4b5fd']};
+    const T={join:['انضمام','#a78bfa'],correct:['إجابة صحيحة','#34d399'],skip:['تخطي','#f87171'],kick:['إقصاء','#f87171'],points:['نقاط','#fbbf24'],round:['بداية الجولة','#38bdf8'],stage:['التصفية','#c4b5fd']};
     const groups=[]; let cur=null;
     for(const e of this.state.log){ const title=(e.stage>1?'المرحلة '+e.stage+' · ':'')+(e.round===0?'البداية':'الجولة '+e.round);
       if(!cur||cur.title!==title){ cur={title,items:[]}; groups.push(cur); }
@@ -543,10 +544,10 @@ class Component extends DCLogic {
     const slots=[0,1,2].map(i=>{ const sl=s.slots[i], c=SLOT_COLORS[i];
       if(!sl) return {empty:true,full:false,bd:'rgba(255,255,255,.06)',halo:'transparent',flash:'0 0 0 0 transparent',op:.45};
       const t=this.st(sl.name), low=P==='playing'&&!sl.done&&leftSec<=10, done=sl.done&&P!=='ready';
-      const fl=sl.flash==='ok'?'0 0 0 3px rgba(52,211,153,.55), 0 0 60px rgba(52,211,153,.3)':sl.flash==='skip'?'0 0 0 3px rgba(251,146,60,.55), 0 0 60px rgba(251,146,60,.25)':'0 0 0 0 transparent';
+      const fl=sl.flash==='ok'?'0 0 0 3px rgba(52,211,153,.55), 0 0 60px rgba(52,211,153,.3)':sl.flash==='skip'?'0 0 0 3px rgba(248,113,113,.5), 0 0 60px rgba(248,113,113,.22)':'0 0 0 0 transparent';
       const qText=sl.q?sl.q.q:'', L=qText.length;
       const NL=[...sl.name].length;
-      return {empty:false,full:true,name:sl.name,nameFs:NL<=14?'30px':NL<=20?'26px':NL<=28?'22px':'19px',handle:this.handle(sl.name),color:c,bd:c+'66',soft:c+'14',halo:c+'2e',flash:fl,op:done?.75:1,
+      return {empty:false,full:true,name:sl.name,nameFs:NL<=14?'30px':NL<=20?'26px':NL<=28?'22px':'19px',handle:this.handle(sl.name),color:'#ddd6fe',bd:'rgba(167,139,250,.28)',soft:c+'14',halo:'rgba(139,92,246,.16)',flash:fl,op:done?.75:1,
         ring:c,deg:360,pulse:'none',
         score:fmt(t.score),correct:t.correct,skips:t.skips,...this.avItem(sl.name,c),
         hasQ:P==='playing'&&!!sl.q&&!sl.done, noQ:!(P==='playing'&&!!sl.q&&!sl.done), cat:sl.q?sl.q.c:'',
@@ -558,13 +559,13 @@ class Component extends DCLogic {
     const liveSet=new Set(P==='playing'?s.slots.filter(x=>!x.done).map(x=>x.name):[]);
     const list=this.ranked(s.queue.filter(n=>this.st(n).played)), wait=s.queue.slice(s.qIdx);
     const scoreRows=list.map((n,j)=>{ const inQ=j<qual, live=liveSet.has(n); return {cut:j===qual,name:n,rank:j+1,val:fmt(this.st(n).score),valFont:'700 22px',valColor:inQ?'#ddd6fe':'#a8a3b5',
-        bg:live?'rgba(56,189,248,.08)':inQ?'rgba(139,92,246,.10)':'rgba(255,255,255,.03)',bd:live?'rgba(56,189,248,.4)':inQ?'rgba(167,139,250,.35)':'rgba(255,255,255,.07)',rankColor:inQ?'#c4b5fd':'#8a8596',avBd:inQ?'rgba(167,139,250,.6)':'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}; });
+        bg:live?'rgba(139,92,246,.16)':inQ?'rgba(139,92,246,.10)':'rgba(255,255,255,.03)',bd:live?'rgba(196,181,253,.55)':inQ?'rgba(167,139,250,.35)':'rgba(255,255,255,.07)',rankColor:inQ?'#c4b5fd':'#8a8596',avBd:inQ?'rgba(167,139,250,.6)':'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}; });
     const waitRows=wait.map((n,j)=>({name:n,rank:j+1,val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#8a8596',bg:'rgba(255,255,255,.03)',bd:'rgba(255,255,255,.07)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
     const lastRound=s.qIdx>=s.queue.length;
     const btnLabel=P==='ready'?'ابدأ الجولة '+s.round:P==='roundEnd'?(lastRound?'نتيجة التصفية':'الجولة التالية'):P==='stageEnd'?'عرض النتيجة':'';
     const F=s.final, eg=this.eventGroups();
     const final=(F&&s.showFinal)?(()=>{ const w=F.qualified[0]||''; return { name:w, score:fmt(this.st(w).score), sub:'المرحلة '+s.stage, qLabel:`المتأهلين (${F.qualified.length})`, outLabel:`خرجوا (${F.out.length})`, hasOut:F.out.length>0, canNext:F.qualified.length>=2&&F.out.length>0, nextLabel:`مرحلة جديدة بالمتأهلين (${F.qualified.length})`,
-      players:F.qualified.map((n,j)=>{ const el=j===0?LM.winCard(this.reg.player(n),['المركز الأول',fmt(this.st(n).score)+' نقطة','لمحة'],'wc0',200):null;
+      players:F.qualified.map((n,j)=>{ const el=j===0?LM.winCard(this.reg.player(n),['المركز الأول',fmt(this.st(n).score)+' نقطة','حنكة'],'wc0',200):null;
         return {name:n,rank:j+1,score:fmt(this.st(n).score)+' نقطة',ring:j===0?'#c4b5fd':'#a78bfa',bd:j===0?'rgba(196,181,253,.6)':'rgba(167,139,250,.35)',delay:(0.4+j*0.06).toFixed(2)+'s',wcOn:!!el,wcStd:!el,wcEl:el,...this.avItem(n,'#7c3aed')}; }),
       out:F.out.map(n=>({name:n,score:fmt(this.st(n).score),...this.avItem(n,'#7c3aed')})) }; })():null;
     return { ...this.anims(), scale:s.scale, round:s.round, rounds:Math.max(1,Math.ceil(total/PER_ROUND)), stage:s.stage, showStage:s.stage>1, playedCount:played, totalCount:total, qualCount:qual,
@@ -597,7 +598,7 @@ class Component extends DCLogic {
       setTabs:['الإعدادات','اللاعبين'].map((l,i)=>({label:l,pick:()=>{this.snd('tick');this.setState({setTab:i});},...this.seg(s.setTab===i)})),
       turnOpts:[[90,'دقيقة ونص'],[120,'دقيقتين']].map(([v,l])=>({label:l,pick:()=>{ this.snd('tick'); this.setState({turn:v}); },...this.seg(s.turn===v)})),
       setPlayers:s.queue.map((n,j)=>{ const live=s.slots.some(x=>x.name===n)&&(P==='playing'||P==='ready'||P==='countdown'), pl=this.st(n).played;
-        return {name:n,num:j+1,status:live?'دوره الحين':pl?fmt(this.st(n).score)+' نقطة':'بالانتظار',stC:live?'#38bdf8':pl?'#c4b5fd':'#8a8596',kick:()=>this.kick(n)}; }) };
+        return {name:n,num:j+1,status:live?'دوره الحين':pl?fmt(this.st(n).score)+' نقطة':'بالانتظار',stC:live?'#ddd6fe':pl?'#c4b5fd':'#8a8596',kick:()=>this.kick(n)}; }) };
   }
 }
 </script>

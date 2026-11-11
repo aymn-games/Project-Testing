@@ -1,5 +1,5 @@
 /**
- * لمحة — ربط شاشات اللعبة (نسخة من games/fastest-answer/fa-platform.js) (.dc.html) بالمنصة.
+ * حنكة — ربط شاشات اللعبة (نسخة من games/fastest-answer/fa-platform.js) (.dc.html) بالمنصة.
  *
  * الشاشات الثلاث (index.html الإعدادات، lobby.html اللوبي، game.html
  * اللعبة) منقولة من ملفات التصميم المعتمدة كما هي وتشتغل عبر support.js.

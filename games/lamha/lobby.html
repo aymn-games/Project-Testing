@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <script src="../../js/agp-wide-scale.js" data-min-height="680"></script>
-<title>لمحة — ألعاب أيمن</title>
+<title>حنكة — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -148,7 +148,7 @@ input::placeholder{color:#6f6a7c}
 //  القسم: { title, full:true (بعرض الشاشة), rows:[...] }
 // ============================================================
 const GAME = {
-  name: 'لمحة',
+  name: 'حنكة',
   libraryUrl: LM.libraryUrl,
   requireLive: false,
   gameUrl: 'game.html'
@@ -157,7 +157,7 @@ const SETTINGS = [];
 // إعدادات المباراة من شاشة الإعدادات (lm-setup)
 const SETUP = LM.readJSON('lm-setup', null);
 if(!SETUP) location.replace('index.html');
-// لمحة لعبة فردية: قائمة مشاركين وحدة بكلمة دخول وحدة
+// حنكة لعبة فردية: قائمة مشاركين وحدة بكلمة دخول وحدة
 const SOLO = true;
 const TEAMS = [
   { name:'المشاركين', keyword:SETUP?.keywordS||'', color:'#a78bfa', max:+SETUP?.maxPlayers||30 }
