@@ -236,7 +236,7 @@ var GAME_NAMES = {
   'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'greed': 'الطمع', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف', 'luck-color': 'حظ و لون', 'survival-ship': 'سفينة النجاة',
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
-  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
+  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'tug-of-war': 'شد الحبل', 'vocab': 'تحدي المفردات',
   'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو',
   'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
   'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو'
@@ -422,6 +422,13 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   // ساعات بث، وبوضع statsOnly بالموصِّل. يظهر بـ«البثوث الشغّالة» بس لو
   // الصفحة صفحة لعبة (overlayOnGame تحت).
   var isOverlay = payload.source === 'overlay';
+  // التكبيسات توصل للمتصفح مجمّعة لكل مشاهد كل 300ms (بدل حدث لكل دفعة من تيك توك)
+  var likeBuf = null, likeTimer = null;
+  function flushLikes() {
+    var buf = likeBuf; likeBuf = null; likeTimer = null;
+    if (!buf) return;
+    Object.keys(buf).forEach(function (k) { sendEnvelope(socket, builder.buildLikeMessage(platform, buf[k].id, buf[k].name, buf[k].count)); });
+  }
   entry.broadcastTracking = null;
   entry.statsUsername = null;
   if (platform === 'tiktok' && payload.username && payload.source !== 'library') {
@@ -539,6 +546,12 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     // لايكات وشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
     onLike: function (data) {
       if (entry.statsUsername) liveSessionStats.recordLike(entry.statsUsername, connectionId, data);
+      // للألعاب اللي تستخدم التكبيس (شد الحبل): 'stream:likeReceived' بالواجهة
+      if (isOverlay || !data || !data.id) return;
+      likeBuf = likeBuf || {};
+      var b = likeBuf[data.id] || (likeBuf[data.id] = { id: data.id, name: data.name, count: 0 });
+      b.count += Number(data.count) || 1;
+      if (!likeTimer) likeTimer = setTimeout(flushLikes, 300);
     },
 
     onShare: function (data) {
