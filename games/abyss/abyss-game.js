@@ -21,7 +21,8 @@
     var AB = window.AB;
 
     var params = new URLSearchParams(location.search);
-    var DEMO = params.get('demo') === '1';
+    // نمط التجربة: ?demo=1 بالرابط، أو صفحة تجربة تحط AGP.abyssDemo = true قبل هذا الملف
+    var DEMO = params.get('demo') === '1' || AGP.abyssDemo === true;
 
     // ---------- الإعدادات (من شاشة الإعدادات) ----------
     var SETUP = AB.readJSON(AB.keys.setup, null) || {};
@@ -298,7 +299,7 @@
     }
 
     // ---------- أزرار ----------
-    function goLobby() { clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
+    function goLobby() { if (DEMO) { $('setPanel').hidden = true; return newDemo(); } clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
     function saveSetup() { if (DEMO) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; AB.writeJSON(AB.keys.setup, SETUP); }
     function paintSettings() {
         [].forEach.call($('sSec').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-v') === CFG.answerSec)); });
@@ -307,13 +308,13 @@
     $('bExit').onclick = function () { $('exitDlg').hidden = false; };
     $('xNo').onclick = function () { $('exitDlg').hidden = true; };
     $('exitDlg').onclick = function (e) { if (e.target === $('exitDlg')) $('exitDlg').hidden = true; };
-    $('xYes').onclick = function () { clearAll(); location.href = AB.libraryUrl; };
+    $('xYes').onclick = function () { $('exitDlg').hidden = true; if (DEMO) return newDemo(); clearAll(); location.href = AB.libraryUrl; };
     $('bSettings').onclick = function (e) { e.stopPropagation(); paintSettings(); $('setPanel').hidden = !$('setPanel').hidden; };
     $('sClose').onclick = function () { $('setPanel').hidden = true; };
     $('sSec').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.answerSec = +b.getAttribute('data-v'); saveSetup(); paintSettings(); };
     $('sFall').onclick = function () { CFG.noAnswerFalls = !CFG.noAnswerFalls; saveSetup(); paintSettings(); };
     $('sSound').onclick = function () { CFG.sound = !CFG.sound; saveSetup(); paintSettings(); };
-    $('sBack').onclick = function () { clearAll(); location.href = 'index.html'; };
+    $('sBack').onclick = function () { if (DEMO) { $('setPanel').hidden = true; return newDemo(); } clearAll(); location.href = 'index.html'; };
     $('sEnd').onclick = goLobby;
     $('bEvents').onclick = function (e) { e.stopPropagation(); $('evPanel').hidden = !$('evPanel').hidden; };
     document.addEventListener('click', function (e) {
@@ -335,16 +336,41 @@
     var NAMES = ['سارا', 'فهد', 'نوره', 'عبدالله', 'ريم', 'خالد', 'لمى', 'تركي', 'جود', 'سلطان', 'هيا', 'ماجد', 'دانة', 'ناصر', 'غلا', 'بندر', 'شهد', 'راكان'];
     function demoAnswers() {
         alive().forEach(function (p) {
+            if (p.human) return;
             later(function () { var ok = correctLane(S.qs[S.row]); answer(p.name, String(Math.random() < DEMO_ACC ? ok + 1 : 2 - ok)); }, 800 + Math.random() * (CFG.answerSec - 4) * 1000);
         });
     }
-    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin };
-
-    var names = ROSTER.slice();
-    if (DEMO) {
-        var n = +params.get('n') || 12, init = {};
-        for (var i = 0; i < n; i++) { var nm = NAMES[i % NAMES.length] + (i >= NAMES.length ? ' ' + (i + 1) : ''); names.push(nm); init[nm] = { id: 'demo:' + i, avatar: null, character: i % 5 === 1 ? 'girl' : i % 5 === 3 ? 'boy' : null }; }
+    // تجربة جديدة ببوتات: {n, mode:'steps'|'last', steps, sec, acc}
+    var demoOpts = { n: +params.get('n') || 12, acc: DEMO_ACC };
+    function newDemo(o) {
+        o = Object.assign(demoOpts, o || {});
+        if (o.mode) CFG.mode = o.mode === 'last' ? 'last' : 'steps';
+        if ([10, 15, 20].indexOf(+o.steps) >= 0) CFG.steps = +o.steps;
+        if (+o.sec >= 5) CFG.answerSec = +o.sec;
+        DEMO_ACC = Math.max(.05, Math.min(1, +o.acc || DEMO_ACC));
+        var list = [], init = {};
+        for (var i = 0; i < Math.max(1, Math.min(60, +o.n || 12)); i++) { var nm = NAMES[i % NAMES.length] + (i >= NAMES.length ? ' ' + (i + 1) : ''); list.push(nm); init[nm] = { id: 'demo:' + i, avatar: null, character: null }; }
         reg = AB.createRegistry(init);
+        var fresh = document.createElement('abyss-3d'); fresh.id = 'scene'; scene.replaceWith(fresh); scene = fresh;
+        setupMatch(list);
     }
-    setupMatch(names);
+    // رسالة شات بنمط التجربة (أنت تلعب مع البوتات): كلمة الدخول = انضمام، وغيرها = جواب
+    function demoChat(name, text) {
+        name = String(name || '').trim(); if (!name) return 'اكتب اسمك';
+        if (AB.norm(text) === AB.norm(CFG.joinWord)) {
+            if (S.players.some(function (p) { return p.name === name; })) return 'أنت داخل المباراة';
+            if (S.phase !== 'intro' && S.phase !== 'question') return 'انتظر السؤال الجاي وادخل';
+            var nm = reg.nameFor({ id: 'human:' + name, name: name });
+            joinMidMatch(nm); var p = S.players.find(function (x) { return x.name === nm; }); if (p) p.human = true;
+            return p ? 'دخلت باسم ' + nm : 'ما قدرت تدخل';
+        }
+        var me = S.players.find(function (x) { return x.human && x.name === name; });
+        if (!me) return 'اكتب «' + CFG.joinWord + '» أول عشان تدخل';
+        if (!me.alive) return 'طحت بالهاوية — انتظر المباراة الجاية';
+        if (S.phase !== 'question') return 'انتظر السؤال';
+        answer(name, text); return me.ans >= 0 ? 'اخترت ' + (me.ans + 1) : 'اكتب 1 أو 2';
+    }
+    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat };
+
+    if (DEMO) newDemo(); else setupMatch(ROSTER.slice());
 }(window.AymanGamesPlatform));
