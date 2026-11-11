@@ -58,6 +58,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes scoreUp{0%{transform:scale(1);color:#ddd6fe}30%{transform:scale(1.45);color:#6ee7b7;text-shadow:0 0 30px rgba(52,211,153,.8)}100%{transform:scale(1);color:#ddd6fe}}
 @keyframes scoreDown{0%{transform:scale(1);color:#ddd6fe}30%{transform:scale(.8);color:#f87171;text-shadow:0 0 30px rgba(248,113,113,.8)}100%{transform:scale(1);color:#ddd6fe}}
 @keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+@keyframes flipOutA{0%{transform:perspective(1400px) rotateY(0);opacity:1}100%{transform:perspective(1400px) rotateY(90deg) scale(.92);opacity:0}}
+@keyframes flipOutB{0%{transform:perspective(1400px) rotateY(0);opacity:1}100%{transform:perspective(1400px) rotateY(90deg) scale(.92);opacity:0}}
+@keyframes flipInA{0%{transform:perspective(1400px) rotateY(-90deg) scale(.92);opacity:0}55%{opacity:1}80%{transform:perspective(1400px) rotateY(8deg) scale(1.02)}100%{transform:perspective(1400px) rotateY(0) scale(1);opacity:1}}
+@keyframes flipInB{0%{transform:perspective(1400px) rotateY(-90deg) scale(.92);opacity:0}55%{opacity:1}80%{transform:perspective(1400px) rotateY(8deg) scale(1.02)}100%{transform:perspective(1400px) rotateY(0) scale(1);opacity:1}}
+@keyframes btnIn{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -85,12 +90,17 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
 
   <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:108px 40px 36px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px">
-    <!-- مؤقت واحد للكل فوق بالوسط: كل لاعبين الجولة يبدأون وينتهون بنفس الوقت -->
-    <div style="flex-shrink:0;display:flex;justify-content:center;padding-left:304px">
+    <!-- فوق بالوسط: المؤقت وقت اللعب، وزر «اللاعبين التالين» / «ابدأ الجولة» بين الجولات -->
+    <div style="flex-shrink:0;height:104px;display:flex;justify-content:center;align-items:center;padding-left:304px">
+      <sc-if value="{{ showTimer }}" hint-placeholder-val="{{ true }}">
       <div style="width:420px;box-sizing:border-box;padding:12px 26px 14px;border-radius:14px;border:3px solid {{ tColor }};background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));display:flex;flex-direction:column;gap:10px;box-shadow:0 0 30px {{ tGlow }}">
         <span style="display:flex;align-items:center;justify-content:center;gap:14px;font:700 54px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ tColor }};direction:ltr"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>{{ tText }}</span>
         <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ tPct }}%;background:{{ tColor }};transition:width .25s linear"></div></div>
       </div>
+      </sc-if>
+      <sc-if value="{{ showBtn }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ primary }}" style="height:88px;min-width:460px;padding:0 54px;border:3px solid rgba(221,214,254,.55);border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:16px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 36px 'IBM Plex Sans Arabic';box-shadow:0 10px 30px rgba(139,92,246,.45);animation:btnIn .45s cubic-bezier(.2,1.3,.4,1) both, glow 1.8s .5s infinite" style-hover="filter:brightness(1.08)" style-active="transform:scale(.96)">{{ btnLabel }}<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      </sc-if>
     </div>
     <div style="flex:1;min-height:0;display:flex;gap:24px">
       <!-- خانات اللاعبين الثلاثة: كل لاعب سؤاله ووقته ونقاطه -->
@@ -169,11 +179,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </div>
 
     <!-- شريط التحكم: التعليمات + زر بدء الجولة / الجولة التالية -->
-    <div style="flex-shrink:0;height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 18px 0 30px;box-sizing:border-box;border-radius:999px;background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));backdrop-filter:blur(14px);border:3px solid rgba(167,139,250,.42)">
+    <div style="flex-shrink:0;height:96px;display:flex;align-items:center;justify-content:center;gap:24px;padding:0 30px;box-sizing:border-box;border-radius:999px;background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));backdrop-filter:blur(14px);border:3px solid rgba(167,139,250,.42)">
       <span style="flex:1;text-align:center;font:700 34px/1.3 'IBM Plex Sans Arabic';color:#f4f2f8;letter-spacing:.3px">جاوب أكبر عدد من الأسئلة خلال الوقت · واللي ما تعرفه خلك ذكي واكتب <b style="color:#c4b5fd">سكب</b></span>
-      <sc-if value="{{ showBtn }}" hint-placeholder-val="{{ true }}">
-        <button onClick="{{ primary }}" style="height:72px;min-width:340px;padding:0 48px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 28px 'IBM Plex Sans Arabic';animation:glow 1.8s infinite;box-shadow:0 10px 30px rgba(139,92,246,.4)" style-hover="filter:brightness(1.08)" style-active="transform:scale(.96)">{{ btnLabel }}<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-      </sc-if>
     </div>
 
     {{ countdownEl }}
@@ -415,16 +422,27 @@ class Component extends DCLogic {
     ({tick:()=>T(1400,.03,'square',.03), start:()=>T(220,.35,'sawtooth',.06,880), reveal:()=>[523,659,784,1047].forEach((f,i)=>T(f,.25,'triangle',.14,null,i*.08)),
       open:()=>{T(300,.4,'sine',.12,1200);T(1200,.3,'triangle',.06,null,.25);}, close:()=>T(900,.18,'sine',.06,400), beep:()=>T(1000,.12,'sine',.15),
       correct:()=>{[784,988,1319].forEach((f,k)=>T(f,.22,'triangle',.2,null,k*.07));T(1568,.35,'sine',.1,null,.21);}, skip:()=>{T(520,.32,'sawtooth',.09,140);T(110,.25,'triangle',.22,70,.05);}, wrong:()=>T(150,.18,'sawtooth',.06,110),
-      join:()=>T(700,.1,'sine',.1,1000), timeup:()=>T(400,.6,'sawtooth',.1,120),
+      join:()=>T(700,.1,'sine',.1,1000), whoosh:()=>{T(900,.45,'sawtooth',.05,120);T(600,.4,'triangle',.08,90,.05);}, flip:()=>{T(420,.09,'square',.05,820);T(1046,.18,'triangle',.1,null,.06);}, timeup:()=>T(400,.6,'sawtooth',.1,120),
       win:()=>[523,659,784,1047,784,1047,1319].forEach((f,i)=>T(f,.4,'triangle',.16,null,i*.13))
     })[k]?.(); }
 
   // ---------- دورة الجولات ----------
   // يجهّز الثلاثة الجايين ويعرضهم، والجولة تبدأ بزر «ابدأ الجولة».
-  prepareRound(){ const s=this.state;
+  // يجهّز الثلاثة الجايين: بطاقاتهم تنقلب وتظهر وحدة ورا الثانية مع صوت.
+  // auto=true (بعد زر «اللاعبين التالين»): العد التنازلي يبدأ لحاله بعد ما تخلص الحركة.
+  prepareRound(auto){ const s=this.state;
     if(s.qIdx>=s.queue.length){ this.finishStage(); return; }
-    const names=s.queue.slice(s.qIdx,s.qIdx+PER_ROUND);
-    this.setState({round:s.round+1,qIdx:s.qIdx+names.length,phase:'ready',showRes:false,slots:names.map(n=>({name:n,q:null,done:false,feed:'',feedC:'#8a8596',delta:null,flash:null}))}); }
+    const names=s.queue.slice(s.qIdx,s.qIdx+PER_ROUND), n=(this.flipN=(this.flipN||0)+1);
+    this.setState({round:s.round+1,qIdx:s.qIdx+names.length,phase:'ready',auto:!!auto,showRes:false,slotAnim:'in',flipN:n,slots:names.map(nm=>({name:nm,q:null,done:false,feed:'',feedC:'#8a8596',delta:null,flash:null}))});
+    if(this._ac) [0,1,2].forEach(k=>setTimeout(()=>this.snd('flip'),k*150+120));
+    clearTimeout(this.animT); this.animT=setTimeout(()=>this.setState({slotAnim:null}),1050);
+    if(auto) setTimeout(()=>this.startRound(),1150); }
+
+  // زر «اللاعبين التالين»: البطاقات الحالية تنقلب وتختفي، وبعدها تظهر بطاقات الجايين.
+  nextPlayers=()=>{ const s=this.state; if(s.phase!=='roundEnd'||this.swapping) return; this.swapping=true;
+    this.ac(); this.snd('whoosh'); const last=s.qIdx>=s.queue.length;
+    this.setState({slotAnim:'out',flipN:(this.flipN=(this.flipN||0)+1)});
+    setTimeout(()=>{ this.swapping=false; if(last){ this.setState({slotAnim:null}); this.finishStage(); } else this.prepareRound(true); },620); };
 
   startRound=()=>{ const s=this.state; if(s.phase!=='ready'||!s.slots.length) return;
     this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
@@ -446,11 +464,11 @@ class Component extends DCLogic {
   endRound(){ const s=this.state; if(s.phase!=='playing') return; this.snd('timeup');
     this.setState({phase:'roundEnd',now:Date.now(),slots:s.slots.map(sl=>({...sl,done:true}))});
     s.slots.forEach(sl=>{ const t=this.st(sl.name); this.addLog('points',`${sl.name} خلص وقته · ${this.fmt(t.score)} نقطة`); });
-    setTimeout(()=>{ if(this.state.phase==='roundEnd') this.setState({showRes:true}); },900); }
+  }
 
   nextFromRes=()=>{ this.snd('close'); this.setState({showRes:false}); setTimeout(()=>this.prepareRound(),50); };
 
-  primary=()=>{ const P=this.state.phase; if(P==='ready') this.startRound(); else if(P==='roundEnd') this.nextFromRes(); else if(P==='stageEnd') this.setState({showFinal:true}); };
+  primary=()=>{ const P=this.state.phase; if(P==='ready') this.startRound(); else if(P==='roundEnd') this.nextPlayers(); else if(P==='stageEnd') this.setState({showFinal:true}); };
 
   finishStage(){ const s=this.state, order=this.ranked(s.queue), q=Math.min(qualifyCount(order.length),order.length);
     const final={order,qualified:order.slice(0,q),out:order.slice(q)};
@@ -550,9 +568,9 @@ class Component extends DCLogic {
     const mmss=x=>{ x=Math.ceil(x); return Math.floor(x/60)+':'+String(x%60).padStart(2,'0'); };
     const dur=P==='playing'||P==='roundEnd'?s.curTurn:s.turn;
     const slots=[0,1,2].map(i=>{ const sl=s.slots[i], c=SLOT_COLORS[i];
-      if(!sl) return {empty:true,full:false,bd:'rgba(255,255,255,.06)',halo:'transparent',flash:'0 0 0 0 transparent',op:.45};
+      if(!sl) return {cardAnim:s.slotAnim==='out'?`flipOut${s.flipN%2?'A':'B'} .45s ease-in ${i*0.08}s both`:s.slotAnim==='in'?`flipIn${s.flipN%2?'A':'B'} .65s cubic-bezier(.2,1,.3,1) ${i*0.15}s both`:'none',empty:true,full:false,bd:'rgba(255,255,255,.06)',halo:'transparent',flash:'0 0 0 0 transparent',op:.45};
       const t=this.st(sl.name), low=P==='playing'&&!sl.done&&leftSec<=10, done=sl.done&&P!=='ready';
-      const fn=sl.fn||0, cardAnim=sl.flash==='ok'?`bump${fn%2?'A':'B'} .45s ease`:sl.flash==='skip'?`shake${fn%2?'A':'B'} .45s ease`:'none';
+      const fn=sl.fn||0, fv=s.flipN%2?'A':'B', cardAnim=s.slotAnim==='out'?`flipOut${fv} .45s ease-in ${i*0.08}s both`:s.slotAnim==='in'?`flipIn${fv} .65s cubic-bezier(.2,1,.3,1) ${i*0.15}s both`:sl.flash==='ok'?`bump${fn%2?'A':'B'} .45s ease`:sl.flash==='skip'?`shake${fn%2?'A':'B'} .45s ease`:'none';
       const fl=sl.flash==='ok'?'0 0 0 3px rgba(52,211,153,.55), 0 0 60px rgba(52,211,153,.3)':sl.flash==='skip'?'0 0 0 3px rgba(248,113,113,.5), 0 0 60px rgba(248,113,113,.22)':'0 0 0 0 transparent';
       const qText=sl.q?sl.q.q:'', L=qText.length;
       const NL=[...sl.name].length;
@@ -577,7 +595,7 @@ class Component extends DCLogic {
         bg:live?'rgba(139,92,246,.32)':inQ?'rgba(139,92,246,.2)':'rgba(255,255,255,.06)',bd:live?'rgba(221,214,254,.75)':inQ?'rgba(167,139,250,.5)':'rgba(255,255,255,.14)',rankColor:inQ?'#c4b5fd':'#8a8596',avBd:inQ?'rgba(167,139,250,.6)':'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}; });
     const waitRows=wait.map((n,j)=>({name:n,rank:j+1,val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#a8a3b5',bg:'rgba(255,255,255,.06)',bd:'rgba(255,255,255,.14)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
     const lastRound=s.qIdx>=s.queue.length;
-    const btnLabel=P==='ready'?'ابدأ الجولة '+s.round:P==='roundEnd'?(lastRound?'نتيجة التصفية':'الجولة التالية'):P==='stageEnd'?'عرض النتيجة':'';
+    const btnLabel=P==='ready'?'ابدأ الجولة '+s.round:P==='roundEnd'?(lastRound?'نتيجة التصفية':'اللاعبين التالين'):P==='stageEnd'?'عرض النتيجة':'';
     const F=s.final, eg=this.eventGroups();
     const final=(F&&s.showFinal)?(()=>{ const w=F.qualified[0]||''; return { name:w, score:fmt(this.st(w).score), sub:'المرحلة '+s.stage, qLabel:`المتأهلين (${F.qualified.length})`, outLabel:`خرجوا (${F.out.length})`, hasOut:F.out.length>0, canNext:F.qualified.length>=2&&F.out.length>0, nextLabel:`مرحلة جديدة بالمتأهلين (${F.qualified.length})`,
       players:F.qualified.map((n,j)=>{ const el=j===0?LM.winCard(this.reg.player(n),['المركز الأول',fmt(this.st(n).score)+' نقطة','حنكة'],'wc0',200):null;
@@ -586,7 +604,7 @@ class Component extends DCLogic {
     return { ...this.anims(), scale:s.scale, round:s.round, rounds:Math.max(1,Math.ceil(total/PER_ROUND)), stage:s.stage, showStage:s.stage>1, playedCount:played, totalCount:total, qualCount:qual,
       tText:mmss(leftSec), tPct:(dur?leftSec/dur:1)*100, tColor:P==='playing'&&leftSec<=10?'#f87171':'#a78bfa', tGlow:P==='playing'&&leftSec<=10?'rgba(248,113,113,.5)':'rgba(167,139,250,.35)',
       slots, scoreRows, scoreEmpty:!scoreRows.length, scoreNote:`يتأهل أعلى ${qual}`, waitRows, waitEmpty:!waitRows.length, waitNote:`${waitRows.length} لاعب`,
-      turnLabel:s.turn===120?'دقيقتين':'دقيقة ونص', showBtn:P==='ready'||P==='roundEnd'||(P==='stageEnd'&&!s.showFinal), showLive:P==='playing'||P==='countdown', btnLabel, primary:this.primary,
+      turnLabel:s.turn===120?'دقيقتين':'دقيقة ونص', showBtn:(P==='ready'&&!s.auto)||P==='roundEnd'||(P==='stageEnd'&&!s.showFinal), showTimer:P==='playing'||P==='countdown'||(P==='ready'&&s.auto), showLive:P==='playing'||P==='countdown', btnLabel, primary:this.primary,
       countdownEl:s.countdown?h('div',{key:'cd',style:{position:'absolute',inset:0,zIndex:6,background:'rgba(0,0,0,.55)',backdropFilter:'blur(10px)',display:'grid',placeItems:'center',animation:'fade .3s ease'}},
         h('div',{key:s.countdown,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:14,animation:'pop .6s cubic-bezier(.2,1.3,.35,1)'}},
           h('span',{style:{font:"600 28px 'IBM Plex Sans Arabic'",color:'#c4b5fd',padding:'8px 22px',borderRadius:999,border:'1px solid rgba(167,139,250,.35)',background:'rgba(139,92,246,.1)'}},'الجولة '+s.round),
