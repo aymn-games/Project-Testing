@@ -236,7 +236,7 @@ var GAME_NAMES = {
   'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'greed': 'الطمع', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف', 'luck-color': 'حظ و لون', 'survival-ship': 'سفينة النجاة',
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
-  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
+  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'tug-of-war': 'شد الحبل', 'vocab': 'تحدي المفردات',
   'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو',
   'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
   'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو'
