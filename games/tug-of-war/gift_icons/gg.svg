@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -2 90 56">
+  <!-- أيقونة أصلية لهدية «جي جي» (GG): حرفين G بتدرّج ألوان وحدود غامقة — بدل أيقونة المايك القديمة -->
+  <defs>
+    <linearGradient id="gg-fill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff27a"/>
+      <stop offset=".45" stop-color="#ff8ad8"/>
+      <stop offset="1" stop-color="#8f7bff"/>
+    </linearGradient>
+    <linearGradient id="gg-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".75"/>
+      <stop offset=".5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <path id="gg-g" d="M33.2 14.8 A14 14 0 1 0 37 28 H25.5"/>
+  </defs>
+  <g transform="rotate(-8 40 26)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(-6 0)">
+      <use href="#gg-g" transform="translate(1.5 2.5)" stroke="#1b1030" stroke-width="13"/>
+      <use href="#gg-g" stroke="#2a1846" stroke-width="13"/>
+      <use href="#gg-g" stroke="url(#gg-fill)" stroke-width="7.5"/>
+      <use href="#gg-g" stroke="url(#gg-shade)" stroke-width="3" transform="translate(-.6 -.8)"/>
+    </g>
+    <g transform="translate(26 4)">
+      <use href="#gg-g" transform="translate(1.5 2.5)" stroke="#1b1030" stroke-width="13"/>
+      <use href="#gg-g" stroke="#2a1846" stroke-width="13"/>
+      <use href="#gg-g" stroke="url(#gg-fill)" stroke-width="7.5"/>
+      <use href="#gg-g" stroke="url(#gg-shade)" stroke-width="3" transform="translate(-.6 -.8)"/>
+    </g>
+  </g>
+  <path d="M70 6l1.6 3.6L75 11l-3.4 1.4L70 16l-1.6-3.6L65 11l3.4-1.4z" fill="#fff6b0"/>
+  <path d="M8 40l1 2.2 2.2.8-2.2.9L8 46l-1-2.1-2.2-.9 2.2-.8z" fill="#ffd1f0"/>
+</svg>

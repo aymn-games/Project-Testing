@@ -109,6 +109,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('stream:giftReceived', payload);
     }
 
+    // تكبيسات مشاهد (مجمّعة من الخادم): {id, name, count} — أول من استخدمها: شد الحبل
+    function handleIncomingLike(payload) {
+        AGP.events.emit('stream:likeReceived', payload);
+    }
+
     function handleIncomingFollow(payload) {
         AGP.events.emit('stream:followReceived', payload);
     }
@@ -151,6 +156,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             case 'comment': handleIncomingComment(envelope.payload); break;
             case 'gift': handleIncomingGift(envelope.payload); break;
             case 'follow': handleIncomingFollow(envelope.payload); break;
+            case 'like': handleIncomingLike(envelope.payload); break;
             case 'error': handleIncomingError(envelope.payload); break;
             default: AGP.log('TikTok Adapter: unknown message type from backend:', envelope.type);
         }
