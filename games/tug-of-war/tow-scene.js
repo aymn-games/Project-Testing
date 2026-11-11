@@ -91,9 +91,9 @@ export function createTugScene(container, opts = {}) {
     const floor = new T.Mesh(new T.BoxGeometry(46, .3, 30), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 11.5); floor.receiveShadow = true; sc.add(floor);
     const edge = new T.Mesh(new T.BoxGeometry(46.2, .06, 30.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 11.5); sc.add(edge);
     const lineM = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: .95 });
-    const mid = new T.Mesh(new T.PlaneGeometry(.06, 6), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.y = .01; sc.add(mid);
-    for (const k of [0, 1]) { const wl = new T.Mesh(new T.PlaneGeometry(.12, 6), lineM(colors[k])); wl.rotation.x = -Math.PI / 2; wl.position.set((k ? 1 : -1) * SHIFT, .012, 0); sc.add(wl);
-        const glow = new T.Mesh(new T.PlaneGeometry(.7, 6), new T.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: .18, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.set(wl.position.x, .011, 0); sc.add(glow); }
+    const mid = new T.Mesh(new T.PlaneGeometry(.06, 30), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.set(0, .01, 11.5); sc.add(mid);
+    for (const k of [0, 1]) { const wl = new T.Mesh(new T.PlaneGeometry(.12, 30), lineM(colors[k])); wl.rotation.x = -Math.PI / 2; wl.position.set((k ? 1 : -1) * SHIFT, .012, 11.5); sc.add(wl);
+        const glow = new T.Mesh(new T.PlaneGeometry(.7, 30), new T.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: .18, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.set(wl.position.x, .011, 11.5); sc.add(glow); }
 
     // ---- الخلفية: ساحة ليلية ثري دي ثابتة (بدون أي حركة): سماء بنجوم، أرض عشب صناعي،
     //      مدرجات فاضية بلون الفريقين، جدار خلفي بلوحة «شد الحبل»، وأعمدة إضاءة.
@@ -113,20 +113,20 @@ export function createTugScene(container, opts = {}) {
         const ROWS = 9, SEATS = 34, Z0 = -14, seatGeo = new T.BoxGeometry(.7, .45, .55);
         for (let r = 0; r < ROWS; r++) {
             const z = Z0 - r * 1.1, y = r * .75;
-            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#2a2540' : '#24203a')); step.position.set(0, y + .05, z); step.receiveShadow = true; sc.add(step);
+            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#15121f' : '#120f1b')); step.position.set(0, y + .05, z); step.receiveShadow = true; sc.add(step);
             for (const k of [0, 1]) {
-                const inst = new T.InstancedMesh(seatGeo, M(shade(colors[k], r % 2 ? .42 : .5), { roughness: .7 }), SEATS / 2), m4 = new T.Matrix4();
+                const inst = new T.InstancedMesh(seatGeo, M(shade(colors[k], r % 2 ? .22 : .27), { roughness: .9 }), SEATS / 2), m4 = new T.Matrix4();
                 for (let i = 0; i < SEATS / 2; i++) { const x = (k ? 1 : -1) * (1.2 + i * 1.5); m4.makeTranslation(x, y + .65, z + .15); inst.setMatrixAt(i, m4); }
                 sc.add(inst);
             }
         }
         const topY = ROWS * .75, backZ = Z0 - ROWS * 1.1;
         // جدار خلفي + لوحة الاسم بالنص + شريطين بلون الفريقين
-        const wall = new T.Mesh(new T.BoxGeometry(60, 6, .6), M('#1b1630')); wall.position.set(0, topY + 2.6, backZ - .4); sc.add(wall);
-        for (const k of [0, 1]) { const band = new T.Mesh(new T.BoxGeometry(26, .5, .1), new T.MeshBasicMaterial({ color: colors[k] })); band.position.set((k ? 1 : -1) * 15, topY + .9, backZ - .05); sc.add(band); }
+        const wall = new T.Mesh(new T.BoxGeometry(60, 6, .6), M('#100d1a')); wall.position.set(0, topY + 2.6, backZ - .4); sc.add(wall);
+        for (const k of [0, 1]) { const band = new T.Mesh(new T.BoxGeometry(26, .5, .1), new T.MeshBasicMaterial({ color: shade(colors[k], .45) })); band.position.set((k ? 1 : -1) * 15, topY + .9, backZ - .05); sc.add(band); }
         const sign = tex(1024, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#3b2a6e'); gr.addColorStop(1, '#5b3fa0'); g.fillStyle = gr; g.beginPath(); g.roundRect(8, 8, w - 16, h - 16, 60); g.fill();
             g.strokeStyle = '#c4b5fd'; g.lineWidth = 8; g.stroke(); g.fillStyle = '#fff'; g.font = '800 130px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText('شد الحبل', w / 2, h / 2 + 8); });
-        const board = new T.Mesh(new T.PlaneGeometry(9, 2.25), new T.MeshBasicMaterial({ map: sign })); board.position.set(0, topY + 3.2, backZ + .05); sc.add(board);
+        const board = new T.Mesh(new T.PlaneGeometry(9, 2.25), new T.MeshBasicMaterial({ map: sign, color: '#9a93b0' })); board.position.set(0, topY + 3.2, backZ + .05); sc.add(board);
         // أعمدة إضاءة ثابتة (كشافات مضيئة بدون حركة)
         const lamp = new T.MeshBasicMaterial({ color: '#fff4d6' });
         for (const x of [-24, -12, 12, 24]) {
@@ -134,7 +134,7 @@ export function createTugScene(container, opts = {}) {
             const head = new T.Mesh(new T.BoxGeometry(3, 1.2, .4), M('#2a2540')); head.position.set(x, topY + 9.2, backZ - 1); sc.add(head);
             for (let i = 0; i < 6; i++) { const b = new T.Mesh(new T.CircleGeometry(.2, 12), lamp); b.position.set(x - 1.1 + (i % 3) * 1.1, topY + 9.45 - Math.floor(i / 3) * .5, backZ - .78); sc.add(b); }
             const halo = new T.Sprite(new T.SpriteMaterial({ map: tex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,244,214,.9)'); gr.addColorStop(1, 'rgba(255,244,214,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }), transparent: true, depthWrite: false, blending: T.AdditiveBlending, fog: false }));
-            halo.scale.set(7, 4.5, 1); halo.position.set(x, topY + 9.2, backZ - .6); sc.add(halo);
+            halo.scale.set(5, 3.2, 1); halo.material.opacity = .45; halo.position.set(x, topY + 9.2, backZ - .6); sc.add(halo);
         }
     })();
 
@@ -185,8 +185,8 @@ export function createTugScene(container, opts = {}) {
     let spanX = 6;
     function fitCam() {
         const n = Math.max(1, state.teams[0].length, state.teams[1].length);
-        spanX = (slot(n - 1, n) + SHIFT * .3 + .3) * .9; // أقرب: آخر لاعب + جزء بسيط من السحبة
-        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(4.6, Math.min(22, spanX / (halfH * Math.max(.5, cam.aspect))));
+        spanX = (slot(n - 1, n) + SHIFT * .25 + .2) * .8; // أقرب: آخر لاعب + جزء بسيط من السحبة
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(4.2, Math.min(20, spanX / (halfH * Math.max(.5, cam.aspect))));
         // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
         const d = far ? dist * 1.75 : dist;
         camGoal.pos.set(0, 1.2 + d * (far ? .32 : .2), d); camGoal.look.set(0, 1.0 + d * .02, 0);
