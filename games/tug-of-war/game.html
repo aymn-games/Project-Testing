@@ -119,6 +119,9 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
               <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
                 <span style="padding:4px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
               </sc-if>
+              <sc-if value="{{ t.tapTxt }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:{{ t.soft }};border:1px solid {{ t.bd }};font:800 15px 'IBM Plex Sans Arabic';color:#fff">👆 {{ t.tapTxt }}</span>
+              </sc-if>
               <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
                 <span style="padding:4px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
               </sc-if>
@@ -153,6 +156,9 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
               </sc-if>
               <sc-if value="{{ t.boostOn }}" hint-placeholder-val="{{ false }}">
                 <span style="padding:4px 12px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#1a1205;font:700 15px 'IBM Plex Sans Arabic'">⚡ ×2 · {{ t.boostSec }}ث</span>
+              </sc-if>
+              <sc-if value="{{ t.tapTxt }}" hint-placeholder-val="{{ false }}">
+                <span style="padding:4px 12px;border-radius:999px;background:{{ t.soft }};border:1px solid {{ t.bd }};font:800 15px 'IBM Plex Sans Arabic';color:#fff">👆 {{ t.tapTxt }}</span>
               </sc-if>
               <sc-if value="{{ t.frozenTxt }}" hint-placeholder-val="{{ false }}">
                 <span style="padding:4px 12px;border-radius:999px;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.4);color:#bae6fd;font:700 15px 'IBM Plex Sans Arabic'">❄️ {{ t.frozenTxt }}</span>
@@ -358,7 +364,8 @@ class Component extends DCLogic {
     if(DEMO) teams.flat().forEach(n=>this.reg.nameFor({id:'demo:'+n,name:n}));
     this.setState({teams});
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
-    this.clockT=setInterval(()=>this.tick(),250);
+    this.pend=[0,0]; this.tapLog=[]; this.lastTapper=[null,null];
+    this.clockT=setInterval(()=>this.tick(),250); this.drainT=setInterval(()=>this.drain(),50);
     if(!DEMO){ TOW.connect(); this.unsub=TOW.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=TOW.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue,p.repeatCount)); this.unsubLike=TOW.watchLikes(p=>this.onLike(this.reg.nameFor(p),p.count)); }
     // للتجربة من الكونسول: towChat('سعد','اي شي') · towGift('سعد','Rose')
     window.towChat=(u,t)=>this.onChat(this.reg.nameFor({id:this.reg.id(u)||'dev:'+u,name:u}),t,true);
@@ -380,7 +387,7 @@ class Component extends DCLogic {
   pushScene(){ const S=this.state, n=Date.now(); if(!this.scene) return;
     this.scene.setState({ pos:S.pos, boost:[0,1].map(k=>S.boost[k]>n), winner:S.phase==='win'?S.winner:-1,
       teams:S.teams.map(l=>l.map(name=>({id:name,name,out:!!S.out[name],frozen:!S.out[name]&&(S.frozen[name]||0)>n}))) }); }
-  componentWillUnmount(){ try{ this.scene&&this.scene.stop(); }catch(e){} removeEventListener('resize',this.fit); clearInterval(this.clockT); clearInterval(this.cdT); clearInterval(this.demoT); clearTimeout(this.chT); this.unsub?.(); this.unsubGift?.(); this.unsubLike?.(); clearTimeout(this.gfxT); }
+  componentWillUnmount(){ try{ this.scene&&this.scene.stop(); }catch(e){} removeEventListener('resize',this.fit); clearInterval(this.clockT); clearInterval(this.drainT); clearInterval(this.cdT); clearInterval(this.demoT); clearTimeout(this.chT); this.unsub?.(); this.unsubGift?.(); this.unsubLike?.(); clearTimeout(this.gfxT); }
 
   /* ---------- الصوت (Web Audio بدون ملفات) ---------- */
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
@@ -396,7 +403,7 @@ class Component extends DCLogic {
   /* ---------- دورة المباراة ---------- */
   // زر «ابدأ»: يقفل نافذة الشرح لو مفتوحة، ويبدأ العد التنازلي (الكاميرا تقرّب عند «اسحب!»)
   startMatch(){ if(this.state.phase!=='ready') return; this.setState({introOn:false}); this.startCountdown(); }
-  resetStats(){ this.stats={pulls:[0,0],likes:0,chats:0,gifts:0,outs:0}; }
+  resetStats(){ this.stats={pulls:[0,0],likes:0,chats:0,gifts:0,outs:0}; this.pend=[0,0]; this.tapLog=[]; this.taps=[0,0]; }
   startCountdown(){ clearInterval(this.cdT); this.resetStats(); this.scene?.setFar(true); this.setState({phase:'countdown',cd:3}); this.snd('cd');
     this.cdT=setInterval(()=>{ const c=this.state.cd-1;
       if(c>0){ this.setState({cd:c}); this.snd('cd'); return; }
@@ -404,6 +411,9 @@ class Component extends DCLogic {
       clearInterval(this.cdT); this.matchStartedAt=Date.now(); this.setState({phase:'play',startedAt:Date.now()});
       if(this.MODE==='speed') this.nextChallenge(800); if(DEMO) this.startDemo(); },900); }
   tick(){ const n=Date.now(), S=this.state, patch={now:n};
+    // سرعة التكبيس لكل فريق (آخر ثانيتين) — تنعرض بكرت الفريق، وتحرّك شدّة الفريق بالملعب
+    this.tapLog=(this.tapLog||[]).filter(x=>n-x[0]<2000); const rate=[0,0]; this.tapLog.forEach(x=>rate[x[1]]+=x[2]); patch.tapRate=rate.map(r=>Math.round(r/2));
+    this.scene?.setState({heave:patch.tapRate.map(r=>Math.min(1,r/25))});
     const fz=Object.keys(S.frozen).filter(k=>S.frozen[k]<=n); if(fz.length){ const f={...S.frozen}; fz.forEach(k=>delete f[k]); patch.frozen=f; }
     if(S.ch&&S.phase==='play'&&n>=S.ch.until){ patch.ch=null; this.nextChallenge(600); }
     this.setState(patch); }
@@ -429,8 +439,17 @@ class Component extends DCLogic {
       ()=>{ if(who&&this.scene) this.scene.pull(who); this.checkOut(); if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
 
   // التكبيس (لايكات البث): كل دفعة تسحب لفريق صاحبها بقدر عدد التكبيسات
+  // التكبيس: ما يسحب دفعة وحدة — ينضاف لرصيد الفريق (pend)، والرصيد ينسحب بنعومة كل 50ms (drain).
   onLike(user,count){ const S=this.state, k=this.teamOf(user); if(k<0||S.phase!=='play'||this.MODE!=='tap'||S.out[user]||this.isFrozen(user)) return;
-    if(this.stats) this.stats.likes+=Math.max(1,+count||1); this.pull(k,Math.min(LIKE_MAX,Math.max(1,+count||1)*LIKE_STEP),user); this.snd('pull'); }
+    const n=Math.max(1,+count||1); if(this.stats){ this.stats.likes+=n; this.stats.pulls[k]++; }
+    this.pend[k]+=Math.min(LIKE_MAX,n*LIKE_STEP)*(this.boosted(k)?2:1); this.tapLog.push([Date.now(),k,n]);
+    this.lastTapper[k]=user; this.scene?.pull(user); this.scene?.effect('taps',k,[user]); this.snd('pull'); }
+  // يسحب جزء من رصيد التكبيس كل 50ms: حركة ناعمة ومستمرة بدل قفزة كل ثانية
+  // كل مرة 7.5% من الرصيد: الدفعة تتوزع على حوالي ثانية (دفعات الخادم كل ثانية)، فالحبل يتحرك بدون توقف
+  drain(){ if(this.state.phase!=='play'){ this.pend=[0,0]; return; } const net=[0,0];
+    for(const k of [0,1]){ const p=this.pend[k]; if(p<.01){ this.pend[k]=0; continue; } const d=Math.min(p,Math.max(.04,p*.075)); this.pend[k]=p-d; net[k]=d; }
+    const diff=net[1]-net[0]; if(!diff) return;
+    this.setState(s=>({pos:Math.max(-100,Math.min(100,s.pos+diff))}),()=>{ this.checkOut(); if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
 
   onChat(user,text,follower){ const S=this.state, k=this.teamOf(user);
     if(k<0){ if(!S.autoJoin) return; // انضمام متأخر بكلمة الفريق (سويتش «الدخول التلقائي»، بدون تبديل فريق أثناء المباراة)
@@ -564,7 +583,7 @@ class Component extends DCLogic {
 
   sideVals(k){ const S=this.state, t=this.T[k], c=t.color, n=S.now, b=S.boost[k]>n, fz=S.teams[k].filter(p=>(S.frozen[p]||0)>n).length, pct=Math.round(50+(k?S.pos:-S.pos)/2);
     const nOut=S.teams[k].filter(p=>S.out[p]).length;
-    return [{name:t.name,color:c,keyword:t.keyword,count:S.teams[k].length,alive:S.teams[k].length-nOut,outTxt:nOut?nOut+' خرج':null,max:this.MAX,pct,bd:c+(b?'cc':'66'),halo:c+(b?'55':'22'),soft:c+'18',boostOn:b,boostSec:Math.ceil((S.boost[k]-n)/1000),frozenTxt:fz?fz+' مجمّد':null,anim:b?'boostGlow 1s ease-in-out infinite':'none'}]; }
+    return [{name:t.name,color:c,keyword:t.keyword,count:S.teams[k].length,alive:S.teams[k].length-nOut,tapTxt:S.phase==='play'&&(S.tapRate||[0,0])[k]?(S.tapRate[k]+' تكبيسة/ث'):null,outTxt:nOut?nOut+' خرج':null,max:this.MAX,pct,bd:c+(b?'cc':'66'),halo:c+(b?'55':'22'),soft:c+'18',boostOn:b,boostSec:Math.ceil((S.boost[k]-n)/1000),frozenTxt:fz?fz+' مجمّد':null,anim:b?'boostGlow 1s ease-in-out infinite':'none'}]; }
 
   renderVals(){ this.pushScene(); const S=this.state, o=(i,out)=>S.exitOpenOut?out:i, [L,R]=this.T, G=this.G, el=S.phase==='play'||S.phase==='win'?Math.floor(((S.phase==='win'?S.endedAt:S.now)-S.startedAt)/1000):0;
     const lead=Math.abs(S.pos)<1?'متعادلين — اسحبوا!':(S.pos>0?R.name:L.name)+' متقدم';
