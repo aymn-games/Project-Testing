@@ -239,7 +239,7 @@ var GAME_NAMES = {
   'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
   'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو',
   'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
-  'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو'
+  'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو', 'abyss': 'الهاوية'
 };
 
 // صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/

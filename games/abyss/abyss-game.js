@@ -1,36 +1,47 @@
 /**
  * الهاوية — منطق المباراة (شاشة game.html).
  *
- * الفكرة: جسر زجاجي، كل خطوة صف فيه مربعين (يمين = 1 / صح · يسار = 2 / خطأ).
- * يطلع سؤال، كل لاعب يكتب جوابه بالشات وشخصيته تنط للمربع، ولما يخلص الوقت
- * المربع الغلط ينكسر ويطيح اللي فوقه، ونكمل بالباقين.
+ * الفكرة: جسر زجاجي، كل خطوة صف فيه لوحين (يمين = 1 / صح · يسار = 2 / خطأ).
+ * يطلع سؤال، كل لاعب يكتب جوابه بالشات وشخصيته تنط على اللوح، ولما يخلص الوقت
+ * اللوح الغلط ينكسر ويطيح اللي فوقه، ونكمل بالباقين.
  *
  * النمطين:
  *  - steps: عدد خطوات (10/15/20) — اللي يوصل خط النجاة يفوز.
  *  - last:  آخر ناجي — نكمل لين يبقى واحد (يفوز) أو يطيح الكل.
  *
- * ?demo=1 بالرابط = لاعبين تجريبيين يدخلون ويجاوبون عشوائي (للتصميم والاختبار).
+ * التسلسل: index.html (الإعدادات → 'abyss-settings') ← lobby.html (اللاعبين →
+ * 'abyss-roster' + 'abyss-players') ← هنا. البيانات عبر AB (abyss-platform.js).
+ *
+ * ?demo=1 بالرابط = لاعبين تجريبيين يجاوبون عشوائي (للتصميم والاختبار، بدون نقاط).
  */
 (function (AGP) {
     'use strict';
     AGP = AGP || {};
     if (!AGP.log) { AGP.log = function () {}; }
+    var AB = window.AB;
 
     var params = new URLSearchParams(location.search);
     var DEMO = params.get('demo') === '1';
-    // الإعدادات من شاشة index.html (localStorage 'abyss-settings')، والرابط يغلبها (للتجربة)
-    var saved = {}; try { saved = JSON.parse(localStorage.getItem('abyss-settings') || '{}') || {}; } catch (e) {}
-    var pick = function (k) { return params.has(k) ? params.get(k) : saved[k]; };
+
+    // ---------- الإعدادات (من شاشة الإعدادات) ----------
+    var SETUP = AB.readJSON(AB.keys.setup, null) || {};
+    if (!DEMO && !SETUP.keyword) { location.replace('index.html'); return; }
+    var ROSTER = DEMO ? [] : AB.readJSON(AB.keys.roster, []);
+    if (!DEMO && (!Array.isArray(ROSTER) || !ROSTER.length)) { location.replace('lobby.html'); return; }
+    var pick = function (k, d) { return params.has(k) ? params.get(k) : (SETUP[k] != null ? SETUP[k] : d); };
+    var modeV = pick('mode', 'عدد خطوات');
     var CFG = {
-        mode: pick('mode') === 'last' ? 'last' : 'steps',
-        steps: [10, 15, 20].indexOf(+pick('steps')) >= 0 ? +pick('steps') : 15,
-        answerSec: Math.min(60, Math.max(5, +pick('answerSec') || 15)),
-        joinWord: String(pick('joinWord') || 'دخول').trim() || 'دخول',
-        // اللي ما جاوب لين خلص الوقت: يطيح (الافتراضي)، أو ينتقل للمربع الصح
-        noAnswerFalls: pick('noAnswerFalls') !== false && pick('noAnswerFalls') !== '0'
+        mode: modeV === 'last' || modeV === 'آخر ناجي' ? 'last' : 'steps',
+        steps: [10, 15, 20].indexOf(+pick('steps', 15)) >= 0 ? +pick('steps', 15) : 15,
+        answerSec: [10, 15, 20, 30].indexOf(+pick('answerSec', 15)) >= 0 ? +pick('answerSec', 15) : 15,
+        joinWord: String(SETUP.keyword || 'دخول').trim() || 'دخول',
+        maxPlayers: Math.max(2, Math.min(200, +SETUP.maxPlayers || 50)),
+        followersOnly: SETUP.who === 'المتابعين فقط',
+        noAnswerFalls: SETUP.noAnswerFalls !== false,
+        sound: SETUP.sound !== false
     };
 
-    // نفس أشكال شخصيات سفينة النجاة (games/survival-ship/game.html)
+    // نفس أشكال شخصيات سفينة النجاة (games/survival-ship/game.html) — للي ما عندهم شخصية أنمي
     var LOOKS = [
         { skin: '#f6cfa6', hair: '#3b2414', girl: 0, outfit: '#3b82f6', pants: '#1e3a8a' },
         { skin: '#f2c49b', hair: '#5b3a1e', girl: 1, outfit: '#a855f7', pants: '#4c1d95' },
@@ -44,17 +55,13 @@
 
     var $ = function (id) { return document.getElementById(id); };
     var scene = $('scene');
+    var reg = AB.createRegistry(DEMO ? {} : AB.readJSON(AB.keys.players, {}));
 
     var S = {
-        phase: 'join',   // join · question · reveal · over
+        phase: 'intro',  // intro · question · reveal · over
         players: [],     // {id, name, look, vrm, row, lane, alive, fall, ans}
-        qs: [],          // أسئلة المباراة بالترتيب — qs[i] = صف الجسر i
-        rows: [],        // {labels, broken, safe}
-        row: 0,          // الصف اللي عليه السؤال الحين
-        left: 0,         // ثواني باقية
-        startedAt: 0,
-        winners: [],
-        cam: 'overview'
+        qs: [], rows: [], row: 0, left: 0, startedAt: 0, winners: [], cam: 'overview',
+        broke: false, pts: {}, ptsState: 'idle', reported: false
     };
 
     // ---------- أدوات ----------
@@ -62,35 +69,42 @@
     var pool = [];
     function nextQuestion() { if (!pool.length) pool = shuffle(AGP.abyssQuestions || []); return pool.pop(); }
     function isTF(q) { return !!q && typeof q.tf === 'boolean'; }
-    // كل لوح زجاج عليه رقمه (1 يمين · 2 يسار) حتى بأسئلة صح وخطأ
-    function labelsOf() { return ['1', '2']; }
     function correctLane(q) { return isTF(q) ? (q.tf ? 0 : 1) : q.c; }
-    function ensureRows(n) { while (S.qs.length < n) { var q = nextQuestion(); S.qs.push(q); S.rows.push({ labels: labelsOf(q), broken: null, safe: null }); } }
+    // كل لوح زجاج عليه رقمه (1 يمين · 2 يسار) حتى بأسئلة صح وخطأ
+    function ensureRows(n) { while (S.qs.length < n) { S.qs.push(nextQuestion()); S.rows.push({ labels: ['1', '2'], broken: null, safe: null }); } }
     function alive() { return S.players.filter(function (p) { return p.alive; }); }
     function show(id, on) { $(id).hidden = !on; }
+    function hashOf(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+    // شخصية الأنمي لأصحاب الحسابات الموثّقة (docs/CHARACTERS.md): girl/boy، و any = وحدة ثابتة من id
+    function vrmOf(c, id) { if (c === 'girl' || c === 'boy') return c; return c === 'any' ? (hashOf(id) & 1 ? 'boy' : 'girl') : null; }
+    function initialOf(n) { return ([].slice.call(String(n || '')).filter(function (c) { return /[^\s_\d]/.test(c); }).slice(0, 2).join('')) || '؟'; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
-    // تطبيع بسيط للأجوبة: الأرقام العربية والفارسية، الهمزات، التاء المربوطة
-    function norm(s) {
-        return String(s == null ? '' : s).trim()
-            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
-            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
-            .replace(/[ً-ٰـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
-            .replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
-    }
-    // الجواب ← المربع: 1/صح = يمين (0) · 2/خطا = يسار (1)
+    // الجواب ← اللوح: 1/صح = يمين (0) · 2/خطأ = يسار (1)
     function laneOf(text, q) {
-        var t = norm(text);
+        var t = AB.norm(text);
         if (t === '1') return 0;
         if (t === '2') return 1;
         if (isTF(q)) { if (t === 'صح' || t === 'صحيح') return 0; if (t === 'خطا' || t === 'غلط') return 1; }
         return -1;
     }
 
+    // ---------- الأصوات (WebAudio خفيفة) ----------
+    var ac = null;
+    function tone(fr, d, type, v) {
+        if (!CFG.sound) return;
+        try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); var o = ac.createOscillator(), g = ac.createGain();
+            o.type = type || 'sine'; o.frequency.value = fr; g.gain.setValueAtTime(v || .14, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + d);
+            o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {}
+    }
+    function sCrack() { tone(180, .35, 'sawtooth', .12); setTimeout(function () { tone(90, .5, 'square', .08); }, 90); }
+    function sSafe() { tone(659, .18); setTimeout(function () { tone(880, .25); }, 120); }
+    function sWin() { tone(523, .22); setTimeout(function () { tone(659, .22); }, 160); setTimeout(function () { tone(784, .5, 'sine', .16); }, 320); }
+
     // ---------- المشهد ----------
     function pushScene() {
         scene.scene = {
-            names: true, cam: S.cam, row: S.row, finish: CFG.mode === 'steps', win: S.winners,
-            rows: S.rows,
+            names: true, cam: S.cam, row: S.row, finish: CFG.mode === 'steps', win: S.winners, rows: S.rows,
             players: S.players.map(function (p) {
                 return { id: p.id, name: p.name, skin: p.look.skin, hair: p.look.hair, girl: p.look.girl, outfit: p.look.outfit, pants: p.look.pants, vrm: p.vrm, row: p.row, lane: p.lane, fall: p.fall };
             })
@@ -99,24 +113,18 @@
 
     // ---------- الواجهة ----------
     function render() {
-        var ph = S.phase, q = S.qs[S.row], n = alive().length;
-        show('join', ph === 'join');
-        show('q', ph === 'question' || ph === 'reveal');
-        show('opts', ph === 'question' || ph === 'reveal');
-        show('hint', ph === 'question');
-        show('alive', ph !== 'join'); show('steps', ph !== 'join');
-        show('over', ph === 'over');
-        $('joinN').textContent = S.players.length;
-        $('joinKw').textContent = CFG.joinWord; $('joinKw2').textContent = CFG.joinWord;
-        $('modeChip').textContent = CFG.mode === 'steps' ? 'النمط: ' + CFG.steps + ' خطوة' : 'النمط: آخر ناجي';
-        $('bStart').disabled = S.players.length < 1;
+        var ph = S.phase, q = S.qs[S.row], n = alive().length, playing = ph === 'question' || ph === 'reveal';
+        show('intro', ph === 'intro');
+        show('q', playing); show('opts', playing); show('hint', ph === 'question');
+        show('alive', ph !== 'intro'); show('steps', ph !== 'intro');
+        $('joinKw').textContent = CFG.joinWord;
         $('aliveN').textContent = n;
         $('stepsN').textContent = CFG.mode === 'steps' ? Math.min(S.row + 1, CFG.steps) + '/' + CFG.steps : S.row + 1;
-        if (q && (ph === 'question' || ph === 'reveal')) {
+        if (q && playing) {
             $('qText').textContent = q.q;
             [0, 1].forEach(function (l) {
                 $('o' + l + 't').textContent = isTF(q) ? (l ? 'خطأ' : 'صح') : q.a[l];
-                $('o' + l + 'c').textContent = alive().filter(function (p) { return p.ans === l; }).length + S.players.filter(function (p) { return p.fall && p.lane === l && p.row === S.row; }).length;
+                $('o' + l + 'c').textContent = S.players.filter(function (p) { return p.row === S.row && p.lane === l && (p.alive || p.fall); }).length;
                 var o = $('o' + l); o.classList.toggle('ok', ph === 'reveal' && S.broke && correctLane(q) === l); o.classList.toggle('bad', ph === 'reveal' && S.broke && correctLane(q) !== l);
             });
             $('hintTx').innerHTML = isTF(q) ? 'اكتب <span class="kbd">1</span> صح أو <span class="kbd">2</span> خطأ بالشات' : 'اكتب <span class="kbd">1</span> أو <span class="kbd">2</span> بالشات';
@@ -129,149 +137,214 @@
     function fit() { var k = Math.min(innerWidth / 1920, innerHeight / 1080), st = $('stage').style; st.setProperty('--s', k); st.setProperty('--top', Math.max(24, Math.round((80 - (innerHeight / 2 - 540 * k)) / k + 22)) + 'px'); }
     addEventListener('resize', fit); fit();
 
-    // ---------- اللاعبين ----------
-    function addPlayer(id, name, vrm) {
-        if (S.phase !== 'join' || S.players.some(function (p) { return p.id === id; })) return;
-        var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-        S.players.push({ id: id, name: name, look: LOOKS[Math.abs(h) % LOOKS.length], vrm: vrm || null, row: -1, lane: 0, alive: true, fall: false, ans: -1 });
-        logEv('🙋', 'انضم ' + name);
-        pushScene(); render();
+    // ---------- أحداث المباراة (زر «أحداث المباراة» بالهيدر) ----------
+    var LOG = [];
+    function logEv(icon, text) {
+        LOG.unshift({ icon: icon, text: text, at: new Date() }); if (LOG.length > 80) LOG.pop();
+        $('evList').innerHTML = LOG.map(function (e) { return '<li><span>' + e.icon + '</span><b>' + esc(e.text) + '</b><time>' + e.at.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) + '</time></li>'; }).join('');
+        $('evEmpty').hidden = LOG.length > 0;
     }
-    function answer(id, text) {
+
+    // ---------- اللاعبين ----------
+    function makePlayer(name) {
+        var p = reg.player(name);
+        return { id: p.id, name: name, look: LOOKS[hashOf(p.id) % LOOKS.length], vrm: vrmOf(p.character, p.id), row: -1, lane: 0, alive: true, fall: false, ans: -1 };
+    }
+    // دخول أثناء المباراة (الدخول التلقائي): يوقف مع الناجين على آخر لوح سليم
+    function joinMidMatch(name) {
+        if (S.players.some(function (p) { return p.name === name; }) || S.players.length >= CFG.maxPlayers) return;
+        if (S.phase !== 'question' && S.phase !== 'intro') return;
+        var p = makePlayer(name), prev = S.rows[S.row - 1];
+        if (S.phase === 'question' && prev) { p.row = S.row - 1; p.lane = prev.safe != null ? prev.safe : 0; }
+        S.players.push(p); participants[p.name] = true;
+        try { AGP.winCard && AGP.winCard.preloadFor(reg.player(name)); } catch (e) {}
+        logEv('🙋', 'انضم ' + name); pushScene(); render();
+    }
+    function answer(name, text) {
         if (S.phase !== 'question') return;
-        var p = S.players.find(function (x) { return x.id === id; }); if (!p || !p.alive) return;
+        var p = S.players.find(function (x) { return x.name === name; }); if (!p || !p.alive) return;
         var l = laneOf(text, S.qs[S.row]); if (l < 0) return;
-        p.ans = l; p.row = S.row; p.lane = l;   // الشخصية تنط للمربع (وتقدر تغيّر رأيها قبل نهاية الوقت)
+        p.ans = l; p.row = S.row; p.lane = l;   // الشخصية تنط للوح (وتقدر تغيّر رأيها قبل نهاية الوقت)
         pushScene(); render();
     }
 
     // ---------- دورة المباراة ----------
-    var timer = null;
+    var timer = null, timers = [], participants = {};
+    function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+    function clearAll() { clearInterval(timer); timers.forEach(clearTimeout); timers = []; }
+
+    function setupMatch(names) {
+        clearAll();
+        S.players = names.map(makePlayer); participants = {};
+        S.players.forEach(function (p) { participants[p.name] = true; try { AGP.winCard && AGP.winCard.preloadFor(reg.player(p.name)); } catch (e) {} });
+        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false;
+        S.cam = 'overview'; S.phase = 'intro';
+        ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
+        $('win').hidden = true;
+        pushScene(); render();
+        // عد تنازلي قصير والكاميرا تستعرض الجسر، ثم أول سؤال
+        var n = 3; $('introN').textContent = n;
+        later(function tick() { n--; if (n > 0) { $('introN').textContent = n; tone(440, .12, 'triangle'); later(tick, 1000); } else start(); }, 1600);
+    }
     function start() {
-        if (!S.players.length) return;
-        S.startedAt = Date.now(); S.row = 0; S.winners = [];
-        S.cam = 'play'; logEv('🚩', 'بدأت المباراة بـ ' + S.players.length + ' لاعب · ' + (CFG.mode === 'steps' ? CFG.steps + ' خطوة' : 'آخر ناجي')); ask();
+        S.startedAt = Date.now(); S.row = 0; S.cam = 'play';
+        logEv('🚩', 'بدأت المباراة بـ ' + S.players.length + ' لاعب · ' + (CFG.mode === 'steps' ? CFG.steps + ' خطوة' : 'آخر ناجي'));
+        ask();
     }
     function ask() {
-        S.phase = 'question'; S.left = CFG.answerSec;
+        S.phase = 'question'; S.left = CFG.answerSec; S.broke = false;
         alive().forEach(function (p) { p.ans = -1; });
         if (CFG.mode === 'last') ensureRows(S.row + 6);
         pushScene(); render();
         clearInterval(timer);
-        timer = setInterval(function () { S.left -= .25; if (S.left <= 0) { clearInterval(timer); reveal(); } else render(); }, 250);
+        timer = setInterval(function () {
+            S.left -= .25;
+            if (S.left > 0 && S.left <= 5 && Math.abs(S.left - Math.round(S.left)) < .01) tone(660, .08, 'triangle', .08);
+            if (S.left <= 0) { clearInterval(timer); reveal(); } else render();
+        }, 250);
         if (DEMO) demoAnswers();
     }
-    // انتهى الوقت: اللي ما جاوب ينط على المربع الغلط، لحظة ترقّب، ثم ينكسر الزجاج
+    // انتهى الوقت: اللي ما جاوب ينط على اللوح الغلط (أو الصح)، لحظة ترقّب، ثم ينكسر الزجاج
     function reveal() {
         S.phase = 'reveal'; S.broke = false;
         var q = S.qs[S.row], ok = correctLane(q), bad = 1 - ok;
         alive().forEach(function (p) { if (p.ans < 0) { p.row = S.row; p.lane = CFG.noAnswerFalls ? bad : ok; } });
         pushScene(); render();
-        setTimeout(breakGlass, 1300);
+        later(breakGlass, 1300);
     }
     function breakGlass() {
         var q = S.qs[S.row], ok = correctLane(q), bad = 1 - ok, fell = [];
         S.broke = true; S.rows[S.row].broken = bad; S.rows[S.row].safe = ok;
-        alive().forEach(function (p) {
-            if (p.lane === ok) return;
-            p.alive = false; p.fall = true; fell.push(p.name);
-        });
-        pushScene(); render();
+        alive().forEach(function (p) { if (p.lane === ok) return; p.alive = false; p.fall = true; fell.push(p.name); });
+        pushScene(); render(); later(sCrack, 400); if (!fell.length) sSafe();
         logEv(fell.length ? '💥' : '✅', 'الخطوة ' + (S.row + 1) + ': ' + (fell.length ? 'سقط ' + fell.join('، ') : 'الكل نجا'));
         var h = $('fallH'), pTx = $('fallP');
         if (fell.length) { h.className = ''; h.textContent = 'انكسر الزجاج! سقط ' + fell.length + (fell.length === 1 ? ' لاعب' : ' لاعبين'); pTx.textContent = fell.slice(0, 12).join(' · ') + (fell.length > 12 ? ' و' + (fell.length - 12) + ' غيرهم' : ''); }
         else { h.className = 'safe'; h.textContent = 'الكل نجا!'; pTx.textContent = 'الجواب الصح: ' + (isTF(q) ? (q.tf ? 'صح' : 'خطأ') : q.a[ok]); }
-        setTimeout(function () { show('fall', true); }, 700);
-        setTimeout(function () { show('fall', false); next(); }, 4200);
+        later(function () { show('fall', true); }, 700);
+        later(function () { show('fall', false); next(); }, 4200);
     }
     function next() {
         var left = alive();
         if (!left.length) return finish([]);
         if (CFG.mode === 'last' && left.length === 1) return finish(left);
         S.row++;
-        if (CFG.mode === 'steps' && S.row >= CFG.steps) { left.forEach(function (p) { p.row = CFG.steps; p.lane = 0; }); pushScene(); return setTimeout(function () { finish(left); }, 1300); }
+        if (CFG.mode === 'steps' && S.row >= CFG.steps) { left.forEach(function (p) { p.row = CFG.steps; p.lane = 0; }); pushScene(); return later(function () { finish(left); }, 1300); }
         ask();
     }
     function finish(winners) {
+        clearAll();
         S.phase = 'over'; S.winners = winners.map(function (p) { return p.id; }); S.cam = winners.length ? 'win' : 'overview';
-        $('overH').textContent = winners.length ? (winners.length === 1 ? 'الفائز: ' + winners[0].name : 'نجا ' + winners.length + ' لاعبين!') : 'سقط الجميع!';
-        $('overP').textContent = winners.length > 1 ? winners.map(function (p) { return p.name; }).join(' · ') : winners.length ? 'آخر واحد صامد على الجسر' : 'ما أحد نجا من الهاوية هالمرة';
-        $('over').querySelector('.crown').textContent = winners.length ? '👑' : '💀';
         logEv(winners.length ? '👑' : '💀', winners.length ? 'الفائز: ' + winners.map(function (p) { return p.name; }).join('، ') : 'سقط الجميع');
-        pushScene(); render();
-        // نظام نقاط المنصة (إلزامي لكل لعبة) — مرة وحدة بنهاية كل مباراة
-        if (!DEMO && window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
-            window.AGPAuth.reportMatchPoints({
-                players: S.players.map(function (p) { return { id: p.id, name: p.name }; }),
-                winnerIds: S.winners, teamGame: false, durationMs: Date.now() - S.startedAt
-            });
-        }
-    }
-    function reset() {
-        clearInterval(timer);
-        S.players.forEach(function (p) { p.row = -1; p.lane = 0; p.alive = true; p.fall = false; p.ans = -1; });
-        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.cam = 'overview'; S.phase = 'join'; ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
-        // المشهد يبني الجسر من جديد
-        var fresh = document.createElement('abyss-3d'); fresh.id = 'scene'; scene.replaceWith(fresh); scene = fresh;
-        pushScene(); render();
+        pushScene(); render(); if (winners.length) sWin();
+        reportPoints(winners);
+        later(function () { renderWin(); $('win').hidden = false; }, winners.length ? 2600 : 1600);
     }
 
-    // ---------- أحداث المباراة (زر «أحداث المباراة» بالهيدر) ----------
-    var LOG = [];
-    function logEv(icon, text) {
-        LOG.unshift({ icon: icon, text: text, at: new Date() }); if (LOG.length > 60) LOG.pop();
-        var box = $('evList'); if (!box) return;
-        box.innerHTML = LOG.map(function (e) { return '<li><span>' + e.icon + '</span><b></b><time>' + e.at.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) + '</time></li>'; }).join('');
-        Array.prototype.forEach.call(box.querySelectorAll('b'), function (b, i) { b.textContent = LOG[i].text; });
-        $('evEmpty').hidden = LOG.length > 0;
+    // ---------- نقاط المنصة (إلزامي لكل لعبة — CLAUDE.md) ----------
+    // reportMatchPoints تسجّل للاعبين نقاطهم وإحصائياتهم، وللاستريمر ساعات البث وعدد المشاركين.
+    function reportPoints(winners) {
+        if (S.reported) return; S.reported = true;
+        var A = window.AGPAuth;
+        if (DEMO || !A || typeof A.reportMatchPoints !== 'function') { S.ptsState = 'none'; return; }
+        S.ptsState = 'pending';
+        var players = Object.keys(participants).map(function (n) { var p = reg.player(n); return { id: p.id, name: n }; });
+        A.reportMatchPoints({ players: players, winnerIds: winners.map(function (p) { return p.id; }), teamGame: false, durationMs: Date.now() - (S.startedAt || Date.now()) })
+            .then(function (res) {
+                S.pts = {}; S.ptsState = 'done';
+                (res && res.success && Array.isArray(res.awarded) ? res.awarded : []).forEach(function (a) { S.pts[String(a.tiktokUsername).toLowerCase()] = a.added; });
+                if (!$('win').hidden) renderWin();
+            });
+    }
+    function ptsOf(p) {
+        if (S.ptsState === 'pending') return { main: '…', sub: 'جارٍ احتساب النقاط' };
+        var u = String(p.id).indexOf('tiktok:') === 0 ? String(p.id).slice(7).toLowerCase() : '';
+        var v = u ? S.pts[u] : undefined;
+        return typeof v === 'number' ? { main: '+' + v + ' نقطة', sub: 'تظهر في بروفايلك' } : { main: '—', sub: 'النقاط للحسابات الموثّقة في الموقع' };
+    }
+
+    // ---------- شاشة الفوز (نفس قالب روليت الإقصاء) ----------
+    var CROWN = '<svg width="60" height="40" viewBox="0 0 60 40" style="display:block;fill:#a78bfa;stroke:#6d28d9;stroke-linejoin:round"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg>';
+    function renderWin() {
+        var ws = S.players.filter(function (p) { return S.winners.indexOf(p.id) >= 0; }), n = ws.length, total = Object.keys(participants).length;
+        $('winH').textContent = n ? (n === 1 ? '🏆 الفائز في لعبة "الهاوية"' : '🏆 الفائزين في لعبة "الهاوية"') : '💀 سقط الجميع في الهاوية';
+        $('winSub').textContent = n ? (n === 1 ? (CFG.mode === 'last' ? 'آخر ناجي من ' + total + ' لاعب' : 'وصل خط النجاة من ' + total + ' لاعب') : 'وصلوا خط النجاة ' + n + ' من ' + total + ' لاعب') : 'ما أحد نجا هالمرة — جربوا مرة ثانية';
+        // كل ما زاد عدد الفائزين تصغر البطاقات (بدون أي تطاير)
+        var k = n <= 1 ? 1 : n <= 3 ? .85 : n <= 6 ? .7 : n <= 12 ? .58 : .5, MAX = 24;
+        $('winCards').innerHTML = ws.slice(0, MAX).map(function (p, i) {
+            var pl = reg.player(p.name), pt = ptsOf(p), delay = 'animation-delay:' + (i * 0.05).toFixed(2) + 's;';
+            if (AGP.winCard && AGP.winCard.canShow(pl)) {
+                return '<div class="wc own" style="zoom:' + k + ';' + delay + '">' + AGP.winCard.renderHtml(pl, [pt.main, n === 1 ? 'المركز الأول من ' + total + ' لاعب' : 'من الناجين', 'الهاوية'], { pop: false }) + '</div>';
+            }
+            var av = pl.avatarUrl;
+            return '<div class="wc" style="zoom:' + k + ';' + delay + '"><div class="crown">' + CROWN + '</div><div class="card"><div class="shine"></div><div class="in">' +
+                '<span class="lbl">WINNER</span><span class="av">' + esc(initialOf(p.name)) + (av ? '<img src="' + esc(av) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+                '<span class="nm">' + esc(p.name) + '</span><div class="pts" style="font-size:' + (pt.main.length > 2 ? '2em' : '1.4em') + '">' + esc(pt.main) + '<small>' + esc(pt.sub) + '</small></div></div></div></div>';
+        }).join('') + (n > MAX ? '<span class="more">و' + (n - MAX) + ' غيرهم</span>' : '');
     }
 
     // ---------- الشات ----------
-    // الاتصال بالبث: نفس الاتصال الموثّق المحفوظ بمكتبة الألعاب (games.html)
-    (function connectStream() {
-        if (DEMO || !AGP.streamConnector) return;
-        var conn = null; try { conn = JSON.parse(localStorage.getItem('agp:agp-stream-connection') || 'null'); } catch (e) {}
-        if (conn && conn.username) AGP.streamConnector.connect('tiktok', { username: conn.username });
-    }());
-    // شخصية الأنمي لأصحاب الحسابات الموثّقة (docs/CHARACTERS.md): girl/boy، و any = وحدة ثابتة من id
-    function vrmOf(c, id) {
-        if (c === 'girl' || c === 'boy') return c;
-        if (c !== 'any') return null;
-        var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-        return h & 1 ? 'boy' : 'girl';
-    }
-    if (AGP.events && typeof AGP.events.on === 'function') {
-        AGP.events.on('stream:commentReceived', function (c) {
-            if (!c || typeof c.text !== 'string' || !c.id) return;
-            var id = String(c.id), name = String(c.name || c.id).trim() || 'لاعب';
-            if (S.phase === 'join') { if (norm(c.text) === norm(CFG.joinWord) && $('bAuto').getAttribute('aria-checked') === 'true') addPlayer(id, name, vrmOf(c.character, id)); }
-            else answer(id, c.text);
+    if (!DEMO) {
+        AB.connect();
+        AB.onComment(function (c) {
+            var name = reg.nameFor(c);
+            if (AB.norm(c.text) === AB.norm(CFG.joinWord)) {
+                if ($('bAuto').getAttribute('aria-checked') !== 'true') return;
+                if (CFG.followersOnly && !c.isFollower) return;
+                return joinMidMatch(name);
+            }
+            answer(name, c.text);
         });
     }
 
     // ---------- أزرار ----------
-    $('bStart').onclick = start;
-    $('bAgain').onclick = reset;
-    $('bBack').onclick = function () { location.href = 'index.html'; };
-    $('bExit').onclick = function () { location.href = '../../games.html'; };
-    $('bSettings').onclick = function () { location.href = 'index.html'; };
+    function goLobby() { clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
+    function saveSetup() { if (DEMO) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; AB.writeJSON(AB.keys.setup, SETUP); }
+    function paintSettings() {
+        [].forEach.call($('sSec').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-v') === CFG.answerSec)); });
+        $('sFall').setAttribute('aria-checked', String(CFG.noAnswerFalls)); $('sSound').setAttribute('aria-checked', String(CFG.sound));
+    }
+    $('bExit').onclick = function () { $('exitDlg').hidden = false; };
+    $('xNo').onclick = function () { $('exitDlg').hidden = true; };
+    $('exitDlg').onclick = function (e) { if (e.target === $('exitDlg')) $('exitDlg').hidden = true; };
+    $('xYes').onclick = function () { clearAll(); location.href = AB.libraryUrl; };
+    $('bSettings').onclick = function (e) { e.stopPropagation(); paintSettings(); $('setPanel').hidden = !$('setPanel').hidden; };
+    $('sClose').onclick = function () { $('setPanel').hidden = true; };
+    $('sSec').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.answerSec = +b.getAttribute('data-v'); saveSetup(); paintSettings(); };
+    $('sFall').onclick = function () { CFG.noAnswerFalls = !CFG.noAnswerFalls; saveSetup(); paintSettings(); };
+    $('sSound').onclick = function () { CFG.sound = !CFG.sound; saveSetup(); paintSettings(); };
+    $('sBack').onclick = function () { clearAll(); location.href = 'index.html'; };
+    $('sEnd').onclick = goLobby;
     $('bEvents').onclick = function (e) { e.stopPropagation(); $('evPanel').hidden = !$('evPanel').hidden; };
-    document.addEventListener('click', function (e) { if (!$('evPanel').contains(e.target)) $('evPanel').hidden = true; });
+    document.addEventListener('click', function (e) {
+        if (!$('evPanel').contains(e.target)) $('evPanel').hidden = true;
+        if (!$('setPanel').contains(e.target) && !$('bSettings').contains(e.target)) $('setPanel').hidden = true;
+    });
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
+    $('wExit').onclick = function () { $('exitDlg').hidden = false; };
+    $('wNew').onclick = goLobby;
+    // إعادة بنفس اللاعبين: الجسر ينبني من جديد والكل يرجع لمنصة البداية
+    $('wSame').onclick = function () {
+        var names = S.players.map(function (p) { return p.name; });
+        var fresh = document.createElement('abyss-3d'); fresh.id = 'scene'; scene.replaceWith(fresh); scene = fresh;
+        setupMatch(names);
+    };
 
     // ---------- نمط التجربة ----------
     var DEMO_ACC = +params.get('acc') || .7;
     var NAMES = ['سارا', 'فهد', 'نوره', 'عبدالله', 'ريم', 'خالد', 'لمى', 'تركي', 'جود', 'سلطان', 'هيا', 'ماجد', 'دانة', 'ناصر', 'غلا', 'بندر', 'شهد', 'راكان'];
-    function demoJoin(n) { for (var i = 0; i < n; i++) addPlayer('demo:' + i, NAMES[i % NAMES.length], i % 5 === 1 ? 'girl' : i % 5 === 3 ? 'boy' : null); }
     function demoAnswers() {
         alive().forEach(function (p) {
-            setTimeout(function () { answer(p.id, Math.random() < DEMO_ACC ? String(correctLane(S.qs[S.row]) + 1) : String(2 - correctLane(S.qs[S.row]))); }, 800 + Math.random() * (CFG.answerSec - 4) * 1000);
+            later(function () { var ok = correctLane(S.qs[S.row]); answer(p.name, String(Math.random() < DEMO_ACC ? ok + 1 : 2 - ok)); }, 800 + Math.random() * (CFG.answerSec - 4) * 1000);
         });
     }
-    // للتجربة ولقطات الشاشة
-    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, addPlayer: addPlayer, demoJoin: demoJoin, render: render, push: pushScene };
-    ensureRows(CFG.mode === 'steps' ? CFG.steps : 6); // الجسر يبان من اللوبي
-    if (DEMO) demoJoin(+params.get('n') || 12);
+    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin };
 
-    pushScene(); render();
+    var names = ROSTER.slice();
+    if (DEMO) {
+        var n = +params.get('n') || 12, init = {};
+        for (var i = 0; i < n; i++) { var nm = NAMES[i % NAMES.length] + (i >= NAMES.length ? ' ' + (i + 1) : ''); names.push(nm); init[nm] = { id: 'demo:' + i, avatar: null, character: i % 5 === 1 ? 'girl' : i % 5 === 3 ? 'boy' : null }; }
+        reg = AB.createRegistry(init);
+    }
+    setupMatch(names);
 }(window.AymanGamesPlatform));

@@ -19,7 +19,12 @@
 <script src="../../js/agp-stream-connector.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
+<script src="abyss-platform.js"></script>
 <!-- الشخصيات: نفس شخصيات سفينة النجاة (abyss3d.js يورث <ship-3d>) -->
 <script src="../survival-ship/ship3d.js"></script>
 <script src="abyss3d.js"></script>
@@ -53,8 +58,8 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 .kw{display:flex;align-items:center;gap:clamp(8px,.7vw,14px);white-space:nowrap;padding:0 6px}
 .kw small{font:600 clamp(12px,.8vw,15px) 'IBM Plex Sans Arabic';color:var(--mut)}
 .kw b{font:700 clamp(18px,1.45vw,28px)/1 'IBM Plex Sans Arabic';color:#7dd3fc;text-shadow:0 0 18px rgba(56,189,248,.55)}
-.logo{height:60px;min-width:clamp(96px,14vw,280px);display:grid;place-items:center}
-.logo img{height:60px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(56,189,248,.45))}
+.logo{height:76px;min-width:clamp(96px,14vw,280px);display:grid;place-items:center}
+.logo img{height:76px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(56,189,248,.45))}
 
 /* ===== المسرح 1920×1080 ===== */
 #stage{position:fixed;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale(var(--s,1));pointer-events:none}
@@ -98,24 +103,63 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 #fall h3.safe{color:#86efac;text-shadow:0 0 30px rgba(34,197,94,.6)}
 #fall p{margin:0;font:500 22px/1.6 'IBM Plex Sans Arabic';color:#e7e3ef;max-width:900px}
 
-/* اللوبي */
-#join{position:absolute;bottom:60px;left:50%;width:980px;margin-left:-490px;border-radius:34px;padding:30px 40px;text-align:center;animation:pop .5s}
-#join h1{margin:0;font:900 96px/1 'Zain';letter-spacing:0;background:linear-gradient(180deg,#e0f2fe,#7dd3fc 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(56,189,248,.45))}
-#join .sub{margin:8px 0 22px;font:500 22px 'IBM Plex Sans Arabic';color:var(--mut)}
-#join .row{display:flex;justify-content:center;gap:14px;align-items:center;flex-wrap:wrap}
-#join .big{font:700 30px 'IBM Plex Sans Arabic'}
-#join .big b{color:#7dd3fc;font-size:40px;margin:0 6px}
-.go{margin-top:22px;height:64px;padding:0 54px;border-radius:999px;border:none;cursor:pointer;font:700 26px 'IBM Plex Sans Arabic';color:#fff;background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 12px 36px rgba(56,189,248,.45);--g:rgba(56,189,248,.35);animation:pulse 2s infinite}
-.go:disabled{opacity:.4;animation:none;cursor:default}
+/* العد قبل البداية */
+#intro{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;animation:pop .5s}
+#intro h1{margin:0;font:900 120px/1 'Zain';background:linear-gradient(180deg,#e0f2fe,#7dd3fc 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(56,189,248,.45))}
+#intro p{margin:10px 0 0;font:600 30px 'IBM Plex Sans Arabic';color:#e7e3ef;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+#intro b{display:block;margin-top:14px;font:900 140px/1 'Zain';color:#fff;text-shadow:0 0 40px rgba(56,189,248,.7)}
 
-/* الفوز */
-#over{position:absolute;top:130px;left:50%;width:1000px;margin-left:-500px;border-radius:34px;padding:30px 40px;text-align:center;animation:pop .6s}
-#over .crown{font-size:64px;line-height:1}
-#over h2{margin:6px 0 4px;font:900 64px 'Zain';color:#fde68a;text-shadow:0 0 40px rgba(251,191,36,.6)}
-#over p{margin:0;font:600 26px/1.6 'IBM Plex Sans Arabic'}
-#over .acts{display:flex;justify-content:center;gap:14px;margin-top:20px}
-#over .acts button{height:56px;padding:0 34px;border-radius:999px;font:700 22px 'IBM Plex Sans Arabic';cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff}
-#over .acts .pri{border:none;background:linear-gradient(90deg,#0ea5e9,#6366f1)}
+/* شاشة الفوز (نفس قالب روليت الإقصاء) */
+@keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes agpCrown{0%{opacity:0;transform:translateX(-50%) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}}
+@keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
+#win{position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:96px 16px 24px;overflow-y:auto;background:rgba(8,4,16,.45);backdrop-filter:blur(14px);font-family:'Zain','IBM Plex Sans Arabic',sans-serif;animation:fade .3s ease}
+#win h2{margin:0 0 6px;font-size:1.6em;font-size:29px;font-weight:800;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-align:center}
+#win .sub{font:600 17px 'IBM Plex Sans Arabic';color:#c4b5fd;text-align:center}
+#winCards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:34px 0 30px;max-width:1500px}
+.wc{position:relative;width:200px;display:flex;flex-direction:column;align-items:center;animation:agpPop .45s cubic-bezier(.2,1,.3,1) both}
+.wc .crown{position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both}
+.wc .card{position:relative;width:200px;height:300px;margin-top:36px;border-radius:22px;overflow:hidden;background:linear-gradient(165deg,rgba(30,20,52,.92),rgba(13,10,24,.96));border:1.5px solid #a78bfa8c;box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 0 40px #a78bfa26}
+.wc .shine{position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);animation:agpShine 2.6s ease-in-out .6s infinite;pointer-events:none}
+.wc .in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;padding:18px 14px 16px}
+.wc .lbl{font-size:15px;letter-spacing:3px;font-weight:800;color:#a78bfa;margin-bottom:12px}
+.wc .av{flex-shrink:0;width:84px;height:84px;border-radius:50%;border:2.5px solid #a78bfa;box-shadow:0 4px 10px rgba(0,0,0,.4);background:#5b21b6;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:25px;position:relative;overflow:hidden}
+.wc .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.wc .nm{margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wc .pts{margin-top:auto;width:100%;padding-top:10px;border-top:1px solid #a78bfa40;text-align:center;font-weight:800;letter-spacing:1px;color:#a78bfa;text-shadow:0 2px 6px rgba(0,0,0,.4);line-height:1.1}
+.wc .pts small{display:block;font-size:.45em;font-weight:500;letter-spacing:0;margin-top:4px;color:rgba(167,139,250,.8)}
+.wc.own{width:240px}
+#win .acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:560px}
+#win .acts button{flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;transition:filter .2s,transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8}
+#win .acts button:hover{filter:brightness(1.2)}
+#win .acts .pri{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)}
+#win .acts .sec{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe}
+#win .more{font:600 16px 'IBM Plex Sans Arabic';color:#c4b5fd;align-self:center}
+
+/* نوافذ: تأكيد الخروج + إعدادات المباراة */
+.ov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:fade .25s ease}
+.dlg{width:min(420px,calc(100vw - 16px));padding:28px;border-radius:24px;background:rgba(12,11,18,.97);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;animation:pop .4s cubic-bezier(.2,1.25,.35,1)}
+.dlg .ic{width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:rgba(248,113,113,.1);color:#fca5a5}
+.dlg b{font:700 22px 'IBM Plex Sans Arabic'}
+.dlg span{font:500 15px/1.6 'IBM Plex Sans Arabic';color:var(--mut)}
+.dlg .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px}
+.dlg .two button{height:48px;border-radius:999px;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef}
+.dlg .two .red{border:none;background:linear-gradient(90deg,#dc2626,#ef4444);color:#fff}
+#setPanel{position:fixed;top:92px;right:clamp(8px,1vw,16px);z-index:80;width:min(400px,calc(100vw - 16px));border-radius:24px;background:rgba(12,11,18,.97);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);overflow:hidden;direction:rtl;animation:pop .35s cubic-bezier(.2,1.25,.35,1)}
+#setPanel .hd{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);font:700 20px 'IBM Plex Sans Arabic'}
+#setPanel .hd button{width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;font-size:18px}
+#setPanel .bd{padding:10px 22px 20px;display:flex;flex-direction:column}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid rgba(255,255,255,.06)}
+.srow>span{font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef;text-align:right}
+.seg{display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.seg button{height:32px;padding:0 12px;border:none;border-radius:999px;cursor:pointer;font:600 13px 'IBM Plex Sans Arabic';background:transparent;color:#a8a3b5}
+.seg button[aria-pressed=true]{background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 6px 20px rgba(139,92,246,.4)}
+.tgl{width:52px;height:30px;flex-shrink:0;border-radius:999px;border:none;cursor:pointer;padding:3px;display:flex;justify-content:flex-end;background:rgba(255,255,255,.12)}
+.tgl i{width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.tgl[aria-checked=true]{justify-content:flex-start;background:linear-gradient(90deg,#7c3aed,#a855f7)}
+#setPanel .acts{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+#setPanel .acts button{height:46px;border-radius:999px;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e7e3ef}
+#setPanel .acts .red{border-color:rgba(248,113,113,.4);color:#fca5a5;background:rgba(248,113,113,.08)}
 
 /* عدّاد الناجين (يمين تحت الهيدر) */
 #alive{position:absolute;top:var(--top,108px);right:40px;border-radius:24px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:150px}
@@ -162,18 +206,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
   <div id="alive" class="glass" hidden><b id="aliveN">0</b><span>ناجي</span></div>
   <div id="steps" class="glass" hidden><b id="stepsN">0</b><span id="stepsL">الخطوة</span></div>
 
-  <section id="join" class="glass">
-    <h1>الهاوية</h1>
-    <div class="sub">جسر زجاج فوق الهاوية… الجواب الغلط يكسر الزجاجة</div>
-    <div class="row">
-      <span class="big">اكتب <b id="joinKw2">دخول</b> بالشات للانضمام</span>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <span class="chip"><span class="dot"></span><span id="joinN">0</span> لاعب على المنصة</span>
-      <span class="chip m" id="modeChip">النمط: 15 خطوة</span>
-    </div>
-    <button class="go" id="bStart" disabled>ابدأ المباراة</button>
-  </section>
+  <section id="intro" hidden><h1>الهاوية</h1><p id="introP">استعدوا… الجواب الغلط يكسر الزجاجة</p><b id="introN">3</b></section>
 
   <section id="q" class="glass" hidden>
     <h2 id="qText"></h2>
@@ -190,13 +223,37 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 
   <section id="fall" class="glass" hidden><h3 id="fallH"></h3><p id="fallP"></p></section>
 
-  <section id="over" class="glass" hidden>
-    <div class="crown">👑</div>
-    <h2 id="overH"></h2>
-    <p id="overP"></p>
-    <div class="acts"><button class="pri" id="bAgain">مباراة جديدة</button><button id="bBack">رجوع للإعدادات</button></div>
-  </section>
 </div>
+
+<!-- شاشة الفوز -->
+<section id="win" hidden>
+  <h2 id="winH"></h2>
+  <div class="sub" id="winSub"></div>
+  <div id="winCards"></div>
+  <div class="acts">
+    <button id="wExit">الخروج</button>
+    <button class="pri" id="wNew">مباراة جديدة</button>
+    <button class="sec" id="wSame">إعادة بنفس اللاعبين</button>
+  </div>
+</section>
+
+<!-- تأكيد الخروج -->
+<div class="ov" id="exitDlg" hidden><div class="dlg">
+  <span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+  <b>الخروج؟</b><span>بترجع لمكتبة الألعاب وتنتهي المباراة الحالية</span>
+  <div class="two"><button id="xNo">إلغاء</button><button class="red" id="xYes">خروج</button></div>
+</div></div>
+
+<!-- إعدادات المباراة (أثناء اللعب) -->
+<aside id="setPanel" hidden>
+  <div class="hd"><span>إعدادات المباراة</span><button id="sClose" aria-label="إغلاق">✕</button></div>
+  <div class="bd">
+    <div class="srow"><span>وقت الإجابة (ثانية)</span><div class="seg" id="sSec"><button data-v="10">10</button><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button></div></div>
+    <div class="srow"><span>اللي ما يجاوب يطيح</span><button class="tgl" id="sFall" role="switch" aria-label="اللي ما يجاوب يطيح"><i></i></button></div>
+    <div class="srow"><span>الأصوات</span><button class="tgl" id="sSound" role="switch" aria-label="الأصوات"><i></i></button></div>
+    <div class="acts"><button id="sBack">رجوع لشاشة الإعدادات</button><button class="red" id="sEnd">إنهاء المباراة والرجوع للوبي</button></div>
+  </div>
+</aside>
 
 <script src="abyss-questions.js"></script>
 <script src="abyss-game.js"></script>

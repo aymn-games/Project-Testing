@@ -148,8 +148,12 @@
       // رقم كبير يطفو فوق اللوحين اللي المفروض ينطون عليها الحين (1 يمين · 2 يسار)
       this.marks = [0, 1].map(l => { const c = l ? ['#d8b4fe', '#7c3aed'] : ['#7dd3fc', '#1d4ed8'];
         const sp = new T.Sprite(new T.SpriteMaterial({ map: this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, c[0]); gr.addColorStop(1, c[1]);
-          g.shadowColor = c[0]; g.shadowBlur = 28; g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, 96, 0, 7); g.fill(); g.shadowBlur = 0; g.lineWidth = 8; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
-          g.fillStyle = '#fff'; g.font = '900 150px Zain, "IBM Plex Sans Arabic", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(l + 1), w / 2, h / 2 + 12); }), depthTest: false, transparent: true, toneMapped: false }));
+          // نفس مربع رقم الإجابة تحت: مربع بزوايا دائرية، تدرّج، إطار أبيض رفيع ولمعة فوق
+          const rr = (x, y, ww, hh, r) => { g.beginPath(); g.roundRect(x, y, ww, hh, r); };
+          g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 22; g.shadowOffsetY = 8; g.fillStyle = gr; rr(36, 30, 184, 184, 46); g.fill(); g.shadowBlur = 0; g.shadowOffsetY = 0;
+          const hl = g.createLinearGradient(0, 30, 0, 110); hl.addColorStop(0, 'rgba(255,255,255,.38)'); hl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = hl; rr(40, 34, 176, 90, 42); g.fill();
+          g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.6)'; rr(36, 30, 184, 184, 46); g.stroke();
+          g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 10; g.shadowOffsetY = 3; g.font = '900 150px Zain, "IBM Plex Sans Arabic", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(l + 1), w / 2, 136); }), depthTest: false, transparent: true, toneMapped: false }));
         sp.scale.setScalar(2.4); sp.renderOrder = 20; sp.visible = false; this.sc.add(sp); return sp; });
     }
     shatter(t) {
@@ -191,7 +195,7 @@
         list.forEach((p, i) => slot.set(p.id, sl[i])); }
       ps.forEach(p => {
         let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'boy') && this.V ? p.vrm : null;
-        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const sp = f.g.userData.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; } /* اسم أصغر عشان ما تتراكب الأسماء */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
+        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; } /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
         const key = p.row + ':' + p.lane;
         if (p.fall) { if (f.fallT == null) { f.fallT = -.45; f.fallV = new T.Vector3((Math.random() - .5) * 1.5, 1.5, (Math.random() - .5) * 1.5); } f.key = key; return; }
         f.fallT = null; f.g.visible = true; const sl = slot.get(p.id); f.scale = sl.s;
