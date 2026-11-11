@@ -183,12 +183,86 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 
 /* ---------- اللوبي ---------- */
 .lobby{position:fixed;inset:64px 0 0 0;z-index:25;display:flex;justify-content:center;align-items:flex-start;padding:22px 16px;overflow-y:auto;
-  background:rgba(6,7,10,.72);backdrop-filter:blur(6px)}
+  background:rgba(7,6,11,.9);backdrop-filter:blur(10px)}
 /* الإعدادات صارت نافذة تنفتح من زر «الإعدادات» (اللوبي يعرض السيارات على الشبكة) */
 body:not(.settings-open) .lobby{display:none}
 body:not([data-phase="lobby"]) .lobby{display:none}
-.lobby-close{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:700}
 body[data-phase="lobby"] .bottom{display:none}
+
+/* ---------- الإعدادات: نفس تنسيق «روليت الإقصاء» بلون اللعبة (أحمر الفورمولا) ---------- */
+.er{width:min(1080px,100%);display:flex;flex-direction:column;min-height:100%}
+.er-head{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:clamp(10px,2.4vh,26px) 0 clamp(14px,2.6vh,26px);text-align:center}
+.er-close{position:absolute;top:clamp(10px,2.4vh,26px);left:0;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5;font:600 13px 'IBM Plex Sans Arabic'}
+.er-close:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)}
+.er-title{font:700 clamp(32px,4.2vw,56px)/1.15 'IBM Plex Sans Arabic';font-style:italic;background:linear-gradient(180deg,#fff,#fca5a5);-webkit-background-clip:text;background-clip:text;color:transparent}
+.er-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.er-chip{height:30px;padding:0 14px;display:flex;align-items:center;gap:4px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font:600 12px 'IBM Plex Sans Arabic';color:#cfd0d8}
+.er-chip b{color:#ffd76a}
+.er-chip-btn{cursor:pointer}.er-chip-btn:hover{background:rgba(255,255,255,.08)}
+.er-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:clamp(12px,1.4vw,18px)}
+.er-card{display:flex;flex-direction:column;padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px);border-radius:24px;background:rgba(18,16,26,.78);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:rise .45s ease both}
+.er-card:nth-child(2){animation-delay:.07s}.er-card:nth-child(3){animation-delay:.14s}.er-card:nth-child(4){animation-delay:.21s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+.er-full{grid-column:1/-1}
+.er-card-h{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06);font:700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'}
+.er-card-h small{margin-inline-start:auto;font:500 12.5px 'IBM Plex Sans Arabic';color:#8a8596}
+.er-num{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(225,6,0,.16);color:#fca5a5;font:700 13px 'IBM Plex Sans Arabic'}
+.er-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 0}
+.er-row+.er-row{border-top:1px solid rgba(255,255,255,.05)}
+.er-lbl{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:right}
+.er-lbl b{font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic';color:#e7e3ef}
+.er-lbl small{font:500 13px/1.55 'IBM Plex Sans Arabic';color:#8a8596}
+.er-step,.er-seg{flex-shrink:0;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.er-step{direction:ltr}
+.er-step button{width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:500 20px/1 'IBM Plex Sans Arabic'}
+.er-step button:hover{background:rgba(255,255,255,.08);color:#fff}
+.er-step input{width:52px;height:34px;border:none;border-radius:999px;background:transparent;text-align:center;font:700 16px 'IBM Plex Sans Arabic';color:#fecaca;font-variant-numeric:tabular-nums}
+.er-step input:focus{outline:none;background:rgba(255,255,255,.05)}
+.er-seg button{height:34px;padding:0 14px;border:none;border-radius:999px;white-space:nowrap;font:600 13px 'IBM Plex Sans Arabic';background:transparent;color:#a8a3b5;transition:all .25s}
+.er-seg button:hover{color:#fff}
+.er-seg button.on{background:linear-gradient(90deg,#e10600,#ff4d3d);color:#fff;box-shadow:0 6px 20px rgba(225,6,0,.4)}
+.er-text{width:min(190px,48%);height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:#f4f2f8;font:600 14px 'IBM Plex Sans Arabic';padding:0 16px;text-align:center}
+.er-text:focus{outline:none;border-color:rgba(248,113,113,.5)}
+.er-switch{position:relative;width:52px;height:30px;flex-shrink:0;cursor:pointer}
+.er-switch input{position:absolute;opacity:0;width:0;height:0}
+.er-switch span{position:absolute;inset:0;border-radius:999px;padding:3px;display:flex;justify-content:flex-end;background:rgba(255,255,255,.12);transition:all .25s}
+.er-switch span::after{content:"";width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.er-switch input:checked+span{justify-content:flex-start;background:linear-gradient(90deg,#e10600,#ff4d3d)}
+.er-switch input:focus-visible+span{outline:2px solid #fca5a5;outline-offset:2px}
+.er-badge{flex-shrink:0;height:30px;padding:0 12px;display:flex;align-items:center;border-radius:999px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:#86efac;font:600 12.5px 'IBM Plex Sans Arabic'}
+/* هدايا السباق: مربع منقّط بصورة الهدية (مثل «نوع الدعم» بروليت الإقصاء) */
+#giftRows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:4px 22px;transition:opacity .2s}
+#giftRows.off{opacity:.35;pointer-events:none}
+.er-gift{display:flex;align-items:center;gap:14px;padding:10px 0}
+.er-gbox{flex-shrink:0;width:92px;height:92px;border-radius:20px;border:1.5px dashed color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 12%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#fff;transition:transform .2s}
+.er-gbox:hover{transform:scale(1.04)}.er-gbox:active{transform:scale(.97)}
+.er-gbox img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+.er-gbox span{max-width:84px;font:600 11.5px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.er-gtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.er-gtxt b{font:700 15px 'IBM Plex Sans Arabic';color:#f4f2f8}
+.er-gtxt b i{font-style:normal;color:var(--c)}
+.er-gtxt small{font:500 13px 'IBM Plex Sans Arabic';color:#8a8596}
+.er-gtxt em{font:600 12px 'IBM Plex Sans Arabic';font-style:normal;color:#ffd76a}
+/* شبكة الانطلاق */
+#lobbyGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;padding:10px 0 4px}
+.slot{height:46px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
+.slot.filled{border:1px solid color-mix(in srgb,var(--team) 50%,transparent);background:linear-gradient(270deg,color-mix(in srgb,var(--team) 20%,transparent),rgba(255,255,255,.02));animation:tin .35s both}
+.slot-num{width:22px;font-weight:700;color:var(--mut);text-align:center;font-variant-numeric:tabular-nums}
+.slot.filled .slot-num{color:#fff}
+.slot-av{width:30px;height:30px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid var(--team)}
+.slot-av img{width:100%;height:100%;object-fit:cover}
+.slot-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:13px}
+.slot-empty{font-size:12px;color:#5f6170}
+.slot-x{width:26px;height:26px;border:0;border-radius:999px;background:transparent;color:#fca5a5;font-size:18px;line-height:1;opacity:.6}
+.slot-x:hover{opacity:1;background:rgba(248,113,113,.12)}
+.er-actions{display:flex;gap:8px;justify-content:flex-start;padding-top:10px}
+.er-ghost{height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#ddd;font:600 13px 'IBM Plex Sans Arabic'}
+.er-ghost:hover{background:rgba(255,255,255,.08)}
+.er-danger{color:#fca5a5;border-color:rgba(248,113,113,.25)}
+.er-foot{position:sticky;bottom:0;display:flex;justify-content:center;padding:clamp(10px,2vh,18px) 0 clamp(14px,2.6vh,24px);margin-top:auto;background:linear-gradient(0deg,rgba(7,6,11,.95) 40%,rgba(7,6,11,0))}
+.er-go{width:100%;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#e10600,#ff4d3d);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(225,6,0,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.er-go:hover{filter:brightness(1.1)}.er-go:active{transform:scale(.97)}
+.er-go:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 
 /* ---------- بطاقة «كل شيء جاهز للسباق» (اللوبي) ---------- */
 #readyCard{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:18;width:min(560px,calc(100vw - 32px));padding:16px 22px 18px;border-radius:20px;text-align:center;
@@ -202,74 +276,14 @@ body:not([data-phase="lobby"]) #readyCard{display:none}
 .rc-actions{display:flex;gap:8px;justify-content:center}
 .rc-actions .btn-start{flex:0 1 260px;height:50px}
 .rc-actions .btn-sec{height:50px}
-.lobby-wrap{width:min(1080px,100%);display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
-.card{border-radius:20px;background:rgba(12,13,18,.82);border:1px solid var(--line);backdrop-filter:blur(14px);padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.hero{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;
-  background:linear-gradient(110deg,rgba(225,6,0,.92),rgba(140,4,0,.85) 55%,rgba(12,13,18,.85) 56%)}
-.hero h1{margin:0;font-size:clamp(26px,3.4vw,40px);line-height:1.1;font-style:italic}
-.hero p{margin:6px 0 0;font-size:14px;opacity:.9}
-.join-call{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 18px;border-radius:14px;background:rgba(0,0,0,.4);border:1px dashed rgba(255,255,255,.3);text-align:center}
-.join-call small{font-size:12px;color:#ddd}
-.join-call b{font-size:28px;color:#ffd76a}
-.card h2{margin:0 0 12px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
-.card h2 span{font-size:12px;color:var(--mut);font-weight:600}
-#lobbyGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.slot{height:46px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1)}
-.slot:nth-child(even){transform:translateY(14px)}
-#lobbyGrid{padding-bottom:14px}
-.slot.filled{border:1px solid color-mix(in srgb,var(--team) 50%,transparent);border-inline-start:4px solid var(--team);background:linear-gradient(270deg,color-mix(in srgb,var(--team) 20%,transparent),rgba(255,255,255,.02));animation:tin .35s both}
-.slot-num{width:22px;font-weight:700;color:var(--mut);text-align:center;font-variant-numeric:tabular-nums}
-.slot.filled .slot-num{color:#fff}
-.slot-av{width:28px;height:28px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0}
-.slot-av img{width:100%;height:100%;object-fit:cover}
-.slot-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:13px}
-.slot-empty{font-size:12px;color:#5f6170}
-.slot-x{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:#fca5a5;font-size:18px;line-height:1;opacity:.6}
-.slot-x:hover{opacity:1;background:rgba(248,113,113,.12)}
-/* صفوف الإعدادات: العنوان يمين والعنصر يسار (قاعدة CLAUDE.md) */
-.set-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.07);margin-bottom:8px}
-.set-label{text-align:right;display:flex;flex-direction:column}
-.set-label b{font-size:13.5px}
-.set-label small{font-size:11px;color:var(--mut);margin-top:2px}
-.counter{display:flex;align-items:center;gap:4px;direction:ltr}
-.counter button{width:32px;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;font-size:17px}
-.counter button:hover{border-color:var(--agp-accent)}
-.counter span{min-width:34px;text-align:center;font-weight:700;font-size:16px}
-.pills{display:flex;gap:4px;direction:ltr}
-.pills button{height:30px;min-width:38px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#ddd;font-weight:600;font-size:12.5px}
-.pills button.on{background:var(--agp-accent);border-color:var(--agp-accent);color:#fff;box-shadow:0 0 14px rgba(225,6,0,.45)}
-.kw{width:120px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.3);color:#fff;font:600 14px 'IBM Plex Sans Arabic';text-align:center}
-.kw:focus{outline:none;border-color:var(--agp-accent)}
-.toggle{position:relative;width:46px;height:26px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle i{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,.12);transition:.2s}
-.toggle i::after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
-.toggle input:checked+i{background:var(--agp-accent)}
-.toggle input:checked+i::after{right:23px}
 .lobby-actions{display:flex;gap:8px;margin-top:12px}
 .btn-start{flex:1;height:52px;border:0;border-radius:14px;background:linear-gradient(90deg,#e10600,#ff3b30);color:#fff;font-size:18px;font-weight:700;box-shadow:0 10px 30px rgba(225,6,0,.4);display:flex;align-items:center;justify-content:center;gap:10px}
 .btn-start:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
 .btn-start:not(:disabled):hover{filter:brightness(1.1)}
 .btn-sec{height:52px;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#ddd;font-weight:600}
-.howto{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
-.howto div{padding:10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:#cfd0d8;line-height:1.5}
-.howto b{display:block;font-size:20px;margin-bottom:2px}
 
 .btn-mini{height:30px;padding:0 12px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600}
 .btn-mini:hover{border-color:var(--agp-accent)}
-.num{width:90px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.3);color:#fff;font:700 15px 'IBM Plex Sans Arabic';text-align:center}
-.num:focus{outline:none;border-color:var(--agp-accent)}
-.pills{flex-wrap:wrap;justify-content:flex-end;max-width:62%}
-.gifts-card{grid-column:1/-1}
-#giftRows{display:grid;grid-template-columns:repeat(2,1fr);gap:0 10px;transition:opacity .2s}
-#giftRows.off{opacity:.35;pointer-events:none}
-.gift-row{border-inline-start:3px solid var(--c)}
-.gift-pick{display:flex;align-items:center;gap:8px;height:48px;padding:0 8px 0 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25);color:#fff;text-align:right}
-.gift-pick:hover{border-color:var(--agp-accent)}
-.gift-pick img{width:36px;height:36px;object-fit:contain}
-.gp-txt{display:flex;flex-direction:column;line-height:1.25}
-.gp-txt b{font-size:13px}.gp-txt small{font-size:11px;color:var(--mut)}
-.gp-change{font-size:11.5px;font-weight:600;color:#fca5a5;margin-inline-start:6px}
 .perk-ic img{width:24px;height:24px;object-fit:contain}
 #picker{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
 #picker.show{display:flex}
@@ -345,13 +359,10 @@ body.no3d .fc-cam{display:none}
   .fcard{padding:9px}.f-speed b{font-size:26px}.f-pos{font-size:22px}
   .lobby{inset:54px 0 0 0}
   #readyCard{bottom:8px;padding:12px 14px}
+  .er-close{position:static;align-self:flex-start}
+  .er-row{flex-wrap:wrap}
+  .er-seg button{padding:0 11px}
   .rc-actions .btn-start{height:44px}.rc-actions .btn-sec{height:44px;padding:0 10px;font-size:12px}
-  .lobby-wrap{grid-template-columns:1fr}
-  .hero{flex-direction:column;align-items:stretch;text-align:center;background:linear-gradient(160deg,rgba(225,6,0,.92),rgba(110,4,0,.9))}
-  .howto{grid-template-columns:1fr}
-  #giftRows{grid-template-columns:1fr}
-  .gp-change{display:none}
-  .gp-txt b{white-space:nowrap}
   #lights .pod{width:30px;height:30px}
   #lights{gap:6px;padding:10px}
   .step{width:104px}
@@ -391,68 +402,75 @@ body.no3d .fc-cam{display:none}
 </div>
 
 <!-- اللوبي + الإعدادات -->
+<!-- الإعدادات بنفس تنسيق «روليت الإقصاء»: عنوان بالنص، كروت مرقّمة، صف لكل خيار (العنوان يمين والتحكم يسار) -->
 <section class="lobby">
-  <div class="lobby-wrap">
-    <div class="lobby-close"><span>⚙ الإعدادات</span><button class="btn-sec" id="settingsClose" type="button" style="height:40px">✕ إغلاق</button></div>
-    <div class="card hero">
-      <div>
-        <h1>سباق الفورمولا 🏁</h1>
-        <p>كبّس على البث عشان سيارتك تطير، وكل دعم يعطيك ميزة!</p>
-      </div>
-      <div class="join-call"><small>للمشاركة اكتب بالشات</small><b id="kwShow">سباق</b></div>
-    </div>
-
-    <div class="card">
-      <h2>شبكة الانطلاق <span id="lobbyCount">0 / 12</span></h2>
-      <div id="lobbyGrid"></div>
-      <div class="lobby-actions">
-        <button class="btn-start" id="startBtn" type="button" disabled>🚦 ابدأ السباق</button>
-        <button class="btn-sec" id="testBtn" type="button">▷ تجربة اللعبة</button>
-        <button class="btn-sec" id="clearBtn" type="button">تفريغ</button>
+  <div class="er">
+    <div class="er-head">
+      <button class="er-close" id="settingsClose" type="button" aria-label="رجوع للشبكة">✕ رجوع</button>
+      <span class="er-title">سباق الفورمولا</span>
+      <div class="er-chips">
+        <span class="er-chip">للمشاركة اكتب بالشات «<b id="kwShow">سباق</b>»</span>
+        <button class="er-chip er-chip-btn" id="resetSettings" type="button">↺ استعادة الافتراضي</button>
       </div>
     </div>
 
-    <div class="card">
-      <h2>إعدادات السباق <button class="btn-mini" id="resetSettings" type="button">استعادة الافتراضي</button></h2>
-      <div class="set-row">
-        <span class="set-label"><b>الحد الأقصى للمتسابقين</b><small>ابدأ من أول لاعب: لا يلزم اكتمال العدد</small></span>
-        <input class="num" id="setMax" type="number" min="1" max="30" inputmode="numeric">
-      </div>
-      <div class="set-row">
-        <span class="set-label"><b>عدد اللفات</b><small>اللفة نحو دقيقة ونصف دون تكبيس أو هدايا</small></span>
-        <input class="num" id="setLaps" type="number" min="1" max="20" inputmode="numeric">
-      </div>
-      <div class="set-row">
-        <span class="set-label"><b>من يمكنه الانضمام؟</b><small>صلاحية المشاركة من شات TikTok</small></span>
-        <div class="pills" id="setJoin"><button type="button" data-v="all">الجميع</button><button type="button" data-v="followers">المتابعون فقط</button></div>
-      </div>
-      <div class="set-row">
-        <span class="set-label"><b>وضع الرسوم</b><small>يمكن تغييره أثناء السباق من زر «التحكم» فوق</small></span>
-        <div class="pills" id="setQuality"><button type="button" data-v="light">الخفيف · للأجهزة الضعيفة</button><button type="button" data-v="balanced">المتوازن</button><button type="button" data-v="cinematic">السينمائي · أعلى جودة</button></div>
-      </div>
-      <div class="set-row">
-        <span class="set-label"><b>كلمة الدخول</b><small>يكتبها المشاهد بالشات</small></span>
-        <input class="kw" id="setKw" maxlength="20" autocomplete="off">
-      </div>
-      <div class="set-row">
-        <span class="set-label"><b>المخرج التلقائي</b><small>الكاميرا تتنقل بين اللقطات والمعارك لحالها</small></span>
-        <label class="toggle"><input type="checkbox" id="setAutoCam"><i></i></label>
-      </div>
-      <div class="howto">
-        <div><b>✍️</b>اكتب «<span id="kwShow2">سباق</span>» بالشات وتاخذ سيارة</div>
-        <div><b>👆</b>التكبيس يزوّد سرعة سيارتك</div>
-        <div><b>🎁</b>الدعم يعطيك درع، بوابة، مكوك، صاروخ وصاعقة</div>
-      </div>
+    <div class="er-grid">
+      <section class="er-card">
+        <div class="er-card-h"><span class="er-num">1</span><span>إعدادات السباق</span></div>
+        <div class="er-row">
+          <div class="er-lbl"><b>الحد الأقصى للمتسابقين</b><small>ابدأ من أول لاعب: لا يلزم اكتمال العدد</small></div>
+          <div class="er-step"><button type="button" data-for="setMax" data-d="-1" aria-label="إنقاص">−</button><input id="setMax" type="text" inputmode="numeric" aria-label="الحد الأقصى للمتسابقين"><button type="button" data-for="setMax" data-d="1" aria-label="زيادة">+</button></div>
+        </div>
+        <div class="er-row">
+          <div class="er-lbl"><b>عدد اللفات</b><small>اللفة نحو دقيقة ونصف دون تكبيس أو هدايا</small></div>
+          <div class="er-step"><button type="button" data-for="setLaps" data-d="-1" aria-label="إنقاص">−</button><input id="setLaps" type="text" inputmode="numeric" aria-label="عدد اللفات"><button type="button" data-for="setLaps" data-d="1" aria-label="زيادة">+</button></div>
+        </div>
+        <div class="er-row">
+          <div class="er-lbl"><b>كلمة الدخول</b><small>اكتب «<span id="kwShow2">سباق</span>» بالشات وتاخذ سيارة</small></div>
+          <input class="er-text" id="setKw" maxlength="20" autocomplete="off" aria-label="كلمة الدخول">
+        </div>
+        <div class="er-row">
+          <div class="er-lbl"><b>المخرج التلقائي</b><small>الكاميرا تتنقل بين اللقطات والمعارك لحالها</small></div>
+          <label class="er-switch"><input type="checkbox" id="setAutoCam"><span></span></label>
+        </div>
+      </section>
+
+      <section class="er-card">
+        <div class="er-card-h"><span class="er-num">2</span><span>المشاركة والرسوم</span></div>
+        <div class="er-row">
+          <div class="er-lbl"><b>من يمكنه الانضمام؟</b><small>صلاحية المشاركة من شات TikTok</small></div>
+          <div class="er-seg" id="setJoin"><button type="button" data-v="all">الجميع</button><button type="button" data-v="followers">المتابعون فقط</button></div>
+        </div>
+        <div class="er-row">
+          <div class="er-lbl"><b>وضع الرسوم</b><small>الخفيف للأجهزة الضعيفة والسينمائي أعلى جودة · يتغير وقت السباق من «التحكم»</small></div>
+          <div class="er-seg" id="setQuality"><button type="button" data-v="light">خفيف</button><button type="button" data-v="balanced">متوازن</button><button type="button" data-v="cinematic">سينمائي</button></div>
+        </div>
+        <div class="er-row">
+          <div class="er-lbl"><b>التكبيس</b><small>كل تكبيسة تزوّد السرعة، وكل 50 تكبيسة نيترو</small></div>
+          <span class="er-badge">👆 مفعّل دائماً</span>
+        </div>
+      </section>
+
+      <section class="er-card er-full">
+        <div class="er-card-h"><span class="er-num">3</span><span>هدايا السباق</span><small>لكل تأثير هدية — اضغط على المربع لتغييرها</small></div>
+        <div class="er-row">
+          <div class="er-lbl"><b>تفعيل هدايا السباق: <span id="giftsOnTxt">مفعّل</span></b><small>عند الإيقاف يبقى التكبيس والنيترو فقط</small></div>
+          <label class="er-switch"><input type="checkbox" id="setGiftsOn"><span></span></label>
+        </div>
+        <div id="giftRows"></div>
+      </section>
+
+      <section class="er-card er-full">
+        <div class="er-card-h"><span class="er-num">4</span><span>شبكة الانطلاق</span><small id="lobbyCount">0 / 12</small></div>
+        <div id="lobbyGrid"></div>
+        <div class="er-actions">
+          <button class="er-ghost" id="testBtn" type="button">▷ تجربة اللعبة</button>
+          <button class="er-ghost er-danger" id="clearBtn" type="button">تفريغ الشبكة</button>
+        </div>
+      </section>
     </div>
 
-    <div class="card gifts-card">
-      <h2>هدايا السباق <span>لكل تأثير هدية افتراضية، وتقدر تغيّرها قبل بدء اللعبة</span></h2>
-      <div class="set-row">
-        <span class="set-label"><b>تفعيل هدايا السباق: <span id="giftsOnTxt">مفعّل</span></b><small>عند الإيقاف يبقى التكبيس والنيترو فقط</small></span>
-        <label class="toggle"><input type="checkbox" id="setGiftsOn"><i></i></label>
-      </div>
-      <div id="giftRows"></div>
-    </div>
+    <div class="er-foot"><button class="er-go" id="startBtn" type="button" disabled>🚦 ابدأ السباق</button></div>
   </div>
 </section>
 

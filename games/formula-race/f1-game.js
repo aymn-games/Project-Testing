@@ -848,6 +848,10 @@
     }
 
     function bindSettings() {
+        // أزرار − / + بجنب الأرقام (نفس عدّادات روليت الإقصاء)
+        Array.prototype.forEach.call(document.querySelectorAll('.er-step button'), function (b) {
+            b.onclick = function () { var inp = $(b.dataset.for); inp.value = (parseInt(inp.value, 10) || 0) + Number(b.dataset.d); inp.onchange(); };
+        });
         $('setLaps').onchange = function () { settings.laps = clampInt(this.value, 1, MAX_LAPS, settings.laps); saveSettings(); syncSettingsUI(); };
         $('setMax').onchange = function () {
             settings.maxDrivers = clampInt(this.value, Math.max(1, S.cars.length), MAX_DRIVERS_LIMIT, settings.maxDrivers);
@@ -879,14 +883,15 @@
         syncSettingsUI();
     }
 
+    /** صفوف هدايا السباق: مربع منقّط بصورة الهدية (يفتح الاختيار) + اسم التأثير ووصفه. */
     function renderGiftRows() {
         $('giftRows').innerHTML = EFFECTS.map(function (e) {
             var g = giftById(settings.gifts[e.id]);
-            return '<div class="set-row gift-row" style="--c:' + e.color + '">' +
-                '<span class="set-label"><b>' + e.icon + ' ' + e.name + ' · ' + e.desc + '</b></span>' +
-                '<button type="button" class="gift-pick" data-pick="' + e.id + '">' +
-                (g ? '<img src="' + esc(g.img) + '" alt=""><span class="gp-txt"><b>' + esc(g.name) + '</b><small>' + g.coins + ' عملة</small></span>' : '<span class="gp-txt"><b>اختر هدية</b></span>') +
-                '<span class="gp-change">تغيير الهدية</span></button></div>';
+            return '<div class="er-gift" style="--c:' + e.color + '">' +
+                '<button type="button" class="er-gbox" data-pick="' + e.id + '" aria-label="اختيار هدية ' + e.name + '">' +
+                (g ? '<img src="' + esc(g.img) + '" alt=""><span>' + esc(g.name) + '</span>' : '<b style="font-size:30px">+</b><span>اختر هدية</span>') + '</button>' +
+                '<div class="er-gtxt"><b><i>' + e.icon + '</i> ' + e.name + '</b><small>' + e.desc + '</small>' +
+                (g ? '<em>' + g.coins + ' عملة</em>' : '') + '</div></div>';
         }).join('');
     }
     var pickFor = null;
