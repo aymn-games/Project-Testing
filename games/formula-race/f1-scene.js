@@ -75,14 +75,15 @@ function ribbon(track, a, b, y, { vScale = 10, filter = null, colorFn = null } =
 }
 
 /** جدار عمودي على إزاحة جانبية ثابتة (حواجز). */
-function wall(track, off, h, every = 1) {
+function wall(track, off, h, every = 1, tile = 4, flipU = false) {
     const N = track.count, pos = [], uv = [], idx = [];
     let vi = 0;
     for (let i = 0; i <= N; i += every) {
         const k = i % N, hd = track.heading[k], lx = Math.cos(hd), lz = -Math.sin(hd);
         const x = track.x[k] + lx * off, z = track.z[k] + lz * off;
         pos.push(x, 0, z, x, h, z);
-        const v = i * track.step / 4; uv.push(v, 0, v, 1);
+        // flipU: الجهة الثانية من المضمار تنقرا كتابتها صح من داخل المضمار (بدل ما تطلع معكوسة)
+        const v = (flipU ? -1 : 1) * i * track.step / tile; uv.push(v, 0, v, 1);
         if (i) { const p = vi - 2; idx.push(p, vi, p + 1, p + 1, vi, vi + 1); }
         vi += 2;
     }
@@ -91,6 +92,40 @@ function wall(track, off, h, every = 1) {
     g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
     g.setIndex(idx); g.computeVertexNormals();
     return g;
+}
+
+// شعار المملكة العربية السعودية: نخلة فوق سيفين عربيين متقاطعين (مرسوم بالكود، بدون نصوص)
+function drawSaudiEmblem(ctx, cx, cy, s, color) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+  ctx.fillStyle = ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // سيفان متقاطعان: المقبض تحت على جنب، والنصل المقوّس يطلع للجهة الثانية
+  for (const k of [1, -1]) {
+    ctx.save(); ctx.scale(k, 1);
+    ctx.beginPath();
+    ctx.moveTo(-30, 40);                                  // بداية النصل عند الواقي
+    ctx.quadraticCurveTo(10, 22, 50, -6);                 // الحافة الخارجية
+    ctx.quadraticCurveTo(46, 2, 40, 6);                   // الرأس المعقوف
+    ctx.quadraticCurveTo(6, 30, -26, 46);                 // الحافة الداخلية
+    ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(-34, 36); ctx.lineTo(-22, 50); ctx.stroke();   // الواقي
+    ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-29, 44); ctx.quadraticCurveTo(-38, 52, -42, 50); ctx.stroke(); // المقبض
+    ctx.beginPath(); ctx.arc(-43, 49, 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // الجذع
+  ctx.beginPath(); ctx.moveTo(-4, 30); ctx.quadraticCurveTo(-2.4, 0, -1.8, -26); ctx.lineTo(1.8, -26); ctx.quadraticCurveTo(2.4, 0, 4, 30); ctx.closePath(); ctx.fill();
+  // السعف: مروحة متناظرة تنحني أطرافها لتحت
+  const leaf = (ang, len, w) => {
+    ctx.save(); ctx.translate(0, -28); ctx.rotate(ang);
+    ctx.beginPath(); ctx.moveTo(0, -w * 0.4);
+    ctx.quadraticCurveTo(len * 0.55, -w * 1.4, len, w * 0.9);
+    ctx.quadraticCurveTo(len * 0.5, w * 0.2, 0, w * 0.6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  };
+  const A = [-0.05, -0.45, -0.9, -1.3];
+  for (const a of A) { leaf(a, 32 - Math.abs(a) * 6, 4.5); leaf(Math.PI - a, 32 - Math.abs(a) * 6, -4.5); }
+  leaf(-Math.PI / 2, 14, 3);
+  ctx.restore();
 }
 
 // ---------- سيارة الفورمولا ----------
@@ -353,16 +388,27 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const kerbR = new T.Mesh(ribbon(track, -half - 1.6, -half + 0.2, 0.05, { filter: isCorner, colorFn: kerbCol }), kerbMat);
     kerbL.receiveShadow = kerbR.receiveShadow = true; scene.add(kerbL, kerbR);
     // ---- الحواجز (تيك برو أزرق/أبيض + إعلانات) ----
-    const barrierTex = canvasTex(256, 64, (ctx, w, h) => {
-        ctx.fillStyle = '#1446a0'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#f5f5f5'; ctx.fillRect(w / 2, 0, w / 2, h);
-        ctx.fillStyle = '#e10600'; ctx.fillRect(0, h - 8, w, 8);
-        ctx.fillStyle = '#fff'; ctx.font = `800 26px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
-        ctx.fillText('ألعاب أيمن', w / 4, h / 2 - 3);
-        ctx.fillStyle = '#1446a0'; ctx.fillText('AYMN GAMES', w * 3 / 4, h / 2 - 3);
+    // لوحات الحواجز (كل 12م ثلاث لوحات): أخضر سعودي بالشعار · أبيض «ألعاب أيمن» · أحمر «AYMN GAMES»
+    const barrierTex = canvasTex(1536, 160, (ctx, w, h) => {
+        const P = w / 3;
+        const txt = (t, x, y, size, col) => { ctx.fillStyle = col; ctx.font = `800 ${size}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl'; ctx.fillText(t, x, y); };
+        // 1) السعودية
+        ctx.fillStyle = '#006c35'; ctx.fillRect(0, 0, P, h);
+        drawSaudiEmblem(ctx, 92, 74, 1.12, '#ffffff');
+        txt('السعودية', P * 0.62, h * 0.47, 64, '#ffffff');
+        // 2) ألعاب أيمن
+        ctx.fillStyle = '#f7f7f5'; ctx.fillRect(P, 0, P, h);
+        drawSaudiEmblem(ctx, P + 80, 74, 0.95, '#006c35');
+        txt('ألعاب أيمن', P + P * 0.6, h * 0.47, 60, '#e10600');
+        // 3) AYMN GAMES
+        ctx.fillStyle = '#c40500'; ctx.fillRect(P * 2, 0, P, h);
+        txt('AYMN GAMES', P * 2.5, h * 0.47, 58, '#ffffff');
+        // شريط أخضر تحت كل اللوحات + فواصل
+        ctx.fillStyle = '#006c35'; ctx.fillRect(0, h - 14, w, 14);
+        ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(P - 2, 0, 4, h); ctx.fillRect(P * 2 - 2, 0, 4, h); ctx.fillRect(w - 4, 0, 4, h);
     }, true);
     const barrierMat = new T.MeshStandardMaterial({ map: barrierTex, roughness: 0.6, side: T.DoubleSide });
-    scene.add(new T.Mesh(wall(track, half + 9, 1.25, 2), barrierMat), new T.Mesh(wall(track, -half - 9, 1.25, 2), barrierMat));
+    scene.add(new T.Mesh(wall(track, half + 9, 1.25, 2, 12, false), barrierMat), new T.Mesh(wall(track, -half - 9, 1.25, 2, 12, true), barrierMat));
     // سياج فوق الحاجز
     const fenceTex = canvasTex(64, 64, (ctx, w, h) => {
         ctx.clearRect(0, 0, w, h); ctx.strokeStyle = 'rgba(200,205,210,.75)'; ctx.lineWidth = 2;
