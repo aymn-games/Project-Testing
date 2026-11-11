@@ -211,19 +211,19 @@ const GAME = { name:'شد الحبل', libraryUrl:TOW.libraryUrl, lobbyUrl:'lobb
 const AUTO_KEY = 'tow-autojoin'; // نفس مفتاح سويتش «الدخول التلقائي» بهيدر شاشة اللعب
 
 const MAXES=[8,12,18];
+// ألوان الفريقين ثابتة (بطلب صاحب المنصة): الأيسر أحمر والأيمن أزرق
+const TEAM_COLORS=TOW.TEAM_COLORS;
 const SETTINGS = [
   { title:'نمط اللعب', full:true, rows:[
     { type:'choice', key:'mode', label:'النمط', hint:'التكبيس والدعم: كل تكبيسة أو رسالة سحبة · السرعة والتحدي: أسرع من يكتب الكلمة يسحب', options:['التكبيس والدعم','السرعة والتحدي'], default:0 }
   ]},
   { title:'الفريق الأيسر', team:0, rows:[
     { type:'text', key:'leftName', label:'اسم الفريق', placeholder:'مثلاً: فريق اللهب', default:'فريق اللهب' },
-    { type:'text', key:'leftKw', label:'كلمة الدخول', placeholder:'مثلاً: لهب', default:'لهب' },
-    { type:'color', key:'leftColor', label:'لون الفريق', default:'#ff5b45' }
+    { type:'text', key:'leftKw', label:'كلمة الدخول', placeholder:'مثلاً: لهب', default:'لهب' }
   ]},
   { title:'الفريق الأيمن', team:1, rows:[
     { type:'text', key:'rightName', label:'اسم الفريق', placeholder:'مثلاً: فريق الموج', default:'فريق الموج' },
-    { type:'text', key:'rightKw', label:'كلمة الدخول', placeholder:'مثلاً: موج', default:'موج' },
-    { type:'color', key:'rightColor', label:'لون الفريق', default:'#19a7ff' }
+    { type:'text', key:'rightKw', label:'كلمة الدخول', placeholder:'مثلاً: موج', default:'موج' }
   ]},
   { title:'الدخول', rows:[
     { type:'choice', key:'max', label:'عدد اللاعبين لكل فريق', options:MAXES.map(String), default:1 },
@@ -272,7 +272,7 @@ class Component extends DCLogic {
 
   buildRow(r,idx,sec){ const V=this.state.values, v=V[r.key], t=r.type;
     const row={label:r.label,hint:r.hint||null,hintColor:t==='gift'?'#e7e3ef':'#a8a3b5',divider:idx>0,isText:t==='text',isChoice:t==='choice',isToggle:t==='toggle',isColor:t==='color',isGift:t==='gift',value:v,placeholder:r.placeholder||'',
-      dot:sec.team!=null?V[sec.team?'rightColor':'leftColor']:(r.color||null)};
+      dot:sec.team!=null?TEAM_COLORS[sec.team]:(r.color||null)};
     if(t==='choice') row.opts=r.options.map((l,k)=>({label:l,pick:()=>this.set(r.key,k),...this.seg(v===k)}));
     if(t==='text') row.onInput=e=>this.set(r.key,e.target.value);
     if(t==='toggle'){ row.on=!!v; row.flip=()=>this.set(r.key,!v); row.knobSide=v?'flex-start':'flex-end'; row.trackBg=v?'linear-gradient(90deg, #7c3aed, #a855f7)':'rgba(255,255,255,.12)'; }
@@ -295,7 +295,7 @@ class Component extends DCLogic {
 
   readSetup(demo){ const V=this.state.values, g=k=>{ const x=TOW.giftById(V[k]); return x?{id:x.id,name:x.name,coins:x.coins,img:x.img}:null; };
     return { values:V, demo:!!demo, mode:V.mode===1?'speed':'tap', max:MAXES[V.max]||12, followersOnly:V.who===1,
-      teams:[{name:V.leftName.trim(),keyword:V.leftKw.trim(),color:V.leftColor},{name:V.rightName.trim(),keyword:V.rightKw.trim(),color:V.rightColor}],
+      teams:[{name:V.leftName.trim(),keyword:V.leftKw.trim(),color:TEAM_COLORS[0]},{name:V.rightName.trim(),keyword:V.rightKw.trim(),color:TEAM_COLORS[1]}],
       gifts:{freeze:g('freezeGift'),double:g('doubleGift'),hook:g('hookGift')} }; }
 
   buildFx(){

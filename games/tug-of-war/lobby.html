@@ -145,7 +145,7 @@ input::placeholder{color:#6f6a7c}
 const GAME = { name:'شد الحبل', libraryUrl:TOW.libraryUrl, gameUrl:'game.html' };
 const SETUP = TOW.readJSON(TOW.keys.setup, null);
 if(!SETUP||!SETUP.teams) location.replace('index.html');
-const TEAMS = (SETUP&&SETUP.teams||[{name:'فريق اللهب',keyword:'لهب',color:'#ff5b45'},{name:'فريق الموج',keyword:'موج',color:'#19a7ff'}]).map(t=>({...t,max:+(SETUP&&SETUP.max)||12}));
+const TEAMS = (SETUP&&SETUP.teams||[{name:'فريق اللهب',keyword:'لهب',color:'#ff5b45'},{name:'فريق الموج',keyword:'موج',color:'#19a7ff'}]).map((t,i)=>({...t,color:TOW.TEAM_COLORS[i],max:+(SETUP&&SETUP.max)||12})); // ألوان ثابتة
 
 class Component extends DCLogic {
   state = { roster:[[],[]], narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
