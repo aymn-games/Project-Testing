@@ -50,6 +50,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes joinBar{from{width:100%}to{width:0}}
 @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes floatUp{0%{opacity:0;transform:translate(-50%,20px) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-70px) scale(1.1)}}
+@keyframes floatUpL{0%{opacity:0;transform:translateY(20px) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translateY(-60px) scale(1.1)}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -77,16 +78,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
 
   <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:108px 40px 36px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px">
-    <!-- شريط المعلومات: الجولة والمرحلة وكم لاعب لعب وكم يتأهل -->
-    <div style="flex-shrink:0;display:flex;justify-content:center;align-items:center;gap:14px">
-      <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.3);background:rgba(139,92,246,.08);font:600 18px 'IBM Plex Sans Arabic';color:#c4b5fd"><span style="width:7px;height:7px;border-radius:50%;background:#a78bfa"></span>لمحة · الجولة {{ round }} من {{ rounds }}</span>
-      <sc-if value="{{ showStage }}" hint-placeholder-val="{{ false }}">
-        <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);font:600 18px 'IBM Plex Sans Arabic';color:#fcd34d">المرحلة {{ stage }}</span>
-      </sc-if>
-      <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:#a8a3b5">لعبوا {{ playedCount }} من {{ totalCount }}</span>
-      <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:#a8a3b5">يتأهل أعلى {{ qualCount }}</span>
-    </div>
-
     <div style="flex:1;min-height:0;display:flex;gap:24px">
       <!-- خانات اللاعبين الثلاثة: كل لاعب سؤاله ووقته ونقاطه -->
       <div style="flex:1;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px">
@@ -104,15 +95,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
               <span style="position:relative;max-width:100%;margin-top:-8px;font:500 16px 'IBM Plex Sans Arabic';color:#8a8596;direction:ltr;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px">{{ sl.handle }}</span>
               <div style="position:relative;display:flex;align-items:center;gap:22px">
                 <span style="display:flex;align-items:baseline;gap:8px"><span style="font:700 88px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.color }};direction:ltr">{{ sl.score }}</span><span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">نقطة</span></span>
-                <span style="display:flex;align-items:center;gap:10px;padding:8px 22px;border-radius:999px;background:#0c0b12;border:2px solid {{ sl.ring }};font:700 40px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.ring }};direction:ltr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>{{ sl.time }}</span>
               </div>
               <div style="position:relative;flex:1;min-height:0;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:18px 20px;border-radius:24px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);text-align:center">
                 <sc-if value="{{ sl.hasQ }}" hint-placeholder-val="{{ true }}">
-                  <span style="display:flex;align-items:center;gap:8px;padding:5px 16px;border-radius:999px;border:1px solid {{ sl.bd }};background:{{ sl.soft }};color:{{ sl.color }};font:700 17px 'IBM Plex Sans Arabic'"><span style="width:7px;height:7px;border-radius:50%;background:{{ sl.color }}"></span>{{ sl.cat }}</span>
                   {{ sl.qEl }}
-                </sc-if>
-                <sc-if value="{{ sl.noQ }}" hint-placeholder-val="{{ false }}">
-                  <span style="font:600 26px/1.5 'IBM Plex Sans Arabic';color:#8a8596">{{ sl.waitText }}</span>
                 </sc-if>
               </div>
               <span style="position:relative;max-width:100%;min-height:28px;font:500 19px 'IBM Plex Sans Arabic';color:{{ sl.feedC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sl.feed }}</span>
@@ -175,7 +161,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
         <button onClick="{{ primary }}" style="height:72px;min-width:340px;padding:0 48px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 28px 'IBM Plex Sans Arabic';animation:glow 1.8s infinite;box-shadow:0 10px 30px rgba(139,92,246,.4)" style-hover="filter:brightness(1.08)" style-active="transform:scale(.96)">{{ btnLabel }}<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       </sc-if>
       <sc-if value="{{ showLive }}" hint-placeholder-val="{{ false }}">
-        <span style="display:flex;align-items:center;gap:10px;height:72px;padding:0 36px;border-radius:999px;border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);font:700 24px 'IBM Plex Sans Arabic';color:#6ee7b7"><span style="width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 12px #34d399"></span>الجولة شغّالة · الإجابة في الشات</span>
+        <!-- مؤقت واحد للكل: كل لاعبين الجولة يبدأون وينتهون بنفس الوقت -->
+        <div style="width:340px;height:72px;box-sizing:border-box;padding:0 26px;border-radius:999px;border:1.5px solid {{ tColor }};background:rgba(12,11,18,.8);display:flex;flex-direction:column;justify-content:center;gap:6px;box-shadow:0 0 24px {{ tGlow }}">
+          <span style="display:flex;align-items:center;justify-content:center;gap:10px;font:700 40px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ tColor }};direction:ltr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>{{ tText }}</span>
+          <div style="height:4px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ tPct }}%;background:{{ tColor }};border-radius:999px;transition:width .25s linear"></div></div>
+        </div>
       </sc-if>
     </div>
 
@@ -557,13 +547,13 @@ class Component extends DCLogic {
       const qText=sl.q?sl.q.q:'', L=qText.length;
       const NL=[...sl.name].length;
       return {empty:false,full:true,name:sl.name,nameFs:NL<=14?'38px':NL<=20?'32px':NL<=28?'27px':'23px',handle:this.handle(sl.name),color:c,bd:c+'66',soft:c+'14',halo:c+'2e',flash:fl,op:done?.75:1,
-        ring:low?'#f87171':c,deg:(dur?leftSec/dur:1)*360,pulse:low?'glow 1s infinite':'none',time:mmss(leftSec),
+        ring:c,deg:360,pulse:'none',
         score:fmt(t.score),correct:t.correct,skips:t.skips,...this.avItem(sl.name,c),
         hasQ:P==='playing'&&!!sl.q&&!sl.done, noQ:!(P==='playing'&&!!sl.q&&!sl.done), cat:sl.q?sl.q.c:'',
         qEl:sl.q?h('span',{key:'q'+qText,style:{font:`700 ${L<=22?44:L<=34?38:L<=48?32:28}px/1.45 'IBM Plex Sans Arabic'`,color:'#f4f2f8',textWrap:'balance',animation:'pop .45s cubic-bezier(.2,1.2,.35,1)'}},qText):null,
         waitText:P==='ready'?'جاهز؟ السؤال يطلع أول ما تبدأ الجولة':P==='countdown'?'استعد…':'خلص الوقت',
         feed:sl.feed||' ',feedC:sl.feedC,
-        deltaEl:sl.delta?h('span',{key:sl.delta.id,style:{position:'absolute',top:470,left:'50%',transform:'translateX(-50%)',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',pointerEvents:'none',animation:'floatUp 1s ease-out forwards',direction:'ltr'}},sl.delta.txt):null}; });
+        deltaEl:sl.delta?h('span',{key:sl.delta.id,style:{position:'absolute',top:330,left:'12%',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',pointerEvents:'none',animation:'floatUpL 1s ease-out forwards',direction:'ltr'}},sl.delta.txt):null}; });
     // لوحة النقاط
     const liveSet=new Set(P==='playing'?s.slots.filter(x=>!x.done).map(x=>x.name):[]);
     const list=this.ranked(s.queue.filter(n=>this.st(n).played)), wait=s.queue.slice(s.qIdx);
@@ -578,6 +568,7 @@ class Component extends DCLogic {
         return {name:n,rank:j+1,score:fmt(this.st(n).score)+' نقطة',ring:j===0?'#c4b5fd':'#a78bfa',bd:j===0?'rgba(196,181,253,.6)':'rgba(167,139,250,.35)',delay:(0.4+j*0.06).toFixed(2)+'s',wcOn:!!el,wcStd:!el,wcEl:el,...this.avItem(n,'#7c3aed')}; }),
       out:F.out.map(n=>({name:n,score:fmt(this.st(n).score),...this.avItem(n,'#7c3aed')})) }; })():null;
     return { ...this.anims(), scale:s.scale, round:s.round, rounds:Math.max(1,Math.ceil(total/PER_ROUND)), stage:s.stage, showStage:s.stage>1, playedCount:played, totalCount:total, qualCount:qual,
+      tText:mmss(leftSec), tPct:(dur?leftSec/dur:1)*100, tColor:P==='playing'&&leftSec<=10?'#f87171':'#a78bfa', tGlow:P==='playing'&&leftSec<=10?'rgba(248,113,113,.5)':'rgba(167,139,250,.35)',
       slots, scoreRows, scoreEmpty:!scoreRows.length, scoreNote:`يتأهل أعلى ${qual}`, waitRows, waitEmpty:!waitRows.length, waitNote:`${waitRows.length} لاعب`,
       turnLabel:s.turn===120?'دقيقتين':'دقيقة ونص', showBtn:P==='ready'||P==='roundEnd'||(P==='stageEnd'&&!s.showFinal), showLive:P==='playing'||P==='countdown', btnLabel, primary:this.primary,
       countdownEl:s.countdown?h('div',{key:'cd',style:{position:'absolute',inset:0,zIndex:6,background:'rgba(0,0,0,.55)',backdropFilter:'blur(10px)',display:'grid',placeItems:'center',animation:'fade .3s ease'}},
