@@ -170,8 +170,9 @@ function reveal() {
     SFX.bell(); flash('rgba(255,220,150,.55)', 260);
     // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول
     if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (!p.bot || d.wasted[p.id]) return; const ms = rnd(900, 3800);
-        if (Math.random() < .25) later(ms * .6, () => answer(p.id, G.ch.type === 'num' ? String(+G.ch.value + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9))) : pickOne(WORDS)));
-        later(ms, () => answer(p.id, G.ch.value)); }));
+        // أحياناً يغلط أول — والإجابة الصح بعدها لازم تجي بعد ما يخلص تعليق المسدس (JAM_MS)
+        const wrong = Math.random() < .25; if (wrong) later(ms * .5, () => answer(p.id, G.ch.type === 'num' ? String(+G.ch.value + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9))) : pickOne(WORDS)));
+        later(wrong ? ms * .5 + JAM_MS + rnd(150, 700) : ms, () => answer(p.id, G.ch.value)); }));
     later(ANSWER_MS, () => { if (G.phase !== 'armed') return; notice('🌵 ولا أحد سحب! جرس جديد…'); G.active.forEach(d => { d.wasted = {}; }); G.phase = 'standoff'; warnThenReveal(true); });
 }
 function answer(id, text) {
