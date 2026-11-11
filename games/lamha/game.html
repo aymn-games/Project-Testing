@@ -82,7 +82,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
       <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
-      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
+      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:-36px -60px;margin:auto;height:108px;max-width:none;object-fit:contain;pointer-events:none;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
     </div>
     <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end">
       <button onClick="{{ onEvents }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;border:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;box-shadow:0 8px 26px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2)" style-hover="filter:brightness(1.1);transform:translateY(-1px)" style-active="transform:scale(.97)"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399"></span><span style="display:{{ lblDisp }}">أحداث المباراة</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg></button>
@@ -135,21 +135,20 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
       <!-- العمود الجانبي بالطول: النقاط فوق، والدور الجاي تحته (بدون تبويبات) -->
       <!-- الدور الجاي: عمود ضيق، كل لاعب ببطاقة صغيرة مربعة فوق بعض -->
-      <aside style="width:168px;flex-shrink:0;min-height:0;display:flex;flex-direction:column;border-radius:24px;background:linear-gradient(180deg, rgba(34,23,60,.97), rgba(15,11,26,.97));border:3px solid rgba(139,92,246,.4);box-shadow:0 30px 80px rgba(0,0,0,.35);overflow:hidden">
-        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 8px 10px;border-bottom:2px solid rgba(139,92,246,.22)">
+      <aside style="width:176px;flex-shrink:0;min-height:0;display:flex;flex-direction:column;border-radius:34px;background:linear-gradient(180deg, rgba(46,30,82,.97), rgba(18,13,32,.97));border:5px solid rgba(139,92,246,.5);box-shadow:0 30px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08), 0 0 40px rgba(109,40,217,.18);overflow:hidden">
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:18px 8px 12px;border-bottom:2px solid rgba(139,92,246,.25)">
           <span style="font:700 20px 'IBM Plex Sans Arabic';color:#ddd6fe">الدور الجاي</span>
           <span style="font:500 14px 'IBM Plex Sans Arabic';color:#8a8596">{{ waitNote }}</span>
         </div>
-        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
           <sc-if value="{{ waitEmpty }}" hint-placeholder-val="{{ false }}">
             <div style="padding:20px 0;text-align:center;font:500 15px/1.5 'IBM Plex Sans Arabic';color:#8a8596">ما فيه أحد بالانتظار</div>
           </sc-if>
           <sc-for list="{{ waitRows }}" as="p" hint-placeholder-count="4">
-            <div style="flex-shrink:0;width:136px;height:136px;box-sizing:border-box;padding:8px 8px;border-radius:16px;background:rgba(139,92,246,.12);border:2px solid {{ p.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative">
+            <div style="flex-shrink:0;width:136px;height:136px;box-sizing:border-box;padding:8px 8px;border-radius:24px;background:linear-gradient(180deg, rgba(139,92,246,.2), rgba(109,40,217,.08));border:3px solid {{ p.bd }};box-shadow:0 8px 20px rgba(0,0,0,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative">
               <span style="position:absolute;top:6px;right:8px;font:700 13px 'IBM Plex Sans Arabic';color:#8a8596">{{ p.rank }}</span>
               <span style="width:46px;height:46px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid rgba(167,139,250,.5);box-sizing:border-box;font:700 20px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
               <span style="max-width:100%;max-height:36px;flex-shrink:0;font:600 14px/1.28 'IBM Plex Sans Arabic';color:#f4f2f8;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere">{{ p.name }}</span>
-              <span style="font:500 12px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ p.val }}</span>
             </div>
           </sc-for>
         </div>
@@ -571,7 +570,7 @@ class Component extends DCLogic {
     const list=this.ranked(s.queue.filter(n=>this.st(n).played)), wait=s.queue.slice(s.qIdx);
     const scoreRows=list.map((n,j)=>{ const inQ=j<qual, live=liveSet.has(n); return {cut:j===qual,name:n,rank:j+1,val:fmt(this.st(n).score),valFont:'700 22px',valColor:inQ?'#ddd6fe':'#a8a3b5',
         bg:live?'rgba(139,92,246,.32)':inQ?'rgba(139,92,246,.2)':'rgba(255,255,255,.06)',bd:live?'rgba(221,214,254,.75)':inQ?'rgba(167,139,250,.5)':'rgba(255,255,255,.14)',rankColor:inQ?'#c4b5fd':'#8a8596',avBd:inQ?'rgba(167,139,250,.6)':'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}; });
-    const waitRows=wait.map((n,j)=>({name:n,rank:j+1,bd:j<PER_ROUND?'rgba(167,139,250,.6)':'rgba(255,255,255,.12)',val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#a8a3b5',bg:'rgba(255,255,255,.06)',bd:'rgba(255,255,255,.14)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
+    const waitRows=wait.slice(0,PER_ROUND).map((n,j)=>({name:n,rank:j+1,bd:'rgba(167,139,250,.45)',val:'الجولة '+(s.round+1+Math.floor(j/PER_ROUND)),valFont:'500 14px',valColor:'#a8a3b5',bg:'rgba(255,255,255,.06)',bd:'rgba(255,255,255,.14)',rankColor:'#8a8596',avBd:'rgba(255,255,255,.15)',...this.avItem(n,'#7c3aed')}));
     const lastRound=s.qIdx>=s.queue.length;
     const btnLabel=P==='ready'?'ابدأ الجولة '+s.round:P==='roundEnd'?(lastRound?'نتيجة التصفية':'اللاعبين التالين'):P==='stageEnd'?'عرض النتيجة':'';
     const F=s.final, eg=this.eventGroups();
@@ -581,7 +580,7 @@ class Component extends DCLogic {
       out:F.out.map(n=>({name:n,score:fmt(this.st(n).score),...this.avItem(n,'#7c3aed')})) }; })():null;
     return { ...this.anims(), scale:s.scale, round:s.round, rounds:Math.max(1,Math.ceil(total/PER_ROUND)), stage:s.stage, showStage:s.stage>1, playedCount:played, totalCount:total, qualCount:qual,
       tText:mmss(leftSec), tPct:(dur?leftSec/dur:1)*100, tColor:P==='playing'&&leftSec<=10?'#ef4444':'#8b5cf6', tGlow:P==='playing'&&leftSec<=10?'rgba(239,68,68,.4)':'rgba(124,58,237,.3)',
-      slots, waitRows, waitEmpty:!waitRows.length, waitNote:`${waitRows.length} لاعب`,
+      slots, waitRows, waitEmpty:!waitRows.length, waitNote:waitRows.length?'الجولة '+(s.round+1):'',
       turnLabel:s.turn===120?'دقيقتين':'دقيقة ونص', showBtn:(P==='ready'&&!s.auto)||P==='roundEnd'||(P==='stageEnd'&&!s.showFinal), showTimer:P==='playing'||P==='countdown'||(P==='ready'&&s.auto), showLive:P==='playing'||P==='countdown', btnLabel, primary:this.primary,
       countdownEl:s.countdown?h('div',{key:'cd',style:{position:'absolute',inset:0,zIndex:6,background:'rgba(0,0,0,.55)',backdropFilter:'blur(10px)',display:'grid',placeItems:'center',animation:'fade .3s ease'}},
         h('div',{key:s.countdown,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:14,animation:'pop .6s cubic-bezier(.2,1.3,.35,1)'}},
