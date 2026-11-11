@@ -105,8 +105,8 @@ export function createTugScene(container, opts = {}) {
         for (let i = 0; i < 260; i++) { const a = rnd(-1.2, 1.2), e = rnd(.12, .9), R = 70; sp.push(Math.sin(a) * Math.cos(e) * R, Math.sin(e) * R * .8 + 4, -Math.cos(a) * Math.cos(e) * R); }
         const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(sp, 3));
         sc.add(new T.Points(sg, new T.PointsMaterial({ color: '#e9e4ff', size: .35, sizeAttenuation: true, transparent: true, opacity: .8, fog: false })));
-        // أرض خلف المنصة (عشب صناعي غامق بخطوط)
-        const turf = tex(512, 512, (g, w, h) => { g.fillStyle = '#16301f'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 64) { g.fillStyle = (y / 64) % 2 ? '#1a3823' : '#14301d'; g.fillRect(0, y, w, 64); } });
+        // أرض خلف المنصة (بنفسجي غامق بخطوط خفيفة)
+        const turf = tex(512, 512, (g, w, h) => { g.fillStyle = '#18132b'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(196,181,253,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }); // أرضية بنفسجية غامقة (بدون أخضر)
         turf.wrapS = turf.wrapT = T.RepeatWrapping; turf.repeat.set(6, 3);
         const field = new T.Mesh(new T.PlaneGeometry(90, 60), new T.MeshStandardMaterial({ map: turf, roughness: 1 })); field.rotation.x = -Math.PI / 2; field.position.set(0, -.32, -4); field.receiveShadow = true; sc.add(field);
         // مدرجات: درجات خرسانية + كراسي بلون كل فريق (كل نص بلون فريقه)
@@ -185,8 +185,8 @@ export function createTugScene(container, opts = {}) {
     let spanX = 6;
     function fitCam() {
         const n = Math.max(1, state.teams[0].length, state.teams[1].length);
-        spanX = slot(n - 1, n) + SHIFT * .45 + .5; // أقرب: آخر لاعب + جزء من أقصى سحبة
-        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(5.2, Math.min(24, spanX / (halfH * Math.max(.5, cam.aspect))));
+        spanX = (slot(n - 1, n) + SHIFT * .3 + .3) * .9; // أقرب: آخر لاعب + جزء بسيط من السحبة
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(4.6, Math.min(22, spanX / (halfH * Math.max(.5, cam.aspect))));
         // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
         const d = far ? dist * 1.75 : dist;
         camGoal.pos.set(0, 1.2 + d * (far ? .32 : .2), d); camGoal.look.set(0, 1.0 + d * .02, 0);
