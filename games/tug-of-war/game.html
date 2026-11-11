@@ -289,7 +289,8 @@ const readAuto = ()=>{ try{ return localStorage.getItem(AUTO_KEY)!=='0'; }catch(
 class Component extends DCLogic {
   reg = TOW.createRegistry(PLAYERS);
   T = SETUP.teams.map((t,i)=>({name:t.name,keyword:t.keyword,color:TOW.TEAM_COLORS[i]})); // ألوان ثابتة
-  MAX = +SETUP.max||12; MODE = SETUP.mode==='speed'?'speed':'tap'; G = SETUP.gifts||{};
+  // «السرعة والتحدي» موقوف حالياً بطلب صاحب المنصة — لإرجاعه: MODE = SETUP.mode==='speed'?'speed':'tap' وخيار النمط بـindex.html
+  MAX = +SETUP.max||12; MODE = 'tap'; G = SETUP.gifts||{};
   lastPull = {};
   state = { autoJoin:readAuto(), out:{}, gfx:null, teams:[[],[]], pos:0, phase:'countdown', cd:3, frozen:{}, boost:[0,0], pulls:{}, flash:{}, feed:[], ch:null, winner:null, now:Date.now(), startedAt:0, muted:false, scale:1, narrow:innerWidth<820, exitOpen:false };
 

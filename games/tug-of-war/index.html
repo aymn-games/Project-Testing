@@ -213,9 +213,6 @@ const MAXES=[8,12,18];
 // ألوان الفريقين ثابتة (بطلب صاحب المنصة): الأيسر أحمر والأيمن أزرق
 const TEAM_COLORS=TOW.TEAM_COLORS;
 const SETTINGS = [
-  { title:'نمط اللعب', full:true, rows:[
-    { type:'choice', key:'mode', label:'النمط', hint:'التكبيس والدعم: كل تكبيسة أو رسالة سحبة · السرعة والتحدي: أسرع من يكتب الكلمة يسحب', options:['التكبيس والدعم','السرعة والتحدي'], default:0 }
-  ]},
   { title:'الفريق الأيسر', team:0, rows:[
     { type:'text', key:'leftName', label:'اسم الفريق', placeholder:'مثلاً: فريق اللهب', default:'فريق اللهب' },
     { type:'text', key:'leftKw', label:'كلمة الدخول', placeholder:'مثلاً: لهب', default:'لهب' }
@@ -230,6 +227,7 @@ const SETTINGS = [
     { type:'toggle', key:'autoJoin', label:'الدخول التلقائي أثناء المباراة', hint:'تقدر تغيّره من هيدر شاشة اللعب', default:true }
   ]},
   { title:'المباراة', rows:[
+    { type:'info', key:'_how', label:'السحب', hint:'كل تكبيسة أو رسالة بالشات من لاعب = سحبة لفريقه' },
     { type:'info', key:'_out', label:'الإقصاء بالخط', hint:'اللي يسحبه الحبل لين يتعدى خط النص ينقصى على طول' },
     { type:'info', key:'_win', label:'الفوز', hint:'أول فريق يجر الحبل لخط فوزه، أو يخلّص لاعبين الخصم' }
   ]},
@@ -293,7 +291,8 @@ class Component extends DCLogic {
     return null; }
 
   readSetup(demo){ const V=this.state.values, g=k=>{ const x=TOW.giftById(V[k]); return x?{id:x.id,name:x.name,coins:x.coins,img:x.img}:null; };
-    return { values:V, demo:!!demo, mode:V.mode===1?'speed':'tap', max:MAXES[V.max]||12, followersOnly:V.who===1,
+    // mode ثابت 'tap': «السرعة والتحدي» موقوف حالياً بطلب صاحب المنصة (الكود باقي بـgame.html)
+    return { values:V, demo:!!demo, mode:'tap', max:MAXES[V.max]||12, followersOnly:V.who===1,
       teams:[{name:V.leftName.trim(),keyword:V.leftKw.trim(),color:TEAM_COLORS[0]},{name:V.rightName.trim(),keyword:V.rightKw.trim(),color:TEAM_COLORS[1]}],
       gifts:{freeze:g('freezeGift'),double:g('doubleGift'),hook:g('hookGift')} }; }
 
