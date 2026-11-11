@@ -98,9 +98,9 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 .btn.ghost{background:rgba(0,0,0,.25);color:#f3d9a8;border-color:rgba(242,193,78,.5);box-shadow:none;font-size:16px}
 
 /* البطل: نجمة الشريف */
-#champ{position:fixed;left:50%;top:calc(9vh + 12px);z-index:7;transform:translate(-50%,-30px) scale(.6);opacity:0;pointer-events:none;transition:all .7s cubic-bezier(.2,1.5,.4,1);text-align:center}
+#champ{position:fixed;left:50%;bottom:calc(9vh + 12px);z-index:7;transform:translate(-50%,-30px) scale(.6);opacity:0;pointer-events:none;transition:all .7s cubic-bezier(.2,1.5,.4,1);text-align:center}
 #champ.in{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto}
-.star{width:clamp(120px,15vw,180px);aspect-ratio:1;margin:0 auto;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#fff2c4,#f2c14e 45%,#a8691c);
+.star{width:clamp(90px,10vw,130px);aspect-ratio:1;margin:0 auto;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#fff2c4,#f2c14e 45%,#a8691c);
   clip-path:polygon(50% 0,61% 32%,95% 25%,72% 52%,95% 79%,61% 70%,50% 100%,39% 70%,5% 79%,28% 52%,5% 25%,39% 32%);filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));animation:spin 6s linear infinite}
 .star span{font:400 clamp(14px,1.6vw,20px) Rye,serif;color:#5a3a12;direction:ltr;animation:spin 6s linear infinite reverse}
 @keyframes spin{to{transform:rotate(360deg)}}

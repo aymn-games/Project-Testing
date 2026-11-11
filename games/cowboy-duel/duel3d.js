@@ -497,7 +497,7 @@ export async function mountDuel(el, opts = {}) {
         else { const kk = shot ? 1 - Math.exp(-real * 14) : 1 - Math.exp(-real * 1.6); camPos.lerp(CS.pos, kk); camLook.lerp(CS.look, kk); camFov += (CS.fov - camFov) * kk; camRoll += (CS.roll - camRoll) * kk; }
         cam.position.copy(camPos); if (shake > 0) { cam.position.x += (Math.random() - .5) * shake; cam.position.y += (Math.random() - .5) * shake; shake = Math.max(0, shake - real * 1.2); }
         cam.lookAt(camLook); if (camRoll) cam.rotateZ(camRoll); if (Math.abs(cam.fov - camFov) > .01) { cam.fov = camFov; cam.updateProjectionMatrix(); }
-        for (const [, f] of figs) f.U.label.visible = labels && f.state !== 'dead' && f.state !== 'poof';
+        for (const [, f] of figs) f.U.label.visible = labels && f.state !== 'dead' && f.state !== 'poof' && cam.position.distanceTo(f.g.position) > 6;
         r.render(sc, cam);
         if (shot && ((shot.dur && shotT >= shot.dur) || (shot.until && shot.until()))) next();
     }
