@@ -144,8 +144,13 @@ export function createTugScene(container, opts = {}) {
         const n = Math.max(1, state.teams[0].length, state.teams[1].length);
         spanX = slot(n - 1, n) + SHIFT * .8 + .9;
         const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(19, spanX / (halfH * Math.max(.5, cam.aspect))));
-        cam.position.set(0, 1.2 + dist * .2, dist); cam.lookAt(0, 1.0 + dist * .02, 0); cam.updateProjectionMatrix();
+        // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
+        const d = far ? dist * 1.75 : dist;
+        camGoal.pos.set(0, 1.2 + d * (far ? .32 : .2), d); camGoal.look.set(0, 1.0 + d * .02, 0);
+        if (!camInit) { camInit = true; cam.position.copy(camGoal.pos); camLook.copy(camGoal.look); cam.lookAt(camLook); }
+        cam.updateProjectionMatrix();
     }
+    let far = true, camInit = false; const camGoal = { pos: new T.Vector3(), look: new T.Vector3() }, camLook = new T.Vector3(0, 1, 0);
     function drop(f) { f.outer.removeFromParent(); }
 
     // وضعية الشد: الجسم مايل لورا، الركب منثنية، اليدين قدام على الحبل
@@ -204,6 +209,7 @@ export function createTugScene(container, opts = {}) {
         const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
         const target = Math.max(-1, Math.min(1, state.pos / 100)) * SHIFT;
         posX += (target - posX) * (1 - Math.exp(-dt * 7)); mover.position.x = posX;
+        { const k = 1 - Math.exp(-dt * 1.8); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k); cam.lookAt(camLook); }
         flag.position.set(0, ropeY, 0);
         for (const f of figs.values()) {
             if (f.outAt) { // منقصى: ينقذف لجهة الخصم وهو يلف، ويصغر لين يختفي
@@ -247,6 +253,8 @@ export function createTugScene(container, opts = {}) {
         setState(s) { state = { ...state, ...s }; sync(); },
         pull(id) { const f = figs.get(id); if (f) f.jerk = 1; },
         effect,
+        // true = الكاميرا بعيدة (قبل البداية) · false = تقرّب للعب
+        setFar(v) { far = !!v; fitCam(); },
         stop() { cancelAnimationFrame(raf); ro.disconnect(); for (const f of figs.values()) drop(f); r.dispose(); r.domElement.remove(); }
     };
 }
