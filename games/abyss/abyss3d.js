@@ -17,8 +17,8 @@
   if (!Base || customElements.get('abyss-3d')) return;
 
   // ألواح أكبر وجسر أعرض عشان تكون المرحلة أوضح على البث
-  const TW = 7.4, TD = 6.6, GAP = 9.6, LX = 4.2, FRAME_X = LX + TW / 2 + .45;
-  const rowZ = r => r < 0 ? 5 : -6.8 - r * GAP;          // منصة البداية مركزها z=5 وعمقها 12
+  const TW = 9.2, TD = 8.4, GAP = 11.6, LX = 5.1, FRAME_X = LX + TW / 2 + .45;
+  const rowZ = r => r < 0 ? 5 : -7.8 - r * GAP;          // منصة البداية مركزها z=5 وعمقها 12
   const laneX = l => l ? -LX : LX;
 
   class Abyss3D extends Base {
@@ -42,7 +42,7 @@
       this.world = new T.Group(); sc.add(this.world);
       this.buildSky(); this.buildMountains(); this.buildAbyss();
       this.bridge = new T.Group(); this.world.add(this.bridge);
-      this.startPad = this.cliff(rowZ(-1), 12, 24, false);
+      this.startPad = this.cliff(rowZ(-1), 12, 28, false);
       this.crew = new T.Group(); sc.add(this.crew);
       this.buildFx();
       this.ro = new ResizeObserver(() => { const w = this.clientWidth || 1, h = this.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }); this.ro.observe(this);
@@ -102,8 +102,8 @@
         const li = new T.PointLight(end ? '#fbbf24' : '#38bdf8', 18, 14, 2); li.position.copy(fl.position); G.add(li); }
       if (end) { // قوس النهاية
         const gold = this.mat('#f5c451', { metalness: .8, roughness: .25, emissive: '#7c4a03', emissiveIntensity: .35 });
-        for (const sx of [-1, 1]) { const c = new T.Mesh(new T.BoxGeometry(.7, 7, .7), gold); c.position.set(sx * 9.5, 3.5, depth / 2 - 1.5); c.castShadow = true; G.add(c); }
-        const beam = new T.Mesh(new T.BoxGeometry(20, 1.1, .8), gold); beam.position.set(0, 7.2, depth / 2 - 1.5); G.add(beam);
+        for (const sx of [-1, 1]) { const c = new T.Mesh(new T.BoxGeometry(.7, 7, .7), gold); c.position.set(sx * 11.5, 3.5, depth / 2 - 1.5); c.castShadow = true; G.add(c); }
+        const beam = new T.Mesh(new T.BoxGeometry(24, 1.1, .8), gold); beam.position.set(0, 7.2, depth / 2 - 1.5); G.add(beam);
         const sign = new T.Mesh(new T.PlaneGeometry(9, 1.6), new T.MeshBasicMaterial({ map: this.tex(512, 96, (g, w, h) => { g.fillStyle = '#1a0f3a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fde68a'; g.font = '900 64px Zain, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText('خط النجاة', w / 2, h / 2 + 4); }) }));
         sign.position.set(0, 7.2, depth / 2 - 1.05); G.add(sign);
       }
@@ -121,7 +121,7 @@
       // لمعة قطرية خفيفة على سطح الزجاج
       const shine = new T.Mesh(new T.PlaneGeometry(TW * .9, TD * .9), new T.MeshBasicMaterial({ map: this.shineTex || (this.shineTex = this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.45, 'rgba(255,255,255,0)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(.58, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); })), transparent: true, depthWrite: false }));
       shine.rotation.x = -Math.PI / 2; shine.position.y = .01; G.add(shine);
-      const lb = new T.Mesh(new T.PlaneGeometry(4.6, 4.6), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: .95 }));
+      const lb = new T.Mesh(new T.PlaneGeometry(5.8, 5.8), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: .95 }));
       lb.rotation.x = -Math.PI / 2; lb.position.y = .02; G.add(lb);
       return { g: G, slab, edge, lb, glass, label, broken: false, safe: false, shakeT: null, r, lane };
     }
@@ -172,7 +172,7 @@
       if (rows.length !== this.builtRows || !!d.finish !== this.builtFinish) {
         for (let i = this.tiles.length; i < rows.length; i++) this.tiles.push([this.buildTile(i, 0, rows[i].labels[0]), this.buildTile(i, 1, rows[i].labels[1])]);
         this.buildFrame(rows.length, d.finish); this.builtRows = rows.length; this.builtFinish = !!d.finish;
-        if (this.endPad) this.world.remove(this.endPad); this.endPad = d.finish && rows.length ? this.cliff(this.endZ(), 14, 24, true) : null;
+        if (this.endPad) this.world.remove(this.endPad); this.endPad = d.finish && rows.length ? this.cliff(this.endZ(), 14, 28, true) : null;
       }
       rows.forEach((rw, i) => this.tiles[i].forEach((t, l) => {
         if (t.label !== rw.labels[l]) { t.label = rw.labels[l]; t.lb.material.map = this.tileLabel(t.label, l ? '#a855f7' : '#0ea5e9'); }
@@ -188,7 +188,7 @@
         list.forEach((p, i) => slot.set(p.id, sl[i])); }
       ps.forEach(p => {
         let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'boy') && this.V ? p.vrm : null;
-        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
+        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const sp = f.g.userData.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; } /* اسم أصغر عشان ما تتراكب الأسماء */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
         const key = p.row + ':' + p.lane;
         if (p.fall) { if (f.fallT == null) { f.fallT = -.45; f.fallV = new T.Vector3((Math.random() - .5) * 1.5, 1.5, (Math.random() - .5) * 1.5); } f.key = key; return; }
         f.fallT = null; f.g.visible = true; const sl = slot.get(p.id); f.scale = sl.s;
@@ -206,7 +206,7 @@
       // المربعات: نبض الصف الحالي، رجفة ثم كسر المربع الغلط
       const cur = d.row;
       const mrow = this.tiles[cur], showM = d.cam === 'play' && mrow && !mrow[0].broken && !mrow[1].broken && !mrow[0].safe && !mrow[1].safe;
-      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 2.8 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.8 + b, rowZ(cur)); m.scale.setScalar(pu); } });
+      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 3.1 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.8 + b, rowZ(cur)); m.scale.setScalar(pu); } });
       this.tiles.forEach((pair, i) => pair.forEach(tl => {
         if (tl.shakeT != null) { tl.shakeT += dt; tl.g.position.x = laneX(tl.lane) + Math.sin(tl.shakeT * 90) * .07 * (1 - tl.shakeT / .45); if (tl.shakeT > .45) { tl.shakeT = null; tl.g.visible = false; this.shatter(tl); } return; }
         if (!tl.safe && !tl.broken) { const on = i === cur; tl.edge.material.opacity = on ? .65 + Math.sin(t * 4) * .35 : .55; tl.glass.emissiveIntensity = on ? .18 + Math.sin(t * 4) * .08 : .08; }
@@ -243,13 +243,13 @@
       const standZ = rowZ(Math.max(-1, (cur || 0) - 1)), nextZ = rowZ(Math.max(0, cur || 0)), midZ = (standZ + nextZ) / 2;
       if (d.cam === 'overview') { const zm = (rowZ(-1) + rowZ(Math.max(0, rows - 1))) / 2, a = t * .05; P.set(26 + Math.sin(a) * 6, 26, rowZ(-1) + 26); L.set(0, -3, zm * .55); rate = 1; }
       else if (d.cam === 'win') { const zE = d.finish ? this.endZ() : standZ, a = t * .15; P.set(Math.sin(a) * 15, 7.5, zE + Math.cos(a) * 15); L.set(0, 2, zE); rate = 1.6; }
-      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.5, 8.5, standZ + 11); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
-      else { P.set(1.5 + Math.sin(t * .2) * .5, 7.5, standZ + 10.5); L.set(0, 1, nextZ - 1); rate = 1.6; } // قريبة ونازلة: ورا اللاعبين مباشرة
+      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.5, 11, standZ + 12); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
+      else { P.set(1.5 + Math.sin(t * .2) * .5, 10.5, standZ + 11.5); L.set(0, -.6, nextZ - 1); rate = 1.6; } // قريبة ونازلة: ورا اللاعبين مباشرة
       const k = 1 - Math.exp(-dt * rate); cam.position.lerp(P, k); this.camLook.lerp(L, k);
       if (this.shakeK > .01) cam.position.add(new T.Vector3((Math.random() - .5) * this.shakeK, (Math.random() - .5) * this.shakeK, 0));
       cam.lookAt(this.camLook);
       // أثناء اللعب الكادر ينزل لتحت عشان بطاقة السؤال فوق ما تغطي اللاعبين
-      const vt = d.cam === 'play' ? .12 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
+      const vt = d.cam === 'play' ? .27 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
       if (this.vo > .001) cam.setViewOffset(vw, vh, 0, -vh * this.vo, vw, vh); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
       this.sun.target.position.set(0, 0, standZ); this.sun.position.set(-30, 45, standZ - 60);
       this.r.render(this.sc, cam);
