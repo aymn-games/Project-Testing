@@ -33,10 +33,9 @@ var ALL_CATS = [
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
     { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' },
     { id: 'plural', name: 'جمع الكلمة' }, { id: 'opposite', name: 'عكس المعنى' },
-    { id: 'currency', name: 'عملة الدولة' }, { id: 'sentence', name: 'رتّب الجملة' },
-    { id: 'color', name: 'لون الشيء' }, { id: 'sound', name: 'صوت الحيوان' },
-    { id: 'baby', name: 'صغير الحيوان' }, { id: 'count', name: 'كم العدد؟' },
-    { id: 'letter', name: 'أول حرف' }, { id: 'synonym', name: 'مرادف الكلمة' }
+    { id: 'currency', name: 'عملة الدولة' },
+    { id: 'color', name: 'لون الشيء' }, { id: 'count', name: 'كم العدد؟' },
+    { id: 'synonym', name: 'مرادف الكلمة' }
 ];
 // إعدادات ثابتة لتحدي البثوث: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم،
 // 20 ثانية للإجابة، و25 لاعب كحد أقصى لكل فريق (شرط أساسي ما يتعدّل). كل
@@ -172,10 +171,7 @@ function genQuestion(catId) {
         return q({ sub: 'رتّب الكلمات', prompt: '', words: m, answer: x[0], accept: [x[0]].concat(x[1] || []) });
     }
     if (cat.id === 'color') { x = pickNew(cat.id, D.color); return q({ sub: 'ما لون هذا الشيء؟', emoji: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
-    if (cat.id === 'sound') { x = pickNew(cat.id, D.sound); return q({ sub: 'ما اسم صوت هذا الحيوان؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
-    if (cat.id === 'baby') { x = pickNew(cat.id, D.baby); return q({ sub: 'ما اسم صغير هذا الحيوان؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
     if (cat.id === 'count') { x = pickNew(cat.id, D.count); return q({ sub: 'كم عددها؟ اكتب الرقم', prompt: x[0], answer: String(x[1]), accept: [String(x[1])] }); }
-    if (cat.id === 'letter') { x = pickNew(cat.id, D.letter); return q({ sub: 'اكتب أول حرف من اسم الصورة', emoji: x[0], answer: x[2][0] + ' (' + x[1] + ')', accept: x[2] }); }
     if (cat.id === 'synonym') { x = pickNew(cat.id, D.synonym); return q({ sub: 'اكتب مرادف الكلمة', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
     x = pick(D.flag);
     return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });
