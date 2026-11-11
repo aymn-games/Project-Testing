@@ -222,8 +222,8 @@
         if (dist > .05) { const st = Math.min(dist, dt * 4), w = t * 14 + f.ph; f.g.position.x += dx / dist * st; f.g.position.z += dz / dist * st; f.g.position.y = 0; f.g.rotation.y = Math.atan2(dx, dz);
           U.legs[0].rotation.x = Math.sin(w) * .6; U.legs[1].rotation.x = -Math.sin(w) * .6; U.arms[0].rotation.x = -Math.sin(w) * .5; U.arms[1].rotation.x = Math.sin(w) * .5; continue; }
         if (win.has(id)) { if (U.rig) { f.g.rotation.y = Math.PI * 0; continue; } const c = t * 7; f.g.position.y = Math.abs(Math.sin(c * .5)) * 1.1; U.arms[0].rotation.z = -2.7 + Math.sin(c) * .35; U.arms[1].rotation.z = 2.7 - Math.sin(c) * .35; f.g.rotation.y += dt * 4; continue; }
-        // وقوف: يواجه الكاميرا (الجسر وراه) ويتمايل بخفة، ويرتجف شوي وقت السؤال
-        f.g.position.y = Math.abs(Math.sin(ph)) * .04; f.g.rotation.y = Math.sin(ph * .3) * .25;
+        // وقوف: ظهره للكاميرا ووجهه للجسر قدامه (Math.PI)، مع تمايل خفيف
+        f.g.position.y = Math.abs(Math.sin(ph)) * .04; f.g.rotation.y = Math.PI + Math.sin(ph * .3) * .12;
         U.arms[0].rotation.x = Math.sin(ph) * .15; U.arms[1].rotation.x = -Math.sin(ph) * .15; U.arms[0].rotation.z = -.18; U.arms[1].rotation.z = .18; U.legs[0].rotation.x = U.legs[1].rotation.x = 0; U.head.rotation.z = Math.sin(ph * .5) * .06; }
       // شخصيات الأنمي
       for (const [id, f] of this.figs) { const U = f.g.userData, r = U.rig; if (!r || !f.g.visible) continue; let a = 0, m = 'smile';

@@ -19,6 +19,7 @@
 <script src="../../js/agp-stream-connector.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
 <!-- الشخصيات: نفس شخصيات سفينة النجاة (abyss3d.js يورث <ship-3d>) -->
 <script src="../survival-ship/ship3d.js"></script>
 <script src="abyss3d.js"></script>
@@ -125,6 +126,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 #steps{position:absolute;top:var(--top,108px);left:40px;border-radius:24px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:150px}
 #steps b{font:700 52px/1 'IBM Plex Sans Arabic';color:#c4b5fd;font-variant-numeric:tabular-nums}
 #steps span{font:500 17px 'IBM Plex Sans Arabic';color:var(--mut)}
+#evPanel{position:fixed;top:88px;left:clamp(12px,1.25vw,24px);z-index:60;width:min(380px,calc(100vw - 32px));max-height:min(70vh,560px);overflow:auto;border-radius:22px;padding:16px 18px;direction:rtl}
+#evPanel h4{margin:0 0 10px;font:700 17px 'IBM Plex Sans Arabic'}
+#evPanel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+#evPanel li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.04);font:500 15px/1.5 'IBM Plex Sans Arabic'}
+#evPanel li b{flex:1;font-weight:500}
+#evPanel time{font-size:12px;color:var(--mut)}
+#evEmpty{font:500 15px 'IBM Plex Sans Arabic';color:var(--mut);text-align:center;padding:14px 0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -137,13 +145,20 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
     <button class="hb exit" id="bExit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>خروج من المباراة</span></button>
     <button class="hb" id="bSettings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span>إعدادات المباراة</span></button>
     <button class="hb" id="bAuto" role="switch" aria-checked="true" title="الدخول التلقائي: أي لاعب يكتب كلمة الدخول بالشات يدخل"><span>الدخول التلقائي</span><span class="sw"><i></i></span></button>
-    <span class="kw"><small>كلمة الدخول</small><b>دخول</b></span>
+    <span class="kw"><small>كلمة الدخول</small><b id="joinKw">دخول</b></span>
   </div>
   <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
   <div class="hs" style="justify-content:flex-end">
     <button class="hb ev" id="bEvents"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399"></span><span>أحداث المباراة</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg></button>
   </div>
 </header>
+
+<!-- أحداث المباراة -->
+<aside id="evPanel" class="glass" hidden>
+  <h4>أحداث المباراة</h4>
+  <ul id="evList"></ul>
+  <div id="evEmpty">ما فيه أحداث للحين</div>
+</aside>
 
 <div id="stage">
   <div id="alive" class="glass" hidden><b id="aliveN">0</b><span>ناجي</span></div>
@@ -153,7 +168,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
     <h1>الهاوية</h1>
     <div class="sub">جسر زجاج فوق الهاوية… الجواب الغلط يكسر الزجاجة</div>
     <div class="row">
-      <span class="big">اكتب <b>دخول</b> بالشات للانضمام</span>
+      <span class="big">اكتب <b id="joinKw2">دخول</b> بالشات للانضمام</span>
     </div>
     <div class="row" style="margin-top:14px">
       <span class="chip"><span class="dot"></span><span id="joinN">0</span> لاعب على المنصة</span>

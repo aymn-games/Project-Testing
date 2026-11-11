@@ -18,13 +18,16 @@
 
     var params = new URLSearchParams(location.search);
     var DEMO = params.get('demo') === '1';
+    // الإعدادات من شاشة index.html (localStorage 'abyss-settings')، والرابط يغلبها (للتجربة)
+    var saved = {}; try { saved = JSON.parse(localStorage.getItem('abyss-settings') || '{}') || {}; } catch (e) {}
+    var pick = function (k) { return params.has(k) ? params.get(k) : saved[k]; };
     var CFG = {
-        mode: params.get('mode') === 'last' ? 'last' : 'steps',
-        steps: [10, 15, 20].indexOf(+params.get('steps')) >= 0 ? +params.get('steps') : 15,
-        answerSec: 15,
-        joinWord: 'دخول',
-        // اللي ما جاوب لين خلص الوقت: يطيح (القرار النهائي عند صاحب المنصة)
-        noAnswerFalls: true
+        mode: pick('mode') === 'last' ? 'last' : 'steps',
+        steps: [10, 15, 20].indexOf(+pick('steps')) >= 0 ? +pick('steps') : 15,
+        answerSec: Math.min(60, Math.max(5, +pick('answerSec') || 15)),
+        joinWord: String(pick('joinWord') || 'دخول').trim() || 'دخول',
+        // اللي ما جاوب لين خلص الوقت: يطيح (الافتراضي)، أو ينتقل للمربع الصح
+        noAnswerFalls: pick('noAnswerFalls') !== false && pick('noAnswerFalls') !== '0'
     };
 
     // نفس أشكال شخصيات سفينة النجاة (games/survival-ship/game.html)
@@ -103,6 +106,7 @@
         show('alive', ph !== 'join'); show('steps', ph !== 'join');
         show('over', ph === 'over');
         $('joinN').textContent = S.players.length;
+        $('joinKw').textContent = CFG.joinWord; $('joinKw2').textContent = CFG.joinWord;
         $('modeChip').textContent = CFG.mode === 'steps' ? 'النمط: ' + CFG.steps + ' خطوة' : 'النمط: آخر ناجي';
         $('bStart').disabled = S.players.length < 1;
         $('aliveN').textContent = n;
@@ -133,6 +137,7 @@
         if (S.phase !== 'join' || S.players.some(function (p) { return p.id === id; })) return;
         var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
         S.players.push({ id: id, name: name, look: LOOKS[Math.abs(h) % LOOKS.length], vrm: vrm || null, row: -1, lane: 0, alive: true, fall: false, ans: -1 });
+        logEv('🙋', 'انضم ' + name);
         pushScene(); render();
     }
     function answer(id, text) {
@@ -148,7 +153,7 @@
     function start() {
         if (!S.players.length) return;
         S.startedAt = Date.now(); S.row = 0; S.winners = [];
-        S.cam = 'play'; ask();
+        S.cam = 'play'; logEv('🚩', 'بدأت المباراة بـ ' + S.players.length + ' لاعب · ' + (CFG.mode === 'steps' ? CFG.steps + ' خطوة' : 'آخر ناجي')); ask();
     }
     function ask() {
         S.phase = 'question'; S.left = CFG.answerSec;
@@ -175,6 +180,7 @@
             p.alive = false; p.fall = true; fell.push(p.name);
         });
         pushScene(); render();
+        logEv(fell.length ? '💥' : '✅', 'الخطوة ' + (S.row + 1) + ': ' + (fell.length ? 'سقط ' + fell.join('، ') : 'الكل نجا'));
         var h = $('fallH'), pTx = $('fallP');
         if (fell.length) { h.className = ''; h.textContent = 'انكسر الزجاج! سقط ' + fell.length + (fell.length === 1 ? ' لاعب' : ' لاعبين'); pTx.textContent = fell.slice(0, 12).join(' · ') + (fell.length > 12 ? ' و' + (fell.length - 12) + ' غيرهم' : ''); }
         else { h.className = 'safe'; h.textContent = 'الكل نجا!'; pTx.textContent = 'الجواب الصح: ' + (isTF(q) ? (q.tf ? 'صح' : 'خطأ') : q.a[ok]); }
@@ -194,6 +200,7 @@
         $('overH').textContent = winners.length ? (winners.length === 1 ? 'الفائز: ' + winners[0].name : 'نجا ' + winners.length + ' لاعبين!') : 'سقط الجميع!';
         $('overP').textContent = winners.length > 1 ? winners.map(function (p) { return p.name; }).join(' · ') : winners.length ? 'آخر واحد صامد على الجسر' : 'ما أحد نجا من الهاوية هالمرة';
         $('over').querySelector('.crown').textContent = winners.length ? '👑' : '💀';
+        logEv(winners.length ? '👑' : '💀', winners.length ? 'الفائز: ' + winners.map(function (p) { return p.name; }).join('، ') : 'سقط الجميع');
         pushScene(); render();
         // نظام نقاط المنصة (إلزامي لكل لعبة) — مرة وحدة بنهاية كل مباراة
         if (!DEMO && window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
@@ -212,12 +219,35 @@
         pushScene(); render();
     }
 
+    // ---------- أحداث المباراة (زر «أحداث المباراة» بالهيدر) ----------
+    var LOG = [];
+    function logEv(icon, text) {
+        LOG.unshift({ icon: icon, text: text, at: new Date() }); if (LOG.length > 60) LOG.pop();
+        var box = $('evList'); if (!box) return;
+        box.innerHTML = LOG.map(function (e) { return '<li><span>' + e.icon + '</span><b></b><time>' + e.at.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) + '</time></li>'; }).join('');
+        Array.prototype.forEach.call(box.querySelectorAll('b'), function (b, i) { b.textContent = LOG[i].text; });
+        $('evEmpty').hidden = LOG.length > 0;
+    }
+
     // ---------- الشات ----------
+    // الاتصال بالبث: نفس الاتصال الموثّق المحفوظ بمكتبة الألعاب (games.html)
+    (function connectStream() {
+        if (DEMO || !AGP.streamConnector) return;
+        var conn = null; try { conn = JSON.parse(localStorage.getItem('agp:agp-stream-connection') || 'null'); } catch (e) {}
+        if (conn && conn.username) AGP.streamConnector.connect('tiktok', { username: conn.username });
+    }());
+    // شخصية الأنمي لأصحاب الحسابات الموثّقة (docs/CHARACTERS.md): girl/boy، و any = وحدة ثابتة من id
+    function vrmOf(c, id) {
+        if (c === 'girl' || c === 'boy') return c;
+        if (c !== 'any') return null;
+        var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+        return h & 1 ? 'boy' : 'girl';
+    }
     if (AGP.events && typeof AGP.events.on === 'function') {
         AGP.events.on('stream:commentReceived', function (c) {
             if (!c || typeof c.text !== 'string' || !c.id) return;
-            var id = 'tiktok:' + (c.username || c.id), name = c.nickname || c.username || 'لاعب';
-            if (S.phase === 'join' && norm(c.text) === norm(CFG.joinWord) && $('bAuto').getAttribute('aria-checked') === 'true') addPlayer(id, name, c.character === 'girl' || c.character === 'boy' ? c.character : c.character === 'any' ? (Math.random() < .5 ? 'girl' : 'boy') : null);
+            var id = String(c.id), name = String(c.name || c.id).trim() || 'لاعب';
+            if (S.phase === 'join') { if (norm(c.text) === norm(CFG.joinWord) && $('bAuto').getAttribute('aria-checked') === 'true') addPlayer(id, name, vrmOf(c.character, id)); }
             else answer(id, c.text);
         });
     }
@@ -227,6 +257,9 @@
     $('bAgain').onclick = reset;
     $('bBack').onclick = function () { location.href = 'index.html'; };
     $('bExit').onclick = function () { location.href = '../../games.html'; };
+    $('bSettings').onclick = function () { location.href = 'index.html'; };
+    $('bEvents').onclick = function (e) { e.stopPropagation(); $('evPanel').hidden = !$('evPanel').hidden; };
+    document.addEventListener('click', function (e) { if (!$('evPanel').contains(e.target)) $('evPanel').hidden = true; });
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
 
     // ---------- نمط التجربة ----------
