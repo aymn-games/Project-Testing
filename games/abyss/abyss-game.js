@@ -102,6 +102,7 @@
         var ph = S.phase, q = S.qs[S.row], n = alive().length;
         show('join', ph === 'join');
         show('q', ph === 'question' || ph === 'reveal');
+        show('opts', ph === 'question' || ph === 'reveal');
         show('hint', ph === 'question');
         show('alive', ph !== 'join'); show('steps', ph !== 'join');
         show('over', ph === 'over');

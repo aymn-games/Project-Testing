@@ -248,7 +248,7 @@
       if (this.shakeK > .01) cam.position.add(new T.Vector3((Math.random() - .5) * this.shakeK, (Math.random() - .5) * this.shakeK, 0));
       cam.lookAt(this.camLook);
       // أثناء اللعب الكادر ينزل لتحت عشان بطاقة السؤال فوق ما تغطي اللاعبين
-      const vt = d.cam === 'play' ? .24 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
+      const vt = d.cam === 'play' ? .12 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
       if (this.vo > .001) cam.setViewOffset(vw, vh, 0, -vh * this.vo, vw, vh); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
       this.sun.target.position.set(0, 0, standZ); this.sun.position.set(-30, 45, standZ - 60);
       this.r.render(this.sc, cam);
