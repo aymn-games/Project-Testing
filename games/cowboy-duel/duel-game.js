@@ -177,18 +177,18 @@ function reveal() {
 function answer(id, text) {
     const p = G.players.find(x => x.id === id); if (!p) return;
     const d = G.active && G.active.find(x => !x.done && (x.a.id === id || x.b.id === id)); if (!d) return;
-    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); tag(id, text, 'waste'); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
+    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
     if (G.phase !== 'armed') return;
     if (d.wasted[id]) return; // مسدسه فاضي لين الجرس الجاي
     if (d.jam[id] && performance.now() < d.jam[id]) return;
-    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; tag(id, text, 'bad'); } return; }
+    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; } return; }
     win(d, p, text.trim());
 }
 // الأسرع: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح
 async function win(d, shooter, typed) {
     const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
     d.done = true; d.winner = shooter; d.loser = target; d.secs = secs;
-    tag(shooter.id, typed, 'ok', secs, 2600);
+    tag(shooter.id, shooter.name, 'ok', secs, 3200); // الفايز بس: تبويب فوق راسه باسمه ووقت إجابته
     if (G.active.length === 1) { // مبارزة بعد مبارزة: تصوير كامل
         G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone'); SFX.stamp();
         await sleep(1200); grade('duel');
@@ -320,7 +320,7 @@ function hookStream() {
         else if (e === 'dud') SFX.dud();
         else if (e === 'hit') { SFX.thud(); if (!many) flash('rgba(255,255,255,.7)', 120); if (G.active && G.active.length === 1 && G.target) $('#poster-' + (G.active[0].a === G.target ? 'a' : 'b')).classList.add('dead'); }
         else if (e === 'thud') SFX.thud();
-        else if (e === 'down') { SFX.toll(); tag(d, 'مُقصى', 'out', null, 2600); document.body.dataset.fx = 'down'; clearTimeout(G.fxT); G.fxT = setTimeout(() => { document.body.dataset.fx = ''; }, 1100); }
+        else if (e === 'down') { SFX.toll(); document.body.dataset.fx = 'down'; clearTimeout(G.fxT); G.fxT = setTimeout(() => { document.body.dataset.fx = ''; }, 1100); }
         else if (e === 'tick') SFX.tick();
         else if (e === 'step') SFX.step(d);
         else if (e === 'spin') SFX.spin(d);

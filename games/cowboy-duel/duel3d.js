@@ -436,9 +436,9 @@ export async function mountDuel(el, opts = {}) {
             [[A, 1], [Bf, -1]].forEach(([f, s]) => { f.duelist = true; f.twitch = false; f.wasted = false; f.g.position.set(x + s * .6, startZ > 9 ? .36 : 0, s * startZ); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = V(x, 0, s * LANE_Z); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); duelists.push(f); }); });
         for (const [, f] of figs) if (!f.duelist) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const [A, Bf] = P[0]; // الزوج الأقرب للكاميرا
-        const crane = { name: 'crane', dur: short ? 2.2 : 2.8, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
+        const crane = { name: 'crane', dur: short ? 2.2 : 2.8, labels: false, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
         const boots = { name: 'boots', dur: 2, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } };
-        const profile = { name: 'profile', dur: 2.4, labels: true, start() { arriveAll(); tumbleweed(V(12, .75, .4), V(-30, .75, -.6), 4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } };
+        const profile = { name: 'profile', dur: 2.4, labels: false, start() { arriveAll(); tumbleweed(V(12, .75, .4), V(-30, .75, -.6), 4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } };
         // من منظور كل لاعب: الكاميرا مكان عيونه (تحت حافة قبعته) تطالع خصمه، والصفحة ترسم الجفون وهو يضيّق عينه ويفتحها
         const pov = (me, him, name, dur) => ({ name, dur, labels: false, start: arriveAll,
             cam(k, t, c) { const H = wp(me.U.head), f = fwd(me), O = wp(him.U.head); c.pos.copy(H).addScaledVector(f, .5); c.pos.y += .02 + Math.sin(t * 1.7) * .015; c.pos.x += Math.sin(t * 1.3) * .02; c.look.copy(O); c.look.y -= .35; c.fov = 34 - k * 12; c.roll = Math.sin(t * .9) * .015; } });
@@ -447,7 +447,7 @@ export async function mountDuel(el, opts = {}) {
         else list = short ? [crane, profile] : [crane, boots, profile, pov(A, Bf, 'povA', .9), pov(Bf, A, 'povB', .9)];
         return play(list);
     }
-    function standoff() { arriveAll(); play([{ name: 'standoff', dur: 0, labels: true, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]); }
+    function standoff() { arriveAll(); play([{ name: 'standoff', dur: 0, labels: false, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]); }
     // كل اللي بالمواجهة يطلعون مسدساتهم ويدوّرون الحشوة (بتوقيت مختلف شوي لكل واحد)
     function drawGuns(ids) { ids.forEach((id, i) => setTimeout(() => { const f = figs.get(String(id)); if (!f || f.state !== 'ready') return; setState(f, 'armed'); f.spinT = 1; emit('spin', f.g.position.z > 0 ? -.6 : .6); }, ids.length > 2 ? Math.random() * 700 : i * 450)); }
     // الخدعة الحمراء: اللي كتبها يطلق بالهوا ويضيّع طلقته
