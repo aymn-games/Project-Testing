@@ -16,8 +16,9 @@
   const Base = customElements.get('ship-3d');
   if (!Base || customElements.get('abyss-3d')) return;
 
-  const TW = 5.4, TD = 4.8, GAP = 7.4, LX = 3.2, FRAME_X = LX + TW / 2 + .45;
-  const rowZ = r => r < 0 ? 5 : -5.5 - r * GAP;          // منصة البداية مركزها z=5 وعمقها 12
+  // ألواح أكبر وجسر أعرض عشان تكون المرحلة أوضح على البث
+  const TW = 7.4, TD = 6.6, GAP = 9.6, LX = 4.2, FRAME_X = LX + TW / 2 + .45;
+  const rowZ = r => r < 0 ? 5 : -6.8 - r * GAP;          // منصة البداية مركزها z=5 وعمقها 12
   const laneX = l => l ? -LX : LX;
 
   class Abyss3D extends Base {
@@ -41,7 +42,7 @@
       this.world = new T.Group(); sc.add(this.world);
       this.buildSky(); this.buildMountains(); this.buildAbyss();
       this.bridge = new T.Group(); this.world.add(this.bridge);
-      this.startPad = this.cliff(rowZ(-1), 12, 20, false);
+      this.startPad = this.cliff(rowZ(-1), 12, 24, false);
       this.crew = new T.Group(); sc.add(this.crew);
       this.buildFx();
       this.ro = new ResizeObserver(() => { const w = this.clientWidth || 1, h = this.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }); this.ro.observe(this);
@@ -101,8 +102,8 @@
         const li = new T.PointLight(end ? '#fbbf24' : '#38bdf8', 18, 14, 2); li.position.copy(fl.position); G.add(li); }
       if (end) { // قوس النهاية
         const gold = this.mat('#f5c451', { metalness: .8, roughness: .25, emissive: '#7c4a03', emissiveIntensity: .35 });
-        for (const sx of [-1, 1]) { const c = new T.Mesh(new T.BoxGeometry(.7, 7, .7), gold); c.position.set(sx * 7.5, 3.5, depth / 2 - 1.5); c.castShadow = true; G.add(c); }
-        const beam = new T.Mesh(new T.BoxGeometry(16, 1.1, .8), gold); beam.position.set(0, 7.2, depth / 2 - 1.5); G.add(beam);
+        for (const sx of [-1, 1]) { const c = new T.Mesh(new T.BoxGeometry(.7, 7, .7), gold); c.position.set(sx * 9.5, 3.5, depth / 2 - 1.5); c.castShadow = true; G.add(c); }
+        const beam = new T.Mesh(new T.BoxGeometry(20, 1.1, .8), gold); beam.position.set(0, 7.2, depth / 2 - 1.5); G.add(beam);
         const sign = new T.Mesh(new T.PlaneGeometry(9, 1.6), new T.MeshBasicMaterial({ map: this.tex(512, 96, (g, w, h) => { g.fillStyle = '#1a0f3a'; g.fillRect(0, 0, w, h); g.fillStyle = '#fde68a'; g.font = '900 64px Zain, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText('خط النجاة', w / 2, h / 2 + 4); }) }));
         sign.position.set(0, 7.2, depth / 2 - 1.05); G.add(sign);
       }
@@ -120,7 +121,7 @@
       // لمعة قطرية خفيفة على سطح الزجاج
       const shine = new T.Mesh(new T.PlaneGeometry(TW * .9, TD * .9), new T.MeshBasicMaterial({ map: this.shineTex || (this.shineTex = this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.45, 'rgba(255,255,255,0)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(.58, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); })), transparent: true, depthWrite: false }));
       shine.rotation.x = -Math.PI / 2; shine.position.y = .01; G.add(shine);
-      const lb = new T.Mesh(new T.PlaneGeometry(3.4, 3.4), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: .95 }));
+      const lb = new T.Mesh(new T.PlaneGeometry(4.6, 4.6), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: .95 }));
       lb.rotation.x = -Math.PI / 2; lb.position.y = .02; G.add(lb);
       return { g: G, slab, edge, lb, glass, label, broken: false, safe: false, shakeT: null, r, lane };
     }
@@ -171,7 +172,7 @@
       if (rows.length !== this.builtRows || !!d.finish !== this.builtFinish) {
         for (let i = this.tiles.length; i < rows.length; i++) this.tiles.push([this.buildTile(i, 0, rows[i].labels[0]), this.buildTile(i, 1, rows[i].labels[1])]);
         this.buildFrame(rows.length, d.finish); this.builtRows = rows.length; this.builtFinish = !!d.finish;
-        if (this.endPad) this.world.remove(this.endPad); this.endPad = d.finish && rows.length ? this.cliff(this.endZ(), 14, 20, true) : null;
+        if (this.endPad) this.world.remove(this.endPad); this.endPad = d.finish && rows.length ? this.cliff(this.endZ(), 14, 24, true) : null;
       }
       rows.forEach((rw, i) => this.tiles[i].forEach((t, l) => {
         if (t.label !== rw.labels[l]) { t.label = rw.labels[l]; t.lb.material.map = this.tileLabel(t.label, l ? '#a855f7' : '#0ea5e9'); }
@@ -205,7 +206,7 @@
       // المربعات: نبض الصف الحالي، رجفة ثم كسر المربع الغلط
       const cur = d.row;
       const mrow = this.tiles[cur], showM = d.cam === 'play' && mrow && !mrow[0].broken && !mrow[1].broken && !mrow[0].safe && !mrow[1].safe;
-      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 2.4 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.6 + b, rowZ(cur)); m.scale.setScalar(pu); } });
+      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 2.8 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.8 + b, rowZ(cur)); m.scale.setScalar(pu); } });
       this.tiles.forEach((pair, i) => pair.forEach(tl => {
         if (tl.shakeT != null) { tl.shakeT += dt; tl.g.position.x = laneX(tl.lane) + Math.sin(tl.shakeT * 90) * .07 * (1 - tl.shakeT / .45); if (tl.shakeT > .45) { tl.shakeT = null; tl.g.visible = false; this.shatter(tl); } return; }
         if (!tl.safe && !tl.broken) { const on = i === cur; tl.edge.material.opacity = on ? .65 + Math.sin(t * 4) * .35 : .55; tl.glass.emissiveIntensity = on ? .18 + Math.sin(t * 4) * .08 : .08; }
