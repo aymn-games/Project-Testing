@@ -245,6 +245,9 @@ export async function mountDuel(el, opts = {}) {
     const TW = { on: false, from: V(), to: V(), t: 0, dur: 4 };
     function tumbleweed(from, to, dur = 4) { TW.on = true; TW.from.copy(from); TW.to.copy(to); TW.t = 0; TW.dur = dur; tumble.visible = true; }
 
+    // موجة غبار على الأرض لما يطيح الخاسر (تأثير بعد السقوط)
+    const shocks = [0, 1, 2, 3].map(() => { const m = new T.Mesh(new T.RingGeometry(.55, 1, 48), new T.MeshBasicMaterial({ color: '#f0c890', transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 9; sc.add(m); return m; });
+    function shock(p) { const m = shocks.find(x => x.userData.t >= 1) || shocks[0]; m.position.set(p.x, .07, p.z); m.userData.t = 0; m.visible = true; }
     const COINS = 90, coinMesh = new T.InstancedMesh(new T.CylinderGeometry(.22, .22, .05, 14), new T.MeshStandardMaterial({ color: '#f5c542', metalness: .95, roughness: .25, emissive: '#6b4a00' }), COINS);
     coinMesh.visible = false; sc.add(coinMesh); const coinD = []; let coinsOn = false, coinC = V();
     function startCoins(c) { coinsOn = true; coinC.copy(c); coinMesh.visible = true; coinD.length = 0; for (let i = 0; i < COINS; i++) coinD.push({ p: V(c.x + (Math.random() - .5) * 9, 8 + Math.random() * 14, c.z + (Math.random() - .5) * 9), v: -3 - Math.random() * 3, r: V(Math.random() * 6, Math.random() * 6, 0), s: V(Math.random() * 8, Math.random() * 6, 0) }); }
@@ -375,7 +378,7 @@ export async function mountDuel(el, opts = {}) {
             case 'draw': rA = [-Math.PI / 2 - f.recoil * .55, .06]; lA = [-.2, .55]; lg = [0, 0, -.13, .13]; sq = .5; br = 1; rate = 34; hx = 0; break;
             case 'slowdraw': { const k = clamp01((f.t - .18) / .5); rA = U.gun.visible ? [-.55 - k * .8, -.12 + k * .15] : [.12 - k * 1.1, -.46 + k * .3]; lA = [0, .4]; lg = [0, 0, -.13, .13]; sq = .45; br = 1; rate = 14; if (k > .55) { U.gun.visible = true; U.holGun.visible = false; } break; }
             case 'dead': { const k = clamp01(f.t / .85), e = k * k; g.rotation.x = -e * Math.PI / 2 * .98; if (k < 1) { const b = fwd(f).multiplyScalar(-dt * 2.2 * (1 - k)); g.position.add(b); }
-                if (k >= 1 && !f.landed) { f.landed = true; const hp = wp(U.head); dustBurst(V(hp.x, 0, hp.z), 10, 1); emit('thud'); }
+                if (k >= 1 && !f.landed) { f.landed = true; const hp = wp(U.head); dustBurst(V(hp.x, 0, hp.z), 18, 1.35); shock(V(hp.x, 0, hp.z)); shake = Math.max(shake, .35); emit('thud'); emit('down', f.id); }
                 rA = [-.6, -2.3]; lA = [-.6, 2.3]; lg = [-.35, .25, 0, 0]; sq = .05; mouthS = 1.4; rate = 12; break; }
             case 'win': { const k = f.t;
                 if (k < .45) { rA = [-1.05, .1]; U.gun.rotation.x -= dt * 20; lA = [0, .25]; }
@@ -453,7 +456,7 @@ export async function mountDuel(el, opts = {}) {
     function fire(sId, tId) {
         const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return Promise.resolve(false);
         const dir = V().subVectors(Tg.g.position, S.g.position).setY(0).normalize(), side = V(-dir.z, 0, dir.x);
-        let fired = false, b = null;
+        let fired = false, b = null, doneCb; const done = new Promise(r => doneCb = r);
         const list = [
             { name: 'draw', dur: .62, labels: false, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
               cam(k, t, c) { const p = S.g.position; c.pos.copy(p).addScaledVector(fwd(S), 2.5).addScaledVector(rightOf(S), 1.35); c.pos.y = 1.55; c.look.copy(p); c.look.y = 1.35; c.fov = 34; c.roll = .04;
@@ -463,13 +466,11 @@ export async function mountDuel(el, opts = {}) {
             { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
               cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },
             // الكاميرا تقرّب من صاحب الطلقة: يرفع المسدس وينفخ فيه والدخان يطلع
-            { name: 'hero', dur: 2.9, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); },
-              cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = .15 + e * .35, d = 5 - e * 1.9; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .8 + e * 1.3; c.look.copy(p).addScaledVector(rr, e * .3); c.look.y = 1.7 + e * .7; c.fov = 36 - e * 2; c.roll = .03; /* من جهة يده اللي فيها المسدس */ } },
-            // مشهد سريع: يمشي راجع لجهته والخاسر يختفي بالغبار
-            { name: 'leave', dur: 1.6, labels: false, start() { removePlayer(Tg.id); returnToCrowd(S.id); S.speed = 5; TS = 2.2; emit('leave'); },
-              cam(k, t, c) { const p = S.g.position; c.pos.set(p.x + 9 - k * 2, 3.2, p.z * .4); c.look.set(p.x - 4, 1.4, p.z * .8); c.fov = 42; c.roll = 0; } }
+            { name: 'hero', dur: 0, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); },
+              cam(k0, t, c) { const k = Math.min(1, t / 2.9); if (t > 2.9 && doneCb) { const d = doneCb; doneCb = null; d(true); } const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = .15 + e * .35, d = 5 - e * 1.9; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .8 + e * 1.3; c.look.copy(p).addScaledVector(rr, e * .3); c.look.y = 1.7 + e * .7; c.fov = 36 - e * 2; c.roll = .03; /* من جهة يده اللي فيها المسدس */ } },
         ];
-        return play(list);
+        play(list).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
+        return done;
     }
     // «كل المبارزات في وقت واحد»: كل زوج يُحسم لحاله بدون قطع للكاميرا (توجيه + طلقة + سقوط)
     function quickFire(sId, tId) { const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return;
@@ -477,12 +478,12 @@ export async function mountDuel(el, opts = {}) {
     // بعد ما تنحسم كل المبارزات: الفايزين ينفخون الدخان، ثم الكل يمشي بمشهد سريع
     function multiOutro(winIds, loseIds) {
         const W = winIds.map(id => figs.get(String(id))).filter(Boolean), Lz = loseIds.map(id => figs.get(String(id))).filter(Boolean), H = W[0];
-        return play([
-            { name: 'heroAll', dur: 2.6, labels: false, start() { TS = 1; W.forEach(f => { setState(f, 'win'); f.blown = false; f.puffed = false; f.t = Math.random() * .3; }); emit('hero'); },
-              cam(k, t, c) { if (!H) return wide(c, 0, t, 0); const p = H.g.position, f = fwd(H), rr = rightOf(H), e = ease(k), d = 6.5 - e * 2.5; c.pos.copy(p).addScaledVector(f, d * .8).addScaledVector(rr, d * .6); c.pos.x += 2; c.pos.y = 1.4 + e * .8; c.look.copy(p); c.look.x -= 6; c.look.y = 1.9; c.fov = 40; c.roll = .02; } },
-            { name: 'leave', dur: 1.6, labels: false, start() { Lz.forEach(f => removePlayer(f.id)); W.forEach(f => { returnToCrowd(f.id); f.speed = 5; }); TS = 2.2; emit('leave'); },
-              cam(k, t, c) { wide(c, 0, t, 0); c.pos.y += 3 + k * 2; c.fov += 6; } }
-        ]);
+        let doneCb; const done = new Promise(r => doneCb = r);
+        play([
+            { name: 'heroAll', dur: 0, labels: false, start() { TS = 1; W.forEach(f => { setState(f, 'win'); f.blown = false; f.puffed = false; f.t = Math.random() * .3; }); emit('hero'); },
+              cam(k0, t, c) { const k = Math.min(1, t / 2.6); if (t > 2.6 && doneCb) { const d = doneCb; doneCb = null; d(true); } if (!H) return wide(c, 0, t, 0); const p = H.g.position, f = fwd(H), rr = rightOf(H), e = ease(k), d = 6.5 - e * 2.5; c.pos.copy(p).addScaledVector(f, d * .8).addScaledVector(rr, d * .6); c.pos.x += 2; c.pos.y = 1.4 + e * .8; c.look.copy(p); c.look.x -= 6; c.look.y = 1.9; c.fov = 40; c.roll = .02; } }
+        ]).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
+        return done;
     }
     function shootFx(S, Tg) {
         const m = wp(S.U.muzzle); S.recoil = 1; shake = Math.max(shake, .25); emit('bang', S.g.position.z > 0 ? -.6 : .6);
@@ -497,6 +498,30 @@ export async function mountDuel(el, opts = {}) {
             const hat = Tg.U.hat; sc.attach(hat); Tg.flyHat = { o: hat, v: V(Q.dir.x * 2.5, 5.5, Q.dir.z * 2.5 + (Math.random() - .5)), s: V(-7, 0, 4), landed: false }; };
         return b;
     }
+    // بعد بطاقة الفايز: الكاميرا ترجع للقطة المبارزة (الشارع والبرج) وتثبت لين «المبارزة التالية»
+    function aftermath() { play([{ name: 'aftermath', dur: 0, labels: false, cam(k, t, c) { wide(c, 0, t, 0); } }]); }
+    // قبل المبارزة الجاية (ورا الانتقال الناعم): الخاسرين يختفون، والفايزين يرجعون لأماكنهم بالممشى على طول
+    function cleanup(winIds, loseIds) { lobby();
+        loseIds.forEach(id => { id = String(id); if (figs.has(id)) dropFig(id); crowdOrder = crowdOrder.filter(x => x !== id); });
+        winIds.forEach(id => { const f = figs.get(String(id)); if (!f) return; returnToCrowd(f.id); f.g.position.copy(f.target); f.g.rotation.set(0, f.face, 0); });
+        for (const [, f] of figs) if (f.state === 'idle') { f.target = homeOf(f.id); f.g.position.copy(f.target); f.face = Math.atan2(-f.target.x * .25, -f.target.z); f.g.rotation.set(0, f.face, 0); } }
+    // صورة وجه الشخصية (للبطاقات والشريط السفلي) — ترسم بزاوية من اللوحة وتنقص مباشرة، وتنحفظ لكل لاعب
+    // «استوديو» صغير: الشخصية لحالها بإضاءة أمامية وخلفية دافية، ننقلها له لحظة ونرجعها
+    const PC = new T.PerspectiveCamera(22, 1, .1, 50), portraits = new Map(), studio = new T.Scene();
+    studio.background = canvasTex(4, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#f3c27f'); gr.addColorStop(1, '#a8572e'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }); texList.push(studio.background);
+    studio.add(new T.HemisphereLight('#fff1dc', '#7a4a2a', 1.3)); { const k = new T.DirectionalLight('#ffe2b8', 2.2); k.position.set(2, 3, 5); studio.add(k); }
+    function portrait(id) { id = String(id); if (portraits.has(id)) return portraits.get(id); const f = figs.get(id); if (!f) return null;
+        const g = f.g, P = g.position.clone(), R = g.rotation.clone(), lv = f.U.label.visible;
+        try { studio.add(g); g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); f.U.label.visible = false; g.updateMatrixWorld(true);
+            const H = wp(f.U.head); PC.position.set(H.x, H.y + .12, H.z + 5); PC.lookAt(H.x, H.y + .3, H.z);
+            const c = r.domElement, pr = r.getPixelRatio(), S = 256, sz = V(); r.getSize(sz);
+            r.setViewport(0, 0, S / pr, S / pr); r.setScissor(0, 0, S / pr, S / pr); r.setScissorTest(true); r.render(studio, PC); r.setScissorTest(false); r.setViewport(0, 0, sz.x, sz.y);
+            const cv = document.createElement('canvas'); cv.width = cv.height = S; cv.getContext('2d').drawImage(c, 0, c.height - S, S, S, 0, 0, S, S);
+            const url = cv.toDataURL('image/jpeg', .86); portraits.set(id, url); return url; }
+        catch (e) { console.warn('portrait', e); return null; }
+        finally { sc.add(g); g.position.copy(P); g.rotation.copy(R); f.U.label.visible = lv; } }
+    // مكان راس اللاعب على الشاشة (0..1) — للتبويب اللي فيه إجابته
+    function screenPos(id) { const f = figs.get(String(id)); if (!f || !f.g.visible) return null; const p = wp(f.U.head); p.y += f.state === 'dead' ? .2 : 1.35; p.project(cam); if (p.z > 1 || Math.abs(p.x) > 1.2 || Math.abs(p.y) > 1.2) return null; return { x: (p.x + 1) / 2, y: (1 - p.y) / 2 }; }
     function removePlayer(id) { const f = figs.get(String(id)); if (!f || f.state === 'poof') return; const p = f.g.position.clone(); dustBurst(V(p.x, 0, p.z).addScaledVector(fwd(f), -1.1), 14, 1.4); if (f.flyHat) { dustBurst(f.flyHat.o.position, 4, .7); sc.remove(f.flyHat.o); f.flyHat = null; } setState(f, 'poof'); crowdOrder = crowdOrder.filter(x => x !== String(id)); }
     function returnToCrowd(id) { const f = figs.get(String(id)); if (!f) return; f.duelist = false; f.twitch = false; f.wasted = false; duelists = duelists.filter(x => x !== f); setState(f, 'idle'); f.g.rotation.x = 0; f.speed = 3.6; const h = homeOf(String(id)); f.target = h; f.face = Math.atan2(-h.x * .25, -h.z); }
     function champion(id) {
@@ -520,6 +545,7 @@ export async function mountDuel(el, opts = {}) {
         for (const b of bullets) { const Q = b.userData.B; if (!Q.on) continue; Q.p += 85 * dt; const k = Math.min(1, Q.p / Q.len); b.position.lerpVectors(Q.from, Q.to, k); b.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { Q.on = false; b.visible = false; Q.onHit && Q.onHit(); } }
         if (TW.on) { TW.t += dt; const k = TW.t / TW.dur; if (k >= 1) { TW.on = false; tumble.visible = false; } else { tumble.position.lerpVectors(TW.from, TW.to, k); tumble.position.y = .75 + Math.abs(Math.sin(k * 14)) * .5; tumble.rotation.x += dt * 6; tumble.rotation.z -= dt * 2; } }
         else if (!shot && (tw8 += dt) > 11) { tw8 = 0; const z = (Math.random() - .5) * 8; tumbleweed(V(-40, .75, z), V(40, .75, z + (Math.random() - .5) * 6), 9); }
+        for (const m of shocks) { if (m.userData.t >= 1) continue; m.userData.t = Math.min(1, m.userData.t + dt / .9); const k = m.userData.t; m.scale.setScalar(1 + easeOut(k) * 6); m.material.opacity = .75 * (1 - k); if (k >= 1) m.visible = false; }
         if (coinsOn) { for (let i = 0; i < COINS; i++) { const c = coinD[i]; c.p.y += c.v * dt; c.r.x += c.s.x * dt; c.r.y += c.s.y * dt; if (c.p.y < .05) { c.p.y = 14 + Math.random() * 8; c.p.x = coinC.x + (Math.random() - .5) * 9; c.p.z = coinC.z + (Math.random() - .5) * 9; } q.setFromEuler(new T.Euler(c.r.x, c.r.y, 0)); mtx.compose(c.p, q, one); coinMesh.setMatrixAt(i, mtx); } coinMesh.instanceMatrix.needsUpdate = true; }
         for (const [, f] of [...figs]) poseFig(f, dt, t);
         // الكاميرا
@@ -544,5 +570,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }

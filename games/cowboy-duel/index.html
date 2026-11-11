@@ -37,8 +37,8 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 #lids .b{bottom:-60%;border-radius:50% 50% 0 0/70% 70% 0 0}
 #lids.on .t{animation:lidT var(--lid,2.4s) ease-in-out both}
 #lids.on .b{animation:lidB var(--lid,2.4s) ease-in-out both}
-@keyframes lidT{0%{transform:translateY(46%)}18%{transform:translateY(6%)}40%{transform:translateY(38%)}55%{transform:translateY(35%)}70%{transform:translateY(39%)}88%{transform:translateY(6%)}100%{transform:translateY(0)}}
-@keyframes lidB{0%{transform:translateY(-40%)}18%{transform:translateY(-6%)}40%{transform:translateY(-32%)}55%{transform:translateY(-29%)}70%{transform:translateY(-33%)}88%{transform:translateY(-6%)}100%{transform:translateY(0)}}
+@keyframes lidT{0%{transform:translateY(24%)}20%{transform:translateY(4%)}42%{transform:translateY(20%)}56%{transform:translateY(18%)}70%{transform:translateY(21%)}88%{transform:translateY(4%)}100%{transform:translateY(0)}}
+@keyframes lidB{0%{transform:translateY(-20%)}20%{transform:translateY(-4%)}42%{transform:translateY(-16%)}56%{transform:translateY(-14%)}70%{transform:translateY(-17%)}88%{transform:translateY(-4%)}100%{transform:translateY(0)}}
 body[data-grade="pov"] :is(.poster,#chat,#title,#counter,#demo,#banner){opacity:0 !important;transition:opacity .25s}
 body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.12) brightness(1.03);transition:none}
 #flash{position:fixed;inset:0;opacity:0;pointer-events:none;z-index:8}
@@ -147,6 +147,45 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 #banner small{display:block;font:500 clamp(11px,1.2vw,14px) "IBM Plex Sans Arabic";color:#f3c98a}
 #banner i{font-style:normal;color:var(--gold);font-family:Rye,serif;margin:0 8px}
 
+/* تأثير بعد السقوط: الصورة تبهت لحظة */
+body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.25) brightness(.92) !important;transition:filter .08s !important}
+/* تبويب الإجابة فوق راس اللاعب */
+#tags{position:fixed;inset:0;pointer-events:none;z-index:6}
+.atag{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:6px;padding:4px 14px 6px;border-radius:7px;white-space:nowrap;
+  background:linear-gradient(180deg,#7a5230,#5a3a22 55%,#4a2f1b);border:2px solid #2a170b;box-shadow:0 6px 14px rgba(0,0,0,.45);color:#fbe7c0;font:400 clamp(16px,1.7vw,22px)/1.2 Rakkas,serif}
+.atag::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-7px;border:7px solid transparent;border-bottom:0;border-top-color:#2a170b}
+.atag .ic{font:700 15px "IBM Plex Sans Arabic"}.atag small{font:500 12px "IBM Plex Sans Arabic";color:#f3c98a;direction:rtl}
+.atag.pop{animation:tagPop .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes tagPop{from{transform:translate(-50%,-60%) scale(.5);opacity:0}}
+.atag.ok{border-color:#f2c14e;box-shadow:0 0 0 2px rgba(242,193,78,.35),0 6px 18px rgba(242,193,78,.35);color:#fff2c4}.atag.ok .ic{color:#f2c14e}
+.atag.bad{background:linear-gradient(180deg,#6a2a1a,#4a1a10);color:#ffd6c9}.atag.bad .ic{color:#ff7a5c}
+.atag.waste{background:linear-gradient(180deg,#5a5048,#3a3430);color:#e8e2d6}
+.atag.out{background:linear-gradient(180deg,#a3201a,#7a140f);border-color:#3a0805;color:#fff;transform:translate(-50%,-100%) rotate(-5deg);font-size:clamp(20px,2.2vw,28px)}
+/* الصور (وجه الشخصية أو صورة حساب تيك توك) */
+.av{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #f2c14e;background:#7a5a3a;color:#f3e3c3;font:400 30px Rakkas,serif;box-shadow:0 4px 12px rgba(0,0,0,.45);flex:none}
+.av.sm{width:36px;height:36px;border-width:2px;font-size:18px}.av.big{width:120px;height:120px;border-width:4px;font-size:56px}
+/* شريط قبل كل مبارزة: كم من أصل كم + اللاعبين */
+#vs{position:fixed;left:50%;bottom:calc(9vh + 14px);z-index:7;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:all .45s cubic-bezier(.2,1.3,.4,1);
+  padding:10px 26px 14px;min-width:min(520px,92vw);background:linear-gradient(180deg,#7a5230,#5a3a22 55%,#4a2f1b);border:3px solid #2a170b;border-radius:8px;box-shadow:0 10px 26px rgba(0,0,0,.5);text-align:center}
+#vs.in{opacity:1;transform:translate(-50%,0)}
+.vhead{font:400 clamp(16px,1.8vw,22px) Rakkas,serif;color:#f3c98a;margin-bottom:8px}
+.vbody{display:flex;align-items:center;justify-content:center;gap:22px}
+.vp{display:flex;flex-direction:column;align-items:center;gap:6px}.vp b{font:400 clamp(20px,2.3vw,30px) Rakkas,serif;color:var(--gold);text-shadow:0 2px 0 #2a170b}
+.vx{font:400 24px Rye,Rakkas,serif;color:#fbe7c0;font-style:normal}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}.vpair{display:flex;align-items:center;gap:6px;font:400 16px Rakkas,serif;color:#fbe7c0}.vpair i{font-style:normal;color:#f3c98a;font-size:13px}.vmore{grid-column:1/-1;color:#f3c98a;font-size:14px}
+/* بطاقة الفايز بعد السقوط */
+#winCard{position:fixed;left:max(16px,5vw);top:50%;z-index:8;transform:translate(-30px,-50%) rotate(-2deg);opacity:0;pointer-events:none;transition:all .5s cubic-bezier(.2,1.4,.4,1);
+  width:min(300px,80vw);padding:16px 18px 18px;text-align:center;background:var(--paper);color:#3d2010;clip-path:polygon(2% 0,98% 2%,100% 97%,96% 100%,3% 98%,0 3%);box-shadow:inset 0 0 30px rgba(110,60,20,.55)}
+#winCard.in{opacity:1;transform:translate(0,-50%) rotate(-2deg);pointer-events:auto}
+.wtag{font:400 clamp(22px,2.4vw,30px) Rakkas,serif;color:#7a2e1b}
+.wpic{margin:10px auto}.wpic .av{border-color:#3d2010}
+#winCard h3{margin:4px 0 2px;font:400 clamp(28px,3vw,40px)/1.15 Rakkas,serif;color:#3d2010}
+#winCard p{margin:0 0 12px;font-size:14px;color:#5a3a22}#winCard p b{font-family:Rye,serif}
+.wlist{display:flex;flex-direction:column;gap:6px;margin:10px 0 14px;max-height:46vh;overflow:auto}.wrow{display:flex;align-items:center;gap:8px;font:400 18px Rakkas,serif}.wrow b{flex:1;text-align:right}.wrow small{color:#7a5a3a;font-size:12px}
+.wbtn,#nextBtn{font:400 20px Rakkas,serif;color:#2a170b;background:linear-gradient(180deg,#ffe08a,#f2c14e 50%,#c98a2a);border:2px solid #2a170b;border-radius:8px;padding:6px 28px 8px;cursor:pointer;box-shadow:0 4px 0 #2a170b}
+.wbtn:active,#nextBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #2a170b}
+#nextBtn{position:fixed;left:50%;bottom:calc(9vh + 20px);z-index:8;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:all .4s cubic-bezier(.2,1.4,.4,1);font-size:24px;padding:8px 36px 10px}
+#nextBtn.in{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 /* تنبيه قصير بنص الشاشة (بدل الشات) */
 #notice{position:fixed;left:50%;top:56vh;z-index:6;transform:translate(-50%,10px);opacity:0;pointer-events:none;padding:8px 22px 10px;border-radius:999px;background:rgba(26,14,6,.82);border:1px solid rgba(242,193,78,.55);color:#fbe7c0;font:400 clamp(16px,1.8vw,22px) Rakkas,serif;white-space:nowrap;transition:all .35s cubic-bezier(.2,1.3,.4,1)}
 #notice.in{opacity:1;transform:translate(-50%,0)}
@@ -243,6 +282,10 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 <div id="loading">🤠 السوق يتجهّز…</div>
 <div id="fallback" hidden>تعذّر تشغيل الثري دي على هذا الجهاز.</div>
 <div id="feed"></div>
+<div id="tags"></div>
+<div id="vs"></div>
+<div id="winCard"></div>
+<button id="nextBtn" type="button">المبارزة التالية</button>
 <div id="settings"><div class="swrap">
   <div class="stop"><h2>إعدادات المبارزة</h2><button id="setClose" type="button" aria-label="إغلاق">✕</button></div>
   <div id="setGrid"></div>

@@ -50,6 +50,8 @@ const SFX = (() => {
         // الخدعة الحمراء: طلقة بالهوا (أخف من الطلقة الحقيقية) + صفير الرصاصة الضايعة
         dud() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(.4), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'lowpass'; f.frequency.value = 2500; g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + .35); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
             const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(2400, t + .05); o.frequency.exponentialRampToValueAtTime(700, t + .7); og.gain.setValueAtTime(.0001, t); og.gain.exponentialRampToValueAtTime(.08, t + .1); og.gain.exponentialRampToValueAtTime(.0001, t + .7); o.connect(og); og.connect(a.destination); o.start(t); o.stop(t + .72); },
+        // بعد السقوط: جرس عميق واحد
+        toll() { const a = ctx(); if (!a) return; const t = a.currentTime; [[98, .5], [196, .3], [294, .12], [523, .06]].forEach(([fq, v]) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = fq; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + 3); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 3); }); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
         wind(on) { const a = ctx(); if (!a) return; if (!windG) { const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .7; windG = a.createGain(); windG.gain.value = 0; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); }
             windG.gain.setTargetAtTime(on ? .09 : .025, a.currentTime, .8); }
@@ -119,23 +121,24 @@ async function startMatch() {
 }
 async function nextRound() {
     G.round++; const { pairs, bye } = makePairs(G.alive), all = G.settings.mode === 'all';
-    banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 2400);
+    banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 1700);
     if (bye) { notice(`🍀 ${bye.name} يتأهل مباشرة للجولة الجاية`); }
-    await sleep(1400);
-    const winners = [];
-    if (all) winners.push(...await runDuels(pairs));
-    else for (let i = 0; i < pairs.length; i++) { if (i) await sleep(500); winners.push(...await runDuels([pairs[i]])); }
+    await sleep(1900);
+    const winners = [], final = pairs.length === 1 && !bye;
+    if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, next: final ? 'إعلان البطل 🏆' : 'الجولة التالية' }));
+    else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, next: final ? 'إعلان البطل 🏆' : i === pairs.length - 1 ? 'الجولة التالية' : 'المبارزة التالية' }));
     G.alive = winners.concat(bye ? [bye] : []); updateCount();
     if (G.alive.length <= 1) return crown(G.alive[0]);
     await sleep(600); nextRound();
 }
 // يشغّل مبارزة وحدة (بتصوير كامل) أو كل مبارزات الجولة سوا، ويرجع الفايزين
-function runDuels(duels) { return new Promise(async done => {
-    clearTimers(); G.active = duels; G.finish = done; G.phase = 'intro'; updateCount();
+function runDuels(duels, info) { return new Promise(async done => {
+    clearTimers(); G.active = duels; G.info = info; G.finish = done; G.phase = 'intro'; updateCount();
     const one = duels.length === 1, d0 = duels[0];
     $('#demoA').textContent = d0.a.name; $('#demoB').textContent = d0.b.name;
-    if (one) { banner(`<small>الجولة ${G.round}</small>${esc(d0.a.name)} <i>ضد</i> ${esc(d0.b.name)}`, 2400); poster('a', d0.a); poster('b', d0.b); }
-    else { poster('a'); poster('b'); }
+    poster('a'); poster('b');
+    await showVs(duels, info); // «المبارزة 2 من أصل 4» + صورة واسم كل لاعب، وبعدها مشهد دخولهم
+    if (one) { poster('a', d0.a); poster('b', d0.b); }
     bars('wide'); SFX.wind(true);
     await G.scene.duelIntro(duels.map(d => [d.a.id, d.b.id]), { len: G.settings.intro });
     if (G.phase !== 'intro') return;
@@ -174,23 +177,23 @@ function reveal() {
 function answer(id, text) {
     const p = G.players.find(x => x.id === id); if (!p) return;
     const d = G.active && G.active.find(x => !x.done && (x.a.id === id || x.b.id === id)); if (!d) return;
-    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
+    if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); tag(id, text, 'waste'); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
     if (G.phase !== 'armed') return;
     if (d.wasted[id]) return; // مسدسه فاضي لين الجرس الجاي
     if (d.jam[id] && performance.now() < d.jam[id]) return;
-    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; } return; }
+    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; tag(id, text, 'bad'); } return; }
     win(d, p, text.trim());
 }
 // الأسرع: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح
 async function win(d, shooter, typed) {
     const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
-    d.done = true; d.winner = shooter; d.loser = target;
+    d.done = true; d.winner = shooter; d.loser = target; d.secs = secs;
+    tag(shooter.id, typed, 'ok', secs, 2600);
     if (G.active.length === 1) { // مبارزة بعد مبارزة: تصوير كامل
-        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone');
-        showAnswer(shooter, typed, secs); SFX.stamp();
-        await sleep(1700); $('#answer').classList.remove('in'); grade('duel');
-        await G.scene.fire(shooter.id, target.id);
-        return endDuels();
+        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone'); SFX.stamp();
+        await sleep(1200); grade('duel');
+        await G.scene.fire(shooter.id, target.id);           // السحب ← الرصاصة ← السقوط ← ينفخ الدخان (اللقطة تثبت عليه)
+        return afterDuels();
     }
     // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
     G.scene.quickFire(shooter.id, target.id); feed(shooter, typed, secs);
@@ -198,18 +201,59 @@ async function win(d, shooter, typed) {
         G.phase = 'resolve'; clearTimers(); sign('gone');
         await sleep(1800); $('#feed').classList.remove('in');
         await G.scene.multiOutro(G.active.map(x => x.winner.id), G.active.map(x => x.loser.id));
-        endDuels();
+        afterDuels();
     }
+}
+// بطاقة الفايز (اسمه وصورته وإنه فاز) ← «التالي» يرجع الكاميرا للقطة المبارزة ← زر المبارزة/الجولة التالية
+async function afterDuels() {
+    await winnerCard(G.active);
+    G.scene.aftermath(); bars('wide'); grade('');
+    await nextButton(G.info.next);
+    endDuels();
 }
 async function endDuels() {
     const winners = G.active.map(d => d.winner);
-    // انتقال ناعم (المشهد يذوب للسوق) بدل الدايرة السودا
-    G.scene.lobby(); poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = '';
-    G.phase = 'between'; await sleep(700);
+    G.scene.cleanup(winners.map(p => p.id), G.active.map(d => d.loser.id)); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
+    poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = ''; clearTags();
+    G.phase = 'between'; await sleep(500);
     const f = G.finish; G.finish = null; f && f(winners);
 }
-function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
-    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
+// ---------- الصور والبطاقات
+const face = p => p.avatar || G.scene.portrait(p.id) || '';
+function avatarHtml(p, cls = '') { const src = face(p); return src ? `<img class="av ${cls}" src="${src}" alt="">` : `<span class="av ${cls} ini">${esc([...p.name.replace(/^أبو\s*/, '')][0] || '؟')}</span>`; }
+// الشريط السفلي قبل الدخول
+async function showVs(duels, info) {
+    const el = $('#vs'), one = duels.length === 1;
+    const head = one ? `الجولة ${G.round} · المبارزة ${info.idx} من أصل ${info.total}` : `الجولة ${G.round} · ${duels.length} مبارزات في وقت واحد`;
+    const body = one ? `<div class="vp">${avatarHtml(duels[0].a)}<b>${esc(duels[0].a.name)}</b></div><i class="vx">ضد</i><div class="vp">${avatarHtml(duels[0].b)}<b>${esc(duels[0].b.name)}</b></div>`
+        : `<div class="vgrid">${duels.slice(0, 6).map(d => `<div class="vpair">${avatarHtml(d.a, 'sm')}<span>${esc(d.a.name)}</span><i>ضد</i><span>${esc(d.b.name)}</span>${avatarHtml(d.b, 'sm')}</div>`).join('')}${duels.length > 6 ? `<div class="vmore">+${duels.length - 6} مبارزات</div>` : ''}</div>`;
+    el.innerHTML = `<div class="vhead">${head}</div><div class="vbody">${body}</div>`; el.classList.add('in'); SFX.stamp();
+    await sleep(one ? 2800 : 3200); el.classList.remove('in'); await sleep(250);
+}
+// بطاقة الفايز: صورته واسمه و«فاز بالمبارزة» + زر «التالي»
+function winnerCard(duels) { return new Promise(res => {
+    const el = $('#winCard'), one = duels.length === 1, d = duels[0];
+    el.innerHTML = one
+        ? `<div class="wtag">🏆 فاز بالمبارزة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.loser.name)} · سحب بـ <b>${d.secs}</b> ث</p><button type="button" class="wbtn">التالي ←</button>`
+        : `<div class="wtag">🏆 الفايزين بالمبارزات</div><div class="wlist">${duels.map(x => `<div class="wrow">${avatarHtml(x.winner, 'sm')}<b>${esc(x.winner.name)}</b><small>${x.secs} ث</small></div>`).join('')}</div><button type="button" class="wbtn">التالي ←</button>`;
+    el.classList.add('in'); SFX.bell();
+    waitClick(el.querySelector('.wbtn'), () => { el.classList.remove('in'); res(); });
+}); }
+function nextButton(label) { return new Promise(res => { const b = $('#nextBtn'); b.textContent = label + ' ←'; b.classList.add('in'); waitClick(b, () => { b.classList.remove('in'); res(); }); }); }
+// زر واحد ينتظر ضغطة (أو Enter/مسافة من كيبورد الستريمر)
+function waitClick(btn, fn) { let on = true; const go = () => { if (!on) return; on = false; btn.onclick = null; removeEventListener('keydown', key); fn(); };
+    const key = e => { if (e.key === 'Enter' || e.key === ' ') { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); go(); } };
+    btn.onclick = go; setTimeout(() => addEventListener('keydown', key), 300); }
+// ---------- تبويب الإجابة فوق راس اللاعب (نفس هوية اللعبة: لوح خشب)
+const TAGS = new Map(); let tagLoop = 0;
+const TAG_IC = { ok: '✓', bad: '✗', waste: '💨', out: '✖' };
+function tag(id, text, kind, secs, ms = 2000) { let t = TAGS.get(id); if (!t) { t = { el: document.createElement('div') }; $('#tags').appendChild(t.el); TAGS.set(id, t); }
+    t.el.className = 'atag ' + kind; t.el.innerHTML = `<span class="ic">${TAG_IC[kind] || ''}</span><b></b>${secs ? `<small>⏱ ${secs} ث</small>` : ''}`; t.el.querySelector('b').textContent = text;
+    t.until = performance.now() + ms; void t.el.offsetWidth; t.el.classList.add('pop'); if (!tagLoop) tagLoop = requestAnimationFrame(moveTags); }
+function moveTags() { tagLoop = 0; const now = performance.now();
+    for (const [id, t] of TAGS) { const p = now < t.until && G.scene.screenPos(id); if (!p) { t.el.remove(); TAGS.delete(id); continue; } t.el.style.left = (Math.min(.93, Math.max(.07, p.x)) * 100) + '%'; t.el.style.top = (Math.min(.9, Math.max(.16, p.y)) * 100) + '%'; }
+    if (TAGS.size) tagLoop = requestAnimationFrame(moveTags); }
+function clearTags() { for (const [, t] of TAGS) t.el.remove(); TAGS.clear(); }
 function feed(p, typed, secs) { const box = $('#feed'), row = document.createElement('div'); row.className = 'frow';
     row.innerHTML = '<b></b><span class="ft"></span><span class="fs"></span>'; row.querySelector('b').textContent = '🔫 ' + p.name; row.querySelector('.ft').textContent = typed; row.querySelector('.fs').textContent = secs + ' ث';
     box.appendChild(row); while (box.children.length > 8) box.firstChild.remove(); box.classList.add('in'); SFX.stamp(); }
@@ -276,6 +320,7 @@ function hookStream() {
         else if (e === 'dud') SFX.dud();
         else if (e === 'hit') { SFX.thud(); if (!many) flash('rgba(255,255,255,.7)', 120); if (G.active && G.active.length === 1 && G.target) $('#poster-' + (G.active[0].a === G.target ? 'a' : 'b')).classList.add('dead'); }
         else if (e === 'thud') SFX.thud();
+        else if (e === 'down') { SFX.toll(); tag(d, 'مُقصى', 'out', null, 2600); document.body.dataset.fx = 'down'; clearTimeout(G.fxT); G.fxT = setTimeout(() => { document.body.dataset.fx = ''; }, 1100); }
         else if (e === 'tick') SFX.tick();
         else if (e === 'step') SFX.step(d);
         else if (e === 'spin') SFX.spin(d);
