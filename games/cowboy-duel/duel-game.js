@@ -84,10 +84,10 @@ function renderLobby() {
 }
 
 // ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
-function addPlayer(id, name, bot = false) {
+function addPlayer(id, name, bot = false, avatar = null) {
     if (G.phase !== 'lobby' || G.players.some(p => p.id === id)) return;
     if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; notice(`🚫 السوق ممتلئ (${G.settings.maxPlayers} لاعب)`); } return; }
-    G.players.push({ id, name, bot }); G.scene && G.scene.setPlayers(G.players); renderLobby();
+    G.players.push({ id, name, bot, avatar }); G.scene && G.scene.setPlayers(G.players); renderLobby();
 }
 function addBot() { const used = new Set(G.players.map(p => p.name)), name = BOT_NAMES.find(n => !used.has(n)) || ('راعي ' + (G.players.length + 1)); addPlayer('bot:' + name, name, true); }
 
@@ -222,7 +222,8 @@ async function endDuels() {
 }
 // ---------- الصور والبطاقات
 const face = p => p.avatar || G.scene.portrait(p.id) || '';
-function avatarHtml(p, cls = '') { const src = face(p); return src ? `<img class="av ${cls}" src="${src}" alt="">` : `<span class="av ${cls} ini">${esc([...p.name.replace(/^أبو\s*/, '')][0] || '؟')}</span>`; }
+function avatarHtml(p, cls = '') { const src = face(p), alt = p.avatar ? (G.scene.portrait(p.id) || '') : '';
+    if (src && alt) return `<img class="av ${cls}" src="${src}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${alt}'">`; return src ? `<img class="av ${cls}" src="${src}" alt="">` : `<span class="av ${cls} ini">${esc([...p.name.replace(/^أبو\s*/, '')][0] || '؟')}</span>`; }
 // الشريط السفلي قبل الدخول
 async function showVs(duels, info) {
     const el = $('#vs'), one = duels.length === 1;
@@ -309,8 +310,9 @@ function saveSettings() {
 // ---------- شات تيك توك الحقيقي (لو اللعبة محمّلة داخل المنصة مع AGP): «دخول» للانضمام، والباقي إجابات
 function hookStream() {
     const A = window.AymanGamesPlatform || window.AGP; if (!A || !A.events || typeof A.events.on !== 'function') return;
-    A.events.on('stream:commentReceived', pl => { if (!pl || !pl.id || typeof pl.text !== 'string') return; const id = 'tiktok:' + (pl.username || pl.uniqueId || pl.id), name = pl.nickname || pl.name || pl.username || 'راعي';
-        if (/^\s*(دخول|join)\s*$/i.test(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name); } else answer(id, pl.text); });
+    // التعليق من backend/platforms/tiktok ← adapters/agp-tiktok-adapter.js: { id, name, text, isFollower, avatarUrl }
+    A.events.on('stream:commentReceived', pl => { if (!pl || !pl.id || typeof pl.text !== 'string') return; const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
+        if (/^\s*(دخول|join)\s*$/i.test(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
