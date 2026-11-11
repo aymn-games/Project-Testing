@@ -96,48 +96,11 @@ function wall(track, off, h, every = 1) {
 // ---------- سيارة الفورمولا ----------
 const SHARED = {};
 function sharedCarGeos() {
-    if (SHARED.body) return SHARED;
-    const box = (w, h, l) => new T.BoxGeometry(w, h, l);
+    if (SHARED.flame) return SHARED;
     // الطول ~5.4م باتجاه +z (المقدمة)
-    SHARED.body = merge([
-        [box(0.86, 0.5, 2.6), M(0, 0.42, 0.1)],                                // الهيكل الأحادي
-        [new T.CylinderGeometry(0.1, 0.36, 1.9, 10), M(0, 0.36, 2.25, Math.PI / 2, 0, 0, 1, 1, 0.55)], // الأنف
-        [box(0.62, 0.42, 1.5), M(0.62, 0.36, -0.1, 0, 0, 0, 1, 1, 1)],         // الجنب يمين
-        [box(0.62, 0.42, 1.5), M(-0.62, 0.36, -0.1)],                          // الجنب يسار
-        [box(0.7, 0.62, 1.4), M(0, 0.78, -0.75, -0.18, 0, 0)],                 // غطاء المحرك
-        [new T.CylinderGeometry(0.12, 0.3, 1.0, 8), M(0, 0.9, -1.55, Math.PI / 2 - 0.12, 0, 0, 1, 1, 0.9)], // ذيل الغطاء (زعنفة)
-        [box(0.06, 0.62, 1.4), M(0, 1.22, -1.2)],                              // زعنفة القرش
-        [box(1.9, 0.06, 0.55), M(0, 0.94, -2.35)],                             // الجناح الخلفي الأساسي
-        [box(1.9, 0.05, 0.3), M(0, 1.12, -2.48, -0.5, 0, 0)],                  // الجناح الخلفي العلوي (DRS)
-        [box(2.2, 0.05, 0.62), M(0, 0.13, 3.0)]                                // الجناح الأمامي
-    ]);
-    SHARED.carbon = merge([
-        [box(0.05, 0.62, 0.9), M(0.96, 0.92, -2.4)],                           // ألواح الجناح الخلفي
-        [box(0.05, 0.62, 0.9), M(-0.96, 0.92, -2.4)],
-        [box(0.05, 0.3, 0.7), M(1.1, 0.2, 3.0)],                               // ألواح الجناح الأمامي
-        [box(0.05, 0.3, 0.7), M(-1.1, 0.2, 3.0)],
-        [box(1.2, 0.04, 0.24), M(0, 0.2, 2.82, 0.25, 0, 0)],                   // فلاب أمامي
-        [box(1.6, 0.1, 4.2), M(0, 0.1, 0.2)],                                  // الأرضية
-        [box(0.08, 0.5, 0.08), M(0, 0.65, -2.3)],                              // عمود الجناح
-        [new T.TorusGeometry(0.42, 0.045, 6, 16, Math.PI), M(0, 0.68, 0.55, 0, 0, 0, 1, 1, 1.15)], // الهالة
-        [box(0.06, 0.3, 0.06), M(0, 0.82, 1.05, 0.35, 0, 0)],                  // عمود الهالة الأمامي
-        [box(0.3, 0.3, 0.2), M(0, 0.95, -0.2)],                                // فتحة الهواء
-        // أذرع التعليق
-        [box(0.9, 0.04, 0.06), M(0.75, 0.32, 1.75, 0, 0, 0.08)], [box(0.9, 0.04, 0.06), M(-0.75, 0.32, 1.75, 0, 0, -0.08)],
-        [box(0.9, 0.04, 0.06), M(0.75, 0.32, -1.45, 0, 0, 0.08)], [box(0.9, 0.04, 0.06), M(-0.75, 0.32, -1.45, 0, 0, -0.08)]
-    ]);
-    SHARED.wheelF = new T.CylinderGeometry(0.36, 0.36, 0.38, 18).rotateZ(Math.PI / 2);
-    SHARED.wheelR = new T.CylinderGeometry(0.38, 0.38, 0.46, 18).rotateZ(Math.PI / 2);
-    SHARED.helmet = new T.SphereGeometry(0.2, 14, 10);
     SHARED.flame = new T.ConeGeometry(0.22, 1.6, 10, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -0.8);
     SHARED.ring = new T.TorusGeometry(1.6, 0.08, 6, 32).rotateX(Math.PI / 2);
     SHARED.dome = new T.SphereGeometry(3.2, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2).scale(0.75, 0.55, 1);
-    SHARED.carbonMat = new T.MeshStandardMaterial({ color: 0x15161a, roughness: 0.55, metalness: 0.3, flatShading: true });
-    SHARED.tyreTex = canvasTex(128, 32, (ctx, w, h) => {
-        ctx.fillStyle = '#16171a'; ctx.fillRect(0, 0, w, h);
-        for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? '#2a2b30' : '#1b1c20'; ctx.fillRect(i * w / 8, 0, w / 16, h); }
-    });
-    SHARED.tyreMat = new T.MeshStandardMaterial({ color: 0xffffff, map: SHARED.tyreTex, roughness: 0.9 });
     return SHARED;
 }
 
@@ -211,20 +174,98 @@ function makeNameTag(car) {
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 function luminance(hex) { const c = new T.Color(hex); return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; }
 
+/** دمج أشكال بألوان رؤوس (vertex colors) — السيارة كلها بمادة وحدة = draw call واحد. */
+function mergeColored(parts) {
+    const pos = [], nor = [], col = [];
+    for (const [g0, m, c] of parts) {
+        const g = g0.index ? g0.toNonIndexed() : g0.clone();
+        g.applyMatrix4(m);
+        const pa = g.attributes.position.array, na = g.attributes.normal.array;
+        for (let k = 0; k < pa.length; k++) { pos.push(pa[k]); nor.push(na[k]); }
+        for (let k = 0; k < pa.length / 3; k++) col.push(c.r, c.g, c.b);
+        g.dispose(); g0.dispose();
+    }
+    const out = new T.BufferGeometry();
+    out.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+    out.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+    return out;
+}
+
+/**
+ * سيارة فورمولا بأشكال ناعمة: أنف مدبب، جوانب مدوّرة، غطاء محرك ينحف للخلف،
+ * أجنحة بألواح ملوّنة، ونقشة (لون الفريق + خطوط فاتحة + أجزاء كربون).
+ * الهيكل كله شكل واحد بألوان رؤوس، والعجلات محورين (كل محور يدور كقطعة وحدة).
+ */
 function buildCar(car) {
     const G = sharedCarGeos();
     const g = new T.Group();
-    const paint = new T.MeshStandardMaterial({ color: car.color, roughness: 0.32, metalness: 0.45, flatShading: true });
-    const body = new T.Mesh(G.body, paint); body.castShadow = true;
-    const carbon = new T.Mesh(G.carbon, G.carbonMat); carbon.castShadow = true;
-    g.add(body, carbon);
-    const wheels = [];
-    [[0.98, 0.36, 1.75, G.wheelF], [-0.98, 0.36, 1.75, G.wheelF], [1.0, 0.38, -1.45, G.wheelR], [-1.0, 0.38, -1.45, G.wheelR]].forEach(([x, y, z, geo]) => {
-        const w = new T.Mesh(geo, G.tyreMat); w.position.set(x, y, z); g.add(w); wheels.push(w);
-    });
-    const helmet = new T.Mesh(G.helmet, new T.MeshStandardMaterial({ color: new T.Color(car.color).offsetHSL(0.1, 0, 0.15), roughness: 0.3, metalness: 0.2 }));
-    helmet.position.set(0, 0.88, 0.45); g.add(helmet);
-    // لهب التوربو/النيترو + حلقة DRS + إضاءة خلفية
+    const main = new T.Color(car.color);
+    const hsl = {}; main.getHSL(hsl);
+    const accent = hsl.l > 0.75 ? new T.Color(0x1f2937) : new T.Color().setHSL(hsl.h, Math.min(1, hsl.s * 0.6), Math.min(0.95, hsl.l + 0.38));
+    const dark = new T.Color().setHSL(hsl.h, hsl.s * 0.8, Math.max(0.08, hsl.l * 0.55));
+    const carbon = new T.Color(0x16171c), white = new T.Color(0xf5f5f7), metal = new T.Color(0x9aa3ad);
+    const cyl = (rt, rb, h, seg = 14) => new T.CylinderGeometry(rt, rb, h, seg);
+    const box = (w, h, l) => new T.BoxGeometry(w, h, l);
+    const X = Math.PI / 2;
+    const geo = mergeColored([
+        // الأنف المدبب (ينحف للأمام) + خط فاتح فوقه
+        [cyl(0.05, 0.3, 2.1), M(0, 0.36, 2.15, X, 0, 0, 1.05, 1, 0.62), main],
+        [box(0.12, 0.02, 1.7), M(0, 0.53, 2.0, 0.07, 0, 0), accent],
+        // حوض السائق
+        [cyl(0.4, 0.44, 1.7), M(0, 0.44, 0.45, X, 0, 0, 1.05, 1, 0.68), main],
+        // الجوانب المدوّرة (السفلي أغمق)
+        [new T.CapsuleGeometry(0.3, 1.0, 4, 12), M(0.66, 0.36, -0.25, X, 0, 0, 1.05, 1, 0.72), main],
+        [new T.CapsuleGeometry(0.3, 1.0, 4, 12), M(-0.66, 0.36, -0.25, X, 0, 0, 1.05, 1, 0.72), main],
+        [box(0.5, 0.1, 1.3), M(0.66, 0.16, -0.25), dark], [box(0.5, 0.1, 1.3), M(-0.66, 0.16, -0.25), dark],
+        // غطاء المحرك ينحف للخلف + خط فاتح + فتحة الهواء وزعنفة
+        [cyl(0.42, 0.1, 2.0), M(0, 0.62, -1.25, X, 0, 0, 1, 1, 0.75), main],
+        [box(0.1, 0.03, 1.8), M(0, 0.93, -1.1, -0.17, 0, 0), accent],
+        [cyl(0.15, 0.22, 0.5, 10), M(0, 1.02, -0.18, 0, 0, 0, 1, 1, 1.2), main],
+        [box(0.05, 0.42, 1.25), M(0, 1.03, -1.3), main],
+        // الأرضية والهالة (كربون)
+        [box(1.7, 0.06, 4.0), M(0, 0.1, 0.1), carbon],
+        [new T.TorusGeometry(0.4, 0.045, 6, 18, Math.PI), M(0, 0.7, 0.62, 0, 0, 0, 1, 1, 1.2), carbon],
+        [box(0.06, 0.3, 0.06), M(0, 0.82, 1.08, 0.35, 0, 0), carbon],
+        // الجناح الأمامي: لوح كربون + فلاب بلون الفريق + ألواح جانبية
+        [box(2.3, 0.05, 0.6), M(0, 0.12, 3.05), carbon],
+        [box(2.1, 0.04, 0.26), M(0, 0.22, 2.92, 0.3, 0, 0), main],
+        [box(0.06, 0.32, 0.72), M(1.15, 0.2, 3.02), main], [box(0.06, 0.32, 0.72), M(-1.15, 0.2, 3.02), main],
+        // الجناح الخلفي: لوحين + ألواح جانبية بلون الفريق مع خط فاتح + عمود
+        [box(1.85, 0.06, 0.5), M(0, 0.96, -2.38), carbon],
+        [box(1.85, 0.05, 0.3), M(0, 1.15, -2.5, -0.45, 0, 0), main],
+        [box(0.06, 0.7, 0.95), M(0.95, 0.94, -2.4), main], [box(0.06, 0.7, 0.95), M(-0.95, 0.94, -2.4), main],
+        [box(0.065, 0.12, 0.95), M(0.95, 1.2, -2.4), accent], [box(0.065, 0.12, 0.95), M(-0.95, 1.2, -2.4), accent],
+        [box(0.08, 0.55, 0.1), M(0, 0.66, -2.3), carbon],
+        // أذرع التعليق
+        [box(0.85, 0.04, 0.06), M(0.72, 0.34, 1.75, 0, 0, 0.08), carbon], [box(0.85, 0.04, 0.06), M(-0.72, 0.34, 1.75, 0, 0, -0.08), carbon],
+        [box(0.85, 0.04, 0.06), M(0.72, 0.34, -1.45, 0, 0, 0.08), carbon], [box(0.85, 0.04, 0.06), M(-0.72, 0.34, -1.45, 0, 0, -0.08), carbon],
+        // المرايا
+        [box(0.16, 0.08, 0.05), M(0.45, 0.72, 0.85), carbon], [box(0.16, 0.08, 0.05), M(-0.45, 0.72, 0.85), carbon]
+    ]);
+    const paint = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.25 });
+    const body = new T.Mesh(geo, paint); body.castShadow = true; g.add(body);
+    // العجلات: كل محور قطعة وحدة (إطار أسود + جنط بلون الفريق + برامق تبيّن الدوران)
+    const axle = (half, r, w) => {
+        const parts = [];
+        for (const sx of [1, -1]) {
+            parts.push([cyl(r, r, w, 20), M(sx * half, 0, 0, 0, 0, X), carbon]);
+            parts.push([cyl(r * 0.58, r * 0.58, w + 0.02, 16), M(sx * half, 0, 0, 0, 0, X), main]);
+            for (let k = 0; k < 3; k++) parts.push([box(w + 0.04, r * 1.05, 0.06), M(sx * half, 0, 0, k * Math.PI / 3, 0, 0), metal]);
+        }
+        return new T.Mesh(mergeColored(parts), paint);
+    };
+    const front = axle(0.98, 0.36, 0.38); front.position.set(0, 0.36, 1.75);
+    const rear = axle(1.0, 0.39, 0.48); rear.position.set(0, 0.39, -1.45);
+    g.add(front, rear);
+    const wheels = [front, rear];
+    // الخوذة + الزجاج (تنخفي بلقطة داخل السيارة)
+    const helmet = new T.Mesh(mergeColored([
+        [new T.SphereGeometry(0.21, 16, 12), M(0, 0, 0), accent.clone().lerp(white, 0.3)],
+        [box(0.3, 0.08, 0.12), M(0, 0.01, 0.15), carbon]
+    ]), paint);
+    helmet.position.set(0, 0.9, 0.42); g.add(helmet);
+    // لهب التوربو/النيترو + حلقة الدرع/التوقف + ضوء خلفي
     const flameMat = new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.85, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
     const flame = new T.Mesh(G.flame, flameMat); flame.position.set(0, 0.55, -2.55); flame.visible = false; g.add(flame);
     const ringMat = new T.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false });
@@ -234,11 +275,13 @@ function buildCar(car) {
     dome.visible = false; g.add(dome);
     const pin = makePin(car); g.add(pin);
     const tag = makeNameTag(car); g.add(tag);
-    return { group: g, wheels, flame, flameMat, ring, dome, pin, tag, paint, helmet, rain, spin: 0, data: car };
+    return { group: g, wheels, flame, flameMat, ring, dome, pin, tag, paint, body, helmet, rain, spin: 0, data: car };
 }
 
 function disposeCar(o) {
-    o.paint.dispose(); o.helmet.material.dispose(); o.flameMat.dispose(); o.ring.material.dispose(); o.dome.material.dispose();
+    o.paint.dispose(); o.body.geometry.dispose(); o.helmet.geometry.dispose();
+    o.wheels.forEach(w => w.geometry.dispose());
+    o.flameMat.dispose(); o.ring.material.dispose(); o.dome.material.dispose();
     o.rain.geometry.dispose(); o.rain.material.dispose();
     o.pin.material.map.dispose(); o.pin.material.dispose();
     o.tag.material.map.dispose(); o.tag.material.dispose();
@@ -282,20 +325,22 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         for (let i = 0; i < 1400; i++) { ctx.fillStyle = `rgba(${40 + Math.random() * 40},${120 + Math.random() * 60},40,.22)`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
     }, true);
     grassTex.repeat.set(90, 90);
-    const ground = new T.Mesh(new T.PlaneGeometry(4400, 4400), new T.MeshStandardMaterial({ map: grassTex, roughness: 1 }));
-    ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.02, -150); ground.receiveShadow = true;
+    // الأرض تحت المضمار بمسافة كافية + polygonOffset عشان ما يطلع العشب فوق الأسفلت من بعيد
+    const ground = new T.Mesh(new T.PlaneGeometry(4400, 4400), new T.MeshStandardMaterial({ map: grassTex, roughness: 1, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 8 }));
+    ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.06, -150); ground.receiveShadow = true;
     scene.add(ground);
 
     const half = track.width / 2;
     // ---- منطقة آمنة (حصى/أسفلت فاتح) ----
-    const runoff = new T.Mesh(ribbon(track, -half - 9, half + 9, 0.0), new T.MeshStandardMaterial({ color: 0xb9ad93, roughness: 1 }));
+    const runoff = new T.Mesh(ribbon(track, -half - 9, half + 9, -0.02), new T.MeshStandardMaterial({ color: 0xb9ad93, roughness: 1, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 }));
     runoff.receiveShadow = true; scene.add(runoff);
     // ---- الأسفلت (خطوط بيضاء على الأطراف) ----
     const asphaltTex = canvasTex(256, 256, (ctx, w, h) => {
         ctx.fillStyle = '#34363b'; ctx.fillRect(0, 0, w, h);
         for (let i = 0; i < 5000; i++) { const v = 40 + Math.random() * 35; ctx.fillStyle = `rgb(${v},${v},${v + 4})`; ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
-        ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(w * 0.3, 0, w * 0.12, h); ctx.fillRect(w * 0.58, 0, w * 0.12, h); // خط السباق الداكن
+        ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(w * 0.26, 0, w * 0.12, h); ctx.fillRect(w * 0.62, 0, w * 0.12, h); // خط السباق الداكن
         ctx.fillStyle = '#f2f2f2'; ctx.fillRect(4, 0, 5, h); ctx.fillRect(w - 9, 0, 5, h);
+        ctx.fillStyle = 'rgba(245,245,245,.9)'; ctx.fillRect(w / 2 - 3, h * 0.05, 6, h * 0.4); // الخط المتقطع بالنص
     }, true);
     const asphalt = new T.Mesh(ribbon(track, -half, half, 0.02, { vScale: 14 }), new T.MeshStandardMaterial({ map: asphaltTex, roughness: 0.85 }));
     asphalt.receiveShadow = true; scene.add(asphalt);
@@ -382,7 +427,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const standMat = new T.MeshStandardMaterial({ map: crowdTex, roughness: 0.9 });
     const concrete = new T.MeshStandardMaterial({ color: 0xc9c9cf, roughness: 0.9 });
     const roofMat = new T.MeshStandardMaterial({ color: 0xe10600, roughness: 0.5, metalness: 0.3 });
-    [-120, -40, 40, 120, 200].forEach((d, i) => {
+    [-200, -120, -40, 40, 120].forEach((d, i) => {
         const p = trackPoint(d, -half - 24);
         const g = new T.Group();
         for (let s = 0; s < 5; s++) {
@@ -434,11 +479,24 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             const a = i / 22 * Math.PI * 2 + rnd() * 0.15, R0 = 1350 + rnd() * 350;
             const r = 170 + rnd() * 160, h = 200 + rnd() * 260;
             const x = Math.cos(a) * R0, z = -260 + Math.sin(a) * R0;
-            green.push([new T.ConeGeometry(r, h, 7), M(x, h / 2 - 5, z, 0, rnd() * 3, 0)]);
-            if (h > 330) snow.push([new T.ConeGeometry(r * 0.3, h * 0.3, 7), M(x, h - h * 0.15 - 4, z, 0, rnd() * 3, 0)]);
+            // قمة ثلجية بنفس ميلان الجبل (نفس الدوران ونفس النسبة)
+            const ry = rnd() * 3, f = 0.3 + rnd() * 0.12;
+            green.push([new T.ConeGeometry(r, h, 7), M(x, h / 2 - 5, z, 0, ry, 0)]);
+            snow.push([new T.ConeGeometry(r * f * 1.03, h * f, 7), M(x, h - 5 - h * f / 2 + 0.5, z, 0, ry, 0)]);
         }
-        scene.add(new T.Mesh(merge(green), new T.MeshLambertMaterial({ color: 0x5f9e6e, flatShading: true, fog: false })));
+        scene.add(new T.Mesh(merge(green), new T.MeshLambertMaterial({ color: 0x8fa8bf, flatShading: true, fog: false })));
         if (snow.length) scene.add(new T.Mesh(merge(snow), new T.MeshLambertMaterial({ color: 0xf4f8fb, flatShading: true, fog: false })));
+    }
+    // ---- تلال خضراء قريبة (بين المضمار والجبال) ----
+    {
+        const hills = [];
+        let seed = 23; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+        for (let i = 0; i < 16; i++) {
+            const a = i / 16 * Math.PI * 2 + rnd() * 0.2, R0 = 880 + rnd() * 220, r = 140 + rnd() * 120;
+            hills.push([new T.SphereGeometry(r, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(Math.cos(a) * R0, -4, -260 + Math.sin(a) * R0, 0, 0, 0, 1, 0.35 + rnd() * 0.25, 1)]);
+        }
+        const hm = new T.Mesh(merge(hills), new T.MeshLambertMaterial({ color: 0x6cbf55, flatShading: true }));
+        scene.add(hm);
     }
     // ---- الأشجار (Instanced): صنوبر + أشجار مزهرة ملوّنة ----
     {
@@ -454,18 +512,20 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         const pines = pts.filter(p => p[3] < 0.4), round = pts.filter(p => p[3] >= 0.4);
         const trunks = new T.InstancedMesh(new T.CylinderGeometry(0.4, 0.55, 3, 5), new T.MeshStandardMaterial({ color: 0x6b4426 }), pts.length);
         const tops = new T.InstancedMesh(new T.ConeGeometry(3.4, 9, 7), new T.MeshStandardMaterial({ color: 0x2f8a3a, flatShading: true }), Math.max(1, pines.length));
+        // ثلج على رؤوس الصنوبر
+        const snowTips = new T.InstancedMesh(new T.ConeGeometry(1.45, 3.0, 7), new T.MeshStandardMaterial({ color: 0xf7fbff, flatShading: true }), Math.max(1, pines.length));
         const crowns = new T.InstancedMesh(new T.IcosahedronGeometry(3.6, 0), new T.MeshStandardMaterial({ color: 0xffffff, flatShading: true }), Math.max(1, round.length));
-        const CROWN = [0x4ade80, 0x22c55e, 0x86efac, 0xf9a8d4, 0xf472b6, 0xfb923c, 0x65a30d];
+        const CROWN = [0xf9a8d4, 0xf472b6, 0xfbcfe8, 0x4ade80, 0x22c55e, 0xf9a8d4, 0xfb923c];
         const col = new T.Color();
         pts.forEach(([x, z, s], i) => trunks.setMatrixAt(i, M(x, 1.5 * s, z, 0, 0, 0, s, s, s)));
-        pines.forEach(([x, z, s], i) => tops.setMatrixAt(i, M(x, 7.5 * s, z, 0, i, 0, s, s, s)));
+        pines.forEach(([x, z, s], i) => { tops.setMatrixAt(i, M(x, 7.5 * s, z, 0, i, 0, s, s, s)); snowTips.setMatrixAt(i, M(x, 10.6 * s, z, 0, i, 0, s, s, s)); });
         round.forEach(([x, z, s, r], i) => {
             crowns.setMatrixAt(i, M(x, 5.6 * s, z, 0, i, 0, s, s * 0.9, s));
             crowns.setColorAt(i, col.setHex(CROWN[Math.floor(r * 1000) % CROWN.length]));
         });
-        tops.count = pines.length; crowns.count = round.length;
-        scene.add(trunks, tops, crowns);
-        decor.push(trunks, tops, crowns);
+        tops.count = snowTips.count = pines.length; crowns.count = round.length;
+        scene.add(trunks, tops, snowTips, crowns);
+        decor.push(trunks, tops, snowTips, crowns);
     }
 
     // ---- لقطة «المضمار كامل» ----
@@ -598,11 +658,14 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             targetPos = trackView.pos; targetLook = trackView.look; fov = trackView.fov;
         } else if (camMode === 'orbit' || !o) {
             // دوران حول شبكة الانطلاق
-            orbitT += dt * 0.12;
-            const c = trackPoint(-50, 0);
-            targetPos = tmp.set(c.x + Math.sin(orbitT) * 70, 26 + Math.sin(orbitT * 0.7) * 6, c.z + Math.cos(orbitT) * 70).clone();
-            targetLook = new T.Vector3(c.x, 1, c.z);
-            fov = 50;
+            // اللوبي: لقطة مائلة من فوق على شبكة الانطلاق، تتمايل بهدوء
+            orbitT += dt * 0.25;
+            const n = Math.max(1, cars.size), dc = -14 - (n - 1) * 4.5;
+            // من جهة مبنى الصيانة (المدرجات بالجهة الثانية تحجب الرؤية)
+            const look = trackPoint(dc, 0), eye = trackPoint(dc + 16 + n * 1.6, 17 + n * 0.7 + Math.sin(orbitT) * 3);
+            targetPos = new T.Vector3(eye.x, 13 + n * 0.9 + Math.sin(orbitT * 0.7) * 1.2, eye.z);
+            targetLook = new T.Vector3(look.x, 0.5, look.z);
+            fov = 48;
             if (phase === 'finish' && o) { targetLook = o.group.position.clone().setY(1); targetPos = o.group.position.clone().add(new T.Vector3(Math.sin(orbitT * 2) * 12, 5, Math.cos(orbitT * 2) * 12)); fov = 45; }
         } else {
             const g = o.group, fwd = new T.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y));
@@ -639,6 +702,8 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         camFov += (fov - camFov) * (jump ? 1 : 1 - Math.exp(-dt * 3));
         // لقطة المضمار كامل بعيدة: نشيل الضباب عشان الحلبة كلها تبان
         scene.fog.near = camMode === 'track' ? 3000 : 400; scene.fog.far = camMode === 'track' ? 6000 : fogFar;
+        const nearWant = camMode === 'onboard' ? 0.1 : 0.5;
+        if (camera.near !== nearWant) { camera.near = nearWant; camera.updateProjectionMatrix(); }
         camera.position.copy(camPos);
         if (camMode === 'onboard' && o) camera.position.y += Math.sin(performance.now() / 30) * 0.008 * Math.min(1, (o.group.userData.speed || 0) / 40);
         camera.lookAt(camLook);

@@ -70,6 +70,7 @@
         [-430, -180], [-465, -100], [-425, -30], [-350, 0]   // المنعطف الأخير
     ];
     var STEP = 2;
+    var START_AT = [130, 0];   // موقع خط البداية/النهاية
     var ROAD_WIDTH = 14;
 
     function buildTrack() {
@@ -103,6 +104,10 @@
             X[q] = A[0] + (B[0] - A[0]) * f;
             Z[q] = A[1] + (B[1] - A[1]) * f;
         }
+        // خط البداية (المسافة 0) بنص الخط المستقيم الرئيسي عشان الشبكة كلها تكون على المستقيم
+        var off = 0, best = Infinity;
+        for (var b = 0; b < N; b++) { var dd2 = Math.hypot(X[b] - START_AT[0], Z[b] - START_AT[1]); if (dd2 < best) { best = dd2; off = b; } }
+        if (off) { var X2 = new Float32Array(N), Z2 = new Float32Array(N); for (var r = 0; r < N; r++) { X2[r] = X[(r + off) % N]; Z2[r] = Z[(r + off) % N]; } X = X2; Z = Z2; }
         var step = total / N;
         // اتجاه وانحناء كل نقطة (للكيربات وللكاميرات الجانبية)
         var H = new Float32Array(N), C = new Float32Array(N);
@@ -398,7 +403,7 @@
             S.cam.autoT += dt;
             if (S.cam.autoT > 7) {
                 S.cam.autoT = 0;
-                var seq = ['tv', 'trackside', 'heli', 'tv', 'onboard', 'trackside'];
+                var seq = ['tv', 'tv', 'trackside', 'tv', 'heli', 'tv', 'onboard', 'trackside'];
                 S.cam.autoMode = seq[(seq.indexOf(S.cam.autoMode) + 1 + Math.floor(Math.random() * 2)) % seq.length];
                 if (!S.cam.locked) {
                     // نختار أقرب معركة على المراكز، وإلا المتصدر
@@ -593,10 +598,23 @@
             grid.appendChild(el);
         }
         $('startBtn').disabled = S.cars.length < 1;
+        $('startBtn2').disabled = S.cars.length < 1;
+        renderReady();
         $('kwShow').textContent = settings.keyword;
         $('kwShow2').textContent = settings.keyword;
         renderTower(true);
     }
+
+    /** بطاقة اللوبي: بانتظار المتسابقين ← كل شيء جاهز للسباق. */
+    function renderReady() {
+        var n = S.cars.length, kw = esc(settings.keyword);
+        $('rcSub').className = n ? '' : 'wait';
+        $('rcSub').textContent = n ? 'السائقون جاهزون (' + n + ' / ' + settings.maxDrivers + ')' : 'بانتظار المتسابقين';
+        $('rcTitle').innerHTML = n ? 'كل شيء جاهز للسباق' : 'اكتب «' + kw + '» بالشات للمشاركة';
+        $('rcHint').innerHTML = n ? 'للمشاركة اكتب «<b>' + kw + '</b>» بالشات · التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو'
+            : 'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+    }
+    function openSettings(on) { document.body.classList.toggle('settings-open', on); }
 
     var towerRows = {};
     function renderTower(full) {
@@ -628,7 +646,7 @@
             r.style.transform = 'translateY(' + (i * 100) + '%)';
             r.querySelector('.tpos').textContent = i + 1;
             var gap;
-            if (S.phase === 'lobby' || S.phase === 'countdown') gap = '#' + c.number;
+            if (S.phase === 'lobby' || S.phase === 'countdown') gap = 'جاهز';
             else if (i === 0) gap = c.finished ? '🏁' : 'L' + lapOf(c) + '/' + settings.laps;
             else if (c.finished) gap = '+' + (c.finishAt - leader.finishAt).toFixed(1) + 'ث';
             else gap = '+' + Math.max(0, Math.round(leader.dist - c.dist)) + 'م';
@@ -639,6 +657,7 @@
             r.classList.toggle('locked', S.cam.focus === c.id && S.cam.locked);
         });
         $('towerCount').textContent = st.length + ' سائق';
+        $('towerTitle').textContent = S.phase === 'lobby' || S.phase === 'countdown' ? 'شبكة البداية' : 'لوحة الصدارة';
         var first = tower.firstElementChild;
         tower.style.height = (st.length * (first ? first.offsetHeight : 38)) + 'px';
     }
@@ -807,7 +826,7 @@
             settings.maxDrivers = clampInt(this.value, Math.max(1, S.cars.length), MAX_DRIVERS_LIMIT, settings.maxDrivers);
             saveSettings(); syncSettingsUI(); renderLobby();
         };
-        $('setKw').oninput = function () { var v = this.value.trim(); if (v) { settings.keyword = v.slice(0, 20); saveSettings(); $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword; } };
+        $('setKw').oninput = function () { var v = this.value.trim(); if (v) { settings.keyword = v.slice(0, 20); saveSettings(); $('kwShow').textContent = settings.keyword; $('kwShow2').textContent = settings.keyword; renderReady(); } };
         $('setAutoCam').onchange = function () { settings.autoCam = this.checked; S.cam.mode = settings.autoCam ? 'auto' : 'tv'; saveSettings(); renderCamBar(); };
         Array.prototype.forEach.call($('setJoin').children, function (b) { b.onclick = function () { settings.joinMode = b.dataset.v; saveSettings(); syncSettingsUI(); }; });
         Array.prototype.forEach.call($('setQuality').children, function (b) { b.onclick = function () { setQuality(b.dataset.v); }; });
@@ -932,10 +951,14 @@
     // تشغيل
     // ------------------------------------------------------------------
     function bindUI() {
-        $('startBtn').onclick = startCountdown;
+        $('startBtn').onclick = function () { openSettings(false); startCountdown(); };
+        $('startBtn2').onclick = startCountdown;
+        $('settingsBtn').onclick = function () { openSettings(true); };
+        $('settingsClose').onclick = function () { openSettings(false); };
+        $('testBtn2').onclick = function () { startTest(true); };
         $('clearBtn').onclick = clearDrivers;
         $('againBtn').onclick = function () { resetRace(); stopTest(); };
-        $('testBtn').onclick = function () { startTest(true); };
+        $('testBtn').onclick = function () { openSettings(false); startTest(true); };
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
         $('lobbyGrid').addEventListener('click', function (e) { var b = e.target.closest('.slot-x'); if (b) removeCar(b.dataset.id); });
         $('hudToggle').onclick = function () { document.body.classList.toggle('clean'); };
@@ -958,7 +981,7 @@
             var m = CAM_MODES.filter(function (x) { return x.key === e.key; })[0];
             if (m) { setCamMode(m.id); return; }
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { stepFocus(e.key === 'ArrowDown' ? 1 : -1); e.preventDefault(); }
-            if (e.key === 'Escape') { S.cam.locked = false; renderTower(true); }
+            if (e.key === 'Escape') { openSettings(false); S.cam.locked = false; renderTower(true); }
             if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('clean');
         });
     }
