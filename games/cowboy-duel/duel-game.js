@@ -188,11 +188,12 @@ function answer(id, text) {
 async function win(d, shooter, typed) {
     const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
     d.done = true; d.winner = shooter; d.loser = target; d.secs = secs;
-    tag(shooter.id, shooter.name, 'ok', secs, 3200); // الفايز بس: تبويب فوق راسه باسمه ووقت إجابته
-    if (G.active.length === 1) { // مبارزة بعد مبارزة: تصوير كامل
-        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone'); SFX.stamp();
-        await sleep(1200); grade('duel');
-        await G.scene.fire(shooter.id, target.id);           // السحب ← الرصاصة ← السقوط ← ينفخ الدخان (اللقطة تثبت عليه)
+    if (G.active.length === 1) { // مبارزة بعد مبارزة
+        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone');
+        // الكاميرا على اللي جاوب + بطاقة مايلة بإجابته ووقته لمدة 3 ثواني
+        G.scene.focusOn(shooter.id); showAnswer(shooter, typed, secs); SFX.stamp();
+        await sleep(3000); $('#answer').classList.remove('in'); grade('duel');
+        await G.scene.fire(shooter.id, target.id);           // ترجع الكاميرا ← الطلقة ← السقوط ← ينفخ الدخان ويمشي (الكاميرا ثابتة)
         return afterDuels();
     }
     // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
@@ -200,17 +201,18 @@ async function win(d, shooter, typed) {
     if (G.active.every(x => x.done)) {
         G.phase = 'resolve'; clearTimers(); sign('gone');
         await sleep(1800); $('#feed').classList.remove('in');
-        await G.scene.multiOutro(G.active.map(x => x.winner.id), G.active.map(x => x.loser.id));
+        await G.scene.multiOutro(G.active.map(x => x.winner.id));
         afterDuels();
     }
 }
-// بطاقة الفايز (اسمه وصورته وإنه فاز) ← «التالي» يرجع الكاميرا للقطة المبارزة ← زر المبارزة/الجولة التالية
+// الكاميرا ثابتة واللاعب يمشي ← زر «التالي» أسفل الشاشة ← إعلان المبارزة/الجولة الجاية
 async function afterDuels() {
-    await winnerCard(G.active);
-    G.scene.aftermath(); bars('wide'); grade('');
-    await nextButton(G.info.next);
+    grade(''); await nextButton('التالي');
     endDuels();
 }
+// بطاقة الإجابة (نفس هوية اللعبة ومايلة): اسم اللي جاوب + إجابته + وقته
+function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
 async function endDuels() {
     const winners = G.active.map(d => d.winner);
     G.scene.cleanup(winners.map(p => p.id), G.active.map(d => d.loser.id)); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
@@ -331,7 +333,9 @@ function hookStream() {
             if (d === 'povA' || d === 'povB') { bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); L.style.setProperty('--lid', (dur || 2.4) + 's'); void L.offsetWidth; L.classList.add('on'); }
             else if (d === 'bullet') { bars('tight'); grade('slow'); SFX.whoosh(); }
             else if (d === 'boots' || d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
-            else if (d === 'hero' || d === 'heroAll') { bars('wide'); grade('hero'); }
+            else if (d === 'answerCam') { bars('wide'); grade('hero'); }
+            else if (d === 'drawWide') { bars('wide'); grade('duel'); }
+            else if (d === 'walkoff') { bars('wide'); grade(''); }
             else if (d === 'leave') { bars('wide'); grade(''); SFX.whoosh(); }
             else if (d === 'crane' || d === 'profile' || d === 'standoff') { bars('wide'); grade(''); }
         } } }); } catch (e) { console.error(e); }

@@ -410,10 +410,10 @@ export async function mountDuel(el, opts = {}) {
     function play(list) { return new Promise(res => { if (qDone) qDone(false); queue = list.slice(); qDone = res; next(); }); }
     // انتقال ناعم بين اللقطات: نصوّر آخر إطار على لوحة فوق المشهد ونخليها تذوب (بدل القطع الحاد والدايرة السودا)
     const xf = document.createElement('canvas'); xf.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0'; el.appendChild(xf);
-    const XF = { draw: 140, bullet: 220, fall: 320, leave: 380 };
+    const XF = { answerCam: 260, drawWide: 450, bullet: 220, fall: 320, walkoff: 0 };
     function crossfade(ms = 600) { try { const c = r.domElement; if (xf.width !== c.width || xf.height !== c.height) { xf.width = c.width; xf.height = c.height; }
         r.render(sc, cam); xf.getContext('2d').drawImage(c, 0, 0); xf.style.transition = 'none'; xf.style.opacity = 1; void xf.offsetWidth; xf.style.transition = `opacity ${ms}ms ease-in-out`; xf.style.opacity = 0; } catch (e) { } }
-    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } crossfade(XF[s.name] || 600); shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
+    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } { const ms = XF[s.name] ?? 600; if (ms) crossfade(ms); } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
     function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } crossfade(800); lobbyCut = true; queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
 
     // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه (بعيدين بعرض الشارع).
@@ -453,21 +453,25 @@ export async function mountDuel(el, opts = {}) {
     // الخدعة الحمراء: اللي كتبها يطلق بالهوا ويضيّع طلقته
     function wasteShot(id) { const f = figs.get(String(id)); if (!f) return; f.recoil = 1; f.wasted = true; const m = wp(f.U.muzzle); for (let i = 0; i < 5; i++) puff(m.clone(), '#ece6da', .2, V((Math.random() - .5) * .3, .6 + Math.random() * .4, (Math.random() - .5) * .3), 1.6, .55, 3); emit('dud'); }
     // مبارزة وحدة بتصوير كامل: السحب ← الرصاصة البطيئة ← السقوط ← البطل ينفخ الدخان ← يمشي (مشهد سريع)
+    // الكاميرا تروح مباشرة على اللي جاوب (لقطة متوسطة من قدام) — تثبت لين تبدأ الطلقة
+    function focusOn(id) { const f = figs.get(String(id)); if (!f) return;
+        play([{ name: 'answerCam', dur: 0, labels: false, cam(k, t, c) { const p = f.g.position, e = Math.min(1, t / 3); c.pos.copy(p).addScaledVector(fwd(f), 7 - e * .7).addScaledVector(rightOf(f), 1.8); c.pos.y = 2.2; c.look.copy(p); c.look.y = 2.6; c.fov = 34; c.roll = .02; /* اللاعب تحت والبطاقة فوق راسه */ } }]); }
+    // اللقطة الواسعة ثابتة (بدون حركة) — بعد الطلقة الكاميرا توقف مكانها
+    const still = (c) => wide(c, 0, 0, 0);
+    // مشهد الطلقة: الكاميرا ترجع للقطة الواسعة ← يوجّه ويطلق ← الرصاصة بالتصوير البطيء ← السقوط ← ينفخ الدخان ويمشي لجهته (الكاميرا ثابتة)
     function fire(sId, tId) {
         const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return Promise.resolve(false);
         const dir = V().subVectors(Tg.g.position, S.g.position).setY(0).normalize(), side = V(-dir.z, 0, dir.x);
         let fired = false, b = null, doneCb; const done = new Promise(r => doneCb = r);
         const list = [
-            { name: 'draw', dur: .62, labels: false, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
-              cam(k, t, c) { const p = S.g.position; c.pos.copy(p).addScaledVector(fwd(S), 2.5).addScaledVector(rightOf(S), 1.35); c.pos.y = 1.55; c.look.copy(p); c.look.y = 1.35; c.fov = 34; c.roll = .04;
-                if (!fired && t > .26) { fired = true; b = shootFx(S, Tg); TS = .07; } } },
+            { name: 'drawWide', dur: 1.1, labels: false, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
+              cam(k, t, c) { still(c); if (!fired && t > .55) { fired = true; b = shootFx(S, Tg); TS = .07; } } },
             { name: 'bullet', dur: 0, labels: false, until: () => fired && (!b || !b.userData.B.on),
               cam(k, t, c) { const bp = b ? b.position : S.g.position; c.pos.copy(bp).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = bp.y + .22; c.look.copy(bp).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
             { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
-              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },
-            // الكاميرا تقرّب من صاحب الطلقة: يرفع المسدس وينفخ فيه والدخان يطلع
-            { name: 'hero', dur: 0, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); },
-              cam(k0, t, c) { const k = Math.min(1, t / 2.9); if (t > 2.9 && doneCb) { const d = doneCb; doneCb = null; d(true); } const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = .15 + e * .35, d = 5 - e * 1.9; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .8 + e * 1.3; c.look.copy(p).addScaledVector(rr, e * .3); c.look.y = 1.7 + e * .7; c.fov = 36 - e * 2; c.roll = .03; /* من جهة يده اللي فيها المسدس */ } },
+              cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); still(c); } },
+            { name: 'walkoff', dur: 0, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); },
+              cam(k, t, c) { still(c); if (t > 2.5 && doneCb) { returnToCrowd(S.id); S.speed = 3.2; const d = doneCb; doneCb = null; d(true); } } }
         ];
         play(list).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
         return done;
@@ -475,13 +479,12 @@ export async function mountDuel(el, opts = {}) {
     // «كل المبارزات في وقت واحد»: كل زوج يُحسم لحاله بدون قطع للكاميرا (توجيه + طلقة + سقوط)
     function quickFire(sId, tId) { const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return;
         setState(S, 'draw'); setState(Tg, 'slowdraw'); setTimeout(() => { if (S.state === 'draw') shootFx(S, Tg); }, 170); }
-    // بعد ما تنحسم كل المبارزات: الفايزين ينفخون الدخان، ثم الكل يمشي بمشهد سريع
-    function multiOutro(winIds, loseIds) {
-        const W = winIds.map(id => figs.get(String(id))).filter(Boolean), Lz = loseIds.map(id => figs.get(String(id))).filter(Boolean), H = W[0];
+    // بعد ما تنحسم كل المبارزات: الفايزين ينفخون الدخان ثم يمشون لجهاتهم، والكاميرا ثابتة
+    function multiOutro(winIds) {
+        const W = winIds.map(id => figs.get(String(id))).filter(Boolean);
         let doneCb; const done = new Promise(r => doneCb = r);
-        play([
-            { name: 'heroAll', dur: 0, labels: false, start() { TS = 1; W.forEach(f => { setState(f, 'win'); f.blown = false; f.puffed = false; f.t = Math.random() * .3; }); emit('hero'); },
-              cam(k0, t, c) { const k = Math.min(1, t / 2.6); if (t > 2.6 && doneCb) { const d = doneCb; doneCb = null; d(true); } if (!H) return wide(c, 0, t, 0); const p = H.g.position, f = fwd(H), rr = rightOf(H), e = ease(k), d = 6.5 - e * 2.5; c.pos.copy(p).addScaledVector(f, d * .8).addScaledVector(rr, d * .6); c.pos.x += 2; c.pos.y = 1.4 + e * .8; c.look.copy(p); c.look.x -= 6; c.look.y = 1.9; c.fov = 40; c.roll = .02; } }
+        play([{ name: 'walkoff', dur: 0, labels: false, start() { TS = 1; W.forEach(f => { setState(f, 'win'); f.blown = false; f.puffed = false; f.t = Math.random() * .3; }); emit('hero'); },
+              cam(k, t, c) { still(c); if (t > 2.5 && doneCb) { W.forEach(f => { returnToCrowd(f.id); f.speed = 3.2; }); const d = doneCb; doneCb = null; d(true); } } }
         ]).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
         return done;
     }
@@ -570,5 +573,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, fire, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, focusOn, fire, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }
