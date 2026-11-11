@@ -764,7 +764,9 @@
             .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
     }
     function answerNorm(s) {
-        return lightNorm(s).split(' ').map(function (w) { return w.replace(/^ال/, ''); }).join('')
+        // "ال" التعريف ما تنحسب أبداً: تنشال من أول كل كلمة (حتى لو تكررت: "الألماس" = "ألماس" = "ماس")،
+        // ويبقى حرفين على الأقل من الكلمة. "ال" لحالها (ال رياض) تنشال كلها.
+        return lightNorm(s).split(' ').map(function (w) { return w === 'ال' ? '' : w.replace(/^(?:ال)+(?=[^ ]{2})/, ''); }).join('')
             .replace(/(\p{L})\1+/gu, '$1');
     }
 
@@ -814,6 +816,9 @@
             if (!w || w === 'and') return;
             if (lookupNumWord(w)) { tokens.push(w); return; }
             if (w.charAt(0) === 'و' && lookupNumWord(w.slice(1))) { tokens.push(w.slice(1)); return; }
+            // "ال" التعريف ما تنحسب: العشرين = عشرين، والخمسة = خمسة
+            var u = w.replace(/^و?ال/, '');
+            if (u !== w && lookupNumWord(u)) { tokens.push(u); return; }
             tokens.push(null);
         });
         if (!tokens.length || tokens.indexOf(null) >= 0) return null;
