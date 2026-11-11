@@ -29,6 +29,18 @@ body[data-grade="hero"] #stage canvas{filter:sepia(.18) saturate(1.3) contrast(1
 .bar.top{top:0}.bar.bot{bottom:0}
 body[data-bars="wide"] .bar{height:9vh}
 body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
+/* جفون منظور اللاعب: تنفتح، يضيّق عينه للنص، ثم يفتحها (مدة لقطة pov بـ duel3d.js) */
+#lids{position:fixed;inset:0;pointer-events:none;z-index:7;opacity:0;overflow:hidden}
+#lids.on{opacity:1}
+#lids i{position:absolute;left:-15%;right:-15%;height:60%;background:#0d0704;filter:blur(18px)}
+#lids .t{top:-60%;border-radius:0 0 50% 50%/0 0 70% 70%}
+#lids .b{bottom:-60%;border-radius:50% 50% 0 0/70% 70% 0 0}
+#lids.on .t{animation:lidT 2.4s ease-in-out both}
+#lids.on .b{animation:lidB 2.4s ease-in-out both}
+@keyframes lidT{0%{transform:translateY(92%)}14%{transform:translateY(8%)}34%{transform:translateY(66%)}50%{transform:translateY(62%)}68%{transform:translateY(68%)}84%{transform:translateY(8%)}100%{transform:translateY(0)}}
+@keyframes lidB{0%{transform:translateY(-92%)}14%{transform:translateY(-8%)}34%{transform:translateY(-58%)}50%{transform:translateY(-54%)}68%{transform:translateY(-60%)}84%{transform:translateY(-8%)}100%{transform:translateY(0)}}
+body[data-grade="pov"] :is(.poster,#chat,#title,#counter,#demo,#banner){opacity:0 !important;transition:opacity .25s}
+body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.12) brightness(1.03);transition:none}
 #flash{position:fixed;inset:0;opacity:0;pointer-events:none;z-index:8}
 #iris{position:fixed;inset:0;pointer-events:none;z-index:9}
 
@@ -175,6 +187,7 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
   </div>
 </div>
 
+<div id="lids"><i class="t"></i><i class="b"></i></div>
 <div id="flash"></div><div id="iris"></div>
 <div id="loading">🤠 السوق يتجهّز…</div>
 <div id="fallback" hidden>تعذّر تشغيل الثري دي على هذا الجهاز.</div>

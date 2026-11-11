@@ -356,7 +356,7 @@ export async function mountDuel(el, opts = {}) {
         if (f.target && f.state !== 'dead' && f.state !== 'poof') {
             const dx = f.target.x - g.position.x, dz = f.target.z - g.position.z, d = Math.hypot(dx, dz);
             if (d > .04) { const st = Math.min(d, dt * f.speed); g.position.x += dx / d * st; g.position.z += dz / d * st; f.walking = true; f.yawT = Math.atan2(dx, dz);
-                const ph = Math.sin(f.t * f.speed * 3.2); if (f.duelist && f.lastStep != null && Math.sign(ph) !== Math.sign(f.lastStep)) puff(V(g.position.x, .1, g.position.z), '#d9b07a', .45, V(0, .3, 0), 1, .45); f.lastStep = ph; }
+                const ph = Math.sin(f.t * f.speed * 3.2); if (f.duelist && f.lastStep != null && Math.sign(ph) !== Math.sign(f.lastStep)) { puff(V(g.position.x, .1, g.position.z), '#d9b07a', .45, V(0, .3, 0), 1, .45); emit('step', g.position.z > 0 ? -.6 : .6); } f.lastStep = ph; }  // صوت الخطوة: يسار/يمين حسب مكان اللاعب بالشاشة
             else { f.walking = false; f.yawT = f.face; }
             g.position.y += (f.target.y - g.position.y) * Math.min(1, dt * 9);
         }
@@ -428,9 +428,13 @@ export async function mountDuel(el, opts = {}) {
             overB: { name: 'overB', dur: 1.5, labels: false, start() { A.twitch = false; }, cam(k, t, c) { const p = Bf.g.position, f = fwd(Bf), rr = rightOf(Bf); c.pos.copy(p).addScaledVector(f, -2.4).addScaledVector(rr, 1.25); c.pos.y = 2.2; c.look.copy(A.g.position); c.look.y = 1.7; c.fov = 28 - k * 3; c.roll = 0; } }
         };
         minHand.rotation.x = .21;
+        // من منظور كل لاعب: الكاميرا مكان عيونه (تحت حافة قبعته) تطالع خصمه، والصفحة ترسم الجفون وهو يضيّق عينه ويفتحها (shot: povA/povB)
+        const pov = (me, him, name) => ({ name, dur: 2.4, labels: false, start() { [A, Bf].forEach(f => { if (f.g.position.distanceTo(f.target) > .3) { f.g.position.x = f.target.x; f.g.position.z = f.target.z; f.walking = false; } }); },
+            cam(k, t, c) { const H = wp(me.U.head), f = fwd(me), O = wp(him.U.head); c.pos.copy(H).addScaledVector(f, .5); c.pos.y += .02 + Math.sin(t * 1.7) * .015; c.pos.x += Math.sin(t * 1.3) * .02; c.look.copy(O); c.look.y -= .35; c.fov = 34 - k * 12; c.roll = Math.sin(t * .9) * .015; } });
+        SH.povA = pov(A, Bf, 'povA'); SH.povB = pov(Bf, A, 'povB');
         let list;
-        if (short) { const cu = [SH.eyesA, SH.eyesB, SH.hand, SH.overB].sort(() => Math.random() - .5).slice(0, 2); list = [SH.crane, SH.boots, ...cu]; }
-        else list = [SH.crane, SH.boots, SH.profile, SH.eyesA, SH.eyesB, SH.hand, SH.clock, SH.overB];
+        if (short) list = [SH.crane, SH.boots, SH.povA, SH.povB];
+        else list = [SH.crane, SH.boots, SH.profile, SH.povA, SH.povB];
         // نضمن وصولهم للعلامات قبل آخر لقطة
         const last = list[list.length - 1], st0 = last.start; last.start = () => { st0 && st0(); [A, Bf].forEach(f => { if (f.g.position.distanceTo(f.target) > .5) { f.g.position.x = f.target.x; f.g.position.z = f.target.z; } }); };
         return play(list);

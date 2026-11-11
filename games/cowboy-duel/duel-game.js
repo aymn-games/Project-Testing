@@ -28,6 +28,11 @@ const SFX = (() => {
         bell() { const a = ctx(); if (!a) return; const t = a.currentTime; [[620, .35], [620 * 2.76, .16], [620 * 5.4, .08], [310, .2]].forEach(([fq, v]) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = fq; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + 2.4); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 2.4); }); },
         tick() { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = 'square'; o.frequency.value = 1800; g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.001, t + .04); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .05); },
         thud() { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(35, t + .3); g.gain.setValueAtTime(.7, t); g.gain.exponentialRampToValueAtTime(.001, t + .35); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .35); },
+        // خطوة جزمة على تراب + رنّة المهماز، pan: يسار (-) أو يمين (+) حسب مكان اللاعب
+        step(pan = 0) { const a = ctx(); if (!a) return; const t = a.currentTime, out = a.createStereoPanner ? a.createStereoPanner() : a.createGain(); if (out.pan) out.pan.value = pan; out.connect(a.destination);
+            const n = noise(.18), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'lowpass'; f.frequency.value = 520; g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .16); n.connect(f); f.connect(g); g.connect(out); n.start(t);
+            const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(60, t + .08); og.gain.setValueAtTime(.35, t); og.gain.exponentialRampToValueAtTime(.001, t + .1); o.connect(og); og.connect(out); o.start(t); o.stop(t + .12);
+            [3150, 4230, 5370].forEach((fq, i) => { const s = a.createOscillator(), sg = a.createGain(), d = t + .03 + i * .018; s.frequency.value = fq; sg.gain.setValueAtTime(.0001, t); sg.gain.setValueAtTime(.045, d); sg.gain.exponentialRampToValueAtTime(.0001, d + .3); s.connect(sg); sg.connect(out); s.start(t); s.stop(d + .32); }); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
         wind(on) { const a = ctx(); if (!a) return; if (!windG) { const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .7; windG = a.createGain(); windG.gain.value = 0; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); }
             windG.gain.setTargetAtTime(on ? .09 : .025, a.currentTime, .8); }
@@ -175,9 +180,12 @@ function hookStream() {
         else if (e === 'hit') { SFX.thud(); flash('rgba(255,255,255,.7)', 120); }
         else if (e === 'thud') SFX.thud();
         else if (e === 'tick') SFX.tick();
+        else if (e === 'step') SFX.step(d);
         else if (e === 'pop') SFX.bang();
         else if (e === 'shot') { // ستارة السينما + تدرّج الألوان حسب اللقطة
-            if (d === 'eyesA' || d === 'eyesB') { bars('tight'); grade('eyes'); }
+            if (d !== 'povA' && d !== 'povB') $('#lids').classList.remove('on');
+            if (d === 'povA' || d === 'povB') { bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); void L.offsetWidth; L.classList.add('on'); }
+            else if (d === 'eyesA' || d === 'eyesB') { bars('tight'); grade('eyes'); }
             else if (d === 'bullet') { bars('tight'); grade('slow'); SFX.whoosh(); }
             else if (d === 'hand' || d === 'clock' || d === 'overB' || d === 'boots') { bars('wide'); grade('duel'); }
             else if (d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
