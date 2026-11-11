@@ -572,12 +572,13 @@ class Component extends DCLogic {
   // تطبيع الإجابة قبل المقارنة — نفس قواعد كلمة الدخول (FA.norm في fa-platform.js).
   norm(s){ return FA.norm(s); }
   // يُقبل أيضاً لو "ال" ملتصقة بكلمة قبلها بدون مسافة (كورياالجنوبية = كوريا الجنوبية).
-  check(t,q){ const v=[this.norm(t),this.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean); return v.length>0&&q.accept.some(a=>v.includes(this.norm(a))); }
+  // الفحص المشترك في fa-questions.js (أسماء الحروف، واو المثل، الأرقام بكل اللغات) — نفس فحص الخادم.
+  check(t,q){ if(this.DATA&&typeof this.DATA.checkAnswer==='function') return this.DATA.checkAnswer(t,q); const v=[this.norm(t),this.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean); return v.length>0&&q.accept.some(a=>v.includes(this.norm(a))); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2600); }
   addLog(k,text){ const d=new Date(), time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     this.setState(s=>({log:[{k,text,time,round:s.round,between:s.phase==='ready'&&s.round>0,id:Math.random()},...s.log].slice(0,200)})); }
 
-  gen(id){ const D=this.DATA, base={catName:this.CATS.find(c=>c.id===id).name,dir:'rtl',ls:'0'};
+  gen(id){ const D=this.DATA, base={kind:id,catName:this.CATS.find(c=>c.id===id).name,dir:'rtl',ls:'0'};
     if(id==='math'){ const op=this.pick(['+','−','×']); let a,b,res; if(op==='×'){a=2+this.r(14);b=2+this.r(11);res=a*b;} else {a=12+this.r(88);b=2+this.r(60);if(op==='−'&&b>a)[a,b]=[b,a];res=op==='+'?a+b:a-b;} return {...base,sub:'احسب الناتج',prompt:`${a} ${op} ${b}`,dir:'ltr',answer:String(res),accept:[String(res)]}; }
     if(id==='image'){ const [e,a,alt=[]]=this.pick(D.image); return {...base,sub:'ما اسم الصورة؟',emoji:e,answer:a,accept:[a,...alt]}; }
     if(id==='reverse'){ const w=this.pick(D.reverse),rv=[...w].reverse().join(''); return {...base,sub:'اكتب الكلمة معكوسة',prompt:w,answer:rv,accept:[rv]}; }

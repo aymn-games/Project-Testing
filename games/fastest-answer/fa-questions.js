@@ -1737,6 +1737,130 @@
         letter: LETTER,
         synonym: SYNONYM
     };
+    // ===== فحص الإجابة (مشترك بين game.html والخادم) =====
+    // يقبل الإجابة بكل طرق كتابتها:
+    // · نفس تطبيع FA.norm (تشكيل، همزات، ة/ه، ى/ي، "ال"، مسافات، تكرار حرف)
+    // · الأرقام بأي نظام أرقام (عربي ١٢٣، فارسي ۱۲۳، هندي १२३، ...)
+    // · أول حرف: اسم الحرف مقبول (ت = تاء = التاء = حرف التاء)
+    // · أكمل المثل: حرف العطف/الجر في أول الكلمة اختياري (واشتكى = اشتكى)
+    // · كم العدد/الحساب: الرقم بالكلمات عربي أو إنجليزي (خمسة وعشرين، twenty five)
+    var DIGIT_ZEROS = [0x30, 0x660, 0x6F0, 0x7C0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66, 0xDE6,
+        0xE50, 0xED0, 0xF20, 0x1040, 0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90, 0x1B50, 0x1BB0, 0x1C40,
+        0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0, 0xFF10];
+    function toAsciiDigits(s) {
+        return String(s).replace(/\p{Nd}/gu, function (d) {
+            var cp = d.codePointAt(0);
+            for (var i = 0; i < DIGIT_ZEROS.length; i++) if (cp >= DIGIT_ZEROS[i] && cp < DIGIT_ZEROS[i] + 10) return String(cp - DIGIT_ZEROS[i]);
+            return d;
+        });
+    }
+    function lightNorm(s) {
+        return toAsciiDigits(String(s == null ? '' : s).normalize('NFKC')).trim()
+            .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+            .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
+            .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
+            .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+    }
+    function answerNorm(s) {
+        return lightNorm(s).split(' ').map(function (w) { return w.replace(/^ال/, ''); }).join('')
+            .replace(/(\p{L})\1+/gu, '$1');
+    }
+
+    // أسماء الحروف (بعد lightNorm: الهمزة محذوفة، فـ"تاء" = "تا")
+    var LETTER_NAMES = {
+        'الف': 'ا', 'اليف': 'ا', 'همزه': 'ا', 'با': 'ب', 'بي': 'ب', 'تا': 'ت', 'ثا': 'ث', 'جيم': 'ج', 'حا': 'ح', 'خا': 'خ',
+        'دال': 'د', 'ذال': 'ذ', 'را': 'ر', 'زاي': 'ز', 'زين': 'ز', 'زا': 'ز', 'سين': 'س', 'شين': 'ش', 'صاد': 'ص',
+        'ضاد': 'ض', 'طا': 'ط', 'ظا': 'ظ', 'عين': 'ع', 'غين': 'غ', 'فا': 'ف', 'قاف': 'ق', 'كاف': 'ك', 'لام': 'ل',
+        'ميم': 'م', 'نون': 'ن', 'ها': 'ه', 'واو': 'و', 'وا': 'و', 'يا': 'ي'
+    };
+    function letterOf(text) {
+        var t = lightNorm(text).replace(/^حرف\s*/, '').replace(/\s+/g, '');
+        if (LETTER_NAMES[t]) return LETTER_NAMES[t];
+        var u = t.replace(/^ال/, '');
+        if (u && LETTER_NAMES[u]) return LETTER_NAMES[u];
+        if (u.length === 1) return u;
+        return t;
+    }
+
+    // الرقم بالكلمات (عربي فصحى/عامي + إنجليزي) — يرجع رقم أو null
+    var NUM_WORDS = {
+        'صفر': 0, 'واحد': 1, 'واحده': 1, 'احد': 1, 'اثنين': 2, 'اثنان': 2, 'اثنتين': 2, 'اثنتان': 2, 'ثنين': 2, 'اتنين': 2, 'تنين': 2,
+        'ثلاث': 3, 'ثلاثه': 3, 'تلات': 3, 'تلاته': 3, 'ثلاثة': 3, 'اربع': 4, 'اربعه': 4, 'خمس': 5, 'خمسه': 5,
+        'ست': 6, 'سته': 6, 'سبع': 7, 'سبعه': 7, 'ثمان': 8, 'ثماني': 8, 'ثمانيه': 8, 'ثمنيه': 8, 'تمان': 8, 'تمانيه': 8, 'تمنيه': 8,
+        'تسع': 9, 'تسعه': 9, 'عشر': 10, 'عشره': 10,
+        'عشرين': 20, 'عشرون': 20, 'ثلاثين': 30, 'ثلاثون': 30, 'تلاتين': 30, 'اربعين': 40, 'اربعون': 40, 'خمسين': 50, 'خمسون': 50,
+        'ستين': 60, 'ستون': 60, 'سبعين': 70, 'سبعون': 70, 'ثمانين': 80, 'ثمانون': 80, 'تمانين': 80, 'تسعين': 90, 'تسعون': 90,
+        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+        'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18,
+        'nineteen': 19, 'twenty': 20, 'thirty': 30, 'forty': 40, 'fourty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90
+    };
+    var HUNDRED_WORDS = { 'ميه': 1, 'مايه': 1, 'مييه': 1, 'hundred': 1 };
+    var HUNDREDS_FIXED = { 'ميتين': 200, 'مايتين': 200, 'ميتان': 200, 'مايتان': 200 };
+    var THOUSAND_WORDS = { 'الف': 1, 'الاف': 1, 'thousand': 1 };
+    var THOUSANDS_FIXED = { 'الفين': 2000, 'الفان': 2000 };
+    function lookupNumWord(w) {
+        if (w in NUM_WORDS || w in HUNDRED_WORDS || w in HUNDREDS_FIXED || w in THOUSAND_WORDS || w in THOUSANDS_FIXED) return w;
+        var m = /^(.+?)(ميه|مايه)$/.exec(w); // ثلاثمية، خمسمائة
+        if (m && NUM_WORDS[m[1]] >= 1 && NUM_WORDS[m[1]] <= 9) return w;
+        return null;
+    }
+    function parseNumberWords(text) {
+        var raw = lightNorm(text).replace(/-/g, ' ');
+        if (!raw || /\d/.test(raw)) return null;
+        var tokens = [];
+        raw.split(' ').forEach(function (w) {
+            if (!w || w === 'and') return;
+            if (lookupNumWord(w)) { tokens.push(w); return; }
+            if (w.charAt(0) === 'و' && lookupNumWord(w.slice(1))) { tokens.push(w.slice(1)); return; }
+            tokens.push(null);
+        });
+        if (!tokens.length || tokens.indexOf(null) >= 0) return null;
+        var total = 0, cur = 0, lastUnit = false;
+        for (var i = 0; i < tokens.length; i++) {
+            var w = tokens[i], m = /^(.+?)(ميه|مايه)$/.exec(w);
+            if ((w === 'عشر' || w === 'عشره') && lastUnit) { cur += 10; lastUnit = false; continue; }
+            if (w in NUM_WORDS) { cur += NUM_WORDS[w]; lastUnit = NUM_WORDS[w] >= 1 && NUM_WORDS[w] <= 9; continue; }
+            lastUnit = false;
+            if (w in HUNDRED_WORDS) { cur = (cur || 1) * 100; continue; }
+            if (w in HUNDREDS_FIXED) { cur += HUNDREDS_FIXED[w]; continue; }
+            if (m && !(w in THOUSAND_WORDS)) { cur += NUM_WORDS[m[1]] * 100; continue; }
+            if (w in THOUSAND_WORDS) { total += (cur || 1) * 1000; cur = 0; continue; }
+            if (w in THOUSANDS_FIXED) { total += THOUSANDS_FIXED[w]; continue; }
+            return null;
+        }
+        return total + cur;
+    }
+
+    // أكمل المثل: حذف حرف عطف/جر من أول الكلمة (و ف ب ك ل) — مرتين كحد أقصى، ويبقى 3 حروف على الأقل
+    function stripPrefix(s) {
+        for (var i = 0; i < 2 && s.length > 3 && /^[وفبكل]/.test(s); i++) s = s.slice(1);
+        return s;
+    }
+
+    function checkAnswer(text, q) {
+        if (!q || !q.accept) return false;
+        var kind = q.kind || '';
+        if (kind === 'letter') {
+            var L = answerNorm(letterOf(text));
+            return !!L && q.accept.some(function (a) { return answerNorm(a) === L; });
+        }
+        var v = [answerNorm(text), answerNorm(String(text).replace(/(\S)(ال)/g, '$1 $2'))].filter(Boolean);
+        if (!v.length) return false;
+        var acc = q.accept.map(answerNorm);
+        if (acc.some(function (a) { return v.indexOf(a) >= 0; })) return true;
+        if (kind === 'proverb') {
+            var vs = v.map(stripPrefix);
+            if (acc.some(function (a) { return vs.indexOf(stripPrefix(a)) >= 0; })) return true;
+        }
+        if (kind === 'math' || kind === 'count') {
+            var n = parseNumberWords(text);
+            if (n !== null && q.accept.some(function (a) { return String(n) === answerNorm(a); })) return true;
+        }
+        return false;
+    }
+    FA_QUESTIONS.checkAnswer = checkAnswer;
+    FA_QUESTIONS._parseNumberWords = parseNumberWords;
+
     // نفس البنك يستخدمه الخادم لتحدي البثوث (backend/challenge/fastest-answer-logic.js).
     if (typeof module === 'object' && module.exports) module.exports = FA_QUESTIONS;
     if (typeof window !== 'undefined') window.FA_QUESTIONS = FA_QUESTIONS;
