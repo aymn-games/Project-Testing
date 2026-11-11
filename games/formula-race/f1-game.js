@@ -908,6 +908,9 @@
         if (!AGP.events || typeof AGP.events.on !== 'function') return;
         AGP.events.on('stream:commentReceived', function (p) {
             if (!p || !p.id || typeof p.text !== 'string') return;
+            // لاعب دخل بدون صورة (مثلاً بالدعم) ووصلت صورته بتعليق: نحدّثها بالدبوس واللوحات
+            var known = S.byId[p.id];
+            if (known && !known.avatar && p.avatarUrl) { known.avatar = p.avatarUrl; if (scene) scene.setCars(S.cars); renderTower(true); }
             if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
             if (settings.joinMode === 'followers' && !p.isFollower) return;
             addCar(p);

@@ -167,51 +167,6 @@ function sharedCarGeos() {
     return SHARED;
 }
 
-/**
- * دبوس اللاعب فوق سيارته: صورته داخل دائرة بلون فريقه + رقم مركزه.
- * يُعاد رسمه فقط لما يتغير المركز (setPos).
- */
-function makePin(car) {
-    const c = document.createElement('canvas'); c.width = 192; c.height = 224;
-    const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-    let img = null, pos = 0;
-    const draw = () => {
-        const ctx = c.getContext('2d');
-        ctx.clearRect(0, 0, 192, 224);
-        // السهم تحت الدائرة
-        ctx.fillStyle = car.color;
-        ctx.beginPath(); ctx.moveTo(78, 168); ctx.lineTo(114, 168); ctx.lineTo(96, 210); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(96, 100, 76, 0, Math.PI * 2); ctx.fillStyle = car.color; ctx.fill();
-        ctx.save(); ctx.beginPath(); ctx.arc(96, 100, 64, 0, Math.PI * 2); ctx.clip();
-        if (img) ctx.drawImage(img, 32, 36, 128, 128);
-        else {
-            ctx.fillStyle = '#16181f'; ctx.fillRect(32, 36, 128, 128);
-            ctx.fillStyle = '#fff'; ctx.font = `700 64px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(String(car.name).trim().charAt(0) || '?', 96, 104);
-        }
-        ctx.restore();
-        if (pos) {
-            ctx.beginPath(); ctx.arc(40, 34, 30, 0, Math.PI * 2); ctx.fillStyle = car.color; ctx.fill();
-            ctx.lineWidth = 6; ctx.strokeStyle = '#0d0f15'; ctx.stroke();
-            ctx.fillStyle = luminance(car.color) > 0.6 ? '#111' : '#fff';
-            ctx.font = `800 36px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(String(pos), 40, 37);
-        }
-        tex.needsUpdate = true;
-    };
-    draw();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
-    if (car.avatar) {
-        const im = new Image(); im.crossOrigin = 'anonymous';
-        im.onload = () => { img = im; try { draw(); } catch (e) { img = null; draw(); } };
-        im.src = car.avatar;
-    }
-    const s = new T.Sprite(new T.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-    s.center.set(0.5, 0); s.renderOrder = 10;
-    s.userData.setPos = (p) => { if (p !== pos) { pos = p; draw(); } };
-    return s;
-}
-
 /** كبسولة الاسم — تظهر فوق اللاعب اللي الكاميرا تتابعه. */
 function makeNameTag(car) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 112;
@@ -405,9 +360,7 @@ function buildCar(car) {
     const rain = new T.Mesh(new T.BoxGeometry(0.2, 0.12, 0.05), new T.MeshBasicMaterial({ color: 0xff2020 })); rain.position.set(0, 0.62, -2.62); g.add(rain);
     const dome = new T.Mesh(G.dome, new T.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.18, blending: T.AdditiveBlending, depthWrite: false }));
     dome.visible = false; g.add(dome);
-    const pin = makePin(car); g.add(pin);
-    const tag = makeNameTag(car); g.add(tag);
-    return { group: g, wheels, flame, flameMat, ring, dome, pin, tag, paint, body, helmet, rain, spin: 0, data: car };
+    return { group: g, wheels, flame, flameMat, ring, dome, paint, body, helmet, rain, spin: 0, data: car, ui: { pos: 0, inside: false } };
 }
 
 function disposeCar(o) {
@@ -415,8 +368,6 @@ function disposeCar(o) {
     o.wheels.forEach(w => w.geometry.dispose());
     o.flameMat.dispose(); o.ring.material.dispose(); o.dome.material.dispose();
     o.rain.geometry.dispose(); o.rain.material.dispose();
-    o.pin.material.map.dispose(); o.pin.material.dispose();
-    o.tag.material.map.dispose(); o.tag.material.dispose();
 }
 
 // ---------- المشهد ----------
@@ -711,6 +662,61 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     let partIdx = 0;
     const BURST = { tap: [0xff3b6b, 8], nitro: [0x22d3ee, 16], shield: [0x38bdf8, 22], portal: [0xa855f7, 34], shuttle: [0xf97316, 26], rocket: [0xef4444, 14], lightning: [0xeab308, 14], hit: [0xef4444, 22], win: [0xffd400, 60] };
 
+    // ---- دبابيس اللاعبين (HTML فوق المشهد) ----
+    // صور حسابات تيك توك ما تنرسم داخل WebGL (سيرفر الصور ما يسمح — CORS)، فالدبوس <img> عادي
+    // نحرّكه كل إطار لمكان السيارة على الشاشة (نفس حل حجرة ورقة مقص بـ rps-scene.js).
+    if (!document.getElementById('f1-pin-style')) {
+        const st = document.createElement('style'); st.id = 'f1-pin-style';
+        st.textContent = `
+.f1-pins{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.f1-pin{position:absolute;left:0;top:0;width:var(--s,44px);height:var(--s,44px);will-change:transform;transform-origin:50% 100%}
+.f1-pin-av{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#1e1336;border:3px solid var(--team);box-shadow:0 0 0 2px rgba(10,6,20,.85),0 6px 16px rgba(0,0,0,.45),0 0 14px rgba(168,85,247,.45);display:grid;place-items:center;color:#fff;font:700 calc(var(--s,44px)*.42)/1 'IBM Plex Sans Arabic',sans-serif}
+.f1-pin-av img{width:100%;height:100%;object-fit:cover;display:block}
+.f1-pin::after{content:"";position:absolute;left:50%;bottom:calc(var(--s,44px)*-.2);transform:translateX(-50%);border:calc(var(--s,44px)*.13) solid transparent;border-top:calc(var(--s,44px)*.16) solid var(--team);filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+.f1-pin-pos{position:absolute;top:calc(var(--s,44px)*-.14);right:calc(var(--s,44px)*-.14);min-width:calc(var(--s,44px)*.42);height:calc(var(--s,44px)*.42);padding:0 3px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font:800 calc(var(--s,44px)*.25)/1 'IBM Plex Sans Arabic',sans-serif;border:2px solid rgba(10,6,20,.9)}
+.f1-pin[data-p="1"] .f1-pin-pos{background:linear-gradient(135deg,#f5c542,#e8a317);color:#2a1a00}
+.f1-pin-name{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:3px 12px;border-radius:999px;background:rgba(16,10,30,.9);border:2px solid var(--team);color:#fff;font:700 14px 'IBM Plex Sans Arabic',sans-serif;display:none}
+.f1-pin.focus .f1-pin-name{display:block}
+.f1-pin.focus .f1-pin-av{box-shadow:0 0 0 2px rgba(10,6,20,.85),0 0 22px rgba(192,132,252,.95)}`;
+        document.head.appendChild(st);
+    }
+    const pinLayer = document.createElement('div'); pinLayer.className = 'f1-pins'; el.appendChild(pinLayer);
+    const initialOf = n => (Array.from(String(n || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase();
+    function makePinEl(car) {
+        const d = document.createElement('div'); d.className = 'f1-pin'; d.style.setProperty('--team', car.color); d.style.display = 'none';
+        const av = document.createElement('div'); av.className = 'f1-pin-av';
+        const setInitial = () => { av.textContent = initialOf(car.name); };
+        if (car.avatar) {
+            const im = new Image(); im.alt = ''; im.decoding = 'async'; im.referrerPolicy = 'no-referrer';
+            im.onerror = () => { im.remove(); setInitial(); };
+            im.src = car.avatar; av.appendChild(im);
+        } else setInitial();
+        const pos = document.createElement('b'); pos.className = 'f1-pin-pos';
+        const nm = document.createElement('span'); nm.className = 'f1-pin-name'; nm.textContent = car.name;
+        d.append(av, pos, nm); pinLayer.appendChild(d);
+        return { d, pos, last: '' };
+    }
+    const _pv = new T.Vector3(), _pu = new T.Vector3();
+    function updatePins() {
+        const w = el.clientWidth || 1, h = el.clientHeight || 1;
+        const hideAll = !!cer;
+        for (const [id, o] of cars) {
+            const P = o.pinEl; if (!P) continue;
+            if (hideAll || o.ui.inside || !o.group.visible) { if (P.d.style.display !== 'none') P.d.style.display = 'none'; continue; }
+            _pv.copy(o.group.position); _pv.y += 1.7; _pu.copy(_pv); _pu.y += 1;
+            _pv.project(camera); _pu.project(camera);
+            if (_pv.z > 1 || _pv.x < -1.2 || _pv.x > 1.2 || _pv.y < -1.2 || _pv.y > 1.3) { if (P.d.style.display !== 'none') P.d.style.display = 'none'; continue; }
+            const x = (_pv.x + 1) / 2 * w, y = (1 - _pv.y) / 2 * h, pxPerM = Math.abs(_pu.y - _pv.y) / 2 * h;
+            const size = camMode === 'track' ? 24 : Math.max(32, Math.min(64, pxPerM * 1.15));
+            if (P.d.style.display === 'none') P.d.style.display = '';
+            P.d.style.setProperty('--s', size.toFixed(1) + 'px');
+            P.d.style.transform = 'translate3d(' + (x - size / 2).toFixed(1) + 'px,' + (y - size * 1.2).toFixed(1) + 'px,0)';
+            P.d.style.zIndex = String(1000 - Math.round(_pv.z * 900));
+            const p = String(o.ui.pos || ''); if (P.last !== p) { P.last = p; P.pos.textContent = p; P.d.dataset.p = p; P.pos.style.display = p ? '' : 'none'; }
+            P.d.classList.toggle('focus', id === focusId && camMode !== 'track' && phase !== 'lobby');
+        }
+    }
+
     // ---- السيارات ----
     const cars = new Map();
     let focusId = null, camMode = 'orbit', phase = 'lobby';
@@ -719,11 +725,12 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
 
     function setCars(list) {
         const ids = new Set(list.map(c => c.id));
-        for (const [id, o] of cars) if (!ids.has(id)) { scene.remove(o.group); disposeCar(o); cars.delete(id); }
+        for (const [id, o] of cars) if (!ids.has(id)) { scene.remove(o.group); disposeCar(o); if (o.pinEl) o.pinEl.d.remove(); cars.delete(id); }
         list.forEach(c => {
             let o = cars.get(c.id);
-            if (o && (o.data.number !== c.number || o.data.color !== c.color)) { scene.remove(o.group); disposeCar(o); cars.delete(c.id); o = null; }
+            if (o && (o.data.number !== c.number || o.data.color !== c.color)) { scene.remove(o.group); disposeCar(o); if (o.pinEl) o.pinEl.d.remove(); cars.delete(c.id); o = null; }
             if (!o) { o = buildCar({ ...c }); cars.set(c.id, o); scene.add(o.group); }
+            if (!o.pinEl || o.data.avatar !== c.avatar || o.data.name !== c.name) { if (o.pinEl) o.pinEl.d.remove(); o.data.avatar = c.avatar; o.data.name = c.name; o.pinEl = makePinEl(o.data); }
         });
     }
 
@@ -758,15 +765,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             const inside = camMode === 'onboard' && s.id === focusId;
             o.helmet.visible = !inside;
             // الدبوس يكبر مع بعد الكاميرا عشان يبان باللقطات البعيدة
-            o.pin.visible = !inside;
-            if (s.pos) o.pin.userData.setPos(s.pos);
-            const dist = camera.position.distanceTo(g.position);
-            const zoom = Math.tan(camera.fov * Math.PI / 360);   // اللقطة المقرّبة (fov صغير) ما تكبّر الدبوس
-            const ps = Math.max(1.1, dist * zoom * (camMode === 'track' ? 0.07 : 0.075));
-            o.pin.scale.set(ps, ps * 224 / 192, 1); o.pin.position.y = 1.6 + ps * 0.15;
-            const focused = s.id === focusId && !inside && camMode !== 'track' && phase !== 'lobby';
-            o.tag.visible = focused;
-            if (focused) { o.tag.scale.set(ps * 2.4, ps * 2.4 * 112 / 512, 1); o.tag.position.y = o.pin.position.y + ps * 1.2; }
+            o.ui.inside = inside; if (s.pos) o.ui.pos = s.pos;
             g.userData.speed = s.speed; g.userData.d = s.d; g.userData.lane = s.lane || 0;
         }
     }
@@ -875,7 +874,9 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             cinematic: { pr: 2, shadow: true, map: 2048, decor: true, fogFar: 2000 }
         }[q] || null;
         if (!Q) return;
-        r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
+        // السينمائي على الشاشات العادية (1x) يرسم بدقة 1.5x (تنعيم أوضح للحواف)، وعلى شاشات 2x بدقتها الكاملة
+        const dpr = window.devicePixelRatio || 1;
+        r.setPixelRatio(q === 'cinematic' ? Math.min(2, Math.max(dpr, 1.5)) : Math.min(dpr, Q.pr));
         r.setSize(W(), H(), false);
         sun.castShadow = Q.shadow;
         if (sun.shadow.mapSize.x !== Q.map) { sun.shadow.mapSize.set(Q.map, Q.map); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
@@ -1209,7 +1210,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         const chars = top.map((c, i) => {
             const o = cars.get(c.id), cp = trackPoint(D_CAR, CAR_LANE[i]);
             o.group.position.set(cp.x, 0, cp.z); o.group.rotation.y = cp.heading;
-            o.pin.visible = o.tag.visible = o.flame.visible = o.ring.visible = o.dome.visible = false; o.helmet.visible = false;
+            o.flame.visible = o.ring.visible = o.dome.visible = false; o.helmet.visible = false;
             const kind = c.character === 'boy' ? 'boy' : c.character === 'girl' ? 'girl' : (hashId(c.id) % 2 ? 'boy' : 'girl');
             const rig = VRM.makeVrmRig(vrmModels[kind], { n: i + 1 });
             dressRacingSuit(rig, vrmModels[kind], c.color);
@@ -1375,6 +1376,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         const dt = Math.min(clock.getDelta(), 0.05);
         if (cer) { tickCeremony(dt); tickParts(dt); ceremonyCamera(dt); }
         else { applyStates(dt); tickParts(dt); camera_(dt); }
+        updatePins();
         r.render(scene, camera);
     }
     loop();
@@ -1392,6 +1394,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         setPhase(p) { phase = p; if (p === 'race') preloadCharacters(); },
         stop() {
             stopCeremony();
+            pinLayer.remove();
             running = false; cancelAnimationFrame(raf); ro.disconnect();
             document.removeEventListener('visibilitychange', onVis);
             scene.traverse(o => { o.geometry?.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k]?.isTexture) m[k].dispose(); m.dispose(); }); });
