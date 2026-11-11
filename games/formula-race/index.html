@@ -22,7 +22,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --agp-accent:#e10600;
+  --agp-accent:#7c3aed;
   --bg:#08090c; --panel:rgba(12,13,18,.78); --line:rgba(255,255,255,.09);
   --txt:#f4f4f6; --mut:#9a9caa;
 }
@@ -36,10 +36,11 @@ button{font-family:inherit;cursor:pointer}
 .top{position:fixed;top:0;left:0;right:0;z-index:20;height:60px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;
   background:linear-gradient(rgba(6,7,10,.85),rgba(6,7,10,0))}
 .top-r{display:flex;align-items:center;gap:10px}
+.top-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:52px;max-width:34vw;object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 14px rgba(139,92,246,.45))}
 .top-l{display:flex;align-items:center;gap:8px}
 .btn-ghost{height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(12,13,18,.6);color:#eee;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)}
 .btn-ghost:hover{background:rgba(255,255,255,.1)}
-.btn-ghost.on{border-color:var(--agp-accent);background:rgba(225,6,0,.18)}
+.btn-ghost.on{border-color:var(--agp-accent);background:rgba(124,58,237,.18)}
 .btn-exit{border-color:rgba(248,113,113,.3);color:#fca5a5}
 .btn-end{border-color:rgba(248,113,113,.4);color:#fca5a5;background:rgba(127,29,29,.35)}
 body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:none}
@@ -66,10 +67,10 @@ body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:non
 .lapbox>div{display:flex;flex-direction:column;align-items:center;line-height:1.1}
 .lapbox small{font-size:11px;color:var(--mut);font-weight:600}
 .lapbox b{font-size:24px;font-variant-numeric:tabular-nums;direction:ltr}
-.lapbox .lb-lap b{color:#ff4d45}
+.lapbox .lb-lap b{color:#c4b5fd}
 .lapbox .lb-lap b span:last-child{font-size:15px;color:#cfd0d8}
 .lb-prog{position:absolute;left:14px;right:14px;bottom:6px;height:3px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden}
-.lb-prog i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#e10600,#ff8a80);transition:transform .2s linear}
+.lb-prog i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#7c3aed,#c4b5fd);transition:transform .2s linear}
 body[data-phase="lobby"] .lapbox{display:none}
 
 /* ---------- لوحة الصدارة (يسار) ---------- */
@@ -91,7 +92,7 @@ body[data-phase="lobby"] .lapbox{display:none}
 
 /* ---------- طريقة اللعب (يمين) ---------- */
 .perks{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
-.perks h3{margin:2px 4px 6px;font-size:14px;color:#ff6b63}
+.perks h3{margin:2px 4px 6px;font-size:14px;color:#c4b5fd}
 .perk{display:flex;align-items:center;gap:10px;padding:6px 6px;border-radius:10px}
 .perk+.perk{border-top:1px solid rgba(255,255,255,.05)}
 .perk-ic{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
@@ -194,7 +195,7 @@ body[data-phase="lobby"] .bottom{display:none}
 .er-head{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:clamp(10px,2.4vh,26px) 0 clamp(14px,2.6vh,26px);text-align:center}
 .er-close{position:absolute;top:clamp(10px,2.4vh,26px);left:0;height:38px;padding:0 16px;border-radius:999px;border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5;font:600 13px 'IBM Plex Sans Arabic'}
 .er-close:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)}
-.er-title{font:700 clamp(32px,4.2vw,56px)/1.15 'IBM Plex Sans Arabic';font-style:italic;background:linear-gradient(180deg,#fff,#fca5a5);-webkit-background-clip:text;background-clip:text;color:transparent}
+.er-title{font:700 clamp(32px,4.2vw,56px)/1.15 'IBM Plex Sans Arabic';font-style:italic;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
 .er-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .er-chip{height:30px;padding:0 14px;display:flex;align-items:center;gap:4px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font:600 12px 'IBM Plex Sans Arabic';color:#cfd0d8}
 .er-chip b{color:#ffd76a}
@@ -206,7 +207,7 @@ body[data-phase="lobby"] .bottom{display:none}
 .er-full{grid-column:1/-1}
 .er-card-h{display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06);font:700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'}
 .er-card-h small{margin-inline-start:auto;font:500 12.5px 'IBM Plex Sans Arabic';color:#8a8596}
-.er-num{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(225,6,0,.16);color:#fca5a5;font:700 13px 'IBM Plex Sans Arabic'}
+.er-num{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'IBM Plex Sans Arabic'}
 .er-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 0}
 .er-row+.er-row{border-top:1px solid rgba(255,255,255,.05)}
 .er-lbl{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:right}
@@ -216,19 +217,19 @@ body[data-phase="lobby"] .bottom{display:none}
 .er-step{direction:ltr}
 .er-step button{width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:500 20px/1 'IBM Plex Sans Arabic'}
 .er-step button:hover{background:rgba(255,255,255,.08);color:#fff}
-.er-step input{width:52px;height:34px;border:none;border-radius:999px;background:transparent;text-align:center;font:700 16px 'IBM Plex Sans Arabic';color:#fecaca;font-variant-numeric:tabular-nums}
+.er-step input{width:52px;height:34px;border:none;border-radius:999px;background:transparent;text-align:center;font:700 16px 'IBM Plex Sans Arabic';color:#ddd6fe;font-variant-numeric:tabular-nums}
 .er-step input:focus{outline:none;background:rgba(255,255,255,.05)}
 .er-seg button{height:34px;padding:0 14px;border:none;border-radius:999px;white-space:nowrap;font:600 13px 'IBM Plex Sans Arabic';background:transparent;color:#a8a3b5;transition:all .25s}
 .er-seg button:hover{color:#fff}
-.er-seg button.on{background:linear-gradient(90deg,#e10600,#ff4d3d);color:#fff;box-shadow:0 6px 20px rgba(225,6,0,.4)}
+.er-seg button.on{background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 6px 20px rgba(124,58,237,.4)}
 .er-text{width:min(190px,48%);height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:#f4f2f8;font:600 14px 'IBM Plex Sans Arabic';padding:0 16px;text-align:center}
-.er-text:focus{outline:none;border-color:rgba(248,113,113,.5)}
+.er-text:focus{outline:none;border-color:rgba(167,139,250,.5)}
 .er-switch{position:relative;width:52px;height:30px;flex-shrink:0;cursor:pointer}
 .er-switch input{position:absolute;opacity:0;width:0;height:0}
 .er-switch span{position:absolute;inset:0;border-radius:999px;padding:3px;display:flex;justify-content:flex-end;background:rgba(255,255,255,.12);transition:all .25s}
 .er-switch span::after{content:"";width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-.er-switch input:checked+span{justify-content:flex-start;background:linear-gradient(90deg,#e10600,#ff4d3d)}
-.er-switch input:focus-visible+span{outline:2px solid #fca5a5;outline-offset:2px}
+.er-switch input:checked+span{justify-content:flex-start;background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.er-switch input:focus-visible+span{outline:2px solid #c4b5fd;outline-offset:2px}
 .er-badge{flex-shrink:0;height:30px;padding:0 12px;display:flex;align-items:center;border-radius:999px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:#86efac;font:600 12.5px 'IBM Plex Sans Arabic'}
 /* هدايا السباق: مربع منقّط بصورة الهدية (مثل «نوع الدعم» بروليت الإقصاء) */
 #giftRows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:4px 22px;transition:opacity .2s}
@@ -244,7 +245,7 @@ body[data-phase="lobby"] .bottom{display:none}
 .er-gtxt small{font:500 13px 'IBM Plex Sans Arabic';color:#8a8596}
 .er-gtxt em{font:600 12px 'IBM Plex Sans Arabic';font-style:normal;color:#ffd76a}
 .er-foot{position:sticky;bottom:0;display:flex;justify-content:center;padding:clamp(10px,2vh,18px) 0 clamp(14px,2.6vh,24px);margin-top:auto;background:linear-gradient(0deg,rgba(7,6,11,.95) 40%,rgba(7,6,11,0))}
-.er-go{width:100%;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#e10600,#ff4d3d);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(225,6,0,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.er-go{width:100%;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(124,58,237,.45),inset 0 1px 0 rgba(255,255,255,.2)}
 .er-go:hover{filter:brightness(1.1)}.er-go:active{transform:scale(.97)}
 .er-go:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
 
@@ -261,7 +262,7 @@ body:not([data-phase="lobby"]) #readyCard{display:none}
 .rc-actions .btn-start{flex:0 1 260px;height:50px}
 .rc-actions .btn-sec{height:50px}
 .lobby-actions{display:flex;gap:8px;margin-top:12px}
-.btn-start{flex:1;height:52px;border:0;border-radius:14px;background:linear-gradient(90deg,#e10600,#ff3b30);color:#fff;font-size:18px;font-weight:700;box-shadow:0 10px 30px rgba(225,6,0,.4);display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-start{flex:1;height:52px;border:0;border-radius:14px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font-size:18px;font-weight:700;box-shadow:0 10px 30px rgba(124,58,237,.4);display:flex;align-items:center;justify-content:center;gap:10px}
 .btn-start:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
 .btn-start:not(:disabled):hover{filter:brightness(1.1)}
 .btn-sec{height:52px;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#ddd;font-weight:600}
@@ -276,7 +277,7 @@ body:not([data-phase="lobby"]) #readyCard{display:none}
 #pickerGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:14px;overflow-y:auto}
 .pk{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#fff}
 .pk:hover{border-color:rgba(255,255,255,.25)}
-.pk.on{border-color:var(--agp-accent);background:rgba(225,6,0,.12)}
+.pk.on{border-color:var(--agp-accent);background:rgba(124,58,237,.12)}
 .pk img{width:46px;height:46px;object-fit:contain}
 .pk b{font-size:12px}.pk small{font-size:10.5px;color:var(--mut)}
 .pk em{position:absolute;top:4px;left:4px;font-style:normal;font-size:9.5px;padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.1);color:#ddd}
@@ -304,7 +305,7 @@ body.testing .live::after{content:" · تجربة";}
 
 /* ---------- مراسم النهاية (ثري دي) ---------- */
 #cerBanner{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:30;display:none;flex-direction:column;align-items:center;gap:2px;padding:10px 28px 12px;border-radius:16px;
-  background:linear-gradient(180deg,rgba(150,4,0,.92),rgba(90,2,0,.9));border:1px solid rgba(255,215,106,.55);box-shadow:0 14px 40px rgba(0,0,0,.45);text-align:center;white-space:nowrap}
+  background:linear-gradient(180deg,rgba(91,33,182,.94),rgba(46,16,101,.92));border:1px solid rgba(255,215,106,.55);box-shadow:0 14px 40px rgba(0,0,0,.45);text-align:center;white-space:nowrap}
 body.ceremony #cerBanner{display:flex}
 #cerBanner.pop{animation:cerpop .5s cubic-bezier(.2,1.3,.4,1) both}
 @keyframes cerpop{from{opacity:0;transform:translate(-50%,-12px) scale(.9)}}
@@ -362,6 +363,8 @@ body.no3d .fc-cam{display:none}
     <button class="btn-ghost btn-exit" id="exitBtn" type="button">✕ <span>خروج</span></button>
     <div class="brand"><i></i><span>سباق الفورمولا</span></div>
   </div>
+  <!-- لوقو ألعاب أيمن بالنص (نفس مكان اللوقو بباقي الألعاب) -->
+  <img class="top-logo" src="../../logo.png" alt="ألعاب أيمن" onerror="this.remove()">
   <div class="top-l">
     <button class="btn-ghost btn-end" id="endBtn" type="button">⏻ <span>إنهاء اللعبة</span></button>
     <button class="btn-ghost" id="ctrlBtn" type="button">⚙ <span>التحكم</span></button>

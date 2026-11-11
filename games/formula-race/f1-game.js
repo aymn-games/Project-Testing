@@ -740,7 +740,7 @@
         ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = (big ? 3 : 1.6) * dpr; ctx.stroke();
         // خط البداية
         var s0 = trackPoint(0, 0);
-        ctx.fillStyle = '#e10600'; ctx.fillRect(px(s0.x) - 2 * dpr, pz(s0.z) - 6 * dpr, 4 * dpr, 12 * dpr);
+        ctx.fillStyle = '#a855f7'; ctx.fillRect(px(s0.x) - 2 * dpr, pz(s0.z) - 6 * dpr, 4 * dpr, 12 * dpr);
         standings().slice().reverse().forEach(function (c) {
             var p = trackPoint(c.dist, c.lane);
             var focus = S.cam.focus === c.id;
@@ -772,7 +772,7 @@
             return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><small>' + small + '</small><b>' + big + '</b></span></div>';
         };
         var rows = [
-            row('tap', '#e10600', '👆', 'كبّس على الشاشة', 'سرعة أعلى'),
+            row('tap', '#a855f7', '👆', 'كبّس على الشاشة', 'سرعة أعلى'),
             row('', NITRO.color, NITRO.icon, 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'), 'نيترو')
         ];
         if (settings.giftsOn) {
@@ -789,7 +789,7 @@
     function toast(html, color) {
         var box = $('toasts');
         var t = document.createElement('div');
-        t.className = 'toast'; t.style.setProperty('--c', color || '#e10600');
+        t.className = 'toast'; t.style.setProperty('--c', color || '#7c3aed');
         t.innerHTML = html;
         box.prepend(t);
         while (box.children.length > 5) box.lastChild.remove();
@@ -1015,7 +1015,8 @@
     }
 
     function init() {
-        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; } };
+        // واجهة فحص لوضع التجربة فقط (?demo=1) — للاختبارات الآلية
+        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; }, get scene() { return scene; }, clear: clearDrivers, stopTest: stopTest, perkFor: effectForGift };
         document.body.dataset.phase = 'lobby';
         bindUI(); bindSettings(); renderPerks(); renderCamBar(); renderLobby();
         bindStream();
