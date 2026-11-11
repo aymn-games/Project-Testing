@@ -794,36 +794,83 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         for (const sx of [1, -1]) { const h = new T.Mesh(new T.TorusGeometry(0.045, 0.01, 6, 14, Math.PI * 1.2), gold); h.position.set(sx * 0.115, 0.25, 0); h.rotation.z = sx > 0 ? -Math.PI * 0.6 : Math.PI * 1.6; g.add(h); }
         return g;
     }
-    // منصة تتويج ألعاب أيمن: ثلاث درجات + قوس ولافتة باسم المنصة
-    const STEP_H = [1.2, 0.85, 0.6], STEP_LANE = [0, -2.35, 2.35];
+    // منصة تتويج ألعاب أيمن (مثل منصات الفورمولا): جدار رعاة خلفي بشعار المنصة، لافتة فوقه،
+    // ثلاث درجات بألواح ذهبي/فضي/برونزي وسجادة حمراء فوقها، وممر سجاد أحمر قدامها.
+    const STEP_H = [1.2, 0.85, 0.6], STEP_LANE = [0, -2.35, 2.35], WALL_Z = -1.65;
+    const LOGO_URL = new URL('../../logo.png', import.meta.url).href;
     function buildPodium() {
         const g = new T.Group();
-        const white = new T.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.5 });
-        const red = new T.MeshStandardMaterial({ color: 0xe10600, roughness: 0.4, metalness: 0.2 });
-        const dark = new T.MeshStandardMaterial({ color: 0x1f2430, roughness: 0.7 });
-        const base = new T.Mesh(new T.BoxGeometry(8.4, 0.15, 3.4), dark); base.position.y = 0.075; base.receiveShadow = true; g.add(base);
+        const white = new T.MeshStandardMaterial({ color: 0xf5f6f8, roughness: 0.45 });
+        const carpet = new T.MeshStandardMaterial({ color: 0xb3121b, roughness: 0.95 });
+        const goldTrim = new T.MeshStandardMaterial({ color: 0xe8c25a, metalness: 0.8, roughness: 0.3 });
+        const dark = new T.MeshStandardMaterial({ color: 0x141821, roughness: 0.6 });
+        const base = new T.Mesh(new T.BoxGeometry(8.6, 0.15, 3.6), dark); base.position.set(0, 0.075, 0.05); base.receiveShadow = true; g.add(base);
+        const PLATE = [['#fff3c4', '#e8c25a', '#a8811f'], ['#ffffff', '#cfd6df', '#8a95a3'], ['#ffe2c7', '#d08a4f', '#8a4f22']];
         for (let i = 0; i < 3; i++) {
             const h = STEP_H[i], x = STEP_LANE[i];
             const b = new T.Mesh(new T.BoxGeometry(2.3, h, 2.2), white); b.position.set(x, 0.15 + h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
-            const trim = new T.Mesh(new T.BoxGeometry(2.34, 0.07, 2.24), red); trim.position.set(x, 0.15 + h, 0); g.add(trim);
-            const face = new T.Mesh(new T.PlaneGeometry(2.0, Math.min(0.9, h - 0.1)), new T.MeshBasicMaterial({ map: canvasTex(256, 120, (ctx, w, hh) => {
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, hh);
-                ctx.fillStyle = ['#c9a227', '#7b8794', '#a0612b'][i]; ctx.font = `800 86px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(String(i + 1), w / 2, hh / 2 + 4);
+            const top = new T.Mesh(new T.BoxGeometry(2.24, 0.04, 2.14), carpet); top.position.set(x, 0.15 + h + 0.02, 0); top.receiveShadow = true; g.add(top);
+            const trim = new T.Mesh(new T.BoxGeometry(2.34, 0.05, 0.06), goldTrim); trim.position.set(x, 0.15 + h, 1.11); g.add(trim);
+            const ph = Math.min(0.95, h - 0.12);
+            const face = new T.Mesh(new T.PlaneGeometry(1.9, ph), new T.MeshStandardMaterial({ roughness: 0.35, metalness: 0.4, map: canvasTex(320, Math.round(320 * ph / 1.9), (ctx, w, hh) => {
+                const gr = ctx.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, PLATE[i][0]); gr.addColorStop(0.45, PLATE[i][1]); gr.addColorStop(1, PLATE[i][2]);
+                ctx.fillStyle = gr; roundRect(ctx, 3, 3, w - 6, hh - 6, 16); ctx.fill();
+                ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.font = `800 ${Math.round(hh * 0.62)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(String(i + 1), w / 2, hh * 0.47);
+                ctx.font = `700 ${Math.max(14, Math.round(hh * 0.13))}px ${FONT}`; ctx.direction = 'rtl'; ctx.fillStyle = 'rgba(0,0,0,.55)';
+                ctx.fillText('ألعاب أيمن', w / 2, hh * 0.86);
             }) }));
             face.position.set(x, 0.15 + h / 2, 1.105); g.add(face);
         }
-        // القوس واللافتة
-        for (const x of [-4.6, 4.6]) { const pl = new T.Mesh(new T.BoxGeometry(0.35, 6.2, 0.35), red); pl.position.set(x, 3.1, -1.2); pl.castShadow = true; g.add(pl); }
-        const bannerTex = canvasTex(1024, 160, (ctx, w, h) => {
+        // جدار الرعاة بشعار المنصة
+        const wallCv = document.createElement('canvas'); wallCv.width = 1024; wallCv.height = 380;
+        const wallTex = new T.CanvasTexture(wallCv); wallTex.colorSpace = T.SRGBColorSpace; wallTex.anisotropy = 4;
+        const drawWall = (logo) => {
+            const ctx = wallCv.getContext('2d'), w = wallCv.width, h = wallCv.height;
+            const gr = ctx.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#12070a'); gr.addColorStop(0.5, '#5a0306'); gr.addColorStop(1, '#12070a');
+            ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
+            ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {
+                const x = c * 190 + (r % 2) * 95 + 30, y = r * 82 + 34;
+                ctx.font = `700 ${r % 2 ? 26 : 30}px ${FONT}`; ctx.direction = 'rtl';
+                ctx.fillText((r + c) % 2 ? 'ألعاب أيمن' : 'AYMN GAMES', x, y);
+            }
+            ctx.restore();
+            // اللوحة الوسطى: الشعار + «منصة التتويج»
+            ctx.fillStyle = 'rgba(255,255,255,.95)'; roundRect(ctx, w / 2 - 230, 70, 460, 240, 26); ctx.fill();
+            ctx.strokeStyle = '#e8c25a'; ctx.lineWidth = 6; roundRect(ctx, w / 2 - 230, 70, 460, 240, 26); ctx.stroke();
+            if (logo) {
+                const s0 = Math.min(400 / logo.width, 150 / logo.height);
+                ctx.drawImage(logo, w / 2 - logo.width * s0 / 2, 86, logo.width * s0, logo.height * s0);
+            } else {
+                ctx.fillStyle = '#e10600'; ctx.font = `800 76px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+                ctx.fillText('ألعاب أيمن', w / 2, 160);
+            }
+            ctx.fillStyle = '#1a1a1a'; ctx.font = `700 40px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.fillText('منصة التتويج', w / 2, 272);
+            wallTex.needsUpdate = true;
+        };
+        drawWall(null);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawWall(null));
+        const im = new Image(); im.onload = () => drawWall(im); im.src = LOGO_URL;
+        const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.6 });
+        const wall = new T.Mesh(new T.BoxGeometry(9.2, 3.4, 0.25), [dark, dark, dark, dark, wallMat, dark]);
+        wall.position.set(0, 0.15 + 1.7, WALL_Z); wall.castShadow = wall.receiveShadow = true; g.add(wall);
+        const frame = new T.Mesh(new T.BoxGeometry(9.4, 0.1, 0.3), goldTrim); frame.position.set(0, 0.15 + 3.42, WALL_Z); g.add(frame);
+        // لافتة فوق الجدار
+        const bannerTex = canvasTex(1024, 150, (ctx, w, h) => {
             const gr = ctx.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#9b0400'); gr.addColorStop(0.5, '#e10600'); gr.addColorStop(1, '#9b0400');
             ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = '#ffd76a'; ctx.fillRect(0, 0, w, 8); ctx.fillRect(0, h - 8, w, 8);
-            ctx.fillStyle = '#fff'; ctx.font = `800 64px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.fillStyle = '#ffd76a'; ctx.fillRect(0, 0, w, 7); ctx.fillRect(0, h - 7, w, 7);
+            ctx.fillStyle = '#fff'; ctx.font = `800 62px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
             ctx.fillText('🏆 منصة تتويج ألعاب أيمن', w / 2, h / 2 + 4);
         });
-        const banner = new T.Mesh(new T.BoxGeometry(9.6, 1.4, 0.3), [red, red, red, red, new T.MeshBasicMaterial({ map: bannerTex }), red]);
-        banner.position.set(0, 5.9, -1.2); banner.castShadow = true; g.add(banner);
+        const red = new T.MeshStandardMaterial({ color: 0xe10600, roughness: 0.4 });
+        const banner = new T.Mesh(new T.BoxGeometry(9.2, 1.25, 0.28), [red, red, red, red, new T.MeshBasicMaterial({ map: bannerTex }), red]);
+        banner.position.set(0, 0.15 + 3.4 + 0.75, WALL_Z); banner.castShadow = true; g.add(banner);
+        for (const x of [-4.75, 4.75]) { const post = new T.Mesh(new T.BoxGeometry(0.3, 5.1, 0.4), goldTrim); post.position.set(x, 2.55, WALL_Z); g.add(post); }
+        // ممر السجاد الأحمر قدام المنصة
+        const run = new T.Mesh(new T.PlaneGeometry(2.0, 7), carpet); run.rotation.x = -Math.PI / 2; run.position.set(0, 0.045, 1.8 + 3.5); run.receiveShadow = true; g.add(run);
         return g;
     }
 
@@ -853,6 +900,120 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         mesh.instanceMatrix.needsUpdate = true;
     }
 
+
+    // ---- بدلة فورمولا للشخصية: نعيد تلوين الملابس بخامة الموديل بلون الفريق ----
+    // الموديل جسم واحد بخامة وحدة (الجسم + اللبس + الشعر). نصنّف كل مثلث حسب العظمة اللي تحرّكه:
+    // جذع/أذرع/أرجل = البدلة، اليدين = قفازات، القدمين = بوت سباق، الراس والرقبة (والشعر) ما تتغيّر.
+    // التنورة (عظام ثانوية تحت الورك/الأرجل) تنشال عشان تصير بدلة كاملة.
+    const SUIT_CACHE = {};
+    function suitAnalysis(model, mesh) {
+        if (SUIT_CACHE[model.kind]) return SUIT_CACHE[model.kind];
+        const human = {}; for (const [hb, nm] of Object.entries(model.rawNames)) human[nm] = hb;
+        const catOfHuman = hb => /head|neck|eye|jaw/i.test(hb) ? 0 : /Hand|Thumb|Index|Middle|Ring|Little/.test(hb) ? 2 : /Foot|Toes/.test(hb) ? 3 : /UpperLeg|LowerLeg/.test(hb) ? 4 : 1;
+        // 0 راس (بدون تغيير) · 1 بدلة · 2 قفاز · 3 بوت · 4 بدلة الأرجل · 5 تنورة (تنشال)
+        const boneCat = mesh.skeleton.bones.map(b => {
+            let n = b, secondary = !human[b.name];
+            while (n && !human[n.name]) n = n.parent;
+            if (!n) return 0;
+            const hb = human[n.name], c = catOfHuman(hb);
+            if (secondary && (hb === 'hips' || /UpperLeg|LowerLeg/.test(hb))) return 5;
+            return c;
+        });
+        const g = mesh.geometry, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, idx = g.index.array;
+        const vCat = new Uint8Array(si.count);
+        for (let v = 0; v < si.count; v++) {
+            let best = 0, bw = -1;
+            for (let k = 0; k < 4; k++) { const w = sw.getComponent(v, k); if (w > bw) { bw = w; best = si.getComponent(v, k); } }
+            vCat[v] = boneCat[best] || 0;
+        }
+        const tri = new Uint8Array(idx.length / 3), keep = [];
+        for (let t = 0; t < tri.length; t++) {
+            const a = vCat[idx[t * 3]], b = vCat[idx[t * 3 + 1]], c = vCat[idx[t * 3 + 2]];
+            const cat = (a === b || a === c) ? a : (b === c ? b : a);
+            tri[t] = cat;
+            if (cat !== 5) keep.push(idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]);
+        }
+        const noSkirt = g.clone(); noSkirt.setIndex(keep);
+        // مجموعات المواد (المادة الأساسية + الحدود) تغطي الفهرس كامل: نحدّث عددها بعد شيل التنورة
+        if (noSkirt.groups.length) noSkirt.groups.forEach(gr => { gr.start = 0; gr.count = keep.length; });
+        return (SUIT_CACHE[model.kind] = { tri, noSkirt, texByColor: {} });
+    }
+    function suitTexture(an, mesh, srcTex, color) {
+        if (an.texByColor[color]) return an.texByColor[color];
+        const img = srcTex.image, W = img.width, H = img.height;
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+        // قناع: نرسم مثلثات كل فئة بإحداثيات الخامة
+        const mk = document.createElement('canvas'); mk.width = W; mk.height = H;
+        const mx = mk.getContext('2d');
+        const uv = mesh.geometry.attributes.uv, idx = mesh.geometry.index.array;
+        const FILL = ['', '#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+        for (let cat = 1; cat <= 4; cat++) {
+            mx.fillStyle = mx.strokeStyle = FILL[cat]; mx.lineWidth = 2; mx.beginPath();
+            for (let t = 0; t < an.tri.length; t++) {
+                if (an.tri[t] !== cat) continue;
+                for (let k = 0; k < 3; k++) { const v = idx[t * 3 + k], x = uv.getX(v) * W, y = uv.getY(v) * H; if (k) mx.lineTo(x, y); else mx.moveTo(x, y); }
+                mx.closePath();
+            }
+            mx.fill(); mx.stroke();
+        }
+        const d = ctx.getImageData(0, 0, W, H), m = mx.getImageData(0, 0, W, H).data, px = d.data;
+        const team = new T.Color(color), dark = team.clone().multiplyScalar(0.62), glove = new T.Color(0x22252c), boot = new T.Color(0x15171c);
+        // بدلة بلونين: الجذع والأذرع بلون الفريق، والأرجل أغمق (مثل بدل الفورمولا)
+        const TINT = [null, team, glove, boot, dark];
+        // متوسط الإضاءة بكل فئة (نحافظ على الطيّات والتفاصيل كظل خفيف)
+        const sum = [0, 0, 0, 0, 0], cnt = [0, 0, 0, 0, 0], catAt = new Uint8Array(W * H);
+        for (let i = 0, p = 0; i < px.length; i += 4, p++) {
+            const r = m[i], g2 = m[i + 1], b = m[i + 2]; if (m[i + 3] < 128) continue;
+            const c = r > 128 && g2 > 128 ? 4 : r > 128 ? 1 : g2 > 128 ? 2 : b > 128 ? 3 : 0;
+            if (!c) continue; catAt[p] = c;
+            const L = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255; sum[c] += L; cnt[c]++;
+        }
+        for (let i = 0, p = 0; i < px.length; i += 4, p++) {
+            const c = catAt[p]; if (!c) continue;
+            const L = (0.3 * px[i] + 0.59 * px[i + 1] + 0.11 * px[i + 2]) / 255, avg = cnt[c] ? sum[c] / cnt[c] : 0.5;
+            const sh = Math.max(0.68, Math.min(1.12, 0.92 + (L - avg) * 0.55));
+            const col = TINT[c];
+            px[i] = Math.min(255, col.r ** (1 / 2.2) * 255 * sh); px[i + 1] = Math.min(255, col.g ** (1 / 2.2) * 255 * sh); px[i + 2] = Math.min(255, col.b ** (1 / 2.2) * 255 * sh);
+        }
+        ctx.putImageData(d, 0, 0);
+        const tex = new T.CanvasTexture(cv);
+        tex.flipY = srcTex.flipY; tex.colorSpace = srcTex.colorSpace; tex.wrapS = srcTex.wrapS; tex.wrapT = srcTex.wrapT; tex.anisotropy = 4;
+        return (an.texByColor[color] = tex);
+    }
+    let _patchTex = null;
+    function patchTexture() {
+        return _patchTex || (_patchTex = canvasTex(256, 84, (ctx, w, h) => {
+            ctx.fillStyle = '#ffffff'; roundRect(ctx, 2, 2, w - 4, h - 4, 14); ctx.fill();
+            ctx.fillStyle = '#e10600'; ctx.font = `800 40px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.fillText('ألعاب أيمن', w / 2, h / 2 + 2);
+        }));
+    }
+    function dressRacingSuit(rig, model, color) {
+        try {
+            // الجسم ممكن تكون مادته وحدة أو مصفوفة (الولد فيه مادة حدود Outline إضافية)
+            let mesh = null;
+            rig.root.traverse(o => { if (!mesh && o.isSkinnedMesh && (o.name === 'Body' || [].concat(o.material).some(m => /Body/i.test(m.name || '')))) mesh = o; });
+            const mats = mesh ? [].concat(mesh.material) : [];
+            const main = mats.find(m => m.map && m.map.image);
+            if (!mesh || !main) return false;
+            const an = suitAnalysis(model, mesh);
+            const tex = suitTexture(an, mesh, main.map, color);
+            const cloned = mats.map(m => { const c = m.clone(); if (c.map) c.map = tex; if ('shadeMultiplyTexture' in c && c.shadeMultiplyTexture) c.shadeMultiplyTexture = tex; return c; });
+            mesh.material = Array.isArray(mesh.material) ? cloned : cloned[0];
+            mesh.geometry = an.noSkirt;
+            rig.__suitMats = cloned;
+            // رقعة الراعي على الصدر
+            const chest = rig.bones.Spine2 || rig.bones.Spine1;
+            if (chest) {
+                const patch = new T.Mesh(new T.PlaneGeometry(0.17, 0.055), new T.MeshBasicMaterial({ map: patchTexture(), transparent: true }));
+                patch.position.set(0, 0.075, 0.13); patch.rotation.x = -0.12; chest.add(patch); rig.__patch = patch;
+            }
+            return true;
+        } catch (e) { logLine('formula-race: racing suit failed', e); return false; }
+    }
+
+
     let cer = null;
     const D_CAR = 22, D_CHAR = 27, D_POD = 33, CAR_LANE = [0, -4.5, 4.5];
     /** يبدأ المراسم. list: [{id, name, color, character}] بالترتيب (الأول، الثاني، الثالث). */
@@ -871,6 +1032,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             o.pin.visible = o.tag.visible = o.flame.visible = o.ring.visible = o.dome.visible = false; o.helmet.visible = false;
             const kind = c.character === 'boy' ? 'boy' : c.character === 'girl' ? 'girl' : (hashId(c.id) % 2 ? 'boy' : 'girl');
             const rig = VRM.makeVrmRig(vrmModels[kind], { n: i + 1 });
+            dressRacingSuit(rig, vrmModels[kind], c.color);
             const p = trackPoint(D_CHAR, CAR_LANE[i]);
             rig.root.position.set(p.x, 0, p.z); rig.root.rotation.y = p.heading;
             rig.root.traverse(m => { if (m.isMesh) m.castShadow = true; });
@@ -886,7 +1048,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     }
     function stopCeremony() {
         if (!cer) return;
-        cer.chars.forEach(ch => { ch.tag.material.map.dispose(); ch.tag.material.dispose(); ch.rig.dispose(); });
+        cer.chars.forEach(ch => { ch.tag.material.map.dispose(); ch.tag.material.dispose(); if (ch.rig.__suitMats) ch.rig.__suitMats.forEach(m => m.dispose()); if (ch.rig.__patch) { ch.rig.__patch.geometry.dispose(); ch.rig.__patch.material.dispose(); } ch.rig.dispose(); });
         cer.group.traverse(o => { if (o === confetti?.mesh) return; if (o.isMesh) { o.geometry.dispose(); [].concat(o.material).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } });
         if (confetti) cer.group.remove(confetti.mesh);
         tickConfetti(0, new T.Vector3(), false);
@@ -902,8 +1064,10 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             cer.stage = 'walk'; cer.podium.visible = true;
             cer.chars.forEach(ch => {
                 ch.state = 'wait'; ch.walkT = -ch.i * 0.3;
-                const a = trackPoint(D_CHAR, CAR_LANE[ch.i]), b = trackPoint(D_POD - 1.45, STEP_LANE[ch.i]);
-                ch.from = new T.Vector3(a.x, 0, a.z); ch.to = new T.Vector3(b.x, 0, b.z);
+                // يلفّون من جنب جدار الرعاة ويطلعون الدرجة من قدّام
+                const side = ch.i === 2 ? 1 : -1, P0 = (d, lane) => { const q = trackPoint(d, lane); return new T.Vector3(q.x, 0, q.z); };
+                ch.path = [P0(D_POD - 3.0, side * 6.0), P0(D_POD + 2.9, side * 6.0), P0(D_POD + 2.0, STEP_LANE[ch.i])];
+                ch.to = ch.path[ch.path.length - 1];
                 ch.tag.visible = false;
             });
             if (cer.cb.onStage) cer.cb.onStage('walk');
@@ -914,11 +1078,17 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             if (ch.state === 'wait' || ch.state === 'walk') {
                 ch.walkT += dt;
                 if (ch.walkT > 0.9) {
-                    if (ch.state === 'wait') { ch.state = 'walk'; rig.play(1); rig.setSpeed(2.2); rig.mood('smile'); }
-                    const dir = ch.to.clone().sub(rig.root.position); dir.y = 0;
-                    const dist = dir.length(), stepLen = 2.2 * dt;
-                    if (dist <= stepLen) { rig.root.position.copy(ch.to); ch.state = 'hop'; ch.hopT = 0; rig.play(0); }
-                    else { rig.root.position.addScaledVector(dir.normalize(), stepLen); rig.root.rotation.y = Math.atan2(dir.x, dir.z); }
+                    if (ch.state === 'wait') { ch.state = 'walk'; rig.play(1); rig.setSpeed(2.5); rig.mood('smile'); }
+                    const goal = ch.path[0], dir = goal.clone().sub(rig.root.position); dir.y = 0;
+                    const dist = dir.length(), stepLen = 2.5 * dt;
+                    if (dist <= stepLen) {
+                        rig.root.position.copy(goal); ch.path.shift();
+                        if (!ch.path.length) { ch.state = 'hop'; ch.hopT = 0; rig.play(0); }
+                    } else {
+                        rig.root.position.addScaledVector(dir.normalize(), stepLen);
+                        let dh = Math.atan2(dir.x, dir.z) - rig.root.rotation.y; while (dh > Math.PI) dh -= 2 * Math.PI; while (dh < -Math.PI) dh += 2 * Math.PI;
+                        rig.root.rotation.y += dh * (1 - Math.exp(-dt * 10));
+                    }
                 }
             } else if (ch.state === 'hop') {
                 // قفزة على درجته
