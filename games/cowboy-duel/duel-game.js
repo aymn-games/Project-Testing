@@ -259,7 +259,7 @@ function showWin(p, typed, secs) { const el = $('#answer'); el.querySelector('.t
 async function endDuels() {
     const winners = G.active.map(d => d.winner).filter(Boolean);
     G.scene.cleanup(winners.map(p => p.id), G.active.flatMap(d => d.losers.map(p => p.id))); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
-    poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = ''; clearTags();
+    poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = '';
     G.phase = 'between'; await sleep(500);
     const f = G.finish; G.finish = null; f && f(winners);
 }
@@ -285,21 +285,6 @@ function winnerCard(duels) { return new Promise(res => {
     el.classList.add('in'); SFX.victory();
     setTimeout(() => { el.classList.remove('in'); res(); }, 2500);
 }); }
-function nextButton(label) { return new Promise(res => { const b = $('#nextBtn'); b.textContent = label + ' ←'; b.classList.add('in'); waitClick(b, () => { b.classList.remove('in'); res(); }); }); }
-// زر واحد ينتظر ضغطة (أو Enter/مسافة من كيبورد الستريمر)
-function waitClick(btn, fn) { let on = true; const go = () => { if (!on) return; on = false; btn.onclick = null; removeEventListener('keydown', key); fn(); };
-    const key = e => { if (e.key === 'Enter' || e.key === ' ') { if (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); go(); } };
-    btn.onclick = go; setTimeout(() => addEventListener('keydown', key), 300); }
-// ---------- تبويب الإجابة فوق راس اللاعب (نفس هوية اللعبة: لوح خشب)
-const TAGS = new Map(); let tagLoop = 0;
-const TAG_IC = { ok: '✓', bad: '✗', waste: '💨', out: '✖' };
-function tag(id, text, kind, secs, ms = 2000) { let t = TAGS.get(id); if (!t) { t = { el: document.createElement('div') }; $('#tags').appendChild(t.el); TAGS.set(id, t); }
-    t.el.className = 'atag ' + kind; t.el.innerHTML = `<span class="ic">${TAG_IC[kind] || ''}</span><b></b>${secs ? `<small>⏱ ${secs} ث</small>` : ''}`; t.el.querySelector('b').textContent = text;
-    t.until = performance.now() + ms; void t.el.offsetWidth; t.el.classList.add('pop'); if (!tagLoop) tagLoop = requestAnimationFrame(moveTags); }
-function moveTags() { tagLoop = 0; const now = performance.now();
-    for (const [id, t] of TAGS) { const p = now < t.until && G.scene.screenPos(id); if (!p) { t.el.remove(); TAGS.delete(id); continue; } t.el.style.left = (Math.min(.93, Math.max(.07, p.x)) * 100) + '%'; t.el.style.top = (Math.min(.9, Math.max(.16, p.y)) * 100) + '%'; }
-    if (TAGS.size) tagLoop = requestAnimationFrame(moveTags); }
-function clearTags() { for (const [, t] of TAGS) t.el.remove(); TAGS.clear(); }
 function feed(p, typed, secs) { const box = $('#feed'), row = document.createElement('div'); row.className = 'frow';
     row.innerHTML = '<b></b><span class="ft"></span><span class="fs"></span>'; row.querySelector('b').textContent = '🔫 ' + p.name; row.querySelector('.ft').textContent = typed; row.querySelector('.fs').textContent = secs + ' ث';
     box.appendChild(row); while (box.children.length > 8) box.firstChild.remove(); box.classList.add('in'); SFX.stamp(); }
@@ -322,42 +307,7 @@ async function newGame() {
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// ---------- شاشة الإعدادات (نفس شكل كروت المنصة: أيقونة + عنوان + خيارات + وصف)
-const ICONS = {
-    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-    sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
-    userplus: '<circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M19 8v6M16 11h6"/>',
-    shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>'
-};
-function renderSettings() {
-    const v = G.draft, grid = $('#setGrid'); grid.innerHTML = '';
-    CDSettings.FIELDS.forEach(f => {
-        const card = document.createElement('div'); card.className = 'scard';
-        card.innerHTML = `<div class="shead"><span class="sico"><svg viewBox="0 0 24 24">${ICONS[f.icon] || ICONS.clock}</svg></span><h3></h3></div>`;
-        card.querySelector('h3').textContent = f.label;
-        if (f.type === 'number') {
-            const inp = document.createElement('input'); inp.type = 'number'; inp.min = f.min; inp.max = f.max; inp.value = v[f.key]; inp.className = 'snum';
-            inp.oninput = () => { G.draft[f.key] = inp.value; }; inp.onblur = () => { G.draft = CDSettings.sanitize(G.draft); inp.value = G.draft[f.key]; };
-            card.appendChild(inp);
-        } else {
-            const row = document.createElement('div'); row.className = 'spills'; row.style.gridTemplateColumns = `repeat(${f.options.length},1fr)`;
-            f.options.forEach(([val, txt]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'spill' + (v[f.key] === val ? ' on' : ''); b.textContent = txt; b.onclick = () => { G.draft[f.key] = val; renderSettings(); }; row.appendChild(b); });
-            card.appendChild(row);
-        }
-        const desc = f.descs ? f.descs[v[f.key]] : f.desc;
-        if (desc) { const p = document.createElement('p'); p.className = 'sdesc'; p.textContent = desc; card.appendChild(p); }
-        grid.appendChild(card);
-    });
-}
-function openSettings() { G.draft = Object.assign({}, G.settings); renderSettings(); $('#settings').classList.add('in'); }
-function saveSettings() {
-    G.settings = CDSettings.save(G.draft); $('#settings').classList.remove('in');
-    if (G.players.length > G.settings.maxPlayers) { G.players = G.players.slice(0, G.settings.maxPlayers); G.scene.setPlayers(G.players); }
-    addPlayer.warned = false; renderLobby();
-}
-
-// ---------- شات تيك توك الحقيقي (لو اللعبة محمّلة داخل المنصة مع AGP): «دخول» للانضمام، والباقي إجابات
-// كلمة الدخول من الإعدادات (cd-settings) — تنقبل بأي كتابة (نفس تطبيع الإجابات)
+// ---------- شات تيك توك: كلمة الدخول من الإعدادات (cd-settings) — تنقبل بأي كتابة (نفس تطبيع الإجابات)
 function isJoin(text) { const k = norm(G.settings.keyword || 'دخول'); return norm(text) === k || norm(text) === 'join'; }
 function hookStream() {
     const P = window.CDPlatform; if (!P) return;
@@ -402,7 +352,6 @@ function hookStream() {
     $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
-    $('#setBtn').onclick = openSettings; $('#setSave').onclick = saveSettings; $('#setClose').onclick = () => $('#settings').classList.remove('in');
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
     const send = (slot, inp) => { const d = G.active && (G.active.find(x => !x.done) || G.active[0]), p = d && (slot ? d.b : d.a); if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
     [['#inA', 0], ['#inB', 1]].forEach(([s, i]) => { const inp = $(s); inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(i, inp); }); inp.nextElementSibling.onclick = () => send(i, inp); });
