@@ -260,7 +260,8 @@
         if (c.tapBank >= TAPS_PER_NITRO) {
             c.tapBank = 0;
             applyEffect(c, 'nitro', true);
-            if (!c.bot) toast(NITRO.icon + ' <b>' + esc(c.name) + '</b> ← نيترو من التكبيس', NITRO.color);
+            // التنبيه للاعب اللي الكاميرا تتابعه بس (لو الكل يكبّس تزحم التنبيهات وتغطي تنبيهات الدعم)
+            if (c.id === S.cam.focus) toast(NITRO.icon + ' <b>' + esc(c.name) + '</b> ← نيترو من التكبيس', NITRO.color);
         } else if (scene && count >= 15) scene.burst(c.id, 'tap');
     }
 
@@ -522,12 +523,13 @@
     }
 
     /** «إنهاء اللعبة»: يوقف السباق ويعرض الترتيب الحالي (النقاط تنرسل فقط لو فيه فائز وصل). */
-    function endNow() {
-        if (S.phase !== 'race' && S.phase !== 'countdown') return;
-        if (!window.confirm('إنهاء السباق الحين وعرض الترتيب؟')) return;
+    function endNow(force) {
+        if (S.phase !== 'race' && S.phase !== 'countdown') return false;
+        if (!force && !window.confirm('إنهاء السباق الحين وعرض الترتيب؟')) return false;
         S.countToken++;
         setLights(0); $('lights').classList.remove('show');
         endRace();
+        return true;
     }
 
     function ceremonyBanner(title, sub) {
@@ -1018,6 +1020,97 @@
         });
     }
 
+    // ------------------------------------------------------------------
+    // التحكم عن بعد (js/agp-remote-control.js): المتحكم يشغّل اللعبة من جواله
+    // (control.html) أو بأوامر الشات (!ابدأ، !كاميرا هليكوبتر، !تابع 3 …).
+    // نفس الأوامر بالضبط بالمكانين، والإعدادات تطلع بالجوال بقيمها.
+    // ------------------------------------------------------------------
+    function attachRemote() {
+        var RC = AGP.remoteControl; if (!RC || typeof RC.attach !== 'function') return;
+        var SEC = 'إعدادات السباق';
+        var onOff = function (arg, cur) { return String(arg || '').trim() ? RC.parseBool(arg) : !cur; };
+        var findCar = function (arg) {
+            var a = String(arg || '').trim(); if (!a) return null;
+            var k = RC.toInt(a), st = standings();
+            if (k != null && /^[\s#0-9٠-٩۰-۹]+$/.test(a)) return S.cars.filter(function (c) { return c.number === k; })[0] || st[k - 1] || null;
+            var q = RC.norm(a), u = 'tiktok:' + a.replace(/^@/, '').toLowerCase();
+            return S.cars.filter(function (c) { return RC.norm(c.name) === q || c.id.toLowerCase() === u; })[0] ||
+                S.cars.filter(function (c) { return RC.norm(c.name).indexOf(q) === 0; })[0] || null;
+        };
+        // «3 نورة» (من اختيار الجوال) أو «3» → بالرقم؛ غير كذا بالاسم كامل
+        var pickCar = function (arg) {
+            var a = String(arg || '').trim(), m = a.match(/^([0-9٠-٩۰-۹]+)(\s|$)/);
+            return m ? findCar(m[1]) : findCar(a);
+        };
+        var CAM_NAMES = CAM_MODES.map(function (m) { return m.name; });
+        var Q_NAMES = ['خفيف', 'متوازن', 'سينمائي'], Q_IDS = ['light', 'balanced', 'cinematic'];
+        var setNum = function (key, lo, hi, arg) {
+            var v = RC.toInt(arg); if (v == null || v < lo || v > hi) return { ok: false, msg: 'رقم من ' + lo + ' إلى ' + hi };
+            if (key === 'maxDrivers' && v < S.cars.length) return { ok: false, msg: 'فيه ' + S.cars.length + ' لاعب داخلين — ما يصير الحد أقل' };
+            settings[key] = v; saveSettings(); syncSettingsUI(); renderLobby(); return null;
+        };
+        RC.attach({
+            game: 'formula-race', page: 'فورمولا ون', connect: connect,
+            status: function () {
+                if (S.phase === 'lobby') return 'الشبكة: ' + S.cars.length + ' / ' + settings.maxDrivers + ' · كلمة الدخول «' + settings.keyword + '»';
+                if (S.phase === 'countdown') return '🚦 العد التنازلي';
+                if (S.phase === 'race') { var l = standings()[0]; return '🏎️ السباق شغّال · اللفة ' + (l ? lapOf(l) : 1) + '/' + settings.laps + (l ? ' · المتصدر ' + l.name : ''); }
+                return '🏆 السباق انتهى' + (S.winner ? ' · الفائز ' + S.winner.name : '');
+            },
+            commands: [
+                { names: ['ابدأ', 'ابدا', 'انطلاق'], desc: 'يبدأ السباق (العد التنازلي)', label: 'ابدأ السباق 🚦', tone: 'primary', run: function () {
+                    if (S.phase !== 'lobby') return { ok: false, msg: 'السباق مو باللوبي' };
+                    if (!S.cars.length) return { ok: false, msg: 'ما فيه لاعبين بالشبكة' };
+                    openSettings(false); startCountdown(); return 'انطلق العد التنازلي 🚦'; } },
+                { names: ['انهاء', 'إنهاء', 'وقف'], desc: 'ينهي السباق الحين ويعرض الترتيب', label: 'إنهاء اللعبة', tone: 'danger', confirm: 'إنهاء السباق الحين؟', run: function () {
+                    return endNow(true) ? 'انتهى السباق' : { ok: false, msg: 'ما فيه سباق شغّال' }; } },
+                { names: ['جديد', 'سباق جديد', 'اعادة'], desc: 'سباق جديد بنفس اللاعبين', label: 'سباق جديد 🔁', run: function () {
+                    if (S.phase !== 'finish') return { ok: false, msg: 'السباق ما خلص' };
+                    resetRace(); stopTest(); return 'رجعنا للشبكة'; } },
+                { names: ['تجربة'], desc: 'تجربة اللعبة بلاعبين وهميين (بدون نقاط)', label: 'تجربة ▷', run: function () {
+                    if (S.phase !== 'lobby') return { ok: false, msg: 'التجربة من اللوبي بس' };
+                    startTest(true); return 'بدأت التجربة'; } },
+                { names: ['شيل', 'اطرد', 'ازالة'], args: '<رقم أو اسم>', desc: 'يشيل لاعب من الشبكة (قبل الانطلاق)', section: 'الشبكة',
+                    pick: function () { return S.cars.map(function (c) { return c.number + ' ' + c.name; }); }, run: function (arg) {
+                    if (S.phase !== 'lobby') return { ok: false, msg: 'تقدر تشيل لاعب قبل الانطلاق بس' };
+                    var c = pickCar(arg); if (!c) return { ok: false, msg: 'ما لقيت هاللاعب' };
+                    removeCar(c.id); return 'انشال ' + c.name; } },
+                { names: ['كاميرا', 'لقطة'], args: '<' + CAM_NAMES.join(' / ') + '>', desc: 'تغيير لقطة الكاميرا', section: 'الكاميرا',
+                    ui: { type: 'choice', options: CAM_NAMES, get: function () { for (var i = 0; i < CAM_MODES.length; i++) if (CAM_MODES[i].id === S.cam.mode) return i; return 0; } }, run: function (arg) {
+                    var k = RC.toInt(arg), idx = k != null && k >= 0 && k < CAM_MODES.length && /^\d+$/.test(String(arg).trim()) ? k : -1;
+                    if (idx < 0) { var q = RC.norm(arg); for (var i = 0; i < CAM_MODES.length; i++) if (RC.norm(CAM_MODES[i].name) === q || RC.norm(CAM_MODES[i].name).indexOf(q) === 0) { idx = i; break; } }
+                    if (idx < 0) return { ok: false, msg: 'اللقطات: ' + CAM_NAMES.join(' / ') };
+                    setCamMode(CAM_MODES[idx].id); return 'الكاميرا: ' + CAM_MODES[idx].name; } },
+                { names: ['تابع', 'ثبت'], args: '<رقم أو اسم>', desc: 'تثبيت الكاميرا على لاعب', section: 'الكاميرا',
+                    pick: function () { return standings().map(function (c) { return c.number + ' ' + c.name; }); }, run: function (arg) {
+                    var c = pickCar(arg); if (!c) return { ok: false, msg: 'ما لقيت هاللاعب' };
+                    setFocus(c.id, true); return 'الكاميرا على ' + c.name; } },
+                { names: ['الرسوم', 'جودة'], args: '<' + Q_NAMES.join(' / ') + '>', desc: 'وضع الرسوم', section: SEC,
+                    ui: { type: 'choice', options: Q_NAMES, get: function () { return Math.max(0, Q_IDS.indexOf(settings.quality)); } }, run: function (arg) {
+                    var k = RC.toInt(arg), i = k != null && /^\d+$/.test(String(arg).trim()) ? k : Q_NAMES.map(RC.norm).indexOf(RC.norm(arg));
+                    if (i < 0 || i > 2) return { ok: false, msg: 'خفيف / متوازن / سينمائي' };
+                    setQuality(Q_IDS[i]); return 'الرسوم: ' + Q_NAMES[i]; } },
+                { names: ['لفات', 'اللفات'], args: '<1–20>', desc: 'عدد اللفات', section: SEC, ui: { type: 'number', min: 1, max: 20, step: 1, get: function () { return settings.laps; } }, run: function (arg) {
+                    if (S.phase !== 'lobby') return { ok: false, msg: 'تتغير قبل الانطلاق' };
+                    return setNum('laps', 1, 20, arg) || 'اللفات: ' + settings.laps; } },
+                { names: ['الحد', 'عدد السيارات'], args: '<1–30>', desc: 'الحد الأقصى للمتسابقين', section: SEC, ui: { type: 'number', min: 1, max: 30, step: 1, get: function () { return settings.maxDrivers; } }, run: function (arg) {
+                    return setNum('maxDrivers', 1, 30, arg) || 'الحد: ' + settings.maxDrivers; } },
+                { names: ['كلمة', 'كلمة الدخول'], args: '<الكلمة>', desc: 'كلمة الدخول بالشات', section: SEC, ui: { type: 'text', get: function () { return settings.keyword; } }, run: function (arg) {
+                    var v = String(arg || '').trim().slice(0, 20); if (!v) return { ok: false, msg: 'اكتب الكلمة' };
+                    settings.keyword = v; saveSettings(); syncSettingsUI(); renderLobby(); return 'كلمة الدخول: ' + v; } },
+                { names: ['المتابعين', 'متابعين فقط'], args: '[تشغيل / ايقاف]', desc: 'الانضمام للمتابعين فقط', section: SEC, ui: { type: 'toggle', get: function () { return settings.joinMode === 'followers'; } }, run: function (arg) {
+                    var v = onOff(arg, settings.joinMode === 'followers'); if (v == null) return { ok: false, msg: 'تشغيل أو ايقاف' };
+                    settings.joinMode = v ? 'followers' : 'all'; saveSettings(); syncSettingsUI(); return v ? 'المتابعين فقط' : 'الجميع يقدر يدخل'; } },
+                { names: ['المخرج', 'المخرج التلقائي'], args: '[تشغيل / ايقاف]', desc: 'المخرج التلقائي للكاميرا', section: SEC, ui: { type: 'toggle', get: function () { return !!settings.autoCam; } }, run: function (arg) {
+                    var v = onOff(arg, settings.autoCam); if (v == null) return { ok: false, msg: 'تشغيل أو ايقاف' };
+                    settings.autoCam = v; S.cam.mode = v ? 'auto' : 'tv'; saveSettings(); syncSettingsUI(); renderCamBar(); return 'المخرج التلقائي: ' + (v ? 'تشغيل' : 'ايقاف'); } },
+                { names: ['هدايا', 'هدايا السباق'], args: '[تشغيل / ايقاف]', desc: 'تأثيرات الدعم (عند الإيقاف: نيترو فقط)', section: SEC, ui: { type: 'toggle', get: function () { return !!settings.giftsOn; } }, run: function (arg) {
+                    var v = onOff(arg, settings.giftsOn); if (v == null) return { ok: false, msg: 'تشغيل أو ايقاف' };
+                    settings.giftsOn = v; saveSettings(); syncSettingsUI(); return 'هدايا السباق: ' + (v ? 'تشغيل' : 'ايقاف'); } }
+            ]
+        });
+    }
+
     function init() {
         // واجهة فحص لوضع التجربة فقط (?demo=1) — للاختبارات الآلية
         if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; }, get scene() { return scene; }, clear: clearDrivers, stopTest: stopTest, perkFor: effectForGift };
@@ -1026,6 +1119,7 @@
         bindStream();
         mount3D();
         requestAnimationFrame(frame);
+        attachRemote();
         if (DEMO) startTest(/[?&]autostart=1/.test(location.search));
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
