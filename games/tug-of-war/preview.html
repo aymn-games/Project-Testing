@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>شد الحبل — معاينة الشخصيات</title>
+<!-- معاينة شكل الشخصيات بالمباراة (للاختيار بين شخصيات سفينة النجاة وشخصيات حجرة ورقة مقص).
+     ?style=ship · ?style=anime — مباراة وهمية 6 ضد 6 بدون بث ولا نقاط. -->
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js"
+} }</script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{color-scheme:dark}
+  html,body{margin:0;height:100%;background:#07060b;color:#f4f2f8;font-family:'IBM Plex Sans Arabic',sans-serif;overflow:hidden}
+  #stage{position:fixed;inset:0}
+  .bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:6px;border-radius:999px;background:rgba(12,11,18,.85);border:1px solid rgba(255,255,255,.1);z-index:5}
+  .bar a{padding:9px 18px;border-radius:999px;color:#a8a3b5;text-decoration:none;font-weight:700;font-size:15px;white-space:nowrap}
+  .bar a.on{background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff}
+  .meter{position:fixed;top:78px;left:50%;transform:translateX(-50%);width:min(620px,calc(100vw - 32px));height:18px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);overflow:hidden;z-index:5}
+  .meter i{position:absolute;top:0;bottom:0;transition:width .25s}
+  .meter b{position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:#fff}
+  .loading{position:fixed;inset:0;display:grid;place-items:center;font-size:20px;color:#c4b5fd;z-index:4}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="bar"><a href="?style=ship" id="t-ship">شخصيات سفينة النجاة</a><a href="?style=anime" id="t-anime">شخصيات حجرة ورقة مقص</a></div>
+<div class="meter"><i id="mL" style="left:0;background:#ff5b45"></i><i id="mR" style="right:0;background:#19a7ff"></i><b></b></div>
+<div class="loading" id="loading">جاري تحميل الشخصيات…</div>
+<script type="module">
+import { createTugScene } from './tow-scene.js';
+const style = new URLSearchParams(location.search).get('style') === 'anime' ? 'anime' : 'ship';
+document.getElementById('t-' + style).classList.add('on');
+const L = ['سعد','نورة','فهد','ريم','خالد','لمى'], R = ['ماجد','سارة','عبدالله','هيا','تركي','جود'];
+const teams = [L.map((n,i)=>({id:'l'+i,name:n,g:i%2})), R.map((n,i)=>({id:'r'+i,name:n,g:(i+1)%2}))];
+const scene = createTugScene(document.getElementById('stage'), { style, colors:['#ff5b45','#19a7ff'], capture:true });
+let pos = 0, bias = 0, frozen = {};
+scene.setState({ teams, pos });
+scene.ready.then(()=>{ document.getElementById('loading').remove(); window.__ready = true; }).catch(()=>{ document.getElementById('loading').textContent = 'تعذّر تحميل الشخصيات'; });
+// مباراة وهمية: سحبات عشوائية، وتجميد لاعب كل شوي
+setInterval(()=>{ bias = Math.max(-.2, Math.min(.2, bias + (Math.random()-.5)*.08)); const k = Math.random() < .5 + bias ? 1 : 0;
+  const p = teams[k][Math.floor(Math.random()*6)]; if (frozen[p.id]) return;
+  pos = Math.max(-80, Math.min(80, pos + (k ? 2.2 : -2.2))); scene.pull(p.id);
+  document.getElementById('mL').style.width = Math.max(0,-pos/2)+'%'; document.getElementById('mR').style.width = Math.max(0,pos/2)+'%';
+  scene.setState({ pos, teams: teams.map(l=>l.map(x=>({...x,frozen:!!frozen[x.id]}))) }); }, 140);
+setInterval(()=>{ const t = teams[Math.random()<.5?0:1], p = t[Math.floor(Math.random()*6)]; frozen = { [p.id]: 1 }; }, 4000);
+window.__scene = scene;
+</script>
+</body>
+</html>
