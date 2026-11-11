@@ -313,7 +313,8 @@
         var ef = effectById(id);
         var extra = applyEffect(c, id);
         toast(ef.icon + ' <b>' + esc(c.name) + '</b> ← ' + ef.name + extra, ef.color);
-        if (!S.cam.locked && S.cam.mode === 'auto') { S.cam.focus = c.id; S.cam.autoT = 0; }
+        // المخرج التلقائي يقطع لصاحب الدعم بس لو اللقطة الحالية أخذت وقتها (ما نقفز مع كل هدية)
+        if (!S.cam.locked && S.cam.mode === 'auto' && S.cam.autoT >= GIFT_CUT_AFTER) { S.cam.focus = c.id; S.cam.autoT = 0; }
     }
 
     // ------------------------------------------------------------------
@@ -381,6 +382,8 @@
         { id: 'trackside', name: 'جانب المضمار', key: '5' },
         { id: 'track', name: 'المضمار كامل', key: '6' }
     ];
+    var SHOT_SECS = 14;        // مدة كل لقطة بالمخرج التلقائي (ثواني)
+    var GIFT_CUT_AFTER = 8;    // أقل مدة للقطة قبل ما يقطع لصاحب دعم
     function setCamMode(id) {
         S.cam.mode = id; S.cam.autoT = 99;
         renderCamBar();
@@ -405,7 +408,7 @@
         var effective = S.cam.mode;
         if (S.cam.mode === 'auto') {
             S.cam.autoT += dt;
-            if (S.cam.autoT > 7) {
+            if (S.cam.autoT > SHOT_SECS) {
                 S.cam.autoT = 0;
                 var seq = ['tv', 'tv', 'trackside', 'tv', 'heli', 'tv', 'onboard', 'trackside'];
                 S.cam.autoMode = seq[(seq.indexOf(S.cam.autoMode) + 1 + Math.floor(Math.random() * 2)) % seq.length];
