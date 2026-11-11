@@ -564,7 +564,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const cars = new Map();
     let focusId = null, camMode = 'orbit', phase = 'lobby';
     const camPos = new T.Vector3(0, 60, 120), camLook = new T.Vector3();
-    let camFov = 55, orbitT = 0, lastMode = '';
+    let camFov = 55, orbitT = 0, lastMode = '', lastFocus = null;
 
     function setCars(list) {
         const ids = new Set(list.map(c => c.id));
@@ -651,7 +651,9 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     function camera_(dt) {
         const o = cars.get(focusId) || cars.values().next().value;
         const k = 1 - Math.exp(-dt * (camMode === 'onboard' ? 30 : 4.5));
-        const jump = lastMode !== camMode; lastMode = camMode;
+        // تغيير اللقطة أو اللاعب = قطع مباشر (مثل النقل التلفزيوني) بدل ما تنزلق الكاميرا عبر الخريطة
+        const jump = lastMode !== camMode || (focusId !== lastFocus && camMode !== 'track' && camMode !== 'orbit');
+        lastMode = camMode; lastFocus = focusId;
         let targetPos, targetLook, fov = 55;
         if (camMode === 'track') {
             // المضمار كامل: من فوق بزاوية، كل الحلبة والسيارات
