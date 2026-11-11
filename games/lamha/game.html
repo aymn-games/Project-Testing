@@ -163,7 +163,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
     <!-- شريط التحكم: التعليمات + زر بدء الجولة / الجولة التالية -->
     <div style="flex-shrink:0;height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 18px 0 30px;box-sizing:border-box;border-radius:999px;background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));backdrop-filter:blur(14px);border:3px solid rgba(167,139,250,.42)">
-      <span style="font:500 22px 'IBM Plex Sans Arabic';color:#a8a3b5">الجواب الصح بالشات <b style="color:#6ee7b7">+1</b> · اكتب <b style="color:#ddd6fe">تخطي</b> لسؤال جديد <b style="color:#fca5a5">−0.5</b> · وقت كل لاعب <b style="color:#ddd6fe">{{ turnLabel }}</b></span>
+      <span style="flex:1;text-align:center;font:700 34px/1.3 'IBM Plex Sans Arabic';color:#f4f2f8;letter-spacing:.3px">جاوب أكبر عدد من الأسئلة خلال الوقت · واللي ما تعرفه خلك ذكي واكتب <b style="color:#c4b5fd">سكب</b></span>
       <sc-if value="{{ showBtn }}" hint-placeholder-val="{{ true }}">
         <button onClick="{{ primary }}" style="height:72px;min-width:340px;padding:0 48px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 28px 'IBM Plex Sans Arabic';animation:glow 1.8s infinite;box-shadow:0 10px 30px rgba(139,92,246,.4)" style-hover="filter:brightness(1.08)" style-active="transform:scale(.96)">{{ btnLabel }}<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       </sc-if>
@@ -352,7 +352,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 //  حنكة — شاشة اللعب (نفس قالب أسرع إجابة: games/fastest-answer/game.html)
 //  كل جولة 3 لاعبين بنفس الوقت، لكل واحد سؤاله ووقته ونقاطه:
 //   · الجواب الصح بالشات = +1 وسؤال جديد على طول
-//   · «تخطي» = −0.5 وسؤال جديد · الجواب الغلط ما يخصم شي
+//   · «سكب» أو «تخطي» = −0.5 وسؤال جديد · الجواب الغلط ما يخصم شي
 //  بعد ما يلعب الكل: تصفية — أعلى 3 (أقل من 10 لاعبين)، أعلى 6 (10 وأكثر)،
 //  أعلى 9 (أكثر من 15). المركز الأول يُرسل كفائز لنظام نقاط المنصة.
 //  بنك الأسئلة: lamha-questions.js (AGP.lamhaQuestions = [[سؤال، جواب، فئة]...]).
@@ -365,7 +365,8 @@ const BANK = (window.AymanGamesPlatform && window.AymanGamesPlatform.lamhaQuesti
 // هوية ألعاب أيمن: لون بنفسجي واحد لكل الخانات (بدل ثلاث ألوان)
 const SLOT_COLORS = ['#a78bfa','#a78bfa','#a78bfa'];
 const PER_ROUND = 3, CORRECT_PTS = 1, SKIP_PTS = 0.5;
-const SKIP_WORDS = ['تخطي','skip'];
+// كلمات التخطي بالشات (الشريط السفلي يقول «سكب»)
+const SKIP_WORDS = ['سكب','تخطي','skip'];
 // التصفية: كم لاعب يتأهل حسب عدد اللاعبين بالمرحلة
 const qualifyCount = n => n>15 ? 9 : n>=10 ? 6 : 3;
 
