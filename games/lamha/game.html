@@ -99,16 +99,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             <sc-if value="{{ sl.full }}" hint-placeholder-val="{{ true }}">
               <span style="position:relative;width:196px;height:196px;flex-shrink:0;border-radius:50%;background:conic-gradient({{ sl.ring }} {{ sl.deg }}deg, rgba(255,255,255,.07) 0);display:grid;place-items:center;animation:{{ sl.pulse }}">
                 <span style="width:176px;height:176px;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ sl.avBg }};border:4px solid #0c0b12;box-sizing:border-box;font:700 64px 'IBM Plex Sans Arabic';color:#fff">{{ sl.initial }}<img src="{{ sl.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ sl.imgOp }}"></span>
-                <span style="position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);padding:4px 16px;border-radius:999px;background:#0c0b12;border:1.5px solid {{ sl.ring }};font:700 24px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.ring }};direction:ltr">{{ sl.time }}</span>
               </span>
-              <span style="position:relative;max-width:100%;margin-top:10px;font:700 {{ sl.nameFs }}/1.25 'IBM Plex Sans Arabic';color:#f4f2f8;text-align:center;overflow-wrap:break-word;text-wrap:balance">{{ sl.name }}</span>
+              <span style="position:relative;max-width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;margin-top:4px;font:700 {{ sl.nameFs }}/1.25 'IBM Plex Sans Arabic';color:#f4f2f8;text-align:center;overflow-wrap:break-word;text-wrap:balance">{{ sl.name }}</span>
               <span style="position:relative;max-width:100%;margin-top:-8px;font:500 16px 'IBM Plex Sans Arabic';color:#8a8596;direction:ltr;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px">{{ sl.handle }}</span>
               <div style="position:relative;display:flex;align-items:center;gap:22px">
                 <span style="display:flex;align-items:baseline;gap:8px"><span style="font:700 88px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.color }};direction:ltr">{{ sl.score }}</span><span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">نقطة</span></span>
-                <span style="display:flex;flex-direction:column;gap:8px">
-                  <span style="display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);font:600 17px 'IBM Plex Sans Arabic';color:#6ee7b7"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>{{ sl.correct }} صح</span>
-                  <span style="display:flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.3);font:600 17px 'IBM Plex Sans Arabic';color:#fdba74"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>{{ sl.skips }} تخطي</span>
-                </span>
+                <span style="display:flex;align-items:center;gap:10px;padding:8px 22px;border-radius:999px;background:#0c0b12;border:2px solid {{ sl.ring }};font:700 40px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.ring }};direction:ltr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>{{ sl.time }}</span>
               </div>
               <div style="position:relative;flex:1;min-height:0;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:18px 20px;border-radius:24px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);text-align:center">
                 <sc-if value="{{ sl.hasQ }}" hint-placeholder-val="{{ true }}">
@@ -127,7 +123,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       </div>
 
       <!-- العمود الجانبي بالطول: النقاط فوق، والدور الجاي تحته (بدون تبويبات) -->
-      <aside style="width:340px;flex-shrink:0;min-height:0;display:flex;flex-direction:column;gap:20px">
+      <aside style="width:280px;flex-shrink:0;min-height:0;display:flex;flex-direction:column;gap:20px">
         <section style="flex:1.25;min-height:0;display:flex;flex-direction:column;border-radius:30px;background:rgba(18,16,26,.7);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.35);overflow:hidden">
           <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:18px 20px 8px;border-bottom:1px solid rgba(255,255,255,.06)">
             <span style="display:flex;align-items:center;gap:8px;font:700 22px 'IBM Plex Sans Arabic';color:#ddd6fe"><span style="width:8px;height:8px;border-radius:50%;background:#a78bfa"></span>النقاط</span>
@@ -141,10 +137,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             <sc-if value="{{ p.cut }}" hint-placeholder-val="{{ false }}">
               <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;margin:4px 0;font:600 14px 'IBM Plex Sans Arabic';color:#fca5a5"><span style="flex:1;height:1px;background:rgba(248,113,113,.45)"></span>خط التأهل<span style="flex:1;height:1px;background:rgba(248,113,113,.45)"></span></div>
             </sc-if>
-            <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 14px 8px 10px;box-sizing:border-box;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .35s">
-              <span style="width:26px;flex-shrink:0;text-align:center;font:700 17px 'IBM Plex Sans Arabic';color:{{ p.rankColor }};font-variant-numeric:tabular-nums">{{ p.rank }}</span>
-              <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid {{ p.avBd }};box-sizing:border-box;font:700 17px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
-              <span style="flex:1;min-width:0;font:600 19px/1.3 'IBM Plex Sans Arabic';overflow-wrap:anywhere">{{ p.name }}</span>
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 12px 6px 8px;box-sizing:border-box;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .35s">
+              <span style="width:20px;flex-shrink:0;text-align:center;font:700 15px 'IBM Plex Sans Arabic';color:{{ p.rankColor }};font-variant-numeric:tabular-nums">{{ p.rank }}</span>
+              <span style="width:34px;height:34px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid {{ p.avBd }};box-sizing:border-box;font:700 17px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <span style="flex:1;min-width:0;font:600 17px/1.3 'IBM Plex Sans Arabic';overflow-wrap:anywhere">{{ p.name }}</span>
               <span style="flex-shrink:0;font:{{ p.valFont }} 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ p.valColor }};direction:ltr;white-space:nowrap">{{ p.val }}</span>
             </div>
             </sc-for>
@@ -160,10 +156,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
               <div style="padding:24px 0;text-align:center;font:500 16px 'IBM Plex Sans Arabic';color:#8a8596">ما فيه أحد بالانتظار</div>
             </sc-if>
             <sc-for list="{{ waitRows }}" as="p" hint-placeholder-count="4">
-            <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 14px 8px 10px;box-sizing:border-box;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .35s">
-              <span style="width:26px;flex-shrink:0;text-align:center;font:700 17px 'IBM Plex Sans Arabic';color:{{ p.rankColor }};font-variant-numeric:tabular-nums">{{ p.rank }}</span>
-              <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid {{ p.avBd }};box-sizing:border-box;font:700 17px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
-              <span style="flex:1;min-width:0;font:600 19px/1.3 'IBM Plex Sans Arabic';overflow-wrap:anywhere">{{ p.name }}</span>
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 12px 6px 8px;box-sizing:border-box;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .35s">
+              <span style="width:20px;flex-shrink:0;text-align:center;font:700 15px 'IBM Plex Sans Arabic';color:{{ p.rankColor }};font-variant-numeric:tabular-nums">{{ p.rank }}</span>
+              <span style="width:34px;height:34px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid {{ p.avBd }};box-sizing:border-box;font:700 17px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <span style="flex:1;min-width:0;font:600 17px/1.3 'IBM Plex Sans Arabic';overflow-wrap:anywhere">{{ p.name }}</span>
               <span style="flex-shrink:0;font:{{ p.valFont }} 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ p.valColor }};direction:ltr;white-space:nowrap">{{ p.val }}</span>
             </div>
             </sc-for>
@@ -567,7 +563,7 @@ class Component extends DCLogic {
         qEl:sl.q?h('span',{key:'q'+qText,style:{font:`700 ${L<=22?44:L<=34?38:L<=48?32:28}px/1.45 'IBM Plex Sans Arabic'`,color:'#f4f2f8',textWrap:'balance',animation:'pop .45s cubic-bezier(.2,1.2,.35,1)'}},qText):null,
         waitText:P==='ready'?'جاهز؟ السؤال يطلع أول ما تبدأ الجولة':P==='countdown'?'استعد…':'خلص الوقت',
         feed:sl.feed||' ',feedC:sl.feedC,
-        deltaEl:sl.delta?h('span',{key:sl.delta.id,style:{position:'absolute',top:330,left:'50%',transform:'translateX(-50%)',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',pointerEvents:'none',animation:'floatUp 1s ease-out forwards',direction:'ltr'}},sl.delta.txt):null}; });
+        deltaEl:sl.delta?h('span',{key:sl.delta.id,style:{position:'absolute',top:470,left:'50%',transform:'translateX(-50%)',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',pointerEvents:'none',animation:'floatUp 1s ease-out forwards',direction:'ltr'}},sl.delta.txt):null}; });
     // لوحة النقاط
     const liveSet=new Set(P==='playing'?s.slots.filter(x=>!x.done).map(x=>x.name):[]);
     const list=this.ranked(s.queue.filter(n=>this.st(n).played)), wait=s.queue.slice(s.qIdx);
