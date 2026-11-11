@@ -252,10 +252,12 @@
         c.likes += count;
         // كل تكبيسة ترفع دواسة الوقود، والحد ١
         c.throttle = Math.min(1, c.throttle + count * 0.045);
-        // كل 50 تكبيسة = نيترو
+        // كل 50 تكبيسة = نيترو. وقت النيترو (الشريط يفضى) التكبيس ما يعبّي الشريط،
+        // والتكبيسات الزايدة لحظة اكتماله ما تنحسب — يرجع يعبّي من الصفر بعد ما يخلص.
+        if (c.fx.nitro > 0) return;
         c.tapBank += count;
         if (c.tapBank >= TAPS_PER_NITRO) {
-            c.tapBank %= TAPS_PER_NITRO;
+            c.tapBank = 0;
             applyEffect(c, 'nitro', true);
             if (!c.bot) toast(NITRO.icon + ' <b>' + esc(c.name) + '</b> ← نيترو من التكبيس', NITRO.color);
         } else if (scene && count >= 15) scene.burst(c.id, 'tap');
@@ -686,12 +688,12 @@
             $('fPos').textContent = 'P' + (st.indexOf(f) + 1);
             $('fAv').innerHTML = avatarHtml(f);
             $('fSpeed').textContent = Math.round(f.speed * 3.6);
-            $('fTaps').textContent = f.tapBank;
             // الشريط = نسبة التكبيس للنيترو الجاي؛ لما يكتمل يتحول لشريط النيترو ويفضى طول مدته
             var nitroOn = f.fx.nitro > 0;
-            $('fNitroBar').classList.toggle('on', nitroOn);
-            $('fNitroLbl').classList.toggle('on', nitroOn);
-            $('fNitroLbl').textContent = nitroOn ? '💨 نيترو شغّال!' : '💨 نيترو';
+            var gauge = $('fNitroBar');
+            gauge.classList.toggle('on', nitroOn);
+            $('fNitroLbl').textContent = nitroOn ? 'نيترو شغّال' : 'نيترو';
+            $('fTaps').innerHTML = nitroOn ? '<b>' + f.fx.nitro.toFixed(1) + '</b>ث' : '<b>' + f.tapBank + '</b>/' + TAPS_PER_NITRO;
             $('fNitro').style.transform = 'scaleX(' + (nitroOn ? Math.min(1, f.fx.nitro / NITRO_SECS) : f.tapBank / TAPS_PER_NITRO).toFixed(3) + ')';
             $('fLock').style.display = S.cam.locked ? '' : 'none';
             var fx = f.fx, act = [];
