@@ -53,8 +53,24 @@ const SFX = (() => {
         // بعد السقوط: جرس عميق واحد
         toll() { const a = ctx(); if (!a) return; const t = a.currentTime; [[98, .5], [196, .3], [294, .12], [523, .06]].forEach(([fq, v]) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = fq; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + 3); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 3); }); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
-        wind(on) { const a = ctx(); if (!a) return; if (!windG) { const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .7; windG = a.createGain(); windG.gain.value = 0; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); }
-            windG.gain.setTargetAtTime(on ? .09 : .025, a.currentTime, .8); }
+        wind() { }, // الهوا المتصل انشال (كان مزعج) — بداله أصوات قصيرة لكل مرحلة تحت
+        // موسيقى دخول قصيرة: صفير غربي (لحن أصلي) + أوتار منتوفة — مرة وحدة مع وصول اللاعبين
+        motif() { const a = ctx(); if (!a) return; const t0 = a.currentTime, out = a.createGain(); out.gain.value = .9; out.connect(a.destination); out.connect(echo);
+            const pluck = (f, t, d = .9, v = .35) => { const o = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.setValueAtTime(2400, t); lp.frequency.exponentialRampToValueAtTime(300, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(lp); lp.connect(g); g.connect(out); o.start(t); o.stop(t + d + .05); };
+            const whistle = (f, t, d) => { const o = a.createOscillator(), vb = a.createOscillator(), vg = a.createGain(), g = a.createGain(); o.type = 'sine'; o.frequency.value = f; vb.frequency.value = 5.5; vg.gain.value = f * .012; vb.connect(vg); vg.connect(o.frequency); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.16, t + .06); g.gain.setValueAtTime(.16, t + d - .08); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); g.connect(out); o.start(t); vb.start(t); o.stop(t + d + .02); vb.stop(t + d + .02); };
+            [[82.4, 0], [123.5, .45], [82.4, .9], [110, 1.35], [98, 1.8]].forEach(([f, t]) => pluck(f, t0 + t, 1.1, .4));
+            [[493.9, .1, .3], [659.3, .45, .3], [784, .8, .25], [740, 1.1, .9], [587.3, 2.1, .7]].forEach(([f, t, d]) => whistle(f, t0 + t, d)); },
+        // دقة قلب (تتسارع وقت التنبيهات)
+        heart(v = .7) { const a = ctx(); if (!a) return; const t = a.currentTime; [0, .17].forEach((dt, i) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(70 - i * 8, t + dt); o.frequency.exponentialRampToValueAtTime(38, t + dt + .14); g.gain.setValueAtTime(v * (i ? .6 : 1), t + dt); g.gain.exponentialRampToValueAtTime(.001, t + dt + .16); o.connect(g); g.connect(a.destination); o.start(t + dt); o.stop(t + dt + .18); }); },
+        // ضربة طبل + صنج مع «ارسم!» وبعدها سكوت لين الجرس
+        drum() { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t + .35); g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(.001, t + .45); o.connect(g); g.connect(a.destination); g.connect(echo); o.start(t); o.stop(t + .46);
+            const n = noise(1.2), hp = a.createBiquadFilter(), ng = a.createGain(); hp.type = 'highpass'; hp.frequency.value = 5000; ng.gain.setValueAtTime(.35, t); ng.gain.exponentialRampToValueAtTime(.001, t + 1.1); n.connect(hp); hp.connect(ng); ng.connect(a.destination); n.start(t); },
+        // منظور اللاعب: نفَس منخفض قصير يكبر ويختفي
+        drone(d = 1) { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 55; lp.type = 'lowpass'; lp.frequency.setValueAtTime(120, t); lp.frequency.exponentialRampToValueAtTime(700, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.22, t + d * .6); g.gain.exponentialRampToValueAtTime(.0001, t + d + .2); o.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .25); },
+        // الفوز: نفخة نحاسية صاعدة + هتاف السوق
+        victory() { const a = ctx(); if (!a) return; const t0 = a.currentTime;
+            [329.6, 415.3, 493.9, 659.3].forEach((f, i) => { const t = t0 + i * .09, o = a.createOscillator(), o2 = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain(); o.type = o2.type = 'sawtooth'; o.frequency.value = f; o2.frequency.value = f * 1.006; lp.type = 'lowpass'; lp.frequency.setValueAtTime(600, t); lp.frequency.exponentialRampToValueAtTime(2600, t + .12); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .05); g.gain.setValueAtTime(.12, t + .9 - i * .09); g.gain.exponentialRampToValueAtTime(.0001, t + 1.4 - i * .09); o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(a.destination); o.start(t); o2.start(t); o.stop(t + 1.5); o2.stop(t + 1.5); });
+            const n = noise(1.6), bp = a.createBiquadFilter(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = .6; lfo.frequency.value = 7; lg.gain.value = .08; lfo.connect(lg); lg.connect(g.gain); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.22, t0 + .25); g.gain.exponentialRampToValueAtTime(.0001, t0 + 1.6); n.connect(bp); bp.connect(g); g.connect(a.destination); n.start(t0); lfo.start(t0); lfo.stop(t0 + 1.6); },
     };
 })();
 
@@ -126,7 +142,7 @@ async function nextRound() {
     await sleep(1900);
     const winners = [], final = pairs.length === 1 && !bye;
     if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, next: final ? 'إعلان البطل 🏆' : 'الجولة التالية' }));
-    else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, next: final ? 'إعلان البطل 🏆' : i === pairs.length - 1 ? 'الجولة التالية' : 'المبارزة التالية' }));
+    else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, next: final ? 'إعلان البطل 🏆' : i === pairs.length - 1 ? 'الجولة التالية' : 'المواجهة التالية' }));
     G.alive = winners.concat(bye ? [bye] : []); updateCount();
     if (G.alive.length <= 1) return crown(G.alive[0]);
     await sleep(600); nextRound();
@@ -151,8 +167,10 @@ function warnThenReveal(again) {
     lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
     if (!again) later(1700 + 300, () => G.scene.drawGuns(activeIds()));
     let t = lines.length * 1700 + rnd(200, 1200);
+    // دقات قلب تتسارع وتعلى لين «ارسم!»
+    for (let b = 300, gap = 950; b < t - 250; b += gap, gap = Math.max(430, gap * .88)) { const v = .35 + .45 * b / t; later(b, () => SFX.heart(v)); }
     if (G.settings.trick && (G.force.decoy != null ? G.force.decoy : Math.random() < .55)) { const tt = t; later(tt, decoy); t += 1700; }
-    later(t, () => { G.phase = 'standoff'; sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
+    later(t, () => { G.phase = 'standoff'; sign('draw'); SFX.drum(); flash('rgba(255,180,90,.35)', 200); });
     later(t + 750, reveal);
 }
 // الخدعة الحمراء: رقم/كلمة بالأحمر — اللي يكتبها يطلق بالهوا ويضيّع طلقته
@@ -194,7 +212,7 @@ async function win(d, shooter, typed) {
         // الكاميرا على اللي جاوب + بطاقة مايلة بإجابته ووقته لمدة 3 ثواني
         G.scene.focusOn(shooter.id); showAnswer(shooter, typed, secs); SFX.stamp();
         await sleep(3000); $('#answer').classList.remove('in'); grade('duel');
-        await G.scene.fire(shooter.id, target.id);           // ترجع الكاميرا ← الطلقة ← السقوط ← ينفخ الدخان ويمشي (الكاميرا ثابتة)
+        await G.scene.fire(shooter.id, target.id);           // ترجع الكاميرا ← الطلقة ← السقوط ← الكاميرا على الفايز
         return afterDuels();
     }
     // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
@@ -202,13 +220,15 @@ async function win(d, shooter, typed) {
     if (G.active.every(x => x.done)) {
         G.phase = 'resolve'; clearTimers(); sign('gone');
         await sleep(1800); $('#feed').classList.remove('in');
-        await G.scene.multiOutro(G.active.map(x => x.winner.id));
+        await G.scene.multiOutro(G.active.map(x => x.winner.id));   // الفايزين يحتفلون
         afterDuels();
     }
 }
 // الكاميرا ثابتة واللاعب يمشي ← زر «التالي» أسفل الشاشة ← إعلان المبارزة/الجولة الجاية
 async function afterDuels() {
-    grade(''); await nextButton('التالي');
+    await winnerCard(G.active);                 // احتفال + بطاقة الفوز 3 ثواني
+    G.scene.aftermath(); grade('');             // ترجع الشاشة للمشهد الكامل
+    await nextButton(G.info.next);              // زر «المواجهة التالية»
     endDuels();
 }
 // بطاقة الإجابة (نفس هوية اللعبة ومايلة): اسم اللي جاوب + إجابته + وقته
@@ -228,20 +248,20 @@ function avatarHtml(p, cls = '') { const src = face(p), alt = p.avatar ? (G.scen
 // الشريط السفلي قبل الدخول
 async function showVs(duels, info) {
     const el = $('#vs'), one = duels.length === 1;
-    const head = one ? `الجولة ${G.round} · المبارزة ${info.idx} من أصل ${info.total}` : `الجولة ${G.round} · ${duels.length} مبارزات في وقت واحد`;
+    const head = one ? `مواجهة رقم ${info.idx} من أصل ${info.total}` : `${duels.length} مواجهات في وقت واحد`;
     const body = one ? `<div class="vp">${avatarHtml(duels[0].a)}<b>${esc(duels[0].a.name)}</b></div><i class="vx">ضد</i><div class="vp">${avatarHtml(duels[0].b)}<b>${esc(duels[0].b.name)}</b></div>`
         : `<div class="vgrid">${duels.slice(0, 6).map(d => `<div class="vpair">${avatarHtml(d.a, 'sm')}<span>${esc(d.a.name)}</span><i>ضد</i><span>${esc(d.b.name)}</span>${avatarHtml(d.b, 'sm')}</div>`).join('')}${duels.length > 6 ? `<div class="vmore">+${duels.length - 6} مبارزات</div>` : ''}</div>`;
     el.innerHTML = `<div class="vhead">${head}</div><div class="vbody">${body}</div>`; el.classList.add('in'); SFX.stamp();
-    await sleep(one ? 2800 : 3200); el.classList.remove('in'); await sleep(250);
+    await sleep(3000); el.classList.remove('in'); await sleep(300);
 }
-// بطاقة الفايز: صورته واسمه و«فاز بالمبارزة» + زر «التالي»
+// بطاقة الفوز (3 ثواني بدون زر): صورته واسمه و«فاز بالمواجهة» ووقته
 function winnerCard(duels) { return new Promise(res => {
     const el = $('#winCard'), one = duels.length === 1, d = duels[0];
     el.innerHTML = one
-        ? `<div class="wtag">🏆 فاز بالمبارزة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.loser.name)} · سحب بـ <b>${d.secs}</b> ث</p><button type="button" class="wbtn">التالي ←</button>`
-        : `<div class="wtag">🏆 الفايزين بالمبارزات</div><div class="wlist">${duels.map(x => `<div class="wrow">${avatarHtml(x.winner, 'sm')}<b>${esc(x.winner.name)}</b><small>${x.secs} ث</small></div>`).join('')}</div><button type="button" class="wbtn">التالي ←</button>`;
-    el.classList.add('in'); SFX.bell();
-    waitClick(el.querySelector('.wbtn'), () => { el.classList.remove('in'); res(); });
+        ? `<div class="wtag">🏆 فاز بالمواجهة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.loser.name)} · سحب بـ <b>${d.secs}</b> ث</p>`
+        : `<div class="wtag">🏆 الفايزين بالمواجهات</div><div class="wlist">${duels.map(x => `<div class="wrow">${avatarHtml(x.winner, 'sm')}<b>${esc(x.winner.name)}</b><small>${x.secs} ث</small></div>`).join('')}</div>`;
+    el.classList.add('in'); SFX.victory();
+    setTimeout(() => { el.classList.remove('in'); res(); }, 3000);
 }); }
 function nextButton(label) { return new Promise(res => { const b = $('#nextBtn'); b.textContent = label + ' ←'; b.classList.add('in'); waitClick(b, () => { b.classList.remove('in'); res(); }); }); }
 // زر واحد ينتظر ضغطة (أو Enter/مسافة من كيبورد الستريمر)
@@ -330,15 +350,16 @@ function hookStream() {
         else if (e === 'step') SFX.step(d);
         else if (e === 'spin') SFX.spin(d);
         else if (e === 'blow') SFX.blow();
-        else if (e === 'pop') SFX.bang();
+        else if (e === 'pop') SFX.dud();
         else if (e === 'shot') { // ستارة السينما + تدرّج الألوان حسب اللقطة
             if (d !== 'povA' && d !== 'povB') $('#lids').classList.remove('on');
-            if (d === 'povA' || d === 'povB') { bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); L.style.setProperty('--lid', (dur || 2.4) + 's'); void L.offsetWidth; L.classList.add('on'); }
+            if (d === 'crane') SFX.motif();
+            if (d === 'povA' || d === 'povB') { SFX.drone(dur || 1); bars(''); grade('pov'); const L = $('#lids'); L.classList.remove('on'); L.style.setProperty('--lid', (dur || 2.4) + 's'); void L.offsetWidth; L.classList.add('on'); }
             else if (d === 'bullet') { bars('tight'); grade('slow'); SFX.whoosh(); }
             else if (d === 'boots' || d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
             else if (d === 'answerCam') { bars('wide'); grade('hero'); }
             else if (d === 'drawWide') { bars('wide'); grade('duel'); }
-            else if (d === 'walkoff') { bars('wide'); grade(''); }
+            else if (d === 'winCam') { bars('wide'); grade('hero'); }
             else if (d === 'leave') { bars('wide'); grade(''); SFX.whoosh(); }
             else if (d === 'crane' || d === 'profile' || d === 'standoff') { bars('wide'); grade(''); }
         } } }); } catch (e) { console.error(e); }

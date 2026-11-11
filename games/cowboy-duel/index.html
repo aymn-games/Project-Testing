@@ -166,13 +166,13 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
 .av.sm{width:36px;height:36px;border-width:2px;font-size:18px}.av.big{width:120px;height:120px;border-width:4px;font-size:56px}
 /* شريط قبل كل مبارزة: كم من أصل كم + اللاعبين */
 #vs{position:fixed;left:50%;bottom:calc(9vh + 14px);z-index:7;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:all .45s cubic-bezier(.2,1.3,.4,1);
-  padding:6px 16px 10px;background:linear-gradient(180deg,#7a5230,#5a3a22 55%,#4a2f1b);border:3px solid #2a170b;border-radius:8px;box-shadow:0 10px 26px rgba(0,0,0,.5);text-align:center}
+  padding:0;background:none;border:0;text-align:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
 #vs.in{opacity:1;transform:translate(-50%,0)}
-.vhead{font:400 clamp(14px,1.4vw,17px) Rakkas,serif;color:#f3c98a;margin-bottom:6px}
+.vhead{font:400 clamp(16px,1.6vw,20px) Rakkas,serif;color:#fbe7c0;margin-bottom:4px;text-shadow:0 2px 0 #2a170b,0 0 10px rgba(0,0,0,.6)}
 .vbody{display:flex;align-items:center;justify-content:center;gap:16px}
-#vs .vp .av{width:clamp(78px,8vw,104px);height:clamp(78px,8vw,104px);border-width:4px;font-size:44px}
-.vp{display:flex;flex-direction:column;align-items:center;gap:4px}.vp b{font:400 clamp(26px,3vw,40px)/1.1 Rakkas,serif;color:var(--gold);text-shadow:0 2px 0 #2a170b}
-.vx{font:400 24px Rye,Rakkas,serif;color:#fbe7c0;font-style:normal}
+#vs .vp .av{width:clamp(56px,5.6vw,72px);height:clamp(56px,5.6vw,72px);border-width:3px;font-size:30px}
+.vp{display:flex;flex-direction:column;align-items:center;gap:4px}.vp b{font:400 clamp(20px,2.1vw,27px)/1.1 Rakkas,serif;color:var(--gold);text-shadow:0 2px 0 #2a170b}
+.vx{font:400 20px Rye,Rakkas,serif;color:#fbe7c0;font-style:normal;text-shadow:0 2px 0 #2a170b}
 .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}.vpair{display:flex;align-items:center;gap:6px;font:400 19px Rakkas,serif;color:#fbe7c0}
 #vs .vpair .av{width:46px;height:46px}.vpair i{font-style:normal;color:#f3c98a;font-size:13px}.vmore{grid-column:1/-1;color:#f3c98a;font-size:14px}
 /* بطاقة الفايز بعد السقوط */
