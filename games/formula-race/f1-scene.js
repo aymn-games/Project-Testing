@@ -217,7 +217,8 @@ function mergeColored(parts) {
         g.applyMatrix4(m);
         const pa = g.attributes.position.array, na = g.attributes.normal.array;
         for (let k = 0; k < pa.length; k++) { pos.push(pa[k]); nor.push(na[k]); }
-        for (let k = 0; k < pa.length / 3; k++) col.push(c.r, c.g, c.b);
+        if (typeof c === 'function') { for (let k = 0; k < pa.length; k += 3) { const cc = c(pa[k], pa[k + 1], pa[k + 2]); col.push(cc.r, cc.g, cc.b); } }
+        else for (let k = 0; k < pa.length / 3; k++) col.push(c.r, c.g, c.b);
         g.dispose(); g0.dispose();
     }
     const out = new T.BufferGeometry();
@@ -225,6 +226,45 @@ function mergeColored(parts) {
     out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
     out.setAttribute('color', new T.Float32BufferAttribute(col, 3));
     return out;
+}
+
+/**
+ * «لوفت»: جسم ناعم متصل من مقاطع عرضية على طول z — كل مقطع شكل superellipse
+ * {z, w نصف العرض, h نصف الارتفاع, y المركز, x المركز (اختياري), n (2 دائري، أكبر = أقرب للمستطيل)}.
+ * فيه نسخدم لهيكل الفورمولا (الأنف/الحوض/غطاء المحرك) والجوانب (sidepods).
+ */
+function loft(sections, M2 = 18) {
+    const pos = [], idx = [];
+    sections.forEach(sc => {
+        const n = sc.n || 2.4, x0 = sc.x || 0;
+        for (let k = 0; k < M2; k++) {
+            const t = k / M2 * Math.PI * 2, c = Math.cos(t), si = Math.sin(t);
+            pos.push(x0 + Math.sign(c) * Math.pow(Math.abs(c), 2 / n) * sc.w, sc.y + Math.sign(si) * Math.pow(Math.abs(si), 2 / n) * sc.h, sc.z);
+        }
+    });
+    for (let r = 0; r < sections.length - 1; r++) for (let k = 0; k < M2; k++) {
+        const a = r * M2 + k, b = r * M2 + (k + 1) % M2, c2 = a + M2, d = b + M2;
+        idx.push(a, c2, b, b, c2, d);
+    }
+    // أغطية الطرفين
+    for (const [r, flip] of [[0, true], [sections.length - 1, false]]) {
+        const sc = sections[r], ci = pos.length / 3; pos.push(sc.x || 0, sc.y, sc.z);
+        for (let k = 0; k < M2; k++) { const a = r * M2 + k, b = r * M2 + (k + 1) % M2; if (flip) idx.push(ci, b, a); else idx.push(ci, a, b); }
+    }
+    const g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    return g;
+}
+/** جناح بمقطع إيروفويل (بروفايل مستدير من قدّام ورفيع من ورا) بعرض span، الوتر chord، السماكة th. */
+function airfoil(span, chord, th) {
+    const sh = new T.Shape();
+    sh.moveTo(chord / 2, 0);
+    sh.quadraticCurveTo(chord / 2, th, chord * 0.15, th * 0.9);
+    sh.quadraticCurveTo(-chord / 2 + 0.01, th * 0.35, -chord / 2, 0);
+    sh.quadraticCurveTo(-chord / 4, -th * 0.15, chord / 2, 0);
+    const g = new T.ExtrudeGeometry(sh, { depth: span, bevelEnabled: false, curveSegments: 6 });
+    g.translate(0, 0, -span / 2); g.rotateY(Math.PI / 2);   // الوتر على z، العرض على x
+    return g;
 }
 
 /**
@@ -242,56 +282,85 @@ function buildCar(car) {
     const carbon = new T.Color(0x16171c), white = new T.Color(0xf5f5f7), metal = new T.Color(0x9aa3ad);
     const cyl = (rt, rb, h, seg = 14) => new T.CylinderGeometry(rt, rb, h, seg);
     const box = (w, h, l) => new T.BoxGeometry(w, h, l);
-    const X = Math.PI / 2;
-    const geo = mergeColored([
-        // الأنف المدبب (ينحف للأمام) + خط فاتح فوقه
-        [cyl(0.05, 0.3, 2.1), M(0, 0.36, 2.15, X, 0, 0, 1.05, 1, 0.62), main],
-        [box(0.12, 0.02, 1.7), M(0, 0.53, 2.0, 0.07, 0, 0), accent],
-        // حوض السائق
-        [cyl(0.4, 0.44, 1.7), M(0, 0.44, 0.45, X, 0, 0, 1.05, 1, 0.68), main],
-        // الجوانب المدوّرة (السفلي أغمق)
-        [new T.CapsuleGeometry(0.3, 1.0, 4, 12), M(0.66, 0.36, -0.25, X, 0, 0, 1.05, 1, 0.72), main],
-        [new T.CapsuleGeometry(0.3, 1.0, 4, 12), M(-0.66, 0.36, -0.25, X, 0, 0, 1.05, 1, 0.72), main],
-        [box(0.5, 0.1, 1.3), M(0.66, 0.16, -0.25), dark], [box(0.5, 0.1, 1.3), M(-0.66, 0.16, -0.25), dark],
-        // غطاء المحرك ينحف للخلف + خط فاتح + فتحة الهواء وزعنفة
-        [cyl(0.42, 0.1, 2.0), M(0, 0.62, -1.25, X, 0, 0, 1, 1, 0.75), main],
-        [box(0.1, 0.03, 1.8), M(0, 0.93, -1.1, -0.17, 0, 0), accent],
-        [cyl(0.15, 0.22, 0.5, 10), M(0, 1.02, -0.18, 0, 0, 0, 1, 1, 1.2), main],
-        [box(0.05, 0.42, 1.25), M(0, 1.03, -1.3), main],
-        // الأرضية والهالة (كربون)
-        [box(1.7, 0.06, 4.0), M(0, 0.1, 0.1), carbon],
-        [new T.TorusGeometry(0.4, 0.045, 6, 18, Math.PI), M(0, 0.7, 0.62, 0, 0, 0, 1, 1, 1.2), carbon],
-        [box(0.06, 0.3, 0.06), M(0, 0.82, 1.08, 0.35, 0, 0), carbon],
-        // الجناح الأمامي: لوح كربون + فلاب بلون الفريق + ألواح جانبية
-        [box(2.3, 0.05, 0.6), M(0, 0.12, 3.05), carbon],
-        [box(2.1, 0.04, 0.26), M(0, 0.22, 2.92, 0.3, 0, 0), main],
-        [box(0.06, 0.32, 0.72), M(1.15, 0.2, 3.02), main], [box(0.06, 0.32, 0.72), M(-1.15, 0.2, 3.02), main],
-        // الجناح الخلفي: لوحين + ألواح جانبية بلون الفريق مع خط فاتح + عمود
-        [box(1.85, 0.06, 0.5), M(0, 0.96, -2.38), carbon],
-        [box(1.85, 0.05, 0.3), M(0, 1.15, -2.5, -0.45, 0, 0), main],
-        [box(0.06, 0.7, 0.95), M(0.95, 0.94, -2.4), main], [box(0.06, 0.7, 0.95), M(-0.95, 0.94, -2.4), main],
-        [box(0.065, 0.12, 0.95), M(0.95, 1.2, -2.4), accent], [box(0.065, 0.12, 0.95), M(-0.95, 1.2, -2.4), accent],
-        [box(0.08, 0.55, 0.1), M(0, 0.66, -2.3), carbon],
-        // أذرع التعليق
-        [box(0.85, 0.04, 0.06), M(0.72, 0.34, 1.75, 0, 0, 0.08), carbon], [box(0.85, 0.04, 0.06), M(-0.72, 0.34, 1.75, 0, 0, -0.08), carbon],
-        [box(0.85, 0.04, 0.06), M(0.72, 0.34, -1.45, 0, 0, 0.08), carbon], [box(0.85, 0.04, 0.06), M(-0.72, 0.34, -1.45, 0, 0, -0.08), carbon],
-        // المرايا
-        [box(0.16, 0.08, 0.05), M(0.45, 0.72, 0.85), carbon], [box(0.16, 0.08, 0.05), M(-0.45, 0.72, 0.85), carbon]
-    ]);
-    const paint = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.25 });
-    const body = new T.Mesh(geo, paint); body.castShadow = true; g.add(body);
-    // العجلات: كل محور قطعة وحدة (إطار أسود + جنط بلون الفريق + برامق تبيّن الدوران)
-    const axle = (half, r, w) => {
-        const parts = [];
-        for (const sx of [1, -1]) {
-            parts.push([cyl(r, r, w, 20), M(sx * half, 0, 0, 0, 0, X), carbon]);
-            parts.push([cyl(r * 0.58, r * 0.58, w + 0.02, 16), M(sx * half, 0, 0, 0, 0, X), main]);
-            for (let k = 0; k < 3; k++) parts.push([box(w + 0.04, r * 1.05, 0.06), M(sx * half, 0, 0, k * Math.PI / 3, 0, 0), metal]);
-        }
-        return new T.Mesh(mergeColored(parts), paint);
+    const X = Math.PI / 2, I = M();
+    // النقشة: لون الفريق فوق، كربون تحت خط الوسط، وخط فاتح على ظهر الأنف وغطاء المحرك
+    const livery = (x, y, z) => {
+        if (y < 0.27) return carbon;
+        if (Math.abs(x) < 0.06 && y > 0.5 && (z > 0.9 || z < -0.4)) return accent;
+        return main;
     };
-    const front = axle(0.98, 0.36, 0.38); front.position.set(0, 0.36, 1.75);
-    const rear = axle(1.0, 0.39, 0.48); rear.position.set(0, 0.39, -1.45);
+    const podLivery = (x, y) => (y < 0.3 ? carbon : (y > 0.52 && Math.abs(x) > 0.3 ? accent : main));
+    const S = (z, w, h, y, n, x) => ({ z, w, h, y, n: n || 2.6, x: x || 0 });
+    // الهيكل: أنف إبرة ← حوض السائق ← غطاء محرك يرتفع لفتحة الهواء ثم ينحف للخلف
+    const chassis = loft([
+        S(3.3, 0.035, 0.03, 0.27, 2.2), S(3.0, 0.07, 0.06, 0.29), S(2.4, 0.13, 0.1, 0.33), S(1.8, 0.2, 0.15, 0.38),
+        S(1.25, 0.28, 0.2, 0.43), S(0.75, 0.34, 0.24, 0.46, 3), S(0.2, 0.37, 0.27, 0.48, 3), S(-0.3, 0.33, 0.32, 0.52, 2.8),
+        S(-0.85, 0.27, 0.32, 0.53), S(-1.45, 0.2, 0.25, 0.48), S(-2.0, 0.12, 0.17, 0.42), S(-2.4, 0.05, 0.09, 0.38, 2.2)
+    ], 20);
+    // فتحة الهواء فوق راس السائق (روول بار) تنزل وتصير زعنفة القرش
+    const airbox = loft([
+        S(0.12, 0.05, 0.05, 0.86, 2.2), S(-0.02, 0.13, 0.11, 0.88, 3), S(-0.3, 0.11, 0.13, 0.84, 2.8),
+        S(-0.8, 0.07, 0.11, 0.76), S(-1.4, 0.035, 0.08, 0.66, 2.2)
+    ], 14);
+    // الجوانب (sidepods): فتحة قدّام، تنحف وتدخل للداخل للخلف (شكل قارورة الكولا)، والسفلي محفور
+    const pod = sx => loft([
+        S(0.62, 0.06, 0.05, 0.42, 3, sx * 0.62), S(0.48, 0.2, 0.15, 0.41, 3.4, sx * 0.64), S(0.1, 0.23, 0.17, 0.4, 3.2, sx * 0.62),
+        S(-0.45, 0.2, 0.15, 0.38, 3, sx * 0.56), S(-1.05, 0.14, 0.11, 0.35, 2.8, sx * 0.45), S(-1.6, 0.06, 0.06, 0.31, 2.4, sx * 0.33)
+    ], 16);
+    const parts = [
+        [chassis, I, livery], [airbox, I, livery], [pod(1), I, podLivery], [pod(-1), I, podLivery],
+        // فتحة التبريد السوداء قدّام الجوانب
+        [box(0.3, 0.2, 0.02), M(0.63, 0.42, 0.63), carbon], [box(0.3, 0.2, 0.02), M(-0.63, 0.42, 0.63), carbon],
+        // زعنفة القرش + كاميرا T فوق فتحة الهواء
+        [box(0.025, 0.36, 1.25), M(0, 0.86, -1.25, 0.06, 0, 0), main],
+        [box(0.12, 0.035, 0.06), M(0, 1.02, 0.02), accent],
+        // الأرضية: لوح عريض بحافة مرفوعة + المشتت الخلفي
+        [box(1.55, 0.04, 3.3), M(0, 0.07, -0.15), carbon],
+        [box(0.04, 0.08, 2.4), M(0.78, 0.1, -0.35), carbon], [box(0.04, 0.08, 2.4), M(-0.78, 0.1, -0.35), carbon],
+        [box(1.0, 0.03, 0.5), M(0, 0.16, -1.95, 0.35, 0, 0), carbon],
+        // الهالة: حلقة فوق الكوكبيت + العمود الوسطي
+        [new T.TorusGeometry(0.36, 0.035, 8, 22, Math.PI), M(0, 0.78, 0.5, -X, 0, 0, 1, 1.25, 1), carbon],
+        [cyl(0.03, 0.03, 0.36, 8), M(0, 0.7, 0.93, -0.75, 0, 0), carbon],
+        // الجناح الأمامي: ثلاث طبقات (كربون + فلابين بلون الفريق) وألواح جانبية + دعامتين للأنف
+        [airfoil(2.1, 0.5, 0.05), M(0, 0.1, 3.05), carbon],
+        [airfoil(1.9, 0.3, 0.04), M(0, 0.17, 2.88, -0.25, 0, 0), main],
+        [airfoil(1.7, 0.22, 0.035), M(0, 0.24, 2.76, -0.45, 0, 0), accent],
+        [box(0.035, 0.26, 0.72), M(1.06, 0.2, 2.98), main], [box(0.035, 0.26, 0.72), M(-1.06, 0.2, 2.98), main],
+        [box(0.025, 0.2, 0.18), M(0.12, 0.2, 3.0), carbon], [box(0.025, 0.2, 0.18), M(-0.12, 0.2, 3.0), carbon],
+        // الجناح الخلفي: لوحين (الأعلى فلاب DRS) + ألواح جانبية مقوسة بلون الفريق + جناح سفلي (beam) + عمود
+        [airfoil(1.7, 0.42, 0.05), M(0, 0.98, -2.42, 0.08, 0, 0), carbon],
+        [airfoil(1.7, 0.26, 0.04), M(0, 1.13, -2.55, -0.38, 0, 0), main],
+        [box(0.035, 0.68, 0.78), M(0.86, 0.9, -2.45), main], [box(0.035, 0.68, 0.78), M(-0.86, 0.9, -2.45), main],
+        [box(0.036, 0.14, 0.78), M(0.86, 1.17, -2.45), accent], [box(0.036, 0.14, 0.78), M(-0.86, 1.17, -2.45), accent],
+        [airfoil(1.0, 0.22, 0.03), M(0, 0.5, -2.3), carbon],
+        [box(0.05, 0.55, 0.12), M(0, 0.72, -2.38), carbon],
+        // أذرع التعليق (كربون): أمامية مائلة لمركز العجلة، وخلفية
+        [box(0.76, 0.025, 0.05), M(0.6, 0.38, 1.82, 0, 0.18, 0.05), carbon], [box(0.76, 0.025, 0.05), M(-0.6, 0.38, 1.82, 0, -0.18, -0.05), carbon],
+        [box(0.76, 0.025, 0.05), M(0.6, 0.3, 1.66, 0, -0.18, -0.03), carbon], [box(0.76, 0.025, 0.05), M(-0.6, 0.3, 1.66, 0, 0.18, 0.03), carbon],
+        [box(0.62, 0.025, 0.05), M(0.68, 0.4, -1.4, 0, 0.1, 0.04), carbon], [box(0.62, 0.025, 0.05), M(-0.68, 0.4, -1.4, 0, -0.1, -0.04), carbon],
+        [box(0.62, 0.025, 0.05), M(0.68, 0.3, -1.52, 0, -0.1, -0.03), carbon], [box(0.62, 0.025, 0.05), M(-0.68, 0.3, -1.52, 0, 0.1, 0.03), carbon],
+        // المرايا على دعامات
+        [box(0.15, 0.07, 0.04), M(0.47, 0.72, 0.95), main], [box(0.15, 0.07, 0.04), M(-0.47, 0.72, 0.95), main],
+        [box(0.12, 0.02, 0.02), M(0.39, 0.66, 0.95, 0, 0, 0.5), carbon], [box(0.12, 0.02, 0.02), M(-0.39, 0.66, 0.95, 0, 0, -0.5), carbon]
+    ];
+    const geo = mergeColored(parts);
+    const paint = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.32, metalness: 0.3 });
+    const body = new T.Mesh(geo, paint); body.castShadow = true; g.add(body);
+    // العجلات: إطار عريض أسود بخط ملوّن على الجنب + جنط داكن + برامق تبيّن الدوران
+    const stripe = new T.Color(0xfacc15), rim = new T.Color(0x2a2d34);
+    const axle = (half, r, w) => {
+        const ps = [];
+        for (const sx of [1, -1]) {
+            ps.push([cyl(r, r, w, 24), M(sx * half, 0, 0, 0, 0, X), carbon]);
+            ps.push([new T.TorusGeometry(r * 0.8, 0.012, 6, 28), M(sx * (half + w / 2 + 0.001), 0, 0, 0, X, 0), stripe]);
+            ps.push([cyl(r * 0.62, r * 0.62, w + 0.012, 20), M(sx * half, 0, 0, 0, 0, X), rim]);
+            for (let k = 0; k < 3; k++) ps.push([box(w + 0.03, r * 1.12, 0.05), M(sx * half, 0, 0, k * Math.PI / 3, 0, 0), metal]);
+            ps.push([cyl(r * 0.18, r * 0.18, w + 0.04, 10), M(sx * half, 0, 0, 0, 0, X), main]);
+        }
+        return new T.Mesh(mergeColored(ps), paint);
+    };
+    const front = axle(0.94, 0.36, 0.36); front.position.set(0, 0.36, 1.75);
+    const rear = axle(0.96, 0.38, 0.46); rear.position.set(0, 0.38, -1.45);
     g.add(front, rear);
     const wheels = [front, rear];
     // الخوذة + الزجاج (تنخفي بلقطة داخل السيارة)
@@ -299,7 +368,7 @@ function buildCar(car) {
         [new T.SphereGeometry(0.21, 16, 12), M(0, 0, 0), accent.clone().lerp(white, 0.3)],
         [box(0.3, 0.08, 0.12), M(0, 0.01, 0.15), carbon]
     ]), paint);
-    helmet.position.set(0, 0.9, 0.42); g.add(helmet);
+    helmet.position.set(0, 0.8, 0.36); g.add(helmet);
     // لهب التوربو/النيترو + حلقة الدرع/التوقف + ضوء خلفي
     const flameMat = new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.85, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
     const flame = new T.Mesh(G.flame, flameMat); flame.position.set(0, 0.55, -2.55); flame.visible = false; g.add(flame);
