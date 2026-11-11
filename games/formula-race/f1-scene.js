@@ -733,6 +733,278 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     }
     setQuality(quality);
 
+
+    // =====================================================================
+    // مراسم النهاية: الثلاثة الأوائل يستعرضون قدام سياراتهم (15 ثانية)، بعدها
+    // تطلع «منصة تتويج ألعاب أيمن» ويمشون لها، ويوقفون عليها بميداليات، والأول
+    // يرفع الكاس ويحتفل. الشخصيات = شخصيات الأنمي المشتركة (docs/CHARACTERS.md).
+    // لو ما تحمّلت الشخصيات، ceremony() ترجع false واللعبة تعرض منصة HTML العادية.
+    // =====================================================================
+    let VRM = null, vrmModels = null, vrmAsked = false;
+    const logLine = (...a) => { try { const A = window.AymanGamesPlatform; if (A && A.log) A.log(...a); } catch (e) {} };
+    function preloadCharacters() {
+        if (vrmAsked) return; vrmAsked = true;
+        Promise.all([import('../../js/agp-vrm-characters.js'), import('../birthday-party/rig3d.js')]).then(([V, Rg]) => {
+            Rg.loadClips(new URL('../birthday-party/anims/', import.meta.url).href).catch(() => null);
+            VRM = V;
+            const tryLoad = () => V.loadModels().then(m => { if (m) vrmModels = m; else setTimeout(tryLoad, 8000); }).catch(() => setTimeout(tryLoad, 8000));
+            tryLoad();
+        }).catch(e => logLine('formula-race: characters unavailable', e));
+    }
+    const hashId = s0 => { let h = 2166136261; const s1 = String(s0); for (let i = 0; i < s1.length; i++) { h ^= s1.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+    const easeIO = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+
+    // توجيه عظمة الذراع لاتجاه بإحداثيات الجسم (+Y فوق، +Z قدام، يمين الشخصية -X) — نفس rps-scene.js
+    const _qa = new T.Quaternion(), _qb = new T.Quaternion(), _qr = new T.Quaternion(), _v1 = new T.Vector3(), _v2 = new T.Vector3(), _e = new T.Euler();
+    const REST_R = new T.Vector3(-1, 0, 0), REST_L = new T.Vector3(1, 0, 0);
+    function aimBone(rig, ry, name, dx, dy, dz) {
+        const b = rig.bones[name]; if (!b || !b.parent) return;
+        _qr.setFromEuler(_e.set(0, ry, 0));
+        b.parent.getWorldQuaternion(_qa);
+        _v1.copy(name.startsWith('Left') ? REST_L : REST_R).applyQuaternion(_qr);
+        _v2.set(dx, dy, dz).normalize().applyQuaternion(_qr);
+        _qb.setFromUnitVectors(_v1, _v2).multiply(_qr);
+        b.quaternion.copy(_qa.invert()).multiply(_qb);
+    }
+
+    // قطعة بين نقطتين (شريط الميدالية)
+    function segBox(a, b, w, mat) {
+        const va = new T.Vector3(...a), vb = new T.Vector3(...b), len = va.distanceTo(vb);
+        const m = new T.Mesh(new T.BoxGeometry(w, len, 0.006), mat);
+        m.position.copy(va).add(vb).multiplyScalar(0.5);
+        m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), vb.clone().sub(va).normalize());
+        return m;
+    }
+    const MEDAL = [0xf5c542, 0xc9d1dc, 0xcd7f32];
+    function makeMedal(i) {
+        const g = new T.Group();
+        const metal = new T.MeshStandardMaterial({ color: MEDAL[i], metalness: 0.85, roughness: 0.25, emissive: MEDAL[i], emissiveIntensity: 0.12 });
+        const ribbon = new T.MeshStandardMaterial({ color: [0xe10600, 0x1d4ed8, 0x16a34a][i], roughness: 0.6 });
+        g.add(segBox([0.07, 0.17, 0.05], [0.012, 0.0, 0.135], 0.028, ribbon), segBox([-0.07, 0.17, 0.05], [-0.012, 0.0, 0.135], 0.028, ribbon));
+        const disc = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 0.012, 24), metal);
+        disc.rotation.x = Math.PI / 2; disc.position.set(0, -0.04, 0.14); g.add(disc);
+        const rim = new T.Mesh(new T.TorusGeometry(0.05, 0.006, 6, 24), metal); rim.position.copy(disc.position); g.add(rim);
+        return g;
+    }
+    function makeTrophy() {
+        const gold = new T.MeshStandardMaterial({ color: 0xf5c542, metalness: 0.9, roughness: 0.2, emissive: 0x7a5a00, emissiveIntensity: 0.25 });
+        const g = new T.Group();
+        const pts = [[0, 0], [0.07, 0], [0.07, 0.025], [0.025, 0.04], [0.02, 0.12], [0.05, 0.15], [0.1, 0.22], [0.115, 0.32], [0.1, 0.32]].map(([x, y]) => new T.Vector2(x, y));
+        g.add(new T.Mesh(new T.LatheGeometry(pts, 20), gold));
+        for (const sx of [1, -1]) { const h = new T.Mesh(new T.TorusGeometry(0.045, 0.01, 6, 14, Math.PI * 1.2), gold); h.position.set(sx * 0.115, 0.25, 0); h.rotation.z = sx > 0 ? -Math.PI * 0.6 : Math.PI * 1.6; g.add(h); }
+        return g;
+    }
+    // منصة تتويج ألعاب أيمن: ثلاث درجات + قوس ولافتة باسم المنصة
+    const STEP_H = [1.2, 0.85, 0.6], STEP_LANE = [0, -2.35, 2.35];
+    function buildPodium() {
+        const g = new T.Group();
+        const white = new T.MeshStandardMaterial({ color: 0xf3f4f6, roughness: 0.5 });
+        const red = new T.MeshStandardMaterial({ color: 0xe10600, roughness: 0.4, metalness: 0.2 });
+        const dark = new T.MeshStandardMaterial({ color: 0x1f2430, roughness: 0.7 });
+        const base = new T.Mesh(new T.BoxGeometry(8.4, 0.15, 3.4), dark); base.position.y = 0.075; base.receiveShadow = true; g.add(base);
+        for (let i = 0; i < 3; i++) {
+            const h = STEP_H[i], x = STEP_LANE[i];
+            const b = new T.Mesh(new T.BoxGeometry(2.3, h, 2.2), white); b.position.set(x, 0.15 + h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
+            const trim = new T.Mesh(new T.BoxGeometry(2.34, 0.07, 2.24), red); trim.position.set(x, 0.15 + h, 0); g.add(trim);
+            const face = new T.Mesh(new T.PlaneGeometry(2.0, Math.min(0.9, h - 0.1)), new T.MeshBasicMaterial({ map: canvasTex(256, 120, (ctx, w, hh) => {
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, hh);
+                ctx.fillStyle = ['#c9a227', '#7b8794', '#a0612b'][i]; ctx.font = `800 86px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(String(i + 1), w / 2, hh / 2 + 4);
+            }) }));
+            face.position.set(x, 0.15 + h / 2, 1.105); g.add(face);
+        }
+        // القوس واللافتة
+        for (const x of [-4.6, 4.6]) { const pl = new T.Mesh(new T.BoxGeometry(0.35, 6.2, 0.35), red); pl.position.set(x, 3.1, -1.2); pl.castShadow = true; g.add(pl); }
+        const bannerTex = canvasTex(1024, 160, (ctx, w, h) => {
+            const gr = ctx.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#9b0400'); gr.addColorStop(0.5, '#e10600'); gr.addColorStop(1, '#9b0400');
+            ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#ffd76a'; ctx.fillRect(0, 0, w, 8); ctx.fillRect(0, h - 8, w, 8);
+            ctx.fillStyle = '#fff'; ctx.font = `800 64px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.fillText('🏆 منصة تتويج ألعاب أيمن', w / 2, h / 2 + 4);
+        });
+        const banner = new T.Mesh(new T.BoxGeometry(9.6, 1.4, 0.3), [red, red, red, red, new T.MeshBasicMaterial({ map: bannerTex }), red]);
+        banner.position.set(0, 5.9, -1.2); banner.castShadow = true; g.add(banner);
+        return g;
+    }
+
+    // قصاصات احتفال (InstancedMesh وحدة)
+    const CONF_N = 240;
+    let confetti = null;
+    function makeConfetti() {
+        const m = new T.InstancedMesh(new T.PlaneGeometry(0.09, 0.14), new T.MeshBasicMaterial({ side: T.DoubleSide }), CONF_N);
+        const C = [0xe10600, 0xffd76a, 0x22d3ee, 0xf472b6, 0x4ade80, 0xffffff], col = new T.Color();
+        const st = [];
+        for (let i = 0; i < CONF_N; i++) { m.setColorAt(i, col.setHex(C[i % C.length])); st.push({ x: 0, y: -99, z: 0, vy: 0, rx: 0, ry: 0, s: 0 }); }
+        m.frustumCulled = false; m.count = CONF_N;
+        return { mesh: m, st };
+    }
+    const _m4 = new T.Matrix4(), _q4 = new T.Quaternion(), _p4 = new T.Vector3(), _s4 = new T.Vector3(1, 1, 1);
+    function tickConfetti(dt, center, on) {
+        if (!confetti) return;
+        const { mesh, st } = confetti;
+        for (let i = 0; i < CONF_N; i++) {
+            const c = st[i];
+            if (c.y < 0) { if (!on) { c.y = -99; } else { c.x = center.x + (Math.random() - 0.5) * 12; c.z = center.z + (Math.random() - 0.5) * 8; c.y = 7 + Math.random() * 6; c.vy = 1.2 + Math.random() * 1.6; c.s = Math.random() * 6; } }
+            if (c.y > -50) { c.y -= c.vy * dt; c.s += dt * 4; }
+            _q4.setFromEuler(_e.set(c.s, c.s * 0.7, c.s * 0.3));
+            _p4.set(c.x + Math.sin(c.s) * 0.15, c.y, c.z);
+            mesh.setMatrixAt(i, _m4.compose(_p4, _q4, _s4));
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+    }
+
+    let cer = null;
+    const D_CAR = 22, D_CHAR = 27, D_POD = 33, CAR_LANE = [0, -4.5, 4.5];
+    /** يبدأ المراسم. list: [{id, name, color, character}] بالترتيب (الأول، الثاني، الثالث). */
+    function ceremony(list, cb = {}) {
+        if (!VRM || !vrmModels || cer) return false;
+        const top = list.slice(0, 3).filter(c => cars.has(c.id));
+        if (!top.length) return false;
+        const group = new T.Group(); scene.add(group);
+        const pb = trackPoint(D_POD, 0);
+        const podium = buildPodium(); podium.position.set(pb.x, 0, pb.z); podium.rotation.y = pb.heading; podium.scale.set(1, 0.001, 1); podium.visible = false; group.add(podium);
+        const ids = new Set(top.map(c => c.id));
+        for (const [id, o] of cars) o.group.visible = ids.has(id);
+        const chars = top.map((c, i) => {
+            const o = cars.get(c.id), cp = trackPoint(D_CAR, CAR_LANE[i]);
+            o.group.position.set(cp.x, 0, cp.z); o.group.rotation.y = cp.heading;
+            o.pin.visible = o.tag.visible = o.flame.visible = o.ring.visible = o.dome.visible = false; o.helmet.visible = false;
+            const kind = c.character === 'boy' ? 'boy' : c.character === 'girl' ? 'girl' : (hashId(c.id) % 2 ? 'boy' : 'girl');
+            const rig = VRM.makeVrmRig(vrmModels[kind], { n: i + 1 });
+            const p = trackPoint(D_CHAR, CAR_LANE[i]);
+            rig.root.position.set(p.x, 0, p.z); rig.root.rotation.y = p.heading;
+            rig.root.traverse(m => { if (m.isMesh) m.castShadow = true; });
+            group.add(rig.root);
+            rig.play(i === 0 ? 'win' : i === 1 ? 9 : 10); rig.mood('laugh');
+            const tag = makeNameTag({ name: (i + 1) + ' · ' + c.name, color: c.color }); tag.visible = true; tag.scale.set(1.9, 1.9 * 112 / 512, 1); tag.position.y = 2.0; rig.root.add(tag);
+            return { c, rig, i, tag, ry: p.heading, state: 'show', from: null, to: null, walkT: 0, hopT: 0 };
+        });
+        confetti = confetti || makeConfetti(); group.add(confetti.mesh);
+        cer = { t: 0, chars, group, podium, pb, cb, stage: 'show', camSeg: '', landed: 0 };
+        if (cb.onStage) cb.onStage('show');
+        return true;
+    }
+    function stopCeremony() {
+        if (!cer) return;
+        cer.chars.forEach(ch => { ch.tag.material.map.dispose(); ch.tag.material.dispose(); ch.rig.dispose(); });
+        cer.group.traverse(o => { if (o === confetti?.mesh) return; if (o.isMesh) { o.geometry.dispose(); [].concat(o.material).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); } });
+        if (confetti) cer.group.remove(confetti.mesh);
+        tickConfetti(0, new T.Vector3(), false);
+        scene.remove(cer.group);
+        for (const [, o] of cars) { o.group.visible = true; o.helmet.visible = true; }
+        cer = null;
+    }
+    function tickCeremony(dt) {
+        cer.t += dt;
+        const t = cer.t;
+        // المنصة تطلع من الأرض بعد الاستعراض
+        if (t >= 15 && cer.stage === 'show') {
+            cer.stage = 'walk'; cer.podium.visible = true;
+            cer.chars.forEach(ch => {
+                ch.state = 'wait'; ch.walkT = -ch.i * 0.3;
+                const a = trackPoint(D_CHAR, CAR_LANE[ch.i]), b = trackPoint(D_POD - 1.45, STEP_LANE[ch.i]);
+                ch.from = new T.Vector3(a.x, 0, a.z); ch.to = new T.Vector3(b.x, 0, b.z);
+                ch.tag.visible = false;
+            });
+            if (cer.cb.onStage) cer.cb.onStage('walk');
+        }
+        if (cer.stage !== 'show') { const k = easeIO((t - 15) / 1.2); cer.podium.scale.set(1, Math.max(0.001, k), 1); }
+        for (const ch of cer.chars) {
+            const { rig } = ch;
+            if (ch.state === 'wait' || ch.state === 'walk') {
+                ch.walkT += dt;
+                if (ch.walkT > 0.9) {
+                    if (ch.state === 'wait') { ch.state = 'walk'; rig.play(1); rig.setSpeed(2.2); rig.mood('smile'); }
+                    const dir = ch.to.clone().sub(rig.root.position); dir.y = 0;
+                    const dist = dir.length(), stepLen = 2.2 * dt;
+                    if (dist <= stepLen) { rig.root.position.copy(ch.to); ch.state = 'hop'; ch.hopT = 0; rig.play(0); }
+                    else { rig.root.position.addScaledVector(dir.normalize(), stepLen); rig.root.rotation.y = Math.atan2(dir.x, dir.z); }
+                }
+            } else if (ch.state === 'hop') {
+                // قفزة على درجته
+                ch.hopT += dt / 0.5;
+                const k = Math.min(1, ch.hopT), top = trackPoint(D_POD, STEP_LANE[ch.i]);
+                const y = 0.15 + STEP_H[ch.i];
+                rig.root.position.set(ch.to.x + (top.x - ch.to.x) * k, y * k + Math.sin(k * Math.PI) * 0.6, ch.to.z + (top.z - ch.to.z) * k);
+                rig.root.rotation.y = ch.ry;
+                if (k >= 1) {
+                    ch.state = 'podium'; cer.landed++;
+                    const chest = rig.bones.Spine2 || rig.bones.Spine1 || rig.bones.Spine;
+                    if (chest) { ch.medal = makeMedal(ch.i); chest.add(ch.medal); }
+                    if (ch.i === 0 && rig.bones.RightHand) { ch.trophy = makeTrophy(); ch.trophy.rotation.z = Math.PI / 2; ch.trophy.position.set(-0.09, 0, 0.03); rig.bones.RightHand.add(ch.trophy); }
+                    rig.play(ch.i === 0 ? 6 : ch.i === 1 ? 4 : 3); rig.mood('laugh');
+                    burstAt(rig.root.position.clone().setY(y + 1.6), MEDAL[ch.i], 30);
+                    if (cer.landed === cer.chars.length) { cer.stage = 'podium'; cer.podiumAt = t; if (cer.cb.onStage) cer.cb.onStage('podium'); }
+                }
+            }
+            rig.update(dt);
+            if (ch.state === 'podium') {
+                rig.root.updateMatrixWorld(true);
+                if (ch.i === 0) {
+                    // الأول يرفع الكاس ويهزّه مع الاحتفال، واليد الثانية قبضة لفوق
+                    const pump = Math.sin(t * 5) * 0.12;
+                    aimBone(rig, ch.ry, 'RightArm', -0.25, 1, 0.12); rig.root.updateMatrixWorld(true);
+                    aimBone(rig, ch.ry, 'RightForeArm', -0.08 + pump * 0.3, 1, 0.12 + pump);
+                    aimBone(rig, ch.ry, 'LeftArm', 0.5, 0.75, 0.25); rig.root.updateMatrixWorld(true);
+                    aimBone(rig, ch.ry, 'LeftForeArm', 0.15, 1, 0.2);
+                    rig.gesture('Left', 'rock');
+                }
+            }
+            rig.sync();
+        }
+        // ألعاب نارية وقصاصات على المنصة
+        if (cer.stage === 'podium') {
+            const u = t - cer.podiumAt;
+            if (Math.floor(u / 1.1) !== Math.floor((u - dt) / 1.1)) {
+                const side = (Math.floor(u / 1.1) % 3) - 1, p = trackPoint(D_POD - 3, side * 4);
+                burstAt(new T.Vector3(p.x, 8 + Math.random() * 3, p.z), [0xffd76a, 0xe10600, 0x22d3ee, 0xf472b6][Math.floor(u) % 4], 26);
+            }
+        }
+        tickConfetti(dt, cer.pb, cer.stage === 'podium');
+    }
+    // الكاميرا: لقطة واسعة ← قريبة على الثالث ← الثاني ← الأول ← واسعة · بعدها المنصة
+    function ceremonyCamera(dt) {
+        const t = cer.t, P = (d, lane, y) => { const q = trackPoint(d, lane); return new T.Vector3(q.x, y, q.z); };
+        let seg, pos, look, fov = 48;
+        const headOf = i => { const ch = cer.chars[i] || cer.chars[0]; return ch.rig.root.position.clone().setY(ch.rig.root.position.y + 1.4); };
+        if (t < 15) {
+            if (t < 4 || !cer.chars[1]) { seg = 'wide'; pos = P(D_CHAR + 11 - t * 0.5, Math.sin(t * 0.4) * 3, 2.6); look = P(D_CHAR - 1, 0, 1.1); }
+            else if (t < 7 && cer.chars[2]) { seg = 'c3'; const h = headOf(2); pos = P(D_CHAR + 3.6 - (t - 4) * 0.25, CAR_LANE[2] + 0.8, 1.55); look = h; fov = 40; }
+            else if (t < 10 && cer.chars[1]) { seg = 'c2'; const h = headOf(1); pos = P(D_CHAR + 3.6 - (t - 7) * 0.25, CAR_LANE[1] - 0.8, 1.55); look = h; fov = 40; }
+            else if (t < 13) { seg = 'c1'; const h = headOf(0); pos = P(D_CHAR + 3.4 - (t - 10) * 0.25, 0.6, 1.5); look = h; fov = 40; }
+            else { seg = 'wide2'; pos = P(D_CHAR + 14 + (t - 13) * 1.2, 0, 4 + (t - 13) * 0.4); look = P(D_CHAR - 2, 0, 1.2); }
+        } else {
+            const u = cer.stage === 'podium' ? t - cer.podiumAt : -1;
+            if (u < 0 || u > 11) {
+                seg = 'pod'; const a = Math.sin(t * 0.25) * 0.35;
+                const c = cer.pb, f = new T.Vector3(Math.sin(c.heading + a), 0, Math.cos(c.heading + a));
+                pos = new T.Vector3(c.x, 4.2, c.z).addScaledVector(f, 13); look = new T.Vector3(c.x, 2.2, c.z);
+            } else if (u < 5.5) {
+                seg = 'pod1'; const h = headOf(0);
+                pos = P(D_POD + 4.4, 0.6 + Math.sin(u * 0.5) * 0.4, h.y + 0.4); look = h.clone().setY(h.y + 0.35); fov = 44;
+            } else {
+                seg = 'podw'; pos = P(D_POD + 9, -2 + (u - 5.5) * 0.7, 3.4); look = P(D_POD, 0, 2.1); fov = 46;
+            }
+        }
+        const cut = seg !== cer.camSeg; cer.camSeg = seg;
+        if (cut) { camPos.copy(pos); camLook.copy(look); camFov = fov; }
+        else { const k = 1 - Math.exp(-dt * 3); camPos.lerp(pos, k); camLook.lerp(look, k); camFov += (fov - camFov) * k; }
+        scene.fog.near = 400; scene.fog.far = fogFar;
+        if (camera.near !== 0.1) { camera.near = 0.1; camera.updateProjectionMatrix(); }
+        camera.position.copy(camPos); camera.lookAt(camLook);
+        if (Math.abs(camera.fov - camFov) > 0.01) { camera.fov = camFov; camera.updateProjectionMatrix(); }
+        const c = cer.pb; sun.target.position.set(c.x, 0, c.z); sun.position.set(c.x + 60, 120, c.z + 40);
+    }
+    function burstAt(pos, color, n) {
+        for (let i = 0; i < n; i++) {
+            const p = parts[partIdx++ % parts.length];
+            p.s.visible = true; p.s.material.color.set(color);
+            p.s.position.copy(pos).add(tmp.set((Math.random() - 0.5) * 1.2, Math.random() * 0.6, (Math.random() - 0.5) * 1.2));
+            p.v.set((Math.random() - 0.5) * 10, 2 + Math.random() * 7, (Math.random() - 0.5) * 10);
+            p.life = 0; p.max = 0.8 + Math.random() * 0.8; p.s.scale.setScalar(1.1);
+        }
+    }
+
     // ---- الحلقة ----
     const clock = new T.Clock();
     let raf = 0, running = true;
@@ -740,9 +1012,8 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         if (!running) return;
         raf = requestAnimationFrame(loop);
         const dt = Math.min(clock.getDelta(), 0.05);
-        applyStates(dt);
-        tickParts(dt);
-        camera_(dt);
+        if (cer) { tickCeremony(dt); tickParts(dt); ceremonyCamera(dt); }
+        else { applyStates(dt); tickParts(dt); camera_(dt); }
         r.render(scene, camera);
     }
     loop();
@@ -752,10 +1023,12 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     document.addEventListener('visibilitychange', onVis);
 
     return {
-        setCars, update, burst, setLights, setQuality,
+        setCars, update, burst, setLights, setQuality, ceremony, stopCeremony,
+        get ceremonyOn() { return !!cer; },
         setCamera(mode, id) { camMode = phase === 'finish' ? 'orbit' : mode; if (id) focusId = id; },
-        setPhase(p) { phase = p; },
+        setPhase(p) { phase = p; if (p === 'race') preloadCharacters(); },
         stop() {
+            stopCeremony();
             running = false; cancelAnimationFrame(raf); ro.disconnect();
             document.removeEventListener('visibilitychange', onVis);
             scene.traverse(o => { o.geometry?.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k]?.isTexture) m[k].dispose(); m.dispose(); }); });

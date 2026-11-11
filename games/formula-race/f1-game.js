@@ -224,7 +224,8 @@
             color: color, number: S.cars.length + 1,
             dist: slot.dist, lane: slot.lane, laneT: slot.lane, speed: 0, throttle: 0,
             fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0, tapBank: 0,
-            bot: !!p.bot
+            bot: !!p.bot,
+            character: p.character || null   // شخصية الأنمي المختارة من البروفايل (girl/boy/any/null) — لمراسم النهاية
         };
         S.cars.push(car); S.byId[car.id] = car;
         if (scene) scene.setCars(S.cars);
@@ -334,10 +335,10 @@
             var idx = Math.floor((((c.dist % L) + L) % L) / TRACK.step) % TRACK.count;
             var corner = Math.min(1, Math.abs(TRACK.curvature[idx]) * 18);
             var target = BASE_SPEED + c.throttle * BOOST_SPEED * (1 - corner * 0.35);
-            if (fx.nitro > 0) target *= 1.2;
+            if (fx.nitro > 0) target *= 1.08;   // النيترو دفعة خفيفة (المكوك هو الأقوى)
             if (fx.shuttle > 0) target *= 1.7;
             if (fx.stop > 0) target = 0;
-            var acc = fx.stop > 0 ? 5 : target > c.speed ? (fx.shuttle > 0 || fx.nitro > 0 ? 4.5 : 1.6) : 2.4;
+            var acc = fx.stop > 0 ? 5 : target > c.speed ? (fx.shuttle > 0 ? 4.5 : fx.nitro > 0 ? 2.4 : 1.6) : 2.4;
             c.speed += (target - c.speed) * (1 - Math.exp(-dt * acc));
             // تجاوز: لو فيه سيارة قريبة قدامي بنفس المسار أغيّر المسار
             sorted.forEach(function (o) {
@@ -529,6 +530,12 @@
         endRace();
     }
 
+    function ceremonyBanner(title, sub) {
+        var b = $('cerBanner');
+        $('cerTitle').textContent = title; $('cerSub').innerHTML = sub || '';
+        b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+    }
+
     function endRace() {
         S.phase = 'finish'; document.body.dataset.phase = 'finish';
         var st = standings();
@@ -549,8 +556,19 @@
             r.innerHTML = '<b>' + (i + 4) + '</b><span class="dot" style="background:' + c.color + '"></span><span>' + esc(c.name) + '</span><span class="rest-gap">' + (c.finished ? gapTxt(c.finishAt - st[0].finishAt) : 'لم يكمل') + '</span>';
             rest.appendChild(r);
         });
-        $('podium').classList.add('show');
         if (scene) { scene.setPhase('finish'); }
+        // مراسم ثري دي للثلاثة الأوائل (لو الشخصيات جاهزة)، وإلا منصة HTML العادية
+        var top3 = st.slice(0, 3).map(function (c) { return { id: c.id, name: c.name, color: c.color, character: c.character }; });
+        var started = false;
+        try {
+            started = !!(scene && scene.ceremony && scene.ceremony(top3, { onStage: function (stg) {
+                if (stg === 'show') ceremonyBanner('الثلاثة الأوائل يستعرضون', top3.map(function (c, i) { return ['🥇', '🥈', '🥉'][i] + ' ' + esc(c.name); }).join('  ·  '));
+                else if (stg === 'walk') ceremonyBanner('إلى منصة التتويج', '🏆 ألعاب أيمن');
+                else if (stg === 'podium') { ceremonyBanner('منصة تتويج ألعاب أيمن', '🏆 ' + esc(top3[0].name) + ' بطل السباق'); $('podium').classList.add('show'); }
+            } }));
+        } catch (e) { AGP.log('formula-race: ceremony failed', e); started = false; }
+        document.body.classList.toggle('ceremony', started);
+        if (!started) $('podium').classList.add('show');
     }
 
     function resetRace() {
@@ -562,6 +580,8 @@
             c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0;
         });
         $('podium').classList.remove('show');
+        document.body.classList.remove('ceremony');
+        if (scene && scene.stopCeremony) scene.stopCeremony();
         if (scene) { scene.setPhase('lobby'); scene.setCars(S.cars); }
         renderLobby();
     }

@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سباق الفورمولا — ألعاب أيمن</title>
+<!-- three + شخصيات الأنمي المشتركة (docs/CHARACTERS.md) — نفس النسخ بكل ألعاب الثري دي -->
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js" } }</script>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -302,6 +304,20 @@ body.testing .live::after{content:" · تجربة";}
 .rest-row .dot{width:10px;height:10px;border-radius:50%}
 .rest-gap{color:var(--mut)}
 
+/* ---------- مراسم النهاية (ثري دي) ---------- */
+#cerBanner{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:30;display:none;flex-direction:column;align-items:center;gap:2px;padding:10px 28px 12px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(150,4,0,.92),rgba(90,2,0,.9));border:1px solid rgba(255,215,106,.55);box-shadow:0 14px 40px rgba(0,0,0,.45);text-align:center;white-space:nowrap}
+body.ceremony #cerBanner{display:flex}
+#cerBanner.pop{animation:cerpop .5s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes cerpop{from{opacity:0;transform:translate(-50%,-12px) scale(.9)}}
+#cerTitle{font-size:clamp(20px,2.2vw,30px);font-weight:700;color:#fff}
+#cerSub{font-size:14px;color:#ffd76a;font-weight:600}
+body.ceremony .tower,body.ceremony .perks,body.ceremony .bottom,body.ceremony .mapbox,body.ceremony .lapbox,body.ceremony #toasts{display:none}
+/* أثناء المراسم: منصة HTML تصير شريط نتائج تحت (المنصة الحقيقية بالثري دي) */
+body.ceremony #podium{inset:auto 0 0 0;padding:14px 16px 18px;gap:10px;background:linear-gradient(0deg,rgba(5,5,8,.85),rgba(5,5,8,0))}
+body.ceremony #podium h2,body.ceremony #podiumSteps{display:none}
+body.ceremony #podium .btn-start{height:46px}
+
 /* إخفاء الواجهة (H) — لقطة بث نظيفة */
 body.clean .perks,body.clean .mapbox{display:none}
 body.no3d .fc-cam{display:none}
@@ -492,6 +508,7 @@ body.no3d .fc-cam{display:none}
 <div id="toasts"></div>
 
 <div id="lights"><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div><div class="col"><div class="pod"></div><div class="pod dim"></div></div></div>
+<div id="cerBanner"><b id="cerTitle"></b><span id="cerSub"></span></div>
 <div id="countNum"></div>
 <div id="goText"><small>الأضواء انطفأت</small>انطلق!</div>
 
