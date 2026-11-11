@@ -104,7 +104,12 @@ input::placeholder{color:#6f6a7c}
                       <sc-if value="{{ row.dot }}" hint-placeholder-val="{{ false }}">
                         <span style="width:8px;height:8px;flex-shrink:0;border-radius:50%;background:{{ row.dot }};box-shadow:0 0 8px {{ row.dot }}"></span>
                       </sc-if>
-                      <span style="font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap">{{ row.label }}</span>
+                      <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap">{{ row.label }}</span>
+                        <sc-if value="{{ row.hint }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:500 13px/1.55 'IBM Plex Sans Arabic';color:#8a8596;text-wrap:pretty">{{ row.hint }}</span>
+                        </sc-if>
+                      </div>
                     </div>
 
                     <sc-if value="{{ row.isText }}" hint-placeholder-val="{{ false }}">
@@ -195,6 +200,7 @@ const SETTINGS = [
     { type:'choice', key:'who',        label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
   ]},
   { title:'المباراة', rows:[
+    { type:'choice', key:'mode',   label:'النمط', options:['سريع','بطولة'], default:0, hint:'سريع: الكل يلعب مرة والأعلى يفوز · بطولة: تصفيات لين النهائي' },
     { type:'choice', key:'turn',   label:'وقت كل لاعب', options:['دقيقة ونص','دقيقتين'], default:0 },
     { type:'toggle', key:'sound',  label:'الأصوات', default:true }
   ]}
@@ -218,7 +224,7 @@ class Component extends DCLogic {
   isSolo(){ return true; }
   shown(x){ return !x.only||x.only===(this.isSolo()?'solo':'teams'); }
   buildRow(r,idx){ const v=this.state.values[r.key], t=r.type;
-    const row={label:this.isSolo()&&r.soloLabel||r.label,dot:r.dot||null,divider:idx>0,isText:t==='text',isNumber:t==='number',isChoice:t==='choice',isToggle:t==='toggle',isMulti:t==='multi',isInline:t!=='multi',value:v,placeholder:r.placeholder||''};
+    const row={hint:r.hint||null,label:this.isSolo()&&r.soloLabel||r.label,dot:r.dot||null,divider:idx>0,isText:t==='text',isNumber:t==='number',isChoice:t==='choice',isToggle:t==='toggle',isMulti:t==='multi',isInline:t!=='multi',value:v,placeholder:r.placeholder||''};
     if(t==='text') row.onInput=e=>this.set(r.key,e.target.value);
     if(t==='number'){ const mn=r.min??0, mx=r.max??999, st=r.step??1, clamp=n=>Math.min(mx,Math.max(mn,n));
       row.dec=()=>this.set(r.key,clamp((+v||mn)-st)); row.inc=()=>this.set(r.key,clamp((+v||0)+st));

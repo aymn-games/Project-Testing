@@ -33,6 +33,7 @@
         { id: 'dots', name: 'توصيل النقاط', icon: '🔵', url: 'games/dots/index.html', ready: true },
         { id: 'penalty', name: 'ركلات الترجيح', icon: '⚽', url: 'games/penalty/index.html', ready: true },
         { id: 'fastest-answer', name: 'أسرع إجابة', icon: '⚡', url: 'games/fastest-answer/index.html', ready: true },
+        { id: 'lamha', name: 'حنكة', icon: '🧠', url: 'games/lamha/index.html', ready: true },
         { id: 'letters-cell', name: 'خلية الحروف', icon: '🐝', url: 'games/letters-cell/index.html', ready: true },
         { id: 'word-hive', name: 'كوّن كلمة', icon: '🍯', url: 'games/word-hive/index.html', ready: true },
         { id: 'word-chain', name: 'سلسلة الكلمات', icon: '🔗', url: 'games/word-chain/index.html', ready: true },
