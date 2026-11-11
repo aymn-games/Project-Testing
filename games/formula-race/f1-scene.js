@@ -938,13 +938,15 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
                 const gr = ctx.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, PLATE[i][0]); gr.addColorStop(0.45, PLATE[i][1]); gr.addColorStop(1, PLATE[i][2]);
                 ctx.fillStyle = gr; roundRect(ctx, 3, 3, w - 6, hh - 6, 18); ctx.fill();
                 ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.font = `800 ${Math.round(hh * (nm ? 0.5 : 0.62))}px ${FONT}`;
-                ctx.fillText(String(i + 1), w / 2, hh * (nm ? 0.36 : 0.47));
+                // الدرجات القصيرة: الرقم أصغر والاسم أكبر عشان يبان
+                const short = hh < 120;
+                ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.font = `800 ${Math.round(hh * (nm ? (short ? 0.42 : 0.5) : 0.62))}px ${FONT}`;
+                ctx.fillText(String(i + 1), w / 2, hh * (nm ? (short ? 0.3 : 0.36) : 0.47));
                 ctx.direction = 'rtl';
                 if (nm) {
-                    let fs = Math.round(hh * 0.2); ctx.font = `700 ${fs}px ${FONT}`;
+                    let fs = Math.max(24, Math.round(hh * (short ? 0.34 : 0.2))); ctx.font = `700 ${fs}px ${FONT}`;
                     while (ctx.measureText(nm).width > w - 40 && fs > 12) { fs -= 2; ctx.font = `700 ${fs}px ${FONT}`; }
-                    ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillText(nm, w / 2, hh * 0.74);
+                    ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillText(nm, w / 2, hh * (short ? 0.72 : 0.74));
                 } else { ctx.font = `700 ${Math.max(14, Math.round(hh * 0.13))}px ${FONT}`; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText('ألعاب أيمن', w / 2, hh * 0.86); }
             }) }));
             face.position.set(x, 0.15 + h / 2, 1.105); g.add(face);
