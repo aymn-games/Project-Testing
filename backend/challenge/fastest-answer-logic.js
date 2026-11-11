@@ -137,13 +137,13 @@ function sanitizeSettings(raw, sideNames) {
 function genQuestion(catId) {
     var D = QUESTIONS || {};
     var cat = ALL_CATS.filter(function (c) { return c.id === catId; })[0] || ALL_CATS[0];
-    var base = { catName: cat.name, dir: 'rtl', ls: '0' };
+    var base = { kind: cat.id, catName: cat.name, dir: 'rtl', ls: '0' };
     function q(extra) { var o = {}; Object.keys(base).forEach(function (k) { o[k] = base[k]; }); Object.keys(extra).forEach(function (k) { o[k] = extra[k]; }); return o; }
     if (cat.id === 'math' || !QUESTIONS) {
         var op = pick(['+', '−', '×']), a, b, res;
         if (op === '×') { a = 2 + rand(14); b = 2 + rand(11); res = a * b; }
         else { a = 12 + rand(88); b = 2 + rand(60); if (op === '−' && b > a) { var t = a; a = b; b = t; } res = op === '+' ? a + b : a - b; }
-        return q({ catName: ALL_CATS[0].name, sub: 'احسب الناتج', prompt: a + ' ' + op + ' ' + b, dir: 'ltr', answer: String(res), accept: [String(res)] });
+        return q({ kind: 'math', catName: ALL_CATS[0].name, sub: 'احسب الناتج', prompt: a + ' ' + op + ' ' + b, dir: 'ltr', answer: String(res), accept: [String(res)] });
     }
     var x;
     if (cat.id === 'image') { x = pick(D.image); return q({ sub: 'ما اسم الصورة؟', emoji: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
@@ -182,6 +182,8 @@ function genQuestion(catId) {
 }
 
 function checkAnswer(text, question) {
+    // الفحص المشترك في fa-questions.js (أسماء الحروف، واو المثل، الأرقام بكل اللغات) — نفس فحص game.html.
+    if (QUESTIONS && typeof QUESTIONS.checkAnswer === 'function') return QUESTIONS.checkAnswer(text, question);
     var v = [norm(text), norm(String(text).replace(/(\S)(ال)/g, '$1 $2'))].filter(Boolean);
     return v.length > 0 && question.accept.some(function (a) { return v.indexOf(norm(a)) >= 0; });
 }
