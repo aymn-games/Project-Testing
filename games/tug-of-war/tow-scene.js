@@ -68,7 +68,7 @@ function shipFigure(d) {
 }
 
 export function createTugScene(container, opts = {}) {
-    const colors = (opts.colors || ['#ff5b45', '#19a7ff']).slice();
+    const colors = (opts.colors || ['#e8776a', '#5aaee6']).slice();
     const r = new T.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: !!opts.capture });
     r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
     r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.1; r.outputColorSpace = T.SRGBColorSpace;
@@ -98,9 +98,9 @@ export function createTugScene(container, opts = {}) {
     // ---- الحبل وكل اللاعبين داخل mover (يتحرك مع pos)
     const mover = new T.Group(); sc.add(mover);
     let ropeY = 1.0;
-    const ropeTex = tex(256, 32, (g, w, h) => { for (let x = -h; x < w; x += 16) { g.fillStyle = (x / 16) % 2 ? '#a87a3f' : '#c89b5c'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 16, 0); g.lineTo(x + 16 + h, h); g.lineTo(x + h, h); g.fill(); } });
+    const ropeTex = tex(256, 32, (g, w, h) => { for (let x = -h; x < w; x += 16) { g.fillStyle = (x / 16) % 2 ? '#d1a76a' : '#f0d39d'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 16, 0); g.lineTo(x + 16 + h, h); g.lineTo(x + h, h); g.fill(); } });
     ropeTex.wrapS = T.RepeatWrapping; ropeTex.repeat.set(72, 1);
-    const rope = new T.Mesh(new T.CylinderGeometry(.055, .055, 40, 12), new T.MeshStandardMaterial({ map: ropeTex, roughness: .9 })); rope.rotation.z = Math.PI / 2; rope.castShadow = true; mover.add(rope);
+    const rope = new T.Mesh(new T.CylinderGeometry(.085, .085, 40, 14), new T.MeshStandardMaterial({ map: ropeTex, roughness: .75, emissive: '#5a4020', emissiveIntensity: .35 })); rope.rotation.z = Math.PI / 2; rope.castShadow = true; mover.add(rope);
     const flag = new T.Group(); mover.add(flag);
     const fTex = tex(64, 128, (g, w, h) => { g.fillStyle = colors[0]; g.fillRect(0, 0, w / 2, h); g.fillStyle = colors[1]; g.fillRect(w / 2, 0, w / 2, h); });
     const fl = new T.Mesh(new T.PlaneGeometry(.32, .55), new T.MeshBasicMaterial({ map: fTex, side: T.DoubleSide })); fl.position.y = -.33; flag.add(fl);
@@ -142,8 +142,8 @@ export function createTugScene(container, opts = {}) {
     let spanX = 6;
     function fitCam() {
         const n = Math.max(1, state.teams[0].length, state.teams[1].length);
-        spanX = slot(n - 1, n) + SHIFT * .8 + .9;
-        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(6.5, Math.min(19, spanX / (halfH * Math.max(.5, cam.aspect))));
+        spanX = slot(n - 1, n) + SHIFT * .45 + .5; // أقرب: آخر لاعب + جزء من أقصى سحبة
+        const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(5.2, Math.min(17, spanX / (halfH * Math.max(.5, cam.aspect))));
         // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
         const d = far ? dist * 1.75 : dist;
         camGoal.pos.set(0, 1.2 + d * (far ? .32 : .2), d); camGoal.look.set(0, 1.0 + d * .02, 0);

@@ -89,15 +89,15 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
     <!-- فوق: الهدايا الثلاث وخاصية كل وحدة -->
     <div dir="rtl" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
       <sc-for list="{{ legend }}" as="g" hint-placeholder-count="3">
-        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:12px 18px 12px 14px;border-radius:22px;background:linear-gradient(135deg, {{ g.soft }}, rgba(18,16,26,.85) 60%);border:2px solid {{ g.bd }};box-shadow:0 14px 40px rgba(0,0,0,.3), inset 0 0 30px {{ g.soft }}">
-          <span style="flex-shrink:0;width:84px;height:84px;border-radius:20px;display:grid;place-items:center;background:#16131f;border:1px solid rgba(255,255,255,.1);box-shadow:0 0 30px {{ g.glow }}"><img src="{{ g.img }}" alt="" style="width:74px;height:74px;object-fit:contain"></span>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;padding:18px 22px 18px 18px;border-radius:26px;background:linear-gradient(135deg, {{ g.soft }}, rgba(22,20,32,.9) 65%);border:2px solid {{ g.bd }};box-shadow:0 14px 40px rgba(0,0,0,.3), inset 0 0 30px {{ g.soft }}">
+          <span style="flex-shrink:0;width:100px;height:100px;border-radius:24px;display:grid;place-items:center;background:#16131f;border:1px solid rgba(255,255,255,.1);box-shadow:0 0 30px {{ g.glow }}"><img src="{{ g.img }}" alt="" style="width:88px;height:88px;object-fit:contain"></span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
-            <span style="display:flex;align-items:center;gap:10px;font:800 30px/1.15 'IBM Plex Sans Arabic';color:{{ g.color }};text-shadow:0 0 18px {{ g.glow }}">{{ g.icon }}{{ g.effect }}</span>
-            <span style="font:700 20px/1.35 'IBM Plex Sans Arabic';color:#ffffff">{{ g.desc }}</span>
+            <span style="display:flex;align-items:center;gap:10px;font:900 36px/1.15 'IBM Plex Sans Arabic';color:{{ g.color }};letter-spacing:.3px">{{ g.icon }}{{ g.effect }}</span>
+            <span style="font:800 24px/1.35 'IBM Plex Sans Arabic';color:#f4f2f8">{{ g.desc }}</span>
           </span>
-          <span style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 14px;border-radius:16px;background:{{ g.soft }};border:1.5px solid {{ g.bd }}">
-            <span style="font:700 14px 'IBM Plex Sans Arabic';color:#e7e3ef">أرسل</span>
-            <span style="font:800 20px 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap">{{ g.name }}</span>
+          <span style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 16px;border-radius:18px;background:{{ g.soft }};border:1.5px solid {{ g.bd }}">
+            <span style="font:800 16px 'IBM Plex Sans Arabic';color:#e7e3ef">أرسل</span>
+            <span style="font:900 24px 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap">{{ g.name }}</span>
           </span>
         </div>
       </sc-for>
@@ -106,10 +106,10 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
     <!-- لوحة النتيجة: الفريق الأيسر يسار والأيمن يمين، والمؤشر بالنص -->
     <div style="flex-shrink:0;display:grid;grid-template-columns:620px minmax(0,1fr) 620px;align-items:stretch;gap:24px">
       <sc-for list="{{ sideL }}" as="t" hint-placeholder-count="1">
-        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:24px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
-          <span style="flex-shrink:0;min-width:96px;text-align:center;font:700 52px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
+        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;padding:20px 24px;border-radius:26px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
+          <span style="flex-shrink:0;min-width:110px;text-align:center;font:800 62px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
-            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
+            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:900 34px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid {{ t.bd }};font:700 15px 'IBM Plex Sans Arabic';color:#e7e3ef">{{ t.alive }} لاعب بالحبل</span>
               <sc-if value="{{ t.outTxt }}" hint-placeholder-val="{{ false }}">
@@ -141,10 +141,10 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
         <span dir="rtl" style="font:700 19px 'IBM Plex Sans Arabic';color:{{ leadColor }}">{{ leadText }}</span>
       </div>
       <sc-for list="{{ sideR }}" as="t" hint-placeholder-count="1">
-        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:24px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
-          <span style="flex-shrink:0;min-width:96px;text-align:center;font:700 52px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
+        <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;padding:20px 24px;border-radius:26px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
+          <span style="flex-shrink:0;min-width:110px;text-align:center;font:800 62px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 24px {{ t.color }}">{{ t.pct }}<span style="font-size:22px;color:#cfcad9">%</span></span>
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
-            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:700 30px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
+            <span style="display:flex;align-items:center;gap:10px;min-width:0;font:900 34px/1.2 'IBM Plex Sans Arabic';color:{{ t.color }}"><span style="width:14px;height:14px;flex-shrink:0;border-radius:50%;background:{{ t.color }};box-shadow:0 0 14px {{ t.color }}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span></span>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span style="padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid {{ t.bd }};font:700 15px 'IBM Plex Sans Arabic';color:#e7e3ef">{{ t.alive }} لاعب بالحبل</span>
               <sc-if value="{{ t.outTxt }}" hint-placeholder-val="{{ false }}">
@@ -242,41 +242,41 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
   <!-- نافذة «طريقة اللعب»: التكبيس والدعم بس، بتصميم ناعم وألوان هادية. تنقفل بـ«فهمت»، ومربع «لا تظهر مرة ثانية» -->
   <sc-if value="{{ introOn }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:85;background:rgba(10,9,16,.55);backdrop-filter:blur(14px);display:grid;place-items:center;animation:fade .35s ease">
-      <div dir="rtl" style="width:min(600px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;padding:clamp(22px,4vw,36px);border-radius:32px;background:linear-gradient(180deg, rgba(30,27,44,.97), rgba(20,18,30,.97));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:22px;animation:popIn .45s cubic-bezier(.2,1.15,.35,1)">
+      <div dir="rtl" style="width:min(820px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;padding:clamp(24px,4vw,44px);border-radius:36px;background:linear-gradient(180deg, rgba(30,27,44,.97), rgba(20,18,30,.97));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:26px;animation:popIn .45s cubic-bezier(.2,1.15,.35,1)">
         <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
-          <span style="font:800 clamp(28px,3.2vw,36px)/1.2 'IBM Plex Sans Arabic';color:#ece9f5">طريقة اللعب</span>
-          <span style="font:600 17px/1.6 'IBM Plex Sans Arabic';color:#b9b4c9">الفريق اللي يسحب أكثر يجر الحبل لجهته</span>
+          <span style="font:800 clamp(32px,3.8vw,46px)/1.2 'IBM Plex Sans Arabic';color:#ece9f5">طريقة اللعب</span>
+          <span style="font:600 21px/1.6 'IBM Plex Sans Arabic';color:#b9b4c9">الفريق اللي يسحب أكثر يجر الحبل لجهته</span>
         </div>
 
-        <div style="display:flex;align-items:center;gap:18px;padding:20px 22px;border-radius:24px;background:rgba(196,181,253,.07);border:1px solid rgba(196,181,253,.16)">
-          <span style="width:64px;height:64px;flex-shrink:0;border-radius:20px;display:grid;place-items:center;background:rgba(196,181,253,.12);color:#c9bdf5">{{ introTapIcon }}</span>
+        <div style="display:flex;align-items:center;gap:18px;padding:24px 26px;border-radius:28px;background:rgba(196,181,253,.07);border:1px solid rgba(196,181,253,.16)">
+          <span style="width:80px;height:80px;flex-shrink:0;border-radius:24px;display:grid;place-items:center;background:rgba(196,181,253,.12);color:#c9bdf5">{{ introTapIcon }}</span>
           <span style="display:flex;flex-direction:column;gap:6px;min-width:0">
-            <span style="font:800 23px 'IBM Plex Sans Arabic';color:#ece9f5">التكبيس</span>
-            <span style="font:600 18px/1.6 'IBM Plex Sans Arabic';color:#d6d2e3">كبّس على الشاشة باستمرار، وكل تكبيسة تسحب الحبل لفريقك</span>
+            <span style="font:800 29px 'IBM Plex Sans Arabic';color:#ece9f5">التكبيس</span>
+            <span style="font:600 22px/1.6 'IBM Plex Sans Arabic';color:#d6d2e3">كبّس على الشاشة باستمرار، وكل تكبيسة تسحب الحبل لفريقك</span>
           </span>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:14px;padding:20px 22px;border-radius:24px;background:rgba(253,230,138,.05);border:1px solid rgba(253,230,138,.14)">
+        <div style="display:flex;flex-direction:column;gap:14px;padding:24px 26px;border-radius:28px;background:rgba(196,181,253,.05);border:1px solid rgba(196,181,253,.14)">
           <span style="display:flex;flex-direction:column;gap:6px">
-            <span style="font:800 23px 'IBM Plex Sans Arabic';color:#ece9f5">الدعم</span>
-            <span style="font:600 18px/1.6 'IBM Plex Sans Arabic';color:#d6d2e3">أرسل هدية، وكل هدية لها قوة تساعد فريقك</span>
+            <span style="font:800 29px 'IBM Plex Sans Arabic';color:#ece9f5">الدعم</span>
+            <span style="font:600 22px/1.6 'IBM Plex Sans Arabic';color:#d6d2e3">أرسل هدية، وكل هدية لها قوة تساعد فريقك</span>
           </span>
           <sc-for list="{{ introGifts }}" as="g" hint-placeholder-count="3">
             <div style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.035)">
-              <span style="width:52px;height:52px;flex-shrink:0;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.05)"><img src="{{ g.img }}" alt="" style="width:46px;height:46px;object-fit:contain"></span>
+              <span style="width:68px;height:68px;flex-shrink:0;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.05)"><img src="{{ g.img }}" alt="" style="width:60px;height:60px;object-fit:contain"></span>
               <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
-                <span style="font:800 18px 'IBM Plex Sans Arabic';color:{{ g.color }}">{{ g.effect }}</span>
-                <span style="font:600 16px/1.5 'IBM Plex Sans Arabic';color:#cfcad9">{{ g.desc }}</span>
+                <span style="font:800 23px 'IBM Plex Sans Arabic';color:{{ g.color }}">{{ g.effect }}</span>
+                <span style="font:600 19px/1.5 'IBM Plex Sans Arabic';color:#cfcad9">{{ g.desc }}</span>
               </span>
             </div>
           </sc-for>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-          <button onClick="{{ toggleIntroHide }}" role="checkbox" aria-checked="{{ introHide }}" style="display:flex;align-items:center;gap:10px;padding:6px 4px;border:none;background:transparent;cursor:pointer;color:#b9b4c9;font:600 16px 'IBM Plex Sans Arabic'">
+          <button onClick="{{ toggleIntroHide }}" role="checkbox" aria-checked="{{ introHide }}" style="display:flex;align-items:center;gap:10px;padding:6px 4px;border:none;background:transparent;cursor:pointer;color:#b9b4c9;font:600 19px 'IBM Plex Sans Arabic'">
             <span style="width:24px;height:24px;flex-shrink:0;border-radius:8px;display:grid;place-items:center;border:2px solid {{ introChkBd }};background:{{ introChkBg }};transition:all .2s">{{ introTick }}</span>لا تظهر مرة ثانية
           </button>
-          <button onClick="{{ closeIntro }}" style="height:52px;min-width:160px;padding:0 34px;border:none;border-radius:999px;cursor:pointer;background:#8b7fd6;color:#fff;font:800 19px 'IBM Plex Sans Arabic';box-shadow:0 8px 24px rgba(139,127,214,.3);transition:background .2s" style-hover="background:#9a8fe0" style-active="transform:scale(.97)">فهمت</button>
+          <button onClick="{{ closeIntro }}" style="height:60px;min-width:190px;padding:0 40px;border:none;border-radius:999px;cursor:pointer;background:#8b7fd6;color:#fff;font:800 22px 'IBM Plex Sans Arabic';box-shadow:0 8px 24px rgba(139,127,214,.3);transition:background .2s" style-hover="background:#9a8fe0" style-active="transform:scale(.97)">فهمت</button>
         </div>
       </div>
     </div>
@@ -575,7 +575,7 @@ class Component extends DCLogic {
     const win=S.phase==='win', w=S.winner, wt=w>=0?this.T[w]:null;
     let mvp=null; if(win&&wt){ const best=S.teams[w].slice().sort((a,b)=>(S.pulls[b]||0)-(S.pulls[a]||0))[0]; if(best&&S.pulls[best]) mvp=best; }
     const legend=[[G.freeze,'freeze','تجميد خصم','يتجمد لاعب من الخصم 8 ثواني'],[G.double,'boost','قوة الفريق ×2','سحب فريقك يتضاعف 10 ثواني'],[G.hook,'hook','خطاف الاندفاع','سحبة قوية فورية لفريقك']]
-      .filter(x=>x[0]).map(([g,kind,effect,desc])=>{ const c=COLORS[kind]; return {img:(TOW.giftById(g.id)||g).img,name:g.name,icon:icon(kind,30),effect,desc,color:c,soft:c+'26',bd:c+'66',glow:c+'66'}; });
+      .filter(x=>x[0]).map(([g,kind,effect,desc])=>{ const c='#d9cffc'; return {img:(TOW.giftById(g.id)||g).img,name:g.name,icon:icon(kind,34,c),effect,desc,color:c,soft:'rgba(196,181,253,.13)',bd:'rgba(196,181,253,.38)',glow:'rgba(196,181,253,.28)'}; }); // لون واحد هادي لكل الهدايا
     return {
       fx:this.buildFx(), scale:S.scale, lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), isDemo:DEMO,
       sideL:this.sideVals(0), sideR:this.sideVals(1), colorL:L.color, colorR:R.color,
@@ -594,8 +594,8 @@ class Component extends DCLogic {
       introOn:S.introOn, introHide:S.introHide, introTick:S.introHide?icon('tick',16,'#fff'):'', introChkBd:S.introHide?'#8b7fd6':'rgba(255,255,255,.25)', introChkBg:S.introHide?'#8b7fd6':'transparent',
       toggleIntroHide:()=>this.setState({introHide:!S.introHide}),
       closeIntro:()=>{ if(S.introHide){ try{ localStorage.setItem(INTRO_KEY,'1'); }catch(e){} } this.setState({introOn:false}); },
-      introTapIcon:icon('tap',34,'#c9bdf5'),
-      introGifts:[[G.freeze,'تجميد خصم','يتجمد لاعب من الفريق الثاني 8 ثواني','#a5d8f3'],[G.double,'قوة الفريق ×2','سحب فريقك يتضاعف 10 ثواني','#f3d98c'],[G.hook,'خطاف الاندفاع','سحبة قوية فورية لفريقك','#f2b8d4']]
+      introTapIcon:icon('tap',42,'#c9bdf5'),
+      introGifts:[[G.freeze,'تجميد خصم','يتجمد لاعب من الفريق الثاني 8 ثواني','#d9cffc'],[G.double,'قوة الفريق ×2','سحب فريقك يتضاعف 10 ثواني','#d9cffc'],[G.hook,'خطاف الاندفاع','سحبة قوية فورية لفريقك','#d9cffc']]
         .filter(x=>x[0]).map(([g,effect,desc,color])=>({img:(TOW.giftById(g.id)||g).img,effect:(g.name?g.name+' · ':'')+effect,desc,color})),
       showEnd:S.phase==='play', onEnd:()=>this.finish(null),
       soundIcon:S.muted?'🔇':'🔊', soundLabel:S.muted?'الصوت مطفي':'الصوت مفعّل', toggleSound:()=>this.setState({muted:!S.muted}),

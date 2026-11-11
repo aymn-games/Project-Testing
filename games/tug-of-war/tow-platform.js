@@ -285,7 +285,7 @@
         onGift: onGift,
         onLike: onLike,
         SHIFT: SHIFT,
-        TEAM_COLORS: ['#ff5b45', '#19a7ff'], // ألوان الفريقين ثابتة: الأيسر أحمر والأيمن أزرق
+        TEAM_COLORS: ['#e8776a', '#5aaee6'], // ألوان الفريقين ثابتة: الأيسر أحمر والأيمن أزرق (درجات هادية)
         stepFor: stepFor,
         slot: slot,
         createRegistry: createRegistry
