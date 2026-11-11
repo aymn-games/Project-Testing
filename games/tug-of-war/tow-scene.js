@@ -151,7 +151,7 @@ export function createTugScene(container, opts = {}) {
 
     // ---- اللاعبين
     const figs = new Map();
-    let state = { teams: [[], []], pos: 0, boost: [false, false], winner: -1 };
+    let state = { teams: [[], []], pos: 0, boost: [false, false], winner: -1, heave: [0, 0] };
     const ready = Promise.resolve().then(sync);
 
     function makeFig(p, k) {
@@ -243,6 +243,7 @@ export function createTugScene(container, opts = {}) {
         if (kind === 'freeze') { for (const f of list) { burstAt(f, '#bae6fd', 26, 2.6, { map: flake, size: .34, g: 1.5, life: 1.6 }); burstAt(f, '#7dd3fc', 30, 3.2); } flash = { k: 1 - k, t: 1, c: '#7dd3fc' }; }
         if (kind === 'boost') { for (const f of figs.values()) if (f.k === k && !f.outAt) burstAt(f, '#fbbf24', 14, 2.4, { up: 3.5, g: 2 }); flash = { k, t: 1, c: '#fbbf24' }; }
         if (kind === 'hook') { const dir = k ? 1 : -1; hookAnim = { k, t: 0, from: dir * 11, to: 0 }; hookMesh.visible = true; hookMesh.scale.set(dir > 0 ? 1.6 : -1.6, 1.6, 1.6); for (const f of figs.values()) if (f.k === k) f.jerk = 1; }
+        if (kind === 'taps') { const f = list[0]; if (f && Math.random() < .7) burstAt(f, colors[k], 3, 1.6, { up: 2.4, g: 2, life: .7, size: .16 }); return; }
         if (kind === 'support') { for (const f of list) burstAt(f, colors[k], 30, 3); for (const f of figs.values()) if (f.k === k) f.jerk = Math.max(f.jerk, .6); }
     }
 
@@ -265,7 +266,10 @@ export function createTugScene(container, opts = {}) {
             f.jerk = Math.max(0, f.jerk - dt * 3.5);
             const won = state.winner === f.k, lost = state.winner >= 0 && !won;
             const boost = state.boost[f.k] ? .08 : 0;
-            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + f.jerk * .35 + (won ? -.3 : 0);
+            // heave = سرعة تكبيس الفريق (0..1): الفريق كامل يشد بإيقاع، وكل ما زاد التكبيس زادت الشدّة
+            const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.18 + .14 * Math.sin(t * 11 + f.ph * .3));
+            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .35 + (won ? -.3 : 0);
+            if (!f.frozen && !won && !lost) f.outer.position.x = f.x + (f.k ? 1 : -1) * hv * .08 * (1 + Math.sin(t * 11 + f.ph * .3));
             f.ice.visible = !!f.frozen;
             poseShip(f, lean, t, won ? 'win' : lost ? 'lose' : null);
             f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
