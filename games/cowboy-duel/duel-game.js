@@ -33,6 +33,14 @@ const SFX = (() => {
             const n = noise(.18), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'lowpass'; f.frequency.value = 520; g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.001, t + .16); n.connect(f); f.connect(g); g.connect(out); n.start(t);
             const o = a.createOscillator(), og = a.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(60, t + .08); og.gain.setValueAtTime(.35, t); og.gain.exponentialRampToValueAtTime(.001, t + .1); o.connect(og); og.connect(out); o.start(t); o.stop(t + .12);
             [3150, 4230, 5370].forEach((fq, i) => { const s = a.createOscillator(), sg = a.createGain(), d = t + .03 + i * .018; s.frequency.value = fq; sg.gain.setValueAtTime(.0001, t); sg.gain.setValueAtTime(.045, d); sg.gain.exponentialRampToValueAtTime(.0001, d + .3); s.connect(sg); sg.connect(out); s.start(t); s.stop(d + .32); }); },
+        // سحب المسدس من الجراب + تدوير الحشوة (تكات تتسارع ثم تبطى) + تلقيم الزناد
+        spin(pan = 0) { const a = ctx(); if (!a) return; const t0 = a.currentTime, out = a.createStereoPanner ? a.createStereoPanner() : a.createGain(); if (out.pan) out.pan.value = pan; out.connect(a.destination);
+            const n = noise(.25), hp = a.createBiquadFilter(), g = a.createGain(); hp.type = 'highpass'; hp.frequency.value = 1800; g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.25, t0 + .06); g.gain.exponentialRampToValueAtTime(.0001, t0 + .22); n.connect(hp); hp.connect(g); g.connect(out); n.start(t0);
+            const click = (t, v, f) => { const c = noise(.03), bp = a.createBiquadFilter(), cg = a.createGain(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 6; cg.gain.setValueAtTime(v, t); cg.gain.exponentialRampToValueAtTime(.0001, t + .025); c.connect(bp); bp.connect(cg); cg.connect(out); c.start(t); };
+            let t = t0 + .3; for (let i = 0; i < 16; i++) { const k = i / 15, gap = .028 + Math.pow(Math.abs(k - .35) * 1.6, 2) * .07; click(t, .5, 3800 + (i % 2) * 500); t += gap; }
+            click(t + .12, .9, 2200); click(t + .2, .7, 1500); },
+        stamp() { const a = ctx(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + .2); g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + .25); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + .26); },
+        blow() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(.7), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = .8; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.3, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + .65); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
         whoosh() { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(1.6), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(1600, t + 1.5); g.gain.setValueAtTime(.001, t); g.gain.exponentialRampToValueAtTime(.35, t + .8); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); },
         wind(on) { const a = ctx(); if (!a) return; if (!windG) { const n = noise(4); n.loop = true; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = .7; windG = a.createGain(); windG.gain.value = 0; n.connect(f); f.connect(windG); windG.connect(a.destination); n.start(); }
             windG.gain.setTargetAtTime(on ? .09 : .025, a.currentTime, .8); }
@@ -111,6 +119,8 @@ async function runRound() {
 function warnThenReveal(again) {
     const lines = again ? ['ولا أحد سحب… الرقم الجاي لا يفوتك!', pickOne(WARN[2])] : WARN.map(pickOne);
     lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
+    // مع التنبيه الثاني: الاثنين يطلعون مسدساتهم ويدوّرون الحشوة (الصوت من حدث spin بالمشهد)
+    if (!again) later(1700 + 300, () => G.scene.drawGuns(G.pair.map(p => p.id)));
     const t = lines.length * 1700 + rnd(200, 1400);
     later(t, () => { sign('draw'); SFX.tick(); flash('rgba(255,180,90,.35)', 200); });
     later(t + 750, reveal);
@@ -133,25 +143,26 @@ function answer(id, text) {
     if (G.jam[id] && performance.now() < G.jam[id]) return;
     const n = toDigits(text); if (!n) return;
     if (+n !== G.number) { G.jam[id] = performance.now() + JAM_MS; chat('❌', `${p.name} غلط — المسدس علّق!`, 'bad'); return; }
-    resolve(p);
+    resolve(p, n);
 }
-async function resolve(shooter) {
+// الأسرع كتب الرقم: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح ← يقرّب على البطل ينفخ الدخان ← يمشي (مشهد سريع) ← دور جديد
+async function resolve(shooter, typed) {
     G.phase = 'resolve'; clearTimers();
     const target = G.pair.find(x => x.id !== shooter.id), secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
-    sign('gone'); grade('duel');
+    G.target = target; sign('gone');
+    showAnswer(shooter, typed, secs); SFX.stamp();
+    await sleep(1700); $('#answer').classList.remove('in');
+    grade('duel');
     await G.scene.fire(shooter.id, target.id);
-    $('#poster-' + (G.pair[0] === target ? 'a' : 'b')).classList.add('dead');
-    banner(`🔫 <b>${esc(shooter.name)}</b> أسقط ${esc(target.name)}<small>سحب بـ ${secs} ث</small>`, 3200);
-    await sleep(900);
-    // انتقال القزحية على البطل ثم رجعة للسوق
-    await iris(true, 800, 50, 48);
-    G.alive = G.alive.filter(x => x.id !== target.id);
-    G.scene.removePlayer(target.id); G.scene.returnToCrowd(shooter.id); G.scene.lobby();
-    poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); updateCount();
-    await sleep(250); await iris(false, 800);
-    if (G.alive.length <= 1) return crown(G.alive[0] || shooter);
-    G.phase = 'between'; await sleep(1600); runRound();
+    G.alive = G.alive.filter(x => x.id !== target.id); updateCount();
+    // انتقال سريع للدور الجاي
+    await iris(true, 420, 50, 50);
+    G.scene.lobby(); poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false);
+    if (G.alive.length <= 1) { await iris(false, 500); return crown(G.alive[0] || shooter); }
+    G.phase = 'between'; await sleep(120); iris(false, 420); runRound();
 }
+function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
+    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
 async function crown(p) {
     G.phase = 'champ'; G.scene.champion(p.id); bars('wide');
     $('#champName').textContent = p.name; $('#champ').classList.add('in'); SFX.bell();
@@ -181,6 +192,9 @@ function hookStream() {
         else if (e === 'thud') SFX.thud();
         else if (e === 'tick') SFX.tick();
         else if (e === 'step') SFX.step(d);
+        else if (e === 'spin') SFX.spin(d);
+        else if (e === 'blow') SFX.blow();
+        else if (e === 'hit' && G.target) $('#poster-' + (G.pair[0] === G.target ? 'a' : 'b')).classList.add('dead');
         else if (e === 'pop') SFX.bang();
         else if (e === 'shot') { // ستارة السينما + تدرّج الألوان حسب اللقطة
             if (d !== 'povA' && d !== 'povB') $('#lids').classList.remove('on');
@@ -190,6 +204,7 @@ function hookStream() {
             else if (d === 'hand' || d === 'clock' || d === 'overB' || d === 'boots') { bars('wide'); grade('duel'); }
             else if (d === 'draw' || d === 'fall') { bars('wide'); grade('duel'); }
             else if (d === 'hero') { bars('wide'); grade('hero'); }
+            else if (d === 'leave') { bars('wide'); grade(''); SFX.whoosh(); }
             else if (d === 'crane' || d === 'profile' || d === 'standoff') { bars('wide'); grade(''); }
         } } }); } catch (e) { console.error(e); }
     if (!scene) { $('#fallback').hidden = false; return; }

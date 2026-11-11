@@ -288,7 +288,7 @@ export async function mountDuel(el, opts = {}) {
             a.rotation.z = s * .18; arms.push(a); }
         const gun = new T.Group(); gun.position.set(0, -.55, 0); arms[0].add(gun); gun.visible = false;
         add(geo('barrel', () => new T.CylinderGeometry(.038, .045, .44, 8)), metal, 0, -.25, .07, gun);
-        add(geo('drum', () => new T.CylinderGeometry(.075, .075, .13, 8)), metal, 0, -.05, .07, gun);
+        const drum = add(geo('drum', () => new T.CylinderGeometry(.075, .075, .13, 8)), metal, 0, -.05, .07, gun);
         add(geo('grip', () => new T.BoxGeometry(.08, .2, .1)), '#6b4226', 0, .05, -.05, gun).rotation.x = .5;
         const muzzle = new T.Object3D(); muzzle.position.set(0, -.5, .07); gun.add(muzzle);
         // الراس (نفس شخصية السفينة) + عيون قابلة للتضييق + حواجب
@@ -316,7 +316,7 @@ export async function mountDuel(el, opts = {}) {
         add(geo('crown', crownGeo), hatM, 0, .3, 0, hat).scale.z = .86;
         add(geo('hband', () => new T.CylinderGeometry(.548, .556, .1, 20)), C.band === '#111827' ? '#7c2d12' : '#2a170b', 0, .09, 0, hat).scale.z = .86;
         const label = new T.Sprite(new T.SpriteMaterial({ map: labelTex(p.name), depthTest: false, transparent: true })); label.scale.set(3.2, .8, 1); label.position.y = 3.75; label.renderOrder = 10; G.add(label);
-        G.userData = { body, legs, arms, head, hat, gun, muzzle, holGun, eyes, brows, glints, mouth, label };
+        G.userData = { body, legs, arms, head, hat, gun, drum, muzzle, holGun, eyes, brows, glints, mouth, label };
         return G;
     }
 
@@ -343,10 +343,11 @@ export async function mountDuel(el, opts = {}) {
     const rightOf = f => V(-Math.cos(f.face), 0, Math.sin(f.face));
     const wp = o => { const v = V(); o.getWorldPosition(v); return v; };
 
-    function setState(f, st) { f.state = st; f.t = 0; const U = f.U;
-        const armed = st === 'draw' || st === 'slowdraw' || st === 'win' || st === 'dead'; U.gun.visible = st === 'draw' || st === 'win'; U.holGun.visible = !U.gun.visible;
-        if (st === 'slowdraw' || st === 'dead') { U.gun.visible = false; U.holGun.visible = true; }
-        if (!armed) U.gun.rotation.set(0, 0, 0); }
+    // armed = المسدس طالع باليد ومنزّل (قبل الرقم). اللي سحب قبل (armed) يبقى مسدسه بيده لو انضرب أو تأخر
+    function setState(f, st) { const U = f.U, was = U.gun.visible; f.state = st; f.t = 0;
+        const gun = st === 'draw' || st === 'win' || st === 'armed' || st === 'champ' || ((st === 'slowdraw' || st === 'dead') && was);
+        U.gun.visible = gun; U.holGun.visible = !gun; if (!gun || st === 'armed') U.gun.rotation.set(0, 0, 0); }
+    function drawGuns(ids) { ids.forEach((id, i) => setTimeout(() => { const f = figs.get(String(id)); if (!f || f.state !== 'ready') return; setState(f, 'armed'); f.spinT = 1; emit('spin', f.g.position.z > 0 ? -.6 : .6); }, i * 450)); }
 
     // وضعيات الجسم: كل إطار نحسب الهدف ونقرّب له (انتقال ناعم بين الحالات)
     const tmp = { rA: [0, 0], lA: [0, 0], lg: [0, 0, 0, 0], hx: 0, sq: 1, br: 0, mo: 1 };
@@ -369,18 +370,20 @@ export async function mountDuel(el, opts = {}) {
             case 'watch': by = Math.sin(ph * 1.3) * .015; rA = [-.25, -.5]; lA = [-.25, .5]; hx = .05; sq = .8; break;   // إيدين على الخصر يتفرجون
             case 'cheer': { const c = f.t * 9 + f.ph; by = Math.abs(Math.sin(c * .5)) * .5; rA = [0, -2.6 + Math.sin(c) * .3]; lA = [0, 2.6 - Math.sin(c) * .3]; mouthS = 1.6; rate = 16; break; }
             case 'ready': { const tw = Math.sin(t * 23 + f.ph) * .05 * (f.twitch ? 2.5 : 1); lg = [0, 0, -.13, .13]; rA = [.12 + tw, -.46]; lA = [0, .34]; hx = .1; sq = .42; br = 1; by = Math.sin(t * 1.4) * .01; break; }
+            case 'armed': { const tw = Math.sin(t * 19 + f.ph) * .03; lg = [0, 0, -.13, .13]; rA = [-.55 + tw, -.12]; lA = [-.1, .38]; hx = .08; sq = .42; br = 1; by = Math.sin(t * 1.4) * .01; rate = f.t < .35 ? 22 : 10; break; }
             case 'draw': rA = [-Math.PI / 2 - f.recoil * .55, .06]; lA = [-.2, .55]; lg = [0, 0, -.13, .13]; sq = .5; br = 1; rate = 34; hx = 0; break;
-            case 'slowdraw': { const k = clamp01((f.t - .18) / .5); rA = [.12 - k * 1.1, -.46 + k * .3]; lA = [0, .4]; lg = [0, 0, -.13, .13]; sq = .45; br = 1; rate = 14; if (k > .55) { U.gun.visible = true; U.holGun.visible = false; } break; }
+            case 'slowdraw': { const k = clamp01((f.t - .18) / .5); rA = U.gun.visible ? [-.55 - k * .8, -.12 + k * .15] : [.12 - k * 1.1, -.46 + k * .3]; lA = [0, .4]; lg = [0, 0, -.13, .13]; sq = .45; br = 1; rate = 14; if (k > .55) { U.gun.visible = true; U.holGun.visible = false; } break; }
             case 'dead': { const k = clamp01(f.t / .85), e = k * k; g.rotation.x = -e * Math.PI / 2 * .98; if (k < 1) { const b = fwd(f).multiplyScalar(-dt * 2.2 * (1 - k)); g.position.add(b); }
                 if (k >= 1 && !f.landed) { f.landed = true; const hp = wp(U.head); dustBurst(V(hp.x, 0, hp.z), 10, 1); emit('thud'); }
                 rA = [-.6, -2.3]; lA = [-.6, 2.3]; lg = [-.35, .25, 0, 0]; sq = .05; mouthS = 1.4; rate = 12; break; }
             case 'win': { const k = f.t;
-                if (k < 1.1) { rA = [-1.05, .1]; U.gun.rotation.x -= dt * 20; lA = [0, .25]; }
-                else if (k < 2.7) { if (!f.blown) { f.blown = true; U.gun.rotation.set(0, 0, 0); } rA = [-2.62, .62]; lA = [0, .25]; hx = -.12; if ((f.smk = (f.smk || 0) + dt) > .09) { f.smk = 0; puff(wp(U.muzzle), '#e8e2d6', .16, V(.05, .55, 0), 1.6, .5, 4); } mouthS = .6; }
+                if (k < .45) { rA = [-1.05, .1]; U.gun.rotation.x -= dt * 20; lA = [0, .25]; }
+                else if (k < 2.5) { if (!f.blown) { f.blown = true; U.gun.rotation.set(0, 0, 0); } rA = [-2.62, .62]; lA = [0, .25]; hx = -.12; if ((f.smk = (f.smk || 0) + dt) > .06) { f.smk = 0; const blow = k > 1.2 && k < 1.9; puff(wp(U.muzzle), '#ece7dc', blow ? .22 : .15, blow ? V(.9, .5, (Math.random() - .5) * .4) : V(.04, .6, 0), 1.8, .6, blow ? 5 : 4); if (blow && !f.puffed) { f.puffed = true; emit('blow'); } } mouthS = k > 1.2 && k < 1.9 ? .45 : .7; }
                 else { if (U.gun.visible) { U.gun.visible = false; U.holGun.visible = true; emit('holster'); } rA = [.15, -.4]; lA = [0, .2]; }
-                sq = k < 2.7 ? .6 : 1; by = Math.sin(ph) * .015; break; }
+                sq = k < 2.5 ? .6 : 1; by = Math.sin(ph) * .015; break; }
             case 'champ': { const c = f.t * 6; by = Math.abs(Math.sin(c * .5)) * .35; lA = [0, 2.6 + Math.sin(c) * .25]; rA = [-Math.PI / 2 - .9, -.2]; U.gun.visible = true; U.holGun.visible = false; U.gun.rotation.x = 0; mouthS = 1.5; if (Math.sin(c * .5) > .97 && !f.shotUp) { f.shotUp = true; emit('pop'); puff(wp(U.muzzle), '#e8e2d6', .25, V(0, 1, 0), 1.4, .6, 3); } if (Math.sin(c * .5) < 0) f.shotUp = false; break; }
         }
+        if (f.spinT > 0) { U.drum.rotation.y += dt * 38 * f.spinT; f.spinT = Math.max(0, f.spinT - dt * 1.05); } // تدوير الحشوة
         const k = 1 - Math.exp(-dt * rate);
         U.arms[0].rotation.x += (rA[0] - U.arms[0].rotation.x) * k; U.arms[0].rotation.z += (rA[1] - U.arms[0].rotation.z) * k;
         U.arms[1].rotation.x += (lA[0] - U.arms[1].rotation.x) * k; U.arms[1].rotation.z += (lA[1] - U.arms[1].rotation.z) * k;
@@ -454,8 +457,12 @@ export async function mountDuel(el, opts = {}) {
               cam(k, t, c) { const b = bullet.position; c.pos.copy(b).addScaledVector(dir, -1.15).addScaledVector(side, .85); c.pos.y = b.y + .22; c.look.copy(b).addScaledVector(dir, 1.4); c.fov = 40; c.roll = Math.sin(t * 1.5) * .05; } },
             { name: 'fall', dur: 2.3, labels: false, start() { TS = .2; },
               cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },  // السقوط باللقطة الأساسية (جهة البرج): الاثنين بالكادر
-            { name: 'hero', dur: 3.2, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; for (const [, f] of figs) if (f !== S && f !== Tg) setState(f, 'cheer'); emit('hero'); },
-              cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), a = -.65 + k * .8; c.pos.copy(p).addScaledVector(f, Math.cos(a) * 4.8).addScaledVector(rr, Math.sin(a) * 4.8); c.pos.y = .5; c.look.copy(p); c.look.y = 1.75; c.fov = 36; c.roll = .04; } }
+            // الكاميرا تقرّب من صاحب الطلقة: يرفع المسدس وينفخ فيه والدخان يطلع
+            { name: 'hero', dur: 2.9, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg) setState(f, 'cheer'); emit('hero'); },
+              cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = -.5 + e * .3, d = 4.8 - e * 2.6; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .7 + e * 1.4; c.look.copy(p); c.look.y = 1.7 + e * .55; c.fov = 36 - e * 4; c.roll = .03; } },
+            // مشهد سريع: يمشي راجع لجهته والخاسر يختفي بالغبار — بعدها دور جديد
+            { name: 'leave', dur: 1.6, labels: false, start() { removePlayer(Tg.id); returnToCrowd(S.id); S.speed = 5; TS = 2.2; emit('leave'); },
+              cam(k, t, c) { const p = S.g.position; c.pos.set(p.x + 9 - k * 2, 3.2, p.z * .4); c.look.set(p.x - 4, 1.4, p.z * .8); c.fov = 42; c.roll = 0; } }
         ];
         return play(list);
     }
@@ -470,7 +477,7 @@ export async function mountDuel(el, opts = {}) {
             for (let i = 0; i < 8; i++) puff(BUL.to.clone(), '#f2d7a8', .2, V((Math.random() - .5) * 2, Math.random() * 1.5, (Math.random() - .5) * 2), .8, .7, 2.5);
             const hat = Tg.U.hat; sc.attach(hat); Tg.flyHat = { o: hat, v: V(BUL.dir.x * 2.5, 5.5, BUL.dir.z * 2.5 + (Math.random() - .5)), s: V(-7, 0, 4), landed: false }; };
     }
-    function removePlayer(id) { const f = figs.get(String(id)); if (!f) return; const p = f.g.position.clone(); dustBurst(V(p.x, 0, p.z).addScaledVector(fwd(f), -1.1), 14, 1.4); if (f.flyHat) { dustBurst(f.flyHat.o.position, 4, .7); sc.remove(f.flyHat.o); f.flyHat = null; } setState(f, 'poof'); crowdOrder = crowdOrder.filter(x => x !== String(id)); }
+    function removePlayer(id) { const f = figs.get(String(id)); if (!f || f.state === 'poof') return; const p = f.g.position.clone(); dustBurst(V(p.x, 0, p.z).addScaledVector(fwd(f), -1.1), 14, 1.4); if (f.flyHat) { dustBurst(f.flyHat.o.position, 4, .7); sc.remove(f.flyHat.o); f.flyHat = null; } setState(f, 'poof'); crowdOrder = crowdOrder.filter(x => x !== String(id)); }
     function returnToCrowd(id) { const f = figs.get(String(id)); if (!f) return; f.duelist = false; f.twitch = false; setState(f, 'idle'); f.g.rotation.x = 0; f.speed = 3.6; const h = homeOf(String(id)); f.target = h; f.face = Math.atan2(-h.x * .25, -h.z); }
     function champion(id) {
         const f = figs.get(String(id)); if (!f) return; f.target = V(0, 0, 0); f.face = 0; f.speed = 3.6; setState(f, 'champ'); startCoins(V(0, 0, 0)); emit('champion');
@@ -517,5 +524,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, fire, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, standoff, drawGuns, fire, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }
