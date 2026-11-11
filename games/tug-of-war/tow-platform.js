@@ -218,6 +218,42 @@
         });
     }
 
+    /**
+     * التكبيس للعبة — مصدرين، وما ينحسب نفس التكبيس مرتين:
+     *  1) لحظي: 'stream:likeReceived' (الخادم يرسله مجمّع كل 300ms — ws-server.js onLike).
+     *  2) احتياط: لو الخادم ما يرسل التكبيسات (نسخة قديمة على Render)، نقرأ عدّاد
+     *     تكبيسات كل لاعب من إحصائيات البث (GET /api/stream/session-stats?sections=likers:20،
+     *     موجود من قبل) كل ثانية، وكل زيادة بعدّاد لاعب = تكبيسات جديدة له.
+     *     أول ما يوصل تكبيس لحظي يوقف الاحتياط تلقائياً.
+     * cb({id, name, count}). ترجع دالة الإيقاف.
+     */
+    var LIKES_POLL_MS = 1000;
+    function watchLikes(cb) {
+        var live = false, base = null, timer = null, inflight = false, stopped = false;
+        var off = onLike(function (p) { live = true; if (timer) { clearInterval(timer); timer = null; } cb(p); });
+        function poll() {
+            if (live || inflight || stopped) return;
+            var A = window.AGPAuth;
+            if (!A || typeof A.request !== 'function') return;
+            inflight = true;
+            A.request('/api/stream/session-stats?sections=likers:20').then(function (d) {
+                inflight = false;
+                if (live || stopped || !d || !d.success || !d.stats || !d.stats.sections) return;
+                var list = d.stats.sections.likers || [], next = {};
+                list.forEach(function (r) { if (r && r.username) next[r.username] = Number(r.count) || 0; });
+                if (base) list.forEach(function (r) {
+                    if (!r || !r.username) return;
+                    var prev = base[r.username], delta = next[r.username] - (prev == null ? 0 : prev);
+                    // لاعب دخل التوب لأول مرة: عدّاده كامل ممكن يكون من قبل المباراة، فنعتبره أساس بس
+                    if (prev != null && delta > 0) cb({ id: r.username, name: r.name, count: delta });
+                });
+                base = Object.assign(base || {}, next);
+            }, function () { inflight = false; });
+        }
+        timer = setInterval(poll, LIKES_POLL_MS); poll();
+        return function () { stopped = true; if (timer) clearInterval(timer); off(); };
+    }
+
     /* ============ هندسة الملعب (مشتركة بين منطق المباراة والمشهد الثري دي) ============
      * كل لاعب له مكان ثابت على الحبل: slot(i, n) = بعده عن النص بالمتر (i ترتيبه
      * بفريقه، n أكبر عدد بالفريقين). الحبل يتحرك SHIFT متر لما pos = ±100.
@@ -290,6 +326,7 @@
         onComment: onComment,
         onGift: onGift,
         onLike: onLike,
+        watchLikes: watchLikes,
         SHIFT: SHIFT,
         TEAM_COLORS: ['#e8776a', '#5aaee6'], // ألوان الفريقين ثابتة: الأيسر أحمر والأيمن أزرق (درجات هادية)
         stepFor: stepFor,

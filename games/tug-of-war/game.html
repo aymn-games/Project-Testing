@@ -317,8 +317,8 @@ if(!DEMO&&!Array.isArray(ROSTER)) location.replace('lobby.html');
 
 const TAP_STEP = 0.55;       // سحبة رسالة شات (نمط التكبيس)
 const TAP_GAP_MS = 220;      // أقل وقت بين سحبتين لنفس اللاعب
-const LIKE_STEP = 0.12;      // سحبة كل تكبيسة (لايك) — الدفعة الوحدة ما تزيد عن LIKE_MAX
-const LIKE_MAX = 3;
+const LIKE_STEP = 0.22;      // سحبة كل تكبيسة (لايك) — التكبيس أساس اللعبة، والدفعة الوحدة ما تزيد عن LIKE_MAX
+const LIKE_MAX = 6;
 const AUTO_KEY = 'tow-autojoin'; // الدخول التلقائي أثناء المباراة (سويتش الهيدر)
 const INTRO_KEY = 'tow-intro-hide'; // «لا تظهر مرة ثانية» بنافذة طريقة اللعب
 const SPEED_STEP = 14;       // سحبة أسرع إجابة (نمط التحدي)
@@ -359,7 +359,7 @@ class Component extends DCLogic {
     this.setState({teams});
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     this.clockT=setInterval(()=>this.tick(),250);
-    if(!DEMO){ TOW.connect(); this.unsub=TOW.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=TOW.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue,p.repeatCount)); this.unsubLike=TOW.onLike(p=>this.onLike(this.reg.nameFor(p),p.count)); }
+    if(!DEMO){ TOW.connect(); this.unsub=TOW.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=TOW.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue,p.repeatCount)); this.unsubLike=TOW.watchLikes(p=>this.onLike(this.reg.nameFor(p),p.count)); }
     // للتجربة من الكونسول: towChat('سعد','اي شي') · towGift('سعد','Rose')
     window.towChat=(u,t)=>this.onChat(this.reg.nameFor({id:this.reg.id(u)||'dev:'+u,name:u}),t,true);
     window.towGift=(u,g,v=1,n=1)=>this.onGift(this.reg.nameFor({id:this.reg.id(u)||'dev:'+u,name:u}),g,v,n);
