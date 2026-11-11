@@ -532,6 +532,7 @@
 
     function ceremonyBanner(title, sub) {
         var b = $('cerBanner');
+        b.classList.add('shown');
         $('cerTitle').textContent = title; $('cerSub').innerHTML = sub || '';
         b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
     }
@@ -562,9 +563,8 @@
         var started = false;
         try {
             started = !!(scene && scene.ceremony && scene.ceremony(top3, { onStage: function (stg) {
-                if (stg === 'show') ceremonyBanner('الثلاثة الأوائل يستعرضون', top3.map(function (c, i) { return ['🥇', '🥈', '🥉'][i] + ' ' + esc(c.name); }).join('  ·  '));
-                else if (stg === 'walk') ceremonyBanner('إلى منصة التتويج', '🏆 ألعاب أيمن');
-                else if (stg === 'podium') { ceremonyBanner('منصة تتويج ألعاب أيمن', '🏆 ' + esc(top3[0].name) + ' بطل السباق'); $('podium').classList.add('show'); }
+                // كتابة أقل: بدون عناوين على الشاشة (الأسماء فوق الشخصيات، و«منصة التتويج» مكتوبة على لافتة المنصة نفسها)
+                if (stg === 'podium') $('podium').classList.add('show');
             } }));
         } catch (e) { AGP.log('formula-race: ceremony failed', e); started = false; }
         document.body.classList.toggle('ceremony', started);
@@ -580,6 +580,7 @@
             c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0;
         });
         $('podium').classList.remove('show');
+        $('cerBanner').classList.remove('shown');
         document.body.classList.remove('ceremony');
         if (scene && scene.stopCeremony) scene.stopCeremony();
         if (scene) { scene.setPhase('lobby'); scene.setCars(S.cars); }

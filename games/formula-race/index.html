@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>سباق الفورمولا — ألعاب أيمن</title>
+<title>فورمولا ون — ألعاب أيمن</title>
 <!-- three + شخصيات الأنمي المشتركة (docs/CHARACTERS.md) — نفس النسخ بكل ألعاب الثري دي -->
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.3.3/lib/three-vrm.module.min.js" } }</script>
 <script src="../../js/agp-core.js"></script>
@@ -23,7 +23,7 @@
 <style>
 :root{
   --agp-accent:#7c3aed;
-  --bg:#08090c; --panel:rgba(12,13,18,.78); --line:rgba(255,255,255,.09);
+  --bg:#07060b; --panel:rgba(16,12,28,.8); --line:rgba(167,139,250,.14);
   --txt:#f4f4f6; --mut:#9a9caa;
 }
 *{box-sizing:border-box}
@@ -45,13 +45,13 @@ button{font-family:inherit;cursor:pointer}
 .btn-end{border-color:rgba(248,113,113,.4);color:#fca5a5;background:rgba(127,29,29,.35)}
 body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:none}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
-.brand i{display:block;width:30px;height:18px;background:linear-gradient(135deg,#e10600 0 55%,transparent 55%);transform:skewX(-20deg);border-radius:2px}
+.brand i{display:block;width:30px;height:18px;background:linear-gradient(135deg,#a855f7 0 55%,transparent 55%);transform:skewX(-20deg);border-radius:2px}
 .live{height:32px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#fca5a5;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25)}
 .live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
 .live.on{color:#4ade80;background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.3)}
 
 /* قائمة «التحكم» */
-#ctrlMenu{position:fixed;top:64px;left:16px;z-index:45;width:300px;padding:12px;border-radius:16px;background:rgba(14,15,20,.96);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:none}
+#ctrlMenu{position:fixed;top:64px;left:16px;z-index:45;width:300px;padding:12px;border-radius:16px;background:rgba(14,10,26,.96);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:none}
 #ctrlMenu.show{display:block;animation:tin .2s both}
 #ctrlMenu h4{margin:4px 2px 8px;font-size:12px;color:var(--mut);font-weight:600}
 #ctrlMenu h4+*{margin-bottom:12px}
@@ -75,7 +75,7 @@ body[data-phase="lobby"] .lapbox{display:none}
 
 /* ---------- لوحة الصدارة (يسار) ---------- */
 .tower{position:fixed;top:78px;left:14px;z-index:15;width:280px;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,#1a1b22,#121318);font-size:13px;font-weight:700}
+.tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:13px;font-weight:700}
 .tower-h span:last-child{color:var(--mut);font-weight:500;font-size:11.5px}
 #towerRows{position:relative;transition:height .3s}
 .trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
@@ -121,7 +121,7 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .f-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .f-av{width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
 .f-av img{width:100%;height:100%;object-fit:cover}
-.f-lock{font-size:11px;color:#93c5fd;padding:1px 6px;border-radius:6px;background:rgba(147,197,253,.12)}
+.f-lock{font-size:11px;color:#c4b5fd;padding:1px 6px;border-radius:6px;background:rgba(139,92,246,.16)}
 .fc-mid{display:flex;align-items:flex-end;gap:8px;margin-top:8px}
 .f-speed{display:flex;flex-direction:column;line-height:1}
 .f-speed b{font-size:34px;font-variant-numeric:tabular-nums}
@@ -129,20 +129,20 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 /* عدّاد النيترو: يتعبّى بالتكبيس (10 خانات × 5 تكبيسات)، ولما يكتمل يصير نيترو ويستهلك لين يخلص */
 .ngauge{margin-inline-start:auto;width:172px;display:flex;flex-direction:column;gap:5px;margin-bottom:4px}
 .ng-head{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#cbd5e1}
-.ng-ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.35);transition:all .25s}
+.ng-ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;background:rgba(139,92,246,.16);border:1px solid rgba(167,139,250,.4);transition:all .25s}
 .ng-cnt{margin-inline-start:auto;font-size:11px;font-weight:600;color:#94a3b8;font-variant-numeric:tabular-nums;direction:ltr}
 .ng-cnt b{color:#fff;font-size:12.5px}
 .ng-track{position:relative;height:10px;border-radius:999px;padding:2px;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 3px rgba(0,0,0,.6);overflow:hidden}
 .ng-track i{position:absolute;inset:2px;border-radius:999px;transform-origin:right;transform:scaleX(0);
-  background:linear-gradient(270deg,#f59e0b,#f97316 60%,#ef4444);box-shadow:0 0 8px rgba(249,115,22,.55);transition:transform .18s ease-out}
+  background:linear-gradient(270deg,#c084fc,#a855f7 55%,#6d28d9);box-shadow:0 0 8px rgba(168,85,247,.6);transition:transform .18s ease-out}
 .ng-track::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1.5px),rgba(10,12,18,.85) calc(10% - 1.5px) 10%)}
-.ngauge.on .ng-head{color:#a5f3fc}
-.ngauge.on .ng-ic{background:rgba(34,211,238,.25);border-color:#22d3ee;box-shadow:0 0 12px rgba(34,211,238,.7)}
-.ngauge.on .ng-cnt b{color:#67e8f9}
-.ngauge.on .ng-track{border-color:rgba(34,211,238,.55);box-shadow:inset 0 1px 3px rgba(0,0,0,.6),0 0 14px rgba(34,211,238,.45)}
-.ngauge.on .ng-track i{transition:transform .1s linear;box-shadow:0 0 12px rgba(34,211,238,.9);
-  background:repeating-linear-gradient(115deg,rgba(255,255,255,.28) 0 6px,transparent 6px 14px),linear-gradient(270deg,#06b6d4,#67e8f9);background-size:28px 100%,100% 100%;animation:ngflow .5s linear infinite}
+.ngauge.on .ng-head{color:#f0abfc}
+.ngauge.on .ng-ic{background:rgba(232,121,249,.25);border-color:#e879f9;box-shadow:0 0 12px rgba(232,121,249,.75)}
+.ngauge.on .ng-cnt b{color:#f0abfc}
+.ngauge.on .ng-track{border-color:rgba(232,121,249,.55);box-shadow:inset 0 1px 3px rgba(0,0,0,.6),0 0 14px rgba(232,121,249,.45)}
+.ngauge.on .ng-track i{transition:transform .1s linear;box-shadow:0 0 12px rgba(232,121,249,.9);
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.28) 0 6px,transparent 6px 14px),linear-gradient(270deg,#a855f7,#f0abfc);background-size:28px 100%,100% 100%;animation:ngflow .5s linear infinite}
 @keyframes ngflow{to{background-position:-28px 0,0 0}}
 
 .f-fx{display:flex;flex-wrap:wrap;gap:6px;min-height:0;margin-top:6px}
@@ -154,11 +154,11 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .fc-cam button:hover{border-color:rgba(255,255,255,.3)}
 .fc-cam .arr{width:34px;padding:0;font-size:18px}
 .fc-cam .grow{flex:1}
-.fc-cam button.on{background:#2563eb;border-color:#2563eb;color:#fff}
+.fc-cam button.on{background:linear-gradient(90deg,#7c3aed,#a855f7);border-color:#8b5cf6;color:#fff}
 
 /* ---------- التنبيهات ---------- */
 #toasts{position:fixed;top:128px;left:50%;transform:translateX(-50%);z-index:17;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;width:min(520px,90vw)}
-.toast{padding:8px 14px;border-radius:10px;background:rgba(10,11,15,.88);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.toast{padding:8px 14px;border-radius:10px;background:rgba(16,11,30,.9);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .toast b{color:#fff}
 .toast .t-sub{color:var(--mut);font-size:11px}
 .toast.out{animation:tout .4s ease both}
@@ -173,14 +173,14 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 #lights .pod{width:46px;height:46px;border-radius:50%;background:#2a0505;box-shadow:inset 0 3px 8px rgba(0,0,0,.8);transition:all .08s}
 #lights .pod.on{background:radial-gradient(circle at 40% 35%,#ff8a8a,#ff0000 45%,#a00000);box-shadow:0 0 28px 6px rgba(255,0,0,.75)}
 #lights .pod.dim{background:#2a0505}
-#countNum{position:fixed;top:60%;left:50%;transform:translate(-50%,-50%);z-index:30;font-size:clamp(90px,16vw,200px);font-weight:800;font-style:italic;color:#fff;text-shadow:0 8px 0 rgba(0,0,0,.35),0 0 40px rgba(255,40,40,.6);pointer-events:none;opacity:0}
+#countNum{position:fixed;top:60%;left:50%;transform:translate(-50%,-50%);z-index:30;font-size:clamp(90px,16vw,200px);font-weight:800;font-style:italic;color:#fff;text-shadow:0 8px 0 rgba(0,0,0,.35),0 0 40px rgba(168,85,247,.75);pointer-events:none;opacity:0}
 #countNum.pop{animation:cpop .8s ease both}
 @keyframes cpop{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}25%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(.9)}}
 #goText{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(.6);z-index:31;font-size:clamp(48px,9vw,120px);font-weight:700;font-style:italic;color:#fff;
-  text-shadow:0 0 30px rgba(34,197,94,.9),0 6px 0 #0b5d29;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.2,1.4,.4,1)}
+  text-shadow:0 0 30px rgba(168,85,247,.95),0 6px 0 #3b0764;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.2,1.4,.4,1)}
 #goText.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
-#goText{display:flex;flex-direction:column;align-items:center;line-height:1.05;padding:14px 34px 20px;border-radius:20px;background:rgba(10,12,20,.75);border:2px solid rgba(34,197,94,.6)}
-#goText small{font-size:clamp(14px,2vw,22px);font-style:normal;font-weight:600;color:#bbf7d0;text-shadow:none}
+#goText{display:flex;flex-direction:column;align-items:center;line-height:1.05;padding:14px 34px 20px;border-radius:20px;background:rgba(16,10,30,.78);border:2px solid rgba(167,139,250,.65)}
+#goText small{font-size:clamp(14px,2vw,22px);font-style:normal;font-weight:600;color:#ddd6fe;text-shadow:none}
 
 /* ---------- اللوبي ---------- */
 .lobby{position:fixed;inset:64px 0 0 0;z-index:25;display:flex;justify-content:center;align-items:flex-start;padding:22px 16px;overflow-y:auto;
@@ -201,7 +201,7 @@ body[data-phase="lobby"] .bottom{display:none}
 .er-chip b{color:#ffd76a}
 .er-chip-btn{cursor:pointer}.er-chip-btn:hover{background:rgba(255,255,255,.08)}
 .er-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:clamp(12px,1.4vw,18px)}
-.er-card{display:flex;flex-direction:column;padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px);border-radius:24px;background:rgba(18,16,26,.78);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:rise .45s ease both}
+.er-card{display:flex;flex-direction:column;padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px);border-radius:24px;background:linear-gradient(180deg,rgba(26,18,46,.82),rgba(14,10,26,.82));backdrop-filter:blur(14px);border:1px solid rgba(167,139,250,.14);box-shadow:0 20px 60px rgba(0,0,0,.3);animation:rise .45s ease both}
 .er-card:nth-child(2){animation-delay:.07s}.er-card:nth-child(3){animation-delay:.14s}.er-card:nth-child(4){animation-delay:.21s}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}}
 .er-full{grid-column:1/-1}
@@ -254,7 +254,7 @@ body[data-phase="lobby"] .bottom{display:none}
   background:rgba(12,13,18,.86);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.45)}
 body:not([data-phase="lobby"]) #readyCard{display:none}
 #readyCard small{display:block;font-size:13px;font-weight:600;color:#4ade80}
-#readyCard small.wait{color:#fbbf24}
+#readyCard small.wait{color:#c4b5fd}
 #readyCard h2{margin:4px 0 2px;font-size:clamp(22px,2.6vw,32px);line-height:1.25}
 #readyCard p{margin:0 0 12px;font-size:13px;color:var(--mut)}
 #readyCard p b{color:#ffd76a}
@@ -306,10 +306,11 @@ body.testing .live::after{content:" · تجربة";}
 /* ---------- مراسم النهاية (ثري دي) ---------- */
 #cerBanner{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:30;display:none;flex-direction:column;align-items:center;gap:2px;padding:10px 28px 12px;border-radius:16px;
   background:linear-gradient(180deg,rgba(91,33,182,.94),rgba(46,16,101,.92));border:1px solid rgba(255,215,106,.55);box-shadow:0 14px 40px rgba(0,0,0,.45);text-align:center;white-space:nowrap}
-body.ceremony #cerBanner{display:flex}
+body.ceremony #cerBanner.shown{display:flex}
+#cerSub:empty{display:none}
 #cerBanner.pop{animation:cerpop .5s cubic-bezier(.2,1.3,.4,1) both}
 @keyframes cerpop{from{opacity:0;transform:translate(-50%,-12px) scale(.9)}}
-#cerTitle{font-size:clamp(20px,2.2vw,30px);font-weight:700;color:#fff}
+#cerTitle{font-size:clamp(22px,2.4vw,32px);font-weight:700;color:#fff;letter-spacing:.3px}
 #cerSub{font-size:14px;color:#ffd76a;font-weight:600}
 body.ceremony .tower,body.ceremony .perks,body.ceremony .bottom,body.ceremony .mapbox,body.ceremony .lapbox,body.ceremony #toasts{display:none}
 /* أثناء المراسم: منصة HTML تصير شريط نتائج تحت (المنصة الحقيقية بالثري دي) */
@@ -361,7 +362,7 @@ body.no3d .fc-cam{display:none}
 <header class="top">
   <div class="top-r">
     <button class="btn-ghost btn-exit" id="exitBtn" type="button">✕ <span>خروج</span></button>
-    <div class="brand"><i></i><span>سباق الفورمولا</span></div>
+    <div class="brand"><i></i><span>فورمولا ون</span></div>
   </div>
   <!-- لوقو ألعاب أيمن بالنص (نفس مكان اللوقو بباقي الألعاب) -->
   <img class="top-logo" src="../../logo.png" alt="ألعاب أيمن" onerror="this.remove()">
@@ -394,7 +395,7 @@ body.no3d .fc-cam{display:none}
   <div class="er">
     <div class="er-head">
       <button class="er-close" id="settingsClose" type="button" aria-label="رجوع للشبكة">✕ رجوع</button>
-      <span class="er-title">سباق الفورمولا</span>
+      <span class="er-title">فورمولا ون</span>
       <div class="er-chips">
         <span class="er-chip">للمشاركة اكتب بالشات «<b id="kwShow">سباق</b>»</span>
         <button class="er-chip er-chip-btn" id="resetSettings" type="button">↺ استعادة الافتراضي</button>

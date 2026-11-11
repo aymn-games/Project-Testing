@@ -128,6 +128,34 @@ function drawSaudiEmblem(ctx, cx, cy, s, color) {
   ctx.restore();
 }
 
+// ---------- لوقو ألعاب أيمن (logo.png) ----------
+const AGP_LOGO_URL = new URL('../../logo.png', import.meta.url).href;
+let _logo = null; const _logoWait = [];
+function withLogo(cb) {
+    if (_logo) return cb(_logo);
+    _logoWait.push(cb);
+    if (_logoWait.length > 1) return;
+    const im = new Image();
+    im.onload = () => {
+        // الشعار (A) = أول كتلة ملوّنة من اليسار: نقصه بحدود البكسلات غير الشفافة
+        let mark = null;
+        try {
+            const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+            const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+            const d = x.getImageData(0, 0, im.width, im.height).data, W = im.width, H = im.height;
+            const colHas = cx => { for (let y = 0; y < H; y++) if (d[(y * W + cx) * 4 + 3] > 40) return true; return false; };
+            let x0 = 0; while (x0 < W && !colHas(x0)) x0++;
+            let x1 = x0; while (x1 < W && colHas(x1)) x1++;
+            let y0 = H, y1 = 0;
+            for (let y = 0; y < H; y++) for (let cx = x0; cx < x1; cx++) if (d[(y * W + cx) * 4 + 3] > 40) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
+            if (x1 - x0 > 10 && y1 - y0 > 10) mark = { sx: x0, sy: y0, sw: x1 - x0, sh: y1 - y0 + 1 };
+        } catch (e) { mark = null; }
+        _logo = { img: im, mark };
+        _logoWait.splice(0).forEach(f => f(_logo));
+    };
+    im.src = AGP_LOGO_URL;
+}
+
 // ---------- سيارة الفورمولا ----------
 const SHARED = {};
 function sharedCarGeos() {
@@ -449,7 +477,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     const asphalt = new T.Mesh(ribbon(track, -half, half, 0.02, { vScale: 14 }), new T.MeshStandardMaterial({ map: asphaltTex, roughness: 0.85 }));
     asphalt.receiveShadow = true; scene.add(asphalt);
     // ---- الكيربات (أحمر/أبيض بالمنعطفات) ----
-    const RED = new T.Color(0xd90f0f), WHITE = new T.Color(0xf4f4f4);
+    const RED = new T.Color(0x7c3aed), WHITE = new T.Color(0xf4f4f4);   // كيربات بهوية ألعاب أيمن (بنفسجي/أبيض)
     const isCorner = k => Math.abs(track.curvature[k]) > 0.006 || Math.abs(track.curvature[(k + 8) % track.count]) > 0.006 || Math.abs(track.curvature[(k - 8 + track.count) % track.count]) > 0.006;
     const kerbCol = k => (Math.floor(k * track.step / 3) % 2 ? RED : WHITE);
     const kerbMat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
@@ -513,12 +541,18 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         [new T.BoxGeometry(0.5, 7.5, 0.5), M(-half - 1.5, 3.75, 0)],
         [new T.BoxGeometry(track.width + 4, 1.4, 0.7), M(0, 7.2, 0)]
     ]), steel));
-    const banner = canvasTex(1024, 96, (ctx, w, h) => {
-        const bg = ctx.createLinearGradient(0, 0, w, 0); bg.addColorStop(0, '#5b21b6'); bg.addColorStop(0.5, '#7c3aed'); bg.addColorStop(1, '#a855f7');
+    // لافتة جسر البداية: لوقو ألعاب أيمن على خلفية داكنة بخطوط بنفسجية (بدون كتابة)
+    const bannerCv = document.createElement('canvas'); bannerCv.width = 1024; bannerCv.height = 96;
+    const banner = new T.CanvasTexture(bannerCv); banner.colorSpace = T.SRGBColorSpace;
+    const drawBanner = (L) => {
+        const ctx = bannerCv.getContext('2d'), w = 1024, h = 96;
+        const bg = ctx.createLinearGradient(0, 0, w, 0); bg.addColorStop(0, '#120a24'); bg.addColorStop(0.5, '#2e1065'); bg.addColorStop(1, '#120a24');
         ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#fff'; ctx.font = `800 58px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
-        ctx.fillText('سباق الفورمولا · ألعاب أيمن', w / 2, h / 2 + 2);
-    });
+        ctx.fillStyle = '#a855f7'; ctx.fillRect(0, 0, w, 4); ctx.fillRect(0, h - 4, w, 4);
+        if (L) { const k = Math.min(380 / L.img.width, 120 / L.img.height); ctx.drawImage(L.img, w / 2 - L.img.width * k / 2, h / 2 - L.img.height * k / 2, L.img.width * k, L.img.height * k); }
+        banner.needsUpdate = true;
+    };
+    drawBanner(null); withLogo(drawBanner);
     const bannerMesh = new T.Mesh(new T.PlaneGeometry(track.width + 4, 1.3), new T.MeshBasicMaterial({ map: banner }));
     bannerMesh.position.set(0, 7.2, -0.36); bannerMesh.rotation.y = Math.PI; gantry.add(bannerMesh);
     const lightPods = [];
@@ -896,7 +930,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     function makeMedal(i) {
         const g = new T.Group();
         const metal = new T.MeshStandardMaterial({ color: MEDAL[i], metalness: 0.85, roughness: 0.25, emissive: MEDAL[i], emissiveIntensity: 0.12 });
-        const ribbon = new T.MeshStandardMaterial({ color: [0xe10600, 0x1d4ed8, 0x16a34a][i], roughness: 0.6 });
+        const ribbon = new T.MeshStandardMaterial({ color: 0x6d28d9, roughness: 0.6 });   // شريط الميدالية بهوية ألعاب أيمن
         g.add(segBox([0.07, 0.17, 0.05], [0.012, 0.0, 0.135], 0.028, ribbon), segBox([-0.07, 0.17, 0.05], [-0.012, 0.0, 0.135], 0.028, ribbon));
         const disc = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 0.012, 24), metal);
         disc.rotation.x = Math.PI / 2; disc.position.set(0, -0.04, 0.14); g.add(disc);
@@ -911,113 +945,111 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
         for (const sx of [1, -1]) { const h = new T.Mesh(new T.TorusGeometry(0.045, 0.01, 6, 14, Math.PI * 1.2), gold); h.position.set(sx * 0.115, 0.25, 0); h.rotation.z = sx > 0 ? -Math.PI * 0.6 : Math.PI * 1.6; g.add(h); }
         return g;
     }
-    // منصة تتويج ألعاب أيمن (مثل منصات الفورمولا) بهوية المنصة البنفسجية:
-    // جدار خلفي بالشعار، لافتة فوقه، ثلاث درجات بألواح ذهبي/فضي/برونزي عليها اسم كل لاعب،
-    // إضاءة LED بنفسجية، كشّافات من فوق، مدافع احتفال على الجنبين، وممر سجاد قدامها.
+    // منصة التتويج (بريميوم، بهوية ألعاب أيمن): كتابة قليلة —
+    //  · لافتة فوق: «منصة التتويج» بس.
+    //  · جدار خلفي داكن بتوهج بنفسجي وشعار ألعاب أيمن كبير بالنص (بدون نصوص مكررة).
+    //  · درجات جرافيت بلوح زجاجي داكن عليه رقم معدني (ذهبي/فضي/برونزي) واسم اللاعب، وشريط LED.
+    //  · أعمدة LED، كشّافات من فوق، مدافع احتفال، وممر مخملي بنفسجي بحواف ذهبية.
     const STEP_H = [1.2, 0.85, 0.6], STEP_LANE = [0, -2.35, 2.35], WALL_Z = -1.65;
-    const LOGO_URL = new URL('../../logo.png', import.meta.url).href;
+    const METAL = [['#fff7d6', '#f5c542', '#9a7414'], ['#ffffff', '#cfd6df', '#7d8794'], ['#ffe0c2', '#d08a4f', '#7a4219']];
     function buildPodium(names = []) {
         const g = new T.Group();
-        const white = new T.MeshStandardMaterial({ color: 0xf5f3ff, roughness: 0.4 });
-        const carpet = new T.MeshStandardMaterial({ color: 0x4c1d95, roughness: 0.95 });
-        const goldTrim = new T.MeshStandardMaterial({ color: 0xe8c25a, metalness: 0.8, roughness: 0.3 });
-        const dark = new T.MeshStandardMaterial({ color: 0x110d1c, roughness: 0.6 });
+        const graphite = new T.MeshStandardMaterial({ color: 0x1b1430, roughness: 0.32, metalness: 0.45 });
+        const velvet = new T.MeshStandardMaterial({ color: 0x3b0764, roughness: 0.95 });
+        const gold = new T.MeshStandardMaterial({ color: 0xe8c25a, metalness: 0.85, roughness: 0.28 });
+        const floor = new T.MeshStandardMaterial({ color: 0x0c0818, roughness: 0.18, metalness: 0.6 });
         const led = new T.MeshBasicMaterial({ color: 0xa855f7 });
-        const base = new T.Mesh(new T.BoxGeometry(8.6, 0.15, 3.6), dark); base.position.set(0, 0.075, 0.05); base.receiveShadow = true; g.add(base);
-        const baseLed = new T.Mesh(new T.BoxGeometry(8.64, 0.035, 0.035), led); baseLed.position.set(0, 0.15, 1.86); g.add(baseLed);
-        const PLATE = [['#fff3c4', '#e8c25a', '#a8811f'], ['#ffffff', '#cfd6df', '#8a95a3'], ['#ffe2c7', '#d08a4f', '#8a4f22']];
+        const base = new T.Mesh(new T.BoxGeometry(8.8, 0.16, 3.7), floor); base.position.set(0, 0.08, 0.05); base.receiveShadow = true; g.add(base);
+        const baseLed = new T.Mesh(new T.BoxGeometry(8.84, 0.03, 0.03), led); baseLed.position.set(0, 0.15, 1.9); g.add(baseLed);
         for (let i = 0; i < 3; i++) {
             const h = STEP_H[i], x = STEP_LANE[i];
-            const b = new T.Mesh(new T.BoxGeometry(2.3, h, 2.2), white); b.position.set(x, 0.15 + h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
-            const top = new T.Mesh(new T.BoxGeometry(2.24, 0.04, 2.14), carpet); top.position.set(x, 0.15 + h + 0.02, 0); top.receiveShadow = true; g.add(top);
-            const trim = new T.Mesh(new T.BoxGeometry(2.34, 0.05, 0.06), goldTrim); trim.position.set(x, 0.15 + h, 1.11); g.add(trim);
-            // شريط LED بنفسجي على حافة كل درجة
-            const strip = new T.Mesh(new T.BoxGeometry(2.3, 0.03, 0.03), led); strip.position.set(x, 0.15 + h - 0.06, 1.115); g.add(strip);
-            const ph = Math.min(0.95, h - 0.14), nm = names[i] ? String(names[i]) : '';
-            const face = new T.Mesh(new T.PlaneGeometry(1.9, ph), new T.MeshStandardMaterial({ roughness: 0.35, metalness: 0.4, map: canvasTex(384, Math.round(384 * ph / 1.9), (ctx, w, hh) => {
-                const gr = ctx.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, PLATE[i][0]); gr.addColorStop(0.45, PLATE[i][1]); gr.addColorStop(1, PLATE[i][2]);
-                ctx.fillStyle = gr; roundRect(ctx, 3, 3, w - 6, hh - 6, 18); ctx.fill();
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                // الدرجات القصيرة: الرقم أصغر والاسم أكبر عشان يبان
-                const short = hh < 120;
-                ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.font = `800 ${Math.round(hh * (nm ? (short ? 0.42 : 0.5) : 0.62))}px ${FONT}`;
-                ctx.fillText(String(i + 1), w / 2, hh * (nm ? (short ? 0.3 : 0.36) : 0.47));
-                ctx.direction = 'rtl';
+            const b = new T.Mesh(new T.BoxGeometry(2.3, h, 2.2), graphite); b.position.set(x, 0.16 + h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
+            const top = new T.Mesh(new T.BoxGeometry(2.24, 0.04, 2.14), velvet); top.position.set(x, 0.16 + h + 0.02, 0); top.receiveShadow = true; g.add(top);
+            const trim = new T.Mesh(new T.BoxGeometry(2.32, 0.035, 0.05), gold); trim.position.set(x, 0.16 + h + 0.005, 1.11); g.add(trim);
+            const strip = new T.Mesh(new T.BoxGeometry(2.3, 0.025, 0.025), led); strip.position.set(x, 0.18, 1.115); g.add(strip);
+            // لوح زجاجي داكن: رقم معدني كبير + اسم اللاعب
+            const ph = Math.min(0.95, h - 0.16), nm = names[i] ? String(names[i]) : '';
+            const face = new T.Mesh(new T.PlaneGeometry(1.95, ph), new T.MeshStandardMaterial({ roughness: 0.25, metalness: 0.2, map: canvasTex(400, Math.round(400 * ph / 1.95), (ctx, w, hh) => {
+                const gl = ctx.createLinearGradient(0, 0, 0, hh); gl.addColorStop(0, '#221640'); gl.addColorStop(1, '#0e0a1c');
+                ctx.fillStyle = gl; roundRect(ctx, 2, 2, w - 4, hh - 4, 16); ctx.fill();
+                ctx.strokeStyle = 'rgba(168,85,247,.55)'; ctx.lineWidth = 3; roundRect(ctx, 3, 3, w - 6, hh - 6, 15); ctx.stroke();
+                const short = hh < 120, numY = hh * (nm ? (short ? 0.36 : 0.4) : 0.5);
+                const ng = ctx.createLinearGradient(0, numY - hh * 0.3, 0, numY + hh * 0.3);
+                ng.addColorStop(0, METAL[i][0]); ng.addColorStop(0.5, METAL[i][1]); ng.addColorStop(1, METAL[i][2]);
+                ctx.fillStyle = ng; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.font = `800 ${Math.round(hh * (nm ? (short ? 0.5 : 0.56) : 0.7))}px ${FONT}`;
+                ctx.shadowColor = 'rgba(168,85,247,.6)'; ctx.shadowBlur = 18; ctx.fillText(String(i + 1), w / 2, numY); ctx.shadowBlur = 0;
                 if (nm) {
-                    let fs = Math.max(24, Math.round(hh * (short ? 0.34 : 0.2))); ctx.font = `700 ${fs}px ${FONT}`;
-                    while (ctx.measureText(nm).width > w - 40 && fs > 12) { fs -= 2; ctx.font = `700 ${fs}px ${FONT}`; }
-                    ctx.fillStyle = 'rgba(0,0,0,.8)'; ctx.fillText(nm, w / 2, hh * (short ? 0.72 : 0.74));
-                } else { ctx.font = `700 ${Math.max(14, Math.round(hh * 0.13))}px ${FONT}`; ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillText('ألعاب أيمن', w / 2, hh * 0.86); }
+                    ctx.direction = 'rtl'; ctx.fillStyle = '#f4f2f8';
+                    let fs = Math.max(22, Math.round(hh * (short ? 0.26 : 0.17))); ctx.font = `600 ${fs}px ${FONT}`;
+                    while (ctx.measureText(nm).width > w - 44 && fs > 12) { fs -= 2; ctx.font = `600 ${fs}px ${FONT}`; }
+                    ctx.fillText(nm, w / 2, hh * (short ? 0.78 : 0.8));
+                }
             }) }));
-            face.position.set(x, 0.15 + h / 2, 1.105); g.add(face);
+            face.position.set(x, 0.16 + h / 2 + 0.02, 1.106); g.add(face);
         }
-        // جدار خلفي بالشعار ونقشة «ألعاب أيمن / AYMN GAMES»
+        // الجدار الخلفي: توهّج بنفسجي + شعار ألعاب أيمن كبير
         const wallCv = document.createElement('canvas'); wallCv.width = 1024; wallCv.height = 380;
         const wallTex = new T.CanvasTexture(wallCv); wallTex.colorSpace = T.SRGBColorSpace; wallTex.anisotropy = 4;
-        const drawWall = (logo) => {
+        const drawWall = (L) => {
             const ctx = wallCv.getContext('2d'), w = wallCv.width, h = wallCv.height;
-            const gr = ctx.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0d0818'); gr.addColorStop(0.5, '#3b1773'); gr.addColorStop(1, '#0d0818');
-            ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
-            ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {
-                const x = c * 190 + (r % 2) * 95 + 30, y = r * 82 + 34;
-                ctx.font = `700 ${r % 2 ? 26 : 30}px ${FONT}`; ctx.direction = 'rtl';
-                ctx.fillText((r + c) % 2 ? 'ألعاب أيمن' : 'AYMN GAMES', x, y);
-            }
+            ctx.fillStyle = '#0b0716'; ctx.fillRect(0, 0, w, h);
+            const rg = ctx.createRadialGradient(w / 2, h * 0.45, 20, w / 2, h * 0.45, w * 0.55);
+            rg.addColorStop(0, 'rgba(124,58,237,.75)'); rg.addColorStop(0.45, 'rgba(76,29,149,.35)'); rg.addColorStop(1, 'rgba(11,7,22,0)');
+            ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h);
+            // خطوط مائلة خفيفة (نقشة بدون كتابة)
+            ctx.save(); ctx.globalAlpha = 0.07; ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 2;
+            for (let x = -h; x < w; x += 34) { ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x + h, 0); ctx.stroke(); }
             ctx.restore();
-            ctx.fillStyle = 'rgba(255,255,255,.96)'; roundRect(ctx, w / 2 - 230, 70, 460, 240, 26); ctx.fill();
-            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 6; roundRect(ctx, w / 2 - 230, 70, 460, 240, 26); ctx.stroke();
-            if (logo) {
-                const s0 = Math.min(420 / logo.width, 170 / logo.height);
-                ctx.drawImage(logo, w / 2 - logo.width * s0 / 2, 80, logo.width * s0, logo.height * s0);
-            } else {
-                ctx.fillStyle = '#7c3aed'; ctx.font = `800 76px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
-                ctx.fillText('ألعاب أيمن', w / 2, 160);
+            ctx.strokeStyle = 'rgba(232,194,90,.7)'; ctx.lineWidth = 3; ctx.strokeRect(14, 14, w - 28, h - 28);
+            if (L) {
+                // الشعار الكامل كبير بالنص، بتوهّج
+                const k = Math.min(620 / L.img.width, 300 / L.img.height), lw = L.img.width * k, lh = L.img.height * k;
+                ctx.shadowColor = 'rgba(192,132,252,.9)'; ctx.shadowBlur = 40;
+                ctx.drawImage(L.img, w / 2 - lw / 2, h / 2 - lh / 2, lw, lh);
+                ctx.shadowBlur = 0;
             }
-            ctx.fillStyle = '#2e1065'; ctx.font = `700 40px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
-            ctx.fillText('منصة التتويج', w / 2, 276);
             wallTex.needsUpdate = true;
         };
-        drawWall(null);
-        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => drawWall(null));
-        const im = new Image(); im.onload = () => drawWall(im); im.src = LOGO_URL;
-        const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.6 });
-        const wall = new T.Mesh(new T.BoxGeometry(9.2, 3.4, 0.25), [dark, dark, dark, dark, wallMat, dark]);
-        wall.position.set(0, 0.15 + 1.7, WALL_Z); wall.castShadow = wall.receiveShadow = true; g.add(wall);
-        const frame = new T.Mesh(new T.BoxGeometry(9.4, 0.1, 0.3), goldTrim); frame.position.set(0, 0.15 + 3.42, WALL_Z); g.add(frame);
-        // لافتة فوق الجدار
-        const bannerTex = canvasTex(1024, 150, (ctx, w, h) => {
-            const gr = ctx.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#5b21b6'); gr.addColorStop(0.5, '#a855f7'); gr.addColorStop(1, '#5b21b6');
+        drawWall(null); withLogo(drawWall);
+        const wallMat = new T.MeshStandardMaterial({ map: wallTex, roughness: 0.55, emissive: 0xffffff, emissiveMap: wallTex, emissiveIntensity: 0.35 });
+        const wall = new T.Mesh(new T.BoxGeometry(9.2, 3.4, 0.25), [graphite, graphite, graphite, graphite, wallMat, graphite]);
+        wall.position.set(0, 0.16 + 1.7, WALL_Z); wall.castShadow = wall.receiveShadow = true; g.add(wall);
+        // اللافتة فوق: «منصة التتويج» بس
+        const bannerTex = canvasTex(1024, 140, (ctx, w, h) => {
+            const gr = ctx.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#2e1065'); gr.addColorStop(0.5, '#6d28d9'); gr.addColorStop(1, '#2e1065');
             ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
-            ctx.fillStyle = '#ffd76a'; ctx.fillRect(0, 0, w, 7); ctx.fillRect(0, h - 7, w, 7);
-            ctx.fillStyle = '#fff'; ctx.font = `800 62px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
-            ctx.fillText('🏆 منصة تتويج ألعاب أيمن', w / 2, h / 2 + 4);
+            ctx.fillStyle = '#e8c25a'; ctx.fillRect(0, 0, w, 4); ctx.fillRect(0, h - 4, w, 4);
+            ctx.fillStyle = '#fff'; ctx.font = `700 66px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.direction = 'rtl';
+            ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 8; ctx.fillText('منصة التتويج', w / 2, h / 2 + 3);
         });
-        const purple = new T.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.4 });
-        const banner = new T.Mesh(new T.BoxGeometry(9.2, 1.25, 0.28), [purple, purple, purple, purple, new T.MeshBasicMaterial({ map: bannerTex }), purple]);
-        banner.position.set(0, 0.15 + 3.4 + 0.75, WALL_Z); banner.castShadow = true; g.add(banner);
+        const banner = new T.Mesh(new T.BoxGeometry(9.2, 1.1, 0.26), [graphite, graphite, graphite, graphite, new T.MeshBasicMaterial({ map: bannerTex }), graphite]);
+        banner.position.set(0, 0.16 + 3.4 + 0.66, WALL_Z); banner.castShadow = true; g.add(banner);
+        // أعمدة جرافيت بخط LED
         for (const x of [-4.75, 4.75]) {
-            const post = new T.Mesh(new T.BoxGeometry(0.3, 5.1, 0.4), goldTrim); post.position.set(x, 2.55, WALL_Z); g.add(post);
-            const pl = new T.Mesh(new T.BoxGeometry(0.06, 4.9, 0.06), led); pl.position.set(x + (x < 0 ? 0.19 : -0.19), 2.55, WALL_Z + 0.21); g.add(pl);
+            const post = new T.Mesh(new T.BoxGeometry(0.3, 5.0, 0.36), graphite); post.position.set(x, 2.5, WALL_Z); post.castShadow = true; g.add(post);
+            const pl = new T.Mesh(new T.BoxGeometry(0.05, 4.8, 0.05), led); pl.position.set(x, 2.5, WALL_Z + 0.19); g.add(pl);
+            const cap = new T.Mesh(new T.BoxGeometry(0.36, 0.06, 0.42), gold); cap.position.set(x, 5.02, WALL_Z); g.add(cap);
         }
-        // كشّافات من فوق اللافتة على الدرجات (أشعة ضوء شفافة)
+        // كشّافات من فوق
         const beamMat = new T.MeshBasicMaterial({ color: 0xd8b4fe, transparent: true, opacity: 0.1, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
         const beams = [];
         for (let i = 0; i < 3; i++) {
-            const bh = 5.6 - STEP_H[i];
-            const beam = new T.Mesh(new T.ConeGeometry(0.95, bh, 20, 1, true), beamMat);
-            beam.position.set(STEP_LANE[i], 0.15 + STEP_H[i] + bh / 2, 0.15); g.add(beam); beams.push(beam);
+            const bh = 5.5 - STEP_H[i];
+            const beam = new T.Mesh(new T.ConeGeometry(0.95, bh, 24, 1, true), beamMat);
+            beam.position.set(STEP_LANE[i], 0.16 + STEP_H[i] + bh / 2, 0.15); g.add(beam); beams.push(beam);
         }
-        // مدافع الاحتفال على الجنبين
+        // مدافع الاحتفال
         const cannons = [];
         for (const x of [-4.2, 4.2]) {
-            const cn = new T.Mesh(new T.CylinderGeometry(0.16, 0.22, 0.75, 14), dark);
-            cn.position.set(x, 0.5, 1.4); cn.rotation.z = x < 0 ? -0.35 : 0.35; g.add(cn);
-            const rim = new T.Mesh(new T.TorusGeometry(0.17, 0.035, 6, 16), goldTrim); rim.position.set(x + (x < 0 ? 0.13 : -0.13), 0.86, 1.4); rim.rotation.x = Math.PI / 2; rim.rotation.y = x < 0 ? -0.35 : 0.35; g.add(rim);
-            cannons.push(new T.Vector3(x + (x < 0 ? 0.15 : -0.15), 0.9, 1.4));
+            const cn = new T.Mesh(new T.CylinderGeometry(0.15, 0.21, 0.72, 16), graphite);
+            cn.position.set(x, 0.5, 1.45); cn.rotation.z = x < 0 ? -0.35 : 0.35; g.add(cn);
+            const rim = new T.Mesh(new T.TorusGeometry(0.16, 0.03, 6, 18), gold); rim.position.set(x + (x < 0 ? 0.12 : -0.12), 0.85, 1.45); rim.rotation.x = Math.PI / 2; rim.rotation.y = x < 0 ? -0.35 : 0.35; g.add(rim);
+            cannons.push(new T.Vector3(x + (x < 0 ? 0.15 : -0.15), 0.9, 1.45));
         }
-        // ممر السجاد قدام المنصة
-        const run = new T.Mesh(new T.PlaneGeometry(2.0, 7), carpet); run.rotation.x = -Math.PI / 2; run.position.set(0, 0.045, 1.8 + 3.5); run.receiveShadow = true; g.add(run);
+        // ممر مخملي بنفسجي بحواف ذهبية
+        const run = new T.Mesh(new T.PlaneGeometry(2.0, 7), velvet); run.rotation.x = -Math.PI / 2; run.position.set(0, 0.05, 1.85 + 3.5); run.receiveShadow = true; g.add(run);
+        for (const x of [-1.02, 1.02]) { const e = new T.Mesh(new T.PlaneGeometry(0.05, 7), gold); e.rotation.x = -Math.PI / 2; e.position.set(x, 0.052, 1.85 + 3.5); g.add(e); }
         g.userData.beams = beams; g.userData.cannons = cannons; g.userData.led = led;
         return g;
     }
@@ -1242,7 +1274,7 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
                 // قفزة على درجته
                 ch.hopT += dt / 0.5;
                 const k = Math.min(1, ch.hopT), top = trackPoint(D_POD, STEP_LANE[ch.i]);
-                const y = 0.15 + STEP_H[ch.i];
+                const y = 0.16 + STEP_H[ch.i];
                 rig.root.position.set(ch.to.x + (top.x - ch.to.x) * k, y * k + Math.sin(k * Math.PI) * 0.6, ch.to.z + (top.z - ch.to.z) * k);
                 rig.root.rotation.y = ch.ry;
                 if (k >= 1) {
