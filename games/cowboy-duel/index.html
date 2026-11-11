@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="cd-platform.js"></script>
 <script src="cd-settings.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -59,6 +60,7 @@ h1{margin:0;text-align:center;font:400 clamp(44px,6vw,64px)/1.15 Rakkas,serif;ba
 .seg button.on{background:linear-gradient(90deg,#c98a2a,#e0a83a);color:#1a1006;box-shadow:0 6px 20px var(--accent-glow)}
 .txt{width:190px;height:40px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:#fff;font:500 14px "IBM Plex Sans Arabic";text-align:center;outline:none}
 .txt:focus{border-color:rgba(224,168,58,.55)}
+.giftsel{display:flex;align-items:center;gap:8px;flex:none}.giftsel img{width:34px;height:34px;object-fit:contain}.giftsel select{width:200px;appearance:none;padding:0 14px;cursor:pointer}.giftsel option{background:#16121e;color:#fff}
 .step{display:flex;align-items:center;height:40px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03);flex:none}
 .step button{width:40px;height:40px;border:0;background:none;color:#fff;font-size:18px;cursor:pointer}
 .step input{width:50px;border:0;background:none;color:#fff;text-align:center;font:700 15px "IBM Plex Sans Arabic";outline:none;-moz-appearance:textfield}
@@ -79,7 +81,7 @@ h1{margin:0;text-align:center;font:400 clamp(44px,6vw,64px)/1.15 Rakkas,serif;ba
 <header><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display='none'"><button class="exit" id="exitBtn" type="button">خروج ↩</button></header>
 <main>
   <h1>بلدة الكاوبوي</h1>
-  <p class="sub">مواجهات كاوبوي بشارع السوق: أول واحد يكتب اللي يطلع عند الجرس يطلق، والثاني يطيح</p>
+  <p class="sub">كل لاعبَين في مبارزة وسط شارع في الغرب. عند الجرس يظهر رقم ذهبي، وأول من يكتبه يُسقط خصمه ويتأهل.</p>
   <div class="status"><span class="pill off" id="livePill"><i class="dot"></i><span id="liveTxt">غير متصل بالبث</span></span><a class="golive" id="goLive" href="../../games.html">ابدأ البث ونتصل تلقائياً</a></div>
   <div class="grid" id="grid"></div>
   <div class="go"><button type="button" id="startBtn">الدخول للوبي <span>‹</span></button></div>
@@ -101,12 +103,13 @@ h1{margin:0;text-align:center;font:400 clamp(44px,6vw,64px)/1.15 Rakkas,serif;ba
         var v = values[f.key];
         if (f.type === 'text') return '<input class="txt" data-k="' + f.key + '" value="' + esc(v) + '" placeholder="' + esc(f.placeholder || '') + '" maxlength="40">';
         if (f.type === 'number') return '<div class="step"><button type="button" data-dec="' + f.key + '">−</button><input type="number" data-n="' + f.key + '" value="' + v + '" min="' + f.min + '" max="' + f.max + '"><button type="button" data-inc="' + f.key + '">+</button></div>';
+        if (f.type === 'gift') { var G = window.AymanGamesPlatform && AymanGamesPlatform.tiktokGifts, cur = G && G.byId(v); return '<div class="giftsel">' + (cur ? '<img src="' + G.iconUrl(cur) + '" alt="">' : '') + '<select class="txt" data-g="' + f.key + '">' + (G ? G.list : []).map(function (g) { return '<option value="' + g.id + '"' + (g.id === v ? ' selected' : '') + '>' + esc(g.label) + ' · ' + g.coins + ' كوينز</option>'; }).join('') + '</select></div>'; }
         if (f.type === 'toggle') return '<button type="button" class="tog' + (v ? ' on' : '') + '" data-t="' + f.key + '" aria-label="' + esc(f.label) + '"></button>';
         return '<div class="seg">' + f.options.map(function (o, i) { return '<button type="button" data-k="' + f.key + '" data-i="' + i + '" class="' + (v === o[0] ? 'on' : '') + '">' + esc(o[1]) + '</button>'; }).join('') + '</div>';
     }
     function render() {
         $('#grid').innerHTML = S.SECTIONS.map(function (sec, si) {
-            var rows = S.FIELDS.filter(function (f) { return f.section === sec.n; });
+            var rows = S.FIELDS.filter(function (f) { return f.section === sec.n && (!f.showIf || values[f.showIf[0]] === f.showIf[1]); });
             return '<section class="card' + (sec.full ? ' full' : '') + '" style="animation-delay:' + (si * .07) + 's"><div class="chead"><span class="num">' + sec.n + '</span><h2>' + sec.title + '</h2></div>' +
                 rows.map(function (f) { var d = f.descs ? f.descs[values[f.key]] : f.desc; return '<div class="row"><div class="lab"><b>' + esc(f.label) + '</b>' + (d ? '<small>' + esc(d) + '</small>' : '') + '</div>' + control(f) + '</div>'; }).join('') + '</section>';
         }).join('');
@@ -120,13 +123,14 @@ h1{margin:0;text-align:center;font:400 clamp(44px,6vw,64px)/1.15 Rakkas,serif;ba
         else if (b.dataset.t) { values[b.dataset.t] = !values[b.dataset.t]; render(); }
         else if (b.dataset.inc || b.dataset.dec) { var k = b.dataset.inc || b.dataset.dec; f = S.FIELDS.find(function (x) { return x.key === k; }); values[k] = Math.max(f.min, Math.min(f.max, (+values[k] || f.min) + (b.dataset.inc ? 1 : -1))); render(); }
     });
+    grid.addEventListener('change', function (e) { var t = e.target; if (t.dataset.g) { values[t.dataset.g] = t.value; render(); } });
     grid.addEventListener('input', function (e) { var t = e.target; if (t.dataset.k) values[t.dataset.k] = t.value; if (t.dataset.n) values[t.dataset.n] = t.value; });
     // حالة الاتصال بالبث (من مكتبة الألعاب أو الاتصال التلقائي)
     function live() { var c = P.getSavedConnection(), on = !!c; $('#livePill').className = 'pill ' + (on ? 'on' : 'off'); $('#liveTxt').textContent = on ? 'متصل بالبث · @' + c.username : 'غير متصل بالبث'; $('#goLive').style.display = on ? 'none' : ''; return on; }
     live(); addEventListener('storage', live); addEventListener('focus', live); addEventListener('agp:stream-connected', live); addEventListener('agp:stream-ended', live);
     $('#startBtn').onclick = function () {
         values.keyword = String(values.keyword || '').trim();
-        if (!values.keyword) return toast('اكتب كلمة الدخول');
+        if (values.joinBy !== 'gift' && !values.keyword) return toast('اكتب كلمة الدخول');
         if (!live() && !P.demo) return toast('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً');
         values = S.save(values); if (SP) SP.save(values);
         location.href = P.gameUrl + (P.demo ? '?demo=1' : '');

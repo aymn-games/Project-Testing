@@ -17,6 +17,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="cd-platform.js"></script>
 <style>
 :root{
@@ -199,6 +200,9 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
 .wbtn:active,#nextBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #2a170b}
 #nextBtn{position:fixed;left:50%;bottom:calc(9vh + 20px);z-index:8;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:all .4s cubic-bezier(.2,1.4,.4,1);font-size:24px;padding:8px 36px 10px}
 #nextBtn.in{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+/* «تخطّ المشهد» — يطلع وقت مشهد الدخول بس */
+#skipBtn{position:fixed;left:16px;bottom:calc(9vh + 16px);z-index:9;opacity:0;pointer-events:none;transform:translateY(10px);transition:all .3s;padding:6px 16px 8px;border-radius:999px;border:1px solid rgba(242,193,78,.55);background:rgba(26,14,6,.78);color:#fbe7c0;font:400 17px Rakkas,serif;cursor:pointer}
+#skipBtn.in{opacity:1;pointer-events:auto;transform:none}
 /* تنبيه قصير بنص الشاشة (بدل الشات) */
 #notice{position:fixed;left:50%;top:56vh;z-index:6;transform:translate(-50%,10px);opacity:0;pointer-events:none;padding:8px 22px 10px;border-radius:999px;background:rgba(26,14,6,.82);border:1px solid rgba(242,193,78,.55);color:#fbe7c0;font:400 clamp(16px,1.8vw,22px) Rakkas,serif;white-space:nowrap;transition:all .35s cubic-bezier(.2,1.3,.4,1)}
 #notice.in{opacity:1;transform:translate(-50%,0)}
@@ -301,6 +305,7 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
 <div id="vs"></div>
 <div id="winCard"></div>
 <button id="nextBtn" type="button">المبارزة التالية</button>
+<button id="skipBtn" type="button">تخطّ المشهد ⏭</button>
 <div id="settings"><div class="swrap">
   <div class="stop"><h2>إعدادات المبارزة</h2><button id="setClose" type="button" aria-label="إغلاق">✕</button></div>
   <div id="setGrid"></div>

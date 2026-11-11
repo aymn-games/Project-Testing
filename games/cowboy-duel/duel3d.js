@@ -436,11 +436,12 @@ export async function mountDuel(el, opts = {}) {
     // pairs: [[aId, bId], ...] — o.len: 'short' (~4ث) | 'full' (~9ث) — o.instant: على العلامات مباشرة (للاختبار)
     function duelIntro(pairs, o = {}) {
         if (!Array.isArray(pairs[0])) pairs = [pairs]; // توافق: duelIntro([a, b])
-        const P = pairs.map(([a, b]) => [figs.get(String(a)), figs.get(String(b))]).filter(([a, b]) => a && b); if (!P.length) return Promise.resolve(false);
+        const P = pairs.map(ids => ids.map(id => figs.get(String(id)))).filter(fs => fs[0] && fs[1]); if (!P.length) return Promise.resolve(false);
         const short = o.len !== 'full', multi = P.length > 1, startZ = o.instant ? LANE_Z : short ? LANE_Z + 3 : ZF - 1.8;
         duelists = [];
-        P.forEach(([A, Bf], i) => { const x = laneX(i, P.length);
-            [[A, 1], [Bf, -1]].forEach(([f, s]) => { f.duelist = true; f.twitch = false; f.wasted = false; f.g.position.set(x + s * .6, startZ > 9 ? .36 : 0, s * startZ); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = V(x, 0, s * LANE_Z); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); duelists.push(f); }); });
+        P.forEach(([A, Bf, Cf], i) => { const x = laneX(i, P.length);
+            [[A, 1], [Bf, -1]].forEach(([f, s]) => { f.duelist = true; f.twitch = false; f.wasted = false; f.g.position.set(x + s * .6, startZ > 9 ? .36 : 0, s * startZ); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = V(x, 0, s * LANE_Z); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); duelists.push(f); });
+            if (Cf) { const cx = x - (P.length > 1 ? 4.5 : 8); Cf.duelist = true; Cf.twitch = false; Cf.wasted = false; Cf.g.position.set(cx - (startZ > 9 ? 12 : 4), 0, 0); Cf.g.rotation.set(0, Math.PI / 2, 0); Cf.target = V(cx, 0, 0); Cf.face = Math.PI / 2; Cf.speed = 2.6; setState(Cf, 'ready'); duelists.push(Cf); } });
         for (const [, f] of figs) if (!f.duelist) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const [A, Bf] = P[0]; // الزوج الأقرب للكاميرا
         const crane = { name: 'crane', dur: short ? 2.4 : 3, labels: false, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
@@ -454,6 +455,7 @@ export async function mountDuel(el, opts = {}) {
         else list = short ? [crane, profile] : [crane, boots, profile, pov(A, Bf, 'povA', .65), pov(Bf, A, 'povB', .65)];
         return play(list);
     }
+    function skipIntro() { if (!qDone || !shot || ['crane', 'boots', 'profile', 'povA', 'povB'].indexOf(shot.name) < 0) return; arriveAll(); queue = []; next(); }
     function standoff() { arriveAll(); play([{ name: 'standoff', dur: 0, labels: false, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]); }
     // كل اللي بالمواجهة يطلعون مسدساتهم ويدوّرون الحشوة (بتوقيت مختلف شوي لكل واحد)
     function drawGuns(ids) { ids.forEach((id, i) => setTimeout(() => { const f = figs.get(String(id)); if (!f || f.state !== 'ready') return; setState(f, 'armed'); f.spinT = 1; emit('spin', f.g.position.z > 0 ? -.6 : .6); }, ids.length > 2 ? Math.random() * 700 : i * 450)); }
@@ -466,15 +468,16 @@ export async function mountDuel(el, opts = {}) {
     // اللقطة الواسعة ثابتة (بدون حركة) — بعد الطلقة الكاميرا توقف مكانها
     const still = (c) => wide(c, 0, 0, 0);
     // مشهد الطلقة: الكاميرا ترجع للقطة الواسعة ← يوجّه ويطلق ← الرصاصة بالتصوير البطيء ← السقوط ← ينفخ الدخان ويمشي لجهته (الكاميرا ثابتة)
-    function fire(sId, tId) {
-        const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return Promise.resolve(false);
-        let fired = false, doneCb; const done = new Promise(r => doneCb = r);
+    const aimAt = (S, Tg) => { S.face = Math.atan2(Tg.g.position.x - S.g.position.x, Tg.g.position.z - S.g.position.z); };
+    function fire(sId, tIds) {
+        const S = figs.get(String(sId)), TT = [].concat(tIds).map(id => figs.get(String(id))).filter(Boolean), Tg = TT[0]; if (!S || !Tg) return Promise.resolve(false);
+        let shots = 0, fired = false, doneCb; const done = new Promise(r => doneCb = r);
         const list = [
             // من نفس اللقطة الواسعة: يوجّه ويطلق والثاني يطيح (بدون قطع وبدون تصوير بطيء)
-            { name: 'drawWide', dur: 0, labels: false, until: () => fired && Tg.landed, start() { setState(S, 'draw'); setState(Tg, 'slowdraw'); emit('draw'); },
-              cam(k, t, c) { still(c); if (!fired && t > .3) { fired = true; shootFx(S, Tg); } if (t > 4) Tg.landed = true; } },
+            { name: 'drawWide', dur: 0, labels: false, until: () => fired && TT.every(x => x.landed), start() { aimAt(S, Tg); setState(S, 'draw'); TT.forEach(x => setState(x, 'slowdraw')); emit('draw'); },
+              cam(k, t, c) { still(c); if (shots < TT.length && t > .3 + shots * .6) { const x = TT[shots]; aimAt(S, x); if (shots) { S.recoil = 0; } shootFx(S, x); shots++; fired = shots === TT.length; } if (t > 5) TT.forEach(x => { x.landed = true; }); } },
             // الكاميرا على الفايز وهو يحتفل — الصفحة تعرض تبويب الفوز
-            { name: 'winCam', dur: 0, labels: false, start() { TS = 1; setState(S, 'champ'); for (const [, f] of figs) if (f !== S && f !== Tg && !f.duelist) setState(f, 'cheer'); emit('hero'); if (doneCb) { const d = doneCb; doneCb = null; d(true); } },
+            { name: 'winCam', dur: 0, labels: false, start() { TS = 1; setState(S, 'champ'); for (const [, f] of figs) if (f !== S && !TT.includes(f) && !f.duelist) setState(f, 'cheer'); emit('hero'); if (doneCb) { const d = doneCb; doneCb = null; d(true); } },
               cam(k, t, c) { const p = S.g.position, e = Math.min(1, t / 2.5); c.pos.copy(p).addScaledVector(fwd(S), 7 - e * .8).addScaledVector(rightOf(S), 1.8); c.pos.y = 2.2; c.look.copy(p); c.look.y = 2.6; c.fov = 34; c.roll = .02; } }
         ];
         play(list).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
@@ -484,8 +487,9 @@ export async function mountDuel(el, opts = {}) {
     function walkBack(ids) { const W = ids.map(id => figs.get(String(id))).filter(Boolean);
         return new Promise(res => { play([{ name: 'walkback', dur: 1.6, labels: false, start() { W.forEach(f => { setState(f, 'idle'); returnToCrowd(f.id); f.speed = 6.5; }); }, cam(k, t, c) { still(c); } }]).then(() => res()); }); }
     // «كل المبارزات في وقت واحد»: كل زوج يُحسم لحاله بدون قطع للكاميرا (توجيه + طلقة + سقوط)
-    function quickFire(sId, tId) { const S = figs.get(String(sId)), Tg = figs.get(String(tId)); if (!S || !Tg) return;
-        setState(S, 'draw'); setState(Tg, 'slowdraw'); setTimeout(() => { if (S.state === 'draw') shootFx(S, Tg); }, 170); }
+    function quickFire(sId, tIds) { const S = figs.get(String(sId)), TT = [].concat(tIds).map(id => figs.get(String(id))).filter(Boolean); if (!S || !TT.length) return;
+        aimAt(S, TT[0]); setState(S, 'draw'); TT.forEach(x => setState(x, 'slowdraw'));
+        TT.forEach((x, i) => setTimeout(() => { if (S.state === 'draw') { aimAt(S, x); shootFx(S, x); } }, 170 + i * 550)); }
     // بعد ما تنحسم كل المبارزات: الفايزين ينفخون الدخان ثم يمشون لجهاتهم، والكاميرا ثابتة
     function multiOutro(winIds) {
         const W = winIds.map(id => figs.get(String(id))).filter(Boolean);
@@ -585,5 +589,5 @@ export async function mountDuel(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose(); }); });
         GC.forEach(g => g.dispose()); texList.forEach(t => t.dispose()); r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, duelIntro, standoff, drawGuns, wasteShot, focusOn, fire, walkBack, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
+    return { setPlayers, duelIntro, skipIntro, standoff, drawGuns, wasteShot, focusOn, fire, walkBack, quickFire, multiOutro, aftermath, cleanup, portrait, screenPos, crossfade, removePlayer, returnToCrowd, champion, lobby, stop, get busy() { return !!shot; }, render() { r.render(sc, cam); }, get shotName() { return shot ? shot.name : 'lobby'; }, get fps() { return fpsNow; } };
 }

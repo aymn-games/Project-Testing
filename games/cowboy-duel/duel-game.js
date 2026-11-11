@@ -13,7 +13,7 @@ const BOT_NAMES = ['أبو فهد', 'سعود', 'نورة', 'ريم', 'خالد'
 const ANSWER_MS = 15000;          // ما أحد كتب = جرس جديد
 const JAM_MS = 1200;              // إجابة غلط = المسدس يعلّق شوي
 
-const G = { players: [], alive: [], byes: {}, phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null, force: {} }; // force: لتسجيل فيديو العرض فقط (decoy: نعم/لا، fall: الأول يطيح بالخدعة)
+const G = { players: [], alive: [], phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null, force: {} }; // force: لتسجيل فيديو العرض فقط (decoy: نعم/لا، fall: الأول يطيح بالخدعة)
 
 // ---------- الصوت (WebAudio مولّد بالكود — بدون ملفات)
 const SFX = (() => {
@@ -123,29 +123,33 @@ function matches(text, c) { if (!c) return false; return c.type === 'num' ? toDi
 // ---------- الجولات: كل جولة يتوزّع الباقين أزواج (الفردي يتأهل مباشرة)، والفايزين يكملون للجولة الجاية
 function clearTimers() { G.timers.forEach(clearTimeout); G.timers = []; }
 function later(ms, fn) { G.timers.push(setTimeout(fn, ms)); }
+// القرعة: كل لاعبين بمبارزة، ولو العدد فردي تكون مبارزة وحدة ثلاثية
 function makePairs(list) {
-    const pool = list.slice().sort(() => Math.random() - .5); let bye = null;
-    if (pool.length % 2) { pool.sort((a, b) => (G.byes[a.id] || 0) - (G.byes[b.id] || 0)); bye = pool.shift(); G.byes[bye.id] = (G.byes[bye.id] || 0) + 1; pool.sort(() => Math.random() - .5); }
-    const pairs = []; for (let i = 0; i < pool.length; i += 2) pairs.push({ a: pool[i], b: pool[i + 1], done: false, wasted: {}, jam: {} });
-    return { pairs, bye };
+    const pool = list.slice().sort(() => Math.random() - .5), pairs = [];
+    const duel = ps => ({ ps, a: ps[0], b: ps[1], c: ps[2] || null, done: false, wasted: {}, jam: {}, misses: 0, winner: null, losers: [] });
+    if (pool.length % 2 && pool.length >= 3) pairs.push(duel(pool.splice(0, 3)));
+    for (let i = 0; i + 1 < pool.length; i += 2) pairs.push(duel([pool[i], pool[i + 1]]));
+    return { pairs };
 }
 async function startMatch() {
     if (G.players.length < 2) return; SFX.unlock(); SFX.wind(false);
-    G.alive = G.players.slice(); G.byes = {}; G.round = 0; G.startedAt = Date.now();
+    G.alive = G.players.slice(); G.round = 0; G.startedAt = Date.now();
     $('#lobby').classList.add('hide'); G.phase = 'intro'; updateCount();
     await sleep(300);
     nextRound();
 }
 async function nextRound() {
-    G.round++; const { pairs, bye } = makePairs(G.alive), all = G.settings.mode === 'all';
+    G.round++; const { pairs } = makePairs(G.alive), all = G.settings.mode === 'all', before = G.alive.slice();
     banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 1700);
-    if (bye) { notice(`🍀 ${bye.name} يتأهل مباشرة للجولة الجاية`); }
+    if (pairs.some(d => d.c)) later(400, () => notice('🔺 العدد فردي: فيه مبارزة ثلاثية'));
     await sleep(1900);
-    const winners = [], final = pairs.length === 1 && !bye;
-    if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, next: final ? 'إعلان البطل 🏆' : 'الجولة التالية' }));
-    else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, next: final ? 'إعلان البطل 🏆' : i === pairs.length - 1 ? 'الجولة التالية' : 'المواجهة التالية' }));
-    G.alive = winners.concat(bye ? [bye] : []); updateCount();
-    if (G.alive.length <= 1) return crown(G.alive[0]);
+    const winners = [], final = pairs.length === 1; // النهائي: يُعاد لين ينحسم
+    if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, final }));
+    else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, final }));
+    G.alive = winners; updateCount();
+    // كل المبارزات طلعت بدون فايز (نادر): الجولة تنعاد بنفس اللاعبين
+    if (!G.alive.length) { G.alive = before; notice('🌵 ما أحد تأهل… الجولة تنعاد'); await sleep(1500); return nextRound(); }
+    if (G.alive.length === 1) return crown(G.alive[0]);
     await sleep(600); nextRound();
 }
 // يشغّل مبارزة وحدة (بتصوير كامل) أو كل مبارزات الجولة سوا، ويرجع الفايزين
@@ -154,17 +158,20 @@ function runDuels(duels, info) { return new Promise(async done => {
     const one = duels.length === 1, d0 = duels[0];
     $('#demoA').textContent = d0.a.name; $('#demoB').textContent = d0.b.name;
     poster('a'); poster('b');
-    await showVs(duels, info); // «المبارزة 2 من أصل 4» + صورة واسم كل لاعب، وبعدها مشهد دخولهم
-    if (one) { poster('a', d0.a); poster('b', d0.b); }
+    await showVs(duels, info); // «مواجهة رقم 2 من أصل 4» + صورة واسم كل لاعب، وبعدها مشهد دخولهم
+    if (one && !d0.c) { poster('a', d0.a); poster('b', d0.b); }
     bars('wide'); SFX.wind(true);
-    await G.scene.duelIntro(duels.map(d => [d.a.id, d.b.id]), { len: G.settings.intro });
+    $('#skipBtn').classList.add('in'); $('#skipBtn').onclick = () => G.scene.skipIntro(); // «تخطّ المشهد»
+    await G.scene.duelIntro(duels.map(d => d.ps.map(p => p.id)), { len: G.settings.intro });
+    $('#skipBtn').classList.remove('in');
     if (G.phase !== 'intro') return;
     G.scene.standoff(); grade(''); G.phase = 'standoff'; warnThenReveal();
 }); }
-const activeIds = () => G.active.filter(d => !d.done).flatMap(d => [d.a.id, d.b.id]);
+const others = (d, p) => d.ps.filter(x => x !== p);
+const activeIds = () => G.active.filter(d => !d.done).flatMap(d => d.ps.map(p => p.id));
 // تنبيه ← تنبيه (يطلعون المسدسات ويدوّرون الحشوة) ← «لا ترمش» ← [الخدعة الحمراء أحياناً] ← «ارسم!» ← الجرس
 function warnThenReveal(again) {
-    const lines = again ? ['ولا أحد سحب… الجرس الجاي لا يفوتك!', pickOne(WARN[2])] : WARN.map(pickOne);
+    const lines = again ? [again, pickOne(WARN[2])] : WARN.map(pickOne);
     lines.forEach((l, i) => later(i * 1700, () => { sign('ready', null, l); SFX.tick(); }));
     if (!again) later(1700 + 300, () => G.scene.drawGuns(activeIds()));
     let t = lines.length * 1700 + rnd(200, 1200);
@@ -178,61 +185,80 @@ function warnThenReveal(again) {
 function decoy() {
     G.decoy = makeChallenge(); G.phase = 'decoy';
     sign('decoy', G.decoy.value); $('#sign').classList.toggle('word', G.decoy.type === 'word'); SFX.tick();
-    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { const fall = G.force.fall != null ? (G.force.fall && p === d.a) : Math.random() < .22; if (p.bot && fall) later(rnd(350, 1300), () => answer(p.id, G.decoy.value)); }));
+    if (G.bots) G.active.forEach(d => !d.done && d.ps.forEach(p => { const fall = G.force.fall != null ? (G.force.fall && p === d.a) : Math.random() < .22; if (p.bot && fall) later(rnd(350, 1300), () => answer(p.id, G.decoy.value)); }));
 }
 function reveal() {
     G.ch = makeChallenge(G.decoy); G.decoy = null; G.revealAt = performance.now(); G.phase = 'armed';
-    // الاثنين ضيّعوا طلقتهم؟ يرجع لهم الحق بالجرس هذا
-    G.active.forEach(d => { if (!d.done && d.wasted[d.a.id] && d.wasted[d.b.id]) { d.wasted = {}; notice(`🌵 ${d.a.name} و${d.b.name} ضيّعوا طلقاتهم… عبّوا من جديد`); } });
+    // الكل ضيّعوا طلقتهم؟ يرجع لهم الحق بالجرس هذا
+    G.active.forEach(d => { if (!d.done && d.ps.every(p => d.wasted[p.id])) { d.wasted = {}; notice('🌵 كلهم ضيّعوا طلقاتهم… عبّوا من جديد'); } });
     sign('show', G.ch.value); $('#sign').classList.toggle('word', G.ch.type === 'word');
     $('#sign .lbl').textContent = G.ch.type === 'word' ? 'اكتب الكلمة بالشات!' : 'اكتب الرقم بالشات!';
     SFX.bell(); flash('rgba(255,220,150,.55)', 260);
-    // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول
-    if (G.bots) G.active.forEach(d => !d.done && [d.a, d.b].forEach(p => { if (!p.bot || d.wasted[p.id]) return; const ms = rnd(900, 3800);
-        // أحياناً يغلط أول — والإجابة الصح بعدها لازم تجي بعد ما يخلص تعليق المسدس (JAM_MS)
+    // البوتات (وضع التجربة): كل واحد يكتب بعد زمن عشوائي، وأحياناً يغلط أول (وأحياناً ما يكتب أبد — عشان تبان الإعادة)
+    if (G.bots) G.active.forEach(d => !d.done && d.ps.forEach(p => { if (!p.bot || d.wasted[p.id] || (G.force.silent != null ? G.force.silent : Math.random() < .04)) return; const ms = rnd(900, 3800);
         const wrong = Math.random() < .25; if (wrong) later(ms * .5, () => answer(p.id, G.ch.type === 'num' ? String(+G.ch.value + (Math.random() < .5 ? 1 : -1) * Math.ceil(rnd(1, 9))) : pickOne(WORDS)));
         later(wrong ? ms * .5 + JAM_MS + rnd(150, 700) : ms, () => answer(p.id, G.ch.value)); }));
-    later(ANSWER_MS, () => { if (G.phase !== 'armed') return; notice('🌵 ولا أحد سحب! جرس جديد…'); G.active.forEach(d => { d.wasted = {}; }); G.phase = 'standoff'; warnThenReveal(true); });
+    later(ANSWER_MS, timeUp);
+}
+// مهلة الإطلاق (15ث) خلصت بدون إصابة: المبارزة تنعاد، وبعد إعادتين بلا إصابة يخرج الكل — إلا بالنهائي يُعاد لين ينحسم
+async function timeUp() {
+    if (G.phase !== 'armed') return;
+    const open = G.active.filter(d => !d.done), out = [];
+    open.forEach(d => { d.wasted = {}; d.misses++; if (d.misses > 2 && !G.info.final) { d.done = true; d.winner = null; d.losers = d.ps.slice(); out.push(d); } });
+    if (out.length) {
+        G.phase = 'resolve'; clearTimers(); sign('gone');
+        notice(out.length === 1 && G.active.length === 1 ? '💀 ولا إصابة بعد إعادتين… الكل خرج' : `💀 ${out.length} ${out.length === 1 ? 'مبارزة' : 'مبارزات'} بلا إصابة… أصحابها خرجوا`);
+        out.forEach(d => d.ps.forEach(p => G.scene.removePlayer(p.id)));
+        if (G.active.every(x => x.done)) { await sleep(1800); return finishAll(); }
+    }
+    const left = G.active.filter(d => !d.done); if (!left.length) return;
+    const n = Math.max(...left.map(d => d.misses)), msg = G.info.final ? 'ولا إصابة… النهائي يُعاد لين ينحسم!' : `ولا إصابة… إعادة المبارزة (${Math.min(n, 2)} من 2)`;
+    G.phase = 'standoff'; warnThenReveal(msg);
 }
 function answer(id, text) {
     const p = G.players.find(x => x.id === id); if (!p) return;
-    const d = G.active && G.active.find(x => !x.done && (x.a.id === id || x.b.id === id)); if (!d) return;
+    const d = G.active && G.active.find(x => !x.done && x.ps.some(q => q.id === id)); if (!d) return;
     if (G.phase === 'decoy') { if (matches(text, G.decoy) && !d.wasted[id]) { d.wasted[id] = true; G.scene.wasteShot(id); notice(`💨 ${p.name} طاح بالخدعة وضيّع طلقته!`); } return; }
     if (G.phase !== 'armed') return;
     if (d.wasted[id]) return; // مسدسه فاضي لين الجرس الجاي
     if (d.jam[id] && performance.now() < d.jam[id]) return;
-    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; } return; }
+    if (!matches(text, G.ch)) { if (toDigits(text) || norm(text)) { d.jam[id] = performance.now() + JAM_MS; } return; } // الغلط ما يُخرج: يكتب مرة ثانية
     win(d, p, text.trim());
 }
-// الأسرع: بطاقة باسمه وإجابته ووقته ← يوجّه ويطلق ← الثاني يطيح
+// الأسرع يُسقط خصمه (أو خصميه بالمبارزة الثلاثية) ويتأهل
 async function win(d, shooter, typed) {
-    const target = d.a === shooter ? d.b : d.a, secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
-    d.done = true; d.winner = shooter; d.loser = target; d.secs = secs;
+    const targets = others(d, shooter), secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
+    d.done = true; d.winner = shooter; d.losers = targets; d.secs = secs;
     if (G.active.length === 1) { // مبارزة بعد مبارزة — سريعة: يطلق ← يطيح ← الكاميرا على الفايز + تبويب فوزه ← يرجع مكانه ← المواجهة الجاية
-        G.phase = 'resolve'; clearTimers(); G.target = target; sign('gone'); grade('duel');
-        await G.scene.fire(shooter.id, target.id);
+        G.phase = 'resolve'; clearTimers(); G.target = targets[0]; sign('gone'); grade('duel');
+        await G.scene.fire(shooter.id, targets.map(t => t.id));
         showWin(shooter, typed, secs); SFX.victory();
         await sleep(2500); $('#answer').classList.remove('in');
         await G.scene.walkBack([shooter.id]);
         return endDuels();
     }
-    // كل المبارزات بوقت واحد: الزوج يُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
-    G.scene.quickFire(shooter.id, target.id); feed(shooter, typed, secs);
-    if (G.active.every(x => x.done)) {
-        G.phase = 'resolve'; clearTimers(); sign('gone');
-        await sleep(1300); $('#feed').classList.remove('in');
-        await G.scene.multiOutro(G.active.map(x => x.winner.id));   // الفايزين يحتفلون
-        await winnerCard(G.active);
-        await G.scene.walkBack(G.active.map(x => x.winner.id));
-        endDuels();
+    // كل المبارزات بوقت واحد: المبارزة تُحسم فوراً بدون قطع، واسمه يطلع بقائمة الأسرع
+    G.scene.quickFire(shooter.id, targets.map(t => t.id)); feed(shooter, typed, secs);
+    if (G.active.every(x => x.done)) { G.phase = 'resolve'; clearTimers(); sign('gone'); await sleep(1300); finishAll(); }
+}
+async function finishAll() {
+    $('#feed').classList.remove('in');
+    const W = G.active.filter(x => x.winner);
+    if (W.length) {
+        if (G.active.length > 1) {
+            await G.scene.multiOutro(W.map(x => x.winner.id));   // الفايزين يحتفلون
+            await winnerCard(W);
+            await G.scene.walkBack(W.map(x => x.winner.id));
+        }
     }
+    endDuels();
 }
 // تبويب الفوز (نفس هوية اللعبة ومايل): «فاز بالمواجهة» + اسمه + إجابته + وقته — المشهد الوحيد لإعلان الفوز
 function showWin(p, typed, secs) { const el = $('#answer'); el.querySelector('.tag').textContent = '🏆 فاز بالمواجهة'; el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
     el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); }
 async function endDuels() {
-    const winners = G.active.map(d => d.winner);
-    G.scene.cleanup(winners.map(p => p.id), G.active.map(d => d.loser.id)); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
+    const winners = G.active.map(d => d.winner).filter(Boolean);
+    G.scene.cleanup(winners.map(p => p.id), G.active.flatMap(d => d.losers.map(p => p.id))); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
     poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = ''; clearTags();
     G.phase = 'between'; await sleep(500);
     const f = G.finish; G.finish = null; f && f(winners);
@@ -245,8 +271,8 @@ function avatarHtml(p, cls = '') { const src = face(p), alt = p.avatar ? (G.scen
 async function showVs(duels, info) {
     const el = $('#vs'), one = duels.length === 1;
     const head = one ? `مواجهة رقم ${info.idx} من أصل ${info.total}` : `${duels.length} مواجهات في وقت واحد`;
-    const body = one ? `<div class="vp">${avatarHtml(duels[0].a)}<b>${esc(duels[0].a.name)}</b></div><i class="vx">ضد</i><div class="vp">${avatarHtml(duels[0].b)}<b>${esc(duels[0].b.name)}</b></div>`
-        : `<div class="vgrid">${duels.slice(0, 6).map(d => `<div class="vpair">${avatarHtml(d.a, 'sm')}<span>${esc(d.a.name)}</span><i>ضد</i><span>${esc(d.b.name)}</span>${avatarHtml(d.b, 'sm')}</div>`).join('')}${duels.length > 6 ? `<div class="vmore">+${duels.length - 6} مبارزات</div>` : ''}</div>`;
+    const body = one ? duels[0].ps.map(p => `<div class="vp">${avatarHtml(p)}<b>${esc(p.name)}</b></div>`).join('<i class="vx">ضد</i>')
+        : `<div class="vgrid">${duels.slice(0, 6).map(d => `<div class="vpair">${d.ps.map(p => `${avatarHtml(p, 'sm')}<span>${esc(p.name)}</span>`).join('<i>ضد</i>')}</div>`).join('')}${duels.length > 6 ? `<div class="vmore">+${duels.length - 6} مبارزات</div>` : ''}</div>`;
     el.innerHTML = `<div class="vhead">${head}</div><div class="vbody">${body}</div>`; el.classList.add('in'); SFX.stamp();
     await sleep(3000); el.classList.remove('in'); await sleep(300);
 }
@@ -254,7 +280,7 @@ async function showVs(duels, info) {
 function winnerCard(duels) { return new Promise(res => {
     const el = $('#winCard'), one = duels.length === 1, d = duels[0];
     el.innerHTML = one
-        ? `<div class="wtag">🏆 فاز بالمواجهة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.loser.name)} · سحب بـ <b>${d.secs}</b> ث</p>`
+        ? `<div class="wtag">🏆 فاز بالمواجهة</div><div class="wpic">${avatarHtml(d.winner, 'big')}</div><h3>${esc(d.winner.name)}</h3><p>ضد ${esc(d.losers.map(x => x.name).join(' و'))} · سحب بـ <b>${d.secs}</b> ث</p>`
         : `<div class="wtag">🏆 الفايزين بالمواجهات</div><div class="wlist">${duels.map(x => `<div class="wrow">${avatarHtml(x.winner, 'sm')}<b>${esc(x.winner.name)}</b><small>${x.secs} ث</small></div>`).join('')}</div>`;
     el.classList.add('in'); SFX.victory();
     setTimeout(() => { el.classList.remove('in'); res(); }, 2500);
@@ -338,7 +364,10 @@ function hookStream() {
     P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
+        if (G.phase === 'lobby' && G.settings.joinBy !== 'gift' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
+    // الدخول بهدية يحددها المضيف (تيك توك لايف)
+    P.onGift(pl => { if (G.phase !== 'lobby' || G.settings.joinBy !== 'gift' || !P.giftMatches(G.settings.joinGift, pl)) return;
+        if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(String(pl.id), pl.name || 'راعي', false, pl.avatarUrl || null); });
 }
 
 // ---------- تشغيل
@@ -373,7 +402,9 @@ function hookStream() {
     G.scene = scene; G.phase = 'lobby';
     const demo = !window.CDPlatform || window.CDPlatform.demo; // وضع التجربة (?demo=1): بوتات + لوحة التجربة
     G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
-    $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل شوي مواجهة بين راعيين، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> والثاني يُقصى.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
+    { const gift = G.settings.joinBy === 'gift' && window.AymanGamesPlatform && AymanGamesPlatform.tiktokGifts && AymanGamesPlatform.tiktokGifts.byId(G.settings.joinGift);
+      $('#lobby p').innerHTML = `${gift ? 'أرسل هدية' : 'اكتب'} <b></b> ${gift ? 'وادخل السوق' : 'بالشات وادخل السوق'} — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`;
+      $('#lobby p b').textContent = gift ? gift.label : (G.settings.keyword || 'دخول'); }
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     $('#setBtn').onclick = openSettings; $('#setSave').onclick = saveSettings; $('#setClose').onclick = () => $('#settings').classList.remove('in');
