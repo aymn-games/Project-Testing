@@ -1,4 +1,4 @@
-// «مواجهة الغرب» — منطق اللعبة.
+// «بلدة الكاوبوي» — منطق اللعبة.
 // الإعدادات (cd-settings.js): ما يظهر عند الجرس (أرقام/كلمات/مختلط)، الخدعة الحمراء، طريقة المبارزات
 // (مبارزة بعد مبارزة / كل المبارزات في وقت واحد)، طول مشهد الدخول، الحد الأقصى، ومن يمكنه الانضمام.
 // كل جولة: الباقين يتوزّعون أزواج (الفردي يتأهل) ← مشهد دخول ← تنبيهات + سحب المسدسات ← الجرس ← أسرع واحد بكل زوج يطلق
@@ -18,7 +18,7 @@ const G = { players: [], alive: [], byes: {}, phase: 'loading', active: null, ch
 // ---------- الصوت (WebAudio مولّد بالكود — بدون ملفات)
 const SFX = (() => {
     let ac = null, echo = null, windG = null;
-    function ctx() { if (ac) return ac; try {
+    function ctx() { if (ac) return ac; if (G.settings && G.settings.sound === false) return null; try { // إعداد «الأصوات» متوقف = بدون صوت
         // تسجيل فيديو العرض (tools/cowboy-duel-video): الأصوات تنكتب بـ OfflineAudioContext على نفس وقت اللعبة (performance.now المزيّف)
         const cap = window.__capAudio;
         if (cap) ac = new Proxy(cap.ctx, { get(o, k) { if (k === 'currentTime') return Math.max(0, (performance.now() - cap.t0) / 1000); const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; } });
@@ -281,7 +281,13 @@ async function crown(p) {
     G.phase = 'champ'; G.scene.champion(p.id); bars('wide');
     $('#champName').textContent = p.name; $('#champ').classList.add('in'); SFX.bell();
     // نقاط المنصة (قاعدة إلزامية لكل لعبة) — بدون أثر بصفحة التجربة لأن ما فيه حساب
-    try { if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') window.AGPAuth.reportMatchPoints({ players: G.players.map(x => ({ id: x.id, name: x.name })), winnerIds: [p.id], teamGame: false, durationMs: Date.now() - G.startedAt }); } catch (e) { }
+    const real = G.players.filter(x => String(x.id).indexOf('tiktok:') === 0);
+    try { if (real.length && window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') window.AGPAuth.reportMatchPoints({ players: real.map(x => ({ id: x.id, name: x.name })), winnerIds: [p.id], teamGame: false, durationMs: Date.now() - G.startedAt }); } catch (e) { }
+}
+// إعادة المباراة: نفس اللاعبين يبدأون من جديد مباشرة
+async function replay() {
+    $('#champ').classList.remove('in'); G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); G.scene.setPlayers(G.players); renderLobby();
+    await sleep(400); startMatch();
 }
 async function newGame() {
     $('#champ').classList.remove('in');
@@ -325,11 +331,14 @@ function saveSettings() {
 }
 
 // ---------- شات تيك توك الحقيقي (لو اللعبة محمّلة داخل المنصة مع AGP): «دخول» للانضمام، والباقي إجابات
+// كلمة الدخول من الإعدادات (cd-settings) — تنقبل بأي كتابة (نفس تطبيع الإجابات)
+function isJoin(text) { const k = norm(G.settings.keyword || 'دخول'); return norm(text) === k || norm(text) === 'join'; }
 function hookStream() {
-    const A = window.AymanGamesPlatform || window.AGP; if (!A || !A.events || typeof A.events.on !== 'function') return;
-    // التعليق من backend/platforms/tiktok ← adapters/agp-tiktok-adapter.js: { id, name, text, isFollower, avatarUrl }
-    A.events.on('stream:commentReceived', pl => { if (!pl || !pl.id || typeof pl.text !== 'string') return; const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (/^\s*(دخول|join)\s*$/i.test(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
+    const P = window.CDPlatform; if (!P) return;
+    P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
+    // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
+    P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
@@ -362,9 +371,11 @@ function hookStream() {
         } } }); } catch (e) { console.error(e); }
     if (!scene) { $('#fallback').hidden = false; return; }
     G.scene = scene; G.phase = 'lobby';
-    for (let i = 0; i < 8; i++) addBot();
+    const demo = !window.CDPlatform || window.CDPlatform.demo; // وضع التجربة (?demo=1): بوتات + لوحة التجربة
+    G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
+    $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل شوي مواجهة بين راعيين، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> والثاني يُقصى.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
     $('#loading').classList.add('hide');
-    $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = newGame;
+    $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     $('#setBtn').onclick = openSettings; $('#setSave').onclick = saveSettings; $('#setClose').onclick = () => $('#settings').classList.remove('in');
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
     const send = (slot, inp) => { const d = G.active && (G.active.find(x => !x.done) || G.active[0]), p = d && (slot ? d.b : d.a); if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
@@ -372,6 +383,5 @@ function hookStream() {
     $('#botsTgl').onchange = e => { G.bots = e.target.checked; };
     $('#demoToggle').onclick = () => $('#demo').classList.toggle('open');
     hookStream(); renderLobby();
-    openSettings(); // الإعدادات أول شي، بعدها اللوبي
     window.__duel = G; // للاختبار
 })();

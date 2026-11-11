@@ -1,4 +1,4 @@
-// «مواجهة الغرب» — المشهد الثري دي (عرض فقط، منطق اللعبة كله في duel-game.js).
+// «بلدة الكاوبوي» — المشهد الثري دي (عرض فقط، منطق اللعبة كله في duel-game.js).
 // سوق كاوبوي: شارع ترابي، محلات بواجهات خشبية ولوحات عربية، برج ساعة، طاحونة، خزان ماء، هضاب الصحراء.
 // الشخصيات: نفس شخصيات «سفينة النجاة» (games/survival-ship/ship3d.js → figure) بلبس كاوبوي:
 //   قبعة، صدرية، منديل رقبة، حزام بجراب مسدس، جزمة بمهماز. الألوان ثابتة لكل لاعب (hash من id).
@@ -535,7 +535,7 @@ export async function mountDuel(el, opts = {}) {
     function removePlayer(id) { const f = figs.get(String(id)); if (!f || f.state === 'poof') return; const p = f.g.position.clone(); dustBurst(V(p.x, 0, p.z).addScaledVector(fwd(f), -1.1), 14, 1.4); if (f.flyHat) { dustBurst(f.flyHat.o.position, 4, .7); sc.remove(f.flyHat.o); f.flyHat = null; } setState(f, 'poof'); crowdOrder = crowdOrder.filter(x => x !== String(id)); }
     function returnToCrowd(id) { const f = figs.get(String(id)); if (!f) return; f.duelist = false; f.twitch = false; f.wasted = false; duelists = duelists.filter(x => x !== f); setState(f, 'idle'); f.g.rotation.x = 0; f.speed = 3.6; const h = homeOf(String(id)); f.target = h; f.face = Math.atan2(-h.x * .25, -h.z); }
     function champion(id) {
-        const f = figs.get(String(id)); if (!f) return; f.target = V(0, 0, 0); f.face = 0; f.speed = 3.6; setState(f, 'champ'); startCoins(V(0, 0, 0)); emit('champion');
+        const f = figs.get(String(id)); if (!f) return; f.target = V(0, 0, 0); f.face = 0; f.speed = 3.6; setState(f, 'champ'); emit('champion'); // احتفال بسيط: بدون عملات تتطاير
         play([{ name: 'champion', dur: 0, labels: true, cam(k, t, c) { const a = t * .32, p = f.g.position; c.pos.set(p.x + Math.sin(a) * 6.2, 1.6 + Math.sin(t * .4) * .5, p.z + Math.cos(a) * 6.2); c.look.set(p.x, 1.9, p.z); c.fov = 38; c.roll = 0; } }]);
     }
 
