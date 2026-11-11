@@ -29,16 +29,16 @@
     init() {
       const T = this.T, r = this.r = new T.WebGLRenderer({ antialias: true });
       r.setPixelRatio(Math.min(devicePixelRatio, 1)); r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
-      r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.1; this.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
+      r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.0; this.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
       const sc = this.sc = new T.Scene();
       sc.background = this.tex(4, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h);
-        gr.addColorStop(0, '#120c35'); gr.addColorStop(.38, '#3b2380'); gr.addColorStop(.62, '#a0559e'); gr.addColorStop(.78, '#f08a73'); gr.addColorStop(1, '#2a1846'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
-      sc.fog = new T.Fog('#4a3075', 90, 460);
+        gr.addColorStop(0, '#04030c'); gr.addColorStop(.34, '#120b2e'); gr.addColorStop(.58, '#32195a'); gr.addColorStop(.74, '#7a3f78'); gr.addColorStop(.82, '#c47a7c'); gr.addColorStop(.88, '#3a1d4f'); gr.addColorStop(1, '#0c0720'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+      sc.fog = new T.Fog('#1d1236', 80, 430);
       const cam = this.cam = new T.PerspectiveCamera(46, 1, .1, 900); cam.position.set(10, 14, 28);
-      sc.add(new T.HemisphereLight('#ffd9e8', '#2b1f4d', 1.05));
-      const sun = this.sun = new T.DirectionalLight('#ffd2a1', 2.4); sun.position.set(-30, 45, -60); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      sc.add(new T.HemisphereLight('#d9ccff', '#140c28', .95));
+      const sun = this.sun = new T.DirectionalLight('#ffd0a8', 2.2); sun.position.set(-30, 45, -60); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
       Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 200 }); sc.add(sun); sc.add(sun.target);
-      const rim = new T.DirectionalLight('#8fd8ff', .8); rim.position.set(30, 20, 40); sc.add(rim);
+      const rim = new T.DirectionalLight('#7cc8ff', 1.0); rim.position.set(30, 20, 40); sc.add(rim);
       this.world = new T.Group(); sc.add(this.world);
       this.buildSky(); this.buildMountains(); this.buildAbyss();
       this.bridge = new T.Group(); this.world.add(this.bridge);
@@ -55,7 +55,7 @@
       const T = this.T, g = new T.ConeGeometry(rad, h, 9, 6), p = g.attributes.position, col = [];
       for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = (y + h / 2) / h, j = (1 - k) * rad * .28;
         if (k < .99) { p.setX(i, p.getX(i) + (Math.random() - .5) * j * 2); p.setZ(i, p.getZ(i) + (Math.random() - .5) * j * 2); p.setY(i, y + (Math.random() - .5) * h * .04); }
-        const snow = k > .8 + Math.random() * .06, c = new T.Color(snow ? '#efe9ff' : k > .5 ? '#4a3b72' : '#241c3b'); col.push(c.r, c.g, c.b); }
+        const snow = k > .8 + Math.random() * .06, c = new T.Color(snow ? '#cfc6ec' : k > .5 ? '#352a57' : '#17112b'); col.push(c.r, c.g, c.b); }
       g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
       const m = new T.Mesh(g, this.rock('#ffffff')); m.position.set(x, h / 2 - 230, z); m.rotation.y = Math.random() * 6; m.castShadow = false; m.receiveShadow = true; this.world.add(m); return m;
     }
@@ -81,16 +81,16 @@
         gr.addColorStop(0, 'rgba(255,235,255,.32)'); gr.addColorStop(1, 'rgba(255,235,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); } });
       cloud.wrapS = cloud.wrapT = T.RepeatWrapping;
       this.mist = [-46, -84, -130].map((y, i) => { const t = cloud.clone(); t.needsUpdate = true; t.repeat.set(3, 3);
-        const m = new T.Mesh(new T.PlaneGeometry(700, 700), new T.MeshBasicMaterial({ map: t, transparent: true, opacity: .55 - i * .12, depthWrite: false, color: i ? '#9b7fe0' : '#d9c8ff' }));
+        const m = new T.Mesh(new T.PlaneGeometry(700, 700), new T.MeshBasicMaterial({ map: t, transparent: true, opacity: .42 - i * .1, depthWrite: false, color: i ? '#5b4790' : '#9a86d6' }));
         m.rotation.x = -Math.PI / 2; m.position.set(0, y, -150); this.world.add(m); return m; });
     }
     // جرف صخري تحت منصة (البداية أو النهاية) + سطح حجري
     cliff(z, depth, width, end) {
       const T = this.T, G = new T.Group(); G.position.z = z; this.world.add(G);
-      const top = this.tex(256, 256, (g, w, h) => { g.fillStyle = '#6f6488'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(30,20,50,.35)'; g.lineWidth = 3;
+      const top = this.tex(256, 256, (g, w, h) => { g.fillStyle = '#463c5e'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(14,9,28,.5)'; g.lineWidth = 3;
         for (let y = 0; y < h; y += 42) for (let x = (y / 42 % 2) * 32; x < w; x += 64) g.strokeRect(x, y, 64, 42); });
       top.wrapS = top.wrapT = T.RepeatWrapping; top.repeat.set(width / 6, depth / 6);
-      const slab = new T.Mesh(new T.BoxGeometry(width, 1.2, depth), [this.mat('#4a3f63'), this.mat('#4a3f63'), new T.MeshStandardMaterial({ map: top, roughness: .9 }), this.mat('#4a3f63'), this.mat('#4a3f63'), this.mat('#4a3f63')]);
+      const slab = new T.Mesh(new T.BoxGeometry(width, 1.2, depth), [this.mat('#2b2440'), this.mat('#2b2440'), new T.MeshStandardMaterial({ map: top, roughness: .75, metalness: .05 }), this.mat('#2b2440'), this.mat('#2b2440'), this.mat('#2b2440')]);
       slab.position.y = -.6; slab.receiveShadow = true; G.add(slab);
       const g = new T.CylinderGeometry(width * .62, width * .25, 230, 8, 8), p = g.attributes.position, col = [];
       for (let i = 0; i < p.count; i++) { if (p.getY(i) < 114) { p.setX(i, p.getX(i) * (1 + (Math.random() - .5) * .25)); p.setZ(i, p.getZ(i) * (1 + (Math.random() - .5) * .25)); } const c = new T.Color(p.getY(i) > 80 ? '#4b3d6b' : '#2a2042'); col.push(c.r, c.g, c.b); }
@@ -110,18 +110,21 @@
       return G;
     }
     // نص المربع (رقم الخيار أو صح/خطأ) كخامة شفافة فوق الزجاج
+    // رقم اللوح: أبيض ناصع بتدرّج خفيف وحدّ غامق رفيع وتوهّج ناعم بلون المسار (بدون toneMapping عشان ما يبهت)
     tileLabel(txt, color) { return this.tex(256, 256, (g, w, h) => { g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
-      const big = /^\d+$/.test(txt); g.font = '900 ' + (big ? 190 : 120) + 'px Zain, "IBM Plex Sans Arabic", sans-serif';
-      g.lineJoin = 'round'; g.lineWidth = 14; g.strokeStyle = color; g.shadowColor = color; g.shadowBlur = 30; g.strokeText(txt, w / 2, h / 2 + 10); g.shadowBlur = 0; g.fillStyle = '#ffffff'; g.fillText(txt, w / 2, h / 2 + 10); }); }
+      const big = /^\d+$/.test(txt), y = h / 2 + 12; g.font = '900 ' + (big ? 200 : 120) + 'px Zain, "IBM Plex Sans Arabic", sans-serif'; g.lineJoin = 'round';
+      g.shadowColor = color; g.shadowBlur = 40; g.lineWidth = 22; g.strokeStyle = color; g.globalAlpha = .55; g.strokeText(txt, w / 2, y); g.globalAlpha = 1; g.shadowBlur = 0;
+      g.lineWidth = 9; g.strokeStyle = 'rgba(8,6,24,.85)'; g.strokeText(txt, w / 2, y);
+      const fg = g.createLinearGradient(0, 40, 0, 220); fg.addColorStop(0, '#ffffff'); fg.addColorStop(1, color === '#a855f7' ? '#ead9ff' : '#d6f1ff'); g.fillStyle = fg; g.fillText(txt, w / 2, y); }); }
     buildTile(r, lane, label) {
       const T = this.T, G = new T.Group(); G.position.set(laneX(lane), 0, rowZ(r)); this.bridge.add(G);
-      const glass = new T.MeshPhysicalMaterial({ color: '#c8f1ff', roughness: .04, metalness: .05, transparent: true, opacity: .4, clearcoat: 1, clearcoatRoughness: .05, emissive: '#38bdf8', emissiveIntensity: .1, depthWrite: false });
+      const glass = new T.MeshPhysicalMaterial({ color: '#a8dcff', roughness: .03, metalness: .1, transparent: true, opacity: .32, clearcoat: 1, clearcoatRoughness: .03, emissive: '#1e7fd6', emissiveIntensity: .1, depthWrite: false });
       const slab = new T.Mesh(new T.BoxGeometry(TW, .32, TD), glass); slab.position.y = -.16; slab.receiveShadow = true; G.add(slab);
-      const edge = new T.LineSegments(new T.EdgesGeometry(slab.geometry), new T.LineBasicMaterial({ color: '#dff6ff', transparent: true, opacity: .9 })); edge.position.copy(slab.position); G.add(edge);
+      const edge = new T.LineSegments(new T.EdgesGeometry(slab.geometry), new T.LineBasicMaterial({ color: '#9ee3ff', transparent: true, opacity: .9, toneMapped: false })); edge.position.copy(slab.position); G.add(edge);
       // لمعة قطرية خفيفة على سطح الزجاج
       const shine = new T.Mesh(new T.PlaneGeometry(TW * .9, TD * .9), new T.MeshBasicMaterial({ map: this.shineTex || (this.shineTex = this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.45, 'rgba(255,255,255,0)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(.58, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); })), transparent: true, depthWrite: false }));
       shine.rotation.x = -Math.PI / 2; shine.position.y = .01; G.add(shine);
-      const lb = new T.Mesh(new T.PlaneGeometry(5.8, 5.8), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: .95 }));
+      const lb = new T.Mesh(new T.PlaneGeometry(5.8, 5.8), new T.MeshBasicMaterial({ map: this.tileLabel(label, lane ? '#a855f7' : '#0ea5e9'), transparent: true, depthWrite: false, opacity: 1, toneMapped: false }));
       lb.rotation.x = -Math.PI / 2; lb.position.y = .02; G.add(lb);
       return { g: G, slab, edge, lb, glass, label, broken: false, safe: false, shakeT: null, r, lane };
     }
@@ -129,7 +132,7 @@
     buildFrame(n, finish) {
       const T = this.T; if (this.frame) { this.bridge.remove(this.frame); this.frame.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
       const F = this.frame = new T.Group(); this.bridge.add(F);
-      const steel = this.mat('#2b2540', { metalness: .8, roughness: .35, flatShading: false }), gold = this.mat('#e0b25a', { metalness: .85, roughness: .25, flatShading: false });
+      const steel = this.mat('#1c1830', { metalness: .8, roughness: .35, flatShading: false }), gold = this.mat('#e0b25a', { metalness: .85, roughness: .25, flatShading: false });
       const z0 = rowZ(-1) - 6, z1 = rowZ(n - 1) - TD / 2 - (finish ? 2.4 : 6), len = z0 - z1, zc = (z0 + z1) / 2;
       for (const x of [-FRAME_X, 0, FRAME_X]) { const b = new T.Mesh(new T.BoxGeometry(x ? .5 : .35, .55, len), steel); b.position.set(x, -.45, zc); b.castShadow = true; F.add(b); }
       for (let i = 0; i < n; i++) for (const s of [-1, 1]) { const z = rowZ(i) + s * TD / 2 + s * .12; const c = new T.Mesh(new T.BoxGeometry(FRAME_X * 2 + .5, .4, .24), steel); c.position.set(0, -.42, z); F.add(c); }
@@ -143,10 +146,10 @@
       this.shardMat = new T.MeshPhysicalMaterial({ color: '#d7f5ff', roughness: .05, transparent: true, opacity: .75, side: T.DoubleSide, emissive: '#7dd3fc', emissiveIntensity: .25, depthWrite: false });
       this.flash = new T.PointLight('#bae6fd', 0, 18, 2); this.sc.add(this.flash);
       // رقم كبير يطفو فوق اللوحين اللي المفروض ينطون عليها الحين (1 يمين · 2 يسار)
-      this.marks = [0, 1].map(l => { const c = l ? ['#c084fc', '#6d28d9'] : ['#38bdf8', '#1d4ed8'];
+      this.marks = [0, 1].map(l => { const c = l ? ['#d8b4fe', '#7c3aed'] : ['#7dd3fc', '#1d4ed8'];
         const sp = new T.Sprite(new T.SpriteMaterial({ map: this.tex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, c[0]); gr.addColorStop(1, c[1]);
           g.shadowColor = c[0]; g.shadowBlur = 28; g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, 96, 0, 7); g.fill(); g.shadowBlur = 0; g.lineWidth = 8; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
-          g.fillStyle = '#fff'; g.font = '900 150px Zain, "IBM Plex Sans Arabic", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(l + 1), w / 2, h / 2 + 12); }), depthTest: false, transparent: true }));
+          g.fillStyle = '#fff'; g.font = '900 150px Zain, "IBM Plex Sans Arabic", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(l + 1), w / 2, h / 2 + 12); }), depthTest: false, transparent: true, toneMapped: false }));
         sp.scale.setScalar(2.4); sp.renderOrder = 20; sp.visible = false; this.sc.add(sp); return sp; });
     }
     shatter(t) {
