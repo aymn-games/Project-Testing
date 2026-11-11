@@ -51,6 +51,13 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes floatUp{0%{opacity:0;transform:translate(-50%,20px) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-70px) scale(1.1)}}
 @keyframes floatUpL{0%{opacity:0;transform:translateY(16px) scale(.8)}20%{opacity:1}100%{opacity:0;transform:translateY(-24px) scale(1.05)}}
+@keyframes bumpA{0%{transform:scale(1)}35%{transform:scale(1.035)}100%{transform:scale(1)}}
+@keyframes bumpB{0%{transform:scale(1)}35%{transform:scale(1.035)}100%{transform:scale(1)}}
+@keyframes shakeA{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(4px)}}
+@keyframes shakeB{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px)}40%{transform:translateX(10px)}60%{transform:translateX(-7px)}80%{transform:translateX(4px)}}
+@keyframes scoreUp{0%{transform:scale(1);color:#ddd6fe}30%{transform:scale(1.45);color:#6ee7b7;text-shadow:0 0 30px rgba(52,211,153,.8)}100%{transform:scale(1);color:#ddd6fe}}
+@keyframes scoreDown{0%{transform:scale(1);color:#ddd6fe}30%{transform:scale(.8);color:#f87171;text-shadow:0 0 30px rgba(248,113,113,.8)}100%{transform:scale(1);color:#ddd6fe}}
+@keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -89,7 +96,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       <!-- خانات اللاعبين الثلاثة: كل لاعب سؤاله ووقته ونقاطه -->
       <div style="flex:1;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px">
         <sc-for list="{{ slots }}" as="sl" hint-placeholder-count="3">
-          <div style="position:relative;min-height:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 18px 16px;box-sizing:border-box;border-radius:30px;background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));backdrop-filter:blur(14px);border:3px solid {{ sl.bd }};box-shadow:0 30px 80px rgba(0,0,0,.35), {{ sl.flash }};overflow:hidden;opacity:{{ sl.op }};transition:border-color .3s, box-shadow .3s, opacity .3s">
+          <div style="position:relative;min-height:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 18px 16px;box-sizing:border-box;border-radius:30px;background:linear-gradient(180deg, rgba(44,30,78,.96), rgba(20,15,34,.96));backdrop-filter:blur(14px);border:3px solid {{ sl.bd }};box-shadow:0 30px 80px rgba(0,0,0,.35), {{ sl.flash }};animation:{{ sl.cardAnim }};overflow:hidden;opacity:{{ sl.op }};transition:border-color .3s, box-shadow .3s, opacity .3s">
             <div style="position:absolute;top:-120px;left:50%;width:420px;height:240px;margin-left:-210px;border-radius:50%;background:{{ sl.halo }};filter:blur(40px);pointer-events:none"></div>
             <sc-if value="{{ sl.empty }}" hint-placeholder-val="{{ false }}">
               <div style="flex:1;display:grid;place-items:center;font:500 22px 'IBM Plex Sans Arabic';color:#6f6a7c">خانة فاضية</div>
@@ -101,7 +108,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
               <span style="position:relative;max-width:100%;min-height:40px;display:flex;align-items:center;justify-content:center;margin-top:0;font:700 {{ sl.nameFs }}/1.25 'IBM Plex Sans Arabic';color:#f4f2f8;text-align:center;overflow-wrap:break-word;text-wrap:balance">{{ sl.name }}</span>
               <span style="position:relative;max-width:100%;margin-top:-8px;font:500 14px 'IBM Plex Sans Arabic';color:#8a8596;direction:ltr;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:20px">{{ sl.handle }}</span>
               <div style="position:relative;display:flex;align-items:center;gap:22px">
-                <span style="display:flex;align-items:baseline;gap:8px"><span style="font:700 58px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:{{ sl.color }};direction:ltr">{{ sl.score }}</span><span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">نقطة</span></span>
+                <span style="display:flex;align-items:baseline;gap:8px">{{ sl.scoreEl }}<span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">نقطة</span></span>
               </div>
               <div style="position:relative;flex:1;min-height:0;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px 14px;margin-top:6px;border-radius:24px;background:rgba(10,8,18,.75);border:2.5px solid rgba(167,139,250,.38);box-shadow:inset 0 2px 18px rgba(0,0,0,.45);text-align:center">
                 <sc-if value="{{ sl.hasQ }}" hint-placeholder-val="{{ true }}">
@@ -407,7 +414,7 @@ class Component extends DCLogic {
   snd(k){ if(this.muted) return; const T=(...a)=>this.tone(...a);
     ({tick:()=>T(1400,.03,'square',.03), start:()=>T(220,.35,'sawtooth',.06,880), reveal:()=>[523,659,784,1047].forEach((f,i)=>T(f,.25,'triangle',.14,null,i*.08)),
       open:()=>{T(300,.4,'sine',.12,1200);T(1200,.3,'triangle',.06,null,.25);}, close:()=>T(900,.18,'sine',.06,400), beep:()=>T(1000,.12,'sine',.15),
-      correct:()=>{T(880,.12,'sine',.18);T(1320,.25,'sine',.16,null,.09);}, skip:()=>T(300,.2,'sawtooth',.07,180), wrong:()=>T(150,.18,'sawtooth',.06,110),
+      correct:()=>{[784,988,1319].forEach((f,k)=>T(f,.22,'triangle',.2,null,k*.07));T(1568,.35,'sine',.1,null,.21);}, skip:()=>{T(520,.32,'sawtooth',.09,140);T(110,.25,'triangle',.22,70,.05);}, wrong:()=>T(150,.18,'sawtooth',.06,110),
       join:()=>T(700,.1,'sine',.1,1000), timeup:()=>T(400,.6,'sawtooth',.1,120),
       win:()=>[523,659,784,1047,784,1047,1319].forEach((f,i)=>T(f,.4,'triangle',.16,null,i*.13))
     })[k]?.(); }
@@ -491,7 +498,7 @@ class Component extends DCLogic {
       this.addLog('correct',`${user} جاوب صح (+1)`); return; }
     // غلط: ما يخصم شي، بس يبان آخر شي كتبه
     this.setSlot(i,{feed:'آخر محاولة: '+String(text).slice(0,40),feedC:'#a8a3b5'},null,user); }
-  setSlot(i,patch,stat,user){ this.setState(s=>({slots:s.slots.map((x,k)=>k===i?{...x,...patch}:x),stats:stat?{...s.stats,[user]:stat}:s.stats}));
+  setSlot(i,patch,stat,user){ this.setState(s=>({slots:s.slots.map((x,k)=>k===i?{...x,...patch,...(patch.flash?{fn:(x.fn||0)+1}:{})}:x),stats:stat?{...s.stats,[user]:stat}:s.stats}));
     if(patch.flash){ clearTimeout((this.ft=this.ft||{})[i]); this.ft[i]=setTimeout(()=>this.setState(s=>({slots:s.slots.map((x,k)=>k===i?{...x,flash:null}:x)})),700); } }
 
   // إقصاء من تبويب اللاعبين بالإعدادات: يطلع من الدور، ولو كان يلعب الحين تنتهي خانته.
@@ -545,17 +552,24 @@ class Component extends DCLogic {
     const slots=[0,1,2].map(i=>{ const sl=s.slots[i], c=SLOT_COLORS[i];
       if(!sl) return {empty:true,full:false,bd:'rgba(255,255,255,.06)',halo:'transparent',flash:'0 0 0 0 transparent',op:.45};
       const t=this.st(sl.name), low=P==='playing'&&!sl.done&&leftSec<=10, done=sl.done&&P!=='ready';
+      const fn=sl.fn||0, cardAnim=sl.flash==='ok'?`bump${fn%2?'A':'B'} .45s ease`:sl.flash==='skip'?`shake${fn%2?'A':'B'} .45s ease`:'none';
       const fl=sl.flash==='ok'?'0 0 0 3px rgba(52,211,153,.55), 0 0 60px rgba(52,211,153,.3)':sl.flash==='skip'?'0 0 0 3px rgba(248,113,113,.5), 0 0 60px rgba(248,113,113,.22)':'0 0 0 0 transparent';
       const qText=sl.q?sl.q.q:'', L=qText.length;
       const NL=[...sl.name].length;
-      return {empty:false,full:true,name:sl.name,nameFs:NL<=14?'30px':NL<=20?'26px':NL<=28?'22px':'19px',handle:this.handle(sl.name),color:'#ddd6fe',bd:'rgba(167,139,250,.55)',soft:c+'14',halo:'rgba(139,92,246,.22)',flash:fl,op:done?.75:1,
+      return {empty:false,full:true,cardAnim,name:sl.name,
+        scoreEl:h('span',{key:'sc'+fn,style:{display:'inline-block',font:"700 58px/1 'IBM Plex Sans Arabic'",fontVariantNumeric:'tabular-nums',color:'#ddd6fe',direction:'ltr',animation:sl.flash==='ok'?'scoreUp .7s ease':sl.flash==='skip'?'scoreDown .7s ease':'none'}},fmt(t.score)),nameFs:NL<=14?'30px':NL<=20?'26px':NL<=28?'22px':'19px',handle:this.handle(sl.name),color:'#ddd6fe',bd:'rgba(167,139,250,.55)',soft:c+'14',halo:'rgba(139,92,246,.22)',flash:fl,op:done?.75:1,
         ring:c,deg:360,pulse:'none',
         score:fmt(t.score),correct:t.correct,skips:t.skips,...this.avItem(sl.name,c),
         hasQ:P==='playing'&&!!sl.q&&!sl.done, noQ:!(P==='playing'&&!!sl.q&&!sl.done), cat:sl.q?sl.q.c:'',
         qEl:sl.q?h('span',{key:'q'+qText,style:{font:`700 ${L<=18?66:L<=26?58:L<=36?50:L<=48?44:38}px/1.35 'IBM Plex Sans Arabic'`,width:'100%',color:'#f4f2f8',textWrap:'balance',animation:'pop .45s cubic-bezier(.2,1.2,.35,1)'}},qText):null,
         waitText:P==='ready'?'جاهز؟ السؤال يطلع أول ما تبدأ الجولة':P==='countdown'?'استعد…':'خلص الوقت',
         feed:sl.feed||' ',feedC:sl.feedC,
-        deltaEl:sl.delta?h('span',{key:sl.delta.id,style:{position:'absolute',top:228,left:'12%',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',pointerEvents:'none',animation:'floatUpL 1s ease-out forwards',direction:'ltr'}},sl.delta.txt):null}; });
+        // تأثير كل نقطة: الرقم يطير (+1 / −0.5)، وشرارات خضراء حول النقاط مع الصح
+        deltaEl:sl.delta?h('div',{key:sl.delta.id,style:{position:'absolute',inset:0,pointerEvents:'none'}},[
+          h('span',{key:'t',style:{position:'absolute',top:228,left:'12%',font:"800 64px 'IBM Plex Sans Arabic'",color:sl.delta.c,textShadow:'0 0 30px rgba(0,0,0,.6)',animation:'floatUpL 1s ease-out forwards',direction:'ltr'}},sl.delta.txt),
+          ...(sl.flash==='ok'||sl.delta.c==='#6ee7b7'?Array.from({length:14},(_,k)=>{ const a=k/14*Math.PI*2, r=90+(k%3)*30;
+            return h('span',{key:'p'+k,style:{position:'absolute',top:262,left:'50%',width:10,height:10,marginLeft:-5,borderRadius:'50%',background:k%2?'#6ee7b7':'#c4b5fd',boxShadow:'0 0 10px #6ee7b7','--dx':Math.cos(a)*r+'px','--dy':Math.sin(a)*r*0.6+'px',animation:'spark .8s ease-out forwards'}}); }):[])
+        ]):null}; });
     // لوحة النقاط
     const liveSet=new Set(P==='playing'?s.slots.filter(x=>!x.done).map(x=>x.name):[]);
     const list=this.ranked(s.queue.filter(n=>this.st(n).played)), wait=s.queue.slice(s.qIdx);
