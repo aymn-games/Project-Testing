@@ -7,9 +7,7 @@
 (function (root) {
     'use strict';
     var FIELDS = [
-        { key: 'joinBy', type: 'choice', section: 1, label: 'طريقة الدخول', default: 'keyword', options: [['keyword', 'كلمة'], ['gift', 'هدية']], descs: { keyword: 'المشاهد يكتب كلمة الدخول بالشات.', gift: 'المشاهد يرسل الهدية اللي تحددها (تيك توك لايف).' } },
-        { key: 'joinGift', type: 'gift', section: 1, showIf: ['joinBy', 'gift'], label: 'هدية الدخول', default: 'rose' },
-        { key: 'keyword', type: 'text', section: 1, showIf: ['joinBy', 'keyword'], label: 'كلمة الدخول', placeholder: 'اكتب كلمة الدخول', default: 'دخول', desc: 'المشاهد يكتبها بالشات عشان يدخل السوق.' },
+        { key: 'keyword', type: 'text', section: 1, label: 'كلمة الدخول', placeholder: 'اكتب كلمة الدخول', default: 'دخول', desc: 'المشاهد يكتبها بالشات عشان يدخل السوق.' },
         { key: 'bell', type: 'choice', section: 2, icon: 'clock', label: 'ما يظهر عند الجرس', default: 'numbers',
           options: [['numbers', 'أرقام'], ['words', 'كلمات'], ['mixed', 'مختلط: أرقام وكلمات']],
           desc: 'الكلمات قصيرة من عالم الغرب مثل حصان ومسدس وقبعة، وتُقبل بأي كتابة للهمزة والتاء المربوطة والألف المقصورة. في المختلط تكون كل مبارزة رقمًا أو كلمة عشوائيًا.' },
@@ -38,7 +36,6 @@
             var x = v[f.key];
             if (f.type === 'number') { x = Math.round(+x); out[f.key] = isFinite(x) ? Math.min(f.max, Math.max(f.min, x)) : d[f.key]; }
             else if (f.type === 'text') out[f.key] = typeof x === 'string' && x.trim() ? x.trim().slice(0, 40) : d[f.key];
-            else if (f.type === 'gift') out[f.key] = typeof x === 'string' && /^[a-z0-9-]{2,40}$/.test(x) ? x : d[f.key];
             else out[f.key] = f.options.some(function (o) { return o[0] === x; }) ? x : d[f.key];
         });
         return out;

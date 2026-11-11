@@ -364,10 +364,7 @@ function hookStream() {
     P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (G.phase === 'lobby' && G.settings.joinBy !== 'gift' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
-    // الدخول بهدية يحددها المضيف (تيك توك لايف)
-    P.onGift(pl => { if (G.phase !== 'lobby' || G.settings.joinBy !== 'gift' || !P.giftMatches(G.settings.joinGift, pl)) return;
-        if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(String(pl.id), pl.name || 'راعي', false, pl.avatarUrl || null); });
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
@@ -402,9 +399,7 @@ function hookStream() {
     G.scene = scene; G.phase = 'lobby';
     const demo = !window.CDPlatform || window.CDPlatform.demo; // وضع التجربة (?demo=1): بوتات + لوحة التجربة
     G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
-    { const gift = G.settings.joinBy === 'gift' && window.AymanGamesPlatform && AymanGamesPlatform.tiktokGifts && AymanGamesPlatform.tiktokGifts.byId(G.settings.joinGift);
-      $('#lobby p').innerHTML = `${gift ? 'أرسل هدية' : 'اكتب'} <b></b> ${gift ? 'وادخل السوق' : 'بالشات وادخل السوق'} — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`;
-      $('#lobby p b').textContent = gift ? gift.label : (G.settings.keyword || 'دخول'); }
+    $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     $('#setBtn').onclick = openSettings; $('#setSave').onclick = saveSettings; $('#setClose').onclick = () => $('#settings').classList.remove('in');
