@@ -33,10 +33,9 @@ var ALL_CATS = [
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
     { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' },
     { id: 'plural', name: 'جمع الكلمة' }, { id: 'opposite', name: 'عكس المعنى' },
-    { id: 'currency', name: 'عملة الدولة' }, { id: 'sentence', name: 'رتّب الجملة' },
-    { id: 'color', name: 'لون الشيء' }, { id: 'sound', name: 'صوت الحيوان' },
-    { id: 'baby', name: 'صغير الحيوان' }, { id: 'count', name: 'كم العدد؟' },
-    { id: 'letter', name: 'أول حرف' }, { id: 'synonym', name: 'مرادف الكلمة' }
+    { id: 'currency', name: 'عملة الدولة' },
+    { id: 'color', name: 'لون الشيء' }, { id: 'count', name: 'كم العدد؟' },
+    { id: 'synonym', name: 'مرادف الكلمة' }
 ];
 // إعدادات ثابتة لتحدي البثوث: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم،
 // 20 ثانية للإجابة، و25 لاعب كحد أقصى لكل فريق (شرط أساسي ما يتعدّل). كل
@@ -137,13 +136,13 @@ function sanitizeSettings(raw, sideNames) {
 function genQuestion(catId) {
     var D = QUESTIONS || {};
     var cat = ALL_CATS.filter(function (c) { return c.id === catId; })[0] || ALL_CATS[0];
-    var base = { catName: cat.name, dir: 'rtl', ls: '0' };
+    var base = { kind: cat.id, catName: cat.name, dir: 'rtl', ls: '0' };
     function q(extra) { var o = {}; Object.keys(base).forEach(function (k) { o[k] = base[k]; }); Object.keys(extra).forEach(function (k) { o[k] = extra[k]; }); return o; }
     if (cat.id === 'math' || !QUESTIONS) {
         var op = pick(['+', '−', '×']), a, b, res;
         if (op === '×') { a = 2 + rand(14); b = 2 + rand(11); res = a * b; }
         else { a = 12 + rand(88); b = 2 + rand(60); if (op === '−' && b > a) { var t = a; a = b; b = t; } res = op === '+' ? a + b : a - b; }
-        return q({ catName: ALL_CATS[0].name, sub: 'احسب الناتج', prompt: a + ' ' + op + ' ' + b, dir: 'ltr', answer: String(res), accept: [String(res)] });
+        return q({ kind: 'math', catName: ALL_CATS[0].name, sub: 'احسب الناتج', prompt: a + ' ' + op + ' ' + b, dir: 'ltr', answer: String(res), accept: [String(res)] });
     }
     var x;
     if (cat.id === 'image') { x = pick(D.image); return q({ sub: 'ما اسم الصورة؟', emoji: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
@@ -172,16 +171,15 @@ function genQuestion(catId) {
         return q({ sub: 'رتّب الكلمات', prompt: '', words: m, answer: x[0], accept: [x[0]].concat(x[1] || []) });
     }
     if (cat.id === 'color') { x = pickNew(cat.id, D.color); return q({ sub: 'ما لون هذا الشيء؟', emoji: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
-    if (cat.id === 'sound') { x = pickNew(cat.id, D.sound); return q({ sub: 'ما اسم صوت هذا الحيوان؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
-    if (cat.id === 'baby') { x = pickNew(cat.id, D.baby); return q({ sub: 'ما اسم صغير هذا الحيوان؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
     if (cat.id === 'count') { x = pickNew(cat.id, D.count); return q({ sub: 'كم عددها؟ اكتب الرقم', prompt: x[0], answer: String(x[1]), accept: [String(x[1])] }); }
-    if (cat.id === 'letter') { x = pickNew(cat.id, D.letter); return q({ sub: 'اكتب أول حرف من اسم الصورة', emoji: x[0], answer: x[2][0] + ' (' + x[1] + ')', accept: x[2] }); }
     if (cat.id === 'synonym') { x = pickNew(cat.id, D.synonym); return q({ sub: 'اكتب مرادف الكلمة', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
     x = pick(D.flag);
     return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });
 }
 
 function checkAnswer(text, question) {
+    // الفحص المشترك في fa-questions.js (أسماء الحروف، واو المثل، الأرقام بكل اللغات) — نفس فحص game.html.
+    if (QUESTIONS && typeof QUESTIONS.checkAnswer === 'function') return QUESTIONS.checkAnswer(text, question);
     var v = [norm(text), norm(String(text).replace(/(\S)(ال)/g, '$1 $2'))].filter(Boolean);
     return v.length > 0 && question.accept.some(function (a) { return v.indexOf(norm(a)) >= 0; });
 }
