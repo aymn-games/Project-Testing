@@ -18,7 +18,7 @@
           descs: { seq: 'في «مبارزة بعد مبارزة» تُلعب مبارزات الجولة واحدة تلو الأخرى، ولكل مبارزة مشهدها، ثم تبدأ الجولة التالية.',
                    all: 'في «كل المبارزات في وقت واحد» يقف كل الأزواج في الشارع معًا، وجرس واحد للجميع، وكل زوج يحسمه أسرع واحد فيه.' } },
         { key: 'intro', type: 'choice', icon: 'clock', label: 'مشهد الدخول قبل كل جولة', default: 'short',
-          options: [['short', 'قصير (نحو 4 ثوانٍ)'], ['full', 'كامل (نحو 9 ثوانٍ)']] },
+          options: [['short', 'قصير (نحو 4 ثوانٍ)'], ['full', 'كامل (نحو 8 ثوانٍ)']] },
         { key: 'maxPlayers', type: 'number', icon: 'userplus', label: 'الحد الأقصى للاعبين', min: 2, max: 64, default: 64 },
         { key: 'who', type: 'choice', icon: 'shield', label: 'من يمكنه الانضمام؟', default: 'all',
           options: [['all', 'الجميع'], ['followers', 'المتابعون فقط']] }

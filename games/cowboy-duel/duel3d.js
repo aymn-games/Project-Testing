@@ -403,10 +403,15 @@ export async function mountDuel(el, opts = {}) {
     // ---------- المخرج: لقطات سينمائية
     const CS = { pos: V(0, 12, 30), look: V(0, 1.5, 0), fov: 40, roll: 0 };
     const camPos = V(0, 12, 30), camLook = V(0, 1.5, 0); let camFov = 40, camRoll = 0, shake = 0;
-    let shot = null, shotT = 0, queue = [], qDone = null, labels = true, TS = 1;
+    let shot = null, shotT = 0, queue = [], qDone = null, labels = true, TS = 1, lobbyCut = false;
     function play(list) { return new Promise(res => { if (qDone) qDone(false); queue = list.slice(); qDone = res; next(); }); }
-    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
-    function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
+    // انتقال ناعم بين اللقطات: نصوّر آخر إطار على لوحة فوق المشهد ونخليها تذوب (بدل القطع الحاد والدايرة السودا)
+    const xf = document.createElement('canvas'); xf.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0'; el.appendChild(xf);
+    const XF = { draw: 140, bullet: 220, fall: 320, leave: 380 };
+    function crossfade(ms = 600) { try { const c = r.domElement; if (xf.width !== c.width || xf.height !== c.height) { xf.width = c.width; xf.height = c.height; }
+        r.render(sc, cam); xf.getContext('2d').drawImage(c, 0, 0); xf.style.transition = 'none'; xf.style.opacity = 1; void xf.offsetWidth; xf.style.transition = `opacity ${ms}ms ease-in-out`; xf.style.opacity = 0; } catch (e) { } }
+    function next() { const s = queue.shift(); if (!s) { shot = null; const d = qDone; qDone = null; d && d(true); return; } crossfade(XF[s.name] || 600); shot = s; shotT = 0; s.cut = true; s.start && s.start(); emit('shot', s.name, s.dur); }
+    function lobby() { if (qDone) { const d = qDone; qDone = null; d(false); } crossfade(800); lobbyCut = true; queue = []; shot = null; labels = true; TS = 1; emit('shot', 'lobby'); for (const [, f] of figs) if (f.state === 'watch' || f.state === 'cheer') setState(f, 'idle'); }
 
     // المواجهة بعرض الشارع: الأول يطلع من محلات الجنوب والثاني من محلات الشمال، ويوقفون وجه لوجه (بعيدين بعرض الشارع).
     // «كل المبارزات في وقت واحد»: كل زوج بمكان على طول الشارع (الأقرب للكاميرا x=0 والباقي باتجاه البرج)
@@ -428,15 +433,15 @@ export async function mountDuel(el, opts = {}) {
             [[A, 1], [Bf, -1]].forEach(([f, s]) => { f.duelist = true; f.twitch = false; f.wasted = false; f.g.position.set(x + s * .6, startZ > 9 ? .36 : 0, s * startZ); f.g.rotation.set(0, s > 0 ? Math.PI : 0, 0); f.target = V(x, 0, s * LANE_Z); f.face = s > 0 ? Math.PI : 0; f.speed = 2.6; setState(f, 'ready'); duelists.push(f); }); });
         for (const [, f] of figs) if (!f.duelist) { setState(f, 'watch'); f.face = Math.atan2(-f.g.position.x, -f.g.position.z); }
         const [A, Bf] = P[0]; // الزوج الأقرب للكاميرا
-        const crane = { name: 'crane', dur: short ? 1.6 : 2.4, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
-        const boots = { name: 'boots', dur: 1.8, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } };
+        const crane = { name: 'crane', dur: short ? 2.2 : 2.8, labels: true, cam(k, t, c) { const e = ease(k); c.pos.set(34 - e * 20, 26 - e * 21.5, 0); c.look.set(-4 - e * 8, e * 2.1, 0); c.fov = 48 - e * 8; c.roll = 0; } };
+        const boots = { name: 'boots', dur: 2, labels: false, cam(k, t, c) { const p = A.g.position; c.pos.copy(p).addScaledVector(fwd(A), -1.7).addScaledVector(rightOf(A), .95); c.pos.y = .32; c.look.set(Bf.g.position.x, .9, Bf.g.position.z); c.fov = 52; c.roll = .03; } };
         const profile = { name: 'profile', dur: 2.4, labels: true, start() { arriveAll(); tumbleweed(V(12, .75, .4), V(-30, .75, -.6), 4); emit('wind'); }, cam(k, t, c) { wide(c, ease(k), t, 1.6); } };
         // من منظور كل لاعب: الكاميرا مكان عيونه (تحت حافة قبعته) تطالع خصمه، والصفحة ترسم الجفون وهو يضيّق عينه ويفتحها
         const pov = (me, him, name, dur) => ({ name, dur, labels: false, start: arriveAll,
             cam(k, t, c) { const H = wp(me.U.head), f = fwd(me), O = wp(him.U.head); c.pos.copy(H).addScaledVector(f, .5); c.pos.y += .02 + Math.sin(t * 1.7) * .015; c.pos.x += Math.sin(t * 1.3) * .02; c.look.copy(O); c.look.y -= .35; c.fov = 34 - k * 12; c.roll = Math.sin(t * .9) * .015; } });
         let list;
-        if (!multi) list = short ? [crane, pov(A, Bf, 'povA', 1.2), pov(Bf, A, 'povB', 1.2)] : [crane, boots, pov(A, Bf, 'povA', 2.4), pov(Bf, A, 'povB', 2.4)];
-        else list = short ? [crane, profile] : [crane, boots, profile, pov(A, Bf, 'povA', 1.2), pov(Bf, A, 'povB', 1.2)];
+        if (!multi) list = short ? [crane, pov(A, Bf, 'povA', .9), pov(Bf, A, 'povB', .9)] : [crane, boots, pov(A, Bf, 'povA', 1.6), pov(Bf, A, 'povB', 1.6)];
+        else list = short ? [crane, profile] : [crane, boots, profile, pov(A, Bf, 'povA', .9), pov(Bf, A, 'povB', .9)];
         return play(list);
     }
     function standoff() { arriveAll(); play([{ name: 'standoff', dur: 0, labels: true, cam(k, t, c) { wide(c, Math.min(1, t / 8), t, 1.2); c.pos.y -= Math.min(1, t / 8) * .3; } }]); }
@@ -522,7 +527,7 @@ export async function mountDuel(el, opts = {}) {
             // الشاشات الطولية (بث الجوال 9:16): الكاميرا ترجع لورا بنفس الاتجاه عشان اللقطة القريبة ما تنقص من الجوانب
             if (cam.aspect < 1 && !CS.wide) CS.pos.sub(CS.look).multiplyScalar(Math.min(2.2, .78 / cam.aspect)).add(CS.look); }
         else { const lt = t * .07; CS.pos.set(Math.cos(lt) * 27, 7 + Math.sin(t * .13) * .8, Math.sin(lt) * 7.5); CS.look.set(-Math.cos(lt) * 6, 1.6, -Math.sin(lt) * 2); CS.fov = 44; CS.roll = 0; labels = true; }
-        if (shot && shot.cut) { shot.cut = false; camPos.copy(CS.pos); camLook.copy(CS.look); camFov = CS.fov; camRoll = CS.roll; }
+        if ((shot && shot.cut) || (!shot && lobbyCut)) { if (shot) shot.cut = false; lobbyCut = false; camPos.copy(CS.pos); camLook.copy(CS.look); camFov = CS.fov; camRoll = CS.roll; }
         else { const kk = shot ? 1 - Math.exp(-real * 14) : 1 - Math.exp(-real * 1.6); camPos.lerp(CS.pos, kk); camLook.lerp(CS.look, kk); camFov += (CS.fov - camFov) * kk; camRoll += (CS.roll - camRoll) * kk; }
         cam.position.copy(camPos); if (shake > 0) { cam.position.x += (Math.random() - .5) * shake; cam.position.y += (Math.random() - .5) * shake; shake = Math.max(0, shake - real * 1.2); }
         cam.lookAt(camLook); if (camRoll) cam.rotateZ(camRoll); if (Math.abs(cam.fov - camFov) > .01) { cam.fov = camFov; cam.updateProjectionMatrix(); }

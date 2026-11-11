@@ -37,8 +37,8 @@ body[data-bars="tight"] .bar{height:17vh;transition-duration:.12s}
 #lids .b{bottom:-60%;border-radius:50% 50% 0 0/70% 70% 0 0}
 #lids.on .t{animation:lidT var(--lid,2.4s) ease-in-out both}
 #lids.on .b{animation:lidB var(--lid,2.4s) ease-in-out both}
-@keyframes lidT{0%{transform:translateY(92%)}14%{transform:translateY(8%)}34%{transform:translateY(66%)}50%{transform:translateY(62%)}68%{transform:translateY(68%)}84%{transform:translateY(8%)}100%{transform:translateY(0)}}
-@keyframes lidB{0%{transform:translateY(-92%)}14%{transform:translateY(-8%)}34%{transform:translateY(-58%)}50%{transform:translateY(-54%)}68%{transform:translateY(-60%)}84%{transform:translateY(-8%)}100%{transform:translateY(0)}}
+@keyframes lidT{0%{transform:translateY(46%)}18%{transform:translateY(6%)}40%{transform:translateY(38%)}55%{transform:translateY(35%)}70%{transform:translateY(39%)}88%{transform:translateY(6%)}100%{transform:translateY(0)}}
+@keyframes lidB{0%{transform:translateY(-40%)}18%{transform:translateY(-6%)}40%{transform:translateY(-32%)}55%{transform:translateY(-29%)}70%{transform:translateY(-33%)}88%{transform:translateY(-6%)}100%{transform:translateY(0)}}
 body[data-grade="pov"] :is(.poster,#chat,#title,#counter,#demo,#banner){opacity:0 !important;transition:opacity .25s}
 body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.12) brightness(1.03);transition:none}
 #flash{position:fixed;inset:0;opacity:0;pointer-events:none;z-index:8}
@@ -239,7 +239,7 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 </div>
 
 <div id="lids"><i class="t"></i><i class="b"></i></div>
-<div id="flash"></div><div id="iris"></div>
+<div id="flash"></div>
 <div id="loading">🤠 السوق يتجهّز…</div>
 <div id="fallback" hidden>تعذّر تشغيل الثري دي على هذا الجهاز.</div>
 <div id="feed"></div>

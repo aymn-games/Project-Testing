@@ -62,11 +62,6 @@ function notice(text) { const el = $('#notice'); el.textContent = text; el.class
 function bars(mode) { document.body.dataset.bars = mode || ''; }
 function grade(mode) { document.body.dataset.grade = mode || ''; }
 async function flash(color = '#fff', ms = 160) { const f = $('#flash'); f.style.background = color; f.style.transition = 'none'; f.style.opacity = 1; await sleep(30); f.style.transition = `opacity ${ms}ms ease-out`; f.style.opacity = 0; }
-// انتقال «القزحية» الكلاسيكي حق أفلام الغرب القديمة: دايرة تنغلق على البطل ثم تنفتح على المشهد الجاي
-function iris(closing, ms = 700, cx = 50, cy = 50) { const el = $('#iris'); return new Promise(res => { const t0 = performance.now(), max = 120;
-    const step = now => { const k = Math.min(1, (now - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, r = closing ? max * (1 - e) : max * e;
-        el.style.background = `radial-gradient(circle at ${cx}% ${cy}%, transparent ${r}vmax, #0d0704 ${r + .3}vmax)`; if (k < 1) requestAnimationFrame(step); else { if (!closing) el.style.background = 'transparent'; res(); } };
-    requestAnimationFrame(step); }); }
 function poster(slot, p) { const el = $('#poster-' + slot); if (!p) { el.classList.remove('in'); return; }
     el.querySelector('.pname').textContent = p.name; el.querySelector('.pava').textContent = [...p.name.replace(/^أبو\s*/, '')][0] || '؟'; el.classList.remove('dead'); el.classList.add('in'); }
 function sign(state, n, text) { const el = $('#sign'); el.dataset.state = state || ''; if (n != null) el.querySelector('.num').textContent = n;
@@ -119,7 +114,7 @@ async function startMatch() {
     if (G.players.length < 2) return; SFX.unlock(); SFX.wind(false);
     G.alive = G.players.slice(); G.byes = {}; G.round = 0; G.startedAt = Date.now();
     $('#lobby').classList.add('hide'); G.phase = 'intro'; updateCount();
-    await iris(true, 600); await sleep(150); await iris(false, 600);
+    await sleep(300);
     nextRound();
 }
 async function nextRound() {
@@ -208,9 +203,9 @@ async function win(d, shooter, typed) {
 }
 async function endDuels() {
     const winners = G.active.map(d => d.winner);
-    await iris(true, 420, 50, 50);
+    // انتقال ناعم (المشهد يذوب للسوق) بدل الدايرة السودا
     G.scene.lobby(); poster('a'); poster('b'); bars(''); grade(''); SFX.wind(false); $('#feed').innerHTML = '';
-    G.phase = 'between'; await sleep(120); iris(false, 420);
+    G.phase = 'between'; await sleep(700);
     const f = G.finish; G.finish = null; f && f(winners);
 }
 function showAnswer(p, typed, secs) { const el = $('#answer'); el.querySelector('.who').textContent = p.name; el.querySelector('.typed b').textContent = typed; el.querySelector('.time b').textContent = secs;
@@ -225,9 +220,9 @@ async function crown(p) {
     try { if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') window.AGPAuth.reportMatchPoints({ players: G.players.map(x => ({ id: x.id, name: x.name })), winnerIds: [p.id], teamGame: false, durationMs: Date.now() - G.startedAt }); } catch (e) { }
 }
 async function newGame() {
-    $('#champ').classList.remove('in'); await iris(true, 600);
+    $('#champ').classList.remove('in');
     G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); bars(''); G.scene.setPlayers(G.players);
-    $('#lobby').classList.remove('hide'); renderLobby(); await iris(false, 600);
+    $('#lobby').classList.remove('hide'); renderLobby();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
