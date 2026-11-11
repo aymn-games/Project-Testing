@@ -124,9 +124,13 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .f-speed b{font-size:34px;font-variant-numeric:tabular-nums}
 .f-speed small{font-size:10px;color:var(--mut);margin-top:3px}
 .f-taps{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;direction:ltr;margin-bottom:6px}
-.f-nitro{margin-inline-start:auto;font-size:12px;font-weight:700;color:#22d3ee;margin-bottom:6px}
+.f-nitro{margin-inline-start:auto;font-size:12px;font-weight:700;color:#22d3ee;margin-bottom:6px;opacity:.5;transition:opacity .2s}
+.f-nitro.on{opacity:1;color:#67e8f9;text-shadow:0 0 10px rgba(34,211,238,.9);animation:pulse .35s ease-in-out infinite alternate}
 .nitro-bar{position:relative;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:4px}
-.nitro-bar i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#0ea5e9,#22d3ee);transition:transform .15s linear}
+.nitro-bar i{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:linear-gradient(270deg,#e10600,#fb923c);transition:transform .15s linear}
+/* اكتمل التكبيس ← شريط النيترو: أزرق مضيء يفضى طول مدة النيترو */
+.nitro-bar.on{box-shadow:0 0 12px rgba(34,211,238,.75)}
+.nitro-bar.on i{background:linear-gradient(270deg,#22d3ee,#a5f3fc,#22d3ee);transition:transform .1s linear}
 .f-fx{display:flex;flex-wrap:wrap;gap:6px;min-height:0;margin-top:6px}
 .f-fx:empty{display:none}
 .f-fx span{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);animation:pulse .6s ease-in-out infinite alternate}
@@ -448,9 +452,9 @@ body.no3d .fc-cam{display:none}
     <div class="fc-mid">
       <span class="f-speed"><b id="fSpeed">0</b><small>كم/س</small></span>
       <span class="f-taps"><b id="fTaps">0</b> / 50</span>
-      <span class="f-nitro">💨 نيترو</span>
+      <span class="f-nitro" id="fNitroLbl">💨 نيترو</span>
     </div>
-    <div class="nitro-bar"><i id="fNitro"></i></div>
+    <div class="nitro-bar" id="fNitroBar"><i id="fNitro"></i></div>
     <div class="f-fx" id="fFx"></div>
     <div class="fc-cam">
       <button class="arr" id="prevCar" type="button" title="اللاعب اللي قبله">›</button>

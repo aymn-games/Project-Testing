@@ -245,7 +245,7 @@
     // ------------------------------------------------------------------
     // التكبيس والدعم
     // ------------------------------------------------------------------
-    var TAPS_PER_NITRO = 50;
+    var TAPS_PER_NITRO = 50, NITRO_SECS = 2;
     function onLike(id, count) {
         var c = S.byId[id]; if (!c || c.finished || S.phase !== 'race') return;
         count = Math.max(1, Math.min(200, Number(count) || 1));
@@ -280,7 +280,7 @@
     function applyEffect(c, id, fromTaps) {
         if (!fromTaps) c.gifts++;
         var extra = '';
-        if (id === 'nitro') { c.fx.nitro = 2; c.throttle = 1; }
+        if (id === 'nitro') { c.fx.nitro = NITRO_SECS; c.throttle = 1; }
         else if (id === 'shield') { c.fx.shield = 10; }
         else if (id === 'portal') {
             var ahead = null;
@@ -687,7 +687,12 @@
             $('fAv').innerHTML = avatarHtml(f);
             $('fSpeed').textContent = Math.round(f.speed * 3.6);
             $('fTaps').textContent = f.tapBank;
-            $('fNitro').style.transform = 'scaleX(' + (f.tapBank / TAPS_PER_NITRO).toFixed(3) + ')';
+            // الشريط = نسبة التكبيس للنيترو الجاي؛ لما يكتمل يتحول لشريط النيترو ويفضى طول مدته
+            var nitroOn = f.fx.nitro > 0;
+            $('fNitroBar').classList.toggle('on', nitroOn);
+            $('fNitroLbl').classList.toggle('on', nitroOn);
+            $('fNitroLbl').textContent = nitroOn ? '💨 نيترو شغّال!' : '💨 نيترو';
+            $('fNitro').style.transform = 'scaleX(' + (nitroOn ? Math.min(1, f.fx.nitro / NITRO_SECS) : f.tapBank / TAPS_PER_NITRO).toFixed(3) + ')';
             $('fLock').style.display = S.cam.locked ? '' : 'none';
             var fx = f.fx, act = [];
             [['shield', 'shield'], ['nitro', 'nitro'], ['shuttle', 'shuttle']].forEach(function (k) {
