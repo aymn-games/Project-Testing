@@ -378,7 +378,7 @@ export async function mountDuel(el, opts = {}) {
                 rA = [-.6, -2.3]; lA = [-.6, 2.3]; lg = [-.35, .25, 0, 0]; sq = .05; mouthS = 1.4; rate = 12; break; }
             case 'win': { const k = f.t;
                 if (k < .45) { rA = [-1.05, .1]; U.gun.rotation.x -= dt * 20; lA = [0, .25]; }
-                else if (k < 2.5) { if (!f.blown) { f.blown = true; U.gun.rotation.set(0, 0, 0); } rA = [-2.62, .62]; lA = [0, .25]; hx = -.12; if ((f.smk = (f.smk || 0) + dt) > .06) { f.smk = 0; const blow = k > 1.2 && k < 1.9; puff(wp(U.muzzle), '#ece7dc', blow ? .22 : .15, blow ? V(.9, .5, (Math.random() - .5) * .4) : V(.04, .6, 0), 1.8, .6, blow ? 5 : 4); if (blow && !f.puffed) { f.puffed = true; emit('blow'); } } mouthS = k > 1.2 && k < 1.9 ? .45 : .7; }
+                else if (k < 2.5) { if (!f.blown) { f.blown = true; U.gun.rotation.set(0, 0, 0); } rA = [-2.25, .55]; lA = [0, .25]; hx = -.05; /* فوهة المسدس قدام فمه */ if ((f.smk = (f.smk || 0) + dt) > .06) { f.smk = 0; const blow = k > 1.2 && k < 1.9; puff(wp(U.muzzle), '#ece7dc', blow ? .22 : .15, blow ? V(.9, .5, (Math.random() - .5) * .4) : V(.04, .6, 0), 1.8, .6, blow ? 5 : 4); if (blow && !f.puffed) { f.puffed = true; emit('blow'); } } mouthS = k > 1.2 && k < 1.9 ? .45 : .7; }
                 else { if (U.gun.visible) { U.gun.visible = false; U.holGun.visible = true; emit('holster'); } rA = [.15, -.4]; lA = [0, .2]; }
                 sq = k < 2.5 ? .6 : 1; by = Math.sin(ph) * .015; break; }
             case 'champ': { const c = f.t * 6; by = Math.abs(Math.sin(c * .5)) * .35; lA = [0, 2.6 + Math.sin(c) * .25]; rA = [-Math.PI / 2 - .9, -.2]; U.gun.visible = true; U.holGun.visible = false; U.gun.rotation.x = 0; mouthS = 1.5; if (Math.sin(c * .5) > .97 && !f.shotUp) { f.shotUp = true; emit('pop'); puff(wp(U.muzzle), '#e8e2d6', .25, V(0, 1, 0), 1.4, .6, 3); } if (Math.sin(c * .5) < 0) f.shotUp = false; break; }
@@ -459,7 +459,7 @@ export async function mountDuel(el, opts = {}) {
               cam(k, t, c) { TS = Math.min(1, .2 + Math.max(0, t - .5) * .9); wide(c, 0, t, 0); } },  // السقوط باللقطة الأساسية (جهة البرج): الاثنين بالكادر
             // الكاميرا تقرّب من صاحب الطلقة: يرفع المسدس وينفخ فيه والدخان يطلع
             { name: 'hero', dur: 2.9, labels: false, start() { TS = 1; setState(S, 'win'); S.blown = false; S.puffed = false; for (const [, f] of figs) if (f !== S && f !== Tg) setState(f, 'cheer'); emit('hero'); },
-              cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = -.5 + e * .3, d = 4.8 - e * 2.6; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .7 + e * 1.4; c.look.copy(p); c.look.y = 1.7 + e * .55; c.fov = 36 - e * 4; c.roll = .03; } },
+              cam(k, t, c) { const p = S.g.position, f = fwd(S), rr = rightOf(S), e = ease(k), a = .15 + e * .35, d = 5 - e * 1.9; c.pos.copy(p).addScaledVector(f, Math.cos(a) * d).addScaledVector(rr, Math.sin(a) * d); c.pos.y = .8 + e * 1.3; c.look.copy(p).addScaledVector(rr, e * .3); c.look.y = 1.7 + e * .7; c.fov = 36 - e * 2; c.roll = .03; /* من جهة يده اللي فيها المسدس */ } },
             // مشهد سريع: يمشي راجع لجهته والخاسر يختفي بالغبار — بعدها دور جديد
             { name: 'leave', dur: 1.6, labels: false, start() { removePlayer(Tg.id); returnToCrowd(S.id); S.speed = 5; TS = 2.2; emit('leave'); },
               cam(k, t, c) { const p = S.g.position; c.pos.set(p.x + 9 - k * 2, 3.2, p.z * .4); c.look.set(p.x - 4, 1.4, p.z * .8); c.fov = 42; c.roll = 0; } }
