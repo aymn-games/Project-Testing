@@ -2,7 +2,8 @@
  * الهاوية — ربط شاشتي الإعدادات (index.html) واللوبي (lobby.html) بالمنصة،
  * وتستخدمه شاشة المباراة (game.html) لبيانات اللاعبين.
  *
- * منقول من games/elimination-roulette/er-platform.js (نفس القالب) بدون الهدايا وبطاقة الإقصاء:
+ * منقول من games/elimination-roulette/er-platform.js (نفس القالب) بدون بطاقة الإقصاء:
+ *  - الهدايا (الرجوع للعبة بطوق النجاة): الحدث 'stream:giftReceived' + أيقونات الهدايا المشتركة (assets/tiktok-gifts).
  *  - حالة الاتصال بالبث: من الاتصال الموثّق المحفوظ بمكتبة الألعاب
  *    (games.html → localStorage 'agp:agp-stream-connection').
  *  - الشات: الحدث 'stream:commentReceived'.
@@ -169,6 +170,88 @@
         });
     }
 
+    /** cb(payload) لكل هدية من البث ({id, name, giftName, ...}). ترجع دالة لإلغاء الاستماع. */
+    function onGift(cb) {
+        if (!AGP.events || typeof AGP.events.on !== 'function') return function () {};
+        return AGP.events.on('stream:giftReceived', function (payload) {
+            if (!payload || !payload.id) return;
+            cb(payload);
+        });
+    }
+
+    // أنواع الدعم = هدايا تيك توك الحقيقية المشتركة (assets/tiktok-gifts) بصورها.
+    // GIFT_NAMES: أسماء الهدية كما يرسلها تيك توك (giftName) لو تختلف عن المعرّف.
+    var GIFT_NAMES = {
+        'ice-cream': ['Ice Cream Cone', 'Ice Cream'],
+        'donut': ['Doughnut', 'Donut'],
+        'finger-heart': ['Finger Heart'],
+        'heart-in-your-hands-a': ['Heart In Your Hands', 'Heart in Your Hands'],
+        'heart-in-your-hands-b': ['Heart In Your Hands', 'Heart in Your Hands'],
+        'hand-hearts': ['Hand Hearts'],
+        'drama-queen': ['Drama Queen'],
+        'little-crown': ['Little Crown'],
+        'music-note': ['Music Note'],
+        'money-gun': ['Money Gun'],
+        'sports-car': ['Sports Car'],
+        'tiktok-universe': ['TikTok Universe', 'Universe'],
+        'kings-scepter': ["King's Scepter", 'Kings Scepter', 'Scepter'],
+        'hat-and-mustache': ['Hat and Mustache', 'Hat & Mustache'],
+        'love-saudi': ['Love Saudi', 'I Love KSA', 'Love KSA'],
+        'saudi-in-heart': ['Saudi in Heart', 'KSA in my heart'],
+        'diving-with-whales': ['Diving with Whales', 'Whale diving']
+    };
+    function giftKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+    /**
+     * هل الهدية القادمة من البث تطابق نوع الدعم (id)؟ بالاسم، أو بقيمة العملات
+     * (giftValue = عملات الوحدة من تيك توك) لأن أسماء تيك توك الإنجليزية
+     * ما تطابق دائماً الأسماء المحفوظة هنا.
+     */
+    function giftMatches(giftId, giftName, giftValue) {
+        if (!giftId) return false;
+        var got = giftKey(giftName);
+        if (got && got === giftKey(giftId)) return true;
+        if (got && (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; })) return true;
+        var g = giftById(giftId), v = Number(giftValue);
+        return !!(g && g.coins > 0 && v > 0 && g.coins === v);
+    }
+    // هدايا معتمدة سابقاً بالمستودع وغير موجودة بالقائمة المشتركة (assets/tiktok-gifts):
+    // العطر وقلوب اليد بصورها الحقيقية (من gift_icons بروليت الإقصاء القديمة)،
+    // والباقي بنفس أيقونات الإيموجي اللي كانت تستخدمها الألعاب السابقة (Twemoji، محفوظة محلياً).
+    // أيقونات الهدايا الإضافية بمجلد روليت الإقصاء (games/elimination-roulette/gift_icons) — مشتركة بدل النسخ
+    var GAME_DIR = (function () {
+        var sc = document.currentScript;
+        return (sc && sc.src ? sc.src.replace(/abyss-platform\.js(\?.*)?$/, '') : '') + '../elimination-roulette/';
+    }());
+    var EXTRA_GIFTS = [
+        { id: 'gg', name: 'جي جي', coins: 1, file: 'gift_icons/gg.svg' },
+        { id: 'drama-queen', name: 'ملكة الدراما', coins: 5, file: 'gift_icons/drama-queen.svg' },
+        { id: 'perfume', name: 'عطر', coins: 20, file: 'gift_icons/perfume.webp' },
+        { id: 'little-crown', name: 'تاج صغير', coins: 99, file: 'gift_icons/little-crown.svg' },
+        { id: 'hand-hearts', name: 'قلوب اليد', coins: 100, file: 'gift_icons/hand_hearts.webp' },
+        { id: 'music-note', name: 'نغمة موسيقية', coins: 169, file: 'gift_icons/music-note.svg' },
+        { id: 'sunglasses', name: 'نظارة شمسية', coins: 199, file: 'gift_icons/sunglasses.svg' },
+        { id: 'money-gun', name: 'مسدس نقود', coins: 500, file: 'gift_icons/money-gun.svg' },
+        { id: 'sports-car', name: 'سيارة رياضية', coins: 7000, file: 'gift_icons/sports-car.svg' },
+        { id: 'tiktok-universe', name: 'كون تيك توك', coins: 44999, file: 'gift_icons/tiktok-universe.svg' }
+    ];
+    /** قائمة أنواع الدعم: [{id, name, coins, img}] — كل الهدايا المعتمدة، مرتبة تصاعدياً بالكوينز. */
+    var _gifts = null;
+    function gifts() {
+        if (_gifts) return _gifts;
+        var G = AGP.tiktokGifts, out = [];
+        if (G && G.list) G.list.forEach(function (g) { out.push({ id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) }); });
+        EXTRA_GIFTS.forEach(function (g) {
+            if (!out.some(function (x) { return x.id === g.id; })) out.push({ id: g.id, name: g.name, coins: g.coins, img: GAME_DIR + g.file });
+        });
+        out.sort(function (a, b) { return a.coins - b.coins; });
+        return (_gifts = out);
+    }
+    function giftById(id) {
+        var all = gifts();
+        for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+        return null;
+    }
+
     /** صورة حساب تيك توك الموثّق للاستريمر (من حسابه بالمنصة) أو null. */
     function streamerAvatar() {
         try {
@@ -242,6 +325,10 @@
         connect: connect,
         onComment: onComment,
         streamerAvatar: streamerAvatar,
-        createRegistry: createRegistry
+        createRegistry: createRegistry,
+        onGift: onGift,
+        gifts: gifts,
+        giftById: giftById,
+        giftMatches: giftMatches
     };
 }());

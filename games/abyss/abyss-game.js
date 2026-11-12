@@ -41,6 +41,11 @@
         maxPlayers: Math.max(2, Math.min(200, +SETUP.maxPlayers || 50)),
         followersOnly: SETUP.who === 'المتابعين فقط',
         sound: SETUP.sound !== false,
+        // طوق النجاة: اللي طاح يرجع للعبة إذا أرسل الهدية المحددة (عدد مرات محدود لكل لاعب)
+        supOn: !!SETUP.supOn && !!(SETUP.supType && SETUP.supType.id),
+        supType: SETUP.supType && SETUP.supType.id || null,
+        supName: SETUP.supType && SETUP.supType.name || '',
+        supCount: Math.max(1, Math.min(10, +SETUP.supCount || 1)),
         // جودة الرسومات: عالية · متوازنة (الافتراضي) · ضعيفة
         quality: ({ 'عالية': 'high', 'ضعيفة': 'low', high: 'high', low: 'low' })[pick('quality', '')] || 'mid'
     };
@@ -126,7 +131,7 @@
         scene.scene = {
             names: true, quality: CFG.quality, cam: S.cam, row: S.row, finish: CFG.mode === 'steps', win: S.winners, rows: S.rows,
             players: S.players.map(function (p) {
-                return { id: p.id, name: p.name, skin: p.look.skin, hair: p.look.hair, girl: p.look.girl, outfit: p.look.outfit, pants: p.look.pants, vrm: p.vrm, row: p.row, lane: p.lane, fall: p.fall };
+                return { id: p.id, name: p.name, skin: p.look.skin, hair: p.look.hair, girl: p.look.girl, outfit: p.look.outfit, pants: p.look.pants, vrm: p.vrm, row: p.row, lane: p.lane, fall: p.fall, rise: p.rise || 0 };
             })
         };
     }
@@ -199,7 +204,7 @@
         clearAll();
         S.players = names.map(makePlayer); participants = {};
         S.players.forEach(function (p) { participants[p.name] = true; try { AGP.winCard && AGP.winCard.preloadFor(reg.player(p.name)); } catch (e) {} });
-        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false;
+        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false; S.supUsed = {}; S.reviveQ = [];
         S.cam = 'overview'; S.phase = 'intro';
         ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
         $('win').hidden = true;
@@ -214,6 +219,8 @@
         ask();
     }
     function ask() {
+        // اللي أرسلوا طوق النجاة وقت كسر الزجاج يرجعون مع بداية السؤال الجديد
+        var q0 = S.reviveQ || []; S.reviveQ = [];
         S.phase = 'question'; S.left = CFG.answerSec; S.broke = false;
         alive().forEach(function (p) { p.ans = -1; });
         if (CFG.mode === 'last') ensureRows(S.row + 6);
@@ -224,6 +231,7 @@
             if (S.left > 0 && S.left <= 5 && Math.abs(S.left - Math.round(S.left)) < .01) tone(660, .08, 'triangle', .08);
             if (S.left <= 0) { clearInterval(timer); reveal(); } else render();
         }, 250);
+        q0.forEach(function (n) { revive(n, true); });
         if (DEMO) demoAnswers();
     }
     // انتهى الوقت: اللي ما جاوب ينط على اللوح الغلط ويطيح معه (قاعدة ثابتة)، لحظة ترقّب، ثم ينكسر الزجاج
@@ -309,6 +317,33 @@
         }).join('') + (n > MAX ? '<span class="more">و' + (n - MAX) + ' غيرهم</span>' : '');
     }
 
+    // ---------- طوق النجاة (الرجوع بعد السقوط) ----------
+    // اللي طاح يرجع: وقت السؤال يرجع على طول ويلحق يجاوب، ووقت كسر الزجاج ينتظر السؤال الجاي.
+    // يطلع من الهاوية بطوق النجاة (abyss3d.js → rise) ويوقف مع الناجين على آخر لوح صح.
+    function canRevive(p) { return p && !p.alive && (S.supUsed[p.name] || 0) < CFG.supCount && S.phase !== 'over' && S.phase !== 'intro'; }
+    function requestRevive(name) {
+        var p = S.players.find(function (x) { return x.name === name; });
+        if (!canRevive(p) || S.reviveQ.indexOf(name) >= 0) return false;
+        if (S.phase === 'question') revive(name); else S.reviveQ.push(name);
+        return true;
+    }
+    function revive(name, quiet) {
+        var p = S.players.find(function (x) { return x.name === name; }); if (!canRevive(p)) return;
+        var prev = S.rows[S.row - 1];
+        S.supUsed[name] = (S.supUsed[name] || 0) + 1;
+        p.alive = true; p.fall = false; p.ans = -1; p.rise = (p.rise || 0) + 1;
+        p.row = prev ? S.row - 1 : -1; p.lane = prev && prev.safe != null ? prev.safe : 0;
+        pushScene(); render(); sSafe();
+        logEv('🛟', 'رجع ' + name + (CFG.supName ? ' بـ' + CFG.supName : ' بطوق النجاة'));
+        var av = reg.player(name).avatarUrl;
+        $('revList').innerHTML = '<div class="fp"><span class="av">' + esc(initialOf(name)) + (av ? '<img src="' + esc(av) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span><b>' + esc(name) + '</b></div>';
+        show('rev', true); clearTimeout(revive.t); revive.t = setTimeout(function () { show('rev', false); }, 3200);
+    }
+    if (!DEMO) AB.onGift(function (g) {
+        if (!CFG.supOn || !AB.giftMatches(CFG.supType, g.giftName, g.giftValue)) return;
+        requestRevive(reg.nameFor(g));
+    });
+
     // ---------- الشات ----------
     if (!DEMO) {
         AB.connect();
@@ -372,6 +407,8 @@
     var DEMO_ACC = +params.get('acc') || .7;
     var NAMES = ['سارا', 'فهد', 'نوره', 'عبدالله', 'ريم', 'خالد', 'لمى', 'تركي', 'جود', 'سلطان', 'هيا', 'ماجد', 'دانة', 'ناصر', 'غلا', 'بندر', 'شهد', 'راكان'];
     function demoAnswers() {
+        // تجربة: بعض البوتات اللي طاحت ترسل هدية طوق النجاة وترجع
+        S.players.forEach(function (p) { if (!p.alive && !p.human && Math.random() < .25) later(function () { requestRevive(p.name); }, 1500 + Math.random() * 4000); });
         alive().forEach(function (p) {
             if (p.human) return;
             later(function () { var ok = correctLane(S.qs[S.row]); answer(p.name, String(Math.random() < DEMO_ACC ? ok + 1 : 2 - ok)); }, 800 + Math.random() * (CFG.answerSec - 4) * 1000);
@@ -402,12 +439,13 @@
             return p ? 'دخلت باسم ' + nm : 'ما قدرت تدخل';
         }
         var me = S.players.find(function (x) { return x.human && x.name === name; });
+        if (me && text === '🛟') { if (me.alive) return 'أنت للحين على الجسر'; return requestRevive(name) ? 'وصلت الهدية — راجع بطوق النجاة' : 'خلصت مرات الرجوع'; }
         if (!me) return 'اكتب «' + CFG.joinWord + '» أول عشان تدخل';
         if (!me.alive) return 'طحت بالهاوية — انتظر المباراة الجاية';
         if (S.phase !== 'question') return 'انتظر السؤال';
         answer(name, text); return me.ans >= 0 ? 'اخترت ' + (me.ans + 1) : 'اكتب 1 أو 2';
     }
-    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat, setAcc: function (v) { DEMO_ACC = Math.max(.05, Math.min(1, +v || DEMO_ACC)); } };
+    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat, revive: requestRevive, setAcc: function (v) { DEMO_ACC = Math.max(.05, Math.min(1, +v || DEMO_ACC)); } };
 
     if (DEMO && !FLOW) newDemo(); else setupMatch(ROSTER.slice());
 }(window.AymanGamesPlatform));

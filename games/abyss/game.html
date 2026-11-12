@@ -24,6 +24,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="abyss-platform.js"></script>
 <!-- الشخصيات: نفس شخصيات سفينة النجاة (abyss3d.js يورث <ship-3d>) -->
 <script src="../survival-ship/ship3d.js"></script>
@@ -102,6 +103,10 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 #fall h3{margin:0;font:800 40px/1.2 'Zain','IBM Plex Sans Arabic';color:#fda4af;text-shadow:0 0 30px rgba(244,63,94,.55)}
 #fall h3.safe{color:#86efac;text-shadow:0 0 30px rgba(34,197,94,.55)}
 /* اللاعبين اللي طاحوا: صورة حساب تيك توك + الاسم */
+#rev{position:absolute;top:330px;right:60px;border-radius:24px;padding:14px 24px 18px;text-align:center;border-color:rgba(251,146,60,.5);box-shadow:0 0 40px rgba(251,146,60,.3);animation:pop .45s cubic-bezier(.2,1,.3,1)}
+#rev h3{margin:0 0 10px;font:800 30px 'Zain','IBM Plex Sans Arabic';color:#fdba74;text-shadow:0 0 24px rgba(251,146,60,.6)}
+#rev .fp{margin:0 auto}
+#rev .fp .av{border-color:#fb923c;background:linear-gradient(135deg,#f97316,#9a3412);box-shadow:0 0 18px rgba(251,146,60,.5);filter:none}
 #fallList{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 18px;margin-top:14px}
 #fallList:empty{display:none}
 .fp{width:92px;display:flex;flex-direction:column;align-items:center;gap:6px;animation:pop .4s cubic-bezier(.2,1,.3,1) both}
@@ -230,6 +235,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
   <div id="hint" hidden><span class="chip m" id="hintTx">اكتب <span class="kbd">1</span> أو <span class="kbd">2</span> بالشات</span></div>
 
   <section id="fall" class="glass" hidden><h3 id="fallH"></h3><div id="fallList"></div></section>
+  <section id="rev" class="glass" hidden><h3>🛟 رجع بطوق النجاة</h3><div id="revList"></div></section>
 
 </div>
 
