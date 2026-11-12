@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
-<title>حنكة — ألعاب أيمن</title>
+<title>محِك العقول — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -217,7 +217,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       <div style="position:absolute;inset:-108px -40px -36px;z-index:20;background:rgba(5,4,10,.7);backdrop-filter:blur(12px);display:grid;place-items:center;animation:fade .3s ease">
         <div style="width:820px;box-sizing:border-box;padding:38px 44px 34px;border-radius:30px;background:linear-gradient(180deg, rgba(34,23,60,.97), rgba(15,11,26,.97));border:4px solid rgba(139,92,246,.5);box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 80px rgba(109,40,217,.25);display:flex;flex-direction:column;gap:22px;animation:pop .6s cubic-bezier(.2,1.2,.35,1)">
           <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-            <span style="font:700 52px/1.1 'IBM Plex Sans Arabic';color:#f4f2f8">حنكة</span>
+            <span style="font:700 52px/1.1 'IBM Plex Sans Arabic';color:#f4f2f8">محِك العقول</span>
             <span style="padding:6px 20px;border-radius:12px;border:2px solid rgba(139,92,246,.45);background:rgba(76,29,149,.3);font:700 20px 'IBM Plex Sans Arabic';color:#ddd6fe">{{ howMode }}</span>
           </div>
           <sc-for list="{{ howRows }}" as="r" hint-placeholder-count="3">
@@ -384,7 +384,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 // ============================================================
-//  حنكة — شاشة اللعب (نفس قالب أسرع إجابة: games/fastest-answer/game.html)
+//  محِك العقول — شاشة اللعب (نفس قالب أسرع إجابة: games/fastest-answer/game.html)
 //  كل جولة 3 لاعبين بنفس الوقت، لكل واحد سؤاله ووقته ونقاطه:
 //   · الجواب الصح بالشات = +1 وسؤال جديد على طول
 //   · «سكب» أو «تخطي» = −0.5 وسؤال جديد · الجواب الغلط ما يخصم شي
@@ -652,8 +652,8 @@ class Component extends DCLogic {
     // شاشة الفوز: بطاقة وحدة (أو بطاقة الفوز المملوكة js/agp-win-card.js)
     // شاشة الفوز (تصميم روليت الإقصاء): بطاقة WINNER وحدة، أو بطاقة الفوز المملوكة (js/agp-win-card.js)
     const W=s.win, wt=W?this.st(W):null, wpts=s.pts, wav=W?this.avItem(W,'#7c3aed'):{};
-    const wcEl=W?LM.winCard(this.reg.player(W),[typeof wpts==='number'?'+'+wpts+' نقطة':'المركز الأول',fmt(wt.score)+' نقطة باللعبة','حنكة'],'wc'+(typeof wpts==='number'?1:0),240):null;
-    const winVals={ winOpen:!!W, winOv:'fade .3s ease', gameName:'حنكة', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
+    const wcEl=W?LM.winCard(this.reg.player(W),[typeof wpts==='number'?'+'+wpts+' نقطة':'المركز الأول',fmt(wt.score)+' نقطة باللعبة','محِك العقول'],'wc'+(typeof wpts==='number'?1:0),240):null;
+    const winVals={ winOpen:!!W, winOv:'fade .3s ease', gameName:'محِك العقول', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
       winnerName:W||'', winnerIni:[...(W||'')].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''), winnerAv:wav.avatar||'', winnerOp:wav.imgOp||0,
       ptsMain:wpts==='pending'?'…':typeof wpts==='number'?`+${wpts} نقطة`:(W?fmt(wt.score)+' نقطة':''), ptsSub:wpts==='pending'?'جارٍ احتساب النقاط':typeof wpts==='number'?'تظهر في بروفايله':'نقاط المنصة للحسابات الموثّقة',
       ptsSize:typeof wpts==='number'?'2em':'1.4em', ptsSubSize:typeof wpts==='number'?'.4em':'.5em',
