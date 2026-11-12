@@ -330,7 +330,11 @@ if(!DEMO&&!Array.isArray(ROSTER)) location.replace('lobby.html');
 
 const TAP_STEP = 0.55;       // سحبة رسالة شات (نمط التكبيس)
 const TAP_GAP_MS = 220;      // أقل وقت بين سحبتين لنفس اللاعب
-const LIKE_STEP = 0.8;       // سحبة كل تكبيسة (لايك) — التكبيس أساس اللعبة، والدفعة الوحدة ما تزيد عن LIKE_MAX
+const LIKE_STEP = 0.8; 
+const TAP_SPEED = 32;        // سرعة الحبل (من 100 بالثانية) لما فريق يكبّس والثاني واقف — إقصاء خلال ~1.2 ثانية
+const TAP_WINDOW_MS = 1500;  // نافذة حساب نسبة التكبيس
+const TAP_MIN = 2;           // أقل مجموع تكبيس بالنافذة عشان يتحرك الحبل
+const TAP_FULL = 30;         // من هالمجموع وفوق: سرعة كاملة (قبلها تبدأ من 45%)      // سحبة كل تكبيسة (لايك) — التكبيس أساس اللعبة، والدفعة الوحدة ما تزيد عن LIKE_MAX
 const LIKE_MAX = 16;
 const AUTO_KEY = 'tow-autojoin'; // الدخول التلقائي أثناء المباراة (سويتش الهيدر)
 const INTRO_KEY = 'tow-intro-hide'; // «لا تظهر مرة ثانية» بنافذة طريقة اللعب
@@ -461,13 +465,19 @@ class Component extends DCLogic {
       if(t!=null){ k=t; this.setState(s=>({teams:s.teams.map((l,i)=>i===t&&!l.includes(user)?[...l,user]:l)})); this.pushFeed(icon('join',22),user+' انضم لـ'+this.T[t].name+' بالتكبيس',this.T[t].color); this.snd('join'); } }
     if(k<0||S.phase!=='play'||this.MODE!=='tap'||S.out[user]||this.isFrozen(user)) return;
     const n=Math.max(1,+count||1); if(this.stats){ this.stats.likes+=n; this.stats.pulls[k]++; }
-    this.pend[k]+=Math.min(LIKE_MAX,n*LIKE_STEP)*(this.boosted(k)?2:1); this.tapLog.push([Date.now(),k,n]);
+    this.tapLog.push([Date.now(),k,n*(this.boosted(k)?2:1)]);
     this.lastTapper[k]=user; this.scene?.pull(user); this.scene?.effect('taps',k,[user]); this.snd('pull'); }
   // يسحب جزء من رصيد التكبيس كل 50ms: حركة ناعمة ومستمرة بدل قفزة كل ثانية
   // كل مرة 7.5% من الرصيد: الدفعة تتوزع على حوالي ثانية (دفعات الخادم كل ثانية)، فالحبل يتحرك بدون توقف
-  drain(){ if(this.state.phase!=='play'){ this.pend=[0,0]; return; } if(Date.now()<(this.recoilUntil||0)) return; const net=[0,0];
-    for(const k of [0,1]){ const p=this.pend[k]; if(p<.01){ this.pend[k]=0; continue; } const d=Math.min(p,Math.max(.04,p*.075)); this.pend[k]=p-d; net[k]=d; }
-    const diff=net[1]-net[0]; if(!diff) return;
+  // سحب التكبيس (كل 50ms): سرعة الحبل حسب نسبة تكبيس كل فريق من المجموع (آخر 1.5 ثانية) — مو الفرق بينهم.
+  // الفريق اللي يكبّس أكثر ولو بشوي ياخذ الأفضلية بوضوح، واللاعب اللي ما يكبّس يضعّف فريقه،
+  // ولو فريق وقف تكبيس ينسحب الحبل للثاني بسرعة TAP_SPEED. القوة ×2 تضاعف تكبيس الفريق بالنسبة.
+  // الفرق الصغير يتضخّم شوي (أس 0.7): 60% مقابل 40% ≈ ثلث السرعة الكاملة بدل الخمس.
+  drain(){ if(this.state.phase!=='play'){ this.pend=[0,0]; return; } if(Date.now()<(this.recoilUntil||0)) return;
+    const now=Date.now(), r=[0,0]; for(const x of this.tapLog||[]) if(now-x[0]<TAP_WINDOW_MS) r[x[1]]+=x[2];
+    const tot=r[0]+r[1]; if(tot<TAP_MIN) return;
+    const d0=(r[1]-r[0])/tot, share=Math.sign(d0)*Math.pow(Math.abs(d0),.7), intensity=Math.min(1,.45+tot/TAP_FULL), diff=TAP_SPEED*share*intensity*.05;
+    if(Math.abs(diff)<.001) return;
     this.setState(s=>({pos:Math.max(-100,Math.min(100,s.pos+diff))}),()=>this.checkOut()); }
 
   onChat(user,text,follower){ const S=this.state, k=this.teamOf(user);
