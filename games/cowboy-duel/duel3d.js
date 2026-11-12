@@ -483,9 +483,9 @@ export async function mountDuel(el, opts = {}) {
             // الكاميرا على الفايز وهو يحتفل — الصفحة تعرض تبويب الفوز
             { name: 'winCam', dur: 0, labels: false, start() { TS = 1; setState(S, 'champ'); for (const [, f] of figs) if (f !== S && !TT.includes(f) && !f.duelist) setState(f, 'cheer'); emit('hero'); if (doneCb) { const d = doneCb; doneCb = null; d(true); } },
               cam(k, t, c) { // لقطة متوسطة: الشخصية كاملة من راسها لرجولها (واسمها فوقها) يمين الشاشة، وتبويب الفوز يسارها
-                const p = S.g.position, e = Math.min(1, t / 2.5), land = cam.aspect >= 1.1, d = (land ? 10.5 : 8.5) - e * .6;
+                const p = S.g.position, e = Math.min(1, t / 2.5), land = cam.aspect >= 1.1, d = (land ? 10.5 : 10) - e * .6;
                 c.pos.copy(p).addScaledVector(fwd(S), d).addScaledVector(rightOf(S), .5); c.pos.y = 2.3;
-                c.look.copy(p).addScaledVector(rightOf(S), land ? 2.3 : 0); c.look.y = land ? 1.75 : 1.15; c.fov = land ? 34 : 46; c.roll = 0; c.fit = true; } }
+                c.look.copy(p).addScaledVector(rightOf(S), land ? 2.3 : 0); c.look.y = land ? 1.75 : 2.2; c.fov = land ? 34 : 50; c.roll = 0; c.fit = true; } }
         ];
         play(list).then(ok => { if (!ok && doneCb) { const d = doneCb; doneCb = null; d(false); } });
         return done;
