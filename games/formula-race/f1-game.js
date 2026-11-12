@@ -1192,6 +1192,17 @@
         $('wNew').onclick = newRace;
         $('wSame').onclick = function () { resetRace(); stopTest(); };
         $('soundBtn').onclick = function () { setSound(!settings.soundOn); };
+        // ملء الشاشة (زر بالهيدر) — يتبدّل نصه حسب الحالة، ومع بادئة webkit لسفاري
+        var docEl = document.documentElement;
+        function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+        function renderFs() { $('fsBtn').innerHTML = isFs() ? '🗗 <span>تصغير الشاشة</span>' : '⛶ <span>ملء الشاشة</span>'; }
+        $('fsBtn').onclick = function () {
+            try {
+                if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                else { var r = (docEl.requestFullscreen || docEl.webkitRequestFullscreen).call(docEl); if (r && r.catch) r.catch(function () {}); }
+            } catch (e) {}
+        };
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) { document.addEventListener(ev, renderFs); });
         // أول ضغطة/زر بالصفحة يفتح الصوت (المتصفح يمنع الصوت قبل تفاعل)
         ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockAudio, { passive: true }); });
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
