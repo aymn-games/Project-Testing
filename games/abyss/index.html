@@ -21,6 +21,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="abyss-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -252,7 +253,8 @@ const GAME = {
   lobbyUrl: 'lobby.html',
   requireLive: true
 };
-const SUPPORT_TYPES = [];
+// أنواع الدعم = هدايا تيك توك الحقيقية بصورها (assets/tiktok-gifts عبر AB.gifts)
+const SUPPORT_TYPES = AB.gifts();
 // showIf: مفتاح إعداد (يظهر الصف لو قيمته true) أو دالة تستقبل القيم
 const SETTINGS = [
   { title:'الدخول', rows:[
@@ -265,6 +267,10 @@ const SETTINGS = [
     { type:'choice', key:'steps',     label:'عدد الخطوات', options:['10','15','20'], default:1, showIf:v=>v.mode===0 },
     { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['10','15','20','30'], default:1 },
     { type:'choice', key:'quality',   label:'جودة الرسومات', hint:'حسب جهازك: الضعيفة للأجهزة البطيئة', options:['عالية','متوازنة','ضعيفة'], default:1 }
+  ]},
+  { title:'الرجوع للعبة', full:true, rows:[
+    { type:'toggle', key:'supOn', label:'الرجوع بطوق النجاة', hint:'اللاعب اللي طاح يرجع للعبة إذا أرسل الهدية المحددة', default:false, dot:'#34d399' },
+    { type:'support', key:'supType', showIf:'supOn', default:null }
   ]},
   { title:'الصوت', full:true, rows:[
     { type:'toggle', key:'sound', label:'الأصوات', default:true, dot:'#60a5fa' }
@@ -333,6 +339,7 @@ class Component extends DCLogic {
       start:()=>{ if(S.connOpen) return; const live=!!AB.getSavedConnection(); if(live!==S.live) this.setState({live});
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); if(!String(S.values.keyword||'').trim()) return this.toastMsg('اكتب كلمة الدخول');
         if(S.values.maxPlayers===''||+S.values.maxPlayers<2) return this.toastMsg('الحد الأقصى للاعبين من 2 إلى 200');
+        if(S.values.supOn&&!S.values.supType) return this.toastMsg('اختر هدية طوق النجاة أو أوقف الرجوع');
         const values=this.readValues(); values.keyword=String(values.keyword).trim(); values.maxPlayers=Math.max(2,Math.min(200,+values.maxPlayers||50));
         AB.writeJSON(AB.keys.setup,values); try{ localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); }catch(e){} SHARED.save(this.state.values); this.props.onStart?.(values);
         this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },

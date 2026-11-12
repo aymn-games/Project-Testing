@@ -320,7 +320,7 @@
     }
 
     window.GR = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'greed-settings', roster: 'greed-roster', players: 'greed-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

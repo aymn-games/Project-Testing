@@ -1934,7 +1934,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _screen = 'result';
         el('lc-result-restart').addEventListener('click', restartGame);
         el('lc-result-replay').addEventListener('click', goToGame);
-        el('lc-result-exit').addEventListener('click', confirmExitToLibrary);
+        el('lc-result-exit').addEventListener('click', goToLibrary); // شاشة الفوز: خروج مباشر بدون تأكيد
     }
 
     // ================================================================
