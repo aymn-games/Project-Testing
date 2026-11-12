@@ -143,7 +143,9 @@
         if (q && playing) {
             $('qText').textContent = q.q;
             [0, 1].forEach(function (l) {
-                $('o' + l + 't').textContent = isTF(q) ? (l ? 'خطأ' : 'صح') : q.a[l];
+                var tx = $('o' + l + 't'), txt = isTF(q) ? (l ? 'خطأ' : 'صح') : q.a[l];
+                // خط الإجابة كبير (76px)، والإجابة الطويلة يصغر خطها لين تنقرى كاملة (أقل شي 40px)
+                if (tx.textContent !== txt) { tx.textContent = txt; tx.style.fontSize = ''; for (var fs = 76; fs > 40 && tx.scrollWidth > tx.clientWidth + 1; fs -= 4) tx.style.fontSize = fs - 4 + 'px'; }
                 $('o' + l + 'c').textContent = S.players.filter(function (p) { return p.row === S.row && p.lane === l && (p.alive || p.fall); }).length;
                 var o = $('o' + l); o.classList.toggle('ok', ph === 'reveal' && S.broke && correctLane(q) === l); o.classList.toggle('bad', ph === 'reveal' && S.broke && correctLane(q) !== l);
             });

@@ -80,11 +80,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 /* بطاقات الخيارين: يمين = 1 ، يسار = 2 (نفس مكان المربع بالجسر) */
 /* الخيارين تحت السؤال: يمين = 1 ، يسار = 2 (نفس مكان اللوحين بالجسر) */
 .opts{position:absolute;left:40px;right:40px;bottom:30px;display:flex;justify-content:space-between;pointer-events:none}
-.opt{width:600px;border-radius:26px;padding:12px 18px 12px 22px;display:flex;align-items:center;gap:18px;text-align:right;transition:all .35s;pointer-events:auto;animation:pop .5s cubic-bezier(.2,1,.3,1) both}
+.opt{width:760px;min-height:132px;border-radius:26px;padding:12px 18px 12px 22px;display:flex;align-items:center;gap:18px;text-align:right;transition:all .35s;pointer-events:auto;animation:pop .5s cubic-bezier(.2,1,.3,1) both}
 .opt .n{width:92px;height:92px;flex-shrink:0;border-radius:24px;display:grid;place-items:center;font:900 72px/1 'Zain','IBM Plex Sans Arabic';color:#fff;text-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.55)}
 .opt.r .n{background:linear-gradient(160deg,#38bdf8,#1d4ed8);box-shadow:0 10px 28px rgba(56,189,248,.4),inset 0 2px 0 rgba(255,255,255,.35)}
 .opt.l .n{background:linear-gradient(160deg,#c084fc,#6d28d9);box-shadow:0 10px 28px rgba(168,85,247,.4),inset 0 2px 0 rgba(255,255,255,.35)}
-.opt .tx{flex:1;min-width:0;font:800 50px/1.2 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .tx{flex:1;min-width:0;font:800 76px/1.15 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .opt .cnt{display:flex;align-items:baseline;gap:6px;font:700 38px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#fff}
 .opt .cnt small{font:500 16px 'IBM Plex Sans Arabic';color:var(--mut)}
 .opt.ok{border-color:rgba(74,222,128,.7);background:linear-gradient(180deg,rgba(20,83,45,.85),rgba(6,40,22,.8));box-shadow:0 0 40px rgba(34,197,94,.45)}
@@ -93,7 +93,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;g
 .opt.bad .n{background:linear-gradient(135deg,#f43f5e,#9f1239)}
 
 /* شريط أسفل الوسط */
-#hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;white-space:nowrap}
+#hint{position:absolute;bottom:172px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;white-space:nowrap}
 #hint .chip{font-size:20px;padding:9px 22px}
 .kbd{display:inline-grid;place-items:center;min-width:34px;height:34px;padding:0 8px;border-radius:10px;font:800 22px 'Zain';background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff}
 
