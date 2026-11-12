@@ -763,6 +763,59 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-er-players .agp-player-remove-btn > *{display:none !important;}',
             '.mc-er-players .agp-player-remove-btn::before{content:"✕";font-size:15px;font-weight:800;}',
 
+            /* ==================================================================
+             * شكل «سميك» لشاشة اللعب: أزرار الهيدر، قائمة الإجراءات،
+             * نافذة الإعدادات، ونافذة «اختر أغنيتك» — خلفيات أصمت، حدود
+             * أعرض، أزرار وخيارات أعلى، وخط أثقل. (محصور بـ#mc-stage، فشاشة
+             * الإعدادات الأولى وشاشة الفوز ما تتأثر.)
+             * ==================================================================== */
+            '#mc-stage{--mc-glass:linear-gradient(180deg,rgba(38,32,58,.97),rgba(22,19,33,.97));',
+            '--mc-line:rgba(167,139,250,.32);--mc-ctl-bg:rgba(255,255,255,.08);--mc-ctl-line:rgba(167,139,250,.34);}',
+            // الهيدر
+            '#mc-stage .mc-hbtn,#mc-stage .mc-spin-btn,#mc-stage .mc-header-title,#mc-stage .mc-seat-timer{',
+            'height:clamp(44px,3vw,52px);font-weight:800;}',
+            '#mc-stage .mc-hbtn{border-width:2.5px;border-color:rgba(167,139,250,.6);background:rgba(139,92,246,.24);',
+            'box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 16px rgba(0,0,0,.35);}',
+            '#mc-stage .mc-hbtn:hover{background:rgba(139,92,246,.34);border-color:rgba(196,181,253,.8);}',
+            '#mc-stage .mc-header-title,#mc-stage .mc-seat-timer{border-width:2.5px;}',
+            // قائمة الإجراءات
+            '#mc-stage .mc-panel-head,#mc-stage .mc-stat,#mc-stage .mc-game-settings{border-width:2.5px;}',
+            '#mc-stage .mc-stat-lbl{font-weight:800;color:var(--mc-muted-2);}',
+            '#mc-stage .mc-gs-title{font-size:18px;border-bottom-width:2px;}',
+            '#mc-stage .mc-gs-lbl,#mc-stage .mc-gs-lbl-row{font-size:16px;font-weight:800;}',
+            '#mc-stage .mc-seg,#mc-stage .mc-stepper,#mc-stage .mc-vol,#mc-stage .mc-song-form{border-width:2.5px;padding:5px;',
+            'box-shadow:inset 0 2px 8px rgba(0,0,0,.4);}',
+            '#mc-stage .mc-vol{padding:12px 18px;}',
+            '#mc-stage .mc-seg button{height:44px;font-size:15px;font-weight:800;}',
+            '#mc-stage .mc-stepper button{width:44px;height:44px;font-size:22px;font-weight:800;background:rgba(255,255,255,.12);}',
+            '#mc-stage .mc-stepper div{font-size:17px;}',
+            // النوافذ (الإعدادات + اختر أغنيتك)
+            '#mc-stage .mc-card{border-width:2.5px;background:linear-gradient(180deg,#1d1730,#110e1b);}',
+            '#mc-stage .mc-card-title{font-size:24px;}',
+            '#mc-stage .mc-x{width:46px;height:46px;border-width:2.5px;background:rgba(255,255,255,.08);font-size:18px;font-weight:800;}',
+            '#mc-stage .mc-end-btn,#mc-stage .mc-reset-btn{height:56px;font-size:17px;font-weight:800;}',
+            '#mc-stage .mc-reset-btn{border-width:2.5px;background:rgba(248,113,113,.12);}',
+            // نافذة «اختر أغنيتك»
+            '#mc-stage .mc-song-form input{height:46px;font-size:16px;font-weight:700;}',
+            '#mc-stage .mc-song-form button{height:46px;padding:0 24px;font-size:16px;}',
+            '#mc-stage .mc-song{gap:10px;padding:10px;border-radius:20px;border-width:2.5px;border-color:rgba(167,139,250,.24);',
+            'background:linear-gradient(180deg,rgba(44,37,66,.95),rgba(28,24,42,.95));box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}',
+            '#mc-stage .mc-song.mc-on{border-color:rgba(192,132,252,.85);background:linear-gradient(180deg,rgba(91,52,160,.55),rgba(52,33,92,.55));}',
+            '#mc-stage .mc-song-art{width:52px;height:52px;border-radius:12px;}',
+            '#mc-stage .mc-song-t{font-size:15px;}',
+            '#mc-stage .mc-song-a{font-size:13px;font-weight:700;color:var(--mc-muted-2);}',
+            '#mc-stage .mc-song-btns{gap:6px;}',
+            '#mc-stage .mc-song-btns button{height:40px;min-width:40px;padding:0 14px;border-width:2.5px;font-size:14px;font-weight:800;',
+            'background:rgba(255,255,255,.1);border-color:rgba(167,139,250,.4);}',
+            '#mc-stage .mc-song-btns button.mc-on{background:var(--mc-grad);border-color:transparent;color:#fff;',
+            'box-shadow:0 4px 14px rgba(139,92,246,.45);}',
+            '#mc-stage .mc-song-sub{font-size:16px;}',
+            '#mc-stage .mc-song-sub button{font-size:14px;font-weight:800;}',
+            '#mc-stage .mc-song-now{font-size:15px;font-weight:800;}',
+            '#mc-stage .mc-song-msg{font-size:14px;font-weight:700;}',
+            '#mc-stage .mc-song-empty{padding:14px;border-width:2px;font-size:14px;font-weight:700;}',
+            '#mc-stage .mc-song-results{max-height:340px;}',
+
             /* الوضع العمودي / الشاشات الأضيق من 900px */
             '@media (max-width:899px),(max-aspect-ratio:9/10){',
             '.mc-header{grid-template-columns:1fr auto;}',
