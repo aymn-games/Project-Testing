@@ -126,9 +126,19 @@
     .st-title { font-size: 16px; }
     .st-saved { display: none; }
   }
+  /* بوابة «استوديو البث»: مقفول للعامة — يفتح للأدمن ولمن عنده permissions.stream_studio (من لوحة الأدمن) */
+  body.st-gated .st-app { display: none; }
+  .st-gate { display: none; }
+  body.st-gated .st-gate { display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 16px; }
+  .st-gate-card { max-width: 420px; width: 100%; text-align: center; padding: 30px 22px; border-radius: 20px;
+    border: 1px dashed rgba(178,140,245,.45); background: rgba(122,63,212,.10); color: #c3bad6; line-height: 1.9; }
+  .st-gate-card h2 { margin: 0 0 8px; color: #fff; font-size: 20px; }
+  .st-gate-card a { display: inline-block; margin-top: 16px; padding: 10px 22px; border-radius: 999px;
+    background: rgba(122,63,212,.4); color: #fff; text-decoration: none; font-weight: 700; }
 </style>
 </head>
-<body>
+<body class="st-gated">
+<div class="st-gate" id="st-gate"><div class="st-gate-card"><h2>استوديو البث</h2><p id="st-gate-msg">جاري التحقق…</p><a href="games.html">→ مكتبة الألعاب</a></div></div>
 <div class="st-app">
   <header class="st-top">
     <a class="st-back" href="games.html">→ مكتبة الألعاب</a>
@@ -145,6 +155,24 @@
   </main>
 </div>
 <script src="auth/auth-client.js"></script>
+<script>
+  // بوابة الصفحة: الأدمن أو permissions.stream_studio (نفس فحص زر المكتبة بـgames.html).
+  // الكاش يفتح فوراً، والقرار النهائي من السيرفر (/api/auth/me) عشان المنح/السحب يوصل على طول.
+  (function () {
+    var A = window.AGPAuth;
+    var msg = document.getElementById('st-gate-msg');
+    function ok(u) { return Boolean(u && (u.role === 'admin' || (u.permissions && u.permissions.stream_studio))); }
+    function apply(u, final) {
+      if (ok(u)) { document.body.classList.remove('st-gated'); window.dispatchEvent(new Event('resize')); return; }
+      document.body.classList.add('st-gated');
+      if (final) msg.textContent = u ? 'استوديو البث — إطلاق جديد قريباً. حسابك ما عنده صلاحية الدخول حالياً.'
+                                     : 'سجّل دخولك بالحساب اللي عنده صلاحية استوديو البث.';
+    }
+    if (!A || !A.getToken || !A.getToken()) { apply(null, true); return; }
+    apply(A.getCachedUser && A.getCachedUser(), false);
+    A.refreshUser().then(function (u) { apply(u || null, true); });
+  })();
+</script>
 <script src="js/agp-stream-overlay.js"></script>
 <script src="js/agp-stream-pip.js"></script>
 <script src="js/agp-stream-studio.js"></script>
