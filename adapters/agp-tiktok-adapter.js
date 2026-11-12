@@ -109,13 +109,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('stream:giftReceived', payload);
     }
 
-    function handleIncomingFollow(payload) {
-        AGP.events.emit('stream:followReceived', payload);
-    }
-
-    // التكبيس (لايكات البث بدفعات): { id, name, count }
+    // تكبيسات مشاهد (مجمّعة من الخادم): {id, name, count, avatarUrl} — شد الحبل وفورمولا ون
     function handleIncomingLike(payload) {
         AGP.events.emit('stream:likeReceived', payload);
+    }
+
+    function handleIncomingFollow(payload) {
+        AGP.events.emit('stream:followReceived', payload);
     }
 
     function handleIncomingStatus(payload) {

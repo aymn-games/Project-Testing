@@ -52,9 +52,10 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.FOLLOW, { platform: platform, id: id, name: name });
     },
 
-    /** تكبيس (لايكات) — تيك توك يجمّعها بدفعات، count = عدد التكبيسات بالدفعة. */
+    // تكبيسات (لايكات) مشاهد: count = مجموع التكبيسات بالدفعة (تيك توك يجمّعها، والخادم يجمّعها أكثر كل ~300ms).
+    // avatarUrl = صورة حساب تيك توك (فورمولا ون تكمّل فيها صورة اللاعب لو دخل بدونها).
     buildLikeMessage: function (platform, id, name, count, avatarUrl) {
-        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Number(count) || 1, avatarUrl: avatarUrl || null });
+        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Math.max(1, Number(count) || 1), avatarUrl: avatarUrl || null });
     },
 
     buildErrorMessage: function (platform, code, message) {
