@@ -210,8 +210,9 @@
     function freshFx() { return { nitro: 0, shield: 0, shuttle: 0, stop: 0, portal: 0 }; }
 
     function gridSlot(i) {
-        // صفّين متداخلين خلف خط البداية (مثل شبكة الفورمولا)
-        return { dist: -14 - i * 9, lane: (i % 2 === 0 ? 3 : -3) };
+        // ثلاث سيارات بكل صف خلف خط البداية، وكل صف متدرّج شوي (يمين ← يسار) عشان الشبكة تبان مرصوصة
+        var row = Math.floor(i / 3), col = i % 3;
+        return { dist: -14 - row * 8.5 - col * 1.6, lane: [4.2, 0, -4.2][col] };
     }
 
     function addCar(p) {
@@ -228,6 +229,7 @@
             fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0, tapBank: 0,
             bot: !!p.bot,
             winCard: p.winCard || null,                                   // بطاقة الفوز المملوكة (js/agp-win-card.js)
+            frame: p.frame || null,                                       // الإطار المفعّل (يظهر بلوبي الدخول)
             winVideo: (p.winVideo && (p.winVideo.url || p.winVideo)) || p.winVideoUrl || null,
             character: p.character || null   // شخصية الأنمي المختارة من البروفايل (girl/boy/any/null) — لمراسم النهاية
         };
@@ -252,11 +254,16 @@
     // التكبيس والدعم
     // ------------------------------------------------------------------
     var TAPS_PER_NITRO = 50, NITRO_SECS = 2;
+    // التكبيس: كل تكبيسة ترفع الدواسة، وما دام اللاعب يكبّس (آخر تكبيسة قبل أقل من TAP_HOLD ثانية —
+    // أطول من الفاصل بين دفعات لايكات تيك توك) الدواسة ما تنزل أبداً، فالسيارة ما تهدي.
+    // لو وقف التكبيس، الدواسة تنزل بهدوء لين ترجع السيارة لسرعتها الطبيعية.
+    var TAP_HOLD = 2.5, THROTTLE_DECAY = 0.35;
     function onLike(id, count) {
         var c = S.byId[id]; if (!c || c.finished || S.phase !== 'race') return;
         count = Math.max(1, Math.min(200, Number(count) || 1));
         c.tapsTotal = (c.tapsTotal || 0) + count;
         c.likes += count;
+        c.tapAt = S.raceClock;
         // كل تكبيسة ترفع دواسة الوقود، والحد ١
         c.throttle = Math.min(1, c.throttle + count * 0.045);
         // كل 50 تكبيسة = نيترو. وقت النيترو (الشريط يفضى) التكبيس ما يعبّي الشريط،
@@ -290,15 +297,15 @@
     function applyEffect(c, id, fromTaps) {
         if (!fromTaps) c.gifts++;
         var extra = '';
-        if (id === 'nitro') { c.fx.nitro = NITRO_SECS; c.throttle = 1; }
+        if (id === 'nitro') { c.fx.nitro = NITRO_SECS; }
         else if (id === 'shield') { c.fx.shield = 10; }
         else if (id === 'portal') {
             var ahead = null;
             S.cars.forEach(function (o) { if (o !== c && !o.finished && o.dist > c.dist && (!ahead || o.dist < ahead.dist)) ahead = o; });
             c.dist = ahead ? ahead.dist + 12 : c.dist + 160;
             c.lane = c.laneT = ahead ? (ahead.lane > 0 ? -3 : 3) : c.lane;
-            c.fx.portal = 1; c.throttle = Math.max(c.throttle, 0.8);
-        } else if (id === 'shuttle') { c.fx.shuttle = 3; c.throttle = 1; }
+            c.fx.portal = 1;
+        } else if (id === 'shuttle') { c.fx.shuttle = 3; }
         else if (id === 'rocket') {
             var t = nearestRivals(c, 1);
             if (t[0] && hit(t[0], 3)) extra = ' على <b>' + esc(t[0].name) + '</b>';
@@ -396,11 +403,10 @@
             if (c.finished) { c.speed *= Math.exp(-dt * 0.8); c.dist += c.speed * dt; return; }
             // متسابقين التجربة يكبّسون عشوائياً (نفس مسار التكبيس الحقيقي)
             if (c.bot && fx.stop <= 0 && Math.random() < dt * 4) onLike(c.id, 2 + Math.floor(Math.random() * 7));
-            c.throttle = Math.max(0, c.throttle - dt * 0.28);
-            // إبطاء بالمنعطفات الحادة (يعطي إحساس الكبح)
-            var idx = Math.floor((((c.dist % L) + L) % L) / TRACK.step) % TRACK.count;
-            var corner = Math.min(1, Math.abs(TRACK.curvature[idx]) * 18);
-            var target = BASE_SPEED + c.throttle * BOOST_SPEED * (1 - corner * 0.35);
+            // الدواسة تنزل بس لما يوقف التكبيس (ما دام يكبّس ما تهدي السيارة — ولا بالمنعطفات)
+            if (S.raceClock - (c.tapAt == null ? -99 : c.tapAt) > TAP_HOLD) c.throttle = Math.max(0, c.throttle - dt * THROTTLE_DECAY);
+            var target = BASE_SPEED + c.throttle * BOOST_SPEED;
+            // النيترو والمكوك يزيدون السرعة وقتهم بس، وبعدها ترجع السيارة لسرعة التكبيس نفسها
             if (fx.nitro > 0) target *= 1.08;   // النيترو دفعة خفيفة (المكوك هو الأقوى)
             if (fx.shuttle > 0) target *= 1.7;
             if (fx.stop > 0) target = 0;
@@ -488,9 +494,9 @@
                 }
             }
             effective = S.phase === 'lobby' ? 'orbit' : S.cam.autoMode;
-        } else if (S.phase === 'lobby') {
-            effective = 'orbit';
         }
+        // أول ما تنفتح شاشة السباق (العد التنازلي): لقطة من فوق على الشبكة كاملة، السيارات مصفوفة
+        if (S.phase === 'lobby' || S.phase === 'countdown') effective = 'orbit';
         if (scene) scene.setCamera(effective, S.cam.focus);
         $('camNow').textContent = S.cam.mode === 'auto' && S.phase !== 'lobby' ? 'تلقائي' : camLabel(effective);
     }
@@ -697,7 +703,7 @@
         S.cars.forEach(function (c, i) {
             var sl = gridSlot(i);
             c.dist = sl.dist; c.lane = c.laneT = sl.lane; c.speed = 0; c.throttle = 0; c.finished = false; c.finishAt = 0;
-            c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0;
+            c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0; c.tapAt = null;
         });
         $('podium').classList.remove('show');
         $('cerBanner').classList.remove('shown');
@@ -735,14 +741,43 @@
     }
 
     /** بطاقة اللوبي: بانتظار المتسابقين ← كل شيء جاهز للسباق. */
+    // ------------------------------------------------------------------
+    // لوبي الدخول — نفس تنسيق لوبي روليت الإقصاء: كرت بكلمة الدخول والعدد، وبطاقة لكل لاعب
+    // (صورة حساب تيك توك واسمه، والإطار لمن يملك إطار مفعّل — js/agp-player-card.js، نفس الروليت).
+    // ------------------------------------------------------------------
+    var elShown = {};
     function renderReady() {
-        var n = S.cars.length, kw = esc(settings.keyword);
-        $('rcSub').className = n ? '' : 'wait';
-        $('rcSub').textContent = n ? 'السائقون جاهزون (' + n + ' / ' + settings.maxDrivers + ')' : 'بانتظار المتسابقين';
-        var tapJoin = settings.joinMode !== 'followers';   // المتابعين فقط: التكبيس ما يبيّن مين متابع، فالدخول بالكلمة بس
-        $('rcTitle').innerHTML = n ? 'كل شيء جاهز للسباق' : 'اكتب «' + kw + '» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' للمشاركة';
-        $('rcHint').innerHTML = (n ? 'للمشاركة اكتب «<b>' + kw + '</b>» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' · ' : '') +
-            'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+        var n = S.cars.length, tapJoin = settings.joinMode !== 'followers';   // المتابعين فقط: التكبيس ما يبيّن مين متابع
+        $('elCount').textContent = n;
+        $('elMax').textContent = settings.maxDrivers;
+        $('elKw').textContent = settings.keyword;
+        $('elKwLabel').textContent = 'كلمة الدخول · اكتبها في الشات' + (tapJoin ? ' أو كبّس على البث' : '');
+        $('elNote').textContent = 'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+        var list = $('elList'), PC = AGP.playerCard;
+        var framed = !!PC && S.cars.some(function (c) { return c.frame; });
+        list.classList.toggle('framed', framed);
+        if (!n) { list.innerHTML = '<div class="el-empty">بانتظار انضمام اللاعبين…</div>'; elShown = {}; return; }
+        var X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
+        var cols = innerWidth <= 820 ? 2 : 5, cellW = Math.max(120, (list.clientWidth - 40 - (cols - 1) * 10) / cols);
+        var seen = {};
+        list.innerHTML = S.cars.map(function (c) {
+            var isNew = !elShown[c.id]; seen[c.id] = 1;
+            var kick = '<button type="button" class="el-x' + (c.frame && PC ? ' on-frame' : '') + '" data-kick="' + esc(c.id) + '" aria-label="شيل ' + esc(c.name) + '">' + X + '</button>';
+            var body;
+            if (c.frame && PC) {
+                body = '<div class="el-frame">' + PC.renderHtml({ id: c.id, name: c.name, avatarUrl: c.avatar || null, frame: c.frame },
+                    { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(cellW / 4.96)) }) + '</div>';
+            } else {
+                var init = esc(String(c.name).trim().charAt(0) || '؟');
+                body = '<div class="el-chip"><span class="el-av" style="--car:' + c.color + '">' + init +
+                    (c.avatar ? '<img src="' + esc(c.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+                    '<span class="el-nm">' + esc(c.name) + '</span>' + kick + '</div>';
+                kick = '';
+            }
+            return '<div class="el-p' + (isNew ? ' new' : '') + '">' + body + kick + '</div>';
+        }).join('');
+        elShown = seen;
+        if (framed && PC.fitAllNames) PC.fitAllNames(list);
     }
     function openSettings(on) { document.body.classList.toggle('settings-open', on); }
 
@@ -889,20 +924,21 @@
     }
 
     /** لوحة «طريقة اللعب»: التكبيس، النيترو، ثم كل تأثير بصورة هديته المختارة. */
+    /** لوحة «طريقة اللعب»: سطر كبير لكل تأثير (اسمه) وتحته وش يشغّله (الهدية أو التكبيس) — مقروءة من بث الجوال. */
     function renderPerks() {
-        var row = function (cls, c, ic, small, big) {
-            return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><small>' + small + '</small><b>' + big + '</b></span></div>';
+        var row = function (cls, c, ic, big, small) {
+            return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><b>' + big + '</b><small>' + small + '</small></span></div>';
         };
         var rows = [
-            row('tap', '#a855f7', '👆', 'كبّس على الشاشة', 'سرعة أعلى'),
-            row('', NITRO.color, NITRO.icon, 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'), 'نيترو')
+            row('tap', '#a855f7', '👆', 'سرعة أعلى', 'كبّس على البث'),
+            row('', NITRO.color, NITRO.icon, 'نيترو', 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'))
         ];
         if (settings.giftsOn) {
             EFFECTS.forEach(function (e) {
                 var g = giftById(settings.gifts[e.id]);
-                rows.push(row('', e.color, g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon, g ? esc(g.name) : '', '<i>' + e.icon + '</i> ' + e.name));
+                rows.push(row('', e.color, g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon, e.icon + ' ' + e.name, g ? esc(g.name) : ''));
             });
-            rows.push(row('', NITRO.color, '🎁', 'أي دعم ثاني', 'نيترو'));
+            rows.push(row('', NITRO.color, '🎁', 'نيترو', 'أي دعم ثاني'));
         }
         $('perkList').innerHTML = rows.join('');
     }
@@ -1114,6 +1150,7 @@
             // لاعب دخل بدون صورة (مثلاً بالدعم) ووصلت صورته بتعليق: نحدّثها بالدبوس واللوحات
             var known = S.byId[p.id];
             fillAvatar(known, p.avatarUrl);
+            if (known && !known.frame && p.frame && S.phase === 'lobby') { known.frame = p.frame; renderReady(); }
             if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
             if (settings.joinMode === 'followers' && !p.isFollower) return;
             addCar(p);
@@ -1192,6 +1229,9 @@
         $('wNew').onclick = newRace;
         $('wSame').onclick = function () { resetRace(); stopTest(); };
         $('soundBtn').onclick = function () { setSound(!settings.soundOn); };
+        // لوبي الدخول: زر × يشيل اللاعب من الشبكة، والشبكة تتعدّل مع تغيير حجم الشاشة
+        $('elList').onclick = function (e) { var b = e.target.closest && e.target.closest('[data-kick]'); if (b) removeCar(b.getAttribute('data-kick')); };
+        var elRz = 0; window.addEventListener('resize', function () { clearTimeout(elRz); elRz = setTimeout(function () { if (S.phase === 'lobby') renderReady(); }, 150); });
         // ملء الشاشة (زر بالهيدر) — يتبدّل نصه حسب الحالة، ومع بادئة webkit لسفاري
         var docEl = document.documentElement;
         function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }

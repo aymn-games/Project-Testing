@@ -476,7 +476,8 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
     startLine.position.set(p0.x, 0.035, p0.z); startLine.receiveShadow = true; scene.add(startLine);
     const gridParts = [];
     for (let i = 0; i < 30; i++) {
-        const d = -14 - i * 9 + 3.2, lane = i % 2 === 0 ? 3 : -3, p = trackPoint(d, lane);
+        // نفس gridSlot بـf1-game.js: ثلاث سيارات بكل صف، كل صف متدرّج
+        const row = Math.floor(i / 3), col = i % 3, d = -14 - row * 8.5 - col * 1.6 + 3.2, lane = [4.2, 0, -4.2][col], p = trackPoint(d, lane);
         gridParts.push([new T.BoxGeometry(2.6, 0.01, 0.25), M(p.x, 0.04, p.z, 0, p.heading, 0)]);
         const pl = trackPoint(d - 0.8, lane + 1.2), pr = trackPoint(d - 0.8, lane - 1.2);
         gridParts.push([new T.BoxGeometry(0.2, 0.01, 1.6), M(pl.x, 0.04, pl.z, 0, p.heading, 0)]);
@@ -707,7 +708,9 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             _pv.project(camera); _pu.project(camera);
             if (_pv.z > 1 || _pv.x < -1.2 || _pv.x > 1.2 || _pv.y < -1.2 || _pv.y > 1.3) { if (P.d.style.display !== 'none') P.d.style.display = 'none'; continue; }
             const x = (_pv.x + 1) / 2 * w, y = (1 - _pv.y) / 2 * h, pxPerM = Math.abs(_pu.y - _pv.y) / 2 * h;
-            const size = camMode === 'track' ? 24 : Math.max(32, Math.min(64, pxPerM * 1.15));
+            // حجم الدبوس يتبع مقاس الشاشة (F1_UI_SCALE من index.html) عشان يبقى بنفس النسبة بكل شاشة
+            const ui = window.F1_UI_SCALE || 1;
+            const size = (camMode === 'track' ? 24 : Math.max(32, Math.min(64, pxPerM * 1.15 / ui))) * ui;
             if (P.d.style.display === 'none') P.d.style.display = '';
             P.d.style.setProperty('--s', size.toFixed(1) + 'px');
             P.d.style.transform = 'translate3d(' + (x - size / 2).toFixed(1) + 'px,' + (y - size * 1.2).toFixed(1) + 'px,0)';
@@ -812,12 +815,13 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             // دوران حول شبكة الانطلاق
             // اللوبي: لقطة مائلة من فوق على شبكة الانطلاق، تتمايل بهدوء
             orbitT += dt * 0.25;
-            const n = Math.max(1, cars.size), dc = -14 - (n - 1) * 4.5;
+            // الشبكة ثلاث سيارات بكل صف (gridSlot بـf1-game.js): لقطة من فوق بزاوية تجمع كل الصفوف، شبه ثابتة
+            const rows = Math.max(1, Math.ceil(cars.size / 3)), dc = -15.5 - (rows - 1) * 4.25;
             // من جهة مبنى الصيانة (المدرجات بالجهة الثانية تحجب الرؤية)
-            const look = trackPoint(dc, 0), eye = trackPoint(dc + 16 + n * 1.6, 17 + n * 0.7 + Math.sin(orbitT) * 3);
-            targetPos = new T.Vector3(eye.x, 13 + n * 0.9 + Math.sin(orbitT * 0.7) * 1.2, eye.z);
+            const look = trackPoint(dc, 0), eye = trackPoint(dc + 7 + rows * 1.2, 15 + rows * 2.6 + Math.sin(orbitT) * 0.8);
+            targetPos = new T.Vector3(eye.x, 15 + rows * 3.4 + Math.sin(orbitT * 0.7) * 0.5, eye.z);
             targetLook = new T.Vector3(look.x, 0.5, look.z);
-            fov = 48;
+            fov = 46;
             if (phase === 'finish' && o) { targetLook = o.group.position.clone().setY(1); targetPos = o.group.position.clone().add(new T.Vector3(Math.sin(orbitT * 2) * 12, 5, Math.cos(orbitT * 2) * 12)); fov = 45; }
         } else {
             const g = o.group, fwd = new T.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y));

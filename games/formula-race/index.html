@@ -15,6 +15,7 @@
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../js/agp-win-card.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
 <script src="../../js/agp-remote-control.js"></script>
@@ -25,14 +26,16 @@
 <script src="../../js/agp-auto-connect.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- خط «زين» العريض (900) للوحة طريقة اللعب — نفس خط ألعاب المنصة، أسمك من IBM Plex (أقصاه 700) -->
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
   --agp-accent:#7c3aed;
-  --bg:#07060b; --panel:rgba(16,12,28,.8); --line:rgba(167,139,250,.14);
-  --txt:#f4f4f6; --mut:#9a9caa;
+  --bg:#07060b; --panel:rgba(14,10,26,.86); --line:rgba(167,139,250,.2);
+  --txt:#f6f5fa; --mut:#b4b2c4;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Arabic',sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Arabic',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 button{font-family:inherit;cursor:pointer}
 #stage{position:fixed;inset:0;background:linear-gradient(#3d7fc4,#9cc3e6 55%,#4e8a3a 56%)}
 #stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
@@ -104,7 +107,7 @@ body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:non
 /* اللفة والزمن (وسط أعلى) */
 .lapbox{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:15;display:flex;align-items:center;gap:22px;padding:8px 22px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px)}
 .lapbox>div{display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.lapbox small{font-size:11px;color:var(--mut);font-weight:600}
+.lapbox small{font-size:12px;color:var(--mut);font-weight:700}
 .lapbox b{font-size:24px;font-variant-numeric:tabular-nums;direction:ltr}
 .lapbox .lb-lap b{color:#c4b5fd}
 .lapbox .lb-lap b span:last-child{font-size:15px;color:#cfd0d8}
@@ -114,41 +117,43 @@ body[data-phase="lobby"] .lapbox{display:none}
 
 /* ---------- لوحة الصدارة (يسار) ---------- */
 .tower{position:fixed;top:78px;left:14px;z-index:15;width:280px;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:13px;font-weight:700}
-.tower-h span:last-child{color:var(--mut);font-weight:500;font-size:11.5px}
+.tower-h{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:14.5px;font-weight:700}
+.tower-h span:last-child{color:var(--mut);font-weight:600;font-size:12.5px}
 #towerRows{position:relative;transition:height .3s}
 /* عدّاد وصول التكبيس من البث — يخضرّ لحظة وصول تكبيس (نفس شد الحبل) */
-.tower-taps{padding:7px 12px;border-top:1px solid rgba(167,139,250,.15);font-size:12px;font-weight:600;color:var(--mut);text-align:center;transition:background .3s,color .3s}
+.tower-taps{padding:8px 12px;border-top:1px solid rgba(167,139,250,.15);font-size:13px;font-weight:700;color:var(--mut);text-align:center;transition:background .3s,color .3s}
 .tower-taps.hot{background:rgba(52,211,153,.14);color:#6ee7b7}
-.trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
+.trow{position:absolute;top:0;right:0;left:0;height:40px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
   background:transparent;color:var(--txt);text-align:right;transition:transform .45s cubic-bezier(.3,.8,.3,1),background .2s}
 .trow:hover{background:rgba(255,255,255,.06)}
 .trow.focus{background:linear-gradient(270deg,color-mix(in srgb,var(--team) 38%,transparent),rgba(255,255,255,.03))}
 .trow.locked .tpos::after{content:"📌";position:absolute;font-size:9px;transform:translate(10px,-10px)}
-.tpos{position:relative;width:22px;text-align:center;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
-.tav{width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700;border:2px solid var(--team)}
+.tpos{position:relative;width:22px;text-align:center;font-weight:700;font-size:15.5px;font-variant-numeric:tabular-nums}
+.tav{width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700;border:2px solid var(--team)}
 .tav img{width:100%;height:100%;object-fit:cover}
-.tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}
-.tgap{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
+.tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:700;color:#fff}
+.tgap{font-size:13px;font-weight:600;color:#e4e3ec;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
 .tfx{width:18px;font-size:13px;text-align:center}
 
-/* ---------- طريقة اللعب (يمين) ---------- */
-.perks{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
-.perks h3{margin:2px 4px 6px;font-size:14px;color:#c4b5fd}
-.perk{display:flex;align-items:center;gap:10px;padding:6px 6px;border-radius:10px}
-.perk+.perk{border-top:1px solid rgba(255,255,255,.05)}
-.perk-ic{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
-.perk-ic img{width:28px;height:28px;object-fit:contain}
-.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
-.perk-txt small{font-size:10.5px;color:var(--mut)}
-.perk-txt b{font-size:13.5px;color:#fff}
-.perk-txt b i{font-style:normal;color:var(--c)}
+/* ---------- طريقة اللعب (يمين) ----------
+   المشاهد يشوف هذي اللوحة من بث الستريمر على جواله (الشاشة كاملة تصغر لحوالي ربع حجمها)،
+   فالخط كبير وسميك وبتباين عالي: اسم التأثير 26px، صورة الهدية 52px، خلفية شبه معتمة. */
+.perks{position:fixed;top:78px;right:14px;z-index:15;width:380px;border-radius:18px;background:rgba(10,7,20,.93);border:1.5px solid rgba(167,139,250,.35);backdrop-filter:blur(12px);padding:10px 10px 8px;box-shadow:0 12px 34px rgba(0,0,0,.45)}
+.perks h3{margin:2px 6px 8px;font:900 28px/1.1 'Zain','IBM Plex Sans Arabic',sans-serif;color:#e2d8ff}
+.perk{display:flex;align-items:center;gap:12px;padding:5px 8px;border-radius:12px;background:color-mix(in srgb,var(--c) 9%,transparent)}
+.perk+.perk{margin-top:6px}
+.perk-ic{width:70px;height:70px;display:grid;place-items:center;border-radius:14px;background:color-mix(in srgb,var(--c) 24%,rgba(0,0,0,.35));border:2px solid color-mix(in srgb,var(--c) 70%,transparent);font-size:38px;flex-shrink:0}
+.perk-ic img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1;gap:2px;font-family:'Zain','IBM Plex Sans Arabic',sans-serif}
+.perk-txt b{font-size:34px;font-weight:900;-webkit-text-stroke:.6px #fff;letter-spacing:.3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.8)}
+.perk-txt small{font-size:23px;font-weight:800;color:color-mix(in srgb,var(--c) 45%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.perk-txt b i{font-style:normal}
 .perk.tap .perk-ic{animation:tap 1s ease-in-out infinite}
-@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 
 /* ---------- الخريطة (يمين تحت) ---------- */
 .mapbox{position:fixed;right:14px;bottom:14px;z-index:15;width:280px;height:190px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);overflow:hidden}
-.mapbox-h{position:absolute;top:8px;right:12px;left:12px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;pointer-events:none}
+.mapbox-h{position:absolute;top:8px;right:12px;left:12px;display:flex;justify-content:space-between;font-size:14px;font-weight:700;pointer-events:none}
 .mapbox-h span:last-child{color:#4ade80;font-weight:600;font-size:11px}
 #minimap{width:100%;height:100%;display:block}
 body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);width:min(760px,70vw);height:min(480px,60vh)}
@@ -157,23 +162,23 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .bottom{position:fixed;bottom:14px;left:14px;z-index:16;width:330px}
 .fcard{border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:12px;border-top:3px solid var(--team)}
 .fc-top{display:flex;align-items:center;gap:10px}
-.f-pos{font-weight:800;font-size:26px;font-style:italic;color:#ffd76a;line-height:1}
+.f-pos{font-weight:700;font-size:28px;font-style:italic;color:#ffd76a;line-height:1}
 .fc-who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
-.fc-who small{font-size:10.5px;color:#4ade80}
-.f-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.f-av{width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
+.fc-who small{font-size:12px;font-weight:600;color:#4ade80}
+.f-name{font-weight:700;font-size:18px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-av{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
 .f-av img{width:100%;height:100%;object-fit:cover}
 .f-lock{font-size:11px;color:#c4b5fd;padding:1px 6px;border-radius:6px;background:rgba(139,92,246,.16)}
 .fc-mid{display:flex;align-items:flex-end;gap:8px;margin-top:8px}
 .f-speed{display:flex;flex-direction:column;line-height:1}
 .f-speed b{font-size:34px;font-variant-numeric:tabular-nums}
-.f-speed small{font-size:10px;color:var(--mut);margin-top:3px}
+.f-speed small{font-size:11.5px;font-weight:600;color:var(--mut);margin-top:3px}
 /* عدّاد النيترو: يتعبّى بالتكبيس (10 خانات × 5 تكبيسات)، ولما يكتمل يصير نيترو ويستهلك لين يخلص */
 .ngauge{margin-inline-start:auto;width:172px;display:flex;flex-direction:column;gap:5px;margin-bottom:4px}
-.ng-head{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#cbd5e1}
+.ng-head{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#e2e8f0}
 .ng-ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;background:rgba(139,92,246,.16);border:1px solid rgba(167,139,250,.4);transition:all .25s}
-.ng-cnt{margin-inline-start:auto;font-size:11px;font-weight:600;color:#94a3b8;font-variant-numeric:tabular-nums;direction:ltr}
-.ng-cnt b{color:#fff;font-size:12.5px}
+.ng-cnt{margin-inline-start:auto;font-size:12px;font-weight:600;color:#b8c2d3;font-variant-numeric:tabular-nums;direction:ltr}
+.ng-cnt b{color:#fff;font-size:14px}
 .ng-track{position:relative;height:10px;border-radius:999px;padding:2px;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 3px rgba(0,0,0,.6);overflow:hidden}
 .ng-track i{position:absolute;inset:2px;border-radius:999px;transform-origin:right;transform:scaleX(0);
   background:linear-gradient(270deg,#c084fc,#a855f7 55%,#6d28d9);box-shadow:0 0 8px rgba(168,85,247,.6);transition:transform .18s ease-out}
@@ -192,7 +197,7 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .f-fx span{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);animation:pulse .6s ease-in-out infinite alternate}
 @keyframes pulse{to{filter:brightness(1.5)}}
 .fc-cam{display:flex;gap:6px;margin-top:10px}
-.fc-cam button{height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e5e5ea;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap}
+.fc-cam button{height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#f1f0f6;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap}
 .fc-cam button:hover{border-color:rgba(255,255,255,.3)}
 .fc-cam .arr{width:34px;padding:0;font-size:18px}
 .fc-cam .grow{flex:1}
@@ -200,8 +205,8 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 
 /* ---------- التنبيهات ---------- */
 #toasts{position:fixed;top:128px;left:50%;transform:translateX(-50%);z-index:17;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;width:min(520px,90vw)}
-.toast{padding:8px 14px;border-radius:10px;background:rgba(16,11,30,.9);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-.toast b{color:#fff}
+.toast{padding:9px 15px;border-radius:10px;background:rgba(16,11,30,.92);font-weight:600;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.toast b{color:#fff;font-weight:700}
 .toast .t-sub{color:var(--mut);font-size:11px}
 .toast.out{animation:tout .4s ease both}
 @keyframes tin{from{opacity:0;transform:translateY(-10px) scale(.95)}}
@@ -311,7 +316,6 @@ body:not([data-phase="lobby"]) #readyCard{display:none}
 
 .btn-mini{height:30px;padding:0 12px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600}
 .btn-mini:hover{border-color:var(--agp-accent)}
-.perk-ic img{width:24px;height:24px;object-fit:contain}
 #picker{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
 #picker.show{display:flex}
 .pk-box{width:min(640px,100%);max-height:80vh;display:flex;flex-direction:column;border-radius:18px;background:#101116;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}
@@ -361,7 +365,60 @@ body.ceremony #podium h2,body.ceremony #podiumSteps{display:none}
 body.ceremony #podium .btn-start{height:46px}
 
 /* كل اللوحات العائمة أصغر 30% (الهيدر بدون تغيير) — تغطي أقل من شاشة البث */
-.tower,.perks,.mapbox,.bottom,.lapbox,#toasts,#readyCard,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
+.perks,.mapbox,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
+/* لوحة الصدارة وبطاقة اللاعب أكبر شوي، وطريقة اللعب بخط أكبر وأسمك (طلب الستريمر) */
+.tower,.bottom{zoom:.8}
+.perks{zoom:.85}   /* أصغر شوي من الحجم الكامل، والخط عريض عشان يبان من بث الجوال */
+/* وضوح النصوص فوق المشهد: ظل خفيف ناعم لكل اللوحات */
+.tower,.perks,.mapbox,.bottom,.lapbox,.toast,#ctrlMenu,#cerBanner{text-shadow:0 1px 2px rgba(0,0,0,.55)}
+
+
+/* ===== لوبي الدخول (نفس تنسيق لوبي روليت الإقصاء) ===== */
+@keyframes elRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#entryLobby{position:fixed;inset:0;z-index:19;display:none;background:#07060b;color:#f4f2f8;overflow:hidden}
+body[data-phase="lobby"] #entryLobby{display:block}
+body[data-phase="lobby"] .tower,body[data-phase="lobby"] .perks,body[data-phase="lobby"] .mapbox{visibility:hidden}
+.el-fx{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(900px 900px at 95% -10%,rgba(124,58,237,.22),transparent 65%),radial-gradient(800px 800px at -5% 55%,rgba(139,92,246,.12),transparent 65%),radial-gradient(1000px 700px at 55% 120%,rgba(168,85,247,.1),transparent 65%)}
+.el-fx::before{content:"";position:absolute;inset:0;opacity:.6;background-image:radial-gradient(1.5px 1.5px at 12% 18%,rgba(255,255,255,.3),transparent 60%),radial-gradient(1.5px 1.5px at 72% 32%,rgba(255,255,255,.25),transparent 60%),radial-gradient(2px 2px at 38% 76%,rgba(255,255,255,.3),transparent 60%),radial-gradient(1.5px 1.5px at 86% 82%,rgba(255,255,255,.2),transparent 60%),radial-gradient(1.5px 1.5px at 24% 52%,rgba(255,255,255,.2),transparent 60%),radial-gradient(2px 2px at 58% 12%,rgba(255,255,255,.28),transparent 60%);background-size:420px 420px}
+.el-wrap{position:absolute;top:60px;left:0;right:0;bottom:0;width:100%;max-width:1080px;margin:0 auto;box-sizing:border-box;padding:0 clamp(12px,2.5vw,32px);display:flex;flex-direction:column}
+.el-head{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:clamp(10px,1.8vh,18px) 0 clamp(14px,2.6vh,26px);text-align:center}
+.el-game{font-size:clamp(14px,1.4vw,18px);font-weight:600;color:#a8a3b5;letter-spacing:.5px}
+.el-title{font-size:clamp(32px,4.2vw,56px);font-weight:700;line-height:1.1;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
+.el-card{flex:1;min-height:0;display:flex;flex-direction:column;border-radius:26px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1.5px solid #a78bfa80;box-shadow:0 20px 60px rgba(0,0,0,.3),0 0 50px #a78bfa2e;overflow:hidden;position:relative}
+.el-halo{position:absolute;top:-100px;left:50%;width:460px;height:200px;margin-left:-230px;border-radius:50%;background:#a78bfa2e;filter:blur(44px);pointer-events:none}
+.el-top{position:relative;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:clamp(16px,2vw,24px) clamp(18px,2.2vw,28px);border-bottom:1px solid rgba(255,255,255,.06)}
+.el-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.el-name{display:flex;align-items:center;gap:10px;min-width:0;font-size:clamp(18px,1.7vw,22px);font-weight:700;color:#a78bfa}
+.el-name i{width:12px;height:12px;flex-shrink:0;border-radius:50%;background:#a78bfa;box-shadow:0 0 14px #a78bfa}
+.el-count{flex-shrink:0;display:flex;align-items:baseline;gap:4px;padding:6px 14px;border-radius:999px;background:#a78bfa14;border:1px solid #a78bfa40}
+.el-count b{font-size:20px;color:#a78bfa;font-variant-numeric:tabular-nums}
+.el-count>span{font-size:13px;font-weight:500;color:#a8a3b5}
+.el-kw{display:flex;flex-direction:column;gap:8px;min-width:0}
+.el-kw-l{font-size:13px;font-weight:500;color:#8a8596}
+.el-kw-v{align-self:stretch;text-align:center;box-sizing:border-box;padding:10px 22px;border-radius:999px;background:#a78bfa14;border:1.5px dashed #a78bfa;font-size:clamp(24px,3vw,36px);font-weight:700;line-height:1.2;color:#a78bfa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.el-list{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:clamp(12px,1.6vw,20px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:54px;align-items:center;align-content:start;gap:10px}
+.el-list::-webkit-scrollbar{display:none}
+.el-list.framed{grid-auto-rows:100px;gap:6px 10px}
+.el-empty{grid-column:1/-1;min-height:140px;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font-size:14px;font-weight:500;text-align:center;padding:20px}
+.el-p{min-width:0;height:100%;display:flex;align-items:center;position:relative}
+.el-p.new{animation:elRise .4s cubic-bezier(.2,1.3,.4,1) both}
+.el-chip{width:100%;min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.el-av{width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,#a78bfa,#a78bfa66);border:1.5px solid var(--car,#a78bfa);box-sizing:border-box;font-size:16px;font-weight:700;color:#fff}
+.el-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.el-nm{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.el-x{width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s,transform .2s}
+.el-x:hover{opacity:1;transform:scale(1.15)}
+.el-frame{width:100%;height:100px;display:flex;justify-content:center;align-items:center;direction:ltr;overflow:visible;line-height:0}
+.el-p .el-x.on-frame{position:absolute;top:2px;left:2px;z-index:3;filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+.el-actions{flex-shrink:0;display:flex;justify-content:center;align-items:center;gap:10px;padding:clamp(10px,2vh,18px) 0 6px}
+.el-go{flex:1;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic',sans-serif;box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2);transition:filter .2s,transform .15s}
+.el-go:hover{filter:brightness(1.1)}.el-go:active{transform:scale(.97)}
+.el-go:disabled{opacity:.4;cursor:not-allowed;filter:none;transform:none}
+.el-sec{height:clamp(46px,5.5vh,54px);padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 14px 'IBM Plex Sans Arabic',sans-serif;cursor:pointer;white-space:nowrap}
+.el-sec:hover{background:rgba(255,255,255,.09)}
+.el-note{flex-shrink:0;margin:0;padding:0 0 clamp(14px,2.6vh,24px);text-align:center;font-size:13px;color:#8a8596}
+@media (max-width:820px){.el-list{grid-template-columns:repeat(2,minmax(0,1fr))}.el-actions{flex-wrap:wrap}.el-go{flex-basis:100%}}
 
 /* إخفاء الواجهة (H) — لقطة بث نظيفة */
 body.clean .perks,body.clean .mapbox{display:none}
@@ -371,6 +428,7 @@ body.no3d .fc-cam{display:none}
   .perks{display:none}
 }
 @media (max-width:760px){
+  .tower,.bottom,.perks{zoom:.7}
   .top{height:54px;padding:0 10px}
   .brand span{display:none}
   .top-l .btn-ghost span,.btn-exit span{display:none}
@@ -400,6 +458,32 @@ body.no3d .fc-cam{display:none}
   .step.p1 .pod-av{width:72px;height:72px}.pod-av{width:56px;height:56px}
 }
 </style>
+<script>
+/* مقاس مرن لكل الشاشات: التصميم مضبوط على 1920×1080، وعلى أي شاشة ثانية كل اللوحات تتكبّر/تتصغّر
+   بنفس النسبة (الأصغر من نسبة العرض ونسبة الارتفاع) — فالشكل والنِّسب نفسها بكل شاشة وبالبث اللي
+   يشوفه المشاهد. الحد الأدنى 0.62 (شاشات اللابتوب الصغيرة) والأعلى 2 (4K).
+   الجوال (عرض 760 أو أقل) له ترتيب خاص بالـ@media فوق، فما نلمسه.
+   الشاشات الكاملة (لوبي الدخول، الإعدادات، الفوز) مرنة أصلاً للصغير، فتتكبّر بس بالشاشات الأكبر من 1080. */
+(function () {
+    var BASE = { '.tower,.bottom': .8, '.perks': .85,
+        '.mapbox,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest': .7 };
+    var FULL = '#entryLobby .el-wrap,.lobby .er,#winScreen .w-wrap,#picker .pk-box';
+    var tag = document.createElement('style'); tag.id = 'f1-fit'; document.head.appendChild(tag);
+    function fit() {
+        var w = innerWidth, h = innerHeight;
+        if (w <= 760) { tag.textContent = ''; window.F1_UI_SCALE = 1; return; }
+        var k = Math.max(.62, Math.min(2, Math.min(w / 1920, h / 1080)));
+        k = Math.round(k * 100) / 100;
+        window.F1_UI_SCALE = k;
+        var css = '';
+        for (var sel in BASE) css += sel + '{zoom:' + (BASE[sel] * k).toFixed(3) + '}';
+        // الهيدر وقائمة التحكم للستريمر نفسه (أزرار يضغطها): تكبر بالشاشات الكبيرة بس وما تصغر
+        if (k > 1) css += FULL + '{zoom:' + k + '}.top{zoom:' + k + '}#ctrlMenu{zoom:' + (.85 * k).toFixed(3) + '}';
+        tag.textContent = css;
+    }
+    fit(); addEventListener('resize', fit);
+})();
+</script>
 </head>
 <body>
 <div id="stage"></div>
@@ -539,17 +623,37 @@ body.no3d .fc-cam{display:none}
   </div>
 </div>
 
-<!-- اللوبي: السيارات على الشبكة + بطاقة الجاهزية -->
-<div id="readyCard">
-  <small id="rcSub" class="wait">بانتظار المتسابقين</small>
-  <h2 id="rcTitle">اكتب «<span class="kw-now">سباق</span>» بالشات للمشاركة</h2>
-  <p id="rcHint">التكبيس يزيد سرعتك · كل 50 تكبيسة تعطيك نيترو</p>
-  <div class="rc-actions">
-    <button class="btn-start" id="startBtn2" type="button" disabled>🚦 ابدأ السباق</button>
-    <button class="btn-sec" id="settingsBtn" type="button">⚙ الإعدادات</button>
-    <button class="btn-sec" id="testBtn2" type="button">▷ تجربة</button>
+<!-- لوبي الدخول — نفس تنسيق لوبي روليت الإقصاء: اسم اللعبة، «لوبي الدخول»، كرت بكلمة الدخول
+     وعدد اللاعبين، وشبكة بطاقات اللاعبين (الصورة والاسم، والإطار لمن يملك إطار — js/agp-player-card.js). -->
+<section id="entryLobby" aria-label="لوبي الدخول">
+  <div class="el-fx" aria-hidden="true"></div>
+  <div class="el-wrap">
+    <div class="el-head">
+      <span class="el-game">فورمولا ون</span>
+      <span class="el-title">لوبي الدخول</span>
+    </div>
+    <section class="el-card">
+      <span class="el-halo" aria-hidden="true"></span>
+      <div class="el-top">
+        <div class="el-row">
+          <span class="el-name"><i></i><span>المتسابقين</span></span>
+          <span class="el-count"><b id="elCount">0</b><span>/ <span id="elMax">12</span> لاعب</span></span>
+        </div>
+        <div class="el-kw">
+          <span class="el-kw-l" id="elKwLabel">كلمة الدخول · اكتبها في الشات</span>
+          <span class="el-kw-v" id="elKw">سباق</span>
+        </div>
+      </div>
+      <div class="el-list" id="elList"></div>
+    </section>
+    <div class="el-actions">
+      <button class="el-go" id="startBtn2" type="button" disabled>ابدأ السباق<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <button class="el-sec" id="settingsBtn" type="button">⚙ الإعدادات</button>
+      <button class="el-sec" id="testBtn2" type="button">▷ تجربة</button>
+    </div>
+    <p class="el-note" id="elNote">التكبيس يزيد سرعتك · كل 50 تكبيسة تعطيك نيترو</p>
   </div>
-</div>
+</section>
 
 <div id="toasts"></div>
 
