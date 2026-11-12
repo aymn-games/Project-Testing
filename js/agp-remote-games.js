@@ -26,6 +26,7 @@
         { id: 'memory-challenge', name: 'تحدي الذاكرة', icon: '🧠', url: 'games/memory-challenge/index.html', ready: true },
         { id: 'luck-color', name: 'حظ و لون', icon: '🎨', url: 'games/luck-color/index.html' }, // تحت التجربة: تفتح للأدمن بس (lc-platform.js)
         { id: 'survival-ship', name: 'سفينة النجاة', icon: '🚢', url: 'games/survival-ship/index.html', ready: true },
+        { id: 'formula-race', name: 'فورمولا ون', icon: '🏎️', url: 'games/formula-race/index.html', ready: true },
         { id: 'rock-paper-scissors', name: 'حجرة ورقة مقص', icon: '✊', url: 'games/rock-paper-scissors/index.html', ready: true },
         { id: 'team-war', name: 'حرب الفريقين', icon: '⚔️', url: 'games/team-war/index.html', ready: true },
         { id: 'khazna', name: 'الخزنة', icon: '🔐', url: 'games/khazna/index.html', ready: true },
@@ -33,6 +34,7 @@
         { id: 'dots', name: 'توصيل النقاط', icon: '🔵', url: 'games/dots/index.html', ready: true },
         { id: 'penalty', name: 'ركلات الترجيح', icon: '⚽', url: 'games/penalty/index.html', ready: true },
         { id: 'fastest-answer', name: 'أسرع إجابة', icon: '⚡', url: 'games/fastest-answer/index.html', ready: true },
+        { id: 'lamha', name: 'محِك العقول', icon: '🧠', url: 'games/lamha/index.html', ready: true },
         { id: 'letters-cell', name: 'خلية الحروف', icon: '🐝', url: 'games/letters-cell/index.html', ready: true },
         { id: 'word-hive', name: 'كوّن كلمة', icon: '🍯', url: 'games/word-hive/index.html', ready: true },
         { id: 'word-chain', name: 'سلسلة الكلمات', icon: '🔗', url: 'games/word-chain/index.html', ready: true },
