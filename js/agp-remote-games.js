@@ -31,7 +31,6 @@
         { id: 'team-war', name: 'حرب الفريقين', icon: '⚔️', url: 'games/team-war/index.html', ready: true },
         { id: 'khazna', name: 'الخزنة', icon: '🔐', url: 'games/khazna/index.html', ready: true },
         { id: 'xo', name: 'إكس أو', icon: '❌', url: 'games/xo/index.html', ready: true },
-        { id: 'tug-of-war', name: 'شد الحبل', icon: '🪢', url: 'games/tug-of-war/index.html', ready: true },
         { id: 'dots', name: 'توصيل النقاط', icon: '🔵', url: 'games/dots/index.html', ready: true },
         { id: 'penalty', name: 'ركلات الترجيح', icon: '⚽', url: 'games/penalty/index.html', ready: true },
         { id: 'fastest-answer', name: 'أسرع إجابة', icon: '⚡', url: 'games/fastest-answer/index.html', ready: true },

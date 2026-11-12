@@ -1,9 +1,7 @@
 /**
  * بلدة الكاوبوي — طبقة الربط مع المنصة (نفس نمط games/elimination-roulette/er-platform.js).
  *
- *  - الرابط الخاص: اللعبة مو بمكتبة الألعاب (games.html)، وتنفتح بس بالرابط اللي فيه المفتاح
- *    games/cowboy-duel/?k=<KEY>. أول فتح يحفظ المفتاح بالمتصفح، فالانتقال بين الإعدادات
- *    واللعبة ما يحتاج المفتاح بالرابط. بدونه يرجع لمكتبة الألعاب.
+ *  - اللعبة بمكتبة الألعاب (games.html) — أول بطاقة. (كانت قبل برابط خاص فيه مفتاح، وانشال.)
  *  - حالة الاتصال بالبث: من الاتصال الموثّق المحفوظ ('agp:agp-stream-connection').
  *  - الشات (الدخول بكلمة الدخول): AGP.streamConnector + adapters/agp-tiktok-adapter.js ('stream:commentReceived').
  *    الاتصال من صفحة اللعبة نفسها = اللعبة تطلع بـ«البثوث الحالية» (الخادم يقرأ اسمها من
@@ -15,19 +13,8 @@
     'use strict';
 
     var AGP = window.AymanGamesPlatform || {};
-    var KEY = 'wst-8k3q7m2x';                     // مفتاح الرابط الخاص
-    var KEY_STORE = 'cowboy-duel:key';
     var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
     var ROOT = '../../';
-
-    // ---- الرابط الخاص (يُفحص أول ما يتحمّل الملف — قبل ما تنرسم الصفحة)
-    function hasAccess() {
-        var k = null;
-        try { k = new URLSearchParams(location.search).get('k'); } catch (e) { }
-        if (k === KEY) { try { localStorage.setItem(KEY_STORE, KEY); } catch (e) { } return true; }
-        try { return localStorage.getItem(KEY_STORE) === KEY; } catch (e) { return false; }
-    }
-    if (!hasAccess()) { location.replace(ROOT + 'games.html'); return; }
 
     function readJSON(key, fallback) { try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; } }
     function getSavedConnection() { var d = readJSON(STREAM_CONNECTION_STORAGE_KEY, null); return d && typeof d.username === 'string' && d.username ? d : null; }
