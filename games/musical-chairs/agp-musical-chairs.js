@@ -712,6 +712,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#mc-add-modal .mc-card{width:520px;height:700px;max-width:100%;gap:16px;overflow:hidden;}',
             '#mc-song-modal .mc-card{width:min(560px,100%);gap:16px;}',
             '.mc-song-search{display:flex;flex-direction:column;gap:14px;}',
+            '.mc-song-hint{margin:0;padding:10px 14px;border-radius:16px;background:rgba(124,58,237,.12);',
+            'border:2px solid rgba(167,139,250,.28);font-size:14px;font-weight:700;line-height:1.7;color:var(--mc-label);text-align:right;}',
             '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:var(--mc-label);}',
             '.mc-add-done{flex-shrink:0;height:56px;font-size:18px;}',
             '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;',
@@ -1025,35 +1027,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-settings-initial-box .mc-settings-footer{flex:0 0 auto !important;width:100% !important;display:flex !important;',
             'justify-content:center !important;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px) !important;}',
 
-            /* — شكل «سميك» لشاشة الإعدادات الأولى (نفس سماكة شاشة اللعب)،
-             *   مع لون بنفسجي أغنى شوي وعمق أوضح (ظلال أعمق ولمعة علوية). — */
-            '.mc-settings-initial-box{--mc-glass:linear-gradient(180deg,rgba(46,36,74,.97),rgba(24,19,38,.97));',
-            '--mc-line:rgba(167,139,250,.38);--mc-ctl-bg:rgba(124,58,237,.12);--mc-ctl-line:rgba(167,139,250,.42);',
-            '--mc-depth:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -2px 0 rgba(0,0,0,.25),0 18px 40px rgba(0,0,0,.55),0 0 34px rgba(124,58,237,.14);}',
-            '.mc-er-section{border-width:2.5px !important;}',
-            '.mc-er-sec-head{border-bottom-width:2px !important;border-bottom-color:rgba(167,139,250,.18) !important;}',
-            '.mc-er-sec-num{width:40px !important;height:40px !important;font-size:17px !important;',
-            'box-shadow:0 6px 18px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(46,16,101,.4) !important;}',
-            '.mc-er-sec-title{font-size:clamp(19px,1.55vw,23px) !important;}',
-            '.mc-er-section > .agp-shell-row + .agp-shell-row,.mc-er-section > .agp-shell-field + .agp-shell-row{',
-            'border-top:2px solid rgba(167,139,250,.14) !important;}',
-            '.mc-er-section .agp-shell-row-label,.mc-er-section > .agp-shell-field > label{font-weight:800 !important;',
-            'font-size:clamp(16px,1.25vw,18px) !important;}',
-            '.mc-er-section .agp-pill-group,.mc-er-section .agp-shell-counter-row,.mc-er-section > .agp-shell-field > input[type=text]{',
-            'border-width:2.5px !important;box-shadow:inset 0 3px 8px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.05) !important;}',
-            '.mc-er-section .agp-pill-group,.mc-er-section .agp-shell-counter-row{padding:5px !important;}',
-            '.mc-er-section .agp-pill-btn{height:44px !important;font-size:15px !important;font-weight:800 !important;}',
-            '.mc-er-section .agp-pill-btn.agp-pill-active{box-shadow:0 6px 20px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.3),',
-            'inset 0 -2px 0 rgba(46,16,101,.35) !important;}',
-            '.mc-er-section .agp-shell-counter-row button{width:44px !important;height:44px !important;font-weight:800 !important;',
-            'background:rgba(255,255,255,.12) !important;}',
-            '.mc-er-section .agp-count-input{height:44px !important;font-size:20px !important;}',
-            '.mc-er-section > .agp-shell-field > input[type=text]{height:50px !important;font-weight:800 !important;}',
-            '.mc-er-live,.mc-settings-initial-box .agp-shell-conn-link{height:38px !important;font-size:14px !important;font-weight:800 !important;}',
-            '.mc-er-live{border-width:2px !important;}',
-            '.mc-er-exit{height:clamp(44px,3vw,52px) !important;border-width:2.5px !important;font-weight:800 !important;',
-            'background:rgba(248,113,113,.12) !important;}',
-
             /* — اللوبي — */
             '#agp-shell-box.agp-lobby-box{width:min(1080px,100vw) !important;max-width:min(1080px,100vw) !important;',
             'height:calc(100vh - 80px) !important;height:calc(100dvh - 80px) !important;max-height:none !important;',
@@ -1218,6 +1191,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="mc-card-head"><div class="mc-card-title">🎵 اختر أغنيتك</div>' +
                 '<button type="button" class="mc-x" id="mc-song-x" title="إغلاق">✕</button></div>' +
                 '<div class="mc-song-search">' +
+                    '<p class="mc-song-hint">اختر أغنية لـ«الجولة الجاية» أو أضفها لـ«القائمة»، واضغط «تدوير» وتشتغل. ' +
+                        'ولو تبي تبدّلها، اضغط ✕ عندها واختر غيرها.</p>' +
                     '<form class="mc-song-form" id="mc-song-form" autocomplete="off">' +
                         '<input type="search" id="mc-song-q" placeholder="اسم الأغنية أو الفنان" maxlength="80">' +
                         '<button type="submit" id="mc-song-go">بحث</button>' +
