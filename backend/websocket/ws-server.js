@@ -240,7 +240,8 @@ var GAME_NAMES = {
   'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-chain': 'سلسلة الكلمات', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو',
   'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
   'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو',
-  'cowboy-duel': 'بلدة الكاوبوي', 'abyss': 'الهاوية', 'formula-race': 'فورمولا ون'
+  'cowboy-duel': 'بلدة الكاوبوي', 'abyss': 'الهاوية', 'formula-race': 'فورمولا ون',
+  'lamha': 'محِك العقول'
 };
 
 // صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/
