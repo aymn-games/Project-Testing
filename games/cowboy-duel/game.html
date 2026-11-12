@@ -80,41 +80,46 @@ body[data-grade="pov"] #stage canvas{filter:sepia(.3) saturate(1.05) contrast(1.
 
 /* اللوحة المعلّقة اللي تنزل بالرقم */
 /* اللوحة المعلّقة بالأعلى ومايلة: أول تنبيه بأسلوب الكاوبوي، ثم «ارسم!»، ثم الرقم */
-#sign{position:fixed;left:50%;top:clamp(80px,calc(9vh + 22px),116px);z-index:6;transform:translate(-50%,-130%) rotate(-10deg);transform-origin:50% -40px;transition:transform .2s;pointer-events:none;text-align:center}
-#sign .ropes{position:absolute;top:-34px;height:40px !important;left:18%;right:18%;height:66px;border-left:3px solid #7a5a3a;border-right:3px solid #7a5a3a}
-#sign .board{padding:6px 34px 10px;min-width:clamp(220px,26vw,340px);transform:rotate(-4deg);transform-origin:50% 0}
-#sign .ropes{transform:rotate(-4deg);transform-origin:50% 100%}
-#sign .lbl{font:400 clamp(14px,1.5vw,19px) Rakkas,serif;color:#f3d9a8}
-#sign .num{font:400 clamp(64px,9vw,118px)/1 Rye,serif;direction:ltr;background:linear-gradient(180deg,#fff2c4,#f2c14e 45%,#b9761f);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #2a170b) drop-shadow(0 0 16px rgba(242,193,78,.45))}
-#sign .wait{display:none;font:400 clamp(20px,2.5vw,32px)/1.35 Rakkas,serif;color:#f3d9a8;padding:6px 0;max-width:min(78vw,520px);white-space:normal}
+/* تبويب السؤال: كرت كريمي بنص الشاشة فوق الشارع — «اكتب الرقم» + الرقم + «أول من يكتبه يُسقط خصمه» + شريط الوقت */
+#sign{position:fixed;left:50%;top:clamp(84px,13vh,140px);z-index:6;transform:translate(-50%,-20px) scale(.9);opacity:0;pointer-events:none;text-align:center;transition:transform .45s cubic-bezier(.2,1.4,.4,1),opacity .3s;font-family:"IBM Plex Sans Arabic",sans-serif}
+#sign .ropes{display:none}
+#sign .board{min-width:clamp(230px,22vw,320px);padding:14px 26px 14px;border-radius:12px;background:linear-gradient(180deg,#fffaf0,#f3e6c9);border:3px solid #5a3a22;box-shadow:0 14px 34px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.6)}
+#sign .lbl{font:700 clamp(18px,1.9vw,24px)/1.2 "IBM Plex Sans Arabic",sans-serif;color:#3d2410}
+#sign .num{font:700 clamp(76px,9.5vw,128px)/1.05 "IBM Plex Sans Arabic",sans-serif;direction:ltr;color:#7a4a17;background:linear-gradient(180deg,#9a6326,#6b3d10);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:2px 4px}
+#sign.word .num{font-size:clamp(52px,6.5vw,86px);direction:rtl;padding:6px 6px}
+#sign .sub{font:600 clamp(13px,1.35vw,17px) "IBM Plex Sans Arabic",sans-serif;color:#3d2410}
+#sign .tbar{margin:8px auto 0;height:5px;border-radius:9px;background:rgba(61,36,16,.15);overflow:hidden;width:88%}
+#sign .tbar i{display:block;height:100%;width:100%;border-radius:9px;background:#5a3a22;transform-origin:right}
+#sign[data-state="show"] .tbar i{animation:tdrain var(--ans,15s) linear forwards}
+@keyframes tdrain{to{transform:scaleX(0)}}
+#sign .wait,#sign .draw,#sign .dec{display:none}
+#sign .wait{font:700 clamp(20px,2.3vw,30px)/1.4 "IBM Plex Sans Arabic",sans-serif;color:#3d2410;max-width:min(78vw,460px);white-space:normal;padding:10px 0}
 #sign .wait.swap{animation:swapIn .45s cubic-bezier(.3,1.5,.5,1)}
 @keyframes swapIn{from{opacity:0;transform:translateY(-8px) scale(.94)}}
-#sign .draw{display:none;font:400 clamp(44px,6.5vw,84px)/1.1 Rakkas,serif;color:#ffdf8a;text-shadow:0 3px 0 #2a170b,0 0 22px rgba(255,120,40,.7);padding:2px 0}
-#sign .draw small{display:block;font:400 clamp(12px,1.3vw,16px) Rye,serif;letter-spacing:4px;color:#e9c99a;direction:ltr;text-shadow:none}
+#sign .draw{font:700 clamp(50px,6.5vw,86px)/1.1 "IBM Plex Sans Arabic",sans-serif;color:#a3271a;padding:4px 0}
+#sign .draw small{display:block;font:700 clamp(12px,1.2vw,15px) "IBM Plex Sans Arabic",sans-serif;letter-spacing:4px;color:#7a4a17;direction:ltr}
 #sign:not([data-state]),#sign[data-state=""]{visibility:hidden}
-#sign[data-state="ready"]{transform:translate(-50%,0) rotate(0);transition:transform .7s cubic-bezier(.3,1.5,.5,1)}
-#sign[data-state="ready"] .num,#sign[data-state="ready"] .lbl{display:none}
+#sign[data-state="ready"],#sign[data-state="draw"],#sign[data-state="show"],#sign[data-state="decoy"]{opacity:1;transform:translate(-50%,0)}
+#sign[data-state="ready"] .num,#sign[data-state="ready"] .lbl,#sign[data-state="ready"] .sub,#sign[data-state="ready"] .tbar{display:none}
 #sign[data-state="ready"] .wait{display:block}
-#sign[data-state="draw"]{transform:translate(-50%,0);animation:shake .5s linear}
-#sign[data-state="draw"] .num,#sign[data-state="draw"] .lbl,#sign[data-state="draw"] .wait{display:none}
+#sign[data-state="draw"] .num,#sign[data-state="draw"] .lbl,#sign[data-state="draw"] .sub,#sign[data-state="draw"] .tbar{display:none}
 #sign[data-state="draw"] .draw{display:block}
-@keyframes shake{0%,100%{transform:translate(-50%,0)}20%{transform:translate(calc(-50% - 6px),2px)}40%{transform:translate(calc(-50% + 6px),-2px)}60%{transform:translate(calc(-50% - 4px),1px)}80%{transform:translate(calc(-50% + 3px),0)}}
-#sign[data-state="show"]{animation:drop .9s cubic-bezier(.25,1.5,.45,1) both}
-#sign[data-state="show"] .wait,#sign[data-state="show"] .draw{display:none}
-/* كلمة بدل الرقم: خط عربي */
-#sign.word .num{font:400 clamp(48px,6.5vw,88px)/1.15 Rakkas,serif;direction:rtl;padding:0 6px}
-/* الخدعة الحمراء: نفس اللوحة بس أحمر */
-#sign[data-state="decoy"]{animation:drop .7s cubic-bezier(.25,1.5,.45,1) both}
-#sign[data-state="decoy"] .wait,#sign[data-state="decoy"] .draw,#sign[data-state="decoy"] .lbl{display:none}
-#sign[data-state="decoy"] .board{background:linear-gradient(180deg,#7a2418,#5a160e 55%,#45100a);border-color:#2a0805}
-#sign[data-state="decoy"] .num{background:linear-gradient(180deg,#ffd0c4,#ff5a3c 45%,#b3160b);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 3px 0 #2a0805) drop-shadow(0 0 18px rgba(255,60,40,.55))}
+#sign[data-state="draw"] .board{animation:shake .5s linear}
+@keyframes shake{20%{transform:translate(-6px,2px)}40%{transform:translate(6px,-2px)}60%{transform:translate(-4px,1px)}80%{transform:translate(3px,0)}}
+#sign[data-state="show"] .board{animation:pop .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+/* الخدعة الحمراء: نفس الكرت بالأحمر */
+#sign[data-state="decoy"] .lbl,#sign[data-state="decoy"] .sub,#sign[data-state="decoy"] .tbar{display:none}
+#sign[data-state="decoy"] .dec{display:block;font:700 clamp(16px,1.7vw,21px) "IBM Plex Sans Arabic",sans-serif;color:#a3271a}
+#sign[data-state="decoy"] .board{background:linear-gradient(180deg,#fff0ec,#f7d6cc);border-color:#8f1d12;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+#sign[data-state="decoy"] .num{background:linear-gradient(180deg,#e0412c,#9a150b);-webkit-background-clip:text;background-clip:text}
+#sign[data-state="gone"]{opacity:0;transform:translate(-50%,-24px) scale(.94)}
 /* قائمة الأسرع (كل المبارزات في وقت واحد) */
-#feed{position:fixed;left:16px;top:calc(9vh + 12px);z-index:6;display:flex;flex-direction:column;gap:6px;width:min(300px,44vw);pointer-events:none}
-.frow{display:flex;align-items:center;gap:8px;padding:6px 12px;background:linear-gradient(90deg,rgba(43,24,12,.92),rgba(43,24,12,.7));border:1px solid rgba(242,193,78,.45);border-radius:8px;animation:slamRow .4s cubic-bezier(.2,1.6,.4,1)}
-.frow b{flex:1;font:400 17px Rakkas,serif;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.frow .ft{font:400 17px Rye,Rakkas,serif;color:#fff2c4}.frow .fs{font-size:12px;color:#e9c99a;direction:ltr}
-@keyframes slamRow{from{opacity:0;transform:translateX(-30px) scale(1.2)}}
-#sign[data-state="gone"]{transform:translate(-50%,-140%) rotate(8deg);opacity:0;transition:transform .35s ease-in,opacity .3s .1s}
+#feed{position:fixed;right:16px;top:calc(max(12px,2vh) + 64px);z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px;width:min(320px,46vw);pointer-events:none}
+.frow{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 6px;background:rgba(30,17,8,.82);border:1px solid rgba(242,193,78,.35);border-radius:999px;animation:slamRow .4s cubic-bezier(.2,1.6,.4,1);font-family:"IBM Plex Sans Arabic",sans-serif}
+.frow b{font:700 14px "IBM Plex Sans Arabic",sans-serif;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}.frow em{font-style:normal;font-size:13px;color:#e9d6b4}.frow .fx{color:#f2c14e;font-size:14px}
+.frow .ft{font:700 14px "IBM Plex Sans Arabic",sans-serif;color:#f2c14e;direction:ltr}.frow .fs{font-size:12px;color:#e9c99a;direction:ltr}
+@keyframes slamRow{from{opacity:0;transform:translateX(30px) scale(1.1)}}
 @keyframes drop{0%{transform:translate(-50%,-30%) rotate(-12deg) scale(.8)}40%{transform:translate(-50%,6%) rotate(6deg) scale(1.08)}65%{transform:translate(-50%,0) rotate(-3deg)}85%{transform:translate(-50%,0) rotate(1.5deg)}100%{transform:translate(-50%,0) rotate(0) scale(1)}}
 @keyframes pulse{50%{opacity:.55}}
 
@@ -151,7 +156,48 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
 .vx{font:400 20px Rye,Rakkas,serif;color:#fbe7c0;font-style:normal;text-shadow:0 2px 0 #2a170b}
 .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}.vpair{display:flex;align-items:center;gap:6px;font:400 19px Rakkas,serif;color:#fbe7c0}
 #vs .vpair .av{width:46px;height:46px}.vpair i{font-style:normal;color:#f3c98a;font-size:13px}.vmore{grid-column:1/-1;color:#f3c98a;font-size:14px}
-/* بطاقة الفايز بعد السقوط */
+/* ---- المباراة: شريط الجولة فوق + حالة البث + أسماء المتواجهين + تلميحات تحت ---- */
+body.match #title,body.match #counter,body.match .poster{display:none}
+body.match .bar{height:0 !important}
+.ibm{font-family:"IBM Plex Sans Arabic",sans-serif}
+#rpill{position:fixed;left:50%;top:max(12px,2vh);z-index:6;transform:translate(-50%,-14px);opacity:0;transition:all .4s;display:flex;align-items:center;gap:10px;padding:6px 7px 6px 16px;border-radius:999px;background:rgba(36,21,10,.88);border:1px solid rgba(255,235,200,.12);box-shadow:0 6px 18px rgba(0,0,0,.35);font-family:"IBM Plex Sans Arabic",sans-serif;white-space:nowrap}
+body.match #rpill{opacity:1;transform:translate(-50%,0)}
+#rpill .rl{font:700 clamp(15px,1.6vw,20px) "IBM Plex Sans Arabic",sans-serif;color:#fff7e8;padding-inline-start:4px}
+#rpill .rs{padding:4px 12px;border-radius:999px;background:rgba(255,235,200,.08);font:500 clamp(11px,1.1vw,13px) "IBM Plex Sans Arabic",sans-serif;color:#e9d6b4}
+#rpill .rs b{font:700 clamp(14px,1.4vw,17px) "IBM Plex Sans Arabic",sans-serif;color:#f2c14e;margin-inline-end:3px}
+#live{position:fixed;left:16px;top:max(12px,2vh);z-index:6;display:none;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(14,22,40,.85);border:1px solid rgba(120,160,255,.35);font:600 12px "IBM Plex Sans Arabic",sans-serif;color:#cfe0ff}
+#live.on{display:flex}#live i{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80}
+.ntag{position:fixed;left:0;top:0;z-index:5;display:none;align-items:center;gap:6px;pointer-events:none;white-space:nowrap;transform:translate(-50%,-100%);font:700 clamp(12px,1.2vw,15px) "IBM Plex Sans Arabic",sans-serif;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.ntag.on{display:flex}.ntag .av{width:22px;height:22px;border-width:1.5px;border-color:#fff;font-size:11px}
+#hints{position:fixed;left:50%;bottom:max(12px,2.2vh);z-index:6;transform:translate(-50%,14px);opacity:0;transition:all .4s;display:flex;gap:10px;pointer-events:none;white-space:nowrap}
+body.duel #hints{opacity:1;transform:translate(-50%,0)}
+.hint{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:999px;background:rgba(30,17,8,.85);border:1px solid rgba(255,235,200,.12);font:600 clamp(11px,1.15vw,14px) "IBM Plex Sans Arabic",sans-serif;color:#f3e6cf}
+.hint b{color:#f2c14e}.hint svg{width:15px;height:15px;flex:none;stroke:#f3e6cf}
+/* بطاقة القرعة لهالمبارزة (قبل مشهد الدخول) */
+#dOne{position:fixed;inset:0;z-index:11;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .35s;background:rgba(18,10,4,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#dOne.in{opacity:1}
+#dOne .dcard{--ch:150px;--av:84px;--nf:20px;--vf:26px;width:min(460px,calc(100vw - 32px));animation:dPop .5s cubic-bezier(.2,1.5,.4,1) forwards}
+@keyframes dPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+/* إعلان المبارزة على لقطة الكتف */
+#annc{position:fixed;left:50%;bottom:clamp(40px,9vh,96px);z-index:6;transform:translate(-50%,16px);opacity:0;transition:all .45s cubic-bezier(.2,1.3,.4,1);text-align:center;pointer-events:none;font-family:"IBM Plex Sans Arabic",sans-serif}
+#annc.in{opacity:1;transform:translate(-50%,0)}
+#annc .ar{font:600 clamp(13px,1.3vw,16px) "IBM Plex Sans Arabic",sans-serif;color:#fbecd0;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#annc h2{margin:2px 0 10px;font:700 clamp(36px,5vw,64px)/1.1 "IBM Plex Sans Arabic",sans-serif;color:#fff;text-shadow:0 3px 0 rgba(42,23,11,.75),0 0 24px rgba(0,0,0,.55);white-space:nowrap}
+#annc .ach{display:flex;align-items:center;justify-content:center;gap:12px}
+.chipP{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 5px;border-radius:999px;background:rgba(30,17,8,.85);border:1px solid rgba(255,235,200,.14);font:700 clamp(13px,1.35vw,16px) "IBM Plex Sans Arabic",sans-serif;color:#fff;white-space:nowrap}
+.chipP .av{width:30px;height:30px;border-width:2px;border-color:#f2c14e;font-size:14px}
+.chipVs{font:800 clamp(15px,1.6vw,20px) "IBM Plex Sans Arabic",sans-serif;color:#f2c14e;font-style:normal;text-shadow:0 2px 4px rgba(0,0,0,.7)}
+/* تبويب الفايز + «التالي» */
+#winTab{position:fixed;left:50%;bottom:clamp(36px,9vh,96px);z-index:8;transform:translate(-62%,20px) scale(.92);opacity:0;pointer-events:none;transition:all .5s cubic-bezier(.2,1.4,.4,1);display:flex;flex-direction:column;align-items:center;gap:14px;font-family:"IBM Plex Sans Arabic",sans-serif}
+#winTab.in{opacity:1;transform:translate(-62%,0);pointer-events:auto}
+#winTab .wt{display:flex;align-items:center;gap:16px;padding:12px 14px 12px 26px;border-radius:18px;background:linear-gradient(180deg,rgba(48,30,16,.96),rgba(30,18,9,.96));border:2px solid #e9b44c;box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 24px rgba(233,180,76,.25)}
+#winTab .wt .av{width:clamp(78px,7.5vw,104px);height:clamp(78px,7.5vw,104px);border:3px solid #e9b44c;font-size:40px}
+#winTab .wtag2{font:700 clamp(13px,1.3vw,16px) "IBM Plex Sans Arabic",sans-serif;color:#f2c14e}
+#winTab .wn{font:800 clamp(28px,3.6vw,46px)/1.1 "IBM Plex Sans Arabic",sans-serif;color:#fff;max-width:min(46vw,420px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#winTab .ws{white-space:nowrap;font:600 clamp(12px,1.25vw,15px) "IBM Plex Sans Arabic",sans-serif;color:#e9d6b4}
+#winTab .gbtn{font-size:17px;padding:8px 26px;border-radius:12px}
+@media (max-aspect-ratio:1/1){#winTab{transform:translate(-50%,20px) scale(.92)}#winTab.in{transform:translate(-50%,0)}#hints{flex-direction:column;align-items:center;gap:6px}#annc h2{font-size:32px}#annc .ach{flex-direction:column;gap:4px}}
+/* بطاقة الفايز بعد السقوط (كل المبارزات في وقت واحد) */
 #winCard{position:fixed;left:max(16px,5vw);top:50%;z-index:8;transform:translate(-30px,-50%) rotate(-2deg);opacity:0;pointer-events:none;transition:all .5s cubic-bezier(.2,1.4,.4,1);
   width:min(300px,80vw);padding:16px 18px 18px;text-align:center;background:var(--paper);color:#3d2010;clip-path:polygon(2% 0,98% 2%,100% 97%,96% 100%,3% 98%,0 3%);box-shadow:inset 0 0 30px rgba(110,60,20,.55)}
 #winCard.in{opacity:1;transform:translate(0,-50%) rotate(-2deg);pointer-events:auto}
@@ -265,8 +311,15 @@ body.ovl-on #title,body.ovl-on #counter,body.ovl-on .poster{opacity:0;transition
 <div class="poster" id="poster-a"><h3>مطلوب</h3><div class="en">WANTED</div><div class="pava">؟</div><div class="pname">—</div><div class="rw">$500</div><div class="x">أُقصي</div></div>
 <div class="poster" id="poster-b"><h3>مطلوب</h3><div class="en">WANTED</div><div class="pava">؟</div><div class="pname">—</div><div class="rw">$500</div><div class="x">أُقصي</div></div>
 
-<div id="sign"><div class="ropes"></div><div class="board plank"><div class="wait">استعد…</div><div class="draw">ارسم!<small>DRAW!</small></div><div class="lbl">اكتب الرقم بالشات!</div><div class="num">00</div></div></div>
+<div id="sign"><div class="ropes"></div><div class="board"><div class="wait">استعد…</div><div class="draw">ارسم!<small>DRAW!</small></div><div class="dec">خدعة! لا تكتبه</div><div class="lbl">اكتب الرقم</div><div class="num">00</div><div class="sub">أول من يكتبه يُسقط خصمه</div><div class="tbar"><i></i></div></div></div>
 <div id="answer"><div class="card plank"><div class="tag">FASTEST GUN</div><div class="who">—</div><div class="row2"><span class="typed">كتب<b>00</b></span><span class="time">⏱<b>0.00</b> ث</span></div></div></div>
+<div id="rpill"><span class="rl" id="rRound">الجولة 1</span><span class="rs"><b id="rDone">0</b>من <span id="rTotal">0</span> مبارزات حُسمت</span></div>
+<div id="live"><i></i>متصل بالبث</div>
+<div class="ntag" id="tag0"></div><div class="ntag" id="tag1"></div><div class="ntag" id="tag2"></div>
+<div id="hints"><div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>مع الجرس <b id="hintGold">اكتب الرقم الذهبي</b></div><div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>الخطأ لا يُخرجك، حاول مجددًا</div></div>
+<div id="dOne"></div>
+<div id="annc"><div class="ar" id="anRound">الجولة 1</div><h2 id="anTitle">المبارزة 1 من 10</h2><div class="ach" id="anChips"></div></div>
+<div id="winTab"><div class="wt"><span id="wtPic"></span><div><div class="wtag2">فاز بالمبارزة</div><div class="wn" id="wtName">—</div><div class="ws">أطلق في <b id="wtSecs">0.00</b> ث</div></div></div><button class="gbtn" id="nextBtn" type="button">التالي <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M18 5 8 12l10 7z"/><path d="M5 5v14"/></svg></button></div>
 <div id="banner"></div>
 <div id="notice"></div>
 
