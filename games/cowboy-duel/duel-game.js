@@ -174,10 +174,10 @@ function showDraw(pairs) { return new Promise(res => {
     const fit = () => {
         const W = Math.min(1180, innerWidth - 32), avail = innerHeight - $('.dhead').offsetHeight - 110;
         let cols = innerWidth < 640 ? 2 : 3; if (n > 12) cols = innerWidth < 640 ? 3 : 4; if (n > 20) cols = innerWidth < 640 ? 3 : 5;
-        cols = Math.min(cols, Math.max(1, n));
+        const base = cols; cols = Math.min(cols, Math.max(1, n)); // كروت قليلة (نصف النهائي/النهائي): نفس عرض الكرت العادي بالنص
         const rows = Math.ceil(n / cols), gap = rows > 5 ? 8 : 14, ch = Math.max(46, Math.min(124, (avail - gap * (rows - 1)) / rows));
-        const cw = (W - gap * (cols - 1)) / cols, av = Math.min(ch * .52, cw / (pairs.some(d => d.c) ? 4.6 : 3.6));
-        g.style.width = (n < cols * 1 ? 'auto' : W + 'px');
+        const cw = (W - gap * (base - 1)) / base, av = Math.min(ch * .52, cw / (pairs.some(d => d.c) ? 4.6 : 3.6));
+        g.style.width = (n < base ? (W + gap) * n / base - gap : W) + 'px';
         Object.entries({ '--cols': cols, '--tri': innerWidth < 640 && cols > 1 ? 2 : 1, '--gap': gap + 'px', '--ch': ch + 'px', '--av': av + 'px', '--nf': Math.max(10, Math.min(18, ch * .15)) + 'px', '--vf': Math.max(11, Math.min(20, ch * .17)) + 'px' }).forEach(([k, v]) => g.style.setProperty(k, v));
     };
     $('#draw').classList.add('in'); document.body.classList.add('ovl-on'); fit(); addEventListener('resize', fit); SFX.stamp();
