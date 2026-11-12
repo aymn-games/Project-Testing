@@ -212,6 +212,7 @@
         if (AGP.winCard && pl.winCard && AGP.winCard.preloadFor) AGP.winCard.preloadFor(playerForCard(pl));
         SFX.join();
         toast(avatarHtml(pl) + '<span><b style="color:' + teamColor(k) + '">' + esc(pl.name) + '</b> ' + (inMatch() ? 'دخل المباراة مع ' : 'انضم إلى ') + 'الفريق ' + esc(teamName(k)) + '</span>');
+        if (modalTab === 'players') showSettings('players');
         if (S.screen === 'lobby') renderLobbyLists(); else if (inMatch()) { renderHeader(); renderTeamsBar(); }
         else renderHeader();
     }
@@ -398,6 +399,10 @@
     }
     var ICON = {
         exit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+        gear: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+        shuffle: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>',
+        eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+        grid: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
         fs: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
         users: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         stats: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="10"/></svg>',
@@ -406,15 +411,10 @@
     };
     function renderHeader() {
         var h = $('hdr'); if (!h) return;
-        var live = liveStatus === 'on' ? '<span class="live"><i></i>متصل بالبث</span>'
-            : liveStatus === 'connecting' ? '<span class="live wait"><i></i>جاري الاتصال…</span>'
-            : '<a class="live off" href="' + LIB_URL + '"><i></i>غير متصل بالبث</a>';
-        var n = activePlayers().length;
-        var right = '<button class="hb exit" data-act="exit">' + ICON.exit + '<span class="lbl">مكتبة الألعاب</span></button>';
-        if (inMatch()) right += '<button class="hb danger' + (S.endSure ? ' sure' : '') + '" data-act="end"><span>' + (S.endSure ? 'متأكد؟ اضغط مرة ثانية' : 'إنهاء المباراة') + '</span></button>';
-        var left = live + '<button class="hb ic" data-act="fs" title="ملء الشاشة">' + ICON.fs + '</button>';
-        if (S.screen !== 'settings') left += '<button class="hb" data-act="players">' + ICON.users + '<span class="lbl">اللاعبين</span> <span class="n">' + n + '</span></button>';
-        if (inMatch()) left += '<div class="aj"><span class="lbl">الدخول التلقائي</span><button class="tg' + (S.settings.autoJoin ? ' on' : '') + '" data-act="autojoin" aria-label="الدخول التلقائي"><i></i></button></div>';
+        var right = '<button class="hb exit" data-act="exitMenu">' + ICON.exit + '<span class="lbl">خروج</span></button>';
+        if (S.screen !== 'settings') right += '<button class="hb set" data-act="settings">' + ICON.gear + '<span class="lbl">إعدادات المباراة</span></button>';
+        var left = '<button class="hb" data-act="fs">' + ICON.fs + '<span class="lbl">ملء الشاشة</span></button>';
+        if (inMatch()) left = '<div class="aj"><span class="lbl">الدخول التلقائي</span><button class="tg' + (S.settings.autoJoin ? ' on' : '') + '" data-act="autojoin" aria-label="الدخول التلقائي"><i></i></button></div>' + left;
         h.innerHTML = '<div class="hr">' + right + '</div><div class="mid"><img class="logo" src="../../logo.png" alt="ألعاب أيمن"></div><div class="hl">' + left + '</div>';
     }
 
@@ -508,9 +508,11 @@
     function teamsBarHtml() {
         var box = function (k) {
             var turn = S.turn === k && (S.screen === 'board' || (S.cur && S.cur.phase === 'turn'));
+            // الاسم بالطرف · النقاط بالنص · كلمة الدخول تحت الاسم لما يكون الدخول التلقائي مفعّل
+            // اسم الفريق · فراغ فيه كلمة الدخول (لما الدخول التلقائي مفعّل) · النقاط بنهاية التبويب
             return '<div class="tbox t' + k + (turn ? ' turn' : '') + '" style="color:' + teamColor(k) + '">' +
-                '<div class="tn"><b>الفريق ' + esc(teamName(k)) + '</b><span>' + membersOf(k).length + ' لاعب · «' + esc(S.settings.teams[k].kw) + '»</span></div>' +
-                (turn ? '<span class="tt"><em>' + (S.screen === 'board' ? 'دوره يختار' : 'دوره يجاوب') + '</em></span>' : '') +
+                '<div class="tn"><b>الفريق ' + esc(teamName(k)) + '</b>' + (turn ? '<span class="tt"><em>' + (S.screen === 'board' ? 'دوره يختار' : 'دوره يجاوب') + '</em></span>' : '') + '</div>' +
+                '<div class="tkw">' + (S.settings.autoJoin ? '<span>اكتب</span><b>' + esc(S.settings.teams[k].kw) + '</b>' : '') + '</div>' +
                 '<span class="sc" id="sc' + k + '">' + fmtNum(S.teams[k].score) + '</span></div>';
         };
         return '<div class="teams" id="teamsBar">' + box(0) + '<div class="mid-logo">حصيلة</div>' + box(1) + '</div>';
@@ -537,11 +539,16 @@
     function viewQuestion() {
         var c = S.cur, col = S.board[c.col], cat = catOf(col.k), q = c.q;
         var emoji = col.k === 'emoji';
-        var meta = '<div class="qmeta"><span class="qc"><span class="mini">' + ART.svgFor(cat, 'q') + '</span>' + esc(cat.t) + '</span>' +
-            '<span class="qp">' + q.p + '</span><span class="ql">' + LEVEL[q.p] + '</span></div>';
+        // رأس السؤال بدون خلفيات: الفئة يمين · العداد بالنص · نقاط السؤال ومستواه يسار
+        var timerHtml = c.phase === 'done' ? '<div class="qtm"></div>'
+            : '<div class="qtm"><div class="ring" id="ring"><b>' + Math.ceil(Math.max(0, c.endsAt - Date.now()) / 1000) + '</b></div><span class="rl">ثانية</span></div>';
+        var meta = '<div class="qhead">' +
+            '<div class="qcat"><span class="mini">' + ART.svgFor(cat, 'q') + '</span><div><span class="lb">الفئة</span><b>' + esc(cat.t) + '</b></div></div>' +
+            timerHtml +
+            '<div class="qpts"><div><span class="lb">نقاط السؤال</span><b>' + q.p + '</b></div><span class="ql">' + LEVEL[q.p] + '</span></div></div>';
         var hint = emoji ? '<div class="qhint">' + esc(q.hint || 'خمّن') + '</div>' : (col.k === 'proverbs' ? '<div class="qhint">كمّل المثل</div>' : (q.img ? '<div class="qhint">' + esc(q.q) + '</div>' : ''));
         // سؤال بصورة (الشعارات): الصورة بدل نص السؤال
-        var qbody = q.img ? '<div class="qlogo ' + (q.bg === 'dark' ? 'dark' : 'light') + '"><img src="' + esc(q.img) + '" alt=""></div>'
+        var qbody = q.img ? '<div class="qlogo ' + (q.bg === 'dark' ? 'dark' : q.bg === 'flag' ? 'flag' : 'light') + '"><img src="' + esc(q.img) + '" alt=""></div>'
             : '<div class="qtext' + (emoji ? ' emoji' : '') + '">' + esc(q.q) + '</div>';
         var body;
         if (c.phase === 'done') {
@@ -551,15 +558,28 @@
                 '<div class="ans' + (pl ? '' : ' none') + '">' + esc(q.a) + '</div>' +
                 (pl ? '<div class="by">' + avatarHtml(pl) + '<span><b style="color:' + teamColor(pl.team) + '">' + esc(pl.name) + '</b> جاوب صح للفريق ' + esc(teamName(pl.team)) + '</span></div>'
                     : '<div class="by"><span>ما أحد جاوب صح — هذا هو الجواب</span></div>') +
-                '</div><div class="qctl"><button class="bs" data-act="back">رجوع للوحة</button></div>';
+                '</div><div class="qctl"><button class="qbtn back" data-act="back">' + ICON.grid + '<span>رجوع للوحة</span></button></div>';
         } else {
             var who = c.phase === 'turn'
                 ? '💬 الفريق <b style="color:' + teamColor(S.turn) + '">' + esc(teamName(S.turn)) + '</b> يجاوب الحين بالشات — أول جواب صح ياخذ النقاط'
                 : '⏳ خلص وقت الفريق! السؤال <b style="color:#fbbf24">مفتوح للفريقين</b> — أول جواب صح ياخذ النقاط';
-            body = '<div class="qbar"><div class="ring" id="ring"><b>' + Math.ceil(Math.max(0, c.endsAt - Date.now()) / 1000) + '</b></div><div class="who">' + who + '</div></div>' +
-                '<div class="qctl"><button class="bs" data-act="swap">تبديل السؤال</button><button class="bs" data-act="reveal">كشف الجواب</button></div>';
+            body = '<div class="who">' + who + '</div>' +
+                '<div class="qctl"><button class="qbtn swap" data-act="swap">' + ICON.shuffle + '<span>تبديل السؤال</span></button>' +
+                '<button class="qbtn show" data-act="reveal">' + ICON.eye + '<span>كشف الجواب</span></button></div>';
         }
-        return teamsBarHtml() + '<div class="qwrap">' + meta + hint + qbody + body + '</div>';
+        var zoom = '<div class="qzoom" role="group" aria-label="حجم السؤال">' +
+            '<button data-act="qz" data-d="1" aria-label="تكبير السؤال">+</button><span>' + Math.round(qScale * 100) + '%</span>' +
+            '<button data-act="qz" data-d="-1" aria-label="تصغير السؤال">−</button></div>';
+        return teamsBarHtml() + '<div class="qwrap" style="--qs:' + qScale + '">' + meta + '<div class="qmain">' + hint + qbody + '</div>' + body + '</div>' + zoom;
+    }
+    // حجم السؤال (تكبير/تصغير السؤال نفسه بدون زوم الصفحة) — ينحفظ للمرة الجاية
+    var QS_KEY = 'hs-qscale';
+    var qScale = (function () { var v = Number(readJSON(QS_KEY, 1)); return v >= 0.6 && v <= 1.8 ? v : 1; }());
+    function setQScale(d) {
+        qScale = Math.round(Math.min(1.8, Math.max(0.6, qScale + d * 0.1)) * 10) / 10;
+        writeJSON(QS_KEY, qScale);
+        var w = document.querySelector('.qwrap'); if (w) w.style.setProperty('--qs', qScale);
+        var z = document.querySelector('.qzoom span'); if (z) z.textContent = Math.round(qScale * 100) + '%';
     }
     function renderQuestion() { if (S.screen === 'question') { $('app').innerHTML = viewQuestion(); tick(); } }
 
@@ -600,17 +620,18 @@
     function renderWinPoints() { var el = $('winPts'); if (el) el.textContent = S.pointsLabel || '…'; }
 
     // ----- النوافذ: اللاعبين والإحصائيات -----
-    function closeModal() { var m = $('modal'); if (m) m.innerHTML = ''; }
+    function closeModal() { var m = $('modal'); if (m) m.innerHTML = ''; modalTab = null; }
     function openModal(title, html) {
+        modalTab = null;
         $('modal').innerHTML = '<div class="mbg" data-act="closeBg"><div class="mbox" role="dialog" aria-label="' + esc(title) + '"><div class="mh"><b>' + esc(title) + '</b><button class="mx" data-act="close" aria-label="إغلاق">✕</button></div>' + html + '</div></div>';
     }
-    function showPlayers() {
+    function playersHtml() {
         var col = function (k) {
             var m = membersOf(k);
             return '<div><b style="color:' + teamColor(k) + ';font-size:18px">الفريق ' + esc(teamName(k)) + ' (' + m.length + ')</b><div class="plist" style="padding:10px 0;max-height:none">' +
                 (m.length ? m.map(function (p) { return playerChip(p, true); }).join('') : '<span class="empty">ما فيه لاعبين</span>') + '</div></div>';
         };
-        openModal('اللاعبين', '<div class="st-teams" style="grid-template-columns:1fr 1fr;align-items:start">' + col(0) + col(1) + '</div>');
+        return '<div class="st-teams" style="grid-template-columns:1fr 1fr;align-items:start">' + col(0) + col(1) + '</div>';
     }
     function showStats() {
         var rows = activePlayers().slice().sort(function (x, y) { return y.correct - x.correct || x.team - y.team; });
@@ -635,6 +656,65 @@
         openModal('إحصائيات المباراة', html);
     }
 
+    // ----- نافذة الإعدادات (من الهيدر) -----
+    // نفس درج «إعدادات المباراة» بروليت الإقصاء: يطلع من يمين الشاشة تحت الهيدر، فيه تبويبين (الإعدادات / اللاعبين)
+    function segHtml(field, opts) {
+        return '<div class="dseg" style="grid-template-columns:repeat(' + opts.length + ',minmax(0,1fr))">' + opts.map(function (o) {
+            return '<button class="' + (S.settings[field] === o.v ? 'on' : '') + '" data-act="mset" data-f="' + field + '" data-v="' + o.v + '">' + o.t + '</button>';
+        }).join('') + '</div>';
+    }
+    function dcard(title, sub, control, inline) {
+        var head = '<div class="dct"><b>' + title + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>';
+        return '<div class="dcard' + (inline ? ' inl' : '') + '">' + (inline ? head + control : head + control) + '</div>';
+    }
+    function drawerSettingsHtml() {
+        return dcard('وقت الإجابة', 'للفريق اللي اختار السؤال، وبعده ' + OPEN_SECS + ' ثانية مفتوحة للفريقين' + (S.screen === 'question' ? ' — التعديل يطبّق من السؤال الجاي' : ''),
+                segHtml('answerTime', [{ v: 20, t: '20 ثانية' }, { v: 30, t: '30 ثانية' }, { v: 45, t: '45 ثانية' }, { v: 60, t: '60 ثانية' }])) +
+            dcard('مين مسموح له ينضم؟', 'المتابعون فقط: اللي ما يتابع حسابك تتجاهل اللعبة رسالته',
+                segHtml('who', [{ v: 'all', t: 'الجميع' }, { v: 'followers', t: 'المتابعون فقط' }])) +
+            dcard('الدخول التلقائي أثناء المباراة', 'اللاعب الجديد يكتب كلمة الدخول ويدخل حتى بعد بداية المباراة',
+                '<button class="tg' + (S.settings.autoJoin ? ' on' : '') + '" data-act="mtoggle" data-f="autoJoin" role="switch" aria-label="الدخول التلقائي"><i></i></button>', true);
+    }
+    function drawerPlayersHtml() {
+        var n = activePlayers().length;
+        var team = function (k) {
+            var m = membersOf(k);
+            return '<div class="dteam" style="color:' + teamColor(k) + '"><b>الفريق ' + esc(teamName(k)) + '</b><span>' + m.length + ' لاعب</span></div>' +
+                (m.length ? m.map(function (p) {
+                    return '<div class="dprow">' + avatarHtml(p) + '<span class="nm">' + esc(p.name) + '</span>' +
+                        '<button class="dx" data-act="kick" data-id="' + esc(p.id) + '" aria-label="إخراج ' + esc(p.name) + '">✕</button></div>';
+                }).join('') : '<div class="dempty">ما فيه لاعبين</div>');
+        };
+        return '<div class="dph"><span>قائمة اللاعبين</span><b>' + n + ' لاعب</b></div>' + team(0) + team(1);
+    }
+    var modalTab = null; // 'settings' | 'players' لما درج الإعدادات مفتوح
+    function showSettings(tab) {
+        tab = tab === 'players' ? 'players' : 'settings';
+        var tabs = '<div class="dtabs">' +
+            '<button class="' + (tab === 'settings' ? 'on' : '') + '" data-act="mtab" data-t="settings">الإعدادات</button>' +
+            '<button class="' + (tab === 'players' ? 'on' : '') + '" data-act="mtab" data-t="players">اللاعبين</button></div>';
+        var body = tab === 'players' ? drawerPlayersHtml() : drawerSettingsHtml();
+        var existing = document.querySelector('#modal .drawer');
+        if (existing && modalTab) { // الدرج مفتوح: نحدّث المحتوى بدون ما نعيد حركة الفتح
+            existing.querySelector('.dtw').innerHTML = tabs;
+            var b = existing.querySelector('.dbody'), st = b.scrollTop;
+            b.innerHTML = body; if (modalTab === tab) b.scrollTop = st;
+            modalTab = tab; return;
+        }
+        modalTab = tab;
+        $('modal').innerHTML = '<div class="dbg" data-act="closeBg"><aside class="drawer" role="dialog" aria-label="إعدادات المباراة">' +
+            '<div class="dh"><b>إعدادات المباراة</b><button class="dclose" data-act="close" aria-label="إغلاق"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>' +
+            '<div class="dtw">' + tabs + '</div><div class="dbody">' + body + '</div></aside></div>';
+    }
+    // ----- نافذة الخروج: أثناء المباراة تخيّر بين إنهاء المباراة والخروج للمكتبة -----
+    function showExit() {
+        if (!inMatch()) { ACT.exit(); return; }
+        openModal('خروج', '<div class="mexit">' +
+            '<button class="bp" data-act="endNow">' + ICON.trophy + ' إنهاء المباراة وعرض النتيجة</button>' +
+            '<button class="bs" data-act="exit">' + ICON.exit + ' الخروج لمكتبة الألعاب</button>' +
+            '<button class="bs" data-act="close">إلغاء</button></div>');
+    }
+
     // ---------- الأحداث ----------
     var ACT = {
         exit: function () { // بدون تأكيد — ولو اللعبة داخل iframe يطلع الإطار الأعلى
@@ -645,11 +725,20 @@
             if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
             else { var e = d.documentElement; var f = e.requestFullscreen || e.webkitRequestFullscreen; if (f) f.call(e); }
         },
-        players: showPlayers,
+        settings: function () { showSettings('settings'); },
+        mtab: function (el) { showSettings(el.dataset.t); },
+        exitMenu: showExit,
+        endNow: function () { closeModal(); finish(); },
+        mset: function (el) {
+            var f = el.dataset.f, v = el.dataset.v;
+            S.settings[f] = f === 'answerTime' ? Number(v) : v;
+            saveSettings(); showSettings('settings');
+        },
+        mtoggle: function (el) { var f = el.dataset.f; S.settings[f] = !S.settings[f]; saveSettings(); el.classList.toggle('on', S.settings[f]); renderHeader(); if (inMatch()) renderTeamsBar(); },
         stats: showStats,
         close: closeModal,
         closeBg: function (el, ev) { if (ev.target === el) closeModal(); },
-        autojoin: function () { S.settings.autoJoin = !S.settings.autoJoin; saveSettings(); renderHeader(); },
+        autojoin: function () { S.settings.autoJoin = !S.settings.autoJoin; saveSettings(); renderHeader(); if (inMatch()) renderTeamsBar(); if (modalTab === 'settings') showSettings('settings'); },
         end: function () {
             if (!S.endSure) {
                 S.endSure = true; renderHeader();
@@ -680,12 +769,13 @@
         kick: function (el) {
             kick(el.dataset.id);
             if (S.screen === 'lobby') renderLobbyLists();
-            if ($('modal').innerHTML) showPlayers();
+            if (modalTab === 'players') showSettings('players');
             renderHeader(); if (inMatch()) renderTeamsBar();
         },
         start: function () { if (lobbyReady()) resetMatch(); },
         tile: function (el) { openTile(Number(el.dataset.c), Number(el.dataset.r)); },
         swap: swapQuestion,
+        qz: function (el) { setQScale(Number(el.dataset.d)); },
         reveal: function () { reveal(null); },
         back: backToBoard,
         restart: function () { resetMatch(); } // نفس اللاعبين والفئات، أسئلة جديدة
@@ -715,6 +805,27 @@
         }
     };
 
+    // خلفية الشاشة — نفس buildFx بروليت الإقصاء (games/elimination-roulette/game.html)
+    function buildFx() {
+        var fx = $('fx'); if (!fx || fx.childNodes.length) return;
+        var rnd = function (a, b) { return a + Math.random() * (b - a); }, html = '';
+        [['top:-20%;right:-10%;width:900px;height:900px', 'rgba(124,58,237,.22)'],
+         ['top:30%;left:-15%;width:800px;height:800px', 'rgba(139,92,246,.12)'],
+         ['bottom:-30%;left:35%;width:1000px;height:700px', 'rgba(168,85,247,.1)']].forEach(function (g) {
+            html += '<div class="g" style="' + g[0] + ';background:radial-gradient(circle,' + g[1] + ',transparent 65%)"></div>';
+        });
+        html += '<div class="ln"></div>';
+        for (var i = 0; i < 90; i++) {
+            var sz = i % 9 ? 1.5 : 3;
+            html += '<span class="s" style="left:' + rnd(0, 100).toFixed(2) + '%;top:' + rnd(0, 100).toFixed(2) + '%;width:' + sz + 'px;height:' + sz + 'px;background:rgba(255,255,255,' + rnd(.12, .35).toFixed(2) + ')"></span>';
+        }
+        [[88, 14, 14, 1], [73, 82, 18, 0], [16, 66, 10, 1], [42, 8, 12, 0]].forEach(function (q) {
+            html += '<span class="q" style="left:' + q[0] + '%;top:' + q[1] + '%;width:' + q[2] + 'px;height:' + q[2] + 'px;' + (q[3] ? 'background:rgba(139,92,246,.45)' : 'border:1.5px solid rgba(139,92,246,.35)') + '"></span>';
+        });
+        fx.innerHTML = html;
+    }
+
+    buildFx();
     render();
     connectStream();
 }());
