@@ -134,6 +134,12 @@ if (!EULERSTREAM_API_KEY) {
  * السقوط لـ user.id كملاذ أخير.
  */
 var _extractUserDebugLogsRemaining = 5;
+/** عدد التكبيسات بدفعة حدث LIKE: `count` (بروتو v3) أو `likeCount` (نسخ أقدم)، وأقل شي 1. */
+function likeBatchCount(data) {
+    var n = Number(data && (data.count != null ? data.count : data.likeCount));
+    return n > 0 ? Math.floor(n) : 1;
+}
+
 function extractUser(data) {
     var user = (data && data.user) || {};
     var identifier = user.displayId || user.uniqueId || user.id || 'unknown';
@@ -515,11 +521,13 @@ function createTikTokConnector() {
         });
 
         // like/share/member — لإحصائيات البث فقط (stats/live-session-stats.js).
-        // تيك توك يجمّع التكبيسات بدفعات (likeCount) بدل حدث لكل ضغطة.
+        // تيك توك يجمّع التكبيسات بدفعات: عدد التكبيسات بالدفعة بالحقل `count` (نسخة البروتو v3 بالمكتبة
+        // 2.x — WebcastLikeMessage)، والنسخ القديمة كانت `likeCount`. قبل كان يقرأ likeCount بس، فكل دفعة
+        // تنحسب تكبيسة وحدة مهما كان عددها (إحصائيات اللايكات والألعاب اللي تعتمد على التكبيس).
         if (_callbacks.onLike) {
             _connection.on(TikTokLib.WebcastEvent.LIKE, function (data) {
                 var user = extractUser(data);
-                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1, avatarUrls: extractAvatarUrls(data) });
+                _callbacks.onLike({ id: user.id, name: user.name, count: likeBatchCount(data), avatarUrls: extractAvatarUrls(data) });
             });
         }
         if (_callbacks.onShare) {
