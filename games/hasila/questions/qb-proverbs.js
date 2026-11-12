@@ -1,8 +1,8 @@
 /**
- * لوحة التحدي — بنك أسئلة فئة «أمثال» (كمّل المثل).
+ * حصيلة — بنك أسئلة فئة «أمثال» (كمّل المثل).
  * كل سؤال: [المثل والفراغ «…» مكان الكلمة الناقصة، الكلمة الناقصة، (بدائل مقبولة — اختياري)].
  * اللعبة تعرض فوقه «كمّل المثل». مجمّعة حسب النقاط (200 سهل، 400 متوسط، 600 صعب).
- * اللعبة تقرأه من AGP.quizBoardBank.proverbs.
+ * اللعبة تقرأه من AGP.hasilaBank.proverbs.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -351,6 +351,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ['تأبى الرماح إذا اجتمعن تكسرًا، وإذا افترقن تكسرت …', 'آحادا', ['احادا']]
     ]);
 
-    var bank = AGP.quizBoardBank = AGP.quizBoardBank || {};
+    var bank = AGP.hasilaBank = AGP.hasilaBank || {};
     bank.proverbs = { key: 'proverbs', name: 'أمثال', icon: '💬', questions: out };
 })(window.AymanGamesPlatform);

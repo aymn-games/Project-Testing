@@ -1,8 +1,8 @@
 /**
- * لوحة التحدي — بنك أسئلة فئة «ألغاز وفوازير».
+ * حصيلة — بنك أسئلة فئة «ألغاز وفوازير».
  * كل سؤال: [اللغز، الجواب، (بدائل مقبولة — اختياري)]، ومجمّعة حسب النقاط (200 سهل، 400 متوسط، 600 صعب).
  * الجواب كلمة أو كلمتين عشان يلحق اللاعب يكتبه بالشات.
- * اللعبة تقرأه من AGP.quizBoardBank.riddles.
+ * اللعبة تقرأه من AGP.hasilaBank.riddles.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -338,6 +338,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ['شي حلو إذا شلت أول حرف منه صار «مُر»؟', 'التمر', ['تمر']]
     ]);
 
-    var bank = AGP.quizBoardBank = AGP.quizBoardBank || {};
+    var bank = AGP.hasilaBank = AGP.hasilaBank || {};
     bank.riddles = { key: 'riddles', name: 'ألغاز وفوازير', icon: '🧩', questions: out };
 })(window.AymanGamesPlatform);

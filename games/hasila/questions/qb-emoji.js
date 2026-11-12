@@ -1,8 +1,8 @@
 /**
- * لوحة التحدي — بنك أسئلة فئة «إيموجي».
+ * حصيلة — بنك أسئلة فئة «إيموجي».
  * السؤال إيموجي، ومعه تلميح لنوع الجواب (فيلم، دولة، مثل...) يظهر فوقه.
  * كل سؤال: [الإيموجي، الجواب، (بدائل مقبولة — اختياري)]، ومجمّعة حسب النقاط والتلميح.
- * اللعبة تقرأه من AGP.quizBoardBank.emoji (لكل سؤال حقل hint).
+ * اللعبة تقرأه من AGP.hasilaBank.emoji (لكل سؤال حقل hint).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -370,6 +370,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ['🐍🍎📱', 'لعبة الثعبان', ['الثعبان', 'سنيك']]
     ]);
 
-    var bank = AGP.quizBoardBank = AGP.quizBoardBank || {};
+    var bank = AGP.hasilaBank = AGP.hasilaBank || {};
     bank.emoji = { key: 'emoji', name: 'إيموجي', icon: '😎', questions: out };
 })(window.AymanGamesPlatform);

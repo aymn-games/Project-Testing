@@ -1,8 +1,8 @@
 /**
- * لوحة التحدي — بنك أسئلة فئة «السعودية».
+ * حصيلة — بنك أسئلة فئة «السعودية».
  * كل سؤال: [السؤال، الجواب، (بدائل كتابة مقبولة — اختياري)]، ومجمّعة حسب النقاط (200 سهل، 400 متوسط، 600 صعب).
  * المطابقة (ال، ة/ه، الهمزات، الأرقام) تسويها اللعبة، فالبدائل هنا للكلمات المختلفة فعلاً.
- * اللعبة تقرأه من AGP.quizBoardBank.saudi.
+ * اللعبة تقرأه من AGP.hasilaBank.saudi.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -332,6 +332,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ['ما اسم الجبل اللي فيه غار ثور؟', 'جبل ثور', ['ثور']]
     ]);
 
-    var bank = AGP.quizBoardBank = AGP.quizBoardBank || {};
+    var bank = AGP.hasilaBank = AGP.hasilaBank || {};
     bank.saudi = { key: 'saudi', name: 'السعودية', icon: '🇸🇦', questions: out };
 })(window.AymanGamesPlatform);
