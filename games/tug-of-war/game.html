@@ -254,7 +254,7 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
       <div dir="rtl" style="width:min(820px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;padding:clamp(24px,4vw,44px);border-radius:36px;background:linear-gradient(180deg, rgba(30,27,44,.97), rgba(20,18,30,.97));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:26px;animation:popIn .45s cubic-bezier(.2,1.15,.35,1)">
         <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
           <span style="font:800 clamp(32px,3.8vw,46px)/1.2 'IBM Plex Sans Arabic';color:#ece9f5">طريقة اللعب</span>
-          <span style="font:600 21px/1.6 'IBM Plex Sans Arabic';color:#b9b4c9">الفريق اللي يسحب أكثر يجر الحبل لجهته</span>
+          <span style="font:600 21px/1.6 'IBM Plex Sans Arabic';color:#b9b4c9">اسحب لاعبين الخصم لين يتعدون خط النص وينقصون، والفريق اللي ينقصى كله يخسر</span>
         </div>
 
         <div style="display:flex;align-items:center;gap:18px;padding:24px 26px;border-radius:28px;background:rgba(196,181,253,.07);border:1px solid rgba(196,181,253,.16)">
@@ -383,7 +383,7 @@ class Component extends DCLogic {
     window.towTap=(u,n=5)=>this.onLike(this.reg.nameFor({id:this.reg.id(u)||'dev:'+u,name:u}),n);
     const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl;
     if(_rc&&_rc.attach) try{ _rc.attach({game:'tug-of-war',page:'المباراة',commands:[
-      {names:['انهاء','إنهاء','انهي'],label:'إنهاء المباراة',desc:'الفريق المتقدم يفوز',tone:'danger',icon:'■',run:()=>{ if(this.state.phase!=='play') return {ok:false,msg:'المباراة مو شغالة'}; this.finish(null); return 'انتهت المباراة'; }},
+      {names:['انهاء','إنهاء','انهي'],label:'إنهاء المباراة',desc:'الفريق اللي باقي له لاعبين أكثر يفوز',tone:'danger',icon:'■',run:()=>{ if(this.state.phase!=='play') return {ok:false,msg:'المباراة مو شغالة'}; this.finish(null); return 'انتهت المباراة'; }},
       {names:['ابدأ','ابدا','بدء'],label:'ابدأ المباراة',icon:'▶',tone:'primary',run:()=>{ if(this.state.phase!=='ready') return {ok:false,msg:'المباراة بدأت'}; this.startMatch(); return 'بدأ العد التنازلي'; }},
       {names:['اعادة','إعادة'],label:'إعادة بنفس اللاعبين',icon:'🔁',run:()=>{ this.rematch(); return 'بدأت مباراة جديدة'; }}
     ]}); }catch(e){}
@@ -433,10 +433,13 @@ class Component extends DCLogic {
   // تأثير كبير على الشاشة لكل خاصية (2.4ث) — buildGfx يرسمه
   showFx(kind,title,sub,k,img){ clearTimeout(this.gfxT); this._gid=(this._gid||0)+1; this.setState({gfx:{id:this._gid,kind,title,sub,k,img}}); this.gfxT=setTimeout(()=>this.setState({gfx:null}),2400); }
   // الإقصاء: الحبل سحب اللاعب لين تعدّى خط النص لجهة الخصم (نفس TOW.slot اللي يرسم بها المشهد)
-  checkOut(){ const S=this.state; if(S.phase!=='play') return; const n=Math.max(S.teams[0].length,S.teams[1].length), sh=S.pos/100*TOW.SHIFT, hit=[];
-    [0,1].forEach(k=>{ const over=k?-sh:sh; if(over<=0) return; S.teams[k].forEach((p,i)=>{ if(!S.out[p]&&TOW.slot(i,n)<over) hit.push([p,k]); }); });
+  // الإقصاء: اللاعب اللي قدام بالحبل (أول الباقين) ينسحب لين يتعدى خط النص ← ينقصى، والحبل يرجع للنص،
+  // والباقين يتقدّمون. المباراة ما تخلص إلا لما ينقصى كل الفريق (نفس ترتيب ومسافات tow-scene.js).
+  checkOut(){ const S=this.state; if(S.phase!=='play'||Date.now()<(this.recoilUntil||0)) return; const n=Math.max(S.teams[0].length,S.teams[1].length), sh=S.pos/100*TOW.SHIFT, hit=[];
+    [0,1].forEach(k=>{ const over=k?-sh:sh; if(over<=0) return; const front=this.alive(k)[0]; if(front&&TOW.slot(0,n)<over) hit.push([front,k]); });
     if(!hit.length) return;
-    const t=Date.now(); this.setState(s=>({out:{...s.out,...Object.fromEntries(hit.map(([p])=>[p,t]))}}),()=>{
+    const t=Date.now(); this.recoilUntil=t+1300; this.pend=[0,0];
+    this.setState(s=>({pos:0,out:{...s.out,...Object.fromEntries(hit.map(([p])=>[p,t]))}}),()=>{
       this.snd('out'); if(this.stats) this.stats.outs+=hit.length; hit.forEach(([p,k])=>this.pushFeed(icon('out',22),p+' تعدّى الخط وانقصى من '+this.T[k].name,COLORS.out));
       this.showFx('out',hit.length>1?'إقصاء '+hit.length+' لاعبين!':'إقصاء!',hit.map(x=>x[0]).join('، ')+' تعدّى الخط',hit[0][1]);
       for(const k of [0,1]) if(this.state.teams[k].length&&!this.alive(k).length){ this.finish(1-k); break; } }); }
@@ -444,9 +447,9 @@ class Component extends DCLogic {
   pushFeed(icon,text,color){ this._fid=(this._fid||0)+1; const id=this._fid; this.setState(s=>({feed:[{id,icon,text,color,at:Date.now()},...s.feed].slice(0,3)})); }
 
   // سحبة لفريق k (0 الأيسر ← pos ينقص، 1 الأيمن ← pos يزيد)
-  pull(k,amount,who){ if(this.state.phase!=='play') return; const amt=amount*(this.boosted(k)?2:1); if(this.stats) this.stats.pulls[k]++;
+  pull(k,amount,who){ if(this.state.phase!=='play'||Date.now()<(this.recoilUntil||0)) return; const amt=amount*(this.boosted(k)?2:1); if(this.stats) this.stats.pulls[k]++;
     this.setState(s=>{ const pos=Math.max(-100,Math.min(100,s.pos+(k?amt:-amt))); const pulls=who?{...s.pulls,[who]:(s.pulls[who]||0)+amt}:s.pulls; const flash=who?{...s.flash,[who]:Date.now()}:s.flash; return {pos,pulls,flash}; }, 
-      ()=>{ if(who&&this.scene) this.scene.pull(who); this.checkOut(); if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
+      ()=>{ if(who&&this.scene) this.scene.pull(who); this.checkOut(); }); }
 
   // التكبيس (لايكات البث): كل دفعة تسحب لفريق صاحبها بقدر عدد التكبيسات
   // التكبيس: ما يسحب دفعة وحدة — ينضاف لرصيد الفريق (pend)، والرصيد ينسحب بنعومة كل 50ms (drain).
@@ -462,10 +465,10 @@ class Component extends DCLogic {
     this.lastTapper[k]=user; this.scene?.pull(user); this.scene?.effect('taps',k,[user]); this.snd('pull'); }
   // يسحب جزء من رصيد التكبيس كل 50ms: حركة ناعمة ومستمرة بدل قفزة كل ثانية
   // كل مرة 7.5% من الرصيد: الدفعة تتوزع على حوالي ثانية (دفعات الخادم كل ثانية)، فالحبل يتحرك بدون توقف
-  drain(){ if(this.state.phase!=='play'){ this.pend=[0,0]; return; } const net=[0,0];
+  drain(){ if(this.state.phase!=='play'){ this.pend=[0,0]; return; } if(Date.now()<(this.recoilUntil||0)) return; const net=[0,0];
     for(const k of [0,1]){ const p=this.pend[k]; if(p<.01){ this.pend[k]=0; continue; } const d=Math.min(p,Math.max(.04,p*.075)); this.pend[k]=p-d; net[k]=d; }
     const diff=net[1]-net[0]; if(!diff) return;
-    this.setState(s=>({pos:Math.max(-100,Math.min(100,s.pos+diff))}),()=>{ this.checkOut(); if(Math.abs(this.state.pos)>=100) this.finish(this.state.pos>0?1:0); }); }
+    this.setState(s=>({pos:Math.max(-100,Math.min(100,s.pos+diff))}),()=>this.checkOut()); }
 
   onChat(user,text,follower){ const S=this.state, k=this.teamOf(user);
     if(k<0){ if(!S.autoJoin) return; // انضمام متأخر بكلمة الفريق (سويتش «الدخول التلقائي»، بدون تبديل فريق أثناء المباراة)
@@ -506,7 +509,7 @@ class Component extends DCLogic {
     this.scene?.effect('support',k,[user]); if(coins>=10) this.showFx('gift','دعم '+T.name,user+' أرسل '+(giftName||'هدية'),k,null); }
 
   finish(k){ if(this.state.phase==='win') return; clearTimeout(this.chT); clearInterval(this.demoT);
-    const pos=this.state.pos, w=k!=null?k:(pos>0?1:pos<0?0:-1);
+    const pos=this.state.pos, a0=this.alive(0).length, a1=this.alive(1).length, w=k!=null?k:(a0!==a1?(a0>a1?0:1):(pos>0?1:pos<0?0:-1));
     this.setState({phase:'win',winner:w,ch:null,endedAt:Date.now()}); this.snd('win'); this.reportPoints(w); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز (لعبة فريقين)
   reportPoints(w){ if(this.reported||DEMO) return; this.reported=true; const S=this.state;
