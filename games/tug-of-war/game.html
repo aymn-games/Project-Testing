@@ -400,7 +400,7 @@ class Component extends DCLogic {
   failScene(e){ const A=window.AymanGamesPlatform; if(A&&A.log) A.log('شد الحبل: الملعب الثري دي ما اشتغل — '+(e&&e.message)); try{ this.scene&&this.scene.stop(); }catch(e){} this.scene=null; this.sceneFailed=true; this.forceUpdate(); }
   pushScene(){ const S=this.state, n=Date.now(); if(!this.scene) return;
     this.scene.setState({ pos:S.pos, boost:[0,1].map(k=>S.boost[k]>n), winner:S.phase==='win'?S.winner:-1,
-      teams:S.teams.map(l=>l.map(name=>({id:name,name,out:!!S.out[name],frozen:!S.out[name]&&(S.frozen[name]||0)>n}))) }); }
+      teams:S.teams.map(l=>l.map(name=>({id:name,name,avatar:this.reg.avatar(name),out:!!S.out[name],frozen:!S.out[name]&&(S.frozen[name]||0)>n}))) }); }
   componentWillUnmount(){ try{ this.scene&&this.scene.stop(); }catch(e){} removeEventListener('resize',this.fit); clearInterval(this.clockT); clearInterval(this.drainT); clearInterval(this.cdT); clearInterval(this.demoT); clearTimeout(this.chT); this.unsub?.(); this.unsubGift?.(); this.unsubLike?.(); clearTimeout(this.gfxT); }
 
   /* ---------- الصوت (Web Audio بدون ملفات) ---------- */
