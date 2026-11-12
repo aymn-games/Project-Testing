@@ -254,11 +254,16 @@
     // التكبيس والدعم
     // ------------------------------------------------------------------
     var TAPS_PER_NITRO = 50, NITRO_SECS = 2;
+    // التكبيس: كل تكبيسة ترفع الدواسة، وما دام اللاعب يكبّس (آخر تكبيسة قبل أقل من TAP_HOLD ثانية —
+    // أطول من الفاصل بين دفعات لايكات تيك توك) الدواسة ما تنزل أبداً، فالسيارة ما تهدي.
+    // لو وقف التكبيس، الدواسة تنزل بهدوء لين ترجع السيارة لسرعتها الطبيعية.
+    var TAP_HOLD = 2.5, THROTTLE_DECAY = 0.35;
     function onLike(id, count) {
         var c = S.byId[id]; if (!c || c.finished || S.phase !== 'race') return;
         count = Math.max(1, Math.min(200, Number(count) || 1));
         c.tapsTotal = (c.tapsTotal || 0) + count;
         c.likes += count;
+        c.tapAt = S.raceClock;
         // كل تكبيسة ترفع دواسة الوقود، والحد ١
         c.throttle = Math.min(1, c.throttle + count * 0.045);
         // كل 50 تكبيسة = نيترو. وقت النيترو (الشريط يفضى) التكبيس ما يعبّي الشريط،
@@ -292,15 +297,15 @@
     function applyEffect(c, id, fromTaps) {
         if (!fromTaps) c.gifts++;
         var extra = '';
-        if (id === 'nitro') { c.fx.nitro = NITRO_SECS; c.throttle = 1; }
+        if (id === 'nitro') { c.fx.nitro = NITRO_SECS; }
         else if (id === 'shield') { c.fx.shield = 10; }
         else if (id === 'portal') {
             var ahead = null;
             S.cars.forEach(function (o) { if (o !== c && !o.finished && o.dist > c.dist && (!ahead || o.dist < ahead.dist)) ahead = o; });
             c.dist = ahead ? ahead.dist + 12 : c.dist + 160;
             c.lane = c.laneT = ahead ? (ahead.lane > 0 ? -3 : 3) : c.lane;
-            c.fx.portal = 1; c.throttle = Math.max(c.throttle, 0.8);
-        } else if (id === 'shuttle') { c.fx.shuttle = 3; c.throttle = 1; }
+            c.fx.portal = 1;
+        } else if (id === 'shuttle') { c.fx.shuttle = 3; }
         else if (id === 'rocket') {
             var t = nearestRivals(c, 1);
             if (t[0] && hit(t[0], 3)) extra = ' على <b>' + esc(t[0].name) + '</b>';
@@ -398,11 +403,10 @@
             if (c.finished) { c.speed *= Math.exp(-dt * 0.8); c.dist += c.speed * dt; return; }
             // متسابقين التجربة يكبّسون عشوائياً (نفس مسار التكبيس الحقيقي)
             if (c.bot && fx.stop <= 0 && Math.random() < dt * 4) onLike(c.id, 2 + Math.floor(Math.random() * 7));
-            c.throttle = Math.max(0, c.throttle - dt * 0.28);
-            // إبطاء بالمنعطفات الحادة (يعطي إحساس الكبح)
-            var idx = Math.floor((((c.dist % L) + L) % L) / TRACK.step) % TRACK.count;
-            var corner = Math.min(1, Math.abs(TRACK.curvature[idx]) * 18);
-            var target = BASE_SPEED + c.throttle * BOOST_SPEED * (1 - corner * 0.35);
+            // الدواسة تنزل بس لما يوقف التكبيس (ما دام يكبّس ما تهدي السيارة — ولا بالمنعطفات)
+            if (S.raceClock - (c.tapAt == null ? -99 : c.tapAt) > TAP_HOLD) c.throttle = Math.max(0, c.throttle - dt * THROTTLE_DECAY);
+            var target = BASE_SPEED + c.throttle * BOOST_SPEED;
+            // النيترو والمكوك يزيدون السرعة وقتهم بس، وبعدها ترجع السيارة لسرعة التكبيس نفسها
             if (fx.nitro > 0) target *= 1.08;   // النيترو دفعة خفيفة (المكوك هو الأقوى)
             if (fx.shuttle > 0) target *= 1.7;
             if (fx.stop > 0) target = 0;
@@ -699,7 +703,7 @@
         S.cars.forEach(function (c, i) {
             var sl = gridSlot(i);
             c.dist = sl.dist; c.lane = c.laneT = sl.lane; c.speed = 0; c.throttle = 0; c.finished = false; c.finishAt = 0;
-            c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0;
+            c.fx = freshFx(); c.likes = 0; c.gifts = 0; c.tapBank = 0; c.tapAt = null;
         });
         $('podium').classList.remove('show');
         $('cerBanner').classList.remove('shown');
