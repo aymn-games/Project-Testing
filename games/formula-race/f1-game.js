@@ -210,8 +210,9 @@
     function freshFx() { return { nitro: 0, shield: 0, shuttle: 0, stop: 0, portal: 0 }; }
 
     function gridSlot(i) {
-        // صفّين متداخلين خلف خط البداية (مثل شبكة الفورمولا)
-        return { dist: -14 - i * 9, lane: (i % 2 === 0 ? 3 : -3) };
+        // ثلاث سيارات بكل صف خلف خط البداية، وكل صف متدرّج شوي (يمين ← يسار) عشان الشبكة تبان مرصوصة
+        var row = Math.floor(i / 3), col = i % 3;
+        return { dist: -14 - row * 8.5 - col * 1.6, lane: [4.2, 0, -4.2][col] };
     }
 
     function addCar(p) {
@@ -228,6 +229,7 @@
             fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0, tapBank: 0,
             bot: !!p.bot,
             winCard: p.winCard || null,                                   // بطاقة الفوز المملوكة (js/agp-win-card.js)
+            frame: p.frame || null,                                       // الإطار المفعّل (يظهر بلوبي الدخول)
             winVideo: (p.winVideo && (p.winVideo.url || p.winVideo)) || p.winVideoUrl || null,
             character: p.character || null   // شخصية الأنمي المختارة من البروفايل (girl/boy/any/null) — لمراسم النهاية
         };
@@ -488,9 +490,9 @@
                 }
             }
             effective = S.phase === 'lobby' ? 'orbit' : S.cam.autoMode;
-        } else if (S.phase === 'lobby') {
-            effective = 'orbit';
         }
+        // أول ما تنفتح شاشة السباق (العد التنازلي): لقطة من فوق على الشبكة كاملة، السيارات مصفوفة
+        if (S.phase === 'lobby' || S.phase === 'countdown') effective = 'orbit';
         if (scene) scene.setCamera(effective, S.cam.focus);
         $('camNow').textContent = S.cam.mode === 'auto' && S.phase !== 'lobby' ? 'تلقائي' : camLabel(effective);
     }
@@ -735,14 +737,43 @@
     }
 
     /** بطاقة اللوبي: بانتظار المتسابقين ← كل شيء جاهز للسباق. */
+    // ------------------------------------------------------------------
+    // لوبي الدخول — نفس تنسيق لوبي روليت الإقصاء: كرت بكلمة الدخول والعدد، وبطاقة لكل لاعب
+    // (صورة حساب تيك توك واسمه، والإطار لمن يملك إطار مفعّل — js/agp-player-card.js، نفس الروليت).
+    // ------------------------------------------------------------------
+    var elShown = {};
     function renderReady() {
-        var n = S.cars.length, kw = esc(settings.keyword);
-        $('rcSub').className = n ? '' : 'wait';
-        $('rcSub').textContent = n ? 'السائقون جاهزون (' + n + ' / ' + settings.maxDrivers + ')' : 'بانتظار المتسابقين';
-        var tapJoin = settings.joinMode !== 'followers';   // المتابعين فقط: التكبيس ما يبيّن مين متابع، فالدخول بالكلمة بس
-        $('rcTitle').innerHTML = n ? 'كل شيء جاهز للسباق' : 'اكتب «' + kw + '» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' للمشاركة';
-        $('rcHint').innerHTML = (n ? 'للمشاركة اكتب «<b>' + kw + '</b>» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' · ' : '') +
-            'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+        var n = S.cars.length, tapJoin = settings.joinMode !== 'followers';   // المتابعين فقط: التكبيس ما يبيّن مين متابع
+        $('elCount').textContent = n;
+        $('elMax').textContent = settings.maxDrivers;
+        $('elKw').textContent = settings.keyword;
+        $('elKwLabel').textContent = 'كلمة الدخول · اكتبها في الشات' + (tapJoin ? ' أو كبّس على البث' : '');
+        $('elNote').textContent = 'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+        var list = $('elList'), PC = AGP.playerCard;
+        var framed = !!PC && S.cars.some(function (c) { return c.frame; });
+        list.classList.toggle('framed', framed);
+        if (!n) { list.innerHTML = '<div class="el-empty">بانتظار انضمام اللاعبين…</div>'; elShown = {}; return; }
+        var X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
+        var cols = innerWidth <= 820 ? 2 : 5, cellW = Math.max(120, (list.clientWidth - 40 - (cols - 1) * 10) / cols);
+        var seen = {};
+        list.innerHTML = S.cars.map(function (c) {
+            var isNew = !elShown[c.id]; seen[c.id] = 1;
+            var kick = '<button type="button" class="el-x' + (c.frame && PC ? ' on-frame' : '') + '" data-kick="' + esc(c.id) + '" aria-label="شيل ' + esc(c.name) + '">' + X + '</button>';
+            var body;
+            if (c.frame && PC) {
+                body = '<div class="el-frame">' + PC.renderHtml({ id: c.id, name: c.name, avatarUrl: c.avatar || null, frame: c.frame },
+                    { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(cellW / 4.96)) }) + '</div>';
+            } else {
+                var init = esc(String(c.name).trim().charAt(0) || '؟');
+                body = '<div class="el-chip"><span class="el-av" style="--car:' + c.color + '">' + init +
+                    (c.avatar ? '<img src="' + esc(c.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+                    '<span class="el-nm">' + esc(c.name) + '</span>' + kick + '</div>';
+                kick = '';
+            }
+            return '<div class="el-p' + (isNew ? ' new' : '') + '">' + body + kick + '</div>';
+        }).join('');
+        elShown = seen;
+        if (framed && PC.fitAllNames) PC.fitAllNames(list);
     }
     function openSettings(on) { document.body.classList.toggle('settings-open', on); }
 
@@ -1114,6 +1145,7 @@
             // لاعب دخل بدون صورة (مثلاً بالدعم) ووصلت صورته بتعليق: نحدّثها بالدبوس واللوحات
             var known = S.byId[p.id];
             fillAvatar(known, p.avatarUrl);
+            if (known && !known.frame && p.frame && S.phase === 'lobby') { known.frame = p.frame; renderReady(); }
             if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
             if (settings.joinMode === 'followers' && !p.isFollower) return;
             addCar(p);
@@ -1192,6 +1224,9 @@
         $('wNew').onclick = newRace;
         $('wSame').onclick = function () { resetRace(); stopTest(); };
         $('soundBtn').onclick = function () { setSound(!settings.soundOn); };
+        // لوبي الدخول: زر × يشيل اللاعب من الشبكة، والشبكة تتعدّل مع تغيير حجم الشاشة
+        $('elList').onclick = function (e) { var b = e.target.closest && e.target.closest('[data-kick]'); if (b) removeCar(b.getAttribute('data-kick')); };
+        var elRz = 0; window.addEventListener('resize', function () { clearTimeout(elRz); elRz = setTimeout(function () { if (S.phase === 'lobby') renderReady(); }, 150); });
         // ملء الشاشة (زر بالهيدر) — يتبدّل نصه حسب الحالة، ومع بادئة webkit لسفاري
         var docEl = document.documentElement;
         function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
