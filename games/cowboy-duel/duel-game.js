@@ -98,17 +98,34 @@ applyZoom(); addEventListener('resize', applyZoom);
 const pickOne = a => a[Math.floor(Math.random() * a.length)];
 function banner(html, ms = 2600) { const el = $('#banner'); el.innerHTML = html; el.classList.add('in'); clearTimeout(banner.t); banner.t = setTimeout(() => el.classList.remove('in'), ms); }
 function updateCount() { $('#count').textContent = G.phase === 'lobby' ? G.players.length : G.alive.length; $('#countLbl').textContent = G.phase === 'lobby' ? 'بالسوق' : 'باقين'; }
+// بطاقة اللاعب باللوبي: صاحب الإطار (حساب موثّق بإطار مفعّل) ببطاقة الإطار المشتركة (js/agp-player-card.js)،
+// والباقي كبسولة صورة + اسم — نفس لوبي روليت الإقصاء. وكل بطاقة فيها × لإقصاء اللاعب من اللوبي.
+const KICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+function lobbyCard(p) {
+    const PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard, kick = `<button class="kick" type="button" data-kick="${esc(p.id)}" aria-label="إقصاء ${esc(p.name)}">${KICK_SVG}</button>`;
+    if (PC && p.frame && p.frame.imageFilename) return `<div class="lcell framed">${PC.renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || (G.scene && G.scene.portrait(p.id)) || null, frame: p.frame }, { showFrame: true, basePath: '../../', size: 44 })}${kick}</div>`;
+    return `<div class="lcell plain">${avatarHtml(p)}<span class="ln">${esc(p.name)}</span>${kick}</div>`;
+}
+function kickPlayer(id) {
+    if (G.phase !== 'lobby') return;
+    G.players = G.players.filter(p => p.id !== id); G.scene && G.scene.setPlayers(G.players); renderLobby();
+}
+function showLobby(on) { $('#lobby').classList.toggle('hide', !on); $('#kwTop').classList.toggle('hide', !on); }
 function renderLobby() {
-    const list = $('#roster'); list.innerHTML = '';
-    G.players.forEach(p => { const c = document.createElement('span'); c.className = 'chip'; c.textContent = p.name; list.appendChild(c); });
+    const list = $('#roster'), PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
+    list.style.setProperty('--rowH', G.players.some(p => p.frame && p.frame.imageFilename) ? '100px' : '56px');
+    list.innerHTML = G.players.length ? G.players.map(lobbyCard).join('') : '<div class="lempty">بانتظار انضمام اللاعبين…</div>';
+    list.querySelectorAll('[data-agp-pcard-name="1"]').forEach(pl => { const h = pl.clientHeight; if (h) { pl.style.fontSize = Math.max(9, Math.min(15, Math.round(h * .65))) + 'px'; pl.style.lineHeight = '1.2'; } });
+    if (PC) PC.fitAllNames(list);
+    $('#lobbyCount').textContent = G.players.length;
     $('#startBtn').disabled = G.players.length < 2; if ($('#rules').classList.contains('in')) updateRulesCount(); $('#lobbyMax').textContent = G.settings.maxPlayers; updateCount();
 }
 
 // ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
-function addPlayer(id, name, bot = false, avatar = null) {
+function addPlayer(id, name, bot = false, avatar = null, frame = null) {
     if (G.phase !== 'lobby' || G.players.some(p => p.id === id)) return;
     if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; notice(`🚫 السوق ممتلئ (${G.settings.maxPlayers} لاعب)`); } return; }
-    G.players.push({ id, name, bot, avatar }); G.scene && G.scene.setPlayers(G.players); renderLobby();
+    G.players.push({ id, name, bot, avatar, frame }); G.scene && G.scene.setPlayers(G.players); renderLobby();
 }
 function addBot() { const used = new Set(G.players.map(p => p.name)), name = BOT_NAMES.find(n => !used.has(n)) || ('راعي ' + (G.players.length + 1)); addPlayer('bot:' + name, name, true); }
 
@@ -160,7 +177,7 @@ function updateRulesCount() {
 }
 function openRules() {
     if (G.players.length < 2 || G.phase !== 'lobby') return; SFX.unlock();
-    renderRules(); $('#lobby').classList.add('hide'); $('#rules').classList.add('in'); document.body.classList.add('ovl-on'); // الدخول من الشات مستمر لين «ابدأ المبارزات»
+    renderRules(); showLobby(false); $('#rules').classList.add('in'); document.body.classList.add('ovl-on'); // الدخول من الشات مستمر لين «ابدأ المبارزات»
 }
 // شاشة القرعة: كرت لكل مبارزة، وتصغر الكروت تلقائياً لين تطلع كلها بشاشة وحدة
 // اسم المرحلة حسب عدد مبارزات الجولة (بعد الجولة الأولى)
@@ -189,7 +206,7 @@ function showDraw(pairs) { return new Promise(res => {
 }); }
 async function startMatch() {
     if (G.players.length < 2 || G.phase !== 'lobby') return; SFX.unlock(); SFX.wind(false);
-    $('#rules').classList.remove('in'); $('#lobby').classList.add('hide');
+    $('#rules').classList.remove('in'); showLobby(false);
     G.alive = G.players.slice(); G.round = 0; G.phase = 'draw'; updateCount(); // القرعة تقفل الدخول
     const { pairs } = makePairs(G.alive); G.fastest = null; G.round = 1; // القرعة الأولى تعرض «القرعة»
     await sleep(350); await showDraw(pairs); G.round = 0;
@@ -382,7 +399,7 @@ async function replay() {
 async function newGame() {
     $('#champ').classList.remove('in'); document.body.classList.remove('match');
     G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); bars(''); G.scene.setPlayers(G.players);
-    $('#lobby').classList.remove('hide'); renderLobby();
+    showLobby(true); renderLobby();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -393,7 +410,7 @@ function hookStream() {
     P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null); } else answer(id, pl.text); });
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
@@ -429,7 +446,8 @@ function hookStream() {
     G.scene = scene; G.phase = 'lobby';
     const demo = !window.CDPlatform || window.CDPlatform.demo; // وضع التجربة (?demo=1): بوتات + لوحة التجربة
     G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
-    $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
+    $('#kwWord').textContent = G.settings.keyword || 'دخول';
+    $('#roster').addEventListener('click', e => { const b = e.target.closest('[data-kick]'); if (b) kickPlayer(b.dataset.kick); });
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = openRules; $('#rulesGo').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
