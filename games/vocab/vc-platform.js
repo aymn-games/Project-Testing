@@ -222,7 +222,7 @@
     }
 
     window.VC = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'vocab-settings', roster: 'vocab-roster', players: 'vocab-players', hideHelp: 'vocab-hide-help' },
         readJSON: readJSON,
         writeJSON: writeJSON,

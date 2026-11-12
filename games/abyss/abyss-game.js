@@ -75,8 +75,16 @@
 
     // ---------- أدوات ----------
     function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-    var pool = [];
-    function nextQuestion() { if (!pool.length) pool = shuffle(AGP.abyssQuestions || []); return pool.pop(); }
+    // أسئلة الحساب تقريباً نص البنك، فنقلّلها: سؤال حساب بنسبة الربع، والباقي من الفئات الثانية.
+    // كل مجموعة تنخلط لحالها وتنسحب بدون تكرار لين تخلص، وبعدها تنخلط من جديد.
+    var MATH_CAT = 'حساب وذكاء', MATH_RATE = .25, pools = { math: [], other: [] };
+    function refill(k) { pools[k] = shuffle((AGP.abyssQuestions || []).filter(function (q) { return (q.cat === MATH_CAT) === (k === 'math'); })); }
+    function nextQuestion() {
+        var k = Math.random() < MATH_RATE ? 'math' : 'other';
+        if (!pools[k].length) refill(k);
+        if (!pools[k].length) { k = k === 'math' ? 'other' : 'math'; if (!pools[k].length) refill(k); }
+        return pools[k].pop();
+    }
     function isTF(q) { return !!q && typeof q.tf === 'boolean'; }
     function correctLane(q) { return isTF(q) ? (q.tf ? 0 : 1) : q.c; }
     // كل لوح زجاج عليه رقمه (1 يمين · 2 يسار) حتى بأسئلة صح وخطأ
@@ -185,7 +193,7 @@
         if (S.phase === 'question' && prev) { p.row = S.row - 1; p.lane = prev.safe != null ? prev.safe : 0; }
         S.players.push(p); participants[p.name] = true;
         try { AGP.winCard && AGP.winCard.preloadFor(reg.player(name)); } catch (e) {}
-        logEv('🙋', 'انضم ' + name); pushScene(); render();
+        logEv('🙋', 'انضم ' + name); if (S.phase === 'intro') $('introC').textContent = S.players.length + ' لاعب على منصة البداية'; pushScene(); render();
     }
     function answer(name, text) {
         if (S.phase !== 'question') return;
@@ -209,10 +217,18 @@
         ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
         $('win').hidden = true;
         pushScene(); render();
-        // عد تنازلي قصير والكاميرا تستعرض الجسر، ثم أول سؤال
-        var n = 3; $('introN').textContent = n;
-        later(function tick() { n--; if (n > 0) { $('introN').textContent = n; tone(440, .12, 'triangle'); later(tick, 1000); } else start(); }, 1600);
+        // شاشة الاستعداد: الكاميرا تستعرض الجسر واللاعبين على منصة البداية، والمباراة ما تبدأ إلا لما الستريمر يضغط «ابدأ المباراة»
+        $('introC').textContent = S.players.length + ' لاعب على منصة البداية';
+        $('bGo').hidden = false; $('introN').hidden = true; $('introC').hidden = false;
     }
+    // «ابدأ المباراة» → عد تنازلي 3، 2، 1 ثم أول سؤال
+    function go() {
+        if (S.phase !== 'intro' || !$('introN').hidden) return;
+        $('bGo').hidden = true; $('introC').hidden = true; $('introN').hidden = false;
+        var n = 3; $('introN').textContent = n; tone(440, .12, 'triangle');
+        later(function tick() { n--; if (n > 0) { $('introN').textContent = n; tone(440, .12, 'triangle'); later(tick, 1000); } else start(); }, 1000);
+    }
+    $('bGo').onclick = go;
     function start() {
         S.startedAt = Date.now(); S.row = 0; S.cam = 'play';
         logEv('🚩', 'بدأت المباراة بـ ' + S.players.length + ' لاعب · ' + (CFG.mode === 'steps' ? CFG.steps + ' خطوة' : 'آخر ناجي'));
@@ -394,7 +410,8 @@
     };
     document.addEventListener('fullscreenchange', paintFs); document.addEventListener('webkitfullscreenchange', paintFs);
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
-    $('wExit').onclick = function () { $('exitDlg').hidden = false; };
+    // خروج شاشة الفوز: مباشرة لمكتبة الألعاب بدون نافذة تأكيد
+    $('wExit').onclick = function () { $('xYes').click(); };
     $('wNew').onclick = goLobby;
     // إعادة بنفس اللاعبين: الجسر ينبني من جديد والكل يرجع لمنصة البداية
     $('wSame').onclick = function () {
@@ -445,7 +462,7 @@
         if (S.phase !== 'question') return 'انتظر السؤال';
         answer(name, text); return me.ans >= 0 ? 'اخترت ' + (me.ans + 1) : 'اكتب 1 أو 2';
     }
-    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat, revive: requestRevive, setAcc: function (v) { DEMO_ACC = Math.max(.05, Math.min(1, +v || DEMO_ACC)); } };
+    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat, go: go, revive: requestRevive, setAcc: function (v) { DEMO_ACC = Math.max(.05, Math.min(1, +v || DEMO_ACC)); } };
 
     if (DEMO && !FLOW) newDemo(); else setupMatch(ROSTER.slice());
 }(window.AymanGamesPlatform));

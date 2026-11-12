@@ -310,7 +310,7 @@
     }
 
     window.TR = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'tribe2-settings', roster: 'tribe2-roster', players: 'tribe2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
