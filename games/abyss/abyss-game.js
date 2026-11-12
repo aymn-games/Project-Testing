@@ -23,12 +23,14 @@
     var params = new URLSearchParams(location.search);
     // نمط التجربة: ?demo=1 بالرابط، أو صفحة تجربة تحط AGP.abyssDemo = true قبل هذا الملف
     var DEMO = params.get('demo') === '1' || AGP.abyssDemo === true;
+    // تجربة كاملة (إعدادات ← لوبي ← هنا) ببوتات: اللاعبين من اللوبي، والأزرار تتنقل بين الشاشات مثل الحقيقي
+    var FLOW = DEMO && AGP.abyssDemoFlow === true;
 
     // ---------- الإعدادات (من شاشة الإعدادات) ----------
     var SETUP = AB.readJSON(AB.keys.setup, null) || {};
-    if (!DEMO && !SETUP.keyword) { location.replace('index.html'); return; }
-    var ROSTER = DEMO ? [] : AB.readJSON(AB.keys.roster, []);
-    if (!DEMO && (!Array.isArray(ROSTER) || !ROSTER.length)) { location.replace('lobby.html'); return; }
+    if ((!DEMO || FLOW) && !SETUP.keyword) { location.replace('index.html'); return; }
+    var ROSTER = DEMO && !FLOW ? [] : AB.readJSON(AB.keys.roster, []);
+    if ((!DEMO || FLOW) && (!Array.isArray(ROSTER) || !ROSTER.length)) { location.replace('lobby.html'); return; }
     var pick = function (k, d) { return params.has(k) ? params.get(k) : (SETUP[k] != null ? SETUP[k] : d); };
     var modeV = pick('mode', 'عدد خطوات');
     var CFG = {
@@ -56,7 +58,7 @@
 
     var $ = function (id) { return document.getElementById(id); };
     var scene = $('scene');
-    var reg = AB.createRegistry(DEMO ? {} : AB.readJSON(AB.keys.players, {}));
+    var reg = AB.createRegistry(DEMO && !FLOW ? {} : AB.readJSON(AB.keys.players, {}));
 
     var S = {
         phase: 'intro',  // intro · question · reveal · over
@@ -94,11 +96,27 @@
     var ac = null;
     function tone(fr, d, type, v) {
         if (!CFG.sound) return;
-        try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); var o = ac.createOscillator(), g = ac.createGain();
+        try { if (!audio()) return; var o = ac.createOscillator(), g = ac.createGain();
             o.type = type || 'sine'; o.frequency.value = fr; g.gain.setValueAtTime(v || .14, ac.currentTime); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + d);
             o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {}
     }
-    function sCrack() { tone(180, .35, 'sawtooth', .12); setTimeout(function () { tone(90, .5, 'square', .08); }, 90); }
+    function audio() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; } catch (e) { return null; } }
+    // المتصفح ما يشغّل الصوت إلا بعد ضغطة من الستريمر: أول ضغطة بالصفحة تفعّله
+    ['pointerdown', 'keydown'].forEach(function (ev) { addEventListener(ev, function () { if (CFG.sound) audio(); }, { once: true }); });
+    // صوت انكسار زجاج (مولّد بالكود): ضربة + تكسّر ضوضاء عالية + رنّات شظايا متناثرة
+    function sCrack() {
+        if (!CFG.sound) return; var A = audio(); if (!A) return;
+        var t0 = A.currentTime, out = A.createGain(); out.gain.value = .9; out.connect(A.destination);
+        var len = Math.floor(A.sampleRate * .9), buf = A.createBuffer(1, len, A.sampleRate), d = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) { var k = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - k, 3) * (k < .015 ? k / .015 : 1); }
+        var nz = A.createBufferSource(); nz.buffer = buf; var hp = A.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2400;
+        var ng = A.createGain(); ng.gain.value = .55; nz.connect(hp); hp.connect(ng); ng.connect(out); nz.start(t0);
+        var th = A.createOscillator(), tg = A.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(140, t0); th.frequency.exponentialRampToValueAtTime(45, t0 + .25);
+        tg.gain.setValueAtTime(.5, t0); tg.gain.exponentialRampToValueAtTime(.001, t0 + .3); th.connect(tg); tg.connect(out); th.start(t0); th.stop(t0 + .32);
+        for (var j = 0; j < 22; j++) { var at = t0 + .02 + Math.pow(Math.random(), 1.6) * 1.1, o = A.createOscillator(), g = A.createGain();
+            o.type = 'sine'; o.frequency.value = 2600 + Math.random() * 4200; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.06 + Math.random() * .06, at + .004); g.gain.exponentialRampToValueAtTime(.0001, at + .08 + Math.random() * .18);
+            o.connect(g); g.connect(out); o.start(at); o.stop(at + .3); }
+    }
     function sSafe() { tone(659, .18); setTimeout(function () { tone(880, .25); }, 120); }
     function sWin() { tone(523, .22); setTimeout(function () { tone(659, .22); }, 160); setTimeout(function () { tone(784, .5, 'sine', .16); }, 320); }
 
@@ -219,9 +237,12 @@
         alive().forEach(function (p) { if (p.lane === ok) return; p.alive = false; p.fall = true; fell.push(p.name); });
         pushScene(); render(); later(sCrack, 400); if (!fell.length) sSafe();
         logEv(fell.length ? '💥' : '✅', 'الخطوة ' + (S.row + 1) + ': ' + (fell.length ? 'سقط ' + fell.join('، ') : 'الكل نجا'));
-        var h = $('fallH'), pTx = $('fallP');
-        if (fell.length) { h.className = ''; h.textContent = 'انكسر الزجاج! سقط ' + fell.length + (fell.length === 1 ? ' لاعب' : ' لاعبين'); pTx.textContent = fell.slice(0, 12).join(' · ') + (fell.length > 12 ? ' و' + (fell.length - 12) + ' غيرهم' : ''); }
-        else { h.className = 'safe'; h.textContent = 'الكل نجا!'; pTx.textContent = 'الجواب الصح: ' + (isTF(q) ? (q.tf ? 'صح' : 'خطأ') : q.a[ok]); }
+        // إعلان مختصر: عدد اللي طاحوا + صورة واسم كل واحد (أول 10، والباقي +N)
+        var h = $('fallH'), MAXF = 10;
+        h.className = fell.length ? '' : 'safe'; h.textContent = fell.length ? '💥 سقط ' + fell.length : '✅ الكل نجا';
+        $('fallList').innerHTML = fell.slice(0, MAXF).map(function (n, i) { var av = reg.player(n).avatarUrl;
+            return '<div class="fp" style="animation-delay:' + (i * .05).toFixed(2) + 's"><span class="av">' + esc(initialOf(n)) + (av ? '<img src="' + esc(av) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span><b>' + esc(n) + '</b></div>'; }).join('') +
+            (fell.length > MAXF ? '<div class="fp more"><span class="av">+' + (fell.length - MAXF) + '</span><b>غيرهم</b></div>' : '');
         later(function () { show('fall', true); }, 700);
         later(function () { show('fall', false); next(); }, 4200);
     }
@@ -259,6 +280,7 @@
     }
     function ptsOf(p) {
         if (S.ptsState === 'pending') return { main: '…', sub: 'جارٍ احتساب النقاط' };
+        if (DEMO) return { main: '+14 نقطة', sub: 'نقاط تجريبية' }; // تجربة: إكمال 4 + فوز 10 (points-service.js)
         var u = String(p.id).indexOf('tiktok:') === 0 ? String(p.id).slice(7).toLowerCase() : '';
         var v = u ? S.pts[u] : undefined;
         return typeof v === 'number' ? { main: '+' + v + ' نقطة', sub: 'تظهر في بروفايلك' } : { main: '—', sub: 'النقاط للحسابات الموثّقة في الموقع' };
@@ -299,8 +321,8 @@
     }
 
     // ---------- أزرار ----------
-    function goLobby() { if (DEMO) { $('setPanel').hidden = true; return newDemo(); } clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
-    function saveSetup() { if (DEMO) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; AB.writeJSON(AB.keys.setup, SETUP); }
+    function goLobby() { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
+    function saveSetup() { if (DEMO && !FLOW) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; AB.writeJSON(AB.keys.setup, SETUP); }
     function paintSettings() {
         [].forEach.call($('sSec').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-v') === CFG.answerSec)); });
         $('sFall').setAttribute('aria-checked', String(CFG.noAnswerFalls)); $('sSound').setAttribute('aria-checked', String(CFG.sound));
@@ -308,13 +330,13 @@
     $('bExit').onclick = function () { $('exitDlg').hidden = false; };
     $('xNo').onclick = function () { $('exitDlg').hidden = true; };
     $('exitDlg').onclick = function (e) { if (e.target === $('exitDlg')) $('exitDlg').hidden = true; };
-    $('xYes').onclick = function () { $('exitDlg').hidden = true; if (DEMO) return newDemo(); clearAll(); location.href = AB.libraryUrl; };
+    $('xYes').onclick = function () { $('exitDlg').hidden = true; if (FLOW) { clearAll(); location.href = 'index.html'; return; } if (DEMO) return newDemo(); clearAll(); location.href = AB.libraryUrl; };
     $('bSettings').onclick = function (e) { e.stopPropagation(); paintSettings(); $('setPanel').hidden = !$('setPanel').hidden; };
     $('sClose').onclick = function () { $('setPanel').hidden = true; };
     $('sSec').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.answerSec = +b.getAttribute('data-v'); saveSetup(); paintSettings(); };
     $('sFall').onclick = function () { CFG.noAnswerFalls = !CFG.noAnswerFalls; saveSetup(); paintSettings(); };
     $('sSound').onclick = function () { CFG.sound = !CFG.sound; saveSetup(); paintSettings(); };
-    $('sBack').onclick = function () { if (DEMO) { $('setPanel').hidden = true; return newDemo(); } clearAll(); location.href = 'index.html'; };
+    $('sBack').onclick = function () { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); location.href = 'index.html'; };
     $('sEnd').onclick = goLobby;
     $('bEvents').onclick = function (e) { e.stopPropagation(); $('evPanel').hidden = !$('evPanel').hidden; };
     document.addEventListener('click', function (e) {
@@ -370,7 +392,7 @@
         if (S.phase !== 'question') return 'انتظر السؤال';
         answer(name, text); return me.ans >= 0 ? 'اخترت ' + (me.ans + 1) : 'اكتب 1 أو 2';
     }
-    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat };
+    AGP.abyssGame = { state: S, cfg: CFG, start: start, pause: function () { clearInterval(timer); }, reveal: function () { clearInterval(timer); reveal(); }, answer: answer, render: render, push: pushScene, renderWin: renderWin, newDemo: newDemo, demoChat: demoChat, setAcc: function (v) { DEMO_ACC = Math.max(.05, Math.min(1, +v || DEMO_ACC)); } };
 
-    if (DEMO) newDemo(); else setupMatch(ROSTER.slice());
+    if (DEMO && !FLOW) newDemo(); else setupMatch(ROSTER.slice());
 }(window.AymanGamesPlatform));
