@@ -26,6 +26,8 @@
 <script src="../../js/agp-auto-connect.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- خط «زين» العريض (900) للوحة طريقة اللعب — نفس خط ألعاب المنصة، أسمك من IBM Plex (أقصاه 700) -->
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
   --agp-accent:#7c3aed;
@@ -136,15 +138,15 @@ body[data-phase="lobby"] .lapbox{display:none}
 /* ---------- طريقة اللعب (يمين) ----------
    المشاهد يشوف هذي اللوحة من بث الستريمر على جواله (الشاشة كاملة تصغر لحوالي ربع حجمها)،
    فالخط كبير وسميك وبتباين عالي: اسم التأثير 26px، صورة الهدية 52px، خلفية شبه معتمة. */
-.perks{position:fixed;top:78px;right:14px;z-index:15;width:340px;border-radius:18px;background:rgba(10,7,20,.93);border:1.5px solid rgba(167,139,250,.35);backdrop-filter:blur(12px);padding:10px 10px 8px;box-shadow:0 12px 34px rgba(0,0,0,.45)}
-.perks h3{margin:2px 6px 8px;font-size:22px;font-weight:700;color:#e2d8ff;letter-spacing:.2px}
-.perk{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:12px;background:color-mix(in srgb,var(--c) 9%,transparent)}
+.perks{position:fixed;top:78px;right:14px;z-index:15;width:380px;border-radius:18px;background:rgba(10,7,20,.93);border:1.5px solid rgba(167,139,250,.35);backdrop-filter:blur(12px);padding:10px 10px 8px;box-shadow:0 12px 34px rgba(0,0,0,.45)}
+.perks h3{margin:2px 6px 8px;font:900 28px/1.1 'Zain','IBM Plex Sans Arabic',sans-serif;color:#e2d8ff}
+.perk{display:flex;align-items:center;gap:12px;padding:5px 8px;border-radius:12px;background:color-mix(in srgb,var(--c) 9%,transparent)}
 .perk+.perk{margin-top:6px}
-.perk-ic{width:56px;height:56px;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--c) 24%,rgba(0,0,0,.35));border:2px solid color-mix(in srgb,var(--c) 70%,transparent);font-size:30px;flex-shrink:0}
-.perk-ic img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
-.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15;gap:3px}
-.perk-txt b{font-size:26px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.8)}
-.perk-txt small{font-size:17px;font-weight:700;color:color-mix(in srgb,var(--c) 45%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.perk-ic{width:70px;height:70px;display:grid;place-items:center;border-radius:14px;background:color-mix(in srgb,var(--c) 24%,rgba(0,0,0,.35));border:2px solid color-mix(in srgb,var(--c) 70%,transparent);font-size:38px;flex-shrink:0}
+.perk-ic img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1;gap:2px;font-family:'Zain','IBM Plex Sans Arabic',sans-serif}
+.perk-txt b{font-size:34px;font-weight:900;-webkit-text-stroke:.6px #fff;letter-spacing:.3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.8)}
+.perk-txt small{font-size:23px;font-weight:800;color:color-mix(in srgb,var(--c) 45%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .perk-txt b i{font-style:normal}
 .perk.tap .perk-ic{animation:tap 1s ease-in-out infinite}
 @keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
@@ -314,7 +316,6 @@ body:not([data-phase="lobby"]) #readyCard{display:none}
 
 .btn-mini{height:30px;padding:0 12px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600}
 .btn-mini:hover{border-color:var(--agp-accent)}
-.perk-ic img{width:24px;height:24px;object-fit:contain}
 #picker{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
 #picker.show{display:flex}
 .pk-box{width:min(640px,100%);max-height:80vh;display:flex;flex-direction:column;border-radius:18px;background:#101116;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}
@@ -368,6 +369,7 @@ body.ceremony #podium .btn-start{height:46px}
 /* لوحة الصدارة وبطاقة اللاعب أكبر شوي، وطريقة اللعب بخط أكبر وأسمك (طلب الستريمر) */
 .tower,.bottom{zoom:.8}
 .perks{zoom:1}   /* بدون تصغير: المشاهد يشوفها من بث الجوال */
+@media (max-height:1000px){.perks{zoom:.86}}   /* شاشات أقصر من 1080: ما تغطي الخريطة */
 /* وضوح النصوص فوق المشهد: ظل خفيف ناعم لكل اللوحات */
 .tower,.perks,.mapbox,.bottom,.lapbox,.toast,#ctrlMenu,#cerBanner{text-shadow:0 1px 2px rgba(0,0,0,.55)}
 
