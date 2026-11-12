@@ -254,6 +254,8 @@
                 var qi = pickQuestion(k, p, taken); taken.push(qi);
                 return { p: p, qi: qi, q: qi >= 0 ? BANK[k].questions[qi] : null, used: qi < 0, by: -1 };
             });
+            // أسئلة الشعارات: تحميل الصور مسبقاً عشان ما تتأخر لما ينفتح السؤال بالبث
+            tiles.forEach(function (t) { if (t.q && t.q.img) { var im = new Image(); im.src = t.q.img; } });
             return { k: k, tiles: tiles };
         });
     }
@@ -537,7 +539,10 @@
         var emoji = col.k === 'emoji';
         var meta = '<div class="qmeta"><span class="qc"><span class="mini">' + ART.svgFor(cat, 'q') + '</span>' + esc(cat.t) + '</span>' +
             '<span class="qp">' + q.p + '</span><span class="ql">' + LEVEL[q.p] + '</span></div>';
-        var hint = emoji ? '<div class="qhint">' + esc(q.hint || 'خمّن') + '</div>' : (col.k === 'proverbs' ? '<div class="qhint">كمّل المثل</div>' : '');
+        var hint = emoji ? '<div class="qhint">' + esc(q.hint || 'خمّن') + '</div>' : (col.k === 'proverbs' ? '<div class="qhint">كمّل المثل</div>' : (q.img ? '<div class="qhint">' + esc(q.q) + '</div>' : ''));
+        // سؤال بصورة (الشعارات): الصورة بدل نص السؤال
+        var qbody = q.img ? '<div class="qlogo ' + (q.bg === 'dark' ? 'dark' : 'light') + '"><img src="' + esc(q.img) + '" alt=""></div>'
+            : '<div class="qtext' + (emoji ? ' emoji' : '') + '">' + esc(q.q) + '</div>';
         var body;
         if (c.phase === 'done') {
             var pl = c.winner ? S.players[c.winner] : null;
@@ -554,7 +559,7 @@
             body = '<div class="qbar"><div class="ring" id="ring"><b>' + Math.ceil(Math.max(0, c.endsAt - Date.now()) / 1000) + '</b></div><div class="who">' + who + '</div></div>' +
                 '<div class="qctl"><button class="bs" data-act="swap">تبديل السؤال</button><button class="bs" data-act="reveal">كشف الجواب</button></div>';
         }
-        return teamsBarHtml() + '<div class="qwrap">' + meta + hint + '<div class="qtext' + (emoji ? ' emoji' : '') + '">' + esc(q.q) + '</div>' + body + '</div>';
+        return teamsBarHtml() + '<div class="qwrap">' + meta + hint + qbody + body + '</div>';
     }
     function renderQuestion() { if (S.screen === 'question') { $('app').innerHTML = viewQuestion(); tick(); } }
 
