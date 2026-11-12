@@ -144,13 +144,112 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return url;
     }
 
-    function startMusic() {
-        stopMusic();
-        var url = pickMusicUrl();
-        if (!url) return; // ⚠️ قسم بدون ملفات مرفوعة بعد (مثل "عراقية" حالياً) — صمت آمن، بدون خطأ
+    /* -------- البحث عن أغنية (Apple Music / iTunes Search API) --------
+     * المذيع يبحث عن أغنية من قائمة الإجراءات، وكل نتيجة فيها مقطع رسمي
+     * من Apple مدته 30 ثانية تقريباً (previewUrl). خيارين:
+     *   - «الجولة الجاية»: تشتغل بالدوران الجاي مرة وحدة بس.
+     *   - «+ القائمة»: قائمة تشغيل، كل جولة تاخذ اللي بعدها، ولما تخلص
+     *     ترجع من أولها.
+     * الأولوية: الجولة الجاية ← قائمة التشغيل ← المقاطع المحفوظة (الأقسام).
+     * المقطع يعيد من أوله (loop) لو مدة الدوران أطول منه (35 ثانية مثلاً).
+     * البحث بـJSONP (باراميتر callback الرسمي بالـAPI) عشان ما نعتمد على
+     * CORS، وما يحتاج مفتاح ولا سيرفر. */
+    var SONG_SEARCH_URL = 'https://itunes.apple.com/search';
+    var SONG_SEARCH_LIMIT = 15;
+    var SONG_SEARCH_TIMEOUT_MS = 10000;
+    var _songResults = [];
+    var _nextSong = null;        // أغنية للجولة الجاية بس
+    var _playlist = [];          // قائمة التشغيل
+    var _playlistIdx = 0;        // الأغنية الجاية من القائمة
+    var _nowPlaying = null;      // الأغنية اللي تشتغل الحين (من البحث) أو null
+    var _previewAudio = null;
+    var _previewId = null;
+    var _searchSeq = 0;
+
+    function songFromItunes(r) {
+        if (!r || !r.previewUrl) return null;
+        return {
+            id: String(r.trackId || r.previewUrl),
+            title: r.trackName || 'بدون اسم',
+            artist: r.artistName || '',
+            art: (r.artworkUrl100 || r.artworkUrl60 || '').replace('100x100bb', '120x120bb'),
+            url: r.previewUrl
+        };
+    }
+
+    function searchSongs(term, done) {
+        var seq = ++_searchSeq;
+        var cbName = '__mcSongCb' + Date.now() + '_' + seq;
+        var script = document.createElement('script');
+        var finished = false;
+        function finish(list, err) {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timer);
+            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+            if (script.parentNode) script.parentNode.removeChild(script);
+            if (seq === _searchSeq) done(list, err); // نتيجة بحث قديم تنهمل
+        }
+        var timer = setTimeout(function () { finish([], 'timeout'); }, SONG_SEARCH_TIMEOUT_MS);
+        window[cbName] = function (data) {
+            var list = ((data && data.results) || []).map(songFromItunes).filter(Boolean);
+            finish(list, null);
+        };
+        script.onerror = function () { finish([], 'network'); };
+        script.src = SONG_SEARCH_URL + '?term=' + encodeURIComponent(term) +
+            '&media=music&entity=song&country=SA&limit=' + SONG_SEARCH_LIMIT + '&callback=' + cbName;
+        document.head.appendChild(script);
+    }
+
+    // ⚠️ صوت واحد بس بنفس الوقت: التجربة توقف أغنية الدوران مؤقتاً، ولما
+    // تخلص التجربة ترجع أغنية الدوران تكمل (لو الدوران لسه شغّال).
+    function stopPreview() {
+        if (!_previewAudio) return;
+        try { _previewAudio.onended = null; _previewAudio.pause(); } catch (e) {}
+        _previewAudio = null;
+        _previewId = null;
+        if (_currentMusicAudio && _phase === 'playing') {
+            try {
+                var p = _currentMusicAudio.play();
+                if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+            } catch (e) {}
+        }
+    }
+
+    function togglePreview(song) {
+        var same = _previewId === song.id;
+        stopPreview();
+        if (!same) {
+            if (_currentMusicAudio) { try { _currentMusicAudio.pause(); } catch (e) {} }
+            _previewAudio = new Audio(song.url);
+            _previewAudio.volume = _musicMuted ? 0 : _musicVolume;
+            _previewAudio.onended = function () { stopPreview(); renderSongPanel(); };
+            _previewId = song.id;
+            try {
+                var p = _previewAudio.play();
+                if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+            } catch (e) {}
+        }
+        renderSongPanel();
+    }
+
+    // الأغنية اللي بتشتغل بالدوران الجاي (من البحث) — أو null للمقاطع المحفوظة
+    function takeSearchedSong() {
+        if (_nextSong) { var s = _nextSong; _nextSong = null; return s; }
+        if (_playlist.length) {
+            if (_playlistIdx >= _playlist.length) _playlistIdx = 0;
+            var p = _playlist[_playlistIdx];
+            _playlistIdx = (_playlistIdx + 1) % _playlist.length;
+            return p;
+        }
+        return null;
+    }
+
+    function playMusicUrl(url, onFail) {
         var audio = new Audio(url);
         audio.loop = true; // لو انتهى المقطع قبل توقف الدوران، يعيد تلقائياً
         audio.volume = _musicMuted ? 0 : _musicVolume;
+        if (onFail) audio.onerror = function () { if (_currentMusicAudio === audio) onFail(); };
         _currentMusicAudio = audio;
         try {
             var p = audio.play();
@@ -158,15 +257,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { /* تجاهل صامت */ }
     }
 
+    function startLocalMusic() {
+        var url = pickMusicUrl();
+        if (!url) return; // ⚠️ قسم بدون ملفات مرفوعة بعد (مثل "عراقية" حالياً) — صمت آمن، بدون خطأ
+        playMusicUrl(url);
+    }
+
+    function startMusic() {
+        stopMusic();
+        stopPreview();
+        var song = takeSearchedSong();
+        _nowPlaying = song;
+        if (song) {
+            // لو مقطع Apple ما اشتغل (انحذف أو انقطع النت) نرجع للمقاطع المحفوظة
+            playMusicUrl(song.url, function () {
+                stopMusic();
+                startLocalMusic();
+            });
+        } else {
+            startLocalMusic();
+        }
+        renderSongPanel();
+    }
+
     function stopMusic() {
         if (_currentMusicAudio) {
-            try { _currentMusicAudio.pause(); _currentMusicAudio.currentTime = 0; } catch (e) {}
+            try { _currentMusicAudio.onerror = null; _currentMusicAudio.pause(); _currentMusicAudio.currentTime = 0; } catch (e) {}
             _currentMusicAudio = null;
         }
+        stopPreview(); // وقت اختيار الكراسي ما يشتغل أي صوت
+        if (_nowPlaying) { _nowPlaying = null; renderSongPanel(); }
     }
 
     function applyMusicVolumeLive() {
-        if (_currentMusicAudio) _currentMusicAudio.volume = _musicMuted ? 0 : _musicVolume;
+        var v = _musicMuted ? 0 : _musicVolume;
+        if (_currentMusicAudio) _currentMusicAudio.volume = v;
+        if (_previewAudio) _previewAudio.volume = v;
     }
 
     /* ======================================================================
@@ -214,6 +340,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _angle = 0;
         stopRingLoop();
         stopMusic();
+        stopPreview();
         if (_spinTimeoutId) { clearTimeout(_spinTimeoutId); _spinTimeoutId = null; }
         if (_outTimeoutId) { clearTimeout(_outTimeoutId); _outTimeoutId = null; }
         AGP.timerManager.stop(TIMER_NAME);
@@ -414,6 +541,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-vol input{flex:1;accent-color:#a855f7;}',
             '.mc-mute-btn{border:none;background:none;color:#fff;font-size:16px;cursor:pointer;padding:0;line-height:1;}',
 
+            /* 2أ-2) البحث عن أغنية (Apple Music) */
+            '.mc-song-form{display:flex;align-items:center;gap:6px;padding:4px;border-radius:999px;',
+            'background:var(--mc-ctl-bg);border:1.5px solid var(--mc-ctl-line);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);}',
+            '.mc-song-form input{flex:1;min-width:0;height:38px;padding:0 14px;border:none;outline:none;background:transparent;',
+            'color:var(--mc-text);font:inherit;font-size:14px;font-weight:600;direction:rtl;}',
+            '.mc-song-form input::placeholder{color:var(--mc-muted);}',
+            '.mc-song-form button{flex:0 0 auto;height:38px;padding:0 16px;border-radius:999px;border:none;cursor:pointer;',
+            'background:var(--mc-grad);color:#fff;font:inherit;font-size:14px;font-weight:800;}',
+            '.mc-song-form button:disabled{opacity:.6;cursor:default;}',
+            '.mc-song-msg{font-size:13px;font-weight:600;color:var(--mc-muted);text-align:center;}',
+            '.mc-song-msg:empty{display:none;}',
+            '.mc-song-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}',
+            '.mc-song-results{max-height:300px;overflow-y:auto;}',
+            '.mc-song{display:flex;align-items:center;gap:8px;padding:6px;border-radius:16px;',
+            'background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.07);}',
+            '.mc-song.mc-on{border-color:rgba(168,85,247,.6);background:rgba(124,58,237,.14);}',
+            '.mc-song-art{flex:0 0 auto;width:40px;height:40px;border-radius:10px;object-fit:cover;background:rgba(255,255,255,.06);}',
+            '.mc-song-results .mc-song{flex-wrap:wrap;}',
+            '.mc-song-results .mc-song-btns{width:100%;justify-content:flex-end;}',
+            '.mc-song-txt{flex:1;min-width:0;text-align:right;}',
+            '.mc-song-t{font-size:13px;font-weight:800;color:var(--mc-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+            '.mc-song-a{font-size:12px;font-weight:600;color:var(--mc-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+            '.mc-song-btns{flex:0 0 auto;display:flex;gap:4px;}',
+            '.mc-song-btns button{height:30px;min-width:30px;padding:0 8px;border-radius:999px;cursor:pointer;',
+            'border:1.5px solid var(--mc-ctl-line);background:rgba(255,255,255,.06);color:var(--mc-label);',
+            'font:inherit;font-size:12px;font-weight:700;white-space:nowrap;}',
+            '.mc-song-btns button:hover{background:rgba(139,92,246,.3);}',
+            '.mc-song-btns button.mc-on{background:var(--mc-grad);border-color:transparent;color:#fff;}',
+            '.mc-song-sub{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:800;color:var(--mc-label);}',
+            '.mc-song-sub button{border:none;background:none;color:var(--mc-bad-soft);font:inherit;font-size:12px;font-weight:700;cursor:pointer;}',
+            '.mc-song-now{font-size:13px;font-weight:700;color:var(--mc-ok);text-align:right;}',
+            '.mc-song-now:empty{display:none;}',
+            '.mc-song-empty{padding:10px;border-radius:14px;border:1.5px dashed rgba(255,255,255,.1);text-align:center;',
+            'font-size:12px;font-weight:600;color:var(--mc-muted);}',
+
             /* 2ب) دائرة اللعب — إطار العجلة نفسه بروليت الإقصاء */
             '.mc-arena{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;}',
             '.mc-cq{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;}',
@@ -548,6 +710,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // نافذة إضافة لاعب
             '#mc-add-modal{z-index:60;}',
             '#mc-add-modal .mc-card{width:520px;height:700px;max-width:100%;gap:16px;overflow:hidden;}',
+            '#mc-song-modal .mc-card{width:min(560px,100%);gap:16px;}',
+            '.mc-song-search{display:flex;flex-direction:column;gap:14px;}',
             '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:var(--mc-label);}',
             '.mc-add-done{flex-shrink:0;height:56px;font-size:18px;}',
             '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;',
@@ -598,6 +762,59 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-er-players .agp-player-remove-btn{font-size:0 !important;}',
             '.mc-er-players .agp-player-remove-btn > *{display:none !important;}',
             '.mc-er-players .agp-player-remove-btn::before{content:"✕";font-size:15px;font-weight:800;}',
+
+            /* ==================================================================
+             * شكل «سميك» لشاشة اللعب: أزرار الهيدر، قائمة الإجراءات،
+             * نافذة الإعدادات، ونافذة «اختر أغنيتك» — خلفيات أصمت، حدود
+             * أعرض، أزرار وخيارات أعلى، وخط أثقل. (محصور بـ#mc-stage، فشاشة
+             * الإعدادات الأولى وشاشة الفوز ما تتأثر.)
+             * ==================================================================== */
+            '#mc-stage{--mc-glass:linear-gradient(180deg,rgba(38,32,58,.97),rgba(22,19,33,.97));',
+            '--mc-line:rgba(167,139,250,.32);--mc-ctl-bg:rgba(255,255,255,.08);--mc-ctl-line:rgba(167,139,250,.34);}',
+            // الهيدر
+            '#mc-stage .mc-hbtn,#mc-stage .mc-spin-btn,#mc-stage .mc-header-title,#mc-stage .mc-seat-timer{',
+            'height:clamp(44px,3vw,52px);font-weight:800;}',
+            '#mc-stage .mc-hbtn{border-width:2.5px;border-color:rgba(167,139,250,.6);background:rgba(139,92,246,.24);',
+            'box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 16px rgba(0,0,0,.35);}',
+            '#mc-stage .mc-hbtn:hover{background:rgba(139,92,246,.34);border-color:rgba(196,181,253,.8);}',
+            '#mc-stage .mc-header-title,#mc-stage .mc-seat-timer{border-width:2.5px;}',
+            // قائمة الإجراءات
+            '#mc-stage .mc-panel-head,#mc-stage .mc-stat,#mc-stage .mc-game-settings{border-width:2.5px;}',
+            '#mc-stage .mc-stat-lbl{font-weight:800;color:var(--mc-muted-2);}',
+            '#mc-stage .mc-gs-title{font-size:18px;border-bottom-width:2px;}',
+            '#mc-stage .mc-gs-lbl,#mc-stage .mc-gs-lbl-row{font-size:16px;font-weight:800;}',
+            '#mc-stage .mc-seg,#mc-stage .mc-stepper,#mc-stage .mc-vol,#mc-stage .mc-song-form{border-width:2.5px;padding:5px;',
+            'box-shadow:inset 0 2px 8px rgba(0,0,0,.4);}',
+            '#mc-stage .mc-vol{padding:12px 18px;}',
+            '#mc-stage .mc-seg button{height:44px;font-size:15px;font-weight:800;}',
+            '#mc-stage .mc-stepper button{width:44px;height:44px;font-size:22px;font-weight:800;background:rgba(255,255,255,.12);}',
+            '#mc-stage .mc-stepper div{font-size:17px;}',
+            // النوافذ (الإعدادات + اختر أغنيتك)
+            '#mc-stage .mc-card{border-width:2.5px;background:linear-gradient(180deg,#1d1730,#110e1b);}',
+            '#mc-stage .mc-card-title{font-size:24px;}',
+            '#mc-stage .mc-x{width:46px;height:46px;border-width:2.5px;background:rgba(255,255,255,.08);font-size:18px;font-weight:800;}',
+            '#mc-stage .mc-end-btn,#mc-stage .mc-reset-btn{height:56px;font-size:17px;font-weight:800;}',
+            '#mc-stage .mc-reset-btn{border-width:2.5px;background:rgba(248,113,113,.12);}',
+            // نافذة «اختر أغنيتك»
+            '#mc-stage .mc-song-form input{height:46px;font-size:16px;font-weight:700;}',
+            '#mc-stage .mc-song-form button{height:46px;padding:0 24px;font-size:16px;}',
+            '#mc-stage .mc-song{gap:10px;padding:10px;border-radius:20px;border-width:2.5px;border-color:rgba(167,139,250,.24);',
+            'background:linear-gradient(180deg,rgba(44,37,66,.95),rgba(28,24,42,.95));box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}',
+            '#mc-stage .mc-song.mc-on{border-color:rgba(192,132,252,.85);background:linear-gradient(180deg,rgba(91,52,160,.55),rgba(52,33,92,.55));}',
+            '#mc-stage .mc-song-art{width:52px;height:52px;border-radius:12px;}',
+            '#mc-stage .mc-song-t{font-size:15px;}',
+            '#mc-stage .mc-song-a{font-size:13px;font-weight:700;color:var(--mc-muted-2);}',
+            '#mc-stage .mc-song-btns{gap:6px;}',
+            '#mc-stage .mc-song-btns button{height:40px;min-width:40px;padding:0 14px;border-width:2.5px;font-size:14px;font-weight:800;',
+            'background:rgba(255,255,255,.1);border-color:rgba(167,139,250,.4);}',
+            '#mc-stage .mc-song-btns button.mc-on{background:var(--mc-grad);border-color:transparent;color:#fff;',
+            'box-shadow:0 4px 14px rgba(139,92,246,.45);}',
+            '#mc-stage .mc-song-sub{font-size:16px;}',
+            '#mc-stage .mc-song-sub button{font-size:14px;font-weight:800;}',
+            '#mc-stage .mc-song-now{font-size:15px;font-weight:800;}',
+            '#mc-stage .mc-song-msg{font-size:14px;font-weight:700;}',
+            '#mc-stage .mc-song-empty{padding:14px;border-width:2px;font-size:14px;font-weight:700;}',
+            '#mc-stage .mc-song-results{max-height:340px;}',
 
             /* الوضع العمودي / الشاشات الأضيق من 900px */
             '@media (max-width:899px),(max-aspect-ratio:9/10){',
@@ -808,6 +1025,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-settings-initial-box .mc-settings-footer{flex:0 0 auto !important;width:100% !important;display:flex !important;',
             'justify-content:center !important;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px) !important;}',
 
+            /* — شكل «سميك» لشاشة الإعدادات الأولى (نفس سماكة شاشة اللعب)،
+             *   مع لون بنفسجي أغنى شوي وعمق أوضح (ظلال أعمق ولمعة علوية). — */
+            '.mc-settings-initial-box{--mc-glass:linear-gradient(180deg,rgba(46,36,74,.97),rgba(24,19,38,.97));',
+            '--mc-line:rgba(167,139,250,.38);--mc-ctl-bg:rgba(124,58,237,.12);--mc-ctl-line:rgba(167,139,250,.42);',
+            '--mc-depth:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -2px 0 rgba(0,0,0,.25),0 18px 40px rgba(0,0,0,.55),0 0 34px rgba(124,58,237,.14);}',
+            '.mc-er-section{border-width:2.5px !important;}',
+            '.mc-er-sec-head{border-bottom-width:2px !important;border-bottom-color:rgba(167,139,250,.18) !important;}',
+            '.mc-er-sec-num{width:40px !important;height:40px !important;font-size:17px !important;',
+            'box-shadow:0 6px 18px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(46,16,101,.4) !important;}',
+            '.mc-er-sec-title{font-size:clamp(19px,1.55vw,23px) !important;}',
+            '.mc-er-section > .agp-shell-row + .agp-shell-row,.mc-er-section > .agp-shell-field + .agp-shell-row{',
+            'border-top:2px solid rgba(167,139,250,.14) !important;}',
+            '.mc-er-section .agp-shell-row-label,.mc-er-section > .agp-shell-field > label{font-weight:800 !important;',
+            'font-size:clamp(16px,1.25vw,18px) !important;}',
+            '.mc-er-section .agp-pill-group,.mc-er-section .agp-shell-counter-row,.mc-er-section > .agp-shell-field > input[type=text]{',
+            'border-width:2.5px !important;box-shadow:inset 0 3px 8px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.05) !important;}',
+            '.mc-er-section .agp-pill-group,.mc-er-section .agp-shell-counter-row{padding:5px !important;}',
+            '.mc-er-section .agp-pill-btn{height:44px !important;font-size:15px !important;font-weight:800 !important;}',
+            '.mc-er-section .agp-pill-btn.agp-pill-active{box-shadow:0 6px 20px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.3),',
+            'inset 0 -2px 0 rgba(46,16,101,.35) !important;}',
+            '.mc-er-section .agp-shell-counter-row button{width:44px !important;height:44px !important;font-weight:800 !important;',
+            'background:rgba(255,255,255,.12) !important;}',
+            '.mc-er-section .agp-count-input{height:44px !important;font-size:20px !important;}',
+            '.mc-er-section > .agp-shell-field > input[type=text]{height:50px !important;font-weight:800 !important;}',
+            '.mc-er-live,.mc-settings-initial-box .agp-shell-conn-link{height:38px !important;font-size:14px !important;font-weight:800 !important;}',
+            '.mc-er-live{border-width:2px !important;}',
+            '.mc-er-exit{height:clamp(44px,3vw,52px) !important;border-width:2.5px !important;font-weight:800 !important;',
+            'background:rgba(248,113,113,.12) !important;}',
+
             /* — اللوبي — */
             '#agp-shell-box.agp-lobby-box{width:min(1080px,100vw) !important;max-width:min(1080px,100vw) !important;',
             'height:calc(100vh - 80px) !important;height:calc(100dvh - 80px) !important;max-height:none !important;',
@@ -924,6 +1170,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<header class="mc-header">' +
                 '<div class="mc-header-btns">' +
                     '<button type="button" class="mc-hbtn" id="mc-add-btn" title="إضافة لاعب جديد">➕ إضافة لاعب</button>' +
+                    '<button type="button" class="mc-hbtn" id="mc-song-btn" title="ابحث عن أغنية وشغّلها بالدوران">🎵 اختر أغنيتك</button>' +
                     '<button type="button" class="mc-hbtn" id="mc-settings-btn" title="الإعدادات">⚙️ الإعدادات</button>' +
                     '<button type="button" class="mc-hbtn" id="mc-panel-btn" title="قائمة الإجراءات">☰ الإجراءات</button>' +
                     '<button type="button" class="mc-spin-btn" id="mc-spin-btn">▶ تدوير</button>' +
@@ -966,6 +1213,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div id="mc-players"></div>' +
                 '</div></div></section>' +
             '</main>' +
+
+            '<div class="mc-modal" id="mc-song-modal"><div class="mc-card">' +
+                '<div class="mc-card-head"><div class="mc-card-title">🎵 اختر أغنيتك</div>' +
+                '<button type="button" class="mc-x" id="mc-song-x" title="إغلاق">✕</button></div>' +
+                '<div class="mc-song-search">' +
+                    '<form class="mc-song-form" id="mc-song-form" autocomplete="off">' +
+                        '<input type="search" id="mc-song-q" placeholder="اسم الأغنية أو الفنان" maxlength="80">' +
+                        '<button type="submit" id="mc-song-go">بحث</button>' +
+                    '</form>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-msg" id="mc-song-msg"></div>' +
+                        '<ul class="mc-song-list mc-song-results" id="mc-song-results"></ul>' +
+                    '</div>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-now" id="mc-song-now"></div>' +
+                        '<div class="mc-song-sub"><span>⏭ الجولة الجاية</span></div>' +
+                        '<ul class="mc-song-list" id="mc-song-next"></ul>' +
+                    '</div>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-sub"><span>📜 قائمة التشغيل (<span id="mc-song-pl-count">0</span>)</span>' +
+                            '<button type="button" id="mc-song-pl-clear" hidden>مسح القائمة</button></div>' +
+                        '<ul class="mc-song-list" id="mc-song-playlist"></ul>' +
+                    '</div>' +
+                '</div>' +
+            '</div></div>' +
 
             '<div class="mc-modal" id="mc-add-modal"><div class="mc-card">' +
                 '<div class="mc-card-head"><div class="mc-card-title">➕ إضافة لاعب جديد</div>' +
@@ -1054,6 +1326,121 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderGenres();
         renderSeatTimes();
         el('mc-dur-val').textContent = spinDuration();
+        wireSongSearch();
+    }
+
+    /* -------- البحث عن أغنية: الواجهة -------- */
+    function openSongModal() {
+        renderSongPanel();
+        openModal('mc-song-modal');
+        var q = el('mc-song-q');
+        if (q) setTimeout(function () { q.focus(); }, 50);
+    }
+    function closeSongModal() {
+        stopPreview();
+        renderSongPanel();
+        closeModal('mc-song-modal');
+    }
+
+    function wireSongSearch() {
+        el('mc-song-btn').onclick = openSongModal;
+        el('mc-song-x').onclick = closeSongModal;
+        el('mc-song-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-song-modal') closeSongModal(); });
+        el('mc-song-form').onsubmit = function (e) {
+            e.preventDefault();
+            var q = el('mc-song-q').value.trim();
+            if (!q) return;
+            var btn = el('mc-song-go');
+            btn.disabled = true;
+            _songResults = [];
+            el('mc-song-msg').textContent = '⏳ جاري البحث…';
+            renderSongPanel();
+            searchSongs(q, function (list, err) {
+                btn.disabled = false;
+                _songResults = list;
+                el('mc-song-msg').textContent = err ? 'تعذّر البحث، تأكد من الاتصال وجرّب مرة ثانية' :
+                    (list.length ? '' : 'ما لقينا نتائج، جرّب اسم ثاني');
+                renderSongPanel();
+            });
+        };
+        el('mc-song-pl-clear').onclick = function () {
+            _playlist = [];
+            _playlistIdx = 0;
+            renderSongPanel();
+        };
+        // زر واحد لكل الأزرار داخل القوائم (data-act + data-id)
+        el('mc-stage').querySelector('.mc-song-search').addEventListener('click', function (e) {
+            var b = e.target.closest('button[data-act]');
+            if (!b) return;
+            var act = b.getAttribute('data-act');
+            var id = b.getAttribute('data-id');
+            var song = findSong(id);
+            // اختيار أغنية يوقف تجربتها، عشان ما تكمل فوق أغنية الدوران
+            if ((act === 'next' || act === 'add') && _previewId === id) stopPreview();
+            if (act === 'preview' && song) togglePreview(song);
+            else if (act === 'next' && song) _nextSong = (_nextSong && _nextSong.id === id) ? null : song;
+            else if (act === 'add' && song && !_playlist.some(function (s) { return s.id === id; })) _playlist.push(song);
+            else if (act === 'rm-next') _nextSong = null;
+            else if (act === 'rm-pl') {
+                var i = _playlist.findIndex(function (s) { return s.id === id; });
+                if (i !== -1) {
+                    _playlist.splice(i, 1);
+                    if (i < _playlistIdx) _playlistIdx--;
+                    if (_playlistIdx >= _playlist.length) _playlistIdx = 0;
+                }
+            }
+            renderSongPanel();
+        });
+        renderSongPanel();
+    }
+
+    function findSong(id) {
+        var all = _songResults.concat(_playlist, _nextSong ? [_nextSong] : []);
+        for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+        return null;
+    }
+
+    function escapeAttr(text) { return escapeHtml(text).replace(/"/g, '&quot;'); }
+
+    function songItemHtml(song, btns, on) {
+        return '<li class="mc-song' + (on ? ' mc-on' : '') + '">' +
+            (song.art ? '<img class="mc-song-art" src="' + escapeAttr(song.art) + '" alt="" loading="lazy">' : '<div class="mc-song-art"></div>') +
+            '<div class="mc-song-txt"><div class="mc-song-t">' + escapeHtml(song.title) + '</div>' +
+            '<div class="mc-song-a">' + escapeHtml(song.artist) + '</div></div>' +
+            '<div class="mc-song-btns">' + btns + '</div></li>';
+    }
+
+    function songBtn(act, id, label, title, on) {
+        return '<button type="button" data-act="' + act + '" data-id="' + escapeAttr(id) + '" title="' + title + '"' +
+            (on ? ' class="mc-on"' : '') + '>' + label + '</button>';
+    }
+
+    function renderSongPanel() {
+        if (!el('mc-song-results')) return;
+        var inList = {};
+        _playlist.forEach(function (s) { inList[s.id] = true; });
+
+        el('mc-song-results').innerHTML = _songResults.map(function (s) {
+            var isNext = _nextSong && _nextSong.id === s.id;
+            return songItemHtml(s,
+                songBtn('preview', s.id, _previewId === s.id ? '⏸' : '▶', 'تجربة', _previewId === s.id) +
+                songBtn('next', s.id, 'الجولة الجاية', 'تشتغل بالدوران الجاي مرة وحدة', isNext) +
+                songBtn('add', s.id, inList[s.id] ? '✓' : '+ القائمة', 'إضافة لقائمة التشغيل', inList[s.id]),
+                isNext);
+        }).join('');
+
+        el('mc-song-now').textContent = _nowPlaying ? '🎶 يشتغل الحين: ' + _nowPlaying.title + (_nowPlaying.artist ? ' — ' + _nowPlaying.artist : '') : '';
+
+        el('mc-song-next').innerHTML = _nextSong ?
+            songItemHtml(_nextSong, songBtn('rm-next', _nextSong.id, '✕', 'إلغاء'), true) :
+            '<li class="mc-song-empty">' + (_playlist.length ? 'بتشتغل الأغنية الجاية من القائمة' : 'بتشتغل الأغاني المحفوظة حسب «نوع الأغاني»') + '</li>';
+
+        el('mc-song-pl-count').textContent = _playlist.length;
+        el('mc-song-pl-clear').hidden = !_playlist.length;
+        el('mc-song-playlist').innerHTML = _playlist.length ? _playlist.map(function (s, i) {
+            var upNext = !_nextSong && i === _playlistIdx;
+            return songItemHtml(s, songBtn('rm-pl', s.id, '✕', 'حذف من القائمة'), upNext);
+        }).join('') : '<li class="mc-song-empty">أضف أغاني من نتائج البحث، وكل جولة تاخذ اللي بعدها</li>';
     }
 
     /* -------- تبويب إضافة لاعب جديد --------
