@@ -176,7 +176,7 @@ export function createTugScene(container, opts = {}) {
             _hv.project(cam); _hu.project(cam);
             if (_hv.z > 1) { el.style.display = 'none'; continue; }
             // حجم الصورة = عرض الراس على الشاشة، وتنحط فوق الراس لازقة فيه
-            const px = Math.abs(_hu.y - _hv.y) * H / 2, size = Math.max(26, Math.min(110, px * 1.5)) * f.outer.scale.x;
+            const px = Math.abs(_hu.y - _hv.y) * H / 2, size = Math.max(22, Math.min(80, px * 1.1)) * f.outer.scale.x;
             const x = (_hv.x + 1) / 2 * W, top = (1 - _hu.y) / 2 * H - size * .92;
             if (Math.abs(size - f.pin.size) > .5) { f.pin.size = size; el.style.width = el.style.height = size + 'px'; el.style.fontSize = Math.round(size * .45) + 'px'; }
             el.style.display = 'grid';

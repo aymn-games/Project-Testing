@@ -592,11 +592,11 @@ class Component extends DCLogic {
     if(g.kind==='hook') kids.push(h('span',{key:'hk',style:{position:'absolute',top:'44%',left:'50%',marginLeft:-60,'--fx0':(onLeft?-760:760)+'px',filter:'drop-shadow(0 0 18px #f472b6)',animation:'gfxFly .9s cubic-bezier(.2,.8,.3,1) both'}},icon('hook',120,'#fbcfe8')));
     if(g.kind==='out'||g.kind==='hook') { for(let i=0;i<3;i++) kids.push(h('span',{key:'r'+i,style:{position:'absolute',top:'52%',left:'50%',width:180,height:180,borderRadius:'50%',border:`5px solid ${c}`,animation:`gfxRing 1s ${(g.kind==='hook'?.55:0)+i*.15}s ease-out both`}}));
       if(g.kind==='out') for(let i=0;i<14;i++) kids.push(h('span',{key:'y'+i,style:{position:'absolute',top:'52%',left:'50%',width:8,height:170,marginLeft:-4,transformOrigin:'50% 0','--r':(i*360/14)+'deg',background:`linear-gradient(${c}, transparent)`,animation:'gfxRay .8s ease-out both'}})); }
-    kids.push(h('div',{key:'ban',dir:'rtl',style:{position:'absolute',top:'50%',left:'50%',display:'flex',alignItems:'center',gap:22,padding:'20px 36px 20px 30px',borderRadius:32,background:'rgba(10,9,18,.9)',border:`3px solid ${c}`,boxShadow:`0 0 80px ${c}88, 0 30px 80px rgba(0,0,0,.6)`,animation:'gfxBanner 2.4s cubic-bezier(.2,1.2,.35,1) forwards',whiteSpace:'nowrap'}},[
-      g.img?h('img',{key:'i',src:g.img,alt:'',style:{width:96,height:96,objectFit:'contain',filter:`drop-shadow(0 0 18px ${c})`}}):icon(g.kind,90,c),
-      h('div',{key:'t',style:{display:'flex',flexDirection:'column',gap:6}},[
-        h('span',{key:'a',style:{display:'flex',alignItems:'center',gap:12,font:"800 58px/1.1 'IBM Plex Sans Arabic'",color:c,textShadow:`0 0 30px ${c}`}},[icon(g.kind,52,c),g.title]),
-        h('span',{key:'b',style:{font:"700 26px/1.3 'IBM Plex Sans Arabic'",color:'#fff'}},g.sub)])]));
+    kids.push(h('div',{key:'ban',dir:'rtl',style:{position:'absolute',top:'13%',left:'50%',display:'flex',alignItems:'center',gap:15,padding:'14px 25px 14px 21px',borderRadius:22,background:'rgba(10,9,18,.9)',border:`2px solid ${c}`,boxShadow:`0 0 56px ${c}88, 0 20px 56px rgba(0,0,0,.6)`,animation:'gfxBanner 2.4s cubic-bezier(.2,1.2,.35,1) forwards',whiteSpace:'nowrap'}},[
+      g.img?h('img',{key:'i',src:g.img,alt:'',style:{width:67,height:67,objectFit:'contain',filter:`drop-shadow(0 0 13px ${c})`}}):icon(g.kind,63,c),
+      h('div',{key:'t',style:{display:'flex',flexDirection:'column',gap:4}},[
+        h('span',{key:'a',style:{display:'flex',alignItems:'center',gap:8,font:"800 41px/1.1 'IBM Plex Sans Arabic'",color:c,textShadow:`0 0 21px ${c}`}},[icon(g.kind,36,c),g.title]),
+        h('span',{key:'b',style:{font:"700 18px/1.3 'IBM Plex Sans Arabic'",color:'#fff'}},g.sub)])]));
     return h('div',{key:'gfx'+g.id,'aria-hidden':true,style:{position:'absolute',inset:0,zIndex:7,pointerEvents:'none',overflow:'hidden'}},kids); }
   // حجم البطاقات: أكبر عرض (لين 170) يخلّي كل البطاقات تدخل بمساحتها (1720×500) بدون ما تدفّ الأزرار
   fitCards(n){ const W=1720, H=430, gap=16; for(let w=140;w>=64;w-=2){ const cols=Math.max(1,Math.min(n,Math.floor((W+gap)/(w+gap)))), rows=Math.ceil(n/cols); if(rows*w*1.34+(rows-1)*gap<=H) return {w,cols}; } return {w:64,cols:Math.floor((W+gap)/80)}; }
