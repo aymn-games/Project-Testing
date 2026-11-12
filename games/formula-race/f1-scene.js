@@ -708,7 +708,9 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             _pv.project(camera); _pu.project(camera);
             if (_pv.z > 1 || _pv.x < -1.2 || _pv.x > 1.2 || _pv.y < -1.2 || _pv.y > 1.3) { if (P.d.style.display !== 'none') P.d.style.display = 'none'; continue; }
             const x = (_pv.x + 1) / 2 * w, y = (1 - _pv.y) / 2 * h, pxPerM = Math.abs(_pu.y - _pv.y) / 2 * h;
-            const size = camMode === 'track' ? 24 : Math.max(32, Math.min(64, pxPerM * 1.15));
+            // حجم الدبوس يتبع مقاس الشاشة (F1_UI_SCALE من index.html) عشان يبقى بنفس النسبة بكل شاشة
+            const ui = window.F1_UI_SCALE || 1;
+            const size = (camMode === 'track' ? 24 : Math.max(32, Math.min(64, pxPerM * 1.15 / ui))) * ui;
             if (P.d.style.display === 'none') P.d.style.display = '';
             P.d.style.setProperty('--s', size.toFixed(1) + 'px');
             P.d.style.transform = 'translate3d(' + (x - size / 2).toFixed(1) + 'px,' + (y - size * 1.2).toFixed(1) + 'px,0)';

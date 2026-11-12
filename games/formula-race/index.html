@@ -369,7 +369,6 @@ body.ceremony #podium .btn-start{height:46px}
 /* لوحة الصدارة وبطاقة اللاعب أكبر شوي، وطريقة اللعب بخط أكبر وأسمك (طلب الستريمر) */
 .tower,.bottom{zoom:.8}
 .perks{zoom:.85}   /* أصغر شوي من الحجم الكامل، والخط عريض عشان يبان من بث الجوال */
-@media (max-height:1000px){.perks{zoom:.75}}   /* شاشات أقصر من 1080: ما تغطي الخريطة */
 /* وضوح النصوص فوق المشهد: ظل خفيف ناعم لكل اللوحات */
 .tower,.perks,.mapbox,.bottom,.lapbox,.toast,#ctrlMenu,#cerBanner{text-shadow:0 1px 2px rgba(0,0,0,.55)}
 
@@ -459,6 +458,32 @@ body.no3d .fc-cam{display:none}
   .step.p1 .pod-av{width:72px;height:72px}.pod-av{width:56px;height:56px}
 }
 </style>
+<script>
+/* مقاس مرن لكل الشاشات: التصميم مضبوط على 1920×1080، وعلى أي شاشة ثانية كل اللوحات تتكبّر/تتصغّر
+   بنفس النسبة (الأصغر من نسبة العرض ونسبة الارتفاع) — فالشكل والنِّسب نفسها بكل شاشة وبالبث اللي
+   يشوفه المشاهد. الحد الأدنى 0.62 (شاشات اللابتوب الصغيرة) والأعلى 2 (4K).
+   الجوال (عرض 760 أو أقل) له ترتيب خاص بالـ@media فوق، فما نلمسه.
+   الشاشات الكاملة (لوبي الدخول، الإعدادات، الفوز) مرنة أصلاً للصغير، فتتكبّر بس بالشاشات الأكبر من 1080. */
+(function () {
+    var BASE = { '.tower,.bottom': .8, '.perks': .85,
+        '.mapbox,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest': .7 };
+    var FULL = '#entryLobby .el-wrap,.lobby .er,#winScreen .w-wrap,#picker .pk-box';
+    var tag = document.createElement('style'); tag.id = 'f1-fit'; document.head.appendChild(tag);
+    function fit() {
+        var w = innerWidth, h = innerHeight;
+        if (w <= 760) { tag.textContent = ''; window.F1_UI_SCALE = 1; return; }
+        var k = Math.max(.62, Math.min(2, Math.min(w / 1920, h / 1080)));
+        k = Math.round(k * 100) / 100;
+        window.F1_UI_SCALE = k;
+        var css = '';
+        for (var sel in BASE) css += sel + '{zoom:' + (BASE[sel] * k).toFixed(3) + '}';
+        // الهيدر وقائمة التحكم للستريمر نفسه (أزرار يضغطها): تكبر بالشاشات الكبيرة بس وما تصغر
+        if (k > 1) css += FULL + '{zoom:' + k + '}.top{zoom:' + k + '}#ctrlMenu{zoom:' + (.85 * k).toFixed(3) + '}';
+        tag.textContent = css;
+    }
+    fit(); addEventListener('resize', fit);
+})();
+</script>
 </head>
 <body>
 <div id="stage"></div>
