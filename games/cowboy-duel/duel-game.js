@@ -502,7 +502,9 @@ function hookStream() {
     const inMatch = () => G.phase !== 'lobby' && G.phase !== 'champ';
     $('#hSet').href = window.CDPlatform ? CDPlatform.settingsUrl + (CDPlatform.demo ? '?demo=1' : '') : 'index.html';
     $('#hExit').href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html';
-    [$('#hSet'), $('#hExit')].forEach(a => a.addEventListener('click', e => { if (inMatch() && !confirm('المباراة شغّالة… تبي تطلع منها؟')) e.preventDefault(); }));
+    // «خروج» (بالهيدر وبشاشة الفوز) يطلع لمكتبة الألعاب مباشرة بدون تأكيد. «إعدادات المباراة» يتأكد بس لو المباراة شغّالة
+    $('#hSet').addEventListener('click', e => { if (inMatch() && !confirm('المباراة شغّالة… تبي تطلع منها للإعدادات؟')) e.preventDefault(); });
+    $('#hExit').addEventListener('click', e => { e.preventDefault(); location.href = $('#hExit').href; });
     hookStream(); renderLobby();
     if (window.CDPlatform && CDPlatform.onStatus) CDPlatform.onStatus(st => $('#live').classList.toggle('on', st === 'connected'));
     document.documentElement.style.setProperty('--ans', ANSWER_MS / 1000 + 's');
