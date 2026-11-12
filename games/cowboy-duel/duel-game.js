@@ -98,25 +98,44 @@ applyZoom(); addEventListener('resize', applyZoom);
 const pickOne = a => a[Math.floor(Math.random() * a.length)];
 function banner(html, ms = 2600) { const el = $('#banner'); el.innerHTML = html; el.classList.add('in'); clearTimeout(banner.t); banner.t = setTimeout(() => el.classList.remove('in'), ms); }
 function updateCount() { $('#count').textContent = G.phase === 'lobby' ? G.players.length : G.alive.length; $('#countLbl').textContent = G.phase === 'lobby' ? 'بالسوق' : 'باقين'; }
-// بطاقة اللاعب باللوبي: صاحب الإطار (حساب موثّق بإطار مفعّل) ببطاقة الإطار المشتركة (js/agp-player-card.js)،
-// والباقي كبسولة صورة + اسم — نفس لوبي روليت الإقصاء. وكل بطاقة فيها × لإقصاء اللاعب من اللوبي.
+// لوبي الدخول — نفس روليت الإقصاء (games/elimination-roulette/lobby.html + er-platform.js frameCard):
+// 5 بطاقات بالصف (2 بالجوال)، ارتفاع الصف 54 (78 لو فيه إطار)، صاحب الإطار ببطاقة الإطار المشتركة
+// (js/agp-player-card.js) بعرض خانته، والباقي كبسولة صورة + اسم. وكل بطاقة فيها × لإقصاء اللاعب.
 const KICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+const FRAME_W_RATIO = 4.96, X_SIZE = 24; // نفس er-platform.js
+const PCard = () => window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
+const hasFrame = p => !!(PCard() && p.frame && p.frame.imageFilename);
+const kickBtn = p => `<button class="kick" type="button" data-kick="${esc(p.id)}" aria-label="إقصاء ${esc(p.name)}">${KICK_SVG}</button>`;
 function lobbyCard(p) {
-    const PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard, kick = `<button class="kick" type="button" data-kick="${esc(p.id)}" aria-label="إقصاء ${esc(p.name)}">${KICK_SVG}</button>`;
-    if (PC && p.frame && p.frame.imageFilename) return `<div class="lcell framed">${PC.renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || (G.scene && G.scene.portrait(p.id)) || null, frame: p.frame }, { showFrame: true, basePath: '../../', size: 44 })}${kick}</div>`;
-    return `<div class="lcell plain">${avatarHtml(p)}<span class="ln">${esc(p.name)}</span>${kick}</div>`;
+    if (hasFrame(p)) return `<div class="lcell"><div class="fw" data-fid="${esc(p.id)}"></div></div>`;
+    return `<div class="lcell"><div class="pl">${avatarHtml(p)}<span class="ln">${esc(p.name)}</span>${kickBtn(p)}</div></div>`;
+}
+// بطاقة الإطار تنرسم بعد ما نعرف عرض خانتها، وزر × يجي على طرف لوح الاسم
+function fillFramed(list) {
+    list.querySelectorAll('.fw[data-fid]').forEach(box => {
+        const p = G.players.find(x => String(x.id) === box.dataset.fid), w = Math.floor(box.clientWidth); if (!p || !w) return;
+        box.innerHTML = PCard().renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || (G.scene && G.scene.portrait(p.id)) || null, frame: p.frame },
+            { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(w / FRAME_W_RATIO)) }) + kickBtn(p);
+        const plate = box.querySelector('[data-agp-pcard-name="1"]'), x = box.querySelector('.kick');
+        if (plate) { const ph = plate.clientHeight; if (ph) { plate.style.fontSize = Math.max(9, Math.min(14, Math.round(ph * .65))) + 'px'; plate.style.lineHeight = '1.2'; }
+            plate.style.width = `calc(${plate.style.width} - ${X_SIZE}px)`;
+            const b = box.getBoundingClientRect(), r = plate.getBoundingClientRect();
+            x.style.left = Math.round(r.right - b.left) + 'px'; x.style.top = Math.round(r.top - b.top + r.height / 2 - X_SIZE / 2) + 'px'; }
+        else { x.style.left = '0px'; x.style.top = '0px'; }
+    });
+    PCard() && PCard().fitAllNames(list);
 }
 function kickPlayer(id) {
     if (G.phase !== 'lobby') return;
-    G.players = G.players.filter(p => p.id !== id); G.scene && G.scene.setPlayers(G.players); renderLobby();
+    G.players = G.players.filter(p => String(p.id) !== String(id)); G.scene && G.scene.setPlayers(G.players); renderLobby();
 }
-function showLobby(on) { $('#lobby').classList.toggle('hide', !on); $('#kwTop').classList.toggle('hide', !on); }
+function showLobby(on) { $('#lobby').classList.toggle('hide', !on); document.body.classList.toggle('inlobby', !!on); }
 function renderLobby() {
-    const list = $('#roster'), PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
-    list.style.setProperty('--rowH', G.players.some(p => p.frame && p.frame.imageFilename) ? '100px' : '56px');
+    const list = $('#roster'), framed = G.players.some(hasFrame), narrow = innerWidth < 720;
+    list.style.setProperty('--cols', narrow ? 'repeat(2,minmax(0,1fr))' : 'repeat(5,minmax(0,1fr))');
+    list.style.setProperty('--rowH', framed ? '78px' : '54px'); list.style.setProperty('--gap', framed ? '6px 10px' : '10px');
     list.innerHTML = G.players.length ? G.players.map(lobbyCard).join('') : '<div class="lempty">بانتظار انضمام اللاعبين…</div>';
-    list.querySelectorAll('[data-agp-pcard-name="1"]').forEach(pl => { const h = pl.clientHeight; if (h) { pl.style.fontSize = Math.max(9, Math.min(15, Math.round(h * .65))) + 'px'; pl.style.lineHeight = '1.2'; } });
-    if (PC) PC.fitAllNames(list);
+    if (framed) fillFramed(list);
     $('#lobbyCount').textContent = G.players.length;
     $('#startBtn').disabled = G.players.length < 2; if ($('#rules').classList.contains('in')) updateRulesCount(); $('#lobbyMax').textContent = G.settings.maxPlayers; updateCount();
 }
@@ -448,6 +467,7 @@ function hookStream() {
     G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
     $('#kwWord').textContent = G.settings.keyword || 'دخول';
     $('#roster').addEventListener('click', e => { const b = e.target.closest('[data-kick]'); if (b) kickPlayer(b.dataset.kick); });
+    showLobby(true); addEventListener('resize', () => { if (G.phase === 'lobby') renderLobby(); });
     $('#loading').classList.add('hide');
     $('#startBtn').onclick = openRules; $('#rulesGo').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
