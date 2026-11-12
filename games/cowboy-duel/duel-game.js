@@ -160,10 +160,15 @@ function openRules() {
     renderRules(); $('#lobby').classList.add('hide'); $('#rules').classList.add('in'); document.body.classList.add('ovl-on'); // الدخول من الشات مستمر لين «ابدأ المبارزات»
 }
 // شاشة القرعة: كرت لكل مبارزة، وتصغر الكروت تلقائياً لين تطلع كلها بشاشة وحدة
+// اسم المرحلة حسب عدد مبارزات الجولة (بعد الجولة الأولى)
+function stageName(n) { return G.round > 1 ? (n === 1 ? 'النهائي' : n === 2 ? 'نصف النهائي' : n === 4 ? 'ربع النهائي' : null) : null; }
+// القرعة: ببداية المباراة وقبل كل جولة بالباقين — «ابدأ الآن» يبدأها
 function showDraw(pairs) { return new Promise(res => {
-    const n = pairs.length, all = G.settings.mode === 'all';
-    $('#drawTitle').textContent = n === 1 ? 'مبارزة واحدة' : `${duelsTxt(n)} ${all ? 'في وقت واحد' : 'واحدة بعد واحدة'}`;
-    $('#drawSub').textContent = `كل اثنين متقابلين. الأسرع في كتابة ${bellWords().the} يتأهل.` + (pairs.some(d => d.c) ? ' والمواجهة الثلاثية: الأسرع من الثلاثة.' : '');
+    const n = pairs.length, all = G.settings.mode === 'all', st = stageName(n);
+    $('#drawChip').textContent = G.round > 1 ? 'الجولة ' + G.round : 'القرعة';
+    $('#drawTitle').textContent = st || (n === 1 ? 'مبارزة واحدة' : `${duelsTxt(n)} ${all ? 'في وقت واحد' : 'واحدة بعد واحدة'}`);
+    $('#drawSub').textContent = G.fastest ? `أسرع مسدس حتى الآن: ${G.fastest.name} · ${G.fastest.secs} ث`
+        : `كل اثنين متقابلين. الأسرع في كتابة ${bellWords().the} يتأهل.` + (pairs.some(d => d.c) ? ' والمواجهة الثلاثية: الأسرع من الثلاثة.' : '');
     const g = $('#dgrid');
     g.innerHTML = pairs.map((d, i) => `<div class="dcard${d.c ? ' tri' : ''}" style="animation-delay:${Math.min(i * 45, 900)}ms">${d.ps.map(p => `<div class="dp">${avatarHtml(p)}<b>${esc(p.name)}</b></div>`).join('<i class="dvs">VS</i>')}</div>`).join('');
     const fit = () => {
@@ -175,15 +180,15 @@ function showDraw(pairs) { return new Promise(res => {
         g.style.width = (n < cols * 1 ? 'auto' : W + 'px');
         Object.entries({ '--cols': cols, '--tri': innerWidth < 640 && cols > 1 ? 2 : 1, '--gap': gap + 'px', '--ch': ch + 'px', '--av': av + 'px', '--nf': Math.max(10, Math.min(18, ch * .15)) + 'px', '--vf': Math.max(11, Math.min(20, ch * .17)) + 'px' }).forEach(([k, v]) => g.style.setProperty(k, v));
     };
-    $('#draw').classList.add('in'); fit(); addEventListener('resize', fit); SFX.stamp();
+    $('#draw').classList.add('in'); document.body.classList.add('ovl-on'); fit(); addEventListener('resize', fit); SFX.stamp();
     $('#drawGo').onclick = () => { removeEventListener('resize', fit); $('#draw').classList.remove('in'); document.body.classList.remove('ovl-on'); SFX.unlock(); res(); };
 }); }
 async function startMatch() {
     if (G.players.length < 2 || G.phase !== 'lobby') return; SFX.unlock(); SFX.wind(false);
     $('#rules').classList.remove('in'); $('#lobby').classList.add('hide');
     G.alive = G.players.slice(); G.round = 0; G.phase = 'draw'; updateCount(); // القرعة تقفل الدخول
-    const { pairs } = makePairs(G.alive);
-    await sleep(350); await showDraw(pairs);
+    const { pairs } = makePairs(G.alive); G.fastest = null; G.round = 1; // القرعة الأولى تعرض «القرعة»
+    await sleep(350); await showDraw(pairs); G.round = 0;
     G.startedAt = Date.now(); G.phase = 'intro';
     await sleep(450);
     nextRound(pairs);
@@ -191,9 +196,7 @@ async function startMatch() {
 async function nextRound(preset) {
     G.round++; const pairs = preset || makePairs(G.alive).pairs, all = G.settings.mode === 'all', before = G.alive.slice();
     G.roundTotal = pairs.length; G.roundDone = 0; document.body.classList.add('match'); updatePill();
-    if (!preset) { banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 1700);
-    if (pairs.some(d => d.c)) later(400, () => notice('🔺 العدد فردي: فيه مبارزة ثلاثية'));
-    await sleep(1900); } // الجولة الأولى: القرعة كانت هي الإعلان
+    if (!preset) { G.phase = 'draw'; await sleep(700); await showDraw(pairs); G.phase = 'intro'; await sleep(450); } // كل جولة: قرعة جديدة بالباقين
     const winners = [], final = pairs.length === 1; // النهائي: يُعاد لين ينحسم
     if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, final }));
     else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, final }));
@@ -280,6 +283,7 @@ function answer(id, text) {
 async function win(d, shooter, typed) {
     const targets = others(d, shooter), secs = ((performance.now() - G.revealAt) / 1000).toFixed(2);
     d.done = true; d.winner = shooter; d.losers = targets; d.secs = secs; G.roundDone++; updatePill();
+    if (!G.fastest || +secs < +G.fastest.secs) G.fastest = { name: shooter.name, secs };
     if (G.active.length === 1) { // مبارزة بعد مبارزة: يطلق ← يطيح ← الكاميرا على الفايز + تبويب فوزه و«التالي» ← يرجع مكانه ← المبارزة الجاية
         G.phase = 'resolve'; clearTimers(); G.target = targets[0]; sign('gone'); grade('duel'); duelHud(false);
         await G.scene.fire(shooter.id, targets.map(t => t.id));
@@ -334,7 +338,7 @@ function duelHud(on) {
 const duelCardHtml = d => `<div class="dcard">${d.ps.map(p => `<div class="dp">${avatarHtml(p)}<b>${esc(p.name)}</b></div>`).join('<i class="dvs">VS</i>')}</div>`;
 async function showDuelCard(d) { const el = $('#dOne'); el.innerHTML = duelCardHtml(d); el.classList.add('in'); SFX.stamp(); await sleep(2200); el.classList.remove('in'); await sleep(350); }
 function fillAnnounce(d, info) {
-    $('#anRound').textContent = 'الجولة ' + G.round;
+    $('#anRound').textContent = stageName(G.roundTotal) || 'الجولة ' + G.round;
     $('#anTitle').textContent = info.final ? 'المبارزة النهائية' : `المبارزة ${info.idx} من ${info.total}`;
     $('#anChips').innerHTML = d.ps.map(p => `<span class="chipP">${avatarHtml(p, 'sm')}<span>${esc(p.name)}</span></span>`).join('<i class="chipVs">VS</i>');
 }
