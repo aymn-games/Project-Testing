@@ -19,7 +19,8 @@
     var AGP = window.AymanGamesPlatform || {};
     if (!AGP.log) AGP.log = function () {};
 
-    var LIB_URL = '../../games.html';
+    // مطلق من دومين الصفحة نفسها (نفس libraryUrl بباقي الألعاب) عشان ما تضيع جلسة الدخول
+    var LIB_URL = new URL('../../games.html', location.href).href;
     var SETTINGS_KEY = 'hs-settings';
     var SEEN_KEY = 'hs-seen';
     var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
@@ -631,7 +632,9 @@
 
     // ---------- الأحداث ----------
     var ACT = {
-        exit: function () { location.href = LIB_URL; }, // بدون تأكيد
+        exit: function () { // بدون تأكيد — ولو اللعبة داخل iframe يطلع الإطار الأعلى
+            try { (window.top || window).location.href = LIB_URL; } catch (e) { location.href = LIB_URL; }
+        },
         fs: function () {
             var d = document;
             if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
