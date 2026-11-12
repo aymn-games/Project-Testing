@@ -97,7 +97,7 @@ function updateCount() { $('#count').textContent = G.phase === 'lobby' ? G.playe
 function renderLobby() {
     const list = $('#roster'); list.innerHTML = '';
     G.players.forEach(p => { const c = document.createElement('span'); c.className = 'chip'; c.textContent = p.name; list.appendChild(c); });
-    $('#startBtn').disabled = G.players.length < 2; $('#lobbyMax').textContent = G.settings.maxPlayers; updateCount();
+    $('#startBtn').disabled = G.players.length < 2; if ($('#rules').classList.contains('in')) updateRulesCount(); $('#lobbyMax').textContent = G.settings.maxPlayers; updateCount();
 }
 
 // ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
@@ -131,18 +131,67 @@ function makePairs(list) {
     for (let i = 0; i + 1 < pool.length; i += 2) pairs.push(duel([pool[i], pool[i + 1]]));
     return { pairs };
 }
-async function startMatch() {
-    if (G.players.length < 2) return; SFX.unlock(); SFX.wind(false);
-    G.alive = G.players.slice(); G.round = 0; G.startedAt = Date.now();
-    $('#lobby').classList.add('hide'); G.phase = 'intro'; updateCount();
-    await sleep(300);
-    nextRound();
+// ---------- قبل أول جولة: تبويب الشرح ← «ابدأ المبارزات» ← القرعة ← «ابدأ الآن»
+const duelCount = n => Math.floor(n / 2); // الفردي = مبارزة ثلاثية وحدة
+function duelsTxt(n) { return n === 1 ? 'مبارزة واحدة' : n === 2 ? 'مبارزتان' : n <= 10 ? n + ' مبارزات' : n + ' مبارزة'; }
+function bellWords() { // صيغة النص حسب «ما يظهر عند الجرس»
+    const b = G.settings.bell;
+    return b === 'words' ? { gold: 'كلمة ذهبية', write: 'اكتبها', wrong: 'الكلمة الخاطئة', the: 'الكلمة الذهبية', red: 'كلمة حمراء', it: 'يكتبها' }
+        : b === 'mixed' ? { gold: 'رقم أو كلمة ذهبية', write: 'اكتبها', wrong: 'الإجابة الخاطئة', the: 'الرقم أو الكلمة الذهبية', red: 'رقم أو كلمة بالأحمر', it: 'يكتبها' }
+        : { gold: 'رقم ذهبي', write: 'اكتبه', wrong: 'الرقم الخاطئ', the: 'الرقم الذهبي', red: 'رقم أحمر', it: 'يكتبه' };
 }
-async function nextRound() {
-    G.round++; const { pairs } = makePairs(G.alive), all = G.settings.mode === 'all', before = G.alive.slice();
-    banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 1700);
+function renderRules() {
+    const w = bellWords(), rows = [
+        '<b>كل لاعبين</b> في مبارزة، والفائز يتأهل حتى يبقى بطل واحد.',
+        `عند دقّ الجرس يظهر <b>${w.gold}</b>: ${w.write} في الشات قبل خصمك.`,
+        `<b>الخطأ لا يُخرجك</b>: الكتابة قبل الجرس أو ${w.wrong} لا تُحسب، فاكتب مجددًا حتى تصيب.`,
+        'إذا كان العدد فرديًا صارت مواجهة <b>ثلاثية</b>: الأسرع يتأهل.'];
+    if (G.settings.trick) rows.push(`<b>الخدعة الحمراء</b>: قد يظهر ${w.red} قبل الجرس، ومن ${w.it} يضيّع طلقته.`);
+    $('#rulesList').innerHTML = rows.map(r => `<div class="rrow">${r}</div>`).join('');
+    updateRulesCount();
+}
+function updateRulesCount() {
+    const n = G.players.length; $('#rulesGo').disabled = n < 2;
+    $('#rulesCount').textContent = n < 2 ? 'بانتظار لاعبين…' : `${n} لاعب · ${duelsTxt(duelCount(n))} في الجولة الأولى`;
+}
+function openRules() {
+    if (G.players.length < 2 || G.phase !== 'lobby') return; SFX.unlock();
+    renderRules(); $('#lobby').classList.add('hide'); $('#rules').classList.add('in'); document.body.classList.add('ovl-on'); // الدخول من الشات مستمر لين «ابدأ المبارزات»
+}
+// شاشة القرعة: كرت لكل مبارزة، وتصغر الكروت تلقائياً لين تطلع كلها بشاشة وحدة
+function showDraw(pairs) { return new Promise(res => {
+    const n = pairs.length, all = G.settings.mode === 'all';
+    $('#drawTitle').textContent = n === 1 ? 'مبارزة واحدة' : `${duelsTxt(n)} ${all ? 'في وقت واحد' : 'واحدة بعد واحدة'}`;
+    $('#drawSub').textContent = `كل اثنين متقابلين. الأسرع في كتابة ${bellWords().the} يتأهل.` + (pairs.some(d => d.c) ? ' والمواجهة الثلاثية: الأسرع من الثلاثة.' : '');
+    const g = $('#dgrid');
+    g.innerHTML = pairs.map((d, i) => `<div class="dcard${d.c ? ' tri' : ''}" style="animation-delay:${Math.min(i * 45, 900)}ms">${d.ps.map(p => `<div class="dp">${avatarHtml(p)}<b>${esc(p.name)}</b></div>`).join('<i class="dvs">VS</i>')}</div>`).join('');
+    const fit = () => {
+        const W = Math.min(1180, innerWidth - 32), avail = innerHeight - $('.dhead').offsetHeight - 110;
+        let cols = innerWidth < 640 ? 2 : 3; if (n > 12) cols = innerWidth < 640 ? 3 : 4; if (n > 20) cols = innerWidth < 640 ? 3 : 5;
+        cols = Math.min(cols, Math.max(1, n));
+        const rows = Math.ceil(n / cols), gap = rows > 5 ? 8 : 14, ch = Math.max(46, Math.min(124, (avail - gap * (rows - 1)) / rows));
+        const cw = (W - gap * (cols - 1)) / cols, av = Math.min(ch * .52, cw / (pairs.some(d => d.c) ? 4.6 : 3.6));
+        g.style.width = (n < cols * 1 ? 'auto' : W + 'px');
+        Object.entries({ '--cols': cols, '--tri': innerWidth < 640 && cols > 1 ? 2 : 1, '--gap': gap + 'px', '--ch': ch + 'px', '--av': av + 'px', '--nf': Math.max(10, Math.min(18, ch * .15)) + 'px', '--vf': Math.max(11, Math.min(20, ch * .17)) + 'px' }).forEach(([k, v]) => g.style.setProperty(k, v));
+    };
+    $('#draw').classList.add('in'); fit(); addEventListener('resize', fit); SFX.stamp();
+    $('#drawGo').onclick = () => { removeEventListener('resize', fit); $('#draw').classList.remove('in'); document.body.classList.remove('ovl-on'); SFX.unlock(); res(); };
+}); }
+async function startMatch() {
+    if (G.players.length < 2 || G.phase !== 'lobby') return; SFX.unlock(); SFX.wind(false);
+    $('#rules').classList.remove('in'); $('#lobby').classList.add('hide');
+    G.alive = G.players.slice(); G.round = 0; G.phase = 'draw'; updateCount(); // القرعة تقفل الدخول
+    const { pairs } = makePairs(G.alive);
+    await sleep(350); await showDraw(pairs);
+    G.startedAt = Date.now(); G.phase = 'intro';
+    await sleep(450);
+    nextRound(pairs);
+}
+async function nextRound(preset) {
+    G.round++; const pairs = preset || makePairs(G.alive).pairs, all = G.settings.mode === 'all', before = G.alive.slice();
+    if (!preset) { banner(`<small>الجولة ${G.round}</small>${pairs.length} ${pairs.length === 1 ? 'مبارزة' : pairs.length === 2 ? 'مبارزتين' : pairs.length <= 10 ? 'مبارزات' : 'مبارزة'}${all && pairs.length > 1 ? ' <i>بوقت واحد</i>' : ''}`, 1700);
     if (pairs.some(d => d.c)) later(400, () => notice('🔺 العدد فردي: فيه مبارزة ثلاثية'));
-    await sleep(1900);
+    await sleep(1900); } // الجولة الأولى: القرعة كانت هي الإعلان
     const winners = [], final = pairs.length === 1; // النهائي: يُعاد لين ينحسم
     if (all) winners.push(...await runDuels(pairs, { idx: 1, total: 1, final }));
     else for (let i = 0; i < pairs.length; i++) winners.push(...await runDuels([pairs[i]], { idx: i + 1, total: pairs.length, final }));
@@ -297,8 +346,8 @@ async function crown(p) {
 }
 // إعادة المباراة: نفس اللاعبين يبدأون من جديد مباشرة
 async function replay() {
-    $('#champ').classList.remove('in'); G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); G.scene.setPlayers(G.players); renderLobby();
-    await sleep(400); startMatch();
+    $('#champ').classList.remove('in'); G.phase = 'lobby'; bars(''); grade(''); G.scene.setPlayers([]); G.scene.lobby(); G.scene.setPlayers(G.players); renderLobby();
+    await sleep(400); openRules();
 }
 async function newGame() {
     $('#champ').classList.remove('in');
@@ -351,7 +400,7 @@ function hookStream() {
     G.bots = demo; if (demo) { for (let i = 0; i < 8; i++) addBot(); $('#demo').hidden = false; } else $('#addBot').hidden = true;
     $('#lobby p').innerHTML = `اكتب <b></b> بالشات وادخل السوق — كل لاعبين بمبارزة، <b>أول من يكتب اللي يطلع عند الجرس يطلق</b> ويتأهل.`; $('#lobby p b').textContent = G.settings.keyword || 'دخول';
     $('#loading').classList.add('hide');
-    $('#startBtn').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
+    $('#startBtn').onclick = openRules; $('#rulesGo').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
     const send = (slot, inp) => { const d = G.active && (G.active.find(x => !x.done) || G.active[0]), p = d && (slot ? d.b : d.a); if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
     [['#inA', 0], ['#inB', 1]].forEach(([s, i]) => { const inp = $(s); inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(i, inp); }); inp.nextElementSibling.onclick = () => send(i, inp); });

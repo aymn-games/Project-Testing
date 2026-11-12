@@ -208,6 +208,38 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
 .row input[type=text]{width:84px;background:#2a170b;border:1px solid #7a5a3a;color:#fff;border-radius:6px;padding:4px 6px;font:16px Rye,serif;text-align:center;direction:ltr}
 .row button{background:#f2c14e;border:0;border-radius:6px;padding:4px 8px;font:700 12px "IBM Plex Sans Arabic";cursor:pointer}
 
+/* تبويب الشرح + شاشة القرعة (قبل أول جولة) */
+.ovl{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .45s;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif}
+.ovl.in{opacity:1;pointer-events:auto}
+#rules{background:rgba(20,11,5,.35);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.rcard{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:22px 22px 20px;border-radius:24px;background:linear-gradient(180deg,rgba(52,33,20,.94),rgba(34,21,12,.94));border:1px solid rgba(242,193,78,.22);box-shadow:0 24px 60px rgba(0,0,0,.55);text-align:center;transform:translateY(16px) scale(.97);transition:transform .5s cubic-bezier(.2,1.3,.4,1)}
+#rules.in .rcard{transform:none}
+.chipg{display:inline-block;padding:4px 14px 5px;border-radius:999px;background:linear-gradient(180deg,#f7d98c,#e7b44c);color:#3d2410;font:700 14px "IBM Plex Sans Arabic",sans-serif}
+.rcard h2{margin:12px 0 16px;font:700 clamp(30px,5vw,44px)/1.2 "IBM Plex Sans Arabic",sans-serif;color:#fff7e8}
+.rrow{margin:0 0 9px;padding:12px 14px;border-radius:12px;background:rgba(255,235,200,.06);border:1px solid rgba(255,235,200,.07);text-align:right;font:500 clamp(14px,1.6vw,17px)/1.65 "IBM Plex Sans Arabic",sans-serif;color:#f3e6cf}
+.rrow b{font-weight:700;color:#f2c14e}
+.rcount{margin:14px 0 14px;font:500 15px "IBM Plex Sans Arabic",sans-serif;color:#d9c7a6}
+.gbtn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;cursor:pointer;border-radius:14px;background:linear-gradient(180deg,#f9dc8f,#eab64e);color:#3d2410;font:700 20px "IBM Plex Sans Arabic",sans-serif;padding:13px 28px;box-shadow:0 6px 0 #9a6a22,0 10px 24px rgba(0,0,0,.4);transition:transform .12s,box-shadow .12s}
+.gbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #9a6a22,0 6px 14px rgba(0,0,0,.4)}
+.gbtn[disabled]{opacity:.55;cursor:default}
+.rcard .gbtn{width:100%}
+.gbtn svg{width:20px;height:20px;flex:none}
+#draw{flex-direction:column;justify-content:flex-start;gap:0;padding:max(14px,2.5vh) 16px 16px;background:rgba(30,16,6,.42);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+body.ovl-on #demo,body.ovl-on #feed{display:none}
+body.ovl-on #title,body.ovl-on #counter,body.ovl-on .poster{opacity:0;transition:opacity .3s}
+.dhead{text-align:center;margin-bottom:max(10px,1.6vh)}
+.dhead h2{margin:8px 0 2px;font:700 clamp(26px,4.4vw,48px)/1.15 "IBM Plex Sans Arabic",sans-serif;color:#fff;text-shadow:0 3px 0 rgba(42,23,11,.85),0 0 22px rgba(0,0,0,.6)}
+.dhead p{margin:0;font:500 clamp(13px,1.4vw,16px) "IBM Plex Sans Arabic",sans-serif;color:#fbecd0;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#dgrid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:var(--gap,14px);width:min(1180px,100%);direction:rtl}
+.dcard{display:flex;align-items:center;justify-content:space-around;gap:4px;height:var(--ch,110px);padding:0 8px;border-radius:calc(var(--ch,110px)*.14);background:linear-gradient(180deg,#fbf1dc,#efdcb6);border:1px solid rgba(255,255,255,.6);box-shadow:0 6px 16px rgba(0,0,0,.35);opacity:0;transform:translateY(12px) scale(.96);animation:dIn .45s cubic-bezier(.2,1.3,.4,1) forwards}
+
+.dcard.tri{grid-column:span var(--tri,1)}
+@keyframes dIn{to{opacity:1;transform:none}}
+.dp{display:flex;flex-direction:column;align-items:center;gap:calc(var(--ch,110px)*.05);min-width:0;flex:1}
+.dp .av{width:var(--av,58px);height:var(--av,58px);border:2px solid #3d2817;font-size:calc(var(--av,58px)*.45);box-shadow:0 3px 8px rgba(0,0,0,.25)}
+.dp b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 var(--nf,16px)/1.2 "IBM Plex Sans Arabic",sans-serif;color:#3d2817}
+.dvs{flex:none;font:700 var(--vf,18px) "IBM Plex Sans Arabic",sans-serif;color:#c0392b;font-style:normal;direction:ltr}
+#drawGo{margin-top:max(12px,2vh);flex:none}
 #loading{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#1a0f08;font:400 30px Rakkas,serif;color:var(--gold);transition:opacity .6s}
 #loading.hide{opacity:0;pointer-events:none}
 #fallback[hidden]{display:none}
@@ -256,6 +288,18 @@ body[data-fx="down"] #stage canvas{filter:grayscale(.85) sepia(.25) contrast(1.2
   </div>
 </div>
 
+<div id="rules" class="ovl"><div class="rcard">
+  <span class="chipg">بلدة الكاوبوي</span>
+  <h2>من الأسرع في الغرب؟</h2>
+  <div id="rulesList"></div>
+  <div class="rcount" id="rulesCount">—</div>
+  <button class="gbtn" id="rulesGo" type="button">ابدأ المبارزات</button>
+</div></div>
+<div id="draw" class="ovl">
+  <div class="dhead"><span class="chipg">القرعة</span><h2 id="drawTitle">—</h2><p id="drawSub">—</p></div>
+  <div id="dgrid"></div>
+  <button class="gbtn" id="drawGo" type="button">ابدأ الآن <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M18 5 8 12l10 7z"/><path d="M5 5v14"/></svg></button>
+</div>
 <div id="lids"><i class="t"></i><i class="b"></i></div>
 <div id="flash"></div>
 <div id="loading">🤠 السوق يتجهّز…</div>
