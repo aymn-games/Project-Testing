@@ -419,7 +419,7 @@ class Component extends DCLogic {
   participants = new Set(ROSTER[0]||[]);
 
   componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
-    this.deck=this.shuffle(BANK.slice()); this.di=0;
+    this.buildDeck();
     LM.connect(); this.unsub=LM.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
     this.ti=setInterval(()=>this.tick(),250);
     this.prepareRound(); }
@@ -428,12 +428,28 @@ class Component extends DCLogic {
   // ---------- أدوات ----------
   shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
   fmt(x){ return String(+(+x).toFixed(2)); }
-  nextQ(){ if(!BANK.length) return {q:'بنك الأسئلة غير محمّل',a:'',c:''}; if(this.di>=this.deck.length){ this.deck=this.shuffle(BANK.slice()); this.di=0; }
-    const [q,a,c,alts]=this.deck[this.di++]; return {q,a,c,alts:alts||[]}; }
+  // ترتيب الأسئلة: ما يتكرر أي سؤال ولا بين المباريات (lm-seen بالمتصفح)، وكل نوع (معلومات / حساب)
+  // يدور لحاله: لما تخلص أسئلة النوع كلها يبدأ من جديد. الترتيب سؤالين معلومات ثم سؤال حساب،
+  // والفئات موزعة فما تجي نفس الفئة ورا بعض.
+  buildDeck(){ const MATH=new Set(['قسمة سريعة','جدول الضرب','حساب ذهني','الوقت','القياسات']), isM=q=>MATH.has(q[2]);
+    let seen=LM.readJSON('lm-seen',[]); const seenSet=()=>new Set(seen);
+    let kPool=BANK.filter(q=>!isM(q)&&!seenSet().has(q[0])); if(kPool.length<10){ const kq=new Set(BANK.filter(q=>!isM(q)).map(q=>q[0])); seen=seen.filter(x=>!kq.has(x)); kPool=BANK.filter(q=>!isM(q)); }
+    let mPool=BANK.filter(q=>isM(q)&&!seenSet().has(q[0])); if(mPool.length<10){ const mq=new Set(BANK.filter(isM).map(q=>q[0])); seen=seen.filter(x=>!mq.has(x)); mPool=BANK.filter(isM); }
+    LM.writeJSON('lm-seen',seen);
+    const spread=pool=>{ const groups={}; pool.forEach(q=>{ (groups[q[2]]=groups[q[2]]||[]).push(q); });
+      const lists=Object.keys(groups).map(c=>this.shuffle(groups[c])), out=[]; let last=null;
+      while(lists.some(l=>l.length)){ const order=this.shuffle(lists.filter(l=>l.length)); const pick=order.find(l=>l[0][2]!==last)||order[0]; const q=pick.shift(); last=q[2]; out.push(q); } return out; };
+    const know=spread(kPool), math=spread(mPool), deck=[];
+    while(know.length){ deck.push(know.shift()); if(know.length) deck.push(know.shift()); if(math.length) deck.push(math.shift()); }
+    this.deck=deck; this.di=0; }
+  nextQ(){ if(!BANK.length) return {q:'بنك الأسئلة غير محمّل',a:'',c:''}; if(!this.deck||this.di>=this.deck.length) this.buildDeck();
+    const [q,a,c,alts]=this.deck[this.di++]; const seen=LM.readJSON('lm-seen',[]); seen.push(q); LM.writeJSON('lm-seen',seen); return {q,a,c,alts:alts||[]}; }
   // نفس مطابقة أسرع إجابة (LM.norm): تتجاهل التشكيل والهمزات و«ال» والرموز والمسافات وحالة الأحرف.
   // الجواب أو أي بديل مقبول له من البنك (العنصر الرابع، مثل «مكة» لـ«مكة المكرمة»)
-  check(t,q){ const v=[LM.norm(t),LM.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean);
-    return [q.a,...(q.alts||[])].map(x=>LM.norm(x)).some(a=>!!a&&v.includes(a)); }
+  // المطابقة (LM.norm): «ال» ما تفرق وين ما كانت (حتى لو ملتصقة: عبدالعزيز = عبد العزيز)، ة = ه، أ إ آ = ا، ى = ي،
+  // التشكيل والرموز والمسافات ما تفرق، والأرقام العربية والإنجليزية وحدة.
+  variants(x){ x=String(x||''); return [LM.norm(x),LM.norm(x.replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean); }
+  check(t,q){ const v=this.variants(t); return [q.a,...(q.alts||[])].some(a=>this.variants(a).some(x=>v.includes(x))); }
   st(n,s=this.state){ return s.stats[n]||{score:0,correct:0,skips:0,played:false,order:0}; }
   avItem(n,c){ const av=n?this.reg.avatar(n):null; return {avatar:av||'',imgOp:av?1:0,initial:[...(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'',avBg:`linear-gradient(135deg, ${c}, ${c}66)`}; }
   handle(n){ const id=this.reg.id(n)||''; return id.indexOf('tiktok:')===0?'@'+id.slice(7):''; }
