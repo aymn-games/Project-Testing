@@ -133,19 +133,21 @@ body[data-phase="lobby"] .lapbox{display:none}
 .tgap{font-size:13px;font-weight:600;color:#e4e3ec;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
 .tfx{width:18px;font-size:13px;text-align:center}
 
-/* ---------- طريقة اللعب (يمين) ---------- */
-.perks{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
-.perks h3{margin:2px 4px 8px;font-size:16px;font-weight:700;color:#d8ccff}
-.perk{display:flex;align-items:center;gap:11px;padding:7px 6px;border-radius:10px}
-.perk+.perk{border-top:1px solid rgba(255,255,255,.05)}
-.perk-ic{width:38px;height:38px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
-.perk-ic img{width:31px;height:31px;object-fit:contain}
-.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35;gap:1px}
-.perk-txt small{font-size:12.5px;font-weight:600;color:#c9c6d8}
-.perk-txt b{font-size:16px;font-weight:700;color:#fff}
-.perk-txt b i{font-style:normal;color:var(--c)}
+/* ---------- طريقة اللعب (يمين) ----------
+   المشاهد يشوف هذي اللوحة من بث الستريمر على جواله (الشاشة كاملة تصغر لحوالي ربع حجمها)،
+   فالخط كبير وسميك وبتباين عالي: اسم التأثير 26px، صورة الهدية 52px، خلفية شبه معتمة. */
+.perks{position:fixed;top:78px;right:14px;z-index:15;width:340px;border-radius:18px;background:rgba(10,7,20,.93);border:1.5px solid rgba(167,139,250,.35);backdrop-filter:blur(12px);padding:10px 10px 8px;box-shadow:0 12px 34px rgba(0,0,0,.45)}
+.perks h3{margin:2px 6px 8px;font-size:22px;font-weight:700;color:#e2d8ff;letter-spacing:.2px}
+.perk{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:12px;background:color-mix(in srgb,var(--c) 9%,transparent)}
+.perk+.perk{margin-top:6px}
+.perk-ic{width:56px;height:56px;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--c) 24%,rgba(0,0,0,.35));border:2px solid color-mix(in srgb,var(--c) 70%,transparent);font-size:30px;flex-shrink:0}
+.perk-ic img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15;gap:3px}
+.perk-txt b{font-size:26px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.8)}
+.perk-txt small{font-size:17px;font-weight:700;color:color-mix(in srgb,var(--c) 45%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.perk-txt b i{font-style:normal}
 .perk.tap .perk-ic{animation:tap 1s ease-in-out infinite}
-@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 
 /* ---------- الخريطة (يمين تحت) ---------- */
 .mapbox{position:fixed;right:14px;bottom:14px;z-index:15;width:280px;height:190px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);overflow:hidden}
@@ -365,7 +367,7 @@ body.ceremony #podium .btn-start{height:46px}
 .perks,.mapbox,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
 /* لوحة الصدارة وبطاقة اللاعب أكبر شوي، وطريقة اللعب بخط أكبر وأسمك (طلب الستريمر) */
 .tower,.bottom{zoom:.8}
-.perks{zoom:.76}
+.perks{zoom:1}   /* بدون تصغير: المشاهد يشوفها من بث الجوال */
 /* وضوح النصوص فوق المشهد: ظل خفيف ناعم لكل اللوحات */
 .tower,.perks,.mapbox,.bottom,.lapbox,.toast,#ctrlMenu,#cerBanner{text-shadow:0 1px 2px rgba(0,0,0,.55)}
 

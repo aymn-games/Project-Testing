@@ -920,20 +920,21 @@
     }
 
     /** لوحة «طريقة اللعب»: التكبيس، النيترو، ثم كل تأثير بصورة هديته المختارة. */
+    /** لوحة «طريقة اللعب»: سطر كبير لكل تأثير (اسمه) وتحته وش يشغّله (الهدية أو التكبيس) — مقروءة من بث الجوال. */
     function renderPerks() {
-        var row = function (cls, c, ic, small, big) {
-            return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><small>' + small + '</small><b>' + big + '</b></span></div>';
+        var row = function (cls, c, ic, big, small) {
+            return '<div class="perk ' + cls + '" style="--c:' + c + '"><span class="perk-ic">' + ic + '</span><span class="perk-txt"><b>' + big + '</b><small>' + small + '</small></span></div>';
         };
         var rows = [
-            row('tap', '#a855f7', '👆', 'كبّس على الشاشة', 'سرعة أعلى'),
-            row('', NITRO.color, NITRO.icon, 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'), 'نيترو')
+            row('tap', '#a855f7', '👆', 'سرعة أعلى', 'كبّس على البث'),
+            row('', NITRO.color, NITRO.icon, 'نيترو', 'كل ' + TAPS_PER_NITRO + ' تكبيسة' + (settings.giftsOn ? '' : ' أو أي دعم'))
         ];
         if (settings.giftsOn) {
             EFFECTS.forEach(function (e) {
                 var g = giftById(settings.gifts[e.id]);
-                rows.push(row('', e.color, g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon, g ? esc(g.name) : '', '<i>' + e.icon + '</i> ' + e.name));
+                rows.push(row('', e.color, g ? '<img src="' + esc(g.img) + '" alt="">' : e.icon, e.icon + ' ' + e.name, g ? esc(g.name) : ''));
             });
-            rows.push(row('', NITRO.color, '🎁', 'أي دعم ثاني', 'نيترو'));
+            rows.push(row('', NITRO.color, '🎁', 'نيترو', 'أي دعم ثاني'));
         }
         $('perkList').innerHTML = rows.join('');
     }
