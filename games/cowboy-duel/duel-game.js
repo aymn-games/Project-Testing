@@ -334,8 +334,8 @@ async function win(d, shooter, typed) {
     if (G.active.length === 1) { // مبارزة بعد مبارزة: يطلق ← يطيح ← الكاميرا على الفايز + تبويب فوزه و«التالي» ← يرجع مكانه ← المبارزة الجاية
         G.phase = 'resolve'; clearTimers(); G.target = targets[0]; sign('gone'); grade('duel'); duelHud(false);
         await G.scene.fire(shooter.id, targets.map(t => t.id));
-        feed(shooter, targets, secs); showWinTab(shooter, secs); SFX.victory();
-        await waitNext(G.nextAutoMs || 0); $('#winTab').classList.remove('in');
+        feed(shooter, targets, secs); showWinTab(shooter, secs); SFX.victory(); showTags([shooter]);
+        await waitNext(G.nextAutoMs || 0); $('#winTab').classList.remove('in'); showTags(null);
         await G.scene.walkBack([shooter.id]);
         return endDuels();
     }
@@ -379,8 +379,11 @@ function duelHud(on) {
     const d = on && G.active && G.active.length === 1 ? G.active[0] : null;
     [0, 1, 2].forEach(i => { const el = $('#tag' + i), p = d && d.ps[i]; el.classList.toggle('on', !!p); if (p) { el.innerHTML = avatarHtml(p, 'sm') + '<span></span>'; el.lastChild.textContent = p.name; } });
 }
+// بطاقات أسماء فوق روس لاعبين محددين (خارج المبارزة نفسها) — null يخفيها
+function showTags(ps) { G.tagPs = ps; [0, 1, 2].forEach(i => { const el = $('#tag' + i), p = ps && ps[i]; el.classList.toggle('on', !!p); if (p) { el.innerHTML = avatarHtml(p, 'sm') + '<span></span>'; el.lastChild.textContent = p.name; } }); }
 (function tagLoop() { // البطاقات تلحق راس كل لاعب
-    if (document.body.classList.contains('duel') && G.scene && G.active && G.active.length === 1) G.active[0].ps.forEach((p, i) => { const el = $('#tag' + i), q = G.scene.headScreen(p.id); if (!q) { el.style.visibility = 'hidden'; return; } el.style.visibility = ''; el.style.transform = `translate(${q.x}px,${q.y}px) translate(-50%,-100%)`; });
+    const ps = G.tagPs || (document.body.classList.contains('duel') && G.active && G.active.length === 1 ? G.active[0].ps : null); // G.tagPs: اسم الفايز فوق راسه بلقطة الفوز
+    if (ps && G.scene) ps.forEach((p, i) => { const el = $('#tag' + i), q = G.scene.headScreen(p.id); if (!q) { el.style.visibility = 'hidden'; return; } el.style.visibility = ''; el.style.transform = `translate(${q.x}px,${q.y}px) translate(-50%,-100%)`; });
     requestAnimationFrame(tagLoop); })();
 const duelCardHtml = d => `<div class="dcard">${d.ps.map(p => `<div class="dp">${avatarHtml(p)}<b>${esc(p.name)}</b></div>`).join('<i class="dvs">VS</i>')}</div>`;
 async function showDuelCard(d) { const el = $('#dOne'); el.innerHTML = duelCardHtml(d); el.classList.add('in'); SFX.stamp(); await sleep(2200); el.classList.remove('in'); await sleep(350); }
