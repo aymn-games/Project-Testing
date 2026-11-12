@@ -221,7 +221,7 @@
     }
 
     window.WC = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'letters-settings', roster: 'letters-roster', players: 'letters-players', howto: 'letters-howto-hide-v2' },
         readJSON: readJSON,
         writeJSON: writeJSON,

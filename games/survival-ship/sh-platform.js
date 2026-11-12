@@ -179,7 +179,7 @@
     }
 
     window.SHIP = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: new URL('../../games.html', location.href).href, // مكتبة الألعاب (كانت الرئيسية بالغلط)
         keys: { setup: 'ship-settings', join: 'ship-join', roster: 'ship-roster', players: 'ship-players', guideHide: 'ship-guide-hide-v2' },
         readJSON: readJSON,
         writeJSON: writeJSON,

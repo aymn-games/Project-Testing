@@ -297,7 +297,7 @@
     }
 
     window.DR = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'draw-settings', roster: 'draw-roster', players: 'draw-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

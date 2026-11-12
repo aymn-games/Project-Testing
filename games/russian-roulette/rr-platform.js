@@ -329,7 +329,7 @@
     }
 
     window.RR = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'rr-settings', roster: 'rr-roster', players: 'rr-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
