@@ -146,6 +146,7 @@ html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
           <div style="position:absolute;top:-2px;bottom:-2px;left:50%;width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 10px #fff"></div>
         </div>
         <span dir="rtl" style="font:700 19px 'IBM Plex Sans Arabic';color:{{ leadColor }}">{{ leadText }}</span>
+        <span dir="rtl" style="display:flex;align-items:center;gap:6px;padding:4px 14px;border-radius:999px;background:{{ tapsInBg }};border:1px solid {{ tapsInBd }};font:700 15px 'IBM Plex Sans Arabic';color:#e7e3ef">👆 {{ tapsInTxt }}</span>
       </div>
       <sc-for list="{{ sideR }}" as="t" hint-placeholder-count="1">
         <div dir="rtl" style="position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;padding:20px 24px;border-radius:26px;background:linear-gradient(135deg, {{ t.soft }}, rgba(18,16,26,.8) 60%);border:1.5px solid {{ t.bd }};box-shadow:0 18px 50px rgba(0,0,0,.3), 0 0 40px {{ t.halo }};--bc:{{ t.color }};animation:{{ t.anim }}">
@@ -449,7 +450,13 @@ class Component extends DCLogic {
 
   // التكبيس (لايكات البث): كل دفعة تسحب لفريق صاحبها بقدر عدد التكبيسات
   // التكبيس: ما يسحب دفعة وحدة — ينضاف لرصيد الفريق (pend)، والرصيد ينسحب بنعومة كل 50ms (drain).
-  onLike(user,count){ const S=this.state, k=this.teamOf(user); if(k<0||S.phase!=='play'||this.MODE!=='tap'||S.out[user]||this.isFrozen(user)) return;
+  onLike(user,count){ const S=this.state; let k=this.teamOf(user);
+    // كل تكبيسة توصل من البث تنحسب بالعدّاد (حتى من غير اللاعبين) — يبيّن للستريمر إن التكبيس يوصل
+    this.tapsIn=(this.tapsIn||0)+Math.max(1,+count||1); this.tapsInAt=Date.now();
+    // مشاهد يكبّس وهو مو بفريق: ينضم تلقائياً للفريق الأقل (لو «الدخول التلقائي» مفعّل وفيه مكان)
+    if(k<0&&S.autoJoin&&S.phase!=='win'){ const a=S.teams[0].length, b=S.teams[1].length, j=a<b?0:b<a?1:(Math.random()<.5?0:1), t=[j,1-j].find(x=>S.teams[x].length<this.MAX);
+      if(t!=null){ k=t; this.setState(s=>({teams:s.teams.map((l,i)=>i===t&&!l.includes(user)?[...l,user]:l)})); this.pushFeed(icon('join',22),user+' انضم لـ'+this.T[t].name+' بالتكبيس',this.T[t].color); this.snd('join'); } }
+    if(k<0||S.phase!=='play'||this.MODE!=='tap'||S.out[user]||this.isFrozen(user)) return;
     const n=Math.max(1,+count||1); if(this.stats){ this.stats.likes+=n; this.stats.pulls[k]++; }
     this.pend[k]+=Math.min(LIKE_MAX,n*LIKE_STEP)*(this.boosted(k)?2:1); this.tapLog.push([Date.now(),k,n]);
     this.lastTapper[k]=user; this.scene?.pull(user); this.scene?.effect('taps',k,[user]); this.snd('pull'); }
@@ -610,6 +617,7 @@ class Component extends DCLogic {
     return {
       fx:this.buildFx(), scale:S.scale, lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), isDemo:DEMO,
       sideL:this.sideVals(0), sideR:this.sideVals(1), colorL:L.color, colorR:R.color,
+      tapsInTxt:this.tapsIn?('وصل من البث '+this.tapsIn.toLocaleString('en')+' تكبيسة'):'ما وصل تكبيس من البث للحين', tapsInBg:this.tapsInAt&&S.now-this.tapsInAt<1500?'rgba(52,211,153,.14)':'rgba(255,255,255,.04)', tapsInBd:this.tapsInAt&&S.now-this.tapsInAt<1500?'rgba(52,211,153,.5)':'rgba(255,255,255,.1)',
       leadColor:S.phase==='countdown'||Math.abs(S.pos)<1?'#a8a3b5':(S.pos>0?R.color:L.color),
       meterL:Math.max(0,Math.min(50,-S.pos/2)), meterR:Math.max(0,Math.min(50,S.pos/2)), leadText:S.phase==='countdown'?'استعدوا…':lead,
       arena:this.sceneFailed?this.buildArena():this.arena3d(),

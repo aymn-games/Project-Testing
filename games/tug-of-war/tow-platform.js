@@ -243,9 +243,9 @@
                 list.forEach(function (r) { if (r && r.username) next[r.username] = Number(r.count) || 0; });
                 if (base) list.forEach(function (r) {
                     if (!r || !r.username) return;
+                    // مكبّس يطلع بالقائمة لأول مرة: تكبيساته كلها جديدة (اللعبة تتجاهل اللي قبل البداية)
                     var prev = base[r.username], delta = next[r.username] - (prev == null ? 0 : prev);
-                    // لاعب دخل التوب لأول مرة: عدّاده كامل ممكن يكون من قبل المباراة، فنعتبره أساس بس
-                    if (prev != null && delta > 0) cb({ id: r.username, name: r.name, count: delta });
+                    if (delta > 0) cb({ id: r.username, name: r.name, count: delta });
                 });
                 base = Object.assign(base || {}, next);
             }, function () { inflight = false; });
