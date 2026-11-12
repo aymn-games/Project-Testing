@@ -117,6 +117,9 @@ body[data-phase="lobby"] .lapbox{display:none}
 .tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:13px;font-weight:700}
 .tower-h span:last-child{color:var(--mut);font-weight:500;font-size:11.5px}
 #towerRows{position:relative;transition:height .3s}
+/* عدّاد وصول التكبيس من البث — يخضرّ لحظة وصول تكبيس (نفس شد الحبل) */
+.tower-taps{padding:7px 12px;border-top:1px solid rgba(167,139,250,.15);font-size:12px;font-weight:600;color:var(--mut);text-align:center;transition:background .3s,color .3s}
+.tower-taps.hot{background:rgba(52,211,153,.14);color:#6ee7b7}
 .trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
   background:transparent;color:var(--txt);text-align:right;transition:transform .45s cubic-bezier(.3,.8,.3,1),background .2s}
 .trow:hover{background:rgba(255,255,255,.06)}
@@ -411,6 +414,7 @@ body.no3d .fc-cam{display:none}
   <div class="top-l">
     <button class="btn-ghost btn-end" id="endBtn" type="button">⏻ <span>إنهاء اللعبة</span></button>
     <button class="btn-ghost" id="ctrlBtn" type="button">⚙ <span>التحكم</span></button>
+    <button class="btn-ghost" id="fsBtn" type="button" aria-label="ملء الشاشة">⛶ <span>ملء الشاشة</span></button>
     <div class="live" id="liveBadge"><span>غير متصل بالبث</span></div>
   </div>
 </header>
@@ -501,6 +505,7 @@ body.no3d .fc-cam{display:none}
 <aside class="tower">
   <div class="tower-h"><span id="towerTitle">شبكة البداية</span><span id="towerCount">0 سائق</span></div>
   <div id="towerRows"></div>
+  <div class="tower-taps" id="tapsIn">👆 ما وصل تكبيس من البث للحين</div>
 </aside>
 
 <aside class="perks">
