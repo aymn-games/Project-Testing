@@ -47,8 +47,14 @@
         return AGP.events.on('stream:commentReceived', function (p) { if (p && typeof p.text === 'string' && p.id) cb(p); });
     }
 
+    /** cb(status) عند تغيّر حالة الاتصال بالبث ('connected' | 'connecting' | 'disconnected' | 'error'). */
+    function onStatus(cb) {
+        if (!AGP.events || typeof AGP.events.on !== 'function') return function () { };
+        return AGP.events.on('stream:statusChanged', function (p) { if (p && p.platform === 'tiktok') cb(p.status); });
+    }
+
     window.CDPlatform = {
-        connect: connect, onComment: onComment, getSavedConnection: getSavedConnection,
+        connect: connect, onComment: onComment, onStatus: onStatus, getSavedConnection: getSavedConnection,
         demo: /[?&]demo=1\b/.test(location.search),   // وضع التجربة: بوتات + لوحة التجربة
         libraryUrl: ROOT + 'games.html', settingsUrl: 'index.html', gameUrl: 'game.html'
     };
