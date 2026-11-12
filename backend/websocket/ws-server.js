@@ -499,7 +499,7 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     },
 
     onGift: function (data) {
-      if (!isOverlay) sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
+      if (!isOverlay) sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId, data.avatarUrl));
       if (entry.live && entry.activeConnector === connector) entry.live.gifts++;
       if (entry.statsUsername) liveSessionStats.recordGift(entry.statsUsername, connectionId, data);
 
@@ -539,7 +539,7 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
     // اللايكات (التكبيس) تُرسل للمتصفح (stream:likeReceived — سباق الفورمولا) وتُسجَّل للإحصائيات.
     // الشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
     onLike: function (data) {
-      if (!isOverlay) sendEnvelope(socket, builder.buildLikeMessage(platform, data.id, data.name, data.count));
+      if (!isOverlay) sendEnvelope(socket, builder.buildLikeMessage(platform, data.id, data.name, data.count, (data.avatarUrls && data.avatarUrls[0]) || null));
       if (entry.statsUsername) liveSessionStats.recordLike(entry.statsUsername, connectionId, data);
     },
 

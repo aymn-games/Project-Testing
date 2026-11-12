@@ -14,6 +14,7 @@
 <script src="../../js/agp-stream-connector.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
 <script src="../../js/agp-remote-control.js"></script>
@@ -55,16 +56,50 @@ body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:non
 .live.on{color:#4ade80;background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.3)}
 
 /* قائمة «التحكم» */
-#ctrlMenu{position:fixed;top:64px;left:16px;z-index:45;width:300px;padding:12px;border-radius:16px;background:rgba(14,10,26,.96);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:none}
+#ctrlMenu{position:fixed;top:64px;left:16px;z-index:45;width:360px;padding:14px;zoom:.85;border-radius:16px;background:rgba(14,10,26,.96);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);display:none}
 #ctrlMenu.show{display:block;animation:tin .2s both}
 #ctrlMenu h4{margin:4px 2px 8px;font-size:12px;color:var(--mut);font-weight:600}
 #ctrlMenu h4+*{margin-bottom:12px}
 .cm-cams{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.cm-cams button,.cm-q button,.cm-row button{height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
+.cm-cams button,.cm-q button,.cm-row button{height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#ddd;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;padding:0 10px}
 .cm-cams button.on,.cm-q button.on{background:var(--agp-accent);border-color:var(--agp-accent);color:#fff}
 .cm-cams kbd{font:600 10px 'IBM Plex Sans Arabic';opacity:.6;border:1px solid currentColor;border-radius:4px;padding:0 4px}
 .cm-q{display:flex;gap:6px}.cm-q button{flex:1;justify-content:center}
 .cm-row{display:flex;gap:6px}.cm-row button{flex:1;justify-content:center}
+.cm-row+.cm-row{margin-top:6px}
+#soundBtn.on{border-color:rgba(167,139,250,.5);background:rgba(139,92,246,.16);color:#ede9fe}
+
+/* شاشة الفوز — نفس شاشة روليت الإقصاء: تغبيش فوق منصة التتويج */
+@keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
+@keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
+@keyframes wIn{from{opacity:0}to{opacity:1}}
+#winScreen{position:fixed;inset:0;z-index:85;display:none;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.38);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-size:18px}
+#winScreen.show{display:flex;animation:wIn .5s ease both}
+.w-wrap{margin:auto 0;text-align:center;max-width:100%;display:flex;flex-direction:column;align-items:center}
+#wVideo{position:relative;overflow:hidden;width:160px;height:160px;margin-bottom:18px;border-radius:24px;border:1px dashed rgba(167,139,250,.4);background:rgba(255,255,255,.03);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both}
+#wVideo video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#winScreen h2{margin:0 0 6px;font-size:1.6em;font-weight:800;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-wrap:balance}
+#wCards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px}
+.w-std{position:relative;width:200px;display:flex;flex-direction:column;align-items:center}
+.w-crown{position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both}
+.w-crown svg{display:block;fill:#a78bfa;stroke:#6d28d9;stroke-linejoin:round}
+.w-card{position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;background:linear-gradient(165deg,rgba(30,20,52,.74) 0%,rgba(13,10,24,.84) 100%);border:1.5px solid #a78bfa8c;box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 0 40px #a78bfa26;backdrop-filter:blur(2px);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both}
+.w-shine{position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);animation:agpShine 2.6s ease-in-out .6s infinite;pointer-events:none}
+.w-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;padding:18px 14px 16px;box-sizing:border-box}
+.w-label{font-size:15px;letter-spacing:3px;font-weight:800;color:#a78bfa;margin-bottom:12px}
+.w-av{flex-shrink:0;width:84px;height:84px;border-radius:50%;box-sizing:border-box;border:2.5px solid #a78bfa;box-shadow:0 4px 10px rgba(0,0,0,.4);background:#5b21b6;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.4em;position:relative;overflow:hidden}
+.w-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.w-name{margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w-pts{margin-top:auto;width:100%;padding-top:10px;border-top:1px solid #a78bfa40;text-align:center}
+.w-pts>span{display:block;font-weight:800;font-size:15px;letter-spacing:1px;color:#a78bfa;text-shadow:0 2px 6px rgba(0,0,0,.4);line-height:1.2;text-wrap:balance}
+.w-pts small{display:block;font-size:12px;font-weight:500;letter-spacing:0;margin-top:4px;color:rgba(167,139,250,.8)}
+.w-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:580px;margin:0 auto}
+.w-btns button{flex:1;min-width:150px;white-space:nowrap;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s,transform .15s}
+.w-btns button:hover{filter:brightness(1.2)}.w-btns button:active{transform:scale(.97)}
+#wExit{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8}
+#wNew{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)}
+#wSame{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe}
 
 /* اللفة والزمن (وسط أعلى) */
 .lapbox{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:15;display:flex;align-items:center;gap:22px;padding:8px 22px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px)}
@@ -323,7 +358,7 @@ body.ceremony #podium h2,body.ceremony #podiumSteps{display:none}
 body.ceremony #podium .btn-start{height:46px}
 
 /* كل اللوحات العائمة أصغر 30% (الهيدر بدون تغيير) — تغطي أقل من شاشة البث */
-.tower,.perks,.mapbox,.bottom,.lapbox,#toasts,#readyCard,#ctrlMenu,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
+.tower,.perks,.mapbox,.bottom,.lapbox,#toasts,#readyCard,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
 
 /* إخفاء الواجهة (H) — لقطة بث نظيفة */
 body.clean .perks,body.clean .mapbox{display:none}
@@ -339,7 +374,7 @@ body.no3d .fc-cam{display:none}
   .live{width:32px;padding:0;justify-content:center}.live span{display:none}
   body.testing .live::after{content:none}
   .lapbox{top:56px;gap:14px;padding:5px 14px 11px}.lapbox b{font-size:18px}.lapbox small{font-size:10px}
-  #ctrlMenu{left:8px;right:8px;width:auto;top:56px}
+  #ctrlMenu{left:8px;right:8px;width:auto;top:56px;zoom:1}
   .tower{top:112px;left:8px;width:158px;border-radius:10px}
   .tower-h{padding:5px 10px}.tower-h span:last-child{display:none}
   .trow{height:27px;gap:5px;padding:0 6px}.tname{font-size:12px}.tpos{font-size:12px;width:16px}.tgap{font-size:10.5px;min-width:34px}.tfx{width:14px;font-size:11px}
@@ -394,6 +429,7 @@ body.no3d .fc-cam{display:none}
   <div class="cm-q" id="ctrlQuality"><button type="button" data-v="light">خفيف</button><button type="button" data-v="balanced">متوازن</button><button type="button" data-v="cinematic">سينمائي</button></div>
   <h4>الشاشة</h4>
   <div class="cm-row"><button type="button" id="hudToggle">👁 إخفاء/إظهار اللوحات (H)</button></div>
+  <div class="cm-row"><button type="button" id="soundBtn">🔊 الصوت: تشغيل</button></div>
 </div>
 
 <!-- اللوبي + الإعدادات -->
@@ -522,6 +558,20 @@ body.no3d .fc-cam{display:none}
   <div id="podiumSteps"></div>
   <div id="podiumRest"></div>
   <div class="lobby-actions"><button class="btn-start" id="againBtn" type="button" style="padding:0 30px">🔁 سباق جديد</button></div>
+</section>
+
+<!-- شاشة الفوز: بعد 5 ثواني على منصة التتويج (نفس روليت الإقصاء) -->
+<section id="winScreen" aria-live="polite">
+  <div class="w-wrap">
+    <div id="wVideo" hidden></div>
+    <h2>🏆 الفائز في لعبة "فورمولا ون"</h2>
+    <div id="wCards"></div>
+    <div class="w-btns">
+      <button type="button" id="wExit">الخروج</button>
+      <button type="button" id="wNew">سباق جديد</button>
+      <button type="button" id="wSame">إعادة بنفس اللاعبين</button>
+    </div>
+  </div>
 </section>
 
 <!-- اختيار هدية لتأثير -->

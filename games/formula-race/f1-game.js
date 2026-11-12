@@ -36,6 +36,7 @@
         joinMode: 'all',            // all | followers
         quality: 'balanced',        // light | balanced | cinematic
         giftsOn: true,              // عند الإيقاف: التكبيس + النيترو فقط
+        soundOn: true,              // أصوات اللعبة (مستوى أقل من النص)
         gifts: DEFAULT_GIFTS        // تأثير ← معرّف الهدية
     };
     var MAX_DRIVERS_LIMIT = 30, MAX_LAPS = 20;
@@ -196,6 +197,7 @@
         startedAt: 0,
         raceClock: 0,
         winner: null,
+        run: 0, pts: null, winOpen: false,
         reported: false,
         cam: { mode: settings.autoCam ? 'auto' : 'tv', focus: null, locked: false, autoT: 0, autoMode: 'tv' },
         finishTimer: 0,
@@ -225,11 +227,14 @@
             dist: slot.dist, lane: slot.lane, laneT: slot.lane, speed: 0, throttle: 0,
             fx: freshFx(), finished: false, finishAt: 0, likes: 0, gifts: 0, tapBank: 0,
             bot: !!p.bot,
+            winCard: p.winCard || null,                                   // بطاقة الفوز المملوكة (js/agp-win-card.js)
+            winVideo: (p.winVideo && (p.winVideo.url || p.winVideo)) || p.winVideoUrl || null,
             character: p.character || null   // شخصية الأنمي المختارة من البروفايل (girl/boy/any/null) — لمراسم النهاية
         };
         S.cars.push(car); S.byId[car.id] = car;
         if (scene) scene.setCars(S.cars);
         renderLobby();
+        if (!car.bot || S.cars.length <= 2) SFX.join();
         toast('🏎️ <b>' + esc(car.name) + '</b> انضم للسباق برقم ' + car.number, car.color);
         return car;
     }
@@ -250,6 +255,7 @@
     function onLike(id, count) {
         var c = S.byId[id]; if (!c || c.finished || S.phase !== 'race') return;
         count = Math.max(1, Math.min(200, Number(count) || 1));
+        c.tapsTotal = (c.tapsTotal || 0) + count;
         c.likes += count;
         // كل تكبيسة ترفع دواسة الوقود، والحد ١
         c.throttle = Math.min(1, c.throttle + count * 0.045);
@@ -268,7 +274,7 @@
     /** يوقف السيارة (صاروخ/صاعقة) — الدرع يصدّ أول ضربة ويختفي. ترجع true لو أصابت. */
     function hit(o, secs) {
         if (o.finished) return false;
-        if (o.fx.shield > 0) { o.fx.shield = 0; if (scene) scene.burst(o.id, 'shield'); toast('🛡️ درع <b>' + esc(o.name) + '</b> صدّ الضربة', '#38bdf8'); return false; }
+        if (o.fx.shield > 0) { o.fx.shield = 0; SFX.shield(); if (scene) scene.burst(o.id, 'shield'); toast('🛡️ درع <b>' + esc(o.name) + '</b> صدّ الضربة', '#38bdf8'); return false; }
         o.fx.stop = Math.max(o.fx.stop, secs);
         if (scene) scene.burst(o.id, 'hit');
         return true;
@@ -301,11 +307,20 @@
             if (hitNames.length) extra = ' على <b>' + hitNames.join('، ') + '</b>';
         }
         if (scene) scene.burst(c.id, id);
+        // الصوت: الدعم دايماً، ونيترو التكبيس بس للاعب اللي الكاميرا تتابعه (ما يزحم)
+        if (SFX[id] && (!fromTaps || c.id === S.cam.focus)) SFX[id]();
         return extra;
+    }
+
+    /** صورة حساب تيك توك: لو اللاعب دخل بدون صورة، تُكمَّل من أول لايك/دعم/تعليق فيه صورة. */
+    function fillAvatar(c, url) {
+        if (!c || c.avatar || !url) return;
+        c.avatar = url; if (scene) scene.setCars(S.cars); renderTower(true); if (S.phase === 'lobby') renderLobby();
     }
 
     function onGift(payload) {
         var c = S.byId[payload.id];
+        fillAvatar(c, payload.avatarUrl);
         if (!c && S.phase === 'lobby' && (settings.joinMode !== 'followers' || payload.isFollower)) c = addCar(payload);
         if (!c || c.finished) return;
         if (S.phase !== 'race') { toast('🎁 <b>' + esc(c.name) + '</b> دعم — التأثيرات تشتغل بعد الانطلاق', c.color); return; }
@@ -460,6 +475,7 @@
             }));
         }
         hudTick(dt);
+        if (engine) { var fc = S.byId[S.cam.focus]; engineUpdate(fc ? fc.speed : 0); }
         requestAnimationFrame(frame);
     }
 
@@ -477,7 +493,7 @@
             n++;
             setLights(n);
             showCount(6 - n);
-            beep(440, 0.15);
+            SFX.light();
             if (n < 5) setTimeout(lit, 900);
             else setTimeout(function () { if (token === S.countToken && S.phase === 'countdown') go(); }, 900 + Math.random() * 1400);
         };
@@ -494,7 +510,7 @@
     }
     function go() {
         setLights(0);
-        beep(880, 0.4);
+        SFX.go(); engineStart();
         $('goText').classList.add('show');
         setTimeout(function () { $('goText').classList.remove('show'); $('lights').classList.remove('show'); }, 1400);
         S.phase = 'race'; document.body.dataset.phase = 'race';
@@ -506,7 +522,7 @@
     }
 
     function onWinner(c) {
-        S.winner = c;
+        S.winner = c; SFX.finish();
         reportPoints(c);
         if (scene) scene.burst(c.id, 'win');
         if (!S.cam.locked) { S.cam.focus = c.id; }
@@ -516,13 +532,20 @@
     function reportPoints(winner) {
         if (S.reported) return; S.reported = true;
         var A = window.AGPAuth;
-        if (S.demo || !A || typeof A.reportMatchPoints !== 'function') return;
-        A.reportMatchPoints({
+        S.pts = S.demo ? 'demo' : 'pending';
+        if (S.demo || !A || typeof A.reportMatchPoints !== 'function') { if (!S.demo) S.pts = null; return; }
+        var run = S.run;
+        Promise.resolve(A.reportMatchPoints({
             players: S.cars.map(function (c) { return { id: c.id, name: c.name }; }),
             winnerIds: [winner.id],
             teamGame: false,
             durationMs: Date.now() - S.startedAt
-        });
+        })).then(function (res) {
+            if (run !== S.run) return;
+            var uname = String(winner.id).indexOf('tiktok:') === 0 ? String(winner.id).slice(7) : winner.name;
+            var aw = res && res.success && Array.isArray(res.awarded) ? res.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] : null;
+            S.pts = aw ? aw.added : null; renderWin();
+        }).catch(function () { if (run === S.run) { S.pts = null; renderWin(); } });
     }
 
     /** «إنهاء اللعبة»: يوقف السباق ويعرض الترتيب الحالي (النقاط تنرسل فقط لو فيه فائز وصل). */
@@ -533,6 +556,46 @@
         setLights(0); $('lights').classList.remove('show');
         endRace();
         return true;
+    }
+
+    // ------------------------------------------------------------------
+    // شاشة الفوز — نفس شاشة روليت الإقصاء: خلفية مغبّشة فوق المنصة، «🏆 الفائز في لعبة»،
+    // تاج فوق بطاقة WINNER (الصورة، الاسم، النقاط) أو بطاقة الفوز المملوكة، وفيديو الفوز
+    // لو عنده، وأزرار الخروج / سباق جديد / إعادة بنفس اللاعبين.
+    // ------------------------------------------------------------------
+    var winTimer = 0;
+    function scheduleWin(ms) { clearTimeout(winTimer); var run = S.run; winTimer = setTimeout(function () { if (run === S.run && S.phase === 'finish') showWin(); }, ms); }
+    function winnerCar() { return S.winner || standings()[0] || null; }
+    function ptsLine() {
+        if (!S.winner) return 'السباق انتهى قبل خط النهاية';
+        if (S.pts === 'demo') return 'نسخة تجربة — بدون نقاط';
+        if (S.pts === 'pending') return 'جارٍ احتساب النقاط';
+        return typeof S.pts === 'number' ? '+' + S.pts + ' نقطة' : 'النقاط للحسابات الموثّقة في الموقع';
+    }
+    function showWin() {
+        var w = winnerCar(); if (!w) return;
+        S.winOpen = true; renderWin();
+        $('winScreen').classList.add('show'); $('podium').classList.remove('show');
+        SFX.win();
+    }
+    function hideWin() { clearTimeout(winTimer); S.winOpen = false; $('winScreen').classList.remove('show'); $('wVideo').innerHTML = ''; }
+    function renderWin() {
+        if (!S.winOpen) return;
+        var w = winnerCar(); if (!w) return;
+        var player = { id: w.id, name: w.name, avatarUrl: w.avatar || null, winCard: w.winCard || null };
+        var lines = [ptsLine(), 'المركز الأول من ' + S.cars.length + ' لاعب', 'فورمولا ون'];
+        var owned = AGP.winCard && typeof AGP.winCard.canShow === 'function' && AGP.winCard.canShow(player);
+        $('wCards').innerHTML = owned ? '<div class="w-owned">' + AGP.winCard.renderHtml(player, lines, { pop: true }) + '</div>' :
+            '<div class="w-std"><div class="w-crown"><svg width="60" height="40" viewBox="0 0 60 40"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>' +
+            '<div class="w-card"><div class="w-shine"></div><div class="w-in"><span class="w-label">WINNER</span>' +
+            '<span class="w-av">' + esc(String(w.name).trim().charAt(0) || '؟') + (w.avatar ? '<img src="' + esc(w.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+            '<span class="w-name">' + esc(w.name) + '</span>' +
+            '<div class="w-pts"><span>' + esc(ptsLine()) + '<small>' + (S.winner ? 'الزمن ' + fmtTime(w.finishAt) : 'المتصدر لحظة الإنهاء') + '</small></span></div></div></div></div>';
+        var vb = $('wVideo');
+        if (w.winVideo && !vb.firstChild) {
+            var v = document.createElement('video'); v.src = w.winVideo; v.loop = true; v.playsInline = true; v.autoplay = true; v.muted = true;
+            v.onerror = function () { vb.innerHTML = ''; vb.hidden = true; }; vb.appendChild(v); vb.hidden = false; v.play && v.play().catch(function () {});
+        } else if (!w.winVideo) vb.hidden = true;
     }
 
     function ceremonyBanner(title, sub) {
@@ -569,14 +632,17 @@
         try {
             started = !!(scene && scene.ceremony && scene.ceremony(top3, { onStage: function (stg) {
                 // كتابة أقل: بدون عناوين على الشاشة (الأسماء فوق الشخصيات، و«منصة التتويج» مكتوبة على لافتة المنصة نفسها)
-                if (stg === 'podium') $('podium').classList.add('show');
+                if (stg === 'podium') { $('podium').classList.add('show'); SFX.cheer(); scheduleWin(5000); }
             } }));
         } catch (e) { AGP.log('formula-race: ceremony failed', e); started = false; }
         document.body.classList.toggle('ceremony', started);
-        if (!started) $('podium').classList.add('show');
+        if (!started) { $('podium').classList.add('show'); scheduleWin(2500); }
+        engineStop();
     }
 
+    function newRace() { resetRace(); stopTest(); clearDrivers(); }
     function resetRace() {
+        hideWin(); S.run = (S.run || 0) + 1; engineStop();
         S.phase = 'lobby'; document.body.dataset.phase = 'lobby';
         S.winner = null; S.reported = false; S.raceClock = 0;
         S.cars.forEach(function (c, i) {
@@ -604,7 +670,7 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
     function avatarHtml(c) {
         var init = esc(String(c.name).trim().charAt(0) || '؟');
-        return c.avatar ? '<img src="' + esc(c.avatar) + '" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\'' + init.replace(/'/g, '') + '\'}))">' : '<span>' + init + '</span>';
+        return c.avatar ? '<img src="' + esc(c.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\'' + init.replace(/'/g, '') + '\'}))">' : '<span>' + init + '</span>';
     }
     function gapTxt(sec) { return '<span dir="ltr">+' + sec.toFixed(1) + '</span> ث'; }
     function isLight(hex) { var n = parseInt(String(hex).slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) > 170; }
@@ -803,16 +869,96 @@
     }
 
     // أصوات بسيطة (إشارات البداية)
-    var actx = null;
-    function beep(freq, len) {
+    // ------------------------------------------------------------------
+    // الأصوات: مولّدة بالكود (WebAudio) بدون ملفات. المستوى العام 40% (أقل من النص)
+    // عشان ما تغطّي على صوت الستريمر. تشتغل بعد أول ضغطة بالصفحة (سياسة المتصفح).
+    // ------------------------------------------------------------------
+    var MASTER_VOLUME = 0.4;
+    var actx = null, master = null, engine = null, noiseBuf = null;
+    function ac() {
+        if (!settings.soundOn) return null;
         try {
-            actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-            var o = actx.createOscillator(), g = actx.createGain();
-            o.type = 'square'; o.frequency.value = freq; g.gain.value = 0.08;
-            g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + len);
-            o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + len);
-        } catch (e) {}
+            if (!actx) {
+                actx = new (window.AudioContext || window.webkitAudioContext)();
+                master = actx.createGain(); master.gain.value = MASTER_VOLUME;
+                var comp = actx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4;
+                master.connect(comp); comp.connect(actx.destination);
+            }
+            if (actx.state === 'suspended') actx.resume();
+            return actx;
+        } catch (e) { return null; }
     }
+    function unlockAudio() { ac(); }
+    function tone(freq, len, type, vol, delay, slideTo) {
+        var a = ac(); if (!a) return;
+        var t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+        o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+        if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + len);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + len + 0.05);
+    }
+    function noise(len, vol, fFrom, fTo, delay, q) {
+        var a = ac(); if (!a) return;
+        if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate); var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+        var t = a.currentTime + (delay || 0), src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+        src.buffer = noiseBuf; src.loop = true;
+        f.type = 'bandpass'; f.Q.value = q || 1.2; f.frequency.setValueAtTime(fFrom, t); f.frequency.exponentialRampToValueAtTime(fTo || fFrom, t + len);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.2, t + Math.min(0.06, len / 3));
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        src.connect(f); f.connect(g); g.connect(master); src.start(t); src.stop(t + len + 0.05);
+    }
+    var SFX = {
+        light: function () { tone(440, 0.22, 'square', 0.12); },
+        go: function () { tone(880, 0.55, 'square', 0.14); noise(0.9, 0.12, 400, 2400); },
+        join: function () { tone(660, 0.09, 'triangle', 0.12); tone(990, 0.12, 'triangle', 0.1, 0.07); },
+        nitro: function () { noise(0.7, 0.22, 600, 3800, 0, 0.8); tone(220, 0.5, 'sawtooth', 0.05, 0, 660); },
+        shield: function () { tone(1046, 0.5, 'sine', 0.12); tone(1568, 0.6, 'sine', 0.08, 0.06); },
+        portal: function () { tone(300, 0.5, 'sine', 0.14, 0, 1400); tone(1400, 0.35, 'triangle', 0.08, 0.35, 500); },
+        shuttle: function () { noise(1.1, 0.24, 300, 2600, 0, 0.7); tone(110, 0.9, 'sawtooth', 0.06, 0, 330); },
+        rocket: function () { noise(0.5, 0.18, 2000, 500); noise(0.6, 0.3, 160, 60, 0.45, 0.6); },
+        lightning: function () { noise(0.25, 0.3, 5000, 1200, 0, 0.5); noise(0.9, 0.22, 120, 50, 0.12, 0.5); },
+        hit: function () { tone(180, 0.35, 'square', 0.1, 0, 70); },
+        finish: function () { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, 0.35, 'triangle', 0.13, i * 0.12); }); },
+        cheer: function () { noise(3.2, 0.16, 900, 1400, 0, 0.6); noise(2.6, 0.1, 2200, 2600, 0.3, 0.8); },
+        // نفس نغمة الفوز بروليت الإقصاء
+        win: function () { tone(523.25, 0.22, 'sine', 0.2); tone(659.25, 0.22, 'sine', 0.2, 0.16); tone(783.99, 0.5, 'sine', 0.165, 0.32); }
+    };
+    function beep(freq, len) { tone(freq, len, 'square', 0.12); }
+    // صوت المحرك: يتبع سرعة السيارة اللي الكاميرا تتابعها (خافت جداً)
+    function engineStart() {
+        var a = ac(); if (!a || engine) return;
+        var o1 = a.createOscillator(), o2 = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+        o1.type = 'sawtooth'; o2.type = 'sawtooth'; o2.detune.value = 12;
+        f.type = 'lowpass'; f.frequency.value = 520; f.Q.value = 2;
+        g.gain.value = 0.0001; g.gain.setTargetAtTime(0.045, a.currentTime, 0.4);
+        o1.connect(f); o2.connect(f); f.connect(g); g.connect(master); o1.start(); o2.start();
+        engine = { o1: o1, o2: o2, f: f, g: g };
+    }
+    function engineUpdate(speed) {
+        if (!engine || !actx) return;
+        var hz = 46 + Math.min(110, speed) * 1.25, t = actx.currentTime;
+        engine.o1.frequency.setTargetAtTime(hz, t, 0.12); engine.o2.frequency.setTargetAtTime(hz * 1.5, t, 0.12);
+        engine.f.frequency.setTargetAtTime(380 + speed * 9, t, 0.15);
+    }
+    function engineStop() {
+        if (!engine || !actx) return;
+        var e = engine; engine = null;
+        e.g.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25);
+        setTimeout(function () { try { e.o1.stop(); e.o2.stop(); } catch (x) {} }, 1200);
+    }
+    function setSound(on) {
+        settings.soundOn = !!on; saveSettings();
+        if (!on) { engineStop(); if (actx) { try { actx.suspend(); } catch (e) {} } }
+        else { ac(); if (S.phase === 'race') engineStart(); }
+        renderSoundBtn();
+    }
+    function renderSoundBtn() {
+        var b = $('soundBtn'); if (!b) return;
+        b.classList.toggle('on', !!settings.soundOn);
+        b.textContent = settings.soundOn ? '🔊 الصوت: تشغيل' : '🔇 الصوت: إيقاف';
+    }
+
 
     // ------------------------------------------------------------------
     // الإعدادات (صف لكل خيار: العنوان يمين والعنصر يسار — قاعدة CLAUDE.md)
@@ -873,6 +1019,7 @@
             saveSettings(); closePicker(); syncSettingsUI();
         });
         syncSettingsUI();
+        renderSoundBtn();
     }
 
     /** صفوف هدايا السباق: مربع منقّط بصورة الهدية (يفتح الاختيار) + اسم التأثير ووصفه. */
@@ -915,13 +1062,17 @@
             if (!p || !p.id || typeof p.text !== 'string') return;
             // لاعب دخل بدون صورة (مثلاً بالدعم) ووصلت صورته بتعليق: نحدّثها بالدبوس واللوحات
             var known = S.byId[p.id];
-            if (known && !known.avatar && p.avatarUrl) { known.avatar = p.avatarUrl; if (scene) scene.setCars(S.cars); renderTower(true); }
+            fillAvatar(known, p.avatarUrl);
             if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
             if (settings.joinMode === 'followers' && !p.isFollower) return;
             addCar(p);
         });
         AGP.events.on('stream:giftReceived', function (p) { if (p && p.id) onGift(p); });
-        AGP.events.on('stream:likeReceived', function (p) { if (p && p.id) onLike(p.id, p.count); });
+        AGP.events.on('stream:likeReceived', function (p) {
+            if (!p || !p.id) return;
+            fillAvatar(S.byId[p.id], p.avatarUrl);
+            onLike(p.id, p.count);
+        });
         AGP.events.on('stream:statusChanged', updateLive);
         window.addEventListener('storage', function (e) { if (e.key === STREAM_CONNECTION_STORAGE_KEY) connect(); });
         window.addEventListener('agp:stream-connected', connect);
@@ -952,7 +1103,8 @@
         if (S.phase !== 'lobby') return;
         S.demo = true; document.body.classList.add('testing');
         var names = ['أبو فهد', 'نورة', 'سلطان', 'ريم ⚡', 'ماجد', 'Lama', 'خالد ٧', 'جود', 'تركي', 'سارا', 'فيصل', 'هيا', 'بندر', 'دانة', 'عزوز', 'مشاعل'];
-        for (var i = 0; S.cars.length < Math.min(settings.maxDrivers, 10) && i < 60; i++) addCar({ id: 'demo:' + i, name: names[i % names.length] + (i >= names.length ? ' ' + (Math.floor(i / names.length) + 1) : ''), bot: true });
+        var AV = [GAME_DIR + '../../assets/characters/girl.png', GAME_DIR + '../../assets/characters/boy.png'];
+        for (var i = 0; S.cars.length < Math.min(settings.maxDrivers, 10) && i < 60; i++) addCar({ id: 'demo:' + i, name: names[i % names.length] + (i >= names.length ? ' ' + (Math.floor(i / names.length) + 1) : ''), bot: true, avatarUrl: i % 3 === 2 ? null : AV[i % 2] });
         $('toasts').innerHTML = '';
         clearInterval(demoTimer);
         demoTimer = setInterval(function () {
@@ -984,6 +1136,12 @@
         $('settingsClose').onclick = function () { openSettings(false); };
         $('testBtn2').onclick = function () { startTest(true); };
         $('againBtn').onclick = function () { resetRace(); stopTest(); };
+        $('wExit').onclick = function () { $('exitBtn').click(); };
+        $('wNew').onclick = newRace;
+        $('wSame').onclick = function () { resetRace(); stopTest(); };
+        $('soundBtn').onclick = function () { setSound(!settings.soundOn); };
+        // أول ضغطة/زر بالصفحة يفتح الصوت (المتصفح يمنع الصوت قبل تفاعل)
+        ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockAudio, { passive: true }); });
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
         $('hudToggle').onclick = function () { document.body.classList.toggle('clean'); };
         $('endBtn').onclick = endNow;
@@ -1116,7 +1274,7 @@
 
     function init() {
         // واجهة فحص لوضع التجربة فقط (?demo=1) — للاختبارات الآلية
-        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; }, get scene() { return scene; }, clear: clearDrivers, stopTest: stopTest, perkFor: effectForGift };
+        if (DEMO) window.__f1Demo = { S: S, TRACK: TRACK, get settings() { return settings; }, get scene() { return scene; }, clear: clearDrivers, stopTest: stopTest, perkFor: effectForGift, get volume() { return master ? master.gain.value : null; } };
         document.body.dataset.phase = 'lobby';
         bindUI(); bindSettings(); renderPerks(); renderCamBar(); renderLobby();
         bindStream();
