@@ -7,11 +7,11 @@
  *
  * التنبيهات القديمة (إطلاق «التحكم عن بعد» و«تنويه التعليق المؤقت») موقّفة.
  *
- * يطلع مرة وحدة بس لكل شخص:
- *  - مسجّل دخول: محفوظ بحسابه بالسيرفر (GET/POST /api/notices/seen —
- *    backend/notices/seen-notices.js)، فما يطلع له مرة ثانية حتى من جهاز ثاني.
- *  - بدون حساب: محفوظ بالمتصفح (localStorage).
- * أي خطأ بالشبكة ← ما نطلّعه (ما نزعج أحد بتنبيه مكرر).
+ * يطلع مرتين بس لكل شخص، وبين المرتين 20 دقيقة على الأقل، وبعدها ما يطلع أبداً:
+ *  - العدّاد ووقت آخر مرة بالمتصفح (localStorage 'agp:notice:<KEY>:<user id|guest>' = {n, t}).
+ *  - مسجّل دخول: بعد المرة الثانية ينحفظ بحسابه بالسيرفر (GET/POST /api/notices/seen —
+ *    backend/notices/seen-notices.js)، فما يطلع له بعدها حتى من جهاز ثاني.
+ * أي خطأ بالشبكة ← ما نطلّعه (ما نزعج أحد بتنبيه زيادة).
  *
  * لتنبيه جديد بالمستقبل: غيّر NOTICE_KEY والنص والصورة.
  * للمعاينة بدون ما ينحفظ: games.html?notice=preview
@@ -20,20 +20,36 @@
     'use strict';
 
     var NOTICE_KEY = 'library-tooth-for-tooth';
-    var LOCAL_KEY = 'agp:notice:' + NOTICE_KEY;
+    var MAX_TIMES = 2;
+    var GAP_MS = 20 * 60 * 1000;
     var IMG = 'assets/notices/check-new-games.jpg';
 
     var A = window.AGPAuth;
     var preview = /[?&]notice=preview\b/.test(location.search);
 
-    function localSeen() { try { return localStorage.getItem(LOCAL_KEY) === '1'; } catch (e) { return false; } }
-    function setLocalSeen() { try { localStorage.setItem(LOCAL_KEY, '1'); } catch (e) {} }
     function loggedIn() { return !!(A && A.getToken && A.getToken()); }
+    function userId() {
+        try { var u = loggedIn() && A.getCachedUser ? A.getCachedUser() : null; return u && u.id ? String(u.id) : ''; } catch (e) { return ''; }
+    }
+    function localKey() { return 'agp:notice:' + NOTICE_KEY + ':' + (userId() || 'guest'); }
 
-    function markSeen() {
+    /** {n: كم مرة طلع، t: وقت آخر مرة} — لو التخزين مو متاح نرجع null (ما نطلّعه). */
+    function readState() {
+        try { var st = JSON.parse(localStorage.getItem(localKey()) || '{}') || {}; return { n: +st.n || 0, t: +st.t || 0 }; }
+        catch (e) { return null; }
+    }
+    function writeState(st) { try { localStorage.setItem(localKey(), JSON.stringify(st)); return true; } catch (e) { return false; } }
+    function canShow(st) { return !!st && st.n < MAX_TIMES && Date.now() - st.t >= GAP_MS; }
+
+    /** نحسب المرة؛ وبعد المرة الأخيرة نحفظها بالحساب عشان ما يطلع بعدها من أي جهاز. */
+    function markShown() {
         if (preview) return;
-        setLocalSeen();
-        if (loggedIn() && A.request) A.request('/api/notices/seen', { method: 'POST', body: { key: NOTICE_KEY } }).catch(function () {});
+        var st = readState() || { n: 0, t: 0 };
+        st = { n: st.n + 1, t: Date.now() };
+        writeState(st);
+        if (st.n >= MAX_TIMES && loggedIn() && A.request) {
+            A.request('/api/notices/seen', { method: 'POST', body: { key: NOTICE_KEY } }).catch(function () {});
+        }
     }
 
     var CSS = '' +
@@ -98,17 +114,18 @@
         bg.addEventListener('click', function (e) { if (e.target === bg) remove(); });
         document.addEventListener('keydown', onKey);
         document.body.appendChild(bg);
-        // أول ما يطلع نعتبره «انشاف» — لو سكّر الصفحة بدون ما يضغط، ما يطلع له مرة ثانية
-        markSeen();
+        // أول ما يطلع نحسبها مرة — حتى لو سكّر الصفحة بدون ما يضغط
+        markShown();
     }
 
     function start() {
         if (preview) { show(); return; }
-        if (localSeen()) return;
+        var st = readState();
+        if (!canShow(st)) return;
         if (!loggedIn() || !A.request) { show(); return; }
         A.request('/api/notices/seen?key=' + encodeURIComponent(NOTICE_KEY)).then(function (r) {
-            if (r && r.success && !r.seen) show();
-            else if (r && r.success) setLocalSeen();
+            if (r && r.success && !r.seen) { if (canShow(readState())) show(); }
+            else if (r && r.success) writeState({ n: MAX_TIMES, t: Date.now() });
         }).catch(function () {});
     }
 
