@@ -418,6 +418,15 @@ body.gfx-low #stage canvas{filter:none !important}
 body.gfx-low .grain{display:none}
 body.gfx-low *{backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
 body.gfx-low .ovl,body.gfx-low #champ,body.gfx-low #dOne{background-color:rgba(14,8,3,.82)}
+
+/* زر الصوت بالهيدر: كتم + تنقيص/زيادة (10%) والنسبة */
+.hvol{display:inline-flex;align-items:center;gap:2px;height:34px;padding:0 4px;border-radius:999px;background:rgba(20,12,6,.45);border:1px solid rgba(255,235,200,.18);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);color:#fbecd0}
+.hvol button{width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:inherit;font:700 18px/1 "IBM Plex Sans Arabic",sans-serif;cursor:pointer;display:grid;place-items:center;transition:background .2s}
+.hvol button:hover{background:rgba(255,235,200,.12)}.hvol button:disabled{opacity:.35;cursor:default}
+.hvol svg{width:17px;height:17px}.hvol .mx{display:none}
+.hvol.muted .mx{display:inline}.hvol.muted .w1,.hvol.muted .w2{display:none}.hvol.lowv .w2{display:none}
+.hvol b{min-width:42px;text-align:center;font:700 13px "IBM Plex Sans Arabic",sans-serif;color:#f2c14e;direction:ltr}
+@media (max-width:560px){.hvol b{display:none}}
 </style>
 </head>
 <body>
@@ -427,7 +436,7 @@ body.gfx-low .ovl,body.gfx-low #champ,body.gfx-low #dOne{background-color:rgba(1
 <i class="bar top"></i><i class="bar bot"></i>
 
 <header id="hdr">
-  <div class="hs r"><a class="hbtn" id="hSet" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>إعدادات المباراة</span></a><a class="hbtn" id="hExit" href="../../games.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg><span>خروج</span></a></div>
+  <div class="hs r"><a class="hbtn" id="hSet" href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>إعدادات المباراة</span></a><a class="hbtn" id="hExit" href="../../games.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg><span>خروج</span></a><div class="hvol" id="hVol" role="group" aria-label="مستوى الصوت"><button type="button" id="volMute" aria-label="كتم الصوت"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="w1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="w2" d="M19 5a10 10 0 0 1 0 14"/><path class="mx" d="m22 9-6 6M16 9l6 6"/></svg></button><button type="button" id="volDown" aria-label="خفض الصوت">−</button><b id="volVal">100%</b><button type="button" id="volUp" aria-label="رفع الصوت">+</button></div></div>
   <div class="hlogo" role="img" aria-label="ألعاب أيمن"></div>
   <div class="hs l"><div id="live"><i></i>متصل بالبث</div><div id="counter"><b id="count">0</b><span id="countLbl">بالسوق</span></div></div>
 </header>
