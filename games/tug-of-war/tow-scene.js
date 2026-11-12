@@ -79,7 +79,7 @@ export function createTugScene(container, opts = {}) {
     const cam = new T.PerspectiveCamera(36, 1, .1, 100); cam.position.set(0, 3.6, 11); cam.lookAt(0, 1.25, 0);
     sc.add(new T.HemisphereLight('#d9ccff', '#1b1230', 1.05));
     const sun = new T.DirectionalLight('#fff4e6', 2.1); sun.position.set(3, 10, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 8, bottom: -8, near: 1, far: 30 }); sc.add(sun);
+    Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 8, bottom: -8, near: 1, far: 30 }); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03; sc.add(sun);
     const glowL = new T.PointLight(colors[0], 18, 14); glowL.position.set(-6, 3, 2); sc.add(glowL);
     const glowR = new T.PointLight(colors[1], 18, 14); glowR.position.set(6, 3, 2); sc.add(glowR);
 
@@ -87,7 +87,7 @@ export function createTugScene(container, opts = {}) {
     const floorTex = tex(1024, 1200, (g, w, h) => {
         const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, colors[0]); gr.addColorStop(.38, '#1b1530'); gr.addColorStop(.62, '#1b1530'); gr.addColorStop(1, colors[1]);
         g.fillStyle = '#120e20'; g.fillRect(0, 0, w, h); g.globalAlpha = .35; g.fillStyle = gr; g.fillRect(0, 0, w, h); g.globalAlpha = 1;
-        g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } });
+        g.strokeStyle = 'rgba(255,255,255,.025)'; g.lineWidth = 3; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } });
     const floor = new T.Mesh(new T.BoxGeometry(46, .3, 30), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 11.5); floor.receiveShadow = true; sc.add(floor);
     const edge = new T.Mesh(new T.BoxGeometry(46.2, .06, 30.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 11.5); sc.add(edge);
     const lineM = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: .95 });
@@ -108,15 +108,14 @@ export function createTugScene(container, opts = {}) {
         const turf = tex(512, 512, (g, w, h) => { g.fillStyle = '#18132b'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(196,181,253,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }); // أرضية بنفسجية غامقة (بدون أخضر)
         turf.wrapS = turf.wrapT = T.RepeatWrapping; turf.repeat.set(6, 3);
         const field = new T.Mesh(new T.PlaneGeometry(90, 60), new T.MeshStandardMaterial({ map: turf, roughness: 1 })); field.rotation.x = -Math.PI / 2; field.position.set(0, -.32, -4); field.receiveShadow = true; sc.add(field);
-        // مدرجات: درجات خرسانية + كراسي بلون كل فريق (كل نص بلون فريقه)
-        const ROWS = 9, SEATS = 34, Z0 = -14, seatGeo = new T.BoxGeometry(.7, .45, .55);
+        // مدرجات: درجات مصمتة هادية، كل نص بلون فريقه (بدون كراسي صغيرة عشان ما يطلع نقش يلمع مع الحركة)
+        const ROWS = 9, Z0 = -14;
         for (let r = 0; r < ROWS; r++) {
             const z = Z0 - r * 1.1, y = r * .75;
-            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#15121f' : '#120f1b')); step.position.set(0, y + .05, z); step.receiveShadow = true; sc.add(step);
+            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#15121f' : '#120f1b')); step.position.set(0, y + .05, z); sc.add(step);
             for (const k of [0, 1]) {
-                const inst = new T.InstancedMesh(seatGeo, M(shade(colors[k], r % 2 ? .22 : .27), { roughness: .9 }), SEATS / 2), m4 = new T.Matrix4();
-                for (let i = 0; i < SEATS / 2; i++) { const x = (k ? 1 : -1) * (1.2 + i * 1.5); m4.makeTranslation(x, y + .65, z + .15); inst.setMatrixAt(i, m4); }
-                sc.add(inst);
+                const seat = new T.Mesh(new T.BoxGeometry(25, .4, .6), M(shade(colors[k], r % 2 ? .2 : .24), { roughness: .95 }));
+                seat.position.set((k ? 1 : -1) * 13.6, y + .62, z + .1); sc.add(seat);
             }
         }
         const topY = ROWS * .75, backZ = Z0 - ROWS * 1.1;
@@ -257,7 +256,9 @@ export function createTugScene(container, opts = {}) {
         const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
         const target = Math.max(-1, Math.min(1, state.pos / 100)) * SHIFT;
         posX += (target - posX) * (1 - Math.exp(-dt * 7)); mover.position.x = posX;
-        { const k = 1 - Math.exp(-dt * (far ? 1.8 : .9)); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k); cam.lookAt(camLook); }
+        { const k = 1 - Math.exp(-dt * 3); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k);
+            if (cam.position.distanceTo(camGoal.pos) < .01) { cam.position.copy(camGoal.pos); camLook.copy(camGoal.look); }
+            cam.lookAt(camLook); }
         flag.position.set(0, ropeY, 0);
         for (const f of figs.values()) {
             if (f.outAt) { // منقصى: ينقذف لجهة الخصم وهو يلف، ويصغر لين يختفي
@@ -271,10 +272,10 @@ export function createTugScene(container, opts = {}) {
             const won = state.winner === f.k, lost = state.winner >= 0 && !won;
             const boost = state.boost[f.k] ? .08 : 0;
             // heave = سرعة تكبيس الفريق (0..1): الفريق كامل يشد بإيقاع، وكل ما زاد التكبيس زادت الشدّة
-            const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.18 + .14 * Math.sin(t * 11 + f.ph * .3));
-            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .35 + (won ? -.3 : 0);
+            const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.14 + .06 * Math.sin(t * 6 + f.ph * .3));
+            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .15 + (won ? -.3 : 0);
             f.cx += (f.x - f.cx) * (1 - Math.exp(-dt * 3));
-            f.outer.position.x = f.cx + (!f.frozen && !won && !lost ? (f.k ? 1 : -1) * hv * .08 * (1 + Math.sin(t * 11 + f.ph * .3)) : 0);
+            f.outer.position.x = f.cx + (!f.frozen && !won && !lost ? (f.k ? 1 : -1) * hv * .04 * (1 + Math.sin(t * 6 + f.ph * .3)) : 0);
             f.ice.visible = !!f.frozen;
             poseShip(f, lean, t, won ? 'win' : lost ? 'lose' : null);
             f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
@@ -287,7 +288,7 @@ export function createTugScene(container, opts = {}) {
             hookMesh.position.set(hookAnim.from + (hookAnim.to - hookAnim.from) * (1 - Math.pow(1 - u, 3)) + posX, ropeY + .25 + Math.sin(u * Math.PI) * .6, 0); hookMesh.rotation.y = u * Math.PI * 2;
             spawn(hookMesh.position.clone(), '#f472b6', 2, .8, { up: .5, g: 0, life: .5, size: .2 });
             if (u >= 1) { spawn(new T.Vector3(posX, ropeY, 0), '#f472b6', 50, 4.5); spawn(new T.Vector3(posX, ropeY, 0), '#ffffff', 20, 3); hookMesh.visible = false; hookAnim = null; } }
-        if (flash.t > 0) { flash.t = Math.max(0, flash.t - dt * 1.4); const L = flash.k ? glowR : glowL; L.color.set(flash.c); L.intensity = 18 + flash.t * 90; if (flash.t === 0) L.color.set(colors[flash.k]); }
+        if (flash.t > 0) { flash.t = Math.max(0, flash.t - dt * 1.4); const L = flash.k ? glowR : glowL; L.color.set(flash.c); L.intensity = 18 + flash.t * 26; if (flash.t === 0) L.color.set(colors[flash.k]); }
         // ارتفاع الحبل = ارتفاع يدين أول لاعب (مرة وحدة بعد ما تطلع الشخصيات)
         if (!measured && figs.size) { const f = [...figs.values()].find(x => !x.outAt); if (f) { f.outer.updateMatrixWorld(true);
             const hand = f.arms[0].children[1];
