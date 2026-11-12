@@ -67,6 +67,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
 @keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
 @keyframes glowDeep{0%,100%{box-shadow:0 12px 34px rgba(76,29,149,.6), 0 0 0 0 rgba(124,58,237,0)}50%{box-shadow:0 12px 34px rgba(76,29,149,.6), 0 0 0 10px rgba(124,58,237,.22)}}
+@keyframes boardIn{0%{opacity:0;transform:translateY(22px) scale(.97);filter:blur(6px)}100%{opacity:1;transform:none;filter:none}}
+@keyframes boardOutK{0%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-10px) scale(.98)}}
+@keyframes boardRow{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
+/* لوحة النتائج: بالجوال الصح/السكب ينزلون تحت الاسم برموز مختصرة */
+.lmb-ic{display:none}
+@media (max-width:560px){.lmb-av,.lmb-unit,.lmb-w{display:none!important}.lmb-ic{display:inline}.lmb-info{flex-wrap:wrap}}
+@keyframes boardShine{0%{left:-45%;opacity:0}20%{opacity:1}100%{left:110%;opacity:0}}
+@keyframes boardRing{from{stroke-dashoffset:0}to{stroke-dashoffset:175.93}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -238,6 +246,43 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
 
   {{ joinEl }}
+  <!-- لوحة النتائج النهائية قبل إعلان الفائز: كل المشاركين ونقاطهم، تختفي لحالها بعد 10 ثواني أو بزر «إنهاء» ثم يطلع الفائز -->
+  <sc-if value="{{ boardOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:86;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:radial-gradient(ellipse at 50% 35%, rgba(46,34,78,.75), rgba(7,5,12,.92));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:'IBM Plex Sans Arabic',sans-serif;animation:{{ boardOv }}">
+      <div style="direction:rtl;position:relative;width:min(880px,100%);max-height:calc(100dvh - 32px);box-sizing:border-box;display:flex;flex-direction:column;gap:clamp(12px,1.8vw,18px);padding:clamp(22px,3vw,34px) clamp(14px,2.6vw,30px) clamp(16px,2.4vw,26px);border-radius:34px;background:linear-gradient(180deg, #1f1934 0%, #120e1f 100%) padding-box, linear-gradient(160deg, rgba(243,217,164,.55), rgba(243,217,164,.08) 35%, rgba(214,204,255,.1) 65%, rgba(243,217,164,.45)) border-box;border:1.5px solid transparent;box-shadow:0 10px 0 #0b0814, 0 60px 140px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);animation:{{ boardAn }}">
+        <div style="position:absolute;inset:9px;border-radius:26px;border:1px solid rgba(243,217,164,.1);pointer-events:none"></div>
+        <div style="position:absolute;top:-120px;left:50%;width:520px;height:240px;transform:translateX(-50%);background:radial-gradient(ellipse, rgba(243,217,164,.12), transparent 70%);pointer-events:none"></div>
+        <span style="position:absolute;top:clamp(16px,2.4vw,26px);left:clamp(16px,2.4vw,28px);width:clamp(46px,5vw,58px);height:clamp(46px,5vw,58px);display:grid;place-items:center">
+          <svg viewBox="0 0 64 64" style="position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)" aria-hidden="true"><circle cx="32" cy="32" r="28" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="3.5"></circle><circle cx="32" cy="32" r="28" fill="none" stroke="#f3d9a4" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="175.93" style="animation:boardRing {{ boardSecs }}s linear forwards"></circle></svg>
+          <span style="position:relative;font:700 clamp(18px,2vw,23px)/1 'IBM Plex Sans Arabic';color:#f6ead0;font-variant-numeric:tabular-nums">{{ boardLeft }}</span>
+        </span>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+          <span style="width:clamp(54px,6vw,68px);height:clamp(54px,6vw,68px);border-radius:50%;display:grid;place-items:center;background:linear-gradient(160deg, #fbecc8, #d9b36c 55%, #a8803f);box-shadow:0 5px 0 #6b4f22, 0 14px 30px rgba(217,179,108,.3), inset 0 2px 0 rgba(255,255,255,.6);color:#3b2a10"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg></span>
+          <span style="font:700 clamp(24px,3vw,38px)/1.15 'IBM Plex Sans Arabic';color:#f7f1e3;letter-spacing:-.2px;text-shadow:0 2px 14px rgba(243,217,164,.18)">النتائج النهائية</span>
+          <span style="display:flex;align-items:center;gap:10px;font:500 clamp(12px,1.2vw,15px) 'IBM Plex Sans Arabic';color:#b4a98f"><span style="width:28px;height:1px;background:linear-gradient(90deg, transparent, rgba(243,217,164,.5))"></span>{{ boardSub }}<span style="width:28px;height:1px;background:linear-gradient(90deg, rgba(243,217,164,.5), transparent)"></span></span>
+        </div>
+        <div data-noscroll="" style="position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(8px,1.2vw,12px);align-content:start;padding:2px 2px 8px">
+          <sc-for list="{{ boardRows }}" as="p" hint-placeholder-count="6">
+            <div style="position:relative;display:flex;align-items:center;gap:clamp(6px,1vw,12px);min-height:clamp(54px,6vw,64px);padding:8px clamp(8px,1.2vw,14px);box-sizing:border-box;border-radius:16px;overflow:hidden;border:1.5px solid transparent;background:{{ p.cardBg }};box-shadow:0 4px 0 {{ p.edge }}, 0 12px 22px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);animation:boardRow .75s cubic-bezier(.22,1,.36,1) {{ p.delay }} both">
+              <span style="position:absolute;top:0;bottom:0;width:40%;left:-45%;background:linear-gradient(100deg, transparent, rgba(255,240,210,.14), transparent);display:{{ p.shineD }};animation:boardShine 1.6s ease-in-out {{ p.shineDelay }} both;pointer-events:none"></span>
+              <span style="flex-shrink:0;width:clamp(24px,2.6vw,32px);height:clamp(24px,2.6vw,32px);border-radius:50%;display:grid;place-items:center;background:{{ p.rankBg }};box-shadow:{{ p.rankSh }};color:{{ p.rankFg }};font:700 clamp(12px,1.3vw,15px) 'IBM Plex Sans Arabic'">{{ p.rank }}</span>
+              <span class="lmb-av" style="flex-shrink:0;width:clamp(30px,3.4vw,40px);height:clamp(30px,3.4vw,40px);border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg, #5d4f99, #392f68);box-shadow:0 0 0 1.5px {{ p.ring }};font:700 clamp(13px,1.4vw,16px) 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <div class="lmb-info" style="flex:1;min-width:0;display:flex;align-items:center;gap:4px 8px">
+                <span style="min-width:0;max-width:100%;font:700 clamp(14px,1.6vw,17px)/1.3 'IBM Plex Sans Arabic';color:#f4efe4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                <span style="flex-shrink:0;display:flex;align-items:center;gap:5px">
+                  <span style="padding:3px 8px;border-radius:8px;background:rgba(134,239,172,.1);border:1px solid rgba(134,239,172,.22);font:700 clamp(12px,1.3vw,14px)/1.2 'IBM Plex Sans Arabic';color:#a7f0c2;white-space:nowrap"><span class="lmb-ic">✓ </span>{{ p.correct }}<span class="lmb-w"> صح</span></span>
+                  <span style="padding:3px 8px;border-radius:8px;background:rgba(252,165,165,.09);border:1px solid rgba(252,165,165,.2);font:700 clamp(12px,1.3vw,14px)/1.2 'IBM Plex Sans Arabic';color:#f8b8b8;white-space:nowrap"><span class="lmb-ic">✗ </span>{{ p.skips }}<span class="lmb-w"> سكب</span></span>
+                  <span style="display:{{ p.outD }};padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font:700 clamp(12px,1.3vw,14px)/1.2 'IBM Plex Sans Arabic';color:#b4adc4;white-space:nowrap">{{ p.outTxt }}</span>
+                </span>
+              </div>
+              <span style="flex-shrink:0;display:flex;align-items:baseline;gap:4px;padding:5px clamp(7px,1vw,12px);border-radius:10px;background:{{ p.scoreBg }}"><span style="font:700 clamp(16px,1.9vw,21px)/1 'IBM Plex Sans Arabic';color:{{ p.scoreC }};font-variant-numeric:tabular-nums;direction:ltr">{{ p.score }}</span><span class="lmb-unit" style="font:500 clamp(9px,1vw,11px) 'IBM Plex Sans Arabic';color:#8d859f">نقطة</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ boardEnd }}" style="position:relative;align-self:center;height:54px;min-width:min(280px,100%);padding:0 44px;border:1px solid rgba(255,244,214,.5);border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg, #f3dca8, #d2aa62);color:#2e2108;font:700 18px 'IBM Plex Sans Arabic';box-shadow:0 4px 0 #7a5a26, 0 16px 34px rgba(210,170,98,.28), inset 0 1px 0 rgba(255,255,255,.55);transition:filter .25s, transform .2s;animation:boardRow .75s cubic-bezier(.22,1,.36,1) .55s both" style-hover="filter:brightness(1.05)" style-active="transform:translateY(2px)">إنهاء وإعلان الفائز</button>
+      </div>
+    </div>
+  </sc-if>
   <!-- شاشة الفوز: نفس تصميم روليت الإقصاء (games/elimination-roulette/game.html) — بطاقة فائز وحدة بدون تطاير -->
   <sc-if value="{{ winOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.38);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-family:'Zain','IBM Plex Sans Arabic',sans-serif;font-size:18px;animation:{{ winOv }}">
@@ -414,7 +459,7 @@ class Component extends DCLogic {
     autoJoin:LM.readJSON('lm-auto-join',true)!==false, joinQ:[], toast:null, log:[], countdown:null,
     turn:SETUP?.turn==='دقيقتين'?120:90, curTurn:SETUP?.turn==='دقيقتين'?120:90,
     stage:1, queue:this.shuffle([...(ROSTER[0]||[])]), qIdx:0, round:0, phase:'ready', slots:[], endsAt:0, now:Date.now(),
-    stats:{}, order:0, showRes:false, final:null, howOpen:LM.readJSON('lm-how-hide',false)!==true, howHide:LM.readJSON('lm-how-hide',false)===true, win:null, pts:null };
+    stats:{}, order:0, showRes:false, final:null, howOpen:LM.readJSON('lm-how-hide',false)!==true, howHide:LM.readJSON('lm-how-hide',false)===true, win:null, pts:null, board:null, boardLeft:0, boardOut:false };
   // كل من شارك بالمباراة (للنقاط) — اللوبي + اللي دخلوا بعدها، والمطرود يطلع
   participants = new Set(ROSTER[0]||[]);
 
@@ -423,7 +468,7 @@ class Component extends DCLogic {
     LM.connect(); this.unsub=LM.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
     this.ti=setInterval(()=>this.tick(),250);
     this.prepareRound(); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearTimeout(this.jt); this.unsub?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearTimeout(this.jt); clearTimeout(this.boardT); clearInterval(this.boardI); this.unsub?.(); }
 
   // ---------- أدوات ----------
   shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -525,7 +570,20 @@ class Component extends DCLogic {
     this.setState({phase:'stageEnd',slots:[],final,showFinal:true});
     this.snd('reveal'); this.addLog('stage',`نهاية المرحلة ${s.stage} · تأهل ${q} من ${order.length}`); }
 
-  showWinner(w){ if(!w) return; this.snd('win'); this.addLog('points',`فوز ${w} بـ ${this.fmt(this.st(w).score)} نقطة`);
+  // قبل إعلان الفائز: لوحة بكل المشاركين ونقاطهم (BOARD_MS)، تختفي لحالها أو بزر «إنهاء» وبعدها يطلع الفائز.
+  // بالبطولة: المتأهلين للنهائي أول، وبعدهم اللي خرجوا بكل مرحلة (الأحدث فوق) بنقاطهم بمرحلتهم.
+  BOARD_MS = 10000;
+  showWinner(w){ if(!w) return; const s=this.state; clearTimeout(this.boardT); clearInterval(this.boardI);
+    const row=(n,stage)=>{ const t=this.st(n); return {name:n,score:t.score,correct:t.correct,skips:t.skips,stage}; };
+    const rows=[...this.ranked(s.queue).map(n=>row(n,null)),...(this.outHist||[]).slice().reverse().flat()];
+    this.snd('reveal'); this.addLog('stage',`النتائج النهائية · ${rows.length} مشارك`);
+    this.setState({phase:'stageEnd',slots:[],final:null,showFinal:false,board:{winner:w,rows,endsAt:Date.now()+this.BOARD_MS},boardLeft:Math.ceil(this.BOARD_MS/1000),boardOut:false});
+    this.boardI=setInterval(()=>{ const b=this.state.board; if(!b) return; const left=Math.max(0,Math.ceil((b.endsAt-Date.now())/1000)); if(left!==this.state.boardLeft) this.setState({boardLeft:left}); },250);
+    this.boardT=setTimeout(()=>this.endBoard(),this.BOARD_MS); }
+  endBoard=()=>{ const b=this.state.board; if(!b||this.state.boardOut) return; clearTimeout(this.boardT); clearInterval(this.boardI);
+    this.setState({boardOut:true});
+    setTimeout(()=>{ if(this.state.board!==b) return; this.setState({board:null,boardOut:false}); this.revealWinner(b.winner); },450); };
+  revealWinner(w){ if(!w) return; this.snd('win'); this.addLog('points',`فوز ${w} بـ ${this.fmt(this.st(w).score)} نقطة`);
     this.setState({phase:'stageEnd',slots:[],final:null,showFinal:false,win:w,pts:'pending'}); this.reportPoints(w); }
 
   // نظام نقاط المنصة (CLAUDE.md): مرة وحدة لكل مباراة عند إعلان الفائز — لعبة فردية.
@@ -538,11 +596,13 @@ class Component extends DCLogic {
 
   // البطولة: المرحلة التالية بالمتأهلين فقط — النقاط من الصفر وترتيب الأدوار عشوائي.
   nextStage=()=>{ const f=this.state.final; if(!f) return; this.snd('open');
+    // نحفظ اللي خرجوا بنقاطهم قبل ما تتصفر — تطلع بلوحة النتائج النهائية
+    (this.outHist=this.outHist||[]).push(f.out.map(n=>{ const t=this.st(n); return {name:n,score:t.score,correct:t.correct,skips:t.skips,stage:this.state.stage}; }));
     this.setState(s=>({stage:s.stage+1,queue:this.shuffle(f.qualified.slice()),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,phase:'ready',slots:[]}));
     setTimeout(()=>this.prepareRound(true),30); };
   // مباراة جديدة بنفس اللاعبين (كل المشاركين)
-  newGame=()=>{ this.snd('open'); this.reported=false; this.matchStartedAt=null; const all=[...this.participants];
-    this.setState({stage:1,queue:this.shuffle(all),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,win:null,pts:null,phase:'ready',slots:[],log:[],howOpen:false});
+  newGame=()=>{ this.snd('open'); this.reported=false; this.matchStartedAt=null; this.outHist=[]; clearTimeout(this.boardT); clearInterval(this.boardI); const all=[...this.participants];
+    this.setState({board:null,boardOut:false,stage:1,queue:this.shuffle(all),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,win:null,pts:null,phase:'ready',slots:[],log:[],howOpen:false});
     setTimeout(()=>this.prepareRound(),30); };
 
   // ---------- الشات ----------
@@ -653,7 +713,24 @@ class Component extends DCLogic {
     // شاشة الفوز (تصميم روليت الإقصاء): بطاقة WINNER وحدة، أو بطاقة الفوز المملوكة (js/agp-win-card.js)
     const W=s.win, wt=W?this.st(W):null, wpts=s.pts, wav=W?this.avItem(W,'#7c3aed'):{};
     const wcEl=W?LM.winCard(this.reg.player(W),[typeof wpts==='number'?'+'+wpts+' نقطة':'المركز الأول',fmt(wt.score)+' نقطة باللعبة','محِك العقول'],'wc'+(typeof wpts==='number'?1:0),240):null;
-    const winVals={ winOpen:!!W, winOv:'fade .3s ease', gameName:'محِك العقول', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
+    // لوحة النتائج النهائية (قبل الفائز)
+    const B=s.board, boardVals={ boardOpen:!!B, boardLeft:s.boardLeft, boardSecs:this.BOARD_MS/1000, boardEnd:this.endBoard,
+      boardOv:s.boardOut?'fadeOut .45s ease forwards':'fade .5s ease', boardAn:s.boardOut?'boardOutK .45s ease forwards':'boardIn .8s cubic-bezier(.22,1,.36,1) both',
+      boardSub:B?(B.rows.length+' مشارك · الفائز يطلع بعد '+s.boardLeft+' ثواني'):'',
+      // فخامة هادئة: ميداليات ذهبي/فضي/برونزي للمراكز الثلاثة بإطار متدرّج ولمعة تمر مرة وحدة، والباقي بنفسجي داكن.
+      // كل بطاقة لها "سماكة" (ظل سفلي صلب)، واللي خرجوا من مراحل سابقة بالبطولة باهتين.
+      boardRows:B?B.rows.map((r,j)=>{ const M=[['#f3d9a4','243,217,164','linear-gradient(160deg, #fbecc8, #d9b36c 55%, #a8803f)','#6b4f22','#3b2a10','#3a2c14'],
+          ['#dfe3ee','223,227,238','linear-gradient(160deg, #ffffff, #c3c9d8 55%, #8a91a6)','#4f5568','#262a36','#262838'],
+          ['#ecc2a0','236,194,160','linear-gradient(160deg, #f8dcc4, #c98c5c 55%, #8d5a33)','#5c3a1f','#2f1b0c','#33231a']], m=!r.stage&&M[j];
+        const base=r.stage?'linear-gradient(180deg, #1e1a2c, #171423)':'linear-gradient(180deg, #2a2342, #1c172d)';
+        return {name:r.name,rank:j+1,score:fmt(r.score),
+        correct:r.correct, skips:r.skips, outTxt:'خرج م'+(r.stage||''), outD:r.stage?'inline-block':'none',
+        cardBg:m?`${base} padding-box, linear-gradient(135deg, ${m[0]}, rgba(${m[1]},.12) 45%, rgba(${m[1]},.7)) border-box`:`${base} padding-box, linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.03)) border-box`,
+        edge:m?m[5]:'#0e0b18', ring:m?`rgba(${m[1]},.75)`:'rgba(255,255,255,.12)',
+        rankBg:m?m[2]:'rgba(255,255,255,.05)', rankSh:m?`0 2px 0 ${m[3]}, inset 0 1px 0 rgba(255,255,255,.5)`:'inset 0 0 0 1px rgba(255,255,255,.07)', rankFg:m?m[4]:'#9b93ad',
+        scoreC:m?m[0]:r.stage?'#8d859f':'#dcd2fb', scoreBg:m?`rgba(${m[1]},.1)`:'rgba(255,255,255,.04)',
+        shineD:m?'block':'none', delay:(0.3+Math.min(j,16)*0.06).toFixed(2)+'s', shineDelay:(1.1+j*0.15).toFixed(2)+'s',...this.avItem(r.name,'#7c3aed')}; }):[] };
+    const winVals={ ...boardVals, winOpen:!!W, winOv:'fade .3s ease', gameName:'محِك العقول', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
       winnerName:W||'', winnerIni:[...(W||'')].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''), winnerAv:wav.avatar||'', winnerOp:wav.imgOp||0,
       ptsMain:wpts==='pending'?'…':typeof wpts==='number'?`+${wpts} نقطة`:(W?fmt(wt.score)+' نقطة':''), ptsSub:wpts==='pending'?'جارٍ احتساب النقاط':typeof wpts==='number'?'تظهر في بروفايله':'نقاط المنصة للحسابات الموثّقة',
       ptsSize:typeof wpts==='number'?'2em':'1.4em', ptsSubSize:typeof wpts==='number'?'.4em':'.5em',

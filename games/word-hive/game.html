@@ -342,7 +342,7 @@ input::placeholder{color:#6f6a7c}
           
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:600px;margin:0 auto">
-          <button onClick="{{ onExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
+          <button onClick="{{ winExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
           <button onClick="{{ newMatch }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:none;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;box-shadow:0 10px 26px rgba(124,58,237,.22)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
           <button onClick="{{ replaySame }}" style="white-space:nowrap;flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(196,181,253,.35);background:rgba(139,92,246,.1);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
         </div>
@@ -876,7 +876,7 @@ class Component extends DCLogic {
       winOv:S.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:S.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   renderVals(){ const S=this.state;
     return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,
-      onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false}),
+      onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), winExit:()=>{ location.href=WH.libraryUrl; }, onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false}),
       onHelp:()=>this.setState({helpOpen:true,helpOpenOut:false}), newRound:this.newRound,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       ...this.winVals(), roundLabel:this.roundNo?`الجولة ${this.roundNo} من ${this.matchRounds||this.settings.matchRounds}`:'الوقت المتبقي',

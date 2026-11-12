@@ -310,7 +310,7 @@
     }
 
     window.TOW = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'tow-setup', roster: 'tow-roster', players: 'tow-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

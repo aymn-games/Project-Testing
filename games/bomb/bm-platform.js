@@ -227,7 +227,7 @@
     }
 
     window.BM = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'bomb-settings', roster: 'bomb-roster', players: 'bomb-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

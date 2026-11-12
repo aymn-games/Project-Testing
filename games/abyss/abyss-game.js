@@ -75,8 +75,16 @@
 
     // ---------- أدوات ----------
     function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-    var pool = [];
-    function nextQuestion() { if (!pool.length) pool = shuffle(AGP.abyssQuestions || []); return pool.pop(); }
+    // أسئلة الحساب تقريباً نص البنك، فنقلّلها: سؤال حساب بنسبة الربع، والباقي من الفئات الثانية.
+    // كل مجموعة تنخلط لحالها وتنسحب بدون تكرار لين تخلص، وبعدها تنخلط من جديد.
+    var MATH_CAT = 'حساب وذكاء', MATH_RATE = .25, pools = { math: [], other: [] };
+    function refill(k) { pools[k] = shuffle((AGP.abyssQuestions || []).filter(function (q) { return (q.cat === MATH_CAT) === (k === 'math'); })); }
+    function nextQuestion() {
+        var k = Math.random() < MATH_RATE ? 'math' : 'other';
+        if (!pools[k].length) refill(k);
+        if (!pools[k].length) { k = k === 'math' ? 'other' : 'math'; if (!pools[k].length) refill(k); }
+        return pools[k].pop();
+    }
     function isTF(q) { return !!q && typeof q.tf === 'boolean'; }
     function correctLane(q) { return isTF(q) ? (q.tf ? 0 : 1) : q.c; }
     // كل لوح زجاج عليه رقمه (1 يمين · 2 يسار) حتى بأسئلة صح وخطأ
@@ -402,7 +410,8 @@
     };
     document.addEventListener('fullscreenchange', paintFs); document.addEventListener('webkitfullscreenchange', paintFs);
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
-    $('wExit').onclick = function () { $('exitDlg').hidden = false; };
+    // خروج شاشة الفوز: مباشرة لمكتبة الألعاب بدون نافذة تأكيد
+    $('wExit').onclick = function () { $('xYes').click(); };
     $('wNew').onclick = goLobby;
     // إعادة بنفس اللاعبين: الجسر ينبني من جديد والكل يرجع لمنصة البداية
     $('wSame').onclick = function () {

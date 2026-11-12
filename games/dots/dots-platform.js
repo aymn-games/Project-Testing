@@ -250,7 +250,7 @@
     }
 
     window.DT = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { settings: 'dots-settings', join: 'dots-join', teams: 'dots-teams', players: 'dots-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

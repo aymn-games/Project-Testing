@@ -222,7 +222,7 @@
     }
 
     window.TT = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'topten-settings', roster: 'topten-roster', players: 'topten-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

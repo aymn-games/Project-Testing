@@ -330,7 +330,7 @@
     }
 
     window.ER = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'er2-settings', roster: 'er2-roster', players: 'er2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
