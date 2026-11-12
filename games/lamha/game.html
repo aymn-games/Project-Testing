@@ -411,9 +411,11 @@ class Component extends DCLogic {
   shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
   fmt(x){ return String(+(+x).toFixed(2)); }
   nextQ(){ if(!BANK.length) return {q:'بنك الأسئلة غير محمّل',a:'',c:''}; if(this.di>=this.deck.length){ this.deck=this.shuffle(BANK.slice()); this.di=0; }
-    const [q,a,c]=this.deck[this.di++]; return {q,a,c}; }
+    const [q,a,c,alts]=this.deck[this.di++]; return {q,a,c,alts:alts||[]}; }
   // نفس مطابقة أسرع إجابة (LM.norm): تتجاهل التشكيل والهمزات و«ال» والرموز والمسافات وحالة الأحرف.
-  check(t,ans){ const v=[LM.norm(t),LM.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean), a=LM.norm(ans); return !!a&&v.includes(a); }
+  // الجواب أو أي بديل مقبول له من البنك (العنصر الرابع، مثل «مكة» لـ«مكة المكرمة»)
+  check(t,q){ const v=[LM.norm(t),LM.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean);
+    return [q.a,...(q.alts||[])].map(x=>LM.norm(x)).some(a=>!!a&&v.includes(a)); }
   st(n,s=this.state){ return s.stats[n]||{score:0,correct:0,skips:0,played:false,order:0}; }
   avItem(n,c){ const av=n?this.reg.avatar(n):null; return {avatar:av||'',imgOp:av?1:0,initial:[...(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'',avBg:`linear-gradient(135deg, ${c}, ${c}66)`}; }
   handle(n){ const id=this.reg.id(n)||''; return id.indexOf('tiktok:')===0?'@'+id.slice(7):''; }
@@ -527,7 +529,7 @@ class Component extends DCLogic {
       this.snd('skip');
       this.setSlot(i,{q:this.nextQ(),feed:'تخطّى · الجواب كان: '+sl.q.a,feedC:'#fca5a5',delta:{id:Math.random(),txt:'−0.5',c:'#fca5a5'},flash:'skip'},{...t,score:t.score-SKIP_PTS,skips:t.skips+1},user);
       this.addLog('skip',`${user} تخطّى (−0.5)`); return; }
-    if(this.check(text,sl.q.a)){
+    if(this.check(text,sl.q)){
       this.snd('correct');
       this.setSlot(i,{q:this.nextQ(),feed:'✓ صح: '+sl.q.a,feedC:'#6ee7b7',delta:{id:Math.random(),txt:'+1',c:'#6ee7b7'},flash:'ok'},{...t,score:t.score+CORRECT_PTS,correct:t.correct+1},user);
       this.addLog('correct',`${user} جاوب صح (+1)`); return; }
