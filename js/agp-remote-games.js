@@ -26,7 +26,7 @@
         { id: 'memory-challenge', name: 'تحدي الذاكرة', icon: '🧠', url: 'games/memory-challenge/index.html', ready: true },
         { id: 'luck-color', name: 'حظ و لون', icon: '🎨', url: 'games/luck-color/index.html' }, // تحت التجربة: تفتح للأدمن بس (lc-platform.js)
         { id: 'survival-ship', name: 'سفينة النجاة', icon: '🚢', url: 'games/survival-ship/index.html', ready: true },
-        { id: 'formula-race', name: 'فورمولا ون', icon: '🏎️', url: 'games/formula-race/index.html', ready: true },
+        { id: 'formula-race', name: 'فورمولا ون', icon: '🏎️', url: 'games/formula-race/index.html' }, // مقفلة للإصلاح (games.html) — ترجع ready:true لما تنفتح
         { id: 'rock-paper-scissors', name: 'حجرة ورقة مقص', icon: '✊', url: 'games/rock-paper-scissors/index.html', ready: true },
         { id: 'team-war', name: 'حرب الفريقين', icon: '⚔️', url: 'games/team-war/index.html', ready: true },
         { id: 'khazna', name: 'الخزنة', icon: '🔐', url: 'games/khazna/index.html', ready: true },

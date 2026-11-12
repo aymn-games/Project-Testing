@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     'cowboy-duel':          { name: 'بلدة الكاوبوي', cat: 'c', icon: 'target', badge: 'جديد', desc: 'اكتب كلمة الدخول وادخل البلدة، والقرعة توزّع المبارزات.. عند الجرس أول من يكتب الرقم الذهبي بالشات يطلق ويتأهل لين يبقى بطل واحد.' },
     'tug-of-war':           { name: 'شد الحبل', cat: 'c', icon: 'fitness_center', badge: 'جديد', desc: 'كبّس أو اكتب بالشات عشان تسحب الحبل لفريقك، والهدايا تجمّد الخصم وتضاعف القوة.. والفريق اللي يقصي كل الخصم يفوز.' },
     'word-chain':           { name: 'سلسلة الكلمات', cat: 'q', icon: 'link', badge: 'رائج', desc: 'اكتب كلمة من نفس الفئة تبدأ بآخر حرف من الكلمة اللي قبلها، واللي يقفلها على الكل ياخذ 4 نقاط.' },
-    'formula-race':         { name: 'فورمولا ون', cat: 'c', icon: 'sports_motorsports', badge: 'جديد', desc: 'سباق ثلاثي الأبعاد: اكتب كلمة الدخول وخذ سيارة، كبّس لتزيد سرعتك وكل 50 تكبيسة نيترو، والدعم يعطيك درع وصاروخ وصاعقة.' },
+    'formula-race':         { name: 'فورمولا ون', cat: 'c', icon: 'sports_motorsports', badge: 'إصلاح', fixing: true, desc: 'سباق ثلاثي الأبعاد: اكتب كلمة الدخول وخذ سيارة، كبّس لتزيد سرعتك وكل 50 تكبيسة نيترو، والدعم يعطيك درع وصاروخ وصاعقة.' },
     'rock-paper-scissors':  { name: 'حجرة ورقة مقص', cat: 'c', icon: 'back_hand', badge: 'جديد', desc: 'بطولة بساحة ثلاثية الأبعاد: اكتب 1 حجرة أو 2 ورقة أو 3 مقص بالشات، والفائز بكل مواجهة يتأهل لين يبقى بطل واحد.' },
     'penalty':              { name: 'بلنتي', cat: 'c', icon: 'sports_soccer', badge: 'رائج', desc: 'العبها في بثك بفريقين من جمهورك، أو ادعُ ستريمر وجمهور كل بث يسدد على مرماه بكتابة رقم الزاوية بالشات.' },
     'mafia':                { name: 'المافيا', cat: 'c', icon: 'theater_comedy', badge: 'جديد', desc: 'العب من جوالك: مافيا وطبيب ومحقق ومواطنين.. بالليل مشاهد ثلاثية الأبعاد على البث، وبالنهار نقاش وتصويت وكروت سرية للمافيا.' },
@@ -740,6 +740,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       msg = 'هذي اللعبة بتنزل خلال دقايق إن شاء الله، ترقّبوها!';
     } else if (reason === 'redesign') {
       msg = 'هذي اللعبة مقفلة حالياً لإعادة تصميمها، وبترجع بشكل جديد قريب إن شاء الله.';
+    } else if (reason === 'fixing') {
+      msg = 'هذي اللعبة مقفلة حالياً للإصلاح، وبترجع قريب إن شاء الله.';
     } else if (reason === 'maintenance') {
       msg = 'هذي اللعبة تحت الصيانة حالياً، وبترجع قريب إن شاء الله.';
     } else if (reason === 'testing') {
@@ -779,7 +781,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('click', function(e){
     var card = e.target && e.target.closest ? e.target.closest('.gl-card') : null;
     if (!card) return;
-    var block = card.classList.contains('gl-soon') ? 'soon' : card.classList.contains('gl-redesign') ? 'redesign' : card.classList.contains('gl-maint') ? 'maintenance' : (card.classList.contains('gl-admin') && !isAdminUser()) ? 'testing' : getGameAccessBlock();
+    var block = card.classList.contains('gl-soon') ? 'soon' : card.classList.contains('gl-redesign') ? 'redesign' : card.classList.contains('gl-fixing') ? 'fixing' : card.classList.contains('gl-maint') ? 'maintenance' : (card.classList.contains('gl-admin') && !isAdminUser()) ? 'testing' : getGameAccessBlock();
     if (!block) return;
     e.preventDefault();
     e.stopPropagation();
@@ -809,7 +811,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var badge = info.badge;
     if (UPDATED_IDS.indexOf(g.id) !== -1 && (!badge || ['جديد', 'رائج', 'الأكثر انتشاراً'].indexOf(badge) !== -1)) badge = 'تم التحديث';
     var card = document.createElement('article');
-    card.className = 'gl-card' + (info.maintenance || info.redesign || info.soon ? ' gl-maint' : '') + (info.redesign ? ' gl-redesign' : '') + (info.soon ? ' gl-soon' : '') + (info.adminOnly ? ' gl-admin' : '');
+    card.className = 'gl-card' + (info.maintenance || info.redesign || info.soon || info.fixing ? ' gl-maint' : '') + (info.redesign ? ' gl-redesign' : '') + (info.fixing ? ' gl-fixing' : '') + (info.soon ? ' gl-soon' : '') + (info.adminOnly ? ' gl-admin' : '');
     // لون البطاقة من هوية ألعاب أيمن (بنفسجي ثابت بالـCSS)، ولون التصنيف
     // يظهر بس على شارة التصنيف.
     card.style.setProperty('--cat-hue', cat.hue);
@@ -830,6 +832,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (info.redesign) card.querySelector('.gl-play').firstChild.textContent = 'إعادة تصميم';
     // لعبة جاهزة بتنزل قريب (soon بـCARD_INFO): نفس قفل الصيانة بنص «دقايق وتنزل»
     if (info.soon) card.querySelector('.gl-play').firstChild.textContent = 'دقايق وتنزل';
+    // لعبة مقفلة للإصلاح (fixing بـCARD_INFO): نفس قفل الصيانة بنص «إصلاح»
+    if (info.fixing) card.querySelector('.gl-play').firstChild.textContent = 'إصلاح';
     applyGameLock(card);
     card.addEventListener('mousemove', function(e){
       var r = card.getBoundingClientRect();
@@ -960,7 +964,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
       // نفس قيود فتح الألعاب اللي ببطاقات الشبكة (صيانة / اختبار / حساب)
       card.querySelector('.gl-upd-play').addEventListener('click', function(e){
-        var block = info.soon ? 'soon' : info.redesign ? 'redesign' : info.maintenance ? 'maintenance' : (info.adminOnly && !isAdminUser()) ? 'testing' : getGameAccessBlock();
+        var block = info.soon ? 'soon' : info.redesign ? 'redesign' : info.fixing ? 'fixing' : info.maintenance ? 'maintenance' : (info.adminOnly && !isAdminUser()) ? 'testing' : getGameAccessBlock();
         markUpdatesSeen();
         if (!block) return;
         e.preventDefault();
