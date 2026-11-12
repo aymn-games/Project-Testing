@@ -211,10 +211,12 @@
         list.forEach((p, i) => slot.set(p.id, sl[i])); }
       ps.forEach(p => {
         let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'boy') && this.V ? p.vrm : null;
-        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; sp.renderOrder = 30; } /* الأسماء ترتسم فوق الرقم الطاير (20) */ /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
+        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6, rise: p.rise || 0 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; sp.renderOrder = 30; } /* الأسماء ترتسم فوق الرقم الطاير (20) */ /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
         const key = p.row + ':' + p.lane;
         if (p.fall) { if (f.fallT == null) { f.fallT = -.45; f.fallV = new T.Vector3((Math.random() - .5) * 1.5, 1.5, (Math.random() - .5) * 1.5); } f.key = key; return; }
         f.fallT = null; f.g.visible = true; const sl = slot.get(p.id); f.scale = sl.s;
+        // رجع بطوق النجاة: يطلع من قاع الهاوية للوحه، والطوق حول خصره (نفس طوق سفينة النجاة)
+        if ((p.rise || 0) !== f.rise) { f.rise = p.rise || 0; f.riseT = 0; f.jT = null; f.key = key; f.target = sl.v; f.g.rotation.set(0, Math.PI, 0); f.g.position.set(sl.v.x, -45, sl.v.z); return; }
         if (born) { f.g.position.copy(sl.v); f.g.scale.setScalar(sl.s); }
         else if (f.key !== key) { f.jT = -Math.random() * .35; f.jFrom = f.g.position.clone(); }
         f.key = key; f.target = sl.v;
@@ -245,6 +247,12 @@
           falling = f; f.fallV.y -= 26 * dt; f.g.position.addScaledVector(f.fallV, dt); f.g.rotation.x += dt * 2.2; f.g.rotation.z += dt * 1.3;
           U.arms[0].rotation.z = -2.6 + Math.sin(t * 22) * .5; U.arms[1].rotation.z = 2.6 - Math.sin(t * 22) * .5; U.legs[0].rotation.x = Math.sin(t * 18) * .8; U.legs[1].rotation.x = -Math.sin(t * 18) * .8;
           if (f.g.position.y < -90) f.g.visible = false; continue; }
+        if (f.riseT != null) { f.riseT += dt; const k = Math.min(1, f.riseT / 1.5), e = 1 - Math.pow(1 - k, 3), B = U.buoy;
+          B.visible = true; B.scale.setScalar(1); U.spin.rotation.z += dt * 3; U.glow.material.opacity = .3 + Math.sin(t * 6) * .15;
+          U.stars.forEach((st, i) => { const a = t * 2 + i * 2.1; st.position.set(Math.cos(a) * .95, Math.sin(t * 3 + i) * .3, Math.sin(a) * .95); });
+          if (f.riseT > 4.5) { f.riseT = null; B.visible = false; }
+          else if (k < 1) { f.g.position.set(f.target.x, -45 * (1 - e) + Math.sin(k * Math.PI) * 2.2, f.target.z); f.g.rotation.set(0, Math.PI + (1 - e) * 8, 0);
+            U.arms[0].rotation.z = -2.6; U.arms[1].rotation.z = 2.6; U.legs[0].rotation.x = U.legs[1].rotation.x = 0; continue; } }
         if (!f.target) continue; const sk = f.g.scale.x + ((f.scale || 1) - f.g.scale.x) * Math.min(1, dt * 4); f.g.scale.setScalar(sk);
         if (f.jT != null) { f.jT += dt; const k = Math.max(0, Math.min(1, f.jT / .7)); const e = k * k * (3 - 2 * k);
           f.g.position.lerpVectors(f.jFrom, f.target, e); f.g.position.y = Math.sin(k * Math.PI) * 1.8; f.g.rotation.y = Math.atan2(f.target.x - f.jFrom.x, f.target.z - f.jFrom.z) || Math.PI;
@@ -266,13 +274,13 @@
       const standZ = rowZ(Math.max(-1, (cur || 0) - 1)), nextZ = rowZ(Math.max(0, cur || 0)), midZ = (standZ + nextZ) / 2;
       if (d.cam === 'overview') { const zm = (rowZ(-1) + rowZ(Math.max(0, rows - 1))) / 2, a = t * .05; P.set(26 + Math.sin(a) * 6, 26, rowZ(-1) + 26); L.set(0, -3, zm * .55); rate = 1; }
       else if (d.cam === 'win') { const zE = d.finish ? this.endZ() : standZ, a = t * .15; P.set(Math.sin(a) * 15, 7.5, zE + Math.cos(a) * 15); L.set(0, 2, zE); rate = 1.6; }
-      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.2, 12.5, standZ + 10); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
-      else { P.set(1.2 + Math.sin(t * .2) * .4, 12, standZ + 9); L.set(0, -1.2, nextZ - 1); rate = 1.6; } // عالية وقريبة ورا اللاعبين، وخط النهاية ما يبان
+      else if (falling && falling.fallT < 2.2) { const w = new T.Vector3(); falling.g.getWorldPosition(w); P.set(w.x * .8 + 2.2, 9.5, standZ + 12); L.set(w.x * .6, Math.max(-8, w.y * .5), nextZ); rate = 2.2; }
+      else { P.set(1.2 + Math.sin(t * .2) * .4, 8.2, standZ + 11.5); L.set(0, 1, nextZ - 2); rate = 1.6; } // نازلة ورا اللاعبين: الواقفين واللوحين الجايين بنص الكادر
       const k = 1 - Math.exp(-dt * rate); cam.position.lerp(P, k); this.camLook.lerp(L, k);
       if (this.shakeK > .01) cam.position.add(new T.Vector3((Math.random() - .5) * this.shakeK, (Math.random() - .5) * this.shakeK, 0));
       cam.lookAt(this.camLook);
       // أثناء اللعب الكادر ينزل لتحت عشان بطاقة السؤال فوق ما تغطي اللاعبين
-      const vt = d.cam === 'play' ? .14 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
+      const vt = d.cam === 'play' ? .02 : d.cam === 'win' ? .2 : 0; this.vo = (this.vo || 0) + (vt - (this.vo || 0)) * k; const vw = this.clientWidth || 1, vh = this.clientHeight || 1;
       if (this.vo > .001) cam.setViewOffset(vw, vh, 0, -vh * this.vo, vw, vh); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
       this.sun.target.position.set(0, 0, standZ); this.sun.position.set(-30, 45, standZ - 60);
       this.r.render(this.sc, cam);
