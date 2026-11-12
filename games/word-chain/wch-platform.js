@@ -233,7 +233,7 @@
     }
 
     window.WCH = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'wch-settings', roster: 'wch-roster', players: 'wch-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

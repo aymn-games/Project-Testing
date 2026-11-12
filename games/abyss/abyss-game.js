@@ -410,7 +410,8 @@
     };
     document.addEventListener('fullscreenchange', paintFs); document.addEventListener('webkitfullscreenchange', paintFs);
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
-    $('wExit').onclick = function () { $('exitDlg').hidden = false; };
+    // خروج شاشة الفوز: مباشرة لمكتبة الألعاب بدون نافذة تأكيد
+    $('wExit').onclick = function () { $('xYes').click(); };
     $('wNew').onclick = goLobby;
     // إعادة بنفس اللاعبين: الجسر ينبني من جديد والكل يرجع لمنصة البداية
     $('wSame').onclick = function () {

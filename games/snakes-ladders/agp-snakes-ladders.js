@@ -1922,10 +1922,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             AGP.gameManager.resetSession();
             window.location.reload();
         };
-        el('sl-home-btn').onclick = function () {
-            var headerHomeBtn = el('agp-header-home-btn');
-            if (headerHomeBtn) headerHomeBtn.click();
-        };
+        // خروج شاشة الفوز: مباشرة لمكتبة الألعاب (homeNavigate يرجع لـgames.html لو زر الهيدر غير موجود)
+        el('sl-home-btn').onclick = homeNavigate;
 
         overlay.style.display = 'flex';
         window.setTimeout(function () {

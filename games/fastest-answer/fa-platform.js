@@ -206,7 +206,7 @@
     }
 
     window.FA = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,

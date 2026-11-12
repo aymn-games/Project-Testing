@@ -312,7 +312,7 @@
     }
 
     window.AB = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'abyss-settings', roster: 'abyss-roster', players: 'abyss-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

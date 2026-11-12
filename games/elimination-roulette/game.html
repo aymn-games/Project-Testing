@@ -297,7 +297,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:520px;margin:0 auto">
-          <button onClick="{{ onExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
+          <button onClick="{{ winExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
           <button onClick="{{ newMatch }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
           <button onClick="{{ replaySame }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
         </div>
@@ -750,7 +750,7 @@ class Component extends DCLogic {
   closeJoin=()=>{ const J=this.state.joined; this.shut('joinOpen'); if(!J.length) return; this.setState({joined:[]});
     J.forEach(n=>{ this.everIn.add(n); this.numOf(n); });
     this.later(()=>{ J.forEach(n=>this.participants.add(n)); this.setState(st=>({players:[...st.players,...J.filter(n=>!st.players.includes(n))],sIdx:null,sLanded:false}),()=>this.next()); }); }
-  renderVals(){ const S=this.state; return { lblDisp:S.narrow?'none':'inline', onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); location.href=ER.libraryUrl; }, ...this.anims(), exitOpen:S.exitOpen, toast:S.toast,
+  renderVals(){ const S=this.state; return { lblDisp:S.narrow?'none':'inline', onExit:()=>this.setState({exitOpen:true}), winExit:()=>{ location.href=ER.libraryUrl; }, closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); location.href=ER.libraryUrl; }, ...this.anims(), exitOpen:S.exitOpen, toast:S.toast,
       eventsOpen:S.eventsOpen, closeEvents:()=>this.shut('eventsOpen'), ...this.events(), onSettings:()=>this.setState({settingsOpen:true}), settingsOpen:S.settingsOpen, tabSettings:S.setTab===0,
       joinOpen:S.joinOpen, openJoin:()=>{ this.shut('settingsOpen'); setTimeout(()=>this.applyPending(),260); this.setState({joinOpen:true,joined:[]}); }, closeJoin:this.closeJoin, joinTeams:[{name:'كلمة الدخول',cmd:(SETUP&&SETUP.keyword)||''}],
       joined:S.joined.map(n=>({name:n,ini:ini(n),...this.av(n),op:this.av(n).op,kick:()=>this.setState(st=>({joined:st.joined.filter(x=>x!==n)}))})), joinedCount:S.joined.length, joinedEmpty:!S.joined.length,

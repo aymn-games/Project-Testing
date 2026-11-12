@@ -271,7 +271,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
-const LIBRARY_URL = 'https://aymngames.online/';
+const LIBRARY_URL = new URL('../../games.html', location.href).href; // مكتبة الألعاب (كانت الرئيسية بالغلط)
 const ST=()=>window.StationSettings;
 const COLORS = ['#ef4444','#3b82f6','#22c55e','#eab308','#f97316','#a855f7','#ec4899','#14b8a6','#f4f2f8','#64748b','#84cc16','#06b6d4','#b45309','#f43f5e','#6366f1','#10b981','#facc15','#c084fc','#0ea5e9','#78350f'];
 // الروم على الخادم (station-net.js ← /ws/station) بدل localStorage('station-room') بالنموذج.

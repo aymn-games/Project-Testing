@@ -243,7 +243,7 @@
     }
 
     window.TW = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'tw2-settings', roster: 'tw2-roster', players: 'tw2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

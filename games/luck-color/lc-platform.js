@@ -234,7 +234,7 @@
     }());
 
     window.LC = {
-        libraryUrl: 'https://aymngames.online/games.html',
+        libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
         keys: { setup: 'luck-color-settings', roster: 'luck-color-roster', players: 'luck-color-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

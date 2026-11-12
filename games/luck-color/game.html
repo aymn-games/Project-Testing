@@ -656,7 +656,7 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
             <span style="font:800 20px 'Zain';color:#fde68a;text-align:center">{{ overMsg }}</span>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%">
               <button onClick="{{ again }}" style="height:54px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 18px 'Zain';box-shadow:0 10px 30px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)">🔁 مباراة جديدة</button>
-              <button onClick="{{ onExit }}" style="height:54px;border-radius:999px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#fca5a5;font:800 18px 'Zain';cursor:pointer" style-hover="background:rgba(248,113,113,.15)">خروج</button>
+              <button onClick="{{ winExit }}" style="height:54px;border-radius:999px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:#fca5a5;font:800 18px 'Zain';cursor:pointer" style-hover="background:rgba(248,113,113,.15)">خروج</button>
             </div>
           </div>
         </sc-if>
@@ -1193,7 +1193,7 @@ class Component extends DCLogic {
       isOver:S.over, notOver:!S.over, rkTitle:S.over?'🏆 انتهت المباراة':'التصنيف الكامل', rkSub:S.over?`${S.players.length} لاعب · ${this.setup.total} جولة`:`${S.players.length} لاعب · الجولة ${S.round+(['pick','colors','challenge','target','duel','hostin','live'].includes(S.phase)?1:0)}`,
       ...this.overVals(),
       rankOv:o('rankOpen','fade .25s ease','fadeOut .26s ease forwards'), rankAn:o('rankOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
-      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>LC.go(LIBRARY_URL),
+      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), winExit:()=>LC.go(LIBRARY_URL), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>LC.go(LIBRARY_URL),
       exitOv:o('exitOpen','fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('exitOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')
     };
   }
