@@ -238,6 +238,35 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 
 
   {{ joinEl }}
+  <!-- لوحة النتائج النهائية قبل إعلان الفائز: كل المشاركين ونقاطهم، تختفي لحالها بعد 10 ثواني أو بزر «إنهاء» ثم يطلع الفائز -->
+  <sc-if value="{{ boardOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:86;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:rgba(8,4,16,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-family:'IBM Plex Sans Arabic',sans-serif;animation:{{ boardOv }}">
+      <div style="direction:rtl;width:min(1100px,100%);max-height:calc(100dvh - 32px);box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:clamp(16px,3vw,28px);border-radius:28px;background:linear-gradient(180deg, rgba(34,23,60,.97), rgba(15,11,26,.97));border:2px solid rgba(139,92,246,.45);box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 80px rgba(109,40,217,.25);animation:{{ boardAn }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            <span style="font:700 clamp(24px,3vw,40px)/1.2 'IBM Plex Sans Arabic';color:#f4f2f8">النتائج النهائية</span>
+            <span style="font:600 clamp(14px,1.4vw,18px) 'IBM Plex Sans Arabic';color:#a8a3b5">{{ boardSub }}</span>
+          </div>
+          <span style="flex-shrink:0;width:clamp(54px,6vw,72px);height:clamp(54px,6vw,72px);border-radius:50%;display:grid;place-items:center;box-sizing:border-box;border:3px solid #8b5cf6;background:rgba(76,29,149,.35);font:700 clamp(24px,3vw,32px)/1 'IBM Plex Sans Arabic';color:#ddd6fe;font-variant-numeric:tabular-nums">{{ boardLeft }}</span>
+        </div>
+        <div style="height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden"><div style="height:100%;border-radius:999px;background:linear-gradient(90deg, #7c3aed, #a855f7);animation:joinBar {{ boardSecs }}s linear forwards"></div></div>
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px;align-content:start">
+          <sc-for list="{{ boardRows }}" as="p" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px 8px 16px;box-sizing:border-box;border-radius:16px;background:{{ p.bg }};border:1.5px solid {{ p.bd }};animation:rise .4s ease {{ p.delay }} both">
+              <span style="flex-shrink:0;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:{{ p.rankBg }};color:{{ p.rankFg }};font:700 16px 'IBM Plex Sans Arabic'">{{ p.rank }}</span>
+              <span style="flex-shrink:0;width:42px;height:42px;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};font:700 17px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <span style="font:700 17px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                <span style="font:500 13px 'IBM Plex Sans Arabic';color:#8a8596;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.sub }}</span>
+              </div>
+              <span style="flex-shrink:0;display:flex;align-items:baseline;gap:5px;font:700 24px/1 'IBM Plex Sans Arabic';color:{{ p.scoreC }};font-variant-numeric:tabular-nums"><span style="direction:ltr">{{ p.score }}</span><span style="font:600 13px 'IBM Plex Sans Arabic';color:#a8a3b5">نقطة</span></span>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ boardEnd }}" style="align-self:center;height:56px;min-width:min(260px,100%);padding:0 40px;border:2px solid #8b5cf6;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 20px 'IBM Plex Sans Arabic';box-shadow:0 10px 30px rgba(124,58,237,.45)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">إنهاء</button>
+      </div>
+    </div>
+  </sc-if>
   <!-- شاشة الفوز: نفس تصميم روليت الإقصاء (games/elimination-roulette/game.html) — بطاقة فائز وحدة بدون تطاير -->
   <sc-if value="{{ winOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.38);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-family:'Zain','IBM Plex Sans Arabic',sans-serif;font-size:18px;animation:{{ winOv }}">
@@ -414,7 +443,7 @@ class Component extends DCLogic {
     autoJoin:LM.readJSON('lm-auto-join',true)!==false, joinQ:[], toast:null, log:[], countdown:null,
     turn:SETUP?.turn==='دقيقتين'?120:90, curTurn:SETUP?.turn==='دقيقتين'?120:90,
     stage:1, queue:this.shuffle([...(ROSTER[0]||[])]), qIdx:0, round:0, phase:'ready', slots:[], endsAt:0, now:Date.now(),
-    stats:{}, order:0, showRes:false, final:null, howOpen:LM.readJSON('lm-how-hide',false)!==true, howHide:LM.readJSON('lm-how-hide',false)===true, win:null, pts:null };
+    stats:{}, order:0, showRes:false, final:null, howOpen:LM.readJSON('lm-how-hide',false)!==true, howHide:LM.readJSON('lm-how-hide',false)===true, win:null, pts:null, board:null, boardLeft:0, boardOut:false };
   // كل من شارك بالمباراة (للنقاط) — اللوبي + اللي دخلوا بعدها، والمطرود يطلع
   participants = new Set(ROSTER[0]||[]);
 
@@ -423,7 +452,7 @@ class Component extends DCLogic {
     LM.connect(); this.unsub=LM.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
     this.ti=setInterval(()=>this.tick(),250);
     this.prepareRound(); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearTimeout(this.jt); this.unsub?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearTimeout(this.jt); clearTimeout(this.boardT); clearInterval(this.boardI); this.unsub?.(); }
 
   // ---------- أدوات ----------
   shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -525,7 +554,20 @@ class Component extends DCLogic {
     this.setState({phase:'stageEnd',slots:[],final,showFinal:true});
     this.snd('reveal'); this.addLog('stage',`نهاية المرحلة ${s.stage} · تأهل ${q} من ${order.length}`); }
 
-  showWinner(w){ if(!w) return; this.snd('win'); this.addLog('points',`فوز ${w} بـ ${this.fmt(this.st(w).score)} نقطة`);
+  // قبل إعلان الفائز: لوحة بكل المشاركين ونقاطهم (BOARD_MS)، تختفي لحالها أو بزر «إنهاء» وبعدها يطلع الفائز.
+  // بالبطولة: المتأهلين للنهائي أول، وبعدهم اللي خرجوا بكل مرحلة (الأحدث فوق) بنقاطهم بمرحلتهم.
+  BOARD_MS = 10000;
+  showWinner(w){ if(!w) return; const s=this.state; clearTimeout(this.boardT); clearInterval(this.boardI);
+    const row=(n,stage)=>{ const t=this.st(n); return {name:n,score:t.score,correct:t.correct,skips:t.skips,stage}; };
+    const rows=[...this.ranked(s.queue).map(n=>row(n,null)),...(this.outHist||[]).slice().reverse().flat()];
+    this.snd('reveal'); this.addLog('stage',`النتائج النهائية · ${rows.length} مشارك`);
+    this.setState({phase:'stageEnd',slots:[],final:null,showFinal:false,board:{winner:w,rows,endsAt:Date.now()+this.BOARD_MS},boardLeft:Math.ceil(this.BOARD_MS/1000),boardOut:false});
+    this.boardI=setInterval(()=>{ const b=this.state.board; if(!b) return; const left=Math.max(0,Math.ceil((b.endsAt-Date.now())/1000)); if(left!==this.state.boardLeft) this.setState({boardLeft:left}); },250);
+    this.boardT=setTimeout(()=>this.endBoard(),this.BOARD_MS); }
+  endBoard=()=>{ const b=this.state.board; if(!b||this.state.boardOut) return; clearTimeout(this.boardT); clearInterval(this.boardI);
+    this.setState({boardOut:true});
+    setTimeout(()=>{ if(this.state.board!==b) return; this.setState({board:null,boardOut:false}); this.revealWinner(b.winner); },300); };
+  revealWinner(w){ if(!w) return; this.snd('win'); this.addLog('points',`فوز ${w} بـ ${this.fmt(this.st(w).score)} نقطة`);
     this.setState({phase:'stageEnd',slots:[],final:null,showFinal:false,win:w,pts:'pending'}); this.reportPoints(w); }
 
   // نظام نقاط المنصة (CLAUDE.md): مرة وحدة لكل مباراة عند إعلان الفائز — لعبة فردية.
@@ -538,11 +580,13 @@ class Component extends DCLogic {
 
   // البطولة: المرحلة التالية بالمتأهلين فقط — النقاط من الصفر وترتيب الأدوار عشوائي.
   nextStage=()=>{ const f=this.state.final; if(!f) return; this.snd('open');
+    // نحفظ اللي خرجوا بنقاطهم قبل ما تتصفر — تطلع بلوحة النتائج النهائية
+    (this.outHist=this.outHist||[]).push(f.out.map(n=>{ const t=this.st(n); return {name:n,score:t.score,correct:t.correct,skips:t.skips,stage:this.state.stage}; }));
     this.setState(s=>({stage:s.stage+1,queue:this.shuffle(f.qualified.slice()),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,phase:'ready',slots:[]}));
     setTimeout(()=>this.prepareRound(true),30); };
   // مباراة جديدة بنفس اللاعبين (كل المشاركين)
-  newGame=()=>{ this.snd('open'); this.reported=false; this.matchStartedAt=null; const all=[...this.participants];
-    this.setState({stage:1,queue:this.shuffle(all),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,win:null,pts:null,phase:'ready',slots:[],log:[],howOpen:false});
+  newGame=()=>{ this.snd('open'); this.reported=false; this.matchStartedAt=null; this.outHist=[]; clearTimeout(this.boardT); clearInterval(this.boardI); const all=[...this.participants];
+    this.setState({board:null,boardOut:false,stage:1,queue:this.shuffle(all),qIdx:0,round:0,stats:{},order:0,final:null,showFinal:false,win:null,pts:null,phase:'ready',slots:[],log:[],howOpen:false});
     setTimeout(()=>this.prepareRound(),30); };
 
   // ---------- الشات ----------
@@ -653,7 +697,16 @@ class Component extends DCLogic {
     // شاشة الفوز (تصميم روليت الإقصاء): بطاقة WINNER وحدة، أو بطاقة الفوز المملوكة (js/agp-win-card.js)
     const W=s.win, wt=W?this.st(W):null, wpts=s.pts, wav=W?this.avItem(W,'#7c3aed'):{};
     const wcEl=W?LM.winCard(this.reg.player(W),[typeof wpts==='number'?'+'+wpts+' نقطة':'المركز الأول',fmt(wt.score)+' نقطة باللعبة','محِك العقول'],'wc'+(typeof wpts==='number'?1:0),240):null;
-    const winVals={ winOpen:!!W, winOv:'fade .3s ease', gameName:'محِك العقول', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
+    // لوحة النتائج النهائية (قبل الفائز)
+    const B=s.board, boardVals={ boardOpen:!!B, boardLeft:s.boardLeft, boardSecs:this.BOARD_MS/1000, boardEnd:this.endBoard,
+      boardOv:s.boardOut?'fadeOut .3s ease forwards':'fade .3s ease', boardAn:s.boardOut?'popOut .3s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
+      boardSub:B?(B.rows.length+' مشارك · الفائز يطلع بعد '+s.boardLeft+' ثواني'):'',
+      boardRows:B?B.rows.map((r,j)=>{ const top=j===0; return {name:r.name,rank:j+1,score:fmt(r.score),
+        sub:(r.stage?'خرج بالمرحلة '+r.stage+' · ':'')+r.correct+' صح · '+r.skips+' سكب',
+        bg:top?'rgba(139,92,246,.18)':'rgba(255,255,255,.03)',bd:top?'rgba(196,181,253,.6)':j<3&&!r.stage?'rgba(167,139,250,.35)':'rgba(255,255,255,.07)',
+        rankBg:j<3&&!r.stage?'linear-gradient(180deg, #6d28d9, #4c1d95)':'rgba(255,255,255,.06)',rankFg:j<3&&!r.stage?'#fff':'#a8a3b5',scoreC:r.stage?'#a8a3b5':'#ddd6fe',
+        delay:(Math.min(j,20)*0.03).toFixed(2)+'s',...this.avItem(r.name,'#7c3aed')}; }):[] };
+    const winVals={ ...boardVals, winOpen:!!W, winOv:'fade .3s ease', gameName:'محِك العقول', hasWinVideo:false, winVideoEl:null, winCardOn:!!wcEl, winCardEl:wcEl, winStd:!wcEl,
       winnerName:W||'', winnerIni:[...(W||'')].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''), winnerAv:wav.avatar||'', winnerOp:wav.imgOp||0,
       ptsMain:wpts==='pending'?'…':typeof wpts==='number'?`+${wpts} نقطة`:(W?fmt(wt.score)+' نقطة':''), ptsSub:wpts==='pending'?'جارٍ احتساب النقاط':typeof wpts==='number'?'تظهر في بروفايله':'نقاط المنصة للحسابات الموثّقة',
       ptsSize:typeof wpts==='number'?'2em':'1.4em', ptsSubSize:typeof wpts==='number'?'.4em':'.5em',
