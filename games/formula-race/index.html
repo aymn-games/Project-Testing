@@ -29,11 +29,11 @@
 <style>
 :root{
   --agp-accent:#7c3aed;
-  --bg:#07060b; --panel:rgba(16,12,28,.8); --line:rgba(167,139,250,.14);
-  --txt:#f4f4f6; --mut:#9a9caa;
+  --bg:#07060b; --panel:rgba(14,10,26,.86); --line:rgba(167,139,250,.2);
+  --txt:#f6f5fa; --mut:#b4b2c4;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Arabic',sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans Arabic',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 button{font-family:inherit;cursor:pointer}
 #stage{position:fixed;inset:0;background:linear-gradient(#3d7fc4,#9cc3e6 55%,#4e8a3a 56%)}
 #stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45))}
@@ -105,7 +105,7 @@ body[data-phase="lobby"] .btn-end,body[data-phase="finish"] .btn-end{display:non
 /* اللفة والزمن (وسط أعلى) */
 .lapbox{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:15;display:flex;align-items:center;gap:22px;padding:8px 22px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px)}
 .lapbox>div{display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.lapbox small{font-size:11px;color:var(--mut);font-weight:600}
+.lapbox small{font-size:12px;color:var(--mut);font-weight:700}
 .lapbox b{font-size:24px;font-variant-numeric:tabular-nums;direction:ltr}
 .lapbox .lb-lap b{color:#c4b5fd}
 .lapbox .lb-lap b span:last-child{font-size:15px;color:#cfd0d8}
@@ -115,41 +115,41 @@ body[data-phase="lobby"] .lapbox{display:none}
 
 /* ---------- لوحة الصدارة (يسار) ---------- */
 .tower{position:fixed;top:78px;left:14px;z-index:15;width:280px;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px)}
-.tower-h{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:13px;font-weight:700}
-.tower-h span:last-child{color:var(--mut);font-weight:500;font-size:11.5px}
+.tower-h{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:linear-gradient(90deg,rgba(91,33,182,.55),rgba(30,16,56,.6));border-bottom:1px solid rgba(167,139,250,.2);font-size:14.5px;font-weight:700}
+.tower-h span:last-child{color:var(--mut);font-weight:600;font-size:12.5px}
 #towerRows{position:relative;transition:height .3s}
 /* عدّاد وصول التكبيس من البث — يخضرّ لحظة وصول تكبيس (نفس شد الحبل) */
-.tower-taps{padding:7px 12px;border-top:1px solid rgba(167,139,250,.15);font-size:12px;font-weight:600;color:var(--mut);text-align:center;transition:background .3s,color .3s}
+.tower-taps{padding:8px 12px;border-top:1px solid rgba(167,139,250,.15);font-size:13px;font-weight:700;color:var(--mut);text-align:center;transition:background .3s,color .3s}
 .tower-taps.hot{background:rgba(52,211,153,.14);color:#6ee7b7}
-.trow{position:absolute;top:0;right:0;left:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
+.trow{position:absolute;top:0;right:0;left:0;height:40px;display:flex;align-items:center;gap:8px;padding:0 10px 0 8px;border:0;border-top:1px solid rgba(255,255,255,.04);border-inline-start:4px solid var(--team);
   background:transparent;color:var(--txt);text-align:right;transition:transform .45s cubic-bezier(.3,.8,.3,1),background .2s}
 .trow:hover{background:rgba(255,255,255,.06)}
 .trow.focus{background:linear-gradient(270deg,color-mix(in srgb,var(--team) 38%,transparent),rgba(255,255,255,.03))}
 .trow.locked .tpos::after{content:"📌";position:absolute;font-size:9px;transform:translate(10px,-10px)}
-.tpos{position:relative;width:22px;text-align:center;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
-.tav{width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700;border:2px solid var(--team)}
+.tpos{position:relative;width:22px;text-align:center;font-weight:700;font-size:15.5px;font-variant-numeric:tabular-nums}
+.tav{width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--team);display:grid;place-items:center;font-size:11px;font-weight:700;border:2px solid var(--team)}
 .tav img{width:100%;height:100%;object-fit:cover}
-.tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}
-.tgap{font-size:12px;color:#cfd0d8;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
+.tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:700;color:#fff}
+.tgap{font-size:13px;font-weight:600;color:#e4e3ec;font-variant-numeric:tabular-nums;min-width:52px;text-align:left;direction:ltr}
 .tfx{width:18px;font-size:13px;text-align:center}
 
 /* ---------- طريقة اللعب (يمين) ---------- */
 .perks{position:fixed;top:78px;right:14px;z-index:15;width:260px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:10px}
-.perks h3{margin:2px 4px 6px;font-size:14px;color:#c4b5fd}
-.perk{display:flex;align-items:center;gap:10px;padding:6px 6px;border-radius:10px}
+.perks h3{margin:2px 4px 8px;font-size:16px;font-weight:700;color:#d8ccff}
+.perk{display:flex;align-items:center;gap:11px;padding:7px 6px;border-radius:10px}
 .perk+.perk{border-top:1px solid rgba(255,255,255,.05)}
-.perk-ic{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
-.perk-ic img{width:28px;height:28px;object-fit:contain}
-.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
-.perk-txt small{font-size:10.5px;color:var(--mut)}
-.perk-txt b{font-size:13.5px;color:#fff}
+.perk-ic{width:38px;height:38px;display:grid;place-items:center;border-radius:9px;background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 50%,transparent);font-size:16px;flex-shrink:0}
+.perk-ic img{width:31px;height:31px;object-fit:contain}
+.perk-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35;gap:1px}
+.perk-txt small{font-size:12.5px;font-weight:600;color:#c9c6d8}
+.perk-txt b{font-size:16px;font-weight:700;color:#fff}
 .perk-txt b i{font-style:normal;color:var(--c)}
 .perk.tap .perk-ic{animation:tap 1s ease-in-out infinite}
 @keyframes tap{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
 /* ---------- الخريطة (يمين تحت) ---------- */
 .mapbox{position:fixed;right:14px;bottom:14px;z-index:15;width:280px;height:190px;border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);overflow:hidden}
-.mapbox-h{position:absolute;top:8px;right:12px;left:12px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;pointer-events:none}
+.mapbox-h{position:absolute;top:8px;right:12px;left:12px;display:flex;justify-content:space-between;font-size:14px;font-weight:700;pointer-events:none}
 .mapbox-h span:last-child{color:#4ade80;font-weight:600;font-size:11px}
 #minimap{width:100%;height:100%;display:block}
 body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);width:min(760px,70vw);height:min(480px,60vh)}
@@ -158,23 +158,23 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .bottom{position:fixed;bottom:14px;left:14px;z-index:16;width:330px}
 .fcard{border-radius:14px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);padding:12px;border-top:3px solid var(--team)}
 .fc-top{display:flex;align-items:center;gap:10px}
-.f-pos{font-weight:800;font-size:26px;font-style:italic;color:#ffd76a;line-height:1}
+.f-pos{font-weight:700;font-size:28px;font-style:italic;color:#ffd76a;line-height:1}
 .fc-who{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
-.fc-who small{font-size:10.5px;color:#4ade80}
-.f-name{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.f-av{width:40px;height:40px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
+.fc-who small{font-size:12px;font-weight:600;color:#4ade80}
+.f-name{font-weight:700;font-size:18px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-av{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--team);display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;border:2px solid var(--team)}
 .f-av img{width:100%;height:100%;object-fit:cover}
 .f-lock{font-size:11px;color:#c4b5fd;padding:1px 6px;border-radius:6px;background:rgba(139,92,246,.16)}
 .fc-mid{display:flex;align-items:flex-end;gap:8px;margin-top:8px}
 .f-speed{display:flex;flex-direction:column;line-height:1}
 .f-speed b{font-size:34px;font-variant-numeric:tabular-nums}
-.f-speed small{font-size:10px;color:var(--mut);margin-top:3px}
+.f-speed small{font-size:11.5px;font-weight:600;color:var(--mut);margin-top:3px}
 /* عدّاد النيترو: يتعبّى بالتكبيس (10 خانات × 5 تكبيسات)، ولما يكتمل يصير نيترو ويستهلك لين يخلص */
 .ngauge{margin-inline-start:auto;width:172px;display:flex;flex-direction:column;gap:5px;margin-bottom:4px}
-.ng-head{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#cbd5e1}
+.ng-head{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#e2e8f0}
 .ng-ic{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:12px;background:rgba(139,92,246,.16);border:1px solid rgba(167,139,250,.4);transition:all .25s}
-.ng-cnt{margin-inline-start:auto;font-size:11px;font-weight:600;color:#94a3b8;font-variant-numeric:tabular-nums;direction:ltr}
-.ng-cnt b{color:#fff;font-size:12.5px}
+.ng-cnt{margin-inline-start:auto;font-size:12px;font-weight:600;color:#b8c2d3;font-variant-numeric:tabular-nums;direction:ltr}
+.ng-cnt b{color:#fff;font-size:14px}
 .ng-track{position:relative;height:10px;border-radius:999px;padding:2px;background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 3px rgba(0,0,0,.6);overflow:hidden}
 .ng-track i{position:absolute;inset:2px;border-radius:999px;transform-origin:right;transform:scaleX(0);
   background:linear-gradient(270deg,#c084fc,#a855f7 55%,#6d28d9);box-shadow:0 0 8px rgba(168,85,247,.6);transition:transform .18s ease-out}
@@ -193,7 +193,7 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 .f-fx span{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);animation:pulse .6s ease-in-out infinite alternate}
 @keyframes pulse{to{filter:brightness(1.5)}}
 .fc-cam{display:flex;gap:6px;margin-top:10px}
-.fc-cam button{height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e5e5ea;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap}
+.fc-cam button{height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#f1f0f6;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;white-space:nowrap}
 .fc-cam button:hover{border-color:rgba(255,255,255,.3)}
 .fc-cam .arr{width:34px;padding:0;font-size:18px}
 .fc-cam .grow{flex:1}
@@ -201,8 +201,8 @@ body.no3d .mapbox{right:50%;top:50%;bottom:auto;transform:translate(50%,-45%);wi
 
 /* ---------- التنبيهات ---------- */
 #toasts{position:fixed;top:128px;left:50%;transform:translateX(-50%);z-index:17;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;width:min(520px,90vw)}
-.toast{padding:8px 14px;border-radius:10px;background:rgba(16,11,30,.9);border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-.toast b{color:#fff}
+.toast{padding:9px 15px;border-radius:10px;background:rgba(16,11,30,.92);font-weight:600;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);border-inline-start:4px solid var(--c);font-size:13.5px;animation:tin .35s cubic-bezier(.2,1.2,.4,1) both;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.toast b{color:#fff;font-weight:700}
 .toast .t-sub{color:var(--mut);font-size:11px}
 .toast.out{animation:tout .4s ease both}
 @keyframes tin{from{opacity:0;transform:translateY(-10px) scale(.95)}}
@@ -362,7 +362,12 @@ body.ceremony #podium h2,body.ceremony #podiumSteps{display:none}
 body.ceremony #podium .btn-start{height:46px}
 
 /* كل اللوحات العائمة أصغر 30% (الهيدر بدون تغيير) — تغطي أقل من شاشة البث */
-.tower,.perks,.mapbox,.bottom,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
+.perks,.mapbox,.lapbox,#toasts,#cerBanner,#lights,#countNum,#goText,#podium .lobby-actions,#podiumRest{zoom:.7}
+/* لوحة الصدارة وبطاقة اللاعب أكبر شوي، وطريقة اللعب بخط أكبر وأسمك (طلب الستريمر) */
+.tower,.bottom{zoom:.8}
+.perks{zoom:.76}
+/* وضوح النصوص فوق المشهد: ظل خفيف ناعم لكل اللوحات */
+.tower,.perks,.mapbox,.bottom,.lapbox,.toast,#ctrlMenu,#cerBanner{text-shadow:0 1px 2px rgba(0,0,0,.55)}
 
 
 /* ===== لوبي الدخول (نفس تنسيق لوبي روليت الإقصاء) ===== */
@@ -420,6 +425,7 @@ body.no3d .fc-cam{display:none}
   .perks{display:none}
 }
 @media (max-width:760px){
+  .tower,.bottom,.perks{zoom:.7}
   .top{height:54px;padding:0 10px}
   .brand span{display:none}
   .top-l .btn-ghost span,.btn-exit span{display:none}
