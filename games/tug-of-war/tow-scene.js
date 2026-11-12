@@ -184,8 +184,11 @@ export function createTugScene(container, opts = {}) {
     // الكاميرا تقرّب أو تبعد حسب عدد اللاعبين وعرض الملعب: أبعد لاعب + أقصى سحبة لازم يبانون
     let spanX = 6;
     function fitCam() {
-        const n = Math.max(1, state.teams[0].length, state.teams[1].length);
-        spanX = (slot(n - 1, n) + SHIFT * .25 + .2) * .8; // أقرب: آخر لاعب + جزء بسيط من السحبة
+        // الكاميرا ثابتة: تحسب على أكبر عدد لاعبين وصل له الفريق (6 على الأقل)، وما تقرّب لما ينقص العدد،
+        // فما تقرّب وتبعد كل ما انضم لاعب. تبعد بس لو اللاعبين زادوا عن اللي يبان.
+        camN = Math.max(camN, 6, state.teams[0].length, state.teams[1].length);
+        const n = camN;
+        spanX = (slot(n - 1, n) + SHIFT * .25 + .2) * .8;
         const halfH = Math.tan(T.MathUtils.degToRad(cam.fov / 2)), dist = Math.max(4.2, Math.min(20, spanX / (halfH * Math.max(.5, cam.aspect))));
         // far = قبل البداية: الكاميرا بعيدة وأعلى، وبعد العد التنازلي تقرّب بنعومة (frame)
         const d = far ? dist * 1.75 : dist;
@@ -193,7 +196,7 @@ export function createTugScene(container, opts = {}) {
         if (!camInit) { camInit = true; cam.position.copy(camGoal.pos); camLook.copy(camGoal.look); cam.lookAt(camLook); }
         cam.updateProjectionMatrix();
     }
-    let far = true, camInit = false; const camGoal = { pos: new T.Vector3(), look: new T.Vector3() }, camLook = new T.Vector3(0, 1, 0);
+    let camN = 0, far = true, camInit = false; const camGoal = { pos: new T.Vector3(), look: new T.Vector3() }, camLook = new T.Vector3(0, 1, 0);
     function drop(f) { f.outer.removeFromParent(); }
 
     // وضعية الشد: الجسم مايل لورا، الركب منثنية، اليدين قدام على الحبل
@@ -253,7 +256,7 @@ export function createTugScene(container, opts = {}) {
         const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
         const target = Math.max(-1, Math.min(1, state.pos / 100)) * SHIFT;
         posX += (target - posX) * (1 - Math.exp(-dt * 7)); mover.position.x = posX;
-        { const k = 1 - Math.exp(-dt * 1.8); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k); cam.lookAt(camLook); }
+        { const k = 1 - Math.exp(-dt * (far ? 1.8 : .9)); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k); cam.lookAt(camLook); }
         flag.position.set(0, ropeY, 0);
         for (const f of figs.values()) {
             if (f.outAt) { // منقصى: ينقذف لجهة الخصم وهو يلف، ويصغر لين يختفي
