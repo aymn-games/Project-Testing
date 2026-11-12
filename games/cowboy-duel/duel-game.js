@@ -11,8 +11,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const rnd = (a, b) => a + Math.random() * (b - a);
 const BOT_NAMES = ['أبو فهد', 'سعود', 'نورة', 'ريم', 'خالد', 'مشاري', 'جود', 'تركي', 'لمى', 'فيصل', 'هيا', 'بندر', 'العنود', 'ذيب', 'مها', 'راكان'];
 const ANSWER_MS = 15000;          // ما أحد كتب = جرس جديد
-const JAM_MS = 1200;
-const NEXT_AUTO_MS = 8000;        // «التالي» بعد الفوز: يكمّل لحاله لو ما انضغط              // إجابة غلط = المسدس يعلّق شوي
+const JAM_MS = 1200;              // إجابة غلط = المسدس يعلّق شوي
 
 const G = { players: [], alive: [], phase: 'loading', active: null, ch: null, decoy: null, revealAt: 0, timers: [], round: 0, startedAt: 0, scene: null, bots: true, settings: CDSettings.load(), draft: null, finish: null, force: {} }; // force: لتسجيل فيديو العرض فقط (decoy: نعم/لا، fall: الأول يطيح بالخدعة)
 
@@ -288,7 +287,7 @@ async function win(d, shooter, typed) {
         G.phase = 'resolve'; clearTimers(); G.target = targets[0]; sign('gone'); grade('duel'); duelHud(false);
         await G.scene.fire(shooter.id, targets.map(t => t.id));
         feed(shooter, targets, secs); showWinTab(shooter, secs); SFX.victory();
-        await waitNext(G.nextAutoMs || NEXT_AUTO_MS); $('#winTab').classList.remove('in');
+        await waitNext(G.nextAutoMs || 0); $('#winTab').classList.remove('in');
         await G.scene.walkBack([shooter.id]);
         return endDuels();
     }
@@ -310,8 +309,8 @@ async function finishAll() {
 }
 // تبويب الفايز: صورته + «فاز بالمبارزة» + اسمه + «أطلق في X ث»، وتحته «التالي»
 function showWinTab(p, secs) { $('#wtPic').innerHTML = avatarHtml(p); $('#wtName').textContent = p.name; $('#wtSecs').textContent = secs; $('#winTab').classList.add('in'); }
-// «التالي» يكمّل، ولو المذيع ما ضغط يكمّل لحاله بعد شوي عشان البث ما يوقف
-function waitNext(ms) { return new Promise(res => { const b = $('#nextBtn'); let t = null; const go = () => { clearTimeout(t); b.onclick = null; SFX.unlock(); res(); }; b.onclick = go; t = setTimeout(go, ms); }); }
+// «التالي» بعد الفوز: اللعبة توقف لين المذيع يضغطه
+function waitNext(ms) { return new Promise(res => { const b = $('#nextBtn'); let t = null; const go = () => { clearTimeout(t); b.onclick = null; SFX.unlock(); res(); }; b.onclick = go; if (ms) t = setTimeout(go, ms); }); } // «التالي»: توقف لين المذيع يضغطه (ms للاختبار فقط)
 async function endDuels() {
     const winners = G.active.map(d => d.winner).filter(Boolean);
     G.scene.cleanup(winners.map(p => p.id), G.active.flatMap(d => d.losers.map(p => p.id))); // يذوب للسوق: الخاسرين يختفون والفايزين يرجعون لأماكنهم
