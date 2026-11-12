@@ -263,7 +263,8 @@ const SETTINGS = [
   { title:'المباراة', rows:[
     { type:'choice', key:'mode',      label:'نمط اللعب', options:['عدد خطوات','آخر ناجي'], default:0 },
     { type:'choice', key:'steps',     label:'عدد الخطوات', options:['10','15','20'], default:1, showIf:v=>v.mode===0 },
-    { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['10','15','20','30'], default:1 }
+    { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['10','15','20','30'], default:1 },
+    { type:'choice', key:'quality',   label:'جودة الرسومات', hint:'حسب جهازك: الضعيفة للأجهزة البطيئة', options:['عالية','متوازنة','ضعيفة'], default:1 }
   ]},
   { title:'القواعد', full:true, rows:[
     { type:'toggle', key:'noAnswerFalls', label:'اللي ما يجاوب يطيح', hint:'لو انطفى، اللي ما جاوب ينتقل للمربع الصح بدون ما يطيح', default:true, dot:'#f87171' },

@@ -47,7 +47,22 @@
       this.buildFx();
       this.ro = new ResizeObserver(() => { const w = this.clientWidth || 1, h = this.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }); this.ro.observe(this);
       this.clock = new T.Clock(); this.camLook = new T.Vector3(0, 0, -10);
-      let last = -1e9; const loop = now => { this.raf = requestAnimationFrame(loop); if (now - last < 29) return; last = now; this.tick(); }; this.raf = requestAnimationFrame(loop);
+      this.frameMs = 29; this.applyQuality(this.data.quality || 'mid');
+      let last = -1e9; const loop = now => { this.raf = requestAnimationFrame(loop); if (now - last < this.frameMs) return; last = now; this.tick(); }; this.raf = requestAnimationFrame(loop);
+    }
+    // جودة الرسومات (يختارها الستريمر حسب جهازه): high عالية · mid متوازنة (الافتراضي) · low ضعيفة
+    //  high: دقة الشاشة لين 2x، ظلال 2048، 60 إطار/ث · mid: دقة 1x، ظلال 1024، 30 إطار/ث (وتنزل لحالها لو الجهاز ثقل)
+    //  low: دقة 0.75x، بدون ظلال ولا إضاءة المشاعل ولا نجوم، وطبقة ضباب وحدة، 30 إطار/ث
+    applyQuality(q) {
+      q = q === 'high' || q === 'low' ? q : 'mid'; if (q === this.quality && this.r) return; this.quality = q; if (!this.r) return;
+      const T = this.T, r = this.r, sun = this.sun, low = q === 'low';
+      r.setPixelRatio(q === 'high' ? Math.min(devicePixelRatio || 1, 2) : low ? .75 : 1); r.setSize(this.clientWidth || 1, this.clientHeight || 1, false);
+      const ms = q === 'high' ? 2048 : 1024; sun.castShadow = !low; r.shadowMap.enabled = !low;
+      if (sun.shadow.mapSize.x !== ms) { sun.shadow.mapSize.set(ms, ms); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+      this.frameMs = q === 'high' ? 0 : 29; this.lite = q !== 'mid'; this.pf = null;
+      if (this.stars) this.stars.visible = !low;
+      (this.mist || []).forEach((m, i) => { m.visible = !low || i === 0; });
+      this.sc.traverse(o => { if (o.isPointLight && o.userData.torch) o.visible = !low; if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { m.needsUpdate = true; }); });
     }
     rock(c) { return new this.T.MeshStandardMaterial({ color: c, roughness: .95, flatShading: true, vertexColors: true }); }
     // قمة جبل: مخروط وعر بألوان رأسية (صخر غامق تحت، بنفسجي بالنص، ثلج فوق)
@@ -65,7 +80,7 @@
       // نجوم خفيفة فوق
       const n = 260, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, e = .35 + Math.random() * .9; pos[i * 3] = Math.cos(a) * Math.cos(e) * 600; pos[i * 3 + 1] = Math.sin(e) * 600; pos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * 600; }
       const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.BufferAttribute(pos, 3));
-      this.sc.add(new T.Points(sg, new T.PointsMaterial({ color: '#ffffff', size: 1.6, fog: false, transparent: true, opacity: .7 })));
+      this.stars = new T.Points(sg, new T.PointsMaterial({ color: '#ffffff', size: 1.6, fog: false, transparent: true, opacity: .7 })); this.sc.add(this.stars);
     }
     buildMountains() {
       for (let side of [-1, 1]) for (let i = 0; i < 16; i++) { const z = 60 - i * 34 + Math.random() * 14, x = side * (95 + Math.random() * 40 + (i % 2) * 50);
@@ -99,7 +114,7 @@
       // مشاعل على أطراف المنصة
       for (const sx of [-1, 1]) { const pole = new T.Mesh(new T.CylinderGeometry(.12, .16, 3, 8), this.mat('#d4a24c', { metalness: .7, roughness: .3 })); pole.position.set(sx * (width / 2 - .6), 1.5, (end ? 1 : -1) * (depth / 2 - .6)); G.add(pole);
         const fl = new T.Mesh(new T.SphereGeometry(.32, 10, 8), new T.MeshBasicMaterial({ color: end ? '#fde68a' : '#7dd3fc' })); fl.position.set(pole.position.x, 3.15, pole.position.z); G.add(fl);
-        const li = new T.PointLight(end ? '#fbbf24' : '#38bdf8', 18, 14, 2); li.position.copy(fl.position); G.add(li); }
+        const li = new T.PointLight(end ? '#fbbf24' : '#38bdf8', 18, 14, 2); li.position.copy(fl.position); li.userData.torch = true; li.visible = this.quality !== 'low'; G.add(li); }
       if (end) { // قوس النهاية
         const gold = this.mat('#f5c451', { metalness: .8, roughness: .25, emissive: '#7c4a03', emissiveIntensity: .35 });
         for (const sx of [-1, 1]) { const c = new T.Mesh(new T.BoxGeometry(.7, 7, .7), gold); c.position.set(sx * 11.5, 3.5, depth / 2 - 1.5); c.castShadow = true; G.add(c); }
@@ -175,6 +190,7 @@
     endZ() { return rowZ((this.data.rows || []).length - 1) - TD / 2 - 9.4; }
     sync() {
       const d = this.data, T = this.T, rows = d.rows || [];
+      if (d.quality && d.quality !== this.quality) this.applyQuality(d.quality);
       // صفوف جديدة
       if (rows.length !== this.builtRows || !!d.finish !== this.builtFinish) {
         for (let i = this.tiles.length; i < rows.length; i++) this.tiles.push([this.buildTile(i, 0, rows[i].labels[0]), this.buildTile(i, 1, rows[i].labels[1])]);

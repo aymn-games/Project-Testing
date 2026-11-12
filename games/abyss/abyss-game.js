@@ -41,7 +41,9 @@
         maxPlayers: Math.max(2, Math.min(200, +SETUP.maxPlayers || 50)),
         followersOnly: SETUP.who === 'المتابعين فقط',
         noAnswerFalls: SETUP.noAnswerFalls !== false,
-        sound: SETUP.sound !== false
+        sound: SETUP.sound !== false,
+        // جودة الرسومات: عالية · متوازنة (الافتراضي) · ضعيفة
+        quality: ({ 'عالية': 'high', 'ضعيفة': 'low', high: 'high', low: 'low' })[pick('quality', '')] || 'mid'
     };
 
     // نفس أشكال شخصيات سفينة النجاة (games/survival-ship/game.html) — للي ما عندهم شخصية أنمي
@@ -123,7 +125,7 @@
     // ---------- المشهد ----------
     function pushScene() {
         scene.scene = {
-            names: true, cam: S.cam, row: S.row, finish: CFG.mode === 'steps', win: S.winners, rows: S.rows,
+            names: true, quality: CFG.quality, cam: S.cam, row: S.row, finish: CFG.mode === 'steps', win: S.winners, rows: S.rows,
             players: S.players.map(function (p) {
                 return { id: p.id, name: p.name, skin: p.look.skin, hair: p.look.hair, girl: p.look.girl, outfit: p.look.outfit, pants: p.look.pants, vrm: p.vrm, row: p.row, lane: p.lane, fall: p.fall };
             })
@@ -322,9 +324,10 @@
 
     // ---------- أزرار ----------
     function goLobby() { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
-    function saveSetup() { if (DEMO && !FLOW) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; AB.writeJSON(AB.keys.setup, SETUP); }
+    function saveSetup() { if (DEMO && !FLOW) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; SETUP.quality = ({ high: 'عالية', mid: 'متوازنة', low: 'ضعيفة' })[CFG.quality]; AB.writeJSON(AB.keys.setup, SETUP); }
     function paintSettings() {
         [].forEach.call($('sSec').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-v') === CFG.answerSec)); });
+        [].forEach.call($('sGfx').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === CFG.quality)); });
         $('sFall').setAttribute('aria-checked', String(CFG.noAnswerFalls)); $('sSound').setAttribute('aria-checked', String(CFG.sound));
     }
     $('bExit').onclick = function () { $('exitDlg').hidden = false; };
@@ -334,6 +337,7 @@
     $('bSettings').onclick = function (e) { e.stopPropagation(); paintSettings(); $('setPanel').hidden = !$('setPanel').hidden; };
     $('sClose').onclick = function () { $('setPanel').hidden = true; };
     $('sSec').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.answerSec = +b.getAttribute('data-v'); saveSetup(); paintSettings(); };
+    $('sGfx').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.quality = b.getAttribute('data-v'); saveSetup(); paintSettings(); pushScene(); };
     $('sFall').onclick = function () { CFG.noAnswerFalls = !CFG.noAnswerFalls; saveSetup(); paintSettings(); };
     $('sSound').onclick = function () { CFG.sound = !CFG.sound; saveSetup(); paintSettings(); };
     $('sBack').onclick = function () { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); location.href = 'index.html'; };
