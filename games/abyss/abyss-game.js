@@ -40,7 +40,6 @@
         joinWord: String(SETUP.keyword || 'دخول').trim() || 'دخول',
         maxPlayers: Math.max(2, Math.min(200, +SETUP.maxPlayers || 50)),
         followersOnly: SETUP.who === 'المتابعين فقط',
-        noAnswerFalls: SETUP.noAnswerFalls !== false,
         sound: SETUP.sound !== false,
         // جودة الرسومات: عالية · متوازنة (الافتراضي) · ضعيفة
         quality: ({ 'عالية': 'high', 'ضعيفة': 'low', high: 'high', low: 'low' })[pick('quality', '')] || 'mid'
@@ -225,11 +224,11 @@
         }, 250);
         if (DEMO) demoAnswers();
     }
-    // انتهى الوقت: اللي ما جاوب ينط على اللوح الغلط (أو الصح)، لحظة ترقّب، ثم ينكسر الزجاج
+    // انتهى الوقت: اللي ما جاوب ينط على اللوح الغلط ويطيح معه (قاعدة ثابتة)، لحظة ترقّب، ثم ينكسر الزجاج
     function reveal() {
         S.phase = 'reveal'; S.broke = false;
         var q = S.qs[S.row], ok = correctLane(q), bad = 1 - ok;
-        alive().forEach(function (p) { if (p.ans < 0) { p.row = S.row; p.lane = CFG.noAnswerFalls ? bad : ok; } });
+        alive().forEach(function (p) { if (p.ans < 0) { p.row = S.row; p.lane = bad; } });
         pushScene(); render();
         later(breakGlass, 1300);
     }
@@ -324,11 +323,11 @@
 
     // ---------- أزرار ----------
     function goLobby() { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); try { localStorage.removeItem(AB.keys.roster); localStorage.removeItem(AB.keys.players); } catch (e) {} location.href = 'lobby.html'; }
-    function saveSetup() { if (DEMO && !FLOW) return; SETUP.answerSec = String(CFG.answerSec); SETUP.noAnswerFalls = CFG.noAnswerFalls; SETUP.sound = CFG.sound; SETUP.quality = ({ high: 'عالية', mid: 'متوازنة', low: 'ضعيفة' })[CFG.quality]; AB.writeJSON(AB.keys.setup, SETUP); }
+    function saveSetup() { if (DEMO && !FLOW) return; SETUP.answerSec = String(CFG.answerSec); SETUP.sound = CFG.sound; SETUP.quality = ({ high: 'عالية', mid: 'متوازنة', low: 'ضعيفة' })[CFG.quality]; AB.writeJSON(AB.keys.setup, SETUP); }
     function paintSettings() {
         [].forEach.call($('sSec').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-v') === CFG.answerSec)); });
         [].forEach.call($('sGfx').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === CFG.quality)); });
-        $('sFall').setAttribute('aria-checked', String(CFG.noAnswerFalls)); $('sSound').setAttribute('aria-checked', String(CFG.sound));
+ $('sSound').setAttribute('aria-checked', String(CFG.sound));
     }
     $('bExit').onclick = function () { $('exitDlg').hidden = false; };
     $('xNo').onclick = function () { $('exitDlg').hidden = true; };
@@ -338,7 +337,6 @@
     $('sClose').onclick = function () { $('setPanel').hidden = true; };
     $('sSec').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.answerSec = +b.getAttribute('data-v'); saveSetup(); paintSettings(); };
     $('sGfx').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; CFG.quality = b.getAttribute('data-v'); saveSetup(); paintSettings(); pushScene(); };
-    $('sFall').onclick = function () { CFG.noAnswerFalls = !CFG.noAnswerFalls; saveSetup(); paintSettings(); };
     $('sSound').onclick = function () { CFG.sound = !CFG.sound; saveSetup(); paintSettings(); };
     $('sBack').onclick = function () { if (DEMO && !FLOW) { $('setPanel').hidden = true; return newDemo(); } clearAll(); location.href = 'index.html'; };
     $('sEnd').onclick = goLobby;
