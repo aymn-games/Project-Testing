@@ -141,10 +141,10 @@ function renderLobby() {
 }
 
 // ---------- اللاعبين (الحد الأقصى ومن يمكنه الانضمام من الإعدادات)
-function addPlayer(id, name, bot = false, avatar = null, frame = null) {
+function addPlayer(id, name, bot = false, avatar = null, frame = null, winCard = null) {
     if (G.phase !== 'lobby' || G.players.some(p => p.id === id)) return;
     if (G.players.length >= G.settings.maxPlayers) { if (!addPlayer.warned) { addPlayer.warned = true; notice(`🚫 السوق ممتلئ (${G.settings.maxPlayers} لاعب)`); } return; }
-    G.players.push({ id, name, bot, avatar, frame }); G.scene && G.scene.setPlayers(G.players); renderLobby();
+    G.players.push({ id, name, bot, avatar, frame, winCard }); try { const W = window.AymanGamesPlatform && window.AymanGamesPlatform.winCard; if (W && winCard) W.preloadFor({ name, avatarUrl: avatar, winCard }); } catch (e) { } G.scene && G.scene.setPlayers(G.players); renderLobby();
 }
 function addBot() { const used = new Set(G.players.map(p => p.name)), name = BOT_NAMES.find(n => !used.has(n)) || ('راعي ' + (G.players.length + 1)); addPlayer('bot:' + name, name, true); }
 
@@ -403,21 +403,44 @@ function feed(p, losers, secs) { const box = $('#feed'), row = document.createEl
     row.innerHTML = avatarHtml(p, 'sm') + '<span class="fx">☆</span><b class="w"></b><em>أسقط</em><b class="l"></b><span class="ft"></span>';
     row.querySelector('.w').textContent = p.name; row.querySelector('.l').textContent = losers.map(x => x.name).join(' و'); row.querySelector('.ft').textContent = secs;
     box.appendChild(row); while (box.children.length > 8) box.firstChild.remove(); box.classList.add('in'); SFX.stamp(); }
-async function crown(p) {
-    document.body.classList.remove('match'); G.phase = 'champ'; G.scene.champion(p.id); bars('wide');
-    $('#champName').textContent = p.name; $('#champ').classList.add('in'); SFX.bell();
-    // نقاط المنصة (قاعدة إلزامية لكل لعبة) — بدون أثر بصفحة التجربة لأن ما فيه حساب
-    const real = G.players.filter(x => String(x.id).indexOf('tiktok:') === 0);
-    try { if (real.length && window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') window.AGPAuth.reportMatchPoints({ players: real.map(x => ({ id: x.id, name: x.name })), winnerIds: [p.id], teamGame: false, durationMs: Date.now() - G.startedAt }); } catch (e) { }
+// ---------- شاشة الفوز — نفس روليت الإقصاء: بطاقة الفوز المملوكة (js/agp-win-card.js) لو الفائز يملكها،
+// وإلا بطاقة الفائز (تاج + WINNER + صورته + اسمه + نقاطه). والأزرار: الخروج / مباراة جديدة / إعادة بنفس اللاعبين
+const CROWN_SVG = '<svg width="60" height="40" viewBox="0 0 60 40"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"/><circle cx="6" cy="13" r="4" stroke-width="1.5"/><circle cx="30" cy="4" r="4.5" stroke-width="1.5"/><circle cx="54" cy="13" r="4" stroke-width="1.5"/><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"/></svg>';
+function ptsLine() { const v = G.pts; return v === 'pending' ? 'جارٍ احتساب النقاط' : typeof v === 'number' ? `+${v} نقطة` : 'النقاط للحسابات الموثّقة في الموقع'; }
+function renderChamp() {
+    const p = G.champ; if (!p) return;
+    const W = window.AymanGamesPlatform && window.AymanGamesPlatform.winCard, n = G.players.length, place = `المركز الأول من ${n} لاعب`;
+    const owned = { name: p.name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+    if (W && p.winCard && W.canShow(owned)) { $('#champCard').innerHTML = `<div class="owc">${W.renderHtml(owned, [ptsLine(), place, 'بلدة الكاوبوي'], { pop: false })}</div>`; return; }
+    const pts = typeof G.pts === 'number' ? [`+${G.pts}`, 'نقطة'] : [G.pts === 'pending' ? '…' : '🏆', ptsLine()];
+    $('#champCard').innerHTML = `<div class="tw"><div class="crown">${CROWN_SVG}</div><div class="tcard"><div class="shine"></div><div class="in">
+        <span class="wl">WINNER</span>${avatarHtml(p)}<span class="wn">${esc(p.name)}</span><span class="wx">${place}</span>
+        <div class="wp"><b>${pts[0]}<small>${esc(pts[1])}</small></b></div></div></div></div>`;
 }
-// إعادة المباراة: نفس اللاعبين يبدأون من جديد مباشرة
+async function crown(p) {
+    document.body.classList.remove('match'); document.body.classList.add('champ'); G.phase = 'champ'; G.scene.champion(p.id); bars('');
+    G.champ = p; G.pts = null; SFX.bell(); SFX.victory();
+    // نقاط المنصة (قاعدة إلزامية لكل لعبة) — بدون أثر بصفحة التجربة لأن ما فيه حساب
+    const real = G.players.filter(x => String(x.id).indexOf('tiktok:') === 0), A = window.AGPAuth;
+    if (real.length && A && typeof A.reportMatchPoints === 'function') {
+        G.pts = 'pending';
+        try { A.reportMatchPoints({ players: real.map(x => ({ id: x.id, name: x.name })), winnerIds: [p.id], teamGame: false, durationMs: Date.now() - G.startedAt }).then(res => {
+            if (G.champ !== p) return; const u = String(p.id).indexOf('tiktok:') === 0 ? String(p.id).slice(7) : p.name;
+            const aw = res && res.success && Array.isArray(res.awarded) ? res.awarded.find(a => a.tiktokUsername === u) : null; G.pts = aw ? aw.added : null; renderChamp(); }, () => { G.pts = null; renderChamp(); }); } catch (e) { G.pts = null; }
+    }
+    renderChamp(); await sleep(1600); if (G.champ === p) $('#champ').classList.add('in');
+}
+function closeChamp() { $('#champ').classList.remove('in'); document.body.classList.remove('champ'); G.champ = null; }
+// إعادة بنفس اللاعبين: نفس اللاعبين يبدأون من جديد (تبويب الشرح ← القرعة)
 async function replay() {
-    $('#champ').classList.remove('in'); G.phase = 'lobby'; bars(''); grade(''); G.scene.setPlayers([]); G.scene.lobby(); G.scene.setPlayers(G.players); renderLobby();
+    closeChamp(); G.phase = 'lobby'; bars(''); grade(''); G.scene.setPlayers([]); G.scene.lobby(); G.scene.setPlayers(G.players); renderLobby();
     await sleep(400); openRules();
 }
-async function newGame() {
-    $('#champ').classList.remove('in'); document.body.classList.remove('match');
-    G.phase = 'lobby'; G.scene.setPlayers([]); G.scene.lobby(); bars(''); G.scene.setPlayers(G.players);
+// مباراة جديدة: اللوبي فاضي من جديد ويدخلون بكلمة الدخول (بوضع التجربة يرجعون البوتات)
+async function newMatch() {
+    closeChamp(); document.body.classList.remove('match');
+    G.phase = 'lobby'; G.players = []; G.alive = []; G.scene.setPlayers([]); G.scene.lobby(); bars(''); grade('');
+    if (G.bots) for (let i = 0; i < 8; i++) addBot();
     showLobby(true); renderLobby();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -429,7 +452,7 @@ function hookStream() {
     P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null); } else answer(id, pl.text); });
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null, pl.winCard || null); } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل
@@ -469,7 +492,7 @@ function hookStream() {
     $('#roster').addEventListener('click', e => { const b = e.target.closest('[data-kick]'); if (b) kickPlayer(b.dataset.kick); });
     showLobby(true); addEventListener('resize', () => { if (G.phase === 'lobby') renderLobby(); });
     $('#loading').classList.add('hide');
-    $('#startBtn').onclick = openRules; $('#rulesGo').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
+    $('#startBtn').onclick = openRules; $('#rulesGo').onclick = startMatch; $('#addBot').onclick = addBot; $('#againBtn').onclick = replay; $('#newBtn').onclick = newMatch; $('#exitBtn').onclick = () => { location.href = window.CDPlatform ? CDPlatform.libraryUrl : '../../games.html'; };
     // لوحة التجربة: اكتب بدال أي راعي من أول مبارزة نشطة
     const send = (slot, inp) => { const d = G.active && (G.active.find(x => !x.done) || G.active[0]), p = d && (slot ? d.b : d.a); if (!p || !inp.value.trim()) return; answer(p.id, inp.value.trim()); inp.value = ''; };
     [['#inA', 0], ['#inB', 1]].forEach(([s, i]) => { const inp = $(s); inp.addEventListener('keydown', e => { if (e.key === 'Enter') send(i, inp); }); inp.nextElementSibling.onclick = () => send(i, inp); });
