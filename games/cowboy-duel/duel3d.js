@@ -52,10 +52,16 @@ export async function mountDuel(el, opts = {}) {
     const emit = opts.onEvent || (() => {});
     try { await Promise.race([Promise.all(['64px Rakkas', '64px Rye', '700 40px "IBM Plex Sans Arabic"'].map(f => document.fonts.load(f))), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
 
-    const r = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    r.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    // جودة الرسومات (إعداد «جودة الرسومات» — يختارها الستريمر حسب جهازه):
+    //  high عالية:   دقة الشاشة لين 2x، ظلال ناعمة 2048، كل الحشائش والقش، بدون حد للإطارات
+    //  mid متوازنة (الافتراضي): دقة 1x، ظلال 1024، قش أقل
+    //  low ضعيفة:    دقة 0.75x بدون تنعيم الحواف، بدون ظلال ولا قش ولا غبار، حشائش أقل، 30 إطار/ث
+    const Q = opts.quality === 'high' || opts.quality === 'low' ? opts.quality : 'mid', LOW = Q === 'low', HIGH = Q === 'high';
+    const r = new T.WebGLRenderer({ antialias: !LOW, powerPreference: 'high-performance' });
+    r.setPixelRatio(HIGH ? Math.min(devicePixelRatio || 1, 2) : LOW ? .75 : 1);
     r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.08;
-    r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
+    r.shadowMap.enabled = !LOW; r.shadowMap.type = HIGH ? T.PCFSoftShadowMap : T.PCFShadowMap;
+    const FRAME_MS = LOW ? 32 : 0; let lastFrame = 0;
     el.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
 
     const sc = new T.Scene();
@@ -78,7 +84,7 @@ export async function mountDuel(el, opts = {}) {
     // ---------- الإضاءة: سماء/أرض دافية + شمس عصر منخفضة (ظلال طويلة) + إضاءة خلفية زرقا خفيفة
     sc.add(new T.HemisphereLight('#ffe2b8', '#7a4a2a', .95));
     const sun = new T.DirectionalLight('#ffc98a', 2.7); sun.position.copy(sunDir).multiplyScalar(60); sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0004; sun.shadow.normalBias = .03;
+    sun.shadow.mapSize.set(HIGH ? 2048 : 1024, HIGH ? 2048 : 1024); sun.castShadow = !LOW; sun.shadow.bias = -.0004; sun.shadow.normalBias = .03;
     Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 50, bottom: -50, near: 1, far: 200 }); sc.add(sun); sc.add(sun.target);
     const rim = new T.DirectionalLight('#ffd7b0', .85); rim.position.set(-40, 18, 30); sc.add(rim);
 
@@ -218,7 +224,7 @@ export async function mountDuel(el, opts = {}) {
     texList.push(soft);
     const DN = 500, dPos = new Float32Array(DN * 3); for (let i = 0; i < DN; i++) { dPos[i * 3] = (Math.random() - .5) * 110; dPos[i * 3 + 1] = Math.random() * 9; dPos[i * 3 + 2] = (Math.random() - .5) * 32; }
     const dGeo = new T.BufferGeometry(); dGeo.setAttribute('position', new T.BufferAttribute(dPos, 3));
-    const motes = new T.Points(dGeo, new T.PointsMaterial({ size: .14, map: soft, color: '#ffd9a0', transparent: true, opacity: .6, depthWrite: false, blending: T.AdditiveBlending })); sc.add(motes);
+    const motes = new T.Points(dGeo, new T.PointsMaterial({ size: .14, map: soft, color: '#ffd9a0', transparent: true, opacity: .6, depthWrite: false, blending: T.AdditiveBlending })); sc.add(motes); motes.visible = !LOW;
 
     // ---------- مؤثرات: سحب غبار/دخان (مجمّعة pooled) + وميض الطلقة + الرصاصة + كرة شوك متدحرجة + عملات الفوز
     const puffs = []; for (let i = 0; i < 70; i++) { const s = new T.Sprite(new T.SpriteMaterial({ map: soft, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; sc.add(s); puffs.push({ s, life: 0, max: 1, v: V(0, 0, 0), g0: 1, g1: 2, o: .6 }); }
@@ -250,7 +256,7 @@ export async function mountDuel(el, opts = {}) {
     const DB = 70, debris = new T.InstancedMesh(new T.PlaneGeometry(.22, .1), new T.MeshStandardMaterial({ side: T.DoubleSide, roughness: 1 }), DB); sc.add(debris);
     const dbD = Array.from({ length: DB }, (_, i) => { const c = new T.Color(['#c9a15a', '#a67b4a', '#e0c48a', '#8a6a3a'][i % 4]); debris.setColorAt(i, c);
         return { p: V(-60 + Math.random() * 90, 0, (Math.random() - .5) * 30), v: 1.2 + Math.random() * 2.4, z: (Math.random() - .5) * .6, ph: Math.random() * 6, r: V(Math.random() * 3, Math.random() * 3, Math.random() * 3), h: .15 + Math.random() * .5 }; });
-    debris.instanceColor.needsUpdate = true;
+    debris.instanceColor.needsUpdate = true; debris.count = HIGH ? DB : LOW ? 0 : 40; debris.visible = !LOW;
 
     // موجة غبار على الأرض لما يطيح الخاسر (تأثير بعد السقوط)
     const shocks = [0, 1, 2, 3].map(() => { const m = new T.Mesh(new T.RingGeometry(.55, 1, 48), new T.MeshBasicMaterial({ color: '#f0c890', transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 9; sc.add(m); return m; });
@@ -545,18 +551,19 @@ export async function mountDuel(el, opts = {}) {
     const clock3 = new T.Clock(); let raf = 0, tw8 = 0, tTotal = 0;
     const mtx = new T.Matrix4(), q = new T.Quaternion(), one = V(1, 1, 1);
     let fpsN = 0, fpsS = 0, fpsNow = 0;
-    function tick() {
+    function tick(now) {
         raf = requestAnimationFrame(tick);
+        if (FRAME_MS && now - lastFrame < FRAME_MS) return; lastFrame = now || 0; // «ضعيفة»: 30 إطار/ث
         const raw = clock3.getDelta(), real = Math.min(raw, .05), dt = real * TS; fpsN++; fpsS += raw; if (fpsS > 1) { fpsNow = fpsN / fpsS; fpsN = 0; fpsS = 0; } tTotal += dt; const t = tTotal;
         blades.rotation.z += dt * .9;
         // غبار معلّق
-        const a = dGeo.attributes.position.array; for (let i = 0; i < DN; i++) { a[i * 3] += dt * (.6 + (i % 7) * .08); a[i * 3 + 1] += Math.sin(t + i) * dt * .05; if (a[i * 3] > 55) a[i * 3] = -55; } dGeo.attributes.position.needsUpdate = true;
+        if (!LOW) { const a = dGeo.attributes.position.array; for (let i = 0; i < DN; i++) { a[i * 3] += dt * (.6 + (i % 7) * .08); a[i * 3 + 1] += Math.sin(t + i) * dt * .05; if (a[i * 3] > 55) a[i * 3] = -55; } dGeo.attributes.position.needsUpdate = true; }
         for (const P of puffs) { if (!P.s.visible) continue; P.life += dt; const k = P.life / P.max; if (k >= 1) { P.s.visible = false; continue; } P.s.position.addScaledVector(P.v, dt); P.v.multiplyScalar(1 - dt * 1.5); P.s.scale.setScalar(P.g0 + (P.g1 - P.g0) * easeOut(k)); P.s.material.opacity = P.o * (1 - k); }
         if (flashT < 1) { flashT += real; const k = flashT / .12; flash.material.opacity = Math.max(0, 1 - k); flashL.intensity = Math.max(0, 40 * (1 - flashT / .18)); if (k >= 1) flash.visible = false; }
         for (const b of bullets) { const Q = b.userData.B; if (!Q.on) continue; Q.p += 85 * dt; const k = Math.min(1, Q.p / Q.len); b.position.lerpVectors(Q.from, Q.to, k); b.userData.rings.forEach((m, i) => { m.scale.setScalar(1 + ((t * 30 + i * .33) % 1) * 2); m.material.opacity = .35 * (1 - ((t * 30 + i * .33) % 1)); }); if (k >= 1) { Q.on = false; b.visible = false; Q.onHit && Q.onHit(); } }
         for (const w of TWS) { if (!w.on) continue; w.t += dt; const k = w.t / w.dur; if (k >= 1) { w.on = false; w.g.visible = false; continue; }
             w.g.position.lerpVectors(w.from, w.to, k); w.g.position.y = .75 * w.s + Math.abs(Math.sin(k * w.dur * 3.2)) * .55 * w.s; w.g.rotation.x += dt * 6 / w.s; w.g.rotation.z -= dt * 2; }
-        if ((tw8 += dt) > 2.8) { tw8 = Math.random() * 1.5; if (TWS.some(x => !x.on)) randomTumble(); }
+        if ((tw8 += dt) > (LOW ? 7 : 2.8)) { tw8 = Math.random() * 1.5; if (TWS.filter(x => x.on).length < (LOW ? 1 : TWS.length)) randomTumble(); }
         for (let i = 0; i < DB; i++) { const d = dbD[i], gust = .6 + Math.max(0, Math.sin(t * .35 + i * .1)) * 1.6; d.p.x += d.v * gust * dt; d.p.z += d.z * dt; d.ph += dt * (4 + d.v);
             if (d.p.x > 32) { d.p.x = -62; d.p.z = (Math.random() - .5) * 30; }
             const y = .05 + Math.abs(Math.sin(d.ph)) * d.h * gust * .6; q.setFromEuler(new T.Euler(d.r.x + d.ph * .7, d.r.y + d.ph * .4, d.r.z)); mtx.compose(V(d.p.x, y, d.p.z), q, one); debris.setMatrixAt(i, mtx); }
