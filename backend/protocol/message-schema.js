@@ -7,8 +7,9 @@
  *   disconnect: { platform }
  *   status:     { platform, status, message? }
  *   comment:    { platform, id, name, text, isFollower, avatarUrl, frame }
- *   gift:       { platform, id, name, giftName, giftId, giftValue, repeatCount }
+ *   gift:       { platform, id, name, giftName, giftId, giftValue, repeatCount, avatarUrl? }
  *   follow:     { platform, id, name }
+ *   like:       { platform, id, name, count, avatarUrl? }
  *   error:      { platform, code, message }
  */
 
