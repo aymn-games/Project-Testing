@@ -206,6 +206,7 @@
         pl.name = String(p.name || p.id).trim() || String(p.id);
         pl.avatar = p.avatarUrl || pl.avatar || null;
         pl.winCard = p.winCard || pl.winCard || null;
+        pl.frame = p.frame || pl.frame || null; // إطار المنصة — لبطاقة اللاعب باللوبي
         pl.team = k; pl.kicked = false;
         S.players[p.id] = pl;
         S.teams[k].members.push(p.id);
@@ -396,6 +397,7 @@
         app.innerHTML = ({ settings: viewSettings, cats: viewCats, lobby: viewLobby, board: viewBoard, question: viewQuestion, win: viewWin })[S.screen]();
         if (S.screen === 'question') tick();
         if (S.screen === 'win') fillWinCards();
+        if (S.screen === 'lobby') fillFrames();
     }
     var ICON = {
         exit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
@@ -476,31 +478,62 @@
             (kickable ? '<button class="x" data-act="kick" data-id="' + esc(p.id) + '" aria-label="إخراج ' + esc(p.name) + '">✕</button>' : '') + '</span>';
     }
     function membersOf(k) { return S.teams[k].members.map(function (id) { return S.players[id]; }).filter(Boolean); }
+    // اللوبي بنفس تصميم وتنسيق لوبي «حرب الفريقين» (games/team-war/lobby.html): عنوان اللعبة الصغير فوق
+    // «لوبي الدخول»، كرت لكل فريق بإضاءة بلونه، كلمة الدخول بإطار منقّط، اللاعبين بعمودين (أو بطاقة
+    // الإطار من المنصة لصاحب الإطار)، وزر «الدخول للمباراة» الأخضر.
+    var TEAM_HEX = ['#38bdf8', '#f472b6'];
+    function lobbyCard(p, k) {
+        var c = TEAM_HEX[k], kick = '<button class="lb-x" data-act="kick" data-id="' + esc(p.id) + '" aria-label="إقصاء ' + esc(p.name) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>';
+        if (p.frame && p.frame.imageFilename && AGP.playerCard) {
+            return '<div class="lb-cell"><div class="lb-fr" data-id="' + esc(p.id) + '"></div></div>';
+        }
+        var ini = esc(([].slice.call(String(p.name || '')).filter(function (ch) { return /[^\s_\d]/.test(ch); })[0]) || '');
+        return '<div class="lb-cell"><div class="lb-pl">' +
+            '<span class="lb-av" style="background:linear-gradient(135deg,' + c + ',' + c + '66);border-color:' + c + '">' + ini +
+            (p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+            '<span class="lb-nm">' + esc(p.name) + '</span>' + kick + '</div></div>';
+    }
     function lobbyCol(k) {
-        var t = S.settings.teams[k], m = membersOf(k);
-        return '<section class="tcol" style="border-color:' + (k === 0 ? 'rgba(56,189,248,.35)' : 'rgba(244,114,182,.35)') + '">' +
-            '<div class="tcol-h"><b style="color:' + teamColor(k) + '">الفريق ' + esc(t.name) + '</b><span class="cnt" id="cnt' + k + '">' + m.length + ' لاعب</span></div>' +
-            '<div class="kw" style="color:' + teamColor(k) + '"><span>الكلمة المفتاحية · اكتبها في الشات للانضمام</span><b>' + esc(t.kw) + '</b></div>' +
-            '<div class="plist" id="pl' + k + '">' + listHtml(k) + '</div></section>';
+        var t = S.settings.teams[k], c = TEAM_HEX[k];
+        return '<section class="lb-team" style="--c:' + c + ';border-color:' + c + '80;box-shadow:0 20px 60px rgba(0,0,0,.3),0 0 50px ' + c + '2e">' +
+            '<span class="lb-halo" style="background:' + c + '2e"></span>' +
+            '<div class="lb-head"><div class="lb-row"><span class="lb-name"><span class="lb-dot"></span><span>الفريق ' + esc(t.name) + '</span></span>' +
+            '<span class="lb-cnt" style="background:' + c + '14;border-color:' + c + '40"><b id="cnt' + k + '">' + membersOf(k).length + '</b><span>لاعب</span></span></div>' +
+            '<div class="lb-kw"><span>الكلمة المفتاحية · اكتبها في الشات للانضمام</span><b style="background:' + c + '14">' + esc(t.kw) + '</b></div></div>' +
+            '<div class="lb-list" data-noscroll id="pl' + k + '">' + listHtml(k) + '</div></section>';
     }
     function listHtml(k) {
         var m = membersOf(k);
-        return m.length ? m.map(function (p) { return playerChip(p, true); }).join('') : '<div class="empty">بانتظار اللاعبين… اكتب «' + esc(S.settings.teams[k].kw) + '» بالشات</div>';
+        return m.length ? '<div class="lb-grid">' + m.map(function (p) { return lobbyCard(p, k); }).join('') + '</div>'
+            : '<div class="lb-empty">بانتظار انضمام اللاعبين…</div>';
+    }
+    // بطاقات الإطار (AGP.playerCard) تنرسم بعد ما ينعرف عرض الخانة الفعلي
+    function fillFrames() {
+        if (!AGP.playerCard) return;
+        [].forEach.call(document.querySelectorAll('.lb-fr'), function (el) {
+            var p = S.players[el.dataset.id]; if (!p) return;
+            var w = Math.floor(el.clientWidth) || 300;
+            el.innerHTML = '<div class="lb-frin">' + AGP.playerCard.renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame },
+                { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(w / 4.96)) }) +
+                '<button class="lb-x lb-xf" data-act="kick" data-id="' + esc(p.id) + '" aria-label="إقصاء ' + esc(p.name) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button></div>';
+            AGP.playerCard.fitAllNames(el);
+        });
     }
     function lobbyReady() { return membersOf(0).length > 0 && membersOf(1).length > 0; }
     function viewLobby() {
-        return '<div class="title"><b>لوبي الدخول</b><span class="badge">' + S.settings.cats.length + ' فئات · ' + S.settings.cats.length * 6 + ' سؤال</span></div>' +
-            '<div class="lob">' + lobbyCol(0) + lobbyCol(1) + '</div>' +
-            '<div class="foot"><button class="bs" data-act="toCats">رجوع</button><button class="bp" id="startBtn" data-act="start"' + (lobbyReady() ? '' : ' disabled') + '>ابدأ المباراة</button></div>' +
-            '<p class="hint" id="lobHint">' + (lobbyReady() ? '' : 'لازم لاعب واحد على الأقل بكل فريق') + '</p>';
+        return '<div class="lb-wrap"><div class="lb-title"><span>حصيلة</span><b>لوبي الدخول</b></div>' +
+            '<div class="lb-teams">' + lobbyCol(0) + lobbyCol(1) + '</div>' +
+            '<div class="lb-foot"><button class="lb-start" id="startBtn" data-act="start" style="opacity:' + (lobbyReady() ? 1 : .4) + '">الدخول للمباراة' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>' +
+            '<button class="lb-back" data-act="toCats">الرجوع لاختيار الفئات</button></div></div>';
     }
     function renderLobbyLists() {
         for (var k = 0; k < 2; k++) {
             var el = $('pl' + k); if (el) el.innerHTML = listHtml(k);
-            var c = $('cnt' + k); if (c) c.textContent = membersOf(k).length + ' لاعب';
+            var c = $('cnt' + k); if (c) c.textContent = membersOf(k).length;
         }
-        var b = $('startBtn'); if (b) b.disabled = !lobbyReady();
-        var h = $('lobHint'); if (h) h.textContent = lobbyReady() ? '' : 'لازم لاعب واحد على الأقل بكل فريق';
+        var b = $('startBtn'); if (b) b.style.opacity = lobbyReady() ? 1 : .4;
+        fillFrames();
         renderHeader();
     }
 
@@ -772,7 +805,7 @@
             if (modalTab === 'players') showSettings('players');
             renderHeader(); if (inMatch()) renderTeamsBar();
         },
-        start: function () { if (lobbyReady()) resetMatch(); },
+        start: function () { if (!lobbyReady()) { toast('<span>كل فريق يحتاج لاعب واحد على الأقل</span>'); return; } resetMatch(); },
         tile: function (el) { openTile(Number(el.dataset.c), Number(el.dataset.r)); },
         swap: swapQuestion,
         qz: function (el) { setQScale(Number(el.dataset.d)); },
