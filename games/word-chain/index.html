@@ -212,7 +212,7 @@ const GAME = {
   lobbyUrl: 'lobby.html',
   requireLive: true
 };
-// كل فئات wc-words.js تدخل في المباراة — أي فئة تُضاف هناك تدخل تلقائياً
+// فئات wc-words.js — أي فئة تُضاف هناك تطلع تلقائياً بخيار «الفئات» ومفعّلة افتراضياً
 const CATEGORIES = AGPWordChainWords.categories;
 const SETTINGS = [
   { title:'الدخول', rows:[
@@ -221,10 +221,14 @@ const SETTINGS = [
   ]},
   { title:'المباراة', rows:[
     { type:'number', key:'winPoints', label:'نقاط الفوز', hint:'أول لاعب يوصل لهذا العدد يفوز بالمباراة', min:10, max:200, step:5, default:30 },
-    { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['15','20','25'], default:1 },
+    { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['20','30','45'], default:1 },
     { type:'choice', key:'order',     label:'ترتيب الفئات', options:['بالترتيب','عشوائي'], default:1 }
   ]},
+  { title:'الفئات', full:true, rows:[
+    { type:'multi', key:'cats', label:'الفئات اللي تدخل المباراة', options:CATEGORIES.map(c=>c.name), default:CATEGORIES.map((c,i)=>i), minPick:1 }
+  ]},
   { title:'قواعد اللعب', full:true, rows:[
+    { type:'toggle', key:'hints', label:'التلميحات', hint:'بنص وقت الإجابة يطلع أول حرف من كلمة متاحة وعدد حروفها، وكم كلمة باقية بالحرف المطلوب', default:true },
     { type:'toggle', key:'noRepeatPlayer', label:'منع الإجابة مرتين ورا بعض', hint:'اللاعب اللي جاوب ما تنقبل إجابته الجاية إلا بعد ما يجاوب لاعب غيره — عشان ما يسيطر لاعب واحد سريع على السلسلة كلها', default:true },
     { type:'toggle', key:'sound',  label:'الأصوات', default:true }
   ]}
@@ -261,7 +265,7 @@ class Component extends DCLogic {
     return row; }
 
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
-    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.categoryIds=CATEGORIES.map(c=>c.id); return out; }
+    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.categoryIds=(this.state.values.cats||[]).map(i=>CATEGORIES[i]&&CATEGORIES[i].id).filter(Boolean); if(!out.categoryIds.length) out.categoryIds=CATEGORIES.map(c=>c.id); delete out.cats; return out; }
 
   buildFx(){
     if(this._fx) return this._fx;

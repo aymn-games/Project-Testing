@@ -18,6 +18,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="cd-platform.js"></script>
 <style>
 :root{
@@ -226,14 +227,8 @@ body.duel #hints{opacity:1;transform:translate(-50%,0)}
 .btn.ghost{background:rgba(0,0,0,.25);color:#f3d9a8;border-color:rgba(242,193,78,.5);box-shadow:none;font-size:16px}
 
 /* البطل: نجمة الشريف */
-#champ{position:fixed;left:50%;bottom:calc(9vh + 12px);z-index:7;transform:translate(-50%,-30px) scale(.6);opacity:0;pointer-events:none;transition:all .7s cubic-bezier(.2,1.5,.4,1);text-align:center}
-#champ.in{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto}
-.star{width:clamp(80px,9vw,110px);aspect-ratio:1;margin:0 auto;display:grid;place-items:center;background:radial-gradient(circle at 40% 35%,#fff2c4,#f2c14e 45%,#a8691c);
   clip-path:polygon(50% 0,61% 32%,95% 25%,72% 52%,95% 79%,61% 70%,50% 100%,39% 70%,5% 79%,28% 52%,5% 25%,39% 32%);filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));}
-.star span{font:400 clamp(14px,1.6vw,20px) Rye,serif;color:#5a3a12;direction:ltr;}
 @keyframes spin{to{transform:rotate(360deg)}}
-#champ h2{margin:10px 0 0;font:400 clamp(30px,4.6vw,58px)/1.1 Rakkas,serif;color:var(--gold);text-shadow:0 3px 0 #2a170b,0 0 26px rgba(242,193,78,.5)}
-#champ p{margin:2px 0 12px;font:400 clamp(14px,1.6vw,20px) Rakkas,serif;color:#f3d9a8}
 
 /* لوحة التجربة (تختفي بالنسخة الحقيقية: الشات يجي من تيك توك) — صفوف RTL: العنوان يمين والتحكم يسار */
 #demo[hidden]{display:none}
@@ -385,6 +380,38 @@ body.match #hdr #counter{display:none}
 .lstart svg{width:20px;height:20px}
 .lbot{height:clamp(44px,5.5vh,52px);padding:0 18px;border-radius:999px;border:1px solid rgba(242,193,78,.4);background:rgba(255,255,255,.04);color:#f3d9a8;font:600 15px "IBM Plex Sans Arabic",sans-serif;cursor:pointer;white-space:nowrap}
 body.inlobby #demo,body.inlobby #hdr #counter{display:none}
+
+/* ---- شاشة الفوز: نفس روليت الإقصاء (العنوان ← بطاقة الفائز أو بطاقة الفوز المملوكة ← الأزرار) بألوان البلدة،
+   والخلفية مغبّشة على القرية والبطل يحتفل وراها ---- */
+#champ{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(18,10,4,.38);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity .5s;font-family:"IBM Plex Sans Arabic",sans-serif}
+#champ.in{opacity:1;pointer-events:auto}
+#champ .cw{margin:auto 0;text-align:center;max-width:100%;display:flex;flex-direction:column;align-items:center}
+#champ .ct{margin:0 0 6px;font:800 29px/1.3 "IBM Plex Sans Arabic",sans-serif;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-wrap:balance}
+#champ .ccards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px}
+.tw{position:relative;width:200px;display:flex;flex-direction:column;align-items:center}
+.tw .crown{position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both}
+.tw .crown svg{display:block;fill:#f2c14e;stroke:#9a6a22;stroke-linejoin:round}
+.tcard{position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;background:linear-gradient(165deg,rgba(62,38,18,.78) 0%,rgba(22,13,6,.88) 100%);border:1.5px solid rgba(242,193,78,.55);box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 0 40px rgba(242,193,78,.16);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both}
+.tcard .shine{position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);animation:agpShine 2.6s ease-in-out .6s infinite;pointer-events:none}
+.tcard .in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;padding:18px 14px 16px;box-sizing:border-box}
+.tcard .wl{font-size:15px;letter-spacing:3px;font-weight:800;color:#f2c14e;margin-bottom:12px;direction:ltr}
+.tcard .av{width:84px;height:84px;border:2.5px solid #f2c14e;box-shadow:0 4px 10px rgba(0,0,0,.4);background:#5a3a22;font-size:32px}
+.tcard .wn{margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcard .wx{margin-top:4px;font-size:13px;font-weight:600;color:#d9c7a6}
+.tcard .wp{margin-top:auto;width:100%;padding-top:10px;border-top:1px solid rgba(242,193,78,.25);text-align:center}
+.tcard .wp b{display:block;font-weight:800;letter-spacing:1px;color:#f2c14e;text-shadow:0 2px 6px rgba(0,0,0,.4);line-height:1.1;font-size:20px}
+.tcard .wp small{display:block;font-size:12px;font-weight:500;letter-spacing:0;margin-top:4px;color:rgba(242,193,78,.8);text-wrap:balance}
+.owc{width:240px;max-width:100%;line-height:0;animation:agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1) both}
+#champ .cbtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:600px;margin:0 auto}
+.cb{flex:1;min-width:170px;white-space:nowrap;height:46px;padding:0 20px;border-radius:999px;font:700 15px "IBM Plex Sans Arabic",sans-serif;cursor:pointer;transition:filter .2s,transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f7efe2}
+.cb:hover{filter:brightness(1.2)}.cb:active{transform:scale(.97)}
+.cb.pri{border:none;background:linear-gradient(90deg,#e7a83a,#f7d27a);color:#2a170b;box-shadow:0 8px 22px rgba(242,193,78,.35)}
+.cb.sec{border:1px solid rgba(242,193,78,.55);background:rgba(242,193,78,.14);color:#fbe3a8}
+@keyframes agpPop{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes agpCrown{0%{opacity:0;transform:translate(-50%,-14px) scale(.6)}100%{opacity:1;transform:translate(-50%,0)}}
+@keyframes agpShine{0%{transform:translateX(-120%)}60%,100%{transform:translateX(260%)}}
+@keyframes agpWinCardPop{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:none}}
+body.champ #hints,body.champ #rpill,body.champ #feed,body.champ #hdr #counter{display:none}
 </style>
 </head>
 <body>
@@ -427,7 +454,11 @@ body.inlobby #demo,body.inlobby #hdr #counter{display:none}
   </div>
 </div>
 
-<div id="champ"><div class="star"><span>SHERIFF</span></div><h2 id="champName">—</h2><p>بطل الغرب 🏆</p><div class="btns"><button class="btn" id="againBtn">إعادة المباراة</button><button class="btn ghost" id="exitBtn">خروج</button></div></div>
+<div id="champ"><div class="cw">
+  <h2 class="ct">🏆 الفائز في لعبة "بلدة الكاوبوي"</h2>
+  <div class="ccards" id="champCard"></div>
+  <div class="cbtns"><button class="cb" id="exitBtn" type="button">الخروج</button><button class="cb pri" id="newBtn" type="button">مباراة جديدة</button><button class="cb sec" id="againBtn" type="button">إعادة بنفس اللاعبين</button></div>
+</div></div>
 
 <div id="demo" class="open" hidden>
   <button id="demoToggle">🧪 لوحة التجربة</button>
