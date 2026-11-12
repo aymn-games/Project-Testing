@@ -458,7 +458,8 @@ function hookStream() {
 // ---------- تشغيل
 (async function boot() {
     let scene = null;
-    try { scene = await mountDuel($('#stage'), { onEvent: (e, d, dur) => {
+    document.body.classList.add('gfx-' + (G.settings.quality || 'mid')); // «ضعيفة» تشيل كمان مؤثرات الصفحة الثقيلة (CSS)
+    try { scene = await mountDuel($('#stage'), { quality: G.settings.quality, onEvent: (e, d, dur) => {
         const many = G.active && G.active.length > 1; // كل المبارزات سوا: بدون وميض الشاشة عشان ما تومض كثير
         if (e === 'bang') { SFX.bang(); if (!many) flash('#fff8e0', 140); }
         else if (e === 'dud') SFX.dud();

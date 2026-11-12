@@ -23,6 +23,11 @@
         { key: 'maxPlayers', type: 'number', section: 1, icon: 'userplus', label: 'الحد الأقصى للاعبين', min: 2, max: 64, default: 64 },
         { key: 'who', type: 'choice', section: 1, icon: 'shield', label: 'المسموح لهم', default: 'all',
           options: [['followers', 'المتابعون فقط'], ['all', 'الجميع']] },
+        { key: 'quality', type: 'choice', section: 3, icon: 'sliders', label: 'جودة الرسومات', default: 'mid',
+          options: [['high', 'عالية'], ['mid', 'متوازنة'], ['low', 'ضعيفة']],
+          descs: { high: 'أوضح صورة: دقة الشاشة كاملة وظلال ناعمة وكل التفاصيل. للأجهزة القوية.',
+                   mid: 'الافتراضي: صورة واضحة وظلال، ومناسبة لأغلب الأجهزة.',
+                   low: 'للأجهزة الضعيفة: دقة أقل، بدون ظلال ولا غبار ولا تغبيش، و30 إطار بالثانية — اللعبة أخف وأسلس.' } },
         { key: 'sound', type: 'toggle', section: 3, label: 'الأصوات', default: true, desc: 'الخطوات والطلقات والموسيقى القصيرة لكل مرحلة.', options: [[false, 'متوقفة'], [true, 'مفعّلة']] }
     ];
     var SECTIONS = [{ n: 1, title: 'الدخول' }, { n: 2, title: 'المواجهة' }, { n: 3, title: 'إضافات', full: true }];
