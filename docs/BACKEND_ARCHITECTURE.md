@@ -84,7 +84,7 @@ convention):
 
 ```json
 {
-  "type": "connect | disconnect | status | comment | gift | follow | error",
+  "type": "connect | disconnect | status | comment | gift | follow | like | error",
   "payload": { "...": "..." },
   "timestamp": 1730000000000
 }
@@ -132,6 +132,11 @@ convention):
 { "type": "follow", "payload": { "platform": "tiktok", "id": "tiktok:<platformUserId>", "name": "displayName" } }
 ```
 
+**`like`** (أُضيف لاحقاً — التكبيس، تيك توك يجمّعه بدفعات؛ أول من يستخدمه سباق الفورمولا)
+```json
+{ "type": "like", "payload": { "platform": "tiktok", "id": "tiktok:<platformUserId>", "name": "displayName", "count": 15 } }
+```
+
 **`error`**
 ```json
 { "type": "error", "payload": { "platform": "tiktok", "code": "invalid_username | upstream_disconnected | rate_limited | unknown", "message": "human-readable" } }
@@ -168,6 +173,7 @@ These `comment`/`gift`/`follow` payload fields are deliberately **identical in s
                or AGP.queueManager.enqueue('tiktok', playerData)
      gift    → AGP.events.emit('stream:giftReceived', payload)
      follow  → AGP.events.emit('stream:followReceived', payload)
+     like    → AGP.events.emit('stream:likeReceived', payload)
 
 7. Streamer clicks Disconnect (existing button, unchanged)
      → AGP.streamConnector.disconnect('tiktok')

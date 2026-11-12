@@ -3,7 +3,7 @@
  * idea whether the data is mocked or real (that's the backend's decision
  * in backend/platforms/connector-router.js). It opens one WebSocket to
  * the backend, sends connect/disconnect on request, and routes incoming
- * status/comment/gift/follow/error messages to the same AGP entry points
+ * status/comment/gift/follow/like/error messages to the same AGP entry points
  * documented in docs/BACKEND_ARCHITECTURE.md §10-12 — meaning once the
  * backend's tiktok-connector.js goes from stub to real implementation,
  * this file needs no changes at all.
@@ -109,7 +109,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('stream:giftReceived', payload);
     }
 
-    // تكبيسات مشاهد (مجمّعة من الخادم): {id, name, count} — أول من استخدمها: شد الحبل
+    // تكبيسات مشاهد (مجمّعة من الخادم): {id, name, count, avatarUrl} — شد الحبل وفورمولا ون
     function handleIncomingLike(payload) {
         AGP.events.emit('stream:likeReceived', payload);
     }

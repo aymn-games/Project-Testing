@@ -40,10 +40,11 @@ module.exports = {
         });
     },
 
-    buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount, giftId) {
+    buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount, giftId, avatarUrl) {
         return buildEnvelope(MESSAGE_TYPES.GIFT, {
             platform: platform, id: id, name: name,
-            giftName: giftName, giftId: giftId || null, giftValue: giftValue, repeatCount: repeatCount || 1
+            giftName: giftName, giftId: giftId || null, giftValue: giftValue, repeatCount: repeatCount || 1,
+            avatarUrl: avatarUrl || null   // صورة حساب الداعم (اختياري — للألعاب اللي تعرض اللاعب من أول دعم)
         });
     },
 
@@ -52,8 +53,9 @@ module.exports = {
     },
 
     // تكبيسات (لايكات) مشاهد: count = مجموع التكبيسات بالدفعة (تيك توك يجمّعها، والخادم يجمّعها أكثر كل ~300ms).
-    buildLikeMessage: function (platform, id, name, count) {
-        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Math.max(1, Number(count) || 1) });
+    // avatarUrl = صورة حساب تيك توك (فورمولا ون تكمّل فيها صورة اللاعب لو دخل بدونها).
+    buildLikeMessage: function (platform, id, name, count, avatarUrl) {
+        return buildEnvelope(MESSAGE_TYPES.LIKE, { platform: platform, id: id, name: name, count: Math.max(1, Number(count) || 1), avatarUrl: avatarUrl || null });
     },
 
     buildErrorMessage: function (platform, code, message) {
