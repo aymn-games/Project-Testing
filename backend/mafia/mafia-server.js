@@ -32,6 +32,10 @@ var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6 };
 var HOST_GRACE_MS = 30 * 60 * 1000;
 var TICK_MS = 100, LIVE_SEND_MS = 250, IDLE_SEND_MS = 1000;
 var MAX_MSG = 8 * 1024;
+// تعليق الشات بالجوالات: الجوال البطيء أو اللي رجع من الخلفية كانت التحديثات تتكدس له (كل state نسخة كاملة)
+// فيوصله الشات متأخر أكثر وأكثر. الحين لو عنده تحديثات ما انرسلت بعد نتخطاه (اللي بعدها يحمل كل شي)،
+// ولو تكدس عليه كثير أو ما وصلنا منه شي مدة طويلة (العميل يرسل ping كل 8 ثواني، والمتصفح بالخلفية ممكن يأخرها لدقيقة) نقفل اتصاله ويرجع باتصال جديد.
+var SLOW_BYTES = 256 * 1024, STUCK_BYTES = 4 * 1024 * 1024, SILENT_MS = 75 * 1000;
 
 var _rooms = {};
 var _clients = {};
@@ -93,10 +97,29 @@ function sendStates(room) {
     var now = Date.now(), cache = {};
     roomClients(room).forEach(function (c) {
         if (!c.id || c.closed) return;
+        if (backlogged(c)) return;
         var v = cache[c.id] || (cache[c.id] = JSON.stringify({ t: 'state', G: room.game.view(c.id), now: now }));
         try { c.socket.write(frame.encodeTextFrame(v)); } catch (e) { }
     });
     room.lastSend = now; room.dirty = false;
+}
+
+/** العميل عنده بيانات ما انرسلت بعد؟ نتخطاه هالمرة، ولو تكدس عليه كثير نقفل اتصاله (العميل يرجع لحاله). */
+function backlogged(c) {
+    var w = (c.socket && c.socket.writableLength) || 0;
+    if (w > STUCK_BYTES) { try { c.socket.destroy(); } catch (e) { } return true; }
+    return w > SLOW_BYTES;
+}
+
+/** رسالة شات معادة بعد انقطاع (نفس cid) وصلت قبل؟ ← تنتجاهل عشان ما تتكرر. */
+function dupChat(room, client, cid) {
+    if (typeof cid !== 'string' || !cid) return false;
+    var p = room.players.find(function (q) { return q.id === client.id; });
+    if (!p) return false;
+    p._cids = p._cids || [];
+    if (p._cids.indexOf(cid) >= 0) return true;
+    p._cids.push(cid); if (p._cids.length > 40) p._cids.shift();
+    return false;
 }
 
 function createRoom() {
@@ -283,6 +306,7 @@ function onMessage(client, msg) {
         var who = room.players.find(function (q) { return q.id === client.id; }), now = Date.now();
         var text = String(msg.text == null ? '' : msg.text).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
         if (!who || room.started || !text || (who._lastChat && now - who._lastChat < 1500)) return;
+        if (dupChat(room, client, msg.cid)) return;
         who._lastChat = now;
         room.lobbyChatN = (room.lobbyChatN || 0) + 1;
         room.lobbyChat.push({ n: room.lobbyChatN, from: who.id, text: text, at: now });
@@ -299,6 +323,7 @@ function onMessage(client, msg) {
         if (!room.game || client.role !== 'player') return;
         var arg = msg.arg;
         if (typeof arg === 'string') arg = arg.slice(0, 200); else arg = null;
+        if (msg.a === 'chat' && dupChat(room, client, msg.cid)) return;
         room.game.act(client.id, String(msg.a || ''), arg);
         return;
     }
@@ -329,8 +354,20 @@ function removeClient(id) {
     else if (room && c.role === 'player' && c.id) broadcastRoom(room);
 }
 
+var _lastSweep = 0;
+/** اتصالات ميتة (جوال طلع من المتصفح بدون ما يقفل الاتصال): ما وصلنا منها شي من SILENT_MS ← نقفلها. */
+function sweepSilent(now) {
+    if (now - _lastSweep < 5000) return;
+    _lastSweep = now;
+    Object.keys(_clients).forEach(function (k) {
+        var c = _clients[k];
+        if (c && now - (c.lastRx || 0) > SILENT_MS) { try { c.socket.destroy(); } catch (e) { } removeClient(k); }
+    });
+}
+
 function tickAll() {
     var now = Date.now();
+    sweepSilent(now);
     Object.keys(_rooms).forEach(function (code) {
         var room = _rooms[code];
         if (!room.hostConn && room.hostGoneAt && now - room.hostGoneAt > HOST_GRACE_MS) return closeRoom(room, 'host-timeout');
@@ -352,10 +389,11 @@ function handleUpgrade(req, socket) {
     ensureTicker();
 
     var id = 'mf_' + Date.now().toString(36) + '_' + rid(3);
-    var client = _clients[id] = { socket: socket, code: null, role: null, id: null, closed: false };
+    var client = _clients[id] = { socket: socket, code: null, role: null, id: null, closed: false, lastRx: Date.now() };
     var buffer = Buffer.alloc(0);
 
     socket.on('data', function (chunk) {
+        client.lastRx = Date.now();
         buffer = Buffer.concat([buffer, chunk]);
         if (buffer.length > MAX_MSG * 4) { socket.destroy(); removeClient(id); return; }
         var result;
