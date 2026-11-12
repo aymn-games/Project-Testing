@@ -2068,24 +2068,51 @@ document.addEventListener('DOMContentLoaded', async function() {
   // زر «استوديو البث» (stream-studio.html) أعلى المكتبة تحت العنوان — يفتح
   // صفحة تصميم أوفرلي البث (js/agp-stream-studio.js). الصفحة مبنية بعد
   // التحميل، فنحاول كل 300ms لين يطلع العنوان (نفس أسلوب بانر الإطارات).
+  // [قريباً] مقفول للعامة (شارة «إطلاق جديد قريباً» بدون رابط)، ويفتح كرابط
+  // فعلي للأدمن ولمن منحه الأدمن صلاحية «استوديو البث» (permissions.stream_studio
+  // من لوحة الأدمن). نفس الفحص بـstream-studio.html نفسها.
+  function canUseStudio(u){
+    return Boolean(u && (u.role === 'admin' || (u.permissions && u.permissions.stream_studio)));
+  }
+  function studioUser(){
+    try { return window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) { return null; }
+  }
+  var STUDIO_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="m2 16 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>';
+  function buildStudioButton(open){
+    var a;
+    if (open) {
+      a = document.createElement('a');
+      a.href = 'stream-studio.html';
+      a.style.cssText = 'display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:13px 26px;border-radius:999px;' +
+        'background:linear-gradient(135deg,rgba(122,63,212,.55),rgba(178,140,245,.35));border:1px solid rgba(178,140,245,.7);color:#fff;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 6px 22px rgba(122,63,212,.35)';
+      a.innerHTML = STUDIO_ICON;
+      a.appendChild(document.createTextNode('استوديو البث'));
+    } else {
+      a = document.createElement('span');
+      a.setAttribute('aria-disabled', 'true');
+      a.title = 'إطلاق جديد قريباً';
+      a.style.cssText = 'display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:13px 26px;border-radius:999px;' +
+        'background:rgba(122,63,212,.12);border:1px dashed rgba(178,140,245,.45);color:#b9a8dd;font-weight:700;font-size:15px;cursor:not-allowed';
+      a.innerHTML = STUDIO_ICON;
+      a.appendChild(document.createTextNode('استوديو البث — إطلاق جديد قريباً'));
+    }
+    a.setAttribute('data-studio-btn', open ? 'open' : 'locked');
+    return a;
+  }
   function mountStudioButton(){
-    if (document.querySelector('[data-studio-btn]')) return true;
+    var open = canUseStudio(studioUser());
+    var cur = document.querySelector('[data-studio-btn]');
+    if (cur) {
+      // الصلاحية تغيّرت (وصل /api/auth/me) — نبدّل الزر بمكانه
+      if (cur.getAttribute('data-studio-btn') !== (open ? 'open' : 'locked')) cur.parentNode.replaceChild(buildStudioButton(open), cur);
+      return true;
+    }
     var heading = Array.prototype.slice.call(document.querySelectorAll('h1')).find(function(h){
       return h.textContent.trim() === 'مكتبة الألعاب';
     });
     var host = heading && heading.parentNode;
     if (!host) return false;
-    // [قريباً] استوديو البث مقفول مؤقتاً — يظهر كشارة «إطلاق جديد قريباً» بدون رابط.
-    // للرجوع: <a href="stream-studio.html" class="nl-btn-glossy"> بالستايل القديم.
-    var a = document.createElement('span');
-    a.setAttribute('data-studio-btn', '1');
-    a.setAttribute('aria-disabled', 'true');
-    a.title = 'إطلاق جديد قريباً';
-    a.style.cssText = 'display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:13px 26px;border-radius:999px;' +
-      'background:rgba(122,63,212,.12);border:1px dashed rgba(178,140,245,.45);color:#b9a8dd;font-weight:700;font-size:15px;cursor:not-allowed';
-    a.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="m2 16 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>';
-    a.appendChild(document.createTextNode('استوديو البث — إطلاق جديد قريباً'));
-    host.appendChild(a);
+    host.appendChild(buildStudioButton(open));
     return true;
   }
   var __studioTries = 0;
@@ -2093,6 +2120,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     __studioTries++;
     if (mountStudioButton() || __studioTries >= 30) clearInterval(__studioTimer);
   }, 300);
+  // الكاش ممكن يكون قديم (الأدمن منح الصلاحية بعد آخر دخول) — نحدّث من السيرفر
+  if (window.AGPAuth && window.AGPAuth.refreshUser) {
+    window.AGPAuth.refreshUser().then(function(){ mountStudioButton(); });
+  }
 </script>
 <script>
   // [عرض مؤقت] بانر خصم الإطارات فوق عنوان "مكتبة الألعاب" — يختفي
