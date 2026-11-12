@@ -195,7 +195,7 @@
         list.forEach((p, i) => slot.set(p.id, sl[i])); }
       ps.forEach(p => {
         let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'boy') && this.V ? p.vrm : null;
-        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; } /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
+        if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; sp.renderOrder = 30; } /* الأسماء ترتسم فوق الرقم الطاير (20) */ /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
         const key = p.row + ':' + p.lane;
         if (p.fall) { if (f.fallT == null) { f.fallT = -.45; f.fallV = new T.Vector3((Math.random() - .5) * 1.5, 1.5, (Math.random() - .5) * 1.5); } f.key = key; return; }
         f.fallT = null; f.g.visible = true; const sl = slot.get(p.id); f.scale = sl.s;
@@ -213,7 +213,7 @@
       // المربعات: نبض الصف الحالي، رجفة ثم كسر المربع الغلط
       const cur = d.row;
       const mrow = this.tiles[cur], showM = d.cam === 'play' && mrow && !mrow[0].broken && !mrow[1].broken && !mrow[0].safe && !mrow[1].safe;
-      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 3.1 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 3.8 + b, rowZ(cur)); m.scale.setScalar(pu); } });
+      this.marks.forEach((m, l) => { m.visible = !!showM; if (showM) { const b = Math.sin(t * 3 + l) * .18, pu = 3.1 + Math.sin(t * 4 + l) * .12; m.position.set(laneX(l), 4.9 + b, rowZ(cur) - TD / 2 + .7); /* فوق طرف اللوح البعيد وأعلى، عشان ما يغطي اللي واقفين بنصه */ m.scale.setScalar(pu); } });
       this.tiles.forEach((pair, i) => pair.forEach(tl => {
         if (tl.shakeT != null) { tl.shakeT += dt; tl.g.position.x = laneX(tl.lane) + Math.sin(tl.shakeT * 90) * .07 * (1 - tl.shakeT / .45); if (tl.shakeT > .45) { tl.shakeT = null; tl.g.visible = false; this.shatter(tl); } return; }
         if (!tl.safe && !tl.broken) { const on = i === cur; tl.edge.material.opacity = on ? .65 + Math.sin(t * 4) * .35 : .55; tl.glass.emissiveIntensity = on ? .18 + Math.sin(t * 4) * .08 : .08; }
