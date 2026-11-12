@@ -116,12 +116,15 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           </svg>
           <div style="width:384px;height:384px;border-radius:50%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%, #231c3a 0%, #120f1f 62%, #0c0a15 100%);border:1px solid rgba(255,255,255,.08);box-shadow:0 40px 100px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08), inset 0 -30px 60px rgba(167,139,250,.06)">
             <span style="font:500 19px 'IBM Plex Sans Arabic';color:#9d95b3;letter-spacing:.6px">الحرف المطلوب</span>
-            <span key="{{ letterKey }}" style="font:700 210px/1.08 'IBM Plex Sans Arabic';background:linear-gradient(180deg, #ffffff 30%, #e4dcff 75%, #f5d0fe);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 30px rgba(196,181,253,.35));animation:letterPop .7s cubic-bezier(.2,1.3,.35,1) both">{{ letter }}</span>
+            <span key="{{ letterKey }}" style="font:{{ letterFont }} 'IBM Plex Sans Arabic';background:linear-gradient(180deg, #ffffff 30%, #e4dcff 75%, #f5d0fe);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 30px rgba(196,181,253,.35));animation:letterPop .7s cubic-bezier(.2,1.3,.35,1) both">{{ letter }}</span>
             <span style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;background:{{ timeBg }};border:1px solid {{ timeBd }};font:600 22px 'IBM Plex Sans Arabic';color:{{ timeCol }};font-variant-numeric:tabular-nums;transition:all .3s"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><polyline points="12 9 12 13 14.5 15"></polyline><line x1="9" y1="2" x2="15" y2="2"></line></svg>{{ timeTxt }}</span>
           </div>
         </div>
 
         <span style="font:400 28px 'IBM Plex Sans Arabic';color:#bdb6cc">اكتب <span style="font-weight:600;color:#f4f2f8">{{ catOne }}</span> تبدأ بحرف <span style="font-weight:700;color:#e4dcff">«{{ letter }}»</span></span>
+        <sc-if value="{{ hintOn }}" hint-placeholder-val="{{ false }}">
+          <span style="margin-top:-18px;display:flex;align-items:center;gap:14px;height:56px;padding:0 26px;border-radius:999px;background:rgba(253,230,184,.08);border:1px solid rgba(253,230,184,.3);color:#fde6b8;font:600 22px 'IBM Plex Sans Arabic';animation:rise .45s ease both">💡 تلميح<span style="font:700 30px 'IBM Plex Sans Arabic';letter-spacing:2px;color:#fff7e6">{{ hintMask }}</span><span style="font:500 17px 'IBM Plex Sans Arabic';color:#d9c9a3">باقي {{ hintCount }} كلمة</span></span>
+        </sc-if>
 
         <div key="{{ answerKey }}" style="width:820px;box-sizing:border-box;display:flex;align-items:center;gap:22px;padding:20px 22px 20px 30px;border-radius:30px;background:{{ lastBg }};border:1px solid {{ lastBd }};box-shadow:0 30px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(20px);animation:{{ lastAn }}">
           <sc-if value="{{ hasLast }}" hint-placeholder-val="{{ true }}">
@@ -241,6 +244,9 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
             </div>
             <div style="flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font:700 16px 'IBM Plex Sans Arabic';color:#f4f2f8">منع الإجابة مرتين ورا بعض</span><span style="font:500 13px/1.5 'IBM Plex Sans Arabic';color:#8a8596">اللاعب اللي جاوب ما تنقبل إجابته الجاية إلا بعد ما يجاوب لاعب غيره</span></div><button onClick="{{ repeatTg.toggle }}" role="switch" aria-checked="{{ repeatTg.on }}" style="flex-shrink:0;width:52px;height:30px;border-radius:999px;border:none;padding:3px;box-sizing:border-box;display:flex;justify-content:{{ repeatTg.just }};background:{{ repeatTg.bg }};cursor:pointer;transition:background .2s"><span style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></span></button></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font:700 16px 'IBM Plex Sans Arabic';color:#f4f2f8">التلميحات</span><span style="font:500 13px/1.5 'IBM Plex Sans Arabic';color:#8a8596">بنص الوقت يطلع أول حرف من كلمة متاحة وعدد حروفها</span></div><button onClick="{{ hintTg.toggle }}" role="switch" aria-checked="{{ hintTg.on }}" style="flex-shrink:0;width:52px;height:30px;border-radius:999px;border:none;padding:3px;box-sizing:border-box;display:flex;justify-content:{{ hintTg.just }};background:{{ hintTg.bg }};cursor:pointer;transition:background .2s"><span style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></span></button></div>
             </div>
             <div style="flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px;border-radius:18px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font:700 16px 'IBM Plex Sans Arabic';color:#f4f2f8">الأصوات</span></div><button onClick="{{ soundTg.toggle }}" role="switch" aria-checked="{{ soundTg.on }}" style="flex-shrink:0;width:52px;height:30px;border-radius:999px;border:none;padding:3px;box-sizing:border-box;display:flex;justify-content:{{ soundTg.just }};background:{{ soundTg.bg }};cursor:pointer;transition:background .2s"><span style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></span></button></div>
@@ -405,6 +411,9 @@ const PLAYERS = WCH.readJSON(WCH.keys.players, {});
 const CATS = (()=>{ const ids=SETUP&&SETUP.categoryIds, l=W.categories.filter(c=>!ids||ids.includes(c.id)); return l.length?l:W.categories; })();
 const WIN_PTS = Math.max(10,Math.min(200,+(SETUP&&SETUP.winPoints)||30));
 const ANSWER_PTS = 2, LOCK_BONUS = 2;
+const SEC_OPTS = [20,30,45];
+// الحرف المطلوب ممكن يكون أكثر من حرف (التاء المربوطة = ت أو ه) — يُعرض «ت أو ه»
+const showL = l=>(Array.isArray(l)?l:[l]).filter(Boolean).join(' أو ');
 const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'';
 const shuffle = a=>{ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // الكلمة مقسومة: [بدايتها، آخر حرف] — آخر حرف يُلوَّن لأنه الحرف المطلوب بعدها (الهمزة الأخيرة تُلوَّن مع ما قبلها)
@@ -413,11 +422,11 @@ const split = w=>{ const c=[...String(w||'').trim()]; const k=c.length>2&&c[c.le
 class Component extends DCLogic {
   reg = WCH.createRegistry(PLAYERS);
   // حالة اللعب المتزامنة (الشات ممكن يوصل أسرع من تحديث الواجهة) — النسخة المعروضة في state
-  g = { phase:'ready', letter:'', lastBy:null, lastWord:null, used:{}, cat:null };
+  g = { phase:'ready', letters:[], lastBy:null, lastWord:null, used:{}, cat:null };
   sc = {};
   queue = [];
   state = { players:Array.isArray(ROSTER)?[...ROSTER]:[], out:[], scores:{}, phase:'ready', cat:null, catNo:0, chain:[], letter:'', last:null, left:0,
-    answerSec:[15,20,25].includes(+(SETUP&&SETUP.answerSec))?+SETUP.answerSec:20, noRepeat:!(SETUP&&SETUP.noRepeatPlayer===false), sound:!(SETUP&&SETUP.sound===false),
+    answerSec:[15,20,25,30,45].includes(+(SETUP&&SETUP.answerSec))?+SETUP.answerSec:30, hints:!(SETUP&&SETUP.hints===false), hint:null, noRepeat:!(SETUP&&SETUP.noRepeatPlayer===false), sound:!(SETUP&&SETUP.sound===false),
     winOpen:false, introOpen:false, lockOpen:false, narrow:innerWidth<820, joinOpen:false, joined:[], exitOpen:false, eventsOpen:false,
     scale:1, logo:false, settingsOpen:false, setTab:0, pending:[], log:[], toast:null };
   componentDidMount(){
@@ -435,15 +444,24 @@ class Component extends DCLogic {
     this.matchStartedAt=Date.now(); this.reported=false; this.startCategory(); }
   // الفئة التالية: بالترتيب أو عشوائي (بدون تكرار نفس الفئة ورا بعض)
   nextCat(){ if(!this.queue.length){ const q=SETUP&&SETUP.order==='بالترتيب'?[...CATS]:shuffle(CATS); if(q.length>1&&this.g.cat&&q[0].id===this.g.cat.id) q.push(q.shift()); this.queue=q; } return this.queue.shift(); }
-  // كلمة البداية: من النظام، وآخر حرف فيها له 3 كلمات على الأقل حتى ما تنقفل من أول دور
-  startCategory(){ const cat=this.nextCat(), ok=cat.entries.filter(e=>W.entriesStartingWith(cat.id,W.lastLetter(e.display),{[e.id]:1}).length>=3);
-    const pool=ok.length?ok:cat.entries, st=pool[Math.floor(Math.random()*pool.length)], letter=W.lastLetter(st.display);
-    Object.assign(this.g,{cat,letter,lastBy:null,lastWord:null,used:{[st.id]:1}});
-    this.setPhase('intro',{cat,catNo:this.state.catNo+1,chain:[{word:st.display,by:null,letter}],letter,last:null,left:this.state.answerSec,introOpen:true});
+  // كلمة البداية: من النظام، وآخر حرف فيها له 8 كلمات على الأقل (أو 3 لو الفئة صغيرة) حتى تكون السلسلة سهلة من أولها
+  startCategory(){ const cat=this.nextCat(), n=e=>W.entriesStartingWith(cat.id,W.lastLetters(e.display),{[e.id]:1}).length;
+    const easy=cat.entries.filter(e=>n(e)>=8), ok=easy.length?easy:cat.entries.filter(e=>n(e)>=3);
+    const pool=ok.length?ok:cat.entries, st=pool[Math.floor(Math.random()*pool.length)], letters=W.lastLetters(st.display), letter=showL(letters);
+    Object.assign(this.g,{cat,letters,lastBy:null,lastWord:null,used:{[st.id]:1}});
+    this.setPhase('intro',{cat,catNo:this.state.catNo+1,chain:[{word:st.display,by:null,letter}],letter,last:null,hint:null,left:this.state.answerSec,introOpen:true});
     this.tone(523.25,.18,'triangle'); setTimeout(()=>this.tone(783.99,.3,'triangle'),140);
     clearTimeout(this._it); this._it=setTimeout(()=>{ this.shut('introOpen'); this.setPhase('playing'); this.startTimer(); },3800); }
-  startTimer(){ clearInterval(this._ti); this.setState({left:this.state.answerSec});
-    this._ti=setInterval(()=>{ const l=this.state.left-1; if(l<=0){ clearInterval(this._ti); this.setState({left:0}); this.timeUp(); } else { if(l<=5) this.tone(880,.06,'square',.04); this.setState({left:l}); } },1000); }
+  startTimer(){ clearInterval(this._ti); this.setState({left:this.state.answerSec,hint:null});
+    this._ti=setInterval(()=>{ const l=this.state.left-1; if(l<=0){ clearInterval(this._ti); this.setState({left:0}); this.timeUp(); } else { if(l<=5) this.tone(880,.06,'square',.04); this.setState({left:l}); if(l<=Math.floor(this.state.answerSec/2)&&!this.state.hint) this.giveHint(); } },1000); }
+  // تلميح بنص الوقت: كلمة متاحة بأول حرفها وعدد حروفها (ك ـ ـ ـ)، وكم كلمة باقية بالحرف
+  giveHint(){ const G=this.g; if(!this.state.hints||G.phase!=='playing') return;
+    const left=W.entriesStartingWith(G.cat.id,G.letters,G.used); if(!left.length) return;
+    const pick=[...left].sort((a,b)=>a.display.length-b.display.length).slice(0,Math.max(3,Math.ceil(left.length/3)));
+    const e=pick[Math.floor(Math.random()*pick.length)], f=W.formStartingWith(e,G.letters).trim();
+    const cut=/^ال/.test(f)&&!W.intersects([W.firstLetter(f)],G.letters)?3:1;
+    const cs=[...f], mask=cs.slice(0,cut).join('')+' '+cs.slice(cut).map(ch=>ch===' '?' ':'ـ').join(' ');
+    this.setState({hint:{mask,count:left.length}}); this.tone(740,.12,'triangle',.08); }
   award(n,pts){ this.sc[n]=(this.sc[n]||0)+pts; this.setState({scores:{...this.sc}}); return this.sc[n]; }
 
   onChat(p){ const user=this.reg.nameFor(p), text=p.text, s=this.state;
@@ -455,19 +473,19 @@ class Component extends DCLogic {
     this.answer(user,text); }
   // إجابة من الشات: لاعب مسجّل، كلمة من الفئة، تبدأ بالحرف المطلوب، ما انقالت قبل، وما هو صاحب آخر إجابة (لو الخيار مفعّل)
   answer(user,text){ const G=this.g; if(G.phase!=='playing'||!this.state.players.includes(user)) return;
-    const hit=W.lookup(G.cat.id,text); if(!hit||hit.first!==G.letter||G.used[hit.entryId]) return;
+    const hit=W.lookup(G.cat.id,text); if(!hit||!W.intersects(hit.firsts,G.letters)||G.used[hit.entryId]) return;
     if(this.state.noRepeat&&G.lastBy===user) return;
-    G.used[hit.entryId]=1; G.letter=hit.last; G.lastBy=user; G.lastWord=hit.form;
+    G.used[hit.entryId]=1; G.letters=hit.lasts; G.lastBy=user; G.lastWord=hit.form; const letter=showL(hit.lasts);
     const total=this.award(user,ANSWER_PTS); this.logEv('answer',user,hit.form);
-    this.setState(st=>({chain:[...st.chain,{word:hit.form,by:user,letter:hit.last}],letter:hit.last,last:{by:user,word:hit.form},answerRun:(st.answerRun||0)+1}));
+    this.setState(st=>({chain:[...st.chain,{word:hit.form,by:user,letter}],letter,last:{by:user,word:hit.form},answerRun:(st.answerRun||0)+1}));
     this.tone(660,.1,'triangle'); setTimeout(()=>this.tone(990,.16,'triangle'),90);
     if(total>=WIN_PTS){ clearInterval(this._ti); return this.showWin(user); }
     // ما بقى ولا كلمة بالحرف الجديد → قفلها على الكل فوراً
-    if(!W.entriesStartingWith(G.cat.id,G.letter,G.used).length) return this.lock('none');
+    if(!W.entriesStartingWith(G.cat.id,G.letters,G.used).length) return this.lock('none');
     this.startTimer(); }
   timeUp(){ if(this.g.phase==='playing') this.lock('time'); }
   // نهاية السلسلة: صاحب آخر إجابة ياخذ +2 إضافية (المجموع 4 على كلمته)، ثم فئة جديدة أو شاشة الفوز
-  lock(reason){ const G=this.g, by=G.lastBy, word=G.lastWord, letter=G.letter; clearInterval(this._ti);
+  lock(reason){ const G=this.g, by=G.lastBy, word=G.lastWord, letter=showL(G.letters); clearInterval(this._ti);
     const total=by?this.award(by,LOCK_BONUS):0;
     if(by) this.logEv('lock',by,word); else this.logEv('time','انتهى الوقت','');
     this.setPhase('lock',{lockOpen:true,lockBy:by,lockWord:word,lockLetter:letter,lockReason:reason,lockCat:G.cat,lockRun:(this.state.lockRun||0)+1});
@@ -490,7 +508,7 @@ class Component extends DCLogic {
       if(this.state.winner!==winner) return; const uname=String(wid).indexOf('tiktok:')===0?String(wid).slice(7):winner;
       const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
   newMatch=()=>{ this.shut('winOpen'); try{ localStorage.removeItem(WCH.keys.roster); localStorage.removeItem(WCH.keys.players); }catch(e){} location.href='lobby.html'; }
-  replaySame=()=>{ this.shut('winOpen'); this.sc={}; this.queue=[]; Object.assign(this.g,{phase:'ready',letter:'',lastBy:null,lastWord:null,used:{},cat:null});
+  replaySame=()=>{ this.shut('winOpen'); this.sc={}; this.queue=[]; Object.assign(this.g,{phase:'ready',letters:[],lastBy:null,lastWord:null,used:{},cat:null});
     this.setState(s=>{ const all=[...s.players,...s.out]; this.participants=new Set(all);
       return {players:all,out:[],scores:{},phase:'ready',cat:null,catNo:0,chain:[],letter:'',last:null,log:[],pending:[]}; }); }
   winVals(){ const s=this.state, h=React.createElement;
@@ -509,7 +527,7 @@ class Component extends DCLogic {
     const lastW=split(L?L.word:(s.chain[0]&&s.chain[0].word)), startW=split(s.chain[0]&&s.chain[0].word);
     return { isReady:s.phase==='ready', isPlaying:s.phase!=='ready', count:s.players.length, catCount:CATS.length, winPoints:WIN_PTS, startGame:this.startGame,
       catIcon:cat.icon||'', catName:cat.name||'', catOne:cat.one||'', catLabel:'الفئة '+s.catNo,
-      letter:s.letter, letterKey:'l'+s.catNo+'-'+s.chain.length, timeTxt:'00:'+String(left).padStart(2,'0'),
+      letter:s.letter, letterFont:String(s.letter||'').length>2?'700 112px/1.2':'700 210px/1.08', hintOn:!!(s.hint&&s.phase==='playing'), hintMask:s.hint?s.hint.mask:'', hintCount:s.hint?s.hint.count:0, letterKey:'l'+s.catNo+'-'+s.chain.length, timeTxt:'00:'+String(left).padStart(2,'0'),
       ringOff:(1344.6*(1-Math.max(0,Math.min(1,left/sec)))).toFixed(1), ringA:hurry?'#fecdd3':'#c4b5fd', ringB:hurry?'#fda4af':'#f0abfc', ringGlow:hurry?'rgba(253,164,175,.55)':'rgba(196,181,253,.45)',
       timeCol:hurry?'#fecdd3':'#e4dcff', timeBg:hurry?'rgba(253,164,175,.12)':'rgba(196,181,253,.08)', timeBd:hurry?'rgba(253,164,175,.35)':'rgba(196,181,253,.18)',
       hasLast:!!L, noLast:!L, lastName:L?L.by:'', lastIni:ini(L&&L.by), lastAv:la.av, lastOp:la.op, lastHead:lastW.head, lastTail:lastW.tail, answerKey:'a'+(s.answerRun||0)+'-'+s.catNo,
@@ -527,8 +545,8 @@ class Component extends DCLogic {
   order(n){ const i=ROSTER?ROSTER.indexOf(n):-1; return i<0?9999:i; }
   settingsVals(){ const s=this.state, tg=(on,fn)=>({bg:on?'#7c3aed':'rgba(255,255,255,.12)',just:on?'flex-end':'flex-start',on:String(!!on),toggle:fn});
     const opt=(on,label,pick)=>({label,pick,bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.35)':'none'});
-    return { secOpts:[15,20,25].map(n=>opt(s.answerSec===n,n+' ثانية',()=>this.setState({answerSec:n}))),
-      repeatTg:tg(s.noRepeat,()=>this.setState(x=>({noRepeat:!x.noRepeat}))), soundTg:tg(s.sound,()=>this.setState(x=>({sound:!x.sound}))) }; }
+    return { secOpts:SEC_OPTS.map(n=>opt(s.answerSec===n,n+' ثانية',()=>this.setState({answerSec:n}))),
+      repeatTg:tg(s.noRepeat,()=>this.setState(x=>({noRepeat:!x.noRepeat}))), hintTg:tg(s.hints,()=>this.setState(x=>({hints:!x.hints}))), soundTg:tg(s.sound,()=>this.setState(x=>({sound:!x.sound}))) }; }
   stageShift(){ const s=this.state; if(!s.eventsOpen||s.eventsOpenOut) return 0; const W2=s.vw||innerWidth, half=430*s.scale, edge=Math.min(24,W2*.0125)+Math.min(300,W2-16)+20, left=W2/2-half, room=W2-(W2/2+half)-12; return Math.max(0,Math.min(edge-left,room))/s.scale; }
   buildFx(){
     if(this._fx) return this._fx;

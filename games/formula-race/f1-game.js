@@ -312,6 +312,55 @@
         return extra;
     }
 
+    // ------------------------------------------------------------------
+    // التكبيس من البث (نفس شد الحبل):
+    //  - عدّاد «وصل من البث N تكبيسة» تحت لوحة الصدارة (حتى من غير اللاعبين) — يبيّن للستريمر إن التكبيس يوصل.
+    //  - مشاهد يكبّس وقت اللوبي وهو مو بالشبكة ينضم تلقائياً (إلا بوضع «المتابعين فقط»).
+    //  - احتياط: لو الخادم ما يرسل التكبيس (نسخة قديمة على Render)، نقرأ عدّاد تكبيسات كل
+    //    مشاهد من إحصائيات البث كل ثانية، وأول ما يوصل تكبيس لحظي يوقف الاحتياط.
+    // ------------------------------------------------------------------
+    var tapsIn = 0, tapsInAt = 0, liveLikes = false, likesPoll = 0;
+    function takeLike(p) {
+        var n = Math.max(1, Number(p.count) || 1);
+        tapsIn += n; tapsInAt = Date.now(); renderTaps();
+        var c = S.byId[p.id];
+        if (!c && S.phase === 'lobby' && settings.joinMode !== 'followers') {
+            c = addCar({ id: p.id, name: p.name, avatarUrl: p.avatarUrl || null });
+            if (c) toast('👆 <b>' + esc(c.name) + '</b> دخل السباق بالتكبيس', c.color);
+        }
+        fillAvatar(c, p.avatarUrl);
+        onLike(p.id, n);
+    }
+    function renderTaps() {
+        var el = $('tapsIn'); if (!el) return;
+        el.textContent = tapsIn ? '👆 وصل من البث ' + tapsIn.toLocaleString('en') + ' تكبيسة' : '👆 ما وصل تكبيس من البث للحين';
+        el.classList.toggle('hot', !!tapsInAt && Date.now() - tapsInAt < 1500);
+    }
+    function stopLikesPoll() { if (likesPoll) { clearInterval(likesPoll); likesPoll = 0; } }
+    function startLikesPoll() {
+        if (likesPoll || liveLikes || DEMO) return;
+        var base = null, inflight = false;
+        function poll() {
+            var A = window.AGPAuth;
+            if (liveLikes) { stopLikesPoll(); return; }
+            if (inflight || !A || typeof A.request !== 'function') return;
+            inflight = true;
+            A.request('/api/stream/session-stats?sections=likers:20').then(function (d) {
+                inflight = false;
+                if (liveLikes || !d || !d.success || !d.stats || !d.stats.sections) return;
+                var list = d.stats.sections.likers || [], next = {};
+                list.forEach(function (r) { if (r && r.username) next[r.username] = Number(r.count) || 0; });
+                if (base) list.forEach(function (r) {
+                    if (!r || !r.username) return;
+                    var prev = base[r.username], delta = next[r.username] - (prev == null ? 0 : prev);
+                    if (delta > 0) takeLike({ id: r.username, name: r.name, count: delta, avatarUrl: (r.avatarUrls && r.avatarUrls[0]) || null });
+                });
+                base = Object.assign(base || {}, next);
+            }, function () { inflight = false; });
+        }
+        likesPoll = setInterval(poll, 1000); poll();
+    }
+
     /** صورة حساب تيك توك: لو اللاعب دخل بدون صورة، تُكمَّل من أول لايك/دعم/تعليق فيه صورة. */
     function fillAvatar(c, url) {
         if (!c || c.avatar || !url) return;
@@ -690,9 +739,10 @@
         var n = S.cars.length, kw = esc(settings.keyword);
         $('rcSub').className = n ? '' : 'wait';
         $('rcSub').textContent = n ? 'السائقون جاهزون (' + n + ' / ' + settings.maxDrivers + ')' : 'بانتظار المتسابقين';
-        $('rcTitle').innerHTML = n ? 'كل شيء جاهز للسباق' : 'اكتب «' + kw + '» بالشات للمشاركة';
-        $('rcHint').innerHTML = n ? 'للمشاركة اكتب «<b>' + kw + '</b>» بالشات · التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو'
-            : 'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
+        var tapJoin = settings.joinMode !== 'followers';   // المتابعين فقط: التكبيس ما يبيّن مين متابع، فالدخول بالكلمة بس
+        $('rcTitle').innerHTML = n ? 'كل شيء جاهز للسباق' : 'اكتب «' + kw + '» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' للمشاركة';
+        $('rcHint').innerHTML = (n ? 'للمشاركة اكتب «<b>' + kw + '</b>» بالشات' + (tapJoin ? ' أو كبّس' : '') + ' · ' : '') +
+            'التكبيس يزيد سرعتك · كل ' + TAPS_PER_NITRO + ' تكبيسة تعطيك نيترو';
     }
     function openSettings(on) { document.body.classList.toggle('settings-open', on); }
 
@@ -1020,6 +1070,7 @@
         });
         syncSettingsUI();
         renderSoundBtn();
+        renderTaps(); setInterval(renderTaps, 500);
     }
 
     /** صفوف هدايا السباق: مربع منقّط بصورة الهدية (يفتح الاختيار) + اسم التأثير ووصفه. */
@@ -1070,8 +1121,8 @@
         AGP.events.on('stream:giftReceived', function (p) { if (p && p.id) onGift(p); });
         AGP.events.on('stream:likeReceived', function (p) {
             if (!p || !p.id) return;
-            fillAvatar(S.byId[p.id], p.avatarUrl);
-            onLike(p.id, p.count);
+            liveLikes = true; stopLikesPoll();
+            takeLike(p);
         });
         AGP.events.on('stream:statusChanged', updateLive);
         window.addEventListener('storage', function (e) { if (e.key === STREAM_CONNECTION_STORAGE_KEY) connect(); });
@@ -1083,6 +1134,7 @@
         var saved = readJSON(STREAM_CONNECTION_STORAGE_KEY, null);
         if (_connected || !saved || !saved.username || !AGP.streamConnector) { updateLive(); return; }
         _connected = true;
+        startLikesPoll();
         try { AGP.streamConnector.connect('tiktok', { username: saved.username }); } catch (e) { AGP.log('formula-race: connect failed', e); }
         updateLive();
     }
@@ -1140,6 +1192,17 @@
         $('wNew').onclick = newRace;
         $('wSame').onclick = function () { resetRace(); stopTest(); };
         $('soundBtn').onclick = function () { setSound(!settings.soundOn); };
+        // ملء الشاشة (زر بالهيدر) — يتبدّل نصه حسب الحالة، ومع بادئة webkit لسفاري
+        var docEl = document.documentElement;
+        function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+        function renderFs() { $('fsBtn').innerHTML = isFs() ? '🗗 <span>تصغير الشاشة</span>' : '⛶ <span>ملء الشاشة</span>'; }
+        $('fsBtn').onclick = function () {
+            try {
+                if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                else { var r = (docEl.requestFullscreen || docEl.webkitRequestFullscreen).call(docEl); if (r && r.catch) r.catch(function () {}); }
+            } catch (e) {}
+        };
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) { document.addEventListener(ev, renderFs); });
         // أول ضغطة/زر بالصفحة يفتح الصوت (المتصفح يمنع الصوت قبل تفاعل)
         ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockAudio, { passive: true }); });
         $('exitBtn').onclick = function () { location.href = '../../games.html'; };
