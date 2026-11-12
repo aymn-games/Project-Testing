@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="js/agp-core.js"></script>
 <script src="js/agp-remote-games.js"></script>
 <script src="js/agp-remote-control.js"></script>
-<!-- تنبيه «مرة وحدة» بالمكتبة: إطلاق التحكم عن بعد (js/agp-library-notice.js) -->
+<!-- تنبيه «مرة وحدة» بالمكتبة: «السن بالسن» — شيك الألعاب الجديدة فوق (js/agp-library-notice.js) -->
 <script src="js/agp-library-notice.js"></script>
 <script>
 (function(){
@@ -2371,55 +2371,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (__refreshTries >= 30) clearInterval(__refreshTimer);
     }, 300);
   })();
-</script>
-<!-- تنويه التعليق المؤقت — نافذة بمكتبة الألعاب لكل حساب مسجّل: مرتين بس، وبين
-     المرتين 30 دقيقة على الأقل (localStorage 'agp-notice-freeze-v1:<id>' = {n, t}).
-     تشرح إن التعليق بالألعاب لثواني بس وسببه رفع ملفات وتحديثات. -->
-<script>
-(function () {
-  var MAX_TIMES = 2, GAP_MS = 30 * 60 * 1000;
-
-  function show() {
-    if (document.getElementById('agp-freeze-notice')) return;
-    var A = window.AGPAuth, u = null;
-    try { u = A && A.getToken && A.getToken() && A.getCachedUser ? A.getCachedUser() : null; } catch (e) {}
-    if (!u || !u.id) return;
-    var key = 'agp-notice-freeze-v1:' + u.id, st = { n: 0, t: 0 };
-    try { st = JSON.parse(localStorage.getItem(key)) || st; } catch (e) { return; }
-    if ((st.n || 0) >= MAX_TIMES || Date.now() - (st.t || 0) < GAP_MS) return;
-    try { localStorage.setItem(key, JSON.stringify({ n: (st.n || 0) + 1, t: Date.now() })); } catch (e) { return; }
-
-    var css = document.createElement('style');
-    css.textContent =
-      '@keyframes agpFzIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}' +
-      '#agp-freeze-notice{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;direction:rtl;font-family:"IBM Plex Sans Arabic",sans-serif;background:rgba(5,5,8,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
-      '#agp-freeze-notice .bx{width:min(380px,100%);max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;padding:24px 22px 20px;border-radius:26px;color:#f4f2fb;text-align:center;' +
-        'background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(178,140,245,.22),transparent 70%),linear-gradient(180deg,#1b1530,#0c0a14);border:1px solid rgba(178,140,245,.4);box-shadow:0 30px 80px -30px rgba(0,0,0,.95),0 0 70px -25px #8b5cf6;animation:agpFzIn .45s cubic-bezier(.22,1,.36,1) both}' +
-      '#agp-freeze-notice .tag{display:inline-flex;padding:4px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:#ddd6fe;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35)}' +
-      '#agp-freeze-notice img.fz-ph{display:block;width:200px;height:200px;object-fit:cover;margin:16px auto 14px;border-radius:22px;border:2px solid rgba(178,140,245,.45);box-shadow:0 12px 34px -10px rgba(139,92,246,.6)}' +
-      '#agp-freeze-notice p{margin:0;font-size:15px;line-height:1.9;color:#e2dcef}' +
-      '#agp-freeze-notice p b{color:#c4b5fd}' +
-      '#agp-freeze-notice img:not(.fz-ph){width:1.15em;height:1.15em;vertical-align:-.2em;margin:0;border:0;box-shadow:none}' +
-      '#agp-freeze-notice .bx button.fz-ok{display:block;margin-top:18px;width:100%;height:48px;padding:0;border:none;border-radius:999px;background:linear-gradient(90deg,#7a3fd4,#b28cf5);color:#fff;font:700 15.5px "IBM Plex Sans Arabic",sans-serif;cursor:pointer;box-shadow:0 10px 30px rgba(139,92,246,.4)}';
-    document.head.appendChild(css);
-
-    var ov = document.createElement('div');
-    ov.id = 'agp-freeze-notice';
-    ov.innerHTML = '<div class="bx" role="dialog" aria-modal="true" aria-label="تنويه">' +
-      '<span class="tag">💜 تنويه</span>' +
-      '<img class="fz-ph" src="notice-freeze.jpg" alt="">' +
-      '<p>التعليق اللي يصير بالألعاب <b>لثواني بس</b>، وسببه إني جالس أرفع ملفات وتحديثات جديدة للمنصة.<br>آسفين يا عسل، انت وياه 🤍</p>' +
-      '<button type="button" class="fz-ok" data-fz-close>فهمت</button>' +
-    '</div>';
-    ov.addEventListener('click', function (e) {
-      if (e.target === ov || e.target.closest('[data-fz-close]')) ov.remove();
-    });
-    document.body.appendChild(ov);
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(show, 900); });
-  else setTimeout(show, 900);
-})();
 </script>
 </body>
 </html>
