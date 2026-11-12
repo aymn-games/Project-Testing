@@ -91,9 +91,8 @@ export function createTugScene(container, opts = {}) {
     const floor = new T.Mesh(new T.BoxGeometry(46, .3, 30), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 11.5); floor.receiveShadow = true; sc.add(floor);
     const edge = new T.Mesh(new T.BoxGeometry(46.2, .06, 30.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 11.5); sc.add(edge);
     const lineM = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: .95 });
-    const mid = new T.Mesh(new T.PlaneGeometry(.06, 30), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.set(0, .01, 11.5); sc.add(mid);
-    for (const k of [0, 1]) { const wl = new T.Mesh(new T.PlaneGeometry(.12, 30), lineM(colors[k])); wl.rotation.x = -Math.PI / 2; wl.position.set((k ? 1 : -1) * SHIFT, .012, 11.5); sc.add(wl);
-        const glow = new T.Mesh(new T.PlaneGeometry(.7, 30), new T.MeshBasicMaterial({ color: colors[k], transparent: true, opacity: .18, depthWrite: false })); glow.rotation.x = -Math.PI / 2; glow.position.set(wl.position.x, .011, 11.5); sc.add(glow); }
+    const mid = new T.Mesh(new T.PlaneGeometry(.1, 30), lineM('#ffffff')); mid.rotation.x = -Math.PI / 2; mid.position.set(0, .01, 11.5); sc.add(mid);
+    // ما فيه خطوط فوز: الإقصاء لما يتعدى اللاعب خط النص، والفوز بإقصاء كل الفريق الثاني
 
     // ---- الخلفية: ساحة ليلية ثري دي ثابتة (بدون أي حركة): سماء بنجوم، أرض عشب صناعي،
     //      مدرجات فاضية بلون الفريقين، جدار خلفي بلوحة «شد الحبل»، وأعمدة إضاءة.
@@ -168,14 +167,16 @@ export function createTugScene(container, opts = {}) {
         const seen = new Set();
         const n = Math.max(state.teams[0].length, state.teams[1].length);
         state.teams.forEach((list, k) => {
-            const dir = k ? 1 : -1;
+            const dir = k ? 1 : -1; let ai = 0;
             list.forEach((p, i) => {
                 const id = p.id || p.name; seen.add(id); let f = figs.get(id);
                 if (!f || f.k !== k) { if (f) drop(f); f = makeFig(p, k); if (!f) return; figs.set(id, f); }
-                f.x = dir * slot(i, n); f.z = 0; f.frozen = !!p.frozen; // صف واحد على الحبل
+                // مكان اللاعب حسب ترتيبه بين الباقين بالحبل: لما ينقصى اللي قدامه يتقدّم مكانه (بنعومة بـ frame)
+                if (!p.out) { f.x = dir * slot(ai, n); ai++; if (f.cx == null) f.cx = f.x; }
+                f.z = 0; f.frozen = !!p.frozen;
                 if (p.out && !f.outAt) { f.outAt = clock.elapsedTime; burstAt(f, '#f97316', 46, 4.2); burstAt(f, '#fde68a', 22, 3); }
                 if (!p.out) { f.outAt = 0; f.outer.visible = true; f.outer.scale.setScalar(1); }
-                if (!f.outAt) f.outer.position.set(f.x, 0, f.z); { const lw = Math.min(1.9, stepFor(n) * 1.7); f.sp.scale.set(lw, lw / 4, 1); f.ly = 2.25 + (i % 2) * (lw / 4 + .08); } // الأسماء كبيرة، وبطابقين متبادلين عشان ما تتراكب
+                if (!f.outAt) f.outer.position.set(f.cx, 0, f.z); { const lw = Math.min(1.9, stepFor(n) * 1.7); f.sp.scale.set(lw, lw / 4, 1); f.ly = 2.25 + (i % 2) * (lw / 4 + .08); } // الأسماء كبيرة، وبطابقين متبادلين عشان ما تتراكب
             });
         });
         for (const [id, f] of figs) if (!seen.has(id)) { drop(f); figs.delete(id); }
@@ -272,7 +273,8 @@ export function createTugScene(container, opts = {}) {
             // heave = سرعة تكبيس الفريق (0..1): الفريق كامل يشد بإيقاع، وكل ما زاد التكبيس زادت الشدّة
             const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.18 + .14 * Math.sin(t * 11 + f.ph * .3));
             const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .35 + (won ? -.3 : 0);
-            if (!f.frozen && !won && !lost) f.outer.position.x = f.x + (f.k ? 1 : -1) * hv * .08 * (1 + Math.sin(t * 11 + f.ph * .3));
+            f.cx += (f.x - f.cx) * (1 - Math.exp(-dt * 3));
+            f.outer.position.x = f.cx + (!f.frozen && !won && !lost ? (f.k ? 1 : -1) * hv * .08 * (1 + Math.sin(t * 11 + f.ph * .3)) : 0);
             f.ice.visible = !!f.frozen;
             poseShip(f, lean, t, won ? 'win' : lost ? 'lose' : null);
             f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
