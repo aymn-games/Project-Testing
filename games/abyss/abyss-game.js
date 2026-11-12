@@ -345,6 +345,17 @@
         if (!$('evPanel').contains(e.target)) $('evPanel').hidden = true;
         if (!$('setPanel').contains(e.target) && !$('bSettings').contains(e.target)) $('setPanel').hidden = true;
     });
+    // ملء الشاشة: يكبّر صفحة اللعبة على كامل الشاشة (للبث بـ OBS أو شاشة ثانية)، والضغطة الثانية ترجّعها
+    function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
+    function paintFs() { $('fsLbl').textContent = fsEl() ? 'خروج من ملء الشاشة' : 'ملء الشاشة'; }
+    $('bFull').onclick = function () {
+        var d = document, el = d.documentElement;
+        try {
+            if (fsEl()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+            else { var r = (el.requestFullscreen || el.webkitRequestFullscreen).call(el); if (r && r.catch) r.catch(function () {}); }
+        } catch (e) {}
+    };
+    document.addEventListener('fullscreenchange', paintFs); document.addEventListener('webkitfullscreenchange', paintFs);
     $('bAuto').onclick = function () { var b = $('bAuto'); b.setAttribute('aria-checked', b.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); };
     $('wExit').onclick = function () { $('exitDlg').hidden = false; };
     $('wNew').onclick = goLobby;
