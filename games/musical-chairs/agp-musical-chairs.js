@@ -201,18 +201,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.head.appendChild(script);
     }
 
+    // ⚠️ صوت واحد بس بنفس الوقت: التجربة توقف أغنية الدوران مؤقتاً، ولما
+    // تخلص التجربة ترجع أغنية الدوران تكمل (لو الدوران لسه شغّال).
     function stopPreview() {
-        if (_previewAudio) {
-            try { _previewAudio.pause(); } catch (e) {}
-            _previewAudio = null;
-        }
+        if (!_previewAudio) return;
+        try { _previewAudio.onended = null; _previewAudio.pause(); } catch (e) {}
+        _previewAudio = null;
         _previewId = null;
+        if (_currentMusicAudio && _phase === 'playing') {
+            try {
+                var p = _currentMusicAudio.play();
+                if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+            } catch (e) {}
+        }
     }
 
     function togglePreview(song) {
         var same = _previewId === song.id;
         stopPreview();
         if (!same) {
+            if (_currentMusicAudio) { try { _currentMusicAudio.pause(); } catch (e) {} }
             _previewAudio = new Audio(song.url);
             _previewAudio.volume = _musicMuted ? 0 : _musicVolume;
             _previewAudio.onended = function () { stopPreview(); renderSongPanel(); };
@@ -277,6 +285,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             try { _currentMusicAudio.onerror = null; _currentMusicAudio.pause(); _currentMusicAudio.currentTime = 0; } catch (e) {}
             _currentMusicAudio = null;
         }
+        stopPreview(); // وقت اختيار الكراسي ما يشتغل أي صوت
         if (_nowPlaying) { _nowPlaying = null; renderSongPanel(); }
     }
 
@@ -701,6 +710,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // نافذة إضافة لاعب
             '#mc-add-modal{z-index:60;}',
             '#mc-add-modal .mc-card{width:520px;height:700px;max-width:100%;gap:16px;overflow:hidden;}',
+            '#mc-song-modal .mc-card{width:min(560px,100%);gap:16px;}',
+            '.mc-song-search{display:flex;flex-direction:column;gap:14px;}',
             '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:var(--mc-label);}',
             '.mc-add-done{flex-shrink:0;height:56px;font-size:18px;}',
             '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;',
@@ -1077,6 +1088,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<header class="mc-header">' +
                 '<div class="mc-header-btns">' +
                     '<button type="button" class="mc-hbtn" id="mc-add-btn" title="إضافة لاعب جديد">➕ إضافة لاعب</button>' +
+                    '<button type="button" class="mc-hbtn" id="mc-song-btn" title="ابحث عن أغنية وشغّلها بالدوران">🎵 اختر أغنيتك</button>' +
                     '<button type="button" class="mc-hbtn" id="mc-settings-btn" title="الإعدادات">⚙️ الإعدادات</button>' +
                     '<button type="button" class="mc-hbtn" id="mc-panel-btn" title="قائمة الإجراءات">☰ الإجراءات</button>' +
                     '<button type="button" class="mc-spin-btn" id="mc-spin-btn">▶ تدوير</button>' +
@@ -1110,27 +1122,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<div class="mc-gs-row"><div class="mc-gs-lbl-row"><label>مستوى الصوت</label><span id="mc-vol-val">40%</span></div>' +
                             '<div class="mc-vol"><button type="button" class="mc-mute-btn" id="mc-mute-btn" title="كتم/تشغيل الصوت">🔊</button><input type="range" id="mc-volume-slider" min="0" max="100" value="40"></div></div>' +
                     '</section>' +
-                    '<section class="mc-game-settings mc-song-search">' +
-                        '<div class="mc-gs-title">🔍 البحث عن أغنية</div>' +
-                        '<form class="mc-song-form" id="mc-song-form" autocomplete="off">' +
-                            '<input type="search" id="mc-song-q" placeholder="اسم الأغنية أو الفنان" maxlength="80">' +
-                            '<button type="submit" id="mc-song-go">بحث</button>' +
-                        '</form>' +
-                        '<div class="mc-gs-row">' +
-                            '<div class="mc-song-msg" id="mc-song-msg"></div>' +
-                            '<ul class="mc-song-list mc-song-results" id="mc-song-results"></ul>' +
-                        '</div>' +
-                        '<div class="mc-gs-row">' +
-                            '<div class="mc-song-now" id="mc-song-now"></div>' +
-                            '<div class="mc-song-sub"><span>⏭ الجولة الجاية</span></div>' +
-                            '<ul class="mc-song-list" id="mc-song-next"></ul>' +
-                        '</div>' +
-                        '<div class="mc-gs-row">' +
-                            '<div class="mc-song-sub"><span>📜 قائمة التشغيل (<span id="mc-song-pl-count">0</span>)</span>' +
-                                '<button type="button" id="mc-song-pl-clear" hidden>مسح القائمة</button></div>' +
-                            '<ul class="mc-song-list" id="mc-song-playlist"></ul>' +
-                        '</div>' +
-                    '</section>' +
                 '</div></aside>' +
                 '<section class="mc-arena"><div class="mc-cq"><div class="mc-circle" id="mc-circle">' +
                     '<div class="mc-ring"><div></div></div>' +
@@ -1140,6 +1131,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div id="mc-players"></div>' +
                 '</div></div></section>' +
             '</main>' +
+
+            '<div class="mc-modal" id="mc-song-modal"><div class="mc-card">' +
+                '<div class="mc-card-head"><div class="mc-card-title">🎵 اختر أغنيتك</div>' +
+                '<button type="button" class="mc-x" id="mc-song-x" title="إغلاق">✕</button></div>' +
+                '<div class="mc-song-search">' +
+                    '<form class="mc-song-form" id="mc-song-form" autocomplete="off">' +
+                        '<input type="search" id="mc-song-q" placeholder="اسم الأغنية أو الفنان" maxlength="80">' +
+                        '<button type="submit" id="mc-song-go">بحث</button>' +
+                    '</form>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-msg" id="mc-song-msg"></div>' +
+                        '<ul class="mc-song-list mc-song-results" id="mc-song-results"></ul>' +
+                    '</div>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-now" id="mc-song-now"></div>' +
+                        '<div class="mc-song-sub"><span>⏭ الجولة الجاية</span></div>' +
+                        '<ul class="mc-song-list" id="mc-song-next"></ul>' +
+                    '</div>' +
+                    '<div class="mc-gs-row">' +
+                        '<div class="mc-song-sub"><span>📜 قائمة التشغيل (<span id="mc-song-pl-count">0</span>)</span>' +
+                            '<button type="button" id="mc-song-pl-clear" hidden>مسح القائمة</button></div>' +
+                        '<ul class="mc-song-list" id="mc-song-playlist"></ul>' +
+                    '</div>' +
+                '</div>' +
+            '</div></div>' +
 
             '<div class="mc-modal" id="mc-add-modal"><div class="mc-card">' +
                 '<div class="mc-card-head"><div class="mc-card-title">➕ إضافة لاعب جديد</div>' +
@@ -1232,7 +1248,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* -------- البحث عن أغنية: الواجهة -------- */
+    function openSongModal() {
+        renderSongPanel();
+        openModal('mc-song-modal');
+        var q = el('mc-song-q');
+        if (q) setTimeout(function () { q.focus(); }, 50);
+    }
+    function closeSongModal() {
+        stopPreview();
+        renderSongPanel();
+        closeModal('mc-song-modal');
+    }
+
     function wireSongSearch() {
+        el('mc-song-btn').onclick = openSongModal;
+        el('mc-song-x').onclick = closeSongModal;
+        el('mc-song-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-song-modal') closeSongModal(); });
         el('mc-song-form').onsubmit = function (e) {
             e.preventDefault();
             var q = el('mc-song-q').value.trim();
@@ -1262,6 +1293,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var act = b.getAttribute('data-act');
             var id = b.getAttribute('data-id');
             var song = findSong(id);
+            // اختيار أغنية يوقف تجربتها، عشان ما تكمل فوق أغنية الدوران
+            if ((act === 'next' || act === 'add') && _previewId === id) stopPreview();
             if (act === 'preview' && song) togglePreview(song);
             else if (act === 'next' && song) _nextSong = (_nextSong && _nextSong.id === id) ? null : song;
             else if (act === 'add' && song && !_playlist.some(function (s) { return s.id === id; })) _playlist.push(song);
