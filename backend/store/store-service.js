@@ -57,11 +57,12 @@ function round2(n) { return Math.round(n * 100) / 100; }
 /**
  * صور المنتجات/الاستريمرز: إما ملف داخل المستودع (مسار نسبي بسيط مثل
  * assets/win-cards/x.png) أو رابط Cloudinary مرفوع من لوحة الأدمن لمجلد
- * المتجر. أي شيء غير ذلك يُرفض.
+ * المتجر. أي شيء غير ذلك يُرفض. SVG مسموح لملفات المستودع فقط (إطارات
+ * متحركة مثل frame-joker-circus.svg)، مو للرفع، لأن SVG مرفوع ممكن يحمل سكربت.
  */
 function isAllowedImageUrl(url) {
     if (url === '') return true;
-    if (/^[A-Za-z0-9_\-]+(\/[A-Za-z0-9_\-.]+)*\.(png|jpe?g|webp|gif)$/i.test(url) && url.indexOf('..') === -1) return true;
+    if (/^[A-Za-z0-9_\-]+(\/[A-Za-z0-9_\-.]+)*\.(png|jpe?g|webp|gif|svg)$/i.test(url) && url.indexOf('..') === -1) return true;
     if (!config.cloudinaryCloudName) return false;
     var prefix = 'https://res.cloudinary.com/' + config.cloudinaryCloudName + '/image/upload/';
     return url.indexOf(prefix) === 0 && /\/agp-store\//.test(url) && /^[A-Za-z0-9_\-.\/:]+$/.test(url);
