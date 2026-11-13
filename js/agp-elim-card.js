@@ -135,6 +135,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             textColor: 'linear-gradient(180deg,#fff3c4 0%,#e9c77b 45%,#b8863b 100%)',
             fontScale: 0.85,
             avatarBg: '#111216'
+        },
+        // باتمان — منح محدود (باكج مع إطار frame-batman.png وبطاقة الفوز).
+        // 1642×958 (نفس مقاس القطة والفرس). "عملية إقصاء" مطبوعة باللوح
+        // الأوسط، واللوح السفلي كان أبيض فتلوّن أسود فحمي، فالجملة "X أقصى Y"
+        // تنكتب فيه تحت شعار الخفاش بتدرّج ذهبي. بدون صوت حالياً.
+        'batman': {
+            image: 'elim-card-batman.png',
+            width: 1642,
+            height: 958,
+            actorHole: { x: 1153, y: 233, w: 352, h: 344 },  // right circle
+            targetHole: { x: 137, y: 234, w: 353, h: 343 },  // left circle
+            holeBleed: 8,
+            textBox: { x: 330, y: 722, w: 980, h: 85 },      // bottom panel, under the bat emblem
+            textColor: 'linear-gradient(180deg,#fff3b0 0%,#f5c518 50%,#c8930a 100%)',
+            fontScale: 0.9,
+            avatarBg: '#111216'
         }
     };
 

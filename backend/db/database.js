@@ -735,6 +735,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-bronze-bat.png', display_name_ar: 'الخفاش البرونزي (منح محدود)' },
     { image_filename: 'frame-blue-kitty.png', display_name_ar: 'القطة الزرقاء (منح محدود)' },
     { image_filename: 'frame-black-pegasus.png', display_name_ar: 'الفرس المجنّح الأسود (منح محدود)' },
+    { image_filename: 'frame-batman.png', display_name_ar: 'باتمان (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
@@ -760,7 +761,9 @@ migrateSingleCardTable('user_win_cards');
 [
     { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' },
     // إطار + بطاقة إقصاء بس (ما لها بطاقة فوز للحين).
-    { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true }
+    { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true },
+    // إطار + بطاقة إقصاء + بطاقة فوز.
+    { name: 'باتمان (منح محدود)', frameImage: 'frame-batman.png', cardKey: 'batman' }
 ].forEach(function (bundle) {
     if (db.prepare('SELECT id FROM bundles WHERE name = ?').get(bundle.name)) return;
     var frame = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(bundle.frameImage);

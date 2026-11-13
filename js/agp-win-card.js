@@ -109,8 +109,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // (206→818 × 361→953، بيضاوية قليلاً)، الاسم باللوح الأسود الأوسط
         // (168→855 × 992→1149)، والنقاط/الترتيب باللوح السفلي الكبير
         // (122→906 × 1192→1439). اللوحان أسود فحمي — نص ذهبي.
-        'batman-black': {
-            image: 'win-card-batman-black.png',
+        'batman': {
+            image: 'win-card-batman.png',
             width: 1024,
             height: 1536,
             photoHole: { x: 206, y: 361, w: 612, h: 592 },
