@@ -448,7 +448,8 @@ var WIN_CARD_CATALOG = [
   { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' },
   // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
   { key: 'sakura-pink', displayNameAr: 'بطاقة الفوز — ساكورا الوردي (منح محدود)', imageFilename: 'assets/win-cards/win-card-sakura-pink.png', limited: true },
-  { key: 'blue-kitty', displayNameAr: 'بطاقة الفوز — القطة الزرقاء (منح محدود)', imageFilename: 'assets/win-cards/win-card-blue-kitty.png', limited: true }
+  { key: 'blue-kitty', displayNameAr: 'بطاقة الفوز — القطة الزرقاء (منح محدود)', imageFilename: 'assets/win-cards/win-card-blue-kitty.png', limited: true },
+  { key: 'batman-black', displayNameAr: 'بطاقة الفوز — باتمان (منح محدود)', imageFilename: 'assets/win-cards/win-card-batman-black.png', limited: true }
 ];
 
 function getWinCardCatalog() {
