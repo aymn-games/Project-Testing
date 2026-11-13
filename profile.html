@@ -627,6 +627,34 @@
   .pf-plat-twitch .pf-plat-logo{background:#9146ff;border-color:rgba(255,255,255,.2)}
   .pf-tt-row.off .pf-tt-handle{white-space:normal}
 
+  /* ربط المنصات: بطاقات جنب بعض، كل وحدة بلون منصتها */
+  .pf-plats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+  .pf-plat{--pc:255,255,255;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r-lg);
+    background:linear-gradient(165deg,rgba(var(--pc),.14),rgba(255,255,255,.02) 55%),var(--glass-1);border:1px solid rgba(var(--pc),.28);box-shadow:var(--lift-sm);
+    -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);transition:transform .25s var(--ease),border-color .25s}
+  .pf-plat:hover{transform:translateY(-3px);border-color:rgba(var(--pc),.5)}
+  .pf-plat::after{content:"";position:absolute;width:140px;height:140px;inset-inline-end:-50px;top:-60px;border-radius:50%;background:radial-gradient(closest-side,rgba(var(--pc),.22),transparent);pointer-events:none}
+  .pf-plat-tiktok{--pc:254,44,85}
+  .pf-plat-kick{--pc:83,252,24}
+  .pf-plat-twitch{--pc:145,70,255}
+  .pf-plat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+  .pf-plat-logo{width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#000;border:1px solid rgba(var(--pc),.4);
+    box-shadow:0 10px 22px -12px rgba(var(--pc),.9)}
+  .pf-plat-logo img,.pf-plat-logo svg{width:30px;height:30px;display:block}
+  .pf-plat-kick .pf-plat-logo{background:#0b0e0b}
+  .pf-plat-twitch .pf-plat-logo{background:#9146ff;border-color:rgba(255,255,255,.25)}
+  .pf-plat-name{font-size:17px;font-weight:800}
+  .pf-plat-line{flex:1;font-size:12.5px;color:var(--ink-3);line-height:1.6;min-height:40px;overflow-wrap:anywhere}
+  .pf-plat.on .pf-plat-line{direction:ltr;text-align:right;color:var(--ink-2)}
+  .pf-plat-btn{position:relative;z-index:1;height:38px;margin-top:6px;border-radius:12px;cursor:pointer;font:inherit;font-size:13.5px;font-weight:800;color:#fff;
+    background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.02) 55%),rgba(var(--pc),.3);border:1px solid rgba(var(--pc),.6);
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset;transition:background .2s,transform .15s var(--ease)}
+  .pf-plat-btn:hover:not(:disabled){background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.03) 55%),rgba(var(--pc),.42)}
+  .pf-plat-btn:active:not(:disabled){transform:scale(.97)}
+  .pf-plat-btn:disabled{cursor:not-allowed;color:var(--ink-3);background:rgba(255,255,255,.03);border:1px dashed rgba(var(--pc),.4);box-shadow:none}
+  .pf-plat-btn.danger{color:var(--rose);background:rgba(240,138,160,.08);border-color:rgba(240,138,160,.4)}
+  .pf-wallet-coin{width:88px;height:88px}
+
   /* ---------------------------------------------------------- تجاوب */
   @media (max-width:1200px){ .pf-row2{grid-template-columns:minmax(0,1fr)} :root{--side-w:220px} }
   @media (min-width:1201px){
@@ -722,6 +750,16 @@
     .pf-wallet-coin{width:56px;height:56px}
     .pf-wallet-v{font-size:24px}
     .pf-howgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+    .pf-plats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .pf-plat{padding:10px 8px;gap:4px;border-radius:14px;align-items:center;text-align:center}
+    .pf-plat-top{flex-direction:column;align-items:center;gap:6px;margin-bottom:2px}
+    .pf-plat-logo{width:40px;height:40px;border-radius:12px}
+    .pf-plat-logo img,.pf-plat-logo svg{width:23px;height:23px}
+    .pf-plat-top .pf-pill{height:20px;font-size:10.5px;padding:0 7px}
+    .pf-plat-name{font-size:14px}
+    .pf-plat-line{display:none}
+    .pf-plat-btn{width:100%;height:32px;font-size:12px;border-radius:10px;margin-top:4px}
+    .pf-wallet-coin{width:64px;height:64px}
     .pf-how{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:10px}
     .pf-how-d{flex-basis:100%}
     .pf-grant-form{grid-template-columns:minmax(0,1fr) 96px}

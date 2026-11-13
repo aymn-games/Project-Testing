@@ -269,7 +269,7 @@
     if (S.owner) {
       if (p.role === 'admin') acts.appendChild(h('a', { href: 'admin.html', class: 'pf-btn pf-btn-ghost' }, 'لوحة الأدمن'));
       acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost', onclick: function () { openEditModal(); } }, 'تعديل الملف'));
-      if (window.AGPProfileCard) acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'صورة بروفايل'));
+      if (window.AGPProfileCard) acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'بطاقة إحصائياتي'));
     }
     paintModeSwitch();
   }
@@ -534,10 +534,10 @@
     return h('div', { class: 'pf-cardrow' }, [
       h('span', { class: 'pf-cardrow-ic' }, icon('frame')),
       h('div', { class: 'pf-lrow-txt' }, [
-        h('div', { class: 'pf-lrow-t', text: 'صورة إحصائياتك' }),
-        h('div', { class: 'pf-lrow-s', text: 'صورة ستوري فيها مستواك ونقاطك وفوزك، تحفظها وتشاركها.' })
+        h('div', { class: 'pf-lrow-t', text: 'بطاقة إحصائياتك' }),
+        h('div', { class: 'pf-lrow-s', text: 'مستواك ونقاطك وعدد فوزك بصورة وحدة جاهزة للستوري.' })
       ]),
-      h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'صورة بروفايل')
+      h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'بطاقة إحصائياتي')
     ]);
   }
 
@@ -551,28 +551,41 @@
     return s;
   }
   function renderPlatforms(body, p) {
-    body.appendChild(tiktokRow(p));
-    [
-      { kind: 'kick', name: 'كيك', desc: 'اربط قناتك على كيك عشان تشغّل الألعاب لمتابعينك هناك.' },
-      { kind: 'twitch', name: 'تويتش', desc: 'اربط قناتك على تويتش وخل الشات يلعب معك.' }
-    ].forEach(function (pl) {
-      body.appendChild(h('div', { class: 'pf-panel pf-tt-row off pf-plat-' + pl.kind }, [
-        h('span', { class: 'pf-tt-logo pf-plat-logo' }, platformLogo(pl.kind)),
-        h('div', { class: 'pf-tt-id' }, [
-          h('div', { class: 'pf-tt-title', text: 'حساب ' + pl.name }),
-          h('div', { class: 'pf-tt-handle', text: pl.desc })
-        ]),
-        h('button', { type: 'button', class: 'pf-btn pf-btn-soon pf-btn-sm', disabled: true, title: 'إطلاق جديد قريباً' }, 'قريباً')
-      ]));
-    });
+    var linked = !!p.tiktok_verified;
+    var grid = h('div', { class: 'pf-plats' });
+    grid.appendChild(platformCard({
+      kind: 'tiktok', name: 'تيك توك', logo: h('img', { src: 'tiktok-logo.png', alt: '' }),
+      status: linked ? pill('مربوط', 'ok') : pill('غير مربوط', 'warn'),
+      line: linked ? (p.tiktok_username ? '@' + p.tiktok_username : 'الحساب مرتبط') : 'نقاطك وشخصيتك بالألعاب تحتاج ربط',
+      button: tiktokButton(p), on: linked
+    }));
+    grid.appendChild(platformCard({
+      kind: 'kick', name: 'كيك', logo: platformLogo('kick'), status: pill('قريباً'),
+      line: 'شغّل الألعاب لمتابعينك على كيك',
+      button: h('button', { type: 'button', class: 'pf-plat-btn', disabled: true, title: 'إطلاق جديد قريباً' }, 'ربط كيك')
+    }));
+    grid.appendChild(platformCard({
+      kind: 'twitch', name: 'تويتش', logo: platformLogo('twitch'), status: pill('قريباً'),
+      line: 'خل شات تويتش يلعب معك',
+      button: h('button', { type: 'button', class: 'pf-plat-btn', disabled: true, title: 'إطلاق جديد قريباً' }, 'ربط تويتش')
+    }));
+    body.appendChild(grid);
+    body.appendChild(h('p', { class: 'pf-hint', text: 'الربط رسمي من المنصة نفسها، وما نشوف كلمة المرور أبداً.' }));
+  }
+  function platformCard(o) {
+    return h('div', { class: 'pf-plat pf-plat-' + o.kind + (o.on ? ' on' : ''), id: o.kind === 'tiktok' ? 'tiktok' : null }, [
+      h('div', { class: 'pf-plat-top' }, [h('span', { class: 'pf-plat-logo' }, o.logo), o.status]),
+      h('div', { class: 'pf-plat-name', text: o.name }),
+      h('div', { class: 'pf-plat-line', text: o.line }),
+      o.button
+    ]);
   }
 
-  // صف تيك توك المختصر: الشعار والحالة يمين، والزر يسار
-  function tiktokRow(p) {
-    var linked = !!p.tiktok_verified;
+  // زر تيك توك: ربط بتسجيل الدخول الرسمي، أو إلغاء الربط
+  function tiktokButton(p) {
     var btn;
-    if (linked) {
-      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-danger pf-btn-sm', text: 'إلغاء الربط' });
+    if (p.tiktok_verified) {
+      btn = h('button', { type: 'button', class: 'pf-plat-btn danger', text: 'إلغاء الربط' });
       // POST /api/auth/tiktok/unlink عبر AGPAuth.unlinkTikTok
       btn.addEventListener('click', function () {
         if (!window.confirm('متأكد تبي تلغي ربط حساب تيك توك؟')) return;
@@ -585,7 +598,7 @@
         }).catch(function () { btn.disabled = false; });
       });
     } else {
-      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'ربط تيك توك' });
+      btn = h('button', { type: 'button', class: 'pf-plat-btn', text: 'ربط تيك توك' });
       // تسجيل دخول تيك توك الرسمي — انتقال مباشر لخادمنا وهو يحوّل (302) لتيك توك
       // (backend/auth/tiktok-oauth-service.js). جلب الرابط بالخلفية طلّع شاشة بيضاء عند ناس كثير.
       btn.addEventListener('click', function () {
@@ -595,14 +608,7 @@
         window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
       });
     }
-    return h('div', { class: 'pf-panel pf-tt-row' + (linked ? '' : ' off'), id: 'tiktok' }, [
-      h('span', { class: 'pf-tt-logo' }, h('img', { src: 'tiktok-logo.png', alt: 'تيك توك' })),
-      h('div', { class: 'pf-tt-id' }, [
-        h('div', { class: 'pf-tt-title' }, ['حساب تيك توك ', linked ? pill('موثّق', 'ok') : pill('غير مربوط', 'warn')]),
-        h('div', { class: 'pf-tt-handle', text: linked ? (p.tiktok_username ? '@' + p.tiktok_username : 'مرتبط') : 'اربطه عشان تنحسب نقاطك وتطلع شخصيتك بالألعاب' })
-      ]),
-      btn
-    ]);
+    return btn;
   }
 
   function renderLevel(body, p) {
@@ -759,15 +765,38 @@
   }
 
   /* ---------- محفظة عملات أيمن (تصميم جاهز — النظام نفسه ينبني لاحقاً) */
+  // عملة أيمن: إطار ذهبي محزّز، وجه بنفسجي غائر، وحرف A بارز مع لمعة.
+  var coinSeq = 0;
   function coinSvg(cls) {
+    var id = 'pfc' + (++coinSeq);
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    s.setAttribute('viewBox', '0 0 64 64'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
+    s.setAttribute('viewBox', '0 0 128 128'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
+    var ridges = '';
+    for (var i = 0; i < 90; i++) ridges += '<rect x="63.2" y="3.5" width="1.6" height="7" rx=".8" transform="rotate(' + (i * 4) + ' 64 64)"/>';
+    var dots = '';
+    for (var k = 0; k < 24; k++) dots += '<circle cx="64" cy="20.5" r="' + (k % 6 === 0 ? 1.7 : 1) + '" transform="rotate(' + (k * 15) + ' 64 64)"/>';
     s.innerHTML =
-      '<defs><linearGradient id="pfCoinG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1c2"/><stop offset=".45" stop-color="#e8d8a6"/><stop offset="1" stop-color="#b48a3c"/></linearGradient>' +
-      '<linearGradient id="pfCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8c5ae0"/><stop offset="1" stop-color="#4a2290"/></linearGradient></defs>' +
-      '<circle cx="32" cy="32" r="30" fill="url(#pfCoinG)"/><circle cx="32" cy="32" r="24.5" fill="url(#pfCoinV)" stroke="#fff3cf" stroke-opacity=".55" stroke-width="1.5"/>' +
-      '<path d="M32 17 44.5 45h-6.2l-2.6-6.2h-7.4L25.7 45h-6.2zm0 11.2-2.4 6h4.8z" fill="#fff3cf"/>' +
-      '<circle cx="32" cy="32" r="28" fill="none" stroke="#fff" stroke-opacity=".35" stroke-dasharray="2 3.2"/>';
+      '<defs>' +
+        '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4cf"/><stop offset=".22" stop-color="#e9cf86"/><stop offset=".5" stop-color="#a77a2c"/><stop offset=".78" stop-color="#e9cf86"/><stop offset="1" stop-color="#7a5418"/></linearGradient>' +
+        '<linearGradient id="' + id + 'b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff1c4"/><stop offset=".5" stop-color="#8a6322"/><stop offset="1" stop-color="#f3dc9a"/></linearGradient>' +
+        '<radialGradient id="' + id + 'f" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#8f5cf0"/><stop offset=".55" stop-color="#4b1f97"/><stop offset="1" stop-color="#1c0b3d"/></radialGradient>' +
+        '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset=".45" stop-color="#ecd28d"/><stop offset="1" stop-color="#b48836"/></linearGradient>' +
+        '<linearGradient id="' + id + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+        '<clipPath id="' + id + 'c"><circle cx="64" cy="64" r="61"/></clipPath>' +
+      '</defs>' +
+      '<circle cx="64" cy="64" r="61" fill="url(#' + id + 'r)"/>' +
+      '<g fill="#5c3d0c" opacity=".35">' + ridges + '</g>' +
+      '<circle cx="64" cy="64" r="51.5" fill="url(#' + id + 'b)"/>' +
+      '<circle cx="64" cy="64" r="48" fill="url(#' + id + 'f)"/>' +
+      '<circle cx="64" cy="64" r="48" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/>' +
+      '<g fill="#e9cf86" opacity=".7">' + dots + '</g>' +
+      // حرف A بارز: ظل غامق تحت، والوجه الذهبي فوق
+      '<path transform="translate(1.5 2)" fill="#12052b" opacity=".55" fill-rule="evenodd" d="M64 33 87 92H74.5l-4.6-12.4H58.1L53.5 92H41zm0 18.5-4.3 15.8h8.6z"/>' +
+      '<path fill="url(#' + id + 'a)" fill-rule="evenodd" d="M64 33 87 92H74.5l-4.6-12.4H58.1L53.5 92H41zm0 18.5-4.3 15.8h8.6z"/>' +
+      '<path fill="none" stroke="#fff8e3" stroke-opacity=".7" stroke-width=".9" d="M64 33 41 92"/>' +
+      '<circle cx="64" cy="31.5" r="3.4" fill="#fff6d8"/><circle cx="41.5" cy="93" r="2.6" fill="#ecd28d"/><circle cx="86.5" cy="93" r="2.6" fill="#ecd28d"/>' +
+      '<g clip-path="url(#' + id + 'c)"><path d="M-6 52C18 14 62 0 104 6L96 -10H-10z" fill="url(#' + id + 's)"/></g>' +
+      '<circle cx="64" cy="64" r="61" fill="none" stroke="#fff4cf" stroke-opacity=".5" stroke-width="1"/>';
     return s;
   }
   function renderWallet(body) {
