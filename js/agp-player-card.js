@@ -410,6 +410,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 12.94, avatarTopPct: 26.85, avatarWidthPct: 17.13, avatarHeightPct: 49.86,
             nameLeftPct: 34.25, nameTopPct: 45.60, nameWidthPct: 42.13, nameHeightPct: 18.61
         },
+        // إطار باتمان — منح محدود (باكج مع بطاقة الإقصاء والفوز `batman`).
+        // الأصل 1254×1254 بفراغ شفاف فوق وتحت: قُص على حدود الإطار (544 ارتفاع)،
+        // وكُبّر لارتفاع 704 ووُسِّط على المقاس المعتمد 2172×724. مقاس بالبكسل
+        // على الملف النهائي: نافذة المحتوى 10→713، الفتحة الدائرية 432→881 ×
+        // 151→583، ولوح الاسم داخل اللوح الرمادي الداكن (965→1765 × 345→530).
+        // اللوح داكن — اسم ذهبي.
+        'frame-batman.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 703,
+            avatarLeftPct: 19.89, avatarTopPct: 20.06, avatarWidthPct: 20.67, avatarHeightPct: 61.45,
+            nameLeftPct: 44.43, nameTopPct: 47.65, nameWidthPct: 36.83, nameHeightPct: 26.32,
+            textColor: '#f5c518'
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص

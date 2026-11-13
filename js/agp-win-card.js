@@ -104,6 +104,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
             fallbackBg: '#dce7f7',
             fallbackColor: '#2b4a86'
+        },
+        // باتمان (أسود وذهبي) — منح محدود. 1024×1536. الدائرة شفافة
+        // (206→818 × 361→953، بيضاوية قليلاً)، الاسم باللوح الأسود الأوسط
+        // (168→855 × 992→1149)، والنقاط/الترتيب باللوح السفلي الكبير
+        // (122→906 × 1192→1439). اللوحان أسود فحمي — نص ذهبي.
+        'batman': {
+            image: 'win-card-batman.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 206, y: 361, w: 612, h: 592 },
+            holeBleed: 8,
+            nameBox: { x: 200, y: 1005, w: 624, h: 130 },
+            detailBox: { x: 160, y: 1210, w: 704, h: 210 },
+            textColor: 'linear-gradient(180deg,#fff3b0 0%,#f5c518 50%,#c8930a 100%)',
+            detailColor: 'linear-gradient(180deg,#fff3b0 0%,#f5c518 50%,#c8930a 100%)',
+            fallbackBg: '#141414',
+            fallbackColor: '#f5c518'
         }
     };
 
