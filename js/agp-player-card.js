@@ -462,6 +462,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 9.02, avatarTopPct: 19.42, avatarWidthPct: 20.40, avatarHeightPct: 63.17,
             nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
         },
+        // [الجوكر] إطار متحرك (SVG، تصميم أصلي) على المقاس المعتمد 2172×724:
+        // الحلقة تطلع → اللوح ينسحب من خلفها → الجواهر → الجوكرية والزينة
+        // تنفجر مع نجوم ودخان (~3ث)، بعدها لمبات ولمعة وغمزات بشكل مستمر.
+        // مقاس بالرندر النهائي: hole 218→642 × 140→564 (فتحة شفافة دائرية،
+        // كل الطبقات ممسوكة عنها بقناع)، name 790→1700 × 305→415 (داخل
+        // المخمل بين الجوهرتين والنجمة والقفاز)، content 2→720. اللوح كحلي
+        // غامق — اسم أبيض افتراضي. ملف المصدر يتولّد بسكربت (راجع CHANGELOG).
+        'frame-joker-circus.svg': {
+            canvasW: 2172, canvasH: 724, contentTop: 2, contentHeight: 718,
+            avatarLeftPct: 10.04, avatarTopPct: 19.22, avatarWidthPct: 19.52, avatarHeightPct: 59.05,
+            nameLeftPct: 36.37, nameTopPct: 42.20, nameWidthPct: 41.90, nameHeightPct: 15.32
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,
