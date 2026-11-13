@@ -666,8 +666,11 @@
     var grid = h('div', { class: 'pf-items pf-items-frames' });
     if (!frames.length) grid.appendChild(emptyNote('ما عندك إطارات بعد. تجيك من المتجر أو المستويات أو أكواد الجوائز.'));
     frames.forEach(function (f) {
-      var control = f.equipped ? null : (S.owner ? actionBtn('تفعيل', function () { return window.AGPAuth.equipFrame(f.frameType, f.frameRef); }) : null);
-      grid.appendChild(itemCard({ img: f.imageFilename, name: f.displayNameAr || f.frameRef, artHeight: 76, status: f.equipped ? pill('مفعّل', 'ok') : null, control: control }));
+      var ctl = h('div', { class: 'pf-item-ctl' }, [f.equipped ? null : (S.owner ? actionBtn('تفعيل', function () { return window.AGPAuth.equipFrame(f.frameType, f.frameRef); }) : null)]);
+      grid.appendChild(itemCard({ img: f.imageFilename, name: f.displayNameAr || f.frameRef, artHeight: 76, status: f.equipped ? pill('مفعّل', 'ok') : null, control: ctl }));
+      isAnimatedImage(f.imageFilename).then(function (moving) {
+        if (moving) ctl.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openFramePreview(f); } }, [icon('play'), 'معاينة الحركة']));
+      });
     });
     body.appendChild(panel('إطاراتي', S.owner ? h('a', { href: '#codes', class: 'pf-link', 'data-sec': 'codes' }, 'عندك كود؟') : plural(frames.length, 'إطار', 'إطار'), [grid]));
   }
@@ -695,20 +698,56 @@
     var grid = h('div', { class: 'pf-items pf-items-cards' });
     if (!list.length) grid.appendChild(emptyNote(emptyText));
     list.forEach(function (c) {
+      var extra = null;
+      // بطاقة الإقصاء: زر صوت بس لو لها صوت خاص. بطاقة الفوز: تطلع بحركة بالألعاب، فلها معاينة حركة.
+      if (kind === 'elim' && cardHasSound('elim', c)) {
+        extra = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { cardApi('elim').playSound(previewPlayer('elim', c), 1); } }, [icon('sound'), 'تشغيل الصوت']);
+      } else if (kind === 'win' && cardApi('win') && cardApi('win').canShow(previewPlayer('win', c))) {
+        extra = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview('win', c); } }, [icon('play'), 'معاينة الحركة']);
+      }
       var ctl = h('div', { class: 'pf-item-ctl' }, [
         S.owner ? actionBtn(c.enabled ? 'إيقاف' : 'تفعيل', function () { return toggleFn(c.cardKey, !c.enabled); }) : null,
-        h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview(kind, c); } }, [icon('play'), 'معاينة'])
+        extra
       ]);
-      var card = itemCard({
+      grid.appendChild(itemCard({
         img: c.imageFilename, name: cleanCardName(c.displayNameAr || c.cardKey), artHeight: artHeight,
         status: c.enabled ? pill('مفعّلة', 'ok') : pill('موقوفة'),
         control: ctl
-      });
-      if (cardHasSound(kind, c)) card.querySelector('.pf-item-art').appendChild(h('span', { class: 'pf-item-flag', title: 'لها صوت خاص' }, icon('sound')));
-      grid.appendChild(card);
+      }));
     });
     return grid;
   }
+
+  // هل ملف الصورة متحرك؟ نقرأ أول بايتات الملف: GIF بأكثر من إطار، WebP فيه ANIM، أو PNG فيه acTL (APNG).
+  var animCache = {};
+  function isAnimatedImage(url) {
+    if (!url) return Promise.resolve(false);
+    if (animCache[url]) return animCache[url];
+    animCache[url] = fetch(url).then(function (r) { return r.ok ? r.arrayBuffer() : null; }).then(function (buf) {
+      if (!buf) return false;
+      var b = new Uint8Array(buf), n = Math.min(b.length, 600000), i;
+      var sig = String.fromCharCode(b[0], b[1], b[2]);
+      if (sig === 'GIF') {
+        var frames = 0;
+        for (i = 0; i < n - 2; i++) if (b[i] === 0x21 && b[i + 1] === 0xF9 && b[i + 2] === 0x04 && ++frames > 1) return true;
+        return false;
+      }
+      var tag = function (s) { for (i = 0; i < n - 3; i++) if (b[i] === s.charCodeAt(0) && b[i + 1] === s.charCodeAt(1) && b[i + 2] === s.charCodeAt(2) && b[i + 3] === s.charCodeAt(3)) return true; return false; };
+      if (String.fromCharCode(b[8], b[9], b[10], b[11]) === 'WEBP') return tag('ANIM');
+      if (b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return tag('acTL');
+      return false;
+    }).catch(function () { return false; });
+    return animCache[url];
+  }
+  function openFramePreview(f) {
+    var sheet = openSheet(f.displayNameAr || f.frameRef, 'كذا يتحرك إطارك.');
+    var stage = h('div', { class: 'pf-preview pf-preview-frame' });
+    function paint() { stage.innerHTML = ''; stage.appendChild(h('img', { src: f.imageFilename + (f.imageFilename.indexOf('?') > -1 ? '&' : '?') + 'r=' + Date.now(), alt: '', class: 'pf-preview-img' })); stage.classList.remove('pf-pop'); void stage.offsetWidth; stage.classList.add('pf-pop'); }
+    paint();
+    sheet.body.appendChild(stage);
+    sheet.body.appendChild(h('div', { class: 'pf-actions pf-actions-center' }, [h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: paint }, [icon('play'), 'إعادة الحركة'])]));
+  }
+
   // «بطاقة الإقصاء — عزوز (منح محدود)» ← «عزوز»
   function cleanCardName(n) { return String(n || '').replace(/^بطاقة (الإقصاء|الفوز)\s*[—-]\s*/, '').replace(/\s*\(منح محدود\)\s*$/, ''); }
   function previewPlayer(kind, c) {
@@ -765,38 +804,57 @@
   }
 
   /* ---------- محفظة عملات أيمن (تصميم جاهز — النظام نفسه ينبني لاحقاً) */
-  // عملة أيمن: إطار ذهبي محزّز، وجه بنفسجي غائر، وحرف A بارز مع لمعة.
+  // عملة أيمن: عملة معدنية ذهبية حقيقية — سماكة وحافة محزّزة، كتابة بارزة على
+  // المحيط، وشعار بارز بالنص بظل وإضاءة، ولمعان معدني.
   var coinSeq = 0;
   function coinSvg(cls) {
     var id = 'pfc' + (++coinSeq);
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    s.setAttribute('viewBox', '0 0 128 128'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
-    var ridges = '';
-    for (var i = 0; i < 90; i++) ridges += '<rect x="63.2" y="3.5" width="1.6" height="7" rx=".8" transform="rotate(' + (i * 4) + ' 64 64)"/>';
-    var dots = '';
-    for (var k = 0; k < 24; k++) dots += '<circle cx="64" cy="20.5" r="' + (k % 6 === 0 ? 1.7 : 1) + '" transform="rotate(' + (k * 15) + ' 64 64)"/>';
+    s.setAttribute('viewBox', '0 0 140 146'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
+    var reeds = '', lathe = '', i;
+    for (i = 0; i < 120; i++) reeds += '<rect x="69.4" y="2" width="1.2" height="5.5" transform="rotate(' + (i * 3) + ' 70 70)"/>';
+    for (i = 0; i < 9; i++) lathe += '<circle cx="70" cy="70" r="' + (20 + i * 3.4) + '"/>';
+    var metal = function (sfx, stops) { return '<linearGradient id="' + id + sfx + '" x1="0" y1="0" x2="1" y2="1">' + stops + '</linearGradient>'; };
     s.innerHTML =
       '<defs>' +
-        '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4cf"/><stop offset=".22" stop-color="#e9cf86"/><stop offset=".5" stop-color="#a77a2c"/><stop offset=".78" stop-color="#e9cf86"/><stop offset="1" stop-color="#7a5418"/></linearGradient>' +
-        '<linearGradient id="' + id + 'b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff1c4"/><stop offset=".5" stop-color="#8a6322"/><stop offset="1" stop-color="#f3dc9a"/></linearGradient>' +
-        '<radialGradient id="' + id + 'f" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#8f5cf0"/><stop offset=".55" stop-color="#4b1f97"/><stop offset="1" stop-color="#1c0b3d"/></radialGradient>' +
-        '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset=".45" stop-color="#ecd28d"/><stop offset="1" stop-color="#b48836"/></linearGradient>' +
-        '<linearGradient id="' + id + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
-        '<clipPath id="' + id + 'c"><circle cx="64" cy="64" r="61"/></clipPath>' +
+        metal('e', '<stop offset="0" stop-color="#7a5212"/><stop offset=".5" stop-color="#b8862e"/><stop offset="1" stop-color="#5c3b0a"/>') +
+        metal('r', '<stop offset="0" stop-color="#fff2c4"/><stop offset=".25" stop-color="#e6c066"/><stop offset=".55" stop-color="#a8761f"/><stop offset=".8" stop-color="#eccb72"/><stop offset="1" stop-color="#8a5f17"/>') +
+        '<radialGradient id="' + id + 'f" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".35" stop-color="#e2b653"/><stop offset=".75" stop-color="#b98a2c"/><stop offset="1" stop-color="#8e6419"/></radialGradient>' +
+        metal('a', '<stop offset="0" stop-color="#fff6d6"/><stop offset=".5" stop-color="#e7c269"/><stop offset="1" stop-color="#b3862c"/>') +
+        '<linearGradient id="' + id + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+        '<path id="' + id + 'top" d="M24 70a46 46 0 0 1 92 0"/>' +
+        '<path id="' + id + 'bot" d="M20 70a50 50 0 0 0 100 0"/>' +
+        '<clipPath id="' + id + 'c"><circle cx="70" cy="70" r="66"/></clipPath>' +
       '</defs>' +
-      '<circle cx="64" cy="64" r="61" fill="url(#' + id + 'r)"/>' +
-      '<g fill="#5c3d0c" opacity=".35">' + ridges + '</g>' +
-      '<circle cx="64" cy="64" r="51.5" fill="url(#' + id + 'b)"/>' +
-      '<circle cx="64" cy="64" r="48" fill="url(#' + id + 'f)"/>' +
-      '<circle cx="64" cy="64" r="48" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/>' +
-      '<g fill="#e9cf86" opacity=".7">' + dots + '</g>' +
-      // حرف A بارز: ظل غامق تحت، والوجه الذهبي فوق
-      '<path transform="translate(1.5 2)" fill="#12052b" opacity=".55" fill-rule="evenodd" d="M64 33 87 92H74.5l-4.6-12.4H58.1L53.5 92H41zm0 18.5-4.3 15.8h8.6z"/>' +
-      '<path fill="url(#' + id + 'a)" fill-rule="evenodd" d="M64 33 87 92H74.5l-4.6-12.4H58.1L53.5 92H41zm0 18.5-4.3 15.8h8.6z"/>' +
-      '<path fill="none" stroke="#fff8e3" stroke-opacity=".7" stroke-width=".9" d="M64 33 41 92"/>' +
-      '<circle cx="64" cy="31.5" r="3.4" fill="#fff6d8"/><circle cx="41.5" cy="93" r="2.6" fill="#ecd28d"/><circle cx="86.5" cy="93" r="2.6" fill="#ecd28d"/>' +
-      '<g clip-path="url(#' + id + 'c)"><path d="M-6 52C18 14 62 0 104 6L96 -10H-10z" fill="url(#' + id + 's)"/></g>' +
-      '<circle cx="64" cy="64" r="61" fill="none" stroke="#fff4cf" stroke-opacity=".5" stroke-width="1"/>';
+      // سماكة العملة (الحافة من تحت) + ظل
+      '<ellipse cx="70" cy="139" rx="52" ry="5" fill="#000" opacity=".35"/>' +
+      '<circle cx="70" cy="75" r="66" fill="url(#' + id + 'e)"/>' +
+      '<g fill="#3e2806" opacity=".45" transform="translate(0 5)">' + reeds + '</g>' +
+      // الوجه: حافة مرفوعة + أرضية معدنية بخطوط خراطة
+      '<circle cx="70" cy="70" r="66" fill="url(#' + id + 'r)"/>' +
+      '<g fill="#6b4810" opacity=".35">' + reeds + '</g>' +
+      '<circle cx="70" cy="70" r="57" fill="#6e4a11" opacity=".55"/>' +
+      '<circle cx="70" cy="70" r="56" fill="url(#' + id + 'f)"/>' +
+      '<g fill="none" stroke="#fff3cf" stroke-opacity=".08">' + lathe + '</g>' +
+      '<circle cx="70" cy="70" r="56" fill="none" stroke="#fff6dc" stroke-opacity=".55" stroke-width="1"/>' +
+      '<circle cx="70" cy="70" r="40" fill="none" stroke="#7a5212" stroke-opacity=".45" stroke-width="1.2" stroke-dasharray="1.2 2.6"/>' +
+      // كتابة بارزة على المحيط
+      '<g font-family="Cairo,system-ui,sans-serif" font-weight="800" text-anchor="middle">' +
+        '<text font-size="10.5" letter-spacing="2.4" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'top" startOffset="50%">AYMAN GAMES</textPath></text>' +
+        '<text font-size="10.5" letter-spacing="2.4" fill="#fff1c7"><textPath href="#' + id + 'top" startOffset="50%">AYMAN GAMES</textPath></text>' +
+        '<text font-size="11" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'bot" startOffset="50%">★ ألعاب أيمن ★</textPath></text>' +
+        '<text font-size="11" fill="#fff1c7"><textPath href="#' + id + 'bot" startOffset="50%">★ ألعاب أيمن ★</textPath></text>' +
+      '</g>' +
+      // الشعار البارز بالنص: ظل غامق، إضاءة فاتحة، ثم الوجه
+      '<path transform="translate(1.6 2)" fill="#5a3a08" opacity=".7" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
+      '<path transform="translate(-.8 -.8)" fill="#fff6dc" opacity=".8" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
+      '<path fill="url(#' + id + 'a)" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
+      '<circle cx="70" cy="42.5" r="3.2" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
+      '<circle cx="50.5" cy="97" r="2.6" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
+      '<circle cx="89.5" cy="97" r="2.6" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
+      // لمعان معدني على كامل الوجه
+      '<g clip-path="url(#' + id + 'c)"><rect x="0" y="0" width="140" height="140" fill="url(#' + id + 's)"/></g>' +
+      '<circle cx="70" cy="70" r="66" fill="none" stroke="#fff6dc" stroke-opacity=".6" stroke-width=".8"/>';
     return s;
   }
   function renderWallet(body) {
