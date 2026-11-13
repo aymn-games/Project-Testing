@@ -551,6 +551,13 @@ function adminGenerateChoiceCode(maxUses, excluded, note) {
 function adminListChoiceCodes() {
     return request('/api/admin/choice-codes', { method: 'GET' });
 }
+/** Admin only — frames permanently excluded from every choice code: ["catalog:<slug>"|"custom:<id>"] */
+function adminGetChoiceExcluded() {
+    return request('/api/admin/choice-codes/excluded', { method: 'GET' });
+}
+function adminSetChoiceExcluded(frames) {
+    return request('/api/admin/choice-codes/excluded', { method: 'POST', body: { frames: frames || [] } });
+}
 /** جائزة فوز مباريات البثين: {enabled, maxUses, frames:["catalog:<slug>"|"custom:<id>"]} */
 function adminGetWinReward() {
     return request('/api/admin/win-reward', { method: 'GET' });
@@ -1106,6 +1113,8 @@ global.AGPAuth = {
     redeemChoiceCode: redeemChoiceCode,
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
+    adminGetChoiceExcluded: adminGetChoiceExcluded,
+    adminSetChoiceExcluded: adminSetChoiceExcluded,
     adminGetWinReward: adminGetWinReward,
     adminSetWinReward: adminSetWinReward,
     getWinRewardCodes: getWinRewardCodes,

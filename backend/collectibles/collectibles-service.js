@@ -1050,6 +1050,29 @@ function listAllFramesForChoice() {
   }));
 }
 
+/* ----------------------------------------------------------------------
+ * الإطارات المستثناة دائماً من أكواد الاختيار (app_settings) — الأدمن يحددها
+ * مرة وحدة، وتنطبق على كل أكواد الاختيار (الجديدة والقديمة) وقت الاستخدام،
+ * فوق استثناءات كل كود. ما تأثر على المنح اليدوي ولا أكواد الإطار الواحد.
+ * ---------------------------------------------------------------------- */
+var PERMANENT_EXCLUDED_KEY = 'choice_excluded_frames';
+
+function getPermanentExcluded() {
+  var row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(PERMANENT_EXCLUDED_KEY);
+  try { var list = row ? JSON.parse(row.value) : []; return Array.isArray(list) ? list.map(String) : []; } catch (e) { return []; }
+}
+
+/** @returns {{success: boolean, frames?: string[], error?: string}} */
+function setPermanentExcluded(frames) {
+  var known = {};
+  listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
+  var clean = (Array.isArray(frames) ? frames : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run(PERMANENT_EXCLUDED_KEY, JSON.stringify(clean));
+  logger.log('Collectibles: permanent choice-code exclusions = ' + clean.length + ' frames');
+  return { success: true, frames: clean };
+}
+
 function parseExcluded(row) {
   try { var list = JSON.parse(row.excluded || '[]'); return Array.isArray(list) ? list : []; } catch (e) { return []; }
 }
@@ -1057,7 +1080,7 @@ function parseExcluded(row) {
 /** الإطارات المتاحة لهذا المستخدم بهذا الكود: غير مستثناة وما يملكها. */
 function choiceCodeOptions(userId, row) {
   var excluded = {};
-  parseExcluded(row).forEach(function (k) { excluded[k] = true; });
+  parseExcluded(row).concat(getPermanentExcluded()).forEach(function (k) { excluded[k] = true; });
   var owned = {};
   db.prepare('SELECT frame_type, frame_ref FROM user_frames WHERE user_id = ?').all(userId)
     .forEach(function (r) { owned[frameKey(r.frame_type, r.frame_ref)] = true; });
@@ -1127,7 +1150,9 @@ function generateChoiceCode(maxUses, excluded, note) {
   var known = {};
   listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
   var cleanExcluded = (Array.isArray(excluded) ? excluded : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
-  if (cleanExcluded.length >= Object.keys(known).length) return { success: false, error: 'all_excluded' };
+  var blocked = {};
+  cleanExcluded.concat(getPermanentExcluded()).forEach(function (k) { if (known[k]) blocked[k] = true; });
+  if (Object.keys(blocked).length >= Object.keys(known).length) return { success: false, error: 'all_excluded' };
 
   var insert = db.prepare('INSERT OR IGNORE INTO choice_codes (code, max_uses, uses, excluded, note, created_at) VALUES (?, ?, 0, ?, ?, ?)');
   var code = null;
@@ -1273,6 +1298,23 @@ function burnCode(rawCode) {
   return { success: false, error: 'invalid_code' };
 }
 
+/* ----------------------------------------------------------------------
+ * إطارات ملفاتها بالمستودع وتنضاف تلقائياً كإطارات حصرية (custom_frames)،
+ * عشان تطلع بقائمة المنح اليدوي (لوحة الأدمن ← منح) بدون إنشاء يدوي.
+ * ما يضيف إطار صورته موجودة أصلاً.
+ * ---------------------------------------------------------------------- */
+var REPO_CUSTOM_FRAMES = [
+  ['frame-joker-circus.svg', 'إطار الجوكر']
+];
+
+(function ensureRepoCustomFrames() {
+  REPO_CUSTOM_FRAMES.forEach(function (f) {
+    if (db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(f[0])) return;
+    var r = createCustomFrame(f[0], f[1]);
+    logger.log('Collectibles: added custom frame #' + r.id + ' ' + f[0]);
+  });
+})();
+
 module.exports = {
   getCatalog: getCatalog,
   getCatalogEntry: getCatalogEntry,
@@ -1314,6 +1356,8 @@ module.exports = {
   claimChoiceCode: claimChoiceCode,
   generateChoiceCode: generateChoiceCode,
   listChoiceCodes: listChoiceCodes,
+  getPermanentExcluded: getPermanentExcluded,
+  setPermanentExcluded: setPermanentExcluded,
   getWinRewardConfig: getWinRewardConfig,
   setWinRewardConfig: setWinRewardConfig,
   createWinRewardCode: createWinRewardCode,

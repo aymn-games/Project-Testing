@@ -441,7 +441,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
               <span style="font-weight:600">كود اختيار إطار</span>
-              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كود واحد تشاركه، وكل لاعب يستخدمه يختار إطار واحد بنفسه من الإطارات الظاهرة تحت. حدد كم شخص يقدر يستخدمه، واضغط على أي إطار تبي تستثنيه.</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كود واحد تشاركه، وكل لاعب يستخدمه يختار إطار واحد بنفسه من الإطارات الظاهرة تحت. حدد كم شخص يقدر يستخدمه، واضغط على أي إطار تبي تستثنيه من هذا الكود. الإطارات اللي ما تبيها تنعطى بأي كود أبداً (الحصرية مثلاً)، حطها مرة وحدة بـ«الاستثناء الدائم» وتنطبق على كل الأكواد تلقائياً، حتى القديمة.</span>
             </div>
             <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 18px;flex-wrap:wrap">
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد مرات الاستخدام (كم شخص)</span><input type="number" min="1" value="{{ choiceMax }}" onChange="{{ onChoiceMax }}" style="width:160px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
@@ -456,7 +456,13 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </div>
             </sc-if>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
-              <span style="font-size:12.5px;color:#9199ab">{{ choiceSummary }}</span>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:inline-flex;border:1px solid #2f3342;border-radius:9px;overflow:hidden;width:max-content">
+                  <button onClick="{{ choiceModeCode }}" style="height:30px;padding:0 12px;border:none;font-size:12.5px;cursor:pointer;background:{{ choiceModeCodeBg }};color:{{ choiceModeCodeFg }}">استثناء لهذا الكود</button>
+                  <button onClick="{{ choiceModePerm }}" style="height:30px;padding:0 12px;border:none;border-right:1px solid #2f3342;font-size:12.5px;cursor:pointer;background:{{ choiceModePermBg }};color:{{ choiceModePermFg }}">🔒 الاستثناء الدائم ({{ choicePermCount }})</button>
+                </div>
+                <span style="font-size:12.5px;color:#9199ab">{{ choiceSummary }}</span>
+              </div>
               <div style="display:flex;gap:6px"><button onClick="{{ choiceShowAll }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">إظهار الكل</button><button onClick="{{ choiceHideAll }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">استثناء الكل</button></div>
             </div>
             <div style="padding:4px 18px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:520px;overflow-y:auto">
@@ -1071,7 +1077,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -1165,7 +1171,7 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
@@ -1493,15 +1499,32 @@ class Component extends DCLogic {
         const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=s.codesOut; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
         if(navigator.clipboard) navigator.clipboard.writeText(s.codesOut).then(done,fallback); else fallback(); },
       // choice codes (كود اختيار إطار)
-      ...(()=>{ const frames=this.allFrames(), ex=new Set(s.choiceExcluded), shown=frames.filter(f=>!ex.has(f.key)).length;
+      ...(()=>{ const frames=this.allFrames(), ex=new Set(s.choiceExcluded), perm=new Set(s.choicePerm), permMode=s.choiceMode==='perm';
+        const shown=frames.filter(f=>!ex.has(f.key)&&!perm.has(f.key)).length, permCount=frames.filter(f=>perm.has(f.key)).length;
+        // الاستثناء الدائم يتحفظ بالسيرفر على طول (يرجع للقائمة القديمة لو فشل الحفظ)
+        const savePerm=next=>{ const prev=s.choicePerm; this.setState({ choicePerm:next });
+          A.adminSetChoiceExcluded(next).then(r=>{ if(!r||!r.success){ this.setState({ choicePerm:prev }); this.flash('تعذّر حفظ الاستثناء الدائم.','err'); } else this.setState({ choicePerm:r.frames||next }); }); };
         const NAMES={ founder:'المؤسس', streamer:'الاستريمر', supporter:'الداعم', distinguished:'المميز' };
         const label=f=>(f.type==='catalog'&&!(s.catalog||[]).find(c=>c.slug===f.ref&&c.display_name_ar))?(NAMES[f.ref]||(/^level-\d$/.test(f.ref)?'المستوى '+f.ref.slice(6):f.name)):f.name;
         return {
           choiceMax:s.choiceMax, choiceNote:s.choiceNote, choiceOut:s.choiceOut,
           onChoiceMax:e=>this.setState({ choiceMax:e.target.value }), onChoiceNote:e=>this.setState({ choiceNote:e.target.value }),
-          choiceSummary:`يظهر للاعب ${shown} من ${frames.length} إطار`+(ex.size?` · مستثنى ${ex.size}`:''),
-          choiceShowAll:()=>this.setState({ choiceExcluded:[] }), choiceHideAll:()=>this.setState({ choiceExcluded:frames.map(f=>f.key) }),
-          choiceFrames:frames.map(f=>{ const off=ex.has(f.key); return { file:f.file, name:label(f), status:off?'مستثنى':'يظهر', statusColor:off?'#f87171':'#4ade80',
+          choicePermCount:permCount,
+          choiceModeCode:()=>this.setState({ choiceMode:'code' }), choiceModePerm:()=>this.setState({ choiceMode:'perm' }),
+          choiceModeCodeBg:permMode?'#0b0d12':'#7c3aed', choiceModeCodeFg:permMode?'#c3c8d4':'#fff',
+          choiceModePermBg:permMode?'#b45309':'#0b0d12', choiceModePermFg:permMode?'#fff':'#c3c8d4',
+          choiceSummary:permMode
+            ?`اضغط على الإطار عشان ما ينعطى بأي كود اختيار أبداً · مستثنى دائماً ${permCount} من ${frames.length} — يتحفظ تلقائياً`
+            :`يظهر للاعب ${shown} من ${frames.length} إطار`+(permCount?` · مستثنى دائماً ${permCount}`:'')+(ex.size?` · مستثنى لهذا الكود ${ex.size}`:''),
+          choiceShowAll:()=>permMode?savePerm([]):this.setState({ choiceExcluded:[] }),
+          choiceHideAll:()=>permMode?savePerm(frames.map(f=>f.key)):this.setState({ choiceExcluded:frames.map(f=>f.key) }),
+          choiceFrames:frames.map(f=>{ const p=perm.has(f.key), off=ex.has(f.key);
+            if(permMode) return { file:f.file, name:label(f), status:p?'🔒 مستثنى دائماً':'يدخل بالأكواد', statusColor:p?'#f59e0b':'#4ade80',
+              border:p?'#5a3d10':'#262a37', opacity:p?0.35:1, hint:p?'اضغط لإرجاعه للأكواد':'اضغط لاستثنائه من كل الأكواد',
+              toggle:()=>savePerm(p?s.choicePerm.filter(k=>k!==f.key):[...s.choicePerm,f.key]) };
+            if(p) return { file:f.file, name:label(f), status:'🔒 مستثنى دائماً', statusColor:'#f59e0b', border:'#5a3d10', opacity:0.25,
+              hint:'مستثنى دائماً — غيّره من «الاستثناء الدائم»', toggle:()=>this.flash('هذا الإطار مستثنى دائماً. لإرجاعه افتح «الاستثناء الدائم».') };
+            return { file:f.file, name:label(f), status:off?'مستثنى لهذا الكود':'يظهر', statusColor:off?'#f87171':'#4ade80',
             border:off?'#4a2427':'#262a37', opacity:off?0.35:1, hint:off?'اضغط لإرجاعه':'اضغط لاستثنائه',
             toggle:()=>this.setState(st=>({ choiceExcluded:st.choiceExcluded.includes(f.key)?st.choiceExcluded.filter(k=>k!==f.key):[...st.choiceExcluded,f.key] })) }; }),
           genChoiceCode:()=>{ const n=Math.floor(Number(s.choiceMax)); if(!(n>=1)) return this.flash('عدد مرات الاستخدام لازم يكون 1 أو أكثر.','err');
@@ -1515,7 +1538,7 @@ class Component extends DCLogic {
             if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,fallback); else fallback(); },
           choiceEmpty:!!s.choiceCodes&&!s.choiceCodes.length,
           choiceRows:(s.choiceCodes||[]).map(c=>{ const full=c.uses>=c.maxUses;
-            return { code:c.code, uses:`${c.uses} / ${c.maxUses}`, excluded:c.excluded.length?c.excluded.length+' إطار':'لا شيء', note:c.note||'—',
+            return { code:c.code, uses:`${c.uses} / ${c.maxUses}`, excluded:c.excluded.length?c.excluded.length+' إطار'+(permCount?' + الدائم':''):(permCount?'الدائم فقط':'لا شيء'), note:c.note||'—',
               status:c.burnedAt?`موقوف · \u2068${fmtDate(c.burnedAt)}\u2069`:full?'اكتمل':'فعّال', color:c.burnedAt?'#f87171':full?'#9199ab':'#4ade80',
               canBurn:!c.burnedAt&&!full, burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يستخدمه بعد الآن. اللي استخدموه يبقى لهم إطارهم.`,'إيقاف',()=>this.busy('burn',()=>A.adminBurnCode(c.code)).then(r=>{ if(!r) return;
                 if(!r.success) return this.flash('تعذّر الإيقاف: '+(r.error||'unknown'),'err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) }; }) }; })(),
