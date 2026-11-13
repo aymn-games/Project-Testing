@@ -410,6 +410,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 12.94, avatarTopPct: 26.85, avatarWidthPct: 17.13, avatarHeightPct: 49.86,
             nameLeftPct: 34.25, nameTopPct: 45.60, nameWidthPct: 42.13, nameHeightPct: 18.61
         },
+        // إطاري "العنكبوت البنفسجي" (نسخة باسم "Essa" مطبوع + نسخة فاضية) —
+        // منح محدود. الأصل JPG 2000×691: الأول خلفيته بيضاء، والثاني فيه مربعات
+        // «شفافية» مرسومة. فُرّغت الخلفية والفتحة الدائرية والجيوب بين السلاسل
+        // وأرجل العنكبوت لشفافية حقيقية، وكُبّر بنفس النسبة لارتفاع 704 ووُسِّط
+        // على 2172×724. شعار Y يغطي أعلى الدائرة، فمربع الصورة = عرض الفتحة
+        // الشفافة مع أعلى الدائرة المقدّر من مركزها. اللوح أسود — اسم أبيض.
+        // [Essa] hole 188→624 × 193→600، الاسم مطبوع (الكلمة والتاج 1700→2030 ×
+        // 370→600، للتوسيط فقط)، content 10→714
+        'frame-essa.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 704,
+            avatarLeftPct: 8.66, avatarTopPct: 25.99, avatarWidthPct: 20.07, avatarHeightPct: 57.81,
+            nameLeftPct: 78.27, nameTopPct: 51.14, nameWidthPct: 15.19, nameHeightPct: 32.67,
+            printedName: true
+        },
+        // [الفاضي] hole 226→658 × 212→613، name 1070→1940 × 370→550، content 10→714
+        'frame-purple-spider.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 704,
+            avatarLeftPct: 10.41, avatarTopPct: 28.69, avatarWidthPct: 19.89, avatarHeightPct: 56.96,
+            nameLeftPct: 49.26, nameTopPct: 51.14, nameWidthPct: 40.06, nameHeightPct: 25.57
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
