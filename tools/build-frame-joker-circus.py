@@ -63,6 +63,14 @@ for _ in range(3):
     HOLE = math.sqrt(c[2] + cx * cx + cy * cy)
 CX, CY = cx, cy
 
+# decorations sit BEHIND the ring (like the reference): wherever the ring band
+# is drawn, and inside the avatar hole, the decoration layer is cleared, so the
+# ring shows complete and nothing covers the player's photo.
+yy, xx = np.mgrid[0:H, 0:W]
+inside = np.hypot(xx - CX, yy - CY) < HOLE + 1
+cover = ring_a[..., 3].astype(np.float32) / 255.0
+deco_a[..., 3] = (deco_a[..., 3] * (1 - cover) * ~inside).astype(np.uint8)
+
 ring, rx, ry = piece(ring_a)
 plate, px, py = piece(plate_a)
 # gems: top and bottom are separate rows
@@ -180,9 +188,10 @@ a('</style>')
 a('<g id="plate">%s</g>' % img(plate, px, py))
 a('<g class="fb orn" style="animation-delay:1.55s">%s</g>' % img(g_top, gtx, gty))
 a('<g class="fb orn" style="animation-delay:1.65s">%s</g>' % img(g_bot, gbx, gby))
-ring_g = [img(ring, rx, ry)]
+ring_g = [img(ring, rx, ry), '<g mask="url(#mHole)">']
 for i, (bx, by) in enumerate(bulbs):
     ring_g.append('<circle class="bulb" cx="%s" cy="%s" r="20" fill="url(#gGlow)" style="animation-delay:%.2fs"/>' % (f(bx), f(by), (i % 2) * .65))
+ring_g.append('</g>')
 ring_g.append('<g mask="url(#mBand)"><rect id="shine" x="%d" y="0" width="80" height="%d" fill="url(#gShine)" transform="skewX(-20)"/></g>' % (CX - 420, H))
 a('<g id="ring">%s</g>' % ''.join(ring_g))
 a('<g class="fb dec" style="animation-delay:2.0s">%s</g>' % img(wreath, wx, wy))
