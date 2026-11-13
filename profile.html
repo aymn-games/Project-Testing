@@ -30,10 +30,10 @@
     - الطبقات: ‎--glass-1 (القوائم والبطاقات) ← ‎--glass-2 (عناصر داخلها) ← ‎--glass-3 (حوم وتفعيل).
   */
   :root{
-    --night:#050508;
+    --night:#030305;
     --night-2:#0b0912;
     --ink:#f4f2fb;
-    --ink-2:#d9d3ea;
+    --ink-2:#cfc8e0;
     --ink-3:#a79fbb;
     --ink-4:#8a829e;
     --violet:#7a3fd4;
@@ -45,15 +45,15 @@
     --rose:#f08aa0;  --rose-bg:rgba(240,138,160,.12);
     --amber:#e8d8a6; --amber-bg:rgba(232,216,166,.12);
 
-    --accent:var(--lavender);
-    --accent-strong:var(--violet);
-    --accent-rgb:178,140,245;
+    --accent:#9a6fe6;
+    --accent-strong:#5a2aa8;
+    --accent-rgb:140,96,220;
 
-    --glass-1:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.025) 60%,rgba(255,255,255,.04));
-    --glass-2:rgba(255,255,255,.045);
-    --glass-3:rgba(255,255,255,.08);
-    --edge:rgba(255,255,255,.09);
-    --edge-hi:rgba(255,255,255,.16);
+    --glass-1:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.012) 60%,rgba(255,255,255,.022));
+    --glass-2:rgba(255,255,255,.03);
+    --glass-3:rgba(255,255,255,.055);
+    --edge:rgba(255,255,255,.07);
+    --edge-hi:rgba(255,255,255,.12);
     --rule:rgba(255,255,255,.07);
     --lift:0 1px 0 rgba(255,255,255,.08) inset,0 24px 48px -24px rgba(0,0,0,.75),0 8px 18px -10px rgba(0,0,0,.6);
     --lift-sm:0 1px 0 rgba(255,255,255,.07) inset,0 10px 24px -14px rgba(0,0,0,.7);
@@ -67,7 +67,7 @@
     --font:"IBM Plex Sans Arabic",system-ui,sans-serif;
     --font-head:"Noto Kufi Arabic","IBM Plex Sans Arabic",sans-serif;
   }
-  body[data-pf-mode="streamer"]{ --accent:#ee9ad9; --accent-strong:#c24ea8; --accent-rgb:224,112,196; }
+  body[data-pf-mode="streamer"]{ --accent:#c95aae; --accent-strong:#8e2f78; --accent-rgb:190,80,160; }
 
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
@@ -84,16 +84,16 @@
   /* المسرح: توهجات ثابتة خلف الزجاج */
   body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;transition:background .5s var(--ease);
     background:
-      radial-gradient(42vw 34vw at 88% 6%,rgba(122,63,212,.34),transparent 70%),
-      radial-gradient(36vw 30vw at 8% 28%,rgba(224,112,196,.16),transparent 70%),
-      radial-gradient(40vw 34vw at 60% 104%,rgba(122,63,212,.20),transparent 70%),
-      radial-gradient(22vw 18vw at 30% 70%,rgba(232,216,166,.06),transparent 70%),
+      radial-gradient(42vw 34vw at 88% 6%,rgba(90,42,168,.20),transparent 70%),
+      radial-gradient(36vw 30vw at 8% 28%,rgba(142,47,120,.09),transparent 70%),
+      radial-gradient(40vw 34vw at 60% 104%,rgba(90,42,168,.12),transparent 70%),
+      radial-gradient(22vw 18vw at 30% 70%,rgba(232,216,166,.03),transparent 70%),
       var(--night)}
   body[data-pf-mode="streamer"]::before{background:
-      radial-gradient(42vw 34vw at 88% 6%,rgba(224,112,196,.28),transparent 70%),
-      radial-gradient(36vw 30vw at 8% 28%,rgba(122,63,212,.22),transparent 70%),
-      radial-gradient(40vw 34vw at 60% 104%,rgba(224,112,196,.14),transparent 70%),
-      radial-gradient(22vw 18vw at 30% 70%,rgba(232,216,166,.06),transparent 70%),
+      radial-gradient(42vw 34vw at 88% 6%,rgba(142,47,120,.18),transparent 70%),
+      radial-gradient(36vw 30vw at 8% 28%,rgba(90,42,168,.12),transparent 70%),
+      radial-gradient(40vw 34vw at 60% 104%,rgba(142,47,120,.09),transparent 70%),
+      radial-gradient(22vw 18vw at 30% 70%,rgba(232,216,166,.03),transparent 70%),
       var(--night)}
 
   /* كتلة الزجاج المشتركة */
@@ -103,7 +103,7 @@
 
   /* ---------------------------------------------------------- الشريط العلوي */
   .pf-top{position:sticky;top:0;z-index:50;height:var(--top-h);display:flex;align-items:center;justify-content:space-between;gap:16px;
-    padding:0 var(--canvas-pad);border-width:0 0 1px;border-radius:0;background:rgba(10,8,18,.62)}
+    padding:0 var(--canvas-pad);border-width:0 0 1px;border-radius:0;background:rgba(6,5,11,.78)}
   .pf-brand{display:flex;align-items:center;gap:14px;height:100%}
   .pf-brand img{display:block;height:36px;width:auto}
   .pf-brand-sep{width:1px;height:22px;background:var(--edge-hi)}
@@ -138,9 +138,9 @@
   .pf-side-item:hover{background:var(--glass-2);border-color:var(--edge);color:var(--ink)}
   .pf-side-item:hover .pf-side-ic{color:var(--ink);background:var(--glass-3)}
   .pf-side-item:active{transform:scale(.98)}
-  .pf-side-item.on{color:#fff;background:linear-gradient(135deg,rgba(var(--accent-rgb),.24),rgba(var(--accent-rgb),.08));
-    border-color:rgba(var(--accent-rgb),.42);box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 12px 26px -16px rgba(var(--accent-rgb),.9)}
-  .pf-side-item.on .pf-side-ic{color:#fff;background:linear-gradient(145deg,var(--accent-strong),rgba(var(--accent-rgb),.75));border-color:rgba(255,255,255,.22)}
+  .pf-side-item.on{color:#fff;background:linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.05));
+    border-color:rgba(var(--accent-rgb),.32);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 12px 26px -18px rgba(var(--accent-rgb),.7)}
+  .pf-side-item.on .pf-side-ic{color:#fff;background:linear-gradient(145deg,var(--accent-strong),color-mix(in srgb,var(--accent-strong) 65%,#000));border-color:rgba(255,255,255,.14)}
   .pf-side-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pf-side-count{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--orchid);color:#1d0a19;font-size:12px;font-weight:700;line-height:22px;text-align:center;
     box-shadow:0 0 0 3px rgba(224,112,196,.18)}
@@ -153,10 +153,10 @@
   /* بطاقة الحساب العلوية */
   .pf-titlerow{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px 24px;flex-wrap:wrap;
     padding:24px;border-radius:var(--r-xl)}
-  .pf-titlerow::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,var(--accent),var(--orchid),transparent);opacity:.8}
+  .pf-titlerow::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,var(--accent-strong),#8e2f78,transparent);opacity:.9}
   .pf-id{display:flex;align-items:center;gap:18px;min-width:0;flex:1 1 380px}
   .pf-avatar{position:relative;flex:none;width:84px;height:84px;border-radius:26px;padding:3px;
-    background:linear-gradient(140deg,var(--accent),var(--orchid) 60%,var(--gold));box-shadow:0 14px 30px -14px rgba(var(--accent-rgb),.9)}
+    background:linear-gradient(140deg,var(--accent-strong),#8e2f78 60%,#b89b5e);box-shadow:0 14px 30px -16px rgba(var(--accent-rgb),.7)}
   .pf-avatar img,.pf-avatar-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:23px;object-fit:cover;background:#151021}
   .pf-avatar-fallback{font-family:var(--font-head);font-size:30px;font-weight:700;color:var(--lavender)}
   .pf-avatar.editable{cursor:pointer}
@@ -178,9 +178,9 @@
   .pf-mode{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:5px;border-radius:18px;background:rgba(0,0,0,.28);border:1px solid var(--edge);
     box-shadow:0 1px 0 rgba(255,255,255,.05),inset 0 2px 6px rgba(0,0,0,.35)}
   .pf-mode::before{content:"";position:absolute;top:5px;bottom:5px;right:5px;width:calc(50% - 5px);border-radius:13px;
-    background:linear-gradient(145deg,#8d55e6,var(--violet));box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 10px 22px -10px rgba(122,63,212,.95);
+    background:linear-gradient(145deg,#6a35c2,#4a2290);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 10px 22px -12px rgba(90,42,168,.9);
     transition:transform .4s var(--ease),background .4s var(--ease),box-shadow .4s var(--ease)}
-  .pf-mode[data-active="streamer"]::before{transform:translateX(-100%);background:linear-gradient(145deg,#ec82cf,#c24ea8);box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 10px 22px -10px rgba(224,112,196,.95)}
+  .pf-mode[data-active="streamer"]::before{transform:translateX(-100%);background:linear-gradient(145deg,#a8408f,#74245f);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 10px 22px -12px rgba(142,47,120,.9)}
   .pf-mode button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;min-width:128px;height:42px;padding:0 18px;border:0;border-radius:13px;
     background:transparent;color:var(--ink-3);font-family:var(--font-head);font-size:14px;font-weight:600;cursor:pointer;transition:color .25s var(--ease)}
   .pf-mode button .pf-ic{width:17px;height:17px}
@@ -221,7 +221,7 @@
   /* الكتلة القائدة */
   .pf-panel-lead{padding:28px;overflow:hidden}
   .pf-panel-lead::after{content:"";position:absolute;inset:auto auto -40% -10%;width:55%;height:120%;pointer-events:none;
-    background:radial-gradient(closest-side,rgba(var(--accent-rgb),.16),transparent)}
+    background:radial-gradient(closest-side,rgba(var(--accent-rgb),.09),transparent)}
   .pf-lead{position:relative;z-index:1;display:flex;align-items:center;gap:26px}
   .pf-ring{position:relative;flex:none;width:128px;height:128px;padding:6px;border-radius:50%;background:rgba(0,0,0,.25);box-shadow:inset 0 2px 8px rgba(0,0,0,.4),0 0 0 1px var(--edge)}
   .pf-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
@@ -253,8 +253,8 @@
     transition:transform .16s var(--ease),filter .2s,background .25s var(--ease),border-color .25s var(--ease),box-shadow .25s var(--ease),color .2s}
   .pf-btn:active:not(:disabled){transform:scale(.97)}
   .pf-btn:disabled{opacity:.55;cursor:default}
-  .pf-btn-primary{color:#fff;background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,0) 55%),linear-gradient(145deg,var(--accent),var(--accent-strong));
-    border-color:rgba(255,255,255,.18);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 -2px 0 rgba(0,0,0,.18) inset,0 12px 26px -12px rgba(var(--accent-rgb),.9)}
+  .pf-btn-primary{color:#fff;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,0) 55%),linear-gradient(145deg,var(--accent-strong),color-mix(in srgb,var(--accent-strong) 70%,#000));
+    border-color:rgba(255,255,255,.12);box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 -2px 0 rgba(0,0,0,.25) inset,0 12px 26px -14px rgba(var(--accent-rgb),.7)}
   .pf-btn-primary:hover:not(:disabled){filter:brightness(1.08);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 -2px 0 rgba(0,0,0,.18) inset,0 16px 32px -12px rgba(var(--accent-rgb),1)}
   .pf-btn-ghost{color:var(--ink);background:var(--glass-2);border-color:var(--edge-hi);box-shadow:0 1px 0 rgba(255,255,255,.08) inset}
   .pf-btn-ghost:hover:not(:disabled){background:var(--glass-3);border-color:rgba(var(--accent-rgb),.5)}
@@ -278,7 +278,7 @@
   .pf-tool-desc{margin-top:8px;font-size:14.5px;line-height:1.8;color:var(--ink-3);max-width:70ch}
 
   .pf-notice{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;padding:14px 18px;border-radius:var(--r-lg);
-    background:linear-gradient(135deg,rgba(122,63,212,.22),rgba(224,112,196,.08));border:1px solid rgba(178,140,245,.34);color:var(--ink-2);font-size:14.5px;line-height:1.8;
+    background:linear-gradient(135deg,rgba(90,42,168,.16),rgba(142,47,120,.05));border:1px solid rgba(140,96,220,.26);color:var(--ink-2);font-size:14.5px;line-height:1.8;
     box-shadow:var(--lift-sm)}
   .pf-notice-txt{flex:1 1 300px}
   .pf-notice strong{color:var(--gold);font-weight:700}
@@ -423,7 +423,7 @@
   @media (max-width:899px){
     :root{--canvas-pad:16px;--gap:14px}
     .pf-shell{grid-template-columns:minmax(0,1fr)}
-    .pf-side{position:sticky;top:calc(var(--top-h) + 8px);z-index:20;max-height:none;overflow:visible;padding:8px;border-radius:var(--r-lg);background:rgba(16,12,26,.82)}
+    .pf-side{position:sticky;top:calc(var(--top-h) + 8px);z-index:20;max-height:none;overflow:visible;padding:8px;border-radius:var(--r-lg);background:rgba(10,8,17,.9)}
     #pfSideNav{display:flex;align-items:center;gap:6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-padding-inline:8px}
     #pfSideNav::-webkit-scrollbar{display:none}
     .pf-side-group{flex:none;display:flex;align-items:center;gap:6px}
@@ -436,7 +436,7 @@
   @media (max-width:700px){
     :root{--top-h:62px;--pad:18px}
     /* الجوال: نخفف البلور للأداء ونعوّضه بتعبئة أعتم */
-    .pf-panel,.pf-tool,.pf-lock,.pf-titlerow{-webkit-backdrop-filter:none;backdrop-filter:none;background:linear-gradient(160deg,rgba(34,26,52,.86),rgba(16,12,26,.9))}
+    .pf-panel,.pf-tool,.pf-lock,.pf-titlerow{-webkit-backdrop-filter:none;backdrop-filter:none;background:linear-gradient(160deg,rgba(20,15,32,.92),rgba(9,7,15,.95))}
     .pf-brand-sep,.pf-brand-t{display:none}
     .pf-nav{display:none;position:absolute;top:calc(100% + 8px);left:12px;right:12px;flex-direction:column;align-items:stretch;gap:2px;padding:8px;border-radius:20px;
       background:rgba(20,15,32,.96);border:1px solid var(--edge-hi);box-shadow:0 24px 60px -20px rgba(0,0,0,.9)}
