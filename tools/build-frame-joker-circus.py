@@ -78,6 +78,20 @@ grows = np.nonzero((gems_a[..., 3] > 60).any(axis=1))[0]
 gsplit = int(grows[np.argmax(np.diff(grows))]) + 1
 g_top, gtx, gty = piece(gems_a, (0, 0, W, gsplit))
 g_bot, gbx, gby = piece(gems_a, (0, gsplit, W, H))
+# gems: a bit smaller, centred on the name plate, nudged down (owner's request)
+GEM_SCALE, GEM_DY = 0.85, 14
+_pr = plate_a[..., :3].astype(int)
+_vx = np.nonzero((plate_a[..., 3] > 200) & (_pr[..., 2] > _pr[..., 0] + 30))[1]
+PLATE_CX = (_vx.min() + _vx.max()) / 2
+_gems = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+for _im, _x, _y in ((g_top, gtx, gty), (g_bot, gbx, gby)):
+    _s = _im.resize((round(_im.width * GEM_SCALE), round(_im.height * GEM_SCALE)), Image.LANCZOS)
+    _gems.paste(_s, (round(PLATE_CX - _s.width / 2), round(_y + _im.height / 2 + GEM_DY - _s.height / 2)), _s)
+gems_a = np.asarray(_gems).copy()
+grows = np.nonzero((gems_a[..., 3] > 60).any(axis=1))[0]
+gsplit = int(grows[np.argmax(np.diff(grows))]) + 1
+g_top, gtx, gty = piece(gems_a, (0, 0, W, gsplit))
+g_bot, gbx, gby = piece(gems_a, (0, gsplit, W, H))
 # decorations: split at the first empty column after the wreath (wreath | big jester)
 dcols = (deco_a[..., 3] > 60).any(axis=0)
 dsplit = next(x for x in range(900, 1700) if not dcols[x])
