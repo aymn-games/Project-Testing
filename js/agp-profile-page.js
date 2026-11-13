@@ -13,10 +13,9 @@
  *   (handlePublicProfile بـbackend/http/auth-router.js)، فالأقسام اللي
  *   تعتمد عليها تختفي لو البيانات مو موجودة.
  *
- * الشكل (design-taste-frontend، نمط true-black flat): أرضية سوداء وطبقات
- * أفتح بخطوة، بدون تدرجات أو ظلال أو إيموجي. لون الوضع (بنفسجي للاعب،
- * أزرق للستريمر) على البيانات فقط (حلقة المستوى والأرقام القائدة)، والزر
- * الأساسي أبيض بنص أسود.
+ * الشكل (بطلب صاحب المنصة): زجاج سميك بألوان هوية ألعاب أيمن — بنفسجي
+ * للاعب، وردي أوركيدي للستريمر، وذهبي للمكافآت. الأقسام أزرار زجاجية
+ * بأيقونة، والأزرار الأساسية بلون الوضع. بدون إيموجي بالواجهة.
  */
 (function () {
   'use strict';
@@ -295,7 +294,7 @@
           class: 'pf-side-item' + (s.id === S.section ? ' on' : ''),
           'aria-current': s.id === S.section ? 'page' : null,
           'data-sec': s.id
-        }, [icon(s.icon), h('span', { class: 'pf-side-txt', text: s.label }), badge]);
+        }, [h('span', { class: 'pf-side-ic' }, icon(s.icon)), h('span', { class: 'pf-side-txt', text: s.label }), badge]);
         grp.appendChild(a);
       });
       nav.appendChild(grp);
@@ -315,7 +314,7 @@
     var c = $('#pfContent');
     c.innerHTML = '';
     var locked = sec.streamerOnly && !isStreamerAccount(S.p);
-    var body = h('div', { class: 'pf-content-body' });
+    var body = h('div', { class: 'pf-content-body pf-anim' });
     c.appendChild(h('h2', { class: 'pf-content-title', text: sec.label }));
     c.appendChild(body);
     try {
