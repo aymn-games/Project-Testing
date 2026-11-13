@@ -189,6 +189,7 @@
   var SECTIONS = [
     { id: 'overview', group: 'account', mode: 'both', icon: 'home', label: 'نظرة عامة', render: renderOverview },
     { id: 'account', group: 'account', mode: 'both', icon: 'user', label: 'حسابي', render: renderAccount },
+    { id: 'platforms', group: 'account', mode: 'both', owner: true, icon: 'link', label: 'ربط المنصات', render: renderPlatforms },
     { id: 'level', group: 'account', mode: 'player', icon: 'star', label: 'المستوى', show: function (p) { return !!p.points; }, render: renderLevel },
     { id: 'wallet', group: 'account', mode: 'both', owner: true, icon: 'coin', label: 'عملات أيمن', render: renderWallet },
 
@@ -210,7 +211,7 @@
     { id: 'support', group: 'help', mode: 'both', owner: true, icon: 'ticket', label: 'تذاكري', render: renderSupport }
   ];
   // روابط قديمة (#info، #win-codes من شاشة الفوز...) توصل للقسم المدموج الجديد
-  var ALIASES = { info: 'account', tiktok: 'account', 'remote-control': 'remote', 'remote-access': 'remote', screens: 'soon',
+  var ALIASES = { info: 'account', tiktok: 'platforms', 'remote-control': 'remote', 'remote-access': 'remote', screens: 'soon',
     'stream-stats': 'broadcast', 'streamer-level': 'broadcast', cards: 'win-cards', redeem: 'codes', rewards: 'win-codes', coins: 'wallet' };
 
   function sectionVisible(sec) {
@@ -268,7 +269,7 @@
     if (S.owner) {
       if (p.role === 'admin') acts.appendChild(h('a', { href: 'admin.html', class: 'pf-btn pf-btn-ghost' }, 'لوحة الأدمن'));
       acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost', onclick: function () { openEditModal(); } }, 'تعديل الملف'));
-      if (window.AGPProfileCard) acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'صورة بروفايلي'));
+      if (window.AGPProfileCard) acts.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'صورة بروفايل'));
     }
     paintModeSwitch();
   }
@@ -435,6 +436,7 @@
             { label: 'نسبة الفوز', value: (p.points.winRatePct || 0) + '%' }
           ])
         ], 'pf-panel-lead'));
+        var cardRow = profileCardRow(); if (cardRow) body.appendChild(cardRow);
       }
     } else {
       var s = p.stats || {};
@@ -496,7 +498,6 @@
       ])
     ]));
     if (S.owner) {
-      body.appendChild(tiktokRow(p));
       body.appendChild(h('div', { class: 'pf-danger-row' }, [
         h('span', { text: 'حذف الحساب يمسح نقاطك ومقتنياتك نهائياً.' }),
         h('button', { type: 'button', class: 'pf-btn pf-btn-danger pf-btn-sm', onclick: deleteAccount }, 'حذف الحساب')
@@ -525,6 +526,45 @@
         window.alert('تعذّر حذف الحساب: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
       }
     }).catch(function () { btn.disabled = false; btn.textContent = label; });
+  }
+
+  // «صورة بروفايل»: صورة ستوري بإحصائيات اللاعب (js/agp-profile-card.js)
+  function profileCardRow() {
+    if (!S.owner || !window.AGPProfileCard) return null;
+    return h('div', { class: 'pf-cardrow' }, [
+      h('span', { class: 'pf-cardrow-ic' }, icon('frame')),
+      h('div', { class: 'pf-lrow-txt' }, [
+        h('div', { class: 'pf-lrow-t', text: 'صورة إحصائياتك' }),
+        h('div', { class: 'pf-lrow-s', text: 'صورة ستوري فيها مستواك ونقاطك وفوزك، تحفظها وتشاركها.' })
+      ]),
+      h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', onclick: function () { window.AGPProfileCard.open(S.p); } }, 'صورة بروفايل')
+    ]);
+  }
+
+  /* ---------- ربط المنصات: تيك توك (شغّال) + كيك وتويتش (قريباً) */
+  function platformLogo(kind) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = kind === 'kick'
+      ? '<path fill="#53fc18" d="M5 4h4v4h2V6h2V4h4v5h-2v2h-2v2h2v2h2v5h-4v-2h-2v-2H9v4H5z"/>'
+      : '<path fill="#fff" d="M5.5 3 4 6.5v12h4V21h2.5l2.5-2.5h3.5L21 14V3zm13.5 10-2.5 2.5h-4L10 18v-2.5H7V5h12z"/><path fill="#fff" d="M15.5 7.5h2v5h-2zm-5 0h2v5h-2z"/>';
+    return s;
+  }
+  function renderPlatforms(body, p) {
+    body.appendChild(tiktokRow(p));
+    [
+      { kind: 'kick', name: 'كيك', desc: 'اربط قناتك على كيك عشان تشغّل الألعاب لمتابعينك هناك.' },
+      { kind: 'twitch', name: 'تويتش', desc: 'اربط قناتك على تويتش وخل الشات يلعب معك.' }
+    ].forEach(function (pl) {
+      body.appendChild(h('div', { class: 'pf-panel pf-tt-row off pf-plat-' + pl.kind }, [
+        h('span', { class: 'pf-tt-logo pf-plat-logo' }, platformLogo(pl.kind)),
+        h('div', { class: 'pf-tt-id' }, [
+          h('div', { class: 'pf-tt-title', text: 'حساب ' + pl.name }),
+          h('div', { class: 'pf-tt-handle', text: pl.desc })
+        ]),
+        h('button', { type: 'button', class: 'pf-btn pf-btn-soon pf-btn-sm', disabled: true, title: 'إطلاق جديد قريباً' }, 'قريباً')
+      ]));
+    });
   }
 
   // صف تيك توك المختصر: الشعار والحالة يمين، والزر يسار
@@ -575,6 +615,7 @@
         { label: 'نسبة الفوز', value: (p.points.winRatePct || 0) + '%' }
       ])
     ], 'pf-panel-lead'));
+    var cardBtn = profileCardRow(); if (cardBtn) body.appendChild(cardBtn);
     // القيم من points-service.js نفسه — ما تنكتب يدوياً هنا.
     var r = p.points.rules;
     if (r) body.appendChild(h('details', { class: 'pf-more' }, [

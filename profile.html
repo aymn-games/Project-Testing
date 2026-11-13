@@ -617,6 +617,16 @@
   .pf-day-n{font-size:11.5px;font-weight:700;color:var(--ink-3)}
   .pf-day-s{font-size:10.5px}
 
+  /* زر «صورة بروفايل» تحت الإحصائيات + شعارات المنصات */
+  .pf-cardrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--r-md);
+    background:linear-gradient(135deg,rgba(232,216,166,.10),rgba(var(--accent-rgb),.10));border:1px solid rgba(232,216,166,.26)}
+  .pf-cardrow-ic{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:11px;color:var(--gold);background:rgba(232,216,166,.1);border:1px solid rgba(232,216,166,.3)}
+  .pf-cardrow .pf-lrow-s{white-space:normal}
+  .pf-plat-logo svg{width:24px;height:24px;display:block}
+  .pf-plat-kick .pf-plat-logo{background:#0b0e0b;border-color:rgba(83,252,24,.35)}
+  .pf-plat-twitch .pf-plat-logo{background:#9146ff;border-color:rgba(255,255,255,.2)}
+  .pf-tt-row.off .pf-tt-handle{white-space:normal}
+
   /* ---------------------------------------------------------- تجاوب */
   @media (max-width:1200px){ .pf-row2{grid-template-columns:minmax(0,1fr)} :root{--side-w:220px} }
   @media (min-width:1201px){
