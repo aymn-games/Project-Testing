@@ -541,6 +541,82 @@
   .pf-sheet-note{margin-top:10px;font-size:12px;color:var(--ink-4)}
   .pf-skel-row{height:52px;border-radius:12px}
 
+  /* ---------------------------------------------------------- مبدّل البروفايل: لوحين واضحين */
+  .pf-modebar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pf-modebar button{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;border-radius:var(--r-md);cursor:pointer;text-align:right;
+    color:var(--ink-3);background:var(--glass-1);border:1px solid var(--edge);box-shadow:var(--lift-sm);
+    -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);transition:transform .2s var(--ease),border-color .3s,background .3s,color .3s,box-shadow .3s}
+  .pf-modebar button:hover{color:var(--ink);border-color:var(--edge-hi)}
+  .pf-modebar button:active{transform:scale(.98)}
+  .pf-modebar-ic{flex:none;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--edge)}
+  .pf-modebar-ic .pf-ic{width:20px;height:20px}
+  .pf-modebar-txt{display:flex;flex-direction:column;min-width:0;flex:1}
+  .pf-modebar-txt b{font-size:15px;font-weight:800;color:inherit}
+  .pf-modebar-txt small{font-size:12px;font-weight:600;color:var(--ink-4)}
+  .pf-modebar-dot{width:18px;height:18px;flex:none;border-radius:50%;border:2px solid rgba(255,255,255,.18)}
+  .pf-modebar button[data-mode="player"].on{color:#fff;border-color:rgba(178,140,245,.7);
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.01) 60%),linear-gradient(135deg,rgba(122,63,212,.38),rgba(90,42,168,.14));
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 14px 34px -16px rgba(122,63,212,.95)}
+  .pf-modebar button[data-mode="streamer"].on{color:#fff;border-color:rgba(224,112,196,.7);
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.01) 60%),linear-gradient(135deg,rgba(190,80,160,.38),rgba(142,47,120,.14));
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 14px 34px -16px rgba(224,112,196,.95)}
+  .pf-modebar button.on .pf-modebar-ic{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25)}
+  .pf-modebar button.on .pf-modebar-txt small{color:rgba(255,255,255,.75)}
+  .pf-modebar button.on .pf-modebar-dot{border-color:#fff;background:radial-gradient(circle,#fff 0 35%,transparent 40%)}
+  /* كل الشاشة تتلوّن بالوضع: شارة بأعلى بطاقة الحساب، وحواف الأقسام، وحركة عند التبديل */
+  .pf-panel,.pf-side,.pf-titlerow{border-color:rgba(var(--accent-rgb),.14)}
+  .pf-side-label{color:rgba(var(--accent-rgb),.85)}
+  body.pf-switching .pf-content,body.pf-switching .pf-side{animation:pf-swap .6s var(--ease) both}
+  @keyframes pf-swap{0%{opacity:.25;transform:translateY(8px);filter:saturate(.4)}100%{opacity:1;transform:none;filter:none}}
+
+  /* المقتنيات: معاينة وصوت وحركة */
+  .pf-item-art{position:relative}
+  .pf-item-flag{position:absolute;top:6px;left:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--gold);
+    background:rgba(5,5,8,.7);border:1px solid rgba(232,216,166,.35)}
+  .pf-item-flag .pf-ic{width:14px;height:14px}
+  .pf-item-ctl{display:flex;gap:6px}
+  .pf-item-ctl .pf-btn{flex:1;padding:0 8px}
+  .pf-item-ctl .pf-btn .pf-ic{width:13px;height:13px}
+  .pf-btn .pf-ic{width:15px;height:15px}
+  .pf-items-chars .pf-item-art img{animation:pf-float 3.2s ease-in-out infinite}
+  .pf-items-chars .pf-item:nth-child(2) .pf-item-art img{animation-delay:-1.6s}
+  @keyframes pf-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .pf-item:hover .pf-item-art img{transform:scale(1.04);transition:transform .3s var(--ease)}
+  .pf-preview{border-radius:var(--r-md);overflow:hidden;background:#0a0810;border:1px solid var(--edge)}
+  .pf-preview-img{display:block;width:100%;height:auto}
+  .pf-preview.pf-pop{animation:pf-pop .55s cubic-bezier(.2,1.3,.4,1) both}
+  @keyframes pf-pop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+  .pf-actions-center{justify-content:center;margin-top:12px}
+  .agp-ed-sheet:has(.pf-preview){max-width:560px}
+
+  /* محفظة عملات أيمن */
+  .pf-wallet{display:flex;align-items:center;gap:16px;overflow:hidden;
+    background:linear-gradient(135deg,rgba(232,216,166,.12),rgba(90,42,168,.12) 55%,rgba(255,255,255,.02));border-color:rgba(232,216,166,.28)}
+  .pf-wallet-coin{flex:none;width:76px;height:76px;filter:drop-shadow(0 10px 18px rgba(232,216,166,.25))}
+  .pf-coin{width:100%;height:100%;display:block}
+  .pf-coin.spin{animation:pf-coin 5s ease-in-out infinite}
+  @keyframes pf-coin{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(6deg) translateY(-4px)}}
+  .pf-wallet-txt{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+  .pf-wallet-v{font-size:30px;font-weight:800;color:var(--gold);line-height:1.2}
+  .pf-wallet-sm .pf-wallet-coin{width:52px;height:52px}
+  .pf-wallet-sm .pf-wallet-v{font-size:22px}
+  .pf-wallet-sm > .pf-pill{margin-inline-start:auto}
+  .pf-howgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+  .pf-how{display:flex;flex-direction:column;gap:6px}
+  .pf-how-ic{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:10px;color:var(--gold);background:rgba(232,216,166,.1);border:1px solid rgba(232,216,166,.3)}
+  .pf-how-t{font-size:14.5px;font-weight:800}
+  .pf-how-d{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+  .pf-grant-form{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;gap:8px}
+  .pf-grant-form .pf-input{width:100%}
+  .pf-input:disabled{opacity:.55;cursor:not-allowed}
+  .pf-daily{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:10px}
+  .pf-day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;background:var(--glass-2);border:1px dashed rgba(255,255,255,.14);color:var(--ink-4)}
+  .pf-day .pf-ic{width:18px;height:18px;color:rgba(var(--accent-rgb),.8)}
+  .pf-day.big{border-style:solid;border-color:rgba(232,216,166,.4);background:rgba(232,216,166,.08)}
+  .pf-day.big .pf-ic{color:var(--gold)}
+  .pf-day-n{font-size:11.5px;font-weight:700;color:var(--ink-3)}
+  .pf-day-s{font-size:10.5px}
+
   /* ---------------------------------------------------------- تجاوب */
   @media (max-width:1200px){ .pf-row2{grid-template-columns:minmax(0,1fr)} :root{--side-w:220px} }
   @media (min-width:1201px){
@@ -624,6 +700,23 @@
     .pf-tt-row .pf-tt-logo{width:34px;height:34px}
     .pf-tt-row .pf-tt-logo img{width:22px;height:22px}
     .pf-notice{padding:9px 12px;font-size:12.5px}
+    .pf-modebar{gap:6px}
+    .pf-modebar button{min-height:46px;padding:6px 8px;gap:8px;border-radius:13px}
+    .pf-modebar-ic{width:30px;height:30px;border-radius:9px}
+    .pf-modebar-ic .pf-ic{width:16px;height:16px}
+    .pf-modebar-txt b{font-size:13px}
+    .pf-modebar-txt small{display:none}
+    .pf-modebar-dot{width:14px;height:14px}
+    .pf-item-ctl{flex-direction:column}
+    .pf-wallet{gap:12px}
+    .pf-wallet-coin{width:56px;height:56px}
+    .pf-wallet-v{font-size:24px}
+    .pf-howgrid{grid-template-columns:minmax(0,1fr);gap:8px}
+    .pf-how{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:10px}
+    .pf-how-d{flex-basis:100%}
+    .pf-grant-form{grid-template-columns:minmax(0,1fr) 96px}
+    .pf-grant-form .pf-btn{grid-column:1/-1}
+    .pf-daily{grid-template-columns:repeat(4,minmax(0,1fr))}
   }
   @media (max-width:400px){
     .pf-items-cards{grid-template-columns:minmax(0,1fr)}
@@ -669,14 +762,24 @@
           </div>
         </div>
         <div class="pf-titlerow-end">
-          <div class="pf-mode" id="pfMode" role="tablist" aria-label="نوع البروفايل" data-active="player">
-            <button type="button" role="tab" data-mode="player" class="on" aria-selected="true"><svg class="pf-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="10.5" rx="4"/><path d="M7 12.2h3.2M8.6 10.6v3.2M15 11h.01M17 13.4h.01"/></svg>لاعب</button>
-            <button type="button" role="tab" data-mode="streamer" aria-selected="false" tabindex="-1"><svg class="pf-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.8"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.8 5.8a8.8 8.8 0 0 0 0 12.4M18.2 5.8a8.8 8.8 0 0 1 0 12.4"/></svg>ستريمر</button>
-          </div>
           <div class="pf-hero-actions" id="pfHeroActions"></div>
         </div>
       </div>
 
+
+      <!-- مبدّل البروفايل: لوحين كبار واضحين، والمفعّل يضيء بلون وضعه وتتغيّر ألوان الشاشة كلها -->
+      <div class="pf-modebar" id="pfMode" role="tablist" aria-label="نوع البروفايل" data-active="player">
+        <button type="button" role="tab" data-mode="player" class="on" aria-selected="true">
+          <span class="pf-modebar-ic"><svg class="pf-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="10.5" rx="4"/><path d="M7 12.2h3.2M8.6 10.6v3.2M15 11h.01M17 13.4h.01"/></svg></span>
+          <span class="pf-modebar-txt"><b>بروفايل اللاعب</b><small>نقاطك ومقتنياتك وأكوادك</small></span>
+          <span class="pf-modebar-dot" aria-hidden="true"></span>
+        </button>
+        <button type="button" role="tab" data-mode="streamer" aria-selected="false" tabindex="-1">
+          <span class="pf-modebar-ic"><svg class="pf-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.8"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.8 5.8a8.8 8.8 0 0 0 0 12.4M18.2 5.8a8.8 8.8 0 0 1 0 12.4"/></svg></span>
+          <span class="pf-modebar-txt"><b>بروفايل الستريمر</b><small>بثّك وفريقك وجوائزك</small></span>
+          <span class="pf-modebar-dot" aria-hidden="true"></span>
+        </button>
+      </div>
 
       <section class="pf-content" id="pfContent" aria-live="polite">
         <div class="pf-skel" style="height:22px;width:160px"></div>
@@ -693,6 +796,9 @@
 <script src="js/agp-profile-card.js"></script>
 <!-- التحكم عن بعد: نافذة الستريمر (المفتاح العام + المتحكمين)، وزر «لوحة التحكم» للمتحكم — تحتاج نواة AGP فقط -->
 <script src="js/agp-core.js"></script>
+<!-- معاينة بطاقات الإقصاء والفوز بشكلها بالألعاب، مع صوت البطاقة -->
+<script src="js/agp-elim-card.js"></script>
+<script src="js/agp-win-card.js"></script>
 <script src="js/agp-remote-control.js"></script>
 <script src="js/agp-profile-page.js"></script>
 </body>

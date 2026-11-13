@@ -101,6 +101,9 @@
     check: '<path d="m5 12.5 4.2 4.2L19 7"/>',
     users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17 14.6c2 .5 3.2 2.1 3.6 4.9"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+    play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+    sound: '<path d="M4.5 9.5h3.2L12 6v12l-4.3-3.5H4.5z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/>',
+    coin: '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.2 15.3 16h-1.8l-.7-1.9h-1.6l-.7 1.9H8.7zm0 3.4-.6 1.8h1.2z"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.8A1.8 1.8 0 0 0 14.2 4H5.8A1.8 1.8 0 0 0 4 5.8v8.4A1.8 1.8 0 0 0 5.8 16H8"/>'
   };
   function icon(name, cls) {
@@ -187,14 +190,17 @@
     { id: 'overview', group: 'account', mode: 'both', icon: 'home', label: 'نظرة عامة', render: renderOverview },
     { id: 'account', group: 'account', mode: 'both', icon: 'user', label: 'حسابي', render: renderAccount },
     { id: 'level', group: 'account', mode: 'player', icon: 'star', label: 'المستوى', show: function (p) { return !!p.points; }, render: renderLevel },
+    { id: 'wallet', group: 'account', mode: 'both', owner: true, icon: 'coin', label: 'عملات أيمن', render: renderWallet },
 
     { id: 'frames', group: 'items', mode: 'player', icon: 'frame', label: 'الإطارات', show: function (p) { return !!p.frames; }, render: renderFrames },
-    { id: 'character', group: 'items', mode: 'player', icon: 'person', label: 'الشخصية', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
-    { id: 'cards', group: 'items', mode: 'player', icon: 'cards', label: 'البطاقات', show: function (p) { return !!(p.elimCards || p.winCards || p.entrance); }, render: renderCards },
+    { id: 'win-cards', group: 'items', mode: 'player', icon: 'trophy', label: 'بطاقات الفوز', show: function (p) { return !!p.winCards; }, render: renderWinCards },
+    { id: 'elim-cards', group: 'items', mode: 'player', icon: 'cards', label: 'بطاقات الإقصاء', show: function (p) { return !!p.elimCards; }, render: renderElimCards },
+    { id: 'character', group: 'items', mode: 'player', icon: 'person', label: 'الشخصيات', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
+    { id: 'entrance', group: 'items', mode: 'player', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance; }, render: renderEntrance },
     { id: 'codes', group: 'items', mode: 'player', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
 
     { id: 'broadcast', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderBroadcast },
-    { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'أكواد الفوز', render: renderWinCodes },
+    { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'الإطارات والجوائز', render: renderRewards },
 
     { id: 'team', group: 'community', mode: 'streamer', owner: true, streamerOnly: true, icon: 'users', label: 'فريقك', render: renderTeam },
     { id: 'teams', group: 'community', mode: 'both', owner: true, icon: 'search', label: 'ابحث عن ستريمر', render: renderTeams },
@@ -205,7 +211,7 @@
   ];
   // روابط قديمة (#info، #win-codes من شاشة الفوز...) توصل للقسم المدموج الجديد
   var ALIASES = { info: 'account', tiktok: 'account', 'remote-control': 'remote', 'remote-access': 'remote', screens: 'soon',
-    'stream-stats': 'broadcast', 'streamer-level': 'broadcast', entrance: 'cards', redeem: 'codes' };
+    'stream-stats': 'broadcast', 'streamer-level': 'broadcast', cards: 'win-cards', redeem: 'codes', rewards: 'win-codes', coins: 'wallet' };
 
   function sectionVisible(sec) {
     if (sec.mode !== 'both' && sec.mode !== S.mode) return false;
@@ -340,12 +346,17 @@
   function setMode(mode, opts) {
     opts = opts || {};
     if (mode !== 'player' && mode !== 'streamer') return;
+    if (mode === S.mode && !opts.keepSection) return;
     S.mode = mode;
     store('agp_profile_mode', mode);
     paintModeSwitch();
     if (!opts.keepSection) {
       var cur = findSection(S.section);
       go(cur && sectionVisible(cur) ? cur.id : 'overview');
+      // الشاشة كلها تبدّل ألوانها، ورسالة قصيرة تأكد وين صرت
+      document.body.classList.remove('pf-switching'); void document.body.offsetWidth; document.body.classList.add('pf-switching');
+      setTimeout(function () { document.body.classList.remove('pf-switching'); }, 700);
+      showToast(mode === 'streamer' ? 'صرت ببروفايل الستريمر' : 'صرت ببروفايل اللاعب');
     }
   }
 
@@ -460,7 +471,7 @@
     } else if (S.mode === 'streamer' && S.owner && isStreamerAccount(p)) {
       row.appendChild(panel('أدوات البث', null, [h('div', { class: 'pf-kvs' }, [
         kvRow('فريقك', h('a', { href: '#team', class: 'pf-link', 'data-sec': 'team' }, 'الأعضاء')),
-        kvRow('أكواد الفوز', h('a', { href: '#win-codes', class: 'pf-link', 'data-sec': 'win-codes' }, 'استرداد ومنح')),
+        kvRow('الإطارات والجوائز', h('a', { href: '#win-codes', class: 'pf-link', 'data-sec': 'win-codes' }, 'أكواد ومنح')),
         kvRow('التحكم عن بعد', h('a', { href: '#remote', class: 'pf-link', 'data-sec': 'remote' }, 'إدارة'))
       ])]));
     }
@@ -616,7 +627,7 @@
 
   function renderCharacter(body, p) {
     var cur = p.character === 'girl' || p.character === 'boy' ? p.character : null;
-    var grid = h('div', { class: 'pf-items pf-items-3' });
+    var grid = h('div', { class: 'pf-items pf-items-3 pf-items-chars' });
     [
       { kind: 'girl', name: 'بنت', img: 'assets/characters/girl.png' },
       { kind: 'boy', name: 'ولد', img: 'assets/characters/boy.png' },
@@ -627,39 +638,150 @@
       grid.appendChild(itemCard({ img: opt.img, glyph: opt.img ? null : '؟', name: opt.name, artHeight: 170, status: active ? pill('مختارة', 'ok') : null, control: control }));
     });
     body.appendChild(panel(null, null, [
-      h('p', { class: 'pf-muted', text: 'تطلع معك بالألعاب الثري دي لما يكون حسابك موثّق بتيك توك.' }),
+      h('p', { class: 'pf-muted', text: 'شخصيتك الثري دي تطلع معك بالألعاب لما يكون حسابك موثّق بتيك توك.' }),
       grid
     ]));
   }
 
-  function cardsGrid(list, toggleFn, emptyText, artHeight) {
+  /* ---------- المقتنيات: كل نوع بقسم، والمتحرك يتحرك، واللي له صوت يشتغل صوته */
+  function cardsGrid(kind, list, toggleFn, emptyText, artHeight) {
     var grid = h('div', { class: 'pf-items pf-items-cards' });
     if (!list.length) grid.appendChild(emptyNote(emptyText));
     list.forEach(function (c) {
-      grid.appendChild(itemCard({
-        img: c.imageFilename, name: c.displayNameAr || c.cardKey, artHeight: artHeight,
+      var ctl = h('div', { class: 'pf-item-ctl' }, [
+        S.owner ? actionBtn(c.enabled ? 'إيقاف' : 'تفعيل', function () { return toggleFn(c.cardKey, !c.enabled); }) : null,
+        h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview(kind, c); } }, [icon('play'), 'معاينة'])
+      ]);
+      var card = itemCard({
+        img: c.imageFilename, name: cleanCardName(c.displayNameAr || c.cardKey), artHeight: artHeight,
         status: c.enabled ? pill('مفعّلة', 'ok') : pill('موقوفة'),
-        control: S.owner ? actionBtn(c.enabled ? 'إيقاف' : 'تفعيل', function () { return toggleFn(c.cardKey, !c.enabled); }) : null
-      }));
+        control: ctl
+      });
+      if (cardHasSound(kind, c)) card.querySelector('.pf-item-art').appendChild(h('span', { class: 'pf-item-flag', title: 'لها صوت خاص' }, icon('sound')));
+      grid.appendChild(card);
     });
     return grid;
   }
-  // البطاقات + الدخولية بقسم واحد، وكل نوع بتبويب صغير بدل لوحات طويلة
-  function renderCards(body, p) {
-    var elim = p.elimCards || [], win = p.winCards || [];
-    var tabs = [
-      { id: 'elim', label: 'الإقصاء', count: elim.length, render: function () { return cardsGrid(elim, function (k, on) { return window.AGPAuth.toggleElimCard(k, on); }, 'ما عندك بطاقات إقصاء بعد.', 96); } },
-      { id: 'win', label: 'الفوز', count: win.length, render: function () { return cardsGrid(win, function (k, on) { return window.AGPAuth.toggleWinCard(k, on); }, 'ما عندك بطاقات فوز بعد.', 130); } },
-      { id: 'entrance', label: 'الدخولية', count: p.entrance ? 1 : 0, render: function () {
-        var e = p.entrance;
-        return e ? h('div', { class: 'pf-kvs' }, [
-          kvRow('الدخولية', e.template_key || '—'),
-          e.entrance_text ? kvRow('النص', e.entrance_text) : null,
-          kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
-        ]) : emptyNote('ما عندك دخولية مفعّلة بعد.');
-      } }
+  // «بطاقة الإقصاء — عزوز (منح محدود)» ← «عزوز»
+  function cleanCardName(n) { return String(n || '').replace(/^بطاقة (الإقصاء|الفوز)\s*[—-]\s*/, '').replace(/\s*\(منح محدود\)\s*$/, ''); }
+  function previewPlayer(kind, c) {
+    var p = S.p || {};
+    var pl = { name: p.display_name || p.username || 'أنت', avatarUrl: p.avatar_image_base64 || p.tiktok_avatar_url || null };
+    pl[kind === 'elim' ? 'elimCard' : 'winCard'] = { cardKey: c.cardKey };
+    return pl;
+  }
+  function cardApi(kind) { var A = window.AymanGamesPlatform || {}; return kind === 'elim' ? A.elimCard : A.winCard; }
+  function cardHasSound(kind, c) { var api = cardApi(kind); return !!(api && api.hasSound && api.hasSound(previewPlayer(kind, c))); }
+
+  // معاينة البطاقة بشكلها الحقيقي بالألعاب (نفس js/agp-elim-card.js وjs/agp-win-card.js)
+  function openCardPreview(kind, c) {
+    var api = cardApi(kind);
+    var sheet = openSheet(cleanCardName(c.displayNameAr || c.cardKey), kind === 'elim' ? 'كذا تطلع بطاقتك لما تقصي لاعب بالألعاب.' : 'كذا تطلع بطاقتك لما تفوز بجولة.');
+    var stage = h('div', { class: 'pf-preview' });
+    var me = previewPlayer(kind, c);
+    function paint() {
+      if (api && api.canShow && api.canShow(me)) {
+        stage.innerHTML = kind === 'elim'
+          ? api.renderHtml(me, { name: 'لاعب', avatarUrl: null })
+          : api.renderHtml(me, ['المركز الأول', '+10 نقاط'], { pop: true });
+      } else {
+        stage.innerHTML = '';
+        if (c.imageFilename) stage.appendChild(h('img', { src: c.imageFilename, alt: '', class: 'pf-preview-img' }));
+      }
+      stage.classList.remove('pf-pop'); void stage.offsetWidth; stage.classList.add('pf-pop');
+    }
+    paint();
+    sheet.body.appendChild(stage);
+    var actions = h('div', { class: 'pf-actions pf-actions-center' });
+    actions.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: paint }, [icon('play'), 'إعادة الحركة']));
+    if (api && api.hasSound && api.hasSound(me)) {
+      actions.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', onclick: function () { paint(); api.playSound(me, 1); } }, [icon('sound'), 'تشغيل الصوت']));
+    }
+    sheet.body.appendChild(actions);
+  }
+
+  function renderWinCards(body, p) {
+    var win = p.winCards || [];
+    body.appendChild(panel(null, null, [cardsGrid('win', win, function (k, on) { return window.AGPAuth.toggleWinCard(k, on); }, 'ما عندك بطاقات فوز بعد.', 150)]));
+  }
+  function renderElimCards(body, p) {
+    var elim = p.elimCards || [];
+    body.appendChild(panel(null, null, [cardsGrid('elim', elim, function (k, on) { return window.AGPAuth.toggleElimCard(k, on); }, 'ما عندك بطاقات إقصاء بعد.', 104)]));
+  }
+  function renderEntrance(body, p) {
+    var e = p.entrance;
+    body.appendChild(panel(null, null, [e ? h('div', { class: 'pf-kvs' }, [
+      kvRow('الدخولية', e.template_key || '—'),
+      e.entrance_text ? kvRow('النص', e.entrance_text) : null,
+      kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
+    ]) : emptyNote('ما عندك دخولية مفعّلة بعد.')]));
+  }
+
+  /* ---------- محفظة عملات أيمن (تصميم جاهز — النظام نفسه ينبني لاحقاً) */
+  function coinSvg(cls) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 64 64'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
+    s.innerHTML =
+      '<defs><linearGradient id="pfCoinG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1c2"/><stop offset=".45" stop-color="#e8d8a6"/><stop offset="1" stop-color="#b48a3c"/></linearGradient>' +
+      '<linearGradient id="pfCoinV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8c5ae0"/><stop offset="1" stop-color="#4a2290"/></linearGradient></defs>' +
+      '<circle cx="32" cy="32" r="30" fill="url(#pfCoinG)"/><circle cx="32" cy="32" r="24.5" fill="url(#pfCoinV)" stroke="#fff3cf" stroke-opacity=".55" stroke-width="1.5"/>' +
+      '<path d="M32 17 44.5 45h-6.2l-2.6-6.2h-7.4L25.7 45h-6.2zm0 11.2-2.4 6h4.8z" fill="#fff3cf"/>' +
+      '<circle cx="32" cy="32" r="28" fill="none" stroke="#fff" stroke-opacity=".35" stroke-dasharray="2 3.2"/>';
+    return s;
+  }
+  function renderWallet(body) {
+    body.appendChild(h('div', { class: 'pf-panel pf-wallet' }, [
+      h('div', { class: 'pf-wallet-coin' }, coinSvg('spin')),
+      h('div', { class: 'pf-wallet-txt' }, [
+        h('div', { class: 'pf-lead-l', text: 'رصيدك من عملات أيمن' }),
+        h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: '—' }), h('span', { class: 'pf-unit', text: ' عملة' })]),
+        pill('قريباً')
+      ])
+    ]));
+    var steps = [
+      ['trophy', 'تكسبها', 'من الفوز بالمباريات، والمهام اليومية، وهدايا الستريمر اللي تتابعه.'],
+      ['gift', 'تصرفها', 'على إطارات وبطاقات من المتجر، أو تهديها للاعبين.'],
+      ['users', 'الستريمر يوزّع', 'الستريمر يقدر يمنح لاعبينه عملات من رصيده.']
     ];
-    body.appendChild(panel(null, null, [segTabs(tabs, 'cards')]));
+    body.appendChild(h('div', { class: 'pf-howgrid' }, steps.map(function (st) {
+      return h('div', { class: 'pf-panel pf-how' }, [h('span', { class: 'pf-how-ic' }, icon(st[0])), h('div', { class: 'pf-how-t', text: st[1] }), h('p', { class: 'pf-how-d', text: st[2] })]);
+    })));
+  }
+
+  /* ---------- الجوائز (الستريمر): أكواد الفوز + منح عملات + أكواد يومية */
+  function renderRewards(body, p) {
+    var tabs = [
+      { id: 'codes', label: 'أكواد الفوز', render: function () { var w = h('div'); renderWinCodes(w, p); return w; } },
+      { id: 'coins', label: 'منح عملات', render: renderGrantCoins },
+      { id: 'daily', label: 'أكواد يومية', render: renderDailyCodes }
+    ];
+    body.appendChild(segTabs(tabs, 'rewards'));
+  }
+  function renderGrantCoins() {
+    var who = h('input', { type: 'search', class: 'pf-input', placeholder: 'الـID أو يوزر تيك توك', disabled: true, 'aria-label': 'اللاعب' });
+    var amount = h('input', { type: 'number', class: 'pf-input pf-input-amt', placeholder: 'عدد العملات', min: '1', disabled: true, 'aria-label': 'عدد العملات' });
+    return h('div', { class: 'pf-content-body' }, [
+      h('div', { class: 'pf-panel pf-wallet pf-wallet-sm' }, [
+        h('div', { class: 'pf-wallet-coin' }, coinSvg()),
+        h('div', { class: 'pf-wallet-txt' }, [h('div', { class: 'pf-lead-l', text: 'رصيدك للمنح' }), h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: '—' }), h('span', { class: 'pf-unit', text: ' عملة' })])]),
+        pill('قريباً')
+      ]),
+      panel('امنح لاعب عملات', null, [
+        h('div', { class: 'pf-grant-form' }, [who, amount, h('button', { type: 'button', class: 'pf-btn pf-btn-primary', disabled: true, title: 'يتفعّل مع نظام العملات' }, 'منح')]),
+        h('p', { class: 'pf-field-help', text: 'تمنح أي لاعب عملات من رصيدك، وتوصله بحسابه على طول. يتفعّل مع إطلاق نظام العملات.' })
+      ])
+    ]);
+  }
+  function renderDailyCodes() {
+    var days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+    return h('div', { class: 'pf-content-body' }, [
+      panel('كود كل يوم', pill('قريباً'), [
+        h('p', { class: 'pf-muted', text: 'تكسب كود جوائز جديد كل يوم مع نشاط بثّك، وتمنحه لفريقك أو تسترده لنفسك.' }),
+        h('div', { class: 'pf-daily' }, days.map(function (d, i) {
+          return h('div', { class: 'pf-day' + (i === 6 ? ' big' : '') }, [h('span', { class: 'pf-day-n', text: d }), icon(i === 6 ? 'gift' : 'medal'), h('span', { class: 'pf-day-s', text: i === 6 ? 'كود مميز' : 'كود' })]);
+        }))
+      ])
+    ]);
   }
 
   // تبويبات صغيرة داخل قسم (تتذكر آخر تبويب)
