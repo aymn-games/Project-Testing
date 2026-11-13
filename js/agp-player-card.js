@@ -463,19 +463,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
         },
         // [الجوكر] إطار متحرك (SVG) على المقاس المعتمد 2172×724 — الرسم 4 طبقات
-        // من صاحب المنصة (ChatGPT): الحلقة، لوح الاسم، الجوهرتين، والزينة
-        // والجوكر الكبير. فُرّغت من الأبيض ورُكّبت داخل الـSVG، والحركة نفس
-        // مقطع صاحب المنصة: الحلقة تطلع → اللوح ينسحب من خلفها → الجواهر →
-        // الزينة والجوكر تنفجر مع نجوم، ونفخات دخان أبيض تطلع لفوق من خلف الحلقة
-        // (~3ث)، بعدها لمبات ولمعة مستمرة. لوح الاسم مقصّر 300px والرسمة
-        // متوسّطة على الكانفاس.
-        // مقاس بالرندر النهائي: hole 443→797 × 183→537 (فتحة دائرية شفافة،
-        // كل الطبقات ممسوكة عنها بقناع)، name 1109→1695 × 298→431 (المخمل بين
-        // الزينة والجوكر)، content 0→707. اللوح كحلي غامق — اسم أبيض افتراضي.
+        // من صاحب المنصة، مصفوفة وشفافة (assets/frame-src/joker-circus/)،
+        // والحركة نفس مقطعه: الحلقة تطلع → اللوح ينسحب من خلفها → الجواهر →
+        // الزينة والجوكر الكبير ينفجرون مع نجوم ونفخات دخان كرتونية من زوايا
+        // الحلقة الأربع (خطوط سرعة ثم ذيل نقاط) (~3.4ث)، بعدها لمبات ولمعة.
+        // مقاس من الطبقات نفسها: hole = دائرة مركزها 517,368 ونصف قطرها 193
+        // (324→710 × 175→561)، name = المخمل بين الجوهرتين والخالي من الزينة
+        // (999→1717 × 317→420)، content 0→724. لوح كحلي — اسم أبيض افتراضي.
         'frame-joker-circus.svg': {
-            canvasW: 2172, canvasH: 724, contentTop: 0, contentHeight: 707,
-            avatarLeftPct: 20.40, avatarTopPct: 25.88, avatarWidthPct: 16.30, avatarHeightPct: 50.07,
-            nameLeftPct: 51.06, nameTopPct: 42.15, nameWidthPct: 26.98, nameHeightPct: 18.81
+            canvasW: 2172, canvasH: 724, contentTop: 0, contentHeight: 724,
+            avatarLeftPct: 14.92, avatarTopPct: 24.17, avatarWidthPct: 17.77, avatarHeightPct: 53.31,
+            nameLeftPct: 45.99, nameTopPct: 43.78, nameWidthPct: 33.06, nameHeightPct: 14.23
         },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
