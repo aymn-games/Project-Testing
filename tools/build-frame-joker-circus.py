@@ -18,7 +18,8 @@ gems_src = Image.open(L + '/gems.png')
 deco_src = Image.open(L + '/deco.png')
 
 # ---------------------------------------------------------------- geometry
-CX, CY = 470, 360                 # ring/avatar centre on the canvas
+SHORTEN = 300                     # name plate shortened by this much (art stays centred)
+CX, CY = 470 + SHORTEN // 2, 360   # ring/avatar centre on the canvas
 WREATH_S = 1.08                   # wreath scale (fills the canvas height)
 WREATH_C = (505, 346)             # centre of the wreath opening (source px)
 RING_C, RING_HOLE = (479.0, 335.3), 192.6
@@ -44,7 +45,7 @@ wx, wy = CX + (wb[0] - WREATH_C[0]) * WREATH_S, CY + (wb[1] - WREATH_C[1]) * WRE
 JS = 0.92
 jb = (1284, 0, 1925, 667)
 jester = scaled(deco_src, jb, JS)
-jx = W - 8 - jester.width
+jx = W - 8 - jester.width - SHORTEN // 2
 jy = (H - jester.height) / 2 + 4
 
 # plate: keep both ornate ends, lengthen by repeating whole quilt periods
@@ -83,6 +84,15 @@ gbx, gby = GX - g_bot.width / 2, bot_border_y - g_bot.height / 2
 
 # flying star sprite (the big gold star from the jester layer)
 star = deco_src.crop((1640, 490, 1790, 635))
+_s = np.asarray(star).astype(np.float32)
+_gold = (_s[..., 0] > 110) & (_s[..., 0] >= _s[..., 1]) & (_s[..., 1] >= _s[..., 2] * 1.15)   # keep gold pixels only
+from scipy import ndimage as _ndi
+_lab, _ = _ndi.label(_gold)
+_big = np.bincount(_lab.ravel()); _big[0] = 0
+_mask = _ndi.binary_closing(_lab == _big.argmax(), iterations=2)
+_s[..., 3] = np.where(_mask, _s[..., 3], 0)
+star = Image.fromarray(_s.astype(np.uint8), 'RGBA')
+star = star.crop(star.getchannel('A').getbbox())
 star = star.resize((90, round(90 * star.height / star.width)), Image.LANCZOS)
 
 # ---------------------------------------------------------------- bulbs (for twinkle overlay)
@@ -132,6 +142,8 @@ a('<radialGradient id="gGlow"><stop offset="0" stop-color="#fff6d0" stop-opacity
 a('<radialGradient id="gPuff" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="#fff"/><stop offset=".75" stop-color="#eef0f6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>')
 a('<linearGradient id="gShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff6d8" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>')
 a('<filter id="fSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4"/></filter>')
+a('<filter id="fSmoke" filterUnits="userSpaceOnUse" x="0" y="-200" width="%d" height="%d"><feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="3" seed="7"/>'
+  '<feDisplacementMap in="SourceGraphic" scale="38" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="5"/></filter>' % (W, H + 400))
 a('<image id="star" width="%d" height="%d" href="%s"/>' % (star.width, star.height, data_uri(star)))
 a('</defs>')
 
@@ -150,8 +162,8 @@ a('@keyframes pop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacit
 a('.dec{animation:decIn .6s cubic-bezier(.2,1.5,.4,1) both}')
 a('@keyframes decIn{0%{transform:scale(.25) rotate(-10deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}')
 # 5) burst: puffs + flying stars
-a('.puff{opacity:0;animation:puff .95s ease-out both}')
-a('@keyframes puff{0%{transform:scale(.2);opacity:0}25%{opacity:.95}100%{transform:scale(1.4);opacity:0}}')
+a('.puff{opacity:0;animation:puff 1.3s cubic-bezier(.2,.7,.35,1) both}')
+a('@keyframes puff{0%{transform:translate(0,0) scale(.2);opacity:0}22%{opacity:1}70%{opacity:.9}100%{transform:translate(var(--dx),var(--dy)) scale(1.9);opacity:0}}')
 a('.fly{opacity:0;animation:fly 1.15s cubic-bezier(.15,.7,.3,1) both}')
 a('@keyframes fly{0%{transform:translate(0,0) scale(.3) rotate(0);opacity:0}15%{opacity:1}80%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1) rotate(220deg);opacity:0}}')
 # idle
@@ -167,6 +179,14 @@ a('@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;an
 a('</style>')
 
 a('<g mask="url(#mHole)">')
+# white puffs bursting out from behind the top of the avatar ring (drawn before the plate and ring)
+for i, deg in enumerate(list(range(195, 350, 13)) + list(range(201, 345, 26))):
+    t = math.radians(deg)
+    ox, oy = CX + 225 * math.cos(t), CY + 215 * math.sin(t)
+    cl = ''.join('<circle cx="%s" cy="%s" r="%d" fill="url(#gPuff)"/>' % (
+        f(ox + 52 * math.cos(k * 1.25)), f(oy + 42 * math.sin(k * 1.25)), 52 - k * 4) for k in range(6))
+    a('<g class="fb puff" filter="url(#fSoft)" style="--dx:%dpx;--dy:%dpx;animation-delay:%.2fs">%s</g>' % (
+        round(270 * math.cos(t)), round(150 * math.sin(t)), 2.3 + (i % 4) * .07, cl))
 a('<g id="plate">%s</g>' % img(plate, px, py))
 a('<g class="fb orn" style="animation-delay:1.55s">%s</g>' % img(g_top, gtx, gty))
 a('<g class="fb orn" style="animation-delay:1.65s">%s</g>' % img(g_bot, gbx, gby))
@@ -181,13 +201,6 @@ a('<g class="fb dec" style="animation-delay:2.12s"><g class="bob">%s</g></g>' % 
 # glints
 for (x, y, d) in [(CX - 150, 140, 0), (CX + 190, 600, .9), (GX - 200, 300, 1.6), (GX + 260, 430, 2.3), (jx + 380, 90, .4), (CX - 330, 320, 1.2)]:
     a('<g class="fb glint" style="animation-delay:%.1fs"><path d="M%s %s l7 -26 l7 26 l26 7 l-26 7 l-7 26 l-7 -26 l-26 -7 Z" fill="#fff"/></g>' % (3.2 + d, f(x - 7), f(y - 7)))
-# puffs at the ring diagonals
-R2 = 225
-for i, (sx, sy) in enumerate([(-1, -1), (1, -1), (-1, 1), (1, 1)]):
-    px_, py_ = CX + sx * R2 * .78, CY + sy * R2 * .78
-    cl = ''.join('<circle cx="%s" cy="%s" r="%d" fill="url(#gPuff)"/>' % (
-        f(px_ + 50 * math.cos(k * 1.25)), f(py_ + 42 * math.sin(k * 1.25)), 46 - k * 4) for k in range(6))
-    a('<g class="fb puff" filter="url(#fSoft)" style="animation-delay:%.2fs">%s</g>' % (2.35 + i * .05, cl))
 # flying stars
 for i, (sx, sy, dx, dy) in enumerate([(jx + 330, 230, -220, -160), (jx + 420, 330, 170, -200), (jx + 260, 420, -280, 120), (jx + 450, 470, 140, 170),
                                       (CX + 260, 300, -180, -210), (CX + 200, 520, 140, 160), (GX, 270, -70, -220), (GX + 120, 470, 90, 200)]):

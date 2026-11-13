@@ -466,14 +466,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // من صاحب المنصة (ChatGPT): الحلقة، لوح الاسم، الجوهرتين، والزينة
         // والجوكر الكبير. فُرّغت من الأبيض ورُكّبت داخل الـSVG، والحركة نفس
         // مقطع صاحب المنصة: الحلقة تطلع → اللوح ينسحب من خلفها → الجواهر →
-        // الزينة والجوكر تنفجر مع نجوم ودخان (~3ث)، بعدها لمبات ولمعة مستمرة.
-        // مقاس بالرندر النهائي: hole 293→647 × 183→537 (فتحة دائرية شفافة،
-        // كل الطبقات ممسوكة عنها بقناع)، name 959→1845 × 298→431 (المخمل بين
+        // الزينة والجوكر تنفجر مع نجوم، ونفخات دخان أبيض تطلع لفوق من خلف الحلقة
+        // (~3ث)، بعدها لمبات ولمعة مستمرة. لوح الاسم مقصّر 300px والرسمة
+        // متوسّطة على الكانفاس.
+        // مقاس بالرندر النهائي: hole 443→797 × 183→537 (فتحة دائرية شفافة،
+        // كل الطبقات ممسوكة عنها بقناع)، name 1109→1695 × 298→431 (المخمل بين
         // الزينة والجوكر)، content 0→707. اللوح كحلي غامق — اسم أبيض افتراضي.
         'frame-joker-circus.svg': {
             canvasW: 2172, canvasH: 724, contentTop: 0, contentHeight: 707,
-            avatarLeftPct: 13.49, avatarTopPct: 25.88, avatarWidthPct: 16.30, avatarHeightPct: 50.07,
-            nameLeftPct: 44.15, nameTopPct: 42.15, nameWidthPct: 40.79, nameHeightPct: 18.81
+            avatarLeftPct: 20.40, avatarTopPct: 25.88, avatarWidthPct: 16.30, avatarHeightPct: 50.07,
+            nameLeftPct: 51.06, nameTopPct: 42.15, nameWidthPct: 26.98, nameHeightPct: 18.81
         },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
