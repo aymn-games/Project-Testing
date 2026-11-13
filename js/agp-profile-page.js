@@ -236,7 +236,8 @@
     // سطر واحد رمادي تحت الاسم: الدور · الـID · تاريخ الانضمام · حالة تيك توك
     var meta = $('#pfChips');
     meta.innerHTML = '';
-    meta.appendChild(h('span', { text: roleLabel(p) }));
+    var roleKey = p.role === 'admin' ? 'admin' : (p.is_streamer || p.can_run_games) ? 'streamer' : 'player';
+    meta.appendChild(h('span', { class: 'pf-role pf-role-' + roleKey, text: roleLabel(p) }));
     if (p.custom_id) {
       var idBtn = h('button', { type: 'button', class: 'pf-meta-btn num', title: 'نسخ الـID', 'aria-label': 'نسخ الـID ' + p.custom_id }, [h('span', { text: 'ID #' + p.custom_id }), icon('copy')]);
       idBtn.addEventListener('click', function () {
@@ -248,7 +249,10 @@
       meta.appendChild(idBtn);
     }
     if (p.joined_at) meta.appendChild(h('span', { text: 'انضم ' + formatDate(p.joined_at) }));
-    meta.appendChild(p.tiktok_verified ? pill('تيك توك موثّق', 'ok') : pill('تيك توك غير مربوط', 'warn'));
+    // شارة توثيق تيك توك — بألوان تيك توك، أو مقطّعة لو الحساب مو مربوط
+    meta.appendChild(p.tiktok_verified
+      ? h('span', { class: 'pf-tt-badge', title: p.tiktok_username ? '@' + p.tiktok_username : 'حساب تيك توك موثّق' }, [h('img', { src: 'tiktok-logo.png', alt: '' }), 'موثّق بتيك توك', icon('check')])
+      : h('a', { class: 'pf-tt-badge off', href: S.owner ? '#tiktok' : null, 'data-sec': S.owner ? 'tiktok' : null }, [h('img', { src: 'tiktok-logo.png', alt: '' }), 'تيك توك غير مربوط']));
 
     var acts = $('#pfHeroActions');
     acts.innerHTML = '';

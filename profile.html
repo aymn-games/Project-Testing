@@ -166,11 +166,30 @@
   .pf-id-txt{min-width:0}
   .pf-name{margin:0;font-family:var(--font-head);font-size:26px;font-weight:800;line-height:1.35;letter-spacing:-.01em;overflow-wrap:anywhere}
   .pf-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:13px;color:var(--ink-3)}
-  .pf-meta > span:not(.pf-pill),.pf-meta-btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:var(--glass-2);border:1px solid var(--edge)}
+  .pf-meta > span:not(.pf-pill),.pf-meta-btn,.pf-meta > a.pf-tt-badge{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:var(--glass-2);border:1px solid var(--edge)}
   .pf-meta-btn{color:var(--ink-3);cursor:pointer;direction:ltr;transition:color .2s,background .2s,border-color .2s}
   .pf-meta-btn .pf-ic{width:14px;height:14px}
   .pf-meta-btn:hover{color:var(--ink);background:var(--glass-3);border-color:var(--edge-hi)}
   .pf-meta .pf-pill{height:28px;padding:0 11px}
+  /* نوع الحساب: لون لكل نوع */
+  .pf-meta > span.pf-role{gap:7px;font-weight:800;color:#fff}
+  .pf-role::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .pf-meta > span.pf-role-player{color:#cdb4ff;background:rgba(122,63,212,.22);border-color:rgba(178,140,245,.5)}
+  .pf-meta > span.pf-role-streamer{color:#ffb3e6;background:rgba(190,80,160,.22);border-color:rgba(224,112,196,.5)}
+  .pf-meta > span.pf-role-admin{color:var(--gold);background:rgba(232,216,166,.14);border-color:rgba(232,216,166,.45)}
+  /* الـID: زر زجاجي */
+  .pf-meta > .pf-meta-btn{color:var(--ink);font-weight:800;letter-spacing:.02em;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 60%),rgba(255,255,255,.04);border-color:rgba(255,255,255,.18);
+    box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 6px 14px -8px rgba(0,0,0,.8);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .pf-meta > .pf-meta-btn .pf-ic{color:var(--accent)}
+  .pf-meta > .pf-meta-btn:hover{border-color:rgba(var(--accent-rgb),.6);background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 60%),rgba(var(--accent-rgb),.12)}
+  /* توثيق تيك توك: شارة بألوان تيك توك */
+  .pf-meta > span.pf-tt-badge{gap:7px;font-weight:800;color:#fff;border:1px solid transparent;
+    background:linear-gradient(rgba(12,10,18,.92),rgba(12,10,18,.92)) padding-box,linear-gradient(90deg,#25f4ee,#fe2c55) border-box}
+  .pf-tt-badge img{width:16px;height:16px;display:block}
+  .pf-tt-badge .pf-ic{width:14px;height:14px;color:#25f4ee}
+  .pf-meta > a.pf-tt-badge.off{color:var(--ink-3);background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.2)}
+  .pf-meta > .pf-tt-badge.off img{opacity:.55}
   .pf-titlerow-end{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
   .pf-hero-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 
@@ -214,7 +233,7 @@
   /* مفتاح/قيمة: صفوف زجاجية داخل اللوح */
   .pf-kvs{display:flex;flex-direction:column;gap:6px}
   .pf-kv{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:50px;padding:8px 14px;border-radius:var(--r-sm);background:var(--glass-2);border:1px solid rgba(255,255,255,.05);font-size:14.5px}
-  .pf-kv-k{color:var(--ink-3)}
+  .pf-kv-k{color:var(--ink-2);font-weight:700}
   .pf-kv-v{color:var(--ink);font-weight:700;text-align:left;overflow-wrap:anywhere}
   .pf-kv-title{font-weight:700}
   .pf-kv-2 .pf-kv-k{font-size:13px}
@@ -454,7 +473,7 @@
     .pf-avatar img,.pf-avatar-fallback{border-radius:16px;font-size:24px}
     .pf-name{font-size:21px}
     .pf-meta{gap:4px;margin-top:6px}
-    .pf-meta > span:not(.pf-pill),.pf-meta-btn,.pf-meta .pf-pill{height:24px;padding:0 9px;font-size:12px}
+    .pf-meta > span:not(.pf-pill),.pf-meta-btn,.pf-meta .pf-pill,.pf-meta > .pf-tt-badge{height:26px;padding:0 10px;font-size:12px}
     .pf-titlerow{gap:14px}
     .pf-titlerow-end{gap:10px}
     .pf-mode button{height:40px}
