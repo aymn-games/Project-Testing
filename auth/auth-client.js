@@ -563,6 +563,29 @@ function getWinRewardCodes() {
     return request('/api/collectibles/win-codes', { method: 'GET' });
 }
 
+/* «فريقك» (backend/teams/team-service.js) + منح أكواد جوائز الفوز لأعضاء الفريق. */
+function teamSearch(query) {
+    return request('/api/teams/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
+}
+function teamMine() {
+    return request('/api/teams/mine', { method: 'GET' });
+}
+function teamJoin(customId) {
+    return request('/api/teams/join', { method: 'POST', body: { customId: customId } });
+}
+function teamLeave(customId) {
+    return request('/api/teams/leave', { method: 'POST', body: { customId: customId } });
+}
+function teamRemove(customId) {
+    return request('/api/teams/remove', { method: 'POST', body: { customId: customId } });
+}
+function grantWinCode(code, customId) {
+    return request('/api/collectibles/win-codes/grant', { method: 'POST', body: { code: code, customId: customId } });
+}
+function getMyGrants() {
+    return request('/api/collectibles/grants', { method: 'GET' });
+}
+
 /* Stream challenge (two streams play one game) — backend/challenge/. */
 function challengeSearch(query) {
     return request('/api/challenge/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
@@ -1109,6 +1132,13 @@ global.AGPAuth = {
     adminGetWinReward: adminGetWinReward,
     adminSetWinReward: adminSetWinReward,
     getWinRewardCodes: getWinRewardCodes,
+    teamSearch: teamSearch,
+    teamMine: teamMine,
+    teamJoin: teamJoin,
+    teamLeave: teamLeave,
+    teamRemove: teamRemove,
+    grantWinCode: grantWinCode,
+    getMyGrants: getMyGrants,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

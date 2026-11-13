@@ -12,6 +12,7 @@ var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
+var teamService = require('../teams/team-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var streamerHours = require('../points/streamer-hours');
@@ -188,6 +189,14 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinReward },
   { method: 'GET', path: '/api/collectibles/win-codes', requireAuth: true, handler: handleWinRewardCodes },
   { method: 'POST', path: '/api/collectibles/redeem-choice', requireAuth: true, handler: handleRedeemChoiceCode },
+  // ---- «فريقك» + منح أكواد جوائز الفوز لأعضاء الفريق (backend/teams/team-service.js)
+  { method: 'GET', path: '/api/teams/search', requireAuth: true, handler: handleTeamSearch },
+  { method: 'GET', path: '/api/teams/mine', requireAuth: true, handler: handleTeamMine },
+  { method: 'POST', path: '/api/teams/join', requireAuth: true, handler: handleTeamJoin },
+  { method: 'POST', path: '/api/teams/leave', requireAuth: true, handler: handleTeamLeave },
+  { method: 'POST', path: '/api/teams/remove', requireAuth: true, handler: handleTeamRemove },
+  { method: 'POST', path: '/api/collectibles/win-codes/grant', requireAuth: true, handler: handleGrantWinCode },
+  { method: 'GET', path: '/api/collectibles/grants', requireAuth: true, handler: handleMyGrants },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -810,6 +819,33 @@ function handleAdminSetWinReward(req, res, body) {
 
 function handleWinRewardCodes(req, res, body, user) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listWinRewardCodes(user.id) });
+}
+
+function handleTeamSearch(req, res, body, user) {
+  sendJson(res, 200, teamService.search(user, getQueryParam(req, 'q')));
+}
+function handleTeamMine(req, res, body, user) {
+  sendJson(res, 200, teamService.mine(user));
+}
+function handleTeamJoin(req, res, body, user) {
+  var r = teamService.join(user, body.customId);
+  sendJson(res, r.success ? 200 : (r.error === 'streamer_not_found' ? 404 : 400), r);
+}
+function handleTeamLeave(req, res, body, user) {
+  var r = teamService.leave(user, body.customId);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+function handleTeamRemove(req, res, body, user) {
+  var r = teamService.removeMember(user, body.customId);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+function handleGrantWinCode(req, res, body, user) {
+  var r = collectiblesService.grantWinCode(user.id, body.code, body.customId);
+  var status = { invalid_code: 404, member_not_found: 404, not_your_code: 403, not_team_member: 403, code_full: 409, already_granted: 409, already_redeemed: 409, code_burned: 410 };
+  sendJson(res, r.success ? 200 : (status[r.error] || 400), r);
+}
+function handleMyGrants(req, res, body, user) {
+  sendJson(res, 200, { success: true, grants: collectiblesService.listMyGrants(user.id) });
 }
 
 function handleChallengeSearch(req, res, body, user) {

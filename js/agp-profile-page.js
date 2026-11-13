@@ -99,6 +99,8 @@
     ticket: '<path d="M4 7.5h16v3a1.8 1.8 0 0 0 0 3.6v2.4H4v-2.4a1.8 1.8 0 0 0 0-3.6z"/><path d="M14 7.5v9" stroke-dasharray="1.6 1.8"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/>',
     check: '<path d="m5 12.5 4.2 4.2L19 7"/>',
+    users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17 14.6c2 .5 3.2 2.1 3.6 4.9"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.8A1.8 1.8 0 0 0 14.2 4H5.8A1.8 1.8 0 0 0 4 5.8v8.4A1.8 1.8 0 0 0 5.8 16H8"/>'
   };
   function icon(name, cls) {
@@ -164,45 +166,46 @@
     remoteAccess: [], // بثوث أعطت صاحب الحساب صلاحية التحكم
     winCodes: null,   // أكواد جوائز الفوز (تنجاب أول ما ينفتح القسم)
     emailUnverified: null,
+    team: null,       // فريقي + الفرق اللي أنا فيها (/api/teams/mine)
+    grants: null,     // أكواد منحها لي ستريمر (/api/collectibles/grants)
     unread: 0
   };
 
   /* ===================================================== تعريف الأقسام */
+  // أقسام قليلة ومدموجة: كل قسم يبان بشاشة وحدة قدر الإمكان.
   // mode: player | streamer | both — owner: لصاحب الحساب فقط
   // show(p): شرط إضافي — streamerOnly: يطلع مقفول لحساب اللاعب العادي
   var GROUPS = [
-    { id: 'account', label: 'الحساب', mode: 'both' },
-    { id: 'progress', label: 'التقدّم', mode: 'player' },
-    { id: 'items', label: 'المقتنيات', mode: 'player' },
-    { id: 'broadcast', label: 'البث', mode: 'streamer' },
-    { id: 'tools', label: 'أدوات الستريمر', mode: 'streamer' },
-    { id: 'help', label: 'الدعم والتحكم', mode: 'both' }
+    { id: 'account', label: 'الحساب' },
+    { id: 'items', label: 'المقتنيات' },
+    { id: 'broadcast', label: 'البث' },
+    { id: 'community', label: 'المجتمع' },
+    { id: 'help', label: 'الدعم' }
   ];
 
   var SECTIONS = [
     { id: 'overview', group: 'account', mode: 'both', icon: 'home', label: 'نظرة عامة', render: renderOverview },
-    { id: 'info', group: 'account', mode: 'both', icon: 'user', label: 'معلومات الحساب', render: renderInfo },
-    { id: 'tiktok', group: 'account', mode: 'both', owner: true, icon: 'link', label: 'ربط تيك توك', render: renderTikTok },
-
-    { id: 'level', group: 'progress', mode: 'player', icon: 'star', label: 'المستوى والنقاط', show: function (p) { return !!p.points; }, render: renderLevel },
+    { id: 'account', group: 'account', mode: 'both', icon: 'user', label: 'حسابي', render: renderAccount },
+    { id: 'level', group: 'account', mode: 'player', icon: 'star', label: 'المستوى', show: function (p) { return !!p.points; }, render: renderLevel },
 
     { id: 'frames', group: 'items', mode: 'player', icon: 'frame', label: 'الإطارات', show: function (p) { return !!p.frames; }, render: renderFrames },
-    { id: 'character', group: 'items', mode: 'player', icon: 'person', label: 'شخصيتي بالألعاب', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
-    { id: 'entrance', group: 'items', mode: 'player', icon: 'sparkle', label: 'الدخوليات', show: function (p) { return p.entrance !== undefined; }, render: renderEntrance },
-    { id: 'cards', group: 'items', mode: 'player', icon: 'cards', label: 'البطاقات', show: function (p) { return !!(p.elimCards || p.winCards); }, render: renderCards },
-    { id: 'redeem', group: 'items', mode: 'player', owner: true, icon: 'gift', label: 'استرداد كود', render: renderRedeem },
+    { id: 'character', group: 'items', mode: 'player', icon: 'person', label: 'الشخصية', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
+    { id: 'cards', group: 'items', mode: 'player', icon: 'cards', label: 'البطاقات', show: function (p) { return !!(p.elimCards || p.winCards || p.entrance); }, render: renderCards },
+    { id: 'codes', group: 'items', mode: 'player', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
 
-    { id: 'stream-stats', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderStreamStats },
-    { id: 'streamer-level', group: 'broadcast', mode: 'streamer', icon: 'trophy', label: 'مستوى الستريمر', show: function (p) { return !!p.streamerLevel; }, render: renderStreamerLevel },
+    { id: 'broadcast', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderBroadcast },
+    { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'أكواد الفوز', render: renderWinCodes },
 
-    { id: 'remote-control', group: 'tools', mode: 'streamer', owner: true, streamerOnly: true, icon: 'signal', label: 'التحكم عن بعد', render: renderRemoteControl },
-    { id: 'screens', group: 'tools', mode: 'streamer', owner: true, streamerOnly: true, icon: 'monitor', label: 'شاشات البث', render: renderScreens },
-    { id: 'win-codes', group: 'tools', mode: 'streamer', owner: true, icon: 'medal', label: 'أكواد جوائز الفوز', render: renderWinCodes },
-    { id: 'soon', group: 'tools', mode: 'streamer', icon: 'clock', label: 'قريباً', render: renderSoon },
+    { id: 'team', group: 'community', mode: 'streamer', owner: true, streamerOnly: true, icon: 'users', label: 'فريقك', render: renderTeam },
+    { id: 'teams', group: 'community', mode: 'both', owner: true, icon: 'search', label: 'ابحث عن ستريمر', render: renderTeams },
+    { id: 'remote', group: 'community', mode: 'both', owner: true, icon: 'signal', label: 'التحكم عن بعد', show: function (p) { return isStreamerAccount(p) || S.remoteAccess.length > 0; }, render: renderRemote },
 
-    { id: 'remote-access', group: 'help', mode: 'both', owner: true, icon: 'pad', label: 'لوحة التحكم', show: function () { return S.remoteAccess.length > 0; }, render: renderRemoteAccess },
+    { id: 'soon', group: 'help', mode: 'streamer', icon: 'clock', label: 'قريباً', render: renderSoon },
     { id: 'support', group: 'help', mode: 'both', owner: true, icon: 'ticket', label: 'تذاكري', render: renderSupport }
   ];
+  // روابط قديمة (#info، #win-codes من شاشة الفوز...) توصل للقسم المدموج الجديد
+  var ALIASES = { info: 'account', tiktok: 'account', 'remote-control': 'remote', 'remote-access': 'remote', screens: 'soon',
+    'stream-stats': 'broadcast', 'streamer-level': 'broadcast', entrance: 'cards', redeem: 'codes' };
 
   function sectionVisible(sec) {
     if (sec.mode !== 'both' && sec.mode !== S.mode) return false;
@@ -211,7 +214,7 @@
     return true;
   }
   function visibleSections() { return SECTIONS.filter(sectionVisible); }
-  function findSection(id) { return SECTIONS.filter(function (s) { return s.id === id; })[0] || null; }
+  function findSection(id) { id = ALIASES[id] || id; return SECTIONS.filter(function (s) { return s.id === id; })[0] || null; }
 
   /* ===================================================== صف العنوان */
 
@@ -291,7 +294,8 @@
         var badge = null;
         // العدّاد بس على شي يحتاج إجراء: ردود الدعم الجديدة
         if (s.id === 'support' && S.unread > 0) badge = h('span', { class: 'pf-side-count num', title: 'ردود جديدة من فريق الدعم', text: S.unread > 99 ? '99+' : String(S.unread) });
-        if (s.id === 'info' && S.emailUnverified) badge = h('span', { class: 'pf-side-dot', title: 'الإيميل غير مؤكد' });
+        if (s.id === 'codes' && pendingGrants() > 0) badge = h('span', { class: 'pf-side-count num', title: 'أكواد وصلتك ما استرديتها', text: String(pendingGrants()) });
+        if (s.id === 'account' && S.emailUnverified) badge = h('span', { class: 'pf-side-dot', title: 'الإيميل غير مؤكد' });
         if (locked) badge = icon('lock', 'pf-side-lock');
         var a = h('a', {
           href: '#' + s.id,
@@ -455,39 +459,38 @@
       ]));
     } else if (S.mode === 'streamer' && S.owner && isStreamerAccount(p)) {
       row.appendChild(panel('أدوات البث', null, [h('div', { class: 'pf-kvs' }, [
-        kvRow('التحكم عن بعد', h('a', { href: '#remote-control', class: 'pf-link', 'data-sec': 'remote-control' }, 'إدارة')),
-        kvRow('أكواد جوائز الفوز', h('a', { href: '#win-codes', class: 'pf-link', 'data-sec': 'win-codes' }, 'عرض الأكواد')),
-        kvRow('شاشات البث', pill('قريباً')),
-        kvRow('صورة ستوري لآخر بث', pill('قريباً'))
+        kvRow('فريقك', h('a', { href: '#team', class: 'pf-link', 'data-sec': 'team' }, 'الأعضاء')),
+        kvRow('أكواد الفوز', h('a', { href: '#win-codes', class: 'pf-link', 'data-sec': 'win-codes' }, 'استرداد ومنح')),
+        kvRow('التحكم عن بعد', h('a', { href: '#remote', class: 'pf-link', 'data-sec': 'remote' }, 'إدارة'))
       ])]));
     }
     body.appendChild(row);
   }
 
-  function renderInfo(body, p) {
+  /* ---------- حسابي: البيانات + تيك توك + الحذف بقسم واحد */
+  function renderAccount(body, p) {
     var banner = emailBanner();
     if (banner) body.appendChild(banner);
     // تشغيل الألعاب: حساب ستريمر + تيك توك موثَّق (بدون موافقة أدمن).
     var play = p.role === 'admin' ? pill('مفعّلة', 'ok')
-      : !(p.is_streamer || p.can_run_games) ? 'لحسابات الستريمر فقط'
+      : !(p.is_streamer || p.can_run_games) ? pill('لحسابات الستريمر')
       : p.tiktok_verified ? pill('مفعّلة', 'ok') : pill('تحتاج ربط تيك توك', 'warn');
     body.appendChild(panel('بيانات الحساب', S.owner ? h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openEditModal(); } }, 'تعديل') : null, [
-      h('div', { class: 'pf-kvs' }, [
+      h('div', { class: 'pf-kvs pf-kvs-2' }, [
         kvRow('اسم العرض', p.display_name || p.username || '—'),
         kvRow('اسم المستخدم', p.username || '—'),
-        kvRow('الـID', p.custom_id ? '#' + p.custom_id : '—'),
         kvRow('نوع الحساب', roleLabel(p)),
         kvRow('تاريخ الانضمام', formatDate(p.joined_at)),
-        kvRow('صلاحية تشغيل الألعاب', play)
+        kvRow('تشغيل الألعاب', play)
       ])
     ]));
-
-    if (S.owner) body.appendChild(panel('حذف الحساب', null, [
-      h('div', { class: 'pf-danger' }, [
-        h('p', { class: 'pf-muted', text: 'يحذف حسابك وكل نقاطك ومقتنياتك وربط تيك توك نهائياً، وما فيه تراجع.' }),
-        h('button', { type: 'button', class: 'pf-btn pf-btn-danger', onclick: deleteAccount }, 'حذف الحساب نهائياً')
-      ])
-    ]));
+    if (S.owner) {
+      body.appendChild(tiktokRow(p));
+      body.appendChild(h('div', { class: 'pf-danger-row' }, [
+        h('span', { text: 'حذف الحساب يمسح نقاطك ومقتنياتك نهائياً.' }),
+        h('button', { type: 'button', class: 'pf-btn pf-btn-danger pf-btn-sm', onclick: deleteAccount }, 'حذف الحساب')
+      ]));
+    }
   }
 
   // حذف الحساب الذاتي — تأكيد مزدوج لأنه نهائي (handleDeleteMyAccount بـauth-router.js).
@@ -513,12 +516,13 @@
     }).catch(function () { btn.disabled = false; btn.textContent = label; });
   }
 
-  function renderTikTok(body, p) {
+  // صف تيك توك المختصر: الشعار والحالة يمين، والزر يسار
+  function tiktokRow(p) {
     var linked = !!p.tiktok_verified;
     var btn;
     if (linked) {
-      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-danger', text: 'إلغاء الربط' });
-      // "إلغاء الربط" — POST /api/auth/tiktok/unlink عبر AGPAuth.unlinkTikTok
+      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-danger pf-btn-sm', text: 'إلغاء الربط' });
+      // POST /api/auth/tiktok/unlink عبر AGPAuth.unlinkTikTok
       btn.addEventListener('click', function () {
         if (!window.confirm('متأكد تبي تلغي ربط حساب تيك توك؟')) return;
         btn.disabled = true;
@@ -530,9 +534,7 @@
         }).catch(function () { btn.disabled = false; });
       });
     } else {
-      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-lg' }, [
-        h('img', { src: 'tiktok-logo.png', alt: '', class: 'pf-tt-btn-logo' }), 'ربط حساب تيك توك'
-      ]);
+      btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'ربط تيك توك' });
       // تسجيل دخول تيك توك الرسمي — انتقال مباشر لخادمنا وهو يحوّل (302) لتيك توك
       // (backend/auth/tiktok-oauth-service.js). جلب الرابط بالخلفية طلّع شاشة بيضاء عند ناس كثير.
       btn.addEventListener('click', function () {
@@ -542,23 +544,14 @@
         window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
       });
     }
-    body.appendChild(h('div', { class: 'pf-panel pf-tt' }, [
-      h('div', { class: 'pf-tt-head' }, [
-        h('span', { class: 'pf-tt-logo' }, h('img', { src: 'tiktok-logo.png', alt: 'تيك توك' })),
-        h('div', { class: 'pf-tt-id' }, [
-          h('div', { class: 'pf-tt-title', text: 'حساب تيك توك' }),
-          h('div', { class: 'pf-tt-handle', text: linked ? (p.tiktok_username ? '@' + p.tiktok_username : 'الحساب مرتبط (اليوزرنيم قريباً)') : 'غير مربوط' })
-        ]),
-        linked ? pill('موثّق', 'ok') : pill('غير مربوط', 'warn')
+    return h('div', { class: 'pf-panel pf-tt-row' + (linked ? '' : ' off'), id: 'tiktok' }, [
+      h('span', { class: 'pf-tt-logo' }, h('img', { src: 'tiktok-logo.png', alt: 'تيك توك' })),
+      h('div', { class: 'pf-tt-id' }, [
+        h('div', { class: 'pf-tt-title' }, ['حساب تيك توك ', linked ? pill('موثّق', 'ok') : pill('غير مربوط', 'warn')]),
+        h('div', { class: 'pf-tt-handle', text: linked ? (p.tiktok_username ? '@' + p.tiktok_username : 'مرتبط') : 'اربطه عشان تنحسب نقاطك وتطلع شخصيتك بالألعاب' })
       ]),
-      h('p', { class: 'pf-tt-sub', html: 'الربط عن طريق <b>تسجيل الدخول الرسمي من تيك توك</b>: ضغطة وحدة، معتمد من تيك توك، وما تشارك كلمة المرور معنا.' }),
-      h('ul', { class: 'pf-checks' }, [
-        'نقاطك ومستواك تنحسب بس للحسابات الموثّقة',
-        'شخصيتك تطلع معك بالألعاب الثري دي',
-        'حسابات الستريمر تقدر تشغّل الألعاب'
-      ].map(function (t) { return h('li', null, [icon('check'), h('span', { text: t })]); })),
-      h('div', { class: 'pf-tt-act' }, [btn])
-    ]));
+      btn
+    ]);
   }
 
   function renderLevel(body, p) {
@@ -573,17 +566,20 @@
     ], 'pf-panel-lead'));
     // القيم من points-service.js نفسه — ما تنكتب يدوياً هنا.
     var r = p.points.rules;
-    if (r) body.appendChild(panel('كيف تكسب نقاط الخبرة', 'للحسابات الموثّقة بتيك توك', [h('div', { class: 'pf-kvs' }, [
-      kvRow('إكمال جولة كاملة', num(r.perCompletedRound) + ' نقاط'),
-      kvRow('الفوز بالجولة', num(r.winBonus) + ' فردي · ' + num(r.teamWinBonus) + ' فريق'),
-      kvRow('كل ساعة لعب فعلية', num(r.perHourPlayed) + ' نقاط'),
-      kvRow('الحد الأقصى باليوم', num(r.dailyCap) + ' نقطة')
-    ])]));
+    if (r) body.appendChild(h('details', { class: 'pf-more' }, [
+      h('summary', { text: 'كيف تكسب النقاط؟' }),
+      h('div', { class: 'pf-kvs pf-kvs-2' }, [
+        kvRow('إكمال جولة', num(r.perCompletedRound) + ' نقاط'),
+        kvRow('الفوز', num(r.winBonus) + ' فردي · ' + num(r.teamWinBonus) + ' فريق'),
+        kvRow('كل ساعة لعب', num(r.perHourPlayed) + ' نقاط'),
+        kvRow('الحد اليومي', num(r.dailyCap) + ' نقطة')
+      ])
+    ]));
   }
 
   function itemCard(opts) {
     var card = h('div', { class: 'pf-item' + (opts.wide ? ' wide' : '') });
-    var box = h('div', { class: 'pf-item-art', style: opts.artHeight ? 'height:' + opts.artHeight + 'px' : null });
+    var box = h('div', { class: 'pf-item-art', style: opts.artHeight ? '--art-h:' + opts.artHeight + 'px' : null });
     if (opts.img) {
       var im = h('img', { src: opts.img, alt: opts.name || '', loading: 'lazy' });
       im.onerror = function () { im.style.display = 'none'; };
@@ -595,8 +591,8 @@
     return card;
   }
   // زر إجراء على عنصر: يعطّل نفسه، ينادي الخادم، ويعيد التحميل لو نجح
-  function actionBtn(label, fn) {
-    var b = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: label });
+  function actionBtn(label, fn, cls) {
+    var b = h('button', { type: 'button', class: 'pf-btn pf-btn-sm ' + (cls || 'pf-btn-ghost'), text: label });
     b.addEventListener('click', function () {
       b.disabled = true; b.textContent = 'جارٍ...';
       fn().then(function (r) {
@@ -610,13 +606,12 @@
   function renderFrames(body, p) {
     var frames = (p.frames || []).slice().sort(function (a, b) { return (b.equipped ? 1 : 0) - (a.equipped ? 1 : 0); });
     var grid = h('div', { class: 'pf-items pf-items-frames' });
-    if (!frames.length) grid.appendChild(emptyNote('ما عندك إطارات بعد. الإطارات تجيك من المتجر أو من المستويات أو من أكواد الجوائز.'));
+    if (!frames.length) grid.appendChild(emptyNote('ما عندك إطارات بعد. تجيك من المتجر أو المستويات أو أكواد الجوائز.'));
     frames.forEach(function (f) {
-      var control = f.equipped ? (S.owner ? h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', disabled: true, text: 'مفعّل الآن' }) : null) : (S.owner ? actionBtn('تفعيل', function () { return window.AGPAuth.equipFrame(f.frameType, f.frameRef); }) : null);
-      grid.appendChild(itemCard({ img: f.imageFilename, name: f.displayNameAr || f.frameRef, artHeight: 96, status: f.equipped ? pill('مفعّل', 'ok') : null, control: control }));
+      var control = f.equipped ? null : (S.owner ? actionBtn('تفعيل', function () { return window.AGPAuth.equipFrame(f.frameType, f.frameRef); }) : null);
+      grid.appendChild(itemCard({ img: f.imageFilename, name: f.displayNameAr || f.frameRef, artHeight: 76, status: f.equipped ? pill('مفعّل', 'ok') : null, control: control }));
     });
-    body.appendChild(panel('إطاراتي', plural(frames.length, 'إطار', 'إطار'), [grid]));
-    if (S.owner) body.appendChild(h('p', { class: 'pf-hint' }, ['عندك كود إطار؟ ', h('a', { href: '#redeem', class: 'pf-link', 'data-sec': 'redeem' }, 'استرده من هنا')]));
+    body.appendChild(panel('إطاراتي', S.owner ? h('a', { href: '#codes', class: 'pf-link', 'data-sec': 'codes' }, 'عندك كود؟') : plural(frames.length, 'إطار', 'إطار'), [grid]));
   }
 
   function renderCharacter(body, p) {
@@ -629,25 +624,12 @@
     ].forEach(function (opt) {
       var active = opt.kind === cur;
       var control = S.owner && !active ? actionBtn('اختيار', function () { return window.AGPAuth.setCharacter(opt.kind); }) : null;
-      grid.appendChild(itemCard({ img: opt.img, glyph: opt.img ? null : '؟', name: opt.name, artHeight: 220, status: active ? pill('مختارة', 'ok') : null, control: control }));
+      grid.appendChild(itemCard({ img: opt.img, glyph: opt.img ? null : '؟', name: opt.name, artHeight: 170, status: active ? pill('مختارة', 'ok') : null, control: control }));
     });
     body.appendChild(panel(null, null, [
-      h('p', { class: 'pf-muted', text: 'الشخصية تطلع معك لما تدخل الألعاب الثري دي (مثل حجرة ورقة مقص). لازم حسابك يكون موثّق بتيك توك، ولو ما اخترت تطلع لك شخصية عشوائية.' }),
+      h('p', { class: 'pf-muted', text: 'تطلع معك بالألعاب الثري دي لما يكون حسابك موثّق بتيك توك.' }),
       grid
     ]));
-  }
-
-  function renderEntrance(body, p) {
-    var e = p.entrance;
-    var content;
-    if (e) {
-      content = h('div', { class: 'pf-kvs' }, [
-        kvRow('الدخولية', e.template_key || '—'),
-        e.entrance_text ? kvRow('النص', e.entrance_text) : null,
-        kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
-      ]);
-    } else content = emptyNote('ما عندك دخولية مفعّلة بعد.');
-    body.appendChild(panel('دخوليتي الحالية', null, [content]));
   }
 
   function cardsGrid(list, toggleFn, emptyText, artHeight) {
@@ -662,183 +644,226 @@
     });
     return grid;
   }
+  // البطاقات + الدخولية بقسم واحد، وكل نوع بتبويب صغير بدل لوحات طويلة
   function renderCards(body, p) {
     var elim = p.elimCards || [], win = p.winCards || [];
-    body.appendChild(panel('بطاقات الإقصاء', plural(elim.length, 'بطاقة', 'بطاقة'), [
-      cardsGrid(elim, function (k, on) { return window.AGPAuth.toggleElimCard(k, on); }, 'ما عندك بطاقات إقصاء بعد.', 120)
-    ]));
-    body.appendChild(panel('بطاقات الفوز', plural(win.length, 'بطاقة', 'بطاقة'), [
-      cardsGrid(win, function (k, on) { return window.AGPAuth.toggleWinCard(k, on); }, 'ما عندك بطاقات فوز بعد.', 160)
-    ]));
+    var tabs = [
+      { id: 'elim', label: 'الإقصاء', count: elim.length, render: function () { return cardsGrid(elim, function (k, on) { return window.AGPAuth.toggleElimCard(k, on); }, 'ما عندك بطاقات إقصاء بعد.', 96); } },
+      { id: 'win', label: 'الفوز', count: win.length, render: function () { return cardsGrid(win, function (k, on) { return window.AGPAuth.toggleWinCard(k, on); }, 'ما عندك بطاقات فوز بعد.', 130); } },
+      { id: 'entrance', label: 'الدخولية', count: p.entrance ? 1 : 0, render: function () {
+        var e = p.entrance;
+        return e ? h('div', { class: 'pf-kvs' }, [
+          kvRow('الدخولية', e.template_key || '—'),
+          e.entrance_text ? kvRow('النص', e.entrance_text) : null,
+          kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
+        ]) : emptyNote('ما عندك دخولية مفعّلة بعد.');
+      } }
+    ];
+    body.appendChild(panel(null, null, [segTabs(tabs, 'cards')]));
+  }
+
+  // تبويبات صغيرة داخل قسم (تتذكر آخر تبويب)
+  var segMemory = {};
+  function segTabs(tabs, key) {
+    var wrap = h('div', { class: 'pf-segwrap' });
+    var bar = h('div', { class: 'pf-seg', role: 'tablist' });
+    var pane = h('div', { class: 'pf-segpane' });
+    function show(id) {
+      segMemory[key] = id;
+      Array.prototype.forEach.call(bar.children, function (b) { var on = b.getAttribute('data-t') === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+      pane.innerHTML = '';
+      pane.appendChild(tabs.filter(function (t) { return t.id === id; })[0].render());
+    }
+    tabs.forEach(function (t) {
+      bar.appendChild(h('button', { type: 'button', role: 'tab', 'data-t': t.id, onclick: function () { show(t.id); } }, [t.label, t.count != null ? h('span', { class: 'pf-seg-n num', text: String(t.count) }) : null]));
+    });
+    wrap.appendChild(bar); wrap.appendChild(pane);
+    show(segMemory[key] && tabs.some(function (t) { return t.id === segMemory[key]; }) ? segMemory[key] : tabs[0].id);
+    return wrap;
   }
 
   var REDEEM_ERRORS = {
     invalid_code: 'الكود غير صحيح، تأكد منه وحاول مرة ثانية.',
     code_used: 'هذا الكود مستخدم من قبل.',
     code_burned: 'هذا الكود ملغي ولا يمكن استخدامه.',
-    already_owned: 'عندك هذا العنصر من قبل، والكود ما انستخدم ويقدر تعطيه لغيرك.',
+    already_owned: 'عندك كل الإطارات المتاحة بهذا الكود.',
     rate_limited: 'محاولات كثيرة، حاول بعد ربع ساعة.',
     code_full: 'هذا الكود وصل الحد الأقصى من الاستخدام.',
     already_redeemed: 'استخدمت هذا الكود من قبل.',
     invalid_frame: 'هذا الإطار مو متاح بهذا الكود، اختر غيره.'
   };
 
-  function renderRedeem(body) {
-    var input = h('input', { id: 'pfRedeemCode', type: 'text', class: 'pf-input pf-input-code', placeholder: 'AGP-XXXX-XXXX', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'pfRedeemHelp' });
+  // استرداد كود (يدوي أو ممنوح أو كود فوز الستريمر لنفسه): كود الاختيار يفتح
+  // قائمة الإطارات، والباقي يضيف العنصر مباشرة. done(text, ok) لعرض النتيجة.
+  function redeemCode(code, done) {
+    return window.AGPAuth.redeemFrameCode(code).then(function (result) {
+      if (!(result && result.success)) { done(REDEEM_ERRORS[result && result.error] || 'تعذّر الاسترداد، حاول مرة ثانية.', false); return; }
+      if (result.kind === 'choice') {
+        done('اختر إطارك من القائمة.', true);
+        window.AGPFramePicker.open({
+          title: 'اختر إطارك',
+          subtitle: 'تختار إطار واحد، وينضاف مباشرة لمقتنياتك.',
+          choices: result.choices,
+          onPick: function (choice, name) {
+            return window.AGPAuth.redeemChoiceCode(result.code, choice.frameType, choice.frameRef).then(function (r) {
+              if (r && r.success) {
+                done('تم! انضاف إطار "' + name + '" لمقتنياتك.', true);
+                setTimeout(function () { window.location.reload(); }, 1300);
+                return { ok: true };
+              }
+              return { ok: false, error: REDEEM_ERRORS[r && r.error] || 'تعذّر الاسترداد، حاول مرة ثانية.' };
+            });
+          }
+        });
+        return;
+      }
+      if (result.kind === 'bundle') {
+        var names = function (list) { return (list || []).map(function (i) { return i.displayNameAr; }).filter(Boolean).join('، '); };
+        var m = 'تم! انضاف لك باكج "' + ((result.bundle && result.bundle.name) || '') + '": ' + names(result.granted) + '.';
+        if (result.alreadyOwned && result.alreadyOwned.length) m += ' (كان عندك من قبل: ' + names(result.alreadyOwned) + ')';
+        done(m, true);
+        setTimeout(function () { window.location.reload(); }, 2200);
+        return;
+      }
+      var isCard = result.kind === 'elim' || result.kind === 'win';
+      var name = ((isCard ? result.card : result.frame) || {}).displayNameAr || '';
+      done(isCard ? 'تم! انضافت ' + (name ? '"' + name + '" ' : 'البطاقة ') + 'لمقتنياتك.' : 'تم! انضاف إطار ' + (name ? '"' + name + '" ' : '') + 'لمقتنياتك.', true);
+      setTimeout(function () { window.location.reload(); }, 1300);
+    }).catch(function () { done('تعذّر الاتصال، حاول مرة ثانية.', false); });
+  }
+
+  // أكوادي: الأكواد اللي منحها لي ستريمر + خانة كود يدوي
+  function renderCodes(body) {
+    var input = h('input', { id: 'pfRedeemCode', type: 'text', class: 'pf-input pf-input-code', placeholder: 'AGP-XXXX-XXXX', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'الكود' });
     var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: 'استرداد' });
     var msg = h('div', { class: 'pf-msg', 'aria-live': 'polite' });
     function setMsg(text, ok) { msg.textContent = text; msg.className = 'pf-msg ' + (ok ? 'ok' : 'err'); }
-    function reset() { btn.disabled = false; btn.textContent = 'استرداد'; }
-    function doRedeem() {
+    function go2() {
       var code = input.value.trim();
       if (!code) { setMsg('اكتب الكود أولاً.', false); return; }
       btn.disabled = true; btn.textContent = 'جارٍ...';
-      window.AGPAuth.redeemFrameCode(code).then(function (result) {
-        if (!(result && result.success)) { setMsg(REDEEM_ERRORS[result && result.error] || 'تعذّر الاسترداد، حاول مرة ثانية.', false); reset(); return; }
-        // كود "اختيار إطار": نعرض كل الإطارات المتاحة ويختار واحد بنفسه.
-        if (result.kind === 'choice') {
-          reset();
-          setMsg('اختر إطارك من القائمة.', true);
-          window.AGPFramePicker.open({
-            title: 'اختر إطارك',
-            subtitle: 'الكود يعطيك إطار واحد تختاره بنفسك، وينضاف مباشرة لمقتنياتك.',
-            choices: result.choices,
-            onPick: function (choice, name) {
-              return window.AGPAuth.redeemChoiceCode(result.code, choice.frameType, choice.frameRef).then(function (r) {
-                if (r && r.success) {
-                  setMsg('تم! انضاف إطار "' + name + '" لمقتنياتك.', true);
-                  setTimeout(function () { window.location.reload(); }, 1500);
-                  return { ok: true };
-                }
-                return { ok: false, error: REDEEM_ERRORS[r && r.error] || 'تعذّر الاسترداد، حاول مرة ثانية.' };
-              });
-            }
-          });
-          return;
-        }
-        if (result.kind === 'bundle') {
-          var names = function (list) { return (list || []).map(function (i) { return i.displayNameAr; }).filter(Boolean).join('، '); };
-          var m = 'تم! انضاف لك باكج "' + ((result.bundle && result.bundle.name) || '') + '": ' + names(result.granted) + '.';
-          if (result.alreadyOwned && result.alreadyOwned.length) m += ' (كان عندك من قبل: ' + names(result.alreadyOwned) + ')';
-          setMsg(m, true);
-          setTimeout(function () { window.location.reload(); }, 2500);
-          return;
-        }
-        var isCard = result.kind === 'elim' || result.kind === 'win';
-        var name = ((isCard ? result.card : result.frame) || {}).displayNameAr || '';
-        setMsg(isCard
-          ? 'تم! انضافت ' + (name ? '"' + name + '" ' : 'البطاقة ') + 'لمقتنياتك.'
-          : 'تم! انضاف إطار ' + (name ? '"' + name + '" ' : '') + 'لمقتنياتك.', true);
-        setTimeout(function () { window.location.reload(); }, 1500);
-      }).catch(function () { setMsg('تعذّر الاتصال، حاول مرة ثانية.', false); reset(); });
+      redeemCode(code, function (t, ok) { setMsg(t, ok); btn.disabled = false; btn.textContent = 'استرداد'; });
     }
-    btn.addEventListener('click', doRedeem);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') doRedeem(); });
-    body.appendChild(panel(null, null, [
-      h('label', { class: 'pf-label', for: 'pfRedeemCode', text: 'الكود' }),
-      h('div', { class: 'pf-redeem' }, [input, btn]),
-      h('div', { id: 'pfRedeemHelp', class: 'pf-field-help', text: 'كود من المتجر أو من جائزة فوز. الإطار أو البطاقة أو الباكج ينضاف مباشرة لمقتنياتك.' }),
-      msg
-    ]));
-    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, 50);
+    btn.addEventListener('click', go2);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go2(); });
+
+    var list = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    body.appendChild(panel('أكواد وصلتك', null, [list]));
+    body.appendChild(panel('عندك كود؟', null, [h('div', { class: 'pf-redeem' }, [input, btn]), msg]));
+
+    function paint(grants) {
+      list.innerHTML = '';
+      if (!grants.length) { list.appendChild(emptyNote('ما وصلك كود للحين. لما يمنحك ستريمر كود من فريقه يطلع هنا.')); return; }
+      grants.forEach(function (g) {
+        var rowMsg = h('span', { class: 'pf-row-msg' });
+        var action;
+        if (g.redeemed) action = pill('تم الاسترداد', 'ok');
+        else if (g.burned) action = pill('ملغي');
+        else {
+          action = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'استرداد' });
+          action.addEventListener('click', function () {
+            action.disabled = true; action.textContent = 'جارٍ...';
+            redeemCode(g.code, function (t, ok) { rowMsg.textContent = ok ? '' : t; action.disabled = false; action.textContent = 'استرداد'; if (!ok) showToast(t, true); });
+          });
+        }
+        list.appendChild(h('div', { class: 'pf-lrow' }, [
+          avatarEl(g.from),
+          h('div', { class: 'pf-lrow-txt' }, [
+            h('div', { class: 'pf-lrow-t', text: 'كود جائزة من ' + (g.from.name || 'ستريمر') }),
+            h('div', { class: 'pf-lrow-s', text: formatDate(g.grantedAt) }),
+            rowMsg
+          ]),
+          action
+        ]));
+      });
+    }
+    if (S.grants) { paint(S.grants); return; }
+    loadGrants().then(function () { if (document.body.contains(list)) paint(S.grants || []); });
+  }
+  function loadGrants() {
+    if (typeof window.AGPAuth.getMyGrants !== 'function') { S.grants = []; return Promise.resolve(); }
+    return window.AGPAuth.getMyGrants().then(function (r) { S.grants = (r && r.success && r.grants) || []; }).catch(function () { S.grants = S.grants || []; });
+  }
+  function pendingGrants() { return (S.grants || []).filter(function (g) { return !g.redeemed && !g.burned; }).length; }
+
+  function metaLine(parts) {
+    var el = h('div', { class: 'pf-lrow-s' });
+    parts.filter(Boolean).forEach(function (part, i) {
+      if (i) el.appendChild(document.createTextNode(' · '));
+      el.appendChild(h('bdi', { text: part }));
+    });
+    return el;
   }
 
-  function renderStreamStats(body, p) {
+  function avatarEl(u) {
+    u = u || {};
+    return u.avatar ? h('img', { src: u.avatar, alt: '', class: 'pf-av' }) : h('span', { class: 'pf-av', 'aria-hidden': 'true', text: (u.name || '؟').charAt(0) });
+  }
+
+  /* ---------- البث: المستوى + الإحصائيات بقسم واحد */
+  function renderBroadcast(body, p) {
     var s = p.stats || {};
     var hours = Math.round(((s.total_live_ms || 0) / 3600000) * 10) / 10;
-    body.appendChild(panel('البث', 'من أول بث لك على المنصة', [kpiStrip([
-      { label: 'عدد البثوث', value: num(s.total_broadcasts) },
-      { label: 'ساعات البث', value: String(hours), unit: 'ساعة' }
-    ])]));
-    body.appendChild(panel('التفاعل', null, [kpiStrip([
-      { label: 'التعليقات', value: num(s.total_comments) },
-      { label: 'متابعين جدد', value: num(s.total_follows) },
-      { label: 'لاعبون انضموا', value: num(s.total_players) }
-    ])]));
-    body.appendChild(panel('الهدايا', null, [kpiStrip([
-      { label: 'عدد الهدايا', value: num(s.total_gifts) },
-      { label: 'قيمة الهدايا', value: num(s.total_gifts_value), unit: 'ألماسة' }
-    ])]));
-    if (S.owner && isStreamerAccount(p)) {
-      body.appendChild(toolRow('chart', 'صورة ستوري لآخر بث', 'المكبّسين، الداعمين، الشير، المتفاعلين، والمشاهدين.', soonBtn()));
+    if (p.streamerLevel) {
+      var SL = streamerLevelInfo(p);
+      body.appendChild(panel(null, null, [levelLead({ pct: SL.pct, ringLabel: 'التقدّم لمستوى الستريمر التالي', label: 'نقاط الستريمر', value: num(SL.sp), unit: 'SP', level: levelName(SL.cur), note: SL.note })], 'pf-panel-lead'));
     }
+    body.appendChild(panel('أرقام بثوثك', null, [h('div', { class: 'pf-stats6' }, [
+      { l: 'البثوث', v: num(s.total_broadcasts) },
+      { l: 'ساعات البث', v: String(hours) },
+      { l: 'التعليقات', v: num(s.total_comments) },
+      { l: 'متابعين جدد', v: num(s.total_follows) },
+      { l: 'لاعبون انضموا', v: num(s.total_players) },
+      { l: 'قيمة الهدايا', v: num(s.total_gifts_value), n: num(s.total_gifts) + ' هدية' }
+    ].map(function (k) { return h('div', { class: 'pf-kpi' }, [h('div', { class: 'pf-kpi-l', text: k.l }), h('div', { class: 'pf-kpi-v num', text: k.v }), k.n ? h('div', { class: 'pf-kpi-n', text: k.n }) : null]); }))]));
   }
 
-  function renderStreamerLevel(body, p) {
-    var SL = streamerLevelInfo(p);
-    body.appendChild(panel(null, null, [
-      levelLead({ pct: SL.pct, ringLabel: 'التقدّم لمستوى الستريمر التالي', label: 'نقاط الستريمر', value: num(SL.sp), unit: 'SP', level: levelName(SL.cur), note: SL.note })
-    ], 'pf-panel-lead'));
-    body.appendChild(h('p', { class: 'pf-hint', text: 'نقاط الستريمر (SP) تنحسب من نشاط بثوثك على المنصة.' }));
-  }
-
-  // التحكم عن بعد (js/agp-remote-control.js): الحالة من /api/remote-control/config
-  function renderRemoteControl(body) {
-    var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
-    if (!RC) { body.appendChild(emptyNote('تعذّر تحميل أداة التحكم عن بعد.')); return; }
-    var state = h('span', { class: 'pf-pill' });
-    var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', 'data-rc-btn': '1', onclick: function () { RC.openPanel(); } });
-    function paint() {
-      var on = RC.isEnabled();
-      state.textContent = on ? 'مفعّل' : 'متوقف';
-      state.className = 'pf-pill' + (on ? ' ok' : '');
-      btn.textContent = on ? 'إدارة المتحكمين' : 'تفعيل التحكم عن بعد';
-    }
-    paint();
-    if (RC.loadConfig) RC.loadConfig().then(paint, paint);
-    paintRemote = paint;
-    body.appendChild(panel('الحالة', state, [
-      h('p', { class: 'pf-muted', text: 'تضيف يوزر تيك توك لشخص أو أكثر، فيشغّلون ألعابك كاملة من «لوحة التحكم» بجوالهم أو بأوامر الشات: يختارون اللعبة، يضبطون الإعدادات والدخول، ويبدؤون وينهون المباراة.' }),
-      h('div', { class: 'pf-actions' }, [btn])
-    ]));
-  }
-  var paintRemote = null;
-  window.addEventListener('agp:remote-control-changed', function () { if (paintRemote && document.querySelector('[data-rc-btn]')) paintRemote(); });
-
-  function renderScreens(body) {
-    body.appendChild(toolRow('monitor', 'شاشات البث', 'شاشات لـOBS وTikTok LIVE Studio: أليرتات الهدايا والمتابعين، التوب، الأهداف، النصوص والأيقونات.', soonBtn()));
-    body.appendChild(toolRow('chart', 'صورة ستوري لآخر بث', 'المكبّسين، الداعمين، الشير، المتفاعلين، والمشاهدين.', soonBtn()));
-  }
-
-  // أكواد جوائز الفوز (مباريات البثين) — يوصلها الستريمر من زر
-  // «اذهب لكشف كود الاسترداد» بشاشة الفوز (profile.html#win-codes)
+  /* ---------- أكواد جوائز الفوز: كل كود صف فيه «استرداد» و«منح» */
   var GAME_NAMES = { 'penalty': 'بلنتي', 'fastest-answer': 'أسرع إجابة' };
   function renderWinCodes(body) {
-    var list = h('div', { class: 'pf-codes' }, [h('div', { class: 'pf-skel-row' })]);
-    var countEl = h('span', { class: 'pf-panel-sub num' });
-    body.appendChild(panel('أكوادك', countEl, [list]));
-    body.appendChild(panel('كيف اللاعبين يستردون الكود؟', null, [h('ol', { class: 'pf-steps' }, [
-      'انسخ الكود وأرسله للاعبين فريقك الفائز، ولا تعرضه بالبث.',
-      'كل لاعب لازم يكون عنده حساب بالموقع مربوط بحساب تيك توك.',
-      'اللاعب يفتح بروفايله ← «استرداد كود»، يكتب الكود ويضغط «استرداد».',
-      'تطلع له الإطارات المتاحة ويختار إطار واحد ينضاف لمقتنياته.'
-    ].map(function (t) { return h('li', { text: t }); })),
-      h('p', { class: 'pf-hint', text: 'كل كود له عدد استخدامات محدد، وكل لاعب يستخدمه مرة وحدة.' })
+    var list = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    body.appendChild(panel('أكوادك', h('a', { href: '#team', class: 'pf-link', 'data-sec': 'team' }, 'فريقك'), [list]));
+    body.appendChild(h('details', { class: 'pf-more' }, [
+      h('summary', { text: 'كيف تشتغل الأكواد؟' }),
+      h('ul', { class: 'pf-steps' }, [
+        'كل كود له عدد استخدامات، تشوفه تحت الكود.',
+        '«استرداد»: تستخدم الكود لنفسك وتختار إطارك.',
+        '«منح»: تختار عضو من فريقك، ويوصله الكود بحسابه يسترده ويختار إطاره.',
+        'كل منح ياخذ استخدام واحد من رصيد الكود.'
+      ].map(function (t) { return h('li', { text: t }); }))
     ]));
 
     function paint(codes) {
       list.innerHTML = '';
-      countEl.textContent = codes.length ? plural(codes.length, 'كود', 'كود') : '';
-      if (!codes.length) { list.appendChild(emptyNote('ما عندك أكواد جوائز للحين. تطلع لك هنا لما تفوز بمباراة بين بثين.')); return; }
+      if (!codes.length) { list.appendChild(emptyNote('ما عندك أكواد للحين. تطلع هنا لما تفوز بمباراة بين بثين.')); return; }
       codes.forEach(function (c) {
         var full = c.uses >= c.maxUses, off = Boolean(c.burnedAt);
-        var d = new Date(c.createdAt);
-        var item = h('div', { class: 'pf-code' + (off || full ? ' dim' : '') }, [
-          h('div', { class: 'pf-code-info' }, [
-            h('span', { class: 'pf-code-v', text: c.code }),
-            h('span', { class: 'pf-code-meta', text: (GAME_NAMES[c.game] || c.game) + (c.teamName ? ' · ' + c.teamName : '') + ' · ' + d.toLocaleDateString('ar-u-ca-gregory', { day: 'numeric', month: 'long' }) })
-          ]),
-          h('span', { class: 'pf-code-uses num' }, [num(c.uses) + ' / ' + num(c.maxUses), h('span', { class: 'pf-unit', text: ' استخدام' })]),
-          off ? pill('موقوف') : full ? pill('اكتمل') : null
-        ]);
-        if (!off && !full) {
-          var copy = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: 'نسخ' });
-          copy.addEventListener('click', function () {
-            copyText(c.code, function () { copy.textContent = 'تم النسخ'; setTimeout(function () { copy.textContent = 'نسخ'; }, 1500); });
+        var left = Math.max(0, c.maxUses - c.uses);
+        var actions = h('div', { class: 'pf-lrow-act' });
+        if (!off && !c.redeemedBySelf && !full) {
+          var rb = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: 'استرداد' });
+          rb.addEventListener('click', function () {
+            rb.disabled = true; rb.textContent = 'جارٍ...';
+            redeemCode(c.code, function (t, ok) { rb.disabled = false; rb.textContent = 'استرداد'; if (!ok) showToast(t, true); });
           });
-          item.appendChild(copy);
+          actions.appendChild(rb);
         }
-        list.appendChild(item);
+        if (!off && !full) actions.appendChild(h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'منح', onclick: function () { openGrantModal(c); } }));
+        var copy = h('button', { type: 'button', class: 'pf-iconbtn', title: 'نسخ الكود', 'aria-label': 'نسخ الكود' }, icon('copy'));
+        copy.addEventListener('click', function () { copyText(c.code, function () { showToast('انسخ الكود'); }); });
+        actions.appendChild(copy);
+        list.appendChild(h('div', { class: 'pf-lrow pf-code-row' + (off || full ? ' dim' : '') }, [
+          h('div', { class: 'pf-lrow-txt' }, [
+            h('div', { class: 'pf-code-v', text: c.code }),
+            h('div', { class: 'pf-lrow-s', text: (GAME_NAMES[c.game] || c.game) + (c.teamName ? ' · ' + c.teamName : '') + ' · ' + new Date(c.createdAt).toLocaleDateString('ar-u-ca-gregory', { day: 'numeric', month: 'long' }) }),
+            h('div', { class: 'pf-uses' }, [
+              h('span', { class: 'pf-uses-bar' }, h('span', { style: 'width:' + Math.round(100 * Math.min(1, c.uses / Math.max(1, c.maxUses))) + '%' })),
+              h('span', { class: 'pf-uses-t num', text: off ? 'موقوف' : full ? 'اكتمل' : 'باقي ' + left + ' من ' + c.maxUses }),
+              (c.grants && c.grants.length) ? h('span', { class: 'pf-uses-t', text: '· ممنوح لـ ' + c.grants.length }) : null
+            ])
+          ]),
+          actions
+        ]));
       });
     }
     if (S.winCodes) { paint(S.winCodes); return; }
@@ -851,12 +876,251 @@
     });
   }
 
+  // نافذة «منح»: أعضاء الفريق مع بحث سريع، وكل عضو زر منح
+  function openGrantModal(c) {
+    var granted = {};
+    (c.grants || []).forEach(function (g) { granted[g.customId] = g; });
+    var sheet = openSheet('منح الكود', 'اختر عضو من فريقك. يوصله الكود بحسابه ويختار إطاره بنفسه.');
+    var filter = h('input', { type: 'search', class: 'pf-input pf-input-sm', placeholder: 'ابحث بالاسم أو اليوزر', 'aria-label': 'ابحث بفريقك' });
+    var list = h('div', { class: 'pf-list pf-list-scroll' }, [h('div', { class: 'pf-skel-row' })]);
+    var left = h('div', { class: 'pf-sheet-note num', text: 'باقي ' + Math.max(0, c.maxUses - c.uses) + ' استخدام' });
+    sheet.body.appendChild(filter);
+    sheet.body.appendChild(list);
+    sheet.body.appendChild(left);
+    loadTeam().then(function () {
+      var members = (S.team && S.team.members) || [];
+      function paint() {
+        var q = filter.value.trim().replace(/^@/, '').toLowerCase();
+        list.innerHTML = '';
+        if (!members.length) {
+          list.appendChild(h('div', { class: 'pf-empty' }, ['فريقك فاضي. ', h('a', { href: '#team', class: 'pf-link', 'data-sec': 'team', onclick: function () { sheet.close(); } }, 'شوف كيف يدخلون فريقك')]));
+          return;
+        }
+        var shown = members.filter(function (m) { return !q || (m.name || '').toLowerCase().indexOf(q) > -1 || (m.tiktok || '').toLowerCase().indexOf(q) > -1 || String(m.customId).indexOf(q) > -1; });
+        if (!shown.length) { list.appendChild(emptyNote('ما فيه عضو بهالاسم.')); return; }
+        shown.forEach(function (m) {
+          var g = granted[m.customId];
+          var act;
+          if (g) act = pill(g.redeemed ? 'استرده' : 'ممنوح', 'ok');
+          else {
+            act = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'منح' });
+            act.addEventListener('click', function () {
+              act.disabled = true; act.textContent = 'جارٍ...';
+              window.AGPAuth.grantWinCode(c.code, m.customId).then(function (r) {
+                if (r && r.success) {
+                  granted[m.customId] = { customId: m.customId, redeemed: false };
+                  c.uses += 1; c.grants = (c.grants || []).concat([{ customId: m.customId, name: m.name, redeemed: false }]);
+                  left.textContent = 'باقي ' + Math.max(0, c.maxUses - c.uses) + ' استخدام';
+                  showToast('انمنح الكود لـ ' + m.name);
+                  if (c.uses >= c.maxUses) { sheet.close(); }
+                  paint();
+                } else {
+                  act.disabled = false; act.textContent = 'منح';
+                  showToast(GRANT_ERRORS[r && r.error] || 'تعذّر المنح، حاول مرة ثانية.', true);
+                }
+              }).catch(function () { act.disabled = false; act.textContent = 'منح'; });
+            });
+          }
+          list.appendChild(h('div', { class: 'pf-lrow' }, [
+            avatarEl(m),
+            h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: m.name }), metaLine([m.tiktok ? '@' + m.tiktok : '#' + m.customId])]),
+            act
+          ]));
+        });
+      }
+      filter.addEventListener('input', paint);
+      paint();
+    });
+    sheet.onClose = function () { go('win-codes', { noHash: true }); };
+  }
+  var GRANT_ERRORS = {
+    not_team_member: 'هذا الشخص مو بفريقك.',
+    code_full: 'الكود خلص رصيده.',
+    already_granted: 'منحته هذا الكود من قبل.',
+    already_redeemed: 'هذا الشخص استخدم الكود من قبل.',
+    code_burned: 'الكود موقوف.',
+    not_your_code: 'هذا الكود مو لك.'
+  };
+
+  // نافذة صغيرة عامة (نفس شكل نافذة التعديل)
+  function openSheet(title, sub) {
+    var ov = h('div', { class: 'agp-ed-overlay' });
+    var bodyEl = h('div', { class: 'pf-sheet-body' });
+    var api = { body: bodyEl, onClose: null, close: close };
+    var sheet = h('div', { class: 'agp-ed-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, [
+      h('div', { class: 'agp-ed-head' }, [h('span', { class: 'agp-ed-title', text: title }), h('button', { type: 'button', class: 'agp-ed-x', 'aria-label': 'إغلاق', text: '×', onclick: close })]),
+      sub ? h('p', { class: 'pf-sheet-sub', text: sub }) : null,
+      bodyEl
+    ]);
+    ov.appendChild(sheet);
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      ov.classList.remove('open'); document.body.style.overflow = '';
+      setTimeout(function () { ov.remove(); }, 200);
+      if (api.onClose) api.onClose();
+    }
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () { ov.classList.add('open'); });
+    return api;
+  }
+
+  /* ---------- فريقك (للستريمر) */
+  function loadTeam() {
+    if (S.team) return Promise.resolve(S.team);
+    if (typeof window.AGPAuth.teamMine !== 'function') { S.team = { members: [], teams: [] }; return Promise.resolve(S.team); }
+    return window.AGPAuth.teamMine().then(function (r) { S.team = (r && r.success) ? r : { members: [], teams: [] }; return S.team; })
+      .catch(function () { S.team = { members: [], teams: [] }; return S.team; });
+  }
+  function renderTeam(body, p) {
+    var count = h('span', { class: 'pf-panel-sub num' });
+    var filter = h('input', { type: 'search', class: 'pf-input pf-input-sm', placeholder: 'ابحث بفريقك', 'aria-label': 'ابحث بفريقك', hidden: true });
+    var list = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    var idBtn = h('button', { type: 'button', class: 'pf-chipbtn num', title: 'نسخ الـID' }, ['#' + p.custom_id, icon('copy')]);
+    idBtn.addEventListener('click', function () { copyText(String(p.custom_id), function () { showToast('انسخ الـID'); }); });
+    body.appendChild(h('div', { class: 'pf-invite' }, [
+      h('span', { text: 'متابعينك يدخلون فريقك من «ابحث عن ستريمر» بالـID ' }), idBtn,
+      p.tiktok_username ? h('span', { text: ' أو @' + p.tiktok_username }) : null
+    ]));
+    body.appendChild(panel('أعضاء فريقك', count, [filter, list]));
+    loadTeam().then(function (t) {
+      var members = t.members || [];
+      count.textContent = plural(members.length, 'عضو', 'عضو');
+      filter.hidden = members.length < 7;
+      function paint() {
+        var q = filter.value.trim().replace(/^@/, '').toLowerCase();
+        list.innerHTML = '';
+        if (!members.length) { list.appendChild(emptyNote('فريقك فاضي للحين. شارك الـID مع متابعينك.')); return; }
+        members.filter(function (m) { return !q || (m.name || '').toLowerCase().indexOf(q) > -1 || (m.tiktok || '').toLowerCase().indexOf(q) > -1; }).forEach(function (m) {
+          var rm = h('button', { type: 'button', class: 'pf-iconbtn danger', title: 'شيل من الفريق', 'aria-label': 'شيل ' + m.name + ' من الفريق', text: '×' });
+          rm.addEventListener('click', function () {
+            if (!window.confirm('تشيل ' + m.name + ' من فريقك؟')) return;
+            rm.disabled = true;
+            window.AGPAuth.teamRemove(m.customId).then(function (r) {
+              if (r && r.success) { members = members.filter(function (x) { return x.customId !== m.customId; }); count.textContent = plural(members.length, 'عضو', 'عضو'); paint(); }
+              else rm.disabled = false;
+            }).catch(function () { rm.disabled = false; });
+          });
+          list.appendChild(h('div', { class: 'pf-lrow' }, [
+            avatarEl(m),
+            h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: m.name }), metaLine([m.tiktok ? '@' + m.tiktok : null, 'انضم ' + formatDate(m.joinedAt)])]),
+            rm
+          ]));
+        });
+      }
+      filter.addEventListener('input', paint);
+      paint();
+    });
+  }
+
+  /* ---------- ابحث عن ستريمر (للكل) + فرقي */
+  function renderTeams(body) {
+    var input = h('input', { id: 'pfTeamSearch', type: 'search', class: 'pf-input', placeholder: 'الـID أو يوزر تيك توك', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'ابحث عن ستريمر' });
+    var results = h('div', { class: 'pf-list' });
+    var mineList = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    body.appendChild(panel(null, null, [h('div', { class: 'pf-searchbox' }, [icon('search'), input]), results]));
+    body.appendChild(panel('فرقي', null, [mineList]));
+
+    function joinBtn(st, onDone) {
+      var joined = st.joined;
+      var b = h('button', { type: 'button', class: 'pf-btn pf-btn-sm ' + (joined ? 'pf-btn-ghost' : 'pf-btn-primary'), text: joined ? 'اطلع' : 'انضم' });
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        var fn = joined ? window.AGPAuth.teamLeave : window.AGPAuth.teamJoin;
+        fn(st.customId).then(function (r) {
+          b.disabled = false;
+          if (r && r.success) {
+            joined = !joined; st.joined = joined;
+            b.textContent = joined ? 'اطلع' : 'انضم';
+            b.className = 'pf-btn pf-btn-sm ' + (joined ? 'pf-btn-ghost' : 'pf-btn-primary');
+            showToast(joined ? 'انضميت لفريق ' + st.name : 'طلعت من فريق ' + st.name);
+            S.team = null; if (onDone) onDone();
+          } else showToast('تعذّر التنفيذ، حاول مرة ثانية.', true);
+        }).catch(function () { b.disabled = false; });
+      });
+      return b;
+    }
+    function stRow(st, onDone) {
+      return h('div', { class: 'pf-lrow' }, [
+        avatarEl(st),
+        h('div', { class: 'pf-lrow-txt' }, [
+          h('div', { class: 'pf-lrow-t', text: st.name }),
+          metaLine([st.tiktok ? '@' + st.tiktok : null, '#' + st.customId, st.members != null ? plural(st.members, 'عضو', 'عضو') : null])
+        ]),
+        st.self ? pill('أنت') : joinBtn(st, onDone)
+      ]);
+    }
+    function paintMine() {
+      loadTeam().then(function (t) {
+        mineList.innerHTML = '';
+        var teams = t.teams || [];
+        if (!teams.length) { mineList.appendChild(emptyNote('ما انضميت لأي فريق. ابحث عن الستريمر اللي تتابعه وانضم لفريقه.')); return; }
+        teams.forEach(function (st) { st.joined = true; mineList.appendChild(stRow(st, paintMine)); });
+      });
+    }
+    var timer = null, seq = 0;
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      var q = input.value.trim();
+      if (q.replace(/^[@#]/, '').length < 2) { results.innerHTML = ''; return; }
+      timer = setTimeout(function () {
+        var my = ++seq;
+        window.AGPAuth.teamSearch(q).then(function (r) {
+          if (my !== seq) return;
+          results.innerHTML = '';
+          var list = (r && r.success && r.results) || [];
+          if (!list.length) { results.appendChild(emptyNote('ما لقينا ستريمر بهذا الـID أو اليوزر.')); return; }
+          list.forEach(function (st) { results.appendChild(stRow(st, paintMine)); });
+        }).catch(function () {});
+      }, 300);
+    });
+    paintMine();
+  }
+
+  /* ---------- التحكم عن بعد: بثّي + البثوث اللي أتحكم فيها بقسم واحد */
+  function renderRemote(body, p) {
+    var RC = window.AymanGamesPlatform && window.AymanGamesPlatform.remoteControl;
+    if (isStreamerAccount(p) && RC) {
+      var state = h('span', { class: 'pf-pill' });
+      var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', 'data-rc-btn': '1', onclick: function () { RC.openPanel(); } });
+      var paint = function () {
+        var on = RC.isEnabled();
+        state.textContent = on ? 'مفعّل' : 'متوقف';
+        state.className = 'pf-pill' + (on ? ' ok' : '');
+        btn.textContent = on ? 'إدارة' : 'تفعيل';
+      };
+      paint();
+      if (RC.loadConfig) RC.loadConfig().then(paint, paint);
+      paintRemote = paint;
+      body.appendChild(panel('بثّي', state, [
+        h('div', { class: 'pf-lrow pf-lrow-plain' }, [
+          h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-s', text: 'تضيف يوزر تيك توك لأشخاص يشغّلون ألعابك من جوالهم أو بأوامر الشات.' })]),
+          btn
+        ])
+      ]));
+    }
+    if (S.remoteAccess.length) {
+      body.appendChild(panel('بثوث تتحكم فيها', null, [h('div', { class: 'pf-list' }, S.remoteAccess.map(function (st) {
+        return h('div', { class: 'pf-lrow' }, [
+          avatarEl(st),
+          h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: st.name || 'ستريمر' })]),
+          h('a', { href: 'control.html?s=' + encodeURIComponent(st.id), class: 'pf-btn pf-btn-primary pf-btn-sm' }, 'افتح')
+        ]);
+      }))]));
+    }
+  }
+  var paintRemote = null;
+  window.addEventListener('agp:remote-control-changed', function () { if (paintRemote && document.querySelector('[data-rc-btn]')) paintRemote(); });
+
   function renderSoon(body) {
-    body.appendChild(panel('ميزات جاية للستريمر', null, [h('div', { class: 'pf-kvs' }, [
-      ['الألعاب التي تم بثها', 'سجل بكل الألعاب اللي شغّلتها ببثوثك'],
+    body.appendChild(panel(null, null, [h('div', { class: 'pf-kvs' }, [
+      ['شاشات البث', 'أليرتات وتوب وأهداف لـOBS وLIVE Studio'],
+      ['صورة ستوري لآخر بث', 'الداعمين والمتفاعلين بصورة وحدة'],
       ['تحليلات الجمهور', 'مين يتفاعل معك أكثر، ومتى'],
-      ['أبرز اللحظات', 'أقوى لحظات بثوثك بمكان واحد'],
-      ['البث القادم', 'تعلن عن بثك الجاي لمتابعينك'],
+      ['البث القادم', 'تعلن عن بثك الجاي لفريقك'],
       ['إنجازات الستريمر', 'شارات تنفتح مع نشاطك']
     ].map(function (c) {
       return h('div', { class: 'pf-kv pf-kv-2' }, [
@@ -866,27 +1130,14 @@
     }))]));
   }
 
-  // «لوحة التحكم» للمتحكم: ستريمرات أعطوه صلاحية (GET /api/remote-control/access)
-  function renderRemoteAccess(body) {
-    var many = S.remoteAccess.length > 1;
-    var list = h('div', { class: 'pf-kvs' });
-    S.remoteAccess.forEach(function (st) {
-      var av = st.avatar ? h('img', { src: st.avatar, alt: '', class: 'pf-rc-av' }) : h('span', { class: 'pf-rc-av', text: (st.name || '؟').charAt(0) });
-      list.appendChild(h('div', { class: 'pf-kv' }, [
-        h('span', { class: 'pf-rc-id' }, [av, h('span', { text: st.name || 'ستريمر' })]),
-        h('a', { href: 'control.html?s=' + encodeURIComponent(st.id), class: 'pf-btn pf-btn-primary pf-btn-sm' }, 'افتح لوحة التحكم')
-      ]));
-    });
-    body.appendChild(panel(many ? 'اختر البث' : 'البث اللي تتحكم فيه', null, [
-      h('p', { class: 'pf-muted', text: 'هذي البثوث أعطتك صلاحية تتحكم بألعابها: تختار اللعبة، تضبط الإعدادات، وتبدأ وتنهي المباراة من جوالك.' }),
-      list
-    ]));
-  }
-
   function renderSupport(body) {
-    body.appendChild(toolRow('ticket', 'تذاكر الدعم',
-      S.unread > 0 ? ('عندك ' + plural(S.unread, 'رد جديد', 'ردود جديدة') + ' من فريق الدعم.') : 'تابع تذاكرك مع فريق الدعم، أو افتح تذكرة جديدة.',
-      h('a', { href: 'support-tickets.html?tab=list', class: 'pf-btn pf-btn-primary' }, 'فتح تذاكري')));
+    body.appendChild(panel(null, null, [h('div', { class: 'pf-lrow pf-lrow-plain' }, [
+      h('div', { class: 'pf-lrow-txt' }, [
+        h('div', { class: 'pf-lrow-t', text: 'تذاكر الدعم' }),
+        h('div', { class: 'pf-lrow-s', text: S.unread > 0 ? ('عندك ' + plural(S.unread, 'رد جديد', 'ردود جديدة') + ' من فريق الدعم.') : 'تابع تذاكرك أو افتح تذكرة جديدة.' })
+      ]),
+      h('a', { href: 'support-tickets.html?tab=list', class: 'pf-btn pf-btn-primary pf-btn-sm' }, 'فتح')
+    ])]));
   }
 
   /* ===================================================== تعديل الملف */
@@ -1285,7 +1536,7 @@
     // زائر يشوف بروفايل غيره: الخادم يرسل الاسم والـID بس (restricted)
     if (p.restricted && !S.owner) { showRestricted(); return; }
     go(hashSec ? hashSec.id : 'overview', { noHash: !hashSec });
-    if (hash === 'win-codes') setTimeout(function () { $('#pfContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+    if (hash === 'win-codes' || hash === 'codes') setTimeout(function () { $('#pfContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
 
     if (!S.owner) return;
     handleTikTokReturn();
@@ -1299,9 +1550,11 @@
     if (window.AGPAuth.request) window.AGPAuth.request('/api/remote-control/access').then(function (r) {
       S.remoteAccess = (r && r.success && r.streamers) || [];
       if (S.remoteAccess.length) {
-        if (hash === 'remote-access') go('remote-access'); else renderSideNav();
+        if (findSection(hash) && findSection(hash).id === 'remote') go('remote'); else renderSideNav();
       }
     }).catch(function () {});
+    // أكواد ممنوحة ما انستردت — شارة على «أكوادي»
+    loadGrants().then(function () { if (pendingGrants() > 0) renderSideNav(); });
   }
 
   function init() {

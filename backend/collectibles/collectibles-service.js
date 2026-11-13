@@ -1071,8 +1071,14 @@ function choiceCodeOptions(userId, row) {
 function choiceCodeBlocker(userId, code, row) {
   if (row.burned_at) return 'code_burned';
   if (db.prepare('SELECT 1 FROM choice_code_redemptions WHERE code = ? AND user_id = ?').get(code, userId)) return 'already_redeemed';
-  if (row.uses >= row.max_uses) return 'code_full';
+  // الكود الممنوح محجوز له استخدام من وقت المنح، فامتلاء الكود ما يمنعه.
+  if (row.uses >= row.max_uses && !pendingGrant(code, userId)) return 'code_full';
   return null;
+}
+
+/** منح معلّق (ما انسترد بعد) لهذا الكود لهذا المستخدم. */
+function pendingGrant(code, userId) {
+  return db.prepare('SELECT * FROM code_grants WHERE code = ? AND to_user_id = ? AND redeemed_at IS NULL').get(code, userId) || null;
 }
 
 function previewChoiceCode(userId, code, row) {
@@ -1101,8 +1107,14 @@ function claimChoiceCode(userId, rawCode, frameType, frameRef) {
     var allowed = choiceCodeOptions(userId, row).some(function (f) { return f.frameType === frameType && f.frameRef === frameRef; });
     if (!allowed) return { success: false, error: 'invalid_frame' };
 
-    var used = db.prepare('UPDATE choice_codes SET uses = uses + 1 WHERE code = ? AND uses < max_uses AND burned_at IS NULL').run(code);
-    if (used.changes !== 1) return { success: false, error: 'code_full' };
+    var grant = pendingGrant(code, userId);
+    if (grant) {
+      // استخدامه محجوز وقت المنح — نسجّل الاسترداد بس.
+      db.prepare('UPDATE code_grants SET redeemed_at = ? WHERE code = ? AND to_user_id = ?').run(now(), code, userId);
+    } else {
+      var used = db.prepare('UPDATE choice_codes SET uses = uses + 1 WHERE code = ? AND uses < max_uses AND burned_at IS NULL').run(code);
+      if (used.changes !== 1) return { success: false, error: 'code_full' };
+    }
     db.prepare('INSERT INTO choice_code_redemptions (code, user_id, frame_type, frame_ref, redeemed_at) VALUES (?, ?, ?, ?, ?)')
       .run(code, userId, frameType, frameRef, now());
     var granted = grantFrame(userId, frameType, frameRef, { grantedBy: 'redeem_code', skipEntranceBundle: true });
@@ -1233,13 +1245,67 @@ function createWinRewardCode(userId, meta) {
   return { success: true, code: r.code };
 }
 
-/** أكواد جوائز الفوز لستريمر (بروفايله)، الأحدث أولاً. */
+/** أكواد جوائز الفوز لستريمر (بروفايله)، الأحدث أولاً — مع اللي انمنح لهم كل كود. */
 function listWinRewardCodes(userId) {
+  var grantsStmt = db.prepare(
+    'SELECT g.created_at, g.redeemed_at, u.custom_id, u.display_name, u.username FROM code_grants g JOIN users u ON u.id = g.to_user_id ' +
+    'WHERE g.code = ? ORDER BY g.created_at DESC'
+  );
+  var selfStmt = db.prepare('SELECT 1 FROM choice_code_redemptions WHERE code = ? AND user_id = ?');
   return db.prepare(
     'SELECT r.code, r.game, r.team_name, r.created_at, c.uses, c.max_uses, c.burned_at FROM challenge_reward_codes r ' +
     'JOIN choice_codes c ON c.code = r.code WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT 100'
   ).all(userId).map(function (r) {
-    return { code: r.code, game: r.game, teamName: r.team_name, createdAt: r.created_at, uses: r.uses, maxUses: r.max_uses, burnedAt: r.burned_at || null };
+    return {
+      code: r.code, game: r.game, teamName: r.team_name, createdAt: r.created_at, uses: r.uses, maxUses: r.max_uses, burnedAt: r.burned_at || null,
+      redeemedBySelf: Boolean(selfStmt.get(r.code, userId)),
+      grants: grantsStmt.all(r.code).map(function (g) {
+        return { customId: g.custom_id, name: g.display_name || g.username, grantedAt: g.created_at, redeemed: Boolean(g.redeemed_at) };
+      })
+    };
+  });
+}
+
+/**
+ * الستريمر يمنح استخدام واحد من كود جائزة فوز (حقه) لعضو بفريقه. المنح
+ * يحجز الاستخدام فوراً، والكود يطلع للاعب بقسم «أكوادي» يسترده ويختار إطاره.
+ * @returns {{success: boolean, error?: string}}
+ */
+function grantWinCode(fromUserId, rawCode, memberCustomId) {
+  var teams = require('../teams/team-service'); // متأخر: تجنّب الاعتماد الدائري وقت التحميل
+  var code = normalizeFrameCode(rawCode);
+  if (!code) return { success: false, error: 'invalid_code' };
+  var member = teams.byCustomId(memberCustomId);
+  if (!member) return { success: false, error: 'member_not_found' };
+  if (member.id === fromUserId) return { success: false, error: 'self' };
+  if (!teams.isMember(fromUserId, member.id)) return { success: false, error: 'not_team_member' };
+  var result = db.transaction(function () {
+    if (!db.prepare('SELECT 1 FROM challenge_reward_codes WHERE code = ? AND user_id = ?').get(code, fromUserId)) return { success: false, error: 'not_your_code' };
+    var row = db.prepare('SELECT * FROM choice_codes WHERE code = ?').get(code);
+    if (!row) return { success: false, error: 'invalid_code' };
+    if (row.burned_at) return { success: false, error: 'code_burned' };
+    if (db.prepare('SELECT 1 FROM code_grants WHERE code = ? AND to_user_id = ?').get(code, member.id)) return { success: false, error: 'already_granted' };
+    if (db.prepare('SELECT 1 FROM choice_code_redemptions WHERE code = ? AND user_id = ?').get(code, member.id)) return { success: false, error: 'already_redeemed' };
+    var used = db.prepare('UPDATE choice_codes SET uses = uses + 1 WHERE code = ? AND uses < max_uses AND burned_at IS NULL').run(code);
+    if (used.changes !== 1) return { success: false, error: 'code_full' };
+    db.prepare('INSERT INTO code_grants (code, from_user_id, to_user_id, created_at) VALUES (?, ?, ?, ?)').run(code, fromUserId, member.id, now());
+    return { success: true };
+  })();
+  if (result.success) logger.log('Collectibles: user ' + fromUserId + ' granted code ' + code + ' to user ' + member.id);
+  return result;
+}
+
+/** الأكواد اللي انمنحت لي (الأحدث أولاً). */
+function listMyGrants(userId) {
+  return db.prepare(
+    'SELECT g.code, g.created_at, g.redeemed_at, c.burned_at, u.custom_id, u.display_name, u.username, u.avatar_image_base64, u.tiktok_avatar_url ' +
+    'FROM code_grants g JOIN users u ON u.id = g.from_user_id JOIN choice_codes c ON c.code = g.code ' +
+    'WHERE g.to_user_id = ? ORDER BY g.created_at DESC LIMIT 100'
+  ).all(userId).map(function (g) {
+    return {
+      code: g.code, grantedAt: g.created_at, redeemed: Boolean(g.redeemed_at), burned: Boolean(g.burned_at),
+      from: { customId: g.custom_id, name: g.display_name || g.username, avatar: g.avatar_image_base64 || g.tiktok_avatar_url || null }
+    };
   });
 }
 
@@ -1318,6 +1384,8 @@ module.exports = {
   setWinRewardConfig: setWinRewardConfig,
   createWinRewardCode: createWinRewardCode,
   listWinRewardCodes: listWinRewardCodes,
+  grantWinCode: grantWinCode,
+  listMyGrants: listMyGrants,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

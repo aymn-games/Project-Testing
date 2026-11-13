@@ -422,6 +422,28 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_remote_controllers_user ON remote_controllers(tiktok_username);
 
+    -- «فريقك»: لاعبين ينضمون لفريق ستريمر من الموقع (دخول مباشر، واللاعب
+    -- يقدر يكون بأكثر من فريق). راجع backend/teams/team-service.js.
+    CREATE TABLE IF NOT EXISTS team_members (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        joined_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, member_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_members_member ON team_members(member_id);
+
+    -- منح كود جائزة فوز من الستريمر لعضو بفريقه: المنح يحجز استخدام واحد من
+    -- رصيد الكود (choice_codes.uses)، واللاعب يسترده من بروفايله ويختار إطاره.
+    CREATE TABLE IF NOT EXISTS code_grants (
+        code TEXT NOT NULL,
+        from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        redeemed_at INTEGER,
+        PRIMARY KEY (code, to_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_code_grants_to ON code_grants(to_user_id);
+
     -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
     CREATE TABLE IF NOT EXISTS user_seen_notices (
         user_id TEXT NOT NULL,
