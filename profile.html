@@ -43,7 +43,7 @@
     --gold-deep:#c9a95a;
     --mint:#7ee0a6;  --mint-bg:rgba(126,224,166,.12);
     --rose:#f08aa0;  --rose-bg:rgba(240,138,160,.12);
-    --amber:#f5cf7a; --amber-bg:rgba(245,207,122,.12);
+    --amber:#e8d8a6; --amber-bg:rgba(232,216,166,.12);
 
     --accent:var(--lavender);
     --accent-strong:var(--violet);
@@ -144,7 +144,7 @@
   .pf-side-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pf-side-count{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--orchid);color:#1d0a19;font-size:12px;font-weight:700;line-height:22px;text-align:center;
     box-shadow:0 0 0 3px rgba(224,112,196,.18)}
-  .pf-side-dot{width:8px;height:8px;margin-inline-end:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 4px rgba(245,207,122,.16)}
+  .pf-side-dot{width:8px;height:8px;margin-inline-end:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 4px rgba(232,216,166,.16)}
   .pf-side-lock{width:15px;height:15px;margin-inline-end:6px;color:var(--ink-4) !important}
 
   .pf-canvas{min-width:0}
@@ -267,7 +267,7 @@
   .pf-pill{display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--edge);color:var(--ink-3);
     font-size:12.5px;font-weight:600;white-space:nowrap}
   .pf-pill.ok{background:var(--mint-bg);border-color:rgba(126,224,166,.3);color:var(--mint)}
-  .pf-pill.warn{background:var(--amber-bg);border-color:rgba(245,207,122,.3);color:var(--amber)}
+  .pf-pill.warn{background:var(--amber-bg);border-color:rgba(232,216,166,.3);color:var(--amber)}
   .pf-chip{display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:999px;background:var(--glass-2);border:1px solid var(--edge);font-size:13px;color:var(--ink-3);direction:ltr}
 
   /* صف أداة: الوصف يمين والتحكم يسار */
@@ -277,12 +277,12 @@
   .pf-tool-title .pf-ic{width:40px;height:40px;padding:10px;border-radius:12px;background:rgba(var(--accent-rgb),.14);border:1px solid rgba(var(--accent-rgb),.28);color:var(--accent)}
   .pf-tool-desc{margin-top:8px;font-size:14.5px;line-height:1.8;color:var(--ink-3);max-width:70ch}
 
-  .pf-notice{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;padding:16px 18px;border-radius:var(--r-lg);
-    background:linear-gradient(135deg,rgba(245,207,122,.14),rgba(245,207,122,.05));border:1px solid rgba(245,207,122,.3);color:#f7e2b2;font-size:14.5px;line-height:1.8;
+  .pf-notice{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;flex-wrap:wrap;padding:14px 18px;border-radius:var(--r-lg);
+    background:linear-gradient(135deg,rgba(122,63,212,.22),rgba(224,112,196,.08));border:1px solid rgba(178,140,245,.34);color:var(--ink-2);font-size:14.5px;line-height:1.8;
     box-shadow:var(--lift-sm)}
   .pf-notice-txt{flex:1 1 300px}
-  .pf-notice strong{color:var(--amber);font-weight:700}
-  .pf-notice .pf-btn-ghost{border-color:rgba(245,207,122,.45);color:#fbe7b6}
+  .pf-notice strong{color:var(--gold);font-weight:700}
+  .pf-notice .pf-btn{flex:none}
 
   .pf-danger{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
@@ -300,7 +300,7 @@
   .pf-item-glyph{font-family:var(--font-head);font-size:58px;font-weight:700;color:rgba(var(--accent-rgb),.7)}
   .pf-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;padding:0 2px}
   .pf-item-name{font-size:14.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .pf-item .pf-btn{width:100%}
+  .pf-item .pf-btn{align-self:flex-start}
 
   .pf-frame-show{display:flex;flex-direction:column;gap:12px}
   .pf-frame-show img{display:block;width:100%;height:auto;max-height:190px;object-fit:contain;padding:10px;border-radius:var(--r-md);
@@ -455,11 +455,9 @@
     .pf-titlerow-end{gap:10px}
     .pf-mode button{height:40px}
     .pf-hero-actions .pf-btn{height:42px}
-    .pf-titlerow-end{width:100%;align-items:stretch}
-    .pf-mode{width:100%}
+    .pf-titlerow-end{width:100%;align-items:flex-start}
     .pf-mode button{min-width:0}
-    .pf-hero-actions{width:100%}
-    .pf-hero-actions .pf-btn{flex:1}
+    .pf-hero-actions{justify-content:flex-start}
     .pf-lead{flex-direction:column;align-items:flex-start;gap:16px}
     .pf-ring{width:104px;height:104px}
     .pf-lead-v{font-size:34px}
@@ -473,7 +471,6 @@
     .pf-items-3 .pf-item-art{height:150px !important}
     .pf-code{flex-wrap:wrap;gap:6px 12px}
     .pf-code-info{flex-basis:100%}
-    .pf-tool .pf-btn,.pf-danger .pf-btn,.pf-notice .pf-btn,.pf-tt .pf-btn{width:100%}
   }
   @media (max-width:400px){
     .pf-items-cards{grid-template-columns:minmax(0,1fr)}
