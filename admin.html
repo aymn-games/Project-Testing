@@ -488,6 +488,37 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             </table></div>
             <sc-if value="{{ choiceEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه أكواد اختيار بعد.</div></sc-if>
           </div>
+          <!-- أكواد اشتراك الستريمر (backend/subscriptions/subscription-service.js): شهر أو شهرين، والستريمر يفعّلها من بروفايله -->
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
+              <span style="font-weight:600">أكواد اشتراك الستريمر</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كل كود يستخدمه ستريمر واحد من قسم «الاشتراك» ببروفايله. اشتراك الشهر له تعليق واحد (5 أيام)، والشهرين تعليقين (واحد بكل شهر). لو كان مشترك، الكود يمدّد اشتراكه.</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 18px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">المدة</span>
+                <div style="display:flex;gap:6px"><button onClick="{{ subPick1 }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ sub1Border }};background:{{ sub1Bg }};color:#e7e9ee;font-size:13px;cursor:pointer">شهر</button><button onClick="{{ subPick2 }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ sub2Border }};background:{{ sub2Bg }};color:#e7e9ee;font-size:13px;cursor:pointer">شهرين</button></div></div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الأكواد</span><input type="number" min="1" max="200" value="{{ subCount }}" onChange="{{ onSubCount }}" style="width:120px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">ملاحظة (اختياري)</span><input value="{{ subNote }}" onChange="{{ onSubNote }}" placeholder="اشتراكات نوفمبر" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <button onClick="{{ genSubCodes }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">توليد الأكواد</button>
+            </div>
+            <sc-if value="{{ subOut }}" hint-placeholder-val="{{ false }}">
+              <div style="margin:0 18px 14px;border-radius:10px;background:#0b0d12;border:1px solid #3b2a63;overflow:hidden">
+                <div style="padding:8px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #262a37"><span style="font-size:12.5px;color:#9199ab">الأكواد الجديدة</span><button onClick="{{ copySubCodes }}" style="height:28px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">نسخ</button></div>
+                <textarea readOnly="{{ true }}" rows="4" dir="ltr" value="{{ subOut }}" style="width:100%;box-sizing:border-box;border:none;resize:none;background:#0b0d12;color:#c4b5fd;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.8;outline:none"></textarea>
+              </div>
+            </sc-if>
+            <div style="border-top:1px solid #262a37;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الكود</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المدة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الملاحظة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37"></th></tr></thead>
+              <tbody><sc-for list="{{ subRows }}" as="c" hint-placeholder-count="2"><tr>
+                <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ c.code }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ c.months }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ c.note }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:{{ c.color }}">{{ c.status }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.canBurn }}"><button onClick="{{ c.burn }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إيقاف</button></sc-if></td>
+              </tr></sc-for></tbody>
+            </table></div>
+            <sc-if value="{{ subEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه أكواد اشتراك بعد.</div></sc-if>
+          </div>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
               <span style="font-weight:600">جائزة فوز مباريات البثين</span>
@@ -1071,7 +1102,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -1165,7 +1196,7 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
@@ -1519,6 +1550,26 @@ class Component extends DCLogic {
               status:c.burnedAt?`موقوف · \u2068${fmtDate(c.burnedAt)}\u2069`:full?'اكتمل':'فعّال', color:c.burnedAt?'#f87171':full?'#9199ab':'#4ade80',
               canBurn:!c.burnedAt&&!full, burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يستخدمه بعد الآن. اللي استخدموه يبقى لهم إطارهم.`,'إيقاف',()=>this.busy('burn',()=>A.adminBurnCode(c.code)).then(r=>{ if(!r) return;
                 if(!r.success) return this.flash('تعذّر الإيقاف: '+(r.error||'unknown'),'err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) }; }) }; })(),
+      // أكواد اشتراك الستريمر
+      ...(()=>{ const pick=m=>({ border:s.subMonths===m?'#7c3aed':'#2f3342', bg:s.subMonths===m?'#2a1d4a':'#0b0d12' }); const p1=pick(1), p2=pick(2);
+        return {
+          subPick1:()=>this.setState({ subMonths:1 }), subPick2:()=>this.setState({ subMonths:2 }),
+          sub1Border:p1.border, sub1Bg:p1.bg, sub2Border:p2.border, sub2Bg:p2.bg,
+          subCount:s.subCount, subNote:s.subNote, subOut:s.subOut,
+          onSubCount:e=>this.setState({ subCount:e.target.value }), onSubNote:e=>this.setState({ subNote:e.target.value }),
+          genSubCodes:()=>{ const n=Math.floor(Number(s.subCount)); if(!(n>=1&&n<=200)) return this.flash('عدد الأكواد من 1 إلى 200.','err');
+            this.busy('subgen',()=>A.adminGenerateSubscriptionCodes(s.subMonths,n,s.subNote)).then(r=>{ if(!r) return;
+              if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
+              this.setState({ subOut:(r.codes||[]).join('\n'), subNote:'' }); this.flash(`تم توليد ${(r.codes||[]).length} كود اشتراك (${s.subMonths===1?'شهر':'شهرين'}).`); this.loadCodes(); }); },
+          copySubCodes:()=>{ const t=s.subOut; if(!t) return; const done=()=>this.flash('تم نسخ الأكواد.');
+            const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
+            if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,fallback); else fallback(); },
+          subEmpty:!!s.subCodes&&!s.subCodes.length,
+          subRows:(s.subCodes||[]).map(c=>({ code:c.code, months:c.months===1?'شهر':'شهرين', note:c.note||'—',
+            status:c.burnedAt?'موقوف':c.redeemedAt?`مستخدم · ${(c.redeemedBy&&c.redeemedBy.name)||'—'}`:'متاح', color:c.burnedAt?'#f87171':c.redeemedAt?'#9199ab':'#4ade80',
+            canBurn:!c.burnedAt&&!c.redeemedAt,
+            burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يفعّله.`,'إيقاف',()=>this.busy('subburn',()=>A.adminBurnSubscriptionCode(c.code)).then(r=>{ if(!r) return;
+              if(!r.success) return this.flash('تعذّر الإيقاف.','err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) })) }; })(),
       // جائزة فوز مباريات البثين (إطارات مختارة + عدد الاستخدام + تشغيل/إيقاف)
       ...(()=>{ const frames=this.allFrames(), wr=s.winReward, on=new Set(wr.frames);
         const NAMES={ founder:'المؤسس', streamer:'الاستريمر', supporter:'الداعم', distinguished:'المميز' };

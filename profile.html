@@ -658,6 +658,26 @@
   .pf-plat-btn.danger{color:var(--rose);background:rgba(240,138,160,.08);border-color:rgba(240,138,160,.4)}
   .pf-wallet-coin{width:88px;height:88px}
 
+  /* اشتراك الستريمر */
+  .pf-sub{display:flex;flex-direction:column;gap:14px;overflow:hidden;
+    background:linear-gradient(135deg,rgba(232,216,166,.12),rgba(var(--accent-rgb),.12) 60%,rgba(255,255,255,.02));border-color:rgba(232,216,166,.3)}
+  .pf-sub-expired,.pf-sub-none{background:var(--glass-1);border-color:var(--edge)}
+  .pf-sub-head{display:flex;align-items:center;gap:12px}
+  .pf-sub-ic{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:14px;color:#2b1d05;
+    background:linear-gradient(145deg,#fff1c2,#e8d8a6 45%,#b48836);box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 10px 22px -12px rgba(232,216,166,.8)}
+  .pf-sub-ic .pf-ic{width:22px;height:22px;stroke-width:1.8}
+  .pf-sub-expired .pf-sub-ic,.pf-sub-none .pf-sub-ic{filter:grayscale(.8) brightness(.7)}
+  .pf-sub-id{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+  .pf-sub-plan{font-size:16px;font-weight:800}
+  .pf-sub-days{font-size:32px;font-weight:800;color:var(--gold);line-height:1.25}
+  .pf-sub-paused .pf-sub-days{color:var(--amber)}
+  .pf-sub-bar{height:8px;margin:8px 0 6px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden}
+  .pf-sub-bar span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--gold),var(--accent))}
+  .pf-pause-dots{display:flex;gap:6px;margin-top:10px}
+  .pf-pause-dot{width:28px;height:8px;border-radius:8px;background:rgba(232,216,166,.55)}
+  .pf-pause-dot.used{background:rgba(255,255,255,.12)}
+  .pf-btn .pf-ic{flex:none}
+
   /* ---------------------------------------------------------- تجاوب */
   @media (max-width:1200px){ .pf-row2{grid-template-columns:minmax(0,1fr)} :root{--side-w:220px} }
   @media (min-width:1201px){
@@ -764,6 +784,8 @@
     .pf-plat-line{display:none}
     .pf-plat-btn{width:100%;height:32px;font-size:12px;border-radius:10px;margin-top:4px}
     .pf-wallet-coin{width:64px;height:64px}
+    .pf-sub-days{font-size:25px}
+    .pf-sub-ic{width:40px;height:40px}
     .pf-how{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:10px}
     .pf-how-d{flex-basis:100%}
     .pf-grant-form{grid-template-columns:minmax(0,1fr) 96px}

@@ -586,6 +586,30 @@ function getMyGrants() {
     return request('/api/collectibles/grants', { method: 'GET' });
 }
 
+/* اشتراك الستريمر (backend/subscriptions/subscription-service.js). */
+function getSubscription() {
+    return request('/api/subscription', { method: 'GET' });
+}
+function redeemSubscriptionCode(code) {
+    return request('/api/subscription/redeem', { method: 'POST', body: { code: code } });
+}
+function pauseSubscription() {
+    return request('/api/subscription/pause', { method: 'POST', body: {} });
+}
+function resumeSubscription() {
+    return request('/api/subscription/resume', { method: 'POST', body: {} });
+}
+/** Admin only. months: 1 | 2 */
+function adminGenerateSubscriptionCodes(months, count, note) {
+    return request('/api/admin/subscription-codes/generate', { method: 'POST', body: { months: months, count: count, note: note || '' } });
+}
+function adminListSubscriptionCodes() {
+    return request('/api/admin/subscription-codes', { method: 'GET' });
+}
+function adminBurnSubscriptionCode(code) {
+    return request('/api/admin/subscription-codes/burn', { method: 'POST', body: { code: code } });
+}
+
 /* Stream challenge (two streams play one game) — backend/challenge/. */
 function challengeSearch(query) {
     return request('/api/challenge/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
@@ -1139,6 +1163,13 @@ global.AGPAuth = {
     teamRemove: teamRemove,
     grantWinCode: grantWinCode,
     getMyGrants: getMyGrants,
+    getSubscription: getSubscription,
+    redeemSubscriptionCode: redeemSubscriptionCode,
+    pauseSubscription: pauseSubscription,
+    resumeSubscription: resumeSubscription,
+    adminGenerateSubscriptionCodes: adminGenerateSubscriptionCodes,
+    adminListSubscriptionCodes: adminListSubscriptionCodes,
+    adminBurnSubscriptionCode: adminBurnSubscriptionCode,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

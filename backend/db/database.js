@@ -444,6 +444,30 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_code_grants_to ON code_grants(to_user_id);
 
+    -- اشتراك الستريمر (backend/subscriptions/subscription-service.js): مدة
+    -- وتعليق (واحد لكل شهر، 5 أيام بحد أقصى)، وأكواد تفعيل يولّدها الأدمن.
+    CREATE TABLE IF NOT EXISTS streamer_subscriptions (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        started_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        months_total INTEGER NOT NULL,
+        pauses_allowed INTEGER NOT NULL,
+        pauses_used INTEGER NOT NULL DEFAULT 0,
+        paused_total_ms INTEGER NOT NULL DEFAULT 0,
+        paused_at INTEGER,
+        pause_until INTEGER,
+        updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS subscription_codes (
+        code TEXT PRIMARY KEY,
+        months INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        redeemed_at INTEGER,
+        burned_at INTEGER
+    );
+
     -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
     CREATE TABLE IF NOT EXISTS user_seen_notices (
         user_id TEXT NOT NULL,

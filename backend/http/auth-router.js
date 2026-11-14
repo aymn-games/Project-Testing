@@ -13,6 +13,7 @@ var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
 var teamService = require('../teams/team-service');
+var subscriptionService = require('../subscriptions/subscription-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var streamerHours = require('../points/streamer-hours');
@@ -197,6 +198,14 @@ var ROUTES = [
   { method: 'POST', path: '/api/teams/remove', requireAuth: true, handler: handleTeamRemove },
   { method: 'POST', path: '/api/collectibles/win-codes/grant', requireAuth: true, handler: handleGrantWinCode },
   { method: 'GET', path: '/api/collectibles/grants', requireAuth: true, handler: handleMyGrants },
+  // ---- اشتراك الستريمر (backend/subscriptions/subscription-service.js)
+  { method: 'GET', path: '/api/subscription', requireAuth: true, handler: handleSubscriptionStatus },
+  { method: 'POST', path: '/api/subscription/redeem', requireAuth: true, handler: handleSubscriptionRedeem },
+  { method: 'POST', path: '/api/subscription/pause', requireAuth: true, handler: handleSubscriptionPause },
+  { method: 'POST', path: '/api/subscription/resume', requireAuth: true, handler: handleSubscriptionResume },
+  { method: 'GET', path: '/api/admin/subscription-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscriptionCodes },
+  { method: 'POST', path: '/api/admin/subscription-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateSubscriptionCodes },
+  { method: 'POST', path: '/api/admin/subscription-codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnSubscriptionCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -846,6 +855,34 @@ function handleGrantWinCode(req, res, body, user) {
 }
 function handleMyGrants(req, res, body, user) {
   sendJson(res, 200, { success: true, grants: collectiblesService.listMyGrants(user.id) });
+}
+
+function handleSubscriptionStatus(req, res, body, user) {
+  sendJson(res, 200, subscriptionService.status(user.id));
+}
+function handleSubscriptionRedeem(req, res, body, user) {
+  var r = subscriptionService.redeem(user, body.code);
+  var status = { invalid_code: 404, code_used: 409, code_burned: 410, not_streamer: 403 };
+  sendJson(res, r.success ? 200 : (status[r.error] || 400), r);
+}
+function handleSubscriptionPause(req, res, body, user) {
+  var r = subscriptionService.pause(user);
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleSubscriptionResume(req, res, body, user) {
+  var r = subscriptionService.resume(user);
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminListSubscriptionCodes(req, res) {
+  sendJson(res, 200, { success: true, codes: subscriptionService.listCodes() });
+}
+function handleAdminGenerateSubscriptionCodes(req, res, body) {
+  var r = subscriptionService.generateCodes(body.months, body.count, body.note);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminBurnSubscriptionCode(req, res, body) {
+  var r = subscriptionService.burnCode(body.code);
+  sendJson(res, r.success ? 200 : 409, r);
 }
 
 function handleChallengeSearch(req, res, body, user) {

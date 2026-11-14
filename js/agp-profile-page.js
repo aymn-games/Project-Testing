@@ -101,6 +101,8 @@
     check: '<path d="m5 12.5 4.2 4.2L19 7"/>',
     users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17 14.6c2 .5 3.2 2.1 3.6 4.9"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+    crown: '<path d="M4 8.5 8 12l4-6 4 6 4-3.5-1.6 9.5H5.6z"/><path d="M6 20.5h12"/>',
+    pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
     play: '<path d="M8 5.5v13l10.5-6.5z"/>',
     sound: '<path d="M4.5 9.5h3.2L12 6v12l-4.3-3.5H4.5z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/>',
     coin: '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.2 15.3 16h-1.8l-.7-1.9h-1.6l-.7 1.9H8.7zm0 3.4-.6 1.8h1.2z"/>',
@@ -206,6 +208,7 @@
     { id: 'entrance', group: 'items', mode: 'both', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance; }, render: renderEntrance },
     { id: 'codes', group: 'items', mode: 'both', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
 
+    { id: 'subscription', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'crown', label: 'الاشتراك', render: renderSubscription },
     { id: 'broadcast', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderBroadcast },
     { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'الإطارات والجوائز', render: renderRewards },
 
@@ -811,55 +814,64 @@
   }
 
   /* ---------- محفظة عملات أيمن (تصميم جاهز — النظام نفسه ينبني لاحقاً) */
-  // عملة أيمن: عملة معدنية ذهبية حقيقية — سماكة وحافة محزّزة، كتابة بارزة على
-  // المحيط، وشعار بارز بالنص بظل وإضاءة، ولمعان معدني.
+  // عملة أيمن: عملة معدنية ذهبية حقيقية — سماكة وحافة محزّزة، حبيبات على
+  // المحيط، كتابة بارزة، وشعار ألعاب أيمن نفسه منقوش بالنص (قناع من صورة
+  // الشعار، معبّأ ذهب بظل وإضاءة عشان يبان بارز).
+  var COIN_LOGO = 'android-chrome-512x512.png';
   var coinSeq = 0;
   function coinSvg(cls) {
     var id = 'pfc' + (++coinSeq);
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     s.setAttribute('viewBox', '0 0 140 146'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin' + (cls ? ' ' + cls : ''));
-    var reeds = '', lathe = '', i;
+    var reeds = '', beads = '', lathe = '', i;
     for (i = 0; i < 120; i++) reeds += '<rect x="69.4" y="2" width="1.2" height="5.5" transform="rotate(' + (i * 3) + ' 70 70)"/>';
-    for (i = 0; i < 9; i++) lathe += '<circle cx="70" cy="70" r="' + (20 + i * 3.4) + '"/>';
-    var metal = function (sfx, stops) { return '<linearGradient id="' + id + sfx + '" x1="0" y1="0" x2="1" y2="1">' + stops + '</linearGradient>'; };
+    for (i = 0; i < 60; i++) beads += '<circle cx="70" cy="16.2" r="1.15" transform="rotate(' + (i * 6) + ' 70 70)"/>';
+    for (i = 0; i < 10; i++) lathe += '<circle cx="70" cy="70" r="' + (8 + i * 4.2) + '"/>';
+    var lg = function (sfx, stops, x2, y2) { return '<linearGradient id="' + id + sfx + '" x1="0" y1="0" x2="' + (x2 || 1) + '" y2="' + (y2 || 1) + '">' + stops + '</linearGradient>'; };
+    var logo = function (dx, dy, fill, op) {
+      return '<g transform="translate(' + dx + ' ' + dy + ')"><rect x="38" y="36" width="64" height="64" fill="' + fill + '" opacity="' + op + '" mask="url(#' + id + 'm)"/></g>';
+    };
     s.innerHTML =
       '<defs>' +
-        metal('e', '<stop offset="0" stop-color="#7a5212"/><stop offset=".5" stop-color="#b8862e"/><stop offset="1" stop-color="#5c3b0a"/>') +
-        metal('r', '<stop offset="0" stop-color="#fff2c4"/><stop offset=".25" stop-color="#e6c066"/><stop offset=".55" stop-color="#a8761f"/><stop offset=".8" stop-color="#eccb72"/><stop offset="1" stop-color="#8a5f17"/>') +
-        '<radialGradient id="' + id + 'f" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".35" stop-color="#e2b653"/><stop offset=".75" stop-color="#b98a2c"/><stop offset="1" stop-color="#8e6419"/></radialGradient>' +
-        metal('a', '<stop offset="0" stop-color="#fff6d6"/><stop offset=".5" stop-color="#e7c269"/><stop offset="1" stop-color="#b3862c"/>') +
-        '<linearGradient id="' + id + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
-        '<path id="' + id + 'top" d="M24 70a46 46 0 0 1 92 0"/>' +
-        '<path id="' + id + 'bot" d="M20 70a50 50 0 0 0 100 0"/>' +
+        lg('e', '<stop offset="0" stop-color="#7a5212"/><stop offset=".5" stop-color="#b8862e"/><stop offset="1" stop-color="#5c3b0a"/>') +
+        lg('r', '<stop offset="0" stop-color="#fff2c4"/><stop offset=".25" stop-color="#e6c066"/><stop offset=".55" stop-color="#a8761f"/><stop offset=".8" stop-color="#eccb72"/><stop offset="1" stop-color="#8a5f17"/>') +
+        '<radialGradient id="' + id + 'f" cx=".36" cy=".3" r=".9"><stop offset="0" stop-color="#ffefb8"/><stop offset=".35" stop-color="#e6bd5c"/><stop offset=".75" stop-color="#bb8b2d"/><stop offset="1" stop-color="#8e6419"/></radialGradient>' +
+        lg('a', '<stop offset="0" stop-color="#fff7da"/><stop offset=".45" stop-color="#eccb76"/><stop offset="1" stop-color="#a97b26"/>', 0, 1) +
+        '<linearGradient id="' + id + 's" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".33" stop-color="#fff" stop-opacity="0"/><stop offset=".72" stop-color="#fff" stop-opacity="0"/><stop offset=".86" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+        '<radialGradient id="' + id + 'd" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#b9862c"/><stop offset=".7" stop-color="#8c6118"/><stop offset="1" stop-color="#5e3f0c"/></radialGradient>' +
+        '<mask id="' + id + 'm" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="140" height="140"><image href="' + COIN_LOGO + '" x="38" y="36" width="64" height="64"/></mask>' +
+        '<path id="' + id + 'top" d="M23 70a47 47 0 0 1 94 0"/>' +
+        '<path id="' + id + 'bot" d="M19.5 70a50.5 50.5 0 0 0 101 0"/>' +
         '<clipPath id="' + id + 'c"><circle cx="70" cy="70" r="66"/></clipPath>' +
       '</defs>' +
-      // سماكة العملة (الحافة من تحت) + ظل
-      '<ellipse cx="70" cy="139" rx="52" ry="5" fill="#000" opacity=".35"/>' +
+      // سماكة العملة وظلها
+      '<ellipse cx="70" cy="139.5" rx="52" ry="5" fill="#000" opacity=".35"/>' +
       '<circle cx="70" cy="75" r="66" fill="url(#' + id + 'e)"/>' +
       '<g fill="#3e2806" opacity=".45" transform="translate(0 5)">' + reeds + '</g>' +
-      // الوجه: حافة مرفوعة + أرضية معدنية بخطوط خراطة
+      // الوجه: حافة مرفوعة، حبيبات، وأرضية معدنية بخطوط خراطة
       '<circle cx="70" cy="70" r="66" fill="url(#' + id + 'r)"/>' +
       '<g fill="#6b4810" opacity=".35">' + reeds + '</g>' +
       '<circle cx="70" cy="70" r="57" fill="#6e4a11" opacity=".55"/>' +
       '<circle cx="70" cy="70" r="56" fill="url(#' + id + 'f)"/>' +
-      '<g fill="none" stroke="#fff3cf" stroke-opacity=".08">' + lathe + '</g>' +
+      '<g fill="none" stroke="#fff3cf" stroke-opacity=".07">' + lathe + '</g>' +
       '<circle cx="70" cy="70" r="56" fill="none" stroke="#fff6dc" stroke-opacity=".55" stroke-width="1"/>' +
-      '<circle cx="70" cy="70" r="40" fill="none" stroke="#7a5212" stroke-opacity=".45" stroke-width="1.2" stroke-dasharray="1.2 2.6"/>' +
-      // كتابة بارزة على المحيط
+      '<g fill="#fff3cf" opacity=".85">' + beads + '</g>' +
+      '<circle cx="70" cy="70" r="51" fill="none" stroke="#7a5212" stroke-opacity=".5" stroke-width=".8"/>' +
+      // الكتابة البارزة
       '<g font-family="Cairo,system-ui,sans-serif" font-weight="800" text-anchor="middle">' +
-        '<text font-size="10.5" letter-spacing="2.4" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'top" startOffset="50%">AYMAN GAMES</textPath></text>' +
-        '<text font-size="10.5" letter-spacing="2.4" fill="#fff1c7"><textPath href="#' + id + 'top" startOffset="50%">AYMAN GAMES</textPath></text>' +
-        '<text font-size="11" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'bot" startOffset="50%">★ ألعاب أيمن ★</textPath></text>' +
-        '<text font-size="11" fill="#fff1c7"><textPath href="#' + id + 'bot" startOffset="50%">★ ألعاب أيمن ★</textPath></text>' +
+        '<text font-size="10" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'top" startOffset="50%">عملة ألعاب أيمن</textPath></text>' +
+        '<text font-size="10" fill="#fff1c7"><textPath href="#' + id + 'top" startOffset="50%">عملة ألعاب أيمن</textPath></text>' +
+        '<text font-size="8.5" letter-spacing="3" fill="#5e3f0c" transform="translate(.6 .8)"><textPath href="#' + id + 'bot" startOffset="50%">• AGP COIN •</textPath></text>' +
+        '<text font-size="8.5" letter-spacing="3" fill="#fff1c7"><textPath href="#' + id + 'bot" startOffset="50%">• AGP COIN •</textPath></text>' +
       '</g>' +
-      // الشعار البارز بالنص: ظل غامق، إضاءة فاتحة، ثم الوجه
-      '<path transform="translate(1.6 2)" fill="#5a3a08" opacity=".7" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
-      '<path transform="translate(-.8 -.8)" fill="#fff6dc" opacity=".8" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
-      '<path fill="url(#' + id + 'a)" fill-rule="evenodd" d="M70 44 90 96H79l-4-11H65l-4 11H50zm0 16-3.6 13h7.2z"/>' +
-      '<circle cx="70" cy="42.5" r="3.2" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
-      '<circle cx="50.5" cy="97" r="2.6" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
-      '<circle cx="89.5" cy="97" r="2.6" fill="url(#' + id + 'a)" stroke="#5a3a08" stroke-opacity=".5" stroke-width=".6"/>' +
-      // لمعان معدني على كامل الوجه
+      // ميدالية غائرة بالنص، وعليها شعار ألعاب أيمن بارز: ظل غامق، إضاءة، ثم ذهب لامع
+      '<circle cx="70" cy="68" r="35" fill="url(#' + id + 'd)"/>' +
+      '<circle cx="70" cy="68" r="35" fill="none" stroke="#3e2806" stroke-opacity=".55" stroke-width="2.2"/>' +
+      '<path d="M43 88a35 35 0 0 0 54 0" fill="none" stroke="#fff3cf" stroke-opacity=".45" stroke-width="1.2"/>' +
+      logo(2, 2.6, '#2e1c03', '.85') +
+      logo(-1, -1, '#fffbe9', '.95') +
+      logo(0, 0, 'url(#' + id + 'a)', '1') +
+      // لمعان معدني
       '<g clip-path="url(#' + id + 'c)"><rect x="0" y="0" width="140" height="140" fill="url(#' + id + 's)"/></g>' +
       '<circle cx="70" cy="70" r="66" fill="none" stroke="#fff6dc" stroke-opacity=".6" stroke-width=".8"/>';
     return s;
@@ -881,6 +893,128 @@
     body.appendChild(h('div', { class: 'pf-howgrid' }, steps.map(function (st) {
       return h('div', { class: 'pf-panel pf-how' }, [h('span', { class: 'pf-how-ic' }, icon(st[0])), h('div', { class: 'pf-how-t', text: st[1] }), h('p', { class: 'pf-how-d', text: st[2] })]);
     })));
+  }
+
+  /* ---------- اشتراك الستريمر: المدة المتبقية + التعليق + كود التفعيل
+     (backend/subscriptions/subscription-service.js) */
+  var SUB_ERRORS = {
+    invalid_code: 'الكود غير صحيح، تأكد منه.',
+    code_used: 'هذا الكود مستخدم من قبل.',
+    code_burned: 'هذا الكود موقوف.',
+    not_streamer: 'الاشتراك لحسابات الستريمر.',
+    expired: 'اشتراكك منتهي.',
+    already_paused: 'اشتراكك معلّق أصلاً.',
+    no_pauses_left: 'خلص رصيد التعليق لهالاشتراك.',
+    monthly_pause_used: 'استخدمت تعليق هالشهر، تقدر تعلّق الشهر الجاي.',
+    not_paused: 'الاشتراك مو معلّق.'
+  };
+  function daysText(ms) {
+    var d = Math.floor(ms / 86400000), hrs = Math.floor((ms % 86400000) / 3600000);
+    if (d <= 0) return hrs <= 0 ? 'أقل من ساعة' : hrs + ' ساعة';
+    return d + (d === 1 ? ' يوم' : d === 2 ? ' يومين' : d <= 10 ? ' أيام' : ' يوم') + (hrs ? ' و' + hrs + ' ساعة' : '');
+  }
+  function renderSubscription(body) {
+    var box = h('div', { class: 'pf-content-body' }, [h('div', { class: 'pf-skel-row', style: 'height:150px' })]);
+    body.appendChild(box);
+    function load() {
+      if (typeof window.AGPAuth.getSubscription !== 'function') { paint(null); return; }
+      window.AGPAuth.getSubscription().then(function (r) { if (document.body.contains(box)) paint(r && r.success ? r.subscription : null); })
+        .catch(function () { box.innerHTML = ''; box.appendChild(h('div', { class: 'pf-empty' }, ['تعذّر تحميل الاشتراك. ', h('button', { type: 'button', class: 'pf-textbtn', onclick: load }, 'إعادة المحاولة')])); });
+    }
+    function act(btn, fn, okText) {
+      var label = btn.textContent;
+      btn.disabled = true; btn.textContent = 'جارٍ...';
+      fn().then(function (r) {
+        if (r && r.success) { showToast(okText); load(); }
+        else { btn.disabled = false; btn.textContent = label; showToast(SUB_ERRORS[r && r.error] || 'تعذّر التنفيذ، حاول مرة ثانية.', true); }
+      }).catch(function () { btn.disabled = false; btn.textContent = label; });
+    }
+    function paint(sub) {
+      box.innerHTML = '';
+      var state = !sub ? 'none' : sub.paused ? 'paused' : sub.active ? 'active' : 'expired';
+      var labels = { none: 'ما عندك اشتراك', active: 'فعّال', paused: 'معلّق', expired: 'منتهي' };
+      var card = h('div', { class: 'pf-panel pf-sub pf-sub-' + state });
+      var totalMs = sub ? sub.months * 30 * 86400000 : 1;
+      var pct = sub ? Math.max(0, Math.min(100, Math.round(100 * sub.remainingMs / totalMs))) : 0;
+      card.appendChild(h('div', { class: 'pf-sub-head' }, [
+        h('span', { class: 'pf-sub-ic' }, icon('crown')),
+        h('div', { class: 'pf-sub-id' }, [
+          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك الستريمر · ' + (sub.months === 1 ? 'شهر' : sub.months === 2 ? 'شهرين' : sub.months + ' أشهر') : 'اشتراك الستريمر' }),
+          h('div', { class: 'pf-sub-state' }, [pill(labels[state], state === 'active' ? 'ok' : state === 'paused' ? 'warn' : null)])
+        ])
+      ]));
+      if (sub && sub.active) {
+        card.appendChild(h('div', { class: 'pf-sub-remain' }, [
+          h('div', { class: 'pf-lead-l', text: sub.paused ? 'المتبقي (متجمّد وقت التعليق)' : 'المتبقي من اشتراكك' }),
+          h('div', { class: 'pf-sub-days', text: daysText(sub.remainingMs) }),
+          h('div', { class: 'pf-sub-bar' }, h('span', { style: 'width:' + pct + '%' })),
+          h('div', { class: 'pf-lead-n', text: 'ينتهي ' + formatDate(sub.endsAt) + (sub.paused ? ' (بعد احتساب التعليق)' : '') })
+        ]));
+      } else {
+        card.appendChild(h('p', { class: 'pf-muted', text: state === 'expired' ? 'اشتراكك انتهى. فعّل كود جديد عشان تجدده.' : 'فعّل كود الاشتراك اللي وصلك عشان يبدأ اشتراكك.' }));
+      }
+      box.appendChild(card);
+
+      // التعليق
+      if (sub && sub.active) {
+        var left = Math.max(0, sub.pausesAllowed - sub.pausesUsed);
+        var ctl;
+        if (sub.paused) {
+          ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm' }, [icon('play'), 'فك التعليق']);
+          ctl.addEventListener('click', function () {
+            if (!window.confirm('تفك التعليق الحين؟ ينحسب لك تعليق كامل حتى لو ما كملت 5 أيام.')) return;
+            act(ctl, window.AGPAuth.resumeSubscription, 'رجع اشتراكك يشتغل');
+          });
+        } else {
+          ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', disabled: !sub.canPause, title: sub.canPause ? null : (SUB_ERRORS[sub.pauseBlocked] || '') }, [icon('pause'), 'تعليق الاشتراك']);
+          ctl.addEventListener('click', function () {
+            if (!window.confirm('تعلّق اشتراكك 5 أيام؟ أيامها ما تنحسب من مدتك، وتقدر تفكه بدري.')) return;
+            act(ctl, window.AGPAuth.pauseSubscription, 'انعلّق اشتراكك');
+          });
+        }
+        var note = sub.paused
+          ? 'معلّق لين ' + formatDate(sub.pauseUntil) + '، وينفك تلقائياً.'
+          : sub.canPause ? 'تعلّقه لين ' + sub.pauseMaxDays + ' أيام، وأيامها ما تنحسب من مدتك.' : (SUB_ERRORS[sub.pauseBlocked] || '');
+        box.appendChild(panel('تعليق الاشتراك', h('span', { class: 'pf-panel-sub num', text: 'باقي ' + left + ' من ' + sub.pausesAllowed }), [
+          h('div', { class: 'pf-lrow pf-lrow-plain' }, [h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-s', text: note })]), ctl]),
+          h('div', { class: 'pf-pause-dots' }, Array.apply(null, Array(sub.pausesAllowed)).map(function (_, i) {
+            return h('span', { class: 'pf-pause-dot' + (i < sub.pausesUsed ? ' used' : ''), title: i < sub.pausesUsed ? 'مستخدم' : 'متاح' });
+          }))
+        ]));
+      }
+
+      // كود التفعيل
+      var input = h('input', { id: 'pfSubCode', type: 'text', class: 'pf-input pf-input-code', placeholder: 'SUB-XXXX-XXXX', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'كود الاشتراك' });
+      var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: 'تفعيل' });
+      var msg = h('div', { class: 'pf-msg', 'aria-live': 'polite' });
+      function redeem() {
+        var code = input.value.trim();
+        if (!code) { msg.textContent = 'اكتب الكود أولاً.'; msg.className = 'pf-msg err'; return; }
+        btn.disabled = true; btn.textContent = 'جارٍ...';
+        window.AGPAuth.redeemSubscriptionCode(code).then(function (r) {
+          btn.disabled = false; btn.textContent = 'تفعيل';
+          if (r && r.success) { showToast('تم! انضاف ' + (r.months === 1 ? 'شهر' : 'شهرين') + ' لاشتراكك'); load(); }
+          else { msg.textContent = SUB_ERRORS[r && r.error] || 'تعذّر التفعيل، حاول مرة ثانية.'; msg.className = 'pf-msg err'; }
+        }).catch(function () { btn.disabled = false; btn.textContent = 'تفعيل'; });
+      }
+      btn.addEventListener('click', redeem);
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') redeem(); });
+      box.appendChild(panel(sub && sub.active ? 'تمديد الاشتراك' : 'تفعيل الاشتراك', null, [
+        h('div', { class: 'pf-redeem' }, [input, btn]),
+        h('div', { class: 'pf-field-help', text: sub && sub.active ? 'كود جديد يضيف مدته على اشتراكك الحالي، ويزيد رصيد التعليق.' : 'كود شهر أو شهرين، يبدأ اشتراكك من لحظة التفعيل.' }),
+        msg
+      ]));
+      box.appendChild(h('details', { class: 'pf-more' }, [
+        h('summary', { text: 'كيف يشتغل التعليق؟' }),
+        h('ul', { class: 'pf-steps' }, [
+          'اشتراك الشهر: تعليق واحد، حده 5 أيام.',
+          'اشتراك الشهرين: تعليقين، واحد بكل شهر، كل واحد 5 أيام.',
+          'أيام التعليق ما تنحسب من مدتك، النهاية تتأجل بقدرها.',
+          'ينفك تلقائياً بعد 5 أيام، ولو فكيته بدري ينحسب تعليق كامل.'
+        ].map(function (x) { return h('li', { text: x }); }))
+      ]));
+    }
+    load();
   }
 
   /* ---------- الجوائز (الستريمر): أكواد الفوز + منح عملات + أكواد يومية */
