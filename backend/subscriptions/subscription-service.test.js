@@ -8,6 +8,7 @@ var test = require('node:test');
 var assert = require('node:assert/strict');
 var db = require('../db/database');
 var sub = require('./subscription-service');
+var config = require('../config');
 
 var DAY = sub.DAY_MS;
 var tag = 'subtest_' + Date.now();
@@ -26,8 +27,10 @@ sub._setClock(function () { return clock; });
 test.after(function () {
     sub._setClock(null);
     codes.forEach(function (c) { db.prepare('DELETE FROM subscription_codes WHERE code = ?').run(c); });
+    db.prepare('DELETE FROM subscription_plans WHERE months = 7').run();
     made.forEach(function (id) {
         db.prepare('DELETE FROM streamer_subscriptions WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM subscription_events WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM users WHERE id = ?').run(id);
     });
 });
@@ -131,4 +134,96 @@ test('الأدمن: التوليد والإيقاف', function () {
     var s = makeUser('s5', true);
     assert.equal(sub.redeem(s, c).error, 'code_burned');
     assert.ok(sub.listCodes().some(function (x) { return x.code === c && x.burnedAt; }));
+});
+
+test('السجل: كل حدث ينكتب بمصدره، والكود يظهر مختصر', function () {
+    var s = makeUser('e1', true);
+    var code = gen(1);
+    sub.redeem(s, code);
+    sub.pause(s); sub.resume(s);
+    sub.redeem(s, gen(1), 'renew');
+    var ev = sub.listEvents(s.id, 10);
+    assert.deepEqual(ev.map(function (e) { return e.type; }), ['renew', 'resume', 'pause', 'activate']);
+    assert.equal(ev[3].source, 'code');
+    assert.equal(ev[3].ref, '…' + code.slice(-4));
+    assert.equal(ev[3].days, 30);
+    assert.equal(ev[1].source, 'user');
+});
+
+test('الباقات: الأدمن يضيف باقة، والكود ياخذ رصيد التعليق منها', function () {
+    assert.equal(sub.generateCodes(7, 1).error, 'invalid_months');
+    assert.equal(sub.savePlan({ months: 7, name: '', pauses: 1 }).error, 'invalid_name');
+    assert.equal(sub.savePlan({ months: 7, name: 'سبعة', pauses: 3 }).success, true);
+    assert.ok(sub.listPlans().some(function (p) { return p.months === 7 && p.pauses === 3; }));
+    var s = makeUser('pl', true);
+    sub.redeem(s, gen(7));
+    var st = sub.status(s.id).subscription;
+    assert.equal(st.months, 7);
+    assert.equal(st.pausesAllowed, 3);
+    sub.savePlan({ months: 7, name: 'سبعة', pauses: 3, active: false });
+    assert.equal(sub.generateCodes(7, 1).error, 'invalid_months');
+    assert.ok(!sub.listPlans().some(function (p) { return p.months === 7; }));
+    assert.ok(sub.listPlans(true).some(function (p) { return p.months === 7 && !p.active; }));
+});
+
+test('المتجر: الشراء يفعّل أو يمدّد، ويُسجَّل برقم الطلب', function () {
+    var s = makeUser('st', true);
+    assert.equal(sub.grantFromStore(s.id, 1, 'ORD-1').mode, 'new');
+    assert.equal(sub.grantFromStore(s.id, 2, 'ORD-2').mode, 'extend');
+    var st = sub.status(s.id).subscription;
+    assert.equal(st.months, 3);
+    assert.equal(st.pausesAllowed, 3);
+    assert.ok(Math.abs(st.remainingMs - 90 * DAY) < 1000);
+    var ev = sub.listEvents(s.id);
+    assert.equal(ev[0].source, 'store');
+    assert.equal(ev[0].ref, 'ORD-2');
+    assert.equal(sub.grantFromStore(s.id, 0, 'x').error, 'invalid_months');
+});
+
+test('الأدمن: إضافة/خصم أيام، فك تعليق، وإنهاء', function () {
+    var s = makeUser('ad', true);
+    assert.equal(sub.adjustDays(s.id, 5).error, 'no_subscription');
+    sub.redeem(s, gen(1));
+    assert.equal(sub.adjustDays(s.id, 0).error, 'invalid_days');
+    sub.adjustDays(s.id, 10);
+    sub.adjustDays(s.id, -3);
+    assert.ok(Math.abs(sub.status(s.id).subscription.remainingMs - 37 * DAY) < 1000);
+    sub.pause(s);
+    assert.equal(sub.adminUnpause(s.id).success, true);
+    assert.equal(sub.status(s.id).subscription.paused, false);
+    assert.ok(sub.listSubscribers().some(function (x) { return x.userId === s.id && x.active; }));
+    sub.endSubscription(s.id);
+    assert.equal(sub.status(s.id).subscription.active, false);
+    clock += 10 * DAY;
+    sub.adjustDays(s.id, 4); // المنتهي يبدأ العد من الحين
+    assert.ok(Math.abs(sub.status(s.id).subscription.remainingMs - 4 * DAY) < 1000);
+    var types = sub.listEvents(s.id).map(function (e) { return e.type; });
+    assert.deepEqual(types.slice(0, 3), ['admin_add', 'admin_end', 'resume']);
+    assert.equal(sub.listEvents(s.id)[2].source, 'admin');
+});
+
+test('التنبيه والقفل: قرب الانتهاء، والقفل مطفي افتراضياً مع أيام سماح', function () {
+    var s = makeUser('en', true);
+    var none = makeUser('en0', true);
+    sub.redeem(s, gen(1));
+    clock += 24 * DAY;
+    assert.equal(sub.status(s.id).subscription.expiringSoon, false);
+    clock += 2 * DAY;
+    assert.equal(sub.status(s.id).subscription.expiringSoon, true);
+    var saved = { on: config.subscriptionEnforcement, grace: config.subscriptionGraceDays };
+    try {
+        config.subscriptionEnforcement = false;
+        assert.equal(sub.hasActiveSubscription(none.id), true); // مطفي = مسموح للكل
+        config.subscriptionEnforcement = true;
+        config.subscriptionGraceDays = 3;
+        assert.equal(sub.hasActiveSubscription(none.id), false);
+        assert.equal(sub.hasActiveSubscription(s.id), true);
+        clock += 6 * DAY; // انتهى قبل يومين — داخل السماح
+        assert.equal(sub.hasActiveSubscription(s.id), true);
+        clock += 2 * DAY;
+        assert.equal(sub.hasActiveSubscription(s.id), false);
+    } finally {
+        config.subscriptionEnforcement = saved.on;
+        config.subscriptionGraceDays = saved.grace;
+    }
 });

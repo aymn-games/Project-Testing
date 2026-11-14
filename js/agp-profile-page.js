@@ -103,6 +103,8 @@
     search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
     crown: '<path d="M4 8.5 8 12l4-6 4 6 4-3.5-1.6 9.5H5.6z"/><path d="M6 20.5h12"/>',
     pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>',
+    refresh: '<path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M19.5 4.5v4h-4"/>',
+    close: '<path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>',
     play: '<path d="M8 5.5v13l10.5-6.5z"/>',
     sound: '<path d="M4.5 9.5h3.2L12 6v12l-4.3-3.5H4.5z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/>',
     coin: '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.2 15.3 16h-1.8l-.7-1.9h-1.6l-.7 1.9H8.7zm0 3.4-.6 1.8h1.2z"/>',
@@ -312,6 +314,7 @@
         if (s.id === 'support' && S.unread > 0) badge = h('span', { class: 'pf-side-count num', title: 'ردود جديدة من فريق الدعم', text: S.unread > 99 ? '99+' : String(S.unread) });
         if (s.id === 'codes' && pendingGrants() > 0) badge = h('span', { class: 'pf-side-count num', title: 'أكواد وصلتك ما استرديتها', text: String(pendingGrants()) });
         if (s.id === 'account' && S.emailUnverified) badge = h('span', { class: 'pf-side-dot', title: 'الإيميل غير مؤكد' });
+        if (s.id === 'subscription' && S.subAlert) badge = h('span', { class: 'pf-side-dot' + (S.subAlert.expired ? ' red' : ''), title: S.subAlert.expired ? 'اشتراكك منتهي' : 'اشتراكك قرب ينتهي' });
         if (locked) badge = icon('lock', 'pf-side-lock');
         var a = h('a', {
           href: '#' + s.id,
@@ -393,6 +396,26 @@
     ]);
   }
 
+  /** تنبيه الاشتراك (≤5 أيام أو منتهي) — للستريمر بس. */
+  function subBanner() {
+    var a = S.subAlert;
+    if (!S.owner || !a || S.mode !== 'streamer' || S.section === 'subscription') return null;
+    return h('div', { class: 'pf-notice' + (a.expired ? ' pf-notice-red' : '') }, [
+      h('div', { class: 'pf-notice-txt' }, a.expired
+        ? [h('strong', { text: 'اشتراكك منتهي. ' }), 'جدّده عشان تكمل بدون انقطاع.']
+        : [h('strong', { text: 'اشتراكك قرب ينتهي. ' }), 'باقي ' + daysText(a.remainingMs) + '، مدّده من الحين.']),
+      h('a', { href: '#subscription', class: 'pf-btn pf-btn-ghost', 'data-sec': 'subscription' }, a.expired ? 'جدّد الاشتراك' : 'مدّد الاشتراك')
+    ]);
+  }
+  /** يحدّث تنبيه الاشتراك من حالة الخادم ويعيد رسم القائمة لو تغيّر. */
+  function setSubAlert(sub) {
+    var next = !sub ? null : (!sub.active ? { expired: true } : sub.expiringSoon ? { remainingMs: sub.remainingMs } : null);
+    var changed = JSON.stringify(next) !== JSON.stringify(S.subAlert);
+    S.subAlert = next;
+    if (changed) renderSideNav();
+    return changed;
+  }
+
   function activeFrame(p) { return (p.frames || []).filter(function (x) { return x.equipped; })[0] || null; }
 
   function playerLevelInfo(p) {
@@ -433,6 +456,8 @@
   function renderOverview(body, p) {
     var banner = emailBanner();
     if (banner) body.appendChild(banner);
+    var sb = subBanner();
+    if (sb) body.appendChild(sb);
 
     if (S.mode === 'player') {
       if (p.points) {
@@ -909,6 +934,12 @@
     monthly_pause_used: 'استخدمت تعليق هالشهر، تقدر تعلّق الشهر الجاي.',
     not_paused: 'الاشتراك مو معلّق.'
   };
+  function monthsText(n) { return n === 1 ? 'شهر' : n === 2 ? 'شهرين' : n <= 10 ? n + ' أشهر' : n + ' شهر'; }
+  var SUB_EVENT = {
+    activate: 'تفعيل', extend: 'تمديد', renew: 'تجديد', pause: 'تعليق', resume: 'فك التعليق', auto_resume: 'انفك التعليق تلقائياً',
+    admin_add: 'إضافة أيام', admin_subtract: 'خصم أيام', admin_end: 'إنهاء الاشتراك'
+  };
+  var SUB_SOURCE = { code: 'بكود', store: 'من المتجر', admin: 'من الإدارة', user: '', system: '' };
   function daysText(ms) {
     var d = Math.floor(ms / 86400000), hrs = Math.floor((ms % 86400000) / 3600000);
     if (d <= 0) return hrs <= 0 ? 'أقل من ساعة' : hrs + ' ساعة';
@@ -919,7 +950,10 @@
     body.appendChild(box);
     function load() {
       if (typeof window.AGPAuth.getSubscription !== 'function') { paint(null); return; }
-      window.AGPAuth.getSubscription().then(function (r) { if (document.body.contains(box)) paint(r && r.success ? r.subscription : null); })
+      window.AGPAuth.getSubscription().then(function (r) {
+        if (r && r.success) setSubAlert(r.subscription);
+        if (document.body.contains(box)) paint(r && r.success ? r.subscription : null, r || {});
+      })
         .catch(function () { box.innerHTML = ''; box.appendChild(h('div', { class: 'pf-empty' }, ['تعذّر تحميل الاشتراك. ', h('button', { type: 'button', class: 'pf-textbtn', onclick: load }, 'إعادة المحاولة')])); });
     }
     function act(btn, fn, okText) {
@@ -930,7 +964,8 @@
         else { btn.disabled = false; btn.textContent = label; showToast(SUB_ERRORS[r && r.error] || 'تعذّر التنفيذ، حاول مرة ثانية.', true); }
       }).catch(function () { btn.disabled = false; btn.textContent = label; });
     }
-    function paint(sub) {
+    function paint(sub, extra) {
+      extra = extra || {};
       box.innerHTML = '';
       var state = !sub ? 'none' : sub.paused ? 'paused' : sub.active ? 'active' : 'expired';
       var labels = { none: 'ما عندك اشتراك', active: 'فعّال', paused: 'معلّق', expired: 'منتهي' };
@@ -953,11 +988,18 @@
       var ringCard = h('div', { class: 'pf-panel pf-sub pf-sub-' + state }, [
         dial,
         h('div', { class: 'pf-sub-info' }, [
-          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك ' + (sub.months === 1 ? 'شهر' : sub.months === 2 ? 'شهرين' : sub.months + ' أشهر') : 'اشتراك الستريمر' }),
+          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك ' + monthsText(sub.months) : 'اشتراك الستريمر' }),
           pill(labels[state], state === 'active' ? 'ok' : state === 'paused' ? 'warn' : null),
           h('div', { class: 'pf-sub-end', text: sub && sub.active ? ('ينتهي ' + formatDate(sub.endsAt)) : state === 'expired' ? 'انتهى، جدّده بكود جديد' : 'فعّله بكود الاشتراك' })
         ])
       ]);
+      if (sub && (sub.expiringSoon || !sub.active)) {
+        box.appendChild(h('div', { class: 'pf-notice' + (sub.active ? '' : ' pf-notice-red') }, [
+          h('div', { class: 'pf-notice-txt' }, sub.active
+            ? [h('strong', { text: 'اشتراكك قرب ينتهي. ' }), 'باقي ' + daysText(sub.remainingMs) + '، مدّده بكود أو من المتجر.']
+            : [h('strong', { text: 'اشتراكك منتهي. ' }), 'فعّل كود جديد أو اشترك من المتجر.'])
+        ]));
+      }
       var grid = h('div', { class: 'pf-sub-grid' }, [ringCard]);
 
       // التعليق
@@ -1000,7 +1042,7 @@
       };
       var input = h('input', { id: 'pfSubCode', type: 'text', class: 'pf-input pf-input-code', placeholder: 'SUB-XXXX-XXXX', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'كود الاشتراك' });
       var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: active ? MODES.extend.btn : 'تفعيل' });
-      var help = h('div', { class: 'pf-field-help', text: active ? MODES.extend.help : 'كود شهر أو شهرين، يبدأ اشتراكك من لحظة التفعيل.' });
+      var help = h('div', { class: 'pf-field-help', text: active ? MODES.extend.help : 'كود الاشتراك يبدأ مدتك من لحظة التفعيل.' });
       var msg = h('div', { class: 'pf-msg', 'aria-live': 'polite' });
       var seg = null;
       if (active) {
@@ -1022,7 +1064,7 @@
         window.AGPAuth.redeemSubscriptionCode(code, mode).then(function (r) {
           btn.disabled = false; btn.textContent = label;
           if (r && r.success) {
-            var dur = r.months === 1 ? 'شهر' : 'شهرين';
+            var dur = monthsText(r.months);
             showToast(r.mode === 'renew' ? 'تجدّد اشتراكك (' + dur + ')' : r.mode === 'extend' ? 'تمدّد اشتراكك ' + dur : 'تفعّل اشتراكك (' + dur + ')');
             load();
           } else { msg.textContent = SUB_ERRORS[r && r.error] || 'تعذّر التفعيل، حاول مرة ثانية.'; msg.className = 'pf-msg err'; }
@@ -1031,11 +1073,50 @@
       btn.addEventListener('click', redeem);
       input.addEventListener('keydown', function (e) { if (e.key === 'Enter') redeem(); });
       box.appendChild(panel(active ? 'تمديد أو تجديد' : 'تفعيل الاشتراك', null, [seg, h('div', { class: 'pf-redeem' }, [input, btn]), help, msg]));
+
+      // الشراء من المتجر — يظهر بس لما يكون فيه منتجات اشتراك ظاهرة بالمتجر
+      var products = extra.storeProducts || [];
+      if (products.length) {
+        box.appendChild(panel(active ? 'جدّد من المتجر' : 'اشترك من المتجر', 'الدفع يفعّل اشتراكك تلقائياً، ولو فعّال يتمدّد.', [
+          h('div', { class: 'pf-sub-buy' }, products.map(function (pr) {
+            return h('a', { class: 'pf-btn pf-btn-ghost', href: 'store.html' + (pr.categoryId ? '#c-' + pr.categoryId : ''), 'data-product': String(pr.id) }, [
+              icon('crown'), (active ? 'جدّد ' : 'اشترك ') + monthsText(pr.months), h('span', { class: 'pf-sub-price num', text: pr.price + ' ر.س' })
+            ]);
+          }))
+        ]));
+      }
+
+      // سجل الاشتراك
+      var events = extra.events || [];
+      if (events.length) {
+        box.appendChild(panel('سجل الاشتراك', null, [
+          h('ul', { class: 'pf-sub-log' }, events.map(function (e) {
+            var what = (SUB_EVENT[e.type] || e.type) + (e.months ? ' ' + monthsText(e.months) : (e.days && /^admin_(add|subtract)$/.test(e.type) ? ' ' + e.days + ' يوم' : ''));
+            var srcLabel = SUB_SOURCE[e.source] || '';
+            var ref = e.ref && (e.source === 'store' || e.source === 'code') ? e.ref : '';
+            return h('li', null, [
+              h('span', { class: 'pf-sub-log-t', text: what }),
+              srcLabel || ref ? h('span', { class: 'pf-sub-log-s' }, [srcLabel, ref ? h('bdi', { dir: 'ltr', class: 'pf-sub-log-ref', text: (e.source === 'store' ? '#' : '') + ref }) : null]) : null,
+              h('span', { class: 'pf-sub-log-d num', text: formatDate(e.at) })
+            ]);
+          }))
+        ]));
+      }
+
+      // إدارة الاشتراك — تتفعّل مع بوابة الدفع
+      if (sub) {
+        box.appendChild(panel('إدارة الاشتراك', null, [
+          h('div', { class: 'pf-sub-manage' }, [
+            h('span', { class: 'pf-btn pf-btn-soon pf-btn-sm', 'aria-disabled': 'true', title: 'يتفعّل مع الدفع الإلكتروني' }, [icon('refresh'), 'تجديد تلقائي', h('span', { class: 'pf-soon-chip', text: 'قريباً' })]),
+            h('span', { class: 'pf-btn pf-btn-soon pf-btn-sm', 'aria-disabled': 'true', title: 'يتفعّل مع الدفع الإلكتروني' }, [icon('close'), 'إلغاء الاشتراك', h('span', { class: 'pf-soon-chip', text: 'قريباً' })])
+          ])
+        ]));
+      }
       box.appendChild(h('details', { class: 'pf-more' }, [
         h('summary', { text: 'كيف يشتغل التعليق؟' }),
         h('ul', { class: 'pf-steps' }, [
-          'اشتراك الشهر: تعليق واحد، حده 5 أيام.',
-          'اشتراك الشهرين: تعليقين، واحد بكل شهر، كل واحد 5 أيام.',
+          'كل شهر بالاشتراك له تعليق واحد، حده 5 أيام.',
+          'اشتراك الشهرين: تعليقين، واحد بكل شهر.',
           'أيام التعليق ما تنحسب من مدتك، النهاية تتأجل بقدرها.',
           'ينفك تلقائياً بعد 5 أيام، ولو فكيته بدري ينحسب تعليق كامل.'
         ].map(function (x) { return h('li', { text: x }); }))
@@ -1970,6 +2051,10 @@
       if (S.remoteAccess.length) {
         if (findSection(hash) && findSection(hash).id === 'remote') go('remote'); else renderSideNav();
       }
+    }).catch(function () {});
+    // تنبيه الاشتراك (قرب الانتهاء/منتهي) — شارة بالقائمة + شريط بالنظرة العامة
+    if (isStreamerAccount(p) && typeof window.AGPAuth.getSubscription === 'function') window.AGPAuth.getSubscription().then(function (r) {
+      if (r && r.success && setSubAlert(r.subscription) && S.section === 'overview') go('overview', { noHash: true });
     }).catch(function () {});
     // أكواد ممنوحة ما انستردت — شارة على «أكوادي»
     loadGrants().then(function () { if (pendingGrants() > 0) renderSideNav(); });

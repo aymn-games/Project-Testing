@@ -21,6 +21,7 @@ var crypto = require('crypto');
 var db = require('../db/database');
 var config = require('../config');
 var logger = require('../utils/logger');
+var subscriptionService = require('../subscriptions/subscription-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var paylink = require('./paylink-client');
 var moyasar = require('./moyasar-client');
@@ -307,8 +308,11 @@ function ensureCustomFrameForProduct(row) {
     return frameId;
 }
 
-/** يضيف المنتج لمقتنيات المستخدم الفعلية حسب delivery. لا يرمي أخطاء. */
-function deliverToCollectibles(userId, row) {
+/**
+ * يضيف المنتج لمقتنيات المستخدم الفعلية حسب delivery. لا يرمي أخطاء.
+ * 'subscription:<أشهر>' = اشتراك ستريمر (يمدّد لو فعّال)، ويُسجَّل برقم الطلب.
+ */
+function deliverToCollectibles(userId, row, orderId) {
     var delivery = row.delivery || '';
     try {
         if (delivery === 'frame') {
@@ -320,6 +324,8 @@ function deliverToCollectibles(userId, row) {
             collectiblesService.grantElimCard(userId, delivery.slice(5), 'store');
         } else if (delivery.indexOf('win:') === 0) {
             collectiblesService.grantWinCard(userId, delivery.slice(4), 'store');
+        } else if (delivery.indexOf('subscription:') === 0) {
+            subscriptionService.grantFromStore(userId, Number(delivery.slice(13)), orderId);
         }
     } catch (err) {
         logger.error('Store: delivery failed for product ' + row.id + ' to user ' + userId + ':', err);
@@ -363,11 +369,11 @@ var finalizeOrder = db.transaction(function (orderId) {
         // المنتج نفسه من قاعدة البيانات (لنوع التسليم)؛ لو انحذف بعد الطلب يُسجَّل بالمقتنيات بدون تسليم.
         var row = getProductRow(item.productId);
         addInventory.run(order.user_id, item.productId, orderId, createdAt);
-        if (row) deliverToCollectibles(order.user_id, row);
+        if (row) deliverToCollectibles(order.user_id, row, orderId);
         (item.parts || []).forEach(function (pt) {
             var part = getProductRow(pt.productId);
             addInventory.run(order.user_id, pt.productId, orderId, createdAt);
-            if (part) deliverToCollectibles(order.user_id, part);
+            if (part) deliverToCollectibles(order.user_id, part, orderId);
         });
     });
     return true;
@@ -696,8 +702,16 @@ function deliveryOptions() {
     });
     var elims = collectiblesService.getElimCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
     var wins = collectiblesService.getWinCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
+    var subs = subscriptionService.listPlans(false).map(function (p) { return { value: 'subscription:' + p.months, label: 'اشتراك ستريمر: ' + p.name }; });
     return [{ value: '', label: 'بدون تسليم تلقائي' }, { value: 'frame', label: 'إطار بروفايل (صورة المنتج)' }]
-        .concat(frames, elims, wins);
+        .concat(frames, elims, wins, subs);
+}
+
+/** منتجات اشتراك الستريمر الظاهرة بالمتجر (لأزرار «اشترك/جدّد» بالبروفايل). */
+function subscriptionProducts() {
+    return listProductRows().filter(function (r) { return !r.hidden && /^subscription:\d+$/.test(r.delivery || ''); })
+        .map(function (r) { return { id: r.id, name: r.name, price: r.price, months: Number(r.delivery.slice(13)), categoryId: r.category_id }; })
+        .sort(function (a, b) { return a.months - b.months; });
 }
 
 function isValidDelivery(value) {
@@ -1198,6 +1212,7 @@ var STORE_FRAMES_BATCH_3 = [
 }());
 
 module.exports = {
+    subscriptionProducts: subscriptionProducts,
     PLAN_KEYS: PLAN_KEYS,
     getPublicStore: getPublicStore,
     checkCoupon: checkCoupon,

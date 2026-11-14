@@ -600,7 +600,7 @@ function pauseSubscription() {
 function resumeSubscription() {
     return request('/api/subscription/resume', { method: 'POST', body: {} });
 }
-/** Admin only. months: 1 | 2 */
+/** Admin only. months: أشهر باقة فعّالة (subscription_plans). */
 function adminGenerateSubscriptionCodes(months, count, note) {
     return request('/api/admin/subscription-codes/generate', { method: 'POST', body: { months: months, count: count, note: note || '' } });
 }
@@ -609,6 +609,24 @@ function adminListSubscriptionCodes() {
 }
 function adminBurnSubscriptionCode(code) {
     return request('/api/admin/subscription-codes/burn', { method: 'POST', body: { code: code } });
+}
+/** Admin only: المشتركين + كل الباقات. */
+function adminListSubscribers() {
+    return request('/api/admin/subscriptions', { method: 'GET' });
+}
+/** Admin only: days موجب = إضافة، سالب = خصم. */
+function adminAdjustSubscription(userId, days) {
+    return request('/api/admin/subscriptions/adjust', { method: 'POST', body: { userId: userId, days: days } });
+}
+function adminEndSubscription(userId) {
+    return request('/api/admin/subscriptions/end', { method: 'POST', body: { userId: userId } });
+}
+function adminUnpauseSubscription(userId) {
+    return request('/api/admin/subscriptions/unpause', { method: 'POST', body: { userId: userId } });
+}
+/** Admin only: plan = {months, name, pauses, active} — إضافة أو تعديل. */
+function adminSaveSubscriptionPlan(plan) {
+    return request('/api/admin/subscription-plans', { method: 'POST', body: plan || {} });
 }
 
 /* Stream challenge (two streams play one game) — backend/challenge/. */
@@ -1171,6 +1189,11 @@ global.AGPAuth = {
     adminGenerateSubscriptionCodes: adminGenerateSubscriptionCodes,
     adminListSubscriptionCodes: adminListSubscriptionCodes,
     adminBurnSubscriptionCode: adminBurnSubscriptionCode,
+    adminListSubscribers: adminListSubscribers,
+    adminAdjustSubscription: adminAdjustSubscription,
+    adminEndSubscription: adminEndSubscription,
+    adminUnpauseSubscription: adminUnpauseSubscription,
+    adminSaveSubscriptionPlan: adminSaveSubscriptionPlan,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

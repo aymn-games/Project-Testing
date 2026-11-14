@@ -26,6 +26,7 @@ var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
 var storeRouter = require('./store-router');
+var storeService = require('../store/store-service');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var screenTests = require('../stats/screen-tests');
 var liveSessionStats = require('../stats/live-session-stats');
@@ -206,6 +207,11 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/subscription-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscriptionCodes },
   { method: 'POST', path: '/api/admin/subscription-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateSubscriptionCodes },
   { method: 'POST', path: '/api/admin/subscription-codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnSubscriptionCode },
+  { method: 'GET', path: '/api/admin/subscriptions', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscribers },
+  { method: 'POST', path: '/api/admin/subscriptions/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminAdjustSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/end', requireAuth: true, requireAdmin: true, handler: handleAdminEndSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/unpause', requireAuth: true, requireAdmin: true, handler: handleAdminUnpauseSubscription },
+  { method: 'POST', path: '/api/admin/subscription-plans', requireAuth: true, requireAdmin: true, handler: handleAdminSaveSubscriptionPlan },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -858,7 +864,11 @@ function handleMyGrants(req, res, body, user) {
 }
 
 function handleSubscriptionStatus(req, res, body, user) {
-  sendJson(res, 200, subscriptionService.status(user.id));
+  var r = subscriptionService.status(user.id);
+  r.events = subscriptionService.listEvents(user.id, 8);
+  r.plans = subscriptionService.listPlans(false);
+  r.storeProducts = storeService.subscriptionProducts(); // فاضية = أزرار الشراء مخفية
+  sendJson(res, 200, r);
 }
 function handleSubscriptionRedeem(req, res, body, user) {
   var r = subscriptionService.redeem(user, body.code, body.mode);
@@ -883,6 +893,25 @@ function handleAdminGenerateSubscriptionCodes(req, res, body) {
 function handleAdminBurnSubscriptionCode(req, res, body) {
   var r = subscriptionService.burnCode(body.code);
   sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminListSubscribers(req, res) {
+  sendJson(res, 200, { success: true, subscribers: subscriptionService.listSubscribers(), plans: subscriptionService.listPlans(true) });
+}
+function handleAdminAdjustSubscription(req, res, body) {
+  var r = subscriptionService.adjustDays(Number(body.userId), body.days);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminEndSubscription(req, res, body) {
+  var r = subscriptionService.endSubscription(Number(body.userId));
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminUnpauseSubscription(req, res, body) {
+  var r = subscriptionService.adminUnpause(Number(body.userId));
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminSaveSubscriptionPlan(req, res, body) {
+  var r = subscriptionService.savePlan(body);
+  sendJson(res, r.success ? 200 : 400, r);
 }
 
 function handleChallengeSearch(req, res, body, user) {

@@ -11,18 +11,28 @@
  *   شهر)، حده الأقصى 5 أيام وينفك تلقائياً بعدها. أيام التعليق ما تنحسب
  *   من المدة (النهاية تتأجل بقدرها). فكّ التعليق قبل الـ5 أيام يحسب تعليق
  *   كامل من الرصيد.
- * - حالياً للعرض فقط: ما فيه ميزة تنقفل لو انتهى الاشتراك أو انعلّق.
- * الجداول streamer_subscriptions وsubscription_codes بـbackend/db/database.js.
+ * - المصادر: كود (redeem)، المتجر بعد الدفع (grantFromStore — تسليم
+ *   'subscription:<أشهر>' بـstore-service.js)، والأدمن (adjustDays/end/unpause).
+ *   كل حدث ينكتب بـsubscription_events (يظهر للستريمر كسجل مختصر).
+ * - الباقات (subscription_plans): الأشهر + رصيد التعليق، يديرها الأدمن.
+ * - القفل: hasActiveSubscription(userId) — مطفي افتراضياً
+ *   (config.subscriptionEnforcement) فيرجع true دائماً، ولما يتفعّل فيه
+ *   أيام سماح بعد الانتهاء (config.subscriptionGraceDays).
+ * الجداول streamer_subscriptions وsubscription_codes وsubscription_events
+ * وsubscription_plans بـbackend/db/database.js.
  */
 
 var crypto = require('crypto');
 var db = require('../db/database');
 var logger = require('../utils/logger');
+var config = require('../config');
 
 var DAY_MS = 24 * 60 * 60 * 1000;
 var MONTH_MS = 30 * DAY_MS;
 var PAUSE_MAX_MS = 5 * DAY_MS;
-var ALLOWED_MONTHS = [1, 2];
+var EXPIRING_SOON_MS = 5 * DAY_MS;
+var MAX_PLAN_MONTHS = 24;
+var MAX_ADJUST_DAYS = 365;
 var MAX_CODES_PER_BATCH = 200;
 var CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
@@ -52,12 +62,62 @@ function getRow(userId) {
     return db.prepare('SELECT * FROM streamer_subscriptions WHERE user_id = ?').get(userId) || null;
 }
 
+/** يسجّل حدث بسجل الاشتراك. ms = المدة المرتبطة (تنحفظ بالأيام). */
+function logEvent(userId, type, source, ref, months, ms) {
+    db.prepare('INSERT INTO subscription_events (user_id, type, source, ref, months, days, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(userId, type, source, ref == null ? null : String(ref), months || 0, Math.round((ms || 0) / DAY_MS), _now());
+}
+
+/** آخر أحداث اشتراك المستخدم (الأحدث أولاً). */
+function listEvents(userId, limit) {
+    return db.prepare('SELECT type, source, ref, months, days, created_at FROM subscription_events WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?')
+        .all(userId, Math.min(50, Math.max(1, limit || 10)))
+        .map(function (e) {
+            // رقم الطلب يظهر للستريمر، والكود يظهر مختصر (آخر 4)
+            var ref = e.ref;
+            if (ref && e.source === 'code') ref = '…' + ref.slice(-4);
+            return { type: e.type, source: e.source, ref: ref, months: e.months, days: e.days, at: e.created_at };
+        });
+}
+
+/* ---------- الباقات ---------- */
+
+function mapPlan(r) { return { months: r.months, name: r.name, pauses: r.pauses, active: Boolean(r.active) }; }
+
+/** الباقات (الفعّالة بس، أو الكل للأدمن). */
+function listPlans(includeInactive) {
+    return db.prepare('SELECT * FROM subscription_plans' + (includeInactive ? '' : ' WHERE active = 1') + ' ORDER BY months').all().map(mapPlan);
+}
+
+function planFor(months) {
+    var r = db.prepare('SELECT * FROM subscription_plans WHERE months = ?').get(months);
+    return r ? mapPlan(r) : null;
+}
+
+/** الأدمن: إضافة/تعديل باقة. @returns {{success: boolean, plan?: Object, error?: string}} */
+function savePlan(input) {
+    input = input || {};
+    var months = Math.floor(Number(input.months));
+    var pauses = Math.floor(Number(input.pauses));
+    var name = String(input.name || '').trim().slice(0, 40);
+    if (!months || months < 1 || months > MAX_PLAN_MONTHS) return { success: false, error: 'invalid_months' };
+    if (!(pauses >= 0 && pauses <= months * 2)) return { success: false, error: 'invalid_pauses' };
+    if (!name) return { success: false, error: 'invalid_name' };
+    var active = input.active === false || input.active === 0 ? 0 : 1;
+    db.prepare('INSERT INTO subscription_plans (months, name, pauses, active, updated_at) VALUES (?, ?, ?, ?, ?) ' +
+        'ON CONFLICT(months) DO UPDATE SET name = excluded.name, pauses = excluded.pauses, active = excluded.active, updated_at = excluded.updated_at')
+        .run(months, name, pauses, active, _now());
+    logger.log('Subscriptions: plan saved (' + months + ' months, ' + pauses + ' pauses, active=' + active + ')');
+    return { success: true, plan: planFor(months) };
+}
+
 /** فكّ التعليق تلقائياً لو خلصت الـ5 أيام (يُستدعى قبل أي قراءة أو تعديل). */
 function settle(row) {
     if (row && row.paused_at && _now() >= row.pause_until) {
         var pausedFor = row.pause_until - row.paused_at;
         db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, paused_total_ms = paused_total_ms + ?, paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
             .run(pausedFor, pausedFor, _now(), row.user_id);
+        logEvent(row.user_id, 'auto_resume', 'system', null, 0, pausedFor);
         row = getRow(row.user_id);
     }
     return row;
@@ -99,9 +159,25 @@ function status(userId) {
             canPause: canPause,
             // ليش ما يقدر يعلّق: خلص الرصيد كله، أو تعليق هالشهر مستخدم (فيه رصيد للشهر الجاي)
             pauseBlocked: canPause || !active || paused ? null : (row.pauses_used >= row.pauses_allowed ? 'no_pauses_left' : 'monthly_pause_used'),
-            pauseMaxDays: PAUSE_MAX_MS / DAY_MS
+            pauseMaxDays: PAUSE_MAX_MS / DAY_MS,
+            // تنبيه قرب الانتهاء (≤5 أيام) — المعلّق ما يتنبّه لأن أيامه متجمّدة
+            expiringSoon: active && !paused && remaining <= EXPIRING_SOON_MS,
+            graceUntil: active ? null : row.ends_at + config.subscriptionGraceDays * DAY_MS
         }
     };
+}
+
+/**
+ * هل المستخدم يقدر يستخدم أدوات الستريمر؟ نقطة القفل الوحيدة.
+ * القفل مطفي (config.subscriptionEnforcement=false) = true دائماً.
+ * مفعّل: فعّال أو معلّق أو داخل أيام السماح بعد الانتهاء.
+ */
+function hasActiveSubscription(userId) {
+    if (!config.subscriptionEnforcement) return true;
+    var row = settle(getRow(userId));
+    if (!row) return false;
+    if (row.paused_at) return true;
+    return _now() < row.ends_at + config.subscriptionGraceDays * DAY_MS;
 }
 
 /** @returns {{success: boolean, error?: string}} */
@@ -115,20 +191,69 @@ function pause(user) {
     var t = _now();
     db.prepare('UPDATE streamer_subscriptions SET paused_at = ?, pause_until = ?, pauses_used = pauses_used + 1, updated_at = ? WHERE user_id = ?')
         .run(t, t + PAUSE_MAX_MS, t, user.id);
+    logEvent(user.id, 'pause', 'user', null, 0, 0);
     logger.log('Subscriptions: user ' + user.id + ' paused subscription');
     return { success: true };
 }
 
 /** فكّ التعليق قبل الـ5 أيام — المدة اللي انعلّقت فعلاً تتأجل بها النهاية. */
-function resume(user) {
+function resume(user, source) {
     var row = settle(getRow(user.id));
     if (!row || !row.paused_at) return { success: false, error: 'not_paused' };
     var t = _now();
     var pausedFor = Math.max(0, t - row.paused_at);
     db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, paused_total_ms = paused_total_ms + ?, paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
         .run(pausedFor, pausedFor, t, user.id);
-    logger.log('Subscriptions: user ' + user.id + ' resumed subscription');
+    logEvent(user.id, 'resume', source || 'user', null, 0, pausedFor);
+    logger.log('Subscriptions: user ' + user.id + ' resumed subscription (' + (source || 'user') + ')');
     return { success: true };
+}
+
+/**
+ * يضيف مدة للاشتراك (من كود أو المتجر). لازم ينادى داخل معاملة.
+ * @returns {string} الوضع المطبّق: 'extend' | 'renew' | 'new'
+ */
+function applyGrant(userId, months, pauses, mode, source, ref) {
+    var t = _now();
+    var row = settle(getRow(userId));
+    var add = months * MONTH_MS;
+    var activeNow = row && (row.paused_at || row.ends_at > t);
+    var applied = activeNow ? (mode || 'extend') : 'new';
+    if (applied === 'extend') {
+        db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, months_total = months_total + ?, pauses_allowed = pauses_allowed + ?, updated_at = ? WHERE user_id = ?')
+            .run(add, months, pauses, t, userId);
+    } else if (applied === 'renew') {
+        // المتبقي وقت التجديد (لو معلّق: المتجمّد لحظة التعليق)، ينضاف للدورة الجديدة
+        var carry = Math.max(0, row.ends_at - (row.paused_at || t));
+        db.prepare('UPDATE streamer_subscriptions SET started_at = ?, ends_at = ?, months_total = ?, pauses_allowed = ?, pauses_used = 0, paused_total_ms = 0, ' +
+            'paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
+            .run(t, t + add + carry, months, pauses, t, userId);
+    } else {
+        db.prepare(
+            'INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, updated_at) ' +
+            'VALUES (?, ?, ?, ?, ?, 0, 0, NULL, NULL, ?) ON CONFLICT(user_id) DO UPDATE SET started_at = excluded.started_at, ends_at = excluded.ends_at, ' +
+            'months_total = excluded.months_total, pauses_allowed = excluded.pauses_allowed, pauses_used = 0, paused_total_ms = 0, paused_at = NULL, pause_until = NULL, updated_at = excluded.updated_at'
+        ).run(userId, t, t + add, months, pauses, t);
+    }
+    logEvent(userId, applied === 'new' ? 'activate' : applied, source, ref, months, add);
+    return applied;
+}
+
+/**
+ * المتجر: تسليم اشتراك بعد الدفع (تسليم 'subscription:<أشهر>'). تمديد لو
+ * فعّال، وإلا يبدأ من جديد. ينادى من داخل معاملة إكمال الطلب (مرة وحدة لكل طلب).
+ * ما يشترط حساب ستريمر — المشتري دفع، فالمدة تنحفظ له.
+ * @returns {{success: boolean, mode?: string, error?: string}}
+ */
+function grantFromStore(userId, months, orderId) {
+    months = Math.floor(Number(months));
+    if (!months || months < 1 || months > MAX_PLAN_MONTHS) return { success: false, error: 'invalid_months' };
+    var plan = planFor(months);
+    var mode = db.transaction(function () {
+        return applyGrant(userId, months, plan ? plan.pauses : months, 'extend', 'store', orderId);
+    })();
+    logger.log('Subscriptions: user ' + userId + ' got ' + months + ' months from store order ' + orderId);
+    return { success: true, mode: mode };
 }
 
 /**
@@ -151,27 +276,8 @@ function redeem(user, rawCode, mode) {
         if (!c) return { success: false, error: 'invalid_code' };
         if (c.burned_at) return { success: false, error: 'code_burned' };
         if (c.redeemed_at) return { success: false, error: 'code_used' };
+        var applied = applyGrant(user.id, c.months, c.pauses == null ? c.months : c.pauses, mode, 'code', code);
         var t = _now();
-        var row = settle(getRow(user.id));
-        var add = c.months * MONTH_MS;
-        var activeNow = row && (row.paused_at || row.ends_at > t);
-        var applied = activeNow ? (mode || 'extend') : 'new';
-        if (applied === 'extend') {
-            db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, months_total = months_total + ?, pauses_allowed = pauses_allowed + ?, updated_at = ? WHERE user_id = ?')
-                .run(add, c.months, c.months, t, user.id);
-        } else if (applied === 'renew') {
-            // المتبقي وقت التجديد (لو معلّق: المتجمّد لحظة التعليق)، ينضاف للدورة الجديدة
-            var carry = Math.max(0, row.ends_at - (row.paused_at || t));
-            db.prepare('UPDATE streamer_subscriptions SET started_at = ?, ends_at = ?, months_total = ?, pauses_allowed = ?, pauses_used = 0, paused_total_ms = 0, ' +
-                'paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
-                .run(t, t + add + carry, c.months, c.months, t, user.id);
-        } else {
-            db.prepare(
-                'INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, updated_at) ' +
-                'VALUES (?, ?, ?, ?, ?, 0, 0, NULL, NULL, ?) ON CONFLICT(user_id) DO UPDATE SET started_at = excluded.started_at, ends_at = excluded.ends_at, ' +
-                'months_total = excluded.months_total, pauses_allowed = excluded.pauses_allowed, pauses_used = 0, paused_total_ms = 0, paused_at = NULL, pause_until = NULL, updated_at = excluded.updated_at'
-            ).run(user.id, t, t + add, c.months, c.months, t);
-        }
         var used = db.prepare('UPDATE subscription_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL').run(user.id, t, code);
         if (used.changes !== 1) throw new Error('code_race');
         return { success: true, months: c.months, mode: applied };
@@ -184,15 +290,16 @@ function redeem(user, rawCode, mode) {
 function generateCodes(months, count, note) {
     months = Math.floor(Number(months));
     count = Math.floor(Number(count));
-    if (ALLOWED_MONTHS.indexOf(months) < 0) return { success: false, error: 'invalid_months' };
+    var plan = planFor(months);
+    if (!plan || !plan.active) return { success: false, error: 'invalid_months' };
     if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
-    var insert = db.prepare('INSERT OR IGNORE INTO subscription_codes (code, months, note, created_at) VALUES (?, ?, ?, ?)');
+    var insert = db.prepare('INSERT OR IGNORE INTO subscription_codes (code, months, pauses, note, created_at) VALUES (?, ?, ?, ?, ?)');
     var codes = [];
     db.transaction(function () {
         var tries = 0;
         while (codes.length < count && tries++ < count * 20) {
             var c = randomCode();
-            if (insert.run(c, months, String(note || '').slice(0, 200), _now()).changes === 1) codes.push(c);
+            if (insert.run(c, months, plan.pauses, String(note || '').slice(0, 200), _now()).changes === 1) codes.push(c);
         }
     })();
     logger.log('Subscriptions: generated ' + codes.length + ' codes (' + months + ' months)');
@@ -219,6 +326,60 @@ function burnCode(rawCode) {
     return r.changes === 1 ? { success: true } : { success: false, error: 'not_burnable' };
 }
 
+/* ---------- أدوات الأدمن على المشتركين ---------- */
+
+/** الأدمن: كل المشتركين مع حالتهم (الفعّال أولاً، ثم الأقرب انتهاءً). */
+function listSubscribers() {
+    var rows = db.prepare(
+        'SELECT s.user_id, u.username, u.display_name, u.custom_id, u.tiktok_username FROM streamer_subscriptions s JOIN users u ON u.id = s.user_id'
+    ).all();
+    return rows.map(function (r) {
+        var st = status(r.user_id).subscription;
+        return {
+            userId: r.user_id, name: r.display_name || r.username, customId: r.custom_id, tiktok: r.tiktok_username || null,
+            active: st.active, paused: st.paused, remainingMs: st.remainingMs, endsAt: st.endsAt, months: st.months,
+            pausesUsed: st.pausesUsed, pausesAllowed: st.pausesAllowed, expiringSoon: st.expiringSoon
+        };
+    }).sort(function (a, b) {
+        if (a.active !== b.active) return a.active ? -1 : 1;
+        return a.active ? a.remainingMs - b.remainingMs : b.endsAt - a.endsAt;
+    });
+}
+
+/**
+ * الأدمن: إضافة (+) أو خصم (−) أيام. المنتهي مع إضافة يبدأ العد من الحين.
+ * @returns {{success: boolean, error?: string}}
+ */
+function adjustDays(userId, days) {
+    days = Math.trunc(Number(days));
+    if (!days || Math.abs(days) > MAX_ADJUST_DAYS) return { success: false, error: 'invalid_days' };
+    var row = settle(getRow(userId));
+    if (!row) return { success: false, error: 'no_subscription' };
+    var t = _now();
+    var ms = days * DAY_MS;
+    var base = days > 0 && !row.paused_at && row.ends_at < t ? t : row.ends_at;
+    db.prepare('UPDATE streamer_subscriptions SET ends_at = ?, updated_at = ? WHERE user_id = ?').run(base + ms, t, userId);
+    logEvent(userId, days > 0 ? 'admin_add' : 'admin_subtract', 'admin', null, 0, Math.abs(ms));
+    logger.log('Subscriptions: admin adjusted user ' + userId + ' by ' + days + ' days');
+    return { success: true };
+}
+
+/** الأدمن: إنهاء الاشتراك الحين (يفك التعليق لو موجود). */
+function endSubscription(userId) {
+    var row = settle(getRow(userId));
+    if (!row) return { success: false, error: 'no_subscription' };
+    var t = _now();
+    db.prepare('UPDATE streamer_subscriptions SET ends_at = ?, paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?').run(t, t, userId);
+    logEvent(userId, 'admin_end', 'admin', null, 0, 0);
+    logger.log('Subscriptions: admin ended subscription of user ' + userId);
+    return { success: true };
+}
+
+/** الأدمن: فك تعليق مستخدم. */
+function adminUnpause(userId) {
+    return resume({ id: userId }, 'admin');
+}
+
 module.exports = {
     status: status,
     pause: pause,
@@ -227,6 +388,15 @@ module.exports = {
     generateCodes: generateCodes,
     listCodes: listCodes,
     burnCode: burnCode,
+    listEvents: listEvents,
+    listPlans: listPlans,
+    savePlan: savePlan,
+    grantFromStore: grantFromStore,
+    hasActiveSubscription: hasActiveSubscription,
+    listSubscribers: listSubscribers,
+    adjustDays: adjustDays,
+    endSubscription: endSubscription,
+    adminUnpause: adminUnpause,
     normalizeCode: normalizeCode,
     _setClock: _setClock,
     DAY_MS: DAY_MS,

@@ -492,11 +492,11 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
               <span style="font-weight:600">أكواد اشتراك الستريمر</span>
-              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كل كود يستخدمه ستريمر واحد من قسم «الاشتراك» ببروفايله. اشتراك الشهر له تعليق واحد (5 أيام)، والشهرين تعليقين (واحد بكل شهر). لو كان مشترك، الكود يمدّد اشتراكه.</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كل كود يستخدمه ستريمر واحد من قسم «الاشتراك» ببروفايله. المدد ورصيد التعليق حسب الباقات (تحت بـ«مشتركين الاشتراك»). لو كان مشترك، الكود يمدّد أو يجدّد اشتراكه حسب اختياره.</span>
             </div>
             <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 18px;flex-wrap:wrap">
               <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">المدة</span>
-                <div style="display:flex;gap:6px"><button onClick="{{ subPick1 }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ sub1Border }};background:{{ sub1Bg }};color:#e7e9ee;font-size:13px;cursor:pointer">شهر</button><button onClick="{{ subPick2 }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ sub2Border }};background:{{ sub2Bg }};color:#e7e9ee;font-size:13px;cursor:pointer">شهرين</button></div></div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ subPlanPicks }}" as="pp" hint-placeholder-count="2"><button onClick="{{ pp.pick }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ pp.border }};background:{{ pp.bg }};color:#e7e9ee;font-size:13px;cursor:pointer">{{ pp.label }}</button></sc-for></div></div>
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الأكواد</span><input type="number" min="1" max="200" value="{{ subCount }}" onChange="{{ onSubCount }}" style="width:120px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
               <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">ملاحظة (اختياري)</span><input value="{{ subNote }}" onChange="{{ onSubNote }}" placeholder="اشتراكات نوفمبر" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
               <button onClick="{{ genSubCodes }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">توليد الأكواد</button>
@@ -518,6 +518,39 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </tr></sc-for></tbody>
             </table></div>
             <sc-if value="{{ subEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه أكواد اشتراك بعد.</div></sc-if>
+          </div>
+          <!-- مشتركين الاشتراك + الباقات (subscription-service.js listSubscribers/adjustDays/endSubscription/adminUnpause/savePlan) -->
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
+              <span style="font-weight:600">مشتركين الاشتراك والباقات</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">الباقات تحدد مدة أكواد الاشتراك ورصيد التعليق، وتطلع بخيارات «التسليم» بالمتجر (اشتراك ستريمر). تعديل الأيام وإنهاء الاشتراك ينكتب بسجل الستريمر.</span>
+            </div>
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #262a37">
+              <span style="font-size:12px;color:#9199ab">الباقات</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{ planRows }" as="pl" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;background:#0b0d12;border:1px solid #2f3342;font-size:13px"><span style="font-weight:600">{{ pl.name }}</span><span style="color:#9199ab">{{ pl.info }}</span><span style="color:{{ pl.color }};font-size:12px">{{ pl.state }}</span><button onClick="{{ pl.edit }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">تعديل</button><button onClick="{{ pl.toggle }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">{{ pl.toggleLabel }}</button></div></sc-for></div>
+              <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الأشهر</span><input type="number" min="1" max="24" value="{{ planMonths }}" onChange="{{ onPlanMonths }}" style="width:90px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الاسم</span><input value="{{ planName }}" onChange="{{ onPlanName }}" placeholder="3 أشهر" style="width:150px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">رصيد التعليق</span><input type="number" min="0" max="48" value="{{ planPauses }}" onChange="{{ onPlanPauses }}" style="width:110px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+                <button onClick="{{ savePlan }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الباقة</button>
+              </div>
+            </div>
+            <div style="padding:14px 18px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الأيام للإضافة/الخصم</span><input type="number" min="1" max="365" value="{{ subAdjDays }}" onChange="{{ onSubAdjDays }}" style="width:120px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <span style="font-size:12.5px;color:#9199ab">{{ subSummary }}</span>
+            </div>
+            <div style="border-top:1px solid #262a37;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:860px">
+              <thead><tr><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الستريمر</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المتبقي</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">ينتهي</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">التعليق</th><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37"></th></tr></thead>
+              <tbody><sc-for list="{{ subscriberRows }}" as="u" hint-placeholder-count="2"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.name }} <span dir="ltr" style="color:#9199ab;font-size:12px">{{ u.id }}</span></td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:{{ u.color }}">{{ u.status }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.remaining }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:#9199ab">{{ u.ends }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.pauses }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;white-space:nowrap"><div style="display:flex;gap:6px"><button onClick="{{ u.add }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">+ أيام</button><button onClick="{{ u.sub }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">− أيام</button><sc-if value="{{ u.paused }}"><button onClick="{{ u.unpause }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">فك التعليق</button></sc-if><sc-if value="{{ u.active }}"><button onClick="{{ u.end }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إنهاء</button></sc-if></div></td>
+              </tr></sc-for></tbody>
+            </table></div>
+            <sc-if value="{{ subscribersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه مشتركين بعد.</div></sc-if>
           </div>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
@@ -1102,7 +1135,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -1196,7 +1229,8 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadSubscribers(){ if(!A.adminListSubscribers) return Promise.resolve(); return A.adminListSubscribers().then(r=>{ if(r&&r.success) this.setState({ subscribers:r.subscribers||[], subPlans:r.plans||[] }); }); }
+  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
@@ -1551,21 +1585,49 @@ class Component extends DCLogic {
               canBurn:!c.burnedAt&&!full, burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يستخدمه بعد الآن. اللي استخدموه يبقى لهم إطارهم.`,'إيقاف',()=>this.busy('burn',()=>A.adminBurnCode(c.code)).then(r=>{ if(!r) return;
                 if(!r.success) return this.flash('تعذّر الإيقاف: '+(r.error||'unknown'),'err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) }; }) }; })(),
       // أكواد اشتراك الستريمر
-      ...(()=>{ const pick=m=>({ border:s.subMonths===m?'#7c3aed':'#2f3342', bg:s.subMonths===m?'#2a1d4a':'#0b0d12' }); const p1=pick(1), p2=pick(2);
+      ...(()=>{ const pick=m=>({ border:s.subMonths===m?'#7c3aed':'#2f3342', bg:s.subMonths===m?'#2a1d4a':'#0b0d12' });
+        const monthsAr=n=>n===1?'شهر':n===2?'شهرين':n<=10?n+' أشهر':n+' شهر';
+        const plans=s.subPlans||[{ months:1, name:'شهر', pauses:1, active:true },{ months:2, name:'شهرين', pauses:2, active:true }];
+        const dayMs=86400000, daysAr=ms=>{ const d=Math.floor(ms/dayMs); return d>0?d+' يوم':Math.max(0,Math.floor(ms/3600000))+' ساعة'; };
+        const adjDays=()=>{ const n=Math.floor(Number(s.subAdjDays)); return n>=1&&n<=365?n:0; };
+        const subs=s.subscribers||[];
         return {
-          subPick1:()=>this.setState({ subMonths:1 }), subPick2:()=>this.setState({ subMonths:2 }),
-          sub1Border:p1.border, sub1Bg:p1.bg, sub2Border:p2.border, sub2Bg:p2.bg,
+          subPlanPicks:plans.filter(p=>p.active).map(p=>{ const c=pick(p.months); return { label:p.name, border:c.border, bg:c.bg, pick:()=>this.setState({ subMonths:p.months }) }; }),
+          planRows:plans.map(p=>({ name:p.name, info:`${monthsAr(p.months)} · ${p.pauses} تعليق`, state:p.active?'فعّالة':'موقوفة', color:p.active?'#4ade80':'#9199ab',
+            edit:()=>this.setState({ planMonths:p.months, planName:p.name, planPauses:p.pauses }), toggleLabel:p.active?'إيقاف':'تفعيل',
+            toggle:()=>this.busy('plan',()=>A.adminSaveSubscriptionPlan({ months:p.months, name:p.name, pauses:p.pauses, active:!p.active })).then(r=>{ if(!r) return;
+              if(!r.success) return this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); this.flash(p.active?`انوقفت باقة ${p.name}.`:`تفعّلت باقة ${p.name}.`); this.loadSubscribers(); }) })),
+          planMonths:s.planMonths, planName:s.planName, planPauses:s.planPauses,
+          onPlanMonths:e=>this.setState({ planMonths:e.target.value }), onPlanName:e=>this.setState({ planName:e.target.value }), onPlanPauses:e=>this.setState({ planPauses:e.target.value }),
+          savePlan:()=>{ const m=Math.floor(Number(s.planMonths)), pz=Math.floor(Number(s.planPauses));
+            if(!(m>=1&&m<=24)) return this.flash('الأشهر من 1 إلى 24.','err'); if(!String(s.planName||'').trim()) return this.flash('اكتب اسم الباقة.','err');
+            if(!(pz>=0&&pz<=m*2)) return this.flash('رصيد التعليق من 0 إلى ضعف الأشهر.','err');
+            const old=plans.find(p=>p.months===m);
+            this.busy('plan',()=>A.adminSaveSubscriptionPlan({ months:m, name:String(s.planName).trim(), pauses:pz, active:old?old.active:true })).then(r=>{ if(!r) return;
+              if(!r.success) return this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err');
+              this.setState({ planMonths:'', planName:'', planPauses:'' }); this.flash(`انحفظت باقة ${r.plan.name}.`); this.loadSubscribers(); }); },
+          subAdjDays:s.subAdjDays, onSubAdjDays:e=>this.setState({ subAdjDays:e.target.value }),
+          subSummary:s.subscribers?`${subs.filter(u=>u.active).length} فعّال · ${subs.filter(u=>u.paused).length} معلّق · ${subs.filter(u=>!u.active).length} منتهي`:'',
+          subscribersEmpty:!!s.subscribers&&!subs.length,
+          subscriberRows:subs.map(u=>{ const act=(key,call,ok)=>this.busy(key,call).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التنفيذ: '+(r.error||'unknown'),'err'); this.flash(ok); this.loadSubscribers(); });
+            return { name:u.name||'—', id:u.customId?'#'+u.customId:'',
+              status:!u.active?'منتهي':u.paused?'معلّق':u.expiringSoon?'قرب ينتهي':'فعّال', color:!u.active?'#9199ab':u.paused?'#fbbf24':u.expiringSoon?'#fb923c':'#4ade80',
+              remaining:u.active?daysAr(u.remainingMs):'—', ends:fmtDate(u.endsAt), pauses:`${u.pausesUsed} / ${u.pausesAllowed}`, paused:u.paused, active:u.active,
+              add:()=>{ const n=adjDays(); if(!n) return this.flash('عدد الأيام من 1 إلى 365.','err'); this.ask('إضافة أيام؟',`تنضاف ${n} يوم لاشتراك ${u.name}.`,'إضافة',()=>act('subadj',()=>A.adminAdjustSubscription(u.userId,n),`انضافت ${n} يوم لـ${u.name}.`)); },
+              sub:()=>{ const n=adjDays(); if(!n) return this.flash('عدد الأيام من 1 إلى 365.','err'); this.ask('خصم أيام؟',`تنخصم ${n} يوم من اشتراك ${u.name}.`,'خصم',()=>act('subadj',()=>A.adminAdjustSubscription(u.userId,-n),`انخصمت ${n} يوم من ${u.name}.`)); },
+              unpause:()=>this.ask('فك التعليق؟',`يرجع اشتراك ${u.name} يشتغل الحين، والتعليق ينحسب له.`,'فك التعليق',()=>act('subadj',()=>A.adminUnpauseSubscription(u.userId),`انفك تعليق ${u.name}.`)),
+              end:()=>this.ask('إنهاء الاشتراك؟',`ينتهي اشتراك ${u.name} الحين والأيام الباقية تضيع.`,'إنهاء',()=>act('subadj',()=>A.adminEndSubscription(u.userId),`انتهى اشتراك ${u.name}.`)) }; }),
           subCount:s.subCount, subNote:s.subNote, subOut:s.subOut,
           onSubCount:e=>this.setState({ subCount:e.target.value }), onSubNote:e=>this.setState({ subNote:e.target.value }),
           genSubCodes:()=>{ const n=Math.floor(Number(s.subCount)); if(!(n>=1&&n<=200)) return this.flash('عدد الأكواد من 1 إلى 200.','err');
             this.busy('subgen',()=>A.adminGenerateSubscriptionCodes(s.subMonths,n,s.subNote)).then(r=>{ if(!r) return;
               if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
-              this.setState({ subOut:(r.codes||[]).join('\n'), subNote:'' }); this.flash(`تم توليد ${(r.codes||[]).length} كود اشتراك (${s.subMonths===1?'شهر':'شهرين'}).`); this.loadCodes(); }); },
+              this.setState({ subOut:(r.codes||[]).join('\n'), subNote:'' }); this.flash(`تم توليد ${(r.codes||[]).length} كود اشتراك (${monthsAr(s.subMonths)}).`); this.loadCodes(); }); },
           copySubCodes:()=>{ const t=s.subOut; if(!t) return; const done=()=>this.flash('تم نسخ الأكواد.');
             const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
             if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,fallback); else fallback(); },
           subEmpty:!!s.subCodes&&!s.subCodes.length,
-          subRows:(s.subCodes||[]).map(c=>({ code:c.code, months:c.months===1?'شهر':'شهرين', note:c.note||'—',
+          subRows:(s.subCodes||[]).map(c=>({ code:c.code, months:monthsAr(c.months), note:c.note||'—',
             status:c.burnedAt?'موقوف':c.redeemedAt?`مستخدم · ${(c.redeemedBy&&c.redeemedBy.name)||'—'}`:'متاح', color:c.burnedAt?'#f87171':c.redeemedAt?'#9199ab':'#4ade80',
             canBurn:!c.burnedAt&&!c.redeemedAt,
             burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يفعّله.`,'إيقاف',()=>this.busy('subburn',()=>A.adminBurnSubscriptionCode(c.code)).then(r=>{ if(!r) return;

@@ -467,6 +467,27 @@ db.exec(`
         redeemed_at INTEGER,
         burned_at INTEGER
     );
+    -- سجل أحداث اشتراك الستريمر (تفعيل/تمديد/تجديد/تعليق/فك/تعديل أدمن...).
+    -- source: code | store | admin | user | system — ref: الكود أو رقم الطلب.
+    CREATE TABLE IF NOT EXISTS subscription_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        source TEXT NOT NULL,
+        ref TEXT,
+        months INTEGER NOT NULL DEFAULT 0,
+        days INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(user_id, created_at);
+    -- باقات الاشتراك (الأدمن يضيف/يعدّل: شهر، شهرين، 3 أشهر، سنة...). المفتاح = عدد الأشهر.
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+        months INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        pauses INTEGER NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        updated_at INTEGER NOT NULL
+    );
 
     -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
     CREATE TABLE IF NOT EXISTS user_seen_notices (
@@ -623,6 +644,10 @@ ensureColumn('users', 'google_id', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
+// اشتراك الستريمر: رصيد التعليق للكود يُنسخ من الباقة وقت التوليد.
+ensureColumn('subscription_codes', 'pauses', 'INTEGER');
+// الباقات الأساسية (لو الجدول فاضي): شهر = تعليق، شهرين = تعليقين.
+db.prepare("INSERT OR IGNORE INTO subscription_plans (months, name, pauses, active, updated_at) VALUES (1, 'شهر', 1, 1, ?), (2, 'شهرين', 2, 1, ?)").run(Date.now(), Date.now());
 ensureColumn('store_orders', 'payment_gateway', 'TEXT');
 ensureColumn('store_orders', 'moyasar_invoice_id', 'TEXT');
 // حرق كود استرداد (استرجاع مبلغ مثلاً) — burned_at ليس NULL = الكود ملغي وما يُسترد.
