@@ -590,8 +590,9 @@ function getMyGrants() {
 function getSubscription() {
     return request('/api/subscription', { method: 'GET' });
 }
-function redeemSubscriptionCode(code) {
-    return request('/api/subscription/redeem', { method: 'POST', body: { code: code } });
+/** mode: 'extend' (تمديد) | 'renew' (تجديد — دورة جديدة) — يُتجاهل لو ما فيه اشتراك فعّال. */
+function redeemSubscriptionCode(code, mode) {
+    return request('/api/subscription/redeem', { method: 'POST', body: { code: code, mode: mode || null } });
 }
 function pauseSubscription() {
     return request('/api/subscription/pause', { method: 'POST', body: {} });

@@ -861,7 +861,7 @@ function handleSubscriptionStatus(req, res, body, user) {
   sendJson(res, 200, subscriptionService.status(user.id));
 }
 function handleSubscriptionRedeem(req, res, body, user) {
-  var r = subscriptionService.redeem(user, body.code);
+  var r = subscriptionService.redeem(user, body.code, body.mode);
   var status = { invalid_code: 404, code_used: 409, code_burned: 410, not_streamer: 403 };
   sendJson(res, r.success ? 200 : (status[r.error] || 400), r);
 }

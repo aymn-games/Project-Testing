@@ -658,22 +658,30 @@
   .pf-plat-btn.danger{color:var(--rose);background:rgba(240,138,160,.08);border-color:rgba(240,138,160,.4)}
   .pf-wallet-coin{width:88px;height:88px}
 
-  /* اشتراك الستريمر */
-  .pf-sub{display:flex;flex-direction:column;gap:14px;overflow:hidden;
+  /* اشتراك الستريمر: دائرة مدمجة + لوح تعليق جنبها، ما يتمددون على العرض كله */
+  .pf-sub-grid{display:flex;flex-wrap:wrap;gap:var(--gap);align-items:stretch}
+  .pf-sub{display:flex;align-items:center;gap:18px;flex:0 1 auto;width:max-content;max-width:100%;padding:18px 22px 18px 18px;
     background:linear-gradient(135deg,rgba(232,216,166,.12),rgba(var(--accent-rgb),.12) 60%,rgba(255,255,255,.02));border-color:rgba(232,216,166,.3)}
   .pf-sub-expired,.pf-sub-none{background:var(--glass-1);border-color:var(--edge)}
-  .pf-sub-head{display:flex;align-items:center;gap:12px}
-  .pf-sub-ic{flex:none;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:14px;color:#2b1d05;
-    background:linear-gradient(145deg,#fff1c2,#e8d8a6 45%,#b48836);box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 10px 22px -12px rgba(232,216,166,.8)}
-  .pf-sub-ic .pf-ic{width:22px;height:22px;stroke-width:1.8}
-  .pf-sub-expired .pf-sub-ic,.pf-sub-none .pf-sub-ic{filter:grayscale(.8) brightness(.7)}
-  .pf-sub-id{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
-  .pf-sub-plan{font-size:16px;font-weight:800}
-  .pf-sub-days{font-size:32px;font-weight:800;color:var(--gold);line-height:1.25}
-  .pf-sub-paused .pf-sub-days{color:var(--amber)}
-  .pf-sub-bar{height:8px;margin:8px 0 6px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden}
-  .pf-sub-bar span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--gold),var(--accent))}
-  .pf-pause-dots{display:flex;gap:6px;margin-top:10px}
+  .pf-sub-dial{position:relative;flex:none;width:148px;height:148px;border-radius:50%;padding:6px;background:rgba(0,0,0,.28);box-shadow:inset 0 2px 10px rgba(0,0,0,.45),0 0 0 1px var(--edge)}
+  .pf-sub-dial svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+  .pf-sub-dial circle{fill:none;stroke-width:8}
+  .pf-sub-track{stroke:rgba(255,255,255,.07)}
+  .pf-sub-arc{stroke:url(#pfRingGrad);stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(232,216,166,.45));transition:stroke-dasharray .8s var(--ease)}
+  .pf-sub-paused .pf-sub-arc{stroke:var(--amber);filter:none;opacity:.85}
+  .pf-sub-dial-in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
+  .pf-sub-dial-n{font-size:40px;font-weight:800;color:var(--gold)}
+  .pf-sub-paused .pf-sub-dial-n{color:var(--amber)}
+  .pf-sub-dial-u{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+  .pf-sub-dial-h{margin-top:2px;font-size:11px;color:var(--ink-4)}
+  .pf-sub-dial-ic{width:30px!important;height:30px!important;color:var(--ink-4);margin-bottom:4px}
+  .pf-sub-info{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:150px}
+  .pf-sub-plan{font-size:17px;font-weight:800}
+  .pf-sub-end{font-size:12.5px;color:var(--ink-3)}
+  .pf-sub-pause{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:0 1 260px;min-width:220px}
+  .pf-sub-pause .pf-panel-head{width:100%;margin-bottom:0}
+  .pf-sub-note{white-space:normal;margin:0}
+  .pf-pause-dots{display:flex;gap:6px}
   .pf-pause-dot{width:28px;height:8px;border-radius:8px;background:rgba(232,216,166,.55)}
   .pf-pause-dot.used{background:rgba(255,255,255,.12)}
   .pf-btn .pf-ic{flex:none}
@@ -784,8 +792,11 @@
     .pf-plat-line{display:none}
     .pf-plat-btn{width:100%;height:32px;font-size:12px;border-radius:10px;margin-top:4px}
     .pf-wallet-coin{width:64px;height:64px}
-    .pf-sub-days{font-size:25px}
-    .pf-sub-ic{width:40px;height:40px}
+    .pf-sub{width:100%;gap:14px;padding:14px}
+    .pf-sub-dial{width:112px;height:112px}
+    .pf-sub-dial-n{font-size:30px}
+    .pf-sub-info{min-width:0}
+    .pf-sub-pause{flex:1 1 100%}
     .pf-how{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:10px}
     .pf-how-d{flex-basis:100%}
     .pf-grant-form{grid-template-columns:minmax(0,1fr) 96px}

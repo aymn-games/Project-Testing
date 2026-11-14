@@ -133,9 +133,15 @@ function resume(user) {
 
 /**
  * تفعيل كود اشتراك. لحسابات الستريمر فقط.
- * @returns {{success: boolean, months?: number, error?: string}}
+ * mode (للاشتراك الفعّال):
+ *   'extend' تمديد — يضيف مدة الكود على نهاية الاشتراك الحالي ويزيد رصيد التعليق.
+ *   'renew'  تجديد — دورة جديدة من الحين بمدة الكود + الأيام الباقية (ما تضيع)،
+ *            ورصيد التعليق يبدأ من جديد بعدد أشهر الكود.
+ * بدون mode: تمديد لو فعّال. والاشتراك المنتهي (أو بدون اشتراك) يبدأ من جديد بأي وضع.
+ * @returns {{success: boolean, months?: number, mode?: string, error?: string}}
  */
-function redeem(user, rawCode) {
+function redeem(user, rawCode, mode) {
+    if (mode != null && mode !== 'extend' && mode !== 'renew') return { success: false, error: 'invalid_mode' };
     var me = db.prepare('SELECT id, role, is_streamer, permissions FROM users WHERE id = ?').get(user.id);
     if (!isStreamerUser(me)) return { success: false, error: 'not_streamer' };
     var code = normalizeCode(rawCode);
@@ -149,9 +155,16 @@ function redeem(user, rawCode) {
         var row = settle(getRow(user.id));
         var add = c.months * MONTH_MS;
         var activeNow = row && (row.paused_at || row.ends_at > t);
-        if (activeNow) {
+        var applied = activeNow ? (mode || 'extend') : 'new';
+        if (applied === 'extend') {
             db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, months_total = months_total + ?, pauses_allowed = pauses_allowed + ?, updated_at = ? WHERE user_id = ?')
                 .run(add, c.months, c.months, t, user.id);
+        } else if (applied === 'renew') {
+            // المتبقي وقت التجديد (لو معلّق: المتجمّد لحظة التعليق)، ينضاف للدورة الجديدة
+            var carry = Math.max(0, row.ends_at - (row.paused_at || t));
+            db.prepare('UPDATE streamer_subscriptions SET started_at = ?, ends_at = ?, months_total = ?, pauses_allowed = ?, pauses_used = 0, paused_total_ms = 0, ' +
+                'paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
+                .run(t, t + add + carry, c.months, c.months, t, user.id);
         } else {
             db.prepare(
                 'INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, updated_at) ' +
@@ -161,7 +174,7 @@ function redeem(user, rawCode) {
         }
         var used = db.prepare('UPDATE subscription_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL').run(user.id, t, code);
         if (used.changes !== 1) throw new Error('code_race');
-        return { success: true, months: c.months };
+        return { success: true, months: c.months, mode: applied };
     })();
     if (result.success) logger.log('Subscriptions: user ' + user.id + ' redeemed ' + code + ' (' + result.months + ' months)');
     return result;

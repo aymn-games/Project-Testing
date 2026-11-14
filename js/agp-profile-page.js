@@ -903,6 +903,7 @@
     code_burned: 'هذا الكود موقوف.',
     not_streamer: 'الاشتراك لحسابات الستريمر.',
     expired: 'اشتراكك منتهي.',
+    invalid_mode: 'اختر تمديد أو تجديد.',
     already_paused: 'اشتراكك معلّق أصلاً.',
     no_pauses_left: 'خلص رصيد التعليق لهالاشتراك.',
     monthly_pause_used: 'استخدمت تعليق هالشهر، تقدر تعلّق الشهر الجاي.',
@@ -933,27 +934,31 @@
       box.innerHTML = '';
       var state = !sub ? 'none' : sub.paused ? 'paused' : sub.active ? 'active' : 'expired';
       var labels = { none: 'ما عندك اشتراك', active: 'فعّال', paused: 'معلّق', expired: 'منتهي' };
-      var card = h('div', { class: 'pf-panel pf-sub pf-sub-' + state });
-      var totalMs = sub ? sub.months * 30 * 86400000 : 1;
-      var pct = sub ? Math.max(0, Math.min(100, Math.round(100 * sub.remainingMs / totalMs))) : 0;
-      card.appendChild(h('div', { class: 'pf-sub-head' }, [
-        h('span', { class: 'pf-sub-ic' }, icon('crown')),
-        h('div', { class: 'pf-sub-id' }, [
-          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك الستريمر · ' + (sub.months === 1 ? 'شهر' : sub.months === 2 ? 'شهرين' : sub.months + ' أشهر') : 'اشتراك الستريمر' }),
-          h('div', { class: 'pf-sub-state' }, [pill(labels[state], state === 'active' ? 'ok' : state === 'paused' ? 'warn' : null)])
+      var totalMs = sub ? Math.max(sub.remainingMs, sub.endsAt - sub.startedAt, 1) : 1;
+      var pct = sub && sub.active ? Math.max(0, Math.min(100, Math.round(100 * sub.remainingMs / totalMs))) : 0;
+      var days = sub && sub.active ? Math.floor(sub.remainingMs / 86400000) : 0;
+      var hours = sub && sub.active ? Math.floor((sub.remainingMs % 86400000) / 3600000) : 0;
+
+      // الدائرة: الأيام الباقية بالنص، والحلقة تنقص مع المدة
+      var r = 52, c = 2 * Math.PI * r;
+      var dial = h('div', { class: 'pf-sub-dial', role: 'img', 'aria-label': sub && sub.active ? ('باقي ' + daysText(sub.remainingMs)) : labels[state] });
+      dial.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="' + r + '" class="pf-sub-track"/>' +
+        '<circle cx="60" cy="60" r="' + r + '" class="pf-sub-arc" stroke-dasharray="' + (c * pct / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg>';
+      dial.appendChild(h('div', { class: 'pf-sub-dial-in' }, sub && sub.active ? [
+        h('span', { class: 'pf-sub-dial-n num', text: String(days) }),
+        h('span', { class: 'pf-sub-dial-u', text: days === 1 ? 'يوم باقي' : 'يوم باقي' }),
+        h('span', { class: 'pf-sub-dial-h num', text: '+ ' + hours + ' ساعة' })
+      ] : [icon('crown', 'pf-sub-dial-ic'), h('span', { class: 'pf-sub-dial-u', text: labels[state] })]));
+
+      var ringCard = h('div', { class: 'pf-panel pf-sub pf-sub-' + state }, [
+        dial,
+        h('div', { class: 'pf-sub-info' }, [
+          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك ' + (sub.months === 1 ? 'شهر' : sub.months === 2 ? 'شهرين' : sub.months + ' أشهر') : 'اشتراك الستريمر' }),
+          pill(labels[state], state === 'active' ? 'ok' : state === 'paused' ? 'warn' : null),
+          h('div', { class: 'pf-sub-end', text: sub && sub.active ? ('ينتهي ' + formatDate(sub.endsAt)) : state === 'expired' ? 'انتهى، جدّده بكود جديد' : 'فعّله بكود الاشتراك' })
         ])
-      ]));
-      if (sub && sub.active) {
-        card.appendChild(h('div', { class: 'pf-sub-remain' }, [
-          h('div', { class: 'pf-lead-l', text: sub.paused ? 'المتبقي (متجمّد وقت التعليق)' : 'المتبقي من اشتراكك' }),
-          h('div', { class: 'pf-sub-days', text: daysText(sub.remainingMs) }),
-          h('div', { class: 'pf-sub-bar' }, h('span', { style: 'width:' + pct + '%' })),
-          h('div', { class: 'pf-lead-n', text: 'ينتهي ' + formatDate(sub.endsAt) + (sub.paused ? ' (بعد احتساب التعليق)' : '') })
-        ]));
-      } else {
-        card.appendChild(h('p', { class: 'pf-muted', text: state === 'expired' ? 'اشتراكك انتهى. فعّل كود جديد عشان تجدده.' : 'فعّل كود الاشتراك اللي وصلك عشان يبدأ اشتراكك.' }));
-      }
-      box.appendChild(card);
+      ]);
+      var grid = h('div', { class: 'pf-sub-grid' }, [ringCard]);
 
       // التعليق
       if (sub && sub.active) {
@@ -966,7 +971,7 @@
             act(ctl, window.AGPAuth.resumeSubscription, 'رجع اشتراكك يشتغل');
           });
         } else {
-          ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', disabled: !sub.canPause, title: sub.canPause ? null : (SUB_ERRORS[sub.pauseBlocked] || '') }, [icon('pause'), 'تعليق الاشتراك']);
+          ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', disabled: !sub.canPause, title: sub.canPause ? null : (SUB_ERRORS[sub.pauseBlocked] || '') }, [icon('pause'), 'تعليق']);
           ctl.addEventListener('click', function () {
             if (!window.confirm('تعلّق اشتراكك 5 أيام؟ أيامها ما تنحسب من مدتك، وتقدر تفكه بدري.')) return;
             act(ctl, window.AGPAuth.pauseSubscription, 'انعلّق اشتراكك');
@@ -974,36 +979,58 @@
         }
         var note = sub.paused
           ? 'معلّق لين ' + formatDate(sub.pauseUntil) + '، وينفك تلقائياً.'
-          : sub.canPause ? 'تعلّقه لين ' + sub.pauseMaxDays + ' أيام، وأيامها ما تنحسب من مدتك.' : (SUB_ERRORS[sub.pauseBlocked] || '');
-        box.appendChild(panel('تعليق الاشتراك', h('span', { class: 'pf-panel-sub num', text: 'باقي ' + left + ' من ' + sub.pausesAllowed }), [
-          h('div', { class: 'pf-lrow pf-lrow-plain' }, [h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-s', text: note })]), ctl]),
-          h('div', { class: 'pf-pause-dots' }, Array.apply(null, Array(sub.pausesAllowed)).map(function (_, i) {
-            return h('span', { class: 'pf-pause-dot' + (i < sub.pausesUsed ? ' used' : ''), title: i < sub.pausesUsed ? 'مستخدم' : 'متاح' });
-          }))
+          : sub.canPause ? 'لين ' + sub.pauseMaxDays + ' أيام، وما تنحسب من مدتك.' : (SUB_ERRORS[sub.pauseBlocked] || '');
+        grid.appendChild(h('div', { class: 'pf-panel pf-sub-pause' }, [
+          h('div', { class: 'pf-panel-head' }, [h('h3', { class: 'pf-panel-title', text: 'التعليق' }), h('span', { class: 'pf-panel-sub num', text: 'باقي ' + left + ' من ' + sub.pausesAllowed })]),
+          h('div', { class: 'pf-pause-dots' }, Array.apply(null, Array(sub.pausesAllowed)).map(function (_, k) {
+            return h('span', { class: 'pf-pause-dot' + (k < sub.pausesUsed ? ' used' : ''), title: k < sub.pausesUsed ? 'مستخدم' : 'متاح' });
+          })),
+          h('p', { class: 'pf-lrow-s pf-sub-note', text: note }),
+          ctl
         ]));
       }
+      box.appendChild(grid);
 
-      // كود التفعيل
+      // الكود: تمديد أو تجديد للاشتراك الفعّال، وتفعيل للمنتهي
+      var active = !!(sub && sub.active);
+      var mode = active ? 'extend' : null;
+      var MODES = {
+        extend: { btn: 'تمديد', help: 'يضيف مدة الكود على نهاية اشتراكك الحالي، ويزيد رصيد التعليق.' },
+        renew: { btn: 'تجديد', help: 'يبدأ دورة جديدة من الحين بمدة الكود، والأيام الباقية تنضاف لها وما تضيع. رصيد التعليق يبدأ من جديد.' }
+      };
       var input = h('input', { id: 'pfSubCode', type: 'text', class: 'pf-input pf-input-code', placeholder: 'SUB-XXXX-XXXX', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'كود الاشتراك' });
-      var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: 'تفعيل' });
+      var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: active ? MODES.extend.btn : 'تفعيل' });
+      var help = h('div', { class: 'pf-field-help', text: active ? MODES.extend.help : 'كود شهر أو شهرين، يبدأ اشتراكك من لحظة التفعيل.' });
       var msg = h('div', { class: 'pf-msg', 'aria-live': 'polite' });
+      var seg = null;
+      if (active) {
+        seg = h('div', { class: 'pf-seg', role: 'tablist', 'aria-label': 'نوع العملية' });
+        ['extend', 'renew'].forEach(function (m) {
+          seg.appendChild(h('button', { type: 'button', role: 'tab', class: m === mode ? 'on' : null, 'aria-selected': m === mode ? 'true' : 'false', onclick: function () {
+            mode = m;
+            Array.prototype.forEach.call(seg.children, function (b) { var on = b === this; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); }, this);
+            btn.textContent = MODES[m].btn; help.textContent = MODES[m].help;
+          } }, m === 'extend' ? 'تمديد الاشتراك' : 'تجديد الاشتراك'));
+        });
+      }
       function redeem() {
         var code = input.value.trim();
         if (!code) { msg.textContent = 'اكتب الكود أولاً.'; msg.className = 'pf-msg err'; return; }
+        if (mode === 'renew' && !window.confirm('تبدأ دورة جديدة من الحين؟ أيامك الباقية تنضاف لها، ورصيد التعليق يبدأ من جديد.')) return;
+        var label = btn.textContent;
         btn.disabled = true; btn.textContent = 'جارٍ...';
-        window.AGPAuth.redeemSubscriptionCode(code).then(function (r) {
-          btn.disabled = false; btn.textContent = 'تفعيل';
-          if (r && r.success) { showToast('تم! انضاف ' + (r.months === 1 ? 'شهر' : 'شهرين') + ' لاشتراكك'); load(); }
-          else { msg.textContent = SUB_ERRORS[r && r.error] || 'تعذّر التفعيل، حاول مرة ثانية.'; msg.className = 'pf-msg err'; }
-        }).catch(function () { btn.disabled = false; btn.textContent = 'تفعيل'; });
+        window.AGPAuth.redeemSubscriptionCode(code, mode).then(function (r) {
+          btn.disabled = false; btn.textContent = label;
+          if (r && r.success) {
+            var dur = r.months === 1 ? 'شهر' : 'شهرين';
+            showToast(r.mode === 'renew' ? 'تجدّد اشتراكك (' + dur + ')' : r.mode === 'extend' ? 'تمدّد اشتراكك ' + dur : 'تفعّل اشتراكك (' + dur + ')');
+            load();
+          } else { msg.textContent = SUB_ERRORS[r && r.error] || 'تعذّر التفعيل، حاول مرة ثانية.'; msg.className = 'pf-msg err'; }
+        }).catch(function () { btn.disabled = false; btn.textContent = label; });
       }
       btn.addEventListener('click', redeem);
       input.addEventListener('keydown', function (e) { if (e.key === 'Enter') redeem(); });
-      box.appendChild(panel(sub && sub.active ? 'تمديد الاشتراك' : 'تفعيل الاشتراك', null, [
-        h('div', { class: 'pf-redeem' }, [input, btn]),
-        h('div', { class: 'pf-field-help', text: sub && sub.active ? 'كود جديد يضيف مدته على اشتراكك الحالي، ويزيد رصيد التعليق.' : 'كود شهر أو شهرين، يبدأ اشتراكك من لحظة التفعيل.' }),
-        msg
-      ]));
+      box.appendChild(panel(active ? 'تمديد أو تجديد' : 'تفعيل الاشتراك', null, [seg, h('div', { class: 'pf-redeem' }, [input, btn]), help, msg]));
       box.appendChild(h('details', { class: 'pf-more' }, [
         h('summary', { text: 'كيف يشتغل التعليق؟' }),
         h('ul', { class: 'pf-steps' }, [

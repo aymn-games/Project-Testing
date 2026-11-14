@@ -106,6 +106,24 @@ test('كود ثاني يمدّد الاشتراك الفعّال، وبعد ال
     assert.ok(Math.abs(st.remainingMs - 30 * DAY) < 1000);
 });
 
+test('التجديد: دورة جديدة من الحين + الأيام الباقية، ورصيد التعليق من جديد', function () {
+    var s = makeUser('s6', true);
+    sub.redeem(s, gen(2));
+    sub.pause(s); sub.resume(s);           // استخدم تعليق
+    clock += 40 * DAY;                      // باقي 20 يوم
+    assert.equal(sub.redeem(s, gen(1), 'bad').error, 'invalid_mode');
+    var r = sub.redeem(s, gen(1), 'renew');
+    assert.equal(r.mode, 'renew');
+    var st = sub.status(s.id).subscription;
+    assert.equal(st.months, 1);
+    assert.equal(st.pausesAllowed, 1);
+    assert.equal(st.pausesUsed, 0);
+    assert.ok(Math.abs(st.remainingMs - 50 * DAY) < 1000); // 30 جديدة + 20 باقية
+    assert.ok(Math.abs(st.startedAt - clock) < 1000);
+    assert.equal(sub.redeem(s, gen(1), 'extend').mode, 'extend');
+    assert.ok(Math.abs(sub.status(s.id).subscription.remainingMs - 80 * DAY) < 1000);
+});
+
 test('الأدمن: التوليد والإيقاف', function () {
     assert.equal(sub.generateCodes(3, 1).error, 'invalid_months');
     var c = gen(2);
