@@ -577,6 +577,9 @@
   .pf-item-ctl{display:flex;gap:6px}
   .pf-item-ctl .pf-btn{flex:1;padding:0 8px}
   .pf-item-ctl .pf-btn .pf-ic{width:13px;height:13px}
+  .pf-item-ctl.three{flex-wrap:wrap}
+  .pf-item-ctl.three .pf-btn{flex:1 1 40%}
+  .pf-item-ctl.three .pf-btn:first-child{flex-basis:100%}
   .pf-btn .pf-ic{width:15px;height:15px}
   .pf-items-chars .pf-item-art img{animation:pf-float 3.2s ease-in-out infinite}
   .pf-items-chars .pf-item:nth-child(2) .pf-item-art img{animation-delay:-1.6s}
@@ -746,6 +749,7 @@
     .pf-modebar-txt small{display:none}
     .pf-modebar-dot{width:14px;height:14px}
     .pf-item-ctl{flex-direction:column}
+    .pf-item-ctl.three .pf-btn,.pf-item-ctl.three .pf-btn:first-child{flex:none;width:100%}
     .pf-wallet{gap:12px}
     .pf-wallet-coin{width:56px;height:56px}
     .pf-wallet-v{font-size:24px}
@@ -824,7 +828,7 @@
         </button>
         <button type="button" role="tab" data-mode="streamer" aria-selected="false" tabindex="-1">
           <span class="pf-modebar-ic"><svg class="pf-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.8"/><path d="M8.6 8.6a4.8 4.8 0 0 0 0 6.8M15.4 8.6a4.8 4.8 0 0 1 0 6.8M5.8 5.8a8.8 8.8 0 0 0 0 12.4M18.2 5.8a8.8 8.8 0 0 1 0 12.4"/></svg></span>
-          <span class="pf-modebar-txt"><b>بروفايل الستريمر</b><small>بثّك وفريقك وجوائزك</small></span>
+          <span class="pf-modebar-txt"><b>بروفايل الستريمر</b><small>كل خيارات اللاعب + أدوات البث</small></span>
           <span class="pf-modebar-dot" aria-hidden="true"></span>
         </button>
       </div>

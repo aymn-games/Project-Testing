@@ -185,20 +185,26 @@
     { id: 'community', label: 'المجتمع' },
     { id: 'help', label: 'الدعم' }
   ];
+  // بروفايل الستريمر = كل خيارات اللاعب + أدوات البث، وأدواته تطلع أول بالقائمة
+  var STREAMER_ORDER = ['account', 'broadcast', 'community', 'items', 'help'];
+  function orderedGroups() {
+    if (S.mode !== 'streamer') return GROUPS;
+    return STREAMER_ORDER.map(function (id) { return GROUPS.filter(function (g) { return g.id === id; })[0]; });
+  }
 
   var SECTIONS = [
     { id: 'overview', group: 'account', mode: 'both', icon: 'home', label: 'نظرة عامة', render: renderOverview },
     { id: 'account', group: 'account', mode: 'both', icon: 'user', label: 'حسابي', render: renderAccount },
     { id: 'platforms', group: 'account', mode: 'both', owner: true, icon: 'link', label: 'ربط المنصات', render: renderPlatforms },
-    { id: 'level', group: 'account', mode: 'player', icon: 'star', label: 'المستوى', show: function (p) { return !!p.points; }, render: renderLevel },
+    { id: 'level', group: 'account', mode: 'both', icon: 'star', label: 'المستوى', show: function (p) { return !!p.points; }, render: renderLevel },
     { id: 'wallet', group: 'account', mode: 'both', owner: true, icon: 'coin', label: 'عملات أيمن', render: renderWallet },
 
-    { id: 'frames', group: 'items', mode: 'player', icon: 'frame', label: 'الإطارات', show: function (p) { return !!p.frames; }, render: renderFrames },
-    { id: 'win-cards', group: 'items', mode: 'player', icon: 'trophy', label: 'بطاقات الفوز', show: function (p) { return !!p.winCards; }, render: renderWinCards },
-    { id: 'elim-cards', group: 'items', mode: 'player', icon: 'cards', label: 'بطاقات الإقصاء', show: function (p) { return !!p.elimCards; }, render: renderElimCards },
-    { id: 'character', group: 'items', mode: 'player', icon: 'person', label: 'الشخصيات', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
-    { id: 'entrance', group: 'items', mode: 'player', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance; }, render: renderEntrance },
-    { id: 'codes', group: 'items', mode: 'player', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
+    { id: 'frames', group: 'items', mode: 'both', icon: 'frame', label: 'الإطارات', show: function (p) { return !!p.frames; }, render: renderFrames },
+    { id: 'win-cards', group: 'items', mode: 'both', icon: 'trophy', label: 'بطاقات الفوز', show: function (p) { return !!p.winCards; }, render: renderWinCards },
+    { id: 'elim-cards', group: 'items', mode: 'both', icon: 'cards', label: 'بطاقات الإقصاء', show: function (p) { return !!p.elimCards; }, render: renderElimCards },
+    { id: 'character', group: 'items', mode: 'both', icon: 'person', label: 'الشخصيات', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
+    { id: 'entrance', group: 'items', mode: 'both', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance; }, render: renderEntrance },
+    { id: 'codes', group: 'items', mode: 'both', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
 
     { id: 'broadcast', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderBroadcast },
     { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'الإطارات والجوائز', render: renderRewards },
@@ -292,7 +298,7 @@
     var nav = $('#pfSideNav');
     nav.innerHTML = '';
     var vis = visibleSections();
-    GROUPS.forEach(function (g) {
+    orderedGroups().forEach(function (g) {
       var items = vis.filter(function (s) { return s.group === g.id; });
       if (!items.length) return;
       var grp = h('div', { class: 'pf-side-group' }, [h('div', { class: 'pf-side-label', text: g.label })]);
@@ -698,17 +704,18 @@
     var grid = h('div', { class: 'pf-items pf-items-cards' });
     if (!list.length) grid.appendChild(emptyNote(emptyText));
     list.forEach(function (c) {
-      var extra = null;
-      // بطاقة الإقصاء: زر صوت بس لو لها صوت خاص. بطاقة الفوز: تطلع بحركة بالألعاب، فلها معاينة حركة.
-      if (kind === 'elim' && cardHasSound('elim', c)) {
-        extra = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { cardApi('elim').playSound(previewPlayer('elim', c), 1); } }, [icon('sound'), 'تشغيل الصوت']);
+      var extra = [];
+      // بطاقة الإقصاء: «معاينة» دايماً، و«تشغيل الصوت» لو لها صوت خاص.
+      // بطاقة الفوز: تطلع بحركة بالألعاب، فلها «معاينة الحركة».
+      if (kind === 'elim') {
+        extra.push(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview('elim', c); } }, [icon('play'), 'معاينة']));
+        if (cardHasSound('elim', c)) extra.push(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { cardApi('elim').playSound(previewPlayer('elim', c), 1); } }, [icon('sound'), 'تشغيل الصوت']));
       } else if (kind === 'win' && cardApi('win') && cardApi('win').canShow(previewPlayer('win', c))) {
-        extra = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview('win', c); } }, [icon('play'), 'معاينة الحركة']);
+        extra.push(h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openCardPreview('win', c); } }, [icon('play'), 'معاينة الحركة']));
       }
-      var ctl = h('div', { class: 'pf-item-ctl' }, [
-        S.owner ? actionBtn(c.enabled ? 'إيقاف' : 'تفعيل', function () { return toggleFn(c.cardKey, !c.enabled); }) : null,
-        extra
-      ]);
+      var ctl = h('div', { class: 'pf-item-ctl' + (extra.length > 1 ? ' three' : '') }, [
+        S.owner ? actionBtn(c.enabled ? 'إيقاف' : 'تفعيل', function () { return toggleFn(c.cardKey, !c.enabled); }) : null
+      ].concat(extra));
       grid.appendChild(itemCard({
         img: c.imageFilename, name: cleanCardName(c.displayNameAr || c.cardKey), artHeight: artHeight,
         status: c.enabled ? pill('مفعّلة', 'ok') : pill('موقوفة'),
