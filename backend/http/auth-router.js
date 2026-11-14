@@ -9,6 +9,8 @@
 
 var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
+var kickOAuthService = require('../auth/kick-oauth-service');
+var kickApi = require('../platforms/kick/kick-api');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
@@ -128,6 +130,10 @@ var ROUTES = [
   { method: 'GET', path: '/api/auth/tiktok/oauth/callback', requireAuth: false, handler: handleTikTokOAuthCallback },
   { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
   { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
+  // ربط حساب كيك (OAuth الرسمي) — auth/kick-oauth-service.js
+  { method: 'GET', path: '/api/auth/kick/oauth/start', requireAuth: false, handler: handleKickOAuthStart },
+  { method: 'GET', path: '/api/auth/kick/oauth/callback', requireAuth: false, handler: handleKickOAuthCallback },
+  { method: 'POST', path: '/api/auth/kick/unlink', requireAuth: true, handler: handleKickUnlink },
   { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
   // اختيار نوع الحساب الإجباري بعد أول دخول بجوجل لحساب جديد كلياً.
   { method: 'POST', path: '/api/auth/account-type', requireAuth: true, handler: handleChooseAccountType },
@@ -551,6 +557,56 @@ async function handleTikTokOAuthCallback(req, res) {
   return redirectToProfile('success');
 }
 
+/* -----------------------------------------------------------------------
+ * ربط حساب كيك — نفس طريقة ربط تيك توك: زر بالبروفايل يودي لـ
+ * oauth/start?token=<الجلسة> → صفحة موافقة كيك → oauth/callback يحفظ
+ * الربط ويرجّع لـ profile.html?kick_link=<النتيجة>.
+ * ----------------------------------------------------------------------- */
+
+function handleKickOAuthStart(req, res) {
+  var params = new URLSearchParams((req.url || '').split('?')[1] || '');
+  var token = params.get('token');
+  var user = token ? authService.validateSession(token) : null;
+  if (!user) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/login.html' });
+    return res.end();
+  }
+  if (!kickOAuthService.isConfigured()) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/profile.html?kick_link=not_configured' });
+    return res.end();
+  }
+  res.writeHead(302, { Location: kickOAuthService.buildAuthorizeUrl(user.id) });
+  res.end();
+}
+
+async function handleKickOAuthCallback(req, res) {
+  var params = new URLSearchParams((req.url || '').split('?')[1] || '');
+  function redirectToProfile(status) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/profile.html?kick_link=' + status });
+    res.end();
+  }
+  if (params.get('error')) return redirectToProfile('cancelled');
+
+  var statePayload = kickOAuthService.verifyState(params.get('state'));
+  if (!statePayload) return redirectToProfile('invalid_state');
+  var code = params.get('code');
+  if (!code) return redirectToProfile('missing_code');
+
+  var tokenResult = await kickOAuthService.exchangeCodeForToken(code, statePayload);
+  if (!tokenResult.success) return redirectToProfile('token_exchange_failed');
+
+  var info = await kickOAuthService.fetchKickAccount(tokenResult.accessToken);
+  if (!info.success) return redirectToProfile('user_info_failed');
+
+  var linkResult = kickOAuthService.linkVerifiedAccount(statePayload.uid, info.account);
+  if (!linkResult.success) return redirectToProfile(linkResult.error === 'kick_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
+  return redirectToProfile('success');
+}
+
+function handleKickUnlink(req, res, body, user) {
+  sendJson(res, 200, kickOAuthService.unlink(user.id));
+}
+
 /** إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط. */
 function handleTikTokUnlink(req, res, body, user) {
   var result = authService.unlinkTikTok(user.id);
@@ -945,6 +1001,21 @@ function handleRoomLookup(req, res) {
 }
 
 function handleStreamIsLive(req, res, body, user) {
+  // كيك: حالة البث من Kick Public API (platforms/kick/kick-api.js). null لو
+  // تعذّر التأكد — الواجهة ما تقطع الاتصال عليها.
+  if (getQueryParam(req, 'platform') === 'kick') {
+    var slug = String(getQueryParam(req, 'username') || '').trim().replace(/^@+/, '').toLowerCase();
+    if (!/^[a-z0-9_-]{1,25}$/.test(slug)) { sendJson(res, 400, { success: false, error: 'invalid_username' }); return; }
+    if (!kickApi.isConfigured()) { sendJson(res, 200, { success: true, username: slug, live: null }); return; }
+    return kickApi.getChannelBySlug(slug).then(function (ch) {
+      return ch ? Boolean(ch.stream && ch.stream.is_live) : false;
+    }, function (err) {
+      logger.error('Stream is-live (kick) failed:', err && err.message);
+      return null;
+    }).then(function (live) {
+      sendJson(res, 200, { success: true, username: slug, live: live });
+    });
+  }
   var username = tiktokLiveCheck.normalize(getQueryParam(req, 'username'));
   if (!username) {
     sendJson(res, 400, { success: false, error: 'invalid_username' });

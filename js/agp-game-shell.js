@@ -369,10 +369,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ==================================================================
      *  شاشة الإعدادات
      * ================================================================== */
+    // خيار يخص منصات معيّنة: settingsFields[].platforms = ['tiktok'] مثلاً —
+    // ينخفي لما منصة البث المختارة غيرها (AGP.streamPlatform بـ
+    // adapters/agp-tiktok-adapter.js). «المتابعين فقط» (followersOnly) لتيك
+    // توك تلقائياً: كيك ما يرسل هل صاحب التعليق متابع.
+    var PLATFORM_ONLY_KEYS = { followersOnly: ['tiktok'] };
+    function isFieldForCurrentPlatform(field) {
+        var platforms = field.platforms || PLATFORM_ONLY_KEYS[field.key];
+        if (!platforms || !AGP.streamPlatform || typeof AGP.streamPlatform.get !== 'function') return true;
+        return platforms.indexOf(AGP.streamPlatform.get()) !== -1;
+    }
+
     function isFieldVisible(field) {
         // onlyMidMatch: only shown when settings are reopened mid-match
         // (e.g. volume, meaningless before the game's sounds start).
         if (field.onlyMidMatch && !_lastIsReopened) return false;
+        if (!isFieldForCurrentPlatform(field)) return false;
         if (!field.showWhen) return true;
         return _settingsValues[field.showWhen.key] === field.showWhen.equals;
     }
@@ -481,7 +493,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function connectionBadgeHtml(savedConn) {
         if (savedConn) {
             return '<div class="agp-shell-conn-badge agp-shell-conn-yes"><span class="agp-shell-conn-dot"></span>' +
-                'متصل بالبث <b>@' + escapeHtml(savedConn.username) + '</b></div>';
+                (savedConn.platform === 'kick'
+                    ? 'متصل ببث كيك <b dir="ltr">' + escapeHtml(savedConn.username) + '</b></div>'
+                    : 'متصل بالبث <b>@' + escapeHtml(savedConn.username) + '</b></div>');
         }
         return '<div class="agp-shell-conn-badge agp-shell-conn-no"><span class="agp-shell-conn-dot"></span>' +
             'لم يتم الاتصال بالبث بعد' +

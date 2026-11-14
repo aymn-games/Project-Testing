@@ -375,6 +375,18 @@ function unlinkTikTok() {
     return request('/api/auth/tiktok/unlink', { method: 'POST' });
 }
 
+/** ربط حساب كيك: انتقال مباشر لخادمنا وهو يحوّل (302) لصفحة موافقة كيك —
+ * نفس طريقة زر ربط تيك توك (profile.html). */
+function startKickLink() {
+    var token = getToken();
+    if (!token) { window.location.href = 'login.html'; return; }
+    window.location.href = API_BASE + '/api/auth/kick/oauth/start?token=' + encodeURIComponent(token);
+}
+
+function unlinkKick() {
+    return request('/api/auth/kick/unlink', { method: 'POST' });
+}
+
 /** Self-service account deletion — final, no undo. */
 function deleteMyAccount() {
     return request('/api/profile/delete-account', { method: 'POST' });
@@ -789,7 +801,9 @@ function canPlayGames(user) {
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).
     if (user.permissions && user.permissions.full_game_access) return true;
-    return isStreamerAccount(user) && Boolean(user.tiktok_verified);
+    // ستريمر مربوط بتيك توك أو بكيك (backend/auth/kick-oauth-service.js) —
+    // الخادم يتأكد عند الاتصال إن البث هو حسابه المربوط على نفس المنصة.
+    return isStreamerAccount(user) && Boolean(user.tiktok_verified || user.kick_verified);
 }
 
 /** True for an approved streamer (same condition as canPlayGames, excluding
@@ -1075,6 +1089,8 @@ global.AGPAuth = {
     requestTikTokVerificationCode: requestTikTokVerificationCode,
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,
+    startKickLink: startKickLink,
+    unlinkKick: unlinkKick,
     deleteMyAccount: deleteMyAccount,
     setCustomId: setCustomId,
     updateDisplayName: updateDisplayName,

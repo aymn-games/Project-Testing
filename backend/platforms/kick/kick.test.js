@@ -94,3 +94,28 @@ test('الموصِّل بدون مفاتيح كيك يرجع خطأ واضح ب�
     assert.deepStrictEqual(r.calls[0][0], 'status');
     assert.strictEqual(r.calls[0][1], 'error');
 });
+
+test('ربط حساب كيك: state موقّع، وPKCE challenge = SHA256(verifier)', function () {
+    var config = require('../../config');
+    var saved = { id: config.kickClientId, secret: config.kickClientSecret };
+    config.kickClientId = 'cid'; config.kickClientSecret = 'sec';
+    try {
+        var oauth = require('../../auth/kick-oauth-service');
+        var url = new URL(oauth.buildAuthorizeUrl(42));
+        assert.strictEqual(url.origin + url.pathname, 'https://id.kick.com/oauth/authorize');
+        assert.strictEqual(url.searchParams.get('code_challenge_method'), 'S256');
+        assert.strictEqual(url.searchParams.get('scope'), 'user:read channel:read');
+        var st = oauth.verifyState(url.searchParams.get('state'));
+        assert.strictEqual(st.uid, 42);
+        var verifier = oauth._codeVerifierFor(st.nonce);
+        assert.ok(verifier.length >= 43 && verifier.length <= 128);
+        assert.strictEqual(url.searchParams.get('code_challenge'), crypto.createHash('sha256').update(verifier).digest('base64url'));
+        // state معدَّل أو مزوّر يُرفض
+        var parts = url.searchParams.get('state').split('.');
+        var forged = Buffer.from(JSON.stringify({ uid: 1, nonce: 'x', exp: Date.now() + 1e6 })).toString('base64url') + '.' + parts[1];
+        assert.strictEqual(oauth.verifyState(forged), null);
+        assert.strictEqual(oauth.verifyState('garbage'), null);
+    } finally {
+        config.kickClientId = saved.id; config.kickClientSecret = saved.secret;
+    }
+});

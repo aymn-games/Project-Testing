@@ -137,6 +137,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { return null; }
     }
 
+    // الاتصال المحفوظ بمكتبة الألعاب (games.html) — نفس صيغة js/agp-storage-manager.js.
+    function readSavedConnection() {
+        try {
+            var d = JSON.parse(localStorage.getItem('agp:agp-stream-connection') || 'null');
+            return d && typeof d.username === 'string' && d.username ? d : null;
+        } catch (e) { return null; }
+    }
+    function readSelectedPlatform() {
+        try { return JSON.parse(localStorage.getItem('agp:agp-stream-platform') || 'null'); } catch (e) { return null; }
+    }
+
+    // [AGP.streamPlatform] المنصة الحالية للألعاب والأدوات: من الاتصال
+    // المحفوظ، وإلا اختيار مكتبة الألعاب، وإلا تيك توك. supports(feature)
+    // يخلّي أي لعبة/أداة تخفي اللي ما ينفع للمنصة (js/agp-game-shell.js).
+    var PLATFORM_FEATURES = {
+        tiktok: { likes: true, followersOnly: true, tiktokGifts: true, shares: true },
+        kick: { subscriptions: true }
+    };
+    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك' };
+    function currentPlatform() {
+        var saved = readSavedConnection();
+        if (saved && PLATFORM_FEATURES[saved.platform]) return saved.platform;
+        var sel = readSelectedPlatform();
+        return PLATFORM_FEATURES[sel] ? sel : 'tiktok';
+    }
+    AGP.streamPlatform = {
+        get: currentPlatform,
+        label: function () { return PLATFORM_LABELS[currentPlatform()] || PLATFORM_LABELS.tiktok; },
+        supports: function (feature) { return Boolean((PLATFORM_FEATURES[currentPlatform()] || {})[feature]); }
+    };
+
     function handleIncomingError(payload) {
         AGP.log('TikTok Adapter: backend reported error —', payload.code, payload.message);
     }
@@ -193,11 +224,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         };
     }
 
-    // منصة البث عند الخادم: 'tiktok' افتراضياً، أو 'kick' لو طلبتها اللعبة
-    // (options.platform). الواجهة تبقى تعامل الاتصال كاتصال بث واحد بنفس
-    // المفتاح PLATFORM_KEY، والأحداث توصل بنفس الشكل من الموصِّلين.
+    // منصة البث عند الخادم: 'tiktok' افتراضياً، أو 'kick'. اللعبة تقدر تحددها
+    // (options.platform)، وإلا تنقرأ من الاتصال المحفوظ بمكتبة الألعاب
+    // (games.html → {platform, username}) لو هو نفس اليوزر — فكل الألعاب
+    // تعرف المنصة تلقائياً بدون أي تعديل فيها. الواجهة تبقى تعامل الاتصال
+    // كاتصال بث واحد بنفس المفتاح PLATFORM_KEY، والأحداث بنفس الشكل.
     function backendPlatform() {
-        return (_pendingConnectOptions && _pendingConnectOptions.platform === 'kick') ? 'kick' : PLATFORM_KEY;
+        var opts = _pendingConnectOptions || {};
+        if (opts.platform === 'kick' || opts.platform === 'tiktok') return opts.platform;
+        var saved = readSavedConnection();
+        if (saved && saved.platform === 'kick' && opts.username &&
+            String(saved.username).toLowerCase() === String(opts.username).toLowerCase()) return 'kick';
+        return PLATFORM_KEY;
     }
 
     function openSocketAndConnect() {

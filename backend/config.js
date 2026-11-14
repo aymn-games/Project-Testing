@@ -63,6 +63,8 @@ module.exports = {
     // على /kick/webhook). السر بلا قيمة افتراضية؛ بدونهما ربط كيك يبقى مطفأ.
     kickClientId: process.env.KICK_CLIENT_ID || '',
     kickClientSecret: process.env.KICK_CLIENT_SECRET || '',
+    // رابط رجوع ربط حساب كيك — لازم يكون مضاف حرفياً بإعدادات التطبيق في كيك.
+    kickRedirectUri: process.env.KICK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/kick/oauth/callback',
 
     // ⚠️ دومين الموقع الفعلي (منفصل عن دومين هذا السيرفر) — لازم يكون مطلقاً
     // لبناء رابط إعادة التوجيه بنهاية تسجيل دخول تيك توك، وإلا يرجّع المستخدم لدومين السيرفر (404).

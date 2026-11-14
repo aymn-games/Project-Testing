@@ -78,7 +78,9 @@ function routeEvent(evt, callbacks) {
             if (!p) return false;
             callbacks.onComment({
                 id: p.id, name: p.name, text: cleanContent(d.content),
-                isFollower: false, avatarUrl: p.avatarUrl, avatarUrls: p.avatarUrl ? [p.avatarUrl] : [],
+                // كيك ما يرسل هل صاحب التعليق متابع — true عشان خيار «المتابعين
+                // فقط» بالألعاب ما يحجب كل تعليقات كيك (الخيار ينخفي لكيك بـ agp-game-shell.js).
+                isFollower: true, avatarUrl: p.avatarUrl, avatarUrls: p.avatarUrl ? [p.avatarUrl] : [],
                 isModerator: isModerator(d.sender)
             });
             return false;

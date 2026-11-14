@@ -53,10 +53,12 @@
     }
 
     /** @returns {Promise<boolean|null>} */
-    function fetchLive(username) {
+    function fetchLive(username, platform) {
         var t = token();
         if (!t || !window.fetch) return Promise.resolve(null);
-        return fetch(apiBase() + '/api/stream/is-live?username=' + encodeURIComponent(username), {
+        // المنصة من الاتصال المحفوظ (مكتبة الألعاب): 'kick' أو تيك توك افتراضياً.
+        var platformParam = platform === 'kick' ? 'platform=kick&' : '';
+        return fetch(apiBase() + '/api/stream/is-live?' + platformParam + 'username=' + encodeURIComponent(username), {
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) {
             return res.json().then(function (d) {
@@ -71,7 +73,7 @@
         var conn = saved();
         if (!conn || _checking || _ended) return;
         _checking = true;
-        fetchLive(conn.username).then(function (live) {
+        fetchLive(conn.username, conn.platform).then(function (live) {
             _checking = false;
             var now = saved();
             if (!now || now.username !== conn.username) return; // تغيّر الاتصال أثناء الفحص
@@ -110,7 +112,7 @@
             '<div style="width:min(420px,100%);box-sizing:border-box;padding:28px 24px;border-radius:24px;background:rgba(12,11,18,.97);border:1px solid rgba(248,113,113,.35);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;color:#f4f2f8">' +
               '<span style="width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:rgba(248,113,113,.12);border:2px solid rgba(248,113,113,.5);color:#fca5a5;font-size:26px">●</span>' +
               '<span style="font-weight:700;font-size:21px">انتهى البث المباشر</span>' +
-              '<span style="font-size:15px;line-height:1.7;color:#a8a3b5">البث في تيك توك انتهى أو صار غير نشط، وتم قطع الاتصال. ابدأ البث من جديد ونتصل تلقائياً بحسابك المربوط.</span>' +
+              '<span style="font-size:15px;line-height:1.7;color:#a8a3b5">البث انتهى أو صار غير نشط، وتم قطع الاتصال. ابدأ البث من جديد ونتصل تلقائياً بحسابك المربوط.</span>' +
               '<div style="display:grid;grid-template-columns:1fr auto;gap:10px;width:100%;margin-top:6px">' +
                 '<a data-agp-live-back href="' + ROOT + 'games.html" style="height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font-weight:700;font-size:15px">الرجوع لمكتبة الألعاب</a>' +
                 '<button type="button" data-agp-live-close style="height:48px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e7e3ef;font:inherit;font-weight:700;font-size:15px;cursor:pointer">إغلاق</button>' +

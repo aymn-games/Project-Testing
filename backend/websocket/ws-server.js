@@ -230,14 +230,30 @@ function checkStreamConnectAllowed(payload) {
   return null;
 }
 
-// ربط بث كيك — المرحلة التجريبية: للأدمن فقط (platforms/kick/kick-connector.js).
+// ربط بث كيك — نفس شروط تيك توك: حساب ستريمر + حساب كيك مربوط (OAuth،
+// auth/kick-oauth-service.js) ويكون هو نفس القناة المطلوبة. الأدمن وصلاحية
+// «تشغيل كامل» مستثنين.
+function normalizeKickSlug(s) {
+  return String(s || '').trim().replace(/^(https?:\/\/)?(www\.)?kick\.com\//i, '').replace(/^@+/, '').split(/[/?#]/)[0].toLowerCase();
+}
 function checkKickConnectAllowed(payload) {
   var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
   if (!user) {
-    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع عشان تتصل ببث كيك.' };
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب كيك عشان تتصل بالبث.' };
   }
   if (user.role === 'admin') return null;
-  return { code: 'kick_admin_only', message: 'ربط بث كيك تجريبي حالياً ومتاح للإدارة فقط.' };
+  if (user.permissions && user.permissions.full_game_access) return null;
+  var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
+  if (!isStreamerAccount) {
+    return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
+  }
+  if (!user.kick_verified || !user.kick_username) {
+    return { code: 'kick_not_linked', message: 'لازم تربط حساب كيك بحسابك في الموقع (من صفحة حسابي) عشان تتصل ببث كيك.' };
+  }
+  if (normalizeKickSlug(payload.username) !== normalizeKickSlug(user.kick_username)) {
+    return { code: 'kick_account_mismatch', message: 'تقدر تتصل فقط ببث قناة كيك المربوطة بحسابك: ' + user.kick_username };
+  }
+  return null;
 }
 
 // اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.
