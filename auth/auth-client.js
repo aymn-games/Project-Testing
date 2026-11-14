@@ -723,6 +723,9 @@ function reportRoundCompletion(participants, durationMs, options) {
 function tiktokUsernameForPlayer(player) {
     var id = (player && player.id) || '';
     if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
+    // لاعب من بث كيك ("kick:<username>") — النقاط مربوطة بتيك توك فقط،
+    // وما نرجع للاسم عشان ما تنحسب لحساب تيك توك بنفس الاسم بالغلط.
+    if (id.indexOf('kick:') === 0) return '';
     return (player && (player.name || player.id)) || '';
 }
 

@@ -193,11 +193,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         };
     }
 
+    // منصة البث عند الخادم: 'tiktok' افتراضياً، أو 'kick' لو طلبتها اللعبة
+    // (options.platform). الواجهة تبقى تعامل الاتصال كاتصال بث واحد بنفس
+    // المفتاح PLATFORM_KEY، والأحداث توصل بنفس الشكل من الموصِّلين.
+    function backendPlatform() {
+        return (_pendingConnectOptions && _pendingConnectOptions.platform === 'kick') ? 'kick' : PLATFORM_KEY;
+    }
+
     function openSocketAndConnect() {
         ensureSocketOpen(function () {
             if (!_connecting) return; // disconnected before the socket finished opening
             sendToBackend('connect', {
-                platform: PLATFORM_KEY,
+                platform: backendPlatform(),
                 username: (_pendingConnectOptions && _pendingConnectOptions.username) || null,
                 followersOnly: Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly),
                 // مسار صفحة اللعبة — يظهر بصفحة «البثوث الشغّالة» بلوحة الأدمن.
@@ -222,7 +229,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     AGP.services.TikTokService.disconnectFromLiveStream = function () {
         _connecting = false;
         clearWsReconnectTimer();
-        sendToBackend('disconnect', { platform: PLATFORM_KEY });
+        sendToBackend('disconnect', { platform: backendPlatform() });
         if (_socket) {
             _socket.close();
             _socket = null;

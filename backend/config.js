@@ -59,6 +59,11 @@ module.exports = {
     tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
     tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/tiktok/oauth/callback',
 
+    // تطبيق كيك (Kick Public API — App Access Token لأحداث البث عبر Webhook
+    // على /kick/webhook). السر بلا قيمة افتراضية؛ بدونهما ربط كيك يبقى مطفأ.
+    kickClientId: process.env.KICK_CLIENT_ID || '',
+    kickClientSecret: process.env.KICK_CLIENT_SECRET || '',
+
     // ⚠️ دومين الموقع الفعلي (منفصل عن دومين هذا السيرفر) — لازم يكون مطلقاً
     // لبناء رابط إعادة التوجيه بنهاية تسجيل دخول تيك توك، وإلا يرجّع المستخدم لدومين السيرفر (404).
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',

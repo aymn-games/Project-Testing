@@ -230,6 +230,16 @@ function checkStreamConnectAllowed(payload) {
   return null;
 }
 
+// ربط بث كيك — المرحلة التجريبية: للأدمن فقط (platforms/kick/kick-connector.js).
+function checkKickConnectAllowed(payload) {
+  var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
+  if (!user) {
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع عشان تتصل ببث كيك.' };
+  }
+  if (user.role === 'admin') return null;
+  return { code: 'kick_admin_only', message: 'ربط بث كيك تجريبي حالياً ومتاح للإدارة فقط.' };
+}
+
 // اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.
 var GAME_NAMES = {
   'bomb': 'القنبلة', 'dots': 'توصيل النقاط', 'codenames': 'كود نيمز', 'draw': 'شخبليطة', 'elimination-roulette': 'روليت الإقصاء',
@@ -346,8 +356,8 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   // قيد تشغيل البث: لازم حساب ستريمر مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
   // ويكون هو نفسه اليوزرنيم المطلوب الاتصال ببثه (الأدمن مستثنى من شرط
   // الربط/التطابق للتجربة). الرسالة تُعرض للمستخدم كما هي بالواجهة.
-  if (platform === 'tiktok') {
-    var denial = checkStreamConnectAllowed(payload);
+  if (platform === 'tiktok' || platform === 'kick') {
+    var denial = platform === 'kick' ? checkKickConnectAllowed(payload) : checkStreamConnectAllowed(payload);
     if (denial) {
       logger.log('WS Server: connect denied for connection ' + connectionId + ' (' + denial.code + ').');
       sendEnvelope(socket, builder.buildErrorMessage(platform, denial.code, denial.message));

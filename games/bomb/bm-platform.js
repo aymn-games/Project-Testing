@@ -30,7 +30,26 @@
         try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
     }
 
+    // [كيك — تجربة للأدمن] فتح اللعبة بـ ?kick=<اسم القناة> يربطها ببث كيك
+    // بدل اتصال تيك توك المحفوظ، لين يتسكّر التبويب (sessionStorage — عشان
+    // ينتقل مع اللعبة من صفحة لصفحة). ?kick= فاضي يلغيه. الخادم يسمح بهذا
+    // للأدمن فقط (checkKickConnectAllowed بـ backend/websocket/ws-server.js).
+    var KICK_TEST_KEY = 'agp-kick-test-channel';
+    function getKickTestChannel() {
+        try {
+            var params = new URLSearchParams(location.search);
+            if (params.has('kick')) {
+                var v = String(params.get('kick') || '').trim();
+                if (v) sessionStorage.setItem(KICK_TEST_KEY, v);
+                else sessionStorage.removeItem(KICK_TEST_KEY);
+            }
+            return sessionStorage.getItem(KICK_TEST_KEY) || '';
+        } catch (e) { return ''; }
+    }
+
     function getSavedConnection() {
+        var kickChannel = getKickTestChannel();
+        if (kickChannel) return { platform: 'kick', username: kickChannel };
         var data = readJSON(STREAM_CONNECTION_STORAGE_KEY, null);
         return data && typeof data.username === 'string' && data.username ? data : null;
     }
@@ -148,7 +167,7 @@
         var saved = getSavedConnection();
         if (_connected || !saved || !AGP.streamConnector) return false;
         _connected = true;
-        AGP.streamConnector.connect('tiktok', { username: saved.username });
+        AGP.streamConnector.connect('tiktok', { username: saved.username, platform: saved.platform === 'kick' ? 'kick' : 'tiktok' });
         return true;
     }
 
