@@ -410,7 +410,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         <sc-if value="{{ is.codes }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
             <h1 style="margin:0;font-size:22px;font-weight:600">أكواد الاسترداد</h1>
-            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر الإطار أو بطاقة الإقصاء/الفوز أو باكج (تسويه من «إنشاء باكج» تحت)، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط من خانة الاسترداد بالبروفايل (الإطار يُمنح بدون دخولية).</p></sc-if>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر اشتراك (فضي/ذهبي/ماسي بمدته) أو الإطار أو بطاقة الإقصاء/الفوز أو باكج (تسويه من «إنشاء باكج» تحت)، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط من خانة الاسترداد بالبروفايل (الإطار يُمنح بدون دخولية).</p></sc-if>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
             <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
@@ -1298,7 +1298,10 @@ class Component extends DCLogic {
     const baseItems=[ ...frames.map(f=>({ key:f.key, type:f.type, ref:f.ref, name:'إطار — '+f.name, label:'إطار '+f.name, item:{ kind:'frame', frameType:f.type, frameRef:f.ref } })),
       ...(s.elimCardList||[]).map(c=>({ key:'elim:'+c.key, card:'elim', ref:c.key, name:c.displayNameAr, label:c.displayNameAr, item:{ kind:'elim', cardKey:c.key } })),
       ...(s.winCardList||[]).map(c=>({ key:'win:'+c.key, card:'win', ref:c.key, name:c.displayNameAr, label:c.displayNameAr, item:{ kind:'win', cardKey:c.key } })) ];
-    const codeItems=[ ...(s.bundles||[]).map(b=>({ key:'bundle:'+b.id, bundle:b.id, name:`باكج — ${b.name} (${b.items.length} عناصر)`, label:'باكج '+b.name })), ...baseItems ];
+    // أكواد الاشتراك (backend/subscriptions/subscriptions-service.js): مستوى × مدة — نفس خانة الاسترداد بالبروفايل.
+    const SUB_TIERS=[['silver','فضي'],['gold','ذهبي'],['diamond','ماسي']], SUB_DURS=[[30,'شهر'],[90,'3 شهور'],[365,'سنة']];
+    const subItems=SUB_TIERS.flatMap(([t,tn])=>SUB_DURS.map(([d,dn])=>({ key:`sub:${t}:${d}`, subTier:t, subDays:d, name:`اشتراك — ${tn} (${dn})`, label:`اشتراك ${tn} ${dn}` })));
+    const codeItems=[ ...subItems, ...(s.bundles||[]).map(b=>({ key:'bundle:'+b.id, bundle:b.id, name:`باكج — ${b.name} (${b.items.length} عناصر)`, label:'باكج '+b.name })), ...baseItems ];
     const sf=frames.find(f=>f.key===s.frameKey);
     const selFrame=sf?{ ok:true, label:sf.name, img:sf.file, color:'#e7e9ee', border:'#7c3aed' }:{ ok:false, label:'اختر إطاراً من القائمة بالأسفل', img:'', color:'#5b6274', border:'#2f3342' };
     const lq=s.libQ.trim().toLowerCase();
@@ -1492,7 +1495,7 @@ class Component extends DCLogic {
       burnTyped:()=>{ const c=s.burnInput.trim(); if(!c) return this.flash('اكتب الكود أولاً.','err'); this.burnCode(c); },
       genCodes:()=>{ const f=codeItems.find(x=>x.key===s.codesFrame); if(!f) return this.flash('اختر الإطار أو البطاقة أولاً.','err');
         const n=Number(s.codesCount); if(!(n>=1&&n<=500)) return this.flash('العدد لازم يكون بين 1 و 500.','err');
-        const gen=f.bundle?()=>A.adminGenerateBundleCodes(f.bundle,n,s.codesNote):f.card?()=>A.adminGenerateCardCodes(f.card,f.ref,n,s.codesNote):()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote);
+        const gen=f.subTier?()=>A.adminGenerateSubscriptionCodes(f.subTier,f.subDays,n,s.codesNote):f.bundle?()=>A.adminGenerateBundleCodes(f.bundle,n,s.codesNote):f.card?()=>A.adminGenerateCardCodes(f.card,f.ref,n,s.codesNote):()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote);
         this.busy('codes',gen).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
           this.setState({ codesOut:(r.codes||[]).join('\n') }); this.flash(`تم توليد ${(r.codes||[]).length} كود لـ"${f.label}".`); this.loadCodes(); }); },
       copyCodes:()=>{ if(!s.codesOut) return this.flash('ولّد الأكواد أولاً.','err'); const done=()=>this.flash('تم نسخ الأكواد.');

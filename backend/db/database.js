@@ -290,6 +290,30 @@ db.exec(`
         created_at INTEGER NOT NULL
     );
 
+    -- الاشتراكات (backend/subscriptions/subscriptions-service.js): صف واحد لكل
+    -- مستخدم بمستواه (silver/gold/diamond) وتاريخ انتهائه. الاشتراك المنتهي
+    -- يبقى صفه (expires_at بالماضي) ويُعامَل كأنه ما فيه اشتراك.
+    CREATE TABLE IF NOT EXISTS user_subscriptions (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        tier TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        source TEXT NOT NULL DEFAULT '',
+        updated_at INTEGER NOT NULL
+    );
+
+    -- أكواد الاشتراك — نفس صيغة أكواد الإطارات AGP-XXXX-XXXX (فريدة عبر كل
+    -- جداول الأكواد) ونفس خانة الاسترداد بالبروفايل. كل كود = مستوى + عدد أيام.
+    CREATE TABLE IF NOT EXISTS subscription_codes (
+        code TEXT PRIMARY KEY,
+        tier TEXT NOT NULL,
+        days INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER,
+        burned_at INTEGER
+    );
+
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
     -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))
     -- الحالي (يتطلب إعادة بناء الجدول بالكامل بـSQLite).

@@ -22,6 +22,7 @@ var db = require('../db/database');
 var config = require('../config');
 var logger = require('../utils/logger');
 var collectiblesService = require('../collectibles/collectibles-service');
+var subscriptionsService = require('../subscriptions/subscriptions-service');
 var paylink = require('./paylink-client');
 var moyasar = require('./moyasar-client');
 
@@ -87,6 +88,12 @@ function cardTypeOf(delivery) {
     return null;
 }
 
+/** "sub:gold:30" → {tier:'gold', days:30} — منتج اشتراك (قسم «الاشتراكات» بالمتجر). */
+function subOf(delivery) {
+    var m = /^sub:([a-z]+):(\d+)$/.exec(delivery || '');
+    return m && subscriptionsService.isTier(m[1]) ? { tier: m[1], days: Number(m[2]) } : null;
+}
+
 function mapProduct(row) {
     return {
         id: row.id,
@@ -104,6 +111,7 @@ function mapProduct(row) {
         // نوع البطاقة بس (مو قيمة التسليم كاملة) — عشان المتجر يعرض
         // «بطاقات الإقصاء» و«بطاقات الفوز» كتبويبات مستقلة تحت الإطارات.
         cardType: cardTypeOf(row.delivery),
+        sub: subOf(row.delivery),
         hidden: !!row.hidden
     };
 }
@@ -260,6 +268,16 @@ function buildOrderItem(row, rowsById, categoriesById) {
     return item;
 }
 
+/** اشتراك أقل من اشتراك المستخدم الشغّال ما ينشرى (ما ينفع يتفعّل فوقه). */
+function lowerSubscriptionInCart(user, priced) {
+    var current = subscriptionsService.getSubscription(user.id);
+    if (!current) return false;
+    return priced.rows.some(function (r) {
+        var sub = subOf(r.delivery);
+        return sub && !subscriptionsService.hasTier(user.id, sub.tier);
+    });
+}
+
 /**
  * يحسب السلة بالسيرفر من أرقام المنتجات فقط (الأسعار من قاعدة البيانات،
  * مو من المتصفح).
@@ -279,6 +297,7 @@ function priceCart(productIds, couponCode) {
         rows.push(row);
     }
     if (rows.filter(function (r) { return r.plan; }).length > 1) return { success: false, error: 'one_plan_only' };
+    if (rows.filter(function (r) { return subOf(r.delivery); }).length > 1) return { success: false, error: 'one_subscription_only' };
 
     var subtotal = round2(rows.reduce(function (a, r) { return a + r.price; }, 0));
     var coupon = null;
@@ -321,6 +340,14 @@ function deliverToCollectibles(userId, row) {
             collectiblesService.grantElimCard(userId, delivery.slice(5), 'store');
         } else if (delivery.indexOf('win:') === 0) {
             collectiblesService.grantWinCard(userId, delivery.slice(4), 'store');
+        } else if (subOf(delivery)) {
+            var sub = subOf(delivery);
+            var r = subscriptionsService.grant(userId, sub.tier, sub.days, 'store');
+            // اشتراك أعلى شغّال: ما نضيّع عليه المدفوع — نعطيه كود يستخدمه بعد ما يخلص.
+            if (!r.success) {
+                var gen = subscriptionsService.generateCodes(sub.tier, sub.days, 1, 'store order — user ' + userId);
+                logger.error('Store: subscription not applied for user ' + userId + ' (' + r.error + '), issued code ' + (gen.codes || []).join(','));
+            }
         }
     } catch (err) {
         logger.error('Store: delivery failed for product ' + row.id + ' to user ' + userId + ':', err);
@@ -403,6 +430,7 @@ function checkout(user, input) {
     if (!useGatewayFor(user)) {
         var mockPriced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
         if (!mockPriced.success) return Promise.resolve(mockPriced);
+        if (lowerSubscriptionInCart(user, mockPriced)) return Promise.resolve(fail('higher_tier_active'));
         var mockId = db.transaction(function () {
             var id = insertOrder(user.id, mockPriced, method, 'pending', { paymentRef: 'mock-' + crypto.randomBytes(6).toString('hex') });
             finalizeOrder(id);
@@ -416,6 +444,7 @@ function checkout(user, input) {
     if (!mobile) return Promise.resolve(fail('invalid_mobile'));
     var priced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
     if (!priced.success) return Promise.resolve(priced);
+    if (lowerSubscriptionInCart(user, priced)) return Promise.resolve(fail('higher_tier_active'));
     if (!(priced.total > 0)) return Promise.resolve(fail('invalid_total'));
 
     var orderId = insertOrder(user.id, priced, method, 'pending', { mobile: mobile });
@@ -697,8 +726,14 @@ function deliveryOptions() {
     });
     var elims = collectiblesService.getElimCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
     var wins = collectiblesService.getWinCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
+    var subs = [];
+    subscriptionsService.TIER_KEYS.forEach(function (tier) {
+        subscriptionsService.DURATIONS.forEach(function (d) {
+            subs.push({ value: 'sub:' + tier + ':' + d.days, label: subscriptionsService.displayName(tier, d.days) });
+        });
+    });
     return [{ value: '', label: 'بدون تسليم تلقائي' }, { value: 'frame', label: 'إطار بروفايل (صورة المنتج)' }]
-        .concat(frames, elims, wins);
+        .concat(frames, elims, wins, subs);
 }
 
 function isValidDelivery(value) {

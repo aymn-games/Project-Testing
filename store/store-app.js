@@ -38,6 +38,7 @@ var state = {
     cat: 'all',
     streamer: null,
     sub: null,
+    section: 'frames',
     cart: readJson(CART_KEY, {}),
     fav: {},
     coupon: '',
@@ -103,7 +104,7 @@ function inTab(p, k) {
     return !p.cardType && p.categoryId === k;
 }
 function tabName(k) { return isCardTab(k) ? CARD_TABS[k] : ((catById(k) || {}).name || ''); }
-function catName(p) { if (p.plan) return PLAN_CATEGORY; var c = catById(p.categoryId); return c ? c.name : ''; }
+function catName(p) { if (p.plan) return PLAN_CATEGORY; if (p.sub) return 'اشتراك';  var c = catById(p.categoryId); return c ? c.name : ''; }
 function cartIds() { return Object.keys(state.cart).map(Number).filter(function (id) { return !!productById(id); }); }
 function cartProducts() { return cartIds().map(productById); }
 function inCart(id) { return !!state.cart[id]; }
@@ -134,8 +135,11 @@ function applyHash() {
     state.cat = 'all';
     state.streamer = null;
     state.sub = null;
+    state.section = 'frames';
     var m;
-    if (hsh === 'cart' || hsh === 'orders' || hsh === 'sell') {
+    if (hsh === 'subs') {
+        state.section = 'subs';
+    } else if (hsh === 'cart' || hsh === 'orders' || hsh === 'sell') {
         state.view = hsh;
     } else if (hsh === 'success') {
         state.view = state.lastOrder ? 'success' : 'store';
@@ -359,7 +363,7 @@ function viewStoreHeader() {
             h('p', null, 'إطارات، باقات ألعاب، واشتراكات لبثّك. ادفع بالريال السعودي ويتفعّل المنتج على حسابك مباشرة.')),
         sectionBar(),
         h('div', { 'class': 'toolbar' },
-            h('div', { 'class': 'tabs', role: 'tablist' }, catTabs()),
+            h('div', { 'class': 'tabs', role: 'tablist' }, state.section === 'subs' ? [] : catTabs()),
             h('div', { 'class': 'toolbar-actions' },
                 h('button', { type: 'button', 'class': 'btn-orders', onclick: function () { go('#orders'); } },
                     S.avatar(u && u.tiktok_avatar_url, meName(u)), h('span', null, 'طلباتي')),
@@ -369,24 +373,28 @@ function viewStoreHeader() {
     ];
 }
 
-// أقسام المتجر الرئيسية: الإطارات شغّال، والأليرتات والاشتراكات «قريبًا»
-// (أزرار معطّلة لين تجهز). لتفعيل قسم: احذف soon منه واربطه بصفحته.
+// أقسام المتجر الرئيسية: الإطارات والاشتراكات (#subs) شغّالة، والأليرتات «قريبًا»
+// (زر معطّل لين يجهز). لتفعيل قسم: احذف soon منه وأعطه hash وعرض بـviewStore.
 var STORE_SECTIONS = [
-    { key: 'frames', label: 'الإطارات' },
+    { key: 'frames', label: 'الإطارات', hash: '' },
     { key: 'alerts', label: 'الأليرتات', soon: true },
-    { key: 'subs', label: 'الاشتراكات', soon: true }
+    { key: 'subs', label: 'الاشتراكات', hash: '#subs' }
 ];
+// منتجات الاشتراك: تسليمها sub:<tier>:<days> (p.sub من الخادم) — الأرخص أولاً.
+function subProducts() {
+    return visible().filter(function (p) { return p.sub; }).sort(function (a, b) { return a.price - b.price; });
+}
 
 function sectionBar() {
     return h('nav', { 'class': 'st-sections', 'aria-label': 'أقسام المتجر' }, STORE_SECTIONS.map(function (sec) {
-        var on = sec.key === 'frames';
+        var on = sec.key === (state.section || 'frames');
         return h('button', {
             type: 'button',
             'class': 'st-section' + (on ? ' on' : '') + (sec.soon ? ' soon' : ''),
             'aria-current': on ? 'page' : null,
             'aria-disabled': sec.soon ? 'true' : null,
             title: sec.soon ? 'قريبًا' : null,
-            onclick: sec.soon ? null : function () { go(''); }
+            onclick: sec.soon ? null : function () { go(sec.hash); }
         }, h('span', null, sec.label), sec.soon ? h('span', { 'class': 'soon-badge' }, 'قريبًا') : null);
     }));
 }
@@ -431,6 +439,11 @@ function viewStore() {
     var sc = streamersCat();
     var inStreamersCat = sc && state.cat === sc.id;
     var out = viewStoreHeader();
+    if (state.section === 'subs') {
+        var subs = subProducts();
+        out.push(subs.length ? h('div', { 'class': 'grid' }, subs.map(productCard)) : h('div', { 'class': 'empty-box' }, 'الاشتراكات بتنزل هنا قريب.'));
+        return out;
+    }
     var cur = inStreamersCat && state.streamer ? streamers().filter(function (s) { return s.id === state.streamer; })[0] : null;
 
     if (state.cat !== 'all' && !cur) {

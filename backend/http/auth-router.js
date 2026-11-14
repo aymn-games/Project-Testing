@@ -11,6 +11,7 @@ var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
+var subscriptionsService = require('../subscriptions/subscriptions-service');
 var challengeService = require('../challenge/challenge-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
@@ -164,6 +165,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
   { method: 'GET', path: '/api/admin/frame-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListFrameCodes },
   { method: 'POST', path: '/api/admin/card-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateCardCodes },
+  { method: 'POST', path: '/api/admin/subscription-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateSubscriptionCodes },
+  { method: 'GET', path: '/api/subscription/plans', requireAuth: false, handler: handleSubscriptionPlans },
   { method: 'GET', path: '/api/admin/bundles', requireAuth: true, requireAdmin: true, handler: handleAdminListBundles },
   { method: 'POST', path: '/api/admin/bundles', requireAuth: true, requireAdmin: true, handler: handleAdminCreateBundle },
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
@@ -391,7 +394,8 @@ function handleLogout(req, res, body, user, token) {
 }
 
 function handleMe(req, res, body, user) {
-  sendJson(res, 200, { success: true, user: user });
+  // الاشتراك الشغّال (أو null) — الواجهة تفحص المزايا المقفلة منه (AGPAuth.hasSubscription).
+  sendJson(res, 200, { success: true, user: Object.assign({}, user, { subscription: subscriptionsService.getSubscription(user.id) }) });
 }
 
 /** شاشة لعب كود نيمز (حساب ستريمر) تسجّل خانات السباي ماستر لغرفتها. */
@@ -754,6 +758,15 @@ function handleAdminGenerateFrameCodes(req, res, body) {
 function handleAdminGenerateCardCodes(req, res, body) {
   var result = collectiblesService.generateCardCodes(body.kind, body.cardKey, body.count, body.note);
   sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminGenerateSubscriptionCodes(req, res, body) {
+  var result = subscriptionsService.generateCodes(String(body.tier || ''), body.days, body.count, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleSubscriptionPlans(req, res) {
+  sendJson(res, 200, Object.assign({ success: true }, subscriptionsService.getPlans()));
 }
 
 function handleAdminListBundles(req, res) {

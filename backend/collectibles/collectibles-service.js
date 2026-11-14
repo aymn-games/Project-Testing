@@ -22,6 +22,7 @@
 'use strict';
 
 var crypto = require('crypto');
+var subscriptionsService = require('../subscriptions/subscriptions-service');
 var db = require('../db/database');
 var logger = require('../utils/logger');
 
@@ -709,7 +710,7 @@ function cardCatalogEntry(kind, cardKey) {
 }
 
 // كل الأكواد (إطارات/بطاقات/باكجات) بنفس الصيغة — الكود لازم يكون فريد عبر الجداول كلها.
-var CODE_TABLES = ['frame_codes', 'card_codes', 'bundle_codes'];
+var CODE_TABLES = ['frame_codes', 'card_codes', 'bundle_codes', 'subscription_codes'];
 function codeTakenElsewhere(code, ownTable) {
   return CODE_TABLES.concat(['choice_codes']).some(function (t) {
     return t !== ownTable && Boolean(db.prepare('SELECT code FROM ' + t + ' WHERE code = ?').get(code));
@@ -808,7 +809,7 @@ function listFrameCodes(limit) {
       burnedAt: row.burned_at || null
     };
   });
-  return frameRows.concat(cardRows, bundleRows).sort(function (a, b) {
+  return frameRows.concat(cardRows, bundleRows, subscriptionsService.listCodes(limit)).sort(function (a, b) {
     return (b.createdAt - a.createdAt) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
   }).slice(0, limit);
 }
@@ -872,6 +873,8 @@ function redeemFrameCode(userId, rawCode) {
     if (bundleRow) return redeemBundleCode(userId, code, bundleRow);
     var choiceRow = code ? db.prepare('SELECT * FROM choice_codes WHERE code = ?').get(code) : null;
     if (choiceRow) return previewChoiceCode(userId, code, choiceRow);
+    var subRow = subscriptionsService.findCode(code);
+    if (subRow) return subscriptionsService.redeemCode(userId, code, subRow);
     recordRedeemFail(userId);
     return { success: false, error: 'invalid_code' };
   }

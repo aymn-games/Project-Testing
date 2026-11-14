@@ -200,6 +200,8 @@ var ERRORS = {
     payments_not_configured: 'الدفع غير متاح حالياً، قريباً بإذن الله.',
     product_unavailable: 'أحد المنتجات ما عاد متوفر، حدّث الصفحة.',
     one_plan_only: 'تقدر تشترك بباقة وحدة بس.',
+    one_subscription_only: 'تقدر تشتري اشتراك واحد بس بكل طلب.',
+    higher_tier_active: 'عندك اشتراك أعلى شغّال — تقدر تشتري نفس مستواه أو أعلى.',
     invalid_coupon: 'الكود غير صحيح أو منتهي',
     rate_limited: 'محاولات كثيرة، انتظر شوي.',
     empty_cart: 'سلتك فاضية.',

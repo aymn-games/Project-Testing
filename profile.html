@@ -1466,6 +1466,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         code_used: 'هذا الكود مستخدم من قبل.',
         code_burned: 'هذا الكود ملغي ولا يمكن استخدامه.',
         already_owned: 'عندك هذا العنصر من قبل — الكود ما انستخدم ويقدر تعطيه لغيرك.',
+        higher_tier_active: 'عندك اشتراك أعلى شغّال — الكود ما انستخدم، تقدر تستخدمه بعد ما يخلص اشتراكك أو تعطيه لغيرك.',
         rate_limited: 'محاولات كثيرة، حاول بعد ربع ساعة.',
         code_full: 'هذا الكود وصل الحد الأقصى من الاستخدام.',
         already_redeemed: 'استخدمت هذا الكود من قبل.',
@@ -1498,6 +1499,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                   });
                 }
               });
+              return;
+            }
+            if (result.kind === 'subscription') {
+              var sub = result.subscription || {};
+              setRedeemMsg('🎉 تم! تفعّل ' + (result.name || 'اشتراكك') + (sub.expiresAt ? ' — ينتهي ' + new Date(sub.expiresAt).toLocaleDateString('ar-SA') : '') + '.', true);
+              if (window.AGPAuth.refreshUser) window.AGPAuth.refreshUser();
+              setTimeout(function(){ window.location.reload(); }, 2500);
               return;
             }
             if (result.kind === 'bundle') {

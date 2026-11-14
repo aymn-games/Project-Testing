@@ -631,6 +631,32 @@ function adminGenerateFrameCodes(frameType, frameRef, count, note) {
     });
 }
 
+/** Admin only — subscription codes: tier silver|gold|diamond, days (30/90/365…).
+ * Redeemed from the same profile box as frame codes (result.kind 'subscription'). */
+function adminGenerateSubscriptionCodes(tier, days, count, note) {
+    return request('/api/admin/subscription-codes/generate', {
+        method: 'POST',
+        body: { tier: tier, days: days, count: count, note: note || '' }
+    });
+}
+
+/** Active subscription of the logged-in user from the cached session
+ * ({tier, tierName, rank, expiresAt, daysLeft}) or null. refreshUser() updates it. */
+function getSubscription() {
+    var user = getCachedUser();
+    var sub = user && user.subscription;
+    return sub && sub.expiresAt > Date.now() ? sub : null;
+}
+
+var SUBSCRIPTION_RANKS = { silver: 1, gold: 2, diamond: 3 };
+/** Locked features: hasSubscription('gold') → true for gold or diamond.
+ * Cached check for the UI only — anything valuable is re-checked on the server
+ * (subscriptions-service.hasTier). */
+function hasSubscription(minTier) {
+    var sub = getSubscription();
+    return Boolean(sub) && (SUBSCRIPTION_RANKS[sub.tier] || 0) >= (SUBSCRIPTION_RANKS[minTier] || 1);
+}
+
 /** Admin only — generates `count` one-time codes for an elimination
  * (kind 'elim') or win (kind 'win') card. */
 function adminGenerateCardCodes(kind, cardKey, count, note) {
@@ -1119,6 +1145,9 @@ global.AGPAuth = {
     adminSetWinReward: adminSetWinReward,
     getWinRewardCodes: getWinRewardCodes,
     redeemFrameCode: redeemFrameCode,
+    adminGenerateSubscriptionCodes: adminGenerateSubscriptionCodes,
+    getSubscription: getSubscription,
+    hasSubscription: hasSubscription,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,
     adminListBundles: adminListBundles,
