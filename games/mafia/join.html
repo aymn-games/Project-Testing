@@ -796,6 +796,7 @@ body.watching { overflow: hidden; }
     }
     // محتوى صندوق الشات العام بس (يتحدّث لحاله بدون ما نعيد بناء الشاشة كلها)
     function chatMsgs(G) {
+        if (shellOnly) return '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
         var dayN = 0; for (var i = G.chat.length - 1; i >= 0; i--) if (G.chat[i].sys && /بدأ النقاش/.test(G.chat[i].text)) { dayN = G.chat[i].n; break; }
@@ -825,7 +826,7 @@ body.watching { overflow: hidden; }
             (canSend ? replyBar(G, ch) + '<div class="send"><input class="field" id="privIn" maxlength="140" placeholder="اكتب…" autocomplete="off"><button type="button" id="privSend">إرسال</button></div>' : '');
     }
     function privMsgs(G) {
-        var ch = S.privOpen; if (!ch) return '';
+        var ch = S.privOpen; if (!ch || shellOnly) return '';
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
         var list = G.chat.filter(function (c) { return c.ch === ch; }), canSend = G.phase !== 'over';
         return list.slice(-60).map(function (c) { return bubble(c, byId, canSend); }).join('') || '<div class="cm sys">🔒 ' + PRIV[ch].n.replace(/^\S+ /, '') + '</div>';
@@ -935,7 +936,7 @@ body.watching { overflow: hidden; }
         });
     }
     // لف الجهاز/تغيّر الحجم: نحسب الجوال/الآيباد من جديد ونعيد الرسم
-    window.addEventListener('resize', function () { clearTimeout(S.rsT); S.rsT = setTimeout(function () { measureDev(); lastRenderKey = ''; renderGame(); fitGrids(); }, 120); });
+    window.addEventListener('resize', function () { clearTimeout(S.rsT); S.rsT = setTimeout(function () { measureDev(); invalidate(); renderGame(); fitGrids(); }, 120); });
     function recruitNote(G) { return G.lastNight && G.lastNight.recruited && G.lastNight.round === G.round ? '<div class="note" style="margin-top:8px">🤝 المافيا جنّدت مواطن الليلة!</div>' : ''; }
     function inspections(G) {
         var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
@@ -1004,7 +1005,6 @@ body.watching { overflow: hidden; }
     // جوال: رأس (مين أنا + المرحلة والوقت) · محتوى تبويب واحد · تبويبات تحت (اللعب، الشات العام، الشات السري، الأحداث)
     // آيباد (700 وفوق): الشاشة مقسومة — اللعب دايم ظاهر، وجنبه (عرضي) أو تحته (طولي) لوحة الشاتات والأحداث،
     // وكل شي يتكبّر بنسبة الشاشة (zoom على #vGame)
-    var lastRenderKey = '';
     S.gtab = 'play'; S.pane = 'city'; S.seen = { city: 0, secret: 0, events: 0 }; S.tabKey = ''; S.evf = 'all';
     var TURN_C = { mafia: '226,72,61', doctor: '47,179,106', detective: '62,142,240', vote: '167,139,250', skip: '245,158,11' };
     function measureDev() {
@@ -1258,39 +1258,66 @@ body.watching { overflow: hidden; }
         var G = S.G; if (!G || !G.me) return;
         maybeFlash(G);
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
-        $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
+        var mb = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
+        if ($('meBox')._html !== mb) { $('meBox').innerHTML = mb; $('meBox')._html = mb; }
         $('roleChip').style.background = S.hideRole ? '#2a2438' : R.c;
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
         autoTab(G);
         var U = unread(G);
-        // نعيد بناء الشاشة بس لو تغيّر شي يهم؛ الرسائل الجديدة بالتبويب المفتوح تحدّث صناديق الشات لحالها
-        // (عشان الكتابة ما تتقطّع، والكيبورد ما يرمش، واللي يقرأ رسائل قديمة ما ينسحب لتحت غصب)
-        var key = JSON.stringify([G.phase, G.turn, G.round, G.players.map(function (p) { return [p.alive, p.team, p.role, p.mate]; }), me, G.cards, G.votes, privChans(G), G.verdict, G.winner, G.lastNight, S.hideRole, S.opMode, S.cardSel, S.cardHelp, S.chan, S.filter, S.privOpen, S.reply, S.gtab, S.pane, S.tablet, U, S.evf, G.chat.filter(function (c) { return c.sys; }).length]);
-        if (key === lastRenderKey) { patchChat(G); return; }
-        lastRenderKey = key;
-        var input = $('chatIn'); if (input) S.draft = input.value;
-        var pin = $('privIn'); if (pin) S.pdraft = pin.value;
-        var focusId = document.activeElement && document.activeElement.id;
-        var caret = document.activeElement && document.activeElement.tagName === 'INPUT' ? document.activeElement.selectionStart : 1e9;
-        var sv = $('gview'), sp0 = $('pview'), keep = { tab: S.scrollTab, g: sv ? sv.scrollTop : 0, p: sp0 ? sp0.scrollTop : 0 };
+        // تعليق الشات والتصويت بالجوال: قبل كانت الشاشة كلها تنبني من جديد مع أي تغيير (صوت جديد، اختيار زميل،
+        // رسالة بالشات السري…) فخانة الكتابة تنمسح وترجع والكيبورد ينقفل، وقائمة التصويت ترجع لفوق.
+        // الحين كل جزء لحاله (اللعب · الشات/الأحداث · التبويبات) وما يتلمس إلا لو تغيّر شكله هو بالذات،
+        // والرسائل الجديدة تدخل صناديق الشات بدون ما نلمس خانة الكتابة، ومكان السكرول (حتى داخل الشبكة) يبقى.
+        var gb = $('gameBody');
+        if (gb._layout !== S.tablet || !$('gview')) {
+            gb._layout = S.tablet;
+            gb.innerHTML = S.tablet
+                ? '<div class="split" id="gsplit"><section class="gview" id="gview"></section><aside class="pane"><nav class="pane-tabs" id="gtabs" role="tablist"></nav><section class="pview" id="pview"></section></aside></div>'
+                : '<section class="gview" id="gview"></section><nav class="gtabs" id="gtabs" role="tablist"></nav>';
+        }
         $('gTrail').innerHTML = G.phase === 'night' ? trailHtml(G) : '';
-        var html, play = S.tablet || S.gtab === 'play', body = play ? playHtml(G) : paneHtml(G, S.gtab), fill = /class="gwrap"/.test(body);
         var chatTab = function (k) { return k === 'city' || k === 'secret'; };
-        if (S.tablet) {
-            html = '<div class="split' + (fill ? ' picking' : '') + '"><section class="gview' + (fill ? ' fill' : '') + '" id="gview">' + body + '</section>' +
-                '<aside class="pane"><nav class="pane-tabs" role="tablist">' + tabsHtml(G, U, true) + '</nav><section class="pview' + (chatTab(S.pane) ? ' chatv' : '') + '" id="pview">' + paneHtml(G, S.pane) + '</section></aside></div>';
-        } else html = '<section class="gview' + (fill ? ' fill' : '') + (chatTab(S.gtab) ? ' chatv' : '') + '" id="gview">' + body + '</section><nav class="gtabs" role="tablist">' + tabsHtml(G, U, false) + '</nav>';
-        $('gameBody').innerHTML = html;
-        fitGrids();
-        S.scrollTab = S.gtab + S.pane + G.phase;
-        if (keep.tab === S.scrollTab) { if ($('gview')) $('gview').scrollTop = keep.g; if ($('pview')) $('pview').scrollTop = keep.p; }
-        var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
-        lastChatHtml = chatMsgs(G) || '<div class="cm sys">💬</div>'; lastPrivHtml = privMsgs(G); lastHeads = '';
-        var ci = $('chatIn'); if (ci) ci.value = S.draft;
-        var pi = $('privIn'); if (pi) pi.value = S.pdraft;
-        var pb = $('privbox'); if (pb) pb.scrollTop = pb.scrollHeight;
-        var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); var sp = Math.min(caret, fe.value.length); fe.setSelectionRange(sp, sp); }
+        var ctx = G.id + '|' + G.phase + '|' + (G.turn || '') + '|' + G.round + '|';
+        var play = S.tablet || S.gtab === 'play';
+        shellOnly = true;
+        var body = play ? playHtml(G) : paneHtml(G, S.gtab), fill = /class="gwrap"/.test(body);
+        var paneBody = S.tablet ? paneHtml(G, S.pane) : null;
+        shellOnly = false;
+        // الكلاسات (اللي تحدد مقاسات الصناديق) قبل البناء، عشان الشبكة تنحسب على المقاس الصح من أول مرة
+        var gv = $('gview'), pv = $('pview');
+        gv.className = 'gview' + (fill ? ' fill' : '') + (!S.tablet && chatTab(S.gtab) ? ' chatv' : '');
+        if (S.tablet) { $('gsplit').className = 'split' + (fill ? ' picking' : ''); pv.className = 'pview' + (chatTab(S.pane) ? ' chatv' : ''); }
+        setRegion(gv, body, ctx + (play ? 'play' : S.gtab), play);
+        if (S.tablet) setRegion(pv, paneBody, ctx + S.pane, false);
+        var th = tabsHtml(G, U, S.tablet), nav = $('gtabs'); if (nav._html !== th) { nav.innerHTML = th; nav._html = th; }
+        patchChat(G);
     }
+    // وقت بناء الأجزاء: صناديق الشات تطلع فاضية (الرسائل تدخل بعدين من patchChat)، عشان رسالة جديدة ما تعيد بناء الجزء كله
+    var shellOnly = false;
+    /** يبني جزء من الشاشة بس لو تغيّر شكله، ويحافظ على المكتوب بخانات الكتابة والتركيز ومكان السكرول (حتى داخل الشبكة). */
+    function setRegion(el, html, ctx, isPlay) {
+        if (el._html === html && el._ctx === ctx) return false;
+        // اللاعب يسكرول الحين بقائمة الاختيار/التصويت: نأجل التحديث شوي عشان السكرول ما ينقطع بنص الحركة
+        if (isPlay && el._ctx === ctx && Date.now() - (S.scrollAt || 0) < 450) { clearTimeout(S.deferT); S.deferT = setTimeout(renderGame, 500); return false; }
+        var same = el._ctx === ctx, act = document.activeElement;
+        var focusId = act && el.contains(act) && act.tagName === 'INPUT' ? act.id : null, caret = focusId ? act.selectionStart : 0;
+        var ci = el.querySelector('#chatIn'); if (ci) S.draft = ci.value;
+        var pi = el.querySelector('#privIn'); if (pi) S.pdraft = pi.value;
+        var scrolls = same ? [el.scrollTop].concat([].map.call(el.querySelectorAll('.gwrap, .grid'), function (x) { return x.scrollTop; })) : null;
+        el.innerHTML = html; el._html = html; el._ctx = ctx;
+        if (el.querySelector('#chatbox')) lastChatHtml = '';
+        if (el.querySelector('#privbox')) lastPrivHtml = '';
+        lastHeads = '';
+        if (isPlay || /class="gwrap"/.test(html)) fitGrids();
+        if (scrolls) { el.scrollTop = scrolls[0]; [].forEach.call(el.querySelectorAll('.gwrap, .grid'), function (x, i) { if (scrolls[i + 1] != null) x.scrollTop = scrolls[i + 1]; }); }
+        ci = el.querySelector('#chatIn'); if (ci) ci.value = S.draft || '';
+        pi = el.querySelector('#privIn'); if (pi) pi.value = S.pdraft || '';
+        var fe = focusId && el.querySelector('#' + focusId);
+        if (fe) { try { fe.focus({ preventScroll: true }); var sp = Math.min(caret, fe.value.length); fe.setSelectionRange(sp, sp); } catch (e) { } }
+        return true;
+    }
+    /** يجبر إعادة بناء كل الأجزاء بالتحديث الجاي (لف الجهاز، تفعيل المشاهد…) */
+    function invalidate() { ['gview', 'pview', 'gtabs'].forEach(function (id) { var e = $(id); if (e) { e._html = null; e._ctx = null; } }); }
     // ================================================================ «📺 المشهد»: مشاهد البث على جوال اللاعب
     // نفس المشهد الثلاثي الأبعاد اللي على شاشة البث، يتحمّل بس لما يضغط الزر ويوقف وينمسح من الذاكرة لما يقفله.
     // يشتغل من نفس اتصال اللاعب (الحالة اللي توصله أصلاً) — بدون أي اتصال أو بيانات زيادة من السيرفر،
@@ -1357,7 +1384,7 @@ body.watching { overflow: hidden; }
     function setScenes(on) {
         S.scenesOn = !!on; try { localStorage.setItem(SCENES_LS, on ? '1' : '0'); } catch (e) { }
         var b = $('sceneBtn'); if (b) { b.classList.toggle('off', !on); b.title = on ? 'شوف مشاهد البث هنا' : 'المشاهد مقفلة — اضغط عشان تفعّلها'; }
-        lastRenderKey = ''; renderGame();
+        invalidate(); renderGame();
     }
     // نافذة التفعيل (لما يضغط الزر والمشاهد مقفلة)
     function sceneSheet() {
@@ -1455,8 +1482,13 @@ body.watching { overflow: hidden; }
         var ur = e.target.closest('[data-unreply]'); if (ur) { delete S.reply[ur.getAttribute('data-unreply')]; return renderGame(); }
         if (e.target.id === 'chatSend') sendChat();
         if (e.target.id === 'privSend') sendPriv();
-        var pt = e.target.closest('[data-priv-toggle]'); if (pt) { var pc = pt.getAttribute('data-priv-toggle'); S.privOpen = S.privOpen === pc ? '' : pc; S.privAuto = false; lastRenderKey = ''; renderGame(); }
+        var pt = e.target.closest('[data-priv-toggle]'); if (pt) { var pc = pt.getAttribute('data-priv-toggle'); S.privOpen = S.privOpen === pc ? '' : pc; S.privAuto = false; invalidate(); renderGame(); }
     });
+    // سكرول قائمة الاختيار/التصويت: نسجّل وقته عشان التحديثات تستنى لين يوقف (setRegion)
+    $('gameBody').addEventListener('scroll', function () { S.scrollAt = Date.now(); }, true);
+    $('gameBody').addEventListener('touchmove', function () { S.scrollAt = Date.now(); }, { passive: true });
+    // زر «إرسال» ما ياخذ التركيز من خانة الكتابة — عشان الكيبورد يبقى مفتوح ويكتب الرسالة اللي بعدها على طول
+    $('gameBody').addEventListener('mousedown', function (e) { if (e.target.id === 'chatSend' || e.target.id === 'privSend') e.preventDefault(); });
     $('gameBody').addEventListener('keydown', function (e) { if (e.key !== 'Enter') return; if (e.target.id === 'chatIn') sendChat(); if (e.target.id === 'privIn') sendPriv(); });
     $('gameBody').addEventListener('input', function (e) { if (e.target.id === 'pf') { S.filter = e.target.value; renderGame(); } });
     function sendPriv() { var i = $('privIn'), ch = S.privOpen; if (!i || !ch) return; var t = i.value.trim(); if (!t) return; act('chat', ch + (S.reply[ch] ? '#' + S.reply[ch] : '') + '|' + t); delete S.reply[ch]; i.value = ''; S.pdraft = ''; renderGame(); var f = $('privIn'); if (f) f.focus(); }
