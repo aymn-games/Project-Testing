@@ -844,7 +844,7 @@ export function createStage(container, getFrame, opts) {
         camPos.lerp(camTarget, 0.06); camLook.lerp(lookTarget, 0.06);
     }
     // بالرومات الكبيرة الكاميرا تكون برا أبعد حلقة وأعلى، عشان ما تنحجب بالرؤوس القريبة
-    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7) * 1.15, (h + extra * 1.1) * 1.12]; }   // الكاميرا أبعد شوي عن الحلقة
+    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7) * 1.4, (h + extra * 1.1) * 1.45]; }   // الكاميرا أبعد وأعلى عشان كل اللاعبين يبانون بالبث
     function orbit(t, r, h, speed) { const a = t * (speed || 0.05) + 0.6, [R, H] = pull(r, h); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 1.0, 0); }
     function seatWorld(v, out) { return (out || new THREE.Vector3()).set(v.seat.x, 0, v.seat.z); }
 

@@ -306,7 +306,7 @@ function createGame(roster, settings, hooks) {
                 G.usedCards.push('recruit');
                 notice(recruited, '🃏 تم تجنيدك! أنت الحين من المافيا، وفقدت دورك وقدرتك السابقة.');
                 mafs.forEach(function (m) { notice(m, '🃏 نجح التجنيد: ' + recruited.name + ' انضم للمافيا.'); });
-            } else mafs.forEach(function (m) { notice(m, 'التجنيد ما تنفّذ لأن المافيا بتتجاوز 30% من الأحياء — الكرت محفوظ.'); });
+            } else mafs.forEach(function (m) { notice(m, '🔒 ما تقدر تجنّد الليلة لأن عدد المواطنين قليل — الكرت محفوظ.'); });
         }
 
         if (card && card.card === 'reveal') aliveMafia().forEach(function (m) { notice(m, '🃏 كشف الهوية: ' + cardTarget.name + ' دوره ' + ROLE_NAMES[cardTarget.role] + '.'); });

@@ -106,7 +106,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 .qr-mini small { display: block; font-size: 12px; line-height: 1.45; color: #5d5a70; }
 
 /* لوحة النقاش/المجريات: بالنقاش والتصويت = الشات العام بس، وبباقي المراحل = سجل الأحداث */
-.chat { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(390px, 30%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
+.chat { position: absolute; top: 166px; right: 14px; bottom: 14px; width: min(300px, 23%); display: flex; flex-direction: column; border-radius: 18px; background: linear-gradient(180deg, rgba(22,19,32,.9), rgba(10,9,15,.92)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px rgba(0,0,0,.5); overflow: hidden; transition: opacity .3s, transform .3s; backdrop-filter: blur(8px); }
 .chat.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
 .chat-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); }
 .chat-h b { font-size: 19px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
@@ -275,7 +275,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
 .is-over .qr-mini, .is-over .round, .is-over .timer { display: none !important; }
 
 @media (max-width: 760px) {
-    .chat { width: 46%; }
+    .chat { width: 38%; }
     .banner .title { font-size: 22px; }
     .brand small { display: none; }
 }

@@ -950,7 +950,7 @@ body.watching { overflow: hidden; }
             (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
             // التجنيد مقفول لأن المافيا بتتعدى 30% من الأحياء: الزر يبان مقفول وتحته السبب
             (recruit && recruit.capped ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill on" data-opmode="kill">🔪 قتل</button><button type="button" class="pill" disabled>🔒 تجنيد</button></div>' +
-                '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🔒 التجنيد يحتاج <b>' + recruit.need + '</b> أحياء على الأقل (الحين ' + recruit.alive + ') عشان المافيا ما تتعدى 30% — الكرت محفوظ</div>' : '') +
+                '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🔒 ما تقدر تجنّد الليلة لأن عدد المواطنين قليل — الكرت محفوظ</div>' : '') +
             '<div class="gwrap">' + playerRows(G, {
                 action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && prev.indexOf(p.id) < 0 && (!lock || lock.indexOf(p.id) >= 0); },
                 sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
