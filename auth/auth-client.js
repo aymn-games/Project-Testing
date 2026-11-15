@@ -586,6 +586,30 @@ function teamLeave(customId) {
 function teamRemove(customId) {
     return request('/api/teams/remove', { method: 'POST', body: { customId: customId } });
 }
+
+/* «مجتمعي»: شات الفريق والإشراف + الأصدقاء والرسائل الخاصة (backend/community/). */
+function q(v) { return encodeURIComponent(v == null ? '' : String(v)); }
+function communitySummary() { return request('/api/community/summary', { method: 'GET' }); }
+function communityTeams() { return request('/api/community/teams', { method: 'GET' }); }
+/** team = ID صاحب الفريق، after = آخر رسالة عندي، since = `now` من آخر رد (للمحذوف). */
+function teamChat(team, after, since) {
+    return request('/api/community/team-chat?team=' + q(team) + '&after=' + q(after || 0) + '&since=' + q(since || 0), { method: 'GET' });
+}
+function teamChatSend(team, body) { return request('/api/community/team-chat/send', { method: 'POST', body: { team: team, body: body } }); }
+function teamChatDelete(team, id) { return request('/api/community/team-chat/delete', { method: 'POST', body: { team: team, id: id } }); }
+/** minutes: 10 | 60 | 1440 | 0 (دائم) */
+function teamChatMute(team, customId, minutes) { return request('/api/community/team-chat/mute', { method: 'POST', body: { team: team, customId: customId, minutes: minutes } }); }
+function teamChatUnmute(team, customId) { return request('/api/community/team-chat/unmute', { method: 'POST', body: { team: team, customId: customId } }); }
+function teamChatKick(team, customId) { return request('/api/community/team-chat/kick', { method: 'POST', body: { team: team, customId: customId } }); }
+function teamChatMembers(team) { return request('/api/community/team-chat/members?team=' + q(team), { method: 'GET' }); }
+/** صاحب الفريق: on = true يضيف مشرف، false يشيله. */
+function setTeamModerator(customId, on) { return request('/api/community/moderators', { method: 'POST', body: { customId: customId, on: !!on } }); }
+function friendsList() { return request('/api/friends', { method: 'GET' }); }
+function friendsSearch(text) { return request('/api/friends/search?q=' + q(text), { method: 'GET' }); }
+/** action: request | accept | decline | cancel | remove | block | unblock */
+function friendAction(action, customId) { return request('/api/friends/' + action, { method: 'POST', body: { customId: customId } }); }
+function friendChat(customId, after) { return request('/api/friends/chat?user=' + q(customId) + '&after=' + q(after || 0), { method: 'GET' }); }
+function friendChatSend(customId, body) { return request('/api/friends/chat/send', { method: 'POST', body: { customId: customId, body: body } }); }
 function grantWinCode(code, customId) {
     return request('/api/collectibles/win-codes/grant', { method: 'POST', body: { code: code, customId: customId } });
 }
@@ -1189,6 +1213,21 @@ global.AGPAuth = {
     teamJoin: teamJoin,
     teamLeave: teamLeave,
     teamRemove: teamRemove,
+    communitySummary: communitySummary,
+    communityTeams: communityTeams,
+    teamChat: teamChat,
+    teamChatSend: teamChatSend,
+    teamChatDelete: teamChatDelete,
+    teamChatMute: teamChatMute,
+    teamChatUnmute: teamChatUnmute,
+    teamChatKick: teamChatKick,
+    teamChatMembers: teamChatMembers,
+    setTeamModerator: setTeamModerator,
+    friendsList: friendsList,
+    friendsSearch: friendsSearch,
+    friendAction: friendAction,
+    friendChat: friendChat,
+    friendChatSend: friendChatSend,
     grantWinCode: grantWinCode,
     getMyGrants: getMyGrants,
     getSubscription: getSubscription,

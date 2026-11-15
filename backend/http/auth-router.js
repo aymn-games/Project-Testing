@@ -13,6 +13,8 @@ var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
 var teamService = require('../teams/team-service');
+var teamChatService = require('../community/team-chat-service');
+var friendsService = require('../community/friends-service');
 var subscriptionService = require('../subscriptions/subscription-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
@@ -199,6 +201,28 @@ var ROUTES = [
   { method: 'POST', path: '/api/teams/join', requireAuth: true, handler: handleTeamJoin },
   { method: 'POST', path: '/api/teams/leave', requireAuth: true, handler: handleTeamLeave },
   { method: 'POST', path: '/api/teams/remove', requireAuth: true, handler: handleTeamRemove },
+  // ---- «مجتمعي»: شات الفريق والإشراف + الأصدقاء والرسائل الخاصة (backend/community/)
+  { method: 'GET', path: '/api/community/summary', requireAuth: true, handler: handleCommunitySummary },
+  { method: 'GET', path: '/api/community/teams', requireAuth: true, handler: handleCommunityTeams },
+  { method: 'GET', path: '/api/community/team-chat', requireAuth: true, handler: handleTeamChat },
+  { method: 'POST', path: '/api/community/team-chat/send', requireAuth: true, handler: handleTeamChatSend },
+  { method: 'POST', path: '/api/community/team-chat/delete', requireAuth: true, handler: handleTeamChatDelete },
+  { method: 'POST', path: '/api/community/team-chat/mute', requireAuth: true, handler: handleTeamChatMute },
+  { method: 'POST', path: '/api/community/team-chat/unmute', requireAuth: true, handler: handleTeamChatUnmute },
+  { method: 'POST', path: '/api/community/team-chat/kick', requireAuth: true, handler: handleTeamChatKick },
+  { method: 'GET', path: '/api/community/team-chat/members', requireAuth: true, handler: handleTeamChatMembers },
+  { method: 'POST', path: '/api/community/moderators', requireAuth: true, handler: handleTeamChatModerator },
+  { method: 'GET', path: '/api/friends', requireAuth: true, handler: handleFriendsList },
+  { method: 'GET', path: '/api/friends/search', requireAuth: true, handler: handleFriendsSearch },
+  { method: 'POST', path: '/api/friends/request', requireAuth: true, handler: friendAction('request') },
+  { method: 'POST', path: '/api/friends/accept', requireAuth: true, handler: friendAction('accept') },
+  { method: 'POST', path: '/api/friends/decline', requireAuth: true, handler: friendAction('decline') },
+  { method: 'POST', path: '/api/friends/cancel', requireAuth: true, handler: friendAction('cancel') },
+  { method: 'POST', path: '/api/friends/remove', requireAuth: true, handler: friendAction('remove') },
+  { method: 'POST', path: '/api/friends/block', requireAuth: true, handler: friendAction('block') },
+  { method: 'POST', path: '/api/friends/unblock', requireAuth: true, handler: friendAction('unblock') },
+  { method: 'GET', path: '/api/friends/chat', requireAuth: true, handler: handleFriendChat },
+  { method: 'POST', path: '/api/friends/chat/send', requireAuth: true, handler: handleFriendChatSend },
   { method: 'POST', path: '/api/collectibles/win-codes/grant', requireAuth: true, handler: handleGrantWinCode },
   { method: 'GET', path: '/api/collectibles/grants', requireAuth: true, handler: handleMyGrants },
   // ---- اشتراك الستريمر (backend/subscriptions/subscription-service.js)
@@ -873,6 +897,35 @@ function handleGrantWinCode(req, res, body, user) {
 function handleMyGrants(req, res, body, user) {
   sendJson(res, 200, { success: true, grants: collectiblesService.listMyGrants(user.id) });
 }
+
+// ---- «مجتمعي»
+var COMMUNITY_STATUS = { team_not_found: 404, user_not_found: 404, member_not_found: 404, message_not_found: 404, not_member: 403, forbidden: 403,
+  not_friends: 403, blocked: 403, muted: 403, too_fast: 429, too_many_requests: 429 };
+function sendCommunity(res, r) { sendJson(res, r.success ? 200 : (COMMUNITY_STATUS[r.error] || 400), r); }
+function handleCommunitySummary(req, res, body, user) {
+  var f = friendsService.counts(user);
+  sendJson(res, 200, { success: true, teamUnread: teamChatService.unreadTotal(user), incoming: f.incoming, dmUnread: f.unread });
+}
+function handleCommunityTeams(req, res, body, user) { sendJson(res, 200, teamChatService.listTeams(user)); }
+function handleTeamChat(req, res, body, user) {
+  sendCommunity(res, teamChatService.messages(user, getQueryParam(req, 'team'), getQueryParam(req, 'after'), getQueryParam(req, 'since')));
+}
+function handleTeamChatSend(req, res, body, user) { sendCommunity(res, teamChatService.send(user, body.team, body.body)); }
+function handleTeamChatDelete(req, res, body, user) { sendCommunity(res, teamChatService.deleteMessage(user, body.team, body.id)); }
+function handleTeamChatMute(req, res, body, user) { sendCommunity(res, teamChatService.mute(user, body.team, body.customId, body.minutes)); }
+function handleTeamChatUnmute(req, res, body, user) { sendCommunity(res, teamChatService.unmute(user, body.team, body.customId)); }
+function handleTeamChatKick(req, res, body, user) { sendCommunity(res, teamChatService.kick(user, body.team, body.customId)); }
+function handleTeamChatMembers(req, res, body, user) { sendCommunity(res, teamChatService.members(user, getQueryParam(req, 'team'))); }
+function handleTeamChatModerator(req, res, body, user) { sendCommunity(res, teamChatService.setModerator(user, body.customId, Boolean(body.on))); }
+function handleFriendsList(req, res, body, user) { sendJson(res, 200, friendsService.list(user)); }
+function handleFriendsSearch(req, res, body, user) { sendJson(res, 200, friendsService.search(user, getQueryParam(req, 'q'))); }
+function friendAction(name) {
+  return function (req, res, body, user) { sendCommunity(res, friendsService[name](user, body.customId)); };
+}
+function handleFriendChat(req, res, body, user) {
+  sendCommunity(res, friendsService.conversation(user, getQueryParam(req, 'user'), getQueryParam(req, 'after')));
+}
+function handleFriendChatSend(req, res, body, user) { sendCommunity(res, friendsService.sendMessage(user, body.customId, body.body)); }
 
 function handleSubscriptionStatus(req, res, body, user) {
   var r = subscriptionService.status(user.id);

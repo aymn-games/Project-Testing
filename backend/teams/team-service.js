@@ -97,6 +97,7 @@ function leave(me, streamerCustomId) {
     var s = byCustomId(streamerCustomId);
     if (!s) return { success: false, error: 'streamer_not_found' };
     db.prepare('DELETE FROM team_members WHERE streamer_id = ? AND member_id = ?').run(s.id, me.id);
+    db.prepare('DELETE FROM team_chat_moderators WHERE streamer_id = ? AND user_id = ?').run(s.id, me.id);
     return { success: true };
 }
 
@@ -105,6 +106,7 @@ function removeMember(me, memberCustomId) {
     var m = byCustomId(memberCustomId);
     if (!m) return { success: false, error: 'member_not_found' };
     db.prepare('DELETE FROM team_members WHERE streamer_id = ? AND member_id = ?').run(me.id, m.id);
+    db.prepare('DELETE FROM team_chat_moderators WHERE streamer_id = ? AND user_id = ?').run(me.id, m.id);
     return { success: true };
 }
 
@@ -128,6 +130,8 @@ function mine(me) {
 
 module.exports = {
     isStreamer: isStreamer,
+    card: card,
+    USER_COLUMNS: USER_COLUMNS,
     isMember: isMember,
     byCustomId: byCustomId,
     search: search,

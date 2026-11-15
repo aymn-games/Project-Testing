@@ -431,6 +431,67 @@ db.exec(`
         PRIMARY KEY (streamer_id, member_id)
     );
     CREATE INDEX IF NOT EXISTS idx_team_members_member ON team_members(member_id);
+    -- «مجتمعي»: شات الفريق (streamer_id = صاحب الفريق) + الإشراف (backend/community/team-chat-service.js)
+    CREATE TABLE IF NOT EXISTS team_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        deleted_at INTEGER,
+        deleted_by INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_chat_team ON team_chat_messages(streamer_id, id);
+    CREATE TABLE IF NOT EXISTS team_chat_moderators (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        added_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- until = 0 كتم دائم (لين يفكه مشرف)
+    CREATE TABLE IF NOT EXISTS team_chat_mutes (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        until INTEGER NOT NULL,
+        by_user_id INTEGER,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- آخر رسالة قرأها العضو بشات كل فريق (لعدّاد غير المقروء)
+    CREATE TABLE IF NOT EXISTS team_chat_reads (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        last_id INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- «مجتمعي»: الأصدقاء والرسائل الخاصة (backend/community/friends-service.js)
+    -- user_a < user_b دائماً. status: pending | accepted
+    CREATE TABLE IF NOT EXISTS friendships (
+        user_a INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_b INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        requested_by INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        accepted_at INTEGER,
+        PRIMARY KEY (user_a, user_b)
+    );
+    CREATE INDEX IF NOT EXISTS idx_friendships_b ON friendships(user_b);
+    CREATE TABLE IF NOT EXISTS user_blocks (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, blocked_id)
+    );
+    CREATE TABLE IF NOT EXISTS direct_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_dm_pair ON direct_messages(from_id, to_id, id);
+    CREATE INDEX IF NOT EXISTS idx_dm_unread ON direct_messages(to_id, read_at);
 
     -- منح كود جائزة فوز من الستريمر لعضو بفريقه: المنح يحجز استخدام واحد من
     -- رصيد الكود (choice_codes.uses)، واللاعب يسترده من بروفايله ويختار إطاره.

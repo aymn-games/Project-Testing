@@ -214,7 +214,7 @@
     { id: 'broadcast', group: 'broadcast', mode: 'streamer', icon: 'chart', label: 'إحصائيات البث', render: renderBroadcast },
     { id: 'win-codes', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'medal', label: 'الإطارات والجوائز', render: renderRewards },
 
-    { id: 'team', group: 'community', mode: 'streamer', owner: true, streamerOnly: true, icon: 'users', label: 'فريقك', render: renderTeam },
+    { id: 'community', group: 'community', mode: 'both', owner: true, icon: 'users', label: 'مجتمعي', render: renderCommunity },
     { id: 'teams', group: 'community', mode: 'both', owner: true, icon: 'search', label: 'ابحث عن ستريمر', render: renderTeams },
     { id: 'remote', group: 'community', mode: 'both', owner: true, icon: 'signal', label: 'التحكم عن بعد', show: function (p) { return isStreamerAccount(p) || S.remoteAccess.length > 0; }, render: renderRemote },
 
@@ -223,7 +223,8 @@
   ];
   // روابط قديمة (#info، #win-codes من شاشة الفوز...) توصل للقسم المدموج الجديد
   var ALIASES = { info: 'account', tiktok: 'platforms', 'remote-control': 'remote', 'remote-access': 'remote', screens: 'soon',
-    'stream-stats': 'broadcast', 'streamer-level': 'broadcast', cards: 'win-cards', redeem: 'codes', rewards: 'win-codes', coins: 'wallet' };
+    'stream-stats': 'broadcast', 'streamer-level': 'broadcast', cards: 'win-cards', redeem: 'codes', rewards: 'win-codes', coins: 'wallet',
+    team: 'community', chat: 'community', friends: 'community' };
 
   function sectionVisible(sec) {
     if (sec.mode !== 'both' && sec.mode !== S.mode) return false;
@@ -312,6 +313,7 @@
         var badge = null;
         // العدّاد بس على شي يحتاج إجراء: ردود الدعم الجديدة
         if (s.id === 'support' && S.unread > 0) badge = h('span', { class: 'pf-side-count num', title: 'ردود جديدة من فريق الدعم', text: S.unread > 99 ? '99+' : String(S.unread) });
+        if (s.id === 'community' && commCount() > 0) badge = h('span', { class: 'pf-side-count num', title: 'رسائل جديدة وطلبات صداقة', text: commCount() > 99 ? '99+' : String(commCount()) });
         if (s.id === 'codes' && pendingGrants() > 0) badge = h('span', { class: 'pf-side-count num', title: 'أكواد وصلتك ما استرديتها', text: String(pendingGrants()) });
         if (s.id === 'account' && S.emailUnverified) badge = h('span', { class: 'pf-side-dot', title: 'الإيميل غير مؤكد' });
         if (s.id === 'subscription' && S.subAlert) badge = h('span', { class: 'pf-side-dot' + (S.subAlert.expired ? ' red' : ''), title: S.subAlert.expired ? 'اشتراكك منتهي' : 'اشتراكك قرب ينتهي' });
@@ -335,6 +337,7 @@
     var sec = findSection(sectionId);
     if (sec && sec.mode !== 'both' && sec.mode !== S.mode) setMode(sec.mode, { keepSection: true });
     if (!sec || !sectionVisible(sec)) sec = visibleSections()[0];
+    stopPoll(); closeMenu();
     S.section = sec.id;
     if (!opts.noHash && location.hash !== '#' + sec.id) history.replaceState(null, '', location.pathname + location.search + '#' + sec.id);
     renderSideNav();
@@ -1515,6 +1518,472 @@
     });
   }
 
+  /* ===================================================== «مجتمعي»: الفريق + الشات + الأصدقاء
+     (backend/community/team-chat-service.js و friends-service.js) — التحديث بالسحب كل بضع ثواني */
+  var POLL_MS = 4000;
+  var COMM_ERRORS = {
+    not_member: 'ما أنت عضو بهالفريق.', muted: 'أنت مكتوم بهالشات.', empty: 'اكتب رسالة أولاً.', too_fast: 'شوي شوي، انتظر ثانية.',
+    forbidden: 'ما عندك صلاحية لهذا.', member_not_found: 'العضو مو موجود بالفريق.', team_not_found: 'الفريق مو موجود.',
+    user_not_found: 'ما لقينا الحساب.', self: 'هذا حسابك.', blocked: 'ما تقدر، فيه حظر بينكم.', already_friends: 'أنتم أصدقاء أصلاً.',
+    no_request: 'الطلب ما عاد موجود.', too_many_requests: 'عندك طلبات كثيرة معلّقة.', friends_full: 'وصلت الحد الأقصى للأصدقاء.',
+    not_friends: 'الرسائل بين الأصدقاء بس.', invalid_duration: 'مدة الكتم غير صحيحة.', too_many_moderators: 'وصلت الحد الأقصى للمشرفين (20).',
+    message_not_found: 'الرسالة انحذفت.'
+  };
+  var MUTES = [[10, '10 دقايق'], [60, 'ساعة'], [1440, 'يوم'], [0, 'دائم']];
+  var ROLE_LABEL = { owner: 'صاحب الفريق', mod: 'مشرف' };
+  function commErr(r) { return COMM_ERRORS[r && r.error] || 'تعذّر التنفيذ، حاول مرة ثانية.'; }
+
+  /** مؤقّت السحب: واحد بس بأي وقت، ويوقف لو العنصر انشال من الصفحة. */
+  function startPoll(el, fn) {
+    stopPoll();
+    S.poll = setInterval(function () {
+      if (!document.body.contains(el)) { stopPoll(); return; }
+      if (!document.hidden) fn();
+    }, POLL_MS);
+  }
+  function stopPoll() { if (S.poll) { clearInterval(S.poll); S.poll = null; } }
+
+  function chatTime(ms) {
+    var d = new Date(ms), now = new Date();
+    var t = d.toLocaleTimeString('ar', { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === now.toDateString() ? t : d.toLocaleDateString('ar', { day: 'numeric', month: 'short' }) + ' · ' + t;
+  }
+  function muteText(m) { return !m ? '' : m.until ? 'مكتوم لين ' + chatTime(m.until) : 'مكتوم دائماً'; }
+
+  /** شارة «مجتمعي» بالقائمة: غير المقروء + طلبات الصداقة. */
+  function commCount() { var c = S.comm; return c ? (c.teamUnread || 0) + (c.incoming || 0) + (c.dmUnread || 0) : 0; }
+  function refreshCommunity() {
+    if (typeof window.AGPAuth.communitySummary !== 'function') return Promise.resolve();
+    return window.AGPAuth.communitySummary().then(function (r) {
+      if (!r || !r.success) return;
+      var before = commCount();
+      S.comm = r;
+      if (commCount() !== before) renderSideNav();
+    }).catch(function () {});
+  }
+
+  /** قائمة صغيرة تنفتح من زر «⋯». items = [[label, fn, danger?], ...] أو null للفاصل. */
+  function openMenu(anchor, items) {
+    closeMenu();
+    var m = h('div', { class: 'pf-menu', role: 'menu' });
+    items.forEach(function (it) {
+      if (!it) { m.appendChild(h('div', { class: 'pf-menu-sep' })); return; }
+      if (typeof it === 'string') { m.appendChild(h('div', { class: 'pf-menu-h', text: it })); return; }
+      m.appendChild(h('button', { type: 'button', role: 'menuitem', class: it[2] ? 'danger' : null, onclick: function () { closeMenu(); it[1](); } }, it[0]));
+    });
+    m.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMenu(); anchor.focus(); } });
+    // بجسم الصفحة وثابت فوق كل شي، عشان ما ينقص داخل صندوق الشات القابل للتمرير
+    document.body.appendChild(m);
+    var r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    var left = document.documentElement.dir === 'rtl' || getComputedStyle(document.body).direction === 'rtl' ? r.left : r.right - mw;
+    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+    var top = r.bottom + 6;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+    m.style.left = left + 'px'; m.style.top = top + 'px';
+    S.menu = m;
+    window.addEventListener('scroll', closeMenu, { once: true, capture: true });
+    window.addEventListener('resize', closeMenu, { once: true });
+    var first = m.querySelector('button'); if (first) first.focus({ preventScroll: true });
+    setTimeout(function () { document.addEventListener('click', menuOutside, true); }, 0);
+  }
+  function menuOutside(e) { if (S.menu && !S.menu.contains(e.target)) closeMenu(); }
+  function closeMenu() { if (S.menu) { S.menu.remove(); S.menu = null; } document.removeEventListener('click', menuOutside, true); }
+  function moreBtn(label, onOpen) {
+    var b = h('button', { type: 'button', class: 'pf-iconbtn pf-more-btn', 'aria-label': label, title: label, 'aria-haspopup': 'menu', text: '⋯' });
+    b.addEventListener('click', function (e) { e.stopPropagation(); onOpen(b); });
+    return h('span', { class: 'pf-menu-anchor' }, [b]);
+  }
+
+  function renderCommunity(body, p) {
+    var c = S.comm || {};
+    body.appendChild(segTabs([
+      { id: 'team', label: 'الفريق', render: function () { stopPoll(); var w = h('div', { class: 'pf-content-body' }); renderTeamTab(w, p); return w; } },
+      { id: 'chat', label: 'الشات', count: c.teamUnread || null, render: function () { stopPoll(); return renderTeamChat(p); } },
+      { id: 'friends', label: 'الأصدقاء', count: ((c.incoming || 0) + (c.dmUnread || 0)) || null, render: function () { stopPoll(); return renderFriends(p); } }
+    ], 'community'));
+  }
+  /** يفتح «مجتمعي» على تبويب معيّن (من أزرار داخل الأقسام). */
+  function openCommunityTab(tab) { segMemory.community = tab; go('community'); }
+
+  /* ---------- تبويب الفريق: فريقك (للستريمر) + الفرق اللي أنت فيها */
+  function renderTeamTab(w, p) {
+    if (isStreamerAccount(p)) {
+      w.appendChild(panel('مشرفين الشات', h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { openMembersSheet({ customId: p.custom_id }, 'owner'); } }, [icon('users'), 'إدارة المشرفين']), [
+        h('p', { class: 'pf-field-help', text: 'المشرف يحذف الرسائل ويكتم ويطرد الأعضاء بشات فريقك. تختارهم من أعضاء فريقك.' })
+      ]));
+      renderTeam(w, p);
+    }
+    var list = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    w.appendChild(panel('فرق انضميت لها', h('a', { href: '#teams', class: 'pf-textbtn', 'data-sec': 'teams' }, 'ابحث عن ستريمر'), [list]));
+    loadTeam().then(function (t) {
+      list.innerHTML = '';
+      if (!(t.teams || []).length) { list.appendChild(emptyNote('ما انضميت لأي فريق للحين. ابحث عن ستريمر بالـID أو يوزر تيك توك.')); return; }
+      t.teams.forEach(function (st) {
+        list.appendChild(h('div', { class: 'pf-lrow' }, [
+          avatarEl(st),
+          h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: st.name }), metaLine([st.tiktok ? '@' + st.tiktok : null, plural(st.members, 'عضو', 'عضو')])]),
+          h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { S.chatTeam = st.customId; openCommunityTab('chat'); } }, 'الشات')
+        ]));
+      });
+    });
+  }
+
+  /* ---------- تبويب الشات: شات الفريق + الإشراف */
+  function renderTeamChat(p) {
+    var wrap = h('div', { class: 'pf-content-body' }, [h('div', { class: 'pf-skel-row', style: 'height:320px' })]);
+    window.AGPAuth.communityTeams().then(function (r) {
+      wrap.innerHTML = '';
+      var teams = (r && r.success && r.teams) || [];
+      if (!teams.length) {
+        wrap.appendChild(panel(null, null, [
+          emptyNote(isStreamerAccount(p) ? 'تعذّر تحميل الشات.' : 'انضم لفريق ستريمر عشان تكتب بشاته.'),
+          h('a', { href: '#teams', class: 'pf-btn pf-btn-primary pf-btn-sm', 'data-sec': 'teams' }, 'ابحث عن ستريمر')
+        ]));
+        return;
+      }
+      var cur = teams.filter(function (t) { return t.customId === S.chatTeam; })[0] || teams[0];
+      S.chatTeam = cur.customId;
+      if (teams.length > 1) {
+        var bar = h('div', { class: 'pf-tchips', role: 'tablist', 'aria-label': 'اختر الفريق' });
+        teams.forEach(function (t) {
+          bar.appendChild(h('button', { type: 'button', role: 'tab', class: 'pf-tchip' + (t.customId === cur.customId ? ' on' : ''), 'aria-selected': t.customId === cur.customId ? 'true' : 'false',
+            onclick: function () { S.chatTeam = t.customId; stopPoll(); var n = renderTeamChat(p); wrap.replaceWith(n); } },
+            [avatarEl(t), h('span', { text: t.role === 'owner' ? 'فريقي' : t.name }), t.unread && t.customId !== cur.customId ? h('span', { class: 'pf-seg-n num', text: String(t.unread) }) : null]));
+        });
+        wrap.appendChild(bar);
+      }
+      wrap.appendChild(chatBox(cur, p));
+    }).catch(function () { wrap.innerHTML = ''; wrap.appendChild(emptyNote('تعذّر تحميل الشات.')); });
+    return wrap;
+  }
+
+  function chatBox(team, p) {
+    var st = { lastId: 0, since: 0, role: null, muted: null, ids: {} };
+    var feed = h('div', { class: 'pf-chat-feed', role: 'log', 'aria-live': 'polite', 'aria-label': 'رسائل الشات' }, [h('div', { class: 'pf-skel-row' })]);
+    var roleSlot = h('span');
+    var manage = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', hidden: true, onclick: function () { openMembersSheet(team, st.role, reloadAll); } }, [icon('users'), 'الأعضاء والمشرفين']);
+    var muteNote = h('div', { class: 'pf-chat-muted', hidden: true });
+    var input = h('textarea', { class: 'pf-input pf-chat-input', rows: '1', maxlength: '500', placeholder: 'اكتب رسالة للفريق…', 'aria-label': 'رسالتك' });
+    var send = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-chat-send', text: 'إرسال' });
+    var box = h('div', { class: 'pf-panel pf-chat' }, [
+      h('div', { class: 'pf-chat-head' }, [avatarEl(team), h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: team.role === 'owner' ? 'شات فريقك' : 'شات فريق ' + team.name }), roleSlot]), manage]),
+      feed, muteNote,
+      h('div', { class: 'pf-chat-compose' }, [input, send])
+    ]);
+
+    function nearBottom() { return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80; }
+    function msgRow(m) {
+      var canDel = m.mine || (st.role === 'owner' && m.author.role !== 'owner') || (st.role === 'mod' && m.author.role === 'member');
+      var canMod = !m.mine && ((st.role === 'owner' && m.author.role !== 'owner') || (st.role === 'mod' && m.author.role === 'member'));
+      var actions = null;
+      if (canDel || canMod) {
+        actions = moreBtn('خيارات الرسالة', function (btn) {
+          var items = [];
+          if (canDel) items.push(['حذف الرسالة', function () { act(window.AGPAuth.teamChatDelete(team.customId, m.id), 'انحذفت الرسالة', function () { removeMsg(m.id); }); }, true]);
+          if (canMod) {
+            items.push(null, 'كتم ' + m.author.name);
+            MUTES.forEach(function (mu) { items.push([mu[1], function () { act(window.AGPAuth.teamChatMute(team.customId, m.author.customId, mu[0]), 'انكتم ' + m.author.name); }]); });
+            items.push(null, ['طرد من الفريق', function () {
+              if (!window.confirm('تطرد ' + m.author.name + ' من الفريق؟ يطلع من الشات ويقدر ينضم مرة ثانية.')) return;
+              act(window.AGPAuth.teamChatKick(team.customId, m.author.customId), 'انطرد ' + m.author.name, function () { S.team = null; });
+            }, true]);
+          }
+          openMenu(btn, items);
+        });
+      }
+      return h('div', { class: 'pf-msg-row' + (m.mine ? ' mine' : ''), 'data-id': String(m.id) }, [
+        m.mine ? null : avatarEl(m.author),
+        h('div', { class: 'pf-bubble' }, [
+          m.mine ? null : h('div', { class: 'pf-bubble-who' }, [h('bdi', { text: m.author.name }), ROLE_LABEL[m.author.role] ? h('span', { class: 'pf-role pf-role-' + m.author.role, text: ROLE_LABEL[m.author.role] }) : null]),
+          h('div', { class: 'pf-bubble-t', dir: 'auto', text: m.body }),
+          h('div', { class: 'pf-bubble-at', text: chatTime(m.at) })
+        ]),
+        actions
+      ]);
+    }
+    function removeMsg(id) { var el = feed.querySelector('[data-id="' + id + '"]'); if (el) el.remove(); delete st.ids[id]; if (!feed.querySelector('.pf-msg-row')) feed.appendChild(emptyNote('ما فيه رسائل للحين. ابدأ السالفة!')); }
+    function addMsgs(list, forceScroll) {
+      var stick = forceScroll || nearBottom();
+      var empty = feed.querySelector('.pf-empty, .pf-skel-row'); if (empty && list.length) empty.remove();
+      list.forEach(function (m) { if (st.ids[m.id]) return; st.ids[m.id] = true; feed.appendChild(msgRow(m)); st.lastId = Math.max(st.lastId, m.id); });
+      if (stick) feed.scrollTop = feed.scrollHeight;
+    }
+    function applyMeta(r) {
+      if (r.myRole !== st.role) {
+        st.role = r.myRole;
+        roleSlot.innerHTML = '';
+        roleSlot.appendChild(ROLE_LABEL[st.role] ? pill(ROLE_LABEL[st.role], st.role === 'owner' ? 'ok' : 'warn') : h('div', { class: 'pf-lrow-s', text: 'عضو' }));
+        manage.hidden = !(st.role === 'owner' || st.role === 'mod');
+      }
+      st.muted = r.muted;
+      muteNote.hidden = !r.muted;
+      muteNote.textContent = r.muted ? muteText(r.muted) + '، ما تقدر تكتب بالشات.' : '';
+      input.disabled = send.disabled = !!r.muted;
+    }
+    function load(first) {
+      return window.AGPAuth.teamChat(team.customId, first ? 0 : st.lastId, first ? 0 : st.since).then(function (r) {
+        if (!r || !r.success) {
+          if (r && (r.error === 'not_member' || r.error === 'team_not_found')) { stopPoll(); feed.innerHTML = ''; feed.appendChild(emptyNote('ما عدت عضو بهالفريق.')); input.disabled = send.disabled = true; }
+          return;
+        }
+        st.since = r.now;
+        applyMeta(r);
+        if (first) { feed.innerHTML = ''; st.ids = {}; if (!r.messages.length) feed.appendChild(emptyNote('ما فيه رسائل للحين. ابدأ السالفة!')); }
+        (r.removed || []).forEach(removeMsg);
+        addMsgs(r.messages, first);
+        if (first && S.comm && S.comm.teamUnread) refreshCommunity();
+      }).catch(function () {});
+    }
+    function reloadAll() { load(true); }
+    function act(promise, ok, after) {
+      promise.then(function (r) { if (r && r.success) { showToast(ok); if (after) after(); load(false); } else showToast(commErr(r), true); }).catch(function () { showToast(commErr(null), true); });
+    }
+    function doSend() {
+      var text = input.value.trim();
+      if (!text || send.disabled) return;
+      send.disabled = true;
+      window.AGPAuth.teamChatSend(team.customId, text).then(function (r) {
+        send.disabled = !!st.muted;
+        if (r && r.success) { input.value = ''; autoGrow(); addMsgs([r.message], true); input.focus(); }
+        else { showToast(commErr(r), true); if (r && r.error === 'muted') load(false); }
+      }).catch(function () { send.disabled = false; });
+    }
+    function autoGrow() { input.style.height = 'auto'; input.style.height = Math.min(120, input.scrollHeight) + 'px'; }
+    send.addEventListener('click', doSend);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); } });
+    input.addEventListener('input', autoGrow);
+    load(true);
+    startPoll(box, function () { load(false); });
+    return box;
+  }
+
+  /** أعضاء الفريق للإشراف: مشرفين، كتم/فك، طرد. */
+  function openMembersSheet(team, myRole, onChange) {
+    var sheet = openSheet('الأعضاء والمشرفين', myRole === 'owner' ? 'أضف مشرفين يساعدونك بالشات: يحذفون الرسائل ويكتمون ويطردون الأعضاء.' : 'المشرف يقدر يكتم ويطرد الأعضاء (مو المشرفين).');
+    var filter = h('input', { type: 'search', class: 'pf-input pf-input-sm', placeholder: 'ابحث بالاسم أو اليوزر', 'aria-label': 'ابحث بالأعضاء' });
+    var list = h('div', { class: 'pf-list pf-list-scroll' }, [h('div', { class: 'pf-skel-row' })]);
+    sheet.body.appendChild(filter);
+    sheet.body.appendChild(list);
+    var members = [];
+    function load() {
+      window.AGPAuth.teamChatMembers(team.customId).then(function (r) {
+        if (!r || !r.success) { list.innerHTML = ''; list.appendChild(emptyNote(commErr(r))); return; }
+        members = r.members; paint();
+      });
+    }
+    function run(promise, ok) {
+      promise.then(function (r) { if (r && r.success) { showToast(ok); load(); if (onChange) onChange(); } else showToast(commErr(r), true); });
+    }
+    function paint() {
+      var q = filter.value.trim().replace(/^@/, '').toLowerCase();
+      list.innerHTML = '';
+      var shown = members.filter(function (m) { return !q || (m.name || '').toLowerCase().indexOf(q) > -1 || (m.tiktok || '').toLowerCase().indexOf(q) > -1; });
+      if (!shown.length) { list.appendChild(emptyNote(members.length ? 'ما فيه نتائج.' : 'فريقك فاضي للحين.')); return; }
+      shown.forEach(function (m) {
+        var canMod = myRole === 'owner' || m.role === 'member';
+        var items = [];
+        if (myRole === 'owner') items.push(m.role === 'mod'
+          ? ['شيل الإشراف', function () { run(window.AGPAuth.setTeamModerator(m.customId, false), 'انشال الإشراف من ' + m.name); }]
+          : ['خلّه مشرف', function () { run(window.AGPAuth.setTeamModerator(m.customId, true), 'صار ' + m.name + ' مشرف'); }]);
+        if (canMod) {
+          if (m.muted) items.push(['فك الكتم', function () { run(window.AGPAuth.teamChatUnmute(team.customId, m.customId), 'انفك كتم ' + m.name); }]);
+          items.push(null, 'كتم');
+          MUTES.forEach(function (mu) { items.push([mu[1], function () { run(window.AGPAuth.teamChatMute(team.customId, m.customId, mu[0]), 'انكتم ' + m.name); }]); });
+          items.push(null, ['طرد من الفريق', function () {
+            if (!window.confirm('تطرد ' + m.name + ' من الفريق؟')) return;
+            S.team = null; run(window.AGPAuth.teamChatKick(team.customId, m.customId), 'انطرد ' + m.name);
+          }, true]);
+        }
+        list.appendChild(h('div', { class: 'pf-lrow' }, [
+          avatarEl(m),
+          h('div', { class: 'pf-lrow-txt' }, [
+            h('div', { class: 'pf-lrow-t' }, [h('bdi', { text: m.name }), m.role === 'mod' ? h('span', { class: 'pf-role pf-role-mod', text: 'مشرف' }) : null]),
+            metaLine([m.tiktok ? '@' + m.tiktok : null, '#' + m.customId, muteText(m.muted) || null])
+          ]),
+          items.length ? moreBtn('خيارات ' + m.name, function (btn) { openMenu(btn, items); }) : null
+        ]));
+      });
+    }
+    filter.addEventListener('input', paint);
+    load();
+  }
+
+  /* ---------- تبويب الأصدقاء: إضافة، طلبات، قائمة، ومحادثة خاصة */
+  function renderFriends(p) {
+    var wrap = h('div', { class: 'pf-content-body' });
+    if (S.dmWith) { wrap.appendChild(dmView(S.dmWith, function () { S.dmWith = null; var n = renderFriends(p); wrap.replaceWith(n); })); return wrap; }
+
+    var input = h('input', { type: 'search', class: 'pf-input', placeholder: 'الـID أو يوزر تيك توك', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'أضف صديق' });
+    var results = h('div', { class: 'pf-list' });
+    var myId = h('button', { type: 'button', class: 'pf-chipbtn num', title: 'نسخ الـID' }, ['#' + p.custom_id, icon('copy')]);
+    myId.addEventListener('click', function () { copyText(String(p.custom_id), function () { showToast('انسخ الـID'); }); });
+    wrap.appendChild(panel('أضف صديق', h('span', { class: 'pf-panel-sub' }, ['الـID حقك ', myId]), [h('div', { class: 'pf-searchbox' }, [icon('search'), input]), results]));
+    var incomingBox = h('div');
+    var friendsList = h('div', { class: 'pf-list' }, [h('div', { class: 'pf-skel-row' })]);
+    var friendsCount = h('span', { class: 'pf-panel-sub num' });
+    var extra = h('div');
+    wrap.appendChild(incomingBox);
+    wrap.appendChild(panel('أصدقائي', friendsCount, [friendsList]));
+    wrap.appendChild(extra);
+
+    function rerender() { var n = renderFriends(p); wrap.replaceWith(n); }
+    function action(name, cid, ok) {
+      return window.AGPAuth.friendAction(name, cid).then(function (r) {
+        if (r && r.success) { if (ok) showToast(ok); refreshCommunity(); return r; }
+        showToast(commErr(r), true); return null;
+      }).catch(function () { showToast(commErr(null), true); return null; });
+    }
+    function relBtn(u) {
+      var map = { none: ['إضافة', 'pf-btn-primary', 'request'], outgoing: ['إلغاء الطلب', 'pf-btn-ghost', 'cancel'], incoming: ['قبول', 'pf-btn-primary', 'accept'],
+        blocked: ['فك الحظر', 'pf-btn-ghost', 'unblock'] };
+      if (u.relation === 'self') return pill('أنت');
+      if (u.relation === 'friend') return h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { S.dmWith = u; rerender(); } }, 'راسله');
+      var cfg = map[u.relation] || map.none;
+      var b = h('button', { type: 'button', class: 'pf-btn pf-btn-sm ' + cfg[1], text: cfg[0] });
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        action(cfg[2], u.customId).then(function (r) {
+          b.disabled = false;
+          if (!r) return;
+          u.relation = r.status || 'none';
+          showToast(u.relation === 'outgoing' ? 'انرسل طلب الصداقة لـ' + u.name : u.relation === 'friend' ? 'صرتوا أصدقاء' : 'تم');
+          b.replaceWith(relBtn(u));
+          if (u.relation === 'friend') loadLists();
+        });
+      });
+      return b;
+    }
+    function userRow(u, right, sub) {
+      return h('div', { class: 'pf-lrow' }, [avatarEl(u), h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t' }, [h('bdi', { text: u.name })]), sub || metaLine([u.tiktok ? '@' + u.tiktok : null, '#' + u.customId])]), right]);
+    }
+
+    var timer = null, seq = 0;
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      var qv = input.value.trim();
+      if (qv.replace(/^[@#]/, '').length < 2) { results.innerHTML = ''; return; }
+      timer = setTimeout(function () {
+        var my = ++seq;
+        window.AGPAuth.friendsSearch(qv).then(function (r) {
+          if (my !== seq) return;
+          results.innerHTML = '';
+          var list = (r && r.results) || [];
+          if (!list.length) { results.appendChild(emptyNote('ما لقينا أحد بهالـID أو اليوزر.')); return; }
+          list.forEach(function (u) { results.appendChild(userRow(u, relBtn(u))); });
+        });
+      }, 300);
+    });
+
+    function loadLists() {
+      window.AGPAuth.friendsList().then(function (r) {
+        if (!r || !r.success) { friendsList.innerHTML = ''; friendsList.appendChild(emptyNote('تعذّر تحميل الأصدقاء.')); return; }
+        // طلبات واردة
+        incomingBox.innerHTML = '';
+        if (r.incoming.length) {
+          incomingBox.appendChild(panel('طلبات صداقة', h('span', { class: 'pf-panel-sub num', text: String(r.incoming.length) }), [h('div', { class: 'pf-list' }, r.incoming.map(function (u) {
+            var yes = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', text: 'قبول', onclick: function () { yes.disabled = true; action('accept', u.customId, 'صرتوا أصدقاء مع ' + u.name).then(function () { loadLists(); }); } });
+            var no = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: 'رفض', onclick: function () { no.disabled = true; action('decline', u.customId).then(function () { loadLists(); }); } });
+            return userRow(u, h('div', { class: 'pf-row-btns' }, [yes, no]));
+          }))], 'pf-panel-hl'));
+        }
+        // الأصدقاء
+        friendsCount.textContent = r.friends.length ? plural(r.friends.length, 'صديق', 'صديق') : '';
+        friendsList.innerHTML = '';
+        if (!r.friends.length) friendsList.appendChild(emptyNote('ما عندك أصدقاء للحين. أضفهم بالـID أو يوزر تيك توك.'));
+        r.friends.forEach(function (u) {
+          var sub = u.last ? h('div', { class: 'pf-lrow-s pf-last' }, [u.last.mine ? 'أنت: ' : '', h('bdi', { text: u.last.body })]) : metaLine([u.tiktok ? '@' + u.tiktok : null, '#' + u.customId]);
+          var menu = moreBtn('خيارات ' + u.name, function (btn) {
+            openMenu(btn, [
+              ['حذف من الأصدقاء', function () { if (window.confirm('تحذف ' + u.name + ' من أصدقائك؟')) action('remove', u.customId, 'انحذف من أصدقائك').then(loadLists); }],
+              ['حظر', function () { if (window.confirm('تحظر ' + u.name + '؟ ينحذف من أصدقائك وما يقدر يراسلك أو يرسل لك طلب.')) action('block', u.customId, 'انحظر ' + u.name).then(loadLists); }, true]
+            ]);
+          });
+          var row = userRow(u, h('div', { class: 'pf-row-btns' }, [u.unread ? h('span', { class: 'pf-side-count num', text: String(u.unread) }) : null, menu]), sub);
+          row.classList.add('pf-lrow-click');
+          row.setAttribute('tabindex', '0');
+          row.setAttribute('role', 'button');
+          row.setAttribute('aria-label', 'محادثة ' + u.name);
+          function open(e) { if (e.target.closest('.pf-menu-anchor, .pf-menu')) return; S.dmWith = u; rerender(); }
+          row.addEventListener('click', open);
+          row.addEventListener('keydown', function (e) { if (e.key === 'Enter') open(e); });
+          friendsList.appendChild(row);
+        });
+        // المرسلة والمحظورين
+        extra.innerHTML = '';
+        if (r.outgoing.length || r.blocked.length) {
+          var kids = [];
+          if (r.outgoing.length) kids.push(h('div', { class: 'pf-side-label', text: 'طلبات أرسلتها' }), h('div', { class: 'pf-list' }, r.outgoing.map(function (u) {
+            return userRow(u, h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: 'إلغاء', onclick: function () { action('cancel', u.customId, 'انلغى الطلب').then(loadLists); } }));
+          })));
+          if (r.blocked.length) kids.push(h('div', { class: 'pf-side-label', text: 'المحظورين' }), h('div', { class: 'pf-list' }, r.blocked.map(function (u) {
+            return userRow(u, h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', text: 'فك الحظر', onclick: function () { action('unblock', u.customId, 'انفك الحظر').then(loadLists); } }));
+          })));
+          extra.appendChild(h('details', { class: 'pf-more' }, [h('summary', { text: 'الطلبات المرسلة والمحظورين (' + (r.outgoing.length + r.blocked.length) + ')' })].concat(kids)));
+        }
+      }).catch(function () {});
+    }
+    loadLists();
+    return wrap;
+  }
+
+  /** محادثة خاصة مع صديق. */
+  function dmView(friend, onBack) {
+    var st = { lastId: 0, ids: {} };
+    var feed = h('div', { class: 'pf-chat-feed', role: 'log', 'aria-live': 'polite', 'aria-label': 'المحادثة' }, [h('div', { class: 'pf-skel-row' })]);
+    var input = h('textarea', { class: 'pf-input pf-chat-input', rows: '1', maxlength: '500', placeholder: 'اكتب رسالة…', 'aria-label': 'رسالتك' });
+    var send = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-chat-send', text: 'إرسال' });
+    var back = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { stopPoll(); onBack(); } }, '→ رجوع');
+    var box = h('div', { class: 'pf-panel pf-chat' }, [
+      h('div', { class: 'pf-chat-head' }, [back, avatarEl(friend), h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t' }, [h('bdi', { text: friend.name })]), metaLine([friend.tiktok ? '@' + friend.tiktok : null, '#' + friend.customId])])]),
+      feed,
+      h('div', { class: 'pf-chat-compose' }, [input, send])
+    ]);
+    function row(m) {
+      return h('div', { class: 'pf-msg-row' + (m.mine ? ' mine' : ''), 'data-id': String(m.id) }, [
+        h('div', { class: 'pf-bubble' }, [h('div', { class: 'pf-bubble-t', dir: 'auto', text: m.body }), h('div', { class: 'pf-bubble-at', text: chatTime(m.at) })])
+      ]);
+    }
+    function setSeen(id) {
+      Array.prototype.forEach.call(feed.querySelectorAll('.pf-seen'), function (x) { x.remove(); });
+      var el = id && feed.querySelector('[data-id="' + id + '"] .pf-bubble-at');
+      if (el) el.appendChild(h('span', { class: 'pf-seen', text: ' · شافها' }));
+    }
+    function add(list, force) {
+      var stick = force || feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+      var empty = feed.querySelector('.pf-empty, .pf-skel-row'); if (empty && list.length) empty.remove();
+      list.forEach(function (m) { if (st.ids[m.id]) return; st.ids[m.id] = true; feed.appendChild(row(m)); st.lastId = Math.max(st.lastId, m.id); });
+      if (stick) feed.scrollTop = feed.scrollHeight;
+    }
+    function load(first) {
+      return window.AGPAuth.friendChat(friend.customId, first ? 0 : st.lastId).then(function (r) {
+        if (!r || !r.success) {
+          if (r && r.error === 'not_friends') { stopPoll(); feed.innerHTML = ''; feed.appendChild(emptyNote('ما عدتوا أصدقاء، فالمحادثة مقفلة.')); input.disabled = send.disabled = true; }
+          return;
+        }
+        if (first) { feed.innerHTML = ''; if (!r.messages.length) feed.appendChild(emptyNote('ابدأ المحادثة مع ' + friend.name + '.')); }
+        add(r.messages, first);
+        setSeen(r.seenUpTo);
+        if (first) refreshCommunity();
+      }).catch(function () {});
+    }
+    function doSend() {
+      var text = input.value.trim();
+      if (!text || send.disabled) return;
+      send.disabled = true;
+      window.AGPAuth.friendChatSend(friend.customId, text).then(function (r) {
+        send.disabled = false;
+        if (r && r.success) { input.value = ''; input.style.height = 'auto'; add([r.message], true); input.focus(); }
+        else showToast(commErr(r), true);
+      }).catch(function () { send.disabled = false; });
+    }
+    send.addEventListener('click', doSend);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); } });
+    input.addEventListener('input', function () { input.style.height = 'auto'; input.style.height = Math.min(120, input.scrollHeight) + 'px'; });
+    load(true);
+    startPoll(box, function () { load(false); });
+    return box;
+  }
+
   /* ---------- ابحث عن ستريمر (للكل) + فرقي */
   function renderTeams(body) {
     var input = h('input', { id: 'pfTeamSearch', type: 'search', class: 'pf-input', placeholder: 'الـID أو يوزر تيك توك', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'ابحث عن ستريمر' });
@@ -2056,6 +2525,8 @@
     if (isStreamerAccount(p) && typeof window.AGPAuth.getSubscription === 'function') window.AGPAuth.getSubscription().then(function (r) {
       if (r && r.success && setSubAlert(r.subscription) && S.section === 'overview') go('overview', { noHash: true });
     }).catch(function () {});
+    // «مجتمعي»: رسائل جديدة وطلبات صداقة — شارة بالقائمة
+    refreshCommunity();
     // أكواد ممنوحة ما انستردت — شارة على «أكوادي»
     loadGrants().then(function () { if (pendingGrants() > 0) renderSideNav(); });
   }
