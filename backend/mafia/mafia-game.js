@@ -153,7 +153,7 @@ function createGame(roster, settings, hooks) {
         if (!actors.length) return false;   // دور وهمي (صاحبه ميت): يكمّل مدته
         return actors.every(function (a) { return G.night.confirmed[a.id]; });
     }
-    function picked(N, id) { return G.turn === 'mafia' ? !!N.ops[id] : !!N.actions[id]; }
+    function picked(N, id) { return G.turn === 'mafia' ? !!N.ops[id] || (teamMode() && realCard(N.cards[id])) : !!N.actions[id]; }
 
     /** تأكيد الاختيار: نهائي، والنتيجة تطلع على طول (المحقق نتيجته، الطبيب الحماية، المافيا الهدف) ويدري فيها الفريق */
     function confirm(me) {
@@ -161,8 +161,15 @@ function createGame(roster, settings, hooks) {
         if (N.confirmed[me.id] || turnActors(turn).indexOf(me) < 0 || !picked(N, me.id)) return;
         N.confirmed[me.id] = true;
         if (turn === 'mafia') {
-            if (anyAuxCard() && !N.cards[me.id] && N.ops[me.id].op !== 'recruit') N.cards[me.id] = { card: 'none' };   // الكرت اختياري
-            var o = N.ops[me.id], t = o.op === 'skip' ? null : P(o.target);
+            var o = N.ops[me.id];
+            if (!o) {   // فريق المافيا: اختار كرت بدل الهدف
+                var mc = N.cards[me.id], mt = P(mc.target), ctxt = 'كرت ' + CARD_NAMES[mc.card] + (mt ? ' على ' + mt.name : '');
+                notice(me, '🃏 اخترت ' + ctxt);
+                aliveMafia().forEach(function (m) { if (m !== me) notice(m, '🃏 زميلك ' + me.name + ' · ' + ctxt, true); });
+                return changed();
+            }
+            if (!teamMode() && anyAuxCard() && !N.cards[me.id] && o.op !== 'recruit') N.cards[me.id] = { card: 'none' };   // الكرت اختياري
+            var t = o.op === 'skip' ? null : P(o.target);
             var txt = o.op === 'skip' ? 'تخطى الليلة' : (o.op === 'recruit' ? 'يبي يجنّد ' : 'الهدف: ') + t.name;
             notice(me, o.op === 'skip' ? '⏭️ تخطيت الليلة' : (o.op === 'recruit' ? '🤝 اخترت تجنيد ' : '🔪 اخترت ') + (t ? t.name : ''));
             aliveMafia().forEach(function (m) { if (m !== me) notice(m, '🔪 زميلك ' + me.name + ' · ' + txt, true); });
@@ -209,6 +216,19 @@ function createGame(roster, settings, hooks) {
     }
     function targetAllowed(picks, meId, target) { var ts = teamTargets(picks, meId); return ts.length < MAX_TARGETS || ts.indexOf(target) >= 0; }
     function opPicks(N) { var o = {}; Object.keys(N.ops).forEach(function (k) { o[k] = N.ops[k].op === 'skip' ? 'skip' : N.ops[k].target; }); return o; }
+    // فريق المافيا (2 أو أكثر): كل واحد يختار هدف أو كرت (مو الاثنين)، ولو صار عندهم هدفين مختلفين تنقفل الكروت الليلة.
+    // المافيا لحاله يبقى زي قبل: هدف وكرت مع بعض
+    function teamMode() { return aliveMafia().length >= 2; }
+    function cardsLocked() { return !!G.night && teamMode() && teamTargets(opPicks(G.night)).length >= MAX_TARGETS; }
+    function realCard(c) { return !!c && c.card !== 'none'; }
+    /** لو انقفلت الكروت (هدفين مختلفين): تنلغى الكروت اللي انختارت، والفريق يدري */
+    function cancelLockedCards(N) {
+        if (!cardsLocked()) return;
+        var gone = Object.keys(N.cards).filter(function (k) { return realCard(N.cards[k]); });
+        if (!gone.length) return;
+        gone.forEach(function (k) { delete N.cards[k]; });
+        aliveMafia().forEach(function (m) { notice(m, '🔒 اخترتوا شخصين مختلفين — الكروت انقفلت الليلة وانلغى الكرت اللي انختار', true); });
+    }
     function rolePicks(N, role) { var o = {}; aliveRole(role).forEach(function (d) { if (N.actions[d.id]) o[d.id] = N.actions[d.id]; }); return o; }
 
     // قرار المافيا ينحسب بنهاية دورهم (عشان كرت الحماية/التضليل يأثر على فحص المحقق اللي بعدهم)
@@ -230,6 +250,7 @@ function createGame(roster, settings, hooks) {
         var card = plurality(mafs.map(function (m) { return N.cards[m.id]; }).filter(Boolean));
         if (card && card.card === 'none') card = null;
         if (op && op.op === 'recruit') card = null;   // التجنيد بديل القتل وما يجتمع مع كرت
+        if (cardsLocked()) card = null;   // فريق المافيا اختار هدفين مختلفين: الكروت مقفولة الليلة
         var opTarget = op && op.op === 'recruit' ? P(op.target) : null;
         if (op && op.op === 'recruit' && !validT(opTarget)) { op = null; opTarget = null; }
         G.mafiaPrev = op ? (op.op === 'kill' ? killTargets.map(function (t) { return t.id; }) : [opTarget.id]) : [];   // المافيا ما يستهدفون نفس الشخص ليلتين ورا بعض
@@ -439,20 +460,23 @@ function createGame(roster, settings, hooks) {
             var turn = G.turn;
             if (a === 'confirm') return confirm(me);
             if (N.confirmed[id]) return;   // بعد التأكيد ما يتغيّر شي
-            if (a === 'kill' && arg === 'skip' && me.faction === 'mafia' && turn === 'mafia') N.ops[id] = { op: 'skip' };   // تخطي: ما يقتلون أحد
+            if (a === 'kill' && arg === 'skip' && me.faction === 'mafia' && turn === 'mafia') { N.ops[id] = { op: 'skip' }; if (teamMode()) delete N.cards[id]; }   // تخطي: ما يقتلون أحد
             else if ((a === 'kill' || a === 'recruit') && me.faction === 'mafia' && turn === 'mafia') {
                 var t = P(String(arg || ''));
                 if (!t || !t.alive || t.faction === 'mafia' || G.mafiaPrev.indexOf(t.id) >= 0) return;   // ممنوع نفس هدف الليلة اللي فاتت
                 if (!targetAllowed(opPicks(N), id, t.id)) return;   // الفريق اختار شخصين مختلفين: واحد منهم بس
                 if (a === 'recruit' && !available('recruit')) return;
                 N.ops[id] = { op: a, target: t.id };
+                if (teamMode()) { delete N.cards[id]; cancelLockedCards(N); }   // الفريق: الهدف بدل الكرت، وهدفين مختلفين يقفلون الكروت
             } else if (a === 'card' && me.faction === 'mafia' && turn === 'mafia') {
                 var parts = String(arg || '').split('|'), c = parts[0], ct = P(parts[1] || '');
-                if (c === 'none') N.cards[id] = { card: 'none' };
+                if (c === 'none') { if (teamMode()) delete N.cards[id]; else N.cards[id] = { card: 'none' }; }
                 else {
+                    if (cardsLocked()) return;
                     if (['shield', 'reveal', 'mislead', 'silence'].indexOf(c) < 0 || !available(c) || !ct || !ct.alive) return;
                     if ((c === 'shield') !== (ct.faction === 'mafia')) return;   // الحماية لعضو مافيا، والباقي لأحد من المدينة
                     N.cards[id] = { card: c, target: ct.id };
+                    if (teamMode()) delete N.ops[id];   // الفريق: الكرت بدل الهدف
                 }
             } else if ((a === 'protect' || a === 'inspect') && arg === 'skip' && me.role === (a === 'protect' ? 'doctor' : 'detective') && turn === me.role) {
                 N.actions[id] = 'skip';   // تخطي الليلة
@@ -556,7 +580,7 @@ function createGame(roster, settings, hooks) {
                 // مين من فريقي أكّد (المافيا يشوفون المافيا، والأطباء الأطباء، والمحققين المحققين)
                 var mates = meMafia ? aliveMafia() : aliveRole(me.role);
                 if (meMafia || me.role === 'doctor' || me.role === 'detective') { v.me.teamDone = {}; mates.forEach(function (p) { v.me.teamDone[p.id] = !!G.night.confirmed[p.id]; }); }
-                if (meMafia) { v.me.ops = G.night.ops; v.me.cardVotes = G.night.cards; v.me.mafiaPrev = G.mafiaPrev; }
+                if (meMafia) { v.me.ops = G.night.ops; v.me.cardVotes = G.night.cards; v.me.mafiaPrev = G.mafiaPrev; v.me.teamMode = teamMode(); v.me.cardsLocked = cardsLocked(); }
                 if (me.role === 'doctor') { v.me.protect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'doctor'); }
                 if (me.role === 'detective') { v.me.inspect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'detective'); }
             }

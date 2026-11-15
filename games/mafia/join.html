@@ -913,32 +913,40 @@ body.watching { overflow: hidden; }
         var key = function (o) { return o ? JSON.stringify(o) : ''; };
         var opsK = team.map(function (m) { return key(ops[m.id]); }), cdK = team.map(function (m) { return key(cv[m.id]); });
         var recruitMine = ops[me.id] && ops[me.id].op === 'recruit';
-        var agreed = opsK.every(function (k) { return k && k === opsK[0]; }) && (!anyCard || recruitMine || cdK.every(function (k) { return k && k === cdK[0]; }));
+        // فريق المافيا (2+): كل واحد يختار هدف أو كرت، وهدفين مختلفين يقفلون الكروت الليلة
+        var tm = !!me.teamMode, locked = !!me.cardsLocked, realC = function (c) { return c && c.card !== 'none'; };
+        var pickedAny = function (id) { return ops[id] || (tm && realC(cv[id])); };
+        var agreed = tm ? (function () { var t = team.filter(function (m) { return ops[m.id]; }).map(function (m) { return key(ops[m.id]); });
+                return t.length && team.every(function (m) { return pickedAny(m.id); }) && t.every(function (k) { return k === t[0]; }); })()
+            : opsK.every(function (k) { return k && k === opsK[0]; }) && (!anyCard || recruitMine || cdK.every(function (k) { return k && k === cdK[0]; }));
         var picks = {}; Object.keys(ops).forEach(function (k) { picks[k] = ops[k].op === 'skip' ? 'skip' : ops[k].target; });
         var lock = lockOf(picks, me.id), prev = me.mafiaPrev || [], allIn = team.every(function (m) { return ops[m.id]; });
         var split = (function () { var l = []; team.forEach(function (m) { var o = ops[m.id]; if (o && o.op === 'kill' && l.indexOf(o.target) < 0) l.push(o.target); }); return l.length > 1; })();
-        var done = team.filter(function (m) { return ops[m.id]; }).length;
+        var done = team.filter(function (m) { return pickedAny(m.id); }).length;
         var cnt = function (fn) { return team.filter(function (m) { return fn(m.id); }).length; };
         // الكروت كانت تحت شبكة الأهداف، وبالجوالات الصغيرة تنضغط وتختفي (ومعها زر «تأكيد»). الحين الدور تبويبين فوق:
         // «🔪 الهدف» و«🃏 الكرت»، وكل واحد ياخذ المساحة كاملة. بعد ما يختار الهدف ينتقل للكروت مرة وحدة بالليلة
         var showCards = aux.length && !recruitMine;
-        if (!showCards || !anyCard) S.mstep = 'target';
-        else if (ops[me.id] && S.mstepAuto !== G.id + G.round && !cv[me.id]) { S.mstepAuto = G.id + G.round; S.mstep = 'card'; }
+        if (!showCards || !anyCard || locked) S.mstep = 'target';
+        else if (!tm && ops[me.id] && S.mstepAuto !== G.id + G.round && !cv[me.id]) { S.mstepAuto = G.id + G.round; S.mstep = 'card'; }
         var step = S.mstep === 'card' ? 'card' : 'target';
         var myOp = ops[me.id], myCard = cv[me.id];
-        var tgtTxt = !myOp ? 'اختار' : myOp.op === 'skip' ? '⏭️ تخطي' : (myOp.op === 'recruit' ? '🤝 ' : '') + esc(pname(G, myOp.target));
-        var cardTxt = !anyCard ? 'من الليلة 2' : !myCard ? 'اختياري' : myCard.card === 'none' ? 'بدون' : CARD_INFO[myCard.card].i + ' ' + esc(pname(G, myCard.target));
+        var tgtTxt = !myOp ? (tm && realC(myCard) ? '🃏 اخترت كرت' : 'اختار') : myOp.op === 'skip' ? '⏭️ تخطي' : (myOp.op === 'recruit' ? '🤝 ' : '') + esc(pname(G, myOp.target));
+        var cardTxt = !anyCard ? 'من الليلة 2' : locked ? '🔒 مقفولة الليلة' : tm && myOp ? 'بدل الهدف' : !myCard ? 'اختياري' : myCard.card === 'none' ? 'بدون' : CARD_INFO[myCard.card].i + ' ' + esc(pname(G, myCard.target));
         var html = showCards ? '<div class="msteps">' +
             '<button type="button" class="mstep' + (step === 'target' ? ' on' : '') + (myOp ? ' done' : '') + '" data-mstep="target"><b>🔪 الهدف <span class="mcnt' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅' : done + '/' + team.length) + '</span></b><small>' + tgtTxt + '</small></button>' +
-            '<button type="button" class="mstep' + (step === 'card' ? ' on' : '') + (myCard ? ' done' : '') + (anyCard && !myCard && myOp ? ' need' : '') + '" data-mstep="card"' + (anyCard ? '' : ' disabled') + '><b>🃏 الكرت</b><small>' + cardTxt + '</small></button></div>' : '';
+            '<button type="button" class="mstep' + (step === 'card' ? ' on' : '') + (myCard ? ' done' : '') + (anyCard && !locked && !tm && !myCard && myOp ? ' need' : '') + '" data-mstep="card"' + (anyCard && !locked ? '' : ' disabled') + '><b>🃏 الكرت</b><small>' + cardTxt + '</small></button></div>' : '';
         if (step === 'card') {
+            if (tm) html += '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🃏 لو اخترت كرت ما تختار هدف — زملاءك يختارون الهدف</div>';
             html += '<div class="gwrap"><div class="cgrid">' + aux.map(function (c) {
                 var I = CARD_INFO[c.id], n = cnt(function (id) { return cv[id] && cv[id].card === c.id; });
-                return '<button type="button" class="ct' + (myCard && myCard.card === c.id ? ' sel' : '') + '"' + (c.available ? ' data-cardsel="' + c.id + '"' : ' disabled') + '><span>' + I.i + '</span><b>' + esc(c.name) + '</b><em>' + (c.used ? 'مستخدم' : I.d) + '</em>' + (n ? '<i>🎯 ' + n + '</i>' : '') + '</button>';
+                return '<button type="button" class="ct' + (myCard && myCard.card === c.id ? ' sel' : '') + '"' + (c.available && !locked ? ' data-cardsel="' + c.id + '"' : ' disabled') + '><span>' + I.i + '</span><b>' + esc(c.name) + '</b><em>' + (c.used ? 'مستخدم' : I.d) + '</em>' + (n ? '<i>🎯 ' + n + '</i>' : '') + '</button>';
             }).join('') + '<button type="button" class="ct none' + (myCard && myCard.card === 'none' ? ' sel' : '') + '" data-act="card" data-id="none"><span>⏭️</span><b>بدون كرت</b><em>الليلة بدون</em>' + (cnt(function (id) { return cv[id] && cv[id].card === 'none'; }) ? '<i>' + cnt(function (id) { return cv[id] && cv[id].card === 'none'; }) + '</i>' : '') + '</button></div></div>';
         } else {
             html += (showCards ? '' : '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : split && allIn ? '🎯 هدفين' : done + '/' + team.length) + '</span></div>') +
-            (split && !lock ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">⚠️ اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b> الليلة</div>' : '') + lockNote(lock, G) +
+            (split && !lock ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">⚠️ اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b> الليلة' + (locked && aux.length ? ' و🔒 <b>الكروت انقفلت</b>' : '') + '</div>' : '') +
+            (locked && !split && aux.length ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🔒 الكروت مقفولة الليلة لأنكم اخترتوا شخصين مختلفين</div>' : '') +
+            (tm && !locked && anyCard ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">ℹ️ كل واحد منكم يختار <b>هدف أو كرت</b> — لو اخترتوا شخصين مختلفين تنقفل الكروت الليلة</div>' : '') + lockNote(lock, G) +
             (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
             // التجنيد مقفول لأن المافيا بتتعدى 30% من الأحياء: الزر يبان مقفول وتحته السبب
             (recruit && recruit.capped ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill on" data-opmode="kill">🔪 قتل</button><button type="button" class="pill" disabled>🔒 تجنيد</button></div>' +
@@ -952,10 +960,11 @@ body.watching { overflow: hidden; }
         }
         if (S.cardSel && CARD_INFO[S.cardSel]) {
             var shield = S.cardSel === 'shield', I = CARD_INFO[S.cardSel], killT = ops[me.id] && ops[me.id].target;
+            var killTs = team.map(function (m) { return ops[m.id] && ops[m.id].op === 'kill' ? ops[m.id].target : null; }).filter(Boolean);   // الإسكات ما ينفع على هدف الفريق
             html += '<div class="pick-bg" data-cardclose><div class="pick"><div class="pick-h"><b>' + I.i + ' ' + esc((cards.find(function (c) { return c.id === S.cardSel; }) || {}).name || '') + ' · ' + I.d + '</b><button type="button" data-cardclose aria-label="إغلاق">✕</button></div>' +
                 playerRows(G, {
                     action: 'card', argOf: function (p) { return S.cardSel + '|' + p.id; },
-                    can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia') && !(S.cardSel === 'silence' && p.id === killT); },
+                    can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia') && !(S.cardSel === 'silence' && (p.id === killT || killTs.indexOf(p.id) >= 0)); },
                     sel: function (p) { return cv[me.id] && cv[me.id].card === S.cardSel && cv[me.id].target === p.id; },
                     tag: function (p) { var n = cnt(function (id) { return cv[id] && cv[id].card === S.cardSel && cv[id].target === p.id; }); return n ? '🎯 ' + n : ''; }
                 }) + '</div></div>';
@@ -1152,14 +1161,21 @@ body.watching { overflow: hidden; }
     function confirmBar(G, kind) {
         var sel = myPick(G, kind), op = kind === 'mafia' && G.me.ops && G.me.ops[G.me.id];
         var VERB = op && op.op === 'recruit' ? '🤝 جنّد' : { mafia: '🔪 هاجم', doctor: '🛡️ احمِ', detective: '🔍 افحص', vote: '🗳️ صوّت على' }[kind];
-        var txt = sel == null ? '👆 اختار لاعب، وبعدها اضغط «تأكيد»' : sel === 'skip' ? '⏭️ تخطي هالمرة' : VERB + ' ' + esc(sel === G.me.id ? 'نفسك' : pname(G, sel)) + '؟';
+        var mc = kind === 'mafia' && sel == null && G.me.teamMode && G.me.cardVotes && G.me.cardVotes[G.me.id];
+        if (mc && mc.card !== 'none' && CARD_INFO[mc.card]) sel = 'card';   // فريق المافيا: اختار كرت بدل الهدف
+        var txt = sel === 'card' ? '🃏 ' + CARD_INFO[mc.card].i + ' كرت على ' + esc(pname(G, mc.target)) + '؟' : sel == null ? '👆 اختار لاعب، وبعدها اضغط «تأكيد»' : sel === 'skip' ? '⏭️ تخطي هالمرة' : VERB + ' ' + esc(sel === G.me.id ? 'نفسك' : pname(G, sel)) + '؟';
         return '<div class="confirm" style="--sr:' + TURN_C[kind] + '"><div class="' + (sel != null ? 'ok' : '') + '"><b>' + txt + '</b><button type="button" class="cbtn" data-confirm' + (sel == null ? ' disabled' : '') + '>تأكيد</button></div></div>';
     }
     // بطاقة النتيجة بعد التأكيد + حالة زملاءك (تأكيدك ما ينهي دورهم)
     function resultCard(G, kind, small) {
         var me = G.me, sel = myPick(G, kind), p = sel && sel !== 'skip' ? pOf(G, sel) : null, tone = TURN_C[kind], k, mid, txt = '';
         var who = p ? '<div class="who">' + avatar(p, 64) + '<b>' + esc(p.id === me.id ? 'نفسك' : p.name) + '</b></div>' : '<div class="who"><span class="sk">⏭️</span><b>تخطيت</b></div>';
-        if (!p) { tone = TURN_C.skip; k = kind === 'vote' ? '🗳️ صوتك' : 'دورك الليلة ' + G.round; mid = who; txt = kind === 'vote' ? 'صوتك راح لـ«تخطي».' : 'ما اخترت أحد هالليلة.'; }
+        var myC = kind === 'mafia' && !sel && me.cardVotes && me.cardVotes[me.id];
+        if (myC && myC.card !== 'none' && CARD_INFO[myC.card]) {   // فريق المافيا: اختار كرت بدل الهدف
+            var cp = pOf(G, myC.target); k = '🃏 اخترت كرت · الليلة ' + G.round;
+            mid = (cp ? '<div class="who">' + avatar(cp, 64) + '<b>' + esc(cp.name) + '</b></div>' : '') + '<span class="verdict">' + CARD_INFO[myC.card].i + ' ' + CARD_INFO[myC.card].d + '</span>';
+            txt = 'زملاءك يختارون الهدف — ولو اختاروا شخصين مختلفين ينلغى الكرت.';
+        } else if (!p) { tone = TURN_C.skip; k = kind === 'vote' ? '🗳️ صوتك' : 'دورك الليلة ' + G.round; mid = who; txt = kind === 'vote' ? 'صوتك راح لـ«تخطي».' : 'ما اخترت أحد هالليلة.'; }
         else if (kind === 'detective') {
             var r = (me.inspections || []).filter(function (x) { return x.round === G.round && !x.by && x.id === p.id; }).pop(), maf = r && r.res === 'mafia';
             if (r) tone = maf ? TURN_C.mafia : TURN_C.doctor;
@@ -1183,7 +1199,8 @@ body.watching { overflow: hidden; }
             var st = '<small>⏳ ما أكّد للحين</small>', chip = '';
             if (done[id]) {
                 var pick = kind === 'mafia' ? (me.ops && me.ops[id] ? (me.ops[id].op === 'skip' ? 'skip' : me.ops[id].target) : null) : (me.teamPicks || {})[id];
-                st = '<small>' + esc(pick == null ? '✓ أكّد' : pick === 'skip' ? '⏭️ تخطى' : { mafia: '🎯 الهدف: ', doctor: '🛡️ حماية: ', detective: '🔍 فحص: ' }[kind] + pname(G, pick)) + '</small>';
+                var tc = kind === 'mafia' && pick == null && me.cardVotes && me.cardVotes[id];
+                st = tc && tc.card !== 'none' && CARD_INFO[tc.card] ? '<small>' + esc('🃏 كرت: ' + CARD_INFO[tc.card].i + ' ' + pname(G, tc.target)) + '</small>' : '<small>' + esc(pick == null ? '✓ أكّد' : pick === 'skip' ? '⏭️ تخطى' : { mafia: '🎯 الهدف: ', doctor: '🛡️ حماية: ', detective: '🔍 فحص: ' }[kind] + pname(G, pick)) + '</small>';
                 var r = kind === 'detective' ? (me.inspections || []).filter(function (x) { return x.by === id && x.round === G.round; }).pop() : null;
                 chip = r ? '<span class="rchip" style="--sr:' + (r.res === 'mafia' ? TURN_C.mafia : TURN_C.doctor) + '">' + (r.res === 'mafia' ? '🔪 مافيا' : '✓ مواطن') + '</span>' : '<span class="rchip" style="--sr:' + TURN_C.doctor + '">✓ أكّد</span>';
             }
