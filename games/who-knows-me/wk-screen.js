@@ -334,11 +334,14 @@
         // ── الرسم ──
         root.classList.add('wk-root');
         root.innerHTML = '<div class="wk-stage"><div class="wk-fx">' + fxHtml() + '</div>' +
-            '<header class="wk-head"></header><main class="wk-body"></main><div class="wk-over"></div></div>';
+            '<header class="wk-head"></header><main class="wk-body"></main><div class="wk-over"></div></div>' +
+            '<div class="wks" hidden></div>';
         var stage = root.querySelector('.wk-stage');
         var head = root.querySelector('.wk-head');
         var body = root.querySelector('.wk-body');
         var over = root.querySelector('.wk-over');
+        var wks = root.querySelector('.wks');
+        var wksFx = '<div class="wk-fx">' + fxHtml() + '</div>';
         var modal = null;
 
         function fit() {
@@ -376,12 +379,22 @@
         }
 
         function render() {
-            renderHead();
             var ph = G.phase;
-            var html = ph === 'setup' ? vSetup() : ph === 'pick' ? vPick() : ph === 'answer' ? vAnswer() :
+            if (ph === 'setup') {
+                // شاشة الإعدادات بنفس تنسيق روليت الإقصاء (صفحة عادية، مو مسرح 1920×1080)
+                stage.style.display = 'none'; wks.hidden = false;
+                var sc = wks.querySelector('.wks-scroll'), top = sc ? sc.scrollTop : 0;
+                wks.innerHTML = vSetupPage();
+                sc = wks.querySelector('.wks-scroll'); if (sc) sc.scrollTop = top;
+                drawQr(wks.querySelector('.wk-qr'));
+                return;
+            }
+            stage.style.display = ''; wks.hidden = true;
+            renderHead();
+            var html = ph === 'pick' ? vPick() : ph === 'answer' ? vAnswer() :
                 ph === 'reveal' ? vReveal() : ph === 'review' ? vReview() : ph === 'round' ? vRound() : vFinal();
             body.innerHTML = html;
-            if (ph === 'setup' || (ph === 'pick' && !(R && R.ctrl))) drawQr(body.querySelector('.wk-qr'));
+            if (ph === 'pick' && !(R && R.ctrl)) drawQr(body.querySelector('.wk-qr'));
             renderOver();
             updateLive();
         }
@@ -406,14 +419,57 @@
                 '<div class="wk-link">' + esc(R ? opts.hostUrl(R.id) : '') + '</div></div></div>' +
                 ctrl + '<div class="wk-reqs">' + reqs + '</div></div>';
         }
-        function vSetup() {
-            return '<h1 class="wk-title">مين يعرفني أكثر؟</h1>' +
-                '<div class="wk-setup"><div class="wk-card"><h3 class="wk-card-h">⚙️ الإعدادات</h3>' + vSettingsRows() +
-                '<ol class="wk-how"><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li><li>المتابعين يكتبون إجاباتهم بالشات.</li>' +
-                '<li>تنكشف إجابتك، وتقبل أو ترفض إجابة كل لاعب.</li><li>كل إجابة مقبولة بنقطة، والأعلى يفوز.</li></ol></div>' +
-                vPhoneCard() + '</div>' +
-                '<button class="wk-btn pri xl" data-a="start"' + (R && R.ctrl ? '' : ' disabled') + '>ابدأ اللعبة</button>' +
-                (R && R.ctrl ? '' : '<p class="wk-sub" style="font-size:22px;margin-top:-14px">اربط جوالك أول عشان تبدأ</p>');
+        // ── شاشة الإعدادات: نفس تنسيق «روليت الإقصاء» (games/elimination-roulette/index.html):
+        // هيدر بزر الخروج واللوقو، عنوان متدرّج + شارة البث، أقسام مرقّمة بصفوف
+        // (العنوان يمين والعنصر يسار)، وزر البدء تحت.
+        var CHEV = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+        var EXIT_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>';
+        function wksSection(num, title, rows, delay, full) {
+            return '<section class="wks-sec' + (full ? ' full' : '') + '" style="animation-delay:' + delay + 's"><div class="wks-sec-h"><span class="wks-num">' + num + '</span><span>' + title + '</span></div>' + rows + '</section>';
+        }
+        function wksRow(label, hint, control) {
+            return '<div class="wks-row"><div class="wks-lbl"><span>' + label + '</span>' + (hint ? '<small>' + hint + '</small>' : '') + '</div>' + control + '</div>';
+        }
+        function vSetupPage() {
+            var st = opts.streamStatus ? opts.streamStatus() : { connected: false };
+            var linked = !!(R && R.ctrl);
+            var live = '<span class="wks-live' + (st.connected ? ' on' : '') + '"><i></i>' + (st.connected ? 'متصل بالبث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' +
+                (st.connected || !opts.libraryUrl ? '' : '<a class="wks-golive" href="' + esc(opts.libraryUrl) + '">ابدأ البث ونتصل تلقائياً</a>');
+            var timeCtl = '<div class="wks-seg">' + TIMES.map(function (t) {
+                return '<button class="' + (settings.time === t ? 'on' : '') + '" data-a="time" data-v="' + t + '">' + t + ' ث</button>';
+            }).join('') + '</div>';
+            var autoCtl = '<button class="wks-tg' + (settings.auto ? ' on' : '') + '" role="switch" aria-checked="' + settings.auto + '" aria-label="الحكم التلقائي على المتطابق" data-a="auto"><span></span></button>';
+            var sec1 = wksRow('وقت الإجابة', 'المدة اللي يكتب فيها المتابعين إجاباتهم بالشات', timeCtl) +
+                '<span class="wks-div"></span>' +
+                wksRow('الحكم التلقائي على المتطابق', 'الإجابة اللي تطابق إجابة حكمت عليها تاخذ نفس الحكم', autoCtl);
+
+            var reqs = Object.keys(pending).map(function (dev) {
+                return '<div class="wks-row wks-req">' +
+                    '<div class="wks-lbl"><span>' + esc(pending[dev].name) + '</span><small>يبي يتحكم باللعبة</small></div>' +
+                    '<div class="wks-btns"><button class="wks-ok" data-a="acc" data-v="' + dev + '">قبول</button><button class="wks-no" data-a="rej" data-v="' + dev + '">رفض</button></div></div>';
+            }).join('');
+            var ctrl = linked ? '<div class="wks-row wks-ctrl"><div class="wks-lbl"><span><i class="wks-dot' + (ctrlOnline() ? ' on' : '') + '"></i>' + esc(R.ctrl.name) + '</span><small>الجوال مربوط ويتحكم باللعبة</small></div>' +
+                '<button class="wks-ghost" data-a="unlink">إلغاء الربط</button></div>' : '';
+            var sec2 = '<div class="wks-qr-row"><div class="wk-qr wks-qr">جاري التجهيز…</div><div class="wks-qr-txt"><span>امسح الباركود بجوالك</span>' +
+                '<small>اكتب اسمك وأرسل طلب، واقبله من هنا. بعدها تختار الأسئلة وتحكم على الإجابات من جوالك.</small>' +
+                '<div class="wk-link">' + esc(R ? opts.hostUrl(R.id) : '') + '</div></div></div>' + ctrl + reqs;
+
+            var sec3 = '<ol class="wks-how"><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li><li>المتابعين يكتبون إجاباتهم بالشات خلال الوقت.</li>' +
+                '<li>ينكشف جوابك، وتطلع إجاباتهم وحدة وحدة وتقبلها أو ترفضها.</li><li>كل إجابة مقبولة بنقطة، واللي يعرفك أكثر يفوز.</li></ol>';
+
+            var exitModal = modal === 'exit' ? '<div class="wks-modal" data-a="close"><div class="wks-dialog"><span class="wks-exit-ic">' + EXIT_ICON.replace(/16/g, '28') + '</span>' +
+                '<b>الخروج؟</b><small>بترجع لمكتبة الألعاب</small><div class="wks-dlg-btns"><button class="wks-ghost" data-a="close">إلغاء</button><button class="wks-danger" data-a="exitYes">خروج</button></div></div></div>' : '';
+
+            return wksFx +
+                '<header class="wks-head"><div><button class="wks-exit" data-a="exit">' + EXIT_ICON + '<span>خروج</span></button></div>' +
+                '<div class="wks-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'ألعاب أيمن\'))"></div><div></div></header>' +
+                '<main class="wks-main"><div class="wks-wrap">' +
+                '<div class="wks-top"><span class="wks-title">مين يعرفني أكثر؟</span><div class="wks-chips">' + live + '</div></div>' +
+                '<div class="wks-scroll"><div class="wks-grid">' +
+                wksSection(1, 'الإعدادات', sec1, 0) + wksSection(2, 'جوال المضيف', sec2, 0.06) + wksSection(3, 'طريقة اللعب', sec3, 0.12, true) +
+                '</div></div>' +
+                '<div class="wks-foot"><button class="wks-start" data-a="start"' + (linked ? '' : ' disabled') + '>' + (linked ? 'ابدأ اللعبة' : 'اربط جوالك أول عشان تبدأ') + CHEV + '</button></div>' +
+                '</div></main>' + exitModal + (flashMsg ? '<div class="wks-toast">' + esc(flashMsg) + '</div>' : '');
         }
         function miniBoard(n) {
             var rk = ranking().slice(0, n);
@@ -528,7 +584,11 @@
             if (modal === 'qr') drawQr(over.querySelector('.wk-qr'));
         }
         var flashMsg = '', flashT = null;
-        function flash(msg) { flashMsg = msg; renderOver(); clearTimeout(flashT); flashT = setTimeout(function () { flashMsg = ''; renderOver(); }, 2600); }
+        function flash(msg) {
+            flashMsg = msg; refreshOver(); clearTimeout(flashT);
+            flashT = setTimeout(function () { flashMsg = ''; refreshOver(); }, 2600);
+        }
+        function refreshOver() { if (G.phase === 'setup') render(); else renderOver(); }
 
         var _qrUrl = '', _qrImg = '';
         function drawQr(el) {
@@ -579,9 +639,9 @@
             var t = ev.target.closest('[data-a]');
             if (!t || t.disabled) return;
             var a = t.getAttribute('data-a'), v = t.getAttribute('data-v');
-            if (a === 'close') { if (ev.target !== t && t.classList.contains('wk-modal')) return; modal = null; renderOver(); return; }
+            if (a === 'close') { if (ev.target !== t && (t.classList.contains('wk-modal') || t.classList.contains('wks-modal'))) return; modal = null; refreshOver(); return; }
             if (a === 'qr') { modal = 'qr'; renderOver(); return; }
-            if (a === 'exit') { modal = 'exit'; renderOver(); return; }
+            if (a === 'exit') { modal = 'exit'; refreshOver(); return; }
             if (a === 'exitYes') { WK.writeJSON(store, STORE_GAME, null); if (opts.onExit) opts.onExit(); else { G = freshGame(); modal = null; render(); } return; }
             if (a === 'acc') { acceptReq(v); return; }
             if (a === 'rej') { rejectReq(v); return; }
