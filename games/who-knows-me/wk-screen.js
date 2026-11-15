@@ -45,7 +45,7 @@
         var transport = opts.transport || WK.relay;
 
         // ── الحالة ──
-        var settings = Object.assign({ time: 60, auto: true, keyword: '' }, WK.readJSON(store, STORE_SETTINGS, {}));
+        var settings = Object.assign({ time: 60, auto: true, keyword: '', autoJoin: false }, WK.readJSON(store, STORE_SETTINGS, {}));
         // كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
         var SHARED = window.AGPSharedPrefs ? window.AGPSharedPrefs.bind({ keyword: 'keyword' }) : null;
         if (SHARED) settings = SHARED.fill(settings);
@@ -56,12 +56,13 @@
         if (saved && saved.phase && saved.phase !== 'setup' && Date.now() - (saved.savedAt || 0) < GAME_TTL) {
             G = Object.assign(freshGame(), saved);
             if (G.phase === 'review') G.busy = false;
+            if (G.ptsState === 'pending') G.ptsState = 'done';
         }
 
         function freshGame() {
             return {
                 phase: 'setup', round: 0, q: null, endsAt: 0, answers: [], seen: {}, idx: 0,
-                players: {}, roster: [], scores: {}, roundPts: {}, used: [], matchStartedAt: 0, reported: false,
+                players: {}, roster: [], everJoined: {}, winPts: {}, ptsState: '', scores: {}, roundPts: {}, used: [], matchStartedAt: 0, reported: false,
                 winners: [], participants: {}, busy: false
             };
         }
@@ -203,7 +204,8 @@
                 case 'endReview': if (G.phase === 'review') toRound(); break;
                 case 'next': if (G.phase === 'round' || (G.phase === 'reveal' && !G.answers.length)) { G.phase = 'pick'; G.round++; commit(); } break;
                 case 'finish': if (G.phase === 'round' || G.phase === 'pick' || G.phase === 'reveal') finish(); break;
-                case 'newGame': if (G.phase === 'final') startGame(); break;
+                case 'newGame': case 'replay': if (G.phase === 'final') startGame(); break;
+                case 'newMatch': if (G.phase === 'final') newMatch(); break;
             }
         }
         function commit() { saveGame(); render(); pushState(true); }
@@ -216,10 +218,18 @@
             if (SHARED) SHARED.save(settings);
             G.phase = 'link'; commit();
         }
+        // «مباراة جديدة» من شاشة الفوز: لوبي جديد فاضي
+        function newMatch() {
+            var players = G.players;
+            G = freshGame();
+            G.players = players;
+            G.phase = 'lobby'; commit();
+        }
         function startGame() {
             var players = G.players, roster = G.roster;
             G = freshGame();
             G.players = players; G.roster = roster;
+            roster.forEach(function (id) { G.everJoined[id] = 1; });
             G.phase = 'pick'; G.round = 1;
             WK.sfx('go'); commit();
         }
@@ -240,7 +250,8 @@
         function joinPlayer(p) {
             var name = String(p.name || p.id).trim().slice(0, 30) || String(p.id);
             var old = G.players[p.id] || {};
-            G.players[p.id] = { id: p.id, name: name, avatar: p.avatarUrl || old.avatar || null, frame: p.frame || old.frame || null };
+            G.players[p.id] = { id: p.id, name: name, avatar: p.avatarUrl || old.avatar || null, frame: p.frame || old.frame || null,
+                winCard: p.winCard !== undefined ? (p.winCard || null) : (old.winCard || null), winVideo: p.winVideo || p.winVideoUrl || old.winVideo || null };
             if (G.roster.indexOf(p.id) >= 0) return false;
             G.roster.push(p.id);
             return true;
@@ -256,9 +267,12 @@
             if (!p || !p.id || G.phase === 'setup') return;
             var raw = String(p.text || '');
             if (settings.keyword && WK.norm(raw) === WK.norm(settings.keyword)) {
-                if (joinPlayer(p)) {
-                    if (G.phase === 'lobby') renderSoon();
-                    saveGameSoon(); pushState(false);
+                if (G.phase === 'lobby') {
+                    if (joinPlayer(p)) { renderSoon(); saveGameSoon(); pushState(false); }
+                } else if (G.phase !== 'link' && G.phase !== 'final' && settings.autoJoin && !G.everJoined[p.id]) {
+                    // الدخول التلقائي أثناء اللعب: لاعب جديد ما سبق له الدخول بهالمباراة
+                    G.everJoined[p.id] = 1;
+                    if (joinPlayer(p)) { joinToast(G.players[p.id]); saveGameSoon(); pushState(false); }
                 }
                 return;
             }
@@ -361,25 +375,41 @@
             Object.keys(G.participants).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
             if (!ids.length) return;
             G.reported = true;
-            if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
-                try {
-                    window.AGPAuth.reportMatchPoints({
-                        players: ids.map(function (id) { return { id: id, name: (G.players[id] || {}).name || id }; }),
-                        winnerIds: G.winners.slice(),
-                        teamGame: false,
-                        durationMs: Date.now() - (G.matchStartedAt || Date.now())
-                    });
-                } catch (e) {}
-            }
+            if (!(window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function')) { G.ptsState = 'done'; return; }
+            G.ptsState = 'pending';
+            var winners = G.winners.slice();
+            var pr = null;
+            try {
+                pr = window.AGPAuth.reportMatchPoints({
+                    players: ids.map(function (id) { return { id: id, name: (G.players[id] || {}).name || id }; }),
+                    winnerIds: winners,
+                    teamGame: false,
+                    durationMs: Date.now() - (G.matchStartedAt || Date.now())
+                });
+            } catch (e) {}
+            Promise.resolve(pr).then(function (res) {
+                // النقاط المكتسبة لكل فائز — تظهر ببطاقة الفوز
+                var aw = res && res.success && Array.isArray(res.awarded) ? res.awarded : [];
+                winners.forEach(function (id) {
+                    var u = String(id).indexOf('tiktok:') === 0 ? String(id).slice(7).toLowerCase() : '';
+                    var hit = aw.filter(function (a) { return String(a.tiktokUsername || '').toLowerCase() === u; })[0];
+                    G.winPts[id] = hit && typeof hit.added === 'number' ? hit.added : null;
+                });
+                G.ptsState = 'done';
+                if (G.phase === 'final') commit();
+            }).catch(function () { G.ptsState = 'done'; if (G.phase === 'final') commit(); });
         }
 
         // ── الرسم ──
         root.classList.add('wk-root');
-        root.innerHTML = '<div class="wk-stage"><div class="wk-fx">' + fxHtml() + '</div>' +
-            '<header class="wk-head"></header><main class="wk-body"></main><div class="wk-over"></div></div>' +
+        // شاشات اللعب: خلفية بكامل الشاشة + هيدر 80px (نفس هيدر روليت الإقصاء) + مسرح 1920×988 يتكبّر/يصغر تحت الهيدر
+        root.innerHTML = '<div class="wk-fx">' + fxHtml() + '</div><header class="wks-head wk-ghead"></header>' +
+            '<div class="wk-area"><div class="wk-stage"><main class="wk-body"></main><div class="wk-over"></div><div class="wk-jt"></div></div></div>' +
             '<div class="wks" hidden></div>';
+        var area = root.querySelector('.wk-area');
         var stage = root.querySelector('.wk-stage');
-        var head = root.querySelector('.wk-head');
+        var head = root.querySelector('.wk-ghead');
+        var jt = root.querySelector('.wk-jt');
         var body = root.querySelector('.wk-body');
         var over = root.querySelector('.wk-over');
         var wks = root.querySelector('.wks');
@@ -387,12 +417,12 @@
         var modal = null;
 
         function fit() {
-            var w = root.clientWidth || window.innerWidth, h = root.clientHeight || window.innerHeight;
-            var s = Math.min(w / 1920, h / 1080);
+            var w = area.clientWidth || window.innerWidth, h = area.clientHeight || (window.innerHeight - 80);
+            var s = Math.min(w / 1920, h / 988);
             stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
         }
         fit();
-        if (window.ResizeObserver) new ResizeObserver(fit).observe(root); else window.addEventListener('resize', fit);
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(area); else window.addEventListener('resize', fit);
 
         function fxHtml() {
             var h = '<i style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle,rgba(124,58,237,.22),transparent 65%)"></i>' +
@@ -406,36 +436,44 @@
         }
 
         function renderHead() {
-            var st = opts.streamStatus ? opts.streamStatus() : null;
-            var ctrl = R && R.ctrl;
-            var ctrlChip = ctrl
-                ? '<span class="wk-chip muted"><span class="wk-dot ' + (ctrlOnline() ? 'on' : 'warn') + '"></span>📱 ' + esc(ctrl.name) + '</span>'
-                : '<span class="wk-chip muted"><span class="wk-dot"></span>📱 بدون جوال</span>';
+            var on = !!settings.autoJoin;
             head.innerHTML =
-                '<div class="wk-head-side"><button class="wk-hbtn exit" data-a="exit">خروج</button>' +
-                (G.phase !== 'setup' ? '<button class="wk-hbtn" data-a="qr">باركود الجوال</button>' : '') + '</div>' +
-                '<div class="wk-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'مين يعرفني أكثر؟\'))"></div>' +
-                '<div class="wk-head-side end">' + (settings.keyword ? '<span class="wk-chip">كلمة الدخول: <b style="color:#fff">' + esc(settings.keyword) + '</b></span>' : '') + ctrlChip +
-                (st ? '<span class="wk-chip muted"><span class="wk-dot ' + (st.connected ? 'on' : '') + '"></span>' + (st.connected ? 'البث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' : '') +
-                '</div>';
+                '<div class="wk-hs"><button class="wks-exit" data-a="exit">' + EXIT_ICON + '<span>خروج</span></button>' +
+                '<button class="wk-aj' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" data-a="autoJoin" title="الدخول التلقائي: أي لاعب جديد يكتب كلمة الدخول يدخل اللعبة">' +
+                '<span>الدخول التلقائي</span><i><b></b></i></button>' +
+                (on && settings.keyword ? '<span class="wk-kwh"><small>كلمة الدخول</small>' + esc(settings.keyword) + '</span>' : '') + '</div>' +
+                '<div class="wks-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'ألعاب أيمن\'))"></div>' +
+                '<div class="wk-hs end"><button class="wk-qrb" data-a="qr">باركود الجوال</button></div>';
+        }
+
+        // بطاقة دخول لاعب جديد (3 ثواني، 200×100) أعلى وسط الشاشة
+        var jtQueue = [], jtBusy = false;
+        function joinToast(p) { jtQueue.push(p); if (!jtBusy) nextToast(); }
+        function nextToast() {
+            var p = jtQueue.shift();
+            if (!p) { jtBusy = false; jt.innerHTML = ''; return; }
+            jtBusy = true;
+            var img = p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '';
+            jt.innerHTML = '<div class="wk-jcard"><span class="wk-jav">' + esc(initial(p.name)) + img + '</span><span class="wk-jtxt"><small>دخل اللعبة</small><b>' + esc(p.name) + '</b></span></div>';
+            setTimeout(nextToast, 3000);
         }
 
         function render() {
             var ph = G.phase;
-            if (ph === 'setup' || ph === 'link' || ph === 'lobby') {
+            if (ph === 'setup' || ph === 'link' || ph === 'lobby' || ph === 'final') {
                 // شاشة الإعدادات بنفس تنسيق روليت الإقصاء (صفحة عادية، مو مسرح 1920×1080)
-                stage.style.display = 'none'; wks.hidden = false;
+                area.style.display = 'none'; head.style.display = 'none'; wks.hidden = false;
                 var sc = wks.querySelector('.wks-scroll'), top = sc ? sc.scrollTop : 0;
-                wks.innerHTML = ph === 'setup' ? vSetupPage() : ph === 'link' ? vLinkPage() : vLobbyPage();
+                wks.innerHTML = ph === 'setup' ? vSetupPage() : ph === 'link' ? vLinkPage() : ph === 'lobby' ? vLobbyPage() : vWinPage();
                 if (ph === 'lobby' && AGP.playerCard && AGP.playerCard.fitAllNames) AGP.playerCard.fitAllNames(wks);
                 sc = wks.querySelector('.wks-scroll'); if (sc) sc.scrollTop = top;
                 if (ph === 'link') drawQr(wks.querySelector('.wk-qr'));
                 return;
             }
-            stage.style.display = ''; wks.hidden = true;
+            area.style.display = ''; head.style.display = ''; wks.hidden = true;
             renderHead();
             var html = ph === 'pick' ? vPick() : ph === 'answer' ? vAnswer() :
-                ph === 'reveal' ? vReveal() : ph === 'review' ? vReview() : ph === 'round' ? vRound() : vFinal();
+                ph === 'reveal' ? vReveal() : ph === 'review' ? vReview() : vRound();
             body.innerHTML = html;
             if (ph === 'pick' && !(R && R.ctrl)) drawQr(body.querySelector('.wk-qr'));
             renderOver();
@@ -629,16 +667,53 @@
                 '<div class="wk-row" style="gap:28px"><button class="wk-btn pri xl" data-a="next">سؤال جديد</button>' +
                 '<button class="wk-btn ghost xl" data-a="finish">إنهاء وعرض الفائز</button></div>';
         }
-        function vFinal() {
-            var rk = ranking();
-            var ws = G.winners.map(function (id) { var p = G.players[id] || { name: id }; return { name: p.name, avatar: p.avatar, total: G.scores[id] }; });
-            var win = ws.length
-                ? '<div class="wk-win"><div class="wk-crown">👑</div><p class="wk-sub" style="font-size:34px;color:#fcd34d">' + (ws.length > 1 ? 'الأكثر معرفة بالمضيف (تعادل)' : 'الأكثر معرفة بالمضيف') + '</p><div class="wk-winners">' +
-                    ws.slice(0, 4).map(function (w) { return '<div class="wk-winner">' + avatarHtml(w) + '<b>' + esc(w.name) + '</b><span>' + w.total + ' نقطة</span></div>'; }).join('') + '</div></div>'
-                : '<div class="wk-win"><div class="wk-crown">🤷</div><h1 class="wk-title">محد جمع نقاط</h1></div>';
-            return win + (rk.length > ws.length ? '<div class="wk-card wk-board" style="width:1000px;max-height:330px"><div class="wk-list">' +
-                rk.slice(0, 5).map(liHtml).join('') + '</div></div>' : '') +
-                '<div class="wk-row" style="gap:28px;margin-top:auto"><button class="wk-btn pri" data-a="newGame">لعبة جديدة</button><button class="wk-btn ghost" data-a="exit">خروج</button></div>';
+        // ── شاشة الفوز: نفس شاشة فوز «روليت الإقصاء» (games/elimination-roulette/game.html → winOpen) ──
+        var CROWN = '<svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg>';
+        var _confetti = '', _confettiKey = null;
+        function confettiHtml() {
+            var k = G.matchStartedAt + ':' + G.round;
+            if (_confettiKey === k) return _confetti;
+            var cols = ['#fbbf24', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#fde68a'], h = '';
+            for (var i = 0; i < 70; i++) {
+                var w = 8 + Math.random() * 6, hh = 12 + Math.random() * 10;
+                h += '<span style="left:' + (Math.random() * 100).toFixed(1) + '%;width:' + w.toFixed(0) + 'px;height:' + hh.toFixed(0) + 'px;border-radius:' + (i % 3 ? '2px' : '50%') +
+                    ';background:' + cols[i % cols.length] + ';--r:' + (Math.random() * 1080 - 540).toFixed(0) + 'deg;animation:wkFloatUp ' + (3.5 + Math.random() * 2.5).toFixed(2) + 's linear ' + (Math.random() * 2.5).toFixed(2) + 's infinite"></span>';
+            }
+            _confettiKey = k; _confetti = '<div class="wkw-confetti" aria-hidden="true">' + h + '</div>';
+            return _confetti;
+        }
+        function ptsText(id) {
+            if (G.ptsState === 'pending') return { main: '…', sub: 'جارٍ احتساب النقاط', big: false };
+            var v = G.winPts[id];
+            return typeof v === 'number' ? { main: '+' + v + ' نقطة', sub: 'تظهر في بروفايلك', big: true } : { main: '—', sub: 'النقاط للحسابات الموثّقة في الموقع', big: false };
+        }
+        function winnerCard(id) {
+            var p = G.players[id] || { id: id, name: id };
+            var pt = ptsText(id);
+            var player = { id: p.id, name: p.name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+            if (AGP.winCard && AGP.winCard.canShow && AGP.winCard.canShow(player)) {
+                var n = G.roster.length;
+                var lines = [pt.big ? pt.main : pt.sub, G.scores[id] + ' نقطة · من ' + n + ' لاعب', 'مين يعرفني أكثر؟'];
+                return '<div class="wkw-owned">' + AGP.winCard.renderHtml(player, lines, { pop: false }) + '</div>';
+            }
+            var img = p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '';
+            return '<div class="wkw-std"><div class="wkw-crown">' + CROWN + '</div><div class="wkw-card"><i class="wkw-shine"></i><div class="wkw-in">' +
+                '<span class="wkw-tag">WINNER</span><span class="wkw-av">' + esc(initial(p.name)) + img + '</span>' +
+                '<span class="wkw-name">' + esc(p.name) + '</span><span class="wkw-score">' + (G.scores[id] || 0) + ' إجابة صحيحة</span>' +
+                '<div class="wkw-pts"><span class="' + (pt.big ? 'big' : '') + '">' + pt.main + '<small>' + pt.sub + '</small></span></div></div></div></div>';
+        }
+        function vWinPage() {
+            var ws = G.winners.slice(0, 4);
+            var solo = ws.length === 1 ? (G.players[ws[0]] || {}) : null;
+            var video = solo && solo.winVideo ? '<div class="wkw-video"><span>فيديو الفوز</span><video src="' + esc(solo.winVideo) + '" autoplay loop playsinline muted onerror="this.remove()"></video></div>' : '';
+            var cards = ws.length ? ws.map(winnerCard).join('') : '<p class="wkw-none">محد جمع نقاط هالمرة 😅</p>';
+            return wksFx + '<div class="wkw">' + confettiHtml() + '<div class="wkw-box">' + video +
+                '<h2 class="wkw-title">🏆 ' + (ws.length > 1 ? 'الفائزين' : 'الفائز') + ' في لعبة "مين يعرفني أكثر؟"</h2>' +
+                '<div class="wkw-cards">' + cards + '</div>' +
+                '<div class="wkw-btns"><button class="wkw-b ghost" data-a="exitYes">الخروج</button>' +
+                '<button class="wkw-b pri" data-a="newMatch">مباراة جديدة</button>' +
+                '<button class="wkw-b soft" data-a="replay">إعادة بنفس اللاعبين</button></div></div></div>' +
+                (flashMsg ? '<div class="wks-toast">' + esc(flashMsg) + '</div>' : '');
         }
 
         function renderOver() {
@@ -726,6 +801,7 @@
             if (a === 'rej') { rejectReq(v); return; }
             if (a === 'unlink') { unlink(); return; }
             if (a === 'kick') { kick(v); return; }
+            if (a === 'autoJoin') { settings.autoJoin = !settings.autoJoin; WK.writeJSON(store, STORE_SETTINGS, settings); WK.sfx(settings.autoJoin ? 'ok' : 'tick'); renderHead(); return; }
             if (a === 'time') { handleCmd('settings', { time: +v }); pushState(true); return; }
             if (a === 'auto') { handleCmd('settings', { auto: !settings.auto }); pushState(true); return; }
             handleCmd(a, null, 'screen');

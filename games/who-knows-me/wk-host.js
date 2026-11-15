@@ -162,7 +162,8 @@
                 '<button class="wkp-btn ghost" data-a="cmd" data-c="finish">إنهاء وعرض الفائز</button>' +
                 '<div class="wkp-card">' + vSettings() + '</div>';
             if (ph === 'final') return center('👑', S.winners.length ? 'الفائز: ' + esc(S.winners.join('، ')) : 'انتهت اللعبة', 'النتيجة ظاهرة على شاشة البث.') +
-                '<div class="wkp-card">' + topList() + '</div><button class="wkp-btn pri big" data-a="cmd" data-c="newGame">لعبة جديدة</button>';
+                '<div class="wkp-card">' + topList() + '</div><button class="wkp-btn pri big" data-a="cmd" data-c="newMatch">مباراة جديدة</button>' +
+                '<button class="wkp-btn ghost" data-a="cmd" data-c="replay">إعادة بنفس اللاعبين</button>';
             return '';
         }
         function topList() {
