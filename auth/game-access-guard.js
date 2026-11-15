@@ -4,9 +4,10 @@
  *
  * نفس شرط مكتبة الألعاب (games.html) وشرط الخادم عند الاتصال بالبث
  * (backend/websocket/ws-server.js): اللعبة تفتح فقط لحساب ستريمر مربوط
- * بحساب تيك توك موثَّق (AGPAuth.canPlayGames — الأدمن مستثنى). غير كذا
+ * بحساب تيك توك موثَّق (AGPAuth.canPlayGames — الأدمن مستثنى)، وباشتراك فعّال بعد بدء
+ * قفل الاشتراكات (subscription_access من /api/auth/me). غير كذا
  * الصفحة ما تنعرض أصلاً ويرجع لمكتبة الألعاب مع سبب المنع
- * (games.html?locked=login|not_streamer|tiktok) فتظهر له رسالة القفل.
+ * (games.html?locked=login|not_streamer|tiktok|subscription) فتظهر له رسالة القفل.
  *
  * الفحص الأول فوري من الجلسة المحفوظة (قبل رسم الصفحة)، ثم يُعاد بعد
  * تحديث بيانات الحساب من الخادم (refreshUser) — لو انتهت الجلسة أو تغيّر
@@ -28,6 +29,10 @@
         var user = auth.getCachedUser ? auth.getCachedUser() : null;
         if (!user) return 'login';
         if (auth.canPlayGames && auth.canPlayGames(user)) return null;
+        // اشتراك منتهي (بعد بدء القفل) لحساب مستوفي باقي الشروط
+        if (auth.hasSubscriptionAccess && !auth.hasSubscriptionAccess(user) &&
+            ((user.permissions && user.permissions.full_game_access) ||
+             (auth.isStreamerAccount && auth.isStreamerAccount(user) && (user.tiktok_verified || user.kick_verified || user.twitch_verified)))) return 'subscription';
         if (auth.isStreamerAccount && !auth.isStreamerAccount(user)) return 'not_streamer';
         return 'tiktok';
     }

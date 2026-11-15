@@ -249,6 +249,9 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/subscriptions/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminAdjustSubscription },
   { method: 'POST', path: '/api/admin/subscriptions/end', requireAuth: true, requireAdmin: true, handler: handleAdminEndSubscription },
   { method: 'POST', path: '/api/admin/subscriptions/unpause', requireAuth: true, requireAdmin: true, handler: handleAdminUnpauseSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/open', requireAuth: true, requireAdmin: true, handler: handleAdminOpenSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/compensate', requireAuth: true, requireAdmin: true, handler: handleAdminCompensateSubscriptions },
   { method: 'POST', path: '/api/admin/subscription-plans', requireAuth: true, requireAdmin: true, handler: handleAdminSaveSubscriptionPlan },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
@@ -451,7 +454,11 @@ function handleLogout(req, res, body, user, token) {
 }
 
 function handleMe(req, res, body, user) {
-  sendJson(res, 200, { success: true, user: user });
+  // subscription_access: هل يقدر يشغّل الألعاب حسب الاشتراك (AGPAuth.canPlayGames
+  // + auth/game-access-guard.js). القفل الفعلي بالخادم عند ربط البث (ws-server.js).
+  var out = Object.assign({}, user);
+  try { out.subscription_access = subscriptionService.accessForUser(user); } catch (err) { out.subscription_access = true; }
+  sendJson(res, 200, { success: true, user: out });
 }
 
 /** شاشة لعب كود نيمز (حساب ستريمر) تسجّل خانات السباي ماستر لغرفتها. */
@@ -1065,7 +1072,22 @@ function handleAdminBurnSubscriptionCode(req, res, body) {
   sendJson(res, r.success ? 200 : 409, r);
 }
 function handleAdminListSubscribers(req, res) {
-  sendJson(res, 200, { success: true, subscribers: subscriptionService.listSubscribers(), plans: subscriptionService.listPlans(true) });
+  sendJson(res, 200, { success: true, subscribers: subscriptionService.listSubscribers(), plans: subscriptionService.listPlans(true), enforcement: subscriptionService.enforcementInfo() });
+}
+/** منح أيام لأي مستخدم (حتى بدون اشتراك). */
+function handleAdminGrantSubscription(req, res, body) {
+  var r = subscriptionService.grantDays(Number(body.userId), body.days);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+/** اشتراك مفتوح: on=true تشغيل، false إلغاء. */
+function handleAdminOpenSubscription(req, res, body) {
+  var r = subscriptionService.setOpenEnded(Number(body.userId), body.on !== false);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+/** تعويض كل المشتركين بأيام. */
+function handleAdminCompensateSubscriptions(req, res, body) {
+  var r = subscriptionService.compensateAll(body.days, body.note);
+  sendJson(res, r.success ? 200 : 400, r);
 }
 function handleAdminAdjustSubscription(req, res, body) {
   var r = subscriptionService.adjustDays(Number(body.userId), body.days);

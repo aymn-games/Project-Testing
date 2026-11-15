@@ -531,6 +531,33 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               <span style="font-weight:600">مشتركين الاشتراك والباقات</span>
               <span style="font-size:12.5px;color:#9199ab;line-height:1.8">الباقات تحدد مدة أكواد الاشتراك ورصيد التعليق، وتطلع بخيارات «التسليم» بالمتجر (اشتراك ستريمر). تعديل الأيام وإنهاء الاشتراك ينكتب بسجل الستريمر.</span>
             </div>
+            <!-- حالة قفل الألعاب (subscription-service.js enforcementInfo) -->
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px">
+              <span style="width:9px;height:9px;border-radius:50%;background:{{ subEnfDot }}"></span><span style="font-weight:600">{{ subEnfTitle }}</span><span style="color:#9199ab;font-size:12.5px">{{ subEnfDesc }}</span>
+            </div>
+            <!-- منح اشتراك لمستخدم (subscription-service.js grantDays/setOpenEnded) -->
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #262a37">
+              <span style="font-size:12px;color:#9199ab">منح اشتراك لمستخدم — حتى لو ما عنده اشتراك. لو عنده اشتراك فعّال تنضاف الأيام على نهايته.</span>
+              <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نوع الآيدي</span>
+                  <select value="{{ subGType }}" onChange="{{ onSubGType }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="internal">الآيدي الداخلي</option><option value="profile">آيدي البروفايل</option></select></label>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الآيدي</span><input value="{{ subGId }}" onChange="{{ onSubGId }}" placeholder="{{ subGPh }}" style="width:140px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+                <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">صاحب الحساب</span>
+                  <div style="height:36px;display:flex;align-items:center;padding:0 12px;border-radius:8px;border:1px dashed {{ subGPick.border }};background:{{ subGPick.bg }};font-size:13px;color:{{ subGPick.color }}">{{ subGPick.label }}</div></div>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الأيام</span><input type="number" min="1" max="365" value="{{ subGDays }}" onChange="{{ onSubGDays }}" style="width:100px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+                <button onClick="{{ subGrant }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الأيام</button>
+                <button onClick="{{ subGrantOpen }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">اشتراك مفتوح</button>
+              </div>
+            </div>
+            <!-- تعويض الكل (subscription-service.js compensateAll) -->
+            <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #262a37">
+              <span style="font-size:12px;color:#9199ab">تعويض كل المشتركين (يوم انقطاع مثلاً): تنضاف الأيام للفعّال والمعلّق، واللي انتهى اشتراكه خلال أيام السماح يرجع له اشتراك بعدد الأيام من الحين. المفتوح ما يتأثر.</span>
+              <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الأيام</span><input type="number" min="1" max="30" value="{{ compDays }}" onChange="{{ onCompDays }}" style="width:100px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+                <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">السبب (اختياري، يظهر بسجل الستريمر)</span><input value="{{ compNote }}" onChange="{{ onCompNote }}" placeholder="تعويض انقطاع" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+                <button onClick="{{ subCompensate }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">تعويض الكل</button>
+              </div>
+            </div>
             <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #262a37">
               <span style="font-size:12px;color:#9199ab">الباقات</span>
               <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{ planRows }" as="pl" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;background:#0b0d12;border:1px solid #2f3342;font-size:13px"><span style="font-weight:600">{{ pl.name }}</span><span style="color:#9199ab">{{ pl.info }}</span><span style="color:{{ pl.color }};font-size:12px">{{ pl.state }}</span><button onClick="{{ pl.edit }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">تعديل</button><button onClick="{{ pl.toggle }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">{{ pl.toggleLabel }}</button></div></sc-for></div>
@@ -553,7 +580,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.remaining }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:#9199ab">{{ u.ends }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.pauses }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;white-space:nowrap"><div style="display:flex;gap:6px"><button onClick="{{ u.add }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">+ أيام</button><button onClick="{{ u.sub }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">− أيام</button><sc-if value="{{ u.paused }}"><button onClick="{{ u.unpause }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">فك التعليق</button></sc-if><sc-if value="{{ u.active }}"><button onClick="{{ u.end }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إنهاء</button></sc-if></div></td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;white-space:nowrap"><div style="display:flex;gap:6px"><sc-if value="{{ u.timed }}"><button onClick="{{ u.add }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">+ أيام</button><button onClick="{{ u.sub }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">− أيام</button><button onClick="{{ u.open }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">مفتوح</button></sc-if><sc-if value="{{ u.openEnded }}"><button onClick="{{ u.close }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">إلغاء المفتوح</button></sc-if><sc-if value="{{ u.paused }}"><button onClick="{{ u.unpause }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">فك التعليق</button></sc-if><sc-if value="{{ u.active }}"><button onClick="{{ u.end }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إنهاء</button></sc-if></div></td>
               </tr></sc-for></tbody>
             </table></div>
             <sc-if value="{{ subscribersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه مشتركين بعد.</div></sc-if>
@@ -1141,7 +1168,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, subEnf:null, subGType:'internal', subGId:'', subGUser:null, subGState:'empty', subGDays:30, compDays:1, compNote:'', planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -1235,7 +1262,10 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadSubscribers(){ if(!A.adminListSubscribers) return Promise.resolve(); return A.adminListSubscribers().then(r=>{ if(r&&r.success) this.setState({ subscribers:r.subscribers||[], subPlans:r.plans||[] }); }); }
+  loadSubscribers(){ if(!A.adminListSubscribers) return Promise.resolve(); return A.adminListSubscribers().then(r=>{ if(r&&r.success) this.setState({ subscribers:r.subscribers||[], subPlans:r.plans||[], subEnf:r.enforcement||null }); }); }
+  setSubPick(patch){ this.setState(patch,()=>{ clearTimeout(this._slk); const v=this.state.subGId.trim(); if(!v){ this.setState({ subGUser:null, subGState:'empty' }); return; }
+    this.setState({ subGUser:null, subGState:'loading' }); const seq=this._sseq=(this._sseq||0)+1;
+    this._slk=setTimeout(()=>A.adminLookupUser(v,this.state.subGType).then(r=>{ if(seq!==this._sseq) return; this.setState(r&&r.success&&r.user?{ subGUser:r.user, subGState:'ok' }:{ subGUser:null, subGState:'missing' }); },()=>{ if(seq===this._sseq) this.setState({ subGState:'missing' }); }),350); }); }
   loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
@@ -1630,12 +1660,40 @@ class Component extends DCLogic {
               if(!r.success) return this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err');
               this.setState({ planMonths:'', planName:'', planPauses:'' }); this.flash(`انحفظت باقة ${r.plan.name}.`); this.loadSubscribers(); }); },
           subAdjDays:s.subAdjDays, onSubAdjDays:e=>this.setState({ subAdjDays:e.target.value }),
-          subSummary:s.subscribers?`${subs.filter(u=>u.active).length} فعّال · ${subs.filter(u=>u.paused).length} معلّق · ${subs.filter(u=>!u.active).length} منتهي`:'',
+          subSummary:s.subscribers?`${subs.filter(u=>u.active&&!u.openEnded).length} فعّال · ${subs.filter(u=>u.openEnded).length} مفتوح · ${subs.filter(u=>u.paused).length} معلّق · ${subs.filter(u=>!u.active).length} منتهي`:'',
           subscribersEmpty:!!s.subscribers&&!subs.length,
+          ...(()=>{ const e=s.subEnf, gu=s.subGUser, nm=x=>x.display_name||x.username;
+            const SUBERR={ open_ended:'اشتراكه مفتوح — ألغِ المفتوح أول.', already_open:'اشتراكه مفتوح أصلاً.', not_open:'اشتراكه مو مفتوح.', user_not_found:'ما فيه حساب بهذا الآيدي.', invalid_days:'عدد الأيام غير صحيح.', no_subscription:'ما عنده اشتراك.' };
+            const done=(r,ok)=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التنفيذ: '+(SUBERR[r.error]||r.error||'unknown'),'err'); this.flash(ok); this.loadSubscribers(); };
+            const gDays=()=>{ const n=Math.floor(Number(s.subGDays)); return n>=1&&n<=365?n:0; };
+            const needG=fn=>{ if(!s.subGId.trim()) return this.flash('اكتب آيدي المستخدم أولاً.','err'); if(!gu) return this.flash('لم يتم التأكد من الحساب بعد — تأكد من الآيدي ونوعه.','err'); fn(gu); };
+            return {
+              subEnfDot:!e?'#5b6274':e.enforced?'#4ade80':'#fbbf24',
+              subEnfTitle:!e?'حالة القفل…':e.enforced?'قفل الألعاب شغّال':'قفل الألعاب لم يبدأ بعد',
+              subEnfDesc:!e?'':e.mode==='forced_off'?'مطفي يدوياً (SUBSCRIPTION_ENFORCEMENT=false) — الكل يقدر يشغّل الألعاب.'
+                :e.mode==='forced_on'?`مفعّل يدوياً (SUBSCRIPTION_ENFORCEMENT=true) · أيام السماح بعد الانتهاء: ${e.graceDays}. الأدمن مستثنى.`
+                :(e.enforced?`بدأ ${fmtDate(e.startAt)}`:`يبدأ تلقائياً ${fmtDate(e.startAt)}`)+` · ربط أي بث يحتاج اشتراك فعّال (الأدمن مستثنى) · أيام السماح بعد الانتهاء: ${e.graceDays}`,
+              subGType:s.subGType, subGId:s.subGId, subGDays:s.subGDays, subGPh:s.subGType==='internal'?'3':'12345678',
+              onSubGType:ev=>this.setSubPick({ subGType:ev.target.value }), onSubGId:ev=>this.setSubPick({ subGId:ev.target.value }), onSubGDays:ev=>this.setState({ subGDays:ev.target.value }),
+              subGPick:s.subGState==='ok'&&gu?{ label:`${nm(gu)} · #${gu.id} · ${gu.custom_id||'—'}`, color:'#e7e9ee', border:'#14532d', bg:'#0f1d15' }
+                :s.subGState==='missing'?{ label:'ما فيه حساب بهذا المعرّف', color:'#fca5a5', border:'#4a2427', bg:'#1a0f12' }
+                :s.subGState==='loading'?{ label:'جارٍ البحث…', color:'#9199ab', border:'#2f3342', bg:'transparent' }
+                :{ label:'اكتب الآيدي', color:'#5b6274', border:'#2f3342', bg:'transparent' },
+              subGrant:()=>needG(g=>{ const n=gDays(); if(!n) return this.flash('عدد الأيام من 1 إلى 365.','err');
+                this.ask('منح اشتراك؟',`ينمنح ${nm(g)} اشتراك ${n} يوم (لو عنده اشتراك فعّال تنضاف على نهايته).`,'منح',()=>this.busy('subgrant',()=>A.adminGrantSubscription(g.id,n)).then(r=>done(r,`انمنح ${nm(g)} ${n} يوم.`))); }),
+              subGrantOpen:()=>needG(g=>this.ask('اشتراك مفتوح؟',`يصير اشتراك ${nm(g)} مفتوح بدون تاريخ انتهاء لين تلغيه. أيامه الباقية (لو فيه) تنحفظ وترجع له لما تلغي المفتوح.`,'تفعيل المفتوح',()=>this.busy('subgrant',()=>A.adminSetOpenSubscription(g.id,true)).then(r=>done(r,`صار اشتراك ${nm(g)} مفتوح.`)))),
+              compDays:s.compDays, compNote:s.compNote, onCompDays:ev=>this.setState({ compDays:ev.target.value }), onCompNote:ev=>this.setState({ compNote:ev.target.value }),
+              subCompensate:()=>{ const n=Math.floor(Number(s.compDays)); if(!(n>=1&&n<=30)) return this.flash('أيام التعويض من 1 إلى 30.','err');
+                this.ask('تعويض كل المشتركين؟',`تنضاف ${n} يوم لكل مشترك فعّال أو معلّق، واللي انتهى اشتراكه خلال أيام السماح يرجع له ${n} يوم من الحين. ما تقدر تتراجع عنها دفعة وحدة.`,'تعويض الكل',
+                  ()=>this.busy('subcomp',()=>A.adminCompensateSubscriptions(n,s.compNote)).then(r=>{ if(r&&r.success) this.setState({ compNote:'' }); done(r,`تم تعويض ${r&&r.count||0} مشترك بـ${n} يوم.`); })); }
+            }; })(),
           subscriberRows:subs.map(u=>{ const act=(key,call,ok)=>this.busy(key,call).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التنفيذ: '+(r.error||'unknown'),'err'); this.flash(ok); this.loadSubscribers(); });
             return { name:u.name||'—', id:u.customId?'#'+u.customId:'',
-              status:!u.active?'منتهي':u.paused?'معلّق':u.expiringSoon?'قرب ينتهي':'فعّال', color:!u.active?'#9199ab':u.paused?'#fbbf24':u.expiringSoon?'#fb923c':'#4ade80',
-              remaining:u.active?daysAr(u.remainingMs):'—', ends:fmtDate(u.endsAt), pauses:`${u.pausesUsed} / ${u.pausesAllowed}`, paused:u.paused, active:u.active,
+              status:u.openEnded?'مفتوح':!u.active?'منتهي':u.paused?'معلّق':u.expiringSoon?'قرب ينتهي':'فعّال', color:u.openEnded?'#a78bfa':!u.active?'#9199ab':u.paused?'#fbbf24':u.expiringSoon?'#fb923c':'#4ade80',
+              remaining:u.openEnded?(u.carryMs>0?`بدون مدة (محفوظ ${daysAr(u.carryMs)})`:'بدون مدة'):u.active?daysAr(u.remainingMs):'—', ends:u.openEnded?'—':fmtDate(u.endsAt), pauses:u.openEnded?'—':`${u.pausesUsed} / ${u.pausesAllowed}`, paused:u.paused, active:u.active,
+              timed:!u.openEnded, openEnded:!!u.openEnded,
+              open:()=>this.ask('اشتراك مفتوح؟',`يصير اشتراك ${u.name} مفتوح بدون تاريخ انتهاء لين تلغيه. أيامه الباقية تنحفظ وترجع له لما تلغي المفتوح.`,'تفعيل المفتوح',()=>act('subadj',()=>A.adminSetOpenSubscription(u.userId,true),`صار اشتراك ${u.name} مفتوح.`)),
+              close:()=>this.ask('إلغاء الاشتراك المفتوح؟',u.carryMs>0?`يرجع اشتراك ${u.name} محدد المدة بالأيام المحفوظة (${daysAr(u.carryMs)}) من الحين.`:`ما عنده أيام محفوظة، فاشتراكه ينتهي الحين (مع أيام السماح).`,'إلغاء المفتوح',()=>act('subadj',()=>A.adminSetOpenSubscription(u.userId,false),`انلغى الاشتراك المفتوح لـ${u.name}.`)),
               add:()=>{ const n=adjDays(); if(!n) return this.flash('عدد الأيام من 1 إلى 365.','err'); this.ask('إضافة أيام؟',`تنضاف ${n} يوم لاشتراك ${u.name}.`,'إضافة',()=>act('subadj',()=>A.adminAdjustSubscription(u.userId,n),`انضافت ${n} يوم لـ${u.name}.`)); },
               sub:()=>{ const n=adjDays(); if(!n) return this.flash('عدد الأيام من 1 إلى 365.','err'); this.ask('خصم أيام؟',`تنخصم ${n} يوم من اشتراك ${u.name}.`,'خصم',()=>act('subadj',()=>A.adminAdjustSubscription(u.userId,-n),`انخصمت ${n} يوم من ${u.name}.`)); },
               unpause:()=>this.ask('فك التعليق؟',`يرجع اشتراك ${u.name} يشتغل الحين، والتعليق ينحسب له.`,'فك التعليق',()=>act('subadj',()=>A.adminUnpauseSubscription(u.userId),`انفك تعليق ${u.name}.`)),

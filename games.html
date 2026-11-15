@@ -708,6 +708,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!auth || !auth.getToken || !auth.getToken()) return 'login';
     var user = auth.getCachedUser ? auth.getCachedUser() : null;
     if (auth.canPlayGames && auth.canPlayGames(user)) return null;
+    // اشتراك منتهي (بعد بدء القفل 1 ديسمبر) لحساب مستوفي باقي الشروط
+    if (auth.hasSubscriptionAccess && !auth.hasSubscriptionAccess(user) && user &&
+        ((user.permissions && user.permissions.full_game_access) ||
+         (auth.isStreamerAccount && auth.isStreamerAccount(user) && (user.tiktok_verified || user.kick_verified || user.twitch_verified)))) return 'subscription';
     if (auth.isStreamerAccount && !auth.isStreamerAccount(user)) return 'not_streamer';
     return 'tiktok';
   }
@@ -751,6 +755,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else if (reason === 'login') {
       msg = 'لازم تسجّل دخول وتربط حساب تيك توك أو كيك بحسابك عشان تفتح الألعاب.';
       btnLabel = 'تسجيل الدخول'; btnHref = 'login.html';
+    } else if (reason === 'subscription') {
+      msg = 'اشتراكك منتهي أو ما عندك اشتراك. فعّل كود الاشتراك أو اشترك من قسم «الاشتراك» بحسابك عشان تفتح الألعاب.';
+      btnLabel = 'الاشتراك'; btnHref = profileHref + '#subscription';
     } else if (reason === 'not_streamer') {
       msg = 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب. تواصل مع الإدارة لتحويله لحساب ستريمر.';
       btnLabel = 'تواصل معنا'; btnHref = 'support.html';
@@ -792,7 +799,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeGameLockModal(); });
   // صفحة لعبة رجّعت المستخدم هنا لأنه غير مسموح له (auth/game-access-guard.js) — نعرض سبب القفل
   (function(){
-    var m = /[?&]locked=(login|not_streamer|tiktok|testing)\b/.exec(window.location.search);
+    var m = /[?&]locked=(login|not_streamer|tiktok|testing|subscription)\b/.exec(window.location.search);
     if (!m) return;
     // بعد ما يكتمل بناء الصفحة (القالب يعيد رسم المحتوى) — ننتظر ظهور بطاقات الألعاب
     var tries = 0;

@@ -31,6 +31,7 @@ var connectorRouter = require('../platforms/connector-router');
 var registry = require('./connection-registry');
 var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
+var subscriptionService = require('../subscriptions/subscription-service');
 var liveSessionStats = require('../stats/live-session-stats');
 var config = require('../config');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
@@ -205,6 +206,19 @@ function normalizeTikTokUsername(name) {
 }
 
 /**
+ * اشتراك الستريمر (subscriptions/subscription-service.js): بعد بدء القفل
+ * (1 ديسمبر 2026) ربط أي بث يحتاج اشتراك فعّال — حتى صلاحية «تشغيل كامل».
+ * الأدمن مستثنى عند المستدعي.
+ * @returns {null|{code: string, message: string}}
+ */
+function checkSubscription(user) {
+  var ok = true;
+  try { ok = subscriptionService.hasActiveSubscription(user.id); } catch (err) { logger.error('WS Server: subscription check failed:', err); }
+  if (ok) return null;
+  return { code: 'subscription_required', message: 'اشتراكك منتهي أو ما عندك اشتراك — فعّل كود الاشتراك أو اشترك من صفحة حسابي (قسم الاشتراك) عشان تشغّل الألعاب.' };
+}
+
+/**
  * @returns {null|{code: string, message: string}} null = مسموح
  */
 function checkStreamConnectAllowed(payload) {
@@ -215,7 +229,7 @@ function checkStreamConnectAllowed(payload) {
   if (user.role === 'admin') return null;
   // صلاحية «تشغيل كامل» يمنحها الأدمن (admin.html → منح الصلاحيات): كل
   // الألعاب على أي بث، بدون شرط حساب ستريمر أو ربط تيك توك أو تطابق اليوزر.
-  if (user.permissions && user.permissions.full_game_access) return null;
+  if (user.permissions && user.permissions.full_game_access) return checkSubscription(user);
   // حساب ستريمر = اختار "ستريمر" بالتسجيل، أو حوّله الأدمن (can_run_games).
   var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
   if (!isStreamerAccount) {
@@ -227,12 +241,13 @@ function checkStreamConnectAllowed(payload) {
   if (normalizeTikTokUsername(payload.username) !== normalizeTikTokUsername(user.tiktok_username)) {
     return { code: 'tiktok_account_mismatch', message: 'تقدر تتصل فقط ببث حساب تيك توك المربوط بحسابك: @' + normalizeTikTokUsername(user.tiktok_username) };
   }
-  return null;
+  return checkSubscription(user);
 }
 
 // ربط بث كيك/تويتش — نفس شروط تيك توك: حساب ستريمر + حساب المنصة مربوط
 // (OAuth — auth/kick-oauth-service.js و auth/twitch-oauth-service.js) ويكون
-// هو نفس القناة المطلوبة. الأدمن وصلاحية «تشغيل كامل» مستثنين.
+// هو نفس القناة المطلوبة + اشتراك فعّال. الأدمن مستثنى، و«تشغيل كامل»
+// مستثنى من الشروط كلها إلا الاشتراك.
 var LINKED_PLATFORMS = {
   kick: { label: 'كيك', field: 'kick', strip: /^(https?:\/\/)?(www\.)?kick\.com\//i },
   twitch: { label: 'تويتش', field: 'twitch', strip: /^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i }
@@ -248,7 +263,7 @@ function checkLinkedPlatformConnectAllowed(platform, payload) {
     return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب ' + def.label + ' عشان تتصل بالبث.' };
   }
   if (user.role === 'admin') return null;
-  if (user.permissions && user.permissions.full_game_access) return null;
+  if (user.permissions && user.permissions.full_game_access) return checkSubscription(user);
   var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
   if (!isStreamerAccount) {
     return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
@@ -260,7 +275,7 @@ function checkLinkedPlatformConnectAllowed(platform, payload) {
   if (normalizeChannelName(platform, payload.username) !== normalizeChannelName(platform, linkedName)) {
     return { code: def.field + '_account_mismatch', message: 'تقدر تتصل فقط ببث قناة ' + def.label + ' المربوطة بحسابك: ' + linkedName };
   }
-  return null;
+  return checkSubscription(user);
 }
 
 // اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.

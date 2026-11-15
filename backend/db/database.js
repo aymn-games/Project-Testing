@@ -707,6 +707,10 @@ ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
 // اشتراك الستريمر: رصيد التعليق للكود يُنسخ من الباقة وقت التوليد.
 ensureColumn('subscription_codes', 'pauses', 'INTEGER');
+// اشتراك مفتوح (بدون مدة) يمنحه الأدمن: open_ended=1 يفتح الأدوات لين يلغيه،
+// وopen_carry_ms = الأيام المحددة اللي كانت باقية وقت المنح (ترجع له لما ينلغي).
+ensureColumn('streamer_subscriptions', 'open_ended', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('streamer_subscriptions', 'open_carry_ms', 'INTEGER NOT NULL DEFAULT 0');
 // الباقات الأساسية (لو الجدول فاضي): شهر = تعليق، شهرين = تعليقين.
 db.prepare("INSERT OR IGNORE INTO subscription_plans (months, name, pauses, active, updated_at) VALUES (1, 'شهر', 1, 1, ?), (2, 'شهرين', 2, 1, ?)").run(Date.now(), Date.now());
 ensureColumn('store_orders', 'payment_gateway', 'TEXT');
