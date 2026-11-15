@@ -59,6 +59,22 @@ module.exports = {
     tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
     tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/tiktok/oauth/callback',
 
+    // تطبيق كيك (Kick Public API — App Access Token لأحداث البث عبر Webhook
+    // على /kick/webhook). السر بلا قيمة افتراضية؛ بدونهما ربط كيك يبقى مطفأ.
+    kickClientId: process.env.KICK_CLIENT_ID || '',
+    kickClientSecret: process.env.KICK_CLIENT_SECRET || '',
+    // رابط رجوع ربط حساب كيك — لازم يكون مضاف حرفياً بإعدادات التطبيق في كيك.
+    kickRedirectUri: process.env.KICK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/kick/oauth/callback',
+
+    // تطبيق تويتش (dev.twitch.tv/console) — EventSub عبر Webhook على /twitch/webhook،
+    // وربط حساب الستريمر (موافقته على قراءة الشات). بدونهما ربط تويتش مطفأ.
+    twitchClientId: process.env.TWITCH_CLIENT_ID || '',
+    twitchClientSecret: process.env.TWITCH_CLIENT_SECRET || '',
+    // لازم يكون مضاف حرفياً بـ OAuth Redirect URLs بإعدادات تطبيق تويتش.
+    twitchRedirectUri: process.env.TWITCH_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/twitch/oauth/callback',
+    // رابط استقبال أحداث EventSub (HTTPS على 443، بدون تحويلات).
+    twitchWebhookUrl: process.env.TWITCH_WEBHOOK_URL || 'https://project-testing-akds.onrender.com/twitch/webhook',
+
     // ⚠️ دومين الموقع الفعلي (منفصل عن دومين هذا السيرفر) — لازم يكون مطلقاً
     // لبناء رابط إعادة التوجيه بنهاية تسجيل دخول تيك توك، وإلا يرجّع المستخدم لدومين السيرفر (404).
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',

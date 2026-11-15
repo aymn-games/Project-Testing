@@ -12,6 +12,8 @@
 var mockConnector = require('./mock/mock-connector'); // يبقى متاحاً للاختبار المحلي، غير مستخدَم بالإنتاج الآن
 var tiktokConnector = require('./tiktok/tiktok-connector'); // يُستخدَم عبر المجمّع تحت
 var connectionPool = require('./tiktok/shared-connection-pool');
+var kickConnector = require('./kick/kick-connector');
+var twitchConnector = require('./twitch/twitch-connector');
 
 /**
  * جلب موصِّل جديد (نسخة مستقلة) للمنصة المطلوبة.
@@ -26,6 +28,14 @@ function createConnectorForPlatform(platform, meta) {
         // meta.source للعداد فقط (game:<slug>، library، watcher، challenge).
         return connectionPool.createLease(meta);
     }
+    if (platform === 'kick') {
+        // كيك: API رسمي عبر Webhooks — اشتراك مشترك لكل قناة (kick/kick-hub.js).
+        return kickConnector.createKickConnector();
+    }
+    if (platform === 'twitch') {
+        // تويتش: EventSub رسمي عبر Webhooks — اشتراك مشترك لكل قناة (twitch/twitch-hub.js).
+        return twitchConnector.createTwitchConnector();
+    }
     return null;
 }
 
@@ -36,6 +46,8 @@ function createConnectorForPlatform(platform, meta) {
  */
 function getActiveConnectorName(platform) {
     if (platform === 'tiktok') return 'tiktok-connector.js (real, shared pool)';
+    if (platform === 'kick') return 'kick-connector.js (official API, webhooks)';
+    if (platform === 'twitch') return 'twitch-connector.js (EventSub, webhooks)';
     return 'none';
 }
 

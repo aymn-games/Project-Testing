@@ -735,6 +735,20 @@ ensureColumn('users', 'tiktok_open_id', 'TEXT');
 // بـtiktok-oauth-service.js). سيرفر فقط، ما يطلع لأي واجهة.
 ensureColumn('users', 'tiktok_refresh_token', 'TEXT');
 ensureColumn('users', 'tiktok_refresh_expires_at', 'INTEGER');
+// ربط حساب كيك (OAuth الرسمي — auth/kick-oauth-service.js): kick_user_id ثابت
+// يمنع نفس حساب كيك من الارتباط بأكثر من حساب، وkick_username = اسم القناة (slug)
+// اللي يُسمح للستريمر يربط الألعاب ببثها. توكن كيك نفسه ما يُحفظ.
+ensureColumn('users', 'kick_user_id', 'TEXT');
+ensureColumn('users', 'kick_username', 'TEXT');
+ensureColumn('users', 'kick_display_name', 'TEXT');
+ensureColumn('users', 'kick_avatar_url', 'TEXT');
+ensureColumn('users', 'kick_verified', 'INTEGER NOT NULL DEFAULT 0');
+// ربط حساب تويتش (auth/twitch-oauth-service.js) — twitch_username = اسم القناة (login).
+ensureColumn('users', 'twitch_user_id', 'TEXT');
+ensureColumn('users', 'twitch_username', 'TEXT');
+ensureColumn('users', 'twitch_display_name', 'TEXT');
+ensureColumn('users', 'twitch_avatar_url', 'TEXT');
+ensureColumn('users', 'twitch_verified', 'INTEGER NOT NULL DEFAULT 0');
 // عدّادات جولات مكتملة/فوز — لبطاقة "إحصائيات اللاعب" بالبروفايل، تُحدَّث
 // من awardForRoundCompletion بـpoints-service.js.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');

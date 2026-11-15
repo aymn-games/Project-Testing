@@ -586,7 +586,7 @@
     ]);
   }
 
-  /* ---------- ربط المنصات: تيك توك (شغّال) + كيك وتويتش (قريباً) */
+  /* ---------- ربط المنصات: تيك توك + كيك + تويتش (backend/auth/*-oauth-service.js) */
   function platformLogo(kind) {
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
@@ -604,19 +604,42 @@
       line: linked ? (p.tiktok_username ? '@' + p.tiktok_username : 'الحساب مرتبط') : 'نقاطك وشخصيتك بالألعاب تحتاج ربط',
       button: tiktokButton(p), on: linked
     }));
-    grid.appendChild(platformCard({
-      kind: 'kick', name: 'كيك', logo: platformLogo('kick'), status: pill('قريباً'),
-      line: 'شغّل الألعاب لمتابعينك على كيك',
-      button: h('button', { type: 'button', class: 'pf-plat-btn', disabled: true, title: 'إطلاق جديد قريباً' }, 'ربط كيك')
-    }));
-    grid.appendChild(platformCard({
-      kind: 'twitch', name: 'تويتش', logo: platformLogo('twitch'), status: pill('قريباً'),
-      line: 'خل شات تويتش يلعب معك',
-      button: h('button', { type: 'button', class: 'pf-plat-btn', disabled: true, title: 'إطلاق جديد قريباً' }, 'ربط تويتش')
-    }));
+    LINK_PLATFORMS.forEach(function (def) {
+      var on = !!(p[def.kind + '_verified'] && p[def.kind + '_username']);
+      grid.appendChild(platformCard({
+        kind: def.kind, name: def.name, logo: platformLogo(def.kind),
+        status: on ? pill('مربوط', 'ok') : pill('غير مربوط', 'warn'),
+        line: on ? def.url + p[def.kind + '_username'] : def.hint,
+        button: linkPlatformButton(def, on), on: on
+      }));
+    });
     body.appendChild(grid);
     body.appendChild(h('p', { class: 'pf-hint', text: 'الربط رسمي من المنصة نفسها، وما نشوف كلمة المرور أبداً.' }));
   }
+  // كيك وتويتش: نفس طريقة تيك توك — زر يودي لموافقة المنصة (AGPAuth.start*Link)
+  // والرجوع على profile.html?kick_link= / ?twitch_link= (handlePlatformReturn).
+  var LINK_PLATFORMS = [
+    { kind: 'kick', name: 'كيك', url: 'kick.com/', hint: 'شغّل الألعاب لمتابعينك على كيك',
+      start: function () { window.AGPAuth.startKickLink(); }, unlink: function () { return window.AGPAuth.unlinkKick(); } },
+    { kind: 'twitch', name: 'تويتش', url: 'twitch.tv/', hint: 'خل شات تويتش يلعب معك (الربط لازم عشان تويتش يسمح بقراءة الشات)',
+      start: function () { window.AGPAuth.startTwitchLink(); }, unlink: function () { return window.AGPAuth.unlinkTwitch(); } }
+  ];
+  function linkPlatformButton(def, on) {
+    if (!S.owner || !window.AGPAuth || !window.AGPAuth.startKickLink) return null;
+    var btn = h('button', { type: 'button', class: 'pf-plat-btn' + (on ? ' danger' : ''), text: on ? 'إلغاء الربط' : 'ربط ' + def.name });
+    btn.addEventListener('click', function () {
+      if (!on) { def.start(); return; }
+      if (!window.confirm('متأكد تبي تلغي ربط حساب ' + def.name + '؟')) return;
+      btn.disabled = true;
+      def.unlink().then(function (r) {
+        btn.disabled = false;
+        if (r && r.success) window.location.reload();
+        else showToast('تعذّر إلغاء الربط، جرّب مرة ثانية.', true);
+      }).catch(function () { btn.disabled = false; });
+    });
+    return btn;
+  }
+
   function platformCard(o) {
     return h('div', { class: 'pf-plat pf-plat-' + o.kind + (o.on ? ' on' : ''), id: o.kind === 'tiktok' ? 'tiktok' : null }, [
       h('div', { class: 'pf-plat-top' }, [h('span', { class: 'pf-plat-logo' }, o.logo), o.status]),
@@ -2432,6 +2455,29 @@
 
   /* ===================================================== رجوع ربط تيك توك */
 
+  // رجوع ربط كيك/تويتش (?kick_link= أو ?twitch_link=)
+  function handlePlatformReturn() {
+    var params = new URLSearchParams(window.location.search);
+    var def = LINK_PLATFORMS.filter(function (d) { return params.get(d.kind + '_link'); })[0];
+    if (!def) return;
+    var res = params.get(def.kind + '_link');
+    var msgMap = {
+      success: 'تم ربط حساب ' + def.name + ' بنجاح.',
+      cancelled: 'ألغيت عملية الربط.',
+      invalid_state: 'انتهت صلاحية محاولة الربط، جرّب مرة ثانية.',
+      missing_code: 'حصل خطأ أثناء الربط، جرّب مرة ثانية.',
+      token_exchange_failed: 'تعذّر إكمال الربط مع ' + def.name + '، جرّب مرة ثانية.',
+      user_info_failed: 'تعذّر جلب بيانات قناتك من ' + def.name + '، جرّب مرة ثانية.',
+      already_linked: 'حساب ' + def.name + ' هذا مرتبط بحساب ثاني في الموقع.',
+      not_configured: 'ربط ' + def.name + ' غير متاح حالياً.',
+      link_failed: 'تعذّر حفظ الربط، جرّب مرة ثانية.'
+    };
+    var ok = res === 'success';
+    showToast(msgMap[res] || 'حصل خطأ غير متوقع.', !ok);
+    history.replaceState({}, '', window.location.pathname + '#tiktok');
+    if (ok) setTimeout(function () { window.location.reload(); }, 900);
+  }
+
   function handleTikTokReturn() {
     var res = new URLSearchParams(window.location.search).get('tiktok_link');
     if (!res) return;
@@ -2516,6 +2562,7 @@
 
     if (!S.owner) return;
     handleTikTokReturn();
+    handlePlatformReturn();
     // الحالة الحقيقية من الخادم — النسخة المحفوظة بالمتصفح ممكن تكون قديمة.
     if (window.AGPAuth.refreshUser) window.AGPAuth.refreshUser().then(function (u) {
       if (u && u.email_verified === false) { S.emailUnverified = { email: u.email }; go(S.section, { noHash: true }); }

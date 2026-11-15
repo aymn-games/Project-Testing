@@ -375,6 +375,29 @@ function unlinkTikTok() {
     return request('/api/auth/tiktok/unlink', { method: 'POST' });
 }
 
+/** ربط حساب كيك: انتقال مباشر لخادمنا وهو يحوّل (302) لصفحة موافقة كيك —
+ * نفس طريقة زر ربط تيك توك (profile.html). */
+function startKickLink() {
+    var token = getToken();
+    if (!token) { window.location.href = 'login.html'; return; }
+    window.location.href = API_BASE + '/api/auth/kick/oauth/start?token=' + encodeURIComponent(token);
+}
+
+function unlinkKick() {
+    return request('/api/auth/kick/unlink', { method: 'POST' });
+}
+
+/** ربط حساب تويتش (موافقة الستريمر على قراءة الشات) — نفس طريقة كيك. */
+function startTwitchLink() {
+    var token = getToken();
+    if (!token) { window.location.href = 'login.html'; return; }
+    window.location.href = API_BASE + '/api/auth/twitch/oauth/start?token=' + encodeURIComponent(token);
+}
+
+function unlinkTwitch() {
+    return request('/api/auth/twitch/unlink', { method: 'POST' });
+}
+
 /** Self-service account deletion — final, no undo. */
 function deleteMyAccount() {
     return request('/api/profile/delete-account', { method: 'POST' });
@@ -813,6 +836,9 @@ function reportRoundCompletion(participants, durationMs, options) {
 function tiktokUsernameForPlayer(player) {
     var id = (player && player.id) || '';
     if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
+    // لاعب من بث كيك/تويتش ("kick:<username>"/"twitch:<login>") — النقاط مربوطة بتيك توك فقط،
+    // وما نرجع للاسم عشان ما تنحسب لحساب تيك توك بنفس الاسم بالغلط.
+    if (id.indexOf('kick:') === 0 || id.indexOf('twitch:') === 0) return '';
     return (player && (player.name || player.id)) || '';
 }
 
@@ -876,7 +902,9 @@ function canPlayGames(user) {
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).
     if (user.permissions && user.permissions.full_game_access) return true;
-    return isStreamerAccount(user) && Boolean(user.tiktok_verified);
+    // ستريمر مربوط بتيك توك أو كيك أو تويتش (backend/auth/*-oauth-service.js) —
+    // الخادم يتأكد عند الاتصال إن البث هو حسابه المربوط على نفس المنصة.
+    return isStreamerAccount(user) && Boolean(user.tiktok_verified || user.kick_verified || user.twitch_verified);
 }
 
 /** True for an approved streamer (same condition as canPlayGames, excluding
@@ -1162,6 +1190,10 @@ global.AGPAuth = {
     requestTikTokVerificationCode: requestTikTokVerificationCode,
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,
+    startKickLink: startKickLink,
+    unlinkKick: unlinkKick,
+    startTwitchLink: startTwitchLink,
+    unlinkTwitch: unlinkTwitch,
     deleteMyAccount: deleteMyAccount,
     setCustomId: setCustomId,
     updateDisplayName: updateDisplayName,

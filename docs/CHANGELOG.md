@@ -9,6 +9,56 @@
 
 ---
 
+## ربط بث تويتش (Twitch) — EventSub الرسمي (2026-11-15)
+
+- **السيرفر (`backend/platforms/twitch/`):** نفس بنية كيك.
+  - `twitch-api.js`: App Access Token، المستخدم بالاسم، هل يبث، إنشاء/حذف اشتراكات EventSub (Webhook)،
+    والتحقق من التوقيع (`sha256=` HMAC). سر التوقيع مشتق من Client Secret (ما يحتاج متغير إضافي).
+  - `twitch-hub.js`: `POST /twitch/webhook` — يرد على تحدي التحقق بالنص الخام، يرفض التوقيع الغلط والرسائل الأقدم
+    من 10 دقايق (403)، يتجاهل التكرار، يسجّل الإلغاء (revocation)، واشتراكات مشتركة لكل قناة.
+  - `twitch-connector.js`: الشات ← `onComment`، الـBits ← `onGift` (كل Bit = عملة)، الاشتراك/التجديد ← `onGift`
+    (500 × مضاعف المستوى 1/2/5)، إهداء الاشتراكات ← `onGift` × العدد، المتابعة ← `onFollow`، `stream.offline` ← انتهاء البث.
+    معرّف اللاعب `twitch:<login>`.
+- **ربط حساب تويتش (`backend/auth/twitch-oauth-service.js`) — إلزامي للبث:** تويتش ما يسمح بقراءة شات القناة إلا بموافقة
+  صاحبها (`user:read:chat user:bot channel:bot moderator:read:followers bits:read channel:read:subscriptions`).
+  مسارات `/api/auth/twitch/oauth/start|callback` و`/api/auth/twitch/unlink`، وأعمدة `twitch_*` بجدول `users`.
+- **الصلاحية:** `ws-server.js` صار يفحص كيك وتويتش بدالة وحدة (`checkLinkedPlatformConnectAllowed`).
+- **الواجهة:** تويتش مفعّل بأيقونات المنصة بمكتبة الألعاب، بطاقة «حساب تويتش» بـ`profile.html`، والأدابتر
+  و`AGP.streamPlatform` والاتصال التلقائي ومراقبة انتهاء البث يدعمون تويتش. لاعبين تويتش ما يدخلون نقاط المنصة.
+- **متغيرات Render الجديدة:** `TWITCH_CLIENT_ID` و`TWITCH_CLIENT_SECRET`. فحص الصحة (`/`) يعرض `twitchConfigured`.
+- **الاختبار:** `backend/platforms/twitch/twitch.test.js` (تحويل الأحداث، التوقيع، تحدي التحقق، محاكاة كاملة للموصِّل).
+  مؤقّت إلغاء الاشتراك بكيك وتويتش صار `unref()` (ما يمسك العملية مفتوحة).
+
+## ربط بث كيك (Kick) + اختيار منصة البث بمكتبة الألعاب (2026-11-15)
+
+- **الطريقة:** Kick Public API الرسمي عبر Webhooks (docs.kick.com). السيرفر ياخذ App Access Token
+  (`client_credentials`) ويشترك بأحداث القناة برقمها.
+- **السيرفر (`backend/platforms/kick/`):**
+  - `kick-api.js`: التوكن (يتجدد لحاله)، جلب القناة بالاسم، الاشتراك وإلغاؤه، والتحقق من توقيع الـWebhook
+    (RSA-SHA256، والمفتاح العام يُجلب من كيك ولا يُكتب بالكود).
+  - `kick-hub.js`: `POST /kick/webhook` — يرفض التوقيع الغلط (401)، يتجاهل الرسائل المكررة، ويوزّع الحدث على
+    موصِّلات نفس القناة. اشتراك واحد مشترك لكل قناة، وينلغي بعد دقيقة من خروج آخر مستمع، والاشتراكات اليتيمة
+    (بعد إعادة تشغيل السيرفر) تنلغي أول ما يوصل لها حدث.
+  - `kick-connector.js`: نفس شكل موصِّل تيك توك. التعليق ← `onComment`، الـKicks ← `onGift` (كل Kick = عملة وحدة)،
+    الاشتراك/إهداء الاشتراكات ← `onGift` بقيمة 500 للاشتراك (`SUB_GIFT_VALUE`)، المتابعة ← `onFollow`، انتهاء البث ← `ended`.
+    معرّف اللاعب `kick:<username>`. كيك ما فيه لايكات ولا مشاركات، وما يرسل هل صاحب التعليق متابع (`isFollower: true`).
+  - `/api/stream/is-live?platform=kick` يفحص حالة بث القناة. فحص الصحة (`/`) يعرض `kickConfigured`.
+- **ربط حساب كيك (`backend/auth/kick-oauth-service.js`):** OAuth 2.1 + PKCE (الـverifier مشتق من state الموقّع، بدون تخزين).
+  `GET /api/auth/kick/oauth/start` و`/callback` و`POST /api/auth/kick/unlink`. أعمدة جديدة بـ`users`:
+  `kick_user_id` و`kick_username` و`kick_display_name` و`kick_avatar_url` و`kick_verified` (التوكن ما يُحفظ).
+  `profile.html`: بطاقة «حساب كيك» تحت بطاقة تيك توك (ستريمر/أدمن).
+- **الصلاحية (`ws-server.js` → `checkKickConnectAllowed`):** نفس شروط تيك توك — حساب ستريمر مربوط بكيك ويتصل بقناته
+  بس. الأدمن و«تشغيل كامل» مستثنين. `AGPAuth.canPlayGames`: الستريمر المربوط بتيك توك **أو** كيك يفتح الألعاب.
+- **مكتبة الألعاب (`games.html`):** أيقونات «منصة البث» (تيك توك · كيك · تويتش قريباً) فوق خانة الاتصال. الاختيار
+  ينحفظ (`agp:agp-stream-platform`) والاتصال المحفوظ صار يحمل المنصة. النصوص والخانة والاتصال التلقائي حسب المنصة.
+  ألعاب التكبيس (شد الحبل، فورمولا ون) عليها شارة «التكبيس لتيك توك فقط» لما المنصة غير تيك توك.
+- **الألعاب تعرف المنصة لحالها:** `adapters/agp-tiktok-adapter.js` يقرأ المنصة من الاتصال المحفوظ (بدون تعديل بالألعاب)،
+  ويوفّر `AGP.streamPlatform` (`get()`، `label()`، `supports(feature)`). `agp-game-shell.js`: الحقول تقبل `platforms`،
+  و«المتابعين فقط» تنخفي تلقائياً لغير تيك توك. `agp-auto-connect.js` و`agp-live-watch.js` و`agp-stream-overlay.js` حسب المنصة.
+- **نقاط المنصة:** لاعبين كيك (`kick:`) ما يدخلون النقاط (مربوطة بتيك توك) — `auth/auth-client.js`.
+- **الاختبار:** `backend/platforms/kick/kick.test.js` (تحويل الأحداث، التوقيع، state وPKCE). اختبار تكامل على سيرفر محلي:
+  رفض حساب اللاعب، وغير المربوط بكيك، والقناة المختلفة، والقناة الصحيحة توصل لكيك. رفض توقيع مزوّر بمفتاح كيك الحقيقي.
+
 ## البروفايل: رصيد عملات أيمن بأعلى البروفايل (2026-11-15)
 
 - شارة ذهبية فيها عملة أيمن والرصيد بنفس سطر الاسم والـID (لصاحب الحساب بس)، تفتح قسم «عملات أيمن». الرصيد من `p.coins` لما ينطلق نظام العملات، وقبلها «—».

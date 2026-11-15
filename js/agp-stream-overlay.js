@@ -619,7 +619,7 @@
         ws.onopen = function () {
             ws.send(JSON.stringify({
                 type: 'connect',
-                payload: { platform: 'tiktok', username: c.username, followersOnly: false, source: 'overlay', chat: link.chat, page: location.pathname, authToken: token() },
+                payload: { platform: c.platform === 'kick' || c.platform === 'twitch' ? c.platform : 'tiktok', username: c.username, followersOnly: false, source: 'overlay', chat: link.chat, page: location.pathname, authToken: token() },
                 timestamp: Date.now()
             }));
         };

@@ -230,6 +230,39 @@ function checkStreamConnectAllowed(payload) {
   return null;
 }
 
+// ربط بث كيك/تويتش — نفس شروط تيك توك: حساب ستريمر + حساب المنصة مربوط
+// (OAuth — auth/kick-oauth-service.js و auth/twitch-oauth-service.js) ويكون
+// هو نفس القناة المطلوبة. الأدمن وصلاحية «تشغيل كامل» مستثنين.
+var LINKED_PLATFORMS = {
+  kick: { label: 'كيك', field: 'kick', strip: /^(https?:\/\/)?(www\.)?kick\.com\//i },
+  twitch: { label: 'تويتش', field: 'twitch', strip: /^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i }
+};
+function normalizeChannelName(platform, s) {
+  var def = LINKED_PLATFORMS[platform];
+  return String(s || '').trim().replace(def.strip, '').replace(/^@+/, '').split(/[/?#]/)[0].toLowerCase();
+}
+function checkLinkedPlatformConnectAllowed(platform, payload) {
+  var def = LINKED_PLATFORMS[platform];
+  var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
+  if (!user) {
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب ' + def.label + ' عشان تتصل بالبث.' };
+  }
+  if (user.role === 'admin') return null;
+  if (user.permissions && user.permissions.full_game_access) return null;
+  var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
+  if (!isStreamerAccount) {
+    return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
+  }
+  var linkedName = user[def.field + '_username'];
+  if (!user[def.field + '_verified'] || !linkedName) {
+    return { code: def.field + '_not_linked', message: 'لازم تربط حساب ' + def.label + ' بحسابك في الموقع (من صفحة حسابي) عشان تتصل ببث ' + def.label + '.' };
+  }
+  if (normalizeChannelName(platform, payload.username) !== normalizeChannelName(platform, linkedName)) {
+    return { code: def.field + '_account_mismatch', message: 'تقدر تتصل فقط ببث قناة ' + def.label + ' المربوطة بحسابك: ' + linkedName };
+  }
+  return null;
+}
+
 // اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.
 var GAME_NAMES = {
   'bomb': 'القنبلة', 'dots': 'توصيل النقاط', 'codenames': 'كود نيمز', 'draw': 'شخبليطة', 'elimination-roulette': 'روليت الإقصاء',
@@ -346,8 +379,8 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   // قيد تشغيل البث: لازم حساب ستريمر مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
   // ويكون هو نفسه اليوزرنيم المطلوب الاتصال ببثه (الأدمن مستثنى من شرط
   // الربط/التطابق للتجربة). الرسالة تُعرض للمستخدم كما هي بالواجهة.
-  if (platform === 'tiktok') {
-    var denial = checkStreamConnectAllowed(payload);
+  if (platform === 'tiktok' || LINKED_PLATFORMS[platform]) {
+    var denial = LINKED_PLATFORMS[platform] ? checkLinkedPlatformConnectAllowed(platform, payload) : checkStreamConnectAllowed(payload);
     if (denial) {
       logger.log('WS Server: connect denied for connection ' + connectionId + ' (' + denial.code + ').');
       sendEnvelope(socket, builder.buildErrorMessage(platform, denial.code, denial.message));

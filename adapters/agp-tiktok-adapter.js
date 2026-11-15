@@ -137,6 +137,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { return null; }
     }
 
+    // الاتصال المحفوظ بمكتبة الألعاب (games.html) — نفس صيغة js/agp-storage-manager.js.
+    function readSavedConnection() {
+        try {
+            var d = JSON.parse(localStorage.getItem('agp:agp-stream-connection') || 'null');
+            return d && typeof d.username === 'string' && d.username ? d : null;
+        } catch (e) { return null; }
+    }
+    function readSelectedPlatform() {
+        try { return JSON.parse(localStorage.getItem('agp:agp-stream-platform') || 'null'); } catch (e) { return null; }
+    }
+
+    // [AGP.streamPlatform] المنصة الحالية للألعاب والأدوات: من الاتصال
+    // المحفوظ، وإلا اختيار مكتبة الألعاب، وإلا تيك توك. supports(feature)
+    // يخلّي أي لعبة/أداة تخفي اللي ما ينفع للمنصة (js/agp-game-shell.js).
+    var PLATFORM_FEATURES = {
+        tiktok: { likes: true, followersOnly: true, tiktokGifts: true, shares: true },
+        kick: { subscriptions: true },
+        twitch: { subscriptions: true }
+    };
+    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك', twitch: 'تويتش' };
+    function currentPlatform() {
+        var saved = readSavedConnection();
+        if (saved && PLATFORM_FEATURES[saved.platform]) return saved.platform;
+        var sel = readSelectedPlatform();
+        return PLATFORM_FEATURES[sel] ? sel : 'tiktok';
+    }
+    AGP.streamPlatform = {
+        get: currentPlatform,
+        label: function () { return PLATFORM_LABELS[currentPlatform()] || PLATFORM_LABELS.tiktok; },
+        supports: function (feature) { return Boolean((PLATFORM_FEATURES[currentPlatform()] || {})[feature]); }
+    };
+
     function handleIncomingError(payload) {
         AGP.log('TikTok Adapter: backend reported error —', payload.code, payload.message);
     }
@@ -193,11 +225,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         };
     }
 
+    // منصة البث عند الخادم: 'tiktok' افتراضياً، أو 'kick'. اللعبة تقدر تحددها
+    // (options.platform)، وإلا تنقرأ من الاتصال المحفوظ بمكتبة الألعاب
+    // (games.html → {platform, username}) لو هو نفس اليوزر — فكل الألعاب
+    // تعرف المنصة تلقائياً بدون أي تعديل فيها. الواجهة تبقى تعامل الاتصال
+    // كاتصال بث واحد بنفس المفتاح PLATFORM_KEY، والأحداث بنفس الشكل.
+    function backendPlatform() {
+        var opts = _pendingConnectOptions || {};
+        if (PLATFORM_FEATURES[opts.platform]) return opts.platform;
+        var saved = readSavedConnection();
+        if (saved && saved.platform && saved.platform !== PLATFORM_KEY && PLATFORM_FEATURES[saved.platform] && opts.username &&
+            String(saved.username).toLowerCase() === String(opts.username).toLowerCase()) return saved.platform;
+        return PLATFORM_KEY;
+    }
+
     function openSocketAndConnect() {
         ensureSocketOpen(function () {
             if (!_connecting) return; // disconnected before the socket finished opening
             sendToBackend('connect', {
-                platform: PLATFORM_KEY,
+                platform: backendPlatform(),
                 username: (_pendingConnectOptions && _pendingConnectOptions.username) || null,
                 followersOnly: Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly),
                 // مسار صفحة اللعبة — يظهر بصفحة «البثوث الشغّالة» بلوحة الأدمن.
@@ -222,7 +268,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     AGP.services.TikTokService.disconnectFromLiveStream = function () {
         _connecting = false;
         clearWsReconnectTimer();
-        sendToBackend('disconnect', { platform: PLATFORM_KEY });
+        sendToBackend('disconnect', { platform: backendPlatform() });
         if (_socket) {
             _socket.close();
             _socket = null;

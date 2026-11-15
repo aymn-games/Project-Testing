@@ -747,14 +747,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else if (reason === 'testing') {
       msg = 'هذي اللعبة بمرحلة اختبار ومتاحة حالياً لحساب الأدمن فقط، وبتنفتح للكل قريب إن شاء الله.';
     } else if (reason === 'login') {
-      msg = 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
+      msg = 'لازم تسجّل دخول وتربط حساب تيك توك أو كيك بحسابك عشان تفتح الألعاب.';
       btnLabel = 'تسجيل الدخول'; btnHref = 'login.html';
     } else if (reason === 'not_streamer') {
       msg = 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب. تواصل مع الإدارة لتحويله لحساب ستريمر.';
       btnLabel = 'تواصل معنا'; btnHref = 'support.html';
     } else {
-      msg = 'لازم تربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
-      btnLabel = 'اربط حساب تيك توك'; btnHref = profileHref;
+      msg = 'لازم تربط حساب تيك توك أو كيك بحسابك عشان تفتح الألعاب.';
+      btnLabel = 'اربط حسابك'; btnHref = profileHref;
     }
     var m = document.createElement('div');
     m.id = 'gl-lock-modal';
@@ -1321,6 +1321,77 @@ document.addEventListener('DOMContentLoaded', async function() {
   var connectUsername = '';
   var connectErrorMsg = '';
 
+  // [منصة البث] الستريمر يختار منصته (تيك توك / كيك / تويتش) مرة
+  // وحدة، والاختيار ينحفظ بالجهاز ('agp:agp-stream-platform'). الاتصال
+  // المحفوظ يحمل المنصة ({platform, username})، والألعاب تقرأها منه
+  // تلقائياً (adapters/agp-tiktok-adapter.js → AGP.streamPlatform).
+  var STREAM_PLATFORM_STORAGE_KEY = 'agp:agp-stream-platform';
+  var STREAM_PLATFORMS = {
+    tiktok: { label: 'تيك توك', color: '#fe2c55', placeholder: 'يوزر التيك توك (بدون @)', handle: function(u){ return '@' + u; } },
+    kick:   { label: 'كيك', color: '#53fc18', placeholder: 'اسم قناة كيك', handle: function(u){ return 'kick.com/' + u; } },
+    twitch: { label: 'تويتش', color: '#9146ff', placeholder: 'اسم قناة تويتش', handle: function(u){ return 'twitch.tv/' + u; } }
+  };
+  function readStreamPlatform(){
+    try {
+      var p = JSON.parse(localStorage.getItem(STREAM_PLATFORM_STORAGE_KEY) || 'null');
+      return (p && STREAM_PLATFORMS[p] && !STREAM_PLATFORMS[p].soon) ? p : 'tiktok';
+    } catch (e) { return 'tiktok'; }
+  }
+  var streamPlatform = readStreamPlatform();
+  function platformInfo(){ return STREAM_PLATFORMS[streamPlatform] || STREAM_PLATFORMS.tiktok; }
+  function setStreamPlatform(p){
+    if (!STREAM_PLATFORMS[p] || STREAM_PLATFORMS[p].soon || p === streamPlatform) return;
+    // تغيير المنصة يقطع أي اتصال قائم بالمنصة الثانية (الألعاب ما تتصل بمنصة غير المختارة).
+    if (connectState === 'connected' || connectState === 'connecting') {
+      closeConnectSocketSilently();
+      clearVerifiedStreamConnection();
+    }
+    streamPlatform = p;
+    try { localStorage.setItem(STREAM_PLATFORM_STORAGE_KEY, JSON.stringify(p)); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('agp:stream-platform-changed', { detail: { platform: p } })); } catch (e) {}
+    connectState = 'idle';
+    connectUsername = '';
+    connectErrorMsg = '';
+    autoFailedAttempts = 0;
+    applyAccountForPlatform();
+    renderConnectUI();
+    refreshPlatformBadges();
+    tryAutoConnect();
+  }
+
+  // [ألعاب التكبيس] كيك (وتويتش) ما فيها لايكات — الألعاب اللي التكبيس
+  // جزء أساسي منها تطلع عليها شارة لما المنصة المختارة غير تيك توك. اللعبة
+  // تبقى تشتغل بالشات، بس التكبيس ما يوصل.
+  var LIKES_GAMES = { 'tug-of-war': 1, 'formula-race': 1 };
+  function refreshPlatformBadges(){
+    if (!document.getElementById('agp-pp-badge-styles')) {
+      var st = document.createElement('style');
+      st.id = 'agp-pp-badge-styles';
+      st.textContent = '.gl-pp-only{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;color:#ffd0da;background:rgba(254,44,85,.14);border:1px solid rgba(254,44,85,.4)}';
+      document.head.appendChild(st);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.gl-card'), function(card){
+      var a = card.querySelector('.gl-play');
+      var m = a && /games\/([a-z0-9-]+)\//.exec(a.getAttribute('href') || '');
+      var meta = card.querySelector('.gl-meta');
+      var old = card.querySelector('.gl-pp-only');
+      var show = Boolean(m && LIKES_GAMES[m[1]] && streamPlatform !== 'tiktok' && meta);
+      if (!show) { if (old) old.remove(); return; }
+      if (old) return;
+      var tag = document.createElement('span');
+      tag.className = 'gl-pp-only';
+      tag.title = 'التكبيس (اللايكات) موجود في تيك توك بس — اللعبة تشتغل بالشات على ' + platformInfo().label;
+      tag.textContent = 'التكبيس لتيك توك فقط';
+      meta.appendChild(tag);
+    });
+  }
+  var __ppBadgeTries = 0;
+  var __ppBadgeTimer = setInterval(function(){
+    __ppBadgeTries++;
+    refreshPlatformBadges();
+    if (__ppBadgeTries >= 40) clearInterval(__ppBadgeTimer);
+  }, 500);
+
   // Lets a game page (currently only elimination-roulette — see its own
   // getSavedStreamConnection()) reuse this verified username instead of
   // asking the streamer to retype it. This page deliberately loads none of
@@ -1332,12 +1403,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   function saveVerifiedStreamConnection(username) {
     try {
       localStorage.setItem(STREAM_CONNECTION_STORAGE_KEY, JSON.stringify({
-        platform: 'tiktok', username: username, connectedAt: Date.now()
+        platform: streamPlatform, username: username, connectedAt: Date.now()
       }));
       // Also feeds js/agp-game-shell.js's own pre-existing per-device
       // username memory (AGP.storageManager key 'agp-last-username'),
       // used to prefill this same field on every other game.
-      localStorage.setItem('agp:agp-last-username', JSON.stringify(username));
+      if (streamPlatform === 'tiktok') localStorage.setItem('agp:agp-last-username', JSON.stringify(username));
     } catch (e) {}
   }
   function clearVerifiedStreamConnection() {
@@ -1375,6 +1446,76 @@ document.addEventListener('DOMContentLoaded', async function() {
     controls.appendChild(statsBtn);
   }
 
+  // أيقونات اختيار المنصة فوق خانة الاتصال. الضغط ملتقط بمستمع على document
+  // (data-platform-pick) لأن القالب ممكن ينسخ العناصر بدون مستمعاتها.
+  function ensurePlatformPickerStyles(){
+    if (document.getElementById('agp-platform-picker-styles')) return;
+    var st = document.createElement('style');
+    st.id = 'agp-platform-picker-styles';
+    st.textContent =
+      '[data-platform-picker]{order:-1;flex:1 1 100%;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}' +
+      '.agp-pp-label{font-size:13.5px;color:#cfc7e2;font-weight:600}' +
+      '.agp-pp-opts{display:flex;gap:8px;flex-wrap:wrap}' +
+      '.agp-pp-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#cfc7e2;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:background .2s,border-color .2s,color .2s}' +
+      '.agp-pp-btn:hover{border-color:rgba(255,255,255,.28)}' +
+      '.agp-pp-btn[aria-pressed="true"]{color:#fff;border-color:var(--pp-c);background:color-mix(in srgb,var(--pp-c) 22%,transparent);box-shadow:0 0 0 1px var(--pp-c) inset}' +
+      '.agp-pp-btn[disabled]{opacity:.5;cursor:not-allowed}' +
+      '.agp-pp-ico{width:22px;height:22px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-family:Arial Black,Arial,sans-serif;font-size:13px;font-weight:900;color:#0b0b10;background:var(--pp-c)}' +
+      '.agp-pp-soon{font-size:10.5px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.08);color:#b9b2c9}';
+    document.head.appendChild(st);
+  }
+  var PLATFORM_ICON_TEXT = { tiktok: '♪', kick: 'K', twitch: 'T' };
+  function renderPlatformPicker(card){
+    ensurePlatformPickerStyles();
+    var picker = card.querySelector('[data-platform-picker]');
+    if (!picker) {
+      picker = document.createElement('div');
+      picker.setAttribute('data-platform-picker', '1');
+      var lbl = document.createElement('span');
+      lbl.className = 'agp-pp-label';
+      lbl.textContent = 'منصة البث';
+      var opts = document.createElement('div');
+      opts.className = 'agp-pp-opts';
+      Object.keys(STREAM_PLATFORMS).forEach(function(key){
+        var info = STREAM_PLATFORMS[key];
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'agp-pp-btn';
+        b.setAttribute('data-platform-pick', key);
+        b.style.setProperty('--pp-c', info.color);
+        var ico = document.createElement('span');
+        ico.className = 'agp-pp-ico';
+        ico.textContent = PLATFORM_ICON_TEXT[key] || '';
+        if (key === 'twitch') ico.style.color = '#fff';
+        b.appendChild(ico);
+        b.appendChild(document.createTextNode(info.label));
+        if (info.soon) {
+          b.disabled = true;
+          var soon = document.createElement('span');
+          soon.className = 'agp-pp-soon';
+          soon.textContent = 'قريباً';
+          b.appendChild(soon);
+        }
+        opts.appendChild(b);
+      });
+      picker.appendChild(lbl);
+      picker.appendChild(opts);
+      card.insertBefore(picker, card.firstChild);
+    }
+    Array.prototype.forEach.call(picker.querySelectorAll('[data-platform-pick]'), function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-platform-pick') === streamPlatform ? 'true' : 'false');
+    });
+  }
+  document.addEventListener('click', function(ev){
+    var b = ev.target && ev.target.closest ? ev.target.closest('[data-platform-pick]') : null;
+    if (!b || b.disabled) return;
+    var key = b.getAttribute('data-platform-pick');
+    if (key === streamPlatform) return;
+    if ((connectState === 'connected' || connectState === 'connecting') &&
+        !window.confirm('أنت متصل الحين ببث ' + platformInfo().label + '. تغيير المنصة يقطع هذا الاتصال، تكمل؟')) return;
+    setStreamPlatform(key);
+  });
+
   function renderConnectUI(){
     var card = document.querySelector('[data-connect-card]');
     if (!card) return;
@@ -1394,19 +1535,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     dot.style.boxShadow = p.glow;
     dot.style.animation = connectState === 'connecting' ? 'agpConnectPulse 1s ease-in-out infinite' : 'none';
     card.style.borderColor = p.border;
+    renderPlatformPicker(card);
 
+    var pl = platformInfo();
     var noteText = {
       idle: accountMode === 'loading' ? 'جاري التحقق من حسابك...'
-        : accountMode === 'guest' ? 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تتصل بالبث'
+        : accountMode === 'guest' ? 'سجّل دخول بحساب ستريمر مربوط ب' + pl.label + ' عشان تتصل بالبث'
         : accountMode === 'player' ? 'تشغيل الألعاب لحسابات الستريمر فقط — تواصل مع الإدارة لتحويل حسابك'
-        : accountMode === 'unlinked' ? 'اربط حساب تيك توك بحسابك في الموقع، وبعدها نتصل ببثك تلقائياً'
+        : accountMode === 'unlinked' ? 'اربط حساب ' + pl.label + ' بحسابك في الموقع، وبعدها نتصل ببثك تلقائياً'
         : linkedUsername
         ? (isAutoConnectOff()
-          ? 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — اضغط اتصال لما تبي تربط الألعاب ببثك'
-          : 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — نتصل تلقائياً أول ما تبدأ البث في تيك توك')
-        : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه',
+          ? 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ — اضغط اتصال لما تبي تربط الألعاب ببثك'
+          : 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ — نتصل تلقائياً أول ما تبدأ البث في ' + pl.label)
+        : (streamPlatform !== 'tiktok' ? 'اكتب اسم قناة ' + pl.label + ' عشان نتحقق منها ونربط الألعاب فيها' : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه'),
       connecting: 'جاري التحقق من إن الحساب يبث الآن...',
-      connected: 'متصل الآن ببث \u2066@' + connectUsername + '\u2069 ✓',
+      connected: 'متصل الآن ببث ' + pl.label + ' ⁦' + pl.handle(connectUsername) + '⁩ ✓',
       error: connectErrorMsg || 'تعذر التحقق من البث'
     };
     note.textContent = noteText[connectState] || noteText.idle;
@@ -1416,7 +1559,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (connectState === 'connected') {
       var badge = document.createElement('span');
-      badge.textContent = '@' + connectUsername;
+      badge.textContent = platformInfo().handle(connectUsername);
       badge.style.cssText = 'padding:8px 14px;border-radius:999px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#8fe3af;font-size:13.5px;font-weight:600;';
       var disconnectBtn = document.createElement('button');
       disconnectBtn.type = 'button';
@@ -1457,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       } else if (accountMode === 'guest' || accountMode === 'unlinked') {
         link = document.createElement('a');
         link.href = accountMode === 'guest' ? 'login.html' : 'profile.html';
-        link.textContent = accountMode === 'guest' ? 'تسجيل الدخول' : 'ربط حساب تيك توك';
+        link.textContent = accountMode === 'guest' ? 'تسجيل الدخول' : 'ربط حساب ' + platformInfo().label;
       }
       if (link) {
         link.className = 'nl-btn-glossy';
@@ -1470,7 +1613,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = 'يوزر التيك توك (بدون @)';
+    input.placeholder = platformInfo().placeholder;
     input.setAttribute('dir', 'ltr');
     input.setAttribute('autocomplete', 'off');
     // كيبورد الآيباد/الآيفون يكبّر أول حرف ويصحّح الكلمة تلقائياً فيغيّر اليوزر.
@@ -1534,13 +1677,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   function handleConnectSubmit(rawValue){
     setAutoConnectOff(false);
     var username = (rawValue || '').trim().replace(/^@+/, '');
+    if (streamPlatform === 'kick') username = username.replace(/^(https?:\/\/)?(www\.)?kick\.com\//i, '').split(/[\/?#]/)[0].toLowerCase();
+    if (streamPlatform === 'twitch') username = username.replace(/^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i, '').split(/[\/?#]/)[0].toLowerCase();
     if (!username) {
       connectState = 'error';
       connectErrorMsg = 'اكتب يوزر البث أولاً';
       renderConnectUI();
       return;
     }
-    if (!/^[a-zA-Z0-9._]{2,24}$/.test(username)) {
+    var usernameRe = streamPlatform === 'kick' ? /^[a-zA-Z0-9_-]{2,25}$/ : streamPlatform === 'twitch' ? /^[a-zA-Z0-9_]{3,25}$/ : /^[a-zA-Z0-9._]{2,24}$/;
+    if (!usernameRe.test(username)) {
       connectState = 'error';
       connectErrorMsg = 'صيغة اليوزر غير صحيحة';
       renderConnectUI();
@@ -1572,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // authToken: الخادم يسمح بالاتصال فقط ببث حساب تيك توك الموثَّق على
         // حساب الموقع المسجَّل (ws-server.js checkStreamConnectAllowed).
         // source: 'library' — تحقق فقط، لا يُحتسب كساعات بث (ws-server.js).
-        payload: { platform: 'tiktok', username: username, followersOnly: false, source: 'library', authToken: (window.AGPAuth && window.AGPAuth.getToken) ? window.AGPAuth.getToken() : null },
+        payload: { platform: streamPlatform, username: username, followersOnly: false, source: 'library', authToken: (window.AGPAuth && window.AGPAuth.getToken) ? window.AGPAuth.getToken() : null },
         timestamp: Date.now()
       }));
     };
@@ -1644,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     setAutoConnectOff(true);
     if (connectSocket && connectSocket.readyState === 1) {
       try {
-        connectSocket.send(JSON.stringify({ type: 'disconnect', payload: { platform: 'tiktok' }, timestamp: Date.now() }));
+        connectSocket.send(JSON.stringify({ type: 'disconnect', payload: { platform: streamPlatform }, timestamp: Date.now() }));
       } catch (e) {}
     }
     closeConnectSocketSilently();
@@ -1672,6 +1818,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     controls.dataset.wired = '1';
     ensureConnectStyles();
     var saved = readVerifiedStreamConnection();
+    // الاتصال المحفوظ يحدد المنصة المعروضة (اتصال قديم قبل الميزة = تيك توك).
+    if (saved) {
+      var savedPlatform = STREAM_PLATFORMS[saved.platform] && !STREAM_PLATFORMS[saved.platform].soon ? saved.platform : 'tiktok';
+      if (savedPlatform !== streamPlatform) {
+        streamPlatform = savedPlatform;
+        try { localStorage.setItem(STREAM_PLATFORM_STORAGE_KEY, JSON.stringify(savedPlatform)); } catch (e) {}
+      }
+    }
     if (saved && connectState === 'idle') {
       connectState = 'connected';
       connectUsername = saved.username;
@@ -1685,8 +1839,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         connectState = 'error';
         connectUsername = '';
         connectErrorMsg = linkedUsername
-          ? 'البث في تيك توك انتهى أو صار غير نشط — تم قطع الاتصال. نرجع نتصل تلقائياً أول ما تبدأ البث.'
-          : 'البث في تيك توك انتهى أو صار غير نشط — تم قطع الاتصال. ابدأ البث ثم اتصل من جديد.';
+          ? 'البث في ' + platformInfo().label + ' انتهى أو صار غير نشط — تم قطع الاتصال. نرجع نتصل تلقائياً أول ما تبدأ البث.'
+          : 'البث في ' + platformInfo().label + ' انتهى أو صار غير نشط — تم قطع الاتصال. ابدأ البث ثم اتصل من جديد.';
         autoFailedAttempts = 0;
         renderConnectUI();
       } });
@@ -1726,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
     var base = (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
     if (!token || !window.fetch) return Promise.resolve(null);
-    return fetch(base + '/api/stream/is-live?username=' + encodeURIComponent(username), {
+    return fetch(base + '/api/stream/is-live?platform=' + streamPlatform + '&username=' + encodeURIComponent(username), {
       headers: { 'Authorization': 'Bearer ' + token }
     }).then(function(res){ return res.json(); }).then(function(d){
       // الستريمر غيّر يوزره في تيك توك — الخادم حدّثه، نكمل على الجديد.
@@ -1749,6 +1903,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
+  // حساب الموقع (من AGPAuth.me) — الربط يختلف حسب المنصة المختارة:
+  // تيك توك → tiktok_username، كيك → kick_username، تويتش → twitch_username (profile.html).
+  var meUser = null;
+  function applyAccountForPlatform(){
+    if (!meUser) return;
+    var u = meUser;
+    var perms = u.permissions || {};
+    var free = u.role === 'admin' || Boolean(perms.full_game_access);
+    var name = streamPlatform === 'tiktok'
+      ? (u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username).replace(/^@+/, '') : null)
+      : (u[streamPlatform + '_verified'] && u[streamPlatform + '_username'] ? String(u[streamPlatform + '_username']) : null);
+    linkedUsername = name;
+    setAccountMode(free ? 'free' : !canRunGames(u) ? 'player' : name ? 'linked' : 'unlinked');
+  }
+
   function setAccountMode(mode){
     accountMode = mode;
     if (connectState === 'idle' || connectState === 'error') renderConnectUI();
@@ -1760,12 +1929,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.AGPAuth.me().then(function(r){
       var u = r && r.success ? r.user : null;
       if (!u) { setAccountMode(r && r.__httpStatus === 401 ? 'guest' : 'free'); return; }
-      var perms = u.permissions || {};
-      var free = u.role === 'admin' || Boolean(perms.full_game_access);
-      var linked = Boolean(u.tiktok_verified && u.tiktok_username);
-      if (linked) linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
-      setAccountMode(free ? 'free' : !canRunGames(u) ? 'player' : linked ? 'linked' : 'unlinked');
-      if (!linked || !canRunGames(u)) return;
+      meUser = u;
+      applyAccountForPlatform();
+      if (!canRunGames(u)) return;
       if (connectState === 'connected') autoFailedAttempts = 0;
       // لو متصل محفوظ ببث حساب ثاني (أدمن مثلاً) نخليه — نتصل تلقائياً بس لما ما فيه اتصال.
       tryAutoConnect();

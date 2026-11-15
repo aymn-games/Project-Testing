@@ -27,6 +27,16 @@
     var MAX_FAILED_ATTEMPTS = 3;
 
     var linkedUsername = null;
+    // المنصة المختارة بمكتبة الألعاب ('agp:agp-stream-platform' — games.html):
+    // تيك توك افتراضياً، أو كيك/تويتش (الحساب المربوط من profile.html).
+    var PLATFORM_KEY = 'agp:agp-stream-platform';
+    function selectedPlatform() {
+        try {
+            var p = JSON.parse(localStorage.getItem(PLATFORM_KEY) || 'null');
+            return p === 'kick' || p === 'twitch' ? p : 'tiktok';
+        } catch (e) { return 'tiktok'; }
+    }
+    var platform = selectedPlatform();
     var inFlight = false;
     var failedAttempts = 0;
 
@@ -54,10 +64,10 @@
     }
 
     function save(username) {
-        var value = JSON.stringify({ platform: 'tiktok', username: username, connectedAt: Date.now() });
+        var value = JSON.stringify({ platform: platform, username: username, connectedAt: Date.now() });
         try {
             localStorage.setItem(STORAGE_KEY, value);
-            localStorage.setItem(LAST_USERNAME_KEY, JSON.stringify(username));
+            if (platform === 'tiktok') localStorage.setItem(LAST_USERNAME_KEY, JSON.stringify(username));
         } catch (e) { return; }
         try { window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: value })); } catch (e) {}
         try { window.dispatchEvent(new CustomEvent('agp:stream-connected', { detail: { username: username } })); } catch (e) {}
@@ -68,7 +78,7 @@
     function fetchIsLive(username) {
         var t = token();
         if (!t || !window.fetch) return Promise.resolve(null);
-        return fetch(apiBase() + '/api/stream/is-live?username=' + encodeURIComponent(username), {
+        return fetch(apiBase() + '/api/stream/is-live?' + (platform !== 'tiktok' ? 'platform=' + platform + '&' : '') + 'username=' + encodeURIComponent(username), {
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) { return res.json(); }).then(function (d) {
             // الستريمر غيّر يوزره في تيك توك — الخادم حدّثه، نكمل على الجديد.
@@ -94,7 +104,7 @@
             ws.onopen = function () {
                 ws.send(JSON.stringify({
                     type: 'connect',
-                    payload: { platform: 'tiktok', username: username, followersOnly: false, source: 'library', authToken: token() },
+                    payload: { platform: platform, username: username, followersOnly: false, source: 'library', authToken: token() },
                     timestamp: Date.now()
                 }));
             };
@@ -128,8 +138,14 @@
         if (!window.AGPAuth || !window.AGPAuth.me || !token()) return;
         window.AGPAuth.me().then(function (r) {
             var u = r && r.success ? r.user : null;
-            if (!u || !u.tiktok_verified || !u.tiktok_username || !canRunGames(u)) return;
-            linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
+            if (!u || !canRunGames(u)) return;
+            if (platform === 'kick' || platform === 'twitch') {
+                if (!u[platform + '_verified'] || !u[platform + '_username']) return;
+                linkedUsername = String(u[platform + '_username']);
+            } else {
+                if (!u.tiktok_verified || !u.tiktok_username) return;
+                linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
+            }
             tick();
             setInterval(tick, POLL_MS);
             document.addEventListener('visibilitychange', function () {
