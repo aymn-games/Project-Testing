@@ -37,65 +37,56 @@
         'background:rgba(4,4,10,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:agpSnFade .25s ease both;transition:opacity .25s ease}' +
         '.agp-sn-bg.is-out{opacity:0}' +
         '.agp-sn-bg *{box-sizing:border-box}' +
-        '.agp-sn{position:relative;display:flex;flex-direction:column;width:min(720px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);' +
-        'border-radius:28px;color:#f4f2fa;text-align:right;font:500 17px/1.85 ' + FONT + ';' +
+        '.agp-sn{position:relative;display:flex;flex-direction:column;width:min(900px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);' +
+        'border-radius:28px;color:#f4f2fa;text-align:right;font:500 16px/1.75 ' + FONT + ';' +
         'background:linear-gradient(180deg,#1e1a31 0%,#14111d 100%);border:1px solid rgba(255,255,255,.09);' +
         'box-shadow:0 40px 90px -24px rgba(0,0,0,.9);animation:agpSnIn .3s ease both}' +
         '.agp-sn:focus{outline:none}' +
 
-        /* الرأس */
-        '.agp-sn-head{padding:28px 32px 18px;border-bottom:1px solid rgba(255,255,255,.06)}' +
-        '.agp-sn-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 12px;border-radius:999px;font:700 14px/1 ' + FONT + ';color:#dbe4ff;' +
+        /* الرأس: العنوان يمين وشارة «تنويه مهم» يسار */
+        '.agp-sn-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 30px 16px;border-bottom:1px solid rgba(255,255,255,.06)}' +
+        '.agp-sn-head h2{margin:0;font:800 26px/1.4 ' + FONT + ';color:#fff}' +
+        '.agp-sn-badge{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 12px;border-radius:999px;font:700 14px/1 ' + FONT + ';color:#dbe4ff;' +
         'background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(139,92,246,.2));border:1px solid rgba(129,140,248,.4)}' +
         '.agp-sn-badge svg{width:16px;height:16px;color:#a5b4fc}' +
-        '.agp-sn-head h2{margin:14px 0 4px;font:800 28px/1.45 ' + FONT + ';color:#fff}' +
-        '.agp-sn-sub{margin:0;font-size:16px;color:#a9a3c2}' +
 
         /* المحتوى */
-        '.agp-sn-body{flex:1 1 auto;overflow-y:auto;padding:22px 32px 8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}' +
-        '.agp-sn-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}' +
-        '.agp-sn-list li{position:relative;padding-right:24px;color:#d6d1e6}' +
-        '.agp-sn-list li::before{content:"";position:absolute;right:2px;top:.72em;width:9px;height:9px;border-radius:3px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);box-shadow:0 0 0 4px rgba(99,102,241,.14)}' +
-        '.agp-sn-card{margin:20px 0 0;padding:20px 22px;border-radius:20px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}' +
-        '.agp-sn-label{display:flex;align-items:center;gap:10px;margin:0 0 14px;font:700 17px/1.4 ' + FONT + ';color:#fff}' +
-        '.agp-sn-label::before{content:"";width:4px;height:18px;border-radius:2px;background:linear-gradient(180deg,#3b82f6,#8b5cf6)}' +
+        '.agp-sn-body{flex:1 1 auto;overflow-y:auto;padding:16px 30px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}' +
+        '.agp-sn-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}' +
+        '.agp-sn-list li{position:relative;padding-right:22px;color:#d6d1e6}' +
+        '.agp-sn-list li::before{content:"";position:absolute;right:2px;top:.68em;width:8px;height:8px;border-radius:3px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);box-shadow:0 0 0 4px rgba(99,102,241,.14)}' +
 
-        /* الأسعار */
-        '.agp-sn-prices{display:grid;grid-template-columns:1fr 1fr;gap:12px}' +
-        '.agp-sn-price{padding:18px 14px;border-radius:18px;text-align:center;background:linear-gradient(160deg,rgba(59,130,246,.14),rgba(139,92,246,.16));border:1px solid rgba(139,92,246,.35)}' +
-        '.agp-sn-price small{display:block;font-size:15px;font-weight:600;color:#c4bdf0}' +
-        '.agp-sn-price b{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-top:4px;font:800 34px/1.2 ' + FONT + ';color:#fff}' +
-        '.agp-sn-price b em{font-style:normal;font-size:16px;font-weight:600;color:#c4bdf0}' +
-
-        /* يشمل + شعارات المنصات */
-        '.agp-sn-incl{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07)}' +
-        '.agp-sn-incl p{margin:0;color:#e6e2f2;font-weight:600}' +
-        '.agp-sn-plats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}' +
-        '.agp-sn-plat{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;font:700 15px/1 ' + FONT + ';color:#fff;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}' +
-        '.agp-sn-plat svg{width:20px;height:20px;flex:0 0 auto}' +
-
-        /* تاريخ البدء — مميّز */
-        '.agp-sn-date{display:flex;align-items:center;gap:18px;padding:20px 22px;background:linear-gradient(120deg,rgba(37,99,235,.28),rgba(124,58,237,.3));border:1px solid rgba(129,140,248,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}' +
-        '.agp-sn-cal{flex:0 0 auto;width:78px;border-radius:16px;overflow:hidden;text-align:center;background:#fff;color:#1e1b4b;box-shadow:0 10px 24px -10px rgba(0,0,0,.7)}' +
-        '.agp-sn-cal span{display:block;padding:4px 0;font:700 13px/1.4 ' + FONT + ';color:#fff;background:linear-gradient(135deg,#3b82f6,#7c3aed)}' +
-        '.agp-sn-cal b{display:block;font:800 32px/1.25 ' + FONT + '}' +
-        '.agp-sn-cal i{display:block;padding-bottom:4px;font:600 12px/1.3 ' + FONT + ';font-style:normal;color:#6b6890}' +
-        '.agp-sn-date small{display:block;font-size:15px;color:#c7d2fe}' +
-        '.agp-sn-date strong{display:block;font:800 26px/1.4 ' + FONT + ';color:#fff}' +
+        /* شريط المعلومات: سعرين + تاريخ البدء بسطر واحد */
+        '.agp-sn-info{margin-top:14px;padding:14px;border-radius:20px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}' +
+        '.agp-sn-label{margin:0 4px 10px 0;font:700 15px/1.4 ' + FONT + ';color:#fff}' +
+        '.agp-sn-tiles{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:10px}' +
+        '.agp-sn-tile{display:flex;flex-direction:column;justify-content:center;min-height:68px;padding:8px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(139,92,246,.3)}' +
+        '.agp-sn-tile b{font:800 22px/1.3 ' + FONT + ';color:#fff}' +
+        '.agp-sn-tile b em{font-style:normal;font-size:14px;font-weight:600;color:#c4bdf0;margin-right:4px}' +
+        '.agp-sn-tile small{font-size:14px;line-height:1.5;color:#b9b2d6}' +
+        '.agp-sn-tile.is-date{flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;background:linear-gradient(120deg,rgba(37,99,235,.32),rgba(124,58,237,.34));border-color:rgba(129,140,248,.6)}' +
+        '.agp-sn-tile.is-date svg{flex:0 0 auto;width:26px;height:26px;color:#c7d2fe}' +
+        '.agp-sn-tile.is-date small{display:block;color:#c7d2fe;font-size:13px}' +
+        '.agp-sn-tile.is-date b{display:block;font-size:21px}' +
+        '.agp-sn-incl{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;padding:0 4px}' +
+        '.agp-sn-incl p{margin:0;font-size:15px;font-weight:600;color:#e6e2f2}' +
+        '.agp-sn-plats{display:flex;gap:8px}' +
+        '.agp-sn-plat{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:10px;font:700 14px/1.2 ' + FONT + ';color:#fff;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}' +
+        '.agp-sn-plat svg{width:17px;height:17px;flex:0 0 auto}' +
 
         /* الختام والتواصل */
-        '.agp-sn-thanks{margin:22px 0 0;color:#d6d1e6}' +
-        '.agp-sn-sign{margin:6px 0 0;font-weight:800;color:#fff}' +
-        '.agp-sn-contact{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}' +
-        '.agp-sn-contact p{margin:0;flex:1 1 auto;font-size:16px;color:#d6d1e6}' +
-        '.agp-sn-cbtn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:10px 18px;border-radius:14px;text-decoration:none;white-space:nowrap;' +
+        '.agp-sn-thanks{margin:14px 0 0;color:#d6d1e6}' +
+        '.agp-sn-sign{margin:0;font-weight:800;color:#fff}' +
+        '.agp-sn-contact{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px;padding:12px 14px 12px 12px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}' +
+        '.agp-sn-contact p{margin:0;flex:1 1 auto;font-size:15px;line-height:1.6;color:#d6d1e6}' +
+        '.agp-sn-cbtn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:8px 16px;border-radius:13px;text-decoration:none;white-space:nowrap;' +
         'color:#fff;font:700 15px ' + FONT + ';background:rgba(255,255,255,.06);border:1px solid rgba(139,92,246,.5);transition:background .15s,border-color .15s}' +
         '.agp-sn-cbtn:hover{background:rgba(139,92,246,.2);border-color:rgba(167,139,250,.8)}' +
         '.agp-sn-cbtn svg{width:18px;height:18px}' +
 
         /* الزر السفلي: العدّاد مدموج فيه */
-        '.agp-sn-foot{padding:16px 32px 26px;border-top:1px solid rgba(255,255,255,.06)}' +
-        '.agp-sn-ok{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:0 20px;border-radius:18px;' +
+        '.agp-sn-foot{padding:14px 30px 20px;border-top:1px solid rgba(255,255,255,.06)}' +
+        '.agp-sn-ok{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;padding:0 20px;border-radius:17px;' +
         'font:800 17px ' + FONT + ';color:#9b95b4;cursor:not-allowed;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);' +
         'transition:color .3s,background .3s,box-shadow .3s,transform .15s,border-color .3s}' +
         '.agp-sn-fill{position:absolute;inset:0;background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(139,92,246,.2));transform-origin:right;transform:scaleX(0);transition:transform 1s linear}' +
@@ -112,18 +103,22 @@
 
         '@keyframes agpSnFade{from{opacity:0}to{opacity:1}}' +
         '@keyframes agpSnIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}' +
-        '@media (max-width:600px){' +
-            '.agp-sn-bg{padding:12px}' +
-            '.agp-sn{border-radius:24px;font-size:16px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}' +
-            '.agp-sn-head{padding:22px 20px 14px}.agp-sn-head h2{font-size:23px}.agp-sn-sub{font-size:15px}' +
-            '.agp-sn-body{padding:18px 20px 6px}.agp-sn-card{padding:16px}' +
-            '.agp-sn-price b{font-size:28px}' +
-            '.agp-sn-date{gap:14px;padding:16px}.agp-sn-cal{width:66px}.agp-sn-cal b{font-size:26px}.agp-sn-date strong{font-size:21px}' +
-            '.agp-sn-contact{flex-direction:column;align-items:stretch}.agp-sn-cbtn{width:100%}' +
-            '.agp-sn-foot{padding:14px 20px 20px}' +
+        /* شاشات قصيرة (لابتوب 768 وأقل): نضغط المسافات شوي */
+        '@media (max-height:780px){.agp-sn{font-size:15px;line-height:1.7}.agp-sn-head{padding:16px 28px 12px}.agp-sn-head h2{font-size:23px}.agp-sn-body{padding:12px 28px}' +
+            '.agp-sn-list{gap:4px}.agp-sn-info{margin-top:10px;padding:12px}.agp-sn-tile{min-height:60px}.agp-sn-thanks,.agp-sn-contact{margin-top:10px}.agp-sn-foot{padding:12px 28px 16px}.agp-sn-ok{min-height:50px}}' +
+        '@media (max-width:640px){' +
+            '.agp-sn-bg{padding:10px}' +
+            '.agp-sn{border-radius:22px;font-size:14.5px;line-height:1.65;max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px)}' +
+            '.agp-sn-head{padding:14px 16px 10px}.agp-sn-head h2{font-size:19px}.agp-sn-badge{padding:5px 10px;font-size:12px}.agp-sn-badge svg{width:14px;height:14px}' +
+            '.agp-sn-body{padding:10px 16px}.agp-sn-list{gap:4px}.agp-sn-list li{padding-right:18px}' +
+            '.agp-sn-info{padding:10px;margin-top:10px}.agp-sn-tiles{grid-template-columns:1fr 1fr;gap:8px}.agp-sn-tile{min-height:0;padding:7px 10px}.agp-sn-tile b{font-size:19px}' +
+            '.agp-sn-tile.is-date{grid-column:1 / -1}.agp-sn-tile.is-date b{font-size:18px}' +
+            '.agp-sn-incl{margin-top:8px}.agp-sn-incl p{font-size:13.5px}.agp-sn-plat{padding:4px 8px;font-size:12.5px}.agp-sn-plat svg{width:15px;height:15px}' +
+            '.agp-sn-thanks,.agp-sn-contact{margin-top:10px}' +
+            '.agp-sn-contact{flex-direction:column;align-items:stretch;gap:8px;padding:10px}.agp-sn-contact p{font-size:13.5px}.agp-sn-cbtn{width:100%;min-height:42px}' +
+            '.agp-sn-foot{padding:10px 16px 14px}.agp-sn-ok{min-height:50px;font-size:16px}' +
         '}' +
         '@media (prefers-reduced-motion:reduce){.agp-sn,.agp-sn-bg{animation:none}.agp-sn-fill{transition:none}}';
-
     var ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>';
     var ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
     var ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -135,11 +130,13 @@
         return ICON_LOCK + '<span>يمكنك الإغلاق بعد <b class="agp-sn-n">' + n + '</b> ثانية</span>';
     }
 
+    var ICON_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+
     var HTML = '' +
         '<div class="agp-sn" role="dialog" aria-modal="true" aria-labelledby="agpSnTitle" tabindex="-1">' +
             '<div class="agp-sn-head">' +
-                '<span class="agp-sn-badge">' + ICON_ALERT + 'تنويه مهم</span>' +
                 '<h2 id="agpSnTitle">إلى مجتمع ألعاب أيمن ❤️</h2>' +
+                '<span class="agp-sn-badge">' + ICON_ALERT + 'تنويه مهم</span>' +
             '</div>' +
             '<div class="agp-sn-body">' +
                 '<ul class="agp-sn-list">' +
@@ -150,11 +147,12 @@
                     '<li>ونحب نوضح أن الهدف من الاشتراك هو استدامة المنصة وتطويرها وتقديم ألعاب وميزات أكثر وليس تحويلها إلى مشروع تجاري هدفه الربح</li>' +
                 '</ul>' +
 
-                '<div class="agp-sn-card">' +
+                '<div class="agp-sn-info">' +
                     '<h3 class="agp-sn-label">أسعار الاشتراك</h3>' +
-                    '<div class="agp-sn-prices">' +
-                        '<div class="agp-sn-price"><small>لمدة شهر</small><b>24.99 <em>ريال</em></b></div>' +
-                        '<div class="agp-sn-price"><small>لمدة شهرين</small><b>34.99 <em>ريال</em></b></div>' +
+                    '<div class="agp-sn-tiles">' +
+                        '<div class="agp-sn-tile"><b>24.99<em>ريال</em></b><small>لمدة شهر</small></div>' +
+                        '<div class="agp-sn-tile"><b>34.99<em>ريال</em></b><small>لمدة شهرين</small></div>' +
+                        '<div class="agp-sn-tile is-date">' + ICON_CAL + '<div><small>سيبدأ العمل بنظام الاشتراكات اعتباراً من</small><b>1 ديسمبر 2026</b></div></div>' +
                     '</div>' +
                     '<div class="agp-sn-incl">' +
                         '<p>اشتراك واحد يشمل جميع الألعاب ومنصات البث المدعومة وجميع المميزات</p>' +
@@ -166,15 +164,10 @@
                     '</div>' +
                 '</div>' +
 
-                '<div class="agp-sn-card agp-sn-date">' +
-                    '<div class="agp-sn-cal" aria-hidden="true"><span>ديسمبر</span><b>1</b><i>2026</i></div>' +
-                    '<div><small>سيبدأ العمل بنظام الاشتراكات اعتباراً من</small><strong>1 ديسمبر 2026</strong></div>' +
-                '</div>' +
-
                 '<p class="agp-sn-thanks">شكراً لكل شخص دعم ألعاب أيمن وكان جزءاً من رحلتنا من البداية</p>' +
                 '<p class="agp-sn-sign">ألعاب أيمن منكم وفيكم ومستمرين معكم ❤️</p>' +
 
-                '<div class="agp-sn-card agp-sn-contact">' +
+                '<div class="agp-sn-contact">' +
                     '<p>عندك استفسار أو رأي بخصوص التحديث الجديد؟ يسعدنا نسمع منك ونتناقش معك بكل وضوح ❤️</p>' +
                     '<a class="agp-sn-cbtn" href="' + CONTACT_URL + '" target="_blank" rel="noopener noreferrer">' + LOGO_TIKTOK + '<span>تواصل معنا وشاركنا رأيك</span></a>' +
                 '</div>' +
