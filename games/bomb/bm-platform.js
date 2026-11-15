@@ -228,7 +228,10 @@
 
     window.BM = {
         libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
-        keys: { setup: 'bomb-settings', roster: 'bomb-roster', players: 'bomb-players' },
+        keys: { setup: 'bomb-settings', roster: 'bomb-roster', players: 'bomb-players', teams: 'bomb-teams' },
+        // وضع الفريقين: الإعدادات فيها mode='فريقين' + كلمتا الفريقين teamA/teamB، واللوبي يحفظ فريق كل لاعب بـ'bomb-teams' {اسم: 0|1}
+        isTeamSetup: function (s) { return !!s && s.mode === 'فريقين'; },
+        setupOk: function (s) { if (!s) return false; return s.mode === 'فريقين' ? !!(norm(s.teamA) && norm(s.teamB) && norm(s.teamA) !== norm(s.teamB)) : !!norm(s.keyword); },
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,

@@ -164,14 +164,19 @@ const GAME = {
 const SETTINGS = [];
 // إعدادات المباراة من شاشة الإعدادات (bomb-settings) — بدونها نرجع للإعدادات
 const SETUP = BM.readJSON(BM.keys.setup, null);
-if(!SETUP||!BM.norm(SETUP.keyword)) location.replace('index.html');
+if(!BM.setupOk(SETUP)) location.replace('index.html');
 // إطارات اللاعبين: من المنصة (الإطار المفعّل بحساب اللاعب) عبر BM.frameCard / AGP.playerCard.
-const TEAMS = [
+// وضع الفريقين: عمودين، وكل لاعب ينضم لفريقه بكتابة كلمة الفريق بالشات
+const TEAM_MODE = BM.isTeamSetup(SETUP);
+const TEAMS = TEAM_MODE ? [
+  { name:'الفريق الأحمر', keyword:SETUP.teamA||'', color:'#e08a8a', max:9999 },
+  { name:'الفريق الأزرق', keyword:SETUP.teamB||'', color:'#8aa6e0', max:9999 }
+] : [
   { name:'اللاعبين', keyword:(SETUP&&SETUP.keyword)||'', color:'#a78bfa', max:9999 }
 ];
 
 class Component extends DCLogic {
-  state = { lobbyTab:0, roster:[[]], values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  state = { lobbyTab:0, roster:TEAMS.map(()=>[]), values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   reg = BM.createRegistry();
   followersOnly = !!SETUP&&SETUP.who==='المتابعون فقط';
   componentDidMount(){ const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(_rc) _rc.templateLobby(this,TEAMS,{game:'bomb'});  this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1320,(innerHeight-80)/730)}); this.fit(); addEventListener('resize',this.fit);
@@ -181,11 +186,13 @@ class Component extends DCLogic {
     this.onEnded=()=>this.toastMsg('انتهى البث · نتصل تلقائياً أول ما تبدأ البث من جديد'); addEventListener('agp:stream-ended',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); this.unsub?.(); clearTimeout(this.tt); }
   // كل تعليق من الشات: الكلمة المفتاحية = انضمام (نفس تطبيع BM.norm) · المتابعين فقط لو محدد · المكرر يُتجاهل
-  onChat(user,text,isFollower=true){ const t=TEAMS[0];
-    if(!t.keyword||BM.norm(t.keyword)!==BM.norm(text)) return;
+  // وضع الفريقين: كلمة الفريق تحدد فريقه، واللي انضم لفريق ما يقدر يغيّر
+  onChat(user,text,isFollower=true){ const i=TEAMS.findIndex(t=>t.keyword&&BM.norm(t.keyword)===BM.norm(text));
+    if(i<0) return;
     if(this.followersOnly&&!isFollower) return;
-    if((this.state.roster[0]||[]).includes(user)) return;
-    this.setState(st=>(st.roster[0]||[]).includes(user)?null:{roster:[[...(st.roster[0]||[]),user]]}); }
+    const inAny=st=>st.roster.some(l=>(l||[]).includes(user));
+    if(inAny(this.state)) return;
+    this.setState(st=>inAny(st)?null:{roster:st.roster.map((l,k)=>k===i?[...(l||[]),user]:(l||[]))}); }
   // اللاعب صاحب الإطار المفعّل بالمنصة: البطاقة هي الإطار نفسه (AGP.playerCard)، وإلا البطاقة العادية
   frameOf(name,kick){ const fr=this.reg.framed(name); return fr?{framed:true,plain:false,frameEl:BM.frameCard(fr,kick)}:{framed:false,plain:true}; }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
@@ -237,8 +244,10 @@ class Component extends DCLogic {
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':S.connecting?'جارٍ الاتصال…':'غير متصل',
       startOp:(!GAME.requireLive||S.live)?1:.4,
-      start:()=>{ if((S.roster[0]||[]).length<2) return this.toastMsg('لازم لاعبين على الأقل');
-        const all=this.reg.all(), list=S.roster[0]||[]; BM.writeJSON(BM.keys.roster,list); BM.writeJSON(BM.keys.players,Object.fromEntries(list.map(n=>[n,all[n]])));
+      start:()=>{ if(TEAM_MODE){ if(S.roster.some(l=>!(l||[]).length)) return this.toastMsg('لازم لاعب واحد على الأقل بكل فريق'); }
+        else if((S.roster[0]||[]).length<2) return this.toastMsg('لازم لاعبين على الأقل');
+        const all=this.reg.all(), list=S.roster.flat(); BM.writeJSON(BM.keys.roster,list); BM.writeJSON(BM.keys.players,Object.fromEntries(list.map(n=>[n,all[n]])));
+        BM.writeJSON(BM.keys.teams,TEAM_MODE?Object.fromEntries(S.roster.flatMap((l,i)=>(l||[]).map(n=>[n,i]))):{});
         this.props.onStart?.(S.roster); location.href=GAME.gameUrl; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>BM.go(GAME.libraryUrl),

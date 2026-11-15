@@ -224,7 +224,11 @@ const liveUser = ()=>(BM.getSavedConnection()||{}).username||'';
 const SUPPORT_TYPES = [];
 const SETTINGS = [
   { title:'الدخول', rows:[
-    { type:'text',   key:'keyword', label:'الكلمة المفتاحية للانضمام كلاعب', placeholder:'مثال: يلا', default:'' },
+    { type:'choice', key:'mode',    label:'👥 طريقة اللعب', hint:'فريقين = الشاشة تنقسم، وكل لاعب يرمي على الفريق الثاني', options:['فردي','فريقين'], default:0 },
+    { type:'text',   key:'keyword', label:'الكلمة المفتاحية للانضمام كلاعب', placeholder:'مثال: يلا', default:'', hideIf:'mode' },
+    // وضع الفريقين: اللاعب يختار فريقه بكتابة كلمته بالشات
+    { type:'text',   key:'teamA',   label:'🔴 كلمة الفريق الأحمر', placeholder:'مثال: أحمر', default:'أحمر', showIf:'mode' },
+    { type:'text',   key:'teamB',   label:'🔵 كلمة الفريق الأزرق', placeholder:'مثال: أزرق', default:'أزرق', showIf:'mode' },
     { type:'choice', key:'who',     label:'مين مسموح له ينضم؟', options:['الجميع','المتابعون فقط'], default:0 }
   ]},
   { title:'المباراة', rows:[
@@ -281,7 +285,7 @@ class Component extends DCLogic {
     return {
       hideImg:e=>{e.currentTarget.style.display='none';}, gameName:'إعدادات مباراة '+GAME.name, fx:this.buildFx(), scale:S.scale||1, stageW:Math.round(1120*(S.scale||1)), stageH:Math.round(680*(S.scale||1)), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>!r.showIf||S.values[r.showIf]).map((r,k)=>this.buildRow(r,k))})),
+      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>(!r.showIf||S.values[r.showIf])&&(!r.hideIf||!S.values[r.hideIf])).map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,
       connect:()=>{ if(S.connecting) return; this.setState({connecting:true}); setTimeout(()=>this.setState({live:true,connecting:false}),1400); },
       disconnect:()=>this.setState({live:false}), connLabel:S.connecting?'…':'اتصل بالبث', connOp:S.connecting?.7:1,
@@ -291,8 +295,10 @@ class Component extends DCLogic {
       supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {id:x.id,name:x.name,coins:x.coins.toLocaleString('en'),ini:x.name.replace(/^ال/,'')[0],c:x.c,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!BM.getSavedConnection(); if(live!==S.live) this.setState({live});
-        if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); if(!BM.norm(S.values.keyword)) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام');
-        const values=this.readValues(); BM.writeJSON(BM.keys.setup,values); SHARED.save(this.state.values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0});
+        if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً');
+        const values=this.readValues(); values.teamA=String(values.teamA||'').trim(); values.teamB=String(values.teamB||'').trim();
+        if(BM.isTeamSetup(values)){ if(!BM.norm(values.teamA)||!BM.norm(values.teamB)) return this.toastMsg('اكتب كلمة لكل فريق'); if(BM.norm(values.teamA)===BM.norm(values.teamB)) return this.toastMsg('كلمة الفريقين لازم تكون مختلفة'); }
+        else if(!BM.norm(S.values.keyword)) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام'); BM.writeJSON(BM.keys.setup,values); SHARED.save(this.state.values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0});
         this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>BM.go(GAME.libraryUrl),
