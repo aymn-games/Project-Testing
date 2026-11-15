@@ -185,11 +185,12 @@
             arg = arg || {};
             switch (cmd) {
                 case 'start':
-                    if (G.phase === 'setup') toLobby();
+                    if (G.phase === 'setup') toLink();
+                    else if (G.phase === 'link' && R && R.ctrl) { G.phase = 'lobby'; commit(); }
                     else if (G.phase === 'lobby' && R && R.ctrl && G.roster.length) startGame();
                     break;
                 case 'settings':
-                    if (G.phase !== 'setup' && G.phase !== 'lobby' && G.phase !== 'pick' && G.phase !== 'round') break;
+                    if (G.phase !== 'setup' && G.phase !== 'link' && G.phase !== 'lobby' && G.phase !== 'pick' && G.phase !== 'round') break;
                     if (TIMES.indexOf(arg.time) >= 0) settings.time = arg.time;
                     if (typeof arg.auto === 'boolean') settings.auto = arg.auto;
                     WK.writeJSON(store, STORE_SETTINGS, settings); render(); break;
@@ -207,12 +208,13 @@
         }
         function commit() { saveGame(); render(); pushState(true); }
 
-        function toLobby() {
+        // الإعدادات ← شاشة «باركود الاستريمر» (ربط الجوال) ← اللوبي
+        function toLink() {
             settings.keyword = String(settings.keyword || '').trim().slice(0, 40);
             if (!settings.keyword) { flash('اكتب كلمة الدخول أول'); return; }
             WK.writeJSON(store, STORE_SETTINGS, settings);
             if (SHARED) SHARED.save(settings);
-            G.phase = 'lobby'; WK.sfx('pop'); commit();
+            G.phase = 'link'; commit();
         }
         function startGame() {
             var players = G.players, roster = G.roster;
@@ -255,7 +257,7 @@
             var raw = String(p.text || '');
             if (settings.keyword && WK.norm(raw) === WK.norm(settings.keyword)) {
                 if (joinPlayer(p)) {
-                    if (G.phase === 'lobby') { WK.sfx('pop'); renderSoon(); }
+                    if (G.phase === 'lobby') renderSoon();
                     saveGameSoon(); pushState(false);
                 }
                 return;
@@ -420,14 +422,14 @@
 
         function render() {
             var ph = G.phase;
-            if (ph === 'setup' || ph === 'lobby') {
+            if (ph === 'setup' || ph === 'link' || ph === 'lobby') {
                 // شاشة الإعدادات بنفس تنسيق روليت الإقصاء (صفحة عادية، مو مسرح 1920×1080)
                 stage.style.display = 'none'; wks.hidden = false;
                 var sc = wks.querySelector('.wks-scroll'), top = sc ? sc.scrollTop : 0;
-                wks.innerHTML = ph === 'setup' ? vSetupPage() : vLobbyPage();
+                wks.innerHTML = ph === 'setup' ? vSetupPage() : ph === 'link' ? vLinkPage() : vLobbyPage();
                 if (ph === 'lobby' && AGP.playerCard && AGP.playerCard.fitAllNames) AGP.playerCard.fitAllNames(wks);
                 sc = wks.querySelector('.wks-scroll'); if (sc) sc.scrollTop = top;
-                if (ph === 'lobby') drawQr(wks.querySelector('.wk-qr'));
+                if (ph === 'link') drawQr(wks.querySelector('.wk-qr'));
                 return;
             }
             stage.style.display = ''; wks.hidden = true;
@@ -496,12 +498,10 @@
             var sec2 = wksRow('وقت الإجابة', 'المدة اللي يكتب فيها المتابعين إجاباتهم', timeCtl) +
                 '<span class="wks-div"></span>' +
                 wksRow('الحكم التلقائي على المتطابق', 'الإجابة اللي تطابق إجابة حكمت عليها تاخذ نفس الحكم', autoCtl);
-            var sec3 = '<ol class="wks-how"><li>اللاعبين يدخلون بكتابة كلمة الدخول بالشات.</li><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li>' +
-                '<li>اللاعبين يكتبون إجاباتهم بالشات خلال الوقت.</li><li>ينكشف جوابك، وتقبل أو ترفض إجاباتهم وحدة وحدة.</li><li>كل إجابة مقبولة بنقطة، واللي يعرفك أكثر يفوز.</li></ol>';
             var ok = !!String(settings.keyword || '').trim();
             return wksShell('<div class="wks-top"><span class="wks-title">مين يعرفني أكثر؟</span>' + liveChips() + '</div>',
-                '<div class="wks-scroll"><div class="wks-grid">' + wksSection(1, 'الدخول', sec1, 0) + wksSection(2, 'المباراة', sec2, 0.06) + wksSection(3, 'طريقة اللعب', sec3, 0.12, true) + '</div></div>',
-                '<button class="wks-start" data-a="start"' + (ok ? '' : ' disabled') + '>الدخول للوبي' + CHEV + '</button>');
+                '<div class="wks-scroll"><div class="wks-grid">' + wksSection(1, 'الدخول', sec1, 0) + wksSection(2, 'المباراة', sec2, 0.06) + '</div></div>',
+                '<button class="wks-start" data-a="start"' + (ok ? '' : ' disabled') + '>التالي' + CHEV + '</button>');
         }
         // بطاقة لاعب: بإطاره من المنصة (AGP.playerCard) لو عنده إطار، وإلا كبسولة عادية
         function cardHtml(id) {
@@ -525,6 +525,13 @@
                 '<span class="wks-kw-lbl">كلمة الدخول · اكتبها في الشات</span><span class="wks-kw">' + esc(settings.keyword) + '</span></div>' +
                 '<div class="wks-plist">' + cards + '</div></section>';
 
+            return wksShell('<div class="wks-top lobby"><span class="wks-game">مين يعرفني أكثر؟</span><span class="wks-title">لوبي الدخول</span></div>',
+                '<div class="wks-lobby solo">' + players + '</div>',
+                '<button class="wks-start" data-a="start"' + (n ? '' : ' disabled') + '>' + (n ? 'ابدأ اللعبة' : 'بانتظار انضمام اللاعبين') + CHEV + '</button>');
+        }
+        // شاشة «باركود الاستريمر»: قبل اللوبي، يربط فيها المضيف جواله
+        function vLinkPage() {
+            var linked = !!(R && R.ctrl);
             var reqs = Object.keys(pending).map(function (dev) {
                 return '<div class="wks-row wks-req">' +
                     '<div class="wks-lbl"><span>' + esc(pending[dev].name) + '</span><small>يبي يتحكم باللعبة</small></div>' +
@@ -532,17 +539,16 @@
             }).join('');
             var ctrl = linked ? '<div class="wks-row wks-ctrl"><div class="wks-lbl"><span><i class="wks-dot' + (ctrlOnline() ? ' on' : '') + '"></i>' + esc(R.ctrl.name) + '</span><small>جوالك مربوط ✓</small></div>' +
                 '<button class="wks-ghost" data-a="unlink">إلغاء الربط</button></div>' : '';
-            var qr = '<section class="wks-sec wks-host"><div class="wks-sec-h"><span class="wks-num">📱</span><span>باركود الاستريمر</span><span class="wks-only">للمضيف فقط</span></div>' +
-                '<div class="wks-qr-big"><div class="wk-qr wks-qr2">جاري التجهيز…</div></div>' +
-                '<ul class="wks-steps"><li>صوّره بكاميرا جوالك ويفتح على طول، بدون حساب.</li>' +
+            var sec = '<section class="wks-sec wks-link"><div class="wks-link-body">' +
+                '<div class="wk-qr wks-qr2">جاري التجهيز…</div>' +
+                '<div class="wks-link-txt"><span class="wks-only">للمضيف فقط · بدون حساب</span>' +
+                '<ul class="wks-steps"><li>صوّره بكاميرا جوالك ويفتح على طول.</li>' +
                 '<li>اكتب اسمك واضغط «إرسال طلب»، واقبله من هنا.</li>' +
                 '<li>من جوالك تختار السؤال وتكتب جوابك بدون ما يشوفه أحد.</li></ul>' +
-                (linked ? '' : '<p class="wks-keep">لا تقفل هالصفحة لين يدخل جوالك</p>') + ctrl + reqs + '</section>';
-
-            var label = !linked ? 'اربط جوالك أول' : !n ? 'بانتظار انضمام اللاعبين' : 'ابدأ المباراة';
-            return wksShell('<div class="wks-top lobby"><span class="wks-game">مين يعرفني أكثر؟</span><span class="wks-title">لوبي الدخول</span></div>',
-                '<div class="wks-lobby">' + players + qr + '</div>',
-                '<button class="wks-start" data-a="start"' + (linked && n ? '' : ' disabled') + '>' + label + CHEV + '</button>');
+                (linked ? '' : '<p class="wks-keep">لا تقفل هالصفحة لين يدخل جوالك</p>') + ctrl + reqs + '</div></div></section>';
+            return wksShell('<div class="wks-top lobby"><span class="wks-game">مين يعرفني أكثر؟</span><span class="wks-title">باركود الاستريمر</span></div>',
+                '<div class="wks-scroll">' + sec + '</div>',
+                '<button class="wks-start" data-a="start"' + (linked ? '' : ' disabled') + '>' + (linked ? 'اللوبي' : 'اربط جوالك أول') + CHEV + '</button>');
         }
         function miniBoard(n) {
             var rk = ranking().slice(0, n);

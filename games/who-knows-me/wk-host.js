@@ -128,10 +128,12 @@
         function vCtrl() {
             if (!S) return '<div class="wkp-center"><div class="wkp-spin"></div><p class="wkp-p">جاري تحميل اللعبة…</p></div>';
             var ph = S.phase;
-            if (ph === 'setup') return center('✅', 'الجوال مربوط', 'افتح اللوبي من شاشة اللعبة.');
+            if (ph === 'setup') return center('✅', 'الجوال مربوط', 'كمّل من شاشة اللعبة.');
+            if (ph === 'link') return center('✅', 'الجوال مربوط', 'اضغط «اللوبي» عشان يدخل اللاعبين.') +
+                '<button class="wkp-btn pri big" data-a="cmd" data-c="start">اللوبي</button>';
             if (ph === 'lobby') return '<div class="wkp-card"><h2 class="wkp-h">✅ الجوال مربوط</h2><div class="wkp-stat"><div><b>' + (S.joined || 0) + '</b><span>لاعب باللوبي</span></div></div>' +
                 '<p class="wkp-p">اللاعبين يدخلون بكتابة <b style="color:#fff">' + esc(S.settings.keyword || '') + '</b> بالشات.</p></div>' +
-                '<button class="wkp-btn pri big" data-a="cmd" data-c="start"' + (S.joined ? '' : ' disabled') + '>' + (S.joined ? 'ابدأ المباراة' : 'بانتظار اللاعبين') + '</button>' +
+                '<button class="wkp-btn pri big" data-a="cmd" data-c="start"' + (S.joined ? '' : ' disabled') + '>' + (S.joined ? 'ابدأ اللعبة' : 'بانتظار اللاعبين') + '</button>' +
                 '<div class="wkp-card">' + vSettings() + '</div>';
             if (ph === 'pick') return vPick();
             if (ph === 'answer') return '<div class="wkp-card"><span class="wkp-lbl">الجولة ' + S.round + '</span><h2 class="wkp-h">' + esc(S.q.text) + '</h2>' +

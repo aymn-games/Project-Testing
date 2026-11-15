@@ -11,12 +11,13 @@
 <style>
 :root{color-scheme:dark}
 html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif}
-.demo{display:flex;gap:18px;padding:16px;align-items:flex-start;max-width:1700px;margin:0 auto}
-.demo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+.demo-screen{position:fixed;inset:0}
+.demo-fab{position:fixed;right:16px;bottom:16px;z-index:200;height:46px;padding:0 18px;border-radius:999px;border:1px solid rgba(167,139,250,.45);background:rgba(18,16,26,.92);color:#ddd6fe;font:700 14px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);backdrop-filter:blur(10px)}
+.demo-side{position:fixed;top:0;bottom:0;left:0;z-index:190;width:min(400px,100%);padding:16px 16px 76px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;background:rgba(5,4,9,.94);border-right:1px solid rgba(255,255,255,.08);box-shadow:20px 0 60px rgba(0,0,0,.6);transform:translateX(-105%);transition:transform .3s ease}
+.demo-side.open{transform:none}
 .demo-lbl{font:700 15px 'IBM Plex Sans Arabic';color:#a8a3b5;display:flex;align-items:center;gap:8px}
-.demo-screen{width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.demo-side{width:380px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
-.demo-phone{height:720px;border-radius:38px;border:10px solid #1b1924;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);background:#07060b}
+.demo-note{font:500 13px/1.6 'IBM Plex Sans Arabic';color:#8a8596;margin:0}
+.demo-phone{height:640px;flex-shrink:0;border-radius:34px;border:9px solid #1b1924;overflow:hidden;background:#07060b}
 .demo-phone > div{height:100%;overflow-y:auto}
 .demo-chat{background:#110f18;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .demo-chat .row{display:flex;gap:8px}
@@ -25,8 +26,6 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
 .demo-chat label{display:flex;align-items:center;gap:8px;font:600 14px 'IBM Plex Sans Arabic';color:#cfc9da}
 .demo-log{max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font:500 13px 'IBM Plex Sans Arabic';color:#cfc9da}
 .demo-log b{color:#c4b5fd}
-.demo-note{font:500 13px/1.6 'IBM Plex Sans Arabic';color:#8a8596;margin:0}
-@media (max-width:900px){.demo{flex-direction:column;padding:16px}.demo-side{width:100%}.demo-phone{height:640px}.demo-screen{aspect-ratio:auto;height:620px}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="wk-core.js"></script>
@@ -35,23 +34,20 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
 <script src="wk-host.js"></script>
 </head>
 <body>
-<div class="demo">
-  <div class="demo-main">
-    <span class="demo-lbl">🖥️ شاشة البث</span>
-    <div class="demo-screen" id="screen"></div>
-    <p class="demo-note">نسخة تجربة: الجوال على الجنب بدل الباركود، ومتابعين وهميين يدخلون ويجاوبون بالشات تلقائياً. اكتب كلمة الدخول واضغط «الدخول للوبي»، وبعدها من الجوال اكتب اسمك ← إرسال طلب ← «قبول» على الشاشة.</p>
+<!-- شاشة البث بكامل الصفحة، وجوال المضيف والشات (للتجربة) يفتحون من الزر تحت -->
+<div class="demo-screen" id="screen"></div>
+<button class="demo-fab" id="fab">📱 جوال المضيف والشات</button>
+<aside class="demo-side" id="side">
+  <p class="demo-note">للتجربة بس: هذا بدل جوالك (الباركود) وبدل شات البث. المتابعين الوهميين يدخلون باللوبي ويجاوبون تلقائياً.</p>
+  <span class="demo-lbl">📱 جوال المضيف</span>
+  <div class="demo-phone"><div id="phone"></div></div>
+  <div class="demo-chat">
+    <span class="demo-lbl">💬 شات البث</span>
+    <label><input type="checkbox" id="bots" checked style="width:18px;height:18px;flex:0"> متابعين وهميين يدخلون ويجاوبون</label>
+    <div class="row"><input id="cname" placeholder="اسم المتابع" value="متابع_تجربة" style="flex:.6"><input id="ctext" placeholder="اكتب بالشات"><button id="csend">إرسال</button></div>
+    <div class="demo-log" id="log"></div>
   </div>
-  <div class="demo-side">
-    <span class="demo-lbl">📱 جوال المضيف</span>
-    <div class="demo-phone"><div id="phone"></div></div>
-    <div class="demo-chat">
-      <span class="demo-lbl">💬 شات البث (تجربة)</span>
-      <label><input type="checkbox" id="bots" checked style="width:18px;height:18px;flex:0"> متابعين وهميين يجاوبون تلقائياً</label>
-      <div class="row"><input id="cname" placeholder="اسم المتابع" value="متابع_تجربة" style="flex:.6"><input id="ctext" placeholder="اكتب إجابة"><button id="csend">إرسال</button></div>
-      <div class="demo-log" id="log"></div>
-    </div>
-  </div>
-</div>
+</aside>
 <script>
 (function () {
     'use strict';
@@ -62,6 +58,11 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
     var loop = WK.createLoopback();
     var listeners = [];
     var logEl = document.getElementById('log');
+    var side = document.getElementById('side');
+    document.getElementById('fab').onclick = function () { side.classList.toggle('open'); };
+    // يفتح لوحة الجوال لحاله لما توصل شاشة الباركود
+    var autoOpened = false;
+    setInterval(function () { if (!autoOpened && screen.state().phase === 'link') { autoOpened = true; side.classList.add('open'); } }, 300);
 
     var screen = WK.mountScreen(document.getElementById('screen'), {
         transport: loop, storage: memStore(),
