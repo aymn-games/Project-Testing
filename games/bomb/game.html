@@ -93,19 +93,19 @@ input:focus{outline:none}
       <div style="position:absolute;top:0;left:0;width:{{ dW }}px;height:1000px;transform:scale({{ scale }});transform-origin:top left;box-sizing:border-box;padding:24px 90px 28px;display:flex;flex-direction:column;gap:14px;animation:{{ shakeAn }}">
 
         <!-- الشريط العلوي: صاحب القنبلة يمين · القنبلة/زر البدء بالنص · المتبقي على الانفجار يسار -->
-        <section style="position:relative;overflow:hidden;flex-shrink:0;height:180px;border-radius:28px;background:radial-gradient(ellipse at 50% 50%, {{ heat }}, transparent 42%), linear-gradient(180deg, rgba(38,26,64,.92), rgba(14,11,24,.94));border:1.5px solid {{ panelBd }};box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05), 0 0 {{ panelGlowR }}px {{ panelGlow }};padding:16px 34px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:30px;transition:border-color .3s, box-shadow .3s">
+        <section style="position:relative;overflow:hidden;flex-shrink:0;height:180px;border-radius:28px;background:radial-gradient(ellipse at 50% 50%, {{ heat }}, transparent 42%), linear-gradient(180deg, rgba(30,24,46,.92), rgba(14,12,22,.94));border:1.5px solid {{ panelBd }};box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05), 0 0 {{ panelGlowR }}px {{ panelGlow }};padding:16px 34px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:30px;transition:border-color .3s, box-shadow .3s">
           <div style="min-width:0;display:flex;align-items:center">
             <sc-if value="{{ hasHolder }}" hint-placeholder-val="{{ false }}">
               <div key="{{ holderKey }}" style="min-width:0;max-width:100%;display:flex;align-items:center;gap:22px;animation:holdIn .45s cubic-bezier(.2,1,.3,1)">
                 <span style="position:relative;width:124px;height:124px;flex-shrink:0;display:grid;place-items:center">
-                  <span style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg, #a855f7, transparent 40%, #f87171 60%, transparent 85%, #a855f7);animation:spinRing 2.4s linear infinite"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg, #8a76c4, transparent 40%, #d98a8a 60%, transparent 85%, #8a76c4);animation:spinRing 2.4s linear infinite"></span>
                   <span style="position:relative;width:112px;height:112px;border-radius:50%;overflow:hidden;display:grid;place-items:center;font:800 46px 'Zain';color:#fff;background:{{ holder.av }};border:3px solid #17111f;box-sizing:border-box">{{ holder.ini }}<sc-if value="{{ holder.img }}" hint-placeholder-val="{{ false }}"><img src="{{ holder.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
-                  <span style="position:absolute;bottom:-6px;left:-6px;min-width:46px;height:46px;padding:0 8px;box-sizing:border-box;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg, #7c3aed, #a855f7);border:3px solid #17111f;font:900 24px/1 'Zain';color:#fff;font-variant-numeric:tabular-nums;box-shadow:0 6px 16px rgba(124,58,237,.5)">{{ holder.id }}</span>
+                  <span style="position:absolute;bottom:-6px;left:-6px;min-width:46px;height:46px;padding:0 8px;box-sizing:border-box;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg, #5e4a9c, #7a64b4);border:3px solid #17111f;font:900 24px/1 'Zain';color:#fff;font-variant-numeric:tabular-nums;box-shadow:0 6px 14px rgba(70,50,120,.4)">{{ holder.id }}</span>
                 </span>
                 <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
-                  <span style="display:flex;align-items:center;gap:8px;font:800 18px 'Zain';color:#c4b5fd"><span style="width:8px;height:8px;border-radius:50%;background:#a855f7;box-shadow:0 0 10px #a855f7"></span>القنبلة الآن مع</span>
-                  <span style="font:900 48px/1.05 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.4)">{{ holder.name }}</span>
-                  <span style="font:700 19px 'Zain';color:#cfcad9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">اكتب <b style="color:#fde68a">رقم لاعب</b> بالشات وارمِ القنبلة عليه</span>
+                  <span style="display:flex;align-items:center;gap:8px;font:800 18px 'Zain';color:#b7aad8"><span style="width:8px;height:8px;border-radius:50%;background:#8a76c4"></span>القنبلة الآن مع</span>
+                  <span style="font:900 46px/1.05 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.4)">{{ holder.name }}</span>
+                  <span style="font:700 19px 'Zain';color:#cfcad9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">اكتب <b style="color:#e6d29a">رقم لاعب</b> بالشات وارمِ القنبلة عليه</span>
                 </div>
               </div>
             </sc-if>
@@ -118,10 +118,7 @@ input:focus{outline:none}
           </div>
 
           <div style="display:grid;place-items:center">
-            <sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}">
-              <button onClick="{{ startRound }}" style="height:72px;padding:0 46px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 26px 'Zain';box-shadow:0 12px 34px rgba(124,58,237,.45), inset 0 1px 0 rgba(255,255,255,.25);white-space:nowrap" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">{{ startLbl }}</button>
-            </sc-if>
-            <sc-if value="{{ notIdle }}" hint-placeholder-val="{{ false }}">
+            <sc-if value="{{ showBomb }}" hint-placeholder-val="{{ true }}">
               <div style="position:relative;width:140px;height:140px;display:grid;place-items:center">
                 <sc-if value="{{ ringOn }}" hint-placeholder-val="{{ false }}">
                   <span style="position:absolute;inset:12px;border-radius:50%;border:3px solid {{ tC }};animation:ring {{ ringDur }}s ease-out infinite"></span>
@@ -140,13 +137,13 @@ input:focus{outline:none}
               <span style="font:800 18px 'Zain';color:{{ leftLblC }}">{{ leftLbl }}</span>
               <sc-if value="{{ showTime }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;align-items:baseline;gap:10px">
-                  <span style="display:flex;align-items:baseline;direction:ltr;font-variant-numeric:tabular-nums;color:{{ tC }};text-shadow:0 0 26px {{ heatGlow }}"><span style="font:900 84px/1 'Zain'">{{ secTxt }}</span><span style="font:900 42px/1 'Zain';opacity:.8">.{{ msTxt }}</span></span>
+                  <span style="display:flex;align-items:baseline;direction:ltr;font-variant-numeric:tabular-nums;color:{{ tC }};text-shadow:0 0 14px {{ heatGlow }}"><span style="font:900 84px/1 'Zain'">{{ secTxt }}</span><span style="font:900 42px/1 'Zain';opacity:.8">.{{ msTxt }}</span></span>
                   <span style="font:700 18px 'Zain';color:#a8a3b5">ثانية</span>
                 </div>
-                <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden"><span style="display:block;height:100%;width:{{ pctW }}%;border-radius:999px;background:{{ tC }};box-shadow:0 0 12px {{ tC }}"></span></div>
+                <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden"><span style="display:block;height:100%;width:{{ pctW }}%;border-radius:999px;background:{{ tC }};box-shadow:none"></span></div>
               </sc-if>
               <sc-if value="{{ hideTime }}" hint-placeholder-val="{{ false }}">
-                <span style="font:900 64px/1.1 'Zain';color:#fca5a5;text-shadow:0 0 26px rgba(239,68,68,.5)">⏳ ؟؟</span>
+                <span style="font:900 64px/1.1 'Zain';color:#d98a8a;text-shadow:none">⏳ ؟؟</span>
               </sc-if>
             </div>
           </div>
@@ -160,7 +157,7 @@ input:focus{outline:none}
         </div>
 
         <!-- شبكة اللاعبين: كل لاعب بمكانه طول المباراة، والمُقصى يبقى باهت ورقمه عليه خط -->
-        <section style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px 18px 18px;border-radius:24px;box-sizing:border-box;background:linear-gradient(180deg, rgba(139,92,246,.06), rgba(255,255,255,.015));border:1px solid rgba(167,139,250,.16)">
+        <section style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px 18px 18px;border-radius:24px;box-sizing:border-box;background:rgba(255,255,255,.018);border:1px solid rgba(160,145,200,.12)">
           <div style="flex-shrink:0;height:26px;display:flex;align-items:center;justify-content:space-between;padding:0 4px">
             <span style="font:900 22px 'Zain'">اللاعبون</span>
             <span style="direction:ltr;font:800 17px 'Zain';color:#a8a3b5;font-variant-numeric:tabular-nums">{{ rangeLbl }}</span>
@@ -168,7 +165,7 @@ input:focus{outline:none}
           <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ cols }},{{ cardW }}px);justify-content:center;align-content:center;gap:{{ gridGap }}px">
             <sc-for list="{{ cards }}" as="p" hint-placeholder-count="12">
               <div style="position:relative;height:{{ cardH }}px;box-sizing:border-box;border-radius:{{ cardR }}px;overflow:hidden;display:flex;flex-direction:column;background:{{ p.bg }};border:{{ p.bw }}px solid {{ p.bd }};box-shadow:{{ p.sh }};opacity:{{ p.op }};transform:{{ p.tf }};z-index:{{ p.z }};animation:{{ p.an }};transition:opacity .3s, transform .25s cubic-bezier(.2,1.2,.4,1), background .3s, border-color .3s">
-                <span style="flex-shrink:0;height:{{ headH }}px;display:grid;place-items:center;background:{{ p.hBg }};color:{{ p.hC }};font:900 {{ numF }}px/1 'Zain';font-variant-numeric:tabular-nums;text-decoration:{{ p.deco }};text-decoration-thickness:3px">{{ p.num }}</span>
+                <span style="flex-shrink:0;height:{{ headH }}px;display:grid;place-items:center;background:{{ p.hBg }};color:{{ p.hC }};font:900 {{ numF }}px/1 'Zain';font-variant-numeric:tabular-nums;text-decoration:{{ p.deco }};text-decoration-thickness:3px;letter-spacing:.04em">{{ p.num }}</span>
                 <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{{ inGap }}px;padding:0 8px">
                   <span style="position:relative;flex-shrink:0;width:{{ avS }}px;height:{{ avS }}px;border-radius:50%;overflow:hidden;display:grid;place-items:center;font:800 {{ avF }}px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 2px {{ p.ring }};filter:{{ p.fl }}">{{ p.ini }}<sc-if value="{{ p.img }}" hint-placeholder-val="{{ false }}"><img src="{{ p.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   <span style="max-width:100%;font:800 {{ nameF }}px/1.15 'Zain';color:{{ p.nC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ p.deco }}">{{ p.name }}</span>
@@ -181,9 +178,9 @@ input:focus{outline:none}
           </div>
         </section>
 
-        <!-- أزرار التحكم: بدء لعبة جديدة · إيقاف مؤقت/استئناف -->
+        <!-- أزرار التحكم: «بدء لعبة جديدة» يبدأ الجولة (الأولى والتالية) · إيقاف مؤقت/استئناف -->
         <div style="flex-shrink:0;height:62px;display:flex;align-items:center;justify-content:center;gap:14px">
-          <button onClick="{{ newGame }}" style="height:58px;padding:0 40px;border:none;border-radius:18px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 21px 'Zain';box-shadow:0 10px 28px rgba(124,58,237,.4), inset 0 1px 0 rgba(255,255,255,.22);white-space:nowrap" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">بدء لعبة جديدة</button>
+          <button onClick="{{ newGame }}" style="height:58px;padding:0 40px;border:none;border-radius:18px;cursor:{{ newCur }};opacity:{{ newOp }};background:linear-gradient(90deg, #5e4a9c, #7a64b4);color:#efeaf7;font:900 21px 'Zain';box-shadow:0 8px 22px rgba(60,40,110,.35), inset 0 1px 0 rgba(255,255,255,.12);white-space:nowrap" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">بدء لعبة جديدة</button>
           <button onClick="{{ togglePause }}" style="height:58px;padding:0 34px;border-radius:18px;cursor:{{ pauseCur }};border:1.5px solid {{ pauseBd }};background:{{ pauseBg }};color:{{ pauseC }};font:900 21px 'Zain';white-space:nowrap;opacity:{{ pauseOp }};display:flex;align-items:center;gap:10px" style-hover="filter:brightness(1.12)">{{ pauseLbl }}</button>
         </div>
       </div>
@@ -456,20 +453,20 @@ class Component extends DCLogic {
   renderVals(){
     const S=this.state, o=(k,i,out)=>S[k+'Out']?out:i, live=S.phase==='live';
     const left=live?Math.max(0,S.endAt-S.now):S.phase==='boom'?0:S.total, pct=live?left/S.total:S.phase==='boom'?0:1;
-    const hot=live?1-pct:0, tC=!live?(S.phase==='boom'?'#f87171':'#a8a3b5'):left<3000?'#f87171':left<6000?'#fb923c':'#fde68a';
+    const hot=live?1-pct:0, tC=!live?(S.phase==='boom'?'#d98a8a':'#8f8a9c'):left<3000?'#d98a8a':left<6000?'#dca17a':'#e6d29a';
     const avOf=p=>{ const c=AVC[(p.ci??(p.id-1))%AVC.length]; return `linear-gradient(135deg, ${c}cc, ${c}55)`; };
     // الشبكة تعرض كل اللاعبين بترتيب أرقامهم (المُقصى يبقى بمكانه باهت). نختار عدد الأعمدة اللي يعطي أكبر كرت يدخل بالمساحة.
     const all=[...S.players].sort((a,b)=>a.id-b.id), N=all.length||1, GW=(S.dW||1920)-220, GH=530, gridGap=N>40?10:N>20?12:14, AR=.62;
     let cols=1, cw=0; for(let c=1;c<=N;c++){ const r=Math.ceil(N/c), w=Math.min((GW-(c-1)*gridGap)/c,(GH-(r-1)*gridGap)/r/AR); if(w>cw){ cw=w; cols=c; } }
-    const cardW=Math.floor(Math.min(cw,300)), cardH=Math.round(cardW*AR), headH=Math.round(cardH*.27), avS=Math.round(cardH*.4), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
+    const cardW=Math.floor(Math.min(cw,300)), cardH=Math.round(cardW*AR), headH=Math.round(cardH*.36), avS=Math.round(cardH*.34), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
     const cards=all.map(p=>{ const isH=S.holder===p.id&&(live||S.phase==='boom')&&!p.out, out=p.out;
       return {...p,ini:ini(p.name),av:avOf(p),num:String(p.id).padStart(pad,'0'),isHolder:isH&&live,
-        bg:out?'rgba(255,255,255,.02)':isH?'linear-gradient(180deg, rgba(76,40,120,.95), rgba(34,18,40,.95))':'linear-gradient(180deg, rgba(46,30,84,.78), rgba(20,15,34,.92))',
-        bw:isH?2.5:1.5, bd:out?'rgba(255,255,255,.05)':isH?'rgba(248,113,113,.85)':'rgba(167,139,250,.28)',
-        sh:out?'none':isH?'0 0 0 4px rgba(248,113,113,.18), 0 0 34px rgba(239,68,68,.45)':'0 6px 16px rgba(0,0,0,.25)',
-        hBg:out?'rgba(255,255,255,.04)':isH?'#ffffff':'linear-gradient(90deg, #7c3aed, #a855f7)', hC:out?'#5f5a6c':isH?'#6d28d9':'#fff',
-        nC:out?'#6f6a7c':'#f4f2f8', an:'rise .35s ease both', op:out?.5:1, fl:out?'grayscale(1) brightness(.6)':'none',
-        tf:isH&&live?'scale(1.06)':'none', z:isH?2:1, deco:out?'line-through':'none', ring:isH?'rgba(248,113,113,.8)':out?'rgba(255,255,255,.06)':'rgba(255,255,255,.18)'}; });
+        bg:out?'rgba(255,255,255,.015)':isH?'linear-gradient(180deg, rgba(62,44,92,.95), rgba(30,22,38,.95))':'linear-gradient(180deg, rgba(38,30,60,.85), rgba(20,17,30,.92))',
+        bw:isH?2.5:1.5, bd:out?'rgba(255,255,255,.04)':isH?'rgba(217,138,138,.75)':'rgba(160,145,200,.2)',
+        sh:out?'none':isH?'0 0 0 4px rgba(217,138,138,.12), 0 0 22px rgba(200,100,100,.25)':'0 6px 14px rgba(0,0,0,.22)',
+        hBg:out?'rgba(255,255,255,.035)':isH?'#e9e4f2':'linear-gradient(90deg, #5e4a9c, #7a64b4)', hC:out?'#57525f':isH?'#4a3680':'#f1edf8',
+        nC:out?'#625d6e':'#e6e2ee', an:'rise .35s ease both', op:out?.5:1, fl:out?'grayscale(1) brightness(.6)':'none',
+        tf:isH&&live?'scale(1.06)':'none', z:isH?2:1, deco:out?'line-through':'none', ring:isH?'rgba(217,138,138,.7)':out?'rgba(255,255,255,.05)':'rgba(255,255,255,.14)'}; });
     const hp=S.players.find(p=>p.id===S.holder), vp=S.players.find(p=>p.id===S.victim), wp=S.players.find(p=>p.id===S.winner);
     const A=S.players.filter(p=>!p.out);
     // فيديو الفوز (من المنصة): يحاول التشغيل بالصوت، ولو منعه المتصفح يكمل بدون صوت
@@ -482,20 +479,20 @@ class Component extends DCLogic {
       fx:this.buildFx(), scale:S.scale, stageW:Math.round((S.dW||1920)*S.scale), dW:S.dW||1920, stageH:Math.round(1000*S.scale),
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      round:S.round, roundLbl:'الجولة '+S.round, aliveN:A.length, totalN:A.length, cols, cardW, cardH, gridGap, headH, avS, avF:Math.round(avS*.44), cardR:Math.round(Math.min(22,cardH*.14)), numF:Math.round(headH*.78), nameF:Math.round(Math.min(30,Math.max(12,cardH*.14))), inGap:Math.round(cardH*.05), bombF:Math.round(Math.min(44,cardH*.24)), noLog:!S.log.length, cards,
+      round:S.round, roundLbl:'الجولة '+S.round, aliveN:A.length, totalN:A.length, cols, cardW, cardH, gridGap, headH, avS, avF:Math.round(avS*.44), cardR:Math.round(Math.min(22,cardH*.14)), numF:Math.round(headH*.86), nameF:Math.round(Math.min(30,Math.max(12,cardH*.14))), inGap:Math.round(cardH*.05), bombF:Math.round(Math.min(44,cardH*.24)), noLog:!S.log.length, cards,
       rangeLbl:maxId?'01'.slice(-pad)+' – '+String(maxId).padStart(pad,'0'):'',
-      stats:[{v:A.length,l:'في الساحة',c:'#f4f2f8'},{v:S.round,l:'الجولة',c:'#c4b5fd'},{v:S.passes,l:'تمريرة',c:'#f4f2f8'},{v:S.players.length-A.length,l:'خارج اللعب',c:'#fca5a5'}],
+      stats:[{v:A.length,l:'في الساحة',c:'#e6e2ee'},{v:S.round,l:'الجولة',c:'#b7aad8'},{v:S.passes,l:'تمريرة',c:'#e6e2ee'},{v:S.players.length-A.length,l:'خارج اللعب',c:'#d98a8a'}],
       notIdle:S.phase!=='idle', ringOn:live&&!S.paused, pctW:Math.round(pct*1000)/10,
-      leftLbl:S.paused?'⏸ متوقفة مؤقتاً':'متبقي على الانفجار', leftLblC:S.paused?'#fde68a':'#a8a3b5',
+      leftLbl:S.paused?'⏸ متوقفة مؤقتاً':'متبقي على الانفجار', leftLblC:S.paused?'#e6d29a':'#a8a3b5',
       waitTxt:S.round===1?'بانتظار بداية الجولة':vp?`انقصى ${vp.name} · الجولة ${S.round}`:'بانتظار الجولة '+S.round,
-      newGame:()=>this.replay(), togglePause:()=>this.togglePause(),
+      newGame:()=>{ if(S.phase==='idle') this.startRound(); }, newOp:S.phase==='idle'?1:.45, newCur:S.phase==='idle'?'pointer':'default', showBomb:true, togglePause:()=>this.togglePause(),
       pauseLbl:S.paused?'▶ استئناف':'⏸ إيقاف مؤقت', pauseOp:live?1:.45, pauseCur:live?'pointer':'default',
-      pauseBg:S.paused?'rgba(253,230,138,.12)':'rgba(255,255,255,.05)', pauseBd:S.paused?'rgba(253,230,138,.5)':'rgba(167,139,250,.35)', pauseC:S.paused?'#fde68a':'#ddd6fe',
+      pauseBg:S.paused?'rgba(230,210,154,.08)':'rgba(255,255,255,.04)', pauseBd:S.paused?'rgba(230,210,154,.4)':'rgba(160,145,200,.28)', pauseC:S.paused?'#e6d29a':'#d6d0e4',
       isLive:live, isIdle:S.phase==='idle', isBoom:S.phase==='boom', isOver:S.phase==='over',
       tC, tDeg:S.tMode==='ظاهر'?Math.round(pct*360):0, secTxt:S.phase==='idle'?'--':String(Math.floor(left/1000)).padStart(2,'0'), msTxt:S.phase==='idle'?'--':String(Math.floor((left%1000)/10)).padStart(2,'0'),
       showTime:S.tMode==='ظاهر', hideTime:S.tMode!=='ظاهر',
-      heat:`rgba(239,68,68,${(.08+hot*.32).toFixed(2)})`, heatGlow:`rgba(249,115,22,${(.2+hot*.6).toFixed(2)})`,
-      panelBd:live?`rgba(248,113,113,${(.3+hot*.6).toFixed(2)})`:'rgba(255,255,255,.08)', panelGlow:'rgba(239,68,68,.35)', panelGlowR:live?Math.round(20+hot*60):0,
+      heat:`rgba(200,90,90,${(.05+hot*.18).toFixed(2)})`, heatGlow:`rgba(220,140,100,${(.12+hot*.3).toFixed(2)})`,
+      panelBd:live?`rgba(217,138,138,${(.25+hot*.4).toFixed(2)})`:'rgba(255,255,255,.07)', panelGlow:'rgba(200,100,100,.2)', panelGlowR:live?Math.round(12+hot*30):0,
       bombIcon:'💣', boomOv:S.boomOut?'fadeOut .3s ease forwards':'fade .25s ease', boomAn:S.boomOut?'popOut .3s ease forwards':'softIn .45s cubic-bezier(.2,.9,.3,1)', bombAn:live&&!S.paused?`wobble ${(0.9-hot*.7).toFixed(2)}s ease-in-out infinite`:'none', ringDur:(1.2-hot*.9).toFixed(2),
       hasHolder:live&&!!hp, noHolder:!(live&&hp), holder:hp?{name:hp.name,id:hp.id,ini:ini(hp.name),av:avOf(hp),img:hp.img||null}:{}, holderKey:S.holderKey,
       idleTxt:S.round===1?'القنبلة تبدأ عند لاعب عشوائي ووقتها عشوائي. اللي ماسكها يكتب رقم لاعب ثاني بالشات عشان يرميها عليه. تنفجر بيد أحد؟ ينقصى.':`انقصى ${vp?vp.name:''}. جاهزين للجولة ${S.round}؟`,
