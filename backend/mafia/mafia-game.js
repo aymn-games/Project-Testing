@@ -96,7 +96,11 @@ function createGame(roster, settings, hooks) {
     function aliveRole(r) { return alive().filter(function (p) { return p.role === r; }); }
     function aliveMafia() { return alive().filter(function (p) { return p.faction === 'mafia'; }); }
     function go(phase, ms) { G.phase = phase; G.phaseAt = Date.now(); G.endsAt = ms ? G.phaseAt + ms : 0; changed(); }
-    function available(card) { return G.cards.indexOf(card) >= 0 && G.usedCards.indexOf(card) < 0 && G.round >= (card === 'recruit' ? 3 : 2); }
+    function cardOpen(card) { return G.cards.indexOf(card) >= 0 && G.usedCards.indexOf(card) < 0 && G.round >= (card === 'recruit' ? 3 : 2); }
+    // أقل عدد أحياء يسمح بالتجنيد: المافيا بعده ما تتعدى 30% من الأحياء (ما أحد يموت قبل آخر الليل، فالفحص وقت الاختيار = الفحص بالفجر)
+    function recruitNeed() { return Math.ceil(Math.round((aliveMafia().length + 1) / RECRUIT_CAP * 1e6) / 1e6); }
+    function recruitCapped() { return alive().length < recruitNeed(); }
+    function available(card) { return cardOpen(card) && !(card === 'recruit' && recruitCapped()); }
     // team = إشعار عن زميل بالفريق (اختياره/نتيجته) — الجوال يعرضه «لفريقك بس» بدل «خاص فيك»
     function notice(p, text, team) { var n = { round: G.round, text: text, at: Date.now() }; if (team) n.team = true; p.notices.push(n); if (p.notices.length > 40) p.notices.shift(); }
 
@@ -556,7 +560,11 @@ function createGame(roster, settings, hooks) {
                 if (me.role === 'doctor') { v.me.protect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'doctor'); }
                 if (me.role === 'detective') { v.me.inspect = G.night.actions[me.id] || null; v.me.teamPicks = rolePicks(G.night, 'detective'); }
             }
-            if (meMafia && !over) v.cards = G.cards.map(function (c) { return { id: c, name: CARD_NAMES[c], used: G.usedCards.indexOf(c) >= 0, available: available(c) }; });
+            if (meMafia && !over) v.cards = G.cards.map(function (c) {
+                var o = { id: c, name: CARD_NAMES[c], used: G.usedCards.indexOf(c) >= 0, available: available(c) };
+                if (c === 'recruit' && cardOpen(c) && recruitCapped()) { o.capped = true; o.need = recruitNeed(); o.alive = alive().length; }   // مقفول بسبب الـ30% — الجوال يعرض السبب
+                return o;
+            });
             if (G.phase === 'vote' || G.phase === 'verdict') { v.me.vote = G.votes[me.id] || null; v.me.voteOk = !!G.voteOk[me.id]; }
         }
         return v;

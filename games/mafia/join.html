@@ -83,6 +83,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
 .pill { flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; }
 .pill.on { background: rgba(139,92,246,.28); color: #fff; border-color: var(--gold); box-shadow: 0 0 12px rgba(139,92,246,.35); }
+.pill:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
 .acct a { color: var(--gold); font-weight: 900; }
 .acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; position: relative; background: var(--card2); font-weight: 900; font-size: 22px; }
@@ -939,6 +940,9 @@ body.watching { overflow: hidden; }
             html += (showCards ? '' : '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : split && allIn ? '🎯 هدفين' : done + '/' + team.length) + '</span></div>') +
             (split && !lock ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">⚠️ اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b> الليلة</div>' : '') + lockNote(lock, G) +
             (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
+            // التجنيد مقفول لأن المافيا بتتعدى 30% من الأحياء: الزر يبان مقفول وتحته السبب
+            (recruit && recruit.capped ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill on" data-opmode="kill">🔪 قتل</button><button type="button" class="pill" disabled>🔒 تجنيد</button></div>' +
+                '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">🔒 التجنيد يحتاج <b>' + recruit.need + '</b> أحياء على الأقل (الحين ' + recruit.alive + ') عشان المافيا ما تتعدى 30% — الكرت محفوظ</div>' : '') +
             '<div class="gwrap">' + playerRows(G, {
                 action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && prev.indexOf(p.id) < 0 && (!lock || lock.indexOf(p.id) >= 0); },
                 sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
