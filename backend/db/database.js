@@ -611,6 +611,12 @@ ensureColumn('users', 'kick_username', 'TEXT');
 ensureColumn('users', 'kick_display_name', 'TEXT');
 ensureColumn('users', 'kick_avatar_url', 'TEXT');
 ensureColumn('users', 'kick_verified', 'INTEGER NOT NULL DEFAULT 0');
+// ربط حساب تويتش (auth/twitch-oauth-service.js) — twitch_username = اسم القناة (login).
+ensureColumn('users', 'twitch_user_id', 'TEXT');
+ensureColumn('users', 'twitch_username', 'TEXT');
+ensureColumn('users', 'twitch_display_name', 'TEXT');
+ensureColumn('users', 'twitch_avatar_url', 'TEXT');
+ensureColumn('users', 'twitch_verified', 'INTEGER NOT NULL DEFAULT 0');
 // عدّادات جولات مكتملة/فوز — لبطاقة "إحصائيات اللاعب" بالبروفايل، تُحدَّث
 // من awardForRoundCompletion بـpoints-service.js.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');

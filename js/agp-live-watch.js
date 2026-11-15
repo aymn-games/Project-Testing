@@ -56,8 +56,8 @@
     function fetchLive(username, platform) {
         var t = token();
         if (!t || !window.fetch) return Promise.resolve(null);
-        // المنصة من الاتصال المحفوظ (مكتبة الألعاب): 'kick' أو تيك توك افتراضياً.
-        var platformParam = platform === 'kick' ? 'platform=kick&' : '';
+        // المنصة من الاتصال المحفوظ (مكتبة الألعاب): 'kick'/'twitch' أو تيك توك افتراضياً.
+        var platformParam = platform === 'kick' || platform === 'twitch' ? 'platform=' + platform + '&' : '';
         return fetch(apiBase() + '/api/stream/is-live?' + platformParam + 'username=' + encodeURIComponent(username), {
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) {

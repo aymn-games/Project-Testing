@@ -15,12 +15,18 @@ var wsServer = require('./websocket/ws-server');
 var connectorRouter = require('./platforms/connector-router');
 var authRouter = require('./http/auth-router');
 var kickHub = require('./platforms/kick/kick-hub');
+var twitchHub = require('./platforms/twitch/twitch-hub');
 
 /** معالج طلبات HTTP — فحص صحة على الجذر، وتفويض "/api/*" لـ http/auth-router.js. */
 function handleHttpRequest(req, res) {
     // أحداث بث كيك (Webhook موقَّع من كيك) — platforms/kick/kick-hub.js
     if ((req.url || '').split('?')[0] === '/kick/webhook') {
         kickHub.handleWebhook(req, res);
+        return;
+    }
+    // أحداث بث تويتش (EventSub Webhook موقَّع) — platforms/twitch/twitch-hub.js
+    if ((req.url || '').split('?')[0] === '/twitch/webhook') {
+        twitchHub.handleWebhook(req, res);
         return;
     }
     if ((req.url || '').indexOf('/api/') === 0) {
@@ -35,7 +41,8 @@ function handleHttpRequest(req, res) {
         websocket: 'implemented',
         activeTikTokConnector: connectorRouter.getActiveConnectorName('tiktok'),
         // للتأكد إن KICK_CLIENT_ID و KICK_CLIENT_SECRET مضافة بـ Render (بدون كشف قيمها)
-        kickConfigured: require('./platforms/kick/kick-api').isConfigured()
+        kickConfigured: require('./platforms/kick/kick-api').isConfigured(),
+        twitchConfigured: require('./platforms/twitch/twitch-api').isConfigured()
     }));
 }
 

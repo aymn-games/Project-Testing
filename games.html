@@ -1321,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   var connectUsername = '';
   var connectErrorMsg = '';
 
-  // [منصة البث] الستريمر يختار منصته (تيك توك / كيك / تويتش قريباً) مرة
+  // [منصة البث] الستريمر يختار منصته (تيك توك / كيك / تويتش) مرة
   // وحدة، والاختيار ينحفظ بالجهاز ('agp:agp-stream-platform'). الاتصال
   // المحفوظ يحمل المنصة ({platform, username})، والألعاب تقرأها منه
   // تلقائياً (adapters/agp-tiktok-adapter.js → AGP.streamPlatform).
@@ -1329,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   var STREAM_PLATFORMS = {
     tiktok: { label: 'تيك توك', color: '#fe2c55', placeholder: 'يوزر التيك توك (بدون @)', handle: function(u){ return '@' + u; } },
     kick:   { label: 'كيك', color: '#53fc18', placeholder: 'اسم قناة كيك', handle: function(u){ return 'kick.com/' + u; } },
-    twitch: { label: 'تويتش', color: '#9146ff', soon: true }
+    twitch: { label: 'تويتش', color: '#9146ff', placeholder: 'اسم قناة تويتش', handle: function(u){ return 'twitch.tv/' + u; } }
   };
   function readStreamPlatform(){
     try {
@@ -1486,6 +1486,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var ico = document.createElement('span');
         ico.className = 'agp-pp-ico';
         ico.textContent = PLATFORM_ICON_TEXT[key] || '';
+        if (key === 'twitch') ico.style.color = '#fff';
         b.appendChild(ico);
         b.appendChild(document.createTextNode(info.label));
         if (info.soon) {
@@ -1546,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         ? (isAutoConnectOff()
           ? 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ — اضغط اتصال لما تبي تربط الألعاب ببثك'
           : 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ — نتصل تلقائياً أول ما تبدأ البث في ' + pl.label)
-        : (streamPlatform === 'kick' ? 'اكتب اسم قناة كيك عشان نتحقق منها ونربط الألعاب فيها' : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه'),
+        : (streamPlatform !== 'tiktok' ? 'اكتب اسم قناة ' + pl.label + ' عشان نتحقق منها ونربط الألعاب فيها' : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه'),
       connecting: 'جاري التحقق من إن الحساب يبث الآن...',
       connected: 'متصل الآن ببث ' + pl.label + ' ⁦' + pl.handle(connectUsername) + '⁩ ✓',
       error: connectErrorMsg || 'تعذر التحقق من البث'
@@ -1677,13 +1678,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     setAutoConnectOff(false);
     var username = (rawValue || '').trim().replace(/^@+/, '');
     if (streamPlatform === 'kick') username = username.replace(/^(https?:\/\/)?(www\.)?kick\.com\//i, '').split(/[\/?#]/)[0].toLowerCase();
+    if (streamPlatform === 'twitch') username = username.replace(/^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i, '').split(/[\/?#]/)[0].toLowerCase();
     if (!username) {
       connectState = 'error';
       connectErrorMsg = 'اكتب يوزر البث أولاً';
       renderConnectUI();
       return;
     }
-    var usernameRe = streamPlatform === 'kick' ? /^[a-zA-Z0-9_-]{2,25}$/ : /^[a-zA-Z0-9._]{2,24}$/;
+    var usernameRe = streamPlatform === 'kick' ? /^[a-zA-Z0-9_-]{2,25}$/ : streamPlatform === 'twitch' ? /^[a-zA-Z0-9_]{3,25}$/ : /^[a-zA-Z0-9._]{2,24}$/;
     if (!usernameRe.test(username)) {
       connectState = 'error';
       connectErrorMsg = 'صيغة اليوزر غير صحيحة';
@@ -1902,16 +1904,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   // حساب الموقع (من AGPAuth.me) — الربط يختلف حسب المنصة المختارة:
-  // تيك توك → tiktok_username، كيك → kick_username (profile.html → ربط حساب كيك).
+  // تيك توك → tiktok_username، كيك → kick_username، تويتش → twitch_username (profile.html).
   var meUser = null;
   function applyAccountForPlatform(){
     if (!meUser) return;
     var u = meUser;
     var perms = u.permissions || {};
     var free = u.role === 'admin' || Boolean(perms.full_game_access);
-    var name = streamPlatform === 'kick'
-      ? (u.kick_verified && u.kick_username ? String(u.kick_username) : null)
-      : (u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username).replace(/^@+/, '') : null);
+    var name = streamPlatform === 'tiktok'
+      ? (u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username).replace(/^@+/, '') : null)
+      : (u[streamPlatform + '_verified'] && u[streamPlatform + '_username'] ? String(u[streamPlatform + '_username']) : null);
     linkedUsername = name;
     setAccountMode(free ? 'free' : !canRunGames(u) ? 'player' : name ? 'linked' : 'unlinked');
   }

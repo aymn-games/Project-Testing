@@ -9,6 +9,26 @@
 
 ---
 
+## ربط بث تويتش (Twitch) — EventSub الرسمي (2026-11-15)
+
+- **السيرفر (`backend/platforms/twitch/`):** نفس بنية كيك.
+  - `twitch-api.js`: App Access Token، المستخدم بالاسم، هل يبث، إنشاء/حذف اشتراكات EventSub (Webhook)،
+    والتحقق من التوقيع (`sha256=` HMAC). سر التوقيع مشتق من Client Secret (ما يحتاج متغير إضافي).
+  - `twitch-hub.js`: `POST /twitch/webhook` — يرد على تحدي التحقق بالنص الخام، يرفض التوقيع الغلط والرسائل الأقدم
+    من 10 دقايق (403)، يتجاهل التكرار، يسجّل الإلغاء (revocation)، واشتراكات مشتركة لكل قناة.
+  - `twitch-connector.js`: الشات ← `onComment`، الـBits ← `onGift` (كل Bit = عملة)، الاشتراك/التجديد ← `onGift`
+    (500 × مضاعف المستوى 1/2/5)، إهداء الاشتراكات ← `onGift` × العدد، المتابعة ← `onFollow`، `stream.offline` ← انتهاء البث.
+    معرّف اللاعب `twitch:<login>`.
+- **ربط حساب تويتش (`backend/auth/twitch-oauth-service.js`) — إلزامي للبث:** تويتش ما يسمح بقراءة شات القناة إلا بموافقة
+  صاحبها (`user:read:chat user:bot channel:bot moderator:read:followers bits:read channel:read:subscriptions`).
+  مسارات `/api/auth/twitch/oauth/start|callback` و`/api/auth/twitch/unlink`، وأعمدة `twitch_*` بجدول `users`.
+- **الصلاحية:** `ws-server.js` صار يفحص كيك وتويتش بدالة وحدة (`checkLinkedPlatformConnectAllowed`).
+- **الواجهة:** تويتش مفعّل بأيقونات المنصة بمكتبة الألعاب، بطاقة «حساب تويتش» بـ`profile.html`، والأدابتر
+  و`AGP.streamPlatform` والاتصال التلقائي ومراقبة انتهاء البث يدعمون تويتش. لاعبين تويتش ما يدخلون نقاط المنصة.
+- **متغيرات Render الجديدة:** `TWITCH_CLIENT_ID` و`TWITCH_CLIENT_SECRET`. فحص الصحة (`/`) يعرض `twitchConfigured`.
+- **الاختبار:** `backend/platforms/twitch/twitch.test.js` (تحويل الأحداث، التوقيع، تحدي التحقق، محاكاة كاملة للموصِّل).
+  مؤقّت إلغاء الاشتراك بكيك وتويتش صار `unref()` (ما يمسك العملية مفتوحة).
+
 ## ربط بث كيك (Kick) + اختيار منصة البث بمكتبة الألعاب (2026-11-15)
 
 - **الطريقة:** Kick Public API الرسمي عبر Webhooks (docs.kick.com). السيرفر ياخذ App Access Token

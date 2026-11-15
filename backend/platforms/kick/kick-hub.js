@@ -132,6 +132,8 @@ function addListener(broadcasterId, handler) {
                     cur.unsubTimer = null;
                     releaseChannel(broadcasterId);
                 }, UNSUBSCRIBE_GRACE_MS);
+                // ما يمسك العملية مفتوحة (اختبارات/إيقاف السيرفر)
+                if (cur.unsubTimer.unref) cur.unsubTimer.unref();
             }
         }
     };

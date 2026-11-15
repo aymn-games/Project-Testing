@@ -11,6 +11,8 @@ var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var kickOAuthService = require('../auth/kick-oauth-service');
 var kickApi = require('../platforms/kick/kick-api');
+var twitchOAuthService = require('../auth/twitch-oauth-service');
+var twitchApi = require('../platforms/twitch/twitch-api');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
@@ -134,6 +136,10 @@ var ROUTES = [
   { method: 'GET', path: '/api/auth/kick/oauth/start', requireAuth: false, handler: handleKickOAuthStart },
   { method: 'GET', path: '/api/auth/kick/oauth/callback', requireAuth: false, handler: handleKickOAuthCallback },
   { method: 'POST', path: '/api/auth/kick/unlink', requireAuth: true, handler: handleKickUnlink },
+  // ربط حساب تويتش (موافقة الستريمر على قراءة الشات) — auth/twitch-oauth-service.js
+  { method: 'GET', path: '/api/auth/twitch/oauth/start', requireAuth: false, handler: handleTwitchOAuthStart },
+  { method: 'GET', path: '/api/auth/twitch/oauth/callback', requireAuth: false, handler: handleTwitchOAuthCallback },
+  { method: 'POST', path: '/api/auth/twitch/unlink', requireAuth: true, handler: handleTwitchUnlink },
   { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
   // اختيار نوع الحساب الإجباري بعد أول دخول بجوجل لحساب جديد كلياً.
   { method: 'POST', path: '/api/auth/account-type', requireAuth: true, handler: handleChooseAccountType },
@@ -607,6 +613,50 @@ function handleKickUnlink(req, res, body, user) {
   sendJson(res, 200, kickOAuthService.unlink(user.id));
 }
 
+/* ربط حساب تويتش — نفس طريقة كيك: oauth/start?token= → موافقة تويتش →
+ * oauth/callback → profile.html?twitch_link=<النتيجة>. */
+function handleTwitchOAuthStart(req, res) {
+  var params = new URLSearchParams((req.url || '').split('?')[1] || '');
+  var token = params.get('token');
+  var user = token ? authService.validateSession(token) : null;
+  if (!user) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/login.html' });
+    return res.end();
+  }
+  if (!twitchOAuthService.isConfigured()) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/profile.html?twitch_link=not_configured' });
+    return res.end();
+  }
+  res.writeHead(302, { Location: twitchOAuthService.buildAuthorizeUrl(user.id) });
+  res.end();
+}
+
+async function handleTwitchOAuthCallback(req, res) {
+  var params = new URLSearchParams((req.url || '').split('?')[1] || '');
+  function redirectToProfile(status) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/profile.html?twitch_link=' + status });
+    res.end();
+  }
+  if (params.get('error')) return redirectToProfile('cancelled');
+  var statePayload = twitchOAuthService.verifyState(params.get('state'));
+  if (!statePayload) return redirectToProfile('invalid_state');
+  var code = params.get('code');
+  if (!code) return redirectToProfile('missing_code');
+
+  var tokenResult = await twitchOAuthService.exchangeCodeForToken(code);
+  if (!tokenResult.success) return redirectToProfile('token_exchange_failed');
+  var info = await twitchOAuthService.fetchTwitchAccount(tokenResult.accessToken);
+  if (!info.success) return redirectToProfile('user_info_failed');
+
+  var linkResult = twitchOAuthService.linkVerifiedAccount(statePayload.uid, info.account);
+  if (!linkResult.success) return redirectToProfile(linkResult.error === 'twitch_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
+  return redirectToProfile('success');
+}
+
+function handleTwitchUnlink(req, res, body, user) {
+  sendJson(res, 200, twitchOAuthService.unlink(user.id));
+}
+
 /** إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط. */
 function handleTikTokUnlink(req, res, body, user) {
   var result = authService.unlinkTikTok(user.id);
@@ -1003,6 +1053,19 @@ function handleRoomLookup(req, res) {
 function handleStreamIsLive(req, res, body, user) {
   // كيك: حالة البث من Kick Public API (platforms/kick/kick-api.js). null لو
   // تعذّر التأكد — الواجهة ما تقطع الاتصال عليها.
+  if (getQueryParam(req, 'platform') === 'twitch') {
+    var login = String(getQueryParam(req, 'username') || '').trim().replace(/^@+/, '').toLowerCase();
+    if (!/^[a-z0-9_]{1,25}$/.test(login)) { sendJson(res, 400, { success: false, error: 'invalid_username' }); return; }
+    if (!twitchApi.isConfigured()) { sendJson(res, 200, { success: true, username: login, live: null }); return; }
+    return twitchApi.getUserByLogin(login).then(function (u) {
+      return u ? twitchApi.isLive(u.id) : false;
+    }).then(null, function (err) {
+      logger.error('Stream is-live (twitch) failed:', err && err.message);
+      return null;
+    }).then(function (live) {
+      sendJson(res, 200, { success: true, username: login, live: live });
+    });
+  }
   if (getQueryParam(req, 'platform') === 'kick') {
     var slug = String(getQueryParam(req, 'username') || '').trim().replace(/^@+/, '').toLowerCase();
     if (!/^[a-z0-9_-]{1,25}$/.test(slug)) { sendJson(res, 400, { success: false, error: 'invalid_username' }); return; }

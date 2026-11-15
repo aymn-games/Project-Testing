@@ -1133,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var isOwnerForEdit = Boolean(cachedUserForEdit && cachedUserForEdit.custom_id && cachedUserForEdit.custom_id === p.custom_id);
     if (isOwnerForEdit) {
       setupEmailVerifyBanner();
-      setupKickCard();
+      setupKickCard(); // بطاقات ربط كيك وتويتش
       var linkBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
         .find(function(e){ var t = e.textContent.trim(); return t === 'ربط الحساب' || t === 'إلغاء الربط'; });
       // [إصلاح] الزر كان يعرض دايماً "ربط الحساب" (حالة محلية وهمية
@@ -2043,43 +2043,54 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (__ttTries >= 30) clearInterval(__ttTimer);
   }, 300);
 
-  // [بطاقة ربط كيك] تحت بطاقة تيك توك، لصاحب الحساب (ستريمر/أدمن) فقط.
-  // الربط عبر تسجيل الدخول الرسمي من كيك (backend/auth/kick-oauth-service.js)
-  // — بعده يقدر الستريمر يختار كيك بمكتبة الألعاب ويربط الألعاب ببث قناته.
-  // القالب ممكن يعيد بناء العمود الجانبي، فنتأكد من وجود البطاقة دورياً.
-  var kickCardUser = null;
-  function ensureKickCardStyles(){
-    if (document.getElementById('agp-kick-style')) return;
+  // [بطاقات ربط كيك وتويتش] تحت بطاقة تيك توك، لصاحب الحساب (ستريمر/أدمن).
+  // الربط عبر تسجيل الدخول الرسمي من المنصة (backend/auth/kick-oauth-service.js
+  // و twitch-oauth-service.js) — بعده يختار المنصة بمكتبة الألعاب ويربط الألعاب
+  // ببث قناته. تويتش يحتاج الربط عشان يسمح بقراءة شات القناة أصلاً.
+  // القالب ممكن يعيد بناء العمود الجانبي، فنتأكد من وجود البطاقات دورياً.
+  var LINK_PLATFORMS = [
+    { key: 'kick', label: 'كيك', color: '#53fc18', ink: '#0b0e0b', logo: 'K', url: 'kick.com/',
+      sub: 'تبث على كيك؟ اربط قناتك عن طريق تسجيل الدخول الرسمي من كيك، وبعدها اختر «كيك» في مكتبة الألعاب.',
+      start: function(){ window.AGPAuth.startKickLink(); }, unlink: function(){ return window.AGPAuth.unlinkKick(); } },
+    { key: 'twitch', label: 'تويتش', color: '#9146ff', ink: '#ffffff', logo: 'T', url: 'twitch.tv/',
+      sub: 'تبث على تويتش؟ اربط قناتك ووافق على قراءة الشات، وبعدها اختر «تويتش» في مكتبة الألعاب.',
+      start: function(){ window.AGPAuth.startTwitchLink(); }, unlink: function(){ return window.AGPAuth.unlinkTwitch(); } }
+  ];
+  var platformCardUser = null;
+  function ensurePlatformCardStyles(){
+    if (document.getElementById('agp-pcard-style')) return;
     var st = document.createElement('style');
-    st.id = 'agp-kick-style';
+    st.id = 'agp-pcard-style';
     st.textContent =
-      '[data-kick-card]{position:relative;overflow:hidden;padding:22px 20px;border-radius:22px;border:1px solid transparent;background:linear-gradient(180deg,rgba(14,20,14,.97),rgba(8,8,13,.98)) padding-box,linear-gradient(135deg,#53fc18,#1f7a0c 55%,#53fc18) border-box;box-shadow:0 24px 60px -34px rgba(83,252,24,.45)}' +
-      '.agp-kick-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}' +
-      '.agp-kick-title{display:flex;align-items:center;gap:12px;font-family:"Noto Kufi Arabic",sans-serif;font-size:16.5px;font-weight:700;color:#fff}' +
-      '.agp-kick-logo{flex:none;width:52px;height:52px;border-radius:15px;background:#0b0e0b;display:flex;align-items:center;justify-content:center;color:#53fc18;font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:26px;box-shadow:0 0 0 1px rgba(83,252,24,.25)}' +
-      '.agp-kick-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;font-size:11.5px}' +
-      '.agp-kick-handle{margin-top:12px;font-size:13.5px;color:#cfc7e2;direction:ltr;text-align:start}' +
-      '.agp-kick-sub{margin-top:12px;font-size:13.5px;line-height:1.85;color:#d9d3e8}' +
-      '.agp-kick-btn{width:100%;margin-top:14px;padding:14px 16px;border-radius:14px;border:0;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:15px;font-weight:700;color:#0b0e0b;background:#53fc18;transition:transform .2s,filter .2s}' +
-      '.agp-kick-btn:hover{transform:translateY(-2px);filter:brightness(1.06)}' +
-      '.agp-kick-btn.unlink{background:transparent;border:1px solid rgba(224,138,138,.45);color:#e08a8a;font-size:13.5px;padding:11px 16px}';
+      '[data-platform-card]{position:relative;overflow:hidden;padding:22px 20px;border-radius:22px;border:1px solid transparent;background:linear-gradient(180deg,rgba(16,15,22,.97),rgba(8,8,13,.98)) padding-box,linear-gradient(135deg,var(--pc),rgba(255,255,255,.08) 55%,var(--pc)) border-box;box-shadow:0 24px 60px -34px var(--pc)}' +
+      '.agp-pc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}' +
+      '.agp-pc-title{display:flex;align-items:center;gap:12px;font-family:"Noto Kufi Arabic",sans-serif;font-size:16.5px;font-weight:700;color:#fff}' +
+      '.agp-pc-logo{flex:none;width:52px;height:52px;border-radius:15px;background:#0b0b10;display:flex;align-items:center;justify-content:center;color:var(--pc);font-family:Arial Black,Arial,sans-serif;font-weight:900;font-size:26px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}' +
+      '.agp-pc-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;font-size:11.5px}' +
+      '.agp-pc-handle{margin-top:12px;font-size:13.5px;color:#cfc7e2;direction:ltr;text-align:start}' +
+      '.agp-pc-sub{margin-top:12px;font-size:13.5px;line-height:1.85;color:#d9d3e8}' +
+      '.agp-pc-btn{width:100%;margin-top:14px;padding:14px 16px;border-radius:14px;border:0;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:15px;font-weight:700;color:var(--pc-ink);background:var(--pc);transition:transform .2s,filter .2s}' +
+      '.agp-pc-btn:hover{transform:translateY(-2px);filter:brightness(1.06)}' +
+      '.agp-pc-btn.unlink{background:transparent;border:1px solid rgba(224,138,138,.45);color:#e08a8a;font-size:13.5px;padding:11px 16px}';
     document.head.appendChild(st);
   }
-  function buildKickCard(u){
-    var linked = Boolean(u.kick_verified && u.kick_username);
+  function buildPlatformCard(def, u){
+    var linked = Boolean(u[def.key + '_verified'] && u[def.key + '_username']);
     var card = document.createElement('div');
-    card.setAttribute('data-kick-card', '1');
+    card.setAttribute('data-platform-card', def.key);
+    card.style.setProperty('--pc', def.color);
+    card.style.setProperty('--pc-ink', def.ink);
     var head = document.createElement('div');
-    head.className = 'agp-kick-head';
+    head.className = 'agp-pc-head';
     var title = document.createElement('span');
-    title.className = 'agp-kick-title';
+    title.className = 'agp-pc-title';
     var logo = document.createElement('span');
-    logo.className = 'agp-kick-logo';
-    logo.textContent = 'K';
+    logo.className = 'agp-pc-logo';
+    logo.textContent = def.logo;
     title.appendChild(logo);
-    title.appendChild(document.createTextNode('حساب كيك'));
+    title.appendChild(document.createTextNode('حساب ' + def.label));
     var badge = document.createElement('span');
-    badge.className = 'agp-kick-badge';
+    badge.className = 'agp-pc-badge';
     badge.textContent = linked ? 'موثّق ✅' : 'غير مربوط';
     badge.style.cssText = linked
       ? 'color:#7ee0a6;background:rgba(126,224,166,.1);border:1px solid rgba(126,224,166,.35)'
@@ -2087,26 +2098,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     head.appendChild(title);
     head.appendChild(badge);
     card.appendChild(head);
-    if (linked) {
-      var handle = document.createElement('div');
-      handle.className = 'agp-kick-handle';
-      handle.textContent = 'kick.com/' + u.kick_username;
-      card.appendChild(handle);
-    } else {
-      var sub = document.createElement('div');
-      sub.className = 'agp-kick-sub';
-      sub.textContent = 'تبث على كيك؟ اربط قناتك عن طريق تسجيل الدخول الرسمي من كيك، وبعدها اختر «كيك» في مكتبة الألعاب.';
-      card.appendChild(sub);
-    }
+    var line = document.createElement('div');
+    line.className = linked ? 'agp-pc-handle' : 'agp-pc-sub';
+    line.textContent = linked ? def.url + u[def.key + '_username'] : def.sub;
+    card.appendChild(line);
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'agp-kick-btn' + (linked ? ' unlink' : '');
-    btn.textContent = linked ? 'إلغاء ربط كيك' : 'ربط حساب كيك';
+    btn.className = 'agp-pc-btn' + (linked ? ' unlink' : '');
+    btn.textContent = linked ? 'إلغاء ربط ' + def.label : 'ربط حساب ' + def.label;
     btn.addEventListener('click', function(){
-      if (!linked) { window.AGPAuth.startKickLink(); return; }
-      if (!window.confirm('متأكد تبي تلغي ربط حساب كيك؟')) return;
+      if (!linked) { def.start(); return; }
+      if (!window.confirm('متأكد تبي تلغي ربط حساب ' + def.label + '؟')) return;
       btn.disabled = true;
-      window.AGPAuth.unlinkKick().then(function(r){
+      def.unlink().then(function(r){
         btn.disabled = false;
         if (r && r.success) window.location.reload();
         else window.alert('تعذّر إلغاء الربط، جرّب مرة ثانية.');
@@ -2115,25 +2119,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.appendChild(btn);
     return card;
   }
-  function ensureKickCard(){
-    if (!kickCardUser || document.querySelector('[data-kick-card]')) return;
-    var tt = document.querySelector('[data-tt-card]');
-    if (!tt || !tt.parentElement) return;
-    ensureKickCardStyles();
-    tt.insertAdjacentElement('afterend', buildKickCard(kickCardUser));
+  function ensurePlatformCards(){
+    if (!platformCardUser) return;
+    var anchor = document.querySelector('[data-tt-card]');
+    if (!anchor || !anchor.parentElement) return;
+    ensurePlatformCardStyles();
+    LINK_PLATFORMS.forEach(function(def){
+      var existing = document.querySelector('[data-platform-card="' + def.key + '"]');
+      if (!existing) {
+        existing = buildPlatformCard(def, platformCardUser);
+        anchor.insertAdjacentElement('afterend', existing);
+      }
+      anchor = existing;
+    });
   }
-  function showKickLinkResult(){
-    var param = new URLSearchParams(window.location.search).get('kick_link');
-    if (!param) return;
+  function showPlatformLinkResult(){
+    var params = new URLSearchParams(window.location.search);
+    var def = LINK_PLATFORMS.filter(function(d){ return params.get(d.key + '_link'); })[0];
+    if (!def) return;
+    var param = params.get(def.key + '_link');
     var msgMap = {
-      success: 'تم ربط حساب كيك بنجاح! ✅',
+      success: 'تم ربط حساب ' + def.label + ' بنجاح! ✅',
       cancelled: 'ألغيت عملية الربط.',
       invalid_state: 'انتهت صلاحية محاولة الربط، جرّب مرة ثانية.',
       missing_code: 'حصل خطأ أثناء الربط، جرّب مرة ثانية.',
-      token_exchange_failed: 'تعذّر إكمال الربط مع كيك، جرّب مرة ثانية.',
-      user_info_failed: 'تعذّر جلب بيانات قناتك من كيك، جرّب مرة ثانية.',
-      already_linked: 'حساب كيك هذا مرتبط بحساب ثاني في الموقع.',
-      not_configured: 'ربط كيك غير متاح حالياً.',
+      token_exchange_failed: 'تعذّر إكمال الربط مع ' + def.label + '، جرّب مرة ثانية.',
+      user_info_failed: 'تعذّر جلب بيانات قناتك من ' + def.label + '، جرّب مرة ثانية.',
+      already_linked: 'حساب ' + def.label + ' هذا مرتبط بحساب ثاني في الموقع.',
+      not_configured: 'ربط ' + def.label + ' غير متاح حالياً.',
       link_failed: 'تعذّر حفظ الربط، جرّب مرة ثانية.'
     };
     var ok = param === 'success';
@@ -2144,21 +2157,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     setTimeout(function(){ banner.remove(); }, 6000);
     window.history.replaceState({}, '', window.location.pathname + window.location.hash);
   }
-  var __kickCardStarted = false;
+  var __platformCardsStarted = false;
   function setupKickCard(){
-    if (__kickCardStarted || !window.AGPAuth || !window.AGPAuth.me) return;
-    __kickCardStarted = true;
-    showKickLinkResult();
+    if (__platformCardsStarted || !window.AGPAuth || !window.AGPAuth.me) return;
+    __platformCardsStarted = true;
+    showPlatformLinkResult();
     window.AGPAuth.me().then(function(r){
       var u = r && r.success ? r.user : null;
       var perms = (u && u.permissions) || {};
       if (!u || !(u.role === 'admin' || u.is_streamer || perms.can_run_games || perms.full_game_access)) return;
-      kickCardUser = u;
-      ensureKickCard();
+      platformCardUser = u;
+      ensurePlatformCards();
       var tries = 0;
       var timer = setInterval(function(){
         tries++;
-        ensureKickCard();
+        ensurePlatformCards();
         if (tries >= 60) clearInterval(timer);
       }, 500);
     }).catch(function(){});

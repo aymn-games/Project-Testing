@@ -1062,7 +1062,7 @@ function validateSession(token) {
         db.prepare('UPDATE sessions SET expires_at = ? WHERE token = ?').run(now() + SESSION_DURATION_MS, token);
     }
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, kick_username, kick_verified, kick_avatar_url, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, email_verified FROM users WHERE id = ?').get(session.user_id);
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, kick_username, kick_verified, kick_avatar_url, twitch_username, twitch_verified, twitch_avatar_url, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, email_verified FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -1076,6 +1076,8 @@ function validateSession(token) {
     user.tiktok_verified = Boolean(user.tiktok_verified);
     user.kick_verified = Boolean(user.kick_verified);
     if (!user.kick_verified) { user.kick_username = null; user.kick_avatar_url = null; }
+    user.twitch_verified = Boolean(user.twitch_verified);
+    if (!user.twitch_verified) { user.twitch_username = null; user.twitch_avatar_url = null; }
     user.permissions = JSON.parse(user.permissions || '{}');
     user.welcome_completed = Boolean(user.welcome_completed);
     user.email_verified = Boolean(user.email_verified);

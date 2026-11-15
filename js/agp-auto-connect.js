@@ -28,10 +28,13 @@
 
     var linkedUsername = null;
     // المنصة المختارة بمكتبة الألعاب ('agp:agp-stream-platform' — games.html):
-    // تيك توك افتراضياً، أو كيك (الحساب المربوط من profile.html).
+    // تيك توك افتراضياً، أو كيك/تويتش (الحساب المربوط من profile.html).
     var PLATFORM_KEY = 'agp:agp-stream-platform';
     function selectedPlatform() {
-        try { return JSON.parse(localStorage.getItem(PLATFORM_KEY) || 'null') === 'kick' ? 'kick' : 'tiktok'; } catch (e) { return 'tiktok'; }
+        try {
+            var p = JSON.parse(localStorage.getItem(PLATFORM_KEY) || 'null');
+            return p === 'kick' || p === 'twitch' ? p : 'tiktok';
+        } catch (e) { return 'tiktok'; }
     }
     var platform = selectedPlatform();
     var inFlight = false;
@@ -75,7 +78,7 @@
     function fetchIsLive(username) {
         var t = token();
         if (!t || !window.fetch) return Promise.resolve(null);
-        return fetch(apiBase() + '/api/stream/is-live?' + (platform === 'kick' ? 'platform=kick&' : '') + 'username=' + encodeURIComponent(username), {
+        return fetch(apiBase() + '/api/stream/is-live?' + (platform !== 'tiktok' ? 'platform=' + platform + '&' : '') + 'username=' + encodeURIComponent(username), {
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) { return res.json(); }).then(function (d) {
             // الستريمر غيّر يوزره في تيك توك — الخادم حدّثه، نكمل على الجديد.
@@ -136,9 +139,9 @@
         window.AGPAuth.me().then(function (r) {
             var u = r && r.success ? r.user : null;
             if (!u || !canRunGames(u)) return;
-            if (platform === 'kick') {
-                if (!u.kick_verified || !u.kick_username) return;
-                linkedUsername = String(u.kick_username);
+            if (platform === 'kick' || platform === 'twitch') {
+                if (!u[platform + '_verified'] || !u[platform + '_username']) return;
+                linkedUsername = String(u[platform + '_username']);
             } else {
                 if (!u.tiktok_verified || !u.tiktok_username) return;
                 linkedUsername = String(u.tiktok_username).replace(/^@+/, '');

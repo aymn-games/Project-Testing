@@ -493,8 +493,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function connectionBadgeHtml(savedConn) {
         if (savedConn) {
             return '<div class="agp-shell-conn-badge agp-shell-conn-yes"><span class="agp-shell-conn-dot"></span>' +
-                (savedConn.platform === 'kick'
-                    ? 'متصل ببث كيك <b dir="ltr">' + escapeHtml(savedConn.username) + '</b></div>'
+                (savedConn.platform === 'kick' || savedConn.platform === 'twitch'
+                    ? 'متصل ببث ' + (savedConn.platform === 'kick' ? 'كيك' : 'تويتش') + ' <b dir="ltr">' + escapeHtml(savedConn.username) + '</b></div>'
                     : 'متصل بالبث <b>@' + escapeHtml(savedConn.username) + '</b></div>');
         }
         return '<div class="agp-shell-conn-badge agp-shell-conn-no"><span class="agp-shell-conn-dot"></span>' +

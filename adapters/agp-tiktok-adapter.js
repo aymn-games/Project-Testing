@@ -153,9 +153,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // يخلّي أي لعبة/أداة تخفي اللي ما ينفع للمنصة (js/agp-game-shell.js).
     var PLATFORM_FEATURES = {
         tiktok: { likes: true, followersOnly: true, tiktokGifts: true, shares: true },
-        kick: { subscriptions: true }
+        kick: { subscriptions: true },
+        twitch: { subscriptions: true }
     };
-    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك' };
+    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك', twitch: 'تويتش' };
     function currentPlatform() {
         var saved = readSavedConnection();
         if (saved && PLATFORM_FEATURES[saved.platform]) return saved.platform;
@@ -231,10 +232,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // كاتصال بث واحد بنفس المفتاح PLATFORM_KEY، والأحداث بنفس الشكل.
     function backendPlatform() {
         var opts = _pendingConnectOptions || {};
-        if (opts.platform === 'kick' || opts.platform === 'tiktok') return opts.platform;
+        if (PLATFORM_FEATURES[opts.platform]) return opts.platform;
         var saved = readSavedConnection();
-        if (saved && saved.platform === 'kick' && opts.username &&
-            String(saved.username).toLowerCase() === String(opts.username).toLowerCase()) return 'kick';
+        if (saved && saved.platform && saved.platform !== PLATFORM_KEY && PLATFORM_FEATURES[saved.platform] && opts.username &&
+            String(saved.username).toLowerCase() === String(opts.username).toLowerCase()) return saved.platform;
         return PLATFORM_KEY;
     }
 
