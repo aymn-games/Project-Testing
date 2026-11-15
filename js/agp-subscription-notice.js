@@ -1,9 +1,10 @@
 /**
  * إعلان بدء نظام الاشتراكات — نافذة «مرة وحدة» بالرئيسية (index.html) ومكتبة الألعاب (games.html).
  *
- *  - تطلع تلقائياً أول ما يدخل المستخدم.
- *  - ما تنقفل أول 15 ثانية (لا زر، لا ESC، لا ضغط برا النافذة)، مع عدّاد «يمكنك الإغلاق بعد N ثانية».
- *  - بعد العدّاد يطلع زر «فهمت، متابعة» (ويصير × بالزاوية يقفل).
+ *  - تطلع تلقائياً أول ما يدخل المستخدم، وفوقها شارة «تنويه مهم».
+ *  - ما تنقفل أول 15 ثانية: لا ESC ولا ضغط برا النافذة. العدّاد مدموج بزر الإغلاق نفسه
+ *    («يمكنك الإغلاق بعد N ثانية» مع تعبئة هادئة)، وبعدها يتحوّل الزر لـ«فهمت، متابعة».
+ *  - الضغط برا النافذة ما يقفلها أبداً — الإغلاق من الزر (أو ESC بعد انتهاء العدّاد).
  *  - زر «تواصل معنا وشاركنا رأيك» شغّال من أول لحظة ويفتح حساب تيك توك @em70_q.
  *  - بعد الإغلاق ينحفظ بـ localStorage (STORE_KEY) فما تطلع مرة ثانية بنفس المتصفح.
  *
@@ -29,101 +30,158 @@
 
     if (!preview && wasClosed()) return;
 
+    var FONT = '"IBM Plex Sans Arabic",system-ui,sans-serif';
+
     var CSS = '' +
-        '.agp-sn-bg{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;direction:rtl;' +
-        'background:rgba(5,4,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:agpSnFade .25s ease both;transition:opacity .25s ease}' +
+        '.agp-sn-bg{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;direction:rtl;' +
+        'background:rgba(4,4,10,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:agpSnFade .25s ease both;transition:opacity .25s ease}' +
         '.agp-sn-bg.is-out{opacity:0}' +
         '.agp-sn-bg *{box-sizing:border-box}' +
-        '.agp-sn{position:relative;display:flex;flex-direction:column;width:min(540px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);' +
-        'border-radius:28px;color:#f4f2fa;text-align:right;font:500 16px/1.8 "IBM Plex Sans Arabic",system-ui,sans-serif;' +
-        'background:linear-gradient(180deg,#1f1a33 0%,#16121f 100%);border:1px solid rgba(255,255,255,.09);' +
-        'box-shadow:0 30px 80px -20px rgba(0,0,0,.85);animation:agpSnIn .3s ease both}' +
-        '.agp-sn-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:24px 24px 6px}' +
-        '.agp-sn-head h2{margin:0;font:800 22px/1.5 "IBM Plex Sans Arabic",system-ui,sans-serif;color:#fff}' +
-        '.agp-sn-x{flex:0 0 auto;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;cursor:pointer;' +
-        'border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e9e6f2;font:700 16px "IBM Plex Sans Arabic",sans-serif;transition:background .15s,color .15s}' +
-        '.agp-sn-x:disabled{cursor:not-allowed;color:#8f88a8}' +
-        '.agp-sn-x:not(:disabled):hover{background:rgba(255,255,255,.09)}' +
-        '.agp-sn-x svg{width:16px;height:16px}' +
-        '.agp-sn-body{flex:1 1 auto;overflow-y:auto;padding:6px 24px 6px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}' +
-        '.agp-sn-body p{margin:0 0 12px;color:#c9c4d9}' +
-        '.agp-sn-card{margin:14px 0;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}' +
-        '.agp-sn-card p{margin:0}' +
-        '.agp-sn-label{display:block;margin-bottom:10px;font-weight:700;font-size:15px;color:#fff}' +
-        '.agp-sn-prices{display:grid;grid-template-columns:1fr 1fr;gap:10px}' +
-        '.agp-sn-price{padding:14px 12px;border-radius:16px;text-align:center;background:linear-gradient(160deg,rgba(91,108,255,.16),rgba(139,92,246,.14));border:1px solid rgba(139,92,246,.32)}' +
-        '.agp-sn-price b{display:block;font:800 26px/1.3 "IBM Plex Sans Arabic",sans-serif;color:#fff;direction:ltr;unicode-bidi:isolate}' +
-        '.agp-sn-price span{display:block;font-size:14px;color:#c4bdf0}' +
-        '.agp-sn-incl{margin-top:12px !important;font-size:15px;color:#d9d4ea !important}' +
-        '.agp-sn-date{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(59,130,246,.14),rgba(139,92,246,.14));border-color:rgba(99,102,241,.35)}' +
-        '.agp-sn-date i{flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:rgba(99,102,241,.22);color:#c7d2fe;font-style:normal}' +
-        '.agp-sn-date i svg{width:22px;height:22px}' +
-        '.agp-sn-date p{color:#e8e6f5}' +
-        '.agp-sn-date strong{color:#fff;font-weight:800;white-space:nowrap}' +
-        '.agp-sn-sign{color:#fff !important;font-weight:700}' +
-        '.agp-sn-contact p{color:#d9d4ea;font-size:15px}' +
-        '.agp-sn-cbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;margin-top:12px;padding:10px 16px;border-radius:14px;text-decoration:none;' +
-        'color:#fff;font:700 15px "IBM Plex Sans Arabic",sans-serif;background:rgba(255,255,255,.05);border:1px solid rgba(139,92,246,.45);transition:background .15s}' +
-        '.agp-sn-cbtn:hover{background:rgba(139,92,246,.18)}' +
-        '.agp-sn-cbtn svg{width:18px;height:18px}' +
-        '.agp-sn-foot{padding:12px 24px 22px;border-top:1px solid rgba(255,255,255,.06)}' +
-        '.agp-sn-wait{text-align:center;font-size:14px;color:#a9a3bf}' +
-        '.agp-sn-wait b{color:#fff;font-weight:800;display:inline-block;min-width:1.4em;text-align:center}' +
-        '.agp-sn-bar{height:4px;margin-top:10px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}' +
-        '.agp-sn-bar span{display:block;height:100%;width:100%;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#8b5cf6);transform-origin:right;transition:transform 1s linear}' +
-        '.agp-sn-ok{display:none;width:100%;min-height:52px;border:none;border-radius:16px;cursor:pointer;color:#fff;font:800 16px "IBM Plex Sans Arabic",sans-serif;' +
-        'background:linear-gradient(135deg,#3b82f6,#7c3aed);box-shadow:0 10px 24px -10px rgba(124,58,237,.9);transition:transform .15s,filter .15s}' +
-        '.agp-sn-ok:hover{filter:brightness(1.08)}' +
-        '.agp-sn-ok:active{transform:scale(.98)}' +
-        '.agp-sn.is-ready .agp-sn-wait{display:none}' +
-        '.agp-sn.is-ready .agp-sn-ok{display:block}' +
+        '.agp-sn{position:relative;display:flex;flex-direction:column;width:min(720px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);' +
+        'border-radius:28px;color:#f4f2fa;text-align:right;font:500 17px/1.85 ' + FONT + ';' +
+        'background:linear-gradient(180deg,#1e1a31 0%,#14111d 100%);border:1px solid rgba(255,255,255,.09);' +
+        'box-shadow:0 40px 90px -24px rgba(0,0,0,.9);animation:agpSnIn .3s ease both}' +
         '.agp-sn:focus{outline:none}' +
-        '.agp-sn :focus-visible{outline:2px solid #a5b4fc;outline-offset:2px}' +
+
+        /* الرأس */
+        '.agp-sn-head{padding:28px 32px 18px;border-bottom:1px solid rgba(255,255,255,.06)}' +
+        '.agp-sn-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 12px;border-radius:999px;font:700 14px/1 ' + FONT + ';color:#dbe4ff;' +
+        'background:linear-gradient(135deg,rgba(59,130,246,.18),rgba(139,92,246,.2));border:1px solid rgba(129,140,248,.4)}' +
+        '.agp-sn-badge svg{width:16px;height:16px;color:#a5b4fc}' +
+        '.agp-sn-head h2{margin:14px 0 4px;font:800 28px/1.45 ' + FONT + ';color:#fff}' +
+        '.agp-sn-sub{margin:0;font-size:16px;color:#a9a3c2}' +
+
+        /* المحتوى */
+        '.agp-sn-body{flex:1 1 auto;overflow-y:auto;padding:22px 32px 8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}' +
+        '.agp-sn-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}' +
+        '.agp-sn-list li{position:relative;padding-right:24px;color:#d6d1e6}' +
+        '.agp-sn-list li::before{content:"";position:absolute;right:2px;top:.72em;width:9px;height:9px;border-radius:3px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);box-shadow:0 0 0 4px rgba(99,102,241,.14)}' +
+        '.agp-sn-card{margin:20px 0 0;padding:20px 22px;border-radius:20px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}' +
+        '.agp-sn-label{display:flex;align-items:center;gap:10px;margin:0 0 14px;font:700 17px/1.4 ' + FONT + ';color:#fff}' +
+        '.agp-sn-label::before{content:"";width:4px;height:18px;border-radius:2px;background:linear-gradient(180deg,#3b82f6,#8b5cf6)}' +
+
+        /* الأسعار */
+        '.agp-sn-prices{display:grid;grid-template-columns:1fr 1fr;gap:12px}' +
+        '.agp-sn-price{padding:18px 14px;border-radius:18px;text-align:center;background:linear-gradient(160deg,rgba(59,130,246,.14),rgba(139,92,246,.16));border:1px solid rgba(139,92,246,.35)}' +
+        '.agp-sn-price small{display:block;font-size:15px;font-weight:600;color:#c4bdf0}' +
+        '.agp-sn-price b{display:flex;align-items:baseline;justify-content:center;gap:6px;margin-top:4px;font:800 34px/1.2 ' + FONT + ';color:#fff}' +
+        '.agp-sn-price b em{font-style:normal;font-size:16px;font-weight:600;color:#c4bdf0}' +
+
+        /* يشمل + شعارات المنصات */
+        '.agp-sn-incl{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07)}' +
+        '.agp-sn-incl p{margin:0;color:#e6e2f2;font-weight:600}' +
+        '.agp-sn-plats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}' +
+        '.agp-sn-plat{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;font:700 15px/1 ' + FONT + ';color:#fff;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}' +
+        '.agp-sn-plat svg{width:20px;height:20px;flex:0 0 auto}' +
+
+        /* تاريخ البدء — مميّز */
+        '.agp-sn-date{display:flex;align-items:center;gap:18px;padding:20px 22px;background:linear-gradient(120deg,rgba(37,99,235,.28),rgba(124,58,237,.3));border:1px solid rgba(129,140,248,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}' +
+        '.agp-sn-cal{flex:0 0 auto;width:78px;border-radius:16px;overflow:hidden;text-align:center;background:#fff;color:#1e1b4b;box-shadow:0 10px 24px -10px rgba(0,0,0,.7)}' +
+        '.agp-sn-cal span{display:block;padding:4px 0;font:700 13px/1.4 ' + FONT + ';color:#fff;background:linear-gradient(135deg,#3b82f6,#7c3aed)}' +
+        '.agp-sn-cal b{display:block;font:800 32px/1.25 ' + FONT + '}' +
+        '.agp-sn-cal i{display:block;padding-bottom:4px;font:600 12px/1.3 ' + FONT + ';font-style:normal;color:#6b6890}' +
+        '.agp-sn-date small{display:block;font-size:15px;color:#c7d2fe}' +
+        '.agp-sn-date strong{display:block;font:800 26px/1.4 ' + FONT + ';color:#fff}' +
+
+        /* الختام والتواصل */
+        '.agp-sn-thanks{margin:22px 0 0;color:#d6d1e6}' +
+        '.agp-sn-sign{margin:6px 0 0;font-weight:800;color:#fff}' +
+        '.agp-sn-contact{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}' +
+        '.agp-sn-contact p{margin:0;flex:1 1 auto;font-size:16px;color:#d6d1e6}' +
+        '.agp-sn-cbtn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:10px 18px;border-radius:14px;text-decoration:none;white-space:nowrap;' +
+        'color:#fff;font:700 15px ' + FONT + ';background:rgba(255,255,255,.06);border:1px solid rgba(139,92,246,.5);transition:background .15s,border-color .15s}' +
+        '.agp-sn-cbtn:hover{background:rgba(139,92,246,.2);border-color:rgba(167,139,250,.8)}' +
+        '.agp-sn-cbtn svg{width:18px;height:18px}' +
+
+        /* الزر السفلي: العدّاد مدموج فيه */
+        '.agp-sn-foot{padding:16px 32px 26px;border-top:1px solid rgba(255,255,255,.06)}' +
+        '.agp-sn-ok{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:0 20px;border-radius:18px;' +
+        'font:800 17px ' + FONT + ';color:#9b95b4;cursor:not-allowed;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);' +
+        'transition:color .3s,background .3s,box-shadow .3s,transform .15s,border-color .3s}' +
+        '.agp-sn-fill{position:absolute;inset:0;background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(139,92,246,.2));transform-origin:right;transform:scaleX(0);transition:transform 1s linear}' +
+        '.agp-sn-ok span,.agp-sn-ok svg{position:relative}' +
+        '.agp-sn-txt{display:inline-flex;align-items:center;gap:10px}' +
+        '.agp-sn-ok svg{width:18px;height:18px}' +
+        '.agp-sn-ok .agp-sn-n{display:inline-block;min-width:1em;text-align:center;color:#e0dcf0;font-variant-numeric:tabular-nums}' +
+        '.agp-sn-ok.is-ready{cursor:pointer;color:#fff;border-color:transparent;background:linear-gradient(135deg,#2563eb 0%,#6d28d9 100%);' +
+        'box-shadow:0 14px 30px -12px rgba(109,40,217,.95),inset 0 1px 0 rgba(255,255,255,.22)}' +
+        '.agp-sn-ok.is-ready .agp-sn-fill{display:none}' +
+        '.agp-sn-ok.is-ready:hover{box-shadow:0 18px 36px -12px rgba(109,40,217,1),inset 0 1px 0 rgba(255,255,255,.28);background:linear-gradient(135deg,#3b74f0 0%,#7c3aed 100%)}' +
+        '.agp-sn-ok.is-ready:active{transform:scale(.985)}' +
+        '.agp-sn :focus-visible{outline:2px solid #a5b4fc;outline-offset:3px}' +
+
         '@keyframes agpSnFade{from{opacity:0}to{opacity:1}}' +
         '@keyframes agpSnIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}' +
-        '@media (max-width:480px){.agp-sn{border-radius:24px}.agp-sn-head{padding:20px 18px 4px}.agp-sn-head h2{font-size:20px}.agp-sn-body{padding:4px 18px}' +
-        '.agp-sn-foot{padding:12px 18px 18px}.agp-sn-price b{font-size:22px}.agp-sn-x{width:44px;height:44px}}' +
-        '@media (prefers-reduced-motion:reduce){.agp-sn,.agp-sn-bg{animation:none}.agp-sn-bar span{transition:none}}';
+        '@media (max-width:600px){' +
+            '.agp-sn-bg{padding:12px}' +
+            '.agp-sn{border-radius:24px;font-size:16px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}' +
+            '.agp-sn-head{padding:22px 20px 14px}.agp-sn-head h2{font-size:23px}.agp-sn-sub{font-size:15px}' +
+            '.agp-sn-body{padding:18px 20px 6px}.agp-sn-card{padding:16px}' +
+            '.agp-sn-price b{font-size:28px}' +
+            '.agp-sn-date{gap:14px;padding:16px}.agp-sn-cal{width:66px}.agp-sn-cal b{font-size:26px}.agp-sn-date strong{font-size:21px}' +
+            '.agp-sn-contact{flex-direction:column;align-items:stretch}.agp-sn-cbtn{width:100%}' +
+            '.agp-sn-foot{padding:14px 20px 20px}' +
+        '}' +
+        '@media (prefers-reduced-motion:reduce){.agp-sn,.agp-sn-bg{animation:none}.agp-sn-fill{transition:none}}';
 
-    var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-    var ICON_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
-    var ICON_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
+    var ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>';
+    var ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+    var ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    var LOGO_TIKTOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>';
+    var LOGO_KICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#53fc18" d="M5 4h4v4h2V6h2V4h4v5h-2v2h-2v2h2v2h2v5h-4v-2h-2v-2H9v4H5z"/></svg>';
+    var LOGO_TWITCH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#a970ff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>';
+
+    function waitLabel(n) {
+        return ICON_LOCK + '<span>يمكنك الإغلاق بعد <b class="agp-sn-n">' + n + '</b> ثانية</span>';
+    }
 
     var HTML = '' +
         '<div class="agp-sn" role="dialog" aria-modal="true" aria-labelledby="agpSnTitle" tabindex="-1">' +
             '<div class="agp-sn-head">' +
+                '<span class="agp-sn-badge">' + ICON_ALERT + 'تنويه مهم</span>' +
                 '<h2 id="agpSnTitle">إلى مجتمع ألعاب أيمن ❤️</h2>' +
-                '<button type="button" class="agp-sn-x" disabled aria-label="يمكنك الإغلاق بعد ' + LOCK_SECONDS + ' ثانية">' + LOCK_SECONDS + '</button>' +
+                '<p class="agp-sn-sub">بشأن بدء العمل بنظام الاشتراكات في المنصة</p>' +
             '</div>' +
             '<div class="agp-sn-body">' +
-                '<p>يمكن لاحظتوا الانقطاعات اللي صارت في المنصة خلال اليومين الماضية والسبب كان وصولنا للحدود المتاحة في الاستضافات والسيرفرات مع زيادة الاستخدام وعدد البثوث.</p>' +
-                '<p>وهذا خلانا نعيد النظر في طريقة تشغيل المنصة ونبحث عن حل يضمن استقرارها واستمرار تطويرها.</p>' +
-                '<p>من بداية ألعاب أيمن كان هدفنا نوفر لكم ألعاب وأدوات تساعدكم تتفاعلون مع جمهوركم مجاناً وبفضل دعمكم قدرنا نوصل لليوم.</p>' +
-                '<p>لذلك قررنا اعتماد اشتراك رمزي يساعدنا على تغطية تكاليف السيرفرات والاستضافات والصيانة والتطوير.</p>' +
-                '<p>ونحب نوضح أن الهدف من الاشتراك هو استدامة المنصة وتطويرها وتقديم ألعاب وميزات أكثر وليس تحويلها إلى مشروع تجاري هدفه الربح.</p>' +
+                '<ul class="agp-sn-list">' +
+                    '<li>شهدت المنصة خلال اليومين الماضيين بعض الانقطاعات، وذلك نتيجة بلوغ الحدود المتاحة في الاستضافات والسيرفرات مع تزايد الاستخدام وعدد البثوث.</li>' +
+                    '<li>دفعنا ذلك إلى إعادة النظر في آلية تشغيل المنصة، والبحث عن حلٍّ يضمن استقرارها واستمرار تطويرها.</li>' +
+                    '<li>منذ انطلاق ألعاب أيمن كان هدفنا توفير ألعاب وأدوات مجانية تساعدكم على التفاعل مع جمهوركم، وبفضل دعمكم وصلنا إلى ما نحن عليه اليوم.</li>' +
+                    '<li>لذلك قررنا اعتماد اشتراك رمزي يُسهم في تغطية تكاليف السيرفرات والاستضافات والصيانة والتطوير.</li>' +
+                    '<li>ونودّ التوضيح بأن الهدف من الاشتراك هو استدامة المنصة وتطويرها وتقديم مزيد من الألعاب والميزات، وليس تحويلها إلى مشروع تجاري هدفه الربح.</li>' +
+                '</ul>' +
+
                 '<div class="agp-sn-card">' +
-                    '<span class="agp-sn-label">أسعار الاشتراك:</span>' +
+                    '<h3 class="agp-sn-label">أسعار الاشتراك</h3>' +
                     '<div class="agp-sn-prices">' +
-                        '<div class="agp-sn-price"><b>24.99</b><span>ريال لمدة شهر</span></div>' +
-                        '<div class="agp-sn-price"><b>34.99</b><span>ريال لمدة شهرين</span></div>' +
+                        '<div class="agp-sn-price"><small>لمدة شهر</small><b>24.99 <em>ريال</em></b></div>' +
+                        '<div class="agp-sn-price"><small>لمدة شهرين</small><b>34.99 <em>ريال</em></b></div>' +
                     '</div>' +
-                    '<p class="agp-sn-incl">اشتراك واحد يشمل جميع الألعاب ومنصات البث المدعومة وجميع المميزات.</p>' +
+                    '<div class="agp-sn-incl">' +
+                        '<p>اشتراك واحد يشمل جميع الألعاب ومنصات البث المدعومة وجميع المميزات:</p>' +
+                        '<div class="agp-sn-plats">' +
+                            '<span class="agp-sn-plat">' + LOGO_TIKTOK + 'تيك توك</span>' +
+                            '<span class="agp-sn-plat">' + LOGO_KICK + 'كيك</span>' +
+                            '<span class="agp-sn-plat">' + LOGO_TWITCH + 'تويتش</span>' +
+                        '</div>' +
+                    '</div>' +
                 '</div>' +
+
                 '<div class="agp-sn-card agp-sn-date">' +
-                    '<i>' + ICON_CAL + '</i>' +
-                    '<p>سيبدأ العمل بنظام الاشتراكات اعتباراً من <strong>1 ديسمبر 2026</strong></p>' +
+                    '<div class="agp-sn-cal" aria-hidden="true"><span>ديسمبر</span><b>1</b><i>2026</i></div>' +
+                    '<div><small>يبدأ العمل بنظام الاشتراكات اعتباراً من</small><strong>1 ديسمبر 2026</strong></div>' +
                 '</div>' +
-                '<p>شكراً لكل شخص دعم ألعاب أيمن وكان جزءاً من رحلتنا من البداية.</p>' +
-                '<p class="agp-sn-sign">ألعاب أيمن منكم وفيكم ومستمرين معكم ❤️</p>' +
+
+                '<p class="agp-sn-thanks">نشكر كل من دعم ألعاب أيمن وكان جزءاً من رحلتنا منذ البداية.</p>' +
+                '<p class="agp-sn-sign">ألعاب أيمن منكم وفيكم، ومستمرون معكم ❤️</p>' +
+
                 '<div class="agp-sn-card agp-sn-contact">' +
-                    '<p>عندك استفسار أو رأي بخصوص التحديث الجديد؟ يسعدنا نسمع منك ونتناقش معك بكل وضوح ❤️</p>' +
-                    '<a class="agp-sn-cbtn" href="' + CONTACT_URL + '" target="_blank" rel="noopener noreferrer">' + ICON_CHAT + '<span>تواصل معنا وشاركنا رأيك</span></a>' +
+                    '<p>هل لديك استفسار أو رأي بخصوص التحديث الجديد؟ يسعدنا أن نسمع منك ونتناقش معك بكل وضوح ❤️</p>' +
+                    '<a class="agp-sn-cbtn" href="' + CONTACT_URL + '" target="_blank" rel="noopener noreferrer">' + LOGO_TIKTOK + '<span>تواصل معنا وشاركنا رأيك</span></a>' +
                 '</div>' +
             '</div>' +
             '<div class="agp-sn-foot">' +
-                '<div class="agp-sn-wait" aria-live="polite">يمكنك الإغلاق بعد <b>' + LOCK_SECONDS + '</b> ثانية' +
-                    '<div class="agp-sn-bar"><span></span></div></div>' +
-                '<button type="button" class="agp-sn-ok">فهمت، متابعة</button>' +
+                '<button type="button" class="agp-sn-ok" aria-disabled="true"><i class="agp-sn-fill"></i><span class="agp-sn-txt">' + waitLabel(LOCK_SECONDS) + '</span></button>' +
             '</div>' +
         '</div>';
 
@@ -140,10 +198,9 @@
         document.body.appendChild(bg);
 
         var box = bg.querySelector('.agp-sn');
-        var xBtn = bg.querySelector('.agp-sn-x');
         var okBtn = bg.querySelector('.agp-sn-ok');
-        var count = bg.querySelector('.agp-sn-wait b');
-        var bar = bg.querySelector('.agp-sn-bar span');
+        var txt = bg.querySelector('.agp-sn-txt');
+        var fill = bg.querySelector('.agp-sn-fill');
         var ready = false;
         var closed = false;
 
@@ -152,23 +209,21 @@
         html.style.overflow = 'hidden';
 
         try { box.focus({ preventScroll: true }); } catch (e) {}
+        requestAnimationFrame(function () { fill.style.transform = 'scaleX(' + (1 / LOCK_SECONDS) + ')'; });
 
         var left = LOCK_SECONDS;
         var timer = setInterval(function () {
             left -= 1;
             if (left > 0) {
-                count.textContent = left;
-                xBtn.textContent = left;
-                xBtn.setAttribute('aria-label', 'يمكنك الإغلاق بعد ' + left + ' ثانية');
-                bar.style.transform = 'scaleX(' + (left / LOCK_SECONDS) + ')';
+                txt.innerHTML = waitLabel(left);
+                fill.style.transform = 'scaleX(' + ((LOCK_SECONDS - left + 1) / LOCK_SECONDS) + ')';
                 return;
             }
             clearInterval(timer);
             ready = true;
-            box.classList.add('is-ready');
-            xBtn.disabled = false;
-            xBtn.innerHTML = ICON_X;
-            xBtn.setAttribute('aria-label', 'إغلاق');
+            okBtn.classList.add('is-ready');
+            okBtn.removeAttribute('aria-disabled');
+            txt.innerHTML = '<span>فهمت، متابعة</span>' + ICON_CHECK;
             try { okBtn.focus({ preventScroll: true }); } catch (e) {}
         }, 1000);
 
@@ -191,11 +246,7 @@
             }
             if (e.key === 'Tab') {
                 // نخلي التنقّل بالكيبورد داخل النافذة
-                var f = Array.prototype.filter.call(
-                    box.querySelectorAll('button:not([disabled]),a[href]'),
-                    function (el) { return el.offsetParent !== null; }
-                );
-                if (!f.length) { e.preventDefault(); return; }
+                var f = Array.prototype.slice.call(box.querySelectorAll('a[href],button'));
                 var first = f[0], last = f[f.length - 1];
                 if (e.shiftKey && (document.activeElement === first || document.activeElement === box)) { e.preventDefault(); last.focus(); }
                 else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -204,8 +255,8 @@
 
         document.addEventListener('keydown', onKey, true);
         okBtn.addEventListener('click', close);
-        xBtn.addEventListener('click', close);
-        bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+        // الضغط برا النافذة ما يقفلها أبداً — نوقفه بس عشان ما يوصل للصفحة تحت
+        bg.addEventListener('click', function (e) { if (e.target === bg) e.stopPropagation(); });
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
