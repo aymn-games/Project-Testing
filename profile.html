@@ -184,6 +184,10 @@
   .pf-meta > .pf-meta-btn .pf-ic{color:var(--accent)}
   .pf-meta > .pf-meta-btn:hover{border-color:rgba(var(--accent-rgb),.6);background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 60%),rgba(var(--accent-rgb),.12)}
   /* توثيق تيك توك: شارة بألوان تيك توك */
+  .pf-meta > a.pf-coin-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 5px;border-radius:999px;text-decoration:none;
+    font-weight:800;color:var(--gold);background:linear-gradient(135deg,rgba(232,216,166,.16),rgba(232,216,166,.05));border:1px solid rgba(232,216,166,.42);transition:background .2s,border-color .2s}
+  .pf-meta > a.pf-coin-chip:hover,.pf-meta > a.pf-coin-chip:focus-visible{border-color:rgba(232,216,166,.7);background:rgba(232,216,166,.2);outline:none}
+  .pf-coin-chip-ic{display:inline-flex;width:20px;height:20px;flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
   .pf-meta > span.pf-tt-badge{gap:7px;font-weight:800;color:#fff;border:1px solid transparent;
     background:linear-gradient(rgba(12,10,18,.92),rgba(12,10,18,.92)) padding-box,linear-gradient(90deg,#25f4ee,#fe2c55) border-box}
   .pf-tt-badge img{width:16px;height:16px;display:block}
@@ -741,6 +745,8 @@
     .pf-name{font-size:17px}
     .pf-meta{gap:4px;margin-top:4px}
     .pf-meta > span:not(.pf-pill),.pf-meta-btn,.pf-meta .pf-pill,.pf-meta > .pf-tt-badge{height:22px;padding:0 8px;font-size:11px;gap:4px}
+    .pf-meta > a.pf-coin-chip{height:22px;padding:0 8px 0 3px;font-size:11px;gap:4px}
+    .pf-coin-chip-ic{width:16px;height:16px}
     .pf-meta > span:not(.pf-pill):nth-child(3){display:none} /* تاريخ الانضمام موجود بـ«حسابي» */
     .pf-tt-badge img{width:13px;height:13px}
     .pf-titlerow-end{width:100%;flex-direction:row;align-items:center;justify-content:space-between;gap:6px;flex-wrap:nowrap}
@@ -857,10 +863,10 @@
   .pf-bubble-t{font-size:14px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
   .pf-bubble-at{margin-top:2px;font-size:11px;color:var(--ink-4)}
   .pf-seen{color:var(--ink-3)}
-  .pf-role{padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:800}
-  .pf-role-owner{background:rgba(232,216,166,.16);color:var(--gold)}
-  .pf-role-mod{background:rgba(130,175,255,.16);color:#a9c6ff}
-  .pf-lrow-t .pf-role{margin-inline-start:6px;vertical-align:middle}
+  .pf-crole{padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:800}
+  .pf-crole-owner{background:rgba(232,216,166,.16);color:var(--gold)}
+  .pf-crole-mod{background:rgba(130,175,255,.16);color:#a9c6ff}
+  .pf-lrow-t .pf-crole{margin-inline-start:6px;vertical-align:middle}
   .pf-chat-muted{padding:8px 16px;font-size:13px;font-weight:700;color:#ffb3bf;background:rgba(232,90,110,.08);border-top:1px solid rgba(232,90,110,.2)}
   .pf-chat-compose{display:flex;align-items:flex-end;gap:8px;padding:12px 16px;border-top:1px solid rgba(255,255,255,.07)}
   .pf-chat-input{flex:1;min-width:0;height:44px;min-height:44px;max-height:120px;resize:none;padding:10px 14px;line-height:1.6;font:inherit;font-size:14px}

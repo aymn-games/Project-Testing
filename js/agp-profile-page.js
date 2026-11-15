@@ -270,6 +270,14 @@
       });
       meta.appendChild(idBtn);
     }
+    // رصيد عملات أيمن — لصاحب الحساب بس، ويفتح قسم «عملات أيمن». الرصيد
+    // من الخادم لما ينطلق نظام العملات (p.coins)، وقبلها «—».
+    if (S.owner) {
+      var bal = typeof p.coins === 'number' ? num(p.coins) : '—';
+      meta.appendChild(h('a', { href: '#wallet', 'data-sec': 'wallet', class: 'pf-coin-chip', title: 'رصيد عملات أيمن', 'aria-label': 'رصيد عملات أيمن: ' + bal }, [
+        h('span', { class: 'pf-coin-chip-ic' }, coinSvg()), h('span', { class: 'num', text: bal })
+      ]));
+    }
     if (p.joined_at) meta.appendChild(h('span', { text: 'انضم ' + formatDate(p.joined_at) }));
     // شارة توثيق تيك توك — بألوان تيك توك، أو مقطّعة لو الحساب مو مربوط
     meta.appendChild(p.tiktok_verified
@@ -1694,7 +1702,7 @@
       return h('div', { class: 'pf-msg-row' + (m.mine ? ' mine' : ''), 'data-id': String(m.id) }, [
         m.mine ? null : avatarEl(m.author),
         h('div', { class: 'pf-bubble' }, [
-          m.mine ? null : h('div', { class: 'pf-bubble-who' }, [h('bdi', { text: m.author.name }), ROLE_LABEL[m.author.role] ? h('span', { class: 'pf-role pf-role-' + m.author.role, text: ROLE_LABEL[m.author.role] }) : null]),
+          m.mine ? null : h('div', { class: 'pf-bubble-who' }, [h('bdi', { text: m.author.name }), ROLE_LABEL[m.author.role] ? h('span', { class: 'pf-crole pf-crole-' + m.author.role, text: ROLE_LABEL[m.author.role] }) : null]),
           h('div', { class: 'pf-bubble-t', dir: 'auto', text: m.body }),
           h('div', { class: 'pf-bubble-at', text: chatTime(m.at) })
         ]),
@@ -1797,7 +1805,7 @@
         list.appendChild(h('div', { class: 'pf-lrow' }, [
           avatarEl(m),
           h('div', { class: 'pf-lrow-txt' }, [
-            h('div', { class: 'pf-lrow-t' }, [h('bdi', { text: m.name }), m.role === 'mod' ? h('span', { class: 'pf-role pf-role-mod', text: 'مشرف' }) : null]),
+            h('div', { class: 'pf-lrow-t' }, [h('bdi', { text: m.name }), m.role === 'mod' ? h('span', { class: 'pf-crole pf-crole-mod', text: 'مشرف' }) : null]),
             metaLine([m.tiktok ? '@' + m.tiktok : null, '#' + m.customId, muteText(m.muted) || null])
           ]),
           items.length ? moreBtn('خيارات ' + m.name, function (btn) { openMenu(btn, items); }) : null
