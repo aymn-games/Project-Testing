@@ -12,6 +12,10 @@ var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
+var teamService = require('../teams/team-service');
+var teamChatService = require('../community/team-chat-service');
+var friendsService = require('../community/friends-service');
+var subscriptionService = require('../subscriptions/subscription-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var streamerHours = require('../points/streamer-hours');
@@ -24,6 +28,7 @@ var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
 var storeRouter = require('./store-router');
+var storeService = require('../store/store-service');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var screenTests = require('../stats/screen-tests');
 var liveSessionStats = require('../stats/live-session-stats');
@@ -190,6 +195,49 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinReward },
   { method: 'GET', path: '/api/collectibles/win-codes', requireAuth: true, handler: handleWinRewardCodes },
   { method: 'POST', path: '/api/collectibles/redeem-choice', requireAuth: true, handler: handleRedeemChoiceCode },
+  // ---- «فريقك» + منح أكواد جوائز الفوز لأعضاء الفريق (backend/teams/team-service.js)
+  { method: 'GET', path: '/api/teams/search', requireAuth: true, handler: handleTeamSearch },
+  { method: 'GET', path: '/api/teams/mine', requireAuth: true, handler: handleTeamMine },
+  { method: 'POST', path: '/api/teams/join', requireAuth: true, handler: handleTeamJoin },
+  { method: 'POST', path: '/api/teams/leave', requireAuth: true, handler: handleTeamLeave },
+  { method: 'POST', path: '/api/teams/remove', requireAuth: true, handler: handleTeamRemove },
+  // ---- «مجتمعي»: شات الفريق والإشراف + الأصدقاء والرسائل الخاصة (backend/community/)
+  { method: 'GET', path: '/api/community/summary', requireAuth: true, handler: handleCommunitySummary },
+  { method: 'GET', path: '/api/community/teams', requireAuth: true, handler: handleCommunityTeams },
+  { method: 'GET', path: '/api/community/team-chat', requireAuth: true, handler: handleTeamChat },
+  { method: 'POST', path: '/api/community/team-chat/send', requireAuth: true, handler: handleTeamChatSend },
+  { method: 'POST', path: '/api/community/team-chat/delete', requireAuth: true, handler: handleTeamChatDelete },
+  { method: 'POST', path: '/api/community/team-chat/mute', requireAuth: true, handler: handleTeamChatMute },
+  { method: 'POST', path: '/api/community/team-chat/unmute', requireAuth: true, handler: handleTeamChatUnmute },
+  { method: 'POST', path: '/api/community/team-chat/kick', requireAuth: true, handler: handleTeamChatKick },
+  { method: 'GET', path: '/api/community/team-chat/members', requireAuth: true, handler: handleTeamChatMembers },
+  { method: 'POST', path: '/api/community/moderators', requireAuth: true, handler: handleTeamChatModerator },
+  { method: 'GET', path: '/api/friends', requireAuth: true, handler: handleFriendsList },
+  { method: 'GET', path: '/api/friends/search', requireAuth: true, handler: handleFriendsSearch },
+  { method: 'POST', path: '/api/friends/request', requireAuth: true, handler: friendAction('request') },
+  { method: 'POST', path: '/api/friends/accept', requireAuth: true, handler: friendAction('accept') },
+  { method: 'POST', path: '/api/friends/decline', requireAuth: true, handler: friendAction('decline') },
+  { method: 'POST', path: '/api/friends/cancel', requireAuth: true, handler: friendAction('cancel') },
+  { method: 'POST', path: '/api/friends/remove', requireAuth: true, handler: friendAction('remove') },
+  { method: 'POST', path: '/api/friends/block', requireAuth: true, handler: friendAction('block') },
+  { method: 'POST', path: '/api/friends/unblock', requireAuth: true, handler: friendAction('unblock') },
+  { method: 'GET', path: '/api/friends/chat', requireAuth: true, handler: handleFriendChat },
+  { method: 'POST', path: '/api/friends/chat/send', requireAuth: true, handler: handleFriendChatSend },
+  { method: 'POST', path: '/api/collectibles/win-codes/grant', requireAuth: true, handler: handleGrantWinCode },
+  { method: 'GET', path: '/api/collectibles/grants', requireAuth: true, handler: handleMyGrants },
+  // ---- اشتراك الستريمر (backend/subscriptions/subscription-service.js)
+  { method: 'GET', path: '/api/subscription', requireAuth: true, handler: handleSubscriptionStatus },
+  { method: 'POST', path: '/api/subscription/redeem', requireAuth: true, handler: handleSubscriptionRedeem },
+  { method: 'POST', path: '/api/subscription/pause', requireAuth: true, handler: handleSubscriptionPause },
+  { method: 'POST', path: '/api/subscription/resume', requireAuth: true, handler: handleSubscriptionResume },
+  { method: 'GET', path: '/api/admin/subscription-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscriptionCodes },
+  { method: 'POST', path: '/api/admin/subscription-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateSubscriptionCodes },
+  { method: 'POST', path: '/api/admin/subscription-codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnSubscriptionCode },
+  { method: 'GET', path: '/api/admin/subscriptions', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscribers },
+  { method: 'POST', path: '/api/admin/subscriptions/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminAdjustSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/end', requireAuth: true, requireAdmin: true, handler: handleAdminEndSubscription },
+  { method: 'POST', path: '/api/admin/subscriptions/unpause', requireAuth: true, requireAdmin: true, handler: handleAdminUnpauseSubscription },
+  { method: 'POST', path: '/api/admin/subscription-plans', requireAuth: true, requireAdmin: true, handler: handleAdminSaveSubscriptionPlan },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -821,6 +869,113 @@ function handleAdminSetWinReward(req, res, body) {
 
 function handleWinRewardCodes(req, res, body, user) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listWinRewardCodes(user.id) });
+}
+
+function handleTeamSearch(req, res, body, user) {
+  sendJson(res, 200, teamService.search(user, getQueryParam(req, 'q')));
+}
+function handleTeamMine(req, res, body, user) {
+  sendJson(res, 200, teamService.mine(user));
+}
+function handleTeamJoin(req, res, body, user) {
+  var r = teamService.join(user, body.customId);
+  sendJson(res, r.success ? 200 : (r.error === 'streamer_not_found' ? 404 : 400), r);
+}
+function handleTeamLeave(req, res, body, user) {
+  var r = teamService.leave(user, body.customId);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+function handleTeamRemove(req, res, body, user) {
+  var r = teamService.removeMember(user, body.customId);
+  sendJson(res, r.success ? 200 : 404, r);
+}
+function handleGrantWinCode(req, res, body, user) {
+  var r = collectiblesService.grantWinCode(user.id, body.code, body.customId);
+  var status = { invalid_code: 404, member_not_found: 404, not_your_code: 403, not_team_member: 403, code_full: 409, already_granted: 409, already_redeemed: 409, code_burned: 410 };
+  sendJson(res, r.success ? 200 : (status[r.error] || 400), r);
+}
+function handleMyGrants(req, res, body, user) {
+  sendJson(res, 200, { success: true, grants: collectiblesService.listMyGrants(user.id) });
+}
+
+// ---- «مجتمعي»
+var COMMUNITY_STATUS = { team_not_found: 404, user_not_found: 404, member_not_found: 404, message_not_found: 404, not_member: 403, forbidden: 403,
+  not_friends: 403, blocked: 403, muted: 403, too_fast: 429, too_many_requests: 429 };
+function sendCommunity(res, r) { sendJson(res, r.success ? 200 : (COMMUNITY_STATUS[r.error] || 400), r); }
+function handleCommunitySummary(req, res, body, user) {
+  var f = friendsService.counts(user);
+  sendJson(res, 200, { success: true, teamUnread: teamChatService.unreadTotal(user), incoming: f.incoming, dmUnread: f.unread });
+}
+function handleCommunityTeams(req, res, body, user) { sendJson(res, 200, teamChatService.listTeams(user)); }
+function handleTeamChat(req, res, body, user) {
+  sendCommunity(res, teamChatService.messages(user, getQueryParam(req, 'team'), getQueryParam(req, 'after'), getQueryParam(req, 'since')));
+}
+function handleTeamChatSend(req, res, body, user) { sendCommunity(res, teamChatService.send(user, body.team, body.body)); }
+function handleTeamChatDelete(req, res, body, user) { sendCommunity(res, teamChatService.deleteMessage(user, body.team, body.id)); }
+function handleTeamChatMute(req, res, body, user) { sendCommunity(res, teamChatService.mute(user, body.team, body.customId, body.minutes)); }
+function handleTeamChatUnmute(req, res, body, user) { sendCommunity(res, teamChatService.unmute(user, body.team, body.customId)); }
+function handleTeamChatKick(req, res, body, user) { sendCommunity(res, teamChatService.kick(user, body.team, body.customId)); }
+function handleTeamChatMembers(req, res, body, user) { sendCommunity(res, teamChatService.members(user, getQueryParam(req, 'team'))); }
+function handleTeamChatModerator(req, res, body, user) { sendCommunity(res, teamChatService.setModerator(user, body.customId, Boolean(body.on))); }
+function handleFriendsList(req, res, body, user) { sendJson(res, 200, friendsService.list(user)); }
+function handleFriendsSearch(req, res, body, user) { sendJson(res, 200, friendsService.search(user, getQueryParam(req, 'q'))); }
+function friendAction(name) {
+  return function (req, res, body, user) { sendCommunity(res, friendsService[name](user, body.customId)); };
+}
+function handleFriendChat(req, res, body, user) {
+  sendCommunity(res, friendsService.conversation(user, getQueryParam(req, 'user'), getQueryParam(req, 'after')));
+}
+function handleFriendChatSend(req, res, body, user) { sendCommunity(res, friendsService.sendMessage(user, body.customId, body.body)); }
+
+function handleSubscriptionStatus(req, res, body, user) {
+  var r = subscriptionService.status(user.id);
+  r.events = subscriptionService.listEvents(user.id, 8);
+  r.plans = subscriptionService.listPlans(false);
+  r.storeProducts = storeService.subscriptionProducts(); // فاضية = أزرار الشراء مخفية
+  sendJson(res, 200, r);
+}
+function handleSubscriptionRedeem(req, res, body, user) {
+  var r = subscriptionService.redeem(user, body.code, body.mode);
+  var status = { invalid_code: 404, code_used: 409, code_burned: 410, not_streamer: 403 };
+  sendJson(res, r.success ? 200 : (status[r.error] || 400), r);
+}
+function handleSubscriptionPause(req, res, body, user) {
+  var r = subscriptionService.pause(user);
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleSubscriptionResume(req, res, body, user) {
+  var r = subscriptionService.resume(user);
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminListSubscriptionCodes(req, res) {
+  sendJson(res, 200, { success: true, codes: subscriptionService.listCodes() });
+}
+function handleAdminGenerateSubscriptionCodes(req, res, body) {
+  var r = subscriptionService.generateCodes(body.months, body.count, body.note);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminBurnSubscriptionCode(req, res, body) {
+  var r = subscriptionService.burnCode(body.code);
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminListSubscribers(req, res) {
+  sendJson(res, 200, { success: true, subscribers: subscriptionService.listSubscribers(), plans: subscriptionService.listPlans(true) });
+}
+function handleAdminAdjustSubscription(req, res, body) {
+  var r = subscriptionService.adjustDays(Number(body.userId), body.days);
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminEndSubscription(req, res, body) {
+  var r = subscriptionService.endSubscription(Number(body.userId));
+  sendJson(res, r.success ? 200 : 400, r);
+}
+function handleAdminUnpauseSubscription(req, res, body) {
+  var r = subscriptionService.adminUnpause(Number(body.userId));
+  sendJson(res, r.success ? 200 : 409, r);
+}
+function handleAdminSaveSubscriptionPlan(req, res, body) {
+  var r = subscriptionService.savePlan(body);
+  sendJson(res, r.success ? 200 : 400, r);
 }
 
 function handleChallengeSearch(req, res, body, user) {
