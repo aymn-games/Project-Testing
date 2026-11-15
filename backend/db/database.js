@@ -711,6 +711,10 @@ ensureColumn('subscription_codes', 'pauses', 'INTEGER');
 // وopen_carry_ms = الأيام المحددة اللي كانت باقية وقت المنح (ترجع له لما ينلغي).
 ensureColumn('streamer_subscriptions', 'open_ended', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('streamer_subscriptions', 'open_carry_ms', 'INTEGER NOT NULL DEFAULT 0');
+// التجربة المجانية (يوم): سجل دائم بحسابات تيك توك اللي جرّبت — المفتاح
+// 'u:<يوزر>' و'o:<open_id>'. ما فيه ربط بجدول users عشان يبقى حتى لو
+// انحذف الحساب، فنفس التيك توك ما ياخذ تجربة ثانية بحساب جديد.
+db.exec('CREATE TABLE IF NOT EXISTS subscription_trials (tiktok_key TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created_at INTEGER NOT NULL)');
 // الباقات الأساسية (لو الجدول فاضي): شهر = تعليق، شهرين = تعليقين.
 db.prepare("INSERT OR IGNORE INTO subscription_plans (months, name, pauses, active, updated_at) VALUES (1, 'شهر', 1, 1, ?), (2, 'شهرين', 2, 1, ?)").run(Date.now(), Date.now());
 ensureColumn('store_orders', 'payment_gateway', 'TEXT');

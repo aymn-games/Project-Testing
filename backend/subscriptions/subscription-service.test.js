@@ -31,6 +31,7 @@ test.after(function () {
     made.forEach(function (id) {
         db.prepare('DELETE FROM streamer_subscriptions WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM subscription_events WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM subscription_trials WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM users WHERE id = ?').run(id);
     });
 });
@@ -334,5 +335,42 @@ test('تعويض الكل: الفعّال والمعلّق والمنتهي دا
         assert.equal(sub.listEvents(act.id, 1)[0].type, 'admin_compensate');
     } finally {
         config.subscriptionGraceDays = savedGrace;
+    }
+});
+
+test('التجربة المجانية: يوم واحد بعد بدء القفل، مرة وحدة لكل حساب تيك توك حتى بحساب جديد', function () {
+    var saved = config.subscriptionEnforcement;
+    function linkTT(u, name, openId) {
+        db.prepare('UPDATE users SET tiktok_username = ?, tiktok_verified = 1, tiktok_open_id = ? WHERE id = ?').run(name, openId || null, u.id);
+    }
+    try {
+        var a = makeUser('t1', true), b = makeUser('t2', true), c = makeUser('t3', true), p = makeUser('t4', false), paid = makeUser('t5', true);
+        var tt = tag + 'tt';
+        config.subscriptionEnforcement = false;
+        linkTT(a, tt, tag + 'oid');
+        assert.equal(sub.trialStatus(a.id).reason, 'not_started'); // قبل بدء القفل ما يظهر
+        config.subscriptionEnforcement = true;
+        assert.equal(sub.trialStatus(b.id).reason, 'tiktok_not_linked');
+        assert.equal(sub.trialStatus(p.id).reason, 'not_streamer');
+        assert.equal(sub.trialStatus(a.id).available, true);
+        assert.equal(sub.startTrial(a).success, true);
+        var st = sub.status(a.id).subscription;
+        assert.equal(st.active, true);
+        assert.equal(Math.round(st.remainingMs / DAY), 1);
+        assert.equal(sub.listEvents(a.id, 1)[0].type, 'trial');
+        assert.equal(sub.startTrial(a).error, 'had_subscription'); // نفس الحساب مرة ثانية
+        // الحساب الأول فك الربط، وحساب جديد ربط نفس التيك توك (بأحرف مختلفة)
+        db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_open_id = NULL WHERE id = ?').run(a.id);
+        linkTT(b, '@' + tt.toUpperCase());
+        assert.equal(sub.startTrial(b).error, 'tiktok_trial_used');
+        // غيّر يوزره بتيك توك بس نفس open_id
+        linkTT(c, tag + 'renamed', tag + 'oid');
+        assert.equal(sub.startTrial(c).error, 'tiktok_trial_used');
+        // اللي اشترك قبل ما ياخذ تجربة
+        linkTT(paid, tag + 'paid');
+        sub.grantDays(paid.id, 3);
+        assert.equal(sub.startTrial(paid).error, 'had_subscription');
+    } finally {
+        config.subscriptionEnforcement = saved;
     }
 });

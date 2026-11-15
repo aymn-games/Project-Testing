@@ -994,13 +994,17 @@
     no_pauses_left: 'خلص رصيد التعليق لهالاشتراك.',
     monthly_pause_used: 'استخدمت تعليق هالشهر، تقدر تعلّق الشهر الجاي.',
     not_paused: 'الاشتراك مو معلّق.',
-    open_ended: 'اشتراكك مفتوح — ما يحتاج تعليق.'
+    open_ended: 'اشتراكك مفتوح — ما يحتاج تعليق.',
+    tiktok_trial_used: 'حساب التيك توك المربوط استخدم التجربة المجانية قبل، وما تنعطى مرتين.',
+    tiktok_not_linked: 'اربط حساب تيك توك أول عشان تفعّل التجربة المجانية.',
+    had_subscription: 'التجربة المجانية للحسابات اللي ما اشتركت قبل.',
+    not_started: 'التجربة المجانية تبدأ مع نظام الاشتراكات.'
   };
   function monthsText(n) { return n === 1 ? 'شهر' : n === 2 ? 'شهرين' : n <= 10 ? n + ' أشهر' : n + ' شهر'; }
   var SUB_EVENT = {
     activate: 'تفعيل', extend: 'تمديد', renew: 'تجديد', pause: 'تعليق', resume: 'فك التعليق', auto_resume: 'انفك التعليق تلقائياً',
     admin_add: 'إضافة أيام', admin_subtract: 'خصم أيام', admin_end: 'إنهاء الاشتراك',
-    admin_grant: 'منح اشتراك', admin_open: 'اشتراك مفتوح', admin_close: 'إلغاء الاشتراك المفتوح', admin_compensate: 'تعويض أيام'
+    trial: 'تجربة مجانية', admin_grant: 'منح اشتراك', admin_open: 'اشتراك مفتوح', admin_close: 'إلغاء الاشتراك المفتوح', admin_compensate: 'تعويض أيام'
   };
   var SUB_SOURCE = { code: 'بكود', store: 'من المتجر', admin: 'من الإدارة', user: '', system: '' };
   function daysText(ms) {
@@ -1096,6 +1100,24 @@
         ]));
       }
       box.appendChild(grid);
+
+      // يوم التجربة المجاني (backend: startTrial) — لحساب ما اشترك قبل وتيك توكه
+      // ما جرّب قبل. يظهر بعد بدء القفل بس (reason 'not_started' = مخفي).
+      var trial = extra.trial;
+      if (!sub && trial && (trial.available || trial.reason === 'tiktok_not_linked' || trial.reason === 'tiktok_trial_used')) {
+        var tBody;
+        if (trial.available) {
+          var tBtn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary' }, [icon('crown'), 'فعّل يوم مجاني']);
+          tBtn.addEventListener('click', function () {
+            if (!window.confirm('تفعّل يوم التجربة المجاني الحين؟ يبدأ العد من لحظة التفعيل (24 ساعة)، وتنعطى مرة وحدة بس.')) return;
+            act(tBtn, window.AGPAuth.startSubscriptionTrial, 'تفعّل يوم التجربة المجاني');
+          });
+          tBody = [h('p', { class: 'pf-lrow-s', text: 'جرّب كل الألعاب يوم كامل (24 ساعة) بدون اشتراك. التجربة مرة وحدة لكل حساب تيك توك.' }), tBtn];
+        } else {
+          tBody = [h('p', { class: 'pf-lrow-s', text: SUB_ERRORS[trial.reason] })];
+        }
+        box.appendChild(panel('التجربة المجانية', null, tBody));
+      }
 
       // الكود: تمديد أو تجديد للاشتراك الفعّال، وتفعيل للمنتهي
       var active = !!(sub && sub.active);

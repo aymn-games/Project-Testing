@@ -650,6 +650,10 @@ function getSubscription() {
 function redeemSubscriptionCode(code, mode) {
     return request('/api/subscription/redeem', { method: 'POST', body: { code: code, mode: mode || null } });
 }
+/** يوم التجربة المجاني — مرة وحدة لكل حساب ولكل حساب تيك توك (backend: startTrial). */
+function startSubscriptionTrial() {
+    return request('/api/subscription/trial', { method: 'POST' });
+}
 function pauseSubscription() {
     return request('/api/subscription/pause', { method: 'POST', body: {} });
 }
@@ -1299,6 +1303,7 @@ global.AGPAuth = {
     adminEndSubscription: adminEndSubscription,
     adminUnpauseSubscription: adminUnpauseSubscription,
     adminGrantSubscription: adminGrantSubscription,
+    startSubscriptionTrial: startSubscriptionTrial,
     adminSetOpenSubscription: adminSetOpenSubscription,
     adminCompensateSubscriptions: adminCompensateSubscriptions,
     hasSubscriptionAccess: hasSubscriptionAccess,

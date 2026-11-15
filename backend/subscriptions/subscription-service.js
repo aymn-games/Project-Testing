@@ -23,6 +23,9 @@
  * - أدوات الأدمن: منح أيام لأي ستريمر حتى لو ما عنده اشتراك (grantDays)،
  *   اشتراك مفتوح بدون مدة (setOpenEnded) — الأيام الباقية تتجمّد وترجع لما
  *   ينلغي، وتعويض الكل (compensateAll) للفعّال والمعلّق والمنتهي داخل أيام السماح.
+ * - التجربة المجانية (startTrial): يوم واحد يفعّله الستريمر بنفسه من البروفايل،
+ *   بعد بدء القفل، لحساب ما عمره اشترك وتيك توكه مربوط. حساب التيك توك ينحفظ
+ *   بـsubscription_trials (يوزر + open_id) فما ياخذ تجربة ثانية بأي حساب ثاني.
  * الجداول streamer_subscriptions وsubscription_codes وsubscription_events
  * وsubscription_plans بـbackend/db/database.js.
  */
@@ -40,6 +43,7 @@ var MAX_PLAN_MONTHS = 24;
 var MAX_ADJUST_DAYS = 365;
 var MAX_CODES_PER_BATCH = 200;
 var MAX_COMPENSATE_DAYS = 30;
+var TRIAL_MS = DAY_MS;
 var CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
 var _now = function () { return Date.now(); };
@@ -508,6 +512,59 @@ function setOpenEnded(userId, on) {
     return r;
 }
 
+/* ---------- التجربة المجانية ---------- */
+
+function trialKeys(u) {
+    var keys = [];
+    if (u.tiktok_username) keys.push('u:' + String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase());
+    if (u.tiktok_open_id) keys.push('o:' + String(u.tiktok_open_id));
+    return keys;
+}
+
+/**
+ * هل يقدر يفعّل التجربة؟ السبب لما ما يقدر:
+ * not_started (القفل ما بدأ) | not_streamer | tiktok_not_linked |
+ * had_subscription (عنده/كان عنده اشتراك أو تجربة) | tiktok_trial_used.
+ */
+function trialInfo(userId) {
+    var u = db.prepare('SELECT id, role, is_streamer, permissions, tiktok_username, tiktok_verified, tiktok_open_id FROM users WHERE id = ?').get(userId);
+    var reason = null;
+    if (!u) reason = 'user_not_found';
+    else if (!isEnforced()) reason = 'not_started';
+    else if (!isStreamerUser(u)) reason = 'not_streamer';
+    else if (getRow(userId)) reason = 'had_subscription';
+    else if (!u.tiktok_verified || !u.tiktok_username) reason = 'tiktok_not_linked';
+    else {
+        var keys = trialKeys(u);
+        var used = keys.some(function (k) { return db.prepare('SELECT 1 FROM subscription_trials WHERE tiktok_key = ?').get(k); });
+        if (used) reason = 'tiktok_trial_used';
+    }
+    return { available: !reason, reason: reason, days: TRIAL_MS / DAY_MS, _user: u };
+}
+
+/** الستريمر يفعّل يوم التجربة. @returns {{success: boolean, error?: string}} */
+function startTrial(user) {
+    var r = db.transaction(function () {
+        var info = trialInfo(user.id);
+        if (!info.available) return { success: false, error: info.reason };
+        var t = _now();
+        var ins = db.prepare('INSERT OR IGNORE INTO subscription_trials (tiktok_key, user_id, created_at) VALUES (?, ?, ?)');
+        trialKeys(info._user).forEach(function (k) { ins.run(k, user.id, t); });
+        db.prepare('INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, open_ended, open_carry_ms, updated_at) ' +
+            'VALUES (?, ?, ?, 0, 0, 0, 0, NULL, NULL, 0, 0, ?)').run(user.id, t, t + TRIAL_MS, t);
+        logEvent(user.id, 'trial', 'user', null, 0, TRIAL_MS);
+        return { success: true };
+    })();
+    if (r.success) logger.log('Subscriptions: user ' + user.id + ' started free trial');
+    return r;
+}
+
+/** للبروفايل: حالة التجربة بدون بيانات داخلية. */
+function trialStatus(userId) {
+    var i = trialInfo(userId);
+    return { available: i.available, reason: i.reason, days: i.days };
+}
+
 /**
  * الأدمن: تعويض كل المشتركين بأيام (انقطاع مثلاً). يشمل الفعّال والمعلّق
  * (تنضاف على النهاية)، والمنتهي داخل أيام السماح (يبدأ العد من الحين).
@@ -556,6 +613,8 @@ module.exports = {
     accessForUser: accessForUser,
     enforcementInfo: enforcementInfo,
     grantDays: grantDays,
+    startTrial: startTrial,
+    trialStatus: trialStatus,
     setOpenEnded: setOpenEnded,
     compensateAll: compensateAll,
     listSubscribers: listSubscribers,

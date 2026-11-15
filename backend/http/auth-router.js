@@ -242,6 +242,7 @@ var ROUTES = [
   { method: 'POST', path: '/api/subscription/redeem', requireAuth: true, handler: handleSubscriptionRedeem },
   { method: 'POST', path: '/api/subscription/pause', requireAuth: true, handler: handleSubscriptionPause },
   { method: 'POST', path: '/api/subscription/resume', requireAuth: true, handler: handleSubscriptionResume },
+  { method: 'POST', path: '/api/subscription/trial', requireAuth: true, handler: handleSubscriptionTrial },
   { method: 'GET', path: '/api/admin/subscription-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListSubscriptionCodes },
   { method: 'POST', path: '/api/admin/subscription-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateSubscriptionCodes },
   { method: 'POST', path: '/api/admin/subscription-codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnSubscriptionCode },
@@ -1043,6 +1044,7 @@ function handleFriendChatSend(req, res, body, user) { sendCommunity(res, friends
 function handleSubscriptionStatus(req, res, body, user) {
   var r = subscriptionService.status(user.id);
   r.events = subscriptionService.listEvents(user.id, 8);
+  r.trial = subscriptionService.trialStatus(user.id); // يوم التجربة المجاني (available + reason)
   r.plans = subscriptionService.listPlans(false);
   r.storeProducts = storeService.subscriptionProducts(); // فاضية = أزرار الشراء مخفية
   sendJson(res, 200, r);
@@ -1070,6 +1072,11 @@ function handleAdminGenerateSubscriptionCodes(req, res, body) {
 function handleAdminBurnSubscriptionCode(req, res, body) {
   var r = subscriptionService.burnCode(body.code);
   sendJson(res, r.success ? 200 : 409, r);
+}
+/** الستريمر يفعّل يوم التجربة المجاني (مرة وحدة لكل حساب ولكل حساب تيك توك). */
+function handleSubscriptionTrial(req, res, body, user) {
+  var r = subscriptionService.startTrial(user);
+  sendJson(res, r.success ? 200 : 400, r);
 }
 function handleAdminListSubscribers(req, res) {
   sendJson(res, 200, { success: true, subscribers: subscriptionService.listSubscribers(), plans: subscriptionService.listPlans(true), enforcement: subscriptionService.enforcementInfo() });
