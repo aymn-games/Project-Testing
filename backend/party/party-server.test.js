@@ -480,7 +480,7 @@ test('host create requires a valid schedule; hosted + phase carry sched', async 
     await a.wait(function (x) { return x.t === 'hosted'; });
     var ph = await a.wait(function (x) { return x.t === 'phase'; });
     assert.equal(ph.p, 'closed');
-    assert.deepEqual([ph.sched.openAt, ph.sched.startAt, ph.sched.endAt, ph.sched.tzOffsetMin, ph.sched.danceMin], [start - 15 * 60000, start, start + 60 * 60000, 180, 7]);
+    assert.deepEqual([ph.sched.openAt, ph.sched.startAt, ph.sched.endAt, ph.sched.tzOffsetMin, ph.sched.danceMin], [start - 15 * 60000, start, undefined, 180, 7]);
     assert.equal(ph.waitGirl, false);
     a.close(); srv.close();
 });

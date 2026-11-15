@@ -124,6 +124,14 @@
     .seg button.on{ background:linear-gradient(180deg,#f08ab0,#d45a8a); color:#fff; }
     .row label small, .row > span small{ display:block; font-weight:500; color:#9b6683; font-size:12px; }
     .rows{ display:flex; flex-direction:column; gap:10px; }
+    h3.sub{ margin:18px 2px 8px; font:900 18px 'Zain'; color:var(--rose2); text-align:right; }
+    .row textarea{ width:min(320px,60%); min-height:84px; padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:#fff; font:500 15px/1.6 'IBM Plex Sans Arabic'; color:var(--ink); resize:vertical; }
+    .row textarea[dir=ltr]{ font-family:system-ui,sans-serif; text-align:left; }
+    .row textarea:focus{ outline:3px solid rgba(226,112,154,.35); }
+    .btn.mini{ padding:8px 14px; font-size:13px; }
+    .seg.swatches{ flex-wrap:wrap; justify-content:flex-end; border-radius:18px; max-width:62%; }
+    .seg.swatches button{ display:inline-flex; align-items:center; gap:6px; padding:0 12px; }
+    .seg.swatches i{ width:14px; height:14px; border-radius:50%; background:var(--c); border:1px solid rgba(0,0,0,.12); }
     .tz{ margin:10px 2px 0; font:600 12px 'IBM Plex Sans Arabic'; color:var(--soft); }
     .timeline{ margin:14px 0 0; padding:12px 14px; border-radius:16px; background:#fff; border:1px dashed var(--line); list-style:none; display:flex; flex-direction:column; gap:6px; }
     .timeline li{ display:flex; justify-content:space-between; gap:12px; font-size:14px; }
@@ -183,6 +191,18 @@
             <div class="seg" role="group" aria-labelledby="cCharsL" id="cChars"><button type="button" data-v="rig" class="on" aria-pressed="true">الجديدة</button><button type="button" data-v="classic" aria-pressed="false">الكلاسيكية</button></div>
         </div>
         <div class="rows" id="createSched" style="margin-top:10px"></div>
+        <h3 class="sub">رسالة مشهد النهاية</h3>
+        <div class="rows">
+            <div class="row"><label for="cardDate">التاريخ بالرسالة<small>ينكتب فوق التهنئة بالعربي والإنجليزي</small></label><input type="date" id="cardDate"></div>
+            <div class="row"><label for="cardAr">التهنئة بالعربي<small>كل سطر بسطر (حد أقصى 4 أسطر)</small></label><textarea id="cardAr" rows="3" maxlength="200" dir="rtl" lang="ar"></textarea></div>
+            <div class="row"><label for="cardEn">التهنئة بالإنجليزي<small>اتركها فاضية عشان يطلع النموذج</small></label><textarea id="cardEn" rows="3" maxlength="240" dir="ltr" lang="en"></textarea></div>
+            <div class="row"><span><b>النموذج المعتمد</b><small>يرجّع نص التهنئة الأصلي</small></span><button class="btn ghost mini" id="cardReset" type="button">رجوع للنموذج</button></div>
+        </div>
+        <h3 class="sub">ألوان الحفلة</h3>
+        <div class="rows">
+            <div class="row"><span id="cThemeL"><b>ألوان القاعة</b><small>درجات ناعمة للقاعة كاملة</small></span><div class="seg swatches" role="group" aria-labelledby="cThemeL" id="cTheme"><button type="button" data-v="pink" class="on" aria-pressed="true"><i style="--c:#f3b6cc"></i>وردي</button><button type="button" data-v="lavender" aria-pressed="false"><i style="--c:#cdbdf0"></i>لافندر</button><button type="button" data-v="sky" aria-pressed="false"><i style="--c:#b6d8ef"></i>سماوي</button><button type="button" data-v="mint" aria-pressed="false"><i style="--c:#b9e6d3"></i>نعناعي</button><button type="button" data-v="peach" aria-pressed="false"><i style="--c:#f7cdb0"></i>خوخي</button></div></div>
+            <div class="row"><span id="cCurtL"><b>لون الستارة</b><small>ستارة المنصة والستائر الجانبية</small></span><div class="seg swatches" role="group" aria-labelledby="cCurtL" id="cCurtain"><button type="button" data-v="same" class="on" aria-pressed="true">مثل القاعة</button><button type="button" data-v="pink" aria-pressed="false"><i style="--c:#f3b6cc"></i>وردي</button><button type="button" data-v="lavender" aria-pressed="false"><i style="--c:#cdbdf0"></i>لافندر</button><button type="button" data-v="sky" aria-pressed="false"><i style="--c:#b6d8ef"></i>سماوي</button><button type="button" data-v="mint" aria-pressed="false"><i style="--c:#b9e6d3"></i>نعناعي</button><button type="button" data-v="peach" aria-pressed="false"><i style="--c:#f7cdb0"></i>خوخي</button></div></div>
+        </div>
         <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
         <div class="msg hidden" id="createMsg" role="alert"></div>
     </section>
@@ -253,6 +273,7 @@
 
 <script type="module">
     import { connect, readJSON, writeJSON, serverNow, clockText, dateText, tzLabel, countdownText } from './party-net.js';
+    import { GREETING } from './greeting.js';
     const $ = id => document.getElementById(id);
     const ERR = {
         disabled: 'الحفلات متوقفة حالياً على السيرفر.',
@@ -266,15 +287,14 @@
 
     // ---- الجدول: نموذج واحد للإنشاء والتعديل (كل صف: العنوان يمين والتحكم يسار — قاعدة CLAUDE.md) ----
     const FIELDS = [
-        { k: 'durationMin', label: 'مدة الحفل كاملة', unit: 'دقيقة', def: 60, min: 15, max: 240, step: 5 },
         { k: 'openBeforeMin', label: 'فتح الدخول قبل البداية', unit: 'دقيقة', def: 15, min: 0, max: 120, step: 5 },
         { k: 'writeMin', label: 'كتابة التهاني', unit: 'دقيقة', def: 3, min: 1, max: 60, step: 1 },
         { k: 'cutTimeoutSec', label: 'مهلة القص قبل القص التلقائي', unit: 'ثانية', def: 60, min: 10, max: 600, step: 10 },
     ];
-    // مدد ثابتة بالسيرفر (ثواني): الدخول 40، الافتتاح 12، التجمّع 12، التجمّع حول الكيكة مع أغنيتها 24.5، الصورة 15
-    const FIXED = { entrance: 40, reveal: 12, gather: 12, cakeWalk: 24.5, photo: 15 };
-    // المشاهد اللي بطول أغانيها (نفس SONG_MS بالسيرفر): الرقص = باقي أغنية الافتتاح، ورقص الكيكة = أغنية القص
-    const SONG = { dance: 210, celebrate: 242.5 };
+    // مدد ثابتة بالسيرفر (ثواني): الدخول 40، الافتتاح 12، التجمّع 12، التجمّع حول الكيكة مع أغنيتها 24.5، الصورة 15، مشهد النهاية 58.5
+    const FIXED = { entrance: 40, reveal: 12, gather: 12, cakeWalk: 24.5, photo: 15, outro: 58.5 };
+    // المشاهد اللي بطول أغانيها (نفس SONG_MS بالسيرفر): الرقص = باقي أغنية الافتتاح، ورقص الكيكة = أغنية القص، والرقص الحر = الأغنية الهادية
+    const SONG = { dance: 210, celebrate: 242.5, free: 120.8 };
     const mmss = sec => Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0');
     const pad = n => String(n).padStart(2, '0');
     const localDate = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
@@ -285,29 +305,27 @@
             + '<div class="row"><label for="' + prefix + 'Time">ساعة البداية</label><input type="time" id="' + prefix + 'Time" value="00:00"></div>'
             + FIELDS.map(f => '<div class="row"><label id="' + prefix + f.k + 'L">' + f.label + ' <small>(' + f.unit + ')</small></label><div class="stepper" role="group" aria-labelledby="' + prefix + f.k + 'L">'
                 + '<button type="button" data-k="' + f.k + '" data-d="-1" aria-label="أقل">−</button><output id="' + prefix + f.k + '"></output><button type="button" data-k="' + f.k + '" data-d="1" aria-label="أكثر">+</button></div></div>').join('')
-            + '<div class="tz" id="' + prefix + 'Tz"></div><ul class="timeline" id="' + prefix + 'Line"></ul><div class="warn hidden" id="' + prefix + 'Warn"></div>';
+            + '<div class="tz" id="' + prefix + 'Tz"></div><ul class="timeline" id="' + prefix + 'Line"></ul>';
         const el = k => box.querySelector('#' + prefix + k);
         const setV = (k, x) => { const f = FIELDS.find(q => q.k === k); v[k] = Math.max(f.min, Math.min(f.max, x)); el(k).textContent = v[k]; };
         FIELDS.forEach(f => setV(f.k, f.def));
         box.addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (!b) return; const f = FIELDS.find(q => q.k === b.dataset.k); setV(f.k, v[f.k] + f.step * +b.dataset.d); draw(); });
         box.addEventListener('input', draw);
         const startAt = () => { const d = el('Date').value, t = el('Time').value || '00:00'; if (!d) return NaN; return new Date(d + 'T' + t).getTime(); };
-        // الخط الزمني المتوقع بأوقات الساعة (عرض التهاني بدون وقت، فما بعده تقريبي)
+        // الخط الزمني المتوقع بأوقات الساعة (عرض التهاني بدون وقت، فما بعده تقريبي). المشاهد تمشي ورا بعض
+        // لين مشهد النهاية وتنتهي الحفلة — المدة = كل المشاهد + وقت عرض التهاني (والقص لين مهلته)
         function draw() {
             const st = startAt(), tz = -new Date(isFinite(st) ? st : Date.now()).getTimezoneOffset(), c = ms => clockText(ms, tz);
             el('Tz').textContent = 'الأوقات بتوقيت جهازك: ' + tzLabel(tz) + (tz === 180 ? '' : ' — تأكد إنه نفس توقيت الحفلة');
-            const line = el('Line'), warn = el('Warn');
-            if (!isFinite(st)) { line.innerHTML = '<li class="note">اختر التاريخ والساعة عشان يطلع الجدول</li>'; warn.classList.add('hidden'); return; }
-            const M = 60000, S = 1000, dance = st + (FIXED.entrance + FIXED.reveal) * S, write = dance + SONG.dance * S + FIXED.gather * S, show = write + v.writeMin * M, end = st + v.durationMin * M;
+            const line = el('Line');
+            if (!isFinite(st)) { line.innerHTML = '<li class="note">اختر التاريخ والساعة عشان يطلع الجدول</li>'; return; }
+            const M = 60000, S = 1000, dance = st + (FIXED.entrance + FIXED.reveal) * S, write = dance + SONG.dance * S + FIXED.gather * S, show = write + v.writeMin * M;
             const rows = [[st - v.openBeforeMin * M, 'فتح الدخول'], [st, 'الافتتاح (أول ما تدخل صاحبة الحفلة)'], [dance, 'الرقص · بطول أغنية الافتتاح (' + mmss(SONG.dance) + ')'], [write, 'كتابة التهاني · ' + v.writeMin + ' د'], [show, 'عرض التهاني (بدون وقت)']];
             line.innerHTML = '';
             rows.forEach(([ms, t]) => { const li = document.createElement('li'); li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = t; li.lastChild.textContent = c(ms); line.append(li); });
-            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: التجمّع حول الكيكة مع أغنيته (' + mmss(FIXED.cakeWalk) + ') ← القص ← رقص الكيكة بطول أغنية القص (' + mmss(SONG.celebrate) + ') ← الصورة الجماعية ← رقص حر ← آخر 58ث مشهد النهاية مع بطاقة التهنئة'; line.append(after);
-            const li = document.createElement('li'); li.innerHTML = '<span>نهاية الحفل</span><b></b>'; li.lastChild.textContent = c(end); line.append(li);
-            const fixed = (FIXED.entrance + FIXED.reveal + FIXED.gather + FIXED.cakeWalk + FIXED.photo) * S + v.cutTimeoutSec * S + (SONG.dance + SONG.celebrate) * S + v.writeMin * M;
-            const spare = end - st - fixed;
-            warn.classList.toggle('hidden', spare > 5 * M);
-            warn.textContent = spare <= 0 ? 'المشاهد أطول من مدة الحفل — الحفلة بتنتهي قبل ما توصل للصورة الجماعية.' : 'باقي ' + Math.round(spare / M) + ' دقيقة بس لعرض التهاني والرقص الحر — زيد مدة الحفل لو الرسائل كثيرة.';
+            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: التجمّع حول الكيكة مع أغنيته (' + mmss(FIXED.cakeWalk) + ') ← القص ← رقص الكيكة بطول أغنية القص (' + mmss(SONG.celebrate) + ') ← الصورة الجماعية ← رقص حر (' + mmss(SONG.free) + ') ← مشهد النهاية مع رسالة التهنئة (' + mmss(FIXED.outro) + ') ← تنتهي الحفلة'; line.append(after);
+            const all = Object.values(FIXED).reduce((a, b) => a + b, 0) + Object.values(SONG).reduce((a, b) => a + b, 0) + v.writeMin * 60;
+            const li = document.createElement('li'); li.innerHTML = '<span>مدة الحفل</span><b></b>'; li.lastChild.textContent = 'حوالي ' + Math.round(all / 60) + ' دقيقة + وقت عرض التهاني'; line.append(li);
         }
         draw();
         return {
@@ -430,6 +448,17 @@
         },
     });
 
+    // ---- رسالة مشهد النهاية (greeting.js): النموذج المعتمد معبّى، والمذيع يغيّره. التاريخ يتبع تاريخ الحفل لين يتغيّر يدوي ----
+    const cardDefault = () => { $('cardAr').value = GREETING.ar; $('cardEn').value = GREETING.en; };
+    cardDefault();
+    let cardDateEdited = false;
+    $('cardDate').addEventListener('input', () => { cardDateEdited = !!$('cardDate').value; });
+    $('createSched').addEventListener('input', e => { if (e.target.id === 'cDate' && !cardDateEdited) $('cardDate').value = e.target.value; });
+    $('cardReset').addEventListener('click', cardDefault);
+    const readCard = () => ({ d: $('cardDate').value || $('cDate').value || '', ar: $('cardAr').value.trim(), en: $('cardEn').value.trim() });
+    // ---- ألوان الحفلة (hall3d.js setTheme): القاعة، والستارة (أو مثل القاعة) ----
+    ['cTheme', 'cCurtain'].forEach(id => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (b) segSet($(id), b.dataset.v); }));
+
     $('createBtn').addEventListener('click', () => {
         const girlName = $('girlName').value.trim();
         if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
@@ -439,7 +468,7 @@
         const who = hostKey() ? { key: hostKey() } : { auth: authTok() };
         if (!who.key && !who.auth) { showLogin(); return; }
         $('createBtn').disabled = true;
-        net.send(Object.assign({ t: 'host', girlName, schedule, chars: segValue($('cChars')) }, who));
+        net.send(Object.assign({ t: 'host', girlName, schedule, chars: segValue($('cChars')), card: readCard(), theme: { hall: segValue($('cTheme')), curtain: segValue($('cCurtain')) } }, who));
     });
 
     // ---- الشخصيات: الجديدة (rig) أو الكلاسيكية ----
@@ -488,7 +517,7 @@
     setInterval(() => {
         if (!phase) return;
         const now = serverNow(), sc = phase.sched, p = phase.p;
-        const to = p === 'closed' && sc ? sc.openAt : p === 'lobby' && sc && now < sc.startAt ? sc.startAt : p === 'free' && sc ? sc.endAt : phase.until;
+        const to = p === 'closed' && sc ? sc.openAt : p === 'lobby' && sc && now < sc.startAt ? sc.startAt : phase.until;
         $('phaseClock').textContent = to ? countdownText(to - now) : '';
         if (p === 'lobby' && !startSure) $('startBtn').textContent = waitingGirl() ? 'بدء الآن بدون صاحبة الحفلة' : 'بدء الحفل الحين';
         $('phaseName').textContent = (PH[p] || p) + (waitingGirl() ? ' · بانتظار صاحبة الحفلة' : '');

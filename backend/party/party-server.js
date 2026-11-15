@@ -9,11 +9,12 @@
  * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName, auth, schedule} (أي استريمر بحساب الموقع؛ حفلة شغالة وحدة لكل حساب — لو عنده وحدة يرجع لها)
+ *   عميل → host {girlName, auth, schedule, card?, theme?} (أي استريمر بحساب الموقع؛ حفلة شغالة وحدة لكل حساب — لو عنده وحدة يرجع لها)
  *          | host {auth, current: true} (حساب المذيع من أي جهاز ← حفلته الشغالة، أو err none؛ بدون حساب صالح ← err login)
  *          | host {code, token} | host {girlName, key, schedule} و host {key, current: true} (المفتاح الخاص PARTY_HOST_KEY، اختياري)
  *          ← hosted {code, token, girlKey, viewKey}
- *          schedule = {startAt (ms UTC), durationMin, openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
+ *          schedule = {startAt (ms UTC), openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
+ *          card = {d: YYYY-MM-DD, ar, en} (رسالة مشهد النهاية، اختياري) · theme = {hall, curtain} (ألوان القاعة والستارة)
  *   المذيع → schedule {schedule} (تعديل أي وقت) ← phase جديدة للكل
  *   عميل → join {code, name, auth?, girlKey?, dev?, g? (0 بنت · 1 ولد)} ← welcome {id, key, n, role, kind} ثم all {d}
  *          (قبل فتح الدخول: ← closed {openAt, tzOffsetMin, girlName} ويبقى مشاهد لين توصله phase lobby؛
@@ -144,7 +145,7 @@ function allow(client, heavy) {
 }
 function roomClients(code) { return Object.keys(_clients).map(function (k) { return _clients[k]; }).filter(function (c) { return c.code === code && !c.closed; }); }
 
-function rosterMsg(code) { var r = _mgr.roster(code); return r.ok ? { t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, players: r.players } } : null; }
+function rosterMsg(code) { var r = _mgr.roster(code); return r.ok ? { t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, card: r.card, theme: r.theme, players: r.players } } : null; }
 // تغيّر بالحضور: نرسل فوراً إذا آخر إرسال قبل ثانية، وإلا نأجّله لدورة tickAll (يمنع
 // موجة دخول 100 شخص من إرسال القائمة الكاملة لكل واحد 100 مرة)
 function markRoster(code) {
@@ -154,7 +155,7 @@ function markRoster(code) {
 function broadcastRoster(code) {
     var st = _roster[code] || (_roster[code] = { at: 0, dirty: false }); st.at = Date.now(); st.dirty = false;
     var r = _mgr.roster(code); if (!r.ok) return;
-    var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, players: r.players } }));
+    var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, card: r.card, theme: r.theme, players: r.players } }));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
 }
 function phaseMsg(code) {
@@ -252,7 +253,7 @@ function handle(client, msg, t, ident) {
         } else {
             // كل حفلة من صفحة المذيع مجدولة (الغرفة بدون جدول للاختبارات بس)
             if (!msg.schedule || typeof msg.schedule !== 'object') return send(client, { t: 'err', err: 'schedule', of: t });
-            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars, ownerId: owner });
+            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars, card: msg.card, theme: msg.theme, ownerId: owner });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created' + (owner != null ? ' by user ' + owner : ''));
@@ -406,9 +407,9 @@ function tickAll() {
         try {
             var cs = roomClients(code), room = _mgr.getRoom(code), sc = room && room.sched;
             // الحفلة المجدولة تمشي على الساعة حتى لو محد متصل، وتبقى لين ساعتين بعد نهايتها
-            // (وأكثر لو النقاط ما انحسبت — تنتظر المذيع يفتح صفحته)
+            // (وأكثر لو النقاط ما انحسبت — تنتظر المذيع يفتح صفحته). النهاية = وقت ما انتهت فعلاً، أو حد الأمان
             if (sc) {
-                var endAt = sc.startAt + sc.durationMin * 60000;
+                var endAt = room.phase === 'ended' ? room.phaseAt : sc.startAt + 4 * 3600 * 1000;
                 // تنشال بعد ساعتين من النهاية لو ما فيه نقاط تنتظر المذيع، وبعد يومين بأي حال
                 if ((now > endAt + ENDED_KEEP_MS && (!room.pointsMsg || room.pointsAcked) && !cs.length) || now > endAt + POINTS_KEEP_MS) return dropRoom(code, 'ended');
             } else if (!cs.length) {

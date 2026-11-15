@@ -635,10 +635,10 @@ function settle(s) { for (var k = 0; k < 20; k++) { if (!s.mgr.tick(s.code).chan
 test('cleanSchedule: defaults, bounds, start in the past or > 30 days rejected', function () {
     var now = 5e12;
     var d = cleanSchedule({ startAt: now + MIN }, now, { creating: true });
-    assert.deepEqual([d.durationMin, d.openBeforeMin, d.danceMin, d.writeMin, d.cakeDanceMin, d.cutTimeoutSec], [60, 15, 7, 3, 5, 60]);
+    assert.deepEqual([d.openBeforeMin, d.danceMin, d.writeMin, d.cakeDanceMin, d.cutTimeoutSec], [15, 7, 3, 5, 60]);
+    assert.equal(d.durationMin, undefined, 'no full-party duration: scenes run back to back');
     assert.equal(cleanSchedule({ startAt: now + MIN, danceMin: 0 }, now, { creating: true }).danceMin, 1);
     assert.equal(cleanSchedule({ startAt: now + MIN, danceMin: 99 }, now, { creating: true }).danceMin, 60);
-    assert.equal(cleanSchedule({ startAt: now + MIN, durationMin: 5 }, now, { creating: true }).durationMin, 15);
     assert.equal(cleanSchedule({ startAt: now - 2 * MIN }, now, { creating: true }), null);
     assert.equal(cleanSchedule({ startAt: now + 31 * 1440 * MIN }, now, { creating: true }), null);
     assert.equal(cleanSchedule({ startAt: 'x' }, now, { creating: true }), null);
@@ -649,8 +649,8 @@ test('room starts closed; guests refused with closed, girl allowed; lobby opens 
     var s = schedRoom();
     assert.equal(s.ph(), 'closed');
     var sc = s.mgr.phaseOf(s.code).sched;
-    assert.deepEqual(sc, { openAt: s.start - 15 * MIN, startAt: s.start, endAt: s.start + 60 * MIN, tzOffsetMin: 180,
-        durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 }, 'host page prefills its edit form from this');
+    assert.deepEqual(sc, { openAt: s.start - 15 * MIN, startAt: s.start, tzOffsetMin: 180,
+        openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 }, 'host page prefills its edit form from this');
     assert.equal(s.mgr.join(s.code, { name: 'ريم' }).err, 'closed');
     assert.equal(girlIn(s).ok, true);
     assert.equal(s.mgr.fullState(s.code, null, false).length, 0, 'girl hidden from untrusted viewers while closed');
@@ -749,21 +749,25 @@ test('cake auto-cuts after cutTimeoutSec', function () {
     var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true);
 });
 
-test('free lasts until endAt; endAt ends the party from wishes; points only after photoDone', function () {
+test('free lasts its song (120.8s) then outro then ended; the 4h safety cap ends a stuck party; points only after photoDone', function () {
     var s = schedRoom(), g = girlIn(s), q;
     s.at(s.start - 15 * MIN); q = s.mgr.join(s.code, { name: 'ريم' }); s.at(s.start);
     ['entrance', 'reveal', 'dance', 'gather'].forEach(function (p) { s.mgr.skip(s.code, p); });
     s.mgr.addWish(s.code, q.id, 'هلا'); s.mgr.skip(s.code, 'wishWrite');
     assert.equal(s.ph(), 'wishes');
-    s.at(s.start + 60 * MIN);
+    s.at(s.start + 60 * MIN); assert.equal(s.ph(), 'wishes', 'no full-hour limit any more');
+    s.at(s.start + 4 * 60 * MIN);
     assert.equal(s.ph(), 'ended'); assert.equal(s.mgr.getRoom(s.code).photoDone, false);
     assert.equal(s.mgr.move(s.code, q.id, [0, 0, 0, 2]).err, 'phase');
     assert.equal(s.mgr.skip(s.code, 'ended').err, 'phase');
     var t = schedRoom(); girlIn(t); t.at(t.start - 15 * MIN); t.at(t.start);
     for (var k = 0; k < 20 && t.ph() !== 'free'; k++) t.mgr.skip(t.code, t.ph());
     var ph = t.mgr.phaseOf(t.code); assert.equal(ph.p, 'free'); assert.equal(t.mgr.getRoom(t.code).photoDone, true);
-    t.at(t.start + 59 * MIN); assert.equal(t.ph(), 'free');
-    t.at(t.start + 60 * MIN); assert.equal(t.ph(), 'ended');
+    assert.equal(ph.until - ph.at, 120800, 'free dance = slowsong.mp3');
+    t.at(ph.until - 1); assert.equal(t.ph(), 'free');
+    t.at(ph.until); assert.equal(t.ph(), 'outro');
+    var o = t.mgr.phaseOf(t.code); assert.equal(o.until - o.at, 58500);
+    t.at(o.until); assert.equal(t.ph(), 'ended');
     assert.equal(g.ok, true);
 });
 
@@ -776,8 +780,8 @@ test('shortening the running phase below its elapsed time advances once', functi
     s.mgr.setSchedule(s.code, { writeMin: 1 });
     s.mgr.tick(s.code); assert.notEqual(s.ph(), 'wishWrite');
     var after = s.ph(); s.mgr.tick(s.code); assert.equal(s.ph(), after, 'only once');
-    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 'x', danceMin: 5 }).ok, true);
-    assert.equal(s.mgr.getRoom(s.code).sched.durationMin, 60, 'bad field keeps the old value');
+    assert.equal(s.mgr.setSchedule(s.code, { writeMin: 'x', danceMin: 5 }).ok, true);
+    assert.equal(s.mgr.getRoom(s.code).sched.writeMin, 1, 'bad field keeps the old value');
 });
 
 test('moving startAt later while waiting for the girl re-arms the countdown; ignored after entrance', function () {
@@ -796,7 +800,7 @@ test('moving startAt later while waiting for the girl re-arms the countdown; ign
 });
 
 test('join refused with ended after the party ends', function () {
-    var s = schedRoom(); s.at(s.start + 61 * MIN); settle(s);
+    var s = schedRoom(); s.at(s.start + 4 * 60 * MIN); settle(s);
     assert.equal(s.ph(), 'ended');
     assert.equal(s.mgr.join(s.code, { name: 'ريم' }).err, 'ended');
     assert.equal(girlIn(s).err, 'ended');
@@ -869,31 +873,36 @@ test('restore while dance is still running keeps its end time', function () {
     assert.equal(after.p, 'dance'); assert.equal(after.until, before.until); assert.equal(after.at, before.at);
 });
 
-test('restore after endAt lands on ended', function () {
+test('restore after the safety cap lands on ended', function () {
     var s = schedRoom(); girlIn(s);
     s.at(s.start - 15 * MIN);
-    s.c.t.now = s.start + 61 * MIN;
+    s.c.t.now = s.start + 4 * 60 * MIN + MIN;
     assert.equal(reboot(s).ph(), 'ended');
 });
 
 // ---- إصلاحات المراجعة النهائية ----
-test('schedule edit that would end the party within a minute is refused', function () {
-    var s = schedRoom(); girlIn(s);
-    s.at(s.start - 15 * MIN); s.at(s.start); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
-    s.c.t.now = s.start + 20 * MIN;
-    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 15 }).err, 'ends', 'endAt already passed');
-    s.c.t.now = s.start + 14.5 * MIN;
-    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 15 }).err, 'ends', 'would end in 30s');
-    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 30 }).ok, true);
-    assert.equal(s.ph(), 'dance');
+test('card and theme: cleaned on create, roster carries them, serialize/restore keeps them', function () {
+    var c = clockMgr();
+    var r = c.mgr.createRoom({ girlName: 'س', card: { d: '2026-11-03', ar: ' سطر١ \n\n<b>سطر٢</b>\n٣\n٤\n٥ ', en: 'Hi' }, theme: { hall: 'mint', curtain: 'peach' } });
+    var ro = c.mgr.roster(r.code);
+    assert.deepEqual(ro.card, { d: '2026-11-03', ar: 'سطر١\nbسطر٢/b\n٣\n٤', en: 'Hi' }, 'max 4 lines, no tags');
+    assert.deepEqual(ro.theme, { hall: 'mint', curtain: 'peach' });
+    var b = c.mgr.createRoom({ girlName: 'ص', card: { d: 'x', ar: '', en: '' }, theme: { hall: 'neon', curtain: 'x' } });
+    assert.equal(c.mgr.roster(b.code).card, null, 'empty card = the default template');
+    assert.deepEqual(c.mgr.roster(b.code).theme, { hall: 'pink', curtain: 'same' });
+    var data = JSON.parse(JSON.stringify(c.mgr.serialize(r.code)));
+    var m2 = createRoomManager({ now: function () { return c.t.now; } });
+    assert.equal(m2.restore(data).ok, true);
+    assert.deepEqual(m2.roster(r.code).theme, { hall: 'mint', curtain: 'peach' });
+    assert.equal(m2.roster(r.code).card.d, '2026-11-03');
 });
 
 test('restore refuses rooms long past their end and bad schedules', function () {
     var s = schedRoom(); girlIn(s);
     var data = JSON.parse(JSON.stringify(s.mgr.serialize(s.code)));
-    s.c.t.now = s.start + 60 * MIN + 49 * 3600000;
+    s.c.t.now = s.start + 4 * 60 * MIN + 49 * 3600000;
     assert.equal(createRoomManager({ now: function () { return s.c.t.now; } }).restore(data).err, 'expired');
-    var bad = JSON.parse(JSON.stringify(data)); bad.sched.durationMin = 'x';
+    var bad = JSON.parse(JSON.stringify(data)); bad.sched.writeMin = 'x';
     assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(bad).err, 'bad');
     var nul = JSON.parse(JSON.stringify(data)); nul.players.push(null);
     assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(nul).err, 'bad');
@@ -949,19 +958,20 @@ test('chars setting defaults to rig, host can switch, roster carries it, seriali
     assert.equal(c2.mgr.roster(r2.code).chars, 'classic');
 });
 
-test('last 58.5s (outro song): outro from any phase after the reveal; only the girl walks (to the door), guests stay put', function () {
+test('outro (58.5s song) comes right after the free dance; only the girl walks (to the door), guests stay put', function () {
     var s = schedRoom(), g = girlIn(s);
     s.at(s.start - 15 * MIN);
     var gs = [0, 1, 2, 3].map(function (i) { return s.mgr.join(s.code, { name: 'ضيف' + i }); });
     s.at(s.start); settle(s);
-    var end = s.start + 60 * MIN;
-    s.at(end - 58501); settle(s);
+    for (var k = 0; k < 20 && s.ph() !== 'free'; k++) s.mgr.skip(s.code, s.ph());
+    var fr = s.mgr.phaseOf(s.code);
+    s.at(fr.until - 1); settle(s);
     assert.notEqual(s.ph(), 'outro');
     var before = s.mgr.getRoom(s.code).players.filter(function (p) { return p.role === 'guest'; }).map(function (p) { return [p.n, p.x, p.z]; });
-    s.at(end - 58500); settle(s);
+    s.at(fr.until); settle(s);
     assert.equal(s.ph(), 'outro');
-    var ph = s.mgr.phaseOf(s.code);
-    assert.equal(ph.until, end, 'outro lasts exactly until the end');
+    var ph = s.mgr.phaseOf(s.code), end = fr.until + 58500;
+    assert.equal(ph.until, end, 'outro lasts its song');
     var girlN = s.mgr.getRoom(s.code).players.find(function (p) { return p.role === 'girl'; }).n;
     assert.deepEqual(ph.walk[girlN], [0, 45]);
     before.forEach(function (b) { assert.deepEqual(ph.walk[b[0]], [b[1], b[2]], 'guest ' + b[0] + ' stays'); });
@@ -969,11 +979,11 @@ test('last 58.5s (outro song): outro from any phase after the reveal; only the g
     assert.equal(s.ph(), 'ended');
 });
 
-test('no outro when the party never started (still in the lobby at the end)', function () {
+test('no outro when the party never started (still in the lobby at the safety cap)', function () {
     var s = schedRoom(); s.at(s.start - 15 * MIN);
-    s.at(s.start + 60 * MIN - 20000); settle(s);
+    s.at(s.start + 4 * 60 * MIN - 20000); settle(s);
     assert.equal(s.ph(), 'lobby');
-    s.at(s.start + 60 * MIN); settle(s);
+    s.at(s.start + 4 * 60 * MIN); settle(s);
     assert.equal(s.ph(), 'ended');
 });
 

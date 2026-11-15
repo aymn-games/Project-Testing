@@ -71,6 +71,7 @@ export function mountHall(el, opts = {}) {
   const add = (m, shadow) => { if (shadow) m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
   const mesh = (geo, mat, x, y, z, shadow, parent) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); if (shadow) m.castShadow = m.receiveShadow = true; (parent || scene).add(m); return m; };
   const dummy = new T.Object3D();
+  const curtainMats = new Set(); // خامات الستائر (ثيم الستارة لحاله — setTheme)
   const setInst = (im, i, p) => {
     dummy.position.set(p.x, p.y, p.z); dummy.rotation.set(p.rx || 0, p.ry || 0, p.rz || 0);
     const s = p.s == null ? 1 : p.s; Array.isArray(s) ? dummy.scale.set(s[0], s[1], s[2]) : dummy.scale.setScalar(s);
@@ -342,7 +343,7 @@ export function mountHall(el, opts = {}) {
   const curtGeo = new T.PlaneGeometry(6, HALL.h - STAGE.h - .3, 36, 30), cp = curtGeo.attributes.position;
   for (let i = 0; i < cp.count; i++) { const x = cp.getX(i), y = cp.getY(i), pinch = 1 - .45 * Math.exp(-((y + 2) ** 2) / 6); cp.setX(i, x * pinch); cp.setZ(i, Math.sin(x * 3.4) * .3 * (0.6 + pinch * .4)); }
   curtGeo.computeVertexNormals();
-  const curtMat = std('#f6b4cb', { roughness: .45, side: T.DoubleSide, metalness: .05 });
+  const curtMat = std('#f6b4cb', { roughness: .45, side: T.DoubleSide, metalness: .05 }); curtainMats.add(curtMat);
   for (const sd of [-1, 1]) {
     const c = mesh(curtGeo, curtMat, sd * 17.6, STAGE.h + (HALL.h - STAGE.h - .3) / 2, -HZ + .7, true);
     mesh(new T.TorusGeometry(.8, .12, 8, 20), gold, sd * 17.6, STAGE.h + (HALL.h - STAGE.h - .3) / 2 - 2, -HZ + 1);
@@ -686,7 +687,7 @@ export function mountHall(el, opts = {}) {
   // --- ستارة المنصة الكبيرة (نصين ينسحبون للأطراف) ---
   const CURT_W = STAGE.w / 2 + .6, CURT_H = 12.8, curtains = [];
   {
-    const vel = std('#b23c6c', { roughness: .55, side: T.DoubleSide, metalness: .08 });
+    const vel = std('#b23c6c', { roughness: .55, side: T.DoubleSide, metalness: .08 }); curtainMats.add(vel);
     for (const sd of [-1, 1]) {
       const g = new T.PlaneGeometry(CURT_W, CURT_H, 48, 1), pa = g.attributes.position;
       for (let i = 0; i < pa.count; i++) pa.setZ(i, Math.sin(pa.getX(i) * 3.2) * .22);
@@ -1047,6 +1048,7 @@ export function mountHall(el, opts = {}) {
   let party = 0, partyTarget = 0, envMats = null;
   // الإضاءة الخافتة (أغنية الرقص الحر الهادية): الليزر يطفي، البقع والانعكاسات أبطأ وأخفت وألوانها دافية، والقاعة أعتم
   let soft = 0, softTarget = 0, spotT = 0, discoT = 0; const warm = new T.Color();
+  let themeHue = 0, themeSat = 1; // ثيم القاعة (setTheme): لفّة لون الأنوار الملونة وتشبّعها
   const CEIL_A = new T.Color('#dcbccc'), CEIL_B = new T.Color('#3b2342');
   const FOG_A = new T.Color('#e7c0d2'), FOG_B = new T.Color('#24102a'), WIN_A = new T.Color('#ffeaf2'), WIN_B = new T.Color('#5d4373');
   const lerp = (a, b, k) => a + (b - a) * k, col = new T.Color(), v3 = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
@@ -1066,7 +1068,7 @@ export function mountHall(el, opts = {}) {
     winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
     upMat.opacity = lerp(.45, .95, k) * (1 - .45 * soft);
     // ألوان الإضاءة الجدارية: ثابتة بالاستقبال، موجة وردي↔بنفسجي بالحفل
-    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95 * MOOD_SAT, .62); warm.setHSL(.97 + Math.sin(t * .22 + i * .9) * .04, .75 * MOOD_SAT, .55); col.lerp(warm, soft); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
+    upBase.forEach((c0, i) => { col.setHSL(.86 + themeHue + Math.sin(t * .9 + i * .7) * .09, .95 * MOOD_SAT * themeSat, .62); warm.setHSL(.97 + Math.sin(t * .22 + i * .9) * .04, .75 * MOOD_SAT, .55); col.lerp(warm, soft); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
     uplights.instanceColor.needsUpdate = true;
     spots.visible = beamCore.visible = beamGlow.visible = dots.visible = refl.visible = discoHalo.visible = on;
     disco.position.y = lerp(HALL.h + 2, 12.4, Math.min(1, k * 1.3)); disco.rotation.y = discoT;
@@ -1075,7 +1077,7 @@ export function mountHall(el, opts = {}) {
     spotMat.opacity = .5 * k * (1 - .6 * soft);
     for (let i = 0; i < SPOTS; i++) {
       setInst(spots, i, { x: Math.sin(spotT * .37 + i * 2.1) * 18, y: .06 + i * .002, z: -6 + Math.sin(spotT * .29 + i * 1.3) * 24, rx: -Math.PI / 2, s: 5 + Math.sin(spotT + i) + soft * 2 });
-      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9 * MOOD_SAT, .6); warm.setHSL(.04 + (i % 3) * .03, .7 * MOOD_SAT, .6); col.lerp(warm, soft); spots.setColorAt(i, col);
+      col.setHSL(.8 + themeHue + ((i * .07 + t * .03) % .22), .9 * MOOD_SAT * themeSat, .6); warm.setHSL(.04 + (i % 3) * .03, .7 * MOOD_SAT, .6); col.lerp(warm, soft); spots.setColorAt(i, col);
     }
     spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
     // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
@@ -1486,8 +1488,72 @@ export function mountHall(el, opts = {}) {
     r.dispose(); r.domElement.remove();
   }
 
+  // ---------- ثيم الحفلة (setTheme): درجات الوردي بالقاعة تتبدّل لدرجة ناعمة ثانية، والستارة لحالها ----------
+  // يلف لون الأجزاء الوردية/البنفسجية بس (الذهبي والأبيض والخشب على حالهم): ألوان الخامات، والصور المرسومة،
+  // وتدرّج الجدران (ألوان الرؤوس)، والأنوار الملونة. الأصل محفوظ، فالتبديل ينعاد بأي ترتيب. أول تبديل بس
+  // يجمع القطع (القاعة كما انبنت، بدون الشخصيات اللي تنضاف بعدين)، والوردي الافتراضي ما يكلّف شي.
+  // [لفّة اللون بالدرجات، التشبّع] — نفس المفاتيح في backend/party/party-rooms.js THEMES
+  const THEMES = { pink: [0, 1], lavender: [-55, .85], sky: [-140, .7], mint: [-175, .6], peach: [50, .8] };
+  const hallObjs = scene.children.slice();
+  const isPink = (h, s) => s > .1 && (h >= .79 || h < .042); // h من 0 لـ 1 (285° ← 15°)
+  const rgb2hsl = (r, g, b, o) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn; let h = 0, s = 0;
+    if (d > 1e-6) { s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; }
+    o[0] = h; o[1] = s; o[2] = l; return o; };
+  const hue2 = (p, q, t) => { t = (t % 1 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  const hsl2rgb = (h, s, l, o) => { if (!s) { o[0] = o[1] = o[2] = l; return o; } const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    o[0] = hue2(p, q, h + 1 / 3); o[1] = hue2(p, q, h); o[2] = hue2(p, q, h - 1 / 3); return o; };
+  let themeReg = null, themeKey = 'pink|pink';
+  function collectTheme() {
+    const reg = { hall: { colors: [], arrays: [], canvases: [] }, curtain: { colors: [], arrays: [], canvases: [] } }, seen = new Set(), hs = {}, px = [0, 0, 0];
+    const regColor = (part, c) => { if (!c || seen.has(c)) return; seen.add(c); c.getHSL(hs, T.SRGBColorSpace); if (isPink(hs.h, hs.s)) reg[part].colors.push({ c, o: c.clone() }); };
+    const regArray = (part, a) => { if (!a || seen.has(a) || !(a.array instanceof Float32Array) || a.itemSize < 3) return; seen.add(a); reg[part].arrays.push({ a, o: a.array.slice() }); };
+    const regCanvas = (part, t) => {
+      if (seen.has(t)) return; seen.add(t);
+      const cv = t.image; if (!(cv instanceof HTMLCanvasElement) || t === nameTex || t === wishTex) return;
+      try {
+        const g = cv.getContext('2d'), d = g.getImageData(0, 0, cv.width, cv.height), a = d.data; let any = false;
+        for (let i = 0; i < a.length && !any; i += 16) { rgb2hsl(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255, px); any = a[i + 3] > 0 && isPink(px[0], px[1]); }
+        if (any) reg[part].canvases.push({ t, g, o: d });
+      } catch (e) { /* خامة ما تنقرا */ }
+    };
+    hallObjs.forEach(root => root.traverse(o => {
+      if (o.isLight) { regColor('hall', o.color); return; }
+      for (const m of [].concat(o.material || [])) {
+        const part = curtainMats.has(m) ? 'curtain' : 'hall';
+        regColor(part, m.color); regColor(part, m.emissive); if (m.map) regCanvas(part, m.map);
+      }
+      if (o.geometry && o.geometry.attributes) regArray('hall', o.geometry.attributes.color);
+      if (o.instanceColor) regArray('hall', o.instanceColor);
+    }));
+    [scene.background, scene.fog.color, CEIL_A, CEIL_B, FOG_A, FOG_B, WIN_A, WIN_B, ...upBase, ...PET_C, ...GLI_C].forEach(c => regColor('hall', c));
+    return reg;
+  }
+  function applyTheme(part, th) {
+    const dh = th[0] / 360, ds = th[1], hs = {}, k = new T.Color(), px = [0, 0, 0];
+    const shift = (r, g, b) => { k.setRGB(r, g, b); k.getHSL(hs, T.SRGBColorSpace); if (isPink(hs.h, hs.s)) k.setHSL(hs.h + dh, hs.s * ds, hs.l, T.SRGBColorSpace); return k; };
+    part.colors.forEach(({ c, o }) => c.copy(shift(o.r, o.g, o.b)));
+    part.arrays.forEach(({ a, o }) => { const n = a.itemSize, d = a.array; for (let i = 0; i + 2 < o.length; i += n) { shift(o[i], o[i + 1], o[i + 2]); d[i] = k.r; d[i + 1] = k.g; d[i + 2] = k.b; } a.needsUpdate = true; });
+    part.canvases.forEach(({ t, g, o }) => {
+      const out = new ImageData(new Uint8ClampedArray(o.data), o.width, o.height), a = out.data;
+      if (dh || ds !== 1) for (let i = 0; i < a.length; i += 4) {
+        if (!a[i + 3]) continue;
+        rgb2hsl(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255, px); if (!isPink(px[0], px[1])) continue;
+        hsl2rgb(px[0] + dh, px[1] * ds, px[2], px); a[i] = px[0] * 255; a[i + 1] = px[1] * 255; a[i + 2] = px[2] * 255;
+      }
+      g.putImageData(out, 0, 0); t.needsUpdate = true;
+    });
+  }
+  // t = {hall, curtain} — curtain «same» (أو فاضي) = مثل القاعة
+  function setTheme(t) {
+    const h = THEMES[t && t.hall] ? t.hall : 'pink', c = THEMES[t && t.curtain] ? t.curtain : h, key = h + '|' + c;
+    if (key === themeKey) return; themeKey = key;
+    if (!themeReg) themeReg = collectTheme();
+    applyTheme(themeReg.hall, THEMES[h]); applyTheme(themeReg.curtain, THEMES[c]);
+    themeHue = THEMES[h][0] / 360; themeSat = THEMES[h][1];
+  }
+
   return {
-    stop, setName, setMode, setParty, setFollow, getLocal, floorAt, scene, camera: cam,
+    stop, setName, setMode, setParty, setFollow, getLocal, floorAt, scene, camera: cam, setTheme,
     setZone: z => { zone = ZONES[z] ? z : 'hall'; resolve(); },
     setCurtain: (k, instant) => { curtainT = k; if (instant) curtainK = k; },
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
