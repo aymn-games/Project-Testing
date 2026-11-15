@@ -36,6 +36,8 @@ var MAX_MSG = 8 * 1024;
 // فيوصله الشات متأخر أكثر وأكثر. الحين لو عنده تحديثات ما انرسلت بعد نتخطاه (اللي بعدها يحمل كل شي)،
 // ولو تكدس عليه كثير أو ما وصلنا منه شي مدة طويلة (العميل يرسل ping كل 8 ثواني، والمتصفح بالخلفية ممكن يأخرها لدقيقة) نقفل اتصاله ويرجع باتصال جديد.
 var SLOW_BYTES = 256 * 1024, STUCK_BYTES = 4 * 1024 * 1024, SILENT_MS = 75 * 1000;
+// أقل فاصل بين تحديثين وقت النشاط (شات/اختيارات): يجمع التغييرات بدل نسخة مع كل رسالة. وحالة ما تغيّرت ما تنعاد إلا كل HEARTBEAT_MS
+var BURST_GAP_MS = 300, BIG_BURST_GAP_MS = 600, HEARTBEAT_MS = 5000;
 
 var _rooms = {};
 var _clients = {};
@@ -92,16 +94,46 @@ function sendAvatars(room) {
     if (any) send(h, { t: 'avatars', map: map });
 }
 
+/**
+ * نسخة الحالة لكل طرف — بس لو تغيّر فيها شي من آخر مرة انرسلت له (أو مرت HEARTBEAT_MS).
+ * قبل كانت كل رسالة شات (حتى بشات المافيا/الأطباء السري) أو اختيار بالليل يرسل نسخة كاملة (10–20KB)
+ * لكل الجوالات لين 10 مرات بالثانية؛ مع مافيا/أطباء/محققين أكثر يكثر الشات السري والاختيارات،
+ * فالجوال على بيانات الجوال يتكدس عليه وينقطع («جاري إعادة الاتصال») والشات يعلق.
+ * الحين المواطن ما يوصله شي لما المافيا يكتبون بسرهم، والوقت يتزامن من ping/pong.
+ */
 function sendStates(room) {
     if (!room.game) return;
     var now = Date.now(), cache = {};
     roomClients(room).forEach(function (c) {
         if (!c.id || c.closed) return;
         if (backlogged(c)) return;
-        var v = cache[c.id] || (cache[c.id] = JSON.stringify({ t: 'state', G: room.game.view(c.id), now: now }));
-        try { c.socket.write(frame.encodeTextFrame(v)); } catch (e) { }
+        var e = cache[c.id];
+        if (!e) {
+            var vw = room.game.view(c.id), chat = vw.chat || [];
+            e = cache[c.id] = { chat: chat, ns: chat.map(function (m) { return m.n; }), rest: JSON.stringify(Object.assign({}, vw, { chat: undefined })), full: null };
+            e.key = e.rest + '|' + e.ns.join(',');
+        }
+        if (e.key === c.lastView && now - (c.lastViewAt || 0) < HEARTBEAT_MS) return;
+        var out = chatDelta(c, e);
+        if (out == null) out = (e.full || (e.full = JSON.stringify(Object.assign(JSON.parse(e.rest), { chat: e.chat })))) + '}';
+        try { c.socket.write(frame.encodeTextFrame('{"t":"state","now":' + now + ',"G":' + out)); c.lastView = e.key; c.lastViewAt = now; c.chatNs = e.ns; } catch (err) { }
     });
     room.lastSend = now; room.dirty = false;
+}
+
+/**
+ * الشات بالتحديثات: بدل ما نعيد آخر 120 رسالة مع كل تحديث (أغلب حجم التحديث)، نرسل الرسائل الجديدة بس (chatAdd)
+ * والجوال يضيفها على اللي عنده (mafia-net.js). يشتغل بس للصفحات اللي تدعمه (caps)، ولو اللي عند الجوال
+ * مو نفس اللي انرسل له (رسالة انحذفت من نظره، أو اتصال جديد) نرسل الشات كامل. يرجع نهاية الرسالة، أو null = كامل.
+ */
+function chatDelta(c, e) {
+    var prev = c.chatNs;
+    if (!c.chatDelta || !prev) return null;
+    var prevMax = prev.length ? prev[prev.length - 1] : 0, i = e.chat.length;
+    while (i > 0 && e.chat[i - 1].n > prevMax) i--;
+    if (i > prev.length) return null;
+    for (var j = 0; j < i; j++) if (e.ns[j] !== prev[prev.length - i + j]) return null;
+    return e.rest + ',"chatAdd":' + JSON.stringify(e.chat.slice(i)) + ',"chatLen":' + e.chat.length + ',"chatBase":' + prevMax + '}';
 }
 
 /** العميل عنده بيانات ما انرسلت بعد؟ نتخطاه هالمرة، ولو تكدس عليه كثير نقفل اتصاله (العميل يرجع لحاله). */
@@ -230,6 +262,9 @@ function onMessage(client, msg) {
     var t = msg && msg.t, room = client.code ? _rooms[client.code] : null;
 
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
+    // الصفحة تدعم الشات بالإضافات (chatAdd) — وresync لو اللي عندها ما يطابق: الشات الكامل بالتحديث الجاي
+    if (t === 'caps') { client.chatDelta = !!msg.chatDelta; return; }
+    if (t === 'resync') { client.chatNs = null; client.lastView = null; if (room) room.dirty = true; return; }
 
     if (t === 'schema') return send(client, { t: 'schema', schema: Settings.SCHEMA });
     if (t === 'host') {
@@ -374,7 +409,7 @@ function tickAll() {
         if (!room.game) return;
         try { room.game.tick(now); } catch (err) { logger.error('Mafia: tick error:', err); }
         // الرومات الكبيرة (لين 200 لاعب): نجمع التغييرات بدل ما نرسل نسخة لكل لاعب مع كل رسالة شات
-        var gap = now - room.lastSend, live = room.game.G.phase === 'dawn', minGap = room.players.length > 40 ? 500 : 0;
+        var gap = now - room.lastSend, live = room.game.G.phase === 'dawn', minGap = room.players.length > 40 ? BIG_BURST_GAP_MS : BURST_GAP_MS;
         if ((room.dirty && gap >= minGap) || gap >= (live ? LIVE_SEND_MS : IDLE_SEND_MS)) sendStates(room);
     });
 }

@@ -410,6 +410,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 12.94, avatarTopPct: 26.85, avatarWidthPct: 17.13, avatarHeightPct: 49.86,
             nameLeftPct: 34.25, nameTopPct: 45.60, nameWidthPct: 42.13, nameHeightPct: 18.61
         },
+        // إطاري "العنكبوت البنفسجي" (نسخة باسم "Essa" مطبوع + نسخة فاضية) —
+        // منح محدود. الأصل JPG 2000×691: الأول خلفيته بيضاء، والثاني فيه مربعات
+        // «شفافية» مرسومة. فُرّغت الخلفية والفتحة الدائرية والجيوب بين السلاسل
+        // وأرجل العنكبوت لشفافية حقيقية، وكُبّر بنفس النسبة لارتفاع 704 ووُسِّط
+        // على 2172×724. شعار Y يغطي أعلى الدائرة، فمربع الصورة = عرض الفتحة
+        // الشفافة مع أعلى الدائرة المقدّر من مركزها. اللوح أسود — اسم أبيض.
+        // [Essa] hole 188→624 × 193→600، الاسم مطبوع (الكلمة والتاج 1700→2030 ×
+        // 370→600، للتوسيط فقط)، content 10→714
+        'frame-essa.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 704,
+            avatarLeftPct: 8.66, avatarTopPct: 25.99, avatarWidthPct: 20.07, avatarHeightPct: 57.81,
+            nameLeftPct: 78.27, nameTopPct: 51.14, nameWidthPct: 15.19, nameHeightPct: 32.67,
+            printedName: true
+        },
+        // [الفاضي] hole 226→658 × 212→613، name 1070→1940 × 370→550، content 10→714
+        'frame-purple-spider.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 704,
+            avatarLeftPct: 10.41, avatarTopPct: 28.69, avatarWidthPct: 19.89, avatarHeightPct: 56.96,
+            nameLeftPct: 49.26, nameTopPct: 51.14, nameWidthPct: 40.06, nameHeightPct: 25.57
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
@@ -461,6 +481,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 695,
             avatarLeftPct: 9.02, avatarTopPct: 19.42, avatarWidthPct: 20.40, avatarHeightPct: 63.17,
             nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
+        },
+        // [الجوكر] إطار متحرك (SVG) على المقاس المعتمد 2172×724 — الرسم 4 طبقات
+        // من صاحب المنصة، مصفوفة وشفافة (assets/frame-src/joker-circus/)،
+        // والحركة نفس مقطعه: الحلقة تطلع → اللوح ينسحب من خلفها → الجواهر →
+        // الزينة والجوكر الكبير ينفجرون مع نجوم ونفخات دخان كرتونية من زوايا
+        // الحلقة الأربع (خطوط سرعة ثم ذيل نقاط) (~3.4ث)، بعدها لمبات ولمعة.
+        // مقاس من الطبقات نفسها: hole = دائرة مركزها 517,368 ونصف قطرها 193
+        // (324→710 × 175→561)، name = المخمل بين الجوهرتين والخالي من الزينة
+        // (999→1717 × 317→420)، content 0→724. لوح كحلي — اسم أبيض افتراضي.
+        'frame-joker-circus.svg': {
+            canvasW: 2172, canvasH: 724, contentTop: 0, contentHeight: 724,
+            avatarLeftPct: 14.92, avatarTopPct: 24.17, avatarWidthPct: 17.77, avatarHeightPct: 53.31,
+            nameLeftPct: 45.99, nameTopPct: 43.78, nameWidthPct: 33.06, nameHeightPct: 14.23
         },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,

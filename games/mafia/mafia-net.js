@@ -52,6 +52,7 @@
             sock.onopen = function () {
                 if (sock !== ws) return;
                 tries = 0; lastRx = Date.now(); if (onStatus) onStatus(true);
+                chat = null; sock.send(JSON.stringify({ t: 'caps', chatDelta: true }));
                 if (onOpen) onOpen();
                 queue.splice(0).forEach(function (m) { sock.send(m); });
                 clearInterval(pingT); pingT = setInterval(function () {
@@ -65,11 +66,23 @@
                 lastRx = Date.now(); clearTimeout(probeT); probeT = null;
                 var m; try { m = JSON.parse(e.data); } catch (err) { return; }
                 if (m && (m.t === 'state' || m.t === 'pong')) noteServerNow(m.now);
+                if (m && m.t === 'state' && m.G && !mergeChat(m)) return;
                 if (m && m.t === 'pong') return;
                 try { onMessage(m); } catch (err) { console.error(err); }
             };
             sock.onclose = function () { if (sock !== ws) return; lost(); retry(); };
             sock.onerror = function () { };
+        }
+        // الشات بالتحديثات: الخادم يرسل الرسائل الجديدة بس (chatAdd) ونضيفها على اللي عندنا، فالصفحات تستلم G.chat كامل
+        // مثل قبل. لو اللي عندنا ما يطابق (chatBase) نطلب الشات كامل (resync) ونتجاهل هالتحديث.
+        var chat = null;
+        function mergeChat(m) {
+            if (!m.chatAdd) { chat = m.G.chat || []; return true; }
+            var last = chat && chat.length ? chat[chat.length - 1].n : 0;
+            if (!chat || last !== m.chatBase) { chat = null; send({ t: 'resync' }); return false; }
+            chat = m.chatLen ? chat.concat(m.chatAdd).slice(-m.chatLen) : [];
+            m.G.chat = chat;
+            return true;
         }
         // الاتصال انقطع: نوقف المؤقتات ونرجّع رسائل الشات اللي يمكن ضاعت لطابور الإرسال
         function lost() {
