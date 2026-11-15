@@ -263,6 +263,10 @@ const state = {
   roomData: null
 };
 
+// حضور البث (js/agp-live-presence.js): بس المضيف وهو داخل غرفة يطلع
+// بقائمة «البثوث الشغّالة» — نفس الصفحة يفتحها اللاعبين بعد.
+if(window.AGPLivePresence) window.AGPLivePresence.setActive(() => state.isHost && !!state.roomCode);
+
 function persistSession(){
   sessionStorage.setItem("imp_roomCode", state.roomCode || "");
   sessionStorage.setItem("imp_playerId", state.playerId || "");
