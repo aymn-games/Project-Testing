@@ -308,6 +308,31 @@
 
   /* ===================================================== القائمة الجانبية */
 
+  /* شريط الأقسام بالجوال يسحب أفقياً: سهم بطرف الشريط (مع تلاشي) يبيّن إن فيه أقسام
+     أكثر لليسار، وسهم يرجّع لليمين بعد السحب. الضغط عليها يسحب الشريط بنعومة. */
+  function updateNavHints() {
+    var side = document.querySelector('.pf-side'), nav = $('#pfSideNav');
+    if (!side || !nav) return;
+    if (!S.navHints) {
+      var chev = function (d) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + d + '" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; };
+      var more = h('button', { type: 'button', class: 'pf-nav-hint pf-nav-more', 'aria-label': 'أقسام أكثر', tabindex: '-1' });
+      more.innerHTML = '<span>' + chev('M14.5 6 8.5 12l6 6') + '</span>';
+      var back = h('button', { type: 'button', class: 'pf-nav-hint pf-nav-back', 'aria-label': 'رجوع لأول الأقسام', tabindex: '-1' });
+      back.innerHTML = '<span>' + chev('M9.5 6l6 6-6 6') + '</span>';
+      // RTL: السحب لليسار = scrollLeft بالسالب
+      more.addEventListener('click', function () { nav.scrollBy({ left: -nav.clientWidth * 0.7, behavior: 'smooth' }); });
+      back.addEventListener('click', function () { nav.scrollBy({ left: nav.clientWidth * 0.7, behavior: 'smooth' }); });
+      side.appendChild(more); side.appendChild(back);
+      nav.addEventListener('scroll', updateNavHints, { passive: true });
+      window.addEventListener('resize', updateNavHints);
+      S.navHints = true;
+    }
+    var max = nav.scrollWidth - nav.clientWidth, pos = Math.abs(nav.scrollLeft);
+    var mobile = window.innerWidth < 900 && max > 4;
+    side.classList.toggle('can-more', mobile && pos < max - 4);
+    side.classList.toggle('can-back', mobile && pos > 4);
+  }
+
   function renderSideNav() {
     var nav = $('#pfSideNav');
     nav.innerHTML = '';
@@ -336,6 +361,7 @@
       });
       nav.appendChild(grp);
     });
+    updateNavHints();
   }
 
   /* ===================================================== التنقل */
@@ -364,6 +390,7 @@
     }
     var active = document.querySelector('.pf-side-item.on');
     if (active && active.scrollIntoView && window.innerWidth < 900) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+    setTimeout(updateNavHints, 350);
     if (opts.scroll && window.innerWidth < 900) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 

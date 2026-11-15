@@ -143,6 +143,7 @@
   .pf-side-item.on{color:#fff;background:linear-gradient(135deg,rgba(var(--accent-rgb),.16),rgba(var(--accent-rgb),.05));
     border-color:rgba(var(--accent-rgb),.32);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 12px 26px -18px rgba(var(--accent-rgb),.7)}
   .pf-side-item.on .pf-side-ic{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.02) 55%),rgba(var(--accent-rgb),.3);border-color:rgba(var(--accent-rgb),.6);box-shadow:0 1px 0 rgba(255,255,255,.2) inset}
+  .pf-nav-hint{display:none}
   .pf-side-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pf-side-count{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--orchid);color:#1d0a19;font-size:12px;font-weight:800;line-height:22px;text-align:center;
     box-shadow:0 0 0 3px rgba(224,112,196,.18)}
@@ -593,8 +594,9 @@
   .pf-item-flag{position:absolute;top:6px;left:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--gold);
     background:rgba(5,5,8,.7);border:1px solid rgba(232,216,166,.35)}
   .pf-item-flag .pf-ic{width:14px;height:14px}
-  .pf-item-ctl{display:flex;gap:6px}
-  .pf-item-ctl .pf-btn{flex:1;padding:0 8px}
+  /* أزرار البطاقة: لو ما وسعت بسطر واحد تنزل لسطر ثاني وتاخذ عرض البطاقة (ما تطلع برا) */
+  .pf-item-ctl{display:flex;flex-wrap:wrap;gap:6px}
+  .pf-item-ctl .pf-btn{flex:1 1 max-content;min-width:0;padding:0 10px;white-space:nowrap}
   .pf-item-ctl .pf-btn .pf-ic{width:13px;height:13px}
   .pf-item-ctl.three{flex-wrap:wrap}
   .pf-item-ctl.three .pf-btn{flex:1 1 40%}
@@ -714,7 +716,10 @@
   /* آيباد وجوال: القائمة شريط أزرار صغيرة يتمرر أفقياً */
   @media (max-width:899px){
     :root{--canvas-pad:12px;--gap:10px}
-    .pf-shell{grid-template-columns:minmax(0,1fr);padding-top:10px}
+    /* flex بدل grid: الـsticky داخل grid محصور بصفّه، فشريط الأقسام كان يطلع مع السكرول */
+    .pf-shell{display:flex;flex-direction:column;padding-top:10px}
+    .pf-canvas{width:100%;min-width:0}
+    .pf-side{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
     .pf-side{position:sticky;top:calc(var(--top-h) + 6px);z-index:20;max-height:none;overflow:visible;padding:5px;border-radius:14px;background:rgba(10,8,17,.92)}
     #pfSideNav{display:flex;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-padding-inline:8px}
     #pfSideNav::-webkit-scrollbar{display:none}
@@ -725,6 +730,18 @@
     .pf-side-ic{width:24px;height:24px;border-radius:7px}
     .pf-side-ic .pf-ic{width:13px;height:13px}
     .pf-side-count{min-width:18px;height:18px;line-height:18px;font-size:10.5px;padding:0 5px}
+    /* أسهم السحب: تلاشي بطرف الشريط + زر دائري، تظهر بس لو فيه أقسام بذاك الاتجاه */
+    .pf-nav-hint{position:absolute;top:0;bottom:0;z-index:3;width:56px;display:flex;align-items:center;padding:0 7px;border:0;cursor:pointer;color:#fff;
+      opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+    .pf-nav-hint span{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
+      background:rgba(var(--accent-rgb),.35);border:1px solid rgba(var(--accent-rgb),.7);box-shadow:0 4px 14px -4px rgba(var(--accent-rgb),.8)}
+    .pf-nav-hint svg{width:16px;height:16px}
+    .pf-nav-more{left:0;justify-content:flex-start;border-radius:14px 0 0 14px;background:linear-gradient(to right,rgba(10,8,17,.98) 45%,rgba(10,8,17,0))}
+    .pf-nav-back{right:0;justify-content:flex-end;border-radius:0 14px 14px 0;background:linear-gradient(to left,rgba(10,8,17,.98) 45%,rgba(10,8,17,0))}
+    .pf-side.can-more .pf-nav-more,.pf-side.can-back .pf-nav-back{opacity:1;pointer-events:auto}
+    .pf-side.can-more .pf-nav-more span{animation:pf-nudge 1.6s ease-in-out infinite}
+    @keyframes pf-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(-4px)}}
+    @media (prefers-reduced-motion:reduce){.pf-side.can-more .pf-nav-more span{animation:none}}
   }
   @media (max-width:700px){
     :root{--top-h:54px;--pad:13px;--ctl:36px;--ctl-sm:30px}
@@ -798,6 +815,7 @@
     .pf-modebar-txt small{display:none}
     .pf-modebar-dot{width:14px;height:14px}
     .pf-item-ctl{flex-direction:column}
+    .pf-item-ctl .pf-btn{width:100%}
     .pf-item-ctl.three .pf-btn,.pf-item-ctl.three .pf-btn:first-child{flex:none;width:100%}
     .pf-wallet{gap:12px}
     .pf-wallet-coin{width:56px;height:56px}
@@ -1012,6 +1030,8 @@
     .pf-side-item{min-height:46px;font-size:16.5px;gap:12px}
     .pf-side-ic{width:34px;height:34px;border-radius:10px}
     .pf-side-ic .pf-ic{width:18px;height:18px}
+    .pf-items-cards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+    .pf-item-ctl .pf-btn{height:40px}
   }
   @media (min-width:900px) and (max-width:1199px){
     :root{--side-w:232px}
