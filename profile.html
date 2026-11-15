@@ -883,6 +883,141 @@
      يتضاعف مع تكبير الشاشات العريضة (store/store-scale.js). الجوال بدون تكبير. */
   @media (min-width:900px){ body{zoom:1.12} }
   @media (min-width:700px) and (max-width:899px){ body{zoom:1.06} }
+
+  /* خطوط أوضح على الكمبيوتر والآيباد (طلب صاحب المنصة: «اللي من بعيد ما يشوف»):
+     كل الخطوط الصغيرة أكبر ~18% وما فيه أقل من 14px، والعناوين والأرقام الكبيرة ~10%.
+     القائمة الجانبية أعرض وخطها قريب من حجم أزرارها. الجوال بدون تغيير.
+     (مولّد من قواعد font-size أعلاه — أي حجم جديد فوق، عدّله هنا بنفس النسبة.) */
+  @media (min-width:900px){
+    body{font-size:16.5px}
+    .pf-brand-t{font-size:16.5px}
+    .pf-nav a{font-size:16.5px}
+    .pf-side-label{font-size:14px}
+    .pf-side-item{font-size:16px}
+    .pf-side-count{font-size:14px}
+    .pf-avatar-fallback{font-size:33px}
+    .pf-avatar.editable::after{font-size:14px}
+    .pf-name{font-size:24px}
+    .pf-meta{font-size:15.5px}
+    .pf-mode button{font-size:16px}
+    .pf-content-title{font-size:20px}
+    .pf-panel-title{font-size:17.5px}
+    .pf-panel-sub{font-size:15.5px}
+    .pf-muted{font-size:16px}
+    .pf-hint{font-size:16px}
+    .pf-link{font-size:16px}
+    .pf-empty{font-size:16.5px}
+    .pf-kv{font-size:16px}
+    .pf-kv-2 .pf-kv-k{font-size:15.5px}
+    .pf-ring-pct{font-size:19px}
+    .pf-lead-l{font-size:16.5px}
+    .pf-lead-v{font-size:35px}
+    .pf-lead-v .pf-unit{font-size:17.5px}
+    .pf-lead-lvl{font-size:15px}
+    .pf-lead-n{font-size:15.5px}
+    .pf-kpi-l{font-size:15.5px}
+    .pf-kpi-v{font-size:23px}
+    .pf-unit{font-size:15.5px}
+    .pf-kpi-n{font-size:14px}
+    .pf-btn{font-size:16px}
+    .pf-btn-sm{font-size:15px}
+    .pf-btn-lg{font-size:17.5px}
+    .pf-pill{font-size:15px}
+    .pf-chip{font-size:15.5px}
+    .pf-tool-title{font-size:19px}
+    .pf-tool-desc{font-size:17px}
+    .pf-notice{font-size:16px}
+    .pf-sub-price{font-size:14px}
+    .pf-soon-chip{font-size:14px}
+    .pf-sub-log li{font-size:16px}
+    .pf-sub-log-s{font-size:15px}
+    .pf-sub-log-ref{font-size:14px}
+    .pf-sub-log-d{font-size:15px}
+    .pf-item-glyph{font-size:64px}
+    .pf-item-name{font-size:15.5px}
+    .pf-frame-name{font-size:17.5px}
+    .pf-label{font-size:16.5px}
+    .pf-input{font-size:17.5px}
+    .pf-field-help{font-size:15.5px}
+    .pf-msg{font-size:16.5px}
+    .pf-code-v{font-size:19px}
+    .pf-code-meta{font-size:15.5px}
+    .pf-code-uses{font-size:16.5px}
+    .pf-steps{font-size:15.5px}
+    .pf-tt-title{font-size:20px}
+    .pf-tt-handle{font-size:16.5px}
+    .pf-tt-sub{font-size:17px}
+    .pf-checks li{font-size:16.5px}
+    .pf-rc-av{font-size:16.5px}
+    .pf-lock-t{font-size:20px}
+    .pf-lock-d{font-size:17px}
+    .agp-ed-title{font-size:21px}
+    .agp-ed-x{font-size:22px}
+    .agp-ed-btn{font-size:16.5px}
+    .agp-ed-hint{font-size:15.5px}
+    .agp-ed-label{font-size:16.5px}
+    .agp-ed-count{font-size:14px}
+    .agp-ed-input{font-size:19px}
+    .agp-ed-msg{font-size:16.5px}
+    .agp-ed-toast{font-size:16.5px}
+    .pf-avatar img,.pf-avatar-fallback{font-size:26.5px}
+    .pf-tt-row .pf-tt-title{font-size:17px}
+    .pf-tt-row .pf-tt-handle{font-size:15px}
+    .pf-danger-row{font-size:15px}
+    .pf-more > summary{font-size:16px}
+    .pf-seg button{font-size:15.5px}
+    .pf-seg-n{font-size:14px}
+    .pf-lrow-t{font-size:16px}
+    .pf-lrow-s{font-size:14px}
+    .pf-lrow-plain .pf-lrow-s{font-size:15.5px}
+    .pf-row-msg{font-size:14px}
+    .pf-av{font-size:15.5px}
+    .pf-iconbtn{font-size:21px}
+    .pf-code-row .pf-code-v{font-size:17px}
+    .pf-uses{font-size:14px}
+    .pf-invite{font-size:15.5px}
+    .pf-input-sm{font-size:16.5px}
+    .pf-sheet-sub{font-size:15.5px}
+    .pf-sheet-note{font-size:14px}
+    .pf-modebar-txt b{font-size:17.5px}
+    .pf-modebar-txt small{font-size:14px}
+    .pf-wallet-v{font-size:33px}
+    .pf-wallet-sm .pf-wallet-v{font-size:24px}
+    .pf-how-t{font-size:17px}
+    .pf-how-d{font-size:15px}
+    .pf-day-n{font-size:14px}
+    .pf-day-s{font-size:14px}
+    .pf-plat-name{font-size:20px}
+    .pf-plat-line{font-size:15px}
+    .pf-plat-btn{font-size:16px}
+    .pf-sub-dial-n{font-size:44px}
+    .pf-sub-dial-u{font-size:15px}
+    .pf-sub-dial-h{font-size:14px}
+    .pf-sub-plan{font-size:20px}
+    .pf-sub-end{font-size:15px}
+    .pf-menu button{font-size:16px}
+    .pf-menu-h{font-size:14px}
+    .pf-more-btn{font-size:22px}
+    .pf-tchip{font-size:16px}
+    .pf-tchip .pf-av{font-size:14px}
+    .pf-msg-row .pf-av{font-size:14px}
+    .pf-bubble-who{font-size:15px}
+    .pf-bubble-t{font-size:16.5px}
+    .pf-bubble-at{font-size:14px}
+    .pf-crole{font-size:14px}
+    .pf-chat-muted{font-size:15.5px}
+    .pf-chat-input{font-size:16.5px}
+    :root{--side-w:268px}
+    .pf-side-label{font-size:13.5px;padding:4px 8px 6px}
+    .pf-side-item{min-height:46px;font-size:16.5px;gap:12px}
+    .pf-side-ic{width:34px;height:34px;border-radius:10px}
+    .pf-side-ic .pf-ic{width:18px;height:18px}
+  }
+  @media (min-width:900px) and (max-width:1199px){
+    :root{--side-w:232px}
+    .pf-side-item{font-size:15.5px;gap:10px}
+    .pf-side-ic{width:30px;height:30px}
+  }
 </style>
 </head>
 <body class="pf-loading" data-pf-mode="player">
