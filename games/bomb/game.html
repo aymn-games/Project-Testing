@@ -159,7 +159,7 @@ input:focus{outline:none}
                 <span style="display:flex;align-items:center;gap:10px;font:900 22px 'Zain';color:{{ g.titleC }};white-space:nowrap"><sc-if value="{{ g.dot }}" hint-placeholder-val="{{ false }}"><span style="width:12px;height:12px;border-radius:50%;background:{{ g.dot }}"></span></sc-if>{{ g.title }}<sc-if value="{{ g.sub }}" hint-placeholder-val="{{ false }}"><span style="font:700 16px 'Zain';color:#a8a3b5">{{ g.sub }}</span></sc-if></span>
                 <span style="direction:ltr;font:800 17px 'Zain';color:#a8a3b5;font-variant-numeric:tabular-nums">{{ g.rangeLbl }}</span>
               </div>
-              <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ g.cols }},minmax(0,1fr));grid-template-rows:repeat({{ g.rows }},minmax(0,1fr));gap:{{ gridGap }}px">
+              <div style="flex:1;min-height:0;display:grid;grid-template-columns:{{ g.colT }};grid-template-rows:{{ g.rowT }};justify-content:center;align-content:start;gap:{{ gridGap }}px">
                 <sc-for list="{{ g.cards }}" as="p" hint-placeholder-count="12">
                   <div style="position:relative;min-height:0;box-sizing:border-box;border-radius:{{ cardR }}px;overflow:hidden;display:flex;flex-direction:column;background:{{ p.bg }};border:{{ p.bw }}px solid {{ p.bd }};box-shadow:{{ p.sh }};opacity:{{ p.op }};transform:{{ p.tf }};z-index:{{ p.z }};animation:{{ p.an }};transition:opacity .3s, transform .25s cubic-bezier(.2,1.2,.4,1), background .3s, border-color .3s">
                     <span style="flex-shrink:0;height:{{ headH }}px;display:grid;place-items:center;background:{{ p.hBg }};color:{{ p.hC }};font:900 {{ numF }}px/1 'Zain';font-variant-numeric:tabular-nums;text-decoration:{{ p.deco }};text-decoration-thickness:3px;letter-spacing:.04em">{{ p.num }}</span>
@@ -504,9 +504,17 @@ class Component extends DCLogic {
     // وضع الفريقين: نصين متساويين (الأحمر يمين · الأزرق يسار)، وكل نص يحسب أعمدته لحاله.
     const all=[...S.players].sort((a,b)=>a.id-b.id), NT=all.length||1, GWall=(S.dW||1920)-104, GH=574, gridGap=NT>40?10:NT>20?12:14, AR=1.45, groupGap=TEAM_MODE?56:0;
     const parts=TEAM_MODE?[0,1].map(t=>all.filter(p=>p.team===t)):[all], GW=TEAM_MODE?(GWall-groupGap)/2:GWall;
-    const fit=n=>{ n=Math.max(1,n); let cols=1, best=1e9; for(let c=1;c<=n;c++){ const r=Math.ceil(n/c), w=(GW-(c-1)*gridGap)/c, hh=(GH-(r-1)*gridGap)/r, sc=Math.abs(Math.log(w/hh/AR))+1.5*((c*r-n)/c); if(sc<best){ best=sc; cols=c; } }
-      const rows=Math.ceil(n/cols), w=(GW-(cols-1)*gridGap)/cols, hh=(GH-(rows-1)*gridGap)/rows; return {cols,rows,u:Math.min(hh,w/1.15,360)}; };
-    const fits=parts.map(l=>fit(l.length)), u=Math.min(...fits.map(z=>z.u)), headH=Math.round(u*.34), avS=Math.round(u*.36), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
+    const fit=(n,W)=>{ n=Math.max(1,n); let cols=1, best=1e9; for(let c=1;c<=n;c++){ const r=Math.ceil(n/c), w=(W-(c-1)*gridGap)/c, hh=(GH-(r-1)*gridGap)/r, sc=Math.abs(Math.log(w/hh/AR))+1.5*((c*r-n)/c); if(sc<best){ best=sc; cols=c; } }
+      const rows=Math.ceil(n/cols), w=(W-(cols-1)*gridGap)/cols, hh=(GH-(rows-1)*gridGap)/rows; return {cols,rows,w,hh,u:Math.min(hh,w/1.15,360),colT:`repeat(${cols},minmax(0,1fr))`,rowT:`repeat(${rows},minmax(0,1fr))`}; };
+    // وضع الفريقين: الكرت بنفس مقاس الفردي (كأن كل اللاعبين بشبكة وحدة)، وكل نص يرصّ كروته بهالمقاس بدون ما تتمدد.
+    // لو ما دخلت بالطول نصغّرها كلها بنفس النسبة.
+    const teamFits=()=>{ const base=fit(NT,GWall); let k=1, res;
+      for(let it=0;it<40;it++){ const cw=base.w*k, ch=base.hh*k;
+        res=parts.map(l=>{ const n=Math.max(1,l.length), cols=Math.max(1,Math.min(n,Math.floor((GW+gridGap)/(cw+gridGap)))), rows=Math.ceil(n/cols); return {cols,rows,need:rows*ch+(rows-1)*gridGap}; });
+        if(res.every(z=>z.need<=GH)) return res.map(z=>({cols:z.cols,rows:z.rows,u:Math.min(ch,cw/1.15,360),colT:`repeat(${z.cols},${Math.floor(cw)}px)`,rowT:`repeat(${z.rows},${Math.floor(ch)}px)`}));
+        k*=.95; }
+      return parts.map(l=>fit(l.length,GW)); };
+    const fits=TEAM_MODE?teamFits():[fit(NT,GW)], u=Math.min(...fits.map(z=>z.u)), headH=Math.round(u*.34), avS=Math.round(u*.36), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
     const mk=p=>{ const isH=S.holder===p.id&&(live||S.phase==='boom')&&!p.out, out=p.out;
       return {...p,ini:ini(p.name),av:avOf(p),num:String(p.id).padStart(pad,'0'),isHolder:isH&&live,
         bg:out?'rgba(255,255,255,.015)':isH?'linear-gradient(180deg, rgba(62,44,92,.95), rgba(30,22,38,.95))':'linear-gradient(180deg, rgba(38,30,60,.85), rgba(20,17,30,.92))',
@@ -517,7 +525,7 @@ class Component extends DCLogic {
         tf:isH&&live?'scale(1.06)':'none', z:isH?2:1, deco:out?'line-through':'none', ring:isH?'rgba(217,138,138,.7)':out?'rgba(255,255,255,.05)':'rgba(255,255,255,.14)'}; };
     const groups=parts.map((l,gi)=>{ const al=l.filter(p=>!p.out).length;
       return {title:TEAM_MODE?TEAMS[gi].name:'اللاعبون', titleC:TEAM_MODE?TEAMS[gi].c:'#ece8f3', dot:TEAM_MODE?TEAMS[gi].c:null, sub:TEAM_MODE?`· باقي ${al} من ${l.length}`:null,
-        rangeLbl:TEAM_MODE?'':(maxId?'01'.slice(-pad)+' – '+String(maxId).padStart(pad,'0'):''), cols:fits[gi].cols, rows:fits[gi].rows, cards:l.map(mk), divider:TEAM_MODE&&gi===1, divX:Math.round(groupGap/2)}; });
+        rangeLbl:TEAM_MODE?'':(maxId?'01'.slice(-pad)+' – '+String(maxId).padStart(pad,'0'):''), cols:fits[gi].cols, rows:fits[gi].rows, colT:fits[gi].colT, rowT:fits[gi].rowT, cards:l.map(mk), divider:TEAM_MODE&&gi===1, divX:Math.round(groupGap/2)}; });
     const hp=S.players.find(p=>p.id===S.holder), vp=S.players.find(p=>p.id===S.victim), wp=S.players.find(p=>p.id===S.winner);
     const A=S.players.filter(p=>!p.out);
     // فيديو الفوز (من المنصة): يحاول التشغيل بالصوت، ولو منعه المتصفح يكمل بدون صوت
