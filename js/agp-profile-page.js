@@ -1605,11 +1605,15 @@
     m.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMenu(); anchor.focus(); } });
     // بجسم الصفحة وثابت فوق كل شي، عشان ما ينقص داخل صندوق الشات القابل للتمرير
     document.body.appendChild(m);
-    var r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    // مع تكبير الصفحة (store-scale.js) إحداثيات getBoundingClientRect ممكن تختلف عن إحداثيات CSS — نقسم على النسبة
+    var k = (m.getBoundingClientRect().width / (m.offsetWidth || 1)) || 1;
+    var rr = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    var r = { left: rr.left / k, right: rr.right / k, top: rr.top / k, bottom: rr.bottom / k };
+    var vw = window.innerWidth / k, vh = window.innerHeight / k;
     var left = document.documentElement.dir === 'rtl' || getComputedStyle(document.body).direction === 'rtl' ? r.left : r.right - mw;
-    left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+    left = Math.max(8, Math.min(left, vw - mw - 8));
     var top = r.bottom + 6;
-    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+    if (top + mh > vh - 8) top = Math.max(8, r.top - mh - 6);
     m.style.left = left + 'px'; m.style.top = top + 'px';
     S.menu = m;
     window.addEventListener('scroll', closeMenu, { once: true, capture: true });

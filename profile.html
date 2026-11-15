@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&display=swap">
 <script src="js/agp-apple-emoji.js"></script>
+<!-- الشاشات العريضة (فوق 1920، أو آيباد/متصفح يعرض الصفحة بعرض كبير): تكبير متناسق لكل الصفحة بدل ما تصغر وتبقى بالنص -->
+<script src="store/store-scale.js"></script>
 <!--
   صفحة البروفايل: هيكل ثابت هنا، وكل المحتوى ينبني من js/agp-profile-page.js.
   الشكل (بطلب صاحب المنصة): زجاج سميك بهوية ألعاب أيمن.
@@ -122,7 +124,7 @@
   .pf-menu-open .pf-burger span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
 
   /* ---------------------------------------------------------- الإطار: قائمة يمين + محتوى */
-  .pf-shell{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:var(--gap);max-width:1440px;margin:0 auto;padding:var(--gap) var(--canvas-pad) 64px}
+  .pf-shell{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);gap:var(--gap);max-width:1760px;margin:0 auto;padding:var(--gap) var(--canvas-pad) 64px}
 
   /* القائمة الجانبية: لوح زجاج وأقسامها أزرار */
   .pf-side{position:sticky;top:calc(var(--top-h) + var(--gap));align-self:start;max-height:calc(100vh - var(--top-h) - var(--gap) * 2);overflow:auto;
@@ -876,6 +878,11 @@
     .pf-chat-head,.pf-chat-compose{padding:10px 12px}
     .pf-msg-row{max-width:92%}
   }
+
+  /* وضوح أكثر: تكبير متناسق لكل عناصر البروفايل (خطوط، أيقونات، أزرار، أقسام).
+     يتضاعف مع تكبير الشاشات العريضة (store/store-scale.js). الجوال بدون تكبير. */
+  @media (min-width:900px){ body{zoom:1.12} }
+  @media (min-width:700px) and (max-width:899px){ body{zoom:1.06} }
 </style>
 </head>
 <body class="pf-loading" data-pf-mode="player">
