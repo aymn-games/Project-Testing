@@ -15,9 +15,17 @@
  *   'subscription:<أشهر>' بـstore-service.js)، والأدمن (adjustDays/end/unpause).
  *   كل حدث ينكتب بـsubscription_events (يظهر للستريمر كسجل مختصر).
  * - الباقات (subscription_plans): الأشهر + رصيد التعليق، يديرها الأدمن.
- * - القفل: hasActiveSubscription(userId) — مطفي افتراضياً
- *   (config.subscriptionEnforcement) فيرجع true دائماً، ولما يتفعّل فيه
- *   أيام سماح بعد الانتهاء (config.subscriptionGraceDays).
+ * - القفل: hasActiveSubscription(userId) — يشتغل تلقائياً من
+ *   config.subscriptionStartAt (1 ديسمبر 2026) أو يدوياً بـconfig.subscriptionEnforcement
+ *   (isEnforced). قبلها يرجع true دائماً. بعدها فيه أيام سماح بعد الانتهاء
+ *   (config.subscriptionGraceDays). يستدعيه ws-server.js عند ربط أي بث،
+ *   وaccessForUser يرسل النتيجة للمتصفح (subscription_access بـ/api/auth/me).
+ * - أدوات الأدمن: منح أيام لأي ستريمر حتى لو ما عنده اشتراك (grantDays)،
+ *   اشتراك مفتوح بدون مدة (setOpenEnded) — الأيام الباقية تتجمّد وترجع لما
+ *   ينلغي، وتعويض الكل (compensateAll) للفعّال والمعلّق والمنتهي داخل أيام السماح.
+ * - التجربة المجانية (startTrial): يوم واحد يفعّله الستريمر بنفسه من البروفايل،
+ *   بعد بدء القفل، لحساب ما عمره اشترك وتيك توكه مربوط. حساب التيك توك ينحفظ
+ *   بـsubscription_trials (يوزر + open_id) فما ياخذ تجربة ثانية بأي حساب ثاني.
  * الجداول streamer_subscriptions وsubscription_codes وsubscription_events
  * وsubscription_plans بـbackend/db/database.js.
  */
@@ -34,6 +42,8 @@ var EXPIRING_SOON_MS = 5 * DAY_MS;
 var MAX_PLAN_MONTHS = 24;
 var MAX_ADJUST_DAYS = 365;
 var MAX_CODES_PER_BATCH = 200;
+var MAX_COMPENSATE_DAYS = 30;
+var TRIAL_MS = DAY_MS;
 var CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
 var _now = function () { return Date.now(); };
@@ -137,6 +147,19 @@ function status(userId) {
     var row = settle(getRow(userId));
     if (!row) return { success: true, subscription: null };
     var t = _now();
+    if (row.open_ended) {
+        // مفتوح: فعّال بدون نهاية، والتعليق ما له معنى
+        return {
+            success: true,
+            subscription: {
+                months: row.months_total, startedAt: row.started_at, endsAt: null, remainingMs: null,
+                active: true, openEnded: true, paused: false, pausedAt: null, pauseUntil: null,
+                pausesAllowed: row.pauses_allowed, pausesUsed: row.pauses_used, canPause: false, pauseBlocked: 'open_ended',
+                pauseMaxDays: PAUSE_MAX_MS / DAY_MS, expiringSoon: false, graceUntil: null,
+                carryMs: row.open_carry_ms || 0
+            }
+        };
+    }
     var paused = Boolean(row.paused_at);
     // وقت التعليق ما ينحسب: المتبقي يتجمّد على قيمته لحظة التعليق
     var remaining = Math.max(0, row.ends_at - (paused ? row.paused_at : t));
@@ -151,6 +174,7 @@ function status(userId) {
             endsAt: paused ? row.ends_at + (row.pause_until - row.paused_at) : row.ends_at,
             remainingMs: remaining,
             active: active,
+            openEnded: false,
             paused: paused,
             pausedAt: row.paused_at || null,
             pauseUntil: row.pause_until || null,
@@ -168,16 +192,43 @@ function status(userId) {
 }
 
 /**
+ * هل القفل شغّال الحين؟ SUBSCRIPTION_ENFORCEMENT=true/false يفرض القرار،
+ * وإلا يشتغل تلقائياً من config.subscriptionStartAt.
+ */
+function isEnforced() {
+    if (config.subscriptionEnforcement === true) return true;
+    if (config.subscriptionEnforcement === false) return false;
+    return _now() >= config.subscriptionStartAt;
+}
+
+/**
  * هل المستخدم يقدر يستخدم أدوات الستريمر؟ نقطة القفل الوحيدة.
- * القفل مطفي (config.subscriptionEnforcement=false) = true دائماً.
- * مفعّل: فعّال أو معلّق أو داخل أيام السماح بعد الانتهاء.
+ * القفل مطفي = true دائماً. شغّال: مفتوح أو فعّال أو معلّق أو داخل أيام
+ * السماح بعد الانتهاء. الأدمن مستثنى عند المستدعي (ws-server.js / accessForUser).
  */
 function hasActiveSubscription(userId) {
-    if (!config.subscriptionEnforcement) return true;
+    if (!isEnforced()) return true;
     var row = settle(getRow(userId));
     if (!row) return false;
-    if (row.paused_at) return true;
+    if (row.open_ended || row.paused_at) return true;
     return _now() < row.ends_at + config.subscriptionGraceDays * DAY_MS;
+}
+
+/** للمتصفح (/api/auth/me): هل يقدر يشغّل الألعاب؟ الأدمن دائماً. */
+function accessForUser(user) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return hasActiveSubscription(user.id);
+}
+
+/** حالة القفل للوحة الأدمن. */
+function enforcementInfo() {
+    return {
+        enforced: isEnforced(),
+        mode: config.subscriptionEnforcement === true ? 'forced_on' : config.subscriptionEnforcement === false ? 'forced_off' : 'scheduled',
+        startAt: config.subscriptionStartAt,
+        graceDays: config.subscriptionGraceDays
+    };
 }
 
 /** @returns {{success: boolean, error?: string}} */
@@ -217,6 +268,13 @@ function applyGrant(userId, months, pauses, mode, source, ref) {
     var t = _now();
     var row = settle(getRow(userId));
     var add = months * MONTH_MS;
+    if (row && row.open_ended) {
+        // الاشتراك مفتوح: المدة تنحفظ مع الأيام المجمّدة وتبدأ لما ينلغي المفتوح
+        db.prepare('UPDATE streamer_subscriptions SET open_carry_ms = open_carry_ms + ?, months_total = months_total + ?, pauses_allowed = pauses_allowed + ?, updated_at = ? WHERE user_id = ?')
+            .run(add, months, pauses, t, userId);
+        logEvent(userId, 'extend', source, ref, months, add);
+        return 'extend';
+    }
     var activeNow = row && (row.paused_at || row.ends_at > t);
     var applied = activeNow ? (mode || 'extend') : 'new';
     if (applied === 'extend') {
@@ -337,11 +395,12 @@ function listSubscribers() {
         var st = status(r.user_id).subscription;
         return {
             userId: r.user_id, name: r.display_name || r.username, customId: r.custom_id, tiktok: r.tiktok_username || null,
-            active: st.active, paused: st.paused, remainingMs: st.remainingMs, endsAt: st.endsAt, months: st.months,
+            active: st.active, openEnded: st.openEnded, carryMs: st.carryMs || 0, paused: st.paused, remainingMs: st.remainingMs, endsAt: st.endsAt, months: st.months,
             pausesUsed: st.pausesUsed, pausesAllowed: st.pausesAllowed, expiringSoon: st.expiringSoon
         };
     }).sort(function (a, b) {
         if (a.active !== b.active) return a.active ? -1 : 1;
+        if (a.openEnded !== b.openEnded) return a.openEnded ? 1 : -1;
         return a.active ? a.remainingMs - b.remainingMs : b.endsAt - a.endsAt;
     });
 }
@@ -355,6 +414,7 @@ function adjustDays(userId, days) {
     if (!days || Math.abs(days) > MAX_ADJUST_DAYS) return { success: false, error: 'invalid_days' };
     var row = settle(getRow(userId));
     if (!row) return { success: false, error: 'no_subscription' };
+    if (row.open_ended) return { success: false, error: 'open_ended' };
     var t = _now();
     var ms = days * DAY_MS;
     var base = days > 0 && !row.paused_at && row.ends_at < t ? t : row.ends_at;
@@ -369,7 +429,7 @@ function endSubscription(userId) {
     var row = settle(getRow(userId));
     if (!row) return { success: false, error: 'no_subscription' };
     var t = _now();
-    db.prepare('UPDATE streamer_subscriptions SET ends_at = ?, paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?').run(t, t, userId);
+    db.prepare('UPDATE streamer_subscriptions SET ends_at = ?, paused_at = NULL, pause_until = NULL, open_ended = 0, open_carry_ms = 0, updated_at = ? WHERE user_id = ?').run(t, t, userId);
     logEvent(userId, 'admin_end', 'admin', null, 0, 0);
     logger.log('Subscriptions: admin ended subscription of user ' + userId);
     return { success: true };
@@ -378,6 +438,162 @@ function endSubscription(userId) {
 /** الأدمن: فك تعليق مستخدم. */
 function adminUnpause(userId) {
     return resume({ id: userId }, 'admin');
+}
+
+function getUserBasic(userId) {
+    return db.prepare('SELECT id, role, is_streamer, permissions FROM users WHERE id = ?').get(userId) || null;
+}
+
+/**
+ * الأدمن: منح أيام لأي مستخدم — بدون اشتراك يبدأ له اشتراك من الحين، والفعّال
+ * تنضاف على نهايته، والمنتهي يبدأ العد من الحين. رصيد التعليق: واحد لكل 30 يوم.
+ * @returns {{success: boolean, mode?: string, error?: string}}
+ */
+function grantDays(userId, days) {
+    days = Math.floor(Number(days));
+    if (!days || days < 1 || days > MAX_ADJUST_DAYS) return { success: false, error: 'invalid_days' };
+    if (!getUserBasic(userId)) return { success: false, error: 'user_not_found' };
+    var ms = days * DAY_MS;
+    var pauses = Math.floor(days / 30);
+    var mode = db.transaction(function () {
+        var t = _now();
+        var row = settle(getRow(userId));
+        if (row && row.open_ended) return 'open_ended';
+        if (row && (row.paused_at || row.ends_at > t)) {
+            db.prepare('UPDATE streamer_subscriptions SET ends_at = ends_at + ?, pauses_allowed = pauses_allowed + ?, updated_at = ? WHERE user_id = ?').run(ms, pauses, t, userId);
+            logEvent(userId, 'admin_add', 'admin', null, 0, ms);
+            return 'extend';
+        }
+        db.prepare(
+            'INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, open_ended, open_carry_ms, updated_at) ' +
+            'VALUES (?, ?, ?, 0, ?, 0, 0, NULL, NULL, 0, 0, ?) ON CONFLICT(user_id) DO UPDATE SET started_at = excluded.started_at, ends_at = excluded.ends_at, ' +
+            'months_total = 0, pauses_allowed = excluded.pauses_allowed, pauses_used = 0, paused_total_ms = 0, paused_at = NULL, pause_until = NULL, open_ended = 0, open_carry_ms = 0, updated_at = excluded.updated_at'
+        ).run(userId, t, t + ms, pauses, t);
+        logEvent(userId, 'admin_grant', 'admin', null, 0, ms);
+        return 'new';
+    })();
+    if (mode === 'open_ended') return { success: false, error: 'open_ended' };
+    logger.log('Subscriptions: admin granted ' + days + ' days to user ' + userId + ' (' + mode + ')');
+    return { success: true, mode: mode };
+}
+
+/**
+ * الأدمن: تشغيل/إلغاء الاشتراك المفتوح (بدون مدة).
+ * التشغيل: يفك التعليق، ويجمّد الأيام الباقية بـopen_carry_ms.
+ * الإلغاء: الأيام المجمّدة ترجع تبدأ من الحين (صفر = ينتهي الحين).
+ * @returns {{success: boolean, error?: string}}
+ */
+function setOpenEnded(userId, on) {
+    if (!getUserBasic(userId)) return { success: false, error: 'user_not_found' };
+    var r = db.transaction(function () {
+        var t = _now();
+        var row = settle(getRow(userId));
+        if (on) {
+            if (row && row.open_ended) return { success: false, error: 'already_open' };
+            if (!row) {
+                db.prepare('INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, open_ended, open_carry_ms, updated_at) ' +
+                    'VALUES (?, ?, ?, 0, 0, 0, 0, NULL, NULL, 1, 0, ?)').run(userId, t, t, t);
+            } else {
+                var carry = Math.max(0, row.ends_at - (row.paused_at || t));
+                var pausedFor = row.paused_at ? Math.max(0, t - row.paused_at) : 0;
+                db.prepare('UPDATE streamer_subscriptions SET open_ended = 1, open_carry_ms = ?, ends_at = ?, paused_total_ms = paused_total_ms + ?, paused_at = NULL, pause_until = NULL, updated_at = ? WHERE user_id = ?')
+                    .run(carry, t, pausedFor, t, userId);
+            }
+            logEvent(userId, 'admin_open', 'admin', null, 0, 0);
+            return { success: true };
+        }
+        if (!row || !row.open_ended) return { success: false, error: 'not_open' };
+        var back = row.open_carry_ms || 0;
+        db.prepare('UPDATE streamer_subscriptions SET open_ended = 0, open_carry_ms = 0, ends_at = ?, updated_at = ? WHERE user_id = ?').run(t + back, t, userId);
+        logEvent(userId, 'admin_close', 'admin', null, 0, back);
+        return { success: true };
+    })();
+    if (r.success) logger.log('Subscriptions: admin ' + (on ? 'opened' : 'closed') + ' open-ended subscription of user ' + userId);
+    return r;
+}
+
+/* ---------- التجربة المجانية ---------- */
+
+function trialKeys(u) {
+    var keys = [];
+    if (u.tiktok_username) keys.push('u:' + String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase());
+    if (u.tiktok_open_id) keys.push('o:' + String(u.tiktok_open_id));
+    return keys;
+}
+
+/**
+ * هل يقدر يفعّل التجربة؟ السبب لما ما يقدر:
+ * not_started (القفل ما بدأ) | not_streamer | tiktok_not_linked |
+ * had_subscription (عنده/كان عنده اشتراك أو تجربة) | tiktok_trial_used.
+ */
+function trialInfo(userId) {
+    var u = db.prepare('SELECT id, role, is_streamer, permissions, tiktok_username, tiktok_verified, tiktok_open_id FROM users WHERE id = ?').get(userId);
+    var reason = null;
+    if (!u) reason = 'user_not_found';
+    else if (!isEnforced()) reason = 'not_started';
+    else if (!isStreamerUser(u)) reason = 'not_streamer';
+    else if (getRow(userId)) reason = 'had_subscription';
+    else if (!u.tiktok_verified || !u.tiktok_username) reason = 'tiktok_not_linked';
+    else {
+        var keys = trialKeys(u);
+        var used = keys.some(function (k) { return db.prepare('SELECT 1 FROM subscription_trials WHERE tiktok_key = ?').get(k); });
+        if (used) reason = 'tiktok_trial_used';
+    }
+    return { available: !reason, reason: reason, days: TRIAL_MS / DAY_MS, _user: u };
+}
+
+/** الستريمر يفعّل يوم التجربة. @returns {{success: boolean, error?: string}} */
+function startTrial(user) {
+    var r = db.transaction(function () {
+        var info = trialInfo(user.id);
+        if (!info.available) return { success: false, error: info.reason };
+        var t = _now();
+        var ins = db.prepare('INSERT OR IGNORE INTO subscription_trials (tiktok_key, user_id, created_at) VALUES (?, ?, ?)');
+        trialKeys(info._user).forEach(function (k) { ins.run(k, user.id, t); });
+        db.prepare('INSERT INTO streamer_subscriptions (user_id, started_at, ends_at, months_total, pauses_allowed, pauses_used, paused_total_ms, paused_at, pause_until, open_ended, open_carry_ms, updated_at) ' +
+            'VALUES (?, ?, ?, 0, 0, 0, 0, NULL, NULL, 0, 0, ?)').run(user.id, t, t + TRIAL_MS, t);
+        logEvent(user.id, 'trial', 'user', null, 0, TRIAL_MS);
+        return { success: true };
+    })();
+    if (r.success) logger.log('Subscriptions: user ' + user.id + ' started free trial');
+    return r;
+}
+
+/** للبروفايل: حالة التجربة بدون بيانات داخلية. */
+function trialStatus(userId) {
+    var i = trialInfo(userId);
+    return { available: i.available, reason: i.reason, days: i.days };
+}
+
+/**
+ * الأدمن: تعويض كل المشتركين بأيام (انقطاع مثلاً). يشمل الفعّال والمعلّق
+ * (تنضاف على النهاية)، والمنتهي داخل أيام السماح (يبدأ العد من الحين).
+ * المفتوح ما يحتاج. @returns {{success: boolean, count?: number, error?: string}}
+ */
+function compensateAll(days, note) {
+    days = Math.floor(Number(days));
+    if (!days || days < 1 || days > MAX_COMPENSATE_DAYS) return { success: false, error: 'invalid_days' };
+    var ms = days * DAY_MS;
+    var ref = String(note || '').trim().slice(0, 100) || null;
+    var graceMs = config.subscriptionGraceDays * DAY_MS;
+    var count = db.transaction(function () {
+        var t = _now();
+        var n = 0;
+        db.prepare('SELECT user_id FROM streamer_subscriptions').all().forEach(function (x) {
+            var row = settle(getRow(x.user_id));
+            if (!row || row.open_ended) return;
+            var base;
+            if (row.paused_at || row.ends_at > t) base = row.ends_at;
+            else if (t < row.ends_at + graceMs) base = t;
+            else return;
+            db.prepare('UPDATE streamer_subscriptions SET ends_at = ?, updated_at = ? WHERE user_id = ?').run(base + ms, t, row.user_id);
+            logEvent(row.user_id, 'admin_compensate', 'admin', ref, 0, ms);
+            n++;
+        });
+        return n;
+    })();
+    logger.log('Subscriptions: admin compensated ' + count + ' subscribers with ' + days + ' days');
+    return { success: true, count: count };
 }
 
 module.exports = {
@@ -393,6 +609,14 @@ module.exports = {
     savePlan: savePlan,
     grantFromStore: grantFromStore,
     hasActiveSubscription: hasActiveSubscription,
+    isEnforced: isEnforced,
+    accessForUser: accessForUser,
+    enforcementInfo: enforcementInfo,
+    grantDays: grantDays,
+    startTrial: startTrial,
+    trialStatus: trialStatus,
+    setOpenEnded: setOpenEnded,
+    compensateAll: compensateAll,
     listSubscribers: listSubscribers,
     adjustDays: adjustDays,
     endSubscription: endSubscription,

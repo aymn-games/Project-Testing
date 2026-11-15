@@ -31,6 +31,7 @@ test.after(function () {
     made.forEach(function (id) {
         db.prepare('DELETE FROM streamer_subscriptions WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM subscription_events WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM subscription_trials WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM users WHERE id = ?').run(id);
     });
 });
@@ -225,5 +226,151 @@ test('التنبيه والقفل: قرب الانتهاء، والقفل مطف
     } finally {
         config.subscriptionEnforcement = saved.on;
         config.subscriptionGraceDays = saved.grace;
+    }
+});
+
+test('القفل يبدأ تلقائياً من تاريخ البدء (subscriptionStartAt)', function () {
+    var none = makeUser('sch', true);
+    var saved = { on: config.subscriptionEnforcement, start: config.subscriptionStartAt };
+    try {
+        config.subscriptionEnforcement = null;
+        config.subscriptionStartAt = clock + DAY;
+        assert.equal(sub.isEnforced(), false);
+        assert.equal(sub.hasActiveSubscription(none.id), true); // قبل البدء = مفتوح للكل
+        assert.equal(sub.accessForUser({ id: none.id, role: 'user' }), true);
+        clock += DAY;
+        assert.equal(sub.isEnforced(), true);
+        assert.equal(sub.hasActiveSubscription(none.id), false);
+        assert.equal(sub.accessForUser({ id: none.id, role: 'user' }), false);
+        assert.equal(sub.accessForUser({ id: none.id, role: 'admin' }), true); // الأدمن مستثنى
+        config.subscriptionEnforcement = false; // الإطفاء اليدوي يغلب التاريخ
+        assert.equal(sub.isEnforced(), false);
+    } finally {
+        config.subscriptionEnforcement = saved.on;
+        config.subscriptionStartAt = saved.start;
+    }
+});
+
+test('منح أيام من الأدمن: بدون اشتراك يبدأ، والفعّال يتمدد، والمنتهي يبدأ من الحين', function () {
+    var a = makeUser('g1', true);
+    assert.equal(sub.grantDays(a.id, 0).error, 'invalid_days');
+    assert.equal(sub.grantDays(999999999, 5).error, 'user_not_found');
+    var r = sub.grantDays(a.id, 10);
+    assert.equal(r.success, true);
+    assert.equal(r.mode, 'new');
+    var st = sub.status(a.id).subscription;
+    assert.equal(st.active, true);
+    assert.equal(Math.round(st.remainingMs / DAY), 10);
+    assert.equal(sub.grantDays(a.id, 5).mode, 'extend');
+    assert.equal(Math.round(sub.status(a.id).subscription.remainingMs / DAY), 15);
+    clock += 20 * DAY; // انتهى
+    assert.equal(sub.status(a.id).subscription.active, false);
+    assert.equal(sub.grantDays(a.id, 3).mode, 'new');
+    assert.equal(Math.round(sub.status(a.id).subscription.remainingMs / DAY), 3);
+});
+
+test('الاشتراك المفتوح: بدون نهاية، الأيام الباقية تتجمّد وترجع عند الإلغاء', function () {
+    var a = makeUser('o1', true), b = makeUser('o2', true);
+    var saved = config.subscriptionEnforcement;
+    try {
+        config.subscriptionEnforcement = true;
+        sub.grantDays(a.id, 10);
+        assert.equal(sub.setOpenEnded(a.id, true).success, true);
+        assert.equal(sub.setOpenEnded(a.id, true).error, 'already_open');
+        var st = sub.status(a.id).subscription;
+        assert.equal(st.openEnded, true);
+        assert.equal(st.active, true);
+        assert.equal(st.canPause, false);
+        assert.equal(sub.adjustDays(a.id, 5).error, 'open_ended');
+        assert.equal(sub.grantDays(a.id, 5).error, 'open_ended');
+        clock += 100 * DAY; // الوقت يمشي والمفتوح شغّال
+        assert.equal(sub.hasActiveSubscription(a.id), true);
+        // كود يتفعّل والاشتراك مفتوح: المدة تنحفظ مع المجمّد
+        sub.redeem(a, gen(1));
+        assert.equal(Math.round(sub.status(a.id).subscription.carryMs / DAY), 40);
+        assert.equal(sub.setOpenEnded(a.id, false).success, true);
+        st = sub.status(a.id).subscription;
+        assert.equal(st.openEnded, false);
+        assert.equal(Math.round(st.remainingMs / DAY), 40);
+        assert.equal(sub.setOpenEnded(a.id, false).error, 'not_open');
+        // مستخدم بدون اشتراك: المفتوح يفتح له، والإلغاء ينهيه الحين
+        assert.equal(sub.setOpenEnded(b.id, true).success, true);
+        assert.equal(sub.hasActiveSubscription(b.id), true);
+        sub.setOpenEnded(b.id, false);
+        assert.equal(sub.status(b.id).subscription.active, false);
+        // إنهاء الاشتراك يلغي المفتوح
+        sub.setOpenEnded(b.id, true);
+        sub.endSubscription(b.id);
+        assert.equal(sub.status(b.id).subscription.openEnded, false);
+    } finally {
+        config.subscriptionEnforcement = saved;
+    }
+});
+
+test('تعويض الكل: الفعّال والمعلّق والمنتهي داخل السماح، بدون المفتوح والمنتهي قديم', function () {
+    var savedGrace = config.subscriptionGraceDays;
+    config.subscriptionGraceDays = 3;
+    try {
+        var act = makeUser('c1', true), paused = makeUser('c2', true), recent = makeUser('c3', true), old = makeUser('c4', true), open = makeUser('c5', true);
+        sub.grantDays(act.id, 10);
+        sub.redeem(paused, gen(1));
+        sub.pause(paused);
+        var pausedBefore = sub.status(paused.id).subscription.remainingMs;
+        sub.grantDays(recent.id, 1);
+        sub.grantDays(old.id, 1);
+        sub.setOpenEnded(open.id, true);
+        clock += 2 * DAY; // recent وold انتهوا قبل يوم
+        sub.adjustDays(old.id, -10); // old انتهى من زمان
+        assert.equal(sub.compensateAll(0).error, 'invalid_days');
+        assert.equal(sub.compensateAll(31).error, 'invalid_days');
+        var r = sub.compensateAll(2, 'انقطاع');
+        assert.equal(r.success, true);
+        assert.ok(r.count >= 3);
+        assert.equal(Math.round(sub.status(act.id).subscription.remainingMs / DAY), 10); // 10 - 2 + 2
+        assert.equal(Math.round((sub.status(paused.id).subscription.remainingMs - pausedBefore) / DAY), 2);
+        assert.equal(sub.status(recent.id).subscription.active, true);
+        assert.equal(Math.round(sub.status(recent.id).subscription.remainingMs / DAY), 2);
+        assert.equal(sub.status(old.id).subscription.active, false);
+        assert.equal(sub.status(open.id).subscription.openEnded, true);
+        assert.equal(sub.listEvents(act.id, 1)[0].type, 'admin_compensate');
+    } finally {
+        config.subscriptionGraceDays = savedGrace;
+    }
+});
+
+test('التجربة المجانية: يوم واحد بعد بدء القفل، مرة وحدة لكل حساب تيك توك حتى بحساب جديد', function () {
+    var saved = config.subscriptionEnforcement;
+    function linkTT(u, name, openId) {
+        db.prepare('UPDATE users SET tiktok_username = ?, tiktok_verified = 1, tiktok_open_id = ? WHERE id = ?').run(name, openId || null, u.id);
+    }
+    try {
+        var a = makeUser('t1', true), b = makeUser('t2', true), c = makeUser('t3', true), p = makeUser('t4', false), paid = makeUser('t5', true);
+        var tt = tag + 'tt';
+        config.subscriptionEnforcement = false;
+        linkTT(a, tt, tag + 'oid');
+        assert.equal(sub.trialStatus(a.id).reason, 'not_started'); // قبل بدء القفل ما يظهر
+        config.subscriptionEnforcement = true;
+        assert.equal(sub.trialStatus(b.id).reason, 'tiktok_not_linked');
+        assert.equal(sub.trialStatus(p.id).reason, 'not_streamer');
+        assert.equal(sub.trialStatus(a.id).available, true);
+        assert.equal(sub.startTrial(a).success, true);
+        var st = sub.status(a.id).subscription;
+        assert.equal(st.active, true);
+        assert.equal(Math.round(st.remainingMs / DAY), 1);
+        assert.equal(sub.listEvents(a.id, 1)[0].type, 'trial');
+        assert.equal(sub.startTrial(a).error, 'had_subscription'); // نفس الحساب مرة ثانية
+        // الحساب الأول فك الربط، وحساب جديد ربط نفس التيك توك (بأحرف مختلفة)
+        db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_open_id = NULL WHERE id = ?').run(a.id);
+        linkTT(b, '@' + tt.toUpperCase());
+        assert.equal(sub.startTrial(b).error, 'tiktok_trial_used');
+        // غيّر يوزره بتيك توك بس نفس open_id
+        linkTT(c, tag + 'renamed', tag + 'oid');
+        assert.equal(sub.startTrial(c).error, 'tiktok_trial_used');
+        // اللي اشترك قبل ما ياخذ تجربة
+        linkTT(paid, tag + 'paid');
+        sub.grantDays(paid.id, 3);
+        assert.equal(sub.startTrial(paid).error, 'had_subscription');
+    } finally {
+        config.subscriptionEnforcement = saved;
     }
 });

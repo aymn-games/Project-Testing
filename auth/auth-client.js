@@ -650,6 +650,10 @@ function getSubscription() {
 function redeemSubscriptionCode(code, mode) {
     return request('/api/subscription/redeem', { method: 'POST', body: { code: code, mode: mode || null } });
 }
+/** يوم التجربة المجاني — مرة وحدة لكل حساب ولكل حساب تيك توك (backend: startTrial). */
+function startSubscriptionTrial() {
+    return request('/api/subscription/trial', { method: 'POST' });
+}
 function pauseSubscription() {
     return request('/api/subscription/pause', { method: 'POST', body: {} });
 }
@@ -679,6 +683,18 @@ function adminEndSubscription(userId) {
 }
 function adminUnpauseSubscription(userId) {
     return request('/api/admin/subscriptions/unpause', { method: 'POST', body: { userId: userId } });
+}
+/** Admin only: منح أيام لأي مستخدم (حتى بدون اشتراك). */
+function adminGrantSubscription(userId, days) {
+    return request('/api/admin/subscriptions/grant', { method: 'POST', body: { userId: userId, days: days } });
+}
+/** Admin only: اشتراك مفتوح بدون مدة — on=false يلغيه وترجع الأيام المجمّدة. */
+function adminSetOpenSubscription(userId, on) {
+    return request('/api/admin/subscriptions/open', { method: 'POST', body: { userId: userId, on: on !== false } });
+}
+/** Admin only: تعويض كل المشتركين بأيام (انقطاع). */
+function adminCompensateSubscriptions(days, note) {
+    return request('/api/admin/subscriptions/compensate', { method: 'POST', body: { days: days, note: note || '' } });
 }
 /** Admin only: plan = {months, name, pauses, active} — إضافة أو تعديل. */
 function adminSaveSubscriptionPlan(plan) {
@@ -895,12 +911,23 @@ function isStreamerAccount(user) {
         Boolean(user.permissions && user.permissions.can_run_games);
 }
 
-/** Playing needs a streamer account with a verified TikTok account — no
- * admin approval step (admins always can). The server enforces the same
- * rule when connecting to a stream (backend/websocket/ws-server.js). */
+/** اشتراك الستريمر: subscription_access يجي من /api/auth/me (refreshUser).
+ * false = اشتراك منتهي بعد بدء القفل. غير موجود (جلسة قديمة) = مسموح لين
+ * يتحدّث من الخادم — القفل الفعلي بالخادم عند ربط البث. */
+function hasSubscriptionAccess(user) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return user.subscription_access !== false;
+}
+
+/** Playing needs a streamer account with a verified TikTok account and an
+ * active subscription — no admin approval step (admins always can). The
+ * server enforces the same rule when connecting to a stream
+ * (backend/websocket/ws-server.js). */
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
+    if (!hasSubscriptionAccess(user)) return false;
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).
     if (user.permissions && user.permissions.full_game_access) return true;
@@ -1275,6 +1302,11 @@ global.AGPAuth = {
     adminAdjustSubscription: adminAdjustSubscription,
     adminEndSubscription: adminEndSubscription,
     adminUnpauseSubscription: adminUnpauseSubscription,
+    adminGrantSubscription: adminGrantSubscription,
+    startSubscriptionTrial: startSubscriptionTrial,
+    adminSetOpenSubscription: adminSetOpenSubscription,
+    adminCompensateSubscriptions: adminCompensateSubscriptions,
+    hasSubscriptionAccess: hasSubscriptionAccess,
     adminSaveSubscriptionPlan: adminSaveSubscriptionPlan,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,

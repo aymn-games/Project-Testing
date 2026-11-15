@@ -993,12 +993,18 @@
     already_paused: 'اشتراكك معلّق أصلاً.',
     no_pauses_left: 'خلص رصيد التعليق لهالاشتراك.',
     monthly_pause_used: 'استخدمت تعليق هالشهر، تقدر تعلّق الشهر الجاي.',
-    not_paused: 'الاشتراك مو معلّق.'
+    not_paused: 'الاشتراك مو معلّق.',
+    open_ended: 'اشتراكك مفتوح — ما يحتاج تعليق.',
+    tiktok_trial_used: 'حساب التيك توك المربوط استخدم التجربة المجانية قبل، وما تنعطى مرتين.',
+    tiktok_not_linked: 'اربط حساب تيك توك أول عشان تفعّل التجربة المجانية.',
+    had_subscription: 'التجربة المجانية للحسابات اللي ما اشتركت قبل.',
+    not_started: 'التجربة المجانية تبدأ مع نظام الاشتراكات.'
   };
   function monthsText(n) { return n === 1 ? 'شهر' : n === 2 ? 'شهرين' : n <= 10 ? n + ' أشهر' : n + ' شهر'; }
   var SUB_EVENT = {
     activate: 'تفعيل', extend: 'تمديد', renew: 'تجديد', pause: 'تعليق', resume: 'فك التعليق', auto_resume: 'انفك التعليق تلقائياً',
-    admin_add: 'إضافة أيام', admin_subtract: 'خصم أيام', admin_end: 'إنهاء الاشتراك'
+    admin_add: 'إضافة أيام', admin_subtract: 'خصم أيام', admin_end: 'إنهاء الاشتراك',
+    trial: 'تجربة مجانية', admin_grant: 'منح اشتراك', admin_open: 'اشتراك مفتوح', admin_close: 'إلغاء الاشتراك المفتوح', admin_compensate: 'تعويض أيام'
   };
   var SUB_SOURCE = { code: 'بكود', store: 'من المتجر', admin: 'من الإدارة', user: '', system: '' };
   function daysText(ms) {
@@ -1030,17 +1036,18 @@
       box.innerHTML = '';
       var state = !sub ? 'none' : sub.paused ? 'paused' : sub.active ? 'active' : 'expired';
       var labels = { none: 'ما عندك اشتراك', active: 'فعّال', paused: 'معلّق', expired: 'منتهي' };
-      var totalMs = sub ? Math.max(sub.remainingMs, sub.endsAt - sub.startedAt, 1) : 1;
-      var pct = sub && sub.active ? Math.max(0, Math.min(100, Math.round(100 * sub.remainingMs / totalMs))) : 0;
+      var open = !!(sub && sub.openEnded); // اشتراك مفتوح من الإدارة: بدون مدة ولا تعليق
+      var totalMs = sub && !open ? Math.max(sub.remainingMs, sub.endsAt - sub.startedAt, 1) : 1;
+      var pct = open ? 100 : sub && sub.active ? Math.max(0, Math.min(100, Math.round(100 * sub.remainingMs / totalMs))) : 0;
       var days = sub && sub.active ? Math.floor(sub.remainingMs / 86400000) : 0;
       var hours = sub && sub.active ? Math.floor((sub.remainingMs % 86400000) / 3600000) : 0;
 
       // الدائرة: الأيام الباقية بالنص، والحلقة تنقص مع المدة
       var r = 52, c = 2 * Math.PI * r;
-      var dial = h('div', { class: 'pf-sub-dial', role: 'img', 'aria-label': sub && sub.active ? ('باقي ' + daysText(sub.remainingMs)) : labels[state] });
+      var dial = h('div', { class: 'pf-sub-dial', role: 'img', 'aria-label': open ? 'اشتراك مفتوح' : sub && sub.active ? ('باقي ' + daysText(sub.remainingMs)) : labels[state] });
       dial.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="' + r + '" class="pf-sub-track"/>' +
         '<circle cx="60" cy="60" r="' + r + '" class="pf-sub-arc" stroke-dasharray="' + (c * pct / 100).toFixed(1) + ' ' + c.toFixed(1) + '"/></svg>';
-      dial.appendChild(h('div', { class: 'pf-sub-dial-in' }, sub && sub.active ? [
+      dial.appendChild(h('div', { class: 'pf-sub-dial-in' }, open ? [icon('crown', 'pf-sub-dial-ic'), h('span', { class: 'pf-sub-dial-u', text: 'مفتوح' })] : sub && sub.active ? [
         h('span', { class: 'pf-sub-dial-n num', text: String(days) }),
         h('span', { class: 'pf-sub-dial-u', text: days === 1 ? 'يوم باقي' : 'يوم باقي' }),
         h('span', { class: 'pf-sub-dial-h num', text: '+ ' + hours + ' ساعة' })
@@ -1049,9 +1056,9 @@
       var ringCard = h('div', { class: 'pf-panel pf-sub pf-sub-' + state }, [
         dial,
         h('div', { class: 'pf-sub-info' }, [
-          h('div', { class: 'pf-sub-plan', text: sub ? 'اشتراك ' + monthsText(sub.months) : 'اشتراك الستريمر' }),
+          h('div', { class: 'pf-sub-plan', text: open ? 'اشتراك مفتوح' : sub && sub.months > 0 ? 'اشتراك ' + monthsText(sub.months) : 'اشتراك الستريمر' }),
           pill(labels[state], state === 'active' ? 'ok' : state === 'paused' ? 'warn' : null),
-          h('div', { class: 'pf-sub-end', text: sub && sub.active ? ('ينتهي ' + formatDate(sub.endsAt)) : state === 'expired' ? 'انتهى، جدّده بكود جديد' : 'فعّله بكود الاشتراك' })
+          h('div', { class: 'pf-sub-end', text: open ? 'بدون تاريخ انتهاء — من الإدارة' : sub && sub.active ? ('ينتهي ' + formatDate(sub.endsAt)) : state === 'expired' ? 'انتهى، جدّده بكود جديد' : 'فعّله بكود الاشتراك' })
         ])
       ]);
       if (sub && (sub.expiringSoon || !sub.active)) {
@@ -1063,8 +1070,8 @@
       }
       var grid = h('div', { class: 'pf-sub-grid' }, [ringCard]);
 
-      // التعليق
-      if (sub && sub.active) {
+      // التعليق (المفتوح ما يحتاج)
+      if (sub && sub.active && !open) {
         var left = Math.max(0, sub.pausesAllowed - sub.pausesUsed);
         var ctl;
         if (sub.paused) {
@@ -1093,6 +1100,24 @@
         ]));
       }
       box.appendChild(grid);
+
+      // يوم التجربة المجاني (backend: startTrial) — لحساب ما اشترك قبل وتيك توكه
+      // ما جرّب قبل. يظهر بعد بدء القفل بس (reason 'not_started' = مخفي).
+      var trial = extra.trial;
+      if (!sub && trial && (trial.available || trial.reason === 'tiktok_not_linked' || trial.reason === 'tiktok_trial_used')) {
+        var tBody;
+        if (trial.available) {
+          var tBtn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary' }, [icon('crown'), 'فعّل يوم مجاني']);
+          tBtn.addEventListener('click', function () {
+            if (!window.confirm('تفعّل يوم التجربة المجاني الحين؟ يبدأ العد من لحظة التفعيل (24 ساعة)، وتنعطى مرة وحدة بس.')) return;
+            act(tBtn, window.AGPAuth.startSubscriptionTrial, 'تفعّل يوم التجربة المجاني');
+          });
+          tBody = [h('p', { class: 'pf-lrow-s', text: 'جرّب كل الألعاب يوم كامل (24 ساعة) بدون اشتراك. التجربة مرة وحدة لكل حساب تيك توك.' }), tBtn];
+        } else {
+          tBody = [h('p', { class: 'pf-lrow-s', text: SUB_ERRORS[trial.reason] })];
+        }
+        box.appendChild(panel('التجربة المجانية', null, tBody));
+      }
 
       // الكود: تمديد أو تجديد للاشتراك الفعّال، وتفعيل للمنتهي
       var active = !!(sub && sub.active);

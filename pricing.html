@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الأسعار — منصة ألعاب أيمن</title>
+<meta name="description" content="باقات اشتراك منصة ألعاب أيمن: كل الألعاب على تيك توك وكيك وتويتش، شهر أو شهرين بنفس المميزات، ويوم تجربة مجاني للحسابات الجديدة.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<!-- هيدر المنصة (site-header) من نفس تنسيق المتجر -->
+<link rel="stylesheet" href="store/store.css">
+<script src="store/store-scale.js"></script>
+<!--
+  صفحة الأسعار — باقات الاشتراك (شهر وشهرين بنفس المميزات)، عداد لبدء
+  الاشتراكات (1 ديسمبر 2026)، ويوم التجربة المجاني (AGPAuth.startSubscriptionTrial
+  ← backend/subscriptions/subscription-service.js startTrial).
+  زر الاشتراك «قريباً» لين يتفعّل الشراء.
+-->
+<style>
+.pr-page{min-height:100vh;background:radial-gradient(1200px 620px at 50% -12%,rgba(124,77,255,.2),transparent 70%),#0a0811;padding:clamp(18px,4vw,48px) clamp(16px,3vw,28px) 80px;}
+.pr-wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(26px,4vw,40px);}
+.pr-hero{text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.pr-hero h1{margin:0;font-size:clamp(30px,4.6vw,48px);line-height:1.3;font-weight:700;color:#fff;}
+.pr-hero p{margin:0;max-width:620px;font-size:16px;line-height:1.9;color:#a9a2bf;}
+
+/* العداد */
+.pr-count{width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px clamp(16px,3vw,28px);border-radius:24px;
+  background:linear-gradient(120deg,rgba(37,99,235,.18),rgba(124,58,237,.24));border:1px solid rgba(129,140,248,.4);}
+.pr-count-t{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;font-size:17px;font-weight:600;color:#e6e2f2;}
+.pr-count-t b{color:#fff;}
+.pr-live{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.4);color:#86efac;font-size:14px;font-weight:700;}
+.pr-live::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 4px rgba(74,222,128,.18);}
+.pr-clock{display:flex;gap:10px;direction:rtl;}
+.pr-unit{min-width:78px;padding:10px 8px;border-radius:16px;background:rgba(10,8,17,.55);border:1px solid rgba(255,255,255,.1);text-align:center;}
+.pr-unit b{display:block;font:700 32px/1.15 'JetBrains Mono',monospace;color:#fff;font-variant-numeric:tabular-nums;}
+.pr-unit small{font-size:13px;color:#b9b2d6;}
+
+/* الباقات */
+.pr-plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
+.pr-plan{display:flex;flex-direction:column;gap:18px;padding:26px clamp(18px,3vw,28px);border-radius:24px;background:linear-gradient(180deg,#1b1629,#110e1a);border:1px solid rgba(255,255,255,.09);box-shadow:0 30px 70px -40px rgba(0,0,0,.9);}
+.pr-plan.is-alt{border-color:rgba(167,139,250,.45);background:linear-gradient(180deg,#221a36,#120e1c);}
+.pr-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.pr-plan-name{font-size:20px;font-weight:700;color:#fff;}
+.pr-plan-tag{font-size:13px;color:#c4b5fd;padding:4px 11px;border-radius:999px;background:rgba(124,77,255,.14);border:1px solid rgba(167,139,250,.35);}
+.pr-price{display:flex;align-items:baseline;gap:8px;}
+.pr-price b{font:700 44px/1 'IBM Plex Sans Arabic',sans-serif;color:#fff;}
+.pr-price span{font-size:16px;color:#b9b2d6;}
+.pr-feats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
+.pr-feats li{display:flex;align-items:flex-start;gap:10px;font-size:15px;line-height:1.75;color:#ddd8ec;}
+.pr-feats li svg{flex:0 0 auto;width:20px;height:20px;margin-top:4px;color:#4ade80;}
+.pr-feats small{display:block;font-size:13.5px;color:#9b94b3;}
+.pr-plats{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.pr-plat{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:10px;font-size:13.5px;font-weight:700;color:#fff;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);}
+.pr-plat svg{width:16px;height:16px;}
+.pr-btn{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#c9c3dc;font:700 16px 'IBM Plex Sans Arabic',sans-serif;cursor:not-allowed;}
+.pr-soon{font-size:12.5px;padding:3px 9px;border-radius:999px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#fcd34d;}
+
+/* اليوم المجاني */
+.pr-trial{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:22px clamp(18px,3vw,28px);border-radius:24px;
+  background:linear-gradient(120deg,rgba(16,185,129,.14),rgba(124,58,237,.16));border:1px solid rgba(74,222,128,.35);}
+.pr-trial-t{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.pr-trial-t h2{margin:0;font-size:20px;color:#fff;}
+.pr-trial-t p{margin:0;font-size:15px;line-height:1.8;color:#c9d6cf;}
+.pr-trial-btn{flex:0 0 auto;height:50px;padding:0 26px;border-radius:14px;border:none;background:linear-gradient(135deg,#10b981,#7c3aed);color:#fff;font:700 16px 'IBM Plex Sans Arabic',sans-serif;cursor:pointer;box-shadow:0 14px 30px -14px rgba(16,185,129,.7);}
+.pr-trial-btn:hover{filter:brightness(1.08);}
+.pr-trial-btn:disabled{opacity:.6;cursor:default;filter:none;}
+.pr-msg{width:100%;font-size:14px;color:#c9d6cf;}
+.pr-msg.err{color:#fca5a5;}
+
+@media (max-width:760px){
+  .pr-plans{grid-template-columns:1fr;}
+  .pr-unit{min-width:64px;}
+  .pr-unit b{font-size:26px;}
+  .pr-trial-btn{width:100%;}
+}
+</style>
+</head>
+<body class="st-has-site-header">
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a href="./" class="site-logo"><img src="logo.png" alt="ألعاب أيمن"></a>
+    <nav class="site-nav">
+      <a href="./">الرئيسية</a>
+      <a href="games.html">ألعاب البثوث</a>
+      <a href="discord-games.html">ألعاب الديسكورد</a>
+      <a href="./#gallery">التصنيف</a>
+      <a href="pricing.html" class="site-pill" aria-current="page">الأسعار</a>
+    </nav>
+    <a href="login.html" class="site-account">إنشاء حساب أو تسجيل الدخول</a>
+    <button type="button" class="site-burger" aria-label="القائمة" aria-expanded="false" aria-controls="site-mobile-panel"><span></span><span></span><span></span></button>
+  </header>
+  <div class="site-mobile-panel" id="site-mobile-panel" data-mobile-panel="1" hidden>
+    <a href="./">الرئيسية</a>
+    <a href="games.html">ألعاب البثوث</a>
+    <a href="discord-games.html">ألعاب الديسكورد</a>
+    <a href="./#gallery">التصنيف</a>
+    <a href="pricing.html">الأسعار</a>
+    <div class="site-mobile-cta"><a href="login.html">إنشاء حساب أو تسجيل الدخول</a></div>
+  </div>
+</div>
+
+<main class="pr-page">
+  <div class="pr-wrap">
+    <section class="pr-hero">
+      <h1>باقات الاشتراك</h1>
+      <p>اشتراك واحد يفتح لك كل ألعاب أيمن على بثك. اختر المدة اللي تناسبك، والمميزات نفسها بكل الباقات.</p>
+      <div class="pr-count" id="prCount">
+        <div class="pr-count-t"><span class="pr-live">العب حالياً</span><span>الاشتراكات تبدأ في <b>1 ديسمبر 2026</b></span></div>
+        <div class="pr-clock" role="timer" aria-live="off">
+          <div class="pr-unit"><b data-u="d">00</b><small>يوم</small></div>
+          <div class="pr-unit"><b data-u="h">00</b><small>ساعة</small></div>
+          <div class="pr-unit"><b data-u="m">00</b><small>دقيقة</small></div>
+          <div class="pr-unit"><b data-u="s">00</b><small>ثانية</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pr-trial" id="prTrial">
+      <div class="pr-trial-t">
+        <h2>عندك يوم مجاني</h2>
+        <p>للحسابات الجديدة: جرّب كل الألعاب يوم كامل (24 ساعة) بدون اشتراك. التجربة مرة وحدة لكل حساب تيك توك.</p>
+      </div>
+      <button type="button" class="pr-trial-btn" id="prTrialBtn">ابدأ اليوم المجاني</button>
+      <div class="pr-msg" id="prTrialMsg" aria-live="polite" hidden></div>
+    </section>
+
+    <section class="pr-plans" id="prPlans"></section>
+  </div>
+</main>
+
+<script src="auth/auth-client.js"></script>
+<script src="store/site-header.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // نفس وقت بدء القفل بالخادم (config.subscriptionStartAt)
+  var START_AT = Date.parse('2026-12-01T00:00:00+03:00');
+
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var LOGO_TIKTOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>';
+  var LOGO_KICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#53fc18" d="M5 4h4v4h2V6h2V4h4v5h-2v2h-2v2h2v2h2v5h-4v-2h-2v-2H9v4H5z"/></svg>';
+  var LOGO_TWITCH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#a970ff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>';
+
+  // المميزات نفسها بكل الباقات
+  var FEATURES =
+    '<li>' + CHECK + '<span>جميع ألعاب أيمن بدون استثناء</span></li>' +
+    '<li>' + CHECK + '<span>جميع منصات البث المدعومة' +
+      '<span class="pr-plats"><span class="pr-plat">' + LOGO_TIKTOK + 'تيك توك</span><span class="pr-plat">' + LOGO_KICK + 'كيك</span><span class="pr-plat">' + LOGO_TWITCH + 'تويتش</span></span></span></li>' +
+    '<li>' + CHECK + '<span>تسجيل حتى 4 أجهزة للحساب<small>اللعب يكون بجهاز واحد بنفس الوقت.</small></span></li>' +
+    '<li>' + CHECK + '<span>إمكانية تعليق حسابك وإعادة تنشيطه<small>للحفاظ على مدة اشتراكك بالأيام اللي ما تبث فيها — 5 أيام لكل شهر.</small></span></li>';
+
+  var PLANS = [
+    { name: 'باقة شهر', tag: '30 يوم', price: '24.99' },
+    { name: 'باقة شهرين', tag: '60 يوم', price: '34.99', alt: true }
+  ];
+  document.getElementById('prPlans').innerHTML = PLANS.map(function (p) {
+    return '<article class="pr-plan' + (p.alt ? ' is-alt' : '') + '">' +
+      '<div class="pr-plan-head"><span class="pr-plan-name">' + p.name + '</span><span class="pr-plan-tag">' + p.tag + '</span></div>' +
+      '<div class="pr-price"><b>' + p.price + '</b><span>ريال</span></div>' +
+      '<ul class="pr-feats">' + FEATURES + '</ul>' +
+      '<button type="button" class="pr-btn" disabled aria-disabled="true">اشترك <span class="pr-soon">قريباً</span></button>' +
+      '</article>';
+  }).join('');
+
+  // العداد لين بدء الاشتراكات — بعدها يختفي
+  var units = {};
+  ['d', 'h', 'm', 's'].forEach(function (u) { units[u] = document.querySelector('[data-u="' + u + '"]'); });
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function tick() {
+    var left = START_AT - Date.now();
+    if (left <= 0) { document.getElementById('prCount').hidden = true; return false; }
+    var s = Math.floor(left / 1000);
+    units.d.textContent = pad(Math.floor(s / 86400));
+    units.h.textContent = pad(Math.floor(s % 86400 / 3600));
+    units.m.textContent = pad(Math.floor(s % 3600 / 60));
+    units.s.textContent = pad(s % 60);
+    return true;
+  }
+  if (tick()) { var timer = setInterval(function () { if (!tick()) clearInterval(timer); }, 1000); }
+
+  // اليوم المجاني: بدون دخول ← تسجيل الدخول، وقبل البدء رسالة، وبعدها يفعّل من الخادم
+  var btn = document.getElementById('prTrialBtn');
+  var msg = document.getElementById('prTrialMsg');
+  var ERR = {
+    not_started: 'اليوم المجاني يتفعّل مع بداية الاشتراكات 1 ديسمبر.',
+    not_streamer: 'اليوم المجاني لحسابات الستريمر.',
+    tiktok_not_linked: 'اربط حساب تيك توك من صفحة حسابك أول، وارجع فعّل اليوم المجاني.',
+    had_subscription: 'اليوم المجاني للحسابات الجديدة اللي ما اشتركت قبل.',
+    tiktok_trial_used: 'حساب التيك توك المربوط استخدم اليوم المجاني قبل، وما ينعطى مرتين.'
+  };
+  function show(text, err) { msg.hidden = false; msg.textContent = text; msg.className = 'pr-msg' + (err ? ' err' : ''); }
+  btn.addEventListener('click', function () {
+    var A = window.AGPAuth;
+    if (!A || !A.getToken || !A.getToken()) { window.location.href = 'login.html?next=' + encodeURIComponent('pricing.html'); return; }
+    if (Date.now() < START_AT) { show(ERR.not_started); return; }
+    if (!window.confirm('تفعّل اليوم المجاني الحين؟ يبدأ العد من لحظة التفعيل (24 ساعة)، وينعطى مرة وحدة بس.')) return;
+    btn.disabled = true;
+    A.startSubscriptionTrial().then(function (r) {
+      if (r && r.success) { btn.textContent = 'تفعّل يومك المجاني'; show('تفعّل يومك المجاني — العب الحين من ألعاب البثوث.'); if (A.refreshUser) A.refreshUser(); }
+      else { btn.disabled = false; show(ERR[r && r.error] || 'تعذّر التفعيل، حاول مرة ثانية.', true); }
+    }).catch(function () { btn.disabled = false; show('تعذّر التفعيل، حاول مرة ثانية.', true); });
+  });
+})();
+</script>
+</body>
+</html>

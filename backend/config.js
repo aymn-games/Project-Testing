@@ -110,10 +110,13 @@ module.exports = {
     paymentGateway: process.env.PAYMENT_GATEWAY || '',
 
     // اشتراك الستريمر (backend/subscriptions/subscription-service.js):
-    // SUBSCRIPTION_ENFORCEMENT=true يفعّل قفل أدوات الستريمر لمن انتهى اشتراكه
-    // (مطفي افتراضياً — الاشتراك للعرض فقط). SUBSCRIPTION_GRACE_DAYS = أيام
-    // سماح بعد الانتهاء قبل القفل.
-    subscriptionEnforcement: process.env.SUBSCRIPTION_ENFORCEMENT === 'true',
+    // قفل ربط البث (كل الألعاب) لمن ما عنده اشتراك فعّال. SUBSCRIPTION_GRACE_DAYS
+    // = أيام سماح بعد الانتهاء قبل القفل.
+    // SUBSCRIPTION_ENFORCEMENT: 'true' = القفل شغّال الحين، 'false' = مطفي دائماً،
+    // فاضي = يشتغل تلقائياً من SUBSCRIPTION_START_AT (الافتراضي 1 ديسمبر 2026
+    // منتصف الليل بتوقيت السعودية). القرار نفسه بـsubscription-service.js isEnforced().
+    subscriptionEnforcement: process.env.SUBSCRIPTION_ENFORCEMENT === 'true' ? true : process.env.SUBSCRIPTION_ENFORCEMENT === 'false' ? false : null,
+    subscriptionStartAt: Date.parse(process.env.SUBSCRIPTION_START_AT || '2026-12-01T00:00:00+03:00') || Date.parse('2026-12-01T00:00:00+03:00'),
     subscriptionGraceDays: Math.max(0, parseInt(process.env.SUBSCRIPTION_GRACE_DAYS || '3', 10) || 0),
     // رابط هذا السيرفر نفسه (لإشعارات بوابة الدفع).
     publicApiBaseUrl: process.env.PUBLIC_API_BASE_URL || 'https://project-testing-akds.onrender.com',
