@@ -311,8 +311,10 @@ function refreshUser() {
  * correct for the whole visit instead of patching it once. Logged in means
  * "has a stored session token"; a missing custom_id in the cached user
  * doesn't make someone look logged out. */
-var ACCOUNT_LINK_TEXT_IN = 'حسابي';
+var ACCOUNT_LINK_TEXT_IN = 'البروفايل';
 var ACCOUNT_LINK_TEXT_OUT = 'إنشاء حساب أو تسجيل الدخول';
+// النص القديم بقوالب الهيدر المحفوظة — يتعرّف عليه ويتبدّل للجديد
+var ACCOUNT_LINK_TEXT_LEGACY = 'حسابي';
 
 function syncHeaderAccountLinks() {
     var loggedIn = Boolean(getToken());
@@ -324,7 +326,7 @@ function syncHeaderAccountLinks() {
     for (var i = 0; i < links.length; i++) {
         var a = links[i];
         var t = (a.textContent || '').trim();
-        if (t !== ACCOUNT_LINK_TEXT_IN && t !== ACCOUNT_LINK_TEXT_OUT) continue;
+        if (t !== ACCOUNT_LINK_TEXT_IN && t !== ACCOUNT_LINK_TEXT_OUT && t !== ACCOUNT_LINK_TEXT_LEGACY) continue;
         if (t !== text) a.textContent = text;
         if (a.getAttribute('href') !== href) a.setAttribute('href', href);
     }
