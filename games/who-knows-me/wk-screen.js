@@ -1,0 +1,600 @@
+/**
+ * «مين يعرفني أكثر؟» — شاشة البث (مصدر الحقيقة لحالة اللعبة).
+ *
+ * WK.mountScreen(root, opts):
+ *   opts.transport(room, onMsg, onState) — قناة الجوال (WK.relay افتراضياً، أو loopback بالتجربة)
+ *   opts.onComment(cb) — اشتراك بتعليقات الشات: cb({id, name, avatarUrl, text})
+ *   opts.hostUrl(room) — رابط لوحة الجوال اللي بالباركود
+ *   opts.streamStatus() — {connected, username} لشارة الاتصال (اختياري)
+ *   opts.onExit() — زر الخروج
+ *   opts.storage — مكان حفظ الحالة (localStorage افتراضياً)
+ *
+ * المراحل: setup ← pick ← answer ← reveal ← review ← round ← (pick | final)
+ *
+ * بروتوكول الجوال (عبر القناة، كل الرسائل فيها dev = مفتاح جهاز الجوال):
+ *   جوال → req {dev, name, pub}       ← wait {dev} | ok {dev, pub} | no {dev}
+ *   شاشة → kick {dev} (لما ينقبل جوال ثاني مكانه أو يتجدد الباركود)
+ *   بعد القبول: e {dev, to:'s'|'p', iv, data} مشفّرة بمفتاح مشترك:
+ *     جوال → {c:'cmd', cmd, arg} | {c:'hb'}      شاشة → {c:'state', s}
+ */
+(function () {
+    'use strict';
+
+    var AGP = window.AymanGamesPlatform = window.AymanGamesPlatform || {};
+    var WK = AGP.whoKnowsMe = AGP.whoKnowsMe || {};
+    var esc = function (s) { return WK.esc(s); };
+
+    var STORE_ROOM = 'wk-room';
+    var STORE_GAME = 'wk-game';
+    var STORE_SETTINGS = 'wk-settings';
+    var TIMES = [30, 45, 60, 90, 120];
+    var MAX_ANSWER_LEN = 80;
+    var AUTO_SHOW_MS = 1400;     // الحكم التلقائي يبان كذا قبل ما ينتقل
+    var JUDGE_SHOW_MS = 750;     // ختم قبول/رفض يبان كذا قبل الإجابة اللي بعدها
+    var GAME_TTL = 6 * 3600 * 1000;
+
+    function initial(name) { return String(name || '?').trim().charAt(0) || '?'; }
+    function avatarHtml(p, cls) {
+        var img = p && p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" onerror="this.remove()">' : '';
+        return '<span class="wk-av ' + (cls || '') + '">' + esc(initial(p && p.name)) + img + '</span>';
+    }
+
+    WK.mountScreen = function (root, opts) {
+        opts = opts || {};
+        var store = opts.storage || window.localStorage;
+        var transport = opts.transport || WK.relay;
+
+        // ── الحالة ──
+        var settings = Object.assign({ time: 60, auto: true }, WK.readJSON(store, STORE_SETTINGS, {}));
+        if (TIMES.indexOf(settings.time) < 0) settings.time = 60;
+
+        var G = freshGame();
+        var saved = WK.readJSON(store, STORE_GAME, null);
+        if (saved && saved.phase && saved.phase !== 'setup' && Date.now() - (saved.savedAt || 0) < GAME_TTL) {
+            G = Object.assign(freshGame(), saved);
+            if (G.phase === 'review') G.busy = false;
+        }
+
+        function freshGame() {
+            return {
+                phase: 'setup', round: 0, q: null, endsAt: 0, answers: [], seen: {}, idx: 0,
+                players: {}, scores: {}, roundPts: {}, used: [], matchStartedAt: 0, reported: false,
+                winners: [], participants: {}, busy: false
+            };
+        }
+        function saveGame() {
+            var copy = Object.assign({}, G, { savedAt: Date.now() });
+            delete copy.busy;
+            WK.writeJSON(store, STORE_GAME, copy);
+        }
+
+        // ── غرفة الجوال والتحكم ──
+        var R = WK.readJSON(store, STORE_ROOM, null);   // {id, pair, ctrl:{dev,name,pub}}
+        var key = null;              // مفتاح AES مع الجوال المقبول
+        var lastSeen = 0;            // آخر رسالة من الجوال المقبول
+        var pending = {};            // dev → {name, pub, at}
+        var rejected = {};           // dev → true (طلبات مرفوضة بهالجلسة)
+        var chan = null, chanOk = false;
+
+        function setupRoom(fresh) {
+            if (chan) { try { chan.close(); } catch (e) {} chan = null; }
+            var p = (!fresh && R && R.pair) ? Promise.resolve(R.pair) : (WK.secure.supported() ? WK.secure.newPair() : Promise.reject(new Error('no crypto')));
+            return p.then(function (pair) {
+                if (fresh || !R || !R.id) R = { id: WK.randomId(20), pair: pair, ctrl: null };
+                R.pair = pair;
+                WK.writeJSON(store, STORE_ROOM, R);
+                pending = {}; key = null;
+                chan = transport(R.id, onChanMsg, function (ok) { chanOk = ok; renderHead(); });
+                if (R.ctrl) {
+                    return WK.secure.shared(R.pair.priv, R.ctrl.pub).then(function (k) { key = k; pushState(true); });
+                }
+            }).catch(function (e) { AGP.log && AGP.log('WK room', e); flash('المتصفح ما يدعم الاتصال الآمن (يحتاج https)'); }).then(render);
+        }
+
+        function onChanMsg(m) {
+            if (!m || typeof m.dev !== 'string' || m.dev.length > 64) return;
+            if (m.t === 'req') {
+                var name = String(m.name || '').trim().slice(0, 24);
+                if (!name || !m.pub || typeof m.pub.x !== 'string') return;
+                if (R.ctrl && R.ctrl.dev === m.dev && R.ctrl.pub.x === m.pub.x) {
+                    // نفس الجوال المقبول رجع اتصل
+                    R.ctrl.name = name; WK.writeJSON(store, STORE_ROOM, R);
+                    chan.send({ t: 'ok', dev: m.dev, pub: R.pair.pub });
+                    lastSeen = Date.now(); pushState(true); renderHead();
+                    return;
+                }
+                if (rejected[m.dev]) { chan.send({ t: 'no', dev: m.dev }); return; }
+                if (!pending[m.dev] && Object.keys(pending).length >= 6) return;
+                var isNew = !pending[m.dev];
+                pending[m.dev] = { name: name, pub: m.pub, at: Date.now() };
+                chan.send({ t: 'wait', dev: m.dev });
+                if (isNew) { WK.sfx('pop'); render(); }
+                return;
+            }
+            if (m.t === 'e' && m.to === 's' && R.ctrl && m.dev === R.ctrl.dev && key) {
+                WK.secure.decrypt(key, m).then(function (inner) {
+                    lastSeen = Date.now();
+                    if (inner.c === 'cmd') handleCmd(inner.cmd, inner.arg, 'phone');
+                    else if (inner.c === 'hb') { renderHead(); if (inner.need) pushState(true); }
+                }).catch(function () {});
+            }
+        }
+
+        function acceptReq(dev) {
+            var p = pending[dev];
+            if (!p) return;
+            if (R.ctrl && R.ctrl.dev !== dev) chan.send({ t: 'kick', dev: R.ctrl.dev });
+            R.ctrl = { dev: dev, name: p.name, pub: p.pub };
+            WK.writeJSON(store, STORE_ROOM, R);
+            delete pending[dev];
+            WK.secure.shared(R.pair.priv, p.pub).then(function (k) {
+                key = k; lastSeen = Date.now();
+                chan.send({ t: 'ok', dev: dev, pub: R.pair.pub });
+                setTimeout(function () { pushState(true); }, 150);
+                WK.sfx('ok'); flash('تم ربط جوال ' + p.name); render();
+            });
+        }
+        function rejectReq(dev) {
+            if (!pending[dev]) return;
+            rejected[dev] = true;
+            chan.send({ t: 'no', dev: dev });
+            delete pending[dev];
+            render();
+        }
+        function unlink() {
+            if (R && R.ctrl) chan.send({ t: 'kick', dev: R.ctrl.dev });
+            setupRoom(true);
+        }
+        function ctrlOnline() { return !!(R && R.ctrl && key && Date.now() - lastSeen < 35000); }
+
+        // حالة مختصرة للجوال (فيها جواب المضيف — توصل مشفّرة للجوال المقبول بس)
+        var _pushT = null, _pushLast = 0;
+        function pushState(now) {
+            if (!key || !R || !R.ctrl) return;
+            var wait = now ? 0 : Math.max(0, 900 - (Date.now() - _pushLast));
+            clearTimeout(_pushT);
+            _pushT = setTimeout(function () {
+                _pushLast = Date.now();
+                var dev = R.ctrl.dev;
+                WK.secure.encrypt(key, { c: 'state', s: phoneState() }).then(function (box) {
+                    chan.send({ t: 'e', dev: dev, to: 'p', iv: box.iv, data: box.data });
+                });
+            }, wait);
+        }
+        function phoneState() {
+            var a = G.answers[G.idx];
+            return {
+                phase: G.phase, round: G.round, settings: settings,
+                q: G.q ? { text: G.q.text, answer: G.q.answer, id: G.q.id } : null,
+                left: G.phase === 'answer' ? Math.max(0, G.endsAt - Date.now()) : 0,
+                count: G.answers.length,
+                cur: (G.phase === 'review' && a) ? { i: G.idx + 1, n: G.answers.length, name: a.name, text: a.text, verdict: a.verdict, auto: !!a.auto } : null,
+                used: G.used,
+                top: ranking().slice(0, 5).map(function (r) { return { name: r.name, total: r.total, pts: G.roundPts[r.id] || 0 }; }),
+                winners: G.winners.map(function (id) { return (G.players[id] || {}).name; }),
+                canUndo: G.phase === 'review' && (G.idx > 0 || (a && a.verdict != null))
+            };
+        }
+
+        // ── منطق اللعبة ──
+        var reviewTimer = null;
+        function handleCmd(cmd, arg, from) {
+            arg = arg || {};
+            switch (cmd) {
+                case 'start': if (G.phase === 'setup') startGame(); break;
+                case 'settings':
+                    if (G.phase !== 'setup' && G.phase !== 'pick' && G.phase !== 'round') break;
+                    if (TIMES.indexOf(arg.time) >= 0) settings.time = arg.time;
+                    if (typeof arg.auto === 'boolean') settings.auto = arg.auto;
+                    WK.writeJSON(store, STORE_SETTINGS, settings); render(); break;
+                case 'pick': pick(arg); break;
+                case 'endTime': if (G.phase === 'answer') toReveal(); break;
+                case 'startReview': startReview(); break;
+                case 'accept': judge(true); break;
+                case 'reject': judge(false); break;
+                case 'undo': undo(); break;
+                case 'endReview': if (G.phase === 'review') toRound(); break;
+                case 'next': if (G.phase === 'round' || (G.phase === 'reveal' && !G.answers.length)) { G.phase = 'pick'; G.round++; commit(); } break;
+                case 'finish': if (G.phase === 'round' || G.phase === 'pick' || G.phase === 'reveal') finish(); break;
+                case 'newGame': if (G.phase === 'final') startGame(); break;
+            }
+        }
+        function commit() { saveGame(); render(); pushState(true); }
+
+        function startGame() {
+            var players = G.players;
+            G = freshGame();
+            G.players = players;
+            G.phase = 'pick'; G.round = 1;
+            WK.sfx('go'); commit();
+        }
+        function pick(arg) {
+            if (G.phase !== 'pick') return;
+            var text = String(arg.text || '').trim().slice(0, 140);
+            var answer = String(arg.answer || '').trim().slice(0, 60);
+            if (!text || !answer) return;
+            var qid = typeof arg.id === 'number' ? arg.id : null;
+            G.q = { text: text, answer: answer, id: qid };
+            if (qid != null && G.used.indexOf(qid) < 0) G.used.push(qid);
+            G.answers = []; G.seen = {}; G.idx = 0; G.roundPts = {};
+            G.phase = 'answer';
+            G.endsAt = Date.now() + settings.time * 1000;
+            if (!G.matchStartedAt) G.matchStartedAt = Date.now();
+            WK.sfx('go'); commit();
+        }
+        function onComment(p) {
+            if (G.phase !== 'answer' || !p || !p.id || Date.now() >= G.endsAt) return;
+            if (G.seen[p.id]) return;
+            var text = String(p.text || '').replace(/\s+/g, ' ').trim().slice(0, MAX_ANSWER_LEN);
+            if (!text) return;
+            G.seen[p.id] = 1;
+            var name = String(p.name || p.id).trim().slice(0, 30) || String(p.id);
+            G.players[p.id] = { id: p.id, name: name, avatar: p.avatarUrl || (G.players[p.id] && G.players[p.id].avatar) || null };
+            G.participants[p.id] = 1;
+            G.answers.push({ id: p.id, name: name, avatar: G.players[p.id].avatar, text: text, verdict: null, auto: false, noAuto: false });
+            saveGameSoon();
+            updateLive();
+            pushState(false);
+        }
+        var _saveT = null;
+        function saveGameSoon() { clearTimeout(_saveT); _saveT = setTimeout(saveGame, 1500); }
+
+        function toReveal() { G.phase = 'reveal'; WK.sfx('pop'); commit(); }
+        function startReview() {
+            if (G.phase !== 'reveal') return;
+            if (!G.answers.length) { toRound(); return; }
+            G.phase = 'review'; G.idx = 0; G.busy = false;
+            commit(); autoStep();
+        }
+        function curAns() { return G.answers[G.idx]; }
+        function autoStep() {
+            clearTimeout(reviewTimer);
+            var a = curAns();
+            if (G.phase !== 'review' || !a || a.verdict != null || !settings.auto || a.noAuto) return;
+            var n = WK.norm(a.text);
+            if (!n) return;
+            for (var i = 0; i < G.idx; i++) {
+                var b = G.answers[i];
+                if (b.verdict != null && WK.norm(b.text) === n) {
+                    a.verdict = b.verdict; a.auto = true; G.busy = true;
+                    WK.sfx(a.verdict ? 'ok' : 'no'); commit();
+                    reviewTimer = setTimeout(advance, AUTO_SHOW_MS);
+                    return;
+                }
+            }
+        }
+        function judge(v) {
+            var a = curAns();
+            if (G.phase !== 'review' || !a || G.busy || a.verdict != null) return;
+            a.verdict = v; a.auto = false; G.busy = true;
+            WK.sfx(v ? 'ok' : 'no'); commit();
+            clearTimeout(reviewTimer);
+            reviewTimer = setTimeout(advance, JUDGE_SHOW_MS);
+        }
+        function advance() {
+            clearTimeout(reviewTimer);
+            if (G.phase !== 'review') return;
+            G.busy = false;
+            if (G.idx + 1 >= G.answers.length) { toRound(); return; }
+            G.idx++;
+            commit(); autoStep();
+        }
+        function undo() {
+            if (G.phase !== 'review') return;
+            clearTimeout(reviewTimer);
+            var a = curAns();
+            if (a && a.verdict != null) { a.verdict = null; a.auto = false; a.noAuto = true; }
+            else if (G.idx > 0) { G.idx--; var b = curAns(); b.verdict = null; b.auto = false; b.noAuto = true; }
+            G.busy = false;
+            commit();
+        }
+        function toRound() {
+            clearTimeout(reviewTimer);
+            G.roundPts = {};
+            G.answers.forEach(function (a) {
+                if (a.verdict === true) {
+                    G.roundPts[a.id] = (G.roundPts[a.id] || 0) + 1;
+                    G.scores[a.id] = (G.scores[a.id] || 0) + 1;
+                }
+            });
+            G.phase = 'round'; G.busy = false;
+            WK.sfx('pop'); commit();
+        }
+        function ranking() {
+            return Object.keys(G.scores).map(function (id) {
+                var p = G.players[id] || { name: id };
+                return { id: id, name: p.name, avatar: p.avatar, total: G.scores[id] };
+            }).filter(function (r) { return r.total > 0; }).sort(function (a, b) { return b.total - a.total; });
+        }
+        function finish() {
+            var rk = ranking();
+            var top = rk.length ? rk[0].total : 0;
+            G.winners = rk.filter(function (r) { return r.total === top && top > 0; }).map(function (r) { return r.id; });
+            G.phase = 'final';
+            reportPoints();
+            WK.sfx('win'); commit();
+        }
+        function reportPoints() {
+            if (G.reported) return;
+            var ids = Object.keys(G.participants);
+            if (!ids.length) return;
+            G.reported = true;
+            if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
+                try {
+                    window.AGPAuth.reportMatchPoints({
+                        players: ids.map(function (id) { return { id: id, name: (G.players[id] || {}).name || id }; }),
+                        winnerIds: G.winners.slice(),
+                        teamGame: false,
+                        durationMs: Date.now() - (G.matchStartedAt || Date.now())
+                    });
+                } catch (e) {}
+            }
+        }
+
+        // ── الرسم ──
+        root.classList.add('wk-root');
+        root.innerHTML = '<div class="wk-stage"><div class="wk-fx">' + fxHtml() + '</div>' +
+            '<header class="wk-head"></header><main class="wk-body"></main><div class="wk-over"></div></div>';
+        var stage = root.querySelector('.wk-stage');
+        var head = root.querySelector('.wk-head');
+        var body = root.querySelector('.wk-body');
+        var over = root.querySelector('.wk-over');
+        var modal = null;
+
+        function fit() {
+            var w = root.clientWidth || window.innerWidth, h = root.clientHeight || window.innerHeight;
+            var s = Math.min(w / 1920, h / 1080);
+            stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+        }
+        fit();
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(root); else window.addEventListener('resize', fit);
+
+        function fxHtml() {
+            var h = '<i style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle,rgba(124,58,237,.22),transparent 65%)"></i>' +
+                '<i style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle,rgba(139,92,246,.12),transparent 65%)"></i>' +
+                '<i style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle,rgba(168,85,247,.1),transparent 65%)"></i>';
+            for (var i = 0; i < 80; i++) {
+                var s = i % 9 ? 1.5 : 3;
+                h += '<b style="left:' + (Math.random() * 100).toFixed(1) + '%;top:' + (Math.random() * 100).toFixed(1) + '%;width:' + s + 'px;height:' + s + 'px;opacity:' + (0.12 + Math.random() * 0.25).toFixed(2) + '"></b>';
+            }
+            return h;
+        }
+
+        function renderHead() {
+            var st = opts.streamStatus ? opts.streamStatus() : null;
+            var ctrl = R && R.ctrl;
+            var ctrlChip = ctrl
+                ? '<span class="wk-chip muted"><span class="wk-dot ' + (ctrlOnline() ? 'on' : 'warn') + '"></span>📱 ' + esc(ctrl.name) + '</span>'
+                : '<span class="wk-chip muted"><span class="wk-dot"></span>📱 بدون جوال</span>';
+            head.innerHTML =
+                '<div class="wk-head-side"><button class="wk-hbtn exit" data-a="exit">خروج</button>' +
+                (G.phase !== 'setup' ? '<button class="wk-hbtn" data-a="qr">باركود الجوال</button>' : '') + '</div>' +
+                '<div class="wk-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'مين يعرفني أكثر؟\'))"></div>' +
+                '<div class="wk-head-side end">' + ctrlChip +
+                (st ? '<span class="wk-chip muted"><span class="wk-dot ' + (st.connected ? 'on' : '') + '"></span>' + (st.connected ? 'البث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' : '') +
+                '</div>';
+        }
+
+        function render() {
+            renderHead();
+            var ph = G.phase;
+            var html = ph === 'setup' ? vSetup() : ph === 'pick' ? vPick() : ph === 'answer' ? vAnswer() :
+                ph === 'reveal' ? vReveal() : ph === 'review' ? vReview() : ph === 'round' ? vRound() : vFinal();
+            body.innerHTML = html;
+            if (ph === 'setup' || (ph === 'pick' && !(R && R.ctrl))) drawQr(body.querySelector('.wk-qr'));
+            renderOver();
+            updateLive();
+        }
+
+        function vSettingsRows() {
+            return '<div class="wk-set-row"><div class="wk-pills">' + TIMES.map(function (t) {
+                return '<button class="wk-pill ' + (settings.time === t ? 'on' : '') + '" data-a="time" data-v="' + t + '">' + t + '</button>';
+            }).join('') + '</div><div class="wk-set-label"><b>وقت الإجابة (ثانية)</b><small>المدة اللي يكتب فيها المتابعين إجاباتهم بالشات</small></div></div>' +
+            '<div class="wk-set-row"><button class="wk-toggle ' + (settings.auto ? 'on' : '') + '" data-a="auto" aria-label="الحكم التلقائي"></button>' +
+            '<div class="wk-set-label"><b>الحكم التلقائي على المتطابق</b><small>إجابة تطابق إجابة حكمت عليها تاخذ نفس الحكم</small></div></div>';
+        }
+        function vPhoneCard() {
+            var reqs = Object.keys(pending).map(function (dev) {
+                return '<div class="wk-req"><div class="wk-row"><button class="wk-btn no sm" data-a="rej" data-v="' + dev + '">رفض</button>' +
+                    '<button class="wk-btn ok sm" data-a="acc" data-v="' + dev + '">قبول</button></div>' +
+                    '<div class="wk-req-name">' + esc(pending[dev].name) + '<small>يبي يتحكم باللعبة</small></div></div>';
+            }).join('');
+            var ctrl = R && R.ctrl ? '<div class="wk-ctrl"><button class="wk-btn ghost sm" data-a="unlink">إلغاء الربط</button><b><span class="wk-dot ' + (ctrlOnline() ? 'on' : 'warn') + '"></span>' + esc(R.ctrl.name) + '</b></div>' : '';
+            return '<div class="wk-card"><h3 class="wk-card-h">📱 جوال المضيف</h3>' +
+                '<div class="wk-qr-wrap"><div class="wk-qr">جاري التجهيز…</div><div class="wk-qr-txt"><b>امسح الباركود بجوالك</b>' +
+                '<span>اكتب اسمك وأرسل طلب، واقبله من هنا. بعدها تختار الأسئلة وتحكم على الإجابات من جوالك.</span>' +
+                '<div class="wk-link">' + esc(R ? opts.hostUrl(R.id) : '') + '</div></div></div>' +
+                ctrl + '<div class="wk-reqs">' + reqs + '</div></div>';
+        }
+        function vSetup() {
+            return '<h1 class="wk-title">مين يعرفني أكثر؟</h1>' +
+                '<div class="wk-setup"><div class="wk-card"><h3 class="wk-card-h">⚙️ الإعدادات</h3>' + vSettingsRows() +
+                '<ol class="wk-how"><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li><li>المتابعين يكتبون إجاباتهم بالشات.</li>' +
+                '<li>تنكشف إجابتك، وتقبل أو ترفض إجابة كل لاعب.</li><li>كل إجابة مقبولة بنقطة، والأعلى يفوز.</li></ol></div>' +
+                vPhoneCard() + '</div>' +
+                '<button class="wk-btn pri xl" data-a="start"' + (R && R.ctrl ? '' : ' disabled') + '>ابدأ اللعبة</button>' +
+                (R && R.ctrl ? '' : '<p class="wk-sub" style="font-size:22px;margin-top:-14px">اربط جوالك أول عشان تبدأ</p>');
+        }
+        function miniBoard(n) {
+            var rk = ranking().slice(0, n);
+            if (!rk.length) return '';
+            return '<div class="wk-card wk-board" style="width:900px"><h3 class="wk-card-h">🏆 الترتيب</h3><div class="wk-list">' +
+                rk.map(liHtml).join('') + '</div></div>';
+        }
+        function liHtml(r, i) {
+            return '<div class="wk-li ' + (i === 0 ? 'top1' : '') + '" style="animation-delay:' + (i * 50) + 'ms"><span class="r">' + (i + 1) + '</span>' + avatarHtml(r) +
+                '<span class="n">' + esc(r.name) + '</span>' + (r.pts ? '<span class="p">+' + r.pts + '</span>' : '') + '<span class="s">' + r.total + '</span></div>';
+        }
+        function vPick() {
+            if (!(R && R.ctrl)) {
+                return '<span class="wk-chip">الجولة ' + G.round + '</span><h1 class="wk-title">اربط جوالك عشان تختار السؤال</h1>' +
+                    '<div class="wk-setup" style="grid-template-columns:1fr;max-width:1000px">' + vPhoneCard() + '</div>';
+            }
+            return '<span class="wk-chip">الجولة ' + G.round + '</span>' +
+                '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px">' +
+                '<div style="font-size:120px;line-height:1">🤔</div>' +
+                '<h1 class="wk-title">' + esc(R.ctrl.name) + ' يختار السؤال<span class="wk-dots"><i>.</i><i>.</i><i>.</i></span></h1>' +
+                '<p class="wk-sub">جهّزوا أنفسكم، السؤال عن المضيف نفسه!</p></div>' + miniBoard(5);
+        }
+        function vAnswer() {
+            return '<span class="wk-chip">الجولة ' + G.round + ' · سؤال عن المضيف</span>' +
+                '<div class="wk-card wk-q"><div class="wk-q-halo"></div><p class="wk-q-text" style="position:relative">' + esc(G.q.text) + '</p></div>' +
+                '<div class="wk-row" style="gap:120px;flex:1">' +
+                '<div class="wk-count"><b data-live="count">0</b><span>إجابة وصلت</span></div>' +
+                '<div class="wk-timer" data-live="timer"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>' +
+                '<circle data-live="ring" cx="50" cy="50" r="44" fill="none" stroke="url(#wkg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="0"/>' +
+                '<defs><linearGradient id="wkg"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs></svg><span data-live="secs"></span></div>' +
+                '<div class="wk-count" style="visibility:hidden"><b>0</b><span>.</span></div></div>' +
+                '<div class="wk-howto">✍️ اكتب إجابتك بالشات — أول تعليق لك هو إجابتك</div>' +
+                '<div class="wk-faces" data-live="faces"></div>' +
+                '<button class="wk-btn ghost sm" data-a="endTime">إنهاء الوقت</button>';
+        }
+        function vReveal() {
+            var n = G.answers.length;
+            return '<span class="wk-chip">الجولة ' + G.round + ' · انتهى الوقت</span>' +
+                '<div class="wk-reveal"><div class="wk-card wk-q" style="flex:1"><p class="wk-q-text">' + esc(G.q.text) + '</p></div>' +
+                '<div class="wk-card wk-host"><span class="wk-host-lbl">⭐ جواب ' + esc(R && R.ctrl ? R.ctrl.name : 'المضيف') + '</span><span class="wk-host-ans">' + esc(G.q.answer) + '</span></div></div>' +
+                '<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:24px">' +
+                (n ? '<div class="wk-count"><b>' + n + '</b><span>إجابة وصلت</span></div><button class="wk-btn pri xl" data-a="startReview">ابدأ إظهار الإجابات</button>'
+                    : '<p class="wk-sub" style="font-size:36px">ما وصلت أي إجابة 😅</p><div class="wk-row"><button class="wk-btn pri" data-a="next">سؤال جديد</button><button class="wk-btn ghost" data-a="finish">إنهاء وعرض الفائز</button></div>') +
+                '</div>';
+        }
+        function vReview() {
+            var a = curAns();
+            if (!a) return '';
+            var n = G.answers.length;
+            var vcls = a.verdict === true ? 'ok' : a.verdict === false ? 'no' : '';
+            var stamp = vcls ? '<span class="wk-stamp ' + vcls + '">' + (a.verdict ? '✓ مقبولة' : '✗ مرفوضة') + '</span>' : '';
+            var canUndo = G.idx > 0 || a.verdict != null;
+            return '<div class="wk-review-top"><div class="wk-card wk-q small"><p class="wk-q-text">' + esc(G.q.text) + '</p></div>' +
+                '<div class="wk-card wk-host small" style="animation:none"><span class="wk-host-lbl">⭐ جواب المضيف</span><span class="wk-host-ans">' + esc(G.q.answer) + '</span></div></div>' +
+                '<div class="wk-row" style="gap:20px"><span class="wk-chip">الإجابة ' + (G.idx + 1) + ' من ' + n + '</span></div>' +
+                '<div class="wk-progress"><i style="width:' + ((G.idx + (a.verdict != null ? 1 : 0)) / n * 100) + '%"></i></div>' +
+                '<div class="wk-card wk-ans ' + vcls + '" data-k="' + G.idx + '">' + stamp + (a.auto ? '<span class="wk-auto">حكم تلقائي</span>' : '') +
+                avatarHtml(a) + '<span class="wk-ans-name">' + esc(a.name) + '</span><span class="wk-ans-text">' + esc(a.text) + '</span></div>' +
+                '<div class="wk-row" style="gap:28px">' +
+                '<button class="wk-btn ok xl" data-a="accept"' + (a.verdict != null || G.busy ? ' disabled' : '') + '>✓ قبول</button>' +
+                '<button class="wk-btn no xl" data-a="reject"' + (a.verdict != null || G.busy ? ' disabled' : '') + '>✗ رفض</button></div>' +
+                '<div class="wk-row"><button class="wk-btn ghost sm" data-a="undo"' + (canUndo ? '' : ' disabled') + '>↶ تراجع</button>' +
+                '<button class="wk-btn ghost sm" data-a="endReview">إنهاء المراجعة</button></div>';
+        }
+        function vRound() {
+            var gained = Object.keys(G.roundPts).map(function (id) {
+                var p = G.players[id] || { name: id };
+                return { id: id, name: p.name, avatar: p.avatar, total: G.scores[id] || 0, pts: G.roundPts[id] };
+            });
+            var rk = ranking().slice(0, 8).map(function (r) { return Object.assign({}, r, { pts: G.roundPts[r.id] || 0 }); });
+            return '<span class="wk-chip">نهاية الجولة ' + G.round + '</span>' +
+                '<div class="wk-boards"><div class="wk-card wk-board"><h3 class="wk-card-h">✅ عرفوا الجواب (' + gained.length + ')</h3><div class="wk-list">' +
+                (gained.length ? gained.slice(0, 8).map(function (r, i) { return liHtml(Object.assign({}, r, { total: '' }), i).replace('class="wk-li top1"', 'class="wk-li"'); }).join('') +
+                    (gained.length > 8 ? '<div class="wk-empty" style="padding:6px 0">+ ' + (gained.length - 8) + ' لاعب ثاني</div>' : '')
+                    : '<div class="wk-empty">محد عرفها هالمرة 😅</div>') + '</div></div>' +
+                '<div class="wk-card wk-board"><h3 class="wk-card-h">🏆 الترتيب العام</h3><div class="wk-list">' +
+                (rk.length ? rk.map(liHtml).join('') : '<div class="wk-empty">ما فيه نقاط للحين</div>') + '</div></div></div>' +
+                '<div class="wk-row" style="gap:28px"><button class="wk-btn pri xl" data-a="next">سؤال جديد</button>' +
+                '<button class="wk-btn ghost xl" data-a="finish">إنهاء وعرض الفائز</button></div>';
+        }
+        function vFinal() {
+            var rk = ranking();
+            var ws = G.winners.map(function (id) { var p = G.players[id] || { name: id }; return { name: p.name, avatar: p.avatar, total: G.scores[id] }; });
+            var win = ws.length
+                ? '<div class="wk-win"><div class="wk-crown">👑</div><p class="wk-sub" style="font-size:34px;color:#fcd34d">' + (ws.length > 1 ? 'الأكثر معرفة بالمضيف (تعادل)' : 'الأكثر معرفة بالمضيف') + '</p><div class="wk-winners">' +
+                    ws.slice(0, 4).map(function (w) { return '<div class="wk-winner">' + avatarHtml(w) + '<b>' + esc(w.name) + '</b><span>' + w.total + ' نقطة</span></div>'; }).join('') + '</div></div>'
+                : '<div class="wk-win"><div class="wk-crown">🤷</div><h1 class="wk-title">محد جمع نقاط</h1></div>';
+            return win + (rk.length > ws.length ? '<div class="wk-card wk-board" style="width:1000px;max-height:330px"><div class="wk-list">' +
+                rk.slice(0, 5).map(liHtml).join('') + '</div></div>' : '') +
+                '<div class="wk-row" style="gap:28px;margin-top:auto"><button class="wk-btn pri" data-a="newGame">لعبة جديدة</button><button class="wk-btn ghost" data-a="exit">خروج</button></div>';
+        }
+
+        function renderOver() {
+            var h = '';
+            var devs = Object.keys(pending);
+            if (devs.length && G.phase !== 'setup' && !(G.phase === 'pick' && !(R && R.ctrl))) {
+                var d = devs[0];
+                h += '<div class="wk-card wk-toast"><b style="font:700 26px \'IBM Plex Sans Arabic\'">📱 ' + esc(pending[d].name) + ' يبي يتحكم باللعبة</b>' +
+                    '<div class="wk-row" style="justify-content:flex-start"><button class="wk-btn ok sm" data-a="acc" data-v="' + d + '">قبول</button>' +
+                    '<button class="wk-btn no sm" data-a="rej" data-v="' + d + '">رفض</button></div></div>';
+            }
+            if (modal === 'qr') {
+                h += '<div class="wk-modal" data-a="close"><div class="wk-card" style="min-width:1000px">' + vPhoneCard().replace(/^<div class="wk-card">/, '<div>') +
+                    '<button class="wk-btn ghost sm" data-a="close">إغلاق</button></div></div>';
+            } else if (modal === 'exit') {
+                h += '<div class="wk-modal"><div class="wk-card"><h2 class="wk-title" style="font-size:44px">تبي تطلع من اللعبة؟</h2>' +
+                    '<p class="wk-sub">النقاط الحالية بتنمسح.</p><div class="wk-row"><button class="wk-btn no sm" data-a="exitYes">خروج</button>' +
+                    '<button class="wk-btn ghost sm" data-a="close">رجوع</button></div></div></div>';
+            }
+            if (flashMsg) h += '<div class="wk-flash">' + esc(flashMsg) + '</div>';
+            over.innerHTML = h;
+            if (modal === 'qr') drawQr(over.querySelector('.wk-qr'));
+        }
+        var flashMsg = '', flashT = null;
+        function flash(msg) { flashMsg = msg; renderOver(); clearTimeout(flashT); flashT = setTimeout(function () { flashMsg = ''; renderOver(); }, 2600); }
+
+        var _qrUrl = '', _qrImg = '';
+        function drawQr(el) {
+            if (!el || !R) return;
+            var url = opts.hostUrl(R.id);
+            if (_qrUrl === url && _qrImg) { el.innerHTML = '<img src="' + _qrImg + '" alt="">'; return; }
+            if (!window.QRCode) { el.textContent = 'افتح الرابط تحت من جوالك'; return; }
+            el.innerHTML = '';
+            try {
+                new window.QRCode(el, { text: url, width: 232, height: 232, colorDark: '#0F1117', colorLight: '#ffffff' });
+                var c = el.querySelector('canvas');
+                if (c) { _qrUrl = url; _qrImg = c.toDataURL('image/png'); }
+            } catch (e) { el.textContent = 'افتح الرابط تحت من جوالك'; }
+        }
+
+        // تحديثات حيّة بدون إعادة رسم (العدّاد وعدد الإجابات)
+        var _lastSec = -1, _facesN = -1;
+        function updateLive() {
+            if (G.phase !== 'answer') return;
+            var left = Math.max(0, G.endsAt - Date.now());
+            var secs = Math.ceil(left / 1000);
+            var el = body.querySelector('[data-live="secs"]');
+            if (el) {
+                el.textContent = secs;
+                var ring = body.querySelector('[data-live="ring"]');
+                if (ring) ring.setAttribute('stroke-dashoffset', String(276.5 * (1 - left / (settings.time * 1000))));
+                body.querySelector('[data-live="timer"]').classList.toggle('hot', secs <= 10);
+                if (secs !== _lastSec && secs <= 5 && secs > 0) WK.sfx('tick');
+                _lastSec = secs;
+            }
+            var c = body.querySelector('[data-live="count"]');
+            if (c) c.textContent = G.answers.length;
+            var f = body.querySelector('[data-live="faces"]');
+            if (f && _facesN !== G.answers.length) {
+                _facesN = G.answers.length;
+                f.innerHTML = G.answers.slice(-14).map(function (a) { return avatarHtml(a); }).join('');
+            }
+        }
+        setInterval(function () {
+            if (G.phase === 'answer') {
+                if (Date.now() >= G.endsAt) toReveal(); else updateLive();
+            }
+        }, 200);
+        setInterval(renderHead, 10000);
+
+        // أزرار الشاشة (نفس أوامر الجوال)
+        root.addEventListener('click', function (ev) {
+            var t = ev.target.closest('[data-a]');
+            if (!t || t.disabled) return;
+            var a = t.getAttribute('data-a'), v = t.getAttribute('data-v');
+            if (a === 'close') { if (ev.target !== t && t.classList.contains('wk-modal')) return; modal = null; renderOver(); return; }
+            if (a === 'qr') { modal = 'qr'; renderOver(); return; }
+            if (a === 'exit') { modal = 'exit'; renderOver(); return; }
+            if (a === 'exitYes') { WK.writeJSON(store, STORE_GAME, null); if (opts.onExit) opts.onExit(); else { G = freshGame(); modal = null; render(); } return; }
+            if (a === 'acc') { acceptReq(v); return; }
+            if (a === 'rej') { rejectReq(v); return; }
+            if (a === 'unlink') { unlink(); return; }
+            if (a === 'time') { handleCmd('settings', { time: +v }); pushState(true); return; }
+            if (a === 'auto') { handleCmd('settings', { auto: !settings.auto }); pushState(true); return; }
+            handleCmd(a, null, 'screen');
+        });
+
+        if (opts.onComment) opts.onComment(onComment);
+        setupRoom(false);
+        render();
+
+        return { state: function () { return G; }, comment: onComment, cmd: handleCmd };
+    };
+}());

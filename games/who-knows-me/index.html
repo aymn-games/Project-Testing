@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مين يعرفني أكثر؟ — ألعاب أيمن</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wk.css">
+<style>html,body{margin:0;height:100%;background:#07060b;overflow:hidden}#app{position:fixed;inset:0}</style>
+<!-- نواة المنصة: الشات من بث تيك توك (stream:commentReceived) -->
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="wk-core.js"></script>
+<script src="wk-questions.js"></script>
+<script src="wk-screen.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+    'use strict';
+    var AGP = window.AymanGamesPlatform || {};
+    var WK = AGP.whoKnowsMe;
+    var CONN_KEY = 'agp:agp-stream-connection';
+
+    // الاتصال بالبث المحفوظ من مكتبة الألعاب (نفس طريقة أسرع إجابة)
+    function saved() { var d = WK.readJSON(localStorage, CONN_KEY, null); return d && d.username ? d : null; }
+    var connected = false;
+    function connect() {
+        var s = saved();
+        if (connected || !s || !AGP.streamConnector) return;
+        connected = true;
+        AGP.streamConnector.connect('tiktok', { username: s.username });
+    }
+
+    var screen = WK.mountScreen(document.getElementById('app'), {
+        hostUrl: function (room) { return new URL('host.html?r=' + room, location.href).href; },
+        streamStatus: function () { var s = saved(); return { connected: !!s, username: s ? s.username : '' }; },
+        onComment: function (cb) {
+            if (!AGP.events || typeof AGP.events.on !== 'function') return;
+            AGP.events.on('stream:commentReceived', function (p) {
+                if (p && typeof p.text === 'string' && p.id) cb(p);
+            });
+        },
+        onExit: function () { location.href = '../../games.html'; }
+    });
+
+    connect();
+    window.addEventListener('agp:stream-connected', connect);
+    window.addEventListener('storage', function (e) { if (e.key === CONN_KEY) connect(); });
+}());
+</script>
+</body>
+</html>

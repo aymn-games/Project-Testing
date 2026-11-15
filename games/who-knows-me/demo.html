@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مين يعرفني أكثر؟ — تجربة</title>
+<!-- نسخة تجربة: شاشة البث + جوال المضيف بنفس الصفحة (قناة داخلية بدل السيرفر) + متابعين وهميين يكتبون بالشات -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="wk.css">
+<link rel="stylesheet" href="wk-host.css">
+<style>
+:root{color-scheme:dark}
+html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif}
+.demo{display:flex;gap:18px;padding:16px;align-items:flex-start;max-width:1700px;margin:0 auto}
+.demo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+.demo-lbl{font:700 15px 'IBM Plex Sans Arabic';color:#a8a3b5;display:flex;align-items:center;gap:8px}
+.demo-screen{width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.demo-side{width:380px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
+.demo-phone{height:720px;border-radius:38px;border:10px solid #1b1924;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);background:#07060b}
+.demo-phone > div{height:100%;overflow-y:auto}
+.demo-chat{background:#110f18;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.demo-chat .row{display:flex;gap:8px}
+.demo-chat input{flex:1;min-width:0;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#fff;padding:0 12px;font:600 15px 'IBM Plex Sans Arabic';outline:none}
+.demo-chat button{height:42px;padding:0 14px;border-radius:12px;border:none;background:#7c3aed;color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;white-space:nowrap}
+.demo-chat label{display:flex;align-items:center;gap:8px;font:600 14px 'IBM Plex Sans Arabic';color:#cfc9da}
+.demo-log{max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;font:500 13px 'IBM Plex Sans Arabic';color:#cfc9da}
+.demo-log b{color:#c4b5fd}
+.demo-note{font:500 13px/1.6 'IBM Plex Sans Arabic';color:#8a8596;margin:0}
+@media (max-width:900px){.demo{flex-direction:column;padding:16px}.demo-side{width:100%}.demo-phone{height:640px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="wk-core.js"></script>
+<script src="wk-questions.js"></script>
+<script src="wk-screen.js"></script>
+<script src="wk-host.js"></script>
+</head>
+<body>
+<div class="demo">
+  <div class="demo-main">
+    <span class="demo-lbl">🖥️ شاشة البث</span>
+    <div class="demo-screen" id="screen"></div>
+    <p class="demo-note">هذي نسخة تجربة: الجوال على الجنب بدل الباركود، ومتابعين وهميين يجاوبون بالشات تلقائياً. ابدأ من الجوال: اكتب اسمك ← إرسال طلب ← اضغط «قبول» على شاشة البث.</p>
+  </div>
+  <div class="demo-side">
+    <span class="demo-lbl">📱 جوال المضيف</span>
+    <div class="demo-phone"><div id="phone"></div></div>
+    <div class="demo-chat">
+      <span class="demo-lbl">💬 شات البث (تجربة)</span>
+      <label><input type="checkbox" id="bots" checked style="width:18px;height:18px;flex:0"> متابعين وهميين يجاوبون تلقائياً</label>
+      <div class="row"><input id="cname" placeholder="اسم المتابع" value="متابع_تجربة" style="flex:.6"><input id="ctext" placeholder="اكتب إجابة"><button id="csend">إرسال</button></div>
+      <div class="demo-log" id="log"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+    'use strict';
+    var WK = window.AymanGamesPlatform.whoKnowsMe;
+
+    // تخزين بالذاكرة (التجربة تبدأ من الصفر كل مرة)
+    function memStore() { var m = {}; return { getItem: function (k) { return k in m ? m[k] : null; }, setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; } }; }
+    var loop = WK.createLoopback();
+    var listeners = [];
+    var logEl = document.getElementById('log');
+
+    var screen = WK.mountScreen(document.getElementById('screen'), {
+        transport: loop, storage: memStore(),
+        hostUrl: function (room) { return new URL('host.html?r=' + room, location.href).href; },
+        streamStatus: function () { return { connected: true, username: 'demo_streamer' }; },
+        onComment: function (cb) { listeners.push(cb); },
+        onExit: function () { location.reload(); }
+    });
+    var roomId = null;
+    // الجوال يحتاج معرّف الغرفة: ننتظر الشاشة تجهّزه (نقرأه من رابط الباركود المعروض)
+    (function waitRoom() {
+        var link = document.querySelector('#screen .wk-link');
+        var m = link && /r=([a-z0-9]+)/.exec(link.textContent);
+        if (!m) return setTimeout(waitRoom, 100);
+        roomId = m[1];
+        WK.mountHost(document.getElementById('phone'), { room: roomId, transport: loop, storage: memStore() });
+    })();
+
+    function chat(id, name, text) {
+        listeners.forEach(function (cb) { cb({ id: id, name: name, text: text, avatarUrl: null }); });
+        var d = document.createElement('div');
+        d.innerHTML = '<b></b>: <span></span>';
+        d.querySelector('b').textContent = name; d.querySelector('span').textContent = text;
+        logEl.prepend(d);
+        while (logEl.children.length > 40) logEl.lastChild.remove();
+    }
+    document.getElementById('csend').onclick = function () {
+        var n = document.getElementById('cname').value.trim() || 'متابع';
+        var t = document.getElementById('ctext');
+        if (!t.value.trim()) return;
+        chat('tiktok:' + n, n, t.value.trim()); t.value = '';
+    };
+    document.getElementById('ctext').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('csend').click(); });
+
+    // متابعين وهميين: بعضهم يعرف الجواب (بصيغ مختلفة)، وبعضهم يخمّن
+    var NAMES = ['نورة', 'فهد', 'ريم', 'سلطان', 'لمى', 'عبدالله', 'جود', 'خالد', 'شهد', 'تركي', 'دانة', 'ماجد', 'غلا', 'بدر'];
+    var WRONG = ['أزرق', 'أحمر', 'بيتزا', 'كبسة', 'فورتنايت', 'ماينكرافت', 'قهوة', 'الشتاء', 'دبي', 'لندن', 'قطوة', 'ما أدري 😂', 'أسود', 'برجر'];
+    var lastQ = null;
+    setInterval(function () {
+        var G = screen.state();
+        if (G.phase !== 'answer' || !G.q || G.q === lastQ || !document.getElementById('bots').checked) return;
+        lastQ = G.q;
+        var ans = G.q.answer, endsIn = G.endsAt - Date.now();
+        var pool = NAMES.slice().sort(function () { return Math.random() - .5; }).slice(0, 7 + Math.floor(Math.random() * 5));
+        pool.forEach(function (n, i) {
+            var r = Math.random(), text;
+            if (r < 0.3) text = ans;
+            else if (r < 0.45) text = 'ال' + ans.replace(/^ال/, '');
+            else if (r < 0.55) text = ans + ' أكيد';
+            else text = WRONG[Math.floor(Math.random() * WRONG.length)];
+            var at = 800 + Math.random() * Math.min(9000, endsIn - 1500);
+            setTimeout(function () { if (screen.state().q === G.q) chat('tiktok:' + n, n, text); }, at);
+        });
+    }, 300);
+}());
+</script>
+</body>
+</html>
