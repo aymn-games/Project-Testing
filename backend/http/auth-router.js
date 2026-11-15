@@ -352,6 +352,10 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
   // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
   { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
+  // نبضة حضور من شاشة المذيع بألعاب الباركود (المافيا، محطة سهيل، حفلة
+  // الميلاد، من الأمبوستر) — تطلّعها بالقائمة فوق بدون اتصال تيك توك.
+  // راجع backend/stats/live-presence.js
+  { method: 'POST', path: '/api/stream/presence', requireAuth: true, handler: handleStreamPresence },
   // صورة الستريمر لبطاقات البث — ملف صورة مباشر (مو JSON) عشان يُستخدم في <img>.
   { method: 'GET', path: '/api/public/streamer-avatar', requireAuth: false, handler: handlePublicStreamerAvatar },
   // ---- إحصائيات لوحة الأدمن
@@ -2132,9 +2136,35 @@ function handlePublicLiveStreams(req, res) {
       connectedAt: c.connectedAt || null
     };
   });
+  // ألعاب الباركود اللي ما فيها اتصال تيك توك (حضور خفيف — stats/live-presence.js).
+  // اتصال اللعبة الفعلي له الأولوية لو موجود لنفس الستريمر.
+  var presence = [];
+  try { presence = require('../stats/live-presence').listLive(); } catch (err) { logger.error('Public live streams: presence failed:', err); }
+  presence.forEach(function (p) {
+    if (byUser[p.username] || !p.customId) return;
+    var u = null;
+    try { u = authService.adminLookupUser(p.customId, 'profile'); } catch (err) { logger.error('Public live streams: user lookup failed:', err); }
+    if (!u || !u.tiktok_username) return;
+    if (String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase() !== p.username) return;
+    byUser[p.username] = {
+      name: u.display_name || u.username || p.username,
+      tiktok: p.username,
+      customId: u.custom_id,
+      gameName: p.gameName,
+      viewers: null,
+      connectedAt: p.since
+    };
+  });
   var streams = Object.keys(byUser).map(function (k) { return byUser[k]; })
     .sort(function (x, y) { return (y.viewers || 0) - (x.viewers || 0); });
   sendJson(res, 200, { success: true, streams: streams });
+}
+
+/** نبضة حضور شاشة المذيع — body: { game: '<slug>', leave?: true }. اليوزر من الجلسة حصراً. */
+function handleStreamPresence(req, res, body, user) {
+  return require('../stats/live-presence').report(user, body && body.game, Boolean(body && body.leave)).then(function (result) {
+    sendJson(res, result.success ? 200 : 400, result);
+  });
 }
 
 /** صورة ستريمر موثَّق (?u=<يوزر تيك توك>) كملف صورة. روابط صور تيك توك
