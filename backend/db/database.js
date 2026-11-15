@@ -422,6 +422,134 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_remote_controllers_user ON remote_controllers(tiktok_username);
 
+    -- «فريقك»: لاعبين ينضمون لفريق ستريمر من الموقع (دخول مباشر، واللاعب
+    -- يقدر يكون بأكثر من فريق). راجع backend/teams/team-service.js.
+    CREATE TABLE IF NOT EXISTS team_members (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        joined_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, member_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_members_member ON team_members(member_id);
+    -- «مجتمعي»: شات الفريق (streamer_id = صاحب الفريق) + الإشراف (backend/community/team-chat-service.js)
+    CREATE TABLE IF NOT EXISTS team_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        deleted_at INTEGER,
+        deleted_by INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_chat_team ON team_chat_messages(streamer_id, id);
+    CREATE TABLE IF NOT EXISTS team_chat_moderators (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        added_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- until = 0 كتم دائم (لين يفكه مشرف)
+    CREATE TABLE IF NOT EXISTS team_chat_mutes (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        until INTEGER NOT NULL,
+        by_user_id INTEGER,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- آخر رسالة قرأها العضو بشات كل فريق (لعدّاد غير المقروء)
+    CREATE TABLE IF NOT EXISTS team_chat_reads (
+        streamer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        last_id INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (streamer_id, user_id)
+    );
+    -- «مجتمعي»: الأصدقاء والرسائل الخاصة (backend/community/friends-service.js)
+    -- user_a < user_b دائماً. status: pending | accepted
+    CREATE TABLE IF NOT EXISTS friendships (
+        user_a INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_b INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        requested_by INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        accepted_at INTEGER,
+        PRIMARY KEY (user_a, user_b)
+    );
+    CREATE INDEX IF NOT EXISTS idx_friendships_b ON friendships(user_b);
+    CREATE TABLE IF NOT EXISTS user_blocks (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, blocked_id)
+    );
+    CREATE TABLE IF NOT EXISTS direct_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        body TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        read_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_dm_pair ON direct_messages(from_id, to_id, id);
+    CREATE INDEX IF NOT EXISTS idx_dm_unread ON direct_messages(to_id, read_at);
+
+    -- منح كود جائزة فوز من الستريمر لعضو بفريقه: المنح يحجز استخدام واحد من
+    -- رصيد الكود (choice_codes.uses)، واللاعب يسترده من بروفايله ويختار إطاره.
+    CREATE TABLE IF NOT EXISTS code_grants (
+        code TEXT NOT NULL,
+        from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        redeemed_at INTEGER,
+        PRIMARY KEY (code, to_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_code_grants_to ON code_grants(to_user_id);
+
+    -- اشتراك الستريمر (backend/subscriptions/subscription-service.js): مدة
+    -- وتعليق (واحد لكل شهر، 5 أيام بحد أقصى)، وأكواد تفعيل يولّدها الأدمن.
+    CREATE TABLE IF NOT EXISTS streamer_subscriptions (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        started_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        months_total INTEGER NOT NULL,
+        pauses_allowed INTEGER NOT NULL,
+        pauses_used INTEGER NOT NULL DEFAULT 0,
+        paused_total_ms INTEGER NOT NULL DEFAULT 0,
+        paused_at INTEGER,
+        pause_until INTEGER,
+        updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS subscription_codes (
+        code TEXT PRIMARY KEY,
+        months INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        redeemed_at INTEGER,
+        burned_at INTEGER
+    );
+    -- سجل أحداث اشتراك الستريمر (تفعيل/تمديد/تجديد/تعليق/فك/تعديل أدمن...).
+    -- source: code | store | admin | user | system — ref: الكود أو رقم الطلب.
+    CREATE TABLE IF NOT EXISTS subscription_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        source TEXT NOT NULL,
+        ref TEXT,
+        months INTEGER NOT NULL DEFAULT 0,
+        days INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscription_events_user ON subscription_events(user_id, created_at);
+    -- باقات الاشتراك (الأدمن يضيف/يعدّل: شهر، شهرين، 3 أشهر، سنة...). المفتاح = عدد الأشهر.
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+        months INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        pauses INTEGER NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        updated_at INTEGER NOT NULL
+    );
+
     -- إعلانات «تطلع مرة وحدة» لكل حساب (مثل «وش الجديد بالمافيا»). راجع backend/notices/seen-notices.js
     CREATE TABLE IF NOT EXISTS user_seen_notices (
         user_id TEXT NOT NULL,
@@ -577,6 +705,10 @@ ensureColumn('users', 'google_id', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
+// اشتراك الستريمر: رصيد التعليق للكود يُنسخ من الباقة وقت التوليد.
+ensureColumn('subscription_codes', 'pauses', 'INTEGER');
+// الباقات الأساسية (لو الجدول فاضي): شهر = تعليق، شهرين = تعليقين.
+db.prepare("INSERT OR IGNORE INTO subscription_plans (months, name, pauses, active, updated_at) VALUES (1, 'شهر', 1, 1, ?), (2, 'شهرين', 2, 1, ?)").run(Date.now(), Date.now());
 ensureColumn('store_orders', 'payment_gateway', 'TEXT');
 ensureColumn('store_orders', 'moyasar_invoice_id', 'TEXT');
 // حرق كود استرداد (استرجاع مبلغ مثلاً) — burned_at ليس NULL = الكود ملغي وما يُسترد.

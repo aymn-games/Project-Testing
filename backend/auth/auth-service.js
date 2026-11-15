@@ -740,7 +740,7 @@ function getPublicProfile(customId) {
     if (!customId) return null;
 
     var user = db.prepare(
-        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, permissions, created_at, display_name, avatar_image_base64 FROM users WHERE custom_id = ?'
+        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, kick_username, kick_verified, twitch_username, twitch_verified, custom_id, permissions, created_at, display_name, avatar_image_base64 FROM users WHERE custom_id = ?'
     ).get(customId);
     if (!user) return null;
 
@@ -756,6 +756,11 @@ function getPublicProfile(customId) {
         // استخراج تقريبي (meta tags) لحظة نجاح التحقق — قد ترجع null بدون أثر على صحة التحقق نفسه.
         tiktok_avatar_url: user.tiktok_verified ? (user.tiktok_avatar_url || null) : null,
         tiktok_display_name: user.tiktok_verified ? (user.tiktok_display_name || null) : null,
+        // ربط كيك وتويتش (auth/kick-oauth-service.js و twitch-oauth-service.js) — لبطاقات «ربط المنصات».
+        kick_username: user.kick_verified ? user.kick_username : null,
+        kick_verified: Boolean(user.kick_verified),
+        twitch_username: user.twitch_verified ? user.twitch_username : null,
+        twitch_verified: Boolean(user.twitch_verified),
         // اسم عرض + صورة بروفايل يعدّلهما المستخدم بنفسه — منفصلان عن
         // username (ثابت) وtiktok_display_name/tiktok_avatar_url (من تيك توك).
         display_name: user.display_name || null,

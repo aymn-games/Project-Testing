@@ -593,6 +593,96 @@ function getWinRewardCodes() {
     return request('/api/collectibles/win-codes', { method: 'GET' });
 }
 
+/* «فريقك» (backend/teams/team-service.js) + منح أكواد جوائز الفوز لأعضاء الفريق. */
+function teamSearch(query) {
+    return request('/api/teams/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
+}
+function teamMine() {
+    return request('/api/teams/mine', { method: 'GET' });
+}
+function teamJoin(customId) {
+    return request('/api/teams/join', { method: 'POST', body: { customId: customId } });
+}
+function teamLeave(customId) {
+    return request('/api/teams/leave', { method: 'POST', body: { customId: customId } });
+}
+function teamRemove(customId) {
+    return request('/api/teams/remove', { method: 'POST', body: { customId: customId } });
+}
+
+/* «مجتمعي»: شات الفريق والإشراف + الأصدقاء والرسائل الخاصة (backend/community/). */
+function q(v) { return encodeURIComponent(v == null ? '' : String(v)); }
+function communitySummary() { return request('/api/community/summary', { method: 'GET' }); }
+function communityTeams() { return request('/api/community/teams', { method: 'GET' }); }
+/** team = ID صاحب الفريق، after = آخر رسالة عندي، since = `now` من آخر رد (للمحذوف). */
+function teamChat(team, after, since) {
+    return request('/api/community/team-chat?team=' + q(team) + '&after=' + q(after || 0) + '&since=' + q(since || 0), { method: 'GET' });
+}
+function teamChatSend(team, body) { return request('/api/community/team-chat/send', { method: 'POST', body: { team: team, body: body } }); }
+function teamChatDelete(team, id) { return request('/api/community/team-chat/delete', { method: 'POST', body: { team: team, id: id } }); }
+/** minutes: 10 | 60 | 1440 | 0 (دائم) */
+function teamChatMute(team, customId, minutes) { return request('/api/community/team-chat/mute', { method: 'POST', body: { team: team, customId: customId, minutes: minutes } }); }
+function teamChatUnmute(team, customId) { return request('/api/community/team-chat/unmute', { method: 'POST', body: { team: team, customId: customId } }); }
+function teamChatKick(team, customId) { return request('/api/community/team-chat/kick', { method: 'POST', body: { team: team, customId: customId } }); }
+function teamChatMembers(team) { return request('/api/community/team-chat/members?team=' + q(team), { method: 'GET' }); }
+/** صاحب الفريق: on = true يضيف مشرف، false يشيله. */
+function setTeamModerator(customId, on) { return request('/api/community/moderators', { method: 'POST', body: { customId: customId, on: !!on } }); }
+function friendsList() { return request('/api/friends', { method: 'GET' }); }
+function friendsSearch(text) { return request('/api/friends/search?q=' + q(text), { method: 'GET' }); }
+/** action: request | accept | decline | cancel | remove | block | unblock */
+function friendAction(action, customId) { return request('/api/friends/' + action, { method: 'POST', body: { customId: customId } }); }
+function friendChat(customId, after) { return request('/api/friends/chat?user=' + q(customId) + '&after=' + q(after || 0), { method: 'GET' }); }
+function friendChatSend(customId, body) { return request('/api/friends/chat/send', { method: 'POST', body: { customId: customId, body: body } }); }
+function grantWinCode(code, customId) {
+    return request('/api/collectibles/win-codes/grant', { method: 'POST', body: { code: code, customId: customId } });
+}
+function getMyGrants() {
+    return request('/api/collectibles/grants', { method: 'GET' });
+}
+
+/* اشتراك الستريمر (backend/subscriptions/subscription-service.js). */
+function getSubscription() {
+    return request('/api/subscription', { method: 'GET' });
+}
+/** mode: 'extend' (تمديد) | 'renew' (تجديد — دورة جديدة) — يُتجاهل لو ما فيه اشتراك فعّال. */
+function redeemSubscriptionCode(code, mode) {
+    return request('/api/subscription/redeem', { method: 'POST', body: { code: code, mode: mode || null } });
+}
+function pauseSubscription() {
+    return request('/api/subscription/pause', { method: 'POST', body: {} });
+}
+function resumeSubscription() {
+    return request('/api/subscription/resume', { method: 'POST', body: {} });
+}
+/** Admin only. months: أشهر باقة فعّالة (subscription_plans). */
+function adminGenerateSubscriptionCodes(months, count, note) {
+    return request('/api/admin/subscription-codes/generate', { method: 'POST', body: { months: months, count: count, note: note || '' } });
+}
+function adminListSubscriptionCodes() {
+    return request('/api/admin/subscription-codes', { method: 'GET' });
+}
+function adminBurnSubscriptionCode(code) {
+    return request('/api/admin/subscription-codes/burn', { method: 'POST', body: { code: code } });
+}
+/** Admin only: المشتركين + كل الباقات. */
+function adminListSubscribers() {
+    return request('/api/admin/subscriptions', { method: 'GET' });
+}
+/** Admin only: days موجب = إضافة، سالب = خصم. */
+function adminAdjustSubscription(userId, days) {
+    return request('/api/admin/subscriptions/adjust', { method: 'POST', body: { userId: userId, days: days } });
+}
+function adminEndSubscription(userId) {
+    return request('/api/admin/subscriptions/end', { method: 'POST', body: { userId: userId } });
+}
+function adminUnpauseSubscription(userId) {
+    return request('/api/admin/subscriptions/unpause', { method: 'POST', body: { userId: userId } });
+}
+/** Admin only: plan = {months, name, pauses, active} — إضافة أو تعديل. */
+function adminSaveSubscriptionPlan(plan) {
+    return request('/api/admin/subscription-plans', { method: 'POST', body: plan || {} });
+}
+
 /* Stream challenge (two streams play one game) — backend/challenge/. */
 function challengeSearch(query) {
     return request('/api/challenge/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
@@ -1150,6 +1240,40 @@ global.AGPAuth = {
     adminGetWinReward: adminGetWinReward,
     adminSetWinReward: adminSetWinReward,
     getWinRewardCodes: getWinRewardCodes,
+    teamSearch: teamSearch,
+    teamMine: teamMine,
+    teamJoin: teamJoin,
+    teamLeave: teamLeave,
+    teamRemove: teamRemove,
+    communitySummary: communitySummary,
+    communityTeams: communityTeams,
+    teamChat: teamChat,
+    teamChatSend: teamChatSend,
+    teamChatDelete: teamChatDelete,
+    teamChatMute: teamChatMute,
+    teamChatUnmute: teamChatUnmute,
+    teamChatKick: teamChatKick,
+    teamChatMembers: teamChatMembers,
+    setTeamModerator: setTeamModerator,
+    friendsList: friendsList,
+    friendsSearch: friendsSearch,
+    friendAction: friendAction,
+    friendChat: friendChat,
+    friendChatSend: friendChatSend,
+    grantWinCode: grantWinCode,
+    getMyGrants: getMyGrants,
+    getSubscription: getSubscription,
+    redeemSubscriptionCode: redeemSubscriptionCode,
+    pauseSubscription: pauseSubscription,
+    resumeSubscription: resumeSubscription,
+    adminGenerateSubscriptionCodes: adminGenerateSubscriptionCodes,
+    adminListSubscriptionCodes: adminListSubscriptionCodes,
+    adminBurnSubscriptionCode: adminBurnSubscriptionCode,
+    adminListSubscribers: adminListSubscribers,
+    adminAdjustSubscription: adminAdjustSubscription,
+    adminEndSubscription: adminEndSubscription,
+    adminUnpauseSubscription: adminUnpauseSubscription,
+    adminSaveSubscriptionPlan: adminSaveSubscriptionPlan,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

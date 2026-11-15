@@ -108,6 +108,13 @@ module.exports = {
     moyasarMode: process.env.MOYASAR_MODE || '',
     // أي بوابة يستخدمها المتجر: moyasar | paylink. فارغ = ميسّر لو مفعّل، وإلا بيلينك.
     paymentGateway: process.env.PAYMENT_GATEWAY || '',
+
+    // اشتراك الستريمر (backend/subscriptions/subscription-service.js):
+    // SUBSCRIPTION_ENFORCEMENT=true يفعّل قفل أدوات الستريمر لمن انتهى اشتراكه
+    // (مطفي افتراضياً — الاشتراك للعرض فقط). SUBSCRIPTION_GRACE_DAYS = أيام
+    // سماح بعد الانتهاء قبل القفل.
+    subscriptionEnforcement: process.env.SUBSCRIPTION_ENFORCEMENT === 'true',
+    subscriptionGraceDays: Math.max(0, parseInt(process.env.SUBSCRIPTION_GRACE_DAYS || '3', 10) || 0),
     // رابط هذا السيرفر نفسه (لإشعارات بوابة الدفع).
     publicApiBaseUrl: process.env.PUBLIC_API_BASE_URL || 'https://project-testing-akds.onrender.com',
 
