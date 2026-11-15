@@ -90,10 +90,10 @@ input:focus{outline:none}
 
   <main data-screen-label="Game" style="position:fixed;top:80px;left:0;right:0;bottom:0;display:grid;place-items:center;overflow:hidden">
     <div style="position:relative;width:{{ stageW }}px;height:{{ stageH }}px">
-      <div style="position:absolute;top:0;left:0;width:{{ dW }}px;height:1000px;transform:scale({{ scale }});transform-origin:top left;box-sizing:border-box;padding:24px 90px 28px;display:flex;flex-direction:column;gap:14px;animation:{{ shakeAn }}">
+      <div style="position:absolute;top:0;left:0;width:{{ dW }}px;height:1000px;transform:scale({{ scale }});transform-origin:top left;box-sizing:border-box;padding:22px 40px 22px;display:flex;flex-direction:column;gap:14px;animation:{{ shakeAn }}">
 
         <!-- الشريط العلوي: صاحب القنبلة يمين · القنبلة/زر البدء بالنص · المتبقي على الانفجار يسار -->
-        <section style="position:relative;overflow:hidden;flex-shrink:0;height:180px;border-radius:28px;background:radial-gradient(ellipse at 50% 50%, {{ heat }}, transparent 42%), linear-gradient(180deg, rgba(30,24,46,.92), rgba(14,12,22,.94));border:1.5px solid {{ panelBd }};box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05), 0 0 {{ panelGlowR }}px {{ panelGlow }};padding:16px 34px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:30px;transition:border-color .3s, box-shadow .3s">
+        <section style="position:relative;flex-shrink:0;height:180px;padding:0 12px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:30px">
           <div style="min-width:0;display:flex;align-items:center">
             <sc-if value="{{ hasHolder }}" hint-placeholder-val="{{ false }}">
               <div key="{{ holderKey }}" style="min-width:0;max-width:100%;display:flex;align-items:center;gap:22px;animation:holdIn .45s cubic-bezier(.2,1,.3,1)">
@@ -157,14 +157,14 @@ input:focus{outline:none}
         </div>
 
         <!-- شبكة اللاعبين: كل لاعب بمكانه طول المباراة، والمُقصى يبقى باهت ورقمه عليه خط -->
-        <section style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px 18px 18px;border-radius:24px;box-sizing:border-box;background:rgba(255,255,255,.018);border:1px solid rgba(160,145,200,.12)">
+        <section style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px">
           <div style="flex-shrink:0;height:26px;display:flex;align-items:center;justify-content:space-between;padding:0 4px">
             <span style="font:900 22px 'Zain'">اللاعبون</span>
             <span style="direction:ltr;font:800 17px 'Zain';color:#a8a3b5;font-variant-numeric:tabular-nums">{{ rangeLbl }}</span>
           </div>
-          <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ cols }},{{ cardW }}px);justify-content:center;align-content:center;gap:{{ gridGap }}px">
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ cols }},minmax(0,1fr));grid-template-rows:repeat({{ rows }},minmax(0,1fr));gap:{{ gridGap }}px">
             <sc-for list="{{ cards }}" as="p" hint-placeholder-count="12">
-              <div style="position:relative;height:{{ cardH }}px;box-sizing:border-box;border-radius:{{ cardR }}px;overflow:hidden;display:flex;flex-direction:column;background:{{ p.bg }};border:{{ p.bw }}px solid {{ p.bd }};box-shadow:{{ p.sh }};opacity:{{ p.op }};transform:{{ p.tf }};z-index:{{ p.z }};animation:{{ p.an }};transition:opacity .3s, transform .25s cubic-bezier(.2,1.2,.4,1), background .3s, border-color .3s">
+              <div style="position:relative;min-height:0;box-sizing:border-box;border-radius:{{ cardR }}px;overflow:hidden;display:flex;flex-direction:column;background:{{ p.bg }};border:{{ p.bw }}px solid {{ p.bd }};box-shadow:{{ p.sh }};opacity:{{ p.op }};transform:{{ p.tf }};z-index:{{ p.z }};animation:{{ p.an }};transition:opacity .3s, transform .25s cubic-bezier(.2,1.2,.4,1), background .3s, border-color .3s">
                 <span style="flex-shrink:0;height:{{ headH }}px;display:grid;place-items:center;background:{{ p.hBg }};color:{{ p.hC }};font:900 {{ numF }}px/1 'Zain';font-variant-numeric:tabular-nums;text-decoration:{{ p.deco }};text-decoration-thickness:3px;letter-spacing:.04em">{{ p.num }}</span>
                 <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{{ inGap }}px;padding:0 8px">
                   <span style="position:relative;flex-shrink:0;width:{{ avS }}px;height:{{ avS }}px;border-radius:50%;overflow:hidden;display:grid;place-items:center;font:800 {{ avF }}px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 2px {{ p.ring }};filter:{{ p.fl }}">{{ p.ini }}<sc-if value="{{ p.img }}" hint-placeholder-val="{{ false }}"><img src="{{ p.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
@@ -456,9 +456,11 @@ class Component extends DCLogic {
     const hot=live?1-pct:0, tC=!live?(S.phase==='boom'?'#d98a8a':'#8f8a9c'):left<3000?'#d98a8a':left<6000?'#dca17a':'#e6d29a';
     const avOf=p=>{ const c=AVC[(p.ci??(p.id-1))%AVC.length]; return `linear-gradient(135deg, ${c}cc, ${c}55)`; };
     // الشبكة تعرض كل اللاعبين بترتيب أرقامهم (المُقصى يبقى بمكانه باهت). نختار عدد الأعمدة اللي يعطي أكبر كرت يدخل بالمساحة.
-    const all=[...S.players].sort((a,b)=>a.id-b.id), N=all.length||1, GW=(S.dW||1920)-220, GH=530, gridGap=N>40?10:N>20?12:14, AR=.62;
-    let cols=1, cw=0; for(let c=1;c<=N;c++){ const r=Math.ceil(N/c), w=Math.min((GW-(c-1)*gridGap)/c,(GH-(r-1)*gridGap)/r/AR); if(w>cw){ cw=w; cols=c; } }
-    const cardW=Math.floor(Math.min(cw,300)), cardH=Math.round(cardW*AR), headH=Math.round(cardH*.36), avS=Math.round(cardH*.34), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
+    // الشبكة تعرض كل اللاعبين بترتيب أرقامهم (المُقصى يبقى بمكانه باهت). الكروت تملأ المساحة كاملة،
+    // ونختار عدد الأعمدة اللي يقرّب شكل الكرت من 1.45 (عرض/طول) بأقل خانات فاضية.
+    const all=[...S.players].sort((a,b)=>a.id-b.id), N=all.length||1, GW=(S.dW||1920)-104, GH=574, gridGap=N>40?10:N>20?12:14, AR=1.45;
+    let cols=1, best=1e9; for(let c=1;c<=N;c++){ const r=Math.ceil(N/c), w=(GW-(c-1)*gridGap)/c, h=(GH-(r-1)*gridGap)/r, sc=Math.abs(Math.log(w/h/AR))+.6*((c*r-N)/c); if(sc<best){ best=sc; cols=c; } }
+    const rows=Math.ceil(N/cols), cardW=(GW-(cols-1)*gridGap)/cols, cardH=(GH-(rows-1)*gridGap)/rows, u=Math.min(cardH,cardW/AR,360), headH=Math.round(u*.34), avS=Math.round(u*.32), maxId=Math.max(0,...all.map(p=>p.id)), pad=maxId>=10?2:1;
     const cards=all.map(p=>{ const isH=S.holder===p.id&&(live||S.phase==='boom')&&!p.out, out=p.out;
       return {...p,ini:ini(p.name),av:avOf(p),num:String(p.id).padStart(pad,'0'),isHolder:isH&&live,
         bg:out?'rgba(255,255,255,.015)':isH?'linear-gradient(180deg, rgba(62,44,92,.95), rgba(30,22,38,.95))':'linear-gradient(180deg, rgba(38,30,60,.85), rgba(20,17,30,.92))',
@@ -479,7 +481,7 @@ class Component extends DCLogic {
       fx:this.buildFx(), scale:S.scale, stageW:Math.round((S.dW||1920)*S.scale), dW:S.dW||1920, stageH:Math.round(1000*S.scale),
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      round:S.round, roundLbl:'الجولة '+S.round, aliveN:A.length, totalN:A.length, cols, cardW, cardH, gridGap, headH, avS, avF:Math.round(avS*.44), cardR:Math.round(Math.min(22,cardH*.14)), numF:Math.round(headH*.86), nameF:Math.round(Math.min(30,Math.max(12,cardH*.14))), inGap:Math.round(cardH*.05), bombF:Math.round(Math.min(44,cardH*.24)), noLog:!S.log.length, cards,
+      round:S.round, roundLbl:'الجولة '+S.round, aliveN:A.length, totalN:A.length, cols, rows, gridGap, headH, avS, avF:Math.round(avS*.44), cardR:Math.round(Math.min(22,u*.14)), numF:Math.round(headH*.86), nameF:Math.round(Math.min(34,Math.max(12,u*.15))), inGap:Math.round(u*.05), bombF:Math.round(Math.min(48,u*.24)), noLog:!S.log.length, cards,
       rangeLbl:maxId?'01'.slice(-pad)+' – '+String(maxId).padStart(pad,'0'):'',
       stats:[{v:A.length,l:'في الساحة',c:'#e6e2ee'},{v:S.round,l:'الجولة',c:'#b7aad8'},{v:S.passes,l:'تمريرة',c:'#e6e2ee'},{v:S.players.length-A.length,l:'خارج اللعب',c:'#d98a8a'}],
       notIdle:S.phase!=='idle', ringOn:live&&!S.paused, pctW:Math.round(pct*1000)/10,
