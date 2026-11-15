@@ -45,7 +45,10 @@
         var transport = opts.transport || WK.relay;
 
         // ── الحالة ──
-        var settings = Object.assign({ time: 60, auto: true }, WK.readJSON(store, STORE_SETTINGS, {}));
+        var settings = Object.assign({ time: 60, auto: true, keyword: '' }, WK.readJSON(store, STORE_SETTINGS, {}));
+        // كلمة الدخول المشتركة بين كل الألعاب (js/agp-shared-prefs.js)
+        var SHARED = window.AGPSharedPrefs ? window.AGPSharedPrefs.bind({ keyword: 'keyword' }) : null;
+        if (SHARED) settings = SHARED.fill(settings);
         if (TIMES.indexOf(settings.time) < 0) settings.time = 60;
 
         var G = freshGame();
@@ -58,7 +61,7 @@
         function freshGame() {
             return {
                 phase: 'setup', round: 0, q: null, endsAt: 0, answers: [], seen: {}, idx: 0,
-                players: {}, scores: {}, roundPts: {}, used: [], matchStartedAt: 0, reported: false,
+                players: {}, roster: [], scores: {}, roundPts: {}, used: [], matchStartedAt: 0, reported: false,
                 winners: [], participants: {}, busy: false
             };
         }
@@ -164,7 +167,7 @@
         function phoneState() {
             var a = G.answers[G.idx];
             return {
-                phase: G.phase, round: G.round, settings: settings,
+                phase: G.phase, round: G.round, settings: settings, joined: G.roster.length,
                 q: G.q ? { text: G.q.text, answer: G.q.answer, id: G.q.id } : null,
                 left: G.phase === 'answer' ? Math.max(0, G.endsAt - Date.now()) : 0,
                 count: G.answers.length,
@@ -181,9 +184,12 @@
         function handleCmd(cmd, arg, from) {
             arg = arg || {};
             switch (cmd) {
-                case 'start': if (G.phase === 'setup') startGame(); break;
+                case 'start':
+                    if (G.phase === 'setup') toLobby();
+                    else if (G.phase === 'lobby' && R && R.ctrl && G.roster.length) startGame();
+                    break;
                 case 'settings':
-                    if (G.phase !== 'setup' && G.phase !== 'pick' && G.phase !== 'round') break;
+                    if (G.phase !== 'setup' && G.phase !== 'lobby' && G.phase !== 'pick' && G.phase !== 'round') break;
                     if (TIMES.indexOf(arg.time) >= 0) settings.time = arg.time;
                     if (typeof arg.auto === 'boolean') settings.auto = arg.auto;
                     WK.writeJSON(store, STORE_SETTINGS, settings); render(); break;
@@ -201,10 +207,17 @@
         }
         function commit() { saveGame(); render(); pushState(true); }
 
+        function toLobby() {
+            settings.keyword = String(settings.keyword || '').trim().slice(0, 40);
+            if (!settings.keyword) { flash('اكتب كلمة الدخول أول'); return; }
+            WK.writeJSON(store, STORE_SETTINGS, settings);
+            if (SHARED) SHARED.save(settings);
+            G.phase = 'lobby'; WK.sfx('pop'); commit();
+        }
         function startGame() {
-            var players = G.players;
+            var players = G.players, roster = G.roster;
             G = freshGame();
-            G.players = players;
+            G.players = players; G.roster = roster;
             G.phase = 'pick'; G.round = 1;
             WK.sfx('go'); commit();
         }
@@ -222,20 +235,46 @@
             if (!G.matchStartedAt) G.matchStartedAt = Date.now();
             WK.sfx('go'); commit();
         }
+        function joinPlayer(p) {
+            var name = String(p.name || p.id).trim().slice(0, 30) || String(p.id);
+            var old = G.players[p.id] || {};
+            G.players[p.id] = { id: p.id, name: name, avatar: p.avatarUrl || old.avatar || null, frame: p.frame || old.frame || null };
+            if (G.roster.indexOf(p.id) >= 0) return false;
+            G.roster.push(p.id);
+            return true;
+        }
+        function kick(id) {
+            var i = G.roster.indexOf(id);
+            if (i < 0) return;
+            G.roster.splice(i, 1);
+            commit();
+        }
+        // كل تعليق: كلمة الدخول = انضمام (من اللوبي وطول اللعبة)، وغيرها إجابة لو وقت الإجابة واللاعب منضم
         function onComment(p) {
-            if (G.phase !== 'answer' || !p || !p.id || Date.now() >= G.endsAt) return;
-            if (G.seen[p.id]) return;
+            if (!p || !p.id || G.phase === 'setup') return;
+            var raw = String(p.text || '');
+            if (settings.keyword && WK.norm(raw) === WK.norm(settings.keyword)) {
+                if (joinPlayer(p)) {
+                    if (G.phase === 'lobby') { WK.sfx('pop'); renderSoon(); }
+                    saveGameSoon(); pushState(false);
+                }
+                return;
+            }
+            if (G.phase !== 'answer' || Date.now() >= G.endsAt) return;
+            if (G.roster.indexOf(p.id) < 0 || G.seen[p.id]) return;
             var text = String(p.text || '').replace(/\s+/g, ' ').trim().slice(0, MAX_ANSWER_LEN);
             if (!text) return;
             G.seen[p.id] = 1;
-            var name = String(p.name || p.id).trim().slice(0, 30) || String(p.id);
-            G.players[p.id] = { id: p.id, name: name, avatar: p.avatarUrl || (G.players[p.id] && G.players[p.id].avatar) || null };
+            joinPlayer(p);
+            var name = G.players[p.id].name;
             G.participants[p.id] = 1;
             G.answers.push({ id: p.id, name: name, avatar: G.players[p.id].avatar, text: text, verdict: null, auto: false, noAuto: false });
             saveGameSoon();
             updateLive();
             pushState(false);
         }
+        var _renderT = null;
+        function renderSoon() { clearTimeout(_renderT); _renderT = setTimeout(render, 120); }
         var _saveT = null;
         function saveGameSoon() { clearTimeout(_saveT); _saveT = setTimeout(saveGame, 1500); }
 
@@ -316,7 +355,8 @@
         }
         function reportPoints() {
             if (G.reported) return;
-            var ids = Object.keys(G.participants);
+            var ids = G.roster.slice();
+            Object.keys(G.participants).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
             if (!ids.length) return;
             G.reported = true;
             if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
@@ -373,20 +413,21 @@
                 '<div class="wk-head-side"><button class="wk-hbtn exit" data-a="exit">خروج</button>' +
                 (G.phase !== 'setup' ? '<button class="wk-hbtn" data-a="qr">باركود الجوال</button>' : '') + '</div>' +
                 '<div class="wk-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'مين يعرفني أكثر؟\'))"></div>' +
-                '<div class="wk-head-side end">' + ctrlChip +
+                '<div class="wk-head-side end">' + (settings.keyword ? '<span class="wk-chip">كلمة الدخول: <b style="color:#fff">' + esc(settings.keyword) + '</b></span>' : '') + ctrlChip +
                 (st ? '<span class="wk-chip muted"><span class="wk-dot ' + (st.connected ? 'on' : '') + '"></span>' + (st.connected ? 'البث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' : '') +
                 '</div>';
         }
 
         function render() {
             var ph = G.phase;
-            if (ph === 'setup') {
+            if (ph === 'setup' || ph === 'lobby') {
                 // شاشة الإعدادات بنفس تنسيق روليت الإقصاء (صفحة عادية، مو مسرح 1920×1080)
                 stage.style.display = 'none'; wks.hidden = false;
                 var sc = wks.querySelector('.wks-scroll'), top = sc ? sc.scrollTop : 0;
-                wks.innerHTML = vSetupPage();
+                wks.innerHTML = ph === 'setup' ? vSetupPage() : vLobbyPage();
+                if (ph === 'lobby' && AGP.playerCard && AGP.playerCard.fitAllNames) AGP.playerCard.fitAllNames(wks);
                 sc = wks.querySelector('.wks-scroll'); if (sc) sc.scrollTop = top;
-                drawQr(wks.querySelector('.wk-qr'));
+                if (ph === 'lobby') drawQr(wks.querySelector('.wk-qr'));
                 return;
             }
             stage.style.display = ''; wks.hidden = true;
@@ -413,9 +454,9 @@
                     '<div class="wk-req-name">' + esc(pending[dev].name) + '<small>يبي يتحكم باللعبة</small></div></div>';
             }).join('');
             var ctrl = R && R.ctrl ? '<div class="wk-ctrl"><button class="wk-btn ghost sm" data-a="unlink">إلغاء الربط</button><b><span class="wk-dot ' + (ctrlOnline() ? 'on' : 'warn') + '"></span>' + esc(R.ctrl.name) + '</b></div>' : '';
-            return '<div class="wk-card"><h3 class="wk-card-h">📱 جوال المضيف</h3>' +
-                '<div class="wk-qr-wrap"><div class="wk-qr">جاري التجهيز…</div><div class="wk-qr-txt"><b>امسح الباركود بجوالك</b>' +
-                '<span>اكتب اسمك وأرسل طلب، واقبله من هنا. بعدها تختار الأسئلة وتحكم على الإجابات من جوالك.</span>' +
+            return '<div class="wk-card"><h3 class="wk-card-h">📱 باركود الاستريمر</h3>' +
+                '<div class="wk-qr-wrap"><div class="wk-qr">جاري التجهيز…</div><div class="wk-qr-txt"><b>للمضيف فقط</b>' +
+                '<span>صوّره بجوالك واكتب اسمك وأرسل طلب، واقبله من هنا. بدون حساب.</span>' +
                 '<div class="wk-link">' + esc(R ? opts.hostUrl(R.id) : '') + '</div></div></div>' +
                 ctrl + '<div class="wk-reqs">' + reqs + '</div></div>';
         }
@@ -430,46 +471,78 @@
         function wksRow(label, hint, control) {
             return '<div class="wks-row"><div class="wks-lbl"><span>' + label + '</span>' + (hint ? '<small>' + hint + '</small>' : '') + '</div>' + control + '</div>';
         }
-        function vSetupPage() {
+        // الهيكل المشترك بين الإعدادات واللوبي (هيدر + عنوان + محتوى + زر تحت + نافذة الخروج)
+        function wksShell(topHtml, inner, foot) {
+            var exitModal = modal === 'exit' ? '<div class="wks-modal" data-a="close"><div class="wks-dialog"><span class="wks-exit-ic">' + EXIT_ICON.replace(/16/g, '28') + '</span>' +
+                '<b>الخروج؟</b><small>بترجع لمكتبة الألعاب</small><div class="wks-dlg-btns"><button class="wks-ghost" data-a="close">إلغاء</button><button class="wks-danger" data-a="exitYes">خروج</button></div></div></div>' : '';
+            return wksFx +
+                '<header class="wks-head"><div><button class="wks-exit" data-a="exit">' + EXIT_ICON + '<span>خروج</span></button></div>' +
+                '<div class="wks-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'ألعاب أيمن\'))"></div><div></div></header>' +
+                '<main class="wks-main"><div class="wks-wrap">' + topHtml + inner +
+                '<div class="wks-foot">' + foot + '</div></div></main>' + exitModal + (flashMsg ? '<div class="wks-toast">' + esc(flashMsg) + '</div>' : '');
+        }
+        function liveChips() {
             var st = opts.streamStatus ? opts.streamStatus() : { connected: false };
-            var linked = !!(R && R.ctrl);
-            var live = '<span class="wks-live' + (st.connected ? ' on' : '') + '"><i></i>' + (st.connected ? 'متصل بالبث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' +
-                (st.connected || !opts.libraryUrl ? '' : '<a class="wks-golive" href="' + esc(opts.libraryUrl) + '">ابدأ البث ونتصل تلقائياً</a>');
+            return '<div class="wks-chips"><span class="wks-live' + (st.connected ? ' on' : '') + '"><i></i>' + (st.connected ? 'متصل بالبث @' + esc(st.username) : 'غير متصل بالبث') + '</span>' +
+                (st.connected || !opts.libraryUrl ? '' : '<a class="wks-golive" href="' + esc(opts.libraryUrl) + '">ابدأ البث ونتصل تلقائياً</a>') + '</div>';
+        }
+        function vSetupPage() {
+            var kwCtl = '<input id="wk-keyword" class="wks-text" maxlength="40" placeholder="اكتب كلمة الدخول" value="' + esc(settings.keyword || '') + '" aria-label="كلمة الدخول">';
             var timeCtl = '<div class="wks-seg">' + TIMES.map(function (t) {
                 return '<button class="' + (settings.time === t ? 'on' : '') + '" data-a="time" data-v="' + t + '">' + t + ' ث</button>';
             }).join('') + '</div>';
             var autoCtl = '<button class="wks-tg' + (settings.auto ? ' on' : '') + '" role="switch" aria-checked="' + settings.auto + '" aria-label="الحكم التلقائي على المتطابق" data-a="auto"><span></span></button>';
-            var sec1 = wksRow('وقت الإجابة', 'المدة اللي يكتب فيها المتابعين إجاباتهم بالشات', timeCtl) +
+            var sec1 = wksRow('كلمة الدخول', 'اللي يكتبها بالشات يدخل اللعبة', kwCtl);
+            var sec2 = wksRow('وقت الإجابة', 'المدة اللي يكتب فيها المتابعين إجاباتهم', timeCtl) +
                 '<span class="wks-div"></span>' +
                 wksRow('الحكم التلقائي على المتطابق', 'الإجابة اللي تطابق إجابة حكمت عليها تاخذ نفس الحكم', autoCtl);
+            var sec3 = '<ol class="wks-how"><li>اللاعبين يدخلون بكتابة كلمة الدخول بالشات.</li><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li>' +
+                '<li>اللاعبين يكتبون إجاباتهم بالشات خلال الوقت.</li><li>ينكشف جوابك، وتقبل أو ترفض إجاباتهم وحدة وحدة.</li><li>كل إجابة مقبولة بنقطة، واللي يعرفك أكثر يفوز.</li></ol>';
+            var ok = !!String(settings.keyword || '').trim();
+            return wksShell('<div class="wks-top"><span class="wks-title">مين يعرفني أكثر؟</span>' + liveChips() + '</div>',
+                '<div class="wks-scroll"><div class="wks-grid">' + wksSection(1, 'الدخول', sec1, 0) + wksSection(2, 'المباراة', sec2, 0.06) + wksSection(3, 'طريقة اللعب', sec3, 0.12, true) + '</div></div>',
+                '<button class="wks-start" data-a="start"' + (ok ? '' : ' disabled') + '>الدخول للوبي' + CHEV + '</button>');
+        }
+        // بطاقة لاعب: بإطاره من المنصة (AGP.playerCard) لو عنده إطار، وإلا كبسولة عادية
+        function cardHtml(id) {
+            var p = G.players[id] || { id: id, name: id };
+            var x = '<button class="wks-kick" data-a="kick" data-v="' + esc(id) + '" aria-label="طرد ' + esc(p.name) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>';
+            if (p.frame && p.frame.imageFilename && AGP.playerCard) {
+                var html = AGP.playerCard.renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame }, { showFrame: true, basePath: opts.basePath || '../../', size: 44 });
+                return '<div class="wks-card framed"><div class="wks-frame">' + html + x + '</div></div>';
+            }
+            var img = p.avatar ? '<img src="' + esc(p.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '';
+            return '<div class="wks-card"><span class="wks-av">' + esc(initial(p.name)) + img + '</span><span class="wks-pname">' + esc(p.name) + '</span>' + x + '</div>';
+        }
+        function vLobbyPage() {
+            var linked = !!(R && R.ctrl);
+            var n = G.roster.length;
+            var cards = n ? '<div class="wks-cards">' + G.roster.map(cardHtml).join('') + '</div>'
+                : '<div class="wks-empty">بانتظار انضمام اللاعبين…</div>';
+            var players = '<section class="wks-sec wks-players"><span class="wks-halo"></span>' +
+                '<div class="wks-ph"><div class="wks-ph-row"><span class="wks-team"><i></i>اللاعبين</span>' +
+                '<span class="wks-count"><b>' + n + '</b> لاعب</span></div>' +
+                '<span class="wks-kw-lbl">كلمة الدخول · اكتبها في الشات</span><span class="wks-kw">' + esc(settings.keyword) + '</span></div>' +
+                '<div class="wks-plist">' + cards + '</div></section>';
 
             var reqs = Object.keys(pending).map(function (dev) {
                 return '<div class="wks-row wks-req">' +
                     '<div class="wks-lbl"><span>' + esc(pending[dev].name) + '</span><small>يبي يتحكم باللعبة</small></div>' +
                     '<div class="wks-btns"><button class="wks-ok" data-a="acc" data-v="' + dev + '">قبول</button><button class="wks-no" data-a="rej" data-v="' + dev + '">رفض</button></div></div>';
             }).join('');
-            var ctrl = linked ? '<div class="wks-row wks-ctrl"><div class="wks-lbl"><span><i class="wks-dot' + (ctrlOnline() ? ' on' : '') + '"></i>' + esc(R.ctrl.name) + '</span><small>الجوال مربوط ويتحكم باللعبة</small></div>' +
+            var ctrl = linked ? '<div class="wks-row wks-ctrl"><div class="wks-lbl"><span><i class="wks-dot' + (ctrlOnline() ? ' on' : '') + '"></i>' + esc(R.ctrl.name) + '</span><small>جوالك مربوط ✓</small></div>' +
                 '<button class="wks-ghost" data-a="unlink">إلغاء الربط</button></div>' : '';
-            var sec2 = '<div class="wks-qr-row"><div class="wk-qr wks-qr">جاري التجهيز…</div><div class="wks-qr-txt"><span>امسح الباركود بجوالك</span>' +
-                '<small>اكتب اسمك وأرسل طلب، واقبله من هنا. بعدها تختار الأسئلة وتحكم على الإجابات من جوالك.</small>' +
-                '<div class="wk-link">' + esc(R ? opts.hostUrl(R.id) : '') + '</div></div></div>' + ctrl + reqs;
+            var qr = '<section class="wks-sec wks-host"><div class="wks-sec-h"><span class="wks-num">📱</span><span>باركود الاستريمر</span><span class="wks-only">للمضيف فقط</span></div>' +
+                '<div class="wks-qr-big"><div class="wk-qr wks-qr2">جاري التجهيز…</div></div>' +
+                '<ul class="wks-steps"><li>صوّره بكاميرا جوالك ويفتح على طول، بدون حساب.</li>' +
+                '<li>اكتب اسمك واضغط «إرسال طلب»، واقبله من هنا.</li>' +
+                '<li>من جوالك تختار السؤال وتكتب جوابك بدون ما يشوفه أحد.</li></ul>' +
+                (linked ? '' : '<p class="wks-keep">لا تقفل هالصفحة لين يدخل جوالك</p>') + ctrl + reqs + '</section>';
 
-            var sec3 = '<ol class="wks-how"><li>تختار سؤال عنك من جوالك وتكتب جوابك.</li><li>المتابعين يكتبون إجاباتهم بالشات خلال الوقت.</li>' +
-                '<li>ينكشف جوابك، وتطلع إجاباتهم وحدة وحدة وتقبلها أو ترفضها.</li><li>كل إجابة مقبولة بنقطة، واللي يعرفك أكثر يفوز.</li></ol>';
-
-            var exitModal = modal === 'exit' ? '<div class="wks-modal" data-a="close"><div class="wks-dialog"><span class="wks-exit-ic">' + EXIT_ICON.replace(/16/g, '28') + '</span>' +
-                '<b>الخروج؟</b><small>بترجع لمكتبة الألعاب</small><div class="wks-dlg-btns"><button class="wks-ghost" data-a="close">إلغاء</button><button class="wks-danger" data-a="exitYes">خروج</button></div></div></div>' : '';
-
-            return wksFx +
-                '<header class="wks-head"><div><button class="wks-exit" data-a="exit">' + EXIT_ICON + '<span>خروج</span></button></div>' +
-                '<div class="wks-logo"><img src="' + (opts.logo || '../../logo.png') + '" alt="" onerror="this.replaceWith(document.createTextNode(\'ألعاب أيمن\'))"></div><div></div></header>' +
-                '<main class="wks-main"><div class="wks-wrap">' +
-                '<div class="wks-top"><span class="wks-title">مين يعرفني أكثر؟</span><div class="wks-chips">' + live + '</div></div>' +
-                '<div class="wks-scroll"><div class="wks-grid">' +
-                wksSection(1, 'الإعدادات', sec1, 0) + wksSection(2, 'جوال المضيف', sec2, 0.06) + wksSection(3, 'طريقة اللعب', sec3, 0.12, true) +
-                '</div></div>' +
-                '<div class="wks-foot"><button class="wks-start" data-a="start"' + (linked ? '' : ' disabled') + '>' + (linked ? 'ابدأ اللعبة' : 'اربط جوالك أول عشان تبدأ') + CHEV + '</button></div>' +
-                '</div></main>' + exitModal + (flashMsg ? '<div class="wks-toast">' + esc(flashMsg) + '</div>' : '');
+            var label = !linked ? 'اربط جوالك أول' : !n ? 'بانتظار انضمام اللاعبين' : 'ابدأ المباراة';
+            return wksShell('<div class="wks-top lobby"><span class="wks-game">مين يعرفني أكثر؟</span><span class="wks-title">لوبي الدخول</span></div>',
+                '<div class="wks-lobby">' + players + qr + '</div>',
+                '<button class="wks-start" data-a="start"' + (linked && n ? '' : ' disabled') + '>' + label + CHEV + '</button>');
         }
         function miniBoard(n) {
             var rk = ranking().slice(0, n);
@@ -646,15 +719,26 @@
             if (a === 'acc') { acceptReq(v); return; }
             if (a === 'rej') { rejectReq(v); return; }
             if (a === 'unlink') { unlink(); return; }
+            if (a === 'kick') { kick(v); return; }
             if (a === 'time') { handleCmd('settings', { time: +v }); pushState(true); return; }
             if (a === 'auto') { handleCmd('settings', { auto: !settings.auto }); pushState(true); return; }
             handleCmd(a, null, 'screen');
         });
 
+        // كلمة الدخول تنكتب بدون إعادة رسم (عشان ما يضيع التركيز)
+        root.addEventListener('input', function (ev) {
+            if (ev.target && ev.target.id === 'wk-keyword') {
+                settings.keyword = ev.target.value.slice(0, 40);
+                WK.writeJSON(store, STORE_SETTINGS, settings);
+                var b = wks.querySelector('[data-a="start"]');
+                if (b) b.disabled = !settings.keyword.trim();
+            }
+        });
+        if (SHARED) SHARED.watch(function () { return settings; }, function (patch) { Object.assign(settings, patch); if (G.phase === 'setup') render(); });
         if (opts.onComment) opts.onComment(onComment);
         setupRoom(false);
         render();
 
-        return { state: function () { return G; }, comment: onComment, cmd: handleCmd };
+        return { state: function () { return G; }, room: function () { return R && R.id; }, comment: onComment, cmd: handleCmd };
     };
 }());

@@ -39,7 +39,7 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
   <div class="demo-main">
     <span class="demo-lbl">🖥️ شاشة البث</span>
     <div class="demo-screen" id="screen"></div>
-    <p class="demo-note">هذي نسخة تجربة: الجوال على الجنب بدل الباركود، ومتابعين وهميين يجاوبون بالشات تلقائياً. ابدأ من الجوال: اكتب اسمك ← إرسال طلب ← اضغط «قبول» على شاشة البث.</p>
+    <p class="demo-note">نسخة تجربة: الجوال على الجنب بدل الباركود، ومتابعين وهميين يدخلون ويجاوبون بالشات تلقائياً. اكتب كلمة الدخول واضغط «الدخول للوبي»، وبعدها من الجوال اكتب اسمك ← إرسال طلب ← «قبول» على الشاشة.</p>
   </div>
   <div class="demo-side">
     <span class="demo-lbl">📱 جوال المضيف</span>
@@ -73,10 +73,8 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
     var roomId = null;
     // الجوال يحتاج معرّف الغرفة: ننتظر الشاشة تجهّزه (نقرأه من رابط الباركود المعروض)
     (function waitRoom() {
-        var link = document.querySelector('#screen .wk-link');
-        var m = link && /r=([a-z0-9]+)/.exec(link.textContent);
-        if (!m) return setTimeout(waitRoom, 100);
-        roomId = m[1];
+        roomId = screen.room();
+        if (!roomId) return setTimeout(waitRoom, 100);
         WK.mountHost(document.getElementById('phone'), { room: roomId, transport: loop, storage: memStore() });
     })();
 
@@ -99,13 +97,20 @@ html,body{margin:0;background:#030207;color:#f4f2f8;font-family:'IBM Plex Sans A
     // متابعين وهميين: بعضهم يعرف الجواب (بصيغ مختلفة)، وبعضهم يخمّن
     var NAMES = ['نورة', 'فهد', 'ريم', 'سلطان', 'لمى', 'عبدالله', 'جود', 'خالد', 'شهد', 'تركي', 'دانة', 'ماجد', 'غلا', 'بدر'];
     var WRONG = ['أزرق', 'أحمر', 'بيتزا', 'كبسة', 'فورتنايت', 'ماينكرافت', 'قهوة', 'الشتاء', 'دبي', 'لندن', 'قطوة', 'ما أدري 😂', 'أسود', 'برجر'];
-    var lastQ = null;
+    var lastQ = null, joined = false;
     setInterval(function () {
         var G = screen.state();
+        // باللوبي: المتابعين الوهميين يكتبون كلمة الدخول واحد واحد
+        if (G.phase === 'lobby' && !joined && document.getElementById('bots').checked) {
+            joined = true;
+            var kw = document.querySelector('#screen .wks-kw');
+            kw = kw ? kw.textContent : '';
+            NAMES.forEach(function (n, i) { setTimeout(function () { chat('tiktok:' + n, n, kw); }, 600 + i * 450); });
+        }
         if (G.phase !== 'answer' || !G.q || G.q === lastQ || !document.getElementById('bots').checked) return;
         lastQ = G.q;
         var ans = G.q.answer, endsIn = G.endsAt - Date.now();
-        var pool = NAMES.slice().sort(function () { return Math.random() - .5; }).slice(0, 7 + Math.floor(Math.random() * 5));
+        var pool = NAMES.filter(function (n) { return G.roster.indexOf('tiktok:' + n) >= 0; }).sort(function () { return Math.random() - .5; }).slice(0, 7 + Math.floor(Math.random() * 5));
         pool.forEach(function (n, i) {
             var r = Math.random(), text;
             if (r < 0.3) text = ans;
