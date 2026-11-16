@@ -596,7 +596,7 @@ const RIDDLES = [
   {q:'يرد عليك بكل اللغات وما تعلّم ولا لغة؟',a:'الصدى|صدى'},{q:'تاكل منه وما ينأكل؟',a:'الصحن|صحن'},{q:'ينكسر إذا قلت اسمه؟',a:'الصمت|السكوت|الهدوء'},
   {q:'له مفاتيح وما يفتح ولا باب؟',a:'الكيبورد|لوحة المفاتيح|البيانو'}
 ];
-const TARGET_SEC = 20, DUEL_SEC = 30, SECRET_SEC = 30, VSCHAT_SEC = 30;
+const COIN_SEC = 5, TARGET_SEC = 20, DUEL_SEC = 30, SECRET_SEC = 30, VSCHAT_SEC = 30;
 const PROVERBS = [
   'القرد في عين امه غزال','الصديق وقت الضيق','اللي ما يعرف الصقر يشويه','من طق الباب سمع الجواب','الجار قبل الدار','كل تأخيرة فيها خيرة','الباب الي يجيك منه ريح سدة و استريح','البعيد عن العين بعيد القلب'
 ];
@@ -628,7 +628,7 @@ class Component extends DCLogic {
   componentDidMount(){ this.fit=()=>{ let sc=(innerHeight-80)/1000, dw=innerWidth/sc; if(dw<1920){ sc=Math.min(innerWidth/1920,sc); dw=1920; } dw=Math.min(dw,2800); this.setState({narrow:innerWidth<820,scale:sc,dW:Math.round(dw),ovScale:Math.min(innerWidth/1400,innerHeight/940,1)}); }; this.fit(); addEventListener('resize',this.fit); this.matchStartedAt=Date.now();
     // الشات من البث المتصل بمكتبة الألعاب (adapters/agp-tiktok-adapter.js)
     LC.connect(); this.unsub=LC.onComment(p=>this.onChat(this.reg.nameFor(p),p.text)); }
-  componentWillUnmount(){ clearInterval(this.div); this.unsub?.(); removeEventListener('resize',this.fit); (this.ts||[]).forEach(clearTimeout); }
+  componentWillUnmount(){ clearInterval(this.div); this.unsub?.(); removeEventListener('resize',this.fit); clearInterval(this.civ); (this.ts||[]).forEach(clearTimeout); }
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
   tgVals(){
     const S=this.state, it=(S.colorMap[(S.chosen||1)-1])||{}, isTarget=S.phase==='target', isDuel=S.phase==='duel'&&!!S.duel;
@@ -699,7 +699,12 @@ class Component extends DCLogic {
     this.setState(s=>({played:[...s.played,id]}));
     this.setState({phase:'colors',anim:false,current:id,chosen:null,colorMap:this.makeMap(id)});
   }
-  pickColor(n){ if(this.state.phase!=='colors'||this.state.chosen||(this.state.colorMap[n-1]||{}).used) return; this.setState({chosen:n}); this.tone(520,.12,'triangle'); this.after(150,()=>this.tone(780,.2,'triangle')); this.after(950,()=>this.setState({phase:'challenge'})); }
+  pickColor(n){ if(this.state.phase!=='colors'||this.state.chosen||(this.state.colorMap[n-1]||{}).used) return; this.setState({chosen:n}); this.tone(520,.12,'triangle'); this.after(150,()=>this.tone(780,.2,'triangle')); this.after(950,()=>{ this.setState({phase:'challenge'}); if((this.state.colorMap[n-1]||{}).inst==='allin') this.coinAuto(); }); }
+  // كل شي أو لا شي: رسالة مع عدّاد 5 ثواني ثم النتيجة تلقائياً (بدون ضغط الستريمر)
+  coinAuto(){ clearInterval(this.civ); this.setState({coinEnd:Date.now()+COIN_SEC*1000,now:Date.now()});
+    this.civ=setInterval(()=>{ const S=this.state; if(S.phase!=='challenge'){ clearInterval(this.civ); return; }
+      const left=Math.ceil((S.coinEnd-Date.now())/1000); this.setState({now:Date.now()});
+      if(left<=0){ clearInterval(this.civ); this.judge(true); } else if(left<=3&&left!==this.cLast) this.tone(880,.08,'square',.04); this.cLast=left; },200); }
   makeMap(id){
     const others=this.state.players.filter(x=>x.id!==id); let again=false;
     return COLORS.map(()=>{
@@ -907,7 +912,7 @@ class Component extends DCLogic {
     let ch={};
     if(S.chosen&&S.colorMap[S.chosen-1]){ const it=S.colorMap[S.chosen-1], c=COLORS[S.chosen-1], isLuck=!!it.inst;
       ch={n:S.chosen,c,hi:mix(c,55,'white'),dk:mix(c,60,'black'),glow:c+'55',ring:c+'1f',winShow:it.win,dblNote:'تنضاف لنقاطه',luckLbl:it.lbl,type:it.t,text:it.q,win:it.win,lose:it.lose,isLuck,notLuck:!isLuck,
-        icon:it.icon||'🎯',luckTxt:it.txt||'',luckC:it.tone>0?'#6ee7b7':it.tone<0?'#fca5a5':'#c4b5fd',luckBg:it.tone>0?'rgba(16,185,129,.12)':it.tone<0?'rgba(239,68,68,.1)':'rgba(139,92,246,.12)',luckBtn:it.inst==='duel'?'اختر اللاعب':it.inst==='speed'?'اختر خصمك':(it.inst==='secret'||it.inst==='vschat')?'متابعة':it.pick?'اختر اللاعب':it.inst==='again'?'اختر لون ثاني':it.inst==='allin'?'ارمِ العملة':'طبّق'}; }
+        icon:it.icon||'🎯',luckTxt:it.txt||'',luckC:it.tone>0?'#6ee7b7':it.tone<0?'#fca5a5':'#c4b5fd',luckBg:it.tone>0?'rgba(16,185,129,.12)':it.tone<0?'rgba(239,68,68,.1)':'rgba(139,92,246,.12)',luckBtn:it.inst==='duel'?'اختر اللاعب':it.inst==='speed'?'اختر خصمك':(it.inst==='secret'||it.inst==='vschat')?'متابعة':it.pick?'اختر اللاعب':it.inst==='again'?'اختر لون ثاني':it.inst==='allin'?'🪙 النتيجة بعد '+Math.max(1,Math.ceil(((S.coinEnd||0)-(S.now||Date.now()))/1000))+' ث':'طبّق'}; }
     let res={};
     if(S.res){ const d=S.res.d; res={prev:S.res.prev,dTxt:d>0?'+'+d:d<0?'−'+Math.abs(d):'0',c:d>0?'#34d399':d<0?'#f87171':'#a8a3b5',glow:d>0?'rgba(16,185,129,.5)':d<0?'rgba(239,68,68,.45)':'transparent'}; }
     const cu=S.current&&this.P(S.current);
