@@ -185,46 +185,22 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
                 </div>
                 <div style="position:relative;flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ pickCols }},minmax(0,1fr));align-content:center;gap:{{ gridGap }}px">
                   <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="10">
-                    <div style="position:relative;height:{{ tileH }}px;box-sizing:border-box;border-radius:24px;overflow:hidden;opacity:{{ t.op }};transform:{{ t.tf }};filter:{{ t.fl }};box-shadow:{{ t.sh }};z-index:{{ t.z }};transition:opacity .4s, transform .45s cubic-bezier(.2,1.3,.4,1), filter .4s, box-shadow .4s">
-                      <sc-if value="{{ t.isWin }}" hint-placeholder-val="{{ false }}">
-                        <span style="position:absolute;top:50%;left:50%;width:160%;aspect-ratio:1;margin:-80% 0 0 -80%;background:conic-gradient(from 0deg, transparent 0deg, #fde68a 40deg, #a855f7 90deg, transparent 140deg, transparent 180deg, #fde68a 220deg, #a855f7 270deg, transparent 320deg);animation:spinRing 2.4s linear infinite"></span>
+                    <div style="position:relative;height:{{ tileH }}px;box-sizing:border-box;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;min-width:0;text-align:center;color:#f4f2f8;background:linear-gradient(180deg, #1d1830, #13101d);border:2px solid {{ t.bd }};box-shadow:{{ t.sh }};opacity:{{ t.op }};transform:{{ t.tf }};filter:{{ t.fl }};z-index:{{ t.z }};transition:opacity .4s, transform .45s cubic-bezier(.2,1.3,.4,1), filter .4s, box-shadow .4s, border-color .3s">
+                      <span style="flex:0 0 {{ bandH }}px;display:grid;place-items:center;background:{{ t.band }};font:900 {{ numF }}px/1 'Zain';color:{{ t.numC }};font-variant-numeric:tabular-nums;letter-spacing:.02em;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);transition:background .3s, color .3s">{{ t.num }}</span>
+                      <span style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{{ tileGap }}px;padding:4px 10px">
+                        <span style="position:relative;width:{{ avS }}px;height:{{ avS }}px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 {{ avF }}px 'Zain';color:#fff;background:{{ t.av }};box-shadow:0 0 0 2px {{ t.ring }}, 0 6px 16px rgba(0,0,0,.35)">{{ t.ini }}<img src="{{ t.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ t.imgOp }}"></span>
+                        <span style="max-width:100%;font:800 {{ nmF }}px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                        <sc-if value="{{ showPts }}" hint-placeholder-val="{{ true }}"><span style="font:800 15px 'Zain';color:#d9cfa6;font-variant-numeric:tabular-nums">{{ t.pts }} نقطة</span></sc-if>
+                      </span>
+                      <sc-if value="{{ t.lbl }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;top:calc({{ bandH }}px + 8px);left:8px;padding:2px 9px;border-radius:999px;background:{{ t.lblBg }};font:800 12px/18px 'Zain';color:{{ t.lblC }};white-space:nowrap">{{ t.lbl }}</span>
                       </sc-if>
-                      <div style="position:absolute;inset:{{ t.inset }};border-radius:22px;background:{{ t.bg }};border:1.5px solid {{ t.bd }};box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{{ tileGap }}px;padding:{{ tPad }}">
-                        <span style="position:absolute;inset:0 0 55% 0;background:linear-gradient(180deg, rgba(255,255,255,.07), transparent);pointer-events:none"></span>
-                        <sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
-                          <div style="position:relative;width:100%;display:flex;align-items:center;gap:10px;min-width:0">
-                            <span style="position:relative;width:{{ avS }}px;height:{{ avS }}px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 {{ avF }}px 'Zain';color:#fff;background:{{ t.av }};box-shadow:0 0 0 2px {{ t.ring }}">{{ t.ini }}<img src="{{ t.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ t.imgOp }}"></span>
-                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-                              <span style="font:800 {{ nmF }}px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
-                              <span style="display:flex;align-items:center;gap:5px">
-                                <span style="width:17px;height:17px;flex-shrink:0;border-radius:50%;background:radial-gradient(circle at 35% 30%, #fff7d1, #f59e0b 60%, #92400e)"></span>
-                                <b style="font:900 20px/1 'Zain';color:#fde68a;font-variant-numeric:tabular-nums">{{ t.pts }}</b><span style="font:700 13px 'Zain';color:#d6c48a">نقطة</span>
-                                <sc-if value="{{ t.lbl }}" hint-placeholder-val="{{ false }}"><span style="padding:0 7px;border-radius:999px;background:{{ t.lblBg }};font:800 11px/18px 'Zain';color:{{ t.lblC }};white-space:nowrap">{{ t.lbl }}</span></sc-if>
-                              </span>
-                            </div>
-                            <span style="flex-shrink:0;min-width:40px;height:34px;padding:0 4px;box-sizing:border-box;border-radius:11px;display:grid;place-items:center;background:rgba(139,92,246,.22);border:1px solid rgba(167,139,250,.35);font:900 26px/1 'Zain';color:#f5f3ff;font-variant-numeric:tabular-nums">{{ t.id }}</span>
-                          </div>
-                        </sc-if>
-                        <sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}">
-                        <span style="position:absolute;top:12px;right:12px;height:30px;padding:0 11px;box-sizing:border-box;display:grid;place-items:center;border-radius:999px;background:rgba(139,92,246,.22);border:1px solid rgba(167,139,250,.35);font:900 20px/1 'Zain';color:#f5f3ff">#{{ t.id }}</span>
-                        <sc-if value="{{ t.lbl }}" hint-placeholder-val="{{ false }}">
-                          <span style="position:absolute;top:12px;left:12px;padding:3px 10px;border-radius:999px;background:{{ t.lblBg }};font:800 13px 'Zain';color:{{ t.lblC }}">{{ t.lbl }}</span>
-                        </sc-if>
-                        <span style="position:relative;width:{{ avS }}px;height:{{ avS }}px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 {{ avF }}px 'Zain';color:#fff;background:{{ t.av }};box-shadow:0 0 0 3px {{ t.ring }}, 0 8px 22px rgba(0,0,0,.4)">{{ t.ini }}<img src="{{ t.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ t.imgOp }}"></span>
-                        <span style="position:relative;max-width:100%;font:800 22px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
-                        <span style="position:relative;display:flex;align-items:center;gap:7px;padding:3px 14px 3px 5px;border-radius:999px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3)">
-                          <span style="width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%, #fff7d1, #f59e0b 60%, #92400e)"></span>
-                          <b style="font:900 24px 'Zain';color:#fde68a;font-variant-numeric:tabular-nums">{{ t.pts }}</b>
-                          <span style="font:700 15px 'Zain';color:#d6c48a">نقطة</span>
-                        </span>
-                        </sc-if>
-                        <sc-if value="{{ t.isOut }}" hint-placeholder-val="{{ false }}">
-                          <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(7,6,11,.45);font:900 90px/1 'Zain';color:rgba(248,113,113,.55);animation:bang .35s ease both">✕</span>
-                        </sc-if>
-                        <sc-if value="{{ t.isHit }}" hint-placeholder-val="{{ false }}">
-                          <span style="position:absolute;inset:0;border-radius:22px;background:rgba(239,68,68,.35);box-shadow:inset 0 0 0 3px #ef4444;animation:hitFlash .22s ease both"></span>
-                        </sc-if>
-                      </div>
+                      <sc-if value="{{ t.isOut }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(7,6,11,.35);font:900 72px/1 'Zain';color:rgba(255,255,255,.28);animation:bang .35s ease both">✕</span>
+                      </sc-if>
+                      <sc-if value="{{ t.isHit }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;inset:0;border-radius:18px;background:rgba(196,181,253,.16);box-shadow:inset 0 0 0 3px #c4b5fd;animation:hitFlash .22s ease both"></span>
+                      </sc-if>
                     </div>
                   </sc-for>
                 </div>
@@ -280,20 +256,20 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
                     <span style="font:900 40px/1.15 'Zain'">{{ cur.name }} يختار لاعب</span>
                     <span style="font:400 17px 'Zain';color:#a8a3b5">{{ tg.sub }}</span>
                   </div>
-                  <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 22px;border-radius:20px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)">
-                    <span style="font:700 14px 'Zain';color:#a8a3b5">💬 اكتب في شات البث</span>
-                    <span style="font:900 28px 'Zain'">رقم اللاعب</span>
+                  <div style="flex-shrink:0;width:230px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 20px 14px;border-radius:20px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)">
+                    <span style="font:700 14px 'Zain';color:#a8a3b5">💬 اكتب رقم اللاعب بالشات · باقي</span>
+                    <span style="display:flex;align-items:baseline;gap:6px"><b style="font:900 52px/1 'Zain';color:{{ tgBarC }};font-variant-numeric:tabular-nums;transition:color .3s">{{ tgLeft }}</b><span style="font:700 16px 'Zain';color:#a8a3b5">ثانية</span></span>
+                    <span style="width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><span style="display:block;height:100%;width:{{ tgPct }}%;border-radius:999px;background:{{ tgBarC }};transition:width .2s linear, background .3s"></span></span>
                   </div>
                 </div>
                 <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat({{ tgCols }},minmax(0,1fr));align-content:center;gap:12px">
-                  <sc-for list="{{ tgTiles }}" as="p" hint-placeholder-count="12">
-                    <button onClick="{{ p.pick }}" style="height:{{ tgH }}px;box-sizing:border-box;padding:0 12px;border-radius:18px;display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;text-align:right;color:#f4f2f8;background:linear-gradient(180deg, rgba(36,30,54,.9), rgba(18,16,26,.9));border:1.5px solid rgba(167,139,250,.22);transition:all .2s" style-hover="border-color:{{ tg.c }};transform:translateY(-2px)" style-active="transform:scale(.97)">
-                      <span style="position:relative;width:{{ tgAv }}px;height:{{ tgAv }}px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 20px 'Zain';color:#fff;background:{{ p.av }}">{{ p.ini }}<img src="{{ p.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
-                      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-                        <span style="font:800 19px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
-                        <span style="font:800 14px 'Zain';color:#fde68a">{{ p.pts }} نقطة</span>
+                  <sc-for list="{{ tgTiles }}" as="t" hint-placeholder-count="12">
+                    <button onClick="{{ t.pick }}" style="position:relative;cursor:pointer;height:{{ tgH }}px;box-sizing:border-box;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;min-width:0;text-align:center;color:#f4f2f8;background:linear-gradient(180deg, #1d1830, #13101d);border:2px solid {{ t.bd }};box-shadow:{{ t.sh }};opacity:{{ t.op }};transform:{{ t.tf }};filter:{{ t.fl }};z-index:{{ t.z }};transition:opacity .4s, transform .45s cubic-bezier(.2,1.3,.4,1), filter .4s, box-shadow .4s, border-color .3s" style-hover="border-color:#c4b5fd;transform:translateY(-3px)" style-active="transform:scale(.97)">
+                      <span style="flex:0 0 {{ tgBand }}px;display:grid;place-items:center;background:{{ t.band }};font:900 {{ tgNumF }}px/1 'Zain';color:{{ t.numC }};font-variant-numeric:tabular-nums;letter-spacing:.02em;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);transition:background .3s, color .3s">{{ t.num }}</span>
+                      <span style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{{ tgGap }}px;padding:4px 10px">
+                        <span style="position:relative;width:{{ tgAv }}px;height:{{ tgAv }}px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 {{ tgAvF }}px 'Zain';color:#fff;background:{{ t.av }};box-shadow:0 0 0 2px {{ t.ring }}, 0 6px 16px rgba(0,0,0,.35)">{{ t.ini }}<img src="{{ t.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ t.imgOp }}"></span>
+                        <span style="max-width:100%;font:800 {{ tgNmF }}px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
                       </span>
-                      <span style="flex-shrink:0;min-width:42px;height:36px;padding:0 8px;box-sizing:border-box;border-radius:11px;display:grid;place-items:center;background:{{ tg.bg }};border:1px solid {{ tg.bd }};font:900 22px 'Zain';color:#fff;font-variant-numeric:tabular-nums">{{ p.id }}</span>
                     </button>
                   </sc-for>
                 </div>
@@ -302,7 +278,7 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
 
             <sc-if value="{{ isDuel }}" hint-placeholder-val="{{ false }}">
               <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;animation:popIn .5s cubic-bezier(.2,1.25,.35,1)">
-                <span style="padding:8px 22px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.45);font:800 20px 'Zain';color:#7dd3fc">{{ du.chip }}</span>
+                <span style="padding:8px 22px;border-radius:999px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.45);font:800 20px 'Zain';color:#c4b5fd">{{ du.chip }}</span>
                 <div style="width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:24px">
                   <sc-for list="{{ du.pl }}" as="p" hint-placeholder-count="2">
                     <div style="order:{{ p.ord }};padding:22px;border-radius:28px;display:flex;align-items:center;gap:18px;min-width:0;background:linear-gradient(180deg, rgba(32,26,48,.92), rgba(14,12,20,.92));border:1.5px solid {{ p.bd }};box-shadow:0 0 50px {{ p.glow }};transition:all .4s">
@@ -313,9 +289,9 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
                       </div>
                     </div>
                   </sc-for>
-                  <span style="order:1;font:900 52px 'Zain';color:#7dd3fc;text-shadow:0 0 24px rgba(56,189,248,.5)">VS</span>
+                  <span style="order:1;font:900 52px 'Zain';color:#c4b5fd;text-shadow:0 0 24px rgba(139,92,246,.5)">VS</span>
                 </div>
-                <div style="position:relative;overflow:hidden;width:min(1120px,100%);box-sizing:border-box;padding:34px 48px 30px;border-radius:32px;text-align:center;background:radial-gradient(circle at 50% 0%, rgba(56,189,248,.16), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(56,189,248,.4);display:flex;flex-direction:column;gap:20px">
+                <div style="position:relative;overflow:hidden;width:min(1120px,100%);box-sizing:border-box;padding:34px 48px 30px;border-radius:32px;text-align:center;background:radial-gradient(circle at 50% 0%, rgba(139,92,246,.16), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(139,92,246,.4);display:flex;flex-direction:column;gap:20px">
                   <span style="font:900 52px/1.35 'Zain';text-wrap:balance">{{ du.q }}</span>
                   <div style="display:flex;align-items:center;gap:16px">
                     <div style="flex:1;height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ du.pct }}%;border-radius:999px;background:{{ du.barC }};transition:width .2s linear"></div></div>
@@ -334,25 +310,25 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
 
             <sc-if value="{{ isHostIn }}" hint-placeholder-val="{{ false }}">
               <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;animation:popIn .5s cubic-bezier(.2,1.25,.35,1)">
-                <div style="width:min(1000px,100%);box-sizing:border-box;border-radius:32px;background:radial-gradient(circle at 50% 0%, rgba(56,189,248,.14), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(56,189,248,.4);box-shadow:0 30px 90px rgba(0,0,0,.45);padding:36px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
-                  <span style="padding:8px 22px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.45);font:800 22px 'Zain';color:#7dd3fc">{{ hq.icon }} {{ hq.title }} · +{{ hq.win }} / −{{ hq.lose }}</span>
+                <div style="width:min(1000px,100%);box-sizing:border-box;border-radius:32px;background:radial-gradient(circle at 50% 0%, rgba(139,92,246,.14), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(139,92,246,.4);box-shadow:0 30px 90px rgba(0,0,0,.45);padding:36px 48px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+                  <span style="padding:8px 22px;border-radius:999px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.45);font:800 22px 'Zain';color:#c4b5fd">{{ hq.icon }} {{ hq.title }} · +{{ hq.win }} / −{{ hq.lose }}</span>
                   <span style="font:900 40px/1.3 'Zain'">🔒 خاص بالهوست</span>
                   <span style="font:400 20px/1.6 'Zain';color:#a8a3b5;max-width:640px;text-wrap:pretty">{{ hq.desc }}</span>
-                  <input type="password" autocomplete="off" inputMode="{{ hq.im }}" maxLength="{{ hq.ml }}" placeholder="{{ hq.ph }}" value="{{ hq.val }}" onChange="{{ hq.onVal }}" onKeyDown="{{ hq.onKey }}" style="width:min(520px,100%);height:76px;box-sizing:border-box;padding:0 24px;border-radius:22px;border:1.5px solid rgba(56,189,248,.45);background:rgba(0,0,0,.35);color:#f4f2f8;font:900 34px 'Zain';text-align:center;letter-spacing:.3em;outline:none">
+                  <input type="password" autocomplete="off" inputMode="{{ hq.im }}" maxLength="{{ hq.ml }}" placeholder="{{ hq.ph }}" value="{{ hq.val }}" onChange="{{ hq.onVal }}" onKeyDown="{{ hq.onKey }}" style="width:min(520px,100%);height:76px;box-sizing:border-box;padding:0 24px;border-radius:22px;border:1.5px solid rgba(139,92,246,.45);background:rgba(0,0,0,.35);color:#f4f2f8;font:900 34px 'Zain';text-align:center;letter-spacing:.3em;outline:none">
                   <span style="min-height:22px;font:700 16px 'Zain';color:#fca5a5">{{ hq.err }}</span>
                 </div>
-                <button onClick="{{ hq.start }}" style="height:72px;min-width:300px;padding:0 36px;border:none;border-radius:999px;cursor:pointer;opacity:{{ hq.btnOp }};background:linear-gradient(90deg, #0284c7, #38bdf8);color:#fff;font:800 26px 'Zain';box-shadow:0 12px 36px rgba(56,189,248,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">▶️ ابدأ</button>
+                <button onClick="{{ hq.start }}" style="height:72px;min-width:300px;padding:0 36px;border:none;border-radius:999px;cursor:pointer;opacity:{{ hq.btnOp }};background:linear-gradient(90deg, #7c3aed, #a78bfa);color:#fff;font:800 26px 'Zain';box-shadow:0 12px 36px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">▶️ ابدأ</button>
               </div>
             </sc-if>
 
             <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
               <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;animation:popIn .5s cubic-bezier(.2,1.25,.35,1)">
-                <span style="padding:8px 22px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.45);font:800 22px 'Zain';color:#7dd3fc">{{ lv.icon }} {{ lv.title }} · +{{ lv.win }} / −{{ lv.lose }}</span>
+                <span style="padding:8px 22px;border-radius:999px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.45);font:800 22px 'Zain';color:#c4b5fd">{{ lv.icon }} {{ lv.title }} · +{{ lv.win }} / −{{ lv.lose }}</span>
                 <div style="display:flex;align-items:center;gap:16px;padding:12px 24px 12px 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
-                  <span style="position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font:800 28px 'Zain';color:#fff;background:{{ lv.cp.av }};box-shadow:0 0 0 3px #38bdf8">{{ lv.cp.ini }}<img src="{{ lv.cp.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ lv.cp.imgOp }}"></span>
+                  <span style="position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font:800 28px 'Zain';color:#fff;background:{{ lv.cp.av }};box-shadow:0 0 0 3px #a78bfa">{{ lv.cp.ini }}<img src="{{ lv.cp.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ lv.cp.imgOp }}"></span>
                   <div style="display:flex;flex-direction:column"><span style="font:900 28px 'Zain'">{{ lv.cp.name }}</span><span style="font:700 15px 'Zain';color:#a78bfa">#{{ lv.cp.id }} · {{ lv.cp.pts }} نقطة</span></div>
                 </div>
-                <div style="width:min(1000px,100%);box-sizing:border-box;border-radius:32px;background:radial-gradient(circle at 50% 0%, rgba(56,189,248,.14), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(56,189,248,.4);box-shadow:0 30px 90px rgba(0,0,0,.45);padding:34px 48px 30px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center">
+                <div style="width:min(1000px,100%);box-sizing:border-box;border-radius:32px;background:radial-gradient(circle at 50% 0%, rgba(139,92,246,.14), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(139,92,246,.4);box-shadow:0 30px 90px rgba(0,0,0,.45);padding:34px 48px 30px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center">
                   <span style="font:900 50px/1.35 'Zain';text-wrap:balance">{{ lv.q }}</span>
                   <sc-if value="{{ lv.isSecret }}" hint-placeholder-val="{{ false }}">
                     <div style="display:flex;gap:18px">
@@ -367,12 +343,12 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
                         <sc-for list="{{ lv.words }}" as="w" hint-placeholder-count="1">
                           <div dir="rtl" style="display:flex;gap:6px">
                             <sc-for list="{{ w.l }}" as="x" hint-placeholder-count="4">
-                              <span style="width:{{ lv.box }}px;height:{{ lv.boxH }}px;border-radius:12px;box-sizing:border-box;border:2px solid rgba(56,189,248,.5);background:linear-gradient(180deg, rgba(56,189,248,.14), rgba(56,189,248,.04));box-shadow:inset 0 -4px 0 rgba(56,189,248,.35)"></span>
+                              <span style="width:{{ lv.box }}px;height:{{ lv.boxH }}px;border-radius:12px;box-sizing:border-box;border:2px solid rgba(139,92,246,.5);background:linear-gradient(180deg, rgba(139,92,246,.14), rgba(139,92,246,.04));box-shadow:inset 0 -4px 0 rgba(139,92,246,.35)"></span>
                             </sc-for>
                           </div>
                         </sc-for>
                       </div>
-                      <span style="padding:6px 18px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);font:800 20px 'Zain';color:#bae6fd">🔒 الإجابة {{ lv.lenTxt }}</span>
+                      <span style="padding:6px 18px;border-radius:999px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.4);font:800 20px 'Zain';color:#bae6fd">🔒 الإجابة {{ lv.lenTxt }}</span>
                     </div>
                   </sc-if>
                   <div style="width:100%;display:flex;align-items:center;gap:16px">
@@ -530,7 +506,7 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
         <button onClick="{{ closeSet }}" aria-label="إغلاق" style="width:40px;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#c9c4d6;cursor:pointer;font:700 20px 'Zain'" style-hover="background:rgba(255,255,255,.09)">✕</button>
       </div>
       <div style="flex-shrink:0;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 22px 0">
-        <sc-for list="{{ setTabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.pick }}" style="height:44px;border-radius:12px;cursor:pointer;font:800 16px 'Zain';border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.c }}">{{ t.l }}</button></sc-for>
+        <sc-for list="{{ setTabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.pick }}" style="height:56px;border-radius:16px;cursor:pointer;font:900 19px 'Zain';border:2px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.c }}">{{ t.l }}</button></sc-for>
       </div>
       <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:18px 22px;display:flex;flex-direction:column;gap:18px">
         <sc-if value="{{ tabCfg }}" hint-placeholder-val="{{ true }}">
@@ -616,7 +592,8 @@ const ROSTER = LC.readJSON(LC.keys.roster, null);
 if(!SETUP||!LC.norm(SETUP.keyword)) location.replace('index.html'); else if(!Array.isArray(ROSTER)||ROSTER.length<2) location.replace('lobby.html');
 const PLAYERS = LC.readJSON(LC.keys.players, {});
 const LIBRARY_URL = LC.libraryUrl;
-const AVC = ['#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6','#a855f7','#f97316','#06b6d4'];
+// ألوان صور اللاعبين: درجات بنفسجية هادئة من هوية اللعبة بدل ألوان عشوائية
+const AVC = ['#7c63c9','#6a5ab8','#8d72cf','#5f56a8','#9b80d4'];
 const COLORS = ['#c0392f','#c8642a','#c08a2a','#ab9a2c','#7a9a34','#3e9a52','#2a8f72','#24857f','#25809a','#3667b8','#5054b4','#6c4cb8','#8a48b4','#a64aa6','#b84a7a'];
 // بنك تجريبي — يُستبدل بالمحتوى الحقيقي لاحقاً
 const ri = (a,b) => a+Math.floor(Math.random()*(b-a+1));
@@ -636,7 +613,7 @@ const RIDDLES = [
   {q:'يرد عليك بكل اللغات وما تعلّم ولا لغة؟',a:'الصدى|صدى'},{q:'تاكل منه وما ينأكل؟',a:'الصحن|صحن'},{q:'ينكسر إذا قلت اسمه؟',a:'الصمت|السكوت|الهدوء'},
   {q:'له مفاتيح وما يفتح ولا باب؟',a:'الكيبورد|لوحة المفاتيح|البيانو'}
 ];
-const DUEL_SEC = 30, SECRET_SEC = 30, VSCHAT_SEC = 30;
+const TARGET_SEC = 20, DUEL_SEC = 30, SECRET_SEC = 30, VSCHAT_SEC = 30;
 const PROVERBS = [
   'القرد في عين امه غزال','الصديق وقت الضيق','اللي ما يعرف الصقر يشويه','من طق الباب سمع الجواب','الجار قبل الدار','كل تأخيرة فيها خيرة','الباب الي يجيك منه ريح سدة و استريح','البعيد عن العين بعيد القلب'
 ];
@@ -672,15 +649,16 @@ class Component extends DCLogic {
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
   tgVals(){
     const S=this.state, it=(S.colorMap[(S.chosen||1)-1])||{}, isTarget=S.phase==='target', isDuel=S.phase==='duel'&&!!S.duel;
-    const colr={duel:['#7dd3fc','rgba(56,189,248,.2)','rgba(56,189,248,.45)'],hit:['#fca5a5','rgba(239,68,68,.18)','rgba(248,113,113,.45)'],steal:['#6ee7b7','rgba(16,185,129,.18)','rgba(52,211,153,.45)'],swap:['#c4b5fd','rgba(139,92,246,.22)','rgba(167,139,250,.5)'],partner:['#6ee7b7','rgba(16,185,129,.18)','rgba(52,211,153,.45)'],charity:['#f9a8d4','rgba(236,72,153,.18)','rgba(244,114,182,.45)']}[it.inst]||['#c4b5fd','rgba(139,92,246,.22)','rgba(167,139,250,.5)'];
-    const others=S.players.filter(x=>x.id!==S.current), N=others.length, tgCols=N<=8?4:N<=20?5:6, rows=Math.ceil(N/tgCols)||1, tgH=Math.round(Math.max(56,Math.min(110,(640-(rows-1)*12)/rows)));
+    const colr=['#c4b5fd','rgba(139,92,246,.2)','rgba(167,139,250,.45)'];
+    const others=S.players.filter(x=>x.id!==S.current), N=others.length, tgCols=N<=8?4:N<=20?5:6, rows=Math.ceil(N/tgCols)||1, tgH=Math.round(Math.max(96,Math.min(200,(620-(rows-1)*12)/rows)));
+    const tgLeftS=Math.max(0,((S.tgEnd||0)-(S.now||Date.now()))/1000), tgBand=Math.round(tgH*.32);
     let du={};
     if(isDuel){ const d=S.duel, left=Math.max(0,(d.end-(S.now||Date.now()))/1000), up=left<=0, A=this.view(this.P(d.a)), B=this.view(this.P(d.b));
-      const card=(v,ord)=>({...v,ord,bd:'rgba(56,189,248,.45)',glow:'rgba(56,189,248,.15)'});
+      const card=(v,ord)=>({...v,ord,bd:'rgba(139,92,246,.45)',glow:'rgba(139,92,246,.15)'});
       const sp=d.kind==='speed';
-      du={pts:d.pts,q:sp?'«'+d.q+'»':d.q,chip:sp?'⏱️ تحدي سرعة · اكتب المثل بالضبط زي ما هو مكتوب · الفائز +'+d.pts:'🧩 '+B.name+' يجاوب عن '+A.name+' · صح = +'+d.pts+' لـ'+A.name+' · غلط = −'+d.pts,hasAns:!sp,pl:[card(A,0),card(B,2)],pct:Math.round(left/d.sec*100),left:up?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#7dd3fc',
+      du={pts:d.pts,q:sp?'«'+d.q+'»':d.q,chip:sp?'⏱️ تحدي سرعة · اكتب المثل بالضبط زي ما هو مكتوب · الفائز +'+d.pts:'🧩 '+B.name+' يجاوب عن '+A.name+' · صح = +'+d.pts+' لـ'+A.name+' · غلط = −'+d.pts,hasAns:!sp,pl:[card(A,0),card(B,2)],pct:Math.round(left/d.sec*100),left:up?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#c4b5fd',
         hint:up?'انتهى الوقت… الهوست يحدد النتيجة':sp?'انتبه! فيه حرف متغيّر… اكتبه في الشات زي ما هو بالضبط، مو المثل الصحيح':'بس '+B.name+' يقدر يجاوب بالشات',
-        btns:sp?[{l:'🏆 فاز '+A.name,go:()=>this.duelEnd(d.a),bd:'none',bg:'linear-gradient(90deg, #059669, #10b981)'},{l:'🏆 فاز '+B.name,go:()=>this.duelEnd(d.b),bd:'none',bg:'linear-gradient(90deg, #0284c7, #38bdf8)'},{l:'🤝 ما أحد كتبه',go:()=>this.duelEnd(null),bd:'1px solid rgba(255,255,255,.14)',bg:'rgba(255,255,255,.05)'}]
+        btns:sp?[{l:'🏆 فاز '+A.name,go:()=>this.duelEnd(d.a),bd:'none',bg:'linear-gradient(90deg, #059669, #10b981)'},{l:'🏆 فاز '+B.name,go:()=>this.duelEnd(d.b),bd:'none',bg:'linear-gradient(90deg, #7c3aed, #a78bfa)'},{l:'🤝 ما أحد كتبه',go:()=>this.duelEnd(null),bd:'1px solid rgba(255,255,255,.14)',bg:'rgba(255,255,255,.05)'}]
           :[{l:'✓ جاوب صح',go:()=>this.duelEnd(d.b),bd:'none',bg:'linear-gradient(90deg, #059669, #10b981)'},{l:'✗ ما جاوب',go:()=>this.duelEnd(null),bd:'none',bg:'linear-gradient(90deg, #b91c1c, #ef4444)'}],
         ansLbl:d.showAns?'الجواب: '+String(d.ans).split('|')[0]:'👁️ إظهار الجواب',toggleAns:()=>this.setState(s=>({duel:s.duel&&{...s.duel,showAns:!s.duel.showAns}}))}; }
     let hq={}, lv={};
@@ -695,12 +673,13 @@ class Component extends DCLogic {
         q:sec?cp.name+' خمّن الرقم السري من 1 إلى 10':'الهوست يسأل… أول واحد يكتب الجواب الصح بالشات',
         hint:sec?'💬 اكتب الرقم في الشات · '+(2-L.tries.length)+' محاولة باقية':'💬 كل اللاعبين يقدرون يجاوبون · الأسرع ياخذ +'+it.win,
         tries:[0,1].map(i=>{ const v=L.tries[i]; return {txt:v==null?'؟':String(v),bd:v==null?'rgba(255,255,255,.12)':'rgba(248,113,113,.6)',bg:v==null?'rgba(255,255,255,.04)':'rgba(239,68,68,.14)',c:v==null?'#8a8596':'#fca5a5'}; }),
-        pct:Math.round(left/L.sec*100),left:left<=0?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#7dd3fc',
+        pct:Math.round(left/L.sec*100),left:left<=0?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#c4b5fd',
         stop:()=>this.liveEnd(sec?'lose':null), stopLbl:sec?'⏹️ إنهاء (خسارة)':'⏹️ إنهاء بدون فائز'}; }
     return { isTarget, isDuel, du, isHostIn, hq, isLive, lv,
       tg:{icon:it.icon||'🎯',title:it.t||'',sub:it.sub||'',c:colr[0],bg:colr[1],bd:colr[2]},
-      tgCols, tgH, tgAv:Math.round(Math.max(36,Math.min(56,tgH*.55))),
-      tgTiles:others.map(o=>({...this.view(o),pick:()=>this.pickTarget(o.id)})) };
+      tgCols, tgH, tgBand, tgNumF:Math.round(tgBand*.7), tgAv:Math.round(Math.max(28,Math.min(64,tgH*.3))), tgAvF:Math.round(Math.max(13,Math.min(26,tgH*.13))), tgNmF:tgH<130?16:19, tgGap:tgH<130?3:6,
+      tgLeft:Math.ceil(tgLeftS), tgPct:Math.round(tgLeftS/TARGET_SEC*100), tgBarC:tgLeftS<=5?'#f87171':'#c4b5fd',
+      tgTiles:others.map(o=>({...this.view(o),...this.cardLook('idle'),pick:()=>this.pickTarget(o.id)})) };
   }
   setVals(){
     const S=this.state, D=S.draft||S.cfg, dirty=JSON.stringify(D)!==JSON.stringify(S.cfg);
@@ -764,7 +743,8 @@ class Component extends DCLogic {
   }
   pickTarget(id){
     const S=this.state, p=this.P(S.current), o=this.P(id), ch=S.colorMap[S.chosen-1];
-    if(S.phase!=='target'||!o||o.id===p.id) return;
+    if(S.phase!=='target'||!o||o.id===p.id||(S.tgEnd&&S.tgEnd<=Date.now())) return;
+    clearInterval(this.div);
     this.tone(780,.15,'triangle',.08);
     if(ch.inst==='duel'||ch.inst==='speed'){
       const sp=ch.inst==='speed', pv=sp?twist(rnd(PROVERBS)):null, r=sp?{q:pv,a:pv}:rnd(RIDDLES), sec=sp?SPEED_SEC:DUEL_SEC;
@@ -777,6 +757,20 @@ class Component extends DCLogic {
     const map=S.colorMap.slice(); map[S.chosen-1]={...ch,o:o.id,pick:false};
     const nm=ch.inst==='partner'?'🤝 '+p.name+' و'+o.name+' أخذوا '+ch.luck+' نقطة':ch.inst==='swap'?'🔄 '+p.name+' بدّل نقاطه مع '+o.name:ch.inst==='hit'?'🎯 '+p.name+' خصم '+(-ch.ov)+' من '+o.name:ch.inst==='steal'?'🧲 '+p.name+' سحب من نقاط '+o.name:'🎀 '+p.name+' أعطى '+o.name+' من نقاطه';
     this.setState({colorMap:map},()=>{ this.judge(true); this.announce(ch.icon,nm.slice(nm.indexOf(' ')+1),'#c4b5fd'); });
+  }
+  // اختيار الخصم: 20 ثانية، ولو خلصت بدون اختيار يضيع الدور (الجولة تنحسب بدون نقاط)
+  startTarget(){
+    const end=Date.now()+TARGET_SEC*1000; this.setState({phase:'target',tgEnd:end,now:Date.now()});
+    clearInterval(this.div); let last=TARGET_SEC;
+    this.div=setInterval(()=>{ if(this.state.phase!=='target'){ clearInterval(this.div); return; }
+      const left=Math.ceil((this.state.tgEnd-Date.now())/1000);
+      if(left!==last&&left<=5&&left>=1) this.tone(880,.1,'square',.04); last=left; this.setState({now:Date.now()});
+      if(left<=0){ clearInterval(this.div); this.targetTimeout(); } },200);
+  }
+  targetTimeout(){
+    const S=this.state; if(S.phase!=='target') return; const p=this.P(S.current);
+    this.announce('⏰',`خلص الوقت… ضاع دور ${p?p.name:''}`,'#fca5a5'); this.tone(196,.45,'sawtooth',.06);
+    this.setState(s=>({phase:'result',res:{d:0,prev:p?p.pts:0},round:s.round+1}));
   }
   liveStart(){
     const S=this.state, hq=S.hq; if(!hq) return; const v=hq.val.trim();
@@ -801,7 +795,7 @@ class Component extends DCLogic {
       const w=this.P(outcome);
       if(w.id===p.id){ d=ch.win; this.upd(p.id,x=>({pts:x.pts+d})); }
       else { this.upd(w.id,x=>({pts:x.pts+ch.win})); d=-ch.lose; this.upd(p.id,x=>({pts:Math.max(0,x.pts+d)})); }
-      this.announce('🏃',w.name+' جاوب أول وأخذ '+ch.win+' نقطة','#7dd3fc');
+      this.announce('🏃',w.name+' جاوب أول وأخذ '+ch.win+' نقطة','#c4b5fd');
     } else this.announce('🏃','ما أحد جاوب… الجواب: '+L.ans,'#a8a3b5');
     this.setState(s=>({phase:'result',live:null,res:{d,prev},round:s.round+1}));
     if(d>0){ [523,659,784].forEach((f,i)=>this.after(i*110,()=>this.tone(f,.3,'triangle',.08))); } else if(d<0) this.tone(196,.45,'sawtooth',.06);
@@ -815,14 +809,14 @@ class Component extends DCLogic {
     else if(wid){ const lid=wid===du.a?du.b:du.a; const wp=this.P(wid), lp=this.P(lid);
       const lossAmt=du.kind==='speed'?0:du.pts;
       this.upd(wid,x=>({pts:x.pts+du.pts})); if(lossAmt) this.upd(lid,x=>({pts:Math.max(0,x.pts-lossAmt)}));
-      d=wid===du.a?du.pts:-lossAmt; this.announce(du.kind==='speed'?'⏱️':'🧩',wp.name+(du.kind==='speed'?' فاز بتحدي السرعة على ':' فاز بتحدي اللغز على ')+lp.name,'#7dd3fc'); }
+      d=wid===du.a?du.pts:-lossAmt; this.announce(du.kind==='speed'?'⏱️':'🧩',wp.name+(du.kind==='speed'?' فاز بتحدي السرعة على ':' فاز بتحدي اللغز على ')+lp.name,'#c4b5fd'); }
     this.setState(s=>({phase:'result',duel:null,res:{d,prev},round:s.round+1}));
     if(d>0){ [523,659,784].forEach((f,i)=>this.after(i*110,()=>this.tone(f,.3,'triangle',.08))); } else if(d<0) this.tone(196,.45,'sawtooth',.06);
   }
   judge(win){
     const S=this.state, p=this.P(S.current); let ch=S.colorMap[S.chosen-1];
     if(ch.inst==='again'){ const map=S.colorMap.slice(); map[S.chosen-1]={...ch,used:true}; this.setState({phase:'colors',chosen:null,colorMap:map}); this.tone(660,.15,'triangle',.08); return; }
-    if(ch.pick){ this.setState({phase:'target'}); this.tone(660,.15,'triangle',.08); return; }
+    if(ch.pick){ this.startTarget(); this.tone(660,.15,'triangle',.08); return; }
     if(ch.inst==='secret'||ch.inst==='vschat'){ this.setState({phase:'hostin',hq:{mode:ch.inst,val:''}}); this.tone(660,.15,'triangle',.08); return; }
     let d; const o=ch.o?this.P(ch.o):null;
     if(ch.inst==='swap'&&o){ d=o.pts-p.pts; const op=o.pts, pp=p.pts; this.upd(o.id,()=>({pts:pp})); this.upd(p.id,()=>({pts:op})); }
@@ -889,9 +883,13 @@ class Component extends DCLogic {
     const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
     return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
   }
+  // شكل بطاقة اللاعب (القرعة واختيار الخصم): شريط علوي سميك فيه رقم اللاعب
+  cardLook(kind){ return kind==='win'
+    ? {band:'linear-gradient(180deg, #f6f3ff, #e4dcfb)',numC:'#3b2a78',bd:'#d8ccfa',sh:'0 0 0 3px rgba(196,181,253,.25), 0 0 44px rgba(167,139,250,.45)',tf:'scale(1.06) translateY(-4px)',op:1,fl:'none',ring:'#e4dcfb',z:2}
+    : {band:'linear-gradient(180deg, #8a72d2, #6c56b6)',numC:'#fff',bd:'rgba(167,139,250,.26)',sh:'0 12px 28px rgba(0,0,0,.32)',tf:'none',op:1,fl:'none',ring:'rgba(196,181,253,.35)',z:1}; }
   view(p){ if(!p) return {}; const c=AVC[(p.id-1)%AVC.length];
     const img=this.reg.avatar(p.name);
-    return {id:p.id,name:p.name,pts:p.pts,ini:p.name.replace(/^ال/,'')[0],av:`linear-gradient(135deg, ${c}, ${c}66)`,img:img||'',imgOp:img?1:0,icons:''}; }
+    return {id:p.id,name:p.name,pts:p.pts,ini:p.name.replace(/^ال/,'')[0],av:`linear-gradient(135deg, ${c}, ${c}66)`,img:img||'',imgOp:img?1:0,icons:'',num:String(p.id).padStart(2,'0')}; }
 
   overVals(){ const S=this.state; if(!S.over) return {overCard:null,overMsg:''};
     const ws=this.winners(), w=ws[0], pp=S.pts, ptsTxt=typeof pp==='number'?`+${pp} نقطة`:null;
@@ -912,12 +910,11 @@ class Component extends DCLogic {
         rowBg:i===0?'rgba(251,191,36,.1)':'rgba(255,255,255,.03)',rowBd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.06)',ptsC:i===0?'#fde68a':'#f4f2f8'}; });
     const cur=this.view(this.P(S.current)), remaining=S.players.length-S.played.length;
     const tiles=S.players.map(p=>{ const v=this.view(p), isWin=S.win===p.id, isOut=S.out.includes(p.id), isPlayed=S.played.includes(p.id)&&!isWin;
-      let st={isWin,isOut,isHit:S.hit===p.id,inset:'0',bg:'linear-gradient(180deg, rgba(42,34,66,.9), rgba(20,17,30,.95))',bd:'rgba(167,139,250,.22)',op:1,tf:'none',sh:'0 14px 34px rgba(0,0,0,.35)',fl:'none',ring:'rgba(196,181,253,.45)',z:1,lbl:null};
-      if(isPlayed) st={...st,op:.38,fl:'grayscale(.7)',lbl:'لعب ✓',lblBg:'rgba(255,255,255,.08)',lblC:'#c9c4d6'};
-      if(isOut) st={...st,op:.4,tf:'scale(.94)',fl:'grayscale(1) brightness(.7)',sh:'none',ring:'rgba(255,255,255,.1)'};
-      if(isWin) st={...st,inset:'3px',bg:'linear-gradient(180deg, #3b2a6b, #1a1230)',bd:'rgba(253,230,138,.5)',tf:'scale(1.1) translateY(-6px)',sh:'0 0 80px rgba(251,191,36,.45), 0 0 140px rgba(167,139,250,.5)',ring:'#fde68a',z:2,lbl:'🎯 عليه الدور',lblBg:'rgba(251,191,36,.2)',lblC:'#fde68a'};
+      let st={isWin,isOut,isHit:S.hit===p.id,...this.cardLook(isWin?'win':'idle'),lbl:isWin?'🎯 عليه الدور':null,lblBg:'rgba(255,255,255,.14)',lblC:'#f5f3ff'};
+      if(isPlayed) st={...st,op:.4,fl:'grayscale(.6)',lbl:'لعب ✓',lblBg:'rgba(255,255,255,.08)',lblC:'#c9c4d6'};
+      if(isOut) st={...st,op:.45,tf:'scale(.95)',fl:'grayscale(1) brightness(.75)',sh:'none'};
       return {...v,...st}; });
-    const N=S.players.length, compact=N>15, gridGap=compact?10:16, gw=S.dW-80-(S.sideOpen?448:82)-60, pickCols=Math.min(N||1,Math.max(Math.ceil(N/10),compact?Math.max(3,Math.round(gw/250)):Math.max(4,Math.round(gw/(N<=10?280:230))))), rows=Math.ceil(N/pickCols), tileH=Math.round(Math.min(compact?120:230,(660-(rows-1)*gridGap)/rows)), avS=compact?Math.round(Math.max(30,Math.min(52,tileH*.58))):Math.round(Math.max(36,Math.min(80,tileH*.36)));
+    const N=S.players.length, compact=N>15, gridGap=compact?10:16, gw=S.dW-80-(S.sideOpen?448:82)-60, pickCols=Math.min(N||1,Math.max(Math.ceil(N/10),compact?Math.max(3,Math.round(gw/250)):Math.max(4,Math.round(gw/(N<=10?280:230))))), rows=Math.ceil(N/pickCols), tileH=Math.round(Math.min(compact?130:230,(660-(rows-1)*gridGap)/rows)), bandH=Math.round(tileH*.32), avS=Math.round(Math.max(26,Math.min(76,tileH*.3)));
     const colors=COLORS.map((c,i)=>{ const n=i+1, ch=S.chosen, used=!!(S.colorMap[i]&&S.colorMap[i].used); return {n,c,hi:mix(c,72,'white'),dk:mix(c,55,'black'),glow:c+'55',delay:(-(i%5)*.45-Math.floor(i/5)*.3).toFixed(2)+'s',isChosen:ch===n,op:used?.15:ch&&ch!==n?.15:1,tf:ch===n?'scale(1.18)':(ch||used)?'scale(.88)':'none',pick:()=>this.pickColor(n)}; });
     let ch={};
     if(S.chosen&&S.colorMap[S.chosen-1]){ const it=S.colorMap[S.chosen-1], c=COLORS[S.chosen-1], isLuck=!!it.inst;
@@ -940,7 +937,7 @@ class Component extends DCLogic {
       phaseLabel:{pick:'اختيار اللاعب',colors:'اختيار اللون',challenge:'التحدي',target:'اختيار لاعب',duel:'التحدي',hostin:'تجهيز التحدي',live:'التحدي',result:'النتيجة'}[S.phase],
       cycleTxt:`${S.played.length} / ${S.players.length}`,
       isPick:S.phase==='pick', isColors:S.phase==='colors', isChallenge:S.phase==='challenge', ...this.tgVals(), isResult:S.phase==='result',
-      pickIdle:!S.anim, startPick:()=>this.startPick(), tiles, pickCols, tileH, avS, compact, notCompact:!compact, gridGap, tPad:compact?'0 12px':'12px', nmF:tileH<70?17:20, avF:Math.round(avS*.45), tileGap:tileH<170?4:8, spotOp:S.win?.32:S.anim?.16:.08, liveCount:S.anim?Math.max(1,S.players.filter(p=>!S.played.includes(p.id)).length-S.out.length):S.players.filter(p=>!S.played.includes(p.id)).length||S.players.length,
+      pickIdle:!S.anim, startPick:()=>this.startPick(), tiles, pickCols, tileH, bandH, numF:Math.round(bandH*.7), showPts:tileH>=150, avS, gridGap, nmF:tileH<130?16:20, avF:Math.round(avS*.45), tileGap:tileH<170?3:6, spotOp:S.win?.32:S.anim?.16:.08, liveCount:S.anim?Math.max(1,S.players.filter(p=>!S.played.includes(p.id)).length-S.out.length):S.players.filter(p=>!S.played.includes(p.id)).length||S.players.length,
       pickSub:S.anim?(S.win?'وقف الاختيار!':'القرعة تدور… ووين ما توقف يكون الدور'):remaining?`${remaining} لاعب باقي لهم دور في هالدورة`:'كل اللاعبين لعبوا — تبدأ دورة جديدة',
       cur, colors, ch, res, judgeWin:()=>this.judge(true), judgeLose:()=>this.judge(false),
       next:()=>this.next(), nextLbl:S.round>=this.setup.total?'🏁 إنهاء المباراة':'الجولة التالية', totalRounds:this.setup.total,
