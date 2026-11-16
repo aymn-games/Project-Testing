@@ -263,6 +263,7 @@ const SETTINGS = [
     { type:'choice', key:'who',        rc:['المسموح'], label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
   ]},
   { title:'المباراة', rows:[
+    { type:'choice', key:'mode',     rc:['الشكل','العجلة'], label:'شكل العجلة', options:['روليت','سكرول'], default:0 },
     { type:'choice', key:'roundDur', rc:['المدة','الصعوبة'], label:'مدة تصاعد صعوبة الصناديق', hint:'كل ما تخلص المدة يزيد عدد الصناديق المخفية', options:['دقيقتين','4 دقائق','6 دقائق','8 دقائق'], default:1 },
     { type:'toggle', key:'sound',    rc:['الأصوات','الصوت'], label:'الأصوات', default:true }
   ]},
