@@ -15,11 +15,11 @@
  * ← cake (تنتظر القص، أو قص تلقائي) ← celebrate ← photo ← free (رقص حر بطول أغنيته) ← outro ← ended. السيرفر يحصر الحركة
  * بمنطقة الدور والمرحلة، ويخفي صاحبة الحفلة عن الضيوف قبل الافتتاح.
  *
- * الجدول (schedule، يحدده المذيع ويعدّله): الانتقالات كلها على الساعة في tick() —
- * closed ← lobby عند openAt، و lobby ← entrance عند startAt بشرط صاحبة الحفلة متصلة،
- * والمراحل الموقّتة بمددها ورا بعض لين مشهد النهاية ثم ended (ما فيه مدة كاملة للحفل؛ endAt = حد أمان
- * بعد MAX_PARTY_MS من البداية لو الحفلة علقت، مثلاً صاحبة الحفلة ما دخلت). غرفة بدون جدول (اختبارات)
- * تبدأ lobby وتنتظر «بدء» المذيع، بنفس المدد الافتراضية.
+ * بدون أوقات: الحفلة تنشأ على lobby (الدخول مفتوح على طول) وتنتظر «بدء» المذيع (start)، وبعدها المراحل
+ * الموقّتة بمددها ورا بعض في tick() لين مشهد النهاية ثم ended. حد أمان: MAX_PARTY_MS من بداية الحفل
+ * (أو من الإنشاء لو ما بدأ) والحفلة تنتهي لو علقت.
+ * الجدول القديم (schedule: closed ← lobby عند openAt، و lobby ← entrance عند startAt) باقي بس للحفلات
+ * المحفوظة قبل التغيير — صفحة المذيع ما عادت ترسله.
  */
 'use strict';
 
@@ -74,6 +74,7 @@ var SCHED_DEF = { openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, 
 var SCHED_LIM = { openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
 // حد أمان: الحفلة اللي ما وصلت النهاية بعد 4 ساعات من بدايتها تنتهي (صاحبة الحفلة ما دخلت، أو التهاني ما انقلبت)
 var MAX_PARTY_MS = 4 * 3600 * 1000;
+var WRITE_MS = 90000, CUT_MS = 60000; // كتابة التهاني ومهلة القص (ثابتة)
 var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000, EXPIRE_MS = 48 * 3600 * 1000;
 // مراحل مشي تلقائي: نوع الأهداف لكل مرحلة
 var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo', outro: 'outro' };
@@ -233,10 +234,12 @@ function createRoomManager(opts) {
     }
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
     function durationOf(room, ph) {
-        var sc = room.sched || SCHED_DEF;
+        var sc = room.sched;
         if (SONG_MS[ph]) return SONG_MS[ph]; // الرقص ورقص الكيكة بطول أغانيهم (مو من الجدول)
-        if (ph === 'wishWrite') return sc.writeMin * MIN_MS;
-        if (ph === 'cake') return room.sched ? sc.cutTimeoutSec * 1000 : 0;
+        // الحفلة الحين بدون جدول (بدون أوقات): كتابة التهاني دقيقة ونص ومهلة القص 60ث ثابتة.
+        // الجدول باقي بس للحفلات القديمة المحفوظة قبل التغيير
+        if (ph === 'wishWrite') return sc ? sc.writeMin * MIN_MS : WRITE_MS;
+        if (ph === 'cake') return sc ? sc.cutTimeoutSec * 1000 : CUT_MS;
         return FIXED_MS[ph] || 0;
     }
     // at: وقت بداية المرحلة (الافتراضي الحين) — الرجوع بعد إعادة تشغيل يبدأ كل مرحلة فاتت بوقتها الصحيح
@@ -485,8 +488,9 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var t = now(), sc = room.sched;
         if (room.phase === 'ended') return { ok: true, changed: false };
-        // حد الأمان (4 ساعات من البداية) يغلب كل شي، وين ما وصلت الحفلة
-        if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended', catchUp ? endAtOf(sc) : 0); return { ok: true, changed: true }; }
+        // حد الأمان (4 ساعات من البداية، أو من الإنشاء لو ما بدأ الحفل) يغلب كل شي، وين ما وصلت الحفلة
+        var cap = sc ? endAtOf(sc) : (room.startedAt || room.createdAt || t) + MAX_PARTY_MS;
+        if (t >= cap) { setPhase(room, 'ended', catchUp ? cap : 0); return { ok: true, changed: true }; }
         if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby', catchUp ? openAtOf(sc) : 0), true) };
         if (room.phase === 'lobby') return { ok: true, changed: !!(sc && t >= sc.startAt && girlOnline(room)) && advance(room) };
         if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room, catchUp ? room.phaseUntil : 0) };

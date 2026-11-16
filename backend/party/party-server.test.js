@@ -40,14 +40,12 @@ function client(port) {
     });
 }
 
-// جدول للاختبارات: البداية بعد نص ساعة والدخول مفتوح من الحين (lobby)
-function SCHED() { return { startAt: Date.now() + 30 * 60000, openBeforeMin: 60, tzOffsetMin: 180 }; }
 function reset() { party._mgr.rooms().forEach(function (c) { party._mgr.closeRoom(c); }); }
 
 test('disabled by default refuses host', async function () {
     reset(); party._setEnabled(false);
     var srv = await startServer(), c = await client(srv.address().port);
-    c.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: SCHED() });
+    c.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var m = await c.wait(function (x) { return x.t === 'err'; });
     assert.equal(m.err, 'disabled');
     c.close(); srv.close();
@@ -57,7 +55,7 @@ test('host → join → both receive room roster with the guest', async function
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
     var h = await client(port);
-    h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: SCHED() });
+    h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var hosted = await h.wait(function (x) { return x.t === 'hosted'; });
     var g = await client(port);
     g.send({ t: 'join', code: hosted.code, name: 'ريم' });
@@ -73,7 +71,7 @@ test('host → join → both receive room roster with the guest', async function
 test('movement reaches other client within 300ms', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: SCHED() });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
     var a = await client(port), b = await client(port);
     // b شاشة عرض (تستقبل كل حركة كل دورة) — قاعدة القريب/البعيد لها اختبارها في party-rooms
@@ -108,7 +106,7 @@ test('garbage message does not crash server', async function () {
 test('reconnect with resume restores same n', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: SCHED() });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
     var a = await client(port); a.send({ t: 'join', code: code, name: 'ريم' });
     var w = await a.wait(function (x) { return x.t === 'welcome'; });
@@ -138,7 +136,7 @@ function rawClient(port) {
     });
 }
 async function hostRoom(port) {
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: SCHED() });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     return { h: h, code: (await h.wait(function (x) { return x.t === 'hosted'; })).code };
 }
 function onlineOf(code, name) { var r = party._mgr.roster(code).players.find(function (p) { return p[1] === name; }); return r ? r[4] : null; }
@@ -467,46 +465,23 @@ test('rooms are saved to the store (batched) and boot restores saved rooms', asy
     g2.close(); srv.close(); party._setStore(null);
 });
 
-// ---- الحفلة المجدولة: البروتوكول ----
-test('host create requires a valid schedule; hosted + phase carry sched', async function () {
+// ---- الحفلة بدون أوقات: البروتوكول ----
+test('host create needs no times: opens straight in the lobby (sched null), guests join right away', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
     var a = await client(port); a.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
-    assert.equal((await a.wait(function (x) { return x.t === 'err' && x.of === 'host'; })).err, 'schedule');
-    await sleep(1100); a.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: { startAt: Date.now() - 3600000 } });
-    assert.equal((await a.wait(function (x) { return x.t === 'err' && x.of === 'host'; })).err, 'schedule');
-    var start = Date.now() + 3600000;
-    await sleep(1100); a.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: { startAt: start, tzOffsetMin: 180 } });
-    await a.wait(function (x) { return x.t === 'hosted'; });
+    var code = (await a.wait(function (x) { return x.t === 'hosted'; })).code;
     var ph = await a.wait(function (x) { return x.t === 'phase'; });
-    assert.equal(ph.p, 'closed');
-    assert.deepEqual([ph.sched.openAt, ph.sched.startAt, ph.sched.endAt, ph.sched.tzOffsetMin, ph.sched.danceMin], [start - 15 * 60000, start, undefined, 180, 7]);
-    assert.equal(ph.waitGirl, false);
-    a.close(); srv.close();
-});
-
-test('guest join while closed gets closed {openAt}; gets phase lobby when it opens', async function () {
-    reset(); party._setEnabled(true);
-    var srv = await startServer(), port = srv.address().port, start = Date.now() + 3600000;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: { startAt: start, tzOffsetMin: 180 } });
-    var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
+    assert.equal(ph.p, 'lobby'); assert.equal(ph.sched, null); assert.equal(ph.waitGirl, false);
     var g = await client(port); g.send({ t: 'join', code: code, name: 'ريم' });
-    var cl = await g.wait(function (x) { return x.t === 'closed'; });
-    assert.equal(cl.openAt, start - 15 * 60000); assert.equal(cl.tzOffsetMin, 180); assert.equal(cl.girlName, 'سارة');
-    assert.equal(party._mgr.roster(code).players.length, 0);
-    await sleep(1100);
-    h.send({ t: 'schedule', schedule: { openBeforeMin: 120 } }); // يفتح الدخول الحين
-    var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'lobby'; });
-    assert.equal(ph.p, 'lobby');
-    await sleep(1100); g.send({ t: 'join', code: code, name: 'ريم' });
     assert.ok(await g.wait(function (x) { return x.t === 'welcome'; }));
-    h.close(); g.close(); srv.close();
+    a.close(); g.close(); srv.close();
 });
 
-test('girl can join while closed; untrusted peek still hides her', async function () {
+test('girl can join before the start; untrusted peek still hides her', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key', schedule: { startAt: Date.now() + 3600000 } });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var hosted = await h.wait(function (x) { return x.t === 'hosted'; });
     var gl = await client(port); gl.send({ t: 'join', code: hosted.code, name: 'سارة', girlKey: hosted.girlKey });
     var wg = await gl.wait(function (x) { return x.t === 'welcome'; });
@@ -519,18 +494,13 @@ test('girl can join while closed; untrusted peek still hides her', async functio
     h.close(); gl.close(); v.close(); hv.close(); srv.close();
 });
 
-test('schedule edit by host broadcasts the new phase/until; by a guest is refused', async function () {
+test('schedule edit is refused: by a guest (host-only) and on a party without times', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
     var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
-    await toPhase(r, 'wishWrite');
-    var before = party._mgr.phaseOf(r.code);
-    await sleep(1100); r.h.send({ t: 'schedule', schedule: { writeMin: 20 } });
-    var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'wishWrite' && x.until === before.at + 20 * 60000; });
-    assert.ok(ph);
     await sleep(1100); g.send({ t: 'schedule', schedule: { danceMin: 1 } });
     assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'schedule'; })).err, 'host-only');
-    await sleep(1100); r.h.send({ t: 'schedule', schedule: 'x' });
+    await sleep(1100); r.h.send({ t: 'schedule', schedule: { writeMin: 20 } });
     assert.equal((await r.h.wait(function (x) { return x.t === 'err' && x.of === 'schedule'; })).err, 'schedule');
     r.h.close(); g.close(); srv.close();
 });
@@ -573,8 +543,8 @@ test('host reconnecting after the party ended still gets the pending points', as
 test('boot restores the good rooms even when one saved row is broken', async function () {
     reset(); party._setEnabled(true);
     var Database = require('better-sqlite3'), st = require('./party-store').createStore(new Database(':memory:'));
-    var good = party._mgr.createRoom({ girlName: 'سارة', schedule: SCHED() });
-    st.save('9999', { code: '9999', phase: 'lobby', players: [null], sched: SCHED() });
+    var good = party._mgr.createRoom({ girlName: 'سارة' });
+    st.save('9999', { code: '9999', phase: 'lobby', players: [null] });
     st.save(good.code, party._mgr.serialize(good.code));
     party._mgr.closeRoom(good.code);
     party._setStore(st); party.boot();
@@ -660,19 +630,19 @@ test('any streamer account hosts its own party; same account on another device g
     party._setHostUser(function (tok) { return tok === 'tok-a' ? { id: 1 } : tok === 'tok-b' ? { id: 2 } : null; });
     try {
         var srv = await startServer(), port = srv.address().port;
-        var bad = await client(port); bad.send({ t: 'host', auth: 'expired', girlName: 'سارة', schedule: SCHED() });
+        var bad = await client(port); bad.send({ t: 'host', auth: 'expired', girlName: 'سارة' });
         assert.equal((await bad.wait(function (x) { return x.t === 'err'; })).err, 'login');
         var a1 = await client(port); a1.send({ t: 'host', auth: 'tok-a', current: true });
         assert.equal((await a1.wait(function (x) { return x.t === 'err'; })).err, 'none');
-        var a2 = await client(port); a2.send({ t: 'host', auth: 'tok-a', girlName: 'سارة', schedule: SCHED() });
+        var a2 = await client(port); a2.send({ t: 'host', auth: 'tok-a', girlName: 'سارة' });
         var ha = await a2.wait(function (x) { return x.t === 'hosted'; });
-        var b1 = await client(port); b1.send({ t: 'host', auth: 'tok-b', girlName: 'ريم', schedule: SCHED() });
+        var b1 = await client(port); b1.send({ t: 'host', auth: 'tok-b', girlName: 'ريم' });
         var hb = await b1.wait(function (x) { return x.t === 'hosted'; });
         assert.notEqual(ha.code, hb.code);
         // جهاز ثاني لنفس الحساب ← نفس حفلته، و«إنشاء» مرة ثانية ما يسوي حفلة ثانية
         var a3 = await client(port); a3.send({ t: 'host', auth: 'tok-a', current: true });
         assert.equal((await a3.wait(function (x) { return x.t === 'hosted'; })).code, ha.code);
-        var a4 = await client(port); a4.send({ t: 'host', auth: 'tok-a', girlName: 'غيرها', schedule: SCHED() });
+        var a4 = await client(port); a4.send({ t: 'host', auth: 'tok-a', girlName: 'غيرها' });
         assert.equal((await a4.wait(function (x) { return x.t === 'hosted'; })).code, ha.code);
         // المفتاح الخاص ما يوصل لحفلات الحسابات
         var k = await client(port); k.send({ t: 'host', key: 'test-key', current: true });
@@ -686,7 +656,7 @@ test('close: host ends the party right away from any phase (no outro); guests ca
     party._setHostUser(function (tok) { return tok === 'tok-a' ? { id: 1 } : null; });
     try {
         var srv = await startServer(), port = srv.address().port;
-        var h = await client(port); h.send({ t: 'host', auth: 'tok-a', girlName: 'سارة', schedule: SCHED() });
+        var h = await client(port); h.send({ t: 'host', auth: 'tok-a', girlName: 'سارة' });
         var hd = await h.wait(function (x) { return x.t === 'hosted'; });
         var g = await client(port); g.send({ t: 'join', code: hd.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome' || x.t === 'closed'; });
         await sleep(1100); g.send({ t: 'close' });
@@ -699,7 +669,7 @@ test('close: host ends the party right away from any phase (no outro); guests ca
         // نفس الحساب: ما فيه حفلة شغالة، وينشئ وحدة جديدة برقم ثاني
         var n = await client(port); n.send({ t: 'host', auth: 'tok-a', current: true });
         assert.equal((await n.wait(function (x) { return x.t === 'err'; })).err, 'none');
-        var n2 = await client(port); n2.send({ t: 'host', auth: 'tok-a', girlName: 'نورة', schedule: SCHED() });
+        var n2 = await client(port); n2.send({ t: 'host', auth: 'tok-a', girlName: 'نورة' });
         assert.notEqual((await n2.wait(function (x) { return x.t === 'hosted'; })).code, hd.code);
         [h, g, n, n2].forEach(function (c) { c.close(); }); srv.close();
     } finally { party._setHostUser(null); }

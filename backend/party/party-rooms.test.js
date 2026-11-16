@@ -371,7 +371,7 @@ test('dance ends into gather with walk targets, then wish writing', function () 
     assert.equal(s.mgr.move(s.code, g.id, [0, -20, 0, 1]).err, 'auto');
     s.c.t.now += 12000; s.mgr.tick(s.code);
     ph = s.mgr.phaseOf(s.code);
-    assert.equal(ph.p, 'wishWrite'); assert.equal(ph.until - ph.at, 3 * 60000);
+    assert.equal(ph.p, 'wishWrite'); assert.equal(ph.until - ph.at, 90000, 'wish writing is fixed at 1.5 min');
 });
 
 test('wish: only guests, only during wishes, trimmed to 200, text kept as text, bad words masked', function () {
@@ -468,7 +468,7 @@ test('cut only during cake → celebrate → photo → free with photo targets b
     toWishes(s);
     assert.equal(s.mgr.cut(s.code, 'host').err, 'phase');
     s.mgr.skip(s.code, 'wishWrite'); s.mgr.skip(s.code, 'cakeWalk');
-    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'cake'); assert.equal(ph.until, 0);
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'cake'); assert.equal(ph.until - ph.at, 60000, 'auto cut after 60s');
     s.mgr.cut(s.code, 'host');
     ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 242500, 'cake dance = the cut song');
     s.c.t.now += 242500; s.mgr.tick(s.code);
@@ -1042,4 +1042,14 @@ test('song-timed scenes match the actual music files (ffprobe; skipped without i
     near(R.FIXED_MS.cakeWalk, dur('cakesong.mp3'), 'gathering around the cake');
     near(R.SONG_MS.celebrate, dur('cutsong.mp3'), 'cake dance');
     near(R.FIXED_MS.outro, dur('outro.mp3'), 'ending scene');
+});
+
+test('no times: party opens in the lobby, waits for the host start, fixed writing 1.5 min and cut 60s, ends by itself after 4h if stuck', function () {
+    var c = clockMgr(), r = c.mgr.createRoom({ girlName: 'س' }), ph = function () { return c.mgr.phaseOf(r.code).p; };
+    assert.equal(ph(), 'lobby'); assert.equal(c.mgr.phaseOf(r.code).sched, null);
+    assert.equal(c.mgr.join(r.code, { name: 'ريم' }).ok, true, 'guests can join right away');
+    c.t.now += 3 * 3600000; c.mgr.tick(r.code); assert.equal(ph(), 'lobby', 'no clock start');
+    assert.equal(c.mgr.start(r.code).ok, true); assert.equal(ph(), 'entrance');
+    c.t.now += 4 * 3600000 - 1; c.mgr.tick(r.code); assert.notEqual(ph(), 'ended');
+    c.t.now += 1; c.mgr.tick(r.code); assert.equal(ph(), 'ended', '4h after the start');
 });

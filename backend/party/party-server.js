@@ -9,7 +9,7 @@
  * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName, auth, schedule, card?, theme?} (أي استريمر بحساب الموقع؛ حفلة شغالة وحدة لكل حساب — لو عنده وحدة يرجع لها)
+ *   عميل → host {girlName, auth, card?, theme?} (بدون أوقات: الحفلة تبدأ lobby والمذيع يضغط start؛ أي استريمر بحساب الموقع؛ حفلة شغالة وحدة لكل حساب — لو عنده وحدة يرجع لها)
  *          | host {auth, current: true} (حساب المذيع من أي جهاز ← حفلته الشغالة، أو err none؛ بدون حساب صالح ← err login)
  *          | host {code, token} | host {girlName, key, schedule} و host {key, current: true} (المفتاح الخاص PARTY_HOST_KEY، اختياري)
  *          ← hosted {code, token, girlKey, viewKey}
@@ -251,9 +251,8 @@ function handle(client, msg, t, ident) {
             attach(client, code, 'host');
             send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey, viewKey: room.viewKey });
         } else {
-            // كل حفلة من صفحة المذيع مجدولة (الغرفة بدون جدول للاختبارات بس)
-            if (!msg.schedule || typeof msg.schedule !== 'object') return send(client, { t: 'err', err: 'schedule', of: t });
-            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars, card: msg.card, theme: msg.theme, ownerId: owner });
+            // الحفلة بدون أوقات: الدخول يفتح على طول، والمذيع يبدأ الحفل بزر «بدء» (start)
+            res = _mgr.createRoom({ girlName: msg.girlName, chars: msg.chars, card: msg.card, theme: msg.theme, ownerId: owner });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created' + (owner != null ? ' by user ' + owner : ''));
@@ -408,15 +407,15 @@ function tickAll() {
             var cs = roomClients(code), room = _mgr.getRoom(code), sc = room && room.sched;
             // الحفلة المجدولة تمشي على الساعة حتى لو محد متصل، وتبقى لين ساعتين بعد نهايتها
             // (وأكثر لو النقاط ما انحسبت — تنتظر المذيع يفتح صفحته). النهاية = وقت ما انتهت فعلاً، أو حد الأمان
-            if (sc) {
-                var endAt = room.phase === 'ended' ? room.phaseAt : sc.startAt + 4 * 3600 * 1000;
+            if (room.phase === 'ended') {
                 // تنشال بعد ساعتين من النهاية لو ما فيه نقاط تنتظر المذيع، وبعد يومين بأي حال
+                var endAt = room.phaseAt;
                 if ((now > endAt + ENDED_KEEP_MS && (!room.pointsMsg || room.pointsAcked) && !cs.length) || now > endAt + POINTS_KEEP_MS) return dropRoom(code, 'ended');
-            } else if (!cs.length) {
+            } else if (!sc && !cs.length) {
+                // حفلة شغالة بدون أي اتصال (ولا حتى المذيع) أكثر من نص ساعة ← تنقفل
                 if (!_emptySince[code]) _emptySince[code] = now;
-                else if (now - _emptySince[code] > EMPTY_ROOM_MS) dropRoom(code, 'empty');
-                return;
-            }
+                else if (now - _emptySince[code] > EMPTY_ROOM_MS) return dropRoom(code, 'empty');
+            } else delete _emptySince[code];
             var tk = _mgr.tick(code);
             if (tk.ok && tk.changed) { logger.log('Party: room ' + code + ' → ' + _mgr.phaseOf(code).p); broadcastPhase(code); }
             flushSave(code);

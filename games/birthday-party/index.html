@@ -190,7 +190,6 @@
             <span id="cCharsL"><b>الشخصيات</b><small>الجديدة: هيكل عظمي ورقص حقيقي · الكلاسيكية: أخف للأجهزة الضعيفة</small></span>
             <div class="seg" role="group" aria-labelledby="cCharsL" id="cChars"><button type="button" data-v="rig" class="on" aria-pressed="true">الجديدة</button><button type="button" data-v="classic" aria-pressed="false">الكلاسيكية</button></div>
         </div>
-        <div class="rows" id="createSched" style="margin-top:10px"></div>
         <h3 class="sub">رسالة مشهد النهاية</h3>
         <div class="rows">
             <div class="row"><label for="cardDate">التاريخ بالرسالة<small>ينكتب فوق التهنئة بالعربي والإنجليزي</small></label><input type="date" id="cardDate"></div>
@@ -272,7 +271,7 @@
 <button class="gear" id="gear" type="button" aria-label="لوحة التحكم (C)" title="لوحة التحكم (C)">⚙️</button>
 
 <script type="module">
-    import { connect, readJSON, writeJSON, serverNow, clockText, dateText, tzLabel, countdownText } from './party-net.js';
+    import { connect, readJSON, writeJSON, serverNow, clockText, countdownText } from './party-net.js';
     import { GREETING } from './greeting.js';
     const $ = id => document.getElementById(id);
     const ERR = {
@@ -282,58 +281,8 @@
         nocode: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         hostkey: 'هذا الرابط ما يسمح بإنشاء حفلة — افتح الرابط الخاص بالمذيع.',
-        schedule: 'اختر تاريخ ووقت صحيحين للبداية (مو بالماضي، وخلال 30 يوم).',
     };
 
-    // ---- الجدول: نموذج واحد للإنشاء والتعديل (كل صف: العنوان يمين والتحكم يسار — قاعدة CLAUDE.md) ----
-    const FIELDS = [
-        { k: 'openBeforeMin', label: 'فتح الدخول قبل البداية', unit: 'دقيقة', def: 15, min: 0, max: 120, step: 5 },
-        { k: 'writeMin', label: 'كتابة التهاني', unit: 'دقيقة', def: 3, min: 1, max: 60, step: 1 },
-        { k: 'cutTimeoutSec', label: 'مهلة القص قبل القص التلقائي', unit: 'ثانية', def: 60, min: 10, max: 600, step: 10 },
-    ];
-    // مدد ثابتة بالسيرفر (ثواني): الدخول 40، الافتتاح 12، التجمّع 12، التجمّع حول الكيكة مع أغنيتها 24.5، الصورة 15، مشهد النهاية 58.5
-    const FIXED = { entrance: 40, reveal: 12, gather: 12, cakeWalk: 24.5, photo: 15, outro: 58.5 };
-    // المشاهد اللي بطول أغانيها (نفس SONG_MS بالسيرفر): الرقص = باقي أغنية الافتتاح، ورقص الكيكة = أغنية القص، والرقص الحر = الأغنية الهادية
-    const SONG = { dance: 210, celebrate: 242.5, free: 120.8 };
-    const mmss = sec => Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0');
-    const pad = n => String(n).padStart(2, '0');
-    const localDate = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
-    const localTime = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
-    function schedForm(box, prefix) {
-        const v = {};
-        box.innerHTML = '<div class="row"><label for="' + prefix + 'Date">تاريخ الحفل</label><input type="date" id="' + prefix + 'Date"></div>'
-            + '<div class="row"><label for="' + prefix + 'Time">ساعة البداية</label><input type="time" id="' + prefix + 'Time" value="00:00"></div>'
-            + FIELDS.map(f => '<div class="row"><label id="' + prefix + f.k + 'L">' + f.label + ' <small>(' + f.unit + ')</small></label><div class="stepper" role="group" aria-labelledby="' + prefix + f.k + 'L">'
-                + '<button type="button" data-k="' + f.k + '" data-d="-1" aria-label="أقل">−</button><output id="' + prefix + f.k + '"></output><button type="button" data-k="' + f.k + '" data-d="1" aria-label="أكثر">+</button></div></div>').join('')
-            + '<div class="tz" id="' + prefix + 'Tz"></div><ul class="timeline" id="' + prefix + 'Line"></ul>';
-        const el = k => box.querySelector('#' + prefix + k);
-        const setV = (k, x) => { const f = FIELDS.find(q => q.k === k); v[k] = Math.max(f.min, Math.min(f.max, x)); el(k).textContent = v[k]; };
-        FIELDS.forEach(f => setV(f.k, f.def));
-        box.addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (!b) return; const f = FIELDS.find(q => q.k === b.dataset.k); setV(f.k, v[f.k] + f.step * +b.dataset.d); draw(); });
-        box.addEventListener('input', draw);
-        const startAt = () => { const d = el('Date').value, t = el('Time').value || '00:00'; if (!d) return NaN; return new Date(d + 'T' + t).getTime(); };
-        // الخط الزمني المتوقع بأوقات الساعة (عرض التهاني بدون وقت، فما بعده تقريبي). المشاهد تمشي ورا بعض
-        // لين مشهد النهاية وتنتهي الحفلة — المدة = كل المشاهد + وقت عرض التهاني (والقص لين مهلته)
-        function draw() {
-            const st = startAt(), tz = -new Date(isFinite(st) ? st : Date.now()).getTimezoneOffset(), c = ms => clockText(ms, tz);
-            el('Tz').textContent = 'الأوقات بتوقيت جهازك: ' + tzLabel(tz) + (tz === 180 ? '' : ' — تأكد إنه نفس توقيت الحفلة');
-            const line = el('Line');
-            if (!isFinite(st)) { line.innerHTML = '<li class="note">اختر التاريخ والساعة عشان يطلع الجدول</li>'; return; }
-            const M = 60000, S = 1000, dance = st + (FIXED.entrance + FIXED.reveal) * S, write = dance + SONG.dance * S + FIXED.gather * S, show = write + v.writeMin * M;
-            const rows = [[st - v.openBeforeMin * M, 'فتح الدخول'], [st, 'الافتتاح (أول ما تدخل صاحبة الحفلة)'], [dance, 'الرقص · بطول أغنية الافتتاح (' + mmss(SONG.dance) + ')'], [write, 'كتابة التهاني · ' + v.writeMin + ' د'], [show, 'عرض التهاني (بدون وقت)']];
-            line.innerHTML = '';
-            rows.forEach(([ms, t]) => { const li = document.createElement('li'); li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = t; li.lastChild.textContent = c(ms); line.append(li); });
-            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: التجمّع حول الكيكة مع أغنيته (' + mmss(FIXED.cakeWalk) + ') ← القص ← رقص الكيكة بطول أغنية القص (' + mmss(SONG.celebrate) + ') ← الصورة الجماعية ← رقص حر (' + mmss(SONG.free) + ') ← مشهد النهاية مع رسالة التهنئة (' + mmss(FIXED.outro) + ') ← تنتهي الحفلة'; line.append(after);
-            const all = Object.values(FIXED).reduce((a, b) => a + b, 0) + Object.values(SONG).reduce((a, b) => a + b, 0) + v.writeMin * 60;
-            const li = document.createElement('li'); li.innerHTML = '<span>مدة الحفل</span><b></b>'; li.lastChild.textContent = 'حوالي ' + Math.round(all / 60) + ' دقيقة + وقت عرض التهاني'; line.append(li);
-        }
-        draw();
-        return {
-            read() { const st = startAt(); if (!isFinite(st)) return null; return Object.assign({ startAt: st, tzOffsetMin: -new Date(st).getTimezoneOffset() }, v); },
-            set(sc) { el('Date').value = localDate(sc.startAt); el('Time').value = localTime(sc.startAt); FIELDS.forEach(f => { if (sc[f.k] != null) setV(f.k, sc[f.k]); }); draw(); },
-        };
-    }
-    const createForm = schedForm($('createSched'), 'c');
     let state = null; // {code, token, girlKey, viewKey}
     // المفتاح الخاص من الرابط ← نحفظه ونشيله من شريط العنوان عشان ما ينكشف
     const urlKey = new URLSearchParams(location.search).get('k');
@@ -448,27 +397,22 @@
         },
     });
 
-    // ---- رسالة مشهد النهاية (greeting.js): النموذج المعتمد معبّى، والمذيع يغيّره. التاريخ يتبع تاريخ الحفل لين يتغيّر يدوي ----
+    // ---- رسالة مشهد النهاية (greeting.js): النموذج المعتمد معبّى، والمذيع يغيّره. التاريخ يبدأ بتاريخ اليوم ----
     const cardDefault = () => { $('cardAr').value = GREETING.ar; $('cardEn').value = GREETING.en; };
     cardDefault();
-    let cardDateEdited = false;
-    $('cardDate').addEventListener('input', () => { cardDateEdited = !!$('cardDate').value; });
-    $('createSched').addEventListener('input', e => { if (e.target.id === 'cDate' && !cardDateEdited) $('cardDate').value = e.target.value; });
+    { const d = new Date(), p2 = n => String(n).padStart(2, '0'); $('cardDate').value = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
     $('cardReset').addEventListener('click', cardDefault);
-    const readCard = () => ({ d: $('cardDate').value || $('cDate').value || '', ar: $('cardAr').value.trim(), en: $('cardEn').value.trim() });
+    const readCard = () => ({ d: $('cardDate').value || '', ar: $('cardAr').value.trim(), en: $('cardEn').value.trim() });
     // ---- ألوان الحفلة (hall3d.js setTheme): القاعة، والستارة (أو مثل القاعة) ----
     ['cTheme', 'cCurtain'].forEach(id => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (b) segSet($(id), b.dataset.v); }));
 
     $('createBtn').addEventListener('click', () => {
         const girlName = $('girlName').value.trim();
         if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
-        const schedule = createForm.read();
-        if (!schedule) { showCreate('اختر تاريخ الحفل وساعة البداية'); return; }
-        if (schedule.startAt < Date.now() - 60000) { showCreate(ERR.schedule); return; }
         const who = hostKey() ? { key: hostKey() } : { auth: authTok() };
         if (!who.key && !who.auth) { showLogin(); return; }
         $('createBtn').disabled = true;
-        net.send(Object.assign({ t: 'host', girlName, schedule, chars: segValue($('cChars')), card: readCard(), theme: { hall: segValue($('cTheme')), curtain: segValue($('cCurtain')) } }, who));
+        net.send(Object.assign({ t: 'host', girlName, chars: segValue($('cChars')), card: readCard(), theme: { hall: segValue($('cTheme')), curtain: segValue($('cCurtain')) } }, who));
     });
 
     // ---- الشخصيات: الجديدة (rig) أو الكلاسيكية ----
@@ -510,7 +454,7 @@
     function renderCast() {
         const p = phase && phase.p, sc = phase && phase.sched, early = p === 'closed' || p === 'lobby';
         $('qrCast').classList.toggle('on', !!state && (early || qrForced) && p !== 'ended');
-        $('qrCastWhen').textContent = !sc ? '' : p === 'closed' ? 'الدخول يفتح الساعة ' + clockText(sc.openAt, sc.tzOffsetMin) : p === 'lobby' ? 'الحفل يبدأ الساعة ' + clockText(sc.startAt, sc.tzOffsetMin) : 'رقم الحفلة';
+        $('qrCastWhen').textContent = !sc ? 'رقم الحفلة' : p === 'closed' ? 'الدخول يفتح الساعة ' + clockText(sc.openAt, sc.tzOffsetMin) : p === 'lobby' ? 'الحفل يبدأ الساعة ' + clockText(sc.startAt, sc.tzOffsetMin) : 'رقم الحفلة';
         $('qrBtn').textContent = qrForced ? 'خبّي الباركود من الشاشة' : 'اعرض الباركود على الشاشة'; $('qrBtn').setAttribute('aria-pressed', String(qrForced));
     }
     $('qrBtn').addEventListener('click', () => { qrForced = !qrForced; renderCast(); });
