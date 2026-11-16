@@ -289,7 +289,7 @@ var GAME_NAMES = {
   'birthday-party': 'حفلة الميلاد', 'intruder': 'محطة سهيل', 'mafia': 'المافيا', 'penalty': 'ركلات الترجيح',
   'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو',
   'cowboy-duel': 'بلدة الكاوبوي', 'abyss': 'الهاوية', 'formula-race': 'فورمولا ون',
-  'lamha': 'محِك العقول', 'hasila': 'حصيلة'
+  'lamha': 'محِك العقول', 'hasila': 'حصيلة', 'arena': 'الحلبة'
 };
 
 // صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/
