@@ -91,7 +91,7 @@
    «دخول غرفة» (`CHECKS` بـ`room-lookup-service.js` و`GAMES` بـ
    `js/agp-join-room.js`). الخطوات مكتوبة بأول ملف النطاقات.
 
-مراجع حيّة لهذا النمط: `games/fruit-roulette/` و`games/memory-challenge/`.
+مرجع حيّ لهذا النمط: `games/memory-challenge/`.
 
 ## 5) بعد أي تعديل
 
