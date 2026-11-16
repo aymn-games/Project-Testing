@@ -35,6 +35,8 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
 @keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes joinPop{0%{opacity:0;transform:translateY(-16px) scale(.9)}100%{opacity:1;transform:none}}
+@keyframes joinOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-12px) scale(.95)}}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes sumIn{0%{opacity:0;transform:translateY(40px) scale(.92);filter:blur(8px)}60%{opacity:1;transform:translateY(-6px) scale(1.01);filter:blur(0)}100%{opacity:1;transform:none;filter:blur(0)}}
@@ -274,6 +276,17 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
     </div>
   </sc-if>
 
+  <!-- لاعب جديد دخل بالدخول التلقائي: بطاقة 300×150 فوق وسط الشاشة لمدة 3 ثواني (نفس روليت الفواكه) -->
+  <div style="position:fixed;top:104px;left:50%;transform:translateX(-50%);z-index:97;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none">
+    <sc-for list="{{ joinPops }}" as="j" hint-placeholder-count="0">
+      <div style="position:relative;width:300px;height:150px;box-sizing:border-box;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;background:linear-gradient(165deg,rgba(30,20,52,.97),rgba(12,11,18,.97));border:1.5px solid rgba(167,139,250,.6);box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 50px rgba(124,58,237,.3);animation:{{ j.an }}">
+        <span style="position:absolute;top:10px;right:12px;padding:3px 10px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'Zain';color:#6ee7b7">لاعب جديد</span>
+        <span style="position:relative;overflow:hidden;flex-shrink:0;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:3px solid #a78bfa;box-shadow:0 0 0 5px rgba(139,92,246,.15);box-sizing:border-box;color:#fff;font:800 28px 'Zain'">{{ j.ini }}<img src="{{ j.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ j.imgOp }}"></span>
+        <span style="max-width:100%;font:800 22px 'Zain';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
+      </div>
+    </sc-for>
+  </div>
+
   <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
       <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ exitAn }}">
@@ -344,7 +357,7 @@ class Component extends DCLogic {
   reg=TT.createRegistry(TT.readJSON(TT.keys.players,{})||{});
   followersOnly=!!SETUP&&SETUP.who==='المتابعون فقط';
   state=(()=>{ const t=this.TIMES.find(x=>x[1]===(SETUP&&SETUP.guessTime)), sec=t?t[0]:90;
-    return {autoJoin:false,scale:1,narrow:innerWidth<820,logo:false,ready:false,bankErr:false,rounds:+(SETUP&&SETUP.rounds)||5,round:1,qi:-1,used:[],opened:{},revealed:false,guessSec:sec,pendingSec:sec,left:sec,scores:{},players:Array.isArray(ROSTER)?[...ROSTER]:[],keyword:String((SETUP&&SETUP.keyword)||'').trim(),lbOpen:false,adminOpen:false,winOpen:false,adTab:0,vol:7,plQuery:'',pendingKick:[],joinOpen:false,joinNew:[],exitOpen:false,sumOpen:false,plat:null}; })();
+    return {autoJoin:false,joinPops:[],scale:1,narrow:innerWidth<820,logo:false,ready:false,bankErr:false,rounds:+(SETUP&&SETUP.rounds)||5,round:1,qi:-1,used:[],opened:{},revealed:false,guessSec:sec,pendingSec:sec,left:sec,scores:{},players:Array.isArray(ROSTER)?[...ROSTER]:[],keyword:String((SETUP&&SETUP.keyword)||'').trim(),lbOpen:false,adminOpen:false,winOpen:false,adTab:0,vol:7,plQuery:'',pendingKick:[],joinOpen:false,joinNew:[],exitOpen:false,sumOpen:false,plat:null}; })();
   componentDidMount(){
     this._ever=[...this.state.players];
     this.fit=()=>{ const W=innerWidth,H=innerHeight-80; this.setState({scale:Math.min(W/1920,H/1000),narrow:W<820}); }; this.fit(); addEventListener('resize',this.fit);
@@ -361,7 +374,7 @@ class Component extends DCLogic {
     if(l<=0){ this.setState({left:0}); this.reveal('time'); } else { if(l<=10) this.tone(880,.06,'square',.04); this.setState({left:l}); } }
   // رسائل الشات: الكلمة المفتاحية = انضمام، وأي رسالة من متسابق منضم = تخمين
   onChat(user,text,isFollower=true){ const s=this.state, t=this.norm(text);
-    if(t===this.norm(s.keyword)){ if(!s.autoJoin) return 'closed'; if(this.followersOnly&&!isFollower) return 'rejected'; if(!s.players.includes(user)&&!(this._ever||[]).includes(user)){ this._ever=[...(this._ever||[]),user]; this.tone(880,.12,'triangle'); this.setState(x=>({players:[...x.players,user]})); } return 'join'; }
+    if(t===this.norm(s.keyword)){ if(!s.autoJoin) return 'closed'; if(this.followersOnly&&!isFollower) return 'rejected'; if(!s.players.includes(user)&&!(this._ever||[]).includes(user)){ this._ever=[...(this._ever||[]),user]; this.tone(880,.12,'triangle'); this.joinPop(user); this.setState(x=>({players:[...x.players,user]})); } return 'join'; }
     if(!s.players.includes(user)) return 'notJoined';
     if(!s.ready||s.revealed||s.winOpen) return 'closed';
     const g=TT.answerKey(text), A=this.q().a, i=g?A.findIndex((al,k)=>!s.opened[k]&&al.some(x=>TT.answerKey(x)===g)):-1; if(i<0) return 'miss';
@@ -397,6 +410,10 @@ class Component extends DCLogic {
       const aw=uname&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null;
       this.setState({plat:aw?{kind:'ok',added:aw.added,total:aw.totalPoints}:{kind:'none'}}); }); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
+  // إشعار دخول لاعب جديد: يطلع 3 ثواني ويختفي
+  joinPop(n){ const id=Math.random(); this.setState(s=>({joinPops:[...s.joinPops,{id,name:n,out:false}]}));
+    setTimeout(()=>this.setState(s=>({joinPops:s.joinPops.map(j=>j.id===id?{...j,out:true}:j)})),2700);
+    setTimeout(()=>this.setState(s=>({joinPops:s.joinPops.filter(j=>j.id!==id)})),3000); }
   ini(n){ return [...(n||'')].find(c=>/[^\s_\d]/.test(c))||'؟'; }
   av(n){ const a=n?this.reg.avatar(n):null; return {avatar:a||'',imgOp:a?1:0}; }
   sorted(){ return Object.entries(this.state.scores).filter(([,p])=>p>0).sort((a,b)=>b[1]-a[1]); }
@@ -448,6 +465,7 @@ class Component extends DCLogic {
       ...(()=>{ const g={}; Q.a.forEach((al,i)=>{ const x=s.opened[i]; if(!x) return; (g[x.by]=g[x.by]||{pts:0,ans:[]}); g[x.by].pts+=10-i; g[x.by].ans.push(al[0]); });
         const rows=Object.entries(g).sort((a,b)=>b[1].pts-a[1].pts).map(([name,v],k)=>({name,ini:this.ini(name),...this.av(name),pts:v.pts,rank:k+1,rankBg:k===0?'#fbbf24':k===1?'#d1d5db':k===2?'#d97706':'rgba(139,92,246,.2)',rankFg:k<3?'#1a1206':'#ddd6fe',count:v.ans.length,countLbl:v.ans.length===1?'إجابة':'إجابات',delay:(0.3+k*0.09)+'s',sheenDelay:(0.6+k*0.09)+'s'}));
         return {sumTitle:s.endWhy==='time'?'⏰ انتهى الوقت':s.endWhy==='all'?'🎉 تم تخمين كل الصناديق!':'انتهت الجولة', sumRows:rows, sumEmpty:!rows.length, sumSub:rows.length?rows.length+' متسابق جاوبوا صح هالجولة':'الجولة '+s.round+' من '+s.rounds}; })(),
+      joinPops:s.joinPops.map(j=>({name:j.name,ini:this.ini(j.name),...this.av(j.name),an:j.out?'joinOut .3s ease forwards':'joinPop .4s cubic-bezier(.2,1.3,.4,1) both'})),
       keyword:s.keyword||'—', lblDisp:s.narrow?'none':'inline',
       // سويتش «الدخول التلقائي» بالهيدر (نفس شكل روليت الفواكه)
       ajOn:s.autoJoin&&!s.narrow, ajAria:String(s.autoJoin), ajBd:s.autoJoin?'rgba(167,139,250,.6)':'rgba(255,255,255,.14)', ajBg:s.autoJoin?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)', ajInk:s.autoJoin?'#ede9fe':'#c4b5fd',
