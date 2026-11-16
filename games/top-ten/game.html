@@ -276,13 +276,13 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
     </div>
   </sc-if>
 
-  <!-- لاعب جديد دخل بالدخول التلقائي: بطاقة 300×150 فوق وسط الشاشة لمدة 3 ثواني (نفس روليت الفواكه) -->
-  <div style="position:fixed;top:104px;left:50%;transform:translateX(-50%);z-index:97;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none">
+  <!-- لاعب جديد دخل بالدخول التلقائي: شريط صغير (الصورة والاسم بصف واحد) تحت الهيدر لمدة 3 ثواني -->
+  <div style="position:fixed;top:88px;left:50%;transform:translateX(-50%);z-index:97;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none">
     <sc-for list="{{ joinPops }}" as="j" hint-placeholder-count="0">
-      <div style="position:relative;width:300px;height:150px;box-sizing:border-box;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;background:linear-gradient(165deg,rgba(30,20,52,.97),rgba(12,11,18,.97));border:1.5px solid rgba(167,139,250,.6);box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 50px rgba(124,58,237,.3);animation:{{ j.an }}">
-        <span style="position:absolute;top:10px;right:12px;padding:3px 10px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'Zain';color:#6ee7b7">لاعب جديد</span>
-        <span style="position:relative;overflow:hidden;flex-shrink:0;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:3px solid #a78bfa;box-shadow:0 0 0 5px rgba(139,92,246,.15);box-sizing:border-box;color:#fff;font:800 28px 'Zain'">{{ j.ini }}<img src="{{ j.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ j.imgOp }}"></span>
-        <span style="max-width:100%;font:800 22px 'Zain';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
+      <div style="height:52px;max-width:min(360px, calc(100vw - 24px));box-sizing:border-box;padding:0 8px 0 16px;border-radius:999px;display:flex;align-items:center;gap:10px;background:linear-gradient(165deg,rgba(30,20,52,.97),rgba(12,11,18,.97));border:1.5px solid rgba(167,139,250,.6);box-shadow:0 14px 36px rgba(0,0,0,.5), 0 0 30px rgba(124,58,237,.25);animation:{{ j.an }}">
+        <span style="position:relative;overflow:hidden;flex-shrink:0;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:2px solid #a78bfa;box-sizing:border-box;color:#fff;font:800 17px 'Zain'">{{ j.ini }}<img src="{{ j.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ j.imgOp }}"></span>
+        <span style="min-width:0;font:800 18px 'Zain';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
+        <span style="flex-shrink:0;padding:3px 10px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'Zain';color:#6ee7b7;white-space:nowrap">لاعب جديد</span>
       </div>
     </sc-for>
   </div>
