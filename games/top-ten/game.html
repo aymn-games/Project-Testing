@@ -415,7 +415,12 @@ class Component extends DCLogic {
   sumSound(){ this.tone(392,.18,'triangle',.1); setTimeout(()=>this.tone(523.25,.18,'triangle',.1),110); setTimeout(()=>this.tone(659.25,.3,'triangle',.11),220);
     const s=this.state, n=new Set(Object.values(s.opened).map(x=>x.by)).size; for(let k=0;k<Math.min(n,12);k++) setTimeout(()=>this.tone(1046+k*60,.07,'sine',.06),300+k*90); }
   reveal=(why='manual')=>{ if(!this.state.ready||this.state.revealed) return; this.tone(330,.3,'triangle'); this.setState({revealed:true,endWhy:why}); this.showSummary(); };
+  // سؤالين متشابهين = يشتركون بـ4 إجابات أو أكثر (مثل «حلويات مشهورة» و«محل الحلويات»)
+  similar(i,j){ const c=this._simKeys||(this._simKeys={}), keys=k=>c[k]||(c[k]=new Set(this.BANK[k].a.flat().map(TT.answerKey)));
+    const ki=keys(i), kj=keys(j); return this.BANK[i].a.filter(al=>kj.has(TT.answerKey(al[0]))).length>=4||this.BANK[j].a.filter(al=>ki.has(TT.answerKey(al[0]))).length>=4; }
   newQ(){ const s=this.state; let pool=this.BANK.map((_,i)=>i).filter(i=>!s.used.includes(i)); if(!pool.length) pool=this.BANK.map((_,i)=>i).filter(i=>i!==s.qi); if(!pool.length) pool=[0];
+    // لا يطلع سؤال يشبه سؤال طلع بنفس المباراة (لو ما بقى غيرها نختار عادي)
+    const recent=s.used.slice(-s.rounds), far=pool.filter(i=>!recent.some(j=>this.similar(i,j))); if(far.length) pool=far;
     const qi=pool[Math.floor(Math.random()*pool.length)]; return {qi,used:[...s.used,qi],opened:{},revealed:false,guessSec:s.pendingSec,left:s.pendingSec}; }
   skip=()=>{ if(!this.state.ready||this.state.revealed) return; this.tone(500,.1,'triangle'); this.setState(this.newQ()); };
   primary=()=>{ const s=this.state; if(!s.ready) return; if(!s.revealed) return this.reveal('manual'); if(s.round>=s.rounds) return this.showWin(); this.setState({...this.newQ(),round:s.round+1}); };
