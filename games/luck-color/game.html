@@ -734,7 +734,9 @@ class Component extends DCLogic {
       this.setState({phase:'duel',duel:{kind:ch.inst,a:p.id,b:o.id,pts:ch.win,q:r.q,ans:r.a||'',sec,end:Date.now()+sec*1000,showAns:false,winner:null},now:Date.now()});
       clearInterval(this.div); let last=sec;
       this.div=setInterval(()=>{ const left=Math.ceil((this.state.duel?this.state.duel.end-Date.now():0)/1000); if(!this.state.duel){ clearInterval(this.div); return; }
-        if(left!==last&&left<=5&&left>=0) this.tone(left?880:330,.1,'square',.04); last=left; this.setState({now:Date.now()}); if(left<=0) clearInterval(this.div); },200);
+        if(left!==last&&left<=5&&left>=0) this.tone(left?880:330,.1,'square',.04); last=left; this.setState({now:Date.now()});
+        // لغز بالنيابة: انتهاء الوقت بدون جواب = خسارة تلقائية (بدون ما يضغط الستريمر)
+        if(left<=0){ clearInterval(this.div); const D=this.state.duel; if(D&&D.kind==='duel') this.duelEnd(null); } },200);
       return;
     }
     const map=S.colorMap.slice(); map[S.chosen-1]={...ch,o:o.id,pick:false};
