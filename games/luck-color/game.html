@@ -299,6 +299,9 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
                   <span style="order:1;font:900 52px 'Zain';color:#c4b5fd;text-shadow:0 0 24px rgba(139,92,246,.5)">VS</span>
                 </div>
                 <div style="position:relative;overflow:hidden;width:min(1120px,100%);box-sizing:border-box;padding:34px 48px 30px;border-radius:32px;text-align:center;background:radial-gradient(circle at 50% 0%, rgba(139,92,246,.16), transparent 60%), linear-gradient(180deg, rgba(28,24,40,.97), rgba(12,11,18,.97));border:1.5px solid rgba(139,92,246,.4);display:flex;flex-direction:column;gap:20px">
+                  <sc-if value="{{ du.isSpeed }}" hint-placeholder-val="{{ false }}">
+                    <span style="align-self:center;padding:10px 24px;border-radius:16px;background:rgba(251,191,36,.12);border:1.5px solid rgba(251,191,36,.55);font:900 26px/1.4 'Zain';color:#fde68a;text-wrap:balance">⚠️ اكتبه بالضبط زي ما هو مكتوب هنا… مو المثل الصحيح</span>
+                  </sc-if>
                   <span style="font:900 52px/1.35 'Zain';text-wrap:balance">{{ du.q }}</span>
                   <div style="display:flex;align-items:center;gap:16px">
                     <div style="flex:1;height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ du.pct }}%;border-radius:999px;background:{{ du.barC }};transition:width .2s linear"></div></div>
@@ -581,7 +584,7 @@ const COLORS = ['#c0392f','#c8642a','#c08a2a','#ab9a2c','#7a9a34','#3e9a52','#2a
 // بنك تجريبي — يُستبدل بالمحتوى الحقيقي لاحقاً
 const ri = (a,b) => a+Math.floor(Math.random()*(b-a+1));
 const CHALLENGES = [
-  {t:'سرعة', icon:'⏱️', inst:'speed', pick:true, q:'اختر لاعب وتتحداه… أول واحد يكتب المثل بالضبط زي ما هو مكتوب يفوز'},
+  {t:'سرعة', icon:'⏱️', inst:'speed', pick:true, q:'اختر لاعب وتتحداه… يطلع مثل فيه حرف غلط، وأول واحد ينسخه بالشات بنفس الغلط حرف بحرف يفوز'},
   {t:'رقم سري', icon:'🎲', inst:'secret', q:'الهوست يختار رقم سري من 1 إلى 10… وأنت تخمّنه من محاولتين'},
   {t:'ضد الشات', icon:'🏃', inst:'vschat', q:'الهوست يسأل سؤال بصوته… أول واحد يجاوب صح بالشات ياخذ النقاط'}
 ];
@@ -639,8 +642,8 @@ class Component extends DCLogic {
     if(isDuel){ const d=S.duel, left=Math.max(0,(d.end-(S.now||Date.now()))/1000), up=left<=0, A=this.view(this.P(d.a)), B=this.view(this.P(d.b));
       const card=(v,ord)=>({...v,ord,bd:'rgba(139,92,246,.45)',glow:'rgba(139,92,246,.15)'});
       const sp=d.kind==='speed';
-      du={pts:d.pts,q:sp?'«'+d.q+'»':d.q,chip:sp?'⏱️ تحدي سرعة · اكتب المثل بالضبط زي ما هو مكتوب · الفائز +'+d.pts:'🧩 '+B.name+' يجاوب عن '+A.name+' · صح = +'+d.pts+' لـ'+A.name+' · غلط = −'+d.pts,hasAns:!sp,pl:[card(A,0),card(B,2)],pct:Math.round(left/d.sec*100),left:up?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#c4b5fd',
-        hint:up?'انتهى الوقت… الهوست يحدد النتيجة':sp?'انتبه! فيه حرف متغيّر… اكتبه في الشات زي ما هو بالضبط، مو المثل الصحيح':'بس '+B.name+' يقدر يجاوب بالشات',
+      du={isSpeed:sp,pts:d.pts,q:sp?'«'+d.q+'»':d.q,chip:sp?'⏱️ تحدي سرعة · انسخ المثل حرف بحرف بنفس الغلط · الفائز +'+d.pts:'🧩 '+B.name+' يجاوب عن '+A.name+' · صح = +'+d.pts+' لـ'+A.name+' · غلط = −'+d.pts,hasAns:!sp,pl:[card(A,0),card(B,2)],pct:Math.round(left/d.sec*100),left:up?'⏰':Math.ceil(left)+' ث',barC:left<=5?'#f87171':'#c4b5fd',
+        hint:up?'انتهى الوقت… الهوست يحدد النتيجة':sp?'انتبه! بالمثل حرف متغيّر بقصد… اكتبه بالشات زي ما هو مكتوب بالشاشة حرف بحرف، ولو كتبت المثل الصحيح المعروف ما ينحسب':'بس '+B.name+' يقدر يجاوب بالشات',
         btns:sp?[{l:'🏆 فاز '+A.name,go:()=>this.duelEnd(d.a),bd:'none',bg:'linear-gradient(90deg, #059669, #10b981)'},{l:'🏆 فاز '+B.name,go:()=>this.duelEnd(d.b),bd:'none',bg:'linear-gradient(90deg, #7c3aed, #a78bfa)'},{l:'🤝 ما أحد كتبه',go:()=>this.duelEnd(null),bd:'1px solid rgba(255,255,255,.14)',bg:'rgba(255,255,255,.05)'}]
           :[{l:'✓ جاوب صح',go:()=>this.duelEnd(d.b),bd:'none',bg:'linear-gradient(90deg, #059669, #10b981)'},{l:'✗ ما جاوب',go:()=>this.duelEnd(null),bd:'none',bg:'linear-gradient(90deg, #b91c1c, #ef4444)'}],
         ansLbl:d.showAns?'الجواب: '+String(d.ans).split('|')[0]:'👁️ إظهار الجواب',toggleAns:()=>this.setState(s=>({duel:s.duel&&{...s.duel,showAns:!s.duel.showAns}}))}; }
@@ -709,7 +712,7 @@ class Component extends DCLogic {
     const others=this.state.players.filter(x=>x.id!==id); let again=false;
     return COLORS.map(()=>{
       if(Math.random()<.5&&others.length){ const c=rnd(CHALLENGES), w=ri(5,20), l=Math.max(2,Math.round(w/2));
-        const sub={speed:'اختر خصمك… أول واحد يكتب المثل بالضبط ياخذ '+w+' نقطة',secret:'تخمين صح = +'+w+' · محاولتين غلط أو انتهاء الوقت = −'+l,vschat:'اللي يجاوب صح أول ياخذ '+w+' · وأنت تنخصم منك '+l}[c.inst];
+        const sub={speed:'اختر خصمك… أول واحد ينسخ المثل بنفس الغلط اللي فيه ياخذ '+w+' نقطة',secret:'تخمين صح = +'+w+' · محاولتين غلط أو انتهاء الوقت = −'+l,vschat:'اللي يجاوب صح أول ياخذ '+w+' · وأنت تنخصم منك '+l}[c.inst];
         const txt={speed:'+'+w,secret:'+'+w+' / −'+l,vschat:'+'+w+' / −'+l}[c.inst];
         return {...c,win:w,lose:l,txt,lbl:c.icon+' '+sub,sub,tone:0}; }
       let k=rnd(INSTANTS); if(k==='again'&&again) k='gift'; if(k==='again') again=true;
