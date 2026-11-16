@@ -19,6 +19,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="../../js/agp-remote-control.js"></script>
@@ -238,6 +239,11 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 
   <sc-if value="{{ kickOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:80px 0 0 0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ kickOv }}">
+      <!-- بطاقة الإقصاء المملوكة (js/agp-elim-card.js) — لو المُقصي يملك بطاقة، حتى لو أقصى نفسه -->
+      <sc-if value="{{ kickCard }}" hint-placeholder-val="{{ false }}">
+      <div style="width:min(760px, calc(100vw - 24px), calc((100dvh - 120px) * 1.777));animation:{{ kickAn }};filter:drop-shadow(0 40px 80px rgba(0,0,0,.6))">{{ kickCardEl }}</div>
+      </sc-if>
+      <sc-if value="{{ kickStd }}" hint-placeholder-val="{{ true }}">
       <div style="width:min(600px, calc(100vw - 24px));min-height:min(400px, calc(100dvh - 104px));box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vw,22px);padding:clamp(20px,4vw,28px) clamp(14px,4vw,36px);border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px rgba(0,0,0,.6);animation:{{ kickAn }}">
         <span style="padding:6px 20px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);font:600 20px 'IBM Plex Sans Arabic';color:#fca5a5">عملية إقصاء</span>
         <span style="max-width:100%;text-align:center;font:700 clamp(19px,2.2vw,26px)/1.45 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ kickLine }}</span>
@@ -255,6 +261,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           </div>
         </div>
       </div>
+      </sc-if>
     </div>
   </sc-if>
 
@@ -554,7 +561,8 @@ class Component extends DCLogic {
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820,vw:innerWidth}); this.fit(); addEventListener('resize',this.fit);
     this.q=[]; this.everIn=new Set(this.state.players); this.startMatch();
-    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
+    // بطاقات الإقصاء والفوز المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
+    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     FR.connect(); this.unsub=FR.onComment(p=>this.onChat(p)); this.unsubGift=FR.onGift(p=>this.onGift(p)); this.attachRemote(); }
   componentWillUnmount(){ this.rc?.detach(); removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearInterval(this._ti); clearTimeout(this._lt); clearTimeout(this._ft); clearTimeout(this._et); clearTimeout(this._gt); clearTimeout(this._at); clearTimeout(this._kt); clearTimeout(this.tt); this.unsub?.(); this.unsubGift?.(); }
 
@@ -677,7 +685,7 @@ class Component extends DCLogic {
   pickCrate(i){ const s=this.state; if(!s.resOpen||s.resolved||!s.crates[i]) return; const n=s.landed, c=s.crates[i];
     this.click(); this.setState({resolved:true,picked:i});
     this._ft=setTimeout(()=>{
-      if(c.hidden){ this.boom(); this.setState({result:'danger'}); this.logEv('kick',HIDDEN_CHARACTER.name,n);
+      if(c.hidden){ if(!FR.hasElimCard(this.reg.player(n))) this.boom(); this.setState({result:'danger'}); this.logEv('kick',HIDDEN_CHARACTER.name,n);
         // إقصاء تلقائي بدون تأكيد: النتيجة تظهر 1.6 ثانية ثم يُقصى وتنقفل الصناديق
         this._et=setTimeout(()=>{ this.closeRes(true); this.eliminate(n,'self'); },1600); }
       else { this.chime(); this.setState({result:'safe'}); this.logEv('safe',n,c.content.name); }
@@ -691,6 +699,9 @@ class Component extends DCLogic {
 
   // تبويب الإقصاء (3 ثواني): الصندوق المخفي = اللاعب أقصى نفسه (صورته مرتين) · اليدوي = الاستريمر
   eliminate(n,kind){ if(!this.state.players.includes(n)) return; clearTimeout(this._kt);
+    // المُقصي (اللاعب نفسه لو فتح الصندوق المخفي) يملك بطاقة إقصاء → صوت البطاقة لو لها صوت، وإلا صوت الإقصاء العادي
+    const actor=kind==='self'?this.reg.player(n):null, EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard;
+    if(actor&&FR.hasElimCard(actor)&&this.state.sound&&!(EC&&EC.playSound(actor,.9))) this.boom();
     this.setState(s=>({players:s.players.filter(x=>x!==n),out:[...s.out.filter(x=>x!==n),n],landedIdx:null,sIdx:null,sLanded:false,
       kicked:n,kickSelf:kind==='self',kickByStreamer:kind==='streamer',kickOpen:true,kickRun:(s.kickRun||0)+1}),()=>this.checkGameOver());
     this._kt=setTimeout(()=>{ this.shut('kickOpen'); setTimeout(()=>this.next(),280); },3000); }
@@ -752,7 +763,7 @@ class Component extends DCLogic {
       if(SETUP.who==='المتابعين فقط'&&!p.isFollower) return;
       if(this.everIn.has(user)) return;
       if(s.players.length>=this.maxPlayers()) return this.toastMsg('اكتمل العدد');
-      this.everIn.add(user); try{ window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(user)); }catch(e){}
+      this.everIn.add(user); try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(user)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(user)); }catch(e){}
       this.later(()=>{ if(this.state.winOpen) return; this.participants.add(user); clearTimeout(this._gt);
         this.setState(st=>({players:st.players.includes(user)?st.players:[...st.players,user],landedIdx:null,sIdx:null,sLanded:false}),()=>this.next());
         this.joinPop(user); }); } }
@@ -842,7 +853,8 @@ class Component extends DCLogic {
       durOpts:DURATIONS.map(([l,v])=>opt(s.roundDur===v,l,()=>this.setState({roundDur:v}))),
       soundOff:String(!s.sound), soundIcon:s.sound?'🔊':'🔇', soundLabel:s.sound?'الصوت مفعّل':'الصوت مغلق', toggleSound:()=>this.setState(x=>({sound:!x.sound})) }; }
   kickVals(){ const s=this.state, k=s.kicked||'', kd=this.av(k), self=!!s.kickSelf;
-    return { kickOpen:!!s.kickOpen, kickedName:k, kickedIni:ini(k), kickedAv:kd.av, kickedOp:kd.op, kickByStreamer:!!s.kickByStreamer, streamerAv:FR.streamerAvatar()||'',
+    const actor=self&&k?this.reg.player(k):null, card=!!(s.kickOpen&&actor&&FR.hasElimCard(actor));
+    return { kickOpen:!!s.kickOpen, kickCard:card, kickStd:!card, kickCardEl:card?FR.elimCard(actor,this.reg.player(k),'ec'+(s.kickRun||0)):null, kickedName:k, kickedIni:ini(k), kickedAv:kd.av, kickedOp:kd.op, kickByStreamer:!!s.kickByStreamer, streamerAv:FR.streamerAvatar()||'',
       byName:s.kickByStreamer?'الاستريمر':k, byIni:s.kickByStreamer?'':ini(k), byAv:s.kickByStreamer?'':kd.av, byOp:s.kickByStreamer?0:kd.op,
       byLabel:self?'أقصى نفسه':'إقصاء يدوي', byRing:self?'#f59e0b':'#34d399',
       kickLine:self?'قام '+k+' بإقصاء نفسه!':'قام الاستريمر بإقصاء '+k,
