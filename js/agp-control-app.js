@@ -39,6 +39,32 @@
         while (toastsEl.children.length > 3) toastsEl.removeChild(toastsEl.firstChild);
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 3200);
     }
+    // رابط من شاشة الستريمر (زر «نسخ الرابط»): يطلع هنا بخانة مع «نسخ» و«مشاركة» — الضغط هنا هو اللي ينسخ
+    // (المتصفح ما يسمح بالنسخ إلا من ضغطة بنفس الجهاز)
+    function showCopy(title, url) {
+        var old = document.getElementById('copySheet'); if (old) old.parentNode.removeChild(old);
+        var el = document.createElement('div');
+        el.className = 'copysheet'; el.id = 'copySheet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title || 'الرابط');
+        el.innerHTML = '<div class="copybox"><b>' + esc(title || 'الرابط') + '</b><input readonly dir="ltr" value="' + esc(url) + '">'
+            + '<div class="copybtns"><button type="button" class="btn" data-a="copy">نسخ</button>'
+            + (navigator.share ? '<button type="button" class="btn ghost" data-a="share">مشاركة</button>' : '')
+            + '<button type="button" class="btn ghost" data-a="close">إغلاق</button></div></div>';
+        document.body.appendChild(el);
+        var inp = el.querySelector('input');
+        el.addEventListener('click', function (e) {
+            var a = e.target.getAttribute && e.target.getAttribute('data-a');
+            if (e.target === el || a === 'close') { el.parentNode && el.parentNode.removeChild(el); return; }
+            if (a === 'share') { navigator.share({ url: url }).catch(function () {}); return; }
+            if (a !== 'copy') return;
+            var done = function () { toast('تم النسخ', true); };
+            var fallback = function () {
+                inp.focus(); inp.setSelectionRange(0, url.length);
+                var ok = false; try { ok = document.execCommand('copy'); } catch (er) {}
+                if (ok) done(); else toast('ما قدرنا ننسخ — الرابط محدد، انسخه يدوي', false);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, fallback); else fallback();
+        });
+    }
     function wsUrl() {
         var q = qs('rcws');
         if (q) return q;
@@ -100,7 +126,8 @@
             } else if (m.t === 'online') {
                 S.online = !!m.on; render();
             } else if (m.t === 'res') {
-                if (m.msg) toast(m.msg, m.ok !== false);
+                if (m.copy) showCopy(m.msg, m.copy);
+                else if (m.msg) toast(m.msg, m.ok !== false);
             } else if (m.t === 'err') {
                 if (m.err === 'login') fatal('انتهت جلستك', 'سجّل دخولك مرة ثانية.', '<a class="btn" href="login.html?next=' + encodeURIComponent('control.html' + location.search) + '">تسجيل الدخول</a>');
                 else if (m.err === 'revoked') fatal('تم إيقاف التحكم', 'الستريمر أوقف صلاحية التحكم عنك. لو رجّعها تقدر تفتح لوحة التحكم من بروفايلك.', '<a class="btn ghost" href="profile.html">بروفايلي</a>', '⛔');

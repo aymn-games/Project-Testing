@@ -188,7 +188,11 @@ function handleMessage(conn, msg) {
         if (t === 'res') {
             var target = _conns[msg.c];
             if (target && target.role === 'ctl' && target.streamerId === conn.streamerId) {
-                send(target, { t: 'res', id: msg.id, ok: msg.ok !== false, msg: cleanStr(msg.msg, 300) });
+                var out = { t: 'res', id: msg.id, ok: msg.ok !== false, msg: cleanStr(msg.msg, 300) };
+                // رابط للنسخ بجوال المتحكم (زر «نسخ الرابط» بشاشة الستريمر — data-rc-copy): http(s) بس
+                var cp = cleanStr(msg.copy, 500);
+                if (/^https?:\/\/[^\s]+$/i.test(cp)) out.copy = cp;
+                send(target, out);
             }
         }
         return;

@@ -334,7 +334,7 @@
                 writeActive(m.list);
             } else if (m.t === 'cmd') {
                 var res = _page ? execute(m.cmd, m.arg, m.from, null) : { ok: false, msg: 'الشاشة تنتقل — جرّب بعد لحظة' };
-                wsSend({ t: 'res', c: m.c, id: m.id, ok: !res || res.ok !== false, msg: res ? res.msg : 'تم' });
+                wsSend({ t: 'res', c: m.c, id: m.id, ok: !res || res.ok !== false, msg: res ? res.msg : 'تم', copy: res && res.copy ? res.copy : undefined });
                 if (res && m.from) feedback(m.from, res);
             } else if (m.t === 'open') {
                 var r = openGame(m.game);
@@ -678,6 +678,9 @@
         var el = liveEl(String(key || '').trim());
         if (!el) { schedulePush(50); return { ok: false, msg: 'الشاشة تغيّرت — جرّب مرة ثانية' }; }
         var l = labelOf(el);
+        // زر «نسخ الرابط»: النسخ لازم يصير بجوال المتحكم مو بجهاز الستريمر — الرابط يروح للجوال (data-rc-copy)
+        var cp = el.getAttribute('data-rc-copy');
+        if (cp) return { ok: true, msg: l, copy: cp };
         el.click();
         return 'تم: ' + l;
     }

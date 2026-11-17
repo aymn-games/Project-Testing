@@ -176,6 +176,17 @@ test('server: controller ↔ host relay, permission checks and instant revoke', 
     var res = await sara.next('res');
     assert.equal(res.id, 7);
     assert.equal(res.msg, 'الحد: 30');
+    assert.equal(res.copy, undefined);
+
+    // زر «نسخ الرابط»: الرابط يوصل للجوال (http/https بس)
+    sara.send({ t: 'cmd', id: 9, cmd: '__press', arg: 'm1' });
+    var cmd2 = await host.next('cmd');
+    host.send({ t: 'res', c: cmd2.c, id: cmd2.id, ok: true, msg: 'نسخ رابط صاحبة الحفلة', copy: 'https://aymngames.online/games/birthday-party/join.html?code=1100&g=abc' });
+    assert.equal((await sara.next('res')).copy, 'https://aymngames.online/games/birthday-party/join.html?code=1100&g=abc');
+    sara.send({ t: 'cmd', id: 10, cmd: '__press', arg: 'm1' });
+    var cmd3 = await host.next('cmd');
+    host.send({ t: 'res', c: cmd3.c, id: cmd3.id, ok: true, msg: 'x', copy: 'javascript:alert(1)' });
+    assert.equal((await sara.next('res')).copy, undefined, 'only http(s) links');
 
     // صفحة الستريمر تنقفل → online:false، وأمر بدون صفحة يفشل بعد المهلة
     host.close();

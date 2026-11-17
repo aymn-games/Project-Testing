@@ -243,7 +243,7 @@
                     <h3>باركود الضيوف</h3>
                     <p>يمسحه كل الضيوف من جوالاتهم</p>
                     <img id="qrGuest" alt="باركود دخول الضيوف">
-                    <div class="link"><button type="button" data-copy="guest">نسخ الرابط</button></div>
+                    <div class="link"><button type="button" data-copy="guest" aria-label="نسخ رابط الضيوف">نسخ الرابط</button></div>
                 </div>
                 <div class="qr">
                     <h3>باركود صاحبة الحفلة</h3>
@@ -252,7 +252,7 @@
                         <img id="qrGirl" alt="باركود دخول صاحبة الحفلة">
                         <button class="btn ghost" type="button" id="showGirl">إظهار</button>
                     </div>
-                    <div class="link"><button type="button" data-copy="girl">نسخ الرابط</button></div>
+                    <div class="link"><button type="button" data-copy="girl" aria-label="نسخ رابط صاحبة الحفلة">نسخ الرابط</button></div>
                 </div>
             </div>
             <div class="actions">
@@ -313,6 +313,8 @@
         $('create').classList.add('hidden'); $('room').classList.remove('hidden');
         $('code').textContent = state.code;
         qr($('qrGuest'), guestUrl()); qr($('qrGirl'), girlUrl()); qr($('qrCastImg'), guestUrl());
+        // لوحة التحكم بالجوال (agp-remote-control.js): زر النسخ يرسل الرابط للجوال وينسخ هناك
+        document.querySelectorAll('[data-copy]').forEach(b => { b.setAttribute('data-rc-copy', b.dataset.copy === 'girl' ? girlUrl() : guestUrl()); });
         $('qrCastCode').textContent = state.code;
         // شاشة البث: نفس شاشة العرض (مع مفتاح المذيع) بكامل الصفحة
         const src = 'play.html?code=' + state.code + '&view=1&host=1' + (state.viewKey ? '&vk=' + encodeURIComponent(state.viewKey) : '');
