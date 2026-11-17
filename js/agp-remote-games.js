@@ -15,6 +15,7 @@
     if (!AGP) return;
 
     AGP.remoteGames = [
+        { id: 'arena', name: 'الحلبة', icon: '🥊', url: 'games/arena/index.html', ready: true }, // مرحلة اختبار: الصفحة تفتح للأدمن بس
         { id: 'elimination-roulette', name: 'روليت الإقصاء', icon: '🎡', url: 'games/elimination-roulette/index.html', ready: true },
         { id: 'tribe-roulette', name: 'روليت مخفي', icon: '🏹', url: 'games/tribe-roulette/index.html', ready: true },
         { id: 'russian-roulette', name: 'الروليت الروسي', icon: '🔫', url: 'games/russian-roulette/index.html', ready: true },
