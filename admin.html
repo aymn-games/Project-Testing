@@ -1338,9 +1338,9 @@ class Component extends DCLogic {
       :is.perms?'صلاحية «تشغيل كامل»: الحساب يشغّل كل الألعاب على أي بث تيك توك، بدون ما يكون حساب ستريمر أو يربط تيك توك، وبدون قيد الأجهزة.':'منح أو سحب بطاقة إقصاء لمستخدم.';
 
     // ---- users
-    const all=s.users||[], ql=s.q.trim().toLowerCase();
+    const all=s.users||[], ql=s.q.trim().toLowerCase().replace(/^@+/,'');
     const list=all.filter(u=>(s.usersTab==='streamers')===isStreamerLike(u))
-      .filter(u=>!ql||String(u.id)===ql||[u.username,u.email,u.custom_id,s.usersTab==='streamers'?u.tiktok_username:''].some(x=>x&&String(x).toLowerCase().includes(ql)));
+      .filter(u=>!ql||String(u.id)===ql||[u.username,u.email,u.custom_id,u.tiktok_username].some(x=>x&&String(x).toLowerCase().includes(ql)));
     const rows=list.map(u=>this.decorate(u));
     const counts={ players:all.filter(u=>!isStreamerLike(u)).length, streamers:all.filter(isStreamerLike).length };
     const usersTabs=[['players','اللاعبون'],['streamers','الستريمرز']].map(([k,l])=>({ label:l, count:s.users?counts[k]:'…', go:()=>this.setState({ usersTab:k, q:'' }), bg:s.usersTab===k?'#7c3aed':'transparent', color:s.usersTab===k?'#fff':'#9199ab' }));
@@ -1533,7 +1533,7 @@ class Component extends DCLogic {
       // users
       usersTabs, rows, q:s.q, onQ:e=>this.setState({ q:e.target.value }),
       isPlayersTab:s.usersTab==='players', isStreamersTab:s.usersTab==='streamers',
-      searchPh:s.usersTab==='players'?'بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / المعرّف الداخلي)':'بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)',
+      searchPh:s.usersTab==='players'?'بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)':'بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)',
       rowsEmpty:!rows.length, rowsEmptyText:!s.users?'جارٍ التحميل…':ql?'لا توجد نتائج مطابقة.':(s.usersTab==='players'?'لا يوجد لاعبون بعد.':'لا يوجد ستريمرز بعد.'),
       drawerOpen:!!dRaw, du, closeDrawer:()=>this.setState({ drawerId:null }),
       // picker
