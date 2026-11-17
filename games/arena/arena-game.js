@@ -718,10 +718,17 @@ function renderLobby(){const n=G.lobby.length;$('elCount').textContent=n;$('star
     const x=document.createElement('button');x.type='button';x.className='el-x';x.setAttribute('aria-label','شيل '+p.name);x.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
     x.onclick=()=>{G.lobby=G.lobby.filter(q=>q!==p);renderLobby();};
     const fr=xtra(p.pid).frame,PC=AGPX().playerCard;
+    // صاحب الإطار: نفس ترتيب روليت المخفي (tr-platform.js frameCard) — الخانة بنفس حجم الباقين، والإطار يتوسطها،
+    // و× داخل حدود الإطار على طرف لوح الاسم (اللوح ينقص بعرض ×)
     if(fr&&fr.imageFilename&&PC){w.classList.add('framed');list.appendChild(w);
-      const card=document.createElement('div');card.className='el-fc';
-      card.innerHTML=PC.renderHtml({id:p.pid,name:p.name,avatarUrl:p.avatar||null,frame:fr},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w.clientWidth/4.96))});
-      x.classList.add('on-frame');w.append(card,x);return;}
+      const fc=document.createElement('div');fc.className='el-fc';const box=document.createElement('div');box.className='el-fbox';
+      box.innerHTML=PC.renderHtml({id:p.pid,name:p.name,avatarUrl:p.avatar||null,frame:fr},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w.clientWidth/4.96))});
+      fc.appendChild(box);w.appendChild(fc);
+      const pl=box.querySelector('[data-agp-pcard-name="1"]');
+      if(pl){const ph=pl.clientHeight;if(ph){pl.style.fontSize=Math.max(9,Math.min(14,Math.round(ph*.65)))+'px';pl.style.lineHeight='1.2';}
+        pl.style.width='calc('+pl.style.width+' - 24px)';
+        const b=box.getBoundingClientRect(),r=pl.getBoundingClientRect();x.classList.add('on-frame');x.style.left=Math.round(r.right-b.left)+'px';x.style.top=Math.round(r.top-b.top+r.height/2-12)+'px';box.appendChild(x);}
+      return;}
     chip.append(av,nm,x);w.appendChild(chip);list.appendChild(w);});
   const PC=AGPX().playerCard;if(PC&&PC.fitAllNames)PC.fitAllNames(list);}
 function freshName(){const used=new Set([...G.lobby,...G.waiting,...G.queue].map(p=>p.name).concat(FS.map(f=>f.name)));const pool=SAMPLE.filter(x=>!used.has(x));return pool.length?pool[Math.floor(Math.random()*pool.length)]:'مشاهد '+Math.floor(rnd(100,999));}
@@ -729,7 +736,8 @@ function joinPlayer(name,avatar,pid){name=String(name||'').trim().slice(0,24);if
   const inGame=FS.some(f=>f.pid===pid&&!f.gone);
   if(UI.phase==='lobby'){if(G.lobby.some(p=>p.pid===pid))return false;
     G.lobby.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.lobby.length%AVA_COLS.length]),isNew:true});renderLobby();sfx('join');return true;}
-  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid))return false;
+  // اللي شارك بهالمباراة (حتى لو انقصى) ما يرجع يدخل بالدخول التلقائي — يقدر يدخل الجولة الجاية
+  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid)||G.participants.some(p=>p.pid===pid))return false;
     G.queue.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.queue.length%AVA_COLS.length])});renderRoster();feed(null,name+' دخل بالدور (رقم '+G.queue.length+')');sfx('join');return true;}
   if((UI.phase==='win'||G.phase==='champion')&&SET.autoJoin){if(G.waiting.some(p=>p.pid===pid))return false;
     G.waiting.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.waiting.length%AVA_COLS.length]),isNew:true});feed(null,name+' دخل الجولة الجاية');sfx('join');return true;}
