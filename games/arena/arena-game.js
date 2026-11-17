@@ -729,7 +729,8 @@ function joinPlayer(name,avatar,pid){name=String(name||'').trim().slice(0,24);if
   const inGame=FS.some(f=>f.pid===pid&&!f.gone);
   if(UI.phase==='lobby'){if(G.lobby.some(p=>p.pid===pid))return false;
     G.lobby.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.lobby.length%AVA_COLS.length]),isNew:true});renderLobby();sfx('join');return true;}
-  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid))return false;
+  // اللي شارك بهالمباراة (حتى لو انقصى) ما يرجع يدخل بالدخول التلقائي — يقدر يدخل الجولة الجاية
+  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid)||G.participants.some(p=>p.pid===pid))return false;
     G.queue.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.queue.length%AVA_COLS.length])});renderRoster();feed(null,name+' دخل بالدور (رقم '+G.queue.length+')');sfx('join');return true;}
   if((UI.phase==='win'||G.phase==='champion')&&SET.autoJoin){if(G.waiting.some(p=>p.pid===pid))return false;
     G.waiting.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.waiting.length%AVA_COLS.length]),isNew:true});feed(null,name+' دخل الجولة الجاية');sfx('join');return true;}
