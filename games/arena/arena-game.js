@@ -946,14 +946,22 @@ function frame(now){requestAnimationFrame(frame);const rdt=Math.min(.05,(now-las
   if(G.confT>=0){G.confT+=dt;if(G.confT>.6){conf.visible=true;const m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),tt=G.confT-.6;
     confData.forEach((c,i)=>{const y=3-((tt*c.s+c.d)%3.6);e.set(c.r+tt*c.w,c.r*2+tt*c.w*.7,0);q.setFromEuler(e);m.compose(V(c.x+.1*Math.sin(tt*c.w+c.r),y,c.z),q,V(1,1,1));conf.setMatrixAt(i,m);});conf.instanceMatrix.needsUpdate=true;}}
   if(Q.extras)beams.forEach(([m,k])=>{m.rotation.z=.45*Math.sin(T*.7+k*1.3);m.rotation.x=.25*Math.cos(T*.5+k);});
-  // الكاميرا: لقطة واسعة للحلبة كاملة، وتقريب وقت الدونات والضربة القاضية والتتويج
+  // الكاميرا: زاويتين بالتناوب كل 8–11 ث (انتقال ناعم)، وكل وحدة تتحرك ببطء طول الوقت:
+  //  1) كاميرا البث: من قدّام وفوق شوي، تمسح يمين ويسار وتقرّب وتبعّد بهدوء
+  //  2) كاميرا الزاوية: أوطى، من زاوية الحلبة (يمين أو يسار بالتناوب) وتدور حول المقاتلين
+  // وتقريب وقت الدونات والضربة القاضية والتتويج يبقى فوقهم
   const asp=cam.aspect;let pos,tgt,fov;
   const f=G.focus&&now<G.focus.until&&G.focus.F&&!G.focus.F.gone?G.focus.F:null;
   if(f){const fx=f.char.position.x,fz=f.z;pos=V(fx*.8,.85,fz+1.45);tgt=V(fx,G.focus.ty||.5,fz);fov=asp<1?72:48;}
   else{const alive=FS.filter(F=>!F.gone);const cx=alive.length?alive.reduce((s,F)=>s+F.x,0)/alive.length*.35:0;
-    const hw=2.45;let dist=4.2,vf=2*Math.atan(Math.tan(Math.atan(hw/dist))/asp)*180/Math.PI;
+    G.camT=(G.camT||0)-rdt;if(G.camT<=0){G.camShot=G.camShot===1?0:1;if(G.camShot===1)G.camSide=-(G.camSide||-1);G.camT=rnd(8,11);}
+    const corner=G.camShot===1&&G.phase!=='champion';
+    const hw=corner?2.05:2.45;let dist=corner?3.7:4.2,vf=2*Math.atan(Math.tan(Math.atan(hw/dist))/asp)*180/Math.PI;
     if(vf>62){vf=62;dist=Math.min(6.5,hw/(Math.tan(vf*Math.PI/360)*asp));}
-    pos=V(cx+Math.sin(T*.12)*.3,.55+dist*.42,dist);tgt=V(cx,.25,0);fov=vf;}
+    let az,h;
+    if(corner){az=G.camSide*(.5+.1*Math.sin(T*.11));h=.5+dist*.36;dist*=1+.04*Math.sin(T*.17);}   // جنب الزاوية مو عليها (عمود الزاوية ما يغطي المقاتلين)
+    else{az=.2*Math.sin(T*.085);h=.55+dist*.42+.12*Math.sin(T*.07);dist*=1+.05*Math.sin(T*.13+1);}
+    tgt=V(cx,corner?.32:.25,0);pos=V(tgt.x+Math.sin(az)*dist,h,Math.cos(az)*dist);fov=vf;}
   const k=Math.min(1,rdt*(f?4:2.2));camPos.lerp(pos,k);camTgt.lerp(tgt,k);cam.fov+=(fov-cam.fov)*k;cam.updateProjectionMatrix();
   G.shake*=Math.exp(-rdt*7);cam.position.copy(camPos).add(V(rnd(-1,1),rnd(-1,1),0).multiplyScalar(G.shake));cam.lookAt(camTgt);
   camFill.position.copy(cam.position).add(V(0,.25,0));
