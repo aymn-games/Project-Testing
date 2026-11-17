@@ -363,7 +363,10 @@
         AB.connect();
         AB.onComment(function (c) {
             var name = reg.nameFor(c);
-            if (AB.norm(c.text) === AB.norm(CFG.joinWord)) {
+            // كلمة الدخول تنحسب دخول بس للي مو داخل المباراة. اللي داخلها رسالته جواب دائماً،
+            // حتى لو كلمة الدخول نفسها «1» أو «2» (كانت تنبلع كمحاولة دخول وما ينحسب الجواب).
+            var inGame = S.players.some(function (p) { return p.name === name; });
+            if (!inGame && AB.norm(c.text) === AB.norm(CFG.joinWord)) {
                 if ($('bAuto').getAttribute('aria-checked') !== 'true') return;
                 if (CFG.followersOnly && !c.isFollower) return;
                 return joinMidMatch(name);
