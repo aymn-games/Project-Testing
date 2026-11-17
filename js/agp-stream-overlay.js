@@ -2140,6 +2140,19 @@
     }
     function avatarShape(k) { return AVATAR_SHAPES.filter(function (x) { return x.key === k; })[0] || AVATAR_SHAPES[0]; }
     var PART_ANIMS = [{ key: 'fade', label: 'تلاشي' }, { key: 'pop', label: 'تكبير' }, { key: 'up', label: 'من تحت' }, { key: 'down', label: 'من فوق' }, { key: 'none', label: 'بدون' }];
+    // حركة مستمرة للعنصر بعد ما يطلع (p.lp) — تشتغل على غلاف داخلي عشان ما تتعارض مع حركة الظهور
+    // only = للصورة بس (avatar) أو للنصوص بس (text)
+    var PART_LOOPS = [
+        { key: 'none', label: 'بدون' }, { key: 'float', label: 'يطفو' }, { key: 'pulse', label: 'نبض' },
+        { key: 'swing', label: 'تمايل' }, { key: 'bounce', label: 'نطّة' }, { key: 'shine', label: 'لمعة' },
+        { key: 'spin', label: 'دوران', only: 'avatar' }, { key: 'wave', label: 'موجة', only: 'text' }
+    ];
+    function loopOf(p) { var k = p && p.lp; return k && k !== 'none' && PART_LOOPS.some(function (x) { return x.key === k; }) ? k : ''; }
+    /** غلاف الحركة المستمرة: abs = يعبّي العنصر (للصورة)، وإلا inline-block (للنص). */
+    function loopEl(p, abs) {
+        var lp = loopOf(p);
+        return el('span', 'agp-so-vloop' + (abs ? ' abs' : '') + (lp ? ' lp-' + lp : ''));
+    }
     /** مدة أليرت الفيديو بالثواني: it.vlen لو محددة، وإلا مدة الفيديو نفسه (تلقائي). */
     function videoAlertLen(it) {
         var own = Number(it && it.vlen) || 0;
@@ -2498,13 +2511,18 @@
                 if (ev.avatar) vi.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
                 else vi.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
                 vf.appendChild(vi);
-                pa.appendChild(vf);
+                var lwa = loopEl(parts.avatar, true);
+                lwa.appendChild(vf);
+                pa.appendChild(lwa);
                 box.appendChild(pa);
             }
             if (parts.name.on) {
                 var pn = el('div', 'agp-so-vpart agp-so-vname');
                 pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
-                partText(pn, ev.user || '', parts.name);
+                var lwn = loopEl(parts.name);
+                partText(lwn, ev.user || '', parts.name);
+                if (lwn.classList.contains('styled')) pn.classList.add('styled');
+                pn.appendChild(lwn);
                 partFont(pn, parts.name);
                 partTiming(pn, parts.name, preview);
                 box.appendChild(pn);
@@ -2513,7 +2531,10 @@
                 var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
                 var pm = el('div', 'agp-so-vpart agp-so-vmsg');
                 pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
-                partText(pm, fillMsg(tpl, ev), parts.msg);
+                var lwm = loopEl(parts.msg);
+                partText(lwm, fillMsg(tpl, ev), parts.msg);
+                if (lwm.classList.contains('styled')) pm.classList.add('styled');
+                pm.appendChild(lwm);
                 partFont(pm, parts.msg);
                 partTiming(pm, parts.msg, preview);
                 box.appendChild(pm);
@@ -3987,6 +4008,24 @@
         '.agp-so-vtxt.top{top:4%}',
         '.agp-so-vpart{position:absolute;z-index:3;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;direction:rtl;text-align:center}',
         '.agp-so-vpart.wait{opacity:0}',
+        /* الحركة المستمرة (PART_LOOPS) على غلاف داخلي */
+        '.agp-so-vloop{display:inline-block}',
+        '.agp-so-vloop.abs{position:absolute;inset:0;display:block}',
+        '.agp-so-vloop.lp-float{animation:agp-so-l-float 2.6s ease-in-out infinite}',
+        '.agp-so-vloop.lp-pulse{animation:agp-so-l-pulse 1.4s ease-in-out infinite}',
+        '.agp-so-vloop.lp-swing{animation:agp-so-l-swing 2.2s ease-in-out infinite;transform-origin:50% 0}',
+        '.agp-so-vloop.lp-bounce{animation:agp-so-l-bounce 1.2s cubic-bezier(.3,0,.5,1) infinite}',
+        '.agp-so-vloop.lp-shine{animation:agp-so-l-shine 2s ease-in-out infinite}',
+        '.agp-so-vloop.lp-spin{animation:agp-so-l-spin 6s linear infinite}',
+        '.agp-so-vloop.lp-wave{animation:agp-so-l-wave 1.6s ease-in-out infinite}',
+        '@keyframes agp-so-l-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-.12em)}}',
+        '@keyframes agp-so-l-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}',
+        '@keyframes agp-so-l-swing{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}',
+        '@keyframes agp-so-l-bounce{0%,55%,100%{transform:translateY(0)}25%{transform:translateY(-.22em)}40%{transform:translateY(.02em)}}',
+        '@keyframes agp-so-l-shine{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) drop-shadow(0 0 .12em rgba(255,255,255,.8))}}',
+        '@keyframes agp-so-l-spin{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-l-wave{0%,100%{transform:skewX(0) translateY(0)}25%{transform:skewX(-6deg) translateY(-.05em)}75%{transform:skewX(6deg) translateY(.05em)}}',
+        '@media (prefers-reduced-motion:reduce){.agp-so-vloop{animation:none!important}}',
         '.agp-so-vpart.pin-fade{animation:agp-so-p-fade .45s ease both}',
         '.agp-so-vpart.pin-pop{animation:agp-so-p-pop .5s cubic-bezier(.2,1.5,.4,1) both}',
         '.agp-so-vpart.pin-up{animation:agp-so-p-up .5s cubic-bezier(.2,.9,.3,1) both}',
@@ -4277,7 +4316,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
