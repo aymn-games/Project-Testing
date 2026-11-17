@@ -11,7 +11,8 @@
  * (js/agp-live-presence.js → POST /api/stream/presence). نتأكد إن المذيع
  * يبث فعلاً بفحص HTTP خفيف بدون توقيع (platforms/tiktok/tiktok-live-check.js،
  * مخزَّن 30 ثانية لكل يوزر)، فما نستهلك شي من EulerStream. الحضور بالذاكرة
- * فقط، وينتهي لحاله لو وقفت النبضات (TTL_MS). ما فيه عدد مشاهدين.
+ * فقط، وينتهي لحاله لو وقفت النبضات (TTL_MS). عدد المشاهدين من نفس الفحص
+ * (صفحة البث فيها العدد) — يتحدّث مع كل نبضة، ولو ما انجاب يطلع «—».
  */
 
 'use strict';
@@ -29,7 +30,7 @@ var GAMES = {
 
 var TTL_MS = 2 * 60 * 1000; // النبضة كل 45 ثانية بالواجهة؛ نتحمّل نبضة أو نبضتين ضايعة
 
-var _presence = new Map(); // tiktokUsername -> { userId, customId, slug, gameName, since, lastSeen, live }
+var _presence = new Map(); // tiktokUsername -> { userId, customId, slug, gameName, since, lastSeen, live, viewers }
 
 function prune() {
   var now = Date.now();
@@ -64,13 +65,19 @@ function report(user, slug, leave) {
     gameName: GAMES[slug],
     since: prev && prev.slug === slug ? prev.since : now,
     lastSeen: now,
-    live: prev ? prev.live : null
+    live: prev ? prev.live : null,
+    viewers: prev ? prev.viewers : null
   };
   _presence.set(username, entry);
 
-  return tiktokLiveCheck.isLive(username).then(function (live) {
+  return tiktokLiveCheck.liveInfo(username).then(function (info) {
     // null = الفحص ما قدر يتأكد: نخلي آخر نتيجة معروفة
-    if (live !== null && _presence.get(username) === entry) entry.live = live;
+    if (info && info.live !== null && _presence.get(username) === entry) {
+      entry.live = info.live;
+      // عدد المشاهدين: آخر رقم معروف يبقى لو هالمرة ما انجاب (الصفحة ما رجعته)
+      if (!info.live) entry.viewers = null;
+      else if (typeof info.viewers === 'number') entry.viewers = info.viewers;
+    }
     return { success: true, live: entry.live === true };
   }, function (err) {
     logger.error('Live Presence: live check failed for "' + username + '":', err);
@@ -84,12 +91,13 @@ function listLive() {
   var out = [];
   _presence.forEach(function (p, username) {
     if (p.live !== true) return;
-    out.push({ username: username, userId: p.userId, customId: p.customId, gameSlug: p.slug, gameName: p.gameName, since: p.since });
+    out.push({ username: username, userId: p.userId, customId: p.customId, gameSlug: p.slug, gameName: p.gameName, since: p.since, viewers: typeof p.viewers === 'number' ? p.viewers : null });
   });
   return out;
 }
 
 module.exports = {
+  _clear: function () { _presence.clear(); },   // للاختبارات
   GAMES: GAMES,
   report: report,
   listLive: listLive
