@@ -12,13 +12,14 @@
  * مراحل العرض: closed (قبل فتح الدخول — صاحبة الحفلة بس تقدر تدخل غرفتها) ← lobby (الضيوف
  * بالصالة وصاحبة الحفلة بغرفتها) ← entrance (مشي تلقائي: walk = هدف كل لاعب) ← reveal (الستارة)
  * ← dance ← gather (تجمّع) ← wishWrite (كتابة التهاني بوقت) ← wishes (العرض، بدون وقت) ← cakeWalk
- * ← cake (تنتظر القص، أو قص تلقائي) ← celebrate ← photo ← free ← ended. السيرفر يحصر الحركة
+ * ← cake (تنتظر القص، أو قص تلقائي) ← celebrate ← photo ← free (رقص حر بطول أغنيته) ← outro ← ended. السيرفر يحصر الحركة
  * بمنطقة الدور والمرحلة، ويخفي صاحبة الحفلة عن الضيوف قبل الافتتاح.
  *
- * الجدول (schedule، يحدده المذيع ويعدّله): الانتقالات كلها على الساعة في tick() —
- * closed ← lobby عند openAt، و lobby ← entrance عند startAt بشرط صاحبة الحفلة متصلة،
- * والمراحل الموقّتة بمددها، ومن أي مرحلة ← ended عند endAt. غرفة بدون جدول (اختبارات)
- * تبدأ lobby وتنتظر «بدء» المذيع، بنفس المدد الافتراضية.
+ * بدون أوقات: الحفلة تنشأ على lobby (الدخول مفتوح على طول) وتنتظر «بدء» المذيع (start)، وبعدها المراحل
+ * الموقّتة بمددها ورا بعض في tick() لين مشهد النهاية ثم ended. حد أمان: MAX_PARTY_MS من بداية الحفل
+ * (أو من الإنشاء لو ما بدأ) والحفلة تنتهي لو علقت.
+ * الجدول القديم (schedule: closed ← lobby عند openAt، و lobby ← entrance عند startAt) باقي بس للحفلات
+ * المحفوظة قبل التغيير — صفحة المذيع ما عادت ترسله.
  */
 'use strict';
 
@@ -55,26 +56,49 @@ var GIRL_SPOT = [0, -36.5], PHOTO_SPOT = [0, -29.6];
 var CAKE_C = [0, -17], CAKE_SPOT = [0, -19.6];
 var RING_R0 = 3.6, RING_DR = 1.25, RING_GAP = 1.05, RING_HOLE = .55; // الحلقة الأولى، المسافة بين الحلقات وبين الضيوف، فتحة صاحبة الحفلة (±راديان)
 var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'outro', 'ended'];
-// مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي لحالها على السجادة
+// مشهد النهاية: بعد الرقص الحر (أو «إنهاء الحفلة» من المذيع) — صاحبة الحفلة تمشي لحالها على السجادة
 // لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
 var OUTRO_MS = 58500, OUTRO_END = [0, 45]; // مشهد النهاية بطول outro.mp3 (58.3ث)
-// مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
+// مدد ثابتة (ms) — wishWrite و cake من الجدول، wishes بدون وقت (المذيع يقلّب الرسائل)
 // المشاهد اللي لها أغنية: مدتها = طول الأغنية (games/birthday-party/music) — لو تبدّلت أغنية بنفس الاسم حدّث الرقم هنا
 //   dance: أغنية الافتتاح reveal.mp3 (221.7ث) تبدأ مع العد التنازلي (reveal 12ث) ← الرقص = الباقي منها
 //   cakeWalk: التجمّع حول الكيكة بطول cakesong.mp3 (23.9ث) — زر القص يطلع بعدها
 //   celebrate: رقص الكيكة بطول cutsong.mp3 (242.1ث) — تبدأ لحظة القص
 //   outro: مشهد النهاية بطول outro.mp3 (58.3ث) — فيه بطاقة التهنئة (play.html)
 //   photo 15ث بالضبط: أغنية الإضاءة الخافتة (slowsong.mp3) تبدأ بعد نهاية أغنية القص بـ 15ث، أول الرقص الحر (play.html SLOW_MS)
-var SONG_MS = { dance: 210000, celebrate: 242500 };
+//   free: الرقص الحر بطول slowsong.mp3 (120.8ث)، وبعده مشهد النهاية على طول
+var SONG_MS = { dance: 210000, celebrate: 242500, free: 120800 };
 var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 15000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
-var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
-var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
+var SCHED_DEF = { openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
+var SCHED_LIM = { openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
+// حد أمان: الحفلة اللي ما وصلت النهاية بعد 4 ساعات من بدايتها تنتهي (صاحبة الحفلة ما دخلت، أو التهاني ما انقلبت)
+var MAX_PARTY_MS = 4 * 3600 * 1000;
+var WRITE_MS = 90000, CUT_MS = 60000; // كتابة التهاني ومهلة القص (ثابتة)
 var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000, EXPIRE_MS = 48 * 3600 * 1000;
 // مراحل مشي تلقائي: نوع الأهداف لكل مرحلة
 var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo', outro: 'outro' };
 var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };  // الحركة اليدوية ممنوعة
 var MAX_WISH = 200;
+// ثيم القاعة (والستارة لحالها، أو «same» = مثل القاعة) — نفس المفاتيح في hall3d.js THEMES
+var THEMES = ['pink', 'lavender', 'sky', 'mint', 'peach'];
+// رسالة التهنئة بمشهد النهاية (greeting.js): التاريخ (YYYY-MM-DD) والنص بالعربي والإنجليزي — فاضي = النموذج المعتمد
+var CARD_MAX = { ar: 200, en: 240 }, CARD_LINES = 4;
+function cleanCardText(v, max) {
+    if (typeof v !== 'string') return '';
+    return v.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f<>]/g, '').split('\n').map(function (l) { return l.replace(/\s+/g, ' ').trim(); })
+        .filter(Boolean).slice(0, CARD_LINES).join('\n').slice(0, max).trim();
+}
+function cleanCard(c) {
+    if (!c || typeof c !== 'object') return null;
+    var d = typeof c.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.d) ? c.d : '';
+    var o = { d: d, ar: cleanCardText(c.ar, CARD_MAX.ar), en: cleanCardText(c.en, CARD_MAX.en) };
+    return o.d || o.ar || o.en ? o : null;
+}
+function cleanTheme(t) {
+    t = t && typeof t === 'object' ? t : {};
+    return { hall: THEMES.indexOf(t.hall) >= 0 ? t.hall : 'pink', curtain: t.curtain === 'same' || THEMES.indexOf(t.curtain) >= 0 ? t.curtain : 'same' };
+}
 // فلتر بسيط — الكلمة تنستبدل بنجوم (المذيع يقدر يخفي أي رسالة)
 // كلمات كاملة بس (مو جزء من كلمة: «يرزقك» و«دخول» تبقى مثل ما هي)، ومعها «ال» و«يا» والتشكيل ما يفرق
 var BAD_WORDS = ['كلب', 'كلبه', 'كلبة', 'حمار', 'حماره', 'حمارة', 'حيوان', 'حيوانه', 'حيوانة', 'قحبه', 'قحبة', 'شرموط', 'شرموطه', 'شرموطة', 'منيوك', 'خول', 'fuck', 'fucking', 'shit', 'bitch'];
@@ -108,7 +132,7 @@ function cleanSchedule(s, nowMs, o) {
     return out;
 }
 function openAtOf(sc) { return sc.startAt - sc.openBeforeMin * MIN_MS; }
-function endAtOf(sc) { return sc.startAt + sc.durationMin * MIN_MS; }
+function endAtOf(sc) { return sc.startAt + MAX_PARTY_MS; }
 function inZone(z, x, y) { return [clamp(x, z[0], z[1]), clamp(y, z[2], z[3])]; }
 // مكان رقم i بالشبكة قدام المنصة (24 عمود × صفوف بمسافة 1.2م، الصف الأول الأقرب للمنصة)
 // صفوف الصورة الجماعية ورا صاحبة الحفلة: 14 بالصف (عرض الكادر)، كل صف بالنص حسب عدده،
@@ -210,10 +234,12 @@ function createRoomManager(opts) {
     }
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
     function durationOf(room, ph) {
-        var sc = room.sched || SCHED_DEF;
+        var sc = room.sched;
         if (SONG_MS[ph]) return SONG_MS[ph]; // الرقص ورقص الكيكة بطول أغانيهم (مو من الجدول)
-        if (ph === 'wishWrite') return sc.writeMin * MIN_MS;
-        if (ph === 'cake') return room.sched ? sc.cutTimeoutSec * 1000 : 0;
+        // الحفلة الحين بدون جدول (بدون أوقات): كتابة التهاني دقيقة ونص ومهلة القص 60ث ثابتة.
+        // الجدول باقي بس للحفلات القديمة المحفوظة قبل التغيير
+        if (ph === 'wishWrite') return sc ? sc.writeMin * MIN_MS : WRITE_MS;
+        if (ph === 'cake') return sc ? sc.cutTimeoutSec * 1000 : CUT_MS;
         return FIXED_MS[ph] || 0;
     }
     // at: وقت بداية المرحلة (الافتراضي الحين) — الرجوع بعد إعادة تشغيل يبدأ كل مرحلة فاتت بوقتها الصحيح
@@ -271,7 +297,7 @@ function createRoomManager(opts) {
         var sched = null;
         if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(), ownerId: o && o.ownerId != null ? o.ownerId : null,
-            chars: CHARS.indexOf(o && o.chars) >= 0 ? o.chars : 'rig', reacts: [],
+            chars: CHARS.indexOf(o && o.chars) >= 0 ? o.chars : 'rig', reacts: [], card: cleanCard(o && o.card), theme: cleanTheme(o && o.theme),
             sched: sched, phase: sched && now() < openAtOf(sched) ? 'closed' : 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} } };
         return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey, viewKey: rooms[code].viewKey };
@@ -413,7 +439,7 @@ function createRoomManager(opts) {
     function roster(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
         return {
-            ok: true, code: room.code, girlName: room.girlName, chars: room.chars || 'rig',
+            ok: true, code: room.code, girlName: room.girlName, chars: room.chars || 'rig', card: room.card || null, theme: room.theme || cleanTheme(null),
             players: room.players.map(function (p) { return [p.n, p.name, p.role, p.kind, p.online ? 1 : 0, p.look]; })
         };
     }
@@ -428,7 +454,7 @@ function createRoomManager(opts) {
         var sc = room.sched;
         return { ok: true, p: room.phase, at: room.phaseAt, until: room.phaseUntil, walk: walk, cut: room.cakeCut,
             // الجدول كامل (المدد مو سرية) — صفحة المذيع تعبّي منه نموذج «تعديل الأوقات»
-            sched: sc ? Object.assign({ openAt: openAtOf(sc), endAt: endAtOf(sc) }, sc) : null,
+            sched: sc ? Object.assign({ openAt: openAtOf(sc) }, sc) : null,
             waitGirl: waitingGirl(room) };
     }
     function girlOnline(room) { return room.players.some(function (p) { return p.role === 'girl' && p.online; }); }
@@ -462,10 +488,9 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var t = now(), sc = room.sched;
         if (room.phase === 'ended') return { ok: true, changed: false };
-        // وقت النهاية يغلب كل شي، وين ما وصلت الحفلة
-        if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended', catchUp ? endAtOf(sc) : 0); return { ok: true, changed: true }; }
-        // آخر 30 ثانية: مشهد النهاية من أي مرحلة بعد الافتتاح
-        if (sc && t >= endAtOf(sc) - OUTRO_MS && room.phase !== 'outro' && PHASES.indexOf(room.phase) >= PHASES.indexOf('reveal')) { setPhase(room, 'outro', catchUp ? endAtOf(sc) - OUTRO_MS : 0); return { ok: true, changed: true }; }
+        // حد الأمان (4 ساعات من البداية، أو من الإنشاء لو ما بدأ الحفل) يغلب كل شي، وين ما وصلت الحفلة
+        var cap = sc ? endAtOf(sc) : (room.startedAt || room.createdAt || t) + MAX_PARTY_MS;
+        if (t >= cap) { setPhase(room, 'ended', catchUp ? cap : 0); return { ok: true, changed: true }; }
         if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby', catchUp ? openAtOf(sc) : 0), true) };
         if (room.phase === 'lobby') return { ok: true, changed: !!(sc && t >= sc.startAt && girlOnline(room)) && advance(room) };
         if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room, catchUp ? room.phaseUntil : 0) };
@@ -479,8 +504,6 @@ function createRoomManager(opts) {
         if (room.phase === 'ended') return fail('phase');
         var sc = cleanSchedule(s, now(), { base: room.sched }); if (!sc) return fail('schedule');
         if (room.phase !== 'closed' && room.phase !== 'lobby') { sc.startAt = room.sched.startAt; sc.openBeforeMin = room.sched.openBeforeMin; }
-        // غلطة بالتعديل ما تنهي الحفلة الحقيقية فجأة (ended ما يرجع)
-        if (endAtOf(sc) <= now() + 60000) return fail('ends');
         room.sched = sc;
         var ms = durationOf(room, room.phase);
         if (ms && room.phaseUntil) room.phaseUntil = room.phaseAt + ms;
@@ -587,7 +610,7 @@ function createRoomManager(opts) {
 
     // ---- الحفظ (party-store) والرجوع بعد إعادة تشغيل السيرفر ----
     // كل شي إلا المواقع (تتغيّر 8 مرات/ث) وحالة الإرسال — بعد الرجوع كل لاعب يتحط بمكان مرحلته
-    var ROOM_KEYS = ['chars', 'code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'ownerId', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
+    var ROOM_KEYS = ['chars', 'card', 'theme', 'code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'ownerId', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
         'wishes', 'wishSeq', 'wishCur', 'cakeCut', 'photoDone', 'startedAt', 'banned', 'pointsMsg', 'pointsAcked'];
     function serialize(code) {
         var room = rooms[code]; if (!room) return null;
@@ -611,6 +634,7 @@ function createRoomManager(opts) {
         var room = { chars: 'rig', reacts: [], players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
         ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });
         if (CHARS.indexOf(room.chars) < 0) room.chars = 'rig';
+        room.card = cleanCard(room.card); room.theme = cleanTheme(room.theme);
         var t = now();
         room.players = o.players.map(function (q) {
             var p = { id: q.id, key: q.key, n: q.n, name: q.name, role: q.role, kind: q.kind, look: Array.isArray(q.look) ? q.look : LOOK_MAX.map(function () { return -1; }),
@@ -645,4 +669,4 @@ function createRoomManager(opts) {
     };
 }
 
-module.exports = { SONG_MS: SONG_MS, FIXED_MS: FIXED_MS, createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS, ringSlot: ringSlot, CAKE_C: CAKE_C, CAKE_SPOT: CAKE_SPOT };
+module.exports = { SONG_MS: SONG_MS, FIXED_MS: FIXED_MS, createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, THEMES: THEMES, REACTS: REACTS, ringSlot: ringSlot, CAKE_C: CAKE_C, CAKE_SPOT: CAKE_SPOT };
