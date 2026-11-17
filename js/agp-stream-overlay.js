@@ -52,6 +52,11 @@
         try { return new URL('../assets/overlay-frames/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/overlay-frames/'; }
     }());
 
+    // صور هدايا تيك توك الحقيقية (assets/tiktok-gifts/icons — نفس صور الألعاب) للمعاينة والتجربة بالوعاء
+    var GIFTS_BASE = (function () {
+        try { return new URL('../assets/tiktok-gifts/icons/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/tiktok-gifts/icons/'; }
+    }());
+
     if (window.AGPStreamOverlay) return;
 
     var STORE_KEY = 'agp:stream-overlay';
@@ -235,6 +240,15 @@
         '<path d="M10 6h20l8 10-18 20L2 16z" fill="#4dd8ff"/><path d="M10 6l4 10h12l4-10M2 16h36" stroke="#b8f1ff" stroke-width="1.5" fill="none"/>',
         '<rect x="6" y="16" width="28" height="20" rx="3" fill="#9b5cf6"/><rect x="4" y="11" width="32" height="7" rx="2" fill="#b78bff"/><path d="M20 11v25" stroke="#ffd54a" stroke-width="4"/><path d="M20 11c-4-7-11-6-9-1 1 2 5 1 9 1 4 0 8 1 9-1 2-5-5-6-9 1z" fill="#ffd54a"/>'
     ].map(function (svg) { return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">' + svg + '</svg>'); });
+    // هدايا الوعاء التجريبية: صور تيك توك الحقيقية (الأكثر انتشاراً أكثر تكرار)
+    var JAR_SAMPLE_GIFTS = [
+        ['00001-rose', 'وردة'], ['00001-tiktok', 'TikTok'], ['00005-finger-heart', 'قلب بالإصبع'], ['00001-ice-cream', 'أيس كريم'],
+        ['00010-rosa', 'روزا'], ['00030-donut', 'دونات'], ['00001-rose', 'وردة'], ['00088-butterfly', 'فراشة'],
+        ['00001-cake-slice', 'قطعة كعك'], ['00099-hat-and-mustache', 'قبعة وشارب'], ['00150-kiss', 'بوسة'], ['00001-love-saudi', 'أحب السعودية'],
+        ['00199-hearts', 'قلوب'], ['00299-corgi', 'كورجي'], ['00099-paper-crane', 'طائر ورقي'], ['00001-tiktok', 'TikTok'],
+        ['00150-kings-scepter', 'صولجان الملك'], ['00100-heart-in-your-hands-a', 'قلب بين يديك'], ['01000-galaxy', 'مجرة'], ['29999-lion', 'أسد']
+    ].map(function (g) { return { img: GIFTS_BASE + g[0] + '.webp', name: g[1] }; });
+    function jarSample(i) { return JAR_SAMPLE_GIFTS[i % JAR_SAMPLE_GIFTS.length]; }
     var SAMPLE_TOTALS = { likes: 4320, diamonds: 860, gifts: 57, follows: 23, shares: 12, comments: 340, peakViewers: 185, donations: 340, lastDonation: { name: 'أبو فهد', amount: 25, currency: 'USD', message: 'كفو والله، استمر 💜' } };
 
     /* ---------------- الحالة والتخزين ---------------- */
@@ -1846,7 +1860,7 @@
         var list = real.concat(preview ? jarDemo : []);
         if (ghost) {
             list = [];
-            for (var i = 0; i < 24; i++) list.push({ k: 'sample-' + i, img: SAMPLE_GIFT_SVGS[i % SAMPLE_GIFT_SVGS.length], name: '' });
+            for (var i = 0; i < 24; i++) { var sg = jarSample(i * 7 % JAR_SAMPLE_GIFTS.length); list.push({ k: 'sample-' + i, img: sg.img, name: sg.name }); }
         }
         if (list.length > JAR_CAP) list = list.slice(list.length - JAR_CAP);
         pile.classList.toggle('agp-so-ghost', ghost);
@@ -1888,12 +1902,13 @@
         n.className += ' agp-so-jar';
         n._item = it;
         title(n, it.title);
+        // وعاء زجاج مفتوح (بدون غطا): الجسم، وفوقه حافة الفتحة (بيضاوية)، والانعكاسات فوق الهدايا
         var wrap = el('div', 'agp-so-jwrap');
-        wrap.appendChild(el('div', 'agp-so-jlid'));
-        wrap.appendChild(el('div', 'agp-so-jneck'));
         var glass = el('div', 'agp-so-jglass');
         glass.appendChild(el('div', 'agp-so-jpile'));
+        glass.appendChild(el('div', 'agp-so-jshine'));
         wrap.appendChild(glass);
+        wrap.appendChild(el('div', 'agp-so-jrim'));
         n.appendChild(wrap);
         if (it.counter !== 'none') n.appendChild(el('div', 'agp-so-jcount'));
         jarNodes = jarNodes.filter(function (j) { return j.node.isConnected; });
@@ -3917,13 +3932,13 @@
         '@keyframes agp-so-sheen{from{background-position:-100% 0}to{background-position:200% 0}}',
         /* وعاء الهدايا */
         '.agp-so-jar{color:#fff;display:flex;flex-direction:column;align-items:center;gap:.3em;text-shadow:0 .04em .12em rgba(0,0,0,.85)}',
-        '.agp-so-jwrap{position:relative;width:9em;filter:drop-shadow(0 .3em .6em rgba(0,0,0,.45))}',
-        '.agp-so-jlid{position:relative;z-index:2;width:6.8em;height:1.2em;margin:0 auto -.15em;border-radius:.4em;background:repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 .1em,transparent .1em .42em),linear-gradient(180deg,color-mix(in srgb,var(--agp-so-c) 55%,#fff),var(--agp-so-c) 50%,color-mix(in srgb,var(--agp-so-c) 65%,#000));box-shadow:inset 0 .08em 0 rgba(255,255,255,.55),0 .08em .25em rgba(0,0,0,.45)}',
-        '.agp-so-jneck{width:6.3em;height:.55em;margin:0 auto;border:.1em solid rgba(255,255,255,.7);border-bottom:0;border-radius:.15em .15em 0 0;background:rgba(255,255,255,.07);box-sizing:border-box}',
-        '.agp-so-jglass{position:relative;width:9em;height:10.5em;box-sizing:border-box;border:.12em solid rgba(255,255,255,.78);border-radius:1.5em 1.5em 2.1em 2.1em;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 35%,rgba(255,255,255,.02) 70%,rgba(255,255,255,.1));box-shadow:0 0 .8em color-mix(in srgb,var(--agp-so-c) 55%,transparent),inset 0 0 1em color-mix(in srgb,var(--agp-so-c) 30%,transparent)}',
-        '.agp-so-jglass::after{content:"";position:absolute;z-index:3;top:.9em;right:.55em;width:.32em;height:62%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}',
-        '.agp-so-jglass::before{content:"";position:absolute;z-index:3;left:12%;right:12%;bottom:.25em;height:.9em;border-radius:50%;border-top:.07em solid rgba(255,255,255,.35);pointer-events:none}',
-        '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.4em;bottom:.35em}',
+        /* وعاء زجاج حقيقي مفتوح (بدون غطا): الحواف أفتح من الوسط (انعكاس الزجاج)، قاع سميك، وحافة فتحة بيضاوية؛
+           الهدايا تطيح من فوق الفتحة (clip-path يقص الأسفل المستدير بس ويخلّي فوق مفتوح)، والانعكاسات فوق الهدايا */
+        '.agp-so-jwrap{position:relative;width:9em;margin-top:.6em;filter:drop-shadow(0 .35em .55em rgba(0,0,0,.4)) drop-shadow(0 0 .7em color-mix(in srgb,var(--agp-so-c) 40%,transparent))}',
+        '.agp-so-jglass{position:relative;width:9em;height:10.5em;box-sizing:border-box;border:.07em solid rgba(255,255,255,.5);border-top:0;border-radius:.5em .5em 2.6em 2.6em/.5em .5em 1.7em 1.7em;clip-path:inset(-16em -.2em 0 -.2em round 0 0 2.6em 2.6em/0 0 1.7em 1.7em);background:linear-gradient(90deg,rgba(255,255,255,.26) 0,rgba(255,255,255,.07) 8%,rgba(255,255,255,0) 20%,rgba(255,255,255,0) 76%,rgba(255,255,255,.06) 89%,rgba(255,255,255,.22) 100%),linear-gradient(180deg,color-mix(in srgb,var(--agp-so-c) 5%,rgba(255,255,255,.015)),color-mix(in srgb,var(--agp-so-c) 14%,rgba(255,255,255,.04)));box-shadow:inset 0 -1.1em 1.2em -.8em rgba(255,255,255,.5),inset 0 -.18em 0 rgba(255,255,255,.28),inset .4em 0 .55em -.35em rgba(255,255,255,.35),inset -.4em 0 .55em -.35em rgba(255,255,255,.22)}',
+        '.agp-so-jshine{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;background:radial-gradient(.3em 3.6em at 13% 44%,rgba(255,255,255,.85),rgba(255,255,255,0) 72%),radial-gradient(.1em 2.4em at 22% 40%,rgba(255,255,255,.55),rgba(255,255,255,0) 72%),radial-gradient(.2em 2em at 89% 58%,rgba(255,255,255,.4),rgba(255,255,255,0) 72%),radial-gradient(3.4em .32em at 50% 95.5%,rgba(255,255,255,.45),rgba(255,255,255,0) 72%),linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,0) 12%)}',
+        '.agp-so-jrim{position:absolute;z-index:4;left:-.06em;right:-.06em;top:-.55em;height:1.1em;box-sizing:border-box;border-radius:50%;border:.09em solid rgba(255,255,255,.4);border-bottom-color:rgba(255,255,255,.92);border-bottom-width:.13em;background:radial-gradient(closest-side,rgba(255,255,255,0) 80%,rgba(255,255,255,.12));box-shadow:0 .06em .12em rgba(0,0,0,.25),inset 0 -.08em .1em rgba(255,255,255,.35);pointer-events:none}',
+        '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.75em;bottom:.45em}',
         '.agp-so-gi{position:absolute;width:1.3em;height:1.3em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
         '.agp-so-gimg{width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-gi.fb>span:first-child{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;font-size:.6em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
@@ -4272,7 +4287,8 @@
             var fresh = [];
             for (var i = 0; i < (n || 6); i++) {
                 var k = 'demo-' + Date.now().toString(36) + '-' + i;
-                jarDemo.push({ k: k, img: SAMPLE_GIFT_SVGS[Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length)], name: '' });
+                var sg = jarSample(Math.floor(Math.random() * JAR_SAMPLE_GIFTS.length));
+                jarDemo.push({ k: k, img: sg.img, name: sg.name });
                 fresh.push(k);
             }
             if (jarDemo.length > JAR_CAP) jarDemo = jarDemo.slice(jarDemo.length - JAR_CAP);
