@@ -15,14 +15,14 @@ import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 
 const CONFIG={
   hp:100,            // صحة كل لاعب عند الدخول (الفايز يكمل بنفس صحته)
-  tapDamage:.25,     // ضرر كل تكبيسة
+  tapDamage:.5,      // ضرر كل تكبيسة
   comboTaps:50,      // تكبيسات متتالية = ركلة
   comboWindow:3,     // ثواني توقف تصفّر عداد الركلة
   kickDamage:8,      // ركلة الكومبو
   roseDamage:10,     // وردة
   giftDamage:25,     // هدية 5 عملات (ضربة طائرة)
-  healAmount:15,     // هدية تيك توك: شفاء
-  punchEvery:.3,
+  healAmount:30,     // هدية تيك توك: شفاء
+  punchEvery:.1,
   championTime:6     // ثواني احتفال البطل قبل دخول الدفعة الجاية
 };
 const SAMPLE_NAMES=['نورة','فهد','سارة','عبدالله','ريم','سلمان','لولو','تركي','غلا','بندر','جود','ماجد','شهد','خالد','دانة','يزيد'];
@@ -149,7 +149,7 @@ const NAMES=Object.keys(SPEC), IDX=Object.fromEntries(NAMES.map((n,i)=>[n,i])), 
 const SEG={hips:[V(0,-.2,0),V(0,.02,0)],spine:[V(0,.02,0),V(0,.165,0)],head:[V(0,.165,0),V(0,.42,0)],
  uaL:[P('uaL'),P('faL')],faL:[P('faL'),P('hdL').add(V(.02,-.01,-.01))],uaR:[P('uaR'),P('faR')],faR:[P('faR'),P('hdR').add(V(-.02,0,.02))],
  thL:[P('thL'),P('shL')],shL:[P('shL'),P('ftL')],ftL:[P('ftL'),P('toeL')],thR:[P('thR'),P('shR')],shR:[P('shR'),P('ftR')],ftR:[P('ftR'),P('toeR')]};
-{const segD=(p,a,b)=>{const ab=b.clone().sub(a),t=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/ab.lengthSq()));return p.distanceTo(a.clone().add(ab.multiplyScalar(t)));};
+function skinGeo(geo){const segD=(p,a,b)=>{const ab=b.clone().sub(a),t=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/ab.lengthSq()));return p.distanceTo(a.clone().add(ab.multiplyScalar(t)));};
  const pos=geo.attributes.position,N=pos.count,sI=new Uint16Array(N*4),sW=new Float32Array(N*4),pv=V(0,0,0);
  for(let i=0;i<N;i++){pv.fromBufferAttribute(pos,i);const {x,y}=pv,ax=Math.abs(x);const ws=[];
   for(const [n,[a,b]] of Object.entries(SEG)){const d=segD(pv,a,b);let g=1;
@@ -160,6 +160,7 @@ const SEG={hips:[V(0,-.2,0),V(0,.02,0)],spine:[V(0,.02,0),V(0,.165,0)],head:[V(0
   ws.sort((a,b)=>b[1]-a[1]);const top=ws.slice(0,4),s=top.reduce((q,w)=>q+w[1],0)||1;
   top.forEach((w,k)=>{sI[i*4+k]=w[0];sW[i*4+k]=w[1]/s;});}
  geo.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(sI,4));geo.setAttribute('skinWeight',new THREE.Float32BufferAttribute(sW,4));}
+skinGeo(geo);
 
 /* ===== الأزياء: نلوّن الفستان والإكسسوارات والشعر من نفس الخامة ===== */
 // [درجة اللون، التشبع، الإضاءة]: d=الفستان، a=الشنطة والربطة، h=الشعر (null = يبقى الأصلي)
@@ -184,20 +185,79 @@ for(let i=0;i<NP;i++){const r=SRC[i*4]/255,g=SRC[i*4+1]/255,b=SRC[i*4+2]/255,mx=
   const s=d<1e-6?0:d/(1-Math.abs(2*l-1)+1e-6);let h=0;if(d>1e-6){h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}
   LL[i]=l;SSAT[i]=s;
   if(h>195&&h<275&&s>.07&&l>.02&&l<.6)CL[i]=1;else if((h<18||h>335)&&s>.35&&l>.12&&l<.7)CL[i]=2;else if(h>34&&h<62&&s>.1&&l>.2&&l<.86)CL[i]=3;else if(s<.16&&l>.58)CL[i]=4;}
+
+/* ===== شخصية الولد: نفس الموديل بشعر قصير وشورت (كله بالكود — بدون موديل ثاني) ===== */
+// الذيلين والكور يرجعون على سطح الراس، والتنورة تنطوي داخل الشورت، والشورت قطع مربوطة بعظام الورك والفخذين.
+const HIP={c:[-.003,-.006,-.012],r:[.104,.11,.096]};
+const HEAD={c:[0,.295,-.005],r:[.172,.2,.205]};
+function boyify(geo,isCloth){   // isCloth(i): لون النقطة قماش غامق (مو جلد/جوارب)
+  const g=geo.clone(),pos=g.attributes.position,N=pos.count,moved=new Float32Array(N);
+  const [cx,cy,cz]=HEAD.c,[rx,ry,rz]=HEAD.r;
+  // محاور الفخذين (من الورك للركبة) — نفس عظام thL/shL و thR/shR
+  const legs=[[[.035,-.06,-.01],[.027,-.32,-.027]],[[-.035,-.06,0],[-.1,-.32,-.03]]];   // محاور الفخذين من شكل الموديل
+  const segP=(p,a,b)=>{const ab=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],ap=[p[0]-a[0],p[1]-a[1],p[2]-a[2]];const L=ab[0]**2+ab[1]**2+ab[2]**2;const t=Math.max(0,Math.min(1,(ap[0]*ab[0]+ap[1]*ab[1]+ap[2]*ab[2])/L));return [a[0]+ab[0]*t,a[1]+ab[1]*t,a[2]+ab[2]*t];};
+  for(let i=0;i<N;i++){let x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);const ox=x,oy=y,oz=z;
+    // الشعر: أي نقطة برا بيضاوي الراس (فوق الرقبة، أو الذيول على الجنبين) ترجع لسطحه
+    if(y>.2||(y>.11&&Math.abs(x)>.165)){const dx=(x-cx)/rx,dy=(y-cy)/ry,dz=(z-cz)/rz,e=Math.hypot(dx,dy,dz);
+      if(e>.97){const k=.97/e;x=cx+dx*k*rx;y=cy+dy*k*ry;z=cz+dz*k*rz;if(y<.17){y=.17;}}}
+    // التنورة ← شورت: نلفّها حول أقرب فخذ
+    if(oy<-.035&&oy>-.3){let best=null,bd=1e9;for(const [a,b] of legs){const q=segP([x,y,z],a,b),d=Math.hypot(x-q[0],y-q[1],z-q[2]);if(d<bd){bd=d;best=q;}}
+      const rT=.036+.026*ss(-.2,-.06,oy);   // نص قطر الفخذ (أعرض فوق عند الورك)
+      if((oy<-.2?!(isCloth&&isCloth(i)):bd<=rT+.008)||bd>.2||Math.abs(ox)>.21){pos.setXYZ(i,x,y,z);moved[i]=Math.hypot(x-ox,y-oy,z-oz);continue;}   // جلد الرجل يبقى مكانه
+      if(oy>-.12){const [hx,hy,hz]=HIP.c,[ax,ay,az]=HIP.r.map(r=>r*.9),dx=(x-hx)/ax,dy=(y-hy)/ay,dz=(z-hz)/az,e=Math.hypot(dx,dy,dz),w=ss(-.022,-.04,oy);
+        if(e>1){const k=1+(1/e-1)*w;x=hx+dx*k*ax;y=hy+dy*k*ay;z=hz+dz*k*az;}}
+      else{const nd=rT*.8,f=nd/bd;x=best[0]+(x-best[0])*f;y=best[1]+(y-best[1])*f;z=best[2]+(z-best[2])*f;}
+}
+    pos.setXYZ(i,x,y,z);moved[i]=Math.hypot(x-ox,y-oy,z-oz);}
+  pos.needsUpdate=true;g.computeVertexNormals();return {geo:g,moved};}
+
+// الشورت: قطع مستقلة تنربط بعظام الورك والفخذين (تتحرك معها)، بلون اللبس
+const LEGS=[[[.035,-.06,-.01],[.027,-.32,-.027]],[[-.035,-.06,0],[-.1,-.32,-.03]]];
+function makeShorts(mat){
+  const hip=new THREE.Mesh(new THREE.SphereGeometry(1,24,16,0,Math.PI*2,0,Math.PI*.62),mat);hip.scale.set(...HIP.r);hip.position.set(...HIP.c);hip.rotation.x=Math.PI;
+  const legs=LEGS.map(([a,b])=>{const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),dir=B.clone().sub(A).normalize(),len=.145;
+    const g=new THREE.CylinderGeometry(.056,.05,len,20,1,true);g.translate(0,-len/2,0);const m=new THREE.Mesh(g,mat);
+    m.position.copy(A);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),dir);return m;});
+  return {hip,legs};}
+const BOY=(()=>{const uv=geo.attributes.uv,tx=i=>Math.min(TW-1,Math.floor(uv.getX(i)*TW))+Math.min(TH-1,Math.floor(uv.getY(i)*TH))*TW;
+  const b=boyify(geo,i=>LL[tx(i)]<.35);skinGeo(b.geo);smoothFace(b.geo,texImg);
+  // مكان الكور على الخامة (يصير بلون الشعر)
+  const mc=document.createElement('canvas');mc.width=TW;mc.height=TH;const mx=mc.getContext('2d');mx.fillStyle='#fff';const pos=geo.attributes.position,idx=geo.index;
+  // مركز كل كورة (من النقاط اللي انطوت فوق الراس) — نلوّن حولها بعد، عشان أثرها على الشعر يختفي
+  const pc=[[0,0,0,0],[0,0,0,0]];for(let i=0;i<pos.count;i++){if(b.moved[i]<.02||pos.getY(i)<.33)continue;const q=pc[pos.getX(i)>0?0:1];q[0]+=pos.getX(i);q[1]+=pos.getY(i);q[2]+=pos.getZ(i);q[3]++;}
+  const near=(x,y,z)=>pc.some(q=>q[3]&&Math.hypot(x-q[0]/q[3],y-q[1]/q[3],z-q[2]/q[3])<.085);
+  for(let t=0;t<idx.count;t+=3){const a=idx.getX(t),c=idx.getX(t+1),d=idx.getX(t+2);
+    const cy=(pos.getY(a)+pos.getY(c)+pos.getY(d))/3;if(cy<.12)continue;
+    if(Math.max(b.moved[a],b.moved[c],b.moved[d])<.012&&!near((pos.getX(a)+pos.getX(c)+pos.getX(d))/3,cy,(pos.getZ(a)+pos.getZ(c)+pos.getZ(d))/3))continue;
+    mx.beginPath();mx.moveTo(uv.getX(a)*TW,uv.getY(a)*TH);mx.lineTo(uv.getX(c)*TW,uv.getY(c)*TH);mx.lineTo(uv.getX(d)*TW,uv.getY(d)*TH);mx.closePath();mx.fill();}
+  const md=mx.getImageData(0,0,TW,TH).data,hair=new Uint8Array(NP);for(let i=0;i<NP;i++)hair[i]=md[i*4]>127?1:0;
+  return {geo:b.geo,hair};})();
+// أزياء الأولاد: صدرية سادة بنفس لون الشورت، وشعر أغمق
+const BOY_OUTFITS=[
+ {d:[222,.5,.3],pat:'plain',a:[0,.75,.45],sh:null,h:[25,.35,.18]},
+ {d:[150,.42,.27],pat:'plain',a:[45,.9,.5],sh:[45,.2],h:[0,0,.12]},
+ {d:[0,0,.17],pat:'plain',a:[205,.8,.5],sh:null,h:[30,.5,.3]},
+ {d:[355,.55,.33],pat:'plain',a:[45,.9,.55],sh:null,h:[42,.55,.55]},
+ {d:[30,.4,.36],pat:'plain',a:[200,.7,.45],sh:[200,.2],h:[18,.6,.26]},
+ {d:[205,.65,.42],pat:'plain',a:[0,0,.92],sh:null,h:[220,.15,.15]},
+ {d:[0,0,.5],pat:'plain',a:[0,.75,.45],sh:null,h:[0,0,.1]},
+ {d:[265,.38,.32],pat:'plain',a:[185,.7,.5],sh:null,h:[30,.3,.4]},
+];
 function hsl2rgb(h,s,l){h/=360;const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1));};return [f(0),f(8),f(4)];}
 const outfitCache={};
 function patternAt(pat,x,y){if(pat==='plaid')return ((x>>4)%5===0?.5:0)+((y>>4)%5===0?.5:0)+(((x>>2)%10===1||(y>>2)%10===1)?.25:0);
   if(pat==='stripe')return ((x+y)>>3)%4===0?1:0;
   if(pat==='dots'){const dx=x%22-11,dy=y%22-11;return dx*dx+dy*dy<20?1:0;}return 0;}
-function outfitTex(k){if(outfitCache[k])return outfitCache[k];const o=OUTFITS[k];
+function outfitTex(k,boy){const ck=(boy?'b':'g')+k;if(outfitCache[ck])return outfitCache[ck];const o=(boy?BOY_OUTFITS:OUTFITS)[k];
   const c=document.createElement('canvas');c.width=TW;c.height=TH;const ctx=c.getContext('2d');const img=ctx.createImageData(TW,TH);const d=img.data;d.set(SRC);
-  for(let i=0;i<NP;i++){const cl=CL[i];if(!cl)continue;let t,ref;
+  for(let i=0;i<NP;i++){const cl=boy&&BOY.hair[i]&&CL[i]!==2?3:CL[i];if(!cl)continue;let t,ref;
     if(cl===1){t=o.d;ref=.26;const m=o.pat!=='plain'?Math.min(1,patternAt(o.pat,i%TW,(i/TW)|0)):0;if(m>0)t=[t[0]+(o.p2[0]-t[0])*m,t[1]+(o.p2[1]-t[1])*m,t[2]+(o.p2[2]-t[2])*m];}
     else if(cl===2){t=o.a;ref=.38;}else if(cl===3){t=o.h;ref=.6;}else{if(!o.sh)continue;t=[o.sh[0],o.sh[1],.82];ref=.8;}
     if(!t)continue;
-    const nl=Math.min(.96,t[2]*Math.pow(LL[i]/ref,.85)),ns=t[1]*Math.min(1,.45+SSAT[i]);const [r,g,b]=hsl2rgb(((t[0]%360)+360)%360,ns,nl);d[i*4]=r*255;d[i*4+1]=g*255;d[i*4+2]=b*255;}
+    const L0=boy&&BOY.hair[i]&&CL[i]!==3?.5+.08*(LL[i]-.5):LL[i];   // مكان الكور القديم: بإضاءة الشعر العادية
+    const nl=Math.min(.96,t[2]*Math.pow(L0/ref,.85)),ns=t[1]*Math.min(1,.45+SSAT[i]);const [r,g,b]=hsl2rgb(((t[0]%360)+360)%360,ns,nl);d[i*4]=r*255;d[i*4+1]=g*255;d[i*4+2]=b*255;}
   applySkin(d,BLURD,FACEMASK,TW,TH);
-  ctx.putImageData(img,0,0);const tex=new THREE.CanvasTexture(c);tex.flipY=baseMat.map.flipY;tex.colorSpace=THREE.SRGBColorSpace;return outfitCache[k]=tex;}
+  ctx.putImageData(img,0,0);const tex=new THREE.CanvasTexture(c);tex.flipY=baseMat.map.flipY;tex.colorSpace=THREE.SRGBColorSpace;return outfitCache[ck]=tex;}
 
 /* ===== الوضعيات ===== */
 const v1=V(0,0,0),v2=V(0,0,0),v3=V(0,0,0),q0=new THREE.Quaternion(),q1=new THREE.Quaternion(),q2=new THREE.Quaternion();
@@ -230,7 +290,7 @@ function guardP(F,t){const p=base(),b=Math.abs(Math.sin(t*Math.PI*2*1.4+F.seed))
     p.thR=L(p.thR,V(-.12,-1,.12-.45*s),a);p.shR=L(p.shR,V(-.05,-1,.12-.45*s-.55*Math.max(0,c)),a);p.lift+=.015*Math.abs(s)*a;}
   return p;}
 const ATK={
- punch:{dur:.34,impact:.12,reach:.46,pose(F,u,t){const p=guardP(F,t),e=env(u,0,.09,.06,.17),s=F.punchSide?'R':'L',sg=s==='L'?1:-1;
+ punch:{dur:.2,impact:.06,reach:.46,pose(F,u,t){const p=guardP(F,t),e=env(u,0,.055,.03,.1),s=F.punchSide?'R':'L',sg=s==='L'?1:-1;
    p['ua'+s]=L(p['ua'+s],V(.12*sg,.03,1),e);p['fa'+s]=L(p['fa'+s],V(.03*sg,.06,1),e);p.spine=[.14,-.38*sg*e,0];p.hips=[0,-.15*sg*e,0];p.fwd=.05*e;return p;}},
  kick:{dur:.8,impact:.3,reach:.5,pose(F,u,t){const p=guardP(F,t),ch=env(u,0,.16,.42,.3),ex=env(u,.16,.12,.22,.28);
    p.thR=L(p.thR,V(-.05,-.05,1),ch);p.shR=L(L(p.shR,V(0,-1,.15),ch),V(0,.08,1),ex);p.ftR=L(p.ftR,V(0,.35,1),ex);
@@ -324,24 +384,27 @@ const G={roundNo:1,bye:null,phase:'idle',st:0,matches:[],champion:null,slow:1,sl
 const DOWN=['fly','down','getup','ko','koDown','exit'];
 const OUT=['ko','koDown','exit'];
 const PRI={donut:5,gift5:4,rose:3,kick:2};
-function makeFighter(name,outfit,col,avatar,pid){
+function makeFighter(name,outfit,col,avatar,pid,boy){
   const B={},list=[];
   for(const n of NAMES){const [p,par]=SPEC[n];const b=new THREE.Bone();b.name=n;const pp=par?SPEC[par][0]:[0,0,0];b.position.set(p[0]-pp[0],p[1]-pp[1],p[2]-pp[2]);if(par)B[par].add(b);B[n]=b;list.push(b);}
-  const mat=baseMat.clone();mat.map=outfitTex(outfit);
-  const sk=new THREE.SkinnedMesh(geo,mat);sk.add(B.hips);sk.bind(new THREE.Skeleton(list));sk.castShadow=true;sk.frustumCulled=false;
+  const mat=baseMat.clone();mat.map=outfitTex(outfit,boy);
+  const sk=new THREE.SkinnedMesh(boy?BOY.geo:geo,mat);sk.add(B.hips);sk.bind(new THREE.Skeleton(list));sk.castShadow=true;sk.frustumCulled=false;
+  // الولد: الشورت قطع مربوطة بالعظام (الورك والفخذين) بلون الصدرية
+  let smat=null;if(boy){const o=BOY_OUTFITS[outfit],[r,g,b]=hsl2rgb(o.d[0],o.d[1],o.d[2]*.95);smat=new THREE.MeshStandardMaterial({color:new THREE.Color(r,g,b).convertSRGBToLinear(),roughness:.85,side:THREE.DoubleSide});
+    const S=makeShorts(smat),rel=(m,bn)=>{m.position.sub(P(bn));m.castShadow=true;B[bn].add(m);};rel(S.hip,'hips');rel(S.legs[0],'thL');rel(S.legs[1],'thR');}
   const char=new THREE.Group();char.add(sk);scene.add(char);
   const c3=new THREE.Color(col);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.2,.26,48),new THREE.MeshBasicMaterial({color:c3,transparent:true,opacity:.9,toneMapped:false}));ring.rotation.x=-Math.PI/2;scene.add(ring);
   const glow=new THREE.PointLight(c3,1,1.1,1.6);scene.add(glow);
   const tag=document.createElement('div');tag.className='tag';tag.innerHTML=`<b style="background:${col}"></b><span class="mhp"><i></i></span>`;tag.querySelector('b').textContent=name;$('tags').appendChild(tag);
-  const F={id:++FID,name,col,avatar:avatar||null,pid:pid||name,c3,B,list,REST:Object.fromEntries(list.map(b=>[b.name,b.quaternion.clone()])),char,mat,ring,glow,tag,
+  const F={id:++FID,name,col,avatar:avatar||null,pid:pid||name,boy:!!boy,smat,c3,B,list,REST:Object.fromEntries(list.map(b=>[b.name,b.quaternion.clone()])),char,mat,ring,glow,tag,
     x:0,z:0,laneZ:0,vx:0,fy:0,vy:0,sign:1,yaw:Math.PI/2,hp:CONFIG.hp,ghost:CONFIG.hp,state:'move',st:0,match:null,opp:null,
     queue:[],pendingTap:0,combo:0,lastTap:-99,punchCd:0,punchSide:0,flinch:0,mv:0,ph:0,seed:Math.random()*6,sink:0,headPos:V(0,1,0),
     fromPose:null,blendU:9,lastPose:null,aura:0,auraCol:new THREE.Color(0xffffff),atk:null,hitDone:false,spin:0,donut:null,gone:false};
   FS.push(F);return F;}
-function removeFighter(F){F.gone=true;scene.remove(F.char,F.ring,F.glow);F.tag.remove();F.mat.dispose();F.ring.geometry.dispose();if(F.donut){scene.remove(F.donut);F.donut=null;}
+function removeFighter(F){F.gone=true;scene.remove(F.char,F.ring,F.glow);F.tag.remove();F.mat.dispose();if(F.smat)F.smat.dispose();F.ring.geometry.dispose();if(F.donut){scene.remove(F.donut);F.donut=null;}
   const i=FS.indexOf(F);if(i>=0)FS.splice(i,1);if(G.sel===F.id)G.sel=null;renderChips();}
-function exitFighter(F){setState(F,'exit');F.mat.transparent=true;F.mat.needsUpdate=true;sfx('poof');
+function exitFighter(F){setState(F,'exit');F.mat.transparent=true;F.mat.needsUpdate=true;if(F.smat){F.smat.transparent=true;F.smat.needsUpdate=true;}sfx('poof');
   smoke.emit(V(F.x,.15,F.z),60,{speed:.6,up:.5,colors:[0x9aa0b8,0xc8ccd8,0x6b7088],life:1.2,gravity:-.2,box:.2});}
 function setState(F,s){
   // ضربة مدفوعة انقطعت قبل ما توصل (اللاعب انضرب وهو يشحن) ترجع للطابور عشان الداعم ما يخسر هديته
@@ -373,12 +436,12 @@ function knockout(F,O,byDonut){const M=F.match;M.done=true;M.winner=F;M.doneAt=p
   sfx('ko');feed(F,O.name+' أُقصي');renderChips();}
 
 function resolveHit(F){const O=F.opp,a=F.atk,A=ATK[a];if(!O||O.gone)return;const gap=Math.abs(F.x-O.x);
-  if(a!=='donut'&&DOWN.includes(O.state))return;
-  if(a==='punch'&&gap>A.reach+.22)return;
+  if(a!=='donut'&&DOWN.includes(O.state)){if(a==='punch')F.pendingTap=Math.min(10,F.pendingTap+F.punchDmg);return;}
+  if(a==='punch'&&gap>A.reach+.4){F.pendingTap=Math.min(10,F.pendingTap+F.punchDmg);return;}
   const hp=chest(O),armor=O.state==='attack'&&O.atk==='donut';
-  if(a==='punch'){const d=F.punchDmg;O.flinch=.25;O.x-=O.sign*.03;star(fist(F,F.punchSide?'R':'L'),.18,0xffffff,.18);
-    sparks.emit(hp,10,{speed:1.2,colors:[0xffe08a,0xffffff],life:.3,gravity:1});G.shake=Math.max(G.shake,.012);sfx('punch');
-    pop(hp.clone().add(V(rnd(-.05,.05),.12,0)),'-'+(Math.round(d*10)/10),'#ffffff',22);deal(F,O,d);}
+  if(a==='punch'){const d=F.punchDmg;O.flinch=.2;O.x-=O.sign*.045;star(fist(F,F.punchSide?'R':'L'),.32,0xffe9a8,.16);
+    sparks.emit(hp,16,{speed:1.6,colors:[0xffe08a,0xffffff,0xffb347],life:.3,gravity:1});G.shake=Math.max(G.shake,.022);sfx('punch');
+    pop(hp.clone().add(V(rnd(-.08,.08),.12+rnd(0,.08),0)),'-'+(Math.round(d*10)/10),'#ffe08a',30);deal(F,O,d);}
   else if(a==='kick'){const tp=F.B.toeR.getWorldPosition(V(0,0,0));star(tp,.45,0xffb347,.3);shock(hp,0xff8a1f,.55);
     sparks.emit(hp,45,{speed:2.4,colors:[0xff8a1f,0xffd23d,0xffffff],life:.5,gravity:2});G.shake=.045;sfx('kick');flash('rgba(255,170,60,.9)',.08);
     pop(hp.clone().add(V(0,.18,0)),'-'+CONFIG.kickDamage,'#ffb347',38);banner('ركلة الكومبو!','50 تكبيسة · '+F.name,'#ffb347');
@@ -407,7 +470,7 @@ function heal(F){if(F.gone||OUT.includes(F.state))return;const before=F.hp;F.hp=
   pop(p.clone().add(V(0,.25,0)),'+'+Math.round(F.hp-before),'#2fcb78',40);}
 
 function startAttack(F,a){F.atk=a;F.hitDone=false;setState(F,'attack');
-  if(a==='punch'){F.punchSide^=1;F.punchDmg=Math.min(F.pendingTap,3);F.pendingTap-=F.punchDmg;F.punchCd=CONFIG.punchEvery;}
+  if(a==='punch'){F.punchSide^=1;F.punchDmg=Math.min(F.pendingTap,F.pendingTap>3?2:1);F.pendingTap-=F.punchDmg;F.punchCd=CONFIG.punchEvery;}
   if(a==='kick')sfx('swing');
   if(a==='rose'){F.aura=1;F.auraCol.set(0xff2d95);showIcon(F,roseTex,ATK.rose.impact);sfx('roseCharge');}
   if(a==='gift5'){F.aura=1;F.auraCol.set(0xffc23d);showIcon(F,boltTex,ATK.gift5.impact);sfx('giftCharge');}
@@ -430,7 +493,7 @@ function updateFighter(F,dt,t){const O=F.opp,M=F.match;F.st+=dt;F.blendU+=dt;F.f
     if(next){const A=ATK[next],gap=Math.abs(F.x-O.x);
       if(gap>A.reach+.06){desired=O.x-F.sign*A.reach;speed=next==='donut'?2.6:1.9;if(F.state==='wait')setState(F,'move');}
       else{if(next!=='punch')F.queue.shift();if(next==='donut')M.donutActive=true;startAttack(F,next);break;}}
-    else if(O&&O.state==='attack'){desired=F.x;}
+    else if(O&&(O.state==='attack'||O.pendingTap>=CONFIG.tapDamage-1e-6||O.queue.length)){desired=F.x;}
     else desired=M.cx-F.sign*M.gap/2;
     if(F.state==='wait')setState(F,'move');
     break;}
@@ -454,7 +517,7 @@ function updateFighter(F,dt,t){const O=F.opp,M=F.match;F.st+=dt;F.blendU+=dt;F.f
    case 'down':{F.x+=F.vx*dt;F.vx*=Math.exp(-6*dt);if(F.st>1.3)setState(F,'getup');break;}
    case 'getup':{if(F.st>.9)setState(F,'move');break;}
    case 'koDown':{if(F.st>1.1){exitFighter(F);pop(chest(F).add(V(0,.3,0)),'أُقصي','#949cb5',30);}break;}
-   case 'exit':{F.mat.opacity=1-ss(0,.7,F.st);F.sink=.2*ss(0,.7,F.st);if(F.st>.75)removeFighter(F);return;}
+   case 'exit':{F.mat.opacity=1-ss(0,.7,F.st);if(F.smat)F.smat.opacity=F.mat.opacity;F.sink=.2*ss(0,.7,F.st);if(F.st>.75)removeFighter(F);return;}
    case 'victory':{if(F!==G.champion&&F.st>1.8)setState(F,'wait');break;}
   }
   if(F.state==='move'){const v=Math.max(-speed,Math.min(speed,(desired-F.x)*3.2));F.x+=v*dt;F.ph+=v*F.sign*dt*13;F.mv+=((Math.abs(v)>.06?1:0)-F.mv)*Math.min(1,dt*8);}
@@ -474,7 +537,7 @@ function poseFighter(F,t){let p;const u=F.st;
   F.lastPose=p;applyPose(F,p);
   F.ring.position.set(F.char.position.x,.006,F.z);F.ring.material.opacity=DOWN.includes(F.state)?.25:.9;
   F.glow.position.set(F.char.position.x-F.sign*.35,.9,F.z-.25);F.glow.color.copy(F.aura>.05?F.auraCol:F.c3);F.glow.intensity=1+F.aura*3;
-  F.mat.emissive.copy(F.auraCol).multiplyScalar(F.aura*.1*(.75+.25*Math.sin(t*30)));
+  F.mat.emissive.copy(F.auraCol).multiplyScalar(F.aura*.1*(.75+.25*Math.sin(t*30)));if(F.smat)F.smat.emissive.copy(F.mat.emissive);
   if(F.aura>.3&&F.state==='attack')sparks.emit(V(F.char.position.x+rnd(-.15,.15),.02,F.z+rnd(-.15,.15)),2,{speed:.3,up:1.4,colors:[F.auraCol.getHex(),0xffffff],life:.7,gravity:-.4});
   const hd=F.B.headEnd.getWorldPosition(V(0,0,0));F.headPos.copy(hd);
   const [sx,sy]=toScreen(hd.add(V(0,.1,0)));F.tag.style.left=sx+'px';F.tag.style.top=sy+'px';F.tag.style.opacity=DOWN.includes(F.state)?0:1;
@@ -639,6 +702,13 @@ $('exitBtn').onclick=exitGame;
 
 // ---- لوبي الدخول ----
 const SAMPLE=['نورة','فهد','سارة','عبدالله','ريم','سلمان','لولو','تركي','غلا','بندر','جود','ماجد','شهد','خالد','دانة','يزيد','رهف','مشاري','أسيل','نواف'];
+// مقتنيات اللاعب من المنصة (تجي مع كل تعليق/تكبيس/هدية من البث): الإطار (agp-player-card.js) وبطاقة الفوز (agp-win-card.js)
+const XTRA=new Map();
+function noteXtra(p){if(!p||!p.id)return;const o=XTRA.get(p.id)||{};
+  if(p.frame!==undefined)o.frame=p.frame||null;if(p.winCard!==undefined)o.winCard=p.winCard||null;if(p.character!==undefined)o.character=p.character||null;XTRA.set(p.id,o);
+  const A=window.AymanGamesPlatform;if(o.winCard&&A&&A.winCard)A.winCard.preloadFor({winCard:o.winCard});}
+const xtra=pid=>XTRA.get(pid)||{};
+const AGPX=()=>window.AymanGamesPlatform||{};
 function renderLobby(){const n=G.lobby.length;$('elCount').textContent=n;$('startBtn').disabled=n<1;renderKw();
   const list=$('elList');list.innerHTML='';
   if(!n){const e=document.createElement('div');e.className='el-empty';e.textContent='بانتظار انضمام اللاعبين… يكتبون «'+SET.keyword+'» بالشات';list.appendChild(e);return;}
@@ -647,13 +717,27 @@ function renderLobby(){const n=G.lobby.length;$('elCount').textContent=n;$('star
     const nm=document.createElement('span');nm.className='el-nm';nm.textContent=p.name;
     const x=document.createElement('button');x.type='button';x.className='el-x';x.setAttribute('aria-label','شيل '+p.name);x.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
     x.onclick=()=>{G.lobby=G.lobby.filter(q=>q!==p);renderLobby();};
-    chip.append(av,nm,x);w.appendChild(chip);list.appendChild(w);});}
+    const fr=xtra(p.pid).frame,PC=AGPX().playerCard;
+    // صاحب الإطار: نفس ترتيب روليت المخفي (tr-platform.js frameCard) — الخانة بنفس حجم الباقين، والإطار يتوسطها،
+    // و× داخل حدود الإطار على طرف لوح الاسم (اللوح ينقص بعرض ×)
+    if(fr&&fr.imageFilename&&PC){w.classList.add('framed');list.appendChild(w);
+      const fc=document.createElement('div');fc.className='el-fc';const box=document.createElement('div');box.className='el-fbox';
+      box.innerHTML=PC.renderHtml({id:p.pid,name:p.name,avatarUrl:p.avatar||null,frame:fr},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w.clientWidth/4.96))});
+      fc.appendChild(box);w.appendChild(fc);
+      const pl=box.querySelector('[data-agp-pcard-name="1"]');
+      if(pl){const ph=pl.clientHeight;if(ph){pl.style.fontSize=Math.max(9,Math.min(14,Math.round(ph*.65)))+'px';pl.style.lineHeight='1.2';}
+        pl.style.width='calc('+pl.style.width+' - 24px)';
+        const b=box.getBoundingClientRect(),r=pl.getBoundingClientRect();x.classList.add('on-frame');x.style.left=Math.round(r.right-b.left)+'px';x.style.top=Math.round(r.top-b.top+r.height/2-12)+'px';box.appendChild(x);}
+      return;}
+    chip.append(av,nm,x);w.appendChild(chip);list.appendChild(w);});
+  const PC=AGPX().playerCard;if(PC&&PC.fitAllNames)PC.fitAllNames(list);}
 function freshName(){const used=new Set([...G.lobby,...G.waiting,...G.queue].map(p=>p.name).concat(FS.map(f=>f.name)));const pool=SAMPLE.filter(x=>!used.has(x));return pool.length?pool[Math.floor(Math.random()*pool.length)]:'مشاهد '+Math.floor(rnd(100,999));}
 function joinPlayer(name,avatar,pid){name=String(name||'').trim().slice(0,24);if(!name)return false;pid=pid||name;
   const inGame=FS.some(f=>f.pid===pid&&!f.gone);
   if(UI.phase==='lobby'){if(G.lobby.some(p=>p.pid===pid))return false;
     G.lobby.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.lobby.length%AVA_COLS.length]),isNew:true});renderLobby();sfx('join');return true;}
-  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid))return false;
+  // اللي شارك بهالمباراة (حتى لو انقصى) ما يرجع يدخل بالدخول التلقائي — يقدر يدخل الجولة الجاية
+  if(UI.phase==='game'&&SET.autoJoin&&G.phase!=='champion'){if(inGame||G.queue.some(p=>p.pid===pid)||G.participants.some(p=>p.pid===pid))return false;
     G.queue.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.queue.length%AVA_COLS.length])});renderRoster();feed(null,name+' دخل بالدور (رقم '+G.queue.length+')');sfx('join');return true;}
   if((UI.phase==='win'||G.phase==='champion')&&SET.autoJoin){if(G.waiting.some(p=>p.pid===pid))return false;
     G.waiting.push({pid,name,avatar:avatar||makeAvatar(name,AVA_COLS[G.waiting.length%AVA_COLS.length]),isNew:true});feed(null,name+' دخل الجولة الجاية');sfx('join');return true;}
@@ -667,7 +751,7 @@ function clearArena(){for(const F of [...FS])removeFighter(F);G.matches=[];G.cha
   $('dark').style.opacity=0;$('banner').innerHTML='';G.entries=[];G.entryBusy=0;$('announce').classList.remove('show');for(const ic of icons)scene.remove(ic.s);icons.length=0;renderAll();}
 function startTournament(list){initAudio();const ps=(list||G.lobby).slice();if(ps.length<1)return;clearArena();
   G.participants=ps.map(p=>({pid:p.pid,name:p.name,avatar:p.avatar,bot:!!p.bot}));G.demo=ps.some(p=>p.bot);G.demoGiftT=3;tapsSeen=0;$('tapsIn').textContent='👆 ما وصل تكبيس من البث للحين';$('tapsIn').classList.remove('hot');G.startedAt=Date.now();G.pts=null;G.winShown=false;
-  G.queue=ps.map(p=>({pid:p.pid,name:p.name,avatar:p.avatar,bot:!!p.bot}));G.slots=ringSlots();G.played=0;G.colorIdx=0;outfitBag=[];
+  G.queue=ps.map(p=>({pid:p.pid,name:p.name,avatar:p.avatar,bot:!!p.bot}));G.slots=ringSlots();G.played=0;G.colorIdx=0;outfitBag=[];boyBag=[];
   setPhase('game');G.phase='fight';G.st=0;G.entries=[];G.entryBusy=0;refill(performance.now());G.sel=null;renderAll();}
 
 // ---- دخول اللاعبين: بطاقة 4 ثواني (مين يدخل وضد مين) ثم عد تنازلي 3-2-1 ثم «قاتل!» ----
@@ -699,9 +783,13 @@ function entryTick(now){const E=G.entries&&G.entries[0];const an=$('announce'),c
 function ringSlots(){const n=Math.max(1,Math.floor(SET.ringSize/2));return SPOTS[n].map(([cx,cz])=>({cx,cz,match:null,holder:null}));}
 function alive(F){return !!F&&!F.gone&&!OUT.includes(F.state);}
 function isWaiting(F){return alive(F)&&(!F.match||(F.match.done&&F.match.winner===F));}
-let outfitBag=[];
-function spawnFromQueue(slot,side){const p=G.queue.shift();if(!p)return null;if(!outfitBag.length)outfitBag=shuffle([...OUTFITS.keys()]);
-  const F=makeFighter(p.name,outfitBag.pop(),SLOT_COLS[(G.colorIdx++)%SLOT_COLS.length],p.avatar,p.pid);F.x=side*1.36;F.z=slot.cz;F.laneZ=slot.cz;
+let outfitBag=[],boyBag=[];
+// بنت أو ولد: حسب اختيار اللاعب من بروفايله («شخصيتي بالألعاب» — docs/CHARACTERS.md)، وإلا عشوائي
+const GENDER=new Map();   // يثبت للاعب طول الجلسة (العشوائي ما يتبدّل بين الجولات)
+function isBoy(p){const c=xtra(p.pid).character;if(c==='boy'||c==='girl')return c==='boy';if(!GENDER.has(p.pid))GENDER.set(p.pid,Math.random()<.5);return GENDER.get(p.pid);}
+function spawnFromQueue(slot,side){const p=G.queue.shift();if(!p)return null;const boy=isBoy(p);
+  if(!outfitBag.length)outfitBag=shuffle([...OUTFITS.keys()]);if(!boyBag.length)boyBag=shuffle([...BOY_OUTFITS.keys()]);
+  const F=makeFighter(p.name,(boy?boyBag:outfitBag).pop(),SLOT_COLS[(G.colorIdx++)%SLOT_COLS.length],p.avatar,p.pid,boy);F.x=side*1.36;F.z=slot.cz;F.laneZ=slot.cz;
   if(!G.participants.some(q=>q.pid===p.pid))G.participants.push({pid:p.pid,name:p.name,avatar:p.avatar,bot:!!p.bot});
   sparks.emit(V(F.x,.05,F.z),50,{speed:.5,up:2,colors:[0xffffff,F.c3.getHex()],life:.8,gravity:-.2,box:.15});shock(V(F.x,.01,F.z),F.c3.getHex(),.5,.5,true);sfx('spawn');return F;}
 function refill(now){let changed=false;
@@ -728,8 +816,11 @@ function reportPoints(F){if(G.demo){G.pts='demo';return;}if(window.AGPAuth&&type
     .then(res=>{if(run!==G.startedAt)return;const un=String(F.pid).indexOf('tiktok:')===0?String(F.pid).slice(7):String(F.pid);const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===un):null;G.pts=aw?aw.added:null;renderWin();})
     .catch(()=>{G.pts=null;renderWin();});}else G.pts=null;}
 function ptsLine(){if(G.pts==='demo')return 'نسخة تجربة — بدون نقاط';if(G.pts==='pending')return 'جارٍ احتساب النقاط';return typeof G.pts==='number'?'+'+G.pts+' نقطة':'النقاط للحسابات الموثّقة في الموقع';}
-function showWin(F){G.winShown=true;G.winner=F;renderWin();setPhase('win');}
+function showWin(F){G.winShown=true;G.winCardPopped=false;G.winner=F;renderWin();setPhase('win');}
 function renderWin(){const F=G.winner;if(!F||!G.winShown)return;const host=$('wCards');host.innerHTML='';
+  const WC=AGPX().winCard,owner={id:F.pid,name:F.name,avatarUrl:F.avatar||null,winCard:xtra(F.pid).winCard||null};
+  if(WC&&WC.canShow(owner)){const box=document.createElement('div');box.className='w-owned';
+    box.innerHTML=WC.renderHtml(owner,['بطل الحلبة',ptsLine()],{pop:!G.winCardPopped});G.winCardPopped=true;host.appendChild(box);return;}
   const std=document.createElement('div');std.className='w-std';
   std.innerHTML='<div class="w-crown"><svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>'+
     '<div class="w-card"><div class="w-shine"></div><div class="w-in"><span class="w-label">WINNER</span></div></div>';
@@ -745,7 +836,7 @@ $('wSame').onclick=()=>{const keep=G.participants.slice();G.waiting=G.waiting.fi
 const findF=key=>FS.find(F=>!F.gone&&(F.id===key||F.pid===key||F.name===key));
 const eliminated=F=>F.match&&F.match.done&&F.match.winner!==F;
 function tap(key,n=1){const F=findF(key);if(!F||!F.match||OUT.includes(F.state)||eliminated(F)||G.phase==='champion')return;const now=performance.now()/1000;
-  if(now-F.lastTap>CONFIG.comboWindow)F.combo=0;F.lastTap=now;F.combo+=n;F.pendingTap=Math.min(F.pendingTap+n*CONFIG.tapDamage,6);
+  if(now-F.lastTap>CONFIG.comboWindow)F.combo=0;F.lastTap=now;F.combo+=n;F.pendingTap=Math.min(F.pendingTap+n*CONFIG.tapDamage,10);
   while(F.combo>=CONFIG.comboTaps){F.combo-=CONFIG.comboTaps;F.queue.push('kick');feed(F,F.name+' كمّل 50 تكبيسة ← ركلة');}}
 function power(key,kind,giftLabel){const F=findF(key);if(!F||OUT.includes(F.state)||eliminated(F)||G.phase==='champion')return;
   const p=POWERS.find(x=>x.id===kind);if(!p)return;const g=giftById(SET.gifts[kind]);
@@ -764,7 +855,14 @@ const ARENA_API={chat,join:(n,a,id)=>joinPlayer(n,a,id),tap,gift:power,giftEvent
 
 // ---- البث: التكبيس والهدايا والتعليقات تجي من تيك توك (نفس شد الحبل وفورمولا ون) ----
 function renderChips(){}
-function renderActs(){}
+// شريط الهدايا أسفل شاشة اللعب: التكبيس + كل هدية بأيقونتها وقوّتها (حسب ربط الهدايا بالإعدادات)
+const POWER_FX={rose:()=>'ضربة الوردة · -'+CONFIG.roseDamage,gift5:()=>'ضربة طائرة · -'+CONFIG.giftDamage,tiktok:()=>'شفاء · +'+CONFIG.healAmount,donut:()=>'ضربة قاضية'};
+function renderActs(){const bar=$('giftBar');if(!bar)return;bar.innerHTML='';
+  const item=(c,icon,title,sub)=>{const d=document.createElement('div');d.className='gb';d.style.setProperty('--c',c);
+    if(icon&&!/^.{1,3}$/u.test(icon)){const im=document.createElement('img');im.src=icon;im.alt='';d.appendChild(im);}else{const s=document.createElement('span');s.className='ic';s.textContent=icon;d.appendChild(s);}
+    const t=document.createElement('span'),b=document.createElement('b'),sm=document.createElement('small');b.textContent=title;sm.textContent=sub;t.append(b,sm);d.appendChild(t);bar.appendChild(d);};
+  item('#a78bfa','👆','تكبيسة','لكمة · كل '+CONFIG.comboTaps+' ركلة');
+  for(const p of POWERS){const g=giftById(SET.gifts[p.id]);item(p.color,g?g.img:p.icon,g?g.label:p.name,POWER_FX[p.id]());}}
 const GIFT_NAMES={'rose':['Rose'],'tiktok':['TikTok'],'finger-heart':['Finger Heart','FingerHeart'],'donut':['Donut','Doughnut'],'rosa':['Rosa'],'ice-cream':['Ice Cream Cone','Ice Cream'],
   'cake-slice':['Cake Slice'],'love-saudi':['Love Saudi','I Love KSA'],'butterfly':['Butterfly'],'hat-and-mustache':['Hat and Mustache','Hat & Mustache'],'paper-crane':['Paper Crane'],
   'saudi-in-heart':['Saudi in Heart','KSA in my heart'],'heart-in-your-hands-a':['Heart In Your Hands'],'heart-in-your-hands-b':['Heart In Your Hands'],'kings-scepter':["King's Scepter",'Scepter'],
@@ -782,9 +880,9 @@ function onStreamGift(p){if(!p||!p.id)return;let F=findF(p.id);
   if(!F)return;const pw=powerForPayload(p);if(!pw)return;const g=giftById(SET.gifts[pw]);const n=Math.max(1,Math.min(5,Number(p.repeatCount)||1));
   for(let i=0;i<n;i++)power(p.id,pw,g&&g.label);}
 function bindStream(){const A=window.AymanGamesPlatform;if(!A||!A.events||typeof A.events.on!=='function')return;
-  A.events.on('stream:commentReceived',p=>{if(p&&p.id&&typeof p.text==='string')chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower});});
-  A.events.on('stream:likeReceived',p=>{if(p&&p.id)onLike(p.id,p.count,p.name,p.avatarUrl);});
-  A.events.on('stream:giftReceived',p=>onStreamGift(p));}
+  A.events.on('stream:commentReceived',p=>{noteXtra(p);if(p&&p.id&&typeof p.text==='string')chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower});});
+  A.events.on('stream:likeReceived',p=>{noteXtra(p);if(p&&p.id)onLike(p.id,p.count,p.name,p.avatarUrl);});
+  A.events.on('stream:giftReceived',p=>{noteXtra(p);onStreamGift(p);});}
 bindStream();
 function renderQueue(){renderRoster();}
 const rosterHp=[];

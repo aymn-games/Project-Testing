@@ -210,7 +210,7 @@
         clearAll();
         S.players = names.map(makePlayer); participants = {};
         S.players.forEach(function (p) { participants[p.name] = true; try { AGP.winCard && AGP.winCard.preloadFor(reg.player(p.name)); } catch (e) {} });
-        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false; S.supUsed = {}; S.reviveQ = [];
+        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false; S.lastOne = false; S.supUsed = {}; S.reviveQ = [];
         S.cam = 'overview'; S.phase = 'intro';
         ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
         $('win').hidden = true;
@@ -274,7 +274,8 @@
     function next() {
         var left = alive();
         if (!left.length) return finish([]);
-        if (CFG.mode === 'last' && left.length === 1) return finish(left);
+        // آخر ناجي يفوز فورًا بالوضعين — حتى لو باقي خطوات للنهاية (مباراة بدأت بلاعب واحد تكمل للنهاية)
+        if (left.length === 1 && (CFG.mode === 'last' || S.players.length > 1)) { S.lastOne = true; return finish(left); }
         S.row++;
         if (CFG.mode === 'steps' && S.row >= CFG.steps) { left.forEach(function (p) { p.row = CFG.steps; p.lane = 0; }); pushScene(); return later(function () { finish(left); }, 1300); }
         ask();
@@ -316,7 +317,7 @@
     function renderWin() {
         var ws = S.players.filter(function (p) { return S.winners.indexOf(p.id) >= 0; }), n = ws.length, total = Object.keys(participants).length;
         $('winH').textContent = n ? (n === 1 ? '🏆 الفائز في لعبة "الهاوية"' : '🏆 الفائزين في لعبة "الهاوية"') : '💀 سقط الجميع في الهاوية';
-        $('winSub').textContent = n ? (n === 1 ? (CFG.mode === 'last' ? 'آخر ناجي من ' + total + ' لاعب' : 'وصل خط النجاة من ' + total + ' لاعب') : 'وصلوا خط النجاة ' + n + ' من ' + total + ' لاعب') : 'ما أحد نجا هالمرة — جربوا مرة ثانية';
+        $('winSub').textContent = n ? (n === 1 ? (CFG.mode === 'last' || S.lastOne ? 'آخر ناجي من ' + total + ' لاعب' : 'وصل خط النجاة من ' + total + ' لاعب') : 'وصلوا خط النجاة ' + n + ' من ' + total + ' لاعب') : 'ما أحد نجا هالمرة — جربوا مرة ثانية';
         // كل ما زاد عدد الفائزين تصغر البطاقات (بدون أي تطاير)
         var k = n <= 1 ? 1 : n <= 3 ? .85 : n <= 6 ? .7 : n <= 12 ? .58 : .5, MAX = 24;
         $('winCards').innerHTML = ws.slice(0, MAX).map(function (p, i) {
@@ -363,7 +364,10 @@
         AB.connect();
         AB.onComment(function (c) {
             var name = reg.nameFor(c);
-            if (AB.norm(c.text) === AB.norm(CFG.joinWord)) {
+            // كلمة الدخول تنحسب دخول بس للي مو داخل المباراة. اللي داخلها رسالته جواب دائماً،
+            // حتى لو كلمة الدخول نفسها «1» أو «2» (كانت تنبلع كمحاولة دخول وما ينحسب الجواب).
+            var inGame = S.players.some(function (p) { return p.name === name; });
+            if (!inGame && AB.norm(c.text) === AB.norm(CFG.joinWord)) {
                 if ($('bAuto').getAttribute('aria-checked') !== 'true') return;
                 if (CFG.followersOnly && !c.isFollower) return;
                 return joinMidMatch(name);
