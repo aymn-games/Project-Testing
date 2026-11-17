@@ -3685,6 +3685,33 @@
     }
     function initial() { var n = me && (me.display_name || me.username) || 'V'; return String(n).trim().charAt(0).toUpperCase(); }
 
+    // لمعة تتبع الماوس على الأزرار والبطاقات، وتوهّج الخلفية، وميلان بطاقة LIVE
+    var glowEl = document.getElementById('vy-glow');
+    var gPos = null, gRaf = 0;
+    document.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'touch') return;
+        var t = e.target.closest && e.target.closest('.ob-btn, .vy-item, .vy-card, .ob-tool, .ob-chip');
+        if (t) {
+            var r = t.getBoundingClientRect();
+            t.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+            t.style.setProperty('--my', (e.clientY - r.top) + 'px');
+        }
+        gPos = [e.clientX, e.clientY];
+        if (!gRaf) gRaf = requestAnimationFrame(function () {
+            gRaf = 0;
+            glowEl.style.setProperty('--gx', gPos[0] + 'px');
+            glowEl.style.setProperty('--gy', gPos[1] + 'px');
+            var lv = view === 'home' && document.getElementById('vy-live');
+            if (lv) {
+                var rr = lv.getBoundingClientRect();
+                var dx = clamp((gPos[0] - (rr.left + rr.width / 2)) / rr.width, -1, 1);
+                var dy = clamp((gPos[1] - (rr.top + rr.height / 2)) / rr.height, -1, 1);
+                lv.style.setProperty('--ry', (-8 + dx * 10) + 'deg');
+                lv.style.setProperty('--rx', (4 - dy * 8) + 'deg');
+            }
+        });
+    }, { passive: true });
+
     // اسم القسم كتلميح لما القائمة مطوية
     document.getElementById('vy-side').addEventListener('pointerover', function (e) {
         var t = e.target.closest && e.target.closest('[data-tip]');
