@@ -21,18 +21,6 @@
 <!-- أوفرلي البث (تصميم الستريمر فوق اللعبة) — نفس باقي الألعاب -->
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
-<script>
-/* مرحلة اختبار: الحلبة تفتح للأدمن، ولأي حساب عنده صلاحية «تجربة الحلبة» (permissions.arena_tester
-   من لوحة الأدمن) — نفس adminOnly/testPerm ببطاقتها في games.html. الباقي يرجع لمكتبة الألعاب
-   مع رسالة «مرحلة اختبار». بدون جلسة أصلاً يتكفّل بها game-access-guard.js. */
-(function () {
-    var auth = window.AGPAuth, u = auth && auth.getCachedUser ? auth.getCachedUser() : null;
-    if (!u || u.role === 'admin' || (u.permissions && u.permissions.arena_tester)) return;
-    var url = new URL('../../games.html?locked=testing', location.href).href;
-    try { if (window.top !== window) { window.top.location.href = url; return; } } catch (e) {}
-    location.href = url;
-}());
-</script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
