@@ -105,7 +105,7 @@ body[data-phase="lobby"]:not(.settings-open) .top-r,body[data-phase="lobby"]:not
 .cb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff8a1f,#ffd23d)}
 .vs{font-family:var(--display);font-weight:900;color:#c4b5fd;font-size:clamp(16px,1.7vw,22px)}
 #cards.many .av{width:34px;height:34px;font-size:14px}#cards.many .nm{font-size:clamp(13px,1.2vw,16px)}
-#phase{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;font-weight:700;font-size:13px;background:#4c3a86;border:1.5px solid rgba(196,181,253,.35);color:#fff;padding:3px 14px;border-radius:999px;white-space:nowrap;direction:rtl}
+#phase{position:absolute;left:50%;transform:translateX(-50%);bottom:134px;font-weight:700;font-size:13px;background:#4c3a86;border:1.5px solid rgba(196,181,253,.35);color:#fff;padding:3px 14px;border-radius:999px;white-space:nowrap;direction:rtl}
 /* فوق رؤوس اللاعبين */
 .tag{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px;transition:opacity .2s}
 .tag b{font-weight:700;font-size:13px;padding:0 9px;border-radius:999px;color:#fff;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5)}
@@ -145,10 +145,18 @@ body[data-phase="win"] #announce,body[data-phase="win"] #countNum{display:none}
 #dark{background:radial-gradient(ellipse at center,transparent 25%,rgba(0,0,0,.85) 80%);opacity:0;transition:opacity .25s}
 #speed{opacity:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,0) 0deg 4deg,rgba(255,240,200,.55) 4deg 5deg);
   -webkit-mask:radial-gradient(circle at center,transparent 22%,#000 70%);mask:radial-gradient(circle at center,transparent 22%,#000 70%)}
-#feed{position:absolute;bottom:10px;right:max(12px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:5px;align-items:flex-end;direction:rtl;pointer-events:none;max-width:40%}
+#feed{position:absolute;bottom:96px;right:max(12px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:5px;align-items:flex-end;direction:rtl;pointer-events:none;max-width:40%}
 #feed div{background:#15112a;border:1.5px solid rgba(167,139,250,.25);border-inline-start:4px solid #8b7bc4;border-radius:10px;padding:3px 10px;font-size:12.5px;font-weight:600;animation:fin .25s ease-out;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-#tapsIn{position:absolute;left:50%;transform:translateX(-50%);bottom:42px;padding:5px 16px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--mut);background:#15112a;border:1.5px solid rgba(167,139,250,.25);white-space:nowrap;transition:background .3s,color .3s,border-color .3s;pointer-events:none}
+#tapsIn{position:absolute;left:50%;transform:translateX(-50%);bottom:96px;padding:5px 16px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--mut);background:#15112a;border:1.5px solid rgba(167,139,250,.25);white-space:nowrap;transition:background .3s,color .3s,border-color .3s;pointer-events:none}
 #tapsIn.hot{background:#173528;color:#a7dcc2;border-color:rgba(110,190,150,.5)}
+/* شريط الهدايا أسفل الشاشة: أيقونة كل هدية وقوّتها (يتحدّث مع ربط الهدايا بالإعدادات) */
+#giftBar{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px 10px;border-radius:18px;background:#15112a;border:2px solid rgba(167,139,250,.28);box-shadow:0 8px 22px rgba(0,0,0,.45);direction:rtl;pointer-events:none;max-width:calc(100% - 240px)}
+.gb{display:flex;align-items:center;gap:8px;min-width:0;padding:4px 12px 4px 6px;border-radius:12px;background:color-mix(in srgb,var(--c) 12%,#15112a);border:1.5px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.gb img,.gb .ic{width:44px;height:44px;flex-shrink:0;object-fit:contain;display:grid;place-items:center;font-size:26px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.gb span{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.gb b{font-family:var(--display);font-weight:800;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gb small{font-size:12.5px;font-weight:700;color:color-mix(in srgb,var(--c) 55%,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body[data-phase="win"] #giftBar{visibility:hidden}
 #roster{position:absolute;top:66px;bottom:60px;left:max(10px,env(safe-area-inset-left,0px));width:80px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:18px;background:#15112a;border:2px solid rgba(167,139,250,.28);box-shadow:0 8px 22px rgba(0,0,0,.45);overflow:hidden;pointer-events:none;direction:rtl}
 .ro-h{font-size:12px;font-weight:700;color:#c4b5fd;text-align:center;line-height:1.2}.ro-h b{display:block;font-size:16px;color:#fff}
 #rosterList{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;overflow:hidden;-webkit-mask:linear-gradient(#000 88%,transparent);mask:linear-gradient(#000 88%,transparent)}
@@ -345,6 +353,8 @@ body[data-phase="win"] #cards,body[data-phase="win"] #tags,body[data-phase="win"
   .acts{grid-template-columns:repeat(3,minmax(0,1fr))}.kbd,#queue{display:none}
   .card{padding:5px 7px;gap:6px}.av{width:30px;height:30px;font-size:12px}
   #announce{padding:0 62px}.an-card{padding:14px 14px 12px}.an-p .aav{width:40px;height:40px;font-size:15px}.an-pair{gap:8px}
+  #giftBar{max-width:calc(100% - 76px);padding:5px 6px;gap:4px;left:auto;right:8px;transform:none}.gb{padding:3px}.gb span{display:none}.gb img,.gb .ic{width:30px;height:30px;font-size:18px}
+  #tapsIn{bottom:62px}#phase{bottom:96px}#feed{bottom:128px}
   #cards{top:58px;left:62px}#roster{width:54px;top:58px}.ro{width:50px}.ro .rav{width:34px;height:34px;font-size:13px}.ro.q .rav{width:28px;height:28px}.ro .rn{font-size:9.5px;max-width:50px}.ro .rhp{width:32px}.ro-h{font-size:10px}#cards.many .card{flex-basis:100%;padding:3px 7px}#cards.many .cb{display:none}#cards.many .av{width:24px;height:24px;font-size:10px}#cards.many .bar{height:10px}
   #toasts{bottom:120px}
 }
@@ -372,6 +382,7 @@ body[data-phase="win"] #cards,body[data-phase="win"] #tags,body[data-phase="win"
     <div id="announce" aria-live="polite"><div class="an-card"><div class="an-t">لاعبين جدد يدخلون الحلبة</div><div class="an-pairs" id="anPairs"></div><div class="an-bar"><i id="anBar"></i></div></div></div>
     <div id="countNum" aria-live="assertive"></div>
     <div id="feed" class="game-only"></div>
+    <div id="giftBar" class="game-only" aria-label="الهدايا وقواها"></div>
     <div id="tapsIn" class="game-only">👆 ما وصل تكبيس من البث للحين</div>
     <aside id="roster" class="game-only" aria-label="اللاعبين"><div class="ro-h">اللاعبين <b id="rosterN">0</b></div><div id="rosterList"></div></aside>
   </div>

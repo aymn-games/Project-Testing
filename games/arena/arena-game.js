@@ -21,7 +21,7 @@ const CONFIG={
   kickDamage:8,      // ركلة الكومبو
   roseDamage:10,     // وردة
   giftDamage:25,     // هدية 5 عملات (ضربة طائرة)
-  healAmount:15,     // هدية تيك توك: شفاء
+  healAmount:30,     // هدية تيك توك: شفاء
   punchEvery:.1,
   championTime:6     // ثواني احتفال البطل قبل دخول الدفعة الجاية
 };
@@ -764,7 +764,14 @@ const ARENA_API={chat,join:(n,a,id)=>joinPlayer(n,a,id),tap,gift:power,giftEvent
 
 // ---- البث: التكبيس والهدايا والتعليقات تجي من تيك توك (نفس شد الحبل وفورمولا ون) ----
 function renderChips(){}
-function renderActs(){}
+// شريط الهدايا أسفل شاشة اللعب: التكبيس + كل هدية بأيقونتها وقوّتها (حسب ربط الهدايا بالإعدادات)
+const POWER_FX={rose:()=>'ضربة الوردة · -'+CONFIG.roseDamage,gift5:()=>'ضربة طائرة · -'+CONFIG.giftDamage,tiktok:()=>'شفاء · +'+CONFIG.healAmount,donut:()=>'ضربة قاضية'};
+function renderActs(){const bar=$('giftBar');if(!bar)return;bar.innerHTML='';
+  const item=(c,icon,title,sub)=>{const d=document.createElement('div');d.className='gb';d.style.setProperty('--c',c);
+    if(icon&&!/^.{1,3}$/u.test(icon)){const im=document.createElement('img');im.src=icon;im.alt='';d.appendChild(im);}else{const s=document.createElement('span');s.className='ic';s.textContent=icon;d.appendChild(s);}
+    const t=document.createElement('span'),b=document.createElement('b'),sm=document.createElement('small');b.textContent=title;sm.textContent=sub;t.append(b,sm);d.appendChild(t);bar.appendChild(d);};
+  item('#a78bfa','👆','تكبيسة','لكمة · كل '+CONFIG.comboTaps+' ركلة');
+  for(const p of POWERS){const g=giftById(SET.gifts[p.id]);item(p.color,g?g.img:p.icon,g?g.label:p.name,POWER_FX[p.id]());}}
 const GIFT_NAMES={'rose':['Rose'],'tiktok':['TikTok'],'finger-heart':['Finger Heart','FingerHeart'],'donut':['Donut','Doughnut'],'rosa':['Rosa'],'ice-cream':['Ice Cream Cone','Ice Cream'],
   'cake-slice':['Cake Slice'],'love-saudi':['Love Saudi','I Love KSA'],'butterfly':['Butterfly'],'hat-and-mustache':['Hat and Mustache','Hat & Mustache'],'paper-crane':['Paper Crane'],
   'saudi-in-heart':['Saudi in Heart','KSA in my heart'],'heart-in-your-hands-a':['Heart In Your Hands'],'heart-in-your-hands-b':['Heart In Your Hands'],'kings-scepter':["King's Scepter",'Scepter'],
