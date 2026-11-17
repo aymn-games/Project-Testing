@@ -891,6 +891,8 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-black-pegasus.png', display_name_ar: 'الفرس المجنّح الأسود (منح محدود)' },
     { image_filename: 'frame-essa.png', display_name_ar: 'Essa — العنكبوت البنفسجي (منح محدود)' },
     { image_filename: 'frame-purple-spider.png', display_name_ar: 'العنكبوت البنفسجي (منح محدود)' },
+    { image_filename: 'frame-roro-lilac.png', display_name_ar: 'Roro — الليلك واللؤلؤ (منح محدود)' },
+    { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).

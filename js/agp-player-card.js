@@ -430,6 +430,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 10.41, avatarTopPct: 28.69, avatarWidthPct: 19.89, avatarHeightPct: 56.96,
             nameLeftPct: 49.26, nameTopPct: 51.14, nameWidthPct: 40.06, nameHeightPct: 25.57
         },
+        // إطارا "Roro" — منح محدود. أصلهما PNG شفاف حقيقي بمقاسات غير معتمدة
+        // (2070×760 و1672×941): قُصّا على حدود المحتوى وكُبّرا بنفس النسبة
+        // ووُسِّطا على 2172×724. الزينة (الفيونكة/الزهور/شعار تيك توك) تدخل
+        // على حافة الدائرة، فمربع الصورة = الدائرة المقدّرة من جانبيها.
+        // [الليلك] hole 231→678 × 135→581، name 821→1915 × 354→507، content 10→714.
+        // «Roro» مطبوعة فوق اللوح، واللوح نفسه فاضي — اسم بنفسجي غامق (اللوح فاتح).
+        'frame-roro-lilac.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 704,
+            avatarLeftPct: 10.64, avatarTopPct: 17.76, avatarWidthPct: 20.53, avatarHeightPct: 63.35,
+            nameLeftPct: 37.80, nameTopPct: 48.86, nameWidthPct: 50.37, nameHeightPct: 21.73,
+            textColor: '#4a2470'
+        },
+        // [القمر] hole 134→603 × 148→617، الاسم مطبوع (1174→1819 × 288→471، للتوسيط
+        // فقط)، content 20→703.
+        'frame-roro-moon.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 20, contentHeight: 683,
+            avatarLeftPct: 6.17, avatarTopPct: 18.74, avatarWidthPct: 21.59, avatarHeightPct: 68.67,
+            nameLeftPct: 54.05, nameTopPct: 39.24, nameWidthPct: 29.70, nameHeightPct: 26.79,
+            printedName: true
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
