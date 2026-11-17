@@ -63,13 +63,44 @@ function plurality(list) {
 /**
  * roster: [{id,name,look,tiktok}] · settings: من mafia-settings.validate
  * hooks: { onChange() }
+ * saved (اختياري): نسخة من serialize() — ترجّع نفس المباراة بعد إعادة تشغيل السيرفر (نشر جديد على Render)
  */
-function createGame(roster, settings, hooks) {
+function createGame(roster, settings, hooks, saved) {
+    if (saved && saved.G) return restoreGame(saved, hooks);
+    return buildGame(roster, settings, hooks, null);
+}
+
+/** ترجيع مباراة محفوظة: المؤقتات تتزحزح بمدة التوقف (المرحلة تكمل باللي باقي لها)، والروابط اللي انقطعت بالحفظ ترجع */
+function restoreGame(saved, hooks) {
+    var G = saved.G, shift = Math.max(0, Date.now() - (Number(saved.savedAt) || Date.now()));
+    G.phaseAt += shift; if (G.endsAt) G.endsAt += shift;
+    var P = function (id) { return G.players.find(function (p) { return p.id === id; }); };
+    var N = G.night;
+    if (N) {
+        // قرار المافيا (ينحسب بنهاية دورهم) يحمل لاعبين — لازم يكونون نفس لاعبين المباراة عشان الليل يطبّق عليهم
+        if (N.dec) {
+            N.dec.killTargets = (N.dec.killTargets || []).map(function (t) { return t && P(t.id); }).filter(Boolean);
+            N.dec.opTarget = N.dec.opTarget ? P(N.dec.opTarget.id) || null : null;
+            N.dec.cardTarget = N.dec.cardTarget ? P(N.dec.cardTarget.id) || null : null;
+        }
+        // التأثيرات اللي انكشفت للمحقق الليلة (تنحرق بالفجر) — نفس عناصر G.effects
+        N.triggered = (N.triggered || []).map(function (t) { return G.effects.find(function (e) { return e.card === t.card && e.target === t.target && e.expires === t.expires; }); }).filter(Boolean);
+    }
+    return buildGame(null, G.settings, hooks, { G: G, chatSeq: Number(saved.chatSeq) || 0 });
+}
+
+function buildGame(roster, settings, hooks, restored) {
     var S = settings;
+    var G = restored ? restored.G : newState(roster, S);
+    var chatSeq = restored ? restored.chatSeq : 0;
+    return gameApi(G, S, hooks, chatSeq, !!restored);
+}
+
+function newState(roster, S) {
     var roles = assignRoles(roster.length, S);
     var districts = Math.max(1, Math.ceil(roster.length / DISTRICT_SIZE));
     var districtOrder = shuffle(roster.map(function (_, i) { return i; }));
-    var G = {
+    return {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         phase: 'reveal', round: 0, startedAt: Date.now(), phaseAt: Date.now(), endsAt: Date.now() + REVEAL_MS,
         settings: S, districts: districts,
@@ -88,7 +119,9 @@ function createGame(roster, settings, hooks) {
         usedCards: [], effects: [], silenced: [], silenceNext: [],
         night: null, seq: [], chat: [], votes: {}, voteOk: {}, verdict: null, winner: null, mafiaPrev: []
     };
-    var chatSeq = 0;
+}
+
+function gameApi(G, S, hooks, chatSeq, restored) {
 
     function changed() { if (hooks && hooks.onChange) hooks.onChange(); }
     function P(id) { return G.players.find(function (p) { return p.id === id; }); }
@@ -107,7 +140,7 @@ function createGame(roster, settings, hooks) {
     function sys(text) { G.chat.push({ n: ++chatSeq, sys: true, ch: 'city', text: text, at: Date.now() }); trimChat(); }
     function trimChat() { if (G.chat.length > CHAT_MAX) G.chat.splice(0, G.chat.length - CHAT_MAX); }
 
-    G.players.forEach(function (p) {
+    if (!restored) G.players.forEach(function (p) {
         notice(p, 'دورك: ' + ROLE_NAMES[p.role] + (p.faction === 'mafia' ? ' — تقدر تدخل شات المافيا السري.' : ' — دوّر على المافيا.'));
     });
 
@@ -594,9 +627,13 @@ function createGame(roster, settings, hooks) {
         return v;
     }
 
-    sys('بدأت المباراة: ' + G.players.length + ' لاعب' + (G.districts > 1 ? ' في ' + G.districts + ' أحياء' : '') + ' — شوفوا أدواركم على جوالاتكم');
+    if (!restored) sys('بدأت المباراة: ' + G.players.length + ' لاعب' + (G.districts > 1 ? ' في ' + G.districts + ' أحياء' : '') + ' — شوفوا أدواركم على جوالاتكم');
     changed();
-    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, view: view, _available: available };
+    /** نسخة قابلة للحفظ (JSON) — mafia-server يحفظها بقاعدة البيانات، وcreateGame(…, saved) يرجّعها */
+    function serialize() { return { G: G, chatSeq: chatSeq, savedAt: Date.now() }; }
+    if (restored) changed();
+
+    return { G: G, tick: tick, act: act, endStage: endStage, remove: remove, view: view, serialize: serialize, _available: available };
 }
 
 module.exports = { createGame: createGame, SHOT: SHOT, REVEAL_MS: REVEAL_MS, VERDICT_MS: VERDICT_MS, CARDS: CARDS, CARD_NAMES: CARD_NAMES, ROLE_NAMES: ROLE_NAMES, DISTRICT_SIZE: DISTRICT_SIZE };
