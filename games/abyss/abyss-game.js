@@ -91,10 +91,15 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
     // الجواب ← اللوح: 1/صح = يمين (0) · 2/خطأ = يسار (1)
+    // يقبل: 1 / 2 (عربي أو هندي، أو إيموجي 1️⃣ 2️⃣)، والرقم مكرر (11 / 222) لأن تيك توك أحياناً يمنع إرسال
+    // نفس الرسالة مرتين ورا بعض، ومع كلمة قبله («رقم 2»، «خيار 1»)، وبالحروف (واحد / اثنين)، وصح أو خطأ لأسئلة صح وخطأ.
+    var ONE = { 'واحد': 1, 'وحد': 1 }, TWO = { 'اثنين': 1, 'اثنان': 1, 'ثنين': 1, 'اثنن': 1 }, PRE = { '': 1, 'رقم': 1, 'خيار': 1, 'جواب': 1, 'اجابه': 1 };
     function laneOf(text, q) {
         var t = AB.norm(text);
-        if (t === '1') return 0;
-        if (t === '2') return 1;
+        if (ONE[t]) return 0;
+        if (TWO[t]) return 1;
+        var d = t.replace(/[^0-9]/g, ''), w = t.replace(/[0-9]/g, '');
+        if (d && PRE[w]) { if (/^1+$/.test(d)) return 0; if (/^2+$/.test(d)) return 1; }
         if (isTF(q)) { if (t === 'صح' || t === 'صحيح') return 0; if (t === 'خطا' || t === 'غلط') return 1; }
         return -1;
     }
@@ -205,7 +210,7 @@
         clearAll();
         S.players = names.map(makePlayer); participants = {};
         S.players.forEach(function (p) { participants[p.name] = true; try { AGP.winCard && AGP.winCard.preloadFor(reg.player(p.name)); } catch (e) {} });
-        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false; S.supUsed = {}; S.reviveQ = [];
+        S.qs = []; S.rows = []; S.row = 0; S.winners = []; S.broke = false; S.pts = {}; S.ptsState = 'idle'; S.reported = false; S.lastOne = false; S.supUsed = {}; S.reviveQ = [];
         S.cam = 'overview'; S.phase = 'intro';
         ensureRows(CFG.mode === 'steps' ? CFG.steps : 6);
         $('win').hidden = true;
@@ -269,7 +274,8 @@
     function next() {
         var left = alive();
         if (!left.length) return finish([]);
-        if (CFG.mode === 'last' && left.length === 1) return finish(left);
+        // آخر ناجي يفوز فورًا بالوضعين — حتى لو باقي خطوات للنهاية (مباراة بدأت بلاعب واحد تكمل للنهاية)
+        if (left.length === 1 && (CFG.mode === 'last' || S.players.length > 1)) { S.lastOne = true; return finish(left); }
         S.row++;
         if (CFG.mode === 'steps' && S.row >= CFG.steps) { left.forEach(function (p) { p.row = CFG.steps; p.lane = 0; }); pushScene(); return later(function () { finish(left); }, 1300); }
         ask();
@@ -311,7 +317,7 @@
     function renderWin() {
         var ws = S.players.filter(function (p) { return S.winners.indexOf(p.id) >= 0; }), n = ws.length, total = Object.keys(participants).length;
         $('winH').textContent = n ? (n === 1 ? '🏆 الفائز في لعبة "الهاوية"' : '🏆 الفائزين في لعبة "الهاوية"') : '💀 سقط الجميع في الهاوية';
-        $('winSub').textContent = n ? (n === 1 ? (CFG.mode === 'last' ? 'آخر ناجي من ' + total + ' لاعب' : 'وصل خط النجاة من ' + total + ' لاعب') : 'وصلوا خط النجاة ' + n + ' من ' + total + ' لاعب') : 'ما أحد نجا هالمرة — جربوا مرة ثانية';
+        $('winSub').textContent = n ? (n === 1 ? (CFG.mode === 'last' || S.lastOne ? 'آخر ناجي من ' + total + ' لاعب' : 'وصل خط النجاة من ' + total + ' لاعب') : 'وصلوا خط النجاة ' + n + ' من ' + total + ' لاعب') : 'ما أحد نجا هالمرة — جربوا مرة ثانية';
         // كل ما زاد عدد الفائزين تصغر البطاقات (بدون أي تطاير)
         var k = n <= 1 ? 1 : n <= 3 ? .85 : n <= 6 ? .7 : n <= 12 ? .58 : .5, MAX = 24;
         $('winCards').innerHTML = ws.slice(0, MAX).map(function (p, i) {
@@ -358,7 +364,10 @@
         AB.connect();
         AB.onComment(function (c) {
             var name = reg.nameFor(c);
-            if (AB.norm(c.text) === AB.norm(CFG.joinWord)) {
+            // كلمة الدخول تنحسب دخول بس للي مو داخل المباراة. اللي داخلها رسالته جواب دائماً،
+            // حتى لو كلمة الدخول نفسها «1» أو «2» (كانت تنبلع كمحاولة دخول وما ينحسب الجواب).
+            var inGame = S.players.some(function (p) { return p.name === name; });
+            if (!inGame && AB.norm(c.text) === AB.norm(CFG.joinWord)) {
                 if ($('bAuto').getAttribute('aria-checked') !== 'true') return;
                 if (CFG.followersOnly && !c.isFollower) return;
                 return joinMidMatch(name);

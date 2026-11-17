@@ -1068,6 +1068,10 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             <button onClick="{{ du.toggleVeyro }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tV.bg }}"><span style="position:absolute;top:3px;right:{{ du.tV.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">تجربة الحلبة</span><span style="font-size:12px;color:#5b6274;text-wrap:pretty">يفتح له لعبة «الحلبة» وهي بمرحلة الاختبار (من المكتبة أو الرابط) — له هو بس</span></div>
+            <button onClick="{{ du.toggleArena }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tAr.bg }}"><span style="position:absolute;top:3px;right:{{ du.tAr.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">استوديو البث</span><span style="font-size:12px;color:#5b6274;text-wrap:pretty">يفتح له زر «استوديو البث» بمكتبة الألعاب قبل الإطلاق العام — له هو بس</span></div>
             <button onClick="{{ du.toggleStudio }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tSt.bg }}"><span style="position:absolute;top:3px;right:{{ du.tSt.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
           </div>
@@ -1237,6 +1241,7 @@ class Component extends DCLogic {
     if(u.permissions&&u.permissions.can_manage_letters_cell) perms.push('أسئلة خلية الحروف');
     if(u.permissions&&u.permissions.stream_stats_watch) perms.push('مراقبة إحصائيات البث');
     if(u.permissions&&u.permissions.veyro_tester) perms.push('تجربة Veyro');
+    if(u.permissions&&u.permissions.arena_tester) perms.push('تجربة الحلبة');
     if(u.permissions&&u.permissions.stream_studio) perms.push('استوديو البث');
     const pts=u.points?u.points.totalPoints:0, lvl=u.points&&u.points.currentLevel?(u.points.currentLevel.displayNameAr||u.points.currentLevel.slug):null;
     const st=u.stats||{};
@@ -1333,9 +1338,9 @@ class Component extends DCLogic {
       :is.perms?'صلاحية «تشغيل كامل»: الحساب يشغّل كل الألعاب على أي بث تيك توك، بدون ما يكون حساب ستريمر أو يربط تيك توك، وبدون قيد الأجهزة.':'منح أو سحب بطاقة إقصاء لمستخدم.';
 
     // ---- users
-    const all=s.users||[], ql=s.q.trim().toLowerCase();
+    const all=s.users||[], ql=s.q.trim().toLowerCase().replace(/^@+/,'');
     const list=all.filter(u=>(s.usersTab==='streamers')===isStreamerLike(u))
-      .filter(u=>!ql||String(u.id)===ql||[u.username,u.email,u.custom_id,s.usersTab==='streamers'?u.tiktok_username:''].some(x=>x&&String(x).toLowerCase().includes(ql)));
+      .filter(u=>!ql||String(u.id)===ql||[u.username,u.email,u.custom_id,u.tiktok_username].some(x=>x&&String(x).toLowerCase().includes(ql)));
     const rows=list.map(u=>this.decorate(u));
     const counts={ players:all.filter(u=>!isStreamerLike(u)).length, streamers:all.filter(isStreamerLike).length };
     const usersTabs=[['players','اللاعبون'],['streamers','الستريمرز']].map(([k,l])=>({ label:l, count:s.users?counts[k]:'…', go:()=>this.setState({ usersTab:k, q:'' }), bg:s.usersTab===k?'#7c3aed':'transparent', color:s.usersTab===k?'#fff':'#9199ab' }));
@@ -1366,6 +1371,8 @@ class Component extends DCLogic {
         // «تجربة Veyro»: يفتح aymngames.online/veyro ويجرب الأدوات بدون الاتصال بالبث
         tV:this.tog(perm('veyro_tester')||dRaw.role==='admin'), toggleVeyro:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح Veyro دائماً','err'); setPerm('veyro_tester'); },
         // «استوديو البث» (stream-studio.html) مقفول للعامة — permissions.stream_studio يفتحه لهذا الحساب بس
+        // «تجربة الحلبة»: يفتح لعبة الحلبة وهي بمرحلة الاختبار (permissions.arena_tester)
+        tAr:this.tog(perm('arena_tester')||dRaw.role==='admin'), toggleArena:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح الحلبة دائماً','err'); setPerm('arena_tester'); },
         tSt:this.tog(perm('stream_studio')||dRaw.role==='admin'), toggleStudio:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح استوديو البث دائماً','err'); setPerm('stream_studio'); },
         savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
           this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },
@@ -1526,7 +1533,7 @@ class Component extends DCLogic {
       // users
       usersTabs, rows, q:s.q, onQ:e=>this.setState({ q:e.target.value }),
       isPlayersTab:s.usersTab==='players', isStreamersTab:s.usersTab==='streamers',
-      searchPh:s.usersTab==='players'?'بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / المعرّف الداخلي)':'بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)',
+      searchPh:s.usersTab==='players'?'بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)':'بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)',
       rowsEmpty:!rows.length, rowsEmptyText:!s.users?'جارٍ التحميل…':ql?'لا توجد نتائج مطابقة.':(s.usersTab==='players'?'لا يوجد لاعبون بعد.':'لا يوجد ستريمرز بعد.'),
       drawerOpen:!!dRaw, du, closeDrawer:()=>this.setState({ drawerId:null }),
       // picker
