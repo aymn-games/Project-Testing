@@ -41,6 +41,10 @@ var BURST_GAP_MS = 300, BIG_BURST_GAP_MS = 600, HEARTBEAT_MS = 5000;
 
 var _rooms = {};
 var _clients = {};
+// الحفظ في SQLite (mafia-store): الروم والمباراة ترجع بعد إعادة تشغيل السيرفر (نشر جديد على Render).
+// مجمّع: مرة كل SAVE_MS بالأكثر لكل روم، وكل شي معلّق ينكتب عند SIGTERM. _store = null ← بدون حفظ (الاختبارات، أو القاعدة ما اشتغلت)
+var SAVE_MS = 2000;
+var _store = null, _sigHooked = false;
 var _validateSession = function (token) { return require('../auth/auth-service').validateSession(String(token || '')); };
 // الإطار المفعّل بحساب اللاعب (لحسابات تيك توك الموثّقة) — نفس مصدر بطاقات اللوبي بباقي الألعاب
 // «وش الجديد بالمافيا» يطلع لكل حساب مرة وحدة (محفوظ بحسابه). إعلان جديد = غيّر المفتاح (ونفس المفتاح بـjoin.html)
@@ -75,7 +79,7 @@ function publicRoom(room) {
         chat: room.lobbyChat.slice(-40)
     };
 }
-function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); sendAvatars(room); }
+function broadcastRoom(room) { markSave(room); var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); sendAvatars(room); }
 
 // صورة بروفايل اللاعب بالموقع (المرفوعة أو صورة تيك توك المحفوظة) — لشاشة المذيع بس (اللوبي وشاشة الفوز)،
 // وترسل مرة وحدة لكل لاعب بدل ما تتكرر مع كل تحديث
@@ -154,6 +158,54 @@ function dupChat(room, client, cid) {
     return false;
 }
 
+// ---- الحفظ والترجيع
+function markSave(room) { if (_store && room) room.saveDirty = true; }
+// صورة البروفايل (Data URL كبير) والحقول المؤقتة (_cids/_lastChat) ما تنحفظ — الصورة ترجع من الحساب بعد الترجيع
+function serializeRoom(room) {
+    return {
+        v: 1, code: room.code, token: room.token, settings: room.settings, started: room.started,
+        lobbyChat: room.lobbyChat, lobbyChatN: room.lobbyChatN || 0,
+        players: room.players.map(function (p) { return { id: p.id, key: p.key, uid: p.uid, name: p.name, look: p.look, tiktok: p.tiktok || null, avatar: p.avatar || null, frame: p.frame || null }; }),
+        game: room.game ? room.game.serialize() : null, savedAt: Date.now()
+    };
+}
+function flushSave(room, force) {
+    if (!_store || !room.saveDirty || _rooms[room.code] !== room) return;
+    var now = Date.now(); if (!force && now - (room.savedAt || 0) < SAVE_MS) return;
+    room.savedAt = now; room.saveDirty = false;
+    try { _store.save(room.code, serializeRoom(room)); } catch (err) { logger.error('Mafia: save failed for ' + room.code + ':', err); }
+}
+function flushAll() { Object.keys(_rooms).forEach(function (code) { flushSave(_rooms[code], true); }); }
+function restoreRoom(o) {
+    if (!o || o.v !== 1 || typeof o.code !== 'string' || _rooms[o.code]) return false;
+    // المذيع ما رجع خلال مهلته (نفس HOST_GRACE_MS) ← الروم منتهية
+    if (!o.savedAt || Date.now() - o.savedAt > HOST_GRACE_MS) return false;
+    var room = { code: o.code, token: o.token, settings: Settings.validate(o.settings || {}), players: [], lobbyChat: o.lobbyChat || [], lobbyChatN: o.lobbyChatN || 0, started: false, game: null, hostConn: null, hostGoneAt: Date.now(), dirty: true, lastSend: 0 };
+    room.players = (o.players || []).map(function (p) { var q = Object.assign({}, p); q.photo = q.uid != null ? _photoOf(q.uid) : null; return q; });
+    if (o.started && o.game) {
+        room.game = Game.createGame(null, room.settings, { onChange: function () { room.dirty = true; markSave(room); } }, o.game);
+        room.started = true;
+    }
+    _rooms[room.code] = room;
+    return true;
+}
+/** عند تشغيل السيرفر (ws-server): نرجّع الرومات المحفوظة، ونكتب الحفظ المعلّق عند الإيقاف */
+function boot() {
+    if (!_store) { try { _store = require('./mafia-store').createStore(require('../db/database')); } catch (err) { logger.error('Mafia: store unavailable:', err); return; } }
+    var rows = [], n = 0;
+    try { rows = _store.loadAll(); } catch (err) { logger.error('Mafia: load failed:', err); }
+    // كل روم لحالها: صف تالف ما يوقف رجوع الباقي
+    rows.forEach(function (o) {
+        try { if (restoreRoom(o)) n++; else if (o && typeof o.code === 'string' && !_rooms[o.code]) _store.remove(o.code); }
+        catch (err) { logger.error('Mafia: restore failed for ' + (o && o.code) + ':', err); try { _store.remove(o.code); } catch (e) { } }
+    });
+    if (n) { logger.log('Mafia: restored ' + n + ' rooms'); ensureTicker(); }
+    if (!_sigHooked) {
+        _sigHooked = true;
+        process.once('SIGTERM', function () { try { flushAll(); } catch (e) { } process.kill(process.pid, 'SIGTERM'); });
+    }
+}
+
 function createRoom() {
     // رقم من نطاق المافيا (rooms/room-code-ranges.js) عشان خانة «رقم الغرفة» بالرئيسية توصل للعبة الصح
     var code = CodeRanges.allocate('mafia', function (c) { return !!_rooms[c]; });
@@ -167,12 +219,13 @@ function createRoom() {
 function closeRoom(room, reason) {
     roomClients(room).forEach(function (c) { if (c.role !== 'host') send(c, { t: 'closed', reason: reason || '' }); c.code = null; c.id = null; });
     delete _rooms[room.code];
+    if (_store) { try { _store.remove(room.code); } catch (err) { logger.error('Mafia: store remove failed:', err); } }
     logger.log('Mafia: room ' + room.code + ' closed (' + (reason || '') + ')');
 }
 
 function startGame(room) {
     room.game = Game.createGame(room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok }; }), room.settings, {
-        onChange: function () { room.dirty = true; }
+        onChange: function () { room.dirty = true; markSave(room); }
     });
     room.started = true; room.dirty = true;
     broadcastRoom(room); sendStates(room);
@@ -406,6 +459,7 @@ function tickAll() {
     Object.keys(_rooms).forEach(function (code) {
         var room = _rooms[code];
         if (!room.hostConn && room.hostGoneAt && now - room.hostGoneAt > HOST_GRACE_MS) return closeRoom(room, 'host-timeout');
+        flushSave(room, false);
         if (!room.game) return;
         try { room.game.tick(now); } catch (err) { logger.error('Mafia: tick error:', err); }
         // الرومات الكبيرة (لين 200 لاعب): نجمع التغييرات بدل ما نرسل نسخة لكل لاعب مع كل رسالة شات
@@ -448,4 +502,4 @@ function handleUpgrade(req, socket) {
 /** لزر «دخول غرفة» (rooms/room-lookup-service.js): فيه روم مافيا مفتوحة بهالرقم؟ الروم المقفلة تنحذف من _rooms فما تنحسب. */
 function hasRoom(code) { return Object.prototype.hasOwnProperty.call(_rooms, String(code || '')); }
 
-module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, _rooms: _rooms, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _setSiteNameLookup: function (fn) { _siteNameOf = fn; }, _setTikTokPhotoLookup: function (fn) { _tkPhotoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; }, _setSeenStore: function (s) { _seen = s; }, NEWS_KEY: NEWS_KEY };
+module.exports = { handleUpgrade: handleUpgrade, hasRoom: hasRoom, boot: boot, _rooms: _rooms, _setStore: function (s) { _store = s; }, _flushAll: flushAll, _setProfileFetcher: function (fn) { _profileFetcher = fn; }, _setPhotoLookup: function (fn) { _photoOf = fn; }, _setSiteNameLookup: function (fn) { _siteNameOf = fn; }, _setTikTokPhotoLookup: function (fn) { _tkPhotoOf = fn; }, _enriched: _enriched, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; }, _setSeenStore: function (s) { _seen = s; }, NEWS_KEY: NEWS_KEY };
