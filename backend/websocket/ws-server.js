@@ -794,5 +794,6 @@ module.exports = {
     logger.log('WS Server: attached to HTTP server, listening for WebSocket upgrades.');
     // الحفلات المجدولة المحفوظة ترجع بعد إعادة التشغيل (مطفأة لو PARTY_ENABLED مو مفعّل)
     try { require('../party/party-server').boot(); } catch (err) { logger.error('Party boot failed:', err); }
+    try { require('../mafia/mafia-server').boot(); } catch (err) { logger.error('Mafia boot failed:', err); }
   }
 };

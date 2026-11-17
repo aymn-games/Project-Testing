@@ -83,6 +83,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
 .pill { flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; }
 .pill.on { background: rgba(139,92,246,.28); color: #fff; border-color: var(--gold); box-shadow: 0 0 12px rgba(139,92,246,.35); }
+.pill:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
 .acct a { color: var(--gold); font-weight: 900; }
 .acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; position: relative; background: var(--card2); font-weight: 900; font-size: 22px; }
@@ -120,17 +121,45 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .ct[disabled] { opacity: .4; cursor: default; }
 .ct.none { border-style: dashed; }
 /* دور المافيا: تبويبين «الهدف» و«الكرت» فوق، وكل واحد ياخذ المساحة كاملة (الكروت كانت تنضغط تحت الشبكة وتختفي بالجوالات الصغيرة) */
-.msteps { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
-.mstep { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 46px; padding: 3px 6px; border: 0; border-radius: 12px; background: transparent; color: var(--mute); font: inherit; cursor: pointer; }
-.mstep b { font-size: 15px; font-weight: 700; }
-.mstep .mcnt { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); vertical-align: 1px; }
-.mstep .mcnt.ok { background: rgba(47,179,106,.3); }
-.msteps + .gwrap, .msteps + .note, .msteps + .opts { margin-top: 2px; }
-.mstep small { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mstep.on { color: #fff; background: rgba(226,72,61,.28); box-shadow: inset 0 0 0 1.5px rgba(226,72,61,.8); }
-.mstep.done small { color: #7ee2a6; }
-.mstep.need::after { content: ''; position: absolute; inset: 0; border-radius: 12px; border: 1.5px solid var(--gold); animation: needP 1.4s ease-in-out infinite; }
-.mstep:disabled { opacity: .45; cursor: default; }
+/* دور المافيا بالجوال: شريط الفريق ← مفتاح العملية ← سطر حالة واحد ← المحتوى (يسكرول) ← «تأكيد». كلها flex: none عشان ما تنضغط تحت بعض */
+.mteam { flex: none; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 1px; }
+.mteam::-webkit-scrollbar { display: none; }
+.mmate { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px 0 4px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); font-size: 13px; white-space: nowrap; max-width: 80vw; }
+.mmate svg { width: 26px; height: 26px; border-radius: 50%; flex: none; }
+.mmate b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.mmate em { font-style: normal; color: var(--mute); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.mmate.on em { color: #7ee2a6; }
+.mops { flex: none; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 6px; }
+.mop { position: relative; min-height: 58px; padding: 6px 4px; border-radius: 14px; border: 1.5px solid var(--line); background: rgba(255,255,255,.04); color: #fff; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; min-width: 0; }
+.mop b { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.mop small { font-size: 11.5px; color: var(--mute); line-height: 1.25; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mop.on { border-color: var(--red); background: rgba(226,72,61,.16); box-shadow: 0 0 0 3px rgba(226,72,61,.18); }
+.mop.on small { color: #ffb4ad; }
+.mop.lock { border-style: dashed; background: transparent; }
+.mop.lock b { color: var(--mute); }
+.mop.lock small { color: #f2b632; }
+.mop.done::after { content: '✓'; position: absolute; top: 4px; left: 7px; font-size: 12px; font-weight: 700; color: #7ee2a6; }
+.mstatus { flex: none; display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; border: 1px solid rgba(167,139,250,.3); background: rgba(139,92,246,.1); color: var(--c3); }
+.mstatus i { font-style: normal; flex: none; }
+.mstatus.warn { border-color: rgba(242,182,50,.45); background: rgba(242,182,50,.1); color: #fde68a; }
+.mstatus.bad { border-color: rgba(226,72,61,.5); background: rgba(226,72,61,.14); color: #ffd1cc; }
+.mcards { display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+.mcard { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border-radius: 14px; border: 1.5px solid rgba(167,139,250,.22); background: linear-gradient(160deg, rgba(139,92,246,.14), rgba(255,255,255,.02)); color: #fff; font: inherit; cursor: pointer; text-align: right; }
+.mcard .ic { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 24px; background: rgba(255,255,255,.06); }
+.mcard .tx { flex: 1; min-width: 0; }
+.mcard .tx b { display: block; font-size: 15px; font-weight: 700; }
+.mcard .tx small { display: block; font-size: 12.5px; color: var(--mute); line-height: 1.45; }
+.mcard .st { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.07); color: var(--mute); }
+.mcard.sel { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(167,139,250,.25); }
+.mcard.sel .st { background: rgba(167,139,250,.3); color: #fff; }
+.mcard:disabled { opacity: .45; cursor: default; }
+.mnone { width: 100%; height: 44px; border-radius: 12px; border: 1.5px dashed rgba(251,191,36,.5); background: transparent; color: #fde68a; font: inherit; font-weight: 600; cursor: pointer; }
+@media (max-height: 640px) {
+    .mop { min-height: 48px; } .mop small { font-size: 11px; }
+    .mstatus { padding: 6px 10px; font-size: 12.5px; }
+    .mcard { padding: 8px 10px; } .mcard .ic { width: 38px; height: 38px; font-size: 20px; }
+}
+@media (max-width: 340px) { .mop b { font-size: 14px; } .mcard .st { display: none; } }
 .cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; align-content: start; padding: 2px; }
 .cgrid .ct { position: relative; width: auto; aspect-ratio: auto; min-height: 96px; padding: 10px 8px; text-align: center; }
 .cgrid .ct span { font-size: 32px; }
@@ -188,10 +217,6 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .msum.ok .msum-h { color: #7ee2a6; }
 .msum-l { font-size: 17px; font-weight: 700; }
 .msum small { display: block; color: var(--mute); font-size: 13px; margin-top: 4px; }
-.mstep { margin-top: 14px; padding: 12px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); }
-.mstep-h { display: flex; align-items: center; gap: 8px; font-size: 19px; }
-.mstep-h .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--g1), var(--g2)); font-size: 15px; font-weight: 700; flex: none; }
-.mstep-h small { margin-inline-start: auto; color: var(--mute); font-size: 13px; }
 .cards { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .ccard { display: flex; gap: 12px; align-items: flex-start; width: 100%; padding: 12px; border-radius: 16px; border: 1px solid rgba(167,139,250,.25); background: linear-gradient(160deg, rgba(139,92,246,.14), rgba(255,255,255,.02)); color: #fff; text-align: right; cursor: pointer; font: inherit; }
 .ccard.sel { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(167,139,250,.45); }
@@ -783,7 +808,7 @@ body.watching { overflow: hidden; }
     // اختيار اللاعب: بطاقات مربعة (عمودين بالجوال وأكثر بالآيباد) داخل صندوق بسكرول، وزر «تخطي» مميز أول الشبكة
     function playerRows(G, opts) {
         var f = S.filter.trim().toLowerCase();
-        var list = plist(G).filter(function (p) { return (!big(G) || p.alive) && (!f || p.name.toLowerCase().indexOf(f) >= 0); });
+        var list = plist(G).filter(function (p) { return (!big(G) || p.alive) && (!f || p.name.toLowerCase().indexOf(f) >= 0) && !(opts.hide && opts.hide(p)); });
         var skip = opts.skip ? '<button type="button" class="pt skip' + (opts.skip.sel ? ' sel' : '') + '"' + (opts.skip.can === false ? ' disabled' : ' data-act="' + opts.action + '" data-id="' + (opts.skip.id || 'skip') + '"') + '><span class="pi">⏭️</span><b>تخطي</b>' + (opts.skip.tag ? '<em>' + opts.skip.tag + '</em>' : '') + '</button>' : '';
         return (big(G) ? '<input class="field" id="pf" placeholder="🔎 دوّر على اسم…" autocomplete="off" style="margin-top:10px;height:42px;font-size:16px" value="' + esc(S.filter) + '">' : '') +
             '<div class="grid">' + skip + list.map(function (p) {
@@ -888,8 +913,9 @@ body.watching { overflow: hidden; }
     }
 
     var CARD_INFO = {
-        recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوفه: مواطن' }, reveal: { i: '👁️', d: 'تعرفون دوره' },
-        mislead: { i: '🎭', d: 'المحقق يشوف: مافيا' }, silence: { i: '🤐', d: 'ما يكتب بكرة' }
+        recruit: { i: '🤝', d: 'يصير مافيا' }, shield: { i: '🛡️', d: 'المحقق يشوفه: مواطن', long: 'واحد منكم يطلع للمحقق «مواطن» لليلتين' },
+        reveal: { i: '👁️', d: 'تعرفون دوره', long: 'تعرفون دور لاعب بالفجر' },
+        mislead: { i: '🎭', d: 'المحقق يشوف: مافيا', long: 'لاعب بريء يطلع للمحقق «مافيا» لليلتين' }, silence: { i: '🤐', d: 'ما يكتب بكرة', long: 'لاعب ما يكتب بنقاش بكرة (يصوّت عادي)' }
     };
     // حد الشخصين: لو زملاءك (غيرك) اختاروا شخصين مختلفين، تقدر تختار واحد منهم بس (الخادم يفرضها بعد)
     function lockOf(picks, meId) {
@@ -903,55 +929,86 @@ body.watching { overflow: hidden; }
     }
     function teamCount(picks, id) { return Object.keys(picks || {}).filter(function (k) { return picks[k] === id; }).length; }
 
+    // دور المافيا بالجوال: مفتاح عملية واضح (قتل · تجنيد · كرت)، سطر حالة واحد، والمحتوى يسكرول لحاله وزر «تأكيد» ثابت تحت.
+    // قبل كانت أزرار «قتل/تجنيد» تنضغط لين تختفي تحت الملاحظات، وتبويبي «الهدف/الكرت» ماخذين مساحة، وتطلع لين 3 ملاحظات فوق بعض
     function mafiaNight(G) {
         var me = G.me, ops = me.ops || {}, cv = me.cardVotes || {}, cards = G.cards || [];
         var team = G.players.filter(function (p) { return p.team === 'mafia' && p.alive; });
         var recruit = cards.find(function (c) { return c.id === 'recruit'; });
-        if (S.opMode === 'recruit' && !(recruit && recruit.available)) S.opMode = 'kill';
         var aux = cards.filter(function (c) { return c.id !== 'recruit'; }), anyCard = aux.some(function (c) { return c.available; });
-        var key = function (o) { return o ? JSON.stringify(o) : ''; };
-        var opsK = team.map(function (m) { return key(ops[m.id]); }), cdK = team.map(function (m) { return key(cv[m.id]); });
-        var recruitMine = ops[me.id] && ops[me.id].op === 'recruit';
-        var agreed = opsK.every(function (k) { return k && k === opsK[0]; }) && (!anyCard || recruitMine || cdK.every(function (k) { return k && k === cdK[0]; }));
+        // فريق المافيا (2+): كل واحد يختار هدف أو كرت، وهدفين مختلفين يقفلون الكروت الليلة
+        var tm = !!me.teamMode, locked = !!me.cardsLocked, realC = function (c) { return c && c.card !== 'none'; };
+        var myOp = ops[me.id], myCard = realC(cv[me.id]) ? cv[me.id] : null;
         var picks = {}; Object.keys(ops).forEach(function (k) { picks[k] = ops[k].op === 'skip' ? 'skip' : ops[k].target; });
-        var lock = lockOf(picks, me.id), prev = me.mafiaPrev || [], allIn = team.every(function (m) { return ops[m.id]; });
-        var split = (function () { var l = []; team.forEach(function (m) { var o = ops[m.id]; if (o && o.op === 'kill' && l.indexOf(o.target) < 0) l.push(o.target); }); return l.length > 1; })();
-        var done = team.filter(function (m) { return ops[m.id]; }).length;
+        var lock = lockOf(picks, me.id), prev = me.mafiaPrev || [];
         var cnt = function (fn) { return team.filter(function (m) { return fn(m.id); }).length; };
-        // الكروت كانت تحت شبكة الأهداف، وبالجوالات الصغيرة تنضغط وتختفي (ومعها زر «تأكيد»). الحين الدور تبويبين فوق:
-        // «🔪 الهدف» و«🃏 الكرت»، وكل واحد ياخذ المساحة كاملة. بعد ما يختار الهدف ينتقل للكروت مرة وحدة بالليلة
-        var showCards = aux.length && !recruitMine;
-        if (!showCards || !anyCard) S.mstep = 'target';
-        else if (ops[me.id] && S.mstepAuto !== G.id + G.round && !cv[me.id]) { S.mstepAuto = G.id + G.round; S.mstep = 'card'; }
-        var step = S.mstep === 'card' ? 'card' : 'target';
-        var myOp = ops[me.id], myCard = cv[me.id];
-        var tgtTxt = !myOp ? 'اختار' : myOp.op === 'skip' ? '⏭️ تخطي' : (myOp.op === 'recruit' ? '🤝 ' : '') + esc(pname(G, myOp.target));
-        var cardTxt = !anyCard ? 'من الليلة 2' : !myCard ? 'اختياري' : myCard.card === 'none' ? 'بدون' : CARD_INFO[myCard.card].i + ' ' + esc(pname(G, myCard.target));
-        var html = showCards ? '<div class="msteps">' +
-            '<button type="button" class="mstep' + (step === 'target' ? ' on' : '') + (myOp ? ' done' : '') + '" data-mstep="target"><b>🔪 الهدف <span class="mcnt' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅' : done + '/' + team.length) + '</span></b><small>' + tgtTxt + '</small></button>' +
-            '<button type="button" class="mstep' + (step === 'card' ? ' on' : '') + (myCard ? ' done' : '') + (anyCard && !myCard && myOp ? ' need' : '') + '" data-mstep="card"' + (anyCard ? '' : ' disabled') + '><b>🃏 الكرت</b><small>' + cardTxt + '</small></button></div>' : '';
-        if (step === 'card') {
-            html += '<div class="gwrap"><div class="cgrid">' + aux.map(function (c) {
-                var I = CARD_INFO[c.id], n = cnt(function (id) { return cv[id] && cv[id].card === c.id; });
-                return '<button type="button" class="ct' + (myCard && myCard.card === c.id ? ' sel' : '') + '"' + (c.available ? ' data-cardsel="' + c.id + '"' : ' disabled') + '><span>' + I.i + '</span><b>' + esc(c.name) + '</b><em>' + (c.used ? 'مستخدم' : I.d) + '</em>' + (n ? '<i>🎯 ' + n + '</i>' : '') + '</button>';
-            }).join('') + '<button type="button" class="ct none' + (myCard && myCard.card === 'none' ? ' sel' : '') + '" data-act="card" data-id="none"><span>⏭️</span><b>بدون كرت</b><em>الليلة بدون</em>' + (cnt(function (id) { return cv[id] && cv[id].card === 'none'; }) ? '<i>' + cnt(function (id) { return cv[id] && cv[id].card === 'none'; }) + '</i>' : '') + '</button></div></div>';
+        var recOk = !!(recruit && recruit.available);
+        var recWhy = !recruit ? '' : recOk ? '' : recruit.used ? 'مستخدم' : recruit.capped ? 'المواطنين قليل' : 'من الليلة 3';
+        var recLong = !recruit || recOk ? '' : recruit.used ? 'كرت التجنيد انستخدم بهالمباراة' : recruit.capped ? 'ما تقدر تجنّد الليلة لأن عدد المواطنين قليل — الكرت محفوظ' : 'التجنيد يبدأ من الليلة 3';
+        var cardWhy = aux.every(function (c) { return c.used; }) ? 'مستخدمة' : 'من الليلة 2';
+        // أول مرة بالليلة: المفتاح يبدأ على اختيارك الحالي (لو رجعت للصفحة)
+        if (S.opNight !== G.id + '|' + G.round) { S.opNight = G.id + '|' + G.round; S.mNote = ''; S.opMode = myOp && myOp.op === 'recruit' ? 'recruit' : tm && myCard ? 'card' : 'kill'; }
+        if (S.opMode === 'recruit' && !recruit) S.opMode = 'kill';
+        if (S.opMode === 'card' && (!aux.length || !anyCard || locked)) {
+            if (aux.length) S.mNote = locked ? 'الكروت مقفولة الليلة لأنكم اخترتوا شخصين مختلفين' : 'الكروت ' + cardWhy;
+            S.opMode = 'kill';
+        }
+        var mode = S.opMode, html = '';
+
+        // شريط الفريق: وش اختار كل زميل (سطر واحد يسكرول بالعرض)
+        if (team.length > 1) html += '<div class="mteam" aria-label="فريقك">' + team.filter(function (m) { return m.id !== me.id; }).map(function (m) {
+            var o = ops[m.id], c = realC(cv[m.id]) ? cv[m.id] : null, ok = (me.teamDone || {})[m.id];
+            var txt = o ? (o.op === 'skip' ? '⏭️ تخطي' : (o.op === 'recruit' ? '🤝 ' : '🎯 ') + pname(G, o.target)) : c && CARD_INFO[c.card] ? CARD_INFO[c.card].i + ' كرت' : '⏳ يختار…';
+            return '<span class="mmate' + (o || c ? ' on' : '') + '">' + avatar(m, 26) + '<b>' + esc(m.name) + '</b><em>' + esc(txt) + (ok ? ' ✓' : '') + '</em></span>';
+        }).join('') + '</div>';
+
+        // مفتاح العملية — المقفول يبان مقفول ومكتوب تحته السبب، ولو ضغطه يطلع الشرح بسطر الحالة
+        var opBtn = function (k, label, sub, lockd, done) {
+            return '<button type="button" class="mop' + (mode === k ? ' on' : '') + (lockd ? ' lock' : '') + (done ? ' done' : '') + '" data-opmode="' + k + '" aria-pressed="' + (mode === k) + '"><b>' + label + '</b><small>' + esc(sub) + '</small></button>';
+        };
+        var nOps = 1 + (recruit ? 1 : 0) + (aux.length ? 1 : 0);
+        if (nOps > 1) html += '<div class="mops" style="--n:' + nOps + '">' +
+            opBtn('kill', '🔪 قتل', myOp && myOp.op === 'kill' ? '🎯 ' + pname(G, myOp.target) : myOp && myOp.op === 'skip' ? '⏭️ تخطي' : 'اختار ضحية', false, myOp && (myOp.op === 'kill' || myOp.op === 'skip')) +
+            (recruit ? opBtn('recruit', (recOk ? '🤝' : '🔒') + ' تجنيد', !recOk ? recWhy : myOp && myOp.op === 'recruit' ? '🎯 ' + pname(G, myOp.target) : 'بدل القتل', !recOk, myOp && myOp.op === 'recruit') : '') +
+            (aux.length ? opBtn('card', (anyCard && !locked ? '🃏' : '🔒') + ' كرت', !anyCard ? cardWhy : locked ? 'مقفولة الليلة' : myCard && CARD_INFO[myCard.card] ? CARD_INFO[myCard.card].i + ' ' + pname(G, myCard.target) : tm ? 'بدل الهدف' : 'إضافي مع الهدف', !anyCard || locked, !!myCard) : '') +
+            '</div>';
+
+        // سطر حالة واحد: أهم شي بس
+        var st = ['', '🔪', 'اختار ضحيتك الليلة، وبعدها اضغط «تأكيد»'];
+        if (S.mNote) st = [' bad', '⚠️', esc(S.mNote)];
+        else if (mode === 'recruit' && !recOk) st = [' warn', '🔒', esc(recLong)];
+        else if (locked) st = [' warn', '⚠️', 'اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b>' + (aux.length ? '، و<b>الكروت انقفلت</b> الليلة' : ' الليلة')];
+        else if (lock) st = ['', '🔒', 'فريقك اختار <b>' + esc(pname(G, lock[0])) + '</b> و<b>' + esc(pname(G, lock[1])) + '</b> — اختار واحد منهم'];
+        else if (mode === 'card' && tm) st = ['', '🃏', 'لو اخترت كرت ما تختار هدف — زملاءك يختارون الهدف'];
+        else if (mode === 'card') st = ['', '🃏', 'الكرت إضافي مع الضحية — اختار الكرت وبعدها الضحية من «قتل»'];
+        else if (mode === 'recruit') st = ['', '🤝', 'اللي تجنّده يصير مافيا ويفقد دوره — التجنيد ما يجتمع مع كرت'];
+        else if (tm && anyCard) st = ['', 'ℹ️', 'كل واحد منكم يختار <b>هدف أو كرت</b> — لو اخترتوا شخصين مختلفين تنقفل الكروت'];
+        html += '<div class="mstatus' + st[0] + '" role="status"><i>' + st[1] + '</i><span>' + st[2] + '</span></div>';
+
+        // المحتوى
+        if (mode === 'card') {
+            html += '<div class="gwrap"><div class="mcards">' + aux.map(function (c) {
+                var I = CARD_INFO[c.id], sel = myCard && myCard.card === c.id, n = cnt(function (id) { return cv[id] && cv[id].card === c.id; });
+                var dis = !c.available || locked, tag = c.used ? 'مستخدم' : locked ? '🔒' : sel ? '✓ ' + pname(G, myCard.target) : n ? '🎯 ' + n : 'اختار';
+                return '<button type="button" class="mcard' + (sel ? ' sel' : '') + '"' + (dis ? ' disabled' : ' data-cardsel="' + c.id + '"') + '><span class="ic">' + I.i + '</span><span class="tx"><b>' + esc(c.name) + '</b><small>' + esc(I.long || I.d) + '</small></span><span class="st">' + esc(tag) + '</span></button>';
+            }).join('') + (myCard && !tm ? '<button type="button" class="mnone" data-act="card" data-id="none">بدون كرت الليلة</button>' : '') + '</div></div>';
         } else {
-            html += (showCards ? '' : '<div class="sec-h"><h2>🔪 الهدف</h2><span class="st' + (agreed ? ' ok' : '') + '">' + (agreed ? '✅ متفقين' : split && allIn ? '🎯 هدفين' : done + '/' + team.length) + '</span></div>') +
-            (split && !lock ? '<div class="note" style="margin-top:8px;padding:8px 12px;font-size:13px">⚠️ اختلفتوا على شخصين — بتهاجمون <b>الاثنين</b> الليلة</div>' : '') + lockNote(lock, G) +
-            (recruit && recruit.available ? '<div class="opts" style="margin-top:8px"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button><button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit">🤝 تجنيد</button></div>' : '') +
-            '<div class="gwrap">' + playerRows(G, {
-                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia' && prev.indexOf(p.id) < 0 && (!lock || lock.indexOf(p.id) >= 0); },
-                sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
-                tag: function (p) { if (p.team === 'mafia') return '🔪'; if (prev.indexOf(p.id) >= 0) return 'أمس'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : lock && p.alive ? '🔒' : ''; },
-                skip: { id: 'skip', sel: ops[me.id] && ops[me.id].op === 'skip', tag: (function () { var n = cnt(function (id) { return ops[id] && ops[id].op === 'skip'; }); return n ? String(n) : ''; })() }
+            var recLocked = mode === 'recruit' && !recOk;
+            html += '<div class="gwrap">' + playerRows(G, {
+                action: mode, hide: function (p) { return p.team === 'mafia'; },   // زملاءك فوق بشريط الفريق
+                can: function (p) { return !recLocked && p.alive && p.team !== 'mafia' && prev.indexOf(p.id) < 0 && (!lock || lock.indexOf(p.id) >= 0); },
+                sel: function (p) { return myOp && myOp.op === mode && myOp.target === p.id; },
+                tag: function (p) { if (prev.indexOf(p.id) >= 0) return 'أمس'; var n = cnt(function (id) { return ops[id] && ops[id].target === p.id; }); return n ? '🎯 ' + n : (lock || recLocked) && p.alive ? '🔒' : ''; },
+                skip: mode === 'kill' ? { id: 'skip', sel: myOp && myOp.op === 'skip', tag: (function () { var n = cnt(function (id) { return ops[id] && ops[id].op === 'skip'; }); return n ? String(n) : ''; })() } : null
             }) + '</div>';
         }
         if (S.cardSel && CARD_INFO[S.cardSel]) {
-            var shield = S.cardSel === 'shield', I = CARD_INFO[S.cardSel], killT = ops[me.id] && ops[me.id].target;
-            html += '<div class="pick-bg" data-cardclose><div class="pick"><div class="pick-h"><b>' + I.i + ' ' + esc((cards.find(function (c) { return c.id === S.cardSel; }) || {}).name || '') + ' · ' + I.d + '</b><button type="button" data-cardclose aria-label="إغلاق">✕</button></div>' +
+            var shield = S.cardSel === 'shield', I = CARD_INFO[S.cardSel], killT = myOp && myOp.target;
+            var killTs = team.map(function (m) { return ops[m.id] && ops[m.id].op === 'kill' ? ops[m.id].target : null; }).filter(Boolean);   // الإسكات ما ينفع على هدف الفريق
+            html += '<div class="pick-bg" data-cardclose><div class="pick"><div class="pick-h"><b>' + I.i + ' ' + esc((cards.find(function (c) { return c.id === S.cardSel; }) || {}).name || '') + ' · على مين؟</b><button type="button" data-cardclose aria-label="إغلاق">✕</button></div>' +
                 playerRows(G, {
                     action: 'card', argOf: function (p) { return S.cardSel + '|' + p.id; },
-                    can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia') && !(S.cardSel === 'silence' && p.id === killT); },
+                    can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia') && !(S.cardSel === 'silence' && (p.id === killT || killTs.indexOf(p.id) >= 0)); },
                     sel: function (p) { return cv[me.id] && cv[me.id].card === S.cardSel && cv[me.id].target === p.id; },
                     tag: function (p) { var n = cnt(function (id) { return cv[id] && cv[id].card === S.cardSel && cv[id].target === p.id; }); return n ? '🎯 ' + n : ''; }
                 }) + '</div></div>';
@@ -1148,14 +1205,21 @@ body.watching { overflow: hidden; }
     function confirmBar(G, kind) {
         var sel = myPick(G, kind), op = kind === 'mafia' && G.me.ops && G.me.ops[G.me.id];
         var VERB = op && op.op === 'recruit' ? '🤝 جنّد' : { mafia: '🔪 هاجم', doctor: '🛡️ احمِ', detective: '🔍 افحص', vote: '🗳️ صوّت على' }[kind];
-        var txt = sel == null ? '👆 اختار لاعب، وبعدها اضغط «تأكيد»' : sel === 'skip' ? '⏭️ تخطي هالمرة' : VERB + ' ' + esc(sel === G.me.id ? 'نفسك' : pname(G, sel)) + '؟';
+        var mc = kind === 'mafia' && sel == null && G.me.teamMode && G.me.cardVotes && G.me.cardVotes[G.me.id];
+        if (mc && mc.card !== 'none' && CARD_INFO[mc.card]) sel = 'card';   // فريق المافيا: اختار كرت بدل الهدف
+        var txt = sel === 'card' ? '🃏 ' + CARD_INFO[mc.card].i + ' كرت على ' + esc(pname(G, mc.target)) + '؟' : sel == null ? '👆 اختار لاعب، وبعدها اضغط «تأكيد»' : sel === 'skip' ? '⏭️ تخطي هالمرة' : VERB + ' ' + esc(sel === G.me.id ? 'نفسك' : pname(G, sel)) + '؟';
         return '<div class="confirm" style="--sr:' + TURN_C[kind] + '"><div class="' + (sel != null ? 'ok' : '') + '"><b>' + txt + '</b><button type="button" class="cbtn" data-confirm' + (sel == null ? ' disabled' : '') + '>تأكيد</button></div></div>';
     }
     // بطاقة النتيجة بعد التأكيد + حالة زملاءك (تأكيدك ما ينهي دورهم)
     function resultCard(G, kind, small) {
         var me = G.me, sel = myPick(G, kind), p = sel && sel !== 'skip' ? pOf(G, sel) : null, tone = TURN_C[kind], k, mid, txt = '';
         var who = p ? '<div class="who">' + avatar(p, 64) + '<b>' + esc(p.id === me.id ? 'نفسك' : p.name) + '</b></div>' : '<div class="who"><span class="sk">⏭️</span><b>تخطيت</b></div>';
-        if (!p) { tone = TURN_C.skip; k = kind === 'vote' ? '🗳️ صوتك' : 'دورك الليلة ' + G.round; mid = who; txt = kind === 'vote' ? 'صوتك راح لـ«تخطي».' : 'ما اخترت أحد هالليلة.'; }
+        var myC = kind === 'mafia' && !sel && me.cardVotes && me.cardVotes[me.id];
+        if (myC && myC.card !== 'none' && CARD_INFO[myC.card]) {   // فريق المافيا: اختار كرت بدل الهدف
+            var cp = pOf(G, myC.target); k = '🃏 اخترت كرت · الليلة ' + G.round;
+            mid = (cp ? '<div class="who">' + avatar(cp, 64) + '<b>' + esc(cp.name) + '</b></div>' : '') + '<span class="verdict">' + CARD_INFO[myC.card].i + ' ' + CARD_INFO[myC.card].d + '</span>';
+            txt = 'زملاءك يختارون الهدف — ولو اختاروا شخصين مختلفين ينلغى الكرت.';
+        } else if (!p) { tone = TURN_C.skip; k = kind === 'vote' ? '🗳️ صوتك' : 'دورك الليلة ' + G.round; mid = who; txt = kind === 'vote' ? 'صوتك راح لـ«تخطي».' : 'ما اخترت أحد هالليلة.'; }
         else if (kind === 'detective') {
             var r = (me.inspections || []).filter(function (x) { return x.round === G.round && !x.by && x.id === p.id; }).pop(), maf = r && r.res === 'mafia';
             if (r) tone = maf ? TURN_C.mafia : TURN_C.doctor;
@@ -1179,7 +1243,8 @@ body.watching { overflow: hidden; }
             var st = '<small>⏳ ما أكّد للحين</small>', chip = '';
             if (done[id]) {
                 var pick = kind === 'mafia' ? (me.ops && me.ops[id] ? (me.ops[id].op === 'skip' ? 'skip' : me.ops[id].target) : null) : (me.teamPicks || {})[id];
-                st = '<small>' + esc(pick == null ? '✓ أكّد' : pick === 'skip' ? '⏭️ تخطى' : { mafia: '🎯 الهدف: ', doctor: '🛡️ حماية: ', detective: '🔍 فحص: ' }[kind] + pname(G, pick)) + '</small>';
+                var tc = kind === 'mafia' && pick == null && me.cardVotes && me.cardVotes[id];
+                st = tc && tc.card !== 'none' && CARD_INFO[tc.card] ? '<small>' + esc('🃏 كرت: ' + CARD_INFO[tc.card].i + ' ' + pname(G, tc.target)) + '</small>' : '<small>' + esc(pick == null ? '✓ أكّد' : pick === 'skip' ? '⏭️ تخطى' : { mafia: '🎯 الهدف: ', doctor: '🛡️ حماية: ', detective: '🔍 فحص: ' }[kind] + pname(G, pick)) + '</small>';
                 var r = kind === 'detective' ? (me.inspections || []).filter(function (x) { return x.by === id && x.round === G.round; }).pop() : null;
                 chip = r ? '<span class="rchip" style="--sr:' + (r.res === 'mafia' ? TURN_C.mafia : TURN_C.doctor) + '">' + (r.res === 'mafia' ? '🔪 مافيا' : '✓ مواطن') + '</span>' : '<span class="rchip" style="--sr:' + TURN_C.doctor + '">✓ أكّد</span>';
             }
@@ -1220,7 +1285,7 @@ body.watching { overflow: hidden; }
             if (!alive) html += stage({ tone: 'night', ic: '💀', k: 'الليلة ' + G.round + ' · دور ' + TN[G.turn], t: 'خرجت من اللعبة', s: 'تابع البث — ما تقدر تختار أو تتكلم', still: true });
             else if (myTurn === G.turn) {
                 if (me.confirmed) html += resultCard(G, G.turn);
-                else if (me.team === 'mafia') { var mn = mafiaNight(G); html += (S.mstep === 'card' ? '' : hintHtml('mafia')) + teamDoneNote(G, 'mafia') + mn + confirmBar(G, 'mafia'); }
+                else if (me.team === 'mafia') html += mafiaNight(G) + confirmBar(G, 'mafia');
                 else if (me.role === 'doctor') {
                     var dLock = lockOf(me.teamPicks, me.id);
                     html += hintHtml('doctor') + teamDoneNote(G, 'doctor') + lockNote(dLock, G) + '<div class="gwrap">' + playerRows(G, {
@@ -1509,9 +1574,8 @@ body.watching { overflow: hidden; }
         var ef = e.target.closest('[data-evf]'); if (ef) { S.evf = ef.getAttribute('data-evf'); return renderGame(); }
         var ps = e.target.closest('[data-privsel]'); if (ps) { S.privOpen = ps.getAttribute('data-privsel'); return renderGame(); }
         var b = e.target.closest('[data-act]');
-        if (b) { act(b.getAttribute('data-act'), b.getAttribute('data-id')); if (navigator.vibrate) navigator.vibrate(20); if (b.getAttribute('data-act') === 'card' && S.cardSel) { S.cardSel = null; renderGame(); } return; }
-        var ms = e.target.closest('[data-mstep]'); if (ms) { S.mstep = ms.getAttribute('data-mstep'); return renderGame(); }
-        var m = e.target.closest('[data-opmode]'); if (m) { S.opMode = m.getAttribute('data-opmode'); return renderGame(); }
+        if (b) { S.mNote = ''; act(b.getAttribute('data-act'), b.getAttribute('data-id')); if (navigator.vibrate) navigator.vibrate(20); if (b.getAttribute('data-act') === 'card' && S.cardSel) { S.cardSel = null; renderGame(); } return; }
+        var m = e.target.closest('[data-opmode]'); if (m) { S.opMode = m.getAttribute('data-opmode'); S.mNote = ''; return renderGame(); }
         var c = e.target.closest('[data-cardsel]'); if (c) { var id = c.getAttribute('data-cardsel'); S.cardSel = S.cardSel === id ? null : id; return renderGame(); }
         if (e.target.closest('[data-cardhelp]')) { S.cardHelp = !S.cardHelp; return renderGame(); }
         if (e.target.hasAttribute('data-cardclose') || e.target.closest('.pick-h [data-cardclose]')) { S.cardSel = null; return renderGame(); }
