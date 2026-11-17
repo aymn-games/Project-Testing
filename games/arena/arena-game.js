@@ -639,6 +639,13 @@ $('exitBtn').onclick=exitGame;
 
 // ---- لوبي الدخول ----
 const SAMPLE=['نورة','فهد','سارة','عبدالله','ريم','سلمان','لولو','تركي','غلا','بندر','جود','ماجد','شهد','خالد','دانة','يزيد','رهف','مشاري','أسيل','نواف'];
+// مقتنيات اللاعب من المنصة (تجي مع كل تعليق/تكبيس/هدية من البث): الإطار (agp-player-card.js) وبطاقة الفوز (agp-win-card.js)
+const XTRA=new Map();
+function noteXtra(p){if(!p||!p.id)return;const o=XTRA.get(p.id)||{};
+  if(p.frame!==undefined)o.frame=p.frame||null;if(p.winCard!==undefined)o.winCard=p.winCard||null;if(p.character!==undefined)o.character=p.character||null;XTRA.set(p.id,o);
+  const A=window.AymanGamesPlatform;if(o.winCard&&A&&A.winCard)A.winCard.preloadFor({winCard:o.winCard});}
+const xtra=pid=>XTRA.get(pid)||{};
+const AGPX=()=>window.AymanGamesPlatform||{};
 function renderLobby(){const n=G.lobby.length;$('elCount').textContent=n;$('startBtn').disabled=n<1;renderKw();
   const list=$('elList');list.innerHTML='';
   if(!n){const e=document.createElement('div');e.className='el-empty';e.textContent='بانتظار انضمام اللاعبين… يكتبون «'+SET.keyword+'» بالشات';list.appendChild(e);return;}
@@ -647,7 +654,13 @@ function renderLobby(){const n=G.lobby.length;$('elCount').textContent=n;$('star
     const nm=document.createElement('span');nm.className='el-nm';nm.textContent=p.name;
     const x=document.createElement('button');x.type='button';x.className='el-x';x.setAttribute('aria-label','شيل '+p.name);x.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
     x.onclick=()=>{G.lobby=G.lobby.filter(q=>q!==p);renderLobby();};
-    chip.append(av,nm,x);w.appendChild(chip);list.appendChild(w);});}
+    const fr=xtra(p.pid).frame,PC=AGPX().playerCard;
+    if(fr&&fr.imageFilename&&PC){w.classList.add('framed');list.appendChild(w);
+      const card=document.createElement('div');card.className='el-fc';
+      card.innerHTML=PC.renderHtml({id:p.pid,name:p.name,avatarUrl:p.avatar||null,frame:fr},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(w.clientWidth/4.96))});
+      x.classList.add('on-frame');w.append(card,x);return;}
+    chip.append(av,nm,x);w.appendChild(chip);list.appendChild(w);});
+  const PC=AGPX().playerCard;if(PC&&PC.fitAllNames)PC.fitAllNames(list);}
 function freshName(){const used=new Set([...G.lobby,...G.waiting,...G.queue].map(p=>p.name).concat(FS.map(f=>f.name)));const pool=SAMPLE.filter(x=>!used.has(x));return pool.length?pool[Math.floor(Math.random()*pool.length)]:'مشاهد '+Math.floor(rnd(100,999));}
 function joinPlayer(name,avatar,pid){name=String(name||'').trim().slice(0,24);if(!name)return false;pid=pid||name;
   const inGame=FS.some(f=>f.pid===pid&&!f.gone);
@@ -728,8 +741,11 @@ function reportPoints(F){if(G.demo){G.pts='demo';return;}if(window.AGPAuth&&type
     .then(res=>{if(run!==G.startedAt)return;const un=String(F.pid).indexOf('tiktok:')===0?String(F.pid).slice(7):String(F.pid);const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===un):null;G.pts=aw?aw.added:null;renderWin();})
     .catch(()=>{G.pts=null;renderWin();});}else G.pts=null;}
 function ptsLine(){if(G.pts==='demo')return 'نسخة تجربة — بدون نقاط';if(G.pts==='pending')return 'جارٍ احتساب النقاط';return typeof G.pts==='number'?'+'+G.pts+' نقطة':'النقاط للحسابات الموثّقة في الموقع';}
-function showWin(F){G.winShown=true;G.winner=F;renderWin();setPhase('win');}
+function showWin(F){G.winShown=true;G.winCardPopped=false;G.winner=F;renderWin();setPhase('win');}
 function renderWin(){const F=G.winner;if(!F||!G.winShown)return;const host=$('wCards');host.innerHTML='';
+  const WC=AGPX().winCard,owner={id:F.pid,name:F.name,avatarUrl:F.avatar||null,winCard:xtra(F.pid).winCard||null};
+  if(WC&&WC.canShow(owner)){const box=document.createElement('div');box.className='w-owned';
+    box.innerHTML=WC.renderHtml(owner,['بطل الحلبة',ptsLine()],{pop:!G.winCardPopped});G.winCardPopped=true;host.appendChild(box);return;}
   const std=document.createElement('div');std.className='w-std';
   std.innerHTML='<div class="w-crown"><svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>'+
     '<div class="w-card"><div class="w-shine"></div><div class="w-in"><span class="w-label">WINNER</span></div></div>';
@@ -789,9 +805,9 @@ function onStreamGift(p){if(!p||!p.id)return;let F=findF(p.id);
   if(!F)return;const pw=powerForPayload(p);if(!pw)return;const g=giftById(SET.gifts[pw]);const n=Math.max(1,Math.min(5,Number(p.repeatCount)||1));
   for(let i=0;i<n;i++)power(p.id,pw,g&&g.label);}
 function bindStream(){const A=window.AymanGamesPlatform;if(!A||!A.events||typeof A.events.on!=='function')return;
-  A.events.on('stream:commentReceived',p=>{if(p&&p.id&&typeof p.text==='string')chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower});});
-  A.events.on('stream:likeReceived',p=>{if(p&&p.id)onLike(p.id,p.count,p.name,p.avatarUrl);});
-  A.events.on('stream:giftReceived',p=>onStreamGift(p));}
+  A.events.on('stream:commentReceived',p=>{noteXtra(p);if(p&&p.id&&typeof p.text==='string')chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower});});
+  A.events.on('stream:likeReceived',p=>{noteXtra(p);if(p&&p.id)onLike(p.id,p.count,p.name,p.avatarUrl);});
+  A.events.on('stream:giftReceived',p=>{noteXtra(p);onStreamGift(p);});}
 bindStream();
 function renderQueue(){renderRoster();}
 const rosterHp=[];

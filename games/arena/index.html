@@ -300,6 +300,11 @@ body[data-phase="lobby"] #entryLobby{display:block}
 .el-nm{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .el-x{width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;display:grid;place-items:center;opacity:.75}
 .el-x:hover{opacity:1;transform:scale(1.15)}
+/* لاعب عنده إطار من المنصة: البطاقة المؤطّرة (ارتفاعها 100px) تاخذ صفّين بالشبكة */
+.el-p.framed{grid-row:span 2;justify-content:center;direction:ltr}
+.el-fc{line-height:0;display:flex;justify-content:center;width:100%}
+.el-x.on-frame{position:absolute;top:2px;left:2px;z-index:3;width:24px;height:24px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+.w-owned{width:250px;max-width:80vw;line-height:0}
 .el-actions{flex-shrink:0;display:flex;justify-content:center;align-items:center;gap:10px;padding:clamp(10px,2vh,18px) 0 6px}
 .el-go{flex:1;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) var(--body);box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2)}
 .el-go:hover{filter:brightness(1.1)}
