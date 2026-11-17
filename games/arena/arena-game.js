@@ -15,14 +15,14 @@ import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 
 const CONFIG={
   hp:100,            // صحة كل لاعب عند الدخول (الفايز يكمل بنفس صحته)
-  tapDamage:.25,     // ضرر كل تكبيسة
+  tapDamage:.5,      // ضرر كل تكبيسة
   comboTaps:50,      // تكبيسات متتالية = ركلة
   comboWindow:3,     // ثواني توقف تصفّر عداد الركلة
   kickDamage:8,      // ركلة الكومبو
   roseDamage:10,     // وردة
   giftDamage:25,     // هدية 5 عملات (ضربة طائرة)
   healAmount:15,     // هدية تيك توك: شفاء
-  punchEvery:.3,
+  punchEvery:.1,
   championTime:6     // ثواني احتفال البطل قبل دخول الدفعة الجاية
 };
 const SAMPLE_NAMES=['نورة','فهد','سارة','عبدالله','ريم','سلمان','لولو','تركي','غلا','بندر','جود','ماجد','شهد','خالد','دانة','يزيد'];
@@ -230,7 +230,7 @@ function guardP(F,t){const p=base(),b=Math.abs(Math.sin(t*Math.PI*2*1.4+F.seed))
     p.thR=L(p.thR,V(-.12,-1,.12-.45*s),a);p.shR=L(p.shR,V(-.05,-1,.12-.45*s-.55*Math.max(0,c)),a);p.lift+=.015*Math.abs(s)*a;}
   return p;}
 const ATK={
- punch:{dur:.34,impact:.12,reach:.46,pose(F,u,t){const p=guardP(F,t),e=env(u,0,.09,.06,.17),s=F.punchSide?'R':'L',sg=s==='L'?1:-1;
+ punch:{dur:.2,impact:.06,reach:.46,pose(F,u,t){const p=guardP(F,t),e=env(u,0,.055,.03,.1),s=F.punchSide?'R':'L',sg=s==='L'?1:-1;
    p['ua'+s]=L(p['ua'+s],V(.12*sg,.03,1),e);p['fa'+s]=L(p['fa'+s],V(.03*sg,.06,1),e);p.spine=[.14,-.38*sg*e,0];p.hips=[0,-.15*sg*e,0];p.fwd=.05*e;return p;}},
  kick:{dur:.8,impact:.3,reach:.5,pose(F,u,t){const p=guardP(F,t),ch=env(u,0,.16,.42,.3),ex=env(u,.16,.12,.22,.28);
    p.thR=L(p.thR,V(-.05,-.05,1),ch);p.shR=L(L(p.shR,V(0,-1,.15),ch),V(0,.08,1),ex);p.ftR=L(p.ftR,V(0,.35,1),ex);
@@ -373,12 +373,12 @@ function knockout(F,O,byDonut){const M=F.match;M.done=true;M.winner=F;M.doneAt=p
   sfx('ko');feed(F,O.name+' أُقصي');renderChips();}
 
 function resolveHit(F){const O=F.opp,a=F.atk,A=ATK[a];if(!O||O.gone)return;const gap=Math.abs(F.x-O.x);
-  if(a!=='donut'&&DOWN.includes(O.state))return;
-  if(a==='punch'&&gap>A.reach+.22)return;
+  if(a!=='donut'&&DOWN.includes(O.state)){if(a==='punch')F.pendingTap=Math.min(10,F.pendingTap+F.punchDmg);return;}
+  if(a==='punch'&&gap>A.reach+.4){F.pendingTap=Math.min(10,F.pendingTap+F.punchDmg);return;}
   const hp=chest(O),armor=O.state==='attack'&&O.atk==='donut';
-  if(a==='punch'){const d=F.punchDmg;O.flinch=.25;O.x-=O.sign*.03;star(fist(F,F.punchSide?'R':'L'),.18,0xffffff,.18);
-    sparks.emit(hp,10,{speed:1.2,colors:[0xffe08a,0xffffff],life:.3,gravity:1});G.shake=Math.max(G.shake,.012);sfx('punch');
-    pop(hp.clone().add(V(rnd(-.05,.05),.12,0)),'-'+(Math.round(d*10)/10),'#ffffff',22);deal(F,O,d);}
+  if(a==='punch'){const d=F.punchDmg;O.flinch=.2;O.x-=O.sign*.045;star(fist(F,F.punchSide?'R':'L'),.32,0xffe9a8,.16);
+    sparks.emit(hp,16,{speed:1.6,colors:[0xffe08a,0xffffff,0xffb347],life:.3,gravity:1});G.shake=Math.max(G.shake,.022);sfx('punch');
+    pop(hp.clone().add(V(rnd(-.08,.08),.12+rnd(0,.08),0)),'-'+(Math.round(d*10)/10),'#ffe08a',30);deal(F,O,d);}
   else if(a==='kick'){const tp=F.B.toeR.getWorldPosition(V(0,0,0));star(tp,.45,0xffb347,.3);shock(hp,0xff8a1f,.55);
     sparks.emit(hp,45,{speed:2.4,colors:[0xff8a1f,0xffd23d,0xffffff],life:.5,gravity:2});G.shake=.045;sfx('kick');flash('rgba(255,170,60,.9)',.08);
     pop(hp.clone().add(V(0,.18,0)),'-'+CONFIG.kickDamage,'#ffb347',38);banner('ركلة الكومبو!','50 تكبيسة · '+F.name,'#ffb347');
@@ -407,7 +407,7 @@ function heal(F){if(F.gone||OUT.includes(F.state))return;const before=F.hp;F.hp=
   pop(p.clone().add(V(0,.25,0)),'+'+Math.round(F.hp-before),'#2fcb78',40);}
 
 function startAttack(F,a){F.atk=a;F.hitDone=false;setState(F,'attack');
-  if(a==='punch'){F.punchSide^=1;F.punchDmg=Math.min(F.pendingTap,3);F.pendingTap-=F.punchDmg;F.punchCd=CONFIG.punchEvery;}
+  if(a==='punch'){F.punchSide^=1;F.punchDmg=Math.min(F.pendingTap,F.pendingTap>3?2:1);F.pendingTap-=F.punchDmg;F.punchCd=CONFIG.punchEvery;}
   if(a==='kick')sfx('swing');
   if(a==='rose'){F.aura=1;F.auraCol.set(0xff2d95);showIcon(F,roseTex,ATK.rose.impact);sfx('roseCharge');}
   if(a==='gift5'){F.aura=1;F.auraCol.set(0xffc23d);showIcon(F,boltTex,ATK.gift5.impact);sfx('giftCharge');}
@@ -430,7 +430,7 @@ function updateFighter(F,dt,t){const O=F.opp,M=F.match;F.st+=dt;F.blendU+=dt;F.f
     if(next){const A=ATK[next],gap=Math.abs(F.x-O.x);
       if(gap>A.reach+.06){desired=O.x-F.sign*A.reach;speed=next==='donut'?2.6:1.9;if(F.state==='wait')setState(F,'move');}
       else{if(next!=='punch')F.queue.shift();if(next==='donut')M.donutActive=true;startAttack(F,next);break;}}
-    else if(O&&O.state==='attack'){desired=F.x;}
+    else if(O&&(O.state==='attack'||O.pendingTap>=CONFIG.tapDamage-1e-6||O.queue.length)){desired=F.x;}
     else desired=M.cx-F.sign*M.gap/2;
     if(F.state==='wait')setState(F,'move');
     break;}
@@ -745,7 +745,7 @@ $('wSame').onclick=()=>{const keep=G.participants.slice();G.waiting=G.waiting.fi
 const findF=key=>FS.find(F=>!F.gone&&(F.id===key||F.pid===key||F.name===key));
 const eliminated=F=>F.match&&F.match.done&&F.match.winner!==F;
 function tap(key,n=1){const F=findF(key);if(!F||!F.match||OUT.includes(F.state)||eliminated(F)||G.phase==='champion')return;const now=performance.now()/1000;
-  if(now-F.lastTap>CONFIG.comboWindow)F.combo=0;F.lastTap=now;F.combo+=n;F.pendingTap=Math.min(F.pendingTap+n*CONFIG.tapDamage,6);
+  if(now-F.lastTap>CONFIG.comboWindow)F.combo=0;F.lastTap=now;F.combo+=n;F.pendingTap=Math.min(F.pendingTap+n*CONFIG.tapDamage,10);
   while(F.combo>=CONFIG.comboTaps){F.combo-=CONFIG.comboTaps;F.queue.push('kick');feed(F,F.name+' كمّل 50 تكبيسة ← ركلة');}}
 function power(key,kind,giftLabel){const F=findF(key);if(!F||OUT.includes(F.state)||eliminated(F)||G.phase==='champion')return;
   const p=POWERS.find(x=>x.id===kind);if(!p)return;const g=giftById(SET.gifts[kind]);
