@@ -16,6 +16,7 @@ var connectorRouter = require('./platforms/connector-router');
 var authRouter = require('./http/auth-router');
 var kickHub = require('./platforms/kick/kick-hub');
 var twitchHub = require('./platforms/twitch/twitch-hub');
+var veyroBridge = require('./http/veyro-bridge');
 
 /** معالج طلبات HTTP — فحص صحة على الجذر، وتفويض "/api/*" لـ http/auth-router.js. */
 function handleHttpRequest(req, res) {
@@ -29,6 +30,8 @@ function handleHttpRequest(req, res) {
         twitchHub.handleWebhook(req, res);
         return;
     }
+    // فيرو: التصدير لسيرفره، وتحويل طلباته القديمة لو VEYRO_API_URL موجود — http/veyro-bridge.js
+    if ((req.url || '').indexOf('/api/') === 0 && veyroBridge.handle(req, res)) return;
     if ((req.url || '').indexOf('/api/') === 0) {
         authRouter.handle(req, res);
         return;
@@ -56,10 +59,15 @@ function start() {
         require('./auth/tiktok-avatar-sync').startBackfill();
         // مراقبة إحصائيات البث للستريمرز المفعّلين من الأدمن (بدون فتح الموقع).
         require('./stats/stream-stats-watcher').startWatcher();
-        // اتصال البث لشاشات Veyro اللي فيها أدوات صوت (القارئ/مشغّل الأغاني) — SCREEN_AUDIO_CONNECT.
-        require('./stats/screen-audio-watcher').startScreenAudioWatcher();
-        // Streamlabs: اتصال لكل ستريمر مربوط (الدونيشن — كريترز وغيره) — streamlabs/streamlabs-manager.js
-        require('./streamlabs/streamlabs-manager').startStreamlabs();
+        if (veyroBridge.proxyMode()) {
+            // فيرو انتقل لسيرفره (VEYRO_API_URL): هو اللي يتصل بالبث للشاشات ويشغّل Streamlabs
+            logger.info('Veyro: proxy mode — Veyro requests go to ' + config.veyroApiUrl + '; screen watcher and Streamlabs run there.');
+        } else {
+            // اتصال البث لشاشات Veyro اللي فيها أدوات صوت (القارئ/مشغّل الأغاني) — SCREEN_AUDIO_CONNECT.
+            require('./stats/screen-audio-watcher').startScreenAudioWatcher();
+            // Streamlabs: اتصال لكل ستريمر مربوط (الدونيشن — كريترز وغيره) — streamlabs/streamlabs-manager.js
+            require('./streamlabs/streamlabs-manager').startStreamlabs();
+        }
         // كتالوج هدايا تيك توك (الأسماء بالعربي والإنجليزي، الأسعار، الصور) — مرة باليوم من تيك توك نفسه.
         require('./platforms/tiktok/gift-catalog').startAutoRefresh(logger);
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');

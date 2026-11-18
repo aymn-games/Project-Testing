@@ -52,6 +52,11 @@
         try { return new URL('../assets/overlay-frames/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/overlay-frames/'; }
     }());
 
+    // صور هدايا تيك توك الحقيقية (assets/tiktok-gifts/icons — نفس صور الألعاب) للمعاينة والتجربة بالوعاء
+    var GIFTS_BASE = (function () {
+        try { return new URL('../assets/tiktok-gifts/icons/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/tiktok-gifts/icons/'; }
+    }());
+
     if (window.AGPStreamOverlay) return;
 
     var STORE_KEY = 'agp:stream-overlay';
@@ -64,6 +69,8 @@
     var JAR_REPEAT_MAX = 10;   // هدية مكررة ×50 تطلع 10 صور بالكثير
     var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
     var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
+    // رابط سيرفر فيرو (خدمة veyro-server بـRender) — يتعبّى بعد إنشاء الخدمة، راجع docs/VEYRO_SERVER.md
+    var VEYRO_API = '';
     var LINK_CHECK_MS = 5000;
     var GAME_GRACE_MS = 15000; // اللعبة غير متصلة كذا متواصل → الأوفرلي يتصل بداله
     var POLL_MS = 15000;
@@ -235,6 +242,15 @@
         '<path d="M10 6h20l8 10-18 20L2 16z" fill="#4dd8ff"/><path d="M10 6l4 10h12l4-10M2 16h36" stroke="#b8f1ff" stroke-width="1.5" fill="none"/>',
         '<rect x="6" y="16" width="28" height="20" rx="3" fill="#9b5cf6"/><rect x="4" y="11" width="32" height="7" rx="2" fill="#b78bff"/><path d="M20 11v25" stroke="#ffd54a" stroke-width="4"/><path d="M20 11c-4-7-11-6-9-1 1 2 5 1 9 1 4 0 8 1 9-1 2-5-5-6-9 1z" fill="#ffd54a"/>'
     ].map(function (svg) { return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">' + svg + '</svg>'); });
+    // هدايا الوعاء التجريبية: صور تيك توك الحقيقية (الأكثر انتشاراً أكثر تكرار)
+    var JAR_SAMPLE_GIFTS = [
+        ['00001-rose', 'وردة'], ['00001-tiktok', 'TikTok'], ['00005-finger-heart', 'قلب بالإصبع'], ['00001-ice-cream', 'أيس كريم'],
+        ['00010-rosa', 'روزا'], ['00030-donut', 'دونات'], ['00001-rose', 'وردة'], ['00088-butterfly', 'فراشة'],
+        ['00001-cake-slice', 'قطعة كعك'], ['00099-hat-and-mustache', 'قبعة وشارب'], ['00150-kiss', 'بوسة'], ['00001-love-saudi', 'أحب السعودية'],
+        ['00199-hearts', 'قلوب'], ['00299-corgi', 'كورجي'], ['00099-paper-crane', 'طائر ورقي'], ['00001-tiktok', 'TikTok'],
+        ['00150-kings-scepter', 'صولجان الملك'], ['00100-heart-in-your-hands-a', 'قلب بين يديك'], ['01000-galaxy', 'مجرة'], ['29999-lion', 'أسد']
+    ].map(function (g) { return { img: GIFTS_BASE + g[0] + '.webp', name: g[1] }; });
+    function jarSample(i) { return JAR_SAMPLE_GIFTS[i % JAR_SAMPLE_GIFTS.length]; }
     var SAMPLE_TOTALS = { likes: 4320, diamonds: 860, gifts: 57, follows: 23, shares: 12, comments: 340, peakViewers: 185, donations: 340, lastDonation: { name: 'أبو فهد', amount: 25, currency: 'USD', message: 'كفو والله، استمر 💜' } };
 
     /* ---------------- الحالة والتخزين ---------------- */
@@ -378,6 +394,13 @@
     }
 
     function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
+    /**
+     * سيرفر فيرو المستقل (veyro-server/ — docs/VEYRO_SERVER.md): الشاشات وروابطها بـOBS ومحرر فيرو.
+     * VEYRO_API فاضي = سيرفر الألعاب (قبل الانتقال، أو يحوّل الطلبات لفيرو لو VEYRO_API_URL عنده).
+     * أوفرلي صفحات الألعاب (بدون رابط شاشة) يبقى على سيرفر الألعاب.
+     */
+    function veyroBase() { return window.AGP_VEYRO_API || VEYRO_API || apiBase(); }
+    function dataBase() { return LINK || SCREENS ? veyroBase() : apiBase(); }
     function token() {
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }
@@ -410,8 +433,8 @@
         if (!t && !LINK) { stats.status = 'login'; notify('stats'); return; }
         inflight = true;
         lastNeeds = q;
-        fetch(LINK ? apiBase() + '/api/public/screen/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
-            : apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
+        fetch(LINK ? dataBase() + '/api/public/screen/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
+            : dataBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -460,7 +483,7 @@
     function https(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : null; }
 
     /** رابط السيرفر لصورة الهدية (مخزّنة عنده) — لو الرابط المباشر من تيك توك ما فتح. */
-    function mediaUrl(kind, id) { return id ? apiBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
+    function mediaUrl(kind, id) { return id ? dataBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
 
     /** صورة تحاول الرابط المباشر، وبعده نسخة السيرفر، وبعدها onFail. */
     function img2(direct, backup, cls, onFail) {
@@ -499,8 +522,8 @@
         if (!t && !LINK) return;
         jarInflight = true;
         var since = jar.sid ? jar.seq : 0;
-        fetch(LINK ? apiBase() + '/api/public/screen/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
-            : apiBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
+        fetch(LINK ? dataBase() + '/api/public/screen/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
+            : dataBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -579,6 +602,7 @@
 
     function linkWanted() {
         if (LINK) return false; // رابط OBS يقرأ بس — الحساب من اتصال الموقع
+        if (SCREENS) return false; // محرر فيرو: سيرفر فيرو هو اللي يتصل بالبث (veyro-server)
         var c = savedConn();
         if ((!dataWanted() && !presenceWanted() && !chatWanted()) || !token() || !c) return false;
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
@@ -1846,7 +1870,7 @@
         var list = real.concat(preview ? jarDemo : []);
         if (ghost) {
             list = [];
-            for (var i = 0; i < 24; i++) list.push({ k: 'sample-' + i, img: SAMPLE_GIFT_SVGS[i % SAMPLE_GIFT_SVGS.length], name: '' });
+            for (var i = 0; i < 24; i++) { var sg = jarSample(i * 7 % JAR_SAMPLE_GIFTS.length); list.push({ k: 'sample-' + i, img: sg.img, name: sg.name }); }
         }
         if (list.length > JAR_CAP) list = list.slice(list.length - JAR_CAP);
         pile.classList.toggle('agp-so-ghost', ghost);
@@ -1888,12 +1912,13 @@
         n.className += ' agp-so-jar';
         n._item = it;
         title(n, it.title);
+        // وعاء زجاج مفتوح (بدون غطا): الجسم، وفوقه حافة الفتحة (بيضاوية)، والانعكاسات فوق الهدايا
         var wrap = el('div', 'agp-so-jwrap');
-        wrap.appendChild(el('div', 'agp-so-jlid'));
-        wrap.appendChild(el('div', 'agp-so-jneck'));
         var glass = el('div', 'agp-so-jglass');
         glass.appendChild(el('div', 'agp-so-jpile'));
+        glass.appendChild(el('div', 'agp-so-jshine'));
         wrap.appendChild(glass);
+        wrap.appendChild(el('div', 'agp-so-jrim'));
         n.appendChild(wrap);
         if (it.counter !== 'none') n.appendChild(el('div', 'agp-so-jcount'));
         jarNodes = jarNodes.filter(function (j) { return j.node.isConnected; });
@@ -2125,6 +2150,19 @@
     }
     function avatarShape(k) { return AVATAR_SHAPES.filter(function (x) { return x.key === k; })[0] || AVATAR_SHAPES[0]; }
     var PART_ANIMS = [{ key: 'fade', label: 'تلاشي' }, { key: 'pop', label: 'تكبير' }, { key: 'up', label: 'من تحت' }, { key: 'down', label: 'من فوق' }, { key: 'none', label: 'بدون' }];
+    // حركة مستمرة للعنصر بعد ما يطلع (p.lp) — تشتغل على غلاف داخلي عشان ما تتعارض مع حركة الظهور
+    // only = للصورة بس (avatar) أو للنصوص بس (text)
+    var PART_LOOPS = [
+        { key: 'none', label: 'بدون' }, { key: 'float', label: 'يطفو' }, { key: 'pulse', label: 'نبض' },
+        { key: 'swing', label: 'تمايل' }, { key: 'bounce', label: 'نطّة' }, { key: 'shine', label: 'لمعة' },
+        { key: 'spin', label: 'دوران', only: 'avatar' }, { key: 'wave', label: 'موجة', only: 'text' }
+    ];
+    function loopOf(p) { var k = p && p.lp; return k && k !== 'none' && PART_LOOPS.some(function (x) { return x.key === k; }) ? k : ''; }
+    /** غلاف الحركة المستمرة: abs = يعبّي العنصر (للصورة)، وإلا inline-block (للنص). */
+    function loopEl(p, abs) {
+        var lp = loopOf(p);
+        return el('span', 'agp-so-vloop' + (abs ? ' abs' : '') + (lp ? ' lp-' + lp : ''));
+    }
     /** مدة أليرت الفيديو بالثواني: it.vlen لو محددة، وإلا مدة الفيديو نفسه (تلقائي). */
     function videoAlertLen(it) {
         var own = Number(it && it.vlen) || 0;
@@ -2149,7 +2187,7 @@
     }
     function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
     function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
-    function videoFileUrl(id) { return id ? apiBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
+    function videoFileUrl(id) { return id ? veyroBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
     function hexRgb(hex) {
         var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
         return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
@@ -2483,13 +2521,18 @@
                 if (ev.avatar) vi.appendChild(img2(https(ev.avatar), null, null, function (im) { im.replaceWith(el('span', 'agp-so-vini', (ev.user || '?').charAt(0))); }));
                 else vi.appendChild(el('span', 'agp-so-vini', (ev.user || '?').charAt(0)));
                 vf.appendChild(vi);
-                pa.appendChild(vf);
+                var lwa = loopEl(parts.avatar, true);
+                lwa.appendChild(vf);
+                pa.appendChild(lwa);
                 box.appendChild(pa);
             }
             if (parts.name.on) {
                 var pn = el('div', 'agp-so-vpart agp-so-vname');
                 pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
-                partText(pn, ev.user || '', parts.name);
+                var lwn = loopEl(parts.name);
+                partText(lwn, ev.user || '', parts.name);
+                if (lwn.classList.contains('styled')) pn.classList.add('styled');
+                pn.appendChild(lwn);
                 partFont(pn, parts.name);
                 partTiming(pn, parts.name, preview);
                 box.appendChild(pn);
@@ -2498,7 +2541,10 @@
                 var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
                 var pm = el('div', 'agp-so-vpart agp-so-vmsg');
                 pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
-                partText(pm, fillMsg(tpl, ev), parts.msg);
+                var lwm = loopEl(parts.msg);
+                partText(lwm, fillMsg(tpl, ev), parts.msg);
+                if (lwm.classList.contains('styled')) pm.classList.add('styled');
+                pm.appendChild(lwm);
                 partFont(pm, parts.msg);
                 partTiming(pm, parts.msg, preview);
                 box.appendChild(pm);
@@ -2716,7 +2762,7 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&d=' + (donState.init ? donState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
+        fetch(veyroBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&d=' + (donState.init ? donState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -3249,7 +3295,7 @@
         var a = new Audio();
         tts.busy = true; tts.audio = a; tts.cur = job;
         a.volume = vol(it, 0.9);
-        a.src = apiBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
+        a.src = veyroBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
             '&v=' + (it.voice === 'm' ? 'm' : 'f') + '&r=' + clamp(Number(it.rate) || 1, 0.5, 2);
         paintTts();
         function done() {
@@ -3308,7 +3354,7 @@
         var job = music.searches.shift();
         music.searching = true;
         music.lastSearchAt = Date.now();
-        fetch(apiBase() + '/api/public/screen/music/search?k=' + encodeURIComponent(LINK_KEY) + '&q=' + encodeURIComponent(job.q))
+        fetch(veyroBase() + '/api/public/screen/music/search?k=' + encodeURIComponent(LINK_KEY) + '&q=' + encodeURIComponent(job.q))
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 var it = audioItems('music')[0];
@@ -3476,7 +3522,7 @@
     function fetchDesign() {
         if (design.inflight) return;
         design.inflight = true;
-        fetch(apiBase() + '/api/public/screen?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : '') + '&lv=' + LIVE_VERSION)
+        fetch(veyroBase() + '/api/public/screen?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : '') + '&lv=' + LIVE_VERSION)
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -3917,13 +3963,13 @@
         '@keyframes agp-so-sheen{from{background-position:-100% 0}to{background-position:200% 0}}',
         /* وعاء الهدايا */
         '.agp-so-jar{color:#fff;display:flex;flex-direction:column;align-items:center;gap:.3em;text-shadow:0 .04em .12em rgba(0,0,0,.85)}',
-        '.agp-so-jwrap{position:relative;width:9em;filter:drop-shadow(0 .3em .6em rgba(0,0,0,.45))}',
-        '.agp-so-jlid{position:relative;z-index:2;width:6.8em;height:1.2em;margin:0 auto -.15em;border-radius:.4em;background:repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 .1em,transparent .1em .42em),linear-gradient(180deg,color-mix(in srgb,var(--agp-so-c) 55%,#fff),var(--agp-so-c) 50%,color-mix(in srgb,var(--agp-so-c) 65%,#000));box-shadow:inset 0 .08em 0 rgba(255,255,255,.55),0 .08em .25em rgba(0,0,0,.45)}',
-        '.agp-so-jneck{width:6.3em;height:.55em;margin:0 auto;border:.1em solid rgba(255,255,255,.7);border-bottom:0;border-radius:.15em .15em 0 0;background:rgba(255,255,255,.07);box-sizing:border-box}',
-        '.agp-so-jglass{position:relative;width:9em;height:10.5em;box-sizing:border-box;border:.12em solid rgba(255,255,255,.78);border-radius:1.5em 1.5em 2.1em 2.1em;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 35%,rgba(255,255,255,.02) 70%,rgba(255,255,255,.1));box-shadow:0 0 .8em color-mix(in srgb,var(--agp-so-c) 55%,transparent),inset 0 0 1em color-mix(in srgb,var(--agp-so-c) 30%,transparent)}',
-        '.agp-so-jglass::after{content:"";position:absolute;z-index:3;top:.9em;right:.55em;width:.32em;height:62%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}',
-        '.agp-so-jglass::before{content:"";position:absolute;z-index:3;left:12%;right:12%;bottom:.25em;height:.9em;border-radius:50%;border-top:.07em solid rgba(255,255,255,.35);pointer-events:none}',
-        '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.4em;bottom:.35em}',
+        /* وعاء زجاج حقيقي مفتوح (بدون غطا): الحواف أفتح من الوسط (انعكاس الزجاج)، قاع سميك، وحافة فتحة بيضاوية؛
+           الهدايا تطيح من فوق الفتحة (clip-path يقص الأسفل المستدير بس ويخلّي فوق مفتوح)، والانعكاسات فوق الهدايا */
+        '.agp-so-jwrap{position:relative;width:9em;margin-top:.6em;filter:drop-shadow(0 .35em .55em rgba(0,0,0,.4)) drop-shadow(0 0 .7em color-mix(in srgb,var(--agp-so-c) 40%,transparent))}',
+        '.agp-so-jglass{position:relative;width:9em;height:10.5em;box-sizing:border-box;border:.07em solid rgba(255,255,255,.5);border-top:0;border-radius:.5em .5em 2.6em 2.6em/.5em .5em 1.7em 1.7em;clip-path:inset(-16em -.2em 0 -.2em round 0 0 2.6em 2.6em/0 0 1.7em 1.7em);background:linear-gradient(90deg,rgba(255,255,255,.26) 0,rgba(255,255,255,.07) 8%,rgba(255,255,255,0) 20%,rgba(255,255,255,0) 76%,rgba(255,255,255,.06) 89%,rgba(255,255,255,.22) 100%),linear-gradient(180deg,color-mix(in srgb,var(--agp-so-c) 5%,rgba(255,255,255,.015)),color-mix(in srgb,var(--agp-so-c) 14%,rgba(255,255,255,.04)));box-shadow:inset 0 -1.1em 1.2em -.8em rgba(255,255,255,.5),inset 0 -.18em 0 rgba(255,255,255,.28),inset .4em 0 .55em -.35em rgba(255,255,255,.35),inset -.4em 0 .55em -.35em rgba(255,255,255,.22)}',
+        '.agp-so-jshine{position:absolute;inset:0;z-index:3;pointer-events:none;border-radius:inherit;background:radial-gradient(.3em 3.6em at 13% 44%,rgba(255,255,255,.85),rgba(255,255,255,0) 72%),radial-gradient(.1em 2.4em at 22% 40%,rgba(255,255,255,.55),rgba(255,255,255,0) 72%),radial-gradient(.2em 2em at 89% 58%,rgba(255,255,255,.4),rgba(255,255,255,0) 72%),radial-gradient(3.4em .32em at 50% 95.5%,rgba(255,255,255,.45),rgba(255,255,255,0) 72%),linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,0) 12%)}',
+        '.agp-so-jrim{position:absolute;z-index:4;left:-.06em;right:-.06em;top:-.55em;height:1.1em;box-sizing:border-box;border-radius:50%;border:.09em solid rgba(255,255,255,.4);border-bottom-color:rgba(255,255,255,.92);border-bottom-width:.13em;background:radial-gradient(closest-side,rgba(255,255,255,0) 80%,rgba(255,255,255,.12));box-shadow:0 .06em .12em rgba(0,0,0,.25),inset 0 -.08em .1em rgba(255,255,255,.35);pointer-events:none}',
+        '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.75em;bottom:.45em}',
         '.agp-so-gi{position:absolute;width:1.3em;height:1.3em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
         '.agp-so-gimg{width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-gi.fb>span:first-child{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;font-size:.6em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
@@ -3972,6 +4018,24 @@
         '.agp-so-vtxt.top{top:4%}',
         '.agp-so-vpart{position:absolute;z-index:3;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;direction:rtl;text-align:center}',
         '.agp-so-vpart.wait{opacity:0}',
+        /* الحركة المستمرة (PART_LOOPS) على غلاف داخلي */
+        '.agp-so-vloop{display:inline-block}',
+        '.agp-so-vloop.abs{position:absolute;inset:0;display:block}',
+        '.agp-so-vloop.lp-float{animation:agp-so-l-float 2.6s ease-in-out infinite}',
+        '.agp-so-vloop.lp-pulse{animation:agp-so-l-pulse 1.4s ease-in-out infinite}',
+        '.agp-so-vloop.lp-swing{animation:agp-so-l-swing 2.2s ease-in-out infinite;transform-origin:50% 0}',
+        '.agp-so-vloop.lp-bounce{animation:agp-so-l-bounce 1.2s cubic-bezier(.3,0,.5,1) infinite}',
+        '.agp-so-vloop.lp-shine{animation:agp-so-l-shine 2s ease-in-out infinite}',
+        '.agp-so-vloop.lp-spin{animation:agp-so-l-spin 6s linear infinite}',
+        '.agp-so-vloop.lp-wave{animation:agp-so-l-wave 1.6s ease-in-out infinite}',
+        '@keyframes agp-so-l-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-.12em)}}',
+        '@keyframes agp-so-l-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}',
+        '@keyframes agp-so-l-swing{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}',
+        '@keyframes agp-so-l-bounce{0%,55%,100%{transform:translateY(0)}25%{transform:translateY(-.22em)}40%{transform:translateY(.02em)}}',
+        '@keyframes agp-so-l-shine{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) drop-shadow(0 0 .12em rgba(255,255,255,.8))}}',
+        '@keyframes agp-so-l-spin{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-l-wave{0%,100%{transform:skewX(0) translateY(0)}25%{transform:skewX(-6deg) translateY(-.05em)}75%{transform:skewX(6deg) translateY(.05em)}}',
+        '@media (prefers-reduced-motion:reduce){.agp-so-vloop{animation:none!important}}',
         '.agp-so-vpart.pin-fade{animation:agp-so-p-fade .45s ease both}',
         '.agp-so-vpart.pin-pop{animation:agp-so-p-pop .5s cubic-bezier(.2,1.5,.4,1) both}',
         '.agp-so-vpart.pin-up{animation:agp-so-p-up .5s cubic-bezier(.2,.9,.3,1) both}',
@@ -4262,7 +4326,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
@@ -4272,7 +4336,8 @@
             var fresh = [];
             for (var i = 0; i < (n || 6); i++) {
                 var k = 'demo-' + Date.now().toString(36) + '-' + i;
-                jarDemo.push({ k: k, img: SAMPLE_GIFT_SVGS[Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length)], name: '' });
+                var sg = jarSample(Math.floor(Math.random() * JAR_SAMPLE_GIFTS.length));
+                jarDemo.push({ k: k, img: sg.img, name: sg.name });
                 fresh.push(k);
             }
             if (jarDemo.length > JAR_CAP) jarDemo = jarDemo.slice(jarDemo.length - JAR_CAP);

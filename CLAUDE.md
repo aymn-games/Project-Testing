@@ -10,6 +10,7 @@
 | نواة المنصة `window.AymanGamesPlatform` (`AGP`) | `js/agp-*.js` |
 | الألعاب | `games/<id>/`، `discord-games/` — أغلبها يبني شاشته عبر `js/agp-game-shell.js` |
 | السيرفر (Node.js + SQLite، مستضاف على Render) | `backend/` — حسابات، نقاط، متجر، دعم، تحديات |
+| سيرفر فيرو المستقل (شاشات البث — خدمة Render منفصلة) | `veyro-server/` + الواجهة `veyro/` — الدليل `docs/VEYRO_SERVER.md` |
 | ربط بث تيك توك | `backend/platforms/tiktok/` ← WebSocket ← `adapters/agp-tiktok-adapter.js` |
 | تسجيل الدخول وتوثيق تيك توك (OAuth) | `backend/auth/` + `auth/auth-client.js` (`window.AGPAuth`) |
 | شخصيات الأنمي ثلاثية الأبعاد المشتركة (VRM: بنت وولد) | `assets/characters/` + `js/agp-vrm-characters.js` — الدليل `docs/CHARACTERS.md` |
@@ -18,6 +19,7 @@
 - `docs/CLAUDE.md` — فلسفة المشروع، طريقة كتابة الكود، ترتيب تحميل الملفات، وخطوات إضافة لعبة.
 - `docs/ARCHITECTURE.md` و`docs/BACKEND_ARCHITECTURE.md` — تفاصيل البنية.
 - `docs/CHARACTERS.md` — لو اللعبة تحتاج شخصيات ثلاثية الأبعاد: شخصيات الأنمي المشتركة (VRM) وطريقة تركيبها بأي لعبة.
+- `docs/VEYRO_SERVER.md` — لو الشغل على فيرو أو شاشات البث: سيرفره منفصل، وبعض ملفاته منسوخة من `backend/`.
 - `docs/CHANGELOG.md` — تاريخ كل تغيير (طويل؛ ابحث فيه عن اسم اللعبة أو الميزة بدل قراءته كاملاً).
 
 **طريقة العمل:** كل جلسة تشتغل على فرع مستقل وتُدمج عبر Pull Request؛

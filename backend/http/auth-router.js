@@ -107,6 +107,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/auth/google', requireAuth: false, handler: handleGoogleLogin },
   { method: 'POST', path: '/api/auth/logout', requireAuth: true, handler: handleLogout },
   { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: handleMe },
+  // سيرفر فيرو يتأكد من الحساب (ومعه الاسم والصورة) — http/veyro-bridge.js
+  { method: 'GET', path: '/api/veyro/whoami', requireAuth: true, handler: require('./veyro-bridge').handleWhoami },
   // كلمة الدخول وأسماء/كلمات الفريقين المشتركة بين كل الألعاب — js/agp-shared-prefs.js
   { method: 'GET', path: '/api/game-prefs', requireAuth: true, handler: handleGetGamePrefs },
   { method: 'POST', path: '/api/game-prefs', requireAuth: true, handler: handleSaveGamePrefs },

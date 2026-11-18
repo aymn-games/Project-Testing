@@ -217,7 +217,8 @@
 
     /* ---------------- السيرفر ---------------- */
 
-    function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
+    // كل طلبات فيرو لسيرفر فيرو المستقل (O.veyroBase — js/agp-stream-overlay.js)، والدخول نفسه بحساب ألعاب أيمن (AGPAuth)
+    function apiBase() { return O.veyroBase(); }
     function token() {
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }
@@ -2537,6 +2538,9 @@
 
     var PART_NAMES = { avatar: 'الصورة', name: 'الاسم', msg: 'الرسالة' };
     var partSel = 'name';
+    var partOpen = null; // العنصر اللي ستايله مفتوح تحت صفه (زر «ستايل»)
+    // حدود حجم كل عنصر (em): الصورة أكبر من النصوص
+    var PART_RANGE = { avatar: [1, 8], name: [0.4, 3], msg: [0.4, 3] };
 
     /**
      * ترتيب الصورة والاسم والرسالة فوق الفيديو: معاينة صغيرة بنفس النسب،
@@ -2634,6 +2638,7 @@
                 var af = c.querySelector('.va-av-f'), ai = c.querySelector('.va-av-i');
                 [af, ai].forEach(function (q) { q.style.clipPath = q.style.webkitClipPath = shp.cp || ''; q.style.borderRadius = shp.cp ? '' : shp.br; });
                 af.style.background = fr === 'ring' ? col : 'transparent';
+                af.className = 'va-av-f' + (O.loopOf(p) ? ' agp-so-vloop abs lp-' + O.loopOf(p) : '');
                 ai.style.inset = fr === 'ring' ? '2px' : '0';
                 c.style.filter = fr === 'glow' ? 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')' : fr === 'none' ? '' : 'drop-shadow(0 2px 5px rgba(0,0,0,.7))';
             }
@@ -2641,7 +2646,7 @@
                 c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
                 // ستايل النص (حدود، نيون، ذهبي…) بنفس كلاسات البث
                 var tx = c.querySelector('.agp-so-tx');
-                tx.className = 'agp-so-tx' + (p.st ? ' s-' + p.st : '');
+                tx.className = 'agp-so-tx' + (p.st ? ' s-' + p.st : '') + (O.loopOf(p) ? ' agp-so-vloop lp-' + O.loopOf(p) : '');
                 tx.style.color = p.c || '#fff';
                 tx.style.setProperty('--agp-so-c', p.c || '#fff');
                 c.style.textShadow = p.st ? 'none' : '';
@@ -2681,7 +2686,7 @@
                     c.removeEventListener('pointerup', up);
                     c.removeEventListener('pointercancel', up);
                     if (moved) { commit(); rebuildNode(it); }
-                    if (partSel !== x[0]) { partSel = x[0]; renderPanel(); }
+                    if (partSel !== x[0] || (!moved && partOpen !== x[0])) { partSel = x[0]; if (!moved) partOpen = x[0]; renderPanel(); }
                 }
                 c.addEventListener('pointermove', mv);
                 c.addEventListener('pointerup', up);
@@ -2719,24 +2724,55 @@
             if (repaint) renderPanel();
         }
 
-        // ١) العناصر: الصورة والاسم والرسالة جنب بعض — كل وحدة بمفتاحها وحجمها
-        var gEl = group(box, 'العناصر', 'إظهار وحجم كل وحدة');
+        // ١) العناصر: الصورة والاسم والرسالة — كل وحدة بحجمها ومفتاحها وزر «ستايل» يفتح شكلها وحركاتها تحت صفها
+        var gEl = group(box, 'العناصر', 'الحجم والستايل لكل وحدة');
+        var linked = !!it.partsLink;
+        gEl.appendChild(row('مقاس موحّد', toggle(linked, function (val) { it.partsLink = val; commit(); renderPanel(); }), false,
+            linked ? 'تغيّر حجم وحدة والباقي يكبر ويصغر معها' : 'شغّله وكبّر أو صغّر وحدة، والباقي يتبعها'));
+        var sizeSl = {};
+        /** الحجم الموحّد: كل العناصر تتغيّر بنفس نسبة العنصر اللي تحركه (كل وحدة داخل حدودها). */
+        function setSize(k2, val) {
+            if (!linked) { setPart(k2, 's', val); return; }
+            var old = Number(O.partsOf(it)[k2].s) || val;
+            var f = val / old;
+            Object.keys(PART_NAMES).forEach(function (k3) {
+                var q3 = Object.assign({}, O.partsOf(it)[k3]);
+                var rg = PART_RANGE[k3];
+                q3.s = k3 === k2 ? val : Math.round(Math.max(rg[0], Math.min(rg[1], (Number(q3.s) || rg[0]) * f)) * 100) / 100;
+                it.parts[k3] = q3;
+                if (k3 !== k2 && sizeSl[k3]) { sizeSl[k3].value = q3.s; sizeSl[k3].dispatchEvent(new Event('input')); }
+                paintChip(k3);
+            });
+            commit(); rebuildNode(it);
+        }
+        var syncing = false;
         Object.keys(PART_NAMES).forEach(function (k2) {
             var q = parts[k2];
-            var r = el('div', 'ob-row va-el' + (k2 === partSel ? ' sel' : '') + (q.on ? '' : ' off'));
-            var lb = button('', 'va-el-n', function () { partSel = k2; renderPanel(); });
+            var open = partOpen === k2;
+            var r = el('div', 'ob-row va-el' + (k2 === partSel ? ' sel' : '') + (q.on ? '' : ' off') + (open ? ' open' : ''));
+            var lb = button('', 'va-el-n', function () { partSel = k2; partOpen = open ? null : k2; renderPanel(); });
             lb.appendChild(el('b', null, PART_NAMES[k2]));
-            lb.appendChild(el('small', null, k2 === partSel ? 'تعدّل شكلها تحت' : 'اضغط لتعديل شكلها'));
+            lb.appendChild(el('small', null, q.on ? (linked ? 'مقاس موحّد' : 'حجمها لحالها') : 'مخفية'));
             r.appendChild(lb);
             var ctl = el('div', 'va-el-c');
-            var mn2 = k2 === 'avatar' ? 1 : 0.4, mx2 = k2 === 'avatar' ? 8 : 3;
-            var sz = withValue(slider(mn2, mx2, 0.05, q.s, function (val) { setPart(k2, 's', val); }));
+            var rg = PART_RANGE[k2];
+            var sl = slider(rg[0], rg[1], 0.05, q.s, function (val) { if (!syncing) { syncing = true; setSize(k2, val); syncing = false; } });
+            sizeSl[k2] = sl;
+            var sz = withValue(sl);
             if (!q.on) sz.classList.add('dis');
-            sz.setAttribute('aria-label', 'حجم ' + PART_NAMES[k2]);
+            sl.setAttribute('aria-label', 'حجم ' + PART_NAMES[k2]);
             ctl.appendChild(sz);
-            ctl.appendChild(toggle(q.on, function (val) { setPart(k2, 'on', val, true); }));
+            var sb = button('', 'va-sty-b' + (open ? ' on' : ''), function () { partSel = k2; partOpen = open ? null : k2; renderPanel(); });
+            sb.appendChild(svgEl('wand'));
+            sb.appendChild(el('span', null, 'ستايل'));
+            sb.setAttribute('aria-expanded', open ? 'true' : 'false');
+            sb.setAttribute('aria-label', 'ستايل ' + PART_NAMES[k2]);
+            if (!q.on) sb.disabled = true;
+            ctl.appendChild(sb);
+            ctl.appendChild(toggle(q.on, function (val) { if (!val && partOpen === k2) partOpen = null; setPart(k2, 'on', val, true); }));
             r.appendChild(ctl);
             gEl.appendChild(r);
+            if (open && q.on) gEl.appendChild(partStyle(k2));
         });
 
         // ٢) وقت الظهور: خيار واحد للصورة والاسم والرسالة كلها (it.partsTime)
@@ -2769,13 +2805,11 @@
             gT.appendChild(row('تختفي عند', ew, true));
         }
 
-        // ٣) شكل العنصر المختار
-        var key = partSel, p = parts[key], nm = PART_NAMES[key];
-        var gS = group(box, 'شكل العنصر');
-        gS.appendChild(row('العنصر', pills(Object.keys(PART_NAMES).map(function (x) { return { label: PART_NAMES[x], value: x }; }), partSel, function (v2) { partSel = v2; renderPanel(); })));
-        if (!p.on) gS.appendChild(el('div', 'ob-hint', nm + ' مخفية — شغّلها من «العناصر» فوق.'));
-        if (p.on) {
-            // التحريك الدقيق
+        /** ستايل العنصر (يفتح تحت صفه): المكان، والشكل/الإطار أو الخط وستايل النص، واللون، وحركة الظهور والحركة المستمرة. */
+        function partStyle(key) {
+            var p = O.partsOf(it)[key], nm = PART_NAMES[key];
+            var gS = el('div', 'va-sty');
+            gS.appendChild(el('div', 'va-sty-h', 'ستايل ' + nm));
             var nudge = el('div', 'va-nudge');
             [['↑', 0, -1, 'فوق'], ['↓', 0, 1, 'تحت'], ['→', 1, 0, 'يمين'], ['←', -1, 0, 'يسار']].forEach(function (d) {
                 var b = button(d[0], 'ob-pill', function () {
@@ -2789,7 +2823,6 @@
             nudge.appendChild(button('بالنص', 'ob-pill', function () { setPart(key, 'x', 50); }));
             gS.appendChild(row('المكان', nudge, true, 'كل ضغطة تحرك 1٪ — أو اسحبه بالمعاينة'));
             if (key === 'avatar') {
-                // شكل الصورة: أزرار فيها معاينة الشكل نفسه
                 var sg = el('div', 'ob-shapes');
                 O.AVATAR_SHAPES.forEach(function (shp) {
                     var sb = button('', 'ob-shape' + ((p.sh || 'circle') === shp.key ? ' on' : ''), function () { setPart(key, 'sh', shp.key, true); });
@@ -2804,7 +2837,7 @@
             }
             gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
-                gS.appendChild(row('ستايل ' + nm, pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
+                gS.appendChild(row('ستايل النص', pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
                 var g = el('div', 'ob-fgrid');
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
@@ -2817,9 +2850,11 @@
                     fb.appendChild(el('span', null, f.label));
                     g.appendChild(fb);
                 });
-                gS.appendChild(row('خط ' + nm, g, true));
+                gS.appendChild(row('الخط', g, true));
             }
-            gS.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true));
+            gS.appendChild(row('حركة الظهور', pills(opts(O.PART_ANIMS), p.a || 'fade', function (val) { setPart(key, 'a', val, true); }), true, 'كيف تدخل أول ما تطلع'));
+            gS.appendChild(row('حركة مستمرة', pills(opts(O.PART_LOOPS.filter(function (x) { return !x.only || x.only === (key === 'avatar' ? 'avatar' : 'text'); })), O.loopOf(p) || 'none', function (val) { setPart(key, 'lp', val === 'none' ? '' : val, true); }), true, 'تتكرر طول ما هي ظاهرة'));
+            return gS;
         }
 
         // ٤) نص الرسالة

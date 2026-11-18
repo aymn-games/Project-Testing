@@ -1,0 +1,751 @@
+/**
+ * AGP TIKTOK CONNECTOR — اتصال حقيقي بخدمة تيك توك عبر `tiktok-live-connector`.
+ * يطبّق نفس شكل الموصِّل الذي يطبّقه platforms/mock/mock-connector.js:
+ *
+ *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
+ *   callbacks = {
+ *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard, character }),
+ *     onGift({ id, name, giftName, giftId, giftValue, giftImage, repeatCount }),
+ *     onFollow({ id, name, avatarUrls }),
+ *     onViewerUpdate({ current, totalUsers }),  // اختياري
+ *     onLike({ id, name, count, avatarUrls }),  // اختياري — count = عدد التكبيسات بهذه الدفعة
+ *     onShare({ id, name, avatarUrls }),        // اختياري
+ *     onMember({ id, name, avatarUrls }),       // اختياري — دخول مشاهد للبث
+ *     onSubscribe({ id, name, avatarUrls })     // اختياري — اشتراك / «سوبر فان» (subNotify + superFanJoin)
+ *   }
+ *
+ * إعادة الاتصال (Reconnect):
+ *   - انقطاع غير متوقَّع بعد اتصال ناجح -> إعادة محاولة تلقائية بتأخير
+ *     تصاعدي (Exponential Backoff + Jitter)، حتى حد أقصى من المحاولات.
+ *   - فشل الاتصال الأول (يوزرنيم خاطئ/غير مباشر الآن) -> لا إعادة محاولة،
+ *     يُبلَّغ كخطأ فوراً — ما عدا "تعذّر جلب Room ID" (غالباً مؤقت من تيك
+ *     توك/خدمة التوقيع): يُعاد تلقائياً مرتين قبل إظهار الخطأ.
+ *   - رسائل المكتبة الإنجليزية الشائعة تُترجَم لرسائل عربية واضحة
+ *     (friendlyConnectError) بدل عرضها خام للمستخدم.
+ *   - قطع متعمَّد عبر disconnect() -> لا أي محاولة إعادة اتصال.
+ *   - انتهاء البث فعلياً في تيك توك (حدث streamEnd، أو انقطاع والحساب ما عاد
+ *     يبث حسب fetchIsLive) -> لا إعادة اتصال، ويُبلَّغ onStatus('ended') عشان
+ *     الواجهة تقطع الاتصال المحفوظ بمكتبة الألعاب والألعاب.
+ *
+ * تطبيع الأحداث (محقَّق من الحزمة v2.4.3):
+ *   chat   -> data.user.displayId، data.user.nickname، data.content (وليس data.comment)
+ *   gift   -> data.user.{displayId,nickname}, data.gift.{name,diamondCount,type}, data.repeatCount, data.repeatEnd
+ *             (هدايا قابلة للتسلسل type===1: حدث واحد نهائي فقط عند repeatEnd)
+ *   follow -> WebcastEvent.FOLLOW منفصل عن SOCIAL/SHARE.
+ */
+
+'use strict';
+
+var logger = require('../../utils/logger');
+var chatLatency = require('../../utils/chat-latency');
+// فيرو ما يعرض إطارات ومقتنيات الألعاب — نفس الواجهة بس ترجع لا شي (الأصل بـbackend/collectibles)
+var collectiblesService = {
+    getEquippedFrameForVerifiedTikTok: function () { return null; },
+    getEquippedEntranceForVerifiedTikTok: function () { return null; },
+    getElimCardForVerifiedTikTok: function () { return null; },
+    getCharacterForVerifiedTikTok: function () { return null; },
+    getWinCardForVerifiedTikTok: function () { return null; }
+};
+var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
+var giftCatalog = require('./gift-catalog');
+
+/** كتالوج الهدايا (Veyro يختار منه هدية لأليرت) — أي خطأ فيه ما يأثر على البث. */
+function catalogSafe(fn) {
+    try { fn(giftCatalog.get()); } catch (err) { logger.error('TikTok Connector: gift catalog failed:', err); }
+}
+
+var MAX_RECONNECT_ATTEMPTS = 5;
+var BASE_RECONNECT_DELAY_MS = 1000;
+var MAX_RECONNECT_DELAY_MS = 30000;
+
+// ⚠️ بگ مؤكَّد داخل tiktok-live-connector (حتى 2.4.4): عند رد 429 من سيرفر
+// التوقيع، المكتبة تمرر response.data (بدون .headers) لباني
+// SignatureRateLimitError فتكسر بـ "Cannot read properties of undefined
+// (reading 'retry-after')" — يخفي رسالة الـ rate-limit الحقيقية. نكتشف
+// هذا الخطأ هنا ونتعامل معه كـ rate-limit فعلي: رسالة واضحة + انتظار أطول.
+var SIGN_RATE_LIMIT_COOLDOWN_MS = 3 * 60 * 1000; // ٣ دقايق — كل محاولة مرفوضة تنحسب من حد الطلبات اليومي
+function isSignRateLimitCrash(err) {
+    return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
+}
+/** حد التوقيع: الكسر أعلاه، أو SignatureRateLimitError الصريح (لو المكتبة انصلحت). */
+function isSignRateLimit(err) {
+    return isSignRateLimitCrash(err) || (err && ((err.constructor && err.constructor.name) || err.name)) === 'SignatureRateLimitError';
+}
+// محاولات حد التوقيع منفصلة عن MAX_RECONNECT_ATTEMPTS: كانت تُحسب منها، فبعد
+// ٥ دقايق تقريباً يوقف الموصِّل نهائياً واللعبة تبقى بدون شات وبدون أي رسالة.
+var MAX_RATE_LIMIT_RETRIES = 10; // ~٣٠ دقيقة
+var RATE_LIMIT_MESSAGE = 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال ٣ دقايق تقريباً.';
+var RATE_LIMIT_GIVE_UP_MESSAGE = 'تعذّر الاتصال ببث تيك توك بسبب حد محاولات الاتصال — جرّب مرة ثانية بعد شوي.';
+
+// ⚠️ "Failed to retrieve Room ID from all sources." (InvalidResponseCompositeError
+// من fetchRoomId بالمكتبة): فشلت كل طرق جلب رقم الغرفة (HTML، API، Euler).
+// الأسباب: الحساب مو في بث، يوزر غلط، أو فشل مؤقت من تيك توك/Euler — الأخير
+// يزول غالباً بإعادة المحاولة، فنعيد تلقائياً قبل ما نبلّغ المستخدم.
+var ROOM_ID_RETRY_DELAYS_MS = [2000, 4000];
+var ROOM_ID_ERROR_MESSAGE = 'ما لقينا بث مباشر لهذا الحساب — تأكد إنك تبث الحين وإن اليوزر مكتوب صح (بدون @)، ثم جرّب مرة ثانية.';
+var USER_OFFLINE_MESSAGE = 'الحساب مو في بث مباشر الحين — ابدأ البث أولاً ثم اضغط اتصال.';
+var GENERIC_CONNECT_ERROR_MESSAGE = 'تعذّر الاتصال ببث تيك توك الحين — جرّب مرة ثانية بعد لحظات.';
+var STREAM_ENDED_MESSAGE = 'انتهى البث المباشر في تيك توك — تم قطع الاتصال.';
+
+function errorName(err) {
+    return (err && ((err.constructor && err.constructor.name) || err.name)) || '';
+}
+function isRoomIdError(err) {
+    var msg = (err && err.message) || '';
+    return errorName(err) === 'InvalidResponseCompositeError' || msg.indexOf('Room ID') !== -1;
+}
+function isUserOfflineError(err) {
+    var msg = (err && err.message) || '';
+    return errorName(err) === 'UserOfflineError' || msg.indexOf("isn't online") !== -1;
+}
+/** رسالة عربية واضحة للمستخدم بدل نص خطأ المكتبة الإنجليزي. */
+function friendlyConnectError(err) {
+    if (isUserOfflineError(err)) return USER_OFFLINE_MESSAGE;
+    if (isRoomIdError(err)) return ROOM_ID_ERROR_MESSAGE;
+    return GENERIC_CONNECT_ERROR_MESSAGE;
+}
+/** تفاصيل كل مصدر فشل (requestErrs) بالسجل — لتشخيص السبب الحقيقي. */
+function logRoomIdSourceErrors(err) {
+    var errs = err && err.requestErrs;
+    if (!Array.isArray(errs)) return;
+    errs.forEach(function (e, i) {
+        logger.error('TikTok Connector: Room ID source #' + (i + 1) + ' failed: ' + ((e && e.message) || String(e)));
+    });
+}
+
+var TikTokLib;
+try {
+    TikTokLib = require('tiktok-live-connector');
+} catch (err) {
+    TikTokLib = null;
+    logger.error('TikTok Connector: "tiktok-live-connector" is not installed. Run `npm install` in backend/.');
+}
+
+// ⚠️ بدون signApiKey، توقيع WebSocket يمر على الطبقة المجانية (Community)
+// من EulerStream — محدودة جداً، سبب تأخر/فشل الاتصال بمعظم البثوث. لو
+// EULERSTREAM_API_KEY غير موجود، نستمر على الطبقة المجانية بدل ما نكسر.
+var EULERSTREAM_API_KEY = process.env.EULERSTREAM_API_KEY || null;
+if (!EULERSTREAM_API_KEY) {
+    logger.error('TikTok Connector: EULERSTREAM_API_KEY not set — falling back to EulerStream free/community tier (heavily rate-limited). Set this env var to fix slow/failed connections.');
+}
+
+/**
+ * استخراج {id, name, uniqueId} موحَّد من كائن مستخدم واردٍ من المكتبة.
+ *
+ * ⚠️ رسالة الـ User الخام من بروتوكول تيك توك الحالي (Webcast proto v3)
+ * لا تحتوي حقل uniqueId — تيك توك أزالته. الحقل البديل بنفس المعنى هو
+ * `displayId`؛ الاعتماد على uniqueId فقط يتساقط على `user.id` (رقم داخلي
+ * خام) بدل اليوزرنيم الحقيقي، فيكسر مطابقة الإطارات/النقاط بمقارنة هذا
+ * الرقم مع users.tiktok_username. نُبقي uniqueId كخيار احتياطي ثانٍ قبل
+ * السقوط لـ user.id كملاذ أخير.
+ */
+var _extractUserDebugLogsRemaining = 5;
+/** عدد التكبيسات بدفعة حدث LIKE: `count` (بروتو v3) أو `likeCount` (نسخ أقدم)، وأقل شي 1. */
+function likeBatchCount(data) {
+    var n = Number(data && (data.count != null ? data.count : data.likeCount));
+    return n > 0 ? Math.floor(n) : 1;
+}
+
+function extractUser(data) {
+    var user = (data && data.user) || {};
+    var identifier = user.displayId || user.uniqueId || user.id || 'unknown';
+    var nickname = user.nickname || identifier;
+
+    if (_extractUserDebugLogsRemaining > 0) {
+        _extractUserDebugLogsRemaining--;
+        logger.log(
+            'TikTok Connector: [0.44.3 تشخيص] الحقول الخام — ' +
+            'displayId=' + JSON.stringify(user.displayId) + ' ' +
+            'uniqueId=' + JSON.stringify(user.uniqueId) + ' ' +
+            'id=' + JSON.stringify(user.id) + ' ' +
+            'secUid=' + JSON.stringify(user.secUid) + ' ' +
+            'nickname=' + JSON.stringify(user.nickname) + ' ' +
+            '→ المُستخدَم فعلياً=' + JSON.stringify(identifier)
+        );
+    }
+
+    return { id: 'tiktok:' + identifier, name: nickname, uniqueId: identifier };
+}
+
+/**
+ * استخراج رابط صورة بروفايل تيك توك — المكتبة تُوثِّق شكل profilePicture
+ * بأكثر من صيغة محتملة حسب نسخة الحدث، فتُجرَّب كل الأشكال المعروفة
+ * بالترتيب وتُرجَع null لو ما لقت شيء.
+ */
+function extractAvatarUrl(data) {
+    var user = (data && data.user) || {};
+    var pic = user.profilePicture || user.avatarThumb || user.avatarMedium || user.avatarLarger || null;
+    if (!pic) return null;
+    if (typeof pic === 'string') return pic;
+    if (typeof pic.url === 'string') return pic.url;
+    if (Array.isArray(pic.urls) && pic.urls.length) return pic.urls[0];
+    if (Array.isArray(pic.urlListList) && pic.urlListList.length) return pic.urlListList[0];
+    if (Array.isArray(pic.urlList) && pic.urlList.length) return pic.urlList[0];
+    return null;
+}
+
+/**
+ * كل روابط الصورة المصغّرة المتاحة (حتى 3) لإحصائيات البث — لو فشل تحميل
+ * رابط نجرّب اللي بعده. صيغ jpeg/webp/png أولاً لأنها اللي ينقبل تحميلها
+ * (tiktok-avatar-sync.js)، والصغيرة (avatarThumb) قبل الأكبر.
+ */
+function extractAvatarUrls(data) {
+    var user = (data && data.user) || {};
+    var out = [];
+    [user.avatarThumb, user.avatarMedium, user.profilePicture].forEach(function (pic) {
+        if (!pic) return;
+        var list = typeof pic === 'string' ? [pic] : (pic.urlList || pic.urls || (pic.url ? [pic.url] : []));
+        (list || []).forEach(function (u) { if (typeof u === 'string' && u && out.indexOf(u) === -1) out.push(u); });
+    });
+    var ok = /\.(jpe?g|webp|png)(\?|$)/i;
+    out.sort(function (a, b) { return (ok.test(b) ? 1 : 0) - (ok.test(a) ? 1 : 0); });
+    return out.slice(0, 3);
+}
+
+/**
+ * الإطار المفعَّل حالياً (لو وُجد) لصاحب هذا التعليق. فشل الاستعلام لا
+ * يوقف معالجة التعليق — فقط يُعتبَر "بدون إطار".
+ * @param {string} uniqueId
+ * @returns {{frameType: string, frameRef: string, imageFilename: string}|null}
+ */
+function extractEquippedFrame(uniqueId) {
+    try {
+        return collectiblesService.getEquippedFrameForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: frame lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * الدخولية المفعَّلة حالياً (لو وُجدت) لصاحب هذا التعليق — نفس منطق
+ * extractEquippedFrame أعلاه.
+ * @param {string} uniqueId
+ * @returns {{templateKey: string, entranceText: string}|null}
+ */
+function extractEquippedEntrance(uniqueId) {
+    try {
+        return collectiblesService.getEquippedEntranceForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: entrance lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * بطاقة الإقصاء المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس منطق
+ * extractEquippedFrame أعلاه.
+ * @param {string} uniqueId
+ * @returns {{cardKey: string}|null}
+ */
+function extractElimCard(uniqueId) {
+    try {
+        return collectiblesService.getElimCardForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: elimination card lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * شخصية الأنمي لصاحب التعليق: 'girl'|'boy' (اختارها)، 'any' (عنده حساب وما اختار)، null (ما عنده حساب).
+ * @param {string} uniqueId
+ * @returns {'girl'|'boy'|'any'|null}
+ */
+function extractCharacter(uniqueId) {
+    try {
+        return collectiblesService.getCharacterForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: character lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * بطاقة الفوز المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس extractElimCard.
+ * @param {string} uniqueId
+ * @returns {{cardKey: string}|null}
+ */
+function extractWinCard(uniqueId) {
+    try {
+        return collectiblesService.getWinCardForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: win card lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * استخراج "هل هذا المعلِّق متابع لصاحب البث؟" عبر
+ * `data.user.followInfo.followStatus`.
+ *
+ * ⚠️ القيمة بالضبط لـ followStatus غير موثَّقة رسمياً من تيك توك. التخمين
+ * الأول (status === '1' || '2') ثبت أنه غير صحيح باختبار حقيقي — لذلك
+ * تُرسَل بيانات تشخيصية خام مع كل تعليق (_debugFollowStatus) لتصحيح
+ * الشرط لاحقاً بدقة بدل التخمين.
+ */
+function extractIsFollower(data) {
+    var followInfo = data && data.user && data.user.followInfo;
+    if (!followInfo || !followInfo.followStatus) return false;
+    var status = String(followInfo.followStatus);
+    return status === '1' || status === '2'; // تخميني — بانتظار القيم الحقيقية من _debugFollowStatus
+}
+
+/**
+ * هل التعليق من صاحب البث نفسه (الحساب المتصَّل ببثه)؟ صاحب البث ما يقدر
+ * "يتابع" نفسه، فبدون هذا يُرفض دخوله بأي لعبة مفعَّل فيها "المتابعين فقط"
+ * رغم إنه أرسل الكلمة المفتاحية. نعامله كمتابع حتى يقدر يشارك بكل الألعاب.
+ * @param {{uniqueId: string}} user - ناتج extractUser()
+ * @param {string} streamUsername - يوزر البث المتصَّل به
+ */
+function isStreamOwner(user, streamUsername) {
+    if (!user || !user.uniqueId || !streamUsername) return false;
+    var norm = function (v) { return String(v).trim().replace(/^@+/, '').toLowerCase(); };
+    return norm(user.uniqueId) === norm(streamUsername);
+}
+
+/**
+ * هل كاتب التعليق مشرف (Moderator) ببث الستريمر؟ — تيك توك يرسلها مع الرسالة
+ * (user.userIdentity.isModeratorOfAnchor). تستخدمها أدوات Veyro (مشغّل الأغاني:
+ * «المشرفين بس»).
+ */
+function extractIsModerator(data) {
+    var id = data && data.user && data.user.userIdentity;
+    return Boolean(id && id.isModeratorOfAnchor);
+}
+
+function extractFollowDebugInfo(data) {
+    var followInfo = data && data.user && data.user.followInfo;
+    var userIdentity = data && data.user && data.user.userIdentity;
+    return {
+        followStatus: followInfo ? followInfo.followStatus : '(no followInfo)',
+        isFollowerOfAnchor: userIdentity ? userIdentity.isFollowerOfAnchor : '(no userIdentity)'
+    };
+}
+
+/**
+ * استخراج بيانات الهدية بأمان من أي من المسارين المحتملين حسب إعدادات
+ * الاتصال (gift الأساسي دائماً متاح، giftDetails فقط إن فُعِّل
+ * enableExtendedGiftInfo — لم نفعّله هنا لإبقاء الاتصال بسيطاً).
+ */
+/** رابط صورة الهدية (giftDetails.giftImage بالرسالة المفكوكة) أو null — لوعاء الهدايا بالأوفرلي. */
+function extractGiftImage(data) {
+    var details = (data && data.giftDetails) || {};
+    var lists = [details.giftImage && details.giftImage.url, details.icon && details.icon.url, data && data.gift && data.gift.image && data.gift.image.url];
+    for (var i = 0; i < lists.length; i++) {
+        var u = Array.isArray(lists[i]) ? lists[i].filter(function (x) { return typeof x === 'string' && /^https:\/\//.test(x); })[0] : null;
+        if (u) return u;
+    }
+    return null;
+}
+
+function extractGiftInfo(data) {
+    var gift = (data && data.gift) || {};
+    var details = (data && data.giftDetails) || {};
+    return {
+        name: gift.name || details.giftName || 'Gift',
+        value: (typeof gift.diamondCount === 'number') ? gift.diamondCount : (details.diamondCount || 0),
+        type: (typeof gift.type === 'number') ? gift.type : details.giftType
+    };
+}
+
+/**
+ * إنشاء نسخة موصِّل تيك توك جديدة ومستقلة (اتصال واحد = نسخة واحدة)،
+ * بنفس نمط platforms/mock/mock-connector.js بالضبط.
+ * @returns {{connect: function, disconnect: function, isConnected: function}}
+ */
+function createTikTokConnector() {
+    var _connection = null;
+    var _connected = false;
+    var _intentionalDisconnect = false;
+    var _reconnectAttempts = 0;
+    var _roomIdRetries = 0; // إعادة محاولات الاتصال الأول بسبب فشل جلب Room ID
+    var _rateLimitRetries = 0; // إعادة محاولات بسبب حد توقيع EulerStream
+    var _connecting = false; // connect() شغّال الحين (بين startConnection ونتيجته)
+    var _onAttempt = null; // options.onAttempt — عداد الاستهلاك (shared-connection-pool.js)
+    var _reconnectTimer = null;
+    var _username = null;
+    var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
+    var _statsOnly = false; // options.statsOnly — اتصال مراقب الإحصائيات (بدون بيانات العرض باللعبة)
+    var _callbacks = null;
+
+    /** البث انتهى فعلياً: إيقاف نهائي بدون إعادة اتصال + إبلاغ 'ended' مرة وحدة. */
+    function endBecauseStreamEnded(reason) {
+        if (_intentionalDisconnect) return;
+        _intentionalDisconnect = true;
+        clearReconnectTimer();
+        _connected = false;
+        logger.log('TikTok Connector: stream ended for "' + _username + '" (' + reason + ') — stopping, no reconnect.');
+        if (_connection) {
+            try { _connection.disconnect(); } catch (err) {}
+            _connection = null;
+        }
+        _callbacks.onStatus('ended', STREAM_ENDED_MESSAGE);
+    }
+
+    function clearReconnectTimer() {
+        if (_reconnectTimer !== null) {
+            clearTimeout(_reconnectTimer);
+            _reconnectTimer = null;
+        }
+    }
+
+    function attemptReconnect(overrideDelayMs) {
+        if (_intentionalDisconnect) return;
+
+        if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            logger.error('TikTok Connector: giving up after ' + _reconnectAttempts + ' reconnect attempt(s).');
+            _callbacks.onStatus('error', 'Lost connection to TikTok LIVE and could not reconnect after ' + _reconnectAttempts + ' attempts.');
+            return;
+        }
+
+        var delay;
+        if (typeof overrideDelayMs === 'number') {
+            // تأخير مخصَّص (مثلاً rate-limit من تيك توك) — أطول من الباك-أوف
+            // العادي عمداً، لتفادي زيادة الحظر بمحاولات سريعة متتالية.
+            delay = overrideDelayMs;
+        } else {
+            delay = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, _reconnectAttempts), MAX_RECONNECT_DELAY_MS);
+            delay += Math.floor(Math.random() * 500); // jitter بسيط لتفادي محاولات متزامنة
+        }
+        _reconnectAttempts++;
+
+        logger.log('TikTok Connector: reconnecting (attempt ' + _reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ') in ' + delay + 'ms…');
+        _callbacks.onStatus('connecting');
+
+        _reconnectTimer = setTimeout(function () {
+            _reconnectTimer = null;
+            startConnection(true);
+        }, delay);
+    }
+
+    /**
+     * بناء اتصال جديد وربط كل المستمعين — تُستدعى عند أول اتصال وعند
+     * كل محاولة إعادة اتصال، بنفس المنطق تماماً.
+     * @param {boolean} isReconnectAttempt
+     */
+    /** يفصل الاتصال السابق (لو موجود) ويشيل مستمعاته — قبل بناء اتصال جديد بإعادة المحاولة. */
+    function disposeConnection() {
+        var old = _connection;
+        _connection = null;
+        if (!old) return;
+        try { if (typeof old.removeAllListeners === 'function') old.removeAllListeners(); } catch (err) {}
+        try { old.disconnect(); } catch (err) {}
+    }
+
+    function startConnection(isReconnectAttempt) {
+        // إعادة المحاولة كانت تبني اتصال جديد وتترك القديم بمستمعاته — ممكن
+        // يطلق DISCONNECTED متأخر ويبدأ إعادة اتصال ثانية بنفس الوقت.
+        disposeConnection();
+        _connecting = true;
+        // كل محاولة هنا = طلب توقيع من EulerStream
+        if (_onAttempt) { try { _onAttempt(); } catch (err) {} }
+        try {
+            _connection = new TikTokLib.TikTokLiveConnection(
+                _username,
+                EULERSTREAM_API_KEY ? { signApiKey: EULERSTREAM_API_KEY } : {}
+            );
+        } catch (err) {
+            _connecting = false;
+            logger.error('TikTok Connector: failed to construct connection:', err);
+            if (isReconnectAttempt) {
+                attemptReconnect();
+            } else {
+                _callbacks.onStatus('error', err && err.message);
+            }
+            return;
+        }
+
+        _connection.on(TikTokLib.WebcastEvent.CHAT, function (data) {
+            var receivedAt = Date.now();
+            var user = extractUser(data);
+
+            // وضع الإحصائيات فقط (stats/stream-stats-watcher.js): بدون إطارات
+            // ودخوليات وبطاقات — ما فيه لعبة تعرضها، فنوفّر استعلامات القاعدة.
+            // النص يُمرَّر (بدون استعلامات) لأوامر «التحكم بالشات» بمكتبة الألعاب
+            // (js/agp-remote-control.js) — ws-server يرسله بس لو الصفحة طلبته (payload.chat).
+            if (_statsOnly) {
+                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data), isModerator: extractIsModerator(data) });
+                return;
+            }
+
+            // الحقل الفعلي بالرسالة المفكوكة هو "content"، وليس "comment"
+            // كما أوحى مثال README (مضلِّل). نُبقي data.comment كاحتياط دفاعي.
+            var commentText = (data && (data.content || data.comment)) || '';
+            var followDebug = extractFollowDebugInfo(data);
+            var avatarUrl = extractAvatarUrl(data);
+            // حساب موثَّق بدون صورة بروفايل؟ نحفظ صورة تيك توك الحالية (بالخلفية).
+            tiktokAvatarSync.noteCommentAvatar(user.uniqueId, avatarUrl);
+            _callbacks.onComment({
+                id: user.id,
+                name: user.name,
+                text: commentText,
+                isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
+                isModerator: extractIsModerator(data),
+                avatarUrl: avatarUrl,
+                avatarUrls: extractAvatarUrls(data),
+                frame: extractEquippedFrame(user.uniqueId),
+                entrance: extractEquippedEntrance(user.uniqueId),
+                elimCard: extractElimCard(user.uniqueId),
+                winCard: extractWinCard(user.uniqueId),
+                character: extractCharacter(user.uniqueId),
+                _debugFollowStatus: followDebug.followStatus,
+                _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
+            });
+            // قياس التأخير (لوحة الأدمن) — onComment أعلاه يكتب على المقبس متزامناً.
+            chatLatency.record(chatLatency.parseCreateTime(data), receivedAt, Date.now());
+        });
+
+        _connection.on(TikTokLib.WebcastEvent.GIFT, function (data) {
+            var user = extractUser(data);
+            var giftInfo = extractGiftInfo(data);
+            var repeatEnd = !!(data && data.repeatEnd);
+
+            // هدايا قابلة للتسلسل (type === 1): تجاهل الأحداث الوسيطة،
+            // أرسل فقط عند اكتمال التسلسل — حدث واحد نهائي فقط.
+            if (giftInfo.type === 1 && !repeatEnd) return;
+
+            var giftImage = extractGiftImage(data);
+            catalogSafe(function (c) { c.noteGift({ giftId: data && data.giftId, giftName: giftInfo.name, giftValue: giftInfo.value, giftImage: giftImage }); });
+
+            _callbacks.onGift({
+                id: user.id,
+                name: user.name,
+                giftName: giftInfo.name,
+                giftId: (data && data.giftId) || null,
+                giftValue: giftInfo.value,
+                giftImage: giftImage,
+                repeatCount: (data && data.repeatCount) || 1,
+                avatarUrl: extractAvatarUrl(data),
+                avatarUrls: extractAvatarUrls(data)
+            });
+        });
+
+        _connection.on(TikTokLib.WebcastEvent.FOLLOW, function (data) {
+            var user = extractUser(data);
+            _callbacks.onFollow({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+        });
+
+        // like/share/member — لإحصائيات البث فقط (stats/live-session-stats.js).
+        // تيك توك يجمّع التكبيسات بدفعات: عدد التكبيسات بالدفعة بالحقل `count` (نسخة البروتو v3 بالمكتبة
+        // 2.x — WebcastLikeMessage)، والنسخ القديمة كانت `likeCount`. قبل كان يقرأ likeCount بس، فكل دفعة
+        // تنحسب تكبيسة وحدة مهما كان عددها (إحصائيات اللايكات والألعاب اللي تعتمد على التكبيس).
+        if (_callbacks.onLike) {
+            _connection.on(TikTokLib.WebcastEvent.LIKE, function (data) {
+                var user = extractUser(data);
+                _callbacks.onLike({ id: user.id, name: user.name, count: likeBatchCount(data), avatarUrls: extractAvatarUrls(data) });
+            });
+        }
+        if (_callbacks.onShare) {
+            _connection.on(TikTokLib.WebcastEvent.SHARE, function (data) {
+                var user = extractUser(data);
+                _callbacks.onShare({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+            });
+        }
+        if (_callbacks.onMember) {
+            _connection.on(TikTokLib.WebcastEvent.MEMBER, function (data) {
+                var user = extractUser(data);
+                _callbacks.onMember({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+            });
+        }
+
+        // اشتراك بالبث (Subscription / Super Fan): نفس الشخص خلال 15 ثانية = حدث واحد
+        // (تيك توك أحياناً يرسل subNotify ورسالة superFanJoin لنفس الاشتراك)
+        if (_callbacks.onSubscribe) {
+            var subSeen = {};
+            var onSub = function (data) {
+                var user = extractUser(data);
+                if (!user || user.uniqueId === 'unknown') return;
+                var now = Date.now();
+                if (subSeen[user.id] && now - subSeen[user.id] < 15000) return;
+                subSeen[user.id] = now;
+                _callbacks.onSubscribe({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+            };
+            ['subNotify', 'superFanJoin'].forEach(function (ev) { _connection.on(ev, onSub); });
+        }
+
+        // roomUser -> عدد المشاهدين. فحص وجود onViewerUpdate دفاعياً.
+        if (_callbacks.onViewerUpdate) {
+            _connection.on(TikTokLib.WebcastEvent.ROOM_USER, function (data) {
+                var current = Number(data && data.total) || 0;
+                var totalUsers = Number(data && data.totalUser) || 0;
+                _callbacks.onViewerUpdate({ current: current, totalUsers: totalUsers });
+            });
+        }
+
+        // الاستريمر أنهى البث في تيك توك
+        if (TikTokLib.WebcastEvent.STREAM_END) {
+            _connection.on(TikTokLib.WebcastEvent.STREAM_END, function () {
+                endBecauseStreamEnded('streamEnd event');
+            });
+        }
+
+        var thisConnection = _connection;
+        _connection.on(TikTokLib.ControlEvent.DISCONNECTED, function (info) {
+            _connected = false;
+            if (_intentionalDisconnect) return; // متوقَّع، لا شيء إضافي مطلوب هنا
+            logger.log('TikTok Connector: disconnected unexpectedly.', info);
+            // قبل إعادة الاتصال: هل الحساب لسا يبث؟ لو لا → البث انتهى، نوقف.
+            // تعذّر التأكد (خطأ مؤقت) → إعادة اتصال عادية كما كان.
+            var check;
+            try { check = thisConnection.fetchIsLive(); } catch (err) { check = Promise.reject(err); }
+            Promise.resolve(check).then(function (live) {
+                if (_intentionalDisconnect) return;
+                if (live === false) endBecauseStreamEnded('not live after disconnect');
+                else attemptReconnect();
+            }, function (err) {
+                if (_intentionalDisconnect) return;
+                if (isUserOfflineError(err)) endBecauseStreamEnded('offline after disconnect');
+                else attemptReconnect();
+            });
+        });
+
+        _connection.on(TikTokLib.ControlEvent.ERROR, function (err) {
+            logger.error('TikTok Connector: connection error:', err);
+            // لا نُبلِّغ status هنا مباشرة؛ الفشل الفعلي يُعالَج عبر
+            // connect().catch() أدناه أو حدث DISCONNECTED — تجنّباً
+            // لإرسال حالة مكرِّرة لنفس اللحظة.
+        });
+
+        _connection.connect()
+            .then(function () {
+                if (_intentionalDisconnect) return; // انقطاع فُصل يدوياً قبل اكتمال هذا الاتصال — تجاهل تماماً
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل بإعادة محاولة — تجاهل
+                _connecting = false;
+                _connected = true;
+                _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
+                _roomIdRetries = 0;
+                _rateLimitRetries = 0;
+                logger.log('TikTok Connector: connected to real TikTok LIVE for "' + _username + '".');
+                _callbacks.onStatus('connected');
+                // قائمة هدايا تيك توك الكاملة: مرة باليوم لكل السيرفر (طلب موقّع ينحسب من حد التوقيع)
+                catalogSafe(function (c) {
+                    c.refreshWith(function () { return thisConnection.fetchAvailableGifts(); }).then(function (n) {
+                        if (n) logger.log('TikTok Connector: gift catalog refreshed (' + n + ' gifts).');
+                    });
+                });
+            })
+            .catch(function (err) {
+                if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد
+                if (thisConnection !== _connection) return; // اتصال قديم استُبدل — نتيجته ما تهم
+                _connected = false;
+                _connecting = false;
+                logger.error('TikTok Connector: connect() failed:', err);
+
+                if (isSignRateLimit(err)) {
+                    // سيرفر التوقيع (EulerStream) رجّع 429 — الحد مشترك بين كل
+                    // البثوث. نبلّغ برسالة صريحة (reason: 'rate_limited' عشان
+                    // الواجهة تعرضها)، ونعيد المحاولة بعد تهدئة أطول بعدّاد
+                    // خاص، بدون ما نستهلك محاولات إعادة الاتصال العادية.
+                    logger.error('TikTok Connector: sign-server rate limit hit for "' + _username + '" (retry ' + (_rateLimitRetries + 1) + '/' + MAX_RATE_LIMIT_RETRIES + ').');
+                    if (_rateLimitRetries >= MAX_RATE_LIMIT_RETRIES) {
+                        _callbacks.onStatus('error', RATE_LIMIT_GIVE_UP_MESSAGE, 'rate_limited');
+                        return;
+                    }
+                    _rateLimitRetries++;
+                    _callbacks.onStatus('error', RATE_LIMIT_MESSAGE, 'rate_limited');
+                    clearReconnectTimer();
+                    var retryAsReconnect = isReconnectAttempt;
+                    _reconnectTimer = setTimeout(function () {
+                        _reconnectTimer = null;
+                        if (_intentionalDisconnect) return;
+                        _callbacks.onStatus('connecting');
+                        startConnection(retryAsReconnect);
+                    }, SIGN_RATE_LIMIT_COOLDOWN_MS);
+                    return;
+                }
+
+                if (isRoomIdError(err)) logRoomIdSourceErrors(err);
+
+                if (isReconnectAttempt && isUserOfflineError(err)) {
+                    // إعادة اتصال بعد انقطاع والحساب ما عاد يبث — البث انتهى
+                    endBecauseStreamEnded('offline on reconnect');
+                } else if (isReconnectAttempt) {
+                    attemptReconnect();
+                } else if (isRoomIdError(err) && !isUserOfflineError(err) && _roomIdRetries < ROOM_ID_RETRY_DELAYS_MS.length) {
+                    // فشل جلب Room ID كثيراً ما يكون مؤقت — نعيد الاتصال الأول
+                    // تلقائياً (والحالة تبقى "جاري الاتصال") قبل ما نبلّغ.
+                    var retryDelay = ROOM_ID_RETRY_DELAYS_MS[_roomIdRetries];
+                    _roomIdRetries++;
+                    logger.log('TikTok Connector: Room ID fetch failed for "' + _username + '" — retry ' + _roomIdRetries + '/' + ROOM_ID_RETRY_DELAYS_MS.length + ' in ' + retryDelay + 'ms…');
+                    _callbacks.onStatus('connecting');
+                    clearReconnectTimer();
+                    _reconnectTimer = setTimeout(function () {
+                        _reconnectTimer = null;
+                        if (_intentionalDisconnect) return;
+                        startConnection(false);
+                    }, retryDelay);
+                } else {
+                    // فشل الاتصال الأول (غالباً اسم مستخدم غير صحيح أو
+                    // المستخدم غير مباشر الآن) — رسالة عربية واضحة بدل نص
+                    // المكتبة الإنجليزي.
+                    _callbacks.onStatus('error', friendlyConnectError(err));
+                }
+            });
+    }
+
+    return {
+        /**
+         * @param {{username: string, followersOnly?: boolean, statsOnly?: boolean}} options
+         * @param {Object} callbacks
+         */
+        connect: function (options, callbacks) {
+            _username = options && options.username;
+            _followersOnly = Boolean(options && options.followersOnly);
+            _statsOnly = Boolean(options && options.statsOnly);
+            _callbacks = callbacks;
+            _intentionalDisconnect = false;
+            _reconnectAttempts = 0;
+            _roomIdRetries = 0;
+            _rateLimitRetries = 0;
+            _onAttempt = (options && typeof options.onAttempt === 'function') ? options.onAttempt : null;
+
+            if (!TikTokLib) {
+                callbacks.onStatus('error', 'tiktok-live-connector is not installed.');
+                return;
+            }
+            if (!_username) {
+                callbacks.onStatus('error', 'Missing TikTok username.');
+                return;
+            }
+
+            logger.log('TikTok Connector: connecting to real TikTok LIVE for "' + _username + '"…');
+            startConnection(false);
+        },
+
+        disconnect: function () {
+            _intentionalDisconnect = true;
+            clearReconnectTimer();
+            _connected = false;
+
+            if (_connection) {
+                try {
+                    _connection.disconnect();
+                } catch (err) {
+                    logger.error('TikTok Connector: error during disconnect:', err);
+                }
+                _connection = null;
+            }
+            logger.log('TikTok Connector: disconnected.');
+        },
+
+        isConnected: function () {
+            return _connected;
+        },
+
+        /** متصل، أو يحاول يتصل، أو ينتظر إعادة محاولة — false = الاتصال ميت نهائياً. */
+        isActive: function () {
+            return !_intentionalDisconnect && (_connected || _connecting || _reconnectTimer !== null);
+        },
+
+        /** رقم غرفة البث الحالي (يتغيّر مع كل بث جديد) أو null. */
+        getRoomId: function () {
+            return (_connection && _connection.roomId) || null;
+        }
+    };
+}
+
+module.exports = {
+    createTikTokConnector: createTikTokConnector
+};
