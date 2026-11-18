@@ -18,7 +18,7 @@
 
     var NOTICE_KEY = 'library-onion-updates';
     // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف.
-    var WINDOW_START = null; // مثال: new Date('2026-11-18T21:00:00+03:00').getTime()
+    var WINDOW_START = new Date('2026-11-18T23:05:00+03:00').getTime(); // 11:05 مساءً بتوقيت السعودية
     var WINDOW_MINUTES = 15;
     // صورة أعلى البطاقة. لو ما تحمّلت تختفي ويطلع إيموجي البصلة بدالها.
     var IMG = 'assets/notices/onion-updates.jpg';
