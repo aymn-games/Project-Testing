@@ -2153,7 +2153,7 @@ function handlePublicLiveStreams(req, res) {
       tiktok: p.username,
       customId: u.custom_id,
       gameName: p.gameName,
-      viewers: null,
+      viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since
     };
   });

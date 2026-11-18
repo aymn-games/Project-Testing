@@ -1,23 +1,34 @@
-// رسالة التهنئة بمشهد النهاية (play.html): تنكتب على الشاشة فوق المشهد — «رسالة من نايف» ثم التاريخ ثم التهنئة بالعربي ثم الإنجليزي، حرف حرف
+// رسالة التهنئة بمشهد النهاية (play.html): تنكتب على الشاشة فوق المشهد — التاريخ ثم التهنئة بالعربي ثم الإنجليزي، حرف حرف
 // مثل الكتابة على لوحة مفاتيح مع صوت نقر خفيف، وتبقى ثابتة لين آخر المشهد، وتتلاشى مع نهايته.
 //
 // الوقت كله محسوب من ساعة السيرفر (بداية المشهد phase.at ونهايته phase.until)، فكل الأجهزة تكتب نفس
 // الحرف بنفس اللحظة، واللي يدخل متأخر يشوف اللي انكتب لين الحين. run() ينعاد بأمان، وstop() ينظّف.
 //
 // التوقيت (ms من بداية المشهد، مع بداية أغنية النهاية): الكتابة كلها 13ث:
-//   «رسالة من نايف» 0 ← 1.1ث · التاريخ لين 3ث · وقفة · العربي 3.4 ← 8ث · الإنجليزي لين 13ث · ثابتة · تلاشي آخر 1.2ث
+//   التاريخ 0 ← 1.9ث · وقفة · العربي 2.3 ← 7.6ث · الإنجليزي لين 13ث · ثابتة · تلاشي آخر 1.2ث
+// النص والتاريخ يحددهم المذيع من شاشة إعدادات الحفلة (index.html ← room.card)، والفاضي ياخذ النموذج المعتمد تحت
 const START = 0, FADE_IN = 500, FADE_OUT = 1200;
 const PLAN = [
-  { k: 'from', t0: 0, t1: 1100 },
-  { k: 'dateAr', t0: 1300, t1: 2050 }, { k: 'dateEn', t0: 2050, t1: 3000 },
-  { k: 'ar', t0: 3400, t1: 8000 }, { k: 'en', t0: 8000, t1: 13000 },
+  { k: 'dateAr', t0: 0, t1: 900 }, { k: 'dateEn', t0: 900, t1: 1900 },
+  { k: 'ar', t0: 2300, t1: 7600 }, { k: 'en', t0: 7600, t1: 13000 },
 ];
+// النموذج المعتمد (يطلع معبّى بشاشة الإعدادات، والمذيع يقدر يغيّره)
 export const GREETING = {
-  from: 'رسالة من نايف',
   dateAr: '٣ نوفمبر', dateEn: 'November 3',
   ar: 'كل عام وحسنك الباهي يزيد\nعسى عامك سعيد\nوأيامك هنيّة',
   en: 'May your beauty and radiance grow with every year\nMay your year be filled with happiness\nAnd your days be ever so sweet',
 };
+// التاريخ YYYY-MM-DD ← «٣ نوفمبر» و «November 3» (ميلادي دائماً)
+export function cardDate(d) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || ''); if (!m) return null;
+  const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])), o = { day: 'numeric', month: 'long', timeZone: 'UTC' };
+  try { return { ar: new Intl.DateTimeFormat('ar-EG-u-nu-arab-ca-gregory', o).format(t), en: new Intl.DateTimeFormat('en-US', o).format(t) }; } catch (e) { return null; }
+}
+// room.card من السيرفر ({d, ar, en}) ← نصوص الرسالة؛ أي جزء فاضي ياخذ النموذج المعتمد
+export function cardText(card) {
+  const c = card || {}, d = cardDate(c.d);
+  return { dateAr: d ? d.ar : GREETING.dateAr, dateEn: d ? d.en : GREETING.dateEn, ar: c.ar || GREETING.ar, en: c.en || GREETING.en };
+}
 
 // ---- صوت النقر: نبضة ضجيج قصيرة مفلترة، بتنويع بسيط بالطبقة والقوة (ما يشتغل قبل أول لمسة) ----
 let actx = null, noise = null;
@@ -44,11 +55,17 @@ function click(soft) {
 export function createGreeting(root) {
   // كل سطر: نص كامل مخفي يحجز مكانه (ما يتحرك التوسيط وهو ينكتب)، وفوقه المكتوب لين الحين
   const segs = PLAN.map(p => {
-    const el = root.querySelector('[data-seg="' + p.k + '"]'), chars = Array.from(GREETING[p.k]);
+    const el = root.querySelector('[data-seg="' + p.k + '"]');
     el.textContent = ''; const full = document.createElement('span'), typed = document.createElement('span');
-    full.className = 'g-full'; full.textContent = GREETING[p.k]; full.setAttribute('aria-hidden', 'true'); typed.className = 'g-typed';
-    el.append(full, typed); return Object.assign({ el, typed, chars, shown: -1 }, p);
+    full.className = 'g-full'; full.setAttribute('aria-hidden', 'true'); typed.className = 'g-typed';
+    el.append(full, typed); return Object.assign({ el, full, typed, chars: [], shown: -1 }, p);
   });
+  // نص الرسالة (room.card) — ينعاد بأمان، واللي ينكتب الحين يكمل بالنص الجديد
+  function setCard(card) {
+    const g = cardText(card);
+    for (const s of segs) { s.chars = Array.from(g[s.k]); s.full.textContent = g[s.k]; s.shown = -1; s.typed.textContent = ''; }
+  }
+  setCard(null);
   let raf = 0, at = 0, until = 0, nowFn = null;
   function frame() {
     raf = 0;
@@ -81,5 +98,5 @@ export function createGreeting(root) {
     root.classList.add('hidden'); root.style.opacity = '0';
     for (const s of segs) { s.shown = -1; s.typed.textContent = ''; s.el.classList.remove('typing'); }
   }
-  return { run, stop, get running() { return !!raf; } };
+  return { run, stop, setCard, get running() { return !!raf; } };
 }

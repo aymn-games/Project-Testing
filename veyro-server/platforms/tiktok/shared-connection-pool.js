@@ -146,7 +146,8 @@ function createEntry(key, options, source) {
         message: null,
         reason: null,
         graceTimer: null,
-        idleSince: null
+        idleSince: null,
+        lastViewers: null   // آخر عدد مشاهدين — يوصل للمشترك الجديد على طول (تيك توك يرسله على فترات)
     };
     _pool.set(key, entry);
 
@@ -176,7 +177,7 @@ function createEntry(key, options, source) {
         onComment: function (d) { forEachSub(entry, function (cb) { cb.onComment && cb.onComment(d); }); },
         onGift: function (d) { forEachSub(entry, function (cb) { cb.onGift && cb.onGift(d); }); },
         onFollow: function (d) { forEachSub(entry, function (cb) { cb.onFollow && cb.onFollow(d); }); },
-        onViewerUpdate: function (d) { forEachSub(entry, function (cb) { cb.onViewerUpdate && cb.onViewerUpdate(d); }); },
+        onViewerUpdate: function (d) { entry.lastViewers = d; forEachSub(entry, function (cb) { cb.onViewerUpdate && cb.onViewerUpdate(d); }); },
         onLike: function (d) { forEachSub(entry, function (cb) { cb.onLike && cb.onLike(d); }); },
         onShare: function (d) { forEachSub(entry, function (cb) { cb.onShare && cb.onShare(d); }); },
         onMember: function (d) { forEachSub(entry, function (cb) { cb.onMember && cb.onMember(d); }); }
@@ -235,8 +236,12 @@ function createLease(meta) {
                 var joined = entry;
                 setImmediate(function () {
                     if (entry !== joined || !callbacks) return;
-                    if (joined.status === 'connected') callbacks.onStatus('connected');
-                    else if (joined.status === 'error' && joined.message) callbacks.onStatus('error', joined.message, joined.reason);
+                    if (joined.status === 'connected') {
+                        callbacks.onStatus('connected');
+                        // بدون هذا تبقى «البثوث النشطة» بدون عدد مشاهدين للصفحة اللي انضمت (مثل شاشة مباراة المافيا بعد اللوبي)
+                        // لين يرسل تيك توك تحديث جديد — وبالبثوث الصغيرة يتأخر كثير
+                        if (joined.lastViewers && callbacks.onViewerUpdate) callbacks.onViewerUpdate(joined.lastViewers);
+                    } else if (joined.status === 'error' && joined.message) callbacks.onStatus('error', joined.message, joined.reason);
                 });
                 return;
             }
