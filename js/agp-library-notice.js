@@ -16,9 +16,9 @@
 (function () {
     'use strict';
 
-    var NOTICE_KEY = 'library-onion-updates';
+    var NOTICE_KEY = 'library-onion-updates-2';
     // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف.
-    var WINDOW_START = new Date('2026-11-18T23:05:00+03:00').getTime(); // 11:05 مساءً بتوقيت السعودية
+    var WINDOW_START = new Date('2026-11-18T23:46:00+03:00').getTime(); // 11:46 مساءً بتوقيت السعودية
     var WINDOW_MINUTES = 15;
     // صورة أعلى البطاقة. لو ما تحمّلت تختفي ويطلع إيموجي البصلة بدالها.
     var IMG = 'assets/notices/onion-updates.jpg';
@@ -51,7 +51,7 @@
     }
 
     var CSS = '' +
-        '.agp-ln-bg{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;direction:rtl;' +
+        '.agp-ln-bg{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;direction:rtl;' +
         'background:radial-gradient(60% 50% at 50% 40%,rgba(124,58,237,.25),transparent 70%),rgba(4,3,8,.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
         'animation:agpLnBg .3s ease both;transition:opacity .45s ease}' +
         '.agp-ln-bg.is-out{opacity:0}' +
@@ -77,7 +77,7 @@
         '.agp-ln-ok::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:agpLnSh 3s ease-in-out 1s infinite}' +
         '.agp-ln-x{flex:1;padding:0 18px;color:#cfc7e2;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}' +
         // زر الإغلاق بعد أول ضغطة يطلع من البطاقة ويصير ينط بالشاشة
-        '.agp-ln-x.is-run{position:fixed;z-index:2147482001;flex:none;width:auto;transition:left .28s cubic-bezier(.3,1.4,.5,1),top .28s cubic-bezier(.3,1.4,.5,1)}' +
+        '.agp-ln-x.is-run{position:fixed;z-index:2147483101;flex:none;width:auto;transition:left .28s cubic-bezier(.3,1.4,.5,1),top .28s cubic-bezier(.3,1.4,.5,1)}' +
         '@keyframes agpLnBg{from{opacity:0}to{opacity:1}}' +
         '@keyframes agpLnIn{from{opacity:0;transform:translateY(24px) scale(.94)}to{opacity:1;transform:none}}' +
         '@keyframes agpLnSh{0%{left:-60%}45%,100%{left:130%}}' +
