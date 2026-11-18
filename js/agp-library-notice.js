@@ -20,6 +20,8 @@
     // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف.
     var WINDOW_START = null; // مثال: new Date('2026-11-18T21:00:00+03:00').getTime()
     var WINDOW_MINUTES = 15;
+    // صورة أعلى البطاقة. لو ما تحمّلت تختفي ويطلع إيموجي البصلة بدالها.
+    var IMG = 'assets/notices/onion-updates.jpg';
 
     var A = window.AGPAuth;
     var preview = /[?&]notice=preview\b/.test(location.search);
@@ -57,6 +59,11 @@
         'padding:30px 22px 22px;box-sizing:border-box;background:#120d1d;font:500 15px/1.7 "IBM Plex Sans Arabic",system-ui,sans-serif;' +
         'box-shadow:0 50px 100px -30px rgba(0,0,0,1),0 0 0 1px rgba(255,255,255,.07),0 0 80px -20px rgba(168,85,247,.55);animation:agpLnIn .55s cubic-bezier(.22,1.2,.36,1) both}' +
         '.agp-ln::-webkit-scrollbar{display:none}' +
+        '.agp-ln.has-img{padding-top:0}' +
+        '.agp-ln-hero{display:block;width:calc(100% + 44px);margin:0 -22px;height:clamp(200px,36vh,290px);object-fit:cover;object-position:50% 30%;background:#1a1329;' +
+        '-webkit-mask-image:linear-gradient(180deg,#000 60%,transparent);mask-image:linear-gradient(180deg,#000 60%,transparent)}' +
+        '.agp-ln.has-img .agp-ln-emoji{display:none}' +
+        '.agp-ln.has-img h3{margin-top:-18px;position:relative;text-shadow:0 4px 18px rgba(0,0,0,.6)}' +
         '.agp-ln-emoji{font-size:64px;line-height:1;display:inline-block;animation:agpLnWob 2.4s ease-in-out infinite}' +
         '.agp-ln h3{margin:14px 0 0;font:800 24px/1.4 "Noto Kufi Arabic","IBM Plex Sans Arabic",sans-serif}' +
         '.agp-ln h3 span{background:linear-gradient(90deg,#d8b4fe,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent}' +
@@ -86,7 +93,8 @@
 
         var bg = document.createElement('div');
         bg.className = 'agp-ln-bg';
-        bg.innerHTML = '<div class="agp-ln" role="dialog" aria-modal="true" aria-labelledby="agp-ln-t">' +
+        bg.innerHTML = '<div class="agp-ln has-img" role="dialog" aria-modal="true" aria-labelledby="agp-ln-t">' +
+            '<img class="agp-ln-hero" alt="" src="' + IMG + '">' +
             '<div class="agp-ln-emoji" aria-hidden="true">🧅</div>' +
             '<h3 id="agp-ln-t">مساء البصل<br><span>ممكن ننسى اللي بيحصل؟</span></h3>' +
             '<p>عندي شوية تحديثات، يمكن <b>تفصل معك الألعاب ثواني وترجع</b><br>تحمّلنا 🙏</p>' +
@@ -94,6 +102,12 @@
             '<button type="button" class="agp-ln-ok">خذ راحتك ياعسل</button>' +
             '<button type="button" class="agp-ln-x">إغلاق</button>' +
             '</div></div>';
+
+        var hero = bg.querySelector('.agp-ln-hero');
+        hero.onerror = function () {
+            hero.parentNode.classList.remove('has-img');
+            hero.parentNode.removeChild(hero);
+        };
 
         var x = bg.querySelector('.agp-ln-x');
         /** ينط زر الإغلاق لمكان عشوائي بالشاشة (بعيد عن مكانه الحالي). */
