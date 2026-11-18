@@ -38,7 +38,7 @@
 
 | الإعداد | القيمة |
 |---|---|
-| Name | `veyro-api` (أو أي اسم — الرابط يطلع منه) |
+| Name | `veyro-api` — الرابط الحالي: `https://veyro-api-7mj3.onrender.com` |
 | Root Directory | `veyro-server` |
 | Build Command | `npm ci` |
 | Start Command | `node server.js` |
