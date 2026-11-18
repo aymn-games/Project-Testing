@@ -22,6 +22,11 @@ module.exports = {
     // اتصال أوفرلي البث بنفسه (source: 'overlay' — js/agp-stream-overlay.js).
     // مقفول = الأوفرلي يعرض بياناته بس من اتصال اللعبة الشغّالة.
     overlayStreamConnect: process.env.OVERLAY_STREAM_CONNECT === '1',
+    // سيرفر فيرو المستقل (veyro-server/ — docs/VEYRO_SERVER.md): لو موجود، طلبات فيرو القديمة
+    // تتحوّل له (http/veyro-bridge.js) ومراقب الصوت وStreamlabs هنا يوقفون.
+    veyroApiUrl: (process.env.VEYRO_API_URL || '').replace(/\/+$/, ''),
+    // سر نقل بيانات فيرو لسيرفره (نفس القيمة بالخدمتين) — يُحذف بعد ما يخلص النقل.
+    veyroExportSecret: process.env.VEYRO_EXPORT_SECRET || '',
     // مراقب الإحصائيات (stats/stream-stats-watcher.js) — يتصل ببث الستريمرز
     // المفعّل لهم من لوحة الأدمن طول بثهم حتى بدون لعبة.
     streamStatsWatcher: process.env.STREAM_STATS_WATCHER === '1',

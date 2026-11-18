@@ -159,7 +159,8 @@
 
     /* ---------------- السيرفر ---------------- */
 
-    function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
+    // الشاشات صارت بسيرفر فيرو المستقل (docs/VEYRO_SERVER.md) — نفس رابطه من js/agp-stream-overlay.js
+    function apiBase() { return window.AGPStreamOverlay.veyroBase(); }
     function token() {
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }

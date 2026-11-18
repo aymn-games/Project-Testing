@@ -1,0 +1,604 @@
+/**
+ * AGP LIVE SESSION STATS — إحصائيات بث تيك توك الواحد (زر «عرض إحصائيات
+ * البث» بمكتبة الألعاب). الأقسام (SECTIONS): المكبّسين، الداعمين، اللي
+ * سوّوا شير، المتفاعلين (التعليقات)، والمشاهدين (مدة التواجد).
+ *
+ * كل شي بالذاكرة فقط — بدون أي كتابة SQLite لكل حدث (نفس سبب التجميع في
+ * ws-server.js: Render محدود بـ0.5 CPU). كل حدث = تحديث رقم في Map.
+ *
+ * الجلسة = بث تيك توك واحد، مفتاحها يوزر الاستريمر. كل لعبة تفتح اتصال
+ * WebSocket خاص فيها، فالتنقّل بين الألعاب يكمل نفس الجلسة: نفس Room ID
+ * من تيك توك = نفس البث، Room ID مختلف = بث جديد (القديم يصير "آخر بث").
+ * لو Room ID غير معروف، نكمل نفس الجلسة إذا ما مر عليها SESSION_GAP_MS.
+ *
+ * لو فيه أكثر من اتصال لنفس البث بنفس اللحظة (تبويبين/لعبتين) نحسب أحداث
+ * اتصال واحد فقط (ownerConnectionId) عشان ما تنحسب الأحداث مرتين.
+ *
+ * الصور: نحفظ رابط صورة تيك توك لكل مستخدم، وتُحمَّل الصور (Data URL)
+ * فقط لما يطلب الاستريمر الملخص، وفقط لأصحاب المراكز المطلوبة — مع كاش
+ * صغير بالذاكرة. التحميل بالسيرفر لأن صور تيك توك ما تسمح برسمها على
+ * Canvas مباشرة من المتصفح (CORS).
+ *
+ * ملاحظة: الأحداث تنحسب فقط والاستريمر متصل بالبث من الموقع (لعبة، أو
+ * أوفرلي البث js/agp-stream-overlay.js بالصفحات اللي ما فيها لعبة)، أو عليه
+ * مراقب سيرفر.
+ *
+ * الحفظ: الجلسة المتغيّرة تنكتب بـSQLite (stats/live-session-store.js) كل
+ * FLUSH_MS وعند SIGTERM، وترجع عند تشغيل السيرفر — فإعادة التشغيل وسط البث
+ * ما تصفّر الأرقام (أقصى خسارة = أحداث آخر FLUSH_MS لو السيرفر طاح فجأة).
+ * بعد الرجوع الجلسة ما لها صاحب اتصال لين أول attach من اتصال جديد بنفس البث.
+ */
+
+'use strict';
+
+var db = require('../db/database');
+var tiktokAvatarSync = require('../auth/tiktok-avatar-sync');
+var logger = require('../utils/logger');
+var sessionStore = require('./live-session-store');
+
+var SESSION_GAP_MS = 30 * 60 * 1000;          // انقطاع أطول من كذا بدون Room ID = بث جديد
+var RETENTION_MS = 24 * 60 * 60 * 1000;       // نحتفظ بآخر بث ٢٤ ساعة بعد آخر نشاط
+var CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+var MAX_USERS_PER_LIST = 5000;                // سقف الذاكرة لكل قائمة بالبث الواحد
+var MAX_TOP = 20;
+var DEFAULT_TOP = 10;
+var AVATAR_CACHE_MAX = 500;
+var AVATAR_CONCURRENCY = 8;
+var FLUSH_MS = 60 * 1000;
+var RECENT_GIFTS_MAX = 72;                    // وعاء الهدايا بالأوفرلي يعرض آخر كذا هدية
+
+// القسم -> الحقل اللي نرتّب عليه (تنازلي). المشاهدين: مدة التواجد (watchMs)
+// = من أول ما شفناه بالبث (دخول/تعليق/لايك/هدية/شير) لآخر مرة شفناه —
+// تقريبية لأن تيك توك ما يبلّغ بخروج المشاهد.
+var SECTIONS = {
+  likers: 'count',
+  gifters: 'diamonds',
+  sharers: 'count',
+  commenters: 'count',
+  viewers: 'watchMs'
+};
+
+var _sessions = new Map(); // username -> session
+// يوزرات عليها مراقب سيرفر شغّال (stats/stream-stats-watcher.js). اتصالاته
+// تبدأ بـ WATCH_PREFIX، ولها الأولوية على اتصالات الألعاب لنفس البث.
+var WATCH_PREFIX = 'watch:';
+var _watching = new Set();
+var _avatarCache = new Map(); // url -> dataUrl|null
+// صور وعاء الهدايا: 'g:<giftId>' -> رابط تيك توك. تنملى بس من
+// أحداث الهدايا نفسها، فمسار /api/stream/media ما يجيب إلا روابط جات من البث.
+var _mediaUrls = new Map();
+var RECENT_EVENTS_MAX = 120; // أحداث الأليرتات المحفوظة لكل بث
+var RECENT_CHAT_MAX = 50;     // آخر رسائل الشات لأدوات الصوت (القارئ ومشغّل الأغاني)
+var CHAT_TEXT_MAX = 200;
+var MEDIA_URLS_MAX = 3000;
+var _cleanupStarted = false;
+var _store = null;
+var _dirty = new Set(); // يوزرات جلساتها تغيّرت من آخر حفظ
+
+function normalize(name) {
+  return String(name || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
+function newSession(username, roomId, connectionId) {
+  var s = {
+    username: username,
+    roomId: roomId || null,
+    ownerConnectionId: connectionId,
+    startedAt: Date.now(),
+    lastActivityAt: Date.now(),
+    endedAt: null,
+    totals: { likes: 0, diamonds: 0, gifts: 0, shares: 0, comments: 0, follows: 0, joins: 0, peakViewers: 0, totalViewers: 0 },
+    lists: {},
+    avatars: new Map(), // id -> روابط الصورة (مشتركة بين كل الأقسام)
+    // آخر الهدايا بالترتيب (وعاء الهدايا) — seq يزيد مع كل هدية عشان الأوفرلي يطلب الجديد بس
+    recentGifts: [],
+    giftSeq: 0,
+    // آخر الأحداث (هدية/متابعة/شير/دخول) لأليرتات «شاشات البث» — بالذاكرة بس، ما تنحفظ
+    events: [],
+    eventSeq: 0,
+    // آخر رسائل الشات لأدوات الصوت بشاشات البث — بالذاكرة بس، ما تنحفظ
+    chat: [],
+    chatSeq: 0
+  };
+  Object.keys(SECTIONS).forEach(function (k) { s.lists[k] = new Map(); });
+  return s;
+}
+
+function startCleanup() {
+  if (_cleanupStarted) return;
+  _cleanupStarted = true;
+  var timer = setInterval(function () {
+    var cutoff = Date.now() - RETENTION_MS;
+    _sessions.forEach(function (s, key) {
+      if (s.lastActivityAt < cutoff) {
+        _sessions.delete(key);
+        _dirty.delete(key);
+        if (_store) { try { _store.remove(key); } catch (err) { logger.error('Live Stats: store remove failed:', err); } }
+      }
+    });
+    if (_store) { try { _store.removeOlderThan(cutoff); } catch (err) { logger.error('Live Stats: store cleanup failed:', err); } }
+  }, CLEANUP_INTERVAL_MS);
+  if (timer.unref) timer.unref();
+}
+
+/* ---------------- الحفظ بقاعدة البيانات ---------------- */
+
+function markDirty(s) { if (s) _dirty.add(s.username); }
+
+/** يكتب كل الجلسات المتغيّرة (صف لكل يوزر). */
+function flush() {
+  if (!_store || !_dirty.size) return;
+  var keys = Array.from(_dirty);
+  _dirty.clear();
+  keys.forEach(function (key) {
+    var s = _sessions.get(key);
+    if (!s) return;
+    try { _store.save(key, sessionStore.serialize(s, SECTIONS, MAX_TOP)); } catch (err) { logger.error('Live Stats: save failed for "' + key + '":', err); }
+  });
+}
+
+/** عند تشغيل السيرفر: نرجّع آخر جلسة لكل يوزر لو ما صار لها أكثر من RETENTION_MS. */
+function boot() {
+  try { _store = sessionStore.createStore(db); } catch (err) { logger.error('Live Stats: store unavailable:', err); return; }
+  var cutoff = Date.now() - RETENTION_MS;
+  var n = 0;
+  var rows = [];
+  try { rows = _store.loadAll(); } catch (err) { logger.error('Live Stats: load failed:', err); }
+  // كل جلسة لحالها: صف تالف ما يوقف رجوع الباقي
+  rows.forEach(function (o) {
+    try {
+      var s = sessionStore.deserialize(o, SECTIONS, newSession);
+      if (!s || s.lastActivityAt < cutoff) {
+        if (o && typeof o.username === 'string') _store.remove(o.username);
+        return;
+      }
+      _sessions.set(s.username, s);
+      s.recentGifts.forEach(noteGiftMedia);
+      n++;
+    } catch (err) { logger.error('Live Stats: restore failed:', err); }
+  });
+  if (n) logger.log('Live Stats: restored ' + n + ' stream sessions');
+  if (_sessions.size) startCleanup();
+  var timer = setInterval(flush, FLUSH_MS);
+  if (timer.unref) timer.unref();
+  // نشر جديد على Render يرسل SIGTERM: نكتب المتغيّر قبل ما يطفي
+  process.once('SIGTERM', function () { try { flush(); } catch (e) { } process.kill(process.pid, 'SIGTERM'); });
+}
+
+/**
+ * يُستدعى لما تيك توك يؤكّد الاتصال. يرجع نفس الجلسة أو يبدأ بث جديد.
+ */
+function attach(username, roomId, connectionId) {
+  startCleanup();
+  var key = normalize(username);
+  if (!key) return;
+  var s = _sessions.get(key);
+  var sameStream = s && (
+    (roomId && s.roomId) ? String(roomId) === String(s.roomId)
+      : (!s.endedAt && Date.now() - s.lastActivityAt < SESSION_GAP_MS)
+  );
+  if (!sameStream) {
+    _sessions.set(key, newSession(key, roomId, connectionId));
+    markDirty(_sessions.get(key));
+    return;
+  }
+  // المراقب شغّال ويحسب هذا البث → اتصال اللعبة ما ياخذ الملكية (ما تنحسب مرتين)
+  var fromWatcher = String(connectionId).indexOf(WATCH_PREFIX) === 0;
+  if (!fromWatcher && _watching.has(key) && String(s.ownerConnectionId).indexOf(WATCH_PREFIX) === 0 && !s.endedAt) return;
+  s.ownerConnectionId = connectionId;
+  s.endedAt = null;
+  if (roomId && !s.roomId) s.roomId = roomId;
+  s.lastActivityAt = Date.now();
+  markDirty(s);
+}
+
+/** يرجع الجلسة فقط لو هذا الاتصال هو المالك الحالي لها. */
+function owned(username, connectionId) {
+  var s = _sessions.get(normalize(username));
+  if (!s || s.endedAt || s.ownerConnectionId !== connectionId) return null;
+  s.lastActivityAt = Date.now();
+  markDirty(s);
+  return s;
+}
+
+/** سجل المستخدم بالقائمة (ينشئه لو جديد)، أو null لو القائمة وصلت السقف. */
+function rec(s, map, data) {
+  if (!data || !data.id) return null;
+  var r = map.get(data.id);
+  if (!r) {
+    if (map.size >= MAX_USERS_PER_LIST) return null;
+    r = { id: data.id, name: data.name || data.id, count: 0, diamonds: 0, joinedAt: Date.now(), lastSeenAt: Date.now() };
+    map.set(data.id, r);
+  } else if (data.name) {
+    r.name = data.name;
+  }
+  // كل روابط الصورة المتاحة (لو فشل الأول نجرب اللي بعده) — بمستوى البث،
+  // عشان صورة شفناها بحدث ثاني (دخول/تعليق) تطلع بكل الأقسام
+  var urls = Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data.avatarUrl ? [data.avatarUrl] : null);
+  if (urls && (s.avatars.has(data.id) || s.avatars.size < MAX_USERS_PER_LIST * 2)) s.avatars.set(data.id, urls.slice(0, 3));
+  return r;
+}
+
+/** أي حدث من مستخدم = موجود بالبث الحين (لقائمة المشاهدين ومدة تواجدهم). */
+function seen(s, data) {
+  if (!data || normalize(data.id) === s.username) return; // صاحب البث نفسه مو مشاهد
+  var r = rec(s, s.lists.viewers, data);
+  if (r) r.lastSeenAt = Date.now();
+}
+
+function recordLike(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  var n = Number(data.count) || 1;
+  s.totals.likes += n;
+  var r = rec(s, s.lists.likers, data);
+  if (r) r.count += n;
+  if (r) queueLikeEvent(s, r, data);
+}
+
+/*
+ * أليرتات التكبيس: تيك توك يرسل التكبيسات دفعات كثيرة، فنجمعها لكل شخص ونرسل
+ * حدث «like» واحد كل LIKE_EVENT_MS على الأكثر (ما يعبّي طابور الأحداث).
+ * الحدث فيه: count = تكبيساته من آخر حدث، total = مجموع تكبيساته بالبث،
+ * all = مجموع تكبيسات البث، allPrev = المجموع وقت آخر حدث تكبيس —
+ * والشاشة تقرر لو عدّى حد «كل N تكبيسة».
+ */
+var LIKE_EVENT_MS = 1500;
+function queueLikeEvent(s, r, data) {
+  if (!s.likeQ) { s.likeQ = new Map(); s.likeAll = s.totals.likes - (Number(data.count) || 1); }
+  var q = s.likeQ.get(r.id);
+  if (!q) { q = { base: r.count - (Number(data.count) || 1), data: data, r: r }; s.likeQ.set(r.id, q); }
+  q.data = data;
+  if (!s.likeTimer) {
+    s.likeTimer = setTimeout(function () { flushLikeEvents(s); }, LIKE_EVENT_MS);
+    if (s.likeTimer.unref) s.likeTimer.unref();
+  }
+}
+function flushLikeEvents(s) {
+  s.likeTimer = null;
+  if (!s.likeQ || !s.likeQ.size) return;
+  var q = s.likeQ;
+  s.likeQ = new Map();
+  q.forEach(function (x) {
+    var count = x.r.count - x.base;
+    if (count <= 0) return;
+    var prev = s.likeAll || 0;
+    s.likeAll = prev + count;
+    pushEvent(s, 'like', x.data, { count: count, total: x.r.count, all: s.likeAll, allPrev: prev });
+  });
+}
+
+function recordSubscribe(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  pushEvent(s, 'subscribe', data);
+}
+
+function recordShare(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  s.totals.shares++;
+  var r = rec(s, s.lists.sharers, data);
+  if (r) r.count++;
+  pushEvent(s, 'share', data);
+}
+
+/**
+ * حدث لأليرتات «شاشات البث» (js/agp-stream-overlay.js نوع alert). eventSeq يزيد
+ * مع كل حدث عشان الرابط يطلب الجديد بس. الجلسة المسترجعة من القاعدة ما فيها
+ * أحداث (تنضاف هنا أول مرة).
+ */
+function pushEvent(s, type, data, extra) {
+  if (!data || normalize(data.id) === s.username) return; // صاحب البث نفسه
+  if (!s.events) { s.events = []; s.eventSeq = 0; }
+  s.eventSeq++;
+  var urls = Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data.avatarUrl ? [data.avatarUrl] : []);
+  var avatar = urls.filter(function (u) { return typeof u === 'string' && /^https:\/\//.test(u); })[0] || null;
+  // uid = يوزر تيك توك (بدون tiktok: وبحروف صغيرة) — لأليرت دخول شخص معيّن
+  var uid = String(data.id || '').replace(/^tiktok:/, '').replace(/^@/, '').toLowerCase().slice(0, 60);
+  s.events.push(Object.assign({ seq: s.eventSeq, type: type, user: String(data.name || data.id || '').slice(0, 60), uid: uid, avatar: avatar, at: Date.now() }, extra || {}));
+  if (s.events.length > RECENT_EVENTS_MAX) s.events.splice(0, s.events.length - RECENT_EVENTS_MAX);
+}
+
+function recordGift(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  var repeat = Number(data.repeatCount) || 1;
+  var diamonds = (Number(data.giftValue) || 0) * repeat;
+  s.totals.gifts += repeat;
+  s.totals.diamonds += diamonds;
+  var r = rec(s, s.lists.gifters, data);
+  if (r) { r.count += repeat; r.diamonds += diamonds; }
+  s.giftSeq++;
+  var g = {
+    seq: s.giftSeq, name: String(data.giftName || ''), img: typeof data.giftImage === 'string' ? data.giftImage : null,
+    giftId: data.giftId != null ? String(data.giftId) : null,
+    count: repeat, diamonds: diamonds, user: String(data.name || ''), at: Date.now()
+  };
+  s.recentGifts.push(g);
+  noteGiftMedia(g);
+  pushEvent(s, 'gift', data, { gift: g.name, giftAr: giftArabicName(g.giftId), img: g.img, giftId: g.giftId, count: repeat, diamonds: diamonds });
+  if (s.recentGifts.length > RECENT_GIFTS_MAX) s.recentGifts.splice(0, s.recentGifts.length - RECENT_GIFTS_MAX);
+}
+
+/** اسم الهدية بالعربي من كتالوج الهدايا ({gift} بنص الأليرت)، أو null. */
+function giftArabicName(id) {
+  if (!id) return null;
+  try { return require('../platforms/tiktok/gift-catalog').get().arabicName(id); } catch (e) { return null; }
+}
+
+function noteMedia(key, url) {
+  if (!key || typeof url !== 'string' || !/^https:\/\//.test(url)) return;
+  _mediaUrls.delete(key);
+  _mediaUrls.set(key, url);
+  if (_mediaUrls.size > MEDIA_URLS_MAX) _mediaUrls.delete(_mediaUrls.keys().next().value);
+}
+
+function noteGiftMedia(g) {
+  if (g.giftId) noteMedia('g:' + g.giftId, g.img);
+}
+
+/**
+ * صورة هدية (kind 'g' + giftId) كـData URL (نفس كاش صور التوب)، أو null.
+ * للوعاء لو صورة تيك توك المباشرة ما فتحت بالمتصفح.
+ * @returns {Promise<string|null>}
+ */
+function getMediaDataUrl(kind, id) {
+  if (kind !== 'g') return Promise.resolve(null);
+  var url = _mediaUrls.get('g:' + String(id || ''));
+  // هدية ما وصلت بالبث الحالي (مثل صور كتالوج الهدايا بمحرر Veyro): صورتها من الكتالوج
+  if (!url) {
+    try { var g = require('../platforms/tiktok/gift-catalog').get().get(id); url = g && g.image; } catch (e) { url = null; }
+  }
+  return url ? cachedAvatar(url) : Promise.resolve(null);
+}
+
+/**
+ * آخر الهدايا (وعاء الهدايا) بعد seq معيّن، أو null لو ما فيه بث.
+ * sid = معرّف البث (وقت بدايته) — يتغيّر = بث جديد، فالأوفرلي يفرّغ الوعاء.
+ * @returns {{sid: number, seq: number, gifts: Array, totals: {gifts: number, diamonds: number}, live: boolean}|null}
+ */
+function getRecentGifts(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var after = Number(since) || 0;
+  // seq أكبر من آخر هدية = بث جديد (أو رجوع بعد إعادة تشغيل) — نرجّع الكل
+  if (after > s.giftSeq) after = 0;
+  return {
+    sid: s.startedAt,
+    seq: s.giftSeq,
+    gifts: s.recentGifts.filter(function (g) { return g.seq > after; }),
+    totals: { gifts: s.totals.gifts, diamonds: s.totals.diamonds },
+    live: !s.endedAt
+  };
+}
+
+function recordComment(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  seen(s, data);
+  s.totals.comments++;
+  var r = rec(s, s.lists.commenters, data);
+  if (r) r.count++;
+  pushChat(s, data);
+}
+
+/**
+ * رسالة شات لأدوات الصوت بشاشات البث (القارئ الصوتي ومشغّل الأغاني). عكس
+ * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل، ومعها mod (مشرف بالبث).
+ */
+function pushChat(s, data) {
+  var text = String((data && data.text) || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_TEXT_MAX);
+  if (!text) return;
+  if (!s.chat) { s.chat = []; s.chatSeq = 0; }
+  s.chatSeq++;
+  s.chat.push({
+    seq: s.chatSeq,
+    user: String(data.name || data.id || '').slice(0, 60),
+    uid: String(data.id || '').replace(/^tiktok:/, '').replace(/^@/, '').toLowerCase().slice(0, 60),
+    text: text,
+    owner: normalize(data.id) === s.username || normalize(String(data.id || '').replace(/^tiktok:/, '')) === s.username,
+    // مشرف ببث الستريمر (تيك توك) — لأدوات الشاشة: مشغّل الأغاني «المشرفين بس»
+    mod: Boolean(data && data.isModerator),
+    at: Date.now()
+  });
+  if (s.chat.length > RECENT_CHAT_MAX) s.chat.splice(0, s.chat.length - RECENT_CHAT_MAX);
+}
+
+/** رسائل الشات بعد since → { sid, cseq, chat } أو null. seq أكبر من الحالي (السيرفر رجع) = الكل. */
+function getRecentChat(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var list = s.chat || [];
+  var seq = s.chatSeq || 0;
+  var after = Number(since) || 0;
+  if (after > seq) after = 0;
+  return { sid: s.startedAt, cseq: seq, chat: list.filter(function (m) { return m.seq > after; }) };
+}
+
+function recordMember(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  s.totals.joins++;
+  seen(s, data);
+  var r = s.lists.viewers.get(data.id);
+  if (r) r.count++;
+  pushEvent(s, 'join', data);
+}
+
+function recordFollow(username, connectionId, data) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  s.totals.follows++;
+  pushEvent(s, 'follow', data);
+}
+
+/** أحداث الأليرتات بعد since → { sid, seq, events, live } أو null. sid = معرّف البث. */
+function getRecentEvents(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var list = s.events || [];
+  var seq = s.eventSeq || 0;
+  var after = Number(since) || 0;
+  if (after > seq) after = 0;
+  return { sid: s.startedAt, seq: seq, events: list.filter(function (e) { return e.seq > after; }), live: !s.endedAt };
+}
+
+function recordViewers(username, connectionId, current, totalUsers) {
+  var s = owned(username, connectionId);
+  if (!s) return;
+  s.totals.peakViewers = Math.max(s.totals.peakViewers, Number(current) || 0);
+  s.totals.totalViewers = Math.max(s.totals.totalViewers, Number(totalUsers) || 0);
+}
+
+/** انتهى البث فعلياً في تيك توك. */
+function markEnded(username, connectionId) {
+  var s = _sessions.get(normalize(username));
+  if (!s || s.ownerConnectionId !== connectionId) return;
+  s.endedAt = Date.now();
+  markDirty(s);
+  flush(); // نهاية البث تنحفظ فوراً
+}
+
+function top(s, map, field, n) {
+  var list = [];
+  map.forEach(function (r) { list.push(r); });
+  list.forEach(function (r) { r.watchMs = Math.max(0, r.lastSeenAt - r.joinedAt); });
+  list.sort(function (a, b) { return b[field] - a[field]; });
+  return list.slice(0, n).map(function (r) {
+    return { name: r.name, username: r.id, count: r.count, diamonds: r.diamonds, watchMs: r.watchMs, avatarUrls: s.avatars.get(r.id) || null };
+  });
+}
+
+function cachedAvatar(url) {
+  if (!url) return Promise.resolve(null);
+  if (_avatarCache.has(url)) return Promise.resolve(_avatarCache.get(url));
+  return tiktokAvatarSync.downloadAvatarDataUrl(url).then(function (dataUrl) {
+    if (_avatarCache.size >= AVATAR_CACHE_MAX) _avatarCache.delete(_avatarCache.keys().next().value);
+    _avatarCache.set(url, dataUrl || null);
+    return dataUrl || null;
+  }, function () { return null; });
+}
+
+/** أول رابط من القائمة ينجح تحميله، أو null. */
+function avatarFromList(urls, i) {
+  i = i || 0;
+  if (!urls || i >= urls.length) return Promise.resolve(null);
+  return cachedAvatar(urls[i]).then(function (a) { return a || avatarFromList(urls, i + 1); });
+}
+
+/** يستبدل avatarUrls بـ avatar (Data URL) لكل عنصر، بحد أقصى AVATAR_CONCURRENCY بنفس اللحظة. */
+function attachAvatars(items) {
+  var i = 0;
+  function worker() {
+    if (i >= items.length) return Promise.resolve();
+    var item = items[i++];
+    return avatarFromList(item.avatarUrls).then(function (a) {
+      item.avatar = a;
+      delete item.avatarUrls;
+      return worker();
+    });
+  }
+  var workers = [];
+  for (var w = 0; w < Math.min(AVATAR_CONCURRENCY, items.length); w++) workers.push(worker());
+  return Promise.all(workers);
+}
+
+/**
+ * ملخص البث الحالي/الأخير لهذا اليوزر، أو null لو ما فيه.
+ * @param {string} username
+ * @param {Object<string, number>} [tops] - القسم -> عدد التوب المطلوب (الأقسام غير المذكورة ما ترجع)
+ * @param {boolean} [withAvatars]
+ * @returns {Promise<Object|null>}
+ */
+function getSummary(username, tops, withAvatars) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return Promise.resolve(null);
+  var end = s.endedAt || s.lastActivityAt;
+  var counts = {}, sections = {}, all = [];
+  Object.keys(SECTIONS).forEach(function (k) {
+    counts[k] = s.lists[k].size;
+    var n = tops ? Math.min(MAX_TOP, Math.max(0, Math.floor(Number(tops[k]) || 0))) : DEFAULT_TOP;
+    if (!n) return;
+    sections[k] = top(s, s.lists[k], SECTIONS[k], n);
+    all = all.concat(sections[k]);
+  });
+  var summary = {
+    username: s.username,
+    live: !s.endedAt,
+    startedAt: s.startedAt,
+    endedAt: s.endedAt,
+    durationMs: Math.max(0, end - s.startedAt),
+    totals: Object.assign({}, s.totals),
+    counts: counts,
+    sections: sections
+  };
+  if (!withAvatars) {
+    all.forEach(function (it) { delete it.avatarUrls; });
+    return Promise.resolve(summary);
+  }
+  return attachAvatars(all).then(function () { return summary; });
+}
+
+/**
+ * اسم وصورة صاحب البث لأعلى الصورة: صورة البروفايل المحفوظة بالموقع، وإلا
+ * صورة تيك توك المربوطة.
+ * @returns {Promise<{name: string, avatar: string|null}>}
+ */
+function getStreamerProfile(username) {
+  var key = normalize(username);
+  var row = null;
+  try {
+    row = db.prepare(
+      'SELECT display_name, username, tiktok_display_name, tiktok_avatar_url, avatar_image_base64 FROM users ' +
+      'WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
+    ).get(key);
+  } catch (e) { row = null; }
+  var name = (row && (row.tiktok_display_name || row.display_name || row.username)) || key;
+  if (row && row.avatar_image_base64) return Promise.resolve({ name: name, avatar: row.avatar_image_base64 });
+  return cachedAvatar(row && row.tiktok_avatar_url).then(function (a) { return { name: name, avatar: a }; });
+}
+
+/** إجماليات البث الحالي/الأخير (بدون قوائم) — للعرض السريع بلوحة الأدمن. */
+function getTotals(username) {
+  var s = _sessions.get(normalize(username));
+  return s ? Object.assign({}, s.totals) : null;
+}
+
+/** المراقب بدأ/وقف لهذا اليوزر. */
+function setWatching(username, on) {
+  var key = normalize(username);
+  if (on) _watching.add(key); else _watching.delete(key);
+}
+
+boot();
+
+module.exports = {
+  WATCH_PREFIX: WATCH_PREFIX,
+  setWatching: setWatching,
+  getTotals: getTotals,
+  getStreamerProfile: getStreamerProfile,
+  SECTIONS: Object.keys(SECTIONS),
+  MAX_TOP: MAX_TOP,
+  attach: attach,
+  recordLike: recordLike,
+  recordSubscribe: recordSubscribe,
+  recordShare: recordShare,
+  recordGift: recordGift,
+  recordComment: recordComment,
+  recordMember: recordMember,
+  recordFollow: recordFollow,
+  recordViewers: recordViewers,
+  markEnded: markEnded,
+  getSummary: getSummary,
+  getRecentGifts: getRecentGifts,
+  getRecentEvents: getRecentEvents,
+  getRecentChat: getRecentChat,
+  getMediaDataUrl: getMediaDataUrl,
+  flush: flush,
+  cachedAvatar: cachedAvatar
+};

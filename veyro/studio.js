@@ -217,7 +217,8 @@
 
     /* ---------------- السيرفر ---------------- */
 
-    function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
+    // كل طلبات فيرو لسيرفر فيرو المستقل (O.veyroBase — js/agp-stream-overlay.js)، والدخول نفسه بحساب ألعاب أيمن (AGPAuth)
+    function apiBase() { return O.veyroBase(); }
     function token() {
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }

@@ -11,3 +11,8 @@ backend/screen-media/
 # Common OS/editor noise.
 .DS_Store
 *.log
+
+# سيرفر فيرو (veyro-server/) — قاعدة بياناته وفيديوهاته وقت التشغيل المحلي
+veyro-server/veyro-data.sqlite
+veyro-server/veyro-data.sqlite-*
+veyro-server/screen-media/

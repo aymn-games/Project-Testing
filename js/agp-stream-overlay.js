@@ -69,6 +69,8 @@
     var JAR_REPEAT_MAX = 10;   // هدية مكررة ×50 تطلع 10 صور بالكثير
     var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
     var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
+    // رابط سيرفر فيرو (خدمة veyro-server بـRender) — يتعبّى بعد إنشاء الخدمة، راجع docs/VEYRO_SERVER.md
+    var VEYRO_API = '';
     var LINK_CHECK_MS = 5000;
     var GAME_GRACE_MS = 15000; // اللعبة غير متصلة كذا متواصل → الأوفرلي يتصل بداله
     var POLL_MS = 15000;
@@ -392,6 +394,13 @@
     }
 
     function apiBase() { return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com'; }
+    /**
+     * سيرفر فيرو المستقل (veyro-server/ — docs/VEYRO_SERVER.md): الشاشات وروابطها بـOBS ومحرر فيرو.
+     * VEYRO_API فاضي = سيرفر الألعاب (قبل الانتقال، أو يحوّل الطلبات لفيرو لو VEYRO_API_URL عنده).
+     * أوفرلي صفحات الألعاب (بدون رابط شاشة) يبقى على سيرفر الألعاب.
+     */
+    function veyroBase() { return window.AGP_VEYRO_API || VEYRO_API || apiBase(); }
+    function dataBase() { return LINK || SCREENS ? veyroBase() : apiBase(); }
     function token() {
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }
@@ -424,8 +433,8 @@
         if (!t && !LINK) { stats.status = 'login'; notify('stats'); return; }
         inflight = true;
         lastNeeds = q;
-        fetch(LINK ? apiBase() + '/api/public/screen/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
-            : apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
+        fetch(LINK ? dataBase() + '/api/public/screen/stats?k=' + encodeURIComponent(LINK_KEY) + '&sections=' + encodeURIComponent(q)
+            : dataBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -474,7 +483,7 @@
     function https(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : null; }
 
     /** رابط السيرفر لصورة الهدية (مخزّنة عنده) — لو الرابط المباشر من تيك توك ما فتح. */
-    function mediaUrl(kind, id) { return id ? apiBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
+    function mediaUrl(kind, id) { return id ? dataBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
 
     /** صورة تحاول الرابط المباشر، وبعده نسخة السيرفر، وبعدها onFail. */
     function img2(direct, backup, cls, onFail) {
@@ -513,8 +522,8 @@
         if (!t && !LINK) return;
         jarInflight = true;
         var since = jar.sid ? jar.seq : 0;
-        fetch(LINK ? apiBase() + '/api/public/screen/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
-            : apiBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
+        fetch(LINK ? dataBase() + '/api/public/screen/gifts?k=' + encodeURIComponent(LINK_KEY) + '&since=' + since
+            : dataBase() + '/api/stream/recent-gifts?since=' + since, LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -593,6 +602,7 @@
 
     function linkWanted() {
         if (LINK) return false; // رابط OBS يقرأ بس — الحساب من اتصال الموقع
+        if (SCREENS) return false; // محرر فيرو: سيرفر فيرو هو اللي يتصل بالبث (veyro-server)
         var c = savedConn();
         if ((!dataWanted() && !presenceWanted() && !chatWanted()) || !token() || !c) return false;
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
@@ -2177,7 +2187,7 @@
     }
     function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
     function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
-    function videoFileUrl(id) { return id ? apiBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
+    function videoFileUrl(id) { return id ? veyroBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
     function hexRgb(hex) {
         var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
         return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
@@ -2752,7 +2762,7 @@
     function fetchEvents() {
         if (evState.inflight || !LINK) return;
         evState.inflight = true;
-        fetch(apiBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&d=' + (donState.init ? donState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
+        fetch(veyroBase() + '/api/public/screen/events?k=' + encodeURIComponent(LINK_KEY) + '&since=' + (evState.init ? evState.seq : 0) + '&t=' + (evState.tinit ? evState.tseq : 0) + '&c=' + (chatState.init ? chatState.seq : 0) + '&d=' + (donState.init ? donState.seq : 0) + '&lv=' + LIVE_VERSION + diagParam())
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) return;
@@ -3285,7 +3295,7 @@
         var a = new Audio();
         tts.busy = true; tts.audio = a; tts.cur = job;
         a.volume = vol(it, 0.9);
-        a.src = apiBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
+        a.src = veyroBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
             '&v=' + (it.voice === 'm' ? 'm' : 'f') + '&r=' + clamp(Number(it.rate) || 1, 0.5, 2);
         paintTts();
         function done() {
@@ -3344,7 +3354,7 @@
         var job = music.searches.shift();
         music.searching = true;
         music.lastSearchAt = Date.now();
-        fetch(apiBase() + '/api/public/screen/music/search?k=' + encodeURIComponent(LINK_KEY) + '&q=' + encodeURIComponent(job.q))
+        fetch(veyroBase() + '/api/public/screen/music/search?k=' + encodeURIComponent(LINK_KEY) + '&q=' + encodeURIComponent(job.q))
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 var it = audioItems('music')[0];
@@ -3512,7 +3522,7 @@
     function fetchDesign() {
         if (design.inflight) return;
         design.inflight = true;
-        fetch(apiBase() + '/api/public/screen?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : '') + '&lv=' + LIVE_VERSION)
+        fetch(veyroBase() + '/api/public/screen?k=' + encodeURIComponent(LINK_KEY) + (design.v != null ? '&v=' + design.v : '') + '&lv=' + LIVE_VERSION)
             .then(function (res) { return res.json(); })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -4316,7 +4326,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
