@@ -70,7 +70,7 @@
     var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
     var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
     // رابط سيرفر فيرو (خدمة veyro-server بـRender) — يتعبّى بعد إنشاء الخدمة، راجع docs/VEYRO_SERVER.md
-    var VEYRO_API = '';
+    var VEYRO_API = 'https://veyro-api-7mj3.onrender.com';
     var LINK_CHECK_MS = 5000;
     var GAME_GRACE_MS = 15000; // اللعبة غير متصلة كذا متواصل → الأوفرلي يتصل بداله
     var POLL_MS = 15000;
