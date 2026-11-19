@@ -217,6 +217,9 @@ test('library: upload checks the file type, publish bumps the version, access fi
 
 test('store: plan discount for games subscribers and idempotent store grants', function () {
     var x = setup();
+    // الافتراضي 30٪ لكل الخطط المعروضة للبيع
+    x.s.salePlans().forEach(function (s) { assert.equal(s.gamesDiscount, 30); });
+    assert.equal(x.s.savePlan({ name: 'أسبوعي', days: 7, price: 12 }).plan.gamesDiscount, 30);
     var p = x.s.savePlan({ id: 'monthly', name: 'شهري', days: 30, price: 40, screens: 10, videos: 10, gamesDiscount: 25 }).plan;
     assert.equal(p.gamesDiscount, 25);
     assert.equal(x.s.savePlan({ id: 'monthly', name: 'شهري', days: 30, price: 40 }).plan.gamesDiscount, 25); // يبقى لو ما انرسل

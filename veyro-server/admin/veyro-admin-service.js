@@ -41,6 +41,7 @@ var ASSET_TYPES = ['alert', 'top', 'icon', 'frame', 'sound'];
 var ASSET_STATUS = ['published', 'draft', 'hidden'];
 var ASSET_ACCESS = ['all', 'subs', 'yearly'];
 var MAX_ASSET_BYTES = 30 * 1024 * 1024;
+var GAMES_DISCOUNT = 30; // خصم مشتركي منصة الألعاب الافتراضي (٪) لكل خطة
 
 function dayKey(ts) { var d = new Date(ts + TZ_MS); return d.toISOString().slice(0, 10); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -113,8 +114,9 @@ function createService(db, deps) {
         '  status TEXT NOT NULL DEFAULT \'draft\', access TEXT NOT NULL DEFAULT \'all\', version INTEGER NOT NULL DEFAULT 0,' +
         '  settings TEXT NOT NULL DEFAULT \'{}\', mime TEXT, size INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);'
     );
-    // خصم مشتركي منصة الألعاب (٪) لكل خطة — يطبّقه متجر الألعاب (backend/store/veyro-link.js)
-    if (db.prepare('PRAGMA table_info(veyro_plans)').all().every(function (c) { return c.name !== 'games_discount'; })) db.exec('ALTER TABLE veyro_plans ADD COLUMN games_discount INTEGER NOT NULL DEFAULT 0');
+    // خصم مشتركي منصة الألعاب (٪) لكل خطة — يطبّقه متجر الألعاب (backend/store/veyro-link.js).
+    // الافتراضي GAMES_DISCOUNT (30٪ بطلب صاحب المنصة) لكل الخطط، ويتعدّل لكل خطة من اللوحة.
+    if (db.prepare('PRAGMA table_info(veyro_plans)').all().every(function (c) { return c.name !== 'games_discount'; })) db.exec('ALTER TABLE veyro_plans ADD COLUMN games_discount INTEGER NOT NULL DEFAULT ' + GAMES_DISCOUNT);
     db.exec('CREATE TABLE IF NOT EXISTS veyro_store_refs (ref TEXT PRIMARY KEY, user_id INTEGER NOT NULL, plan TEXT NOT NULL, amount REAL NOT NULL, at INTEGER NOT NULL)');
     if (!db.prepare('SELECT COUNT(*) AS n FROM veyro_plans').get().n) {
         var ins = db.prepare('INSERT INTO veyro_plans (id, name, days, price, screens, videos, on_sale, internal, features, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -142,7 +144,7 @@ function createService(db, deps) {
         var days = id === 'lifetime' ? 0 : clamp(int(p.days, 30), 1, 3650);
         var feats = (Array.isArray(p.features) ? p.features : []).map(function (f) { return str(f, 80); }).filter(Boolean).slice(0, 12);
         var sort = old ? db.prepare('SELECT sort FROM veyro_plans WHERE id = ?').get(id).sort : db.prepare('SELECT COALESCE(MAX(sort), 0) + 1 AS s FROM veyro_plans').get().s;
-        var gd = p.gamesDiscount == null ? (old ? old.gamesDiscount : 0) : clamp(int(p.gamesDiscount, 0), 0, 100);
+        var gd = p.gamesDiscount == null ? (old ? old.gamesDiscount : GAMES_DISCOUNT) : clamp(int(p.gamesDiscount, 0), 0, 100);
         db.prepare('INSERT OR REPLACE INTO veyro_plans (id, name, days, price, screens, videos, on_sale, internal, features, sort, games_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
             .run(id, name, days, Math.max(0, Number(p.price) || 0), clamp(int(p.screens, 10), 0, 500), clamp(int(p.videos, 10), 0, 500), p.on === false ? 0 : 1, id === 'lifetime' ? 1 : 0, JSON.stringify(feats), sort, gd);
         return { success: true, plan: plan(id), isNew: !old };

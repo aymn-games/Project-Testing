@@ -115,9 +115,9 @@
     var MAILS = ['gmail.com', 'hotmail.com', 'outlook.com', 'icloud.com'];
 
     var PLANS_SEED = [
-        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, videos: 10, gamesDiscount: 20, on: true, features: ['كل أدوات البث', '10 شاشات', '10 فيديوهات بالمكتبة'] },
-        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, videos: 20, gamesDiscount: 15, on: true, features: ['كل أدوات البث', '20 شاشة', '20 فيديو بالمكتبة'] },
-        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, videos: 40, on: true, features: ['كل أدوات البث', '50 شاشة', '40 فيديو بالمكتبة', 'أصول حصرية للسنوي'] },
+        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, videos: 10, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '10 شاشات', '10 فيديوهات بالمكتبة'] },
+        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, videos: 20, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '20 شاشة', '20 فيديو بالمكتبة'] },
+        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, videos: 40, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '50 شاشة', '40 فيديو بالمكتبة', 'أصول حصرية للسنوي'] },
         { id: 'lifetime', name: 'مفتوح', days: 0, price: 0, screens: 100, videos: 60, on: true, internal: true, features: ['بدون تاريخ انتهاء', 'يعطيه الأدمن أو كود خاص بس'] }
     ];
 
@@ -1642,7 +1642,7 @@
         });
     }
     function planModal(p) {
-        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: '', name: '', days: 30, price: 0, screens: 10, videos: 10, on: true, features: [] };
+        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: '', name: '', days: 30, price: 0, screens: 10, videos: 10, gamesDiscount: 30, on: true, features: [] };
         openModal({
             title: isNew ? 'خطة جديدة' : 'تعديل خطة «' + esc(p.name) + '»',
             body: '<div class="field"><label for="pm-n">الاسم</label><input id="pm-n" class="ob-input" value="' + esc(p.name) + '"></div>' +

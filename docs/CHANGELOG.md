@@ -17,7 +17,7 @@
   - `/api/veyro/whoami` صار يرسل `games_subscriber`.
   - متغير جديد: `VEYRO_STORE_SECRET`.
 - **سيرفر فيرو:**
-  - `games_discount` بالخطط، و`GET /api/veyro/plans`.
+  - `games_discount` بالخطط، والافتراضي 30٪ لكل الخطط بطلب صاحب المنصة. و`GET /api/veyro/plans`.
   - `POST /api/veyro/internal/store-grant` بالسر، وما يتفعّل مرتين لنفس الطلب.
   - `/api/auth/me` صار يرسل `veyro.store`: الخطط بسعر الحساب.
 - **لوحة فيرو:** خانة «خصم مشتركي منصة الألعاب (٪)» بكل خطة.
