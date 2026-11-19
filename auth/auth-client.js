@@ -834,7 +834,7 @@ function toggleWinCard(cardKey, enabled) {
     return request('/api/win-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
-/** شخصية الأنمي بالألعاب: 'girl' أو 'boy'، أو null = شكل عشوائي (docs/CHARACTERS.md). */
+/** شخصية الأنمي بالألعاب: 'girl' أو 'girl2' (البنت بالشكل الثاني) أو 'boy'، أو null = شكل عشوائي (docs/CHARACTERS.md). */
 function setCharacter(kind) {
     return request('/api/character/set', { method: 'POST', body: { kind: kind || null } });
 }

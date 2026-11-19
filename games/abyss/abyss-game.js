@@ -86,7 +86,8 @@
     function show(id, on) { $(id).hidden = !on; }
     function hashOf(s) { var h = 0; s = String(s); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
     // شخصية الأنمي لأصحاب الحسابات الموثّقة (docs/CHARACTERS.md): girl/boy، و any = وحدة ثابتة من id
-    function vrmOf(c, id) { if (c === 'girl' || c === 'boy') return c; return c === 'any' ? (hashOf(id) & 1 ? 'boy' : 'girl') : null; }
+    // 'girl2' = البنت بالشكل الثاني (docs/CHARACTERS.md). العضو اللي ما اختار ياخذ وحدة من الثلاث ثابتة من id حسابه
+    function vrmOf(c, id) { if (c === 'girl' || c === 'girl2' || c === 'boy') return c; var h = hashOf(id); return c === 'any' ? (h & 1 ? 'boy' : (h >>> 3) & 1 ? 'girl2' : 'girl') : null; }
     function initialOf(n) { return ([].slice.call(String(n || '')).filter(function (c) { return /[^\s_\d]/.test(c); }).slice(0, 2).join('')) || '؟'; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 

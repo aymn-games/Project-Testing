@@ -771,10 +771,11 @@
   }
 
   function renderCharacter(body, p) {
-    var cur = p.character === 'girl' || p.character === 'boy' ? p.character : null;
+    var cur = p.character === 'girl' || p.character === 'girl2' || p.character === 'boy' ? p.character : null;
     var grid = h('div', { class: 'pf-items pf-items-3 pf-items-chars' });
     [
       { kind: 'girl', name: 'بنت', img: 'assets/characters/girl.png' },
+      { kind: 'girl2', name: 'بنت (الشكل الثاني)', img: 'assets/characters/girl2.png' },
       { kind: 'boy', name: 'ولد', img: 'assets/characters/boy.png' },
       { kind: null, name: 'عشوائي', img: null }
     ].forEach(function (opt) {

@@ -149,14 +149,14 @@
             id: function (name) { return (byName[name] && byName[name].id) || null; },
             winVideo: function (name) { return (byName[name] && byName[name].winVideo) || null; },
             // شخصية الأنمي (VRM) بمشهد السفينة: بس لأصحاب الحسابات الموثّقة (character بالتعليق — docs/CHARACTERS.md).
-            // 'girl'/'boy' = اختياره بالبروفايل · 'any' = عضو ما اختار ← وحدة منهم ثابتة من id حسابه
+            // 'girl'/'girl2'/'boy' = اختياره بالبروفايل · 'any' = عضو ما اختار ← وحدة من الثلاث ثابتة من id حسابه
             // (نفسها باللوبي والمباراة) · بدون حساب = null ← الشخصية القديمة حق السفينة
             vrm: function (name) {
                 var p = byName[name], c = p && p.character;
-                if (c === 'girl' || c === 'boy') return c;
+                if (c === 'girl' || c === 'girl2' || c === 'boy') return c;
                 if (c !== 'any') return null;
                 var h = 0, id = String(p.id || name); for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-                return (h & 1) ? 'boy' : 'girl';
+                return (h & 1) ? 'boy' : ((h >>> 3) & 1) ? 'girl2' : 'girl';
             },
             // اللاعب بصيغة AGP ({id, name, avatarUrl}) — لنقاط المنصة
             player: function (name) {

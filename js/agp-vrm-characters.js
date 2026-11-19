@@ -6,10 +6,14 @@
  *
  * يحتاج بصفحة اللعبة importmap فيه: three (0.160.0) و three/addons/ و @pixiv/three-vrm (3.3.3).
  *
- * loadModels(base?) ← Promise<{ girl, boy } | null>: كل موديل ينحمّل مرة وحدة بالصفحة، وكل لاعب ياخذ نسخة
+ * loadModels(base?) ← Promise<{ girl, girl2, boy } | null>: girl2 = البنت بالشكل الثاني (شعر طويل وزي مدرسي)، ولو فشل
+ *   تحميله يرجع null والبنات كلهم بالشكل الأول: كل موديل ينحمّل مرة وحدة بالصفحة، وكل لاعب ياخذ نسخة
  *   (SkeletonUtils.clone: نفس الجيومتري والخامات والصور، فالذاكرة ما تتضاعف). base الافتراضي مجلد
  *   assets/characters/ نسبة لهذا الملف. لو فشل التحميل (المكتبة أو الملف) ترجع null، والفشل ما ينحفظ:
  *   نداء ثاني يعيد المحاولة (الألعاب تعيد كل كم ثانية).
+ *
+ * modelFor(models, character, boy, seed) ← موديل اللاعب: boy من اللعبة (ولد أو بنت)، و character اختياره بالبروفايل
+ *   ('girl' · 'girl2' · 'boy' · 'any' · null). البنت اللي ما اختارت شكل تاخذ وحدة من الشكلين ثابتة من seed.
  *
  * makeVrmRig(model, { n }) ← شخصية وحدة:
  *   root (Group تنضاف للمشهد) · bones (عظام بأسماء Mixamo: Hips, Spine, Head, RightArm, RightForeArm, RightHand ...)
@@ -30,9 +34,9 @@ const MODELS_BASE = new URL('../assets/characters/', import.meta.url).href;
 
 const T = THREE, TAU = Math.PI * 2, FADE = .25;
 const RIG_HIPS = .92; // ارتفاع الورك بوحدات حركات الحفلة (HIPS_Y بـ rig3d.js)
-const HEIGHT = { girl: 1.62, boy: 1.7 };
+const HEIGHT = { girl: 1.62, girl2: 1.62, boy: 1.7 };
 // لون بشرة الموديلين (لليد الكبيرة بالمواجهة)
-const SKIN = { girl: '#f6e0d4', boy: '#f3dacb' };
+const SKIN = { girl: '#f6e0d4', girl2: '#f6e0d4', boy: '#f3dacb' };
 
 // أسماء Mixamo (اللي تستخدمها الحركات و rps-scene.js) ← أسماء عظام VRM
 const MAP = { Hips: 'hips', Spine: 'spine', Spine1: 'chest', Spine2: 'upperChest', Neck: 'neck', Head: 'head' };
@@ -65,11 +69,24 @@ export function loadModels(base = MODELS_BASE) {
             const rawNames = {}; for (const b of Object.values(MAP).concat(FINGER_BONES)) { const nd = vrm.humanoid.getRawBoneNode(b); if (nd) rawNames[b] = nd.name; }
             return { kind, vrm, height, hipsY, expr, rawNames, clips: new Map() };
         };
-        const [girl, boy] = await Promise.all([one('girl'), one('boy')]);
-        return { girl, boy };
+        // girl2 (الشكل الثاني للبنت) اختياري: لو فشل تحميله، البنات كلهم بالشكل الأول
+        const [girl, boy, girl2] = await Promise.all([one('girl'), one('boy'), one('girl2').catch(() => null)]);
+        return { girl, boy, girl2 };
     })().catch(() => { cache.p = null; return null; }); // الفشل ما ينحفظ: المحاولة الجاية تعيد التحميل
     return cache.p;
 }
+
+// موديل اللاعب: boy (ولد أو بنت) تقرره اللعبة، و character اختياره بالبروفايل. 'girl2' = البنت بالشكل الثاني.
+// البنت بدون اختيار شكل ('any' أو بدون حساب) تاخذ وحدة من الشكلين ثابتة من seed (رقم اللاعب أو id حسابه).
+export function modelFor(models, character, boy, seed) {
+    if (boy) return models.boy;
+    if (!models.girl2 || character === 'girl') return models.girl;
+    if (character === 'girl2') return models.girl2;
+    return ((Math.abs(seed | 0) >>> 3) & 1) ? models.girl2 : models.girl;
+}
+
+// هل اختيار البروفايل بنت (بأي شكل)؟ للألعاب اللي تقرر بنت أو ولد قبل الموديل
+export const isGirlCharacter = c => c === 'girl' || c === 'girl2';
 
 // الأصابع: [اسم، [عظام السلاميات]]
 const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Little'];

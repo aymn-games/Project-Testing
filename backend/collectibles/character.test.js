@@ -22,6 +22,8 @@ test('اختيار الشخصية وقراءتها والرجوع للعشوائ
         assert.equal(svc.getCharacter(id), null);
         assert.deepEqual(svc.setCharacter(id, 'girl'), { success: true, character: 'girl' });
         assert.equal(svc.getCharacter(id), 'girl');
+        assert.deepEqual(svc.setCharacter(id, 'girl2'), { success: true, character: 'girl2' });
+        assert.equal(svc.getCharacter(id), 'girl2');
         assert.deepEqual(svc.setCharacter(id, 'boy'), { success: true, character: 'boy' });
         assert.equal(svc.getCharacter(id), 'boy');
         assert.equal(svc.setCharacter(id, 'dragon').success, false);
@@ -47,6 +49,7 @@ test('الشخصية توصل لصاحب التعليق بس لو تيك توك 
 test('رسالة التعليق تحمل الشخصية (والقيم الغريبة تصير null)', function () {
     var msg = function (c) { var e = builder.buildCommentMessage('tiktok', 'tiktok:x', 'x', 'hi', false, null, null, null, null, c); return (e.payload || e.data || e).character; };
     assert.equal(msg('girl'), 'girl');
+    assert.equal(msg('girl2'), 'girl2');
     assert.equal(msg('boy'), 'boy');
     assert.equal(msg('any'), 'any');
     assert.equal(msg('dragon'), null);

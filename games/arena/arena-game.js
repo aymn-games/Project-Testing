@@ -786,7 +786,7 @@ function isWaiting(F){return alive(F)&&(!F.match||(F.match.done&&F.match.winner=
 let outfitBag=[],boyBag=[];
 // بنت أو ولد: حسب اختيار اللاعب من بروفايله («شخصيتي بالألعاب» — docs/CHARACTERS.md)، وإلا عشوائي
 const GENDER=new Map();   // يثبت للاعب طول الجلسة (العشوائي ما يتبدّل بين الجولات)
-function isBoy(p){const c=xtra(p.pid).character;if(c==='boy'||c==='girl')return c==='boy';if(!GENDER.has(p.pid))GENDER.set(p.pid,Math.random()<.5);return GENDER.get(p.pid);}
+function isBoy(p){const c=xtra(p.pid).character;if(c==='boy'||c==='girl'||c==='girl2')return c==='boy';if(!GENDER.has(p.pid))GENDER.set(p.pid,Math.random()<.5);return GENDER.get(p.pid);}
 function spawnFromQueue(slot,side){const p=G.queue.shift();if(!p)return null;const boy=isBoy(p);
   if(!outfitBag.length)outfitBag=shuffle([...OUTFITS.keys()]);if(!boyBag.length)boyBag=shuffle([...BOY_OUTFITS.keys()]);
   const F=makeFighter(p.name,(boy?boyBag:outfitBag).pop(),SLOT_COLS[(G.colorIdx++)%SLOT_COLS.length],p.avatar,p.pid,boy);F.x=side*1.36;F.z=slot.cz;F.laneZ=slot.cz;

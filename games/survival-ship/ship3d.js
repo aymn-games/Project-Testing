@@ -1,5 +1,5 @@
 // <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring,vrm}], focus:id|null, duel:[id,id]|null}
-// vrm: 'girl'|'boy' = شخصية أنمي مشتركة (js/agp-vrm-characters.js — docs/CHARACTERS.md) لأصحاب الحسابات الموثّقة، وإلا الشخصية المرسومة هنا.
+// vrm: 'girl'|'girl2'|'boy' = شخصية أنمي مشتركة (js/agp-vrm-characters.js — docs/CHARACTERS.md) لأصحاب الحسابات الموثّقة، وإلا الشخصية المرسومة هنا.
 //   الموديلات تنحمّل بس لو فيه لاعب عنده vrm، ولين تخلص (أو لو فشلت) يطلع الشكل القديم. يحتاج importmap بالصفحة (game.html / lobby.html).
 class Ship3D extends HTMLElement {
   static get observedAttributes(){ return ['scene']; }
@@ -120,7 +120,7 @@ class Ship3D extends HTMLElement {
   // الجسم المرسوم يختفي (الاسم والطوق يبقون) والموديل ياخذ مكانه بنفس طول شخصيات السفينة
   attachVrm(G,kind,d){ const U=G.userData, keep=new Set([U.sp,U.buoy]); G.children.forEach(o=>{ if(!keep.has(o)) o.visible=false; });
     let h=0; const id=String(d.id); for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))|0;
-    const rig=this.V.make(this.V.M[kind],{n:Math.abs(h)}); rig.root.scale.setScalar(kind==='boy'?2.65/1.7:2.5/1.62); rig.root.visible=true;
+    const rig=this.V.make(this.V.M[kind]||this.V.M.girl,{n:Math.abs(h)}); rig.root.scale.setScalar(kind==='boy'?2.65/1.7:2.5/1.62); rig.root.visible=true;
     rig.root.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); G.add(rig.root); U.rig=rig; U.vrmAnim=-1; }
   dropFig(f){ this.crew.remove(f.g); const r=f.g.userData.rig; if(r) r.dispose(); }
   slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67,17/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4,7.3/(rows-1)):0;
@@ -132,7 +132,7 @@ class Ship3D extends HTMLElement {
     const sl=this.slots(ps.length);
     for(const [id,f] of this.figs) if(!keep.has(id)){ this.dropFig(f); this.figs.delete(id); }
     if(ps.some(p=>p.vrm)) this.loadVrm();
-    ps.forEach((p,i)=>{ let f=this.figs.get(p.id), born=false; const vrm=(p.vrm==='girl'||p.vrm==='boy')&&this.V?p.vrm:null;
+    ps.forEach((p,i)=>{ let f=this.figs.get(p.id), born=false; const vrm=(p.vrm==='girl'||p.vrm==='girl2'||p.vrm==='boy')&&this.V?p.vrm:null;
       if(!f||f.name!==p.name||f.vrm!==vrm){ const was=f&&f.g.position.clone(); if(f) this.dropFig(f); f={g:this.figure(p,vrm),name:p.name,vrm,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); born=!was; if(was) f.g.position.copy(was); }
       // target = المكان اللي يمشي له اللاعب (مكانه الأصلي أو مكان المواجهة) — tick() يحركه له بخطوات
       const di=D?D.indexOf(p.id):-1; f.home=sl[i]; f.duel=di>=0; f.target=di>=0?this.duelSpot(di):sl[i]; if(born) f.g.position.copy(f.target);

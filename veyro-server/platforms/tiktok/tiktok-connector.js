@@ -249,9 +249,9 @@ function extractElimCard(uniqueId) {
 }
 
 /**
- * شخصية الأنمي لصاحب التعليق: 'girl'|'boy' (اختارها)، 'any' (عنده حساب وما اختار)، null (ما عنده حساب).
+ * شخصية الأنمي لصاحب التعليق: 'girl'|'girl2'|'boy' (اختارها)، 'any' (عنده حساب وما اختار)، null (ما عنده حساب).
  * @param {string} uniqueId
- * @returns {'girl'|'boy'|'any'|null}
+ * @returns {'girl'|'girl2'|'boy'|'any'|null}
  */
 function extractCharacter(uniqueId) {
     try {

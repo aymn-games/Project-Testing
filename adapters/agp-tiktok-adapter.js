@@ -93,7 +93,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // avatarUrl/frame/entrance feed the player card (agp-player-card.js)
         // and the entrance intro animation (agp-entrance.js); elimCard feeds
         // the owned elimination card (agp-elim-card.js); winCard the owned win
-        // card (agp-win-card.js); character the chosen anime character ('girl'|'boy'|null — docs/CHARACTERS.md).
+        // card (agp-win-card.js); character the chosen anime character ('girl'|'girl2'|'boy'|'any'|null — docs/CHARACTERS.md).
         var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, entrance: payload.entrance || null, elimCard: payload.elimCard || null, winCard: payload.winCard || null, character: payload.character || null };
         var keywordActive = AGP.keywordManager && AGP.keywordManager.isActive();
 

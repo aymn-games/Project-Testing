@@ -562,16 +562,17 @@ function getWinCardForVerifiedTikTok(tiktokUsername) {
  * لو حسابه موثّق بتيك توك. بدون اختيار = اللعبة تعطيه شكل عشوائي.
  * ---------------------------------------------------------------------- */
 
-var CHARACTER_KINDS = ['girl', 'boy'];
+// girl2 = البنت بالشكل الثاني (شعر طويل وزي مدرسي — assets/characters/girl2.vrm)
+var CHARACTER_KINDS = ['girl', 'girl2', 'boy'];
 
-/** @returns {'girl'|'boy'|null} */
+/** @returns {'girl'|'girl2'|'boy'|null} */
 function getCharacter(userId) {
   var row = db.prepare('SELECT kind FROM user_characters WHERE user_id = ?').get(userId);
   return row && CHARACTER_KINDS.indexOf(row.kind) !== -1 ? row.kind : null;
 }
 
 /**
- * kind: 'girl' أو 'boy'، أو null/'' يرجّع الشكل العشوائي.
+ * kind: 'girl' أو 'girl2' أو 'boy'، أو null/'' يرجّع الشكل العشوائي.
  * @returns {{success: boolean, character?: string|null, error?: string}}
  */
 function setCharacter(userId, kind) {
@@ -594,7 +595,7 @@ function setCharacter(userId, kind) {
  * (اللعبة تعطيه وحدة من الشخصيتين عشوائي)، و null = ما عنده حساب (الشكل القديم
  * للعبة). بطلب صاحب المنصة: الشخصيات الجديدة لأصحاب الحسابات بس.
  * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
- * @returns {'girl'|'boy'|'any'|null}
+ * @returns {'girl'|'girl2'|'boy'|'any'|null}
  */
 function getCharacterForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();

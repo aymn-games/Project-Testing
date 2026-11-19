@@ -7,7 +7,7 @@
  * وما تطلع أي شخصية قبل ما يخلص تحميل الموديلات.
  *
  * المشهد عرض بس: الشاشة (game.html) تمسك القواعد والوقت وترسل الحالة:
- *   setState({ phase, players: [{ id, name, avatarUrl, place, pose, pick, bubble, badge }] })
+ *   setState({ phase, players: [{ id, name, avatarUrl, g, c, place, pose, pick, bubble, badge }] }) — g: 0 بنت 1 ولد، c: اختيار البروفايل (character)
  *   place = { kind: 'stage'|'duel'|'queue'|'podium', i, n, side }  (stage = اللوبي قدام قبل البدء)
  *   hl = 1 الضوء يمر عليه (الاختيار العشوائي) · 2 انختار · cam = 'wide' (اللوبي والاختيار) | 'close'
  *     duel: واحد من الاثنين بالمواجهة الحالية (side 0 يسار، 1 يمين) — مكان واحد والكاميرا ثابتة عليه قريب
@@ -27,7 +27,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { loadClips } from '../birthday-party/rig3d.js';
 import { makeHand } from './rps-hand.js';
-import { loadModels, makeVrmRig } from '../../js/agp-vrm-characters.js'; // شخصيات الأنمي المشتركة (docs/CHARACTERS.md)
+import { loadModels, makeVrmRig, modelFor } from '../../js/agp-vrm-characters.js'; // شخصيات الأنمي المشتركة (docs/CHARACTERS.md)
 
 const T = THREE, TAU = Math.PI * 2;
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -390,7 +390,8 @@ export function createArena(container, opts = {}) {
     // الشخصيات: موديلات VRM بس (js/agp-vrm-characters.js). قبل ما يخلص تحميلها ما تطلع أي شخصية، ولو فشل
     // التحميل (نت المذيع أو السيرفر) نعيد المحاولة كل 5 ثواني. آخر حالة توصل تنحفظ وتنطبق بعد التحميل
     let MODELS = null, lastState = null;
-    function newRig(n, g) { const rig = makeVrmRig(g ? MODELS.boy : MODELS.girl, { n }); rig.root.visible = false; scene.add(rig.root); return rig; }
+    // c: اختيار البروفايل (character)، و girl2 = الشكل الثاني للبنت
+    function newRig(n, g, c) { const rig = makeVrmRig(modelFor(MODELS, c, g, n), { n }); rig.root.visible = false; scene.add(rig.root); return rig; }
     (function tryLoad() {
         loadModels().then(m => {
             if (stopped) return;
@@ -403,7 +404,7 @@ export function createArena(container, opts = {}) {
         const n = idNum(p.id);
         // بنت أو ولد حسب الرقم، والباقي من الشكل الافتراضي المشتق من نفس الرقم (crowd-common.js)
         const g = p.g === 0 || p.g === 1 ? p.g : n % 2; // بنت أو ولد (عشوائي من الشاشة)
-        const rig = newRig(n, g);
+        const rig = newRig(n, g, p.c);
         const tag = makeSprite(512, 104, .36); scene.add(tag);
         const bubble = makeSprite(420, 120, .27); bubble.visible = false; scene.add(bubble);
         const badge = makeSprite(420, 120, .27); badge.visible = false; scene.add(badge);

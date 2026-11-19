@@ -604,6 +604,8 @@
   .pf-btn .pf-ic{width:15px;height:15px}
   .pf-items-chars .pf-item-art img{animation:pf-float 3.2s ease-in-out infinite}
   .pf-items-chars .pf-item:nth-child(2) .pf-item-art img{animation-delay:-1.6s}
+  .pf-items-chars .pf-item:nth-child(3) .pf-item-art img{animation-delay:-.8s}
+  .pf-items.pf-items-chars{grid-template-columns:repeat(4,minmax(0,1fr))}
   @keyframes pf-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   .pf-item:hover .pf-item-art img{transform:scale(1.04);transition:transform .3s var(--ease)}
   .pf-preview{border-radius:var(--r-md);overflow:hidden;background:#0a0810;border:1px solid var(--edge)}
@@ -798,6 +800,7 @@
     .pf-items-3{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
     .pf-items-3 .pf-item{padding:6px}
     .pf-items-3 .pf-item-art{--art-h:120px}
+    .pf-items.pf-items-chars{grid-template-columns:repeat(2,minmax(0,1fr))}
     .pf-item-art{--art-h:64px}
     .pf-lrow{min-height:46px;padding:6px 8px;gap:8px}
     .pf-av{width:30px;height:30px;font-size:12px}

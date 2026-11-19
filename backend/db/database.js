@@ -219,7 +219,7 @@ db.exec(`
     -- (assets/characters/ — docs/CHARACTERS.md). صف واحد لكل مستخدم؛ ما فيه صف = شكل عشوائي.
     CREATE TABLE IF NOT EXISTS user_characters (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-        kind TEXT NOT NULL CHECK(kind IN ('girl', 'boy')),
+        kind TEXT NOT NULL CHECK(kind IN ('girl', 'girl2', 'boy')),
         updated_at INTEGER NOT NULL
     );
 
@@ -876,6 +876,28 @@ function migrateSingleCardTable(table) {
 }
 migrateSingleCardTable('user_elim_cards');
 migrateSingleCardTable('user_win_cards');
+
+// شكل ثاني للبنت ('girl2'): قيد CHECK القديم بـuser_characters كان ('girl','boy')
+// بس، وSQLite ما يعدّل القيود بـALTER، فيُعاد بناء الجدول مرة وحدة مع نقل
+// اختيارات المستخدمين كما هي (والصفوف اليتيمة لحساب محذوف تنشال).
+(function migrateCharacterKinds() {
+    var row = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'user_characters'").get();
+    if (!row || row.sql.indexOf("'girl2'") !== -1) return;
+    db.transaction(function () {
+        db.exec(
+            'CREATE TABLE user_characters_new (' +
+            '    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,' +
+            "    kind TEXT NOT NULL CHECK(kind IN ('girl', 'girl2', 'boy'))," +
+            '    updated_at INTEGER NOT NULL' +
+            ');' +
+            'INSERT INTO user_characters_new (user_id, kind, updated_at) ' +
+            '    SELECT user_id, kind, updated_at FROM user_characters WHERE user_id IN (SELECT id FROM users);' +
+            'DROP TABLE user_characters;' +
+            'ALTER TABLE user_characters_new RENAME TO user_characters;'
+        );
+    })();
+    logger.log('Database: migrated — user_characters accepts girl2');
+}());
 
 // إطارات حصرية جاهزة (ملفها مرفوع بالمستودع ومقاسها مسجَّل بـ
 // js/agp-player-card.js) — تُضاف لـcustom_frames مرة وحدة (بحث بـ

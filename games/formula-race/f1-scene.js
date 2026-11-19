@@ -1215,9 +1215,10 @@ export function mountRace(el, { track, trackPoint, quality = 'balanced' }) {
             const o = cars.get(c.id), cp = trackPoint(D_CAR, CAR_LANE[i]);
             o.group.position.set(cp.x, 0, cp.z); o.group.rotation.y = cp.heading;
             o.flame.visible = o.ring.visible = o.dome.visible = false; o.helmet.visible = false;
-            const kind = c.character === 'boy' ? 'boy' : c.character === 'girl' ? 'girl' : (hashId(c.id) % 2 ? 'boy' : 'girl');
-            const rig = VRM.makeVrmRig(vrmModels[kind], { n: i + 1 });
-            dressRacingSuit(rig, vrmModels[kind], c.color);
+            const boy = c.character === 'boy' ? true : VRM.isGirlCharacter(c.character) ? false : hashId(c.id) % 2 === 1;
+            const model = VRM.modelFor(vrmModels, c.character, boy, hashId(c.id));
+            const rig = VRM.makeVrmRig(model, { n: i + 1 });
+            dressRacingSuit(rig, model, c.color);
             const p = trackPoint(D_CHAR, CAR_LANE[i]);
             rig.root.position.set(p.x, 0, p.z); rig.root.rotation.y = p.heading;
             rig.root.traverse(m => { if (m.isMesh) m.castShadow = true; });

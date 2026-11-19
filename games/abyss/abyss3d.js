@@ -210,7 +210,7 @@
       const slot = new Map(); for (const [k, list] of groups) { const sl = k === 'start' ? this.slotsFor(list.length, -1, null) : k === 'end' ? this.slotsFor(list.length, -1, null).map(o => ({ v: o.v.setZ(o.v.z - rowZ(-1) + this.endZ()), s: o.s })) : this.slotsFor(list.length, +k.split(':')[0], +k.split(':')[1]);
         list.forEach((p, i) => slot.set(p.id, sl[i])); }
       ps.forEach(p => {
-        let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'boy') && this.V ? p.vrm : null;
+        let f = this.figs.get(p.id), born = false; const vrm = (p.vrm === 'girl' || p.vrm === 'girl2' || p.vrm === 'boy') && this.V ? p.vrm : null;
         if (!f || f.name !== p.name || f.vrm !== vrm) { const was = f && f.g.position.clone(); if (f) this.dropFig(f); f = { g: this.figure(p, vrm), name: p.name, vrm, ph: Math.random() * 6, rise: p.rise || 0 }; { const U = f.g.userData, sp = U.sp; if (sp) { sp.scale.set(2, .5, 1); sp.position.y = 3.05; sp.renderOrder = 30; } /* الأسماء ترتسم فوق الرقم الطاير (20) */ /* اسم أصغر عشان ما تتراكب الأسماء */ if (U.rig) U.rig.root.scale.multiplyScalar(1.22); /* شخصية الأنمي أقرب بحجمها للشخصيات المرسومة */ } this.crew.add(f.g); this.figs.set(p.id, f); born = !was; if (was) f.g.position.copy(was); }
         const key = p.row + ':' + p.lane;
         if (p.fall) { if (f.fallT == null) { f.fallT = -.45; f.fallV = new T.Vector3((Math.random() - .5) * 1.5, 1.5, (Math.random() - .5) * 1.5); } f.key = key; return; }
