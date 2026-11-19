@@ -3851,6 +3851,16 @@
         who.appendChild(el('small', null, me.tiktok_username ? '@' + me.tiktok_username : 'حسابي'));
         u.appendChild(who);
         userEl.appendChild(u);
+        // «لوحة التحكم» (veyro/admin.html): للأدمن والمشرفين بس (isAdmin من /api/auth/me → veyro)
+        if (vyInfo && vyInfo.isAdmin) {
+            var ab = el('a', 'ob-btn ghost vy-subline vy-adminbtn');
+            ab.href = 'admin.html';
+            ab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+            ab.appendChild(el('span', 'lbl', 'لوحة التحكم'));
+            ab.setAttribute('data-tip', 'لوحة التحكم');
+            ab.style.width = '100%';
+            userEl.appendChild(ab);
+        }
         // الاشتراك من لوحة تحكم فيرو + «عندك كود؟»
         if (vyInfo && vyInfo.sub) {
             var sb = button('', 'ob-btn ghost vy-subline', redeemPrompt);
