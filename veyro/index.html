@@ -574,9 +574,9 @@
   .vy-lcard:hover { border-color: var(--line-2); }
   .vy-lcard.pick { cursor: pointer; }
   .vy-lcard.pick:hover { transform: translateY(-2px); border-color: rgba(207,195,220,.5); }
-  /* خلفية ثابتة لبطاقات الأليرتات بالمكتبة: لافندر داكن وشعار فيرو باهت بالوسط (الأليرت المفرّغ يطلع فوقه) */
-  .vy-lcard .th { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden; background: radial-gradient(120% 90% at 50% 0%, rgba(141,127,163,.38), transparent 60%), linear-gradient(160deg, #241e2f, #110f16); }
-  .vy-lcard .th::before { content: ""; position: absolute; inset: 0; background: url("brand/veyro-icon.png") center / auto 46% no-repeat; opacity: .16; pointer-events: none; }
+  /* خلفية ثابتة لبطاقات الأليرتات بالمكتبة: صورة المدينة (brand/library-bg.webp) وشعار فيرو بالنص — الأليرت المفرّغ يطلع فوقهم */
+  .vy-lcard .th { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden; background: linear-gradient(rgba(10,8,16,.28), rgba(10,8,16,.28)), url("brand/library-bg.webp") center / cover no-repeat, #14121a; }
+  .vy-lcard .th::before { content: ""; position: absolute; inset: 0; background: url("brand/veyro-logo.webp") center / 46% auto no-repeat; opacity: .9; filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); pointer-events: none; }
   .vy-lcard .th video, .vy-lcard .th canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .vy-lcard .th.keyed video, .vy-lcard .th.stilled video { opacity: 0; }
   .vy-lcard .th.keyed .still { display: none; }

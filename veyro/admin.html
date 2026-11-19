@@ -396,8 +396,8 @@
   /* «محاكاة بث»: شاشة بث 1920×1080 (brand/stream-sim.svg) — تختبر عليها التفريغ والأليرت فوق بث حقيقي */
   .ed-stage.bg-stream { background: #0b1230 url("brand/stream-sim.svg") center / cover no-repeat; }
   /* خلفية بطاقات الأليرتات بالمكتبة: ثابتة بشعار فيرو (نفس بطاقات «مكتبتي» بالمحرر) */
-  .a-card .th.brand { background: radial-gradient(120% 90% at 50% 0%, rgba(141,127,163,.38), transparent 60%), linear-gradient(160deg, #241e2f, #110f16); }
-  .a-card .th.brand::before { content: ""; position: absolute; inset: 22px 0 0; background: url("brand/veyro-icon.png") center / auto 46% no-repeat; opacity: .16; pointer-events: none; }
+  .a-card .th.brand { background: linear-gradient(rgba(10,8,16,.28), rgba(10,8,16,.28)), url("brand/library-bg.webp") center / cover no-repeat, #14121a; }
+  .a-card .th.brand::before { content: ""; position: absolute; inset: 0; background: url("brand/veyro-logo.webp") center / 46% auto no-repeat; opacity: .9; filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); pointer-events: none; }
   .a-card .th.brand > canvas, .a-card .th.brand > video { position: relative; }
   .ed-stage.white { background: #f1eef5; }
   .ed-stage canvas { max-width: 100%; max-height: 100%; }
