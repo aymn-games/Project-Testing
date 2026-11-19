@@ -372,7 +372,7 @@ export async function mountPyramid(el, opts = {}) {
     // مقاس الدوائر يتحدد مرة وحدة بداية المباراة حسب العدد (عشان صف 56 يدخل الشاشة)، وكل صف أضيق من اللي تحته.
     const R0 = .95; // نصف قطر جيومتري الدائرة الأصلي (الكل يتصغّر بـ K)
     let SP = 2.4, K = 1, R = R0, STEP_H = 1.3, PAD = 1.3, CS = 1; const GAP = 0;
-    function setUnit(n0) { SP = Math.max(1.3, Math.min(2.4, 74 / Math.max(1, n0))); K = SP / 2.4; R = R0 * K; PAD = Math.max(.55, 1.1 * K); STEP_H = Math.max(.75, 1.35 * K); CS = Math.max(.55, Math.min(1, K * 1.15)); }
+    function setUnit(n0) { SP = Math.max(1.3, Math.min(2.4, 74 / Math.max(1, n0))); K = SP / 2.4; R = R0 * K; PAD = Math.max(.55, 1.1 * K); STEP_H = (R * 2 + PAD * 2) * .62; /* درجات عالية عشان يبان شكل الهرم */ CS = Math.max(.55, Math.min(1, K * 1.15)); }
     // أطلس الأرقام 1..64 (8×8)
     const atlas = canvasTex(2048, 2048, (g) => {
         g.clearRect(0, 0, 2048, 2048); g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -412,7 +412,7 @@ export async function mountPyramid(el, opts = {}) {
         constructor(k, n) {
             this.k = k; this.n = n; const L = layout(n); Object.assign(this, L);
             const prev = levels[k - 1];
-            this.yTop = .5 + (k + 1) * STEP_H * .8;
+            this.yTop = .4 + (k + 1) * STEP_H;
             this.zFront = prev ? prev.zBack : 2;
             this.zBack = this.zFront - this.d;
             this.cz = (this.zFront + this.zBack) / 2;
@@ -660,6 +660,8 @@ export async function mountPyramid(el, opts = {}) {
         return { look: c, pos: c.clone().addScaledVector(dir, Math.max(9, d)) };
     }
     function levelPts(L, extra = []) { if (!L) return extra; const p = [V(-L.w / 2, L.yTop, L.zFront), V(L.w / 2, L.yTop, L.zFront), V(-L.w / 2, L.yTop + 1.8, L.zBack), V(L.w / 2, L.yTop + 1.8, L.zBack)]; return p.concat(extra); }
+    // كل صفوف الهرم الظاهرة (من القاعدة للقمة) — اللقطة الرئيسية تعرض الهرم كامل
+    function pyramidPts(extra = []) { let p = extra.slice(); for (const L of levels) if (L.group.visible && L.alive) p = levelPts(L, p); return p; }
     function actorPts() { const p = []; for (const a of actors.values()) if (!a.dead) p.push(a.pos.clone(), a.pos.clone().setY(a.pos.y + 1.9)); return p; }
     const drift = t => REDUCED ? V() : V(Math.sin(t * .23) * .35, Math.sin(t * .31) * .18, Math.cos(t * .19) * .25);
     function oblique(pts, pitch = .72, rate = 1.6, swing = .07) {
@@ -675,7 +677,7 @@ export async function mountPyramid(el, opts = {}) {
         // الظل يتبع مكان الحدث
         key.target.position.copy(camS.look); key.position.copy(camS.look).add(V(18, 34, 26));
     }
-    const mainShot = () => oblique(levelPts(activeLevel, actorPts()), .74, 1.4);
+    const mainShot = () => oblique(pyramidPts(actorPts()), .5, 1.4);
     // لقطة اللوبي: الكاميرا تتابع اللاعبين بالساحة (تكبر مع عددهم) وتتمايل ببطء
     const lobbyShot = () => t => { const pts = actorPts(); if (pts.length < 2) pts.push(V(-6, 0, 6), V(6, 0, 6)); pts.push(V(0, 3, -6)); const F = frameBox(pts, .36, REDUCED ? 0 : Math.sin(t * .09) * .22, 1.25); return { pos: F.pos.add(drift(t)), look: F.look.add(V(0, .6, 0)), rate: 1.1 }; };
 
@@ -791,7 +793,7 @@ export async function mountPyramid(el, opts = {}) {
     }
     function choosing(on, round) {
         isChoosing = on; urgency = 0;
-        if (on) { setMood('choose'); for (const a of actors.values()) a.setMood('choose'); setShot(oblique(levelPts(activeLevel, actorPts()), .8, 1.2, .06)); screen('اختر رقمك', 'المرحلة ' + (round || 1)); pulse(activeLevel.center().setY(activeLevel.yTop + .1), C.cyan, 1, activeLevel.w * .8, 1.6, .7); }
+        if (on) { setMood('choose'); for (const a of actors.values()) a.setMood('choose'); setShot(oblique(pyramidPts(actorPts()), .52, 1.2, .06)); screen('اختر رقمك', 'المرحلة ' + (round || 1)); pulse(activeLevel.center().setY(activeLevel.yTop + .1), C.cyan, 1, activeLevel.w * .8, 1.6, .7); }
     }
     function setUrgency(k) { urgency = clamp01(k); if (k > .6) for (const a of actors.values()) if (a.moodSet === 'choose' && a.rnd() < .02) a.setMood('tense'); }
     // اختيار رقم: الدائرة تتلوّن بلون اللاعب + موجة ضوء + شرار، والقديمة ترجع
@@ -816,14 +818,14 @@ export async function mountPyramid(el, opts = {}) {
     async function moveIn(assign) {
         const L = activeLevel; setMood('choose'); let maxT = 0;
         const entries = Object.entries(assign);
-        setShot(oblique(levelPts(L, actorPts()), .7, 1.2, .04));
+        setShot(oblique(pyramidPts(actorPts()), .5, 1.2, .04));
         entries.forEach(([id, num], q) => { const a = actors.get(String(id)); if (!a) return; const s = L.st[num - 1]; a.homeYaw = 0; a.setMood('still'); maxT = Math.max(maxT, a.walkTo(L.stand(num - 1), (q % 12) * .08 + Math.random() * .25, 3)); setTimeout(() => { s.mode = 'occupied'; s.flash = .6; }, maxT * 1000); });
         await wait(maxT + .4);
         for (const [id, num] of entries) { const s = L.st[num - 1]; s.mode = 'occupied'; const a = actors.get(String(id)); if (a) a.setMood('tense', true); }
         // الدوائر الفاضية في هالمرحلة تنطفئ، والدرجة السابقة تغطس دوائرها
         L.st.forEach(s => { if (s.mode === 'idle') s.mode = 'dim'; });
         const prev = levels[L.k - 1]; if (prev) prev.st.forEach(s => sink(s));
-        setShot(oblique(levelPts(L, actorPts()), .7, 1.2, .04));
+        setShot(oblique(pyramidPts(actorPts()), .5, 1.2, .04));
     }
     function sink(s, dur = .9) { const t0 = now(), y0 = s.y; const f = () => { const k = clamp01((now() - t0) / dur); s.y = y0 - .5 * ease(k); s.s = 1 - ease(k); if (k < 1) requestAnimationFrame(f); else s.gone = true; }; f(); }
     function actorCircle(a) { const L = activeLevel; if (!L) return -1; return L.st.findIndex(s => s.owner === a.id); }
@@ -894,14 +896,14 @@ export async function mountPyramid(el, opts = {}) {
         const L = activeLevel; pulse(L.center().setY(L.yTop + .1), C.gold, 1, L.w, 1.4, .8);
         ids.forEach((id, i) => { const a = actors.get(String(id)); if (!a) return; setTimeout(() => { a.setMood('happy', true); a.doBeh(pickW(MOOD_SETS.happy, a.rnd)); sparks.emit(a.pos.clone().setY(a.pos.y + 1.8), { count: 6, color: [a.color, C.gold], speed: 2, up: 2, life: .8, size: .2 }); }, (i % 10) * 90 + Math.random() * 300); });
         confetti.emit(L.center().setY(L.yTop + 10), { count: 260, color: [TEAL, SAND], speed: 7, up: 2, gravity: 3, drag: 1.6, life: 3.2, size: .2, spread: L.w * .6 });
-        setShot(oblique(levelPts(L, actorPts()), .66, 1.3, .1));
+        setShot(oblique(pyramidPts(actorPts()), .5, 1.3, .1));
         await wait(o.dur || 2.6);
         for (const id of ids) { const a = actors.get(String(id)); if (a) a.setMood('calm'); }
     }
     // المرحلة التالية: الكاميرا تطلع تعرض الناجين والدرجة الجديدة تنبني فوقهم
     async function nextLevel(n) {
         setMood('calm');
-        const prev = activeLevel, F = () => frameBox(levelPts(prev, actorPts()).concat(levelPts({ w: layout(n).w, yTop: prev.yTop + STEP_H * .8, zFront: prev.zBack, zBack: prev.zBack - layout(n).d })), .72, 0, 1.02);
+        const prev = activeLevel, F = () => frameBox(pyramidPts(actorPts()).concat(levelPts({ w: layout(n).w, yTop: prev.yTop + STEP_H, zFront: prev.zBack, zBack: prev.zBack - layout(n).d })), .72, 0, 1.02);
         setShot(t => { const f = F(); return { pos: f.pos.add(drift(t)), look: f.look, rate: 1.1 }; });
         await wait(.6);
         const dur = buildLevel(n, .04); screen('المرحلة التالية', n + ' دائرة');
