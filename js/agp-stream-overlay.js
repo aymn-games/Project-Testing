@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '7'; // 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '8'; // 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2255,11 +2255,26 @@
         return { rgba: 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')', r: clamp(Number(b.r) || 0, 0, 9) };
     }
     /** ألوان أليرت الفيديو (Veyro): {hue: -180..180، sat: 0..3، bri: 0.2..2} → فلتر CSS أو ''. */
+    /** ألوان جاهزة لأليرت الفيديو (it.vfx.tint): تلوّن الفيديو كله بلون واحد بدرجاته. */
+    var ALERT_TINTS = [
+        { key: '', label: 'الأصلي' }, { key: '#ff3b5c', label: 'أحمر' }, { key: '#ff6fb5', label: 'وردي' }, { key: '#a26bff', label: 'بنفسجي' },
+        { key: '#3fa9ff', label: 'أزرق' }, { key: '#2ee6d6', label: 'سماوي' }, { key: '#3ddc84', label: 'أخضر' }, { key: '#ffc83d', label: 'ذهبي' },
+        { key: '#ff8a3d', label: 'برتقالي' }, { key: '#ffffff', label: 'أبيض' }
+    ];
+    /** فلتر CSS يلوّن بلون hex: رمادي ← سيبيا (درجته ~38°) ← تدوير للدرجة المطلوبة. */
+    function tintFilter(hex) {
+        if (!/^#[0-9a-f]{6}$/i.test(String(hex || ''))) return '';
+        var m = /^#(..)(..)(..)$/.exec(hex), r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+        if (Math.max(r, g, b) - Math.min(r, g, b) < 24) return 'grayscale(1) brightness(' + (0.7 + Math.max(r, g, b) / 255 * 0.6).toFixed(2) + ')';
+        return 'grayscale(1) sepia(1) saturate(4.5) hue-rotate(' + Math.round(hexHue(hex) - 38) + 'deg) brightness(1.05)';
+    }
     function vfxFilter(it) {
         var f = it && it.vfx;
         if (!f) return '';
         var hue = clamp(Number(f.hue) || 0, -180, 180), sat = f.sat == null ? 1 : clamp(Number(f.sat), 0, 3), bri = f.bri == null ? 1 : clamp(Number(f.bri), 0.2, 2);
         var out = [];
+        var tf = tintFilter(f.tint);
+        if (tf) out.push(tf);
         if (hue) out.push('hue-rotate(' + hue + 'deg)');
         if (sat !== 1) out.push('saturate(' + sat + ')');
         if (bri !== 1) out.push('brightness(' + bri + ')');
@@ -4439,7 +4454,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

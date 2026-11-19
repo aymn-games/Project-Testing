@@ -53,6 +53,7 @@ function cleanLook(l) {
     if (l.size != null) out.size = clamp(Number(l.size) || 3, 1.5, 9);
     if (l.vbg && typeof l.vbg === 'object') out.vbg = { on: Boolean(l.vbg.on), c: hex.test(l.vbg.c) ? l.vbg.c : '#000000', a: clamp(Number(l.vbg.a), 0, 1) || 0, r: clamp(Number(l.vbg.r) || 0, 0, 9) };
     if (l.vfx && typeof l.vfx === 'object') out.vfx = { hue: clamp(Number(l.vfx.hue) || 0, -180, 180), sat: l.vfx.sat == null ? 1 : clamp(Number(l.vfx.sat), 0, 3), bri: l.vfx.bri == null ? 1 : clamp(Number(l.vfx.bri), 0.2, 2) };
+    if (out.vfx && hex.test(l.vfx.tint)) out.vfx.tint = l.vfx.tint; // لون جاهز للأليرت
     if (l.parts && typeof l.parts === 'object') {
         out.parts = {};
         ['avatar', 'name', 'msg'].forEach(function (k) {
@@ -488,7 +489,7 @@ function createService(db, deps) {
         if (publish) version = (old && old.status === 'published') ? version + 1 : Math.max(1, version);
         var access = ASSET_ACCESS.indexOf(a.access) >= 0 ? a.access : (old ? old.access : 'all');
         var settingsJson = cleanAssetSettings(type, a, old && old.settings);
-        if (old) db.prepare('UPDATE veyro_assets SET name = ?, cat = ?, status = ?, access = ?, version = ?, settings = ?, updated_at = ? WHERE id = ?').run(name, str(a.cat, 40), status, access, version, settingsJson, t, id);
+        if (old) db.prepare('UPDATE veyro_assets SET name = ?, cat = ?, status = ?, access = ?, version = ?, settings = ?, updated_at = ? WHERE id = ?').run(name, 'cat' in a ? str(a.cat, 40) : old.cat, status, access, version, settingsJson, t, id);
         else db.prepare('INSERT INTO veyro_assets (id, type, name, cat, status, access, version, settings, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, type, name, str(a.cat, 40), status, access, version, settingsJson, t, t);
         log(admin, publish ? 'نشر أصل للجميع' : (old ? 'عدّل أصل' : 'أضاف أصل'), name);
         return { success: true, asset: assetRow(db.prepare('SELECT * FROM veyro_assets WHERE id = ?').get(id), true) };
