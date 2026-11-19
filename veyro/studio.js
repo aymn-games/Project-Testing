@@ -1599,17 +1599,22 @@
         orbLabelProps(it, root);
     }
 
-    /** النص تحت الهدف: شكله، مكانه، نص حر بدل الأرقام أو جنبها، الخط واللون والحجم والإزاحة. */
+    /** نص الهدف: نص بس (بدون خلفية) — شكل النص، التوهّج، الحركة، المكان، نص حر، الخط واللون والحجم. */
     function orbLabelProps(it, root) {
-        var st = O.orbLabelStyle(it);
-        var box = group(root, 'النص تحت الهدف', 'الأرقام أو نص تكتبه انت');
-        box.appendChild(row('الشكل', pills(opts(O.ORB_LABELS), st, function (v) {
-            // «بدون» القديمة كانت showNums = false — نخليها تمشي مع الجديد
-            it.showNums = v !== 'none';
-            update(it, 'lbl', v, true);
-        }), true));
-        if (st === 'none') return;
-        box.appendChild(row('المكان', pills(opts(O.ORB_LABEL_POS), it.lblPos || 'bottom', function (v) { it.lblDx = 0; it.lblDy = 0; update(it, 'lblPos', v, true); }), true));
+        var on = O.orbLabelOn(it);
+        var box = group(root, 'نص الهدف', 'شكل النص والتوهّج والحركة');
+        box.appendChild(row('إظهار النص', toggle(on, function (v) { it.showNums = v; update(it, 'lbl', v ? 'text' : 'none', true); })));
+        if (!on) return;
+        box.appendChild(row('شكل النص', pills(opts(O.ORB_TEXT_STYLES), it.lblSt || 'clean', function (v) { update(it, 'lblSt', v, true); }), true));
+        box.appendChild(row('التوهّج', pills(opts(O.ORB_GLOWS), it.lblGlow || 'none', function (v) { update(it, 'lblGlow', v, true); }), true));
+        if (it.lblGlow && it.lblGlow !== 'none') optColor(it, box, 'lblGlowColor', 'لون التوهّج', 'الأصلي = لون الهدف');
+        box.appendChild(row('حركة النص', pills(opts(O.ANIMS), it.lblAnim || 'none', function (v) { update(it, 'lblAnim', v, true); }), true));
+        if (it.lblAnim && it.lblAnim !== 'none') box.appendChild(row('سرعة الحركة', pills(O.SPEEDS, Number(it.lblSpeed) || 1, function (v) { update(it, 'lblSpeed', v, true); })));
+        fontPick(it, box, 'lblFont', 'الخط');
+        optColor(it, box, 'lblColor', 'لون النص', 'الأصلي = أبيض');
+        box.appendChild(row('حجم النص', slider(0.4, 3, 0.05, Number(it.lblSize) || 1, function (v) { update(it, 'lblSize', v); })));
+
+        box = group(root, 'كلام النص ومكانه');
         var txt = textInput(it.lblText, 60, function (v) { update(it, 'lblText', v); });
         txt.placeholder = 'فاضي = الأرقام (مثلاً 860 / 5,000)';
         box.appendChild(row('النص', txt, true, 'اكتب أي نص، وحط الأرقام بالأزرار تحت'));
@@ -1617,8 +1622,7 @@
         [['+ الحالي', '{cur}'], ['+ الهدف', '{target}'], ['+ الباقي', '{left}'], ['+ النسبة', '{pct}']].forEach(function (x) {
             chips.appendChild(button(x[0], 'ob-pill', function () {
                 var v = txt.value;
-                var at = typeof txt.selectionStart === 'number' && document.activeElement === txt ? txt.selectionStart : v.length;
-                var nv = (v.slice(0, at) + (at && v[at - 1] !== ' ' ? ' ' : '') + x[1] + ' ' + v.slice(at)).replace(/\s+$/, '').slice(0, 60);
+                var nv = (v + (v && !/\s$/.test(v) ? ' ' : '') + x[1]).slice(0, 60);
                 update(it, 'lblText', nv, true);
             }));
         });
@@ -1630,9 +1634,7 @@
         box.appendChild(row('جاهز', quick, true));
         box.appendChild(row('الأيقونة', toggle(it.lblIcon !== false, function (v) { update(it, 'lblIcon', v); })));
         if (!it.lblText) box.appendChild(row('النسبة ٪ جنب الأرقام', toggle(Boolean(it.showPct), function (v) { update(it, 'showPct', v); })));
-        fontPick(it, box, 'lblFont', 'الخط');
-        optColor(it, box, 'lblColor', 'لون النص', 'الأصلي = أبيض');
-        box.appendChild(row('حجم النص', slider(0.4, 3, 0.05, Number(it.lblSize) || 1, function (v) { update(it, 'lblSize', v); })));
+        box.appendChild(row('المكان', pills(opts(O.ORB_LABEL_POS), it.lblPos || 'bottom', function (v) { it.lblDx = 0; it.lblDy = 0; update(it, 'lblPos', v, true); }), true));
         box.appendChild(row('تحريك يمين/يسار', slider(-12, 12, 0.1, Number(it.lblDx) || 0, function (v) { update(it, 'lblDx', v); })));
         box.appendChild(row('تحريك فوق/تحت', slider(-12, 12, 0.1, Number(it.lblDy) || 0, function (v) { update(it, 'lblDy', v); })));
     }

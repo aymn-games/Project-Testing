@@ -1791,60 +1791,81 @@
     }
 
     /*
-     * النص تحت الهدف (أشكال السائل): it.lbl = شكله، it.lblText = نص حر (يقبل {cur} {target} {left} {pct})،
-     * it.lblPos = مكانه، it.lblFont/lblColor/lblSize = الخط واللون والحجم، it.lblIcon = أيقونة المقياس،
-     * it.lblDx/lblDy = إزاحة دقيقة (em). «بدون» (أو showNums = false القديمة) يخفيه.
+     * نص الهدف (أشكال السائل) — نص بس، بدون خلفية ولا خط:
+     * it.lblSt = شكل النص (ORB_TEXT_STYLES)، it.lblGlow = قوة التوهّج + it.lblGlowColor،
+     * it.lblAnim = حركة النص (ANIMS) + it.lblSpeed، it.lblText = نص حر ({cur} {target} {left} {pct})،
+     * it.lblPos = مكانه، it.lblFont/lblColor/lblSize، it.lblIcon، it.lblDx/lblDy = إزاحة (em).
+     * it.lbl = 'none' (أو showNums = false القديمة) يخفيه.
      */
-    var ORB_LABELS = [
-        { key: 'pill', label: 'كبسولة' }, { key: 'glass', label: 'زجاج' }, { key: 'neon', label: 'نيون' },
-        { key: 'ribbon', label: 'شريطة' }, { key: 'line', label: 'خط تحته' }, { key: 'plain', label: 'نص بس' }, { key: 'none', label: 'بدون' }
-    ];
+    var ORB_TEXT_STYLES = [{ key: 'clean', label: 'عادي' }].concat(TEXT_STYLES.filter(function (x) { return ['pill', 'glass', 'plain'].indexOf(x.key) === -1; }));
+    var ORB_GLOWS = [{ key: 'none', label: 'بدون' }, { key: 'soft', label: 'خفيف' }, { key: 'mid', label: 'متوسط' }, { key: 'strong', label: 'قوي' }, { key: 'huge', label: 'هالة' }];
     var ORB_LABEL_POS = [
         { key: 'bottom', label: 'تحت' }, { key: 'top', label: 'فوق' }, { key: 'right', label: 'يمين' }, { key: 'left', label: 'يسار' }, { key: 'in', label: 'داخل الشكل' }
     ];
-    function orbLabelStyle(it) {
-        if (it.showNums === false) return 'none';
-        return ORB_LABELS.some(function (x) { return x.key === it.lbl; }) ? it.lbl : 'pill';
+    function orbLabelOn(it) { return it.showNums !== false && it.lbl !== 'none'; }
+    function orbGlowFilter(g, c) {
+        if (g === 'soft') return 'drop-shadow(0 0 .12em ' + c + ')';
+        if (g === 'mid') return 'drop-shadow(0 0 .1em ' + c + ') drop-shadow(0 0 .3em ' + c + ')';
+        if (g === 'strong') return 'drop-shadow(0 0 .08em #fff) drop-shadow(0 0 .2em ' + c + ') drop-shadow(0 0 .5em ' + c + ')';
+        if (g === 'huge') return 'drop-shadow(0 0 .1em #fff) drop-shadow(0 0 .3em ' + c + ') drop-shadow(0 0 .7em ' + c + ') drop-shadow(0 0 1.2em ' + c + ')';
+        return '';
     }
     function paintOrbLabel(node, o, it, m, cur, target, pct) {
-        var n = o.nums, st = orbLabelStyle(it);
+        var n = o.nums;
         var pos = ORB_LABEL_POS.some(function (x) { return x.key === it.lblPos; }) ? it.lblPos : 'bottom';
         var side = pos === 'right' || pos === 'left' || pos === 'in';
         // المكان: فوق/تحت بتدفق العنصر، يمين/يسار/داخل فوق الرسمة نفسها
         var parent = side ? o.wrap : node;
         if (n.parentNode !== parent) parent.appendChild(n);
-        n.className = 'agp-so-onums s-' + st + ' p-' + pos;
+        n.className = 'agp-so-onums p-' + pos + (orbLabelOn(it) ? '' : ' off');
         n.textContent = '';
         n.style.cssText = '';
-        if (st === 'none') return;
+        if (!orbLabelOn(it)) return;
         var dx = clamp(Number(it.lblDx) || 0, -12, 12), dy = clamp(Number(it.lblDy) || 0, -12, 12);
         var k = clamp(Number(it.lblSize) || 1, .4, 3);
-        n.style.fontSize = (.75 * k).toFixed(3) + 'em';
+        n.style.fontSize = (.8 * k).toFixed(3) + 'em';
         if (dx || dy) {
             // الإزاحة بوحدة em الخاصة بالهدف (مو النص) عشان ما تتغيّر لو كبّرت الخط
-            n.style.marginLeft = (dx / k).toFixed(2) + 'em';
-            n.style.marginTop = (dy / k).toFixed(2) + 'em';
-            if (!side) { n.style.position = 'relative'; n.style.marginLeft = ''; n.style.marginTop = ''; n.style.left = (dx / k).toFixed(2) + 'em'; n.style.top = (dy / k).toFixed(2) + 'em'; }
+            if (side) { n.style.marginLeft = (dx / k).toFixed(2) + 'em'; n.style.marginTop = (dy / k).toFixed(2) + 'em'; }
+            else { n.style.position = 'relative'; n.style.left = (dx / k).toFixed(2) + 'em'; n.style.top = (dy / k).toFixed(2) + 'em'; }
         }
-        if (/^#[0-9a-f]{6}$/i.test(it.lblColor || '')) n.style.color = it.lblColor;
+        var col = /^#[0-9a-f]{6}$/i.test(it.lblColor || '') ? it.lblColor : '#ffffff';
+        var gcol = /^#[0-9a-f]{6}$/i.test(it.lblGlowColor || '') ? it.lblGlowColor : 'var(--og,#a68bff)';
         if (it.lblFont) {
             var f = fontOf(it.lblFont);
             loadFont(f);
             n.style.fontFamily = fontStack(f);
-            n.style.fontWeight = String(f.b);
+            n.style.fontWeight = String(Math.max(700, f.b));
         }
+        // غلاف التوهّج ← غلاف الحركة ← (الأيقونة + النص بشكله)
+        var gl = el('span', 'agp-so-oglow');
+        var fl = orbGlowFilter(it.lblGlow || 'none', gcol);
+        if (fl) gl.style.filter = fl;
+        var mv = el('span', 'agp-so-mv');
+        var an = ANIMS.filter(function (a) { return a.key === it.lblAnim; })[0];
+        if (an && an.d) {
+            mv.className += ' a-' + an.key;
+            mv.style.animationDuration = (an.d * (Number(it.lblSpeed) || 1)) + 's';
+        }
+        mv.style.setProperty('--agp-so-c', it.lblGlowColor && /^#[0-9a-f]{6}$/i.test(it.lblGlowColor) ? it.lblGlowColor : col);
+        if (it.lblIcon !== false) { var ic = icon(METRICS[m].icon); ic.style.color = col === '#ffffff' ? gcol : col; mv.appendChild(ic); }
+        var stKey = ORB_TEXT_STYLES.some(function (x) { return x.key === it.lblSt; }) ? it.lblSt : 'clean';
+        var tx = el('span', 'agp-so-tx s-' + stKey);
+        tx.style.color = col;
+        tx.style.setProperty('--agp-so-c', /^#[0-9a-f]{6}$/i.test(it.lblGlowColor || '') ? it.lblGlowColor : (col === '#ffffff' ? gcol : col));
         var tpl = String(it.lblText || '').trim();
-        if (it.lblIcon !== false) n.appendChild(icon(METRICS[m].icon));
         if (tpl) {
             n.dir = 'auto';
             var vals = { cur: fmtKind(m, cur), target: fmtKind(m, target), left: fmtKind(m, Math.max(0, target - cur)), pct: Math.floor(pct * 100) + '%' };
-            n.appendChild(el('span', null, tpl.replace(/\{(cur|target|left|pct)\}/g, function (_, key) { return vals[key]; })));
-            return;
+            tx.textContent = tpl.replace(/\{(cur|target|left|pct)\}/g, function (_, key) { return vals[key]; });
+        } else {
+            n.removeAttribute('dir');
+            var done = cur >= target && !it.autoNext;
+            tx.textContent = (done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)) + (it.showPct ? '  ' + Math.floor(pct * 100) + '%' : '');
         }
-        n.removeAttribute('dir');
-        var done = cur >= target && !it.autoNext;
-        n.appendChild(el('span', null, done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
-        if (it.showPct) n.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
+        mv.appendChild(tx);
+        gl.appendChild(mv);
+        n.appendChild(gl);
     }
 
     function fillGoal(node, it, preview) {
@@ -4560,16 +4581,14 @@
         '.agp-so-obloom{opacity:.55;animation:agp-so-bloom calc(3.4s*var(--osp)) ease-in-out infinite}',
         '.agp-so-orb.full .agp-so-obloom{opacity:.95}',
         '.agp-so-ofly{animation:agp-so-flyb 6s ease-in-out infinite}',
-        '.agp-so-onums{display:inline-flex;align-items:center;gap:.35em;padding:.2em .8em;border-radius:999px;font-weight:800;font-size:.75em;direction:ltr;color:#fff;background:rgba(10,8,20,.6);border:.06em solid color-mix(in srgb,var(--og,#a68bff) 50%,transparent)}',
-        '.agp-so-onums:empty{display:none}',
-        // أشكال النص تحت الهدف
-        '.agp-so-onums.s-none{display:none}',
-        '.agp-so-onums.s-glass{background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.05));border:.06em solid rgba(255,255,255,.4);border-radius:.9em;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:inset 0 .06em 0 rgba(255,255,255,.5),inset 0 -.1em .3em rgba(0,0,0,.25),0 .3em 1em rgba(0,0,0,.45)}',
-        '.agp-so-onums.s-neon{background:rgba(5,4,10,.45);border:.08em solid var(--og,#a68bff);box-shadow:0 0 .5em var(--og,#a68bff),inset 0 0 .45em color-mix(in srgb,var(--og,#a68bff) 55%,transparent);text-shadow:0 0 .35em var(--og,#a68bff)}',
-        '.agp-so-onums.s-ribbon{border:0;border-radius:0;padding:.3em 1.3em;background:linear-gradient(180deg,color-mix(in srgb,var(--og,#a68bff) 85%,#fff),color-mix(in srgb,var(--og,#a68bff) 70%,#000));clip-path:polygon(0 0,100% 0,calc(100% - .55em) 50%,100% 100%,0 100%,.55em 50%);text-shadow:0 .05em .15em rgba(0,0,0,.6)}',
-        '.agp-so-onums.s-ribbon svg,.agp-so-onums.s-ribbon b{color:#fff}',
-        '.agp-so-onums.s-line{background:none;border:0;border-bottom:.08em solid var(--og,#a68bff);border-radius:0;padding:.1em .3em;box-shadow:0 .5em .5em -.5em var(--og,#a68bff)}',
-        '.agp-so-onums.s-plain{background:none;border:0;padding:0;text-shadow:0 .05em .25em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.5)}',
+        // نص الهدف: نص بس (بدون خلفية ولا حدود) — الشكل والتوهّج والحركة من الإعدادات
+        // text-shadow:none — ظل الهدف الموروث يغمّق النصوص المتدرّجة (ذهبي، تدرّج، قوس قزح)
+        '.agp-so-onums{display:inline-flex;align-items:center;font-weight:800;font-size:.8em;direction:ltr;color:#fff;line-height:1.2;text-shadow:none}',
+        '.agp-so-onums.off,.agp-so-onums:empty{display:none}',
+        '.agp-so-oglow,.agp-so-onums .agp-so-mv{display:inline-flex;align-items:center;gap:.3em}',
+        '.agp-so-onums svg{width:1em;height:1em;flex:none;filter:drop-shadow(0 .04em .1em rgba(0,0,0,.7))}',
+        '.agp-so-onums .agp-so-tx{padding:0 .05em}',
+        '.agp-so-tx.s-clean{text-shadow:0 .04em .14em rgba(0,0,0,.85)}',
         '.agp-so-onums[dir=auto]{direction:auto;unicode-bidi:plaintext}',
         // الأماكن: فوق = بين العنوان والرسمة؛ يمين/يسار/داخل = فوق الرسمة نفسها
         '.agp-so-goal.d-orb .agp-so-otitle{order:-2}',
@@ -4856,7 +4875,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, ORB_LABELS: ORB_LABELS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelStyle: orbLabelStyle, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
