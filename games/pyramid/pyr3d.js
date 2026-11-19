@@ -83,7 +83,7 @@ export async function mountPyramid(el, opts = {}) {
 
     const sc = new T.Scene();
     const OPEN = true; // بيئة مفتوحة (طلب صاحب المنصة): بدون مدرّجات/أبراج/بوابة
-    sc.fog = new T.FogExp2('#6f6650', .0048);
+    sc.fog = new T.FogExp2('#6f6650', .0075);
     const cam = new T.PerspectiveCamera(42, 1, .1, 1500);
     cam.position.set(0, 60, 60); cam.lookAt(0, 0, 0);
     const disposables = [];
@@ -351,14 +351,28 @@ export async function mountPyramid(el, opts = {}) {
     if (OPEN) {
         const hillMat = new T.MeshStandardMaterial({ color: '#8a7652', roughness: 1, flatShading: true }), hill2 = new T.MeshStandardMaterial({ color: '#3f6662', roughness: 1, flatShading: true });
         const R0 = rng(21), hg = new T.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
-        for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2 + R0() * .2, rr = 230 + R0() * 80, m = new T.Mesh(hg, i % 3 ? hillMat : hill2); m.position.set(Math.cos(a) * rr, -2, Math.sin(a) * rr); m.scale.set(40 + R0() * 50, 14 + R0() * 26, 30 + R0() * 30); m.rotation.y = R0() * 3; sc.add(m); }
+        for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2 + R0() * .2, rr = 120 + R0() * 60, m = new T.Mesh(hg, i % 3 ? hillMat : hill2); m.position.set(Math.cos(a) * rr, -2, Math.sin(a) * rr); m.scale.set(40 + R0() * 50, 14 + R0() * 26, 30 + R0() * 30); m.rotation.y = R0() * 3; sc.add(m); }
         const cg = new T.SphereGeometry(1, 10, 8), cm = new T.MeshStandardMaterial({ color: '#ffffff', roughness: 1, transparent: true, opacity: .9, fog: false, emissive: '#9aa59c', emissiveIntensity: .1 }); cm.color.set('#c9cfc6');
         for (let i = 0; i < 9; i++) { const g = new T.Group(); for (let k = 0; k < 5; k++) { const b = new T.Mesh(cg, cm); b.position.set(k * 5 - 10 + R0() * 3, R0() * 2, R0() * 4); b.scale.set(6 + R0() * 5, 3 + R0() * 2.5, 5 + R0() * 3); g.add(b); } g.position.set(-260 + i * 65 + R0() * 30, 70 + R0() * 40, -180 - R0() * 120); g.userData.v = .6 + R0() * .8; addDecor(g, i < 4 ? 0 : 1); clouds.push(g); }
         // نخيل منخفض البوليجون
         const trunkG = new T.CylinderGeometry(.35, .55, 9, 6); trunkG.translate(0, 4.5, 0); const leafG = new T.ConeGeometry(1.4, 6, 4); leafG.translate(0, 3, 0); leafG.rotateZ(Math.PI / 2.6);
         const trunkM = new T.MeshStandardMaterial({ color: '#b08a5a', roughness: .9, flatShading: true }), leafM = new T.MeshStandardMaterial({ color: '#2e6e70', roughness: .8, flatShading: true });
         const palms = new T.Group(); addDecor(palms, 1);
-        for (let i = 0; i < 14; i++) { const a = Math.PI * .06 + i / 13 * Math.PI * .88, rr = 58 + (i % 3) * 10; /* خلف الهرم فقط */ const p = new T.Group(); p.position.set(Math.cos(a) * rr, 0, -Math.sin(a) * rr - 10); p.rotation.y = i * 1.3; const tr = new T.Mesh(trunkG, trunkM); tr.rotation.z = .08; tr.castShadow = true; p.add(tr); for (let k = 0; k < 6; k++) { const l = new T.Mesh(leafG, leafM); l.position.y = 9; l.rotation.y = k / 6 * Math.PI * 2; p.add(l); } p.scale.setScalar(.9 + (i % 4) * .15); palms.add(p); }
+        for (let i = 0; i < 14; i++) { const a = Math.PI * .06 + i / 13 * Math.PI * .88, rr = 34 + (i % 3) * 7; /* خلف الهرم فقط */ const p = new T.Group(); p.position.set(Math.cos(a) * rr, 0, -Math.sin(a) * rr - 10); p.rotation.y = i * 1.3; const tr = new T.Mesh(trunkG, trunkM); tr.rotation.z = .08; tr.castShadow = true; p.add(tr); for (let k = 0; k < 6; k++) { const l = new T.Mesh(leafG, leafM); l.position.y = 9; l.rotation.y = k / 6 * Math.PI * 2; p.add(l); } p.scale.setScalar(.9 + (i % 4) * .15); palms.add(p); }
+    }
+    // خلفية المسرح: جدار صخري متماسك خلف الهرم (يملأ الفراغ ويثبّت العين على الهرم)
+    const backdrop = new T.Group(); sc.add(backdrop);
+    if (OPEN) {
+        const rockA = new T.MeshStandardMaterial({ color: '#8a7550', roughness: 1, flatShading: true }), rockB = new T.MeshStandardMaterial({ color: '#7a6646', roughness: 1, flatShading: true }), band = new T.MeshStandardMaterial({ color: '#2e5f60', roughness: .9, flatShading: true });
+        const R1 = rng(33), mg = new T.CylinderGeometry(1, 1.15, 1, 7);
+        for (let i = 0; i < 15; i++) {
+            const k = i / 14, a = Math.PI * (.12 + k * .76), rr = 46 + R1() * 10, h = 16 + R1() * 16 + Math.sin(k * Math.PI) * 10, w = 8 + R1() * 7;
+            const x = Math.cos(a) * rr * 1.25, z = -Math.sin(a) * rr;
+            const m = new T.Mesh(mg, i % 2 ? rockA : rockB); m.position.set(x, h / 2 - 1, z); m.scale.set(w, h, w * .8); m.rotation.y = R1() * 3; backdrop.add(m);
+            const b = new T.Mesh(mg, band); b.position.set(x, h * (.45 + R1() * .25), z); b.scale.set(w * 1.02, .9, w * .82); b.rotation.y = m.rotation.y; backdrop.add(b);
+        }
+        const dg = new T.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), dm = new T.MeshStandardMaterial({ color: '#9c875f', roughness: 1, flatShading: true });
+        for (let i = 0; i < 10; i++) { const a = Math.PI * (.1 + i / 9 * .8), rr = 36 + R1() * 6, m = new T.Mesh(dg, dm); m.position.set(Math.cos(a) * rr * 1.3, -.5, -Math.sin(a) * rr); m.scale.set(12 + R1() * 8, 3 + R1() * 3, 7 + R1() * 4); backdrop.add(m); }
     }
     // أعمدة صغيرة حول قاعدة الساحة (رملي + تيجان تركوازية)
     const orbs = new T.Group(); addDecor(orbs, 0);
@@ -651,17 +665,17 @@ export async function mountPyramid(el, opts = {}) {
     let shotT0 = now();
     function setShot(fn) { shot = fn; shotT0 = now(); }
     // إطار يحتوي مجموعة نقاط من زاوية (yaw, pitch) — يحسب المسافة حسب نسبة الشاشة
-    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.12) {
+    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0) {
         const b = new T.Box3(); pts.forEach(p => b.expandByPoint(p)); const c = b.getCenter(V()), s = b.getSize(V());
         const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
-        const halfW = s.x / 2 * margin + 1.2, halfH = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + 1.6;
+        const halfW = s.x / 2 * margin + .5, halfH = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + .8;
         const d = Math.max(halfW / Math.tan(hf / 2), halfH / Math.tan(vf / 2)) + s.z / 2 * Math.cos(pitch) * .5;
         const dir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
         return { look: c, pos: c.clone().addScaledVector(dir, Math.max(9, d)) };
     }
     function levelPts(L, extra = []) { if (!L) return extra; const p = [V(-L.w / 2, L.yTop, L.zFront), V(L.w / 2, L.yTop, L.zFront), V(-L.w / 2, L.yTop + 1.8, L.zBack), V(L.w / 2, L.yTop + 1.8, L.zBack)]; return p.concat(extra); }
     // كل صفوف الهرم الظاهرة (من القاعدة للقمة) — اللقطة الرئيسية تعرض الهرم كامل
-    function pyramidPts(extra = []) { let p = extra.slice(); for (const L of levels) if (L.group.visible && L.alive) p = levelPts(L, p); return p; }
+    function pyramidPts(extra = []) { let p = extra.slice(); const vis = levels.filter(L => L.group.visible && L.alive).slice(-3); for (const L of vis) p = levelPts(L, p); return p; }
     function actorPts() { const p = []; for (const a of actors.values()) if (!a.dead) p.push(a.pos.clone(), a.pos.clone().setY(a.pos.y + 1.9)); return p; }
     const drift = t => REDUCED ? V() : V(Math.sin(t * .23) * .35, Math.sin(t * .31) * .18, Math.cos(t * .19) * .25);
     function oblique(pts, pitch = .72, rate = 1.6, swing = .07) {
@@ -730,6 +744,7 @@ export async function mountPyramid(el, opts = {}) {
         crowdU.uTime.value = t;
         // حزم الضوء تمسح الساحة
         beams.forEach((b, i) => { b.pivot.rotation.set(-.55 + Math.sin(t * .4 + b.ph) * .28, b.a0 + Math.sin(t * .27 + b.ph) * .6, 0); b.cone.material.opacity = .05 * moodNow.beam; b.cone.material.color.set(C.lav); });
+        { const top = activeLevel; const bz = top ? Math.min(0, top.zBack + 8) : 0, by = top ? Math.max(0, top.yTop - 4) : 0; backdrop.position.z = lerp(backdrop.position.z, bz, damp(dt, .8)); backdrop.position.y = lerp(backdrop.position.y, by * .5, damp(dt, .8)); }
         clouds.forEach(g => { if (!g.visible) return; g.position.x += g.userData.v * dt; if (g.position.x > 320) g.position.x = -320; });
         bunting.forEach(g => { g.rotation.y = Math.sin(t * .5) * .004; g.position.y = Math.sin(t * 1.3) * .15; });
         if (lanterns.visible) { const D = lanterns.userData.data; D.forEach((d, i) => { d.y += d.v * dt; if (d.y > 80) d.y = -2; _P.set(d.x + Math.sin(t * .4 + d.ph) * 1.5, d.y, d.z + Math.cos(t * .3 + d.ph)); _M.compose(_P, _Q.identity(), _S.setScalar(clamp01(d.y / 4) * clamp01((80 - d.y) / 10))); lanterns.setMatrixAt(i, _M); }); lanterns.instanceMatrix.needsUpdate = true; }

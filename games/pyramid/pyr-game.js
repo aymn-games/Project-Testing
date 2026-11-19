@@ -96,7 +96,15 @@ function uiZoom() { const w = innerWidth, h = innerHeight, z = w / h < 1 ? Math.
 function applyZoom() { document.documentElement.style.setProperty('--z', uiZoom().toFixed(3)); }
 applyZoom(); addEventListener('resize', applyZoom);
 function notice(text) { const el = $('#notice'); el.textContent = text; el.classList.remove('in'); void el.offsetWidth; el.classList.add('in'); clearTimeout(notice.t); notice.t = setTimeout(() => el.classList.remove('in'), 2200); }
-function banner(t, s = '', cls = '', ms = 2200) { const el = $('#banner'); $('#bT').textContent = t; $('#bS').textContent = s; el.className = cls; void el.offsetWidth; el.classList.add('in'); clearTimeout(banner.t); return new Promise(res => { banner.t = setTimeout(() => { el.classList.remove('in'); res(); }, ms); }); }
+// النص بإخراج متحرك: العنوان كلمة كلمة (والأرقام كبيرة)، والعبارات الثانوية متفرقة يمين/يسار بتوقيت متتابع
+function banner(t, s = '', cls = '', ms = 2200) {
+    const el = $('#banner'); el.className = cls; el.innerHTML = ''; clearTimeout(banner.t); clearTimeout(banner.t2);
+    const line = document.createElement('div'); line.className = 'kl'; let d = 0;
+    String(t).split(/\s+/).filter(Boolean).forEach(w => { const sp = document.createElement('span'); sp.className = 'kw' + (/^[\d٠-٩]+!?$/.test(w) ? ' kn' : ''); sp.textContent = w; sp.style.animationDelay = d + 'ms'; d += 150; line.appendChild(sp); });
+    el.appendChild(line);
+    String(s || '').split(/\s*[·،]\s*/).filter(Boolean).forEach((ph, i) => { const row = document.createElement('div'); row.className = 'kl ' + (i % 2 ? 'l' : 'r'); const sp = document.createElement('span'); sp.className = 'ks'; sp.textContent = ph; sp.style.animationDelay = (d + 180 + i * 280) + 'ms'; row.appendChild(sp); el.appendChild(row); });
+    return new Promise(res => { banner.t = setTimeout(() => { el.classList.add('out'); banner.t2 = setTimeout(() => { el.innerHTML = ''; res(); }, 420); }, ms + Math.min(900, d)); });
+}
 async function flash(color = '#fff', ms = 200) { const f = $('#flash'); f.style.background = color; f.style.transition = 'none'; f.style.opacity = .55; await sleep(30); f.style.transition = `opacity ${ms}ms ease-out`; f.style.opacity = 0; }
 function fx(k, ms = 1200) { document.body.dataset.fx = k; clearTimeout(fx.t); if (ms) fx.t = setTimeout(() => { document.body.dataset.fx = ''; }, ms); }
 const initial = p => [...String(p.name).replace(/^أبو\s*/, '')][0] || '؟';
@@ -174,14 +182,14 @@ async function startMatch() {
     document.body.classList.add('match'); updateCount();
     // اللاعبين بالساحة قبل البداية (لو أحد انضاف آخر لحظة)
     G.scene.setPlayers(G.alive); await sleep(300);
-    banner('الهرم', `${G.alive.length} لاعب · الأخير يصل القمة`, '', 3000);
+    banner(`${G.alive.length} لاعب`, 'على أرض الهرم · واحد بس يوصل القمة', '', 3000);
     await G.scene.startMatch(G.alive.length, { short: G.settings.intro === 'short' });
     playRound();
 }
 async function playRound() {
     G.round++; G.picks = new Map(); G.taken = new Map(); const n = G.alive.length;
     pill('اختيار الأرقام'); SFX.stage();
-    await banner('المرحلة ' + G.round, `${n} دائرة · اكتب رقمك بالشات`, '', 1600);
+    await banner('المرحلة ' + G.round, `${n} دائرة · اكتب رقمك بالشات`, '', 1500);
     G.phase = 'pick'; document.body.classList.add('picking'); $('#hTotal').textContent = n; $('#hPicked').textContent = 0;
     G.scene.choosing(true, G.round);
     // المؤقت (وقت حقيقي — ما يتأثر بسرعة الرسم)
@@ -200,7 +208,7 @@ async function playRound() {
     });
     G.endNow = null; clearTimers(); G.phase = 'lock'; document.body.classList.remove('picking'); tm.classList.remove('in', 'warn', 'hot');
     G.scene.choosing(false); SFX.timeUp(); flash('#c4b5fd', 260); pill('انتهى الوقت');
-    banner('انتهى الوقت!', `اختار ${G.picks.size} من ${n}`, '', 1700);
+    banner('انتهى الوقت!', `اختار ${G.picks.size} من ${n} · الكل لمكانه`, '', 1500);
     await G.scene.timeUp();
     const chosen = G.alive.filter(p => G.picks.has(String(p.id))), idle = G.alive.filter(p => !G.picks.has(String(p.id)));
     if (!chosen.length) { await banner('ما أحد اختار!', 'نعيد نفس المرحلة', 'red', 2000); G.round--; G.scene.choosing(false); return playRound(); }
@@ -222,11 +230,11 @@ async function playRound() {
     const victim = G.alive[Math.floor(Math.random() * G.alive.length)];
     pill('الحيّة تتنقل بين الأرقام…'); SFX.roll(3.4);
     await G.scene.roulette(victim.id);
-    banner(`الحيّة كانت تحت الرقم ${G.picks.get(String(victim.id))}`, `لدغت ${victim.name}`, 'red', 2200);
+    banner(`الرقم ${G.picks.get(String(victim.id))}`, `كانت الحيّة تحته · لدغت ${victim.name}`, 'red', 2200);
     G.alive = G.alive.filter(p => p !== victim); feed(victim, 0, true); pill();
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 4) الناجين + بناء الصف الجديد
-    SFX.survive(); banner(`نجا ${G.alive.length} لاعب`, 'يصعدون للصف التالي', 'gold', 1800); fx('gold', 1600);
+    SFX.survive(); banner(`نجا ${G.alive.length}`, 'لاعب · يصعدون درجة · الهرم يضيق', 'gold', 1900); fx('gold', 1600);
     await G.scene.survived(G.alive.map(p => p.id));
     pill('بناء الصف التالي');
     await G.scene.nextLevel(G.alive.length);
@@ -235,7 +243,7 @@ async function playRound() {
 // تبويب الحيّة: يطلع بنص الشاشة قبل الاختيار العشوائي
 function snakeCard() { return new Promise(res => {
     const el = $('#snake'); $('#snNum').textContent = G.alive.length; el.classList.add('in'); SFX.hiss(1.6); fx('danger', 3400);
-    setTimeout(() => { el.classList.remove('in'); setTimeout(res, 350); }, 3600);
+    setTimeout(() => { el.classList.remove('in'); setTimeout(res, 420); }, 4400);
 }); }
 function showStrip(title, list) { $('#osTitle').textContent = title; const max = 18; $('#osChips').innerHTML = list.slice(0, max).map(p => `<span class="chip">${avatarHtml(p, 'sm')}${esc(p.name)}</span>`).join('') + (list.length > max ? `<span class="chip">+${list.length - max}</span>` : ''); $('#outStrip').classList.add('in'); }
 function hideStrip() { $('#outStrip').classList.remove('in'); }
@@ -266,7 +274,7 @@ function renderChamp() {
 }
 async function crown(p) {
     G.phase = 'champ'; G.champ = p; G.pts = null; pill('البطل'); fx('gold', 0);
-    banner('البطل!', p.name, 'gold', 3000);
+    banner('البطل', `${p.name} · وصل القمة`, 'gold', 3000);
     const real = G.players.filter(x => String(x.id).indexOf('tiktok:') === 0), A = window.AGPAuth;
     if (real.length && A && typeof A.reportMatchPoints === 'function') {
         G.pts = 'pending';
