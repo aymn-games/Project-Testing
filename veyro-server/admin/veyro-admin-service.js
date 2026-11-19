@@ -47,6 +47,10 @@ var GAMES_DISCOUNT = 30; // خصم مشتركي منصة الألعاب الاف
 function cleanLook(l) {
     if (!l || typeof l !== 'object') return null;
     var hex = /^#[0-9a-f]{6}$/i, out = {};
+    // ملء الشاشة، والحجم العادي، و«شكلين» (الستريمر يختار مفرّغ أو بخلفية)
+    out.full = Boolean(l.full);
+    out.variants = Boolean(l.variants);
+    if (l.size != null) out.size = clamp(Number(l.size) || 3, 1.5, 9);
     if (l.vbg && typeof l.vbg === 'object') out.vbg = { on: Boolean(l.vbg.on), c: hex.test(l.vbg.c) ? l.vbg.c : '#000000', a: clamp(Number(l.vbg.a), 0, 1) || 0, r: clamp(Number(l.vbg.r) || 0, 0, 9) };
     if (l.vfx && typeof l.vfx === 'object') out.vfx = { hue: clamp(Number(l.vfx.hue) || 0, -180, 180), sat: l.vfx.sat == null ? 1 : clamp(Number(l.vfx.sat), 0, 3), bri: l.vfx.bri == null ? 1 : clamp(Number(l.vfx.bri), 0.2, 2) };
     if (l.parts && typeof l.parts === 'object') {
