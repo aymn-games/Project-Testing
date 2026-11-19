@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '9'; // 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '10'; // 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2460,7 +2460,7 @@
         { key: 'star', label: 'نجمة', cp: starPolygon() }
     ];
     // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون
-    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
+    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'swirl', label: 'دوامة ضوء' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
     function heartPolygon() {
         var pts = [];
         for (var i = 0; i < 40; i++) {
@@ -2555,6 +2555,86 @@
     function hexRgb(hex) {
         var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
         return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
+    }
+
+    /*
+     * «دوامة ضوء» حول صورة الداعم (إطار fr = 'swirl'): حلقات ضوء مائلة بذيل يبهت، غبار ضوئي
+     * يلف حولها، ونجوم لمعة. p.c = اللون، p.fw = السماكة (0.3–3)، p.fm = الحركة
+     * (SWIRL_MOTIONS)، p.fsp = السرعة (slow/normal/fast). الرسمة 190٪ من الصورة وفي نصها.
+     * التوهّج المضبّب ثابت (ما يلف) عشان ما يتعب OBS — اللي يلف خطوط وغبار بس.
+     */
+    var SWIRL_MOTIONS = [
+        { key: 'spin', label: 'دوران' }, { key: 'vortex', label: 'دوامة' }, { key: 'orbit', label: 'غبار يلف' },
+        { key: 'pulse', label: 'نبض' }, { key: 'none', label: 'ثابت' }
+    ];
+    var SWIRL_SPEEDS = { slow: 1.7, normal: 1, fast: 0.55 };
+    var swirlSeq = 0;
+    function swirlMix(hex, t) {
+        var c = hexRgb(hex);
+        return '#' + c.map(function (v) { return ('0' + Math.round((v + (1 - v) * t) * 255).toString(16)).slice(-2); }).join('');
+    }
+    function swirlDust(seed, n, w, light) {
+        var s = seed, out = '';
+        function rnd() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+        for (var i = 0; i < n; i++) {
+            // أكثر الغبار على الجهة المضيئة (يمين/تحت) مثل ذيل المذنّب
+            var a = (rnd() < .7 ? -1.1 + rnd() * 3.2 : rnd() * Math.PI * 2);
+            var k = 1 + (rnd() - .5) * .34;
+            var x = Math.cos(a) * 66 * k, y = Math.sin(a) * 56 * k;
+            var r = (.35 + rnd() * rnd() * 1.4) * (.75 + .25 * w);
+            out += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(2) + '" fill="' + (rnd() < .5 ? '#fff' : light) + '" opacity="' + (.35 + rnd() * .65).toFixed(2) + '"/>';
+        }
+        return out;
+    }
+    function swirlFlare(x, y, r, delay) {
+        return '<g transform="translate(' + x + ' ' + y + ')"><g class="sw-tw" style="animation-delay:-' + delay + 's">' +
+            '<circle r="' + r * 1.2 + '" fill="url(#__sg)"/>' +
+            '<path d="M-' + r * 2.4 + ' 0H' + r * 2.4 + 'M0 -' + r * 2.4 + 'V' + r * 2.4 + '" stroke="url(#__sx)" stroke-width="' + (r * .14).toFixed(2) + '"/>' +
+            '<path d="M-' + r + ' 0H' + r + 'M0 -' + r + 'V' + r + '" stroke="#fff" stroke-width="' + (r * .12).toFixed(2) + '" transform="rotate(45)" opacity=".5"/>' +
+            '<circle r="' + (r * .22).toFixed(2) + '" fill="#fff"/></g></g>';
+    }
+    function swirlSvg(p) {
+        var id = 'agpsw' + (++swirlSeq);
+        var col = /^#[0-9a-f]{6}$/i.test(p.c || '') ? p.c : '#6fb4ff';
+        var light = swirlMix(col, .55);
+        var w = clamp(Number(p.fw) || 1, .3, 3);
+        var mo = SWIRL_MOTIONS.some(function (x) { return x.key === p.fm; }) ? p.fm : 'spin';
+        var sp = SWIRL_SPEEDS[p.fsp] || 1;
+        var ring = function (cls, rx, ry, rot, grad, sw, dash, op) {
+            return '<g class="' + cls + '"><g transform="rotate(' + rot + ')">' +
+                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="' + col + '" stroke-opacity="' + (op * .28).toFixed(2) + '" stroke-width="' + (sw * 3.2).toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
+                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="url(#' + id + grad + ')" stroke-opacity="' + op + '" stroke-width="' + sw.toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
+                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="#fff" stroke-opacity="' + (op * .85).toFixed(2) + '" stroke-width="' + (sw * .3).toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
+                '</g></g>';
+        };
+        var flares = [[-80, -28, 7, 0], [72, -64, 6, .8], [28, -84, 4, 1.6], [86, 30, 8, .4], [-40, 80, 5, 2.1], [-90, 44, 4, 1.2], [12, 92, 3.5, 2.7], [52, 70, 4.5, 1.9], [-62, -72, 3.5, 1.4], [94, -10, 3, 2.4]]
+            .map(function (f) { return swirlFlare(f[0], f[1], f[2], f[3]); }).join('').replace(/__/g, id);
+        return '<svg class="vav-swirl m-' + mo + '" viewBox="-100 -100 200 200" style="--sws:' + sp + '" aria-hidden="true"><defs>' +
+            '<filter id="' + id + 'b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>' +
+            '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity="0"/><stop offset=".4" stop-color="' + col + '" stop-opacity=".45"/><stop offset=".75" stop-color="' + light + '"/><stop offset="1" stop-color="#fff"/></linearGradient>' +
+            '<linearGradient id="' + id + 'c" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="' + light + '"/><stop offset=".8" stop-color="' + col + '" stop-opacity=".3"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient>' +
+            '<radialGradient id="' + id + 'sg"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".3" stop-color="' + light + '" stop-opacity=".45"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></radialGradient>' +
+            '<linearGradient id="' + id + 'sx"><stop offset="0" stop-color="' + light + '" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="' + light + '" stop-opacity="0"/></linearGradient>' +
+            '</defs>' +
+            // توهّج ثابت (مضبّب) تحت كل شي
+            '<g class="sw-glow" transform="rotate(-18)" filter="url(#' + id + 'b)">' +
+            '<ellipse rx="66" ry="56" fill="none" stroke="' + col + '" stroke-width="' + (7 * w).toFixed(1) + '" stroke-opacity=".55"/>' +
+            '<ellipse rx="66" ry="56" fill="none" stroke="' + light + '" stroke-width="' + (3 * w).toFixed(1) + '" stroke-opacity=".5" pathLength="100" stroke-dasharray="40 60" stroke-dashoffset="-5"/></g>' +
+            '<g transform="rotate(-18)"><g class="sw-tilt">' +
+            ring('sw-r1', 66, 56, 0, 'a', 2.6 * w, '74 26', 1) +
+            ring('sw-r2', 72, 61, 22, 'c', 1.6 * w, '58 42', .75) +
+            ring('sw-r3', 60, 51, -34, 'a', 1.1 * w, '46 54', .6) +
+            '<g class="sw-d1">' + swirlDust(7, 70, w, light) + '</g>' +
+            '<g class="sw-d2">' + swirlDust(91, 50, w, light) + '</g>' +
+            '</g></g>' +
+            '<g class="sw-st">' + flares + '</g>' +
+            '</svg>';
+    }
+    /** الإطار جاهز كعنصر (للبث وللمحرر). */
+    function avatarSwirl(p) {
+        var d = document.createElement('div');
+        d.innerHTML = swirlSvg(p);
+        return d.firstChild;
     }
 
     var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
@@ -2906,6 +2986,8 @@
                     fim.style.cssText = 'width:' + (fs * 100) + '%;height:' + (fs * 100) + '%;left:' + (50 - fs * 50) + '%;top:' + (50 - fs * 50) + '%';
                     lwa.appendChild(fim);
                 }
+                // «دوامة ضوء»: حلقات وغبار ونجوم تلف حول الصورة (خارج الحركة المستمرة عشان ما تدور مرتين)
+                if (frm === 'swirl') pa.appendChild(avatarSwirl(parts.avatar));
                 pa.appendChild(lwa);
                 box.appendChild(pa);
             }
@@ -4507,8 +4589,29 @@
         // الصورة: الإطار (vav-f) بلون الإطار وبشكل الصورة، والصورة (vav-i) داخله بنفس الشكل
         '.agp-so-vav .vav-f{position:absolute;inset:0;background:currentColor}',
         '.agp-so-vav .vav-i{position:absolute;inset:.085em;overflow:hidden;background:#2a2338;display:flex;align-items:center;justify-content:center}',
-        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f{background:transparent}',
-        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i{inset:0}',
+        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f,.agp-so-vav.fr-swirl .vav-f{background:transparent}',
+        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i,.agp-so-vav.fr-swirl .vav-i{inset:0}',
+        // دوامة الضوء حول الصورة
+        '.vav-swirl{position:absolute;width:190%;height:190%;left:-45%;top:-45%;overflow:visible;pointer-events:none}',
+        '.agp-so-vav .vav-swirl{z-index:1}',
+        '.vav-swirl .sw-r1,.vav-swirl .sw-r2,.vav-swirl .sw-r3,.vav-swirl .sw-d1,.vav-swirl .sw-d2,.vav-swirl .sw-tilt,.vav-swirl .sw-glow{transform-origin:0 0}',
+        '.vav-swirl.m-spin .sw-r1,.vav-swirl.m-vortex .sw-r1{animation:agp-so-swr calc(5s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-r2,.vav-swirl.m-vortex .sw-r2{animation:agp-so-swr calc(8s*var(--sws)) linear infinite reverse}',
+        '.vav-swirl.m-spin .sw-r3,.vav-swirl.m-vortex .sw-r3{animation:agp-so-swr calc(11s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-d1,.vav-swirl.m-vortex .sw-d1,.vav-swirl.m-orbit .sw-d1{animation:agp-so-swr calc(9s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-d2,.vav-swirl.m-vortex .sw-d2,.vav-swirl.m-orbit .sw-d2{animation:agp-so-swr calc(13s*var(--sws)) linear infinite reverse}',
+        '.vav-swirl.m-orbit .sw-d1{animation-duration:calc(4s*var(--sws))}',
+        '.vav-swirl.m-orbit .sw-d2{animation-duration:calc(6s*var(--sws))}',
+        '.vav-swirl.m-vortex .sw-tilt{animation:agp-so-swt calc(6s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl.m-pulse .sw-tilt,.vav-swirl.m-orbit .sw-tilt{animation:agp-so-swp calc(2.4s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl.m-pulse .sw-glow,.vav-swirl.m-orbit .sw-glow{animation:agp-so-swg calc(2.4s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl .sw-tw{animation:agp-so-swtw calc(2.6s*var(--sws)) ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
+        '.vav-swirl.m-none .sw-tw{animation:none}',
+        '@keyframes agp-so-swr{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.06,.84) rotate(12deg)}}',
+        '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}',
+        '@keyframes agp-so-swg{0%,100%{opacity:.7}50%{opacity:1}}',
+        '@keyframes agp-so-swtw{0%,100%{opacity:.25;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}',
         '.agp-so-vav.fr-ring{filter:drop-shadow(0 .12em .3em rgba(0,0,0,.6))}',
         '.agp-so-vav.fr-shadow{filter:drop-shadow(0 .14em .35em rgba(0,0,0,.75))}',
         '.agp-so-vav.fr-glow{filter:drop-shadow(0 0 .14em currentColor) drop-shadow(0 0 .4em currentColor)}',
@@ -4753,7 +4856,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
