@@ -16,3 +16,6 @@ backend/screen-media/
 veyro-server/veyro-data.sqlite
 veyro-server/veyro-data.sqlite-*
 veyro-server/screen-media/
+
+# كاش بايثون (سكربتات tools/)
+__pycache__/
