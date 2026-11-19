@@ -83,7 +83,7 @@ export async function mountPyramid(el, opts = {}) {
 
     const sc = new T.Scene();
     const OPEN = true; // بيئة مفتوحة (طلب صاحب المنصة): بدون مدرّجات/أبراج/بوابة
-    sc.fog = new T.FogExp2('#eadfca', .0042);
+    sc.fog = new T.FogExp2('#6f6650', .0048);
     const cam = new T.PerspectiveCamera(42, 1, .1, 1500);
     cam.position.set(0, 60, 60); cam.lookAt(0, 0, 0);
     const disposables = [];
@@ -93,7 +93,7 @@ export async function mountPyramid(el, opts = {}) {
     // ---------- السماء: قبة بتدرّج ليلي بنفسجي/كحلي + نجوم
     {
         const g = new T.SphereGeometry(1000, 32, 20), p = g.attributes.position, col = [];
-        const stops = [[-1, '#e6d7bb'], [-.02, '#efe2c8'], [.04, '#f3e8d2'], [.14, '#cfe1d9'], [.4, '#9cc6c2'], [1, '#6faaa8']].map(([y, c]) => [y, new T.Color(c)]);
+        const stops = [[-1, '#6e5f45'], [-.02, '#8c7b5c'], [.04, '#9a8a6a'], [.14, '#5f7f7a'], [.4, '#2f5a5a'], [1, '#1b3c3e']].map(([y, c]) => [y, new T.Color(c)]);
         for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 1000; let a = stops[0], b = stops[stops.length - 1]; for (let j = 0; j < stops.length - 1; j++) if (y >= stops[j][0] && y <= stops[j + 1][0]) { a = stops[j]; b = stops[j + 1]; break; } const c = a[1].clone().lerp(b[1], (y - a[0]) / ((b[0] - a[0]) || 1)); col.push(c.r, c.g, c.b); }
         g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
         sc.add(new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })));
@@ -113,18 +113,18 @@ export async function mountPyramid(el, opts = {}) {
     key.shadow.camera.left = -26; key.shadow.camera.right = 26; key.shadow.camera.top = 26; key.shadow.camera.bottom = -26; key.shadow.camera.near = 1; key.shadow.camera.far = 120; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
     const rimA = new T.DirectionalLight(C.cyan, .25); rimA.position.set(-30, 18, -30); sc.add(rimA);
     const rimB = new T.DirectionalLight(C.lav, .2); rimB.position.set(30, 16, -26); sc.add(rimB);
-    const amb = new T.AmbientLight('#e9e0cc', .35); sc.add(amb);
+    const amb = new T.AmbientLight('#cfc4a8', .25); sc.add(amb);
 
     // أجواء الإضاءة حسب الحدث (تتبدّل بنعومة): لون السماء/الأرض، شدة الضوء الرئيسي، الضباب، توهج الأرضية، حماس الجمهور
-    const MOODS = { // نهار مفتوح هادئ — تتغير الإضاءة بخفة مع الأحداث
-        calm: { hemi: '#e4f0ec', ground: '#c7b38c', key: '#fff3e0', keyI: 1.55, fog: '#eadfca', floor: 0, crowd: .3, beam: 0, exp: 1.0 },
-        choose: { hemi: '#e2f0ee', ground: '#c4b28e', key: '#fff6e8', keyI: 1.6, fog: '#e8dfcc', floor: 0, crowd: .3, beam: 0, exp: 1.0 },
-        tense: { hemi: '#d2e2df', ground: '#b9a480', key: '#f7e6cf', keyI: 1.4, fog: '#ddd2bd', floor: 0, crowd: .2, beam: 0, exp: .96 },
-        danger: { hemi: '#d8dcd6', ground: '#b89a7c', key: '#f4dccb', keyI: 1.35, fog: '#dccdba', floor: 0, crowd: .2, beam: 0, exp: .95 },
-        survive: { hemi: '#e8f4f1', ground: '#cbb892', key: '#fff8ec', keyI: 1.7, fog: '#ece3d0', floor: 0, crowd: .5, beam: 0, exp: 1.02 },
-        win: { hemi: '#f2ecd8', ground: '#cfb27e', key: '#ffe9c4', keyI: 1.8, fog: '#efe1c4', floor: 0, crowd: .6, beam: 0, exp: 1.03 },
+    const MOODS = { // محيط داكن هادئ والهرم مضاء — تتغير الإضاءة بخفة مع الأحداث
+        calm: { hemi: '#a9c4bf', ground: '#6e5c3e', key: '#fff1dc', keyI: 1.65, fog: '#6f6650', floor: 0, crowd: .3, beam: 0, exp: .95 },
+        choose: { hemi: '#a6c4c0', ground: '#6a5a3e', key: '#fff4e4', keyI: 1.7, fog: '#6c6450', floor: 0, crowd: .3, beam: 0, exp: .95 },
+        tense: { hemi: '#93aeaa', ground: '#5e4f36', key: '#f6e2c8', keyI: 1.55, fog: '#625a48', floor: 0, crowd: .2, beam: 0, exp: .92 },
+        danger: { hemi: '#9aa29c', ground: '#5e4636', key: '#f2d8c4', keyI: 1.5, fog: '#615446', floor: 0, crowd: .2, beam: 0, exp: .9 },
+        survive: { hemi: '#b2ccc7', ground: '#725f40', key: '#fff6e8', keyI: 1.8, fog: '#736a54', floor: 0, crowd: .5, beam: 0, exp: .97 },
+        win: { hemi: '#c8c4a8', ground: '#7a6038', key: '#ffe6bc', keyI: 1.9, fog: '#77684a', floor: 0, crowd: .6, beam: 0, exp: .98 },
     };
-    const moodNow = { hemi: new T.Color('#e4f0ec'), ground: new T.Color('#c7b38c'), key: new T.Color('#fff3e0'), keyI: 1.55, fog: new T.Color('#eadfca'), floor: 0, crowd: .3, beam: 0, exp: 1.0 };
+    const moodNow = { hemi: new T.Color('#a9c4bf'), ground: new T.Color('#6e5c3e'), key: new T.Color('#fff1dc'), keyI: 1.65, fog: new T.Color('#6f6650'), floor: 0, crowd: .3, beam: 0, exp: .95 };
     let moodT = MOODS.calm, urgency = 0;
     const setMood = k => { moodT = MOODS[k] || MOODS.calm; };
     const _c = new T.Color();
@@ -147,7 +147,7 @@ export async function mountPyramid(el, opts = {}) {
     const floorMat = (() => {
         const S = 2048, h = S / 2, toPx = rr => rr / FLOOR_R * h;
         const base = canvasTex(S, S, (g) => {
-            const rg = g.createRadialGradient(h, h, 0, h, h, h); rg.addColorStop(0, '#efe3c9'); rg.addColorStop(.4, '#e8d9b9'); rg.addColorStop(1, '#ddcaa3'); g.fillStyle = rg; g.fillRect(0, 0, S, S);
+            const rg = g.createRadialGradient(h, h, 0, h, h, h); rg.addColorStop(0, '#b9a479'); rg.addColorStop(.4, '#a8936a'); rg.addColorStop(1, '#8c7853'); g.fillStyle = rg; g.fillRect(0, 0, S, S);
             // حلقات عريضة بدرجات قريبة (نقش هادئ بدون خطوط رفيعة تسبب تشويش)
             for (let i = 0; i < 9; i++) { g.strokeStyle = i % 2 ? 'rgba(255,255,255,.035)' : 'rgba(24,57,59,.12)'; g.lineWidth = toPx(5); g.beginPath(); g.arc(h, h, toPx(14 + i * 13), 0, Math.PI * 2); g.stroke(); }
         });
@@ -229,7 +229,7 @@ export async function mountPyramid(el, opts = {}) {
 
     // ---------- الساحة: مدرّجات بجمهور، أبراج إضاءة، بوابات، شاشات، أعلام، فوانيس، حلقات هولوغرام
     const ARENA_R = 78;
-    const darkMat = new T.MeshStandardMaterial({ color: '#d8c49c', roughness: .8, metalness: .1 });
+    const darkMat = new T.MeshStandardMaterial({ color: '#9c875f', roughness: .8, metalness: .1 });
     const trimMat = c => new T.MeshStandardMaterial({ color: TEAL, roughness: .6 }); // كل الإضاءات الديكورية بلون واحد هادئ
     // مدرّجات (Lathe) — قوس كبير خلف الهرم وعلى الجنبين، ومفتوح من جهة الكاميرا
     if (!OPEN) {
@@ -349,10 +349,10 @@ export async function mountPyramid(el, opts = {}) {
     // ---------- البيئة المفتوحة: تلال على الأفق، غيوم، نخيل وأعمدة بأعلام (بلونين فقط)
     const clouds = [];
     if (OPEN) {
-        const hillMat = new T.MeshStandardMaterial({ color: '#cdb98f', roughness: 1, flatShading: true }), hill2 = new T.MeshStandardMaterial({ color: '#8fb3ab', roughness: 1, flatShading: true });
+        const hillMat = new T.MeshStandardMaterial({ color: '#8a7652', roughness: 1, flatShading: true }), hill2 = new T.MeshStandardMaterial({ color: '#3f6662', roughness: 1, flatShading: true });
         const R0 = rng(21), hg = new T.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
         for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2 + R0() * .2, rr = 230 + R0() * 80, m = new T.Mesh(hg, i % 3 ? hillMat : hill2); m.position.set(Math.cos(a) * rr, -2, Math.sin(a) * rr); m.scale.set(40 + R0() * 50, 14 + R0() * 26, 30 + R0() * 30); m.rotation.y = R0() * 3; sc.add(m); }
-        const cg = new T.SphereGeometry(1, 10, 8), cm = new T.MeshStandardMaterial({ color: '#ffffff', roughness: 1, transparent: true, opacity: .9, fog: false, emissive: '#f4ead6', emissiveIntensity: .35 });
+        const cg = new T.SphereGeometry(1, 10, 8), cm = new T.MeshStandardMaterial({ color: '#ffffff', roughness: 1, transparent: true, opacity: .9, fog: false, emissive: '#9aa59c', emissiveIntensity: .1 }); cm.color.set('#c9cfc6');
         for (let i = 0; i < 9; i++) { const g = new T.Group(); for (let k = 0; k < 5; k++) { const b = new T.Mesh(cg, cm); b.position.set(k * 5 - 10 + R0() * 3, R0() * 2, R0() * 4); b.scale.set(6 + R0() * 5, 3 + R0() * 2.5, 5 + R0() * 3); g.add(b); } g.position.set(-260 + i * 65 + R0() * 30, 70 + R0() * 40, -180 - R0() * 120); g.userData.v = .6 + R0() * .8; addDecor(g, i < 4 ? 0 : 1); clouds.push(g); }
         // نخيل منخفض البوليجون
         const trunkG = new T.CylinderGeometry(.35, .55, 9, 6); trunkG.translate(0, 4.5, 0); const leafG = new T.ConeGeometry(1.4, 6, 4); leafG.translate(0, 3, 0); leafG.rotateZ(Math.PI / 2.6);

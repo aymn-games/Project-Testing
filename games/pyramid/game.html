@@ -122,8 +122,8 @@ body.picking #hints{opacity:1;transform:translate(-50%,0)}
 #lobby.hide{opacity:0;pointer-events:none}
 #lobby .lwrap{width:100%;max-width:1080px;height:100%;padding:0 clamp(12px,2.5vw,32px);display:flex;flex-direction:column}
 #lobby .ltitle{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:clamp(6px,1.2vh,12px) 0 clamp(12px,2.4vh,24px);text-align:center}
-#lobby .lg{font:600 clamp(14px,1.4vw,18px) "IBM Plex Sans Arabic";color:#2e6e70}
-#lobby .lh{padding:0 .1em .14em;font:700 clamp(32px,4.2vw,56px)/1.25 "IBM Plex Sans Arabic";color:#1d4a4c;text-shadow:0 2px 0 rgba(255,255,255,.5)}
+#lobby .lg{font:600 clamp(14px,1.4vw,18px) "IBM Plex Sans Arabic";color:#e9d6b0}
+#lobby .lh{padding:0 .1em .14em;font:700 clamp(32px,4.2vw,56px)/1.25 "IBM Plex Sans Arabic";color:#f4ead6;text-shadow:0 2px 8px rgba(0,0,0,.35)}
 #lobby .lsec{flex:1;min-height:0;display:flex;flex-direction:column;border-radius:26px;background:rgba(18,51,53,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1.5px solid rgba(122,147,146,.45);box-shadow:0 20px 60px rgba(0,0,0,.35),0 0 50px rgba(122,147,146,.18);overflow:hidden;position:relative}
 #lobby .lsec::before{content:"";position:absolute;top:-100px;left:50%;width:460px;height:200px;margin-left:-230px;border-radius:50%;background:rgba(122,147,146,.22);filter:blur(44px);pointer-events:none}
 #lobby .lsh{position:relative;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:clamp(16px,2vw,24px) clamp(18px,2.2vw,28px);border-bottom:1px solid rgba(255,255,255,.06)}
@@ -208,9 +208,9 @@ body.inlobby #demo,body.champ #demo{display:none}
 @media (prefers-reduced-motion:reduce){#timer.hot .core{animation:none}}
 
 /* ---- الهيدر الشفاف (طلب صاحب المنصة): بدون خلفية، عناصر بحدود رفيعة ونص تركوازي غامق ---- */
-#hdr .hbtn,#hdr .hvol,#hdr #counter,#hdr #live{background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;border:1px solid rgba(29,74,76,.35) !important;color:#1d4a4c !important;box-shadow:none !important}
-#hdr .hbtn:hover{background:rgba(29,74,76,.08) !important}
-#hdr #counter b,#hdr .hvol b,#qBtn b{color:#2e6e70 !important}#hdr #counter span{color:#1d4a4c !important}
+#hdr .hbtn,#hdr .hvol,#hdr #counter,#hdr #live{background:transparent !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;border:1px solid rgba(244,234,214,.35) !important;color:#f4ead6 !important;box-shadow:none !important}
+#hdr .hbtn:hover{background:rgba(244,234,214,.1) !important}
+#hdr #counter b,#hdr .hvol b,#qBtn b{color:#e9d6b0 !important}#hdr #counter span{color:#f4ead6 !important}
 #hdr .hvol button:hover{background:rgba(29,74,76,.1)}
 #hdr .hlogo{filter:none}
 </style>
