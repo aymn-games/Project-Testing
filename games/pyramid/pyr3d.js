@@ -35,8 +35,8 @@ function lerpAng(a, b, k) { const d = ((b - a + Math.PI) % (Math.PI * 2) + Math.
 const FONT = '"IBM Plex Sans Arabic","Cairo","Zain",system-ui,sans-serif';
 
 // هوية ألعاب أيمن (روليت الإقصاء) + لمسات ذهبية وبرتقالية
-const C = { purple: '#8b5cf6', violet: '#a855f7', deep: '#4c1d95', lav: '#c4b5fd', cyan: '#22d3ee', sky: '#38bdf8', blue: '#3b82f6', gold: '#fbbf24', orange: '#fb923c', pink: '#f472b6', red: '#ef4444' };
-export const PLAYER_COLORS = ['#22d3ee', '#a855f7', '#f472b6', '#fbbf24', '#34d399', '#fb923c', '#60a5fa', '#e879f9', '#facc15', '#2dd4bf', '#c084fc', '#f87171', '#38bdf8', '#a3e635'];
+const C = { purple: '#9b87f5', violet: '#b49cf7', deep: '#4c3a8f', lav: '#d4cbfb', cyan: '#7dd3e8', sky: '#93b8f5', blue: '#7f9cf0', gold: '#f2cc78', orange: '#f0a77a', pink: '#e8a3c9', red: '#ec6a7a' }; // ألوان ناعمة ومنسجمة (طلب صاحب المنصة: أقل سطوع وضوضاء)
+export const PLAYER_COLORS = ['#7dd3e8', '#b49cf7', '#e8a3c9', '#f2cc78', '#86d9b4', '#f0a77a', '#93b8f5', '#d9a6f0', '#e6d27e', '#7fd6c8', '#c3b0f8', '#ee9a9a', '#9cc9f0', '#b9dc8e'];
 export const colorOf = id => PLAYER_COLORS[hash(id) % PLAYER_COLORS.length];
 
 // ================================================================ مستويات الجودة
@@ -76,12 +76,12 @@ export async function mountPyramid(el, opts = {}) {
     let cfg = TIERS[cur().tier];
 
     const r = new T.WebGLRenderer({ antialias: !(probe.software || mode === 'low'), powerPreference: 'high-performance' });
-    r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.1;
+    r.outputColorSpace = T.SRGBColorSpace; r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
     r.shadowMap.enabled = true; r.shadowMap.type = T.PCFShadowMap;
     el.appendChild(r.domElement); r.domElement.style.cssText = 'display:block;width:100%;height:100%';
 
     const sc = new T.Scene();
-    sc.fog = new T.FogExp2('#120b2e', .0075);
+    sc.fog = new T.FogExp2('#2c2660', .006);
     const cam = new T.PerspectiveCamera(42, 1, .1, 1500);
     cam.position.set(0, 60, 60); cam.lookAt(0, 0, 0);
     const disposables = [];
@@ -91,7 +91,7 @@ export async function mountPyramid(el, opts = {}) {
     // ---------- السماء: قبة بتدرّج ليلي بنفسجي/كحلي + نجوم
     {
         const g = new T.SphereGeometry(1000, 32, 20), p = g.attributes.position, col = [];
-        const stops = [[-1, '#0b0820'], [-.02, '#2a1460'], [.05, '#3b1d7a'], [.16, '#1d1550'], [.45, '#0d0b2c'], [1, '#05040f']].map(([y, c]) => [y, new T.Color(c)]);
+        const stops = [[-1, '#2a2458'], [-.02, '#4a3f8c'], [.05, '#5a4c9e'], [.16, '#3e3780'], [.45, '#2b2766'], [1, '#1d1a4a']].map(([y, c]) => [y, new T.Color(c)]);
         for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 1000; let a = stops[0], b = stops[stops.length - 1]; for (let j = 0; j < stops.length - 1; j++) if (y >= stops[j][0] && y <= stops[j + 1][0]) { a = stops[j]; b = stops[j + 1]; break; } const c = a[1].clone().lerp(b[1], (y - a[0]) / ((b[0] - a[0]) || 1)); col.push(c.r, c.g, c.b); }
         g.setAttribute('color', new T.Float32BufferAttribute(col, 3));
         sc.add(new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })));
@@ -101,28 +101,28 @@ export async function mountPyramid(el, opts = {}) {
         const R = rng(7), pos = new Float32Array(STAR_N * 3), col = new Float32Array(STAR_N * 3), tint = [new T.Color('#ffffff'), new T.Color(C.lav), new T.Color(C.cyan), new T.Color('#ffe7b0')];
         for (let i = 0; i < STAR_N; i++) { const th = R() * Math.PI * 2, ph = Math.acos(1 - R() * .85), rr = 800; pos.set([Math.sin(ph) * Math.cos(th) * rr, Math.cos(ph) * rr + 40, Math.sin(ph) * Math.sin(th) * rr], i * 3); const c = tint[i % 4]; col.set([c.r, c.g, c.b], i * 3); }
         const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('color', new T.BufferAttribute(col, 3));
-        const m = new T.Points(g, new T.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, opacity: .85, depthWrite: false }));
+        const m = new T.Points(g, new T.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, fog: false, transparent: true, opacity: .5, depthWrite: false }));
         sc.add(m); return m;
     })();
 
     // ---------- الإضاءة
-    const hemi = new T.HemisphereLight('#7c6cf0', '#1a0f3a', 1.0); sc.add(hemi);
+    const hemi = new T.HemisphereLight('#a99cf2', '#3a3170', 1.25); sc.add(hemi);
     const key = new T.DirectionalLight('#ffe2b8', 1.7); key.position.set(18, 34, 26); sc.add(key); sc.add(key.target);
     key.shadow.camera.left = -26; key.shadow.camera.right = 26; key.shadow.camera.top = 26; key.shadow.camera.bottom = -26; key.shadow.camera.near = 1; key.shadow.camera.far = 120; key.shadow.bias = -.0006; key.shadow.normalBias = .02;
-    const rimA = new T.DirectionalLight(C.cyan, .9); rimA.position.set(-30, 18, -30); sc.add(rimA);
-    const rimB = new T.DirectionalLight('#d946ef', .8); rimB.position.set(30, 16, -26); sc.add(rimB);
-    const amb = new T.AmbientLight('#2a1f5c', .35); sc.add(amb);
+    const rimA = new T.DirectionalLight(C.cyan, .5); rimA.position.set(-30, 18, -30); sc.add(rimA);
+    const rimB = new T.DirectionalLight('#c9a3f0', .45); rimB.position.set(30, 16, -26); sc.add(rimB);
+    const amb = new T.AmbientLight('#5a4f99', .6); sc.add(amb);
 
     // أجواء الإضاءة حسب الحدث (تتبدّل بنعومة): لون السماء/الأرض، شدة الضوء الرئيسي، الضباب، توهج الأرضية، حماس الجمهور
     const MOODS = {
-        calm: { hemi: '#7c6cf0', ground: '#1a0f3a', key: '#ffe2b8', keyI: 1.6, fog: '#140c34', floor: .9, crowd: .35, beam: 1, exp: 1.1 },
-        choose: { hemi: '#6d7cf5', ground: '#120f3a', key: '#ffe9c8', keyI: 1.75, fog: '#0f0c30', floor: 1.1, crowd: .5, beam: 1, exp: 1.12 },
-        tense: { hemi: '#5b3fb8', ground: '#160a2a', key: '#ffc79a', keyI: 1.35, fog: '#1a0a2a', floor: .6, crowd: .2, beam: .55, exp: 1.0 },
-        danger: { hemi: '#7a2a7a', ground: '#250a1a', key: '#ffb08a', keyI: 1.25, fog: '#24081c', floor: .5, crowd: .15, beam: .4, exp: .98 },
-        survive: { hemi: '#7fa0ff', ground: '#1a1240', key: '#fff1d0', keyI: 1.9, fog: '#141040', floor: 1.4, crowd: 1, beam: 1.2, exp: 1.18 },
-        win: { hemi: '#ffcf7a', ground: '#3a1f20', key: '#ffd27a', keyI: 2.2, fog: '#2a1430', floor: 1.6, crowd: 1.3, beam: 1.4, exp: 1.22 },
+        calm: { hemi: '#a99cf2', ground: '#3a3170', key: '#ffeedd', keyI: 1.55, fog: '#2c2660', floor: .32, crowd: .35, beam: .7, exp: 1.15 },
+        choose: { hemi: '#a6b0f2', ground: '#363372', key: '#fff2e2', keyI: 1.65, fog: '#2a2862', floor: .38, crowd: .5, beam: .7, exp: 1.17 },
+        tense: { hemi: '#8f80d6', ground: '#33285e', key: '#ffe0c8', keyI: 1.4, fog: '#2e2458', floor: .24, crowd: .2, beam: .45, exp: 1.08 },
+        danger: { hemi: '#a07cc2', ground: '#3a2650', key: '#ffd6c4', keyI: 1.35, fog: '#33224e', floor: .2, crowd: .15, beam: .35, exp: 1.06 },
+        survive: { hemi: '#b4c0f5', ground: '#3c3878', key: '#fff6e8', keyI: 1.8, fog: '#2e2c68', floor: .45, crowd: 1, beam: .8, exp: 1.2 },
+        win: { hemi: '#f0d6a8', ground: '#4a3a5a', key: '#ffe2a8', keyI: 1.9, fog: '#3a2c5c', floor: .5, crowd: 1.2, beam: .9, exp: 1.2 },
     };
-    const moodNow = { hemi: new T.Color('#7c6cf0'), ground: new T.Color('#1a0f3a'), key: new T.Color('#ffe2b8'), keyI: 1.6, fog: new T.Color('#140c34'), floor: .9, crowd: .35, beam: 1, exp: 1.1 };
+    const moodNow = { hemi: new T.Color('#a99cf2'), ground: new T.Color('#3a3170'), key: new T.Color('#ffeedd'), keyI: 1.55, fog: new T.Color('#2c2660'), floor: .32, crowd: .35, beam: .7, exp: 1.15 };
     let moodT = MOODS.calm, urgency = 0;
     const setMood = k => { moodT = MOODS[k] || MOODS.calm; };
     const _c = new T.Color();
@@ -132,11 +132,11 @@ export async function mountPyramid(el, opts = {}) {
         for (const p of ['keyI', 'floor', 'crowd', 'beam', 'exp']) moodNow[p] = lerp(moodNow[p], m[p], k);
         // الوقت المتبقي: آخر ثواني الاختيار تميل للبرتقالي/الأحمر وتنبض
         const u = urgency, pulse = u > 0 ? (.5 + .5 * Math.sin(t * (4 + u * 6))) * u : 0;
-        hemi.color.copy(moodNow.hemi).lerp(_c.set('#ff7a3d'), u * .35 + pulse * .15); hemi.groundColor.copy(moodNow.ground);
-        key.color.copy(moodNow.key).lerp(_c.set('#ff9a6a'), u * .3); key.intensity = moodNow.keyI * (1 - pulse * .12);
-        sc.fog.color.copy(moodNow.fog).lerp(_c.set('#3a0d1e'), u * .45);
+        hemi.color.copy(moodNow.hemi).lerp(_c.set('#f0b08a'), u * .25 + pulse * .06); hemi.groundColor.copy(moodNow.ground);
+        key.color.copy(moodNow.key).lerp(_c.set('#f5c0a0'), u * .25); key.intensity = moodNow.keyI * (1 - pulse * .05);
+        sc.fog.color.copy(moodNow.fog).lerp(_c.set('#4a2c4e'), u * .3);
         r.toneMappingExposure = moodNow.exp;
-        floorMat.emissiveIntensity = moodNow.floor * (1 + Math.sin(t * .8) * .08) + pulse * .4;
+        floorMat.emissiveIntensity = moodNow.floor * (1 + Math.sin(t * .6) * .05) + pulse * .08;
         crowdU.uAmp.value = moodNow.crowd;
     }
 
@@ -145,22 +145,23 @@ export async function mountPyramid(el, opts = {}) {
     const floorMat = (() => {
         const S = 2048, h = S / 2, toPx = rr => rr / FLOOR_R * h;
         const base = canvasTex(S, S, (g) => {
-            const rg = g.createRadialGradient(h, h, 0, h, h, h); rg.addColorStop(0, '#1b1442'); rg.addColorStop(.35, '#140f33'); rg.addColorStop(1, '#0a0820'); g.fillStyle = rg; g.fillRect(0, 0, S, S);
-            g.globalAlpha = .18; g.strokeStyle = '#3b2f7a'; g.lineWidth = 1; const step = 24;
-            for (let x = 0; x < S; x += step) for (let y = 0; y < S; y += step) { g.beginPath(); g.moveTo(x + step / 2, y); g.lineTo(x + step, y + step / 2); g.lineTo(x + step / 2, y + step); g.lineTo(x, y + step / 2); g.closePath(); g.stroke(); }
-            g.globalAlpha = 1;
+            const rg = g.createRadialGradient(h, h, 0, h, h, h); rg.addColorStop(0, '#4a4290'); rg.addColorStop(.35, '#3a347a'); rg.addColorStop(1, '#2a2660'); g.fillStyle = rg; g.fillRect(0, 0, S, S);
+            // حلقات عريضة بدرجات قريبة (نقش هادئ بدون خطوط رفيعة تسبب تشويش)
+            for (let i = 0; i < 9; i++) { g.strokeStyle = i % 2 ? 'rgba(255,255,255,.035)' : 'rgba(20,16,60,.12)'; g.lineWidth = toPx(5); g.beginPath(); g.arc(h, h, toPx(14 + i * 13), 0, Math.PI * 2); g.stroke(); }
         });
         const glow = canvasTex(S, S, (g) => {
             g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.translate(h, h); g.lineCap = 'round';
             const ring = (rr, w, c, dash) => { g.strokeStyle = c; g.lineWidth = w; g.setLineDash(dash || []); g.beginPath(); g.arc(0, 0, toPx(rr), 0, Math.PI * 2); g.stroke(); g.setLineDash([]); };
-            ring(16, 5, C.cyan); ring(18, 2, C.violet, [10, 12]); ring(34, 4, C.purple); ring(36, 1.5, C.cyan, [4, 10]); ring(58, 4, C.violet); ring(60.5, 2, C.gold, [24, 18]); ring(84, 3, C.cyan); ring(110, 3, C.purple);
-            for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2, r0 = toPx(i % 2 ? 36 : 18), r1 = toPx(i % 4 === 0 ? 110 : i % 2 ? 58 : 84); g.strokeStyle = i % 4 === 0 ? C.cyan : '#6d4fd6'; g.lineWidth = i % 4 === 0 ? 2.5 : 1.2; g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); g.stroke(); }
+            g.filter = 'blur(2px)'; // حواف ناعمة
+            ring(16, 7, C.cyan); ring(34, 6, C.purple); ring(58, 6, C.violet); ring(84, 5, C.cyan); ring(110, 5, C.purple);
+            for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, r0 = toPx(36), r1 = toPx(84); g.strokeStyle = 'rgba(155,135,245,.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); g.stroke(); }
             // معيّنات ذهبية على الحلقة
-            for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, rr = toPx(47), x = Math.cos(a) * rr, y = Math.sin(a) * rr, s = toPx(2.1); g.save(); g.translate(x, y); g.rotate(a); g.strokeStyle = i % 2 ? C.gold : C.orange; g.lineWidth = 3; g.beginPath(); g.moveTo(-s, 0); g.lineTo(0, -s * .6); g.lineTo(s, 0); g.lineTo(0, s * .6); g.closePath(); g.stroke(); g.restore(); }
+            for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, rr = toPx(47), x = Math.cos(a) * rr, y = Math.sin(a) * rr, s = toPx(2.1); g.save(); g.translate(x, y); g.rotate(a); g.strokeStyle = C.gold; g.lineWidth = 5; g.beginPath(); g.moveTo(-s, 0); g.lineTo(0, -s * .6); g.lineTo(s, 0); g.lineTo(0, s * .6); g.closePath(); g.stroke(); g.restore(); }
             // نجمة ثمانية بالمنتصف
-            g.strokeStyle = 'rgba(167,139,250,.55)'; g.lineWidth = 2; for (let k = 0; k < 2; k++) { g.save(); g.rotate(k * Math.PI / 4); const s = toPx(11); g.strokeRect(-s, -s, s * 2, s * 2); g.restore(); }
+            g.strokeStyle = 'rgba(212,203,251,.35)'; g.lineWidth = 6; for (let k = 0; k < 2; k++) { g.save(); g.rotate(k * Math.PI / 4); const s = toPx(11); g.strokeRect(-s, -s, s * 2, s * 2); g.restore(); }
         });
-        const m = new T.MeshStandardMaterial({ map: base, emissiveMap: glow, emissive: '#ffffff', emissiveIntensity: .9, roughness: .38, metalness: .55 });
+        const m = new T.MeshStandardMaterial({ map: base, emissiveMap: glow, emissive: '#ffffff', emissiveIntensity: .32, roughness: .62, metalness: .2 });
+        base.anisotropy = glow.anisotropy = 8;
         const mesh = new T.Mesh(new T.CircleGeometry(FLOOR_R, 96), m); mesh.rotation.x = -Math.PI / 2; mesh.receiveShadow = true; sc.add(mesh);
         return m;
     })();
@@ -183,7 +184,7 @@ export async function mountPyramid(el, opts = {}) {
         const mat = new T.ShaderMaterial({
             uniforms: { map: { value: additive ? glowTex : null }, scale: { value: 400 } }, transparent: true, depthWrite: false, blending: additive ? T.AdditiveBlending : T.NormalBlending,
             vertexShader: 'attribute float size; attribute float alpha; varying vec3 vC; varying float vA; uniform float scale; void main(){ vC=color; vA=alpha; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=size*scale/max(.1,-mv.z); gl_Position=projectionMatrix*mv; }',
-            fragmentShader: additive ? 'uniform sampler2D map; varying vec3 vC; varying float vA; void main(){ vec4 t=texture2D(map,gl_PointCoord); gl_FragColor=vec4(vC*t.rgb*vA*1.6, t.a*vA); }'
+            fragmentShader: additive ? 'uniform sampler2D map; varying vec3 vC; varying float vA; void main(){ vec4 t=texture2D(map,gl_PointCoord); gl_FragColor=vec4(vC*t.rgb*vA*.9, t.a*vA); }'
                 : 'varying vec3 vC; varying float vA; void main(){ vec2 d=abs(gl_PointCoord-.5); if(max(d.x,d.y*1.7)>.5) discard; gl_FragColor=vec4(vC,vA); }',
             vertexColors: true,
         });
@@ -224,8 +225,8 @@ export async function mountPyramid(el, opts = {}) {
 
     // ---------- الساحة: مدرّجات بجمهور، أبراج إضاءة، بوابات، شاشات، أعلام، فوانيس، حلقات هولوغرام
     const ARENA_R = 78;
-    const darkMat = new T.MeshStandardMaterial({ color: '#17123a', roughness: .55, metalness: .45 });
-    const trimMat = c => new T.MeshBasicMaterial({ color: c, toneMapped: false });
+    const darkMat = new T.MeshStandardMaterial({ color: '#3d3678', roughness: .7, metalness: .2 });
+    const trimMat = c => new T.MeshBasicMaterial({ color: new T.Color(c).multiplyScalar(.75) });
     // مدرّجات (Lathe) — قوس كبير خلف الهرم وعلى الجنبين، ومفتوح من جهة الكاميرا
     {
         const prof = []; const steps = 7;
@@ -255,7 +256,7 @@ export async function mountPyramid(el, opts = {}) {
         };
         mat.customProgramCacheKey = () => 'pyr-crowd';
         const m = new T.InstancedMesh(geo, mat, CROWD_MAX); m.frustumCulled = false;
-        const R = rng(11), M = new T.Matrix4(), q = new T.Quaternion(), cols = ['#4c3a8f', '#3b4a9a', '#6b3fa0', '#2f5f8f', '#7a4fb0', '#8a4f6f', '#5a6fb5', '#b07a3a'].map(c => new T.Color(c));
+        const R = rng(11), M = new T.Matrix4(), q = new T.Quaternion(), cols = ['#7a6fc0', '#6f7fc4', '#8f78c8', '#6a8fbf', '#9a86cc', '#a88aa8', '#8597d0', '#bfa580'].map(c => new T.Color(c));
         let i = 0;
         for (let row = 0; row < 7 && i < CROWD_MAX; row++) {
             const rr = ARENA_R + row * 3.2 + 1.6, y = row * 2.1 + 2.1, per = Math.floor(rr * Math.PI * 1.7 / .95);
@@ -301,11 +302,11 @@ export async function mountPyramid(el, opts = {}) {
     let screenLines = ['الهرم', 'ألعاب أيمن'];
     function drawScreen(t) {
         const g = screenCtx, w = 1024, h = 512; if (!g) return;
-        const lg = g.createLinearGradient(0, 0, w, h); lg.addColorStop(0, '#1e1050'); lg.addColorStop(1, '#3b1478'); g.fillStyle = lg; g.fillRect(0, 0, w, h);
+        const lg = g.createLinearGradient(0, 0, w, h); lg.addColorStop(0, '#3d3680'); lg.addColorStop(1, '#5a4c9e'); g.fillStyle = lg; g.fillRect(0, 0, w, h);
         // نبض دوائر بالخلفية
-        g.globalAlpha = .35; for (let i = 0; i < 9; i++) { g.strokeStyle = i % 2 ? C.cyan : C.violet; g.lineWidth = 6; g.beginPath(); g.arc(w / 2, h / 2, ((t * 60 + i * 60) % 540), 0, Math.PI * 2); g.stroke(); } g.globalAlpha = 1;
+        g.globalAlpha = .12; for (let i = 0; i < 9; i++) { g.strokeStyle = i % 2 ? C.cyan : C.violet; g.lineWidth = 6; g.beginPath(); g.arc(w / 2, h / 2, ((t * 60 + i * 60) % 540), 0, Math.PI * 2); g.stroke(); } g.globalAlpha = 1;
         g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillStyle = '#ffffff'; g.font = `700 150px ${FONT}`; g.shadowColor = C.violet; g.shadowBlur = 30; g.fillText(screenLines[0] || '', w / 2, h * .42);
+        g.fillStyle = '#ffffff'; g.font = `700 150px ${FONT}`; g.shadowColor = 'rgba(0,0,0,.25)'; g.shadowBlur = 10; g.fillText(screenLines[0] || '', w / 2, h * .42);
         g.shadowBlur = 0; g.fillStyle = C.gold; g.font = `700 64px ${FONT}`; g.fillText(screenLines[1] || '', w / 2, h * .78);
         screenTex.needsUpdate = true;
     }
@@ -337,8 +338,8 @@ export async function mountPyramid(el, opts = {}) {
     // حلقات هولوغرام فوق الهرم (تتحرك مع القمة)
     const holo = new T.Group(); addDecor(holo, 1);
     {
-        const a = new T.Mesh(new T.TorusGeometry(9, .09, 6, 96), new T.MeshBasicMaterial({ color: C.cyan, transparent: true, opacity: .55, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
-        const b = new T.Mesh(new T.TorusGeometry(11.5, .07, 6, 96), new T.MeshBasicMaterial({ color: C.violet, transparent: true, opacity: .45, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        const a = new T.Mesh(new T.TorusGeometry(9, .09, 6, 96), new T.MeshBasicMaterial({ color: C.cyan, transparent: true, opacity: .25, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        const b = new T.Mesh(new T.TorusGeometry(11.5, .07, 6, 96), new T.MeshBasicMaterial({ color: C.violet, transparent: true, opacity: .2, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
         a.rotation.x = Math.PI / 2; b.rotation.x = Math.PI / 2; holo.add(a, b); holo.userData.a = a; holo.userData.b = b;
     }
     // أعمدة صغيرة بكرات مضيئة حول قاعدة الساحة (ديكور منخفض)
@@ -355,9 +356,9 @@ export async function mountPyramid(el, opts = {}) {
         g.clearRect(0, 0, 2048, 2048); g.textAlign = 'center'; g.textBaseline = 'middle';
         for (let k = 1; k <= 64; k++) {
             const i = k - 1, cx = (i % 8) * 256 + 128, cy = Math.floor(i / 8) * 256 + 128;
-            const rg = g.createRadialGradient(cx, cy, 20, cx, cy, 124); rg.addColorStop(0, '#2b2170'); rg.addColorStop(1, '#130e38'); g.fillStyle = rg; g.beginPath(); g.arc(cx, cy, 124, 0, Math.PI * 2); g.fill();
-            g.strokeStyle = 'rgba(196,181,253,.55)'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, 104, 0, Math.PI * 2); g.stroke();
-            g.fillStyle = '#ffffff'; g.font = `700 ${k > 9 ? 112 : 128}px ${FONT}`; g.shadowColor = 'rgba(139,92,246,.9)'; g.shadowBlur = 14;
+            const rg = g.createRadialGradient(cx, cy, 20, cx, cy, 124); rg.addColorStop(0, '#5b52a8'); rg.addColorStop(1, '#3c3582'); g.fillStyle = rg; g.beginPath(); g.arc(cx, cy, 124, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = 'rgba(232,226,255,.35)'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, 104, 0, Math.PI * 2); g.stroke();
+            g.fillStyle = '#ffffff'; g.font = `700 ${k > 9 ? 112 : 128}px ${FONT}`; g.shadowColor = 'rgba(20,14,60,.6)'; g.shadowBlur = 6;
             g.fillText(String(k), cx, cy + 34); g.shadowBlur = 0; // الرقم بالنصف الأمامي (الشخصية تقف بالنصف الخلفي)
         }
     });
@@ -366,17 +367,17 @@ export async function mountPyramid(el, opts = {}) {
     topMat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aCell;').replace('#include <uv_vertex>', '#include <uv_vertex>\nvMapUv = vMapUv / 8.0 + aCell;'); };
     topMat.customProgramCacheKey = () => 'pyr-atlas';
     const baseGeo = new T.CylinderGeometry(R, R * 1.06, .34, 40); baseGeo.translate(0, .17, 0);
-    const baseMat = new T.MeshStandardMaterial({ color: '#ffffff', roughness: .3, metalness: .6 });
+    const baseMat = new T.MeshStandardMaterial({ color: '#ffffff', roughness: .55, metalness: .25 });
     const ringGeoC = new T.TorusGeometry(R * .97, .06, 8, 56); ringGeoC.rotateX(Math.PI / 2);
     const ringMat = new T.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
     const haloMat = new T.MeshBasicMaterial({ map: glowTex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
     const topGeoProto = new T.CircleGeometry(R * .86, 40); topGeoProto.rotateX(-Math.PI / 2);
-    const haloGeo = new T.PlaneGeometry(R * 3.6, R * 3.6); haloGeo.rotateX(-Math.PI / 2);
-    const slabMat = new T.MeshStandardMaterial({ color: '#1a1446', roughness: .42, metalness: .5 });
-    const slabFrontTex = canvasTex(512, 128, (g, w, h) => { g.fillStyle = '#1a1446'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(139,92,246,.6)'; g.lineWidth = 3; for (let x = -h; x < w; x += 48) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + h * .6, 0); g.stroke(); } g.fillStyle = C.cyan; g.fillRect(0, 0, w, 6); g.fillStyle = 'rgba(251,191,36,.9)'; g.fillRect(0, h - 5, w, 5); });
+    const haloGeo = new T.PlaneGeometry(R * 2.5, R * 2.5); haloGeo.rotateX(-Math.PI / 2);
+    const slabMat = new T.MeshStandardMaterial({ color: '#4a4290', roughness: .6, metalness: .25 });
+    const slabFrontTex = canvasTex(512, 128, (g, w, h) => { const lg = g.createLinearGradient(0, 0, 0, h); lg.addColorStop(0, '#5a519e'); lg.addColorStop(1, '#3a3478'); g.fillStyle = lg; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(212,203,251,.18)'; for (let x = 16; x < w; x += 64) g.fillRect(x, 14, 28, h - 28); g.fillStyle = 'rgba(125,211,232,.7)'; g.fillRect(0, 0, w, 5); });
     slabFrontTex.wrapS = T.RepeatWrapping;
-    const edgeMat = new T.MeshBasicMaterial({ color: C.cyan, toneMapped: false });
-    const edgeGoldMat = new T.MeshBasicMaterial({ color: C.gold, toneMapped: false });
+    const edgeMat = new T.MeshBasicMaterial({ color: new T.Color(C.cyan).multiplyScalar(.8) });
+    const edgeGoldMat = new T.MeshBasicMaterial({ color: new T.Color(C.gold).multiplyScalar(.8) });
 
     const levels = [];
     let aspect = 16 / 9;
@@ -403,7 +404,7 @@ export async function mountPyramid(el, opts = {}) {
             const slabGeo = new T.BoxGeometry(this.w, h, this.d); slabGeo.translate(0, h / 2, 0);
             this.slab = new T.Mesh(slabGeo, slabMat); this.slab.position.set(0, 0, this.cz); this.slab.receiveShadow = true; this.slab.castShadow = false; this.group.add(this.slab);
             const ft = slabFrontTex.clone(); ft.needsUpdate = true; ft.repeat.set(Math.max(1, this.w / 6), 1); this._ft = ft;
-            this.front = new T.Mesh(new T.PlaneGeometry(this.w, h), new T.MeshStandardMaterial({ map: ft, emissiveMap: ft, emissive: '#ffffff', emissiveIntensity: .55, roughness: .5, metalness: .3 }));
+            this.front = new T.Mesh(new T.PlaneGeometry(this.w, h), new T.MeshStandardMaterial({ map: ft, emissiveMap: ft, emissive: '#ffffff', emissiveIntensity: .18, roughness: .6, metalness: .2 }));
             this.front.position.set(0, h / 2, this.zFront + .01); this.group.add(this.front);
             this.edge = new T.Mesh(new T.BoxGeometry(this.w + .1, .1, .1), k % 2 ? edgeGoldMat : edgeMat); this.edge.position.set(0, h + .02, this.zFront); this.group.add(this.edge);
             // مواقع الدوائر: 1 على يمين الشاشة (+X)، الصف الأمامي أول
@@ -433,15 +434,15 @@ export async function mountPyramid(el, opts = {}) {
             for (let j = 0; j < n; j++) {
                 const s = this.st[j], p = this.pos[j];
                 // لون الحلقة والهالة حسب الحالة
-                let ring, haloI = 0, haloC = s.color, base = '#2a2366';
-                if (s.mode === 'off' || s.mode === 'idle') { const chase = isChoosing && this === activeLevel ? Math.max(0, Math.sin(t * 2.2 - j * .35)) : 0; ring = _c.set(this === activeLevel ? C.cyan : '#5b4bb0').multiplyScalar(.55 + chase * .7); haloI = chase * .18; haloC = C.cyan; }
-                else if (s.mode === 'chosen') { ring = _c.copy(s.color).multiplyScalar(1.3 + Math.sin(t * 5 + j) * .25); haloI = .55 + Math.sin(t * 4 + j) * .12; base = '#3a2f80'; }
-                else if (s.mode === 'occupied') { ring = _c.copy(s.color).multiplyScalar(.95); haloI = .2; }
-                else if (s.mode === 'spot') { ring = _c.set('#ffffff').multiplyScalar(1.5); haloI = 1; haloC = C.gold; base = '#5a4a20'; }
-                else if (s.mode === 'doom') { const f = .5 + .5 * Math.sin(t * 16); ring = _c.set(C.red).multiplyScalar(1 + f); haloI = .8 + f * .4; haloC = C.red; base = '#5a1020'; }
-                else if (s.mode === 'win') { ring = _c.set(C.gold).multiplyScalar(1.6); haloI = 1; haloC = C.gold; base = '#6a4a10'; }
-                else { ring = _c.set('#3a2f70'); }
-                if (s.flash > 0) { s.flash = Math.max(0, s.flash - dt * 2.2); ring = ring.clone().lerp(_c.set('#ffffff'), s.flash); haloI += s.flash * .8; }
+                let ring, haloI = 0, haloC = s.color, base = '#5a52a0';
+                if (s.mode === 'off' || s.mode === 'idle') { const chase = isChoosing && this === activeLevel ? Math.max(0, Math.sin(t * 2.2 - j * .35)) : 0; ring = _c.set(this === activeLevel ? C.cyan : '#8a7fd0').multiplyScalar(.6 + chase * .3); haloI = chase * .08; haloC = C.cyan; }
+                else if (s.mode === 'chosen') { ring = _c.copy(s.color).multiplyScalar(1.0 + Math.sin(t * 3 + j) * .08); haloI = .32 + Math.sin(t * 3 + j) * .05; base = '#6a60b8'; }
+                else if (s.mode === 'occupied') { ring = _c.copy(s.color).multiplyScalar(.85); haloI = .14; }
+                else if (s.mode === 'spot') { ring = _c.set('#fff4dc'); haloI = .6; haloC = C.gold; base = '#8a7a50'; }
+                else if (s.mode === 'doom') { const f = .5 + .5 * Math.sin(t * 7); ring = _c.set(C.red).multiplyScalar(.9 + f * .2); haloI = .45 + f * .15; haloC = C.red; base = '#5a1020'; }
+                else if (s.mode === 'win') { ring = _c.set(C.gold); haloI = .6; haloC = C.gold; base = '#9a8050'; }
+                else { ring = _c.set('#6a62a8'); }
+                if (s.flash > 0) { s.flash = Math.max(0, s.flash - dt * 2.2); ring = ring.clone().lerp(_c.set('#ffffff'), s.flash * .5); haloI += s.flash * .3; }
                 s.cur.lerp(ring, damp(dt, 10)); s.halo.lerp(_c.set(haloC).multiplyScalar(haloI), damp(dt, 8));
                 this.ring.setColorAt(j, s.cur); this.halo.setColorAt(j, s.halo); this.base.setColorAt(j, _c.set(base));
                 this.top.setColorAt(j, s.mode === 'doom' ? _c.set('#ffb0b0') : s.mode === 'gone' ? _c.set('#444') : _c.set('#ffffff'));
@@ -708,13 +709,13 @@ export async function mountPyramid(el, opts = {}) {
         tickMood(dt, t);
         crowdU.uTime.value = t;
         // حزم الضوء تمسح الساحة
-        beams.forEach((b, i) => { b.pivot.rotation.set(-.55 + Math.sin(t * .4 + b.ph) * .28, b.a0 + Math.sin(t * .27 + b.ph) * .6, 0); b.cone.material.opacity = .16 * moodNow.beam; });
+        beams.forEach((b, i) => { b.pivot.rotation.set(-.55 + Math.sin(t * .4 + b.ph) * .28, b.a0 + Math.sin(t * .27 + b.ph) * .6, 0); b.cone.material.opacity = .09 * moodNow.beam; });
         bunting.forEach(g => { g.rotation.y = Math.sin(t * .5) * .004; g.position.y = Math.sin(t * 1.3) * .15; });
         if (lanterns.visible) { const D = lanterns.userData.data; D.forEach((d, i) => { d.y += d.v * dt; if (d.y > 80) d.y = -2; _P.set(d.x + Math.sin(t * .4 + d.ph) * 1.5, d.y, d.z + Math.cos(t * .3 + d.ph)); _M.compose(_P, _Q.identity(), _S.setScalar(clamp01(d.y / 4) * clamp01((80 - d.y) / 10))); lanterns.setMatrixAt(i, _M); }); lanterns.instanceMatrix.needsUpdate = true; }
         if (holo.visible) { const top = levels.length ? levels[levels.length - 1] : null; const hy = top ? top.yTop + 9 : 12, hz = top ? top.cz : -6; holo.position.lerp(_P.set(0, hy, hz), damp(dt, 1)); holo.userData.a.rotation.z = t * .2; holo.userData.b.rotation.z = -t * .14; holo.userData.a.rotation.x = Math.PI / 2 + Math.sin(t * .3) * .12; }
         if (t - lastScreen > (cfg.decor >= 1 ? .1 : .3)) { lastScreen = t; drawScreen(t); }
         // الموجات الضوئية تمر عبر الأرضية من وقت لآخر (بألوان متغيرة)
-        if (frame % 240 === 0) pulse(V(0, .04, activeLevel ? activeLevel.cz + 4 : -4), [C.violet, C.cyan, C.gold][(frame / 240) % 3 | 0], 2, 70, 4.5, .55);
+        if (frame % 240 === 0) pulse(V(0, .04, activeLevel ? activeLevel.cz + 4 : -4), [C.violet, C.cyan][(frame / 240) % 2 | 0], 2, 70, 5, .22);
         for (const L of levels) if (L.alive && L.group.visible) L.update(dt, t);
         for (const a of actors.values()) a.update(dt, t);
         tickPulses(dt); sparks.update(dt, t); confetti.update(dt, t); sparks.pts.material.uniforms.scale.value = confetti.pts.material.uniforms.scale.value = r.domElement.height * .6;
