@@ -113,6 +113,9 @@ function createService(db, deps) {
         '  status TEXT NOT NULL DEFAULT \'draft\', access TEXT NOT NULL DEFAULT \'all\', version INTEGER NOT NULL DEFAULT 0,' +
         '  settings TEXT NOT NULL DEFAULT \'{}\', mime TEXT, size INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);'
     );
+    // خصم مشتركي منصة الألعاب (٪) لكل خطة — يطبّقه متجر الألعاب (backend/store/veyro-link.js)
+    if (db.prepare('PRAGMA table_info(veyro_plans)').all().every(function (c) { return c.name !== 'games_discount'; })) db.exec('ALTER TABLE veyro_plans ADD COLUMN games_discount INTEGER NOT NULL DEFAULT 0');
+    db.exec('CREATE TABLE IF NOT EXISTS veyro_store_refs (ref TEXT PRIMARY KEY, user_id INTEGER NOT NULL, plan TEXT NOT NULL, amount REAL NOT NULL, at INTEGER NOT NULL)');
     if (!db.prepare('SELECT COUNT(*) AS n FROM veyro_plans').get().n) {
         var ins = db.prepare('INSERT INTO veyro_plans (id, name, days, price, screens, videos, on_sale, internal, features, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         DEFAULT_PLANS.forEach(function (p) { ins.run(p.id, p.name, p.days, p.price, p.screens, p.videos, p.on, p.internal, JSON.stringify(p.features), p.sort); });
@@ -127,7 +130,7 @@ function createService(db, deps) {
     function setSetting(key, value) { db.prepare('INSERT OR REPLACE INTO veyro_settings (key, value) VALUES (?, ?)').run(key, JSON.stringify(value)); }
 
     /* ---------------- الخطط ---------------- */
-    function planRow(r) { return r ? { id: r.id, name: r.name, days: r.days, price: r.price, screens: r.screens, videos: r.videos, on: Boolean(r.on_sale), internal: Boolean(r.internal), features: json(r.features, []) } : null; }
+    function planRow(r) { return r ? { id: r.id, name: r.name, days: r.days, price: r.price, screens: r.screens, videos: r.videos, on: Boolean(r.on_sale), internal: Boolean(r.internal), features: json(r.features, []), gamesDiscount: r.games_discount || 0 } : null; }
     function plans() { return db.prepare('SELECT * FROM veyro_plans ORDER BY sort, rowid').all().map(planRow); }
     function plan(id) { return planRow(db.prepare('SELECT * FROM veyro_plans WHERE id = ?').get(String(id || ''))); }
     function planName(id) { var p = plan(id); return p ? p.name : String(id || '—'); }
@@ -139,9 +142,34 @@ function createService(db, deps) {
         var days = id === 'lifetime' ? 0 : clamp(int(p.days, 30), 1, 3650);
         var feats = (Array.isArray(p.features) ? p.features : []).map(function (f) { return str(f, 80); }).filter(Boolean).slice(0, 12);
         var sort = old ? db.prepare('SELECT sort FROM veyro_plans WHERE id = ?').get(id).sort : db.prepare('SELECT COALESCE(MAX(sort), 0) + 1 AS s FROM veyro_plans').get().s;
-        db.prepare('INSERT OR REPLACE INTO veyro_plans (id, name, days, price, screens, videos, on_sale, internal, features, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-            .run(id, name, days, Math.max(0, Number(p.price) || 0), clamp(int(p.screens, 10), 0, 500), clamp(int(p.videos, 10), 0, 500), p.on === false ? 0 : 1, id === 'lifetime' ? 1 : 0, JSON.stringify(feats), sort);
+        var gd = p.gamesDiscount == null ? (old ? old.gamesDiscount : 0) : clamp(int(p.gamesDiscount, 0), 0, 100);
+        db.prepare('INSERT OR REPLACE INTO veyro_plans (id, name, days, price, screens, videos, on_sale, internal, features, sort, games_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(id, name, days, Math.max(0, Number(p.price) || 0), clamp(int(p.screens, 10), 0, 500), clamp(int(p.videos, 10), 0, 500), p.on === false ? 0 : 1, id === 'lifetime' ? 1 : 0, JSON.stringify(feats), sort, gd);
         return { success: true, plan: plan(id), isNew: !old };
+    }
+
+    /** الخطط المعروضة للبيع (المتجر والمحرر): المفعّلة وغير الداخلية. */
+    function salePlans() {
+        return plans().filter(function (p) { return p.on && !p.internal; }).map(function (p) {
+            return { id: p.id, name: p.name, days: p.days, price: p.price, gamesDiscount: p.gamesDiscount, features: p.features };
+        });
+    }
+    /**
+     * اشتراك انشرى من متجر الألعاب: يفعّل الخطة ويسجّل الدفعة. ref = رقم الطلب والمنتج،
+     * فلو المتجر أعاد الإرسال ما يتفعّل مرتين.
+     */
+    function storeGrant(ref, uid, planId, amount, orderId) {
+        ref = str(ref, 80);
+        if (!ref || !(uid > 0)) return { success: false, error: 'bad_request' };
+        if (db.prepare('SELECT 1 FROM veyro_store_refs WHERE ref = ?').get(ref)) return { success: true, duplicate: true };
+        if (!plan(planId)) return { success: false, error: 'bad_plan' };
+        ensureAccount(uid);
+        var r;
+        db.transaction(function () {
+            r = renew(uid, planId, amount, 'متجر الألعاب #' + str(orderId, 20), { id: null, name: 'المتجر' });
+            if (r.success) db.prepare('INSERT INTO veyro_store_refs (ref, user_id, plan, amount, at) VALUES (?, ?, ?, ?, ?)').run(ref, uid, planId, Number(amount) || 0, now());
+        })();
+        return r.success ? { success: true, sub: subSummary(uid) } : r;
     }
 
     /* ---------------- الحساب ---------------- */
@@ -587,7 +615,7 @@ function createService(db, deps) {
 
     return {
         settings: settings, setSetting: setSetting,
-        plans: plans, plan: plan, planName: planName, savePlan: savePlan,
+        plans: plans, plan: plan, planName: planName, savePlan: savePlan, salePlans: salePlans, storeGrant: storeGrant,
         ensureAccount: ensureAccount, account: account, gate: gate, devices: devices,
         subRow: subRow, subState: subState, subSummary: subSummary, limits: limits, isPaying: isPaying,
         addDays: addDays, setEnd: setEnd, renew: renew, setLifetime: setLifetime, freeze: freeze, unfreeze: unfreeze, cancel: cancel,

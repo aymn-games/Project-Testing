@@ -20,6 +20,8 @@
 'use strict';
 
 var fs = require('fs');
+var crypto = require('crypto');
+var config = require('../config');
 var response = require('../http/response');
 var svcMod = require('./veyro-admin-service');
 var tracker = require('./usage-tracker');
@@ -213,7 +215,41 @@ function veyroInfo(user) {
         sub: s.subSummary(Number(user.id)), limits: s.limits(Number(user.id)),
         previewAdminOnly: Boolean(cfg.previewAdminOnly), requireSub: Boolean(cfg.requireSub),
         announce: cfg.announce && cfg.announce.on && cfg.announce.text ? cfg.announce.text : '',
-        isAdmin: Boolean(adminRole(user))
+        isAdmin: Boolean(adminRole(user)),
+        // الشراء من متجر الألعاب: السعر لهذا الحساب (مشترك الألعاب ياخذ خصم كل خطة)
+        store: storeInfo(user)
+    };
+}
+/** GET /api/veyro/plans — الخطط المعروضة للبيع (متجر الألعاب يقرأ منها السعر ونسبة خصم مشتركي الألعاب). */
+function handlePlans(req, res) { sendJson(res, 200, { success: true, plans: svc().salePlans() }); }
+
+/**
+ * POST /api/veyro/internal/store-grant — من سيرفر الألعاب بعد الدفع (backend/store/veyro-link.js).
+ * مقفل بالسر VEYRO_STORE_SECRET (نفس القيمة بالخدمتين). body: { ref, orderId, plan, amount, user }
+ */
+function handleStoreGrant(req, res, body) {
+    var want = config.storeSecret, got = String(req.headers['x-veyro-secret'] || '');
+    var a = Buffer.from(want || ''), b = Buffer.from(got);
+    if (!want || a.length !== b.length || !crypto.timingSafeEqual(a, b)) { sendJson(res, 403, { success: false, error: 'forbidden' }); return; }
+    body = body || {};
+    var u = body.user && typeof body.user === 'object' ? body.user : null;
+    var uid = u ? Math.round(Number(u.id)) : 0;
+    if (!(uid > 0)) { sendJson(res, 400, { success: false, error: 'bad_user' }); return; }
+    // الحساب يظهر بلوحة فيرو حتى لو ما فتح فيرو قبل
+    try { require('../core/core-auth').get().save(u); } catch (e) { /* ignore */ }
+    var r = svc().storeGrant(body.ref, uid, String(body.plan || ''), Number(body.amount) || 0, body.orderId);
+    sendJson(res, r.success ? 200 : 400, r);
+}
+
+function storeInfo(user) {
+    var gs = Boolean(user && user.games_subscriber);
+    return {
+        url: (config.frontendBaseUrl || 'https://aymngames.online').replace(/\/+$/, '') + '/store.html',
+        gamesSubscriber: gs,
+        plans: svc().salePlans().map(function (p) {
+            var pct = gs ? (p.gamesDiscount || 0) : 0;
+            return { id: p.id, name: p.name, days: p.days, price: p.price, discount: pct, final: Math.round(p.price * (100 - pct)) / 100 };
+        })
     };
 }
 function handleMe(req, res, body, user) { sendJson(res, 200, { success: true, veyro: veyroInfo(user) }); }
@@ -236,7 +272,9 @@ var ROUTES = [
     { method: 'GET', path: '/api/veyro/assets/file', requireAuth: false, handler: handleAssetFile },
     { method: 'GET', path: '/api/veyro/me', requireAuth: true, allowBlocked: true, handler: handleMe },
     { method: 'POST', path: '/api/veyro/me/redeem', requireAuth: true, handler: handleRedeem },
-    { method: 'GET', path: '/api/veyro/library', requireAuth: true, handler: handleLibrary }
+    { method: 'GET', path: '/api/veyro/library', requireAuth: true, handler: handleLibrary },
+    { method: 'GET', path: '/api/veyro/plans', requireAuth: false, handler: handlePlans },
+    { method: 'POST', path: '/api/veyro/internal/store-grant', requireAuth: false, handler: handleStoreGrant }
 ];
 
 /**

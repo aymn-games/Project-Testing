@@ -214,3 +214,20 @@ test('library: upload checks the file type, publish bumps the version, access fi
         assert.equal(x.s.findAssetFile(a.id), null);
     });
 });
+
+test('store: plan discount for games subscribers and idempotent store grants', function () {
+    var x = setup();
+    var p = x.s.savePlan({ id: 'monthly', name: 'شهري', days: 30, price: 40, screens: 10, videos: 10, gamesDiscount: 25 }).plan;
+    assert.equal(p.gamesDiscount, 25);
+    assert.equal(x.s.savePlan({ id: 'monthly', name: 'شهري', days: 30, price: 40 }).plan.gamesDiscount, 25); // يبقى لو ما انرسل
+    var sale = x.s.salePlans();
+    assert.ok(sale.some(function (s) { return s.id === 'monthly' && s.gamesDiscount === 25; }));
+    assert.ok(!sale.some(function (s) { return s.id === 'lifetime'; }));
+    var r = x.s.storeGrant('store:1:5', 7, 'monthly', 30, 1);
+    assert.equal(r.success, true);
+    assert.equal(x.s.subRow(7).plan, 'monthly');
+    assert.equal(x.db.prepare("SELECT amount, method FROM veyro_payments WHERE user_id = 7").get().amount, 30);
+    assert.equal(x.s.storeGrant('store:1:5', 7, 'monthly', 30, 1).duplicate, true);
+    assert.equal(x.db.prepare('SELECT COUNT(*) AS n FROM veyro_payments WHERE user_id = 7').get().n, 1);
+    assert.equal(x.s.storeGrant('store:2:5', 7, 'nope', 30, 2).error, 'bad_plan');
+});

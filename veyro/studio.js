@@ -3863,12 +3863,12 @@
         }
         // الاشتراك من لوحة تحكم فيرو + «عندك كود؟»
         if (vyInfo && vyInfo.sub) {
-            var sb = button('', 'ob-btn ghost vy-subline', redeemPrompt);
+            var sb = button('', 'ob-btn ghost vy-subline', function () { showGate('subscribe', true); });
             sb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>';
             var txt = subText(vyInfo.sub);
             sb.appendChild(el('span', 'lbl', txt));
             sb.setAttribute('data-tip', txt);
-            sb.title = 'عندك كود؟ اضغط هنا';
+            sb.title = 'اشترك أو جدّد، أو اكتب كود';
             sb.style.width = '100%';
             userEl.appendChild(sb);
         }
@@ -3890,10 +3890,6 @@
             renderUser();
             return true;
         }).catch(function () { toast('ما وصل الطلب — تأكد من الاتصال'); return false; });
-    }
-    function redeemPrompt() {
-        var c = window.prompt('اكتب كود الاشتراك');
-        if (c && c.trim()) redeemCode(c.trim());
     }
     /** إعلان الأدمن (من لوحة تحكم فيرو) فوق الصفحة. */
     function paintAnnounce() {
@@ -3953,7 +3949,7 @@
 
     /* ---------------- تشغيل ---------------- */
 
-    function showGate(kind) {
+    function showGate(kind, closable) {
         gbox.textContent = '';
         // يسار: هوية Veyro ومزاياها — يمين: الرسالة والأزرار
         var br = el('div', 'ob-gbrand');
@@ -3987,8 +3983,30 @@
             bb.href = '../profile.html';
             f.appendChild(bb);
         } else if (kind === 'subscribe') {
-            f.appendChild(el('h2', null, 'فعّل اشتراكك'));
-            f.appendChild(el('p', null, (vyInfo && vyInfo.sub && vyInfo.sub.state === 'expired' ? 'اشتراكك بفيرو انتهى. ' : 'أدوات فيرو للمشتركين. ') + 'عندك كود اشتراك؟ اكتبه هنا ويتفعّل على طول.'));
+            var sst = vyInfo && vyInfo.sub ? vyInfo.sub.state : 'none';
+            f.appendChild(el('h2', null, closable && vyInfo && vyInfo.sub && vyInfo.sub.active ? 'اشتراكك: ' + subText(vyInfo.sub) : 'فعّل اشتراكك'));
+            f.appendChild(el('p', null, (sst === 'expired' ? 'اشتراكك بفيرو انتهى. ' : closable ? '' : 'أدوات فيرو للمشتركين. ') + 'اشترك أو جدّد من متجر ألعاب أيمن، أو اكتب كود اشتراك.'));
+            // الخطط والسعر لهذا الحساب (مشترك الألعاب ياخذ خصم) — الدفع بمتجر الألعاب
+            var st = vyInfo && vyInfo.store;
+            if (st && st.plans && st.plans.length) {
+                var pl = el('div', 'vy-plans');
+                st.plans.forEach(function (p) {
+                    var c = el('div', 'vy-plan');
+                    c.appendChild(el('b', null, p.name));
+                    var pr = el('span', 'pr');
+                    if (p.discount) { pr.appendChild(el('s', null, String(p.price))); pr.appendChild(document.createTextNode(' ')); }
+                    pr.appendChild(el('strong', null, String(p.final)));
+                    pr.appendChild(el('small', null, ' ر.س / ' + p.days + ' يوم'));
+                    c.appendChild(pr);
+                    if (p.discount) c.appendChild(el('span', 'off', 'خصم مشتركي الألعاب ' + p.discount + '٪'));
+                    pl.appendChild(c);
+                });
+                f.appendChild(pl);
+                if (!st.gamesSubscriber && st.plans.some(function (p) { return p.price && p.discount === 0; })) f.appendChild(el('div', 'fine', 'مشتركين منصة الألعاب لهم خصم على اشتراك فيرو.'));
+                var sbtn = el('a', 'ob-btn primary lg', 'اشترك من المتجر');
+                sbtn.href = st.url || '../store.html';
+                f.appendChild(sbtn);
+            }
             var cf = el('form', 'ob-glogin');
             var ci = el('input', 'ob-input ltr');
             ci.placeholder = 'VEYRO-XXXX-XXXX'; ci.autocomplete = 'off'; ci.spellcheck = false;
@@ -4001,10 +4019,10 @@
                 e.preventDefault();
                 if (!ci.value.trim()) return;
                 cb.disabled = true;
-                redeemCode(ci.value.trim()).then(function (ok) { cb.disabled = false; if (ok && vyInfo.sub && vyInfo.sub.active) { gate.hidden = true; loadScreens(); } });
+                redeemCode(ci.value.trim()).then(function (ok) { cb.disabled = false; if (ok && vyInfo.sub && vyInfo.sub.active) { gate.hidden = true; if (!closable) loadScreens(); } });
             });
             f.appendChild(cf);
-            f.appendChild(el('p', null, 'تبي تشترك؟ تواصل مع الإدارة.'));
+            if (closable) f.appendChild(button('رجوع', 'ob-btn ghost', function () { gate.hidden = true; }));
         } else if (kind === 'streamer') {
             f.appendChild(el('h2', null, 'لحسابات الستريمر'));
             f.appendChild(el('p', null, 'أدوات Veyro لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
