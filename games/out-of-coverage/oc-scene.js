@@ -15,6 +15,11 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const Looks = window.OCLooks;
 const TAU = Math.PI * 2;
@@ -23,16 +28,28 @@ const ease = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
 const span = (u, a, b) => clamp01((u - a) / (b - a));
 const FONT = '"IBM Plex Sans Arabic", "Zain", "Segoe UI", Tahoma, sans-serif';
 const STAGE_Z = -6;          // مركز قوس المنصات
-const POD_H = 0.45, POD_H_BACK = 1.15;
+
 // منطقة الانتظار (منصات القوس) ترجع لورا، وقدّامها «منصة الدور»: كل دفعة تمشي لها وتوقف تحت الإضاءة
-const WAIT_BACK = 3.2, FRONT_Z = STAGE_Z + 11.6, FRONT_GAP = 2.8, DECK_Y = 0.3, WALK_SPEED = 6.5;
+const WAIT_BACK = 3.2, FRONT_Z = STAGE_Z + 12.2, FRONT_GAP = 2.9, WALK_SPEED = 6.5;
+// سماكات الطبقات: المسرح ← منصة الدور المرتفعة ← قاعدة كل لاعب، ودرجتين لمنطقة الانتظار
+const DECK_Y = 0.55, HOT_H = 0.3, PED_H = 0.32, FRONT_Y = DECK_Y + HOT_H + PED_H, TIER1_H = 0.7, TIER2_H = 0.95;
+// ألوان ناعمة (رمادي مائل للبنفسجي، والإضاءة لافندر هادي بدل النيون الحاد)
+const PAL = { bg: '#0d0b12', deck: '#1d1826', riser1: '#221c2b', riser2: '#1d1825', riserSide: '#15111b', hotTop: '#2e2739', led: '#b9a8f0' };
+/** خامة شريط إضاءة (تتوهّج مع الـBloom) */
+function ledMat(color, k) { return new THREE.MeshStandardMaterial({ color: '#000000', emissive: color, emissiveIntensity: k || 1, roughness: 0.4 }); }
+let RADIAL = null;
+function radialTex() {
+    if (RADIAL) return RADIAL;
+    RADIAL = canvasTex(256, 256, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    return RADIAL;
+}
 
 // ---------------------------------------------------------------- خامات وأشكال مشتركة
-const MATS = new Map();
+const MATS = new Map(), MATS_SET = new Set();
 function M(color, o) {
     const key = color + JSON.stringify(o || {});
     let m = MATS.get(key);
-    if (!m) { m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.55 }, o || {})); MATS.set(key, m); }
+    if (!m) { m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.55, envMapIntensity: 0.35 }, o || {})); MATS.set(key, m); MATS_SET.add(m); }
     return m;
 }
 function canvasTex(w, h, draw) {
@@ -238,81 +255,124 @@ export function createStage(container, getFrame) {
     const r = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     r.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(r.domElement);
 
     const scene = new THREE.Scene();
-    const BG = new THREE.Color('#0b0814');
-    scene.background = BG.clone(); scene.fog = new THREE.Fog('#0b0814', 34, 80);
-    const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 200); cam.position.set(0, 14, 34);
+    const BG = new THREE.Color(PAL.bg);
+    scene.background = BG.clone(); scene.fog = new THREE.Fog(PAL.bg, 40, 95);
+    // انعكاسات ناعمة (بيئة استوديو مولّدة بالكود، بدون صور) — تخلي الخامات تبان مصقولة
+    try { const pm = new THREE.PMREMGenerator(r); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); } catch (e) { }
+    const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 220); cam.position.set(0, 14, 34);
     const camLook = new THREE.Vector3(0, 2, -2);
 
-    // الإضاءة: سماء/أرض + ضوء رئيسي بظل + ضوء حافة ملوّن + بقعة تتبع صاحب اللحظة
-    const hemi = new THREE.HemisphereLight('#d9ccff', '#1a1030', 0.9); scene.add(hemi);
-    const key = new THREE.DirectionalLight('#fff1e6', 1.6); key.position.set(-8, 18, 14); key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -16, right: 16, top: 14, bottom: -10, near: 1, far: 60 }); scene.add(key);
-    const rim = new THREE.DirectionalLight(accent, 1.2); rim.position.set(6, 8, -16); scene.add(rim);
-    const spot = new THREE.SpotLight('#fff3d6', 0, 30, 0.32, 0.5, 1.2); spot.position.set(0, 16, 2); scene.add(spot); scene.add(spot.target);
+    // ---- الإضاءة: محيطة خافتة + رئيسي دافي بظل + حافة باردة من ورا + «غسيل» لمنطقة الانتظار
+    // + بقعة متابعة للحظات الكبيرة. منصة الدور لها بقع خاصة فيها (تحت).
+    const hemi = new THREE.HemisphereLight('#c9c0e6', '#120e19', 0.55); scene.add(hemi);
+    const key = new THREE.DirectionalLight('#ffe9d2', 1.3); key.position.set(-9, 20, 18); key.target.position.set(0, 0, STAGE_Z + 2); scene.add(key.target);
+    key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0005;
+    Object.assign(key.shadow.camera, { left: -22, right: 22, top: 22, bottom: -16, near: 1, far: 70 }); scene.add(key);
+    const rim = new THREE.DirectionalLight('#9fb0ff', 0.9); rim.position.set(6, 10, -30); scene.add(rim);
+    const wash = new THREE.SpotLight('#e4dcff', 18, 80, 0.8, 1, 0.9); wash.position.set(0, 22, STAGE_Z + 20); wash.target.position.set(0, 1, STAGE_Z - WAIT_BACK + 3); scene.add(wash); scene.add(wash.target);
+    const spot = new THREE.SpotLight('#fff1dc', 0, 34, 0.3, 0.55, 1.2); spot.position.set(0, 16, 2); scene.add(spot); scene.add(spot.target);
 
-    // الأرضية والمنصة
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 48), new THREE.MeshStandardMaterial({ roughness: 0.9, map: canvasTex(512, 512, (g, w, h) => {
-        const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w / 2); gr.addColorStop(0, '#2a1d4a'); gr.addColorStop(0.5, '#140e24'); gr.addColorStop(1, '#0b0814'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    // ---- الأرضية: لامعة داكنة بتدرّج ناعم
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(80, 64), new THREE.MeshStandardMaterial({ roughness: 0.38, metalness: 0.15, envMapIntensity: 0.25, map: canvasTex(512, 512, (g, w, h) => {
+        const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w / 2); gr.addColorStop(0, '#221b2d'); gr.addColorStop(0.45, '#15111c'); gr.addColorStop(1, PAL.bg); g.fillStyle = gr; g.fillRect(0, 0, w, h);
     }) }));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-    const deck = new THREE.Mesh(new THREE.CylinderGeometry(15, 15.4, 0.3, 72), new THREE.MeshStandardMaterial({ color: '#17122a', roughness: 0.32, metalness: 0.25, map: canvasTex(1024, 1024, (g, w, h) => {
-        g.fillStyle = '#17122a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(167,139,250,.13)'; g.lineWidth = 2;
-        for (let i = 1; i < 9; i++) { g.beginPath(); g.arc(w / 2, h / 2, i * w / 18, 0, TAU); g.stroke(); }
-        for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; g.beginPath(); g.moveTo(w / 2, h / 2); g.lineTo(w / 2 + Math.cos(a) * w / 2, h / 2 + Math.sin(a) * h / 2); g.stroke(); }
-    }) }));
-    deck.position.set(0, 0.15, STAGE_Z); deck.receiveShadow = true; scene.add(deck);
-    const neon = new THREE.Mesh(new THREE.TorusGeometry(15.25, 0.09, 8, 120), new THREE.MeshBasicMaterial({ color: accent }));
-    neon.rotation.x = Math.PI / 2; neon.position.set(0, 0.32, STAGE_Z); scene.add(neon);
-    const neon2 = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.06, 6, 80), new THREE.MeshBasicMaterial({ color: '#c4b5fd', transparent: true, opacity: 0.6 }));
-    neon2.rotation.x = Math.PI / 2; neon2.position.set(0, 0.31, STAGE_Z + 6.5); scene.add(neon2);
 
-    // شاشة LED الخلفية: عنوان اللعبة والمرحلة
+    // ---- المسرح الرئيسي: قرص سميك بحافة مشطوفة، وشريط إضاءة غائر حوله
+    const deckProfile = [[0, 0], [16.2, 0], [16.6, 0.12], [16.6, DECK_Y - 0.14], [16.35, DECK_Y], [0, DECK_Y]].map((q) => new THREE.Vector2(q[0], q[1]));
+    const deck = new THREE.Mesh(new THREE.LatheGeometry(deckProfile, 96), new THREE.MeshStandardMaterial({ color: PAL.deck, roughness: 0.3, metalness: 0.25, envMapIntensity: 0.35, map: canvasTex(1024, 1024, (g, w, h) => {
+        g.fillStyle = PAL.deck; g.fillRect(0, 0, w, h);
+        // ألواح دائرية ناعمة بدل الخطوط الحادة
+        for (let i = 9; i > 0; i--) { g.beginPath(); g.arc(w / 2, h / 2, i * w / 19, 0, TAU); g.fillStyle = i % 2 ? '#1f1a29' : '#1b1624'; g.fill(); }
+    }) }));
+    deck.position.set(0, 0, STAGE_Z); deck.castShadow = false; deck.receiveShadow = true; scene.add(deck);
+    const deckLed = new THREE.Mesh(new THREE.CylinderGeometry(16.63, 16.63, 0.12, 96, 1, true), ledMat(PAL.led, 1.4));
+    deckLed.position.set(0, DECK_Y * 0.5, STAGE_Z); scene.add(deckLed);
+    const strips = [deckLed];   // كل شرائط الإضاءة (تتلوّن بالأحمر وقت التصويت والكشف)
+
+    // ---- منطقة الانتظار: درجتين سميكة على شكل قوس ورا المسرح (مدرّج)
+    const GC = STAGE_Z - WAIT_BACK, SPAN = 1.42;
+    function tier(r0, r1, y0, h, col) {
+        const sh = new THREE.Shape(), N = 48;
+        for (let i = 0; i <= N; i++) { const a = -SPAN + (2 * SPAN) * i / N; const x = Math.sin(a) * r1, z = Math.cos(a) * r1; i ? sh.lineTo(x, -z) : sh.moveTo(x, -z); }
+        for (let i = N; i >= 0; i--) { const a = -SPAN + (2 * SPAN) * i / N; sh.lineTo(Math.sin(a) * r0, -Math.cos(a) * r0); }
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: h - 0.08, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3, curveSegments: 4 });
+        geo.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(geo, [new THREE.MeshStandardMaterial({ color: col, roughness: 0.42, metalness: 0.2, envMapIntensity: 0.3 }), new THREE.MeshStandardMaterial({ color: PAL.riserSide, roughness: 0.6, metalness: 0.15, envMapIntensity: 0.2 })]);
+        m.position.set(0, y0 + 0.08, GC); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+        // شريط إضاءة على حافة الدرجة الأمامية
+        const led = new THREE.Mesh(new THREE.CylinderGeometry(r0 - 0.11, r0 - 0.11, 0.1, 64, 1, true, -SPAN, SPAN * 2), ledMat(PAL.led, 1.1));
+        led.position.set(0, y0 + h - 0.24, GC); scene.add(led); strips.push(led);
+    }
+    tier(8.3, 11.8, DECK_Y, TIER1_H, PAL.riser1);
+    tier(11.8, 15.4, DECK_Y, TIER1_H + TIER2_H, PAL.riser2);
+
+    // ---- منصة الدور: مسرح مرتفع قدّام، مستطيل بحواف دائرية
+    const HOT_W = 15.5, HOT_D = 4.8;
+    {
+        const sh = new THREE.Shape(), w = HOT_W / 2, d = HOT_D / 2, rr = 1.6;
+        sh.moveTo(-w + rr, -d); sh.lineTo(w - rr, -d); sh.quadraticCurveTo(w, -d, w, -d + rr); sh.lineTo(w, d - rr); sh.quadraticCurveTo(w, d, w - rr, d);
+        sh.lineTo(-w + rr, d); sh.quadraticCurveTo(-w, d, -w, d - rr); sh.lineTo(-w, -d + rr); sh.quadraticCurveTo(-w, -d, -w + rr, -d);
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: HOT_H - 0.06, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 3, curveSegments: 10 });
+        geo.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(geo, [new THREE.MeshStandardMaterial({ color: PAL.hotTop, roughness: 0.28, metalness: 0.3, envMapIntensity: 0.4 }), new THREE.MeshStandardMaterial({ color: PAL.riserSide, roughness: 0.5, metalness: 0.2 })]);
+        m.position.set(0, DECK_Y + 0.06, FRONT_Z); m.receiveShadow = true; m.castShadow = true; scene.add(m);
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(HOT_W - 2.4, 0.08, 0.06), ledMat(PAL.led, 1.2));
+        edge.position.set(0, DECK_Y + HOT_H * 0.5, FRONT_Z + HOT_D / 2 + 0.07); scene.add(edge); strips.push(edge);
+    }
+
+    // ---- خلفية الاستيج: جدار، شاشة LED بإطار سميك، وأعمدة ضوء على الجانبين
+    const SET_Z = GC - 18;
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(90, 34), new THREE.MeshStandardMaterial({ color: '#100d16', roughness: 0.85, map: canvasTex(512, 256, (g, w, h) => {
+        g.fillStyle = '#100d16'; g.fillRect(0, 0, w, h); g.fillStyle = '#16121e';
+        for (let x = 0; x < w; x += 32) g.fillRect(x + 2, 0, 28, h);   // ألواح عمودية
+    }) }));
+    wall.position.set(0, 14, SET_Z - 1.2); scene.add(wall);
     const ledC = document.createElement('canvas'); ledC.width = 1536; ledC.height = 480;
-    const ledTex = new THREE.CanvasTexture(ledC); ledTex.colorSpace = THREE.SRGBColorSpace;
-    ledTex.wrapS = THREE.RepeatWrapping; ledTex.repeat.x = -1;   // نشوف الوجه الداخلي، فنقلب النص عشان ينقرا صح
-    const led = new THREE.Mesh(new THREE.CylinderGeometry(24, 24, 9, 64, 1, true, Math.PI - 0.62, 1.24), new THREE.MeshBasicMaterial({ map: ledTex, side: THREE.BackSide, toneMapped: false }));
-    led.position.set(0, 5.6, STAGE_Z + 2); scene.add(led);
-    const ledFrame = new THREE.Mesh(new THREE.CylinderGeometry(24.15, 24.15, 9.3, 64, 1, true, Math.PI - 0.64, 1.28), new THREE.MeshStandardMaterial({ color: '#0e0a18', side: THREE.BackSide, roughness: 0.6 }));
-    ledFrame.position.copy(led.position); scene.add(ledFrame);
+    const ledTex = new THREE.CanvasTexture(ledC); ledTex.colorSpace = THREE.SRGBColorSpace; ledTex.anisotropy = 4;
+    const SCR_W = 25, SCR_H = SCR_W * 480 / 1536;
+    const bezel = new THREE.Mesh(new THREE.BoxGeometry(SCR_W + 1.0, SCR_H + 1.0, 0.9), new THREE.MeshStandardMaterial({ color: '#0c0a11', roughness: 0.35, metalness: 0.6, envMapIntensity: 0.5 }));
+    bezel.position.set(0, 7.6, SET_Z); scene.add(bezel);
+    const led = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), new THREE.MeshBasicMaterial({ map: ledTex, toneMapped: false }));
+    led.position.set(0, 7.6, SET_Z + 0.46); scene.add(led);
+    const pillars = [];
+    [-1, 1].forEach((sd) => [17, 22].forEach((x, i) => {
+        const pl = new THREE.Group(); pl.position.set(sd * x, 0, SET_Z + 2 + i * 2.5); pl.rotation.y = -sd * 0.35; scene.add(pl);
+        add(pl, new THREE.BoxGeometry(1.6, 13 - i * 2, 1.6), new THREE.MeshStandardMaterial({ color: '#141019', roughness: 0.4, metalness: 0.5, envMapIntensity: 0.4 }), 0, (13 - i * 2) / 2, 0);
+        const st = new THREE.Mesh(new THREE.BoxGeometry(0.34, 11.6 - i * 2, 0.1), ledMat(PAL.led, 1.3)); st.position.set(0, (13 - i * 2) / 2, 0.82); pl.add(st); strips.push(st);
+        pillars.push(pl);
+    }));
+    // جسر إضاءة سميك فوق منصة الدور بكشافات
+    const trussMat = new THREE.MeshStandardMaterial({ color: '#211b2b', roughness: 0.35, metalness: 0.7, envMapIntensity: 0.5 });
+    add(scene, new THREE.BoxGeometry(22, 0.55, 0.55), trussMat, 0, 12.5, FRONT_Z - 0.5);
+    add(scene, new THREE.BoxGeometry(30, 0.55, 0.55), trussMat, 0, 14, GC - 4);
+
     let ledKey = '';
     function drawLed(title, sub, tone) {
         const k = title + '|' + sub + '|' + tone + '|' + FONTS_OK; if (k === ledKey) return; ledKey = k;
         const g = ledC.getContext('2d'), W = ledC.width, H = ledC.height;
-        const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, tone === 'red' ? '#2a0b14' : '#1a0f33'); gr.addColorStop(1, '#07050d'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-        g.fillStyle = 'rgba(255,255,255,.05)'; for (let y = 0; y < H; y += 6) g.fillRect(0, y, W, 2);
-        // أيقونة إشارة التغطية (خطوط متدرّجة) — الأخيرة مقطوعة
-        const bx = W / 2 - 60, by = 150;
-        for (let i = 0; i < 4; i++) { g.fillStyle = i === 3 ? 'rgba(255,255,255,.18)' : (tone === 'red' ? '#f87171' : accent); roundRect(g, bx + i * 32, by - 26 - i * 22, 22, 26 + i * 22, 5); g.fill(); }
-        g.strokeStyle = '#f87171'; g.lineWidth = 9; g.beginPath(); g.moveTo(bx + 92, by - 100); g.lineTo(bx + 140, by - 52); g.moveTo(bx + 140, by - 100); g.lineTo(bx + 92, by - 52); g.stroke();
+        const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, tone === 'red' ? '#2b1018' : '#1f1830'); gr.addColorStop(1, tone === 'red' ? '#120609' : '#0d0a15'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+        // شبكة نقاط LED ناعمة
+        g.fillStyle = 'rgba(255,255,255,.035)'; for (let y = 3; y < H; y += 8) for (let x = 3; x < W; x += 8) g.fillRect(x, y, 3, 3);
+        const bx = W / 2 - 60, by = 150, soft = tone === 'red' ? '#f39a9a' : '#c9bbf5';
+        for (let i = 0; i < 4; i++) { g.fillStyle = i === 3 ? 'rgba(255,255,255,.14)' : soft; roundRect(g, bx + i * 32, by - 26 - i * 22, 22, 26 + i * 22, 6); g.fill(); }
+        g.strokeStyle = '#f2a0a0'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(bx + 94, by - 98); g.lineTo(bx + 138, by - 54); g.moveTo(bx + 138, by - 98); g.lineTo(bx + 94, by - 54); g.stroke();
         g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.font = '800 120px ' + FONT; g.fillStyle = '#f4f2f8'; g.shadowColor = tone === 'red' ? '#ef4444' : accent; g.shadowBlur = 30;
+        g.font = '800 116px ' + FONT; g.fillStyle = '#f6f3fb'; g.shadowColor = tone === 'red' ? 'rgba(239,68,68,.6)' : 'rgba(183,166,238,.6)'; g.shadowBlur = 26;
         g.fillText(title, W / 2, 262);
-        g.shadowBlur = 0; g.font = '600 56px ' + FONT; g.fillStyle = '#c4b5fd'; g.fillText(sub || '', W / 2, 372);
+        g.shadowBlur = 0; g.font = '600 54px ' + FONT; g.fillStyle = tone === 'red' ? '#f3c4c4' : '#d6ccf5'; g.fillText(sub || '', W / 2, 372);
         ledTex.needsUpdate = true;
     }
 
-    // جسور الإضاءة وحزم الضوء (مخاريط شفافة تتمايل، وبالكشف تتجه لصاحب الأصوات)
-    const truss = new THREE.Mesh(new THREE.BoxGeometry(30, 0.4, 0.4), M('#2a2340', { metalness: 0.6, roughness: 0.4 }));
-    truss.position.set(0, 13, -2); scene.add(truss);
-    const beams = [];
-    const beamGeo = new THREE.ConeGeometry(1.6, 13, 24, 1, true); beamGeo.translate(0, -6.5, 0);
-    [-11, -4, 4, 11].forEach((x, i) => {
-        const piv = new THREE.Group(); piv.position.set(x, 13, -2); scene.add(piv);
-        const b = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? '#c4b5fd' : accent, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-        piv.add(b);
-        add(piv, new THREE.CylinderGeometry(0.35, 0.45, 0.7, 12), M('#1f1a30', { metalness: 0.7 }), 0, -0.3, 0);
-        beams.push({ piv, b, ph: i * 1.7, x });
-    });
-
-    // قصاصات الاحتفال (مجمّعة بأمر رسم واحد)
+    // ---- قصاصات الاحتفال (مجمّعة بأمر رسم واحد)
     const CONF_N = 160, conf = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.16, 0.26), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false }), CONF_N);
     conf.visible = false; scene.add(conf);
-    const confP = []; const confCols = [accent, '#fbbf24', '#f472b6', '#34d399', '#60a5fa', '#ffffff'];
+    const confP = []; const confCols = ['#c4b5fd', '#f5d48a', '#f3a6c8', '#8fe0bd', '#9cc2f5', '#ffffff'];
     for (let i = 0; i < CONF_N; i++) { conf.setColorAt(i, new THREE.Color(confCols[i % confCols.length])); confP.push({ p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Euler(), w: new THREE.Vector3() }); }
     let confT = -1;
     function burst(center) {
@@ -320,41 +380,57 @@ export function createStage(container, getFrame) {
         confP.forEach((c) => { c.p.set(center.x + (Math.random() - 0.5) * 8, 13 + Math.random() * 3, center.z + (Math.random() - 0.5) * 5); c.v.set((Math.random() - 0.5) * 2, -2 - Math.random() * 2.5, (Math.random() - 0.5) * 2); c.w.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); });
     }
 
-    // ---------------------------------------------------------------- منصة الدور: بقعة ضوء لكل لاعب بالدفعة
+    // ---------------------------------------------------------------- منصة الدور: قاعدة تطلع من الأرض + كشاف حقيقي لكل لاعب
     const hot = [];
-    const hotBeamGeo = new THREE.ConeGeometry(1.25, 11, 28, 1, true); hotBeamGeo.translate(0, -5.5, 0);
+    const hotBeamGeo = new THREE.ConeGeometry(1.35, 11.2, 32, 1, true); hotBeamGeo.translate(0, -5.6, 0);
+    const pedGeo = new THREE.LatheGeometry([[0, 0], [1.05, 0], [1.12, 0.06], [1.12, PED_H - 0.06], [1.05, PED_H], [0, PED_H]].map((q) => new THREE.Vector2(q[0], q[1])), 48);
     for (let i = 0; i < 5; i++) {
         const g = new THREE.Group(); g.visible = false; scene.add(g);
-        const disc = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: '#fff3d6', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-        disc.rotation.x = -Math.PI / 2; disc.position.y = DECK_Y + 0.02; g.add(disc);
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.05, 6, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, toneMapped: false }));
-        ring.rotation.x = Math.PI / 2; ring.position.y = DECK_Y + 0.03; g.add(ring);
-        const beam = new THREE.Mesh(hotBeamGeo, new THREE.MeshBasicMaterial({ color: '#fff3d6', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-        beam.position.y = 11 + DECK_Y; g.add(beam);
-        hot.push({ g, disc, ring, beam, a: 0 });
+        const ped = new THREE.Mesh(pedGeo, new THREE.MeshStandardMaterial({ color: '#2a2335', roughness: 0.25, metalness: 0.45, envMapIntensity: 0.6 }));
+        ped.castShadow = ped.receiveShadow = true; g.add(ped);
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(1.125, 1.125, 0.09, 48, 1, true), ledMat(PAL.led, 1.6)); band.position.y = PED_H * 0.55; ped.add(band);
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(1.9, 48), new THREE.MeshBasicMaterial({ color: '#ffe7c4', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radialTex() }));
+        disc.rotation.x = -Math.PI / 2; disc.position.y = 0.012; g.add(disc);
+        const beam = new THREE.Mesh(hotBeamGeo, new THREE.MeshBasicMaterial({ color: '#ffe9cc', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+        beam.position.y = 11.6; g.add(beam);
+        const can = add(g, new THREE.CylinderGeometry(0.42, 0.55, 0.9, 16), trussMat, 0, 12.1, 0);
+        const sl = new THREE.SpotLight('#ffe6c8', 0, 22, 0.36, 0.55, 1.3); sl.position.set(0, 11.6, 0.8); g.add(sl); sl.target.position.set(0, 0, 0); g.add(sl.target);
+        hot.push({ g, ped, band, disc, beam, can, sl, a: 0 });
     }
-    /** مكان اللاعب رقم i من n بمنصة الدور (الأول يمين الشاشة مثل القراءة بالعربي) */
-    function frontSlot(i, n, out) { return out.set(((n - 1) / 2 - i) * FRONT_GAP, DECK_Y, FRONT_Z); }
+    /** مكان اللاعب رقم i من n بمنصة الدور (الأول يمين الشاشة مثل القراءة بالعربي) — فوق القاعدة */
+    function frontSlot(i, n, out) { return out.set(((n - 1) / 2 - i) * FRONT_GAP, FRONT_Y, FRONT_Z); }
+
+    // ---- توهّج ناعم للإضاءة (Bloom) — ينطفي بالوضع الخفيف
+    let composer = null;
+    try {
+        composer = new EffectComposer(r);
+        composer.addPass(new RenderPass(scene, cam));
+        composer.addPass(new UnrealBloomPass(new THREE.Vector2(512, 288), 0.42, 0.55, 0.86));
+        composer.addPass(new OutputPass());
+    } catch (e) { composer = null; }
 
     // ---------------------------------------------------------------- اللاعبين
     const figs = new Map();
+    const PUCK_H = 0.16, TIER_TOP1 = DECK_Y + TIER1_H + PUCK_H, TIER_TOP2 = DECK_Y + TIER1_H + TIER2_H + PUCK_H;
+    const PUCK_GEO = new THREE.LatheGeometry([[0, 0], [0.86, 0], [0.92, 0.05], [0.92, PUCK_H - 0.04], [0.86, PUCK_H], [0, PUCK_H]].map((q) => new THREE.Vector2(q[0], q[1])), 40);
+    const PUCK_BAND = new THREE.CylinderGeometry(0.925, 0.925, 0.05, 40, 1, true);
     function makeFig(p) {
         const root = new THREE.Group();
-        const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 1.08, 1, 28), M('#221b38', { roughness: 0.35, metalness: 0.3 }));
+        const pod = new THREE.Mesh(PUCK_GEO, new THREE.MeshStandardMaterial({ color: '#332b40', roughness: 0.3, metalness: 0.4, envMapIntensity: 0.5 }));
         pod.castShadow = pod.receiveShadow = true; root.add(pod);
-        const ringMat = new THREE.MeshBasicMaterial({ color: accent, toneMapped: false });
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.05, 6, 40), ringMat); ring.rotation.x = Math.PI / 2; root.add(ring);
-        const glow = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+        const ringMat = ledMat(PAL.led, 1.2);
+        const ring = new THREE.Mesh(PUCK_BAND, ringMat); root.add(ring);
+        const glow = new THREE.Mesh(new THREE.CircleGeometry(1.6, 40), new THREE.MeshBasicMaterial({ color: PAL.led, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, map: radialTex() }));
         glow.rotation.x = -Math.PI / 2; root.add(glow);
         const ch = buildFigure(p.look); root.add(ch);
         const name = sprite(512, 96, 0.62, 10); root.add(name);
         const badge = sprite(128, 128, 0.62, 12); badge.visible = false; root.add(badge);
         scene.add(root);
-        return { root, pod, ring, ringMat, glow, ch, name, badge, look: p.look, home: new THREE.Vector3(), podH: POD_H, faceY: 0, born: performance.now(), hop: -1, ph: Math.random() * 6, scale: 0.001, flash: 0, lastSent: false };
+        return { root, pod, ring, ringMat, glow, ch, name, badge, look: p.look, home: new THREE.Vector3(), podH: TIER_TOP1, faceY: 0, born: performance.now(), hop: -1, ph: Math.random() * 6, scale: 0.001, flash: 0, lastSent: false };
     }
     function dropFig(f) {
         scene.remove(f.root);
-        f.root.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } else if (o.isMesh && o.geometry) { o.geometry.dispose(); if (!o.material.isMeshStandardMaterial) o.material.dispose(); } });
+        f.root.traverse((o) => { if (o.isSprite) { o.material.map.dispose(); o.material.dispose(); } else if (o.isMesh && o.geometry && o.geometry !== PUCK_GEO && o.geometry !== PUCK_BAND) { o.geometry.dispose(); if (!MATS_SET.has(o.material)) o.material.dispose(); } });
     }
 
     /** أماكن المنصات: قوس واحد لين 8 لاعبين، وفوقها صفين (الخلفي أعلى). */
@@ -367,8 +443,8 @@ export function createStage(container, getFrame) {
                 out.push({ pos: new THREE.Vector3(Math.sin(a) * R, 0, STAGE_Z - WAIT_BACK + Math.cos(a) * R), rot: a * 0.75, h });
             }
         };
-        row(front, 9.5 + Math.max(0, front - 6) * 0.35, POD_H);
-        if (back) row(back, 13.2, POD_H_BACK, back === front);   // الخلفي (أعلى) بين فراغات الأمامي عشان ما ينحجب
+        row(front, 9.6 + Math.max(0, front - 6) * 0.3, TIER_TOP1);
+        if (back) row(back, 13.5, TIER_TOP2, back === front);   // الخلفي (أعلى) بين فراغات الأمامي عشان ما ينحجب
         return out;
     }
 
@@ -389,7 +465,7 @@ export function createStage(container, getFrame) {
             if (!f) { f = makeFig(p); figs.set(p.id, f); }
             const L = lay[Math.min(p.seat, lay.length - 1)] || lay[0];
             f.home.copy(L.pos); f.root.rotation.y = L.rot; f.podH = L.h; f.p = p;
-            f.pod.scale.y = L.h; f.pod.position.y = L.h / 2; f.ring.position.y = L.h + 0.01; f.glow.position.y = L.h + 0.02;
+            f.pod.position.y = L.h - PUCK_H; f.ring.position.y = L.h - PUCK_H * 0.45; f.glow.position.y = L.h - PUCK_H - 0.0 + 0.012;
             if (!f.placed) { f.ch.position.set(0, L.h, 0); f.baseY = L.h; }
             if (layoutN !== n || !f.placed) { f.root.position.copy(f.home); f.placed = true; }
         });
@@ -410,7 +486,7 @@ export function createStage(container, getFrame) {
     const clock = new THREE.Clock();
     const P = new THREE.Vector3(), Lk = new THREE.Vector3(), tmpV = new THREE.Vector3();
     const vo = { x: 0, y: 0 }; let occl = false;
-    const mood = { hemi: 0.9, key: 1.6, rim: 1.2, spot: 0, fog: new THREE.Color('#0b0814'), red: 0 };
+    const mood = { hemi: 0.55, key: 1.3, rim: 0.9, wash: 1, spot: 0, red: 0 };
     let raf = 0, last = -1e9, lite = false, pf = { n: 0, s: 0, w: 0 };
     const mob = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -445,39 +521,28 @@ export function createStage(container, getFrame) {
         else if (k === 'guess' || k === 'guessed') drawLed('التخمين الأخير', 'فرصة أخيرة للفوز', 'red');
         else if (k === 'over') drawLed(res && res.winner === 'in' ? 'انكشف!' : res && res.winner === 'out' ? 'خارج التغطية فاز' : 'انتهت', G.words ? 'الكلمة: ' + G.words.word : '', '');
 
-        // ---- الإضاءة حسب المرحلة
-        let tHemi = 0.9, tKey = 1.6, tRim = 1.2, tSpot = 0, tRed = 0; focus = null;
-        if (!G || k === 'intro') { tHemi = 0.75 + (k === 'intro' ? ease(span(u, 0, 0.5)) * 0.2 : 0.15); }
-        if (k === 'deal') { const d = Math.sin(Math.PI * clamp01(u)); tHemi = 0.9 - d * 0.55; tKey = 1.6 - d * 1.1; }
-        if (k === 'write' || k === 'show') { tSpot = batchIds.length ? 1.2 : 0; }
-        if (k === 'vote' || k === 'runoff') { tHemi = 0.55; tKey = 0.95; tRed = 1; }
-        if (k === 'reveal') { const dimK = ease(span(u, 0, 0.25)); tHemi = 0.9 - dimK * 0.6; tKey = 1.6 - dimK * 1.25; tRed = 0.5; if (accused && u > 0.62) { focus = accused; tSpot = 3.2; } }
-        if (k === 'unmask' || k === 'guess' || k === 'guessed') { tHemi = 0.4; tKey = 0.5; focus = accused; tSpot = 3.4; tRed = G.accusedOut ? 1 : 0; }
-        if (k === 'over') { tHemi = 1; tKey = 1.7; tSpot = winners.length ? 2.2 : 0; }
+        // ---- الإضاءة حسب المرحلة: وقت الدور منطقة الانتظار خافتة والضوء كله على منصة الدور
+        let tHemi = 0.55, tKey = 1.3, tRim = 0.9, tWash = 1, tSpot = 0, tRed = 0; focus = null;
+        if (!G || k === 'intro') { tWash = 1.1; }
+        if (k === 'deal') { const d = Math.sin(Math.PI * clamp01(u)); tHemi = 0.55 - d * 0.35; tKey = 1.3 - d * 0.9; tWash = 1 - d * 0.7; }
+        if (k === 'write' || k === 'show') { tHemi = 0.2; tKey = 0.38; tWash = 0.16; tRim = 0.55; }
+        if (k === 'vote' || k === 'runoff') { tHemi = 0.38; tKey = 0.85; tWash = 0.8; tRed = 1; }
+        if (k === 'reveal') { const dimK = ease(span(u, 0, 0.25)); tHemi = 0.55 - dimK * 0.35; tKey = 1.3 - dimK * 1.0; tWash = 1 - dimK * 0.75; tRed = 0.5; if (accused && u > 0.62) { focus = accused; tSpot = 3.2; } }
+        if (k === 'unmask' || k === 'guess' || k === 'guessed') { tHemi = 0.2; tKey = 0.32; tWash = 0.2; focus = accused; tSpot = 3.4; tRed = G.accusedOut ? 1 : 0; }
+        if (k === 'over') { tHemi = 0.65; tKey = 1.4; tWash = 1.1; tSpot = winners.length ? 2.2 : 0; }
         const km = 1 - Math.exp(-dt * 3);
-        mood.hemi += (tHemi - mood.hemi) * km; mood.key += (tKey - mood.key) * km; mood.rim += (tRim - mood.rim) * km; mood.spot += (tSpot - mood.spot) * km; mood.red += (tRed - mood.red) * km;
-        hemi.intensity = mood.hemi; key.intensity = mood.key; rim.intensity = mood.rim; spot.intensity = mood.spot * 40;
-        rim.color.set(accent).lerp(tmpColor.set('#ef4444'), mood.red);
-        neon.material.color.set(accent).lerp(tmpColor.set('#ef4444'), mood.red);
-        scene.background.copy(BG).lerp(tmpColor.set('#1a0710'), mood.red * 0.6); scene.fog.color.copy(scene.background);
+        mood.hemi += (tHemi - mood.hemi) * km; mood.key += (tKey - mood.key) * km; mood.rim += (tRim - mood.rim) * km; mood.spot += (tSpot - mood.spot) * km; mood.red += (tRed - mood.red) * km; mood.wash += (tWash - mood.wash) * km;
+        hemi.intensity = mood.hemi; key.intensity = mood.key; rim.intensity = mood.rim; spot.intensity = mood.spot * 40; wash.intensity = mood.wash * 18;
+        rim.color.set('#9fb0ff').lerp(tmpColor.set('#ff7a7a'), mood.red * 0.8);
+        tmpColor.set(PAL.led).lerp(tmpC2.set('#f08a8a'), mood.red);
+        strips.forEach((m) => { m.material.emissive.copy(tmpColor); m.material.emissiveIntensity = (m.userData.k || (m.userData.k = m.material.emissiveIntensity)) * (0.55 + 0.45 * Math.min(1, mood.hemi / 0.55)); });
+        scene.background.copy(BG).lerp(tmpC2.set('#1c0b12'), mood.red * 0.5); scene.fog.color.copy(scene.background);
 
-        // البقعة: على صاحب اللحظة، أو على مركز الدفعة
+        // البقعة: على صاحب اللحظة، أو على الفائزين
         let spotTarget = null;
-        if (focus && figs.get(focus)) spotTarget = figs.get(focus).root.position;
+        if (focus && figs.get(focus)) { figs.get(focus).ch.getWorldPosition(tmpV); spotTarget = tmpV.clone(); }
         else if (k === 'over' && winners.length) { const c = centroid(winners); if (c) spotTarget = c.c; }
-        else if (batchIds.length) { const c = centroid(batchIds); if (c) spotTarget = c.c; }
-        if (spotTarget) { spot.target.position.lerp(tmpV.set(spotTarget.x, 0, spotTarget.z), km * 2); spot.position.set(spot.target.position.x * 0.6, 16, spot.target.position.z + 6); }
-
-        // حزم الضوء: تتمايل بهدوء، وتتجه للمكشوف/الفائز
-        const beamAim = spotTarget && (focus || k === 'over') ? spotTarget : null;
-        beams.forEach((B) => {
-            let rx = Math.sin(t * 0.35 + B.ph) * 0.25, rz = Math.cos(t * 0.27 + B.ph) * 0.3;
-            if (beamAim) { const dx = beamAim.x - B.x, dz = beamAim.z - (-2), dy = 13; rz = Math.atan2(dx, dy); rx = -Math.atan2(dz, dy); }
-            if (mob) { rx *= 0.3; rz *= 0.3; }
-            B.piv.rotation.x += (rx - B.piv.rotation.x) * km; B.piv.rotation.z += (rz - B.piv.rotation.z) * km;
-            B.b.material.opacity = 0.05 + (beamAim ? 0.07 : 0) + mood.red * 0.02;
-            B.b.material.color.set(mood.red > 0.5 ? '#f87171' : (B.ph > 2 ? '#c4b5fd' : accent));
-        });
+        if (spotTarget) { spot.target.position.lerp(tmpV.set(spotTarget.x, 0, spotTarget.z), km * 2); spot.position.set(spot.target.position.x * 0.6, 17, spot.target.position.z + 7); }
 
         // ---- الشخصيات
         let seatNo = 0;
@@ -540,19 +605,20 @@ export function createStage(container, getFrame) {
             f.badge.position.copy(f.ch.position); f.badge.position.y += 4.05;
         });
 
-        // بقع منصة الدور: تضوي بأماكن الدفعة الحالية (أخضر خفيف للي أرسل)
+        // منصة الدور: القواعد تطلع من الأرض بأماكن الدفعة، وفوق كل وحدة كشاف حقيقي (يخضرّ شريطها لما يرسل)
         const hotOn = (k === 'write' || k === 'show') ? batchIds.length : 0;
         hot.forEach((H, i) => {
             const on = i < hotOn;
-            H.a += ((on ? 1 : 0) - H.a) * (1 - Math.exp(-dt * 4));
+            H.a += ((on ? 1 : 0) - H.a) * (1 - Math.exp(-dt * 3.5));
             H.g.visible = H.a > 0.01;
-            if (!H.g.visible) return;
-            if (on) { frontSlot(i, hotOn, tmpW); H.g.position.set(tmpW.x, 0, tmpW.z); }
+            if (!H.g.visible) { H.sl.intensity = 0; return; }
+            if (on) { frontSlot(i, hotOn, tmpW); H.g.position.set(tmpW.x, DECK_Y + HOT_H, tmpW.z); }
             const gp = on ? pById[batchIds[i]] || {} : {}, sent = k === 'write' ? gp.sent : !!gp.hint;
-            H.ring.material.color.set(sent ? '#22c55e' : accent);
-            H.disc.material.opacity = H.a * (0.28 + Math.sin(t * 3 + i) * 0.04);
-            H.ring.material.opacity = H.a * 0.9;
-            H.beam.material.opacity = H.a * 0.1;
+            H.ped.position.y = -PED_H * (1 - ease(H.a));
+            H.band.material.emissive.set(sent ? '#7ee2a8' : PAL.led);
+            H.disc.material.opacity = H.a * 0.55;
+            H.beam.material.opacity = H.a * 0.07;
+            H.sl.intensity = H.a * 70;
         });
 
         // ---- القصاصات
@@ -590,9 +656,9 @@ export function createStage(container, getFrame) {
             f.ch.visible = !hide; if (hide) { f.name.visible = false; f.badge.visible = false; }
         }
 
-        r.render(scene, cam);
+        if (composer && !lite) composer.render(); else r.render(scene, cam);
     }
-    const tmpColor = new THREE.Color();
+    const tmpColor = new THREE.Color(), tmpC2 = new THREE.Color();
 
     /** يحدد مكان الكاميرا (P) ونقطة النظر (Lk) لكل مرحلة — الحركة نفسها ناعمة (lerp) بمعدل ثابت. */
     function direct(k, u, el, G, batchIds, accused, winners) {
@@ -611,7 +677,7 @@ export function createStage(container, getFrame) {
         if ((k === 'write' || k === 'show') && batchIds.length) {
             // متوسطة على لاعبين الدفعة، وزاوية مختلفة لكل دفعة (يمين · يسار · وسط أعلى)
             // الكاميرا ثابتة على منصة الدور (مو تلاحقهم): الدفعة تمشي وتدخل الكادر
-            const nB = batchIds.length, c = { c: new THREE.Vector3(0, DECK_Y + 2.3, FRONT_Z), spread: Math.max(1.2, (nB - 1) * FRONT_GAP / 2 + 0.6) };
+            const nB = batchIds.length, c = { c: new THREE.Vector3(0, FRONT_Y + 2.3, FRONT_Z), spread: Math.max(1.2, (nB - 1) * FRONT_GAP / 2 + 0.6) };
             const side = [0.42, -0.42, 0][G.batch % 3], dist = (5.6 + c.spread * 1.15 + (k === 'show' ? -0.6 : 0)) * far;
             const dir = new THREE.Vector3(c.c.x - 0, 0, c.c.z - STAGE_Z).normalize(); if (!isFinite(dir.x)) dir.set(0, 0, 1);
             dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), side);
@@ -634,8 +700,8 @@ export function createStage(container, getFrame) {
             // لقطة البطل: أقرب ومن تحت شوي
             headPos(af, tmpV);
             const yaw = af.root.rotation.y + (k === 'guess' ? Math.sin(t * 0.2) * 0.25 : 0.22);
-            const d = (k === 'guess' ? 4.8 : 4.1) * Math.min(far, 1.45);
-            P.set(tmpV.x + Math.sin(yaw) * d, tmpV.y - 0.3, tmpV.z + Math.cos(yaw) * d); Lk.set(tmpV.x, tmpV.y - 0.6, tmpV.z);
+            const d = (k === 'guess' ? 6.4 : 5.8) * Math.min(far, 1.45);
+            P.set(tmpV.x + Math.sin(yaw) * d, tmpV.y + 0.2, tmpV.z + Math.cos(yaw) * d); Lk.set(tmpV.x, tmpV.y - 0.9, tmpV.z);
             occl = true; return;
         }
         if (k === 'over') {
@@ -652,7 +718,7 @@ export function createStage(container, getFrame) {
      */
     function walkTo(f, world, dt) {
         f.root.updateMatrixWorld();
-        if (world) { tmpL.copy(world); f.root.worldToLocal(tmpL); tmpL.y = DECK_Y - f.root.position.y; }
+        if (world) { const wy = world.y; tmpL.copy(world); f.root.worldToLocal(tmpL); tmpL.y = wy - f.root.position.y; }
         else tmpL.set(0, f.podH, 0);
         const cp = f.ch.position, dx = tmpL.x - cp.x, dz = tmpL.z - cp.z, dist = Math.hypot(dx, dz);
         if (dist > 0.06) {
@@ -661,7 +727,10 @@ export function createStage(container, getFrame) {
             f.baseYaw = Math.atan2(dx, dz);
             // ينزل من المنصة أول خطوة ويطلع لها آخر خطوة
             const homeD = Math.hypot(cp.x, cp.z);
-            f.baseY = homeD < 1.0 ? f.podH + (DECK_Y - f.root.position.y - f.podH) * Math.min(1, homeD) : DECK_Y - f.root.position.y;
+            // ينزل من الدرجة لأرض المسرح، ويطلع منصة الدور آخر خطوتين (والعكس بالرجعة)
+            const toD = Math.hypot(tmpL.x - cp.x, tmpL.z - cp.z), floorY = DECK_Y - f.root.position.y;
+            const yA = homeD < 1.2 ? f.podH + (floorY - f.podH) * (homeD / 1.2) : floorY;
+            f.baseY = world && toD < 1.6 ? yA + (tmpL.y - yA) * (1 - toD / 1.6) : yA;
             return true;
         }
         cp.x = tmpL.x; cp.z = tmpL.z; f.baseY = tmpL.y;
@@ -708,10 +777,11 @@ export function createStage(container, getFrame) {
     }
     function goLite() {
         lite = true; key.castShadow = false; r.shadowMap.enabled = false; r.setPixelRatio(0.8); resize();
+        hot.forEach((H) => { H.sl.visible = false; }); wash.visible = false; hemi.intensity *= 1.4;
         scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
     }
 
-    function resize() { const w = container.clientWidth || 1, h = container.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+    function resize() { const w = container.clientWidth || 1, h = container.clientHeight || 1; r.setSize(w, h, false); if (composer) composer.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); }
     const ro = new ResizeObserver(resize); ro.observe(container); resize();
     raf = requestAnimationFrame(frame);
 
