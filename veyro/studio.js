@@ -2470,7 +2470,7 @@
     /** «من مكتبة فيرو»: أليرتات جاهزة ينشرها الأدمن لكل المستخدمين (مفرّغة وجاهزة). */
     function globalLibrary(box) {
         var list = libOf('alert').map(function (a) {
-            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, look: a.look || null, global: true };
+            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, look: a.look || null, vol: a.vol, global: true };
         });
         if (!list.length) return;
         var head = el('div', 'vy-lib-head');
@@ -2543,6 +2543,10 @@
             if (variant === 'clear') it.vbg = null;
             else if (variant === 'bg' && m.look.vbg) it.vbg.on = true;
             if (m.look.full) it.full = true;
+        }
+        // مستوى الصوت اللي حفظه الأدمن مع الأليرت
+        if (m.vol != null) it.volume = m.vol;
+        if (m.look) {
             if (m.look.size) it.size = m.look.size;
             if (m.look.vfx) it.vfx = Object.assign({}, m.look.vfx);
             if (m.look.parts) Object.keys(m.look.parts).forEach(function (k) { if (it.parts[k]) it.parts[k] = Object.assign({}, it.parts[k], m.look.parts[k]); });

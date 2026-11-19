@@ -1309,7 +1309,7 @@
             keyRow('اسم الداعم', tgl('lk-nm-on', a.look.parts.name.on) + clr('lk-nm-c', a.look.parts.name.c, 'لون الاسم')) +
             keyRow('الرسالة', tgl('lk-ms-on', a.look.parts.msg.on) + clr('lk-ms-c', a.look.parts.msg.c, 'لون الرسالة')) +
             '</div></div>' : '';
-        var alertUI = a.type === 'alert' ? keyRow('مدة الأليرت (ثانية)', rng('al-dur', a.dur, 2, 20, 1)) + keyRow('صوت الفيديو', rng('al-vol', a.vol, 0, 1, 0.01)) : '';
+        var alertUI = a.type === 'alert' ? keyRow('مدة الأليرت (ثانية)', rng('al-dur', a.dur, 2, 20, 1)) + keyRow('صوت الفيديو', rng('al-vol', a.vol, 0, 1, 0.01), 'ينحفظ مع الأليرت ويوصل للستريمر') : '';
         var stage = a.type === 'top' ? '<div class="ed-stage stream" id="ed-stage">' + topHTML(a.top) + '</div>'
             : a.type === 'sound' ? '<div class="ed-stage" id="ed-stage" style="background:rgba(12,11,16,.5)">' + thumbHTML(a) + '</div>'
                 : '<div class="ed-stage bg-' + bg + '" id="ed-stage">' + (a.type === 'alert' ? '<span class="lk-res">1920×1080</span><div class="lk-box" id="lk-box"><div class="lk-bg" id="lk-bg"></div><canvas id="ed-cv"></canvas><div class="lk-parts"><span class="lk-av" id="lk-av"></span><span class="lk-nm" id="lk-nm">اسم الداعم</span><span class="lk-ms" id="lk-ms">أرسل 5 وردة</span></div></div>' : '<canvas id="ed-cv"></canvas>') + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">محاكاة بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
@@ -1338,10 +1338,12 @@
                 function fit(w, h, mx) { var s = Math.min(1, mx / Math.max(w, h)); return [Math.round(w * s), Math.round(h * s)]; }
                 if (cv) {
                     if (a.src.video) {
-                        video = document.createElement('video'); video.src = a.src.video; video.muted = true; video.loop = true; video.playsInline = true; video.crossOrigin = 'anonymous';
+                        video = document.createElement('video'); video.src = a.src.video; video.muted = false; video.volume = clamp(a.vol == null ? 0.8 : a.vol, 0, 1); video.loop = true; video.playsInline = true; video.crossOrigin = 'anonymous';
                         video.addEventListener('loadedmetadata', function () { a.w = video.videoWidth; a.h = video.videoHeight; a.d = Math.round((video.duration || 0) * 100) / 100; sizeCanvas(); a.dur = Math.min(20, Math.max(2, Math.round(video.duration))) || a.dur; var dr = el.querySelector('#al-dur'); if (dr) { dr.value = a.dur; el.querySelector('#al-dur-v').textContent = a.dur; } });
                         video.addEventListener('loadeddata', function () { if (!a.src.thumb) { try { var tc = document.createElement('canvas'); var sz = fit(video.videoWidth, video.videoHeight, 320); tc.width = sz[0]; tc.height = sz[1]; tc.getContext('2d').drawImage(video, 0, 0, sz[0], sz[1]); a.src.thumb = tc.toDataURL('image/jpeg', .7); } catch (e) { /* ignore */ } } });
-                        video.play().catch(function () { /* ignore */ });
+                        // يبدأ بالصوت (فتح المحرر ضغطة)، ولو المتصفح منعه يكمل صامت وزر السماعة يشغّله
+                        video.play().then(function () { var sb = el.querySelector('#ed-snd'); if (sb) sb.classList.toggle('primary', !video.muted); })
+                            .catch(function () { video.muted = true; video.play().catch(function () {}); });
                     }
                     sizeCanvas();
                     if (a.type === 'alert') loop(); else { draw(); if (a.src.img) getImg(a.src.img, function () { sizeCanvas(); draw(); }); }
@@ -1419,7 +1421,11 @@
                     pills('#t-shape', function (v) { a.top.shape = v; redrawTop(); }); pills('#t-font', function (v) { a.top.font = v; redrawTop(); });
                 }
                 if (a.type === 'sound') { bindRange('s-vol', function (v) { a.vol = v; }); el.querySelector('#s-play').addEventListener('click', function () { playSound(a, a.vol); }); }
-                if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) { a.vol = v; if (video) video.volume = clamp(v, 0, 1); }); }
+                if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) {
+                    a.vol = v;
+                    // تحريك الصوت يشغّله ويسمّعك المستوى على طول
+                    if (video) { video.volume = clamp(v, 0, 1); video.muted = false; video.play().catch(function () {}); var sb = el.querySelector('#ed-snd'); if (sb) sb.classList.add('primary'); }
+                }); }
                 // شكل الأليرت: معاينة مباشرة (نفس اللي يطلع بالبث)
                 function paintLook() {
                     if (a.type !== 'alert' || !cv) return;
