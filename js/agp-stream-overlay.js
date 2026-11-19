@@ -1786,14 +1786,65 @@
         }
         o.wrap.classList.toggle('full', pct >= 1);
         o.pct = pct;
-        o.nums.textContent = '';
-        if (it.showNums !== false) {
-            var done = cur >= target && !it.autoNext;
-            o.nums.appendChild(icon(METRICS[m].icon));
-            o.nums.appendChild(el('span', null, done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
-            if (it.showPct) o.nums.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
-        }
+        paintOrbLabel(node, o, it, m, cur, target, pct);
         node.classList.toggle('agp-so-ghost', Boolean(tt.ghost));
+    }
+
+    /*
+     * النص تحت الهدف (أشكال السائل): it.lbl = شكله، it.lblText = نص حر (يقبل {cur} {target} {left} {pct})،
+     * it.lblPos = مكانه، it.lblFont/lblColor/lblSize = الخط واللون والحجم، it.lblIcon = أيقونة المقياس،
+     * it.lblDx/lblDy = إزاحة دقيقة (em). «بدون» (أو showNums = false القديمة) يخفيه.
+     */
+    var ORB_LABELS = [
+        { key: 'pill', label: 'كبسولة' }, { key: 'glass', label: 'زجاج' }, { key: 'neon', label: 'نيون' },
+        { key: 'ribbon', label: 'شريطة' }, { key: 'line', label: 'خط تحته' }, { key: 'plain', label: 'نص بس' }, { key: 'none', label: 'بدون' }
+    ];
+    var ORB_LABEL_POS = [
+        { key: 'bottom', label: 'تحت' }, { key: 'top', label: 'فوق' }, { key: 'right', label: 'يمين' }, { key: 'left', label: 'يسار' }, { key: 'in', label: 'داخل الشكل' }
+    ];
+    function orbLabelStyle(it) {
+        if (it.showNums === false) return 'none';
+        return ORB_LABELS.some(function (x) { return x.key === it.lbl; }) ? it.lbl : 'pill';
+    }
+    function paintOrbLabel(node, o, it, m, cur, target, pct) {
+        var n = o.nums, st = orbLabelStyle(it);
+        var pos = ORB_LABEL_POS.some(function (x) { return x.key === it.lblPos; }) ? it.lblPos : 'bottom';
+        var side = pos === 'right' || pos === 'left' || pos === 'in';
+        // المكان: فوق/تحت بتدفق العنصر، يمين/يسار/داخل فوق الرسمة نفسها
+        var parent = side ? o.wrap : node;
+        if (n.parentNode !== parent) parent.appendChild(n);
+        n.className = 'agp-so-onums s-' + st + ' p-' + pos;
+        n.textContent = '';
+        n.style.cssText = '';
+        if (st === 'none') return;
+        var dx = clamp(Number(it.lblDx) || 0, -12, 12), dy = clamp(Number(it.lblDy) || 0, -12, 12);
+        var k = clamp(Number(it.lblSize) || 1, .4, 3);
+        n.style.fontSize = (.75 * k).toFixed(3) + 'em';
+        if (dx || dy) {
+            // الإزاحة بوحدة em الخاصة بالهدف (مو النص) عشان ما تتغيّر لو كبّرت الخط
+            n.style.marginLeft = (dx / k).toFixed(2) + 'em';
+            n.style.marginTop = (dy / k).toFixed(2) + 'em';
+            if (!side) { n.style.position = 'relative'; n.style.marginLeft = ''; n.style.marginTop = ''; n.style.left = (dx / k).toFixed(2) + 'em'; n.style.top = (dy / k).toFixed(2) + 'em'; }
+        }
+        if (/^#[0-9a-f]{6}$/i.test(it.lblColor || '')) n.style.color = it.lblColor;
+        if (it.lblFont) {
+            var f = fontOf(it.lblFont);
+            loadFont(f);
+            n.style.fontFamily = fontStack(f);
+            n.style.fontWeight = String(f.b);
+        }
+        var tpl = String(it.lblText || '').trim();
+        if (it.lblIcon !== false) n.appendChild(icon(METRICS[m].icon));
+        if (tpl) {
+            n.dir = 'auto';
+            var vals = { cur: fmtKind(m, cur), target: fmtKind(m, target), left: fmtKind(m, Math.max(0, target - cur)), pct: Math.floor(pct * 100) + '%' };
+            n.appendChild(el('span', null, tpl.replace(/\{(cur|target|left|pct)\}/g, function (_, key) { return vals[key]; })));
+            return;
+        }
+        n.removeAttribute('dir');
+        var done = cur >= target && !it.autoNext;
+        n.appendChild(el('span', null, done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
+        if (it.showPct) n.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
     }
 
     function fillGoal(node, it, preview) {
@@ -4416,6 +4467,22 @@
         '.agp-so-ofly{animation:agp-so-flyb 6s ease-in-out infinite}',
         '.agp-so-onums{display:inline-flex;align-items:center;gap:.35em;padding:.2em .8em;border-radius:999px;font-weight:800;font-size:.75em;direction:ltr;color:#fff;background:rgba(10,8,20,.6);border:.06em solid color-mix(in srgb,var(--og,#a68bff) 50%,transparent)}',
         '.agp-so-onums:empty{display:none}',
+        // أشكال النص تحت الهدف
+        '.agp-so-onums.s-none{display:none}',
+        '.agp-so-onums.s-glass{background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.05));border:.06em solid rgba(255,255,255,.4);border-radius:.9em;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:inset 0 .06em 0 rgba(255,255,255,.5),inset 0 -.1em .3em rgba(0,0,0,.25),0 .3em 1em rgba(0,0,0,.45)}',
+        '.agp-so-onums.s-neon{background:rgba(5,4,10,.45);border:.08em solid var(--og,#a68bff);box-shadow:0 0 .5em var(--og,#a68bff),inset 0 0 .45em color-mix(in srgb,var(--og,#a68bff) 55%,transparent);text-shadow:0 0 .35em var(--og,#a68bff)}',
+        '.agp-so-onums.s-ribbon{border:0;border-radius:0;padding:.3em 1.3em;background:linear-gradient(180deg,color-mix(in srgb,var(--og,#a68bff) 85%,#fff),color-mix(in srgb,var(--og,#a68bff) 70%,#000));clip-path:polygon(0 0,100% 0,calc(100% - .55em) 50%,100% 100%,0 100%,.55em 50%);text-shadow:0 .05em .15em rgba(0,0,0,.6)}',
+        '.agp-so-onums.s-ribbon svg,.agp-so-onums.s-ribbon b{color:#fff}',
+        '.agp-so-onums.s-line{background:none;border:0;border-bottom:.08em solid var(--og,#a68bff);border-radius:0;padding:.1em .3em;box-shadow:0 .5em .5em -.5em var(--og,#a68bff)}',
+        '.agp-so-onums.s-plain{background:none;border:0;padding:0;text-shadow:0 .05em .25em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.5)}',
+        '.agp-so-onums[dir=auto]{direction:auto;unicode-bidi:plaintext}',
+        // الأماكن: فوق = بين العنوان والرسمة؛ يمين/يسار/داخل = فوق الرسمة نفسها
+        '.agp-so-goal.d-orb .agp-so-otitle{order:-2}',
+        '.agp-so-onums.p-top{order:-1}',
+        '.agp-so-orb .agp-so-onums{position:absolute;top:50%;white-space:nowrap;z-index:2}',
+        '.agp-so-orb .agp-so-onums.p-in{left:50%;transform:translate(-50%,-50%)}',
+        '.agp-so-orb .agp-so-onums.p-right{left:100%;transform:translate(.4em,-50%)}',
+        '.agp-so-orb .agp-so-onums.p-left{right:100%;transform:translate(-.4em,-50%)}',
         '.agp-so-onums svg{width:1em;height:1em;color:var(--og,#a68bff)}',
         '.agp-so-onums b{color:var(--og,#a68bff);margin-inline-start:.2em}',
         '@keyframes agp-so-wave{from{transform:translateX(0)}to{transform:translateX(-100px)}}',
@@ -4673,7 +4740,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, ORB_LABELS: ORB_LABELS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelStyle: orbLabelStyle, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
