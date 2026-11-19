@@ -392,7 +392,7 @@ function createService(db, deps) {
     function assetFile(id) { return dir ? path.join(dir, id) : null; }
     function assetRow(r, withUsage) {
         var st = json(r.settings, {});
-        var a = { id: r.id, type: r.type, name: r.name, cat: r.cat, status: r.status, access: r.access, version: r.version, updated: r.updated_at, created: r.created_at, mime: r.mime, size: r.size, key: st.key || null, top: st.top || null, vol: st.vol == null ? 0.8 : st.vol, dur: st.dur || 6, w: st.w || 0, h: st.h || 0, d: st.d || 0, src: {} };
+        var a = { id: r.id, type: r.type, name: r.name, cat: r.cat, status: r.status, access: r.access, version: r.version, updated: r.updated_at, created: r.created_at, mime: r.mime, size: r.size, key: st.key || null, top: st.top || null, vol: st.vol == null ? 0.8 : st.vol, dur: st.dur || 6, w: st.w || 0, h: st.h || 0, d: st.d || 0, fscale: st.fscale || 1.3, src: {} };
         if (r.mime) {
             var url = fileUrl(r.id) + '&v=' + r.updated_at;
             if (r.type === 'alert') a.src.video = url; else if (r.type === 'sound') a.src.audio = url; else a.src.img = url;
@@ -416,6 +416,8 @@ function createService(db, deps) {
         if (a.w != null) st.w = clamp(int(a.w, 0), 0, 10000);
         if (a.h != null) st.h = clamp(int(a.h, 0), 0, 10000);
         if (a.d != null) st.d = clamp(Number(a.d) || 0, 0, 3600);
+        // الإطار: حجمه نسبة لصورة الداعم (المحرر يحطه حولها)
+        if (a.fscale != null) st.fscale = clamp(Number(a.fscale) || 1.3, 1, 2.5);
         return JSON.stringify(st);
     }
     /** حفظ أصل (جديد أو تعديل). publish = ينشر للجميع ويرفع رقم النسخة. */

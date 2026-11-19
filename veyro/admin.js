@@ -288,7 +288,7 @@
             a({ type: 'icon', name: 'قلب (خلفية بيضاء)', cat: 'رموز', src: { img: heart }, status: 'draft', usage: 0 }),
             a({ type: 'icon', name: 'نجمة', cat: 'رموز', src: { img: starI }, usage: 51 }),
             a({ type: 'icon', name: 'نار', cat: 'رموز', src: { img: fire }, key: key({ on: true, mode: 'black', sim: 0.12, smooth: 0.08 }), usage: 34, access: 'subs' }),
-            a({ type: 'frame', name: 'إطار لافندر', cat: 'إطارات الصورة', src: { img: frame1 }, usage: 47 }),
+            a({ type: 'frame', name: 'إطار لافندر', cat: 'إطارات الصورة', src: { img: frame1 }, usage: 47, fscale: 1.3 }),
             a({ type: 'frame', name: 'إطار ذهبي سداسي', cat: 'إطارات الصورة', src: { img: frame2 }, usage: 19, access: 'yearly' }),
             a({ type: 'sound', name: 'دنق', cat: 'تنبيه', src: { synth: 'ding' }, usage: 70 }),
             a({ type: 'sound', name: 'عملات', cat: 'هدايا', src: { synth: 'coins' }, usage: 36 }),
@@ -1082,7 +1082,7 @@
         ctx.fillText(a.src && a.src.lost ? 'ارفع الفيديو مرة ثانية (المعاينة ما تحفظه)' : 'بدون ملف', w / 2, h / 2);
         return true;
     }
-    function assetSize(a) { if (a.type === 'alert') return [640, 360]; var src = a.src && (a.src.img || a.src.thumb); var im = src && IMG_CACHE[src]; if (im && im.naturalWidth) { var sc = Math.min(1, 512 / Math.max(im.naturalWidth, im.naturalHeight)); return [Math.round(im.naturalWidth * sc), Math.round(im.naturalHeight * sc)]; } return [256, 256]; }
+    function assetSize(a) { if (a.type === 'alert') return [640, 360]; var src = a.src && (a.src.img || a.src.thumb); var im = src && IMG_CACHE[src]; if (im && im.naturalWidth) { var sc = Math.min(1, 1024 / Math.max(im.naturalWidth, im.naturalHeight)); return [Math.round(im.naturalWidth * sc), Math.round(im.naturalHeight * sc)]; } return [256, 256]; }
     function renderKeyed(cv, a, t, videoEl) {
         var sz = a.type === 'alert' ? [cv.width, cv.height] : [cv.width, cv.height], ctx = cv.getContext('2d', { willReadFrequently: true });
         var ok = drawSource(ctx, a, t, sz[0], sz[1], function () { renderKeyed(cv, a, t, videoEl); }, videoEl);
@@ -1214,7 +1214,7 @@
      * يرجع Promise بالأصل من السيرفر، أو false.
      */
     function persistAsset(a, isNew, publish) {
-        var meta = { type: a.type, name: a.name, cat: a.cat, access: a.access, status: publish ? undefined : a.status, key: a.key, top: a.top, vol: a.vol, dur: a.dur, w: a.w, h: a.h, d: a.d };
+        var meta = { type: a.type, name: a.name, cat: a.cat, access: a.access, status: publish ? undefined : a.status, key: a.key, top: a.top, vol: a.vol, dur: a.dur, w: a.w, h: a.h, d: a.d, fscale: a.fscale };
         if (!isNew) meta.id = a.id;
         if (isNew && meta.status === 'published') meta.status = 'draft';
         busy(true);
@@ -1281,10 +1281,11 @@
             keyRow('تاج للأول', '<label class="ob-toggle"><input type="checkbox" id="t-crown"' + (a.top.crown ? ' checked' : '') + '><span></span></label>') +
             '</div></div>' : '';
         var soundUI = a.type === 'sound' ? '<div class="sec"><h4>الصوت</h4><div class="rows">' + keyRow('مستوى الصوت', rng('s-vol', a.vol, 0, 1, 0.01)) + '<button type="button" class="ob-btn" id="s-play">' + ic('play') + 'تشغيل</button></div></div>' : '';
+        var frameUI = a.type === 'frame' ? keyRow('حجم الإطار حول الصورة', rng('f-scale', a.fscale || 1.3, 1, 2.5, 0.05), 'الدائرة بالمعاينة = صورة الداعم') : '';
         var alertUI = a.type === 'alert' ? keyRow('مدة الأليرت (ثانية)', rng('al-dur', a.dur, 2, 20, 1)) + keyRow('صوت الفيديو', rng('al-vol', a.vol, 0, 1, 0.01)) : '';
         var stage = a.type === 'top' ? '<div class="ed-stage stream" id="ed-stage">' + topHTML(a.top) + '</div>'
             : a.type === 'sound' ? '<div class="ed-stage" id="ed-stage" style="background:rgba(12,11,16,.5)">' + thumbHTML(a) + '</div>'
-                : '<div class="ed-stage bg-' + bg + '" id="ed-stage"><canvas id="ed-cv"></canvas><span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
+                : '<div class="ed-stage bg-' + bg + '" id="ed-stage"><canvas id="ed-cv"></canvas>' + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
                 (a.type === 'alert' ? '<div class="ed-play"><button type="button" class="ob-btn icon sm" id="ed-pp" aria-label="تشغيل/إيقاف">' + ic('pause') + '</button><input type="range" class="ob-range" id="ed-seek" min="0" max="1000" value="0" aria-label="الوقت"><span class="rv num" id="ed-time">0.0</span></div>' : '');
 
         var m = openModal({
@@ -1294,7 +1295,7 @@
                 keyRow('التصنيف', '<input id="ed-cat" class="ob-input" value="' + esc(a.cat) + '" placeholder="هدايا، متابعة…" style="width:200px">') +
                 '<div class="ob-row col"><div class="lb"><b>متاح لـ</b><small>مين يشوفه بمكتبته</small></div><div class="ob-pills" id="ed-access">' + Object.keys(ACCESS).map(function (k) { return '<button type="button" class="ob-pill' + (a.access === k ? ' on' : '') + '" data-v="' + k + '">' + ACCESS[k] + '</button>'; }).join('') + '</div></div>' +
                 '<div class="ob-row col"><div class="lb"><b>الحالة</b><small>«مخفي» يختفي من المكتبات، واللي يستخدمونه يبقى عندهم</small></div><div class="ob-pills" id="ed-st">' + Object.keys(A_ST).map(function (k) { return '<button type="button" class="ob-pill' + (a.status === k ? ' on' : '') + '" data-v="' + k + '">' + A_ST[k][0] + '</button>'; }).join('') + '</div></div>' +
-                alertUI + '</div></div>' +
+                alertUI + frameUI + '</div></div>' +
                 '<div class="ed-side">' + keyUI + topUI + soundUI +
                 (!isNew ? '<div class="sec"><h4>معلومات</h4><div class="kv">' + kv('النسخة', 'v' + a.version) + kv('آخر تعديل', fdt(a.updated)) + kv('يستخدمه', fmtN(a.usage) + ' ستريمر') + '</div></div>' : '') +
                 '</div></div>',
@@ -1382,6 +1383,17 @@
                 }
                 if (a.type === 'sound') { bindRange('s-vol', function (v) { a.vol = v; }); el.querySelector('#s-play').addEventListener('click', function () { playSound(a, a.vol); }); }
                 if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) { a.vol = v; }); }
+                // الإطار: دائرة بحجم صورة الداعم تحت الإطار عشان يضبط الحجم
+                function paintFprev() { var fp = el.querySelector('#f-prev'); if (!fp || !cv) return; var d = Math.min(cv.clientWidth, cv.clientHeight) / (a.fscale || 1.3); fp.style.width = fp.style.height = d + 'px'; }
+                if (a.type === 'frame') { bindRange('f-scale', function (v) { a.fscale = v; paintFprev(); }); setTimeout(paintFprev, 60); setTimeout(paintFprev, 400); }
+                /** متصل: الأيقونة والإطار ينرفعون مفرّغين (PNG شفاف) — الشاشات تعرض الصورة كما هي. */
+                function bakeIfNeeded() {
+                    if (!REAL || !cv || !(a.type === 'icon' || a.type === 'frame') || !a.key || !a.key.on) return Promise.resolve();
+                    return new Promise(function (res) {
+                        renderKeyed(cv, a, 0);
+                        try { cv.toBlob(function (b) { if (b) { a._file = b; a.key = Object.assign({}, a.key, { on: false, opacity: 1 }); } res(); }, 'image/png'); } catch (e) { res(); }
+                    });
+                }
                 function pills(sel, fn) { el.querySelector(sel).addEventListener('click', function (e) { var b = e.target.closest('.ob-pill'); if (!b) return; $$(sel + ' .ob-pill', el).forEach(function (x) { x.classList.toggle('on', x === b); }); fn(b.getAttribute('data-v')); }); }
                 pills('#ed-access', function (v) { a.access = v; }); pills('#ed-st', function (v) { a.status = v; });
                 function collect() { a.name = el.querySelector('#ed-name').value.trim() || a.name; a.cat = el.querySelector('#ed-cat').value.trim(); }
@@ -1389,13 +1401,13 @@
                 el.querySelector('#ed-save').addEventListener('click', function () {
                     collect();
                     if (!REAL) { API.saveAsset(a, false); mm.close(); refresh(); toast('انحفظ «' + a.name + '»'); return; }
-                    persistAsset(a, isNew, false).then(function (ok) { if (ok) { mm.close(); toast('انحفظ «' + a.name + '»'); } });
+                    bakeIfNeeded().then(function () { return persistAsset(a, isNew, false); }).then(function (ok) { if (ok) { mm.close(); toast('انحفظ «' + a.name + '»'); } });
                 });
                 el.querySelector('#ed-pub').addEventListener('click', function () {
                     collect(); if (a.type === 'alert' && !a.src.video && !a.src.proc) { toast('ارفع الفيديو أول', true); return; }
                     var wasPub = orig.status === 'published' && !isNew;
                     if (!REAL) { API.saveAsset(a, true); mm.close(); refresh(); toast((wasPub ? 'انرفع التحديث v' + a.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + reach() + ' مستخدم'); return; }
-                    persistAsset(a, isNew, true).then(function (r) { if (r) { mm.close(); toast((wasPub ? 'انرفع التحديث v' + r.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + reach() + ' مستخدم'); } });
+                    bakeIfNeeded().then(function () { return persistAsset(a, isNew, true); }).then(function (r) { if (r) { mm.close(); toast((wasPub ? 'انرفع التحديث v' + r.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + reach() + ' مستخدم'); } });
                 });
                 el.querySelector('#ed-cancel').addEventListener('click', mm.close);
                 var del = el.querySelector('#ed-del');

@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '4'; // 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '5'; // 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -1423,6 +1423,8 @@
         }
         var sec = SECTIONS[it.section] ? it.section : 'likers';
         var builders = makeTop(sec);
+        // «قالب فيرو» من مكتبة فيرو
+        if (it.design === 'tpl' && it.tpl) builders = Object.assign({}, builders, { tpl: function (rows) { return tplTop(sec, it, rows); } });
         var design = builders[it.design] ? it.design : 'podium';
         node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-' + design;
         title(node, it.title);
@@ -1936,11 +1938,60 @@
         }
     }
 
+    /* ---------------- مكتبة فيرو (أصول ينشرها الأدمن من veyro/admin.html) ----------------
+     * الملف: سيرفر فيرو /api/veyro/assets/file?id= (المعرّف عشوائي طويل). العناصر تحفظ المعرّف بس:
+     * it.img = {id} (أيقونة)، it.design = 'tpl' + it.tpl (قالب توب)، it.soundId (صوت أليرت)،
+     * parts.avatar.fa + fs (إطار صورة الداعم بأليرت الفيديو). بدون هالحقول كل شي زي ما كان. */
+    var ASSET_ID_RE = /^[a-f0-9]{32}$/;
+    function assetUrl(id) { return ASSET_ID_RE.test(String(id || '')) ? veyroBase() + '/api/veyro/assets/file?id=' + id : ''; }
+    var assetAudio = {};
+    function playAssetSound(id, volume) {
+        var url = assetUrl(id);
+        if (!url) return chime();
+        try {
+            var a = assetAudio[id] || (assetAudio[id] = new Audio(url));
+            a.volume = clamp(volume == null ? 0.8 : Number(volume), 0, 1);
+            a.currentTime = 0;
+            var pr = a.play();
+            if (pr && pr.catch) pr.catch(function () { /* المتصفح منع الصوت قبل أي تفاعل */ });
+        } catch (e) { chime(); }
+    }
+    /** «قالب فيرو» للتوب: صفوف بالشكل والألوان اللي صممها الأدمن (it.tpl)، واللون الأساسي = it.color. */
+    var TPL_RADII = { bevel: '.5em .12em .5em .12em', round: '.5em', pill: '999em', sharp: '0' };
+    var TPL_FONTS = { kufi: '"Noto Kufi Arabic",' + FONT, plex: '"IBM Plex Sans Arabic",' + FONT, mono: 'ui-monospace,Menlo,monospace' };
+    function tplTop(sec, it, rows) {
+        var t = it.tpl || {}, meta = SECTIONS[sec] || SECTIONS.likers, acc = it.color || t.accent || '#cfc3dc';
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(t.bg || '#14121a')) || [0, '14', '12', '1a'];
+        var bg = 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + clamp(t.bgA == null ? 0.78 : Number(t.bgA), 0, 1) + ')';
+        var r = TPL_RADII[t.shape] || TPL_RADII.bevel;
+        var box = el('div', 'agp-so-tpl');
+        box.style.cssText = 'gap:' + (clamp(Number(t.gap) || 0, 0, 24) / 16) + 'em;font-family:' + (TPL_FONTS[t.font] || TPL_FONTS.kufi);
+        rows.forEach(function (row, i) {
+            var rw = el('div', 'agp-so-tplrow' + (i === 0 ? ' first' : ''));
+            rw.style.cssText = 'background:' + bg + ';border-color:' + (t.border || acc) + ';border-radius:' + r + ';--agp-so-tpa:' + acc;
+            var rk = el('span', 'agp-so-tplrk', i === 0 && t.crown !== false ? '♛' : String(i + 1));
+            rk.style.borderRadius = t.shape === 'pill' ? '50%' : t.shape === 'sharp' ? '0' : '.25em .08em .25em .08em';
+            rw.appendChild(rk);
+            rw.appendChild(avatar(row));
+            rw.appendChild(el('span', 'agp-so-name', nameOf(row)));
+            rw.appendChild(el('span', 'agp-so-tplv', meta.value(row)));
+            box.appendChild(rw);
+        });
+        return box;
+    }
+
     function buildIcon(n, it) {
         var mv = el('span', 'agp-so-mv');
         mv.style.setProperty('--agp-so-c', it.color || '#ffd54a');
         animate(mv, it);
-        if (it.emoji) {
+        if (it.img && assetUrl(it.img.id)) {
+            // أيقونة من مكتبة فيرو (صورة PNG شفافة)
+            var im = el('img', 'agp-so-aicon' + (it.glow ? ' glow' : ''));
+            im.src = assetUrl(it.img.id);
+            im.alt = '';
+            im.draggable = false;
+            mv.appendChild(im);
+        } else if (it.emoji) {
             mv.appendChild(el('span', 'agp-so-emoji', String(it.emoji).slice(0, 8)));
         } else {
             var g = el('span', 'agp-so-glyph' + (it.glow ? ' glow' : ''));
@@ -2523,6 +2574,15 @@
                 vf.appendChild(vi);
                 var lwa = loopEl(parts.avatar, true);
                 lwa.appendChild(vf);
+                // إطار من مكتبة فيرو فوق الصورة (fa = المعرّف، fs = حجمه نسبة للصورة)
+                if (frm === 'asset' && assetUrl(parts.avatar.fa)) {
+                    var fim = el('img', 'vav-asset');
+                    fim.src = assetUrl(parts.avatar.fa);
+                    fim.alt = '';
+                    var fs = clamp(Number(parts.avatar.fs) || 1.3, 1, 2.5);
+                    fim.style.cssText = 'width:' + (fs * 100) + '%;height:' + (fs * 100) + '%;left:' + (50 - fs * 50) + '%;top:' + (50 - fs * 50) + '%';
+                    lwa.appendChild(fim);
+                }
                 pa.appendChild(lwa);
                 box.appendChild(pa);
             }
@@ -2608,6 +2668,8 @@
                 partT = partT.concat(runPartTimers(vb.root));
                 if (!started) {
                     started = true;
+                    // صوت إضافي من مكتبة فيرو مع بداية الأليرت (برابط الشاشة بس — المحرر صامت)
+                    if (it.soundId && LINK && !STUDIO) playAssetSound(it.soundId, it.soundVol);
                     // المدة تبدأ من أول ما يشتغل الفيديو فعلاً (مو من التحميل)
                     clearTimeout(timer);
                     timer = setTimeout(done, max);
@@ -2681,7 +2743,7 @@
             q.roots = (q.roots || []).concat([c]);
             if (t.node._pos) place(t.node, t.node._pos, t.node._F);
         });
-        if (it.sound) chime();
+        if (it.sound) { if (it.soundId) playAssetSound(it.soundId, it.soundVol); else chime(); }
         setTimeout(function () {
             liveAlertNodes(id).forEach(function (t) {
                 var c = t.node.querySelector('.agp-so-acard');
@@ -3135,7 +3197,7 @@
             }
             return Object.assign(base, { events: evs, design: opts.design || 'card', anim: 'pop', duration: 5, minDiamonds: 0, sound: true, size: 3, color: opts.color || '#ff4d6d', msg: msg });
         }
-        if (type === 'icon') return Object.assign(base, opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: true });
+        if (type === 'icon') return Object.assign(base, opts.img ? { img: { id: opts.img.id, name: opts.img.name || '' } } : opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: !opts.img });
         if (type === 'lastdonation') return Object.assign(base, { title: 'آخر دعم', showMessage: false, size: 3, color: '#ffd54a' });
         if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
         if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volCmd: '!صوت', who: 'all', ctrlWho: 'owner', allow: '', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
@@ -3994,6 +4056,17 @@
         /* أيقونة */
         '.agp-so-icon{line-height:1}',
         '.agp-so-glyph{display:block;width:1em;height:1em}',
+        '.agp-so-aicon{display:block;width:1em;height:1em;object-fit:contain;pointer-events:none}',
+        '.agp-so-aicon.glow{filter:drop-shadow(0 0 .06em rgba(255,255,255,.5)) drop-shadow(0 .04em .06em rgba(0,0,0,.6))}',
+        '.agp-so-tpl{display:flex;flex-direction:column;min-width:13em}',
+        '.agp-so-tplrow{display:flex;align-items:center;gap:.45em;padding:.35em .5em;border:1px solid;color:#fff;font-weight:700;box-shadow:0 .4em 1em -.6em rgba(0,0,0,.8)}',
+        '.agp-so-tplrow.first{box-shadow:0 0 0 1px var(--agp-so-tpa),0 0 1.1em -.3em var(--agp-so-tpa)}',
+        '.agp-so-tplrk{flex:none;width:1.25em;height:1.25em;display:flex;align-items:center;justify-content:center;font-size:.8em;background:var(--agp-so-tpa);color:#14121a}',
+        '.agp-so-tplrow .agp-so-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+        '.agp-so-tplv{color:var(--agp-so-tpa);direction:ltr}',
+        '.agp-so-vav .vav-asset{position:absolute;object-fit:contain;pointer-events:none}',
+        '.agp-so-vav.fr-asset .vav-f{background:transparent}',
+        '.agp-so-vav.fr-asset .vav-i{inset:0}',
         '.agp-so-glyph svg{display:block;width:100%;height:100%}',
         '.agp-so-glyph.glow{filter:drop-shadow(0 0 .08em currentColor) drop-shadow(0 .04em .06em rgba(0,0,0,.6))}',
         '.agp-so-emoji{display:block;font-size:1em;line-height:1.15;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;filter:drop-shadow(0 .04em .06em rgba(0,0,0,.45))}',
@@ -4326,7 +4399,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

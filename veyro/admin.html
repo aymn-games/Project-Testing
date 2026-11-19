@@ -395,8 +395,10 @@
   .ed-stage.stream { background: linear-gradient(135deg, #2b3a55, #563a5c 50%, #1e2c3a); }
   .ed-stage.white { background: #f1eef5; }
   .ed-stage canvas { max-width: 100%; max-height: 100%; }
-  .ed-stage .bgsw { position: absolute; bottom: 10px; left: 10px; }
-  .ed-stage .pick-hint { position: absolute; top: 10px; right: 10px; padding: 5px 10px; border-radius: 9px; background: rgba(12,11,16,.8); font-size: 12px; color: var(--warn); }
+  .ed-stage .bgsw { position: absolute; bottom: 10px; left: 10px; z-index: 2; }
+  .ed-stage .fprev { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; background: linear-gradient(160deg, #8d7fa3, #42394f); box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); pointer-events: none; }
+  .ed-stage canvas { position: relative; z-index: 1; }
+  .ed-stage .pick-hint { position: absolute; z-index: 2; top: 10px; right: 10px; padding: 5px 10px; border-radius: 9px; background: rgba(12,11,16,.8); font-size: 12px; color: var(--warn); }
   .ed-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .ed-play { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .ed-play .ob-range { flex: 1; }
