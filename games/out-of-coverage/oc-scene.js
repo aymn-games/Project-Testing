@@ -24,6 +24,8 @@ const span = (u, a, b) => clamp01((u - a) / (b - a));
 const FONT = '"IBM Plex Sans Arabic", "Zain", "Segoe UI", Tahoma, sans-serif';
 const STAGE_Z = -6;          // مركز قوس المنصات
 const POD_H = 0.45, POD_H_BACK = 1.15;
+// منطقة الانتظار (منصات القوس) ترجع لورا، وقدّامها «منصة الدور»: كل دفعة تمشي لها وتوقف تحت الإضاءة
+const WAIT_BACK = 3.2, FRONT_Z = STAGE_Z + 11.6, FRONT_GAP = 2.8, DECK_Y = 0.3, WALK_SPEED = 6.5;
 
 // ---------------------------------------------------------------- خامات وأشكال مشتركة
 const MATS = new Map();
@@ -180,7 +182,11 @@ function buildFigure(look) {
     }
     const mouth = add(head, new THREE.TorusGeometry(0.08, 0.022, 6, 12, Math.PI), M('#9f1239'), 0, -0.2, 0.57); mouth.rotation.z = Math.PI;
     bake(body); bake(head); legs.forEach(bake); arms.forEach(bake);
-    G.userData = { legs, arms, head, body, mouth };
+    // الجوال: يطلع بين اليدين وقت كتابة التلميح، وشاشته تضوي على الوجه
+    const phone = new THREE.Group(); phone.position.set(0, 1.18, 0.5); phone.rotation.x = -0.95; phone.visible = false; G.add(phone);
+    add(phone, new THREE.BoxGeometry(0.34, 0.56, 0.05), M('#18151f', { roughness: 0.3, metalness: 0.4 }));
+    add(phone, new THREE.PlaneGeometry(0.29, 0.49), new THREE.MeshBasicMaterial({ color: '#c4b5fd', toneMapped: false }), 0, 0, 0.027);
+    G.userData = { legs, arms, head, body, mouth, phone };
     return G;
 }
 
@@ -314,6 +320,22 @@ export function createStage(container, getFrame) {
         confP.forEach((c) => { c.p.set(center.x + (Math.random() - 0.5) * 8, 13 + Math.random() * 3, center.z + (Math.random() - 0.5) * 5); c.v.set((Math.random() - 0.5) * 2, -2 - Math.random() * 2.5, (Math.random() - 0.5) * 2); c.w.set(Math.random() * 6, Math.random() * 6, Math.random() * 6); });
     }
 
+    // ---------------------------------------------------------------- منصة الدور: بقعة ضوء لكل لاعب بالدفعة
+    const hot = [];
+    const hotBeamGeo = new THREE.ConeGeometry(1.25, 11, 28, 1, true); hotBeamGeo.translate(0, -5.5, 0);
+    for (let i = 0; i < 5; i++) {
+        const g = new THREE.Group(); g.visible = false; scene.add(g);
+        const disc = new THREE.Mesh(new THREE.CircleGeometry(1.15, 40), new THREE.MeshBasicMaterial({ color: '#fff3d6', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+        disc.rotation.x = -Math.PI / 2; disc.position.y = DECK_Y + 0.02; g.add(disc);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.05, 6, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0, toneMapped: false }));
+        ring.rotation.x = Math.PI / 2; ring.position.y = DECK_Y + 0.03; g.add(ring);
+        const beam = new THREE.Mesh(hotBeamGeo, new THREE.MeshBasicMaterial({ color: '#fff3d6', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+        beam.position.y = 11 + DECK_Y; g.add(beam);
+        hot.push({ g, disc, ring, beam, a: 0 });
+    }
+    /** مكان اللاعب رقم i من n بمنصة الدور (الأول يمين الشاشة مثل القراءة بالعربي) */
+    function frontSlot(i, n, out) { return out.set(((n - 1) / 2 - i) * FRONT_GAP, DECK_Y, FRONT_Z); }
+
     // ---------------------------------------------------------------- اللاعبين
     const figs = new Map();
     function makeFig(p) {
@@ -342,7 +364,7 @@ export function createStage(container, getFrame) {
             const step = Math.min(0.42, 2.3 / Math.max(1, count - 1)), a0 = -step * (count - 1) / 2 + (half ? step / 2 : 0);
             for (let i = 0; i < count; i++) {
                 const a = a0 + step * i;
-                out.push({ pos: new THREE.Vector3(Math.sin(a) * R, 0, STAGE_Z + Math.cos(a) * R), rot: a * 0.75, h });
+                out.push({ pos: new THREE.Vector3(Math.sin(a) * R, 0, STAGE_Z - WAIT_BACK + Math.cos(a) * R), rot: a * 0.75, h });
             }
         };
         row(front, 9.5 + Math.max(0, front - 6) * 0.35, POD_H);
@@ -368,13 +390,13 @@ export function createStage(container, getFrame) {
             const L = lay[Math.min(p.seat, lay.length - 1)] || lay[0];
             f.home.copy(L.pos); f.root.rotation.y = L.rot; f.podH = L.h; f.p = p;
             f.pod.scale.y = L.h; f.pod.position.y = L.h / 2; f.ring.position.y = L.h + 0.01; f.glow.position.y = L.h + 0.02;
-            f.ch.position.y = L.h; f.name.position.y = L.h + 3.35; f.badge.position.y = L.h + 4.05;
+            if (!f.placed) { f.ch.position.set(0, L.h, 0); f.baseY = L.h; }
             if (layoutN !== n || !f.placed) { f.root.position.copy(f.home); f.placed = true; }
         });
         layoutN = n;
     }
 
-    function headPos(f, out) { return out.set(f.root.position.x, f.root.position.y + f.podH + 2.3, f.root.position.z); }
+    function headPos(f, out) { f.ch.getWorldPosition(out); out.y += 2.3; return out; }
     function centroid(ids) {
         const c = new THREE.Vector3(); let n = 0, spread = 0; const tmp = new THREE.Vector3(), pts = [];
         ids.forEach((id) => { const f = figs.get(id); if (f) { headPos(f, tmp); c.add(tmp); pts.push(tmp.clone()); n++; } });
@@ -472,9 +494,11 @@ export function createStage(container, getFrame) {
 
             // حالة اللاعب ← لون حلقة المنصة والشارة والحركة
             const inBatch = batchIds.indexOf(p.id) >= 0;
+            const upFront = inBatch && (k === 'write' || k === 'show') && !p.left;
+            f.walking = walkTo(f, upFront ? frontSlot(batchIds.indexOf(p.id), batchIds.length, tmpW) : null, Math.min(raw, 0.25));   // المشي بالوقت الفعلي حتى لو الإطارات قليلة
             let ringC = accent, glowO = 0, badge = null, badgeN = null, anim = 'idle';
             if (p.left) { ringC = '#3f3f46'; anim = 'still'; }
-            else if (k === 'write' && inBatch) { ringC = gp.sent ? '#22c55e' : '#c4b5fd'; glowO = gp.sent ? 0.35 : 0.22 + Math.sin(t * 4) * 0.08; badge = gp.sent ? 'sent' : 'typing'; anim = gp.sent ? 'idle' : 'turn'; }
+            else if (k === 'write' && inBatch) { ringC = gp.sent ? '#22c55e' : '#c4b5fd'; glowO = 0; badge = gp.sent ? 'sent' : 'typing'; anim = gp.sent ? 'idle' : 'type'; }
             else if (k === 'show' && inBatch) { ringC = gp.hint ? '#22c55e' : '#71717a'; glowO = 0.25; badge = gp.hint ? null : 'none'; }
             else if (k === 'vote' || k === 'runoff') { const cand = !G.runoff || G.runoff.indexOf(p.id) >= 0; ringC = cand ? '#f87171' : '#3f3f46'; badge = gp.voted ? 'voted' : null; anim = 'still'; }
             else if (k === 'reveal' && G.tally) {
@@ -498,7 +522,8 @@ export function createStage(container, getFrame) {
             const sentNow = k === 'write' && inBatch && !!gp.sent;
             if (sentNow && !f.lastSent) { f.hop = 0; f.flash = 1; }
             f.lastSent = sentNow;
-            if (k === 'write' && inBatch && el < 1400 && !gp.sent) anim = 'wave';
+            if (f.walking) anim = 'walk';
+            else if (!upFront && batchIds.length && (k === 'write' || k === 'show')) anim = 'wait';
 
             f.ringMat.color.set(ringC);
             f.flash = Math.max(0, f.flash - dt * 1.6);
@@ -510,6 +535,24 @@ export function createStage(container, getFrame) {
             f.name.material.opacity = (k === 'write' || k === 'show') && batchIds.length && !inBatch ? 0.35 : 1;
 
             animate(f, U, anim, dt, t, ph);
+            // الاسم والشارة يمشون مع الشخصية
+            f.name.position.copy(f.ch.position); f.name.position.y += 3.35;
+            f.badge.position.copy(f.ch.position); f.badge.position.y += 4.05;
+        });
+
+        // بقع منصة الدور: تضوي بأماكن الدفعة الحالية (أخضر خفيف للي أرسل)
+        const hotOn = (k === 'write' || k === 'show') ? batchIds.length : 0;
+        hot.forEach((H, i) => {
+            const on = i < hotOn;
+            H.a += ((on ? 1 : 0) - H.a) * (1 - Math.exp(-dt * 4));
+            H.g.visible = H.a > 0.01;
+            if (!H.g.visible) return;
+            if (on) { frontSlot(i, hotOn, tmpW); H.g.position.set(tmpW.x, 0, tmpW.z); }
+            const gp = on ? pById[batchIds[i]] || {} : {}, sent = k === 'write' ? gp.sent : !!gp.hint;
+            H.ring.material.color.set(sent ? '#22c55e' : accent);
+            H.disc.material.opacity = H.a * (0.28 + Math.sin(t * 3 + i) * 0.04);
+            H.ring.material.opacity = H.a * 0.9;
+            H.beam.material.opacity = H.a * 0.1;
         });
 
         // ---- القصاصات
@@ -567,7 +610,8 @@ export function createStage(container, getFrame) {
         if (k === 'deal') { P.set(0, 17 * Math.min(far, 1.25), STAGE_Z + 13 * far); Lk.set(0, 0.5, STAGE_Z + 2.5); return; }
         if ((k === 'write' || k === 'show') && batchIds.length) {
             // متوسطة على لاعبين الدفعة، وزاوية مختلفة لكل دفعة (يمين · يسار · وسط أعلى)
-            const c = centroid(batchIds); if (!c) return wide();
+            // الكاميرا ثابتة على منصة الدور (مو تلاحقهم): الدفعة تمشي وتدخل الكادر
+            const nB = batchIds.length, c = { c: new THREE.Vector3(0, DECK_Y + 2.3, FRONT_Z), spread: Math.max(1.2, (nB - 1) * FRONT_GAP / 2 + 0.6) };
             const side = [0.42, -0.42, 0][G.batch % 3], dist = (5.6 + c.spread * 1.15 + (k === 'show' ? -0.6 : 0)) * far;
             const dir = new THREE.Vector3(c.c.x - 0, 0, c.c.z - STAGE_Z).normalize(); if (!isFinite(dir.x)) dir.set(0, 0, 1);
             dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), side);
@@ -601,11 +645,45 @@ export function createStage(container, getFrame) {
         wide();
     }
 
+    const tmpW = new THREE.Vector3(), tmpL = new THREE.Vector3();
+    /**
+     * يحرك الشخصية لمكان (عالمي) أو يرجعها لمنصتها (null). يرجع true وهي تمشي.
+     * المنصة تبقى مكانها (منطقة الانتظار)، والشخصية بس اللي تتحرك.
+     */
+    function walkTo(f, world, dt) {
+        f.root.updateMatrixWorld();
+        if (world) { tmpL.copy(world); f.root.worldToLocal(tmpL); tmpL.y = DECK_Y - f.root.position.y; }
+        else tmpL.set(0, f.podH, 0);
+        const cp = f.ch.position, dx = tmpL.x - cp.x, dz = tmpL.z - cp.z, dist = Math.hypot(dx, dz);
+        if (dist > 0.06) {
+            const st = Math.min(dist, dt * WALK_SPEED);
+            cp.x += dx / dist * st; cp.z += dz / dist * st;
+            f.baseYaw = Math.atan2(dx, dz);
+            // ينزل من المنصة أول خطوة ويطلع لها آخر خطوة
+            const homeD = Math.hypot(cp.x, cp.z);
+            f.baseY = homeD < 1.0 ? f.podH + (DECK_Y - f.root.position.y - f.podH) * Math.min(1, homeD) : DECK_Y - f.root.position.y;
+            return true;
+        }
+        cp.x = tmpL.x; cp.z = tmpL.z; f.baseY = tmpL.y;
+        // واقف: بمنصة الدور يواجه الكاميرا، وبمنصته باتجاهها
+        f.baseYaw = world ? -f.root.rotation.y : 0;
+        return false;
+    }
+
     /** حركة الشخصية حسب الحدث — الباقين هادئين (اهتزاز تنفس بسيط) عشان ما يتشتت المشاهد. */
     function animate(f, U, anim, dt, t, ph) {
         const k = 1 - Math.exp(-dt * 10);
-        let y = 0, ax0 = 0, ax1 = 0, az0 = -0.2, az1 = 0.2, hx = 0, hz = Math.sin(ph * 0.4) * 0.04, ry = 0, lg = 0;
-        if (anim === 'turn') { y = Math.abs(Math.sin(ph * 1.6)) * 0.08; ax0 = Math.sin(ph) * 0.4; ax1 = -Math.sin(ph) * 0.4; hz = Math.sin(ph * 0.8) * 0.1; }
+        let y = 0, ax0 = 0, ax1 = 0, az0 = -0.2, az1 = 0.2, hx = 0, hz = Math.sin(ph * 0.4) * 0.04, ry = f.baseYaw || 0, lg = 0;
+        U.phone.visible = anim === 'type';
+        if (anim === 'walk') { const w = t * 11 + f.ph; lg = Math.sin(w) * 0.6; ax0 = -Math.sin(w) * 0.5; ax1 = Math.sin(w) * 0.5; y = Math.abs(Math.sin(w)) * 0.06; hz = 0; }
+        else if (anim === 'type') {
+            // منزّل راسه يكتب بالجوال: اليدين قدّام ومضمومة، والإبهام ينقر
+            const tap = Math.sin(t * 16 + f.ph) * 0.06;
+            hx = 0.5 + Math.sin(t * 1.3 + f.ph) * 0.04; hz = Math.sin(t * 0.9 + f.ph) * 0.05;
+            ax0 = -1.05 + tap; ax1 = -1.05 - tap; az0 = 0.42; az1 = -0.42;
+        }
+        else if (anim === 'wait') { hz = Math.sin(ph * 0.3) * 0.05; }
+        else if (anim === 'turn') { y = Math.abs(Math.sin(ph * 1.6)) * 0.08; ax0 = Math.sin(ph) * 0.4; ax1 = -Math.sin(ph) * 0.4; hz = Math.sin(ph * 0.8) * 0.1; }
         else if (anim === 'wave') { az1 = 2.6 + Math.sin(t * 9) * 0.35; hz = 0.1; }
         else if (anim === 'cheer') { const c = t * 7 + f.ph; y = Math.abs(Math.sin(c * 0.5)) * 0.8; az0 = -2.7 + Math.sin(c) * 0.3; az1 = 2.7 - Math.sin(c) * 0.3; hz = Math.sin(c) * 0.15; lg = Math.sin(c * 0.5) * 0.4; }
         else if (anim === 'sad') { hx = 0.38; az0 = -0.08; az1 = 0.08; }
@@ -618,8 +696,9 @@ export function createStage(container, getFrame) {
         U.arms[0].rotation.x += (ax0 - U.arms[0].rotation.x) * k; U.arms[1].rotation.x += (ax1 - U.arms[1].rotation.x) * k;
         U.head.rotation.x += (hx - U.head.rotation.x) * k; U.head.rotation.z += (hz - U.head.rotation.z) * k;
         U.legs[0].rotation.x = lg; U.legs[1].rotation.x = -lg;
-        f.ch.position.y = f.podH + y + (anim === 'idle' ? Math.sin(ph * 0.7) * 0.015 : 0);
-        f.ch.rotation.y += (ry - f.ch.rotation.y) * k;
+        f.ch.position.y = (f.baseY == null ? f.podH : f.baseY) + y + (anim === 'idle' ? Math.sin(ph * 0.7) * 0.015 : 0);
+        let dy = ry - f.ch.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+        f.ch.rotation.y += dy * (1 - Math.exp(-dt * 8));
     }
 
     // وضع الأداء: لو الإطارات نزلت تحت 22/ث تنطفي الظلال وتنزل الدقة (نفس سفينة النجاة)
@@ -641,7 +720,7 @@ export function createStage(container, getFrame) {
         /** مكان فوق رأس الشخصية على الشاشة (بكسل) — لبطاقات التلميح بشاشة البث */
         project(id) {
             const f = figs.get(id); if (!f) return null;
-            proj.set(f.root.position.x, f.root.position.y + f.podH + 3.05, f.root.position.z).project(cam);
+            f.ch.getWorldPosition(proj); proj.y += 3.05; proj.project(cam);
             const w = container.clientWidth, h = container.clientHeight;
             return { x: (proj.x * 0.5 + 0.5) * w, y: (-proj.y * 0.5 + 0.5) * h, on: proj.z < 1 && Math.abs(proj.x) < 1.1 && Math.abs(proj.y) < 1.1 };
         },
