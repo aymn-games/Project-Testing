@@ -148,7 +148,10 @@
         ],
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
-            { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } }
+            { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } },
+            { label: 'القط المضيء', sub: 'قط من زجاج بنيون يتعبّى بالدعم، وله انعكاس', type: 'goal', set: { design: 'cat', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'amber', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff9a45' } },
+            { label: 'القط الدائري', sub: 'قط مدوّر من زجاج بنيون قوس قزح، يتعبّى بالدعم', type: 'goal', set: { design: 'blob', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
+            { label: 'هلال الفراشات', sub: 'هلال زجاج فضّي وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
         ],
         text: [
             { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
@@ -1536,13 +1539,18 @@
         num.addEventListener('input', function () { var v = Math.floor(Number(num.value)); if (v > 0) update(it, 'target', v); });
         box.appendChild(row('الهدف', num));
         box.appendChild(row('لما يوصل ينتقل للي بعده', toggle(it.autoNext, function (v) { update(it, 'autoNext', v); })));
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, it.design === 'orb' ? 'فاضي = بدون عنوان' : ''));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, O.isOrbDesign(it.design) ? 'فاضي = بدون عنوان' : ''));
         box = group(root, 'الشكل');
         box.appendChild(row('التصميم', pills(opts(O.GOAL_DESIGNS.concat(O.VEYRO_GOAL_DESIGNS)), it.design || 'bar', function (v) {
-            if (v === 'orb' && !it.palette) { it.palette = 'lavender'; it.speed = 'normal'; it.bubbles = true; }
+            // أشكال السائل: كل شكل يبدأ بلوحته (لو ما غيّر الستريمر الألوان بنفسه)
+            if (O.isOrbDesign(v) && v !== it.design) {
+                if (!(it.orb && Object.keys(it.orb).length)) it.palette = O.ORB_SHAPES[v].palette;
+                if (!it.speed) it.speed = 'normal';
+                if (it.bubbles == null) it.bubbles = true;
+            }
             update(it, 'design', v, true);
         }), true));
-        if (it.design === 'orb') { orbProps(it, root, box); return; }
+        if (O.isOrbDesign(it.design)) { orbProps(it, root, box); return; }
         sizeColor(it, box, 1.5, 9);
     }
 
@@ -1574,13 +1582,12 @@
             return w;
         }
         var cg = el('div', 'vo-cps');
-        [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], ['الحلقة', 'ring'], ['التوهّج', 'glow'], ['القمر', 'moon'], ['الغيوم', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
+        var isBall = (it.design || 'orb') === 'orb';
+        [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], [isBall ? 'الحلقة' : 'الخط', 'ring'], ['التوهّج', 'glow'], [isBall ? 'القمر' : 'التفاصيل', 'moon'], [isBall ? 'الغيوم' : 'الخلفية', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
         box.appendChild(row('كل لون لحاله', cg, true, 'يبدأ من اللوحة اللي اخترتها'));
         box = group(root, 'الحركة والأرقام');
         box.appendChild(row('حركة الموج', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], it.speed || 'normal', function (v) { update(it, 'speed', v, true); })));
         box.appendChild(row('فقاعات', toggle(it.bubbles !== false, function (v) { update(it, 'bubbles', v); })));
-        box.appendChild(row('الأرقام تحت', toggle(it.showNums !== false, function (v) { update(it, 'showNums', v, true); })));
-        if (it.showNums !== false) box.appendChild(row('النسبة ٪', toggle(Boolean(it.showPct), function (v) { update(it, 'showPct', v); })));
         box.appendChild(row('الحجم', slider(1.5, 12, 0.1, it.size, function (v) { update(it, 'size', v); })));
         box.appendChild(row('جرّب التعبئة', (function () {
             var w = el('div', 'ob-pills');
@@ -1589,6 +1596,47 @@
             });
             return w;
         })(), true, 'يورّيك حركة السائل وهو يتعبّى (بالمعاينة بس)'));
+        orbLabelProps(it, root);
+    }
+
+    /** نص الهدف: نص بس (بدون خلفية) — شكل النص، التوهّج، الحركة، المكان، نص حر، الخط واللون والحجم. */
+    function orbLabelProps(it, root) {
+        var on = O.orbLabelOn(it);
+        var box = group(root, 'نص الهدف', 'شكل النص والتوهّج والحركة');
+        box.appendChild(row('إظهار النص', toggle(on, function (v) { it.showNums = v; update(it, 'lbl', v ? 'text' : 'none', true); })));
+        if (!on) return;
+        box.appendChild(row('شكل النص', pills(opts(O.ORB_TEXT_STYLES), it.lblSt || 'clean', function (v) { update(it, 'lblSt', v, true); }), true));
+        box.appendChild(row('التوهّج', pills(opts(O.ORB_GLOWS), it.lblGlow || 'none', function (v) { update(it, 'lblGlow', v, true); }), true));
+        if (it.lblGlow && it.lblGlow !== 'none') optColor(it, box, 'lblGlowColor', 'لون التوهّج', 'الأصلي = لون الهدف');
+        box.appendChild(row('حركة النص', pills(opts(O.ANIMS), it.lblAnim || 'none', function (v) { update(it, 'lblAnim', v, true); }), true));
+        if (it.lblAnim && it.lblAnim !== 'none') box.appendChild(row('سرعة الحركة', pills(O.SPEEDS, Number(it.lblSpeed) || 1, function (v) { update(it, 'lblSpeed', v, true); })));
+        fontPick(it, box, 'lblFont', 'الخط');
+        optColor(it, box, 'lblColor', 'لون النص', 'الأصلي = أبيض');
+        box.appendChild(row('حجم النص', slider(0.4, 3, 0.05, Number(it.lblSize) || 1, function (v) { update(it, 'lblSize', v); })));
+
+        box = group(root, 'كلام النص ومكانه');
+        var txt = textInput(it.lblText, 60, function (v) { update(it, 'lblText', v); });
+        txt.placeholder = 'فاضي = الأرقام (مثلاً 860 / 5,000)';
+        box.appendChild(row('النص', txt, true, 'اكتب أي نص، وحط الأرقام بالأزرار تحت'));
+        var chips = el('div', 'ob-pills');
+        [['+ الحالي', '{cur}'], ['+ الهدف', '{target}'], ['+ الباقي', '{left}'], ['+ النسبة', '{pct}']].forEach(function (x) {
+            chips.appendChild(button(x[0], 'ob-pill', function () {
+                var v = txt.value;
+                var nv = (v + (v && !/\s$/.test(v) ? ' ' : '') + x[1]).slice(0, 60);
+                update(it, 'lblText', nv, true);
+            }));
+        });
+        box.appendChild(row('إضافة رقم للنص', chips, true, 'مثال: «باقي {left} على الهدف»'));
+        var quick = el('div', 'ob-pills');
+        [['الأرقام', ''], ['الباقي', 'باقي {left}'], ['النسبة', '{pct}'], ['الحالي بس', '{cur}']].forEach(function (x) {
+            quick.appendChild(button(x[0], 'ob-pill' + ((it.lblText || '') === x[1] ? ' on' : ''), function () { update(it, 'lblText', x[1], true); }));
+        });
+        box.appendChild(row('جاهز', quick, true));
+        box.appendChild(row('الأيقونة', toggle(it.lblIcon !== false, function (v) { update(it, 'lblIcon', v); })));
+        if (!it.lblText) box.appendChild(row('النسبة ٪ جنب الأرقام', toggle(Boolean(it.showPct), function (v) { update(it, 'showPct', v); })));
+        box.appendChild(row('المكان', pills(opts(O.ORB_LABEL_POS), it.lblPos || 'bottom', function (v) { it.lblDx = 0; it.lblDy = 0; update(it, 'lblPos', v, true); }), true));
+        box.appendChild(row('تحريك يمين/يسار', slider(-12, 12, 0.1, Number(it.lblDx) || 0, function (v) { update(it, 'lblDx', v); })));
+        box.appendChild(row('تحريك فوق/تحت', slider(-12, 12, 0.1, Number(it.lblDy) || 0, function (v) { update(it, 'lblDy', v); })));
     }
 
     function counterProps(it, root) {
@@ -2976,6 +3024,10 @@
                 af.className = 'va-av-f' + (O.loopOf(p) ? ' agp-so-vloop abs lp-' + O.loopOf(p) : '');
                 ai.style.inset = fr === 'ring' ? '2px' : '0';
                 c.style.filter = fr === 'glow' ? 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')' : fr === 'none' ? '' : 'drop-shadow(0 2px 5px rgba(0,0,0,.7))';
+                // «دوامة ضوء»: نفس رسمة البث حول الصورة
+                var oldSw = c.querySelector('.vav-swirl');
+                if (oldSw) oldSw.remove();
+                if (fr === 'swirl') { c.style.filter = ''; c.appendChild(O.avatarSwirl(p)); }
             }
             else {
                 c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
@@ -3168,7 +3220,16 @@
                     sg.appendChild(sb);
                 });
                 gS.appendChild(row('شكل الصورة', sg, true));
-                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) {
+                    // الدوامة بلون أبيض تطلع باهتة — نبدأها بالأزرق (مثل الصورة) لو اللون أبيض
+                    if (val === 'swirl' && (!p.c || /^#fff(fff)?$/i.test(p.c))) it.parts[key] = Object.assign({}, O.partsOf(it)[key], { c: '#6fb4ff' });
+                    setPart(key, 'fr', val, true);
+                }), true));
+                if (p.fr === 'swirl') {
+                    gS.appendChild(row('سماكة الدوامة', slider(0.3, 3, 0.05, Number(p.fw) || 1, function (v) { setPart(key, 'fw', v); })));
+                    gS.appendChild(row('حركة الدوامة', pills(opts(O.SWIRL_MOTIONS), p.fm || 'spin', function (val) { setPart(key, 'fm', val, true); }), true));
+                    if ((p.fm || 'spin') !== 'none') gS.appendChild(row('السرعة', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], p.fsp || 'normal', function (val) { setPart(key, 'fsp', val, true); })));
+                }
                 // إطارات من مكتبة فيرو (صورة فوق صورة الداعم)
                 loadVyLib(function () { if (libOf('frame').length) renderPanel(); });
                 if (libOf('frame').length) {
@@ -3187,7 +3248,7 @@
                     if (p.fr === 'asset') gS.appendChild(row('حجم الإطار', slider(1, 2.5, 0.05, p.fs || 1.3, function (v) { setPart(key, 'fs', v); })));
                 }
             }
-            gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
+            gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : p.fr === 'swirl' ? 'لون الدوامة' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
                 gS.appendChild(row('ستايل النص', pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
                 var g = el('div', 'ob-fgrid');

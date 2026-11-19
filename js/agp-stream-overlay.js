@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '8'; // 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '10'; // 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -1102,8 +1102,8 @@
         // «آخر دعم» البسيط: ما نعيد الرسم إلا لو تغيّر الداعم أو الشكل (عشان الحركة ما تنقطع)
         if (node && node._ld && it.type === 'lastdonation') return node._ld.sig === ldSig(curLastDon()) && node._ld.cfg === ldCfg(it);
         // كرة القمر: نحدّث المستوى بس (الموج يكمل) — لو تغيّر شكلها نعيد البناء
-        if (node && node._orb && it.type === 'goal' && it.design === 'orb') {
-            if (node._orb.sig !== JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title])) return false;
+        if (node && node._orb && it.type === 'goal' && isOrbDesign(it.design)) {
+            if (node._orb.sig !== orbSig(it)) return false;
             node._orb.it = it;
             paintOrb(node, true);
             return true;
@@ -1349,8 +1349,8 @@
     // تصاميم Veyro (veyro/) — ما تطلع بمحرر overlay/ القديم. max = أكثر عدد أشخاص.
     var VEYRO_DESIGNS = [{ key: 'throne', label: 'العرش', max: 3, multi: true }, { key: 'stack', label: 'القائمة', max: 10, multi: true }];
     var GOAL_DESIGNS = [{ key: 'bar', label: 'شريط' }, { key: 'ring', label: 'دائرة' }];
-    // تصاميم أهداف Veyro بس: «كرة القمر» (سائل يتعبّى)
-    var VEYRO_GOAL_DESIGNS = [{ key: 'orb', label: 'كرة القمر' }];
+    // تصاميم أهداف Veyro بس: أشكال نيون تتعبّى بسائل يتموّج (ORB_SHAPES تحت)
+    var VEYRO_GOAL_DESIGNS = [{ key: 'orb', label: 'كرة القمر' }, { key: 'cat', label: 'القط المضيء' }, { key: 'blob', label: 'القط الدائري' }, { key: 'crescent', label: 'هلال الفراشات' }];
     var COUNTER_DESIGNS = [{ key: 'pills', label: 'كبسولات' }, { key: 'big', label: 'أرقام كبيرة' }, { key: 'stack', label: 'قائمة' }];
 
     // أليرتات «شاشات البث»: msg = النص الافتراضي ({name} {gift} {count} {diamonds})
@@ -1455,13 +1455,16 @@
         ocean: { label: 'محيط', top: '#5fd4ff', bottom: '#0f3d86', ring: '#b5e8ff', moon: '#eefaff', cloud: '#10264a', glow: '#3cc3ff' },
         gold: { label: 'ذهبي', top: '#ffd77a', bottom: '#8a5a12', ring: '#ffe7ad', moon: '#fff8e6', cloud: '#3a2a10', glow: '#ffc64a' },
         mint: { label: 'نعناعي', top: '#7cffc8', bottom: '#0f6b5a', ring: '#b8ffe2', moon: '#effff8', cloud: '#103a33', glow: '#45f0b0' },
-        fire: { label: 'ناري', top: '#ffb347', bottom: '#b3122e', ring: '#ffd1a1', moon: '#fff3e8', cloud: '#3d1414', glow: '#ff6a3d' }
+        fire: { label: 'ناري', top: '#ffb347', bottom: '#b3122e', ring: '#ffd1a1', moon: '#fff3e8', cloud: '#3d1414', glow: '#ff6a3d' },
+        amber: { label: 'كهرماني', top: '#ffc27a', bottom: '#7a3510', ring: '#ffe2bd', moon: '#fff1de', cloud: '#2a1508', glow: '#ff9a45' },
+        aurora: { label: 'قوس قزح', top: '#8fe9ff', bottom: '#7a4bff', ring: '#c8f6ff', moon: '#ffffff', cloud: '#1a1238', glow: '#ff8fd2' },
+        silver: { label: 'فضّي', top: '#cdd2ff', bottom: '#2c2f6e', ring: '#f4f5ff', moon: '#ffffff', cloud: '#14153a', glow: '#b9bfff' }
     };
     var ORB_SPEEDS = { slow: 1.6, normal: 1, fast: 0.6 };
     var orbSeq = 0;
 
     function orbColors(it) {
-        var pal = ORB_PALETTES[it.palette] || ORB_PALETTES.lavender;
+        var pal = ORB_PALETTES[it.palette] || ORB_PALETTES[(ORB_SHAPES[it.design] || {}).palette] || ORB_PALETTES.lavender;
         var c = Object.assign({}, pal);
         ['top', 'bottom', 'ring', 'moon', 'cloud', 'glow'].forEach(function (k) {
             var v = it.orb && it.orb[k];
@@ -1471,36 +1474,194 @@
     }
 
     /** موجة: من -200 لين 400 (طولها 600 = 3 دورات قابلة للتكرار)، y = 0 عند القمة. */
-    function wavePath(amp) {
+    function waveLine(amp) {
         var d = 'M-200 0';
         for (var x = -200; x < 400; x += 100) d += ' q25 ' + (-amp) + ' 50 0 t50 0';
-        return d + ' L400 260 L-200 260 Z';
+        return d;
     }
+    function wavePath(amp) { return waveLine(amp) + ' L400 300 L-200 300 Z'; }
+
+    /** فراشة (تصميم الهلال) بجناحين من زجاج ملوّن وحواف مضيئة، ترفرف حول الجسم. */
+    function orbButterfly(c, id, x, y, s, rot, dur, delay) {
+        var wing = '<g class="agp-so-owing" style="animation-duration:' + dur + 's;animation-delay:-' + delay + 's">' +
+            '<path d="M0 -2C2 -14 12 -27 24 -25C33 -23 31 -11 23 -5C16 0 6 0 0 0Z"/>' +
+            '<path d="M0 1C8 1 18 4 18 13C18 21 10 22 6 16C3 11 1 6 0 2Z"/>' +
+            '<path d="M2 -3Q12 -10 22 -20M3 -2Q14 -6 24 -9M2 3Q9 7 13 15" fill="none" stroke-opacity=".5" stroke-width=".8"/>' +
+            '<path d="M6 -10Q12 -19 21 -21" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round"/>' +
+            '<circle cx="24" cy="-19" r="1.4" fill="#fff" stroke="none"/><circle cx="27" cy="-13" r="1" fill="#fff" stroke="none"/><circle cx="14" cy="15" r="1.1" fill="#fff" stroke="none"/>' +
+            '</g>';
+        var wings = wing + '<g transform="scale(-1 1)">' + wing + '</g>';
+        return '<g transform="translate(' + x + ' ' + y + ') rotate(' + rot + ') scale(' + s + ')">' +
+            '<g fill="none" stroke="' + c.glow + '" stroke-width="3" filter="url(#' + id + 'fn)" opacity=".8">' + wings + '</g>' +
+            '<g fill="url(#' + id + 'bw)" stroke="' + c.moon + '" stroke-width="1.3" stroke-linejoin="round">' + wings + '</g>' +
+            neonLine(id, 'M0 -8L0 12M0 -8Q-2 -16 -7 -19M0 -8Q2 -16 7 -19', c.moon, 1.6) +
+            '</g>';
+    }
+
+    function orbStar(x, y, r, delay) {
+        return '<path class="agp-so-otw" style="animation-delay:-' + delay + 's" d="M' + x + ' ' + (y - r) + 'q' + r * .14 + ' ' + r * .86 + ' ' + r + ' ' + r + 'q-' + r * .86 + ' ' + r * .14 + ' -' + r + ' ' + r + 'q-' + r * .14 + ' -' + r * .86 + ' -' + r + ' -' + r + 'q' + r * .86 + ' -' + r * .14 + ' ' + r + ' -' + r + 'z" fill="#fff"/>';
+    }
+
+    /** نجمة لمعة (نفس الشكل) وحولها هالة ضوء ناعمة. */
+    function glassStar(id, x, y, r, delay) {
+        return '<circle class="agp-so-otw" style="animation-delay:-' + delay + 's" cx="' + x + '" cy="' + y + '" r="' + (r * 2.6) + '" fill="url(#' + id + 'sg)"/>' + orbStar(x, y, r, delay);
+    }
+
+    /** نقطة ضوء صغيرة بهالة. */
+    function realStar(id, x, y, r, delay) {
+        return '<g class="agp-so-otw" style="animation-delay:-' + delay + 's" transform="translate(' + x + ' ' + y + ')">' +
+            '<circle r="' + (r * 4.5) + '" fill="url(#' + id + 'sg)"/><circle r="' + (r * .6) + '" fill="#fff"/></g>';
+    }
+
+    /** خط مضيء (فم، شوارب): هالة ناعمة + الخط نفسه. */
+    function neonLine(id, d, color, w) {
+        return '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="' + (w * 2.4) + '" stroke-opacity=".55" stroke-linecap="round" filter="url(#' + id + 'fn)"/>' +
+            '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
+
+    /** عين مثل خرزة زجاج: عمق متدرّج، حافة مضيئة، ولمعتين. small = العين البيضاء الصغيرة (القط الدائري). */
+    function glassEye(id, x, y, r, small) {
+        if (small) {
+            return '<circle cx="' + x + '" cy="' + y + '" r="' + r * 1.8 + '" fill="url(#' + id + 'sg)"/>' +
+                '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + id + 'ew)"/>' +
+                '<ellipse cx="' + (x - r * .3) + '" cy="' + (y - r * .35) + '" rx="' + r * .35 + '" ry="' + r * .25 + '" fill="#fff"/>';
+        }
+        return '<circle cx="' + x + '" cy="' + y + '" r="' + (r + 1.6) + '" fill="none" stroke="url(#' + id + 'r)" stroke-width="3.5" filter="url(#' + id + 'fn)" opacity=".8"/>' +
+            '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + id + 'eb)" stroke="url(#' + id + 'r)" stroke-width="1.3"/>' +
+            '<path d="M' + (x - r * .62) + ' ' + (y + r * .3) + 'A' + r * .7 + ' ' + r * .7 + ' 0 0 0 ' + (x + r * .62) + ' ' + (y + r * .3) + '" fill="none" stroke="' + '#fff' + '" stroke-opacity=".22" stroke-width="1.6" stroke-linecap="round"/>' +
+            '<ellipse cx="' + (x + r * .28) + '" cy="' + (y - r * .36) + '" rx="' + r * .36 + '" ry="' + r * .3 + '" fill="#fff"/>' +
+            '<circle cx="' + (x - r * .32) + '" cy="' + (y + r * .42) + '" r="' + r * .15 + '" fill="#fff" fill-opacity=".75"/>';
+    }
+
+    /**
+     * أشكال الأهداف اللي تتعبّى (كلها بنفس المحرك: سائل بموجتين + فقاعات):
+     * h = ارتفاع الرسمة (العرض 200)، top/bot = حدود السائل (100٪ / 0٪)،
+     * path = حدود الشكل (قص السائل + أنبوب النيون)، floor = خط الأرض (للانعكاس)،
+     * inner = داخل الزجاج تحت السائل، over = فوق السائل داخل الزجاج،
+     * front = تفاصيل فوق كل شي (عيون، شوارب، فراشات)، back = ورى الشكل (نجوم)،
+     * spec = لمعة زجاج حادة، bubbles = أماكن الفقاعات.
+     */
+    var ORB_SHAPES = {
+        orb: {
+            h: 200, top: 8, bot: 190, palette: 'lavender',
+            path: 'M100 10a90 90 0 1 0 0.01 0z',
+            bubbles: [[62, 9, 0], [96, 7, 2.2], [128, 11, 1.1], [146, 8, 3.1], [80, 10, 4.2], [112, 6, 5]],
+            inner: function (c, id) {
+                var stars = '';
+                [[132, 62, 3.4, 0], [158, 98, 2.6, 1.2], [118, 112, 2.2, 2.1], [150, 128, 2.8, .6], [86, 56, 2, 1.7], [168, 140, 1.8, 2.6], [70, 92, 1.6, .9]].forEach(function (s, i) {
+                    stars += i === 0
+                        ? orbStar(s[0], s[1], 14, s[3])
+                        : '<circle class="agp-so-otw" style="animation-delay:-' + s[3] + 's" cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] / 1.6 + '" fill="#fff"/>';
+                });
+                stars += orbStar(126, 111, 7, 1.4);
+                return '<rect width="200" height="200" fill="#07050f"/>' +
+                    '<circle cx="100" cy="100" r="88" fill="url(#' + id + 'g)"/>' + stars +
+                    '<g class="agp-so-omoon"><rect width="200" height="200" fill="url(#' + id + 'm)" mask="url(#' + id + 'k)"/></g>' +
+                    '<g class="agp-so-ocloud" fill="' + c.cloud + '" stroke="' + c.ring + '" stroke-opacity=".35" stroke-width="1.2">' +
+                    '<path d="M8 150c0-14 12-24 26-22 4-12 20-17 30-8 8-8 24-5 27 7 12-2 22 8 20 20 10 1 16 10 14 19H8z"/>' +
+                    '<path d="M120 172c-1-10 8-17 17-15 5-9 18-10 24-2 9-4 20 3 19 13 7 2 12 8 11 15h-71z"/>' +
+                    '</g>';
+            },
+            shine: '<path d="M38 70a66 66 0 0 1 46-46" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>' +
+                '<path d="M34 92a68 68 0 0 1 3-10" stroke="#fff" stroke-opacity=".22" stroke-width="4" stroke-linecap="round" fill="none"/>'
+        },
+        // قط جالس (بنفس شكل الصورة) من زجاج وأنبوب نيون دافي، وانعكاسه على أرضية لامعة
+        cat: {
+            h: 255, top: 30, bot: 213, floor: 213, palette: 'amber',
+            path: 'M62 212C50 200 50 175 58 158C64 146 66 140 58 134C44 124 40 104 44 86C46 70 48 48 54 30C66 38 78 50 86 56C95 53 105 53 114 56C122 50 134 38 146 30C152 48 154 70 156 86C160 104 156 124 142 134C134 140 136 146 142 158C150 175 150 200 138 212Z',
+            spec: 'M50 90C48 104 50 116 56 124M60 166C56 180 56 194 62 204',
+            bubbles: [[78, 9, 0], [96, 7, 2.2], [118, 10, 1.1], [130, 8, 3.1], [88, 10, 4.2], [108, 6, 5]],
+            front: function (c, id) {
+                return '<g class="agp-so-oblink">' + glassEye(id, 80, 96, 9.5) + glassEye(id, 120, 96, 9.5) + '</g>' +
+                    neonLine(id, 'M90 112q5 5.5 10 0q5 5.5 10 0', c.moon, 2) +
+                    '<g class="agp-so-owhisk">' + neonLine(id, 'M46 104Q30 100 14 102M47 112Q32 114 18 120M154 104Q170 100 186 102M153 112Q168 114 182 120', c.ring, 1.6) + '</g>' +
+                    '<g fill="none" stroke="' + c.ring + '" stroke-opacity=".5" stroke-width="1.1" stroke-linecap="round">' +
+                    '<path d="M58 48q8 6 12 14M62 56l6 3M142 48q-8 6-12 14M138 56l-6 3"/>' +
+                    '<path d="M82 212q2-12 0-24M100 212v-22M118 212q-2-12 0-24"/></g>';
+            },
+            back: function (c, id) {
+                return glassStar(id, 178, 196, 3, .4) + glassStar(id, 26, 186, 2.2, 1.9) + realStar(id, 170, 170, 1, 1.1);
+            }
+        },
+        // قط مدوّر (دبدوب) من زجاج بنيون قوس قزح، جالس على خط ضوء
+        blob: {
+            h: 212, top: 44, bot: 178, floor: 178, palette: 'aurora',
+            path: 'M38 158C28 128 32 96 54 76L59 48Q61 42 66 45L84 60C95 56 107 56 118 60L136 45Q141 42 143 48L148 76C170 96 174 128 164 158C158 172 138 178 101 178C64 178 44 172 38 158Z',
+            spec: 'M46 112C42 126 44 142 50 152M70 76C80 68 92 65 104 65',
+            bubbles: [[66, 9, 0], [88, 7, 2.2], [112, 10, 1.1], [138, 8, 3.1], [78, 10, 4.2], [124, 6, 5]],
+            front: function (c, id) {
+                return '<g fill="' + c.glow + '" fill-opacity=".4"><path d="M62 52L65 70L77 62Z"/><path d="M140 52L137 70L125 62Z"/></g>' +
+                    '<g class="agp-so-oblink">' + glassEye(id, 80, 100, 5.4, true) + glassEye(id, 124, 100, 5.4, true) + '</g>' +
+                    neonLine(id, 'M96 104q3 4 6 0q3 4 6 0', '#fff', 1.6) +
+                    '<g class="agp-so-owhisk">' + neonLine(id, 'M158 94Q172 86 188 82M160 100Q174 96 190 96M160 106Q174 106 186 110M42 112Q30 116 16 124M43 118Q32 124 22 132', '#fff', 1.1) + '</g>';
+            }
+        },
+        // هلال بخط فضّي وفراشتين (وحدة جالسة عليه ووحدة طايرة) ونجوم — من زجاج وفيه ملمس قمر خفيف
+        crescent: {
+            h: 200, top: 20, bot: 180, palette: 'silver',
+            path: 'M100.5 20A80 80 0 1 0 175.8 125.5A66 66 0 1 1 100.5 20Z',
+            spec: 'M44 62C30 86 30 118 44 142',
+            bubbles: [[34, 8, 0], [48, 6, 2.2], [62, 9, 1.1], [42, 7, 3.1], [56, 8, 4.2], [90, 6, 5]],
+            craters: [[40, 96, 9], [52, 140, 7], [48, 58, 6], [76, 164, 5], [30, 122, 4], [104, 172, 4]],
+            inner: function (c, id) { return craterSet(ORB_SHAPES.crescent.craters, id, .35) + glassStar(id, 44, 96, 4, .8); },
+            over: function (c, id) {
+                return '<rect width="200" height="200" filter="url(#' + id + 'tx)" opacity=".12" style="mix-blend-mode:multiply"/>' +
+                    craterSet(ORB_SHAPES.crescent.craters, id, .14);
+            },
+            back: function (c, id) {
+                var s = '';
+                [[150, 152, 4, 0], [162, 162, 2.6, .7], [156, 176, 2, 1.5], [172, 146, 1.8, 2.2], [182, 38, 3, 1], [30, 26, 2.4, 2.6], [186, 88, 2, .3], [24, 178, 2, 1.8]].forEach(function (p) {
+                    s += glassStar(id, p[0], p[1], p[2], p[3]);
+                });
+                return '<circle cx="80" cy="100" r="96" fill="url(#' + id + 'mh)"/>' + s;
+            },
+            front: function (c, id) {
+                return orbButterfly(c, id, 112, 140, .9, 12, 3.2, 0) +
+                    '<g class="agp-so-ofly">' + orbButterfly(c, id, 150, 62, .9, 14, .55, .2) + '</g>';
+            }
+        }
+    };
+    function craterSet(list, id, op) {
+        return list.map(function (k) {
+            return '<circle cx="' + k[0] + '" cy="' + k[1] + '" r="' + k[2] + '" fill="url(#' + id + 'cr)" opacity="' + op + '"/>';
+        }).join('');
+    }
+    function isOrbDesign(d) { return Object.prototype.hasOwnProperty.call(ORB_SHAPES, d); }
+    function orbShape(it) { return ORB_SHAPES[it.design] || ORB_SHAPES.orb; }
+    function orbSig(it) { return JSON.stringify([it.design, it.palette, it.orb, it.speed, it.bubbles, it.title]); }
+    function orbY(shape, p) { return (shape.bot - clamp(p, 0, 1) * (shape.bot - shape.top)).toFixed(1); }
 
     function buildOrb(node, it, preview) {
         var id = 'agpso' + (++orbSeq);
+        var sh = orbShape(it);
         var c = orbColors(it);
         var sp = ORB_SPEEDS[it.speed] || 1;
         node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-orb';
         if (it.title) node.appendChild(el('div', 'agp-so-otitle', it.title));
-        var wrap = el('div', 'agp-so-orb');
-        wrap.style.setProperty('--og', c.glow);
+        var wrap = el('div', 'agp-so-orb s-' + (it.design || 'orb'));
+        node.style.setProperty('--og', c.glow);
         wrap.style.setProperty('--osp', sp);
-        var stars = '';
-        [[132, 62, 3.4, 0], [158, 98, 2.6, 1.2], [118, 112, 2.2, 2.1], [150, 128, 2.8, .6], [86, 56, 2, 1.7], [168, 140, 1.8, 2.6], [70, 92, 1.6, .9]].forEach(function (s, i) {
-            stars += i === 0
-                ? '<path class="agp-so-otw" style="animation-delay:-' + s[3] + 's" d="M' + s[0] + ' ' + (s[1] - 14) + 'q2 12 14 14q-12 2 -14 14q-2 -12 -14 -14q12 -2 14 -14z" fill="#fff"/>'
-                : '<circle class="agp-so-otw" style="animation-delay:-' + s[3] + 's" cx="' + s[0] + '" cy="' + s[1] + '" r="' + s[2] / 1.6 + '" fill="#fff"/>';
+        wrap.style.height = (9 * sh.h / 200).toFixed(2) + 'em';
+        wrap.innerHTML = sh === ORB_SHAPES.orb ? ballSvg(sh, c, id, it) : glassSvg(sh, c, id, it);
+        node.appendChild(wrap);
+        var nums = el('div', 'agp-so-onums');
+        node.appendChild(nums);
+        node._orb = { it: it, shape: sh, preview: preview, wrap: wrap, lvl: wrap.querySelector('.agp-so-olvl'), nums: nums, pct: -1, sig: orbSig(it) };
+        paintOrb(node, false);
+    }
+
+    function orbBubbles(sh, it, fill) {
+        if (it.bubbles === false) return '';
+        var span = sh.bot - sh.top, s = '';
+        sh.bubbles.forEach(function (b) {
+            s += '<circle class="agp-so-obub" style="animation-delay:-' + b[2] + 's;animation-duration:' + (b[1] * 0.75) + 's" cx="' + b[0] + '" cy="' + (span + 6) + '" r="' + (fill ? 1.2 + b[1] / 6 : 2 + b[1] / 5) + '"' + (fill ? ' fill="' + fill + '"' : '') + '/>';
         });
-        stars += '<path class="agp-so-otw" style="animation-delay:-1.4s" d="M126 104q1.2 6 7 7q-5.8 1 -7 7q-1.2 -6 -7 -7q5.8 -1 7 -7z" fill="#fff"/>';
-        var bubbles = '';
-        if (it.bubbles !== false) {
-            [[62, 9, 0], [96, 7, 2.2], [128, 11, 1.1], [146, 8, 3.1], [80, 10, 4.2], [112, 6, 5]].forEach(function (b) {
-                bubbles += '<circle class="agp-so-obub" style="animation-delay:-' + b[2] + 's;animation-duration:' + (b[1] * 0.75) + 's" cx="' + b[0] + '" cy="196" r="' + (2 + b[1] / 5) + '"/>';
-            });
-        }
-        wrap.innerHTML =
-            '<svg viewBox="0 0 200 200" aria-hidden="true">' +
+        return s;
+    }
+
+    /** «كرة القمر» الأصلية. */
+    function ballSvg(sh, c, id, it) {
+        return '<svg viewBox="0 0 200 200" aria-hidden="true">' +
             '<defs>' +
             '<clipPath id="' + id + 'c"><circle cx="100" cy="100" r="88"/></clipPath>' +
             '<linearGradient id="' + id + 'l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c.top + '"/><stop offset="1" stop-color="' + c.bottom + '"/></linearGradient>' +
@@ -1509,32 +1670,91 @@
             '<mask id="' + id + 'k"><rect width="200" height="200" fill="#000"/><circle cx="92" cy="100" r="54" fill="#fff"/><circle cx="116" cy="88" r="46" fill="#000"/></mask>' +
             '<radialGradient id="' + id + 'g" cx=".5" cy=".5" r=".5"><stop offset=".7" stop-color="' + c.glow + '" stop-opacity="0"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity=".55"/></radialGradient>' +
             '</defs>' +
-            '<g clip-path="url(#' + id + 'c)">' +
-            '<rect width="200" height="200" fill="#07050f"/>' +
-            '<circle cx="100" cy="100" r="88" fill="url(#' + id + 'g)"/>' +
-            stars +
-            '<g class="agp-so-omoon"><rect width="200" height="200" fill="url(#' + id + 'm)" mask="url(#' + id + 'k)"/></g>' +
-            '<g class="agp-so-ocloud" fill="' + c.cloud + '" stroke="' + c.ring + '" stroke-opacity=".35" stroke-width="1.2">' +
-            '<path d="M8 150c0-14 12-24 26-22 4-12 20-17 30-8 8-8 24-5 27 7 12-2 22 8 20 20 10 1 16 10 14 19H8z"/>' +
-            '<path d="M120 172c-1-10 8-17 17-15 5-9 18-10 24-2 9-4 20 3 19 13 7 2 12 8 11 15h-71z"/>' +
-            '</g>' +
+            '<g clip-path="url(#' + id + 'c)">' + sh.inner(c, id) +
             // السائل: مجموعة تنزل/تطلع حسب النسبة، وفيها موجتين تتحرك عكس بعض
             '<g class="agp-so-olvl" style="transform:translateY(200px)">' +
             '<g class="agp-so-ow2"><path d="' + wavePath(5) + '" fill="' + c.top + '" opacity=".65"/></g>' +
             '<g class="agp-so-ow1"><path d="' + wavePath(7) + '" fill="url(#' + id + 'l)" opacity=".94"/></g>' +
-            '<g class="agp-so-obubs" fill="#fff" fill-opacity=".55">' + bubbles + '</g>' +
-            '</g>' +
-            // لمعة الزجاج
-            '<path d="M38 70a66 66 0 0 1 46-46" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>' +
-            '<path d="M34 92a68 68 0 0 1 3-10" stroke="#fff" stroke-opacity=".22" stroke-width="4" stroke-linecap="round" fill="none"/>' +
-            '</g>' +
+            '<g class="agp-so-obubs" fill="#fff" fill-opacity=".55">' + orbBubbles(sh, it) + '</g>' +
+            '</g>' + sh.shine + '</g>' +
             '<circle class="agp-so-oring" cx="100" cy="100" r="90" fill="none" stroke="url(#' + id + 'r)" stroke-width="3.2"/>' +
             '</svg>';
-        node.appendChild(wrap);
-        var nums = el('div', 'agp-so-onums');
-        node.appendChild(nums);
-        node._orb = { it: it, preview: preview, wrap: wrap, lvl: wrap.querySelector('.agp-so-olvl'), nums: nums, pct: -1, sig: JSON.stringify([it.palette, it.orb, it.speed, it.bubbles, it.title]) };
-        paintOrb(node, false);
+    }
+
+    /**
+     * الأشكال الواقعية: إناء زجاج بشكل الشيء نفسه — سائل يغمق مع العمق وفيه انكسارات ضوء
+     * (caustics)، لمعة سطح، فقاعات زجاجية، انعكاس فريسنل على الحواف، لمعة حادة،
+     * وأنبوب نيون حقيقي (هالة واسعة + هالة قريبة + لون + قلب أبيض)، وانعكاس على الأرض.
+     * الفلاتر كلها على عناصر ثابتة (ما تتحرك) عشان ما تتعب OBS.
+     */
+    function glassSvg(sh, c, id, it) {
+        var H = sh.h, span = sh.bot - sh.top, P = sh.path;
+        var defs =
+            '<clipPath id="' + id + 'c"><path d="' + P + '"/></clipPath>' +
+            '<filter id="' + id + 'fw" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>' +
+            '<filter id="' + id + 'fn" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.8"/></filter>' +
+            // انكسارات الضوء بالسائل: ضجيج يتحوّل لخيوط ضوء رفيعة
+            '<filter id="' + id + 'cs" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".055 .09" numOctaves="2" seed="7"/>' +
+            '<feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 -2.4 1.55"/><feComponentTransfer><feFuncA type="table" tableValues="0 0 .05 .6 1"/></feComponentTransfer></filter>' +
+            // ملمس سطح القمر
+            '<filter id="' + id + 'tx" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="4" seed="3"/><feColorMatrix type="matrix" values="0 0 0 0 .1  0 0 0 0 .1  0 0 0 0 .14  0 0 0 1.8 -.6"/></filter>' +
+            '<linearGradient id="' + id + 'l" gradientUnits="userSpaceOnUse" x1="0" y1="-6" x2="0" y2="' + span + '"><stop offset="0" stop-color="' + c.top + '"/><stop offset=".08" stop-color="' + c.top + '" stop-opacity=".92"/><stop offset=".5" stop-color="' + c.bottom + '" stop-opacity=".9"/><stop offset="1" stop-color="' + c.bottom + '"/></linearGradient>' +
+            '<linearGradient id="' + id + 'su" gradientUnits="userSpaceOnUse" x1="0" y1="-4" x2="0" y2="16"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".25" stop-color="' + c.top + '" stop-opacity=".35"/><stop offset="1" stop-color="' + c.top + '" stop-opacity="0"/></linearGradient>' +
+            '<linearGradient id="' + id + 'i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#040308"/><stop offset="1" stop-color="' + c.cloud + '"/></linearGradient>' +
+            '<linearGradient id="' + id + 'ao" gradientUnits="userSpaceOnUse" x1="0" y1="' + (sh.bot - 40) + '" x2="0" y2="' + sh.bot + '"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>' +
+            '<linearGradient id="' + id + 'r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + c.ring + '"/><stop offset=".5" stop-color="' + c.glow + '"/><stop offset="1" stop-color="' + c.ring + '"/></linearGradient>' +
+            '<radialGradient id="' + id + 'bb" cx=".5" cy=".5" r=".5"><stop offset=".55" stop-color="#fff" stop-opacity=".04"/><stop offset=".9" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity=".15"/></radialGradient>' +
+            '<radialGradient id="' + id + 'sg"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".25" stop-color="' + c.ring + '" stop-opacity=".35"/><stop offset="1" stop-color="' + c.ring + '" stop-opacity="0"/></radialGradient>' +
+            '<linearGradient id="' + id + 'sx"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+            '<radialGradient id="' + id + 'eb" cx=".45" cy=".4" r=".65"><stop offset="0" stop-color="' + c.bottom + '"/><stop offset=".6" stop-color="#0b0710"/><stop offset=".92" stop-color="' + c.glow + '" stop-opacity=".9"/><stop offset="1" stop-color="' + c.ring + '"/></radialGradient>' +
+            '<radialGradient id="' + id + 'ew" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="' + c.ring + '"/><stop offset="1" stop-color="' + c.glow + '"/></radialGradient>' +
+            '<radialGradient id="' + id + 'eg"><stop offset="0" stop-color="' + c.moon + '"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity="0"/></radialGradient>' +
+            '<radialGradient id="' + id + 'ei" cx=".5" cy=".55" r=".6"><stop offset="0" stop-color="' + c.moon + '"/><stop offset=".45" stop-color="' + c.top + '"/><stop offset="1" stop-color="' + c.bottom + '"/></radialGradient>' +
+            '<radialGradient id="' + id + 'bw" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="38"><stop offset="0" stop-color="' + c.moon + '" stop-opacity=".95"/><stop offset=".45" stop-color="' + c.top + '" stop-opacity=".75"/><stop offset=".85" stop-color="' + c.bottom + '" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient>' +
+            '<radialGradient id="' + id + 'cr" cx=".42" cy=".4" r=".6"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".75" stop-color="#000" stop-opacity=".25"/><stop offset=".9" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
+            '<radialGradient id="' + id + 'mh"><stop offset=".6" stop-color="' + c.glow + '" stop-opacity=".18"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity="0"/></radialGradient>';
+        var vessel =
+            (sh.back ? sh.back(c, id) : '') +
+            // هالة النيون الواسعة (تنبض)
+            '<g class="agp-so-obloom" filter="url(#' + id + 'fw)"><path d="' + P + '" fill="none" stroke="' + c.glow + '" stroke-width="7"/></g>' +
+            '<g clip-path="url(#' + id + 'c)">' +
+            '<rect width="200" height="' + H + '" fill="url(#' + id + 'i)" fill-opacity=".9"/>' +
+            // فريسنل: الحواف أفتح من النص
+            '<path d="' + P + '" fill="none" stroke="' + c.glow + '" stroke-opacity=".22" stroke-width="22" filter="url(#' + id + 'fn)"/>' +
+            (sh.inner ? sh.inner(c, id) : '') +
+            '<g class="agp-so-olvl" style="transform:translateY(' + H + 'px)">' +
+            '<g class="agp-so-ow2"><path d="' + wavePath(4) + '" fill="' + c.top + '" opacity=".45"/></g>' +
+            '<g class="agp-so-ow1"><path d="' + wavePath(5.5) + '" fill="url(#' + id + 'l)"/>' +
+            '<path d="' + waveLine(5.5) + ' l0 16 L-200 16Z" fill="url(#' + id + 'su)"/>' +
+            '<path d="' + waveLine(5.5) + '" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/></g>' +
+            '<rect x="0" y="5" width="200" height="' + (span + 10) + '" filter="url(#' + id + 'cs)" opacity=".16" style="mix-blend-mode:screen"/>' +
+            '<g>' + orbBubbles(sh, it, 'url(#' + id + 'bb)') + '</g>' +
+            '</g>' +
+            '<rect width="200" height="' + H + '" fill="url(#' + id + 'ao)"/>' +
+            (sh.over ? sh.over(c, id) : '') +
+            // انعكاسات الزجاج: حافة داخلية مزاحة + لمعة حادة
+            '<path d="' + P + '" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="9" transform="translate(4 3)"/>' +
+            '<path d="' + P + '" fill="none" stroke="#000" stroke-opacity=".2" stroke-width="10" transform="translate(-4 -2)"/>' +
+            (sh.spec ? '<path d="' + sh.spec + '" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2.4" stroke-linecap="round" filter="url(#' + id + 'fn)"/><path d="' + sh.spec + '" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".7" stroke-linecap="round"/>' : '') +
+            '</g>' +
+            // أنبوب النيون: هالة قريبة + لون الأنبوب + قلب أبيض حار
+            '<path d="' + P + '" fill="none" stroke="' + c.glow + '" stroke-width="4.5" filter="url(#' + id + 'fn)"/>' +
+            '<path class="agp-so-oring" d="' + P + '" fill="none" stroke="url(#' + id + 'r)" stroke-width="2.2" stroke-linejoin="round"/>' +
+            '<path d="' + P + '" fill="none" stroke="#fff" stroke-opacity=".92" stroke-width=".75" stroke-linejoin="round"/>' +
+            (sh.front ? sh.front(c, id) : '');
+        var floor = '';
+        if (sh.floor) {
+            var F = sh.floor;
+            defs += '<linearGradient id="' + id + 'rf" gradientUnits="userSpaceOnUse" x1="0" y1="' + F + '" x2="0" y2="' + H + '"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+                '<mask id="' + id + 'rm" maskUnits="userSpaceOnUse" x="-20" y="0" width="240" height="' + H + '"><rect x="-20" y="' + F + '" width="240" height="' + (H - F) + '" fill="url(#' + id + 'rf)"/></mask>' +
+                '<linearGradient id="' + id + 'fl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + c.glow + '" stop-opacity="0"/><stop offset=".5" stop-color="' + c.glow + '" stop-opacity=".8"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity="0"/></linearGradient>' +
+                '<radialGradient id="' + id + 'fp"><stop offset="0" stop-color="' + c.glow + '" stop-opacity=".35"/><stop offset="1" stop-color="' + c.glow + '" stop-opacity="0"/></radialGradient>';
+            floor = '<ellipse cx="100" cy="' + F + '" rx="96" ry="9" fill="url(#' + id + 'fp)"/>' +
+                // انعكاس حقيقي على أرضية لامعة (نسخة مقلوبة تبهت لتحت، وفيها تموّج خفيف)
+                '<g mask="url(#' + id + 'rm)"><use href="#' + id + 'v" transform="translate(0 ' + (2 * F) + ') scale(1 -1)"/></g>' +
+                '<rect x="10" y="' + (F - .5) + '" width="180" height="1" fill="url(#' + id + 'fl)"/>';
+        }
+        return '<svg viewBox="0 0 200 ' + H + '" aria-hidden="true"><defs>' + defs + '</defs>' + floor + '<g id="' + id + 'v">' + vessel + '</g></svg>';
     }
 
     /** تجربة بالمحرر: السائل يطلع لنسبة p (مع موجة)، ويرجع للحقيقي بعد 4 ثواني. */
@@ -1542,7 +1762,7 @@
         var o = node && node._orb;
         if (!o) return;
         clearTimeout(o.demoT);
-        o.lvl.style.transform = 'translateY(' + (190 - clamp(p, 0, 1) * 182).toFixed(1) + 'px)';
+        o.lvl.style.transform = 'translateY(' + orbY(o.shape, p) + 'px)';
         o.wrap.classList.remove('bump'); void o.wrap.offsetWidth; o.wrap.classList.add('bump');
         o.wrap.classList.toggle('full', p >= 1);
         o.demoT = setTimeout(function () { o.pct = -1; paintOrb(node, false); }, 4000);
@@ -1557,28 +1777,99 @@
         var target = Math.max(1, Number(it.target) || 1000);
         if (it.autoNext && cur >= target) target = target * (Math.floor(cur / target) + 1);
         var pct = clamp(cur / target, 0, 1);
-        // بالمعاينة بدون بيانات: نص الكرة عشان يبان شكل السائل
+        // بالمعاينة بدون بيانات: نص الشكل عشان يبان السائل
         if (tt.ghost) pct = 0.55;
-        // المستوى: 0٪ = تحت الدائرة (y 190)، 100٪ = فوقها (y 8)
-        var y = 190 - pct * 182;
-        o.lvl.style.transform = 'translateY(' + y.toFixed(1) + 'px)';
+        // المستوى: 0٪ = تحت الشكل (bot)، 100٪ = فوقه (top)
+        o.lvl.style.transform = 'translateY(' + orbY(o.shape, pct) + 'px)';
         if (animate && o.pct >= 0 && pct > o.pct) {
             o.wrap.classList.remove('bump'); void o.wrap.offsetWidth; o.wrap.classList.add('bump');
         }
         o.wrap.classList.toggle('full', pct >= 1);
         o.pct = pct;
-        o.nums.textContent = '';
-        if (it.showNums !== false) {
-            var done = cur >= target && !it.autoNext;
-            o.nums.appendChild(icon(METRICS[m].icon));
-            o.nums.appendChild(el('span', null, done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)));
-            if (it.showPct) o.nums.appendChild(el('b', null, Math.floor(pct * 100) + '%'));
-        }
+        paintOrbLabel(node, o, it, m, cur, target, pct);
         node.classList.toggle('agp-so-ghost', Boolean(tt.ghost));
     }
 
+    /*
+     * نص الهدف (أشكال السائل) — نص بس، بدون خلفية ولا خط:
+     * it.lblSt = شكل النص (ORB_TEXT_STYLES)، it.lblGlow = قوة التوهّج + it.lblGlowColor،
+     * it.lblAnim = حركة النص (ANIMS) + it.lblSpeed، it.lblText = نص حر ({cur} {target} {left} {pct})،
+     * it.lblPos = مكانه، it.lblFont/lblColor/lblSize، it.lblIcon، it.lblDx/lblDy = إزاحة (em).
+     * it.lbl = 'none' (أو showNums = false القديمة) يخفيه.
+     */
+    var ORB_TEXT_STYLES = [{ key: 'clean', label: 'عادي' }].concat(TEXT_STYLES.filter(function (x) { return ['pill', 'glass', 'plain'].indexOf(x.key) === -1; }));
+    var ORB_GLOWS = [{ key: 'none', label: 'بدون' }, { key: 'soft', label: 'خفيف' }, { key: 'mid', label: 'متوسط' }, { key: 'strong', label: 'قوي' }, { key: 'huge', label: 'هالة' }];
+    var ORB_LABEL_POS = [
+        { key: 'bottom', label: 'تحت' }, { key: 'top', label: 'فوق' }, { key: 'right', label: 'يمين' }, { key: 'left', label: 'يسار' }, { key: 'in', label: 'داخل الشكل' }
+    ];
+    function orbLabelOn(it) { return it.showNums !== false && it.lbl !== 'none'; }
+    function orbGlowFilter(g, c) {
+        if (g === 'soft') return 'drop-shadow(0 0 .12em ' + c + ')';
+        if (g === 'mid') return 'drop-shadow(0 0 .1em ' + c + ') drop-shadow(0 0 .3em ' + c + ')';
+        if (g === 'strong') return 'drop-shadow(0 0 .08em #fff) drop-shadow(0 0 .2em ' + c + ') drop-shadow(0 0 .5em ' + c + ')';
+        if (g === 'huge') return 'drop-shadow(0 0 .1em #fff) drop-shadow(0 0 .3em ' + c + ') drop-shadow(0 0 .7em ' + c + ') drop-shadow(0 0 1.2em ' + c + ')';
+        return '';
+    }
+    function paintOrbLabel(node, o, it, m, cur, target, pct) {
+        var n = o.nums;
+        var pos = ORB_LABEL_POS.some(function (x) { return x.key === it.lblPos; }) ? it.lblPos : 'bottom';
+        var side = pos === 'right' || pos === 'left' || pos === 'in';
+        // المكان: فوق/تحت بتدفق العنصر، يمين/يسار/داخل فوق الرسمة نفسها
+        var parent = side ? o.wrap : node;
+        if (n.parentNode !== parent) parent.appendChild(n);
+        n.className = 'agp-so-onums p-' + pos + (orbLabelOn(it) ? '' : ' off');
+        n.textContent = '';
+        n.style.cssText = '';
+        if (!orbLabelOn(it)) return;
+        var dx = clamp(Number(it.lblDx) || 0, -12, 12), dy = clamp(Number(it.lblDy) || 0, -12, 12);
+        var k = clamp(Number(it.lblSize) || 1, .4, 3);
+        n.style.fontSize = (.8 * k).toFixed(3) + 'em';
+        if (dx || dy) {
+            // الإزاحة بوحدة em الخاصة بالهدف (مو النص) عشان ما تتغيّر لو كبّرت الخط
+            if (side) { n.style.marginLeft = (dx / k).toFixed(2) + 'em'; n.style.marginTop = (dy / k).toFixed(2) + 'em'; }
+            else { n.style.position = 'relative'; n.style.left = (dx / k).toFixed(2) + 'em'; n.style.top = (dy / k).toFixed(2) + 'em'; }
+        }
+        var col = /^#[0-9a-f]{6}$/i.test(it.lblColor || '') ? it.lblColor : '#ffffff';
+        var gcol = /^#[0-9a-f]{6}$/i.test(it.lblGlowColor || '') ? it.lblGlowColor : 'var(--og,#a68bff)';
+        if (it.lblFont) {
+            var f = fontOf(it.lblFont);
+            loadFont(f);
+            n.style.fontFamily = fontStack(f);
+            n.style.fontWeight = String(Math.max(700, f.b));
+        }
+        // غلاف التوهّج ← غلاف الحركة ← (الأيقونة + النص بشكله)
+        var gl = el('span', 'agp-so-oglow');
+        var fl = orbGlowFilter(it.lblGlow || 'none', gcol);
+        if (fl) gl.style.filter = fl;
+        var mv = el('span', 'agp-so-mv');
+        var an = ANIMS.filter(function (a) { return a.key === it.lblAnim; })[0];
+        if (an && an.d) {
+            mv.className += ' a-' + an.key;
+            mv.style.animationDuration = (an.d * (Number(it.lblSpeed) || 1)) + 's';
+        }
+        mv.style.setProperty('--agp-so-c', it.lblGlowColor && /^#[0-9a-f]{6}$/i.test(it.lblGlowColor) ? it.lblGlowColor : col);
+        if (it.lblIcon !== false) { var ic = icon(METRICS[m].icon); ic.style.color = col === '#ffffff' ? gcol : col; mv.appendChild(ic); }
+        var stKey = ORB_TEXT_STYLES.some(function (x) { return x.key === it.lblSt; }) ? it.lblSt : 'clean';
+        var tx = el('span', 'agp-so-tx s-' + stKey);
+        tx.style.color = col;
+        tx.style.setProperty('--agp-so-c', /^#[0-9a-f]{6}$/i.test(it.lblGlowColor || '') ? it.lblGlowColor : (col === '#ffffff' ? gcol : col));
+        var tpl = String(it.lblText || '').trim();
+        if (tpl) {
+            n.dir = 'auto';
+            var vals = { cur: fmtKind(m, cur), target: fmtKind(m, target), left: fmtKind(m, Math.max(0, target - cur)), pct: Math.floor(pct * 100) + '%' };
+            tx.textContent = tpl.replace(/\{(cur|target|left|pct)\}/g, function (_, key) { return vals[key]; });
+        } else {
+            n.removeAttribute('dir');
+            var done = cur >= target && !it.autoNext;
+            tx.textContent = (done ? 'اكتمل! ' + fmtKind(m, cur) : fmtKind(m, cur) + ' / ' + fmtKind(m, target)) + (it.showPct ? '  ' + Math.floor(pct * 100) + '%' : '');
+        }
+        mv.appendChild(tx);
+        gl.appendChild(mv);
+        n.appendChild(gl);
+    }
+
     function fillGoal(node, it, preview) {
-        if (it.design === 'orb') { buildOrb(node, it, preview); return; }
+        if (isOrbDesign(it.design)) { buildOrb(node, it, preview); return; }
         var m = METRICS[it.metric] ? it.metric : 'likes';
         var tt = totalsFor(preview);
         var cur = Number(tt.t[m]) || 0;
@@ -2190,7 +2481,7 @@
         { key: 'star', label: 'نجمة', cp: starPolygon() }
     ];
     // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون
-    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
+    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'swirl', label: 'دوامة ضوء' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
     function heartPolygon() {
         var pts = [];
         for (var i = 0; i < 40; i++) {
@@ -2285,6 +2576,99 @@
     function hexRgb(hex) {
         var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
         return m ? [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255] : [0, 1, 0];
+    }
+
+    /*
+     * «دوامة ضوء» حول صورة الداعم (إطار fr = 'swirl'): حلقات ضوء مائلة بذيل يبهت، غبار ضوئي
+     * يلف حولها، ونجوم لمعة. p.c = اللون، p.fw = السماكة (0.3–3)، p.fm = الحركة
+     * (SWIRL_MOTIONS)، p.fsp = السرعة (slow/normal/fast). الرسمة 190٪ من الصورة وفي نصها.
+     * التوهّج المضبّب ثابت (ما يلف) عشان ما يتعب OBS — اللي يلف خطوط وغبار بس.
+     */
+    var SWIRL_MOTIONS = [
+        { key: 'spin', label: 'دوران' }, { key: 'vortex', label: 'دوامة' }, { key: 'orbit', label: 'غبار يلف' },
+        { key: 'pulse', label: 'نبض' }, { key: 'none', label: 'ثابت' }
+    ];
+    var SWIRL_SPEEDS = { slow: 1.7, normal: 1, fast: 0.55 };
+    var swirlSeq = 0;
+    function swirlMix(hex, t) {
+        var c = hexRgb(hex);
+        return '#' + c.map(function (v) { return ('0' + Math.round((v + (1 - v) * t) * 255).toString(16)).slice(-2); }).join('');
+    }
+    // نصف قطر الصورة داخل رسمة الدوامة (الرسمة 190٪ من الصورة → 100 / 1.9)
+    var SWIRL_R = 52.6;
+    /** غبار ضوئي ناعم ملاصق لحافة الصورة (أكثره على الجهة المضيئة). */
+    function swirlDust(seed, n, w, light, spread) {
+        var s = seed, out = '';
+        function rnd() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+        for (var i = 0; i < n; i++) {
+            var a = rnd() < .72 ? -1.2 + rnd() * 3.3 : rnd() * Math.PI * 2;
+            // توزيع شبه طبيعي حول الحافة، ويميل لبرّا
+            var g = (rnd() + rnd() + rnd() - 1.5) / 1.5;
+            var rr = SWIRL_R + 2 + g * spread + Math.abs(g) * spread * .4;
+            var x = Math.cos(a) * rr, y = Math.sin(a) * rr * .95;
+            var r = (.18 + rnd() * rnd() * .75) * (.8 + .2 * w);
+            out += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(2) + '" fill="' + (rnd() < .55 ? '#fff' : light) + '" opacity="' + (.3 + rnd() * .7).toFixed(2) + '"/>';
+        }
+        return out;
+    }
+    /** لمعة عدسة: نقطة حارة وخيوط طويلة رفيعة تبهت. */
+    function swirlFlare(id, a, r, size, delay) {
+        var x = Math.cos(a) * r, y = Math.sin(a) * r * .95, L = size * 3.4;
+        return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"><g class="sw-tw" style="animation-delay:-' + delay + 's">' +
+            '<circle r="' + (size * 1.3).toFixed(2) + '" fill="url(#' + id + 'sg)"/>' +
+            '<path d="M-' + L + ' 0H' + L + 'M0 -' + L * .8 + 'V' + L * .8 + '" stroke="url(#' + id + 'sx)" stroke-width=".35"/>' +
+            '<path d="M-' + size + ' 0H' + size + 'M0 -' + size + 'V' + size + '" stroke="#fff" stroke-width=".25" transform="rotate(45)" opacity=".45"/>' +
+            '<circle r="' + (size * .16).toFixed(2) + '" fill="#fff"/></g></g>';
+    }
+    function swirlSvg(p) {
+        var id = 'agpsw' + (++swirlSeq);
+        var col = /^#[0-9a-f]{6}$/i.test(p.c || '') ? p.c : '#6fb4ff';
+        var light = swirlMix(col, .55);
+        var w = clamp(Number(p.fw) || 1, .3, 3);
+        var mo = SWIRL_MOTIONS.some(function (x) { return x.key === p.fm; }) ? p.fm : 'spin';
+        var sp = SWIRL_SPEEDS[p.fsp] || 1;
+        var R = SWIRL_R;
+        // خيط ضوء: بيضاوي ملاصق لحافة الصورة (فرق نصف القطر dr)، مقطوع بذيل يبهت (التدرّج)
+        var strand = function (dr, rot, sw, dash, op, grad, core) {
+            var rx = (R + dr).toFixed(1), ry = ((R + dr) * .95).toFixed(1);
+            var e = '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round" ';
+            return '<g transform="rotate(' + rot + ')">' +
+                e + 'stroke="' + col + '" stroke-opacity="' + (op * .2).toFixed(2) + '" stroke-width="' + (sw * 3.4).toFixed(2) + '"/>' +
+                e + 'stroke="url(#' + id + grad + ')" stroke-opacity="' + op + '" stroke-width="' + sw.toFixed(2) + '"/>' +
+                (core ? e + 'stroke="#fff" stroke-opacity="' + (op * .9).toFixed(2) + '" stroke-width="' + (sw * .32).toFixed(2) + '"/>' : '') +
+                '</g>';
+        };
+        var flares = swirlFlare(id, -.55, R + 3, 6, 0) + swirlFlare(id, 2.5, R + 2, 4.5, 1.3) + swirlFlare(id, .9, R + 4, 3.5, 2.2) + swirlFlare(id, 4.2, R + 1, 3, .7);
+        return '<svg class="vav-swirl m-' + mo + '" viewBox="-100 -100 200 200" style="--sws:' + sp + '" aria-hidden="true"><defs>' +
+            '<filter id="' + id + 'b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter>' +
+            '<filter id="' + id + 'B" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>' +
+            '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity="0"/><stop offset=".45" stop-color="' + col + '" stop-opacity=".5"/><stop offset=".78" stop-color="' + light + '"/><stop offset="1" stop-color="#fff"/></linearGradient>' +
+            '<linearGradient id="' + id + 'c" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="' + light + '"/><stop offset=".75" stop-color="' + col + '" stop-opacity=".35"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient>' +
+            '<radialGradient id="' + id + 'sg"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="' + light + '" stop-opacity=".55"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></radialGradient>' +
+            '<linearGradient id="' + id + 'sx"><stop offset="0" stop-color="' + light + '" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="' + light + '" stop-opacity="0"/></linearGradient>' +
+            '</defs>' +
+            // ضوء ثابت (مضبّب): هالة واسعة + ضوء حافة يركب على حدود الصورة نفسها (نصه داخلها)
+            '<g class="sw-glow">' +
+            '<g filter="url(#' + id + 'B)"><circle r="' + (R + 4) + '" fill="none" stroke="' + col + '" stroke-width="' + (10 * w).toFixed(1) + '" stroke-opacity=".38"/></g>' +
+            '<g filter="url(#' + id + 'b)" transform="rotate(-18)"><ellipse rx="' + (R + .5) + '" ry="' + ((R + .5) * .97).toFixed(1) + '" fill="none" stroke="' + light + '" stroke-width="' + (3.2 * w).toFixed(1) + '" stroke-opacity=".75"/>' +
+            '<ellipse rx="' + (R + .5) + '" ry="' + ((R + .5) * .97).toFixed(1) + '" fill="none" stroke="#fff" stroke-width="' + (2.4 * w).toFixed(1) + '" stroke-opacity=".7" pathLength="100" stroke-dasharray="34 66" stroke-dashoffset="-6"/></g>' +
+            '</g>' +
+            '<g transform="rotate(-18)"><g class="sw-tilt">' +
+            // خيوط ضوء رفيعة كثيرة بأنصاف أقطار قريبة (مثل شريط حرير ضوئي) — كل مجموعة تلف بسرعتها
+            '<g class="sw-r1">' + strand(1.4, 0, 1.5 * w, '72 28', 1, 'a', true) + strand(3, 5, .55 * w, '56 44', .85, 'a') + strand(0, -7, .45 * w, '42 58', .75, 'a') + strand(4.6, 9, .3 * w, '30 70', .6, 'a') + '</g>' +
+            '<g class="sw-r2">' + strand(2.2, 22, 1 * w, '52 48', .8, 'c', true) + strand(5.6, 28, .38 * w, '36 64', .6, 'c') + strand(.8, 15, .4 * w, '28 72', .7, 'c') + '</g>' +
+            '<g class="sw-r3">' + strand(7.5, -32, .6 * w, '38 62', .5, 'a') + strand(-1, -44, .3 * w, '22 78', .55, 'a') + strand(9.5, -20, .25 * w, '26 74', .4, 'c') + '</g>' +
+            '<g class="sw-d1">' + swirlDust(7, 110, w, light, 5) + '</g>' +
+            '<g class="sw-d2">' + swirlDust(91, 70, w, light, 11) + '</g>' +
+            '</g></g>' +
+            '<g class="sw-st">' + flares + '</g>' +
+            '</svg>';
+    }
+    /** الإطار جاهز كعنصر (للبث وللمحرر). */
+    function avatarSwirl(p) {
+        var d = document.createElement('div');
+        d.innerHTML = swirlSvg(p);
+        return d.firstChild;
     }
 
     var KEY_VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
@@ -2636,6 +3020,8 @@
                     fim.style.cssText = 'width:' + (fs * 100) + '%;height:' + (fs * 100) + '%;left:' + (50 - fs * 50) + '%;top:' + (50 - fs * 50) + '%';
                     lwa.appendChild(fim);
                 }
+                // «دوامة ضوء»: حلقات وغبار ونجوم تلف حول الصورة (خارج الحركة المستمرة عشان ما تدور مرتين)
+                if (frm === 'swirl') pa.appendChild(avatarSwirl(parts.avatar));
                 pa.appendChild(lwa);
                 box.appendChild(pa);
             }
@@ -4187,8 +4573,30 @@
         '.agp-so-oring{transition:stroke-width .4s}',
         '.agp-so-orb.full{animation:agp-so-ofull 2.2s ease-in-out infinite}',
         '.agp-so-orb.full .agp-so-oring{stroke-width:4.6}',
-        '.agp-so-onums{display:inline-flex;align-items:center;gap:.35em;padding:.2em .8em;border-radius:999px;font-weight:800;font-size:.75em;direction:ltr;color:#fff;background:rgba(10,8,20,.6);border:.06em solid color-mix(in srgb,var(--og,#a68bff) 50%,transparent)}',
-        '.agp-so-onums:empty{display:none}',
+        // أشكال النيون (قط، قط دائري، هلال): رمشة، شوارب، أجنحة ترفرف، فراشة طايرة
+        '.agp-so-oblink{animation:agp-so-blink 5.5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
+        '.agp-so-owhisk{animation:agp-so-whisk 3.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
+        '.agp-so-owing{animation:agp-so-flap 2.8s ease-in-out infinite;transform-origin:0 0}',
+        '.agp-so-owing.rest{animation-name:agp-so-flapr}',
+        '.agp-so-obloom{opacity:.55;animation:agp-so-bloom calc(3.4s*var(--osp)) ease-in-out infinite}',
+        '.agp-so-orb.full .agp-so-obloom{opacity:.95}',
+        '.agp-so-ofly{animation:agp-so-flyb 6s ease-in-out infinite}',
+        // نص الهدف: نص بس (بدون خلفية ولا حدود) — الشكل والتوهّج والحركة من الإعدادات
+        // text-shadow:none — ظل الهدف الموروث يغمّق النصوص المتدرّجة (ذهبي، تدرّج، قوس قزح)
+        '.agp-so-onums{display:inline-flex;align-items:center;font-weight:800;font-size:.8em;direction:ltr;color:#fff;line-height:1.2;text-shadow:none}',
+        '.agp-so-onums.off,.agp-so-onums:empty{display:none}',
+        '.agp-so-oglow,.agp-so-onums .agp-so-mv{display:inline-flex;align-items:center;gap:.3em}',
+        '.agp-so-onums svg{width:1em;height:1em;flex:none;filter:drop-shadow(0 .04em .1em rgba(0,0,0,.7))}',
+        '.agp-so-onums .agp-so-tx{padding:0 .05em}',
+        '.agp-so-tx.s-clean{text-shadow:0 .04em .14em rgba(0,0,0,.85)}',
+        '.agp-so-onums[dir=auto]{direction:auto;unicode-bidi:plaintext}',
+        // الأماكن: فوق = بين العنوان والرسمة؛ يمين/يسار/داخل = فوق الرسمة نفسها
+        '.agp-so-goal.d-orb .agp-so-otitle{order:-2}',
+        '.agp-so-onums.p-top{order:-1}',
+        '.agp-so-orb .agp-so-onums{position:absolute;top:50%;white-space:nowrap;z-index:2}',
+        '.agp-so-orb .agp-so-onums.p-in{left:50%;transform:translate(-50%,-50%)}',
+        '.agp-so-orb .agp-so-onums.p-right{left:100%;transform:translate(.4em,-50%)}',
+        '.agp-so-orb .agp-so-onums.p-left{right:100%;transform:translate(-.4em,-50%)}',
         '.agp-so-onums svg{width:1em;height:1em;color:var(--og,#a68bff)}',
         '.agp-so-onums b{color:var(--og,#a68bff);margin-inline-start:.2em}',
         '@keyframes agp-so-wave{from{transform:translateX(0)}to{transform:translateX(-100px)}}',
@@ -4198,6 +4606,12 @@
         '@keyframes agp-so-bub{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-150px);opacity:0}}',
         '@keyframes agp-so-tw{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}',
         '@keyframes agp-so-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}',
+        '@keyframes agp-so-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}',
+        '@keyframes agp-so-whisk{0%,100%{transform:rotate(0)}50%{transform:rotate(1.5deg)}}',
+        '@keyframes agp-so-flap{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.18)}}',
+        '@keyframes agp-so-flapr{0%,60%,100%{transform:scaleX(1)}78%{transform:scaleX(.45)}}',
+        '@keyframes agp-so-bloom{0%,100%{opacity:.5}50%{opacity:.75}}',
+        '@keyframes agp-so-flyb{0%,100%{transform:translate(0,0)}50%{transform:translate(-4px,-7px)}}',
         '@keyframes agp-so-ofull{0%,100%{filter:drop-shadow(0 0 .5em var(--og))}50%{filter:drop-shadow(0 0 1.3em var(--og))}}',
         '@keyframes agp-so-p-fade{0%{opacity:0}100%{opacity:1}}',
         '@keyframes agp-so-p-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}',
@@ -4207,8 +4621,29 @@
         // الصورة: الإطار (vav-f) بلون الإطار وبشكل الصورة، والصورة (vav-i) داخله بنفس الشكل
         '.agp-so-vav .vav-f{position:absolute;inset:0;background:currentColor}',
         '.agp-so-vav .vav-i{position:absolute;inset:.085em;overflow:hidden;background:#2a2338;display:flex;align-items:center;justify-content:center}',
-        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f{background:transparent}',
-        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i{inset:0}',
+        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f,.agp-so-vav.fr-swirl .vav-f{background:transparent}',
+        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i,.agp-so-vav.fr-swirl .vav-i{inset:0}',
+        // دوامة الضوء حول الصورة
+        '.vav-swirl{position:absolute;width:190%;height:190%;left:-45%;top:-45%;overflow:visible;pointer-events:none;mix-blend-mode:screen}',
+        '.agp-so-vav .vav-swirl{z-index:1}',
+        '.vav-swirl .sw-r1,.vav-swirl .sw-r2,.vav-swirl .sw-r3,.vav-swirl .sw-d1,.vav-swirl .sw-d2,.vav-swirl .sw-tilt,.vav-swirl .sw-glow{transform-origin:0 0}',
+        '.vav-swirl.m-spin .sw-r1,.vav-swirl.m-vortex .sw-r1{animation:agp-so-swr calc(5s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-r2,.vav-swirl.m-vortex .sw-r2{animation:agp-so-swr calc(8s*var(--sws)) linear infinite reverse}',
+        '.vav-swirl.m-spin .sw-r3,.vav-swirl.m-vortex .sw-r3{animation:agp-so-swr calc(11s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-d1,.vav-swirl.m-vortex .sw-d1,.vav-swirl.m-orbit .sw-d1{animation:agp-so-swr calc(9s*var(--sws)) linear infinite}',
+        '.vav-swirl.m-spin .sw-d2,.vav-swirl.m-vortex .sw-d2,.vav-swirl.m-orbit .sw-d2{animation:agp-so-swr calc(13s*var(--sws)) linear infinite reverse}',
+        '.vav-swirl.m-orbit .sw-d1{animation-duration:calc(4s*var(--sws))}',
+        '.vav-swirl.m-orbit .sw-d2{animation-duration:calc(6s*var(--sws))}',
+        '.vav-swirl.m-vortex .sw-tilt{animation:agp-so-swt calc(6s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl.m-pulse .sw-tilt,.vav-swirl.m-orbit .sw-tilt{animation:agp-so-swp calc(2.4s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl.m-pulse .sw-glow,.vav-swirl.m-orbit .sw-glow{animation:agp-so-swg calc(2.4s*var(--sws)) ease-in-out infinite}',
+        '.vav-swirl .sw-tw{animation:agp-so-swtw calc(2.6s*var(--sws)) ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
+        '.vav-swirl.m-none .sw-tw{animation:none}',
+        '@keyframes agp-so-swr{to{transform:rotate(360deg)}}',
+        '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.03,.93) rotate(10deg)}}',
+        '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}',
+        '@keyframes agp-so-swg{0%,100%{opacity:.7}50%{opacity:1}}',
+        '@keyframes agp-so-swtw{0%,100%{opacity:.25;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}',
         '.agp-so-vav.fr-ring{filter:drop-shadow(0 .12em .3em rgba(0,0,0,.6))}',
         '.agp-so-vav.fr-shadow{filter:drop-shadow(0 .14em .35em rgba(0,0,0,.75))}',
         '.agp-so-vav.fr-glow{filter:drop-shadow(0 0 .14em currentColor) drop-shadow(0 0 .4em currentColor)}',
@@ -4440,7 +4875,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
@@ -4453,7 +4888,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
