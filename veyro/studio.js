@@ -149,9 +149,9 @@
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
             { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } },
-            { label: 'القط المضيء', sub: 'قط زجاج بنيون حقيقي يتعبّى بالدعم، وله انعكاس', type: 'goal', set: { design: 'cat', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'amber', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff9a45' } },
-            { label: 'القط المستلقي', sub: 'قط زجاج مستلقي بنيون قوس قزح، يتعبّى بالدعم', type: 'goal', set: { design: 'loaf', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
-            { label: 'هلال الفراشات', sub: 'هلال بتضاريس حقيقية وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
+            { label: 'القط المضيء', sub: 'قط من زجاج بنيون يتعبّى بالدعم، وله انعكاس', type: 'goal', set: { design: 'cat', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'amber', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff9a45' } },
+            { label: 'القط الدائري', sub: 'قط مدوّر من زجاج بنيون قوس قزح، يتعبّى بالدعم', type: 'goal', set: { design: 'blob', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
+            { label: 'هلال الفراشات', sub: 'هلال زجاج فضّي وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
         ],
         text: [
             { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
