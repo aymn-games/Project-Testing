@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b0814">
+<title>خارج التغطية — العب من جوالك</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- الحساب اختياري: لو اللاعب مسجّل وموثّق بتيك توك تنحسب له نقاط المنصة -->
+<script src="../../auth/auth-client.js"></script>
+<script src="oc-net.js"></script>
+<script src="oc-looks.js"></script>
+<style>
+:root { --bg: #0b0814; --card: rgba(22,18,34,.9); --line: rgba(255,255,255,.09); --ink: #f4f2f8; --mute: #a8a3b5; --c: #a78bfa; --c2: #c4b5fd; --g1: #7c3aed; --g2: #a855f7; --red: #ef4444; --green: #22c55e; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; direction: rtl; }
+body { background: radial-gradient(600px 380px at 100% 0%, rgba(124,58,237,.25), transparent 70%), radial-gradient(500px 300px at 0% 100%, rgba(168,85,247,.12), transparent 70%), var(--bg); background-attachment: fixed; }
+button, input { font-family: inherit; }
+.hide { display: none !important; }
+.app { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); gap: 12px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
+.brand i { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, var(--g1), var(--g2)); font-style: normal; font-size: 15px; }
+.room-chip { font-size: 12px; font-weight: 700; color: var(--c2); background: rgba(139,92,246,.14); border: 1px solid rgba(167,139,250,.3); padding: 4px 10px; border-radius: 999px; direction: ltr; letter-spacing: 1px; }
+.ghost { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: var(--mute); font-size: 13px; font-weight: 600; }
+.card { padding: 18px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.35); animation: rise .35s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(167,139,250,.18) } }
+h1 { margin: 0 0 4px; font-size: 24px; font-weight: 700; }
+h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+p, .p { margin: 0; color: var(--mute); font-size: 15px; line-height: 1.6; }
+label.f { display: block; font-size: 13px; color: var(--mute); font-weight: 600; margin: 14px 0 6px; }
+input.in { width: 100%; height: 54px; padding: 0 16px; border-radius: 16px; border: 1.5px solid rgba(167,139,250,.3); background: rgba(255,255,255,.04); color: #fff; font-size: 18px; font-weight: 600; outline: none; }
+input.in:focus { border-color: var(--c); box-shadow: 0 0 0 4px rgba(167,139,250,.15); }
+input.code { text-align: center; letter-spacing: 12px; font-size: 30px; direction: ltr; }
+.btn { width: 100%; height: 54px; margin-top: 14px; border: 0; border-radius: 999px; background: linear-gradient(90deg, var(--g1), var(--g2)); color: #fff; font-size: 18px; font-weight: 700; box-shadow: 0 10px 26px rgba(139,92,246,.4); }
+.btn[disabled] { opacity: .45; }
+.btn.alt { background: rgba(255,255,255,.07); box-shadow: none; border: 1px solid rgba(255,255,255,.12); }
+.err { margin-top: 10px; color: #fca5a5; font-size: 14px; font-weight: 600; min-height: 20px; }
+.me { display: flex; align-items: center; gap: 14px; }
+.me .av { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,.05); box-shadow: 0 0 0 3px rgba(167,139,250,.5); flex: none; }
+.me b { font-size: 21px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); font-size: 13px; font-weight: 600; }
+.chip .a { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; }
+
+/* شريط المرحلة والوقت */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stage-t { font-size: 15px; font-weight: 700; color: var(--c2); }
+.clock { min-width: 58px; height: 36px; padding: 0 12px; border-radius: 999px; display: grid; place-items: center; background: rgba(255,255,255,.06); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.clock.low { background: rgba(239,68,68,.2); color: #fca5a5; }
+.tline { height: 5px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; direction: ltr; }
+.tline i { display: block; height: 100%; background: linear-gradient(90deg, var(--g1), var(--g2)); transition: width .25s linear; }
+
+/* الكلمة السرية */
+.secret { text-align: center; padding: 22px 16px; border-radius: 22px; background: linear-gradient(160deg, rgba(124,58,237,.3), rgba(20,16,32,.9)); border: 1.5px solid rgba(167,139,250,.45); }
+.secret.out { background: linear-gradient(160deg, rgba(239,68,68,.25), rgba(20,16,32,.9)); border-color: rgba(248,113,113,.5); }
+.secret small { display: block; color: var(--mute); font-size: 13px; font-weight: 600; }
+.secret .w { font-size: 40px; font-weight: 700; margin: 6px 0; line-height: 1.2; }
+.secret .w.blur { filter: blur(14px); user-select: none; }
+.secret .role { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; background: rgba(255,255,255,.1); }
+.secret.out .role { background: rgba(239,68,68,.3); color: #fecaca; }
+.secret .ins { margin-top: 10px; font-size: 14px; color: #e7e3ef; line-height: 1.6; }
+.secret .warn { margin-top: 8px; font-size: 12px; color: #fcd34d; }
+.mini-word { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--line); font-size: 14px; }
+.mini-word b { font-size: 18px; }
+.mini-word button { border: 0; background: rgba(167,139,250,.15); color: var(--c2); font-weight: 700; padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+
+.still .card:not(.turn) { animation: none; }
+.turn { border-color: rgba(167,139,250,.6); animation: rise .35s ease both, pulse 1.8s ease-in-out infinite; }
+.count { font-size: 12px; color: var(--mute); text-align: left; margin-top: 4px; }
+.ok { display: flex; align-items: center; gap: 10px; color: #86efac; font-weight: 700; font-size: 18px; }
+
+/* القوائم */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1.5px solid transparent; }
+.row .a { width: 42px; height: 42px; flex: none; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,.05); }
+.row .col { min-width: 0; flex: 1; }
+.row .n { font-size: 15px; font-weight: 700; }
+.row .h { font-size: 14px; color: var(--mute); overflow-wrap: anywhere; }
+.row.pick { cursor: pointer; }
+.row.pick:active { transform: scale(.99); }
+.row.sel { border-color: var(--c); background: rgba(139,92,246,.18); }
+.row.dim { opacity: .4; pointer-events: none; }
+.row .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); flex: none; }
+.row.sel .radio { border-color: var(--c); background: radial-gradient(circle, var(--c) 45%, transparent 50%); }
+.lock { text-align: center; font-size: 13px; color: var(--mute); margin-top: 8px; }
+
+.big { text-align: center; padding: 26px 16px; }
+.big .e { font-size: 54px; }
+.res-win { font-size: 26px; font-weight: 700; margin: 6px 0; }
+.pts { display: inline-block; margin-top: 8px; padding: 6px 16px; border-radius: 999px; background: rgba(34,197,94,.18); color: #86efac; font-weight: 700; }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 10px 20px; border-radius: 999px; background: rgba(12,10,20,.95); border: 1px solid rgba(248,113,113,.45); color: #fca5a5; font-weight: 600; font-size: 14px; z-index: 9; max-width: 90%; text-align: center; }
+.net { text-align: center; font-size: 12px; color: #fcd34d; }
+</style>
+</head>
+<body>
+<div class="app">
+    <div class="top">
+        <div class="brand"><i>📵</i>خارج التغطية</div>
+        <div style="display:flex;gap:8px;align-items:center"><span class="room-chip hide" id="roomChip"></span><button class="ghost hide" id="leaveBtn" type="button">خروج</button></div>
+    </div>
+    <div class="net hide" id="net">جاري الاتصال…</div>
+
+    <!-- 1) رقم الغرفة -->
+    <section class="card hide" id="sCode">
+        <h1>ادخل الغرفة</h1>
+        <p>اكتب رقم الغرفة اللي يظهر على شاشة البث</p>
+        <input class="in code" id="codeIn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="رقم الغرفة">
+        <button class="btn" id="codeBtn" type="button">التالي</button>
+        <div class="err" id="codeErr"></div>
+    </section>
+
+    <!-- 2) الاسم -->
+    <section class="card hide" id="sName">
+        <h1>وش اسمك؟</h1>
+        <p id="roomInfo">بيظهر اسمك فوق شخصيتك على المسرح</p>
+        <label class="f" for="nameIn">الاسم</label>
+        <input class="in" id="nameIn" maxlength="18" autocomplete="nickname" placeholder="اسمك">
+        <button class="btn" id="joinBtn" type="button">ادخل اللعبة</button>
+        <div class="err" id="nameErr"></div>
+    </section>
+
+    <!-- 3) اللوبي -->
+    <section class="hide" id="sLobby" style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+            <div class="me"><span class="av" id="meAv"></span><div><b id="meName"></b><p id="meLook"></p></div></div>
+            <button class="btn alt" id="lookBtn" type="button">🔄 غيّر شكل شخصيتي</button>
+        </div>
+        <div class="card">
+            <h2 id="lobbyTitle">بانتظار بداية المباراة</h2>
+            <p id="lobbySub"></p>
+            <div class="chips" id="lobbyList"></div>
+        </div>
+    </section>
+
+    <!-- 4) المباراة -->
+    <section class="hide" id="sGame" style="display:flex;flex-direction:column;gap:12px">
+        <div class="bar"><span class="stage-t" id="stageT"></span><span class="clock hide" id="clock">0</span></div>
+        <div class="tline hide" id="tline"><i id="tlineI"></i></div>
+        <div id="gBody" style="display:flex;flex-direction:column;gap:12px"></div>
+    </section>
+</div>
+<div class="toast hide" id="toast" role="status"></div>
+
+<script>
+(function () {
+    'use strict';
+    var NET = window.OCNet, LK = window.OCLooks;
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var qs = new URLSearchParams(location.search);
+    var S = { code: (qs.get('room') || qs.get('code') || '').replace(/\D/g, '').slice(0, 4), me: null, room: null, G: null, reveal: false, pickVote: null, draft: '', guessDraft: '' };
+    var saved = NET.me();
+    if (saved && (!S.code || saved.room === S.code)) { S.code = saved.room; S.me = saved; }
+
+    function show(id) { ['sCode', 'sName', 'sLobby', 'sGame'].forEach(function (x) { $(x).classList.toggle('hide', x !== id); }); }
+
+    var net = NET.connect(function (m) {
+        if (m.t === 'peek') {
+            if (!m.ok) { show('sCode'); $('codeErr').textContent = m.err || 'الغرفة غير موجودة'; return; }
+            S.room = m.room; $('roomInfo').textContent = 'الغرفة ' + m.room.code + ' · ' + m.room.players.length + ' لاعبين داخل';
+            show('sName'); setTimeout(function () { $('nameIn').focus(); }, 50);
+        } else if (m.t === 'welcome') {
+            S.me = { room: m.code, id: m.id, key: m.key, name: S.me && S.me.name || $('nameIn').value.trim() };
+            NET.me(S.me); $('roomChip').textContent = m.code; $('roomChip').classList.remove('hide'); $('leaveBtn').classList.remove('hide');
+        } else if (m.t === 'room') { S.room = m.room; if (!m.room.started) S.G = null; render(); }
+        else if (m.t === 'state') { onState(m.G); }
+        else if (m.t === 'lobby') { S.G = null; render(); }
+        else if (m.t === 'err') {
+            if (m.step === 'code') { NET.me(null); S.me = null; show('sCode'); $('codeErr').textContent = m.err; }
+            else if (m.step === 'name') { $('nameErr').textContent = m.err; $('joinBtn').disabled = false; }
+            else toast(m.err);
+        }
+        else if (m.t === 'kicked' || m.t === 'closed' || m.t === 'gone') {
+            if (m.t === 'gone' && m.reason === 'elsewhere') { toast('فتحت اللعبة بمكان ثاني'); return; }
+            NET.me(null); S.me = null; S.G = null; S.room = null;
+            $('roomChip').classList.add('hide'); $('leaveBtn').classList.add('hide');
+            show('sCode'); $('codeErr').textContent = m.t === 'kicked' ? 'المذيع طلّعك من الغرفة' : 'الغرفة انقفلت';
+        }
+    }, function () {
+        if (S.me) net.send({ t: 'resume', code: S.me.room, id: S.me.id, key: S.me.key });
+        else if (S.code) net.send({ t: 'peek', code: S.code });
+        else show('sCode');
+    }, function (ok) { $('net').classList.toggle('hide', ok); });
+
+    // ---------------------------------------------------------------- الدخول
+    $('codeIn').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 4); $('codeErr').textContent = ''; });
+    $('codeBtn').onclick = function () {
+        var c = $('codeIn').value; if (c.length !== 4) { $('codeErr').textContent = 'رقم الغرفة 4 أرقام'; return; }
+        S.code = c; net.send({ t: 'peek', code: c });
+    };
+    $('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('codeBtn').click(); });
+    try { $('nameIn').value = localStorage.getItem('oc-name') || ''; } catch (e) { }
+    $('joinBtn').onclick = function () {
+        var n = $('nameIn').value.trim(); if (n.length < 2) { $('nameErr').textContent = 'اكتب اسم من حرفين أو أكثر'; return; }
+        try { localStorage.setItem('oc-name', n); } catch (e) { }
+        $('nameErr').textContent = ''; this.disabled = true; S.me = null;
+        S.pendingName = n;
+        net.send({ t: 'join', code: S.code, name: n, auth: NET.authToken() || undefined });
+        setTimeout(function () { $('joinBtn').disabled = false; }, 2500);
+    };
+    $('nameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('joinBtn').click(); });
+    $('lookBtn').onclick = function () { net.send({ t: 'look' }); };
+    $('leaveBtn').onclick = function () {
+        if (!confirm('تطلع من الغرفة؟')) return;
+        net.send({ t: 'leave' }); NET.me(null); S.me = null; S.G = null;
+        $('roomChip').classList.add('hide'); this.classList.add('hide'); show('sCode');
+    };
+
+    // ---------------------------------------------------------------- الحالة
+    function onState(G) {
+        var prevK = S.G && S.G.stage.k, prevMid = S.G && S.G.mid;
+        S.G = G;
+        if (G.mid !== prevMid) { S.reveal = false; S.draft = ''; S.guessDraft = ''; S.pickVote = null; }
+        if (G.stage.k !== prevK) { S.pickVote = null; if (navigator.vibrate && (G.stage.k === 'vote' || (G.stage.k === 'write' && G.me && G.me.batch === G.batch) || (G.stage.k === 'guess' && G.accused === S.me.id))) try { navigator.vibrate(120); } catch (e) { } }
+        render();
+    }
+    function myPlayer() { return S.room && S.me && S.room.players.find(function (p) { return p.id === S.me.id; }); }
+
+    function render() {
+        if (!S.me) return;
+        var R = S.room, G = S.G;
+        if (G && G.me && R && R.started) { show('sGame'); return renderGame(); }
+        show('sLobby');
+        var me = myPlayer(); if (!me || !R) return;
+        $('meAv').innerHTML = LK.avatarSvg(me.look, 84); $('meName').textContent = me.name; $('meLook').textContent = 'قصة الشعر: ' + LK.get(me.look).n;
+        $('lookBtn').classList.toggle('hide', R.started);
+        $('lobbyTitle').textContent = R.started ? 'المباراة شغالة الحين' : 'بانتظار بداية المباراة';
+        $('lobbySub').textContent = R.started ? 'تدخل معهم من الجولة الجاية 👀' : R.players.length + ' لاعبين بالغرفة · تحتاج ' + R.minPlayers + ' على الأقل';
+        $('lobbyList').innerHTML = R.players.map(function (p) { return '<span class="chip"><span class="a">' + LK.avatarSvg(p.look, 24) + '</span>' + esc(p.name) + '</span>'; }).join('');
+    }
+
+    var STAGE_T = { intro: 'بداية المباراة', deal: 'كلمتك السرية', write: 'التلميحات', show: 'التلميحات', talk: 'النقاش', vote: 'التصويت السري', runoff: 'تصويت فاصل', reveal: 'لحظة الكشف', unmask: 'لحظة الكشف', guess: 'التخمين الأخير', guessed: 'التخمين الأخير', over: 'النتيجة' };
+    function P(id) { return S.G.players.find(function (p) { return p.id === id; }); }
+    function wordCard(full) {
+        var me = S.G.me, blank = me.out && !me.word;
+        var w = blank ? 'بدون كلمة' : me.word;
+        if (!full) return '<div class="mini-word"><span>' + (me.out ? '📵 أنت خارج التغطية · ' : 'كلمتك: ') + '<b>' + (S.reveal ? esc(w) : '••••') + '</b></span><button type="button" data-act="peek">' + (S.reveal ? 'إخفاء' : 'إظهار') + '</button></div>';
+        var ins = me.out
+            ? (blank ? 'ما عندك كلمة! الفئة: <b>' + esc(S.G.cat) + '</b>. اسمع تلميحات الباقين واكتب تلميح عام يمشي معهم، وحاول تعرف كلمتهم.' : 'كلمتك تختلف عن كلمة الباقين. اكتب تلميح عام يمشي مع الكلمتين، وحاول تكتشف كلمتهم.')
+            : 'اكتب تلميح قصير يوصف الكلمة بدون ما تذكرها، ودوّر على اللي تلميحه ما يركب.';
+        return '<div class="secret' + (me.out ? ' out' : '') + '"><small>' + (me.out ? 'دورك' : 'كلمتك السرية') + ' · الفئة: ' + esc(S.G.cat) + '</small>' +
+            '<div class="w">' + esc(w) + '</div><span class="role">' + (me.out ? '📵 أنت خارج التغطية' : '📶 أنت داخل التغطية') + '</span>' +
+            '<div class="ins">' + ins + '</div><div class="warn">🤫 لا تخلّي أحد يشوف شاشتك</div></div>';
+    }
+    function hintRows(filterBatch) {
+        var list = S.G.players.filter(function (p) { return p.hint !== undefined && (filterBatch == null || p.batch === filterBatch); });
+        if (!list.length) return '';
+        return '<div class="list">' + list.map(function (p) {
+            return '<div class="row"><span class="a">' + LK.avatarSvg(p.look, 42) + '</span><div class="col"><div class="n">' + esc(p.name) + (p.id === S.me.id ? ' (أنت)' : '') + '</div><div class="h">' + (p.hint ? esc(p.hint) : 'لم يرسل تلميحًا') + '</div></div></div>';
+        }).join('') + '</div>';
+    }
+
+    var lastKey = '';
+    function renderGame() {
+        var G = S.G, k = G.stage.k, me = G.me, body = $('gBody');
+        $('stageT').textContent = (STAGE_T[k] || '') + (k === 'write' || k === 'show' ? ' · الدفعة ' + (G.batch + 1) + ' من ' + G.batches : '');
+        tickClock();
+        var inBatch = me.batch === G.batch;
+        // نعيد رسم المحتوى بس لو تغيّر شي يخصه (عشان ما ينمسح اللي يكتبه اللاعب)
+        var key = [k, G.stage.seq, S.reveal, me.hint, me.vote, me.guess, S.pickVote, JSON.stringify(G.players.map(function (p) { return [p.hint, p.sent, p.voted, p.left]; })), G.accused, G.accusedOut, G.guessOk, !!G.result, S.room && JSON.stringify(S.room.scores)].join('|');
+        if (key === lastKey) return; lastKey = key;
+        var html = '';
+        if (me.left) html = '<div class="card big"><div class="e">🚪</div><h2>طلعت من المباراة</h2></div>';
+        else if (k === 'intro' || k === 'deal') html = wordCard(true);
+        else if (k === 'write') {
+            html += wordCard(false);
+            if (inBatch && !me.hint) {
+                html += '<div class="card turn"><h2>✍️ دورك تكتب تلميح</h2><p>تلميح قصير (كلمة أو كلمتين) بدون ما تذكر الكلمة. تلميحات دفعتك تنكشف مع بعض.</p>' +
+                    '<input class="in" id="hintIn" maxlength="40" autocomplete="off" placeholder="تلميحك…" value="' + esc(S.draft) + '"><div class="count" id="hintCount">' + S.draft.length + '/40</div>' +
+                    '<button class="btn" type="button" data-act="hint">إرسال التلميح</button></div>';
+            } else if (inBatch) {
+                html += '<div class="card"><div class="ok">✓ تم الإرسال</div><p style="margin-top:6px">تلميحك: <b style="color:#fff">' + esc(me.hint) + '</b></p><p>ينكشف مع تلميحات دفعتك لما يخلص الوقت.</p></div>';
+            } else {
+                var wait = me.batch > G.batch ? 'دفعتك رقم ' + (me.batch + 1) + ' — بعد ' + (me.batch - G.batch) + (me.batch - G.batch === 1 ? ' دفعة' : ' دفعات') : 'خلّصت تلميحك 👌';
+                html += '<div class="card"><h2>⏳ ' + wait + '</h2><p>الحين يكتبون: ' + esc(G.players.filter(function (p) { return p.batch === G.batch; }).map(function (p) { return p.name; }).join('، ')) + '</p></div>';
+            }
+            var shown = hintRows(); if (shown) html += '<div class="card"><h2>التلميحات اللي انكشفت</h2>' + shown + '</div>';
+        }
+        else if (k === 'show') html = wordCard(false) + '<div class="card"><h2>تلميحات الدفعة ' + (G.batch + 1) + '</h2>' + hintRows(G.batch) + '</div>';
+        else if (k === 'talk') html = wordCard(false) + '<div class="card"><h2>🗣️ مين تشك فيه؟</h2><p>ناقشوا بالبث، والتصويت بعدها.</p></div><div class="card"><h2>كل التلميحات</h2>' + hintRows() + '</div>';
+        else if (k === 'vote' || k === 'runoff') {
+            html += wordCard(false);
+            if (me.vote) {
+                var v = P(me.vote);
+                html += '<div class="card big"><div class="e">🗳️</div><h2>صوتك انحسب</h2><p>صوّتت على <b style="color:#fff">' + esc(v ? v.name : '') + '</b> · التصويت سري ونهائي</p></div>';
+            } else {
+                var cands = G.players.filter(function (p) { return !p.left && p.id !== S.me.id; });
+                html += '<div class="card"><h2>' + (k === 'runoff' ? '⚖️ تعادل! صوّت بين المتعادلين' : '🗳️ مين خارج التغطية؟') + '</h2><div class="list">' + cands.map(function (p) {
+                    var ok = k !== 'runoff' || (G.runoff || []).indexOf(p.id) >= 0;
+                    return '<div class="row pick' + (S.pickVote === p.id ? ' sel' : '') + (ok ? '' : ' dim') + '" data-vote="' + p.id + '"><span class="a">' + LK.avatarSvg(p.look, 42) + '</span><div class="col"><div class="n">' + esc(p.name) + '</div><div class="h">' + (p.hint ? esc(p.hint) : 'لم يرسل تلميحًا') + '</div></div><span class="radio"></span></div>';
+                }).join('') + '</div><button class="btn" type="button" data-act="vote"' + (S.pickVote ? '' : ' disabled') + '>تأكيد التصويت</button><div class="lock">🔒 تصويتك سري ولا يتغيّر بعد التأكيد</div></div>';
+            }
+        }
+        else if (k === 'reveal') html = '<div class="card big"><div class="e">🥁</div><h2>لحظة الكشف…</h2><p>تابع شاشة البث</p></div>';
+        else if (k === 'unmask') {
+            var a = P(G.accused), mine = G.accused === S.me.id;
+            html = '<div class="card big"><div class="e">' + (G.accusedOut ? '📵' : '📶') + '</div><h2>' + (mine ? 'الأصوات عليك!' : esc(a ? a.name : '')) + '</h2><p>' + (G.accusedOut ? (mine ? 'انكشفت!' : 'طلع خارج التغطية!') : 'طلع بريء!') + '</p></div>';
+        }
+        else if (k === 'guess') {
+            if (G.accused === S.me.id && !me.guess) {
+                html = '<div class="card turn"><h2>🎯 فرصتك الأخيرة</h2><p>انكشفت! خمّن كلمة الباقين صح وتفوز.</p>' +
+                    '<input class="in" id="guessIn" maxlength="30" autocomplete="off" placeholder="الكلمة…" value="' + esc(S.guessDraft) + '"><button class="btn" type="button" data-act="guess">تأكيد التخمين</button></div>' +
+                    '<div class="card"><h2>التلميحات</h2>' + hintRows() + '</div>';
+            } else if (G.accused === S.me.id) html = '<div class="card big"><div class="e">⏳</div><h2>تخمينك: ' + esc(me.guess) + '</h2><p>تابع البث…</p></div>';
+            else { var ga = P(G.accused); html = '<div class="card big"><div class="e">⏳</div><h2>' + esc(ga ? ga.name : '') + ' يخمّن الكلمة</h2><p>لو خمّنها صح يفوز</p></div>'; }
+        }
+        else if (k === 'guessed') html = '<div class="card big"><div class="e">' + (G.guessOk ? '🎯' : '❌') + '</div><h2>' + (G.guessOk ? 'خمّنها صح!' : 'تخمين غلط') + '</h2><p>الكلمة كانت <b style="color:#fff">' + esc(G.words.word) + '</b></p></div>';
+        else if (k === 'over') {
+            var r = G.result, won = r.winner === 'none' ? null : (r.winner === 'out') === !!me.out, pts = r.points[S.me.id] || 0, total = (S.room && S.room.scores[S.me.id]) || 0;
+            html = '<div class="card big"><div class="e">' + (won == null ? '🤝' : won ? '🏆' : '😅') + '</div><div class="res-win">' + (won == null ? 'انتهت بدون فائز' : won ? 'فزت!' : 'خسرت هالمرة') + '</div>' +
+                '<p>' + (r.winner === 'in' ? 'فاز الفريق اللي كشف خارج التغطية' : r.winner === 'out' ? 'فاز خارج التغطية' : '') + '</p>' +
+                '<p style="margin-top:8px">كلمة الأغلبية: <b style="color:#fff">' + esc(G.words.word) + '</b>' + (G.words.alt ? ' · كلمة خارج التغطية: <b style="color:#fff">' + esc(G.words.alt) + '</b>' : '') + '</p>' +
+                (pts ? '<span class="pts">+' + pts + ' نقاط</span>' : '') + '<p style="margin-top:8px">مجموعك بالغرفة: <b style="color:#fff">' + total + '</b></p></div>';
+            var scores = (S.room && S.room.scores) || {};
+            var rank = G.players.slice().sort(function (x, y) { return (scores[y.id] || 0) - (scores[x.id] || 0); }).slice(0, 5);
+            html += '<div class="card"><h2>الترتيب</h2><div class="list">' + rank.map(function (p, i) { return '<div class="row"><span class="a">' + LK.avatarSvg(p.look, 42) + '</span><div class="col"><div class="n">' + (i + 1) + '. ' + esc(p.name) + (p.out ? ' 📵' : '') + '</div></div><b>' + (scores[p.id] || 0) + '</b></div>'; }).join('') + '</div><p style="margin-top:10px;text-align:center">بانتظار المذيع يبدأ جولة جديدة…</p></div>';
+        }
+        body.classList.toggle('still', renderGame.seq === G.stage.seq); renderGame.seq = G.stage.seq;
+        body.innerHTML = html;
+        var hi = $('hintIn'); if (hi) { hi.addEventListener('input', function () { S.draft = hi.value; $('hintCount').textContent = hi.value.length + '/40'; }); hi.addEventListener('keydown', function (e) { if (e.key === 'Enter') send('hint'); }); }
+        var gi = $('guessIn'); if (gi) { gi.addEventListener('input', function () { S.guessDraft = gi.value; }); gi.addEventListener('keydown', function (e) { if (e.key === 'Enter') send('guess'); }); }
+    }
+
+    function send(a) {
+        if (a === 'hint') { var h = ($('hintIn') && $('hintIn').value || '').trim(); if (!h) return toast('اكتب تلميح'); net.send({ t: 'act', a: 'hint', arg: h }); }
+        if (a === 'guess') { var g = ($('guessIn') && $('guessIn').value || '').trim(); if (!g) return toast('اكتب الكلمة'); net.send({ t: 'act', a: 'guess', arg: g }); }
+        if (a === 'vote' && S.pickVote) net.send({ t: 'act', a: 'vote', arg: S.pickVote });
+    }
+    $('gBody').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-act]');
+        if (b) { var a = b.getAttribute('data-act'); if (a === 'peek') { S.reveal = !S.reveal; lastKey = ''; return renderGame(); } return send(a); }
+        var v = e.target.closest('[data-vote]');
+        if (v) { S.pickVote = v.getAttribute('data-vote'); lastKey = ''; renderGame(); }
+    });
+
+    // العدّاد من ساعة الخادم
+    function tickClock() {
+        var G = S.G; if (!G || !G.stage) return;
+        var ends = G.stage.ends, timed = !!ends && ['write', 'talk', 'vote', 'runoff', 'guess'].indexOf(G.stage.k) >= 0;
+        $('clock').classList.toggle('hide', !timed); $('tline').classList.toggle('hide', !timed);
+        if (!timed) return;
+        var left = Math.max(0, ends - NET.now()), secs = Math.ceil(left / 1000);
+        $('clock').textContent = secs; $('clock').classList.toggle('low', secs <= 5);
+        $('tlineI').style.width = (100 * left / (ends - G.stage.at)) + '%';
+    }
+    setInterval(function () { if (S.G && !$('sGame').classList.contains('hide')) tickClock(); }, 250);
+
+    var tt;
+    function toast(text) { var t = $('toast'); t.textContent = text; t.classList.remove('hide'); clearTimeout(tt); tt = setTimeout(function () { t.classList.add('hide'); }, 3000); }
+
+    if (!S.me && !S.code) show('sCode');
+})();
+</script>
+</body>
+</html>

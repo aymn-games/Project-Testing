@@ -48,6 +48,7 @@
         { id: 'codenames', name: 'كود نيمز', icon: '🕵️', url: 'games/codenames/index.html', ready: true },
         { id: 'mafia', name: 'المافيا', icon: '🔪', url: 'games/mafia/index.html', ready: true },
         { id: 'intruder', name: 'محطة سهيل', icon: '🛰️', url: 'games/intruder/index.html', ready: true },
+        { id: 'out-of-coverage', name: 'خارج التغطية', icon: '📵', url: 'games/out-of-coverage/index.html', ready: true },
         { id: 'birthday-party', name: 'حفلة الميلاد', icon: '🎂', url: 'games/birthday-party/index.html', ready: true },
         { id: 'impostor', name: 'من الأمبوستر؟', icon: '🎭', url: 'discord-games/impostor/index.html', ready: true }
     ];

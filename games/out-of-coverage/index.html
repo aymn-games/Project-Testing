@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خارج التغطية — الإعدادات</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="../../auth/auth-client.js"></script>
+<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
+<script src="../../js/agp-remote-control.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-stream-overlay.js"></script>
+<script src="../../js/agp-live-presence.js" data-game="out-of-coverage"></script>
+<link rel="stylesheet" href="oc-host.css">
+<script src="oc-net.js"></script>
+</head>
+<body>
+<div class="fx" aria-hidden="true"></div>
+<!-- 1) الإعدادات ← 2) game.html (اللوبي بالباركود على المسرح، ثم المباراة) -->
+<header class="hdr">
+    <div class="side"><button class="hbtn exit" id="exitBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="lbl-txt">خروج</span></button></div>
+    <div class="logo"><img src="../../logo.png" alt="" onerror="this.style.display='none'"></div>
+    <div></div>
+</header>
+
+<main class="main">
+    <div class="wrap">
+        <div class="titlebox">
+            <span class="title">خارج التغطية</span>
+            <span class="pill"><span class="dot"></span>اللاعبين يدخلون من جوالاتهم بالباركود أو رقم الغرفة</span>
+        </div>
+        <div class="scroll noscroll">
+            <div class="grid" id="sections"><div class="spinner" aria-label="جاري التحميل"></div></div>
+        </div>
+        <div class="footer">
+            <button class="cta" id="goBtn" type="button" disabled>الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+        </div>
+    </div>
+</main>
+
+<div class="ov" id="exitOv">
+    <div class="dlg">
+        <span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+        <b>الخروج؟</b>
+        <p>بترجع لمكتبة الألعاب</p>
+        <div class="two"><button class="btn-ghost" type="button" data-close>إلغاء</button><button class="btn-red" type="button" id="exitYes">خروج</button></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var NET = window.OCNet;
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var schema = null, cur = NET.setup() || {}, firstRender = true;
+
+    // الخلفية: توهجات ونجوم (نفس buildFx بالمافيا وروليت الإقصاء)
+    (function () {
+        var html = '<div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>';
+        for (var i = 0; i < 90; i++) { var s = i % 9 ? 1.5 : 3; html += '<span class="st" style="left:' + (Math.random() * 100).toFixed(2) + '%;top:' + (Math.random() * 100).toFixed(2) + '%;width:' + s + 'px;height:' + s + 'px;background:rgba(255,255,255,' + (0.12 + Math.random() * 0.23).toFixed(2) + ')"></span>'; }
+        document.querySelector('.fx').innerHTML = html;
+    })();
+
+    // مخطط الإعدادات من الخادم (هو المرجع للحدود والقيم الافتراضية)
+    var net = NET.connect(function (m) {
+        if (m.t !== 'schema') return;
+        schema = m.schema;
+        schema.forEach(function (g) { g.f.forEach(function (f) { if (cur[f.k] === undefined) cur[f.k] = f.d; }); });
+        render(); $('goBtn').disabled = false;
+    }, function () { net.send({ t: 'schema' }); });
+
+    function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
+    // نفس منطق الخادم (coverage-settings.minPlayers)
+    function minPlayers(s) { return Math.max(4, (s.outsiders || 1) * 2 + 2); }
+    var HIDE = { guessSec: function (s) { return !s.finalGuess; } };
+
+    function control(f) {
+        if (f.t === 'bool') return '<button type="button" class="toggle' + (cur[f.k] ? ' on' : '') + '" role="switch" aria-checked="' + !!cur[f.k] + '" aria-label="' + esc(f.n) + '" data-k="' + f.k + '"><span></span></button>';
+        if (f.t === 'pick') return '<div class="pills' + (f.o.length > 3 ? ' wrap' : '') + '" role="radiogroup" aria-label="' + esc(f.n) + '">' + f.o.map(function (o) {
+            return '<button type="button" role="radio" aria-checked="' + (cur[f.k] === o.v) + '" class="' + (cur[f.k] === o.v ? 'on' : '') + '" data-k="' + f.k + '" data-v="' + esc(o.v) + '">' + esc(o.n) + '</button>';
+        }).join('') + '</div>';
+        return '<div class="stepper"><button type="button" data-k="' + f.k + '" data-d="-1" aria-label="إنقاص">−</button><output>' + (f.k === 'talkSec' && !cur[f.k] ? 'بدون' : cur[f.k] + (f.u ? ' ' + f.u : '')) + '</output><button type="button" data-k="' + f.k + '" data-d="1" aria-label="زيادة">+</button></div>';
+    }
+    function render() {
+        var html = '', anim = firstRender ? ' anim' : ''; firstRender = false;
+        schema.forEach(function (g, gi) {
+            html += '<section class="sec' + anim + '" style="animation-delay:' + gi * 0.06 + 's"><div class="sec-h"><span class="sec-n">' + (gi + 1) + '</span><span class="sec-t">' + esc(g.n) + '</span></div>';
+            g.f.forEach(function (f) {
+                if (HIDE[f.k] && HIDE[f.k](cur)) return;
+                html += '<div class="row"><span class="lbl"><b>' + esc(f.n) + '</b>' + (f.desc ? '<small>' + esc(f.desc) + '</small>' : '') + '</span>' + control(f) + '</div>';
+            });
+            html += '</section>';
+        });
+        var s = cur, rounds = Math.ceil(s.maxPlayers / s.batchSize);
+        html += '<section class="sec full' + anim + '" style="animation-delay:.24s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">ملخص</span></div>' +
+            '<div class="chips" style="padding:10px 0 4px"><span class="chip">📵 ' + s.outsiders + ' خارج التغطية</span>' +
+            '<span class="chip">' + (s.mode === 'blank' ? '❔ بدون كلمة' : '🔀 كلمة مختلفة') + '</span>' +
+            '<span class="chip">✍️ دفعات من ' + s.batchSize + ' · ' + s.hintSec + ' ث لكل دفعة</span>' +
+            '<span class="chip">' + (s.finalGuess ? '🎯 مع تخمين أخير' : '🚫 بدون تخمين أخير') + '</span></div>' +
+            '<div class="note" style="padding-top:6px">تحتاج <b style="color:#fff">' + minPlayers(s) + '</b> لاعبين على الأقل، والغرفة تقبل لين ' + s.maxPlayers + ' لاعب (التلميحات تخلص بـ' + rounds + ' دفعات تقريباً لو اكتملت).</div></section>';
+        $('sections').innerHTML = html;
+    }
+
+    $('sections').addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-k]'); if (!b || !schema) return;
+        var k = b.getAttribute('data-k'), f = field(k);
+        if (f.t === 'bool') cur[k] = !cur[k];
+        else if (f.t === 'pick') cur[k] = b.getAttribute('data-v');
+        else cur[k] = Math.max(f.min, Math.min(f.max, cur[k] + f.step * Number(b.getAttribute('data-d'))));
+        cur.maxPlayers = Math.max(cur.maxPlayers, minPlayers(cur));
+        NET.setup(cur); render();
+    });
+
+    $('goBtn').onclick = function () { NET.setup(cur); location.href = 'game.html'; };
+    $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
+    $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
+    $('exitYes').onclick = function () {
+        var h = NET.hostSession();
+        if (h) { net.send({ t: 'host', code: h.code, token: h.token }); net.send({ t: 'close' }); NET.hostSession(null); }
+        setTimeout(function () { location.href = '../../games.html'; }, 200);
+    };
+})();
+</script>
+</body>
+</html>
