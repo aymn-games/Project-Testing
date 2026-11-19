@@ -2444,7 +2444,11 @@
             info.appendChild(el('small', null, (m.w ? m.w + '×' + m.h + ' · ' : '') + fmtSec(m.d)));
             c.appendChild(info);
             var a = el('div', 'acts');
-            a.appendChild(iconBtn('استخدمه كأليرت', 'plus', 'primary', function () { newAlertFrom(m); }));
+            // الأدمن فعّل «شكلين»: الستريمر يختار مفرّغ بالكامل أو بخلفية سودا شفافة
+            if (m.look && m.look.variants) {
+                a.appendChild(iconBtn('مفرّغ', 'plus', 'primary', function () { newAlertFrom(m, null, 'clear'); }));
+                a.appendChild(iconBtn('بخلفية', 'plus', 'ghost', function () { newAlertFrom(m, null, 'bg'); }));
+            } else a.appendChild(iconBtn('استخدمه كأليرت', 'plus', 'primary', function () { newAlertFrom(m); }));
             c.appendChild(a);
             g.appendChild(c);
         });
@@ -2456,7 +2460,8 @@
      * وألوان الفيديو نفسه (it.vfx): درجة اللون والتشبع والسطوع. ألوان الاسم والرسالة والإطار بـ«ستايل» كل عنصر.
      */
     function lookGroup(it, root) {
-        var g = group(root, 'الألوان والخلفية');
+        var g = group(root, 'الحجم والألوان والخلفية');
+        g.appendChild(row('ملء الشاشة', toggle(Boolean(it.full), function (on) { update(it, 'full', on, true); }), false, 'الأليرت ياخذ الشاشة كاملة (1920×1080) بدل حجمه العادي'));
         function setObj(key, field, val, repaint) {
             var o = Object.assign({}, it[key] || {}); o[field] = val; it[key] = o;
             commit(); rebuildNode(it);
@@ -2486,12 +2491,17 @@
     }
 
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
-    function newAlertFrom(m, kind) {
+    /** variant (أليرت من مكتبة فيرو بشكلين): 'clear' = مفرّغ بالكامل، 'bg' = بخلفية الأدمن. */
+    function newAlertFrom(m, kind, variant) {
         var don = kind === 'donation';
         var it = O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: [don ? 'donation' : 'gift'], key: m.key || null });
         // أليرت من مكتبة فيرو: الشكل اللي حدده الأدمن (الخلفية، ألوان الفيديو، ألوان العناصر وظهورها)
         if (m.look) {
             if (m.look.vbg) it.vbg = Object.assign({}, m.look.vbg);
+            if (variant === 'clear') it.vbg = null;
+            else if (variant === 'bg' && m.look.vbg) it.vbg.on = true;
+            if (m.look.full) it.full = true;
+            if (m.look.size) it.size = m.look.size;
             if (m.look.vfx) it.vfx = Object.assign({}, m.look.vfx);
             if (m.look.parts) Object.keys(m.look.parts).forEach(function (k) { if (it.parts[k]) it.parts[k] = Object.assign({}, it.parts[k], m.look.parts[k]); });
         }

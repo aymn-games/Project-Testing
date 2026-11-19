@@ -1287,6 +1287,7 @@
         if (a.type === 'alert') {
             var L0 = a.look || {};
             a.look = {
+                full: Boolean(L0.full), size: L0.size || 3, variants: L0.variants == null ? true : Boolean(L0.variants),
                 vbg: Object.assign({ on: false, c: '#000000', a: 0.6, r: 0.6 }, L0.vbg || {}),
                 vfx: Object.assign({ hue: 0, sat: 1, bri: 1 }, L0.vfx || {}),
                 parts: { avatar: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).avatar || {}), name: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).name || {}), msg: Object.assign({ on: true, c: '#ffd54a' }, (L0.parts || {}).msg || {}) }
@@ -1295,8 +1296,11 @@
         function clr(id, v, label) { return '<input type="color" class="ob-color" id="' + id + '" value="' + v + '" aria-label="' + label + '">'; }
         function tgl(id, on) { return '<label class="ob-toggle"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><span></span></label>'; }
         var lookUI = a.type === 'alert' ? '<div class="sec"><h4>' + ic('drop', ' style="width:16px;height:16px"') + 'شكل الأليرت للستريمرز</h4><div class="rows">' +
-            '<small class="mut2" style="line-height:1.7">يوصل للستريمر مع الأليرت لما يستخدمه، ويقدر يعدّله من المحرر.</small>' +
-            keyRow('خلفية خلف الأليرت', tgl('lk-bg-on', a.look.vbg.on), 'للأليرت المفرّغ: لوح ورا الفيديو') +
+            '<small class="mut2" style="line-height:1.7">يوصل للستريمر مع الأليرت لما يستخدمه، ويقدر يعدّله من المحرر. المعاينة = شاشة بث 1920×1080.</small>' +
+            keyRow('ملء الشاشة', tgl('lk-full', a.look.full), 'الأليرت ياخذ الشاشة كاملة') +
+            '<div id="lk-size-row">' + keyRow('حجم الأليرت', rng('lk-size', a.look.size, 1.5, 9, 0.1), 'حجمه على الشاشة لما ما يكون ملء الشاشة') + '</div>' +
+            keyRow('شكلين للستريمر', tgl('lk-var', a.look.variants), 'يختار: مفرّغ بالكامل، أو بخلفية سودا شفافة (إعدادات الخلفية تحت)') +
+            keyRow('خلفية خلف الأليرت', tgl('lk-bg-on', a.look.vbg.on), 'شغّلها تشوف شكل «بخلفية» بالمعاينة') +
             '<div id="lk-bg-rows">' + keyRow('لون الخلفية', clr('lk-bg-c', a.look.vbg.c, 'لون الخلفية')) + keyRow('شفافية الخلفية', rng('lk-bg-a', a.look.vbg.a, 0, 1, 0.01), '0 = شفافة، 1 = لون كامل') + keyRow('حواف الخلفية', rng('lk-bg-r', a.look.vbg.r, 0, 3, 0.05)) + '</div>' +
             keyRow('درجة اللون', rng('lk-hue', a.look.vfx.hue, -180, 180, 1), 'تغيّر ألوان الفيديو (0 = الأصلي)') +
             keyRow('التشبّع', rng('lk-sat', a.look.vfx.sat, 0, 2, 0.05)) +
@@ -1308,8 +1312,8 @@
         var alertUI = a.type === 'alert' ? keyRow('مدة الأليرت (ثانية)', rng('al-dur', a.dur, 2, 20, 1)) + keyRow('صوت الفيديو', rng('al-vol', a.vol, 0, 1, 0.01)) : '';
         var stage = a.type === 'top' ? '<div class="ed-stage stream" id="ed-stage">' + topHTML(a.top) + '</div>'
             : a.type === 'sound' ? '<div class="ed-stage" id="ed-stage" style="background:rgba(12,11,16,.5)">' + thumbHTML(a) + '</div>'
-                : '<div class="ed-stage bg-' + bg + '" id="ed-stage">' + (a.type === 'alert' ? '<div class="lk-box" id="lk-box"><div class="lk-bg" id="lk-bg"></div><canvas id="ed-cv"></canvas><div class="lk-parts"><span class="lk-av" id="lk-av"></span><span class="lk-nm" id="lk-nm">اسم الداعم</span><span class="lk-ms" id="lk-ms">أرسل 5 وردة</span></div></div>' : '<canvas id="ed-cv"></canvas>') + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
-                (a.type === 'alert' ? '<div class="ed-play"><button type="button" class="ob-btn icon sm" id="ed-pp" aria-label="تشغيل/إيقاف">' + ic('pause') + '</button><input type="range" class="ob-range" id="ed-seek" min="0" max="1000" value="0" aria-label="الوقت"><span class="rv num" id="ed-time">0.0</span></div>' : '');
+                : '<div class="ed-stage bg-' + bg + '" id="ed-stage">' + (a.type === 'alert' ? '<span class="lk-res">1920×1080</span><div class="lk-box" id="lk-box"><div class="lk-bg" id="lk-bg"></div><canvas id="ed-cv"></canvas><div class="lk-parts"><span class="lk-av" id="lk-av"></span><span class="lk-nm" id="lk-nm">اسم الداعم</span><span class="lk-ms" id="lk-ms">أرسل 5 وردة</span></div></div>' : '<canvas id="ed-cv"></canvas>') + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
+                (a.type === 'alert' ? '<div class="ed-play"><button type="button" class="ob-btn icon sm" id="ed-pp" aria-label="تشغيل/إيقاف">' + ic('pause') + '</button><button type="button" class="ob-btn icon sm" id="ed-snd" aria-label="الصوت" title="شغّل صوت الأليرت">' + ic('sound') + '</button><input type="range" class="ob-range" id="ed-seek" min="0" max="1000" value="0" aria-label="الوقت"><span class="rv num" id="ed-time">0.0</span></div>' : '');
 
         var m = openModal({
             title: (isNew ? 'أصل جديد: ' : 'تعديل: ') + esc(a.name), wide: true, noFocus: true,
@@ -1354,6 +1358,15 @@
                     el.querySelector('#ed-pp').addEventListener('click', function () {
                         var wasT = tNow(); playing = !playing; if (video) { if (playing) video.play(); else video.pause(); } else { tOff = wasT; t0 = performance.now(); }
                         el.querySelector('#ed-pp').innerHTML = ic(playing ? 'pause' : 'play');
+                    });
+                    // صوت الأليرت بالمعاينة (يبدأ صامت — المتصفح ما يشغّل الصوت إلا بعد ضغطة)
+                    var sndB = el.querySelector('#ed-snd');
+                    function paintSnd() { var on = video && !video.muted; sndB.classList.toggle('primary', Boolean(on)); sndB.title = on ? 'اكتم الصوت' : 'شغّل صوت الأليرت'; }
+                    sndB.addEventListener('click', function () {
+                        if (!video) { toast('هذا الأليرت التجريبي بدون صوت — ارفع فيديو', true); return; }
+                        video.muted = !video.muted; video.volume = clamp(a.vol == null ? 0.8 : a.vol, 0, 1);
+                        if (!video.muted) { video.currentTime = 0; video.play().catch(function () {}); }
+                        paintSnd();
                     });
                     el.querySelector('#ed-seek').addEventListener('input', function (e) { var v = e.target.value / 1000; if (video) video.currentTime = v * (video.duration || 0); else { tOff = v * 3; t0 = performance.now(); } });
                 }
@@ -1405,15 +1418,21 @@
                     pills('#t-shape', function (v) { a.top.shape = v; redrawTop(); }); pills('#t-font', function (v) { a.top.font = v; redrawTop(); });
                 }
                 if (a.type === 'sound') { bindRange('s-vol', function (v) { a.vol = v; }); el.querySelector('#s-play').addEventListener('click', function () { playSound(a, a.vol); }); }
-                if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) { a.vol = v; }); }
+                if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) { a.vol = v; if (video) video.volume = clamp(v, 0, 1); }); }
                 // شكل الأليرت: معاينة مباشرة (نفس اللي يطلع بالبث)
                 function paintLook() {
                     if (a.type !== 'alert' || !cv) return;
                     if (!document.body.contains(el)) { window.removeEventListener('resize', paintLook); return; } // المحرر تسكّر
                     var L = a.look, box = el.querySelector('#lk-box'), b = L.vbg;
                     el.querySelector('#lk-bg-rows').hidden = !b.on;
+                    el.querySelector('#lk-size-row').hidden = L.full;
                     var m = hexRgb(b.c);
-                    var em = Math.max(1, cv.clientWidth / 18);
+                    // شاشة البث 1920×1080: نفس حساب الرسم (الحجم = size٪ من أصغر ضلع، والأليرت 18em)
+                    var stg = el.querySelector('#ed-stage'), W = stg.clientWidth, H = stg.clientHeight;
+                    var em = (L.size || 3) * Math.min(W, H) / 100;
+                    var vw = cv.width || 16, vh = cv.height || 9, bw, bh;
+                    if (L.full) { bw = W; bh = H; } else { bw = 18 * em * Math.min(1, vw / vh); bh = 18 * em * Math.min(1, vh / vw); }
+                    box.style.width = bw + 'px'; box.style.height = bh + 'px';
                     box.style.fontSize = em + 'px';
                     var bgEl = el.querySelector('#lk-bg');
                     bgEl.style.display = b.on ? '' : 'none';
@@ -1434,7 +1453,8 @@
                     var L = a.look;
                     function lkRange(id, obj, key) { bindRange(id, function (v) { obj[key] = v; paintLook(); }); }
                     lkRange('lk-bg-a', L.vbg, 'a'); lkRange('lk-bg-r', L.vbg, 'r'); lkRange('lk-hue', L.vfx, 'hue'); lkRange('lk-sat', L.vfx, 'sat'); lkRange('lk-bri', L.vfx, 'bri');
-                    [['lk-bg-on', L.vbg, 'on'], ['lk-av-on', L.parts.avatar, 'on'], ['lk-nm-on', L.parts.name, 'on'], ['lk-ms-on', L.parts.msg, 'on']].forEach(function (t) {
+                    lkRange('lk-size', L, 'size');
+                    [['lk-full', L, 'full'], ['lk-var', L, 'variants'], ['lk-bg-on', L.vbg, 'on'], ['lk-av-on', L.parts.avatar, 'on'], ['lk-nm-on', L.parts.name, 'on'], ['lk-ms-on', L.parts.msg, 'on']].forEach(function (t) {
                         el.querySelector('#' + t[0]).addEventListener('change', function (e) { t[1][t[2]] = e.target.checked; paintLook(); });
                     });
                     [['lk-bg-c', L.vbg], ['lk-av-c', L.parts.avatar], ['lk-nm-c', L.parts.name], ['lk-ms-c', L.parts.msg]].forEach(function (t) {

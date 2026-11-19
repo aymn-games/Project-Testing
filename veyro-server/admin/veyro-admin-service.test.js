@@ -241,6 +241,11 @@ test('library: alert look (background, video colors, part colors) is cleaned and
     assert.deepEqual(a.look.vbg, { on: true, c: '#000000', a: 1, r: 9 });
     assert.deepEqual(a.look.vfx, { hue: 180, sat: 1.5, bri: 2 });
     assert.deepEqual(a.look.parts, { name: { on: true, c: '#ff0000' }, msg: { on: false } });
+    assert.equal(a.look.full, false);
+    var b = x.s.saveAsset({ type: 'alert', name: 'كامل', look: { full: 1, variants: true, size: 99 } }, false, ADMIN).asset;
+    assert.equal(b.look.full, true);
+    assert.equal(b.look.variants, true);
+    assert.equal(b.look.size, 9);
     var icon = x.s.saveAsset({ type: 'icon', name: 'ا', look: { vbg: { on: true } } }, false, ADMIN).asset;
     assert.equal(icon.look, null);
 });

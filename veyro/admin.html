@@ -397,8 +397,11 @@
   .ed-stage canvas { max-width: 100%; max-height: 100%; }
   .ed-stage .bgsw { position: absolute; bottom: 10px; left: 10px; z-index: 2; }
   /* معاينة شكل الأليرت: خلفية ورا الفيديو + الصورة والاسم والرسالة بأماكنها الافتراضية */
-  .lk-box { position: relative; display: flex; max-width: 100%; max-height: 100%; }
-  .lk-box canvas { max-width: 100%; max-height: 100%; }
+  /* شاشة اختبار الأليرت = شاشة بث 1920×1080 (16:9)، والأليرت بحجمه الحقيقي عليها */
+  .ed-stage:has(.lk-box) { aspect-ratio: 16 / 9; min-height: 0; }
+  .lk-res { position: absolute; top: 8px; right: 10px; z-index: 3; padding: 2px 8px; border-radius: 7px; background: rgba(12,11,16,.7); font-size: 11.5px; font-weight: 700; color: var(--lav-l); direction: ltr; }
+  .lk-box { position: relative; flex: none; }
+  .lk-box canvas { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; object-fit: contain; }
   .lk-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .lk-parts { position: absolute; inset: 0; z-index: 2; pointer-events: none; font-family: var(--f-head); }
   .lk-parts > span { position: absolute; left: 50%; transform: translate(-50%, -50%); white-space: nowrap; font-weight: 800; text-shadow: 0 .06em .2em rgba(0,0,0,.8); }

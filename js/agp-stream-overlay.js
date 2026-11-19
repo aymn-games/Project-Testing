@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '6'; // 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '7'; // 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2081,6 +2081,14 @@
         return alertNodes.filter(function (a) { return a.node._item && a.node._item.id === id; });
     }
 
+    /** أليرت فيديو «ملء الشاشة» (it.full): الإطار بحجم الشاشة كاملة (الفيديو contain بالوسط). */
+    function fitFull(box, n, it) {
+        if (!it || !it.full || !n || !n._F) return;
+        box.style.width = n._F.w + 'px';
+        box.style.height = n._F.h + 'px';
+        box.classList.add('full');
+    }
+
     function idleAlert(n) {
         var stage = n.querySelector('.agp-so-astage');
         if (!stage) return;
@@ -2093,7 +2101,8 @@
                 var ph = el('div', 'agp-so-vslot');
                 ph.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
                 ph.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
-                ph.appendChild(el('span', null, 'أليرت فيديو'));
+                ph.appendChild(el('span', null, n._item.full ? 'أليرت فيديو — ملء الشاشة' : 'أليرت فيديو'));
+                fitFull(ph, n, n._item);
                 stage.appendChild(ph);
             }
             prefetchVideo(n._item.video.id);
@@ -2681,6 +2690,7 @@
             if (!stage) return;
             stage.textContent = '';
             var vb = videoBox(it, e, false);
+            fitFull(vb.root, t.node, it);
             vb.root.classList.add('in');
             stage.appendChild(vb.root);
             boxes.push(vb);
