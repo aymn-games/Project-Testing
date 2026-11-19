@@ -21,6 +21,8 @@ module.exports = {
     coreApiUrl: (process.env.CORE_API_URL || 'https://project-testing-akds.onrender.com').replace(/\/+$/, ''),
     // سر مشترك مع سيرفر الألعاب لنقل بيانات فيرو القديمة (migrate/import-from-core.js)
     coreExportSecret: process.env.VEYRO_EXPORT_SECRET || '',
+    // سر تفعيل الاشتراكات المشتراة من متجر الألعاب (admin/admin-router.js → store-grant) — نفس القيمة بسيرفر الألعاب
+    storeSecret: process.env.VEYRO_STORE_SECRET || '',
 
     // رابط الموقع (رجوع Streamlabs بعد الموافقة)
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',

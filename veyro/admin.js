@@ -115,9 +115,9 @@
     var MAILS = ['gmail.com', 'hotmail.com', 'outlook.com', 'icloud.com'];
 
     var PLANS_SEED = [
-        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, videos: 10, on: true, features: ['كل أدوات البث', '10 شاشات', '10 فيديوهات بالمكتبة'] },
-        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, videos: 20, on: true, features: ['كل أدوات البث', '20 شاشة', '20 فيديو بالمكتبة'] },
-        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, videos: 40, on: true, features: ['كل أدوات البث', '50 شاشة', '40 فيديو بالمكتبة', 'أصول حصرية للسنوي'] },
+        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, videos: 10, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '10 شاشات', '10 فيديوهات بالمكتبة'] },
+        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, videos: 20, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '20 شاشة', '20 فيديو بالمكتبة'] },
+        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, videos: 40, gamesDiscount: 30, on: true, features: ['كل أدوات البث', '50 شاشة', '40 فيديو بالمكتبة', 'أصول حصرية للسنوي'] },
         { id: 'lifetime', name: 'مفتوح', days: 0, price: 0, screens: 100, videos: 60, on: true, internal: true, features: ['بدون تاريخ انتهاء', 'يعطيه الأدمن أو كود خاص بس'] }
     ];
 
@@ -889,6 +889,7 @@
                     var n = S.users.filter(function (u) { return isPaying(u) && u.sub.plan === p.id; }).length;
                     return '<div class="plan' + (p.on ? '' : ' off') + '"><h4>' + esc(p.name) + '<span class="sp"></span>' + (p.internal ? '<span class="tag gold">داخلي</span>' : p.on ? '<span class="tag ok">مفعّلة</span>' : '<span class="tag mute">موقفة</span>') + '</h4>' +
                         '<div class="pr num">' + (p.price ? fmtN(p.price) + ' <small>' + CUR + ' / ' + p.days + ' يوم</small>' : '<small>' + (p.days ? p.days + ' يوم' : 'بدون انتهاء') + '</small>') + '</div>' +
+                        (p.gamesDiscount ? '<div><span class="tag gold">مشتركي الألعاب: −' + p.gamesDiscount + '٪ = ' + fmtN(Math.round(p.price * (100 - p.gamesDiscount)) / 100, 2) + ' ' + CUR + '</span></div>' : '') +
                         '<ul>' + p.features.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
                         '<div class="ft"><span>' + n + ' مشترك نشط</span><button type="button" class="ob-btn ghost sm" data-a="planEdit" data-id="' + p.id + '">' + ic('edit') + 'تعديل</button></div></div>';
                 }).join('') + '</div></section>';
@@ -1641,12 +1642,13 @@
         });
     }
     function planModal(p) {
-        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: '', name: '', days: 30, price: 0, screens: 10, videos: 10, on: true, features: [] };
+        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: '', name: '', days: 30, price: 0, screens: 10, videos: 10, gamesDiscount: 30, on: true, features: [] };
         openModal({
             title: isNew ? 'خطة جديدة' : 'تعديل خطة «' + esc(p.name) + '»',
             body: '<div class="field"><label for="pm-n">الاسم</label><input id="pm-n" class="ob-input" value="' + esc(p.name) + '"></div>' +
                 '<div class="grid2"><div class="field"><label for="pm-d">المدة (يوم)</label><input id="pm-d" type="number" min="0" class="ob-input ltr num" value="' + p.days + '"' + (p.id === 'lifetime' ? ' disabled' : '') + '></div><div class="field"><label for="pm-p">السعر (' + CUR + ')</label><input id="pm-p" type="number" min="0" class="ob-input ltr num" value="' + p.price + '"></div>' +
                 '<div class="field"><label for="pm-s">عدد الشاشات</label><input id="pm-s" type="number" min="0" class="ob-input ltr num" value="' + p.screens + '"></div><div class="field"><label for="pm-m">عدد الفيديوهات بالمكتبة</label><input id="pm-m" type="number" min="0" class="ob-input ltr num" value="' + (p.videos != null ? p.videos : 10) + '"></div></div>' +
+                (p.id === 'lifetime' ? '' : '<div class="field"><label for="pm-g">خصم مشتركي منصة الألعاب (٪)</label><input id="pm-g" type="number" min="0" max="100" class="ob-input ltr num" value="' + (p.gamesDiscount || 0) + '"><small>اللي عنده اشتراك فعّال بالألعاب ياخذ هالخصم كل ما يشتري هالخطة من متجر الألعاب. 0 = بدون.</small></div>') +
                 '<div class="field"><label for="pm-f">المزايا (سطر لكل ميزة)</label><textarea id="pm-f" class="ob-input">' + esc(p.features.join('\n')) + '</textarea></div>' +
                 '<div class="ob-row"><div class="lb"><b>الخطة مفعّلة</b><small>الموقفة ما تطلع للمشتركين الجدد، والحاليين يكملون</small></div><div class="ct"><label class="ob-toggle"><input type="checkbox" id="pm-on"' + (p.on ? ' checked' : '') + '><span></span></label></div></div>',
             foot: '<button type="button" class="ob-btn primary" id="pm-ok">حفظ الخطة</button><button type="button" class="ob-btn ghost" data-x6>رجوع</button>',
@@ -1656,6 +1658,7 @@
                     p.name = el.querySelector('#pm-n').value.trim(); if (!p.name) return toast('اكتب اسم الخطة', true);
                     if (p.id !== 'lifetime') p.days = Math.max(1, Number(el.querySelector('#pm-d').value) || 30);
                     p.price = Math.max(0, Number(el.querySelector('#pm-p').value) || 0); p.screens = Number(el.querySelector('#pm-s').value) || 0; p.videos = Number(el.querySelector('#pm-m').value) || 0;
+                    var gEl = el.querySelector('#pm-g'); if (gEl) p.gamesDiscount = clamp(Math.round(Number(gEl.value) || 0), 0, 100);
                     p.features = el.querySelector('#pm-f').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); p.on = el.querySelector('#pm-on').checked;
                     mm.close();
                     doOp('planSave', { plan: p }, function () {

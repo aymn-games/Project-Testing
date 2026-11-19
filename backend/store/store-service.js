@@ -25,6 +25,8 @@ var subscriptionService = require('../subscriptions/subscription-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var paylink = require('./paylink-client');
 var moyasar = require('./moyasar-client');
+// اشتراكات فيرو بالمتجر (تسليم 'veyro:<خطة>') وخصم مشتركي الألعاب عليها — store/veyro-link.js
+var veyroLink = require('./veyro-link');
 
 var FIRST_ORDER_ID = 482100;
 var MAX_NAME_LENGTH = 80;
@@ -161,7 +163,8 @@ function getPublicStore(user) {
         success: true,
         categories: listCategories(),
         streamers: listStreamers(),
-        products: listProductRows().map(mapProduct),
+        // اشتراك فيرو: سعر مشترك الألعاب بعد الخصم (السعر الأصلي مشطوب)
+        products: listProductRows().map(function (r) { return veyroLink.priceRowFor(r, user); }).map(mapProduct),
         favorites: favorites,
         paymentsEnabled: canPay(user),
         // بوابة مفعّلة = الدفع يتحوّل لصفحة البوابة ويحتاج رقم جوال
@@ -266,7 +269,7 @@ function buildOrderItem(row, rowsById, categoriesById) {
  * مو من المتصفح).
  * @returns {{success: boolean, error?: string, rows?: Array, subtotal?: number, discount?: number, total?: number, coupon?: Object}}
  */
-function priceCart(productIds, couponCode) {
+function priceCart(productIds, couponCode, user) {
     if (!Array.isArray(productIds)) return { success: false, error: 'invalid_items' };
     var ids = [];
     productIds.forEach(function (raw) { var id = toId(raw); if (id && ids.indexOf(id) === -1) ids.push(id); });
@@ -277,7 +280,8 @@ function priceCart(productIds, couponCode) {
     for (var i = 0; i < ids.length; i++) {
         var row = getProductRow(ids[i]);
         if (!row || (row.hidden && !row.plan)) return { success: false, error: 'product_unavailable', productId: ids[i] };
-        rows.push(row);
+        // خصم مشتركي الألعاب على اشتراك فيرو (ينحسب هنا بالسيرفر)
+        rows.push(veyroLink.priceRowFor(row, user));
     }
     if (rows.filter(function (r) { return r.plan; }).length > 1) return { success: false, error: 'one_plan_only' };
 
@@ -313,7 +317,7 @@ function ensureCustomFrameForProduct(row) {
  * يضيف المنتج لمقتنيات المستخدم الفعلية حسب delivery. لا يرمي أخطاء.
  * 'subscription:<أشهر>' = اشتراك ستريمر (يمدّد لو فعّال)، ويُسجَّل برقم الطلب.
  */
-function deliverToCollectibles(userId, row, orderId) {
+function deliverToCollectibles(userId, row, orderId, amount) {
     var delivery = row.delivery || '';
     try {
         if (delivery === 'frame') {
@@ -327,6 +331,9 @@ function deliverToCollectibles(userId, row, orderId) {
             collectiblesService.grantWinCard(userId, delivery.slice(4), 'store');
         } else if (delivery.indexOf('subscription:') === 0) {
             subscriptionService.grantFromStore(userId, Number(delivery.slice(13)), orderId);
+        } else if (delivery.indexOf('veyro:') === 0) {
+            // اشتراك فيرو: ينرسل لسيرفر فيرو (بطابور يعيد المحاولة) مع المبلغ المدفوع فعلاً
+            veyroLink.grant(userId, delivery, amount, orderId, row.id);
         }
     } catch (err) {
         logger.error('Store: delivery failed for product ' + row.id + ' to user ' + userId + ':', err);
@@ -366,15 +373,18 @@ var finalizeOrder = db.transaction(function (orderId) {
     var order = db.prepare('SELECT * FROM store_orders WHERE id = ?').get(orderId);
     var createdAt = now();
     var addInventory = db.prepare('INSERT INTO store_inventory (user_id, product_id, order_id, created_at) VALUES (?, ?, ?, ?)');
-    parseJsonArray(order.items).forEach(function (item) {
+    var items = parseJsonArray(order.items);
+    // المدفوع فعلاً لكل منتج (بعد كود الخصم) — نفس نسبة إحصائيات الاستريمرز
+    var paidF = order.total / (items.reduce(function (a, i) { return a + i.price; }, 0) || 1);
+    items.forEach(function (item) {
         // المنتج نفسه من قاعدة البيانات (لنوع التسليم)؛ لو انحذف بعد الطلب يُسجَّل بالمقتنيات بدون تسليم.
         var row = getProductRow(item.productId);
         addInventory.run(order.user_id, item.productId, orderId, createdAt);
-        if (row) deliverToCollectibles(order.user_id, row, orderId);
+        if (row) deliverToCollectibles(order.user_id, row, orderId, round2(item.price * paidF));
         (item.parts || []).forEach(function (pt) {
             var part = getProductRow(pt.productId);
             addInventory.run(order.user_id, pt.productId, orderId, createdAt);
-            if (part) deliverToCollectibles(order.user_id, part, orderId);
+            if (part) deliverToCollectibles(order.user_id, part, orderId, round2((pt.amount || 0) * paidF));
         });
     });
     return true;
@@ -407,7 +417,7 @@ function checkout(user, input) {
 
     if (!canPay(user)) return Promise.resolve(fail('payments_not_configured'));
     if (!useGatewayFor(user)) {
-        var mockPriced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
+        var mockPriced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '', user);
         if (!mockPriced.success) return Promise.resolve(mockPriced);
         var mockId = db.transaction(function () {
             var id = insertOrder(user.id, mockPriced, method, 'pending', { paymentRef: 'mock-' + crypto.randomBytes(6).toString('hex') });
@@ -420,7 +430,7 @@ function checkout(user, input) {
 
     var mobile = normalizeMobile(input.mobile);
     if (!mobile) return Promise.resolve(fail('invalid_mobile'));
-    var priced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
+    var priced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '', user);
     if (!priced.success) return Promise.resolve(priced);
     if (!(priced.total > 0)) return Promise.resolve(fail('invalid_total'));
 
@@ -705,7 +715,7 @@ function deliveryOptions() {
     var wins = collectiblesService.getWinCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
     var subs = subscriptionService.listPlans(false).map(function (p) { return { value: 'subscription:' + p.months, label: 'اشتراك ستريمر: ' + p.name }; });
     return [{ value: '', label: 'بدون تسليم تلقائي' }, { value: 'frame', label: 'إطار بروفايل (صورة المنتج)' }]
-        .concat(frames, elims, wins, subs);
+        .concat(frames, elims, wins, subs, veyroLink.deliveryOptions());
 }
 
 /** منتجات اشتراك الستريمر الظاهرة بالمتجر (لأزرار «اشترك/جدّد» بالبروفايل). */
