@@ -43,6 +43,23 @@ var ASSET_ACCESS = ['all', 'subs', 'yearly'];
 var MAX_ASSET_BYTES = 30 * 1024 * 1024;
 var GAMES_DISCOUNT = 30; // خصم مشتركي منصة الألعاب الافتراضي (٪) لكل خطة
 
+/** شكل أليرت الفيديو الافتراضي من المكتبة (نفس حقول it.vbg / it.vfx / it.parts بـjs/agp-stream-overlay.js). */
+function cleanLook(l) {
+    if (!l || typeof l !== 'object') return null;
+    var hex = /^#[0-9a-f]{6}$/i, out = {};
+    if (l.vbg && typeof l.vbg === 'object') out.vbg = { on: Boolean(l.vbg.on), c: hex.test(l.vbg.c) ? l.vbg.c : '#000000', a: clamp(Number(l.vbg.a), 0, 1) || 0, r: clamp(Number(l.vbg.r) || 0, 0, 9) };
+    if (l.vfx && typeof l.vfx === 'object') out.vfx = { hue: clamp(Number(l.vfx.hue) || 0, -180, 180), sat: l.vfx.sat == null ? 1 : clamp(Number(l.vfx.sat), 0, 3), bri: l.vfx.bri == null ? 1 : clamp(Number(l.vfx.bri), 0.2, 2) };
+    if (l.parts && typeof l.parts === 'object') {
+        out.parts = {};
+        ['avatar', 'name', 'msg'].forEach(function (k) {
+            var p = l.parts[k];
+            if (!p || typeof p !== 'object') return;
+            out.parts[k] = { on: p.on !== false };
+            if (hex.test(p.c)) out.parts[k].c = p.c;
+        });
+    }
+    return out;
+}
 function dayKey(ts) { var d = new Date(ts + TZ_MS); return d.toISOString().slice(0, 10); }
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function int(v, def) { var n = Math.round(Number(v)); return isFinite(n) ? n : def; }
@@ -422,7 +439,7 @@ function createService(db, deps) {
     function assetFile(id) { return dir ? path.join(dir, id) : null; }
     function assetRow(r, withUsage) {
         var st = json(r.settings, {});
-        var a = { id: r.id, type: r.type, name: r.name, cat: r.cat, status: r.status, access: r.access, version: r.version, updated: r.updated_at, created: r.created_at, mime: r.mime, size: r.size, key: st.key || null, top: st.top || null, vol: st.vol == null ? 0.8 : st.vol, dur: st.dur || 6, w: st.w || 0, h: st.h || 0, d: st.d || 0, fscale: st.fscale || 1.3, src: {} };
+        var a = { id: r.id, type: r.type, name: r.name, cat: r.cat, status: r.status, access: r.access, version: r.version, updated: r.updated_at, created: r.created_at, mime: r.mime, size: r.size, key: st.key || null, top: st.top || null, look: st.look || null, vol: st.vol == null ? 0.8 : st.vol, dur: st.dur || 6, w: st.w || 0, h: st.h || 0, d: st.d || 0, fscale: st.fscale || 1.3, src: {} };
         if (r.mime) {
             var url = fileUrl(r.id) + '&v=' + r.updated_at;
             if (r.type === 'alert') a.src.video = url; else if (r.type === 'sound') a.src.audio = url; else a.src.img = url;
@@ -446,6 +463,8 @@ function createService(db, deps) {
         if (a.w != null) st.w = clamp(int(a.w, 0), 0, 10000);
         if (a.h != null) st.h = clamp(int(a.h, 0), 0, 10000);
         if (a.d != null) st.d = clamp(Number(a.d) || 0, 0, 3600);
+        // الأليرت: الشكل اللي ياخذه الستريمر (خلفية، ألوان الفيديو، ألوان العناصر)
+        if (type === 'alert' && 'look' in a) st.look = cleanLook(a.look);
         // الإطار: حجمه نسبة لصورة الداعم (المحرر يحطه حولها)
         if (a.fscale != null) st.fscale = clamp(Number(a.fscale) || 1.3, 1, 2.5);
         return JSON.stringify(st);

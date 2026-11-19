@@ -1215,7 +1215,7 @@
      * يرجع Promise بالأصل من السيرفر، أو false.
      */
     function persistAsset(a, isNew, publish) {
-        var meta = { type: a.type, name: a.name, cat: a.cat, access: a.access, status: publish ? undefined : a.status, key: a.key, top: a.top, vol: a.vol, dur: a.dur, w: a.w, h: a.h, d: a.d, fscale: a.fscale };
+        var meta = { type: a.type, name: a.name, cat: a.cat, access: a.access, status: publish ? undefined : a.status, key: a.key, top: a.top, vol: a.vol, dur: a.dur, w: a.w, h: a.h, d: a.d, fscale: a.fscale, look: a.type === 'alert' ? a.look : undefined };
         if (!isNew) meta.id = a.id;
         if (isNew && meta.status === 'published') meta.status = 'draft';
         busy(true);
@@ -1283,10 +1283,32 @@
             '</div></div>' : '';
         var soundUI = a.type === 'sound' ? '<div class="sec"><h4>الصوت</h4><div class="rows">' + keyRow('مستوى الصوت', rng('s-vol', a.vol, 0, 1, 0.01)) + '<button type="button" class="ob-btn" id="s-play">' + ic('play') + 'تشغيل</button></div></div>' : '';
         var frameUI = a.type === 'frame' ? keyRow('حجم الإطار حول الصورة', rng('f-scale', a.fscale || 1.3, 1, 2.5, 0.05), 'الدائرة بالمعاينة = صورة الداعم') : '';
+        // الأليرت: الشكل اللي ياخذه الستريمر (خلفية خلفه، ألوان الفيديو، ألوان العناصر وظهورها)
+        if (a.type === 'alert') {
+            var L0 = a.look || {};
+            a.look = {
+                vbg: Object.assign({ on: false, c: '#000000', a: 0.6, r: 0.6 }, L0.vbg || {}),
+                vfx: Object.assign({ hue: 0, sat: 1, bri: 1 }, L0.vfx || {}),
+                parts: { avatar: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).avatar || {}), name: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).name || {}), msg: Object.assign({ on: true, c: '#ffd54a' }, (L0.parts || {}).msg || {}) }
+            };
+        }
+        function clr(id, v, label) { return '<input type="color" class="ob-color" id="' + id + '" value="' + v + '" aria-label="' + label + '">'; }
+        function tgl(id, on) { return '<label class="ob-toggle"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><span></span></label>'; }
+        var lookUI = a.type === 'alert' ? '<div class="sec"><h4>' + ic('drop', ' style="width:16px;height:16px"') + 'شكل الأليرت للستريمرز</h4><div class="rows">' +
+            '<small class="mut2" style="line-height:1.7">يوصل للستريمر مع الأليرت لما يستخدمه، ويقدر يعدّله من المحرر.</small>' +
+            keyRow('خلفية خلف الأليرت', tgl('lk-bg-on', a.look.vbg.on), 'للأليرت المفرّغ: لوح ورا الفيديو') +
+            '<div id="lk-bg-rows">' + keyRow('لون الخلفية', clr('lk-bg-c', a.look.vbg.c, 'لون الخلفية')) + keyRow('شفافية الخلفية', rng('lk-bg-a', a.look.vbg.a, 0, 1, 0.01), '0 = شفافة، 1 = لون كامل') + keyRow('حواف الخلفية', rng('lk-bg-r', a.look.vbg.r, 0, 3, 0.05)) + '</div>' +
+            keyRow('درجة اللون', rng('lk-hue', a.look.vfx.hue, -180, 180, 1), 'تغيّر ألوان الفيديو (0 = الأصلي)') +
+            keyRow('التشبّع', rng('lk-sat', a.look.vfx.sat, 0, 2, 0.05)) +
+            keyRow('السطوع', rng('lk-bri', a.look.vfx.bri, 0.5, 1.5, 0.05)) +
+            keyRow('صورة الداعم', tgl('lk-av-on', a.look.parts.avatar.on) + clr('lk-av-c', a.look.parts.avatar.c, 'لون إطار الصورة'), 'اللون = لون الإطار') +
+            keyRow('اسم الداعم', tgl('lk-nm-on', a.look.parts.name.on) + clr('lk-nm-c', a.look.parts.name.c, 'لون الاسم')) +
+            keyRow('الرسالة', tgl('lk-ms-on', a.look.parts.msg.on) + clr('lk-ms-c', a.look.parts.msg.c, 'لون الرسالة')) +
+            '</div></div>' : '';
         var alertUI = a.type === 'alert' ? keyRow('مدة الأليرت (ثانية)', rng('al-dur', a.dur, 2, 20, 1)) + keyRow('صوت الفيديو', rng('al-vol', a.vol, 0, 1, 0.01)) : '';
         var stage = a.type === 'top' ? '<div class="ed-stage stream" id="ed-stage">' + topHTML(a.top) + '</div>'
             : a.type === 'sound' ? '<div class="ed-stage" id="ed-stage" style="background:rgba(12,11,16,.5)">' + thumbHTML(a) + '</div>'
-                : '<div class="ed-stage bg-' + bg + '" id="ed-stage"><canvas id="ed-cv"></canvas>' + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
+                : '<div class="ed-stage bg-' + bg + '" id="ed-stage">' + (a.type === 'alert' ? '<div class="lk-box" id="lk-box"><div class="lk-bg" id="lk-bg"></div><canvas id="ed-cv"></canvas><div class="lk-parts"><span class="lk-av" id="lk-av"></span><span class="lk-nm" id="lk-nm">اسم الداعم</span><span class="lk-ms" id="lk-ms">أرسل 5 وردة</span></div></div>' : '<canvas id="ed-cv"></canvas>') + (a.type === 'frame' ? '<div class="fprev" id="f-prev"></div>' : '') + '<span class="pick-hint" id="ed-hint" hidden>اضغط على لون الخلفية بالمعاينة</span><div class="ob-seg bgsw" id="ed-bg"><button type="button" data-v="chk" class="on">شفاف</button><button type="button" data-v="stream">بث</button><button type="button" data-v="white">أبيض</button></div></div>' +
                 (a.type === 'alert' ? '<div class="ed-play"><button type="button" class="ob-btn icon sm" id="ed-pp" aria-label="تشغيل/إيقاف">' + ic('pause') + '</button><input type="range" class="ob-range" id="ed-seek" min="0" max="1000" value="0" aria-label="الوقت"><span class="rv num" id="ed-time">0.0</span></div>' : '');
 
         var m = openModal({
@@ -1297,7 +1319,7 @@
                 '<div class="ob-row col"><div class="lb"><b>متاح لـ</b><small>مين يشوفه بمكتبته</small></div><div class="ob-pills" id="ed-access">' + Object.keys(ACCESS).map(function (k) { return '<button type="button" class="ob-pill' + (a.access === k ? ' on' : '') + '" data-v="' + k + '">' + ACCESS[k] + '</button>'; }).join('') + '</div></div>' +
                 '<div class="ob-row col"><div class="lb"><b>الحالة</b><small>«مخفي» يختفي من المكتبات، واللي يستخدمونه يبقى عندهم</small></div><div class="ob-pills" id="ed-st">' + Object.keys(A_ST).map(function (k) { return '<button type="button" class="ob-pill' + (a.status === k ? ' on' : '') + '" data-v="' + k + '">' + A_ST[k][0] + '</button>'; }).join('') + '</div></div>' +
                 alertUI + frameUI + '</div></div>' +
-                '<div class="ed-side">' + keyUI + topUI + soundUI +
+                '<div class="ed-side">' + keyUI + lookUI + topUI + soundUI +
                 (!isNew ? '<div class="sec"><h4>معلومات</h4><div class="kv">' + kv('النسخة', 'v' + a.version) + kv('آخر تعديل', fdt(a.updated)) + kv('يستخدمه', fmtN(a.usage) + ' ستريمر') + '</div></div>' : '') +
                 '</div></div>',
             foot: '<button type="button" class="ob-btn primary" id="ed-pub">' + ic('send') + (a.status === 'published' && !isNew ? 'نشر التحديث للجميع' : 'نشر للجميع') + '</button><button type="button" class="ob-btn" id="ed-save">حفظ</button><button type="button" class="ob-btn ghost" id="ed-cancel">رجوع</button>' + (!isNew ? '<span style="flex:1"></span><button type="button" class="ob-btn danger" id="ed-del">' + ic('trash') + 'حذف</button>' : ''),
@@ -1384,6 +1406,43 @@
                 }
                 if (a.type === 'sound') { bindRange('s-vol', function (v) { a.vol = v; }); el.querySelector('#s-play').addEventListener('click', function () { playSound(a, a.vol); }); }
                 if (a.type === 'alert') { bindRange('al-dur', function (v) { a.dur = v; }); bindRange('al-vol', function (v) { a.vol = v; }); }
+                // شكل الأليرت: معاينة مباشرة (نفس اللي يطلع بالبث)
+                function paintLook() {
+                    if (a.type !== 'alert' || !cv) return;
+                    if (!document.body.contains(el)) { window.removeEventListener('resize', paintLook); return; } // المحرر تسكّر
+                    var L = a.look, box = el.querySelector('#lk-box'), b = L.vbg;
+                    el.querySelector('#lk-bg-rows').hidden = !b.on;
+                    var m = hexRgb(b.c);
+                    var em = Math.max(1, cv.clientWidth / 18);
+                    box.style.fontSize = em + 'px';
+                    var bgEl = el.querySelector('#lk-bg');
+                    bgEl.style.display = b.on ? '' : 'none';
+                    bgEl.style.background = 'rgba(' + m.join(',') + ',' + b.a + ')';
+                    bgEl.style.borderRadius = b.r + 'em';
+                    var f = [];
+                    if (L.vfx.hue) f.push('hue-rotate(' + L.vfx.hue + 'deg)');
+                    if (L.vfx.sat !== 1) f.push('saturate(' + L.vfx.sat + ')');
+                    if (L.vfx.bri !== 1) f.push('brightness(' + L.vfx.bri + ')');
+                    cv.style.filter = f.join(' ');
+                    var P = L.parts;
+                    var av = el.querySelector('#lk-av'), nm = el.querySelector('#lk-nm'), ms = el.querySelector('#lk-ms');
+                    av.hidden = !P.avatar.on; av.style.borderColor = P.avatar.c;
+                    nm.hidden = !P.name.on; nm.style.color = P.name.c;
+                    ms.hidden = !P.msg.on; ms.style.color = P.msg.c;
+                }
+                if (a.type === 'alert') {
+                    var L = a.look;
+                    function lkRange(id, obj, key) { bindRange(id, function (v) { obj[key] = v; paintLook(); }); }
+                    lkRange('lk-bg-a', L.vbg, 'a'); lkRange('lk-bg-r', L.vbg, 'r'); lkRange('lk-hue', L.vfx, 'hue'); lkRange('lk-sat', L.vfx, 'sat'); lkRange('lk-bri', L.vfx, 'bri');
+                    [['lk-bg-on', L.vbg, 'on'], ['lk-av-on', L.parts.avatar, 'on'], ['lk-nm-on', L.parts.name, 'on'], ['lk-ms-on', L.parts.msg, 'on']].forEach(function (t) {
+                        el.querySelector('#' + t[0]).addEventListener('change', function (e) { t[1][t[2]] = e.target.checked; paintLook(); });
+                    });
+                    [['lk-bg-c', L.vbg], ['lk-av-c', L.parts.avatar], ['lk-nm-c', L.parts.name], ['lk-ms-c', L.parts.msg]].forEach(function (t) {
+                        el.querySelector('#' + t[0]).addEventListener('input', function (e) { t[1].c = e.target.value; paintLook(); });
+                    });
+                    paintLook(); setTimeout(paintLook, 80); setTimeout(paintLook, 500);
+                    window.addEventListener('resize', paintLook);
+                }
                 // الإطار: دائرة بحجم صورة الداعم تحت الإطار عشان يضبط الحجم
                 function paintFprev() { var fp = el.querySelector('#f-prev'); if (!fp || !cv) return; var d = Math.min(cv.clientWidth, cv.clientHeight) / (a.fscale || 1.3); fp.style.width = fp.style.height = d + 'px'; }
                 if (a.type === 'frame') { bindRange('f-scale', function (v) { a.fscale = v; paintFprev(); }); setTimeout(paintFprev, 60); setTimeout(paintFprev, 400); }

@@ -2428,7 +2428,7 @@
     /** «من مكتبة فيرو»: أليرتات جاهزة ينشرها الأدمن لكل المستخدمين (مفرّغة وجاهزة). */
     function globalLibrary(box) {
         var list = libOf('alert').map(function (a) {
-            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, global: true };
+            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, look: a.look || null, global: true };
         });
         if (!list.length) return;
         var head = el('div', 'vy-lib-head');
@@ -2451,10 +2451,50 @@
         box.appendChild(g);
     }
 
+    /**
+     * «الألوان والخلفية» لأليرت الفيديو: خلفية خلف الأليرت (it.vbg) بلون وشفافية وحواف،
+     * وألوان الفيديو نفسه (it.vfx): درجة اللون والتشبع والسطوع. ألوان الاسم والرسالة والإطار بـ«ستايل» كل عنصر.
+     */
+    function lookGroup(it, root) {
+        var g = group(root, 'الألوان والخلفية');
+        function setObj(key, field, val, repaint) {
+            var o = Object.assign({}, it[key] || {}); o[field] = val; it[key] = o;
+            commit(); rebuildNode(it);
+            if (repaint) renderPanel();
+        }
+        var bg = it.vbg || {};
+        g.appendChild(row('خلفية خلف الأليرت', toggle(Boolean(bg.on), function (on) {
+            it.vbg = Object.assign({ c: '#000000', a: 0.6, r: 0.6 }, it.vbg || {}, { on: on });
+            commit(); rebuildNode(it); renderPanel();
+        }), false, 'للأليرتات المفرّغة: لوح ورا الفيديو تتحكم بلونه وشفافيته'));
+        if (bg.on) {
+            g.appendChild(row('لون الخلفية', swatches(bg.c || '#000000', function (c) { setObj('vbg', 'c', c, true); }), true));
+            var aS = slider(0, 100, 1, Math.round((bg.a == null ? 0.6 : bg.a) * 100), function (x) { setObj('vbg', 'a', Math.round(x) / 100); aR.querySelector('.ob-rval').textContent = Math.round(x) + '٪'; });
+            var aR = row('شفافية الخلفية', aS, false, '0 = شفافة كاملة، 100 = لون كامل');
+            aR.querySelector('.ob-rval').textContent = Math.round((bg.a == null ? 0.6 : bg.a) * 100) + '٪';
+            g.appendChild(aR);
+            g.appendChild(row('حواف الخلفية', slider(0, 3, 0.05, bg.r == null ? 0.6 : bg.r, function (x) { setObj('vbg', 'r', x); }), false, '0 = زوايا حادّة'));
+        }
+        var fx = it.vfx || {};
+        g.appendChild(row('درجة اللون', slider(-180, 180, 1, fx.hue || 0, function (x) { setObj('vfx', 'hue', x); }), false, 'تغيّر ألوان الفيديو نفسه (0 = الأصلي)'));
+        g.appendChild(row('التشبّع', slider(0, 2, 0.05, fx.sat == null ? 1 : fx.sat, function (x) { setObj('vfx', 'sat', x); }), false, '0 = أبيض وأسود، 1 = الأصلي'));
+        g.appendChild(row('السطوع', slider(0.5, 1.5, 0.05, fx.bri == null ? 1 : fx.bri, function (x) { setObj('vfx', 'bri', x); }), false, '1 = الأصلي'));
+        if (fx.hue || (fx.sat != null && fx.sat !== 1) || (fx.bri != null && fx.bri !== 1)) {
+            g.appendChild(button('رجّع ألوان الفيديو الأصلية', 'ob-btn ghost', function () { it.vfx = null; commit(); rebuildNode(it); renderPanel(); }));
+        }
+        g.appendChild(el('div', 'ob-hint', 'ألوان الاسم والرسالة وإطار الصورة من زر «ستايل» جنب كل عنصر.'));
+    }
+
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
     function newAlertFrom(m, kind) {
         var don = kind === 'donation';
         var it = O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: [don ? 'donation' : 'gift'], key: m.key || null });
+        // أليرت من مكتبة فيرو: الشكل اللي حدده الأدمن (الخلفية، ألوان الفيديو، ألوان العناصر وظهورها)
+        if (m.look) {
+            if (m.look.vbg) it.vbg = Object.assign({}, m.look.vbg);
+            if (m.look.vfx) it.vfx = Object.assign({}, m.look.vfx);
+            if (m.look.parts) Object.keys(m.look.parts).forEach(function (k) { if (it.parts[k]) it.parts[k] = Object.assign({}, it.parts[k], m.look.parts[k]); });
+        }
         it.minDiamonds = 0;
         it.maxDiamonds = 0;
         if (don) { it.minAmount = 0; it.maxAmount = 0; it.amountMode = 'range'; }
@@ -2564,6 +2604,7 @@
             }), true, 'يشتغل مع بداية الأليرت'));
             if (it.soundId) box.appendChild(row('مستوى الصوت الإضافي', slider(0, 1, 0.05, it.soundVol == null ? 0.8 : it.soundVol, function (v) { it.soundVol = v; commit(); })));
         }
+        lookGroup(it, root);
         durationRows(it, box);
         box = group(root, 'الحجم والمكان');
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
