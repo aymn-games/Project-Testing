@@ -148,7 +148,10 @@
         ],
         jar: [
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' },
-            { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } }
+            { label: 'كرة القمر', sub: 'سائل يتموّج ويتعبّى حسب الدعم', type: 'goal', set: { design: 'orb', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'lavender', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#a68bff' } },
+            { label: 'القط المضيء', sub: 'قط نيون يتعبّى بالدعم، يرمش وله انعكاس', type: 'goal', set: { design: 'cat', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'amber', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff9a45' } },
+            { label: 'القط الدائري', sub: 'قط مدوّر بألوان قوس قزح يتعبّى بالدعم', type: 'goal', set: { design: 'blob', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
+            { label: 'هلال الفراشات', sub: 'هلال فضّي وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
         ],
         text: [
             { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
@@ -1536,13 +1539,18 @@
         num.addEventListener('input', function () { var v = Math.floor(Number(num.value)); if (v > 0) update(it, 'target', v); });
         box.appendChild(row('الهدف', num));
         box.appendChild(row('لما يوصل ينتقل للي بعده', toggle(it.autoNext, function (v) { update(it, 'autoNext', v); })));
-        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, it.design === 'orb' ? 'فاضي = بدون عنوان' : ''));
+        box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, O.isOrbDesign(it.design) ? 'فاضي = بدون عنوان' : ''));
         box = group(root, 'الشكل');
         box.appendChild(row('التصميم', pills(opts(O.GOAL_DESIGNS.concat(O.VEYRO_GOAL_DESIGNS)), it.design || 'bar', function (v) {
-            if (v === 'orb' && !it.palette) { it.palette = 'lavender'; it.speed = 'normal'; it.bubbles = true; }
+            // أشكال السائل: كل شكل يبدأ بلوحته (لو ما غيّر الستريمر الألوان بنفسه)
+            if (O.isOrbDesign(v) && v !== it.design) {
+                if (!(it.orb && Object.keys(it.orb).length)) it.palette = O.ORB_SHAPES[v].palette;
+                if (!it.speed) it.speed = 'normal';
+                if (it.bubbles == null) it.bubbles = true;
+            }
             update(it, 'design', v, true);
         }), true));
-        if (it.design === 'orb') { orbProps(it, root, box); return; }
+        if (O.isOrbDesign(it.design)) { orbProps(it, root, box); return; }
         sizeColor(it, box, 1.5, 9);
     }
 
@@ -1574,7 +1582,8 @@
             return w;
         }
         var cg = el('div', 'vo-cps');
-        [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], ['الحلقة', 'ring'], ['التوهّج', 'glow'], ['القمر', 'moon'], ['الغيوم', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
+        var isBall = (it.design || 'orb') === 'orb';
+        [['السائل فوق', 'top'], ['السائل تحت', 'bottom'], [isBall ? 'الحلقة' : 'الخط', 'ring'], ['التوهّج', 'glow'], [isBall ? 'القمر' : 'التفاصيل', 'moon'], [isBall ? 'الغيوم' : 'الخلفية', 'cloud']].forEach(function (x) { cg.appendChild(colorPick(x[0], x[1])); });
         box.appendChild(row('كل لون لحاله', cg, true, 'يبدأ من اللوحة اللي اخترتها'));
         box = group(root, 'الحركة والأرقام');
         box.appendChild(row('حركة الموج', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], it.speed || 'normal', function (v) { update(it, 'speed', v, true); })));
