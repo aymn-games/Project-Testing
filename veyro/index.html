@@ -113,6 +113,20 @@
   .vy-tip.show { opacity: 1; transform: none; }
 
   .vy-foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); margin-top: 8px; }
+  /* مكتبة فيرو العامة بالمحرر: أيقونات وقوالب توب وإطارات */
+  .vy-aicon img { width: 70%; height: 70%; object-fit: contain; }
+  .vy-tplgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; width: 100%; }
+  .vy-tpl, .vy-frm { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; font-size: 12.5px; font-weight: 600; color: var(--lav-l); cursor: pointer; }
+  .vy-tpl .sw { display: flex; gap: 4px; }
+  .vy-tpl .sw i { width: 14px; height: 14px; border-radius: 50% 50% 50% 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+  .vy-frm img { width: 48px; height: 48px; object-fit: contain; }
+  /* الاشتراك (من لوحة تحكم فيرو) تحت الحساب */
+  .vy-subline { min-height: 34px; padding: 6px 10px; font-size: 12px; justify-content: flex-start; }
+  .vy-subline .lbl { overflow: hidden; text-overflow: ellipsis; }
+  /* إعلان الأدمن فوق الصفحة */
+  .vy-ann { flex: none; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px 4px 14px 4px; border: 1px solid rgba(233,194,122,.4); background: linear-gradient(180deg, rgba(233,194,122,.14), rgba(233,194,122,.05)); color: #f6deaa; font-size: 13.5px; font-weight: 600; line-height: 1.7; }
+  .vy-ann span { flex: 1; min-width: 0; }
+  .vy-ann .x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 8px; background: rgba(0,0,0,.2); color: inherit; cursor: pointer; font-size: 18px; line-height: 1; }
   .vy-user { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); min-width: 0; color: var(--text); }
   .vy-user .av { width: 36px; height: 36px; flex: none; border-radius: 50%; background: linear-gradient(160deg, var(--lav-m), var(--lav-d)); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; overflow: hidden; }
   .vy-user .av img { width: 100%; height: 100%; object-fit: cover; }

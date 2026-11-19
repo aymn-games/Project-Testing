@@ -177,10 +177,24 @@
     var section = 'alerts';
     var view = 'home';         // home | screens | editor
     var me = null;             // الحساب (AGPAuth.getCachedUser)
+    var vyInfo = null;         // من لوحة تحكم فيرو (/api/auth/me → veyro): حالة الحساب، الاشتراك، الإعلان
     var panelOpen = true;
     var selectedId = null;
     var textTab = 'text';
     var iconTab = 'icons';
+    // مكتبة فيرو العامة (أصول ينشرها الأدمن من veyro/admin.html): أليرتات، توبات، أيقونات، إطارات، أصوات
+    var vyLib = { list: [], loaded: false, loading: false, cbs: [] };
+    /** يجيب المكتبة مرة وحدة. cb = يعيد الرسم لما توصل (ما ينادى لو كانت محمّلة أصلاً). */
+    function loadVyLib(cb) {
+        if (vyLib.loaded) return;
+        if (cb) vyLib.cbs.push(cb);
+        if (vyLib.loading) return;
+        vyLib.loading = true;
+        api('GET', '/api/veyro/library').then(function (d) { vyLib.list = d.success ? (d.assets || []) : []; })
+            .catch(function () { vyLib.list = []; })
+            .then(function () { vyLib.loading = false; vyLib.loaded = true; var c = vyLib.cbs; vyLib.cbs = []; c.forEach(function (f) { f(); }); });
+    }
+    function libOf(type) { return vyLib.list.filter(function (a) { return a.type === type && (type === 'top' ? a.top : a.mime); }); }
     var iconColor = '#ffd54a';
     var drag = null, resize = null;
     var F = null;
@@ -683,6 +697,7 @@
         if (it.type === 'music') return 'مشغّل الأغاني' + (it.enabled === false ? ' (موقف)' : '');
         if (O.isVideoAlert(it)) return 'أليرت فيديو: ' + (it.video.name || '');
         if (it.type === 'alert') return 'أليرت: ' + (it.events || []).map(function (k) { return (O.ALERT_EVENTS_ALL[k] || {}).label; }).filter(Boolean).join('، ');
+        if (it.type === 'icon' && it.img) return 'أيقونة ' + (it.img.name || 'من فيرو');
         if (it.type === 'icon') return it.emoji ? 'ملصق ' + it.emoji : 'أيقونة ' + ((O.ICON_SET[it.icon] || {}).label || '');
         if (it.type === 'shape') return 'شكل: ' + ((O.SHAPES.filter(function (s) { return s.key === it.shape; })[0] || {}).label || '');
         return it.title || 'عدّادات البث';
@@ -975,6 +990,17 @@
             if (sec.key === 'alerts') videoAlertsPane(pb);
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
+            // قوالب التوب من مكتبة فيرو (ينشرها الأدمن)
+            if (sec.key === 'tops') {
+                loadVyLib(function () { if (libOf('top').length && section === 'tops' && !selectedId) renderPanel(); });
+                if (libOf('top').length) {
+                    pb.appendChild(el('div', 'ob-gtitle', 'من مكتبة فيرو'));
+                    toolsPane(libOf('top').map(function (a) {
+                        var t = a.top;
+                        return { label: a.name, sub: 'قالب جاهز — تختار من داخل الداعمين أو المكبّسين', type: 'top', opts: { section: 'gifters' }, set: { design: 'tpl', tpl: JSON.parse(JSON.stringify(t)), tplId: a.id, title: t.title || '', top: Math.min(10, t.rows || 5), color: t.accent } };
+                    }), pb);
+                }
+            }
             if (sec.key === 'jar') pb.appendChild(el('div', 'ob-hint', 'يتعبّى بصور هدايا تيك توك نفسها (آخر 54 صورة)، والجديدة تطيح من فوق.'));
             if (sec.key === 'donations') {
                 pb.appendChild(streamlabsCard());
@@ -1033,8 +1059,12 @@
     }
 
     function iconsPane(box) {
+        loadVyLib(function () { if (libOf('icon').length && view === 'editor' && section === 'icons' && !selectedId) renderPanel(); });
         var seg = el('div', 'ob-seg');
-        [['icons', 'أيقونات'], ['emoji', 'إيموجي']].forEach(function (t) {
+        var tabs = [['icons', 'أيقونات'], ['emoji', 'إيموجي']];
+        if (libOf('icon').length) tabs.push(['veyro', 'من فيرو']);
+        if (iconTab === 'veyro' && !libOf('icon').length) iconTab = 'icons';
+        tabs.forEach(function (t) {
             seg.appendChild(button(t[1], t[0] === iconTab ? 'on' : '', function () { iconTab = t[0]; renderPanel(); }));
         });
         box.appendChild(seg);
@@ -1047,6 +1077,16 @@
                 b.style.color = iconColor;
                 b.title = O.ICON_SET[k].label;
                 b.setAttribute('aria-label', O.ICON_SET[k].label);
+                g.appendChild(b);
+            });
+        } else if (iconTab === 'veyro') {
+            libOf('icon').forEach(function (a) {
+                var b = button('', 'ob-ibtn vy-aicon', function () { addItem(O.newItem('icon', { img: { id: a.id, name: a.name } })); });
+                var im = el('img');
+                im.src = O.assetUrl(a.id); im.alt = ''; im.loading = 'lazy';
+                b.appendChild(im);
+                b.title = a.name;
+                b.setAttribute('aria-label', a.name);
                 g.appendChild(b);
             });
         } else {
@@ -1409,8 +1449,37 @@
         box.appendChild(row('الحجم', slider(1.5, 9, 0.1, it.size, function (v) { update(it, 'size', v); })));
     }
 
+    /** «قوالب مكتبة فيرو»: قوالب توب ينشرها الأدمن — الضغط يطبّق شكلها على التوب. */
+    function tplGroup(it, root) {
+        loadVyLib(function () { if (libOf('top').length && selectedId === it.id) renderPanel(); });
+        var list = libOf('top');
+        if (!list.length) return;
+        var g = el('div', 'vy-tplgrid');
+        list.forEach(function (a) {
+            var t = a.top;
+            var b = button('', 'ob-fbtn vy-tpl' + (it.design === 'tpl' && it.tplId === a.id ? ' on' : ''), function () {
+                if (it.design === 'throne' || it.design === 'stack') it.section = (it.sections && it.sections[0]) || it.section || 'gifters';
+                it.tpl = JSON.parse(JSON.stringify(t));
+                it.tplId = a.id;
+                it.title = t.title || it.title;
+                it.top = Math.min(10, t.rows || 5);
+                it.color = t.accent || it.color;
+                update(it, 'design', 'tpl', true);
+                O.refreshStats();
+            });
+            var sw = el('span', 'sw');
+            [t.accent, t.bg, t.border].forEach(function (c) { var d = el('i'); d.style.background = c; sw.appendChild(d); });
+            b.appendChild(sw);
+            b.appendChild(el('span', null, a.name));
+            g.appendChild(b);
+        });
+        group(root, 'قوالب من مكتبة فيرو').appendChild(g);
+    }
+
     function topProps(it, root) {
         var designs0 = (O.VEYRO_DESIGNS || []).concat(O.DESIGNS.filter(function (d) { return d.key !== 'podium'; }));
+        if (it.design === 'tpl') designs0 = designs0.concat([{ key: 'tpl', label: 'قالب فيرو', max: 10 }]);
+        tplGroup(it, root);
         var box = group(root, 'التصميم والمحتوى');
         if (it.design === 'throne' || it.design === 'stack') {
             box.appendChild(row('التصميم', pills(opts(designs0), it.design, function (v) {
@@ -1902,6 +1971,8 @@
     function loadMedia(force) {
         if (media.loading || (media.loaded && !force)) return;
         media.loading = true;
+        // مكتبة فيرو العامة (أليرتات ينشرها الأدمن من لوحة التحكم) — للاستخدام بس، ما تنحذف ولا تتعدّل
+        loadVyLib(function () { if (view === 'editor' && section === 'library' && !selectedId) renderPanel(); });
         api('GET', '/api/screens/media').then(function (d) {
             if (d.success) {
                 media.list = d.media || [];
@@ -2328,7 +2399,7 @@
         head.appendChild(el('span', null, media.list.length + ' / ' + media.max));
         box.appendChild(head);
         if (!media.loaded) { box.appendChild(el('div', 'ob-hint', media.failed ? 'ما قدرنا نجيب ملفاتك — حدّث الصفحة.' : 'يحمّل…')); return; }
-        if (!media.list.length) { box.appendChild(el('div', 'ob-hint', 'مكتبتك فاضية. ارفع فيديو، فرّغ خلفيته، ويصير جاهز تستخدمه كأليرت بأي شاشة.')); return; }
+        if (!media.list.length) { box.appendChild(el('div', 'ob-hint', 'مكتبتك فاضية. ارفع فيديو، فرّغ خلفيته، ويصير جاهز تستخدمه كأليرت بأي شاشة.')); globalLibrary(box); return; }
         var g = el('div', 'vy-libgrid');
         media.list.forEach(function (m) {
             var c = el('div', 'vy-lcard');
@@ -2351,6 +2422,33 @@
         });
         box.appendChild(g);
         box.appendChild(el('div', 'ob-hint', 'التفريغ ينحفظ مع الفيديو بمكتبتك — وأي أليرت يستخدمه بشاشاتك ياخذه تلقائياً.'));
+        globalLibrary(box);
+    }
+
+    /** «من مكتبة فيرو»: أليرتات جاهزة ينشرها الأدمن لكل المستخدمين (مفرّغة وجاهزة). */
+    function globalLibrary(box) {
+        var list = libOf('alert').map(function (a) {
+            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, global: true };
+        });
+        if (!list.length) return;
+        var head = el('div', 'vy-lib-head');
+        head.appendChild(el('b', null, 'من مكتبة فيرو'));
+        head.appendChild(el('span', null, String(list.length)));
+        box.appendChild(head);
+        var g = el('div', 'vy-libgrid');
+        list.forEach(function (m) {
+            var c = el('div', 'vy-lcard');
+            c.appendChild(libThumb(m));
+            var info = el('div', 'mi');
+            info.appendChild(el('b', 'nm', m.name));
+            info.appendChild(el('small', null, (m.w ? m.w + '×' + m.h + ' · ' : '') + fmtSec(m.d)));
+            c.appendChild(info);
+            var a = el('div', 'acts');
+            a.appendChild(iconBtn('استخدمه كأليرت', 'plus', 'primary', function () { newAlertFrom(m); }));
+            c.appendChild(a);
+            g.appendChild(c);
+        });
+        box.appendChild(g);
     }
 
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
@@ -2456,6 +2554,16 @@
         triggerRows(it, group(root, 'متى يشتغل'));
         box = group(root, 'الصوت والمدة');
         box.appendChild(row('الصوت', slider(0, 1, 0.05, it.volume == null ? 0.8 : it.volume, function (v) { it.volume = v; commit(); }), false, 'صوت الفيديو نفسه'));
+        // صوت إضافي من مكتبة فيرو يشتغل مع الفيديو
+        loadVyLib(function () { if (libOf('sound').length && selectedId === it.id) renderPanel(); });
+        if (libOf('sound').length) {
+            var snd = [{ label: 'بدون', value: '' }].concat(libOf('sound').map(function (a) { return { label: a.name, value: a.id }; }));
+            box.appendChild(row('صوت من مكتبة فيرو', pills(snd, it.soundId || '', function (v) {
+                if (v) { if (it.soundVol == null) it.soundVol = (libOf('sound').filter(function (a) { return a.id === v; })[0] || {}).vol; O.playAssetSound(v, it.soundVol); }
+                update(it, 'soundId', v || null, true);
+            }), true, 'يشتغل مع بداية الأليرت'));
+            if (it.soundId) box.appendChild(row('مستوى الصوت الإضافي', slider(0, 1, 0.05, it.soundVol == null ? 0.8 : it.soundVol, function (v) { it.soundVol = v; commit(); })));
+        }
         durationRows(it, box);
         box = group(root, 'الحجم والمكان');
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
@@ -2834,6 +2942,23 @@
                 });
                 gS.appendChild(row('شكل الصورة', sg, true));
                 gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) { setPart(key, 'fr', val, true); }), true));
+                // إطارات من مكتبة فيرو (صورة فوق صورة الداعم)
+                loadVyLib(function () { if (libOf('frame').length) renderPanel(); });
+                if (libOf('frame').length) {
+                    var fg = el('div', 'vy-tplgrid');
+                    libOf('frame').forEach(function (a) {
+                        var fb = button('', 'ob-fbtn vy-frm' + (p.fr === 'asset' && p.fa === a.id ? ' on' : ''), function () {
+                            it.parts.avatar = Object.assign({}, O.partsOf(it).avatar, { fr: 'asset', fa: a.id, fs: a.fscale || 1.3 });
+                            commit(); rebuildNode(it); renderPanel();
+                        });
+                        var fi = el('img'); fi.src = O.assetUrl(a.id); fi.alt = ''; fi.loading = 'lazy';
+                        fb.appendChild(fi);
+                        fb.appendChild(el('span', null, a.name));
+                        fg.appendChild(fb);
+                    });
+                    gS.appendChild(row('إطارات من فيرو', fg, true));
+                    if (p.fr === 'asset') gS.appendChild(row('حجم الإطار', slider(1, 2.5, 0.05, p.fs || 1.3, function (v) { setPart(key, 'fs', v); })));
+                }
             }
             gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
@@ -3225,7 +3350,16 @@
         box.appendChild(row('التصميم', pills(opts(O.ALERT_DESIGNS), it.design || 'card', function (v) { update(it, 'design', v, true); }), true));
         box.appendChild(row('الدخول', pills(opts(O.ALERT_ANIMS), it.anim || 'pop', function (v) { update(it, 'anim', v, true); O.alertDemo(it.id, evs[0]); }), true));
         box.appendChild(row('المدة', pills([3, 5, 8, 12].map(function (n) { return { label: n + ' ث', value: n }; }), Number(it.duration) || 5, function (v) { update(it, 'duration', v, true); })));
-        box.appendChild(row('صوت', toggle(it.sound, function (v) { update(it, 'sound', v); }), false, 'نغمة قصيرة مع كل تنبيه'));
+        box.appendChild(row('صوت', toggle(it.sound, function (v) { update(it, 'sound', v, true); }), false, 'نغمة قصيرة مع كل تنبيه'));
+        loadVyLib(function () { if (libOf('sound').length && selectedId === it.id) renderPanel(); });
+        if (it.sound && libOf('sound').length) {
+            var sounds = [{ label: 'النغمة الافتراضية', value: '' }].concat(libOf('sound').map(function (a) { return { label: a.name, value: a.id }; }));
+            box.appendChild(row('نوع الصوت', pills(sounds, it.soundId || '', function (v) {
+                if (v) { it.soundVol = it.soundVol == null ? (libOf('sound').filter(function (a) { return a.id === v; })[0] || {}).vol : it.soundVol; O.playAssetSound(v, it.soundVol); }
+                update(it, 'soundId', v || null, true);
+            }), true, 'أصوات من مكتبة فيرو'));
+            if (it.soundId) box.appendChild(row('مستوى الصوت', slider(0, 1, 0.05, it.soundVol == null ? 0.8 : it.soundVol, function (v) { update(it, 'soundVol', v); })));
+        }
         box = group(root, 'النصوص');
         it.msg = it.msg || {};
         evs.forEach(function (k) {
@@ -3717,6 +3851,54 @@
         who.appendChild(el('small', null, me.tiktok_username ? '@' + me.tiktok_username : 'حسابي'));
         u.appendChild(who);
         userEl.appendChild(u);
+        // الاشتراك من لوحة تحكم فيرو + «عندك كود؟»
+        if (vyInfo && vyInfo.sub) {
+            var sb = button('', 'ob-btn ghost vy-subline', redeemPrompt);
+            sb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>';
+            var txt = subText(vyInfo.sub);
+            sb.appendChild(el('span', 'lbl', txt));
+            sb.setAttribute('data-tip', txt);
+            sb.title = 'عندك كود؟ اضغط هنا';
+            sb.style.width = '100%';
+            userEl.appendChild(sb);
+        }
+    }
+    function subText(s) {
+        if (!s || s.state === 'none') return 'بدون اشتراك — عندك كود؟';
+        if (s.state === 'lifetime') return 'اشتراك مفتوح ∞';
+        if (s.state === 'frozen') return (s.planName || 'اشتراك') + ' · مجمّد';
+        if (s.state === 'expired') return 'اشتراكك منتهي — عندك كود؟';
+        var d = Math.ceil((s.msLeft || 0) / 864e5);
+        return (s.planName || 'اشتراك') + ' · باقي ' + d + ' يوم';
+    }
+    /** يطبّق كود اشتراك (POST /api/veyro/me/redeem) ويحدّث الحالة. */
+    function redeemCode(code) {
+        return api('POST', '/api/veyro/me/redeem', { code: code }).then(function (d) {
+            if (!d.success) { toast(d.message || 'ما انطبق الكود'); return false; }
+            vyInfo = Object.assign({}, vyInfo || {}, { sub: d.sub });
+            toast('انطبق الكود ✓ ' + subText(d.sub));
+            renderUser();
+            return true;
+        }).catch(function () { toast('ما وصل الطلب — تأكد من الاتصال'); return false; });
+    }
+    function redeemPrompt() {
+        var c = window.prompt('اكتب كود الاشتراك');
+        if (c && c.trim()) redeemCode(c.trim());
+    }
+    /** إعلان الأدمن (من لوحة تحكم فيرو) فوق الصفحة. */
+    function paintAnnounce() {
+        var old = document.getElementById('vy-ann');
+        if (old) old.remove();
+        var t = vyInfo && vyInfo.announce;
+        if (!t) return;
+        var b = el('div', 'vy-ann');
+        b.id = 'vy-ann';
+        b.appendChild(el('span', null, t));
+        var x = button('×', 'x', function () { b.remove(); });
+        x.setAttribute('aria-label', 'إخفاء الإعلان');
+        b.appendChild(x);
+        var main = document.querySelector('.vy-main');
+        if (main) main.insertBefore(b, main.firstChild);
     }
     function initial() { var n = me && (me.display_name || me.username) || 'V'; return String(n).trim().charAt(0).toUpperCase(); }
 
@@ -3787,6 +3969,32 @@
             var c = el('a', 'ob-btn primary lg', 'شاشات البث الحالية');
             c.href = '../overlay/index.html';
             f.appendChild(c);
+        } else if (kind === 'blocked') {
+            var banned = vyInfo && vyInfo.status === 'banned';
+            f.appendChild(el('h2', null, banned ? 'حسابك محظور من فيرو' : 'حسابك موقوف مؤقتاً'));
+            f.appendChild(el('p', null, (vyInfo && vyInfo.statusReason ? 'السبب: ' + vyInfo.statusReason + '. ' : '') + 'شاشاتك بالبث متوقفة. لو تشوف إن فيه خطأ، تواصل مع الإدارة.'));
+            var bb = el('a', 'ob-btn primary lg', 'رجوع لحسابي');
+            bb.href = '../profile.html';
+            f.appendChild(bb);
+        } else if (kind === 'subscribe') {
+            f.appendChild(el('h2', null, 'فعّل اشتراكك'));
+            f.appendChild(el('p', null, (vyInfo && vyInfo.sub && vyInfo.sub.state === 'expired' ? 'اشتراكك بفيرو انتهى. ' : 'أدوات فيرو للمشتركين. ') + 'عندك كود اشتراك؟ اكتبه هنا ويتفعّل على طول.'));
+            var cf = el('form', 'ob-glogin');
+            var ci = el('input', 'ob-input ltr');
+            ci.placeholder = 'VEYRO-XXXX-XXXX'; ci.autocomplete = 'off'; ci.spellcheck = false;
+            ci.setAttribute('aria-label', 'كود الاشتراك');
+            cf.appendChild(ci);
+            var cb = el('button', 'ob-btn primary lg', 'تفعيل الكود');
+            cb.type = 'submit';
+            cf.appendChild(cb);
+            cf.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!ci.value.trim()) return;
+                cb.disabled = true;
+                redeemCode(ci.value.trim()).then(function (ok) { cb.disabled = false; if (ok && vyInfo.sub && vyInfo.sub.active) { gate.hidden = true; loadScreens(); } });
+            });
+            f.appendChild(cf);
+            f.appendChild(el('p', null, 'تبي تشترك؟ تواصل مع الإدارة.'));
         } else if (kind === 'streamer') {
             f.appendChild(el('h2', null, 'لحسابات الستريمر'));
             f.appendChild(el('p', null, 'أدوات Veyro لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
@@ -3952,13 +4160,19 @@
     function start() {
         renderUser();
         if (!token()) { renderHome(); showGate('login'); return; }
-        var gateCheck = PREVIEW_ADMIN_ONLY ? api('GET', '/api/auth/me') : Promise.resolve(null);
-        gateCheck.then(function (m) {
-            if (!m) return loadScreens();
+        api('GET', '/api/auth/me').then(function (m) {
             if (m._status === 401) { renderHome(); showGate('login'); return; }
-            // الأدمن، أو حساب عنده صلاحية «تجربة Veyro» (veyro_tester من لوحة الأدمن)
-            var okUser = m.success && m.user && (m.user.role === 'admin' || (m.user.permissions && m.user.permissions.veyro_tester));
-            if (!okUser) { renderHome(); showGate(m.success ? 'preview' : 'error'); return; }
+            if (!m.success || !m.user) { renderHome(); showGate('error'); return; }
+            // لوحة تحكم فيرو (veyro/admin.html): حالة الحساب، «للأدمن بس»، الاشتراك الإلزامي، والإعلان
+            vyInfo = m.veyro || null;
+            renderUser();
+            paintAnnounce();
+            if (vyInfo && vyInfo.status && vyInfo.status !== 'active') { renderHome(); showGate('blocked'); return; }
+            // الأدمن، أو حساب عنده صلاحية «تجربة Veyro» (من لوحة الأدمن أو لوحة فيرو)
+            var special = m.user.role === 'admin' || Boolean(m.user.permissions && m.user.permissions.veyro_tester) || Boolean(vyInfo && vyInfo.isAdmin);
+            var previewOnly = vyInfo ? vyInfo.previewAdminOnly : PREVIEW_ADMIN_ONLY;
+            if (previewOnly && !special) { renderHome(); showGate('preview'); return; }
+            if (vyInfo && vyInfo.requireSub && !special && !(vyInfo.sub && vyInfo.sub.active)) { renderHome(); showGate('subscribe'); return; }
             loadScreens();
         }).catch(function () { renderHome(); showGate('error'); });
     }
@@ -3966,6 +4180,8 @@
     function loadScreens() {
         api('GET', '/api/screens').then(function (d) {
             if (d._status === 401) { renderHome(); showGate('login'); return; }
+            if (d._status === 402) { renderHome(); showGate('subscribe'); return; }
+            if (d._status === 403 && /^veyro_/.test(d.error || '')) { vyInfo = Object.assign({}, vyInfo || {}, { status: d.error.slice(6) }); renderHome(); showGate('blocked'); return; }
             if (d._status === 403) { renderHome(); showGate('streamer'); return; }
             if (!d.success) { renderHome(); showGate('error'); return; }
             screens = d.screens || [];

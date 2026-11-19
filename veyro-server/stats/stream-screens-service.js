@@ -75,9 +75,10 @@ function createService(db) {
      * @param {string} name
      * @param {Object} [design] - تصميم مبدئي (تكرار شاشة)
      */
-    function create(userId, name, design) {
+    function create(userId, name, design, max) {
         var count = db.prepare('SELECT COUNT(*) AS n FROM stream_screens WHERE user_id = ?').get(userId).n;
-        if (count >= MAX_SCREENS) return { success: false, error: 'too_many_screens' };
+        // فيرو: max = حد الحساب من لوحة تحكم فيرو (الخطة أو حد مخصّص) — بدونه MAX_SCREENS
+        if (count >= (max != null ? max : MAX_SCREENS)) return { success: false, error: 'too_many_screens', max: max != null ? max : MAX_SCREENS };
         var json = null;
         if (design != null) {
             var c = checkDesign(design);
@@ -148,7 +149,7 @@ module.exports = {
     MAX_SCREENS: MAX_SCREENS,
     createService: createService,
     list: function (userId) { return get().list(userId); },
-    create: function (userId, name, design) { return get().create(userId, name, design); },
+    create: function (userId, name, design, max) { return get().create(userId, name, design, max); },
     save: function (userId, id, fields) { return get().save(userId, id, fields); },
     remove: function (userId, id) { return get().remove(userId, id); },
     rotateKey: function (userId, id) { return get().rotateKey(userId, id); },

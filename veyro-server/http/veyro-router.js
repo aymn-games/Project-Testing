@@ -25,6 +25,8 @@ var screenAudio = require('../stats/screen-audio-service');
 var hasAudioTools = require('../stats/screen-audio-design').hasAudioTools;
 var usesDonations = require('../stats/screen-audio-design').usesDonations;
 var mergeDonations = require('../streamlabs/donations-stats').mergeDonations;
+// لوحة تحكم فيرو: الاشتراكات، حالة الحساب، الساعات الفعلية، والمكتبة العامة (admin/)
+var veyroAdmin = require('../admin/admin-router');
 
 var sendJson = response.sendJson;
 
@@ -65,7 +67,8 @@ function handleHealth(req, res) {
 var ROUTES = [
   { method: 'GET', path: '/api/veyro/health', requireAuth: false, handler: handleHealth },
   // بوابة محرر فيرو: الحساب من سيرفر الألعاب (محفوظ مؤقتاً — المحرر يفتح حتى وقت نشر الألعاب)
-  { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: function (req, res, body, user) { sendJson(res, 200, { success: true, user: user }); } },
+  // + veyro: حالة الحساب والاشتراك والإعلان من لوحة تحكم فيرو (المحرر يقرأها من نفس الطلب)
+  { method: 'GET', path: '/api/auth/me', requireAuth: true, allowBlocked: true, handler: function (req, res, body, user) { sendJson(res, 200, { success: true, user: user, veyro: veyroAdmin.veyroInfo(user) }); } },
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
   { method: 'GET', path: '/api/stream/stats-watch', requireAuth: true, handler: handleGetStatsWatch },
   { method: 'POST', path: '/api/stream/stats-watch', requireAuth: true, handler: handleSetStatsWatch },
@@ -103,7 +106,7 @@ var ROUTES = [
   { method: 'POST', path: '/api/screens/connect', requireAuth: true, handler: handleScreenConnect },
   { method: 'POST', path: '/api/screens/disconnect', requireAuth: true, handler: handleScreenDisconnect },
   { method: 'GET', path: '/api/public/screen/events', requireAuth: false, handler: handlePublicScreenEvents },
-];
+].concat(veyroAdmin.ROUTES);
 
 function matchRoute(method, pathname) {
   for (var i = 0; i < ROUTES.length; i++) {
@@ -237,9 +240,10 @@ function isStreamerUser(user) {
 function isVeyroTester(user) { return Boolean(user && user.permissions && user.permissions.veyro_tester); }
 
 function screensGate(res, user) {
-  if (isStreamerUser(user) || isVeyroTester(user)) return true;
-  sendJson(res, 403, { success: false, error: 'not_streamer' });
-  return false;
+  if (!(isStreamerUser(user) || isVeyroTester(user))) { sendJson(res, 403, { success: false, error: 'not_streamer' }); return false; }
+  // لوحة تحكم فيرو: «الاشتراك الإلزامي» لو مفعّل (الأدمن والتجربة مستثنين)
+  if (veyroAdmin.subRequired(user)) { sendJson(res, 402, { success: false, error: 'subscription_required' }); return false; }
+  return true;
 }
 
 /** GET /api/screens → { success, screens: [{id, name, key, design, updatedAt}], max, tiktokLinked } */
@@ -248,7 +252,7 @@ function handleListScreens(req, res, body, user) {
   sendJson(res, 200, {
     success: true,
     screens: streamScreens.list(user.id),
-    max: streamScreens.MAX_SCREENS,
+    max: veyroAdmin.limits(user.id).screens != null ? veyroAdmin.limits(user.id).screens : streamScreens.MAX_SCREENS,
     tiktokLinked: Boolean(user.tiktok_verified && user.tiktok_username)
   });
 }
@@ -256,7 +260,7 @@ function handleListScreens(req, res, body, user) {
 /** POST /api/screens/create { name, design? } → { success, screen } */
 function handleCreateScreen(req, res, body, user) {
   if (!screensGate(res, user)) return;
-  var r = streamScreens.create(user.id, body && body.name, body && body.design);
+  var r = streamScreens.create(user.id, body && body.name, body && body.design, veyroAdmin.limits(user.id).screens);
   sendJson(res, r.success ? 200 : 400, r);
 }
 
@@ -284,7 +288,8 @@ function handleRotateScreenKey(req, res, body, user) {
 /** GET /api/screens/media → { success, media: [{id, name, mime, size, w, h, d}], max, maxBytes } */
 function handleListScreenMedia(req, res, body, user) {
   if (!screensGate(res, user)) return;
-  sendJson(res, 200, { success: true, media: screenMedia.list(user.id), max: screenMedia.MAX_FILES, maxBytes: screenMedia.MAX_FILE_BYTES });
+  var lim = veyroAdmin.limits(user.id).videos;
+  sendJson(res, 200, { success: true, media: screenMedia.list(user.id), max: lim != null ? lim : screenMedia.MAX_FILES, maxBytes: screenMedia.MAX_FILE_BYTES });
 }
 
 /** POST /api/screens/media/upload?name=&w=&h=&d= — الجسم = ملف الفيديو (MP4/WebM/MOV). */
@@ -292,7 +297,7 @@ function handleUploadScreenMedia(req, res, body, user) {
   if (!screensGate(res, user)) { req.resume(); return; }
   var meta = { name: getQueryParam(req, 'name'), w: getQueryParam(req, 'w'), h: getQueryParam(req, 'h'), d: getQueryParam(req, 'd') };
   var declared = Number(req.headers['content-length']) || 0;
-  return screenMedia.upload(user.id, meta, req, declared).then(function (r) {
+  return screenMedia.upload(user.id, meta, req, declared, veyroAdmin.limits(user.id).videos).then(function (r) {
     var status = r.success ? 200 : (r.error === 'file_too_large' ? 413 : r.error === 'storage_unavailable' ? 500 : 400);
     if (!res.headersSent) sendJson(res, status, r);
   });
@@ -321,7 +326,8 @@ function handleUpdateScreenMedia(req, res, body, user) {
  * بالمتصفح وOBS). المعرّف ما يتغيّر محتواه، فالتخزين المؤقت طويل.
  */
 function handleScreenMediaFile(req, res) {
-  var m = screenMedia.find(getQueryParam(req, 'id'));
+  // لوحة تحكم فيرو: أليرت من مكتبة فيرو العامة يشتغل بنفس الرابط
+  var m = screenMedia.find(getQueryParam(req, 'id')) || require('../admin/veyro-admin-service').get().findAssetFile(getQueryParam(req, 'id'), false);
   if (!m) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
   var headers = { 'Content-Type': m.mime, 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=31536000, immutable' };
   var range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
@@ -348,6 +354,8 @@ function handleScreenMediaFile(req, res) {
 /** صاحب الشاشة من ?k= — أو يرد 404 ويرجع null. */
 function screenFromKey(req, res) {
   var o = streamScreens.findByKey(getQueryParam(req, 'k'));
+  // لوحة تحكم فيرو: حساب موقوف/محظور → شاشاته تطفى
+  if (o && veyroAdmin.ownerBlocked(o.userId)) { sendJson(res, 403, { success: false, error: 'owner_blocked' }); return null; }
   if (!o) sendJson(res, 404, { success: false, error: 'invalid_key' });
   return o;
 }
@@ -397,6 +405,8 @@ function handlePublicScreenEvents(req, res) {
   var t = screenTests.since(getQueryParam(req, 'k'), getQueryParam(req, 't'));
   screenTests.touch(getQueryParam(req, 'k'), getQueryParam(req, 'lv'), getQueryParam(req, 'dg'));
   var out = r ? { success: true, sid: r.sid, seq: r.seq, events: r.events, live: r.live } : { success: true, sid: 0, seq: 0, events: [], live: false };
+  // الساعات الفعلية بلوحة تحكم فيرو: الرابط مفتوح بـOBS = نبضة لصاحب الشاشة
+  try { veyroAdmin.tracker().beat(o.userId, out.live); } catch (e) { /* ignore */ }
   out.tseq = t.tseq;
   out.tests = t.tests;
   // أدوات الصوت بالشاشة → نص الشات بعد c= (الشاشات العادية ما يوصلها الشات)
@@ -639,6 +649,13 @@ function handle(req, res) {
     if (route.requireAuth && !a.user) {
       if (route.rawBody) req.resume();
       sendJson(res, a.status === 503 ? 503 : 401, { success: false, error: a.error || 'unauthorized' });
+      return;
+    }
+    // لوحة تحكم فيرو: الحساب موقوف/محظور، أو انسجّل خروجه من كل الأجهزة، وصلاحية التجربة
+    var denied = route.requireAuth ? veyroAdmin.guard(route, a.user, token) : null;
+    if (denied) {
+      if (route.rawBody) req.resume();
+      sendJson(res, denied.status, { success: false, error: denied.error });
       return;
     }
     var bodyPromise = route.rawBody ? Promise.resolve({}) : bodyParser.readJsonBody(req);
