@@ -2469,14 +2469,27 @@
 
     /** «من مكتبة فيرو»: أليرتات جاهزة ينشرها الأدمن لكل المستخدمين (مفرّغة وجاهزة). */
     function globalLibrary(box) {
-        var list = libOf('alert').map(function (a) {
-            return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, look: a.look || null, vol: a.vol, global: true };
+        var all = libOf('alert').map(function (a) {
+            return { id: a.id, name: a.name, cat: a.cat || '', w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, look: a.look || null, vol: a.vol, global: true };
         });
-        if (!list.length) return;
+        if (!all.length) return;
         var head = el('div', 'vy-lib-head');
         head.appendChild(el('b', null, 'من مكتبة فيرو'));
-        head.appendChild(el('span', null, String(list.length)));
+        head.appendChild(el('span', null, String(all.length)));
         box.appendChild(head);
+        // التصنيفات (من لوحة الأدمن): «الكل» + كل تصنيف فيه أليرتات
+        var cats = [];
+        all.forEach(function (m) { if (m.cat && cats.indexOf(m.cat) === -1) cats.push(m.cat); });
+        if (libCat && cats.indexOf(libCat) === -1) libCat = '';
+        if (cats.length) {
+            var seg = el('div', 'ob-seg vy-libcats');
+            [['', 'الكل']].concat(cats.map(function (c) { return [c, c]; })).forEach(function (c) {
+                var n = c[0] ? all.filter(function (m) { return m.cat === c[0]; }).length : all.length;
+                seg.appendChild(button(c[1] + ' ' + n, c[0] === libCat ? 'on' : '', function () { libCat = c[0]; renderPanel(); }));
+            });
+            box.appendChild(seg);
+        }
+        var list = libCat ? all.filter(function (m) { return m.cat === libCat; }) : all;
         var g = el('div', 'vy-libgrid');
         list.forEach(function (m) {
             var c = el('div', 'vy-lcard');
@@ -2486,6 +2499,7 @@
             info.appendChild(el('small', null, (m.w ? m.w + '×' + m.h + ' · ' : '') + fmtSec(m.d)));
             c.appendChild(info);
             var a = el('div', 'acts');
+            a.appendChild(iconBtn('مشاهدة', 'eye', 'ghost', function () { openAlertViewer(m); }));
             // الأدمن فعّل «شكلين»: الستريمر يختار مفرّغ بالكامل أو بخلفية سودا شفافة
             if (m.look && m.look.variants) {
                 a.appendChild(iconBtn('مفرّغ', 'plus', 'primary', function () { newAlertFrom(m, null, 'clear'); }));
@@ -2523,6 +2537,7 @@
             g.appendChild(row('حواف الخلفية', slider(0, 3, 0.05, bg.r == null ? 0.6 : bg.r, function (x) { setObj('vbg', 'r', x); }), false, '0 = زوايا حادّة'));
         }
         var fx = it.vfx || {};
+        g.appendChild(row('لون الأليرت', tintSwatches(fx.tint || '', function (c) { setObj('vfx', 'tint', c || null); }), true, 'ألوان جاهزة: اضغط ويتلوّن الأليرت كله'));
         g.appendChild(row('درجة اللون', slider(-180, 180, 1, fx.hue || 0, function (x) { setObj('vfx', 'hue', x); }), false, 'تغيّر ألوان الفيديو نفسه (0 = الأصلي)'));
         g.appendChild(row('التشبّع', slider(0, 2, 0.05, fx.sat == null ? 1 : fx.sat, function (x) { setObj('vfx', 'sat', x); }), false, '0 = أبيض وأسود، 1 = الأصلي'));
         g.appendChild(row('السطوع', slider(0.5, 1.5, 0.05, fx.bri == null ? 1 : fx.bri, function (x) { setObj('vfx', 'bri', x); }), false, '1 = الأصلي'));
@@ -2533,8 +2548,121 @@
     }
 
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
-    /** variant (أليرت من مكتبة فيرو بشكلين): 'clear' = مفرّغ بالكامل، 'bg' = بخلفية الأدمن. */
-    function newAlertFrom(m, kind, variant) {
+    var libCat = ''; // تصنيف «من مكتبة فيرو» المختار
+
+    /**
+     * «مشاهدة» أليرت من مكتبة فيرو: شاشة كبيرة بالصوت فوق «محاكاة بث»، تجرّب فيها الشكلين
+     * والألوان الجاهزة، و«استخدمه بشاشتي» يضيفه بالشكل واللون اللي اخترته.
+     */
+    function openAlertViewer(m) {
+        var look = m.look || {}, variant = look.variants ? 'clear' : '', tint = (look.vfx && look.vfx.tint) || '', bgMode = 'stream';
+        var modal = el('div', 'vk-modal vy-viewer');
+        modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-label', 'مشاهدة الأليرت');
+        var boxEl = el('div', 'vk-box glass');
+        modal.appendChild(boxEl);
+        var hd = el('div', 'vk-head');
+        var ht = el('div');
+        ht.appendChild(el('h2', null, m.name));
+        ht.appendChild(el('p', null, (m.cat ? m.cat + ' — ' : '') + 'من مكتبة فيرو · ' + fmtSec(m.d)));
+        hd.appendChild(ht);
+        var xb = button('', 'ob-x', function () { close(); });
+        xb.innerHTML = svg(UI.close); xb.setAttribute('aria-label', 'إغلاق');
+        hd.appendChild(xb);
+        boxEl.appendChild(hd);
+        var main = el('div', 'vk-main');
+        boxEl.appendChild(main);
+        var viewEl = el('div', 'vk-view');
+        var stageEl = el('div', 'vk-stage vy-vstage bg-' + bgMode);
+        var media2 = el('div', 'vk-media vy-vmedia');
+        var bgl = el('div', 'vy-vbg');
+        media2.appendChild(bgl);
+        var v = document.createElement('video');
+        v.crossOrigin = 'anonymous'; v.loop = true; v.playsInline = true; v.preload = 'auto';
+        v.volume = m.vol == null ? 0.8 : m.vol;
+        v.src = O.videoSrc(m.id);
+        media2.appendChild(v);
+        var keyer = m.key && m.key.on ? O.makeKeyer(v, function () { return Object.assign({}, O.KEY_DEFAULT, m.key); }) : null;
+        if (keyer) { media2.appendChild(keyer.canvas); media2.classList.add('keyed'); }
+        stageEl.appendChild(media2);
+        viewEl.appendChild(stageEl);
+        // التشغيل والصوت والخلفية
+        var bar = el('div', 'ob-actions vy-vbar');
+        bar.appendChild(button('من البداية', 'ob-btn primary', function () { v.currentTime = 0; v.play().catch(function () {}); }));
+        var sndB = button('', 'ob-btn ghost', function () { v.muted = !v.muted; paintSnd(); if (!v.muted) v.play().catch(function () {}); });
+        function paintSnd() { sndB.textContent = v.muted ? 'الصوت: مقفول' : 'الصوت: شغّال'; }
+        bar.appendChild(sndB);
+        var bgs = el('div', 'ob-seg');
+        [['stream', 'محاكاة بث'], ['checker', 'شفاف'], ['dark', 'داكن']].forEach(function (b) {
+            bgs.appendChild(button(b[1], b[0] === bgMode ? 'on' : '', function () {
+                bgMode = b[0]; stageEl.className = 'vk-stage bg-' + bgMode;
+                Array.prototype.forEach.call(bgs.children, function (x) { x.classList.toggle('on', x.textContent === b[1]); });
+            }));
+        });
+        bar.appendChild(bgs);
+        viewEl.appendChild(bar);
+        main.appendChild(viewEl);
+        // الشكل واللون
+        var side = el('div', 'vy-vside');
+        if (look.variants) {
+            side.appendChild(el('div', 'ob-gtitle', 'الشكل'));
+            var vs = el('div', 'ob-pills');
+            [['clear', 'مفرّغ بالكامل'], ['bg', 'بخلفية سودا شفافة']].forEach(function (x) {
+                vs.appendChild(button(x[1], 'ob-pill' + (variant === x[0] ? ' on' : ''), function () {
+                    variant = x[0]; paint();
+                    Array.prototype.forEach.call(vs.children, function (b) { b.classList.toggle('on', b.textContent === x[1]); });
+                }));
+            });
+            side.appendChild(vs);
+        }
+        side.appendChild(el('div', 'ob-gtitle', 'لون الأليرت'));
+        side.appendChild(tintSwatches(tint, function (c) { tint = c; paint(); }));
+        side.appendChild(el('div', 'ob-hint', 'اضغط أي لون ويتلوّن الأليرت كله فيه. تقدر تغيّره بعدين من «الحجم والألوان والخلفية».'));
+        var use = button('استخدمه بشاشتي', 'ob-btn primary lg', function () { close(); newAlertFrom(m, null, variant || undefined, tint); });
+        use.style.width = '100%';
+        side.appendChild(use);
+        main.appendChild(side);
+        function paint() {
+            var b = look.vbg || { c: '#000000', a: 0.6, r: 0.6 };
+            var showBg = variant === 'bg' || (!look.variants && b.on);
+            var mm = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(b.c || '#000000') || [0, '00', '00', '00'];
+            bgl.style.background = showBg ? 'rgba(' + parseInt(mm[1], 16) + ',' + parseInt(mm[2], 16) + ',' + parseInt(mm[3], 16) + ',' + (b.a == null ? 0.6 : b.a) + ')' : 'transparent';
+            var f = O.vfxFilter({ vfx: Object.assign({}, look.vfx || {}, { tint: tint || null }) });
+            v.style.filter = f; if (keyer) keyer.canvas.style.filter = f;
+        }
+        function onKey(e) { if (e.key === 'Escape') close(); }
+        function close() {
+            v.pause(); if (keyer) keyer.destroy();
+            document.removeEventListener('keydown', onKey);
+            modal.remove();
+        }
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(modal);
+        paint(); paintSnd();
+        // فتحه ضغطة: يشتغل بالصوت، ولو المتصفح منعه يكمل صامت
+        v.play().then(paintSnd).catch(function () { v.muted = true; paintSnd(); v.play().catch(function () {}); });
+    }
+
+    /** الألوان الجاهزة للأليرت (O.ALERT_TINTS): «الأصلي» + ألوان — كل زر يلوّن الأليرت كله. */
+    function tintSwatches(current, onPick) {
+        var g = el('div', 'vy-tints');
+        O.ALERT_TINTS.forEach(function (t) {
+            var b = button('', 'vy-tint' + ((current || '') === t.key ? ' on' : ''), function () {
+                Array.prototype.forEach.call(g.children, function (x) { x.classList.remove('on'); });
+                b.classList.add('on');
+                onPick(t.key);
+            });
+            var dot = el('i');
+            if (t.key) dot.style.background = t.key; else b.classList.add('orig');
+            b.appendChild(dot);
+            b.appendChild(el('span', null, t.label));
+            b.title = t.label;
+            g.appendChild(b);
+        });
+        return g;
+    }
+
+    /** variant (أليرت من مكتبة فيرو بشكلين): 'clear' = مفرّغ بالكامل، 'bg' = بخلفية الأدمن. tint = لون جاهز. */
+    function newAlertFrom(m, kind, variant, tint) {
         var don = kind === 'donation';
         var it = O.newItem('alert', { video: { id: m.id, w: m.w, h: m.h, d: m.d, name: m.name }, events: [don ? 'donation' : 'gift'], key: m.key || null });
         // أليرت من مكتبة فيرو: الشكل اللي حدده الأدمن (الخلفية، ألوان الفيديو، ألوان العناصر وظهورها)
@@ -2546,9 +2674,11 @@
         }
         // مستوى الصوت اللي حفظه الأدمن مع الأليرت
         if (m.vol != null) it.volume = m.vol;
+        if (tint !== undefined && !(m.look && m.look.vfx)) it.vfx = tint ? { tint: tint } : null;
         if (m.look) {
             if (m.look.size) it.size = m.look.size;
             if (m.look.vfx) it.vfx = Object.assign({}, m.look.vfx);
+            if (tint !== undefined) it.vfx = Object.assign({}, it.vfx || {}, { tint: tint || null });
             if (m.look.parts) Object.keys(m.look.parts).forEach(function (k) { if (it.parts[k]) it.parts[k] = Object.assign({}, it.parts[k], m.look.parts[k]); });
         }
         it.minDiamonds = 0;

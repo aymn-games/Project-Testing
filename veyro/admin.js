@@ -1042,6 +1042,17 @@
         var c = IMG_CACHE[src]; if (c) { if (c.complete && c.naturalWidth) return c; c._cbs.push(cb); return null; }
         var im = new Image(); im._cbs = [cb]; im.onload = function () { im._cbs.forEach(function (f) { if (f) f(); }); im._cbs = []; }; if (/^https?:/.test(src)) im.crossOrigin = 'anonymous'; im.src = src; IMG_CACHE[src] = im; return null;
     }
+    /** الألوان الجاهزة للأليرت — نفس ALERT_TINTS وtintFilter بـjs/agp-stream-overlay.js (أي تغيير يتعدّل بالمكانين). */
+    var TINTS = [['', 'الأصلي'], ['#ff3b5c', 'أحمر'], ['#ff6fb5', 'وردي'], ['#a26bff', 'بنفسجي'], ['#3fa9ff', 'أزرق'], ['#2ee6d6', 'سماوي'], ['#3ddc84', 'أخضر'], ['#ffc83d', 'ذهبي'], ['#ff8a3d', 'برتقالي'], ['#ffffff', 'أبيض']];
+    function tintFilter(hex) {
+        if (!/^#[0-9a-f]{6}$/i.test(String(hex || ''))) return '';
+        var c = hexRgb(hex), mx = Math.max(c[0], c[1], c[2]), mn = Math.min(c[0], c[1], c[2]);
+        if (mx - mn < 24) return 'grayscale(1) brightness(' + (0.7 + mx / 255 * 0.6).toFixed(2) + ')';
+        var r = c[0] / 255, g = c[1] / 255, b = c[2] / 255, d = (mx - mn) / 255, h;
+        if (mx === c[0]) h = ((g - b) / d) % 6; else if (mx === c[1]) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+        h = (h * 60 + 360) % 360;
+        return 'grayscale(1) sepia(1) saturate(4.5) hue-rotate(' + Math.round(h - 38) + 'deg) brightness(1.05)';
+    }
     function hexRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join(''); var n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
     function rgbHex(r, g, b) { return '#' + [r, g, b].map(function (v) { return clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0'); }).join(''); }
     function sstep(a, b, x) { var t = clamp((x - a) / Math.max(1e-6, b - a), 0, 1); return t * t * (3 - 2 * t); }
@@ -1289,7 +1300,7 @@
             a.look = {
                 full: Boolean(L0.full), size: L0.size || 3, variants: L0.variants == null ? true : Boolean(L0.variants),
                 vbg: Object.assign({ on: false, c: '#000000', a: 0.6, r: 0.6 }, L0.vbg || {}),
-                vfx: Object.assign({ hue: 0, sat: 1, bri: 1 }, L0.vfx || {}),
+                vfx: Object.assign({ hue: 0, sat: 1, bri: 1, tint: '' }, L0.vfx || {}),
                 parts: { avatar: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).avatar || {}), name: Object.assign({ on: true, c: '#ffffff' }, (L0.parts || {}).name || {}), msg: Object.assign({ on: true, c: '#ffd54a' }, (L0.parts || {}).msg || {}) }
             };
         }
@@ -1302,6 +1313,8 @@
             keyRow('شكلين للستريمر', tgl('lk-var', a.look.variants), 'يختار: مفرّغ بالكامل، أو بخلفية سودا شفافة (إعدادات الخلفية تحت)') +
             keyRow('خلفية خلف الأليرت', tgl('lk-bg-on', a.look.vbg.on), 'شغّلها تشوف شكل «بخلفية» بالمعاينة') +
             '<div id="lk-bg-rows">' + keyRow('لون الخلفية', clr('lk-bg-c', a.look.vbg.c, 'لون الخلفية')) + keyRow('شفافية الخلفية', rng('lk-bg-a', a.look.vbg.a, 0, 1, 0.01), '0 = شفافة، 1 = لون كامل') + keyRow('حواف الخلفية', rng('lk-bg-r', a.look.vbg.r, 0, 3, 0.05)) + '</div>' +
+            '<div class="ob-row col"><div class="lb"><b>لون الأليرت</b><small>ألوان جاهزة: يتلوّن الأليرت كله باللون</small></div><div class="ob-pills" id="lk-tint">' +
+                TINTS.map(function (t) { return '<button type="button" class="ob-pill' + ((a.look.vfx.tint || '') === t[0] ? ' on' : '') + '" data-v="' + t[0] + '"><i class="tdot" style="background:' + (t[0] || 'conic-gradient(#ff3b5c,#ffc83d,#3ddc84,#3fa9ff,#a26bff,#ff3b5c)') + '"></i>' + t[1] + '</button>'; }).join('') + '</div></div>' +
             keyRow('درجة اللون', rng('lk-hue', a.look.vfx.hue, -180, 180, 1), 'تغيّر ألوان الفيديو (0 = الأصلي)') +
             keyRow('التشبّع', rng('lk-sat', a.look.vfx.sat, 0, 2, 0.05)) +
             keyRow('السطوع', rng('lk-bri', a.look.vfx.bri, 0.5, 1.5, 0.05)) +
@@ -1446,6 +1459,8 @@
                     bgEl.style.background = 'rgba(' + m.join(',') + ',' + b.a + ')';
                     bgEl.style.borderRadius = b.r + 'em';
                     var f = [];
+                    var tf = tintFilter(L.vfx.tint);
+                    if (tf) f.push(tf);
                     if (L.vfx.hue) f.push('hue-rotate(' + L.vfx.hue + 'deg)');
                     if (L.vfx.sat !== 1) f.push('saturate(' + L.vfx.sat + ')');
                     if (L.vfx.bri !== 1) f.push('brightness(' + L.vfx.bri + ')');
@@ -1461,6 +1476,7 @@
                     function lkRange(id, obj, key) { bindRange(id, function (v) { obj[key] = v; paintLook(); }); }
                     lkRange('lk-bg-a', L.vbg, 'a'); lkRange('lk-bg-r', L.vbg, 'r'); lkRange('lk-hue', L.vfx, 'hue'); lkRange('lk-sat', L.vfx, 'sat'); lkRange('lk-bri', L.vfx, 'bri');
                     lkRange('lk-size', L, 'size');
+                    pills('#lk-tint', function (v) { L.vfx.tint = v; paintLook(); });
                     [['lk-full', L, 'full'], ['lk-var', L, 'variants'], ['lk-bg-on', L.vbg, 'on'], ['lk-av-on', L.parts.avatar, 'on'], ['lk-nm-on', L.parts.name, 'on'], ['lk-ms-on', L.parts.msg, 'on']].forEach(function (t) {
                         el.querySelector('#' + t[0]).addEventListener('change', function (e) { t[1][t[2]] = e.target.checked; paintLook(); });
                     });

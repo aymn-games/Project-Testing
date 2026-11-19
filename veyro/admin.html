@@ -411,6 +411,8 @@
   .ed-stage:has(.lk-box) { aspect-ratio: 16 / 9; min-height: 0; }
   .lk-res { position: absolute; top: 8px; right: 10px; z-index: 3; padding: 2px 8px; border-radius: 7px; background: rgba(12,11,16,.7); font-size: 11.5px; font-weight: 700; color: var(--lav-l); direction: ltr; }
   .lk-box { position: relative; flex: none; }
+  #lk-tint .ob-pill::before { display: none; }
+  .ob-pill .tdot { width: 12px; height: 12px; border-radius: 50% 50% 50% 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
   .lk-box canvas { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; object-fit: contain; }
   .lk-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .lk-parts { position: absolute; inset: 0; z-index: 2; pointer-events: none; font-family: var(--f-head); }
