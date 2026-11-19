@@ -213,6 +213,19 @@ body.inlobby #demo,body.champ #demo{display:none}
 #hdr #counter b,#hdr .hvol b,#qBtn b{color:#e9d6b0 !important}#hdr #counter span{color:#f4ead6 !important}
 #hdr .hvol button:hover{background:rgba(29,74,76,.1)}
 #hdr .hlogo{filter:none}
+
+/* ---- تبويب الحيّة المميتة ---- */
+#snake{position:fixed;inset:0;z-index:11;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .35s;background:radial-gradient(circle at 50% 50%,rgba(20,40,40,.35),rgba(10,20,20,.6))}
+#snake.in{opacity:1}
+#snake .sc{zoom:var(--z);width:min(520px,calc(100vw - 32px));padding:22px 26px 24px;border-radius:26px;text-align:center;background:linear-gradient(180deg,rgba(29,74,76,.96),rgba(18,48,50,.96));border:2px solid #e9d6b0;box-shadow:0 24px 60px rgba(0,0,0,.45);transform:scale(.8) rotate(-2deg);transition:transform .5s cubic-bezier(.2,1.5,.4,1)}
+#snake.in .sc{transform:none}
+#snake svg{width:120px;height:120px;display:block;margin:0 auto 4px;animation:sway 1.4s ease-in-out infinite}
+@keyframes sway{50%{transform:rotate(-6deg) translateY(-3px)}}
+#snake h3{margin:0;font:800 44px/1.2 "IBM Plex Sans Arabic";color:#f4ead6}
+#snake p{margin:10px 0 0;font:600 19px/1.7 "IBM Plex Sans Arabic";color:#e9d6b0}
+#snake p b{color:#fff;font-weight:800}
+#snake .q{margin-top:14px;display:inline-block;padding:8px 22px;border-radius:999px;background:rgba(196,102,76,.25);border:1.5px solid #c4664c;font:800 22px "IBM Plex Sans Arabic";color:#f4ead6}
+@media (prefers-reduced-motion:reduce){#snake svg{animation:none}}
 </style>
 </head>
 <body class="inlobby">
@@ -236,8 +249,14 @@ body.inlobby #demo,body.champ #demo{display:none}
 <div id="hints"><div class="hint"><span class="big">اكتب <b>رقم دائرة فاضية</b> بالشات</span></div><div class="hint prog">اختار <b id="hPicked">0</b> من <b id="hTotal">0</b></div><div class="hint">تقدر تغيّر رقمك قبل نهاية الوقت</div></div>
 <div id="feed"></div>
 <div id="banner"><div class="bt" id="bT">—</div><div class="bs" id="bS"></div></div>
-<div id="outCard"><span id="ocPic"></span><div><div class="tg">إقصاء عشوائي</div><div class="nm" id="ocName">—</div><div class="sb" id="ocSub">—</div></div></div>
+<div id="outCard"><span id="ocPic"></span><div><div class="tg">لدغته الحيّة 🐍</div><div class="nm" id="ocName">—</div><div class="sb" id="ocSub">—</div></div></div>
 <div id="outStrip"><h5 id="osTitle">—</h5><div class="chips" id="osChips"></div></div>
+<div id="snake" role="alert"><div class="sc">
+  <svg viewBox="0 0 120 120" aria-hidden="true"><path d="M30 104c-14 0-14-18 0-18h52c16 0 16-22 0-22H44c-15 0-15-21 0-21h30" fill="none" stroke="#e9d6b0" stroke-width="11" stroke-linecap="round"/><path d="M30 104c-14 0-14-18 0-18h52c16 0 16-22 0-22H44c-15 0-15-21 0-21h30" fill="none" stroke="#2e6e70" stroke-width="5" stroke-linecap="round" stroke-dasharray="3 9"/><ellipse cx="86" cy="43" rx="15" ry="11" fill="#e9d6b0"/><circle cx="90" cy="39" r="2.6" fill="#1d4a4c"/><path d="M100 45l9-2m-9 2 8 5" stroke="#c4664c" stroke-width="2.4" stroke-linecap="round"/></svg>
+  <h3>حيّة مميتة! 🐍</h3>
+  <p>حيّة سامّة ساكنة تحت <b>واحد</b> من الـ<b id="snNum">0</b> رقم… وراح تطلع وتلدغ صاحبه</p>
+  <div class="q">من هو صاحب الرقم؟</div>
+</div></div>
 <div id="notice"></div>
 <div id="qToast"></div>
 <div id="flash"></div>

@@ -884,11 +884,61 @@ export async function mountPyramid(el, opts = {}) {
         // وقفة تشويق ثم الحسم مع لقطة قريبة
         const vp = L.pos[vj].clone().setY(L.yTop + 1); setShot(close(vp, 6.5, .38, .35, 2.2)); emit('suspense');
         await wait(1.1);
-        spot.material.color.set(C.red); emit('strike');
-        sparks.emit(vp, { count: 50, color: [C.red, C.gold, '#ffffff'], speed: 6, life: .9, size: .3 });
-        await dropActor(v, { kind: 'random', hold: 1.1 });
+        spot.material.color.set(C.red);
+        // الحيّة تطلع من الرقم وتلدغ صاحبه
+        setShot(close(vp.clone().setY(vp.y - .2), 5.2 * Math.max(.75, K), .3, .55, 2.4));
+        for (const o of actors.values()) if (o !== v) o.plate.visible = false; // اللقطة القريبة: اسم الضحية بس
+        await snakeAttack(v, L, vj);
+        emit('strike');
+        await dropActor(v, { kind: 'random', hold: .45 });
+        for (const o of actors.values()) o.plate.visible = true;
         sc.remove(spot); spot.geometry.dispose(); spot.material.dispose();
         await wait(.4); setShot(mainShot());
+    }
+    // ---------- الحيّة المميتة: تطلع من فتحة بالرقم، تتمايل وتفحّ، ثم تلدغ صاحب الرقم وترجع لجحرها
+    function snakeAttack(a, L, j) {
+        const sk = Math.max(.75, K), base = L.pos[j].clone().setY(L.yTop + .36 * K); base.z += .32 * K;
+        const target = a.pos.clone().setY(a.pos.y + 1.1 * (a.baseScale || 1));
+        const g = new T.Group(); sc.add(g);
+        const bodyM = new T.MeshStandardMaterial({ color: '#23494a', roughness: .4, metalness: .1 }), bandM = new T.MeshStandardMaterial({ color: SAND, roughness: .5 });
+        const eyeM = new T.MeshBasicMaterial({ color: '#f0c25a' }), tongueM = new T.MeshBasicMaterial({ color: '#b8402e' }), holeM = new T.MeshBasicMaterial({ color: '#0e1d1d', transparent: true, opacity: .95 });
+        const sg = new T.SphereGeometry(1, 14, 10), N = 26, segs = [];
+        for (let i = 0; i < N; i++) { const m = new T.Mesh(sg, i % 5 === 2 ? bandM : bodyM); m.castShadow = true; g.add(m); segs.push(m); }
+        const head = segs[0];
+        const eyes = [-1, 1].map(sd => { const e = new T.Mesh(sg, eyeM); e.scale.setScalar(.035 * sk); head.add(e); e.position.set(sd * .5, .35, .55); e.scale.set(.18, .18, .18); return e; });
+        const tongue = new T.Mesh(new T.BoxGeometry(.04, .01, .5), tongueM); tongue.position.set(0, -.15, 1.1); head.add(tongue);
+        const hole = new T.Mesh(new T.CircleGeometry(.5 * sk, 24), holeM); hole.rotation.x = -Math.PI / 2; hole.position.copy(base).setY(base.y + .01); hole.scale.setScalar(.01); sc.add(hole);
+        const r0 = .13 * sk, H = 1.25 * sk * (a.baseScale || 1), t0 = now();
+        const T1 = .9, T2 = 2.0, T3 = 2.3, T4 = 2.75, T5 = 3.5; // طلوع ← تمايل وفحيح ← لدغة ← تثبيت ← رجوع
+        a.lookAt = base.clone().setY(base.y + H); a.ov = 'shock'; a.rig.mood && a.rig.mood('scared'); a.behUntil = now() + 9; a.moodSet = 'locked';
+        emit('hiss'); pulse(base.clone().setY(base.y + .02), '#0e1d1d', .2, .9 * sk, .5, .6);
+        const P = V(), up = V(), line = V(), _d = V();
+        let bit = false;
+        return new Promise(res => {
+            const f = () => {
+                const t = now() - t0;
+                const emerge = t < T1 ? easeOut(t / T1) : t < T4 ? 1 : 1 - ease(clamp01((t - T4) / (T5 - T4)));
+                const strike = t < T2 ? 0 : t < T3 ? easeOut((t - T2) / (T3 - T2)) : t < T4 ? 1 : 1 - ease(clamp01((t - T4) / .4));
+                hole.scale.setScalar(Math.max(.01, Math.min(1, t / .3) * (t > T5 - .2 ? clamp01((T5 - t) / .2) : 1)));
+                for (let i = 0; i < N; i++) {
+                    const sN = 1 - i / (N - 1), s = sN * emerge; // s: 0 عند الجحر، 1 الراس
+                    // وقفة الحيّة: منحنى S عمودي يتمايل
+                    up.set(Math.sin(s * Math.PI * 2.2 + t * 3.2) * .22 * sk * s, s * H, -Math.sin(s * Math.PI) * .25 * sk);
+                    // اللدغة: الجسم يمتد بخط من الجحر لصدر اللاعب
+                    _d.subVectors(target, base); line.copy(_d).multiplyScalar(s); line.y += Math.sin(s * Math.PI) * .35 * sk;
+                    P.copy(base).add(up.lerp(line, strike));
+                    const m = segs[i], rr = r0 * (1 - i / N * .6) * (i === 0 ? 1.35 : 1);
+                    m.position.copy(P); m.scale.set(rr, rr, rr); m.visible = s > .01 || i === N - 1;
+                }
+                // الراس يطالع اللاعب، ويتمدد شوي وقت اللدغة
+                head.scale.set(r0 * 1.5, r0 * 1.05, r0 * 2.1); head.lookAt(target);
+                tongue.visible = (t > T1 && Math.sin(t * 22) > 0) || (t > T2 && t < T4);
+                if (!bit && t >= T3 - .05) { bit = true; emit('bite'); sparks.emit(target, { count: 36, color: [C.red, SAND], speed: 4, life: .8, size: .26 }); pulse(target.clone().setY(L.yTop + .4), C.red, .3, 2.4, .7); }
+                if (t < T5) requestAnimationFrame(f);
+                else { sc.remove(g); sc.remove(hole); sg.dispose(); tongue.geometry.dispose(); hole.geometry.dispose(); [bodyM, bandM, eyeM, tongueM, holeM].forEach(m => m.dispose()); }
+                if (t >= T4 && !g.userData.done) { g.userData.done = true; res(); }
+            }; f();
+        });
     }
     // النجاة: احتفال قصير متفاوت لكل شخصية + قصاصات + الجمهور يهتف
     async function survived(ids, o = {}) {

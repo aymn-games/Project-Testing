@@ -65,6 +65,11 @@ const SFX = (() => {
             else if (v === 1) { swish(t, .25, 5000, 2000, .12); for (let i = 0; i < 6; i++) tone(2000 + Math.random() * 3000, t + i * .03, .25, { v: .03, wet: .5 }); hit(t, 70, .5, .45); }
             else { [0, .12, .24].forEach((dt, i) => tone(440 - i * 90, t + dt, .14, { type: 'square', v: .05, wet: .2 })); hit(t + .3, 60, .5, .5); }
             if (kind === 'random') bell(hz(-17), t + .05, .12, 2); },
+        // فحيح الحيّة: ضجيج عالي النبرة يكبر ويصغر مع رجفة خفيفة
+        hiss(d = 1.2) { const a = ctx(); if (!a) return; const t = a.currentTime, n = noise(d), hp = ac.createBiquadFilter(), bp = ac.createBiquadFilter(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+            hp.type = 'highpass'; hp.frequency.value = 3200; bp.type = 'bandpass'; bp.frequency.value = 6200; bp.Q.value = .9; lfo.frequency.value = 11; lg.gain.value = .025; lfo.connect(lg); lg.connect(g.gain);
+            g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09, t + d * .35); g.gain.exponentialRampToValueAtTime(.0001, t + d); n.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master); n.start(t); lfo.start(t); lfo.stop(t + d); },
+        bite() { const a = ctx(); if (!a) return; const t = a.currentTime; swish(t, .12, 2000, 6000, .12); hit(t + .04, 140, .5, .25); tone(900, t + .02, .2, { type: 'square', v: .04, to: 200, wet: .3 }); },
         fall() { const a = ctx(); if (!a) return; swish(a.currentTime, .9, 1800, 200, .08); },
         // النجاة: أربع جمل لحنية تتناوب
         survive() { const a = ctx(); if (!a) return; const t = a.currentTime, set = [[0, 4, 7, 12], [2, 7, 9, 14], [4, 7, 12, 16], [0, 7, 12, 19]][survV++ % 4]; set.forEach((s, i) => bell(hz(s), t + i * .09, .09, 1.2)); swish(t, .8, 300, 6000, .05); },
@@ -149,7 +154,7 @@ function renderRules() {
         `كل مرحلة فيها <b>دوائر بعدد اللاعبين</b> ومرقّمة. اكتب <b>رقم دائرة فاضية</b> بالشات قبل نهاية الوقت (${G.settings.pickTime} ثانية).`,
         'تقدر <b>تغيّر رقمك</b> قبل نهاية الوقت، والرقم المحجوز لغيرك ما ينقبل.',
         'مع نهاية الوقت: شخصيتك تمشي لدائرتك، و<b>من لم يختر يُقصى</b> مباشرة.',
-        'بعدها <b>يُقصى لاعب عشوائي</b>، والناجين يطلعون لصف أصغر أعلى الهرم.',
+        'بعدها <b>حيّة مميتة</b> تسكن تحت أحد الأرقام عشوائياً، وتلدغ صاحبه ويُقصى. والناجين يطلعون لصف أصغر أعلى الهرم.',
         'آخر لاعب يبقى يوصل <b>القمة</b> ويفوز.'
     ].map(t => `<div class="rrow">${t}</div>`).join('');
     $('#rulesCount').textContent = `${G.players.length} لاعب جاهز`;
@@ -212,10 +217,12 @@ async function playRound() {
     }
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 3) إقصاء عشوائي (القرار هنا قبل الأنيميشن — المشهد يعرضه بس)
-    pill('إقصاء عشوائي'); await banner('إقصاء عشوائي', 'من يغادر الهرم؟', 'red', 1500);
+    // حدث «الحيّة المميتة»: تبويب ينبّه إن حيّة ساكنة تحت أحد الأرقام ← الكشاف يدوّر ← الحيّة تطلع وتلدغ صاحب الرقم
+    pill('حيّة بين الأرقام'); await snakeCard();
     const victim = G.alive[Math.floor(Math.random() * G.alive.length)];
-    SFX.roll(3.4);
+    pill('الحيّة تتنقل بين الأرقام…'); SFX.roll(3.4);
     await G.scene.roulette(victim.id);
+    banner(`الحيّة كانت تحت الرقم ${G.picks.get(String(victim.id))}`, `لدغت ${victim.name}`, 'red', 2200);
     G.alive = G.alive.filter(p => p !== victim); feed(victim, 0, true); pill();
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 4) الناجين + بناء الصف الجديد
@@ -225,9 +232,14 @@ async function playRound() {
     await G.scene.nextLevel(G.alive.length);
     playRound();
 }
+// تبويب الحيّة: يطلع بنص الشاشة قبل الاختيار العشوائي
+function snakeCard() { return new Promise(res => {
+    const el = $('#snake'); $('#snNum').textContent = G.alive.length; el.classList.add('in'); SFX.hiss(1.6); fx('danger', 3400);
+    setTimeout(() => { el.classList.remove('in'); setTimeout(res, 350); }, 3600);
+}); }
 function showStrip(title, list) { $('#osTitle').textContent = title; const max = 18; $('#osChips').innerHTML = list.slice(0, max).map(p => `<span class="chip">${avatarHtml(p, 'sm')}${esc(p.name)}</span>`).join('') + (list.length > max ? `<span class="chip">+${list.length - max}</span>` : ''); $('#outStrip').classList.add('in'); }
 function hideStrip() { $('#outStrip').classList.remove('in'); }
-function outCard(p) { $('#ocPic').innerHTML = avatarHtml(p, 'lg'); $('#ocName').textContent = p.name; $('#ocSub').textContent = `غادر الهرم في المرحلة ${G.round}`; $('#outCard').classList.add('in'); setTimeout(() => $('#outCard').classList.remove('in'), 2600); }
+function outCard(p) { $('#ocPic').innerHTML = avatarHtml(p, 'lg'); $('#ocName').textContent = p.name; $('#ocSub').textContent = `كانت الحيّة تحت رقمه (${G.picks.get(String(p.id)) || '—'}) · المرحلة ${G.round}`; $('#outCard').classList.add('in'); setTimeout(() => $('#outCard').classList.remove('in'), 2600); }
 
 // إجابة من الشات: رقم دائرة (يقبل الأرقام العربية والهندية)
 function answer(id, text) {
@@ -310,7 +322,7 @@ function hookStream() {
             if (e === 'tick') SFX.tick(d); else if (e === 'build') SFX.build(d); else if (e === 'rise') SFX.rise(); else if (e === 'intro') SFX.intro();
             else if (e === 'fall') { SFX.elim(d); SFX.fall(); if (d === 'random') flash('#ef4444', 260); }
             else if (e === 'suspense') SFX.suspense(); else if (e === 'strike') { fx('danger', 2400); const v = G.lastVictim; if (v) outCard(v); }
-            else if (e === 'firework') SFX.firework(); else if (e === 'join' && G.phase === 'lobby') SFX.join();
+            else if (e === 'firework') SFX.firework(); else if (e === 'hiss') SFX.hiss(1.8); else if (e === 'bite') { SFX.bite(); flash('#c4664c', 220); } else if (e === 'join' && G.phase === 'lobby') SFX.join();
         } });
     } catch (e) { console.error(e); }
     if (!scene) { $('#fallback').hidden = false; $('#loading').classList.add('hide'); return; }
