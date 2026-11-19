@@ -2573,25 +2573,31 @@
         var c = hexRgb(hex);
         return '#' + c.map(function (v) { return ('0' + Math.round((v + (1 - v) * t) * 255).toString(16)).slice(-2); }).join('');
     }
-    function swirlDust(seed, n, w, light) {
+    // نصف قطر الصورة داخل رسمة الدوامة (الرسمة 190٪ من الصورة → 100 / 1.9)
+    var SWIRL_R = 52.6;
+    /** غبار ضوئي ناعم ملاصق لحافة الصورة (أكثره على الجهة المضيئة). */
+    function swirlDust(seed, n, w, light, spread) {
         var s = seed, out = '';
         function rnd() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
         for (var i = 0; i < n; i++) {
-            // أكثر الغبار على الجهة المضيئة (يمين/تحت) مثل ذيل المذنّب
-            var a = (rnd() < .7 ? -1.1 + rnd() * 3.2 : rnd() * Math.PI * 2);
-            var k = 1 + (rnd() - .5) * .34;
-            var x = Math.cos(a) * 66 * k, y = Math.sin(a) * 56 * k;
-            var r = (.35 + rnd() * rnd() * 1.4) * (.75 + .25 * w);
-            out += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(2) + '" fill="' + (rnd() < .5 ? '#fff' : light) + '" opacity="' + (.35 + rnd() * .65).toFixed(2) + '"/>';
+            var a = rnd() < .72 ? -1.2 + rnd() * 3.3 : rnd() * Math.PI * 2;
+            // توزيع شبه طبيعي حول الحافة، ويميل لبرّا
+            var g = (rnd() + rnd() + rnd() - 1.5) / 1.5;
+            var rr = SWIRL_R + 2 + g * spread + Math.abs(g) * spread * .4;
+            var x = Math.cos(a) * rr, y = Math.sin(a) * rr * .95;
+            var r = (.18 + rnd() * rnd() * .75) * (.8 + .2 * w);
+            out += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + r.toFixed(2) + '" fill="' + (rnd() < .55 ? '#fff' : light) + '" opacity="' + (.3 + rnd() * .7).toFixed(2) + '"/>';
         }
         return out;
     }
-    function swirlFlare(x, y, r, delay) {
-        return '<g transform="translate(' + x + ' ' + y + ')"><g class="sw-tw" style="animation-delay:-' + delay + 's">' +
-            '<circle r="' + r * 1.2 + '" fill="url(#__sg)"/>' +
-            '<path d="M-' + r * 2.4 + ' 0H' + r * 2.4 + 'M0 -' + r * 2.4 + 'V' + r * 2.4 + '" stroke="url(#__sx)" stroke-width="' + (r * .14).toFixed(2) + '"/>' +
-            '<path d="M-' + r + ' 0H' + r + 'M0 -' + r + 'V' + r + '" stroke="#fff" stroke-width="' + (r * .12).toFixed(2) + '" transform="rotate(45)" opacity=".5"/>' +
-            '<circle r="' + (r * .22).toFixed(2) + '" fill="#fff"/></g></g>';
+    /** لمعة عدسة: نقطة حارة وخيوط طويلة رفيعة تبهت. */
+    function swirlFlare(id, a, r, size, delay) {
+        var x = Math.cos(a) * r, y = Math.sin(a) * r * .95, L = size * 3.4;
+        return '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')"><g class="sw-tw" style="animation-delay:-' + delay + 's">' +
+            '<circle r="' + (size * 1.3).toFixed(2) + '" fill="url(#' + id + 'sg)"/>' +
+            '<path d="M-' + L + ' 0H' + L + 'M0 -' + L * .8 + 'V' + L * .8 + '" stroke="url(#' + id + 'sx)" stroke-width=".35"/>' +
+            '<path d="M-' + size + ' 0H' + size + 'M0 -' + size + 'V' + size + '" stroke="#fff" stroke-width=".25" transform="rotate(45)" opacity=".45"/>' +
+            '<circle r="' + (size * .16).toFixed(2) + '" fill="#fff"/></g></g>';
     }
     function swirlSvg(p) {
         var id = 'agpsw' + (++swirlSeq);
@@ -2600,32 +2606,39 @@
         var w = clamp(Number(p.fw) || 1, .3, 3);
         var mo = SWIRL_MOTIONS.some(function (x) { return x.key === p.fm; }) ? p.fm : 'spin';
         var sp = SWIRL_SPEEDS[p.fsp] || 1;
-        var ring = function (cls, rx, ry, rot, grad, sw, dash, op) {
-            return '<g class="' + cls + '"><g transform="rotate(' + rot + ')">' +
-                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="' + col + '" stroke-opacity="' + (op * .28).toFixed(2) + '" stroke-width="' + (sw * 3.2).toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
-                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="url(#' + id + grad + ')" stroke-opacity="' + op + '" stroke-width="' + sw.toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
-                '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" stroke="#fff" stroke-opacity="' + (op * .85).toFixed(2) + '" stroke-width="' + (sw * .3).toFixed(2) + '" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
-                '</g></g>';
+        var R = SWIRL_R;
+        // خيط ضوء: بيضاوي ملاصق لحافة الصورة (فرق نصف القطر dr)، مقطوع بذيل يبهت (التدرّج)
+        var strand = function (dr, rot, sw, dash, op, grad, core) {
+            var rx = (R + dr).toFixed(1), ry = ((R + dr) * .95).toFixed(1);
+            var e = '<ellipse rx="' + rx + '" ry="' + ry + '" fill="none" pathLength="100" stroke-dasharray="' + dash + '" stroke-linecap="round" ';
+            return '<g transform="rotate(' + rot + ')">' +
+                e + 'stroke="' + col + '" stroke-opacity="' + (op * .2).toFixed(2) + '" stroke-width="' + (sw * 3.4).toFixed(2) + '"/>' +
+                e + 'stroke="url(#' + id + grad + ')" stroke-opacity="' + op + '" stroke-width="' + sw.toFixed(2) + '"/>' +
+                (core ? e + 'stroke="#fff" stroke-opacity="' + (op * .9).toFixed(2) + '" stroke-width="' + (sw * .32).toFixed(2) + '"/>' : '') +
+                '</g>';
         };
-        var flares = [[-80, -28, 7, 0], [72, -64, 6, .8], [28, -84, 4, 1.6], [86, 30, 8, .4], [-40, 80, 5, 2.1], [-90, 44, 4, 1.2], [12, 92, 3.5, 2.7], [52, 70, 4.5, 1.9], [-62, -72, 3.5, 1.4], [94, -10, 3, 2.4]]
-            .map(function (f) { return swirlFlare(f[0], f[1], f[2], f[3]); }).join('').replace(/__/g, id);
+        var flares = swirlFlare(id, -.55, R + 3, 6, 0) + swirlFlare(id, 2.5, R + 2, 4.5, 1.3) + swirlFlare(id, .9, R + 4, 3.5, 2.2) + swirlFlare(id, 4.2, R + 1, 3, .7);
         return '<svg class="vav-swirl m-' + mo + '" viewBox="-100 -100 200 200" style="--sws:' + sp + '" aria-hidden="true"><defs>' +
-            '<filter id="' + id + 'b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>' +
-            '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity="0"/><stop offset=".4" stop-color="' + col + '" stop-opacity=".45"/><stop offset=".75" stop-color="' + light + '"/><stop offset="1" stop-color="#fff"/></linearGradient>' +
-            '<linearGradient id="' + id + 'c" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="' + light + '"/><stop offset=".8" stop-color="' + col + '" stop-opacity=".3"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient>' +
-            '<radialGradient id="' + id + 'sg"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".3" stop-color="' + light + '" stop-opacity=".45"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></radialGradient>' +
+            '<filter id="' + id + 'b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter>' +
+            '<filter id="' + id + 'B" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>' +
+            '<linearGradient id="' + id + 'a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + col + '" stop-opacity="0"/><stop offset=".45" stop-color="' + col + '" stop-opacity=".5"/><stop offset=".78" stop-color="' + light + '"/><stop offset="1" stop-color="#fff"/></linearGradient>' +
+            '<linearGradient id="' + id + 'c" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="' + light + '"/><stop offset=".75" stop-color="' + col + '" stop-opacity=".35"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></linearGradient>' +
+            '<radialGradient id="' + id + 'sg"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="' + light + '" stop-opacity=".55"/><stop offset="1" stop-color="' + col + '" stop-opacity="0"/></radialGradient>' +
             '<linearGradient id="' + id + 'sx"><stop offset="0" stop-color="' + light + '" stop-opacity="0"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="' + light + '" stop-opacity="0"/></linearGradient>' +
             '</defs>' +
-            // توهّج ثابت (مضبّب) تحت كل شي
-            '<g class="sw-glow" transform="rotate(-18)" filter="url(#' + id + 'b)">' +
-            '<ellipse rx="66" ry="56" fill="none" stroke="' + col + '" stroke-width="' + (7 * w).toFixed(1) + '" stroke-opacity=".55"/>' +
-            '<ellipse rx="66" ry="56" fill="none" stroke="' + light + '" stroke-width="' + (3 * w).toFixed(1) + '" stroke-opacity=".5" pathLength="100" stroke-dasharray="40 60" stroke-dashoffset="-5"/></g>' +
+            // ضوء ثابت (مضبّب): هالة واسعة + ضوء حافة يركب على حدود الصورة نفسها (نصه داخلها)
+            '<g class="sw-glow">' +
+            '<g filter="url(#' + id + 'B)"><circle r="' + (R + 4) + '" fill="none" stroke="' + col + '" stroke-width="' + (10 * w).toFixed(1) + '" stroke-opacity=".38"/></g>' +
+            '<g filter="url(#' + id + 'b)" transform="rotate(-18)"><ellipse rx="' + (R + .5) + '" ry="' + ((R + .5) * .97).toFixed(1) + '" fill="none" stroke="' + light + '" stroke-width="' + (3.2 * w).toFixed(1) + '" stroke-opacity=".75"/>' +
+            '<ellipse rx="' + (R + .5) + '" ry="' + ((R + .5) * .97).toFixed(1) + '" fill="none" stroke="#fff" stroke-width="' + (2.4 * w).toFixed(1) + '" stroke-opacity=".7" pathLength="100" stroke-dasharray="34 66" stroke-dashoffset="-6"/></g>' +
+            '</g>' +
             '<g transform="rotate(-18)"><g class="sw-tilt">' +
-            ring('sw-r1', 66, 56, 0, 'a', 2.6 * w, '74 26', 1) +
-            ring('sw-r2', 72, 61, 22, 'c', 1.6 * w, '58 42', .75) +
-            ring('sw-r3', 60, 51, -34, 'a', 1.1 * w, '46 54', .6) +
-            '<g class="sw-d1">' + swirlDust(7, 70, w, light) + '</g>' +
-            '<g class="sw-d2">' + swirlDust(91, 50, w, light) + '</g>' +
+            // خيوط ضوء رفيعة كثيرة بأنصاف أقطار قريبة (مثل شريط حرير ضوئي) — كل مجموعة تلف بسرعتها
+            '<g class="sw-r1">' + strand(1.4, 0, 1.5 * w, '72 28', 1, 'a', true) + strand(3, 5, .55 * w, '56 44', .85, 'a') + strand(0, -7, .45 * w, '42 58', .75, 'a') + strand(4.6, 9, .3 * w, '30 70', .6, 'a') + '</g>' +
+            '<g class="sw-r2">' + strand(2.2, 22, 1 * w, '52 48', .8, 'c', true) + strand(5.6, 28, .38 * w, '36 64', .6, 'c') + strand(.8, 15, .4 * w, '28 72', .7, 'c') + '</g>' +
+            '<g class="sw-r3">' + strand(7.5, -32, .6 * w, '38 62', .5, 'a') + strand(-1, -44, .3 * w, '22 78', .55, 'a') + strand(9.5, -20, .25 * w, '26 74', .4, 'c') + '</g>' +
+            '<g class="sw-d1">' + swirlDust(7, 110, w, light, 5) + '</g>' +
+            '<g class="sw-d2">' + swirlDust(91, 70, w, light, 11) + '</g>' +
             '</g></g>' +
             '<g class="sw-st">' + flares + '</g>' +
             '</svg>';
@@ -4592,7 +4605,7 @@
         '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f,.agp-so-vav.fr-swirl .vav-f{background:transparent}',
         '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i,.agp-so-vav.fr-swirl .vav-i{inset:0}',
         // دوامة الضوء حول الصورة
-        '.vav-swirl{position:absolute;width:190%;height:190%;left:-45%;top:-45%;overflow:visible;pointer-events:none}',
+        '.vav-swirl{position:absolute;width:190%;height:190%;left:-45%;top:-45%;overflow:visible;pointer-events:none;mix-blend-mode:screen}',
         '.agp-so-vav .vav-swirl{z-index:1}',
         '.vav-swirl .sw-r1,.vav-swirl .sw-r2,.vav-swirl .sw-r3,.vav-swirl .sw-d1,.vav-swirl .sw-d2,.vav-swirl .sw-tilt,.vav-swirl .sw-glow{transform-origin:0 0}',
         '.vav-swirl.m-spin .sw-r1,.vav-swirl.m-vortex .sw-r1{animation:agp-so-swr calc(5s*var(--sws)) linear infinite}',
@@ -4608,8 +4621,8 @@
         '.vav-swirl .sw-tw{animation:agp-so-swtw calc(2.6s*var(--sws)) ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
         '.vav-swirl.m-none .sw-tw{animation:none}',
         '@keyframes agp-so-swr{to{transform:rotate(360deg)}}',
-        '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.06,.84) rotate(12deg)}}',
-        '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}',
+        '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.03,.93) rotate(10deg)}}',
+        '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}',
         '@keyframes agp-so-swg{0%,100%{opacity:.7}50%{opacity:1}}',
         '@keyframes agp-so-swtw{0%,100%{opacity:.25;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}',
         '.agp-so-vav.fr-ring{filter:drop-shadow(0 .12em .3em rgba(0,0,0,.6))}',
