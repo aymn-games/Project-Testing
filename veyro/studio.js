@@ -105,7 +105,9 @@
         { key: 'dark', label: 'داكن' },
         { key: 'light', label: 'فاتح' },
         { key: 'green', label: 'كروما' },
-        { key: 'roulette', label: 'لعبة', img: '../elimination-roulette-cover.png' }
+        { key: 'roulette', label: 'لعبة', img: '../elimination-roulette-cover.png' },
+        // «محاكاة بث»: مشهد لعبة + كاميرا + شات (brand/stream-sim.svg) — تشوف الأليرت فوق بث حقيقي
+        { key: 'stream', label: 'محاكاة بث', img: 'brand/stream-sim.svg' }
     ];
 
     var TOOLS = {
@@ -2326,12 +2328,52 @@
     }
 
     /** بطاقة فيديو بالمكتبة: معاينة (مفرّغة لو فيه تفريغ — تشتغل لما يمر عليها الماوس). */
+    /** صورة ثابتة مفرّغة لبطاقة المكتبة: بالدور (WebGL محدود)، وبعد ما يكون الفريم جاهز فعلاً. */
+    var stillQ = Promise.resolve();
+    function keyedStill(v, m, th) {
+        return new Promise(function (done) {
+            if (!th.isConnected) { done(); return; }
+            var tmp = O.makeKeyer(v, function () { return Object.assign({}, O.KEY_DEFAULT, m.key); });
+            if (!tmp) { done(); return; }
+            var finished = false;
+            function grab() {
+                if (finished) return;
+                finished = true;
+                try {
+                    if (tmp.draw) tmp.draw();
+                    var c2 = document.createElement('canvas');
+                    c2.width = tmp.canvas.width; c2.height = tmp.canvas.height;
+                    if (c2.width && c2.height) {
+                        c2.getContext('2d').drawImage(tmp.canvas, 0, 0);
+                        c2.className = 'still';
+                        th.insertBefore(c2, v.nextSibling);
+                        th.classList.add('stilled');
+                    }
+                } catch (e) { /* يبقى الفيديو نفسه */ }
+                tmp.destroy();
+                done();
+            }
+            // الفريم ينعرض فعلاً (requestVideoFrameCallback) أو بعد شوي كاحتياط
+            if (typeof v.requestVideoFrameCallback === 'function' && v.readyState < 2) v.requestVideoFrameCallback(function () { requestAnimationFrame(grab); });
+            else setTimeout(function () { requestAnimationFrame(grab); }, 120);
+            setTimeout(grab, 1500);
+        });
+    }
+
     function libThumb(m) {
         var th = el('div', 'th');
         var v = document.createElement('video');
         v.muted = true; v.preload = 'metadata'; v.playsInline = true; v.loop = true; v.crossOrigin = 'anonymous';
         v.src = O.videoFileUrl(m.id) + '#t=0.4';
         th.appendChild(v);
+        // الأليرت المفرّغ: صورة ثابتة مفرّغة من أول فريم عشان تبين خلفية البطاقة (شعار فيرو) —
+        // نفرّغ مرة وحدة وننسخ النتيجة لكانفس عادي ونفك WebGL (البطاقات كثيرة)
+        if (m.key && m.key.on) {
+            v.addEventListener('loadeddata', function once() {
+                v.removeEventListener('loadeddata', once);
+                stillQ = stillQ.then(function () { return keyedStill(v, m, th); });
+            });
+        }
         var kr = null;
         th.addEventListener('pointerenter', function () {
             if (m.key && m.key.on && !kr) {
@@ -3116,7 +3158,7 @@
         cmp.addEventListener('pointerdown', function () { setBefore(true); });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (t) { cmp.addEventListener(t, function () { if (before) setBefore(false); }); });
         var bgs = el('div', 'ob-seg vk-bgs');
-        var bgList = [['checker', 'شفاف'], ['dark', 'داكن'], ['light', 'فاتح'], ['game', 'لعبة']];
+        var bgList = [['checker', 'شفاف'], ['stream', 'محاكاة بث'], ['dark', 'داكن'], ['light', 'فاتح'], ['game', 'لعبة']];
         if (localBg) bgList.push(['mine', 'صورتك']);
         bgList.forEach(function (b) {
             bgs.appendChild(button(b[1], b[0] === bgMode ? 'on' : '', function () {
