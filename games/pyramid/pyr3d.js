@@ -368,7 +368,11 @@ export async function mountPyramid(el, opts = {}) {
     }
 
     // ================================================================ الهرم (درجات + دوائر)
-    const SP = 2.4, LN = 3.0, R = .95, STEP_H = 1.3, GAP = 1.6, PAD = 1.3;
+    // هرم حقيقي: كل مرحلة صف واحد فيه كل الأرقام، والصف اللي فوقه أقصر وأعلى وأبعد خطوة.
+    // مقاس الدوائر يتحدد مرة وحدة بداية المباراة حسب العدد (عشان صف 56 يدخل الشاشة)، وكل صف أضيق من اللي تحته.
+    const R0 = .95; // نصف قطر جيومتري الدائرة الأصلي (الكل يتصغّر بـ K)
+    let SP = 2.4, K = 1, R = R0, STEP_H = 1.3, PAD = 1.3, CS = 1; const GAP = 0;
+    function setUnit(n0) { SP = Math.max(1.3, Math.min(2.4, 74 / Math.max(1, n0))); K = SP / 2.4; R = R0 * K; PAD = Math.max(.55, 1.1 * K); STEP_H = Math.max(.75, 1.35 * K); CS = Math.max(.55, Math.min(1, K * 1.15)); }
     // أطلس الأرقام 1..64 (8×8)
     const atlas = canvasTex(2048, 2048, (g) => {
         g.clearRect(0, 0, 2048, 2048); g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -401,19 +405,15 @@ export async function mountPyramid(el, opts = {}) {
     let aspect = 16 / 9;
     // عدد الأعمدة حسب العدد ونسبة الشاشة، وكل صف أضيق من اللي تحته (أو بنفس عرضه بالأقصى) عشان يبان هرم
     function layout(n, prev = levels[levels.length - 1]) {
-        const wide = aspect >= 1.15;
-        let cols = n <= (wide ? 10 : 5) ? n : Math.ceil(Math.sqrt(n * (wide ? 2.6 : 1.1)));
-        if (prev) cols = Math.min(cols, Math.max(1, prev.cols - (prev.lines > 1 ? 1 : 0)));
-        cols = Math.max(1, Math.min(cols, n)); const lines = Math.ceil(n / cols);
-        return { cols, lines, w: cols * SP + PAD * 2, d: lines * LN + PAD * 2 - (LN - SP) };
+        return { cols: n, lines: 1, w: n * SP + PAD * 2, d: R * 2 + PAD * 2 };
     }
     const _M = new T.Matrix4(), _Q = new T.Quaternion(), _E = new T.Euler(), _S = V(), _P = V();
     class Level {
         constructor(k, n) {
             this.k = k; this.n = n; const L = layout(n); Object.assign(this, L);
             const prev = levels[k - 1];
-            this.yTop = .7 + k * STEP_H;
-            this.zFront = prev ? prev.zBack - GAP * .25 : 2;
+            this.yTop = .5 + (k + 1) * STEP_H * .8;
+            this.zFront = prev ? prev.zBack : 2;
             this.zBack = this.zFront - this.d;
             this.cz = (this.zFront + this.zBack) / 2;
             this.group = new T.Group(); sc.add(this.group);
@@ -429,7 +429,7 @@ export async function mountPyramid(el, opts = {}) {
             this.pos = []; let i = 0;
             for (let ln = 0; ln < this.lines; ln++) {
                 const inLine = Math.min(this.cols, n - i);
-                for (let c = 0; c < inLine; c++, i++) this.pos.push(V((inLine - 1) / 2 * SP - c * SP, this.yTop, this.zFront - PAD - ln * LN - R + .4));
+                for (let c = 0; c < inLine; c++, i++) this.pos.push(V((inLine - 1) / 2 * SP - c * SP, this.yTop, this.zFront - PAD - R));
             }
             // InstancedMesh: القاعدة، الحلقة المضيئة، سطح الرقم، الهالة
             this.base = new T.InstancedMesh(baseGeo, baseMat, n); this.base.castShadow = true; this.base.receiveShadow = true;
@@ -444,7 +444,7 @@ export async function mountPyramid(el, opts = {}) {
             this.st = this.pos.map((p, j) => ({ s: 0, y: 0, tilt: 0, tiltDir: 0, born: 0, mode: 'off', color: new T.Color(C.cyan), cur: new T.Color('#000'), halo: new T.Color('#000'), owner: null, flash: 0, gone: false }));
             this.rise = 0; this.alive = true; this.dirty = true;
         }
-        stand(j) { const p = this.pos[j]; return V(p.x, this.yTop + .34, p.z - .32); }
+        stand(j) { const p = this.pos[j]; return V(p.x, this.yTop + .34 * K, p.z - .32 * K); }
         center() { return V(0, this.yTop, this.cz); }
         update(dt, t) {
             const n = this.n;
@@ -467,11 +467,11 @@ export async function mountPyramid(el, opts = {}) {
                 // الظهور المتتابع (يكبر مع ارتداد) / السقوط / الغطس
                 const sc0 = s.gone ? 0 : easeBack(clamp01(s.s));
                 _E.set(s.tilt * Math.cos(s.tiltDir), 0, s.tilt * Math.sin(s.tiltDir)); _Q.setFromEuler(_E);
-                _P.set(p.x, this.yTop * this.slab.scale.y + s.y, p.z); _S.set(sc0, Math.max(.001, sc0), sc0);
+                _P.set(p.x, this.yTop * this.slab.scale.y + s.y, p.z); _S.set(sc0 * K, Math.max(.001, sc0 * K), sc0 * K);
                 _M.compose(_P, _Q, _S); this.base.setMatrixAt(j, _M);
-                _P.y += .33; _M.compose(_P, _Q, _S); this.ring.setMatrixAt(j, _M);
-                _P.y += .015; _M.compose(_P, _Q, _S); this.top.setMatrixAt(j, _M);
-                _P.y = this.yTop * this.slab.scale.y + s.y + .03; _S.setScalar(sc0 * (1 + (s.mode === 'spot' || s.mode === 'doom' ? .15 * Math.sin(t * 10) : 0))); _M.compose(_P, _Q, _S); this.halo.setMatrixAt(j, _M);
+                _P.y += .33 * K; _M.compose(_P, _Q, _S); this.ring.setMatrixAt(j, _M);
+                _P.y += .015 * K; _M.compose(_P, _Q, _S); this.top.setMatrixAt(j, _M);
+                _P.y = this.yTop * this.slab.scale.y + s.y + .03; _S.setScalar(K * sc0 * (1 + (s.mode === 'spot' || s.mode === 'doom' ? .15 * Math.sin(t * 10) : 0))); _M.compose(_P, _Q, _S); this.halo.setMatrixAt(j, _M);
             }
             for (const m of [this.base, this.ring, this.top, this.halo]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
         }
@@ -772,6 +772,7 @@ export async function mountPyramid(el, opts = {}) {
     }
     async function startMatch(n, o = {}) {
         champFx = null; setMood('calm'); screen('الهرم', n + ' لاعب');
+        setUnit(n); for (const a of actors.values()) { a.baseScale = CS; a.scale = CS; }
         const dur = buildLevel(n, o.short ? .03 : .05);
         // لقطة التقديم: واسعة من فوق تعرض الهرم كامل ← تنزل بهدوء لزاوية مائلة
         const L = activeLevel, all = levelPts(L, actorPts());
@@ -842,7 +843,7 @@ export async function mountPyramid(el, opts = {}) {
         const t0 = now(), dur = 1.15, tilt = (Math.random() - .5) * 2;
         await new Promise(res => { const f = () => {
             const k = clamp01((now() - t0) / dur), g = k * k;
-            a.extraY = -g * 3.2; a.spinY = g * 2.4 * tilt; a.scale = 1 - g * .35;
+            a.extraY = -g * 3.2; a.spinY = g * 2.4 * tilt; a.scale = (a.baseScale || 1) * (1 - g * .35);
             if (s) { s.y = -g * 3.2; s.tilt = g * .8; s.tiltDir = tilt * 3; }
             if (k < 1) requestAnimationFrame(f); else res(); }; f(); });
         if (s) { s.gone = true; s.mode = 'gone'; }
@@ -900,7 +901,7 @@ export async function mountPyramid(el, opts = {}) {
     // المرحلة التالية: الكاميرا تطلع تعرض الناجين والدرجة الجديدة تنبني فوقهم
     async function nextLevel(n) {
         setMood('calm');
-        const prev = activeLevel, F = () => frameBox(levelPts(prev, actorPts()).concat(levelPts({ w: layout(n).w, yTop: prev.yTop + STEP_H, zFront: prev.zBack - GAP * .25, zBack: prev.zBack - GAP * .25 - layout(n).d })), .72, 0, 1.02);
+        const prev = activeLevel, F = () => frameBox(levelPts(prev, actorPts()).concat(levelPts({ w: layout(n).w, yTop: prev.yTop + STEP_H * .8, zFront: prev.zBack, zBack: prev.zBack - layout(n).d })), .72, 0, 1.02);
         setShot(t => { const f = F(); return { pos: f.pos.add(drift(t)), look: f.look, rate: 1.1 }; });
         await wait(.6);
         const dur = buildLevel(n, .04); screen('المرحلة التالية', n + ' دائرة');
@@ -918,6 +919,7 @@ export async function mountPyramid(el, opts = {}) {
         const top = L.stand(0);
         setShot(t => { const F = frameBox([a.pos.clone(), top.clone(), top.clone().setY(top.y + 2)], .5, .3, 1.4); return { pos: F.pos, look: F.look, rate: 1.4 }; });
         await wait(1.3);
+        a.baseScale = a.scale = 1; // البطل بحجمه الكامل على القمة
         a.homeYaw = 0; a.setMood('still'); const wt = a.walkTo(top, 0, 2.6); await wait(wt + .2);
         L.st[0].owner = a.id;
         a.moodSet = 'locked'; a.doBeh('win', 999); a.rig.mood && a.rig.mood('laugh'); emit('champion');
