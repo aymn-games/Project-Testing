@@ -19,6 +19,8 @@
 
     var DAY = 864e5, HOUR = 36e5;
     var LS_KEY = 'veyro-admin-demo-v1';
+    // متصل بسيرفر فيرو (REAL) أو بيانات تجريبية — يتحدد بـboot() تحت
+    var REAL = false, API_BASE = '', TOKEN = null, ME = null;
     var CUR = 'ر.س';
     var ADMIN_NAME = 'أيمن';
 
@@ -113,10 +115,10 @@
     var MAILS = ['gmail.com', 'hotmail.com', 'outlook.com', 'icloud.com'];
 
     var PLANS_SEED = [
-        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, storageMb: 500, on: true, features: ['كل أدوات البث', '10 شاشات', 'رفع فيديوهات 500MB'] },
-        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, storageMb: 1500, on: true, features: ['كل أدوات البث', '20 شاشة', 'رفع فيديوهات 1.5GB', 'توفير 15%'] },
-        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, storageMb: 5000, on: true, features: ['كل أدوات البث', '50 شاشة', 'رفع فيديوهات 5GB', 'أصول حصرية للسنوي'] },
-        { id: 'lifetime', name: 'مفتوح', days: 0, price: 0, screens: 100, storageMb: 10000, on: true, internal: true, features: ['بدون تاريخ انتهاء', 'يعطيه الأدمن أو كود خاص بس'] }
+        { id: 'monthly', name: 'شهري', days: 30, price: 39, screens: 10, videos: 10, on: true, features: ['كل أدوات البث', '10 شاشات', '10 فيديوهات بالمكتبة'] },
+        { id: 'quarter', name: 'ربع سنوي', days: 90, price: 99, screens: 20, videos: 20, on: true, features: ['كل أدوات البث', '20 شاشة', '20 فيديو بالمكتبة'] },
+        { id: 'yearly', name: 'سنوي', days: 365, price: 349, screens: 50, videos: 40, on: true, features: ['كل أدوات البث', '50 شاشة', '40 فيديو بالمكتبة', 'أصول حصرية للسنوي'] },
+        { id: 'lifetime', name: 'مفتوح', days: 0, price: 0, screens: 100, videos: 60, on: true, internal: true, features: ['بدون تاريخ انتهاء', 'يعطيه الأدمن أو كود خاص بس'] }
     ];
 
     function seed() {
@@ -173,7 +175,6 @@
                 email: nm[1] + (R() < .6 ? ri(1, 9999) : '') + '@' + pick(MAILS),
                 tiktok: tk.toLowerCase(),
                 tiktokVerified: R() < .88,
-                tiktokFollowers: Math.round(Math.pow(R(), 2.4) * 380000 + 300),
                 joined: joined,
                 veyroSince: joined + rnd(0, 6) * DAY,
                 lastSeen: lastSeen,
@@ -182,7 +183,7 @@
                 status: 'active',
                 tester: R() < .22,
                 notes: '',
-                limits: { screens: null, storageMb: null },
+                limits: { screens: null, videos: null },
                 devices: ri(1, 3),
                 sub: sub,
                 payments: payments.sort(function (a, b) { return b.at - a.at; }),
@@ -193,7 +194,8 @@
                     screens: activeish ? ri(2, 14) : ri(0, 4),
                     videos: activeish ? ri(0, 12) : ri(0, 3),
                     storageMb: activeish ? ri(20, 480) : ri(0, 60),
-                    gifts: Math.round(total * rnd(30, 260))
+                    live: daily.map(function (h) { return Math.round(h * 8.5) / 10; }),
+                    liveTotal: Math.round(total * 8.5) / 10
                 },
                 donations: { total: R() < .45 ? Math.round(rnd(20, 4200)) : 0, count: 0 },
                 history: []
@@ -254,7 +256,7 @@
             codes: codes,
             assets: seedAssets(T),
             log: log,
-            cfg: { previewAdminOnly: true, trialDays: 3, announce: { on: false, text: 'تحديث جديد: مكتبة أليرتات جاهزة بقسم «المكتبة».' }, admins: [{ id: 10001, name: ADMIN_NAME, role: 'مدير' }, { id: 10057, name: 'مشرف الدعم', role: 'دعم (قراءة + أيام إضافية)' }] }
+            cfg: { previewAdminOnly: true, requireSub: false, trialDays: 3, announce: { on: false, text: 'تحديث جديد: مكتبة أليرتات جاهزة بقسم «المكتبة».' }, admins: [{ id: 10001, name: ADMIN_NAME, role: 'owner' }, { id: 10057, name: 'مشرف الدعم', role: 'support' }] }
         };
     }
     function genCode(prefix, R) {
@@ -420,7 +422,7 @@
         },
         setTester: function (u, on) { u.tester = on; hist(u, (on ? 'إعطاء' : 'سحب') + ' صلاحية «تجربة Veyro»', on ? 'ok' : 'warn'); logA((on ? 'عطى' : 'سحب') + ' صلاحية التجربة', uTag(u), u); },
         logoutAll: function (u) { u.devices = 0; u.online = false; u.liveSince = null; hist(u, 'تسجيل خروج من كل الأجهزة', 'warn'); logA('سجّل خروجه من كل الأجهزة', uTag(u), u); },
-        setLimits: function (u, l) { u.limits = l; hist(u, 'تعديل الحدود: ' + (l.screens == null ? 'الشاشات حسب الخطة' : l.screens + ' شاشة') + '، ' + (l.storageMb == null ? 'التخزين حسب الخطة' : l.storageMb + 'MB'), ''); logA('عدّل الحدود', uTag(u), u); },
+        setLimits: function (u, l) { u.limits = l; hist(u, 'تعديل الحدود: ' + (l.screens == null ? 'الشاشات حسب الخطة' : l.screens + ' شاشة') + '، ' + (l.videos == null ? 'الفيديوهات حسب الخطة' : l.videos + ' فيديو'), ''); logA('عدّل الحدود', uTag(u), u); },
         setNotes: function (u, t) { u.notes = t; logA('عدّل الملاحظات', uTag(u), u); },
         wipe: function (u) { u.usage.screens = 0; u.usage.videos = 0; u.usage.storageMb = 0; hist(u, 'حذف بيانات فيرو (الشاشات والفيديوهات)', 'bad'); logA('حذف بيانات فيرو', uTag(u), u); },
         unlinkTiktok: function (u) { u.tiktokVerified = false; hist(u, 'فك توثيق تيك توك — لازم يوثّق من جديد', 'warn'); logA('فك توثيق تيك توك', uTag(u), u); },
@@ -555,11 +557,12 @@
     }
 
     function avatar(u, lg) {
+        if (u.avatar) return '<span class="av' + (lg ? ' lg' : '') + '"><img src="' + esc(u.avatar) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' + (u.online ? '<i class="on" title="شغّال الحين"></i>' : '') + '</span>';
         var letter = (u.name || '?').trim().charAt(0);
         var hue = (u.id * 47) % 360;
         return '<span class="av' + (lg ? ' lg' : '') + '" style="background:linear-gradient(160deg,hsl(' + hue + ' 22% 52%),hsl(' + ((hue + 40) % 360) + ' 24% 26%))">' + esc(letter) + (u.online ? '<i class="on" title="شغّال الحين"></i>' : '') + '</span>';
     }
-    function uCell(u, em) { return '<div class="u">' + avatar(u) + '<div class="m"><b>' + esc(u.name) + (u.tester ? ' <span class="tag lav" style="font-size:10px;padding:0 6px">تجربة</span>' : '') + '</b><small>@' + esc(u.tiktok) + '</small>' + (em ? '<small class="em">' + esc(u.email) + '</small>' : '') + '</div></div>'; }
+    function uCell(u, em) { return '<div class="u">' + avatar(u) + '<div class="m"><b>' + esc(u.name) + (u.tester ? ' <span class="tag lav" style="font-size:10px;padding:0 6px">تجربة</span>' : '') + '</b><small>@' + esc(u.tiktok) + '</small>' + (em && u.email ? '<small class="em">' + esc(u.email) + '</small>' : '') + '</div></div>'; }
     function statusTag(u) { return u.status === 'banned' ? '<span class="tag bad">محظور</span>' : u.status === 'suspended' ? '<span class="tag warn">موقوف</span>' : ''; }
 
     /* =========================================================
@@ -604,7 +607,7 @@
         else if (keepScroll !== false) sc.scrollTop = top;
         $('#vy-app').classList.remove('open');
     }
-    function refresh() { save(); go(cur); if (DR.uid) renderDrawer(); }
+    function refresh() { if (!REAL) save(); go(cur); if (DR.uid) renderDrawer(); }
     function part(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
 
     var VIEWS = {};
@@ -673,7 +676,7 @@
         if (!q) return true;
         var raw = q.trim().replace(/^@/, '').toLowerCase(), n = normAr(raw);
         var by = {
-            id: function () { return String(u.id).indexOf(raw) === 0; },
+            id: function () { return String(u.id).indexOf(raw) === 0 || (u.customId && String(u.customId).toLowerCase().indexOf(raw) === 0); },
             tiktok: function () { return u.tiktok.indexOf(raw) >= 0; },
             email: function () { return u.email.toLowerCase().indexOf(raw) >= 0; },
             name: function () { return normAr(u.name).indexOf(n) >= 0 || u.username.toLowerCase().indexOf(raw) >= 0; }
@@ -717,7 +720,7 @@
             '<div class="tbl-wrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" class="chk" data-c="selPage" aria-label="تحديد الصفحة"' + (allOn ? ' checked' : '') + '></th><th>الستريمر</th><th>الآيدي</th><th>الاشتراك</th><th>المتبقي</th><th>ساعات 30 يوم</th><th>قيمة الدعم</th><th>تجديد</th><th>آخر ظهور</th></tr></thead><tbody>' +
             (rows.length ? rows.map(function (u) {
                 return '<tr class="click' + (ST.sel[u.id] ? ' sel' : '') + '" data-user="' + u.id + '"><td data-stop><input type="checkbox" class="chk" data-c="selOne" data-id="' + u.id + '" aria-label="تحديد"' + (ST.sel[u.id] ? ' checked' : '') + '></td>' +
-                    '<td>' + uCell(u, true) + '</td><td class="num ltr">' + u.id + '</td>' +
+                    '<td>' + uCell(u, true) + '</td><td class="num ltr">' + esc(u.customId || u.id) + '</td>' +
                     '<td>' + subTag(u) + ' ' + statusTag(u) + (u.sub ? ' <small class="mut2">' + planName(u.sub.plan) + '</small>' : '') + '</td>' +
                     '<td><div style="display:flex;align-items:center;gap:8px">' + leftBar(u) + '<span class="num">' + daysLeftTxt(u) + '</span></div></td>' +
                     '<td class="num">' + hrs(hours30(u)) + ' س</td><td class="num">' + money(paidTotal(u)) + '</td><td class="num">' + (u.sub ? u.sub.renewals : '—') + '</td>' +
@@ -758,12 +761,12 @@
         var el = $('#drawer');
         var sb = el.querySelector('.drawer-b'), top = sb ? sb.scrollTop : 0;
         el.innerHTML = '<div class="drawer-h">' + avatar(u, true) + '<div class="m"><h2>' + esc(u.name) + ' ' + subTag(u) + ' ' + statusTag(u) + (u.online ? '<span class="tag ok live">شغّال الحين</span>' : '') + '</h2>' +
-            '<div class="ids">' + idChip('ID', u.id) + idChip('تيك توك', '@' + u.tiktok) + idChip('الإيميل', u.email) + idChip('يوزر', u.username) + '</div></div>' +
+            '<div class="ids">' + (u.customId ? idChip('آيدي البروفايل', u.customId) : '') + idChip('#', u.id) + (u.tiktok ? idChip('تيك توك', '@' + u.tiktok) : '') + (u.email ? idChip('الإيميل', u.email) : '') + (u.username ? idChip('يوزر', u.username) : '') + '</div></div>' +
             '<button type="button" class="ob-btn ghost icon" data-a="closeDr" aria-label="إغلاق">' + ic('x') + '</button></div>' +
             '<div class="drawer-tabs"><div class="ob-seg">' + DR_TABS.map(function (t) { return '<button type="button" data-a="drTab" data-v="' + t[0] + '" class="' + (DR.tab === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div></div>' +
             '<div class="drawer-b">' + DRT[DR.tab](u) + '</div>';
         if (sb) el.querySelector('.drawer-b').scrollTop = top;
-        var nt = $('#u-notes'); if (nt) nt.addEventListener('change', function () { API.setNotes(u, nt.value); save(); toast('انحفظت الملاحظات'); });
+        var nt = $('#u-notes'); if (nt) nt.addEventListener('change', function () { var t = nt.value; doOp('setNotes', { uid: u.id, text: t }, function () { API.setNotes(u, t); }, 'انحفظت الملاحظات'); });
     }
     function subBox(u) {
         var st = subState(u), p = u.sub ? plan(u.sub.plan) : null;
@@ -781,12 +784,12 @@
                 fact('متوسط البث', u.usage.sessions ? hrs(u.usage.hoursTotal / u.usage.sessions) + ' س' : '—') +
                 fact('قيمة الدعم (المدفوع)', money(pt)) + fact('مدة الاشتراك الكلية', fmtN(paidDays(u)) + ' يوم') + fact('مرات التجديد', u.sub ? u.sub.renewals : 0) +
                 fact('دونيشن Streamlabs', u.donations.total ? '$' + fmtN(u.donations.total) + ' <small class="mut2">(' + u.donations.count + ')</small>' : '—') +
-                fact('هدايا تيك توك (عملات)', fmtN(u.usage.gifts)) + fact('الشاشات', u.usage.screens) + fact('الفيديوهات', u.usage.videos) + fact('التخزين', u.usage.storageMb + 'MB') +
+                fact('ساعات على الهواء', hrs(u.usage.liveTotal || 0) + ' س') + fact('الشاشات', u.usage.screens) + fact('الفيديوهات', u.usage.videos) + fact('التخزين', u.usage.storageMb + 'MB') +
                 '</div></div>' +
                 '<div class="sec"><h4>' + ic('users', ' style="width:16px;height:16px"') + 'بيانات الحساب</h4><div class="kv">' +
-                kv('آيدي ألعاب أيمن', '<span class="ltr num">' + u.id + '</span>') + kv('اسم المستخدم', '<span class="ltr">' + esc(u.username) + '</span>') + kv('الاسم', esc(u.name)) +
-                kv('الإيميل', '<span class="ltr">' + esc(u.email) + '</span>') +
-                kv('تيك توك', '<span class="ltr">@' + esc(u.tiktok) + '</span> ' + (u.tiktokVerified ? '<span class="tag ok">موثّق</span>' : '<span class="tag warn">غير موثّق</span>') + ' <span class="mut2">' + fmtN(u.tiktokFollowers) + ' متابع</span>') +
+                kv('آيدي البروفايل', '<span class="ltr num">' + esc(u.customId || '—') + '</span>') + kv('رقم الحساب', '<span class="ltr num">' + u.id + '</span>') + kv('اسم المستخدم', '<span class="ltr">' + esc(u.username) + '</span>') + kv('الاسم', esc(u.name)) +
+                kv('الإيميل', u.email ? '<span class="ltr">' + esc(u.email) + '</span>' : '<span class="mut2">— (حساب تيك توك)</span>') +
+                kv('تيك توك', '<span class="ltr">@' + esc(u.tiktok) + '</span> ' + (u.tiktokVerified ? '<span class="tag ok">موثّق</span>' : '<span class="tag warn">غير موثّق</span>') + (u.tiktokFollowers ? ' <span class="mut2">' + fmtN(u.tiktokFollowers) + ' متابع</span>' : '')) +
                 kv('حساب ألعاب أيمن من', fdate(u.joined)) + kv('أول دخول لفيرو', fdate(u.veyroSince)) + kv('آخر ظهور', u.online ? 'الحين' : fdt(u.lastSeen) + ' (' + rel(u.lastSeen) + ')') +
                 kv('الأجهزة المسجّلة', u.devices) + kv('حالة الحساب', u.status === 'active' ? '<span class="tag ok">نشط</span>' : statusTag(u)) + kv('صلاحية «تجربة Veyro»', u.tester ? 'عنده' : 'ما عنده') +
                 '</div></div>' +
@@ -820,11 +823,11 @@
                 [['active', 'نشط'], ['suspended', 'موقوف'], ['banned', 'محظور']].map(function (s) { return '<button type="button" data-a="uStatus" data-v="' + s[0] + '" class="' + (u.status === s[0] ? 'on' : '') + '">' + s[1] + '</button>'; }).join('') + '</div></div></div>' +
                 '<div class="ob-row"><div class="lb"><b>صلاحية «تجربة Veyro»</b><small>يدخل فيرو وقت ما يكون مقفول للأدمن بس</small></div><div class="ct"><label class="ob-toggle"><input type="checkbox" data-c="uTester"' + (u.tester ? ' checked' : '') + '><span></span></label></div></div>' +
                 '<div class="ob-row"><div class="lb"><b>تسجيل خروج من كل الأجهزة</b><small>' + u.devices + ' جهاز مسجّل الحين</small></div><div class="ct"><button type="button" class="ob-btn sm" data-a="uLogout">' + ic('logout') + 'تسجيل خروج</button></div></div>' +
-                '<div class="ob-row"><div class="lb"><b>توثيق تيك توك</b><small class="ltr" style="text-align:right">@' + esc(u.tiktok) + '</small></div><div class="ct">' + (u.tiktokVerified ? '<span class="tag ok">موثّق</span><button type="button" class="ob-btn ghost sm" data-a="uUnlink">فك التوثيق</button>' : '<span class="tag warn">غير موثّق</span>') + '</div></div>' +
+                '<div class="ob-row"><div class="lb"><b>توثيق تيك توك</b><small class="ltr" style="text-align:right">@' + esc(u.tiktok) + '</small></div><div class="ct">' + (u.tiktokVerified ? '<span class="tag ok">موثّق</span>' + (REAL ? '' : '<button type="button" class="ob-btn ghost sm" data-a="uUnlink">فك التوثيق</button>') : '<span class="tag warn">غير موثّق</span>') + '</div></div>' +
                 '</div></div>' +
                 '<div class="sec"><h4>الحدود <span class="sp"></span><small class="mut2" style="font-weight:500">فاضي = حسب خطته (' + (p ? p.name : '—') + ')</small></h4><div class="rows">' +
                 '<div class="ob-row"><div class="lb"><b>عدد الشاشات</b><small>يستخدم ' + u.usage.screens + ' من ' + (u.limits.screens != null ? u.limits.screens : p.screens) + '</small></div><div class="ct"><input id="u-lim-s" type="number" min="0" class="ob-input ltr num" style="width:110px" placeholder="' + p.screens + '" value="' + (u.limits.screens != null ? u.limits.screens : '') + '"></div></div>' +
-                '<div class="ob-row"><div class="lb"><b>مساحة الفيديوهات (MB)</b><small>يستخدم ' + u.usage.storageMb + 'MB من ' + (u.limits.storageMb != null ? u.limits.storageMb : p.storageMb) + 'MB</small></div><div class="ct"><input id="u-lim-m" type="number" min="0" class="ob-input ltr num" style="width:110px" placeholder="' + p.storageMb + '" value="' + (u.limits.storageMb != null ? u.limits.storageMb : '') + '"></div></div>' +
+                '<div class="ob-row"><div class="lb"><b>عدد الفيديوهات بالمكتبة</b><small>عنده ' + u.usage.videos + ' من ' + (u.limits.videos != null ? u.limits.videos : p.videos) + ' (' + u.usage.storageMb + 'MB)</small></div><div class="ct"><input id="u-lim-m" type="number" min="0" class="ob-input ltr num" style="width:110px" placeholder="' + p.videos + '" value="' + (u.limits.videos != null ? u.limits.videos : '') + '"></div></div>' +
                 '<div style="display:flex;justify-content:flex-start"><button type="button" class="ob-btn primary sm" data-a="uLimits">حفظ الحدود</button></div>' +
                 '</div></div>' +
                 '<div class="sec" style="border-color:rgba(236,143,157,.3)"><h4 style="color:#f4b6c0">منطقة الخطر</h4><div class="rows">' +
@@ -835,7 +838,7 @@
             var d = u.usage.daily.slice(-30), sessions = [];
             for (var i = 29; i >= 0 && sessions.length < 10; i--) if (d[i] > 0) sessions.push({ at: now() - (29 - i) * DAY, h: d[i] });
             return '<div class="facts">' + fact('آخر 7 أيام', hrs(hoursN(u, 7)) + ' س') + fact('آخر 30 يوم', hrs(hours30(u)) + ' س') + fact('آخر 90 يوم', hrs(hoursN(u, 90)) + ' س') + fact('أيام بث (30 يوم)', d.filter(function (v) { return v > 0; }).length) + '</div>' +
-                '<div class="sec"><h4>الساعات الفعلية يومياً <span class="sp"></span><small class="mut2" style="font-weight:500">وقت رابط الشاشة مفتوح والبث متصل</small></h4>' + barChart(d, dayLabels(30), { h: 200, ticks: 6, label: 'ساعات الستريمر' }) + '</div>' +
+                '<div class="sec"><h4>الساعات الفعلية يومياً <span class="sp"></span><small class="mut2" style="font-weight:500">وقت رابط شاشة فيرو مفتوح بـOBS</small></h4>' + barChart(d, dayLabels(30), { h: 200, ticks: 6, label: 'ساعات الستريمر' }) + '</div>' +
                 '<div class="sec"><h4>آخر البثوث</h4>' + (sessions.length ? '<div class="list">' + sessions.map(function (s) {
                     return '<div class="li"><span class="ic">' + ic('live', ' style="width:18px;height:18px;color:var(--lav)"') + '</span><div class="m"><b>' + fdate(s.at) + '</b><small>' + Math.max(1, Math.round(s.h * 1.4)) + ' شاشة مستخدمة</small></div><span class="v num">' + hrs(s.h) + ' س</span></div>';
                 }).join('') + '</div>' : '<div class="empty-s">ما بث بآخر 30 يوم</div>') + '</div>';
@@ -902,7 +905,7 @@
         function draw() {
             var q = inp.value.trim(); if (!q) { res.innerHTML = ''; return; }
             var m = S.users.filter(function (u) { return matchUser(u, q); }).slice(0, 6);
-            res.innerHTML = m.length ? m.map(function (u) { return '<button type="button" class="li click" data-pick="' + u.id + '" style="text-align:right;width:100%">' + avatar(u) + '<span class="m"><b>' + esc(u.name) + ' <span class="mut2 num">#' + u.id + '</span></b><small class="ltr">@' + esc(u.tiktok) + ' · ' + esc(u.email) + '</small></span>' + subTag(u) + '</button>'; }).join('') : '<div class="empty-s">ما لقيت أحد</div>';
+            res.innerHTML = m.length ? m.map(function (u) { return '<button type="button" class="li click" data-pick="' + u.id + '" style="text-align:right;width:100%">' + avatar(u) + '<span class="m"><b>' + esc(u.name) + ' <span class="mut2 num">#' + esc(u.customId || u.id) + '</span></b><small class="ltr">@' + esc(u.tiktok) + (u.email ? ' · ' + esc(u.email) : '') + '</small></span>' + subTag(u) + '</button>'; }).join('') : '<div class="empty-s">ما لقيت أحد</div>';
         }
         inp.addEventListener('input', function () { hv.value = ''; draw(); if (onPick) onPick(null); });
         res.addEventListener('click', function (e) {
@@ -1036,7 +1039,7 @@
     var IMG_CACHE = {};
     function getImg(src, cb) {
         var c = IMG_CACHE[src]; if (c) { if (c.complete && c.naturalWidth) return c; c._cbs.push(cb); return null; }
-        var im = new Image(); im._cbs = [cb]; im.onload = function () { im._cbs.forEach(function (f) { if (f) f(); }); im._cbs = []; }; im.src = src; IMG_CACHE[src] = im; return null;
+        var im = new Image(); im._cbs = [cb]; im.onload = function () { im._cbs.forEach(function (f) { if (f) f(); }); im._cbs = []; }; if (/^https?:/.test(src)) im.crossOrigin = 'anonymous'; im.src = src; IMG_CACHE[src] = im; return null;
     }
     function hexRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join(''); var n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
     function rgbHex(r, g, b) { return '#' + [r, g, b].map(function (v) { return clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0'); }).join(''); }
@@ -1097,6 +1100,7 @@
     function thumbHTML(a) {
         if (a.type === 'top') return '<div style="transform:scale(.5);transform-origin:center;width:330px;display:flex;justify-content:center">' + topHTML(a.top) + '</div>';
         if (a.type === 'sound') return '<svg viewBox="0 0 120 50" width="70%" aria-hidden="true">' + Array.apply(null, Array(24)).map(function (_, i) { var hh = 6 + Math.abs(Math.sin(i * 1.7 + a.name.length)) * 34; return '<rect x="' + (i * 5) + '" y="' + (25 - hh / 2) + '" width="3" height="' + hh + '" rx="1.5" fill="#a99bb8"/>'; }).join('') + '</svg>';
+        if (a.type === 'alert' && a.src && a.src.video && !a.src.proc && !a.src.thumb && /^https?:/.test(a.src.video)) return '<video src="' + esc(a.src.video) + '#t=0.6" muted playsinline preload="metadata"></video>';
         var sz = a.type === 'alert' ? [320, 180] : [150, 150];
         return '<canvas width="' + sz[0] + '" height="' + sz[1] + '" data-thumb="' + a.id + '"></canvas>';
     }
@@ -1189,15 +1193,15 @@
                     else if (!file) { el.querySelector('#an-note').textContent = 'اختر ملف أول.'; return; }
                     if (file && type === 'alert') {
                         if (!/^video\//.test(file.type)) { el.querySelector('#an-note').textContent = 'هذا مو ملف فيديو.'; return; }
-                        a.src.video = URL.createObjectURL(file); a.src.size = file.size; mm.close(); assetEditor(a, true); return;
+                        a.src.video = URL.createObjectURL(file); a.src.size = file.size; a._file = file; mm.close(); assetEditor(a, true); return;
                     }
                     if (file && type === 'sound') {
                         if (!/^audio\//.test(file.type)) { el.querySelector('#an-note').textContent = 'هذا مو ملف صوت.'; return; }
-                        a.src.audio = URL.createObjectURL(file); a.src.size = file.size; mm.close(); assetEditor(a, true); return;
+                        a.src.audio = URL.createObjectURL(file); a.src.size = file.size; a._file = file; mm.close(); assetEditor(a, true); return;
                     }
                     if (file) {
                         if (!/^image\//.test(file.type)) { el.querySelector('#an-note').textContent = 'هذا مو ملف صورة.'; return; }
-                        var rd = new FileReader(); rd.onload = function () { a.src.img = rd.result; a.src.size = file.size; mm.close(); assetEditor(a, true); }; rd.readAsDataURL(file); return;
+                        var rd = new FileReader(); rd.onload = function () { a.src.img = rd.result; a.src.size = file.size; a._file = file; mm.close(); assetEditor(a, true); }; rd.readAsDataURL(file); return;
                     }
                     mm.close(); assetEditor(a, true);
                 });
@@ -1205,9 +1209,52 @@
         });
     }
 
+    /**
+     * حفظ أصل بالسيرفر: (١) ينشئه أو يحدّث بياناته، (٢) يرفع الملف لو فيه ملف جديد، (٣) ينشره لو publish.
+     * يرجع Promise بالأصل من السيرفر، أو false.
+     */
+    function persistAsset(a, isNew, publish) {
+        var meta = { type: a.type, name: a.name, cat: a.cat, access: a.access, status: publish ? undefined : a.status, key: a.key, top: a.top, vol: a.vol, dur: a.dur, w: a.w, h: a.h, d: a.d };
+        if (!isNew) meta.id = a.id;
+        if (isNew && meta.status === 'published') meta.status = 'draft';
+        busy(true);
+        function fail(d) { toast(errText(d), true); return false; }
+        return rawOp('assetSave', { asset: meta, publish: false }).then(function (d) {
+            if (!d.success) return fail(d);
+            var id = d.asset.id;
+            var up = a._file ? uploadAssetFile(id, a._file) : Promise.resolve({ success: true });
+            return up.then(function (u) {
+                if (!u.success) return fail(u);
+                if (!publish) return d.asset;
+                return rawOp('assetSave', { asset: { id: id }, publish: true }).then(function (p) { return p.success ? p.asset : fail(p); });
+            });
+        }).then(function (r) { return r ? reload().then(function () { return r; }) : false; })
+            .catch(function () { return fail({ message: 'ما وصل الطلب للسيرفر — تأكد من الاتصال' }); })
+            .then(function (x) { busy(false); return x; });
+    }
+    function uploadAssetFile(id, file) {
+        return new Promise(function (resolve) {
+            var x = new XMLHttpRequest();
+            x.open('POST', API_BASE + '/api/veyro/admin/assets/upload?id=' + encodeURIComponent(id));
+            x.setRequestHeader('Authorization', 'Bearer ' + TOKEN);
+            x.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            x.upload.onprogress = function (e) { if (e.lengthComputable) toastUpload(Math.round(e.loaded / e.total * 100)); };
+            x.onload = function () { toastUpload(null); var d = {}; try { d = JSON.parse(x.responseText); } catch (e) { d = {}; } if (x.status === 413) d = { success: false, error: 'file_too_large' }; resolve(d); };
+            x.onerror = function () { toastUpload(null); resolve({ success: false, message: 'ما انرفع الملف — تأكد من الاتصال' }); };
+            x.send(file);
+        });
+    }
+    var upToast = null;
+    function toastUpload(pct) {
+        if (pct == null) { if (upToast) upToast.remove(); upToast = null; return; }
+        if (!upToast) { upToast = document.createElement('div'); upToast.className = 'toast'; $('#toasts').appendChild(upToast); }
+        upToast.innerHTML = '<i></i>يرفع الملف… ' + pct + '%';
+    }
+
     /* --- محرّر الأصل: المعاينة + التفريغ + الشكل + النشر --- */
     function assetEditor(orig, isNew) {
         var a = JSON.parse(JSON.stringify(orig)); if (orig.src && orig.src.video) a.src.video = orig.src.video; if (orig.src && orig.src.audio) a.src.audio = orig.src.audio;
+        a._file = orig._file || null;
         var video = null, raf = 0, playing = true, t0 = performance.now(), tOff = 0, picking = false, bg = 'chk';
         var isVis = a.type === 'alert' || a.type === 'icon' || a.type === 'frame';
         function keyRow(lbl, html, sub) { return '<div class="ob-row"><div class="lb"><b>' + lbl + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div><div class="ct">' + html + '</div></div>'; }
@@ -1263,7 +1310,7 @@
                 if (cv) {
                     if (a.src.video) {
                         video = document.createElement('video'); video.src = a.src.video; video.muted = true; video.loop = true; video.playsInline = true; video.crossOrigin = 'anonymous';
-                        video.addEventListener('loadedmetadata', function () { sizeCanvas(); a.dur = Math.min(20, Math.max(2, Math.round(video.duration))) || a.dur; var dr = el.querySelector('#al-dur'); if (dr) { dr.value = a.dur; el.querySelector('#al-dur-v').textContent = a.dur; } });
+                        video.addEventListener('loadedmetadata', function () { a.w = video.videoWidth; a.h = video.videoHeight; a.d = Math.round((video.duration || 0) * 100) / 100; sizeCanvas(); a.dur = Math.min(20, Math.max(2, Math.round(video.duration))) || a.dur; var dr = el.querySelector('#al-dur'); if (dr) { dr.value = a.dur; el.querySelector('#al-dur-v').textContent = a.dur; } });
                         video.addEventListener('loadeddata', function () { if (!a.src.thumb) { try { var tc = document.createElement('canvas'); var sz = fit(video.videoWidth, video.videoHeight, 320); tc.width = sz[0]; tc.height = sz[1]; tc.getContext('2d').drawImage(video, 0, 0, sz[0], sz[1]); a.src.thumb = tc.toDataURL('image/jpeg', .7); } catch (e) { /* ignore */ } } });
                         video.play().catch(function () { /* ignore */ });
                     }
@@ -1318,7 +1365,8 @@
                     var bake = el.querySelector('#k-bake');
                     if (bake) bake.addEventListener('click', function () {
                         if (!a.key.on) { toast('شغّل التفريغ أول', true); return; }
-                        renderKeyed(cv, a, 0); try { a.src.img = cv.toDataURL('image/png'); } catch (e) { toast('المتصفح منع حفظ الصورة', true); return; } a.key = Object.assign({}, a.key, { on: false, opacity: 1 }); syncKeyUI(); syncRange('k-op', 1); getImg(a.src.img, draw); draw(); toast('انحفظت الصورة بخلفية شفافة');
+                        renderKeyed(cv, a, 0); try { a.src.img = cv.toDataURL('image/png'); } catch (e) { toast('المتصفح منع حفظ الصورة', true); return; }
+                        if (REAL) cv.toBlob(function (b) { if (b) a._file = b; }, 'image/png'); a.key = Object.assign({}, a.key, { on: false, opacity: 1 }); syncKeyUI(); syncRange('k-op', 1); getImg(a.src.img, draw); draw(); toast('انحفظت الصورة بخلفية شفافة');
                     });
                 }
                 function bindRange(id, set) { var r = el.querySelector('#' + id); if (!r) return; r.addEventListener('input', function () { var v = Number(r.value); set(v); el.querySelector('#' + id + '-v').textContent = v; if (a.type === 'top') redrawTop(); else draw(); }); }
@@ -1337,18 +1385,23 @@
                 function pills(sel, fn) { el.querySelector(sel).addEventListener('click', function (e) { var b = e.target.closest('.ob-pill'); if (!b) return; $$(sel + ' .ob-pill', el).forEach(function (x) { x.classList.toggle('on', x === b); }); fn(b.getAttribute('data-v')); }); }
                 pills('#ed-access', function (v) { a.access = v; }); pills('#ed-st', function (v) { a.status = v; });
                 function collect() { a.name = el.querySelector('#ed-name').value.trim() || a.name; a.cat = el.querySelector('#ed-cat').value.trim(); }
-                el.querySelector('#ed-save').addEventListener('click', function () { collect(); API.saveAsset(a, false); mm.close(); refresh(); toast('انحفظ «' + a.name + '»'); });
+                function reach() { return S.users.filter(function (u) { return u.status === 'active' && (a.access === 'all' || (a.access === 'subs' ? isPaying(u) : isPaying(u) && (u.sub.plan === 'yearly' || u.sub.lifetime))); }).length; }
+                el.querySelector('#ed-save').addEventListener('click', function () {
+                    collect();
+                    if (!REAL) { API.saveAsset(a, false); mm.close(); refresh(); toast('انحفظ «' + a.name + '»'); return; }
+                    persistAsset(a, isNew, false).then(function (ok) { if (ok) { mm.close(); toast('انحفظ «' + a.name + '»'); } });
+                });
                 el.querySelector('#ed-pub').addEventListener('click', function () {
                     collect(); if (a.type === 'alert' && !a.src.video && !a.src.proc) { toast('ارفع الفيديو أول', true); return; }
-                    var wasPub = orig.status === 'published' && !isNew; API.saveAsset(a, true); mm.close(); refresh();
-                    var n = S.users.filter(function (u) { return u.status === 'active' && (a.access === 'all' || (a.access === 'subs' ? isPaying(u) : isPaying(u) && u.sub.plan === 'yearly')); }).length;
-                    toast((wasPub ? 'انرفع التحديث v' + a.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + n + ' مستخدم');
+                    var wasPub = orig.status === 'published' && !isNew;
+                    if (!REAL) { API.saveAsset(a, true); mm.close(); refresh(); toast((wasPub ? 'انرفع التحديث v' + a.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + reach() + ' مستخدم'); return; }
+                    persistAsset(a, isNew, true).then(function (r) { if (r) { mm.close(); toast((wasPub ? 'انرفع التحديث v' + r.version : 'انرفع «' + a.name + '»') + ' لمكتبات ' + reach() + ' مستخدم'); } });
                 });
                 el.querySelector('#ed-cancel').addEventListener('click', mm.close);
                 var del = el.querySelector('#ed-del');
                 if (del) del.addEventListener('click', function () {
                     confirmBox({ title: 'حذف «' + esc(a.name) + '»؟', text: orig.usage ? 'يستخدمه ' + fmtN(orig.usage) + ' ستريمر. بيختفي من مكتباتهم، والشاشات اللي فيها هالأصل بيطلع مكانه فاضي.' : 'بيختفي من المكتبة نهائياً.', ok: 'حذف نهائي', danger: true })
-                        .then(function (ok) { if (!ok) return; API.deleteAsset(orig); mm.close(); refresh(); toast('انحذف'); });
+                        .then(function (ok) { if (!ok) return; mm.close(); doOp('assetDelete', { id: orig.id }, function () { API.deleteAsset(orig); }, 'انحذف'); });
                 });
             }
         });
@@ -1378,7 +1431,7 @@
                 var l = U.slice().sort(function (a, b) { return fn(b) - fn(a); }).slice(0, 8);
                 return '<section class="card glass"><div class="card-h"><h3>' + title + '</h3></div><div class="list">' + l.map(function (u, i) { return '<div class="li click" data-user="' + u.id + '"><span class="num mut2" style="width:18px">' + (i + 1) + '</span>' + avatar(u) + '<div class="m"><b>' + esc(u.name) + '</b><small class="ltr">@' + esc(u.tiktok) + '</small></div><span class="v num">' + fmt(u) + '</span></div>'; }).join('') + '</div></section>';
             }
-            return '<div class="toolbar"><div class="ob-seg">' + [[7, '7 أيام'], [30, '30 يوم'], [90, '90 يوم']].map(function (p) { return '<button type="button" data-a="stsDays" data-v="' + p[0] + '" class="' + (n === p[0] ? 'on' : '') + '">' + p[1] + '</button>'; }).join('') + '</div><span class="sp"></span><small class="mut2">الساعات الفعلية = وقت رابط شاشة فيرو مفتوح بـOBS والبث متصل</small></div>' +
+            return '<div class="toolbar"><div class="ob-seg">' + [[7, '7 أيام'], [30, '30 يوم'], [90, '90 يوم']].map(function (p) { return '<button type="button" data-a="stsDays" data-v="' + p[0] + '" class="' + (n === p[0] ? 'on' : '') + '">' + p[1] + '</button>'; }).join('') + '</div><span class="sp"></span><small class="mut2">الساعات الفعلية = وقت رابط شاشة فيرو مفتوح بـOBS أو TikTok LIVE Studio</small></div>' +
                 '<div class="kpis k4">' +
                 kpi('clock', hrs(totalH) + '<small>ساعة</small>', 'استخدام فعلي بآخر ' + n + ' يوم') +
                 kpi('users', fmtN(activeU.length), 'ستريمر استخدم فيرو') +
@@ -1420,30 +1473,84 @@
     /* =========================================================
        ٨) الإعدادات
        ========================================================= */
+    var ROLE_NAMES = { owner: 'المالك', manager: 'مدير (كل شي)', support: 'دعم (قراءة + أيام إضافية)', content: 'محتوى (المكتبة بس)' };
     VIEWS.config = {
         html: function () {
             var c = S.cfg;
+            function tg(name, on) { return '<label class="ob-toggle"><input type="checkbox" data-c="' + name + '"' + (on ? ' checked' : '') + '><span></span></label>'; }
             return '<div class="grid2">' +
                 '<section class="card glass"><div class="card-h"><h3>الوصول لفيرو</h3></div><div class="rows">' +
-                '<div class="ob-row"><div class="lb"><b>فيرو للأدمن والتجربة بس</b><small>لما تطفيه يتفتح فيرو لكل ستريمر عنده حساب ألعاب أيمن (PREVIEW_ADMIN_ONLY)</small></div><div class="ct"><label class="ob-toggle"><input type="checkbox" data-c="cfgPreview"' + (c.previewAdminOnly ? ' checked' : '') + '><span></span></label></div></div>' +
-                '<div class="ob-row"><div class="lb"><b>أيام التجربة المجانية</b><small>تنعطى تلقائياً لأي حساب يدخل فيرو أول مرة (0 = بدون)</small></div><div class="ct"><input id="cfg-trial" type="number" min="0" max="60" class="ob-input ltr num" value="' + c.trialDays + '" style="width:90px"></div></div>' +
+                '<div class="ob-row"><div class="lb"><b>فيرو للأدمن والتجربة بس</b><small>لما تطفيه يتفتح فيرو لكل ستريمر عنده حساب ألعاب أيمن</small></div><div class="ct">' + tg('cfgPreview', c.previewAdminOnly) + '</div></div>' +
+                '<div class="ob-row"><div class="lb"><b>الاشتراك إلزامي</b><small>لما يكون شغّال: اللي ما عنده اشتراك نشط ما يقدر يستخدم أدوات فيرو (الأدمن والتجربة مستثنين)</small></div><div class="ct">' + tg('cfgReq', c.requireSub) + '</div></div>' +
+                '<div class="ob-row"><div class="lb"><b>أيام التجربة المجانية</b><small>تنعطى تلقائياً لأي حساب يدخل فيرو أول مرة (0 = بدون)</small></div><div class="ct"><input id="cfg-trial" type="number" min="0" max="60" class="ob-input ltr num" value="' + (c.trialDays || 0) + '" style="width:90px"></div></div>' +
                 '</div></section>' +
                 '<section class="card glass"><div class="card-h"><h3>إعلان لكل المستخدمين</h3></div><div class="rows">' +
-                '<div class="ob-row"><div class="lb"><b>إظهار الإعلان</b><small>يطلع شريط فوق المحرر عند كل المستخدمين</small></div><div class="ct"><label class="ob-toggle"><input type="checkbox" data-c="cfgAnn"' + (c.announce.on ? ' checked' : '') + '><span></span></label></div></div>' +
-                '<textarea id="cfg-ann" class="ob-input" placeholder="نص الإعلان">' + esc(c.announce.text) + '</textarea>' +
+                '<div class="ob-row"><div class="lb"><b>إظهار الإعلان</b><small>يطلع شريط فوق المحرر عند كل المستخدمين</small></div><div class="ct">' + tg('cfgAnn', c.announce && c.announce.on) + '</div></div>' +
+                '<textarea id="cfg-ann" class="ob-input" placeholder="نص الإعلان" maxlength="300">' + esc(c.announce ? c.announce.text : '') + '</textarea>' +
                 '</div></section>' +
-                '<section class="card glass"><div class="card-h"><h3>الأدمن والمشرفين</h3><button type="button" class="ob-btn sm" data-a="adminAdd">' + ic('plus') + 'إضافة</button></div><div class="list">' +
-                c.admins.map(function (a, i) { return '<div class="li"><span class="av">' + esc(a.name.charAt(0)) + '</span><div class="m"><b>' + esc(a.name) + ' <span class="mut2 num">#' + a.id + '</span></b><small>' + esc(a.role) + '</small></div>' + (i ? '<button type="button" class="ob-btn danger sm" data-a="adminDel" data-i="' + i + '">إزالة</button>' : '<span class="tag gold">المالك</span>') + '</div>'; }).join('') +
+                '<section class="card glass"><div class="card-h"><h3>الأدمن والمشرفين</h3><button type="button" class="ob-btn sm" data-a="adminAdd">' + ic('plus') + 'إضافة</button></div>' +
+                '<p class="mut2" style="margin:0 0 10px;font-size:12.5px;line-height:1.7">حسابات الأدمن بألعاب أيمن تدخل اللوحة دايماً بصلاحية كاملة.</p><div class="list">' +
+                (c.admins || []).map(function (a) { return '<div class="li"><span class="av">' + esc(String(a.name || '?').charAt(0)) + '</span><div class="m"><b>' + esc(a.name) + ' <span class="mut2 num">#' + a.id + '</span></b><small>' + esc(ROLE_NAMES[a.role] || a.role) + '</small></div>' + (a.role === 'owner' ? '<span class="tag gold">المالك</span>' : '<button type="button" class="ob-btn danger sm" data-a="adminDel" data-id="' + a.id + '">إزالة</button>') + '</div>'; }).join('') +
+                ((c.admins || []).length ? '' : '<div class="empty-s">ما فيه مشرفين مضافين</div>') +
                 '</div></section>' +
-                '<section class="card glass"><div class="card-h"><h3>بيانات المعاينة</h3></div><p class="mut" style="margin:0 0 12px;line-height:1.8">كل اللي تشوفه هنا بيانات تجريبية محفوظة بمتصفحك بس. تقدر تجرّب كل الأزرار بدون ما يتأثر أي ستريمر حقيقي.</p>' +
-                '<button type="button" class="ob-btn danger" data-a="resetDemo">' + ic('reset') + 'إرجاع البيانات التجريبية من البداية</button></section>' +
+                (REAL ? '<section class="card glass"><div class="card-h"><h3>الاتصال</h3></div><p class="mut" style="margin:0 0 12px;line-height:1.8">اللوحة متصلة بسيرفر فيرو، وكل تعديل يتطبق على الحسابات الحقيقية مباشرة.</p><div class="quick"><button type="button" class="ob-btn" data-a="reloadNow">' + ic('reset') + 'تحديث البيانات</button><a class="ob-btn ghost" href="?demo#overview">فتح المعاينة التجريبية</a></div></section>'
+                    : '<section class="card glass"><div class="card-h"><h3>بيانات المعاينة</h3></div><p class="mut" style="margin:0 0 12px;line-height:1.8">كل اللي تشوفه هنا بيانات تجريبية محفوظة بمتصفحك بس. تقدر تجرّب كل الأزرار بدون ما يتأثر أي ستريمر حقيقي.</p>' +
+                    '<button type="button" class="ob-btn danger" data-a="resetDemo">' + ic('reset') + 'إرجاع البيانات التجريبية من البداية</button></section>') +
                 '</div>';
         },
         mount: function () {
-            $('#cfg-trial').addEventListener('change', function (e) { S.cfg.trialDays = clamp(Number(e.target.value) || 0, 0, 60); logA('غيّر أيام التجربة', S.cfg.trialDays + ' يوم'); save(); toast('انحفظ'); });
-            $('#cfg-ann').addEventListener('change', function (e) { S.cfg.announce.text = e.target.value; logA('عدّل نص الإعلان', '—'); save(); toast('انحفظ نص الإعلان'); });
+            $('#cfg-trial').addEventListener('change', function (e) {
+                var v = clamp(Math.round(Number(e.target.value)) || 0, 0, 60);
+                doOp('cfgSet', { key: 'trialDays', value: v }, function () { S.cfg.trialDays = v; logA('غيّر أيام التجربة', v + ' يوم'); }, 'انحفظ');
+            });
+            $('#cfg-ann').addEventListener('change', function (e) {
+                var t = e.target.value;
+                doOp('cfgSet', { key: 'announce', value: { on: S.cfg.announce.on, text: t } }, function () { S.cfg.announce.text = t; logA('عدّل الإعلان', '—'); }, 'انحفظ نص الإعلان');
+            });
         }
     };
+
+    /* =========================================================
+       تنفيذ الإجراءات: السيرفر (اللوحة متصلة) أو البيانات التجريبية
+       ========================================================= */
+    var ERR = {
+        bad_days: 'عدد الأيام غلط', already_lifetime: 'اشتراكه مفتوح أصلاً', no_active_sub: 'ما عنده اشتراك نشط تنخصم منه أيام', bad_plan: 'الخطة غلط',
+        not_running: 'الاشتراك مو شغّال', not_frozen: 'الاشتراك مو مجمّد', no_sub: 'ما عنده اشتراك', not_lifetime: 'الاشتراك مو مفتوح', bad_status: 'الحالة غلط',
+        bad_user: 'الحساب مو موجود', bad_type: 'النوع غلط', bad_date: 'التاريخ لازم يكون بعد اليوم', code_used: 'الكود انستخدم وما ينحذف — عطّله بداله', not_found: 'مو موجود',
+        name_required: 'اكتب الاسم', file_required: 'ارفع الملف أول', no_permission: 'ما عندك صلاحية لهالإجراء', not_admin: 'ما عندك صلاحية للوحة فيرو',
+        unsupported_type: 'نوع الملف مو مدعوم', file_too_large: 'الملف كبير (الحد 30MB)', storage_unavailable: 'التخزين بالسيرفر مو متاح الحين', bad_role: 'الصلاحية غلط', bad_key: 'إعداد غلط',
+        unauthorized: 'انتهت جلستك — سجّل دخول من جديد', session_revoked: 'انتهت جلستك — سجّل دخول من جديد'
+    };
+    function errText(d) { return (d && (d.message || ERR[d.error])) || 'ما تم — صار خطأ' + (d && d.error ? ' (' + d.error + ')' : ''); }
+    function req(method, path, data) {
+        var opt = { method: method, headers: { 'Authorization': 'Bearer ' + TOKEN } };
+        if (data) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(data); }
+        return fetch(API_BASE + path, opt).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d = d || {}; d._status = r.status; return d; }); });
+    }
+    function rawOp(name, args) { return req('POST', '/api/veyro/admin/op', Object.assign({ op: name }, args || {})); }
+    function busy(on) { document.body.classList.toggle('busy', Boolean(on)); }
+    /**
+     * إجراء واحد: متصل → يرسله للسيرفر ويحدّث البيانات، تجريبي → demo() على البيانات المحلية.
+     * demo يرجع false (فشل وطلع تنبيه) أو نص خطأ، أو أي شي ثاني = نجح. ok = رسالة النجاح (أو دالة تاخذ النتيجة).
+     * يرجع Promise بالنتيجة (أو false).
+     */
+    function doOp(name, args, demo, ok) {
+        function msg(r) { if (ok) toast(typeof ok === 'function' ? ok(r) : ok); }
+        if (!REAL) {
+            var r = demo ? demo() : undefined;
+            if (r === false) return Promise.resolve(false);
+            if (typeof r === 'string') { toast(r, true); return Promise.resolve(false); }
+            refresh(); msg(r || {});
+            return Promise.resolve(r || {});
+        }
+        busy(true);
+        return rawOp(name, args).then(function (d) {
+            if (d._status === 401) { toast(errText({ error: 'unauthorized' }), true); return false; }
+            if (!d.success) { toast(errText(d), true); return false; }
+            return reload().then(function () { msg(d); return d; });
+        }).catch(function () { toast('ما وصل الطلب للسيرفر — تأكد من الاتصال', true); return false; })
+            .then(function (x) { busy(false); return x; });
+    }
 
     /* =========================================================
        نوافذ الإجراءات
@@ -1462,11 +1569,16 @@
             }
         });
     }
+    function bulkDaysFor(l, n, why) {
+        return doOp('bulkDays', { uids: l.map(function (u) { return u.id; }), n: n, why: why }, function () {
+            var ok = 0; l.forEach(function (u) { if (API.addDays(u, n, why, true)) ok++; }); logA('أضاف ' + n + ' يوم لـ' + ok + ' ستريمر', why || '—'); return { count: ok };
+        }, function (r) { return 'انضاف ' + n + ' يوم لـ' + r.count + ' ستريمر'; });
+    }
     function grantModal(preset) {
         openModal({
             title: 'منح اشتراك',
-            body: (preset ? '' : userPicker('gm-user')) +
-                '<div class="field"><label>الخطة</label><div class="ob-pills" id="gm-plan">' + S.plans.filter(function (p) { return p.on; }).map(function (p, i) { return '<button type="button" class="ob-pill' + (i === 0 ? ' on' : '') + '" data-v="' + p.id + '">' + p.name + '</button>'; }).join('') + '</div></div>' +
+            body: (preset ? '<p>لـ<b>' + preset.length + '</b> ستريمر.</p>' : userPicker('gm-user')) +
+                '<div class="field"><label>الخطة</label><div class="ob-pills" id="gm-plan">' + S.plans.filter(function (p) { return p.on; }).map(function (p, i) { return '<button type="button" class="ob-pill' + (i === 0 ? ' on' : '') + '" data-v="' + p.id + '">' + esc(p.name) + '</button>'; }).join('') + '</div></div>' +
                 '<div class="field"><label for="gm-amt">المبلغ المدفوع (' + CUR + ')</label><input id="gm-amt" type="number" min="0" value="0" class="ob-input ltr num"><small>0 = هدية بدون دفع. المبلغ يدخل بإحصائيات الدعم.</small></div>' +
                 '<div class="field"><label for="gm-m">طريقة الدفع</label><select id="gm-m" class="ob-input"><option>هدية من الأدمن</option><option>تحويل بنكي</option><option>STC Pay</option><option>Apple Pay</option><option>مدى</option></select></div>',
             foot: '<button type="button" class="ob-btn primary" id="gm-ok">' + ic('crown') + 'منح</button><button type="button" class="ob-btn ghost" data-x4>رجوع</button>',
@@ -1479,18 +1591,20 @@
                     var list = preset || (el.querySelector('#gm-user-v').value ? [user(el.querySelector('#gm-user-v').value)] : []);
                     if (!list.length) return toast('اختر ستريمر', true);
                     var amt = Number(el.querySelector('#gm-amt').value) || 0, meth = amt ? el.querySelector('#gm-m').value : 'هدية من الأدمن';
-                    list.forEach(function (u) { API.renew(u, pl, amt, meth); });
-                    mm.close(); refresh(); toast('تم: ' + planName(pl) + ' لـ' + (list.length > 1 ? list.length + ' ستريمر' : list[0].name));
+                    mm.close(); ST.sel = {};
+                    doOp('bulkGrant', { uids: list.map(function (u) { return u.id; }), plan: pl, amount: amt, method: meth }, function () { list.forEach(function (u) { API.renew(u, pl, amt, meth); }); },
+                        'تم: ' + planName(pl) + ' لـ' + (list.length > 1 ? list.length + ' ستريمر' : list[0].name));
                 });
             }
         });
     }
+    var COMP_GROUPS = {
+        paying: ['المشتركين النشطين', function (u) { var s = subState(u); return s === 'active' || s === 'expiring'; }],
+        pf: ['النشطين + المجمّدين', function (u) { var s = subState(u); return s === 'active' || s === 'expiring' || s === 'frozen'; }],
+        recent: ['النشطين + اللي انتهى اشتراكهم آخر 7 أيام', function (u) { var s = subState(u); return s === 'active' || s === 'expiring' || (s === 'expired' && u.sub.end > now() - 7 * DAY); }]
+    };
     function compModal() {
-        var groups = {
-            paying: ['المشتركين النشطين', function (u) { var s = subState(u); return s === 'active' || s === 'expiring'; }],
-            pf: ['النشطين + المجمّدين', function (u) { var s = subState(u); return s === 'active' || s === 'expiring' || s === 'frozen'; }],
-            recent: ['النشطين + اللي انتهى اشتراكهم آخر 7 أيام', function (u) { var s = subState(u); return s === 'active' || s === 'expiring' || (s === 'expired' && u.sub.end > now() - 7 * DAY); }]
-        };
+        var groups = COMP_GROUPS;
         openModal({
             title: 'تعويض للكل',
             body: '<p>يضيف أيام لمجموعة كاملة مرة وحدة، مثلاً بعد توقف السيرفر.</p>' +
@@ -1504,21 +1618,23 @@
                 el.querySelector('[data-x5]').addEventListener('click', mm.close);
                 el.querySelector('#cm-ok').addEventListener('click', function () {
                     var n = Math.round(Number(el.querySelector('#cm-n').value)); if (!(n > 0)) return toast('اكتب عدد أيام صحيح', true);
-                    var why = el.querySelector('#cm-why').value.trim(), list = S.users.filter(groups[g][1]);
-                    list.forEach(function (u) { API.addDays(u, n, why, true); });
-                    logA('تعويض ' + n + ' يوم لـ' + list.length + ' ستريمر', why || '—');
-                    mm.close(); refresh(); toast('انضاف ' + n + ' يوم لـ' + list.length + ' ستريمر');
+                    var why = el.querySelector('#cm-why').value.trim();
+                    mm.close();
+                    doOp('compensate', { group: g, n: n, why: why }, function () {
+                        var list = S.users.filter(groups[g][1]); list.forEach(function (u) { API.addDays(u, n, why, true); });
+                        logA('تعويض ' + n + ' يوم لـ' + list.length + ' ستريمر', why || '—'); return { count: list.length };
+                    }, function (r) { return 'انضاف ' + n + ' يوم لـ' + r.count + ' ستريمر'; });
                 });
             }
         });
     }
     function planModal(p) {
-        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: 'p' + uid().slice(0, 5), name: '', days: 30, price: 0, screens: 10, storageMb: 500, on: true, features: [] };
+        var isNew = !p; p = p ? JSON.parse(JSON.stringify(p)) : { id: '', name: '', days: 30, price: 0, screens: 10, videos: 10, on: true, features: [] };
         openModal({
             title: isNew ? 'خطة جديدة' : 'تعديل خطة «' + esc(p.name) + '»',
             body: '<div class="field"><label for="pm-n">الاسم</label><input id="pm-n" class="ob-input" value="' + esc(p.name) + '"></div>' +
                 '<div class="grid2"><div class="field"><label for="pm-d">المدة (يوم)</label><input id="pm-d" type="number" min="0" class="ob-input ltr num" value="' + p.days + '"' + (p.id === 'lifetime' ? ' disabled' : '') + '></div><div class="field"><label for="pm-p">السعر (' + CUR + ')</label><input id="pm-p" type="number" min="0" class="ob-input ltr num" value="' + p.price + '"></div>' +
-                '<div class="field"><label for="pm-s">عدد الشاشات</label><input id="pm-s" type="number" min="0" class="ob-input ltr num" value="' + p.screens + '"></div><div class="field"><label for="pm-m">مساحة الفيديوهات (MB)</label><input id="pm-m" type="number" min="0" class="ob-input ltr num" value="' + p.storageMb + '"></div></div>' +
+                '<div class="field"><label for="pm-s">عدد الشاشات</label><input id="pm-s" type="number" min="0" class="ob-input ltr num" value="' + p.screens + '"></div><div class="field"><label for="pm-m">عدد الفيديوهات بالمكتبة</label><input id="pm-m" type="number" min="0" class="ob-input ltr num" value="' + (p.videos != null ? p.videos : 10) + '"></div></div>' +
                 '<div class="field"><label for="pm-f">المزايا (سطر لكل ميزة)</label><textarea id="pm-f" class="ob-input">' + esc(p.features.join('\n')) + '</textarea></div>' +
                 '<div class="ob-row"><div class="lb"><b>الخطة مفعّلة</b><small>الموقفة ما تطلع للمشتركين الجدد، والحاليين يكملون</small></div><div class="ct"><label class="ob-toggle"><input type="checkbox" id="pm-on"' + (p.on ? ' checked' : '') + '><span></span></label></div></div>',
             foot: '<button type="button" class="ob-btn primary" id="pm-ok">حفظ الخطة</button><button type="button" class="ob-btn ghost" data-x6>رجوع</button>',
@@ -1527,12 +1643,26 @@
                 el.querySelector('#pm-ok').addEventListener('click', function () {
                     p.name = el.querySelector('#pm-n').value.trim(); if (!p.name) return toast('اكتب اسم الخطة', true);
                     if (p.id !== 'lifetime') p.days = Math.max(1, Number(el.querySelector('#pm-d').value) || 30);
-                    p.price = Math.max(0, Number(el.querySelector('#pm-p').value) || 0); p.screens = Number(el.querySelector('#pm-s').value) || 0; p.storageMb = Number(el.querySelector('#pm-m').value) || 0;
+                    p.price = Math.max(0, Number(el.querySelector('#pm-p').value) || 0); p.screens = Number(el.querySelector('#pm-s').value) || 0; p.videos = Number(el.querySelector('#pm-m').value) || 0;
                     p.features = el.querySelector('#pm-f').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); p.on = el.querySelector('#pm-on').checked;
-                    var i = S.plans.findIndex(function (x) { return x.id === p.id; }); if (i < 0) S.plans.push(p); else S.plans[i] = p;
-                    logA(isNew ? 'أضاف خطة' : 'عدّل خطة', p.name); mm.close(); refresh(); toast('انحفظت الخطة');
+                    mm.close();
+                    doOp('planSave', { plan: p }, function () {
+                        if (!p.id) p.id = 'p' + uid().slice(0, 5);
+                        var i = S.plans.findIndex(function (x) { return x.id === p.id; }); if (i < 0) S.plans.push(p); else S.plans[i] = p;
+                        logA(isNew ? 'أضاف خطة' : 'عدّل خطة', p.name);
+                    }, 'انحفظت الخطة');
                 });
             }
+        });
+    }
+    function showCodes(out, type, uses, ex) {
+        if (!out || !out.length) return;
+        var all = out.map(function (c) { return c.code; }).join('\n');
+        openModal({
+            title: 'انشأت ' + out.length + ' كود', wide: out.length > 12,
+            body: '<p>' + codeTypeName(type) + ' — ' + codeValue(out[0]) + (uses > 1 ? ' · ' + uses + ' استخدام لكل كود' : '') + (ex ? ' · ينتهي ' + fdate(ex) : '') + '</p><div class="codes-gen code-out">' + out.map(function (c) { return '<span>' + esc(c.code) + '</span>'; }).join('') + '</div>',
+            foot: '<button type="button" class="ob-btn primary" id="gc-copy">' + ic('copy') + 'نسخ الكل</button>',
+            onMount: function (el) { el.querySelector('#gc-copy').addEventListener('click', function () { copy(all, 'انتسخت ' + out.length + ' كود'); }); }
         });
     }
 
@@ -1541,8 +1671,9 @@
        ========================================================= */
     function curU() { return user(DR.uid); }
     function selUsers(map) { return Object.keys(map).map(user).filter(Boolean); }
+    function uop(name, args, demo, ok) { var u = curU(); return doOp(name, Object.assign({ uid: u.id }, args || {}), function () { return demo(u); }, ok); }
     var ACT = {
-        quickDays: function (b) { var u = user(b.getAttribute('data-id')); if (API.addDays(u, Number(b.getAttribute('data-n')))) { refresh(); toast('+' + b.getAttribute('data-n') + ' يوم لـ' + u.name); } },
+        quickDays: function (b) { var u = user(b.getAttribute('data-id')), n = Number(b.getAttribute('data-n')); doOp('addDays', { uid: u.id, n: n }, function () { return API.addDays(u, n); }, '+' + n + ' يوم لـ' + u.name); },
         copy: function (b) { copy(b.getAttribute('data-v'), 'انتسخ: ' + b.getAttribute('data-v')); },
         closeDr: closeDrawer,
         drTab: function (b) { DR.tab = b.getAttribute('data-v'); renderDrawer(); $('#drawer .drawer-b').scrollTop = 0; },
@@ -1550,38 +1681,51 @@
         stField: function (b) { ST.field = b.getAttribute('data-v'); ST.page = 0; $$('[data-a=stField]').forEach(function (x) { x.classList.toggle('on', x === b); }); part('st-table', stTable()); $('#st-q').focus(); },
         stFilter: function (b) { ST.filter = b.getAttribute('data-v'); ST.page = 0; $$('[data-a=stFilter]').forEach(function (x) { x.classList.toggle('on', x === b); }); part('st-table', stTable()); },
         clearSel: function () { ST.sel = {}; part('st-table', stTable()); },
-        bulkDays: function () { var l = selUsers(ST.sel); daysModal('إضافة أيام لـ' + l.length + ' ستريمر', l, function (n, why) { var ok = 0; l.forEach(function (u) { if (API.addDays(u, n, why, true)) ok++; }); logA('أضاف ' + n + ' يوم لـ' + ok + ' ستريمر', why || '—'); ST.sel = {}; refresh(); toast('انضاف ' + n + ' يوم لـ' + ok + ' ستريمر'); }); },
-        bulkGrant: function () { grantModal(selUsers(ST.sel)); ST.sel = {}; },
-        bulkTester: function () { var l = selUsers(ST.sel); l.forEach(function (u) { if (!u.tester) API.setTester(u, true); }); ST.sel = {}; refresh(); toast('انعطت صلاحية التجربة لـ' + l.length); },
+        bulkDays: function () { var l = selUsers(ST.sel); daysModal('إضافة أيام لـ' + l.length + ' ستريمر', l, function (n, why) { ST.sel = {}; bulkDaysFor(l, n, why); }); },
+        bulkGrant: function () { grantModal(selUsers(ST.sel)); },
+        bulkTester: function () { var l = selUsers(ST.sel); ST.sel = {}; doOp('bulkTester', { uids: l.map(function (u) { return u.id; }) }, function () { l.forEach(function (u) { if (!u.tester) API.setTester(u, true); }); }, 'انعطت صلاحية التجربة لـ' + l.length); },
         bulkCsv: function () {
-            var l = selUsers(ST.sel), rows = [['id', 'name', 'tiktok', 'email', 'subscription', 'plan', 'ends', 'hours_30d', 'paid', 'renewals']];
-            l.forEach(function (u) { rows.push([u.id, u.name, '@' + u.tiktok, u.email, SUBL[subState(u)][0], u.sub ? planName(u.sub.plan) : '', u.sub && u.sub.end ? isoDay(u.sub.end) : '', hours30(u).toFixed(1), paidTotal(u), u.sub ? u.sub.renewals : 0]); });
+            var l = selUsers(ST.sel), rows = [['id', 'profile_id', 'name', 'tiktok', 'email', 'subscription', 'plan', 'ends', 'hours_30d', 'paid', 'renewals']];
+            l.forEach(function (u) { rows.push([u.id, u.customId || '', u.name, '@' + u.tiktok, u.email, SUBL[subState(u)][0], u.sub ? planName(u.sub.plan) : '', u.sub && u.sub.end ? isoDay(u.sub.end) : '', hours30(u).toFixed(1), paidTotal(u), u.sub ? u.sub.renewals : 0]); });
             copy(rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n'), 'انتسخ CSV لـ' + l.length + ' ستريمر');
         },
         sbTab: function (b) { SB.tab = b.getAttribute('data-v'); SB.sel = {}; go('subs'); },
         sbClear: function () { SB.sel = {}; part('sb-table', sbTable()); },
-        sbBulkDays: function () { var l = selUsers(SB.sel); daysModal('إضافة أيام لـ' + l.length + ' ستريمر', l, function (n, why) { var ok = 0; l.forEach(function (u) { if (API.addDays(u, n, why, true)) ok++; }); logA('أضاف ' + n + ' يوم لـ' + ok + ' ستريمر', why || '—'); SB.sel = {}; refresh(); toast('انضاف ' + n + ' يوم لـ' + ok + ' ستريمر'); }); },
+        sbBulkDays: function () { var l = selUsers(SB.sel); daysModal('إضافة أيام لـ' + l.length + ' ستريمر', l, function (n, why) { SB.sel = {}; bulkDaysFor(l, n, why); }); },
         grantOpen: function () { grantModal(null); },
         compOpen: compModal,
         planEdit: function (b) { planModal(plan(b.getAttribute('data-id'))); },
         planNew: function () { planModal(null); },
+        reloadNow: function () { reload().then(function (ok) { if (ok) toast('تحدّثت البيانات'); }); },
         // ملف الستريمر
-        uDays: function (b) { var u = curU(), n = Number(b.getAttribute('data-n')); if (API.addDays(u, n)) { refresh(); toast('+' + n + ' يوم'); } },
-        uDaysCustom: function () { var u = curU(); daysModal('أيام إضافية لـ' + u.name, [u], function (n, why) { if (API.addDays(u, n, why)) { refresh(); toast('+' + n + ' يوم'); } }); },
-        uDaysMinus: function () { var u = curU(); confirmBox({ title: 'خصم أيام من ' + esc(u.name), text: 'باقي له ' + daysLeftTxt(u) + '. كم يوم تبي تخصم؟', input: 'عدد الأيام', ph: '3', ok: 'خصم', danger: true }).then(function (v) { if (v === true || v == null) return; var n = Math.round(Number(v)); if (!(n > 0)) return toast('اكتب عدد أيام صحيح', true); if (API.addDays(u, -n)) { refresh(); toast('انخصم ' + n + ' يوم'); } }); },
-        uSetEnd: function () { var u = curU(), v = $('#u-end').value; if (!v) return; var p = v.split('-'), ts = new Date(+p[0], +p[1] - 1, +p[2], 23, 59).getTime(); API.setEnd(u, ts); refresh(); toast('ينتهي ' + fdate(ts)); },
-        uRenew: function () { var u = curU(), pl = $('#u-plan').value, amt = Number($('#u-amt').value) || 0; API.renew(u, pl, amt, amt ? 'يدوي' : 'هدية من الأدمن'); refresh(); toast('تجدّد: ' + planName(pl)); },
-        uCancel: function () { var u = curU(); confirmBox({ title: 'إنهاء اشتراك ' + esc(u.name) + '؟', text: 'الأدوات المدفوعة بتوقف عنده فوراً، وباقي الأيام (' + daysLeftTxt(u) + ') بتروح.', ok: 'إنهاء الاشتراك', danger: true }).then(function (ok) { if (!ok) return; API.cancel(u); refresh(); toast('انتهى الاشتراك'); }); },
+        uDays: function (b) { var n = Number(b.getAttribute('data-n')); uop('addDays', { n: n }, function (u) { return API.addDays(u, n); }, '+' + n + ' يوم'); },
+        uDaysCustom: function () { var u = curU(); daysModal('أيام إضافية لـ' + u.name, [u], function (n, why) { uop('addDays', { n: n, why: why }, function (x) { return API.addDays(x, n, why); }, '+' + n + ' يوم'); }); },
+        uDaysMinus: function () {
+            var u = curU();
+            confirmBox({ title: 'خصم أيام من ' + esc(u.name), text: 'باقي له ' + daysLeftTxt(u) + '. كم يوم تبي تخصم؟', input: 'عدد الأيام', ph: '3', ok: 'خصم', danger: true }).then(function (v) {
+                if (v === true || v == null) return; var n = Math.round(Number(v)); if (!(n > 0)) return toast('اكتب عدد أيام صحيح', true);
+                uop('addDays', { n: -n }, function (x) { return API.addDays(x, -n); }, 'انخصم ' + n + ' يوم');
+            });
+        },
+        uSetEnd: function () { var v = $('#u-end').value; if (!v) return; var p = v.split('-'), ts = new Date(+p[0], +p[1] - 1, +p[2], 23, 59).getTime(); uop('setEnd', { ts: ts }, function (u) { API.setEnd(u, ts); }, 'ينتهي ' + fdate(ts)); },
+        uRenew: function () { var pl = $('#u-plan').value, amt = Number($('#u-amt').value) || 0, m = amt ? 'يدوي' : 'هدية من الأدمن'; uop('renew', { plan: pl, amount: amt, method: m }, function (u) { API.renew(u, pl, amt, m); }, 'تجدّد: ' + planName(pl)); },
+        uCancel: function () { var u = curU(); confirmBox({ title: 'إنهاء اشتراك ' + esc(u.name) + '؟', text: 'الأدوات المدفوعة بتوقف عنده فوراً، وباقي الأيام (' + daysLeftTxt(u) + ') بتروح.', ok: 'إنهاء الاشتراك', danger: true }).then(function (ok) { if (ok) uop('cancel', {}, function (x) { API.cancel(x); }, 'انتهى الاشتراك'); }); },
         uStatus: function (b) {
             var u = curU(), st = b.getAttribute('data-v'); if (u.status === st) return;
-            if (st === 'active') { API.setStatus(u, st); refresh(); toast('الحساب نشط'); return; }
+            if (st === 'active') { uop('setStatus', { status: st }, function (x) { API.setStatus(x, st); }, 'الحساب نشط'); return; }
             confirmBox({ title: (st === 'banned' ? 'حظر ' : 'إيقاف ') + esc(u.name) + '؟', text: st === 'banned' ? 'ما يقدر يدخل فيرو أبداً، وشاشاته تطفى بالبث.' : 'ما يقدر يدخل فيرو لين ترجّعه، وشاشاته تطفى بالبث.', input: 'السبب (يطلع بالسجل)', ok: st === 'banned' ? 'حظر' : 'إيقاف', danger: true })
-                .then(function (v) { if (!v) return; API.setStatus(u, st, v === true ? '' : v); if (st !== 'active') { u.online = false; } refresh(); toast(st === 'banned' ? 'انحظر' : 'انوقف'); });
+                .then(function (v) { if (!v) return; var why = v === true ? '' : v; uop('setStatus', { status: st, why: why }, function (x) { API.setStatus(x, st, why); x.online = false; }, st === 'banned' ? 'انحظر' : 'انوقف'); });
         },
-        uLogout: function () { var u = curU(); API.logoutAll(u); refresh(); toast('انسجّل خروجه من كل الأجهزة'); },
-        uUnlink: function () { var u = curU(); confirmBox({ title: 'فك توثيق تيك توك؟', text: '@' + esc(u.tiktok) + ' بيحتاج يوثّق من جديد عشان الاتصال بالبث.', ok: 'فك التوثيق', danger: true }).then(function (ok) { if (!ok) return; API.unlinkTiktok(u); refresh(); }); },
-        uLimits: function () { var u = curU(), s = $('#u-lim-s').value, m = $('#u-lim-m').value; API.setLimits(u, { screens: s === '' ? null : Number(s), storageMb: m === '' ? null : Number(m) }); refresh(); toast('انحفظت الحدود'); },
-        uWipe: function () { var u = curU(); confirmBox({ title: 'حذف بيانات فيرو لـ' + esc(u.name) + '؟', text: 'بتنحذف ' + u.usage.screens + ' شاشة و' + u.usage.videos + ' فيديو. ما تقدر ترجعها. اكتب <b>حذف</b> للتأكيد.', input: 'اكتب: حذف', ok: 'حذف نهائي', danger: true }).then(function (v) { if (v !== 'حذف') { if (v) toast('ما انحذف شي: لازم تكتب «حذف»', true); return; } API.wipe(u); refresh(); toast('انحذفت بيانات فيرو'); }); },
+        uLogout: function () { uop('logoutAll', {}, function (u) { API.logoutAll(u); }, 'انسجّل خروجه من كل الأجهزة'); },
+        uUnlink: function () { var u = curU(); confirmBox({ title: 'فك توثيق تيك توك؟', text: '@' + esc(u.tiktok) + ' بيحتاج يوثّق من جديد عشان الاتصال بالبث.', ok: 'فك التوثيق', danger: true }).then(function (ok) { if (ok) { API.unlinkTiktok(u); refresh(); } }); },
+        uLimits: function () { var s = $('#u-lim-s').value, m = $('#u-lim-m').value; uop('setLimits', { screens: s, videos: m }, function (u) { API.setLimits(u, { screens: s === '' ? null : Number(s), videos: m === '' ? null : Number(m) }); }, 'انحفظت الحدود'); },
+        uWipe: function () {
+            var u = curU();
+            confirmBox({ title: 'حذف بيانات فيرو لـ' + esc(u.name) + '؟', text: 'بتنحذف ' + u.usage.screens + ' شاشة و' + u.usage.videos + ' فيديو. ما تقدر ترجعها. اكتب <b>حذف</b> للتأكيد.', input: 'اكتب: حذف', ok: 'حذف نهائي', danger: true }).then(function (v) {
+                if (v !== 'حذف') { if (v) toast('ما انحذف شي: لازم تكتب «حذف»', true); return; }
+                uop('wipe', {}, function (x) { API.wipe(x); }, 'انحذفت بيانات فيرو');
+            });
+        },
         // الأكواد
         cdF: function (b) { CD.f = b.getAttribute('data-v'); $$('[data-a=cdF]').forEach(function (x) { x.classList.toggle('on', x === b); }); part('cd-table', codeTable()); },
         genCodes: function () {
@@ -1589,26 +1733,18 @@
             var days = Math.round(Number($('#cg-days').value) || 0), exp = $('#cg-exp').value, fu = $('#cg-user-v').value;
             if ((type === 'days' || type === 'extra') && !(days > 0)) return toast('اكتب عدد أيام صحيح', true);
             var ex = null; if (exp) { var p = exp.split('-'); ex = new Date(+p[0], +p[1] - 1, +p[2], 23, 59).getTime(); if (ex < now()) return toast('تاريخ الانتهاء لازم يكون بعد اليوم', true); }
-            var out = API.genCodes({ type: type, count: count, maxUses: uses, days: days, plan: type === 'plan' ? $('#cg-plan').value : null, expires: ex, prefix: $('#cg-prefix').value.trim(), campaign: $('#cg-camp').value.trim(), forUser: fu ? Number(fu) : null });
-            save(); go('codes');
-            var all = out.map(function (c) { return c.code; }).join('\n');
-            openModal({
-                title: 'انشأت ' + out.length + ' كود', wide: out.length > 12,
-                body: '<p>' + codeTypeName(type) + ' — ' + codeValue(out[0]) + (uses > 1 ? ' · ' + uses + ' استخدام لكل كود' : '') + (ex ? ' · ينتهي ' + fdate(ex) : '') + '</p><div class="codes-gen code-out">' + out.map(function (c) { return '<span>' + c.code + '</span>'; }).join('') + '</div>',
-                foot: '<button type="button" class="ob-btn primary" id="gc-copy">' + ic('copy') + 'نسخ الكل</button>',
-                onMount: function (el) { el.querySelector('#gc-copy').addEventListener('click', function () { copy(all, 'انتسخت ' + out.length + ' كود'); }); }
-            });
+            var o = { type: type, count: count, maxUses: uses, days: days, plan: type === 'plan' ? $('#cg-plan').value : null, expires: ex, prefix: $('#cg-prefix').value.trim(), campaign: $('#cg-camp').value.trim(), forUser: fu ? Number(fu) : null };
+            doOp('genCodes', o, function () { return { codes: API.genCodes(o) }; }).then(function (r) { if (r && r.codes) showCodes(r.codes, type, uses, ex); });
         },
         redeem: function () {
-            var code = $('#rd-code').value, uidv = $('#rd-user-v').value, msg = $('#rd-msg');
-            if (!code.trim()) return toast('اكتب الكود', true); if (!uidv) return toast('اختر ستريمر', true);
-            var u = user(uidv), err = API.redeem(code, u);
-            if (err) { msg.innerHTML = '<span class="tag bad">' + esc(err) + '</span>'; return; }
-            logA('طبّق كود', code.trim().toUpperCase() + ' ← ' + uTag(u), u); save();
-            go('codes'); toast('انطبق الكود على ' + u.name + ' — ' + (u.sub ? planName(u.sub.plan) + ' · ' + daysLeftTxt(u) : ''));
+            var code = $('#rd-code').value.trim(), uidv = $('#rd-user-v').value;
+            if (!code) return toast('اكتب الكود', true); if (!uidv) return toast('اختر ستريمر', true);
+            var u = user(uidv);
+            doOp('redeem', { code: code, uid: u.id }, function () { var err = API.redeem(code, u); if (err) return err; logA('طبّق كود', code.toUpperCase() + ' ← ' + uTag(u), u); },
+                function () { var x = user(uidv); return 'انطبق الكود على ' + x.name + ' — ' + (x.sub ? planName(x.sub.plan) + ' · ' + daysLeftTxt(x) : ''); });
         },
-        codeToggle: function (b) { var c = S.codes.filter(function (x) { return x.code === b.getAttribute('data-v'); })[0]; c.disabled = !c.disabled; logA(c.disabled ? 'عطّل كود' : 'فعّل كود', c.code); save(); go('codes'); },
-        codeDel: function (b) { var cs = b.getAttribute('data-v'); confirmBox({ title: 'حذف الكود؟', text: '<span class="code-out">' + esc(cs) + '</span> ما انستخدم، بينحذف نهائياً.', ok: 'حذف', danger: true }).then(function (ok) { if (!ok) return; S.codes = S.codes.filter(function (x) { return x.code !== cs; }); logA('حذف كود', cs); save(); go('codes'); }); },
+        codeToggle: function (b) { var cs = b.getAttribute('data-v'), c = S.codes.filter(function (x) { return x.code === cs; })[0]; doOp('codeToggle', { code: cs }, function () { c.disabled = !c.disabled; logA(c.disabled ? 'عطّل كود' : 'فعّل كود', c.code); }, c.disabled ? 'انفعّل الكود' : 'انعطّل الكود'); },
+        codeDel: function (b) { var cs = b.getAttribute('data-v'); confirmBox({ title: 'حذف الكود؟', text: '<span class="code-out">' + esc(cs) + '</span> ما انستخدم، بينحذف نهائياً.', ok: 'حذف', danger: true }).then(function (ok) { if (ok) doOp('codeDel', { code: cs }, function () { S.codes = S.codes.filter(function (x) { return x.code !== cs; }); logA('حذف كود', cs); }, 'انحذف الكود'); }); },
         codeUses: function (b) {
             var c = S.codes.filter(function (x) { return x.code === b.getAttribute('data-v'); })[0];
             openModal({ title: 'مين استخدم ' + esc(c.code), body: '<div class="list">' + c.uses.slice().reverse().map(function (x) { var u = user(x.uid); return u ? '<div class="li click" data-user="' + u.id + '">' + avatar(u) + '<div class="m"><b>' + esc(u.name) + '</b><small class="ltr">@' + esc(u.tiktok) + '</small></div><span class="v mut2">' + fdt(x.at) + '</span></div>' : ''; }).join('') + '</div>' });
@@ -1623,31 +1759,50 @@
         stsDays: function (b) { STS.days = Number(b.getAttribute('data-v')); go('stats'); },
         adminAdd: function () {
             openModal({
-                title: 'إضافة مشرف', body: userPicker('ad-user') + '<div class="field"><label for="ad-role">الصلاحية</label><select id="ad-role" class="ob-input"><option>دعم (قراءة + أيام إضافية)</option><option>محتوى (المكتبة بس)</option><option>مدير (كل شي)</option></select></div>',
+                title: 'إضافة مشرف', body: userPicker('ad-user') + '<div class="field"><label for="ad-role">الصلاحية</label><select id="ad-role" class="ob-input"><option value="support">' + ROLE_NAMES.support + '</option><option value="content">' + ROLE_NAMES.content + '</option><option value="manager">' + ROLE_NAMES.manager + '</option></select></div>',
                 foot: '<button type="button" class="ob-btn primary" id="ad-ok">إضافة</button>',
                 onMount: function (el, mm) {
                     bindPicker(el, 'ad-user');
-                    el.querySelector('#ad-ok').addEventListener('click', function () { var id = el.querySelector('#ad-user-v').value; if (!id) return toast('اختر حساب', true); var u = user(id); S.cfg.admins.push({ id: u.id, name: u.name, role: el.querySelector('#ad-role').value }); logA('أضاف مشرف', u.name); mm.close(); refresh(); });
+                    el.querySelector('#ad-ok').addEventListener('click', function () {
+                        var id = el.querySelector('#ad-user-v').value; if (!id) return toast('اختر حساب', true);
+                        var u = user(id), role = el.querySelector('#ad-role').value; mm.close();
+                        doOp('adminAdd', { uid: u.id, role: role }, function () { S.cfg.admins = S.cfg.admins.filter(function (a) { return a.id !== u.id; }); S.cfg.admins.push({ id: u.id, name: u.name, role: role }); logA('أضاف مشرف', u.name); }, 'انضاف ' + u.name);
+                    });
                 }
             });
         },
-        adminDel: function (b) { var i = Number(b.getAttribute('data-i')), a = S.cfg.admins[i]; confirmBox({ title: 'إزالة ' + esc(a.name) + '؟', text: 'بيفقد الوصول للوحة تحكم فيرو.', ok: 'إزالة', danger: true }).then(function (ok) { if (!ok) return; S.cfg.admins.splice(i, 1); logA('أزال مشرف', a.name); refresh(); }); },
-        resetDemo: function () { confirmBox({ title: 'إرجاع البيانات التجريبية؟', text: 'كل تعديلاتك بالمعاينة بتروح وترجع البيانات من البداية.', ok: 'إرجاع', danger: true }).then(function (ok) { if (!ok) return; S = seed(); ST.sel = {}; SB.sel = {}; save(); closeDrawer(); go(cur); toast('رجعت البيانات من البداية'); }); }
+        adminDel: function (b) {
+            var id = Number(b.getAttribute('data-id')), a = S.cfg.admins.filter(function (x) { return Number(x.id) === id; })[0]; if (!a) return;
+            confirmBox({ title: 'إزالة ' + esc(a.name) + '؟', text: 'بيفقد الوصول للوحة تحكم فيرو.', ok: 'إزالة', danger: true }).then(function (ok) {
+                if (ok) doOp('adminDel', { uid: id }, function () { S.cfg.admins = S.cfg.admins.filter(function (x) { return Number(x.id) !== id; }); logA('أزال مشرف', a.name); }, 'انشال');
+            });
+        },
+        resetDemo: function () { if (REAL) return; confirmBox({ title: 'إرجاع البيانات التجريبية؟', text: 'كل تعديلاتك بالمعاينة بتروح وترجع البيانات من البداية.', ok: 'إرجاع', danger: true }).then(function (ok) { if (!ok) return; S = seed(); ST.sel = {}; SB.sel = {}; save(); closeDrawer(); go(cur); toast('رجعت البيانات من البداية'); }); }
     };
+    function cfgToggle(key, el, on, off) {
+        var v = el.checked, val = key === 'announce' ? { on: v, text: S.cfg.announce.text } : v;
+        doOp('cfgSet', { key: key, value: val }, function () { if (key === 'announce') S.cfg.announce.on = v; else S.cfg[key] = v; logA(v ? on : off, '—'); }, v ? on : off)
+            .then(function (r) { if (r === false) el.checked = !v; });
+    }
     var CHG = {
         selOne: function (el) { var id = el.getAttribute('data-id'); if (el.checked) ST.sel[id] = 1; else delete ST.sel[id]; part('st-table', stTable()); },
         selPage: function (el) { var list = stList().slice(ST.page * PER, ST.page * PER + PER); list.forEach(function (u) { if (el.checked) ST.sel[u.id] = 1; else delete ST.sel[u.id]; }); part('st-table', stTable()); },
         sbOne: function (el) { var id = el.getAttribute('data-id'); if (el.checked) SB.sel[id] = 1; else delete SB.sel[id]; part('sb-table', sbTable()); },
         sbAll: function (el) { sbList().forEach(function (u) { if (el.checked) SB.sel[u.id] = 1; else delete SB.sel[u.id]; }); part('sb-table', sbTable()); },
-        uLifetime: function (el) { var u = curU(); API.setLifetime(u, el.checked); refresh(); toast(el.checked ? 'صار اشتراكه مفتوح' : 'صار شهري ينتهي ' + fdate(u.sub.end)); },
+        uLifetime: function (el) { var on = el.checked; uop('setLifetime', { on: on }, function (u) { API.setLifetime(u, on); }, on ? 'صار اشتراكه مفتوح' : 'صار شهري لمدة 30 يوم').then(function (r) { if (r === false) el.checked = !on; }); },
         uFreeze: function (el) {
             var u = curU();
-            if (el.checked) { confirmBox({ title: 'تجميد اشتراك ' + esc(u.name), text: 'الأيام الباقية (' + daysLeftTxt(u) + ') تنحفظ، والأدوات المدفوعة توقف لين تفك التجميد.', input: 'السبب (اختياري)', ph: 'سفر', ok: 'تجميد' }).then(function (v) { if (!v) { el.checked = false; return; } API.freeze(u, v === true ? '' : v); refresh(); toast('انجمّد'); }); }
-            else { API.unfreeze(u); refresh(); toast('انفك التجميد'); }
+            if (el.checked) {
+                confirmBox({ title: 'تجميد اشتراك ' + esc(u.name), text: 'الأيام الباقية (' + daysLeftTxt(u) + ') تنحفظ، والأدوات المدفوعة توقف لين تفك التجميد.', input: 'السبب (اختياري)', ph: 'سفر', ok: 'تجميد' }).then(function (v) {
+                    if (!v) { el.checked = false; return; } var why = v === true ? '' : v;
+                    uop('freeze', { why: why }, function (x) { API.freeze(x, why); }, 'انجمّد');
+                });
+            } else uop('unfreeze', {}, function (x) { API.unfreeze(x); }, 'انفك التجميد');
         },
-        uTester: function (el) { API.setTester(curU(), el.checked); refresh(); },
-        cfgPreview: function (el) { S.cfg.previewAdminOnly = el.checked; logA(el.checked ? 'قفل فيرو للأدمن والتجربة' : 'فتح فيرو للكل', '—'); save(); toast(el.checked ? 'فيرو للأدمن والتجربة بس' : 'فيرو مفتوح للكل'); },
-        cfgAnn: function (el) { S.cfg.announce.on = el.checked; logA(el.checked ? 'أظهر الإعلان' : 'أخفى الإعلان', '—'); save(); toast(el.checked ? 'الإعلان ظاهر' : 'الإعلان مخفي'); }
+        uTester: function (el) { var on = el.checked; uop('setTester', { on: on }, function (u) { API.setTester(u, on); }, on ? 'انعطت صلاحية التجربة' : 'انسحبت صلاحية التجربة'); },
+        cfgPreview: function (el) { cfgToggle('previewAdminOnly', el, 'قفل فيرو للأدمن والتجربة', 'فتح فيرو للكل'); },
+        cfgReq: function (el) { cfgToggle('requireSub', el, 'شغّل الاشتراك الإلزامي', 'طفّى الاشتراك الإلزامي'); },
+        cfgAnn: function (el) { cfgToggle('announce', el, 'أظهر الإعلان', 'أخفى الإعلان'); }
     };
     document.addEventListener('click', function (e) {
         var g = e.target.closest('[data-go]');
@@ -1724,8 +1879,66 @@
     }, { passive: true });
 
     /* تحديث «شغّال الحين» والأوقات كل دقيقة */
-    setInterval(function () { if (!modalStack.length && cur === 'overview') go(cur); }, 60e3);
+    setInterval(function () {
+        if (modalStack.length || document.hidden) return;
+        var ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+        if (REAL) reload(); else if (cur === 'overview') go(cur);
+    }, 60e3);
 
     window.addEventListener('hashchange', function () { var h = location.hash.slice(1); if (h && h !== cur && VIEWS[h]) go(h); });
-    go(location.hash.slice(1) || 'overview');
+    /* =========================================================
+       التشغيل: متصل بسيرفر فيرو (بالموقع وفيه تسجيل دخول) أو بيانات تجريبية
+       ========================================================= */
+    /** يجيب كل البيانات من السيرفر ويعيد الرسم. يرجع Promise<boolean>. */
+    function reload() {
+        return req('GET', '/api/veyro/admin/snapshot').then(function (d) {
+            if (!d.success) { if (d._status === 401 || d._status === 403) gate(d._status === 401 ? 'login' : 'denied'); else toast(errText(d), true); return false; }
+            S = adopt(d); ME = d.me; paintMe();
+            if (!PAGES.some(function (p) { return p.id === cur; })) cur = 'overview';
+            go(cur); if (DR.uid) { if (user(DR.uid)) renderDrawer(); else closeDrawer(); }
+            return true;
+        }).catch(function () { toast('ما قدرت أوصل لسيرفر فيرو', true); return false; });
+    }
+    /** روابط ملفات المكتبة من السيرفر نسبية (/api/...) — نكمّلها بعنوان سيرفر فيرو. */
+    function adopt(d) {
+        (d.assets || []).forEach(function (a) { ['video', 'audio', 'img'].forEach(function (k) { if (a.src && a.src[k] && a.src[k].charAt(0) === '/') a.src[k] = API_BASE + a.src[k]; }); });
+        return d;
+    }
+    function paintMe() {
+        var demo = $('#vy-demo');
+        if (REAL) { demo.innerHTML = '<i style="background:var(--ok);box-shadow:0 0 8px var(--ok)"></i><span>متصل</span>'; demo.style.color = 'var(--ok)'; demo.style.borderColor = 'rgba(116,214,161,.45)'; demo.title = 'متصل بسيرفر فيرو — التعديلات حقيقية'; }
+        if (ME) { var w = $('.vy-me .who'); if (w) w.innerHTML = '<b>' + esc(ME.name) + '</b><small>' + esc(ROLE_NAMES[ME.role] || 'أدمن') + '</small>'; var av = $('.vy-me .av'); if (av) av.textContent = String(ME.name || 'أ').charAt(0); }
+    }
+    /** شاشة بدل اللوحة: تسجيل الدخول، ما عنده صلاحية، أو السيرفر طايح. */
+    function gate(kind) {
+        var T = {
+            login: ['سجّل دخولك', 'افتح فيرو وسجّل دخولك بحساب ألعاب أيمن، وارجع لهالصفحة.', '<a class="ob-btn primary" href="index.html">تسجيل الدخول</a>'],
+            denied: ['ما عندك صلاحية', 'لوحة تحكم فيرو للأدمن والمشرفين بس. لو المفروض عندك صلاحية، تواصل مع مالك المنصة.', '<a class="ob-btn primary" href="index.html">رجوع لفيرو</a>'],
+            error: ['ما قدرت أوصل لسيرفر فيرو', 'تأكد من الاتصال وجرّب مرة ثانية. لو المشكلة مستمرة، شيك على خدمة veyro-api بـRender.', '<button type="button" class="ob-btn primary" id="gate-retry">جرّب مرة ثانية</button>']
+        }[kind];
+        $('#pg-title').textContent = T[0]; $('#pg-sub').textContent = '';
+        $('#vy-nav').innerHTML = '';
+        $('#vy-scroll').innerHTML = '<div class="wrap"><section class="card glass" style="max-width:560px;margin:40px auto;text-align:center;padding:34px"><h2 style="font-family:var(--f-head);margin:0 0 10px">' + T[0] + '</h2><p class="mut" style="line-height:1.9;margin:0 0 20px">' + T[1] + '</p><div class="quick" style="justify-content:center">' + T[2] + '<a class="ob-btn ghost" href="?demo#overview">جرّب المعاينة التجريبية</a></div></section></div>';
+        var r = $('#gate-retry'); if (r) r.addEventListener('click', boot);
+    }
+    function boot() {
+        var qs = new URLSearchParams(location.search), h = location.hostname;
+        var local = h === 'localhost' || h === '127.0.0.1';
+        var site = local || /(^|\.)aymngames\.online$/.test(h);
+        if (qs.has('demo') || !site) { REAL = false; go(location.hash.slice(1) || 'overview'); return; }
+        REAL = true;
+        API_BASE = (qs.get('api') || window.AGP_VEYRO_API || (local ? 'http://localhost:8788' : 'https://veyro-api-7mj3.onrender.com')).replace(/\/+$/, '');
+        try { TOKEN = (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { TOKEN = null; }
+        paintMe();
+        if (!TOKEN) { gate('login'); return; }
+        $('#vy-scroll').innerHTML = '<div class="wrap"><div class="empty-s" style="margin-top:40px">يحمّل بيانات فيرو…</div></div>';
+        cur = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'overview';
+        req('GET', '/api/veyro/admin/snapshot').then(function (d) {
+            if (d._status === 401) return gate('login');
+            if (d._status === 403) return gate('denied');
+            if (!d.success) return gate('error');
+            S = adopt(d); ME = d.me; paintMe(); go(cur);
+        }).catch(function () { gate('error'); });
+    }
+    boot();
 })();

@@ -177,6 +177,7 @@
     var section = 'alerts';
     var view = 'home';         // home | screens | editor
     var me = null;             // الحساب (AGPAuth.getCachedUser)
+    var vyInfo = null;         // من لوحة تحكم فيرو (/api/auth/me → veyro): حالة الحساب، الاشتراك، الإعلان
     var panelOpen = true;
     var selectedId = null;
     var textTab = 'text';
@@ -1902,6 +1903,13 @@
     function loadMedia(force) {
         if (media.loading || (media.loaded && !force)) return;
         media.loading = true;
+        // مكتبة فيرو العامة (أليرتات ينشرها الأدمن من لوحة التحكم) — للاستخدام بس، ما تنحذف ولا تتعدّل
+        api('GET', '/api/veyro/library').then(function (d) {
+            media.global = d.success ? (d.assets || []).filter(function (a) { return a.type === 'alert' && a.src && a.src.video; }).map(function (a) {
+                return { id: a.id, name: a.name, w: a.w || 0, h: a.h || 0, d: a.d || a.dur || 0, size: a.size || 0, key: a.key, global: true };
+            }) : [];
+            if (view === 'editor' && section === 'library' && !selectedId) renderPanel();
+        }).catch(function () { media.global = []; });
         api('GET', '/api/screens/media').then(function (d) {
             if (d.success) {
                 media.list = d.media || [];
@@ -2328,7 +2336,7 @@
         head.appendChild(el('span', null, media.list.length + ' / ' + media.max));
         box.appendChild(head);
         if (!media.loaded) { box.appendChild(el('div', 'ob-hint', media.failed ? 'ما قدرنا نجيب ملفاتك — حدّث الصفحة.' : 'يحمّل…')); return; }
-        if (!media.list.length) { box.appendChild(el('div', 'ob-hint', 'مكتبتك فاضية. ارفع فيديو، فرّغ خلفيته، ويصير جاهز تستخدمه كأليرت بأي شاشة.')); return; }
+        if (!media.list.length) { box.appendChild(el('div', 'ob-hint', 'مكتبتك فاضية. ارفع فيديو، فرّغ خلفيته، ويصير جاهز تستخدمه كأليرت بأي شاشة.')); globalLibrary(box); return; }
         var g = el('div', 'vy-libgrid');
         media.list.forEach(function (m) {
             var c = el('div', 'vy-lcard');
@@ -2351,6 +2359,31 @@
         });
         box.appendChild(g);
         box.appendChild(el('div', 'ob-hint', 'التفريغ ينحفظ مع الفيديو بمكتبتك — وأي أليرت يستخدمه بشاشاتك ياخذه تلقائياً.'));
+        globalLibrary(box);
+    }
+
+    /** «من مكتبة فيرو»: أليرتات جاهزة ينشرها الأدمن لكل المستخدمين (مفرّغة وجاهزة). */
+    function globalLibrary(box) {
+        var list = media.global || [];
+        if (!list.length) return;
+        var head = el('div', 'vy-lib-head');
+        head.appendChild(el('b', null, 'من مكتبة فيرو'));
+        head.appendChild(el('span', null, String(list.length)));
+        box.appendChild(head);
+        var g = el('div', 'vy-libgrid');
+        list.forEach(function (m) {
+            var c = el('div', 'vy-lcard');
+            c.appendChild(libThumb(m));
+            var info = el('div', 'mi');
+            info.appendChild(el('b', 'nm', m.name));
+            info.appendChild(el('small', null, (m.w ? m.w + '×' + m.h + ' · ' : '') + fmtSec(m.d)));
+            c.appendChild(info);
+            var a = el('div', 'acts');
+            a.appendChild(iconBtn('استخدمه كأليرت', 'plus', 'primary', function () { newAlertFrom(m); }));
+            c.appendChild(a);
+            g.appendChild(c);
+        });
+        box.appendChild(g);
     }
 
     /** أليرت جديد من فيديو بالمكتبة (بتفريغه)، ويفتح إعداداته على طول. */
@@ -3717,6 +3750,54 @@
         who.appendChild(el('small', null, me.tiktok_username ? '@' + me.tiktok_username : 'حسابي'));
         u.appendChild(who);
         userEl.appendChild(u);
+        // الاشتراك من لوحة تحكم فيرو + «عندك كود؟»
+        if (vyInfo && vyInfo.sub) {
+            var sb = button('', 'ob-btn ghost vy-subline', redeemPrompt);
+            sb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>';
+            var txt = subText(vyInfo.sub);
+            sb.appendChild(el('span', 'lbl', txt));
+            sb.setAttribute('data-tip', txt);
+            sb.title = 'عندك كود؟ اضغط هنا';
+            sb.style.width = '100%';
+            userEl.appendChild(sb);
+        }
+    }
+    function subText(s) {
+        if (!s || s.state === 'none') return 'بدون اشتراك — عندك كود؟';
+        if (s.state === 'lifetime') return 'اشتراك مفتوح ∞';
+        if (s.state === 'frozen') return (s.planName || 'اشتراك') + ' · مجمّد';
+        if (s.state === 'expired') return 'اشتراكك منتهي — عندك كود؟';
+        var d = Math.ceil((s.msLeft || 0) / 864e5);
+        return (s.planName || 'اشتراك') + ' · باقي ' + d + ' يوم';
+    }
+    /** يطبّق كود اشتراك (POST /api/veyro/me/redeem) ويحدّث الحالة. */
+    function redeemCode(code) {
+        return api('POST', '/api/veyro/me/redeem', { code: code }).then(function (d) {
+            if (!d.success) { toast(d.message || 'ما انطبق الكود'); return false; }
+            vyInfo = Object.assign({}, vyInfo || {}, { sub: d.sub });
+            toast('انطبق الكود ✓ ' + subText(d.sub));
+            renderUser();
+            return true;
+        }).catch(function () { toast('ما وصل الطلب — تأكد من الاتصال'); return false; });
+    }
+    function redeemPrompt() {
+        var c = window.prompt('اكتب كود الاشتراك');
+        if (c && c.trim()) redeemCode(c.trim());
+    }
+    /** إعلان الأدمن (من لوحة تحكم فيرو) فوق الصفحة. */
+    function paintAnnounce() {
+        var old = document.getElementById('vy-ann');
+        if (old) old.remove();
+        var t = vyInfo && vyInfo.announce;
+        if (!t) return;
+        var b = el('div', 'vy-ann');
+        b.id = 'vy-ann';
+        b.appendChild(el('span', null, t));
+        var x = button('×', 'x', function () { b.remove(); });
+        x.setAttribute('aria-label', 'إخفاء الإعلان');
+        b.appendChild(x);
+        var main = document.querySelector('.vy-main');
+        if (main) main.insertBefore(b, main.firstChild);
     }
     function initial() { var n = me && (me.display_name || me.username) || 'V'; return String(n).trim().charAt(0).toUpperCase(); }
 
@@ -3787,6 +3868,32 @@
             var c = el('a', 'ob-btn primary lg', 'شاشات البث الحالية');
             c.href = '../overlay/index.html';
             f.appendChild(c);
+        } else if (kind === 'blocked') {
+            var banned = vyInfo && vyInfo.status === 'banned';
+            f.appendChild(el('h2', null, banned ? 'حسابك محظور من فيرو' : 'حسابك موقوف مؤقتاً'));
+            f.appendChild(el('p', null, (vyInfo && vyInfo.statusReason ? 'السبب: ' + vyInfo.statusReason + '. ' : '') + 'شاشاتك بالبث متوقفة. لو تشوف إن فيه خطأ، تواصل مع الإدارة.'));
+            var bb = el('a', 'ob-btn primary lg', 'رجوع لحسابي');
+            bb.href = '../profile.html';
+            f.appendChild(bb);
+        } else if (kind === 'subscribe') {
+            f.appendChild(el('h2', null, 'فعّل اشتراكك'));
+            f.appendChild(el('p', null, (vyInfo && vyInfo.sub && vyInfo.sub.state === 'expired' ? 'اشتراكك بفيرو انتهى. ' : 'أدوات فيرو للمشتركين. ') + 'عندك كود اشتراك؟ اكتبه هنا ويتفعّل على طول.'));
+            var cf = el('form', 'ob-glogin');
+            var ci = el('input', 'ob-input ltr');
+            ci.placeholder = 'VEYRO-XXXX-XXXX'; ci.autocomplete = 'off'; ci.spellcheck = false;
+            ci.setAttribute('aria-label', 'كود الاشتراك');
+            cf.appendChild(ci);
+            var cb = el('button', 'ob-btn primary lg', 'تفعيل الكود');
+            cb.type = 'submit';
+            cf.appendChild(cb);
+            cf.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (!ci.value.trim()) return;
+                cb.disabled = true;
+                redeemCode(ci.value.trim()).then(function (ok) { cb.disabled = false; if (ok && vyInfo.sub && vyInfo.sub.active) { gate.hidden = true; loadScreens(); } });
+            });
+            f.appendChild(cf);
+            f.appendChild(el('p', null, 'تبي تشترك؟ تواصل مع الإدارة.'));
         } else if (kind === 'streamer') {
             f.appendChild(el('h2', null, 'لحسابات الستريمر'));
             f.appendChild(el('p', null, 'أدوات Veyro لحسابات الستريمر بس. لو تبث على تيك توك، تواصل مع الإدارة لتحويل حسابك.'));
@@ -3952,13 +4059,19 @@
     function start() {
         renderUser();
         if (!token()) { renderHome(); showGate('login'); return; }
-        var gateCheck = PREVIEW_ADMIN_ONLY ? api('GET', '/api/auth/me') : Promise.resolve(null);
-        gateCheck.then(function (m) {
-            if (!m) return loadScreens();
+        api('GET', '/api/auth/me').then(function (m) {
             if (m._status === 401) { renderHome(); showGate('login'); return; }
-            // الأدمن، أو حساب عنده صلاحية «تجربة Veyro» (veyro_tester من لوحة الأدمن)
-            var okUser = m.success && m.user && (m.user.role === 'admin' || (m.user.permissions && m.user.permissions.veyro_tester));
-            if (!okUser) { renderHome(); showGate(m.success ? 'preview' : 'error'); return; }
+            if (!m.success || !m.user) { renderHome(); showGate('error'); return; }
+            // لوحة تحكم فيرو (veyro/admin.html): حالة الحساب، «للأدمن بس»، الاشتراك الإلزامي، والإعلان
+            vyInfo = m.veyro || null;
+            renderUser();
+            paintAnnounce();
+            if (vyInfo && vyInfo.status && vyInfo.status !== 'active') { renderHome(); showGate('blocked'); return; }
+            // الأدمن، أو حساب عنده صلاحية «تجربة Veyro» (من لوحة الأدمن أو لوحة فيرو)
+            var special = m.user.role === 'admin' || Boolean(m.user.permissions && m.user.permissions.veyro_tester) || Boolean(vyInfo && vyInfo.isAdmin);
+            var previewOnly = vyInfo ? vyInfo.previewAdminOnly : PREVIEW_ADMIN_ONLY;
+            if (previewOnly && !special) { renderHome(); showGate('preview'); return; }
+            if (vyInfo && vyInfo.requireSub && !special && !(vyInfo.sub && vyInfo.sub.active)) { renderHome(); showGate('subscribe'); return; }
             loadScreens();
         }).catch(function () { renderHome(); showGate('error'); });
     }
@@ -3966,6 +4079,8 @@
     function loadScreens() {
         api('GET', '/api/screens').then(function (d) {
             if (d._status === 401) { renderHome(); showGate('login'); return; }
+            if (d._status === 402) { renderHome(); showGate('subscribe'); return; }
+            if (d._status === 403 && /^veyro_/.test(d.error || '')) { vyInfo = Object.assign({}, vyInfo || {}, { status: d.error.slice(6) }); renderHome(); showGate('blocked'); return; }
             if (d._status === 403) { renderHome(); showGate('streamer'); return; }
             if (!d.success) { renderHome(); showGate('error'); return; }
             screens = d.screens || [];

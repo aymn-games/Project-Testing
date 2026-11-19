@@ -247,6 +247,9 @@
 
   /* الأفاتار */
   .av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; border: 1px solid var(--line-2); background: linear-gradient(160deg, var(--lav-m), var(--lav-d)); position: relative; }
+  .av img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .av { overflow: visible; }
+  body.busy, body.busy * { cursor: progress !important; }
   .av.lg { width: 64px; height: 64px; font-size: 24px; border-radius: 20px 6px 20px 6px; }
   .av .on { position: absolute; bottom: -1px; left: -1px; width: 11px; height: 11px; border-radius: 50%; background: var(--ok); border: 2px solid #17141e; box-shadow: 0 0 8px var(--ok); }
 
