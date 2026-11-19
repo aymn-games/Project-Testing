@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '5'; // 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '6'; // 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2237,6 +2237,25 @@
         return out;
     }
     function keyOf(it) { return Object.assign({}, KEY_DEFAULT, (it && it.key) || {}); }
+    /** خلفية أليرت الفيديو (Veyro): {on, c: لون hex، a: الشفافية 0..1، r: الحواف em} → null لو مطفية. */
+    function vbgOf(it) {
+        var b = it && it.vbg;
+        if (!b || !b.on) return null;
+        var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(b.c || '#000000')) || [0, '00', '00', '00'];
+        var a = clamp(b.a == null ? 0.6 : Number(b.a), 0, 1);
+        return { rgba: 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')', r: clamp(Number(b.r) || 0, 0, 9) };
+    }
+    /** ألوان أليرت الفيديو (Veyro): {hue: -180..180، sat: 0..3، bri: 0.2..2} → فلتر CSS أو ''. */
+    function vfxFilter(it) {
+        var f = it && it.vfx;
+        if (!f) return '';
+        var hue = clamp(Number(f.hue) || 0, -180, 180), sat = f.sat == null ? 1 : clamp(Number(f.sat), 0, 3), bri = f.bri == null ? 1 : clamp(Number(f.bri), 0.2, 2);
+        var out = [];
+        if (hue) out.push('hue-rotate(' + hue + 'deg)');
+        if (sat !== 1) out.push('saturate(' + sat + ')');
+        if (bri !== 1) out.push('brightness(' + bri + ')');
+        return out.join(' ');
+    }
     function isVideoAlert(it) { return Boolean(it && it.type === 'alert' && it.video && it.video.id); }
     function videoFileUrl(id) { return id ? veyroBase() + '/api/screens/media/file?id=' + encodeURIComponent(id) : null; }
     function hexRgb(hex) {
@@ -2546,6 +2565,13 @@
         var box = el('div', 'agp-so-vbox');
         box.style.width = (18 * Math.min(1, vw / vh)).toFixed(3) + 'em';
         box.style.height = (18 * Math.min(1, vh / vw)).toFixed(3) + 'em';
+        // خلفية خلف الأليرت (it.vbg = {on, c, a, r}): لون وشفافية وحواف — للأليرتات المفرّغة
+        var vbg = vbgOf(it);
+        if (vbg) {
+            var bgl = el('div', 'agp-so-vbg');
+            bgl.style.cssText = 'background:' + vbg.rgba + ';border-radius:' + vbg.r + 'em';
+            box.appendChild(bgl);
+        }
         var v = makeVideo(it);
         box.appendChild(v);
         var key = keyOf(it);
@@ -2555,6 +2581,9 @@
             box.appendChild(k.canvas);
             k.onfail = function () { box.classList.remove('keyed'); if (k.canvas.parentNode) k.canvas.remove(); };
         }
+        // ألوان الفيديو (it.vfx = {hue, sat, bri}): درجة اللون والتشبع والسطوع
+        var fx = vfxFilter(it);
+        if (fx) { v.style.filter = fx; if (k) k.canvas.style.filter = fx; }
         // شفافية الفيديو كله لو التفريغ مطفي (لو شغّال تنطبق داخل التفريغ)
         if (!k && key.opacity != null && Number(key.opacity) < 1) v.style.opacity = String(clamp(Number(key.opacity), 0.05, 1));
         var parts = partsOf(it);
@@ -4086,6 +4115,7 @@
         '.agp-so-vslot span{font-size:.7em;font-weight:700;color:rgba(255,255,255,.55);text-shadow:0 .05em .2em rgba(0,0,0,.8)}',
         '.agp-so-vbox video,.agp-so-vbox canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-vbox.keyed video{opacity:0}',
+        '.agp-so-vbg{position:absolute;inset:0;pointer-events:none}',
         '.agp-so-vbox.in{animation:agp-so-a-fade .35s ease both}',
         '.agp-so-vtxt{position:absolute;left:0;right:0;padding:0 .4em;text-align:center;direction:rtl;color:var(--agp-so-c,#fff);font-weight:800;font-size:1em;line-height:1.35;text-shadow:0 .06em .2em rgba(0,0,0,.9),0 0 .6em rgba(0,0,0,.55)}',
         '.agp-so-vtxt.top{top:4%}',
@@ -4399,7 +4429,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

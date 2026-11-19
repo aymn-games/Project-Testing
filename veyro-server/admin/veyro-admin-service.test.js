@@ -234,3 +234,13 @@ test('store: plan discount for games subscribers and idempotent store grants', f
     assert.equal(x.db.prepare('SELECT COUNT(*) AS n FROM veyro_payments WHERE user_id = 7').get().n, 1);
     assert.equal(x.s.storeGrant('store:2:5', 7, 'nope', 30, 2).error, 'bad_plan');
 });
+
+test('library: alert look (background, video colors, part colors) is cleaned and returned', function () {
+    var x = setup();
+    var a = x.s.saveAsset({ type: 'alert', name: 'أليرت', look: { vbg: { on: true, c: '#000000', a: 5, r: 99 }, vfx: { hue: 400, sat: 1.5, bri: 9 }, parts: { name: { on: true, c: '#ff0000' }, msg: { on: false, c: 'red' }, evil: { c: '#000000' } } } }, false, ADMIN).asset;
+    assert.deepEqual(a.look.vbg, { on: true, c: '#000000', a: 1, r: 9 });
+    assert.deepEqual(a.look.vfx, { hue: 180, sat: 1.5, bri: 2 });
+    assert.deepEqual(a.look.parts, { name: { on: true, c: '#ff0000' }, msg: { on: false } });
+    var icon = x.s.saveAsset({ type: 'icon', name: 'ا', look: { vbg: { on: true } } }, false, ADMIN).asset;
+    assert.equal(icon.look, null);
+});
