@@ -354,6 +354,9 @@
   @keyframes fade { from { opacity: 0; } }
   .modal { width: min(520px, 100%); max-height: calc(100% - 24px); display: flex; flex-direction: column; border-radius: 22px 6px 22px 6px; overflow: hidden; background: linear-gradient(155deg, rgba(169,155,184,.12), rgba(66,57,79,.1) 60%), rgba(22,19,28,.99); border: 1px solid var(--line-2); box-shadow: 0 40px 90px -30px #000; animation: pop .3s var(--ease); }
   .modal.wide { width: min(980px, 100%); }
+  /* محرر الأصل: عريض وبطول الشاشة، والمعاينة ثابتة فوق وانت تنزل بالخيارات */
+  .modal.xwide { width: min(1560px, 100%); height: calc(100% - 24px); }
+  .modal.xwide .modal-b { flex: 1; min-height: 0; }
   @keyframes pop { from { transform: translateY(10px) scale(.98); opacity: 0; } }
   .modal-h { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
   .modal-h h3 { margin: 0; flex: 1; font-family: var(--f-head); font-size: 16px; }
@@ -389,7 +392,8 @@
   .drop b { display: block; color: var(--text); font-size: 14.5px; margin-bottom: 4px; }
 
   /* محرّر الأصل */
-  .ed { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 16px; }
+  .ed { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr); gap: 18px; align-items: stretch; }
+  .ed-pv { position: sticky; top: -16px; z-index: 6; margin: -16px -2px 0; padding: 16px 2px 10px; background: rgb(24,21,31); box-shadow: 0 14px 18px -16px rgba(0,0,0,.9); }
   .ed-stage { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; min-height: 300px; aspect-ratio: 16 / 10; }
   .ed-stage.bg-chk { background-color: #1d1a24; background-image: linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.06) 75%), linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.06) 75%); background-size: 20px 20px; background-position: 0 0, 10px 10px; }
   .ed-stage.stream { background: linear-gradient(135deg, #2b3a55, #563a5c 50%, #1e2c3a); }

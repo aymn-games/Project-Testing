@@ -483,7 +483,7 @@
     var modalStack = [];
     function openModal(o) {
         var bg = document.createElement('div'); bg.className = 'modal-bg';
-        bg.innerHTML = '<div class="modal' + (o.wide ? ' wide' : '') + '" role="dialog" aria-modal="true"><div class="modal-h"><h3>' + o.title + '</h3><button type="button" class="ob-btn ghost icon sm" data-x aria-label="إغلاق">' + ic('x') + '</button></div><div class="modal-b">' + (o.body || '') + '</div>' + (o.foot ? '<div class="modal-f">' + o.foot + '</div>' : '') + '</div>';
+        bg.innerHTML = '<div class="modal' + (o.wide ? ' wide' : '') + (o.xwide ? ' xwide' : '') + '" role="dialog" aria-modal="true"><div class="modal-h"><h3>' + o.title + '</h3><button type="button" class="ob-btn ghost icon sm" data-x aria-label="إغلاق">' + ic('x') + '</button></div><div class="modal-b">' + (o.body || '') + '</div>' + (o.foot ? '<div class="modal-f">' + o.foot + '</div>' : '') + '</div>';
         $('#modal-root').appendChild(bg);
         var m = { el: bg, close: function () { if (o.onClose) o.onClose(); bg.remove(); modalStack = modalStack.filter(function (x) { return x !== m; }); } };
         modalStack.push(m);
@@ -1316,8 +1316,9 @@
                 (a.type === 'alert' ? '<div class="ed-play"><button type="button" class="ob-btn icon sm" id="ed-pp" aria-label="تشغيل/إيقاف">' + ic('pause') + '</button><button type="button" class="ob-btn icon sm" id="ed-snd" aria-label="الصوت" title="شغّل صوت الأليرت">' + ic('sound') + '</button><input type="range" class="ob-range" id="ed-seek" min="0" max="1000" value="0" aria-label="الوقت"><span class="rv num" id="ed-time">0.0</span></div>' : '');
 
         var m = openModal({
-            title: (isNew ? 'أصل جديد: ' : 'تعديل: ') + esc(a.name), wide: true, noFocus: true,
-            body: '<div class="ed"><div>' + stage + '<div class="rows" style="margin-top:12px">' +
+            title: (isNew ? 'أصل جديد: ' : 'تعديل: ') + esc(a.name), wide: true, xwide: true, noFocus: true,
+            // المعاينة ثابتة فوق (sticky) وانت تنزل بالخيارات
+            body: '<div class="ed"><div class="ed-main"><div class="ed-pv">' + stage + '</div><div class="rows" style="margin-top:12px">' +
                 keyRow('الاسم', '<input id="ed-name" class="ob-input" value="' + esc(a.name) + '" style="width:200px">') +
                 keyRow('التصنيف', '<input id="ed-cat" class="ob-input" value="' + esc(a.cat) + '" placeholder="هدايا، متابعة…" style="width:200px">') +
                 '<div class="ob-row col"><div class="lb"><b>متاح لـ</b><small>مين يشوفه بمكتبته</small></div><div class="ob-pills" id="ed-access">' + Object.keys(ACCESS).map(function (k) { return '<button type="button" class="ob-pill' + (a.access === k ? ' on' : '') + '" data-v="' + k + '">' + ACCESS[k] + '</button>'; }).join('') + '</div></div>' +
