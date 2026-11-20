@@ -22,3 +22,12 @@ test('donation tools: alert/top/goal/last donation, hidden ignored', function ()
     assert.equal(usesDonations({ items: [{ type: 'lastdonation' }] }), true);
     assert.equal(usesDonations({ items: [{ type: 'lastdonation', hidden: true }] }), false);
 });
+
+var usesLiveData = require('./screen-audio-design').usesLiveData;
+test('stream stages: only the end screen with stream stats needs TikTok data', function () {
+    assert.equal(usesLiveData({ items: [{ type: 'stage', kind: 'start', mins: 5 }] }), false);
+    assert.equal(usesLiveData({ items: [{ type: 'stage', kind: 'brb' }] }), false);
+    assert.equal(usesLiveData({ items: [{ type: 'stage', kind: 'end', stats: false }] }), false);
+    assert.equal(usesLiveData({ items: [{ type: 'stage', kind: 'end', stats: true }] }), true);
+    assert.equal(usesLiveData({ items: [{ type: 'stage', kind: 'end', stats: true, hidden: true }] }), false);
+});

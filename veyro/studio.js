@@ -47,6 +47,7 @@
     var toastEl = document.getElementById('ob-toast');
 
     var UI = {
+        stage: '<path d="M3 4h18a1 1 0 011 1v12a1 1 0 01-1 1h-7v2h3v2H7v-2h3v-2H3a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v10h16V6zm6 2.5l5 2.5-5 2.5z"/>',
         text: '<path d="M4 4h16v4h-2V6h-5v12h2v2H9v-2h2V6H6v2H4z"/>',
         dollar: '<path d="M12 2a10 10 0 110 20 10 10 0 010-20zm.9 4.2h-1.8v1.4c-1.7.3-2.9 1.4-2.9 3 0 1.9 1.5 2.6 3.4 3.1 1.4.4 1.9.7 1.9 1.3 0 .6-.6 1-1.6 1-1.1 0-2.1-.4-2.9-1l-.9 1.6c.8.6 1.9 1 3 1.1v1.4h1.8v-1.4c1.8-.3 3-1.4 3-3.1 0-1.9-1.4-2.6-3.5-3.2-1.3-.4-1.8-.6-1.8-1.2 0-.5.5-.9 1.4-.9.9 0 1.8.3 2.5.8l.9-1.6c-.7-.5-1.6-.8-2.5-.9z"/>',
         speaker: '<path d="M3 9h4l5-4v14l-5-4H3zM15.5 8.5a5 5 0 010 7l-1.4-1.4a3 3 0 000-4.2zM18.4 5.6a9 9 0 010 12.8L17 17a7 7 0 000-9.9z"/>',
@@ -88,6 +89,7 @@
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
         { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
+        { key: 'stage', label: 'مراحل البث', icon: 'stage', title: 'مراحل البث', desc: 'شاشة البداية قبل ما تبدأ، شاشة البريك لما ترتاح، وشاشة النهاية لما تقفل البث.' },
         { key: 'icons', label: 'الأيقونات', icon: 'star', title: 'الأيقونات والملصقات', desc: 'أيقونات وإيموجي تزيّن فيها شاشتك.' },
         { key: 'shapes', label: 'الأشكال', icon: 'shapes', title: 'الأشكال', desc: 'لوحات وإطارات وشرائط تحط فوقها الأدوات.' },
         { sep: true },
@@ -96,10 +98,10 @@
     ];
     // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
     // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
+    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text', 'stage'];
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
-    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
-    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
+    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم', stage: 'مرحلة البث' };
+    var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar', stage: 'stage' };
     var PREVIEWS = [
         { key: 'checker', label: 'شفاف' },
         { key: 'dark', label: 'داكن' },
@@ -164,6 +166,15 @@
             { label: 'لوحة الأصدقاء — خشب', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'wood', style: 'plain', color: '#3a220e', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
             { label: 'لوحة الأصدقاء — ورق فاخر', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'paper', bnTextFx: 'foil', style: 'plain', color: '#3a2a1a', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
             { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', bnMat: 'linen', style: 'plain', color: '#3a2e22', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'marquee', bnWidth: 12 } }
+        ],
+        // «مراحل البث»: شاشة كاملة — تنحط تحت باقي الأدوات (التوب والأهداف تبان فوقها)
+        stage: [
+            { label: 'يبدأ قريباً — شفق', sub: 'عدّاد تنازلي وضوء يسبح بالخلفية', type: 'stage', opts: { kind: 'start' }, set: { design: 'aurora', color: '#a68bff' }, at: [0.5, 0.5] },
+            { label: 'يبدأ قريباً — نيون', sub: 'إطار نيون وأرضية شبكة تمشي، مع عدّاد', type: 'stage', opts: { kind: 'start' }, set: { design: 'neon', color: '#ff4fd8' }, at: [0.5, 0.5] },
+            { label: 'بريك — ليل ونجوم', sub: 'قمر ونجوم تلمع وعدّاد للرجعة', type: 'stage', opts: { kind: 'brb' }, set: { design: 'night', color: '#6fb4ff' }, at: [0.5, 0.5] },
+            { label: 'بريك — زجاج فوق الكاميرا', sub: 'بطاقة زجاج بالنص والخلفية شفافة شوي', type: 'stage', opts: { kind: 'brb' }, set: { design: 'glass', bg: 'dim', color: '#7cffc8' }, at: [0.5, 0.5] },
+            { label: 'انتهى البث — مع الحصيلة', sub: 'شكر وأرقام البث: تكبيسات وماس ومتابعين وشير', type: 'stage', opts: { kind: 'end' }, set: { design: 'aurora', color: '#ffc94a' }, at: [0.5, 0.5] },
+            { label: 'انتهى البث — ليل', sub: 'شكر ووداع بقمر ونجوم', type: 'stage', opts: { kind: 'end' }, set: { design: 'night', stats: false, color: '#b9bfff' }, at: [0.5, 0.5] }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -697,6 +708,7 @@
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
         if (it.type === 'jar') return it.title || 'وعاء الهدايا';
+        if (it.type === 'stage') return (O.STAGE_KINDS[it.kind] || O.STAGE_KINDS.start).label;
         if (it.type === 'lastdonation') return it.title || 'آخر دعم';
         if (it.type === 'tts') return 'القارئ الصوتي' + (it.enabled === false ? ' (موقف)' : '');
         if (it.type === 'music') return 'مشغّل الأغاني' + (it.enabled === false ? ' (موقف)' : '');
@@ -719,7 +731,7 @@
         var spot = at || spots[S().items.length % spots.length];
         it.pos[curKey()] = { x: spot[0], y: spot[1] };
         // الأشكال تنحط تحت باقي العناصر عشان تصير خلفية لها
-        if (it.type === 'shape') S().items.unshift(it); else S().items.push(it);
+        if (it.type === 'shape' || it.type === 'stage') S().items.unshift(it); else S().items.push(it);
         commit();
         selectedId = it.id;
         textTab = 'text';
@@ -994,7 +1006,7 @@
             if (sec.key === 'library') libraryPane(pb);
             if (sec.key === 'alerts') videoAlertsPane(pb);
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
-            if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
+            if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar' || sec.key === 'stage');
             // قوالب التوب من مكتبة فيرو (ينشرها الأدمن)
             if (sec.key === 'tops') {
                 loadVyLib(function () { if (libOf('top').length && section === 'tops' && !selectedId) renderPanel(); });
@@ -1196,6 +1208,7 @@
         else if (it.type === 'goal') goalProps(it, box);
         else if (it.type === 'counter') counterProps(it, box);
         else if (it.type === 'jar') jarProps(it, box);
+        else if (it.type === 'stage') stageProps(it, box);
         else if (O.isVideoAlert(it)) videoAlertProps(it, box);
         else if (it.type === 'alert') alertProps(it, box);
         else if (it.type === 'icon') iconProps(it, box);
@@ -1651,6 +1664,47 @@
         box = group(root, 'الشكل');
         box.appendChild(row('التصميم', pills(opts(O.COUNTER_DESIGNS), it.design || 'pills', function (v) { update(it, 'design', v, true); }), true));
         sizeColor(it, box, 1.5, 9);
+    }
+
+    /** «مراحل البث»: النوع (بداية/بريك/نهاية)، التصميم، الخلفية، النصوص، العدّاد، الحصيلة، اليوزر، الخط واللون والحجم. */
+    function stageProps(it, root) {
+        var box = group(root, 'المرحلة');
+        box.appendChild(row('النوع', pills(Object.keys(O.STAGE_KINDS).map(function (k) { return { label: O.STAGE_KINDS[k].label, value: k }; }), it.kind || 'start', function (v) {
+            // النصوص والعدّاد الافتراضية للنوع الجديد (لو الستريمر ما غيّرها)
+            var old = O.STAGE_KINDS[it.kind || 'start'], nk = O.STAGE_KINDS[v];
+            if (!it.title || it.title === old.title) it.title = nk.title;
+            if (!it.sub || it.sub === old.sub) it.sub = nk.sub;
+            if (!it.doneText || it.doneText === old.done) it.doneText = nk.done;
+            if (Number(it.mins || 0) === old.mins) it.mins = nk.mins;
+            if (v === 'end' && it.stats == null) it.stats = true;
+            update(it, 'kind', v, true);
+        }), true));
+        box.appendChild(row('التصميم', pills(opts(O.STAGE_DESIGNS), it.design || 'aurora', function (v) { update(it, 'design', v, true); }), true));
+        box.appendChild(row('الخلفية', pills(opts(O.STAGE_BGS), it.bg || 'full', function (v) { update(it, 'bg', v, true); }), true, '«بدون» = النص بس فوق الكاميرا أو اللعبة'));
+
+        box = group(root, 'النصوص');
+        box.appendChild(row('العنوان', textInput(it.title, 60, function (v) { update(it, 'title', v); }), true));
+        box.appendChild(row('سطر تحته', textInput(it.sub, 90, function (v) { update(it, 'sub', v); }), true, 'فاضي = بدون'));
+        var hd = textInput(it.handle, 40, function (v) { update(it, 'handle', v); });
+        hd.placeholder = '@yourname';
+        box.appendChild(row('يوزرك', hd, true, 'يطلع تحت بلون التصميم — فاضي = بدون'));
+        fontPick(it, box, 'font', 'الخط');
+
+        if ((it.kind || 'start') !== 'end') {
+            box = group(root, 'العدّاد التنازلي');
+            box.appendChild(row('الدقايق', slider(0, 60, 1, Number(it.mins) || 0, function (v) { update(it, 'mins', v); }), false, '0 = بدون عدّاد (نقاط تتحرك بداله)'));
+            if (Number(it.mins) > 0) {
+                box.appendChild(row('لما يخلص', textInput(it.doneText, 30, function (v) { update(it, 'doneText', v); }), true));
+                box.appendChild(row('من جديد', button('رجّع العدّاد من أوله', 'ob-btn ghost', function () { O.stageRestart(it.id); rebuildNode(it); }), false, 'يبدأ العدّاد من أول ما تنفتح الشاشة بتطبيق البث'));
+            }
+        } else {
+            box = group(root, 'حصيلة البث');
+            box.appendChild(row('أرقام البث', toggle(Boolean(it.stats), function (v) { update(it, 'stats', v, true); if (v) O.refreshStats(); }), false, 'التكبيسات والماس والمتابعين الجدد والشير'));
+        }
+
+        box = group(root, 'الشكل');
+        box.appendChild(row('حجم النصوص', slider(0.6, 3.5, 0.05, Number(it.size) || 1.8, function (v) { update(it, 'size', v); })));
+        box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
     }
 
     function jarProps(it, root) {

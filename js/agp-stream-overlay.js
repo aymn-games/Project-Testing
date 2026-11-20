@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '11'; // 11: إطارات صورة الداعم المتحركة (neon/comet/electric/metal) بدل القديمة — 10: 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '12'; // 12: «مراحل البث» (type = stage: البداية والبريك والنهاية) — 11: 11: إطارات صورة الداعم المتحركة (neon/comet/electric/metal) بدل القديمة — 10: 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -414,7 +414,7 @@
         activeItems().forEach(function (it) {
             if (isTopLive(it)) throneSecs(it).forEach(function (k) { secs[k] = Math.max(secs[k] || 0, liveCount(it)); });
             else if (it.type === 'top' && SECTIONS[it.section]) secs[it.section] = Math.max(secs[it.section] || 0, Number(it.top) || 3);
-            else if (it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation') totals = true;
+            else if (it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation' || stageStats(it)) totals = true;
         });
         var keys = Object.keys(secs).sort();
         if (!keys.length && !totals) return null;
@@ -1963,8 +1963,144 @@
             else if (it.type === 'lastdonation') buildLastDonation(n, it, preview);
             else if (it.type === 'tts') buildTts(n, it, preview);
             else if (it.type === 'music') buildMusic(n, it, preview);
+            else if (it.type === 'stage') buildStage(n, it, preview, F);
         }
         return n;
+    }
+
+    /* ---------------- «مراحل البث»: شاشة البداية والبريك والنهاية (Veyro) ----------------
+     * عنصر بحجم الشاشة كاملة (type = 'stage'):
+     * it.kind = start | brb | end، it.design = STAGE_DESIGNS، it.bg = full | dim | none (الخلفية)،
+     * it.title / it.sub = النصوص، it.mins = عدّاد تنازلي بالدقايق (0 = بدون، يبدأ من فتح الشاشة)،
+     * it.doneText = النص لما يخلص العدّاد، it.stats = حصيلة البث (بالنهاية)، it.handle = يوزرك،
+     * it.font / it.color / it.size. العدّاد يكمل لو انعاد رسم الشاشة (وقت البداية محفوظ لكل عنصر).
+     */
+    var STAGE_KINDS = {
+        start: { label: 'يبدأ قريباً', title: 'البث يبدأ قريباً', sub: 'جهّز نفسك… دقايق ونبدأ', mins: 5, done: 'نبدأ الحين!' },
+        brb: { label: 'بريك', title: 'استراحة قصيرة', sub: 'راجعين بعد شوي، لا تروح 💜', mins: 5, done: 'راجعين!' },
+        end: { label: 'انتهى البث', title: 'شكراً على المتابعة', sub: 'نشوفكم بالبث الجاي', mins: 0, done: '' }
+    };
+    var STAGE_DESIGNS = [
+        { key: 'aurora', label: 'شفق' }, { key: 'night', label: 'ليل ونجوم' },
+        { key: 'neon', label: 'نيون' }, { key: 'glass', label: 'زجاج' }
+    ];
+    var STAGE_BGS = [{ key: 'full', label: 'كاملة' }, { key: 'dim', label: 'شفافة شوي' }, { key: 'none', label: 'بدون' }];
+    var STAGE_START_KEY = 'agp:stream-overlay:stage';
+    var stageStarts = (function () { try { return JSON.parse(sessionStorage.getItem(STAGE_START_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+    var stageNodes = [], stageTimer = null;
+
+    function stageKind(it) { return STAGE_KINDS[it.kind] ? it.kind : 'start'; }
+    /** وقت نهاية العدّاد: يبدأ أول مرة تنفتح الشاشة، وينعاد لو تغيّرت الدقايق. */
+    function stageEnd(it) {
+        var mins = clamp(Number(it.mins) || 0, 0, 180);
+        if (!mins) return 0;
+        var rec = stageStarts[it.id];
+        if (!rec || rec.m !== mins) {
+            rec = stageStarts[it.id] = { t: Date.now(), m: mins };
+            try { sessionStorage.setItem(STAGE_START_KEY, JSON.stringify(stageStarts)); } catch (e) { /* ignore */ }
+        }
+        return rec.t + mins * 60000;
+    }
+    /** المحرر: يرجّع العدّاد من أوله. */
+    function stageRestart(id) {
+        delete stageStarts[id];
+        try { sessionStorage.setItem(STAGE_START_KEY, JSON.stringify(stageStarts)); } catch (e) { /* ignore */ }
+    }
+    function stageClock(ms) {
+        var s = Math.max(0, Math.ceil(ms / 1000)), m = Math.floor(s / 60);
+        return (m < 10 ? '0' : '') + m + ':' + ('0' + (s % 60)).slice(-2);
+    }
+    function paintStageTimer(n) {
+        var st = n._stage;
+        if (!st || !st.end) return;
+        var left = st.end - Date.now();
+        var done = left <= 0;
+        st.num.textContent = done ? (st.it.doneText || STAGE_KINDS[stageKind(st.it)].done || '00:00') : stageClock(left);
+        st.box.classList.toggle('done', done);
+        var tot = (Number(st.it.mins) || 1) * 60000;
+        st.arc.style.strokeDashoffset = (done ? 0 : 100 * clamp(left / tot, 0, 1)).toFixed(2);
+    }
+    function tickStages() {
+        stageNodes = stageNodes.filter(function (n) { return n.isConnected; });
+        stageNodes.forEach(paintStageTimer);
+        if (!stageNodes.length) { clearInterval(stageTimer); stageTimer = null; }
+    }
+
+    function buildStage(n, it, preview, F) {
+        var kind = stageKind(it), K = STAGE_KINDS[kind];
+        var des = STAGE_DESIGNS.some(function (d) { return d.key === it.design; }) ? it.design : 'aurora';
+        var bg = STAGE_BGS.some(function (d) { return d.key === it.bg; }) ? it.bg : 'full';
+        var col = /^#[0-9a-f]{6}$/i.test(it.color || '') ? it.color : '#a68bff';
+        n.className += ' d-' + des + ' bg-' + bg + ' k-' + kind;
+        // بحجم الشاشة كاملة (place() يوسّطه)، والخط بنسبة أصغر ضلع
+        n.style.width = F.w + 'px';
+        n.style.height = F.h + 'px';
+        n.style.setProperty('--sc', col);
+        n.style.setProperty('--sl', swirlMix(col, .55));
+        n.style.setProperty('--sd', fxShade(col, .78));
+        var f = fontOf(it.font || 'lalezar');
+        loadFont(f);
+
+        // الخلفية حسب التصميم
+        var back = el('div', 'agp-so-sgbg');
+        // الخلفية بمقاس الشاشة نفسها (1em = 1٪ من أصغر ضلع) — ما تكبر مع حجم النصوص
+        back.style.fontSize = (Math.min(F.w, F.h) / 100) + 'px';
+        if (des === 'aurora') {
+            ['a', 'b', 'c'].forEach(function (k) { back.appendChild(el('i', 'sg-blob ' + k)); });
+        } else if (des === 'night') {
+            back.appendChild(el('i', 'sg-stars'));
+            back.appendChild(el('i', 'sg-stars s2'));
+            back.appendChild(el('i', 'sg-moon'));
+        } else if (des === 'neon') {
+            back.appendChild(el('i', 'sg-grid'));
+            back.appendChild(el('i', 'sg-frame'));
+        } else {
+            ['a', 'b'].forEach(function (k) { back.appendChild(el('i', 'sg-blob ' + k)); });
+        }
+        n.appendChild(back);
+
+        var card = el('div', 'agp-so-sgcard');
+        card.style.fontFamily = fontStack(f);
+        var t = el('div', 'sg-title', it.title != null && it.title !== '' ? it.title : K.title);
+        t.style.fontWeight = String(f.b);
+        card.appendChild(t);
+        var subTx = it.sub != null ? it.sub : K.sub;
+        if (subTx) card.appendChild(el('div', 'sg-sub', subTx));
+
+        var end = stageEnd(it);
+        if (end) {
+            var box = el('div', 'sg-timer');
+            box.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="tr"/><circle cx="60" cy="60" r="52" class="ar" pathLength="100" stroke-dasharray="100 100"/></svg>';
+            var num = el('span', 'sg-num');
+            box.appendChild(num);
+            card.appendChild(box);
+            n._stage = { it: it, end: end, box: box, num: num, arc: box.querySelector('.ar') };
+            paintStageTimer(n);
+            stageNodes.push(n);
+            if (!stageTimer) stageTimer = setInterval(tickStages, 500);
+        } else if (kind === 'start' || kind === 'brb') {
+            var dots = el('div', 'sg-dots');
+            dots.innerHTML = '<i></i><i></i><i></i>';
+            card.appendChild(dots);
+        }
+
+        // حصيلة البث (بالنهاية): أرقام هذا البث
+        if (it.stats && kind === 'end') {
+            var tt = totalsFor(preview);
+            var row = el('div', 'sg-stats');
+            ['likes', 'diamonds', 'follows', 'shares'].forEach(function (m) {
+                if (!METRICS[m]) return;
+                var c = el('div', 'sg-stat');
+                c.appendChild(icon(METRICS[m].icon));
+                c.appendChild(el('b', null, fmtKind(m, Number(tt.t[m]) || 0)));
+                c.appendChild(el('small', null, METRICS[m].name));
+                row.appendChild(c);
+            });
+            card.appendChild(row);
+            if (tt.ghost) n.classList.add('agp-so-ghost');
+        }
+        if (it.handle) card.appendChild(el('div', 'sg-handle', String(it.handle).slice(0, 40)));
+        n.appendChild(card);
     }
 
     /* ---------------- النص داخل «لوحة الأصدقاء» ---------------- */
@@ -3513,7 +3649,9 @@
         }
     }
 
-    function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation'; }
+    function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter' || it.type === 'lastdonation' || stageStats(it); }
+    /** «انتهى البث» مع حصيلة البث يحتاج أرقام البث. */
+    function stageStats(it) { return it.type === 'stage' && Boolean(it.stats) && it.kind === 'end'; }
 
     /* ---------------- الدونيشن (Streamlabs — كريترز وغيره) ----------------
      * يوصل مع طلب الأحداث (dseq/donations) لو الشاشة فيها أداة دونيشن. كل دونيشن جديد: أليرت
@@ -3815,6 +3953,10 @@
         if (type === 'lastdonation') return Object.assign(base, { title: 'آخر دعم', showMessage: false, size: 3, color: '#ffd54a' });
         if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
         if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volCmd: '!صوت', who: 'all', ctrlWho: 'owner', allow: '', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
+        if (type === 'stage') {
+            var sk = STAGE_KINDS[opts.kind] ? opts.kind : 'start';
+            return Object.assign(base, { kind: sk, design: 'aurora', bg: 'full', title: STAGE_KINDS[sk].title, sub: STAGE_KINDS[sk].sub, mins: STAGE_KINDS[sk].mins, doneText: STAGE_KINDS[sk].done, stats: sk === 'end', handle: '', font: 'lalezar', size: 1.8, color: '#a68bff' });
+        }
         if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
         return base;
     }
@@ -4835,6 +4977,60 @@
         '@keyframes agp-so-fxe3{0%{opacity:0}66%{opacity:1}}',
         '@keyframes agp-so-fxsk{0%,100%{opacity:0}8%{opacity:1}22%{opacity:0}}',
         '@keyframes agp-so-fxfl{0%,100%{opacity:.7}50%{opacity:1}}',
+        // «مراحل البث»: شاشة كاملة (البداية، البريك، النهاية)
+        '.agp-so-stage{overflow:hidden;color:#fff;direction:rtl;pointer-events:auto}',
+        '.agp-so-sgbg{position:absolute;inset:0;overflow:hidden}',
+        '.agp-so-stage.bg-full .agp-so-sgbg{background:radial-gradient(120% 90% at 50% 110%,var(--sd),#07060d 65%)}',
+        '.agp-so-stage.bg-dim .agp-so-sgbg{background:rgba(6,5,12,.62)}',
+        '.agp-so-stage.bg-none .agp-so-sgbg{background:none}',
+        '.agp-so-stage.bg-none .sg-blob,.agp-so-stage.bg-none .sg-stars,.agp-so-stage.bg-none .sg-moon,.agp-so-stage.bg-none .sg-grid{display:none}',
+        '.agp-so-sgbg i{position:absolute;display:block}',
+        // شفق: بقع ضوء ناعمة تسبح
+        '.sg-blob{width:70%;height:90%;border-radius:50%;opacity:.55;background:radial-gradient(closest-side,var(--sc),transparent);animation:agp-so-sgb 18s ease-in-out infinite alternate}',
+        '.sg-blob.a{left:-15%;top:-25%}',
+        '.sg-blob.b{right:-20%;bottom:-35%;background:radial-gradient(closest-side,var(--sl),transparent);animation-duration:23s;animation-delay:-6s}',
+        '.sg-blob.c{left:30%;top:40%;width:50%;height:60%;opacity:.16;background:radial-gradient(closest-side,#fff,transparent);animation-duration:27s;animation-delay:-12s}',
+        '.agp-so-stage.d-glass .sg-blob{opacity:.4}',
+        // ليل: نجوم تلمع وقمر
+        '.sg-stars{inset:0;width:2px;height:2px;border-radius:50%;background:transparent;box-shadow:' + (function () {
+            var s = 11, out = [];
+            for (var i = 0; i < 110; i++) { s = (s * 16807) % 2147483647; var x = s % 1000; var y = Math.floor(s / 1000) % 1000; out.push((x * .18).toFixed(1) + 'em ' + (y * .1).toFixed(1) + 'em 0 ' + (i % 7 === 0 ? '1px' : '0') + ' rgba(255,255,255,' + (0.35 + (i % 5) * .13).toFixed(2) + ')'); }
+            return out.join(',');
+        })() + ';animation:agp-so-sgtw 4s ease-in-out infinite}',
+        '.sg-stars.s2{transform:translate(60em,50em) scale(-1,1);animation-delay:-2s}',
+        '.sg-moon{right:9%;top:10%;width:14em;height:14em;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,var(--sl) 45%,var(--sc) 75%);box-shadow:0 0 6em var(--sc),0 0 16em color-mix(in srgb,var(--sc) 45%,transparent);animation:agp-so-sgm 9s ease-in-out infinite}',
+        // نيون: إطار مضيء وأرضية شبكة تمشي
+        '.sg-frame{inset:4%;border:.35em solid var(--sl);border-radius:2em;box-shadow:0 0 1.2em var(--sc),0 0 4em var(--sc),inset 0 0 1.2em var(--sc),inset 0 0 4em color-mix(in srgb,var(--sc) 40%,transparent);animation:agp-so-sgn 3s ease-in-out infinite}',
+        '.sg-grid{left:-50%;right:-50%;bottom:-10%;height:55%;background-image:linear-gradient(var(--sc) 1px,transparent 1px),linear-gradient(90deg,var(--sc) 1px,transparent 1px);background-size:6em 6em;opacity:.35;transform:perspective(40em) rotateX(62deg);transform-origin:50% 0;animation:agp-so-sgg 2.4s linear infinite;-webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%)}',
+        // النصوص
+        '.agp-so-sgcard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:.5em;text-align:center;width:max-content;max-width:90%;font-size:calc(var(--agp-so-fs,1em))}',
+        '.agp-so-stage.d-glass .agp-so-sgcard{padding:1.4em 2.4em;border-radius:1.2em;background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.04));border:.06em solid rgba(255,255,255,.28);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 .06em 0 rgba(255,255,255,.35),0 1em 3em rgba(0,0,0,.45)}',
+        '.sg-title{font-size:5.4em;line-height:1.15;text-shadow:0 0 .12em var(--sc),0 0 .4em color-mix(in srgb,var(--sc) 60%,transparent),0 .05em .1em rgba(0,0,0,.5);animation:agp-so-sgt 4s ease-in-out infinite}',
+        '.agp-so-stage.d-neon .sg-title{color:#fff;text-shadow:0 0 .04em #fff,0 0 .14em var(--sl),0 0 .35em var(--sc),0 0 .8em var(--sc)}',
+        '.sg-sub{font-size:2em;opacity:.88;text-shadow:0 .05em .2em rgba(0,0,0,.7)}',
+        '.sg-timer{position:relative;width:8.5em;height:8.5em;margin-top:.4em;display:flex;align-items:center;justify-content:center}',
+        '.sg-timer svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}',
+        '.sg-timer .tr{fill:rgba(0,0,0,.25);stroke:rgba(255,255,255,.14);stroke-width:5}',
+        '.sg-timer .ar{fill:none;stroke:var(--sl);stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 .2em var(--sc));transition:stroke-dashoffset .5s linear}',
+        '.sg-num{position:relative;font-size:2.4em;font-weight:800;direction:ltr;font-variant-numeric:tabular-nums;text-shadow:0 0 .3em var(--sc)}',
+        '.sg-timer.done .sg-num{font-size:1.5em;animation:agp-so-pulse 1.2s ease-in-out infinite}',
+        '.sg-dots{display:flex;gap:.6em;margin-top:.6em}',
+        '.sg-dots i{width:.8em;height:.8em;border-radius:50%;background:var(--sl);box-shadow:0 0 .5em var(--sc);animation:agp-so-sgd 1.4s ease-in-out infinite}',
+        '.sg-dots i:nth-child(2){animation-delay:.2s}',
+        '.sg-dots i:nth-child(3){animation-delay:.4s}',
+        '.sg-stats{display:flex;gap:1.2em;margin-top:.8em}',
+        '.sg-stat{display:flex;flex-direction:column;align-items:center;gap:.15em;min-width:6.5em;padding:.7em .8em;border-radius:.9em;background:rgba(255,255,255,.07);border:.06em solid rgba(255,255,255,.16)}',
+        '.sg-stat svg{width:1.6em;height:1.6em;color:var(--sl);filter:drop-shadow(0 0 .3em var(--sc))}',
+        '.sg-stat b{font-size:1.8em;direction:ltr}',
+        '.sg-stat small{font-size:.9em;opacity:.75}',
+        '.sg-handle{margin-top:.5em;font-size:1.6em;direction:ltr;color:var(--sl);letter-spacing:.03em;text-shadow:0 0 .3em var(--sc)}',
+        '@keyframes agp-so-sgb{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8%,6%) scale(1.12)}100%{transform:translate(-6%,10%) scale(.95)}}',
+        '@keyframes agp-so-sgtw{0%,100%{opacity:.55}50%{opacity:1}}',
+        '@keyframes agp-so-sgm{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2em)}}',
+        '@keyframes agp-so-sgn{0%,100%{opacity:.85}50%{opacity:1}}',
+        '@keyframes agp-so-sgg{to{background-position:0 6em}}',
+        '@keyframes agp-so-sgt{0%,100%{transform:translateY(0)}50%{transform:translateY(-.06em)}}',
+        '@keyframes agp-so-sgd{0%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-.6em);opacity:1}}',
         '@keyframes agp-so-swr{to{transform:rotate(360deg)}}',
         '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.03,.93) rotate(10deg)}}',
         '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}',
@@ -5068,7 +5264,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, STAGE_KINDS: STAGE_KINDS, STAGE_DESIGNS: STAGE_DESIGNS, STAGE_BGS: STAGE_BGS, stageRestart: stageRestart, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */

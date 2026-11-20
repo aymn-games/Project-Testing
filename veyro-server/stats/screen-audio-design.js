@@ -43,6 +43,8 @@ function usesLiveData(design) {
         if (it.type === 'alert') return (it.events || ['gift']).some(function (e) { return e !== 'donation'; });
         if (it.type === 'top') return (Array.isArray(it.sections) ? it.sections : [it.section]).some(function (k) { return k && k !== 'donors'; });
         if (it.type === 'goal') return it.metric !== 'donations';
+        // «انتهى البث» مع حصيلة البث (أرقام تيك توك)
+        if (it.type === 'stage') return Boolean(it.stats) && it.kind === 'end';
         return false;
     });
 }
