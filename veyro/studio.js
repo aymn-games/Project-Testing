@@ -169,6 +169,12 @@
         ],
         // «مراحل البث»: شاشة كاملة — تنحط تحت باقي الأدوات (التوب والأهداف تبان فوقها)
         stage: [
+            // مشاهد متحركة من صور حقيقية (بدون نصوص) — شفافة أو كاملة، وألوانها تتغيّر
+            { label: 'مشهد: ساكورا وقمر', sub: 'القمر يتوهّج والبتلات تطيح', type: 'stage', opts: { kind: 'start' }, set: { design: 'sakura', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: فراشات الهلال', sub: 'نجوم تلمع وضباب يمشي ولمعات تطلع', type: 'stage', opts: { kind: 'start' }, set: { design: 'moonfly', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: غرفة القطة', sub: 'ضوء الشاشة ينبض وغبار يطفو', type: 'stage', opts: { kind: 'brb' }, set: { design: 'catroom', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: عيون القطة', sub: 'العيون تلمع وضوء يمر', type: 'stage', opts: { kind: 'brb' }, set: { design: 'cateyes', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: لهب الفراشات', sub: 'لهب السيف يرتعش وجمر وفراشات ضوء', type: 'stage', opts: { kind: 'end' }, set: { design: 'flame', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1, stats: false }, at: [0.5, 0.5] },
             { label: 'يبدأ قريباً — شفق', sub: 'عدّاد تنازلي وضوء يسبح بالخلفية', type: 'stage', opts: { kind: 'start' }, set: { design: 'aurora', color: '#a68bff' }, at: [0.5, 0.5] },
             { label: 'يبدأ قريباً — نيون', sub: 'إطار نيون وأرضية شبكة تمشي، مع عدّاد', type: 'stage', opts: { kind: 'start' }, set: { design: 'neon', color: '#ff4fd8' }, at: [0.5, 0.5] },
             { label: 'بريك — ليل ونجوم', sub: 'قمر ونجوم تلمع وعدّاد للرجعة', type: 'stage', opts: { kind: 'brb' }, set: { design: 'night', color: '#6fb4ff' }, at: [0.5, 0.5] },
@@ -708,7 +714,7 @@
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
         if (it.type === 'jar') return it.title || 'وعاء الهدايا';
-        if (it.type === 'stage') return (O.STAGE_KINDS[it.kind] || O.STAGE_KINDS.start).label;
+        if (it.type === 'stage') { var scn = O.STAGE_SCENES.filter(function (x) { return x.key === it.design; })[0]; return scn ? 'مشهد: ' + scn.label : (O.STAGE_KINDS[it.kind] || O.STAGE_KINDS.start).label; }
         if (it.type === 'lastdonation') return it.title || 'آخر دعم';
         if (it.type === 'tts') return 'القارئ الصوتي' + (it.enabled === false ? ' (موقف)' : '');
         if (it.type === 'music') return 'مشغّل الأغاني' + (it.enabled === false ? ' (موقف)' : '');
@@ -1668,6 +1674,7 @@
 
     /** «مراحل البث»: النوع (بداية/بريك/نهاية)، التصميم، الخلفية، النصوص، العدّاد، الحصيلة، اليوزر، الخط واللون والحجم. */
     function stageProps(it, root) {
+        if (O.isStageScene(it.design)) { stageSceneProps(it, root); return; }
         var box = group(root, 'المرحلة');
         box.appendChild(row('النوع', pills(Object.keys(O.STAGE_KINDS).map(function (k) { return { label: O.STAGE_KINDS[k].label, value: k }; }), it.kind || 'start', function (v) {
             // النصوص والعدّاد الافتراضية للنوع الجديد (لو الستريمر ما غيّرها)
@@ -1705,6 +1712,28 @@
         box = group(root, 'الشكل');
         box.appendChild(row('حجم النصوص', slider(0.6, 3.5, 0.05, Number(it.size) || 1.8, function (v) { update(it, 'size', v); })));
         box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+    }
+
+    /** مشهد متحرك (صورة حقيقية + تأثيرات): المشهد، الوضع (كامل/شفاف/تأثيرات)، الشفافية، الألوان، السرعة. بدون نصوص للحين. */
+    function stageSceneProps(it, root) {
+        var box = group(root, 'المشهد');
+        box.appendChild(row('المشهد', pills(opts(O.STAGE_SCENES), it.design, function (v) { update(it, 'design', v, true); }), true));
+        box.appendChild(row('الوضع', pills(opts(O.STAGE_SCENE_MODES), it.mode || 'full', function (v) { update(it, 'mode', v, true); }), true, '«شفاف» = الغامق يختفي ويبقى المضيء، فتبان الكاميرا أو اللعبة من وراه'));
+        box.appendChild(row('الشفافية', slider(0.1, 1, 0.05, Number(it.alpha) || 1, function (v) { update(it, 'alpha', v); })));
+        box.appendChild(row('السرعة', pills([{ label: 'هادية', value: 0.6 }, { label: 'عادية', value: 1 }, { label: 'سريعة', value: 1.6 }], Number(it.speed) || 1, function (v) { update(it, 'speed', v, true); })));
+
+        box = group(root, 'الألوان', 'تتغيّر الصورة والتأثيرات مع بعض');
+        // ألوان جاهزة: إزاحة درجة اللون من البنفسجي الأصلي
+        var quick = el('div', 'ob-pills');
+        [['الأصلي', 0], ['أزرق', -55], ['سماوي', -95], ['أخضر', -150], ['ذهبي', 150], ['أحمر', 95], ['وردي', 40]].forEach(function (x) {
+            quick.appendChild(button(x[0], 'ob-pill' + ((Number(it.hue) || 0) === x[1] ? ' on' : ''), function () { update(it, 'hue', x[1], true); }));
+        });
+        box.appendChild(row('لون جاهز', quick, true));
+        box.appendChild(row('درجة اللون', slider(-180, 180, 1, Number(it.hue) || 0, function (v) { update(it, 'hue', v); })));
+        box.appendChild(row('التشبّع', slider(0.2, 2, 0.05, Number(it.sat) || 1, function (v) { update(it, 'sat', v); })));
+        box.appendChild(row('الإضاءة', slider(0.5, 1.6, 0.05, Number(it.bri) || 1, function (v) { update(it, 'bri', v); })));
+        box.appendChild(row('', button('رجّع الألوان الأصلية', 'ob-btn ghost', function () { it.hue = 0; it.sat = 1; it.bri = 1; update(it, 'hue', 0, true); })));
+        box.appendChild(el('div', 'ob-hint', 'المشهد بدون نصوص للحين — مكان النصوص فوقه نضيفه بعدين.'));
     }
 
     function jarProps(it, root) {

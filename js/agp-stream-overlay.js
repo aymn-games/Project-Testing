@@ -47,6 +47,8 @@
 (function () {
     'use strict';
 
+    // رابط هذا الملف (لتحميل ملفات جنبه عند الحاجة، مثل مشاهد «مراحل البث»)
+    var SELF_SRC = (document.currentScript && document.currentScript.src) || location.href;
     // ملفات إطارات التوب (Veyro) جنب هذا الملف: js/ → assets/overlay-frames/
     var FRAMES_BASE = (function () {
         try { return new URL('../assets/overlay-frames/', (document.currentScript && document.currentScript.src) || location.href).href; } catch (e) { return '../assets/overlay-frames/'; }
@@ -80,7 +82,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '12'; // 12: «مراحل البث» (type = stage: البداية والبريك والنهاية) — 11: 11: إطارات صورة الداعم المتحركة (neon/comet/electric/metal) بدل القديمة — 10: 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '13'; // 13: مشاهد «مراحل البث» المتحركة (js/agp-stage-scenes.js) — 12: 12: «مراحل البث» (type = stage: البداية والبريك والنهاية) — 11: 11: إطارات صورة الداعم المتحركة (neon/comet/electric/metal) بدل القديمة — 10: 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -1985,6 +1987,39 @@
         { key: 'neon', label: 'نيون' }, { key: 'glass', label: 'زجاج' }
     ];
     var STAGE_BGS = [{ key: 'full', label: 'كاملة' }, { key: 'dim', label: 'شفافة شوي' }, { key: 'none', label: 'بدون' }];
+    // مشاهد متحركة من صور حقيقية (js/agp-stage-scenes.js + assets/stage-scenes — ينحمّل بس لما ينستخدم مشهد):
+    // it.design = مفتاح المشهد، it.mode = full | glow (شفاف: المضيء بس) | fx (التأثيرات بس)،
+    // it.hue/sat/bri = الألوان، it.alpha = الشفافية، it.speed = السرعة
+    var STAGE_SCENES = [
+        { key: 'sakura', label: 'ساكورا وقمر' }, { key: 'moonfly', label: 'فراشات الهلال' }, { key: 'catroom', label: 'غرفة القطة' },
+        { key: 'cateyes', label: 'عيون القطة' }, { key: 'flame', label: 'لهب الفراشات' }
+    ];
+    function isStageScene(d) { return STAGE_SCENES.some(function (x) { return x.key === d; }); }
+    var STAGE_SCENE_MODES = [{ key: 'full', label: 'الصورة كاملة' }, { key: 'glow', label: 'شفاف (المضيء بس)' }, { key: 'fx', label: 'التأثيرات بس' }];
+    var scenesWait = null;
+    function loadScenes(cb) {
+        if (window.AGPStageScenes) { cb(); return; }
+        if (scenesWait) { scenesWait.push(cb); return; }
+        scenesWait = [cb];
+        var sc = document.createElement('script');
+        try { sc.src = new URL('agp-stage-scenes.js?v=' + LIVE_VERSION, SELF_SRC).href; } catch (e) { sc.src = '../js/agp-stage-scenes.js?v=' + LIVE_VERSION; }
+        sc.onload = function () { var q = scenesWait || []; scenesWait = null; q.forEach(function (f) { try { f(); } catch (e) { /* ignore */ } }); };
+        sc.onerror = function () { scenesWait = null; };
+        document.head.appendChild(sc);
+    }
+    /** مشهد متحرك بدون نصوص (مكان النصوص ينبني بعدين). */
+    function buildStageScene(n, it, F) {
+        n.className += ' d-scene';
+        n.style.width = F.w + 'px';
+        n.style.height = F.h + 'px';
+        var host = el('div', 'agp-so-sgscene');
+        host.style.opacity = String(clamp(Number(it.alpha) || 1, .1, 1));
+        n.appendChild(host);
+        loadScenes(function () {
+            if (!host.isConnected && host.parentNode !== n) return;
+            window.AGPStageScenes.build(host, { scene: it.design, w: F.w, h: F.h, mode: it.mode, hue: it.hue, sat: it.sat, bri: it.bri, speed: Number(it.speed) || 1 });
+        });
+    }
     var STAGE_START_KEY = 'agp:stream-overlay:stage';
     var stageStarts = (function () { try { return JSON.parse(sessionStorage.getItem(STAGE_START_KEY) || '{}') || {}; } catch (e) { return {}; } })();
     var stageNodes = [], stageTimer = null;
@@ -2028,6 +2063,7 @@
 
     function buildStage(n, it, preview, F) {
         var kind = stageKind(it), K = STAGE_KINDS[kind];
+        if (isStageScene(it.design)) { buildStageScene(n, it, F); return; }
         var des = STAGE_DESIGNS.some(function (d) { return d.key === it.design; }) ? it.design : 'aurora';
         var bg = STAGE_BGS.some(function (d) { return d.key === it.bg; }) ? it.bg : 'full';
         var col = /^#[0-9a-f]{6}$/i.test(it.color || '') ? it.color : '#a68bff';
@@ -4980,6 +5016,8 @@
         // «مراحل البث»: شاشة كاملة (البداية، البريك، النهاية)
         '.agp-so-stage{overflow:hidden;color:#fff;direction:rtl;pointer-events:auto}',
         '.agp-so-sgbg{position:absolute;inset:0;overflow:hidden}',
+        '.agp-so-sgscene{position:absolute;inset:0;overflow:hidden}',
+        '.agp-so-stage.d-scene{pointer-events:auto}',
         '.agp-so-stage.bg-full .agp-so-sgbg{background:radial-gradient(120% 90% at 50% 110%,var(--sd),#07060d 65%)}',
         '.agp-so-stage.bg-dim .agp-so-sgbg{background:rgba(6,5,12,.62)}',
         '.agp-so-stage.bg-none .agp-so-sgbg{background:none}',
@@ -5264,7 +5302,7 @@
 
     window.AGPStreamOverlay = {
         STORE_KEY: STORE_KEY, TEMPLATES: TEMPLATES, FONTS: FONTS, TEXT_STYLES: TEXT_STYLES, ANIMS: ANIMS, SPEEDS: SPEEDS,
-        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, STAGE_KINDS: STAGE_KINDS, STAGE_DESIGNS: STAGE_DESIGNS, STAGE_BGS: STAGE_BGS, stageRestart: stageRestart, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
+        COLORS: COLORS, TOPS: TOPS, DESIGNS: DESIGNS, GOAL_DESIGNS: GOAL_DESIGNS, VEYRO_GOAL_DESIGNS: VEYRO_GOAL_DESIGNS, ORB_PALETTES: ORB_PALETTES, ORB_SHAPES: ORB_SHAPES, STAGE_KINDS: STAGE_KINDS, STAGE_DESIGNS: STAGE_DESIGNS, STAGE_SCENES: STAGE_SCENES, STAGE_SCENE_MODES: STAGE_SCENE_MODES, isStageScene: isStageScene, loadScenes: loadScenes, STAGE_BGS: STAGE_BGS, stageRestart: stageRestart, ORB_TEXT_STYLES: ORB_TEXT_STYLES, ORB_GLOWS: ORB_GLOWS, ORB_LABEL_POS: ORB_LABEL_POS, orbLabelOn: orbLabelOn, isOrbDesign: isOrbDesign, orbColors: orbColors, orbDemo: orbDemo, COUNTER_DESIGNS: COUNTER_DESIGNS,
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** محرر الشاشات: الشاشة المفتوحة (ما تنحفظ هنا — المحرر يرفعها للسيرفر). */
