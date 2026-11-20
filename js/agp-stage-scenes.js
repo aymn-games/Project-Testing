@@ -1,7 +1,9 @@
 /*
  * مشاهد «مراحل البث» المتحركة (Veyro) — window.AGPStageScenes
  *
- * خمس صور حقيقية (assets/stage-scenes/<key>.webp — صور صاحب المنصة) تتحرك بتأثيرات فوقها:
+ * خمس صور حقيقية (assets/stage-scenes/<key>.webp — صور صاحب المنصة) تتحرك هي نفسها (WebGL —
+ * «صورة حيّة»: مناطق من الصورة تتمايل وترفرف وتتنفّس وتنساب، REGIONS تحت). التأثيرات الإضافية
+ * فوقها (o.extras) اختيارية:
  *   sakura   = ساكورا وقمر: هالة القمر تنبض، بتلات تطيح، لمعات على الزهر
  *   moonfly  = فراشات الهلال: نجوم تلمع، توهّج الهلال والفراشات، ضباب يمشي، لمعات تطلع
  *   catroom  = غرفة القطة: ضوء الشاشة ينبض، نجوم بالشباك والشاشة، غبار يطفو
@@ -12,8 +14,8 @@
  * build(host, o):
  *   o.scene، o.w / o.h = مقاس الشاشة (px). الصورة تغطي الشاشة (cover) بأي اتجاه، ومركزها على
  *     الشي المهم بالصورة (القمر، الفراشات، العيون…) عشان الطولي (تيك توك) ما يقص الأهم.
- *   o.mode = full (الصورة كاملة) | glow (شفاف: الأجزاء الغامقة تختفي وتبقى الأجزاء المضيئة —
- *     قناع SVG بالإضاءة، يشتغل بـ OBS) | fx (التأثيرات بس بدون الصورة)
+ *   o.mode = full (الصورة كاملة) | glow (شفاف: الغامق يختفي ويبقى المضيء — بالـ shader، يشتغل بـ OBS)
+ *     | fx (التأثيرات بس بدون الصورة)، o.extras = تأثيرات فوق الصورة، o.still = إطار واحد (للمصغّرات)
  *   o.hue (−180..180 درجة) / o.sat / o.bri = الألوان، o.speed (0.5..2)
  *
  * الأداء: الصورة والتأثيرات الكبيرة طبقات تتحرك بـ transform/opacity (على كرت الشاشة).
@@ -29,7 +31,7 @@
 
     // iw/ih = مقاس الصورة، fx/fy = مركز الاهتمام (0..1) للقص بالطولي
     var SCENES = [
-        { key: 'sakura', label: 'ساكورا وقمر', iw: 1920, ih: 1080, fx: .38, fy: .48 },
+        { key: 'sakura', label: 'ساكورا وقمر', iw: 1920, ih: 1080, fx: .41, fy: .45 },
         { key: 'moonfly', label: 'فراشات الهلال', iw: 1920, ih: 1076, fx: .5, fy: .5 },
         { key: 'catroom', label: 'غرفة القطة', iw: 1920, ih: 1280, fx: .55, fy: .5 },
         { key: 'cateyes', label: 'عيون القطة', iw: 1920, ih: 1081, fx: .66, fy: .55 },
@@ -85,8 +87,8 @@
         sakura: function (VH) {
             var r = rng(5), g = '';
             for (var i = 0; i < 16; i++) g += glint(45 + r() * 55, r() * 70, 1.2 + r() * 1.2, 2 + r() * 3);
-            return glow(36.7, 48.3, 52, 92, 'rgba(225,235,255,.55)', 'pulse slow') +
-                glow(36.7, 48.3, 24, 43, 'rgba(255,255,255,.45)', 'pulse') +
+            return glow(41.4, 44.7, 52, 92, 'rgba(225,235,255,.55)', 'pulse slow') +
+                glow(41.4, 44.7, 24, 43, 'rgba(255,255,255,.45)', 'pulse') +
                 g +
                 particles(VH, 34, 'fall', { colors: ['#f4e3ff', '#e2c4ff', '#cfa6f5', '#ffffff'], size: [5, 11], dur: [9, 18], dx: -320, dy: VH + 80, y: [-.08, -.02] }, 7);
         },
@@ -203,6 +205,170 @@
 
     function clampN(v, a, b, d) { v = Number(v); return isFinite(v) && v !== 0 ? Math.max(a, Math.min(b, v)) : d; }
 
+    /* ---------------- الصورة الحيّة (WebGL): الصورة نفسها تتحرك ----------------
+     * كل مشهد له مناطق (REGIONS) بإحداثيات الصورة (0..1، y لتحت) ونوع حركة:
+     *   sway   = تمايل بالهوا (أغصان، ورد، نباتات)      flap   = رفرفة أجنحة (تنضغط ناحية جسم الفراشة)
+     *   flow   = انسياب (شعر، ضباب، سحاب الشاشة)        flame  = لهب يرتعش ويطلع لفوق
+     *   breathe= تنفّس (تكبير وتصغير خفيف حول المركز)    glow   = إضاءة تنبض (القمر، العيون، الشاشة)
+     *   twinkle= لمعان نقط الضوء (النجوم)
+     * [cx, cy, rx, ry, type, amp, freq, extra] — extra = محور الجسم للرفرفة، أو إزاحة التوقيت.
+     */
+    var RT = { sway: 0, flap: 1, flow: 2, flame: 3, breathe: 4, glow: 5, twinkle: 6 };
+    var REGIONS = {
+        sakura: [
+            [.76, .42, .34, .62, 'sway', .007, .22, 0],
+            [.46, .08, .3, .14, 'sway', .006, .26, 1.3],
+            [.2, .42, .16, .26, 'sway', .006, .3, 2.1],
+            [.42, .36, .2, .2, 'sway', .004, .24, .7],
+            [.414, .447, .14, .25, 'glow', .07, .12, 0]
+        ],
+        moonfly: [
+            [.47, .46, .17, .31, 'flap', .16, .55, .417],
+            [.265, .62, .09, .16, 'flap', .2, .7, .213],
+            [.08, .42, .11, .36, 'sway', .008, .3, 0],
+            [.28, .87, .16, .14, 'sway', .007, .34, 1.1],
+            [.44, .9, .12, .1, 'sway', .007, .3, 2.3],
+            [.9, .92, .12, .1, 'sway', .006, .32, .4],
+            [.75, .82, .3, .14, 'flow', .01, .05, 0],
+            [.77, .46, .09, .22, 'glow', .14, .1, 0],
+            [.5, .3, .6, .35, 'twinkle', .9, .5, 0]
+        ],
+        catroom: [
+            [.69, .66, .13, .15, 'breathe', .012, .22, 0],
+            [.62, .56, .04, .06, 'sway', .004, .5, 0],
+            [.15, .22, .16, .24, 'sway', .006, .2, 0],
+            [.77, .38, .08, .18, 'sway', .006, .22, 1.7],
+            [.48, .44, .19, .18, 'flow', .006, .04, 0],
+            [.48, .44, .24, .24, 'glow', .1, .2, 0],
+            [.48, .3, .45, .32, 'twinkle', .8, .45, 0]
+        ],
+        cateyes: [
+            [.571, .578, .045, .075, 'glow', .3, .25, 0],
+            [.799, .681, .065, .1, 'glow', .3, .25, 1.6],
+            [.259, .289, .06, .07, 'glow', .18, .2, .8],
+            [.538, .244, .05, .07, 'glow', .18, .2, 2.4],
+            [.05, .6, .11, .46, 'flow', .009, .07, 0],
+            [.93, .14, .1, .22, 'flow', .008, .08, 0],
+            [.52, .86, .3, .14, 'sway', .005, .3, 0],
+            [.78, .58, .3, .48, 'breathe', .006, .18, 0]
+        ],
+        flame: [
+            [.3, .555, .33, .06, 'flame', .008, .9, 0],
+            [.3, .555, .33, .05, 'glow', .25, .7, 0],
+            [.07, .62, .12, .34, 'flame', .012, .6, 0],
+            [.93, .74, .1, .34, 'flame', .012, .6, 0],
+            [.5, .17, .3, .2, 'flow', .009, .09, 0],
+            [.1, .34, .06, .1, 'flap', .25, .9, .1],
+            [.83, .3, .06, .1, 'flap', .25, .8, .83],
+            [.12, .82, .07, .12, 'flap', .25, 1, .12],
+            [.507, .35, .07, .05, 'glow', .4, .35, 0]
+        ]
+    };
+    var MAXR = 12;
+    var VS = 'attribute vec2 p;varying vec2 v;void main(){v=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}';
+    var FS = [
+        '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif',
+        'varying vec2 v;uniform sampler2D tx;uniform float T,N,asp,glowMode;uniform vec4 A[' + MAXR + '];uniform vec4 B[' + MAXR + '];',
+        'float h(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}',
+        'float n(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}',
+        'void main(){',
+        '  vec2 uv=v;vec2 o=vec2(0.);float br=0.;float tw=0.;',
+        '  for(int i=0;i<' + MAXR + ';i++){',
+        '    if(float(i)>=N)break;',
+        '    vec4 a=A[i];vec4 b=B[i];',
+        '    vec2 d=(v-a.xy)/a.zw;float w=1.-smoothstep(.55,1.,length(d));',
+        '    if(w<=0.)continue;',
+        '    float ty=b.x,am=b.y,fr=b.z,ex=b.w;vec2 q=v*vec2(asp,1.);float t=T*fr;',
+        '    if(ty<.5){o+=w*am*vec2(n(q*3.+vec2(t,ex))-.5+.5*sin(t*6.2832*.5+v.y*6.+ex),(n(q*3.+vec2(ex,t)+9.)-.5)*.6);}',
+        '    else if(ty<1.5){float s=1.-am*(.5+.5*sin(T*fr*6.2832));uv.x=mix(uv.x,ex+(uv.x-ex)/s,w);}',
+        '    else if(ty<2.5){o+=w*am*vec2(n(vec2(q.x*4.-t*6.,q.y*9.))-.5,(n(vec2(q.x*5.,q.y*7.-t*6.))-.5)*.4);}',
+        '    else if(ty<3.5){o+=w*am*vec2(n(vec2(q.x*14.,q.y*7.+t*4.))-.5,(n(vec2(q.x*9.+3.,q.y*6.+t*6.))-.5)*1.6);br+=w*.12*sin(t*11.+q.x*25.);}',
+        '    else if(ty<4.5){o+=w*am*(v-a.xy)/max(a.z,a.w)*sin(t*6.2832+ex);}',
+        '    else if(ty<5.5){br+=w*am*(.5+.5*sin(t*6.2832+ex));}',
+        '    else{tw+=w*am*(n(q*38.+vec2(t*3.,-t*2.))-.5)*1.8;}',
+        '  }',
+        '  uv-=o;',
+        '  vec4 c=texture2D(tx,clamp(uv,0.,1.));',
+        // اللمعان على نقط الضوء بس (النجوم) — الغامق يبقى ثابت
+        '  float lum0=dot(c.rgb,vec3(.299,.587,.114));',
+        '  vec3 col=c.rgb*(1.+br+tw*smoothstep(.28,.7,lum0));',
+        '  if(glowMode>.5){float l=dot(col,vec3(.299,.587,.114));float al=smoothstep(.06,.5,l);gl_FragColor=vec4(col*al,al);}',
+        '  else gl_FragColor=vec4(col,1.);',
+        '}'
+    ].join('\n');
+
+    /** يبني الصورة الحيّة على canvas. يرجّع false لو WebGL مو متوفر (يطلع بداله صورة ثابتة). */
+    function liveImage(cv, url, regions, o) {
+        var gl;
+        try { gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false }) || cv.getContext('experimental-webgl'); } catch (e) { gl = null; }
+        if (!gl) return false;
+        function sh(type, src) { var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; }
+        var vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+        if (!vs || !fs) return false;
+        var pr = gl.createProgram();
+        gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return false;
+        gl.useProgram(pr);
+        var buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        var loc = gl.getAttribLocation(pr, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        var U = {};
+        ['T', 'N', 'asp', 'glowMode', 'A', 'B', 'tx'].forEach(function (k) { U[k] = gl.getUniformLocation(pr, k); });
+        var a = new Float32Array(MAXR * 4), b = new Float32Array(MAXR * 4);
+        regions.slice(0, MAXR).forEach(function (r, i) {
+            a.set([r[0], r[1], r[2], r[3]], i * 4);
+            b.set([RT[r[4]] || 0, r[5], r[6], r[7]], i * 4);
+        });
+        gl.uniform4fv(U.A, a); gl.uniform4fv(U.B, b);
+        gl.uniform1f(U.N, Math.min(MAXR, regions.length));
+        gl.uniform1f(U.asp, cv.width / cv.height);
+        gl.uniform1f(U.glowMode, o.mode === 'glow' ? 1 : 0);
+        gl.uniform1i(U.tx, 0);
+        var tex = gl.createTexture();
+        var img = new Image();
+        if (!/^data:/.test(url)) img.crossOrigin = 'anonymous';
+        var start = performance.now(), raf = 0, ready = false, misses = 0, sp = clampN(o.speed, .3, 3, 1);
+        function frame(now) {
+            raf = 0;
+            if (!cv.isConnected) {
+                // انشال من الصفحة: نوقف ونرجّع ذاكرة كرت الشاشة
+                if (++misses > 90) { var lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext(); return; }
+            } else misses = 0;
+            gl.viewport(0, 0, cv.width, cv.height);
+            gl.uniform1f(U.T, ((now || performance.now()) - start) / 1000 * sp);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            if (!o.still) raf = requestAnimationFrame(frame);
+        }
+        img.onload = function () {
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+            try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img); } catch (e) { cv.dispatchEvent(new Event('agsc-fail')); return; }
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            ready = true;
+            // نبدأ من نقطة عشوائية بالدورة (كل نسخة شكلها مختلف شوي)
+            start -= (o.still ? 3 : 0) * 1000;
+            frame();
+        };
+        img.onerror = function () { cv.dispatchEvent(new Event('agsc-fail')); };
+        img.src = url;
+        return true;
+    }
+
+    function staticImg(url, mode, VH) {
+        if (mode !== 'glow') return '<img class="agsc-img" src="' + url + '" alt="" draggable="false">';
+        var id = 'agscm' + (++seq);
+        return '<svg class="agsc-img" viewBox="0 0 1000 ' + f1(VH) + '" preserveAspectRatio="none" aria-hidden="true"><defs>' +
+            '<filter id="' + id + 'f" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="gamma" exponent=".75" amplitude="1.35"/><feFuncG type="gamma" exponent=".75" amplitude="1.35"/><feFuncB type="gamma" exponent=".75" amplitude="1.35"/></feComponentTransfer></filter>' +
+            '<mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="' + f1(VH) + '"><image href="' + url + '" width="1000" height="' + f1(VH) + '" preserveAspectRatio="none" filter="url(#' + id + 'f)"/></mask></defs>' +
+            '<image href="' + url + '" width="1000" height="' + f1(VH) + '" preserveAspectRatio="none" mask="url(#' + id + ')"/></svg>';
+    }
+
     function build(host, o) {
         injectCss();
         var sc = SCENES.filter(function (x) { return x.key === o.scene; })[0] || SCENES[0];
@@ -219,22 +385,29 @@
         if (hue || sat !== 1 || bri !== 1) root.style.filter = 'hue-rotate(' + hue + 'deg) saturate(' + sat + ') brightness(' + bri + ')';
         var url = BASE + sc.key + '.webp';
         var VH = 1000 * sc.ih / sc.iw;
-        var img = '';
-        if (mode === 'full') {
-            img = '<img class="agsc-img" src="' + url + '" alt="" draggable="false">';
-        } else if (mode === 'glow') {
-            // شفاف: نفس الصورة قناع لنفسها بالإضاءة (الغامق يختفي) — مع تقوية خفيفة عشان الوسط ما يبهت
-            var id = 'agscm' + (++seq);
-            img = '<svg class="agsc-img" viewBox="0 0 1000 ' + f1(VH) + '" preserveAspectRatio="none" aria-hidden="true"><defs>' +
-                '<filter id="' + id + 'f" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="gamma" exponent=".75" amplitude="1.35"/><feFuncG type="gamma" exponent=".75" amplitude="1.35"/><feFuncB type="gamma" exponent=".75" amplitude="1.35"/></feComponentTransfer></filter>' +
-                '<mask id="' + id + '" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="' + f1(VH) + '"><image href="' + url + '" width="1000" height="' + f1(VH) + '" preserveAspectRatio="none" filter="url(#' + id + 'f)"/></mask></defs>' +
-                '<image href="' + url + '" width="1000" height="' + f1(VH) + '" preserveAspectRatio="none" mask="url(#' + id + ')"/></svg>';
-        }
+        var img = '', canvasMode = mode !== 'fx';
+        if (canvasMode) img = '<canvas class="agsc-img"></canvas>';
+        var extras = mode === 'fx' || Boolean(o.extras);
         root.innerHTML = div('agsc-cv', 'left:' + f1(left) + 'px;top:' + f1(top) + 'px;width:' + f1(cw) + 'px;height:' + f1(ch) + 'px;font-size:' + f1(ch / 100) + 'px',
-            div('agsc-kb', '--ox:' + (sc.fx * 100) + '%;--oy:' + (sc.fy * 100) + '%', img + FX[sc.key](VH)));
+            div('agsc-kb', '--ox:' + (sc.fx * 100) + '%;--oy:' + (sc.fy * 100) + '%', img + (extras ? FX[sc.key](VH) : '')));
+        if (canvasMode) {
+            var cv = root.querySelector('canvas');
+            // دقة الرسم: مقاس الصورة على الشاشة (لين دقة الصورة نفسها)
+            var dpr = Math.min(1.5, window.devicePixelRatio || 1);
+            cv.width = Math.round(Math.min(sc.iw, cw * dpr));
+            cv.height = Math.round(cv.width * sc.ih / sc.iw);
+            var fallback = function () {
+                // بدون WebGL: صورة ثابتة (والشفاف بقناع SVG بالإضاءة)
+                var holder = document.createElement('div');
+                holder.innerHTML = staticImg(url, mode, VH);
+                if (cv.parentNode) cv.parentNode.replaceChild(holder.firstChild, cv);
+            };
+            cv.addEventListener('agsc-fail', fallback);
+            if (!liveImage(cv, url, REGIONS[sc.key] || [], { mode: mode, speed: o.speed, still: o.still })) fallback();
+        }
         host.appendChild(root);
         return root;
     }
 
-    window.AGPStageScenes = { SCENES: SCENES, MODES: MODES, build: build, BASE: BASE };
+    window.AGPStageScenes = { SCENES: SCENES, MODES: MODES, REGIONS: REGIONS, build: build, BASE: BASE };
 })();

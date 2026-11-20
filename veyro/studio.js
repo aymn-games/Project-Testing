@@ -170,11 +170,11 @@
         // «مراحل البث»: شاشة كاملة — تنحط تحت باقي الأدوات (التوب والأهداف تبان فوقها)
         stage: [
             // مشاهد متحركة من صور حقيقية (بدون نصوص) — شفافة أو كاملة، وألوانها تتغيّر
-            { label: 'مشهد: ساكورا وقمر', sub: 'القمر يتوهّج والبتلات تطيح', type: 'stage', opts: { kind: 'start' }, set: { design: 'sakura', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
-            { label: 'مشهد: فراشات الهلال', sub: 'نجوم تلمع وضباب يمشي ولمعات تطلع', type: 'stage', opts: { kind: 'start' }, set: { design: 'moonfly', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
-            { label: 'مشهد: غرفة القطة', sub: 'ضوء الشاشة ينبض وغبار يطفو', type: 'stage', opts: { kind: 'brb' }, set: { design: 'catroom', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
-            { label: 'مشهد: عيون القطة', sub: 'العيون تلمع وضوء يمر', type: 'stage', opts: { kind: 'brb' }, set: { design: 'cateyes', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
-            { label: 'مشهد: لهب الفراشات', sub: 'لهب السيف يرتعش وجمر وفراشات ضوء', type: 'stage', opts: { kind: 'end' }, set: { design: 'flame', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1, stats: false }, at: [0.5, 0.5] },
+            { label: 'مشهد: ساكورا وقمر', sub: 'الأغصان تتمايل والقمر يتوهّج', type: 'stage', opts: { kind: 'start' }, set: { design: 'sakura', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: فراشات الهلال', sub: 'الفراشات ترفرف والورد يتمايل والنجوم تلمع', type: 'stage', opts: { kind: 'start' }, set: { design: 'moonfly', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: غرفة القطة', sub: 'القطة تتنفّس والنباتات تتمايل والشاشة تنبض', type: 'stage', opts: { kind: 'brb' }, set: { design: 'catroom', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: عيون القطة', sub: 'العيون تتوهّج والشعر ينساب', type: 'stage', opts: { kind: 'brb' }, set: { design: 'cateyes', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1 }, at: [0.5, 0.5] },
+            { label: 'مشهد: لهب الفراشات', sub: 'اللهب يرتعش والفراشات ترفرف والشعر ينساب', type: 'stage', opts: { kind: 'end' }, set: { design: 'flame', mode: 'full', alpha: 1, speed: 1, hue: 0, sat: 1, bri: 1, stats: false }, at: [0.5, 0.5] },
             { label: 'يبدأ قريباً — شفق', sub: 'عدّاد تنازلي وضوء يسبح بالخلفية', type: 'stage', opts: { kind: 'start' }, set: { design: 'aurora', color: '#a68bff' }, at: [0.5, 0.5] },
             { label: 'يبدأ قريباً — نيون', sub: 'إطار نيون وأرضية شبكة تمشي، مع عدّاد', type: 'stage', opts: { kind: 'start' }, set: { design: 'neon', color: '#ff4fd8' }, at: [0.5, 0.5] },
             { label: 'بريك — ليل ونجوم', sub: 'قمر ونجوم تلمع وعدّاد للرجعة', type: 'stage', opts: { kind: 'brb' }, set: { design: 'night', color: '#6fb4ff' }, at: [0.5, 0.5] },
@@ -1720,6 +1720,7 @@
         box.appendChild(row('المشهد', pills(opts(O.STAGE_SCENES), it.design, function (v) { update(it, 'design', v, true); }), true));
         box.appendChild(row('الوضع', pills(opts(O.STAGE_SCENE_MODES), it.mode || 'full', function (v) { update(it, 'mode', v, true); }), true, '«شفاف» = الغامق يختفي ويبقى المضيء، فتبان الكاميرا أو اللعبة من وراه'));
         box.appendChild(row('الشفافية', slider(0.1, 1, 0.05, Number(it.alpha) || 1, function (v) { update(it, 'alpha', v); })));
+        if ((it.mode || 'full') !== 'fx') box.appendChild(row('تأثيرات إضافية', toggle(Boolean(it.extras), function (v) { update(it, 'extras', v); }), false, 'بتلات وجمر ولمعات فوق الصورة — الصورة نفسها تتحرك بدونها'));
         box.appendChild(row('السرعة', pills([{ label: 'هادية', value: 0.6 }, { label: 'عادية', value: 1 }, { label: 'سريعة', value: 1.6 }], Number(it.speed) || 1, function (v) { update(it, 'speed', v, true); })));
 
         box = group(root, 'الألوان', 'تتغيّر الصورة والتأثيرات مع بعض');

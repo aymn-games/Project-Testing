@@ -1987,7 +1987,8 @@
         { key: 'neon', label: 'نيون' }, { key: 'glass', label: 'زجاج' }
     ];
     var STAGE_BGS = [{ key: 'full', label: 'كاملة' }, { key: 'dim', label: 'شفافة شوي' }, { key: 'none', label: 'بدون' }];
-    // مشاهد متحركة من صور حقيقية (js/agp-stage-scenes.js + assets/stage-scenes — ينحمّل بس لما ينستخدم مشهد):
+    // مشاهد من صور حقيقية تتحرك هي نفسها (WebGL — js/agp-stage-scenes.js + assets/stage-scenes، ينحمّل بس لما ينستخدم مشهد):
+    // it.extras = تأثيرات إضافية فوق الصورة (بتلات، جمر، لمعات…)
     // it.design = مفتاح المشهد، it.mode = full | glow (شفاف: المضيء بس) | fx (التأثيرات بس)،
     // it.hue/sat/bri = الألوان، it.alpha = الشفافية، it.speed = السرعة
     var STAGE_SCENES = [
@@ -2017,7 +2018,7 @@
         n.appendChild(host);
         loadScenes(function () {
             if (!host.isConnected && host.parentNode !== n) return;
-            window.AGPStageScenes.build(host, { scene: it.design, w: F.w, h: F.h, mode: it.mode, hue: it.hue, sat: it.sat, bri: it.bri, speed: Number(it.speed) || 1 });
+            window.AGPStageScenes.build(host, { scene: it.design, w: F.w, h: F.h, mode: it.mode, hue: it.hue, sat: it.sat, bri: it.bri, speed: Number(it.speed) || 1, extras: Boolean(it.extras), still: F.w < 400 });
         });
     }
     var STAGE_START_KEY = 'agp:stream-overlay:stage';
