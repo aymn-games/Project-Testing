@@ -80,7 +80,7 @@
     var SCREENS = document.documentElement.hasAttribute('data-agp-screens');
     var EVENTS_POLL_MS = 2000;
     // نسخة رابط الشاشة: المحرر يعرف لو التطبيق فاتح نسخة قديمة (يحتاج تحديث المصدر)
-    var LIVE_VERSION = '10'; // 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
+    var LIVE_VERSION = '11'; // 11: إطارات صورة الداعم المتحركة (neon/comet/electric/metal) بدل القديمة — 10: 10: «دوامة ضوء» حول صورة الداعم بأليرت الفيديو (fr = swirl) + النص تحت أهداف السائل (lbl*) — 9: أهداف بأشكال زجاج ونيون تتعبّى (cat/blob/crescent) — 8: ألوان جاهزة لأليرت الفيديو (vfx.tint) — 7: 7: أليرت الفيديو ملء الشاشة (it.full) — 6: 6: خلفية أليرت الفيديو (vbg) وألوانه (vfx) — 5: أصول مكتبة فيرو (أيقونة، قالب توب، صوت أليرت، إطار صورة) — 4: 4: أليرت لهدية معيّنة (giftIds) — 3: تفريغ «لون الخلفية» (hue) + أشكال الصورة وستايل النص بأليرت الفيديو
     var LINK_KEY = LINK ? (new URLSearchParams(location.search).get('k') || '') : '';
     var DESIGN_POLL_MS = 5000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -2480,8 +2480,8 @@
         { key: 'heart', label: 'قلب', cp: heartPolygon() },
         { key: 'star', label: 'نجمة', cp: starPolygon() }
     ];
-    // إطار الصورة: حلقة بلون الإطار، توهّج بنفس اللون، ظل بس، أو بدون
-    var AVATAR_FRAMES = [{ key: 'ring', label: 'إطار' }, { key: 'swirl', label: 'دوامة ضوء' }, { key: 'glow', label: 'توهّج' }, { key: 'shadow', label: 'ظل' }, { key: 'none', label: 'بدون' }];
+    // إطار الصورة: كلها متحركة (AVATAR_FX تحت). القديمة (ring/glow/shadow) تتحوّل لأقرب جديد بـ avatarFrame()
+    var AVATAR_FRAMES = [{ key: 'neon', label: 'حلقة نيون' }, { key: 'swirl', label: 'دوامة ضوء' }, { key: 'comet', label: 'مذنّبين' }, { key: 'electric', label: 'برق' }, { key: 'metal', label: 'معدن لامع' }, { key: 'none', label: 'بدون' }];
     function heartPolygon() {
         var pts = [];
         for (var i = 0; i < 40; i++) {
@@ -2668,6 +2668,179 @@
     function avatarSwirl(p) {
         var d = document.createElement('div');
         d.innerHTML = swirlSvg(p);
+        return d.firstChild;
+    }
+
+    /*
+     * إطارات صورة الداعم المتحركة (أليرت الفيديو). كلها SVG بنفس المقاس (190٪ من الصورة)
+     * وملاصقة لحافتها: p.c = اللون، p.fw = السماكة، p.fm = الحركة، p.fsp = السرعة.
+     * التوهّج المضبّب ثابت دايم (ما يتحرك) — اللي يتحرك خطوط بدون فلاتر، عشان OBS.
+     */
+    var FX_MOTIONS = [{ key: 'run', label: 'متحرك' }, { key: 'pulse', label: 'متحرك + نبض' }, { key: 'none', label: 'ثابت' }];
+    // اللون الأول لكل إطار (لو لون الستريمر أبيض/فاضي)
+    var FX_DEFAULT_COLORS = { swirl: '#6fb4ff', neon: '#ff4fd8', comet: '#7fd8ff', electric: '#8fc8ff', metal: '#ffc94a' };
+    function fxShade(hex, t) {
+        var c = hexRgb(hex);
+        return '#' + c.map(function (v) { return ('0' + Math.round(v * (1 - t) * 255).toString(16)).slice(-2); }).join('');
+    }
+    function fxBase(p) {
+        var col = /^#[0-9a-f]{6}$/i.test(p.c || '') && !/^#ffffff$/i.test(p.c) ? p.c : (FX_DEFAULT_COLORS[p.fr] || '#ffffff');
+        if (/^#ffffff$/i.test(p.c || '') && p.fr === 'metal') col = '#d9dde6'; // أبيض = فضّي
+        return {
+            id: 'agpfx' + (++swirlSeq), col: col, light: swirlMix(col, .55),
+            w: clamp(Number(p.fw) || 1, .3, 3),
+            mo: FX_MOTIONS.some(function (x) { return x.key === p.fm; }) ? p.fm : 'run',
+            sp: SWIRL_SPEEDS[p.fsp] || 1
+        };
+    }
+    function fxOpen(k, cls, defs) {
+        return '<svg class="vav-swirl vav-fx ' + cls + ' m-' + k.mo + '" viewBox="-100 -100 200 200" style="--sws:' + k.sp + '" aria-hidden="true"><defs>' +
+            '<filter id="' + k.id + 'b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4"/></filter>' +
+            '<filter id="' + k.id + 'B" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6.5"/></filter>' +
+            '<radialGradient id="' + k.id + 'sg"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="' + k.light + '" stop-opacity=".6"/><stop offset="1" stop-color="' + k.col + '" stop-opacity="0"/></radialGradient>' +
+            (defs || '') + '</defs>';
+    }
+    // هالة ثابتة مضبّبة + ضوء حافة يركب على الصورة
+    function fxGlow(k, r, wide, rim) {
+        return '<g class="fx-glow">' +
+            '<g filter="url(#' + k.id + 'B)"><circle r="' + r + '" fill="none" stroke="' + k.col + '" stroke-width="' + (wide * k.w).toFixed(1) + '" stroke-opacity=".45"/></g>' +
+            (rim ? '<g filter="url(#' + k.id + 'b)"><circle r="' + (SWIRL_R - .5) + '" fill="none" stroke="' + k.light + '" stroke-width="' + (rim * k.w).toFixed(1) + '" stroke-opacity=".55"/></g>' : '') +
+            '</g>';
+    }
+
+    /** حلقة نيون: أنبوب بقلب أبيض حار، وشرارتين ضوء يلفّون عليه. */
+    function neonSvg(p) {
+        var k = fxBase(p), R = SWIRL_R + 1.6, w = k.w;
+        var spark = function (len, op, rot) {
+            return '<g transform="rotate(' + rot + ')">' +
+                '<circle r="' + R + '" fill="none" stroke="' + k.light + '" stroke-opacity="' + (op * .35).toFixed(2) + '" stroke-width="' + (6 * w).toFixed(1) + '" pathLength="100" stroke-dasharray="' + len + ' ' + (100 - len) + '" stroke-linecap="round"/>' +
+                '<circle r="' + R + '" fill="none" stroke="#fff" stroke-opacity="' + op + '" stroke-width="' + (2.2 * w).toFixed(1) + '" pathLength="100" stroke-dasharray="' + len + ' ' + (100 - len) + '" stroke-linecap="round"/></g>';
+        };
+        return fxOpen(k, 'fx-neon') +
+            fxGlow(k, R, 9, 2.6) +
+            '<g class="fx-body">' +
+            '<circle r="' + R + '" fill="none" stroke="' + k.col + '" stroke-opacity=".45" stroke-width="' + (6.5 * w).toFixed(1) + '"/>' +
+            '<circle r="' + R + '" fill="none" stroke="' + k.col + '" stroke-width="' + (3.2 * w).toFixed(1) + '"/>' +
+            '<circle r="' + R + '" fill="none" stroke="' + k.light + '" stroke-width="' + (1.8 * w).toFixed(1) + '"/>' +
+            '<circle r="' + R + '" fill="none" stroke="#fff" stroke-opacity=".95" stroke-width="' + (.8 * w).toFixed(1) + '"/>' +
+            '</g>' +
+            '<g class="fx-run">' + spark(9, 1, 0) + spark(6, .7, 180) + '</g>' +
+            '</svg>';
+    }
+
+    /** مذنّبين يدورون على حافة الصورة: راس مضيء وذيل يبهت (مقاطع متدرّجة)، وغبار ورا الذيل. */
+    function cometSvg(p) {
+        var k = fxBase(p), R = SWIRL_R + 1.2, w = k.w;
+        var H = 34; // مكان الراس على الحلقة (من 100)
+        var comet = function (rot, scale) {
+            var segs = '';
+            [[44, .1, k.col], [34, .18, k.col], [25, .3, k.light], [17, .45, k.light], [11, .65, k.light], [6, .85, '#fff'], [2.4, 1, '#fff']].forEach(function (s) {
+                var L = s[0];
+                segs += '<circle r="' + R + '" fill="none" stroke="' + s[2] + '" stroke-opacity="' + s[1] + '" stroke-width="' + ((1.3 + (1 - L / 44) * 3.6) * w * scale).toFixed(2) + '" pathLength="100" stroke-dasharray="' + L + ' ' + (100 - L) + '" stroke-dashoffset="' + (-(H - L)) + '" stroke-linecap="round"/>';
+            });
+            var a = H / 100 * Math.PI * 2;
+            var hx = (Math.cos(a) * R).toFixed(1), hy = (Math.sin(a) * R).toFixed(1);
+            // غبار ورا الراس
+            var dust = '';
+            for (var i = 0; i < 16; i++) {
+                var t = a - (i + 1) * .045 - (i % 3) * .01, rr = R + ((i * 37) % 9 - 4) * .9;
+                dust += '<circle cx="' + (Math.cos(t) * rr).toFixed(1) + '" cy="' + (Math.sin(t) * rr).toFixed(1) + '" r="' + (.35 + ((i * 13) % 5) * .12).toFixed(2) + '" fill="#fff" opacity="' + (1 - i / 17).toFixed(2) + '"/>';
+            }
+            return '<g transform="rotate(' + rot + ')">' +
+                '<circle r="' + R + '" fill="none" stroke="' + k.col + '" stroke-opacity=".28" stroke-width="' + (9 * w * scale).toFixed(1) + '" pathLength="100" stroke-dasharray="22 78" stroke-dashoffset="' + (-(H - 22)) + '" stroke-linecap="round"/>' +
+                segs + dust +
+                '<circle cx="' + hx + '" cy="' + hy + '" r="' + (9 * w * scale).toFixed(1) + '" fill="url(#' + k.id + 'sg)"/>' +
+                '<circle cx="' + hx + '" cy="' + hy + '" r="' + (2.2 * w * scale).toFixed(2) + '" fill="#fff"/></g>';
+        };
+        return fxOpen(k, 'fx-comet') +
+            fxGlow(k, R, 6, 2) +
+            '<circle r="' + R + '" fill="none" stroke="' + k.col + '" stroke-opacity=".3" stroke-width="' + (.9 * w).toFixed(2) + '"/>' +
+            '<g class="fx-run">' + comet(0, 1) + comet(180, .78) + '</g>' +
+            '</svg>';
+    }
+
+    /** برق كهربائي: ثلاث حلقات خيوط متعرّجة تتبادل بسرعة (وميض)، وشرارات صغيرة تطلع برّا. */
+    function electricSvg(p) {
+        var k = fxBase(p), R = SWIRL_R + 1.4, w = k.w;
+        var bolt = function (seed, amp) {
+            var s = seed, d = '';
+            function rnd() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+            // كهرباء طبيعية: تموّج بطيء + رجفة دقيقة + قفزات قليلة (مو مسنن منتظم)
+            var p1 = rnd() * 6.3, p2 = rnd() * 6.3, k1 = 5 + Math.floor(rnd() * 4), k2 = 11 + Math.floor(rnd() * 6), N = 150;
+            for (var i = 0; i <= N; i++) {
+                var a = i / N * Math.PI * 2;
+                var off = Math.sin(a * k1 + p1) * 1.3 + Math.sin(a * k2 + p2) * .7 + (rnd() - .5) * 1.5;
+                if (rnd() < .05) off += (rnd() < .5 ? -1 : 1) * (2 + rnd() * 2.6);
+                var rr = R + (i === 0 || i === N ? 0 : off * amp / 3 * (.85 + .25 * w));
+                d += (i ? 'L' : 'M') + (Math.cos(a) * rr).toFixed(2) + ' ' + (Math.sin(a) * rr).toFixed(2);
+            }
+            return d + 'Z';
+        };
+        // كل حالة: خيط رئيسي ساطع + خيط ثاني خافت يتقاطع معه
+        var ring = function (cls, seed) {
+            var d = bolt(seed, 3), d2 = bolt(seed * 7 + 3, 4);
+            return '<g class="' + cls + '">' +
+                '<path d="' + d2 + '" fill="none" stroke="' + k.light + '" stroke-opacity=".45" stroke-width="' + (.7 * w).toFixed(2) + '" stroke-linejoin="round"/>' +
+                '<path d="' + d + '" fill="none" stroke="' + k.col + '" stroke-opacity=".45" stroke-width="' + (3 * w).toFixed(1) + '" stroke-linejoin="round"/>' +
+                '<path d="' + d + '" fill="none" stroke="' + k.light + '" stroke-width="' + (1.1 * w).toFixed(2) + '" stroke-linejoin="round"/>' +
+                '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="' + (.45 * w).toFixed(2) + '" stroke-linejoin="round"/></g>';
+        };
+        // شرارات قصيرة برّا الحافة
+        var sparks = '';
+        [[.3, 0], [1.9, 1], [3.4, 2], [4.6, 1], [5.6, 0]].forEach(function (z, i) {
+            var a = z[0], x0 = Math.cos(a) * R, y0 = Math.sin(a) * R, L = 9 + z[1] * 3;
+            var nx = Math.cos(a), ny = Math.sin(a), tx = -ny, ty = nx;
+            var pts = [[0, 0], [L * .35, 2.5], [L * .55, -2], [L * .8, 1.8], [L, -.5]];
+            var d = pts.map(function (q, j) { return (j ? 'L' : 'M') + (x0 + nx * q[0] + tx * q[1]).toFixed(1) + ' ' + (y0 + ny * q[0] + ty * q[1]).toFixed(1); }).join('');
+            sparks += '<g class="fx-sk" style="animation-delay:-' + (i * .23).toFixed(2) + 's"><path d="' + d + '" fill="none" stroke="' + k.light + '" stroke-width="' + (1.3 * w).toFixed(2) + '" stroke-linejoin="round" stroke-linecap="round"/><path d="' + d + '" fill="none" stroke="#fff" stroke-width="' + (.5 * w).toFixed(2) + '" stroke-linecap="round"/></g>';
+        });
+        return fxOpen(k, 'fx-electric') +
+            fxGlow(k, R, 8, 2.4) +
+            '<g class="fx-spin">' + ring('fx-b1', 11) + ring('fx-b2', 523) + ring('fx-b3', 9871) + '</g>' +
+            sparks + '</svg>';
+    }
+
+    /** حلقة معدن لامعة: شريط معدني بتدرّج (ذهبي/فضي/أي لون)، حواف محفورة، ولمعة تمشي عليه. */
+    function metalSvg(p) {
+        var k = fxBase(p), w = k.w, bw = 5.5 * w, R = SWIRL_R + bw / 2 - .4;
+        var c = k.col, hi = swirlMix(c, .7), lo = fxShade(c, .45), dk = fxShade(c, .7);
+        var defs = '<linearGradient id="' + k.id + 'm" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0" stop-color="' + hi + '"/><stop offset=".22" stop-color="' + c + '"/><stop offset=".42" stop-color="' + dk + '"/>' +
+            '<stop offset=".55" stop-color="' + hi + '"/><stop offset=".72" stop-color="' + lo + '"/><stop offset="1" stop-color="' + hi + '"/></linearGradient>';
+        return fxOpen(k, 'fx-metal', defs) +
+            fxGlow(k, R, 5, 0) +
+            '<g class="fx-body">' +
+            '<circle r="' + (R + .6) + '" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="' + (bw + 1.6).toFixed(1) + '"/>' +
+            '<circle r="' + R + '" fill="none" stroke="url(#' + k.id + 'm)" stroke-width="' + bw.toFixed(1) + '"/>' +
+            // حواف محفورة: خط فاتح برّا وخط غامق جوّا (مثل المعدن المصقول)
+            '<circle r="' + (R + bw / 2 - .4) + '" fill="none" stroke="' + hi + '" stroke-opacity=".9" stroke-width=".6"/>' +
+            '<circle r="' + (R - bw / 2 + .4) + '" fill="none" stroke="' + dk + '" stroke-opacity=".9" stroke-width=".7"/>' +
+            '<circle r="' + R + '" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width=".5"/>' +
+            '</g>' +
+            // اللمعة: قوس أبيض قصير يلف على الشريط
+            '<g class="fx-run" style="mix-blend-mode:screen">' +
+            '<circle r="' + R + '" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="' + bw.toFixed(1) + '" pathLength="100" stroke-dasharray="14 86"/>' +
+            '<circle r="' + R + '" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="' + (bw * .55).toFixed(1) + '" pathLength="100" stroke-dasharray="6 94" stroke-dashoffset="-4" stroke-linecap="round"/>' +
+            '<circle cx="' + (Math.cos(.5 * Math.PI * 2 * .07) * R).toFixed(1) + '" cy="' + (Math.sin(.5 * Math.PI * 2 * .07) * R).toFixed(1) + '" r="' + (4 * w).toFixed(1) + '" fill="url(#' + k.id + 'sg)"/>' +
+            '</g>' +
+            '</svg>';
+    }
+
+    var AVATAR_FX = { swirl: swirlSvg, neon: neonSvg, comet: cometSvg, electric: electricSvg, metal: metalSvg };
+    /** الإطارات القديمة تتحوّل لأقرب جديد: إطار ← معدن، توهّج ← نيون، ظل ← بدون. الفاضي = نيون. */
+    function avatarFrame(fr) {
+        if (fr === 'ring') return 'metal';
+        if (fr === 'glow') return 'neon';
+        if (fr === 'shadow') return 'none';
+        if (fr === 'none' || fr === 'asset' || AVATAR_FX[fr]) return fr;
+        return 'neon';
+    }
+    /** الإطار المتحرك جاهز كعنصر (للبث وللمحرر) — null لو «بدون» أو إطار من المكتبة. */
+    function avatarFx(p) {
+        var fr = avatarFrame(p && p.fr);
+        if (!AVATAR_FX[fr]) return null;
+        var d = document.createElement('div');
+        d.innerHTML = AVATAR_FX[fr](Object.assign({}, p, { fr: fr }));
         return d.firstChild;
     }
 
@@ -3000,7 +3173,7 @@
             var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
             if (parts.avatar.on) {
                 // غلاف (الحركة والتوهّج) ← إطار بشكل الصورة (بلون الإطار) ← الصورة نفسها بنفس الشكل
-                var shp = avatarShape(parts.avatar.sh), frm = parts.avatar.fr || 'ring';
+                var shp = avatarShape(parts.avatar.sh), frm = avatarFrame(parts.avatar.fr);
                 var pa = el('div', 'agp-so-vpart agp-so-vav fr-' + frm);
                 pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em;color:' + (parts.avatar.c || '#fff');
                 var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
@@ -3020,8 +3193,9 @@
                     fim.style.cssText = 'width:' + (fs * 100) + '%;height:' + (fs * 100) + '%;left:' + (50 - fs * 50) + '%;top:' + (50 - fs * 50) + '%';
                     lwa.appendChild(fim);
                 }
-                // «دوامة ضوء»: حلقات وغبار ونجوم تلف حول الصورة (خارج الحركة المستمرة عشان ما تدور مرتين)
-                if (frm === 'swirl') pa.appendChild(avatarSwirl(parts.avatar));
+                // الإطار المتحرك (نيون، دوامة، مذنّبين، برق، معدن) حول الصورة — خارج الحركة المستمرة عشان ما يدور مرتين
+                var fxEl = avatarFx(parts.avatar);
+                if (fxEl) pa.appendChild(fxEl);
                 pa.appendChild(lwa);
                 box.appendChild(pa);
             }
@@ -4621,8 +4795,9 @@
         // الصورة: الإطار (vav-f) بلون الإطار وبشكل الصورة، والصورة (vav-i) داخله بنفس الشكل
         '.agp-so-vav .vav-f{position:absolute;inset:0;background:currentColor}',
         '.agp-so-vav .vav-i{position:absolute;inset:.085em;overflow:hidden;background:#2a2338;display:flex;align-items:center;justify-content:center}',
-        '.agp-so-vav.fr-glow .vav-f,.agp-so-vav.fr-shadow .vav-f,.agp-so-vav.fr-none .vav-f,.agp-so-vav.fr-swirl .vav-f{background:transparent}',
-        '.agp-so-vav.fr-glow .vav-i,.agp-so-vav.fr-shadow .vav-i,.agp-so-vav.fr-none .vav-i,.agp-so-vav.fr-swirl .vav-i{inset:0}',
+        // كل الإطارات صارت رسمة فوق الصورة — الصورة نفسها تعبّي مكانها
+        '.agp-so-vav .vav-f{background:transparent}',
+        '.agp-so-vav .vav-i{inset:0}',
         // دوامة الضوء حول الصورة
         '.vav-swirl{position:absolute;width:190%;height:190%;left:-45%;top:-45%;overflow:visible;pointer-events:none;mix-blend-mode:screen}',
         '.agp-so-vav .vav-swirl{z-index:1}',
@@ -4639,14 +4814,32 @@
         '.vav-swirl.m-pulse .sw-glow,.vav-swirl.m-orbit .sw-glow{animation:agp-so-swg calc(2.4s*var(--sws)) ease-in-out infinite}',
         '.vav-swirl .sw-tw{animation:agp-so-swtw calc(2.6s*var(--sws)) ease-in-out infinite;transform-box:fill-box;transform-origin:center}',
         '.vav-swirl.m-none .sw-tw{animation:none}',
+        // الإطارات المتحركة (نيون، مذنّبين، برق، معدن)
+        '.vav-fx .fx-run,.vav-fx .fx-spin,.vav-fx .fx-body,.vav-fx .fx-glow{transform-origin:0 0}',
+        '.vav-fx.m-run .fx-run,.vav-fx.m-pulse .fx-run{animation:agp-so-swr calc(3.2s*var(--sws)) linear infinite}',
+        '.vav-fx.fx-comet .fx-run{animation-duration:calc(2.6s*var(--sws))}',
+        '.vav-fx.fx-metal .fx-run{animation-duration:calc(3.8s*var(--sws))}',
+        '.vav-fx.m-pulse .fx-glow{animation:agp-so-swg calc(1.8s*var(--sws)) ease-in-out infinite}',
+        '.vav-fx.m-pulse .fx-body{animation:agp-so-fxp calc(1.8s*var(--sws)) ease-in-out infinite}',
+        '.vav-fx.fx-electric .fx-b2,.vav-fx.fx-electric .fx-b3{opacity:0}',
+        '.vav-fx.fx-electric.m-run .fx-b1,.vav-fx.fx-electric.m-pulse .fx-b1{animation:agp-so-fxe1 calc(.36s*var(--sws)) steps(1,end) infinite}',
+        '.vav-fx.fx-electric.m-run .fx-b2,.vav-fx.fx-electric.m-pulse .fx-b2{animation:agp-so-fxe2 calc(.36s*var(--sws)) steps(1,end) infinite}',
+        '.vav-fx.fx-electric.m-run .fx-b3,.vav-fx.fx-electric.m-pulse .fx-b3{animation:agp-so-fxe3 calc(.36s*var(--sws)) steps(1,end) infinite}',
+        '.vav-fx.fx-electric.m-run .fx-spin,.vav-fx.fx-electric.m-pulse .fx-spin{animation:agp-so-swr calc(14s*var(--sws)) linear infinite}',
+        '.vav-fx .fx-sk{opacity:0}',
+        '.vav-fx.m-run .fx-sk,.vav-fx.m-pulse .fx-sk{animation:agp-so-fxsk calc(1.15s*var(--sws)) steps(1,end) infinite}',
+        '.vav-fx.m-pulse.fx-electric .fx-glow{animation:agp-so-fxfl calc(.5s*var(--sws)) ease-in-out infinite}',
+        '@keyframes agp-so-fxp{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}',
+        '@keyframes agp-so-fxe1{0%{opacity:1}33%{opacity:0}}',
+        '@keyframes agp-so-fxe2{0%{opacity:0}33%{opacity:1}66%{opacity:0}}',
+        '@keyframes agp-so-fxe3{0%{opacity:0}66%{opacity:1}}',
+        '@keyframes agp-so-fxsk{0%,100%{opacity:0}8%{opacity:1}22%{opacity:0}}',
+        '@keyframes agp-so-fxfl{0%,100%{opacity:.7}50%{opacity:1}}',
         '@keyframes agp-so-swr{to{transform:rotate(360deg)}}',
         '@keyframes agp-so-swt{0%,100%{transform:scale(1,1) rotate(0)}50%{transform:scale(1.03,.93) rotate(10deg)}}',
         '@keyframes agp-so-swp{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}',
         '@keyframes agp-so-swg{0%,100%{opacity:.7}50%{opacity:1}}',
         '@keyframes agp-so-swtw{0%,100%{opacity:.25;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}',
-        '.agp-so-vav.fr-ring{filter:drop-shadow(0 .12em .3em rgba(0,0,0,.6))}',
-        '.agp-so-vav.fr-shadow{filter:drop-shadow(0 .14em .35em rgba(0,0,0,.75))}',
-        '.agp-so-vav.fr-glow{filter:drop-shadow(0 0 .14em currentColor) drop-shadow(0 0 .4em currentColor)}',
         '.agp-so-vav img{width:100%;height:100%;object-fit:cover;display:block}',
         '.agp-so-vini{font-weight:800;font-size:1.1em;color:#fff}',
         '.agp-so-vname,.agp-so-vmsg{font-family:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:800;line-height:1.3;text-shadow:0 .06em .22em rgba(0,0,0,.95),0 0 .6em rgba(0,0,0,.55)}',
@@ -4888,7 +5081,7 @@
         ICON_SET: ICON_SET, EMOJIS: EMOJIS, ALERT_EVENTS: ALERT_EVENTS, ALERT_EVENTS_ALL: ALERT_EVENTS_ALL, alertMatches: alertMatches, alertsFor: alertsFor, ALERT_DESIGNS: ALERT_DESIGNS, ALERT_ANIMS: ALERT_ANIMS,
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
-        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
+        AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, FX_MOTIONS: FX_MOTIONS, FX_DEFAULT_COLORS: FX_DEFAULT_COLORS, avatarFrame: avatarFrame, avatarFx: avatarFx, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
