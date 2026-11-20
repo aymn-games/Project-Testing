@@ -3017,17 +3017,17 @@
                 // نفس شكل وإطار الصورة على البث: إطار بشكل الصورة (لونه) والصورة داخله بنفس الشكل
                 c.style.width = c.style.height = (p.s * px) + 'px';
                 var shp = O.AVATAR_SHAPES.filter(function (q) { return q.key === (p.sh || 'circle'); })[0] || O.AVATAR_SHAPES[0];
-                var fr = p.fr || 'ring', col = p.c || '#fff';
                 var af = c.querySelector('.va-av-f'), ai = c.querySelector('.va-av-i');
                 [af, ai].forEach(function (q) { q.style.clipPath = q.style.webkitClipPath = shp.cp || ''; q.style.borderRadius = shp.cp ? '' : shp.br; });
-                af.style.background = fr === 'ring' ? col : 'transparent';
+                af.style.background = 'transparent';
                 af.className = 'va-av-f' + (O.loopOf(p) ? ' agp-so-vloop abs lp-' + O.loopOf(p) : '');
-                ai.style.inset = fr === 'ring' ? '2px' : '0';
-                c.style.filter = fr === 'glow' ? 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')' : fr === 'none' ? '' : 'drop-shadow(0 2px 5px rgba(0,0,0,.7))';
-                // «دوامة ضوء»: نفس رسمة البث حول الصورة
+                ai.style.inset = '0';
+                c.style.filter = '';
+                // الإطار المتحرك: نفس رسمة البث حول الصورة
                 var oldSw = c.querySelector('.vav-swirl');
                 if (oldSw) oldSw.remove();
-                if (fr === 'swirl') { c.style.filter = ''; c.appendChild(O.avatarSwirl(p)); }
+                var fxEl = O.avatarFx(p);
+                if (fxEl) c.appendChild(fxEl);
             }
             else {
                 c.style.fontSize = (p.s * px) + 'px'; c.style.color = p.c;
@@ -3220,15 +3220,21 @@
                     sg.appendChild(sb);
                 });
                 gS.appendChild(row('شكل الصورة', sg, true));
-                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), p.fr || 'ring', function (val) {
-                    // الدوامة بلون أبيض تطلع باهتة — نبدأها بالأزرق (مثل الصورة) لو اللون أبيض
-                    if (val === 'swirl' && (!p.c || /^#fff(fff)?$/i.test(p.c))) it.parts[key] = Object.assign({}, O.partsOf(it)[key], { c: '#6fb4ff' });
-                    setPart(key, 'fr', val, true);
+                var curFr = O.avatarFrame(p.fr);
+                gS.appendChild(row('إطار الصورة', pills(opts(O.AVATAR_FRAMES), curFr, function (val) {
+                    // لكل إطار لونه الأول: لو اللون أبيض أو لون الإطار السابق الأصلي، ينحط لون الإطار الجديد
+                    var pc = String(p.c || '').toLowerCase();
+                    var next = { fr: val, fm: undefined };
+                    if (O.FX_DEFAULT_COLORS[val] && (!pc || pc === '#ffffff' || pc === '#fff' || pc === String(O.FX_DEFAULT_COLORS[curFr] || '').toLowerCase())) next.c = O.FX_DEFAULT_COLORS[val];
+                    it.parts[key] = Object.assign({}, O.partsOf(it)[key], next);
+                    commit(); rebuildNode(it); paintChip(key); renderPanel();
                 }), true));
-                if (p.fr === 'swirl') {
-                    gS.appendChild(row('سماكة الدوامة', slider(0.3, 3, 0.05, Number(p.fw) || 1, function (v) { setPart(key, 'fw', v); })));
-                    gS.appendChild(row('حركة الدوامة', pills(opts(O.SWIRL_MOTIONS), p.fm || 'spin', function (val) { setPart(key, 'fm', val, true); }), true));
-                    if ((p.fm || 'spin') !== 'none') gS.appendChild(row('السرعة', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], p.fsp || 'normal', function (val) { setPart(key, 'fsp', val, true); })));
+                if (curFr !== 'none' && curFr !== 'asset') {
+                    var isSw = curFr === 'swirl';
+                    var mos = isSw ? O.SWIRL_MOTIONS : O.FX_MOTIONS, mo = p.fm && mos.some(function (x) { return x.key === p.fm; }) ? p.fm : mos[0].key;
+                    gS.appendChild(row('سماكة الإطار', slider(0.3, 3, 0.05, Number(p.fw) || 1, function (v) { setPart(key, 'fw', v); })));
+                    gS.appendChild(row('حركة الإطار', pills(opts(mos), mo, function (val) { setPart(key, 'fm', val, true); }), true));
+                    if (mo !== 'none') gS.appendChild(row('سرعة الحركة', pills([{ label: 'هادية', value: 'slow' }, { label: 'عادية', value: 'normal' }, { label: 'سريعة', value: 'fast' }], p.fsp || 'normal', function (val) { setPart(key, 'fsp', val, true); })));
                 }
                 // إطارات من مكتبة فيرو (صورة فوق صورة الداعم)
                 loadVyLib(function () { if (libOf('frame').length) renderPanel(); });
@@ -3248,7 +3254,7 @@
                     if (p.fr === 'asset') gS.appendChild(row('حجم الإطار', slider(1, 2.5, 0.05, p.fs || 1.3, function (v) { setPart(key, 'fs', v); })));
                 }
             }
-            gS.appendChild(row(key === 'avatar' ? (p.fr === 'glow' ? 'لون التوهّج' : p.fr === 'swirl' ? 'لون الدوامة' : 'لون الإطار') : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
+            gS.appendChild(row(key === 'avatar' ? 'لون الإطار' : 'لون ' + nm, swatches(p.c, function (c) { setPart(key, 'c', c, true); }), true));
             if (key !== 'avatar') {
                 gS.appendChild(row('ستايل النص', pills([{ label: 'عادي', value: '' }].concat(opts(O.TEXT_STYLES).filter(function (x) { return x.value !== 'plain'; })), p.st || '', function (val) { setPart(key, 'st', val, true); }), true, 'حدود، نيون، ذهبي، نار…'));
                 var g = el('div', 'ob-fgrid');
