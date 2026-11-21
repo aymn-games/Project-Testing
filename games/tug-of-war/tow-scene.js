@@ -28,12 +28,6 @@ const SKINS = ['#f6cfa6', '#f2c49b', '#d9a273', '#f8d9bd', '#c68a5c', '#e3ae80']
 const HAIRS = ['#3b2414', '#5b3a1e', '#1f1410', '#7c4a1e', '#120c09', '#4a2c17'];
 
 function tex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; }
-function label(name, color) {
-    return tex(512, 128, (g, w) => { g.font = '700 58px ' + FONT; const tw = Math.min(w - 20, g.measureText(name).width + 60);
-        g.fillStyle = 'rgba(10,9,18,.88)'; g.beginPath(); g.roundRect((w - tw) / 2, 14, tw, 100, 50); g.fill();
-        g.strokeStyle = color; g.lineWidth = 6; g.stroke();
-        g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.fillText(name, w / 2, 66, w - 70); });
-}
 const shade = (c, k) => new T.Color(c).multiplyScalar(k).getStyle();
 
 /* ---------- شخصية سفينة النجاة (نسخة من figure() بـ ship3d.js، بقميص الفريق) ---------- */
@@ -79,7 +73,7 @@ export function createTugScene(container, opts = {}) {
     const cam = new T.PerspectiveCamera(36, 1, .1, 100); cam.position.set(0, 3.6, 11); cam.lookAt(0, 1.25, 0);
     sc.add(new T.HemisphereLight('#d9ccff', '#1b1230', 1.05));
     const sun = new T.DirectionalLight('#fff4e6', 2.1); sun.position.set(3, 10, 7); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 8, bottom: -8, near: 1, far: 30 }); sc.add(sun);
+    Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 8, bottom: -8, near: 1, far: 30 }); sun.shadow.bias = -.0006; sun.shadow.normalBias = .03; sc.add(sun);
     const glowL = new T.PointLight(colors[0], 18, 14); glowL.position.set(-6, 3, 2); sc.add(glowL);
     const glowR = new T.PointLight(colors[1], 18, 14); glowR.position.set(6, 3, 2); sc.add(glowR);
 
@@ -87,7 +81,7 @@ export function createTugScene(container, opts = {}) {
     const floorTex = tex(1024, 1200, (g, w, h) => {
         const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, colors[0]); gr.addColorStop(.38, '#1b1530'); gr.addColorStop(.62, '#1b1530'); gr.addColorStop(1, colors[1]);
         g.fillStyle = '#120e20'; g.fillRect(0, 0, w, h); g.globalAlpha = .35; g.fillStyle = gr; g.fillRect(0, 0, w, h); g.globalAlpha = 1;
-        g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } });
+        g.strokeStyle = 'rgba(255,255,255,.025)'; g.lineWidth = 3; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } });
     const floor = new T.Mesh(new T.BoxGeometry(46, .3, 30), new T.MeshStandardMaterial({ map: floorTex, roughness: .8 })); floor.position.set(0, -.15, 11.5); floor.receiveShadow = true; sc.add(floor);
     const edge = new T.Mesh(new T.BoxGeometry(46.2, .06, 30.2), new T.MeshBasicMaterial({ color: '#a855f7' })); edge.position.set(0, -.31, 11.5); sc.add(edge);
     const lineM = c => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: .95 });
@@ -108,15 +102,14 @@ export function createTugScene(container, opts = {}) {
         const turf = tex(512, 512, (g, w, h) => { g.fillStyle = '#18132b'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(196,181,253,.05)'; g.lineWidth = 2; for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }); // أرضية بنفسجية غامقة (بدون أخضر)
         turf.wrapS = turf.wrapT = T.RepeatWrapping; turf.repeat.set(6, 3);
         const field = new T.Mesh(new T.PlaneGeometry(90, 60), new T.MeshStandardMaterial({ map: turf, roughness: 1 })); field.rotation.x = -Math.PI / 2; field.position.set(0, -.32, -4); field.receiveShadow = true; sc.add(field);
-        // مدرجات: درجات خرسانية + كراسي بلون كل فريق (كل نص بلون فريقه)
-        const ROWS = 9, SEATS = 34, Z0 = -14, seatGeo = new T.BoxGeometry(.7, .45, .55);
+        // مدرجات: درجات مصمتة هادية، كل نص بلون فريقه (بدون كراسي صغيرة عشان ما يطلع نقش يلمع مع الحركة)
+        const ROWS = 9, Z0 = -14;
         for (let r = 0; r < ROWS; r++) {
             const z = Z0 - r * 1.1, y = r * .75;
-            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#15121f' : '#120f1b')); step.position.set(0, y + .05, z); step.receiveShadow = true; sc.add(step);
+            const step = new T.Mesh(new T.BoxGeometry(56, .75, 1.1), M(r % 2 ? '#15121f' : '#120f1b')); step.position.set(0, y + .05, z); sc.add(step);
             for (const k of [0, 1]) {
-                const inst = new T.InstancedMesh(seatGeo, M(shade(colors[k], r % 2 ? .22 : .27), { roughness: .9 }), SEATS / 2), m4 = new T.Matrix4();
-                for (let i = 0; i < SEATS / 2; i++) { const x = (k ? 1 : -1) * (1.2 + i * 1.5); m4.makeTranslation(x, y + .65, z + .15); inst.setMatrixAt(i, m4); }
-                sc.add(inst);
+                const seat = new T.Mesh(new T.BoxGeometry(25, .4, .6), M(shade(colors[k], r % 2 ? .2 : .24), { roughness: .95 }));
+                seat.position.set((k ? 1 : -1) * 13.6, y + .62, z + .1); sc.add(seat);
             }
         }
         const topY = ROWS * .75, backZ = Z0 - ROWS * 1.1;
@@ -148,6 +141,50 @@ export function createTugScene(container, opts = {}) {
     const fl = new T.Mesh(new T.PlaneGeometry(.32, .55), new T.MeshBasicMaterial({ map: fTex, side: T.DoubleSide })); fl.position.y = -.33; flag.add(fl);
     const knot = new T.Mesh(new T.SphereGeometry(.11, 16, 12), new T.MeshStandardMaterial({ color: '#fff', emissive: '#fff', emissiveIntensity: .6 })); flag.add(knot);
 
+    // ---- صور اللاعبين: دائرة بصورة اللاعب ملاصقة لراسه (بدل الاسم). طبقة HTML فوق الملعب
+    //      مثل فورمولا ون، لأن صور تيك توك ما تنفع texture بالـ WebGL (CORS). اللي ما عنده صورة يطلع أول حرف من اسمه.
+    const pinLayer = document.createElement('div');
+    pinLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2';
+    container.appendChild(pinLayer);
+    const initialOf = n => (Array.from(String(n || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase();
+    function makePin(p, k) {
+        const el = document.createElement('div');
+        el.style.cssText = 'position:absolute;left:0;top:0;border-radius:50%;overflow:hidden;box-sizing:border-box;display:none;place-items:center;' +
+            'border:3px solid ' + colors[k] + ';background:linear-gradient(135deg,' + colors[k] + ',' + shade(colors[k], .45) + ');' +
+            'box-shadow:0 0 0 2px rgba(10,8,20,.85),0 6px 16px rgba(0,0,0,.45);color:#fff;font-weight:800;font-family:' + FONT.replace(/"/g, "'") + ';will-change:transform';
+        pinLayer.appendChild(el);
+        const pin = { el, src: undefined, size: 0 };
+        setPinImg(pin, p.avatar || null, p.name);
+        return pin;
+    }
+    function setPinImg(pin, src, name) {
+        pin.src = src; pin.el.textContent = '';
+        const initial = () => { pin.el.textContent = initialOf(name); };
+        if (!src) return initial();
+        const im = new Image(); im.alt = ''; im.decoding = 'async'; im.referrerPolicy = 'no-referrer';
+        im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+        im.onerror = () => { im.remove(); initial(); };
+        im.src = src; pin.el.appendChild(im);
+    }
+    const _hv = new T.Vector3(), _hu = new T.Vector3();
+    function placePins() {
+        const W = container.clientWidth || 1, H = container.clientHeight || 1;
+        for (const f of figs.values()) {
+            const el = f.pin.el, vis = f.outer.visible && f.outer.scale.x > .05;
+            if (!vis) { el.style.display = 'none'; continue; }
+            f.head.getWorldPosition(_hv); _hu.copy(_hv); _hu.y += .5;
+            _hv.project(cam); _hu.project(cam);
+            if (_hv.z > 1) { el.style.display = 'none'; continue; }
+            // حجم الصورة = عرض الراس على الشاشة، وتنحط فوق الراس لازقة فيه
+            const px = Math.abs(_hu.y - _hv.y) * H / 2, size = Math.max(22, Math.min(80, px * 1.1)) * f.outer.scale.x;
+            const x = (_hv.x + 1) / 2 * W, top = (1 - _hu.y) / 2 * H - size * .92;
+            if (Math.abs(size - f.pin.size) > .5) { f.pin.size = size; el.style.width = el.style.height = size + 'px'; el.style.fontSize = Math.round(size * .45) + 'px'; }
+            el.style.display = 'grid';
+            el.style.transform = 'translate(' + (x - size / 2).toFixed(1) + 'px,' + top.toFixed(1) + 'px)';
+            el.style.opacity = f.frozen ? .75 : 1;
+        }
+    }
+
     // ---- اللاعبين
     const figs = new Map();
     let state = { teams: [[], []], pos: 0, boost: [false, false], winner: -1, heave: [0, 0] };
@@ -157,11 +194,10 @@ export function createTugScene(container, opts = {}) {
         const outer = new T.Group(), h = hash(p.id || p.name), girl = p.g != null ? !p.g : (h & 1) === 0;
         const f = shipFigure({ skin: SKINS[h % SKINS.length], hair: HAIRS[(h >>> 3) % HAIRS.length], girl, outfit: colors[k], pants: shade(colors[k], .45) });
         outer.add(f.root);
-        const sp = new T.Sprite(new T.SpriteMaterial({ map: label(p.name, colors[k]), depthTest: false, transparent: true })); sp.scale.set(1.5, .375, 1); sp.position.y = 2.2; sp.renderOrder = 10; outer.add(sp);
         const ice = new T.Mesh(new T.BoxGeometry(.8, 1.9, .8), new T.MeshStandardMaterial({ color: '#bae6fd', transparent: true, opacity: .42, roughness: .1, metalness: .1, emissive: '#7dd3fc', emissiveIntensity: .35, depthWrite: false })); ice.position.y = .95; ice.visible = false; outer.add(ice);
         outer.rotation.y = k ? -Math.PI / 2 : Math.PI / 2; // يطالع النص
         mover.add(outer);
-        return Object.assign(f, { outer, sp, ice, k, ph: (h % 628) / 100, jerk: 0, x: 0, name: p.name });
+        return Object.assign(f, { outer, ice, k, ph: (h % 628) / 100, jerk: 0, x: 0, name: p.name, pin: makePin(p, k) });
     }
     function sync() {
         const seen = new Set();
@@ -174,9 +210,10 @@ export function createTugScene(container, opts = {}) {
                 // مكان اللاعب حسب ترتيبه بين الباقين بالحبل: لما ينقصى اللي قدامه يتقدّم مكانه (بنعومة بـ frame)
                 if (!p.out) { f.x = dir * slot(ai, n); ai++; if (f.cx == null) f.cx = f.x; }
                 f.z = 0; f.frozen = !!p.frozen;
+                if ((p.avatar || null) !== f.pin.src) setPinImg(f.pin, p.avatar || null, p.name);
                 if (p.out && !f.outAt) { f.outAt = clock.elapsedTime; burstAt(f, '#f97316', 46, 4.2); burstAt(f, '#fde68a', 22, 3); }
                 if (!p.out) { f.outAt = 0; f.outer.visible = true; f.outer.scale.setScalar(1); }
-                if (!f.outAt) f.outer.position.set(f.cx, 0, f.z); { const lw = Math.min(1.9, stepFor(n) * 1.7); f.sp.scale.set(lw, lw / 4, 1); f.ly = 2.25 + (i % 2) * (lw / 4 + .08); } // الأسماء كبيرة، وبطابقين متبادلين عشان ما تتراكب
+                if (!f.outAt) f.outer.position.set(f.cx, 0, f.z);
             });
         });
         for (const [id, f] of figs) if (!seen.has(id)) { drop(f); figs.delete(id); }
@@ -198,7 +235,7 @@ export function createTugScene(container, opts = {}) {
         cam.updateProjectionMatrix();
     }
     let camN = 0, far = true, camInit = false; const camGoal = { pos: new T.Vector3(), look: new T.Vector3() }, camLook = new T.Vector3(0, 1, 0);
-    function drop(f) { f.outer.removeFromParent(); }
+    function drop(f) { f.outer.removeFromParent(); f.pin.el.remove(); }
 
     // وضعية الشد: الجسم مايل لورا، الركب منثنية، اليدين قدام على الحبل
     const E = (b, x, y, z) => { if (b) b.rotation.set(x, y, z); };
@@ -257,7 +294,9 @@ export function createTugScene(container, opts = {}) {
         const dt = Math.min(.05, clock.getDelta()), t = clock.elapsedTime;
         const target = Math.max(-1, Math.min(1, state.pos / 100)) * SHIFT;
         posX += (target - posX) * (1 - Math.exp(-dt * 7)); mover.position.x = posX;
-        { const k = 1 - Math.exp(-dt * (far ? 1.8 : .9)); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k); cam.lookAt(camLook); }
+        { const k = 1 - Math.exp(-dt * 3); cam.position.lerp(camGoal.pos, k); camLook.lerp(camGoal.look, k);
+            if (cam.position.distanceTo(camGoal.pos) < .01) { cam.position.copy(camGoal.pos); camLook.copy(camGoal.look); }
+            cam.lookAt(camLook); }
         flag.position.set(0, ropeY, 0);
         for (const f of figs.values()) {
             if (f.outAt) { // منقصى: ينقذف لجهة الخصم وهو يلف، ويصغر لين يختفي
@@ -271,13 +310,12 @@ export function createTugScene(container, opts = {}) {
             const won = state.winner === f.k, lost = state.winner >= 0 && !won;
             const boost = state.boost[f.k] ? .08 : 0;
             // heave = سرعة تكبيس الفريق (0..1): الفريق كامل يشد بإيقاع، وكل ما زاد التكبيس زادت الشدّة
-            const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.18 + .14 * Math.sin(t * 11 + f.ph * .3));
-            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .35 + (won ? -.3 : 0);
+            const hv = (state.heave && state.heave[f.k]) || 0, tug = hv * (.14 + .06 * Math.sin(t * 6 + f.ph * .3));
+            const lean = f.frozen ? .05 : lost ? .02 : .38 + boost + tug + f.jerk * .15 + (won ? -.3 : 0);
             f.cx += (f.x - f.cx) * (1 - Math.exp(-dt * 3));
-            f.outer.position.x = f.cx + (!f.frozen && !won && !lost ? (f.k ? 1 : -1) * hv * .08 * (1 + Math.sin(t * 11 + f.ph * .3)) : 0);
+            f.outer.position.x = f.cx + (!f.frozen && !won && !lost ? (f.k ? 1 : -1) * hv * .04 * (1 + Math.sin(t * 6 + f.ph * .3)) : 0);
             f.ice.visible = !!f.frozen;
             poseShip(f, lean, t, won ? 'win' : lost ? 'lose' : null);
-            f.sp.position.y = lost ? f.ly - 1.15 : f.ly;
             if (won) f.outer.position.y = Math.abs(Math.sin(t * 6 + f.ph)) * .25; else f.outer.position.y = 0;
         }
         for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.age += dt; const a = p.age / p.life;
@@ -287,12 +325,12 @@ export function createTugScene(container, opts = {}) {
             hookMesh.position.set(hookAnim.from + (hookAnim.to - hookAnim.from) * (1 - Math.pow(1 - u, 3)) + posX, ropeY + .25 + Math.sin(u * Math.PI) * .6, 0); hookMesh.rotation.y = u * Math.PI * 2;
             spawn(hookMesh.position.clone(), '#f472b6', 2, .8, { up: .5, g: 0, life: .5, size: .2 });
             if (u >= 1) { spawn(new T.Vector3(posX, ropeY, 0), '#f472b6', 50, 4.5); spawn(new T.Vector3(posX, ropeY, 0), '#ffffff', 20, 3); hookMesh.visible = false; hookAnim = null; } }
-        if (flash.t > 0) { flash.t = Math.max(0, flash.t - dt * 1.4); const L = flash.k ? glowR : glowL; L.color.set(flash.c); L.intensity = 18 + flash.t * 90; if (flash.t === 0) L.color.set(colors[flash.k]); }
+        if (flash.t > 0) { flash.t = Math.max(0, flash.t - dt * 1.4); const L = flash.k ? glowR : glowL; L.color.set(flash.c); L.intensity = 18 + flash.t * 26; if (flash.t === 0) L.color.set(colors[flash.k]); }
         // ارتفاع الحبل = ارتفاع يدين أول لاعب (مرة وحدة بعد ما تطلع الشخصيات)
         if (!measured && figs.size) { const f = [...figs.values()].find(x => !x.outAt); if (f) { f.outer.updateMatrixWorld(true);
             const hand = f.arms[0].children[1];
             if (hand) { const v = hand.getWorldPosition(new T.Vector3()); if (v.y > .4) { ropeY = v.y; rope.position.y = ropeY; measured = true; } } } }
-        r.render(sc, cam);
+        r.render(sc, cam); placePins();
     }
     const ro = new ResizeObserver(() => { const w = container.clientWidth || 1, h = container.clientHeight || 1; r.setSize(w, h, false); cam.aspect = w / h;
         // الشاشات الضيقة: الكاميرا ترجع لورا عشان يبان الملعب كامل
@@ -307,6 +345,6 @@ export function createTugScene(container, opts = {}) {
         effect,
         // true = الكاميرا بعيدة (قبل البداية) · false = تقرّب للعب
         setFar(v) { far = !!v; fitCam(); },
-        stop() { cancelAnimationFrame(raf); ro.disconnect(); for (const f of figs.values()) drop(f); r.dispose(); r.domElement.remove(); }
+        stop() { cancelAnimationFrame(raf); ro.disconnect(); for (const f of figs.values()) drop(f); r.dispose(); r.domElement.remove(); pinLayer.remove(); }
     };
 }
