@@ -3760,6 +3760,8 @@
             conn.state = d.state || 'idle';
             if (was !== conn.state) conn.msg = '';
             if (was === 'connected' && conn.state === 'idle') { conn.msg = 'انقطع الاتصال — غالباً البث انتهى'; conn.ok = false; }
+            // الاتصال علّق أو فشل (السيرفر قفله بعد مهلة): نقول له يعيد بدل ما يرجع «اتصل» بصمت
+            if (conn.state === 'idle' && d.error) { conn.msg = d.error === 'timeout' ? 'تيك توك ما رد على الاتصال — اضغط «اتصل» مرة ثانية' : 'انقطع الاتصال بخطأ — اضغط «اتصل» مرة ثانية'; conn.ok = false; }
             if (first || was !== conn.state) paintConnect();
             syncConnTimer();
         }).catch(function () { conn.loading = false; });
@@ -3772,12 +3774,13 @@
         else if (!want && conn.timer) { clearInterval(conn.timer); conn.timer = null; }
     }
 
-    function doConnect(raw) {
+    /** force = «إعادة الاتصال»: السيرفر يقفل الاتصال الحالي (عالق أو على بث قديم) ويفتح جديد. */
+    function doConnect(raw, force) {
         var u = String(raw || '').trim().replace(/^@+/, '');
         if (!u) { conn.msg = 'اكتب يوزر تيك توك'; conn.ok = false; paintConnect(); return; }
-        conn.busy = true; conn.msg = 'نتأكد إنك تبث ونتصل…'; conn.ok = true;
+        conn.busy = true; conn.msg = force ? 'نعيد الاتصال ببثك…' : 'نتأكد إنك تبث ونتصل…'; conn.ok = true;
         paintConnect();
-        api('POST', '/api/screens/connect', { username: u }).then(function (d) {
+        api('POST', '/api/screens/connect', force ? { username: u, force: true } : { username: u }).then(function (d) {
             conn.busy = false;
             if (!d || !d.success) {
                 conn.ok = false;
@@ -3828,7 +3831,8 @@
         info.appendChild(dot);
         var tx = el('div');
         tx.appendChild(el('b', null, st === 'connected' ? 'متصل بالبث' : st === 'connecting' ? 'يتصل بالبث…' : 'اتصل بالبث'));
-        var note = conn.msg || (conn.loaded && !conn.username ? 'حسابك مو مربوط بتيك توك — اربطه مرة وحدة وبعدها تتصل من هنا' : st === 'connected' ? 'الأليرتات والتوب والأهداف والشات والأغاني كلها شغّالة على بثك — حتى لو سكّرت الصفحة'
+        var note = conn.msg || (conn.loaded && !conn.username ? 'حسابك مو مربوط بتيك توك — اربطه مرة وحدة وبعدها تتصل من هنا' : st === 'connected' ? 'الأليرتات والتوب والأهداف والشات والأغاني كلها شغّالة على بثك — حتى لو سكّرت الصفحة. لو أعدت البث وما وصلت البيانات اضغط «إعادة الاتصال»'
+            : st === 'connecting' ? 'يتصل ببثك… لو طوّل اضغط «إعادة الاتصال»'
             : 'اكتب يوزر تيك توك حقك واتصل — يبقى متصل لين ينتهي البث');
         tx.appendChild(el('small', 'note' + (conn.msg && !conn.ok ? ' bad' : ''), note));
         info.appendChild(tx);
@@ -3841,6 +3845,10 @@
             ctl.appendChild(lk);
         } else if (st === 'connected' || st === 'connecting') {
             ctl.appendChild(el('span', 'who', '@' + (conn.username || '')));
+            // لو علّق على «يتصل…» أو أعاد البث وما وصلت البيانات: اتصال جديد بضغطة
+            var re = button(conn.busy ? 'يتصل…' : 'إعادة الاتصال', 'ob-btn' + (st === 'connecting' ? ' primary' : ''), function () { doConnect(conn.username, true); });
+            re.disabled = conn.busy;
+            ctl.appendChild(re);
             var off = button('قطع الاتصال', 'ob-btn ghost', doDisconnect);
             off.disabled = conn.busy;
             ctl.appendChild(off);

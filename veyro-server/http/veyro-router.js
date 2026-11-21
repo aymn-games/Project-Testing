@@ -538,15 +538,16 @@ function handleStreamlabsDonations(req, res, body, user) {
   }) });
 }
 
-/** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected } */
+/** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected, error: null|timeout|error } */
 function handleScreenConnectionStatus(req, res, body, user) {
   if (!screensGate(res, user)) return;
   var u = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(user.id));
-  sendJson(res, 200, { success: true, username: u || null, state: u ? require('../stats/screen-audio-watcher').get().status(u) : 'idle' });
+  var w = require('../stats/screen-audio-watcher').get();
+  sendJson(res, 200, { success: true, username: u || null, state: u ? w.status(u) : 'idle', error: u ? w.lastError(u) : null });
 }
 
 /**
- * POST /api/screens/connect { username } → { success, state } — اليوزر لازم يكون حساب تيك توك
+ * POST /api/screens/connect { username, force? } → { success, state } — force = «إعادة الاتصال» (يقفل القديم ويفتح جديد) — اليوزر لازم يكون حساب تيك توك
  * الموثّق بحساب الستريمر (not_linked / not_your_account)، ويبث الحين (not_live).
  */
 function handleScreenConnect(req, res, body, user) {
@@ -558,7 +559,7 @@ function handleScreenConnect(req, res, body, user) {
   if (typed !== mine) { sendJson(res, 400, { success: false, error: 'not_your_account', username: mine }); return; }
   tiktokLiveCheck.isLive(mine).then(function (live) {
     if (live === false) { sendJson(res, 409, { success: false, error: 'not_live' }); return; }
-    var r = require('../stats/screen-audio-watcher').get().connectManual(mine);
+    var r = require('../stats/screen-audio-watcher').get().connectManual(mine, Boolean(body && body.force));
     sendJson(res, 200, { success: true, username: mine, state: r.state });
   });
 }
