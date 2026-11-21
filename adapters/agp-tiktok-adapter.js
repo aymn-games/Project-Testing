@@ -154,9 +154,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var PLATFORM_FEATURES = {
         tiktok: { likes: true, followersOnly: true, tiktokGifts: true, shares: true },
         kick: { subscriptions: true },
-        twitch: { subscriptions: true }
+        twitch: { subscriptions: true },
+        // «غرفة الجوالات» (اللعب بدون بث — phone-room.html): اللاعبين يرسلون
+        // من جوالاتهم تعليقات وهدايا تيك توك وتكبيس، بنفس شكل أحداث البث.
+        phone: { likes: true, tiktokGifts: true }
     };
-    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك', twitch: 'تويتش' };
+    var PLATFORM_LABELS = { tiktok: 'تيك توك', kick: 'كيك', twitch: 'تويتش', phone: 'غرفة الجوالات' };
     function currentPlatform() {
         var saved = readSavedConnection();
         if (saved && PLATFORM_FEATURES[saved.platform]) return saved.platform;

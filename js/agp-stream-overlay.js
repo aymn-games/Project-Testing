@@ -605,6 +605,7 @@
         if (SCREENS) return false; // محرر فيرو: سيرفر فيرو هو اللي يتصل بالبث (veyro-server)
         var c = savedConn();
         if ((!dataWanted() && !presenceWanted() && !chatWanted()) || !token() || !c) return false;
+        if (c.platform === 'phone') return false; // «غرفة الجوالات» (بدون بث): ما فيه بث نحسب بياناته
         if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
         if (gameConnected()) { gameDownSince = null; return false; }
         if (gameConnector()) {

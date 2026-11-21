@@ -1435,8 +1435,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 
+  // [غرفة الجوالات] اللعب بدون بث (phone-room.html): الاتصال المحفوظ يكون
+  // {platform:'phone', username:<رقم الغرفة>}، والألعاب تستقبل من جوالات
+  // اللاعبين بدل البث. الزر يظهر للأدمن ولمن منحه صلاحية 'phone_rooms'.
+  function isPhoneRoomSaved(){
+    try { var d = JSON.parse(localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY) || 'null'); return Boolean(d && d.platform === 'phone'); } catch (e) { return false; }
+  }
+  function canHostPhoneRoom(){
+    return Boolean(meUser && (meUser.role === 'admin' || (meUser.permissions && meUser.permissions.phone_rooms)));
+  }
+  function appendPhoneRoomLink(controls){
+    var phone = connectState === 'connected' && isPhoneRoomSaved();
+    if (!phone && !canHostPhoneRoom()) return;
+    var a = document.createElement('a');
+    a.href = 'phone-room.html';
+    a.textContent = phone ? 'الباركود وإدارة الغرفة' : '📱 العب بدون بث (غرفة الجوالات)';
+    a.style.cssText = 'padding:9px 18px;border-radius:999px;border:1px solid rgba(167,139,250,.45);background:rgba(124,58,237,.14);color:#e3d9ff;font-size:13.5px;font-weight:600;text-decoration:none;';
+    controls.appendChild(a);
+  }
+
   // زر «عرض إحصائيات البث» (js/agp-stream-stats.js) — لحسابات الستريمر المربوطة فقط.
   function appendStatsButton(controls){
+    appendPhoneRoomLink(controls);
+    if (connectState === 'connected' && isPhoneRoomSaved()) return;
     if (accountMode !== 'linked' && accountMode !== 'free') return;
     var statsBtn = document.createElement('button');
     statsBtn.type = 'button';
@@ -1552,7 +1573,9 @@ document.addEventListener('DOMContentLoaded', async function() {
           : 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ — نتصل تلقائياً أول ما تبدأ البث في ' + pl.label)
         : (streamPlatform !== 'tiktok' ? 'اكتب اسم قناة ' + pl.label + ' عشان نتحقق منها ونربط الألعاب فيها' : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه'),
       connecting: 'جاري التحقق من إن الحساب يبث الآن...',
-      connected: 'متصل الآن ببث ' + pl.label + ' ⁦' + pl.handle(connectUsername) + '⁩ ✓',
+      connected: isPhoneRoomSaved()
+        ? 'غرفة الجوالات مفتوحة — الألعاب تستقبل من جوالات اللاعبين بدون بث ✓'
+        : 'متصل الآن ببث ' + pl.label + ' ⁦' + pl.handle(connectUsername) + '⁩ ✓',
       error: connectErrorMsg || 'تعذر التحقق من البث'
     };
     note.textContent = noteText[connectState] || noteText.idle;
@@ -1562,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (connectState === 'connected') {
       var badge = document.createElement('span');
-      badge.textContent = platformInfo().handle(connectUsername);
+      badge.textContent = isPhoneRoomSaved() ? 'غرفة ' + connectUsername : platformInfo().handle(connectUsername);
       badge.style.cssText = 'padding:8px 14px;border-radius:999px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#8fe3af;font-size:13.5px;font-weight:600;';
       var disconnectBtn = document.createElement('button');
       disconnectBtn.type = 'button';
@@ -1934,6 +1957,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (!u) { setAccountMode(r && r.__httpStatus === 401 ? 'guest' : 'free'); return; }
       meUser = u;
       applyAccountForPlatform();
+      if (connectState === 'connected') renderConnectUI(); // زر غرفة الجوالات يعتمد على الحساب
       if (!canRunGames(u)) return;
       if (connectState === 'connected') autoFailedAttempts = 0;
       // لو متصل محفوظ ببث حساب ثاني (أدمن مثلاً) نخليه — نتصل تلقائياً بس لما ما فيه اتصال.

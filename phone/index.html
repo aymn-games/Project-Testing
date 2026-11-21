@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07060b">
+<title>غرفة الجوالات — العب من جوالك</title>
+<link rel="icon" href="../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="../assets/tiktok-gifts/tiktok-gifts.js"></script>
+<!--
+  «غرفة الجوالات» — صفحة اللاعب (اللعب بدون بث).
+  اللاعب يدخل برقم الغرفة (من الباركود أو بكتابته) واسمه بس، بدون حساب.
+  كل اللي يرسله من هنا (تعليق، تكبيس، هدية، متابعة) يوصل للعبة المفتوحة عند
+  صاحب الغرفة بنفس شكل أحداث بث تيك توك، فاللعبة تتعامل معه كمشاهد بالبث.
+  الخادم: backend/phone-room/phone-room-server.js ('/ws/phone-room').
+-->
+<style>
+:root {
+  --bg: #07060b; --card: #13111b; --card2: #1c1828; --ink: #f4f2f8; --mute: #a8a3b5; --line: rgba(255,255,255,.09);
+  --acc: #a78bfa; --g1: #7c3aed; --g2: #a855f7; --red: #fe2c55; --green: #2fb36a;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: radial-gradient(700px 500px at 100% -10%, rgba(124,58,237,.2), transparent 65%), radial-gradient(600px 500px at -10% 60%, rgba(139,92,246,.1), transparent 65%), var(--bg); background-attachment: fixed; color: var(--ink); font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+body { min-height: 100dvh; padding: calc(10px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
+button, input { font-family: inherit; }
+.wrap { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.hide { display: none !important; }
+.brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 2px; }
+.brand img { height: 34px; }
+.brand span { font-weight: 700; font-size: 15px; color: var(--mute); }
+.card { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+h1 { margin: 0 0 6px; font-size: 22px; }
+p.sub { margin: 0; color: var(--mute); font-size: 14px; line-height: 1.7; }
+label.f { display: block; font-size: 13px; color: var(--mute); margin: 14px 0 6px; }
+input.in { width: 100%; height: 50px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.35); color: var(--ink); font-size: 17px; padding: 0 14px; outline: none; }
+input.in:focus { border-color: var(--acc); }
+input.code { text-align: center; letter-spacing: 10px; font-size: 28px; font-weight: 700; direction: ltr; }
+.btn { height: 52px; border-radius: 14px; border: 0; background: linear-gradient(180deg, var(--g2), var(--g1)); color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 16px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,.18); color: var(--ink); font-weight: 600; }
+.err { color: #ffb3c0; font-size: 14px; margin-top: 10px; min-height: 1em; }
+
+/* شاشة اللعب */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.me { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.me b { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me small { color: var(--mute); font-size: 12.5px; }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: rgba(255,255,255,.04); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6578; }
+.pill.on .dot { background: var(--green); box-shadow: 0 0 8px 2px rgba(47,179,106,.6); }
+.pill.on { color: #9ff0c2; border-color: rgba(47,179,106,.35); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sect-t { font-size: 13px; color: var(--mute); font-weight: 600; margin: 0 0 10px; }
+.chat { display: flex; gap: 8px; }
+.chat input { flex: 1; min-width: 0; }
+.chat button { flex: 0 0 auto; width: 76px; height: 50px; margin: 0; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.like { position: relative; width: 100%; height: 120px; border-radius: 22px; border: 1px solid rgba(254,44,85,.4); background: radial-gradient(circle at 50% 40%, rgba(254,44,85,.35), rgba(254,44,85,.08)); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; user-select: none; touch-action: manipulation; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; overflow: hidden; }
+.like .h { font-size: 44px; line-height: 1; transition: transform .08s; }
+.like:active .h { transform: scale(.86); }
+.like small { font-size: 12.5px; color: #ffd0da; font-weight: 500; }
+.fly { position: absolute; font-size: 26px; pointer-events: none; animation: fly .9s ease-out forwards; }
+@keyframes fly { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-80px) scale(1.4); } }
+.gifts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.gift { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--ink); cursor: pointer; font-size: 11.5px; min-width: 0; }
+.gift img { width: 40px; height: 40px; object-fit: contain; }
+.gift span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.gift em { font-style: normal; color: #ffd76a; font-size: 11px; direction: ltr; }
+.gift:active { transform: scale(.95); background: rgba(167,139,250,.15); }
+.toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); opacity: 0; background: #241e33; border: 1px solid rgba(167,139,250,.4); color: var(--ink); padding: 11px 18px; border-radius: 14px; font-size: 14px; font-weight: 600; transition: opacity .2s, transform .2s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; z-index: 10; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.hint { font-size: 12.5px; color: var(--mute); line-height: 1.7; margin: 10px 0 0; }
+.wait { text-align: center; color: #ffd76a; font-size: 13.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img src="../logo.png" alt=""><span>غرفة الجوالات</span></div>
+
+  <!-- 1) رقم الغرفة (لو ما جا بالرابط) -->
+  <div class="card hide" id="vCode">
+    <h1>ادخل رقم الغرفة</h1>
+    <p class="sub">الرقم من ٤ أرقام تلقاه على شاشة المذيع بجانب الباركود.</p>
+    <input class="in code" id="codeIn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
+    <button class="btn" id="codeBtn">التالي</button>
+    <div class="err" id="codeErr"></div>
+  </div>
+
+  <!-- 2) الاسم -->
+  <div class="card hide" id="vName">
+    <h1>غرفة <span dir="ltr" id="nameCode"></span></h1>
+    <p class="sub" id="nameHost"></p>
+    <label class="f" for="nameIn">اسمك باللعبة</label>
+    <input class="in" id="nameIn" maxlength="24" autocomplete="nickname" placeholder="اكتب اسمك">
+    <button class="btn" id="joinBtn">ادخل الغرفة</button>
+    <button class="btn ghost" id="otherCode">رقم غرفة ثاني</button>
+    <div class="err" id="joinErr"></div>
+  </div>
+
+  <!-- 3) اللعب -->
+  <div class="hide" id="vPlay" style="display:flex;flex-direction:column;gap:14px">
+    <div class="card top">
+      <div class="me"><b id="meName"></b><small>غرفة <span dir="ltr" id="meCode"></span></small></div>
+      <span class="pill" id="livePill"><span class="dot"></span><span id="liveTxt">بانتظار اللعبة</span></span>
+    </div>
+    <div class="card wait hide" id="waitNote">المذيع ما فتح لعبة الحين — خلك هنا، أول ما يفتح لعبة يوصل كل شي ترسله.</div>
+
+    <div class="card">
+      <p class="sect-t">اكتب بالشات (كلمة الدخول، إجابتك، رقمك…)</p>
+      <div class="chat">
+        <input class="in" id="chatIn" maxlength="150" autocomplete="off" enterkeyhint="send" placeholder="اكتب هنا">
+        <button class="btn" id="chatBtn">إرسال</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card">
+      <button class="like" id="likeBtn" type="button"><span class="h">❤️</span>كبّس<small id="likeCount">اضغط بسرعة — كل ضغطة لايك</small></button>
+    </div>
+
+    <div class="card">
+      <div class="row"><p class="sect-t" style="margin:0">أرسل دعم (مجاني هنا — يشتغل مثل هدايا البث)</p></div>
+      <div class="gifts" id="gifts" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <button class="btn ghost" id="followBtn" style="margin-top:0">➕ متابعة</button>
+      <button class="btn ghost" id="leaveBtn">خروج من الغرفة</button>
+      <p class="hint">ما تحتاج حساب. النقاط ما تنحسب باللعب بدون بث.</p>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_BASE = 'https://project-testing-akds.onrender.com';
+  var WS_URL = 'wss://project-testing-akds.onrender.com/ws/phone-room';
+  var K_DEV = 'agp-phone-dev', K_NAME = 'agp-phone-name', K_RECENT = 'agp-phone-recent';
+
+  function $(id) { return document.getElementById(id); }
+  function show(id) { ['vCode', 'vName', 'vPlay'].forEach(function (v) { $(v).classList.toggle('hide', v !== id); }); }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  // معرّف ثابت للجهاز: نفس الجوال يرجع لنفس اللاعب لو انقطع أو حدّث الصفحة
+  function deviceId() {
+    var d = lsGet(K_DEV);
+    if (!d || !/^[a-z0-9]{8,32}$/.test(d)) {
+      d = '';
+      var abc = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      var rnd = window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint8Array(16)) : null;
+      for (var i = 0; i < 16; i++) d += abc[(rnd ? rnd[i] : Math.floor(Math.random() * 256)) % abc.length];
+      lsSet(K_DEV, d);
+    }
+    return d;
+  }
+
+  var ERRORS = {
+    no_room: 'الغرفة غير موجودة — تأكد من الرقم.',
+    bad_name: 'اكتب اسم من حرفين على الأقل.',
+    bad_device: 'صار خطأ بالجهاز — حدّث الصفحة.',
+    full: 'الغرفة ممتلئة.',
+    net: 'تعذّر الاتصال — تأكد من النت وحاول مرة ثانية.'
+  };
+
+  var code = '';
+  var me = null;
+
+  // ===== 1) رقم الغرفة =====
+  function checkCode(c, errEl) {
+    errEl.textContent = '';
+    return fetch(API_BASE + '/api/phone-room/info?code=' + encodeURIComponent(c)).then(function (r) {
+      return r.json().catch(function () { return null; });
+    }).then(function (d) {
+      if (!d || !d.success) { errEl.textContent = ERRORS.no_room; return null; }
+      return d.room;
+    }, function () { errEl.textContent = ERRORS.net; return null; });
+  }
+
+  function goName(room) {
+    code = room.code;
+    $('nameCode').textContent = code;
+    $('nameHost').textContent = room.host ? 'غرفة ' + room.host + ' — اكتب اسمك وادخل.' : 'اكتب اسمك وادخل.';
+    $('nameIn').value = lsGet(K_NAME) || '';
+    show('vName');
+    if (!$('nameIn').value) $('nameIn').focus();
+  }
+
+  $('codeIn').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 4);
+    if (this.value.length === 4) $('codeBtn').click();
+  });
+  $('codeBtn').addEventListener('click', function () {
+    var c = $('codeIn').value;
+    if (!/^\d{4}$/.test(c)) { $('codeErr').textContent = 'الرقم ٤ أرقام.'; return; }
+    var b = this; b.disabled = true;
+    checkCode(c, $('codeErr')).then(function (room) { b.disabled = false; if (room) { history.replaceState(null, '', '?code=' + c); goName(room); } });
+  });
+  $('otherCode').addEventListener('click', function () {
+    history.replaceState(null, '', location.pathname);
+    $('codeIn').value = '';
+    show('vCode');
+    $('codeIn').focus();
+  });
+
+  // ===== 2) الدخول + الاتصال =====
+  var ws = null, wantOpen = false, retry = 0, pingTimer = null, live = false;
+
+  function setLive(on) {
+    live = Boolean(on);
+    $('livePill').classList.toggle('on', live);
+    $('liveTxt').textContent = live ? 'اللعبة مفتوحة' : 'بانتظار اللعبة';
+    $('waitNote').classList.toggle('hide', live);
+  }
+
+  function send(obj) {
+    if (ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; }
+    toast('جاري إعادة الاتصال…');
+    return false;
+  }
+
+  function connect(name) {
+    wantOpen = true;
+    try { ws = new WebSocket(WS_URL); } catch (e) { scheduleRetry(); return; }
+    var sock = ws;
+    sock.onopen = function () {
+      retry = 0;
+      sock.send(JSON.stringify({ t: 'join', code: code, dev: deviceId(), name: name }));
+      clearInterval(pingTimer);
+      pingTimer = setInterval(function () { if (sock.readyState === 1) sock.send('{"t":"ping"}'); }, 20000);
+    };
+    sock.onmessage = function (e) {
+      var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      if (m.t === 'joined') {
+        me = m.me;
+        $('meName').textContent = me.name;
+        $('meCode').textContent = code;
+        setLive(m.room && m.room.live);
+        $('joinBtn').disabled = false;
+        show('vPlay');
+      } else if (m.t === 'err') {
+        wantOpen = false;
+        try { sock.close(); } catch (x) {}
+        $('joinBtn').disabled = false;
+        if (me) { me = null; show('vName'); }
+        $('joinErr').textContent = ERRORS[m.err] || ERRORS.net;
+      } else if (m.t === 'live') {
+        setLive(m.on);
+        if (m.on) toast('المذيع فتح لعبة — يلا!');
+      } else if (m.t === 'ack' && m.ok && !m.live && m.k !== 'like') {
+        toast('انرسلت، بس ما فيه لعبة مفتوحة الحين');
+      } else if (m.t === 'bye') {
+        wantOpen = false;
+        me = null;
+        try { sock.close(); } catch (x) {}
+        alertBye(m.reason);
+      }
+    };
+    sock.onclose = function () {
+      clearInterval(pingTimer);
+      if (ws === sock) ws = null;
+      if (wantOpen) scheduleRetry(name);
+    };
+  }
+  function scheduleRetry(name) {
+    var d = Math.min(1000 * Math.pow(2, retry++), 15000);
+    setTimeout(function () { if (wantOpen && !ws) connect(name || lsGet(K_NAME) || ''); }, d);
+  }
+  function alertBye(reason) {
+    var msg = reason === 'kicked' ? 'المذيع أخرجك من الغرفة.' : 'الغرفة انقفلت.';
+    $('codeErr').textContent = msg;
+    $('codeIn').value = '';
+    history.replaceState(null, '', location.pathname);
+    show('vCode');
+  }
+
+  $('joinBtn').addEventListener('click', function () {
+    var name = $('nameIn').value.replace(/\s+/g, ' ').trim();
+    if (name.length < 2) { $('joinErr').textContent = ERRORS.bad_name; return; }
+    $('joinErr').textContent = '';
+    lsSet(K_NAME, name);
+    this.disabled = true;
+    if (ws) { wantOpen = false; try { ws.close(); } catch (e) {} ws = null; }
+    connect(name);
+  });
+  $('nameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('joinBtn').click(); });
+
+  $('leaveBtn').addEventListener('click', function () {
+    wantOpen = false;
+    if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+    me = null;
+    show('vName');
+  });
+
+  // ===== 3) الشات =====
+  function recent() { try { return JSON.parse(lsGet(K_RECENT) || '[]').slice(0, 6); } catch (e) { return []; } }
+  function renderChips() {
+    var box = $('chips');
+    box.innerHTML = '';
+    recent().forEach(function (t) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = t;
+      b.addEventListener('click', function () { sendChat(t); });
+      box.appendChild(b);
+    });
+  }
+  function sendChat(text) {
+    text = String(text || '').trim();
+    if (!text) return;
+    if (!send({ t: 'chat', text: text })) return;
+    var list = recent().filter(function (x) { return x !== text; });
+    list.unshift(text);
+    lsSet(K_RECENT, JSON.stringify(list.slice(0, 6)));
+    renderChips();
+  }
+  $('chatBtn').addEventListener('click', function () { sendChat($('chatIn').value); $('chatIn').value = ''; $('chatIn').focus(); });
+  $('chatIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('chatBtn').click(); } });
+
+  // ===== 4) التكبيس: يتجمّع كل 300ms (نفس تجميع الخادم لتكبيس تيك توك) =====
+  var likeBuf = 0, likeTimer = null, likeTotal = 0;
+  function flushLikes() {
+    likeTimer = null;
+    var n = likeBuf; likeBuf = 0;
+    if (n > 0) send({ t: 'like', n: n });
+  }
+  $('likeBtn').addEventListener('pointerdown', function (e) {
+    likeBuf++; likeTotal++;
+    $('likeCount').textContent = likeTotal + ' لايك';
+    if (!likeTimer) likeTimer = setTimeout(flushLikes, 300);
+    var f = document.createElement('span');
+    f.className = 'fly'; f.textContent = '❤️';
+    var r = this.getBoundingClientRect();
+    f.style.left = ((e.clientX || r.left + r.width / 2) - r.left - 13) + 'px';
+    f.style.top = ((e.clientY || r.top + r.height / 2) - r.top - 13) + 'px';
+    this.appendChild(f);
+    setTimeout(function () { f.remove(); }, 900);
+  });
+
+  // ===== 5) الهدايا: نفس هدايا الألعاب (assets/tiktok-gifts + إضافات روليت الإقصاء) =====
+  // giftName بالإنجليزي مثل ما يرسله تيك توك — الألعاب تطابق بالاسم أو بقيمة الكوينز.
+  var EN_NAMES = {
+    'ice-cream': 'Ice Cream Cone', 'donut': 'Doughnut', 'tiktok': 'TikTok', 'gg': 'GG',
+    'heart-in-your-hands-a': 'Heart In Your Hands', 'heart-in-your-hands-b': 'Heart In Your Hands',
+    'kings-scepter': "King's Scepter", 'hat-and-mustache': 'Hat and Mustache', 'tiktok-universe': 'TikTok Universe'
+  };
+  function enName(id) {
+    return EN_NAMES[id] || id.split('-').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+  }
+  var EXTRA = [
+    { id: 'gg', name: 'جي جي', coins: 1, file: 'gg.svg' },
+    { id: 'drama-queen', name: 'ملكة الدراما', coins: 5, file: 'drama-queen.svg' },
+    { id: 'perfume', name: 'عطر', coins: 20, file: 'perfume.webp' },
+    { id: 'little-crown', name: 'تاج صغير', coins: 99, file: 'little-crown.svg' },
+    { id: 'hand-hearts', name: 'قلوب اليد', coins: 100, file: 'hand_hearts.webp' },
+    { id: 'music-note', name: 'نغمة موسيقية', coins: 169, file: 'music-note.svg' },
+    { id: 'sunglasses', name: 'نظارة شمسية', coins: 199, file: 'sunglasses.svg' },
+    { id: 'money-gun', name: 'مسدس نقود', coins: 500, file: 'money-gun.svg' },
+    { id: 'sports-car', name: 'سيارة رياضية', coins: 7000, file: 'sports-car.svg' },
+    { id: 'tiktok-universe', name: 'كون تيك توك', coins: 44999, file: 'tiktok-universe.svg' }
+  ];
+  function giftList() {
+    var G = window.AymanGamesPlatform && window.AymanGamesPlatform.tiktokGifts, out = [];
+    if (G && G.list) G.list.forEach(function (g) {
+      if (g.id === 'heart-in-your-hands-b') return; // نفس هدية a بالاسم والسعر
+      out.push({ id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) });
+    });
+    EXTRA.forEach(function (g) {
+      if (!out.some(function (x) { return x.id === g.id; })) out.push({ id: g.id, name: g.name, coins: g.coins, img: '../games/elimination-roulette/gift_icons/' + g.file });
+    });
+    return out.sort(function (a, b) { return a.coins - b.coins; });
+  }
+  function renderGifts() {
+    var box = $('gifts');
+    giftList().forEach(function (g) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'gift';
+      var img = document.createElement('img'); img.src = g.img; img.alt = ''; img.loading = 'lazy';
+      var n = document.createElement('span'); n.textContent = g.name;
+      var c = document.createElement('em'); c.textContent = '🪙 ' + g.coins;
+      b.appendChild(img); b.appendChild(n); b.appendChild(c);
+      b.addEventListener('click', function () {
+        if (send({ t: 'gift', g: { id: g.id, name: enName(g.id), coins: g.coins }, n: 1 })) toast('أرسلت ' + g.name + ' 🎁');
+      });
+      box.appendChild(b);
+    });
+  }
+
+  $('followBtn').addEventListener('click', function () { if (send({ t: 'follow' })) toast('تابعت ✓'); });
+
+  // ===== البداية =====
+  renderGifts();
+  renderChips();
+  var qs = new URLSearchParams(location.search);
+  var qCode = (qs.get('code') || qs.get('room') || '').replace(/\D/g, '');
+  if (/^\d{4}$/.test(qCode)) {
+    $('codeIn').value = qCode;
+    checkCode(qCode, $('codeErr')).then(function (room) { if (room) goName(room); else show('vCode'); });
+  } else {
+    show('vCode');
+    $('codeIn').focus();
+  }
+})();
+</script>
+</body>
+</html>

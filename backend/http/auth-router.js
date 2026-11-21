@@ -46,6 +46,7 @@ var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var gamePrefsService = require('../game-prefs/game-prefs-service');
 var remoteControlService = require('../remote-control/remote-control-service');
+var phoneRoomService = require('../phone-room/phone-room-service');
 var seenNotices = require('../notices/seen-notices');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
@@ -113,6 +114,12 @@ var ROUTES = [
   { method: 'GET', path: '/api/game-prefs', requireAuth: true, handler: handleGetGamePrefs },
   { method: 'POST', path: '/api/game-prefs', requireAuth: true, handler: handleSaveGamePrefs },
   // «التحكم عن بعد» — الستريمر يدير المتحكمين، والمتحكم يشوف مين أعطاه صلاحية (remote-control/)
+  // «غرفة الجوالات» (اللعب بدون بث) — صاحب صلاحية 'phone_rooms' يفتح غرفة واللاعبين يدخلون بجوالاتهم (phone-room/)
+  { method: 'GET', path: '/api/phone-room/mine', requireAuth: true, handler: handlePhoneRoomMine },
+  { method: 'POST', path: '/api/phone-room/open', requireAuth: true, handler: handlePhoneRoomOpen },
+  { method: 'POST', path: '/api/phone-room/close', requireAuth: true, handler: handlePhoneRoomClose },
+  { method: 'POST', path: '/api/phone-room/kick', requireAuth: true, handler: handlePhoneRoomKick },
+  { method: 'GET', path: '/api/phone-room/info', requireAuth: false, handler: handlePhoneRoomInfo },
   { method: 'GET', path: '/api/remote-control/config', requireAuth: true, handler: handleGetRemoteControl },
   { method: 'POST', path: '/api/remote-control/config', requireAuth: true, handler: handleSaveRemoteControl },
   { method: 'GET', path: '/api/remote-control/access', requireAuth: true, handler: handleRemoteControlAccess },
@@ -1398,6 +1405,35 @@ function handleSaveGamePrefs(req, res, body, user) {
  * ----------------------------------------------------------------------- */
 
 /** GET /api/remote-control/config → { success, enabled, max, controllers:[{username, enabled, createdAt, account}] } */
+/** GET /api/phone-room/mine → { success, allowed, room: {code, hostOnline, players:[{id,name,online}]} | null } */
+function handlePhoneRoomMine(req, res, body, user) {
+  var allowed = phoneRoomService.canHost(user);
+  sendJson(res, 200, { success: true, allowed: allowed, room: allowed ? phoneRoomService.getRoomOf(user) : null });
+}
+
+/** POST /api/phone-room/open → { success, room } أو error: no_permission | rooms_full */
+function handlePhoneRoomOpen(req, res, body, user) {
+  var r = phoneRoomService.openRoom(user);
+  sendJson(res, r.success ? 200 : (r.error === 'no_permission' ? 403 : 503), r);
+}
+
+function handlePhoneRoomClose(req, res, body, user) {
+  var r = phoneRoomService.closeRoom(user);
+  sendJson(res, 200, r);
+}
+
+/** POST /api/phone-room/kick { playerId } */
+function handlePhoneRoomKick(req, res, body, user) {
+  var r = phoneRoomService.kickPlayer(user, String(body.playerId || ''));
+  sendJson(res, r.success ? 200 : 404, r);
+}
+
+/** GET /api/phone-room/info?code= → { success, room: {code, host, live} } — صفحة الجوال قبل الدخول (بدون حساب) */
+function handlePhoneRoomInfo(req, res) {
+  var info = phoneRoomService.roomInfo(String(getQueryParam(req, 'code') || '').trim());
+  sendJson(res, info ? 200 : 404, info ? { success: true, room: info } : { success: false, error: 'no_room' });
+}
+
 function handleGetRemoteControl(req, res, body, user) {
   if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'not_streamer' }); return; }
   sendJson(res, 200, Object.assign({ success: true }, remoteControlService.getConfig(user.id)));
