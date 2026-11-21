@@ -418,7 +418,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // Shared-shell games: a player actually joined.
     AGP.events.on('player:joined', function (payload) { if (payload && payload.player) play(payload.player); });
     // Lobby pages (games/<id>/lobby.html): the first time an entrance owner shows up in chat.
-    var ON_LOBBY = /\/lobby\.html$/i.test(location.pathname) || document.documentElement.hasAttribute('data-agp-entrance-on-comment');
+    var ON_LOBBY = /\/lobby(\.html)?\/?$/i.test(location.pathname) || document.documentElement.hasAttribute('data-agp-entrance-on-comment');
     AGP.events.on('stream:commentReceived', function (payload) { if (ON_LOBBY && payload && payload.entrance) play(payload); });
 
     AGP.entrance = {
