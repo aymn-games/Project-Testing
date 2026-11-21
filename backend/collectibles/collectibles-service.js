@@ -120,14 +120,7 @@ function grantFrame(userId, frameType, frameRef, opts) {
     'INSERT OR IGNORE INTO user_frames (user_id, frame_type, frame_ref, granted_by, equipped, granted_at) VALUES (?, ?, ?, ?, 0, ?)'
   ).run(userId, frameType, frameRef, opts.grantedBy || 'admin_manual', now());
 
-  if (catalogEntry && catalogEntry.bundles_entrance && !opts.skipEntranceBundle) {
-    setEntrance(
-      userId,
-      opts.entranceTemplate || catalogEntry.default_entrance_template || 'gold',
-      opts.entranceText || catalogEntry.default_entrance_text || '',
-      'auto_bundle'
-    );
-  }
+  // الإطار ما يمنح دخولية بعد الآن (الدخوليات الجديدة تُمنح يدوياً فقط — grantEntrance).
 
   logger.log('Collectibles: granted frame ' + frameType + ':' + frameRef + ' to user ' + userId);
 
@@ -284,12 +277,13 @@ var ENTRANCE_CATALOG = [
 ];
 var ENTRANCE_BY_KEY = {};
 ENTRANCE_CATALOG.forEach(function (e) { ENTRANCE_BY_KEY[e.key] = e; });
-var LEGACY_ENTRANCE_KEYS = { gold: 'royal', neon: 'nitro', fire: 'nitro', ice: 'storm' };
 var ENTRANCE_TEXT_MAX = 40;
+// وقت إطلاق الدخوليات الجديدة (دمج #455). أي ملكية قبله جت من الدخوليات القديمة.
+var ENTRANCES_V2_SINCE = 1795225384000;
 
 function normalizeEntranceKey(key) {
   key = String(key || '');
-  return ENTRANCE_BY_KEY[key] ? key : (LEGACY_ENTRANCE_KEYS[key] || null);
+  return ENTRANCE_BY_KEY[key] ? key : null;
 }
 function validColor(key, color) {
   var e = ENTRANCE_BY_KEY[key];
@@ -302,16 +296,18 @@ function getEntranceCatalog() {
   return ENTRANCE_CATALOG.map(function (e) { return { key: e.key, displayNameAr: e.displayNameAr, colors: e.colors.slice(), defaultText: e.defaultText }; });
 }
 
-// تحويل الدخوليات القديمة للنماذج الجديدة + تسجيل ملكيتها (مرة وحدة، آمن للتكرار).
-(function migrateLegacyEntrances() {
+// الدخوليات القديمة (gold/neon/fire/ice، ومنها اللي جت مع الإطارات) ما تشتغل:
+// تنحذف هي، وأي ملكية انضافت قبل إطلاق الدخوليات الجديدة أو جت تلقائياً مع
+// إطار (auto_bundle). تبقى بس الدخوليات اللي منحها الأدمن يدوياً بعد الإطلاق.
+// آمن للتكرار مع كل تشغيل.
+(function removeLegacyEntrances() {
   db.transaction(function () {
-    Object.keys(LEGACY_ENTRANCE_KEYS).forEach(function (oldKey) {
-      db.prepare('UPDATE user_entrances SET template_key = ? WHERE template_key = ?').run(LEGACY_ENTRANCE_KEYS[oldKey], oldKey);
-    });
-    db.prepare(
-      "INSERT OR IGNORE INTO user_owned_entrances (user_id, entrance_key, granted_by, granted_at) " +
-      "SELECT user_id, template_key, source, updated_at FROM user_entrances WHERE template_key IN ('nitro','royal','princess','storm')"
-    ).run();
+    var owned = db.prepare("DELETE FROM user_owned_entrances WHERE granted_at < ? OR granted_by = 'auto_bundle'").run(ENTRANCES_V2_SINCE).changes;
+    var active = db.prepare(
+      "DELETE FROM user_entrances WHERE template_key NOT IN ('nitro','royal','princess','storm') " +
+      "OR NOT EXISTS (SELECT 1 FROM user_owned_entrances o WHERE o.user_id = user_entrances.user_id AND o.entrance_key = user_entrances.template_key)"
+    ).run().changes;
+    if (owned || active) logger.log('Collectibles: removed legacy entrances (' + owned + ' owned, ' + active + ' active)');
   })();
 })();
 
@@ -344,10 +340,7 @@ function revokeEntrance(userId, key) {
   return { success: true };
 }
 
-/**
- * منح + تفعيل دخولية بنص معيّن (الأدمن، أو حزمة إطار خاص). يقبل المفاتيح
- * القديمة (gold/neon/fire/ice) ويحوّلها. كل تعيين جديد يعيد enabled = 1.
- */
+/** منح + تفعيل دخولية بنص معيّن (الأدمن). كل تعيين جديد يعيد enabled = 1. */
 function setEntrance(userId, templateKey, entranceText, source) {
   var key = normalizeEntranceKey(templateKey);
   if (!key) return { success: false, error: 'unknown_entrance' };
