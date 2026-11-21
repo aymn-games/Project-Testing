@@ -1,6 +1,7 @@
 /**
  * AGP SCREEN AUDIO SERVICE — أدوات الصوت بشاشات البث (Veyro): بحث يوتيوب لمشغّل
- * الأغاني، وتحويل نص لصوت (Google Cloud TTS) للقارئ الصوتي.
+ * الأغاني، وتحويل نص لصوت للقارئ الصوتي: Google Cloud TTS (عادي وHD) وElevenLabs
+ * (مفتاح المنصة ELEVENLABS_API_KEY أو مفتاح الستريمر الخاص).
  *
  * - رابط الشاشة (live.html) يطلبها برمز الشاشة بس، والمفاتيح ما تطلع للواجهة أبداً.
  * - مفتاح يوتيوب: مفتاح الستريمر الخاص (لو حطه) وإلا مفتاح المنصة YOUTUBE_API_KEY.
@@ -24,6 +25,14 @@ var KEY_RE = /^[\w-]{20,60}$/;
 var YT = 'https://www.googleapis.com/youtube/v3';
 var TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=';
 var VOICES = { f: 'ar-XA-Standard-A', m: 'ar-XA-Standard-B' };
+// أصوات جوجل العربية المسموحة (Standard/Wavenet A..D، وأصوات HD «Chirp3»)
+var GOOGLE_VOICE_RE = /^ar-XA-(?:(?:Standard|Wavenet)-[A-D]|Chirp3-HD-[A-Z][a-z]{2,15})$/;
+// ElevenLabs: معرّف الصوت (20 حرف/رقم)، النموذج متعدد اللغات يدعم العربي
+var EL_VOICE_RE = /^[A-Za-z0-9]{20}$/;
+var EL_KEY_RE = /^(?:sk_)?[A-Za-z0-9]{24,80}$/;
+var EL_URL = 'https://api.elevenlabs.io/v1/text-to-speech/';
+var EL_MODEL = 'eleven_multilingual_v2';
+var EL_PLATFORM_DAILY_CHARS = 4000;       // حروف باليوم لكل ستريمر على مفتاح المنصة (ElevenLabs غالي)
 
 /** PT1H2M3S → ثواني */
 function isoDuration(s) {
@@ -67,6 +76,8 @@ function createService(db, opts) {
         '    updated_at INTEGER NOT NULL' +
         ');'
     );
+    // مفتاح ElevenLabs الخاص بالستريمر (اختياري) — نفس الجدول
+    try { db.exec('ALTER TABLE screen_audio_keys ADD COLUMN eleven_key TEXT'); } catch (e) { /* موجود */ }
 
     var searchCache = lru(SEARCH_CACHE_MAX, SEARCH_CACHE_TTL_MS, now);
     var ttsCache = lru(TTS_CACHE_MAX, TTS_CACHE_TTL_MS, now);
@@ -79,19 +90,54 @@ function createService(db, opts) {
         return r && r.youtube_key ? r.youtube_key : null;
     }
 
+    function elevenKey(userId) {
+        if (userId == null) return null;
+        var r = db.prepare('SELECT eleven_key FROM screen_audio_keys WHERE user_id = ?').get(userId);
+        return r && r.eleven_key ? r.eleven_key : null;
+    }
+
+    function setColumn(userId, col, value) {
+        db.prepare('INSERT INTO screen_audio_keys (user_id, ' + col + ', updated_at) VALUES (?, ?, ?) ' +
+            'ON CONFLICT(user_id) DO UPDATE SET ' + col + ' = excluded.' + col + ', updated_at = excluded.updated_at').run(userId, value, now());
+    }
+
     function setUserYoutubeKey(userId, key) {
         if (key == null || key === '') {
-            db.prepare('DELETE FROM screen_audio_keys WHERE user_id = ?').run(userId);
+            setColumn(userId, 'youtube_key', null);
             return { success: true, hasKey: false };
         }
         key = String(key).trim();
         if (!KEY_RE.test(key)) return { success: false, error: 'invalid_key' };
-        db.prepare('INSERT INTO screen_audio_keys (user_id, youtube_key, updated_at) VALUES (?, ?, ?) ' +
-            'ON CONFLICT(user_id) DO UPDATE SET youtube_key = excluded.youtube_key, updated_at = excluded.updated_at').run(userId, key, now());
+        setColumn(userId, 'youtube_key', key);
+        return { success: true, hasKey: true };
+    }
+
+    function setUserElevenKey(userId, key) {
+        if (key == null || key === '') {
+            setColumn(userId, 'eleven_key', null);
+            return { success: true, hasKey: false };
+        }
+        key = String(key).trim();
+        if (!EL_KEY_RE.test(key)) return { success: false, error: 'invalid_key' };
+        setColumn(userId, 'eleven_key', key);
         return { success: true, hasKey: true };
     }
 
     function hasUserYoutubeKey(userId) { return Boolean(userKey(userId)); }
+    function hasUserElevenKey(userId) { return Boolean(elevenKey(userId)); }
+    /** وش متاح من أنواع الأصوات (للمحرر) */
+    function voiceProviders(userId) {
+        return { google: Boolean(opts.ttsKey), eleven: Boolean(opts.elevenKey || elevenKey(userId)), ownEleven: hasUserElevenKey(userId) };
+    }
+
+    var elDaily = { day: '', counts: new Map() }; // userId -> حروف ElevenLabs على مفتاح المنصة اليوم
+    function elPlatformChars(userId, add) {
+        var day = new Date(now()).toISOString().slice(0, 10);
+        if (elDaily.day !== day) { elDaily.day = day; elDaily.counts = new Map(); }
+        var n = (elDaily.counts.get(userId) || 0) + (add || 0);
+        if (add) elDaily.counts.set(userId, n);
+        return n;
+    }
 
     function platformCount(userId, add) {
         var day = new Date(now()).toISOString().slice(0, 10);
@@ -168,37 +214,104 @@ function createService(db, opts) {
         return Promise.resolve().then(function () { return attempt(0); }).catch(function () { return { success: false, error: 'failed' }; });
     }
 
-    function tts(screenKey, text, voice, rate) {
-        var t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, TTS_TEXT_MAX);
-        if (!t) return Promise.resolve({ success: false, error: 'empty_text' });
-        if (!opts.ttsKey) return Promise.resolve({ success: false, error: 'disabled' });
-        var name = VOICES[voice] || VOICES.f;
-        var r = Math.max(0.5, Math.min(2, Number(rate) || 1));
-        var ck = name + '|' + r + '|' + t;
-        var hit = ttsCache.get(ck);
-        if (hit) return Promise.resolve({ success: true, audio: hit });
+    function num(v, lo, hi, def) {
+        var n = Number(v);
+        if (v === '' || v == null || !isFinite(n)) n = def;
+        return Math.max(lo, Math.min(hi, n));
+    }
+
+    /** حد الطلبات الجديدة لكل شاشة بالدقيقة — true = مسموح (ويسجّل الطلب) */
+    function takeSlot(screenKey) {
         var t0 = now();
         var hits = (ttsHits.get(screenKey) || []).filter(function (x) { return t0 - x < 60000; });
-        if (hits.length >= TTS_PER_MINUTE) { ttsHits.set(screenKey, hits); return Promise.resolve({ success: false, error: 'rate_limited' }); }
+        if (hits.length >= TTS_PER_MINUTE) { ttsHits.set(screenKey, hits); return false; }
         hits.push(t0);
         ttsHits.delete(screenKey);
         ttsHits.set(screenKey, hits);
         if (ttsHits.size > 5000) ttsHits.delete(ttsHits.keys().next().value);
-        return doFetch(TTS_URL + encodeURIComponent(opts.ttsKey), {
+        return true;
+    }
+
+    function googleTts(screenKey, t, name, r) {
+        if (!opts.ttsKey) return Promise.resolve({ success: false, error: 'disabled' });
+        var ck = name + '|' + r + '|' + t;
+        var hit = ttsCache.get(ck);
+        if (hit) return Promise.resolve({ success: true, audio: hit });
+        if (!takeSlot(screenKey)) return Promise.resolve({ success: false, error: 'rate_limited' });
+        function call(withRate) {
+            var cfg = { audioEncoding: 'MP3' };
+            if (withRate) cfg.speakingRate = r;
+            return doFetch(TTS_URL + encodeURIComponent(opts.ttsKey), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ input: { text: t }, voice: { languageCode: 'ar-XA', name: name }, audioConfig: cfg })
+            }).then(function (resp) {
+                return resp.json().catch(function () { return {}; }).then(function (body) { return { resp: resp, body: body }; });
+            });
+        }
+        return call(true).then(function (x) {
+            // أصوات HD القديمة ممكن ترفض السرعة — نعيد بدونها
+            if (x.resp.status === 400 && /Chirp3/.test(name) && r !== 1) return call(false);
+            return x;
+        }).then(function (x) {
+            if (!x.resp.ok || !x.body.audioContent) return { success: false, error: x.resp.status === 429 ? 'quota' : 'failed' };
+            var buf = Buffer.from(x.body.audioContent, 'base64');
+            ttsCache.set(ck, buf);
+            return { success: true, audio: buf };
+        }).catch(function () { return { success: false, error: 'failed' }; });
+    }
+
+    function elevenTts(screenKey, t, voiceId, r, extra) {
+        var own = elevenKey(extra.userId);
+        var key = own || opts.elevenKey || null;
+        if (!key) return Promise.resolve({ success: false, error: 'disabled' });
+        var vs = {
+            stability: num(extra.st, 0, 1, 0.5),
+            similarity_boost: num(extra.sim, 0, 1, 0.75),
+            style: num(extra.sty, 0, 1, 0),
+            use_speaker_boost: extra.boost !== false && extra.boost !== '0' && extra.boost !== 0,
+            speed: num(r, 0.7, 1.2, 1)
+        };
+        var ck = 'el|' + voiceId + '|' + JSON.stringify(vs) + '|' + t;
+        var hit = ttsCache.get(ck);
+        if (hit) return Promise.resolve({ success: true, audio: hit });
+        if (!own && extra.userId != null && elPlatformChars(extra.userId) + t.length > EL_PLATFORM_DAILY_CHARS) return Promise.resolve({ success: false, error: 'quota' });
+        if (!takeSlot(screenKey)) return Promise.resolve({ success: false, error: 'rate_limited' });
+        if (!own && extra.userId != null) elPlatformChars(extra.userId, t.length);
+        return doFetch(EL_URL + encodeURIComponent(voiceId) + '?output_format=mp3_44100_64', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ input: { text: t }, voice: { languageCode: 'ar-XA', name: name }, audioConfig: { audioEncoding: 'MP3', speakingRate: r } })
+            headers: { 'Content-Type': 'application/json', 'Accept': 'audio/mpeg', 'xi-api-key': key },
+            body: JSON.stringify({ text: t, model_id: EL_MODEL, voice_settings: vs })
         }).then(function (resp) {
-            return resp.json().catch(function () { return {}; }).then(function (body) {
-                if (!resp.ok || !body.audioContent) return { success: false, error: resp.status === 429 ? 'quota' : 'failed' };
-                var buf = Buffer.from(body.audioContent, 'base64');
+            if (!resp.ok) return { success: false, error: resp.status === 429 || resp.status === 401 ? 'quota' : 'failed' };
+            return resp.arrayBuffer().then(function (ab) {
+                var buf = Buffer.from(ab);
+                if (!buf.length) return { success: false, error: 'failed' };
                 ttsCache.set(ck, buf);
                 return { success: true, audio: buf };
             });
         }).catch(function () { return { success: false, error: 'failed' }; });
     }
 
-    return { searchMusic: searchMusic, tts: tts, setUserYoutubeKey: setUserYoutubeKey, hasUserYoutubeKey: hasUserYoutubeKey };
+    /**
+     * voice: 'f' | 'm' (القديم) | اسم صوت جوجل عربي | 'el:<voiceId>' (ElevenLabs).
+     * extra (اختياري): { userId, st, sim, sty, boost } — إعدادات ElevenLabs.
+     */
+    function tts(screenKey, text, voice, rate, extra) {
+        extra = extra || {};
+        var t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, TTS_TEXT_MAX);
+        if (!t) return Promise.resolve({ success: false, error: 'empty_text' });
+        var v = String(voice || '');
+        if (v.indexOf('el:') === 0) {
+            var id = v.slice(3);
+            if (!EL_VOICE_RE.test(id)) return Promise.resolve({ success: false, error: 'bad_voice' });
+            return elevenTts(screenKey, t, id, rate, extra);
+        }
+        var name = VOICES[v] || (GOOGLE_VOICE_RE.test(v) ? v : VOICES.f);
+        return googleTts(screenKey, t, name, Math.max(0.5, Math.min(2, Number(rate) || 1)));
+    }
+
+    return { searchMusic: searchMusic, tts: tts, setUserYoutubeKey: setUserYoutubeKey, hasUserYoutubeKey: hasUserYoutubeKey, setUserElevenKey: setUserElevenKey, hasUserElevenKey: hasUserElevenKey, voiceProviders: voiceProviders };
 }
 
 var instance = null;
@@ -208,7 +321,8 @@ function get() {
         instance = createService(require('../db/database'), {
             fetch: function (u, o) { return global.fetch(u, o); },
             platformYoutubeKey: config.youtubeApiKey,
-            ttsKey: config.googleTtsApiKey
+            ttsKey: config.googleTtsApiKey,
+            elevenKey: config.elevenLabsApiKey
         });
     }
     return instance;
@@ -217,6 +331,7 @@ function get() {
 module.exports = {
     PLATFORM_DAILY_PER_USER: PLATFORM_DAILY_PER_USER,
     TTS_PER_MINUTE: TTS_PER_MINUTE,
+    EL_PLATFORM_DAILY_CHARS: EL_PLATFORM_DAILY_CHARS,
     createService: createService,
     get: get
 };

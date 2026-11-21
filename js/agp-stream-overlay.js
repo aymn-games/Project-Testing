@@ -3813,7 +3813,13 @@
         }
         if (type === 'icon') return Object.assign(base, opts.img ? { img: { id: opts.img.id, name: opts.img.name || '' } } : opts.emoji ? { emoji: opts.emoji } : { icon: opts.icon || 'star' }, { size: 9, color: opts.color || '#ffd54a', anim: 'none', speed: 1, glow: !opts.img });
         if (type === 'lastdonation') return Object.assign(base, { title: 'آخر دعم', showMessage: false, size: 3, color: '#ffd54a' });
-        if (type === 'tts') return Object.assign(base, { enabled: true, voice: 'f', rate: 1, volume: 0.9, readName: true, minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], bubble: true, size: 3, color: '#cfc3dc' });
+        if (type === 'tts') return Object.assign(base, {
+            enabled: true, vtype: 'google', voice: 'ar-XA-Standard-A', multiVoice: false, voices: [], rate: 1, volume: 0.9,
+            stab: 0.5, sim: 0.75, style: 0, boost: true,
+            mode: 'any', prefix: '', skipEmoji: true, readMentions: false, readNumbers: true, template: '{nickname} يقول {comment}',
+            roles: ['all'], teamMin: 1, allow: '', blocked: [],
+            minLen: 2, maxLen: 200, skipCommands: true, skipLinks: true, banned: [], size: 3, color: '#cfc3dc'
+        });
         if (type === 'music') return Object.assign(base, { enabled: true, playCmd: '!تشغيل', skipCmd: '!تخطي', volCmd: '!صوت', who: 'all', ctrlWho: 'owner', allow: '', volume: 0.6, maxDurSec: 360, maxQueue: 10, design: 'card', size: 3, color: '#cfc3dc' });
         if (type === 'shape') return Object.assign(base, { shape: opts.shape || 'round', w: opts.w || 46, h: opts.h || 18, fill: opts.fill || 'glass', color: opts.color || '#7a3fd4', opacity: 0.9, size: 1 });
         return base;
@@ -3839,13 +3845,120 @@
     function audioItems(type) { return activeItems().filter(function (it) { return it.type === type && it.enabled !== false && !it.hidden; }); }
     function vol(it, def) { var v = Number(it && it.volume); return clamp(isFinite(v) && it.volume !== '' && it.volume != null ? v : def, 0, 1); }
 
+    /*
+     * أصوات القارئ: ثلاث أنواع، وكل نوع فيه أكثر من صوت. المعرّف يروح للسيرفر كما هو (v=):
+     * جوجل = اسم الصوت، ElevenLabs = 'el:<voiceId>'. ElevenLabs بس له ثبات/تشابه/مبالغة/تعزيز.
+     */
+    var TTS_VOICE_TYPES = [
+        { key: 'google', label: 'أصوات جوجل', voices: [
+            { id: 'ar-XA-Standard-A', label: 'سارة', g: 'f' }, { id: 'ar-XA-Standard-D', label: 'نورة', g: 'f' },
+            { id: 'ar-XA-Wavenet-A', label: 'ريم (أوضح)', g: 'f' }, { id: 'ar-XA-Wavenet-D', label: 'لمى (أوضح)', g: 'f' },
+            { id: 'ar-XA-Standard-B', label: 'فهد', g: 'm' }, { id: 'ar-XA-Standard-C', label: 'خالد', g: 'm' },
+            { id: 'ar-XA-Wavenet-B', label: 'ماجد (أوضح)', g: 'm' }, { id: 'ar-XA-Wavenet-C', label: 'سلطان (أوضح)', g: 'm' }
+        ] },
+        { key: 'hd', label: 'أصوات HD (طبيعية)', voices: [
+            { id: 'ar-XA-Chirp3-HD-Aoede', label: 'جود', g: 'f' }, { id: 'ar-XA-Chirp3-HD-Kore', label: 'دانة', g: 'f' },
+            { id: 'ar-XA-Chirp3-HD-Leda', label: 'هيا', g: 'f' }, { id: 'ar-XA-Chirp3-HD-Zephyr', label: 'لين', g: 'f' },
+            { id: 'ar-XA-Chirp3-HD-Despina', label: 'غلا', g: 'f' }, { id: 'ar-XA-Chirp3-HD-Achernar', label: 'رهف', g: 'f' },
+            { id: 'ar-XA-Chirp3-HD-Charon', label: 'عبدالله', g: 'm' }, { id: 'ar-XA-Chirp3-HD-Fenrir', label: 'سعود', g: 'm' },
+            { id: 'ar-XA-Chirp3-HD-Orus', label: 'نايف', g: 'm' }, { id: 'ar-XA-Chirp3-HD-Puck', label: 'تركي', g: 'm' },
+            { id: 'ar-XA-Chirp3-HD-Algieba', label: 'بندر', g: 'm' }, { id: 'ar-XA-Chirp3-HD-Iapetus', label: 'راشد', g: 'm' }
+        ] },
+        { key: 'el', label: 'أصوات ElevenLabs', voices: [
+            { id: 'el:cgSgspJ2msm6clMCkdW9', label: 'جسيكا', g: 'f' }, { id: 'el:EXAVITQu4vr4xnSDxMaL', label: 'سارة', g: 'f' },
+            { id: 'el:XrExE9yKIg1WjnnlVkGX', label: 'ماتيلدا', g: 'f' }, { id: 'el:pFZP5JQG7iQjIQuC4Bku', label: 'ليلي', g: 'f' },
+            { id: 'el:FGY2WhTYpPnrIDTdsKH5', label: 'لورا', g: 'f' }, { id: 'el:Xb7hH8MSUJpSbSDYk0k2', label: 'أليس', g: 'f' },
+            { id: 'el:9BWtsMINqrJLrRacOk9x', label: 'آريا', g: 'f' },
+            { id: 'el:JBFqnCBsd6RMkjVDRZzb', label: 'جورج', g: 'm' }, { id: 'el:nPczCjzI2devNBz1zQrb', label: 'براين', g: 'm' },
+            { id: 'el:onwK4e9ZLuTAKqWW03q4', label: 'دانيال', g: 'm' }, { id: 'el:TX3LPaxmHKxFdv7VOQHJ', label: 'ليام', g: 'm' },
+            { id: 'el:IKne3meq5aSn9XLyUdCD', label: 'تشارلي', g: 'm' }, { id: 'el:CwhRBWXzGAHq8TQ4Fs17', label: 'روجر', g: 'm' },
+            { id: 'el:iP95p4xoKVk53GoZ742B', label: 'كريس', g: 'm' }
+        ] }
+    ];
+    var TTS_ROLES = ['all', 'followers', 'subs', 'mods', 'team', 'top3', 'ranks', 'list'];
+
+    function ttsVoiceType(it) {
+        var k = it && it.vtype;
+        return TTS_VOICE_TYPES.filter(function (t) { return t.key === k; })[0] || TTS_VOICE_TYPES[0];
+    }
+    /** صوت العنصر الأساسي (القديم 'f'/'m' يتحوّل لسارة/فهد). */
+    function ttsMainVoice(it) {
+        var t = ttsVoiceType(it), v = it && it.voice;
+        if (v === 'm') v = 'ar-XA-Standard-B';
+        if (v === 'f' || !v) v = 'ar-XA-Standard-A';
+        return t.voices.some(function (x) { return x.id === v; }) ? v : t.voices[0].id;
+    }
+    /** «صوت مختلف لكل مشاهد»: نفس المشاهد ياخذ نفس الصوت دائماً من الأصوات المختارة. */
+    function ttsVoiceFor(it, uid) {
+        var main = ttsMainVoice(it);
+        if (!it || !it.multiVoice) return main;
+        var t = ttsVoiceType(it);
+        var list = (Array.isArray(it.voices) ? it.voices : []).filter(function (id) { return t.voices.some(function (x) { return x.id === id; }); });
+        if (list.indexOf(main) === -1) list.unshift(main);
+        if (list.length < 2 || !uid) return main;
+        var h = 0, s = String(uid);
+        for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        return list[h % list.length];
+    }
+
+    function userList(v) {
+        return (Array.isArray(v) ? v : String(v || '').split(/[\s,،]+/))
+            .map(function (u) { return String(u).trim().replace(/^@+/, '').toLowerCase(); }).filter(Boolean);
+    }
+
+    /** هل كاتب الرسالة من «الأدوار المسموح لها»؟ صاحب البث دائماً. */
+    function ttsRoleOk(it, m) {
+        if (m.owner) return true;
+        var roles = (Array.isArray(it.roles) ? it.roles : []).filter(function (r) { return TTS_ROLES.indexOf(r) !== -1; });
+        if (!roles.length || roles.indexOf('all') !== -1) return true;
+        var uid = String(m.uid || '').replace(/^@+/, '').toLowerCase();
+        return roles.some(function (r) {
+            if (r === 'followers') return !!m.follower;
+            if (r === 'subs') return !!m.sub;
+            if (r === 'mods') return !!m.mod;
+            if (r === 'team') return (Number(m.team) || 0) >= clamp(Number(it.teamMin) || 1, 1, 50);
+            if (r === 'top3') return !!m.top3;
+            if (r === 'ranks') return !!m.rank;
+            if (r === 'list') return !!uid && userList(it.allow).indexOf(uid) !== -1;
+            return false;
+        });
+    }
+
+    var EMOJI_RE = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
+
+    /** «قالب الرسالة»: {nickname} الاسم، {username} اليوزر، {comment} التعليق. */
+    function ttsCompose(it, m, comment) {
+        var tpl = it.template != null ? String(it.template) : (it.readName === false ? '{comment}' : '{nickname} يقول {comment}');
+        if (tpl.indexOf('{comment}') === -1) tpl += ' {comment}';
+        var out = tpl.replace(/\{(nickname|username|comment)\}/g, function (all, k) {
+            if (k === 'comment') return comment;
+            if (k === 'nickname') return String(m.user || '').slice(0, 40);
+            return String(m.uid || '').slice(0, 40);
+        });
+        if (it.skipEmoji !== false) out = out.replace(EMOJI_RE, ' ');
+        return out.replace(/\s+/g, ' ').trim().slice(0, 200) || null;
+    }
+
     /** النص اللي القارئ يقرأه لرسالة شات، أو null لو الرسالة تنتجاهل. */
     function ttsFilter(it, m) {
         if (!m || !m.text) return null;
         var t = String(m.text).replace(/\s+/g, ' ').trim();
         if (!t) return null;
-        if (it.skipCommands !== false && /^[!！]/.test(t)) return null;
+        var uid = String(m.uid || '').replace(/^@+/, '').toLowerCase();
+        if (uid && userList(it.blocked).indexOf(uid) !== -1) return null;      // محظورون من القراءة
+        if (!ttsRoleOk(it, m)) return null;
+        // نوع التعليقات المسموح بها
+        var mode = it.mode || 'any';
+        var pre = mode === 'dot' ? '.' : mode === 'slash' ? '/' : mode === 'custom' ? String(it.prefix || '').trim() : '';
+        if (pre) {
+            if (t.indexOf(pre) !== 0) return null;
+            t = t.slice(pre.length).trim();
+        } else if (it.skipCommands !== false && /^[!！]/.test(t)) return null;
+        if (/^@/.test(t) && !it.readMentions) return null;
         if (it.skipLinks !== false && /(https?:\/\/|www\.|[\w-]+\.(com|net|org|io|me|ly|gg|tv|sa|app|link)\b)/i.test(t)) return null;
+        if (it.skipEmoji !== false) t = t.replace(EMOJI_RE, ' ');
+        if (it.readNumbers === false) t = t.replace(/[0-9٠-٩۰-۹]+/g, ' ');
+        t = t.replace(/\s+/g, ' ').trim();
         if (!/[\p{L}\p{N}]/u.test(t)) return null; // كلها رموز أو إيموجي
         if (t.length < clamp(Number(it.minLen) || 2, 1, 50)) return null;
         var banned = (Array.isArray(it.banned) ? it.banned : String(it.banned || '').split(/[,،\n]/))
@@ -3853,7 +3966,19 @@
         var low = t.toLowerCase();
         if (banned.some(function (w) { return low.indexOf(w) !== -1; })) return null;
         t = t.slice(0, clamp(Number(it.maxLen) || 200, 10, 200));
-        return it.readName !== false && m.user ? String(m.user).slice(0, 40) + ' يقول: ' + t : t;
+        return ttsCompose(it, m, t);
+    }
+
+    /** باراميترات الصوت لطلب /tts (رابط الشاشة و«اختبار الصوت» بالمحرر). */
+    function ttsParams(it, voice) {
+        var p = { v: voice || ttsMainVoice(it), r: clamp(Number(it.rate) || 1, 0.7, 1.2) };
+        if (String(p.v).indexOf('el:') === 0) {
+            p.st = clamp(it.stab == null ? 0.5 : Number(it.stab) || 0, 0, 1);
+            p.sim = clamp(it.sim == null ? 0.75 : Number(it.sim) || 0, 0, 1);
+            p.sty = clamp(Number(it.style) || 0, 0, 1);
+            p.b = it.boost === false ? 0 : 1;
+        }
+        return p;
     }
 
     /** قائمة يوزرات تيك توك («أشخاص معيّنين») بشكل موحّد: بدون @ وحروف صغيرة. */
@@ -3924,7 +4049,7 @@
         var ti = audioItems('tts')[0];
         if (ti) {
             var text = ttsFilter(ti, m);
-            if (text) ttsEnqueue({ text: text, user: m.user, msg: m.text });
+            if (text) ttsEnqueue({ text: text, user: m.user, msg: m.text, voice: ttsVoiceFor(ti, m.uid) });
         }
         var mi = audioItems('music')[0];
         if (mi) {
@@ -3947,7 +4072,7 @@
         var it = activeItems().filter(function (x) { return x.id === t.itemId && (x.type === 'tts' || x.type === 'music'); })[0];
         if (!it) return false;
         if (!AUDIO_ON) return true;
-        if (t.type === 'tts' && it.type === 'tts') ttsEnqueue({ text: ttsFilter(Object.assign({}, it, { banned: [] }), { user: 'سارة', text: 'هلا والله، هذي تجربة للقارئ الصوتي' }), user: 'سارة', msg: 'هلا والله، هذي تجربة للقارئ الصوتي' });
+        if (t.type === 'tts' && it.type === 'tts') ttsEnqueue({ text: ttsCompose(it, { user: 'سارة', uid: 'sara' }, 'هلا والله، هذي تجربة للقارئ الصوتي'), user: 'سارة', msg: 'هلا والله، هذي تجربة للقارئ الصوتي', voice: ttsMainVoice(it) });
         else if (t.type === 'music') musicRequest(it, 'تجربة', '__test__', 'محمد عبده الأماكن');
         else if (t.type === 'music-skip') musicSkip();
         else if (t.type === 'music-stop') musicStop();
@@ -3971,8 +4096,9 @@
         var a = new Audio();
         tts.busy = true; tts.audio = a; tts.cur = job;
         a.volume = vol(it, 0.9);
+        var tp = ttsParams(it, job.voice);
         a.src = veyroBase() + '/api/public/screen/tts?k=' + encodeURIComponent(LINK_KEY) + '&t=' + encodeURIComponent(job.text) +
-            '&v=' + (it.voice === 'm' ? 'm' : 'f') + '&r=' + clamp(Number(it.rate) || 1, 0.5, 2);
+            Object.keys(tp).map(function (k) { return '&' + k + '=' + encodeURIComponent(tp[k]); }).join('');
         paintTts();
         function done() {
             if (tts.audio !== a) return;
@@ -3995,18 +4121,10 @@
         });
     }
 
-    function buildTts(n, it, preview) {
-        var ic = el('span', 'agp-so-aic');
-        ic.innerHTML = WAVE_SVG;
-        var job = preview ? { user: 'أبو فهد', msg: 'السلام عليكم، كيف الحال؟' } : tts.cur;
-        if (job) n.className += ' talking';
-        n.appendChild(ic);
-        if (it.bubble !== false && job) {
-            var b = el('span', 'agp-so-tbub');
-            b.appendChild(el('b', null, job.user || ''));
-            b.appendChild(el('span', null, String(job.msg || '').slice(0, 140)));
-            n.appendChild(b);
-        }
+    /** القارئ ما له شكل على الشاشة (طلب صاحب المنصة): عنصر مخفي بس عشان السيرفر يعرف إن بالشاشة قارئ. */
+    function buildTts(n) {
+        n.style.display = 'none';
+        n.setAttribute('aria-hidden', 'true');
     }
 
     function paintTts() { repaintAudio('tts'); }
@@ -5109,6 +5227,8 @@
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,
         /** أدوات الصوت (Veyro): فلتر القارئ وأوامر المشغّل — للمحرر والاختبارات. */
         ttsFilter: ttsFilter, parseMusicCommand: parseMusicCommand, musicAllowed: musicAllowed,
+        TTS_VOICE_TYPES: TTS_VOICE_TYPES, ttsVoiceType: ttsVoiceType, ttsMainVoice: ttsMainVoice, ttsVoiceFor: ttsVoiceFor,
+        ttsParams: ttsParams, ttsCompose: ttsCompose, ttsRoleOk: ttsRoleOk,
         /** الدونيشن: تنسيق المبلغ ($25) — للمحرر وصورة الإحصائيات. */
         fmtMoney: fmtMoney,
         stats: function () { return stats; },
