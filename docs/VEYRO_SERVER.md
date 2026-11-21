@@ -43,7 +43,7 @@
 | Build Command | `npm ci` |
 | Start Command | `node server.js` |
 | Instance | Starter أو أعلى (لازم عشان القرص) |
-| Disk | Mount Path = `/var/data`، الحجم 1GB يكفي البداية (الفيديو لين 20MB، 10 لكل ستريمر) |
+| Disk | Mount Path = `/var/data`، الحجم 1GB يكفي البداية (الفيديو لين 50MB، والعدد حسب الباقة — راقب المساحة وكبّرها لما تمتلي) |
 | Region | نفس منطقة سيرفر الألعاب |
 
 **متغيرات البيئة لخدمة فيرو:**

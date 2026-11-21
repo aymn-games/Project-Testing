@@ -2005,7 +2005,7 @@
 
     /* ---------------- أليرتات الفيديو: رفع + مكتبة + أداة التفريغ ---------------- */
 
-    var media = { list: [], max: 10, maxBytes: 20 * 1024 * 1024, loaded: false, loading: false, failed: false, uploading: null };
+    var media = { list: [], max: 10, maxBytes: 50 * 1024 * 1024, loaded: false, loading: false, failed: false, uploading: null };
     var UPLOAD_ERR = {
         file_too_large: 'الملف أكبر من الحد المسموح',
         too_many_files: 'وصلت لحد الملفات — احذف فيديو قديم',
