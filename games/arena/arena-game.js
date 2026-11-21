@@ -880,7 +880,7 @@ function onStreamGift(p){if(!p||!p.id)return;let F=findF(p.id);
   if(!F)return;const pw=powerForPayload(p);if(!pw)return;const g=giftById(SET.gifts[pw]);const n=Math.max(1,Math.min(5,Number(p.repeatCount)||1));
   for(let i=0;i<n;i++)power(p.id,pw,g&&g.label);}
 function bindStream(){const A=window.AymanGamesPlatform;if(!A||!A.events||typeof A.events.on!=='function')return;
-  A.events.on('stream:commentReceived',p=>{noteXtra(p);if(p&&p.id&&typeof p.text==='string')chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower});});
+  A.events.on('stream:commentReceived',p=>{noteXtra(p);if(p&&p.id&&typeof p.text==='string'){const wasLobby=UI.phase==='lobby';if(chat(p.name||p.id,p.text,p.avatarUrl,{id:p.id,follower:!!p.isFollower})&&wasLobby){var AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true });}}});
   A.events.on('stream:likeReceived',p=>{noteXtra(p);if(p&&p.id)onLike(p.id,p.count,p.name,p.avatarUrl);});
   A.events.on('stream:giftReceived',p=>{noteXtra(p);onStreamGift(p);});}
 bindStream();

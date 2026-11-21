@@ -462,7 +462,7 @@ function hookStream() {
     P.connect(); // الاتصال من صفحة اللعبة: تطلع بـ«البثوث الحالية» وتنحسب إحصائيات البث
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'راعي';
-        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null, pl.winCard || null); } else answer(id, pl.text); });
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; const before = G.players.length; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null, pl.winCard || null); if (G.players.length > before) { const AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(pl, { rejoin: true }); } } else answer(id, pl.text); });
 }
 
 // ---------- تشغيل

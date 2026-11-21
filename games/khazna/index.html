@@ -23,6 +23,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-auto-connect.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-entrance.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="khazna-platform.js"></script>
 <script src="./support.js"></script>
@@ -684,7 +685,7 @@ class Component extends DCLogic {
     this.setState({conn:st==='connected'?'ok':st==='connecting'?'reconnecting':'lost'}); }
   canJoin(p){ return this.state.joinMode!=='fol'||!!p.isFollower; }
   mkPlayer(p,id){ return {id:p.id,name:String(p.name||p.id).trim()||String(p.id),avatar:p.avatarUrl||null,winCard:p.winCard||null,n:id,out:false}; }
-  join(p){ const s=this.state; if(s.screen!=='lobby'||!this.canJoin(p)||s.players.some(x=>x.id===p.id)) return; this.sfx('ans'); this.setState(x=>({nid:x.nid+1,players:[...x.players,this.mkPlayer(p,x.nid)]})); }
+  join(p){ const s=this.state; if(s.screen!=='lobby'||!this.canJoin(p)||s.players.some(x=>x.id===p.id)) return; this.sfx('ans'); this.setState(x=>({nid:x.nid+1,players:[...x.players,this.mkPlayer(p,x.nid)]})); var AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true }); }
   chatIn(p){ const txt=String(p.text||'').trim(); if(!txt) return; const s=this.state, kw=!!KZ.norm(s.keyword)&&KZ.norm(txt)===KZ.norm(s.keyword);
     if(s.mini&&kw){ if(this.canJoin(p)&&![...s.players,...s.miniNew].some(x=>x.id===p.id)){ this.sfx('ans'); this.setState(x=>({nid:x.nid+1,miniNew:[...x.miniNew,this.mkPlayer(p,x.nid)]})); } }
     else if(s.screen==='lobby'&&kw) this.join(p);
