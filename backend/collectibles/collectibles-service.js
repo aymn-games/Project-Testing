@@ -259,50 +259,161 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
 
   if (!user) return null;
 
-  // إطار مُجهَّز فعلاً (بصرف النظر عن نوعه، فقط وجوده).
-  var hasEquippedFrame = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND equipped = 1').get(user.id);
-  if (!hasEquippedFrame) return null;
+  // الدخولية مستقلة عن الإطار (ما يحتاج إطار مُجهَّز)، ولازم يكون يملكها.
+  var row = db.prepare(
+    'SELECT e.template_key, e.entrance_text, e.color FROM user_entrances e ' +
+    'JOIN user_owned_entrances o ON o.user_id = e.user_id AND o.entrance_key = e.template_key ' +
+    'WHERE e.user_id = ? AND e.enabled = 1'
+  ).get(user.id);
+  if (!row || !ENTRANCE_BY_KEY[row.template_key]) return null;
 
-  var row = db.prepare('SELECT template_key, entrance_text FROM user_entrances WHERE user_id = ? AND enabled = 1').get(user.id);
-  if (!row) return null;
-
-  return { templateKey: row.template_key, entranceText: row.entrance_text || '' };
+  return { templateKey: row.template_key, entranceText: row.entrance_text || '', color: validColor(row.template_key, row.color) };
 }
 
 /* ----------------------------------------------------------------------
- * الدخولية (نموذج أنيميشن + نص حر)
+ * الدخوليات — 4 نماذج (مؤثرات حقيقية + اسم + نص، 4 ثواني، js/agp-entrance.js).
+ * تُمنح يدوياً من الأدمن مثل الإطارات (اللاعب يقدر يملك أكثر من وحدة ويفعّل
+ * وحدة)، ومستقلة عن الإطار. اللاعب يعدّل نصها ولونها (من ألوانها الجاهزة)
+ * من بروفايله. المفاتيح القديمة (gold/neon/fire/ice) تتحوّل للجديدة.
  * ---------------------------------------------------------------------- */
+var ENTRANCE_CATALOG = [
+  { key: 'nitro', displayNameAr: 'نيترو', colors: ['blue', 'red', 'green', 'purple'], defaultText: 'وصل… افسحوا الطريق' },
+  { key: 'royal', displayNameAr: 'ملكي', colors: ['gold', 'silver', 'rose'], defaultText: 'حيّوا الملك' },
+  { key: 'princess', displayNameAr: 'الأميرة', colors: ['pink', 'purple', 'sky'], defaultText: 'نوّرت الأميرة' },
+  { key: 'storm', displayNameAr: 'العاصفة', colors: ['white', 'blue', 'purple', 'red'], defaultText: 'العاصفة وصلت' }
+];
+var ENTRANCE_BY_KEY = {};
+ENTRANCE_CATALOG.forEach(function (e) { ENTRANCE_BY_KEY[e.key] = e; });
+var LEGACY_ENTRANCE_KEYS = { gold: 'royal', neon: 'nitro', fire: 'nitro', ice: 'storm' };
+var ENTRANCE_TEXT_MAX = 40;
+
+function normalizeEntranceKey(key) {
+  key = String(key || '');
+  return ENTRANCE_BY_KEY[key] ? key : (LEGACY_ENTRANCE_KEYS[key] || null);
+}
+function validColor(key, color) {
+  var e = ENTRANCE_BY_KEY[key];
+  return e && e.colors.indexOf(color) >= 0 ? color : (e ? e.colors[0] : '');
+}
+function cleanEntranceText(text) {
+  return String(text == null ? '' : text).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, ENTRANCE_TEXT_MAX);
+}
+function getEntranceCatalog() {
+  return ENTRANCE_CATALOG.map(function (e) { return { key: e.key, displayNameAr: e.displayNameAr, colors: e.colors.slice(), defaultText: e.defaultText }; });
+}
+
+// تحويل الدخوليات القديمة للنماذج الجديدة + تسجيل ملكيتها (مرة وحدة، آمن للتكرار).
+(function migrateLegacyEntrances() {
+  db.transaction(function () {
+    Object.keys(LEGACY_ENTRANCE_KEYS).forEach(function (oldKey) {
+      db.prepare('UPDATE user_entrances SET template_key = ? WHERE template_key = ?').run(LEGACY_ENTRANCE_KEYS[oldKey], oldKey);
+    });
+    db.prepare(
+      "INSERT OR IGNORE INTO user_owned_entrances (user_id, entrance_key, granted_by, granted_at) " +
+      "SELECT user_id, template_key, source, updated_at FROM user_entrances WHERE template_key IN ('nitro','royal','princess','storm')"
+    ).run();
+  })();
+})();
+
+/** يمنح دخولية (ملكية). لو ما عنده دخولية مفعّلة، تصير هي المفعّلة بنصها الافتراضي. */
+function grantEntrance(userId, key, grantedBy) {
+  key = normalizeEntranceKey(key);
+  if (!key) return { success: false, error: 'unknown_entrance' };
+  if (!db.prepare('SELECT id FROM users WHERE id = ?').get(userId)) return { success: false, error: 'unknown_user' };
+  var info = db.prepare('INSERT OR IGNORE INTO user_owned_entrances (user_id, entrance_key, granted_by, granted_at) VALUES (?, ?, ?, ?)')
+    .run(userId, key, grantedBy || 'admin_manual', now());
+  if (!db.prepare('SELECT user_id FROM user_entrances WHERE user_id = ?').get(userId)) {
+    db.prepare("INSERT INTO user_entrances (user_id, template_key, entrance_text, source, enabled, color, updated_at) VALUES (?, ?, ?, ?, 1, '', ?)")
+      .run(userId, key, ENTRANCE_BY_KEY[key].defaultText, grantedBy || 'admin_manual', now());
+  }
+  logger.log('Collectibles: granted entrance ' + key + ' to user ' + userId);
+  return info.changes ? { success: true } : { success: false, error: 'already_owned' };
+}
+
+/** يسحب دخولية. لو كانت المفعّلة، تتفعّل غيرها من اللي يملكها (أو ما يبقى شي). */
+function revokeEntrance(userId, key) {
+  key = normalizeEntranceKey(key);
+  if (!key) return { success: false, error: 'unknown_entrance' };
+  db.prepare('DELETE FROM user_owned_entrances WHERE user_id = ? AND entrance_key = ?').run(userId, key);
+  var cur = db.prepare('SELECT template_key FROM user_entrances WHERE user_id = ?').get(userId);
+  if (cur && cur.template_key === key) {
+    var other = db.prepare('SELECT entrance_key FROM user_owned_entrances WHERE user_id = ? ORDER BY granted_at DESC LIMIT 1').get(userId);
+    if (other) db.prepare("UPDATE user_entrances SET template_key = ?, entrance_text = ?, color = '', updated_at = ? WHERE user_id = ?").run(other.entrance_key, ENTRANCE_BY_KEY[other.entrance_key].defaultText, now(), userId);
+    else db.prepare('DELETE FROM user_entrances WHERE user_id = ?').run(userId);
+  }
+  return { success: true };
+}
 
 /**
- * تعيين/استبدال الدخولية النشطة لمستخدم بالكامل — تلقائياً (حزمة إطار
- * خاص) أو يدوياً من الأدمن. كل تعيين جديد يعيد enabled = 1 تلقائياً.
- * @param {'gold'|'neon'|'fire'|'ice'} templateKey
+ * منح + تفعيل دخولية بنص معيّن (الأدمن، أو حزمة إطار خاص). يقبل المفاتيح
+ * القديمة (gold/neon/fire/ice) ويحوّلها. كل تعيين جديد يعيد enabled = 1.
  */
 function setEntrance(userId, templateKey, entranceText, source) {
+  var key = normalizeEntranceKey(templateKey);
+  if (!key) return { success: false, error: 'unknown_entrance' };
+  db.prepare('INSERT OR IGNORE INTO user_owned_entrances (user_id, entrance_key, granted_by, granted_at) VALUES (?, ?, ?, ?)')
+    .run(userId, key, source || 'admin_manual', now());
+  var text = cleanEntranceText(entranceText) || ENTRANCE_BY_KEY[key].defaultText;
   db.prepare(
-    'INSERT INTO user_entrances (user_id, template_key, entrance_text, source, enabled, updated_at) VALUES (?, ?, ?, ?, 1, ?) ' +
-    'ON CONFLICT(user_id) DO UPDATE SET template_key = excluded.template_key, entrance_text = excluded.entrance_text, source = excluded.source, enabled = 1, updated_at = excluded.updated_at'
-  ).run(userId, templateKey, entranceText || '', source || 'admin_manual', now());
+    "INSERT INTO user_entrances (user_id, template_key, entrance_text, source, enabled, color, updated_at) VALUES (?, ?, ?, ?, 1, '', ?) " +
+    "ON CONFLICT(user_id) DO UPDATE SET template_key = excluded.template_key, entrance_text = excluded.entrance_text, source = excluded.source, enabled = 1, color = '', updated_at = excluded.updated_at"
+  ).run(userId, key, text, source || 'admin_manual', now());
 
   return { success: true };
 }
 
+/** يسحب كل دخوليات المستخدم. */
 function clearEntrance(userId) {
   db.prepare('DELETE FROM user_entrances WHERE user_id = ?').run(userId);
+  db.prepare('DELETE FROM user_owned_entrances WHERE user_id = ?').run(userId);
 
   return { success: true };
 }
 
+/** الدخولية المفعّلة (أو null). */
 function getEntrance(userId) {
-  return db.prepare('SELECT template_key, entrance_text, source, enabled FROM user_entrances WHERE user_id = ?').get(userId) || null;
+  var row = db.prepare('SELECT template_key, entrance_text, source, enabled, color FROM user_entrances WHERE user_id = ?').get(userId);
+  if (!row) return null;
+  row.color = validColor(row.template_key, row.color);
+  return row;
 }
 
-/**
- * تفعيل/إيقاف ذاتي من صاحب الحساب — لا يحذف الصف، فقط يبدّل عمود enabled.
- * @param {number} userId
- * @param {boolean} enabled
- * @returns {{success: boolean, error?: string}}
- */
+/** الدخوليات اللي يملكها المستخدم، بترتيب الكتالوج. */
+function getOwnedEntrances(userId) {
+  var owned = {};
+  db.prepare('SELECT entrance_key, granted_at FROM user_owned_entrances WHERE user_id = ?').all(userId).forEach(function (r) { owned[r.entrance_key] = r.granted_at; });
+  return getEntranceCatalog().filter(function (e) { return owned[e.key]; }).map(function (e) { e.grantedAt = owned[e.key]; return e; });
+}
+
+/** اللاعب يختار دخولية من اللي يملكها. النص يبقى لو كان معدّل، واللون يرجع للأساسي. */
+function equipEntrance(userId, key) {
+  key = normalizeEntranceKey(key);
+  if (!key || !db.prepare('SELECT 1 FROM user_owned_entrances WHERE user_id = ? AND entrance_key = ?').get(userId, key)) return { success: false, error: 'not_owned' };
+  var cur = db.prepare('SELECT template_key, entrance_text FROM user_entrances WHERE user_id = ?').get(userId);
+  var keepText = cur && cur.entrance_text && !ENTRANCE_CATALOG.some(function (e) { return e.defaultText === cur.entrance_text; });
+  var text = keepText ? cur.entrance_text : ENTRANCE_BY_KEY[key].defaultText;
+  db.prepare(
+    "INSERT INTO user_entrances (user_id, template_key, entrance_text, source, enabled, color, updated_at) VALUES (?, ?, ?, 'player', 1, '', ?) " +
+    "ON CONFLICT(user_id) DO UPDATE SET template_key = excluded.template_key, entrance_text = excluded.entrance_text, enabled = 1, color = '', updated_at = excluded.updated_at"
+  ).run(userId, key, text, now());
+  return { success: true, entrance: getEntrance(userId) };
+}
+
+/** اللاعب يعدّل نص دخوليته ولونها (من ألوانها الجاهزة). */
+function updateEntranceSettings(userId, input) {
+  input = input || {};
+  var cur = db.prepare('SELECT template_key, entrance_text, color FROM user_entrances WHERE user_id = ?').get(userId);
+  if (!cur) return { success: false, error: 'no_entrance' };
+  var text = input.text !== undefined ? cleanEntranceText(input.text) : cur.entrance_text;
+  var color = cur.color;
+  if (input.color !== undefined) {
+    if (ENTRANCE_BY_KEY[cur.template_key].colors.indexOf(String(input.color)) < 0) return { success: false, error: 'invalid_color' };
+    color = String(input.color);
+  }
+  db.prepare('UPDATE user_entrances SET entrance_text = ?, color = ?, updated_at = ? WHERE user_id = ?').run(text, color, now(), userId);
+  return { success: true, entrance: getEntrance(userId) };
+}
+
 function setEntranceEnabled(userId, enabled) {
   var existing = db.prepare('SELECT user_id FROM user_entrances WHERE user_id = ?').get(userId);
   if (!existing) return { success: false, error: 'no_entrance' };
@@ -1396,6 +1507,12 @@ module.exports = {
   setEntrance: setEntrance,
   clearEntrance: clearEntrance,
   getEntrance: getEntrance,
+  getEntranceCatalog: getEntranceCatalog,
+  getOwnedEntrances: getOwnedEntrances,
+  grantEntrance: grantEntrance,
+  revokeEntrance: revokeEntrance,
+  equipEntrance: equipEntrance,
+  updateEntranceSettings: updateEntranceSettings,
   setEntranceEnabled: setEntranceEnabled,
   autoGrantOnLevelUp: autoGrantOnLevelUp,
   getElimCardCatalog: getElimCardCatalog,

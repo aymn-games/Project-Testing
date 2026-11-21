@@ -257,7 +257,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                   </div>
                 </div>
                 <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نموذج الدخولية (اختياري)</span>
-                  <select value="{{ grantTpl }}" onChange="{{ onGrantTpl }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">افتراضي الكتالوج</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select>
+                  <select value="{{ grantTpl }}" onChange="{{ onGrantTpl }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">افتراضي الكتالوج</option><option value="nitro">نيترو</option><option value="royal">ملكي</option><option value="princess">الأميرة</option><option value="storm">العاصفة</option></select>
                 </label>
                 <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px"><span style="font-size:12px;color:#9199ab">نص الدخولية (اختياري)</span>
                   <input value="{{ grantText }}" onChange="{{ onGrantText }}" placeholder="اتركه فاضي لاستخدام النص الافتراضي" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
@@ -306,6 +306,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                   <button onClick="{{ m.pick }}" style="display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ m.border }};background:{{ m.bg }}">
                     <div style="height:72px;border-radius:6px;background:{{ m.swatch }}"></div>
                     <span style="font-size:13px;font-weight:500">{{ m.label }}</span>
+                    <span style="font-size:11.5px;color:#9199ab">{{ m.desc }}</span>
                   </button>
                 </sc-for>
               </div>
@@ -315,10 +316,12 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               <input value="{{ entranceText }}" onChange="{{ onEntranceText }}" placeholder="نص الدخولية" style="width:100%;max-width:560px;height:40px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
-              <span style="font-size:12.5px;color:#9199ab;max-width:520px;text-wrap:pretty">لو مستخدم أوقف دخوليته بنفسه من بروفايله، تعيين دخولية جديدة هنا يعيد تفعيلها تلقائياً.</span>
-              <div style="display:flex;gap:8px">
-                <button onClick="{{ removeEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إزالة الدخولية</button>
-                <button onClick="{{ saveEntrance }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الدخولية</button>
+              <span style="font-size:12.5px;color:#9199ab;max-width:520px;text-wrap:pretty">{{ entOwnedText }} — اللاعب يقدر يملك أكثر من دخولية ويختار وحدة، ويعدّل نصها ولونها من بروفايله. «منح» يضيفها له بدون ما يغيّر المفعّلة، و«منح وتفعيل» يفعّلها بالنص المكتوب فوق.</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onClick="{{ removeEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب كل الدخوليات</button>
+                <button onClick="{{ revokeOneEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#fca5a5;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب هذي الدخولية</button>
+                <button onClick="{{ grantOneEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer" style-hover="border-color:#7c3aed">منح</button>
+                <button onClick="{{ saveEntrance }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح وتفعيل</button>
               </div>
             </div>
           </div>
@@ -689,7 +692,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <td dir="ltr" style="text-align:right;padding:10px 14px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ c.file }}</td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><input value="{{ c.name }}" onChange="{{ c.onName }}" style="width:150px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isLevel }}"><input type="number" value="{{ c.points }}" onChange="{{ c.onPoints }}" placeholder="غير مفعّل" style="width:110px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></sc-if><sc-if value="{{ c.isSpecial }}"><span style="color:#5b6274">—</span></sc-if></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><select value="{{ c.model }}" onChange="{{ c.onModel }}" style="height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 8px;font-size:13px"><option value="">—</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><select value="{{ c.model }}" onChange="{{ c.onModel }}" style="height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 8px;font-size:13px"><option value="">—</option><option value="nitro">نيترو</option><option value="royal">ملكي</option><option value="princess">الأميرة</option><option value="storm">العاصفة</option></select></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><input value="{{ c.text }}" onChange="{{ c.onText }}" style="width:170px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ c.save }}" style="height:30px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">حفظ</button></td>
               </tr></sc-for></tbody>
@@ -1144,7 +1147,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 // ============================================================
 const A = window.AGPAuth;
 const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store'];
-const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
+const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
 const TYPE_LABELS = { suggestion:'اقتراح', question:'سؤال', bug:'مشكلة تقنية' };
@@ -1171,7 +1174,7 @@ class Component extends DCLogic {
     me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', emailDraft:'', confirm:null, toast:null,
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
-    frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
+    frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'nitro', entranceText:'', entOwned:null, entOwnedFor:null, cardKey:null,
     codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, subEnf:null, subGType:'internal', subGId:'', subGUser:null, subGState:'empty', subGDays:30, compDays:1, compNote:'', planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
@@ -1271,6 +1274,9 @@ class Component extends DCLogic {
   setSubPick(patch){ this.setState(patch,()=>{ clearTimeout(this._slk); const v=this.state.subGId.trim(); if(!v){ this.setState({ subGUser:null, subGState:'empty' }); return; }
     this.setState({ subGUser:null, subGState:'loading' }); const seq=this._sseq=(this._sseq||0)+1;
     this._slk=setTimeout(()=>A.adminLookupUser(v,this.state.subGType).then(r=>{ if(seq!==this._sseq) return; this.setState(r&&r.success&&r.user?{ subGUser:r.user, subGState:'ok' }:{ subGUser:null, subGState:'missing' }); },()=>{ if(seq===this._sseq) this.setState({ subGState:'missing' }); }),350); }); }
+  // دخوليات المستخدم المختار (صفحة الدخوليات) — force يعيد التحميل بعد منح/سحب
+  loadEntOwned(userId, force){ if(!userId||(!force&&this._entLoading===userId)) return; this._entLoading=userId;
+    A.adminGetUserEntrances(userId).then(r=>{ this._entLoading=null; this.setState({ entOwned:(r&&r.success?(r.owned||[]).map(e=>e.key):[]), entOwnedFor:userId }); }); }
   loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
@@ -1409,8 +1415,10 @@ class Component extends DCLogic {
     const libTabs=[['club','نوادي'],['country','دول خليجية والسعودية'],['general','عام'],['girls','بنات'],['boys','عيال'],['rare','نادرة'],['other','أخرى (كتالوج أساسي)']].map(([k,l])=>({ label:l,
       count:frames.filter(f=>f.cat===k&&(!lq||f.name.toLowerCase().includes(lq)||f.file.toLowerCase().includes(lq))).length, go:()=>this.setState({ libTab:k }),
       bg:s.libTab===k?'#7c3aed':'transparent', color:s.libTab===k?'#fff':'#9199ab', border:s.libTab===k?'#7c3aed':'#262a37' }));
-    const entranceModels=[['gold','linear-gradient(135deg,#78350f,#f59e0b 60%,#fde68a)'],['neon','linear-gradient(135deg,#1e1b4b,#7c3aed 55%,#22d3ee)'],['fire','linear-gradient(135deg,#450a0a,#dc2626 55%,#fb923c)'],['ice','linear-gradient(135deg,#0c4a6e,#38bdf8 60%,#e0f2fe)']]
-      .map(([k,sw])=>({ label:TEMPLATE_LABELS[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
+    const ENT_DESC={ nitro:'لهب نيترو أزرق وانطلاق — بصوت', royal:'عمود ضوء ذهبي ولمعات — بدون صوت', princess:'أضواء وردية وفراشات — بدون صوت', storm:'غيوم وصواعق حقيقية — بصوت' };
+    const ownedNow=(s.entOwnedFor&&s.pickUser&&s.entOwnedFor===s.pickUser.id)?(s.entOwned||[]):null;
+    const entranceModels=[['nitro','radial-gradient(circle at 30% 40%,#bfe3ff,#2f7dff 35%,#06112b 75%)'],['royal','radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)'],['princess','radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)'],['storm','radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)']]
+      .map(([k,sw])=>({ label:TEMPLATE_LABELS[k]+(ownedNow&&ownedNow.includes(k)?' ✓':''), desc:ENT_DESC[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
     const elimCards=(s.elimCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ cardKey:c.key }), border:s.cardKey===c.key?'#7c3aed':'#262a37', bg:s.cardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
     const selCard=(s.elimCardList||[]).find(c=>c.key===s.cardKey);
     const winCards=(s.winCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ winCardKey:c.key }), border:s.winCardKey===c.key?'#7c3aed':'#262a37', bg:s.winCardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
@@ -1548,9 +1556,12 @@ class Component extends DCLogic {
         this.ask('سحب الإطار؟',`سيُسحب إطار «${sf.name}» من ${this.pickName(u)}.`,'سحب الإطار',()=>this.busy('revoke',()=>A.adminRevokeFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم سحب الإطار.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // entrances
       entranceModels, entranceText:s.entranceText, onEntranceText:e=>this.setState({ entranceText:e.target.value }),
-      saveEntrance:()=>this.needUser(u=>{ const text=s.entranceText.trim(); if(!text) return this.flash('اكتب نص الدخولية أولاً.','err');
-        this.busy('ent',()=>A.adminSetEntrance(u.id,s.entranceModel,text)).then(r=>{ if(r) this.flash(r.success?'تم حفظ الدخولية.':'تعذّر الحفظ.',r.success?'ok':'err'); }); }),
-      removeEntrance:()=>this.needUser(u=>this.ask('إزالة الدخولية؟',`ستُزال دخولية ${this.pickName(u)}.`,'إزالة',()=>this.busy('entx',()=>A.adminClearEntrance(u.id)).then(r=>{ if(r) this.flash(r.success?'تمت إزالة الدخولية.':'تعذّرت الإزالة.',r.success?'ok':'err'); }))),
+      entOwnedText:!s.pickUser?'اختر مستخدماً لتشوف دخولياته':(ownedNow===null?(this.loadEntOwned(s.pickUser.id),'جاري التحميل…'):(ownedNow.length?'يملك: '+ownedNow.map(k=>TEMPLATE_LABELS[k]).join('، '):'ما يملك دخوليات')),
+      saveEntrance:()=>this.needUser(u=>{ const text=s.entranceText.trim();
+        this.busy('ent',()=>A.adminSetEntrance(u.id,s.entranceModel,text)).then(r=>{ if(r) this.flash(r.success?`تم منح «${TEMPLATE_LABELS[s.entranceModel]}» وتفعيلها.`:'تعذّر الحفظ.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }); }),
+      grantOneEntrance:()=>this.needUser(u=>this.busy('ent',()=>A.adminGrantEntrance(u.id,s.entranceModel)).then(r=>{ if(r) this.flash(r.success?`تم منح «${TEMPLATE_LABELS[s.entranceModel]}».`:(r.error==='already_owned'?'المستخدم يملكها أصلاً.':'تعذّر المنح.'),r.success?'ok':'err'); this.loadEntOwned(u.id,true); })),
+      revokeOneEntrance:()=>this.needUser(u=>this.ask('سحب الدخولية؟',`ستُسحب «${TEMPLATE_LABELS[s.entranceModel]}» من ${this.pickName(u)}.`,'سحب',()=>this.busy('entx',()=>A.adminGrantEntrance(u.id,s.entranceModel,true)).then(r=>{ if(r) this.flash(r.success?'تم السحب.':'تعذّر السحب.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }))),
+      removeEntrance:()=>this.needUser(u=>this.ask('سحب كل الدخوليات؟',`ستُسحب كل دخوليات ${this.pickName(u)}.`,'سحب الكل',()=>this.busy('entx',()=>A.adminClearEntrance(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب كل الدخوليات.':'تعذّر السحب.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }))),
       // elim
       elimCards,
       grantCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');

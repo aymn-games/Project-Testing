@@ -780,6 +780,8 @@ function getPublicProfile(customId) {
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
         entrance: collectiblesService.getEntrance(user.id),
+        entrances: collectiblesService.getOwnedEntrances(user.id),
+        entranceCatalog: collectiblesService.getEntranceCatalog(),
         elimCards: collectiblesService.getElimCards(user.id),
         winCards: collectiblesService.getWinCards(user.id),
         character: collectiblesService.getCharacter(user.id),
