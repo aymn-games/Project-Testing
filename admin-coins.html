@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عملات أيمن — لوحة الأدمن</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- إدارة عملات أيمن (أدمن فقط): تختار يدوياً وش ينسترد بالعملات وسعره،
+     وتشوف رصيد أي مستخدم وتضيف أو تخصم منه. كل شي يتحقق منه السيرفر —
+     backend/coins/coins-service.js و/api/admin/coins/*. تنفتح داخل admin.html (#coins). -->
+<style>
+  :root{--bg:#0b0d12;--panel:#12141b;--line:#1d2029;--line-2:#262a37;--ink:#e7e9ee;--ink-2:#9199ab;--ink-3:#5b6274;--accent:#7c3aed;--accent-2:#a855f7;--gold:#e8d8a6;--ok:#7ee0a6;--bad:#f08aa0}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+  body{direction:rtl}
+  input,select,button{font-family:inherit;font-size:14px}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 16px 64px;display:flex;flex-direction:column;gap:20px}
+  h1{margin:0;font-size:22px;font-weight:600}
+  .lead{margin:6px 0 0;color:var(--ink-2);line-height:1.7}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .card h2{margin:0;font-size:16px;font-weight:600}
+  .hint{margin:0;font-size:12.5px;color:var(--ink-3);line-height:1.7}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .row > label{text-align:right;color:var(--ink-2);font-weight:500}
+  .ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  input[type=text],input[type=number],input[type=search],select{height:38px;padding:0 12px;border-radius:9px;background:#0b0d12;border:1px solid var(--line-2);color:var(--ink);outline:none;min-width:0}
+  input:focus,select:focus{border-color:var(--accent-2)}
+  input[type=number]{width:110px}
+  select{max-width:100%}
+  .btn{height:38px;padding:0 16px;border-radius:9px;border:1px solid var(--line-2);background:transparent;color:var(--ink);cursor:pointer;font-weight:600;white-space:nowrap}
+  .btn:hover{border-color:var(--ink-3)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-2)}
+  .btn.danger{color:var(--bad);border-color:rgba(240,138,160,.35)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .items{display:flex;flex-direction:column;gap:10px}
+  .item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px;border-radius:12px;background:#0f1117;border:1px solid var(--line)}
+  .item.off{opacity:.6}
+  .art{width:64px;height:64px;border-radius:10px;background:#0b0d12;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:24px}
+  .art img{max-width:100%;max-height:100%;object-fit:contain}
+  .name{font-weight:600;overflow-wrap:anywhere}
+  .meta{font-size:12px;color:var(--ink-3);margin-top:3px}
+  .fields{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:flex-end}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field span{font-size:11.5px;color:var(--ink-3)}
+  .switch{display:inline-flex;align-items:center;gap:6px;height:38px;color:var(--ink-2);cursor:pointer}
+  .empty{padding:18px;text-align:center;color:var(--ink-3);border:1px dashed var(--line-2);border-radius:12px}
+  .pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;background:#1d1830;color:#c4b5fd}
+  .stat{display:flex;gap:24px;flex-wrap:wrap}
+  .stat div{display:flex;flex-direction:column;gap:2px}
+  .stat b{font-size:22px;color:var(--gold)}
+  .stat small{color:var(--ink-3)}
+  .hist{display:flex;flex-direction:column;gap:6px;max-height:360px;overflow:auto}
+  .hrow{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;border-radius:9px;background:#0f1117;border:1px solid var(--line)}
+  .plus{color:var(--ok);font-weight:700}.minus{color:var(--bad);font-weight:700}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:10px;background:#16221b;border:1px solid rgba(126,224,166,.4);color:var(--ok);z-index:10}
+  .toast.bad{background:#2a141a;border-color:rgba(240,138,160,.4);color:var(--bad)}
+  .gate{padding:40px;text-align:center;color:var(--ink-2)}
+  @media (max-width:640px){
+    .item{grid-template-columns:52px minmax(0,1fr)}
+    .art{width:52px;height:52px}
+    .fields{grid-column:1/-1;justify-content:flex-start}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="gate">جارٍ التحميل…</div></div>
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+  'use strict';
+  var A = window.AGPAuth;
+  var app = document.getElementById('app');
+  var S = { items: [], options: [], user: null };
+  var KIND = { frame: 'إطار', elim: 'بطاقة إقصاء', win: 'بطاقة فوز', entrance: 'دخولية' };
+  var ERR = {
+    invalid_price: 'السعر لازم يكون رقم من 1 وفوق.', invalid_stock: 'الكمية لازم تكون رقم (أو فاضية = بلا حد).',
+    already_listed: 'العنصر موجود بالمتجر من قبل.', unknown_item: 'العنصر غير موجود.', not_found: 'غير موجود.',
+    user_not_found: 'ما لقينا المستخدم.', invalid_amount: 'اكتب عدد صحيح (موجب يضيف، سالب يخصم).',
+    insufficient_balance: 'الرصيد ما يكفي للخصم.', forbidden: 'هذي الصفحة للأدمن بس.'
+  };
+
+  function h(tag, attrs, kids) {
+    var el = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k.indexOf('on') === 0 && typeof v === 'function') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+    [].concat(kids === undefined ? [] : kids).forEach(function (c) {
+      if (c === null || c === undefined || c === false) return;
+      el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+    });
+    return el;
+  }
+  function num(v) { return Number(v || 0).toLocaleString('en-US'); }
+  function toast(text, bad) {
+    var t = h('div', { class: 'toast' + (bad ? ' bad' : ''), role: 'status', text: text });
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3000);
+  }
+  function err(r) { return (r && (ERR[r.error] || r.error)) || 'تعذّر التنفيذ.'; }
+  function api(path, body) { return A.request(path, body ? { method: 'POST', body: body } : { method: 'GET' }); }
+  function art(it) {
+    return h('div', { class: 'art' }, it.image ? h('img', { src: it.image, alt: '', loading: 'lazy' }) : '✨');
+  }
+
+  function load() {
+    return api('/api/admin/coins/shop').then(function (r) {
+      if (!r || !r.success) { app.innerHTML = ''; app.appendChild(h('div', { class: 'gate', text: r && r.__httpStatus === 403 ? ERR.forbidden : 'تعذّر التحميل — تأكد إنك داخل بحساب أدمن.' })); return; }
+      S.items = r.items || []; S.options = r.options || [];
+      render();
+    });
+  }
+
+  function render() {
+    app.innerHTML = '';
+    app.appendChild(h('div', null, [
+      h('h1', { text: 'عملات أيمن' }),
+      h('p', { class: 'lead', text: 'اختر وش ينسترد بالعملات وسعره. اللي تفعّله يطلع للاعبين بقسم «عملات أيمن» ببروفايلهم، واللي يستردونه ينضاف لحسابهم على طول.' })
+    ]));
+    app.appendChild(addCard());
+    app.appendChild(itemsCard());
+    app.appendChild(userCard());
+  }
+
+  /* ---- إضافة عنصر للمتجر */
+  function addCard() {
+    var free = S.options.filter(function (o) { return !o.listed; });
+    var sel = h('select', { 'aria-label': 'العنصر' });
+    var groups = {};
+    free.forEach(function (o, i) {
+      if (!groups[o.group]) { groups[o.group] = h('optgroup', { label: o.group }); sel.appendChild(groups[o.group]); }
+      groups[o.group].appendChild(h('option', { value: String(i), text: o.name }));
+    });
+    var price = h('input', { type: 'number', min: '1', step: '1', placeholder: 'السعر', 'aria-label': 'السعر' });
+    var stock = h('input', { type: 'number', min: '0', step: '1', placeholder: 'بلا حد', 'aria-label': 'الكمية' });
+    var btn = h('button', { class: 'btn primary', type: 'button', text: 'أضف للمتجر', disabled: !free.length });
+    btn.addEventListener('click', function () {
+      var o = free[Number(sel.value)];
+      if (!o) return;
+      btn.disabled = true;
+      api('/api/admin/coins/shop', { kind: o.kind, ref: o.ref, price: price.value, stock: stock.value === '' ? null : stock.value, active: true, sortOrder: S.items.length })
+        .then(function (r) { btn.disabled = false; if (!r || !r.success) return toast(err(r), true); toast('انضاف «' + o.name + '» للمتجر.'); load(); });
+    });
+    return h('div', { class: 'card' }, [
+      h('h2', { text: 'أضف عنصر قابل للاسترداد' }),
+      h('div', { class: 'row' }, [h('label', { text: 'العنصر' }), h('div', { class: 'ctl' }, [free.length ? sel : h('span', { class: 'hint', text: 'كل العناصر مضافة.' })])]),
+      h('div', { class: 'row' }, [h('label', { text: 'السعر بالعملات' }), h('div', { class: 'ctl' }, [price])]),
+      h('div', { class: 'row' }, [h('label', { text: 'الكمية (اختياري)' }), h('div', { class: 'ctl' }, [stock])]),
+      h('p', { class: 'hint', text: 'الكمية = كم شخص يقدر يسترده على مستوى المنصة. فاضية = بلا حد. كل لاعب يسترد العنصر مرة وحدة بس.' }),
+      h('div', { class: 'row' }, [h('span'), h('div', { class: 'ctl' }, [btn])])
+    ]);
+  }
+
+  /* ---- العناصر الحالية بالمتجر */
+  function itemsCard() {
+    var list = h('div', { class: 'items' });
+    if (!S.items.length) list.appendChild(h('div', { class: 'empty', text: 'المتجر فاضي — أضف أول عنصر من فوق.' }));
+    S.items.forEach(function (it) {
+      var price = h('input', { type: 'number', min: '1', step: '1', value: String(it.price), 'aria-label': 'السعر' });
+      var stock = h('input', { type: 'number', min: '0', step: '1', value: it.stock == null ? '' : String(it.stock), placeholder: 'بلا حد', 'aria-label': 'الكمية' });
+      var sort = h('input', { type: 'number', step: '1', value: String(it.sortOrder || 0), 'aria-label': 'الترتيب', style: 'width:80px' });
+      var active = h('input', { type: 'checkbox' });
+      active.checked = it.active;
+      var save = h('button', { class: 'btn primary', type: 'button', text: 'حفظ' });
+      var del = h('button', { class: 'btn danger', type: 'button', text: 'حذف' });
+      save.addEventListener('click', function () {
+        save.disabled = true;
+        api('/api/admin/coins/shop', { id: it.id, price: price.value, stock: stock.value === '' ? null : stock.value, sortOrder: sort.value, active: active.checked })
+          .then(function (r) { save.disabled = false; if (!r || !r.success) return toast(err(r), true); toast('انحفظ.'); load(); });
+      });
+      del.addEventListener('click', function () {
+        if (!window.confirm('تحذف «' + it.name + '» من المتجر؟ اللي استردوه يبقى عندهم.')) return;
+        api('/api/admin/coins/shop/delete', { id: it.id }).then(function (r) { if (!r || !r.success) return toast(err(r), true); toast('انحذف.'); load(); });
+      });
+      list.appendChild(h('div', { class: 'item' + (it.active ? '' : ' off') }, [
+        art(it),
+        h('div', null, [
+          h('div', { class: 'name' }, [it.name, ' ', it.missing ? h('span', { class: 'pill', text: 'العنصر انحذف' }) : null]),
+          h('div', { class: 'meta', text: (KIND[it.kind] || it.kind) + ' · استرده ' + num(it.sold) + (it.stock != null ? ' من ' + num(it.stock) : '') + (it.active ? '' : ' · مخفي') })
+        ]),
+        h('div', { class: 'fields' }, [
+          h('label', { class: 'field' }, [h('span', { text: 'السعر' }), price]),
+          h('label', { class: 'field' }, [h('span', { text: 'الكمية' }), stock]),
+          h('label', { class: 'field' }, [h('span', { text: 'الترتيب' }), sort]),
+          h('label', { class: 'switch' }, [active, 'ظاهر']),
+          save, del
+        ])
+      ]));
+    });
+    return h('div', { class: 'card' }, [
+      h('div', { class: 'row' }, [h('h2', { text: 'المتجر الحالي' }), h('span', { class: 'pill', text: num(S.items.length) + ' عنصر' })]),
+      h('p', { class: 'hint', text: 'إلغاء «ظاهر» يخفي العنصر عن اللاعبين بدون ما ينحذف. الترتيب: الأصغر يطلع أول.' }),
+      list
+    ]);
+  }
+
+  /* ---- رصيد مستخدم: بحث + إضافة/خصم */
+  function userCard() {
+    var q = h('input', { type: 'search', placeholder: 'ID البروفايل أو يوزر تيك توك', 'aria-label': 'المستخدم' });
+    var find = h('button', { class: 'btn', type: 'button', text: 'بحث' });
+    var box = h('div');
+    function show(r) {
+      box.innerHTML = '';
+      if (!r) return;
+      var amount = h('input', { type: 'number', step: '1', placeholder: 'مثلاً 100 أو -50', 'aria-label': 'العدد' });
+      var wallet = h('select', { 'aria-label': 'الرصيد' }, [h('option', { value: 'main', text: 'الرصيد الأساسي' }), h('option', { value: 'pool', text: 'رصيد التوزيع (ستريمر)' })]);
+      var note = h('input', { type: 'text', maxlength: '200', placeholder: 'السبب (يطلع للمستخدم بسجله)', 'aria-label': 'السبب' });
+      var apply = h('button', { class: 'btn primary', type: 'button', text: 'تنفيذ' });
+      apply.addEventListener('click', function () {
+        var n = Math.floor(Number(amount.value));
+        if (!n) return toast(ERR.invalid_amount, true);
+        if (!window.confirm((n > 0 ? 'تضيف ' : 'تخصم ') + num(Math.abs(n)) + ' عملة ' + (n > 0 ? 'لـ' : 'من ') + r.user.name + '؟')) return;
+        apply.disabled = true;
+        api('/api/admin/coins/adjust', { userId: r.user.id, amount: n, wallet: wallet.value, note: note.value })
+          .then(function (res) { apply.disabled = false; if (!res || !res.success) return toast(err(res), true); toast('تم.'); lookup(); });
+      });
+      box.appendChild(h('div', { class: 'stat' }, [
+        h('div', null, [h('small', { text: r.user.name + (r.user.customId ? ' · #' + r.user.customId : '') + (r.user.tiktokUsername ? ' · @' + r.user.tiktokUsername : '') }), h('b', { text: num(r.balance) + ' عملة' })]),
+        h('div', null, [h('small', { text: 'رصيد التوزيع' }), h('b', { text: num(r.poolBalance) })])
+      ]));
+      box.appendChild(h('div', { class: 'row', style: 'margin-top:14px' }, [h('label', { text: 'العدد (+ يضيف / − يخصم)' }), h('div', { class: 'ctl' }, [amount])]));
+      box.appendChild(h('div', { class: 'row', style: 'margin-top:10px' }, [h('label', { text: 'من أي رصيد' }), h('div', { class: 'ctl' }, [wallet])]));
+      box.appendChild(h('div', { class: 'row', style: 'margin-top:10px' }, [h('label', { text: 'السبب' }), h('div', { class: 'ctl' }, [note])]));
+      box.appendChild(h('div', { class: 'row', style: 'margin-top:10px' }, [h('span'), h('div', { class: 'ctl' }, [apply])]));
+      var hist = h('div', { class: 'hist', style: 'margin-top:14px' });
+      (r.history || []).forEach(function (e) {
+        hist.appendChild(h('div', { class: 'hrow' }, [
+          h('span', null, [e.label + (e.wallet === 'pool' ? ' (التوزيع)' : '') + (e.note ? ' — ' + e.note : ''), h('div', { class: 'meta', text: new Date(e.createdAt).toLocaleString('ar-u-ca-gregory') })]),
+          h('span', { class: e.amount > 0 ? 'plus' : 'minus', text: (e.amount > 0 ? '+' : '−') + num(Math.abs(e.amount)) })
+        ]));
+      });
+      if (!(r.history || []).length) hist.appendChild(h('div', { class: 'empty', text: 'ما فيه حركات.' }));
+      box.appendChild(hist);
+    }
+    function lookup() {
+      var v = q.value.trim();
+      if (!v) return;
+      find.disabled = true;
+      api('/api/admin/coins/user?q=' + encodeURIComponent(v)).then(function (r) {
+        find.disabled = false;
+        if (!r || !r.success) { show(null); return toast(err(r), true); }
+        show(r);
+      });
+    }
+    find.addEventListener('click', lookup);
+    q.addEventListener('keydown', function (e) { if (e.key === 'Enter') lookup(); });
+    return h('div', { class: 'card' }, [
+      h('h2', { text: 'رصيد مستخدم' }),
+      h('div', { class: 'row' }, [h('label', { text: 'المستخدم' }), h('div', { class: 'ctl' }, [q, find])]),
+      box
+    ]);
+  }
+
+  if (!A) { app.innerHTML = '<div class="gate">تعذّر التحميل.</div>'; return; }
+  load();
+})();
+</script>
+</body>
+</html>

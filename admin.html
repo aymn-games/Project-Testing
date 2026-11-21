@@ -74,6 +74,12 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           <iframe src="admin-store.html?embed=1" title="إدارة المتجر" style="display:block;width:calc(100% + 2 * clamp(20px,2.4vw,40px));margin:-28px calc(-1 * clamp(20px,2.4vw,40px)) -64px;height:calc(100vh - 60px);border:none;background:#0a0811"></iframe>
         </sc-if>
 
+        <!-- ============ COINS ============ -->
+        <!-- عملات أيمن: متجر العملات (وش ينسترد وسعره) + أرصدة المستخدمين — admin-coins.html. -->
+        <sc-if value="{{ is.coins }}" hint-placeholder-val="{{ false }}">
+          <iframe src="admin-coins.html?embed=1" title="عملات أيمن" style="display:block;width:calc(100% + 2 * clamp(20px,2.4vw,40px));margin:-28px calc(-1 * clamp(20px,2.4vw,40px)) -64px;height:calc(100vh - 60px);border:none;background:#0b0d12"></iframe>
+        </sc-if>
+
         <!-- ============ USERS ============ -->
         <sc-if value="{{ is.users }}" hint-placeholder-val="{{ true }}">
           <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
@@ -1136,7 +1142,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store','coins'];
 const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -1323,7 +1329,7 @@ class Component extends DCLogic {
       ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
       ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات'],['live','البثوث الشغّالة الآن']]],
-      ['المتجر',[['store','إدارة المتجر']]]
+      ['المتجر',[['store','إدارة المتجر'],['coins','عملات أيمن']]]
     ];
     let crumbGroup='', crumbPage='';
     const nav=navDef.map(([group,items])=>({ group, items:items.map(([key,label])=>{ const a=s.page===key; if(a){ crumbGroup=group; crumbPage=label; }

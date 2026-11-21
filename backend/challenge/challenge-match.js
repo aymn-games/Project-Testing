@@ -34,6 +34,7 @@ var handshake = require('../websocket/ws-handshake');
 var connectorRouter = require('../platforms/connector-router');
 var authService = require('../auth/auth-service');
 var pointsService = require('../points/points-service');
+var coinsService = require('../coins/coins-service');
 var streamerHours = require('../points/streamer-hours');
 var liveSessionStats = require('../stats/live-session-stats');
 var collectiblesService = require('../collectibles/collectibles-service');
@@ -142,8 +143,9 @@ function reportPoints(m, winnerIdx, durationMs) {
     if (m.pointsReported) return;
     m.pointsReported = true;
     // ساعات البث لكل طرف = وقت المباراة فقط (راجع streamer-hours.js).
+    var recorded = [0, 0];
     [0, 1].forEach(function (i) {
-        try { streamerHours.recordMatchTime(m.sides[i].userId, durationMs); } catch (err) { logger.error('Challenge: match time record failed:', err); }
+        try { recorded[i] = streamerHours.recordMatchTime(m.sides[i].userId, durationMs); } catch (err) { logger.error('Challenge: match time record failed:', err); }
     });
     try {
         // «الأكثر مشاركات»: كل ستريمر ينحسب له لاعبين فريقه (جمهور بثه) بدون تكرار.
@@ -155,6 +157,7 @@ function reportPoints(m, winnerIdx, durationMs) {
     }
     try {
         var seen = {};
+        var coinSides = [[], []];
         m.logic.participants().forEach(function (p) {
             // نفس الشخص بالشاتين (نادر) ينحسب مرة وحدة.
             var key = p.tiktokUsername.toLowerCase();
@@ -163,6 +166,11 @@ function reportPoints(m, winnerIdx, durationMs) {
             var matched = authService.findVerifiedUserByTikTok(p.tiktokUsername);
             if (!matched) return;
             pointsService.awardForRoundCompletion(matched.id, { won: p.team === winnerIdx, teamGame: true, durationMs: durationMs });
+            if (coinSides[p.team]) coinSides[p.team].push({ userId: matched.id, won: p.team === winnerIdx });
+        });
+        // عملات أيمن: كل ستريمر مع لاعبين فريقه (جمهور بثه) — coins-service.js.
+        [0, 1].forEach(function (i) {
+            coinsService.recordMatch({ streamerId: m.sides[i].userId, recordedMs: recorded[i], teamGame: true, game: m.game || '', participants: coinSides[i] });
         });
     } catch (err) {
         logger.error('Challenge: points report failed:', err);

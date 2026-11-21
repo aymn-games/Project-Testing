@@ -45,6 +45,8 @@
  *                    راجع backend/support/support-service.js
  *   stream_screens — «شاشات البث» (تصميم + رمز رابط لكل شاشة) — ينشأ من
  *                    backend/stats/stream-screens-service.js
+ *   coin_*         — عملات أيمن (المحافظ، سجل الحركات، الحد اليومي، متجر
+ *                    العملات والاسترداد) — تنشأ من backend/coins/coins-service.js
  *   store_*        — المتجر: تصنيفات/استريمرز/منتجات/أكواد خصم/طلبات/
  *                    مقتنيات المشتري/المفضلة — راجع backend/store/store-service.js
  * ==========================================================================

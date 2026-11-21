@@ -137,6 +137,10 @@ if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
 }
 ```
 
+نفس الاستدعاء يصرف **عملات أيمن** للاعبين والستريمر
+(`backend/coins/coins-service.js` — القيم والحد اليومي 150 هناك فقط)،
+فما تحتاج اللعبة أي كود إضافي للعملات.
+
 `reportMatchPoints` تتولى استخراج يوزر تيك توك من `player.id`
 (`tiktok:<username>`) وإرسال الطلب. لا تكتب منطق حساب نقاط داخل اللعبة
 نفسها — القيم كلها في `points-service.js` فقط، وأي تعديل عليها ينطبق

@@ -21,6 +21,8 @@ var teamChatService = require('../community/team-chat-service');
 var friendsService = require('../community/friends-service');
 var subscriptionService = require('../subscriptions/subscription-service');
 var pointsService = require('../points/points-service');
+// عملات أيمن (رصيد/كسب/متجر العملات) — backend/coins/coins-service.js
+var coinsService = require('../coins/coins-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var streamerHours = require('../points/streamer-hours');
 var supportersService = require('../supporters/supporters-service');
@@ -190,6 +192,15 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
   { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
+  // عملات أيمن — المحفظة ومتجر العملات (backend/coins/coins-service.js).
+  { method: 'GET', path: '/api/coins/wallet', requireAuth: true, handler: handleCoinsWallet },
+  { method: 'POST', path: '/api/coins/redeem', requireAuth: true, handler: handleCoinsRedeem },
+  { method: 'POST', path: '/api/coins/grant', requireAuth: true, handler: handleCoinsGrant },
+  { method: 'GET', path: '/api/admin/coins/shop', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsShop },
+  { method: 'POST', path: '/api/admin/coins/shop', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsSaveItem },
+  { method: 'POST', path: '/api/admin/coins/shop/delete', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsDeleteItem },
+  { method: 'GET', path: '/api/admin/coins/user', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsUser },
+  { method: 'POST', path: '/api/admin/coins/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsAdjust },
   // تحدي البثوث — بحث عن خصم، دعوات، وقبول (المباراة نفسها عبر /ws/challenge).
   { method: 'GET', path: '/api/challenge/search', requireAuth: true, handler: handleChallengeSearch },
   { method: 'GET', path: '/api/challenge/inbox', requireAuth: true, handler: handleChallengeInbox },
@@ -979,6 +990,64 @@ var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410,
 function handleRedeemFrameCode(req, res, body, user) {
   var result = collectiblesService.redeemFrameCode(user.id, body.code);
   sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
+}
+
+/* -----------------------------------------------------------------------
+ * عملات أيمن (backend/coins/coins-service.js).
+ * ----------------------------------------------------------------------- */
+var COINS_ERROR_STATUS = { not_available: 404, user_not_found: 404, sold_out: 409, already_owned: 409, insufficient_balance: 409, insufficient_pool: 409, server_error: 500 };
+
+function coinsReply(res, result) {
+  sendJson(res, result.success ? 200 : (COINS_ERROR_STATUS[result.error] || 400), result);
+}
+
+/** GET /api/coins/wallet → رصيدك + مهام اليوم + آخر الحركات + متجر العملات. */
+function handleCoinsWallet(req, res, body, user) {
+  var wallet = coinsService.getWallet(user.id);
+  if (!wallet) { sendJson(res, 404, { success: false, error: 'user_not_found' }); return; }
+  sendJson(res, 200, { success: true, wallet: wallet, shop: coinsService.listShop(user.id), isStreamer: isStreamerUser(user) });
+}
+
+/** POST /api/coins/redeem { itemId } — يخصم ويمنح العنصر بنفس اللحظة. */
+function handleCoinsRedeem(req, res, body, user) {
+  coinsReply(res, coinsService.redeem(user.id, Number(body && body.itemId)));
+}
+
+/** POST /api/coins/grant { target, amount } — الستريمر يمنح لاعب من رصيد التوزيع. */
+function handleCoinsGrant(req, res, body, user) {
+  if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'streamers_only' }); return; }
+  body = body || {};
+  coinsReply(res, coinsService.grantFromPool(user.id, body.target, body.amount));
+}
+
+function handleAdminCoinsShop(req, res) {
+  sendJson(res, 200, { success: true, items: coinsService.adminListShop(), options: coinsService.adminShopOptions() });
+}
+
+function handleAdminCoinsSaveItem(req, res, body) {
+  coinsReply(res, coinsService.adminSaveShopItem(body || {}));
+}
+
+function handleAdminCoinsDeleteItem(req, res, body) {
+  coinsReply(res, coinsService.adminDeleteShopItem(Number(body && body.id)));
+}
+
+/** GET /api/admin/coins/user?q=<ID البروفايل أو يوزر تيك توك> → الحساب ورصيده وآخر حركاته. */
+function handleAdminCoinsUser(req, res) {
+  var target = coinsService.findTarget(getQueryParam(req, 'q'));
+  if (!target) { sendJson(res, 404, { success: false, error: 'user_not_found' }); return; }
+  var wallet = coinsService.getWallet(target.id);
+  sendJson(res, 200, {
+    success: true,
+    user: { id: target.id, name: target.display_name || target.username, customId: target.custom_id || null, tiktokUsername: target.tiktok_verified ? target.tiktok_username : null },
+    balance: wallet.balance, poolBalance: wallet.poolBalance, history: coinsService.getHistory(target.id, 50)
+  });
+}
+
+/** POST /api/admin/coins/adjust { userId, amount (موجب يضيف / سالب يخصم), note, wallet: 'main'|'pool' } */
+function handleAdminCoinsAdjust(req, res, body) {
+  body = body || {};
+  coinsReply(res, coinsService.adminAdjust(Number(body.userId), body.amount, String(body.note || '').slice(0, 200), body.wallet));
 }
 
 function handleRedeemChoiceCode(req, res, body, user) {
@@ -1924,7 +1993,8 @@ function handleRoundComplete(req, res, body, user) {
   var participants = Array.isArray(body.participants) ? body.participants : [];
   var durationMs = Number(body.durationMs) || 0;
   // ساعات البث للاستريمر = وقت المباريات المكتملة فقط (لا وقت فتح الصفحة).
-  try { streamerHours.recordMatchTime(user && user.id, durationMs); } catch (err) { logger.error('Round complete: match time record failed:', err); }
+  var recordedMs = 0;
+  try { recordedMs = streamerHours.recordMatchTime(user && user.id, durationMs); } catch (err) { logger.error('Round complete: match time record failed:', err); }
   // عدد المشاركين بالمباراة (بدون تكرار) — لتصنيف "الأكثر مشاركات" للاستريمر.
   var seen = {};
   participants.forEach(function (p) {
@@ -1942,7 +2012,19 @@ function handleRoundComplete(req, res, body, user) {
     var award = pointsService.awardForRoundCompletion(matched.id, { won: Boolean(p.won), teamGame: teamGame, durationMs: durationMs });
     results.push({ tiktokUsername: p.tiktokUsername, userId: matched.id, added: award.added, totalPoints: award.totalPoints });
   });
-  sendJson(res, 200, { success: true, awarded: results });
+  // عملات أيمن: نفس اللاعبين الموثّقين + الستريمر صاحب الطلب (راجع coins-service.js).
+  var coinResult = coinsService.recordMatch({
+    streamerId: user && user.id,
+    recordedMs: recordedMs,
+    teamGame: teamGame,
+    game: body.game,
+    participants: results.map(function (r) {
+      var src = participants.filter(function (p) { return p && String(p.tiktokUsername || '').toLowerCase() === String(r.tiktokUsername || '').toLowerCase(); })[0];
+      return { userId: r.userId, won: Boolean(src && src.won) };
+    })
+  });
+  results.forEach(function (r) { r.coins = coinResult.players[r.userId] || 0; });
+  sendJson(res, 200, { success: true, awarded: results, streamerCoins: coinResult.streamer });
 }
 
 /* -----------------------------------------------------------------------

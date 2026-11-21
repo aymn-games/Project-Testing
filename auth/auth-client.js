@@ -861,8 +861,27 @@ function setCharacter(kind) {
 function reportRoundCompletion(participants, durationMs, options) {
     return request('/api/points/round-complete', {
         method: 'POST',
-        body: { participants: participants, durationMs: durationMs, teamGame: Boolean(options && options.teamGame) }
+        body: { participants: participants, durationMs: durationMs, teamGame: Boolean(options && options.teamGame), game: (options && options.game) || currentGameId() }
     });
+}
+
+/* معرّف اللعبة من مسار الصفحة (games/<id>/ أو discord-games/<id>/) — لمهمة
+ * «العب لعبتين مختلفتين» بعملات أيمن. بدون تعديل بكل لعبة. */
+function currentGameId() {
+    var m = String((window.location && window.location.pathname) || '').match(/\/(?:games|discord-games)\/([^\/]+)/);
+    return m ? m[1] : 'dashboard';
+}
+
+/* عملات أيمن — backend/coins/coins-service.js */
+function getCoinWallet() {
+    return request('/api/coins/wallet', { method: 'GET' });
+}
+function redeemCoinItem(itemId) {
+    return request('/api/coins/redeem', { method: 'POST', body: { itemId: itemId } });
+}
+/** الستريمر يمنح لاعب من «رصيد التوزيع». target = ID البروفايل أو يوزر تيك توك. */
+function grantCoins(target, amount) {
+    return request('/api/coins/grant', { method: 'POST', body: { target: target, amount: amount } });
 }
 
 /* TikTok username of an AGP player: ids from the TikTok adapter are
@@ -895,7 +914,7 @@ function reportMatchPoints(opts) {
         return { tiktokUsername: tiktokUsernameForPlayer(p), won: Boolean(p && winners[p.id]) };
     }).filter(function (p) { return p.tiktokUsername; });
     if (!participants.length) return Promise.resolve(null);
-    return reportRoundCompletion(participants, opts.durationMs || 0, { teamGame: Boolean(opts.teamGame) })
+    return reportRoundCompletion(participants, opts.durationMs || 0, { teamGame: Boolean(opts.teamGame), game: opts.game })
         .catch(function () { return null; });
 }
 
@@ -1346,6 +1365,9 @@ global.AGPAuth = {
     setCharacter: setCharacter,
     reportRoundCompletion: reportRoundCompletion,
     reportMatchPoints: reportMatchPoints,
+    getCoinWallet: getCoinWallet,
+    redeemCoinItem: redeemCoinItem,
+    grantCoins: grantCoins,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
     canAccessDashboard: canAccessDashboard,

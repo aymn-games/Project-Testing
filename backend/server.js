@@ -72,6 +72,8 @@ function start() {
         require('./platforms/tiktok/gift-catalog').startAutoRefresh(logger);
         // اشتراكات فيرو من المتجر: خطط فيرو ونسب خصم مشتركي الألعاب، وإعادة إرسال اللي ما وصل — store/veyro-link.js
         require('./store/veyro-link').start();
+        // عملات أيمن: جوائز التصنيف الأسبوعي (تنصرف مرة وحدة بعد تصفير السبت) — coins/coins-service.js
+        require('./coins/coins-service').start();
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 
