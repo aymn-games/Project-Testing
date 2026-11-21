@@ -798,6 +798,22 @@ function adminListFrameCodes() {
 
 /** Owner toggles their entrance on/off without deleting it (template/text
  * stay saved for one-click re-enable). */
+/** Owner picks one of their owned entrances (nitro/royal/princess/storm). */
+function equipEntrance(key) {
+    return request('/api/entrance/equip', { method: 'POST', body: { key: key } });
+}
+/** Owner edits their entrance text and/or colour preset. settings: {text?, color?} */
+function updateEntranceSettings(settings) {
+    return request('/api/entrance/settings', { method: 'POST', body: settings || {} });
+}
+/** Admin only — grant (or revoke with revoke:true) one entrance to a user. */
+function adminGrantEntrance(userId, key, revoke) {
+    return request('/api/admin/entrance/grant', { method: 'POST', body: { userId: userId, key: key, revoke: Boolean(revoke) } });
+}
+/** Admin only — a user's entrances: {catalog, owned, active}. */
+function adminGetUserEntrances(userId) {
+    return request('/api/admin/entrances?userId=' + encodeURIComponent(userId || ''), { method: 'GET' });
+}
 function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
@@ -1317,6 +1333,10 @@ global.AGPAuth = {
     adminBurnCode: adminBurnCode,
     adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
+    equipEntrance: equipEntrance,
+    updateEntranceSettings: updateEntranceSettings,
+    adminGrantEntrance: adminGrantEntrance,
+    adminGetUserEntrances: adminGetUserEntrances,
     adminGrantElimCard: adminGrantElimCard,
     adminRevokeElimCard: adminRevokeElimCard,
     toggleElimCard: toggleElimCard,

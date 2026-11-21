@@ -164,8 +164,18 @@ db.exec(`
         UNIQUE(user_id, frame_type, frame_ref)
     );
 
-    -- الدخولية النشطة لكل مستخدم — صف واحد لكل مستخدم، يُستبدَل بالكامل
-    -- مع كل منح جديد (تلقائي مع إطار خاص، أو يدوي من الأدمن).
+    -- الدخوليات اللي يملكها المستخدم (منح يدوي من الأدمن، مثل الإطارات) —
+    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm).
+    CREATE TABLE IF NOT EXISTS user_owned_entrances (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        entrance_key TEXT NOT NULL,
+        granted_by TEXT NOT NULL DEFAULT 'admin_manual',
+        granted_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, entrance_key)
+    );
+
+    -- الدخولية المفعّلة لكل مستخدم — صف واحد: المفتاح (لازم يكون من اللي
+    -- يملكها) + النص + اللون، واللاعب يعدّلها من بروفايله.
     CREATE TABLE IF NOT EXISTS user_entrances (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         template_key TEXT NOT NULL,
@@ -769,6 +779,8 @@ ensureColumn('player_rounds_log', 'duration_ms', 'INTEGER NOT NULL DEFAULT 0');
 // تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 افتراضي (مفعّلة)، 0 يعني
 // الستريمر أطفأها بنفسه (القالب/النص يبقيان محفوظين لإعادة التفعيل).
 ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');
+// لون الدخولية اللي اختاره اللاعب (من ألوانها الجاهزة؛ فاضي = لونها الأساسي).
+ensureColumn('user_entrances', 'color', "TEXT NOT NULL DEFAULT ''");
 // اختيار نوع الحساب (لاعب/استريمر) بعد تسجيل الدخول عبر جوجل — افتراضي 1
 // ("تم الاختيار") للحسابات الحالية؛ فقط حسابات جوجل الجديدة تُنشأ بـ0.
 ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');

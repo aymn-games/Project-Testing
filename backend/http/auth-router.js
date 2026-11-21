@@ -178,6 +178,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/collectibles/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantFrame },
   { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
+  { method: 'POST', path: '/api/admin/entrance/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantEntrance },
+  { method: 'GET', path: '/api/admin/entrances', requireAuth: true, requireAdmin: true, handler: handleAdminUserEntrances },
   { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
   // أكواد استرداد الإطارات — توليد/عرض للأدمن، واسترداد لصاحب الحساب.
   { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
@@ -311,6 +313,8 @@ var ROUTES = [
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
+  { method: 'POST', path: '/api/entrance/equip', requireAuth: true, handler: handleEquipEntrance },
+  { method: 'POST', path: '/api/entrance/settings', requireAuth: true, handler: handleEntranceSettings },
   { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
   { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
   { method: 'POST', path: '/api/admin/win-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinCard },
@@ -914,6 +918,28 @@ function handleAdminSetEntrance(req, res, body) {
   sendJson(res, 200, result);
 }
 
+/**
+ * منح/سحب دخولية واحدة (nitro/royal/princess/storm) — مثل الإطارات، المستخدم
+ * يقدر يملك أكثر من وحدة. body.revoke === true يسحب body.key.
+ */
+function handleAdminGrantEntrance(req, res, body) {
+  var result = body.revoke
+    ? collectiblesService.revokeEntrance(body.userId, body.key)
+    : collectiblesService.grantEntrance(body.userId, body.key, 'admin_manual');
+  sendJson(res, result.success || result.error === 'already_owned' ? 200 : 400, result);
+}
+
+/** دخوليات مستخدم معيّن (للوحة الأدمن): الكتالوج + اللي يملكها + المفعّلة. */
+function handleAdminUserEntrances(req, res) {
+  var userId = Number(getQueryParam(req, 'userId'));
+  sendJson(res, 200, {
+    success: true,
+    catalog: collectiblesService.getEntranceCatalog(),
+    owned: userId ? collectiblesService.getOwnedEntrances(userId) : [],
+    active: userId ? collectiblesService.getEntrance(userId) : null
+  });
+}
+
 function handleAdminGenerateFrameCodes(req, res, body) {
   var result = collectiblesService.generateFrameCodes(body.frameType, body.frameRef, body.count, body.note);
   sendJson(res, result.success ? 200 : 400, result);
@@ -1178,6 +1204,18 @@ function handleEquipFrame(req, res, body, user) {
  */
 function handleToggleEntrance(req, res, body, user) {
   var result = collectiblesService.setEntranceEnabled(user.id, Boolean(body.enabled));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** صاحب الحساب يختار دخولية من اللي يملكها. body.key */
+function handleEquipEntrance(req, res, body, user) {
+  var result = collectiblesService.equipEntrance(user.id, body.key);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** صاحب الحساب يعدّل نص دخوليته ولونها. body.text / body.color (اختياريان) */
+function handleEntranceSettings(req, res, body, user) {
+  var result = collectiblesService.updateEntranceSettings(user.id, { text: body.text, color: body.color });
   sendJson(res, result.success ? 200 : 400, result);
 }
 
