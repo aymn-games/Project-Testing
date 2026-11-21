@@ -104,6 +104,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
             fallbackBg: '#dce7f7',
             fallbackColor: '#2b4a86'
+        },
+        // الخفاش الذهبي — منح محدود. الأصل JPG 832×1248 بمربعات «شفافية»
+        // مرسومة: فُرّغت الخلفية والدائرة لشفافية حقيقية، وكُبّرت على 1024×1536.
+        // الدائرة 195→826 × 351→961، الاسم باللوح الأسود الأول (161→863 ×
+        // 986→1149)، والنقاط/الترتيب باللوح الثاني (116→909 × 1188→1445).
+        // اللوحان أسود — نص ذهبي.
+        'gold-bat': {
+            image: 'win-card-gold-bat.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 195, y: 351, w: 631, h: 610 },
+            holeBleed: 8,
+            nameBox: { x: 190, y: 1000, w: 644, h: 135 },
+            detailBox: { x: 150, y: 1205, w: 724, h: 225 },
+            textColor: 'linear-gradient(180deg,#fff3c4 0%,#f3c43a 50%,#b8863b 100%)',
+            detailColor: 'linear-gradient(180deg,#fff3c4 0%,#f3c43a 50%,#b8863b 100%)',
+            fallbackBg: '#111216',
+            fallbackColor: '#f3c43a'
         }
     };
 

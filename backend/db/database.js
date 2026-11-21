@@ -905,6 +905,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-purple-spider.png', display_name_ar: 'العنكبوت البنفسجي (منح محدود)' },
     { image_filename: 'frame-roro-lilac.png', display_name_ar: 'Roro — الليلك واللؤلؤ (منح محدود)' },
     { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
+    { image_filename: 'frame-gold-bat.png', display_name_ar: 'الخفاش الذهبي (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
@@ -929,6 +930,7 @@ migrateSingleCardTable('user_win_cards');
 // معرّفة بـbackend/collectibles/collectibles-service.js.
 [
     { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' },
+    { name: 'الخفاش الذهبي (منح محدود)', frameImage: 'frame-gold-bat.png', cardKey: 'gold-bat' },
     // إطار + بطاقة إقصاء بس (ما لها بطاقة فوز للحين).
     { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true }
 ].forEach(function (bundle) {
