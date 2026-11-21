@@ -107,8 +107,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         },
         // القطة الزرقاء — منح محدود. 1642×958. "عملية إقصاء" مطبوعة باللوح
         // الأوسط، فالبطاقة بدون textBox (الصورتين فقط) مثل البجعة الوردية.
-        // الدائرتين = حدود الفتحتين الشفافتين بالبكسل. الصوت = أول جملة من
-        // المقطع اللي أرسله صاحب المشروع، بعد عزل الصوت عن الموسيقى.
+        // الدائرتين = حدود الفتحتين الشفافتين بالبكسل. الصوت = المقطع الجديد
+        // اللي أرسله صاحب المشروع كامل (3.5 ثانية)، بمستوى -16 LUFS.
         'blue-kitty': {
             image: 'elim-card-blue-kitty.png',
             width: 1642,
@@ -135,6 +135,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             textColor: 'linear-gradient(180deg,#fff3c4 0%,#e9c77b 45%,#b8863b 100%)',
             fontScale: 0.85,
             avatarBg: '#111216'
+        },
+        // الخفاش الذهبي — منح محدود (باكج مع frame-gold-bat.png وبطاقة الفوز).
+        // الأصل JPG 1079×630 بخلفية بيضاء: فُرّغت الخلفية والدائرتين لشفافية
+        // حقيقية، وتعبّت خلفية «عملية إقصاء» بأسود متدرّج، وكُبّرت بنفس النسبة
+        // على 1642×958. الجملة "X أقصى Y" بالشريط الأبيض السفلي (277→1364 ×
+        // 653→826، تحت شعار الوسط) بنص أسود. الصوت أول 2.8 ثانية من مقطع صاحب
+        // المشروع مع خفوت بالنهاية، بمستوى -16 LUFS.
+        'gold-bat': {
+            image: 'elim-card-gold-bat.png',
+            width: 1642,
+            height: 958,
+            actorHole: { x: 1139, y: 240, w: 353, h: 347 },  // right circle
+            targetHole: { x: 146, y: 240, w: 354, h: 345 },  // left circle
+            holeBleed: 8,
+            textBox: { x: 330, y: 695, w: 982, h: 115 },      // inside the white bottom bar
+            textColor: 'linear-gradient(180deg,#3a3a3a 0%,#161616 55%,#000 100%)',
+            textFilter: 'drop-shadow(0 0 .12cqw rgba(255,255,255,.9))',
+            fontScale: 0.85,
+            avatarBg: '#111216',
+            sound: 'elim-card-gold-bat.mp3'
         }
     };
 
