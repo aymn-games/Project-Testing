@@ -256,12 +256,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                     <span>{{ selFrame.label }}</span>
                   </div>
                 </div>
-                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نموذج الدخولية (اختياري)</span>
-                  <select value="{{ grantTpl }}" onChange="{{ onGrantTpl }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">افتراضي الكتالوج</option><option value="nitro">نيترو</option><option value="royal">ملكي</option><option value="princess">الأميرة</option><option value="storm">العاصفة</option></select>
-                </label>
-                <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px"><span style="font-size:12px;color:#9199ab">نص الدخولية (اختياري)</span>
-                  <input value="{{ grantText }}" onChange="{{ onGrantText }}" placeholder="اتركه فاضي لاستخدام النص الافتراضي" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
-                </label>
                 <div style="display:flex;gap:8px">
                   <button onClick="{{ revokeFrame }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب الإطار</button>
                   <button onClick="{{ grantFrame }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الإطار</button>
@@ -683,8 +677,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">اسم الملف</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">الاسم المعروض (عربي)</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نقاط المستوى المطلوبة</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نموذج الدخولية الافتراضي</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نص الدخولية الافتراضي</th>
                 <th style="border-bottom:1px solid #262a37"></th>
               </tr></thead>
               <tbody><sc-for list="{{ catalog }}" as="c" hint-placeholder-count="11"><tr>
@@ -692,8 +684,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <td dir="ltr" style="text-align:right;padding:10px 14px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ c.file }}</td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><input value="{{ c.name }}" onChange="{{ c.onName }}" style="width:150px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isLevel }}"><input type="number" value="{{ c.points }}" onChange="{{ c.onPoints }}" placeholder="غير مفعّل" style="width:110px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></sc-if><sc-if value="{{ c.isSpecial }}"><span style="color:#5b6274">—</span></sc-if></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><select value="{{ c.model }}" onChange="{{ c.onModel }}" style="height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 8px;font-size:13px"><option value="">—</option><option value="nitro">نيترو</option><option value="royal">ملكي</option><option value="princess">الأميرة</option><option value="storm">العاصفة</option></select></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><input value="{{ c.text }}" onChange="{{ c.onText }}" style="width:170px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ c.save }}" style="height:30px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">حفظ</button></td>
               </tr></sc-for></tbody>
             </table>
@@ -1432,7 +1422,7 @@ class Component extends DCLogic {
         onName:ev=>this.catEdit(c.slug,'displayNameAr',ev.target.value), onPoints:ev=>this.catEdit(c.slug,'levelPointsRequired',ev.target.value),
         onModel:ev=>this.catEdit(c.slug,'defaultEntranceTemplate',ev.target.value), onText:ev=>this.catEdit(c.slug,'defaultEntranceText',ev.target.value),
         save:()=>{ const fields={ displayNameAr:val('displayNameAr',c.display_name_ar) };
-          if(sp){ fields.defaultEntranceTemplate=val('defaultEntranceTemplate',c.default_entrance_template); fields.defaultEntranceText=val('defaultEntranceText',c.default_entrance_text); }
+
           else fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
           this.busy('cat'+c.slug,()=>A.adminUpdateCatalogEntry(c.slug,fields)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadCatalog(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }); } }; });
     const levels=(s.levels||[]).map(l=>{ const e=s.lvEdits[l.slug]||{};
@@ -1551,7 +1541,7 @@ class Component extends DCLogic {
       selFrame, libFrames, libTabs, libQ:s.libQ, onLibQ:e=>this.setState({ libQ:e.target.value }), libEmpty:!libFrames.length,
       grantTpl:s.grantTpl, onGrantTpl:e=>this.setState({ grantTpl:e.target.value }), grantText:s.grantText, onGrantText:e=>this.setState({ grantText:e.target.value }),
       grantFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
-        this.busy('grant',()=>A.adminGrantFrame(u.id,sf.type,sf.ref,{ entranceTemplate:s.grantTpl, entranceText:s.grantText })).then(r=>{ if(r) this.flash(r.success?'تم منح الإطار.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+        this.busy('grant',()=>A.adminGrantFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم منح الإطار.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
       revokeFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
         this.ask('سحب الإطار؟',`سيُسحب إطار «${sf.name}» من ${this.pickName(u)}.`,'سحب الإطار',()=>this.busy('revoke',()=>A.adminRevokeFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم سحب الإطار.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // entrances
