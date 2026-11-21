@@ -943,6 +943,10 @@ function hasSubscriptionAccess(user) {
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
+    // «غرفة الجوالات» (اللعب بدون بث — phone-room.html): صلاحية يمنحها الأدمن
+    // بنفسه لكل حساب، فتفتح الألعاب بدون شرط ستريمر/ربط/اشتراك. الاتصال ببث
+    // حقيقي يبقى بنفس شروطه بالخادم (ws-server.js checkStreamConnectAllowed).
+    if (user.permissions && user.permissions.phone_rooms) return true;
     if (!hasSubscriptionAccess(user)) return false;
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).

@@ -6,6 +6,7 @@
  *   - «حفلة الميلاد»: خادمها داخل هذا الباك اند (party/party-server.js).
  *   - «المافيا»: خادمها داخل هذا الباك اند (mafia/mafia-server.js).
  *   - «كود نيمز»: رقم السباي ماستر لكل فريق (codenames/spy-codes-service.js).
+ *   - «غرفة الجوالات» (اللعب بدون بث): phone-room/phone-room-service.js.
  *   - «بلياردو ٨»: خادم منفصل بمستودعه ونطاقه الخاص. نسأله عبر
  *     GET <BILLIARDS_API_BASE_URL>/api/room/<code> ← {exists:true|false}.
  *     الرابط فارغ افتراضياً = الفحص معطّل (السيرفر لسا ما انبنى).
@@ -26,6 +27,7 @@ var station = require('../station/station-server');
 var party = require('../party/party-server');
 var mafia = require('../mafia/mafia-server');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
+var phoneRooms = require('../phone-room/phone-room-service');
 
 var REMOTE_TIMEOUT_MS = 2500;
 
@@ -74,6 +76,10 @@ function hasCodenamesSpyCode(code) {
     return Promise.resolve(codenamesSpyCodes.hasRoom(code));
 }
 
+function hasPhoneRoom(code) {
+    return Promise.resolve(phoneRooms.hasRoom(code));
+}
+
 function hasBilliardsRoom(code) {
     var base = String(config.billiardsApiBaseUrl || '').replace(/\/+$/, '');
     if (!base) return Promise.resolve(false);
@@ -86,6 +92,7 @@ var CHECKS = [
     { game: 'party', check: hasPartyRoom },
     { game: 'mafia', check: hasMafiaRoom },
     { game: 'codenames', check: hasCodenamesSpyCode },
+    { game: 'phone', check: hasPhoneRoom },
     { game: 'billiards', check: hasBilliardsRoom }
 ];
 

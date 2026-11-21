@@ -401,6 +401,37 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </div>
             </sc-for>
           </div>
+          <!-- غرفة الجوالات (اللعب بدون بث) — permissions.phone_rooms -->
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:10px;border:2px solid #7c3aed;background:rgba(124,58,237,.12)">
+                <span style="width:44px;height:44px;flex-shrink:0;border-radius:12px;background:#1d1830;display:flex;align-items:center;justify-content:center;font-size:22px">📱</span>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span style="font-size:14px;font-weight:600;color:#e7e9ee">اللعب بدون بث (غرفة الجوالات)</span>
+                  <span style="font-size:12.5px;color:#9199ab;line-height:1.7">يفتح غرفة برقم وباركود، واللاعبين يلعبون كل الألعاب من جوالاتهم وكأنهم بالبث (phone-room.html).</span>
+                </div>
+              </div>
+              <span style="font-size:13px;color:{{ phoneStatusColor }}">{{ phoneStatus }}</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ revokePhone }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب الصلاحية</button>
+              <button onClick="{{ grantPhone }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الصلاحية</button>
+            </div>
+            <div style="padding:12px 18px;border-top:1px solid #1f222c;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="font-size:13px;font-weight:600">عندهم الصلاحية</span>
+              <span style="font-size:12px;color:#9199ab">{{ phoneHoldersCount }}</span>
+            </div>
+            <sc-for list="{{ phoneHolders }}" as="h" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid #1a1d26">
+                <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ h.initial }}</span>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font-size:13px;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.name }}</span>
+                  <span style="font-size:12px;color:#9199ab;font-family:'IBM Plex Mono',monospace">{{ h.ids }}</span>
+                </div>
+                <button onClick="{{ h.revoke }}" style="height:30px;padding:0 12px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer" style-hover="background:#2a1416">سحب</button>
+              </div>
+            </sc-for>
+          </div>
         </sc-if>
 
         <!-- CODES -->
@@ -1577,6 +1608,21 @@ class Component extends DCLogic {
           revokeFullAccess:()=>this.needUser(u=>{ if(s.users&&!has(pk)) return this.flash('الحساب ما عنده الصلاحية.','err'); revokeAsk(u); }),
           permHolders:holders.map(u=>({ name:u.username, initial:(u.username||'?').charAt(0).toUpperCase(), ids:'#'+(u.custom_id||'—')+' · '+(u.email||''), revoke:()=>revokeAsk(u) })),
           permHoldersEmpty:!!s.users&&!holders.length, permHoldersCount:s.users?holders.length+' حساب':'…'
+        }; })(),
+      // perms — «غرفة الجوالات» اللعب بدون بث (permissions.phone_rooms)
+      ...(()=>{ const users=s.users||[], has=u=>!!(u&&u.permissions&&u.permissions.phone_rooms);
+        const pk=s.pickUser&&users.find(x=>x.id===s.pickUser.id);
+        const setPhone=(u,v)=>this.busy('phoneacc',()=>A.adminSetPermission(u.id,'phone_rooms',v)).then(r=>{ if(!r) return;
+          this.flash(r.success?(v?'تم منح صلاحية اللعب بدون بث.':'تم سحب صلاحية اللعب بدون بث.'):'تعذّر التحديث: '+(r.error||'unknown'),r.success?'ok':'err'); if(r.success) this.loadUsers(); });
+        const revokeAsk=u=>this.ask('سحب الصلاحية؟',`ستُسحب صلاحية اللعب بدون بث (غرفة الجوالات) من ${this.pickName(u)}.`,'سحب الصلاحية',()=>setPhone(u,false));
+        const holders=users.filter(has);
+        return {
+          phoneStatus:!s.pickUser?'اكتب آيدي المستخدم فوق عشان تشوف حالته.':!s.users?'جارٍ تحميل الحالة…':has(pk)?'✅ هذا الحساب عنده الصلاحية.':'هذا الحساب ما عنده الصلاحية.',
+          phoneStatusColor:has(pk)?'#6ee7b7':'#9199ab',
+          grantPhone:()=>this.needUser(u=>{ if(has(pk)) return this.flash('الحساب عنده الصلاحية أصلاً.','err'); setPhone(u,true); }),
+          revokePhone:()=>this.needUser(u=>{ if(s.users&&!has(pk)) return this.flash('الحساب ما عنده الصلاحية.','err'); revokeAsk(u); }),
+          phoneHolders:holders.map(u=>({ name:u.username, initial:(u.username||'?').charAt(0).toUpperCase(), ids:'#'+(u.custom_id||'—')+' · '+(u.email||''), revoke:()=>revokeAsk(u) })),
+          phoneHoldersCount:s.users?holders.length+' حساب':'…'
         }; })(),
       // codes
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
