@@ -39,6 +39,7 @@ function setup(opts) {
             recordLike: function () {}, recordShare: function () {}, recordMember: function () {}, recordSubscribe: function () {}
         },
         gapMs: 0,
+        connectTimeoutMs: opts.connectTimeoutMs || 0,
         autoAudio: opts.autoAudio
     });
     return { w: w, st: st };
@@ -134,4 +135,33 @@ test('audio auto-connect can be turned off while manual connect still works', as
     assert.equal(t.st.connectors.length, 0);
     t.w.connectManual('streamer_one');
     assert.equal(t.st.connectors.length, 1);
+});
+
+test('manual reconnect: force closes a stuck or stale connection and opens a fresh one', function () {
+    var t = setup({ seen: [] });
+    t.w.connectManual('streamer_one');
+    assert.equal(t.w.connectManual('streamer_one').state, 'connecting'); // بدون force ما يفتح ثاني
+    assert.equal(t.st.connectors.length, 1);
+    assert.equal(t.w.connectManual('streamer_one', true).state, 'connecting');
+    assert.equal(t.st.connectors.length, 2);
+    assert.equal(t.st.connectors[0].disconnected, true);
+    t.st.connectors[0].callbacks.onStatus('connected'); // القديم ما يأثر بعد ما انقفل
+    assert.equal(t.w.status('streamer_one'), 'connecting');
+    t.st.connectors[1].callbacks.onStatus('connected');
+    assert.equal(t.w.status('streamer_one'), 'connected');
+});
+
+test('manual connect: a connection stuck on connecting times out and reports it', async function () {
+    var t = setup({ seen: [], connectTimeoutMs: 20 });
+    t.w.connectManual('streamer_one');
+    assert.equal(t.w.lastError('streamer_one'), null);
+    await new Promise(function (r) { setTimeout(r, 40); });
+    assert.equal(t.w.status('streamer_one'), 'idle');
+    assert.equal(t.w.lastError('streamer_one'), 'timeout');
+    assert.equal(t.st.connectors[0].disconnected, true);
+    t.w.connectManual('streamer_one'); // محاولة جديدة تمسح الخطأ
+    assert.equal(t.w.lastError('streamer_one'), null);
+    t.st.connectors[1].callbacks.onStatus('connected');
+    await new Promise(function (r) { setTimeout(r, 40); });
+    assert.equal(t.w.status('streamer_one'), 'connected'); // المتصل ما ينقفل بالمهلة
 });

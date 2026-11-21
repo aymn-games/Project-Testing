@@ -40,7 +40,7 @@ var CODE_TYPES = { days: 'اشتراك بأيام', plan: 'خطة كاملة', l
 var ASSET_TYPES = ['alert', 'top', 'icon', 'frame', 'sound'];
 var ASSET_STATUS = ['published', 'draft', 'hidden'];
 var ASSET_ACCESS = ['all', 'subs', 'yearly'];
-var MAX_ASSET_BYTES = 30 * 1024 * 1024;
+var MAX_ASSET_BYTES = 50 * 1024 * 1024;
 var GAMES_DISCOUNT = 30; // خصم مشتركي منصة الألعاب الافتراضي (٪) لكل خطة
 
 /** شكل أليرت الفيديو الافتراضي من المكتبة (نفس حقول it.vbg / it.vfx / it.parts بـjs/agp-stream-overlay.js). */

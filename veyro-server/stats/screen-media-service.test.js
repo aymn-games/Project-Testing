@@ -45,7 +45,7 @@ test('upload rejects non-video, empty and too-large files without leaving files 
     assert.equal((await t.s.upload(7, {}, body(Buffer.from('not a video at all, just text')))).error, 'unsupported_type');
     assert.equal((await t.s.upload(7, {}, stream.Readable.from([]))).error, 'empty_file');
     assert.equal((await t.s.upload(7, {}, body(WEBM), media.MAX_FILE_BYTES + 1)).error, 'file_too_large');
-    var big = stream.Readable.from((function* () { for (var i = 0; i < 22; i++) yield i === 0 ? Buffer.concat([WEBM, Buffer.alloc(1024 * 1024 - WEBM.length)]) : Buffer.alloc(1024 * 1024); })());
+    var big = stream.Readable.from((function* () { for (var i = 0; i < media.MAX_FILE_BYTES / (1024 * 1024) + 2; i++) yield i === 0 ? Buffer.concat([WEBM, Buffer.alloc(1024 * 1024 - WEBM.length)]) : Buffer.alloc(1024 * 1024); })());
     assert.equal((await t.s.upload(7, {}, big)).error, 'file_too_large');
     await new Promise(function (r) { setTimeout(r, 50); });
     assert.deepEqual(fs.readdirSync(t.dir), []);

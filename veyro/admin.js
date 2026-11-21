@@ -1633,7 +1633,7 @@
         not_running: 'الاشتراك مو شغّال', not_frozen: 'الاشتراك مو مجمّد', no_sub: 'ما عنده اشتراك', not_lifetime: 'الاشتراك مو مفتوح', bad_status: 'الحالة غلط',
         bad_user: 'الحساب مو موجود', bad_type: 'النوع غلط', bad_date: 'التاريخ لازم يكون بعد اليوم', code_used: 'الكود انستخدم وما ينحذف — عطّله بداله', not_found: 'مو موجود',
         name_required: 'اكتب الاسم', file_required: 'ارفع الملف أول', no_permission: 'ما عندك صلاحية لهالإجراء', not_admin: 'ما عندك صلاحية للوحة فيرو',
-        unsupported_type: 'نوع الملف مو مدعوم', file_too_large: 'الملف كبير (الحد 30MB)', storage_unavailable: 'التخزين بالسيرفر مو متاح الحين', bad_role: 'الصلاحية غلط', bad_key: 'إعداد غلط',
+        unsupported_type: 'نوع الملف مو مدعوم', file_too_large: 'الملف كبير (الحد 50MB)', storage_unavailable: 'التخزين بالسيرفر مو متاح الحين', bad_role: 'الصلاحية غلط', bad_key: 'إعداد غلط',
         unauthorized: 'انتهت جلستك — سجّل دخول من جديد', session_revoked: 'انتهت جلستك — سجّل دخول من جديد'
     };
     function errText(d) { return (d && (d.message || ERR[d.error])) || 'ما تم — صار خطأ' + (d && d.error ? ' (' + d.error + ')' : ''); }

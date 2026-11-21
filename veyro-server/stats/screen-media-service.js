@@ -16,7 +16,7 @@ var fs = require('fs');
 var path = require('path');
 var crypto = require('crypto');
 
-var MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
+var MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
 var MAX_FILES = 10;
 var MAX_NAME = 60;
 var ID_RE = /^[a-f0-9]{32}$/;
