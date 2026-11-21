@@ -334,6 +334,8 @@
 <script src="../../js/agp-keyword-manager.js"></script>
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-entrance.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
 <script src="../../js/agp-remote-control.js"></script>
@@ -402,7 +404,7 @@
             if (FOLLOWERS && !p.isFollower) return;
             if (banned[p.id]) return; // انقصى يدوياً من الإعدادات: ما يرجع بنفس المباراة
             if (G.player(p.id)) { G.touch(p); return; }
-            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); G.player(p.id).g = genderOf(p); G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
+            if (G.join({ id: p.id, name: p.name || p.uniqueId || p.id, avatarUrl: p.avatarUrl })) { joinedAt[p.id] = Date.now(); var AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true }); G.player(p.id).g = genderOf(p); G.player(p.id).user = p.uniqueId || (/^tiktok:/.test(p.id) ? p.id.slice(7) : ''); sfx('join'); showJoined(G.player(p.id).name); render(); later(render, 2300); }
             else if (G.players.length >= G.maxPlayers) toast('اكتمل العدد');
             return;
         }
