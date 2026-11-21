@@ -384,22 +384,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     // ---------------------------------------------------------------- queue + triggers
+    // متى تتكرر: الدخولية تطلع مرة لكل «دخول» حقيقي، مو مع كل تعليق:
+    //  - أول مرة يظهر اللاعب، أو لو غيّر دخوليته/لونها/نصها (توقيع مختلف).
+    //  - لو انطرد/طلع ورجع: اسمه ما كان باللوبي قبل التعليق وصار موجود بعده.
+    //  - ألعاب الشِل: كل player:joined حقيقي.
+    // ودردشة لاعب موجود باللوبي ما تكررها.
     var _queue = [], _busy = false, _seen = {};
     var SEEN_KEY = 'agp-entrance-seen';
-    function seenRecently(id) {
-        if (_seen[id]) return true;
-        try {
-            var m = JSON.parse(sessionStorage.getItem(SEEN_KEY) || '{}');
-            if (m[id] && Date.now() - m[id] < REPLAY_GAP_MS) return true;
-        } catch (e) { /* storage blocked */ }
-        return false;
-    }
-    function markSeen(id) {
-        _seen[id] = true;
-        try {
-            var m = JSON.parse(sessionStorage.getItem(SEEN_KEY) || '{}');
-            m[id] = Date.now(); sessionStorage.setItem(SEEN_KEY, JSON.stringify(m));
-        } catch (e) { /* storage blocked */ }
+    var SAME_JOIN_GUARD_MS = 3000;   // نفس الحدث يوصل مرتين (تعليق + انضمام) — ما تنعرض مرتين
+    function signature(p) { var e = p.entrance || {}; return [e.templateKey, e.color || '', e.entranceText || ''].join('|'); }
+    function readSeen() { try { return JSON.parse(sessionStorage.getItem(SEEN_KEY) || '{}') || {}; } catch (e) { return {}; } }
+    function lastSeen(id) { return _seen[id] || readSeen()[id] || null; }
+    function markSeen(id, sig) {
+        _seen[id] = { t: Date.now(), sig: sig };
+        try { var m = readSeen(); m[id] = _seen[id]; sessionStorage.setItem(SEEN_KEY, JSON.stringify(m)); } catch (e) { /* storage blocked */ }
     }
     function valid(player) { var k = player && player.entrance && player.entrance.templateKey; return Boolean(k && MODELS[k]); }
     function next() {
@@ -407,19 +405,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _busy = true;
         run(_queue.shift(), function () { _busy = false; setTimeout(next, 350); });
     }
-    function play(player) {
-        if (!valid(player) || !player.id || seenRecently(player.id)) return false;
-        markSeen(player.id);
+    function enqueue(player) {
+        markSeen(player.id, signature(player));
         if (_queue.length >= 6) return false;   // a flood of joins: skip the rest rather than block the lobby for minutes
         _queue.push(player); next();
         return true;
     }
+    /** Plays unless this exact entrance already played for this player and nothing changed. */
+    function play(player, opts) {
+        if (!valid(player) || !player.id) return false;
+        var last = lastSeen(player.id);
+        if (last && typeof last === 'object' && Date.now() - last.t < SAME_JOIN_GUARD_MS) return false;
+        if (!(opts && opts.rejoin) && last && (typeof last !== 'object' || last.sig === signature(player)) && Date.now() - (last.t || last) < REPLAY_GAP_MS) return false;
+        return enqueue(player);
+    }
+    // Is this player's name currently shown on the lobby page (outside our own overlay)?
+    function nameShown(name) {
+        name = String(name || '').trim();
+        if (name.length < 2 || !document.body) return false;
+        var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+            acceptNode: function (n) {
+                var el = n.parentElement;
+                if (!el || el.closest('.agp-ent, script, style, template')) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        for (var n = w.nextNode(); n; n = w.nextNode()) if (n.nodeValue.indexOf(name) >= 0) return true;
+        return false;
+    }
 
-    // Shared-shell games: a player actually joined.
-    AGP.events.on('player:joined', function (payload) { if (payload && payload.player) play(payload.player); });
-    // Lobby pages (games/<id>/lobby.html): the first time an entrance owner shows up in chat.
+    // Shared-shell games: a player actually joined — every real join plays.
+    AGP.events.on('player:joined', function (payload) { if (payload && payload.player) play(payload.player, { rejoin: true }); });
+    // Lobby pages (games/<id>/lobby.html): first time the owner shows up, after a change, or when they (re)join the lobby.
     var ON_LOBBY = /\/lobby(\.html)?\/?$/i.test(location.pathname) || document.documentElement.hasAttribute('data-agp-entrance-on-comment');
-    AGP.events.on('stream:commentReceived', function (payload) { if (ON_LOBBY && payload && payload.entrance) play(payload); });
+    AGP.events.on('stream:commentReceived', function (payload) {
+        if (!ON_LOBBY || !payload || !valid(payload)) return;
+        if (play(payload)) return;
+        // already seen with the same entrance: play again only if this comment (re)joined them to the lobby
+        var before = nameShown(payload.name);
+        if (before) return;
+        setTimeout(function () { if (nameShown(payload.name)) play(payload, { rejoin: true }); }, 700);
+    });
 
     AGP.entrance = {
         play: play,
