@@ -1422,8 +1422,7 @@ class Component extends DCLogic {
         onName:ev=>this.catEdit(c.slug,'displayNameAr',ev.target.value), onPoints:ev=>this.catEdit(c.slug,'levelPointsRequired',ev.target.value),
         onModel:ev=>this.catEdit(c.slug,'defaultEntranceTemplate',ev.target.value), onText:ev=>this.catEdit(c.slug,'defaultEntranceText',ev.target.value),
         save:()=>{ const fields={ displayNameAr:val('displayNameAr',c.display_name_ar) };
-
-          else fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
+          if(!sp) fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
           this.busy('cat'+c.slug,()=>A.adminUpdateCatalogEntry(c.slug,fields)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadCatalog(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }); } }; });
     const levels=(s.levels||[]).map(l=>{ const e=s.lvEdits[l.slug]||{};
       const name=e.displayNameAr!==undefined?e.displayNameAr:l.display_name_ar, sp=e.minSp!==undefined?e.minSp:l.min_sp;
