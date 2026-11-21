@@ -57,6 +57,7 @@
 | `PUBLIC_API_BASE_URL` | رابط خدمة فيرو نفسها (مثل `https://veyro-api.onrender.com`) |
 | `FRONTEND_BASE_URL` | `https://aymngames.online` |
 | `YOUTUBE_API_KEY`، `GOOGLE_TTS_API_KEY` | انسخها من سيرفر الألعاب (مشغّل الأغاني والقارئ الصوتي) |
+| `ELEVENLABS_API_KEY` | اختياري: مفتاح ElevenLabs لأصوات «ElevenLabs» بالقارئ (حد يومي لكل ستريمر). بدونه هالأصوات تشتغل بس لمن حط مفتاحه الخاص بالمحرر |
 | `STREAMLABS_CLIENT_ID`، `STREAMLABS_CLIENT_SECRET` | انسخها من سيرفر الألعاب لو موجودة |
 | `STREAMLABS_REDIRECT_URI` | اختياري — الافتراضي `PUBLIC_API_BASE_URL/api/streamlabs/oauth/callback`، ولازم يتحدّث بإعدادات تطبيق Streamlabs بنفس القيمة |
 | `VEYRO_AUTO_CONNECT` | اختياري: `0` يقفل الاتصال التلقائي للشاشات المفتوحة |

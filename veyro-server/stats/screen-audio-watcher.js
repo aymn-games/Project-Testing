@@ -89,7 +89,7 @@ function createWatcher(deps) {
             onComment: function (d) { stats.recordComment(username, id, d); },
             onGift: function (d) { stats.recordGift(username, id, d); },
             onFollow: function (d) { stats.recordFollow(username, id, d); },
-            onViewerUpdate: function (d) { stats.recordViewers(username, id, d.current, d.totalUsers); },
+            onViewerUpdate: function (d) { stats.recordViewers(username, id, d.current, d.totalUsers, d.topViewers); },
             onLike: function (d) { stats.recordLike(username, id, d); },
             onShare: function (d) { stats.recordShare(username, id, d); },
             onMember: function (d) { stats.recordMember(username, id, d); },

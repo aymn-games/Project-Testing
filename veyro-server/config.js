@@ -36,6 +36,7 @@ module.exports = {
 
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
+    elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
     streamlabsClientId: process.env.STREAMLABS_CLIENT_ID || '',
     streamlabsClientSecret: process.env.STREAMLABS_CLIENT_SECRET || '',
     // رجوع Streamlabs بعد الموافقة — على سيرفر فيرو نفسه (لازم يطابق اللي بإعدادات تطبيق Streamlabs)

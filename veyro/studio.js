@@ -143,7 +143,6 @@
             { label: 'قائمة أرقام', sub: 'تحت بعض', type: 'counter', set: { design: 'stack', metrics: ['likes', 'diamonds', 'follows', 'shares'] } }
         ],
         audio: [
-            { label: 'القارئ الصوتي', sub: 'يقرأ رسائل الشات بصوت عالي، رسالة ورى رسالة', type: 'tts', at: [0.12, 0.85] },
             { label: 'مشغّل الأغاني', sub: 'المشاهد يكتب «!تشغيل» واسم الأغنية وتشتغل', type: 'music', at: [0.85, 0.12] }
         ],
         jar: [
@@ -791,15 +790,17 @@
         tag.appendChild(el('b', null, o === 'l' ? '1920×1080' : '1080×1920'));
         tag.appendChild(el('span', null, Math.round(box.w / (o === 'l' ? 1920 : 1080) * 100) + '%'));
         frame.appendChild(tag);
-        if (!st.items.length) {
+        if (!st.items.filter(function (x) { return x.type !== 'tts'; }).length) {
             var em = el('div', 'ob-empty');
             em.appendChild(el('b', null, 'شاشة فاضية'));
             em.appendChild(el('span', null, 'اختر قسم من اليمين واضغط على أي أداة — وبعدها اسحبها لأي مكان'));
             frame.appendChild(em);
         }
-        st.items.forEach(function (it) { frame.appendChild(buildNode(it)); });
+        // القارئ الصوتي ما له شكل على الشاشة — إعداداته بصفحة كاملة (openTts)
+        var shown = st.items.filter(function (it) { return it.type !== 'tts'; });
+        shown.forEach(function (it) { frame.appendChild(buildNode(it)); });
         // الأماكن بعد ما ينضافون كلهم (القياس يحتاج العنصر بالصفحة)
-        st.items.forEach(function (it) { placeNode(it); });
+        shown.forEach(function (it) { placeNode(it); });
     }
 
     function buildNode(it) {
@@ -833,6 +834,8 @@
     }
 
     function select(id) {
+        var picked = id && find(id);
+        if (picked && picked.type === 'tts') { openTts(); return; }
         selectedId = id;
         textTab = 'text';
         if (id) panelOpen = true;
@@ -994,7 +997,8 @@
             if (sec.key === 'library') libraryPane(pb);
             if (sec.key === 'alerts') videoAlertsPane(pb);
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
-            if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key], pb, sec.key === 'jar');
+            if (sec.key === 'audio') ttsCard(pb);
+            if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key].filter(function (t) { return t.type !== 'tts'; }), pb, sec.key === 'jar');
             // قوالب التوب من مكتبة فيرو (ينشرها الأدمن)
             if (sec.key === 'tops') {
                 loadVyLib(function () { if (libOf('top').length && section === 'tops' && !selectedId) renderPanel(); });
@@ -1907,30 +1911,523 @@
         box.appendChild(row('مستوى الصوت', slider(0, 1, 0.05, v, function (x) { update(it, 'volume', x); })));
     }
 
-    function ttsProps(it, root) {
-        var box = group(root, 'التشغيل');
-        enabledRow(it, box, 'تشغيل القارئ');
-        box.appendChild(row('الصوت', pills([{ label: 'نسائي', value: 'f' }, { label: 'رجالي', value: 'm' }], it.voice === 'm' ? 'm' : 'f', function (v) { update(it, 'voice', v, true); })));
-        box.appendChild(row('السرعة', pills([{ label: 'بطيء', value: 0.8 }, { label: 'عادي', value: 1 }, { label: 'سريع', value: 1.25 }], Number(it.rate) || 1, function (v) { update(it, 'rate', v, true); })));
-        volumeRow(it, box, 0.9);
-        box = group(root, 'وش يقرأ');
-        box.appendChild(row('يقرأ الاسم', toggle(it.readName !== false, function (on) { update(it, 'readName', on); }), false, '«فهد يقول: …» قبل الرسالة'));
-        box.appendChild(row('أقل طول', numInput(it.minLen || 2, 1, 50, '2', function (n) { update(it, 'minLen', n || 2); }), false, 'الرسائل الأقصر ما تنقرى'));
-        box.appendChild(row('أقصى طول', numInput(it.maxLen || 200, 10, 200, '200', function (n) { update(it, 'maxLen', n || 200); }), false, 'الأطول تنقص'));
-        box = group(root, 'الفلترة');
-        box.appendChild(row('تجاهل الأوامر', toggle(it.skipCommands !== false, function (on) { update(it, 'skipCommands', on); }), false, 'الرسائل اللي تبدأ بـ!'));
-        box.appendChild(row('تجاهل الروابط', toggle(it.skipLinks !== false, function (on) { update(it, 'skipLinks', on); })));
+    /* ---------------- القارئ الصوتي: صفحة إعدادات بكامل الشاشة ----------------
+     * القارئ ما له شكل على شاشة البث: الضغط عليه بقسم «الصوت» (أو من الطبقات) يفتح كل
+     * إعداداته بكامل الشاشة، وأول مرة ينضاف للشاشة لحاله (مخفي — بس عشان السيرفر يرسل الشات).
+     * ثلاث أعمدة: نوع التعليقات والقالب | الأدوار والمحظورين | إعدادات الصوت. */
+
+    var TTS_ROLE_OPTS = [
+        { key: 'all', label: 'جميع المستخدمين', icon: '<path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/>' },
+        { key: 'followers', label: 'المتابعين فقط', icon: '<path d="M12 21l-1.4-1.3C5.4 15 2 12 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.5-3.4 6.5-8.6 11.2z"/>' },
+        { key: 'subs', label: 'مشتركين السوبر فان', icon: '<path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/>' },
+        { key: 'mods', label: 'المشرفين فقط', icon: '<path d="M12 2l8 3v6c0 5-3.5 9.7-8 11-4.5-1.3-8-6-8-11V5z"/>' },
+        { key: 'team', label: 'Team Level (مستوى الفريق)', icon: '<path d="M7 4h10v3a5 5 0 01-4 4.9V15h3v2H8v-2h3v-3.1A5 5 0 017 7zM4 5h2v2a2 2 0 01-2-2zm14 0h2a2 2 0 01-2 2zM6 19h12v2H6z"/>' },
+        { key: 'top3', label: 'أفضل 3 بالبث', sub: 'أكثر 3 دعموك بالهدايا بهالبث', icon: '<path d="M3 5h5v14H3zm6.5 3h5v11h-5zM16 11h5v8h-5z"/>' },
+        { key: 'ranks', label: 'ترتيبات المشاهدين', sub: 'توب 3 بقائمة تيك توك الرسمية', icon: '<path d="M4 19h16v2H4zM6 10h3v7H6zm4.5-4h3v11h-3zM15 13h3v4h-3z"/>' },
+        { key: 'list', label: 'مستخدمون محددون', sub: 'حسب اليوزرنيم', icon: '<path d="M10 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-8 2-8 5v1h11.5a6 6 0 01-.5-2.4c0-1.4.5-2.6 1.2-3.6-1.3-.6-2.7-1-4.2-1zm8 0v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/>' }
+    ];
+    var TTS_MODES = [
+        { key: 'any', label: 'أي تعليق', mark: '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm6.9 6h-3a15 15 0 00-1.3-4A8 8 0 0118.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8 8 0 010-4h3.4a16 16 0 000 4zm.8 2h3a15 15 0 001.3 4A8 8 0 015.1 16zm3-8h-3a8 8 0 014.3-4A15 15 0 008.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14 14 0 010-4h4.6a14 14 0 010 4zm.3 6a15 15 0 001.3-4h3a8 8 0 01-4.3 4zm1.7-6a16 16 0 000-4h3.4a8 8 0 010 4z"/>' },
+        { key: 'dot', label: 'التعليقات التي تبدأ بنقطة (.)', txt: '.' },
+        { key: 'slash', label: 'التعليقات التي تبدأ بـ (/)', txt: '/' },
+        { key: 'custom', label: 'أمر مخصص', mark: '<path d="M19.4 13a7.5 7.5 0 000-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 00-1.7-1L15 3h-4l-.4 2.8a7.6 7.6 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 000 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1L11 21h4l.4-2.8c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/>' }
+    ];
+
+    var ttsUi = { root: null, body: null, key: null, voices: null, loading: false, audio: null, playing: false };
+
+    function ttsItem() { return cur ? S().items.filter(function (x) { return x.type === 'tts'; })[0] || null : null; }
+
+    /** يفتح إعدادات القارئ بكامل الشاشة — وينضاف للشاشة لو مو موجود. */
+    function openTts() {
+        if (!cur) return;
+        var it = ttsItem();
+        if (!it) {
+            it = makeItem({ type: 'tts' });
+            it.pos[curKey()] = { x: 0.5, y: 0.5 };
+            S().items.push(it);
+            commit();
+            renderRail();
+            renderCanvas();
+            toast('انضاف القارئ الصوتي لهالشاشة ✓');
+        }
+        if (selectedId) { selectedId = null; renderCanvas(); }
+        loadTtsVoices();
+        if (!ttsUi.root) buildTtsShell();
+        ttsUi.root.hidden = false;
+        document.body.classList.add('vt-open');
+        renderTts();
+        setTimeout(function () { var b = ttsUi.root && ttsUi.root.querySelector('.vt-back'); if (b) b.focus(); }, 30);
+    }
+
+    function closeTts() {
+        if (!ttsUi.root) return;
+        ttsUi.root.hidden = true;
+        document.body.classList.remove('vt-open');
+        if (ttsUi.audio) { try { ttsUi.audio.pause(); } catch (e) { /* ignore */ } }
+        renderPanel();
+    }
+
+    function loadTtsVoices() {
+        if (ttsUi.loading) return;
+        ttsUi.loading = true;
+        api('GET', '/api/screens/audio-key').then(function (d) {
+            ttsUi.loading = false;
+            ttsUi.voices = (d && d.voices) || { google: true, eleven: false, ownEleven: false };
+            if (ttsUi.root && !ttsUi.root.hidden) renderTts();
+        }).catch(function () { ttsUi.loading = false; });
+    }
+
+    function buildTtsShell() {
+        var root = el('div', 'vt-full');
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-modal', 'true');
+        root.setAttribute('aria-label', 'إعدادات القارئ الصوتي');
+        root.hidden = true;
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || root.hidden || /^(SELECT)$/.test((e.target && e.target.tagName) || '')) return;
+            e.stopPropagation();
+            closeTts();
+        });
+        var body = el('div', 'vt-body');
+        root.appendChild(el('header', 'vt-head'));
+        root.appendChild(body);
+        document.body.appendChild(root);
+        ttsUi.root = root;
+        ttsUi.body = body;
+    }
+
+    /** يحفظ خاصية بالقارئ؛ again = يعيد رسم الصفحة (للأزرار، مو للكتابة). */
+    function tset(k, v, again) {
+        var it = ttsItem();
+        if (!it) return;
+        it[k] = v;
+        commit();
+        if (again) renderTts();
+    }
+
+    function vtSvg(p) { var i = el('i', 'vt-ic'); i.innerHTML = svg(p); return i; }
+
+    function vtCol(title, iconPath) {
+        var c = el('section', 'vt-col');
+        var h = el('h2', 'vt-ct');
+        h.appendChild(vtSvg(iconPath));
+        h.appendChild(el('span', null, title));
+        c.appendChild(h);
+        return c;
+    }
+
+    /** خانة اختيار بشكل كرت: العنوان يمين والمربع يسار. */
+    function vtCheck(label, on, onChange, iconPath, sub) {
+        var b = button('', 'vt-chk' + (on ? ' on' : ''), function () { onChange(!on); });
+        b.setAttribute('role', 'checkbox');
+        b.setAttribute('aria-checked', String(!!on));
+        var l = el('span', 'vt-lb');
+        if (iconPath) l.appendChild(vtSvg(iconPath));
+        var tx = el('span', 'vt-tx', label);
+        if (sub) tx.appendChild(el('small', null, sub));
+        l.appendChild(tx);
+        b.appendChild(l);
+        var box = el('span', 'vt-box');
+        box.innerHTML = svg(UI.check);
+        b.appendChild(box);
+        return b;
+    }
+
+    function vtSlider(label, min, max, step, value, hint, fmt, onInput) {
+        var w = el('div', 'vt-sl');
+        var h = el('div', 'vt-slh');
+        var val = el('b', null, fmt(value));
+        h.appendChild(el('span', null, label));
+        h.appendChild(val);
+        w.appendChild(h);
+        var s = document.createElement('input');
+        s.type = 'range'; s.className = 'vt-range';
+        s.min = min; s.max = max; s.step = step; s.value = value;
+        s.setAttribute('aria-label', label);
+        s.addEventListener('input', function () { val.textContent = fmt(Number(s.value)); onInput(Number(s.value)); });
+        w.appendChild(s);
+        if (hint) w.appendChild(el('small', 'vt-hint', hint));
+        return w;
+    }
+
+    function vtSelect(options, current, onPick, label) {
+        var sel = document.createElement('select');
+        sel.className = 'ob-input vt-sel';
+        sel.setAttribute('aria-label', label);
+        options.forEach(function (o) {
+            var op = document.createElement('option');
+            op.value = o.value; op.textContent = o.label;
+            if (o.value === current) op.selected = true;
+            sel.appendChild(op);
+        });
+        sel.addEventListener('change', function () { onPick(sel.value); });
+        return sel;
+    }
+
+    function renderTts() {
+        var it = ttsItem();
+        if (!ttsUi.root) return;
+        if (!it) { closeTts(); return; }
+        var scrolls = Array.prototype.map.call(ttsUi.body.querySelectorAll('.vt-col'), function (c) { return c.scrollTop; });
+        var bodyScroll = ttsUi.body.scrollTop;
+        ttsHead(it);
+        ttsUi.body.textContent = '';
+        ttsUi.body.appendChild(ttsCommentsCol(it));
+        ttsUi.body.appendChild(ttsRolesCol(it));
+        ttsUi.body.appendChild(ttsVoiceCol(it));
+        Array.prototype.forEach.call(ttsUi.body.querySelectorAll('.vt-col'), function (c, i) { if (scrolls[i]) c.scrollTop = scrolls[i]; });
+        ttsUi.body.scrollTop = bodyScroll;
+    }
+
+    function ttsHead(it) {
+        var h = ttsUi.root.querySelector('.vt-head');
+        h.textContent = '';
+        var back = button('', 'vt-back', closeTts);
+        back.innerHTML = svg('<path d="M8.6 16.6L13.2 12 8.6 7.4 10 6l6 6-6 6z"/>');
+        back.appendChild(el('span', null, 'رجوع'));
+        h.appendChild(back);
+        var t = el('div', 'vt-title');
+        t.appendChild(vtSvg(ic('speaker')));
+        var tt = el('div');
+        tt.appendChild(el('h1', null, 'القارئ الصوتي'));
+        tt.appendChild(el('small', null, 'يقرأ تعليقات الشات بصوت على رابط الشاشة (OBS / TikTok LIVE Studio) — ما يطلع له شي على الشاشة.'));
+        t.appendChild(tt);
+        h.appendChild(t);
+        var acts = el('div', 'vt-hacts');
+        var on = el('label', 'vt-on');
+        on.appendChild(el('span', null, it.enabled === false ? 'موقف' : 'شغّال'));
+        on.appendChild(toggle(it.enabled !== false, function (v) { tset('enabled', v, true); }));
+        acts.appendChild(on);
+        acts.appendChild(button('جرّب على شاشة البث', 'ob-btn primary', function () { tryAudio(it, 'tts', 'التجربة بتنقرى بشاشة البث بعد ثواني…'); }));
+        acts.appendChild(button('حذف القارئ', 'ob-btn danger', function () {
+            if (!window.confirm('تحذف القارئ الصوتي من هالشاشة؟')) return;
+            removeItem(it);
+            closeTts();
+        }));
+        h.appendChild(acts);
+    }
+
+    /* العمود الأول: نوع التعليقات + خيارات القراءة + قالب الرسالة */
+    function ttsCommentsCol(it) {
+        var c = vtCol('نوع التعليقات المسموح بها', '<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/>');
+        var mode = it.mode || 'any';
+        var rg = el('div', 'vt-radios');
+        rg.setAttribute('role', 'radiogroup');
+        TTS_MODES.forEach(function (m) {
+            var b = button('', 'vt-radio' + (m.key === mode ? ' on' : ''), function () { tset('mode', m.key, true); });
+            b.setAttribute('role', 'radio');
+            b.setAttribute('aria-checked', String(m.key === mode));
+            var l = el('span', 'vt-lb');
+            if (m.mark) l.appendChild(vtSvg(m.mark)); else l.appendChild(el('i', 'vt-ic vt-mk', m.txt));
+            l.appendChild(el('span', 'vt-tx', m.label));
+            b.appendChild(l);
+            b.appendChild(el('span', 'vt-dot'));
+            rg.appendChild(b);
+        });
+        c.appendChild(rg);
+        if (mode === 'custom') {
+            var pi = textInput(it.prefix || '', 12, function (v) { tset('prefix', v.trim()); });
+            pi.placeholder = 'مثال: #قول';
+            pi.setAttribute('aria-label', 'بداية الأمر المخصص');
+            var pr = el('div', 'vt-field');
+            pr.appendChild(el('span', 'vt-fl', 'التعليق لازم يبدأ بـ'));
+            pr.appendChild(pi);
+            c.appendChild(pr);
+        }
+        c.appendChild(el('div', 'vt-sep'));
+        c.appendChild(vtCheck('تخطي الإيموجي (يقرأ النص فقط)', it.skipEmoji !== false, function (v) { tset('skipEmoji', v, true); }, '<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-3.5-9a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm7 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12 17.5c2.3 0 4.3-1.4 5-3.5H7c.7 2.1 2.7 3.5 5 3.5z"/>'));
+        c.appendChild(vtCheck('قراءة التعليقات التي تبدأ بـ @', !!it.readMentions, function (v) { tset('readMentions', v, true); }, '<path d="M12 2a10 10 0 104.5 18.9l-.9-1.8A8 8 0 1120 12v1a2 2 0 01-4 0V8h-2v.5A5 5 0 1015 16a4 4 0 007-3v-1A10 10 0 0012 2zm0 13a3 3 0 110-6 3 3 0 010 6z"/>'));
+        c.appendChild(vtCheck('قراءة الأرقام', it.readNumbers !== false, function (v) { tset('readNumbers', v, true); }, '<path d="M9.4 3l-.7 4H5v2h3.4l-.7 6H4v2h3.5l-.6 4h2l.6-4h5.9l-.6 4h2l.6-4H21v-2h-3.4l.7-6H22V7h-3.5l.6-4h-2l-.6 4h-5.9l.6-4zm1 6h5.9l-.7 6H9.7z"/>'));
+        if ((it.mode || 'any') === 'any') c.appendChild(vtCheck('تجاهل الأوامر (!)', it.skipCommands !== false, function (v) { tset('skipCommands', v, true); }, '<path d="M11 3h2v12h-2zm0 15h2v3h-2z"/>', 'مثل أوامر مشغّل الأغاني «!تشغيل»'));
+        c.appendChild(vtCheck('تجاهل الروابط', it.skipLinks !== false, function (v) { tset('skipLinks', v, true); }, UI.link));
+
+        // قالب الرسالة
+        var th = el('h3', 'vt-st');
+        th.appendChild(vtSvg('<path d="M4 4h16v2H4zm0 4h10v2H4zm0 4h16v2H4zm0 4h10v2H4z"/>'));
+        th.appendChild(el('span', null, 'قالب الرسالة'));
+        c.appendChild(th);
+        var tpl = it.template != null ? String(it.template) : (it.readName === false ? '{comment}' : '{nickname} يقول {comment}');
+        var ta = textInput(tpl, 120, function (v) { tset('template', v); paintChips(); }, true);
+        ta.className += ' vt-tpl';
+        ta.setAttribute('aria-label', 'قالب الرسالة');
+        c.appendChild(ta);
+        var chips = el('div', 'vt-chips');
+        var VARS = [['{comment}', 'التعليق'], ['{username}', 'اليوزر'], ['{nickname}', 'الاسم']];
+        function paintChips() {
+            Array.prototype.forEach.call(chips.children, function (b) { b.classList.toggle('on', ta.value.indexOf(b.getAttribute('data-v')) !== -1); });
+        }
+        VARS.forEach(function (v) {
+            var b = button(v[0], 'vt-chip', function () {
+                var cur = ta.value;
+                if (cur.indexOf(v[0]) !== -1) cur = cur.split(v[0]).join('');
+                else cur = (cur.replace(/\s+$/, '') + ' ' + v[0]).trim();
+                ta.value = cur.replace(/\s{2,}/g, ' ').trim();
+                tset('template', ta.value);
+                paintChips();
+            });
+            b.setAttribute('data-v', v[0]);
+            b.title = v[1];
+            chips.appendChild(b);
+        });
+        paintChips();
+        c.appendChild(chips);
+        c.appendChild(el('small', 'vt-hint', 'اضغط الزر لإضافة المتغير أو إزالته من القالب. مثال: {nickname} يقول {comment}'));
+        var sample = el('div', 'vt-sample');
+        sample.appendChild(el('span', null, 'كذا بينقرى: '));
+        var sb = el('b', null, O.ttsCompose(Object.assign({}, it, { template: tpl }), { user: 'أبو فهد', uid: 'abufahad' }, 'السلام عليكم') || '');
+        sample.appendChild(sb);
+        ta.addEventListener('input', function () { sb.textContent = O.ttsCompose(Object.assign({}, it, { template: ta.value }), { user: 'أبو فهد', uid: 'abufahad' }, 'السلام عليكم') || ''; });
+        c.appendChild(sample);
+
+        // طول الرسالة والكلمات الممنوعة
+        var lh = el('h3', 'vt-st');
+        lh.appendChild(vtSvg('<path d="M3 6h18v2H3zm0 5h12v2H3zm0 5h18v2H3z"/>'));
+        lh.appendChild(el('span', null, 'فلترة إضافية'));
+        c.appendChild(lh);
+        var lens = el('div', 'vt-two');
+        var mn = el('div', 'vt-field');
+        mn.appendChild(el('span', 'vt-fl', 'أقل طول'));
+        mn.appendChild(numInput(it.minLen || 2, 1, 50, '2', function (n) { tset('minLen', n || 2); }));
+        var mx = el('div', 'vt-field');
+        mx.appendChild(el('span', 'vt-fl', 'أقصى طول'));
+        mx.appendChild(numInput(it.maxLen || 200, 10, 200, '200', function (n) { tset('maxLen', n || 200); }));
+        lens.appendChild(mn); lens.appendChild(mx);
+        c.appendChild(lens);
         var banned = Array.isArray(it.banned) ? it.banned.join('، ') : String(it.banned || '');
-        box.appendChild(row('كلمات ممنوعة', textInput(banned, 600, function (v) {
-            update(it, 'banned', v.split(/[,،\n]/).map(function (w) { return w.trim(); }).filter(Boolean).slice(0, 60));
-        }, true), true, 'افصل بينها بفاصلة — الرسالة اللي فيها وحدة منها ما تنقرى'));
-        box = group(root, 'الشكل');
-        box.appendChild(row('فقاعة الرسالة', toggle(it.bubble !== false, function (on) { update(it, 'bubble', on); }), false, 'تعرض الاسم والرسالة وقت القراءة'));
-        sizeColor(it, box, 1, 8);
-        box = root;
+        var bw = el('div', 'vt-field col');
+        bw.appendChild(el('span', 'vt-fl', 'كلمات ممنوعة — افصل بينها بفاصلة'));
+        bw.appendChild(textInput(banned, 600, function (v) {
+            tset('banned', v.split(/[,،\n]/).map(function (w) { return w.trim(); }).filter(Boolean).slice(0, 60));
+        }, true));
+        c.appendChild(bw);
+        return c;
+    }
+
+    /* العمود الثاني: الأدوار المسموح لها + المحظورون */
+    function ttsRolesCol(it) {
+        var c = vtCol('الأدوار المسموح لها', '<path d="M9 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-7 2-7 4.5V20h14v-1.5C16 16 13 14 9 14zm7-2a3 3 0 100-6 3 3 0 000 6zm1.5 2c1.9.6 4.5 1.9 4.5 4.5V20h-4v-1.5c0-1.7-.7-3.2-2-4.4z"/>');
+        var roles = (Array.isArray(it.roles) && it.roles.length) ? it.roles.slice() : ['all'];
+        TTS_ROLE_OPTS.forEach(function (r) {
+            var on = roles.indexOf(r.key) !== -1;
+            c.appendChild(vtCheck(r.label, on, function (v) {
+                var next = roles.filter(function (x) { return x !== r.key; });
+                if (r.key === 'all') next = v ? ['all'] : next;
+                else {
+                    next = next.filter(function (x) { return x !== 'all'; });
+                    if (v) next.push(r.key);
+                }
+                if (!next.length) next = ['all'];
+                tset('roles', next, true);
+            }, r.icon, r.sub));
+            if (on && r.key === 'team') {
+                var f = el('div', 'vt-field sub');
+                f.appendChild(el('span', 'vt-fl', 'أقل مستوى بالفريق'));
+                f.appendChild(numInput(it.teamMin || 1, 1, 50, '1', function (n) { tset('teamMin', n || 1); }));
+                c.appendChild(f);
+            }
+            if (on && r.key === 'list') {
+                var al = textInput(it.allow || '', 600, function (v) { tset('allow', v); }, true);
+                al.dir = 'ltr';
+                al.placeholder = 'sara.tt, @omar_1';
+                al.setAttribute('aria-label', 'يوزرات المستخدمين المحددين');
+                var lf = el('div', 'vt-field col sub');
+                lf.appendChild(el('span', 'vt-fl', 'يوزرات تيك توك — افصل بينها بفاصلة أو سطر'));
+                lf.appendChild(al);
+                c.appendChild(lf);
+            }
+        });
+        c.appendChild(el('small', 'vt-hint', 'أكثر من دور = يكفي واحد منها. وأنت (صاحب البث) ينقرى تعليقك دائماً.'));
+
+        // المحظورون من القراءة
+        var bh = el('h3', 'vt-st bad');
+        bh.appendChild(vtSvg('<path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 2a8 8 0 016.3 12.9L7.1 5.7A8 8 0 0112 4zm0 16a8 8 0 01-6.3-12.9l11.2 11.2A8 8 0 0112 20z"/>'));
+        bh.appendChild(el('span', null, 'محظورون من القراءة'));
+        c.appendChild(bh);
+        c.appendChild(el('small', 'vt-hint', 'تعليقات هؤلاء لن تُقرأ صوتياً إطلاقاً مهما كان دورهم.'));
+        var blocked = Array.isArray(it.blocked) ? it.blocked.slice() : [];
+        var add = el('form', 'vt-ban');
+        var bi = document.createElement('input');
+        bi.type = 'text'; bi.className = 'ob-input'; bi.dir = 'ltr'; bi.maxLength = 40;
+        bi.placeholder = 'user123';
+        bi.setAttribute('aria-label', 'يوزر للحظر');
+        add.appendChild(bi);
+        var bb = button('حظر', 'ob-btn vt-banb', function () {});
+        bb.type = 'submit';
+        add.appendChild(bb);
+        add.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var u = bi.value.trim().replace(/^@+/, '').toLowerCase();
+            if (!/^[a-z0-9._]{2,24}$/.test(u)) { toast('اكتب يوزر تيك توك صحيح'); return; }
+            if (blocked.indexOf(u) === -1) blocked.push(u);
+            tset('blocked', blocked.slice(0, 300), true);
+            setTimeout(function () { var x = ttsUi.body.querySelector('.vt-ban .ob-input'); if (x) x.focus(); }, 0);
+        });
+        c.appendChild(add);
+        if (blocked.length) {
+            var list = el('div', 'vt-banned');
+            blocked.forEach(function (u) {
+                var chip = el('span', 'vt-bchip');
+                chip.appendChild(el('span', null, '@' + u));
+                var x = button('×', 'vt-bx', function () { tset('blocked', blocked.filter(function (y) { return y !== u; }), true); });
+                x.setAttribute('aria-label', 'فك الحظر عن ' + u);
+                chip.appendChild(x);
+                list.appendChild(chip);
+            });
+            c.appendChild(list);
+        }
+        return c;
+    }
+
+    /** «اختبار الصوت»: يشغّل الصوت هنا بالمحرر (POST /api/screens/tts-preview). */
+    function previewVoice(it, btn) {
+        if (ttsUi.playing) return;
+        var p = O.ttsParams(it, O.ttsMainVoice(it));
+        p.t = O.ttsCompose(it, { user: 'أبو فهد', uid: 'abufahad' }, 'هلا والله، كيف الحال؟ هذا صوتي بالقارئ') || 'هلا والله';
+        ttsUi.playing = true;
+        btn.disabled = true;
+        btn.lastChild.textContent = 'يجهّز…';
+        function reset() { ttsUi.playing = false; btn.disabled = false; btn.lastChild.textContent = 'اختبار الصوت'; }
+        fetch(apiBase() + '/api/screens/tts-preview', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(p)
+        }).then(function (res) {
+            if (!res.ok) {
+                return res.json().catch(function () { return {}; }).then(function (d) {
+                    var e = d && d.error;
+                    toast(e === 'disabled' ? 'هالنوع من الأصوات مو مفعّل — اختر نوع ثاني أو حط مفتاحك' : e === 'quota' ? 'خلص الحد اليومي لهالأصوات — جرّب نوع ثاني' : e === 'rate_limited' ? 'شوي شوي — جرّب بعد ثواني' : 'ما اشتغل الصوت، جرّب مرة ثانية');
+                    reset();
+                });
+            }
+            return res.blob().then(function (b) {
+                var url = URL.createObjectURL(b);
+                var a = new Audio(url);
+                ttsUi.audio = a;
+                a.volume = Math.max(0, Math.min(1, it.volume == null ? 0.9 : Number(it.volume)));
+                btn.lastChild.textContent = 'يتكلم…';
+                a.onended = a.onerror = function () { URL.revokeObjectURL(url); reset(); };
+                var pr = a.play();
+                if (pr && pr.catch) pr.catch(function () { URL.revokeObjectURL(url); reset(); });
+            });
+        }).catch(function () { toast('ما وصلت للسيرفر — تأكد من الاتصال'); reset(); });
+    }
+
+    /* العمود الثالث: إعدادات الصوت */
+    function ttsVoiceCol(it) {
+        var c = vtCol('إعدادات الصوت', '<path d="M12 15a3 3 0 003-3V5a3 3 0 00-6 0v7a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.9V22h2v-3.1a7 7 0 006-6.9z"/>');
+        var type = O.ttsVoiceType(it);
+        var av = ttsUi.voices || { google: true, eleven: false };
+        var f1 = el('div', 'vt-field col');
+        f1.appendChild(el('span', 'vt-fl', 'نوع الصوت'));
+        f1.appendChild(vtSelect(O.TTS_VOICE_TYPES.map(function (t) { return { value: t.key, label: t.label }; }), type.key, function (k) {
+            var nt = O.TTS_VOICE_TYPES.filter(function (t) { return t.key === k; })[0];
+            var x = ttsItem();
+            if (!x || !nt) return;
+            x.vtype = k;
+            x.voice = nt.voices[0].id;
+            x.voices = [];
+            commit();
+            renderTts();
+        }, 'نوع الصوت'));
+        c.appendChild(f1);
+        if (type.key === 'el' && ttsUi.voices && !av.eleven) c.appendChild(el('div', 'ob-warn', 'أصوات ElevenLabs تحتاج مفتاح — حط مفتاحك تحت، وإلا القارئ ما بيتكلم بهالنوع.'));
+        if (type.key !== 'el' && ttsUi.voices && !av.google) c.appendChild(el('div', 'ob-warn', 'أصوات جوجل مو مفعّلة بالسيرفر حالياً.'));
+
+        var main = O.ttsMainVoice(it);
+        var vOpts = [];
+        [['f', 'أصوات نسائية'], ['m', 'أصوات رجالية']].forEach(function (g) {
+            type.voices.filter(function (v) { return v.g === g[0]; }).forEach(function (v) { vOpts.push({ value: v.id, label: v.label + ' — ' + (g[0] === 'f' ? 'نسائي' : 'رجالي') }); });
+        });
+        var f2 = el('div', 'vt-field col');
+        f2.appendChild(el('span', 'vt-fl', type.label + ':'));
+        f2.appendChild(vtSelect(vOpts, main, function (v) { tset('voice', v, true); }, 'الصوت'));
+        c.appendChild(f2);
+
+        var test = button('', 'vt-test', function () { previewVoice(ttsItem(), test); });
+        test.appendChild(vtSvg(UI.play));
+        test.appendChild(el('span', null, ttsUi.playing ? 'يتكلم…' : 'اختبار الصوت'));
+        c.appendChild(test);
+
+        // أكثر من صوت: كل مشاهد له صوت ثابت من الأصوات المختارة
+        c.appendChild(vtCheck('صوت مختلف لكل مشاهد', !!it.multiVoice, function (v) { tset('multiVoice', v, true); }, '<path d="M7 9a3 3 0 100-6 3 3 0 000 6zm10 0a3 3 0 100-6 3 3 0 000 6zM7 11c-3 0-5 1.5-5 3.5V17h10v-2.5C12 12.5 10 11 7 11zm10 0c-.8 0-1.6.1-2.3.3 1 .9 1.3 2 1.3 3.2V17h6v-2.5c0-2-2-3.5-5-3.5zM4 19h16v2H4z"/>', 'كل واحد بالشات ياخذ صوت من الأصوات اللي تختارها'));
+        if (it.multiVoice) {
+            var chosen = (Array.isArray(it.voices) ? it.voices : []).slice();
+            if (chosen.indexOf(main) === -1) chosen.unshift(main);
+            var vg = el('div', 'vt-vlist');
+            type.voices.forEach(function (v) {
+                var on = chosen.indexOf(v.id) !== -1;
+                var b = button(v.label, 'vt-vchip ' + v.g + (on ? ' on' : ''), function () {
+                    if (v.id === main) { toast('هذا الصوت الأساسي — غيّره من فوق'); return; }
+                    tset('voices', on ? chosen.filter(function (x) { return x !== v.id; }) : chosen.concat([v.id]), true);
+                });
+                b.setAttribute('aria-pressed', String(on));
+                vg.appendChild(b);
+            });
+            c.appendChild(vg);
+            c.appendChild(el('small', 'vt-hint', chosen.length < 2 ? 'اختر صوتين أو أكثر.' : chosen.length + ' أصوات — نفس المشاهد ياخذ نفس الصوت دائماً.'));
+        }
+
+        c.appendChild(el('div', 'vt-sep'));
+        var x2 = function (v) { return Number(v).toFixed(2); };
+        c.appendChild(vtSlider('السرعة', 0.7, 1.2, 0.05, Math.max(0.7, Math.min(1.2, Number(it.rate) || 1)), '0.70 = بطيء جداً • 1.00 = طبيعي • 1.20 = سريع', function (v) { return x2(v) + ' ×'; }, function (v) { tset('rate', v); }));
+        if (type.key === 'el') {
+            c.appendChild(vtSlider('ثبات الصوت', 0, 1, 0.05, it.stab == null ? 0.5 : Number(it.stab), 'أقل = أكثر تعبيراً وعاطفية • أعلى = أكثر ثباتاً ورتابة', x2, function (v) { tset('stab', v); }));
+            c.appendChild(vtSlider('التشابه مع الصوت الأصلي', 0, 1, 0.05, it.sim == null ? 0.75 : Number(it.sim), 'أعلى = أقرب لنبرة الصوت الأصلي', x2, function (v) { tset('sim', v); }));
+            c.appendChild(vtSlider('مبالغة الأسلوب', 0, 1, 0.05, Number(it.style) || 0, 'يبالغ في أسلوب الصوت الأصلي (قد يبطّئ الأداء)', x2, function (v) { tset('style', v); }));
+            c.appendChild(vtCheck('تعزيز وضوح المتحدث (Speaker Boost)', it.boost !== false, function (v) { tset('boost', v, true); }, ic('speaker')));
+        }
+        c.appendChild(vtSlider('مستوى الصوت', 0, 100, 1, Math.round((it.volume == null ? 0.9 : Number(it.volume)) * 100), '', function (v) { return v + '%'; }, function (v) { tset('volume', v / 100); }));
+
+        if (type.key === 'el') c.appendChild(elevenKeyCard(av));
+        c.appendChild(el('small', 'vt-hint', 'الصوت يطلع من رابط الشاشة بـOBS أو TikTok LIVE Studio. «اختبار الصوت» يشغّله هنا بس.'));
+        return c;
+    }
+
+    function elevenKeyCard(av) {
+        var kc = el('div', 'ob-card vt-key');
+        kc.appendChild(el('h3', null, 'مفتاح ElevenLabs الخاص' + (av.ownEleven ? ' — محفوظ ✓' : ' (اختياري)')));
+        kc.appendChild(el('div', 'ob-hint', av.eleven && !av.ownEleven ? 'المنصة عندها مفتاح بحد يومي. لو تبي قراءة أكثر حط مفتاحك من elevenlabs.io (Profile ← API Keys).' : 'حط مفتاحك من elevenlabs.io (Profile ← API Keys). ينحفظ بالسيرفر وما يطلع لأحد.'));
+        var kin = textInput('', 90, function () {});
+        kin.dir = 'ltr';
+        kin.placeholder = av.ownEleven ? 'اكتب مفتاح جديد لتغييره' : 'sk_…';
+        kin.setAttribute('aria-label', 'مفتاح ElevenLabs');
+        kc.appendChild(kin);
+        var ka = el('div', 'ob-actions');
+        function saveKey(v) {
+            api('POST', '/api/screens/audio-key', { elevenKey: v }).then(function (d) {
+                if (!d || !d.success) { toast(d && d.error === 'invalid_key' ? 'المفتاح شكله غلط — انسخه كامل' : 'ما انحفظ المفتاح، جرّب مرة ثانية'); return; }
+                ttsUi.voices = d.voices || ttsUi.voices;
+                toast(v ? 'انحفظ مفتاحك ✓' : 'انمسح مفتاحك');
+                renderTts();
+            }).catch(function () { toast('ما انحفظ المفتاح — تأكد من الاتصال'); });
+        }
+        ka.appendChild(button('حفظ المفتاح', 'ob-btn primary', function () { if (kin.value.trim()) saveKey(kin.value.trim()); }));
+        if (av.ownEleven) ka.appendChild(button('مسح مفتاحي', 'ob-btn danger', function () { saveKey(null); }));
+        kc.appendChild(ka);
+        return kc;
+    }
+
+    /** بطاقة القارئ بقسم «الصوت»: ضغطة = صفحة الإعدادات (ما تنحط أيقونة على الشاشة). */
+    function ttsCard(box) {
+        var it = ttsItem();
+        var b = button('', 'vt-card', openTts);
+        var i = el('span', 'vt-card-i');
+        i.innerHTML = svg(ic('speaker'));
+        b.appendChild(i);
+        var m = el('span', 'vt-card-m');
+        m.appendChild(el('b', null, 'القارئ الصوتي'));
+        var st = !it ? 'يقرأ رسائل الشات بصوت — اضغط وجهّز إعداداته' : it.enabled === false ? 'موقف — اضغط لفتح الإعدادات' : 'شغّال بهالشاشة · ' + ((O.ttsVoiceType(it).voices.filter(function (v) { return v.id === O.ttsMainVoice(it); })[0] || {}).label || '') + (it.multiVoice ? ' + أصوات' : '');
+        m.appendChild(el('small', null, st));
+        b.appendChild(m);
+        b.appendChild(el('span', 'vt-card-go', it ? 'الإعدادات' : 'جهّز'));
+        box.appendChild(b);
+    }
+
+    /** لو انفتح القارئ من مكان قديم (لوحة العنصر): زر يفتح الصفحة. */
+    function ttsProps(it, root) {
         var a = el('div', 'ob-actions');
-        a.appendChild(button('جرّب على شاشة البث', 'ob-btn primary', function () { tryAudio(it, 'tts', 'التجربة بتنقرى بشاشة البث بعد ثواني…'); }));
-        box.appendChild(a);
+        a.appendChild(button('افتح إعدادات القارئ', 'ob-btn primary', openTts));
+        root.appendChild(a);
     }
 
     var audioKey = { loaded: false, loading: false, has: false };
