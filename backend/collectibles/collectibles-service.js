@@ -264,7 +264,7 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
 }
 
 /* ----------------------------------------------------------------------
- * الدخوليات — 4 نماذج (مؤثرات حقيقية + اسم + نص، 4 ثواني، js/agp-entrance.js).
+ * الدخوليات — 5 نماذج (مؤثرات حقيقية + اسم + نص، 4 ثواني، js/agp-entrance.js).
  * تُمنح يدوياً من الأدمن مثل الإطارات (اللاعب يقدر يملك أكثر من وحدة ويفعّل
  * وحدة)، ومستقلة عن الإطار. اللاعب يعدّل نصها ولونها (من ألوانها الجاهزة)
  * من بروفايله. المفاتيح القديمة (gold/neon/fire/ice) تتحوّل للجديدة.
@@ -273,7 +273,8 @@ var ENTRANCE_CATALOG = [
   { key: 'nitro', displayNameAr: 'نيترو', colors: ['blue', 'red', 'green', 'purple'], defaultText: 'وصل… افسحوا الطريق' },
   { key: 'royal', displayNameAr: 'ملكي', colors: ['gold', 'silver', 'rose'], defaultText: 'حيّوا الملك' },
   { key: 'princess', displayNameAr: 'الأميرة', colors: ['pink', 'purple', 'sky'], defaultText: 'نوّرت الأميرة' },
-  { key: 'storm', displayNameAr: 'العاصفة', colors: ['white', 'blue', 'purple', 'red'], defaultText: 'العاصفة وصلت' }
+  { key: 'storm', displayNameAr: 'العاصفة', colors: ['white', 'blue', 'purple', 'red'], defaultText: 'العاصفة وصلت' },
+  { key: 'notes', displayNameAr: 'النوتات', colors: ['gold', 'silver', 'pink', 'sky'], defaultText: 'دخل على أنغام' }
 ];
 var ENTRANCE_BY_KEY = {};
 ENTRANCE_CATALOG.forEach(function (e) { ENTRANCE_BY_KEY[e.key] = e; });
@@ -304,7 +305,7 @@ function getEntranceCatalog() {
   db.transaction(function () {
     var owned = db.prepare("DELETE FROM user_owned_entrances WHERE granted_at < ? OR granted_by = 'auto_bundle'").run(ENTRANCES_V2_SINCE).changes;
     var active = db.prepare(
-      "DELETE FROM user_entrances WHERE template_key NOT IN ('nitro','royal','princess','storm') " +
+      "DELETE FROM user_entrances WHERE template_key NOT IN ('nitro','royal','princess','storm','notes') " +
       "OR NOT EXISTS (SELECT 1 FROM user_owned_entrances o WHERE o.user_id = user_entrances.user_id AND o.entrance_key = user_entrances.template_key)"
     ).run().changes;
     if (owned || active) logger.log('Collectibles: removed legacy entrances (' + owned + ' owned, ' + active + ' active)');
