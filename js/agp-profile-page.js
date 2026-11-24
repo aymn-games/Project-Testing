@@ -1044,14 +1044,17 @@
     user_not_found: 'ما لقينا لاعب بهذا الـID أو اليوزر.',
     self_grant: 'ما تقدر تمنح نفسك.',
     invalid_amount: 'اكتب عدد صحيح.',
-    streamers_only: 'المنح للستريمرز بس.'
+    streamers_only: 'رصيد التوزيع للستريمرز بس.',
+    daily_limit: 'وصلت حد الإهداء اليومي.',
+    account_too_new: 'حسابك جديد — الإهداء يتفعّل بعد 7 أيام من التسجيل.',
+    not_verified: 'وثّق حسابك بتيك توك عشان تقدر تهدي.'
   };
   function coinError(r) { return (r && COIN_ERRORS[r.error]) || 'تعذّر التنفيذ، حاول مرة ثانية.'; }
   function loadWallet(after) {
     if (!S.owner || !window.AGPAuth || typeof window.AGPAuth.getCoinWallet !== 'function') return Promise.resolve(null);
     return window.AGPAuth.getCoinWallet().then(function (r) {
       if (!r || !r.success) return null;
-      S.wallet = r.wallet; S.coinShop = r.shop || [];
+      S.wallet = r.wallet; S.coinShop = r.shop || []; S.coinGift = r.gift || null;
       S.p.coins = r.wallet.balance;
       var chip = document.querySelector('.pf-coin-chip .num');
       if (chip) chip.textContent = num(r.wallet.balance);
@@ -1077,6 +1080,13 @@
     return h('div', { class: 'pf-coin-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(max), 'aria-valuenow': String(value) }, [h('span', { style: 'width:' + pct + '%' })]);
   }
 
+  /* ---------- قسم «عملات أيمن»: بطاقة الرصيد فوق، وتحتها تبويبات:
+     اليوم · المتجر · إهداء · السجل · كيف تكسب. كل شي يخص العملات هنا. */
+  var KIND_LABEL = { frame: 'إطار', elim: 'بطاقة إقصاء', win: 'بطاقة فوز', entrance: 'دخولية' };
+  // حركات فيها اسم شخص: «هدية من فلان»، «أهديت فلان»
+  var NAMED_REASONS = { gift_sent: 1, gift_received: 1, streamer_gift: 1, pool_grant: 1 };
+  function openWalletTab(tab) { segMemory.wallet = tab; go('wallet', { noHash: true }); }
+
   function renderWallet(body) {
     var w = S.wallet;
     if (!w) {
@@ -1088,93 +1098,259 @@
       return;
     }
     var t = w.today;
+    var streamer = Boolean(S.coinGift && S.coinGift.isStreamer);
+
+    // بطاقة الرصيد: الرقم الأهم أول شي، وتحته كسب اليوم، وأزرار سريعة
+    var balances = [h('div', { class: 'pf-wallet-bal' }, [
+      h('div', { class: 'pf-lead-l', text: 'رصيدك' }),
+      h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: num(w.balance) }), h('span', { class: 'pf-unit', text: ' عملة' })])
+    ])];
+    if (streamer) balances.push(h('div', { class: 'pf-wallet-bal pf-wallet-pool' }, [
+      h('div', { class: 'pf-lead-l', text: 'رصيد التوزيع' }),
+      h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: num(w.poolBalance) }), h('span', { class: 'pf-unit', text: ' عملة' })])
+    ]));
     body.appendChild(h('div', { class: 'pf-panel pf-wallet' }, [
       h('div', { class: 'pf-wallet-coin' }, coinSvg('spin')),
       h('div', { class: 'pf-wallet-txt pf-wallet-grow' }, [
-        h('div', { class: 'pf-lead-l', text: 'رصيدك من عملات أيمن' }),
-        h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: num(w.balance) }), h('span', { class: 'pf-unit', text: ' عملة' })]),
+        h('div', { class: 'pf-wallet-bals' }, balances),
         h('div', { class: 'pf-wallet-today' }, [
           h('div', { class: 'pf-wallet-today-row' }, [h('span', { text: 'كسبت اليوم' }), h('span', { class: 'num', text: num(t.earned) + ' من ' + num(t.cap) })]),
           bar(t.earned, t.cap),
           h('div', { class: 'pf-field-help', text: t.earned >= t.cap ? 'وصلت الحد اليومي. ' + resetTimeText(t.resetsAt) : resetTimeText(t.resetsAt) })
+        ]),
+        h('div', { class: 'pf-wallet-actions' }, [
+          h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-primary', onclick: function () { openWalletTab('shop'); } }, [icon('gift'), 'استرد من المتجر']),
+          h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', onclick: function () { openWalletTab('send'); } }, [icon('users'), 'أهدِ عملات'])
         ])
       ])
     ]));
 
-    // المهام اليومية + السلسلة
-    var missions = t.missions.map(function (m) {
+    var shop = S.coinShop || [];
+    var affordable = shop.filter(function (it) { return !it.owned && it.remaining !== 0 && it.price <= w.balance; }).length;
+    body.appendChild(segTabs([
+      { id: 'today', label: 'اليوم', render: renderCoinToday },
+      { id: 'shop', label: 'المتجر', count: affordable || null, render: renderCoinShop },
+      { id: 'send', label: 'إهداء', render: renderCoinSend },
+      { id: 'history', label: 'السجل', render: renderCoinHistory },
+      { id: 'earn', label: 'كيف تكسب', render: renderCoinEarn }
+    ], 'wallet'));
+  }
+
+  /* اليوم: المهام والسلسلة (وكسب البث للستريمر) */
+  function renderCoinToday() {
+    var w = S.wallet, t = w.today, rules = w.rules;
+    var wrap = h('div', { class: 'pf-content-body' });
+    var rows = t.missions.map(function (m) {
       return h('div', { class: 'pf-coin-row' + (m.done ? ' done' : '') }, [
         h('span', { class: 'pf-coin-row-l' }, [h('span', { class: 'pf-coin-row-t', text: m.label }), h('span', { class: 'pf-coin-row-s num', text: m.progress + ' من ' + m.target })]),
         m.done ? pill('تم +' + m.reward, 'ok') : coinAmount(m.reward, 'muted')
       ]);
     });
-    missions.push(h('div', { class: 'pf-coin-row' + (t.allMissionsDone ? ' done' : '') }, [
-      h('span', { class: 'pf-coin-row-l' }, [h('span', { class: 'pf-coin-row-t', text: 'خلّص المهام الثلاث' })]),
+    rows.push(h('div', { class: 'pf-coin-row' + (t.allMissionsDone ? ' done' : '') }, [
+      h('span', { class: 'pf-coin-row-l' }, [h('span', { class: 'pf-coin-row-t', text: 'خلّص المهام الثلاث' }), h('span', { class: 'pf-coin-row-s', text: 'مكافأة إضافية' })]),
       t.allMissionsDone ? pill('تم +' + t.allMissionsReward, 'ok') : coinAmount(t.allMissionsReward, 'muted')
     ]));
-    var rules = w.rules;
-    missions.push(h('div', { class: 'pf-coin-row' }, [
-      h('span', { class: 'pf-coin-row-l' }, [h('span', { class: 'pf-coin-row-t', text: 'سلسلة الأيام المتتالية' }), h('span', { class: 'pf-coin-row-s', text: plural(t.streakDays, 'يوم', 'أيام') + ' — كل ' + rules.player.streakEvery + ' أيام لعب ورا بعض +' + rules.player.streakBonus })]),
+    wrap.appendChild(panel('مهام اليوم', 'تتجدد 12:00 ص', rows));
+    var left = rules.player.streakEvery - (t.streakDays % rules.player.streakEvery);
+    wrap.appendChild(panel('سلسلة الأيام', null, [h('div', { class: 'pf-coin-row' }, [
+      h('span', { class: 'pf-coin-row-l' }, [
+        h('span', { class: 'pf-coin-row-t', text: t.streakDays ? plural(t.streakDays, 'يوم', 'أيام') + ' ورا بعض' : 'ما بدأت سلسلة للحين' }),
+        h('span', { class: 'pf-coin-row-s', text: 'العب كل يوم — باقي ' + plural(left, 'يوم', 'أيام') + ' على المكافأة' })
+      ]),
       coinAmount(rules.player.streakBonus, 'muted')
-    ]));
-    body.appendChild(panel('مهام اليوم', 'تتجدد 12:00 ص', missions));
+    ])]));
+    if (S.coinGift && S.coinGift.isStreamer) {
+      wrap.appendChild(panel('كسبك من البث اليوم', null, [
+        h('div', { class: 'pf-wallet-today-row' }, [h('span', { text: 'حد الستريمر اليومي' }), h('span', { class: 'num', text: num(t.streamerEarned) + ' من ' + num(t.streamerCap) })]),
+        bar(t.streamerEarned, t.streamerCap),
+        h('p', { class: 'pf-field-help', text: 'ربع اللي تكسبه من البث يروح لرصيد التوزيع، تهديه للاعبينك من تبويب «إهداء».' })
+      ]));
+    }
+    return wrap;
+  }
 
-    // متجر العملات — العناصر اللي اختارها الأدمن
-    var shop = S.coinShop || [];
+  /* المتجر: اللي اختاره الأدمن، مع زر استرداد واضح لكل عنصر */
+  function renderCoinShop() {
+    var w = S.wallet, shop = S.coinShop || [];
+    var wrap = h('div', { class: 'pf-content-body' });
+    if (!shop.length) { wrap.appendChild(panel(null, null, [emptyNote('ما فيه عناصر للاسترداد الحين. ترقّب الإضافات الجاية.')])); return wrap; }
     var grid = h('div', { class: 'pf-items pf-coin-shop' });
     shop.forEach(function (it) {
       var ctl;
       if (it.owned) ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', disabled: true, text: 'تملكه' });
       else if (it.remaining === 0) ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', disabled: true, text: 'خلصت الكمية' });
-      else if (w.balance < it.price) ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', disabled: true, text: 'يبيلك ' + num(it.price - w.balance) + ' عملة' });
+      else if (w.balance < it.price) ctl = h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', disabled: true, text: 'باقي لك ' + num(it.price - w.balance) + ' عملة' });
       else ctl = redeemBtn(it);
-      var kindLabel = { frame: 'إطار', elim: 'بطاقة إقصاء', win: 'بطاقة فوز', entrance: 'دخولية' }[it.kind] || '';
-      var card = itemCard({
+      grid.appendChild(itemCard({
         img: it.image || null, glyph: it.image ? null : '✨', name: it.name, artHeight: 90,
         status: it.owned ? pill('تملكه', 'ok') : null,
         control: h('div', { class: 'pf-coin-shop-ctl' }, [
-          h('div', { class: 'pf-coin-shop-meta' }, [coinAmount(it.price), h('span', { class: 'pf-coin-shop-kind', text: kindLabel + (it.remaining != null && it.remaining > 0 ? ' · باقي ' + num(it.remaining) : '') })]),
+          h('div', { class: 'pf-coin-shop-meta' }, [coinAmount(it.price), h('span', { class: 'pf-coin-shop-kind', text: (KIND_LABEL[it.kind] || '') + (it.remaining != null && it.remaining > 0 ? ' · باقي ' + num(it.remaining) : '') })]),
           ctl
         ])
-      });
-      grid.appendChild(card);
+      }));
     });
-    body.appendChild(panel('متجر العملات', shop.length ? plural(shop.length, 'عنصر', 'عناصر') : null, [
-      shop.length ? grid : emptyNote('ما فيه عناصر للاسترداد الحين. ترقّب الإضافات الجاية.'),
-      shop.length ? h('p', { class: 'pf-field-help', text: 'اللي تسترده يطلع بمقتنياتك على طول (الإطارات، البطاقات، الدخوليات).' }) : null
+    wrap.appendChild(panel('متجر العملات', 'رصيدك ' + num(w.balance) + ' عملة', [
+      grid,
+      h('p', { class: 'pf-field-help', text: 'اللي تسترده يطلع بمقتنياتك على طول (الإطارات، البطاقات، الدخوليات). كل عنصر ينسترد مرة وحدة.' })
     ]));
+    return wrap;
+  }
 
-    // طريقة الكسب — الأرقام من الخادم نفسه
-    var pl = rules.player, st = rules.streamer;
-    var earnRows = [
-      ['إكمال مباراة', pl.match], ['فوز (فردي)', pl.soloWin], ['فوز (فريقين)', pl.teamWin], ['أول مباراة باليوم', pl.firstMatchOfDay]
-    ].map(function (r) { return kvRow(r[0], coinAmount(r[1])); });
-    earnRows.push(kvRow('الحد اليومي', num(pl.dailyCap) + ' عملة'));
-    var earnPanel = panel('كيف تكسب', 'للحسابات الموثّقة بتيك توك', [h('div', { class: 'pf-kv-list' }, earnRows),
-      h('p', { class: 'pf-field-help', text: 'وتوب 10 لاعبين بالفوز كل أسبوع ياخذون جوائز من ' + num(rules.weeklyPlayers[0]) + ' عملة للأول (خارج الحد اليومي).' })]);
-    if (isStreamerAccount(S.p)) {
-      earnPanel.appendChild(h('div', { class: 'pf-kv-list', style: 'margin-top:12px' }, [
-        kvRow('مباراة على بثّك (' + st.minVerifiedPlayers + ' لاعبين موثّقين+)', coinAmount(st.match)),
-        kvRow('كل ساعة لعب على بثّك', coinAmount(st.perHour)),
-        kvRow('كل ' + st.playersEvery + ' لاعبين جدد باليوم', coinAmount(st.playersBonus)),
-        kvRow('حد الستريمر اليومي', num(t.streamerEarned) + ' من ' + num(t.streamerCap))
+  /* إهداء: 1) لمين  2) كم (ومن أي رصيد للستريمر)  3) تأكيد وإرسال */
+  var giftDraft = { target: null, amount: '', source: 'main' };
+  function renderCoinSend() {
+    var w = S.wallet, g = S.coinGift || { sources: ['main'], isStreamer: false };
+    var wrap = h('div', { class: 'pf-content-body' });
+    if (g.blocked) {
+      var msg = g.blocked === 'not_verified'
+        ? 'الإهداء للحسابات الموثّقة بتيك توك. وثّق حسابك من «ربط المنصات» وترجع تهدي.'
+        : 'حسابك جديد. الإهداء يتفعّل ' + (g.availableAt ? 'يوم ' + formatDate(new Date(g.availableAt).toISOString()) : 'بعد 7 أيام من التسجيل') + '.';
+      wrap.appendChild(panel('إهداء عملات', null, [
+        h('p', { class: 'pf-muted', text: msg }),
+        g.blocked === 'not_verified' ? h('a', { href: '#platforms', 'data-sec': 'platforms', class: 'pf-btn pf-btn-sm pf-btn-primary', text: 'وثّق حسابك' }) : null
       ]));
-      earnPanel.appendChild(h('p', { class: 'pf-field-help', text: 'ربع كسب الستريمر يروح لـ«رصيد التوزيع»، تمنحه للاعبينك من «الإطارات والجوائز ← منح عملات».' }));
+      return wrap;
     }
-    body.appendChild(earnPanel);
+    if (g.sources.indexOf(giftDraft.source) < 0) giftDraft.source = g.sources[0];
+    var avail = giftDraft.source === 'pool' ? w.poolBalance : w.balance;
+    var cap = g.isStreamer ? avail : Math.min(avail, g.remainingToday);
 
-    // آخر الحركات
-    var hist = (w.history || []).map(function (e) {
-      var plus = e.amount > 0;
-      return h('div', { class: 'pf-coin-row' }, [
+    // الخطوة 1: لمين؟
+    var step1 = h('div', { class: 'pf-gift-step' });
+    var who = h('input', { type: 'search', class: 'pf-input', placeholder: 'الـID (مثل 1234) أو يوزر تيك توك', 'aria-label': 'المستلم', autocomplete: 'off' });
+    var findBtn = h('button', { type: 'button', class: 'pf-btn pf-btn-ghost', text: 'بحث' });
+    function doFind() {
+      var q = who.value.trim();
+      if (!q) { showToast('اكتب الـID أو يوزر تيك توك.', true); return; }
+      findBtn.disabled = true; findBtn.textContent = '...';
+      window.AGPAuth.lookupCoinRecipient(q).then(function (r) {
+        findBtn.disabled = false; findBtn.textContent = 'بحث';
+        if (!r || !r.success) { showToast(coinError(r), true); return; }
+        giftDraft.target = r.target; repaint();
+      }).catch(function () { findBtn.disabled = false; findBtn.textContent = 'بحث'; showToast(coinError(null), true); });
+    }
+    findBtn.addEventListener('click', doFind);
+    who.addEventListener('keydown', function (e) { if (e.key === 'Enter') doFind(); });
+    var tg = giftDraft.target;
+    step1.appendChild(h('div', { class: 'pf-gift-step-h' }, [h('span', { class: 'pf-gift-n', text: '1' }), h('span', { text: 'لمين تهدي؟' })]));
+    if (tg) {
+      step1.appendChild(h('div', { class: 'pf-gift-who' }, [
+        tg.avatarUrl ? h('img', { src: tg.avatarUrl, alt: '', class: 'pf-gift-av', referrerpolicy: 'no-referrer' }) : h('span', { class: 'pf-gift-av pf-gift-av-ph', text: (tg.name || '?').charAt(0) }),
         h('span', { class: 'pf-coin-row-l' }, [
-          h('span', { class: 'pf-coin-row-t', text: e.label + (e.wallet === 'pool' ? ' (رصيد التوزيع)' : '') }),
-          h('span', { class: 'pf-coin-row-s', text: (e.note ? e.note + ' · ' : '') + new Date(e.createdAt).toLocaleString('ar-u-ca-gregory', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) })
+          h('span', { class: 'pf-coin-row-t', text: tg.name }),
+          h('span', { class: 'pf-coin-row-s', text: [tg.customId ? 'ID #' + tg.customId : '', tg.tiktokUsername ? '@' + tg.tiktokUsername : ''].filter(Boolean).join(' · ') })
         ]),
+        pill(tg.isStreamer ? 'ستريمر' : 'لاعب'),
+        h('button', { type: 'button', class: 'pf-btn pf-btn-sm pf-btn-ghost', text: 'تغيير', onclick: function () { giftDraft.target = null; repaint(); } })
+      ]));
+    } else {
+      step1.appendChild(h('div', { class: 'pf-gift-find' }, [who, findBtn]));
+      step1.appendChild(h('p', { class: 'pf-field-help', text: 'تقدر تهدي أي لاعب أو ستريمر. الـID يطلع ببروفايله جنب اسمه.' }));
+    }
+
+    // الخطوة 2: كم؟ ومن أي رصيد
+    var step2 = h('div', { class: 'pf-gift-step' + (tg ? '' : ' off') });
+    step2.appendChild(h('div', { class: 'pf-gift-step-h' }, [h('span', { class: 'pf-gift-n', text: '2' }), h('span', { text: 'كم عملة؟' })]));
+    if (g.sources.length > 1) {
+      step2.appendChild(h('div', { class: 'pf-coin-row' }, [
+        h('span', { class: 'pf-coin-row-t', text: 'من أي رصيد' }),
+        h('div', { class: 'pf-gift-src' }, g.sources.map(function (src) {
+          var label = src === 'pool' ? 'التوزيع (' + num(w.poolBalance) + ')' : 'رصيدي (' + num(w.balance) + ')';
+          return h('button', { type: 'button', class: 'pf-gift-chip' + (giftDraft.source === src ? ' on' : ''), text: label, onclick: function () { giftDraft.source = src; repaint(); } });
+        }))
+      ]));
+    }
+    var amount = h('input', { type: 'number', class: 'pf-input pf-input-amt', placeholder: 'العدد', min: '1', step: '1', inputmode: 'numeric', 'aria-label': 'عدد العملات', value: giftDraft.amount });
+    var quick = h('div', { class: 'pf-gift-src' }, [10, 25, 50, 100].filter(function (n) { return n <= cap; }).map(function (n) {
+      return h('button', { type: 'button', class: 'pf-gift-chip' + (Number(giftDraft.amount) === n ? ' on' : ''), text: String(n), onclick: function () { giftDraft.amount = String(n); repaint(); } });
+    }));
+    step2.appendChild(h('div', { class: 'pf-gift-amount' }, [quick, amount]));
+    step2.appendChild(h('p', { class: 'pf-field-help', text: g.isStreamer
+      ? 'متاح ' + num(avail) + ' عملة من ' + (giftDraft.source === 'pool' ? 'رصيد التوزيع' : 'رصيدك') + ' — بدون حد يومي للستريمر.'
+      : 'باقي لك اليوم ' + num(g.remainingToday) + ' من ' + num(g.dailyLimit) + ' عملة (يتجدد 12:00 ص).' }));
+
+    // الخطوة 3: إرسال
+    var send = h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-gift-send' });
+    function syncSend() {
+      var n = Math.floor(Number(amount.value));
+      giftDraft.amount = amount.value;
+      var ok = tg && n >= 1 && n <= cap;
+      send.disabled = !ok;
+      send.textContent = !tg ? 'اختر المستلم أول' : !(n >= 1) ? 'اكتب العدد' : n > cap ? 'أكثر من المتاح (' + num(cap) + ')' : 'أرسل ' + num(n) + ' عملة لـ ' + tg.name;
+    }
+    amount.addEventListener('input', syncSend);
+    syncSend();
+    send.addEventListener('click', function () {
+      var n = Math.floor(Number(amount.value));
+      if (!window.confirm('تأكيد: ترسل ' + num(n) + ' عملة لـ ' + tg.name + '؟ ما تقدر تسترجعها بعد الإرسال.')) return;
+      send.disabled = true; send.textContent = 'جارٍ الإرسال...';
+      window.AGPAuth.grantCoins(tg.customId || tg.tiktokUsername, n, giftDraft.source).then(function (r) {
+        if (!r || !r.success) { showToast(coinError(r), true); syncSend(); return; }
+        showToast('وصلت ' + num(n) + ' عملة لـ ' + tg.name + '.');
+        giftDraft = { target: null, amount: '', source: giftDraft.source };
+        loadWallet(function () { openWalletTab('send'); });
+      }).catch(function () { showToast(coinError(null), true); syncSend(); });
+    });
+
+    function repaint() { openWalletTab('send'); }
+    wrap.appendChild(panel('إهداء عملات', g.isStreamer ? 'ستريمر' : null, [step1, step2, send,
+      h('p', { class: 'pf-field-help', text: 'العملات توصل حساب المستلم على طول وتطلع بسجله باسمك.' })]));
+    return wrap;
+  }
+
+  /* السجل: كل حركة دخلت أو طلعت، مع فلتر */
+  var historyFilter = 'all';
+  function renderCoinHistory() {
+    var w = S.wallet;
+    var wrap = h('div', { class: 'pf-content-body' });
+    var all = w.history || [];
+    var list = all.filter(function (e) { return historyFilter === 'all' || (historyFilter === 'in' ? e.amount > 0 : e.amount < 0); });
+    var filters = h('div', { class: 'pf-gift-src' }, [['all', 'الكل'], ['in', 'دخل'], ['out', 'طلع']].map(function (f) {
+      return h('button', { type: 'button', class: 'pf-gift-chip' + (historyFilter === f[0] ? ' on' : ''), text: f[1], onclick: function () { historyFilter = f[0]; openWalletTab('history'); } });
+    }));
+    var rows = list.map(function (e) {
+      var plus = e.amount > 0;
+      var title = NAMED_REASONS[e.reason] && e.note ? e.label + ' ' + e.note : e.label;
+      var sub = [NAMED_REASONS[e.reason] ? '' : e.note, e.wallet === 'pool' ? 'رصيد التوزيع' : '', new Date(e.createdAt).toLocaleString('ar-u-ca-gregory', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })].filter(Boolean).join(' · ');
+      return h('div', { class: 'pf-coin-row' }, [
+        h('span', { class: 'pf-coin-row-l' }, [h('span', { class: 'pf-coin-row-t', text: title }), h('span', { class: 'pf-coin-row-s', text: sub })]),
         h('span', { class: 'pf-coin-delta num ' + (plus ? 'plus' : 'minus'), text: (plus ? '+' : '−') + num(Math.abs(e.amount)) })
       ]);
     });
-    body.appendChild(panel('آخر الحركات', null, hist.length ? hist : [emptyNote('ما فيه حركات للحين.')]));
+    wrap.appendChild(panel('سجل الحركات', filters, rows.length ? rows : [emptyNote('ما فيه حركات هنا.')]));
+    return wrap;
+  }
+
+  /* كيف تكسب: القواعد من الخادم نفسه */
+  function renderCoinEarn() {
+    var w = S.wallet, rules = w.rules, pl = rules.player, st = rules.streamer;
+    var wrap = h('div', { class: 'pf-content-body' });
+    wrap.appendChild(panel('اللاعب', 'للحسابات الموثّقة بتيك توك', [h('div', { class: 'pf-kv-list' }, [
+      kvRow('إكمال مباراة', coinAmount(pl.match)),
+      kvRow('فوز (فردي)', coinAmount(pl.soloWin)),
+      kvRow('فوز (فريقين)', coinAmount(pl.teamWin)),
+      kvRow('أول مباراة باليوم', coinAmount(pl.firstMatchOfDay)),
+      kvRow('كل مهمة يومية', coinAmount(pl.mission)),
+      kvRow('كل ' + pl.streakEvery + ' أيام لعب متتالية', coinAmount(pl.streakBonus)),
+      kvRow('الحد اليومي', num(pl.dailyCap) + ' عملة')
+    ]), h('p', { class: 'pf-field-help', text: 'توب 10 لاعبين بالفوز كل أسبوع ياخذون جوائز من ' + num(rules.weeklyPlayers[0]) + ' عملة للأول (خارج الحد اليومي).' })]));
+    if (S.coinGift && S.coinGift.isStreamer) {
+      wrap.appendChild(panel('الستريمر', 'وقت البث بس', [h('div', { class: 'pf-kv-list' }, [
+        kvRow('مباراة فيها ' + st.minVerifiedPlayers + ' لاعبين موثّقين+', coinAmount(st.match)),
+        kvRow('كل ساعة لعب', coinAmount(st.perHour)),
+        kvRow('كل ' + st.playersEvery + ' لاعبين جدد باليوم', coinAmount(st.playersBonus)),
+        kvRow('ترقية مستوى الستريمر', (st.levelBonusPerLevel) + ' × رقم المستوى'),
+        kvRow('الحد اليومي', num(st.dailyCap) + ' عملة')
+      ]), h('p', { class: 'pf-field-help', text: 'ربع كسبك يروح لرصيد التوزيع. وتوب 10 ستريمرز بالساعات كل أسبوع ياخذون من ' + num(rules.weeklyStreamers[0]) + ' عملة للأول.' })]));
+    }
+    var g = S.coinGift || {};
+    wrap.appendChild(panel('الإهداء', null, [h('div', { class: 'pf-kv-list' }, [
+      kvRow('اللاعب', 'لين ' + num((S.coinGift && S.coinGift.dailyLimit) || 100) + ' عملة باليوم'),
+      kvRow('الستريمر', 'من رصيده أو رصيد التوزيع، بدون حد'),
+      kvRow('الشرط', 'حساب موثّق وعمره ' + num(g.minAccountDays || 7) + ' أيام+')
+    ])]));
+    return wrap;
   }
 
   function redeemBtn(it) {
@@ -1184,8 +1360,8 @@
       b.disabled = true; b.textContent = 'جارٍ...';
       window.AGPAuth.redeemCoinItem(it.id).then(function (r) {
         if (!r || !r.success) { b.disabled = false; b.textContent = 'استرداد'; showToast(coinError(r), true); return; }
-        showToast('تم! «' + it.name + '» انضاف لحسابك.');
-        Promise.all([loadWallet(), refreshProfileData()]).then(function () { if (S.section === 'wallet') go('wallet', { noHash: true }); else renderSideNav(); });
+        showToast('تم! «' + it.name + '» انضاف لمقتنياتك.');
+        Promise.all([loadWallet(), refreshProfileData()]).then(function () { if (S.section === 'wallet') openWalletTab('shop'); else renderSideNav(); });
       }).catch(function () { b.disabled = false; b.textContent = 'استرداد'; showToast(coinError(null), true); });
     });
     return b;
@@ -1425,46 +1601,9 @@
   function renderRewards(body, p) {
     var tabs = [
       { id: 'codes', label: 'أكواد الفوز', render: function () { var w = h('div'); renderWinCodes(w, p); return w; } },
-      { id: 'coins', label: 'منح عملات', render: renderGrantCoins },
       { id: 'daily', label: 'أكواد يومية', render: renderDailyCodes }
     ];
     body.appendChild(segTabs(tabs, 'rewards'));
-  }
-  function renderGrantCoins() {
-    var wrap = h('div', { class: 'pf-content-body' });
-    function paint() {
-      wrap.innerHTML = '';
-      var w = S.wallet;
-      var who = h('input', { type: 'search', class: 'pf-input', placeholder: 'الـID أو يوزر تيك توك', 'aria-label': 'اللاعب', autocomplete: 'off' });
-      var amount = h('input', { type: 'number', class: 'pf-input pf-input-amt', placeholder: 'عدد العملات', min: '1', step: '1', inputmode: 'numeric', 'aria-label': 'عدد العملات' });
-      var btn = h('button', { type: 'button', class: 'pf-btn pf-btn-primary', text: 'منح' });
-      if (!w || !(w.poolBalance > 0)) { who.disabled = true; amount.disabled = true; btn.disabled = true; }
-      btn.addEventListener('click', function () {
-        var target = who.value.trim(), n = Math.floor(Number(amount.value));
-        if (!target) { showToast('اكتب الـID أو يوزر تيك توك.', true); return; }
-        if (!(n >= 1)) { showToast(COIN_ERRORS.invalid_amount, true); return; }
-        if (n > w.poolBalance) { showToast(COIN_ERRORS.insufficient_pool, true); return; }
-        if (!window.confirm('تمنح ' + num(n) + ' عملة لـ ' + target + '؟')) return;
-        btn.disabled = true; btn.textContent = 'جارٍ...';
-        window.AGPAuth.grantCoins(target, n).then(function (r) {
-          btn.disabled = false; btn.textContent = 'منح';
-          if (!r || !r.success) { showToast(coinError(r), true); return; }
-          showToast('وصلت ' + num(n) + ' عملة لـ ' + (r.target && r.target.name ? r.target.name : target) + '.');
-          loadWallet(paint);
-        }).catch(function () { btn.disabled = false; btn.textContent = 'منح'; showToast(coinError(null), true); });
-      });
-      wrap.appendChild(h('div', { class: 'pf-panel pf-wallet pf-wallet-sm' }, [
-        h('div', { class: 'pf-wallet-coin' }, coinSvg()),
-        h('div', { class: 'pf-wallet-txt' }, [h('div', { class: 'pf-lead-l', text: 'رصيد التوزيع' }), h('div', { class: 'pf-wallet-v' }, [h('span', { class: 'num', text: w ? num(w.poolBalance) : '…' }), h('span', { class: 'pf-unit', text: ' عملة' })])])
-      ]));
-      wrap.appendChild(panel('امنح لاعب عملات', null, [
-        h('div', { class: 'pf-grant-form' }, [who, amount, btn]),
-        h('p', { class: 'pf-field-help', text: 'ربع العملات اللي تكسبها من بثّك تنضاف هنا، وما تنصرف إلا منحاً للاعبين. توصل اللاعب بحسابه على طول.' })
-      ]));
-    }
-    paint();
-    if (!S.wallet) loadWallet(paint);
-    return wrap;
   }
   function renderDailyCodes() {
     var days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];

@@ -879,9 +879,13 @@ function getCoinWallet() {
 function redeemCoinItem(itemId) {
     return request('/api/coins/redeem', { method: 'POST', body: { itemId: itemId } });
 }
-/** الستريمر يمنح لاعب من «رصيد التوزيع». target = ID البروفايل أو يوزر تيك توك. */
-function grantCoins(target, amount) {
-    return request('/api/coins/grant', { method: 'POST', body: { target: target, amount: amount } });
+/** إهداء عملات. target = ID البروفايل أو يوزر تيك توك، source = 'main' (رصيدك) أو 'pool' (رصيد التوزيع، للستريمر). */
+function grantCoins(target, amount, source) {
+    return request('/api/coins/grant', { method: 'POST', body: { target: target, amount: amount, source: source || 'main' } });
+}
+/** معاينة المستلم (الاسم والصورة) قبل الإهداء. */
+function lookupCoinRecipient(query) {
+    return request('/api/coins/lookup?q=' + encodeURIComponent(query), { method: 'GET' });
 }
 
 /* TikTok username of an AGP player: ids from the TikTok adapter are
@@ -1389,6 +1393,7 @@ global.AGPAuth = {
     getCoinWallet: getCoinWallet,
     redeemCoinItem: redeemCoinItem,
     grantCoins: grantCoins,
+    lookupCoinRecipient: lookupCoinRecipient,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
     adminListHoursAdjustments: adminListHoursAdjustments,

@@ -202,6 +202,7 @@ var ROUTES = [
   // عملات أيمن — المحفظة ومتجر العملات (backend/coins/coins-service.js).
   { method: 'GET', path: '/api/coins/wallet', requireAuth: true, handler: handleCoinsWallet },
   { method: 'POST', path: '/api/coins/redeem', requireAuth: true, handler: handleCoinsRedeem },
+  { method: 'GET', path: '/api/coins/lookup', requireAuth: true, handler: handleCoinsLookup },
   { method: 'POST', path: '/api/coins/grant', requireAuth: true, handler: handleCoinsGrant },
   { method: 'GET', path: '/api/admin/coins/shop', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsShop },
   { method: 'POST', path: '/api/admin/coins/shop', requireAuth: true, requireAdmin: true, handler: handleAdminCoinsSaveItem },
@@ -1006,7 +1007,7 @@ function handleRedeemFrameCode(req, res, body, user) {
 /* -----------------------------------------------------------------------
  * عملات أيمن (backend/coins/coins-service.js).
  * ----------------------------------------------------------------------- */
-var COINS_ERROR_STATUS = { not_available: 404, user_not_found: 404, sold_out: 409, already_owned: 409, insufficient_balance: 409, insufficient_pool: 409, server_error: 500 };
+var COINS_ERROR_STATUS = { not_available: 404, user_not_found: 404, sold_out: 409, already_owned: 409, insufficient_balance: 409, insufficient_pool: 409, daily_limit: 409, account_too_new: 403, not_verified: 403, streamers_only: 403, server_error: 500 };
 
 function coinsReply(res, result) {
   sendJson(res, result.success ? 200 : (COINS_ERROR_STATUS[result.error] || 400), result);
@@ -1016,7 +1017,13 @@ function coinsReply(res, result) {
 function handleCoinsWallet(req, res, body, user) {
   var wallet = coinsService.getWallet(user.id);
   if (!wallet) { sendJson(res, 404, { success: false, error: 'user_not_found' }); return; }
-  sendJson(res, 200, { success: true, wallet: wallet, shop: coinsService.listShop(user.id), isStreamer: isStreamerUser(user) });
+  var streamer = isStreamerUser(user);
+  sendJson(res, 200, { success: true, wallet: wallet, shop: coinsService.listShop(user.id), isStreamer: streamer, gift: coinsService.getGiftInfo(user.id, streamer) });
+}
+
+/** GET /api/coins/lookup?q=<ID البروفايل أو يوزر تيك توك> → اسم وصورة المستلم قبل الإرسال. */
+function handleCoinsLookup(req, res, body, user) {
+  coinsReply(res, coinsService.lookupRecipient(user.id, getQueryParam(req, 'q')));
 }
 
 /** POST /api/coins/redeem { itemId } — يخصم ويمنح العنصر بنفس اللحظة. */
@@ -1024,11 +1031,13 @@ function handleCoinsRedeem(req, res, body, user) {
   coinsReply(res, coinsService.redeem(user.id, Number(body && body.itemId)));
 }
 
-/** POST /api/coins/grant { target, amount } — الستريمر يمنح لاعب من رصيد التوزيع. */
+/**
+ * POST /api/coins/grant { target, amount, source: 'main'|'pool' } — إهداء عملات.
+ * اللاعب من رصيده بحد يومي، والستريمر من رصيد التوزيع أو رصيده بدون حد.
+ */
 function handleCoinsGrant(req, res, body, user) {
-  if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'streamers_only' }); return; }
   body = body || {};
-  coinsReply(res, coinsService.grantFromPool(user.id, body.target, body.amount));
+  coinsReply(res, coinsService.gift(user.id, body.target, body.amount, { source: body.source, isStreamer: isStreamerUser(user) }));
 }
 
 function handleAdminCoinsShop(req, res) {

@@ -100,7 +100,9 @@ var REASONS = {
     streamer_players: 'لاعبين جدد على بثّك',
     streamer_level: 'ترقية مستوى الستريمر',
     streamer_gift: 'منحة من ستريمر',
-    pool_grant: 'منحت لاعب',
+    pool_grant: 'منحت',
+    gift_sent: 'أهديت',
+    gift_received: 'هدية من',
     redeem: 'استرداد من المتجر',
     admin: 'تعديل من الإدارة'
 };
@@ -659,46 +661,124 @@ function redeem(userId, itemId) {
 }
 
 /* ----------------------------------------------------------------------
- * المنح: الستريمر من رصيد التوزيع، والأدمن مباشرة
+ * الإهداء والمنح
+ *   اللاعب: من رصيده الأساسي، حد 100 عملة باليوم (يتجدد 12:00 ص)، والحساب
+ *     لازم يكون موثّق تيك توك وعمره 7 أيام أو أكثر.
+ *   الستريمر: من رصيد التوزيع، أو من رصيده الأساسي بدون حد يومي.
+ *   الأدمن: يضيف ويخصم مباشرة (adminAdjust).
  * ---------------------------------------------------------------------- */
-/** يلقى لاعب بآيدي البروفايل (#1234) أو يوزر تيك توك الموثّق (@user). */
+var GIFT = { playerDailyLimit: 100, minAccountDays: 7 };
+
+/** يلقى مستخدم بآيدي البروفايل (#1234) أو يوزر تيك توك الموثّق (@user). */
 function findTarget(query) {
     var raw = String(query || '').trim().replace(/^[@#]+/, '').trim();
     if (!raw) return null;
-    var cols = 'SELECT id, username, display_name, custom_id, tiktok_username, tiktok_verified FROM users WHERE ';
+    var cols = 'SELECT id, username, display_name, custom_id, tiktok_username, tiktok_verified, tiktok_avatar_url, is_streamer, role, permissions FROM users WHERE ';
     return db.prepare(cols + 'custom_id = ?').get(raw) ||
         db.prepare(cols + 'tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE').get(raw) || null;
 }
 
-function publicTarget(u) {
-    return { id: u.id, name: u.display_name || u.username, customId: u.custom_id || null, tiktokUsername: u.tiktok_verified ? u.tiktok_username : null };
+function isStreamerRow(u) {
+    var perms = {};
+    try { perms = JSON.parse(u.permissions || '{}') || {}; } catch (e) {}
+    return u.role === 'admin' || Boolean(u.is_streamer) || Boolean(perms.can_run_games) || Boolean(perms.full_game_access);
 }
 
-/** الستريمر يمنح لاعب عملات من رصيد التوزيع. */
-function grantFromPool(streamerId, query, amount) {
-    amount = toInt(amount);
-    if (!(amount >= 1 && amount <= MAX_GRANT)) return { success: false, error: 'invalid_amount' };
+function publicTarget(u) {
+    return {
+        id: u.id,
+        name: u.display_name || u.username,
+        customId: u.custom_id || null,
+        tiktokUsername: u.tiktok_verified ? u.tiktok_username : null,
+        avatarUrl: u.tiktok_verified ? (u.tiktok_avatar_url || null) : null,
+        isStreamer: isStreamerRow(u)
+    };
+}
+
+/** معاينة المستلم قبل الإرسال (الاسم والصورة)، عشان المرسل يتأكد إنه الشخص الصح. */
+function lookupRecipient(senderId, query) {
     var target = findTarget(query);
     if (!target) return { success: false, error: 'user_not_found' };
-    if (target.id === streamerId) return { success: false, error: 'self_grant' };
-    var w = ensureWallet(streamerId);
-    if (!w) return { success: false, error: 'unknown_user' };
-    if (w.pool_balance < amount) return { success: false, error: 'insufficient_pool' };
-    var streamer = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(streamerId);
+    if (target.id === senderId) return { success: false, error: 'self_grant' };
+    return { success: true, target: publicTarget(target) };
+}
+
+/**
+ * حالة الإهداء للمستخدم: من وين يقدر يرسل، وكم باقي له اليوم.
+ * @param {number} userId
+ * @param {boolean} isStreamer
+ */
+function getGiftInfo(userId, isStreamer) {
+    var w = ensureWallet(userId);
+    if (!w) return null;
+    var u = db.prepare('SELECT created_at, tiktok_verified FROM users WHERE id = ?').get(userId);
+    var sentToday = getDaily(userId, 'gift', riyadhDay()).earned;
+    var info = {
+        isStreamer: Boolean(isStreamer),
+        sources: isStreamer ? ['pool', 'main'] : ['main'],
+        dailyLimit: isStreamer ? null : GIFT.playerDailyLimit,
+        sentToday: sentToday,
+        remainingToday: isStreamer ? null : Math.max(0, GIFT.playerDailyLimit - sentToday),
+        minAccountDays: GIFT.minAccountDays,
+        blocked: null
+    };
+    if (!isStreamer) {
+        if (!u || !u.tiktok_verified) info.blocked = 'not_verified';
+        else if (now() - (u.created_at || 0) < GIFT.minAccountDays * DAY_MS) {
+            info.blocked = 'account_too_new';
+            info.availableAt = (u.created_at || 0) + GIFT.minAccountDays * DAY_MS;
+        }
+    }
+    return info;
+}
+
+/**
+ * يرسل عملات من المرسل للمستلم.
+ * @param {number} senderId
+ * @param {string} query - ID البروفايل أو يوزر تيك توك
+ * @param {number} amount
+ * @param {{source?: 'main'|'pool', isStreamer?: boolean}} opts
+ */
+function gift(senderId, query, amount, opts) {
+    opts = opts || {};
+    var source = opts.source === 'pool' ? 'pool' : 'main';
+    var isStreamer = Boolean(opts.isStreamer);
+    amount = toInt(amount);
+    if (!(amount >= 1 && amount <= MAX_GRANT)) return { success: false, error: 'invalid_amount' };
+    if (source === 'pool' && !isStreamer) return { success: false, error: 'streamers_only' };
+    var info = getGiftInfo(senderId, isStreamer);
+    if (!info) return { success: false, error: 'unknown_user' };
+    if (info.blocked) return { success: false, error: info.blocked };
+    if (!isStreamer && amount > info.remainingToday) return { success: false, error: 'daily_limit', remainingToday: info.remainingToday };
+    var target = findTarget(query);
+    if (!target) return { success: false, error: 'user_not_found' };
+    if (target.id === senderId) return { success: false, error: 'self_grant' };
+    var sender = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(senderId);
+    var senderName = sender ? (sender.display_name || sender.username) : '';
+    var targetName = target.display_name || target.username;
     try {
-        var pool = db.transaction(function () {
+        var after = db.transaction(function () {
             ensureWallet(target.id);
-            var after = applyEntry(streamerId, 'pool', -amount, 'pool_grant', target.display_name || target.username);
-            applyEntry(target.id, 'main', amount, 'streamer_gift', streamer ? (streamer.display_name || streamer.username) : '');
-            return after;
+            var left = applyEntry(senderId, source, -amount, source === 'pool' ? 'pool_grant' : 'gift_sent', targetName);
+            applyEntry(target.id, 'main', amount, source === 'pool' ? 'streamer_gift' : 'gift_received', senderName);
+            if (!isStreamer) db.prepare('UPDATE coin_daily SET earned = earned + ? WHERE user_id = ? AND day = ? AND role = ?').run(amount, senderId, riyadhDay(), 'gift');
+            return left;
         })();
-        logger.log('Coins: streamer ' + streamerId + ' granted ' + amount + ' to user ' + target.id);
-        return { success: true, pool: pool, target: publicTarget(target) };
+        logger.log('Coins: user ' + senderId + ' sent ' + amount + ' (' + source + ') to user ' + target.id);
+        var w = db.prepare('SELECT balance, pool_balance FROM coin_wallets WHERE user_id = ?').get(senderId);
+        return { success: true, source: source, left: after, balance: w.balance, poolBalance: w.pool_balance, target: publicTarget(target) };
     } catch (err) {
-        if (String(err && err.message) === 'insufficient_balance') return { success: false, error: 'insufficient_pool' };
-        logger.error('Coins: pool grant failed:', err);
+        if (String(err && err.message) === 'insufficient_balance') return { success: false, error: source === 'pool' ? 'insufficient_pool' : 'insufficient_balance' };
+        logger.error('Coins: gift failed:', err);
         return { success: false, error: 'server_error' };
     }
+}
+
+/** الستريمر يمنح من رصيد التوزيع (اختصار لـgift). */
+function grantFromPool(streamerId, query, amount) {
+    var r = gift(streamerId, query, amount, { source: 'pool', isStreamer: true });
+    if (r.success) r.pool = r.poolBalance;
+    return r;
 }
 
 /** الأدمن: يضيف (موجب) أو يخصم (سالب) من رصيد مستخدم. */
@@ -791,6 +871,10 @@ module.exports = {
     adminDeleteShopItem: adminDeleteShopItem,
     redeem: redeem,
     findTarget: findTarget,
+    lookupRecipient: lookupRecipient,
+    getGiftInfo: getGiftInfo,
+    gift: gift,
+    GIFT: GIFT,
     grantFromPool: grantFromPool,
     adminAdjust: adminAdjust
 };

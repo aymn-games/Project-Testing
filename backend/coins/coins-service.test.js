@@ -10,9 +10,9 @@ var coins = require('./coins-service');
 
 var tag = 'cointest_' + Date.now();
 var created = [];
-function makeUser(suffix, verified) {
+function makeUser(suffix, verified, ageDays) {
     var info = db.prepare('INSERT INTO users (username, email, tiktok_username, tiktok_verified, custom_id, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(tag + suffix, tag + suffix + '@test.local', tag + suffix + '_tt', verified === false ? 0 : 1, tag + suffix + '_cid', Date.now());
+        .run(tag + suffix, tag + suffix + '@test.local', tag + suffix + '_tt', verified === false ? 0 : 1, tag + suffix + '_cid', Date.now() - (ageDays || 30) * 86400000);
     var id = Number(info.lastInsertRowid);
     created.push(id);
     return id;
@@ -90,6 +90,38 @@ test('منح من رصيد التوزيع', function () {
     assert.equal(coins.grantFromPool(streamer, tag + 'g_tt', 21).error, 'insufficient_pool');
     assert.equal(coins.grantFromPool(streamer, tag + 's2_cid', 1).error, 'self_grant');
     assert.equal(coins.grantFromPool(streamer, 'nobody_' + tag, 1).error, 'user_not_found');
+});
+
+test('إهداء اللاعب: من رصيده، حد 100 باليوم، والحساب الجديد أو غير الموثّق ما يهدي', function () {
+    var a = makeUser('ga');
+    var b = makeUser('gb');
+    var fresh = makeUser('gnew', true, 2);
+    var unverified = makeUser('gunv', false);
+    var r = coins.gift(a, '@' + tag + 'gb_tt', 60, { source: 'main' });
+    assert.equal(r.success, true);
+    assert.equal(r.balance, 140);
+    assert.equal(coins.getBalance(b), 260);
+    r = coins.gift(a, tag + 'gb_cid', 41, { source: 'main' });
+    assert.equal(r.error, 'daily_limit');
+    assert.equal(r.remainingToday, 40);
+    assert.equal(coins.gift(a, tag + 'gb_cid', 40, { source: 'main' }).success, true);
+    assert.equal(coins.gift(a, tag + 'gb_cid', 1, { source: 'pool' }).error, 'streamers_only');
+    assert.equal(coins.gift(fresh, tag + 'gb_cid', 1, {}).error, 'account_too_new');
+    assert.equal(coins.gift(unverified, tag + 'gb_cid', 1, {}).error, 'not_verified');
+    assert.equal(coins.lookupRecipient(a, '#' + tag + 'gb_cid').target.id, b);
+    assert.equal(coins.lookupRecipient(a, tag + 'ga_cid').error, 'self_grant');
+    var hist = coins.getHistory(b, 5).map(function (e) { return e.reason; });
+    assert.ok(hist.indexOf('gift_received') >= 0);
+});
+
+test('إهداء الستريمر: من رصيده الأساسي بدون حد يومي', function () {
+    var s = makeUser('gs', true, 1);
+    var p = makeUser('gp');
+    var r = coins.gift(s, tag + 'gp_cid', 180, { source: 'main', isStreamer: true });
+    assert.equal(r.success, true);
+    assert.equal(r.balance, 20);
+    assert.equal(coins.gift(s, tag + 'gp_cid', 21, { source: 'main', isStreamer: true }).error, 'insufficient_balance');
+    assert.equal(coins.getBalance(p), 380);
 });
 
 test('متجر العملات: الأدمن يختار العنصر وسعره، والاسترداد يخصم ويمنح', function () {
