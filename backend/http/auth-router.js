@@ -332,6 +332,10 @@ var ROUTES = [
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
   { method: 'POST', path: '/api/admin/streamer-levels', requireAuth: true, requireAdmin: true, handler: handleAdminUpdateStreamerLevel },
+  // ---- تعديل ساعات الاستريمر يدوياً (تعويض/خصم) — points/streamer-hours.js
+  { method: 'GET', path: '/api/admin/streamer-hours/adjustments', requireAuth: true, requireAdmin: true, handler: handleAdminListHoursAdjustments },
+  { method: 'POST', path: '/api/admin/streamer-hours/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminAdjustHours },
+  { method: 'POST', path: '/api/admin/streamer-hours/adjustments/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteHoursAdjustment },
   // ---- حفلة ترحيب الستريمر الجديد
   { method: 'POST', path: '/api/auth/welcome/complete', requireAuth: true, handler: handleCompleteWelcome },
   { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome },
@@ -926,7 +930,7 @@ function handleAdminSetEntrance(req, res, body) {
 }
 
 /**
- * منح/سحب دخولية واحدة (nitro/royal/princess/storm) — مثل الإطارات، المستخدم
+ * منح/سحب دخولية واحدة (nitro/royal/princess/storm/notes) — مثل الإطارات، المستخدم
  * يقدر يملك أكثر من وحدة. body.revoke === true يسحب body.key.
  */
 function handleAdminGrantEntrance(req, res, body) {
@@ -1997,6 +2001,30 @@ function handleAdminUpdateStreamerLevel(req, res, body) {
     displayNameAr: body.displayNameAr
   });
   sendJson(res, ok ? 200 : 400, { success: ok, error: ok ? undefined : 'unknown_slug' });
+}
+
+/* -----------------------------------------------------------------------
+ * تعديل ساعات الاستريمر يدوياً (لوحة الأدمن ← إحصائيات الستريمرز).
+ * ----------------------------------------------------------------------- */
+
+/** GET ?userId= (اختياري) → { success, adjustments:[...] } */
+function handleAdminListHoursAdjustments(req, res) {
+  var userId = Number(getQueryParam(req, 'userId')) || null;
+  sendJson(res, 200, { success: true, adjustments: streamerHours.listAdjustments(userId, 100) });
+}
+
+/** POST { userId, hours (سالب = خصم), effectiveAt (ms), reason } */
+function handleAdminAdjustHours(req, res, body, user) {
+  var r = streamerHours.addAdjustment(Number(body.userId), body.hours, body.effectiveAt, body.reason, user && user.id);
+  if (r.success) logger.log('Admin ' + (user && user.id) + ' adjusted streamer hours: user=' + body.userId + ' hours=' + body.hours + '.');
+  sendJson(res, r.success ? 200 : (r.error === 'user_not_found' ? 404 : 400), r);
+}
+
+/** POST { id } — تراجع عن تعديل. */
+function handleAdminDeleteHoursAdjustment(req, res, body, user) {
+  var r = streamerHours.deleteAdjustment(body.id);
+  if (r.success) logger.log('Admin ' + (user && user.id) + ' deleted streamer hours adjustment #' + body.id + '.');
+  sendJson(res, r.success ? 200 : 404, r);
 }
 
 /* -----------------------------------------------------------------------

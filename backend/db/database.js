@@ -165,7 +165,7 @@ db.exec(`
     );
 
     -- الدخوليات اللي يملكها المستخدم (منح يدوي من الأدمن، مثل الإطارات) —
-    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm).
+    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm/notes).
     CREATE TABLE IF NOT EXISTS user_owned_entrances (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         entrance_key TEXT NOT NULL,
@@ -385,6 +385,20 @@ db.exec(`
         ended_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_streamer_match_time_user ON streamer_match_time(user_id);
+
+    -- تعديل يدوي لساعات الاستريمر من لوحة الأدمن (تعويض ساعات ما انحسبت، أو
+    -- خصم لتصحيح خطأ). ms بالموجب = إضافة، بالسالب = خصم. effective_at = اليوم
+    -- اللي تنحسب فيه (يحدد أسبوع التصنيف). راجع backend/points/streamer-hours.js
+    CREATE TABLE IF NOT EXISTS streamer_hours_adjustments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ms INTEGER NOT NULL,
+        effective_at INTEGER NOT NULL,
+        reason TEXT,
+        admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_streamer_hours_adj_user ON streamer_hours_adjustments(user_id);
 
     -- سجل الجولات المكتملة لكل لاعب (صف لكل جولة) — لتصنيف "توب اللاعبين"
     -- الأسبوعي بالرئيسية (getTopPlayersByWins بـpoints-service.js). العدّادات
@@ -905,6 +919,8 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-purple-spider.png', display_name_ar: 'العنكبوت البنفسجي (منح محدود)' },
     { image_filename: 'frame-roro-lilac.png', display_name_ar: 'Roro — الليلك واللؤلؤ (منح محدود)' },
     { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
+    { image_filename: 'frame-gold-bat.png', display_name_ar: 'الخفاش الذهبي (منح محدود)' },
+    { image_filename: 'frame-winged-crown.png', display_name_ar: 'التاج المجنّح (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
@@ -929,6 +945,7 @@ migrateSingleCardTable('user_win_cards');
 // معرّفة بـbackend/collectibles/collectibles-service.js.
 [
     { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' },
+    { name: 'الخفاش الذهبي (منح محدود)', frameImage: 'frame-gold-bat.png', cardKey: 'gold-bat' },
     // إطار + بطاقة إقصاء بس (ما لها بطاقة فوز للحين).
     { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true }
 ].forEach(function (bundle) {
