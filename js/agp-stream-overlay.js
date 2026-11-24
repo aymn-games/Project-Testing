@@ -1923,6 +1923,97 @@
      * عنصر جاهز للرسم داخل إطار F. opts.preview = معاينة الاستوديو (بيانات
      * تجريبية باهتة لما ما فيه بث).
      */
+    /* ---------------- زخارف النص: «ريشة اللانهاية» ----------------
+     * علامة اللانهاية (منحنى برنولي) مرسومة ريشة: ساق رفيع على المنحنى كله، وريش ناعم على جزء منه،
+     * وطيور تطير من طرفها، وقلبين. النص بالوسط عند التقاطع: نص المنحنى قدّام النص ونصه ورا
+     * (طبقتين SVG حوالين النص)، فيبان النص «منسوج» داخل الريشة. كل الحركة ناعمة وبطيئة:
+     * لمعة تمشي على المنحنى، الريش يتنفّس، الطيور ترفرف وتبتعد، والقلوب تنبض. اللون = currentColor.
+     */
+    var DECOS = [{ key: 'none', label: 'بدون' }, { key: 'infinity', label: 'ريشة اللانهاية' }];
+    var DECO_A = 118; // نصف عرض اللانهاية بوحدات الـviewBox
+    function lemni(t) {
+        var s = Math.sin(t), c = Math.cos(t), d = 1 + s * s;
+        return [DECO_A * c / d, DECO_A * s * c / d * 0.95];
+    }
+    /** نقاط المنحنى بين t0 وt1 (مسار SVG). */
+    function lemniPath(t0, t1, n) {
+        var out = '';
+        for (var i = 0; i <= n; i++) {
+            var p = lemni(t0 + (t1 - t0) * i / n);
+            out += (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2);
+        }
+        return out;
+    }
+    /**
+     * ريش حقيقي على [t0,t1]: شعيرات كثيفة طويلة تميل باتجاه رأس الريشة (اتجاه t)، جهة أعرض من الثانية،
+     * والعرض يكبر بالنص ويدق عند الطرفين.
+     */
+    function featherBarbs(t0, t1, n, maxW, seed) {
+        var out = '';
+        for (var i = 0; i <= n; i++) {
+            var u = i / n, t = t0 + (t1 - t0) * u;
+            var p = lemni(t), q = lemni(t + 0.01);
+            var tx = q[0] - p[0], ty = q[1] - p[1], L = Math.hypot(tx, ty) || 1;
+            tx /= L; ty /= L;
+            var env = Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), 0.6);
+            [1, -1].forEach(function (side, k) {
+                var jit = 0.8 + 0.4 * (((i * 37 + k * 11 + seed) % 23) / 23);
+                var len = (side > 0 ? maxW : maxW * 0.62) * env * jit + 1;
+                var ex = p[0] + (tx * 0.9 - ty * side * 0.5) * len;
+                var ey = p[1] + (ty * 0.9 + tx * side * 0.5) * len;
+                var cx = p[0] + (tx * 0.25 - ty * side * 0.45) * len, cy = p[1] + (ty * 0.25 + tx * side * 0.45) * len;
+                out += '<path d="M' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + 'Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + '" opacity="' + (0.3 + 0.5 * (jit - 0.8) / 0.4 + 0.15).toFixed(2) + '"/>';
+            });
+        }
+        return out;
+    }
+    function decoBird(x, y, s, delay) {
+        return '<g class="dc-bird" style="animation-delay:' + delay + 's"><g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+            '<path class="dc-wing" style="animation-delay:' + (delay / 3).toFixed(2) + 's" d="M0 0C-3-7-9-9-15-6C-9-5-5-2 0 0C5-2 9-5 15-6C9-9 3-7 0 0Z"/>' +
+            '<path d="M-2 0C-1 2 1 2 2 0C1 4 0 6-1 7C0 4-1 2-2 0Z"/></g></g>';
+    }
+    function decoHeart(x, y, s, delay) {
+        return '<g class="dc-heart" style="animation-delay:' + delay + 's"><path transform="translate(' + x + ' ' + y + ') scale(' + s + ')" d="M0 4C-6-1-10-4-10-8C-10-12-6-14-3-12C-1.6-11.2-.6-10 0-9C.6-10 1.6-11.2 3-12C6-14 10-12 10-8C10-4 6-1 0 4Z"/></g>';
+    }
+    var _decoCache = {};
+    /** طبقة الزخرفة: back = ورا النص، front = قدّامه. */
+    function infinityLayer(front) {
+        var k = front ? 'f' : 'b';
+        if (_decoCache[k]) return _decoCache[k];
+        var PI = Math.PI;
+        // التقاطع الأول (t≈π/2) قدّام النص، والثاني (t≈3π/2) وراه
+        var fr = [PI / 2 - 0.55, PI / 2 + 0.55];
+        var shaft = front ? lemniPath(fr[0], fr[1], 40) : lemniPath(fr[1], fr[0] + 2 * PI, 160);
+        var vb = '-175 -70 350 140';
+        var svg = '<svg class="dc-svg ' + (front ? 'dc-front' : 'dc-back') + '" viewBox="' + vb + '" aria-hidden="true">';
+        if (!front) {
+            // لمعة تمشي على المنحنى كله
+            svg += '<path class="dc-glow" pathLength="1000" d="' + lemniPath(0, 2 * PI, 220) + 'Z"/>';
+        }
+        svg += '<path class="dc-shaft" d="' + shaft + '"/>';
+        // الريشة: على الفص اليمين (من التقاطع للطرف ورجوع)، والجزء اللي قدّام النص بالطبقة الأمامية
+        // الريشة على القوس الفوقاني اليمين (من قرب التقاطع لرأسها عند طرف اللانهاية) — كلها ورا النص
+        if (!front) svg += '<g class="dc-feather">' + featherBarbs(-PI / 2 + 0.22, 0.3, 190, 44, 7) + '</g>';
+        if (!front) {
+            svg += decoHeart(100, 18, 1.15, 0) + decoHeart(124, 18, 1.15, 0.35);
+            svg += decoBird(-132, -22, 1, 0) + decoBird(-150, 2, 0.85, 1.4) + decoBird(-128, 22, 0.9, 2.6);
+        }
+        svg += '</svg>';
+        _decoCache[k] = svg;
+        return svg;
+    }
+    /** يلف النص بالزخرفة (لو it.deco معروفة) — يرجّع العنصر اللي ينحط بالـmv. */
+    function decorate(it, tx) {
+        if (it.deco !== 'infinity') return tx;
+        var w = el('span', 'agp-so-deco d-infinity');
+        if (it.decoColor) w.style.color = it.decoColor;
+        w.insertAdjacentHTML('beforeend', infinityLayer(false));
+        tx.classList.add('dc-tx');
+        w.appendChild(tx);
+        w.insertAdjacentHTML('beforeend', infinityLayer(true));
+        return w;
+    }
+
     function buildItem(it, F, opts) {
         var preview = Boolean(opts && opts.preview);
         var n = document.createElement('div');
@@ -1950,7 +2041,7 @@
                 mv.style.animationDuration = (an.d * (Number(it.speed) || 1)) + 's';
             }
             tx.textContent = it.text || ' ';
-            mv.appendChild(tx);
+            mv.appendChild(decorate(it, tx));
             n.appendChild(mv);
         } else {
             n.className += ' agp-so-widget agp-so-' + it.type;
@@ -4245,6 +4336,25 @@
         '.agp-so-tx.s-3d{text-shadow:.02em .02em 0 rgba(0,0,0,.55),.04em .04em 0 rgba(0,0,0,.5),.06em .06em 0 rgba(0,0,0,.45),.08em .08em 0 rgba(0,0,0,.4),.1em .1em .12em rgba(0,0,0,.6)}',
         '.agp-so-tx.s-hollow{color:transparent !important;-webkit-text-stroke:.035em var(--agp-so-c);filter:drop-shadow(0 .03em .06em rgba(0,0,0,.8))}',
         '.agp-so-mv{display:inline-block}',
+        /* «ريشة اللانهاية»: طبقتين SVG حوالين النص (ورا وقدّام) — الحركة كلها ناعمة وبطيئة */
+        '.agp-so-deco{position:relative;display:inline-block;color:#fff;padding:.35em 1.1em}',
+        '.agp-so-deco .dc-tx{position:relative;z-index:1}',
+        '.agp-so-deco .dc-svg{position:absolute;left:-1.6em;right:-1.6em;top:50%;height:auto;width:calc(100% + 3.2em);aspect-ratio:350/140;transform:translateY(-50%);overflow:visible;pointer-events:none;fill:none;stroke:currentColor;stroke-linecap:round;filter:drop-shadow(0 0 .08em currentColor) drop-shadow(0 .05em .12em rgba(0,0,0,.6));animation:agp-so-dcfloat 7s ease-in-out infinite}',
+        '.agp-so-deco .dc-back{z-index:0}',
+        '.agp-so-deco .dc-front{z-index:2}',
+        '.agp-so-deco .dc-shaft{stroke-width:1.6;opacity:.95}',
+        '.agp-so-deco .dc-glow{stroke-width:3.2;stroke-dasharray:70 930;opacity:.75;filter:blur(1.2px);animation:agp-so-dcrun 6.5s linear infinite}',
+        '.agp-so-deco .dc-feather{stroke-width:.42;transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-dcbreath 5s ease-in-out infinite}',
+        '.agp-so-deco .dc-heart{fill:color-mix(in srgb,currentColor 55%,#3a3340);stroke:currentColor;stroke-width:1.1;transform-box:fill-box;transform-origin:50% 60%;animation:agp-so-dcbeat 2.4s ease-in-out infinite}',
+        '.agp-so-deco .dc-bird{fill:currentColor;stroke:none;animation:agp-so-dcfly 7.5s ease-in-out infinite}',
+        '.agp-so-deco .dc-wing{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-dcflap .9s ease-in-out infinite}',
+        '@keyframes agp-so-dcfloat{0%,100%{transform:translateY(-50%)}50%{transform:translateY(-54%)}}',
+        '@keyframes agp-so-dcrun{to{stroke-dashoffset:-1000}}',
+        '@keyframes agp-so-dcbreath{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.025);opacity:1}}',
+        '@keyframes agp-so-dcbeat{0%,100%{transform:scale(1)}15%{transform:scale(1.12)}30%{transform:scale(.98)}45%{transform:scale(1.06)}}',
+        '@keyframes agp-so-dcfly{0%{transform:translate(0,0);opacity:0}12%{opacity:1}70%{opacity:1}100%{transform:translate(-26px,-22px);opacity:0}}',
+        '@keyframes agp-so-dcflap{0%,100%{transform:scaleY(1)}50%{transform:scaleY(-.35)}}',
+        '@media (prefers-reduced-motion:reduce){.agp-so-deco *{animation:none!important}}',
         '.agp-so-mv[class*=" a-"]{animation-iteration-count:infinite;animation-timing-function:ease-in-out;will-change:transform}',
         '.agp-so-mv.a-pulse{animation-name:agp-so-pulse}',
         '.agp-so-mv.a-heartbeat{animation-name:agp-so-heartbeat}',
@@ -4980,7 +5090,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, FX_MOTIONS: FX_MOTIONS, FX_DEFAULT_COLORS: FX_DEFAULT_COLORS, avatarFrame: avatarFrame, avatarFx: avatarFx, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
