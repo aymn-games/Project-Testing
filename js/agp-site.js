@@ -262,7 +262,7 @@
     }).catch(function(){busy(f,false);say('#au-code-msg',NET,'err')})});
   $('#au-finish').addEventListener('click',closeAuth);
   var signedInState=false;
-  function signedIn(n){signedInState=true;[].forEach.call(document.querySelectorAll('[data-auth]'),function(b){var s=b.querySelector('span');if(s)s.textContent=n;else b.lastChild.textContent=n;b.setAttribute('aria-label','حسابي '+n);b.dataset.signed='1'})}
+  function signedIn(n){signedInState=true;[].forEach.call(document.querySelectorAll('[data-auth]'),function(b){var s=b.querySelector('span');if(s)s.textContent='البروفايل';else b.lastChild.textContent='البروفايل';b.setAttribute('aria-label','البروفايل: '+n);b.title=n;b.dataset.signed='1'})}
   /* links to a section of the home page (the ranking goes to صناع النجاح) from any view */
   document.addEventListener('click',function(e){var a=e.target.closest('[data-goto]');if(!a)return;e.preventDefault();
     var el=document.getElementById(a.dataset.goto);if(!el){location.href='./#'+a.dataset.goto;return}if(mn.classList.contains('open'))openM(false);
