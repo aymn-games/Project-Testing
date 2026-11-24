@@ -131,7 +131,7 @@
   var A=window.AGPAuth;
   if(A&&A.getPlatformStats)A.getPlatformStats().then(function(r){var s=r&&r.success&&r.stats;if(!s)return;
     setStat(0,s.totalAccounts);setStat(2,s.activeStreamersThisMonth);setStat(4,s.totalRoundsPlayed);estimates(s.activeStreamersThisMonth)}).catch(function(){});
-  function gamesCount(){fetch('games.html',{cache:'no-store'}).then(function(r){return r.text()}).then(function(h){var m=/var REAL_GAMES\s*=\s*(\[[\s\S]*?\]);/.exec(h);if(m)setStat(1,JSON.parse(m[1]).length)}).catch(function(){})}
+  function gamesCount(){fetch('js/agp-games-library.js',{cache:'no-store'}).then(function(r){return r.text()}).then(function(h){var m=/var REAL_GAMES\s*=\s*(\[[\s\S]*?\]);/.exec(h);if(m)setStat(1,JSON.parse(m[1]).length)}).catch(function(){})}
   if(document.readyState==='complete')setTimeout(gamesCount,1500);else addEventListener('load',function(){setTimeout(gamesCount,1500)});
 
   /* ---------- شركاء الإبداع: من الخادم (GET /api/partners) ---------- */

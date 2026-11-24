@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <!-- SEO: محركات البحث وصورة المشاركة (docs/CHANGELOG.md) -->
 <title>العب ضد ستريمر | ألعاب أيمن</title>
 <meta name="description" content="تحدّى ستريمر ثاني في بلنتي وأسرع إجابة وجمهور كل بث يلعب لفريقه مباشرة من الشات.">
@@ -22,264 +22,272 @@
 <meta name="twitter:description" content="تحدّى ستريمر ثاني في بلنتي وأسرع إجابة وجمهور كل بث يلعب لفريقه مباشرة من الشات.">
 <meta name="twitter:image" content="https://aymngames.online/og-image.jpg">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://aymngames.online/#org","name":"ألعاب أيمن","alternateName":["Ayman Games","AGP","العاب ايمن"],"url":"https://aymngames.online/","logo":{"@type":"ImageObject","url":"https://aymngames.online/android-chrome-512x512.png","width":512,"height":512},"image":"https://aymngames.online/og-image.jpg","description":"منصة سعودية لألعاب البث المباشر التفاعلية لصنّاع المحتوى وجمهورهم على تيك توك وكيك وتويتش.","email":"aymngames1@gmail.com","address":{"@type":"PostalAddress","addressCountry":"SA"},"areaServed":{"@type":"Country","name":"المملكة العربية السعودية"},"contactPoint":{"@type":"ContactPoint","contactType":"customer support","email":"aymngames1@gmail.com","telephone":"+966582411235","areaServed":"SA","availableLanguage":["ar"]},"identifier":{"@type":"PropertyValue","name":"وثيقة العمل الحر","value":"FL-701621249"},"sameAs":["https://www.tiktok.com/@aymngame"]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"الرئيسية","item":"https://aymngames.online/"},{"@type":"ListItem","position":2,"name":"العب ضد ستريمر","item":"https://aymngames.online/challenge.html"}]}]}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="icon" href="favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050508">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>try{if(localStorage.getItem("agp-tone")==="bright")document.documentElement.setAttribute("data-tone","bright")}catch(e){}</script>
+<script>/* الشاشات الكبيرة: تكبير الصفحة بنسبة الشاشة (css/agp-site.css: body{zoom:var(--z)}) */(function(){function z(){var w=innerWidth,h=innerHeight,k=w>=1680?Math.min(w/1536,h/864,2.4):1;document.documentElement.style.setProperty("--z",String(Math.max(1,Math.round(k*100)/100)))}z();addEventListener("resize",z)})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- «العب ضد ستريمر» (تحدي البثوث): الألعاب اللي تنلعب بين بثين — كل بطاقة
-     تفتح صفحة إعدادات لعبتها (الدعوة، تجهيز الخصم، «جاهز»، اللوبي). الدعوات
-     الواردة بزر البريد (js/agp-challenge-inbox.js — نفس زر مكتبة الألعاب).
-     المباريات نفسها على الخادم (backend/challenge/). -->
-<style>
-    *{ box-sizing:border-box; }
-    html,body{ margin:0; min-height:100%; background:#07060b; }
-    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:#f4f2f8; }
-    a{ color:inherit; text-decoration:none; }
-    button,input{ font-family:inherit; }
-    input:focus{ outline:none; border-color:rgba(167,139,250,.5) !important; }
-    input::placeholder{ color:#6f6a7c; }
-    bdi{ unicode-bidi:isolate; }
-    .hidden{ display:none !important; }
-    @keyframes rise{ from{ opacity:0; transform:translateY(14px) } to{ opacity:1; transform:none } }
-
-    /* ===== الخلفية (نفس buildFx بشاشة الإعدادات) ===== */
-    .fx{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
-    .fx .g{ position:absolute; border-radius:50%; filter:blur(40px); }
-    .fx .s{ position:absolute; border-radius:50%; }
-
-    /* ===== الترويسة ===== */
-    header.bar{ position:sticky; top:0; z-index:50; height:80px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(10px,1.2vw,24px);
-        padding:0 clamp(12px,1.25vw,24px); background:rgba(10,9,15,.72); border-bottom:1px solid rgba(255,255,255,.07); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
-    .exit{ justify-self:start; height:clamp(32px,2.3vw,42px); padding:0 clamp(10px,.9vw,16px); border-radius:999px; display:flex; align-items:center; gap:8px; font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';
-        white-space:nowrap; border:1px solid rgba(248,113,113,.25); background:rgba(255,255,255,.03); color:#fca5a5; }
-    .exit:hover{ background:rgba(248,113,113,.1); border-color:rgba(248,113,113,.45); }
-    .logo img{ display:block; height:60px; filter:drop-shadow(0 0 14px rgba(139,92,246,.45)); }
-
-    main{ position:relative; z-index:1; width:100%; max-width:1080px; margin:0 auto; padding:0 clamp(12px,2.5vw,32px) 130px; }
-    .head{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:clamp(16px,3.2vh,34px) 0 clamp(14px,2.6vh,26px); text-align:center; }
-    .head h1{ margin:0; font:700 clamp(32px,4.2vw,56px)/1.1 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f4f2f8,#c4b5fd); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .chip{ display:inline-flex; align-items:center; gap:8px; min-height:30px; padding:4px 12px; border-radius:999px; font:600 12px 'IBM Plex Sans Arabic'; background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.3); color:#34d399; }
-    .chip i{ width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; flex:0 0 auto; }
-    .chip.warn{ background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); color:#fbbf24; }
-
-    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr)); gap:clamp(12px,1.4vw,18px); }
-    .grid + .grid{ margin-top:clamp(12px,1.4vw,18px); }
-    .grid:empty{ display:none; }
-    .sec{ display:flex; flex-direction:column; padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px); border-radius:24px; background:rgba(18,16,26,.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-        border:1px solid rgba(255,255,255,.08); box-shadow:0 20px 60px rgba(0,0,0,.3); animation:rise .45s ease both; min-width:0; }
-    .sec.full{ grid-column:1 / -1; }
-    .sec.hot{ border-color:rgba(167,139,250,.45); box-shadow:0 20px 60px rgba(139,92,246,.18); }
-    .sec-h{ display:flex; align-items:center; gap:10px; padding-bottom:10px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.06); }
-    .num{ width:30px; height:30px; flex:0 0 auto; border-radius:999px; display:grid; place-items:center; background:rgba(139,92,246,.14); color:#c4b5fd; font:700 13px 'IBM Plex Sans Arabic'; }
-    .sec-t{ font:700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'; }
-    .sec-n{ margin-inline-start:auto; font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
-    .div{ display:block; height:1px; background:rgba(255,255,255,.06); }
-
-    /* صف: العنوان يمين والعنصر يسار */
-    .row{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; padding:6px 0; }
-    .lbl{ display:flex; align-items:center; gap:8px; min-width:0; }
-    .lbl .d{ width:8px; height:8px; flex-shrink:0; border-radius:50%; background:#a78bfa; box-shadow:0 0 8px #a78bfa; }
-    .lbl > span:last-child{ font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic'; color:#e7e3ef; }
-    .lbl small{ display:block; font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
-    .txt{ width:min(190px,48%); height:40px; flex:0 0 auto; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); color:#f4f2f8; font:600 14px 'IBM Plex Sans Arabic'; padding:0 16px; text-align:center; }
-    .fixed{ height:40px; min-width:64px; max-width:60%; padding:0 18px; border-radius:999px; display:grid; place-items:center; border:1px dashed rgba(167,139,250,.4); background:rgba(139,92,246,.08); color:#ddd6fe; font:700 15px 'IBM Plex Sans Arabic'; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .step{ display:flex; align-items:center; gap:2px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
-    .step button{ width:34px; height:34px; border-radius:999px; border:none; background:transparent; color:#a8a3b5; font:500 20px/1 'IBM Plex Sans Arabic'; cursor:pointer; }
-    .step button:hover{ background:rgba(255,255,255,.08); color:#fff; }
-    .step input{ width:52px; height:34px; border:none; border-radius:999px; background:transparent; text-align:center; font:700 16px 'IBM Plex Sans Arabic'; color:#ddd6fe; }
-    .seg{ display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
-    .seg button{ height:34px; padding:0 14px; border:none; border-radius:999px; cursor:pointer; white-space:nowrap; font:600 13px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; transition:all .25s; }
-    .seg button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 6px 20px rgba(139,92,246,.4); }
-
-    /* اختيار متعدد بنقطة (الألعاب، الفئات) */
-    .multi{ display:flex; flex-direction:column; gap:10px; padding:10px 0 6px; }
-    .multi .ml{ display:flex; align-items:center; gap:8px; font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic'; color:#e7e3ef; }
-    .multi .ml em{ font-style:normal; font:600 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
-    .multi .ml em.full{ color:#34d399; }
-    .opts{ display:flex; flex-wrap:wrap; gap:8px; }
-    .opt{ height:36px; padding:0 16px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px; font:600 13px 'IBM Plex Sans Arabic';
-        border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.02); color:#8a8596; transition:all .2s; }
-    .opt i{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.2); }
-    .opt.on{ border-color:rgba(167,139,250,.55); background:rgba(139,92,246,.16); color:#ddd6fe; }
-    .opt.on i{ background:#a78bfa; }
-    .opt:disabled{ opacity:.4; cursor:default; }
-    .opt.big{ height:44px; padding:0 20px; font-size:14px; }
-    .opt .soon{ font-size:11px; color:#6f6a7c; }
-
-    /* أشخاص (دعوات، نتائج البحث) */
-    .person{ display:flex; align-items:center; gap:12px; padding:10px 0; flex-wrap:wrap; }
-    .av{ width:46px; height:46px; flex:0 0 auto; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#7c3aed,#a855f766); border:2px solid rgba(255,255,255,.12); display:grid; place-items:center; color:#fff; font-weight:700; }
-    .pi{ flex:1 1 180px; min-width:0; }
-    .pi b{ display:block; font:700 15px 'IBM Plex Sans Arabic'; }
-    .pi span{ display:block; font:500 12.5px 'IBM Plex Sans Arabic'; color:#8a8596; line-height:1.7; }
-    .pi bdi{ direction:ltr; }
-    .res{ display:block; width:100%; text-align:right; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02); border-radius:18px; padding:8px 12px; margin-top:8px; cursor:pointer; color:#f4f2f8; }
-    .res.on{ border-color:rgba(167,139,250,.55); background:rgba(139,92,246,.16); }
-    .res:disabled{ opacity:.5; cursor:default; }
-    .tag{ font:600 11px 'IBM Plex Sans Arabic'; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,.12); color:#fca5a5; white-space:nowrap; }
-    .search{ width:100%; height:44px; margin:10px 0 2px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); color:#f4f2f8; font:600 14px 'IBM Plex Sans Arabic'; padding:0 18px; }
-    .empty{ font:500 13px 'IBM Plex Sans Arabic'; color:#8a8596; padding:10px 2px; }
-
-    .btns{ display:flex; gap:8px; flex-wrap:wrap; }
-    .btn{ height:40px; padding:0 18px; border-radius:999px; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; font:700 14px 'IBM Plex Sans Arabic'; color:#fff;
-        background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.35); white-space:nowrap; }
-    .btn:hover{ filter:brightness(1.1); }
-    .btn:disabled{ opacity:.45; cursor:default; filter:none; }
-    .btn.ok{ background:linear-gradient(90deg,#059669,#34d399); box-shadow:0 6px 20px rgba(52,211,153,.3); }
-    .btn.ghost{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); color:#e7e3ef; box-shadow:none; }
-
-    /* زر الإرسال الكبير (نفس "الدخول للوبي") */
-    .cta-wrap{ position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex; flex-direction:column; align-items:center; gap:6px; padding:18px 16px clamp(16px,3vh,28px);
-        background:linear-gradient(0deg,#07060b 60%,transparent); }
-    .cta{ width:100%; max-width:440px; height:clamp(52px,6.5vh,62px); border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
-        background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic'; box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); }
-    .cta:hover{ filter:brightness(1.1); }
-    .cta:disabled{ opacity:.4; cursor:default; filter:none; }
-    .msg{ min-height:18px; font:600 13px 'IBM Plex Sans Arabic'; color:#a8a3b5; text-align:center; }
-    .msg.bad{ color:#fca5a5; } .msg.good{ color:#86efac; }
-
-    /* ===== بطاقات ألعاب البثين ===== */
-    .hdr-end{ justify-self:end; display:flex; align-items:center; gap:10px; }
-    .vs-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr)); gap:18px; margin-top:8px; }
-    .vc{ --h:#8b5cf6; position:relative; overflow:hidden; display:flex; flex-direction:column; gap:12px; padding:22px; border-radius:26px; text-decoration:none; color:inherit;
-        background:linear-gradient(180deg,rgba(24,20,36,.9),rgba(12,11,18,.9)); border:1px solid color-mix(in srgb,var(--h) 35%,transparent); box-shadow:0 20px 60px rgba(0,0,0,.35),0 0 60px -30px var(--h); animation:rise .45s ease both; transition:transform .2s, border-color .2s; }
-    a.vc:hover{ transform:translateY(-3px); border-color:color-mix(in srgb,var(--h) 60%,transparent); }
-    .vc .bgic{ position:absolute; left:-20px; bottom:-30px; font-size:170px; opacity:.06; line-height:1; pointer-events:none; }
-    .vc .top{ display:flex; align-items:center; gap:14px; }
-    .vc .ic{ width:56px; height:56px; flex:0 0 auto; border-radius:16px; display:grid; place-items:center; font-size:28px; background:color-mix(in srgb,var(--h) 18%,transparent); border:1px solid color-mix(in srgb,var(--h) 45%,transparent); }
-    .vc h3{ margin:0; font:700 24px 'IBM Plex Sans Arabic'; }
-    .vc .tags{ display:flex; gap:6px; margin-top:4px; }
-    .vc .t{ font:600 11.5px 'IBM Plex Sans Arabic'; padding:3px 10px; border-radius:999px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#c9c4d6; }
-    .vc .t.new{ background:rgba(52,211,153,.1); border-color:rgba(52,211,153,.35); color:#6ee7b7; }
-    .vc p{ margin:0; font:500 14.5px/1.85 'IBM Plex Sans Arabic'; color:#a8a3b5; }
-    .vc ul{ margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
-    .vc li{ font:600 12.5px 'IBM Plex Sans Arabic'; padding:5px 12px; border-radius:999px; background:color-mix(in srgb,var(--h) 10%,transparent); color:#ddd6fe; border:1px solid color-mix(in srgb,var(--h) 30%,transparent); }
-    .vc .go{ margin-top:auto; height:50px; border-radius:999px; display:grid; place-items:center; font:700 16px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 10px 30px rgba(139,92,246,.4); }
-    .vc.soon{ opacity:.55; }
-    .vc.soon .go{ background:rgba(255,255,255,.06); box-shadow:none; color:#8a8596; }
-</style>
-<script src="js/agp-apple-emoji.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@600;700&family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&icon_names=arrow_back,auto_awesome,back_hand,bolt,brush,casino,category,chair,check_circle,devices,emoji_events,fitness_center,flag,format_list_numbered,grid_3x3,grid_on,group,groups,hexagon,hive,image_search,key,landscape,link,local_fire_department,lock,nutrition,palette,person_remove,person_search,pets,psychology,quiz,rocket_launch,sailing,savings,schedule,spellcheck,sports_mma,sports_motorsports,sports_score,sports_soccer,stairs,swords,target,theater_comedy,timer&display=block">
+<link rel="stylesheet" href="css/agp-site.css">
 </head>
-<body>
-<div class="fx" id="fx" aria-hidden="true"></div>
-
-<header class="bar">
-    <a class="exit" href="games.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>العودة لمكتبة الألعاب</a>
-    <a class="logo" href="./"><img src="logo.png" alt="ألعاب أيمن"></a>
-    <div class="hdr-end" id="hdr-end"></div>
+<body class="page-lib">
+<div class="tone-lift" aria-hidden="true"></div>
+<div class="page-bg" aria-hidden="true"><span class="lattice"></span><span class="grain"></span><span class="vig"></span></div>
+<header class="site-header">
+ <div class="wrap bar">
+ <a class="logo" href="#" aria-label="ألعاب أيمن الرئيسية"><img src="assets/site/logo-t.png" alt="ألعاب أيمن" width="110" height="42"></a>
+ <nav class="nav" aria-label="القائمة الرئيسية">
+ <a href="./">الرئيسية</a>
+ <a href="games.html">ألعاب البثوث</a>
+ <a href="discord-games.html">ألعاب الديسكورد</a>
+ <a href="pricing.html">الأسعار</a>
+ <a href="redeem.html" class="nav-redeem"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200,128a32,32,0,0,0,32,32v32a8,8,0,0,1-8,8H96V56H224a8,8,0,0,1,8,8V96A32,32,0,0,0,200,128Z" opacity="0.2"/><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></svg>استرداد كود</a>
+ </nav>
+ <div class="actions">
+ <button class="btn btn-secondary btn-icon tone-btn" id="tone-btn" type="button" aria-pressed="false" aria-label="السطوع">
+          <svg viewBox="0 0 256 256" fill="currentColor" class="sun" aria-hidden="true"><path d="M184,128a56,56,0,1,1-56-56A56,56,0,0,1,184,128Z" opacity="0.2"/><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg>
+          <svg viewBox="0 0 256 256" fill="currentColor" class="moon" aria-hidden="true"><path d="M227.89,147.89A96,96,0,1,1,108.11,28.11,96.09,96.09,0,0,0,227.89,147.89Z" opacity="0.2"/><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        </button>
+      <div class="dd" id="gfx-dd">
+ <button class="btn btn-secondary btn-sm dd-trigger" id="gfx-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="gfx-menu" aria-label="جودة الرسوميات">
+ <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M207.86,123.18l16.78-21a99.14,99.14,0,0,0-10.07-24.29l-26.7-3a81,81,0,0,0-6.81-6.81l-3-26.71a99.43,99.43,0,0,0-24.3-10l-21,16.77a81.59,81.59,0,0,0-9.64,0l-21-16.78A99.14,99.14,0,0,0,77.91,41.43l-3,26.7a81,81,0,0,0-6.81,6.81l-26.71,3a99.43,99.43,0,0,0-10,24.3l16.77,21a81.59,81.59,0,0,0,0,9.64l-16.78,21a99.14,99.14,0,0,0,10.07,24.29l26.7,3a81,81,0,0,0,6.81,6.81l3,26.71a99.43,99.43,0,0,0,24.3,10l21-16.77a81.59,81.59,0,0,0,9.64,0l21,16.78a99.14,99.14,0,0,0,24.29-10.07l3-26.7a81,81,0,0,0,6.81-6.81l26.71-3a99.43,99.43,0,0,0,10-24.3l-16.77-21A81.59,81.59,0,0,0,207.86,123.18ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.29,107.29,0,0,0-26.25-10.86,8,8,0,0,0-7.06,1.48L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8.06,8.06,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8.06,8.06,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg>
+ <span class="q-badge" id="gfx-badge">تلقائي</span>
+ </button>
+ <div class="dd-menu" id="gfx-menu" role="menu" aria-labelledby="gfx-btn">
+ <div class="dd-title">جودة الرسوميات</div>
+ <button class="dd-item" role="menuitemradio" data-mode="auto" aria-checked="true">
+ <span>تلقائي<small id="auto-note">يختار حسب جهازك</small></span>
+ <svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <div class="dd-sep" role="separator"></div>
+ <button class="dd-item" role="menuitemradio" data-mode="eco" aria-checked="false"><span>اقتصادي<small>بدون ضبابية ولا حركة</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <button class="dd-item" role="menuitemradio" data-mode="balanced" aria-checked="false"><span>متوازن<small>زجاج خفيف وحركة ناعمة</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <button class="dd-item" role="menuitemradio" data-mode="ultra" aria-checked="false"><span>عالي<small>زجاج أغنى وظلال أعمق</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <p class="dd-note" id="gfx-why"></p>
+ </div>
+ </div>
+      <button class="btn btn-primary login-btn" type="button" data-auth><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M192,96a64,64,0,1,1-64-64A64,64,0,0,1,192,96Z" opacity="0.2"/><path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/></svg><span>تسجيل الدخول</span></button>
+ <button class="btn btn-secondary btn-icon menu-btn" id="menu-btn" aria-label="فتح القائمة" aria-expanded="false" aria-controls="mnav">
+ <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228,128a12,12,0,0,1-12,12H40a12,12,0,0,1,0-24H216A12,12,0,0,1,228,128ZM40,76H216a12,12,0,0,0,0-24H40a12,12,0,0,0,0,24ZM216,180H40a12,12,0,0,0,0,24H216a12,12,0,0,0,0-24Z"/></svg></button>
+ </div>
+ </div>
 </header>
+<div class="scrim" id="scrim"></div>
+<nav class="mnav" id="mnav" aria-label="قائمة الجوال">
+ <a href="./">الرئيسية</a>
+ <a href="games.html">ألعاب البثوث</a>
+ <a href="discord-games.html">ألعاب الديسكورد</a>
+ <a href="./#ranks" data-goto="ranks">التصنيف</a>
+ <a href="pricing.html">الأسعار</a>
+ <a href="redeem.html">استرداد كود</a>
+  <div class="mset" aria-label="الإعدادات">
+    <div class="mset-row"><span class="mset-l">السطوع<small>إضاءة خفيفة لكل الشاشات</small></span>
+      <button class="mtog" id="m-tone" type="button" role="switch" aria-checked="false" aria-label="السطوع"><span></span></button></div>
+    <div class="mset-row col"><span class="mset-l">جودة الرسوميات<small id="m-gfx-note">يختار حسب جهازك</small></span>
+      <div class="mseg" id="m-gfx" role="radiogroup" aria-label="جودة الرسوميات">
+        <button type="button" role="radio" data-mode="auto">تلقائي</button><button type="button" role="radio" data-mode="eco">اقتصادي</button><button type="button" role="radio" data-mode="balanced">متوازن</button><button type="button" role="radio" data-mode="ultra">عالي</button>
+      </div></div>
+  </div>
+</nav>
 
-<main>
-    <div class="head">
-        <h1>العب ضد ستريمر</h1>
-        <span class="chip" id="me-chip"><i></i><span id="me-text">جمهورك فريق وجمهور خصمك فريق · ادعُ أي ستريمر بالـID أو من البثوث النشطة</span></span>
+<main id="main">
+  <section class="lib wrap">
+    <div class="lib-head">
+      <a class="btn btn-ghost btn-sm rd-back" href="games.html"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg>مكتبة الألعاب</a>
+      <div class="lib-title"><h1 id="vs-title">العب ضد ستريمر</h1><span class="lib-count"><span class="num" id="vs-n">0</span> لعبة</span></div>
+      <p>تحدى ستريمر ثاني وجمهور كل بث يلعب لفريقه ادعه بالآيدي أو من البثوث الشغالة</p>
+      <div class="lib-acts" id="lib-acts"></div>
+      <span class="vs-note" id="vs-note" hidden><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z" opacity="0.2"/><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm-8-80V80a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,172Z"/></svg>تحتاج حساب ستريمر مربوط بتيك توك</span>
     </div>
-
-    <div class="grid" id="top-grid"></div>
-    <div class="vs-grid" id="games"></div>
+    <div class="vs-top" id="top-grid"></div>
+    <div class="lib-grid dc-grid" id="vs-grid"></div>
+  </section>
 </main>
 
+<div class="faq-scrim doc-scrim" id="doc-scrim" hidden></div>
+<div class="faq doc" id="doc" role="dialog" aria-modal="true" aria-labelledby="doc-title" hidden>
+ <div class="faq-head"><div><h2 id="doc-title"></h2><p class="doc-intro" id="doc-intro"></p></div><button class="btn btn-secondary btn-icon x" id="doc-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+ <div class="faq-body doc-body" id="doc-body"></div>
+</div>
+<div class="faq-scrim" id="faq-scrim" hidden></div>
+<div class="faq" id="faq" role="dialog" aria-modal="true" aria-labelledby="faq-title" hidden>
+ <div class="faq-head"><h2 id="faq-title">الأسئلة الشائعة</h2><button class="btn btn-secondary btn-icon x" id="faq-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+ <div class="faq-body"><details class="qa" open><summary><span>هل يحتاج الإستريمرز أو المتابعون إلى تحميل تطبيق للمشاركة في الألعاب</span><i aria-hidden="true"></i></summary><p>لا لا يحتاج أي شخص لتحميل أي تطبيق يفتح الإستريمرز اللعبة مباشرة عبر الموقع بينما يشارك المتابعون باللعب فوراً من خلال كتابة الأوامر في شات البث أو عبر مسح رمز الـ QR بالهاتف في بعض الألعاب المخصصة </p></details><details class="qa"><summary><span>هل المنصة مجانية أم تتطلب اشتراكاً مدفوعاً</span><i aria-hidden="true"></i></summary><p>المنصة مجانية بالكامل جميع الألعاب متاحة للإستريمرز والمتابعين بدون أي اشتراكات أو رسوم إلزامية نوفر فقط إطارات وتأثيرات جمالية كمالية لتمييز اللاعبين في البث بأسعار رمزية واختيارية تماماً دون أن تؤثر على تجربة اللعب الأساسية </p></details><details class="qa"><summary><span>كيف تبدأ الألعاب وهل يحتاج الإستريمرز لربط حسابه بالمنصة لكل لعبة</span><i aria-hidden="true"></i></summary><p>الربط بسيط وسريع جداً يقوم الإستريمرز بربط حسابه بالمنصة لمرة واحدة فقط عند التسجيل وبعد ذلك كل ما عليه فعله عند بدء اللعب هو إدخال اسم المستخدم اسم حساب البث للاتصال بالبث المباشر وسيتم تشغيل جميع الألعاب فوراً بنفس الاتصال دون الحاجة لإعادة الربط في كل لعبة </p></details><details class="qa"><summary><span>هل تعمل الألعاب على جميع منصات البث تيك توك يوتيوب ديسكورد</span><i aria-hidden="true"></i></summary><p>الألعاب تعمل حالياً وبشكل كامل على بثوث تيك توك TikTok Live ونعمل على إضافة باقي المنصات تويتش يوتيوب ديسكورد قريباً جداً لتكون متاحة للجميع </p></details><details class="qa"><summary><span>كيف أشتري الإطارات المميزة وهل تبقى في حسابي للأبد</span><i aria-hidden="true"></i></summary><p>تستطيع شراء الإطارات من المتجر بأسعار رمزية عبر طرق الدفع المتاحة وتظل مضافة لحسابك لتمييز اسمك وصورتك في شاشة البث أثناء اللعب </p></details><details class="qa"><summary><span>هل أستطيع اقتراح لعبة جديدة أو الإبلاغ عن مشكلة</span><i aria-hidden="true"></i></summary><p>نعم بالتأكيد نسعد دائماً بسماع أفكاركم واقتراحاتكم لتطوير المنصة يمكنك التواصل معنا مباشرة للإبلاغ عن أي مشكلة أو تقديم اقتراحاتك عبر حسابنا في تيك توك أو من خلال الواتساب </p></details>
+ <div class="faq-more"><b>ما لقيت جوابك</b><span>أرسل لنا اقتراحك أو سؤالك أو بلّغ عن مشكلة ونرد عليك في أقرب وقت </span><a class="btn btn-primary btn-sm" href="https://aymngames.online/suggest-ideas.html" target="_blank" rel="noopener">الاقتراحات والشكاوي</a></div>
+ </div>
+</div>
+<div class="au-scrim" id="au-scrim" hidden></div>
+<div class="au" id="au" role="dialog" aria-modal="true" aria-labelledby="au-title" hidden>
+  <div class="au-main">
+    <div class="au-top"><button class="btn btn-ghost btn-icon au-back" id="au-back" type="button" aria-label="رجوع" hidden><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg></button><ol class="au-steps" aria-hidden="true"><li></li><li></li><li></li></ol><button class="btn btn-secondary btn-icon" id="au-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+    <div class="fox" id="fox" aria-hidden="true">
+  <svg viewBox="0 0 220 150">
+    <defs>
+      <radialGradient id="ct-fur" cx="50%" cy="28%" r="75%"><stop offset="0" stop-color="#c9c3cf"/><stop offset=".55" stop-color="#9a93a3"/><stop offset="1" stop-color="#6e6878"/></radialGradient>
+      <radialGradient id="ct-light" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#fbf9f7"/><stop offset="1" stop-color="#ddd6d8"/></radialGradient>
+      <linearGradient id="ct-ear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d7686"/><stop offset="1" stop-color="#a59eae"/></linearGradient>
+      <linearGradient id="ct-earin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d79aa4"/><stop offset="1" stop-color="#f4d2d0"/></linearGradient>
+      <radialGradient id="ct-iris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f3e27a"/><stop offset=".3" stop-color="#d7d860"/><stop offset=".62" stop-color="#8cbf55"/><stop offset=".9" stop-color="#4c7c3a"/><stop offset="1" stop-color="#2c4423"/></radialGradient>
+      <radialGradient id="ct-paw" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#f4f1ef"/><stop offset="1" stop-color="#c9c2c6"/></radialGradient>
+      <filter id="fx-soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".35"/></filter>
+    </defs>
+    <g class="fx-body" filter="url(#fx-soft)">
+      <path d="M50 150 C54 126 80 118 110 118 C140 118 166 126 170 150 Z" fill="url(#ct-fur)"/>
+      <path d="M84 150 C86 132 98 124 110 124 C122 124 134 132 136 150 Z" fill="url(#ct-light)"/>
+      <path class="fx-scarf" d="M62 126 C82 138 138 138 158 126 L162 138 C138 150 82 150 58 138 Z" fill="#7a3fd4"/>
+      <path d="M66 132 C88 142 132 142 154 132" stroke="#c9b0f5" stroke-width="2" fill="none" stroke-dasharray="4 4" opacity=".8"/>
+      <circle cx="110" cy="143" r="5" fill="#e8d8a6" stroke="#b89b4e" stroke-width="1.2"/>
+      <g class="fx-head">
+        <g class="fx-ear l"><path d="M60 72 C56 54 56 34 62 18 C64 14 68 14 71 17 C82 30 92 44 98 54 Z" fill="url(#ct-ear)"/><path d="M66 64 C64 50 64 36 67 26 C76 36 84 46 90 54 Z" fill="url(#ct-earin)"/><path d="M68 40 l7 6 M66 50 l8 4 M70 32 l5 6" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".7"/></g>
+        <g class="fx-ear r"><path d="M160 72 C164 54 164 34 158 18 C156 14 152 14 149 17 C138 30 128 44 122 54 Z" fill="url(#ct-ear)"/><path d="M154 64 C156 50 156 36 153 26 C144 36 136 46 130 54 Z" fill="url(#ct-earin)"/><path d="M152 40 l-7 6 M154 50 l-8 4 M150 32 l-5 6" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".7"/></g>
+        <path d="M110 40 C146 40 168 60 170 86 C171 100 166 110 158 118 C148 128 132 132 110 132 C88 132 72 128 62 118 C54 110 49 100 50 86 C52 60 74 40 110 40 Z" fill="url(#ct-fur)"/>
+        <g fill="none" stroke="#5c5666" stroke-linecap="round" opacity=".7">
+          <path d="M98 46 C100 54 100 60 98 66" stroke-width="3"/><path d="M110 44 V64" stroke-width="3.2"/><path d="M122 46 C120 54 120 60 122 66" stroke-width="3"/>
+          <path d="M54 86 C60 84 64 86 68 90 M52 96 C58 94 64 96 68 98" stroke-width="2.6"/><path d="M166 86 C160 84 156 86 152 90 M168 96 C162 94 156 96 152 98" stroke-width="2.6"/>
+        </g>
+        <path d="M58 108 l-12 2 l12 4 l-8 6 l14 -3 M162 108 l12 2 l-12 4 l8 6 l-14 -3" fill="#b6afbd"/>
+        <path d="M110 76 C126 76 142 86 146 102 C144 120 128 130 110 130 C92 130 76 120 74 102 C78 86 94 76 110 76 Z" fill="url(#ct-light)"/>
+        <g class="fx-cheek"><ellipse cx="74" cy="104" rx="9" ry="5" fill="#f0a7b2" opacity=".35"/><ellipse cx="146" cy="104" rx="9" ry="5" fill="#f0a7b2" opacity=".35"/></g>
+        <g class="fx-eyes">
+          <g class="fx-eye l">
+            <path d="M71 86 C76 72 96 72 101 86 C96 99 76 99 71 86 Z" fill="#f4f1ea"/>
+            <clipPath id="ce-l"><path d="M71 86 C76 72 96 72 101 86 C96 99 76 99 71 86 Z"/></clipPath>
+            <g clip-path="url(#ce-l)">
+              <g class="fx-pup">
+                <circle cx="86" cy="86" r="11.5" fill="url(#ct-iris)"/>
+                <g stroke="#3e6a2a" stroke-width=".7" opacity=".45"><path d="M89.2 86.0 L96.0 86.0"/><path d="M89.1 86.8 L95.7 88.6"/><path d="M88.8 87.6 L94.7 91.0"/><path d="M88.3 88.3 L93.1 93.1"/><path d="M87.6 88.8 L91.0 94.7"/><path d="M86.8 89.1 L88.6 95.7"/><path d="M86.0 89.2 L86.0 96.0"/><path d="M85.2 89.1 L83.4 95.7"/><path d="M84.4 88.8 L81.0 94.7"/><path d="M83.7 88.3 L78.9 93.1"/><path d="M83.2 87.6 L77.3 91.0"/><path d="M82.9 86.8 L76.3 88.6"/><path d="M82.8 86.0 L76.0 86.0"/><path d="M82.9 85.2 L76.3 83.4"/><path d="M83.2 84.4 L77.3 81.0"/><path d="M83.7 83.7 L78.9 78.9"/><path d="M84.4 83.2 L81.0 77.3"/><path d="M85.2 82.9 L83.4 76.3"/><path d="M86.0 82.8 L86.0 76.0"/><path d="M86.8 82.9 L88.6 76.3"/><path d="M87.6 83.2 L91.0 77.3"/><path d="M88.3 83.7 L93.1 78.9"/><path d="M88.8 84.4 L94.7 81.0"/><path d="M89.1 85.2 L95.7 83.4"/></g>
+                <circle cx="86" cy="86" r="11.5" fill="none" stroke="#25381c" stroke-width="1.8"/>
+                <ellipse class="ct-slit" cx="86" cy="86" rx="2.4" ry="8.8" fill="#0b0a0d"/>
+                <ellipse cx="90.5" cy="80.5" rx="3.2" ry="2.4" fill="#fff" opacity=".95"/>
+                <circle cx="82" cy="91" r="1.3" fill="#fff" opacity=".75"/>
+              </g>
+              <path d="M70 74 H102 V82 C94 78 78 78 70 82 Z" fill="#1d1a22" opacity=".28"/>
+            </g>
+            <path d="M71 86 C76 72 96 72 101 86" stroke="#1b1820" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M101 86 l4 -3" stroke="#1b1820" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M71 86 C76 99 96 99 101 86" stroke="#4a4552" stroke-width="1.2" fill="none" opacity=".7"/>
+            <rect class="fx-lid" x="70" y="71" width="32" height="29" rx="14" fill="#8f8898"/></g>
+          <g class="fx-eye r">
+            <path d="M119 86 C124 72 144 72 149 86 C144 99 124 99 119 86 Z" fill="#f4f1ea"/>
+            <clipPath id="ce-r"><path d="M119 86 C124 72 144 72 149 86 C144 99 124 99 119 86 Z"/></clipPath>
+            <g clip-path="url(#ce-r)">
+              <g class="fx-pup">
+                <circle cx="134" cy="86" r="11.5" fill="url(#ct-iris)"/>
+                <g stroke="#3e6a2a" stroke-width=".7" opacity=".45"><path d="M137.2 86.0 L144.0 86.0"/><path d="M137.1 86.8 L143.7 88.6"/><path d="M136.8 87.6 L142.7 91.0"/><path d="M136.3 88.3 L141.1 93.1"/><path d="M135.6 88.8 L139.0 94.7"/><path d="M134.8 89.1 L136.6 95.7"/><path d="M134.0 89.2 L134.0 96.0"/><path d="M133.2 89.1 L131.4 95.7"/><path d="M132.4 88.8 L129.0 94.7"/><path d="M131.7 88.3 L126.9 93.1"/><path d="M131.2 87.6 L125.3 91.0"/><path d="M130.9 86.8 L124.3 88.6"/><path d="M130.8 86.0 L124.0 86.0"/><path d="M130.9 85.2 L124.3 83.4"/><path d="M131.2 84.4 L125.3 81.0"/><path d="M131.7 83.7 L126.9 78.9"/><path d="M132.4 83.2 L129.0 77.3"/><path d="M133.2 82.9 L131.4 76.3"/><path d="M134.0 82.8 L134.0 76.0"/><path d="M134.8 82.9 L136.6 76.3"/><path d="M135.6 83.2 L139.0 77.3"/><path d="M136.3 83.7 L141.1 78.9"/><path d="M136.8 84.4 L142.7 81.0"/><path d="M137.1 85.2 L143.7 83.4"/></g>
+                <circle cx="134" cy="86" r="11.5" fill="none" stroke="#25381c" stroke-width="1.8"/>
+                <ellipse class="ct-slit" cx="134" cy="86" rx="2.4" ry="8.8" fill="#0b0a0d"/>
+                <ellipse cx="138.5" cy="80.5" rx="3.2" ry="2.4" fill="#fff" opacity=".95"/>
+                <circle cx="130" cy="91" r="1.3" fill="#fff" opacity=".75"/>
+              </g>
+              <path d="M118 74 H150 V82 C142 78 126 78 118 82 Z" fill="#1d1a22" opacity=".28"/>
+            </g>
+            <path d="M119 86 C124 72 144 72 149 86" stroke="#1b1820" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M149 86 l4 -3" stroke="#1b1820" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M119 86 C124 99 144 99 149 86" stroke="#4a4552" stroke-width="1.2" fill="none" opacity=".7"/>
+            <rect class="fx-lid" x="118" y="71" width="32" height="29" rx="14" fill="#8f8898"/></g>
+          <path class="fx-happy-eyes" d="M74 89 Q86 77 98 89 M122 89 Q134 77 146 89" stroke="#1d1a22" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+          <path class="fx-brow" d="M74 74 L96 68 M146 74 L124 68" stroke="#4d4756" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <path d="M104 100 H116 L110 107 Z" fill="#e48a9a" stroke="#b5606f" stroke-width="1" stroke-linejoin="round"/>
+        <path d="M110 107 V111" stroke="#4a3f4c" stroke-width="1.8" stroke-linecap="round"/>
+        <g fill="#8d8592" opacity=".7"><circle cx="94" cy="109" r="1.1"/><circle cx="91" cy="105" r="1.1"/><circle cx="97" cy="104" r="1.1"/><circle cx="126" cy="109" r="1.1"/><circle cx="129" cy="105" r="1.1"/><circle cx="123" cy="104" r="1.1"/></g>
+        <g class="ct-wh" stroke="#f6f4f2" stroke-width="1.2" stroke-linecap="round" opacity=".9" fill="none">
+          <path d="M92 106 C78 102 64 100 44 100"/><path d="M92 109 C76 108 62 110 44 114"/><path d="M93 112 C80 114 68 118 54 124"/>
+          <path d="M128 106 C142 102 156 100 176 100"/><path d="M128 109 C144 108 158 110 176 114"/><path d="M127 112 C140 114 152 118 166 124"/>
+        </g>
+        <path class="fx-m n" d="M102 112 Q106 116.5 110 112 Q114 116.5 118 112" stroke="#4a3f4c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <g class="fx-m h"><path d="M100 111 Q110 127 120 111 Z" fill="#7a2a40" stroke="#4a3f4c" stroke-width="2" stroke-linejoin="round"/><path d="M104 119 Q110 124 116 119 Q110 116 104 119 Z" fill="#f08ea2"/></g>
+        <path class="fx-m s" d="M102 119 Q110 111 118 119" stroke="#4a3f4c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path class="fx-tear" d="M146 96 Q151 104 146 109 Q141 104 146 96 Z" fill="#9fdcff" stroke="#e8f7ff" stroke-width=".8"/>
+      </g>
+      <g class="fx-paw l"><ellipse cx="62" cy="150" rx="20" ry="15" fill="url(#ct-paw)"/><path d="M54 140 v7 M62 138 v8 M70 140 v7" stroke="#b7b0b6" stroke-width="1.6" stroke-linecap="round"/><g fill="#efb3b8"><ellipse cx="62" cy="152" rx="6.5" ry="4.5"/></g></g>
+      <g class="fx-paw r"><ellipse cx="158" cy="150" rx="20" ry="15" fill="url(#ct-paw)"/><path d="M150 140 v7 M158 138 v8 M166 140 v7" stroke="#b7b0b6" stroke-width="1.6" stroke-linecap="round"/><g fill="#efb3b8"><ellipse cx="158" cy="152" rx="6.5" ry="4.5"/></g></g>
+    </g>
+  </svg>
+</div>
+
+    <section class="au-step" data-step="start">
+      <h2 id="au-title">أهلًا فيك</h2>
+      <p class="au-sub">ادخل بإيميلك أو اسم المستخدم حقك</p>
+      <form id="au-email-form" novalidate>
+        <label class="au-field"><span>الإيميل أو اسم المستخدم</span><span class="au-in"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,56l-96,88L32,56Z" opacity="0.2"/><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"/></svg><input id="au-email" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@mail.com" dir="ltr"></span></label>
+        <p class="au-msg" id="au-email-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">متابعة<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+      <div class="au-or"><span>أو تابع بحساب</span></div>
+      <div class="au-social">
+      <button class="btn btn-lg au-tt" type="button" id="au-tiktok"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 3c.4 2.3 1.8 3.8 4 4v3.1c-1.5.1-2.8-.4-4-1.2v6.3c0 3.6-3.4 6.3-7 5.3-3.6-.9-4.9-5.4-2.4-8.1 1.3-1.4 3.2-2 5.1-1.7v3.3c-.9-.3-2 0-2.6.8-1 1.4.1 3.4 1.8 3.4 1.2 0 2.2-1 2.2-2.2V3z"/></svg><span>تيك توك</span></button>
+      <button class="btn btn-lg au-gg" type="button" id="au-google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 01-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0012 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 010-4.6V6.6H1.3a12 12 0 000 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 001.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg><span>قوقل</span></button></div>
+      <p class="au-hint">نفس حسابك في موقع ألعاب أيمن</p>
+      <div class="au-new"><span>ما عندك حساب</span><button class="btn btn-secondary" type="button" id="au-create">إنشاء حساب</button></div></section>
+
+    <section class="au-step" data-step="login" hidden>
+      <h2>كلمة المرور</h2>
+      <div class="au-who"><span class="au-av" id="au-av">ف</span><span><b id="au-who-name">فهد</b><small id="au-who-mail" dir="ltr"></small></span><button class="btn btn-ghost btn-sm" type="button" data-to="start">تغيير</button></div>
+      <form id="au-login-form" novalidate>
+        <label class="au-field"><span>كلمة المرور</span><span class="au-pw"><input id="au-pass" type="password" autocomplete="current-password" placeholder="••••••••" dir="ltr"><button type="button" class="au-eye" aria-label="إظهار كلمة المرور"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg></button></span></label>
+        <div class="au-row"><label class="au-check"><input type="checkbox" id="au-remember" checked><span>تذكّرني</span></label><button class="au-link" type="button" id="au-forgot">نسيت كلمة المرور</button></div>
+        <p class="au-msg" id="au-login-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">دخول<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+    </section>
+
+    <section class="au-step" data-step="signup" hidden>
+      <h2>حساب جديد</h2>
+      <p class="au-sub" id="au-new-sub">عبّ بياناتك وابدأ</p>
+      <form id="au-signup-form" novalidate>
+        <div class="au-two">
+          <label class="au-field"><span>الاسم الظاهر</span><input id="au-dname" autocomplete="nickname" placeholder="فهد العتيبي"></label>
+          <label class="au-field"><span>اسم المستخدم</span><input id="au-user" autocomplete="username" placeholder="fahad" dir="ltr"></label>
+        </div>
+        <label class="au-field"><span>البريد الإلكتروني</span><input id="au-nmail" type="email" inputmode="email" autocomplete="email" placeholder="name@mail.com" dir="ltr"></label>
+        <label class="au-field"><span>كلمة المرور</span><span class="au-pw"><input id="au-npass" type="password" autocomplete="new-password" placeholder="8 خانات على الأقل" dir="ltr" aria-describedby="au-meter-t"><button type="button" class="au-eye" aria-label="إظهار كلمة المرور"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg></button></span>
+          <span class="au-meter"><i id="au-meter"></i></span><small class="au-meter-t" id="au-meter-t">8 خانات على الأقل</small></label>
+        <fieldset class="au-type"><legend>نوع الحساب</legend>
+          <label><input type="radio" name="au-type" value="player" checked><span><b>لاعب</b><small>للعب والتفاعل في الألعاب</small></span></label>
+          <label><input type="radio" name="au-type" value="streamer"><span><b>استريمر</b><small>لبث الألعاب والتفاعل مع الجمهور</small></span></label>
+        </fieldset>
+        <p class="au-note" id="au-type-note" hidden>الاستريمر طلب أولي والحساب يبقى لاعب لين يوافق الأدمن</p>
+        <label class="au-terms"><input type="checkbox" id="au-terms"><span>أوافق على <a href="https://aymngames.online/terms.html" target="_blank" rel="noopener">شروط الاستخدام</a> و<a href="https://aymngames.online/privacy-policy.html" target="_blank" rel="noopener">سياسة الخصوصية</a> و<a href="#" data-doc="rules">قواعد المجتمع</a></span></label>
+        <p class="au-msg" id="au-signup-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">إنشاء حساب<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+    </section>
+
+    <section class="au-step" data-step="code" hidden>
+      <h2>تأكيد البريد</h2>
+      <p class="au-sub">أرسلنا رمز من 6 أرقام إلى <b dir="ltr" id="au-code-mail"></b></p>
+      <form id="au-code-form" novalidate>
+        <div class="au-code" role="group" aria-label="رمز التأكيد"><input inputmode="numeric" maxlength="1" aria-label="الرقم 1"><input inputmode="numeric" maxlength="1" aria-label="الرقم 2"><input inputmode="numeric" maxlength="1" aria-label="الرقم 3"><input inputmode="numeric" maxlength="1" aria-label="الرقم 4"><input inputmode="numeric" maxlength="1" aria-label="الرقم 5"><input inputmode="numeric" maxlength="1" aria-label="الرقم 6"></div>
+        <p class="au-msg" id="au-code-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">إنشاء الحساب<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+        <button class="au-link au-resend" type="button" id="au-resend" disabled>إعادة الإرسال بعد <span class="num" id="au-cd">30</span> ثانية</button>
+      </form>
+    </section>
+
+    <section class="au-step au-done" data-step="done" hidden>
+      <span class="au-ok" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none" stroke-width="3"/><path d="M15 27l7 7 15-16" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2 id="au-done-t">أهلًا فيك</h2>
+      <p class="au-sub" id="au-done-s">تم تسجيل الدخول</p>
+      <button class="btn btn-primary btn-lg" type="button" id="au-finish">ابدأ اللعب</button>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="cursor-glow" id="cglow" aria-hidden="true"></div>
+
+
+
+<script src="js/agp-apple-emoji.js"></script>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-join-room.js"></script>
+<script src="js/agp-site.js"></script>
 <script src="js/agp-challenge-inbox.js"></script>
-<script>
-(function () {
-    'use strict';
-    var A = window.AGPAuth;
-    var POLL_MS = 5000;
-
-    // ألعاب البثين — كل لعبة: صفحة إعداداتها (الدعوة والتجهيز) وشاشة مباراتها.
-    var GAMES = [
-        { id: 'penalty', name: 'بلنتي', icon: '⚽', hue: '#22c55e', cat: 'تحديات', isNew: true, page: 'games/penalty/index.html', match: 'games/penalty/game.html',
-          desc: 'كل جمهور يسدد على مرماه بكتابة رقم الزاوية بشات بثه، والحارس يرتمي لزاوية عشوائية. 3 جولات والفائز بجولتين.',
-          facts: ['3 جولات', '25 لاعب لكل فريق', 'الجولة 3–5 دقائق'] },
-        { id: 'fastest-answer', name: 'أسرع إجابة', icon: '⚡', hue: '#3b82f6', cat: 'أسئلة وكلمات', page: 'games/fastest-answer/versus.html', match: 'games/fastest-answer/challenge.html',
-          desc: 'كل جولة لاعب من كل بث وسؤال سريع، وأول إجابة صحيحة تكسب فريقها نقطتين. أول فريق يوصل نقاط الفوز يكسب.',
-          facts: ['كل ستريمر يختار فئاته', '25 لاعب لكل فريق', 'نقاط الفوز تحددها'] },
-        { id: 'xo', name: 'إكس أو', icon: '❌', cat: 'تحديات', soon: true },
-        { id: 'team-war', name: 'حرب الفريقين', icon: '⚔️', cat: 'تحديات', soon: true }
-    ];
-
-    function $(id) { return document.getElementById(id); }
-    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-    function gameById(id) { return GAMES.filter(function (g) { return g.id === id; })[0]; }
-    function section(num, title, body, opts) {
-        opts = opts || {};
-        return '<section class="sec full' + (opts.hot ? ' hot' : '') + '"><div class="sec-h"><span class="num">' + num + '</span><span class="sec-t">' + title + '</span></div>' + body + '</section>';
-    }
-    function row(label, control) {
-        return '<div class="row"><div class="lbl"><span>' + label + '</span></div>' + control + '</div>';
-    }
-
-    function renderGames() {
-        $('games').innerHTML = GAMES.map(function (g, i) {
-            var head = '<span class="bgic">' + g.icon + '</span><div class="top"><span class="ic">' + g.icon + '</span><div><h3>' + esc(g.name) + '</h3><div class="tags"><span class="t">' + esc(g.cat) + '</span>' + (g.isNew ? '<span class="t new">جديد</span>' : '') + '</div></div></div>';
-            if (g.soon) return '<div class="vc soon" style="animation-delay:' + (i * 0.06) + 's">' + head + '<p>قريباً بين البثين.</p><span class="go">قريباً</span></div>';
-            return '<a class="vc" href="' + g.page + '" style="--h:' + g.hue + ';animation-delay:' + (i * 0.06) + 's">' + head + '<p>' + esc(g.desc) + '</p>' +
-                '<ul>' + g.facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul><span class="go">العب الآن ‹</span></a>';
-        }).join('');
-    }
-
-    /* ---- فوق البطاقات: منع الدخول / مباراة جارية / دعوة شغّالة ---- */
-    var gate = null, lastTop = null;
-    function renderTop(r) {
-        var html = '';
-        if (gate) html += section('!', 'تنبيه', row(gate.text, '<a class="btn" href="' + gate.href + '">' + gate.btn + '</a>'), { hot: true });
-        if (r && r.activeMatch) {
-            var g = gameById(r.activeMatch.game);
-            html += section('●', 'مباراة جارية', row('عندك مباراة ' + esc(g ? g.name : '') + ' شغّالة الحين', '<a class="btn ok" href="' + (g ? g.match : 'games.html') + '?match=' + encodeURIComponent(r.activeMatch.id) + '">ادخل المباراة</a>'), { hot: true });
-        } else if (r) {
-            var open = function (inv) { return inv && (inv.status === 'pending' || inv.status === 'setup' || inv.status === 'ready'); };
-            var o = open(r.outgoing) ? r.outgoing : open(r.joined) && r.joined.status !== 'pending' ? r.joined : null;
-            if (o) {
-                var og = gameById(o.game), mine = o === r.outgoing;
-                var text = mine ? (o.status === 'ready' ? o.other.name + ' جاهز ✓ — ادخل اللوبي' : o.status === 'setup' ? o.other.name + ' قبل ويجهّز فريقه' : 'بانتظار رد ' + o.other.name)
-                    : (o.status === 'ready' ? 'أنت جاهز — بانتظار ' + o.other.name + ' يدخل اللوبي' : 'قبلت تحدي ' + o.other.name + ' — جهّز فريقك');
-                html += section('↗', 'تحدي ' + esc(og ? og.name : ''), row(esc(text), '<a class="btn" href="' + (og ? og.page : '#') + '">افتح</a>'));
-            }
-        }
-        if (html !== lastTop) { lastTop = html; $('top-grid').innerHTML = html; }
-    }
-
-    var polling = false;
-    function poll() {
-        if (polling || gate) return;
-        polling = true;
-        A.challengeInbox().then(function (r) {
-            polling = false;
-            if (!r || !r.success) { if (r && r.__httpStatus === 401) setGate('login'); return; }
-            if (!r.eligible) { setGate('link'); return; }
-            renderTop(r);
-        }).catch(function () { polling = false; });
-    }
-
-    function setGate(kind) {
-        gate = kind === 'login'
-            ? { text: 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تلعب ضد ستريمر.', href: 'login.html', btn: 'تسجيل الدخول' }
-            : { text: 'اللعب ضد ستريمر لحسابات الستريمر المربوطة بتيك توك. اربط حسابك من صفحة حسابي.', href: 'profile.html', btn: 'ربط حساب تيك توك' };
-        $('me-chip').classList.add('warn');
-        $('me-text').textContent = kind === 'login' ? 'غير مسجّل دخول' : 'الحساب غير مربوط بتيك توك';
-        renderTop(null);
-    }
-
-    /* ---- الخلفية ---- */
-    (function fx() {
-        var r = function (a, b) { return a + Math.random() * (b - a); }, html = '';
-        html += '<div class="g" style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)"></div>';
-        html += '<div class="g" style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle, rgba(139,92,246,.12), transparent 65%)"></div>';
-        html += '<div class="g" style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)"></div>';
-        for (var i = 0; i < 90; i++) html += '<span class="s" style="left:' + r(0, 100) + '%;top:' + r(0, 100) + '%;width:' + (i % 9 ? 1.5 : 3) + 'px;height:' + (i % 9 ? 1.5 : 3) + 'px;background:rgba(255,255,255,' + r(.12, .35).toFixed(2) + ')"></span>';
-        $('fx').innerHTML = html;
-    })();
-
-    renderGames();
-    if (!A || !A.getToken || !A.getToken()) { setGate('login'); return; }
-    if (window.AGPChallengeInbox) window.AGPChallengeInbox.mount($('hdr-end'), { root: '' });
-    poll();
-    setInterval(function () { if (!document.hidden) poll(); }, POLL_MS);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
-})();
-</script>
+<script src="js/agp-challenge-page.js"></script>
 </body>
 </html>
