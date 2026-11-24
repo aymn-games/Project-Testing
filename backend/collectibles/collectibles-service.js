@@ -433,7 +433,8 @@ var ELIM_CARD_CATALOG = [
   { key: 'azooz', displayNameAr: 'بطاقة الإقصاء — عزوز (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-azooz.png', limited: true },
   { key: 'blue-kitty', displayNameAr: 'بطاقة الإقصاء — القطة الزرقاء (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-blue-kitty.png', limited: true },
   { key: 'black-pegasus', displayNameAr: 'بطاقة الإقصاء — الفرس المجنّح الأسود (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-black-pegasus.png', limited: true },
-  { key: 'gold-bat', displayNameAr: 'بطاقة الإقصاء — الخفاش الذهبي (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-gold-bat.png', limited: true }
+  { key: 'gold-bat', displayNameAr: 'بطاقة الإقصاء — الخفاش الذهبي (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-gold-bat.png', limited: true },
+  { key: 'winged-crown', displayNameAr: 'بطاقة الإقصاء — التاج المجنّح (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-winged-crown.png', limited: true }
 ];
 
 function getElimCardCatalog() {

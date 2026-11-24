@@ -155,6 +155,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             fontScale: 0.85,
             avatarBg: '#111216',
             sound: 'elim-card-gold-bat.mp3'
+        },
+        // التاج المجنّح — منح محدود. الأصل JPG 1008×516 بخلفية سوداء: فُرّغت
+        // الخلفية والدائرتين لشفافية حقيقية، وكُبّرت بنفس النسبة على 1642×958.
+        // "عملية اقصاء" مطبوعة باللوح الأوسط، فالبطاقة بدون textBox (الصورتين
+        // فقط). الصوت مقطع صاحب المشروع كامل (ثانية وحدة) بمستوى -16 LUFS:
+        // يشتغل مرة وحدة لما تظهر البطاقة، وباقي وقتها صامت.
+        'winged-crown': {
+            image: 'elim-card-winged-crown.png',
+            width: 1642,
+            height: 958,
+            actorHole: { x: 1125, y: 298, w: 340, h: 352 },  // right circle
+            targetHole: { x: 192, y: 296, w: 362, h: 359 },  // left circle
+            holeBleed: 8,
+            avatarBg: '#f3e6c8',
+            sound: 'elim-card-winged-crown.mp3'
         }
     };
 
