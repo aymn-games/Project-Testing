@@ -2346,10 +2346,36 @@
         box.classList.add('full');
     }
 
+    /*
+     * ترتيب عناصر أليرت الفيديو على الشاشة نفسها (المحرر): الأليرت المختار يطلع بحجمه الحقيقي والفيديو
+     * شغّال بتكرار (بدون صوت) وفوقه الصورة والاسم والرسالة (data-part)، والمحرر (veyro/studio.js) يسحبهم.
+     */
+    var alertEditId = null;
+    function alertEdit(id) {
+        id = id || null;
+        if (id === alertEditId) return;
+        alertEditId = id;
+        alertNodes = alertNodes.filter(function (a) { return a.node.isConnected; });
+        alertNodes.forEach(function (a) {
+            var q = a.node._item && alertQ[a.node._item.id];
+            if (a.preview && !(q && q.busy)) idleAlert(a.node);
+        });
+    }
+
     function idleAlert(n) {
         var stage = n.querySelector('.agp-so-astage');
         if (!stage) return;
         stage.textContent = '';
+        if (isVideoAlert(n._item) && n._preview && alertEditId === n._item.id && partsOf(n._item)) {
+            var vbx = videoBox(n._item, null, true), eb = vbx.root;
+            eb.classList.add('editing');
+            fitFull(eb, n, n._item);
+            var ev2 = vbx.video;
+            if (ev2) { ev2.muted = true; ev2.loop = true; ev2.play().catch(function () {}); }
+            stage.appendChild(eb);
+            if (n._pos) place(n, n._pos, n._F);
+            return;
+        }
         if (isVideoAlert(n._item)) {
             // بالمحرر: إطار فاضي بحجم الأليرت بس (يشوف مكانه ويسحبه) — بدون فيديو ولا اسم ولا رسالة،
             // فأول ما يخلص الأليرت ما يبقى منه شي، وما يشغّل فيديو وتفريغ بالخلفية (أخف)
@@ -3141,6 +3167,7 @@
                 // غلاف (الحركة والتوهّج) ← إطار بشكل الصورة (بلون الإطار) ← الصورة نفسها بنفس الشكل
                 var shp = avatarShape(parts.avatar.sh), frm = avatarFrame(parts.avatar.fr);
                 var pa = el('div', 'agp-so-vpart agp-so-vav fr-' + frm);
+                pa.setAttribute('data-part', 'avatar');
                 pa.style.cssText = 'left:' + parts.avatar.x + '%;top:' + parts.avatar.y + '%;width:' + parts.avatar.s + 'em;height:' + parts.avatar.s + 'em;color:' + (parts.avatar.c || '#fff');
                 var vf = el('div', 'vav-f'), vi = el('div', 'vav-i');
                 [vf, vi].forEach(function (q) { if (shp.cp) q.style.clipPath = q.style.webkitClipPath = shp.cp; else q.style.borderRadius = shp.br; });
@@ -3167,6 +3194,7 @@
             }
             if (parts.name.on) {
                 var pn = el('div', 'agp-so-vpart agp-so-vname');
+                pn.setAttribute('data-part', 'name');
                 pn.style.cssText = 'left:' + parts.name.x + '%;top:' + parts.name.y + '%;font-size:' + parts.name.s + 'em;color:' + (parts.name.c || '#fff');
                 var lwn = loopEl(parts.name);
                 partText(lwn, ev.user || '', parts.name);
@@ -3179,6 +3207,7 @@
             if (parts.msg.on) {
                 var tpl = (it.msg && it.msg[ev.type]) || PART_MSGS[ev.type] || PART_MSGS.gift;
                 var pm = el('div', 'agp-so-vpart agp-so-vmsg');
+                pm.setAttribute('data-part', 'msg');
                 pm.style.cssText = 'left:' + parts.msg.x + '%;top:' + parts.msg.y + '%;font-size:' + parts.msg.s + 'em;color:' + (parts.msg.c || '#ffd54a');
                 var lwm = loopEl(parts.msg);
                 partText(lwm, fillMsg(tpl, ev), parts.msg);
@@ -5121,7 +5150,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, FX_MOTIONS: FX_MOTIONS, FX_DEFAULT_COLORS: FX_DEFAULT_COLORS, avatarFrame: avatarFrame, avatarFx: avatarFx, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, partsSample: partsSample, fillMsg: fillMsg, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, alertEdit: alertEdit, partsSample: partsSample, fillMsg: fillMsg, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */

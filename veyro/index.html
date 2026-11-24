@@ -981,6 +981,11 @@
   .vy-connect .uin, .ob-url { border-radius: var(--vf-sm); }
   .vs-tabs { margin: 12px 14px 0; }
 
+  /* أليرت الفيديو المختار: الصورة والاسم والرسالة تنسحب على الشاشة نفسها (O.alertEdit) */
+  .ob-frame .agp-so-vbox.editing .agp-so-vpart { pointer-events: auto; cursor: grab; outline: 2px dashed rgba(255,255,255,.7); outline-offset: .25em; border-radius: .3em; touch-action: none; }
+  .ob-frame .agp-so-vbox.editing .agp-so-vpart:hover { outline-color: #fff; }
+  .ob-frame .agp-so-vbox.editing .agp-so-vpart.ob-pdrag { cursor: grabbing; outline-style: solid; outline-color: var(--lav-l); }
+
   /* عناصر أليرت الفيديو: زر «ستايل» جنب كل عنصر يفتح شكله وحركاته تحت صفه */
   .va-sty-b { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 11px; border-radius: var(--vf-sm); border: 1px solid transparent; cursor: pointer; color: var(--lav-l); font: inherit; font-size: 12.5px; font-weight: 700;
     background: linear-gradient(180deg, rgba(169,155,184,.08), rgba(169,155,184,.02)) padding-box, var(--vb-edge) border-box; transition: background .2s, color .2s, box-shadow .25s; }
