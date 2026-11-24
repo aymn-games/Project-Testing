@@ -555,7 +555,8 @@ var WIN_CARD_CATALOG = [
   // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
   { key: 'sakura-pink', displayNameAr: 'بطاقة الفوز — ساكورا الوردي (منح محدود)', imageFilename: 'assets/win-cards/win-card-sakura-pink.png', limited: true },
   { key: 'blue-kitty', displayNameAr: 'بطاقة الفوز — القطة الزرقاء (منح محدود)', imageFilename: 'assets/win-cards/win-card-blue-kitty.png', limited: true },
-  { key: 'gold-bat', displayNameAr: 'بطاقة الفوز — الخفاش الذهبي (منح محدود)', imageFilename: 'assets/win-cards/win-card-gold-bat.png', limited: true }
+  { key: 'gold-bat', displayNameAr: 'بطاقة الفوز — الخفاش الذهبي (منح محدود)', imageFilename: 'assets/win-cards/win-card-gold-bat.png', limited: true },
+  { key: 'winged-crown', displayNameAr: 'بطاقة الفوز — التاج المجنّح (منح محدود)', imageFilename: 'assets/win-cards/win-card-winged-crown.png', limited: true }
 ];
 
 function getWinCardCatalog() {

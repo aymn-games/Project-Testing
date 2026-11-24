@@ -122,6 +122,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#fff3c4 0%,#f3c43a 50%,#b8863b 100%)',
             fallbackBg: '#111216',
             fallbackColor: '#f3c43a'
+        },
+        // التاج المجنّح — منح محدود. الأصل JPG 529×1024 بخلفية سوداء: فُرّغت
+        // الخلفية والدائرة لشفافية حقيقية، وكُبّرت بنفس النسبة لارتفاع 1536
+        // ووُسِّطت على 1024×1536. الدائرة 256→771 × 275→789، واللوح الكريمي
+        // الوحيد 205→831 × 922→1299: الاسم بأعلاه والنقاط/الترتيب تحته.
+        // لوح فاتح — نص بني ذهبي.
+        'winged-crown': {
+            image: 'win-card-winged-crown.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 256, y: 275, w: 515, h: 514 },
+            holeBleed: 8,
+            nameBox: { x: 245, y: 950, w: 536, h: 115 },
+            detailBox: { x: 245, y: 1080, w: 536, h: 190 },
+            textColor: 'linear-gradient(180deg,#b8801f 0%,#8a5a12 50%,#5c3a08 100%)',
+            detailColor: 'linear-gradient(180deg,#b8801f 0%,#8a5a12 50%,#5c3a08 100%)',
+            fallbackBg: '#f3e6c8',
+            fallbackColor: '#8a5a12'
         }
     };
 
