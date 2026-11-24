@@ -1489,6 +1489,9 @@ body.lock{overflow:hidden}
 .gl-lock-box .btn{width:100%}
 /* حالة رسالة الاتصال */
 .cn-msg.ok{color:#9be7b9}
+/* بعد الاتصال (أو أثناءه) تنطوي باقي المنصات ويبقى شعار المنصة المتصلة بس؛ ترجع مع «قطع الاتصال» */
+.cn[data-s="connected"] .pf[aria-checked="false"],.cn[data-s="connecting"] .pf[aria-checked="false"]{display:none}
+@media (max-width:640px){.cn[data-s="connected"] .cn-acc{flex-wrap:wrap}.cn[data-s="connected"] .cn-pf,.cn[data-s="connecting"] .cn-pf{width:auto}.cn[data-s="connected"] .pf,.cn[data-s="connecting"] .pf{flex:none;padding:0 13px 0 11px}}
 .cn-b.soon{border-style:dashed;color:var(--text-3);cursor:not-allowed}
 .cn-acc .cn-in{flex:1 1 180px;min-width:160px}
 /* شريط البثوث الشغّالة بخط الموقع */
