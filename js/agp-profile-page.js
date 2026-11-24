@@ -931,7 +931,7 @@
       var card = h('div', { class: 'pf-item' }, [
         h('div', { class: 'pf-item-art', style: '--art-h:76px;background:' + info.art + ';border-radius:12px' }),
         h('div', { class: 'pf-item-row' }, [h('div', { class: 'pf-item-name', text: info.name }), active ? pill(e.enabled === false ? 'موقوفة' : 'مفعّلة', e.enabled === false ? 'warn' : 'ok') : null]),
-        h('div', { class: 'pf-muted', style: 'font-size:12px;margin:2px 0 6px', text: info.desc }),
+        h('div', { class: 'pf-muted', style: 'font-size:calc(12px * var(--pf-fs, 1));margin:2px 0 6px', text: info.desc }),
         h('div', { class: 'pf-item-ctl' }, [
           active ? null : actionBtn('تفعيل', function () { return window.AGPAuth.equipEntrance(o.key); }),
           h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { entPreview(p, o.key, active ? e.entrance_text : o.defaultText, active ? e.color : o.colors[0]); } }, [icon('play'), 'معاينة'])
