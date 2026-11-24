@@ -16,13 +16,13 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
-<!-- التحكم عن بعد: المتحكم يشغّل اللعبة من جواله (control.html) أو بأوامر الشات -->
-<script src="../../js/agp-remote-control.js"></script>
 <script src="../../js/agp-stream-overlay.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-entrance.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
+<script src="../../js/agp-remote-control.js"></script>
 <script src="bw-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -87,20 +87,18 @@ input::placeholder{color:#6f6a7c}
             <sc-if value="{{ t.empty }}" hint-placeholder-val="{{ true }}">
               <div style="height:100%;min-height:140px;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic';text-align:center;padding:20px">بانتظار انضمام اللاعبين…</div>
             </sc-if>
-            <div style="display:grid;grid-template-columns:{{ t.cols }};align-items:center;gap:8px 12px">
+            <div style="display:grid;grid-template-columns:{{ t.cols }};grid-auto-rows:{{ t.rowH }};align-items:center;gap:{{ t.gap }}">
               <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="0">
-                <div style="container-type:inline-size;aspect-ratio:{{ p.ar }};position:relative;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+                <div style="min-width:0;height:100%;display:flex;align-items:center;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
                   <sc-if value="{{ p.framed }}" hint-placeholder-val="{{ false }}">
-                    <div style="display:flex;align-items:center;min-width:0">{{ p.frameEl }}</div>
+                    <div style="width:100%;min-width:0;display:flex;align-items:center">{{ p.frameEl }}</div>
                   </sc-if>
                   <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
-                    <div style="position:absolute;inset:0;display:flex;align-items:center">
-                      <div style="width:100%;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);">
-                  <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ t.avBg }};border:1.5px solid {{ t.color }};font:700 16px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+                <div style="width:100%;min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                  <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ t.avBg }};border:1.5px solid {{ t.color }};box-sizing:border-box;font:700 16px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
                   <span style="flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
                   <button onClick="{{ p.kick }}" aria-label="إقصاء {{ p.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:scale(1.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
                 </div>
-                    </div>
                   </sc-if>
                 </div>
               </sc-for>
@@ -153,38 +151,47 @@ const GAME = {
   name: 'حرب الصناديق',
   libraryUrl: BW.libraryUrl,
   requireLive: false,
-  gameUrl: 'game.html',
-  setupKey: 'bw-setup',
-  rosterKey: 'bw-roster'
+  gameUrl: 'game.html'
 };
 const SETTINGS = [];
-// إعدادات المباراة من شاشة الإعدادات (bw-setup)
-const SETUP = BW.readJSON(GAME.setupKey, null);
-if(!SETUP) location.replace('index.html');
+// إعدادات المباراة من شاشة الإعدادات (bw-setup) — بدونها نرجع للإعدادات
+const SETUP = BW.readJSON(BW.keys.setup, null);
+if(!SETUP||!SETUP.keyword1||!SETUP.keyword2) location.replace('index.html');
 // إطارات اللاعبين: من المنصة (الإطار المفعّل بحساب اللاعب) عبر BW.frameCard / AGP.playerCard.
-let TEAMS = [
-  { name:'الفريق الأزرق', keyword:'ازرق', color:'#38bdf8', max:30 },
-  { name:'الفريق الأحمر', keyword:'احمر', color:'#fb7185', max:30 }
+// الدخوليات: js/agp-entrance.js يشغّلها لحاله بصفحة اللوبي أول ما يكتب اللاعب كلمة فريقه.
+const MAX = Math.max(1,Math.min(200,+(SETUP&&SETUP.maxPlayers)||30));
+const TEAMS = [
+  { name:(SETUP&&SETUP.team1)||'الفريق الأزرق', keyword:(SETUP&&SETUP.keyword1)||'', color:'#38bdf8', max:MAX },
+  { name:(SETUP&&SETUP.team2)||'الفريق الأحمر', keyword:(SETUP&&SETUP.keyword2)||'', color:'#fb7185', max:MAX }
 ];
 
 class Component extends DCLogic {
-  state = { solo:false, kwSolo:'العب', maxSolo:20, lobbyTab:0, roster:[[],[]], values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  state = { lobbyTab:0, roster:[[],[]], values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   reg = BW.createRegistry();
-  componentDidMount(){ const c=SETUP; if(c){ const max=+c.maxPlayers||30;
-      TEAMS=TEAMS.map((t,i)=>({...t,name:(i?c.team2:c.team1)||t.name,keyword:(i?c.keyword2:c.keyword1)||t.keyword,max})); this.forceUpdate(); }
-    // التحكم عن بعد — بعد تطبيق أسماء وكلمات الفريقين من الإعدادات
-    const _rc=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(_rc) _rc.templateLobby(this,TEAMS,{game:'box-war'});
-    this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
-    BW.connect(); this.unsub=BW.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); }
-  // Called for every chat message. Writing a team's keyword joins that team; writing the other team's keyword moves the player.
-  // القواعد نفسها في BW.join (bw-platform.js) المشتركة مع نافذة الدخول داخل المباراة.
-  onChat(user,text,follower){ const S=this.state, followersOnly=SETUP?.who==='المتابعين فقط';
-    if(S.solo){ const r=BW.join([{name:'اللاعبون',keyword:S.kwSolo,max:S.maxSolo,members:S.roster[0]}],user,text,{followersOnly,isFollower:follower}); if(!r) return;
-      if(!r.ok){ if(r.toast) this.toastMsg('اكتمل العدد'); return; } this.setState(st=>({roster:[[...st.roster[0],user]]})); return; }
-    const r=BW.join(TEAMS.map((t,i)=>({...t,members:S.roster[i]||[]})),user,text,{followersOnly,isFollower:follower}); if(!r) return;
-    if(r.toast) this.toastMsg(r.toast); if(!r.ok) return;
-    this.setState(st=>({roster:st.roster.map((l,i)=>i===r.k?[...l,user]:l.filter(x=>x!==user))})); }
+  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+    // الشات من البث المتصل بمكتبة الألعاب: كتابة كلمة الدخول = انضمام
+    BW.connect(); this.unsub=BW.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
+    this.attachRemote(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); this.rc?.detach(); clearTimeout(this.tt); }
+  // التحكم عن بعد (js/agp-remote-control.js): بدء المباراة وطرد لاعب والرجوع للإعدادات — من جوال المتحكم أو بأوامر الشات
+  attachRemote(){ const RC=window.AymanGamesPlatform&&window.AymanGamesPlatform.remoteControl; if(!RC) return;
+    const list=()=>(this.state.roster[0]||[]).concat(this.state.roster[1]||[]);
+    const status=()=>TEAMS.map((t,i)=>t.name+': '+(this.state.roster[i]||[]).length+' من '+t.max+' · «'+t.keyword+'»').join(' — ');
+    this.rc=RC.attach({ game:'box-war', page:'اللوبي', connect:BW.connect,
+      status, commands:[
+      { names:['ابدأ','ابدا','بدء','العب'], desc:'يبدأ المباراة بلاعبين اللوبي', label:'ابدأ المباراة', tone:'primary', run:()=>{ if(this._rcGo) return null;
+        const err=RC.captureToast(this,()=>this.renderVals().start()); if(err) return {ok:false,msg:err}; this._rcGo=true; return 'بدأت المباراة بـ '+list().length+' لاعب'; } },
+      { names:['اللاعبين','العدد'], desc:'عدد اللاعبين باللوبي', phone:false, run:status },
+      { names:['طرد','اطرد','شيل'], args:'<اسم اللاعب>', desc:'يشيل لاعب من اللوبي', label:'طرد لاعب', tone:'danger', pick:()=>list().slice(), run:arg=>{ const q=RC.norm(arg); if(!q) return {ok:false,msg:'اكتب اسم اللاعب'};
+        const n=list().find(x=>RC.norm(x)===q)||list().find(x=>RC.norm(x).indexOf(q)===0)||list().find(x=>{ const id=this.reg.id(x); return id&&id.toLowerCase()==='tiktok:'+String(arg).trim().replace(/^@/,'').toLowerCase(); });
+        if(!n) return {ok:false,msg:'ما لقيت لاعب بهذا الاسم'}; this.setState(st=>({roster:st.roster.map(l=>l.filter(x=>x!==n))})); return 'تم طرد '+n; } },
+      { names:['رجوع','الاعدادات','الإعدادات'], desc:'يرجع لشاشة الإعدادات', label:'رجوع للإعدادات', run:()=>{ setTimeout(()=>{ location.href='index.html'; },700); return 'رجوع للإعدادات'; } }
+    ]}); }
+  // Called for every chat message. Writing the keyword joins (followers only when set); full lobby → toast.
+  onChat(user,text,follower){ const S=this.state;
+    const r=BW.join(TEAMS.map((t,i)=>({name:t.name,keyword:t.keyword,max:t.max,members:S.roster[i]||[]})),user,text,{followersOnly:SETUP&&SETUP.who==='المتابعين فقط',isFollower:follower});
+    if(!r) return; if(r.toast) this.toastMsg(r.toast); if(!r.ok) return;
+    this.setState(st=>({roster:st.roster.map((l,i)=>i===r.k?(l.includes(user)?l:[...l,user]):l.filter(x=>x!==user))})); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
@@ -220,11 +227,12 @@ class Component extends DCLogic {
 
   renderVals(){ const S=this.state, o=(i,out)=>S.exitOpenOut?out:i;
     return {
-      gameName:GAME.name, lobbyTeams:(S.solo?[{name:'اللاعبون',keyword:S.kwSolo,color:'#a78bfa',max:S.maxSolo}]:TEAMS).map((t,i)=>{ const pl=S.roster[i]||[], c=t.color, on=S.lobbyTab===i; return {name:t.name,keyword:t.keyword,color:c,max:t.max,count:pl.length,empty:!pl.length,
+      gameName:GAME.name, lobbyTeams:TEAMS.map((t,i)=>{ const pl=S.roster[i]||[], c=t.color, on=S.lobbyTab===i, anyFramed=pl.some(n=>this.reg.framed(n)); return {name:t.name,keyword:t.keyword,color:c,max:t.max,count:pl.length,empty:!pl.length,
+        cols:S.narrow?'repeat(1,minmax(0,1fr))':'repeat(2,minmax(0,1fr))', rowH:anyFramed?'78px':'54px', gap:anyFramed?'6px 10px':'10px',
         pick:()=>this.setState({lobbyTab:i}), tabBg:on?'rgba(255,255,255,.07)':'transparent', tabBd:on?c+'66':'transparent', tabFg:on?'#f4f2f8':'#8a8596', tabSh:on?'0 6px 20px rgba(0,0,0,.3)':'none',
-        cols:S.solo&&!S.narrow?'repeat(5,minmax(0,1fr))':'repeat(2,minmax(0,1fr))', bd:c+'40',bdStrong:c+'80',soft:c+'14',halo:c+'2e',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(i*0.08).toFixed(2)+'s',
-        players:pl.map(n=>{ const fr=this.reg.framed(n), kick=()=>this.setState(st=>({roster:st.roster.map((list,k)=>k===i?list.filter(x=>x!==n):list)})); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:this.reg.avatar(n)||'',imgOp:this.reg.avatar(n)?1:0,
-          framed:!!fr, plain:!fr, ar:fr?'auto':'3 / 1', frameEl:fr?BW.frameCard(fr,kick):null, kick}; })}; }), fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
+        bd:c+'40',bdStrong:c+'80',soft:c+'14',halo:c+'2e',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(i*0.08).toFixed(2)+'s',
+        players:pl.map(n=>{ const fr=this.reg.framed(n), av=this.reg.avatar(n), kick=()=>this.setState(st=>({roster:st.roster.map((list,k)=>k===i?list.filter(x=>x!==n):list)}));
+          return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,framed:!!fr,plain:!fr,frameEl:fr?BW.frameCard(fr,kick):null,kick}; })}; }), fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,
@@ -233,9 +241,10 @@ class Component extends DCLogic {
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':S.connecting?'جارٍ الاتصال…':'غير متصل',
       startOp:(!GAME.requireLive||S.live)?1:.4,
-      start:()=>{ if(S.solo){ if(S.roster[0].length<2) return this.toastMsg('نحتاج لاعبين اثنين على الأقل'); }
-        else if(TEAMS.some((t,i)=>!(S.roster[i]||[]).length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
-        BW.writeJSON(GAME.rosterKey,S.roster); const all=this.reg.all(); BW.writeJSON('bw-players',Object.fromEntries(S.roster.flat().map(n=>[n,all[n]]))); this.props.onStart?.(S.roster); location.href=GAME.gameUrl; },
+      start:()=>{ if(TEAMS.some((t,i)=>!(S.roster[i]||[]).length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
+        const all=this.reg.all(), everyone=(S.roster[0]||[]).concat(S.roster[1]||[]);
+        BW.writeJSON(BW.keys.roster,[S.roster[0]||[],S.roster[1]||[]]); BW.writeJSON(BW.keys.players,Object.fromEntries(everyone.map(n=>[n,all[n]])));
+        this.props.onStart?.(S.roster); location.href=GAME.gameUrl; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')

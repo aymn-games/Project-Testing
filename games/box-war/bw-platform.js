@@ -104,20 +104,17 @@
                     ro.observe(node);
                     return function () { ro.disconnect(); };
                 }, []);
-                // حجم خط الاسم يتبع ارتفاع لوح الاسم بكل إطار (البطاقات الصغيرة أصغر من
-                // باقي الألعاب، فالخط الموروث يطلع أكبر من اللوح وينقص/يرتفع الاسم)،
-                // ثم الأسماء الطويلة تتحرك داخل اللوح (fitAllNames).
+                // خط الاسم يتبع ارتفاع لوح الاسم بكل إطار، ثم الأسماء الطويلة تتحرك داخل اللوح (fitAllNames).
                 React.useEffect(function () {
                     if (!w || !ref.current) return;
                     var plates = ref.current.querySelectorAll('[data-agp-pcard-name="1"]');
                     for (var i = 0; i < plates.length; i++) {
                         var ph = plates[i].clientHeight;
-                        if (ph) { plates[i].style.fontSize = Math.max(9, Math.min(13, Math.round(ph * 0.65))) + 'px'; plates[i].style.lineHeight = '1.2'; }
-                        // مساحة × تُقتطع من عرض اللوح نفسه (مو padding) حتى الاسم وحركته ما يدخلون تحت ×
+                        if (ph) { plates[i].style.fontSize = Math.max(9, Math.min(14, Math.round(ph * 0.65))) + 'px'; plates[i].style.lineHeight = '1.2'; }
+                        // مساحة × تُقتطع من عرض اللوح نفسه حتى الاسم وحركته ما يدخلون تحت ×
                         if (props.onKick) { var pl = plates[i]; if (!pl.dataset.w) pl.dataset.w = pl.style.width; pl.style.width = 'calc(' + pl.dataset.w + ' - ' + X_SIZE + 'px)'; }
                     }
                     AGP.playerCard.fitAllNames(ref.current);
-                    // × على الطرف الداخلي (يمين، داخل صندوق LTR) للوح الاسم، بمنتصفه عمودياً
                     if (props.onKick && plates[0] && boxRef.current) {
                         var b = boxRef.current.getBoundingClientRect(), r = plates[0].getBoundingClientRect();
                         var next = { left: Math.round(r.right - b.left), top: Math.round(r.top - b.top + r.height / 2 - X_SIZE / 2) };
@@ -125,6 +122,7 @@
                     }
                 });
                 var p = props.player;
+                var H = FRAME_CARD_HEIGHT;
                 var html = w ? AGP.playerCard.renderHtml(
                     { id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame },
                     { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(w / FRAME_CARD_WIDTH_RATIO)) }
@@ -141,7 +139,7 @@
                     h('line', { x1: 6, y1: 6, x2: 18, y2: 18 }), h('line', { x1: 18, y1: 6, x2: 6, y2: 18 }))) : null;
                 return h('div', {
                     ref: ref,
-                    style: { flex: 1, minWidth: 0, height: FRAME_CARD_HEIGHT, display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'ltr' }
+                    style: { width: '100%', minWidth: 0, height: H, display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'ltr', overflow: 'visible' }
                 }, h('div', { ref: boxRef, style: { position: 'relative', lineHeight: 0 } }, [
                     h('div', { key: 'card', dangerouslySetInnerHTML: { __html: html } }),
                     kick
@@ -151,6 +149,11 @@
         return React.createElement(_FrameCard, { key: 'fc-' + player.name, player: player, onKick: onKick });
     }
 
+    /**
+     * بطاقة الإقصاء المملوكة (js/agp-elim-card.js) كعنصر React — تظهر بدل
+     * تبويب الإقصاء العادي فقط لو المُقصي يملك بطاقة مفعّلة.
+     * actor/target: {name, avatarUrl, elimCard}. ترجع null لو ما يملك بطاقة.
+     */
     /**
      * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px —
      * تحل محل بطاقة الفائز العادية بنفس مكانها بشاشة الفوز، فقط لو الفائز
@@ -274,6 +277,7 @@
 
     window.BW = {
         libraryUrl: new URL('../../games.html', location.href).href, // نفس الدومين (مكتبة الألعاب)
+        keys: { setup: 'bw-setup', roster: 'bw-roster', players: 'bw-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,
