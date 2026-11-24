@@ -997,6 +997,12 @@ function getRecentSupporters(limit) {
     return request(path, { method: 'GET' });
 }
 
+/** تصنيف «الأسبوع الماضي» المحفوظ: توب الاستريمرز بالساعات واللاعبين بالفوز
+ * للأسبوع اللي خلص (backend/stats/last-week-ranking-service.js). */
+function getLastWeekRanking() {
+    return request('/api/public/last-week-ranking', { method: 'GET' });
+}
+
 /** Top streamers by total stream hours. Returns TikTok username + hours
  * only, no sensitive account data. */
 function getTopStreamers(limit) {
@@ -1378,6 +1384,7 @@ global.AGPAuth = {
     needsWelcome: needsWelcome,
     completeWelcome: completeWelcome,
     adminResetWelcome: adminResetWelcome,
+    getLastWeekRanking: getLastWeekRanking,
     getTopStreamers: getTopStreamers,
     getTopStreamersByParticipations: getTopStreamersByParticipations,
     getUserWeeklyRanks: getUserWeeklyRanks,

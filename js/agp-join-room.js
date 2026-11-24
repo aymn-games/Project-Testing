@@ -325,6 +325,10 @@
         scheduled = true;
         (window.requestAnimationFrame || setTimeout)(function () { scheduled = false; ensureButtons(); ensureHomeField(); });
     }
+    // للصفحات اللي فيها خانة رقم غرفة بتصميمها الخاص (الرئيسية الجديدة js/agp-home.js):
+    // نفس البحث ونفس الانتقال بدون تكرار منطق النطاقات والأمبوستر.
+    window.AGPJoinRoom = { findRoom: findRoom, goTo: goTo, games: GAMES };
+
     // نراقب document نفسه: الصفحات المجمّعة تستبدل documentElement كامل لما تنفك
     new MutationObserver(schedule).observe(document, { childList: true, subtree: true });
     schedule();
