@@ -275,7 +275,7 @@
     if (S.owner) {
       var bal = typeof p.coins === 'number' ? num(p.coins) : '—';
       meta.appendChild(h('a', { href: '#wallet', 'data-sec': 'wallet', class: 'pf-coin-chip', title: 'رصيد عملات أيمن', 'aria-label': 'رصيد عملات أيمن: ' + bal }, [
-        h('span', { class: 'pf-coin-chip-ic' }, coinSvg()), h('span', { class: 'num', text: bal })
+        h('span', { class: 'pf-coin-chip-ic' }, coinMini()), h('span', { class: 'num', text: bal })
       ]));
     }
     if (p.joined_at) meta.appendChild(h('span', { text: 'انضم ' + formatDate(p.joined_at) }));
@@ -976,6 +976,21 @@
   // الشعار، معبّأ ذهب بظل وإضاءة عشان يبان بارز).
   var COIN_LOGO = 'android-chrome-512x512.png';
   var coinSeq = 0;
+  // نسخة خفيفة للأيقونات الصغيرة (جنب الأرقام والشارة بالهيدر): نفس الألوان
+  // والشعار بعناصر قليلة، بدل العملة المفصّلة (~200 عنصر وأقنعة) بكل سطر.
+  var miniSeq = 0;
+  function coinMini() {
+    var id = 'pfm' + (++miniSeq);
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'pf-coin');
+    s.innerHTML =
+      '<defs><radialGradient id="' + id + '" cx=".36" cy=".3" r=".9"><stop offset="0" stop-color="#ffefb8"/><stop offset=".45" stop-color="#e6bd5c"/><stop offset="1" stop-color="#8e6419"/></radialGradient></defs>' +
+      '<circle cx="12" cy="12" r="11" fill="#8a5f17"/>' +
+      '<circle cx="12" cy="12" r="10" fill="url(#' + id + ')"/>' +
+      '<circle cx="12" cy="12" r="7.4" fill="none" stroke="#7a5212" stroke-opacity=".55" stroke-width=".8"/>' +
+      '<image href="' + COIN_LOGO + '" x="6.5" y="6.5" width="11" height="11"/>';
+    return s;
+  }
   function coinSvg(cls) {
     var id = 'pfc' + (++coinSeq);
     var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1069,7 +1084,7 @@
       if (r && r.success && r.profile) { r.profile.coins = S.p.coins; S.p = r.profile; window.__profileData = r.profile; }
     }).catch(function () {});
   }
-  function coinAmount(n, cls) { return h('span', { class: 'pf-coin-amt' + (cls ? ' ' + cls : '') }, [h('span', { class: 'pf-coin-amt-ic' }, coinSvg()), h('span', { class: 'num', text: num(n) })]); }
+  function coinAmount(n, cls) { return h('span', { class: 'pf-coin-amt' + (cls ? ' ' + cls : '') }, [h('span', { class: 'pf-coin-amt-ic' }, coinMini()), h('span', { class: 'num', text: num(n) })]); }
   function resetTimeText(ms) {
     var left = Math.max(0, (ms || 0) - Date.now());
     var hrs = Math.floor(left / 3600000), mins = Math.floor((left % 3600000) / 60000);
@@ -1986,15 +2001,42 @@
   var ROLE_LABEL = { owner: 'صاحب الفريق', mod: 'مشرف' };
   function commErr(r) { return COMM_ERRORS[r && r.error] || 'تعذّر التنفيذ، حاول مرة ثانية.'; }
 
-  /** مؤقّت السحب: واحد بس بأي وقت، ويوقف لو العنصر انشال من الصفحة. */
+  /** مؤقّت السحب: واحد بس بأي وقت، ويوقف لو العنصر انشال من الصفحة.
+      يتباطأ لو المحادثة هادية (4 ← 8 ← 15 ← 30 ثانية) ويرجع 4 ثواني أول ما
+      توصل رسالة أو يرسل المستخدم. التبويب المخفي ما يسحب، ولما يرجع يسحب على طول.
+      fn ترجع Promise بـtrue لو وصل شي جديد. */
+  var POLL_STEPS = [POLL_MS, 8000, 15000, 30000];
   function startPoll(el, fn) {
     stopPoll();
-    S.poll = setInterval(function () {
+    var poll = { step: 0, timer: null, busy: false };
+    function tick() {
+      poll.timer = null;
+      if (S.poll !== poll) return;
       if (!document.body.contains(el)) { stopPoll(); return; }
-      if (!document.hidden) fn();
-    }, POLL_MS);
+      if (document.hidden) { schedule(); return; }
+      poll.busy = true;
+      Promise.resolve(fn()).then(function (fresh) {
+        poll.busy = false;
+        poll.step = fresh ? 0 : Math.min(POLL_STEPS.length - 1, poll.step + 1);
+        schedule();
+      }, function () { poll.busy = false; schedule(); });
+    }
+    function schedule() { if (S.poll === poll && !poll.timer) poll.timer = setTimeout(tick, POLL_STEPS[poll.step]); }
+    poll.now = function () { poll.step = 0; if (poll.timer) { clearTimeout(poll.timer); poll.timer = null; } if (!poll.busy) tick(); };
+    poll.onVis = function () { if (!document.hidden) poll.now(); };
+    document.addEventListener('visibilitychange', poll.onVis);
+    S.poll = poll;
+    schedule();
   }
-  function stopPoll() { if (S.poll) { clearInterval(S.poll); S.poll = null; } }
+  /** المستخدم سوّى شي بالمحادثة: ارجع للسحب السريع. */
+  function pollSoon() { if (S.poll && S.poll.now) { S.poll.step = 0; } }
+  function stopPoll() {
+    var poll = S.poll;
+    if (!poll) return;
+    S.poll = null;
+    if (poll.timer) clearTimeout(poll.timer);
+    document.removeEventListener('visibilitychange', poll.onVis);
+  }
 
   function chatTime(ms) {
     var d = new Date(ms), now = new Date();
@@ -2189,6 +2231,7 @@
         (r.removed || []).forEach(removeMsg);
         addMsgs(r.messages, first);
         if (first && S.comm && S.comm.teamUnread) refreshCommunity();
+        return (r.messages || []).length > 0 || (r.removed || []).length > 0;
       }).catch(function () {});
     }
     function reloadAll() { load(true); }
@@ -2201,7 +2244,7 @@
       send.disabled = true;
       window.AGPAuth.teamChatSend(team.customId, text).then(function (r) {
         send.disabled = !!st.muted;
-        if (r && r.success) { input.value = ''; autoGrow(); addMsgs([r.message], true); input.focus(); }
+        if (r && r.success) { input.value = ''; autoGrow(); addMsgs([r.message], true); input.focus(); pollSoon(); }
         else { showToast(commErr(r), true); if (r && r.error === 'muted') load(false); }
       }).catch(function () { send.disabled = false; });
     }
@@ -2210,7 +2253,7 @@
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); } });
     input.addEventListener('input', autoGrow);
     load(true);
-    startPoll(box, function () { load(false); });
+    startPoll(box, function () { return load(false); });
     return box;
   }
 
@@ -2421,6 +2464,7 @@
         add(r.messages, first);
         setSeen(r.seenUpTo);
         if (first) refreshCommunity();
+        return (r.messages || []).length > 0;
       }).catch(function () {});
     }
     function doSend() {
@@ -2429,7 +2473,7 @@
       send.disabled = true;
       window.AGPAuth.friendChatSend(friend.customId, text).then(function (r) {
         send.disabled = false;
-        if (r && r.success) { input.value = ''; input.style.height = 'auto'; add([r.message], true); input.focus(); }
+        if (r && r.success) { input.value = ''; input.style.height = 'auto'; add([r.message], true); input.focus(); pollSoon(); }
         else showToast(commErr(r), true);
       }).catch(function () { send.disabled = false; });
     }
@@ -2437,7 +2481,7 @@
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); } });
     input.addEventListener('input', function () { input.style.height = 'auto'; input.style.height = Math.min(120, input.scrollHeight) + 'px'; });
     load(true);
-    startPoll(box, function () { load(false); });
+    startPoll(box, function () { return load(false); });
     return box;
   }
 

@@ -843,18 +843,19 @@ function handleAdminLookupUser(req, res) {
  */
 function handlePublicProfile(req, res, body, user) {
   var customId = getQueryParam(req, 'id');
-  var profile = authService.getPublicProfile(customId);
-  if (!profile) {
+  // الزائر ياخذ الاسم والـID بس — فنتحقق قبل ما نحسب الإحصائيات والمقتنيات (حمل على الفاضي).
+  var identity = authService.getProfileIdentity(customId);
+  if (!identity) {
     sendJson(res, 404, { success: false, error: 'not_found' });
     return;
   }
-  var isOwner = Boolean(user && user.custom_id === profile.custom_id);
+  var isOwner = Boolean(user && user.custom_id === identity.custom_id);
   var isAdmin = Boolean(user && user.role === 'admin');
   if (!isOwner && !isAdmin) {
-    sendJson(res, 200, { success: true, profile: { username: profile.username, custom_id: profile.custom_id, restricted: true } });
+    sendJson(res, 200, { success: true, profile: { username: identity.username, custom_id: identity.custom_id, restricted: true } });
     return;
   }
-  sendJson(res, 200, { success: true, profile: profile });
+  sendJson(res, 200, { success: true, profile: authService.getPublicProfile(customId) });
 }
 
 /**

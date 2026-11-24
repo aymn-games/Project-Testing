@@ -281,15 +281,15 @@
   .pf-btn:active:not(:disabled){transform:scale(.97)}
   .pf-btn:disabled{opacity:.55;cursor:default}
   .pf-btn-primary{color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 55%),rgba(var(--accent-rgb),.22);border-color:rgba(var(--accent-rgb),.5);
-    box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 -1px 0 rgba(0,0,0,.25) inset,0 10px 24px -14px rgba(var(--accent-rgb),.8);-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
+    box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 -1px 0 rgba(0,0,0,.25) inset,0 10px 24px -14px rgba(var(--accent-rgb),.8)}
   .pf-btn-primary:hover:not(:disabled){background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 55%),rgba(var(--accent-rgb),.32);border-color:rgba(var(--accent-rgb),.7)}
   .pf-btn-ghost{color:var(--ink);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.015) 55%),rgba(255,255,255,.03);border-color:rgba(255,255,255,.14);
-    box-shadow:0 1px 0 rgba(255,255,255,.14) inset,0 8px 20px -14px rgba(0,0,0,.8);-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
+    box-shadow:0 1px 0 rgba(255,255,255,.14) inset,0 8px 20px -14px rgba(0,0,0,.8)}
   .pf-btn-ghost:hover:not(:disabled){background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 55%),rgba(var(--accent-rgb),.10);border-color:rgba(var(--accent-rgb),.45)}
   .pf-btn-danger{color:var(--rose);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.01) 55%),rgba(240,138,160,.10);border-color:rgba(240,138,160,.35);
-    box-shadow:0 1px 0 rgba(255,255,255,.12) inset;-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
+    box-shadow:0 1px 0 rgba(255,255,255,.12) inset}
   .pf-btn-danger:hover:not(:disabled){background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02) 55%),rgba(240,138,160,.18)}
-  .pf-btn-soon{color:var(--ink-4);background:rgba(255,255,255,.025);border:1px dashed rgba(255,255,255,.18);cursor:not-allowed;-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
+  .pf-btn-soon{color:var(--ink-4);background:rgba(255,255,255,.025);border:1px dashed rgba(255,255,255,.18);cursor:not-allowed}
   .pf-btn-sm{height:var(--ctl-sm);padding:0 16px;font-size:calc(13px * var(--pf-fs));border-radius:12px}
   .pf-btn-lg{height:52px;padding:0 26px;font-size:calc(15px * var(--pf-fs));border-radius:16px}
 
@@ -618,7 +618,9 @@
     background:linear-gradient(135deg,rgba(232,216,166,.12),rgba(90,42,168,.12) 55%,rgba(255,255,255,.02));border-color:rgba(232,216,166,.28)}
   .pf-wallet-coin{flex:none;width:76px;height:76px;filter:drop-shadow(0 10px 18px rgba(232,216,166,.25))}
   .pf-coin{width:100%;height:100%;display:block}
-  .pf-coin.spin{animation:pf-coin 5s ease-in-out infinite}
+  /* الحركة على غلاف العملة (div) مو على الـSVG: تتحرك كطبقة جاهزة بكرت الشاشة
+     بدون إعادة رسم كل إطار. وتلف 3 مرات وتوقف، مو للأبد. */
+  .pf-wallet-coin:has(.pf-coin.spin){animation:pf-coin 5s ease-in-out 3;will-change:transform}
   @keyframes pf-coin{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(6deg) translateY(-4px)}}
   .pf-wallet-txt{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
   .pf-wallet-v{font-size:calc(30px * var(--pf-fs));font-weight:800;color:var(--gold);line-height:1.2}
@@ -794,6 +796,7 @@
     :root{--top-h:54px;--pad:13px;--ctl:36px;--ctl-sm:30px}
     body{font-size:calc(13.5px * var(--pf-fs))}
     /* الجوال: نخفف البلور للأداء ونعوّضه بتعبئة أعتم */
+    .pf-modebar button,.pf-plat,.pf-side{-webkit-backdrop-filter:none;backdrop-filter:none}
     .pf-panel,.pf-tool,.pf-lock,.pf-titlerow{-webkit-backdrop-filter:none;backdrop-filter:none;background:linear-gradient(160deg,rgba(20,15,32,.92),rgba(9,7,15,.95))}
     .pf-top{padding:0 12px}
     .pf-brand img{height:28px}
@@ -1156,7 +1159,6 @@
 </div>
 
 <script src="auth/auth-client.js"></script>
-<script src="js/agp-stream-overlay.js"></script>
 <script src="js/agp-frame-picker.js"></script>
 <script src="js/agp-stream-stats.js"></script>
 <script src="js/agp-profile-card.js"></script>

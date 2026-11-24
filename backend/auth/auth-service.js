@@ -735,6 +735,13 @@ function adminLookupUser(query, idType) {
  * @param {string} customId
  * @returns {Object|null}
  */
+/** الاسم والـID بس — لزائر ما يحق له يشوف البروفايل كامل، بدون حساب الإحصائيات والمقتنيات. */
+function getProfileIdentity(customId) {
+    customId = (customId || '').trim();
+    if (!customId) return null;
+    return db.prepare('SELECT username, custom_id FROM users WHERE custom_id = ?').get(customId) || null;
+}
+
 function getPublicProfile(customId) {
     customId = (customId || '').trim();
     if (!customId) return null;
@@ -1687,6 +1694,7 @@ module.exports = {
     completeWelcome: completeWelcome,
     resetWelcome: resetWelcome,
     getPublicProfile: getPublicProfile,
+    getProfileIdentity: getProfileIdentity,
     adminLookupUser: adminLookupUser,
     findVerifiedUserByTikTok: findVerifiedUserByTikTok,
     fetchPublicProfileHtml: fetchPublicProfileHtml,
