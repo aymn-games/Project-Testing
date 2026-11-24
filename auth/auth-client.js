@@ -913,6 +913,23 @@ function adminUpdateStreamerLevel(slug, fields) {
     });
 }
 
+/* Admin only — manual streamer hours (compensate/deduct), see
+ * backend/points/streamer-hours.js. hours < 0 = deduction. */
+function adminListHoursAdjustments(userId) {
+    return request('/api/admin/streamer-hours/adjustments' + (userId ? '?userId=' + encodeURIComponent(userId) : ''), { method: 'GET' });
+}
+
+function adminAdjustStreamerHours(userId, hours, effectiveAt, reason) {
+    return request('/api/admin/streamer-hours/adjust', {
+        method: 'POST',
+        body: { userId: userId, hours: hours, effectiveAt: effectiveAt, reason: reason || '' }
+    });
+}
+
+function adminDeleteHoursAdjustment(id) {
+    return request('/api/admin/streamer-hours/adjustments/delete', { method: 'POST', body: { id: id } });
+}
+
 /** Only admin accounts can access the streamer dashboard (dashboard-core);
  * every other account is redirected to its public profile instead. */
 function canAccessDashboard(user) {
@@ -1352,6 +1369,9 @@ global.AGPAuth = {
     reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
+    adminListHoursAdjustments: adminListHoursAdjustments,
+    adminAdjustStreamerHours: adminAdjustStreamerHours,
+    adminDeleteHoursAdjustment: adminDeleteHoursAdjustment,
     canAccessDashboard: canAccessDashboard,
     isStreamerAccount: isStreamerAccount,
     canPlayGames: canPlayGames,
