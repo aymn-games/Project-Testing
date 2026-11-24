@@ -9,6 +9,14 @@
 
 ---
 
+## [غير مُرقَّم] — تعويض/خصم ساعات الاستريمر يدوياً من لوحة الأدمن (2026-11-24)
+
+### أُضيف (Added)
+- **بطاقة «تعويض / خصم ساعات استريمر»** بلوحة الأدمن ← الإحصائيات ← إحصائيات الستريمرز (`admin.html`): تختار الاستريمر بالآيدي الداخلي أو آيدي البروفايل، ثم العملية (إضافة/خصم)، وعدد الساعات (تقبل كسور، حتى 200)، والتاريخ اللي تنحسب فيه، والسبب. تحتها سجل بكل التعديلات مع زر «تراجع».
+- **جدول `streamer_hours_adjustments`** (`backend/db/database.js`): `ms` موجب للإضافة وسالب للخصم، و`effective_at` يحدد أسبوع التصنيف.
+- **`backend/points/streamer-hours.js`:** التعديلات داخلة في `HOURS_BY_USER_SQL` و`getTotalLiveMs`، فتنعكس على التصنيف الأسبوعي والبروفايل ومستوى SP وإحصائيات الأدمن بدون أي تعديل ثاني. المجموع ما ينزل تحت الصفر، والخصم الأكبر من الساعات الكلية يُرفض. دوال جديدة: `addAdjustment` و`listAdjustments` و`deleteAdjustment`.
+- **API للأدمن فقط** (`backend/http/auth-router.js`): `GET /api/admin/streamer-hours/adjustments`، و`POST /api/admin/streamer-hours/adjust`، و`POST /api/admin/streamer-hours/adjustments/delete`. وبـ`auth/auth-client.js`: `adminListHoursAdjustments` و`adminAdjustStreamerHours` و`adminDeleteHoursAdjustment`.
+
 ## [غير مُرقَّم] — باكج «الخفاش الذهبي» (منح محدود): إطار + بطاقة إقصاء + بطاقة فوز (2026-11-21)
 
 ### أُضيف (Added)

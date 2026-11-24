@@ -386,6 +386,20 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_streamer_match_time_user ON streamer_match_time(user_id);
 
+    -- تعديل يدوي لساعات الاستريمر من لوحة الأدمن (تعويض ساعات ما انحسبت، أو
+    -- خصم لتصحيح خطأ). ms بالموجب = إضافة، بالسالب = خصم. effective_at = اليوم
+    -- اللي تنحسب فيه (يحدد أسبوع التصنيف). راجع backend/points/streamer-hours.js
+    CREATE TABLE IF NOT EXISTS streamer_hours_adjustments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ms INTEGER NOT NULL,
+        effective_at INTEGER NOT NULL,
+        reason TEXT,
+        admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_streamer_hours_adj_user ON streamer_hours_adjustments(user_id);
+
     -- سجل الجولات المكتملة لكل لاعب (صف لكل جولة) — لتصنيف "توب اللاعبين"
     -- الأسبوعي بالرئيسية (getTopPlayersByWins بـpoints-service.js). العدّادات
     -- التراكمية بـuser_points تبقى كما هي للبروفايل.
