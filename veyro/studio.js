@@ -3463,7 +3463,8 @@
         }
         clock.textContent = fmtSec(len());
 
-        var ev = { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
+        // نفس المثال اللي تطلع فيه المعاينة و«جرّب» (O.partsSample) — الطول والمكان يتطابقون
+        var ev = O.partsSample(it);
         var chips = {};
         function emPx() { return lay.clientWidth / wEm; }
         function paintChip(key) {
@@ -3498,6 +3499,8 @@
                 tx.style.color = p.c || '#fff';
                 tx.style.setProperty('--agp-so-c', p.c || '#fff');
                 c.style.textShadow = p.st ? 'none' : '';
+                // بدون ستايل، البث يكتب النص مباشرة بدون هوامش (partText) — نفس الشي هنا عشان الحجم يتطابق
+                tx.style.padding = p.st ? '' : '0';
                 var f = O.fontOf(p.f || 'notokufi'); O.loadFont(f);
                 c.style.fontFamily = O.fontStack(f); c.style.fontWeight = String(Math.max(700, f.b));
             }
@@ -3510,7 +3513,7 @@
                 af.appendChild(ai);
                 c.appendChild(af);
             } else {
-                c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]));
+                c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? O.fillMsg(x[1], ev) : x[1]));
             }
             c.title = PART_NAMES[x[0]];
             chips[x[0]] = c;

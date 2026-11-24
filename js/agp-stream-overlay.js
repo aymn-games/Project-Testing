@@ -2260,7 +2260,24 @@
     var evState = { init: false, sid: 0, seq: 0, timer: null, inflight: false, tinit: false, tseq: 0, tests: [] };
     var audioCtx = null;
 
+    /**
+     * مثال ثابت لأليرت الفيديو اللي فيه صورة واسم ورسالة: نفس النص بمحرر الترتيب، وبمعاينة الشاشة، وبـ«جرّب».
+     * كذا اللي يرتّبه الستريمر يطلع بالتجربة بنفس الطول والمكان (قبل كان «جرّب» ياخذ اسم وهدية وعدد عشوائي).
+     */
+    function partsSample(it, type) {
+        type = type || (it && it.events || ['gift'])[0] || 'gift';
+        var e = { type: type, user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5, avatar: null, at: Date.now(), demo: true };
+        if (type === 'gift' && it && pickedGifts(it)) {
+            var pg = it.gifts[0];
+            e.gift = pg.name; e.giftAr = pg.nameAr || null; e.giftId = String(pg.id); e.img = pg.image || null; e.count = 1; e.diamonds = Number(pg.diamonds) || 0;
+        }
+        if (type === 'like') { e.count = 100; e.total = 100; e.all = 100; e.allPrev = 0; }
+        if (type === 'join' || type === 'subscribe') e.uid = 'demo';
+        if (type === 'donation') { e.amount = 25; e.currency = 'USD'; e.message = 'كفو والله، استمر 💜'; }
+        return e;
+    }
     function sampleEvent(type, it) {
+        if (it && isVideoAlert(it) && partsOf(it)) return partsSample(it, type);
         var names = ['أبو فهد', 'نوره', 'سلطان', 'ريم'];
         var e = { type: type, user: names[Math.floor(Math.random() * names.length)], avatar: null, at: Date.now(), demo: true };
         if (type === 'gift' && it && pickedGifts(it)) {
@@ -3119,7 +3136,7 @@
         var parts = partsOf(it);
         if (parts && (e || preview)) {
             // بالمحرر (بدون حدث): مثال عشان يشوف أماكنها
-            var ev = e || { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
+            var ev = e || partsSample(it);
             if (parts.avatar.on) {
                 // غلاف (الحركة والتوهّج) ← إطار بشكل الصورة (بلون الإطار) ← الصورة نفسها بنفس الشكل
                 var shp = avatarShape(parts.avatar.sh), frm = avatarFrame(parts.avatar.fr);
@@ -5104,7 +5121,7 @@
         SHAPES: SHAPES, SHAPE_FILLS: SHAPE_FILLS,
         /** أليرت الفيديو والتفريغ (Veyro). */
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, FX_MOTIONS: FX_MOTIONS, FX_DEFAULT_COLORS: FX_DEFAULT_COLORS, avatarFrame: avatarFrame, avatarFx: avatarFx, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
-        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
+        KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, partsSample: partsSample, fillMsg: fillMsg, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
         alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
