@@ -86,34 +86,34 @@
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
     var COLORS = ['#ffffff', '#ffd54a', '#ff4d6d', '#4dd8ff', '#7cff6b', '#c58bff', '#111111'];
     // b = أثقل وزن متوفر بالخط (للخطوط اللي وزنها واحد = 400)
+    // 20 خط معتمد، كل واحد بطابع مختلف (اختيار صاحب المنصة 2026-11). b = أثقل وزن متوفر بالخط
     var FONTS = [
-        { key: 'plex', family: 'IBM Plex Sans Arabic', label: 'بلكس', b: 700 },
+        { key: 'notokufi', family: 'Noto Kufi Arabic', label: 'كوفي واضح', b: 900 },
         { key: 'cairo', family: 'Cairo', label: 'القاهرة', b: 900 },
-        { key: 'tajawal', family: 'Tajawal', label: 'تجوال', b: 900 },
-        { key: 'almarai', family: 'Almarai', label: 'المراعي', b: 800 },
-        { key: 'changa', family: 'Changa', label: 'تشانجا', b: 800 },
-        { key: 'alexandria', family: 'Alexandria', label: 'الإسكندرية', b: 900 },
-        { key: 'kufam', family: 'Kufam', label: 'كوفام', b: 900 },
-        { key: 'notokufi', family: 'Noto Kufi Arabic', label: 'نوتو كوفي', b: 900 },
-        { key: 'readex', family: 'Readex Pro', label: 'ريدكس', b: 700 },
-        { key: 'mada', family: 'Mada', label: 'مدى', b: 900 },
-        { key: 'baloo', family: 'Baloo Bhaijaan 2', label: 'بالو', b: 800 },
-        { key: 'lemonada', family: 'Lemonada', label: 'ليمونادة', b: 700 },
-        { key: 'marhey', family: 'Marhey', label: 'مرحي', b: 700 },
-        { key: 'elmessiri', family: 'El Messiri', label: 'المسيري', b: 700 },
-        { key: 'reemkufi', family: 'Reem Kufi', label: 'ريم كوفي', b: 700 },
-        { key: 'lalezar', family: 'Lalezar', label: 'لاله زار', b: 400 },
-        { key: 'rakkas', family: 'Rakkas', label: 'رقّاص', b: 400 },
-        { key: 'jomhuria', family: 'Jomhuria', label: 'جمهورية', b: 400 },
-        { key: 'blaka', family: 'Blaka', label: 'بلاكا', b: 400 },
-        { key: 'katibeh', family: 'Katibeh', label: 'كاتبة', b: 400 },
-        { key: 'vibes', family: 'Vibes', label: 'فايبز', b: 400 },
-        { key: 'mirza', family: 'Mirza', label: 'ميرزا', b: 700 },
-        { key: 'harmattan', family: 'Harmattan', label: 'هرمتان', b: 700 },
-        { key: 'amiri', family: 'Amiri', label: 'أميري', b: 700 },
+        { key: 'alexandria', family: 'Alexandria', label: 'هندسي عريض', b: 900 },
+        { key: 'changa', family: 'Changa', label: 'تقني', b: 800 },
+        { key: 'handjet', family: 'Handjet', label: 'بكسل', b: 900 },
+        { key: 'lalezar', family: 'Lalezar', label: 'عناوين ثقيلة', b: 400 },
+        { key: 'jomhuria', family: 'Jomhuria', label: 'ضخم', b: 400 },
+        { key: 'rakkas', family: 'Rakkas', label: 'فخم', b: 400 },
+        { key: 'lemonada', family: 'Lemonada', label: 'دائري مرح', b: 700 },
+        { key: 'marhey', family: 'Marhey', label: 'ماركر', b: 700 },
+        { key: 'playpen', family: 'Playpen Sans Arabic', label: 'خط يد', b: 800 },
+        { key: 'reemkufi', family: 'Reem Kufi', label: 'كوفي هندسي', b: 700 },
+        { key: 'qahiri', family: 'Qahiri', label: 'كوفي تراثي', b: 400 },
+        { key: 'badeen', family: 'Badeen Display', label: 'كتل', b: 400 },
+        { key: 'blaka', family: 'Blaka', label: 'حاد', b: 400 },
+        { key: 'elmessiri', family: 'El Messiri', label: 'أنيق', b: 700 },
         { key: 'arefruqaa', family: 'Aref Ruqaa', label: 'رقعة', b: 700 },
+        { key: 'amiri', family: 'Amiri', label: 'نسخ', b: 700 },
+        { key: 'ruwudu', family: 'Ruwudu', label: 'مخطوطة', b: 700 },
         { key: 'gulzar', family: 'Gulzar', label: 'نستعليق', b: 400 }
     ];
+    // الخطوط اللي انشالت → أقرب خط معتمد (التصاميم المحفوظة ما تنكسر)
+    var FONT_ALIASES = {
+        plex: 'cairo', tajawal: 'cairo', almarai: 'cairo', mada: 'cairo', readex: 'alexandria',
+        kufam: 'reemkufi', baloo: 'lemonada', katibeh: 'rakkas', vibes: 'ruwudu', mirza: 'amiri', harmattan: 'amiri'
+    };
     var TEXT_STYLES = [
         { key: 'outline', label: 'حدود' },
         { key: 'shadow', label: 'ظل' },
@@ -143,7 +143,7 @@
         { key: 'hue', label: 'تلوّن', d: 4 }
     ];
     var SPEEDS = [{ label: 'بطيء', value: 1.8 }, { label: 'عادي', value: 1 }, { label: 'سريع', value: 0.55 }];
-    var DEFAULT_FONT = 'plex';
+    var DEFAULT_FONT = 'cairo';
     // w×h بالوضع الأفقي (نقاط CSS)؛ العمودي = نفس الأبعاد مقلوبة
     var TEMPLATES = [
         { key: 'auto', label: 'شاشة جهازي', sub: 'يملأ الشاشة الحالية' },
@@ -358,6 +358,7 @@
     /* ---------------- الخطوط ---------------- */
 
     function fontOf(key) {
+        if (FONT_ALIASES[key]) key = FONT_ALIASES[key];
         for (var i = 0; i < FONTS.length; i++) if (FONTS[i].key === key) return FONTS[i];
         return FONTS[0];
     }

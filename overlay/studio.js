@@ -848,7 +848,7 @@
             var cur2 = it.font || O.DEFAULT_FONT;
             O.FONTS.forEach(function (f) {
                 O.loadFont(f);
-                var b = button('', 'ob-fbtn' + (f.key === cur2 ? ' on' : ''), function () { update(it, 'font', f.key, true); });
+                var b = button('', 'ob-fbtn' + (f.key === O.fontOf(cur2).key ? ' on' : ''), function () { update(it, 'font', f.key, true); });
                 var sample = el('span', null, 'حياكم');
                 sample.style.fontFamily = O.fontStack(f);
                 sample.style.fontWeight = String(f.b);

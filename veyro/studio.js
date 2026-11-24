@@ -1240,7 +1240,7 @@
             var cur2 = it.font || O.DEFAULT_FONT;
             O.FONTS.forEach(function (f) {
                 O.loadFont(f);
-                var b = button('', 'ob-fbtn' + (f.key === cur2 ? ' on' : ''), function () { update(it, 'font', f.key, true); });
+                var b = button('', 'ob-fbtn' + (f.key === O.fontOf(cur2).key ? ' on' : ''), function () { update(it, 'font', f.key, true); });
                 var sample = el('span', null, 'حياكم');
                 sample.style.fontFamily = O.fontStack(f);
                 sample.style.fontWeight = String(f.b);
@@ -1774,7 +1774,7 @@
     /** اختيار خط (يفتح عند الضغط عشان اللوحة ما تطول). */
     var ldFontOpen = null;
     function fontPick(it, box, key, label) {
-        var curF = O.FONTS.filter(function (f) { return f.key === it[key]; })[0];
+        var curF = it[key] ? O.fontOf(it[key]) : null;
         var w = el('div', 'ob-sw');
         var tb = button(curF ? curF.label : 'الأصلي', 'ob-pill' + (ldFontOpen === key ? ' on' : ''), function () { ldFontOpen = ldFontOpen === key ? null : key; renderPanel(); });
         if (curF) { O.loadFont(curF); tb.style.fontFamily = O.fontStack(curF); }
@@ -1785,7 +1785,7 @@
         var g = el('div', 'ob-fgrid');
         O.FONTS.forEach(function (f) {
             O.loadFont(f);
-            var b = button('', 'ob-fbtn' + (f.key === it[key] ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
+            var b = button('', 'ob-fbtn' + (it[key] && f.key === O.fontOf(it[key]).key ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
             var sample = el('span', null, key === 'amtFont' ? '$25' : 'حياكم');
             sample.style.fontFamily = O.fontStack(f);
             sample.style.fontWeight = String(f.b);
@@ -3717,7 +3717,7 @@
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
                     O.loadFont(f);
-                    var fb = button('', 'ob-fbtn' + (f.key === curF ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
+                    var fb = button('', 'ob-fbtn' + (f.key === O.fontOf(curF).key ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
                     var sample = el('span', null, key === 'name' ? 'أيمن' : 'شكراً');
                     sample.style.fontFamily = O.fontStack(f);
                     sample.style.fontWeight = String(f.b);
