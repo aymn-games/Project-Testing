@@ -28,6 +28,7 @@ var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
+var lastWeekRankingService = require('../stats/last-week-ranking-service');
 var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
@@ -367,6 +368,9 @@ var ROUTES = [
   // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
   // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
+  // ---- تصنيف «الأسبوع الماضي» المحفوظ (توب الاستريمرز بالساعات واللاعبين
+  // بالفوز للأسبوع اللي خلص) — عام — راجع backend/stats/last-week-ranking-service.js
+  { method: 'GET', path: '/api/public/last-week-ranking', requireAuth: false, handler: handleLastWeekRanking },
   // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
   { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
   // نبضة حضور من شاشة المذيع بألعاب الباركود (المافيا، محطة سهيل، حفلة
@@ -2179,6 +2183,11 @@ function handleTopPlayersByRounds(req, res) {
 }
 
 /** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً بالسيرفر. */
+function handleLastWeekRanking(req, res) {
+  var r = lastWeekRankingService.getLastWeekRanking();
+  sendJson(res, 200, { success: true, periodStart: r.periodStart, periodEnd: r.periodEnd, savedAt: r.savedAt, streamers: r.streamers, players: r.players });
+}
+
 function handleGetPlatformStats(req, res) {
   var result = platformStatsService.getCachedStats();
   sendJson(res, 200, { success: true, stats: result.stats, computedAt: result.computedAt });

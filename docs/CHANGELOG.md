@@ -9,6 +9,20 @@
 
 ---
 
+## [غير مُرقَّم] — حفظ تصنيف «الأسبوع الماضي» (2026-11-24)
+
+### أُضيف (Added)
+- **`backend/stats/last-week-ranking-service.js`:** يحفظ نتيجة الأسبوع اللي خلص (سبت لجمعة بتوقيت السعودية) كما هي: توب 10 استريمرز بالساعات وتوب 10 لاعبين بالفوز. الحفظ كسول: أول طلب بعد تجديد السبت يحسب الفترة السابقة من نفس الجداول المؤرخة ويخزنها، وبعدها تنقرأ محفوظة وما تتغير. ولأن البيانات مؤرخة، أول تشغيل يحفظ الأسبوع الماضي مباشرة. لو الأدمن صفّر التصنيف بنص الأسبوع، الفترة السابقة تنتهي عند لحظة التصفير.
+- **جدول `ranking_snapshots`** (`backend/db/database.js`): صف لكل أسبوع منتهي (`period_start`، `period_end`، `data`).
+- **API عام:** `GET /api/public/last-week-ranking` يرجع `periodStart` و`periodEnd` و`streamers` و`players`.
+- **اختبار:** `backend/stats/last-week-ranking.test.js`.
+
+### تغيّر (Changed)
+- `HOURS_BY_USER_SQL` و`hoursParams(periodStart, periodEnd)` (`backend/points/streamer-hours.js`) تقبل نهاية للفترة (`@hoursTo`)، وبدونها تبقى لين الآن مثل قبل.
+- `getTopPlayers` و`getTopPlayersByWins` (`backend/points/points-service.js`) تقبل `untilMs` اختياري، و`computeTopStreamersByHours` (`backend/auth/auth-service.js`) تقبل `periodEnd` وصارت مصدّرة. الاستدعاءات القديمة بنفس النتيجة.
+
+---
+
 ## [غير مُرقَّم] — تعويض/خصم ساعات الاستريمر يدوياً من لوحة الأدمن (2026-11-24)
 
 ### أُضيف (Added)
