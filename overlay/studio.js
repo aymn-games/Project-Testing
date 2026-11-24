@@ -97,12 +97,8 @@
             { label: 'وعاء الهدايا', sub: 'صور الهدايا تطيح فيه وتتكدّس، وتحته مجموع الماس', type: 'jar' }
         ],
         text: [
-            { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
-            { label: 'نيون', type: 'text', set: { text: 'LIVE', style: 'neon', font: 'changa', color: '#4dd8ff', size: 8, anim: 'glow' } },
-            { label: 'بخلفية', type: 'text', set: { text: 'تابعني 💜', style: 'pill', font: 'cairo', size: 5 } },
-            { label: 'نار', type: 'text', set: { text: 'تحدي اليوم', style: 'fire', font: 'cairo', size: 7 } },
-            { label: 'زجاجي', type: 'text', set: { text: 'اكتب سؤالك بالشات', style: 'glass', font: 'tajawal', size: 4.5 } },
-            { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } }
+            // تصاميم النصوص (ذهبي، نيون، نار…) انشالت — نص بسيط بس لين تنبني التصاميم الجديدة
+            { label: 'نص', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -838,7 +834,8 @@
 
     function textProps(it, box) {
         var tabs = el('div', 'ob-ptabs');
-        [['text', 'النص'], ['font', 'الخط'], ['fx', 'التأثير'], ['anim', 'الحركة']].forEach(function (t) {
+        if (textTab === 'fx') textTab = 'text';
+        [['text', 'النص'], ['font', 'الخط'], ['anim', 'الحركة']].forEach(function (t) {
             tabs.appendChild(button(t[1], t[0] === textTab ? 'on' : '', function () { textTab = t[0]; renderPanel(); }));
         });
         box.appendChild(tabs);
@@ -860,8 +857,6 @@
                 g.appendChild(b);
             });
             box.appendChild(g);
-        } else if (textTab === 'fx') {
-            box.appendChild(row('التأثير', pills(opts(O.TEXT_STYLES), it.style || 'outline', function (v) { update(it, 'style', v, true); }), true));
         } else {
             animRows(it, box);
         }
