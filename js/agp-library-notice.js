@@ -25,9 +25,8 @@
 
     var NOTICE_KEY = 'library-shy-update-1';
     // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف (يطلع بالمعاينة بس).
-    // مثال: new Date('2026-11-25T22:00:00+03:00').getTime()
-    var WINDOW_START = null;
-    var WINDOW_MINUTES = 15;
+    var WINDOW_START = new Date('2026-11-24T21:15:00+03:00').getTime(); // 9:15 مساءً بتوقيت السعودية
+    var WINDOW_MINUTES = 30;
     // صورة المرحلة الأولى والثانية. لو ما تحمّلت تختفي ويطلع الإيموجي بدالها.
     var IMG = 'assets/notices/shy-update.jpg';
     var IMG_SURE = 'assets/notices/are-you-sure.jpg';
