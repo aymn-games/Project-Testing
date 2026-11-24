@@ -87,7 +87,7 @@
         { key: 'lastsup', label: 'آخر داعم', icon: 'crown', title: 'آخر داعم', desc: 'آخر واحد دعمك بالدونيشن (Streamlabs): اسمه ومبلغه، ويتحدّث مع كل دعم.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
-        { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'تصاميم النصوص الجديدة قريباً.' },
+        { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'نصوص بخطوط مميزة وزخارف متحركة.' },
         { key: 'icons', label: 'الأيقونات', icon: 'star', title: 'الأيقونات والملصقات', desc: 'أيقونات وإيموجي تزيّن فيها شاشتك.' },
         { key: 'shapes', label: 'الأشكال', icon: 'shapes', title: 'الأشكال', desc: 'لوحات وإطارات وشرائط تحط فوقها الأدوات.' },
         { sep: true },
@@ -152,8 +152,10 @@
             { label: 'القط الدائري', sub: 'قط مدوّر من زجاج بنيون قوس قزح، يتعبّى بالدعم', type: 'goal', set: { design: 'blob', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
             { label: 'هلال الفراشات', sub: 'هلال زجاج فضّي وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
         ],
-        // تصاميم النصوص انشالت كلها (طلب صاحب المنصة) — التصاميم الجديدة تنبني من جديد
+        // تصاميم النصوص الجديدة (القديمة انشالت كلها بطلب صاحب المنصة)
         text: [
+            { label: 'ريشة اللانهاية', sub: 'ريشة على شكل ∞ تلف النص، وطيور وقلبين — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'elmessiri', size: 7, color: '#ffffff', deco: 'infinity' } },
+            { label: 'ريشتين ونجوم', sub: 'لانهاية بريشتين متقابلتين، ونجوم تلمع وقلب — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'ruwudu', size: 7, color: '#ffffff', deco: 'infinity2' } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -990,7 +992,7 @@
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (sec.key === 'audio') ttsCard(pb);
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key].filter(function (t) { return t.type !== 'tts'; }), pb, sec.key === 'jar');
-            if (sec.key === 'text' && !TOOLS.text.length) pb.appendChild(el('div', 'ob-hint', 'تصاميم النصوص الجديدة قيد التصميم — قريباً.'));
+            if (sec.key === 'text') pb.appendChild(el('div', 'ob-hint', 'تصاميم جديدة تنضاف تباعاً.'));
             // قوالب التوب من مكتبة فيرو (ينشرها الأدمن)
             if (sec.key === 'tops') {
                 loadVyLib(function () { if (libOf('top').length && section === 'tops' && !selectedId) renderPanel(); });
@@ -1235,12 +1237,15 @@
             box.appendChild(row('النص', textInput(it.text, 200, function (v) { update(it, 'text', v); }, true), true));
             box.appendChild(row('الحجم', slider(2, 20, 0.5, it.size, function (v) { update(it, 'size', v); })));
             box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+            // الزخرفة حوالين النص (js/agp-stream-overlay.js DECOS)
+            box.appendChild(row('الزخرفة', pills(opts(O.DECOS), it.deco || 'none', function (v) { if (v === 'none') { delete it.deco; update(it, 'deco', undefined, true); } else update(it, 'deco', v, true); }), true));
+            if (it.deco && it.deco !== 'none') box.appendChild(row('لون الزخرفة', swatches(it.decoColor || '#ffffff', function (c) { update(it, 'decoColor', c, true); }), true));
         } else if (textTab === 'font') {
             var g = el('div', 'ob-fgrid');
             var cur2 = it.font || O.DEFAULT_FONT;
             O.FONTS.forEach(function (f) {
                 O.loadFont(f);
-                var b = button('', 'ob-fbtn' + (f.key === cur2 ? ' on' : ''), function () { update(it, 'font', f.key, true); });
+                var b = button('', 'ob-fbtn' + (f.key === O.fontOf(cur2).key ? ' on' : ''), function () { update(it, 'font', f.key, true); });
                 var sample = el('span', null, 'حياكم');
                 sample.style.fontFamily = O.fontStack(f);
                 sample.style.fontWeight = String(f.b);
@@ -1774,7 +1779,7 @@
     /** اختيار خط (يفتح عند الضغط عشان اللوحة ما تطول). */
     var ldFontOpen = null;
     function fontPick(it, box, key, label) {
-        var curF = O.FONTS.filter(function (f) { return f.key === it[key]; })[0];
+        var curF = it[key] ? O.fontOf(it[key]) : null;
         var w = el('div', 'ob-sw');
         var tb = button(curF ? curF.label : 'الأصلي', 'ob-pill' + (ldFontOpen === key ? ' on' : ''), function () { ldFontOpen = ldFontOpen === key ? null : key; renderPanel(); });
         if (curF) { O.loadFont(curF); tb.style.fontFamily = O.fontStack(curF); }
@@ -1785,7 +1790,7 @@
         var g = el('div', 'ob-fgrid');
         O.FONTS.forEach(function (f) {
             O.loadFont(f);
-            var b = button('', 'ob-fbtn' + (f.key === it[key] ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
+            var b = button('', 'ob-fbtn' + (it[key] && f.key === O.fontOf(it[key]).key ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
             var sample = el('span', null, key === 'amtFont' ? '$25' : 'حياكم');
             sample.style.fontFamily = O.fontStack(f);
             sample.style.fontWeight = String(f.b);
@@ -3717,7 +3722,7 @@
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
                     O.loadFont(f);
-                    var fb = button('', 'ob-fbtn' + (f.key === curF ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
+                    var fb = button('', 'ob-fbtn' + (f.key === O.fontOf(curF).key ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
                     var sample = el('span', null, key === 'name' ? 'أيمن' : 'شكراً');
                     sample.style.fontFamily = O.fontStack(f);
                     sample.style.fontWeight = String(f.b);
