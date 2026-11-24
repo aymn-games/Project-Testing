@@ -176,11 +176,21 @@
     var b = ev.target && ev.target.closest ? ev.target.closest('[data-platform-pick]') : null;
     if (!b || b.disabled) return;
     var key = b.getAttribute('data-platform-pick');
-    if (key === streamPlatform) return;
-    if ((connectState === 'connected' || connectState === 'connecting') &&
-        !window.confirm('أنت متصل الحين ببث ' + platformInfo().label + '. تغيير المنصة يقطع هذا الاتصال، تكمل؟')) return;
-    setStreamPlatform(key);
+    if (key !== streamPlatform) {
+      if ((connectState === 'connected' || connectState === 'connecting') &&
+          !window.confirm('أنت متصل الحين ببث ' + platformInfo().label + '. تغيير المنصة يقطع هذا الاتصال، تكمل؟')) return;
+      setStreamPlatform(key);
+    }
+    connectLinkedNow();
   });
+  // [اتصال بضغطة] اختيار المنصة يتصل على طول ببث الحساب المربوط فيها (من صفحة الحساب).
+  function connectLinkedNow(){
+    if (!linkedUsername || (accountMode !== 'linked' && accountMode !== 'free')) return;
+    if (connectState === 'connected' || connectState === 'connecting') return;
+    otherOpen = false;
+    setAutoConnectOff(false);
+    connectToBackend(linkedUsername);
+  }
   document.addEventListener('keydown', function(ev){
     var b = ev.target && ev.target.closest ? ev.target.closest('[data-platform-pick]') : null;
     if (!b) return;
@@ -235,12 +245,10 @@
       idle: accountMode === 'loading' ? 'جاري التحقق من حسابك'
         : accountMode === 'guest' ? 'سجّل دخول بحساب ستريمر مربوط ب' + pl.label + ' عشان تتصل بالبث'
         : accountMode === 'player' ? 'تشغيل الألعاب لحسابات الستريمر فقط تواصل مع الإدارة لتحويل حسابك'
-        : accountMode === 'unlinked' ? 'اربط حساب ' + pl.label + ' بحسابك في الموقع وبعدها نتصل ببثك تلقائيا'
         : linkedUsername
-        ? (isAutoConnectOff()
-          ? 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ اضغط اتصال لما تبي تربط الألعاب ببثك'
-          : 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ نتصل تلقائيا أول ما تبدأ البث في ' + pl.label)
-        : (streamPlatform !== 'tiktok' ? 'اكتب اسم قناة ' + pl.label + ' عشان نتحقق منها ونربط الألعاب فيها' : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه'),
+        ? 'حسابك المربوط ⁦' + pl.handle(linkedUsername) + '⁩ اضغط اتصال أو اختر المنصة ونتصل ببثك على طول'
+        : accountMode === 'unlinked' ? 'اربط حساب ' + pl.label + ' من صفحة حسابك ونتصل ببثك بضغطة، أو اتصل بحساب آخر'
+        : 'اضغط اتصال بحساب آخر واكتب ' + (streamPlatform !== 'tiktok' ? 'اسم قناة ' + pl.label : 'يوزر البث'),
       connecting: 'نتأكد إن الحساب يبث الآن',
       connected: isPhoneRoomSaved()
         ? 'غرفة الجوالات مفتوحة والألعاب تستقبل من جوالات اللاعبين بدون بث'
@@ -251,6 +259,7 @@
     note.className = 'cn-msg' + (connectState === 'error' ? ' err' : connectState === 'connected' ? ' ok' : '');
 
     controls.innerHTML = '';
+    if (connectState === 'connected' || connectState === 'connecting' || accountMode === 'guest' || accountMode === 'player' || accountMode === 'loading') renderOtherForm(card, false);
     if (connectState === 'connected') {
       var badge = document.createElement('span');
       badge.className = 'cn-st';
@@ -270,34 +279,44 @@
       controls.appendChild(cnButton('إلغاء', 'cancel'));
       return;
     }
-    // خانة اليوزر للأدمن وأصحاب صلاحية «تشغيل كامل» بس. الستريمر العادي يتصل فقط ببث حسابه المربوط.
-    if (accountMode !== 'free') {
-      if (accountMode === 'linked') controls.appendChild(cnButton('تحقق الآن', 'check', 'pri'));
-      else if (accountMode === 'guest') {
-        var login = cnButton('تسجيل الدخول', null, 'pri');
-        login.addEventListener('click', function(){ if (window.AGPSite) window.AGPSite.openAuth(); else location.href = 'login.html'; });
-        controls.appendChild(login);
-      } else if (accountMode === 'unlinked') controls.appendChild(cnLink('ربط حساب ' + platformInfo().label, 'profile.html', 'pri'));
-      appendStatsButton(controls);
+    if (accountMode === 'guest') {
+      var login = cnButton('تسجيل الدخول', null, 'pri');
+      login.addEventListener('click', function(){ if (window.AGPSite) window.AGPSite.openAuth(); else location.href = 'login.html'; });
+      controls.appendChild(login);
       return;
     }
-    var wrap = document.createElement('label');
-    wrap.className = 'cn-in';
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = platformInfo().placeholder;
-    input.setAttribute('dir', 'ltr');
-    input.setAttribute('autocomplete', 'off');
-    input.setAttribute('autocapitalize', 'none');
-    input.setAttribute('autocorrect', 'off');
-    input.setAttribute('spellcheck', 'false');
-    input.setAttribute('aria-label', 'يوزر البث');
-    input.setAttribute('data-connect-input', '1');
-    if (linkedUsername) input.value = linkedUsername;
-    wrap.appendChild(input);
-    controls.appendChild(wrap);
-    controls.appendChild(cnButton('اتصال', 'submit', 'pri'));
+    if (accountMode !== 'linked' && accountMode !== 'unlinked' && accountMode !== 'free') return;
+    // الستريمر: اتصال بضغطة بحسابه المربوط، و«اتصال بحساب آخر» مطوي يفتح خانة اليوزر.
+    if (linkedUsername) controls.appendChild(cnButton('اتصال', 'check', 'pri'));
+    else if (accountMode === 'unlinked') controls.appendChild(cnLink('ربط حساب ' + pl.label, 'profile.html', 'pri'));
+    var other = cnButton('اتصال بحساب آخر', 'other');
+    other.setAttribute('aria-expanded', otherOpen ? 'true' : 'false');
+    other.setAttribute('aria-controls', 'cn-alt');
+    controls.appendChild(other);
     appendStatsButton(controls);
+    renderOtherForm(card, true);
+  }
+
+  // خانة «اتصال بحساب آخر»: عنصر ثابت تحت سطر المنصة (ينطوي ويفتح) فما يضيع اللي انكتب فيه.
+  var otherOpen = false;
+  function renderOtherForm(card, allowed){
+    var alt = card.querySelector('.cn-alt');
+    if (!allowed) { if (alt) { alt.classList.remove('open'); alt.setAttribute('aria-hidden', 'true'); } return; }
+    if (!alt) {
+      alt = document.createElement('div');
+      alt.className = 'cn-alt';
+      alt.id = 'cn-alt';
+      alt.innerHTML = '<div><div class="cn-form"><label class="cn-in"><input type="text" dir="ltr" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="يوزر البث" data-connect-input="1"></label></div></div>';
+      var form = alt.querySelector('.cn-form');
+      form.appendChild(cnButton('اتصال', 'submit', 'pri'));
+      var note = card.querySelector('[data-connect-note]');
+      card.insertBefore(alt, note);
+    }
+    var input = alt.querySelector('[data-connect-input]');
+    input.placeholder = platformInfo().placeholder;
+    alt.classList.toggle('open', otherOpen);
+    alt.setAttribute('aria-hidden', otherOpen ? 'false' : 'true');
+    Array.prototype.forEach.call(alt.querySelectorAll('input,button'), function(x){ x.tabIndex = otherOpen ? 0 : -1; });
   }
 
   // [إصلاح زر "اتصال" الميت — خصوصاً بالآيباد] محرك القالب يعيد بناء محتوى
@@ -307,18 +326,23 @@
   // الأبطأ (آيباد/Safari) هذا يصير تقريباً كل مرة. نفس حل زر القائمة:
   // مستمع واحد على document يلتقط أي نسخة عبر data-connect-* ويقرأ قيمة
   // الخانة وقت الضغط بدل الاعتماد على مراجع قديمة.
+  function getConnectInputEl(){ return document.querySelector('[data-connect-card] [data-connect-input]'); }
   function getConnectInputValue(){
-    var input = document.querySelector('[data-connect-controls] [data-connect-input]');
+    var input = document.querySelector('[data-connect-card] [data-connect-input]');
     return input ? input.value : '';
   }
   document.addEventListener('click', function(ev){
-    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-connect-controls] [data-connect-action]') : null;
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-connect-card] [data-connect-action]') : null;
     if (!btn || btn.disabled) return;
     var action = btn.getAttribute('data-connect-action');
     if (action === 'submit') {
       handleConnectSubmit(getConnectInputValue());
     } else if (action === 'check') {
-      if (linkedUsername) { setAutoConnectOff(false); connectToBackend(linkedUsername); }
+      connectLinkedNow();
+    } else if (action === 'other') {
+      otherOpen = !otherOpen;
+      renderConnectUI();
+      if (otherOpen) setTimeout(function(){ var i = getConnectInputEl(); if (i) i.focus(); }, 60);
     } else if (action === 'disconnect') {
       disconnectFromBackend();
     } else if (action === 'stats') {
@@ -331,7 +355,7 @@
   });
   document.addEventListener('keydown', function(ev){
     if (ev.key !== 'Enter' || ev.isComposing) return;
-    var input = ev.target && ev.target.closest ? ev.target.closest('[data-connect-controls] [data-connect-input]') : null;
+    var input = ev.target && ev.target.closest ? ev.target.closest('[data-connect-card] [data-connect-input]') : null;
     if (!input) return;
     ev.preventDefault();
     handleConnectSubmit(input.value);
@@ -398,6 +422,7 @@
           renderConnectUI();
         } else if (status === 'connected') {
           connectState = 'connected';
+          otherOpen = false;
           autoFailedAttempts = 0;
           saveVerifiedStreamConnection(connectUsername);
           if (window.AGPLiveWatch) window.AGPLiveWatch.reset();
