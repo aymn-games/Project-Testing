@@ -380,37 +380,32 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .win-btns .go{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 26px rgba(139,92,246,.4)}
 .win-btns .lib{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--fg2);backdrop-filter:blur(10px)}
 .win-btns button:hover{filter:brightness(1.1)}
-/* شريط شرح اللعبة قبل البداية — بين النتيجة والصناديق، والصناديق تصغر شوي بدل ما ينغطّى شي */
-.intro{flex:none;display:flex;align-items:center;gap:clamp(10px,1vw,18px);padding:clamp(10px,1.2vh,14px) clamp(12px,1vw,18px);border-radius:clamp(18px,1.6vw,26px);
-  background:linear-gradient(180deg,rgba(30,25,44,.92),rgba(13,11,20,.94));border:1px solid rgba(167,139,250,.28);box-shadow:0 0 0 6px rgba(139,92,246,.05),0 20px 50px rgba(0,0,0,.35);animation:rise .4s ease}
-.intro-idea{flex:0 0 clamp(170px,15vw,290px);display:flex;flex-direction:column;gap:6px;padding-inline-start:clamp(4px,.4vw,8px)}
-.intro-idea b{font-weight:700;font-size:clamp(18px,1.6vw,30px);line-height:1.15;background:linear-gradient(180deg,var(--fg),var(--agp3));-webkit-background-clip:text;background-clip:text;color:transparent}
-.intro-idea span{font-weight:500;font-size:clamp(12px,.92vw,17px);line-height:1.45;color:var(--fg2)}
-.intro.mini .intro-idea{display:none}
-.intro-steps{flex:1;min-width:0;margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(6px,.6vw,10px)}
-.intro-steps li{min-width:0;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.55em;row-gap:2px;align-items:center;padding:clamp(8px,.9vh,12px) clamp(8px,.7vw,12px);border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
-.intro-steps .n{grid-row:1/3;width:clamp(26px,1.9vw,34px);height:clamp(26px,1.9vw,34px);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:clamp(13px,1vw,17px);color:#fff;background:linear-gradient(135deg,var(--agp),var(--pink));box-shadow:0 4px 14px rgba(139,92,246,.4)}
-.intro-steps b{font-weight:700;font-size:clamp(14px,1.2vw,22px);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.intro-steps li > span:last-child{font-weight:500;font-size:clamp(12px,.92vw,17px);line-height:1.4;color:var(--fg2)}
-.intro-steps .kb{color:var(--blue)} .intro-steps .kr{color:var(--red)}
-.intro-mini{display:none;flex:1;min-width:0;align-items:baseline;gap:.6em;font-size:clamp(14px,1.1vw,20px)}
-.intro-mini b{font-weight:700;color:var(--fg);white-space:nowrap}
-.intro-mini span{color:var(--muted);font-weight:500;font-size:.8em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.intro-actions{flex:none;display:flex;flex-direction:column;gap:8px}
-.ib{font-family:var(--f-body);font-weight:700;font-size:clamp(14px,1.05vw,19px);height:clamp(40px,3vw,52px);padding:0 clamp(16px,1.6vw,30px);border-radius:999px;white-space:nowrap;transition:filter .2s,transform .15s}
+/* نافذة فكرة اللعبة قبل البداية — فوق شاشة اللعب بخلفية خفيفة (الصناديق تبان وراها) */
+.intro-ov{position:fixed;inset:0;z-index:45;display:grid;place-items:center;padding:calc(var(--hh) + 16px) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:rgba(7,6,11,.38);overflow-y:auto;animation:fadeIn .3s ease}
+.intro-win{position:relative;width:min(980px,100%);display:flex;flex-direction:column;gap:clamp(14px,2vh,22px);padding:clamp(20px,2.6vh,32px) clamp(18px,2vw,34px);border-radius:30px;
+  background:rgba(12,11,18,.94);border:1px solid rgba(167,139,250,.3);box-shadow:0 0 0 8px rgba(139,92,246,.06),0 40px 100px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);animation:rise .45s cubic-bezier(.2,1.25,.35,1)}
+.intro-idea{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.intro-idea b{font-weight:700;font-size:clamp(28px,2.6vw,46px);line-height:1.15;background:linear-gradient(180deg,var(--fg),var(--agp3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro-idea span{font-weight:500;font-size:clamp(15px,1.25vw,22px);line-height:1.5;color:var(--fg2);max-width:46ch;text-wrap:balance}
+.intro-steps{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(8px,.8vw,12px)}
+.intro-steps li{min-width:0;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.7em;row-gap:3px;align-items:center;padding:clamp(10px,1.3vh,16px) clamp(10px,.9vw,16px);border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+.intro-steps .n{grid-row:1/3;width:clamp(30px,2.2vw,40px);height:clamp(30px,2.2vw,40px);border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:clamp(14px,1.1vw,19px);color:#fff;background:linear-gradient(135deg,var(--agp),var(--pink));box-shadow:0 4px 14px rgba(139,92,246,.4)}
+.intro-steps b{font-weight:700;font-size:clamp(15px,1.25vw,22px);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.intro-steps li > span:last-child{font-weight:500;font-size:clamp(13px,.95vw,17px);line-height:1.45;color:var(--fg2)}
+.intro-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.ib{font-family:var(--f-body);font-weight:700;font-size:clamp(15px,1.15vw,20px);height:clamp(44px,3.3vw,56px);padding:0 clamp(22px,2.2vw,40px);border-radius:999px;white-space:nowrap;transition:filter .2s,transform .15s}
 .ib:active{transform:scale(.97)}
 .ib.ok,.ib.more{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--fg2)}
 .ib.ok:hover,.ib.more:hover{background:rgba(255,255,255,.09)}
 .ib.go{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 26px rgba(139,92,246,.4);animation:goGlow 1.8s infinite}
 .ib.go:hover{filter:brightness(1.1)}
-.ib.more,.ib.go2{display:none}
-.intro.mini .intro-steps,.intro.mini .ib.ok,.intro.mini .ib.go:not(.go2){display:none}
-.intro.mini .intro-mini{display:flex}
-.intro.mini .intro-actions{flex-direction:row}
-.intro.mini .ib.more,.intro.mini .ib.go2{display:inline-block}
+/* بعد «فهمت»: زر البداية بمكان الوقت فوق، بدون ما يغطي أي صندوق */
+.ready-bar{display:flex;gap:6px;justify-content:center}
+.ready-bar .ib{height:clamp(30px,2.3vw,40px);font-size:clamp(12px,.95vw,16px);padding:0 clamp(12px,1.1vw,20px)}
+.clock.ready .tug,.clock.ready .tbar{display:none}
 @keyframes goGlow{0%,100%{box-shadow:0 8px 26px rgba(139,92,246,.4),0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 8px 26px rgba(139,92,246,.4),0 0 0 10px rgba(139,92,246,.16)}}
-@media (max-width:1100px){.intro-steps{grid-template-columns:repeat(3,minmax(0,1fr))}.intro{flex-wrap:wrap}.intro-idea{flex:1 1 100%}}
-@media (max-width:620px){.intro{flex-direction:column;align-items:stretch}.intro-idea{flex:none}.intro-steps{grid-template-columns:1fr 1fr}.intro-actions{flex-direction:row;justify-content:center}.intro-mini{flex-direction:column}}
+@media (max-width:820px){.intro-steps{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.intro-steps{grid-template-columns:1fr}}
 @keyframes winPop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
 </style>
 </head>
@@ -437,6 +432,10 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       <div class="time" id="clock">00:00</div>
       <div class="tug"><div class="b" id="tugB" style="width:50%"></div><div class="r" id="tugR" style="width:50%"></div></div>
       <div class="tbar"><i id="tbar"></i></div>
+      <div class="ready-bar" id="readyBar" hidden>
+        <button class="ib more" type="button" id="introMore">الشرح</button>
+        <button class="ib go" type="button" id="introGo2">ابدأ المباراة</button>
+      </div>
     </div>
     <div class="team-card red">
       <div class="team-info"><div class="team-name" id="redName">الفريق الأحمر</div><div class="team-kw">للانضمام اكتب «<b id="redKw"></b>»</div></div>
@@ -444,9 +443,14 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       <div class="roster" id="rosterRed" aria-label="لاعبو الفريق الأحمر"></div>
     </div>
   </section>
-  <section class="intro" id="intro" hidden aria-label="شرح اللعبة">
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+</div>
+
+<div class="fx" id="fx"></div>
+<div class="intro-ov" id="intro" hidden>
+  <section class="intro-win" role="dialog" aria-modal="true" aria-labelledby="introTitle">
     <div class="intro-idea">
-      <b>فكرة اللعبة</b>
+      <b id="introTitle">فكرة اللعبة</b>
       <span>كل فريق يحاول يحوّل صناديق الفريق الثاني للونه، بالإجابة على أسئلة الصناديق قبل ما يخلص الوقت</span>
     </div>
     <ol class="intro-steps">
@@ -457,18 +461,12 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       <li><span class="n">5</span><b>الاسترداد</b><span>بعد الهجوم نص الوقت يرجّع فيه كل فريق صناديقه</span></li>
       <li><span class="n">6</span><b>الفوز</b><span>للفريق اللي عنده صناديق أكثر بجهة الخصم</span></li>
     </ol>
-    <div class="intro-mini"><b>جاهزين؟</b><span>اكتبوا رقم صندوق من صناديق الخصم أول ما تبدأ المباراة</span></div>
     <div class="intro-actions">
       <button class="ib ok" type="button" id="introOk">فهمت</button>
-      <button class="ib more" type="button" id="introMore">الشرح</button>
       <button class="ib go" type="button" id="introGo">ابدأ المباراة</button>
-      <button class="ib go go2" type="button" id="introGo2">ابدأ المباراة</button>
     </div>
   </section>
-  <div class="board-wrap"><div class="board" id="board"></div></div>
 </div>
-
-<div class="fx" id="fx"></div>
 <div class="banner" id="banner" hidden></div>
 
 <aside class="events" id="events" hidden aria-label="أحداث المباراة">
@@ -1020,14 +1018,17 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     S.phase = 'ready';
     renderAll();
   }
-  /* شرح اللعبة قبل البداية — شريط فوق الصناديق (ما يغطيها)، «فهمت» يطويه و«ابدأ» يبدأ */
+  /* نافذة فكرة اللعبة قبل البداية — «فهمت» يقفلها ويخلي زر البداية بمكان الوقت فوق، و«ابدأ» يبدأ */
   function showIntro(mini) {
-    var el = $('intro');
-    el.hidden = false;
-    el.classList.toggle('mini', !!mini);
-    requestAnimationFrame(queueFit);
+    $('intro').hidden = !!mini;
+    $('readyBar').hidden = !mini;
+    $('clock').parentNode.classList.toggle('ready', !!mini);
   }
-  function hideIntro() { $('intro').hidden = true; requestAnimationFrame(queueFit); }
+  function hideIntro() {
+    $('intro').hidden = true;
+    $('readyBar').hidden = true;
+    $('clock').parentNode.classList.remove('ready');
+  }
   function beginFromIntro() {
     if (S.phase !== 'ready') return false;
     hideIntro();
