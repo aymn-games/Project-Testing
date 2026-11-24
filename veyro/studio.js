@@ -838,6 +838,47 @@
         body.classList.toggle('closed', !panelOpen);
     }
 
+    /*
+     * سحب الصورة/الاسم/الرسالة على الشاشة نفسها (فوق فيديو الأليرت الحقيقي). يلتقط الضغطة قبل سحب العنصر كله،
+     * والمكان نسبة من إطار الفيديو — نفس اللي يحفظه محرر الترتيب الصغير ويقراه البث.
+     */
+    frame.addEventListener('pointerdown', function (e) {
+        var pe = e.target.closest && e.target.closest('.agp-so-vbox.editing .agp-so-vpart[data-part]');
+        if (!pe) return;
+        var n = pe.closest('.agp-so-item');
+        var it = n && find(n.getAttribute('data-id'));
+        if (!it || !O.isVideoAlert(it)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var box = pe.closest('.agp-so-vbox'), key = pe.getAttribute('data-part'), xy = null;
+        try { pe.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
+        pe.classList.add('ob-pdrag');
+        function mv(ev) {
+            var r = box.getBoundingClientRect();
+            xy = [Math.max(0, Math.min(100, (ev.clientX - r.left) / r.width * 100)), Math.max(0, Math.min(100, (ev.clientY - r.top) / r.height * 100))];
+            pe.style.left = xy[0] + '%';
+            pe.style.top = xy[1] + '%';
+        }
+        function up() {
+            pe.removeEventListener('pointermove', mv);
+            pe.removeEventListener('pointerup', up);
+            pe.removeEventListener('pointercancel', up);
+            pe.classList.remove('ob-pdrag');
+            if (xy) {
+                it.parts = it.parts || {};
+                it.parts[key] = Object.assign({}, O.partsOf(it)[key], { x: Math.round(xy[0] * 10) / 10, y: Math.round(xy[1] * 10) / 10 });
+                commit();
+                rebuildNode(it);
+            }
+            partSel = key;
+            partOpen = key;
+            renderPanel();
+        }
+        pe.addEventListener('pointermove', mv);
+        pe.addEventListener('pointerup', up);
+        pe.addEventListener('pointercancel', up);
+    }, true);
+
     frame.addEventListener('pointerdown', function (e) {
         var handle = e.target.closest && e.target.closest('.ob-handle');
         var n = e.target.closest && e.target.closest('.agp-so-item');
@@ -970,6 +1011,9 @@
      */
     var panelScroll = { ctx: null, top: 0 };
     function renderPanel() {
+        // أليرت فيديو فيه صورة واسم ورسالة ومختار: يطلع بالشاشة بحجمه والفيديو شغّال، وعناصره تنسحب (O.alertEdit)
+        var selIt = selectedId && find(selectedId);
+        O.alertEdit(selIt && O.isVideoAlert(selIt) && O.partsOf(selIt) ? selIt.id : null);
         var oldPb = panel.querySelector('.ob-pbody');
         if (oldPb && panelScroll.ctx) panelScroll.top = oldPb.scrollTop;
         panel.textContent = '';
