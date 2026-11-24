@@ -1475,3 +1475,23 @@ body.lock{overflow:hidden}
 .room-pick{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px;width:100%}
 /* زر الحساب بعد الدخول */
 .login-btn[data-signed] span{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- مكتبة الألعاب (الموقع الحي) ---------- */
+/* نافذة سبب قفل اللعبة */
+.gl-lock{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,5,8,.72);direction:rtl;animation:fade .2s ease}
+.gl-lock-box{width:100%;max-width:400px;padding:26px 22px 20px;border-radius:24px;border:1px solid var(--line-2);background:linear-gradient(180deg,rgba(26,21,42,.98),rgba(12,10,20,.98));box-shadow:0 40px 80px -30px rgba(0,0,0,.9);text-align:center;display:flex;flex-direction:column;gap:10px;animation:pop .25s cubic-bezier(.2,.8,.2,1)}
+.gl-lock-ic{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 4px;border-radius:18px;color:var(--brand-primary);background:rgba(178,140,245,.12);border:1px solid var(--line-2)}
+.gl-lock-ic svg{width:28px;height:28px}
+.gl-lock-box p{margin:0 0 8px;font:500 .98rem/1.85 var(--f-ui);color:var(--text)}
+.gl-lock-box .btn{width:100%}
+/* حالة رسالة الاتصال */
+.cn-msg.ok{color:#9be7b9}
+.cn-b.soon{border-style:dashed;color:var(--text-3);cursor:not-allowed}
+.cn-acc .cn-in{flex:1 1 180px;min-width:160px}
+/* شريط البثوث الشغّالة بخط الموقع */
+.agp-live-streams{margin:var(--s5) 0 0!important;font-family:var(--f-ui)}
+.agp-live-head{font-family:var(--f-ui)!important}
+/* زر استوديو البث جنب العنوان */
+.lib-title [data-studio-btn]{margin-inline-start:auto}
+/* بطاقة متابعة تيك توك تحت الشبكة */
+.page-lib .lib > .lib-empty + *{margin-top:var(--s6)}
