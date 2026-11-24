@@ -1929,7 +1929,7 @@
      * (طبقتين SVG حوالين النص)، فيبان النص «منسوج» داخل الريشة. كل الحركة ناعمة وبطيئة:
      * لمعة تمشي على المنحنى، الريش يتنفّس، الطيور ترفرف وتبتعد، والقلوب تنبض. اللون = currentColor.
      */
-    var DECOS = [{ key: 'none', label: 'بدون' }, { key: 'infinity', label: 'ريشة اللانهاية' }];
+    var DECOS = [{ key: 'none', label: 'بدون' }, { key: 'infinity', label: 'ريشة اللانهاية' }, { key: 'infinity2', label: 'ريشتين ونجوم' }];
     var DECO_A = 118; // نصف عرض اللانهاية بوحدات الـviewBox
     function lemni(t) {
         var s = Math.sin(t), c = Math.cos(t), d = 1 + s * s;
@@ -1952,7 +1952,7 @@
         var out = '';
         for (var i = 0; i <= n; i++) {
             var u = i / n, t = t0 + (t1 - t0) * u;
-            var p = lemni(t), q = lemni(t + 0.01);
+            var p = lemni(t), q = lemni(t + (t1 >= t0 ? 0.01 : -0.01));
             var tx = q[0] - p[0], ty = q[1] - p[1], L = Math.hypot(tx, ty) || 1;
             tx /= L; ty /= L;
             var env = Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), 0.6);
@@ -1972,13 +1972,18 @@
             '<path class="dc-wing" style="animation-delay:' + (delay / 3).toFixed(2) + 's" d="M0 0C-3-7-9-9-15-6C-9-5-5-2 0 0C5-2 9-5 15-6C9-9 3-7 0 0Z"/>' +
             '<path d="M-2 0C-1 2 1 2 2 0C1 4 0 6-1 7C0 4-1 2-2 0Z"/></g></g>';
     }
+    /** نجمة لامعة بأربع رؤوس (تتلألأ). */
+    function decoStar(x, y, s, delay) {
+        return '<g class="dc-star" style="animation-delay:' + delay + 's"><path transform="translate(' + x + ' ' + y + ') scale(' + s + ')" d="M0-6C.6-1.6 1.6-.6 6 0C1.6.6.6 1.6 0 6C-.6 1.6-1.6.6-6 0C-1.6-.6-.6-1.6 0-6Z"/></g>';
+    }
     function decoHeart(x, y, s, delay) {
         return '<g class="dc-heart" style="animation-delay:' + delay + 's"><path transform="translate(' + x + ' ' + y + ') scale(' + s + ')" d="M0 4C-6-1-10-4-10-8C-10-12-6-14-3-12C-1.6-11.2-.6-10 0-9C.6-10 1.6-11.2 3-12C6-14 10-12 10-8C10-4 6-1 0 4Z"/></g>';
     }
     var _decoCache = {};
     /** طبقة الزخرفة: back = ورا النص، front = قدّامه. */
-    function infinityLayer(front) {
-        var k = front ? 'f' : 'b';
+    function infinityLayer(front, variant) {
+        var two = variant === 'infinity2';
+        var k = (front ? 'f' : 'b') + (two ? '2' : '');
         if (_decoCache[k]) return _decoCache[k];
         var PI = Math.PI;
         // التقاطع الأول (t≈π/2) قدّام النص، والثاني (t≈3π/2) وراه
@@ -1993,8 +1998,14 @@
         svg += '<path class="dc-shaft" d="' + shaft + '"/>';
         // الريشة: على الفص اليمين (من التقاطع للطرف ورجوع)، والجزء اللي قدّام النص بالطبقة الأمامية
         // الريشة على القوس الفوقاني اليمين (من قرب التقاطع لرأسها عند طرف اللانهاية) — كلها ورا النص
-        if (!front) svg += '<g class="dc-feather">' + featherBarbs(-PI / 2 + 0.22, 0.3, 190, 44, 7) + '</g>';
-        if (!front) {
+        if (!front && !two) svg += '<g class="dc-feather">' + featherBarbs(-PI / 2 + 0.22, 0.3, 190, 44, 7) + '</g>';
+        // «ريشتين ونجوم»: ريشتين أصغر متقابلتين (فوق يمين، وتحت يسار مقلوبة — رأسها عند الطرف اليسار)
+        if (!front && two) svg += '<g class="dc-feather">' + featherBarbs(-PI / 2 + 0.3, 0.25, 150, 34, 7) + '</g><g class="dc-feather dc-f2">' + featherBarbs(3 * PI / 2 - 0.3, PI - 0.25, 150, 34, 13) + '</g>';
+        if (!front && two) {
+            svg += decoHeart(0, -40, 1.2, 0);
+            svg += decoStar(-150, -30, 1.4, 0) + decoStar(-96, -52, 0.95, 0.8) + decoStar(150, 34, 1.4, 1.6) + decoStar(92, 52, 0.95, 2.4) + decoStar(-40, 48, 0.8, 1.2) + decoStar(44, -50, 0.8, 2);
+        }
+        if (!front && !two) {
             svg += decoHeart(100, 18, 1.15, 0) + decoHeart(124, 18, 1.15, 0.35);
             svg += decoBird(-132, -22, 1, 0) + decoBird(-150, 2, 0.85, 1.4) + decoBird(-128, 22, 0.9, 2.6);
         }
@@ -2004,13 +2015,13 @@
     }
     /** يلف النص بالزخرفة (لو it.deco معروفة) — يرجّع العنصر اللي ينحط بالـmv. */
     function decorate(it, tx) {
-        if (it.deco !== 'infinity') return tx;
-        var w = el('span', 'agp-so-deco d-infinity');
+        if (it.deco !== 'infinity' && it.deco !== 'infinity2') return tx;
+        var w = el('span', 'agp-so-deco d-' + it.deco);
         if (it.decoColor) w.style.color = it.decoColor;
-        w.insertAdjacentHTML('beforeend', infinityLayer(false));
+        w.insertAdjacentHTML('beforeend', infinityLayer(false, it.deco));
         tx.classList.add('dc-tx');
         w.appendChild(tx);
-        w.insertAdjacentHTML('beforeend', infinityLayer(true));
+        w.insertAdjacentHTML('beforeend', infinityLayer(true, it.deco));
         return w;
     }
 
@@ -4346,6 +4357,9 @@
         '.agp-so-deco .dc-glow{stroke-width:3.2;stroke-dasharray:70 930;opacity:.75;filter:blur(1.2px);animation:agp-so-dcrun 6.5s linear infinite}',
         '.agp-so-deco .dc-feather{stroke-width:.42;transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-dcbreath 5s ease-in-out infinite}',
         '.agp-so-deco .dc-heart{fill:color-mix(in srgb,currentColor 55%,#3a3340);stroke:currentColor;stroke-width:1.1;transform-box:fill-box;transform-origin:50% 60%;animation:agp-so-dcbeat 2.4s ease-in-out infinite}',
+        '.agp-so-deco .dc-f2{animation-delay:-2.5s}',
+        '.agp-so-deco .dc-star{fill:currentColor;stroke:none;transform-box:fill-box;transform-origin:50% 50%;animation:agp-so-dctwinkle 3.2s ease-in-out infinite}',
+        '@keyframes agp-so-dctwinkle{0%,100%{transform:scale(.35) rotate(0);opacity:.15}50%{transform:scale(1) rotate(45deg);opacity:1}}',
         '.agp-so-deco .dc-bird{fill:currentColor;stroke:none;animation:agp-so-dcfly 7.5s ease-in-out infinite}',
         '.agp-so-deco .dc-wing{transform-box:fill-box;transform-origin:50% 100%;animation:agp-so-dcflap .9s ease-in-out infinite}',
         '@keyframes agp-so-dcfloat{0%,100%{transform:translateY(-50%)}50%{transform:translateY(-54%)}}',

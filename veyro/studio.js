@@ -154,7 +154,8 @@
         ],
         // تصاميم النصوص الجديدة (القديمة انشالت كلها بطلب صاحب المنصة)
         text: [
-            { label: 'ريشة اللانهاية', sub: 'ريشة على شكل ∞ تلف النص، وطيور وقلبين — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'elmessiri', size: 7, color: '#ffffff', deco: 'infinity' } }
+            { label: 'ريشة اللانهاية', sub: 'ريشة على شكل ∞ تلف النص، وطيور وقلبين — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'elmessiri', size: 7, color: '#ffffff', deco: 'infinity' } },
+            { label: 'ريشتين ونجوم', sub: 'لانهاية بريشتين متقابلتين، ونجوم تلمع وقلب — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'ruwudu', size: 7, color: '#ffffff', deco: 'infinity2' } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
