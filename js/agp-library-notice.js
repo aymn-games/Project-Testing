@@ -11,8 +11,11 @@
  *        وزرّين: «خذ راحتك ماورانا شي» و«لا خله بعدين».
  *     ٢) لو ضغط «لا خله بعدين»: الزر ينط لمكان ثاني بالشاشة، والصورة تتبدّل
  *        للصورة الثانية وفوقها «متأكد؟». الزر يظل ينط كل ما ينضغط.
- * - «خذ راحتك ماورانا شي» هو الوحيد اللي يقفل — ويقفل معه كل التنويهات
- *   المفتوحة بالصفحة. ESC والضغط برا ما يقفلون.
+ *        وزر «خذ راحتك ماورانا شي» يصير «لا خلاص خذ راحتك».
+ * - زر «خذ راحتك» (بالمرحلتين) هو الوحيد اللي يقفل — ويقفل معه كل التنويهات
+ *   المفتوحة بالصفحة، وما يطلع بعده أي تنويه ثاني بنفس الزيارة
+ *   (window.__agpNoticesDismissed + حدث 'agp:notices:dismiss-all').
+ *   ESC والضغط برا ما يقفلون.
  *
  * لتنبيه جديد بالمستقبل: غيّر NOTICE_KEY والنص و WINDOW_START.
  * للمعاينة بدون ما ينحفظ وبدون شرط الوقت: games.html?notice=preview
@@ -129,6 +132,7 @@
             var h = card.querySelector('.agp-ln-hero');
             if (h) { card.classList.add('has-img'); h.src = IMG_SURE; }
             card.querySelector('.agp-ln-emoji').textContent = '🌹';
+            card.querySelector('.agp-ln-ok').textContent = 'لا خلاص خذ راحتك';
             var t = card.querySelector('h3');
             t.innerHTML = '<span>متأكد؟</span>';
             card.classList.add('is-sure');
@@ -169,21 +173,25 @@
         x.addEventListener('pointerdown', runAway);
         x.addEventListener('click', runAway);
 
-        // «خذ راحتك ماورانا شي» يقفل هذا التنبيه وكل التنويهات المفتوحة بالصفحة
+        // «خذ راحتك» يقفل هذا التنبيه وكل التنويهات المفتوحة، وما يطلع بعده شي بنفس الزيارة
         bg.querySelector('.agp-ln-ok').onclick = function () {
-            var all = document.querySelectorAll('.agp-ln-bg, .agp-sn-bg');
-            Array.prototype.forEach.call(all, function (el) {
-                el.classList.add('is-out');
-                setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 460);
-            });
+            window.__agpNoticesDismissed = true;
+            try { document.dispatchEvent(new CustomEvent('agp:notices:dismiss-all')); } catch (e) {}
+            bg.classList.add('is-out');
             x.style.opacity = '0';
+            setTimeout(function () { if (bg.parentNode) bg.parentNode.removeChild(bg); }, 460);
         };
+        // ESC ما يقفل — نوقفه عشان ما يوصل لأي مستمع ثاني بالصفحة
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && bg.parentNode) { e.preventDefault(); e.stopPropagation(); }
+        }, true);
         document.body.appendChild(bg);
         // أول ما يطلع نحسبه — حتى لو سكّر الصفحة بدون ما يضغط
         markShown();
     }
 
     function start() {
+        if (window.__agpNoticesDismissed) return;
         if (preview) { show(); return; }
         if (!inWindow() || seenLocally()) return;
         if (!loggedIn() || !A.request) { show(); return; }
