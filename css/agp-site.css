@@ -60,7 +60,7 @@ p{margin:0}
 /* الشاشات الكبيرة: الصفحة كلها تتكبّر بنسبة الشاشة (--z يحسبه سكربت بالـhead بكل صفحة)،
    فتملى الشاشة بنفس تناسق شاشة كمبيوتر عادية. أي طول بوحدات vw/vh يتقسم على --z */
 body{zoom:var(--z,1)}
-.wrap{max-width:1280px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1440px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (min-width:900px){.wrap{padding-left:max(40px,env(safe-area-inset-left,0px));padding-right:max(40px,env(safe-area-inset-right,0px))}}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
