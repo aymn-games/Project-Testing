@@ -244,7 +244,12 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 
 /* لوحة الصناديق: نفس لوحة إكس أو */
 .board-wrap{background:linear-gradient(180deg,rgba(30,25,44,.9),rgba(13,11,20,.92));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(167,139,250,.2);border-radius:clamp(20px,2vw,36px);box-shadow:0 0 0 8px rgba(139,92,246,.05),0 0 80px rgba(124,58,237,.12),0 40px 100px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
-.board::after{width:2px;margin-left:-1px;background:linear-gradient(180deg,transparent,rgba(167,139,250,.35),transparent)}
+/* الخط الفاصل بين جهة الأزرق وجهة الأحمر — واضح ومضيء، مع فراغ أعرض حوله */
+.board::after{top:-6px;bottom:-6px;width:6px;margin-left:-3px;border-radius:6px;
+  background:linear-gradient(180deg,rgba(56,189,248,.2),#c4b5fd 12%,#f4f2f8 50%,#c4b5fd 88%,rgba(251,113,133,.2));
+  box-shadow:0 0 12px rgba(196,181,253,.95),0 0 32px rgba(139,92,246,.75),0 0 60px rgba(139,92,246,.35)}
+.board > .box:nth-child(6n+3){margin-right:clamp(7px,.7vw,14px)}
+.board > .box:nth-child(6n+4){margin-left:clamp(7px,.7vw,14px)}
 
 /* الصندوق المقفول: خانة زجاجية بلون الفريق (مثل خانة إكس أو المملوكة) */
 .face{border-radius:clamp(14px,1.4vw,26px);border-width:2px}
@@ -393,6 +398,13 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .intro-steps b{font-weight:700;font-size:clamp(15px,1.25vw,22px);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .intro-steps li > span:last-child{font-weight:500;font-size:clamp(13px,.95vw,17px);line-height:1.45;color:var(--fg2)}
 .intro-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.intro-idea em,.intro-steps em{font-style:normal;font-weight:700}
+.intro-idea .tb{color:var(--blue)} .intro-idea .tr{color:var(--red)}
+.intro-steps .ex{display:inline-block;direction:ltr;padding:0 .45em;border-radius:8px;background:rgba(251,113,133,.14);border:1px solid rgba(251,113,133,.4);color:var(--red-l)}
+.intro-notes{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 12px}
+.intro-notes span{padding:8px 16px;border-radius:999px;background:rgba(139,92,246,.08);border:1px solid rgba(167,139,250,.28);color:var(--fg2);font-weight:500;font-size:clamp(13px,.95vw,17px);text-align:center}
+.intro-notes b{font-weight:700;color:var(--agp3)}
+.intro-actions .ib.go{min-width:clamp(160px,14vw,240px)}
 .ib{font-family:var(--f-body);font-weight:700;font-size:clamp(15px,1.15vw,20px);height:clamp(44px,3.3vw,56px);padding:0 clamp(22px,2.2vw,40px);border-radius:999px;white-space:nowrap;transition:filter .2s,transform .15s}
 .ib:active{transform:scale(.97)}
 .ib.ok,.ib.more{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--fg2)}
@@ -451,19 +463,22 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   <section class="intro-win" role="dialog" aria-modal="true" aria-labelledby="introTitle">
     <div class="intro-idea">
       <b id="introTitle">فكرة اللعبة</b>
-      <span>كل فريق يحاول يحوّل صناديق الفريق الثاني للونه، بالإجابة على أسئلة الصناديق قبل ما يخلص الوقت</span>
+      <span>فريقين: <em class="tb">الأزرق</em> و<em class="tr">الأحمر</em>، وكل فريق عنده 15 صندوق بجهته. هدفك تاخذ صناديق الفريق الثاني وتقلبها للون فريقك</span>
     </div>
     <ol class="intro-steps">
-      <li><span class="n">1</span><b>افتح صندوق</b><span>اكتب بالشات رقم صندوق من صناديق الفريق الثاني</span></li>
-      <li><span class="n">2</span><b>جاوب سؤالك</b><span>يطلع لك سؤال بوقت محدد، وإجابتك أنت بس تنحسب</span></li>
-      <li><span class="n">3</span><b>حوّله لفريقك</b><span>الصح يقلبه للونك، وخلص الوقت يقفله ويرجع متاح</span></li>
-      <li><span class="n">4</span><b>صندوق الحظ 🍀</b><span>لكل فريق صندوق يتحول له بدون سؤال</span></li>
-      <li><span class="n">5</span><b>الاسترداد</b><span>بعد الهجوم نص الوقت يرجّع فيه كل فريق صناديقه</span></li>
-      <li><span class="n">6</span><b>الفوز</b><span>للفريق اللي عنده صناديق أكثر بجهة الخصم</span></li>
+      <li><span class="n">1</span><b>افتح صندوق</b><span>اكتب بالشات رقم أي صندوق بجهة الفريق الثاني، مثلاً: <em class="ex" id="introEx">245</em></span></li>
+      <li><span class="n">2</span><b>جاوب على سؤالك</b><span>الصندوق ينقلب ويطلع عليه سؤالك واسمك والوقت. اكتب الجواب بالشات، وجوابك أنت بس ينحسب</span></li>
+      <li><span class="n">3</span><b>جواب صح ✓</b><span>الصندوق يصير بلون فريقك، وتقدر تفتح صندوق ثاني على طول</span></li>
+      <li><span class="n">4</span><b>خلص الوقت ⌛</b><span>الصندوق يتقفل ويرجع متاح لأي لاعب بسؤال جديد</span></li>
+      <li><span class="n">5</span><b>مرحلة الاسترداد</b><span>بعد ما يخلص وقت الهجوم، كل فريق عنده نص الوقت يرجّع صناديقه اللي انأخذت</span></li>
+      <li><span class="n">6</span><b>الفوز 🏆</b><span>الفريق اللي عنده صناديق أكثر بجهة الخصم لما يخلص الوقت</span></li>
     </ol>
+    <div class="intro-notes">
+      <span><b>الأسئلة:</b> عامة · مسائل رياضية · حروف مبعثرة (رتّبها وتطلع الكلمة)</span>
+      <span><b>🍀 صندوق الحظ:</b> لكل فريق صندوق يتحول له بدون سؤال</span>
+    </div>
     <div class="intro-actions">
-      <button class="ib ok" type="button" id="introOk">فهمت</button>
-      <button class="ib go" type="button" id="introGo">ابدأ المباراة</button>
+      <button class="ib go" type="button" id="introOk">فهمت</button>
     </div>
   </section>
 </div>
@@ -1020,6 +1035,9 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   }
   /* نافذة فكرة اللعبة قبل البداية — «فهمت» يقفلها ويخلي زر البداية بمكان الوقت فوق، و«ابدأ» يبدأ */
   function showIntro(mini) {
+    /* مثال حقيقي: رقم صندوق من جهة الفريق الأحمر بنفس اللوحة */
+    var ex = S.boxes.filter(function (b) { return b.origin === 'red'; });
+    if (ex.length && $('introEx')) $('introEx').textContent = ex[rnd(ex.length)].num;
     $('intro').hidden = !!mini;
     $('readyBar').hidden = !mini;
     $('clock').parentNode.classList.toggle('ready', !!mini);
@@ -1301,7 +1319,6 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   /* أول دخول من اللوبي: الشرح أولاً، والمباراة تبدأ بزر «ابدأ» (وضع التجربة يبدأ على طول) */
   $('introOk').onclick = function () { showIntro(true); };
   $('introMore').onclick = function () { showIntro(false); };
-  $('introGo').onclick = beginFromIntro;
   $('introGo2').onclick = beginFromIntro;
   resetMatch();
   requestAnimationFrame(loop);
