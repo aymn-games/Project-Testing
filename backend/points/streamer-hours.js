@@ -72,23 +72,26 @@ function recordMatchTime(userId, durationMs) {
 
 /**
  * استعلام فرعي (user_id, total_ms): ساعات البث المحتسبة لكل مستخدم من لحظة
- * @hoursFrom — الجزء قبل التحويل من broadcasts، والجزء بعده من
- * streamer_match_time. معاملاته المسمّاة تأتي من hoursParams(periodStart)
- * (periodStart = 0 → تراكمي كامل).
+ * @hoursFrom لين @hoursTo — الجزء قبل التحويل من broadcasts، والجزء بعده من
+ * streamer_match_time. معاملاته المسمّاة تأتي من hoursParams(periodStart, periodEnd)
+ * (periodStart = 0 → تراكمي كامل، بدون periodEnd → لين الآن).
  */
 var HOURS_BY_USER_SQL =
     `SELECT user_id, MAX(0, SUM(ms)) AS total_ms FROM (
-        SELECT user_id, MAX(0, MIN(ended_at, @cutover) - MAX(started_at, @hoursFrom)) AS ms
+        SELECT user_id, MAX(0, MIN(ended_at, @cutover, @hoursTo) - MAX(started_at, @hoursFrom)) AS ms
           FROM broadcasts WHERE ended_at IS NOT NULL
         UNION ALL
-        SELECT user_id, MAX(0, ended_at - MAX(started_at, @cutover, @hoursFrom)) AS ms
+        SELECT user_id, MAX(0, MIN(ended_at, @hoursTo) - MAX(started_at, @cutover, @hoursFrom)) AS ms
           FROM streamer_match_time
         UNION ALL
-        SELECT user_id, ms FROM streamer_hours_adjustments WHERE effective_at >= @hoursFrom
+        SELECT user_id, ms FROM streamer_hours_adjustments WHERE effective_at >= @hoursFrom AND effective_at < @hoursTo
     ) GROUP BY user_id`;
 
-function hoursParams(periodStart) {
-    return { hoursFrom: periodStart || 0, cutover: CUTOVER_AT };
+// نهاية مفتوحة (لين الآن) — أكبر لحظة يقبلها Date بالملي ثانية.
+var OPEN_END_MS = 8640000000000000;
+
+function hoursParams(periodStart, periodEnd) {
+    return { hoursFrom: periodStart || 0, hoursTo: periodEnd || OPEN_END_MS, cutover: CUTOVER_AT };
 }
 
 /** ساعات البث المحتسبة (ms) لمستخدم واحد — تراكمي كامل. */

@@ -37,6 +37,9 @@
  *                    بين كل من عنده صلاحية إدارتها، صف واحد ثابت يُستبدَل
  *                    بالكامل مع كل حفظ من لوحة admin-questions.html —
  *                    راجع backend/letters-cell/letters-cell-questions-service.js
+ *   ranking_snapshots — تصنيف كل أسبوع منتهي محفوظ كما هو (توب الاستريمرز
+ *                    بالساعات واللاعبين بالفوز) لتبويب «الأسبوع الماضي» —
+ *                    راجع backend/stats/last-week-ranking-service.js
  *   platform_stats_cache — أرقام حقيقية مُجمَّعة لقسم "الأرقام" بالصفحة
  *                    الرئيسية (حسابات مسجّلة، استريمرز نشطين، مشاهدين...)،
  *                    محسوبة من الجداول الفعلية ومخزَّنة مؤقتاً (٣ أيام) —
@@ -374,6 +377,15 @@ db.exec(`
         id INTEGER PRIMARY KEY CHECK (id = 1),
         data TEXT NOT NULL,
         computed_at INTEGER NOT NULL
+    );
+
+    -- نسخة محفوظة من التصنيف الأسبوعي بعد ما يخلص الأسبوع (قبل ما يتصفر
+    -- العرض): صف لكل أسبوع منتهي — راجع backend/stats/last-week-ranking-service.js
+    CREATE TABLE IF NOT EXISTS ranking_snapshots (
+        period_start INTEGER PRIMARY KEY,
+        period_end INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        created_at INTEGER NOT NULL
     );
 
     -- ساعات البث الفعلية = وقت المباريات المكتملة فقط (من بدايتها لإعلان
