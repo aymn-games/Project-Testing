@@ -2,12 +2,14 @@
  * AGP ENTRANCE — دخولية اللاعب: مشهد 4 ثواني فوق الشاشة كلها لما يدخل لاعب
  * عنده دخولية مفعّلة (backend/collectibles: user_entrances + user_owned_entrances).
  *
- * 4 نماذج، كل واحد بمؤثرات حقيقية مصوّرة (assets/entrances/<key>/، مصادرها
+ * 5 نماذج: 4 بمؤثرات حقيقية مصوّرة (assets/entrances/<key>/، مصادرها
  * بـCREDITS.md) تنحط فوق اللوبي بـmix-blend-mode: screen:
  *   nitro    — نيترو: جزيئات زرقاء، لهب ينفجر، كرة نار، جمر. بصوت (مخفّف).
  *   royal    — ملكي: عمود ضوء ذهبي، غبار ولمعات ذهبية. بدون صوت.
  *   princess — الأميرة: أضواء ولمعات وردية، دخان ناعم، فراشات مضيئة تطير. بدون صوت.
  *   storm    — العاصفة: غيوم وصواعق حقيقية، الإطار يطلع مع الصاعقة. بصوت (مخفّف).
+ *   notes    — النوتات: موجة نوتات موسيقية مضيئة (مرسومة بالكود على canvas، بدون
+ *              ملفات فيديو) مع خطوط المدرج، والإطار يركب الموجة ويستقر بالنص. بدون صوت.
  * المشهد يعرض إطار اللاعب نفسه (AGP.playerCard، أي إطار — مو مربوط بإطار
  * معيّن)، واسمه كبير، ونص الدخولية اللي يكتبه من بروفايله، وبلونه اللي اختاره
  * (entrance.color من ألوان النموذج الجاهزة).
@@ -49,7 +51,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         nitro:    { blue: 210, red: 2, green: 135, purple: 272 },
         royal:    { gold: 45, silver: 'silver', rose: 18 },
         princess: { pink: 328, purple: 282, sky: 200 },
-        storm:    { white: null, blue: 215, purple: 270, red: 0 }
+        storm:    { white: null, blue: 215, purple: 270, red: 0 },
+        notes:    { gold: 45, silver: 'silver', pink: 328, sky: 200 }
     };
     var GLOW = {
         blue: '110,180,255', red: '255,95,95', green: '90,230,150', purple: '185,125,255', gold: '255,205,110', silver: '220,228,240',
@@ -95,6 +98,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 { n: 'strike1', z: 'back', t0: 2.8, t1: 3.95, fi: .05, fo: .3, op: 1, hue: null, tint: true, base: 'saturate(.6) brightness(1.1)' },
                 { n: 'smoke', z: 'front', t0: .5, t1: 3.85, fi: .5, fo: .4, op: .35, hue: null, tint: true }
             ]
+        },
+        notes: {
+            tag: 'دخول النوتات', notes: true, dim: 'radial-gradient(ellipse at 50% 45%, rgba(22,8,44,.6), rgba(4,2,10,.95) 72%)',
+            layers: []
         }
     };
 
@@ -159,6 +166,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-ent-royal .agp-ent-tag{font-family:"Aref Ruqaa",serif;font-size:24px;letter-spacing:2px;color:#e9cf8a;}',
             '.agp-ent-flash{position:absolute;inset:0;opacity:0;mix-blend-mode:screen;}',
             '.agp-ent-trail{position:absolute;inset:0;}',
+            '.agp-ent-notes{position:absolute;inset:0;width:1280px;height:720px;}',
             '.agp-ent-bfs{position:absolute;inset:0;}',
             '.agp-ent-bf{position:absolute;left:0;top:0;width:0;height:0;perspective:520px;}',
             '.agp-ent-bf .w{position:absolute;top:-70px;width:100px;height:140px;filter:drop-shadow(0 0 6px rgba(255,170,220,.9)) drop-shadow(0 0 16px rgba(255,120,200,.55));}',
@@ -228,6 +236,74 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         g.globalCompositeOperation = 'source-over';
     }
 
+    // ---------------------------------------------------------------- notes (music wave)
+    // موجة نوتات تعبر المسرح (1280×720) من اليسار لليمين: النوتات تطلع من رأس
+    // الموجة وتتطاير وتختفي، ووراها 5 خطوط مدرج. كل شي محسوب من الزمن t مباشرة
+    // (بذرة عشوائية ثابتة)، فالحركة ناعمة بأي معدل إطارات.
+    var NOTE_HEAD_END = 2.1;
+    function notesWaveY(x, t) {   // x: 0..1 من العرض → y: 0..1 من الطول، تمر بمكان الإطار (0.4) عند x=0.5
+        return .4 + .16 * Math.sin((x - .5) * 5.2 + .9) * (1 - .35 * x) - .16 * Math.sin(.9) * (1 - .35 * .5) +
+            .015 * Math.sin(t * 2.2 + x * 7) + .13 * (1 - smooth(-.2, .55, x));
+    }
+    function notesSlope(x, t) { return (notesWaveY(x + .002, t) - notesWaveY(x - .002, t)) / .004; }
+    function notesHead(t) { return -.1 + 1.25 * easeInOut(t / NOTE_HEAD_END); }
+    function smooth(a, b, x) { x = clamp((x - a) / (b - a)); return x * x * (3 - 2 * x); }
+    function easeInOut(x) { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function noteSprites(glow) {
+        var px = 64, sz = Math.round(px * 2.2), out = [];
+        function sprite(draw) {
+            var c = document.createElement('canvas'); c.width = c.height = sz; var g = c.getContext('2d');
+            g.translate(sz / 2, sz / 2); g.shadowColor = 'rgba(' + glow + ',.95)'; g.shadowBlur = px * .35;
+            g.fillStyle = '#fffaf0'; g.strokeStyle = '#fffaf0'; g.lineCap = 'round';
+            draw(g, px * .5); draw(g, px * .5); return c;
+        }
+        function head(g, u, x, y) { g.save(); g.translate(x, y); g.rotate(-.45); g.beginPath(); g.ellipse(0, 0, u * .42, u * .3, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+        out.push(sprite(function (g, u) { head(g, u, -u * .2, u * .55); g.lineWidth = u * .12; g.beginPath(); g.moveTo(u * .17, u * .5); g.lineTo(u * .17, -u * .85); g.quadraticCurveTo(u * .3, -u * .35, u * .7, -u * .2); g.stroke(); }));
+        out.push(sprite(function (g, u) { head(g, u, -u * .62, u * .62); head(g, u, u * .42, u * .45); g.lineWidth = u * .11; g.beginPath(); g.moveTo(-u * .25, u * .58); g.lineTo(-u * .25, -u * .7); g.moveTo(u * .79, u * .4); g.lineTo(u * .79, -u * .88); g.stroke(); g.lineWidth = u * .2; g.beginPath(); g.moveTo(-u * .25, -u * .66); g.lineTo(u * .79, -u * .84); g.stroke(); }));
+        out.push(sprite(function (g, u) { head(g, u, -u * .1, u * .6); g.lineWidth = u * .12; g.beginPath(); g.moveTo(u * .27, u * .55); g.lineTo(u * .27, -u * .85); g.stroke(); }));
+        out.push(sprite(function (g, u) { g.beginPath(); for (var i = 0; i < 8; i++) { var r = i % 2 ? u * .14 : u * .55, a = i * Math.PI / 4; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); }));
+        return out;
+    }
+    function buildNotes(o) {
+        var cv = o.root.querySelector('.agp-ent-notes'), dpr = Math.min(2, window.devicePixelRatio || 1);
+        cv.width = 1280 * dpr; cv.height = 720 * dpr;
+        var g = cv.getContext('2d'); g.scale(dpr, dpr);
+        var parts = [];
+        for (var i = 0; i < 700; i++) {
+            var r = function (k) { return hash(i * 13.7 + k * 101.3); };
+            parts.push({ born: Math.pow(r(1), .9) * NOTE_HEAD_END, life: 1.1 + r(2) * .9, off: (r(3) + r(4) + r(5) - 1.5) * .14,
+                dx: (r(6) - .3) * .05, dy: -(.02 + r(7) * .06), k: r(8) < .12 ? 3 : Math.floor(r(9) * 3), sc: .45 + r(10) * .7,
+                rot: (r(11) - .5) * .6, spin: (r(12) - .5) * 1.2, ph: r(13) * 6.28, lag: r(14) * .08 });
+        }
+        o.notes = { g: g, parts: parts, sprites: noteSprites(o.glow) };
+    }
+    function drawNotes(o, t) {
+        var N = o.notes, g = N.g, W = 1280, H = 720, fadeAll = 1 - smooth(3.4, 3.9, t);
+        g.clearRect(0, 0, W, H);
+        var hx = notesHead(t), tail = Math.max(-.1, hx - .75), lineA = smooth(0, .3, t) * (1 - smooth(2.4, 3.2, t));
+        if (lineA > 0) {
+            g.lineWidth = 1.2; g.shadowColor = 'rgba(' + o.glow + ',.8)'; g.shadowBlur = 6;
+            for (var L = -2; L <= 2; L++) {
+                g.beginPath();
+                for (var x = tail; x <= Math.min(hx, 1.12); x += .006) { var y = (notesWaveY(x, t) + L * .018) * H; if (x === tail) g.moveTo(x * W, y); else g.lineTo(x * W, y); }
+                var gr = g.createLinearGradient(tail * W, 0, hx * W, 0);
+                gr.addColorStop(0, 'rgba(255,245,225,0)'); gr.addColorStop(.6, 'rgba(255,245,225,' + (.35 * lineA) + ')'); gr.addColorStop(1, 'rgba(255,250,235,' + (.7 * lineA) + ')');
+                g.strokeStyle = gr; g.stroke();
+            }
+            g.shadowBlur = 0;
+        }
+        for (var i = 0; i < N.parts.length; i++) {
+            var p = N.parts[i], age = t - p.born; if (age < 0 || age > p.life) continue;
+            var u = age / p.life, a = smooth(0, .12, u) * (1 - smooth(.55, 1, u)) * fadeAll; if (a <= 0) continue;
+            var x0 = notesHead(p.born) - p.lag;
+            var px = x0 + p.dx * age + .012 * Math.sin(p.ph + age * 3);
+            var py = notesWaveY(x0, p.born) + p.off * (.6 + .8 * Math.pow(Math.sin(x0 * 3.1 + 1.2), 2)) + p.dy * age;
+            var d = 30 * p.sc * (.8 + .35 * smooth(0, .25, u)) * 2.2;
+            g.save(); g.globalAlpha = a; g.translate(px * W, py * H); g.rotate(p.rot + p.spin * age + .12 * Math.sin(p.ph + age * 4));
+            g.drawImage(N.sprites[p.k], -d / 2, -d / 2, d, d); g.restore();
+        }
+    }
+
     // ---------------------------------------------------------------- per-model motion of card + title
     function title(o, t, tIn, tOut, rise) {
         var a = cubicOut(seg(t, tIn, tIn + .7)), out = seg(t, tOut, tOut + .35);
@@ -281,6 +357,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             shake(o, t, Math.max(bump(t, .42, .07) * 14, bump(t, 2.0, .06) * 5, bump(t, 3.2, .06) * 11));
             flash(o, Math.max(.95 * bump(t, .41, .035), .5 * bump(t, .48, .03), .45 * bump(t, 2.0, .04), .9 * bump(t, 3.2, .035)), o.glow);
             title(o, t, 1.0, 3.0, 12);
+        },
+        notes: function (o, t) {
+            o.dim.style.opacity = seg(t, 0, .35) * (1 - seg(t, 3.55, 4));
+            drawNotes(o, t);
+            // الإطار يركب الموجة من خارج اليسار، يميل مع اتجاهها، ويستقر بمكانه بنعومة
+            var T0 = .4, T1 = 2.0, u = seg(t, T0, T1), e = easeInOut(u);
+            var fx = -.22 + .72 * e, w = smooth(.55, 1, e);
+            var cy = .4 + (notesWaveY(fx, t) - .4) * .7 * (1 - w);
+            var ang = Math.atan(notesSlope(fx, t) * 720 / 1280) * (1 - w) * .55;
+            var sc = .5 + .5 * cubicOut(u), st = t - T1;
+            if (st > 0) sc *= 1 + .028 * Math.exp(-st * 5) * Math.sin(st * 11);
+            var co = seg(t, 3.1, 3.5);
+            card(o, fx * 1280 - 640, cy * 720 - 288, sc * (1 - .06 * co),
+                 'brightness(' + (1 + .3 * bump(t, 2.05, .2)) + ') drop-shadow(0 0 22px rgba(' + o.glow + ',' + (.45 * smooth(1.6, 2.2, t)) + '))',
+                 seg(t, T0, T0 + .35) * (1 - co));
+            o.card.style.transform += ' rotate(' + ang + 'rad)';
+            shake(o, t, 0);
+            flash(o, .22 * bump(t, 2.05, .2), o.glow);
+            title(o, t, 2.0, 3.05, 14);
         }
     };
 
@@ -305,6 +400,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="agp-ent-dim" style="background:' + M.dim + '"></div>' +
             '<div class="agp-ent-stage"><div class="agp-ent-world">' +
             '<div class="agp-ent-back"></div>' +
+            (M.notes ? '<canvas class="agp-ent-notes"></canvas>' : '') +
             '<div class="agp-ent-card"><div class="agp-ent-card-in">' + cardHtml(player) + '</div></div>' +
             '<div class="agp-ent-title"><div class="agp-ent-tag">' + esc(M.tag) + '</div>' +
             '<div class="agp-ent-name" style="text-shadow:0 0 24px rgba(' + glow + ',.75),0 4px 12px rgba(0,0,0,.8)">' + esc(player.name || '') + '</div>' +
@@ -329,6 +425,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             o.trail = q('trail').getContext('2d');
             if (shift) q('trail').style.filter = 'hue-rotate(' + shift + 'deg)';
         }
+        if (M.notes) buildNotes(o);
         if (M.sound) { o.audio = new Audio(ASSETS + key + '/' + M.sound); o.audio.preload = 'auto'; }
         return o;
     }
@@ -456,6 +553,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // Kept for js/agp-game-shell.js (the old small badges are gone; the full-screen entrance replaces them).
     AGP.playerEntrance = { syncSettled: function () {} };
 
-    AGP.log('AGP Entrance loaded (4 real-VFX entrances: nitro/royal/princess/storm).');
+    AGP.log('AGP Entrance loaded (5 entrances: nitro/royal/princess/storm/notes).');
 
 }(window.AymanGamesPlatform));

@@ -461,6 +461,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 13.31, avatarTopPct: 21.91, avatarWidthPct: 20.35, avatarHeightPct: 61.59,
             nameLeftPct: 38.67, nameTopPct: 51.21, nameWidthPct: 47.42, nameHeightPct: 22.76
         },
+        // إطار "التاج المجنّح" — منح محدود (مع بطاقتي الإقصاء والفوز بنفس التصميم).
+        // نسخة عريضة 2172×724 (طوّلت لوح الاسم بالعرض فصار بنفس عرض باقي الإطارات).
+        // الأصل PNG بخلفية سوداء: فُرّغت الخلفية والفتحة الدائرية لشفافية حقيقية.
+        // hole 282→599 × 219→530، name 650→1800 × 285→475 (داخل اللوح الكريمي
+        // 610→1865 × 264→497)، content 13→697. لوح فاتح — نص بني ذهبي.
+        'frame-winged-crown.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 13, contentHeight: 684,
+            avatarLeftPct: 12.98, avatarTopPct: 30.12, avatarWidthPct: 14.59, avatarHeightPct: 45.47,
+            nameLeftPct: 29.93, nameTopPct: 39.77, nameWidthPct: 52.95, nameHeightPct: 27.78,
+            textColor: '#6b4208'
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص

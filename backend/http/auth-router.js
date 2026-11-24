@@ -934,7 +934,7 @@ function handleAdminSetEntrance(req, res, body) {
 }
 
 /**
- * منح/سحب دخولية واحدة (nitro/royal/princess/storm) — مثل الإطارات، المستخدم
+ * منح/سحب دخولية واحدة (nitro/royal/princess/storm/notes) — مثل الإطارات، المستخدم
  * يقدر يملك أكثر من وحدة. body.revoke === true يسحب body.key.
  */
 function handleAdminGrantEntrance(req, res, body) {
