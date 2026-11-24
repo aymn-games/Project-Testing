@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <!-- SEO: محركات البحث وصورة المشاركة (docs/CHANGELOG.md) -->
 <title>ألعاب الديسكورد والجمعات | ألعاب أيمن</title>
 <meta name="description" content="العب من الأمبوستر مع ربعك في الديسكورد أو بالجمعة من جوالاتكم بدون تحميل أي تطبيق.">
@@ -22,227 +22,269 @@
 <meta name="twitter:description" content="العب من الأمبوستر مع ربعك في الديسكورد أو بالجمعة من جوالاتكم بدون تحميل أي تطبيق.">
 <meta name="twitter:image" content="https://aymngames.online/og-image.jpg">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://aymngames.online/#org","name":"ألعاب أيمن","alternateName":["Ayman Games","AGP","العاب ايمن"],"url":"https://aymngames.online/","logo":{"@type":"ImageObject","url":"https://aymngames.online/android-chrome-512x512.png","width":512,"height":512},"image":"https://aymngames.online/og-image.jpg","description":"منصة سعودية لألعاب البث المباشر التفاعلية لصنّاع المحتوى وجمهورهم على تيك توك وكيك وتويتش.","email":"aymngames1@gmail.com","address":{"@type":"PostalAddress","addressCountry":"SA"},"areaServed":{"@type":"Country","name":"المملكة العربية السعودية"},"contactPoint":{"@type":"ContactPoint","contactType":"customer support","email":"aymngames1@gmail.com","telephone":"+966582411235","areaServed":"SA","availableLanguage":["ar"]},"identifier":{"@type":"PropertyValue","name":"وثيقة العمل الحر","value":"FL-701621249"},"sameAs":["https://www.tiktok.com/@aymngame"]},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"الرئيسية","item":"https://aymngames.online/"},{"@type":"ListItem","position":2,"name":"ألعاب الديسكورد","item":"https://aymngames.online/discord-games.html"}]}]}</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="icon" href="favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050508">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>try{if(localStorage.getItem("agp-tone")==="bright")document.documentElement.setAttribute("data-tone","bright")}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&display=block" rel="stylesheet">
-<!-- مكتبة ألعاب الدسكورد والجمعات: نفس تصميم مكتبة ألعاب التيك توك
-     (games.html) — نفس الترويسة وبطاقات .gl-card. كل لعبة هنا مستضافة
-     في مستودعها ونطاقها الخاص، والبطاقة رابط لها فقط.
-     لإضافة لعبة: انسخ عنصر <article class="gl-card"> وعدّل:
-     --hue (لون البطاقة)، اسم الأيقونة (Material Symbols)، الرقم، التصنيف،
-     العنوان، الوصف، والرابط. -->
-<style>
-    @property --h { syntax:"<number>"; inherits:true; initial-value:0; }
-    :root{ --bg:#050508; --text:#f4f2fb; --muted:#968ea4; }
-    *{ box-sizing:border-box; }
-    body{
-        margin:0; min-height:100dvh; display:flex; flex-direction:column;
-        font-family:'IBM Plex Sans Arabic', system-ui, sans-serif; color:var(--text);
-        background:
-            radial-gradient(circle at 80% -10%, rgba(122,63,212,.22), transparent 45%),
-            radial-gradient(circle at 10% 110%, rgba(63,95,212,.14), transparent 45%),
-            var(--bg);
-    }
-    a{ color:inherit; text-decoration:none; }
-    :focus-visible{ outline:2px solid #b28cf5; outline-offset:3px; }
-
-    /* ===== الترويسة (نفس مكتبة ألعاب التيك توك) ===== */
-    .top-wrap{ padding:14px clamp(12px,3vw,36px) 0; }
-    header.top{
-        display:flex; align-items:center; justify-content:space-between; column-gap:20px;
-        max-width:1600px; margin:0 auto; padding:12px 20px 12px 14px;
-        background:rgba(10,9,16,.92); border:1px solid rgba(255,255,255,.09); border-radius:999px;
-        box-shadow:rgba(0,0,0,.9) 0 18px 50px -20px, rgba(122,63,212,.1) 0 0 0 1px inset;
-    }
-    .top-logo{ display:flex; align-items:center; flex:0 0 auto; filter:drop-shadow(rgba(122,63,212,.45) 0 6px 18px); transition:transform .25s; }
-    .top-logo:hover{ transform:scale(1.04); }
-    .top-logo img{ display:block; height:50px; width:auto; }
-    .top-nav{ display:flex; align-items:center; gap:clamp(16px,2.4vw,35px); font-size:16px; color:#a79fbb; }
-    .top-nav a{ transition:color .25s; white-space:nowrap; }
-    .top-nav a:hover, .top-nav a.is-on{ color:#f4f2fb; }
-    .top-cta{
-        display:inline-flex; align-items:center; padding:10px 20px; border-radius:999px; white-space:nowrap;
-        background:linear-gradient(rgb(138,79,232), rgb(122,63,212)); color:#f3ecff; font-weight:600; font-size:14px;
-        transition:transform .25s, filter .25s;
-    }
-    .top-cta:hover{ transform:translateY(-1px); filter:brightness(1.08); }
-    @media (max-width:900px){ .top-nav a.nav-extra{ display:none; } }
-    @media (max-width:600px){
-        .top-cta{ display:none; }
-        .top-logo img{ height:38px; }
-        header.top{ padding:10px 18px 10px 12px; column-gap:12px; }
-        .top-nav{ font-size:14px; }
-    }
-    @media (max-width:360px){ .top-nav{ font-size:12.5px; } header.top{ column-gap:8px; } }
-
-    /* ===== العنوان ===== */
-    .hero{ padding:clamp(48px,6vw,88px) clamp(18px,4vw,60px) clamp(20px,3vw,32px); text-align:center; }
-    .hero-inner{ max-width:900px; margin:0 auto; }
-    .hero-tag{
-        display:inline-flex; align-items:center; gap:9px; padding:7px 16px; border-radius:999px;
-        border:1px solid rgba(178,140,245,.35); background:rgba(122,63,212,.1); font-size:13px; color:#c6b4f2;
-    }
-    .hero-dot{ width:6px; height:6px; border-radius:50%; background:#b28cf5; box-shadow:rgba(178,140,245,.8) 0 0 10px 2px; }
-    .hero h1{ margin:22px 0 0; font-family:'Noto Kufi Arabic', sans-serif; font-weight:700; font-size:clamp(32px,5vw,60px); line-height:1.3; color:#f4f2fb; }
-    .hero p{ margin:16px auto 0; max-width:560px; font-size:16px; line-height:1.95; color:var(--muted); }
-
-    /* ===== قائمة الألعاب ===== */
-    .catalog{ flex:1; padding:0 clamp(18px,4vw,60px) clamp(70px,9vw,120px); }
-    .catalog-inner{ max-width:1600px; margin:0 auto; }
-    .catalog-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .catalog-count{ font-size:13.5px; color:#7c7590; }
-
-    /* ===== بطاقة اللعبة (نفس .gl-card في مكتبة التيك توك) ===== */
-    /* بطاقات عريضة: كل بطاقة بعرض ~420px على الكمبيوتر، وتملأ العرض على الجوال */
-    .gl-grid{ display:grid; gap:24px; margin-top:24px; grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr)); }
-
-    .gl-card{
-        --h:0;
-        position:relative; overflow:hidden; isolation:isolate;
-        background:oklch(0.17 0.025 300); border:1px solid oklch(0.26 0.04 300); border-radius:24px;
-        padding:clamp(20px,2vw,26px); display:flex; flex-direction:column; gap:12px; min-height:320px; cursor:pointer;
-        font-family:"Readex Pro", system-ui, sans-serif; color:#fff; text-align:right;
-        transform:translateY(calc(var(--h) * -5px));
-        transition:--h .3s ease, transform .25s, border-color .25s, box-shadow .25s;
-    }
-    .gl-card:hover, .gl-card:focus-within{ --h:1; border-color:oklch(0.6 0.16 var(--hue) / 0.55); box-shadow:0 26px 50px -30px oklch(0.6 0.18 var(--hue) / 0.55); }
-    .gl-ms{
-        font-family:"Material Symbols Rounded"; font-weight:normal; font-style:normal; line-height:1; letter-spacing:normal;
-        text-transform:none; display:inline-block; white-space:nowrap; direction:ltr;
-        -webkit-font-feature-settings:"liga"; font-feature-settings:"liga";
-    }
-    .gl-glow{
-        position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:var(--h); transition:opacity .3s;
-        background:radial-gradient(340px circle at var(--x,50%) var(--y,0%), oklch(0.65 0.18 var(--hue) / 0.2), transparent 70%);
-    }
-    .gl-bgicon{
-        position:absolute; z-index:-1; left:-24px; bottom:60px; pointer-events:none; font-size:190px;
-        color:oklch(0.74 0.14 var(--hue)); opacity:calc(0.06 + var(--h) * 0.08);
-        transform:rotate(calc(-14deg + var(--h) * 10deg)) scale(calc(1 + var(--h) * 0.08));
-        transition:transform .4s, opacity .3s; font-variation-settings:"FILL" 1, "wght" 500, "opsz" 48;
-    }
-    .gl-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .gl-tile{
-        width:58px; height:58px; border-radius:17px; background:oklch(0.26 0.05 var(--hue));
-        border:1px solid oklch(0.6 0.16 var(--hue) / 0.3); display:flex; align-items:center; justify-content:center;
-        transform:rotate(calc(var(--h) * -8deg)); transition:transform .3s;
-    }
-    .gl-tile .gl-ms{ font-size:30px; color:oklch(0.74 0.14 var(--hue)); font-variation-settings:"FILL" 1, "wght" 500; }
-    .gl-num{ font-family:"IBM Plex Mono", monospace; font-size:13px; color:oklch(0.72 0.02 300); }
-    .gl-meta{ display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap; }
-    .gl-cat{ font-size:13.5px; font-weight:500; color:oklch(0.74 0.14 var(--hue)); }
-    .gl-badge{
-        font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px;
-        background:oklch(0.6 0.22 295 / 0.18); color:oklch(0.8 0.14 300); border:1px solid oklch(0.6 0.22 295 / 0.5);
-    }
-    .gl-title{ margin:0; font-size:clamp(22px,1.8vw,26px); font-weight:600; line-height:1.3; color:#fff; }
-    .gl-desc{ margin:0; font-size:15px; line-height:1.8; color:oklch(0.72 0.02 300); text-wrap:pretty; flex:1 1 0%; }
-    .gl-info{ display:flex; flex-wrap:wrap; gap:8px; }
-    .gl-info span{
-        display:inline-flex; align-items:center; gap:5px; font-size:13px; color:oklch(0.8 0.03 300);
-        padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
-    }
-    .gl-info .gl-ms{ font-size:17px; color:oklch(0.74 0.14 var(--hue)); }
-    .gl-play{
-        font-family:inherit; font-size:16px; font-weight:600; height:52px; border-radius:14px; margin-top:4px; border:none;
-        background:linear-gradient(90deg, oklch(0.62 0.22 300), oklch(0.55 0.23 285)); color:oklch(0.99 0 0);
-        display:flex; align-items:center; justify-content:center; gap:6px; transition:filter .15s;
-    }
-    .gl-play:hover{ filter:brightness(1.12); }
-    .gl-play .gl-ms{ font-size:20px; transform:translateX(calc(var(--h) * -4px)); transition:transform .25s; }
-    /* الرابط يغطي البطاقة كلها (نفس سلوك بطاقات التيك توك: الضغط على البطاقة يفتح اللعبة) */
-    .gl-link::after{ content:""; position:absolute; inset:0; z-index:1; border-radius:24px; }
-
-    @media (prefers-reduced-motion: reduce){
-        .gl-card, .gl-bgicon, .gl-tile, .gl-play .gl-ms{ transition:none; transform:none; }
-    }
-
-    footer{ border-top:1px solid rgba(255,255,255,.08); padding:20px; text-align:center; color:var(--muted); font-size:13px; }
-</style>
-    <script src="js/agp-apple-emoji.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alexandria:wght@600;700&family=Tajawal:wght@400;500;700&family=Cairo:wght@600;700&family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&icon_names=arrow_back,auto_awesome,back_hand,bolt,brush,casino,category,chair,check_circle,devices,emoji_events,fitness_center,flag,format_list_numbered,grid_3x3,grid_on,group,groups,hexagon,hive,image_search,key,landscape,link,local_fire_department,lock,nutrition,palette,person_remove,person_search,pets,psychology,quiz,rocket_launch,sailing,savings,schedule,spellcheck,sports_mma,sports_motorsports,sports_score,sports_soccer,stairs,swords,target,theater_comedy,timer&display=block">
+<link rel="stylesheet" href="css/agp-site.css">
 </head>
-<body>
+<body class="page-lib">
+<div class="tone-lift" aria-hidden="true"></div>
+<div class="page-bg" aria-hidden="true"><span class="lattice"></span><span class="grain"></span><span class="vig"></span></div>
+<header class="site-header">
+ <div class="wrap bar">
+ <a class="logo" href="#" aria-label="ألعاب أيمن الرئيسية"><img src="assets/site/logo-t.png" alt="ألعاب أيمن" width="110" height="42"></a>
+ <nav class="nav" aria-label="القائمة الرئيسية">
+ <a href="./">الرئيسية</a>
+ <a href="games.html">ألعاب البثوث</a>
+ <a href="discord-games.html" aria-current="page">ألعاب الديسكورد</a>
+ <a href="pricing.html">الأسعار</a>
+ <a href="profile.html" class="nav-redeem"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200,128a32,32,0,0,0,32,32v32a8,8,0,0,1-8,8H96V56H224a8,8,0,0,1,8,8V96A32,32,0,0,0,200,128Z" opacity="0.2"/><path d="M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z"/></svg>استرداد كود</a>
+ </nav>
+ <div class="actions">
+ <button class="btn btn-secondary btn-icon tone-btn" id="tone-btn" type="button" aria-pressed="false" aria-label="السطوع">
+          <svg viewBox="0 0 256 256" fill="currentColor" class="sun" aria-hidden="true"><path d="M184,128a56,56,0,1,1-56-56A56,56,0,0,1,184,128Z" opacity="0.2"/><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg>
+          <svg viewBox="0 0 256 256" fill="currentColor" class="moon" aria-hidden="true"><path d="M227.89,147.89A96,96,0,1,1,108.11,28.11,96.09,96.09,0,0,0,227.89,147.89Z" opacity="0.2"/><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        </button>
+      <div class="dd" id="gfx-dd">
+ <button class="btn btn-secondary btn-sm dd-trigger" id="gfx-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="gfx-menu" aria-label="جودة الرسوميات">
+ <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M207.86,123.18l16.78-21a99.14,99.14,0,0,0-10.07-24.29l-26.7-3a81,81,0,0,0-6.81-6.81l-3-26.71a99.43,99.43,0,0,0-24.3-10l-21,16.77a81.59,81.59,0,0,0-9.64,0l-21-16.78A99.14,99.14,0,0,0,77.91,41.43l-3,26.7a81,81,0,0,0-6.81,6.81l-26.71,3a99.43,99.43,0,0,0-10,24.3l16.77,21a81.59,81.59,0,0,0,0,9.64l-16.78,21a99.14,99.14,0,0,0,10.07,24.29l26.7,3a81,81,0,0,0,6.81,6.81l3,26.71a99.43,99.43,0,0,0,24.3,10l21-16.77a81.59,81.59,0,0,0,9.64,0l21,16.78a99.14,99.14,0,0,0,24.29-10.07l3-26.7a81,81,0,0,0,6.81-6.81l26.71-3a99.43,99.43,0,0,0,10-24.3l-16.77-21A81.59,81.59,0,0,0,207.86,123.18ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.29,107.29,0,0,0-26.25-10.86,8,8,0,0,0-7.06,1.48L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8.06,8.06,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8.06,8.06,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg>
+ <span class="q-badge" id="gfx-badge">تلقائي</span>
+ </button>
+ <div class="dd-menu" id="gfx-menu" role="menu" aria-labelledby="gfx-btn">
+ <div class="dd-title">جودة الرسوميات</div>
+ <button class="dd-item" role="menuitemradio" data-mode="auto" aria-checked="true">
+ <span>تلقائي<small id="auto-note">يختار حسب جهازك</small></span>
+ <svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <div class="dd-sep" role="separator"></div>
+ <button class="dd-item" role="menuitemradio" data-mode="eco" aria-checked="false"><span>اقتصادي<small>بدون ضبابية ولا حركة</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <button class="dd-item" role="menuitemradio" data-mode="balanced" aria-checked="false"><span>متوازن<small>زجاج خفيف وحركة ناعمة</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <button class="dd-item" role="menuitemradio" data-mode="ultra" aria-checked="false"><span>عالي<small>زجاج أغنى وظلال أعمق</small></span><svg viewBox="0 0 256 256" fill="currentColor" class="chk" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg></button>
+ <p class="dd-note" id="gfx-why"></p>
+ </div>
+ </div>
+      <button class="btn btn-primary login-btn" type="button" data-auth><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M192,96a64,64,0,1,1-64-64A64,64,0,0,1,192,96Z" opacity="0.2"/><path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/></svg><span>تسجيل الدخول</span></button>
+ <button class="btn btn-secondary btn-icon menu-btn" id="menu-btn" aria-label="فتح القائمة" aria-expanded="false" aria-controls="mnav">
+ <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228,128a12,12,0,0,1-12,12H40a12,12,0,0,1,0-24H216A12,12,0,0,1,228,128ZM40,76H216a12,12,0,0,0,0-24H40a12,12,0,0,0,0,24ZM216,180H40a12,12,0,0,0,0,24H216a12,12,0,0,0,0-24Z"/></svg></button>
+ </div>
+ </div>
+</header>
+<div class="scrim" id="scrim"></div>
+<nav class="mnav" id="mnav" aria-label="قائمة الجوال">
+ <a href="./">الرئيسية</a>
+ <a href="games.html">ألعاب البثوث</a>
+ <a href="discord-games.html" aria-current="page">ألعاب الديسكورد</a>
+ <a href="./#ranks" data-goto="ranks">التصنيف</a>
+ <a href="pricing.html">الأسعار</a>
+ <a href="profile.html">استرداد كود</a>
+  <div class="mset" aria-label="الإعدادات">
+    <div class="mset-row"><span class="mset-l">السطوع<small>إضاءة خفيفة لكل الشاشات</small></span>
+      <button class="mtog" id="m-tone" type="button" role="switch" aria-checked="false" aria-label="السطوع"><span></span></button></div>
+    <div class="mset-row col"><span class="mset-l">جودة الرسوميات<small id="m-gfx-note">يختار حسب جهازك</small></span>
+      <div class="mseg" id="m-gfx" role="radiogroup" aria-label="جودة الرسوميات">
+        <button type="button" role="radio" data-mode="auto">تلقائي</button><button type="button" role="radio" data-mode="eco">اقتصادي</button><button type="button" role="radio" data-mode="balanced">متوازن</button><button type="button" role="radio" data-mode="ultra">عالي</button>
+      </div></div>
+  </div>
+</nav>
 
-<div class="top-wrap">
-    <header class="top">
-        <a href="./" class="top-logo" aria-label="الرئيسية"><img src="logo.png" alt="ألعاب أيمن"></a>
-        <nav class="top-nav" aria-label="التنقل">
-            <a href="./">الرئيسية</a>
-            <a href="games.html" class="nav-extra">ألعاب البثوث</a>
-            <a href="discord-games.html" class="is-on" aria-current="page">ألعاب الديسكورد</a>
-            <a href="./#gallery" class="nav-extra">التصنيف</a>
-            <a href="pricing.html">الأسعار</a>
-        </nav>
-        <a href="login.html" class="top-cta">إنشاء حساب أو تسجيل الدخول</a>
-    </header>
+<main id="main">
+  <section class="lib wrap">
+    <div class="lib-head">
+      <a class="btn btn-ghost btn-sm rd-back" href="./"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg>الرئيسية</a>
+      <div class="lib-title"><h1 id="dc-title">ألعاب الديسكورد</h1><span class="lib-count"><span class="num" id="dc-n">0</span> لعبة</span></div>
+      <p>العبها مع ربعك في الديسكورد أو بالجمعة من جوالاتكم</p>
+    </div>
+    <div class="lib-grid dc-grid" id="dc-grid"></div>
+    <div id="dc-follow"></div>
+  </section>
+</main>
+
+<div class="faq-scrim doc-scrim" id="doc-scrim" hidden></div>
+<div class="faq doc" id="doc" role="dialog" aria-modal="true" aria-labelledby="doc-title" hidden>
+ <div class="faq-head"><div><h2 id="doc-title"></h2><p class="doc-intro" id="doc-intro"></p></div><button class="btn btn-secondary btn-icon x" id="doc-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+ <div class="faq-body doc-body" id="doc-body"></div>
+</div>
+<div class="faq-scrim" id="faq-scrim" hidden></div>
+<div class="faq" id="faq" role="dialog" aria-modal="true" aria-labelledby="faq-title" hidden>
+ <div class="faq-head"><h2 id="faq-title">الأسئلة الشائعة</h2><button class="btn btn-secondary btn-icon x" id="faq-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+ <div class="faq-body"><details class="qa" open><summary><span>هل يحتاج الإستريمرز أو المتابعون إلى تحميل تطبيق للمشاركة في الألعاب</span><i aria-hidden="true"></i></summary><p>لا لا يحتاج أي شخص لتحميل أي تطبيق يفتح الإستريمرز اللعبة مباشرة عبر الموقع بينما يشارك المتابعون باللعب فوراً من خلال كتابة الأوامر في شات البث أو عبر مسح رمز الـ QR بالهاتف في بعض الألعاب المخصصة </p></details><details class="qa"><summary><span>هل المنصة مجانية أم تتطلب اشتراكاً مدفوعاً</span><i aria-hidden="true"></i></summary><p>المنصة مجانية بالكامل جميع الألعاب متاحة للإستريمرز والمتابعين بدون أي اشتراكات أو رسوم إلزامية نوفر فقط إطارات وتأثيرات جمالية كمالية لتمييز اللاعبين في البث بأسعار رمزية واختيارية تماماً دون أن تؤثر على تجربة اللعب الأساسية </p></details><details class="qa"><summary><span>كيف تبدأ الألعاب وهل يحتاج الإستريمرز لربط حسابه بالمنصة لكل لعبة</span><i aria-hidden="true"></i></summary><p>الربط بسيط وسريع جداً يقوم الإستريمرز بربط حسابه بالمنصة لمرة واحدة فقط عند التسجيل وبعد ذلك كل ما عليه فعله عند بدء اللعب هو إدخال اسم المستخدم اسم حساب البث للاتصال بالبث المباشر وسيتم تشغيل جميع الألعاب فوراً بنفس الاتصال دون الحاجة لإعادة الربط في كل لعبة </p></details><details class="qa"><summary><span>هل تعمل الألعاب على جميع منصات البث تيك توك يوتيوب ديسكورد</span><i aria-hidden="true"></i></summary><p>الألعاب تعمل حالياً وبشكل كامل على بثوث تيك توك TikTok Live ونعمل على إضافة باقي المنصات تويتش يوتيوب ديسكورد قريباً جداً لتكون متاحة للجميع </p></details><details class="qa"><summary><span>كيف أشتري الإطارات المميزة وهل تبقى في حسابي للأبد</span><i aria-hidden="true"></i></summary><p>تستطيع شراء الإطارات من المتجر بأسعار رمزية عبر طرق الدفع المتاحة وتظل مضافة لحسابك لتمييز اسمك وصورتك في شاشة البث أثناء اللعب </p></details><details class="qa"><summary><span>هل أستطيع اقتراح لعبة جديدة أو الإبلاغ عن مشكلة</span><i aria-hidden="true"></i></summary><p>نعم بالتأكيد نسعد دائماً بسماع أفكاركم واقتراحاتكم لتطوير المنصة يمكنك التواصل معنا مباشرة للإبلاغ عن أي مشكلة أو تقديم اقتراحاتك عبر حسابنا في تيك توك أو من خلال الواتساب </p></details>
+ <div class="faq-more"><b>ما لقيت جوابك</b><span>أرسل لنا اقتراحك أو سؤالك أو بلّغ عن مشكلة ونرد عليك في أقرب وقت </span><a class="btn btn-primary btn-sm" href="https://aymngames.online/suggest-ideas.html" target="_blank" rel="noopener">الاقتراحات والشكاوي</a></div>
+ </div>
+</div>
+<div class="au-scrim" id="au-scrim" hidden></div>
+<div class="au" id="au" role="dialog" aria-modal="true" aria-labelledby="au-title" hidden>
+  <div class="au-main">
+    <div class="au-top"><button class="btn btn-ghost btn-icon au-back" id="au-back" type="button" aria-label="رجوع" hidden><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z"/></svg></button><ol class="au-steps" aria-hidden="true"><li></li><li></li><li></li></ol><button class="btn btn-secondary btn-icon" id="au-close" type="button" aria-label="إغلاق"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg></button></div>
+    <div class="fox" id="fox" aria-hidden="true">
+  <svg viewBox="0 0 220 150">
+    <defs>
+      <radialGradient id="ct-fur" cx="50%" cy="28%" r="75%"><stop offset="0" stop-color="#c9c3cf"/><stop offset=".55" stop-color="#9a93a3"/><stop offset="1" stop-color="#6e6878"/></radialGradient>
+      <radialGradient id="ct-light" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#fbf9f7"/><stop offset="1" stop-color="#ddd6d8"/></radialGradient>
+      <linearGradient id="ct-ear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d7686"/><stop offset="1" stop-color="#a59eae"/></linearGradient>
+      <linearGradient id="ct-earin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d79aa4"/><stop offset="1" stop-color="#f4d2d0"/></linearGradient>
+      <radialGradient id="ct-iris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f3e27a"/><stop offset=".3" stop-color="#d7d860"/><stop offset=".62" stop-color="#8cbf55"/><stop offset=".9" stop-color="#4c7c3a"/><stop offset="1" stop-color="#2c4423"/></radialGradient>
+      <radialGradient id="ct-paw" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#f4f1ef"/><stop offset="1" stop-color="#c9c2c6"/></radialGradient>
+      <filter id="fx-soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".35"/></filter>
+    </defs>
+    <g class="fx-body" filter="url(#fx-soft)">
+      <path d="M50 150 C54 126 80 118 110 118 C140 118 166 126 170 150 Z" fill="url(#ct-fur)"/>
+      <path d="M84 150 C86 132 98 124 110 124 C122 124 134 132 136 150 Z" fill="url(#ct-light)"/>
+      <path class="fx-scarf" d="M62 126 C82 138 138 138 158 126 L162 138 C138 150 82 150 58 138 Z" fill="#7a3fd4"/>
+      <path d="M66 132 C88 142 132 142 154 132" stroke="#c9b0f5" stroke-width="2" fill="none" stroke-dasharray="4 4" opacity=".8"/>
+      <circle cx="110" cy="143" r="5" fill="#e8d8a6" stroke="#b89b4e" stroke-width="1.2"/>
+      <g class="fx-head">
+        <g class="fx-ear l"><path d="M60 72 C56 54 56 34 62 18 C64 14 68 14 71 17 C82 30 92 44 98 54 Z" fill="url(#ct-ear)"/><path d="M66 64 C64 50 64 36 67 26 C76 36 84 46 90 54 Z" fill="url(#ct-earin)"/><path d="M68 40 l7 6 M66 50 l8 4 M70 32 l5 6" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".7"/></g>
+        <g class="fx-ear r"><path d="M160 72 C164 54 164 34 158 18 C156 14 152 14 149 17 C138 30 128 44 122 54 Z" fill="url(#ct-ear)"/><path d="M154 64 C156 50 156 36 153 26 C144 36 136 46 130 54 Z" fill="url(#ct-earin)"/><path d="M152 40 l-7 6 M154 50 l-8 4 M150 32 l-5 6" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".7"/></g>
+        <path d="M110 40 C146 40 168 60 170 86 C171 100 166 110 158 118 C148 128 132 132 110 132 C88 132 72 128 62 118 C54 110 49 100 50 86 C52 60 74 40 110 40 Z" fill="url(#ct-fur)"/>
+        <g fill="none" stroke="#5c5666" stroke-linecap="round" opacity=".7">
+          <path d="M98 46 C100 54 100 60 98 66" stroke-width="3"/><path d="M110 44 V64" stroke-width="3.2"/><path d="M122 46 C120 54 120 60 122 66" stroke-width="3"/>
+          <path d="M54 86 C60 84 64 86 68 90 M52 96 C58 94 64 96 68 98" stroke-width="2.6"/><path d="M166 86 C160 84 156 86 152 90 M168 96 C162 94 156 96 152 98" stroke-width="2.6"/>
+        </g>
+        <path d="M58 108 l-12 2 l12 4 l-8 6 l14 -3 M162 108 l12 2 l-12 4 l8 6 l-14 -3" fill="#b6afbd"/>
+        <path d="M110 76 C126 76 142 86 146 102 C144 120 128 130 110 130 C92 130 76 120 74 102 C78 86 94 76 110 76 Z" fill="url(#ct-light)"/>
+        <g class="fx-cheek"><ellipse cx="74" cy="104" rx="9" ry="5" fill="#f0a7b2" opacity=".35"/><ellipse cx="146" cy="104" rx="9" ry="5" fill="#f0a7b2" opacity=".35"/></g>
+        <g class="fx-eyes">
+          <g class="fx-eye l">
+            <path d="M71 86 C76 72 96 72 101 86 C96 99 76 99 71 86 Z" fill="#f4f1ea"/>
+            <clipPath id="ce-l"><path d="M71 86 C76 72 96 72 101 86 C96 99 76 99 71 86 Z"/></clipPath>
+            <g clip-path="url(#ce-l)">
+              <g class="fx-pup">
+                <circle cx="86" cy="86" r="11.5" fill="url(#ct-iris)"/>
+                <g stroke="#3e6a2a" stroke-width=".7" opacity=".45"><path d="M89.2 86.0 L96.0 86.0"/><path d="M89.1 86.8 L95.7 88.6"/><path d="M88.8 87.6 L94.7 91.0"/><path d="M88.3 88.3 L93.1 93.1"/><path d="M87.6 88.8 L91.0 94.7"/><path d="M86.8 89.1 L88.6 95.7"/><path d="M86.0 89.2 L86.0 96.0"/><path d="M85.2 89.1 L83.4 95.7"/><path d="M84.4 88.8 L81.0 94.7"/><path d="M83.7 88.3 L78.9 93.1"/><path d="M83.2 87.6 L77.3 91.0"/><path d="M82.9 86.8 L76.3 88.6"/><path d="M82.8 86.0 L76.0 86.0"/><path d="M82.9 85.2 L76.3 83.4"/><path d="M83.2 84.4 L77.3 81.0"/><path d="M83.7 83.7 L78.9 78.9"/><path d="M84.4 83.2 L81.0 77.3"/><path d="M85.2 82.9 L83.4 76.3"/><path d="M86.0 82.8 L86.0 76.0"/><path d="M86.8 82.9 L88.6 76.3"/><path d="M87.6 83.2 L91.0 77.3"/><path d="M88.3 83.7 L93.1 78.9"/><path d="M88.8 84.4 L94.7 81.0"/><path d="M89.1 85.2 L95.7 83.4"/></g>
+                <circle cx="86" cy="86" r="11.5" fill="none" stroke="#25381c" stroke-width="1.8"/>
+                <ellipse class="ct-slit" cx="86" cy="86" rx="2.4" ry="8.8" fill="#0b0a0d"/>
+                <ellipse cx="90.5" cy="80.5" rx="3.2" ry="2.4" fill="#fff" opacity=".95"/>
+                <circle cx="82" cy="91" r="1.3" fill="#fff" opacity=".75"/>
+              </g>
+              <path d="M70 74 H102 V82 C94 78 78 78 70 82 Z" fill="#1d1a22" opacity=".28"/>
+            </g>
+            <path d="M71 86 C76 72 96 72 101 86" stroke="#1b1820" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M101 86 l4 -3" stroke="#1b1820" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M71 86 C76 99 96 99 101 86" stroke="#4a4552" stroke-width="1.2" fill="none" opacity=".7"/>
+            <rect class="fx-lid" x="70" y="71" width="32" height="29" rx="14" fill="#8f8898"/></g>
+          <g class="fx-eye r">
+            <path d="M119 86 C124 72 144 72 149 86 C144 99 124 99 119 86 Z" fill="#f4f1ea"/>
+            <clipPath id="ce-r"><path d="M119 86 C124 72 144 72 149 86 C144 99 124 99 119 86 Z"/></clipPath>
+            <g clip-path="url(#ce-r)">
+              <g class="fx-pup">
+                <circle cx="134" cy="86" r="11.5" fill="url(#ct-iris)"/>
+                <g stroke="#3e6a2a" stroke-width=".7" opacity=".45"><path d="M137.2 86.0 L144.0 86.0"/><path d="M137.1 86.8 L143.7 88.6"/><path d="M136.8 87.6 L142.7 91.0"/><path d="M136.3 88.3 L141.1 93.1"/><path d="M135.6 88.8 L139.0 94.7"/><path d="M134.8 89.1 L136.6 95.7"/><path d="M134.0 89.2 L134.0 96.0"/><path d="M133.2 89.1 L131.4 95.7"/><path d="M132.4 88.8 L129.0 94.7"/><path d="M131.7 88.3 L126.9 93.1"/><path d="M131.2 87.6 L125.3 91.0"/><path d="M130.9 86.8 L124.3 88.6"/><path d="M130.8 86.0 L124.0 86.0"/><path d="M130.9 85.2 L124.3 83.4"/><path d="M131.2 84.4 L125.3 81.0"/><path d="M131.7 83.7 L126.9 78.9"/><path d="M132.4 83.2 L129.0 77.3"/><path d="M133.2 82.9 L131.4 76.3"/><path d="M134.0 82.8 L134.0 76.0"/><path d="M134.8 82.9 L136.6 76.3"/><path d="M135.6 83.2 L139.0 77.3"/><path d="M136.3 83.7 L141.1 78.9"/><path d="M136.8 84.4 L142.7 81.0"/><path d="M137.1 85.2 L143.7 83.4"/></g>
+                <circle cx="134" cy="86" r="11.5" fill="none" stroke="#25381c" stroke-width="1.8"/>
+                <ellipse class="ct-slit" cx="134" cy="86" rx="2.4" ry="8.8" fill="#0b0a0d"/>
+                <ellipse cx="138.5" cy="80.5" rx="3.2" ry="2.4" fill="#fff" opacity=".95"/>
+                <circle cx="130" cy="91" r="1.3" fill="#fff" opacity=".75"/>
+              </g>
+              <path d="M118 74 H150 V82 C142 78 126 78 118 82 Z" fill="#1d1a22" opacity=".28"/>
+            </g>
+            <path d="M119 86 C124 72 144 72 149 86" stroke="#1b1820" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M149 86 l4 -3" stroke="#1b1820" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M119 86 C124 99 144 99 149 86" stroke="#4a4552" stroke-width="1.2" fill="none" opacity=".7"/>
+            <rect class="fx-lid" x="118" y="71" width="32" height="29" rx="14" fill="#8f8898"/></g>
+          <path class="fx-happy-eyes" d="M74 89 Q86 77 98 89 M122 89 Q134 77 146 89" stroke="#1d1a22" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+          <path class="fx-brow" d="M74 74 L96 68 M146 74 L124 68" stroke="#4d4756" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <path d="M104 100 H116 L110 107 Z" fill="#e48a9a" stroke="#b5606f" stroke-width="1" stroke-linejoin="round"/>
+        <path d="M110 107 V111" stroke="#4a3f4c" stroke-width="1.8" stroke-linecap="round"/>
+        <g fill="#8d8592" opacity=".7"><circle cx="94" cy="109" r="1.1"/><circle cx="91" cy="105" r="1.1"/><circle cx="97" cy="104" r="1.1"/><circle cx="126" cy="109" r="1.1"/><circle cx="129" cy="105" r="1.1"/><circle cx="123" cy="104" r="1.1"/></g>
+        <g class="ct-wh" stroke="#f6f4f2" stroke-width="1.2" stroke-linecap="round" opacity=".9" fill="none">
+          <path d="M92 106 C78 102 64 100 44 100"/><path d="M92 109 C76 108 62 110 44 114"/><path d="M93 112 C80 114 68 118 54 124"/>
+          <path d="M128 106 C142 102 156 100 176 100"/><path d="M128 109 C144 108 158 110 176 114"/><path d="M127 112 C140 114 152 118 166 124"/>
+        </g>
+        <path class="fx-m n" d="M102 112 Q106 116.5 110 112 Q114 116.5 118 112" stroke="#4a3f4c" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <g class="fx-m h"><path d="M100 111 Q110 127 120 111 Z" fill="#7a2a40" stroke="#4a3f4c" stroke-width="2" stroke-linejoin="round"/><path d="M104 119 Q110 124 116 119 Q110 116 104 119 Z" fill="#f08ea2"/></g>
+        <path class="fx-m s" d="M102 119 Q110 111 118 119" stroke="#4a3f4c" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <path class="fx-tear" d="M146 96 Q151 104 146 109 Q141 104 146 96 Z" fill="#9fdcff" stroke="#e8f7ff" stroke-width=".8"/>
+      </g>
+      <g class="fx-paw l"><ellipse cx="62" cy="150" rx="20" ry="15" fill="url(#ct-paw)"/><path d="M54 140 v7 M62 138 v8 M70 140 v7" stroke="#b7b0b6" stroke-width="1.6" stroke-linecap="round"/><g fill="#efb3b8"><ellipse cx="62" cy="152" rx="6.5" ry="4.5"/></g></g>
+      <g class="fx-paw r"><ellipse cx="158" cy="150" rx="20" ry="15" fill="url(#ct-paw)"/><path d="M150 140 v7 M158 138 v8 M166 140 v7" stroke="#b7b0b6" stroke-width="1.6" stroke-linecap="round"/><g fill="#efb3b8"><ellipse cx="158" cy="152" rx="6.5" ry="4.5"/></g></g>
+    </g>
+  </svg>
 </div>
 
-<section class="hero">
-    <div class="hero-inner">
-        <div class="hero-tag"><span class="hero-dot"></span>ألعاب الدسكورد والجمعات · متاحة الآن</div>
-        <h1>مكتبة ألعاب الدسكورد والجمعات</h1>
-        <p>ألعاب جماعية تلعبها مع أصدقائك في الدسكورد أو في جمعتكم.. كل واحد يدخل من جواله أو جهازه بدون تحميل.</p>
-    </div>
-</section>
+    <section class="au-step" data-step="start">
+      <h2 id="au-title">أهلًا فيك</h2>
+      <p class="au-sub">ادخل بإيميلك أو اسم المستخدم حقك</p>
+      <form id="au-email-form" novalidate>
+        <label class="au-field"><span>الإيميل أو اسم المستخدم</span><span class="au-in"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,56l-96,88L32,56Z" opacity="0.2"/><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"/></svg><input id="au-email" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@mail.com" dir="ltr"></span></label>
+        <p class="au-msg" id="au-email-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">متابعة<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+      <div class="au-or"><span>أو تابع بحساب</span></div>
+      <div class="au-social">
+      <button class="btn btn-lg au-tt" type="button" id="au-tiktok"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 3c.4 2.3 1.8 3.8 4 4v3.1c-1.5.1-2.8-.4-4-1.2v6.3c0 3.6-3.4 6.3-7 5.3-3.6-.9-4.9-5.4-2.4-8.1 1.3-1.4 3.2-2 5.1-1.7v3.3c-.9-.3-2 0-2.6.8-1 1.4.1 3.4 1.8 3.4 1.2 0 2.2-1 2.2-2.2V3z"/></svg><span>تيك توك</span></button>
+      <button class="btn btn-lg au-gg" type="button" id="au-google"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 01-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0012 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 010-4.6V6.6H1.3a12 12 0 000 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 001.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg><span>قوقل</span></button></div>
+      <p class="au-hint">نفس حسابك في موقع ألعاب أيمن</p>
+      <div class="au-new"><span>ما عندك حساب</span><button class="btn btn-secondary" type="button" id="au-create">إنشاء حساب</button></div></section>
 
-<section class="catalog">
-    <div class="catalog-inner">
-        <div class="catalog-head">
-            <div class="catalog-count" id="catalog-count">ألعاب الدسكورد والجمعات بالمنصة</div>
+    <section class="au-step" data-step="login" hidden>
+      <h2>كلمة المرور</h2>
+      <div class="au-who"><span class="au-av" id="au-av">ف</span><span><b id="au-who-name">فهد</b><small id="au-who-mail" dir="ltr"></small></span><button class="btn btn-ghost btn-sm" type="button" data-to="start">تغيير</button></div>
+      <form id="au-login-form" novalidate>
+        <label class="au-field"><span>كلمة المرور</span><span class="au-pw"><input id="au-pass" type="password" autocomplete="current-password" placeholder="••••••••" dir="ltr"><button type="button" class="au-eye" aria-label="إظهار كلمة المرور"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg></button></span></label>
+        <div class="au-row"><label class="au-check"><input type="checkbox" id="au-remember" checked><span>تذكّرني</span></label><button class="au-link" type="button" id="au-forgot">نسيت كلمة المرور</button></div>
+        <p class="au-msg" id="au-login-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">دخول<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+    </section>
+
+    <section class="au-step" data-step="signup" hidden>
+      <h2>حساب جديد</h2>
+      <p class="au-sub" id="au-new-sub">عبّ بياناتك وابدأ</p>
+      <form id="au-signup-form" novalidate>
+        <div class="au-two">
+          <label class="au-field"><span>الاسم الظاهر</span><input id="au-dname" autocomplete="nickname" placeholder="فهد العتيبي"></label>
+          <label class="au-field"><span>اسم المستخدم</span><input id="au-user" autocomplete="username" placeholder="fahad" dir="ltr"></label>
         </div>
+        <label class="au-field"><span>البريد الإلكتروني</span><input id="au-nmail" type="email" inputmode="email" autocomplete="email" placeholder="name@mail.com" dir="ltr"></label>
+        <label class="au-field"><span>كلمة المرور</span><span class="au-pw"><input id="au-npass" type="password" autocomplete="new-password" placeholder="8 خانات على الأقل" dir="ltr" aria-describedby="au-meter-t"><button type="button" class="au-eye" aria-label="إظهار كلمة المرور"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg></button></span>
+          <span class="au-meter"><i id="au-meter"></i></span><small class="au-meter-t" id="au-meter-t">8 خانات على الأقل</small></label>
+        <fieldset class="au-type"><legend>نوع الحساب</legend>
+          <label><input type="radio" name="au-type" value="player" checked><span><b>لاعب</b><small>للعب والتفاعل في الألعاب</small></span></label>
+          <label><input type="radio" name="au-type" value="streamer"><span><b>استريمر</b><small>لبث الألعاب والتفاعل مع الجمهور</small></span></label>
+        </fieldset>
+        <p class="au-note" id="au-type-note" hidden>الاستريمر طلب أولي والحساب يبقى لاعب لين يوافق الأدمن</p>
+        <label class="au-terms"><input type="checkbox" id="au-terms"><span>أوافق على <a href="https://aymngames.online/terms.html" target="_blank" rel="noopener">شروط الاستخدام</a> و<a href="https://aymngames.online/privacy-policy.html" target="_blank" rel="noopener">سياسة الخصوصية</a> و<a href="#" data-doc="rules">قواعد المجتمع</a></span></label>
+        <p class="au-msg" id="au-signup-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">إنشاء حساب<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+      </form>
+    </section>
 
-        <div class="gl-grid" id="gl-grid">
-            <article class="gl-card" style="--hue:175">
-                <span class="gl-glow"></span>
-                <span class="gl-bgicon gl-ms" aria-hidden="true">person_search</span>
-                <div class="gl-top">
-                    <span class="gl-tile" aria-hidden="true"><span class="gl-ms">person_search</span></span>
-                    <span class="gl-num" dir="ltr">01</span>
-                </div>
-                <div class="gl-meta">
-                    <span class="gl-cat">خداع اجتماعي</span>
-                    <span class="gl-badge">جديد</span>
-                </div>
-                <h3 class="gl-title">من الأمبوستر؟</h3>
-                <p class="gl-desc">الكل عنده نفس الكلمة إلا واحد.. أعطوا تلميحات، صوّتوا على الأمبوستر، واكشفوه قبل ما يخمّن كلمتكم.</p>
-                <div class="gl-info">
-                    <span><span class="gl-ms" aria-hidden="true">group</span>3 لاعبين أو أكثر</span>
-                    <span><span class="gl-ms" aria-hidden="true">devices</span>جوال وكمبيوتر</span>
-                </div>
-                <a class="gl-play gl-link" href="discord-games/impostor/">العب الآن<span class="gl-ms" aria-hidden="true">arrow_back</span></a>
-            </article>
-        </div>
-    </div>
-</section>
+    <section class="au-step" data-step="code" hidden>
+      <h2>تأكيد البريد</h2>
+      <p class="au-sub">أرسلنا رمز من 6 أرقام إلى <b dir="ltr" id="au-code-mail"></b></p>
+      <form id="au-code-form" novalidate>
+        <div class="au-code" role="group" aria-label="رمز التأكيد"><input inputmode="numeric" maxlength="1" aria-label="الرقم 1"><input inputmode="numeric" maxlength="1" aria-label="الرقم 2"><input inputmode="numeric" maxlength="1" aria-label="الرقم 3"><input inputmode="numeric" maxlength="1" aria-label="الرقم 4"><input inputmode="numeric" maxlength="1" aria-label="الرقم 5"><input inputmode="numeric" maxlength="1" aria-label="الرقم 6"></div>
+        <p class="au-msg" id="au-code-msg" aria-live="polite"></p>
+        <button class="btn btn-primary btn-lg au-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="lbl">إنشاء الحساب<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M168.49,199.51a12,12,0,0,1-17,17l-80-80a12,12,0,0,1,0-17l80-80a12,12,0,0,1,17,17L97,128Z"/></svg></span></button>
+        <button class="au-link au-resend" type="button" id="au-resend" disabled>إعادة الإرسال بعد <span class="num" id="au-cd">30</span> ثانية</button>
+      </form>
+    </section>
 
-<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+    <section class="au-step au-done" data-step="done" hidden>
+      <span class="au-ok" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none" stroke-width="3"/><path d="M15 27l7 7 15-16" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <h2 id="au-done-t">أهلًا فيك</h2>
+      <p class="au-sub" id="au-done-s">تم تسجيل الدخول</p>
+      <button class="btn btn-primary btn-lg" type="button" id="au-finish">ابدأ اللعب</button>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="cursor-glow" id="cglow" aria-hidden="true"></div>
 
-<script src="js/agp-tiktok-follow.js"></script>
-<script src="js/agp-join-room.js"></script>
-<script>
-/* بطاقة حساب تيك توك المنصة (@aymngame) — تحت قائمة الألعاب */
-window.AGPTikTokFollow.insertBefore(document.querySelector('footer'));
-</script>
 
-<script>
-/* لمعة البطاقة تتبع مكان المؤشر (نفس تأثير بطاقات مكتبة التيك توك) + عدد الألعاب */
-(function () {
-    var cards = document.querySelectorAll('.gl-card');
-    cards.forEach(function (card) {
-        card.addEventListener('pointermove', function (e) {
-            var r = card.getBoundingClientRect();
-            card.style.setProperty('--x', (e.clientX - r.left) + 'px');
-            card.style.setProperty('--y', (e.clientY - r.top) + 'px');
-        });
-    });
-    var n = cards.length;
-    document.getElementById('catalog-count').textContent =
-        (n === 1 ? 'لعبة واحدة' : n === 2 ? 'لعبتان' : n + ' ألعاب') + ' للدسكورد والجمعات بالمنصة';
-})();
-</script>
+
+<script src="js/agp-apple-emoji.js"></script>
+<script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-join-room.js"></script>
+<script src="js/agp-site.js"></script>
+<script src="js/agp-tiktok-follow.js"></script>
+<script src="js/agp-discord.js"></script>
 </body>
 </html>
