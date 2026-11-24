@@ -1113,6 +1113,115 @@
     .vy-item { height: 34px; font-size: 14px; }
     .vy-group { margin: 6px 12px 2px; }
   }
+
+  /* ---------- القارئ الصوتي: صفحة إعدادات بكامل الشاشة (studio.js → openTts) ---------- */
+  body.vt-open { overflow: hidden; }
+  .vt-full { position: fixed; inset: 0; z-index: 900; direction: rtl; display: flex; flex-direction: column; color: var(--text);
+    background: radial-gradient(900px 600px at 90% -10%, rgba(110,97,127,.35), transparent 60%), radial-gradient(800px 600px at 0% 110%, rgba(110,97,127,.28), transparent 60%), linear-gradient(180deg, #13111a, #0b0a10);
+    animation: vt-in .28s var(--ease) both; }
+  @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .vt-head { display: flex; align-items: center; gap: 16px; padding: 14px 22px; border-bottom: 1px solid var(--line); background: rgba(14,13,19,.6); backdrop-filter: var(--blur); flex: none; }
+  .vt-back { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px 9px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card-2); cursor: pointer; font-weight: 600; font-size: 13.5px; }
+  .vt-back svg { width: 18px; height: 18px; }
+  .vt-back:hover { border-color: var(--lav); }
+  .vt-title { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .vt-title > .vt-ic { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--grad); color: #fff; box-shadow: 0 8px 22px -10px rgba(169,155,184,.9); }
+  .vt-title > .vt-ic svg { width: 22px; height: 22px; }
+  .vt-title h1 { margin: 0; font-size: 19px; font-weight: 800; }
+  .vt-title small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .vt-hacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .vt-on { display: flex; align-items: center; gap: 9px; padding: 7px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .vt-body { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 18px 22px 22px; }
+  .vt-col { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; padding: 18px; border-radius: 20px; border: 1px solid var(--line-2);
+    background: linear-gradient(160deg, rgba(169,155,184,.09), rgba(66,57,79,.08)); scrollbar-width: thin; scrollbar-color: var(--lav-d) transparent; }
+  .vt-ct, .vt-st { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15.5px; font-weight: 800; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .vt-st { font-size: 14.5px; margin-top: 14px; padding-bottom: 9px; }
+  .vt-st.bad .vt-ic { color: var(--bad); }
+  .vt-ic { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; color: var(--lav-l); font-style: normal; }
+  .vt-ic svg { width: 100%; height: 100%; }
+  .vt-mk { font-weight: 900; font-size: 17px; line-height: 1; }
+  .vt-radios { display: flex; flex-direction: column; gap: 2px; }
+  .vt-radio, .vt-chk { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: right; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text); }
+  .vt-radio { padding: 10px 6px; border: 0; background: none; border-radius: 12px; }
+  .vt-radio:hover { background: var(--card); }
+  .vt-lb { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .vt-tx { display: flex; flex-direction: column; gap: 2px; line-height: 1.4; }
+  .vt-tx small { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .vt-dot { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-2); display: grid; place-items: center; transition: border-color .2s, box-shadow .2s; }
+  .vt-radio.on .vt-dot { border-color: var(--lav-l); box-shadow: 0 0 0 3px rgba(169,155,184,.18), 0 0 14px -2px rgba(207,195,220,.6); }
+  .vt-radio.on .vt-dot::after { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--lav-l); }
+  .vt-chk { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(12,11,16,.35); transition: border-color .2s, background .2s; }
+  .vt-chk:hover { border-color: var(--line-2); }
+  .vt-chk.on { border-color: rgba(207,195,220,.4); background: linear-gradient(160deg, rgba(169,155,184,.14), rgba(66,57,79,.12)); }
+  .vt-box { width: 26px; height: 26px; flex: none; border-radius: 7px; border: 1.5px solid var(--line-2); background: rgba(0,0,0,.4); display: grid; place-items: center; color: transparent; transition: all .2s; }
+  .vt-box svg { width: 18px; height: 18px; }
+  .vt-chk.on .vt-box { border-color: var(--lav-l); color: var(--lav-l); background: rgba(169,155,184,.16); box-shadow: 0 0 12px -3px rgba(207,195,220,.7); }
+  .vt-sep { height: 1px; background: var(--line); margin: 6px 0; flex: none; }
+  .vt-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .vt-field.col { flex-direction: column; align-items: stretch; gap: 7px; }
+  .vt-field.sub { margin: -3px 14px 4px 0; padding: 10px 12px; border-radius: 12px; background: rgba(12,11,16,.3); border: 1px dashed var(--line-2); }
+  .vt-field .ob-input.num { flex: 0 0 90px; text-align: center; }
+  .vt-fl { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .vt-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vt-two .vt-field { flex-direction: column; align-items: stretch; gap: 6px; }
+  .vt-two .ob-input.num { flex: none; }
+  .vt-tpl { min-height: 64px; text-align: center; }
+  .vt-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
+  .vt-chip { padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--card); color: var(--lav-l); font-family: ui-monospace, monospace; font-size: 12.5px; cursor: pointer; direction: ltr; }
+  .vt-chip.on { background: rgba(169,155,184,.2); border-color: var(--lav-l); color: #fff; }
+  .vt-hint { color: var(--muted-2); font-size: 12px; line-height: 1.6; }
+  .vt-sample { font-size: 13px; color: var(--muted); padding: 10px 12px; border-radius: 12px; background: rgba(12,11,16,.35); border: 1px solid var(--line); }
+  .vt-sample b { color: var(--text); font-weight: 600; }
+  .vt-ban { display: flex; gap: 8px; }
+  .vt-ban .ob-input { text-align: left; }
+  .vt-banb { background: #0b0a10; border-color: var(--line-2); }
+  .vt-banned { display: flex; flex-wrap: wrap; gap: 7px; }
+  .vt-bchip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 11px; border-radius: 999px; background: rgba(236,143,157,.1); border: 1px solid rgba(236,143,157,.35); font-size: 12.5px; direction: ltr; }
+  .vt-bx { width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(236,143,157,.2); color: #fff; cursor: pointer; line-height: 1; font-size: 15px; }
+  .vt-bx:hover { background: rgba(236,143,157,.45); }
+  .vt-sel { appearance: none; -webkit-appearance: none; padding: 12px 14px; border-radius: 999px; text-align: center; font-weight: 600; cursor: pointer;
+    background: rgba(169,155,184,.1) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cfc3dc'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat 16px center / 18px; }
+  .vt-sel option { background: #1a1722; color: #fff; }
+  .vt-test { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--line-2); background: #0b0a10; color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+  .vt-test .vt-ic { width: 16px; height: 16px; color: #fff; }
+  .vt-test:hover:not(:disabled) { border-color: var(--lav-l); }
+  .vt-test:disabled { opacity: .7; cursor: progress; }
+  .vt-vlist { display: flex; flex-wrap: wrap; gap: 7px; }
+  .vt-vchip { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--card); font-size: 13px; cursor: pointer; }
+  .vt-vchip.on { background: rgba(169,155,184,.22); border-color: var(--lav-l); color: #fff; }
+  .vt-vchip.f::before { content: "♀ "; color: var(--pink); }
+  .vt-vchip.m::before { content: "♂ "; color: var(--sky); }
+  .vt-sl { display: flex; flex-direction: column; gap: 7px; padding: 4px 0; }
+  .vt-slh { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: 700; }
+  .vt-slh b { font-variant-numeric: tabular-nums; color: var(--lav-l); font-size: 13px; }
+  .vt-range { width: 100%; accent-color: var(--lav); }
+  .vt-key { margin-top: 6px; }
+  .vt-key .ob-input { text-align: left; }
+  .vt-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; margin-bottom: 12px; text-align: right; cursor: pointer; border-radius: 18px; border: 1px solid rgba(207,195,220,.3); color: var(--text);
+    background: linear-gradient(160deg, rgba(169,155,184,.14), rgba(66,57,79,.1)); transition: border-color .2s, transform .25s var(--ease); }
+  .vt-card:hover { border-color: var(--lav-l); transform: translateY(-1px); }
+  .vt-card-i { width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--grad); color: #fff; }
+  .vt-card-i svg { width: 24px; height: 24px; }
+  .vt-card-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .vt-card-m b { font-size: 15px; }
+  .vt-card-m small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .vt-card-go { flex: none; padding: 7px 13px; border-radius: 999px; background: rgba(169,155,184,.18); font-size: 12.5px; font-weight: 700; }
+  @media (max-width: 1100px) {
+    .vt-body { grid-template-columns: 1fr 1fr; overflow-y: auto; align-content: start; }
+    .vt-col { overflow: visible; min-height: auto; }
+    .vt-col:last-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 720px) {
+    .vt-head { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+    .vt-title { order: -1; flex-basis: calc(100% - 100px); }
+    .vt-title small { display: none; }
+    .vt-hacts { width: 100%; }
+    .vt-hacts .ob-btn { flex: 1; padding: 9px 10px; font-size: 12.5px; }
+    .vt-body { display: flex; flex-direction: column; padding: 12px 16px 24px; gap: 12px; overflow-x: hidden; }
+    .vt-col { padding: 14px; flex: none; min-width: 0; }
+    .vt-field { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) { .vt-full { animation: none; } }
 </style>
 </head>
 <body>

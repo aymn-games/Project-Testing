@@ -313,6 +313,7 @@ function recordGift(username, connectionId, data) {
   s.totals.diamonds += diamonds;
   var r = rec(s, s.lists.gifters, data);
   if (r) { r.count += repeat; r.diamonds += diamonds; }
+  if (r) updateTopGifters(s);
   s.giftSeq++;
   var g = {
     seq: s.giftSeq, name: String(data.giftName || ''), img: typeof data.giftImage === 'string' ? data.giftImage : null,
@@ -387,6 +388,14 @@ function recordComment(username, connectionId, data) {
   pushChat(s, data);
 }
 
+/** أفضل 3 داعمين بالبث (بالماس) — تنحدّث مع كل هدية، للقارئ الصوتي «أفضل 3 بالبث» */
+function updateTopGifters(s) {
+  var list = [];
+  s.lists.gifters.forEach(function (r) { if (r.diamonds > 0) list.push(r); });
+  list.sort(function (a, b) { return b.diamonds - a.diamonds; });
+  s.topGifters = list.slice(0, 3).map(function (r) { return r.id; });
+}
+
 /**
  * رسالة شات لأدوات الصوت بشاشات البث (القارئ الصوتي ومشغّل الأغاني). عكس
  * pushEvent، رسائل صاحب البث تنحفظ (owner: true) عشان أوامره مثل «!تخطي» توصل، ومعها mod (مشرف بالبث).
@@ -404,6 +413,12 @@ function pushChat(s, data) {
     owner: normalize(data.id) === s.username || normalize(String(data.id || '').replace(/^tiktok:/, '')) === s.username,
     // مشرف ببث الستريمر (تيك توك) — لأدوات الشاشة: مشغّل الأغاني «المشرفين بس»
     mod: Boolean(data && data.isModerator),
+    // أدوار القارئ الصوتي: متابع، سوبر فان، مستوى الفريق، أفضل 3 بالبث، توب 3 بقائمة تيك توك
+    follower: Boolean(data && data.isFollower),
+    sub: Boolean(data && data.isSubscriber),
+    team: Number(data && data.teamLevel) || 0,
+    top3: Boolean(data && data.id && (s.topGifters || []).indexOf(data.id) !== -1),
+    rank: Boolean(data && data.id && (s.topViewers || []).indexOf(data.id) !== -1),
     at: Date.now()
   });
   if (s.chat.length > RECENT_CHAT_MAX) s.chat.splice(0, s.chat.length - RECENT_CHAT_MAX);
@@ -448,9 +463,10 @@ function getRecentEvents(username, since) {
   return { sid: s.startedAt, seq: seq, events: list.filter(function (e) { return e.seq > after; }), live: !s.endedAt };
 }
 
-function recordViewers(username, connectionId, current, totalUsers) {
+function recordViewers(username, connectionId, current, totalUsers, topViewers) {
   var s = owned(username, connectionId);
   if (!s) return;
+  if (Array.isArray(topViewers) && topViewers.length) s.topViewers = topViewers.slice(0, 3);
   s.totals.peakViewers = Math.max(s.totals.peakViewers, Number(current) || 0);
   s.totals.totalViewers = Math.max(s.totals.totalViewers, Number(totalUsers) || 0);
 }

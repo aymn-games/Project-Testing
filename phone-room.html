@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07060b">
+<title>غرفة الجوالات — العب بدون بث</title>
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="auth/auth-client.js"></script>
+<!--
+  «غرفة الجوالات» — صفحة صاحب الغرفة (اللعب بدون بث).
+  للأدمن ولمن منحه الأدمن صلاحية 'phone_rooms' (admin.html ← الصلاحيات).
+  يفتح غرفة برقم من 4 أرقام (نطاق 1600–1699)، يعرض الباركود والرقم
+  للاعبين، ويحفظ الاتصال {platform:'phone', username:<الرقم>} بنفس مفتاح
+  «اتصل بالبث» بمكتبة الألعاب — فأي لعبة يفتحها بعدها تستقبل من جوالات
+  اللاعبين (phone/index.html) بدل البث، بدون أي تعديل باللعبة.
+  الخادم: backend/phone-room/ و backend/platforms/phone/phone-connector.js.
+-->
+<style>
+:root {
+  --bg: #07060b; --ink: #f4f2f8; --mute: #a8a3b5; --line: rgba(255,255,255,.09);
+  --acc: #a78bfa; --g1: #7c3aed; --g2: #a855f7; --green: #2fb36a; --red: #f87171;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: radial-gradient(900px 600px at 100% -10%, rgba(124,58,237,.22), transparent 65%), radial-gradient(700px 500px at -10% 70%, rgba(139,92,246,.1), transparent 65%), var(--bg); background-attachment: fixed; color: var(--ink); font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+body { min-height: 100dvh; padding: 18px 16px 40px; }
+button, input, a { font-family: inherit; }
+.wrap { max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.hide { display: none !important; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.head a.back { color: var(--mute); text-decoration: none; font-size: 14px; }
+.head h1 { margin: 0; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+.head h1 img { height: 34px; }
+.card { background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+.sub { margin: 0; color: var(--mute); font-size: 14.5px; line-height: 1.8; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: 14px; border: 0; background: linear-gradient(180deg, var(--g2), var(--g1)); color: #fff; font-size: 15.5px; font-weight: 700; cursor: pointer; text-decoration: none; }
+.btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,.18); color: var(--ink); font-weight: 600; }
+.btn.danger { background: transparent; border: 1px solid rgba(248,113,113,.45); color: var(--red); font-weight: 600; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+.join { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; }
+.qr { background: #fff; border-radius: 18px; padding: 14px; width: min(100%, 340px); }
+.qr img { width: 100%; display: block; image-rendering: pixelated; aspect-ratio: 1; }
+.codeLbl { color: var(--mute); font-size: 14px; }
+.code { font-size: clamp(56px, 11vw, 96px); font-weight: 700; letter-spacing: 12px; line-height: 1; direction: ltr; color: #fff; text-shadow: 0 0 30px rgba(167,139,250,.55); }
+.url { font-size: 13.5px; color: var(--mute); direction: ltr; word-break: break-all; }
+.status { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(0,0,0,.25); font-size: 14px; }
+.status.ok { border-color: rgba(47,179,106,.4); color: #9ff0c2; }
+.status.warn { border-color: rgba(245,166,35,.4); color: #ffd796; }
+.players-h { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px; }
+.players-h b { font-size: 16px; }
+.players-h span { color: var(--mute); font-size: 13px; }
+ul.pl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+ul.pl li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+ul.pl .nm { display: flex; align-items: center; gap: 9px; min-width: 0; font-weight: 600; }
+ul.pl .nm span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: #5f5a70; flex-shrink: 0; }
+.dot.on { background: var(--green); box-shadow: 0 0 8px 2px rgba(47,179,106,.55); }
+.kick { height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(248,113,113,.4); background: transparent; color: var(--red); font-size: 12.5px; cursor: pointer; }
+.empty { color: var(--mute); font-size: 14px; padding: 14px 0; }
+ol.how { margin: 0; padding: 0 20px 0 0; color: var(--mute); font-size: 14px; line-height: 2; }
+.err { color: #ffb3c0; font-size: 14px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1><img src="logo.png" alt="">غرفة الجوالات</h1>
+    <a class="back" href="games.html">← مكتبة الألعاب</a>
+  </div>
+
+  <div class="card" id="vLoading"><p class="sub">جارِ التحقق من حسابك…</p></div>
+
+  <div class="card hide" id="vGuest">
+    <p class="sub">سجّل دخول بحسابك عشان تفتح غرفة الجوالات.</p>
+    <div class="btns"><a class="btn" href="login.html?next=phone-room.html">تسجيل الدخول</a></div>
+  </div>
+
+  <div class="card hide" id="vDenied">
+    <p class="sub">اللعب بدون بث (غرفة الجوالات) يحتاج صلاحية من الإدارة. تواصل مع الإدارة عشان تفعّلها لحسابك.</p>
+  </div>
+
+  <div class="card hide" id="vOpen">
+    <p class="sub">العب كل الألعاب بدون بث: افتح غرفة، واللاعبين يدخلونها من جوالاتهم بالباركود أو بكتابة رقم الغرفة. كل لاعب يكتب ويكبّس ويرسل دعم من جواله، واللعبة تتعامل معه وكأنه مشاهد بالبث.</p>
+    <ol class="how" style="margin-top:12px">
+      <li>افتح الغرفة، واعرض الباركود للاعبين.</li>
+      <li>كل لاعب يدخل باسمه بس — ما يحتاج حساب.</li>
+      <li>روح لمكتبة الألعاب وافتح أي لعبة: كلمة الدخول والإجابات تنكتب من جوالاتهم.</li>
+    </ol>
+    <div class="btns"><button class="btn" id="openBtn">📱 افتح غرفة</button></div>
+    <div class="err" id="openErr"></div>
+  </div>
+
+  <div class="grid hide" id="vRoom">
+    <div class="card join">
+      <div class="codeLbl">امسح الباركود بالجوال، أو ادخل <b dir="ltr" id="siteHost"></b> واكتب رقم الغرفة</div>
+      <div class="qr"><img id="qrImg" alt="باركود دخول الغرفة"></div>
+      <div class="codeLbl">رقم الغرفة</div>
+      <div class="code" id="codeBig"></div>
+      <div class="url" id="joinUrl"></div>
+    </div>
+    <div class="card">
+      <div class="status" id="linkStatus"></div>
+      <div class="btns">
+        <a class="btn" href="games.html">🎮 اختر لعبة</a>
+        <button class="btn ghost" id="copyBtn">نسخ الرابط</button>
+        <button class="btn danger" id="closeBtn">إغلاق الغرفة</button>
+      </div>
+      <div class="players-h"><b>اللاعبين بالغرفة</b><span id="plCount"></span></div>
+      <ul class="pl" id="plList"></ul>
+      <p class="sub" style="margin-top:14px;font-size:13px">الغرفة تبقى مفتوحة وأنت تتنقل بين الألعاب، واللاعبين ما يحتاجون يدخلون من جديد. النقاط ما تنحسب باللعب بدون بث.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح «اتصل بالبث» بمكتبة الألعاب
+  var POLL_MS = 3000;
+  var A = window.AGPAuth;
+
+  function $(id) { return document.getElementById(id); }
+  function show(id) { ['vLoading', 'vGuest', 'vDenied', 'vOpen', 'vRoom'].forEach(function (v) { $(v).classList.toggle('hide', v !== id); }); }
+
+  function api(path, method, body) {
+    var headers = { 'Authorization': 'Bearer ' + (A.getToken() || '') };
+    if (body) headers['Content-Type'] = 'application/json';
+    return fetch(A.API_BASE + path, { method: method || 'GET', headers: headers, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d.__status = r.status; return d; }); });
+  }
+
+  function savedConn() {
+    try { var d = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); return d && d.username ? d : null; } catch (e) { return null; }
+  }
+  function notifyConn(value) {
+    try { window.dispatchEvent(new StorageEvent('storage', { key: CONN_KEY, newValue: value })); } catch (e) {}
+  }
+  // الألعاب تقرأ هذا وتتصل بالغرفة بدل البث (adapters/agp-tiktok-adapter.js)
+  function linkGames(code) {
+    var v = JSON.stringify({ platform: 'phone', username: code, connectedAt: Date.now() });
+    try { localStorage.setItem(CONN_KEY, v); } catch (e) {}
+    notifyConn(v);
+  }
+  function unlinkGames() {
+    var c = savedConn();
+    if (c && c.platform === 'phone') { try { localStorage.removeItem(CONN_KEY); } catch (e) {} notifyConn(null); }
+  }
+
+  function joinUrl(code) {
+    return new URL('phone/?code=' + code, location.href).href;
+  }
+
+  var room = null, pollTimer = null, renderedCode = null;
+
+  function renderLink() {
+    var c = savedConn(), el = $('linkStatus');
+    el.innerHTML = '';
+    var t = document.createElement('span');
+    if (c && c.platform === 'phone' && c.username === room.code) {
+      el.className = 'status ok';
+      t.textContent = room.hostOnline ? '✓ لعبة مفتوحة الحين ومربوطة بالغرفة' : '✓ الألعاب مربوطة بالغرفة — افتح أي لعبة';
+      el.appendChild(t);
+    } else {
+      el.className = 'status warn';
+      t.textContent = c ? 'الألعاب مربوطة الحين ببث ' + c.username + ' — مو بالغرفة' : 'الألعاب مو مربوطة بالغرفة';
+      var b = document.createElement('button');
+      b.className = 'btn'; b.style.height = '36px'; b.style.fontSize = '13.5px';
+      b.textContent = 'اربط الألعاب بالغرفة';
+      b.addEventListener('click', function () { linkGames(room.code); renderLink(); });
+      el.appendChild(t); el.appendChild(b);
+    }
+  }
+
+  function renderPlayers() {
+    var list = $('plList');
+    list.innerHTML = '';
+    var online = room.players.filter(function (p) { return p.online; }).length;
+    $('plCount').textContent = room.players.length + ' لاعب · ' + online + ' متصل';
+    if (!room.players.length) {
+      var e = document.createElement('li');
+      e.className = 'empty'; e.style.background = 'none'; e.style.border = '0';
+      e.textContent = 'ما دخل أحد للحين — اعرض الباركود للاعبين.';
+      list.appendChild(e);
+      return;
+    }
+    room.players.forEach(function (p) {
+      var li = document.createElement('li');
+      var nm = document.createElement('div'); nm.className = 'nm';
+      var d = document.createElement('i'); d.className = 'dot' + (p.online ? ' on' : '');
+      var s = document.createElement('span'); s.textContent = p.name;
+      nm.appendChild(d); nm.appendChild(s);
+      var k = document.createElement('button'); k.className = 'kick'; k.textContent = 'إخراج';
+      k.addEventListener('click', function () {
+        if (!confirm('إخراج ' + p.name + ' من الغرفة؟')) return;
+        api('/api/phone-room/kick', 'POST', { playerId: p.id }).then(refresh);
+      });
+      li.appendChild(nm); li.appendChild(k);
+      list.appendChild(li);
+    });
+  }
+
+  function renderRoom() {
+    show('vRoom');
+    if (renderedCode !== room.code) {
+      renderedCode = room.code;
+      var url = joinUrl(room.code);
+      $('codeBig').textContent = room.code;
+      $('joinUrl').textContent = url;
+      $('siteHost').textContent = new URL(url).host + '/phone';
+      try { var q = window.qrcode(0, 'M'); q.addData(url); q.make(); $('qrImg').src = q.createDataURL(10, 2); } catch (e) {}
+    }
+    renderLink();
+    renderPlayers();
+  }
+
+  function refresh() {
+    return api('/api/phone-room/mine').then(function (d) {
+      if (d.__status === 401) { show('vGuest'); return; }
+      if (!d.success) return;
+      if (!d.allowed) { show('vDenied'); return; }
+      room = d.room;
+      if (!room) { unlinkGames(); renderedCode = null; show('vOpen'); return; }
+      renderRoom();
+    }).catch(function () {});
+  }
+
+  $('openBtn').addEventListener('click', function () {
+    var b = this; b.disabled = true; $('openErr').textContent = '';
+    api('/api/phone-room/open', 'POST', {}).then(function (d) {
+      b.disabled = false;
+      if (!d.success) { $('openErr').textContent = d.error === 'rooms_full' ? 'كل الغرف مشغولة الحين، جرّب بعد شوي.' : 'تعذّر فتح الغرفة.'; return; }
+      room = d.room;
+      linkGames(room.code);
+      renderRoom();
+    }, function () { b.disabled = false; $('openErr').textContent = 'تعذّر الاتصال بالخادم.'; });
+  });
+
+  $('closeBtn').addEventListener('click', function () {
+    if (!confirm('إغلاق الغرفة؟ كل اللاعبين بيطلعون منها.')) return;
+    api('/api/phone-room/close', 'POST', {}).then(function () { unlinkGames(); room = null; renderedCode = null; show('vOpen'); });
+  });
+
+  $('copyBtn').addEventListener('click', function () {
+    var url = joinUrl(room.code), b = this;
+    var done = function () { b.textContent = 'تم النسخ ✓'; setTimeout(function () { b.textContent = 'نسخ الرابط'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt('انسخ الرابط:', url); });
+    else prompt('انسخ الرابط:', url);
+  });
+
+  window.addEventListener('storage', function (e) { if (e.key === CONN_KEY && room) renderLink(); });
+
+  if (!A || !A.getToken || !A.getToken()) { show('vGuest'); return; }
+  refresh();
+  pollTimer = setInterval(function () { if (!document.hidden) refresh(); }, POLL_MS);
+})();
+</script>
+</body>
+</html>

@@ -72,6 +72,8 @@
     function check(confirming) {
         var conn = saved();
         if (!conn || _checking || _ended) return;
+        // «غرفة الجوالات» (اللعب بدون بث) ما لها بث نفحصه — الخادم يبلّغ لو انقفلت (stream_ended)
+        if (conn.platform === 'phone') return;
         _checking = true;
         fetchLive(conn.username, conn.platform).then(function (live) {
             _checking = false;

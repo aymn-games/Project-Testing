@@ -104,6 +104,43 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
             fallbackBg: '#dce7f7',
             fallbackColor: '#2b4a86'
+        },
+        // الخفاش الذهبي — منح محدود. الأصل JPG 832×1248 بمربعات «شفافية»
+        // مرسومة: فُرّغت الخلفية والدائرة لشفافية حقيقية، وكُبّرت على 1024×1536.
+        // الدائرة 195→826 × 351→961، الاسم باللوح الأسود الأول (161→863 ×
+        // 986→1149)، والنقاط/الترتيب باللوح الثاني (116→909 × 1188→1445).
+        // اللوحان أسود — نص ذهبي.
+        'gold-bat': {
+            image: 'win-card-gold-bat.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 195, y: 351, w: 631, h: 610 },
+            holeBleed: 8,
+            nameBox: { x: 190, y: 1000, w: 644, h: 135 },
+            detailBox: { x: 150, y: 1205, w: 724, h: 225 },
+            textColor: 'linear-gradient(180deg,#fff3c4 0%,#f3c43a 50%,#b8863b 100%)',
+            detailColor: 'linear-gradient(180deg,#fff3c4 0%,#f3c43a 50%,#b8863b 100%)',
+            fallbackBg: '#111216',
+            fallbackColor: '#f3c43a'
+        },
+        // التاج المجنّح — منح محدود. الأصل PNG 1024×1536 بخلفية سوداء: فُرّغت
+        // الخلفية والدائرة لشفافية حقيقية، وتمدّد بالطول 4% عشان يعبّي البطاقة
+        // كاملة مثل باقي البطاقات. الدائرة 219→800 × 275→826، واللوح الكريمي
+        // 159→864 × 944→1299: الاسم بأعلاه والنقاط/الترتيب تحته. لوح فاتح — نص
+        // بني ذهبي. الصوت مقطع صاحب المشروع كامل (5.4 ثانية) بمستوى -16 LUFS.
+        'winged-crown': {
+            image: 'win-card-winged-crown.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 219, y: 275, w: 581, h: 551 },
+            holeBleed: 8,
+            nameBox: { x: 200, y: 975, w: 624, h: 125 },
+            detailBox: { x: 200, y: 1110, w: 624, h: 185 },
+            textColor: 'linear-gradient(180deg,#b8801f 0%,#8a5a12 50%,#5c3a08 100%)',
+            detailColor: 'linear-gradient(180deg,#b8801f 0%,#8a5a12 50%,#5c3a08 100%)',
+            fallbackBg: '#f3e6c8',
+            fallbackColor: '#8a5a12',
+            sound: 'win-card-winged-crown.mp3'
         }
     };
 
@@ -190,6 +227,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function preload(tpl) {
         var img = new Image();
         img.src = ASSETS_BASE + tpl.image;
+        audioFor(tpl);
+    }
+
+    // صوت خاص لكل بطاقة (اختياري: tpl.sound) — نسخة Audio وحدة لكل ملف.
+    // يشتغل تلقائياً مرة وحدة لما تظهر البطاقة (renderHtml)، بدون أي تعديل
+    // بملفات الألعاب. إعادة رسم نفس البطاقة (pop:false، أو نفس الفائز خلال
+    // SOUND_GAP_MS) ما تعيد الصوت.
+    var SOUND_GAP_MS = 15000;
+    var _audio = {};
+    var _lastPlayed = {};
+    function audioFor(tpl) {
+        if (!tpl.sound || typeof Audio === 'undefined') return null;
+        if (!_audio[tpl.sound]) {
+            _audio[tpl.sound] = new Audio(ASSETS_BASE + tpl.sound);
+            _audio[tpl.sound].preload = 'auto';
+        }
+        return _audio[tpl.sound];
+    }
+    function playOnce(player, tpl, volume) {
+        var a = audioFor(tpl);
+        if (!a) return false;
+        var key = ((player && player.id) || playerName(player)) + '|' + tpl.image;
+        var now = Date.now();
+        if (_lastPlayed[key] && now - _lastPlayed[key] < SOUND_GAP_MS) return false;
+        _lastPlayed[key] = now;
+        try {
+            a.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 1;
+            a.currentTime = 0;
+            var p = a.play();
+            if (p && typeof p.catch === 'function') p.catch(function () {});
+        } catch (e) { return false; }
+        return true;
     }
 
     function normalizeLines(lines) {
@@ -225,6 +294,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          * @param {Object} [opts]
          * @param {boolean} [opts.pop=true] - false skips the pop-in animation (for
          *   re-renders, e.g. when the earned points arrive after the card is shown)
+         * @param {boolean} [opts.silent=false] - true never plays the card's sound
          * @returns {string} HTML for the card; fills its container's width
          */
         renderHtml: function (player, lines, opts) {
@@ -243,12 +313,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }).join('');
 
             var pop = !(opts && opts.pop === false);
+            if (tpl.sound && pop && !(opts && opts.silent)) playOnce(player, tpl, opts && opts.volume);
             return '<div class="agp-wincard' + (pop ? ' agp-wincard-pop' : '') + '" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(player, tpl) +
                 '<img class="agp-wincard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
                 '<div class="agp-wincard-text" style="' + nameStyle + '">' + escapeHtml(name) + '</div>' +
                 (detailHtml ? '<div class="agp-wincard-detail" style="' + boxStyle(tpl.detailBox, tpl) + '">' + detailHtml + '</div>' : '') +
                 '</div>';
+        },
+
+        /** True when the winner's card has its own sound. */
+        hasSound: function (player) {
+            var tpl = templateFor(player);
+            return Boolean(tpl && tpl.sound);
+        },
+
+        /** Plays the card's sound now (e.g. a profile button), ignoring the repeat gap. */
+        playSound: function (player, volume) {
+            var tpl = templateFor(player);
+            if (!tpl || !tpl.sound) return false;
+            _lastPlayed[((player && player.id) || playerName(player)) + '|' + tpl.image] = 0;
+            return playOnce(player, tpl, volume);
         },
 
         /** Warm the image cache so the card shows without a load flash. */

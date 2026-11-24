@@ -491,6 +491,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function connectionBadgeHtml(savedConn) {
+        if (savedConn && savedConn.platform === 'phone') {
+            // «غرفة الجوالات» (اللعب بدون بث — phone-room.html)
+            return '<div class="agp-shell-conn-badge agp-shell-conn-yes"><span class="agp-shell-conn-dot"></span>' +
+                'غرفة الجوالات <b dir="ltr">' + escapeHtml(savedConn.username) + '</b>' +
+                '<a href="../../phone-room.html" target="_blank" class="agp-shell-conn-link">الباركود ↗</a></div>';
+        }
         if (savedConn) {
             return '<div class="agp-shell-conn-badge agp-shell-conn-yes"><span class="agp-shell-conn-dot"></span>' +
                 (savedConn.platform === 'kick' || savedConn.platform === 'twitch'

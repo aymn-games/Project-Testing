@@ -94,6 +94,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/screen/tts', requireAuth: false, handler: handlePublicScreenTts },
   { method: 'GET', path: '/api/screens/audio-key', requireAuth: true, handler: handleGetScreenAudioKey },
   { method: 'POST', path: '/api/screens/audio-key', requireAuth: true, handler: handleSetScreenAudioKey },
+  { method: 'POST', path: '/api/screens/tts-preview', requireAuth: true, handler: handleScreenTtsPreview },
   { method: 'GET', path: '/api/streamlabs', requireAuth: true, handler: handleStreamlabsState },
   { method: 'POST', path: '/api/streamlabs/link', requireAuth: true, handler: handleStreamlabsLink },
   { method: 'POST', path: '/api/streamlabs/unlink', requireAuth: true, handler: handleStreamlabsUnlink },
@@ -435,16 +436,32 @@ function handlePublicScreenMusicSearch(req, res) {
   });
 }
 
-/** GET /api/public/screen/tts?k=&t=&v=f|m&r= → audio/mpeg — القارئ الصوتي. */
+/** إعدادات الصوت من الطلب (رابط الشاشة أو المحرر): v= الصوت، r= السرعة، st/sim/sty/b لـElevenLabs */
+function ttsVoiceArgs(get, userId) {
+  return { voice: get('v'), rate: get('r'), extra: { userId: userId, st: get('st'), sim: get('sim'), sty: get('sty'), boost: get('b') } };
+}
+
+function sendTtsAudio(res, r) {
+  if (!r.success) { sendJson(res, r.error === 'empty_text' || r.error === 'bad_voice' ? 400 : r.error === 'rate_limited' ? 429 : 503, r); return; }
+  res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
+  res.end(r.audio);
+}
+
+/** GET /api/public/screen/tts?k=&t=&v=&r=&st=&sim=&sty=&b= → audio/mpeg — القارئ الصوتي. */
 function handlePublicScreenTts(req, res) {
   var o = screenFromKey(req, res);
   if (!o) return;
   if (!hasAudioTools(o.design).tts) { sendJson(res, 400, { success: false, error: 'no_tts_tool' }); return; }
-  screenAudio.get().tts(getQueryParam(req, 'k'), getQueryParam(req, 't'), getQueryParam(req, 'v'), getQueryParam(req, 'r')).then(function (r) {
-    if (!r.success) { sendJson(res, r.error === 'empty_text' ? 400 : r.error === 'rate_limited' ? 429 : 503, r); return; }
-    res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': r.audio.length, 'Cache-Control': 'private, max-age=3600' });
-    res.end(r.audio);
-  });
+  var a = ttsVoiceArgs(function (k) { return getQueryParam(req, k); }, o.userId);
+  screenAudio.get().tts(getQueryParam(req, 'k'), getQueryParam(req, 't'), a.voice, a.rate, a.extra).then(function (r) { sendTtsAudio(res, r); });
+}
+
+/** POST /api/screens/tts-preview { t, v, r, st, sim, sty, b } → audio/mpeg — «اختبار الصوت» بالمحرر. */
+function handleScreenTtsPreview(req, res, body, user) {
+  if (!screensGate(res, user)) return;
+  body = body || {};
+  var a = ttsVoiceArgs(function (k) { return body[k] == null ? '' : String(body[k]); }, user.id);
+  screenAudio.get().tts('preview:' + user.id, String(body.t || 'هلا والله، هذا صوت القارئ'), a.voice, a.rate, a.extra).then(function (r) { sendTtsAudio(res, r); });
 }
 
 /* ---------------- Streamlabs (الدونيشن) — الرمز ما يرجع للواجهة أبداً ---------------- */
@@ -538,15 +555,16 @@ function handleStreamlabsDonations(req, res, body, user) {
   }) });
 }
 
-/** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected } */
+/** GET /api/screens/connection → { success, username|null, state: idle|connecting|connected, error: null|timeout|error } */
 function handleScreenConnectionStatus(req, res, body, user) {
   if (!screensGate(res, user)) return;
   var u = tiktokLiveCheck.normalize(streamScreens.ownerTikTok(user.id));
-  sendJson(res, 200, { success: true, username: u || null, state: u ? require('../stats/screen-audio-watcher').get().status(u) : 'idle' });
+  var w = require('../stats/screen-audio-watcher').get();
+  sendJson(res, 200, { success: true, username: u || null, state: u ? w.status(u) : 'idle', error: u ? w.lastError(u) : null });
 }
 
 /**
- * POST /api/screens/connect { username } → { success, state } — اليوزر لازم يكون حساب تيك توك
+ * POST /api/screens/connect { username, force? } → { success, state } — force = «إعادة الاتصال» (يقفل القديم ويفتح جديد) — اليوزر لازم يكون حساب تيك توك
  * الموثّق بحساب الستريمر (not_linked / not_your_account)، ويبث الحين (not_live).
  */
 function handleScreenConnect(req, res, body, user) {
@@ -558,7 +576,7 @@ function handleScreenConnect(req, res, body, user) {
   if (typed !== mine) { sendJson(res, 400, { success: false, error: 'not_your_account', username: mine }); return; }
   tiktokLiveCheck.isLive(mine).then(function (live) {
     if (live === false) { sendJson(res, 409, { success: false, error: 'not_live' }); return; }
-    var r = require('../stats/screen-audio-watcher').get().connectManual(mine);
+    var r = require('../stats/screen-audio-watcher').get().connectManual(mine, Boolean(body && body.force));
     sendJson(res, 200, { success: true, username: mine, state: r.state });
   });
 }
@@ -574,13 +592,19 @@ function handleScreenDisconnect(req, res, body, user) {
 /** GET /api/screens/audio-key → { success, hasKey } — هل الستريمر حاط مفتاح يوتيوب خاص (المفتاح نفسه ما يرجع أبداً). */
 function handleGetScreenAudioKey(req, res, body, user) {
   if (!screensGate(res, user)) return;
-  sendJson(res, 200, { success: true, hasKey: screenAudio.get().hasUserYoutubeKey(user.id) });
+  var sa = screenAudio.get();
+  sendJson(res, 200, { success: true, hasKey: sa.hasUserYoutubeKey(user.id), hasElevenKey: sa.hasUserElevenKey(user.id), voices: sa.voiceProviders(user.id) });
 }
 
-/** POST /api/screens/audio-key { youtubeKey|null } → { success, hasKey } */
+/** POST /api/screens/audio-key { youtubeKey|null } أو { elevenKey|null } → { success, hasKey } */
 function handleSetScreenAudioKey(req, res, body, user) {
   if (!screensGate(res, user)) return;
-  var r = screenAudio.get().setUserYoutubeKey(user.id, body && body.youtubeKey ? String(body.youtubeKey) : null);
+  body = body || {};
+  var sa = screenAudio.get();
+  var r = Object.prototype.hasOwnProperty.call(body, 'elevenKey')
+    ? sa.setUserElevenKey(user.id, body.elevenKey ? String(body.elevenKey) : null)
+    : sa.setUserYoutubeKey(user.id, body.youtubeKey ? String(body.youtubeKey) : null);
+  if (r.success) r.voices = sa.voiceProviders(user.id);
   sendJson(res, r.success ? 200 : 400, r);
 }
 

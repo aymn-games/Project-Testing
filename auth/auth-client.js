@@ -798,7 +798,7 @@ function adminListFrameCodes() {
 
 /** Owner toggles their entrance on/off without deleting it (template/text
  * stay saved for one-click re-enable). */
-/** Owner picks one of their owned entrances (nitro/royal/princess/storm). */
+/** Owner picks one of their owned entrances (nitro/royal/princess/storm/notes). */
 function equipEntrance(key) {
     return request('/api/entrance/equip', { method: 'POST', body: { key: key } });
 }
@@ -932,6 +932,23 @@ function adminUpdateStreamerLevel(slug, fields) {
     });
 }
 
+/* Admin only — manual streamer hours (compensate/deduct), see
+ * backend/points/streamer-hours.js. hours < 0 = deduction. */
+function adminListHoursAdjustments(userId) {
+    return request('/api/admin/streamer-hours/adjustments' + (userId ? '?userId=' + encodeURIComponent(userId) : ''), { method: 'GET' });
+}
+
+function adminAdjustStreamerHours(userId, hours, effectiveAt, reason) {
+    return request('/api/admin/streamer-hours/adjust', {
+        method: 'POST',
+        body: { userId: userId, hours: hours, effectiveAt: effectiveAt, reason: reason || '' }
+    });
+}
+
+function adminDeleteHoursAdjustment(id) {
+    return request('/api/admin/streamer-hours/adjustments/delete', { method: 'POST', body: { id: id } });
+}
+
 /** Only admin accounts can access the streamer dashboard (dashboard-core);
  * every other account is redirected to its public profile instead. */
 function canAccessDashboard(user) {
@@ -962,6 +979,10 @@ function hasSubscriptionAccess(user) {
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
+    // «غرفة الجوالات» (اللعب بدون بث — phone-room.html): صلاحية يمنحها الأدمن
+    // بنفسه لكل حساب، فتفتح الألعاب بدون شرط ستريمر/ربط/اشتراك. الاتصال ببث
+    // حقيقي يبقى بنفس شروطه بالخادم (ws-server.js checkStreamConnectAllowed).
+    if (user.permissions && user.permissions.phone_rooms) return true;
     if (!hasSubscriptionAccess(user)) return false;
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).
@@ -1370,6 +1391,9 @@ global.AGPAuth = {
     grantCoins: grantCoins,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
+    adminListHoursAdjustments: adminListHoursAdjustments,
+    adminAdjustStreamerHours: adminAdjustStreamerHours,
+    adminDeleteHoursAdjustment: adminDeleteHoursAdjustment,
     canAccessDashboard: canAccessDashboard,
     isStreamerAccount: isStreamerAccount,
     canPlayGames: canPlayGames,

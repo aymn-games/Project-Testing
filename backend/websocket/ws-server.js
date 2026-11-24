@@ -781,6 +781,11 @@ module.exports = {
         require('../remote-control/remote-control-server').handleUpgrade(req, socket);
         return;
       }
+      if (pathname === '/ws/phone-room') {
+        // «غرفة الجوالات» (اللعب بدون بث): جوالات اللاعبين — phone-room/
+        require('../phone-room/phone-room-server').handleUpgrade(req, socket);
+        return;
+      }
       if (pathname === '/ws/party') {
         require('../party/party-server').handleUpgrade(req, socket);
         return;

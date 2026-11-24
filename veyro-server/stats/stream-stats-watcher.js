@@ -84,7 +84,7 @@ function start(user) {
     onComment: function (d) { liveSessionStats.recordComment(username, id, d); },
     onGift: function (d) { liveSessionStats.recordGift(username, id, d); },
     onFollow: function (d) { liveSessionStats.recordFollow(username, id, d); },
-    onViewerUpdate: function (d) { liveSessionStats.recordViewers(username, id, d.current, d.totalUsers); },
+    onViewerUpdate: function (d) { liveSessionStats.recordViewers(username, id, d.current, d.totalUsers, d.topViewers); },
     onLike: function (d) { liveSessionStats.recordLike(username, id, d); },
     onShare: function (d) { liveSessionStats.recordShare(username, id, d); },
     onMember: function (d) { liveSessionStats.recordMember(username, id, d); },
