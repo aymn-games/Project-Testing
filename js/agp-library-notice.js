@@ -1,27 +1,33 @@
 /**
- * تنبيه «مرة وحدة» بمكتبة الألعاب (games.html) — «مساء البصل»: تنبيه تحديثات قصير.
+ * تنبيه «مرة وحدة» بمكتبة الألعاب (games.html) — «مستحي أصارحكم»: تحديث قصير.
  *
- * - يطلع بس خلال نافذة 15 دقيقة (من WINDOW_START إلى WINDOW_START + WINDOW_MINUTES).
+ * - يطلع بس خلال نافذة زمنية (من WINDOW_START إلى WINDOW_START + WINDOW_MINUTES).
  *   اللي يدخل بعدها ما يشوفه أبداً. لو WINDOW_START = null فالتنبيه موقّف.
  * - اللي يدخل خلال النافذة يطلع له مرة وحدة بس:
  *     localStorage 'agp:notice:<KEY>:<user id|guest>'، ومسجّل الدخول ينحفظ بحسابه
  *     بالسيرفر (GET/POST /api/notices/seen — backend/notices/seen-notices.js).
- * - زرّين: «إغلاق» مقلب — كل ما ينضغط ينط لمكان ثاني بالشاشة وما يقفل شي؛
- *   و«خذ راحتك ياعسل» هو الوحيد اللي يقفل النافذة. ESC والضغط برا ما يقفلون.
+ * - مرحلتين:
+ *     ١) صورة القطو + «عندي تحديث مدته أقل من 10 دقايق ومستحي أصارحكم»
+ *        وزرّين: «خذ راحتك ماورانا شي» و«لا خله بعدين».
+ *     ٢) لو ضغط «لا خله بعدين»: الزر ينط لمكان ثاني بالشاشة، والصورة تتبدّل
+ *        للصورة الثانية وفوقها «متأكد؟». الزر يظل ينط كل ما ينضغط.
+ * - «خذ راحتك ماورانا شي» هو الوحيد اللي يقفل — ويقفل معه كل التنويهات
+ *   المفتوحة بالصفحة. ESC والضغط برا ما يقفلون.
  *
- * التنبيه القديم («السن بالسن») انشال.
  * لتنبيه جديد بالمستقبل: غيّر NOTICE_KEY والنص و WINDOW_START.
  * للمعاينة بدون ما ينحفظ وبدون شرط الوقت: games.html?notice=preview
  */
 (function () {
     'use strict';
 
-    var NOTICE_KEY = 'library-onion-updates-2';
-    // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف.
-    var WINDOW_START = new Date('2026-11-18T23:46:00+03:00').getTime(); // 11:46 مساءً بتوقيت السعودية
+    var NOTICE_KEY = 'library-shy-update-1';
+    // بداية النافذة بتوقيت السعودية (+03:00). null = موقّف (يطلع بالمعاينة بس).
+    // مثال: new Date('2026-11-25T22:00:00+03:00').getTime()
+    var WINDOW_START = null;
     var WINDOW_MINUTES = 15;
-    // صورة أعلى البطاقة. لو ما تحمّلت تختفي ويطلع إيموجي البصلة بدالها.
-    var IMG = 'assets/notices/onion-updates.jpg';
+    // صورة المرحلة الأولى والثانية. لو ما تحمّلت تختفي ويطلع الإيموجي بدالها.
+    var IMG = 'assets/notices/shy-update.jpg';
+    var IMG_SURE = 'assets/notices/are-you-sure.jpg';
 
     var A = window.AGPAuth;
     var preview = /[?&]notice=preview\b/.test(location.search);
@@ -77,7 +83,11 @@
         '.agp-ln-ok::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:agpLnSh 3s ease-in-out 1s infinite}' +
         '.agp-ln-x{flex:1;padding:0 18px;color:#cfc7e2;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}' +
         // زر الإغلاق بعد أول ضغطة يطلع من البطاقة ويصير ينط بالشاشة
-        '.agp-ln-x.is-run{position:fixed;z-index:2147483101;flex:none;width:auto;transition:left .28s cubic-bezier(.3,1.4,.5,1),top .28s cubic-bezier(.3,1.4,.5,1)}' +
+        '.agp-ln-x.is-run{position:fixed;z-index:2147483101;flex:none;width:auto;background:#241a38;box-shadow:0 10px 30px -8px rgba(0,0,0,.9),inset 0 0 0 1px rgba(255,255,255,.18);transition:left .28s cubic-bezier(.3,1.4,.5,1),top .28s cubic-bezier(.3,1.4,.5,1)}' +
+        // المرحلة الثانية: «متأكد؟» فوق الصورة
+        '.agp-ln.is-sure{padding-top:24px}' +
+        '.agp-ln.is-sure h3{margin:0 0 14px;font-size:30px;text-shadow:none}' +
+        '.agp-ln.is-sure .agp-ln-hero{width:100%;margin:0;border-radius:22px;-webkit-mask-image:none;mask-image:none}' +
         '@keyframes agpLnBg{from{opacity:0}to{opacity:1}}' +
         '@keyframes agpLnIn{from{opacity:0;transform:translateY(24px) scale(.94)}to{opacity:1;transform:none}}' +
         '@keyframes agpLnSh{0%{left:-60%}45%,100%{left:130%}}' +
@@ -95,12 +105,12 @@
         bg.className = 'agp-ln-bg';
         bg.innerHTML = '<div class="agp-ln has-img" role="dialog" aria-modal="true" aria-labelledby="agp-ln-t">' +
             '<img class="agp-ln-hero" alt="" src="' + IMG + '">' +
-            '<div class="agp-ln-emoji" aria-hidden="true">🧅</div>' +
-            '<h3 id="agp-ln-t">مساء البصل<br><span>ممكن ننسى اللي بيحصل؟</span></h3>' +
-            '<p>عندي شوية تحديثات، يمكن <b>تفصل معك الألعاب ثواني وترجع</b><br>تحمّلنا 🙏</p>' +
+            '<div class="agp-ln-emoji" aria-hidden="true">🙈</div>' +
+            '<h3 id="agp-ln-t">عندي تحديث مدته <span>أقل من 10 دقايق</span></h3>' +
+            '<p>ومستحي أصارحكم 🙈</p>' +
             '<div class="agp-ln-btns">' +
-            '<button type="button" class="agp-ln-ok">خذ راحتك ياعسل</button>' +
-            '<button type="button" class="agp-ln-x">إغلاق</button>' +
+            '<button type="button" class="agp-ln-ok">خذ راحتك ماورانا شي</button>' +
+            '<button type="button" class="agp-ln-x">لا خله بعدين</button>' +
             '</div></div>';
 
         var hero = bg.querySelector('.agp-ln-hero');
@@ -110,6 +120,25 @@
         };
 
         var x = bg.querySelector('.agp-ln-x');
+        var card = bg.querySelector('.agp-ln');
+        var sure = false;
+        /** المرحلة الثانية: الصورة الثانية وفوقها «متأكد؟». */
+        function toSure() {
+            if (sure) return;
+            sure = true;
+            var h = card.querySelector('.agp-ln-hero');
+            if (h) { card.classList.add('has-img'); h.src = IMG_SURE; }
+            card.querySelector('.agp-ln-emoji').textContent = '🌹';
+            var t = card.querySelector('h3');
+            t.innerHTML = '<span>متأكد؟</span>';
+            card.classList.add('is-sure');
+            if (h) card.insertBefore(t, h);
+            var p = card.querySelector('p');
+            if (p) p.parentNode.removeChild(p);
+            card.style.animation = 'none';
+            void card.offsetWidth;
+            card.style.animation = '';
+        }
         /** ينط زر الإغلاق لمكان عشوائي بالشاشة (بعيد عن مكانه الحالي). */
         function runAway(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -135,14 +164,19 @@
             } while (tries < 10 && Math.abs(nx - r.left) + Math.abs(ny - r.top) < 160);
             x.style.left = Math.round(nx) + 'px';
             x.style.top = Math.round(ny) + 'px';
+            toSure();
         }
         x.addEventListener('pointerdown', runAway);
         x.addEventListener('click', runAway);
 
+        // «خذ راحتك ماورانا شي» يقفل هذا التنبيه وكل التنويهات المفتوحة بالصفحة
         bg.querySelector('.agp-ln-ok').onclick = function () {
-            bg.classList.add('is-out');
+            var all = document.querySelectorAll('.agp-ln-bg, .agp-sn-bg');
+            Array.prototype.forEach.call(all, function (el) {
+                el.classList.add('is-out');
+                setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 460);
+            });
             x.style.opacity = '0';
-            setTimeout(function () { if (bg.parentNode) bg.parentNode.removeChild(bg); }, 460);
         };
         document.body.appendChild(bg);
         // أول ما يطلع نحسبه — حتى لو سكّر الصفحة بدون ما يضغط
