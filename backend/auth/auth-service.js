@@ -1338,7 +1338,7 @@ function getTopStreamersByHours(limit) {
     return rows;
 }
 
-function computeTopStreamersByHours(limit, periodStart) {
+function computeTopStreamersByHours(limit, periodStart, periodEnd) {
     // بث/مباراة بدأت قبل بداية الأسبوع وانتهت بعدها: ينحسب منها الجزء اللي
     // بعد البداية فقط. بعد التحويل: وقت المباريات فقط (راجع streamer-hours.js).
     var rows = db.prepare(
@@ -1351,7 +1351,7 @@ function computeTopStreamersByHours(limit, periodStart) {
            AND h.total_ms > 0
          ORDER BY total_ms DESC
          LIMIT @limit`
-    ).all(Object.assign({ limit: limit || 20 }, streamerHours.hoursParams(periodStart)));
+    ).all(Object.assign({ limit: limit || 20 }, streamerHours.hoursParams(periodStart, periodEnd)));
     return rows.map(function (r) {
         return {
             tiktokUsername: r.tiktokUsername,
@@ -1695,6 +1695,8 @@ module.exports = {
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
     getRankingPeriodStart: getRankingPeriodStart,
+    // توب الاستريمرز بالساعات لفترة محددة [periodStart, periodEnd) — لحفظ تصنيف الأسبوع الماضي.
+    computeTopStreamersByHours: computeTopStreamersByHours,
     endBroadcast: endBroadcast,
     incrementBroadcastStat: incrementBroadcastStat,
     addGiftValue: addGiftValue,

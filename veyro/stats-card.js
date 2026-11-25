@@ -47,7 +47,7 @@
         caption: 'إحصائيات البث', showHandle: true, shape: 'circle', border: 'line',
         views: { on: true, metric: 'total', label: 'مشاهدة' },
         sections: SECTIONS.map(function (s) { return { key: s.key, on: s.def, n: s.n }; }),
-        fonts: { title: 'plex', name: 'plex', num: 'plex' },
+        fonts: { title: 'cairo', name: 'cairo', num: 'cairo' },
         colors: { title: '#ffffff', name: '#ffffff', num: '#d9b8ff', ring: '#d9b8ff', accent: '#d9b8ff' }
     };
     var COLOR_PRESETS = ['#ffffff', '#ffd54a', '#cfc3dc', '#a99bb8', '#ff5fa8', '#4dd8ff', '#7cff6b', '#ff8a3d', '#f5c46b', '#14121a'];
@@ -1004,7 +1004,7 @@
             var g = el('div', 'ob-fgrid vs-fonts');
             O.FONTS.forEach(function (f) {
                 O.loadFont(f);
-                var b = btn('', 'ob-fbtn' + (f.key === p.fonts[key] ? ' on' : ''), function () { p.fonts[key] = f.key; changed(true); });
+                var b = btn('', 'ob-fbtn' + (f.key === O.fontOf(p.fonts[key]).key ? ' on' : ''), function () { p.fonts[key] = f.key; changed(true); });
                 var s = el('span', null, sample); s.style.fontFamily = O.fontStack(f); s.style.fontWeight = String(f.b);
                 b.appendChild(s); b.appendChild(el('span', null, f.label)); g.appendChild(b);
             });

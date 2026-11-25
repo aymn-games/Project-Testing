@@ -4,7 +4,9 @@
  *  - تطلع تلقائياً أول ما يدخل المستخدم، وفوقها شارة «تنويه مهم».
  *  - ما تنقفل أول 15 ثانية: لا ESC ولا ضغط برا النافذة. العدّاد مدموج بزر الإغلاق نفسه
  *    («يمكنك الإغلاق بعد N ثانية» مع تعبئة هادئة)، وبعدها يتحوّل الزر لـ«فهمت، متابعة».
- *  - الضغط برا النافذة ما يقفلها أبداً — الإغلاق من الزر (أو ESC بعد انتهاء العدّاد).
+ *  - الضغط برا النافذة وESC ما يقفلونها أبداً — الإغلاق من الزر بس.
+ *  - لو المستخدم ضغط «خذ راحتك» بتنبيه المكتبة (js/agp-library-notice.js) تنقفل
+ *    هذي النافذة فوراً وما تطلع بنفس الزيارة (بدون ما تنحفظ إنها انقفلت).
  *  - زر «تواصل معنا وشاركنا رأيك» شغّال من أول لحظة ويفتح حساب تيك توك @em70_q.
  *  - بعد الإغلاق ينحفظ بـ localStorage (STORE_KEY) فما تطلع مرة ثانية بنفس المتصفح.
  *
@@ -178,7 +180,7 @@
         '</div>';
 
     function show() {
-        if (document.querySelector('.agp-sn-bg')) return;
+        if (window.__agpNoticesDismissed || document.querySelector('.agp-sn-bg')) return;
 
         var style = document.createElement('style');
         style.textContent = CSS;
@@ -219,10 +221,12 @@
             try { okBtn.focus({ preventScroll: true }); } catch (e) {}
         }, 1000);
 
-        function close() {
-            if (!ready || closed) return;
+        function close(force) {
+            if ((!ready && force !== true) || closed) return;
             closed = true;
-            markClosed();
+            clearInterval(timer);
+            document.removeEventListener('agp:notices:dismiss-all', dismissAll);
+            if (force !== true) markClosed();
             document.removeEventListener('keydown', onKey, true);
             html.style.overflow = prevOverflow;
             bg.classList.add('is-out');
@@ -231,9 +235,9 @@
 
         function onKey(e) {
             if (e.key === 'Escape') {
+                // ESC ما يقفل — الإغلاق من الزر بس
                 e.preventDefault();
                 e.stopPropagation();
-                close();
                 return;
             }
             if (e.key === 'Tab') {
@@ -246,7 +250,10 @@
         }
 
         document.addEventListener('keydown', onKey, true);
-        okBtn.addEventListener('click', close);
+        okBtn.addEventListener('click', function () { close(); });
+        // «خذ راحتك» بتنبيه المكتبة يقفل كل التنويهات
+        function dismissAll() { close(true); }
+        document.addEventListener('agp:notices:dismiss-all', dismissAll);
         // الضغط برا النافذة ما يقفلها أبداً — نوقفه بس عشان ما يوصل للصفحة تحت
         bg.addEventListener('click', function (e) { if (e.target === bg) e.stopPropagation(); });
     }
