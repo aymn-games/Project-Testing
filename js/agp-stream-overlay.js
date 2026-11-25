@@ -2061,7 +2061,7 @@
             else if (it.type === 'goal') fillGoal(n, it, preview);
             else if (it.type === 'counter') fillCounter(n, it, preview);
             else if (it.type === 'jar') buildJar(n, it, preview);
-            else if (it.type === 'alert') buildAlert(n, it, preview);
+            else if (it.type === 'alert') { n._pose = Boolean(preview && opts.pose); buildAlert(n, it, preview); }
             else if (it.type === 'icon') buildIcon(n, it);
             else if (it.type === 'shape') buildShape(n, it);
             else if (it.type === 'lastdonation') buildLastDonation(n, it, preview);
@@ -2353,6 +2353,16 @@
         if (isVideoAlert(n._item)) {
             // بالمحرر: إطار فاضي بحجم الأليرت بس (يشوف مكانه ويسحبه) — بدون فيديو ولا اسم ولا رسالة،
             // فأول ما يخلص الأليرت ما يبقى منه شي، وما يشغّل فيديو وتفريغ بالخلفية (أخف)
+            // محرر فيرو (وضع التعديل، opts.pose): الأليرت واقف بشكله الحقيقي — الفيديو والصورة والاسم والرسالة —
+            // عشان الستريمر يرتّبه على الشاشة نفسها. باقي المحررات: إطار فاضي زي قبل
+            if (n._preview && n._pose) {
+                var pv = videoBox(n._item, null, true);
+                fitFull(pv.root, n, n._item);
+                pv.root.classList.add('in');
+                stage.appendChild(pv.root);
+                if (n._pos) place(n, n._pos, n._F);
+                return;
+            }
             if (n._preview) {
                 var vw = Number(n._item.video.w) || 16, vh = Number(n._item.video.h) || 9;
                 var ph = el('div', 'agp-so-vslot');
