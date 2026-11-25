@@ -602,6 +602,7 @@
     function group(box, title, sub) {
         var key = (selectedId ? (find(selectedId) || {}).type : section) + ':' + title;
         var g = el('section', 'ob-grp' + (grpShut[key] ? ' shut' : ''));
+        g.setAttribute('data-title', title);
         var h = button('', 'ob-grp-h', function () {
             var shut = g.classList.toggle('shut');
             grpShut[key] = shut;
@@ -984,6 +985,8 @@
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
             panel.appendChild(itemBar(it));
             propsPane(it, pb);
+            var tb = tabify(it, pb);
+            if (tb) panel.appendChild(tb);
         } else {
             var sec = SECTIONS.filter(function (s) { return s.key === section; })[0] || SECTIONS[0];
             panel.appendChild(head(sec.title, sec.desc));
@@ -1020,10 +1023,80 @@
         syncWide();
     }
 
-    /** المكتبة والأليرتات (وإعدادات أي أليرت) = لوحة عريضة، وشاشة البث تصغر؛ تقفلها ترجع تتمدد. */
+    /*
+     * تبويبات إعدادات العنصر: بدل مجموعات طويلة تحت بعض (الأليرت كان 4 شاشات تمرير)، كل مجموعة
+     * تنحط بتبويب قصير فوق اللوحة، ويبين تبويب واحد بس. المجموعات نفسها ما تغيّرت (group())،
+     * والتبويب ينعرف من عنوانها هنا. اللي قبل أول مجموعة (أزرار «جرّب») وبعد آخرها (الملاحظات)
+     * يبين بكل التبويبات، واللي بين مجموعتين يمشي مع اللي بعده. عنصر فيه data-tab يروح لتبويبه.
+     */
+    var TAB_OF = {
+        'متى يشتغل': 'متى يشتغل', 'الصوت والمدة': 'الصوت',
+        'الحجم والمكان': 'الشكل', 'الحجم والألوان والخلفية': 'الشكل', 'الشكل والحركة': 'الشكل', 'الحجم واللون': 'الشكل', 'الشكل': 'الشكل', 'المقاس': 'الشكل',
+        'العناصر': 'النصوص', 'وقت الظهور بالأليرت': 'النصوص', 'نص الرسالة': 'النصوص', 'النص فوق الفيديو': 'النصوص', 'النصوص': 'النصوص',
+        'المحتوى': 'المحتوى', 'التصميم والمحتوى': 'المحتوى', 'الهدف': 'الهدف',
+        'قوالب من مكتبة فيرو': 'الإطار', 'الإطار': 'الإطار', 'الألوان': 'الألوان', 'العنوان والحجم': 'العنوان والحجم',
+        'الحركة والأرقام': 'الحركة', 'الحركة': 'الحركة', 'نص الهدف': 'شكل النص', 'كلام النص ومكانه': 'كلام النص',
+        'الأيقونات والخطوط': 'الخطوط', 'الحجم': 'الخطوط',
+        'التشغيل': 'التشغيل', 'الطابور': 'التشغيل', 'أوامر الشات': 'الأوامر', 'الصلاحيات': 'الأوامر',
+        // الهدف: ألوان السائل مع شكله
+        'goal:الألوان': 'الشكل',
+        'lastdonation:الحجم واللون': 'الخطوط'
+    };
+    var TAB_ORDER = ['متى يشتغل', 'الهدف', 'المحتوى', 'التشغيل', 'الأوامر', 'الشكل', 'الإطار', 'الألوان', 'الخطوط', 'العنوان والحجم', 'الحركة', 'شكل النص', 'كلام النص', 'النصوص', 'الصوت'];
+    function tabbed(n, t) { n.setAttribute('data-tab', t); return n; }
+    var tabSel = {}; // آخر تبويب لكل نوع عنصر (يبقى لين تسكّر الصفحة)
+    function tabOf(type, title) { return TAB_OF[type + ':' + title] || TAB_OF[title] || title; }
+    function tabify(it, pb) {
+        var kids = Array.prototype.slice.call(pb.children);
+        var named = kids.map(function (k) {
+            var t = k.getAttribute('data-tab');
+            if (!t && k.classList.contains('ob-grp')) t = tabOf(it.type, k.getAttribute('data-title'));
+            return t || '';
+        });
+        var first = -1, last = -1;
+        named.forEach(function (t, i) { if (t) { if (first < 0) first = i; last = i; } });
+        if (first < 0) return null;
+        var of = new Array(kids.length), next = '';
+        for (var i = last; i >= first; i--) { if (named[i]) next = named[i]; of[i] = next; }
+        var names = [];
+        of.forEach(function (t) { if (t && names.indexOf(t) === -1) names.push(t); });
+        if (names.length < 2) return null;
+        var rank = function (t) { var r = TAB_ORDER.indexOf(t); return r < 0 ? 99 : r; };
+        names.sort(function (a, b) { return rank(a) - rank(b); });
+        var active = names.indexOf(tabSel[it.type]) !== -1 ? tabSel[it.type] : names[0];
+        pb.classList.add('tabbed');
+        // مجموعة وحدة بالتبويب = بدون عنوانها (التبويب هو العنوان)، وأكثر = عناوين ثابتة ما تنطوي
+        names.forEach(function (t) {
+            var gs = kids.filter(function (k, j) { return of[j] === t && k.classList.contains('ob-grp'); });
+            gs.forEach(function (g) { g.classList.remove('shut'); g.classList.toggle('solo', gs.length === 1); });
+        });
+        var bar = el('div', 'ob-ptabs ob-itabs');
+        bar.setAttribute('role', 'tablist');
+        function show(t) {
+            active = t;
+            tabSel[it.type] = t;
+            kids.forEach(function (k, j) { k.classList.toggle('ob-tabhide', Boolean(of[j]) && of[j] !== t); });
+            Array.prototype.forEach.call(bar.children, function (b) {
+                var on = b.getAttribute('data-t') === t;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-selected', String(on));
+            });
+        }
+        names.forEach(function (t) {
+            var b = button(t, '', function () { if (t === active) return; show(t); pb.scrollTop = 0; });
+            b.setAttribute('data-t', t);
+            b.setAttribute('role', 'tab');
+            bar.appendChild(b);
+        });
+        show(active);
+        var w = el('div', 'ob-itabs-w');
+        w.appendChild(bar);
+        return w;
+    }
+
+    /** المكتبة = لوحة عريضة (شبكة فيديوهات)، وشاشة البث تصغر؛ باقي الأقسام والإعدادات بعرضها العادي عشان المعاينة تبقى كبيرة. */
     function syncWide() {
-        var it = selectedId && find(selectedId);
-        var w = panelOpen && (it ? it.type === 'alert' : (section === 'library' || section === 'alerts'));
+        var w = panelOpen && !selectedId && section === 'library';
         if (body.classList.contains('wide') === w) return;
         body.classList.toggle('wide', w);
         setTimeout(function () { if (!drag) renderCanvas(); }, 380);
@@ -1839,7 +1912,7 @@
             }
             ldStyleRows(it, group(root, 'الأيقونات والخطوط'), des);
             group(root, 'الحجم').appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
-            root.appendChild(streamlabsCard());
+            root.appendChild(tabbed(streamlabsCard(), 'المحتوى'));
             return;
         }
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
@@ -1850,7 +1923,7 @@
         optColor(it, box, 'boxColor', 'خلفية البطاقة', 'الأصلي = غامق');
         ldStyleRows(it, group(root, 'الأيقونات والخطوط'), 'card');
         sizeColor(it, group(root, 'الحجم واللون'), 1, 8);
-        root.appendChild(streamlabsCard());
+        root.appendChild(tabbed(streamlabsCard(), 'المحتوى'));
     }
 
     /* ---------------- أدوات الصوت: القارئ الصوتي ومشغّل الأغاني ---------------- */
@@ -3283,7 +3356,7 @@
             bgS.addEventListener('input', function () { bgR.querySelector('.ob-rval').textContent = bgS.value + '٪'; });
             kc.appendChild(bgR);
         }
-        box.appendChild(kc);
+        kc.setAttribute('data-tab', 'الشكل');
 
         var root = box;
         triggerRows(it, group(root, 'متى يشتغل'));
@@ -3299,11 +3372,13 @@
             }), true, 'يشتغل مع بداية الأليرت'));
             if (it.soundId) box.appendChild(row('مستوى الصوت الإضافي', slider(0, 1, 0.05, it.soundVol == null ? 0.8 : it.soundVol, function (v) { it.soundVol = v; commit(); })));
         }
-        lookGroup(it, root);
         durationRows(it, box);
+        // تبويب «الشكل»: الحجم أول، بعده الألوان والخلفية، وآخره التفريغ
         box = group(root, 'الحجم والمكان');
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
         box.appendChild(row('الحجم', slider(1, 20, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        lookGroup(it, root);
+        root.appendChild(kc);
         box = root;
         var parts = O.partsOf(it);
         if (parts) {
@@ -3750,7 +3825,9 @@
             }), true));
         });
         gM.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
-        box.appendChild(button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); }));
+        var back = button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); });
+        back.setAttribute('data-tab', 'النصوص');
+        box.appendChild(back);
     }
 
     /* أداة التفريغ: معاينة كبيرة + لون/أسود/أبيض/مؤثرات + حماية الشخصية + قطّارة + تلقائي + القوة والنعومة والتقليص والانعكاس */
