@@ -1117,6 +1117,47 @@
     .ob-gform { padding: 26px 22px; }
   }
 
+  /* ---------- وضع التعديل (studio.js → syncFocus): العنصر المفتوح ياخذ الشاشة كاملة ----------
+     شاشة البث فوق كبيرة، والإعدادات تحتها بأعمدة. بدون القائمة الجانبية ولا شريط الشاشات. */
+  .vy-app.focus { grid-template-columns: minmax(0, 1fr); --panel-w: 100%; }
+  .vy-app.focus > .vy-side, .vy-app.focus .ob-top, .vy-app.focus .ob-mtabs, .vy-app.focus .vy-mbar, .vy-app.focus .vy-ann { display: none; }
+  .vy-app.focus .ob-editor { grid-template-rows: minmax(0, 1fr); }
+  .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(240px, 37%); gap: 10px; }
+  .vy-app.focus .ob-panel { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "h t b" "p p p"; align-items: center; opacity: 1; }
+  .vy-app.focus .ob-phead { grid-area: h; border-bottom: 0; padding: 12px 16px; align-items: center; flex-direction: row-reverse; justify-content: flex-end; min-width: 0; }
+  .vy-app.focus .ob-phead h2 { font-size: 17px; white-space: nowrap; }
+  .vy-app.focus .ob-phead p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .vy-app.focus .ob-itabs-w { grid-area: t; padding: 8px 6px; min-width: 0; }
+  .vy-app.focus .ob-itabs { max-width: 720px; margin: 0 auto; }
+  .vy-app.focus .ob-ibar { grid-area: b; display: flex; border-bottom: 0; padding: 8px 14px; min-width: 0; }
+  .vy-app.focus .ob-ibar-b { padding: 7px 10px; }
+  .vy-app.focus .ob-pbody { grid-area: p; align-self: stretch; border-top: 1px solid var(--line); padding: 14px 18px 20px; min-width: 0; }
+  /* صفوف المجموعة بأعمدة، عشان الخيارات تنفرد بعرض الشاشة بدل ما تنزل تحت بعض */
+  .vy-app.focus .ob-grp-b { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+  .vy-app.focus .ob-grp-b > * + * { border-top: 0 !important; }
+  .vy-app.focus .ob-grp-b > * { border-bottom: 1px solid rgba(169,155,184,.08); }
+  /* ترتيب الصورة والاسم والرسالة صار على شاشة البث نفسها — المعاينة الصغيرة ما تحتاجها */
+  .vy-app.focus .va-lay, .vy-app.focus .va-play { display: none; }
+  .vy-app.focus .ob-sel .agp-so-vpart { outline: 1.5px dashed rgba(233,225,243,.6); outline-offset: 3px; border-radius: 4px; }
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav, .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname, .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg { outline: 2px solid #fff; box-shadow: 0 0 0 5px rgba(169,155,184,.3); }
+  .vy-app.focus .ob-sel .agp-so-vpart.ob-vdrag { outline-color: var(--warn); }
+  .vy-app.focus .ob-sel .agp-so-vpart::before { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); padding: 1px 7px; border-radius: 6px; background: rgba(20,18,26,.92); color: #fff; font: 600 11px/1.7 "IBM Plex Sans Arabic", sans-serif; letter-spacing: 0; white-space: nowrap; text-shadow: none; z-index: 5; }
+  /* اسم العنصر فوقه: للمحدد بس (والعناصر القريبة من بعض ما تتزاحم أسماؤها) */
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav::before { content: "الصورة"; }
+  .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname::before { content: "الاسم"; }
+  .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg::before { content: "الرسالة"; }
+  @media (max-width: 900px) {
+    .vy-app.focus .vy-main { padding-top: 10px; }
+    .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-rows: minmax(200px, 38%) minmax(0, 1fr); gap: 8px; }
+    .vy-app.focus .ob-panel { display: flex; flex-direction: column; max-height: none; min-height: 0; }
+    .vy-app.focus .ob-phead { padding: 10px 14px; }
+    .vy-app.focus .ob-ibar { display: grid; padding: 6px 14px; }
+    .vy-app.focus .ob-ibar-b { padding: 7px 4px; }
+    .vy-app.focus .ob-itabs-w { padding: 4px 14px 8px; }
+    .vy-app.focus .ob-pbody { padding: 12px 14px 18px; }
+    .vy-app.focus .ob-grp-b { grid-template-columns: minmax(0, 1fr); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }

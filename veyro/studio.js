@@ -518,6 +518,7 @@
         if (next === 'editor' && !cur) { if (screens[0]) openScreen(screens[0]); else { next = 'screens'; } }
         var changed = next !== view;
         view = next;
+        syncFocus();
         ['home', 'screens', 'stats', 'editor'].forEach(function (v) {
             var sEl = document.getElementById('vy-' + v);
             sEl.hidden = v !== view;
@@ -760,11 +761,28 @@
 
     /* ---------------- المعاينة ---------------- */
 
+    /*
+     * «وضع التعديل»: أي عنصر تفتحه ياخذ الشاشة كاملة — شاشة البث الحقيقية كبيرة فوق، وإعداداته
+     * تحتها بأعمدة، بدون القائمة الجانبية. الصورة والاسم والرسالة (أليرت الفيديو) تنسحب على الشاشة
+     * نفسها (partHit). الرجوع (→ أو Esc) يرجّع المحرر العادي. القارئ الصوتي له صفحته (openTts).
+     */
+    function focusOn() {
+        var it = view === 'editor' && selectedId && find(selectedId);
+        return Boolean(it && it.type !== 'tts');
+    }
+    function syncFocus() {
+        var f = focusOn();
+        if (app.classList.contains('focus') === f) return false;
+        app.classList.toggle('focus', f);
+        return true;
+    }
+
     function renderCanvas() {
         if (!cur) return;
+        syncFocus();
         var st = S();
         var o = orientNow();
-        var pad = 28;
+        var pad = app.classList.contains('focus') ? 14 : 28;
         var W = stage.clientWidth - pad * 2, H = stage.clientHeight - pad * 2 - 54;
         if (W < 50 || H < 50) return;
         var box = O.frameIn(TEMPLATE, o, W, H);
@@ -798,16 +816,36 @@
     }
 
     function buildNode(it) {
-        var n = O.buildItem(it, F, { preview: true });
+        // العنصر المفتوح بوضع التعديل: أليرت الفيديو يبان واقف بشكله الحقيقي (pose) عشان ترتّبه على الشاشة
+        var n = O.buildItem(it, F, { preview: true, pose: it.id === selectedId && focusOn() });
         if (it.hidden) n.classList.add('ob-hidden');
         if (it.id === selectedId) {
             n.classList.add('ob-sel');
+            if (O.isVideoAlert(it) && O.partsOf(it)) n.setAttribute('data-psel', partSel);
             var h = el('span', 'ob-handle');
             h.title = 'كبّر / صغّر';
             n.appendChild(h);
         }
         nodes[it.id] = n;
         return n;
+    }
+
+    /*
+     * وضع التعديل: الصورة والاسم والرسالة بالأليرت المحدد تنسحب على الشاشة نفسها.
+     * تنبني متأخر (مع حركة المعاينة)، فنلقاها وقت الضغط. شكل التحديد بالـCSS (.ob-sel[data-psel]).
+     */
+    var PART_CLS = { avatar: 'agp-so-vav', name: 'agp-so-vname', msg: 'agp-so-vmsg' };
+    /** أي عنصر (صورة/اسم/رسالة) تحت المؤشر — العناصر نفسها ما تستقبل الماوس (pointer-events:none). */
+    function partHit(n, x, y) {
+        if (!n) return null;
+        var keys = Object.keys(PART_CLS);
+        for (var i = keys.length - 1; i >= 0; i--) {
+            var q = n.querySelector('.' + PART_CLS[keys[i]]);
+            if (!q) continue;
+            var r = q.getBoundingClientRect(), pad = 6;
+            if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) return { el: q, key: keys[i] };
+        }
+        return null;
     }
 
     function placeNode(it) {
@@ -839,7 +877,17 @@
         body.classList.toggle('closed', !panelOpen);
     }
 
+    var partDrag = null;
     frame.addEventListener('pointerdown', function (e) {
+        var selIt = selectedId && find(selectedId);
+        var hit = selIt && app.classList.contains('focus') && !(e.target.closest && e.target.closest('.ob-handle')) && partHit(nodes[selIt.id], e.clientX, e.clientY);
+        if (hit) {
+            e.preventDefault();
+            partDrag = { it: selIt, key: hit.key, el: hit.el, box: hit.el.closest('.agp-so-vbox'), pid: e.pointerId, moved: false, sx: e.clientX, sy: e.clientY };
+            hit.el.classList.add('ob-vdrag');
+            nodes[selIt.id].setAttribute('data-psel', hit.key);
+            return;
+        }
         var handle = e.target.closest && e.target.closest('.ob-handle');
         var n = e.target.closest && e.target.closest('.agp-so-item');
         if (!n) { if (selectedId) select(null); return; }
@@ -860,6 +908,19 @@
     });
 
     window.addEventListener('pointermove', function (e) {
+        if (partDrag && e.pointerId === partDrag.pid) {
+            if (Math.abs(e.clientX - partDrag.sx) + Math.abs(e.clientY - partDrag.sy) < 3 && !partDrag.moved) return;
+            partDrag.moved = true;
+            var r = partDrag.box.getBoundingClientRect();
+            var px = clamp((e.clientX - r.left) / r.width * 100, 0, 100), py = clamp((e.clientY - r.top) / r.height * 100, 0, 100);
+            px = Math.round(px * 10) / 10; py = Math.round(py * 10) / 10;
+            var it2 = partDrag.it;
+            if (!it2.parts) it2.parts = JSON.parse(JSON.stringify(O.partsOf(it2)));
+            it2.parts[partDrag.key] = Object.assign({}, O.partsOf(it2)[partDrag.key], { x: px, y: py });
+            partDrag.el.style.left = px + '%';
+            partDrag.el.style.top = py + '%';
+            return;
+        }
         if (resize && e.pointerId === resize.pid) {
             // المقبض بالزاوية اليسار تحت: نبعد عنه = يكبر
             var d = ((resize.sx - e.clientX) + (e.clientY - resize.sy)) / 2;
@@ -879,6 +940,18 @@
     });
 
     function endPointer(e) {
+        if (partDrag && e.pointerId === partDrag.pid) {
+            var pd = partDrag;
+            partDrag = null;
+            pd.el.classList.remove('ob-vdrag');
+            var again = partSel !== pd.key || !pd.moved;
+            partSel = pd.key;
+            // ضغطة بدون سحب = يفتح ستايل العنصر بتبويب «النصوص»
+            if (!pd.moved) { partOpen = pd.key; tabSel[pd.it.type] = 'النصوص'; }
+            if (pd.moved) { commit(); rebuildNode(pd.it); }
+            if (again) renderPanel();
+            return;
+        }
         if (resize && e.pointerId === resize.pid) { resize = null; commit(); renderPanel(); return; }
         if (!drag || e.pointerId !== drag.pid) return;
         var moved = drag.moved;
@@ -1021,6 +1094,7 @@
         }
         panel.appendChild(pb);
         syncWide();
+        if (syncFocus()) renderCanvas();
     }
 
     /*
@@ -1274,7 +1348,7 @@
         else if (it.type === 'lastdonation') lastDonationProps(it, box);
         else if (it.type === 'tts') ttsProps(it, box);
         else if (it.type === 'music') musicProps(it, box);
-        box.appendChild(el('div', 'ob-hint', 'اسحبه بالمعاينة لأي مكان، وكبّره من النقطة اللي بزاويته. بالكيبورد: الأسهم للتحريك، Delete للحذف، Ctrl+D للتكرار.'));
+        box.appendChild(el('div', 'ob-hint', 'اسحبه على شاشة البث لأي مكان، وكبّره من النقطة اللي بزاويته. بالكيبورد: الأسهم للتحريك، Delete للحذف، Ctrl+D للتكرار، Esc للرجوع.'));
     }
 
     /** أزرار العنصر (ترتيب، تكرار، إخفاء، حذف): ثابتة فوق اللوحة، ما تحتاج تنزل لآخرها. */
@@ -3468,7 +3542,7 @@
     function partsEditor(it, box, parts) {
         var card = el('div', 'ob-card va-parts');
         card.appendChild(el('h3', null, 'الصورة والاسم والرسالة'));
-        card.appendChild(el('div', 'ob-hint', 'اسحب أي عنصر لمكانه، أو اضغطه وعدّله تحت. ▶ يشغّل المعاينة بالتوقيت.'));
+        card.appendChild(el('div', 'ob-hint', 'اسحب الصورة والاسم والرسالة لمكانها على شاشة البث فوق، أو اضغط أي وحدة وعدّل ستايلها هنا. «جرّب» يشغّل الأليرت بالتوقيت.'));
         var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
         var wEm = 18 * Math.min(1, vw / vh);
         var lay = el('div', 'va-lay');
