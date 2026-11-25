@@ -83,7 +83,7 @@
         { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، أفضل معجب…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
-        { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
+        { key: 'donations', label: 'أليرتات الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
         { key: 'lastsup', label: 'آخر داعم', icon: 'crown', title: 'آخر داعم', desc: 'آخر واحد دعمك بالدونيشن (Streamlabs): اسمه ومبلغه، ويتحدّث مع كل دعم.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
@@ -96,7 +96,14 @@
     ];
     // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
     // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
+    // الأدوات بمجموعات (القائمة الجانبية): كل مجموعة عنوان وتحته أقسامها — وبالجوال نفس الترتيب كشريط
+    var TOOL_GROUPS = [
+        { label: 'التنبيهات', keys: ['library', 'alerts'] },
+        { label: 'التفاعل', keys: ['tops', 'goals', 'jar'] },
+        { label: 'الدونيشن', keys: ['donations', 'lastsup'] },
+        { label: 'الصوت والنصوص', keys: ['audio', 'text'] }
+    ];
+    var TOOL_KEYS = [].concat.apply([], TOOL_GROUPS.map(function (g) { return g.keys; }));
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -492,10 +499,12 @@
         navEl.appendChild(navItem('الرئيسية', 'home', view === 'home', function () { go('home'); }));
         navEl.appendChild(navItem('الشاشات', 'screens', view === 'screens', function () { go('screens'); }, screens.length ? String(screens.length) : ''));
         navEl.appendChild(navItem('إحصائيات البث', 'bars', view === 'stats', function () { go('stats'); }));
-        navEl.appendChild(el('div', 'vy-group', 'أدوات البث'));
-        TOOL_KEYS.forEach(function (k) {
-            var sec = secOf(k);
-            navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }));
+        TOOL_GROUPS.forEach(function (g) {
+            navEl.appendChild(el('div', 'vy-group', g.label));
+            g.keys.forEach(function (k) {
+                var sec = secOf(k);
+                navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }));
+            });
         });
         navEl.appendChild(el('div', 'vy-group', 'الشاشة المفتوحة'));
         ['layers', 'screen'].forEach(function (k) {
@@ -519,6 +528,8 @@
         var changed = next !== view;
         view = next;
         syncFocus();
+        if (view !== 'editor') setSim(false);
+        syncMini();
         ['home', 'screens', 'stats', 'editor'].forEach(function (v) {
             var sEl = document.getElementById('vy-' + v);
             sEl.hidden = v !== view;
@@ -802,6 +813,12 @@
         tag.appendChild(el('b', null, o === 'l' ? '1920×1080' : '1080×1920'));
         tag.appendChild(el('span', null, Math.round(box.w / (o === 'l' ? 1920 : 1080) * 100) + '%'));
         frame.appendChild(tag);
+        if (O.simulating()) {
+            var sv = el('div', 'ob-simtag');
+            sv.appendChild(el('i'));
+            sv.appendChild(el('span', null, 'تجربة بث — بالموقع بس'));
+            frame.appendChild(sv);
+        }
         if (!st.items.filter(function (x) { return x.type !== 'tts'; }).length) {
             var em = el('div', 'ob-empty');
             em.appendChild(el('b', null, 'شاشة فاضية'));
@@ -991,8 +1008,28 @@
         renderZoom();
         if (file) toast('خلفيتك للمعاينة بس — ما تنحفظ ولا تطلع برابط الشاشة');
     }
+    /**
+     * «تجربة بث»: بث وهمي بالمعاينة بس (O.simulate بـjs/agp-stream-overlay.js) — هدايا وتكبيسات ومتابعات
+     * ودونيشن، فتشوف الأليرتات والتوب والأهداف والوعاء وهي تشتغل. ما يوصل لرابط الشاشة بـOBS.
+     */
+    function setSim(on) {
+        if (Boolean(O.simulating()) === Boolean(on)) return;
+        O.simulate(on);
+        renderZoom();
+        renderCanvas();
+        if (on) toast('تجربة بث شغّالة بالموقع بس — ما يوصل شي لشاشة البث');
+    }
     function renderZoom() {
         zoomBar.textContent = '';
+        var simOn = O.simulating();
+        var sb = el('button', 'ob-btn ob-simb' + (simOn ? ' on' : ' primary'));
+        sb.type = 'button';
+        sb.innerHTML = svg(ic(simOn ? 'pause' : 'play'));
+        sb.appendChild(el('span', null, simOn ? 'وقّف التجربة' : 'تجربة بث'));
+        sb.title = 'بث وهمي بالمعاينة بس: هدايا وتكبيسات ومتابعات ودونيشن — ما يوصل لشاشة البث';
+        sb.addEventListener('click', function () { setSim(!O.simulating()); });
+        zoomBar.appendChild(sb);
+        zoomBar.appendChild(el('i', 'ob-zsep'));
         zoomBar.appendChild(el('span', null, 'خلفية المعاينة'));
         PREVIEWS.forEach(function (p) {
             zoomBar.appendChild(button(p.label, 'ob-btn' + (!localBg && (S().preview || 'checker') === p.key ? ' primary' : ' ghost'), function () {
@@ -4729,8 +4766,22 @@
     /* ---------------- القائمة: طي، درج الجوال، الحساب، تأثيرات الماوس ---------------- */
 
     var NAV_KEY = 'vy:nav-mini';
-    function setMini(on) {
+    /*
+     * آيباد أفقي وشاشات الكمبيوتر الصغيرة (901–1279): بالمحرر القائمة تنطوي لأيقونات بس لحالها، عشان شاشة البث
+     * تاخذ مساحتها. ما ينحفظ كاختيار — اختيار الستريمر («طي القائمة») يرجع بالشاشات الأكبر وبباقي الصفحات.
+     */
+    var miniPref = false;
+    function autoMini() { return view === 'editor' && window.innerWidth > 900 && window.innerWidth < 1280; }
+    function syncMini() {
+        var on = miniPref || autoMini();
+        if (app.classList.contains('mini') === on) return;
         app.classList.toggle('mini', on);
+        setTimeout(function () { if (view === 'editor' && !drag) renderCanvas(); }, 380);
+    }
+    window.addEventListener('resize', syncMini);
+    function setMini(on) {
+        miniPref = on;
+        app.classList.toggle('mini', on || autoMini());
         try { localStorage.setItem(NAV_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
         var cb = document.getElementById('vy-collapse');
         cb.setAttribute('aria-label', on ? 'فتح القائمة' : 'طي القائمة');

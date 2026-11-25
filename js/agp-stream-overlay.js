@@ -438,16 +438,18 @@
             : dataBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), LINK ? undefined : { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); })
             .then(function (d) {
+                // «تجربة بث» شغّالة: البيانات الحقيقية تنحفظ بمكانها وترجع لما توقف التجربة
+                var tgt = sim ? sim.real : stats;
                 if (!d || !d.success) {
-                    stats.status = d && d.error === 'tiktok_not_linked' ? 'tiktok' : 'error';
+                    tgt.status = d && d.error === 'tiktok_not_linked' ? 'tiktok' : 'error';
                     return;
                 }
-                stats.status = 'ok';
-                stats.sections = (d.stats && d.stats.sections) || {};
-                stats.totals = (d.stats && d.stats.totals) || null;
+                tgt.status = 'ok';
+                tgt.sections = (d.stats && d.stats.sections) || {};
+                tgt.totals = (d.stats && d.stats.totals) || null;
                 try { sessionStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ sections: stats.sections, totals: stats.totals })); } catch (e) { /* ignore */ }
             })
-            .catch(function () { stats.status = 'error'; }) // نخلي آخر بيانات ظاهرة
+            .catch(function () { (sim ? sim.real : stats).status = 'error'; }) // نخلي آخر بيانات ظاهرة
             .then(function () { inflight = false; notify('stats'); });
     }
 
@@ -2138,7 +2140,7 @@
         var it = node._item;
         var cnt = node.querySelector('.agp-so-jcount');
         if (cnt && it) {
-            var tt = jar.totals || (preview ? { diamonds: 860, gifts: 57 } : { diamonds: 0, gifts: 0 });
+            var tt = (sim && preview && sim.stats.totals) || jar.totals || (preview ? { diamonds: 860, gifts: 57 } : { diamonds: 0, gifts: 0 });
             cnt.textContent = '';
             if (it.counter === 'gifts') { cnt.appendChild(icon('gift')); cnt.appendChild(el('span', null, fmt(tt.gifts) + ' هدية')); }
             else { cnt.appendChild(icon('diamond')); cnt.appendChild(el('span', null, fmt(tt.diamonds))); }
@@ -3529,8 +3531,114 @@
     }
 
     /** آخر دونيشن فعلي (من الرابط أو ملخص الإحصائيات — الأحدث). */
+    /*
+     * «تجربة بث» (محرر فيرو بس — STUDIO): بث وهمي بالمعاينة. هدايا وتكبيسات ومتابعات وشير ودونيشن
+     * تجي كل لحظة، فالأليرتات تشتغل والتوب يتغيّر والأهداف والوعاء يتعبّون والأرقام تزيد.
+     * كله بالمتصفح: ما يوصل للسيرفر ولا لرابط الشاشة بـOBS. البيانات الحقيقية تنحفظ (sim.real) وترجع لما توقف.
+     */
+    var sim = null;
+    var SIM_NAMES = ['أبو فهد', 'نوره', 'سلطان', 'ريم', 'ماجد', 'جود', 'نواف', 'ساره', 'فيصل', 'لمى', 'عبدالله', 'هيا'];
+    var SIM_MSGS = ['كفو والله، استمر 💜', 'أحلى بث', 'تستاهل', ''];
+    function simPick(a) { return a[Math.floor(Math.random() * a.length)]; }
+    function simRand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+    function simCoins(g) { return Number(String(g.img).replace(/^.*\/(\d+)-[^/]*$/, '$1')) || 1; }
+    /** يزوّد صف الشخص بقسم التوب ويرتّب القسم (أعلى 10). */
+    function simBump(sec, user, field, n) {
+        var list = sim.stats.sections[sec];
+        var r = list.filter(function (x) { return x.name === user; })[0];
+        if (!r) { r = { name: user, count: 0, diamonds: 0, amount: 0 }; list.push(r); }
+        r[field] += n;
+        list.sort(function (a, b) { return b[field] - a[field]; });
+        if (list.length > 10) list.length = 10;
+        return r;
+    }
+    function simTick() {
+        if (!sim) return;
+        var t = sim.stats.totals, user = simPick(SIM_NAMES), e = null, fresh = null;
+        var roll = Math.random();
+        if (roll < 0.34) {
+            var n = simRand(5, 60);
+            var lr = simBump('likers', user, 'count', n);
+            t.likes += n;
+            e = { type: 'like', user: user, count: n, total: lr.count, all: t.likes, allPrev: t.likes - n };
+        } else if (roll < 0.66) {
+            // الهدايا الغالية نادرة، عشان الأهداف ما تكتمل من أول هدية
+            var pool = JAR_SAMPLE_GIFTS.filter(function (g) { return simCoins(g) < 1000 || Math.random() < 0.04; });
+            var g = simPick(pool), coins = simCoins(g), cnt = coins >= 100 ? 1 : simRand(1, 5);
+            simBump('gifters', user, 'diamonds', coins * cnt);
+            t.diamonds += coins * cnt;
+            t.gifts += cnt;
+            fresh = [];
+            for (var i = 0; i < Math.min(cnt, 5); i++) {
+                var k = 'sim-' + (sim.n++);
+                jarDemo.push({ k: k, img: g.img, name: g.name });
+                fresh.push(k);
+            }
+            if (jarDemo.length > JAR_CAP) jarDemo = jarDemo.slice(jarDemo.length - JAR_CAP);
+            e = { type: 'gift', user: user, gift: g.name, giftAr: g.name, img: g.img, count: cnt, diamonds: coins * cnt };
+        } else if (roll < 0.76) {
+            simBump('commenters', user, 'count', 1);
+            t.comments += 1;
+        } else if (roll < 0.84) {
+            t.follows += 1;
+            e = { type: 'follow', user: user };
+        } else if (roll < 0.91) {
+            simBump('sharers', user, 'count', 1);
+            t.shares += 1;
+            e = { type: 'share', user: user };
+        } else if (roll < 0.95) {
+            e = { type: 'join', user: user, uid: 'sim' };
+        } else {
+            var amt = simPick([1, 2, 5, 10, 25]);
+            simBump('donors', user, 'amount', amt);
+            t.donations += amt;
+            var msg = simPick(SIM_MSGS);
+            t.lastDonation = { name: user, amount: amt, currency: 'USD', message: msg, at: Date.now() };
+            e = { type: 'donation', user: user, amount: amt, currency: 'USD', message: msg };
+        }
+        t.peakViewers = Math.max(t.peakViewers, simRand(30, 60) + Math.round(t.likes / 200));
+        if (e) {
+            e.at = Date.now();
+            e.demo = true;
+            // طابور قصير: ما نكدّس أليرتات وراء بعض (البث الحقيقي يكدّسها، التجربة بس تورّيك شكلها)
+            alertsFor(e).forEach(function (it) {
+                var q = alertQ[it.id];
+                if (q && (q.busy ? q.list.length >= 1 : q.list.length >= 2)) return;
+                queueAlert(it.id, forItem(it, e));
+            });
+        }
+        if (fresh) paintJars(fresh);
+        repaintData();
+        notify('stats');
+    }
+    function simStart() {
+        if (sim || !STUDIO) return;
+        sim = {
+            real: stats, n: 0, timer: null,
+            stats: { status: 'ok', sections: { likers: [], gifters: [], commenters: [], sharers: [], donors: [] }, totals: { likes: 0, diamonds: 0, gifts: 0, follows: 0, shares: 0, comments: 0, peakViewers: 30, donations: 0, lastDonation: null } }
+        };
+        stats = sim.stats;
+        jarDemo = [];
+        paintJars(null);
+        repaintData();
+        notify('stats');
+        simTick();
+        sim.timer = setInterval(simTick, 1100);
+    }
+    function simStop() {
+        if (!sim) return;
+        clearInterval(sim.timer);
+        stats = sim.real;
+        sim = null;
+        jarDemo = [];
+        paintJars(null);
+        repaintData();
+        notify('stats');
+    }
+
     function curLastDon() {
         var t = (stats.totals && stats.totals.lastDonation) || null;
+        if (sim) return t;
         return lastDon && (!t || (lastDon.at || 0) >= (t.at || 0)) ? lastDon : t;
     }
     function ldSig(d) { return d ? [d.name, d.amount, d.currency, d.at].join('|') : ''; }
@@ -5149,6 +5257,9 @@
             paintJars(fresh);
         },
         jarClearDemo: function () { jarDemo = []; paintJars(null); },
+        /** «تجربة بث» بمحرر فيرو: on = يبدأ بث وهمي بالمعاينة، false = يوقفه ويرجّع البيانات الحقيقية. */
+        simulate: function (on) { if (on) simStart(); else simStop(); },
+        simulating: function () { return Boolean(sim); },
         /** للنافذة العائمة (js/agp-stream-pip.js): صور الوعاء والإجماليات. */
         jarData: function () { return { icons: jar.icons.concat(jarDemo), totals: jar.totals }; },
         mediaUrl: mediaUrl,
