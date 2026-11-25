@@ -418,6 +418,14 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 @keyframes goGlow{0%,100%{box-shadow:0 8px 26px rgba(139,92,246,.4),0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 8px 26px rgba(139,92,246,.4),0 0 0 10px rgba(139,92,246,.16)}}
 @media (max-width:820px){.intro-steps{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.intro-steps{grid-template-columns:1fr}}
+/* صندوق مقفل 10 ثواني بعد انتهاء الوقت بدون إجابة */
+.cool{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:inherit;
+  background:repeating-linear-gradient(135deg,rgba(251,191,36,.10) 0 10px,rgba(7,6,11,.0) 10px 20px),rgba(7,6,11,.78);border:2px solid rgba(251,191,36,.7);color:#fcd34d;pointer-events:none}
+.box.cooling .cool{display:flex;animation:fadeIn .25s ease}
+.cool-t{font-weight:700;font-size:max(12px,min(14cqh,8cqw))}
+.cool-n{font-weight:700;font-size:min(42cqh,24cqw);line-height:1;font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(251,191,36,.6)}
+.box.cooling{cursor:not-allowed}
+.box.cooling .num,.box.cooling .tag{opacity:.25}
 @keyframes winPop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
 </style>
 </head>
@@ -747,15 +755,19 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
         '<div class="timer-pill"></div>' +
         '<div class="who-pill"><img class="ava" alt=""><b></b></div>' +
         '<div class="inner">' +
-          '<div class="face front"><div class="num">' + b.num + '</div><div class="tag"></div></div>' +
+          '<div class="face front"><div class="num">' + b.num + '</div><div class="tag"></div>' +
+            '<div class="cool"><span class="cool-t">🔒 مقفل</span><b class="cool-n"></b></div></div>' +
           '<div class="face back"><div class="q"></div><div class="qbar"><i></i></div><div class="result"></div></div>' +
         '</div>';
       b.el = el;
       board.appendChild(el);
     });
   }
+  /* صندوق تقفل بانتهاء الوقت بدون إجابة: ممنوع اختياره 10 ثواني */
+  var COOL_MS = 10000;
+  function cooling(b, now) { return b.coolUntil > (now || Date.now()); }
   function eligible(b, team) {
-    if (b.state !== 'closed') return false;
+    if (b.state !== 'closed' || cooling(b)) return false;
     if (S.phase === 'attack') return b.owner !== team && b.origin !== team;
     if (S.phase === 'recover') return b.origin === team && b.owner !== team;
     return false;
@@ -763,7 +775,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   function renderBox(b) {
     var el = b.el, any = eligible(b, 'blue') || eligible(b, 'red');
     el.className = 'box o-' + b.owner + (b.state !== 'closed' ? ' open' : '') + (b.opener ? ' by-' + b.opener.team : '') +
-      (playing() && !any && b.state === 'closed' ? ' locked' : '') + (S.phase === 'recover' && any ? ' target' : '');
+      (playing() && !any && b.state === 'closed' && !cooling(b) ? ' locked' : '') + (S.phase === 'recover' && any ? ' target' : '') + (cooling(b) ? ' cooling' : '');
     el.setAttribute('aria-label', 'صندوق ' + b.num);
     var tag = el.querySelector('.tag'), tk = b.capturer ? b.capturer.name + b.owner : '';
     if (tag.dataset.k !== tk) {
@@ -993,10 +1005,21 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     showResult(b, 'fail', '⌛', 'انتهى الوقت');
     if (p) { logEvent('bad', 'انتهى وقت ' + p.name + ' على الصندوق ' + b.num); release(p, 600); }
     snd('fail');
-    later(b, function () { safeClose(b); }, 900);
+    later(b, function () {
+      b.coolUntil = Date.now() + COOL_MS;
+      safeClose(b);
+      tickCool(b, Date.now());
+    }, 900);
+  }
+  /* عدّاد القفل على وجه الصندوق — ولما يخلص يرجع الصندوق متاح */
+  function tickCool(b, now) {
+    var on = cooling(b, now);
+    b.el.classList.toggle('cooling', on);
+    if (on) b.el.querySelector('.cool-n').textContent = Math.ceil((b.coolUntil - now) / 1000);
+    else if (b.coolUntil) { b.coolUntil = 0; renderBox(b); }
   }
   function closeAllOpen() {
-    S.boxes.forEach(function (b) { if (b.state !== 'closed') safeClose(b); else b.token = ++S.seq; });
+    S.boxes.forEach(function (b) { b.coolUntil = 0; if (b.el) b.el.classList.remove('cooling'); if (b.state !== 'closed') safeClose(b); else b.token = ++S.seq; });
     S.players.forEach(function (p) { p.box = null; p.answerAt = 0; });
     renderRoster();
   }
@@ -1227,7 +1250,10 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     clock.textContent = mmss(left);
     clock.classList.toggle('warn', left < 10000);
     $('tbar').style.width = Math.max(0, left / (S.phaseEnd - S.phaseStart) * 100) + '%';
-    S.boxes.forEach(function (b) { if (b.state === 'open') { if (now >= b.deadline) timeout(b); else tickBox(b, now); } });
+    S.boxes.forEach(function (b) {
+      if (b.state === 'open') { if (now >= b.deadline) timeout(b); else tickBox(b, now); }
+      else if (b.coolUntil) tickCool(b, now);
+    });
     if (left <= 0) { if (S.phase === 'attack') startPhase('recover'); else endMatch('انتهى الوقت'); }
     else if (DEMO) bots(now);
   }
