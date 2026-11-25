@@ -170,7 +170,8 @@
     owner: false,     // المستخدم يشوف بروفايله هو
     mode: 'player',   // player | streamer
     section: null,
-    remoteAccess: [], // بثوث أعطت صاحب الحساب صلاحية التحكم
+    remoteAccess: [], // بثوث أعطت صاحب الحساب صلاحية التحكم (للأدمن: كل البثوث المفتوحة الحين)
+    remoteAdmin: false, // الأدمن يتحكم بأي بث (backend/remote-control/)
     winCodes: null,   // أكواد جوائز الفوز (تنجاب أول ما ينفتح القسم)
     emailUnverified: null,
     team: null,       // فريقي + الفرق اللي أنا فيها (/api/teams/mine)
@@ -216,7 +217,7 @@
 
     { id: 'community', group: 'community', mode: 'both', owner: true, icon: 'users', label: 'مجتمعي', render: renderCommunity },
     { id: 'teams', group: 'community', mode: 'both', owner: true, icon: 'search', label: 'ابحث عن ستريمر', render: renderTeams },
-    { id: 'remote', group: 'community', mode: 'both', owner: true, icon: 'signal', label: 'التحكم عن بعد', show: function (p) { return isStreamerAccount(p) || S.remoteAccess.length > 0; }, render: renderRemote },
+    { id: 'remote', group: 'community', mode: 'both', owner: true, icon: 'signal', label: 'التحكم عن بعد', show: function (p) { return isStreamerAccount(p) || S.remoteAdmin || S.remoteAccess.length > 0; }, render: renderRemote },
 
     { id: 'soon', group: 'help', mode: 'streamer', icon: 'clock', label: 'قريباً', render: renderSoon },
     { id: 'support', group: 'help', mode: 'both', owner: true, icon: 'ticket', label: 'تذاكري', render: renderSupport }
@@ -2228,8 +2229,16 @@
         ])
       ]));
     }
+    if (S.remoteAdmin) {
+      body.appendChild(panel('🛡️ تحكم الأدمن', null, [
+        h('div', { class: 'pf-lrow pf-lrow-plain' }, [
+          h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-s', text: 'تتحكم بأي بث صفحة ألعابه مفتوحة الحين (' + S.remoteAccess.length + ' الحين) — من الجوال أو بأوامر ! بالشات. كل أمر يتسجّل.' })]),
+          h('a', { href: 'control.html', class: 'pf-btn pf-btn-primary pf-btn-sm' }, 'كل البثوث')
+        ])
+      ]));
+    }
     if (S.remoteAccess.length) {
-      body.appendChild(panel('بثوث تتحكم فيها', null, [h('div', { class: 'pf-list' }, S.remoteAccess.map(function (st) {
+      body.appendChild(panel(S.remoteAdmin ? 'البثوث المفتوحة الحين' : 'بثوث تتحكم فيها', null, [h('div', { class: 'pf-list' }, S.remoteAccess.map(function (st) {
         return h('div', { class: 'pf-lrow' }, [
           avatarEl(st),
           h('div', { class: 'pf-lrow-txt' }, [h('div', { class: 'pf-lrow-t', text: st.name || 'ستريمر' })]),
@@ -2699,7 +2708,8 @@
     }).catch(function () {});
     if (window.AGPAuth.request) window.AGPAuth.request('/api/remote-control/access').then(function (r) {
       S.remoteAccess = (r && r.success && r.streamers) || [];
-      if (S.remoteAccess.length) {
+      S.remoteAdmin = !!(r && r.success && r.admin);
+      if (S.remoteAccess.length || S.remoteAdmin) {
         if (findSection(hash) && findSection(hash).id === 'remote') go('remote'); else renderSideNav();
       }
     }).catch(function () {});

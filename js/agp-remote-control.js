@@ -21,6 +21,10 @@
  *  - قائمة المتحكمين من الخادم بس (src:'server' بالتخزين المحلي)؛ أي إيقاف
  *    من الستريمر يوصل كل صفحاته المفتوحة فوراً ويقفل جوال المتحكم.
  *  - الأوامر بالشات تبدأ بـ ! فما تختلط بكلمة الدخول أو أرقام اللاعبين.
+ *  - الأدمن: يوزرات تيك توك الأدمن (admins من الخادم) أوامرهم بالشات تنقبل
+ *    دائماً، وكل أمر ينفّذونه يتبلّغ للخادم للسجل (adminchat). ولما جوال الأدمن
+ *    متصل بهالبث تطلع شارة صغيرة «🛡️ الأدمن متصل» عند الستريمر، وكل أمر منه
+ *    يطلع بإشعار «🛡️ الأدمن».
  *
  * الاستخدام من صفحة لعبة (بعد تحميل agp-core + agp-events + الأدابتر + auth-client):
  *   var rc = AGP.remoteControl.attach({
@@ -116,9 +120,10 @@
     function readConfig() {
         var c = null;
         try { c = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { c = null; }
-        if (!c || typeof c !== 'object' || c.src !== 'server') return { enabled: false, users: [] };
+        if (!c || typeof c !== 'object' || c.src !== 'server') return { enabled: false, users: [], admins: [] };
         var users = Array.isArray(c.users) ? c.users.map(cleanUser).filter(Boolean) : [];
-        return { enabled: users.length > 0, users: users };
+        var admins = Array.isArray(c.admins) ? c.admins.map(cleanUser).filter(Boolean) : [];
+        return { enabled: users.length > 0, users: users, admins: admins };
     }
     /** قائمة النظام القديم (محفوظة بالمتصفح بس) — تنتقل للخادم مرة وحدة من نافذة البروفايل. */
     function readLegacyUsers() {
@@ -127,21 +132,25 @@
         if (!c || c.src === 'server' || !Array.isArray(c.users)) return [];
         return c.users.map(cleanUser).filter(Boolean).slice(0, MAX_USERS);
     }
-    function writeActive(users) {
+    /** admins: undefined = نخلي القائمة المحفوظة (الطلب من نافذة البروفايل ما يرجّعها). */
+    function writeActive(users, admins) {
         var before = JSON.stringify(readConfig());
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ src: 'server', users: users || [], at: Date.now() })); } catch (e) {}
+        if (!Array.isArray(admins)) admins = readConfig().admins;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ src: 'server', users: users || [], admins: admins, at: Date.now() })); } catch (e) {}
         if (JSON.stringify(readConfig()) !== before) notifyChanged();
         if (readConfig().enabled) ensureConnected();
     }
     function isController(payload) {
         if (!payload || typeof payload.id !== 'string') return null;
         var c = readConfig();
-        if (!c.enabled) return null;
         var id = payload.id.toLowerCase();
         if (id.indexOf('tiktok:') !== 0) return null;
         var u = cleanUser(id.slice(7));
+        if (u && c.admins.indexOf(u) >= 0) return u;
+        if (!c.enabled) return null;
         return c.users.indexOf(u) >= 0 ? u : null;
     }
+    function isAdminUser(u) { return !!u && readConfig().admins.indexOf(cleanUser(u)) >= 0; }
 
     // ---------- الصفحة الحالية وأوامرها ----------
 
@@ -221,8 +230,10 @@
         if (!user) return;
         var p = parse(payload.text);
         if (!p) return;
+        var adm = isAdminUser(user);
+        if (adm) wsSend({ t: 'adminchat', u: user, cmd: p.cmd, arg: p.arg });
         var res = execute(p.cmd, p.arg, user, payload);
-        if (res) feedback(user, res);
+        if (res) feedback(user, res, adm);
     }
 
     function ensureConnected() {
@@ -326,27 +337,30 @@
             if (!m) return;
             if (m.t === 'hosted') {
                 _wsReady = true; _wsTries = 0; _lastSent = '';
-                writeActive(m.controllers);
+                writeActive(m.controllers, m.admins);
+                adminBadge(!!m.adminHere);
                 schedulePush(50);
                 clearInterval(_wsPingT);
                 _wsPingT = setInterval(function () { wsSend({ t: 'ping' }); }, 20000);
             } else if (m.t === 'controllers') {
-                writeActive(m.list);
+                writeActive(m.list, m.admins);
+            } else if (m.t === 'admin') {
+                adminBadge(!!m.on);
             } else if (m.t === 'cmd') {
                 var res = _page ? execute(m.cmd, m.arg, m.from, null) : { ok: false, msg: 'الشاشة تنتقل — جرّب بعد لحظة' };
                 wsSend({ t: 'res', c: m.c, id: m.id, ok: !res || res.ok !== false, msg: res ? res.msg : 'تم' });
-                if (res && m.from) feedback(m.from, res);
+                if (res && m.from) feedback(m.from, res, !!m.admin);
             } else if (m.t === 'open') {
                 var r = openGame(m.game);
                 wsSend({ t: 'res', c: m.c, id: m.id, ok: r.ok !== false, msg: r.msg });
-                if (m.from) feedback(m.from, r);
+                if (m.from) feedback(m.from, r, !!m.admin);
             } else if (m.t === 'err') {
                 // ما هو حساب ستريمر/جلسة منتهية — ما نعيد المحاولة بهالصفحة
                 if (m.err === 'login' || m.err === 'not_streamer') _wsStop = true;
             }
         };
         ws.onclose = function () {
-            if (_ws === ws) { _ws = null; _wsReady = false; }
+            if (_ws === ws) { _ws = null; _wsReady = false; adminBadge(false); }
             clearInterval(_wsPingT);
             hostRetry();
         };
@@ -859,6 +873,8 @@
         '.agp-rc-toast{max-width:100%;box-sizing:border-box;padding:10px 18px;border-radius:18px;background:rgba(15,12,24,.92);border:1px solid rgba(52,211,153,.45);' +
         'color:#f4f2f8;font:600 14px "IBM Plex Sans Arabic",system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45);animation:agpRcIn .3s ease both;text-align:center}' +
         '.agp-rc-toast.is-err{border-color:rgba(248,113,113,.5)}' +
+        '.agp-rc-toast small.is-admin{color:#fbbf24;direction:rtl}' +
+        '.agp-rc-admin{position:fixed;bottom:14px;left:14px;z-index:2147483001;padding:6px 12px;border-radius:999px;background:rgba(15,12,24,.88);border:1px solid rgba(251,191,36,.55);color:#fde68a;font:700 12px/1.4 system-ui,sans-serif;direction:rtl;pointer-events:none}' +
         '.agp-rc-toast small{color:#a78bfa;font-weight:700;margin-inline-end:6px;direction:ltr;unicode-bidi:isolate}' +
         '.agp-rc-help{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);max-height:80vh;overflow:hidden;z-index:2147483002;width:min(520px,calc(100% - 32px));box-sizing:border-box;direction:rtl;' +
         'padding:16px 18px;border-radius:18px;background:rgba(15,12,24,.94);border:1px solid rgba(167,139,250,.35);color:#d6d1e2;' +
@@ -1019,7 +1035,20 @@
         clearTimeout(_helpT);
         _helpT = setTimeout(function () { if (_help && _help.parentNode) _help.parentNode.removeChild(_help); _help = null; }, 12000);
     }
-    function feedback(user, res) {
+    /** شارة «🛡️ الأدمن متصل» عند الستريمر — لما جوال الأدمن فاتح لوحة التحكم على هالبث. */
+    var _adminBadge = null;
+    function adminBadge(on) {
+        if (!on) { if (_adminBadge && _adminBadge.parentNode) _adminBadge.parentNode.removeChild(_adminBadge); _adminBadge = null; return; }
+        if (_adminBadge || !document.body) return;
+        injectCss();
+        _adminBadge = document.createElement('div');
+        _adminBadge.className = 'agp-rc-admin';
+        _adminBadge.setAttribute('data-rc-skip', '');
+        _adminBadge.textContent = '🛡️ الأدمن متصل بلوحة التحكم';
+        document.body.appendChild(_adminBadge);
+    }
+
+    function feedback(user, res, admin) {
         if (!document.body) return;
         injectCss();
         if (!_toasts) {
@@ -1029,7 +1058,7 @@
         }
         var el = document.createElement('div');
         el.className = 'agp-rc-toast' + (res.ok === false ? ' is-err' : '');
-        el.innerHTML = '<small>@' + esc(user) + '</small>' + (res.ok === false ? '⚠️ ' : '✅ ') + esc(res.msg || '');
+        el.innerHTML = (admin ? '<small class="is-admin">🛡️ الأدمن</small>' : '<small>@' + esc(user) + '</small>') + (res.ok === false ? '⚠️ ' : '✅ ') + esc(res.msg || '');
         _toasts.appendChild(el);
         while (_toasts.children.length > 3) _toasts.removeChild(_toasts.firstChild);
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 4000);

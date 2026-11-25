@@ -22,6 +22,12 @@
  *   خادم → err {err: revoked} للجوال لما تنشال صلاحيته، وينقفل
  *   أي طرف → ping ← pong
  *
+ * الأدمن (role=admin) يتحكم بأي ستريمر صفحته مفتوحة (canControl تسمح له دائماً):
+ *   hosted/controllers فيها admins [يوزرات تيك توك الأدمن] — أوامرهم بالشات تنقبل،
+ *   وhosted فيها adminHere؛ والصفحة تستلم admin {on} لما جوال الأدمن يتصل/يطلع،
+ *   وcmd/open من الأدمن فيها admin:true. صفحة الستريمر → adminchat {u, cmd, arg}
+ *   لما الأدمن ينفّذ أمر بالشات (للسجل). كل أوامر الأدمن تتسجّل (service.logAdmin).
+ *
  * صفحة الستريمر تنتقل بين الشاشات (إعدادات ← لوبي ← لعب) فاتصالها ينقطع
  * لحظات؛ الأمر اللي يوصل وقتها ينتظر PENDING_MS ويتنفذ أول ما ترجع.
  */
@@ -87,9 +93,31 @@ function primaryHost(streamerId) {
     return hs[hs.length - 1];
 }
 
+function adminHere(streamerId) {
+    return ctlsOf(streamerId).some(function (c) { return c.isAdmin; });
+}
+function tellAdmin(streamerId) {
+    var on = adminHere(streamerId);
+    hostsOf(streamerId).forEach(function (h) { send(h, { t: 'admin', on: on }); });
+}
+
+/** الستريمرز اللي صفحة ألعابهم مفتوحة الحين (لقائمة الأدمن). */
+function onlineStreamers() {
+    var seen = {}, out = [];
+    Object.keys(_conns).forEach(function (k) {
+        var c = _conns[k];
+        if (!c || c.closed || c.role !== 'host' || seen[c.streamerId]) return;
+        seen[c.streamerId] = true;
+        var st = _lastState[c.streamerId] || {};
+        out.push({ id: c.streamerId, gameName: typeof st.gameName === 'string' ? st.gameName : '', page: typeof st.page === 'string' ? st.page : '' });
+    });
+    return out;
+}
+
 function cleanup(conn) {
     if (!_conns[conn.id]) return;
     delete _conns[conn.id];
+    if (conn.role === 'ctl' && conn.isAdmin) tellAdmin(conn.streamerId);
     if (conn.role === 'host' && !hostsOf(conn.streamerId).length) {
         ctlsOf(conn.streamerId).forEach(function (c) { send(c, { t: 'online', on: false }); });
     }
@@ -128,8 +156,8 @@ function forward(conn, msg) {
 }
 
 function onServiceChange(streamerId) {
-    var list = service().activeUsernames(streamerId);
-    hostsOf(streamerId).forEach(function (h) { send(h, { t: 'controllers', list: list }); });
+    var list = service().activeUsernames(streamerId), admins = service().adminUsernames();
+    hostsOf(streamerId).forEach(function (h) { send(h, { t: 'controllers', list: list, admins: admins }); });
     ctlsOf(streamerId).forEach(function (c) {
         if (!service().canControl(c.user, streamerId)) { send(c, { t: 'err', err: 'revoked' }); drop(c); }
     });
@@ -159,7 +187,7 @@ function handleMessage(conn, msg) {
             if (!isStreamerUser(user)) { send(conn, { t: 'err', err: 'not_streamer' }); drop(conn); return; }
             var wasOnline = hostsOf(user.id).length > 0;
             conn.role = 'host'; conn.streamerId = user.id; conn.user = user;
-            send(conn, { t: 'hosted', controllers: service().activeUsernames(user.id) });
+            send(conn, { t: 'hosted', controllers: service().activeUsernames(user.id), admins: service().adminUsernames(), adminHere: adminHere(user.id) });
             if (!wasOnline) ctlsOf(user.id).forEach(function (c) { send(c, { t: 'online', on: true }); });
             flushPending(user.id);
             return;
@@ -168,11 +196,18 @@ function handleMessage(conn, msg) {
         if (!sid || !service().canControl(user, sid)) { send(conn, { t: 'err', err: 'no_access' }); drop(conn); return; }
         conn.role = 'ctl'; conn.streamerId = sid; conn.user = user;
         conn.username = String(user.tiktok_username || '').replace(/^@+/, '').toLowerCase();
+        conn.isAdmin = service().isAdmin(user);
+        if (conn.isAdmin) {
+            if (!conn.username) conn.username = 'admin';
+            service().logAdmin(user.id, sid, 'phone', 'join', null);
+            tellAdmin(sid);
+        }
         send(conn, {
             t: 'welcome',
             streamer: service().streamerInfo(sid),
             me: { username: conn.username, name: user.tiktok_display_name || user.username || conn.username },
             online: hostsOf(sid).length > 0,
+            admin: conn.isAdmin,
             state: _lastState[sid] || null
         });
         return;
@@ -183,6 +218,10 @@ function handleMessage(conn, msg) {
             _lastState[conn.streamerId] = msg.s;
             _primary[conn.streamerId] = conn.id;
             ctlsOf(conn.streamerId).forEach(function (c) { send(c, { t: 'state', s: msg.s }); });
+            return;
+        }
+        if (t === 'adminchat') {
+            service().logAdminChat(conn.streamerId, cleanStr(msg.u, 40), cleanStr(msg.cmd, 40), cleanStr(msg.arg, 200));
             return;
         }
         if (t === 'res') {
@@ -201,11 +240,14 @@ function handleMessage(conn, msg) {
     if (t === 'cmd') {
         var cmd = cleanStr(msg.cmd, 40).trim();
         if (!cmd) return;
-        forward(conn, { t: 'cmd', c: conn.id, id: id, from: conn.username, cmd: cmd, arg: cleanStr(msg.arg, 200) });
+        var arg = cleanStr(msg.arg, 200);
+        if (conn.isAdmin) service().logAdmin(conn.user.id, conn.streamerId, 'phone', cmd, arg);
+        forward(conn, { t: 'cmd', c: conn.id, id: id, from: conn.username, admin: conn.isAdmin || undefined, cmd: cmd, arg: arg });
     } else {
         var game = cleanStr(msg.game, 40).trim();
         if (!/^[a-z0-9-]+$/.test(game)) return;
-        forward(conn, { t: 'open', c: conn.id, id: id, from: conn.username, game: game });
+        if (conn.isAdmin) service().logAdmin(conn.user.id, conn.streamerId, 'phone', 'open', game);
+        forward(conn, { t: 'open', c: conn.id, id: id, from: conn.username, admin: conn.isAdmin || undefined, game: game });
     }
 }
 
@@ -273,6 +315,7 @@ if (_timer.unref) _timer.unref();
 
 module.exports = {
     handleUpgrade: handleUpgrade,
+    onlineStreamers: onlineStreamers,
     _setDeps: function (svc, au) { _service = svc; _auth = au; _hooked = false; },
     _setTimings: function (o) { if (o.pendingMs) PENDING_MS = o.pendingMs; }
 };

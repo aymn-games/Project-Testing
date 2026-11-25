@@ -11,7 +11,11 @@
  * أي تغيير يُبلَّغ للمستمعين (onChange) عشان خادم WebSocket يقفل الوصول
  * فوراً عن اللي انشالت صلاحيته، ويحدّث قائمة المتحكمين عند الستريمر.
  *
- * الجداول: remote_control_settings + remote_controllers (db/database.js).
+ * الأدمن (role = 'admin'): يتحكم بأي بث بدون ما يضيفه أحد، حتى لو الستريمر
+ * طافي المفتاح العام (إشراف ودعم). أوامره بالشات تنقبل من يوزر تيك توك
+ * الموثّق بحسابه (adminUsernames)، وكل أمر ينفّذه يتسجّل (logAdmin).
+ *
+ * الجداول: remote_control_settings + remote_controllers + remote_admin_log (db/database.js).
  */
 
 'use strict';
@@ -118,8 +122,19 @@ function userTikTok(user) {
     return user && user.tiktok_verified ? cleanUsername(user.tiktok_username) : '';
 }
 
+function isAdmin(user) { return !!user && user.role === 'admin'; }
+
+/** يوزرات تيك توك الموثّقة لحسابات الأدمن — أوامرهم بالشات تنقبل بأي بث. */
+function adminUsernames() {
+    try {
+        return db().prepare("SELECT tiktok_username FROM users WHERE role = 'admin' AND tiktok_verified = 1 AND tiktok_username IS NOT NULL").all()
+            .map(function (r) { return cleanUsername(r.tiktok_username); }).filter(Boolean);
+    } catch (e) { return []; }
+}
+
 /** هل حساب الموقع هذا يقدر يتحكم بألعاب هذا الستريمر الحين؟ */
 function canControl(user, streamerId) {
+    if (isAdmin(user)) return !!streamerId && user.id !== streamerId;
     var u = userTikTok(user);
     if (!u || !streamerId || (user.id === streamerId)) return false;
     if (!isMasterOn(streamerId)) return false;
@@ -143,6 +158,41 @@ function accessFor(user) {
     });
 }
 
+var LOG_KEEP_MS = 90 * 24 * 3600 * 1000;
+
+/** يسجّل أمر نفّذه الأدمن على بث ستريمر. source: phone | chat، action: cmd | open | join. */
+function logAdmin(adminId, streamerId, source, action, arg) {
+    try {
+        var d = db(), t = now();
+        d.prepare('INSERT INTO remote_admin_log (admin_id, streamer_id, source, action, arg, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(adminId, streamerId, String(source || '').slice(0, 10), String(action || '').slice(0, 60), arg == null ? null : String(arg).slice(0, 200), t);
+        if (Math.random() < 0.02) d.prepare('DELETE FROM remote_admin_log WHERE created_at < ?').run(t - LOG_KEEP_MS);
+    } catch (e) {}
+}
+
+/** أمر كتبه الأدمن بشات بث الستريمر (تبلّغ عنه صفحة الستريمر) — يتسجّل لو اليوزر فعلاً أدمن. */
+function logAdminChat(streamerId, tiktokUsername, cmd, arg) {
+    var u = cleanUsername(tiktokUsername);
+    if (!u || !cmd) return;
+    try {
+        var a = db().prepare("SELECT id FROM users WHERE role = 'admin' AND tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE").get(u);
+        if (a) logAdmin(a.id, streamerId, 'chat', cmd, arg);
+    } catch (e) {}
+}
+
+/** آخر أوامر الأدمن (الأحدث أول). */
+function adminLog(limit) {
+    var n = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+    try {
+        return db().prepare(
+            'SELECT l.id, l.source, l.action, l.arg, l.created_at, l.streamer_id, COALESCE(s.tiktok_display_name, s.username) AS streamer, COALESCE(a.tiktok_display_name, a.username) AS admin ' +
+            'FROM remote_admin_log l LEFT JOIN users s ON s.id = l.streamer_id LEFT JOIN users a ON a.id = l.admin_id ORDER BY l.id DESC LIMIT ?'
+        ).all(n).map(function (r) {
+            return { id: r.id, at: r.created_at, source: r.source, action: r.action, arg: r.arg, streamerId: r.streamer_id, streamer: r.streamer || 'ستريمر', admin: r.admin || 'الأدمن' };
+        });
+    } catch (e) { return []; }
+}
+
 /** بيانات العرض لستريمر (اسم + صورة) — لشاشة الجوال. */
 function streamerInfo(streamerId) {
     var r = db().prepare('SELECT id, username, tiktok_display_name, tiktok_avatar_url FROM users WHERE id = ?').get(streamerId);
@@ -159,6 +209,11 @@ module.exports = {
     removeController: removeController,
     activeUsernames: activeUsernames,
     canControl: canControl,
+    isAdmin: isAdmin,
+    adminUsernames: adminUsernames,
+    logAdmin: logAdmin,
+    logAdminChat: logAdminChat,
+    adminLog: adminLog,
     accessFor: accessFor,
     streamerInfo: streamerInfo,
     onChange: function (fn) { _listeners.push(fn); },

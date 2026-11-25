@@ -200,3 +200,85 @@ test('server: controller ↔ host relay, permission checks and instant revoke', 
     host2.close(); anon.close(); omar.close();
     srv.close();
 });
+
+// ---------- الأدمن: يتحكم بأي بث، وأوامره تتسجّل ----------
+
+function makeAdminDb() {
+    var d = makeDb();
+    d.exec(
+        "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'streamer';" +
+        'CREATE TABLE remote_admin_log (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER NOT NULL, streamer_id INTEGER NOT NULL, source TEXT NOT NULL, action TEXT NOT NULL, arg TEXT, created_at INTEGER NOT NULL);'
+    );
+    d.prepare("INSERT INTO users (id, username, custom_id, tiktok_username, tiktok_verified, tiktok_display_name, role) VALUES (9, 'boss', 'B9', 'boss_tt', 1, 'الأدمن', 'admin')").run();
+    return d;
+}
+var ADMIN = { id: 9, tiktok_username: 'boss_tt', tiktok_verified: true, role: 'admin', permissions: {} };
+
+test('service: admin controls any streamer even with master off, and logs', function () {
+    svc._setDb(makeAdminDb());
+    assert.equal(svc.isAdmin(ADMIN), true);
+    assert.equal(svc.isAdmin(SARA), false);
+    // ما أحد أضافه، والمفتاح العام مطفي → الأدمن يتحكم برضو
+    svc.setEnabled(1, false);
+    assert.equal(svc.canControl(ADMIN, 1), true);
+    assert.equal(svc.canControl(ADMIN, 9), false); // مو نفسه
+    assert.equal(svc.canControl(SARA, 1), false);
+    // أدمن بدون توثيق تيك توك يتحكم من الجوال برضو
+    assert.equal(svc.canControl({ id: 9, role: 'admin' }, 2), true);
+    assert.deepEqual(svc.adminUsernames(), ['boss_tt']);
+
+    svc.logAdmin(9, 1, 'phone', 'open', 'bomb');
+    svc.logAdminChat(1, '@Boss_TT', 'لف', '');
+    svc.logAdminChat(1, 'sara.tt', 'لف', ''); // مو أدمن → ما يتسجّل
+    var log = svc.adminLog(10);
+    assert.equal(log.length, 2);
+    assert.equal(log[0].source, 'chat');
+    assert.equal(log[0].action, 'لف');
+    assert.equal(log[1].arg, 'bomb');
+    assert.equal(log[1].streamer, 'أيمن');
+    assert.equal(log[1].admin, 'الأدمن');
+});
+
+test('server: admin phone controls any host, host is told, commands flagged and logged', async function () {
+    svc._setDb(makeAdminDb());
+    svc.setEnabled(1, false);
+    var users = { s: STREAMER, x: ADMIN };
+    server._setDeps(svc, { validateSession: function (t) { return users[t] || null; } });
+    var srv = await startServer(), port = srv.address().port;
+
+    var host = await client(port);
+    host.send({ t: 'host', auth: 's' });
+    var hosted = await host.next('hosted');
+    assert.deepEqual(hosted.admins, ['boss_tt']);
+    assert.equal(hosted.adminHere, false);
+    host.send({ t: 'state', s: { gameName: 'القنبلة', page: 'اللوبي' } });
+    await wait(50);
+    assert.deepEqual(server.onlineStreamers(), [{ id: 1, gameName: 'القنبلة', page: 'اللوبي' }]);
+
+    var adm = await client(port);
+    adm.send({ t: 'ctl', auth: 'x', s: 1 });
+    var w = await adm.next('welcome');
+    assert.equal(w.admin, true);
+    assert.equal(w.online, true);
+    assert.equal((await host.next('admin')).on, true);
+
+    adm.send({ t: 'cmd', id: 1, cmd: 'انهاء', arg: '' });
+    var cmd = await host.next('cmd');
+    assert.equal(cmd.admin, true);
+    assert.equal(cmd.cmd, 'انهاء');
+    adm.send({ t: 'open', id: 2, game: 'bomb' });
+    assert.equal((await host.next('open')).admin, true);
+
+    // أمر الأدمن بالشات: الصفحة تبلّغ عنه للسجل
+    host.send({ t: 'adminchat', u: 'boss_tt', cmd: 'لف', arg: '' });
+    await wait(50);
+    var log = svc.adminLog(10).map(function (e) { return e.source + ':' + e.action; });
+    assert.deepEqual(log, ['chat:لف', 'phone:open', 'phone:انهاء', 'phone:join']);
+
+    // الأدمن يطلع → الشارة تختفي عند الستريمر
+    adm.close();
+    assert.equal((await host.next('admin')).on, false);
+
+    host.close();
+    srv.close();
+});

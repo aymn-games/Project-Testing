@@ -9,6 +9,22 @@
 
 ---
 
+## [غير مُرقَّم] — الأدمن يتحكم بأي بث (2026-11-25)
+
+### أُضيف (Added)
+- **حساب الأدمن (`role = admin`) يتحكم بأي بث صفحة ألعابه مفتوحة**: يفتح ألعاب، ويغيّر الإعدادات، ويبدأ وينهي، ويضغط أي زر. يقدر من الجوال (`control.html`) أو بأوامر `!` بالشات. ما يحتاج الستريمر يضيفه، ويتجاوز المفتاح العام.
+  - `backend/remote-control/remote-control-service.js`: `canControl` تسمح للأدمن دائماً (ما عدا بثه هو)، و`adminUsernames` (يوزرات تيك توك الأدمن، عشان أوامرهم بالشات تنقبل)، و`logAdmin`/`logAdminChat`/`adminLog`.
+  - `backend/remote-control/remote-control-server.js`: `onlineStreamers()`. ورسالة `hosted`/`controllers` صار فيها `admins` و`adminHere`، ورسالة `admin {on}` للصفحة لما جوال الأدمن يتصل أو يطلع، و`admin:true` على أوامره. ورسالة `adminchat` من الصفحة تسجّل أوامر الأدمن بالشات.
+  - `GET /api/remote-control/access`: للأدمن ترجع `admin:true` وكل البثوث المفتوحة الحين (مع اسم اللعبة والشاشة). `GET /api/remote-control/admin-log` جديد للأدمن بس.
+  - جدول `remote_admin_log`، والسجل يبقى 90 يوم.
+- **الشفافية للستريمر** (`js/agp-remote-control.js`): شارة «🛡️ الأدمن متصل بلوحة التحكم» تحت يسار الشاشة، وكل أمر من الأدمن يطلع بإشعار «🛡️ الأدمن».
+- **جوال الأدمن** (`js/agp-control-app.js`، `control.html`): قائمة «وضع الأدمن — اختر البث»، وتحت كل بث اللعبة والشاشة. وفيها «آخر أوامرك» و«تبديل البث» بالهيدر.
+- **البروفايل** (`js/agp-profile-page.js`): قسم «🛡️ تحكم الأدمن» فيه زر «كل البثوث».
+- **دليل الأوامر:** `docs/ADMIN_REMOTE_COMMANDS.md`.
+- **اختبارات:** `node --test backend/remote-control/remote-control.test.js` (أُضيف اختباران للأدمن).
+
+---
+
 ## [غير مُرقَّم] — فيرو: إعدادات الأدوات بتبويبات، ومعاينة أكبر وقت التعديل (2026-11-25)
 
 ### تغيّر (Changed)

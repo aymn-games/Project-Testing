@@ -66,6 +66,7 @@
         // بدون رقم: من أعطاني صلاحية؟
         A.request('/api/remote-control/access').then(function (r) {
             var list = (r && r.streamers) || [];
+            if (r && r.admin) { adminPicker(list); return; }
             if (r && r.tiktokLinked === false) {
                 fatal('اربط حساب تيك توك', 'التحكم يعتمد على يوزر تيك توك اللي أضافه الستريمر. اربط حسابك من «حسابي» أولاً.',
                     '<a class="btn" href="profile.html">حسابي</a>', '🔗');
@@ -79,6 +80,35 @@
         }).catch(function () { fatal('تعذّر الاتصال', 'تأكد من الإنترنت وحاول مرة ثانية.', '', '📡'); });
     }
 
+    /** الأدمن: كل البثوث اللي صفحة ألعابها مفتوحة الحين + آخر أوامره (السجل). */
+    function adminPicker(list) {
+        var refresh = '<a class="btn ghost" href="control.html">🔄 تحديث</a>';
+        var html = '<div class="center"><div class="big">🛡️</div><h2>وضع الأدمن — اختر البث</h2>';
+        if (!list.length) {
+            html += '<p>ما فيه ستريمر فاتح صفحة الألعاب الحين. أول ما يفتحها يطلع هنا.</p>' + refresh;
+        } else {
+            html += '<p>' + list.length + ' بث مفتوح الحين. تقدر تتحكم بأي واحد، والستريمر يشوف إن الأدمن متصل.</p>' +
+                '<div class="pick-streamer">' + list.map(function (x) {
+                    var sub = [x.gameName, x.page].filter(Boolean).join(' · ');
+                    return '<a href="?s=' + x.id + '"><span class="ava">' + (x.avatar ? '<img src="' + esc(x.avatar) + '" alt="">' : esc((x.name || '؟').charAt(0))) + '</span>' +
+                        '<span class="pick-t"><b>' + esc(x.name) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
+                }).join('') + '</div>' + refresh;
+        }
+        html += '<div class="admin-log" id="adminLog"></div></div>';
+        app.innerHTML = html;
+        A.request('/api/remote-control/admin-log?limit=15').then(function (r) {
+            var box = document.getElementById('adminLog');
+            var log = (r && r.log) || [];
+            if (!box || !log.length) return;
+            box.innerHTML = '<h3>آخر أوامرك</h3>' + log.map(function (e) {
+                var what = e.action === 'join' ? 'فتح لوحة التحكم' : e.action === 'open' ? 'فتح لعبة ' + (e.arg || '') : '!' + e.action + (e.arg ? ' ' + e.arg : '');
+                var t = new Date(e.at);
+                return '<div class="log-row"><span>' + esc(what) + '</span><small>' + esc(e.streamer) + ' · ' + (e.source === 'chat' ? 'شات' : 'جوال') + ' · ' +
+                    esc(t.toLocaleString('ar-SA', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'numeric' })) + '</small></div>';
+            }).join('');
+        }).catch(function () {});
+    }
+
     // ---------- الاتصال ----------
 
     function connect() {
@@ -90,7 +120,7 @@
             var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
             if (!m) return;
             if (m.t === 'welcome') {
-                tries = 0; S.connected = true; S.streamer = m.streamer; S.me = m.me; S.online = !!m.online;
+                tries = 0; S.connected = true; S.streamer = m.streamer; S.me = m.me; S.online = !!m.online; S.admin = !!m.admin;
                 if (m.state) setState(m.state);
                 clearInterval(pingT);
                 pingT = setInterval(function () { send({ t: 'ping' }); }, 20000);
@@ -155,7 +185,7 @@
             : '<span class="pill off"><i></i>الشاشة مقفلة</span>';
         return '<div class="top"><div class="top-in"><div class="who"><span class="ava">' +
             (st.avatar ? '<img src="' + esc(st.avatar) + '" alt="">' : esc((st.name || '🎮').charAt(0))) +
-            '</span><span class="who-t"><small>لوحة التحكم · ألعاب</small><b>' + esc(st.name || '…') + '</b></span></div>' + pill + '</div></div>';
+            '</span><span class="who-t"><small>' + (S.admin ? '🛡️ وضع الأدمن · <a href="control.html">تبديل البث</a>' : 'لوحة التحكم · ألعاب') + '</small><b>' + esc(st.name || '…') + '</b></span></div>' + pill + '</div></div>';
     }
 
     function tabbar(view) {

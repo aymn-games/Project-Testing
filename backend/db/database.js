@@ -457,6 +457,17 @@ db.exec(`
         PRIMARY KEY (streamer_id, tiktok_username)
     );
     CREATE INDEX IF NOT EXISTS idx_remote_controllers_user ON remote_controllers(tiktok_username);
+    -- سجل أوامر الأدمن على بثوث الستريمرز (تحكم الأدمن بأي بث — remote-control-service.logAdmin).
+    CREATE TABLE IF NOT EXISTS remote_admin_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        streamer_id INTEGER NOT NULL,
+        source TEXT NOT NULL,
+        action TEXT NOT NULL,
+        arg TEXT,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_remote_admin_log_time ON remote_admin_log(created_at);
 
     -- «فريقك»: لاعبين ينضمون لفريق ستريمر من الموقع (دخول مباشر، واللاعب
     -- يقدر يكون بأكثر من فريق). راجع backend/teams/team-service.js.

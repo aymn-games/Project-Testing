@@ -124,6 +124,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/remote-control/config', requireAuth: true, handler: handleGetRemoteControl },
   { method: 'POST', path: '/api/remote-control/config', requireAuth: true, handler: handleSaveRemoteControl },
   { method: 'GET', path: '/api/remote-control/access', requireAuth: true, handler: handleRemoteControlAccess },
+  { method: 'GET', path: '/api/remote-control/admin-log', requireAuth: true, handler: handleRemoteAdminLog },
   // إعلانات «تطلع مرة وحدة» محفوظة بالحساب (notices/seen-notices.js) — مثل تنبيه مكتبة الألعاب
   { method: 'GET', path: '/api/notices/seen', requireAuth: true, handler: handleGetNoticeSeen },
   { method: 'POST', path: '/api/notices/seen', requireAuth: true, handler: handleMarkNoticeSeen },
@@ -1483,13 +1484,38 @@ function handleMarkNoticeSeen(req, res, body, user) {
   sendJson(res, 200, { success: seenNotices.markSeen(user.id, key) });
 }
 
-/** GET /api/remote-control/access → { success, tiktokLinked, streamers:[{id, customId, name, avatar}] } */
+/**
+ * GET /api/remote-control/access → { success, tiktokLinked, streamers:[{id, customId, name, avatar}] }
+ * للأدمن: admin:true، وstreamers = كل الستريمرز اللي صفحة ألعابهم مفتوحة الحين (مع gameName/page).
+ */
 function handleRemoteControlAccess(req, res, body, user) {
+  if (remoteControlService.isAdmin(user)) {
+    var online = [];
+    try { online = require('../remote-control/remote-control-server').onlineStreamers(); } catch (e) { online = []; }
+    sendJson(res, 200, {
+      success: true,
+      admin: true,
+      tiktokLinked: Boolean(user.tiktok_verified && user.tiktok_username),
+      streamers: online.filter(function (o) { return o.id !== user.id; }).map(function (o) {
+        var info = remoteControlService.streamerInfo(o.id);
+        return info ? { id: o.id, customId: null, name: info.name, avatar: info.avatar, live: true, gameName: o.gameName, page: o.page } : null;
+      }).filter(Boolean)
+    });
+    return;
+  }
   sendJson(res, 200, {
     success: true,
     tiktokLinked: Boolean(user.tiktok_verified && user.tiktok_username),
     streamers: remoteControlService.accessFor(user)
   });
+}
+
+/** GET /api/remote-control/admin-log?limit=50 → { success, log:[{at, source, action, arg, streamer, admin}] } — للأدمن بس. */
+function handleRemoteAdminLog(req, res, body, user) {
+  if (!remoteControlService.isAdmin(user)) { sendJson(res, 403, { success: false, error: 'forbidden' }); return; }
+  var limit = 50;
+  try { limit = parseInt(new URL(req.url, 'http://x').searchParams.get('limit'), 10) || 50; } catch (e) {}
+  sendJson(res, 200, { success: true, log: remoteControlService.adminLog(limit) });
 }
 
 /**
