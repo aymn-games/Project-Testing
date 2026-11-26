@@ -1010,25 +1010,50 @@
         renderZoom();
         if (file) toast('خلفيتك للمعاينة بس — ما تنحفظ ولا تطلع برابط الشاشة');
     }
-    /**
-     * «تجربة بث»: بث وهمي بالمعاينة بس (O.simulate بـjs/agp-stream-overlay.js) — هدايا وتكبيسات ومتابعات
-     * ودونيشن، فتشوف الأليرتات والتوب والأهداف والوعاء وهي تشتغل. ما يوصل لرابط الشاشة بـOBS.
+    /*
+     * «تجربة» (بالموقع بس — ما يوصل لرابط الشاشة بـOBS)، وتشتغل مرة وحدة لين النهاية:
+     * - أليرت مفتوح بوضع التعديل: يشغّل هالأليرت بس، مرة وحدة.
+     * - أداة بيانات مفتوحة (توب، هدف، وعاء…): بث وهمي قصير بدون أليرتات، وتقف لحالها.
+     * - بدون عنصر مفتوح: بث وهمي للشاشة كلها، أليرت واحد بالمرة، وتقف لحالها.
      */
+    var simAlert = null;
+    function simTarget() { var it = app.classList.contains('focus') && selectedId && find(selectedId); return it || null; }
     function setSim(on) {
-        if (Boolean(O.simulating()) === Boolean(on)) return;
-        O.simulate(on);
+        if (!on) {
+            if (O.simulating()) O.simulate(false);
+            simAlert = null;
+            renderZoom();
+            renderCanvas();
+            return;
+        }
+        if (O.simulating() || simAlert) return;
+        var it = simTarget();
+        if (it && it.type === 'alert') {
+            simAlert = it.id;
+            O.alertDemo(it.id, (it.events || ['gift'])[0]);
+            renderZoom();
+            var t = setInterval(function () {
+                if (simAlert !== it.id) { clearInterval(t); return; }
+                if (!O.alertBusy(it.id)) { clearInterval(t); simAlert = null; renderZoom(); }
+            }, 400);
+            return;
+        }
+        O.simulate(true, { ticks: it ? 12 : 20, alerts: !it, onEnd: function () { renderZoom(); renderCanvas(); } });
         renderZoom();
         renderCanvas();
-        if (on) toast('تجربة بث شغّالة بالموقع بس — ما يوصل شي لشاشة البث');
+        toast(it ? 'تجربة لهالأداة بالموقع بس — تقف لحالها' : 'تجربة بث بالموقع بس — ما يوصل شي لشاشة البث، وتقف لحالها');
     }
     function renderZoom() {
         zoomBar.textContent = '';
-        var simOn = O.simulating();
+        var simOn = O.simulating() || Boolean(simAlert);
+        var tgt = simTarget();
         var sb = el('button', 'ob-btn ob-simb' + (simOn ? ' on' : ' primary'));
         sb.type = 'button';
         sb.innerHTML = svg(ic(simOn ? 'pause' : 'play'));
-        sb.appendChild(el('span', null, simOn ? 'وقّف التجربة' : 'تجربة بث'));
-        sb.title = 'بث وهمي بالمعاينة بس: هدايا وتكبيسات ومتابعات ودونيشن — ما يوصل لشاشة البث';
+        sb.appendChild(el('span', null, simOn ? (simAlert ? 'يشتغل…' : 'وقّف التجربة') : tgt && tgt.type === 'alert' ? 'جرّب الأليرت' : tgt ? 'جرّب الأداة' : 'تجربة بث'));
+        sb.title = tgt && tgt.type === 'alert' ? 'يشغّل هالأليرت مرة وحدة بالمعاينة بس — ما يوصل لشاشة البث'
+            : 'بث وهمي قصير بالمعاينة بس (هدايا وتكبيسات ومتابعات ودونيشن) ويقف لحاله — ما يوصل لشاشة البث';
+        if (simAlert) sb.disabled = true;
         sb.addEventListener('click', function () { setSim(!O.simulating()); });
         zoomBar.appendChild(sb);
         zoomBar.appendChild(el('i', 'ob-zsep'));
@@ -1135,6 +1160,7 @@
         syncWide();
         if (syncFocus()) renderCanvas();
         renderFocusList();
+        renderZoom(); // زر «تجربة» يتغيّر حسب العنصر المفتوح
     }
 
     /*

@@ -3560,6 +3560,15 @@
     }
     function simTick() {
         if (!sim) return;
+        // تجربة وحدة للنهاية: عدد أحداث محدد، وبعدها تقف لحالها (تبقى النتيجة لحظة قبل ما ترجع البيانات)
+        if (sim.left <= 0) {
+            clearInterval(sim.timer);
+            sim.timer = null;
+            var s0 = sim;
+            setTimeout(function () { if (sim === s0) { simStop(); if (s0.onEnd) s0.onEnd(); } }, 2500);
+            return;
+        }
+        sim.left--;
         var t = sim.stats.totals, user = simPick(SIM_NAMES), e = null, fresh = null;
         var roll = Math.random();
         if (roll < 0.34) {
@@ -3606,21 +3615,23 @@
         if (e) {
             e.at = Date.now();
             e.demo = true;
-            // طابور قصير: ما نكدّس أليرتات وراء بعض (البث الحقيقي يكدّسها، التجربة بس تورّيك شكلها)
-            alertsFor(e).forEach(function (it) {
-                var q = alertQ[it.id];
-                if (q && (q.busy ? q.list.length >= 1 : q.list.length >= 2)) return;
-                queueAlert(it.id, forItem(it, e));
-            });
+            // أليرت واحد بس بالمرة: لو فيه أليرت شغّال أو منتظر ما نضيف (ما تطلع فوق بعض ولا تتكدّس)
+            var busy = Object.keys(alertQ).some(function (id) { var q = alertQ[id]; return q && (q.busy || q.list.length); });
+            if (sim.alerts && !busy) {
+                var hit = alertsFor(e)[0];
+                if (hit) queueAlert(hit.id, forItem(hit, e));
+            }
         }
         if (fresh) paintJars(fresh);
         repaintData();
         notify('stats');
     }
-    function simStart() {
+    /** opts: ticks = عدد الأحداث (افتراضي 20)، alerts = يشغّل أليرتات (افتراضي نعم)، onEnd = لما تخلص لحالها. */
+    function simStart(opts) {
         if (sim || !STUDIO) return;
+        opts = opts || {};
         sim = {
-            real: stats, n: 0, timer: null,
+            real: stats, n: 0, timer: null, left: Math.max(1, Number(opts.ticks) || 20), alerts: opts.alerts !== false, onEnd: opts.onEnd || null,
             stats: { status: 'ok', sections: { likers: [], gifters: [], commenters: [], sharers: [], donors: [] }, totals: { likes: 0, diamonds: 0, gifts: 0, follows: 0, shares: 0, comments: 0, peakViewers: 30, donations: 0, lastDonation: null } }
         };
         stats = sim.stats;
@@ -5264,7 +5275,9 @@
         },
         jarClearDemo: function () { jarDemo = []; paintJars(null); },
         /** «تجربة بث» بمحرر فيرو: on = يبدأ بث وهمي بالمعاينة، false = يوقفه ويرجّع البيانات الحقيقية. */
-        simulate: function (on) { if (on) simStart(); else simStop(); },
+        simulate: function (on, opts) { if (on) simStart(opts); else simStop(); },
+        /** الأليرت شغّال أو منتظر دوره (لزر «تجربة» بالمحرر). */
+        alertBusy: function (id) { var q = alertQ[id]; return Boolean(q && (q.busy || q.list.length)); },
         simulating: function () { return Boolean(sim); },
         /** للنافذة العائمة (js/agp-stream-pip.js): صور الوعاء والإجماليات. */
         jarData: function () { return { icons: jar.icons.concat(jarDemo), totals: jar.totals }; },
