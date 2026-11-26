@@ -51,6 +51,7 @@ var phoneRoomService = require('../phone-room/phone-room-service');
 var seenNotices = require('../notices/seen-notices');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
+var followDebug = require('../utils/follow-debug');
 var config = require('../config');
 var response = require('./response');
 var bodyParser = require('./body-parser');
@@ -2217,7 +2218,7 @@ function handleAdminLiveStreams(req, res) {
   // استهلاك EulerStream اليوم (محاولات الاتصال الحقيقية والبثوث) — shared-connection-pool.js
   var streamUsage = null;
   try { streamUsage = require('../platforms/tiktok/shared-connection-pool').getUsage(); } catch (err) { logger.error('Admin live streams: usage failed:', err); }
-  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), followDebug: followDebug.getStats(), streamUsage: streamUsage });
 }
 
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة

@@ -39,6 +39,7 @@
 
 var logger = require('../../utils/logger');
 var chatLatency = require('../../utils/chat-latency');
+var followDebug = require('../../utils/follow-debug');
 var collectiblesService = require('../../collectibles/collectibles-service');
 var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
 var giftCatalog = require('./gift-catalog');
@@ -270,19 +271,24 @@ function extractWinCard(uniqueId) {
 }
 
 /**
- * استخراج "هل هذا المعلِّق متابع لصاحب البث؟" عبر
- * `data.user.followInfo.followStatus`.
+ * استخراج "هل هذا المعلِّق متابع لصاحب البث؟".
  *
- * ⚠️ القيمة بالضبط لـ followStatus غير موثَّقة رسمياً من تيك توك. التخمين
- * الأول (status === '1' || '2') ثبت أنه غير صحيح باختبار حقيقي — لذلك
- * تُرسَل بيانات تشخيصية خام مع كل تعليق (_debugFollowStatus) لتصحيح
- * الشرط لاحقاً بدقة بدل التخمين.
+ * المصدر الأوضح: علامات تيك توك الصريحة بالرسالة نفسها
+ * (`user.userIdentity.isFollowerOfAnchor` و`isMutualFollowingWithAnchor` —
+ * نفس الكائن اللي نقرأ منه isModeratorOfAnchor). قبل كنا نعتمد بس على
+ * `followInfo.followStatus` بتخمين ('1'/'2') غير موثَّق، وأي تعليق تغيب
+ * عنه followInfo كان ينحسب «مو متابع» فينرفض بخيار «المتابعين فقط».
+ * الحين يكفي أي واحد من الثلاثة. القيم الخام وقرارنا يتسجّلون لكل تعليق
+ * بـ utils/follow-debug.js (لوحة الأدمن) عشان نتأكد على بثوث حقيقية.
  */
 function extractIsFollower(data) {
-    var followInfo = data && data.user && data.user.followInfo;
+    var user = (data && data.user) || {};
+    var identity = user.userIdentity;
+    if (identity && (identity.isFollowerOfAnchor || identity.isMutualFollowingWithAnchor)) return true;
+    var followInfo = user.followInfo;
     if (!followInfo || !followInfo.followStatus) return false;
     var status = String(followInfo.followStatus);
-    return status === '1' || status === '2'; // تخميني — بانتظار القيم الحقيقية من _debugFollowStatus
+    return status === '1' || status === '2';
 }
 
 /**
@@ -313,7 +319,8 @@ function extractFollowDebugInfo(data) {
     var userIdentity = data && data.user && data.user.userIdentity;
     return {
         followStatus: followInfo ? followInfo.followStatus : '(no followInfo)',
-        isFollowerOfAnchor: userIdentity ? userIdentity.isFollowerOfAnchor : '(no userIdentity)'
+        isFollowerOfAnchor: userIdentity ? userIdentity.isFollowerOfAnchor : '(no userIdentity)',
+        isMutualFollowingWithAnchor: userIdentity ? userIdentity.isMutualFollowingWithAnchor : '(no userIdentity)'
     };
 }
 
@@ -466,7 +473,12 @@ function createTikTokConnector() {
             // الحقل الفعلي بالرسالة المفكوكة هو "content"، وليس "comment"
             // كما أوحى مثال README (مضلِّل). نُبقي data.comment كاحتياط دفاعي.
             var commentText = (data && (data.content || data.comment)) || '';
-            var followDebug = extractFollowDebugInfo(data);
+            var followDebugInfo = extractFollowDebugInfo(data);
+            var isFollower = extractIsFollower(data);
+            // تشخيص كشف المتابعين (لوحة الأدمن) — صاحب البث مستثنى لأنه «متابع» بالتعريف
+            if (!isStreamOwner(user, _username)) {
+                try { followDebug.record(user.uniqueId, followDebugInfo, isFollower); } catch (err) { /* تشخيص فقط */ }
+            }
             var avatarUrl = extractAvatarUrl(data);
             // حساب موثَّق بدون صورة بروفايل؟ نحفظ صورة تيك توك الحالية (بالخلفية).
             tiktokAvatarSync.noteCommentAvatar(user.uniqueId, avatarUrl);
@@ -474,7 +486,7 @@ function createTikTokConnector() {
                 id: user.id,
                 name: user.name,
                 text: commentText,
-                isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
+                isFollower: isStreamOwner(user, _username) || isFollower,
                 isModerator: extractIsModerator(data),
                 avatarUrl: avatarUrl,
                 avatarUrls: extractAvatarUrls(data),
@@ -483,8 +495,8 @@ function createTikTokConnector() {
                 elimCard: extractElimCard(user.uniqueId),
                 winCard: extractWinCard(user.uniqueId),
                 character: extractCharacter(user.uniqueId),
-                _debugFollowStatus: followDebug.followStatus,
-                _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
+                _debugFollowStatus: followDebugInfo.followStatus,
+                _debugIsFollowerOfAnchor: followDebugInfo.isFollowerOfAnchor
             });
             // قياس التأخير (لوحة الأدمن) — onComment أعلاه يكتب على المقبس متزامناً.
             chatLatency.record(chatLatency.parseCreateTime(data), receivedAt, Date.now());
@@ -517,6 +529,8 @@ function createTikTokConnector() {
 
         _connection.on(TikTokLib.WebcastEvent.FOLLOW, function (data) {
             var user = extractUser(data);
+            // تابع الحين = متابع أكيد — تعليقاته الجاية تأكّد صحة كشف المتابعين
+            try { followDebug.noteFollow(user.uniqueId); } catch (err) { /* تشخيص فقط */ }
             _callbacks.onFollow({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
         });
 

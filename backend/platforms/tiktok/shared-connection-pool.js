@@ -30,6 +30,15 @@ var tiktokConnector = require('./tiktok-connector');
 
 var GRACE_MS = 2 * 60 * 1000;
 
+/* تعليقات «فجوة التنقّل»: لما الستريمر ينتقل بين صفحات اللعبة (الإعدادات ←
+ * اللوبي، أو تحديث الصفحة) تتسكّر صفحة وتفتح الثانية، وبينهم لحظات ما فيه
+ * أي صفحة مشتركة بالاتصال — وأي تعليق يوصل فيها (مثل كلمة الدخول) كان يضيع.
+ * الحين نحفظ تعليقات هالفترة بس، ونسلّمها لأول صفحة تشترك بعدها. اللي
+ * أقدم من GAP_REPLAY_MS ما تنسلّم (فجوة طويلة = الستريمر طلع فعلاً). */
+var GAP_REPLAY_MS = 15 * 1000;
+var GAP_BUFFER_MAX = 300;
+var GAP_REPLAY_DELAY_MS = 1200;   // نعطي الصفحة الجديدة لحظة تجهّز اللوبي/كلمة الدخول قبل التسليم
+
 var _pool = new Map(); // key -> entry
 
 function normalize(username) {
@@ -147,6 +156,7 @@ function createEntry(key, options, source) {
         reason: null,
         graceTimer: null,
         idleSince: null,
+        gapComments: [],    // [{at, d}] — تعليقات وصلت وما فيه ولا مشترك (راجع GAP_REPLAY_MS)
         lastViewers: null   // آخر عدد مشاهدين — يوصل للمشترك الجديد على طول (تيك توك يرسله على فترات)
     };
     _pool.set(key, entry);
@@ -174,7 +184,15 @@ function createEntry(key, options, source) {
                 });
             }
         },
-        onComment: function (d) { forEachSub(entry, function (cb) { cb.onComment && cb.onComment(d); }); },
+        onComment: function (d) {
+            // وضع الإحصائيات ما يحتاج التعليقات القديمة (يحسبها بنفسه)، فنحفظ بس لاتصالات الألعاب
+            if (entry.subs.size === 0 && !entry.statsOnly) {
+                entry.gapComments.push({ at: Date.now(), d: d });
+                if (entry.gapComments.length > GAP_BUFFER_MAX) entry.gapComments.shift();
+                return;
+            }
+            forEachSub(entry, function (cb) { cb.onComment && cb.onComment(d); });
+        },
         onGift: function (d) { forEachSub(entry, function (cb) { cb.onGift && cb.onGift(d); }); },
         onFollow: function (d) { forEachSub(entry, function (cb) { cb.onFollow && cb.onFollow(d); }); },
         onViewerUpdate: function (d) { entry.lastViewers = d; forEachSub(entry, function (cb) { cb.onViewerUpdate && cb.onViewerUpdate(d); }); },
@@ -192,6 +210,24 @@ function subscribe(entry, callbacks) {
         entry.idleSince = null;
     }
     entry.subs.add(callbacks);
+    replayGapComments(entry, callbacks);
+}
+
+/** يسلّم تعليقات فجوة التنقّل (الحديثة بس) للمشترك الجديد، مرة وحدة. */
+function replayGapComments(entry, callbacks) {
+    if (!entry.gapComments.length) return;
+    var cutoff = Date.now() - GAP_REPLAY_MS;
+    var items = entry.gapComments.filter(function (x) { return x.at >= cutoff; });
+    entry.gapComments = [];
+    if (!items.length) return;
+    logger.log('Connection pool: replaying ' + items.length + ' comment(s) from the page-switch gap on "' + entry.key + '".');
+    setTimeout(function () {
+        if (!entry.subs.has(callbacks) || !callbacks.onComment) return;   // الصفحة طلعت قبل التسليم
+        items.forEach(function (x) {
+            if (Date.now() - x.at > GAP_REPLAY_MS + GAP_REPLAY_DELAY_MS) return;
+            try { callbacks.onComment(Object.assign({}, x.d, { replayed: true })); } catch (err) { logger.error('Connection pool: gap replay failed:', err); }
+        });
+    }, GAP_REPLAY_DELAY_MS);
 }
 
 function unsubscribe(entry, callbacks) {

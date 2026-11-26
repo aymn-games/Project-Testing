@@ -1002,6 +1002,28 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </table></div>
             </div>
           </sc-if>
+          <sc-if value="{{ live.hasFollow }}">
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+              <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">تشخيص كشف المتابعين («المتابعين فقط»)</div>
+              <div style="padding:10px 18px;border-bottom:1px solid #262a37;font-size:12.5px;color:#9199ab;line-height:1.7">{{ live.followNote }}</div>
+              <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
+                <thead><tr>
+                  <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">القيم الخام من تيك توك</th>
+                  <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">تعليقات</th>
+                  <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">انحسب متابع</th>
+                  <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">تابع وقت البث (أكيد)</th>
+                  <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">آخر حساب</th>
+                </tr></thead>
+                <tbody><sc-for list="{{ live.followCombos }}" as="f"><tr>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12px;font-family:'IBM Plex Mono',monospace;direction:ltr;text-align:right">{{ f.key }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ f.count }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ f.accepted }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:{{ f.confColor }}">{{ f.confirmed }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ f.lastUser }}</td>
+                </tr></sc-for></tbody>
+              </table></div>
+            </div>
+          </sc-if>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">البثوث المتصلة</div>
             <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:860px">
@@ -1585,6 +1607,13 @@ class Component extends DCLogic {
         return { name:b.label||k, attempts:b.attempts, rooms:b.rooms, shared:b.sharedJoins }; })
         .sort((a,b)=>b.attempts-a.attempts),
       hasUsage:!!(lv&&lv.streamUsage&&Object.keys(lv.streamUsage.bySource).length),
+      // تشخيص «المتابعين فقط» (backend/utils/follow-debug.js): القيم الخام لكل تعليق وقرارنا.
+      // «تابع وقت البث» = ضغط متابعة بالبث ثم علّق — متابع أكيد؛ لو صفّه «انحسب متابع» أقل منه فالكشف غلط لهالقيم.
+      hasFollow:!!(lv&&lv.followDebug&&lv.followDebug.total),
+      followNote:(()=>{ const f=lv&&lv.followDebug; if(!f||!f.total) return '';
+        return f.total.toLocaleString('en')+' تعليق من '+(f.since?new Date(f.since).toLocaleTimeString('en-GB'):'—')+' · متابعين أكيدين علّقوا: '+f.confirmedSamples+' · منهم انحسبوا «مو متابع» بالغلط: '+f.missedFollowers+(f.missedFollowers?' ⚠️ الكشف يحتاج تعديل — أرسل هالجدول للمطوّر':''); })(),
+      followCombos:(lv&&lv.followDebug?lv.followDebug.combos:[]).map(c=>({ key:c.key, count:c.count, accepted:c.accepted, confirmed:c.confirmed,
+        confColor:c.confirmed&&c.accepted<c.count?'#f87171':'#e7e9ee', lastUser:c.lastUser?'@'+c.lastUser:'—' })),
       games:Object.keys(games).sort((a,b)=>games[b]-games[a]).map(g=>({ name:g, n:games[g] })),
       hasGames:Object.keys(games).length>0,
       rows:liveRows, empty:lv&&!liveRows.length?'ما فيه أحد يبث ويلعب الحين.':'',
