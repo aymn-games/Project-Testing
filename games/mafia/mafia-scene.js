@@ -246,14 +246,17 @@ function buildChar(look, opts) {
     const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#1e1b2e', { roughness: 0.2 });
     const shineM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
     const eyes = [];
+    // الوجه (تصميم صاحب المنصة): عيون سودا كبيرة مدوّرة ولمعة بيضاء فوق يمين، خدود وردية بيضاوية، وفم صغير بيضاوي، بدون حواجب
+    const cheekM = new THREE.MeshStandardMaterial({ color: '#ef9590', transparent: true, opacity: 0.95, roughness: 0.6 });
     [-1, 1].forEach((s) => {
-        const e = add(GEO.eye, eyeM, s * 0.22, -0.02, 0.53, head); e.scale.set(0.85, 1.15, 0.5); e.userData.sy = 1.15; eyes.push(e);
+        const e = shadow ? add(GEO.eye, eyeM, s * 0.22, -0.02, 0.53, head) : add(GEO.eye, eyeM, s * 0.25, -0.07, 0.52, head);
+        if (shadow) { e.scale.set(0.85, 1.15, 0.5); e.userData.sy = 1.15; } else { e.scale.set(1.32, 1.36, 0.45); e.userData.sy = 1.36; }
+        eyes.push(e);
         if (shadow || opts.lite) return;
-        const sh = new THREE.Mesh(GEO.shine, shineM); sh.position.set(s * 0.22 + 0.03, 0.05, 0.59); head.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        add(GEO.brow, hairM, s * 0.22, 0.2, 0.55, head).rotation.z = Math.PI / 2 + s * 0.15;
-        add(GEO.cheek, new THREE.MeshStandardMaterial({ color: '#fb7185', transparent: true, opacity: 0.55, roughness: 0.55 }), s * 0.36, -0.2, 0.47, head).scale.set(1, 0.55, 0.3);
+        const sh = new THREE.Mesh(GEO.shine, shineM); sh.scale.setScalar(1.35); sh.position.set(s * 0.25 + 0.055, -0.005, 0.59); head.add(sh); sh.userData.sy = 1.35; eyes.push(sh);
+        add(GEO.cheek, cheekM, s * 0.41, -0.25, 0.43, head).scale.set(1.45, 0.72, 0.3);
     });
-    if (!shadow) add(GEO.mouth, S('#9f1239'), 0, -0.2, 0.57, head).rotation.z = Math.PI;
+    if (!shadow) add(GEO.cheek, S('#d9603b', { roughness: 0.4 }), 0, -0.28, 0.565, head).scale.set(0.78, 0.28, 0.25);
 
     const style = opts.outfit ? (opts.outfit === 'detective' ? 'fedora' : opts.outfit === 'doctor' ? 'surgeon' : 'hood') : C.style;
     buildHair(head, style, hairM, mats, GEO);

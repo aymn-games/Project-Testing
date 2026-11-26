@@ -57,10 +57,10 @@
             '<path d="M38 76 Q50 84 62 76" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="50" cy="92" r="2.6" fill="#fde68a"/>' +
             '<ellipse cx="20" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/><ellipse cx="80" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/>' +
             '<circle cx="50" cy="46" r="30" fill="' + c.skin + '"/>' +
-            '<ellipse cx="39" cy="50" rx="4.4" ry="5.8" fill="#1e1b2e"/><ellipse cx="61" cy="50" rx="4.4" ry="5.8" fill="#1e1b2e"/><circle cx="40.5" cy="47.5" r="1.5" fill="#fff"/><circle cx="62.5" cy="47.5" r="1.5" fill="#fff"/>' +
-            '<path d="M34 41 L44 40" stroke="' + c.hair + '" stroke-width="2.4" stroke-linecap="round"/><path d="M56 40 L66 41" stroke="' + c.hair + '" stroke-width="2.4" stroke-linecap="round"/>' +
-            '<circle cx="33" cy="60" r="4" fill="#f08a8a" opacity=".45"/><circle cx="67" cy="60" r="4" fill="#f08a8a" opacity=".45"/>' +
-            '<path d="M44 63 Q50 67 56 63" stroke="#7a3b2b" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+            // الوجه: عيون سودا كبيرة ولمعة بيضاء فوق يمين، خدود وردية بيضاوية، وفم صغير بيضاوي (نفس الشخصيات الثلاثية الأبعاد)
+            '<ellipse cx="38" cy="51" rx="6.2" ry="6.8" fill="#1e1b2e"/><ellipse cx="62" cy="51" rx="6.2" ry="6.8" fill="#1e1b2e"/><circle cx="40.6" cy="48.6" r="2.1" fill="#fff"/><circle cx="64.6" cy="48.6" r="2.1" fill="#fff"/>' +
+            '<ellipse cx="29" cy="60" rx="5" ry="3" fill="#f29a9a" opacity=".9"/><ellipse cx="71" cy="60" rx="5" ry="3" fill="#f29a9a" opacity=".9"/>' +
+            '<ellipse cx="50" cy="63" rx="3.2" ry="1.5" fill="#d9603b"/>' +
             hair + '</svg>';
     }
 
