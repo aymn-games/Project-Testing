@@ -45,8 +45,9 @@
      *  عيون سودا بيضاوية بلمعة، خدود وردية، فم صغير، غُرّة مستقيمة، صدر بلون القميص وزر أصفر وأكمام بيضاء. */
     function avatarSVG(look, size) {
         var c = colors(look), s = size || 96, h = c.hair, back = '', front = '';
-        var top = '<rect x="15" y="10" width="70" height="24" rx="11" fill="' + h + '"/><rect x="17" y="24" width="66" height="11" rx="3" fill="' + h + '"/>';
-        var sides = function (len) { return '<rect x="13" y="22" width="9" height="' + len + '" rx="3" fill="' + h + '"/><rect x="78" y="22" width="9" height="' + len + '" rx="3" fill="' + h + '"/>'; };
+        // قبة مدوّرة أعرض من الرأس، وحافتها التحتية خط الغُرّة المستقيم
+        var top = '<path d="M11 36 Q11 6 50 6 Q89 6 89 36 Z" fill="' + h + '"/>';
+        var sides = function (len) { return '<rect x="11" y="28" width="11" height="' + len + '" rx="4" fill="' + h + '"/><rect x="78" y="28" width="11" height="' + len + '" rx="4" fill="' + h + '"/>'; };
         switch (c.style) {
             case 0: front = top + sides(26); break;
             case 1: back = '<rect x="5" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/><rect x="84" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/>';
@@ -54,7 +55,7 @@
             case 2: back = '<rect x="15" y="40" width="70" height="56" rx="4" fill="' + h + '"/>'; front = top + sides(74); break;
             case 3: back = '<circle cx="31" cy="9" r="9" fill="' + h + '"/><circle cx="69" cy="9" r="9" fill="' + h + '"/>'; front = top + sides(26); break;
             case 4: front = '<g fill="' + h + '"><circle cx="22" cy="24" r="11"/><circle cx="36" cy="14" r="12"/><circle cx="50" cy="11" r="12"/><circle cx="64" cy="14" r="12"/><circle cx="78" cy="24" r="11"/><circle cx="16" cy="38" r="8"/><circle cx="84" cy="38" r="8"/></g>'; break;
-            case 5: front = '<rect x="15" y="10" width="70" height="24" rx="11" fill="' + h + '"/><rect x="22" y="29" width="72" height="6" rx="3" fill="' + h + '"/>' + sides(20); break;
+            case 5: front = top + '<rect x="20" y="32" width="74" height="6" rx="3" fill="' + h + '"/>' + sides(20); break;
             case 6: back = '<rect x="11" y="16" width="78" height="80" rx="8" fill="#f4f1ea"/>';
                 front = '<rect x="13" y="9" width="74" height="24" rx="11" fill="#f4f1ea"/><path d="M18 22 H82" stroke="#c4302b" stroke-width="4" stroke-dasharray="4 4"/><rect x="16" y="10" width="68" height="6" rx="3" fill="#1f1a17"/>' +
                     '<rect x="11" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/><rect x="81" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/>'; break;
