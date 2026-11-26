@@ -41,27 +41,34 @@
     }
 
     /** صورة SVG للوجه والجسم (للجوال والقوائم). */
+    /** صورة SVG للرأس والكتوف (للجوال والقوائم) — نفس الشخصية ثلاثية الأبعاد: رأس مربع بحواف مدوّرة ووجه مسطّح،
+     *  عيون سودا بيضاوية بلمعة، خدود وردية، فم صغير، غُرّة مستقيمة، صدر بلون القميص وزر أصفر وأكمام بيضاء. */
     function avatarSVG(look, size) {
-        var c = colors(look), s = size || 96, hair = '';
+        var c = colors(look), s = size || 96, h = c.hair, back = '', front = '';
+        var top = '<rect x="15" y="10" width="70" height="24" rx="11" fill="' + h + '"/><rect x="17" y="24" width="66" height="11" rx="3" fill="' + h + '"/>';
+        var sides = function (len) { return '<rect x="13" y="22" width="9" height="' + len + '" rx="3" fill="' + h + '"/><rect x="78" y="22" width="9" height="' + len + '" rx="3" fill="' + h + '"/>'; };
         switch (c.style) {
-            case 0: hair = '<path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
-            case 1: hair = '<rect x="12" y="38" width="12" height="34" rx="6" fill="' + c.hair + '"/><rect x="76" y="38" width="12" height="34" rx="6" fill="' + c.hair + '"/><circle cx="20" cy="40" r="4" fill="#f472b6"/><circle cx="80" cy="40" r="4" fill="#f472b6"/><path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
-            case 2: hair = '<path d="M18 74 Q14 16 50 14 Q86 16 82 74 L74 74 Q76 36 50 30 Q24 36 26 74Z" fill="' + c.hair + '"/>'; break;
-            case 3: hair = '<circle cx="24" cy="18" r="11" fill="' + c.hair + '"/><circle cx="76" cy="18" r="11" fill="' + c.hair + '"/><path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
-            case 4: hair = '<g fill="' + c.hair + '"><circle cx="30" cy="24" r="12"/><circle cx="44" cy="16" r="12"/><circle cx="58" cy="16" r="12"/><circle cx="71" cy="25" r="12"/><circle cx="22" cy="38" r="9"/><circle cx="79" cy="38" r="9"/></g>'; break;
-            case 5: hair = '<path d="M20 40 Q20 12 50 12 Q80 12 80 40Z" fill="' + c.hair + '"/><rect x="46" y="36" width="44" height="7" rx="3.5" fill="' + c.hair + '"/>'; break;
-            case 6: hair = '<path d="M16 86 Q12 14 50 12 Q88 14 84 86 L72 86 Q74 40 50 34 Q26 40 28 86Z" fill="#f4f1ea"/><path d="M22 40 Q50 22 78 40" stroke="#c4302b" stroke-width="5" fill="none" stroke-dasharray="4 4"/><rect x="20" y="30" width="60" height="7" rx="3" fill="#1f1a17"/>'; break;
+            case 0: front = top + sides(26); break;
+            case 1: back = '<rect x="5" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/><rect x="84" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/>';
+                front = top + sides(24) + '<circle cx="12" cy="29" r="4" fill="#f26d7d"/><circle cx="88" cy="29" r="4" fill="#f26d7d"/>'; break;
+            case 2: back = '<rect x="15" y="40" width="70" height="56" rx="4" fill="' + h + '"/>'; front = top + sides(74); break;
+            case 3: back = '<circle cx="31" cy="9" r="9" fill="' + h + '"/><circle cx="69" cy="9" r="9" fill="' + h + '"/>'; front = top + sides(26); break;
+            case 4: front = '<g fill="' + h + '"><circle cx="22" cy="24" r="11"/><circle cx="36" cy="14" r="12"/><circle cx="50" cy="11" r="12"/><circle cx="64" cy="14" r="12"/><circle cx="78" cy="24" r="11"/><circle cx="16" cy="38" r="8"/><circle cx="84" cy="38" r="8"/></g>'; break;
+            case 5: front = '<rect x="15" y="10" width="70" height="24" rx="11" fill="' + h + '"/><rect x="22" y="29" width="72" height="6" rx="3" fill="' + h + '"/>' + sides(20); break;
+            case 6: back = '<rect x="11" y="16" width="78" height="80" rx="8" fill="#f4f1ea"/>';
+                front = '<rect x="13" y="9" width="74" height="24" rx="11" fill="#f4f1ea"/><path d="M18 22 H82" stroke="#c4302b" stroke-width="4" stroke-dasharray="4 4"/><rect x="16" y="10" width="68" height="6" rx="3" fill="#1f1a17"/>' +
+                    '<rect x="11" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/><rect x="81" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/>'; break;
         }
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + s + '" height="' + s + '" aria-hidden="true">' +
-            '<path d="M24 100 Q24 74 50 74 Q76 74 76 100Z" fill="' + c.shirt + '"/>' +
-            '<path d="M38 76 Q50 84 62 76" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="50" cy="92" r="2.6" fill="#fde68a"/>' +
-            '<ellipse cx="20" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/><ellipse cx="80" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/>' +
-            '<circle cx="50" cy="46" r="30" fill="' + c.skin + '"/>' +
-            // الوجه: عيون سودا كبيرة ولمعة بيضاء فوق يمين، خدود وردية بيضاوية، وفم صغير بيضاوي (نفس الشخصيات الثلاثية الأبعاد)
-            '<ellipse cx="38" cy="51" rx="6.2" ry="6.8" fill="#1e1b2e"/><ellipse cx="62" cy="51" rx="6.2" ry="6.8" fill="#1e1b2e"/><circle cx="40.6" cy="48.6" r="2.1" fill="#fff"/><circle cx="64.6" cy="48.6" r="2.1" fill="#fff"/>' +
-            '<ellipse cx="29" cy="60" rx="5" ry="3" fill="#f29a9a" opacity=".9"/><ellipse cx="71" cy="60" rx="5" ry="3" fill="#f29a9a" opacity=".9"/>' +
-            '<ellipse cx="50" cy="63" rx="3.2" ry="1.5" fill="#d9603b"/>' +
-            hair + '</svg>';
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + s + '" height="' + s + '" aria-hidden="true">' + back +
+            // الكتوف: أكمام بيضاء وصدر بلون القميص وزر أصفر وياقة صفرا
+            '<rect x="16" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/><rect x="68" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/>' +
+            '<path d="M28 100 L30 82 Q50 76 70 82 L72 100Z" fill="' + c.shirt + '"/><path d="M36 80 Q50 85 64 80" stroke="#f2c230" stroke-width="2.6" fill="none"/><circle cx="50" cy="93" r="4.2" fill="#f2c230"/>' +
+            // الرأس المربع والوجه
+            '<rect x="19" y="18" width="62" height="62" rx="15" fill="' + c.skin + '"/>' +
+            '<ellipse cx="38" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><ellipse cx="62" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><circle cx="40.2" cy="51.6" r="1.9" fill="#fff"/><circle cx="64.2" cy="51.6" r="1.9" fill="#fff"/>' +
+            '<ellipse cx="26" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/><ellipse cx="74" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/>' +
+            '<ellipse cx="50" cy="66" rx="3" ry="1.3" fill="#d8613f"/>' +
+            front + '</svg>';
     }
 
     window.MafiaLooks = { SKIN: SKIN, HAIR_STYLES: HAIR_STYLES, HAIR_C: HAIR_C, SHIRT: SHIRT, PANTS: PANTS, ROLE: ROLE, randomLook: randomLook, colors: colors, avatarSVG: avatarSVG };
