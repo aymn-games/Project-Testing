@@ -352,7 +352,7 @@ body.is-over .qr-mini, body.is-over .timer { display: none !important; }
         var list = alive().sort(function (a, b) { return a.seat - b.seat; }), t = G.tally || {}, max = 0, tops = 0;
         list.forEach(function (p) { max = Math.max(max, t[p.id] || 0); });
         list.forEach(function (p) { if (max && (t[p.id] || 0) === max) tops++; });
-        once('votes', JSON.stringify([G.votes, t, list.length]), function () {
+        once('votes', JSON.stringify([G.votes, t, list.length, G.skipVotes]), function () {
             var cols = list.length <= 8 ? 2 : list.length <= 15 ? 3 : list.length <= 28 ? 4 : 5;
             $('votes').style.setProperty('--cols', cols);
             $('votes').innerHTML = list.map(function (p) {
@@ -360,7 +360,7 @@ body.is-over .qr-mini, body.is-over .timer { display: none !important; }
                 return '<div class="vc' + (n && n === max && tops === 1 ? ' top' : '') + '">' + (G.votes[p.id] ? '<span class="did">✓ صوّت</span>' : '') + num(p) + photo(p, 46) +
                     '<span class="nm">' + esc(p.name) + (p.role === 'mayor' ? ' <small>👑 العمدة</small>' : '') + '</span>' +
                     '<span class="n' + (n ? ' has' : '') + '"><b>' + n + '</b><small>' + (n > 2 && n < 11 ? 'أصوات' : 'صوت') + '</small></span></div>';
-            }).join('');
+            }).join('') + (G.skipVotes ? '<div class="vc"><span class="num">⏭</span><span class="nm">تخطّى</span><span class="n has"><b>' + G.skipVotes + '</b><small>صوت</small></span></div>' : '');
         });
     }
     $('endVote').onclick = function () { if (S.G && S.G.phase === 'vote') net.send({ t: 'endStage' }); };
@@ -373,7 +373,7 @@ body.is-over .qr-mini, body.is-over .timer { display: none !important; }
         once('verdict', G.phaseAt + stage, function () {
             var el = $('verdict');
             el.className = 'verdict paper' + (p ? '' : ' none');
-            if (!p) { el.innerHTML = Vd.tie ? '⚖️ تعادل بالأصوات — ما أحد خرج من القرية' : '🤐 ما أحد صوّت — ما أحد خرج من القرية'; return; }
+            if (!p) { el.innerHTML = Vd.skip ? '⏭️ الأغلبية تخطّت التصويت — ما أحد خرج من القرية' : Vd.tie ? '⚖️ تعادل بالأصوات — ما أحد خرج من القرية' : '🤐 ما أحد صوّت — ما أحد خرج من القرية'; return; }
             var bar = '';
             if (stage === 'ask') bar = '<div class="bar ask">هل كان من المافيا؟</div>';
             else if (stage === 'reveal') {

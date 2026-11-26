@@ -143,3 +143,17 @@ test('الحفظ والترجيع يكمل نفس المباراة', function ()
     g2.act(m.id, 'pick', c.id);
     assert.equal(g2.G.night.picks[m.id], c.id);
 });
+
+test('«تخطّى» بالتصويت: لو أخذ نفس أصوات الأعلى أو أكثر ما أحد يطلع', function () {
+    var t = setup(6, { mafia: 1, doctor: 0, detective: 0 }, { talkSec: 0 }), g = t.g, G = t.G;
+    toNight(g); next(g); next(g);
+    var ps = G.players;
+    g.act(ps[0].id, 'vote', ps[1].id); g.act(ps[2].id, 'vote', ps[1].id);
+    g.act(ps[3].id, 'vote', 'skip'); g.act(ps[4].id, 'vote', 'skip');
+    g.act(ps[3].id, 'vote', ps[1].id);   // ما يتغيّر
+    assert.equal(g.view('host').skipVotes, 2);
+    next(g);
+    assert.equal(G.verdict.skip, true);
+    assert.equal(G.verdict.id, null);
+    assert.equal(ps[1].alive, true);
+});

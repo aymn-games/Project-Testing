@@ -645,11 +645,18 @@ body.watching { overflow: hidden; }
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: NET.look() || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
 
-    function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame' || v === 'vVillage'); ['vCode', 'vProfile', 'vWait', 'vGame', 'vVillage'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
+    function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame' || v === 'vVillage'); document.body.classList.toggle('vv-on', v === 'vVillage'); ['vCode', 'vProfile', 'vWait', 'vGame', 'vVillage'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
     // نظام القرية: شاشة اللعب لحالها (village-phone.js) — نفس الاتصال والدخول والانتظار
     var village = null;
     function renderVillage() {
-        if (!village) village = window.MafiaVillagePhone.mount($('vVillage'), { act: function (a, arg) { net.send({ t: 'act', a: a, arg: arg }); } });
+        if (!village) village = window.MafiaVillagePhone.mount($('vVillage'), {
+            act: function (a, arg) { net.send({ t: 'act', a: a, arg: arg }); },
+            // صورة اللاعب: صورة تيك توك المحفوظة عند الخادم (للحسابات الموثّقة)، وإلا شخصيته المرسومة
+            photo: function (p) {
+                var rp = S.room && p && S.room.players.find(function (q) { return q.id === p.id; }), a = rp && rp.avatar;
+                return a ? (a.charAt(0) === '/' ? ((window.AGPAuth && window.AGPAuth.API_BASE) || '') + a : a) : null;
+            }
+        });
         if (S.view !== 'vVillage') show('vVillage');
         village.render(S.G);
     }

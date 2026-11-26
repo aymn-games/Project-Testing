@@ -6,7 +6,7 @@
  *
  * المراحل: reveal (كل واحد يشوف دوره بجواله) → night (كل الأدوار تختار بنفس الوقت)
  *   → dawn («طلع الصبح على القرية»: مين مات ومين نجا، ودور الميت ينكشف) → day (النقاش)
- *   → vote (صوت واحد لكل لاعب ولا يتغيّر) → verdict («قرار القرية» وكشف دور المطرود) → night … حتى over.
+ *   → vote (صوت واحد لكل لاعب ولا يتغيّر، أو «تخطّى») → verdict («قرار القرية» وكشف دور المطرود) → night … حتى over.
  *
  * الأدوار (أعدادها من شاشة «اختر الأدوار»، واللي ما ياخذ دور يصير مواطن):
  *   مافيا (فريق المافيا) — يقتلون بالليل: «يتفقون على واحد» (killMode agree) أو «كل مافيا يقتل لاعب» (each).
@@ -22,7 +22,7 @@
  *   مواطن.
  *
  * الفوز: القرية لما تطلع المافيا كلها (والمزوّر منهم)، والمافيا لما يصير عددها يساوي الباقين أو أكثر.
- * التعادل بالتصويت = ما أحد يطلع.
+ * التعادل بالتصويت = ما أحد يطلع، ولو «تخطّى» أخذ نفس أصوات الأعلى أو أكثر بعد.
  *
  * G كله بيانات JSON (معرّفات بس، بدون روابط بين الكائنات) عشان الحفظ والترجيع (serialize) يكون نسخ مباشر.
  */
@@ -241,14 +241,17 @@ function gameApi(G, hooks, restored) {
     function resolveVote() {
         var t = tally(), best = 0, top = [];
         Object.keys(t).forEach(function (id) { if (t[id] > best) { best = t[id]; top = [id]; } else if (t[id] === best) top.push(id); });
-        var out = top.length === 1 ? P(top[0]) : null;
-        G.verdict = { id: out ? out.id : null, votes: best, tie: top.length > 1, none: !top.length, tally: t, role: null, team: null };
+        // «تخطّى» ينافس مثل أي لاعب: لو أخذ نفس أصوات الأعلى أو أكثر ما أحد يطلع
+        var skipN = 0; Object.keys(G.votes).forEach(function (vid) { var v = P(vid); if (v && G.votes[vid] === 'skip') skipN += weight(v); });
+        var skipped = skipN > 0 && skipN >= best;
+        var out = top.length === 1 && !skipped ? P(top[0]) : null;
+        G.verdict = { id: out ? out.id : null, votes: best, tie: !skipped && top.length > 1, none: !top.length && !skipped, skip: skipped, skipVotes: skipN, tally: t, role: null, team: null };
         if (out) {
             out.alive = false; out.diedRound = G.round; out.cause = 'vote';
             G.verdict.role = out.role; G.verdict.team = out.team;
             if (out.role === 'jester') { G.verdict.jester = true; G.jesterWins.push(out.id); }
             sys('⚖️ ' + out.name + ' خرج من القرية بـ' + best + ' صوت — ' + (out.role === 'jester' ? 'كان المهرّج وفاز! 🤡' : out.team === 'mafia' ? 'كان ' + ROLE_NAMES[out.role] + ' من المافيا' : 'بريء، كان ' + ROLE_NAMES[out.role]));
-        } else sys(top.length > 1 ? '⚖️ تعادل بالأصوات — ما أحد خرج' : '⚖️ ما أحد صوّت — ما أحد خرج');
+        } else sys(skipped ? '⏭️ الأغلبية تخطّت التصويت — ما أحد خرج' : top.length > 1 ? '⚖️ تعادل بالأصوات — ما أحد خرج' : '⚖️ ما أحد صوّت — ما أحد خرج');
         go('verdict', out ? VERDICT_MS : 6000);
     }
     function afterVerdict() { var w = winner(); if (w) return finish(w); startNight(); }
@@ -296,8 +299,9 @@ function gameApi(G, hooks, restored) {
         }
         if (G.phase === 'vote' && a === 'vote') {
             if (G.votes[id]) return;   // صوت واحد ولا يتغيّر
-            var vt = P(String(arg || '')); if (!vt || !vt.alive || vt.id === id) return;
-            G.votes[id] = vt.id; changed();
+            if (arg === 'skip') G.votes[id] = 'skip';   // «تخطّى»: ما يصوّت على أحد
+            else { var vt = P(String(arg || '')); if (!vt || !vt.alive || vt.id === id) return; G.votes[id] = vt.id; }
+            changed();
             if (alive().every(function (p) { return G.votes[p.id]; })) { G.endsAt = Math.min(G.endsAt, Date.now() + EARLY_END_MS); changed(); }
         }
     }
@@ -328,6 +332,7 @@ function gameApi(G, hooks, restored) {
             morning: G.phase === 'night' || G.phase === 'reveal' ? null : G.morning,
             votes: G.phase === 'vote' || G.phase === 'verdict' ? G.votes : {},
             tally: G.phase === 'vote' || G.phase === 'verdict' ? tally() : {},
+            skipVotes: G.phase === 'vote' || G.phase === 'verdict' ? Object.keys(G.votes).filter(function (k) { return G.votes[k] === 'skip'; }).reduce(function (n, k) { var v = P(k); return n + (v ? weight(v) : 0); }, 0) : 0,
             verdict: G.phase === 'verdict' || over ? G.verdict : null,
             chat: G.chat.filter(function (c) { return c.ch !== 'mafia' || meMafia; }).slice(isHost ? -60 : -120)
         };

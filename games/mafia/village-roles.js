@@ -34,6 +34,21 @@
         citizen: { n: 'مواطن', i: '🏠', c: '#4f8ff7', team: 'town',
             desc: 'ما عندك قدرة بالليل. ناقش وصوّت بذكاء عشان تطرد المافيا.' }
     };
+    // أيقونات الأدوار (رسم أبيض على مربع بلون الدور — بطاقة الدور بالجوال)
+    var D = 'rgba(0,0,0,.45)';
+    var SVG = {
+        mafia: '<path d="M3 10.5h18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6.2 10.5 7.6 4.6c.2-.8 1-1.2 1.8-.9L12 4.6l2.6-.9c.8-.3 1.6.1 1.8.9l1.4 5.9z"/><path d="M3.6 14.6c0-1 .8-1.6 2-1.6h12.8c1.2 0 2 .6 2 1.6 0 2.4-1.8 4.2-4.1 4.2-1.6 0-2.9-.9-4.3-2.5-1.4 1.6-2.7 2.5-4.3 2.5-2.3 0-4.1-1.8-4.1-4.2z"/><circle cx="7.8" cy="15.4" r="1.6" fill="' + D + '"/><circle cx="16.2" cy="15.4" r="1.6" fill="' + D + '"/>',
+        doctor: '<path d="M9 7V5.6C9 4.7 9.7 4 10.6 4h2.8c.9 0 1.6.7 1.6 1.6V7" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M12 10.3v6.4M8.8 13.5h6.4" stroke="' + D + '" stroke-width="2.4" stroke-linecap="round"/>',
+        detective: '<circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="m15.2 15.2 5.3 5.3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+        mayor: '<path d="M3 8.5 7.5 12 12 5l4.5 7L21 8.5 19.2 19H4.8z"/><rect x="4.8" y="19.6" width="14.4" height="1.9" rx=".9"/>',
+        bodyguard: '<path d="M12 2.5 20 5.5v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6z"/><path d="m8.6 12 2.4 2.4 4.4-4.6" fill="none" stroke="' + D + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+        sniper: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.8"/>',
+        forger: '<path d="M20.5 3C14 4 9 8.4 7 14.4L5 21l1.9-1.1c1-3 2.3-4.3 4.4-5.1C16.6 12.6 19.6 8.2 20.5 3z"/><path d="M4 21h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+        jester: '<path d="M4.5 18 3 7.5l5 4 4-7.5 4 7.5 5-4L19.5 18z"/><rect x="4.5" y="18.6" width="15" height="2.4" rx="1.2"/><circle cx="3" cy="6.5" r="1.6"/><circle cx="12" cy="3" r="1.6"/><circle cx="21" cy="6.5" r="1.6"/>',
+        citizen: '<path d="M3.5 11 12 3.8l8.5 7.2V20a1 1 0 0 1-1 1H15v-5.5H9V21H4.5a1 1 0 0 1-1-1z"/>'
+    };
+    function icon(k, size) { return '<svg viewBox="0 0 24 24" width="' + (size || 24) + '" height="' + (size || 24) + '" fill="currentColor" aria-hidden="true">' + (SVG[k] || SVG.citizen) + '</svg>'; }
+
     var CORE = ['mafia', 'doctor', 'detective'], EXTRA = ['mayor', 'bodyguard', 'sniper', 'forger', 'jester'];
     var LIMITS = { mafia: [1, 60], doctor: [0, 20], detective: [0, 20], mayor: [0, 1], bodyguard: [0, 5], sniper: [0, 5], forger: [0, 5], jester: [0, 3] };
 
@@ -69,7 +84,7 @@
         '.vrp-extra{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}' +
         '.vrc{--rc:#4f8ff7;position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px 12px;border-radius:20px;background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 10%,#161d40),#10153a);border:1.5px solid color-mix(in srgb,var(--rc) 32%,transparent);transition:border-color .2s,box-shadow .2s}' +
         '.vrc.on{border-color:var(--rc);box-shadow:0 0 0 1px var(--rc),0 0 28px color-mix(in srgb,var(--rc) 35%,transparent)}' +
-        '.vrc .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:color-mix(in srgb,var(--rc) 26%,transparent)}' +
+        '.vrc .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;color:#fff;background:color-mix(in srgb,var(--rc) 40%,transparent)}' +
         '.vrc b{font-size:18px;font-weight:800;margin-top:4px}.vrc small{font-size:12.5px;font-weight:700;color:color-mix(in srgb,var(--tc) 70%,#fff)}' +
         '.vrc .q{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-weight:800;font-size:13px;cursor:pointer}' +
         '.vrc .st{direction:ltr;display:flex;align-items:center;gap:8px;margin-top:8px;padding:4px;border-radius:999px;background:rgba(0,0,0,.28)}' +
@@ -114,7 +129,7 @@
             return '<div class="vrc' + (v > 0 ? ' on' : '') + '" style="--rc:' + R.c + ';--tc:' + T.c + '">' +
                 '<button type="button" class="q" data-q="' + k + '" aria-label="شرح ' + esc(R.n) + '">؟</button>' +
                 (tip === k ? '<div class="tip">' + esc(R.desc) + '</div>' : '') +
-                '<span class="ic">' + R.i + '</span><b>' + esc(R.n) + '</b><small>' + T.n + '</small>' +
+                '<span class="ic">' + icon(k, 26) + '</span><b>' + esc(R.n) + '</b><small>' + T.n + '</small>' +
                 '<div class="st"><button type="button" data-k="' + k + '" data-d="-1" aria-label="إنقاص"' + (v <= L[0] ? ' disabled' : '') + '>−</button><output>' + v + '</output>' +
                 '<button type="button" data-k="' + k + '" data-d="1" aria-label="زيادة"' + (v >= L[1] ? ' disabled' : '') + '>+</button></div>' + km + '</div>';
         }
@@ -153,5 +168,5 @@
         return { refresh: render, close: close, settings: function () { return s; } };
     }
 
-    window.MafiaVillage = { ROLES: ROLES, TEAMS: TEAMS, CORE: CORE, EXTRA: EXTRA, counts: counts, problem: problem, roleBadge: roleBadge, injectCss: injectCss, openPicker: openPicker, esc: esc };
+    window.MafiaVillage = { icon: icon, ROLES: ROLES, TEAMS: TEAMS, CORE: CORE, EXTRA: EXTRA, counts: counts, problem: problem, roleBadge: roleBadge, injectCss: injectCss, openPicker: openPicker, esc: esc };
 })();
