@@ -62,9 +62,10 @@
                     '<rect x="11" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/><rect x="81" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/>'; break;
         }
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + s + '" height="' + s + '" aria-hidden="true">' + back +
-            // الكتوف: أكمام بيضاء وصدر بلون القميص وزر أصفر وياقة صفرا
-            '<rect x="16" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/><rect x="68" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/>' +
-            '<path d="M28 100 L30 82 Q50 76 70 82 L72 100Z" fill="' + c.shirt + '"/><path d="M36 80 Q50 85 64 80" stroke="#f2c230" stroke-width="2.6" fill="none"/><circle cx="50" cy="93" r="4.2" fill="#f2c230"/>' +
+            // الكتوف (نفس الشخصية ثلاثية الأبعاد): بلوزة بيضاء وأكمام منفوخة، وياقة وحزام وفيونكة بلون قميص اللاعب
+            '<ellipse cx="25" cy="92" rx="9" ry="11" fill="#f3efe6"/><ellipse cx="75" cy="92" rx="9" ry="11" fill="#f3efe6"/>' +
+            '<path d="M30 100 L31 82 Q50 77 69 82 L70 100Z" fill="#f3efe6"/><rect x="30" y="93" width="40" height="7" fill="' + c.shirt + '"/>' +
+            '<path d="M38 80 Q50 85 62 80" stroke="' + c.shirt + '" stroke-width="3.5" fill="none"/><path d="M44 87 L50 85 L44 83Z M56 87 L50 85 L56 83Z" fill="' + c.shirt + '"/>' +
             // الرأس المربع والوجه
             '<ellipse cx="50" cy="48" rx="33" ry="33" fill="' + c.skin + '"/>' +
             '<ellipse cx="38" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><ellipse cx="62" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><circle cx="40.2" cy="51.6" r="1.9" fill="#fff"/><circle cx="64.2" cy="51.6" r="1.9" fill="#fff"/>' +

@@ -219,18 +219,23 @@ function charGeo(lo) {
     const s = lo ? 1 : 3, r = lo ? 8 : 18;
     CHAR_GEO[k] = {
         head: new THREE.SphereGeometry(1, r * 2, r + 4),
-        eye: new THREE.SphereGeometry(0.165, r + 8, r + 4),
+        eye: new THREE.SphereGeometry(0.145, r + 8, r + 4),
         shine: new THREE.SphereGeometry(0.045, 12, 10),
         cheek: new THREE.SphereGeometry(0.1, r + 8, r + 4),
         hairTop: new RoundedBoxGeometry(HEAD_W + 0.5, 0.78, HEAD_D + 0.14, s + 2, 0.3),
         // الشعر قشرة بيضاوية فوق الرأس: الجزء اللي فوق خط الغُرّة كامل، والخلف ينزل تحت
-        hairCap: new THREE.SphereGeometry(1, lo ? 20 : 48, lo ? 10 : 24, 0, TAU, 0, HAIR_CUT),   // ناعم (تظليل سلس)
+        hairCap: new THREE.SphereGeometry(1, lo ? 16 : 30, lo ? 8 : 14, 0, TAU, 0, HAIR_CUT),
         hairBack: (to) => new THREE.SphereGeometry(1, r * 2, r + 4, Math.PI, Math.PI, HAIR_CUT - 0.02, to - HAIR_CUT + 0.02),
         bangs: new RoundedBoxGeometry(HEAD_W + 0.08, 0.55, 0.12, s, 0.05),
         side: (h) => new RoundedBoxGeometry(0.4, h, HEAD_D * 0.78, s + 1, 0.18),
         back: (h) => new RoundedBoxGeometry(HEAD_W + 0.2, h, 0.3, s, 0.12),
         torso: new THREE.CylinderGeometry(0.42, 0.43, 0.71, r),
         hem: new THREE.CylinderGeometry(0.435, 0.435, 0.09, r),
+        band: new THREE.CylinderGeometry(0.445, 0.445, 0.2, lo ? 10 : 20),
+        ruff: new THREE.CylinderGeometry(0.34, 0.4, 0.1, lo ? 10 : 16),
+        bow: new RoundedBoxGeometry(0.2, 0.07, 0.05, 1, 0.02),
+        puff: new THREE.SphereGeometry(0.2, r, r - 4),
+        forearm: new THREE.CylinderGeometry(0.12, 0.13, 0.5, r - 4),
         collar: new THREE.TorusGeometry(0.32, 0.055, 6, r + 6),
         button: new THREE.SphereGeometry(0.14, r, r - 4),
         belt: new THREE.CylinderGeometry(0.44, 0.44, 0.07, r),
@@ -238,7 +243,7 @@ function charGeo(lo) {
         shorts: new THREE.CylinderGeometry(0.43, 0.46, 0.3, r),
         shoulder: new THREE.SphereGeometry(0.16, r - 4, r - 6),
         sleeve: new THREE.CylinderGeometry(0.16, 0.16, 0.8, r - 4),
-        cuff: new THREE.CylinderGeometry(0.17, 0.17, 0.11, r - 4),
+        cuff: new THREE.CylinderGeometry(0.19, 0.19, 0.1, r - 4),
         hand: new THREE.SphereGeometry(0.145, r - 4, r - 6),
         thigh: new THREE.CylinderGeometry(0.16, 0.16, 0.36, r - 4),
         sock: new THREE.CylinderGeometry(0.165, 0.165, 0.3, r - 4),
@@ -290,21 +295,25 @@ function buildChar(look, opts) {
         add(G.sole, toeM, 0, -0.47, 0.06, knee);
         return { hip, knee };
     });
-    // الصدر (من الحزام لين الذقن) بحاشية أغمق، والزر والياقة، والحزام، والتنورة أو الشورت
-    const torso = add(G.torso, outfitM, 0, 1.68, 0, body);
-    add(G.hem, hemM, 0, 1.35, 0, body);
-    add(G.button, goldM, 0, 1.63, 0.41, body).scale.set(1, 1, 0.4);
-    const collar = add(G.collar, goldM, 0, 2.02, 0.02, body); collar.rotation.x = Math.PI / 2;
+    // البلوزة (تصميم صاحب المنصة): بيضاء، وعليها حزام عريض بلون قميص اللاعب حافته مسنّنة، وياقة مكشكشة وفيونكة
+    // بنفس اللون، وشريط أوف وايت تحت، والتنورة أو الشورت. الكم قصير منفوخ بسوار ملوّن، وتحته الذراع والكف
+    const whiteM = shadow ? outfitM : S('#f3efe6', { roughness: 0.7 }), creamM = shadow ? outfitM : S('#dcd6c8', { roughness: 0.7 });
+    const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6, flatShading: true });
+    mats.push(whiteM, creamM, accM);
+    const torso = add(G.torso, opts.outfit ? outfitM : whiteM, 0, 1.68, 0, body);
+    add(G.band, accM, 0, 1.66, 0, body);
+    add(G.hem, creamM, 0, 1.33, 0, body).scale.set(1.04, 1.4, 1.04);
+    add(G.ruff, accM, 0, 2.03, 0, body);
+    if (!opts.outfit) [-1, 1].forEach((s2) => { const bw = add(G.bow, accM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
     add(G.belt, beltM, 0, 1.27, 0, body);
     if (girl) add(G.skirt, lowM, 0, 0.98, 0, body);
     else add(G.shorts, lowM, 0, 1.08, 0, body);
-    // الذراع: كتف مدوّر وكم أبيض طويل، سوار أصفر عند الخصر، ويد
     const arm = (s) => {
-        const g = new THREE.Group(); g.position.set(s * 0.52, 1.97, 0); body.add(g);
-        add(G.shoulder, sleeveM, 0, 0, 0, g);
-        add(G.sleeve, sleeveM, 0, -0.4, 0, g);
-        add(G.cuff, goldM, 0, -0.84, 0, g);
-        add(G.hand, skinM, 0, -0.98, 0, g);
+        const g = new THREE.Group(); g.position.set(s * 0.5, 1.97, 0); body.add(g);
+        add(G.puff, opts.outfit ? sleeveM : whiteM, 0, -0.22, 0, g).scale.set(0.85, 1.55, 0.85);
+        add(G.cuff, accM, 0, -0.5, 0, g);
+        add(G.forearm, opts.outfit ? sleeveM : skinM, 0, -0.72, 0, g).scale.set(1, 0.6, 1);
+        add(G.hand, skinM, 0, -0.92, 0, g);
         g.rotation.z = s * 0.06; return g;
     };
     const armL = arm(-1), armR = arm(1);
@@ -319,12 +328,12 @@ function buildChar(look, opts) {
     if (!shadow) mats.push(cheekM);
     const eyes = [];
     [-1, 1].forEach((s) => {
-        const e = onFace(add(G.eye, eyeM, s * 0.36, -0.15, faceZ(s * 0.36, -0.15, -0.025), hc)); e.scale.set(1, 1.25, 0.3); e.userData.sy = 1.25; eyes.push(e);
+        const e = onFace(add(G.eye, eyeM, s * 0.33, -0.11, faceZ(s * 0.33, -0.11, -0.02), hc)); e.scale.set(1, 1.25, 0.3); e.userData.sy = 1.25; eyes.push(e);
         if (shadow || opts.lite) return;
-        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.36 + 0.06, -0.08, faceZ(s * 0.36 + 0.06, -0.08, 0.02)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        const ck = onFace(add(G.cheek, cheekM, s * 0.56, -0.33, faceZ(s * 0.56, -0.33, -0.02), hc)); ck.scale.set(1.3, 0.75, 0.2); ck.castShadow = false;
+        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.33 + 0.05, -0.05, faceZ(s * 0.33 + 0.05, -0.05, 0.02)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
+        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.27, faceZ(s * 0.55, -0.27, -0.02), hc)); ck.scale.set(1.3, 0.75, 0.2); ck.castShadow = false;
     });
-    if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.56, faceZ(0, -0.56, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
+    if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
     buildHair(hc, style, hairM, mats, G);
 
@@ -402,12 +411,14 @@ function buildHair(head, style, hairM, mats, G) {
     // غُرّة مسنّنة (تصميم الضفاير): شريط على سطح الجبهة، حافته التحتية زقزاق (أسنان مثلّثة)
     const FR_DROP = 0.14;   // الغُرّة المسنّنة تنزل أكثر على الجبهة
     const fringe = (teeth, depth) => {
-        const rx = HR.x + 0.08, ry = HR.y + 0.08, rz = HR.z + 0.06, t0 = Math.asin(0.84), cols = teeth * 2, pos = [], idx = [];
-        const at = (t, y) => { const c = Math.sqrt(Math.max(0.02, 1 - (y / ry) ** 2)); return [Math.sin(t) * rx * c, y, Math.cos(t) * rz * c]; };
+        // غُرّة لها سماكة: طبقة برا وطبقة جوا (لاصقة بالجبهة)، وحافة تحتية مسنّنة تقفل بينهم (تبان أغمق مثل التصميم)
+        const t0 = Math.asin(0.84), cols = teeth * 2, pos = [], idx = [];
+        const at = (k, t, y) => { const rx = HR.x + k, ry = HR.y + k, rz = HR.z + k, c = Math.sqrt(Math.max(0.02, 1 - (y / ry) ** 2)); return [Math.sin(t) * rx * c, y, Math.cos(t) * rz * c]; };
+        const OUT = 0.13, IN = 0.01, W = 4;   // 4 رؤوس لكل عمود: فوق برا، تحت برا، تحت جوا، فوق جوا
         for (let i = 0; i <= cols; i++) {
-            const t = -t0 + 2 * t0 * i / cols, yb = BANG - 0.06 - (i % 2 ? depth : 0) - (i === 0 || i === cols ? 0.06 : 0);
-            pos.push(...at(t, BANG + 0.06), ...at(t, yb - FR_DROP));
-            if (i) { const a = (i - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+            const t = -t0 + 2 * t0 * i / cols, yb = BANG - 0.06 - FR_DROP - (i % 2 ? depth : 0) - (i === 0 || i === cols ? 0.06 : 0);
+            pos.push(...at(0.065, t, BANG + 0.12), ...at(OUT, t, yb), ...at(IN, t, yb + 0.02), ...at(IN, t, BANG + 0.12));   // فوق تنضم مع القبة بدون عتبة
+            if (i) { const a = (i - 1) * W, c = i * W; for (let f = 0; f < 3; f++) idx.push(a + f, a + f + 1, c + f, a + f + 1, c + f + 1, c + f); }
         }
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
         head.add(mesh(g, hairM, 0, 0, 0));
@@ -430,25 +441,31 @@ function buildHair(head, style, hairM, mats, G) {
     // ذيل ضفيرة: أنبوب مستدق على منحنى (يطلع لبرا وفوق شوي ثم ينزل لتحت)، بربطة مضلّعة عند الرأس
     const tieM = mat('#f0646a', { roughness: 0.6 });
     const pigtail = (s) => {
+        // الذيل: مقطع دائري يمشي على منحنى بمستوى الوجه (بدون لف): من الربطة يطلع لبرا وفوق لين مستوى أعلى الرأس،
+        // يدور من فوق، وينزل لتحت على الجنب ويستدق لين طرفه
         const P = (x, y, z) => new THREE.Vector3(s * x, y, z);
-        const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.24, 0.52, -0.1), P(HR.x + 0.42, 0.68, -0.15), P(HR.x + 0.58, 0.45, -0.18), P(HR.x + 0.64, -0.1, -0.18), P(HR.x + 0.56, -0.75, -0.15), P(HR.x + 0.44, -1.3, -0.1)]);
-        const SEG = 48, RAD = 14, g = new THREE.TubeGeometry(curve, SEG, 1, RAD, false), pa = g.attributes.position;
-        const radius = (u) => u < 0.3 ? 0.27 + u / 0.3 * 0.04 : 0.31 - (u - 0.3) / 0.7 * 0.2;
+        const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.12, 0.55, -0.12), P(HR.x + 0.34, 0.74, -0.16), P(HR.x + 0.6, 0.66, -0.2), P(HR.x + 0.7, 0.22, -0.2), P(HR.x + 0.68, -0.45, -0.17), P(HR.x + 0.5, -1.25, -0.12)]);
+        const SEG = 44, RAD = 14, radius = (u) => u < 0.18 ? 0.2 + u / 0.18 * 0.11 : 0.31 - (u - 0.18) / 0.82 * 0.21;
+        const pos = [], idx = [], B = new THREE.Vector3(0, 0, 1);
         for (let i = 0; i <= SEG; i++) {
-            const c = curve.getPointAt(i / SEG), r = radius(i / SEG);
-            for (let j = 0; j <= RAD; j++) { const k = i * (RAD + 1) + j; pa.setXYZ(k, c.x + (pa.getX(k) - c.x) * r, c.y + (pa.getY(k) - c.y) * r, c.z + (pa.getZ(k) - c.z) * r); }
+            const u = i / SEG, c = curve.getPointAt(u), T = curve.getTangentAt(u), N = new THREE.Vector3().crossVectors(B, T).normalize(), r = radius(u);
+            for (let j = 0; j <= RAD; j++) { const a = j / RAD * TAU, v = new THREE.Vector3().addScaledVector(N, Math.cos(a) * r).addScaledVector(B, Math.sin(a) * r * 0.9); pos.push(c.x + v.x, c.y + v.y, c.z + v.z); }
+            if (i) for (let j = 0; j < RAD; j++) { const a = (i - 1) * (RAD + 1) + j, b2 = i * (RAD + 1) + j; idx.push(a, b2, a + 1, b2, b2 + 1, a + 1); }
         }
-        g.computeVertexNormals();
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
         head.add(mesh(g, hairM, 0, 0, 0));
-        const p0 = curve.getPointAt(0.02); head.add(mesh(new THREE.SphereGeometry(radius(0.02) * 1.05, 20, 14), hairM, p0.x, p0.y, p0.z));   // بداية الذيل مدوّرة (بدون فتحة)
-        const tie = mesh(new THREE.IcosahedronGeometry(0.17, 4), tieM, s * (HR.x + 0.03), 0.5, -0.06); tie.scale.set(0.9, 1.05, 1.05); head.add(tie);
+        [0, 1].forEach((u) => { const c = curve.getPointAt(u), b = mesh(new THREE.SphereGeometry(radius(u) * 0.98, 18, 12), hairM, c.x, c.y, c.z); b.scale.z = 0.9; head.add(b); });   // الأطراف مقفولة ومدوّرة
+        // الربطة: أسطوانة قصيرة مدوّرة الحواف باتجاه الذيل
+        const t0 = curve.getTangentAt(0.0), c0 = curve.getPointAt(0.0);
+        const tie = mesh(new THREE.SphereGeometry(0.19, 18, 12), tieM, c0.x - s * 0.05, c0.y - 0.03, c0.z); tie.scale.set(1, 0.78, 1);
+        tie.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t0.clone().normalize()); head.add(tie);
     };
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
         case 0: top(); sides(-0.3); break;                                       // قصير (لين الأذن)
         case 1:                                                                    // ضفاير (تصميم صاحب المنصة): غُرّة مسنّنة وخصل جنب الوجه لين الذقن وذيلين فوق
-            top(); fringe(6, 0.07); sideShell(-0.58, 0.72); [-1, 1].forEach(pigtail);
+            top(); fringe(6, 0.07); sideShell(-0.46, 0.72); [-1, 1].forEach(pigtail);
             break;
         case 2: top(); sides(-1.82); break;                                        // طويل (لين الخصر)
         case 3: top(); sides(-0.3); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;   // كعكتين
