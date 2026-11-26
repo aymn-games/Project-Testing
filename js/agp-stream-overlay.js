@@ -3274,7 +3274,8 @@
                     if (own) outT = setTimeout(function () { boxes.forEach(function (b) { b.root.classList.add('out'); }); }, Math.max(0, max - 350));
                 }
             });
-            v.muted = i > 0 || Boolean(it.mute);
+            // e.mute: «جرّب» من المحرر يطلع بشاشة البث بصوته، والمعاينة بالمحرر صامتة (ما يتكرر الصوت)
+            v.muted = i > 0 || Boolean(it.mute) || Boolean(e && e.mute);
             if (i === 0) v.addEventListener('playing', function () { diagAlert('played'); }, { once: true });
             var p = v.play();
             // المتصفح منع الصوت التلقائي: نشغّله بدون صوت بدل ما يوقف
@@ -3341,7 +3342,7 @@
             q.roots = (q.roots || []).concat([c]);
             if (t.node._pos) place(t.node, t.node._pos, t.node._F);
         });
-        if (it.sound) { if (it.soundId) playAssetSound(it.soundId, it.soundVol); else chime(); }
+        if (it.sound && !e.mute) { if (it.soundId) playAssetSound(it.soundId, it.soundVol); else chime(); }
         setTimeout(function () {
             liveAlertNodes(id).forEach(function (t) {
                 var c = t.node.querySelector('.agp-so-acard');
@@ -5258,7 +5259,13 @@
         AVATAR_SHAPES: AVATAR_SHAPES, AVATAR_FRAMES: AVATAR_FRAMES, SWIRL_MOTIONS: SWIRL_MOTIONS, FX_MOTIONS: FX_MOTIONS, FX_DEFAULT_COLORS: FX_DEFAULT_COLORS, avatarFrame: avatarFrame, avatarFx: avatarFx, avatarSwirl: avatarSwirl, hueDist: hueDist, calibrateHue: calibrateHue,
         KEY_DEFAULT: KEY_DEFAULT, LIVE_VERSION: LIVE_VERSION, PARTS_DEFAULT: PARTS_DEFAULT, PART_ANIMS: PART_ANIMS, PART_LOOPS: PART_LOOPS, loopOf: loopOf, partsSample: partsSample, fillMsg: fillMsg, DECOS: DECOS, veyroBase: veyroBase, vbgOf: vbgOf, vfxFilter: vfxFilter, ALERT_TINTS: ALERT_TINTS, tintFilter: tintFilter, assetUrl: assetUrl, playAssetSound: playAssetSound, videoAlertLen: videoAlertLen, prefetchVideo: prefetchVideo, videoSrc: videoSrc, PART_MSGS: PART_MSGS, partsOf: partsOf, keyOf: keyOf, isVideoAlert: isVideoAlert, videoFileUrl: videoFileUrl, makeKeyer: makeKeyer,
         /** المحرر: تنبيه تجريبي بأداة الأليرتات (type = gift/follow/share/join). */
-        alertDemo: function (itemId, type) { var it = alertItems().filter(function (x) { return x.id === itemId; })[0]; queueAlert(itemId, sampleEvent(type || 'gift', it), true); },
+        /** opts.mute = المعاينة بدون صوت (لما «جرّب» يوصل لشاشة البث، الصوت يطلع من تطبيق البث بس). */
+        alertDemo: function (itemId, type, opts) {
+            var it = alertItems().filter(function (x) { return x.id === itemId; })[0];
+            var e = sampleEvent(type || 'gift', it);
+            if (opts && opts.mute) e = Object.assign({}, e, { mute: true });
+            queueAlert(itemId, e, true);
+        },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
         commit: function () { save(); if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); } },
         /** الاستوديو: هدايا تجريبية تطيح بالوعاء (بالمعاينة فقط، ما تنحفظ). */
