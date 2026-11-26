@@ -885,6 +885,8 @@ module.exports = { createGame: createGame, ROLE_NAMES: ROLE_NAMES, REVEAL_MS: RE
             var cit = Math.max(0, n - sum), err = problem(s, n), nExtra = EXTRA.filter(function (k) { return c[k] > 0; }).length;
             var sumHtml = CORE.concat(EXTRA).filter(function (k) { return c[k] > 0; }).map(function (k) { return '<span>' + ROLES[k].i + ' ' + esc(ROLES[k].n) + ' ×' + c[k] + '</span>'; }).join('') +
                 '<span>' + ROLES.citizen.i + ' مواطن ×' + cit + '</span>';
+            // نعيد الرسم مع كل ضغطة، فنحفظ مكان السكرول عشان ما يرجع لفوق (الأدوار الإضافية تحت)
+            var oldB = bg.querySelector('.vrp-b'), keep = oldB ? oldB.scrollTop : 0;
             bg.innerHTML = '<div class="vrp" role="dialog" aria-modal="true" aria-labelledby="vrpT">' +
                 '<div class="vrp-h"><button type="button" class="vrp-x" data-close aria-label="إغلاق">✕</button>' +
                 '<div class="k">🌙 ' + n + ' لاعبًا في القرية</div><h2 id="vrpT">اختر الأدوار</h2><p>كل من لا يأخذ دورًا يصير <b>مواطنًا</b>.</p>' +
@@ -895,6 +897,7 @@ module.exports = { createGame: createGame, ROLE_NAMES: ROLE_NAMES, REVEAL_MS: RE
                 '<div class="vrp-f"><div class="vrp-sum">' + sumHtml + '</div>' +
                 '<button type="button" class="vrp-go" data-go' + (err ? ' disabled' : '') + '>🌙 وزّع الأدوار</button>' +
                 (err ? '<div class="vrp-err">' + esc(err) + '</div>' : '') + '</div></div>';
+            var newB = bg.querySelector('.vrp-b'); if (newB) newB.scrollTop = keep;
         }
         bg.addEventListener('click', function (e) {
             var t = e.target;
