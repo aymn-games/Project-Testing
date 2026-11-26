@@ -61,8 +61,8 @@
         '.vv-ph{display:flex;align-items:flex-start;gap:8px}.vv-ph .ic{flex:none;color:var(--pc);margin-top:3px}.vv-ph .t{flex:1;min-width:0}' +
         '.vv-ph b{display:block;font-size:20px;font-weight:900;line-height:1.35}.vv-ph small{display:block;font-size:14.5px;font-weight:600;color:#c3cbef;line-height:1.6}' +
         '.vv-ph .fin{flex:none;font-size:14px;font-weight:800;color:#f5c84c;text-align:center;line-height:1.3}' +
-        '.vv-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:104px;gap:16px 10px;align-content:start;padding:12px 2px 2px;scrollbar-width:none}' +
-        '.vv-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:18px 0 0;height:104px;border-radius:18px;border:1.5px solid rgba(90,130,255,.35);background:rgba(26,46,120,.55);color:#eef1ff;min-width:0;overflow:visible}' +
+        '.vv-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:116px;gap:16px 10px;align-content:start;padding:12px 2px 2px;scrollbar-width:none}' +
+        '.vv-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:16px 0 0;height:116px;border-radius:18px;border:1.5px solid rgba(90,130,255,.35);background:rgba(26,46,120,.55);color:#eef1ff;min-width:0;overflow:visible}' +
         '.vv-c .n{position:absolute;top:-9px;right:8px;min-width:40px;height:26px;padding:0 8px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(180deg,#5aa0ff,#2f6fe8);font-size:15px;font-weight:900;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.35)}' +
         '.vv-c b{font-size:14px;font-weight:800;max-width:100%;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
         '.vv-c .f{align-self:stretch;margin-top:auto;padding:3px 4px;border-radius:0 0 16px 16px;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
@@ -70,6 +70,16 @@
         '.vv-c.sel{border-color:#f5c84c;box-shadow:0 0 0 2px #f5c84c;background:rgba(70,60,40,.6)}' +
         '.vv-c.voted{border-color:#6fdba1}' +
         '.vv-c.dim{opacity:.45}' +
+        '.vv-c.skipd{border-color:#f0a040}.vv-c .f.skp{background:#f0a040;color:#2a1600}' +
+        '.vv-c.dead{opacity:.55;background:rgba(20,30,80,.5)}.vv-c.dead b{text-decoration:line-through;text-decoration-thickness:2px}.vv-c.dead .n{background:rgba(255,255,255,.16);box-shadow:none}' +
+        '.vv-c .f.role{display:flex;align-items:center;justify-content:center;gap:4px;background:rgba(10,18,60,.75);color:#c3cbef;font-size:13px}.vv-c .f.role svg{flex:none}' +
+        '.vv-c.mayor .f.role{color:#f5c84c}' +
+        '.vv-c.me{border-color:#c9a24a;box-shadow:0 0 0 1px #c9a24a}' +
+        '.vv-ph .cnt{flex:none;font-size:16px;font-weight:800;color:#f5c84c}' +
+        '.vv-chip.dead{opacity:.5;text-decoration:line-through}' +
+        '.vv-dead{flex:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:14px;background:rgba(8,16,52,.8);font-weight:800;font-size:15px;color:#f08a96}' +
+        '.vv-head.dead{border-color:#e0687a;background:linear-gradient(to left,#1b2659 30%,#6a1b2c);box-shadow:0 0 24px rgba(224,104,122,.2)}.vv-head.dead small{color:#c9cdef}' +
+        '.vv-head.dead .vv-clock{background:rgba(60,10,20,.75)}' +
         '.vv-c:disabled{cursor:default}.vv-c.off{opacity:.3}' +
         '.vv-c .ok{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#16a34a;color:#fff;font-size:15px;font-weight:900;box-shadow:0 0 0 2px #f5c84c}' +
         '.vv-c.skip .vv-tile{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.08);font-size:22px}' +
@@ -146,7 +156,7 @@
             var src = api.photo ? api.photo(p) : null;
             return '<span class="vv-av" style="width:' + size + 'px;height:' + size + 'px">' + L.avatarSVG(p.look, size) + (src ? '<img src="' + esc(src) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
         }
-        function chip(p) { return '<span class="vv-chip">' + esc(p.name) + (p.role === 'forger' ? ' (المزوّر)' : '') + ' <em>' + (p.seat + 1) + '</em>' + av(p, 30) + '</span>'; }
+        function chip(p) { return '<span class="vv-chip' + (p.alive ? '' : ' dead') + '">' + esc(p.name) + (p.role === 'forger' ? ' (المزوّر)' : '') + ' <em>' + (p.seat + 1) + '</em>' + av(p, 30) + '</span>'; }
         function mates() { return G.players.filter(function (p) { return p.mate; }).sort(function (a, b) { return a.seat - b.seat; }); }
 
         // ---------------------------------------------------------------- الأحداث
@@ -259,12 +269,23 @@
         }
         function votePanel(me) {
             var my = me.vote, votes = G.votes || {};
-            var skip = '<button type="button" class="vv-c skip' + (my === 'skip' ? ' sel' : my ? ' dim' : '') + '"' + (my ? ' disabled' : ' data-vote="skip"') + '><span class="vv-tile">⏭</span><b>تخطّى</b>' + (my === 'skip' ? '<span class="f mine">صوتك</span>' : G.skipVotes ? '<span class="f done">' + G.skipVotes + '</span>' : '') + '</button>';
+            var skip = '<button type="button" class="vv-c skip' + (my === 'skip' ? ' sel' : my ? ' dim' : '') + '"' + (my ? ' disabled' : ' data-vote="skip"') + '><span class="vv-tile">‹</span><b>تخطّى</b>' + (my === 'skip' ? '<span class="f mine">صوتك</span>' : G.skipVotes ? '<span class="f done">' + G.skipVotes + '</span>' : '') + '</button>';
             var cards = alive().map(function (p) {
                 var mine = my === p.id, can = !my && p.id !== me.id;
-                return card(p, { attr: can ? 'data-vote="' + p.id + '"' : '', cls: (mine ? ' sel' : votes[p.id] ? ' voted' : '') + (my && !mine ? ' dim' : '') + (p.id === me.id ? ' off' : ''), ok: mine, foot: mine ? 'صوتك' : votes[p.id] ? '✓ صوّت' : '', footCls: mine ? 'mine' : 'done' });
+                // تحت كل لاعب: «صوّت» لو صوّت هو، و«تخطّى» لو تخطّى، واختيارك «صوتك»
+                var sk = votes[p.id] === 'skip';
+                return card(p, { attr: can ? 'data-vote="' + p.id + '"' : '', cls: (mine ? ' sel' : sk ? ' skipd' : votes[p.id] ? ' voted' : '') + (my && !mine ? ' dim' : '') + (p.id === me.id ? ' off' : ''), ok: mine, foot: mine ? 'صوتك' : sk ? '‹ تخطّى' : votes[p.id] ? '✓ صوّت' : '', footCls: mine ? 'mine' : sk ? 'skp' : 'done' });
             }).join('');
             return '<div class="vv-panel gold"><div class="vv-ph"><span class="ic">◎</span><div class="t"><b>اضغط على من تشك أنه من المافيا</b></div><span class="fin">صوتك<br>نهائي</span></div><div class="vv-grid">' + skip + cards + '</div></div>';
+        }
+        /** «أهل القرية»: كل اللاعبين — الحي واضح، والميت باهت واسمه مشطوب وتحته دوره، والعمدة دوره ظاهر */
+        function villagers(me) {
+            var all = G.players.slice().sort(function (a, b) { return a.seat - b.seat; }), n = all.filter(function (p) { return p.alive; }).length;
+            var cards = all.map(function (p) {
+                var showRole = p.role && (!p.alive || p.role === 'mayor'), r = showRole ? R[p.role] || R.citizen : null;
+                return card(p, { cls: (p.alive ? '' : ' dead') + (p.role === 'mayor' && p.alive ? ' mayor' : '') + (p.id === me.id ? ' me' : ''), foot: r ? esc(r.n) + V.icon(p.role, 14) : '', footCls: 'role' });
+            }).join('');
+            return '<div class="vv-panel" style="--pc:#4a6fd6"><div class="vv-ph"><span class="ic" style="color:#f5c84c">' + V.icon('citizen', 24) + '</span><div class="t"><b>أهل القرية</b></div><span class="cnt">' + n + ' أحياء</span></div><div class="vv-grid">' + cards + '</div></div>';
         }
         function notices(me) {
             return (me.notices || []).filter(function (n) { return n.round === G.round && n.round > 0; }).map(function (n) {
@@ -293,7 +314,7 @@
             var ph = G.phase;
             if (ph === 'over') { var won = me.team === G.winner || (G.jesterWins || []).indexOf(me.id) >= 0; return [won ? 'فزت! 🏆' : 'خسرت', G.winner === 'mafia' ? 'فازت المافيا' : 'فاز أهل القرية']; }
             if (ph === 'reveal') return ['هذا دورك، لا تقله لأحد', 'يبدأ الليل بعد قليل'];
-            if (!me.alive) return ['خرجت من القرية', 'تابع اللعبة على البث'];
+            if (!me.alive) return ['أنت ميت', 'تابع بصمت، ولا تكشف شيئًا في شات البث'];
             if (ph === 'night') {
                 if (!me.actor) return ['القرية نايمة', 'انتظر الصبح'];
                 if (me.confirmed) return ['تم اختيارك', 'انتظر الصبح'];
@@ -309,9 +330,9 @@
             var ph = G.phase;
             if (ph === 'over') return bigRole(me) + events(me);
             if (ph === 'reveal') return bigRole(me);
-            if (!me.alive) return band(me) + state('💀', 'خرجت من القرية', 'لا تكشف شي للأحياء!') + events(me);
+            if (!me.alive) return band(me) + villagers(me);
             if (ph === 'night') return band(me) + (me.actor ? nightPanel(me) : state(me.role === 'sniper' ? '🎯' : '😴', me.role === 'sniper' ? 'خلصت رصاصتك' : 'نام… القرية نايمة', me.role === 'mayor' ? 'ما عندك شي بالليل. بكرة صوتك بصوتين 👑' : me.role === 'jester' ? 'بكرة خلّهم يشكّون فيك… هدفك يطردونك.' : 'ما عندك شي بالليل. انتظر الصبح.'));
-            if (ph === 'dawn') return band(me) + notices(me) + events(me);
+            if (ph === 'dawn') return band(me) + notices(me) + villagers(me);
             if (ph === 'day') return notices(me);
             if (ph === 'vote') return band(me) + votePanel(me);
             if (ph === 'verdict') return band(me) + verdict() + events(me);
@@ -344,7 +365,9 @@
                 if (G.phase === 'day') { tab = 'city'; open.city = true; }
             }
             var tk = (mp.name || '') + (mp.seat || 0) + (api.photo ? api.photo(mp) || '' : '');
-            if (tk !== topKey) { topKey = tk; $('vvTop').innerHTML = '<div class="vv-me">' + av(mp, 52) + '<span>' + esc(mp.name || '') + '</span></div><span class="vv-num">رقمك <b>' + ((mp.seat || 0) + 1) + '</b></span>'; }
+            tk += me.alive ? '' : ':dead';
+            if (tk !== topKey) { topKey = tk; $('vvTop').innerHTML = '<div class="vv-me">' + av(mp, 52) + '<span>' + esc(mp.name || '') + '</span></div><div style="display:flex;gap:8px">' + (me.alive ? '' : '<span class="vv-dead">ℹ ميت</span>') + '<span class="vv-num">رقمك <b>' + ((mp.seat || 0) + 1) + '</b></span></div>'; }
+            $('vvHead').classList.toggle('dead', !me.alive && G.phase !== 'over');
             $('vvTop').classList.toggle('hide', G.phase === 'day' && me.alive);   // النهار: الشات ياخذ الشاشة
             var h = head(me); $('vvHT').textContent = h[0]; $('vvHS').textContent = h[1];
             tick(); renderBody(); renderDock();

@@ -319,11 +319,12 @@ function gameApi(G, hooks, restored) {
     function view(id) {
         var isHost = id === 'host', me = !isHost && P(id), over = G.phase === 'over';
         var meMafia = !!(me && me.alive && me.team === 'mafia');
+        var knowsMafia = !!(me && me.team === 'mafia');   // المافيا الميت يبقى يعرف زملاءه (شاشة الميت)، بس شاتهم واختياراتهم للأحياء
         var players = G.players.map(function (p) {
             var o = { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, seat: p.seat, alive: p.alive, cause: p.cause, causeRef: p.causeRef, diedRound: p.diedRound, role: null, team: null };
             // الدور ينكشف: بالنهاية، ولما يموت، ولصاحبه، والمافيا يعرفون بعض (مع المزوّر)، والعمدة معروف للكل
-            if (over || !p.alive || p === me || (meMafia && p.team === 'mafia') || p.role === 'mayor') { o.role = p.role; o.team = p.team; }
-            if (meMafia && p.team === 'mafia' && p !== me) o.mate = true;
+            if (over || !p.alive || p === me || (knowsMafia && p.team === 'mafia') || p.role === 'mayor') { o.role = p.role; o.team = p.team; }
+            if (knowsMafia && p.team === 'mafia' && p !== me) o.mate = true;
             return o;
         });
         var v = {
