@@ -16,6 +16,26 @@
 <link rel="stylesheet" href="mafia-host.css">
 <script src="mafia-net.js"></script>
 <script src="mafia-host.js"></script>
+<style>
+/* اختيار النظام: أول شي يشوفه المذيع — بطاقتين (الحالي / الجديد) */
+.sys { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(16px,3vh,28px); padding-bottom: 24px; overflow-y: auto; }
+.sys-cards { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(12px,1.6vw,22px); }
+.sys-card { --sc: #a78bfa; position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: right; padding: clamp(18px,2vw,28px); border-radius: 26px; cursor: pointer; color: var(--ink);
+    background: radial-gradient(120% 70% at 100% 0%, color-mix(in srgb, var(--sc) 22%, transparent), transparent 60%), var(--card); border: 1.5px solid color-mix(in srgb, var(--sc) 35%, transparent);
+    box-shadow: 0 20px 60px rgba(0,0,0,.35); transition: transform .2s, border-color .2s, box-shadow .2s; font-family: inherit; animation: rise .45s ease both; }
+.sys-card:hover, .sys-card:focus-visible { transform: translateY(-3px); border-color: var(--sc); box-shadow: 0 24px 70px rgba(0,0,0,.45), 0 0 40px color-mix(in srgb, var(--sc) 30%, transparent); outline: none; }
+.sys-card .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font: 700 12px 'IBM Plex Sans Arabic', sans-serif; color: #fff; background: var(--sc); }
+.sys-card .em { font-size: 44px; line-height: 1; }
+.sys-card h2 { margin: 0; font: 800 clamp(22px,2.2vw,30px) 'IBM Plex Sans Arabic', sans-serif; }
+.sys-card p { margin: 0; font: 500 14.5px/1.75 'IBM Plex Sans Arabic', sans-serif; color: var(--sub2); }
+.sys-card ul { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.sys-card li { font: 600 14px/1.6 'IBM Plex Sans Arabic', sans-serif; color: var(--ink2); }
+.sys-card .go { margin-top: auto; align-self: stretch; display: flex; justify-content: center; align-items: center; gap: 8px; height: 50px; border-radius: 999px; background: var(--sc); color: #fff; font: 700 17px 'IBM Plex Sans Arabic', sans-serif; }
+.sys-card.new { --sc: #e0a81e; }
+.sys-card.new .go { color: #2a1d00; background: linear-gradient(180deg, #ffe08a, #f0b93a); }
+.sys-switch { cursor: pointer; }
+@media (max-width: 760px) { .sys-cards { grid-template-columns: 1fr; } .sys-card .em { font-size: 34px; } }
+</style>
 </head>
 <body>
 <div class="fx" aria-hidden="true"></div>
@@ -23,19 +43,41 @@
 <header class="hdr">
     <div class="side"><button class="hbtn exit" id="exitBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="lbl-txt">خروج</span></button></div>
     <div class="logo"><img src="../../logo.png" alt="" onerror="this.style.display='none'"></div>
-    <div></div>
+    <div class="side end"><button class="hbtn sys-switch hide" id="sysBtn" type="button">🔁 <span class="lbl-txt">تغيير النظام</span></button></div>
 </header>
 
 <main class="main">
     <div class="wrap">
-        <div class="titlebox">
-            <span class="title">المافيا</span>
+        <!-- 0) اختيار النظام: أول ما تنفتح اللعبة -->
+        <section class="sys" id="sysPick">
+            <div class="titlebox" style="padding-bottom:0">
+                <span class="title">المافيا</span>
+                <span class="pill"><span class="dot"></span>اختر نظام اللعب</span>
+            </div>
+            <div class="sys-cards">
+                <button class="sys-card" type="button" data-sys="classic" style="animation-delay:.05s">
+                    <span class="tag">النظام الحالي</span><span class="em">🔪</span><h2>مدينة المافيا</h2>
+                    <p>النظام اللي تعرفونه: الليل بالأدوار (المافيا ← الطبيب ← المحقق) مع مشاهد سينمائية.</p>
+                    <ul><li>🃏 كروت المافيا: تجنيد، حماية، تضليل، إسكات…</li><li>🔒 شات سري للمافيا والأطباء والمحققين</li><li>🏙️ أحياء للرومات الكبيرة</li></ul>
+                    <span class="go">العب بالنظام الحالي</span>
+                </button>
+                <button class="sys-card new" type="button" data-sys="village" style="animation-delay:.12s">
+                    <span class="tag">🆕 النظام الجديد</span><span class="em">🏘️</span><h2>القرية</h2>
+                    <p>تختار الأدوار قبل التوزيع، والليل كله بنفس الوقت. الصبح يكشف مين مات ودوره، والقرية تصوّت وتطرد.</p>
+                    <ul><li>👑 العمدة · 🛡️ الحارس الشخصي · 🎯 القنّاص</li><li>✒️ المزوّر (مع المافيا) · 🤡 المهرّج (محايد)</li><li>🗳️ صوت واحد لكل لاعب ولا يتغيّر</li></ul>
+                    <span class="go">العب بالنظام الجديد</span>
+                </button>
+            </div>
+        </section>
+
+        <div class="titlebox hide" id="setTitle">
+            <span class="title" id="setName">المافيا</span>
             <span class="pill"><span class="dot"></span>اللاعبين يدخلون من جوالاتهم بحساب الموقع</span>
         </div>
-        <div class="scroll noscroll">
+        <div class="scroll noscroll hide" id="setScroll">
             <div class="grid" id="sections"><div class="spinner" aria-label="جاري التحميل"></div></div>
         </div>
-        <div class="footer">
+        <div class="footer hide" id="setFooter">
             <button class="cta" id="goBtn" type="button" disabled>الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
         </div>
     </div>
@@ -56,15 +98,41 @@
     var NET = window.MafiaNet;
     var $ = function (id) { return document.getElementById(id); };
     var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
-    var schema = null, cur = NET.setup() || {}, firstRender = true;
+    // نظامين: الحالي (classic) والجديد «القرية» (village). كل نظام إعداداته محفوظة لحالها بالجهاز،
+    // واللي ينختار ينحفظ بـNET.setup() عشان اللوبي يرسله للخادم عند إنشاء الروم.
+    function readLS(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+    function writeLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+    var last = NET.setup() || {};
+    var store = {
+        classic: readLS('mafia-setup-classic') || (last.system ? {} : last),
+        village: readLS('mafia-setup-village') || (last.system === 'village' ? last : { system: 'village' })
+    };
+    var schemas = null, mode = null, schema = null, cur = {}, firstRender = true;
 
     // مخطط الإعدادات من الخادم (هو المرجع للحدود والقيم الافتراضية)
     var net = NET.connect(function (m) {
         if (m.t !== 'schema') return;
-        schema = m.schema;
-        schema.forEach(function (g) { g.f.forEach(function (f) { if (cur[f.k] === undefined) cur[f.k] = f.d; }); });
-        render(); $('goBtn').disabled = false;
+        schemas = { classic: m.schema, village: m.village || [] };
+        ['classic', 'village'].forEach(function (k) { schemas[k].forEach(function (g) { g.f.forEach(function (f) { if (store[k][f.k] === undefined) store[k][f.k] = f.d; }); }); });
+        if (mode) choose(mode);
     }, function () { net.send({ t: 'schema' }); });
+
+    /** اختيار النظام ← شاشة إعداداته */
+    function choose(k) {
+        mode = k; cur = store[k]; firstRender = true;
+        ['setTitle', 'setScroll', 'setFooter', 'sysBtn'].forEach(function (id) { $(id).classList.remove('hide'); });
+        $('sysPick').classList.add('hide');
+        $('setName').textContent = k === 'village' ? 'المافيا · القرية' : 'المافيا';
+        if (!schemas) return;
+        schema = schemas[k];
+        render(); $('goBtn').disabled = false;
+    }
+    document.querySelectorAll('[data-sys]').forEach(function (b) { b.onclick = function () { choose(b.getAttribute('data-sys')); }; });
+    $('sysBtn').onclick = function () {
+        mode = null; $('goBtn').disabled = true;
+        ['setTitle', 'setScroll', 'setFooter', 'sysBtn'].forEach(function (id) { $(id).classList.add('hide'); });
+        $('sysPick').classList.remove('hide');
+    };
 
     function field(k) { var r = null; schema.forEach(function (g) { g.f.forEach(function (f) { if (f.k === k) r = f; }); }); return r; }
     // صفوف ما لها فايدة بهالإعدادات تختفي (نفس منطق الخادم mafia-settings.cardUseful)
@@ -93,6 +161,13 @@
             html += '</section>';
         });
         var s = cur;
+        if (mode === 'village') {
+            html += '<section class="sec full' + anim + '" style="animation-delay:.2s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">الأدوار</span></div>' +
+                '<div class="note" style="padding-top:8px">بعد ما يدخلون اللاعبين، اضغط <b style="color:#fff">«اختر الأدوار ووزّعها»</b> باللوبي وحدد عدد كل دور: المافيا، الطبيب، المحقق، والأدوار الإضافية (العمدة، الحارس الشخصي، القنّاص، المزوّر، المهرّج). اللي ما ياخذ دور يصير مواطن.</div>' +
+                '<div class="chips" style="padding:10px 0 4px"><span class="chip">🌙 الليل كله بنفس الوقت</span><span class="chip">☀️ الصبح يكشف دور الميت</span><span class="chip">🗳️ صوت واحد ما يتغيّر</span><span class="chip">👥 من 5 لاعبين لين ' + s.maxPlayers + '</span></div></section>';
+            $('sections').innerHTML = html;
+            return;
+        }
         html += '<section class="sec full' + anim + '" style="animation-delay:.2s"><div class="sec-h"><span class="sec-n">' + (schema.length + 1) + '</span><span class="sec-t">ملخص الأدوار</span></div>' +
             '<div class="chips" style="padding:10px 0 4px"><span class="chip">🔪 ' + s.mafia + ' مافيا' + (s.disguised ? ' (منهم ' + s.disguised + ' متخفي)' : '') + '</span>' +
             (s.doctors ? '<span class="chip">🩺 ' + s.doctors + ' طبيب</span>' : '') +
@@ -108,13 +183,19 @@
         var k = b.getAttribute('data-k'), f = field(k);
         if (f.t === 'bool') cur[k] = !cur[k];
         else cur[k] = Math.max(f.min, Math.min(f.max, cur[k] + f.step * Number(b.getAttribute('data-d'))));
+        if (mode === 'village') { writeLS('mafia-setup-village', cur); return render(); }
         if (cur.disguised > cur.mafia) cur.disguised = cur.mafia;   // المتخفين من ضمن المافيا
         if (!cur.detectives) cur.disguised = 0;                     // بدون محقق ما له معنى
         cur.cardsCount = Math.min(cur.cardsCount, enabledCards(cur).length);   // ما يتعدى الكروت المفعّلة
-        NET.setup(cur); render();
+        NET.setup(cur); writeLS('mafia-setup-classic', cur); render();
     });
 
-    $('goBtn').onclick = function () { NET.setup(cur); location.href = 'lobby.html'; };
+    $('goBtn').onclick = function () {
+        if (!mode) return;
+        if (mode === 'village') cur.system = 'village'; else delete cur.system;
+        writeLS(mode === 'village' ? 'mafia-setup-village' : 'mafia-setup-classic', cur);
+        NET.setup(cur); location.href = 'lobby.html';
+    };
     $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
     $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
     $('exitYes').onclick = function () {

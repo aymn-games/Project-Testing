@@ -19,6 +19,7 @@
 <script src="../../js/agp-entrance.js"></script>
 <script src="mafia-net.js"></script>
 <script src="mafia-host.js"></script>
+<script src="village-roles.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 /* كرت اللاعبين: نفس كرت الفريق بلوبي روليت الإقصاء */
@@ -131,7 +132,7 @@
             $('code').textContent = m.code; makeQr();
         } else if (m.t === 'room') {
             S.room = m.room;
-            if (m.room.started) return location.replace('game.html');   // بدأت المباراة ← شاشة المباراة
+            if (m.room.started) return location.replace(isVillage() ? 'village.html' : 'game.html');   // بدأت المباراة ← شاشة المباراة (حسب النظام)
             render();
         } else if (m.t === 'avatars') { Object.keys(m.map).forEach(function (k) { PHOTOS[k] = m.map[k]; }); if (S.room) render(); }
         else if (m.t === 'err') toast(m.err);
@@ -199,6 +200,14 @@
         $('empty').classList.toggle('hide', list.length > 0);
         $('cnt').textContent = list.length; $('cntMax').textContent = '/ ' + R.settings.maxPlayers + ' لاعب';
         var s = R.settings;
+        if (s.system === 'village') {   // نظام القرية: الأدوار تنختار بنافذة «اختر الأدوار» قبل التوزيع
+            $('roles').innerHTML = '<span class="chip">🏘️ نظام القرية</span><span class="chip">الأدوار تنختار قبل التوزيع</span>';
+            var okV = list.length >= 5;
+            $('startBtn').disabled = !okV;
+            $('startTxt').textContent = okV ? 'اختر الأدوار ووزّعها' : 'تحتاج 5 لاعبين (' + list.length + '/5)';
+            if (picker) picker.refresh();
+            return;
+        }
         $('roles').innerHTML = '<span class="chip">🔪 ' + s.mafia + ' مافيا' + (s.disguised ? ' · ' + s.disguised + ' متخفي' : '') + '</span>' +
             (s.doctors ? '<span class="chip">🩺 ' + s.doctors + ' طبيب</span>' : '') + (s.detectives ? '<span class="chip">🕵️ ' + s.detectives + ' محقق</span>' : '');
         var need = R.minPlayers, ok = list.length >= need;
@@ -213,7 +222,19 @@
     $('cards').addEventListener('click', function (e) {
         var b = e.target.closest('[data-kick]'); if (b) net.send({ t: 'kick', id: b.getAttribute('data-kick') });
     });
-    $('startBtn').onclick = function () { net.send({ t: 'start' }); };
+    function isVillage() { return !!(S.room && S.room.settings && S.room.settings.system === 'village'); }
+    var picker = null;
+    $('startBtn').onclick = function () {
+        if (!isVillage()) return net.send({ t: 'start' });
+        // نظام القرية: نافذة «اختر الأدوار» (بعدد اللاعبين الحالي) ← «وزّع الأدوار» يحفظ الأعداد ويبدأ
+        if (picker) return;
+        picker = window.MafiaVillage.openPicker({
+            settings: S.room.settings,
+            count: function () { return S.room ? S.room.players.length : 0; },
+            onDeal: function (st) { NET.setup(st); net.send({ t: 'settings', settings: st }); net.send({ t: 'start' }); },
+            onClose: function () { picker = null; }
+        });
+    };
 
     var tt;
     function toast(text) { var t = $('toast'); t.textContent = text; t.classList.remove('hide'); clearTimeout(tt); tt = setTimeout(function () { t.classList.add('hide'); }, 3500); }

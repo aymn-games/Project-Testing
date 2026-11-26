@@ -26,6 +26,9 @@ var logger = require('../utils/logger');
 var CodeRanges = require('../rooms/room-code-ranges');
 var Settings = require('./mafia-settings');
 var Game = require('./mafia-game');
+var Village = require('./mafia-village');
+/** المحرك حسب النظام اللي اختاره المذيع: «القرية» (النظام الجديد) أو الحالي */
+function engineFor(settings) { return settings && settings.system === 'village' ? Village : Game; }
 
 // حدود ملامح الشخصية (لازم تطابق اللوحات في games/mafia/mafia-looks.js)
 var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6 };
@@ -183,7 +186,7 @@ function restoreRoom(o) {
     var room = { code: o.code, token: o.token, settings: Settings.validate(o.settings || {}), players: [], lobbyChat: o.lobbyChat || [], lobbyChatN: o.lobbyChatN || 0, started: false, game: null, hostConn: null, hostGoneAt: Date.now(), dirty: true, lastSend: 0 };
     room.players = (o.players || []).map(function (p) { var q = Object.assign({}, p); q.photo = q.uid != null ? _photoOf(q.uid) : null; return q; });
     if (o.started && o.game) {
-        room.game = Game.createGame(null, room.settings, { onChange: function () { room.dirty = true; markSave(room); } }, o.game);
+        room.game = engineFor(room.settings).createGame(null, room.settings, { onChange: function () { room.dirty = true; markSave(room); } }, o.game);
         room.started = true;
     }
     _rooms[room.code] = room;
@@ -224,7 +227,7 @@ function closeRoom(room, reason) {
 }
 
 function startGame(room) {
-    room.game = Game.createGame(room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok }; }), room.settings, {
+    room.game = engineFor(room.settings).createGame(room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok }; }), room.settings, {
         onChange: function () { room.dirty = true; markSave(room); }
     });
     room.started = true; room.dirty = true;
@@ -319,7 +322,7 @@ function onMessage(client, msg) {
     if (t === 'caps') { client.chatDelta = !!msg.chatDelta; return; }
     if (t === 'resync') { client.chatNs = null; client.lastView = null; if (room) room.dirty = true; return; }
 
-    if (t === 'schema') return send(client, { t: 'schema', schema: Settings.SCHEMA });
+    if (t === 'schema') return send(client, { t: 'schema', schema: Settings.SCHEMA, village: Settings.VILLAGE_SCHEMA, villageRoles: Settings.VILLAGE_ROLES });
     if (t === 'host') {
         var r = msg.code && _rooms[msg.code];
         if (!(r && msg.token && r.token === msg.token)) r = createRoom();
@@ -327,7 +330,7 @@ function onMessage(client, msg) {
         // إعدادات شاشة الإعدادات تنطبق قبل البداية بس
         if (msg.settings && !r.started) r.settings = Settings.validate(msg.settings);
         attach(client, r, 'host', 'host');
-        send(client, { t: 'welcome', role: 'host', id: 'host', code: r.code, token: r.token, schema: Settings.SCHEMA });
+        send(client, { t: 'welcome', role: 'host', id: 'host', code: r.code, token: r.token, schema: Settings.SCHEMA, villageRoles: Settings.VILLAGE_ROLES });
         broadcastRoom(r); if (r.game) sendStates(r);
         return;
     }

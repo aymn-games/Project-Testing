@@ -12,6 +12,8 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="mafia-net.js"></script>
 <script src="mafia-looks.js"></script>
+<script src="village-roles.js"></script>
+<script src="village-phone.js"></script>
 <style>
 :root { /* هوية ألعاب أيمن (نفس روليت الإقصاء): بنفسجي على خلفية داكنة */
     --bg: #07060b; --card: #13111b; --card2: #1c1828; --ink: #f4f2f8; --mute: #a8a3b5; --line: rgba(255,255,255,.09);
@@ -627,6 +629,9 @@ body.watching { overflow: hidden; }
         <div id="gTrail"></div>
         <div id="gameBody"></div>
     </section>
+
+    <!-- 5) المباراة بنظام القرية (النظام الجديد) — village-phone.js يبنيها -->
+    <section id="vVillage" class="hide"></section>
 </div>
 <div class="status" id="status">جاري الاتصال…</div>
 
@@ -640,7 +645,14 @@ body.watching { overflow: hidden; }
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: NET.look() || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
 
-    function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame'); ['vCode', 'vProfile', 'vWait', 'vGame'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
+    function show(v) { S.view = v; document.body.classList.toggle('in-game', v === 'vGame' || v === 'vVillage'); ['vCode', 'vProfile', 'vWait', 'vGame', 'vVillage'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
+    // نظام القرية: شاشة اللعب لحالها (village-phone.js) — نفس الاتصال والدخول والانتظار
+    var village = null;
+    function renderVillage() {
+        if (!village) village = window.MafiaVillagePhone.mount($('vVillage'), { act: function (a, arg) { net.send({ t: 'act', a: a, arg: arg }); } });
+        if (S.view !== 'vVillage') show('vVillage');
+        village.render(S.G);
+    }
 
     var net = NET.connect(onMsg, function () {
         if (S.me && (S.me.room === S.code || !S.code)) { S.code = S.me.room; net.send({ t: 'resume', code: S.me.room, id: S.me.id, key: S.me.key }); }
@@ -663,7 +675,9 @@ body.watching { overflow: hidden; }
             S.room = m.room; renderRoomInfo();
             if (S.me && !m.room.started && S.view !== 'vProfile') { S.G = null; show('vWait'); renderWait(); maybeNews(); }
         } else if (m.t === 'state') {
-            S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame(); maybeNews();
+            S.G = m.G;
+            if (m.G.system === 'village') return renderVillage();
+            if (S.view !== 'vGame') show('vGame'); renderGame(); maybeNews();
         } else if (m.t === 'lobby') {
             closeScene(); S.G = null; show('vWait'); renderWait();
         } else if (m.t === 'err') {
@@ -1362,7 +1376,7 @@ body.watching { overflow: hidden; }
     function paneHtml(G, k) { return k === 'secret' ? secretHtml(G) : k === 'events' ? eventsHtml(G) : cityHtml(G); }
 
     function renderGame() {
-        var G = S.G; if (!G || !G.me) return;
+        var G = S.G; if (!G || !G.me || G.system === 'village') return;   // نظام القرية له شاشته (village-phone.js)
         maybeFlash(G);
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
         var mb = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';

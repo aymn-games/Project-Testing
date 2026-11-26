@@ -356,6 +356,7 @@ body.vres .caption .role { margin-top: 4px; padding: 3px 14px; font-size: 16px; 
             if (!m.room.started) return location.replace('lobby.html');
             renderCtl();
         } else if (m.t === 'state') {
+            if (m.G && m.G.system === 'village') return location.replace('village.html');   // مباراة «نظام القرية» لها شاشتها
             S.G = m.G; onState();
         } else if (m.t === 'err') {
             $('status').textContent = m.err || ''; $('status').classList.add('on');
