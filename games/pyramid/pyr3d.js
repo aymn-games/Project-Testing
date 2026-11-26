@@ -754,7 +754,7 @@ export async function mountPyramid(el, opts = {}) {
         if (frame % 240 === 0) pulse(V(0, .04, activeLevel ? activeLevel.cz + 4 : -4), C.purple, 2, 70, 5, .08);
         for (const L of levels) if (L.alive && L.group.visible) L.update(dt, t);
         for (const a of actors.values()) a.update(dt, t);
-        tickPulses(dt); sparks.update(dt, t); confetti.update(dt, t); sparks.pts.material.uniforms.scale.value = confetti.pts.material.uniforms.scale.value = r.domElement.height * .6;
+        tickTags(t); tickPulses(dt); sparks.update(dt, t); confetti.update(dt, t); sparks.pts.material.uniforms.scale.value = confetti.pts.material.uniforms.scale.value = r.domElement.height * .6;
         if (champFx) champFx(dt, t);
         tickCam(dt, t);
         r.render(sc, cam);
@@ -812,13 +812,23 @@ export async function mountPyramid(el, opts = {}) {
     }
     function setUrgency(k) { urgency = clamp01(k); if (k > .6) for (const a of actors.values()) if (a.moodSet === 'choose' && a.rnd() < .02) a.setMood('tense'); }
     // اختيار رقم: الدائرة تتلوّن بلون اللاعب + موجة ضوء + شرار، والقديمة ترجع
+    // اسم اللاعب يطلع فوق الدائرة اللي اختارها (بدل قائمة جانبية) — يكبر بارتداد ويتمايل خفيف لين يوصل صاحبه
+    const pickTags = new Map(); // رقم الدائرة ← Sprite
+    const tagsOut = new Set();
+    function tickTags(t) {
+        for (const [, sp] of pickTags) { const k = clamp01((now() - sp.userData.t0) / .4), sc0 = easeBack(k) * sp.userData.s; sp.scale.set(sc0 * 4, sc0, 1); sp.position.y = sp.userData.y + Math.sin(t * 2 + sp.userData.ph) * .06 * K; }
+        for (const sp of [...tagsOut]) { const k = clamp01((now() - sp.userData.out) / .3); sp.material.opacity = 1 - k; sp.position.y += .02; if (k >= 1) { tagsOut.delete(sp); sc.remove(sp); sp.material.dispose(); } }
+    }
     function pick(id, num, prev) {
         const L = activeLevel, a = actors.get(String(id)); if (!L) return;
-        if (prev != null && L.st[prev - 1]) { const s = L.st[prev - 1]; s.mode = 'idle'; s.owner = null; }
+        if (prev != null && L.st[prev - 1]) { const s = L.st[prev - 1]; s.mode = 'idle'; s.owner = null; const t = pickTags.get(prev); if (t) { pickTags.delete(prev); t.userData.out = now(); tagsOut.add(t); } }
         if (num == null) return; const s = L.st[num - 1]; if (!s) return;
         s.mode = 'chosen'; s.owner = String(id); s.color.set(a ? a.color : C.cyan); s.flash = 1;
         const p = L.pos[num - 1].clone().setY(L.yTop + .4);
         pulse(p.clone().setY(L.yTop + .37), s.color, .4, 2.2, .6); sparks.emit(p, { count: 14, color: [a ? a.color : C.cyan, '#ffffff'], speed: 2.4, up: 2.5, life: .7, size: .22 });
+        if (a) { const old = pickTags.get(num); if (old) { pickTags.delete(num); old.userData.out = now(); tagsOut.add(old); }
+            const sp = new T.Sprite(new T.SpriteMaterial({ map: a.plateT, transparent: true, depthWrite: false, depthTest: false, toneMapped: false, fog: false })); sp.renderOrder = 6;
+            const pp = L.pos[num - 1]; sp.position.set(pp.x, L.yTop + 1.15 * K + .35, pp.z); sp.userData = { t0: now(), s: .55 * Math.max(.7, K), y: sp.position.y, ph: num }; sp.scale.set(.001, .001, 1); sc.add(sp); pickTags.set(num, sp); }
         if (a && !a.path) { a.lookAt = p.clone(); a.behUntil = Math.max(a.behUntil, now() + 1.6); if (a.rnd() < .5) { a.rig.play(a.rnd() < .5 ? 4 : 3); a.behUntil = now() + 1.4; a.ov = null; } }
     }
     async function timeUp() {
@@ -831,6 +841,7 @@ export async function mountPyramid(el, opts = {}) {
     }
     // اللاعبين اللي اختاروا يمشون لدوائرهم (تتابع خفيف حتى ما يتحركون كلهم بنفس اللحظة)
     async function moveIn(assign) {
+        for (const [n, sp] of [...pickTags]) { pickTags.delete(n); sp.userData.out = now(); tagsOut.add(sp); }
         const L = activeLevel; setMood('choose'); let maxT = 0;
         const entries = Object.entries(assign);
         setShot(oblique(pyramidPts(actorPts()), .5, 1.2, .04));
@@ -1003,6 +1014,7 @@ export async function mountPyramid(el, opts = {}) {
     // إعادة: يشيل الهرم كامل ويرجع الكل للساحة
     function reset() {
         champFx = null; isChoosing = false; urgency = 0; setMood('calm'); screen('الهرم', 'ألعاب أيمن');
+        for (const [n, sp] of [...pickTags]) { pickTags.delete(n); sc.remove(sp); sp.material.dispose(); } for (const sp of tagsOut) { sc.remove(sp); sp.material.dispose(); } tagsOut.clear();
         levels.splice(0).forEach(L => L.dispose()); activeLevel = null;
         for (const a of actors.values()) a.dispose(); actors.clear();
         setShot(lobbyShot());

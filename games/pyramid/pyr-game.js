@@ -111,12 +111,6 @@ const initial = p => [...String(p.name).replace(/^أبو\s*/, '')][0] || '؟';
 function avatarHtml(p, cls = '') { const c = colorOf(p.id); return p.avatar ? `<img class="av ${cls}" src="${esc(p.avatar)}" alt="" style="border-color:${c}" onerror="this.outerHTML='<span class=\\'av ${cls}\\' style=\\'border-color:${c}\\'>${esc(initial(p))}</span>'">` : `<span class="av ${cls}" style="border-color:${c};background:${c}33">${esc(initial(p))}</span>`; }
 function updateCount() { const lobby = G.phase === 'lobby'; $('#count').textContent = lobby ? G.players.length : G.alive.length; $('#countLbl').textContent = lobby ? 'بالساحة' : 'باقين'; }
 function pill(state) { $('#rRound').textContent = 'المرحلة ' + G.round; $('#rLeft').textContent = G.alive.length; if (state) $('#rState').textContent = state; updateCount(); }
-function feed(p, num, out) {
-    const box = $('#feed'), row = document.createElement('div'); row.className = 'frow' + (out ? ' out' : ''); const c = colorOf(p.id);
-    row.innerHTML = `<span class="dot" style="background:${c}">${esc(initial(p))}</span><b></b><em>${out ? 'خرج' : '← ' + num}</em>`; row.querySelector('b').textContent = p.name;
-    box.prepend(row); [...box.children].forEach((r, i) => { r.classList.toggle('old', i >= 4); if (i >= 6) r.remove(); });
-}
-function clearFeed() { $('#feed').innerHTML = ''; }
 
 // ---------- اللوبي (نفس بلدة الكاوبوي/روليت الإقصاء: بطاقة إطار لمن عنده + كبسولة صورة واسم + زر إقصاء)
 const KICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
@@ -178,7 +172,7 @@ const byId = id => G.alive.find(p => String(p.id) === String(id));
 
 async function startMatch() {
     $('#rules').classList.remove('in'); showLobby(false); SFX.unlock(); SFX.ambient(true);
-    G.alive = G.players.slice(); G.round = 0; G.startedAt = Date.now(); G.phase = 'intro'; clearFeed();
+    G.alive = G.players.slice(); G.round = 0; G.startedAt = Date.now(); G.phase = 'intro';
     document.body.classList.add('match'); updateCount();
     // اللاعبين بالساحة قبل البداية (لو أحد انضاف آخر لحظة)
     G.scene.setPlayers(G.alive); await sleep(300);
@@ -190,6 +184,7 @@ async function playRound() {
     G.round++; G.picks = new Map(); G.taken = new Map(); const n = G.alive.length;
     pill('اختيار الأرقام'); SFX.stage();
     await banner('المرحلة ' + G.round, `${n} دائرة · اكتب رقمك بالشات`, '', 1500);
+    banner('ابدأوا', 'اختاروا أرقامكم · اكتب رقم دائرة فاضية بالشات', '', 1700);
     G.phase = 'pick'; document.body.classList.add('picking'); $('#hTotal').textContent = n; $('#hPicked').textContent = 0;
     G.scene.choosing(true, G.round);
     // المؤقت (وقت حقيقي — ما يتأثر بسرعة الرسم)
@@ -219,7 +214,6 @@ async function playRound() {
     if (idle.length) {
         pill('إقصاء من لم يختر'); fx('danger', 2500);
         showStrip(`أُقصي ${idle.length === 1 ? 'لاعب واحد' : idle.length + ' لاعبين'} لم ${idle.length === 1 ? 'يختر' : 'يختاروا'}`, idle);
-        idle.forEach(p => feed(p, 0, true));
         await G.scene.eliminate(idle.map(p => p.id), 'idle');
         G.alive = chosen; hideStrip(); pill();
     }
@@ -231,7 +225,7 @@ async function playRound() {
     pill('الحيّة تتنقل بين الأرقام…'); SFX.roll(3.4);
     await G.scene.roulette(victim.id);
     banner(`الرقم ${G.picks.get(String(victim.id))}`, `كانت الحيّة تحته · لدغت ${victim.name}`, 'red', 2200);
-    G.alive = G.alive.filter(p => p !== victim); feed(victim, 0, true); pill();
+    G.alive = G.alive.filter(p => p !== victim); pill();
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 4) الناجين + بناء الصف الجديد
     SFX.survive(); banner(`نجا ${G.alive.length}`, 'لاعب · يصعدون درجة · الهرم يضيق', 'gold', 1900); fx('gold', 1600);
@@ -258,7 +252,7 @@ function answer(id, text) {
     const owner = G.taken.get(num); if (owner && owner !== key) { if (!p.bot) notice(`الرقم ${num} محجوز — اختر رقم ثاني يا ${p.name}`); return; }
     if (prev != null) G.taken.delete(prev);
     G.picks.set(key, num); G.taken.set(num, key);
-    G.scene.pick(p.id, num, prev); SFX.pick(num); feed(p, num, false);
+    G.scene.pick(p.id, num, prev); SFX.pick(num); // الاسم يطلع فوق الدائرة نفسها (pyr3d.js)
     $('#hPicked').textContent = G.picks.size;
 }
 
@@ -286,7 +280,7 @@ async function crown(p) {
     renderChamp(); await sleep(3200);
     if (G.champ === p) { document.body.classList.remove('match'); document.body.classList.add('champ'); $('#champ').classList.add('in'); }
 }
-function closeChamp() { $('#champ').classList.remove('in'); document.body.classList.remove('champ', 'match', 'picking'); document.body.dataset.fx = ''; G.champ = null; clearFeed(); }
+function closeChamp() { $('#champ').classList.remove('in'); document.body.classList.remove('champ', 'match', 'picking'); document.body.dataset.fx = ''; G.champ = null; }
 async function replay() { closeChamp(); G.phase = 'lobby'; G.scene.reset(); G.scene.setPlayers(G.players); renderLobby(); showLobby(true); await sleep(300); openRules(); }
 function newMatch() { closeChamp(); G.phase = 'lobby'; G.players = []; G.alive = []; G.scene.reset(); if (G.bots) fillBots(8); showLobby(true); renderLobby(); }
 
