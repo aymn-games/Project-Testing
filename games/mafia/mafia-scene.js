@@ -204,22 +204,31 @@ const GEO_LO = Object.assign({}, GEO_HI, {
  * opts.outfit = 'doctor'|'detective'|'shadow' للشخصيات الخاصة. opts.lite = الحلقات البعيدة (مثلثات أقل).
  * يرجع {root, body, head, armL, armR, legs, eyes, mats, torso, sit(bool)} — root أصله عند الأرض.
  */
-const HEAD_W = 1.45, HEAD_H = 1.6, HEAD_D = 1.3;   // الرأس (الوجه = HEAD_D/2 قدّام مركزه)
+const HEAD_W = 1.86, HEAD_H = 1.8, HEAD_D = 1.5;   // الرأس: بيضاوي مدوّر (أنصاف أقطاره HEAD_*/2)
+const HR = { x: HEAD_W / 2, y: HEAD_H / 2, z: HEAD_D / 2 };
+/** نقطة على سطح الوجه (x,y من مركز الرأس) — للعيون والخدود والفم على الرأس المدوّر */
+/** يدوّر قطعة على الوجه عشان تلصق على سطح الرأس المدوّر (باتجاه العمودي على السطح) */
+function onFace(o) { const p = o.position, nx = p.x / HR.x ** 2, ny = p.y / HR.y ** 2, nz = p.z / HR.z ** 2; o.rotation.set(-Math.atan2(ny, nz), Math.atan2(nx, nz), 0, 'YXZ'); return o; }
+function faceZ(x, y, out) { const k = 1 - (x / HR.x) ** 2 - (y / HR.y) ** 2; return HR.z * Math.sqrt(Math.max(0.02, k)) + (out || 0); }
+const BANG_Y = 0.36;   // خط الغُرّة المستقيم (فوق العيون، من مركز الرأس)
+const HAIR_CUT = Math.acos(BANG_Y / (HR.y + 0.08));   // زاوية قص قشرة الشعر عند خط الغُرّة
 const CHAR_GEO = {};
 function charGeo(lo) {
     const k = lo ? 'lo' : 'hi';
     if (CHAR_GEO[k]) return CHAR_GEO[k];
     const s = lo ? 1 : 3, r = lo ? 8 : 18;
     CHAR_GEO[k] = {
-        head: new RoundedBoxGeometry(HEAD_W, HEAD_H, HEAD_D, s, 0.38),
-        eye: new THREE.SphereGeometry(0.145, r, r - 4),
+        head: new THREE.SphereGeometry(1, r * 2, r + 4),
+        eye: new THREE.SphereGeometry(0.17, r, r - 4),
         shine: new THREE.SphereGeometry(0.036, 8, 6),
-        cheek: new THREE.SphereGeometry(0.085, r, r - 4),
+        cheek: new THREE.SphereGeometry(0.1, r, r - 4),
         hairTop: new RoundedBoxGeometry(HEAD_W + 0.5, 0.78, HEAD_D + 0.14, s + 2, 0.3),
-        dome: new THREE.SphereGeometry(1, r * 2, r, 0, TAU, 0, Math.PI / 2),
+        // الشعر قشرة بيضاوية فوق الرأس: الجزء اللي فوق خط الغُرّة كامل، والخلف ينزل تحت
+        hairCap: new THREE.SphereGeometry(1, r * 2, r + 4, 0, TAU, 0, HAIR_CUT),
+        hairBack: (to) => new THREE.SphereGeometry(1, r * 2, r + 4, Math.PI, Math.PI, HAIR_CUT - 0.02, to - HAIR_CUT + 0.02),
         bangs: new RoundedBoxGeometry(HEAD_W + 0.08, 0.55, 0.12, s, 0.05),
-        side: (h) => new RoundedBoxGeometry(0.34, h, HEAD_D - 0.25, s, 0.14),
-        back: (h) => new RoundedBoxGeometry(HEAD_W + 0.62, h, 0.32, s, 0.12),
+        side: (h) => new RoundedBoxGeometry(0.4, h, HEAD_D * 0.78, s + 1, 0.18),
+        back: (h) => new RoundedBoxGeometry(HEAD_W + 0.2, h, 0.3, s, 0.12),
         torso: new THREE.CylinderGeometry(0.42, 0.43, 0.71, r),
         hem: new THREE.CylinderGeometry(0.435, 0.435, 0.09, r),
         collar: new THREE.TorusGeometry(0.32, 0.055, 6, r + 6),
@@ -261,7 +270,7 @@ function buildChar(look, opts) {
     const sleeveM = S(shadow ? '#0b0b10' : opts.outfit ? outfitC : '#f6f3ec');
     const goldM = S(shadow ? '#0b0b10' : '#f2c230', { roughness: 0.45 });
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
-    const hairM = S(C.hair, { roughness: 0.55 });
+    const hairM = S(C.hair, { roughness: 0.55, side: THREE.DoubleSide });
     const mats = [skinM, outfitM, hemM, lowM, beltM, sleeveM, goldM, sockM, shoeM, toeM, hairM];
     const add = (geo, m, x, y, z, par) => { const o = mesh(geo, m, x, y, z); par.add(o); return o; };
 
@@ -302,21 +311,20 @@ function buildChar(look, opts) {
 
     // الرأس: يدور من الذقن (head) والمحتوى فوقه (hc = مركز الرأس)
     const head = new THREE.Group(); head.position.y = 2.04; body.add(head);
-    const hc = new THREE.Group(); hc.position.y = HEAD_H / 2; head.add(hc);
-    add(G.head, skinM, 0, 0, 0, hc);
-    const FZ = HEAD_D / 2;   // سطح الوجه
+    const hc = new THREE.Group(); hc.position.y = HEAD_H / 2 - 0.12; head.add(hc);
+    add(G.head, skinM, 0, 0, 0, hc).scale.set(HR.x, HR.y, HR.z);
     const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#221a26', { roughness: 0.25 });
     const shineM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
     const cheekM = S('#f19a93', { roughness: 0.7 });
     if (!shadow) mats.push(cheekM);
     const eyes = [];
     [-1, 1].forEach((s) => {
-        const e = add(G.eye, eyeM, s * 0.36, -0.08, FZ - 0.02, hc); e.scale.set(1, 1.18, 0.3); e.userData.sy = 1.18; eyes.push(e);
+        const e = onFace(add(G.eye, eyeM, s * 0.4, -0.08, faceZ(s * 0.4, -0.08, -0.04), hc)); e.scale.set(1, 1.18, 0.3); e.userData.sy = 1.18; eyes.push(e);
         if (shadow || opts.lite) return;
-        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.36 + 0.05, -0.01, FZ + 0.03); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        add(G.cheek, cheekM, s * 0.6, -0.26, FZ - 0.02, hc).scale.set(1, 0.65, 0.25);
+        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.4 + 0.06, -0.01, faceZ(s * 0.4 + 0.06, -0.01, 0.025)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
+        const ck = onFace(add(G.cheek, cheekM, s * 0.64, -0.3, faceZ(s * 0.64, -0.3, -0.02), hc)); ck.scale.set(1, 0.65, 0.25);
     });
-    if (!shadow) add(G.cheek, S('#d8613f', { roughness: 0.4 }), 0, -0.41, FZ, hc).scale.set(1, 0.3, 0.2);
+    if (!shadow) onFace(add(G.cheek, S('#d8613f', { roughness: 0.4 }), 0, -0.42, faceZ(0, -0.42, -0.005), hc)).scale.set(1, 0.3, 0.2);
 
     buildHair(hc, style, hairM, mats, G);
 
@@ -363,33 +371,34 @@ function bakeChar(c) {
 }
 
 function buildHair(head, style, hairM, mats, G) {
-    // head = مركز الرأس. الرأس HEAD_W×HEAD_H×HEAD_D، فوقه +HEAD_H/2، والوجه قدّام عند +HEAD_D/2
-    const TOP = HEAD_H / 2, FZ = HEAD_D / 2, SX = HEAD_W / 2 - 0.05 + 0.18;   // مركز الجانب (حافته الداخلية تغطي طرف الوجه)
-    // أساس التسريحات: طاقية ناعمة فوق الرأس وغُرّة مستقيمة تغطي ربع الوجه من فوق
-    // الشعر فوق قبة ناعمة وحدة: حافتها القدّامية هي الغُرّة المستقيمة (تنزل لين ربع الوجه)، بدون قطعة بارزة
-    // قبة مدوّرة (نص كرة مسطّحة) أعرض من الرأس: حافتها القدّامية هي خط الغُرّة المستقيم فوق العيون
-    const BANG = TOP - 0.42;
-    const top = () => { const d = mesh(G.dome, hairM, 0, BANG, -0.02); d.scale.set(HEAD_W / 2 + 0.3, TOP - BANG + 0.2, HEAD_D / 2 + 0.16); head.add(d); };
-    // جوانب سميكة على يمين ويسار الوجه، وخلف، من فوق الرأس لين bottom (نسبة لمركز الرأس)
+    // head = مركز الرأس. الرأس بيضاوي بأنصاف أقطار HR، والشعر قشرة أكبر منه شوي (HX/HY/HZ)
+    const HX = HR.x + 0.1, HY = HR.y + 0.08, HZ = HR.z + 0.08, TOP = HR.y, FZ = HR.z, BANG = BANG_Y;
+    const SX = HR.x + 0.02, TAILX = HX + 0.14;
+    const shell = (g) => { const o = mesh(g, hairM, 0, 0, 0); o.scale.set(HX, HY, HZ); head.add(o); return o; };
+    // فوق: قشرة مدوّرة حافتها القدّامية خط الغُرّة المستقيم
+    const top = () => shell(G.hairCap);
+    // الشعر النازل: الخلف (قشرة لين bottom) وجوانب مدوّرة على يمين ويسار الوجه
     const sides = (bottom) => {
-        const t = BANG + 0.05, h = t - bottom, y = (t + bottom) / 2;   // من تحت القبة لتحت: تحاوط الغُرّة والوجه من الجنبين
-        [-1, 1].forEach((s) => head.add(mesh(G.side(h), hairM, s * SX, y, -0.12)));
-        head.add(mesh(G.back(h), hairM, 0, y, -FZ - 0.08));
+        const to = Math.acos(Math.max(-0.99, bottom / HY));
+        shell(G.hairBack(to));
+        const t = HY * 0.62, h = t - bottom, y = (t + bottom) / 2;   // من داخل القبة فوق عشان يطلع الشعر قطعة وحدة
+        [-1, 1].forEach((s) => { const sd = mesh(G.side(h), hairM, s * SX, y, 0.0); sd.rotation.z = s * Math.min(0.07, 0.03 * h); head.add(sd); });
+        if (bottom < -HY) { const bk = mesh(G.back(-HY * 0.4 - bottom), hairM, 0, (-HY * 0.4 + bottom) / 2, -HZ * 0.62); head.add(bk); }
     };
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
-        case 0: top(); sides(-0.35); break;                                       // قصير (لين الأذن)
+        case 0: top(); sides(-0.3); break;                                       // قصير (لين الأذن)
         case 1: {                                                                  // ضفاير
-            top(); sides(-0.35);
+            top(); sides(-0.3);
             [-1, 1].forEach((s) => {
-                const t = mesh(G.tail, hairM, s * (SX + 0.28), -0.5, -0.1); t.rotation.z = s * 0.12; head.add(t);
-                head.add(mesh(G.tie, mat('#f26d7d'), s * (SX + 0.2), 0.2, -0.1));
+                const t = mesh(G.tail, hairM, s * TAILX, -0.45, -0.1); t.rotation.z = s * 0.12; head.add(t);
+                head.add(mesh(G.tie, mat('#f26d7d'), s * (TAILX - 0.04), 0.22, -0.1));
             });
             break;
         }
         case 2: top(); sides(-1.82); break;                                        // طويل (لين الخصر)
-        case 3: top(); sides(-0.35); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.48, TOP + 0.36, -0.1))); break;   // كعكتين
+        case 3: top(); sides(-0.3); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;   // كعكتين
         case 4: {                                                                  // كيرلي
             for (let i = 0; i < 34; i++) {
                 const phi = Math.acos(1 - (i + 0.5) / 34 * 1.2), th = i * 2.399;
@@ -401,7 +410,7 @@ function buildHair(head, style, hairM, mats, G) {
         }
         case 5: {                                                                  // كاب: نفس القبة وقدّامها حافة
             top(); sides(-0.2);
-            head.add(mesh(G.visor, hairM, 0, BANG + 0.02, FZ + 0.3));
+            head.add(mesh(G.visor, hairM, 0, BANG + 0.02, FZ + 0.25));
             break;
         }
         case 6: {                                                                  // شماغ وعقال
@@ -411,7 +420,7 @@ function buildHair(head, style, hairM, mats, G) {
             }) });
             ghutraM.map.wrapS = ghutraM.map.wrapT = THREE.RepeatWrapping; ghutraM.map.repeat.set(3, 2);
             mats.push(ghutraM);
-            const gd = mesh(G.dome, ghutraM, 0, BANG, -0.02); gd.scale.set(HEAD_W / 2 + 0.3, TOP - BANG + 0.2, HEAD_D / 2 + 0.16); head.add(gd);
+            const gd = mesh(G.hairCap, ghutraM, 0, 0, 0); gd.scale.set(HX + 0.04, HY + 0.04, HZ + 0.04); head.add(gd);
             [-1, 1].forEach((s) => head.add(mesh(new RoundedBoxGeometry(0.12, 1.9, HEAD_D + 0.1, 1, 0.05), ghutraM, s * (HEAD_W / 2 + 0.08), -0.5, -0.04)));
             head.add(mesh(new RoundedBoxGeometry(HEAD_W + 0.3, 1.9, 0.12, 1, 0.05), ghutraM, 0, -0.5, -FZ - 0.08));
             const iqal = mesh(new THREE.TorusGeometry(0.78, 0.07, 8, 32), mat('#141414'), 0, TOP, -0.02); iqal.rotation.x = Math.PI / 2; iqal.scale.set(1.08, 0.95, 1); head.add(iqal);
@@ -424,7 +433,7 @@ function buildHair(head, style, hairM, mats, G) {
             big.add(mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.08, 24), mat('#16110d'), 0, 0.36, 0));
             break;
         }
-        case 'surgeon': { const sd = mesh(G.dome, mat('#3fb7a8'), 0, BANG, -0.02); sd.scale.set(HEAD_W / 2 + 0.3, TOP - BANG + 0.2, HEAD_D / 2 + 0.16); head.add(sd); break; }
+        case 'surgeon': { const sd = mesh(G.hairCap, mat('#3fb7a8', { side: THREE.DoubleSide }), 0, 0, 0); sd.scale.set(HX, HY, HZ); head.add(sd); break; }
         case 'hood': {
             // مفتوح من قدّام عشان تبان العيون الحمر
             const hood = mesh(new THREE.SphereGeometry(0.56, 24, 18, Math.PI / 2 + 0.75, TAU - 1.5, 0, 2.2), mat('#09090d', { roughness: 1, side: THREE.DoubleSide }), 0, 0.04, -0.06);

@@ -41,13 +41,13 @@
     }
 
     /** صورة SVG للوجه والجسم (للجوال والقوائم). */
-    /** صورة SVG للرأس والكتوف (للجوال والقوائم) — نفس الشخصية ثلاثية الأبعاد: رأس مربع بحواف مدوّرة ووجه مسطّح،
+    /** صورة SVG للرأس والكتوف (للجوال والقوائم) — نفس الشخصية ثلاثية الأبعاد: رأس مدوّر كبير،
      *  عيون سودا بيضاوية بلمعة، خدود وردية، فم صغير، غُرّة مستقيمة، صدر بلون القميص وزر أصفر وأكمام بيضاء. */
     function avatarSVG(look, size) {
         var c = colors(look), s = size || 96, h = c.hair, back = '', front = '';
         // قبة مدوّرة أعرض من الرأس، وحافتها التحتية خط الغُرّة المستقيم
-        var top = '<path d="M11 36 Q11 6 50 6 Q89 6 89 36 Z" fill="' + h + '"/>';
-        var sides = function (len) { return '<rect x="11" y="28" width="11" height="' + len + '" rx="4" fill="' + h + '"/><rect x="78" y="28" width="11" height="' + len + '" rx="4" fill="' + h + '"/>'; };
+        var top = '<path d="M13 34 C13 8 30 3 50 3 C70 3 87 8 87 34 Z" fill="' + h + '"/>';
+        var sides = function (len) { return '<rect x="11" y="22" width="13" height="' + (len + 6) + '" rx="6" fill="' + h + '"/><rect x="76" y="22" width="13" height="' + (len + 6) + '" rx="6" fill="' + h + '"/>'; };
         switch (c.style) {
             case 0: front = top + sides(26); break;
             case 1: back = '<rect x="5" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/><rect x="84" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/>';
@@ -65,7 +65,7 @@
             '<rect x="16" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/><rect x="68" y="80" width="16" height="24" rx="7" fill="#f6f3ec"/>' +
             '<path d="M28 100 L30 82 Q50 76 70 82 L72 100Z" fill="' + c.shirt + '"/><path d="M36 80 Q50 85 64 80" stroke="#f2c230" stroke-width="2.6" fill="none"/><circle cx="50" cy="93" r="4.2" fill="#f2c230"/>' +
             // الرأس المربع والوجه
-            '<rect x="19" y="18" width="62" height="62" rx="15" fill="' + c.skin + '"/>' +
+            '<ellipse cx="50" cy="48" rx="33" ry="33" fill="' + c.skin + '"/>' +
             '<ellipse cx="38" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><ellipse cx="62" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><circle cx="40.2" cy="51.6" r="1.9" fill="#fff"/><circle cx="64.2" cy="51.6" r="1.9" fill="#fff"/>' +
             '<ellipse cx="26" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/><ellipse cx="74" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/>' +
             '<ellipse cx="50" cy="66" rx="3" ry="1.3" fill="#d8613f"/>' +
