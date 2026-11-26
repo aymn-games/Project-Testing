@@ -1730,6 +1730,15 @@ function onFace(o) { const p = o.position, nx = p.x / HR.x ** 2, ny = p.y / HR.y
 function faceZ(x, y, out) { const k = 1 - (x / HR.x) ** 2 - (y / HR.y) ** 2; return HR.z * Math.sqrt(Math.max(0.02, k)) + (out || 0); }
 const BANG_Y = 0.36;   // خط الغُرّة المستقيم (فوق العيون، من مركز الرأس)
 const HAIR_CUT = Math.acos(BANG_Y / (HR.y + 0.08));   // زاوية قص قشرة الشعر عند خط الغُرّة
+/** أسطوانة بحواف مدوّرة (بدل الحواف الحادة): مقطع جانبي فيه ربع دائرة عند كل حافة، ملفوف حول المحور */
+function roundCyl(rTop, rBot, h, bevel, seg) {
+    const b = Math.min(bevel, h / 2 - 0.001, rTop - 0.001, rBot - 0.001), pts = [], Q = 5;
+    pts.push(new THREE.Vector2(0.0001, -h / 2));
+    for (let i = 0; i <= Q; i++) { const a = -Math.PI / 2 + (i / Q) * Math.PI / 2; pts.push(new THREE.Vector2(rBot - b + Math.cos(a) * b, -h / 2 + b + Math.sin(a) * b)); }
+    for (let i = 0; i <= Q; i++) { const a = (i / Q) * Math.PI / 2; pts.push(new THREE.Vector2(rTop - b + Math.cos(a) * b, h / 2 - b + Math.sin(a) * b)); }
+    pts.push(new THREE.Vector2(0.0001, h / 2));
+    return new THREE.LatheGeometry(pts, seg || 24);
+}
 const CHAR_GEO = {};
 function charGeo(lo) {
     const k = lo ? 'lo' : 'hi';
@@ -1747,25 +1756,25 @@ function charGeo(lo) {
         bangs: new RoundedBoxGeometry(HEAD_W + 0.08, 0.55, 0.12, s, 0.05),
         side: (h) => new RoundedBoxGeometry(0.4, h, HEAD_D * 0.78, s + 1, 0.18),
         back: (h) => new RoundedBoxGeometry(HEAD_W + 0.2, h, 0.3, s, 0.12),
-        torso: new THREE.CylinderGeometry(0.42, 0.43, 0.71, r),
-        hem: new THREE.CylinderGeometry(0.435, 0.435, 0.09, r),
-        band: new THREE.CylinderGeometry(0.445, 0.445, 0.2, lo ? 10 : 20),
-        ruff: new THREE.CylinderGeometry(0.34, 0.4, 0.1, lo ? 10 : 16),
+        torso: roundCyl(0.42, 0.43, 0.71, 0.1, r + 8),
+        hem: roundCyl(0.445, 0.445, 0.1, 0.045, r + 8),
+        band: roundCyl(0.45, 0.45, 0.2, 0.06, r + 8),
+        ruff: roundCyl(0.33, 0.39, 0.1, 0.045, r + 8),
         bow: new RoundedBoxGeometry(0.2, 0.07, 0.05, 1, 0.02),
         puff: new THREE.SphereGeometry(0.2, r, r - 4),
-        forearm: new THREE.CylinderGeometry(0.12, 0.13, 0.5, r - 4),
+        forearm: roundCyl(0.12, 0.13, 0.5, 0.06, r),
         collar: new THREE.TorusGeometry(0.32, 0.055, 6, r + 6),
         button: new THREE.SphereGeometry(0.14, r, r - 4),
-        belt: new THREE.CylinderGeometry(0.44, 0.44, 0.07, r),
-        skirt: new THREE.CylinderGeometry(0.43, 0.65, 0.47, lo ? 8 : 14),
-        shorts: new THREE.CylinderGeometry(0.43, 0.46, 0.3, r),
+        belt: roundCyl(0.445, 0.445, 0.08, 0.035, r + 8),
+        skirt: roundCyl(0.43, 0.65, 0.47, 0.07, r + 8),
+        shorts: roundCyl(0.43, 0.46, 0.3, 0.07, r + 8),
         shoulder: new THREE.SphereGeometry(0.16, r - 4, r - 6),
         sleeve: new THREE.CylinderGeometry(0.16, 0.16, 0.8, r - 4),
-        cuff: new THREE.CylinderGeometry(0.19, 0.19, 0.1, r - 4),
+        cuff: roundCyl(0.19, 0.19, 0.11, 0.045, r),
         hand: new THREE.SphereGeometry(0.145, r - 4, r - 6),
-        thigh: new THREE.CylinderGeometry(0.16, 0.16, 0.36, r - 4),
-        sock: new THREE.CylinderGeometry(0.165, 0.165, 0.3, r - 4),
-        rim: new THREE.CylinderGeometry(0.18, 0.18, 0.07, r - 4),
+        thigh: roundCyl(0.16, 0.16, 0.36, 0.06, r),
+        sock: roundCyl(0.165, 0.165, 0.3, 0.05, r),
+        rim: roundCyl(0.18, 0.18, 0.08, 0.035, r),
         shoe: new RoundedBoxGeometry(0.42, 0.26, 0.52, s, 0.12),
         sole: new RoundedBoxGeometry(0.43, 0.06, 0.55, s, 0.03),
         toe: new RoundedBoxGeometry(0.38, 0.13, 0.17, s, 0.06),
@@ -1789,7 +1798,7 @@ function buildChar(look, opts) {
     const skinM = shadow ? S('#0b0b10', { roughness: 1 }) : S(C.skin, { roughness: 0.75 });
     const outfitM = S(outfitC), hemM = S(new THREE.Color(outfitC).multiplyScalar(0.72).getStyle());
     const lowC = shadow ? '#0b0b10' : opts.outfit === 'doctor' ? '#2c8f86' : opts.outfit === 'detective' ? '#4a3a2a' : C.pants;
-    const lowM = S(lowC, { flatShading: true }), beltM = S(new THREE.Color(lowC).multiplyScalar(0.78).getStyle());
+    const lowM = S(lowC), beltM = S(new THREE.Color(lowC).multiplyScalar(0.78).getStyle());
     const sleeveM = S(shadow ? '#0b0b10' : opts.outfit ? outfitC : '#f6f3ec');
     const goldM = S(shadow ? '#0b0b10' : '#f2c230', { roughness: 0.45 });
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
@@ -1816,7 +1825,7 @@ function buildChar(look, opts) {
     // البلوزة (تصميم صاحب المنصة): بيضاء، وعليها حزام عريض بلون قميص اللاعب حافته مسنّنة، وياقة مكشكشة وفيونكة
     // بنفس اللون، وشريط أوف وايت تحت، والتنورة أو الشورت. الكم قصير منفوخ بسوار ملوّن، وتحته الذراع والكف
     const whiteM = shadow ? outfitM : S('#f3efe6', { roughness: 0.7 }), creamM = shadow ? outfitM : S('#dcd6c8', { roughness: 0.7 });
-    const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6, flatShading: true });
+    const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6 });
     mats.push(whiteM, creamM, accM);
     const torso = add(G.torso, opts.outfit ? outfitM : whiteM, 0, 1.68, 0, body);
     add(G.band, accM, 0, 1.66, 0, body);
@@ -1929,14 +1938,20 @@ function buildHair(head, style, hairM, mats, G) {
     // غُرّة مسنّنة (تصميم الضفاير): شريط على سطح الجبهة، حافته التحتية زقزاق (أسنان مثلّثة)
     const FR_DROP = 0.14;   // الغُرّة المسنّنة تنزل أكثر على الجبهة
     const fringe = (teeth, depth) => {
-        // غُرّة لها سماكة: طبقة برا وطبقة جوا (لاصقة بالجبهة)، وحافة تحتية مسنّنة تقفل بينهم (تبان أغمق مثل التصميم)
-        const t0 = Math.asin(0.84), cols = teeth * 2, pos = [], idx = [];
+        // غُرّة لها سماكة: طبقة برا وطبقة جوا، وحافة تحتية بأسنان ناعمة (رؤوس مدوّرة) تقفل بينهم بانحناءة
+        const t0 = Math.asin(0.84), SUB = 6, cols = teeth * SUB, pos = [], idx = [];
         const at = (k, t, y) => { const rx = HR.x + k, ry = HR.y + k, rz = HR.z + k, c = Math.sqrt(Math.max(0.02, 1 - (y / ry) ** 2)); return [Math.sin(t) * rx * c, y, Math.cos(t) * rz * c]; };
-        const OUT = 0.13, IN = 0.01, W = 4;   // 4 رؤوس لكل عمود: فوق برا، تحت برا، تحت جوا، فوق جوا
+        const OUT = 0.13, IN = 0.01, RIM = 4, W = 2 + RIM + 1;
         for (let i = 0; i <= cols; i++) {
-            const t = -t0 + 2 * t0 * i / cols, yb = BANG - 0.06 - FR_DROP - (i % 2 ? depth : 0) - (i === 0 || i === cols ? 0.06 : 0);
-            pos.push(...at(0.065, t, BANG + 0.12), ...at(OUT, t, yb), ...at(IN, t, yb + 0.02), ...at(IN, t, BANG + 0.12));   // فوق تنضم مع القبة بدون عتبة
-            if (i) { const a = (i - 1) * W, c = i * W; for (let f = 0; f < 3; f++) idx.push(a + f, a + f + 1, c + f, a + f + 1, c + f + 1, c + f); }
+            const t = -t0 + 2 * t0 * i / cols, ph = (i % SUB) / SUB;   // مكانها داخل السن
+            const tri = 1 - Math.abs(2 * ph - 1), tooth = tri * tri * (3 - 2 * tri);   // سن مثلّث رأسه ناعم (مثل التصميم)
+            const edgeK = Math.min(i, cols - i) / SUB < 0.5 ? 0.06 : 0;
+            const yb = BANG - 0.06 - FR_DROP - depth * tooth - edgeK;
+            pos.push(...at(0.065, t, BANG + 0.12));   // فوق برا (تنضم مع القبة)
+            // الحافة: نص دائرة من برا (yb) لجوا، منتفخة لتحت
+            for (let r = 0; r <= RIM; r++) { const a = r / RIM * Math.PI, k = OUT + (IN - OUT) * (1 - Math.cos(a)) / 2; pos.push(...at(k, t, yb - Math.sin(a) * 0.035 + (r / RIM) * 0.02)); }
+            pos.push(...at(IN, t, BANG + 0.12));   // فوق جوا
+            if (i) { const a = (i - 1) * W, c = i * W; for (let f = 0; f < W - 1; f++) idx.push(a + f, a + f + 1, c + f, a + f + 1, c + f + 1, c + f); }
         }
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
         head.add(mesh(g, hairM, 0, 0, 0));
@@ -1944,17 +1959,45 @@ function buildHair(head, style, hairM, mats, G) {
     // خصل مدوّرة لاصقة بالرأس (تصميم الضفاير): قشرة الشعر نفسها تكمل لتحت على الجنبين والخلف وتترك فتحة الوجه،
     // وطرفها التحتي ينزل أكثر عند حافة الوجه (رأس الخصلة)
     const sideShell = (bottom, faceHalf) => {
-        const rx = HR.x + 0.06, ry = HR.y + 0.06, rz = HR.z + 0.04, g = Math.asin(faceHalf);
-        const th0 = HAIR_CUT - 0.03, th1 = Math.acos(Math.max(-0.99, bottom / ry));
-        const geo = new THREE.SphereGeometry(1, 48, 18, Math.PI / 2 + g, TAU - 2 * g, th0, th1 - th0), pa = geo.attributes.position;
-        for (let i = 0; i < pa.count; i++) {
-            let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
-            const phi = Math.atan2(z, -x), dFront = Math.abs(((phi - Math.PI / 2 + Math.PI) % TAU + TAU) % TAU - Math.PI);   // بُعدها عن قدّام
-            const deep = (y - Math.cos(th1)) < 1e-3 ? Math.max(0, 1 - (dFront - g) / 0.5) * 0.14 : 0;   // رأس الخصلة عند حافة الوجه
-            pa.setXYZ(i, x * rx, y * ry - deep, z * rz);
-        }
+        // قشرة لها سماكة (برا + جوا) وحافة مدوّرة تقفل بينهم على أطراف الخصل وتحتها — بدون حواف حادة
+        const g = Math.asin(faceHalf), th0 = HAIR_CUT - 0.03, ry0 = HR.y + 0.06, th1 = Math.acos(Math.max(-0.99, bottom / ry0));
+        const W = 40, H = 14, T = 0.1, RIM = 4;   // RIM = تقسيمات نص الدائرة على الحافة
+        const P0 = Math.PI / 2 + g, PL = TAU - 2 * g;
+        const surf = (u, v, k) => {   // u على العرض (0..1)، v على الطول (0..1)، k = 0 برا .. 1 جوا
+            const phi = P0 + PL * u, th = th0 + (th1 - th0) * v, rr = 0.06 - T * k;
+            const rx = HR.x + rr, ry = HR.y + rr, rz = HR.z + rr - 0.02;
+            let x = -Math.cos(phi) * Math.sin(th) * rx, y = Math.cos(th) * ry, z = Math.sin(phi) * Math.sin(th) * rz;
+            const dFront = Math.min(u, 1 - u) * PL;   // بُعدها عن حافة الوجه
+            y -= v * v * Math.max(0, 1 - dFront / 0.5) * 0.14;   // رأس الخصلة ينزل عند حافة الوجه
+            return [x, y, z];
+        };
+        // شبكة: صفوف (v) × أعمدة؛ كل عمود فيه برا، ثم الحافة المدوّرة، ثم جوا — مقطع على شكل U مقلوب حول طرف الخصلة
+        const pos = [], idx = [], ring = [];
+        const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+        // مسار الحافة: الحافة اليسار (u=0) من فوق لتحت، ثم التحت (v=1)، ثم اليمين (u=1) من تحت لفوق
+        const edge = []; for (let i = 0; i <= H; i++) edge.push([0, i / H]); for (let i = 1; i <= W; i++) edge.push([i / W, 1]); for (let i = H - 1; i >= 0; i--) edge.push([1, i / H]);
+        // الوجه البراني والجواني كشبكتين
+        const grid = (k, flip) => {
+            const base = pos.length / 3;
+            for (let i = 0; i <= H; i++) for (let j = 0; j <= W; j++) pos.push(...surf(j / W, i / H, k));
+            for (let i = 0; i < H; i++) for (let j = 0; j < W; j++) { const a = base + i * (W + 1) + j, b2 = a + W + 1; if (flip) idx.push(a, a + 1, b2, a + 1, b2 + 1, b2); else idx.push(a, b2, a + 1, a + 1, b2, b2 + 1); }
+        };
+        grid(0, false); grid(1, true);
+        // الحافة المدوّرة: لكل نقطة على المسار، نص دائرة من برا لجوا تنتفخ للخارج (بعيد عن الشعر)
+        const base = pos.length / 3;
+        edge.forEach(([u, v]) => {
+            const o = surf(u, v, 0), n = surf(u, v, 1), du = u === 0 ? -1 : u === 1 ? 1 : 0, dv = v === 1 ? 1 : 0;
+            const o2 = surf(Math.min(1, Math.max(0, u - du * 0.01)), Math.min(1, v - dv * 0.01), 0);
+            const out = [o[0] - o2[0], o[1] - o2[1], o[2] - o2[2]], L = Math.hypot(out[0], out[1], out[2]) || 1;
+            for (let r = 0; r <= RIM; r++) {
+                const a = r / RIM * Math.PI, m = lerp3(o, n, (1 - Math.cos(a)) / 2), bulge = Math.sin(a) * T * 0.5 / L;
+                pos.push(m[0] + out[0] * bulge, m[1] + out[1] * bulge, m[2] + out[2] * bulge);
+            }
+        });
+        for (let e = 0; e < edge.length - 1; e++) for (let r = 0; r < RIM; r++) { const a = base + e * (RIM + 1) + r, b2 = a + RIM + 1; idx.push(a, b2, a + 1, a + 1, b2, b2 + 1); }
+        const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx);
         geo.computeVertexNormals();
-        head.add(mesh(geo, hairM, 0, 0, 0));
+        const m = mesh(geo, hairM, 0, 0, 0); head.add(m);
     };
     // ذيل ضفيرة: أنبوب مستدق على منحنى (يطلع لبرا وفوق شوي ثم ينزل لتحت)، بربطة مضلّعة عند الرأس
     const tieM = mat('#f0646a', { roughness: 0.6 });
