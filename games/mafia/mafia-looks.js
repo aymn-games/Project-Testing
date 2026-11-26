@@ -50,8 +50,9 @@
         var sides = function (len) { return '<rect x="11" y="22" width="13" height="' + (len + 6) + '" rx="6" fill="' + h + '"/><rect x="76" y="22" width="13" height="' + (len + 6) + '" rx="6" fill="' + h + '"/>'; };
         switch (c.style) {
             case 0: front = top + sides(26); break;
-            case 1: back = '<rect x="5" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/><rect x="84" y="30" width="11" height="44" rx="5.5" fill="' + h + '"/>';
-                front = top + sides(24) + '<circle cx="12" cy="29" r="4" fill="#f26d7d"/><circle cx="88" cy="29" r="4" fill="#f26d7d"/>'; break;
+            case 1: back = '<path d="M14 26 Q2 22 4 40 Q6 62 10 74 L15 74 Q11 54 16 34Z" fill="' + h + '"/><path d="M86 26 Q98 22 96 40 Q94 62 90 74 L85 74 Q89 54 84 34Z" fill="' + h + '"/>';
+                front = '<path d="M13 40 C13 9 30 3 50 3 C70 3 87 9 87 40 L82 40 L76 34 L69 40 L63 34 L56 40 L50 34 L44 40 L37 34 L31 40 L24 34 L18 40Z" fill="' + h + '"/>' + sides(22) +
+                    '<circle cx="14" cy="27" r="5" fill="#f0646a"/><circle cx="86" cy="27" r="5" fill="#f0646a"/>'; break;
             case 2: back = '<rect x="15" y="40" width="70" height="56" rx="4" fill="' + h + '"/>'; front = top + sides(74); break;
             case 3: back = '<circle cx="31" cy="9" r="9" fill="' + h + '"/><circle cx="69" cy="9" r="9" fill="' + h + '"/>'; front = top + sides(26); break;
             case 4: front = '<g fill="' + h + '"><circle cx="22" cy="24" r="11"/><circle cx="36" cy="14" r="12"/><circle cx="50" cy="11" r="12"/><circle cx="64" cy="14" r="12"/><circle cx="78" cy="24" r="11"/><circle cx="16" cy="38" r="8"/><circle cx="84" cy="38" r="8"/></g>'; break;

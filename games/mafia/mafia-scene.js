@@ -399,18 +399,56 @@ function buildHair(head, style, hairM, mats, G) {
         const o = mesh(g, mt || hairM, 0, 0, 0); head.add(o); return o;
     };
     const sides = (bottom) => drape(bottom);
+    // غُرّة مسنّنة (تصميم الضفاير): شريط على سطح الجبهة، حافته التحتية زقزاق (أسنان مثلّثة)
+    const FR_DROP = 0.14;   // الغُرّة المسنّنة تنزل أكثر على الجبهة
+    const fringe = (teeth, depth) => {
+        const rx = HR.x + 0.08, ry = HR.y + 0.08, rz = HR.z + 0.06, t0 = Math.asin(0.84), cols = teeth * 2, pos = [], idx = [];
+        const at = (t, y) => { const c = Math.sqrt(Math.max(0.02, 1 - (y / ry) ** 2)); return [Math.sin(t) * rx * c, y, Math.cos(t) * rz * c]; };
+        for (let i = 0; i <= cols; i++) {
+            const t = -t0 + 2 * t0 * i / cols, yb = BANG - 0.06 - (i % 2 ? depth : 0) - (i === 0 || i === cols ? 0.06 : 0);
+            pos.push(...at(t, BANG + 0.06), ...at(t, yb - FR_DROP));
+            if (i) { const a = (i - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+        }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        head.add(mesh(g, hairM, 0, 0, 0));
+    };
+    // خصل مدوّرة لاصقة بالرأس (تصميم الضفاير): قشرة الشعر نفسها تكمل لتحت على الجنبين والخلف وتترك فتحة الوجه،
+    // وطرفها التحتي ينزل أكثر عند حافة الوجه (رأس الخصلة)
+    const sideShell = (bottom, faceHalf) => {
+        const rx = HR.x + 0.06, ry = HR.y + 0.06, rz = HR.z + 0.04, g = Math.asin(faceHalf);
+        const th0 = HAIR_CUT - 0.03, th1 = Math.acos(Math.max(-0.99, bottom / ry));
+        const geo = new THREE.SphereGeometry(1, 28, 10, Math.PI / 2 + g, TAU - 2 * g, th0, th1 - th0), pa = geo.attributes.position;
+        for (let i = 0; i < pa.count; i++) {
+            let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
+            const phi = Math.atan2(z, -x), dFront = Math.abs(((phi - Math.PI / 2 + Math.PI) % TAU + TAU) % TAU - Math.PI);   // بُعدها عن قدّام
+            const deep = (y - Math.cos(th1)) < 1e-3 ? Math.max(0, 1 - (dFront - g) / 0.5) * 0.14 : 0;   // رأس الخصلة عند حافة الوجه
+            pa.setXYZ(i, x * rx, y * ry - deep, z * rz);
+        }
+        geo.computeVertexNormals();
+        head.add(mesh(geo, hairM, 0, 0, 0));
+    };
+    // ذيل ضفيرة: أنبوب مستدق على منحنى (يطلع لبرا وفوق شوي ثم ينزل لتحت)، بربطة مضلّعة عند الرأس
+    const tieM = mat('#f0646a', { roughness: 0.55 });
+    const pigtail = (s) => {
+        const P = (x, y, z) => new THREE.Vector3(s * x, y, z);
+        const curve = new THREE.CatmullRomCurve3([P(HR.x - 0.04, 0.48, -0.12), P(HR.x + 0.24, 0.62, -0.18), P(HR.x + 0.5, 0.48, -0.22), P(HR.x + 0.6, -0.05, -0.22), P(HR.x + 0.56, -0.7, -0.18), P(HR.x + 0.44, -1.3, -0.12)]);
+        const SEG = 24, RAD = 6, g = new THREE.TubeGeometry(curve, SEG, 1, RAD, false), pa = g.attributes.position;
+        const radius = (u) => u < 0.15 ? 0.18 + u / 0.15 * 0.1 : 0.28 - (u - 0.15) / 0.85 * 0.18;
+        for (let i = 0; i <= SEG; i++) {
+            const c = curve.getPointAt(i / SEG), r = radius(i / SEG);
+            for (let j = 0; j <= RAD; j++) { const k = i * (RAD + 1) + j; pa.setXYZ(k, c.x + (pa.getX(k) - c.x) * r, c.y + (pa.getY(k) - c.y) * r, c.z + (pa.getZ(k) - c.z) * r); }
+        }
+        g.computeVertexNormals();
+        head.add(mesh(g, hairM, 0, 0, 0));
+        const tie = mesh(new THREE.IcosahedronGeometry(0.21, 1), tieM, s * (HR.x + 0.1), 0.48, -0.06); tie.scale.set(0.85, 1, 1); head.add(tie);
+    };
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
         case 0: top(); sides(-0.3); break;                                       // قصير (لين الأذن)
-        case 1: {                                                                  // ضفاير
-            top(); sides(-0.3);
-            [-1, 1].forEach((s) => {
-                const t = mesh(G.tail, hairM, s * TAILX, -0.45, -0.1); t.rotation.z = s * 0.12; head.add(t);
-                head.add(mesh(G.tie, mat('#f26d7d'), s * (TAILX - 0.04), 0.22, -0.1));
-            });
+        case 1:                                                                    // ضفاير (تصميم صاحب المنصة): غُرّة مسنّنة وخصل جنب الوجه لين الذقن وذيلين فوق
+            top(); fringe(6, 0.07); sideShell(-0.55, 0.78); [-1, 1].forEach(pigtail);
             break;
-        }
         case 2: top(); sides(-1.82); break;                                        // طويل (لين الخصر)
         case 3: top(); sides(-0.3); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;   // كعكتين
         case 4: {                                                                  // كيرلي
