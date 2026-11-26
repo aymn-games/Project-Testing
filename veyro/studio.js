@@ -263,7 +263,8 @@
      * (POST /api/screens/test-alert — الرابط يسحبه خلال ثانيتين). لو الأليرت جديد نحفظ أول.
      */
     function tryAlert(it, type) {
-        O.alertDemo(it.id, type);
+        // المعاينة هنا صامتة: الصوت يطلع من تطبيق البث بس (لا يتكرر مرتين)
+        O.alertDemo(it.id, type, { mute: true });
         if (!cur) return;
         if (save.pending) flush();
         api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
