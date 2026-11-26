@@ -2063,7 +2063,13 @@
             else if (it.type === 'goal') fillGoal(n, it, preview);
             else if (it.type === 'counter') fillCounter(n, it, preview);
             else if (it.type === 'jar') buildJar(n, it, preview);
-            else if (it.type === 'alert') { n._pose = Boolean(preview && opts.pose); buildAlert(n, it, preview); }
+            else if (it.type === 'alert') {
+                n._pose = Boolean(preview && opts.pose);
+                // مقاس الشاشة من أول ما ينبني: «ملء الشاشة» (fitFull) يحتاجه، وإلا الأليرت الواقف بالمحرر
+                // يطلع بحجمه العادي ومكان الصورة والاسم يختلف عن وقت التشغيل
+                if (!n._F) n._F = F;
+                buildAlert(n, it, preview);
+            }
             else if (it.type === 'icon') buildIcon(n, it);
             else if (it.type === 'shape') buildShape(n, it);
             else if (it.type === 'lastdonation') buildLastDonation(n, it, preview);
