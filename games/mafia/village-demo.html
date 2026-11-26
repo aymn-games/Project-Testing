@@ -1736,12 +1736,12 @@ function charGeo(lo) {
     const s = lo ? 1 : 3, r = lo ? 8 : 18;
     CHAR_GEO[k] = {
         head: new THREE.SphereGeometry(1, r * 2, r + 4),
-        eye: new THREE.SphereGeometry(0.17, r, r - 4),
+        eye: new THREE.SphereGeometry(0.165, r + 8, r + 4),
         shine: new THREE.SphereGeometry(0.036, 8, 6),
-        cheek: new THREE.SphereGeometry(0.1, r, r - 4),
+        cheek: new THREE.SphereGeometry(0.1, r + 8, r + 4),
         hairTop: new RoundedBoxGeometry(HEAD_W + 0.5, 0.78, HEAD_D + 0.14, s + 2, 0.3),
         // الشعر قشرة بيضاوية فوق الرأس: الجزء اللي فوق خط الغُرّة كامل، والخلف ينزل تحت
-        hairCap: new THREE.SphereGeometry(1, lo ? 14 : 26, r + 4, 0, TAU, 0, HAIR_CUT),   // تقسيمات طولية قليلة + flatShading = خصل شعر طولية مثل التصميم
+        hairCap: new THREE.SphereGeometry(1, lo ? 20 : 48, lo ? 10 : 24, 0, TAU, 0, HAIR_CUT),   // ناعم (تظليل سلس)
         hairBack: (to) => new THREE.SphereGeometry(1, r * 2, r + 4, Math.PI, Math.PI, HAIR_CUT - 0.02, to - HAIR_CUT + 0.02),
         bangs: new RoundedBoxGeometry(HEAD_W + 0.08, 0.55, 0.12, s, 0.05),
         side: (h) => new RoundedBoxGeometry(0.4, h, HEAD_D * 0.78, s + 1, 0.18),
@@ -1780,14 +1780,14 @@ function buildChar(look, opts) {
     const shadow = opts.outfit === 'shadow';
     const S = (c, o) => mat(c, Object.assign({ roughness: 0.6 }, o || {}));
     const outfitC = opts.outfit === 'doctor' ? '#f4f6f8' : opts.outfit === 'detective' ? '#8a6a45' : shadow ? '#0b0b10' : C.shirt;
-    const skinM = shadow ? S('#0b0b10', { roughness: 1 }) : S(C.skin);
+    const skinM = shadow ? S('#0b0b10', { roughness: 1 }) : S(C.skin, { roughness: 0.75 });
     const outfitM = S(outfitC), hemM = S(new THREE.Color(outfitC).multiplyScalar(0.72).getStyle());
     const lowC = shadow ? '#0b0b10' : opts.outfit === 'doctor' ? '#2c8f86' : opts.outfit === 'detective' ? '#4a3a2a' : C.pants;
     const lowM = S(lowC, { flatShading: true }), beltM = S(new THREE.Color(lowC).multiplyScalar(0.78).getStyle());
     const sleeveM = S(shadow ? '#0b0b10' : opts.outfit ? outfitC : '#f6f3ec');
     const goldM = S(shadow ? '#0b0b10' : '#f2c230', { roughness: 0.45 });
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
-    const hairM = S(C.hair, { roughness: 0.6, side: THREE.DoubleSide, flatShading: true });
+    const hairM = S(C.hair, { roughness: 0.7, side: THREE.DoubleSide });
     const mats = [skinM, outfitM, hemM, lowM, beltM, sleeveM, goldM, sockM, shoeM, toeM, hairM];
     const add = (geo, m, x, y, z, par) => { const o = mesh(geo, m, x, y, z); par.add(o); return o; };
 
@@ -1830,18 +1830,19 @@ function buildChar(look, opts) {
     const head = new THREE.Group(); head.position.y = 2.04; body.add(head);
     const hc = new THREE.Group(); hc.position.y = HEAD_H / 2 + 0.02; head.add(hc);   // الرأس مرفوع شوي عن الياقة
     add(G.head, skinM, 0, 0, 0, hc).scale.set(HR.x, HR.y, HR.z);
-    const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#221a26', { roughness: 0.25 });
+    const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#2a2130', { roughness: 0.35 });
     const shineM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-    const cheekM = S('#f19a93', { roughness: 0.7 });
+    const cheekM = new THREE.MeshStandardMaterial({ color: '#f39c9c', roughness: 0.9, transparent: true, opacity: 0.82, depthWrite: false });   // حمرة ناعمة شفافة
     if (!shadow) mats.push(cheekM);
     const eyes = [];
     [-1, 1].forEach((s) => {
         const e = onFace(add(G.eye, eyeM, s * 0.4, -0.08, faceZ(s * 0.4, -0.08, -0.04), hc)); e.scale.set(1, 1.18, 0.3); e.userData.sy = 1.18; eyes.push(e);
         if (shadow || opts.lite) return;
         const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.4 + 0.06, -0.01, faceZ(s * 0.4 + 0.06, -0.01, 0.025)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.28, faceZ(s * 0.55, -0.28, -0.02), hc)); ck.scale.set(1, 0.65, 0.25);
+        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.27, faceZ(s * 0.55, -0.27, -0.025), hc)); ck.scale.set(1.25, 0.72, 0.2); ck.castShadow = false;
+        const sh2 = new THREE.Mesh(G.shine, shineM); sh2.scale.setScalar(0.55); sh2.position.set(s * 0.4 - 0.05, -0.13, faceZ(s * 0.4 - 0.05, -0.13, 0.02)); hc.add(sh2); sh2.userData.sy = 0.55; eyes.push(sh2);   // لمعة صغيرة ثانية تحت
     });
-    if (!shadow) onFace(add(G.cheek, S('#d8613f', { roughness: 0.4 }), 0, -0.42, faceZ(0, -0.42, -0.005), hc)).scale.set(1, 0.3, 0.2);
+    if (!shadow) onFace(add(G.cheek, S('#e3836b', { roughness: 0.6 }), 0, -0.41, faceZ(0, -0.41, -0.006), hc)).scale.set(0.75, 0.26, 0.18);   // فم صغير ناعم
 
     buildHair(hc, style, hairM, mats, G);
 
@@ -1899,12 +1900,12 @@ function buildHair(head, style, hairM, mats, G) {
     // فوق خط الغُرّة تنضم على شكل الرأس (تصغر مع القبة)، وتحت تتوسّع شوي لين طرفها.
     const drape = (bottom, mt) => {
         const ox = HR.x + 0.06, oz = HR.z + 0.04, ix = HR.x - 0.04, iz = HR.z - 0.06;   // سماكة رفيعة (~0.1)
-        const gap = Math.asin(0.8), N = 24, sh = new THREE.Shape();   // الوجه مكشوف بعرض الغُرّة، والخصل الجانبية تبدأ عند طرفه
+        const gap = Math.asin(0.8), N = 44, sh = new THREE.Shape();   // الوجه مكشوف بعرض الغُرّة، والخصل الجانبية تبدأ عند طرفه
         const pt = (rx, rz, t) => [Math.sin(t) * rx, Math.cos(t) * rz];
         for (let i = 0; i <= N; i++) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ox, oz, t); i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1]); }
         for (let i = N; i >= 0; i--) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ix, iz, t); sh.lineTo(q[0], q[1]); }
         const topY = BANG + 0.04, len = topY - bottom;   // تبدأ عند حافة القبة بالضبط (بدون عتبة فوق)
-        const g = new THREE.ExtrudeGeometry(sh, { depth: len, steps: Math.max(6, Math.round(len * 10)), curveSegments: 4, bevelEnabled: false });
+        const g = new THREE.ExtrudeGeometry(sh, { depth: len, steps: Math.max(6, Math.round(len * 10)), curveSegments: 8, bevelEnabled: false });
         g.rotateX(Math.PI / 2); g.translate(0, topY, 0);
         const P = g.attributes.position;
         for (let i = 0; i < P.count; i++) {
@@ -1934,7 +1935,7 @@ function buildHair(head, style, hairM, mats, G) {
     const sideShell = (bottom, faceHalf) => {
         const rx = HR.x + 0.06, ry = HR.y + 0.06, rz = HR.z + 0.04, g = Math.asin(faceHalf);
         const th0 = HAIR_CUT - 0.03, th1 = Math.acos(Math.max(-0.99, bottom / ry));
-        const geo = new THREE.SphereGeometry(1, 28, 10, Math.PI / 2 + g, TAU - 2 * g, th0, th1 - th0), pa = geo.attributes.position;
+        const geo = new THREE.SphereGeometry(1, 48, 18, Math.PI / 2 + g, TAU - 2 * g, th0, th1 - th0), pa = geo.attributes.position;
         for (let i = 0; i < pa.count; i++) {
             let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
             const phi = Math.atan2(z, -x), dFront = Math.abs(((phi - Math.PI / 2 + Math.PI) % TAU + TAU) % TAU - Math.PI);   // بُعدها عن قدّام
@@ -1945,11 +1946,11 @@ function buildHair(head, style, hairM, mats, G) {
         head.add(mesh(geo, hairM, 0, 0, 0));
     };
     // ذيل ضفيرة: أنبوب مستدق على منحنى (يطلع لبرا وفوق شوي ثم ينزل لتحت)، بربطة مضلّعة عند الرأس
-    const tieM = mat('#f0646a', { roughness: 0.55 });
+    const tieM = mat('#f0646a', { roughness: 0.6 });
     const pigtail = (s) => {
         const P = (x, y, z) => new THREE.Vector3(s * x, y, z);
         const curve = new THREE.CatmullRomCurve3([P(HR.x - 0.04, 0.48, -0.12), P(HR.x + 0.24, 0.62, -0.18), P(HR.x + 0.5, 0.48, -0.22), P(HR.x + 0.6, -0.05, -0.22), P(HR.x + 0.56, -0.7, -0.18), P(HR.x + 0.44, -1.3, -0.12)]);
-        const SEG = 24, RAD = 6, g = new THREE.TubeGeometry(curve, SEG, 1, RAD, false), pa = g.attributes.position;
+        const SEG = 48, RAD = 14, g = new THREE.TubeGeometry(curve, SEG, 1, RAD, false), pa = g.attributes.position;
         const radius = (u) => u < 0.15 ? 0.18 + u / 0.15 * 0.1 : 0.28 - (u - 0.15) / 0.85 * 0.18;
         for (let i = 0; i <= SEG; i++) {
             const c = curve.getPointAt(i / SEG), r = radius(i / SEG);
@@ -1957,7 +1958,7 @@ function buildHair(head, style, hairM, mats, G) {
         }
         g.computeVertexNormals();
         head.add(mesh(g, hairM, 0, 0, 0));
-        const tie = mesh(new THREE.IcosahedronGeometry(0.21, 1), tieM, s * (HR.x + 0.1), 0.48, -0.06); tie.scale.set(0.85, 1, 1); head.add(tie);
+        const tie = mesh(new THREE.IcosahedronGeometry(0.21, 4), tieM, s * (HR.x + 0.1), 0.48, -0.06); tie.scale.set(0.85, 1, 1); head.add(tie);
     };
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
