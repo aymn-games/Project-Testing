@@ -483,7 +483,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     </ol>
     <div class="intro-notes">
       <span><b>الأسئلة:</b> عامة · مسائل رياضية · حروف مبعثرة (رتّبها وتطلع الكلمة)</span>
-      <span><b>🍀 صندوق الحظ:</b> لكل فريق صندوق يتحول له بدون سؤال</span>
+      <span><b>🍀 صندوق الحظ:</b> بالهجوم، لكل فريق صندوق يتحول له بدون سؤال</span>
     </div>
     <div class="intro-actions">
       <button class="ib go" type="button" id="introOk">فهمت</button>
@@ -1103,7 +1103,9 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     S.phaseStart = Date.now(); S.phaseEnd = S.phaseStart + dur;
     S.attempts = {};
     /* صندوق الحظ يطلع بمحاولة عشوائية: ممكن صندوق جديد أو صندوق سبق فتحه وتقفل */
-    S.luck = { blue: { used: false, at: 3 + rnd(10) }, red: { used: false, at: 3 + rnd(10) } };
+    /* صندوق الحظ بالهجوم بس — بالاسترداد كل صندوق فيه سؤال */
+    var noLuck = ph !== 'attack';
+    S.luck = { blue: { used: noLuck, at: 3 + rnd(10) }, red: { used: noLuck, at: 3 + rnd(10) } };
     S.players.forEach(function (p) { p.nextAt = Date.now() + 600 + Math.random() * 3500; });
     if (ph === 'recover' && lost('blue') === 0 && lost('red') === 0) { renderAll(); endMatch('ما فيه صناديق تُسترد'); return; }
     if (ph === 'attack') { banner('مرحلة الهجوم', 'اكتب رقم صندوق من صناديق الفريق الثاني'); logEvent('phase', 'بدأت مرحلة الهجوم'); }
