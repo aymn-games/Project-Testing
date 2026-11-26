@@ -1838,7 +1838,7 @@ function buildChar(look, opts) {
         const e = onFace(add(G.eye, eyeM, s * 0.4, -0.08, faceZ(s * 0.4, -0.08, -0.04), hc)); e.scale.set(1, 1.18, 0.3); e.userData.sy = 1.18; eyes.push(e);
         if (shadow || opts.lite) return;
         const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.4 + 0.06, -0.01, faceZ(s * 0.4 + 0.06, -0.01, 0.025)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        const ck = onFace(add(G.cheek, cheekM, s * 0.64, -0.3, faceZ(s * 0.64, -0.3, -0.02), hc)); ck.scale.set(1, 0.65, 0.25);
+        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.28, faceZ(s * 0.55, -0.28, -0.02), hc)); ck.scale.set(1, 0.65, 0.25);
     });
     if (!shadow) onFace(add(G.cheek, S('#d8613f', { roughness: 0.4 }), 0, -0.42, faceZ(0, -0.42, -0.005), hc)).scale.set(1, 0.3, 0.2);
 
@@ -1892,15 +1892,29 @@ function buildHair(head, style, hairM, mats, G) {
     const SX = HR.x + 0.02, TAILX = HX + 0.14;
     const shell = (g) => { const o = mesh(g, hairM, 0, 0, 0); o.scale.set(HX, HY, HZ); head.add(o); return o; };
     // فوق: قشرة مدوّرة حافتها القدّامية خط الغُرّة المستقيم
-    const top = () => shell(G.hairCap);
-    // الشعر النازل: الخلف (قشرة لين bottom) وجوانب مدوّرة على يمين ويسار الوجه
-    const sides = (bottom) => {
-        const to = Math.acos(Math.max(-0.99, bottom / HY));
-        shell(G.hairBack(to));
-        const t = HY * 0.62, h = t - bottom, y = (t + bottom) / 2;   // من داخل القبة فوق عشان يطلع الشعر قطعة وحدة
-        [-1, 1].forEach((s) => { const sd = mesh(G.side(h), hairM, s * SX, y, 0.0); sd.rotation.z = s * Math.min(0.07, 0.03 * h); head.add(sd); });
-        if (bottom < -HY) { const bk = mesh(G.back(-HY * 0.4 - bottom), hairM, 0, (-HY * 0.4 + bottom) / 2, -HZ * 0.62); head.add(bk); }
+    const top = () => { const c = shell(G.hairCap); c.scale.set(HX + 0.06, HY + 0.1, HZ + 0.04); return c; };   // نفس مقاس الشعر النازل عشان ينضمون بدون عتبة
+    // الشعر النازل (نفس صورة التصميم): قطعة وحدة تلف الرأس من الجنبين والخلف وتترك الوجه مكشوف.
+    // مقطعها حلقة بيضاوية مقصوصة من قدّام (وجهها الأمامي المسطّح = الجوانب اللي تبان جنب الوجه)، ممدودة لتحت لين bottom.
+    // فوق خط الغُرّة تنضم على شكل الرأس (تصغر مع القبة)، وتحت تتوسّع شوي لين طرفها.
+    const drape = (bottom, mt) => {
+        const ox = HX + 0.06, oz = HZ + 0.04, ix = HR.x - 0.06, iz = HR.z - 0.1;
+        const gap = Math.asin(0.68), N = 28, sh = new THREE.Shape();
+        const pt = (rx, rz, t) => [Math.sin(t) * rx, Math.cos(t) * rz];
+        for (let i = 0; i <= N; i++) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ox, oz, t); i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1]); }
+        for (let i = N; i >= 0; i--) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ix, iz, t); sh.lineTo(q[0], q[1]); }
+        const topY = BANG + 0.04, len = topY - bottom;   // تبدأ عند حافة القبة بالضبط (بدون عتبة فوق)
+        const g = new THREE.ExtrudeGeometry(sh, { depth: len, steps: Math.max(6, Math.round(len * 10)), curveSegments: 4, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3 });
+        g.rotateX(Math.PI / 2); g.translate(0, topY, 0);
+        const P = g.attributes.position;
+        for (let i = 0; i < P.count; i++) {
+            const y = P.getY(i);
+            const f = y > 0 ? Math.sqrt(Math.max(0.05, 1 - (y / (HY + 0.1)) ** 2)) : 1 + Math.min(0.12, -y * 0.07);   // ينضم مع القبة فوق ويتوسّع تحت
+            P.setX(i, P.getX(i) * f); P.setZ(i, P.getZ(i) * (y > 0 ? f : 1));
+        }
+        g.computeVertexNormals();
+        const o = mesh(g, mt || hairM, 0, 0, 0); head.add(o); return o;
     };
+    const sides = (bottom) => drape(bottom);
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
