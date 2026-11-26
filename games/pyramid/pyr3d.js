@@ -696,6 +696,8 @@ export async function mountPyramid(el, opts = {}) {
     const lobbyShot = () => t => { const pts = actorPts(); if (pts.length < 2) pts.push(V(-6, 0, 6), V(6, 0, 6)); pts.push(V(0, 3, -6)); const F = frameBox(pts, .36, REDUCED ? 0 : Math.sin(t * .09) * .22, 1.25); return { pos: F.pos.add(drift(t)), look: F.look.add(V(0, .6, 0)), rate: 1.1 }; };
 
     // ================================================================ الحلقة
+    const pickTags = new Map(); // رقم الدائرة ← Sprite
+    const tagsOut = new Set();
     const clock = new T.Clock(); let raf = 0, running = true, tAll = 0, champFx = null;
     // حاكم الجودة: يقيس الإطارات/ث كل ثانية (يتجاهل الإطارات الشاذة والتبويب المخفي)
     const gov = { acc: 0, frames: 0, slow: 0, fast: 0, cool: 3, dts: [], refresh: 60, banned: new Set(), lastUpAt: -99, fps: 0 };
@@ -813,8 +815,6 @@ export async function mountPyramid(el, opts = {}) {
     function setUrgency(k) { urgency = clamp01(k); if (k > .6) for (const a of actors.values()) if (a.moodSet === 'choose' && a.rnd() < .02) a.setMood('tense'); }
     // اختيار رقم: الدائرة تتلوّن بلون اللاعب + موجة ضوء + شرار، والقديمة ترجع
     // اسم اللاعب يطلع فوق الدائرة اللي اختارها (بدل قائمة جانبية) — يكبر بارتداد ويتمايل خفيف لين يوصل صاحبه
-    const pickTags = new Map(); // رقم الدائرة ← Sprite
-    const tagsOut = new Set();
     function tickTags(t) {
         for (const [, sp] of pickTags) { const k = clamp01((now() - sp.userData.t0) / .4), sc0 = easeBack(k) * sp.userData.s; sp.scale.set(sc0 * 4, sc0, 1); sp.position.y = sp.userData.y + Math.sin(t * 2 + sp.userData.ph) * .06 * K; }
         for (const sp of [...tagsOut]) { const k = clamp01((now() - sp.userData.out) / .3); sp.material.opacity = 1 - k; sp.position.y += .02; if (k >= 1) { tagsOut.delete(sp); sc.remove(sp); sp.material.dispose(); } }
