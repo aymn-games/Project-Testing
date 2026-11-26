@@ -224,7 +224,7 @@ function charGeo(lo) {
         cheek: new THREE.SphereGeometry(0.1, r, r - 4),
         hairTop: new RoundedBoxGeometry(HEAD_W + 0.5, 0.78, HEAD_D + 0.14, s + 2, 0.3),
         // الشعر قشرة بيضاوية فوق الرأس: الجزء اللي فوق خط الغُرّة كامل، والخلف ينزل تحت
-        hairCap: new THREE.SphereGeometry(1, r * 2, r + 4, 0, TAU, 0, HAIR_CUT),
+        hairCap: new THREE.SphereGeometry(1, lo ? 14 : 26, r + 4, 0, TAU, 0, HAIR_CUT),   // تقسيمات طولية قليلة + flatShading = خصل شعر طولية مثل التصميم
         hairBack: (to) => new THREE.SphereGeometry(1, r * 2, r + 4, Math.PI, Math.PI, HAIR_CUT - 0.02, to - HAIR_CUT + 0.02),
         bangs: new RoundedBoxGeometry(HEAD_W + 0.08, 0.55, 0.12, s, 0.05),
         side: (h) => new RoundedBoxGeometry(0.4, h, HEAD_D * 0.78, s + 1, 0.18),
@@ -270,7 +270,7 @@ function buildChar(look, opts) {
     const sleeveM = S(shadow ? '#0b0b10' : opts.outfit ? outfitC : '#f6f3ec');
     const goldM = S(shadow ? '#0b0b10' : '#f2c230', { roughness: 0.45 });
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
-    const hairM = S(C.hair, { roughness: 0.55, side: THREE.DoubleSide });
+    const hairM = S(C.hair, { roughness: 0.6, side: THREE.DoubleSide, flatShading: true });
     const mats = [skinM, outfitM, hemM, lowM, beltM, sleeveM, goldM, sockM, shoeM, toeM, hairM];
     const add = (geo, m, x, y, z, par) => { const o = mesh(geo, m, x, y, z); par.add(o); return o; };
 
@@ -376,23 +376,23 @@ function buildHair(head, style, hairM, mats, G) {
     const SX = HR.x + 0.02, TAILX = HX + 0.14;
     const shell = (g) => { const o = mesh(g, hairM, 0, 0, 0); o.scale.set(HX, HY, HZ); head.add(o); return o; };
     // فوق: قشرة مدوّرة حافتها القدّامية خط الغُرّة المستقيم
-    const top = () => { const c = shell(G.hairCap); c.scale.set(HX + 0.06, HY + 0.1, HZ + 0.04); return c; };   // نفس مقاس الشعر النازل عشان ينضمون بدون عتبة
+    const top = () => { const c = shell(G.hairCap); c.scale.set(HX + 0.12, HY + 0.12, HZ + 0.04); return c; };   // نفس مقاس الشعر النازل عشان ينضمون بدون عتبة
     // الشعر النازل (نفس صورة التصميم): قطعة وحدة تلف الرأس من الجنبين والخلف وتترك الوجه مكشوف.
     // مقطعها حلقة بيضاوية مقصوصة من قدّام (وجهها الأمامي المسطّح = الجوانب اللي تبان جنب الوجه)، ممدودة لتحت لين bottom.
     // فوق خط الغُرّة تنضم على شكل الرأس (تصغر مع القبة)، وتحت تتوسّع شوي لين طرفها.
     const drape = (bottom, mt) => {
-        const ox = HX + 0.06, oz = HZ + 0.04, ix = HR.x - 0.06, iz = HR.z - 0.1;
-        const gap = Math.asin(0.68), N = 28, sh = new THREE.Shape();
+        const ox = HX + 0.12, oz = HZ + 0.04, ix = HR.x - 0.08, iz = HR.z - 0.12;
+        const gap = Math.asin(0.8), N = 24, sh = new THREE.Shape();   // الوجه مكشوف بعرض الغُرّة، والخصل الجانبية تبدأ عند طرفه
         const pt = (rx, rz, t) => [Math.sin(t) * rx, Math.cos(t) * rz];
         for (let i = 0; i <= N; i++) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ox, oz, t); i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1]); }
         for (let i = N; i >= 0; i--) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ix, iz, t); sh.lineTo(q[0], q[1]); }
         const topY = BANG + 0.04, len = topY - bottom;   // تبدأ عند حافة القبة بالضبط (بدون عتبة فوق)
-        const g = new THREE.ExtrudeGeometry(sh, { depth: len, steps: Math.max(6, Math.round(len * 10)), curveSegments: 4, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3 });
+        const g = new THREE.ExtrudeGeometry(sh, { depth: len, steps: Math.max(6, Math.round(len * 10)), curveSegments: 4, bevelEnabled: false });
         g.rotateX(Math.PI / 2); g.translate(0, topY, 0);
         const P = g.attributes.position;
         for (let i = 0; i < P.count; i++) {
             const y = P.getY(i);
-            const f = y > 0 ? Math.sqrt(Math.max(0.05, 1 - (y / (HY + 0.1)) ** 2)) : 1 + Math.min(0.12, -y * 0.07);   // ينضم مع القبة فوق ويتوسّع تحت
+            const f = y > 0 ? Math.sqrt(Math.max(0.05, 1 - (y / (HY + 0.12)) ** 2)) : 1 + Math.min(0.16, -y * 0.09);   // ينضم مع القبة فوق ويتوسّع تحت
             P.setX(i, P.getX(i) * f); P.setZ(i, P.getZ(i) * (y > 0 ? f : 1));
         }
         g.computeVertexNormals();
