@@ -478,8 +478,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       <li><span class="n">2</span><b>جاوب على سؤالك</b><span>الصندوق ينقلب ويطلع عليه سؤالك واسمك والوقت. اكتب الجواب بالشات، وجوابك أنت بس ينحسب</span></li>
       <li><span class="n">3</span><b>جواب صح ✓</b><span>الصندوق يصير بلون فريقك، وتقدر تفتح صندوق ثاني على طول</span></li>
       <li><span class="n">4</span><b>خلص الوقت ⌛</b><span>الصندوق يتقفل ويرجع متاح لأي لاعب بسؤال جديد</span></li>
-      <li><span class="n">5</span><b>مرحلة الاسترداد</b><span>بعد ما يخلص وقت الهجوم، كل فريق عنده نص الوقت يرجّع صناديقه اللي انأخذت</span></li>
-      <li><span class="n">6</span><b>الفوز 🏆</b><span>الفريق اللي عنده صناديق أكثر بجهة الخصم لما يخلص الوقت</span></li>
+      <li><span class="n">5</span><b>مرحلة الاسترداد</b><span>بعد الهجوم (أو أول ما ياخذ فريق كل صناديق خصمه) نص الوقت يرجّع فيه كل فريق صناديقه، واللي يرجّعها كلها تخلص المباراة</span></li>
+      <li><span class="n">6</span><b>الفوز 🏆</b><span>للفريق اللي عنده صناديق أكثر بلونه بالجهتين لما يخلص الوقت</span></li>
     </ol>
     <div class="intro-notes">
       <span><b>الأسئلة:</b> عامة · مسائل رياضية · حروف مبعثرة (رتّبها وتطلع الكلمة)</span>
@@ -1025,9 +1025,16 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   }
   function captured(team) { return S.boxes.filter(function (b) { return b.owner === team && b.origin !== team; }).length; }
   function lost(team) { return S.boxes.filter(function (b) { return b.origin === team && b.owner !== team; }).length; }
+  /* مجموع الصناديق بلون الفريق بالجهتين (من 30) — هو اللي يحدد الفائز */
+  function total(team) { return S.boxes.filter(function (b) { return b.owner === team; }).length; }
   function checkInstantWin(team) {
-    if (S.phase === 'attack' && captured(team) === 15) endMatch(CFG.name[team] + ' أخذ كل صناديق الخصم');
-    else if (S.phase === 'recover' && lost(team) === 0) endMatch(CFG.name[team] + ' استرجع كل صناديقه قبل الوقت');
+    /* أخذ كل صناديق جهة الخصم: يخلص الهجوم على طول وتبدأ مرحلة الاسترداد */
+    if (S.phase === 'attack' && captured(team) === 15) {
+      logEvent('phase', CFG.name[team] + ' أخذ كل صناديق الخصم — نروح للاسترداد');
+      startPhase('recover');
+    }
+    /* رجّع كل صناديقه بالاسترداد: تخلص المباراة على طول، والفوز للأكثر صناديق بلونه */
+    else if (S.phase === 'recover' && lost(team) === 0) endMatch(CFG.name[team] + ' رجّع كل صناديقه قبل الوقت');
   }
 
   /* ---------- الانضمام أثناء المباراة بكلمة الفريق ---------- */
@@ -1110,7 +1117,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     closeAllOpen();
     S.phase = 'over';
     renderAll();
-    var b = captured('blue'), r = captured('red');
+    var b = total('blue'), r = total('red');
     var winner = b > r ? 'blue' : r > b ? 'red' : null;
     logEvent('phase', 'انتهت المباراة: ' + (winner ? 'فاز ' + CFG.name[winner] : 'تعادل'));
     reportPoints(winner);
@@ -1135,7 +1142,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     var c = winner ? TEAM_COLOR[winner] : '#e7e3ef';
     var w = $('win');
     w.style.setProperty('--wc', c);
-    $('winChip').innerHTML = winner ? (captured(winner) + ' صندوق بجهة الخصم') : (b + ' مقابل ' + r);
+    $('winChip').innerHTML = winner ? (total(winner) + ' من 30 صندوق بلونه') : (b + ' مقابل ' + r);
     $('winName').textContent = winner ? CFG.name[winner] : 'تعادل';
     $('winSub').textContent = winner ? 'فاز بالمباراة' : 'ما أحد فاز بالمباراة';
     $('winReason').textContent = reason || '';
@@ -1232,8 +1239,8 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   }
   function renderAll() {
     S.boxes.forEach(renderBox);
-    $('blueScore').textContent = captured('blue');
-    $('redScore').textContent = captured('red');
+    $('blueScore').textContent = total('blue');
+    $('redScore').textContent = total('red');
     var nb = S.boxes.filter(function (b) { return b.owner === 'blue'; }).length;
     $('tugB').style.width = (nb / 30 * 100) + '%';
     $('tugR').style.width = ((30 - nb) / 30 * 100) + '%';
@@ -1313,7 +1320,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
       game: 'box-war', page: 'شاشة اللعب', connect: P.connect,
       status: function () {
         var ph = { ready: 'بانتظار «ابدأ»', countdown: 'استعداد', attack: 'الهجوم', recover: 'الاسترداد', over: 'انتهت' }[S.phase] || '';
-        return ph + (playing() ? ' · باقي ' + mmss(S.phaseEnd - Date.now()) : '') + ' — ' + CFG.name.blue + ' ' + captured('blue') + ' : ' + captured('red') + ' ' + CFG.name.red;
+        return ph + (playing() ? ' · باقي ' + mmss(S.phaseEnd - Date.now()) : '') + ' — ' + CFG.name.blue + ' ' + total('blue') + ' : ' + total('red') + ' ' + CFG.name.red;
       },
       commands: [
         { names: ['ابدأ', 'ابدا', 'بدء'], label: 'ابدأ المباراة', desc: 'من شاشة الشرح', tone: 'primary', icon: '▶',
