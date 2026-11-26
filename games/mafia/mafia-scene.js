@@ -373,15 +373,15 @@ function bakeChar(c) {
 function buildHair(head, style, hairM, mats, G) {
     // head = مركز الرأس. الرأس بيضاوي بأنصاف أقطار HR، والشعر قشرة أكبر منه شوي (HX/HY/HZ)
     const HX = HR.x + 0.1, HY = HR.y + 0.08, HZ = HR.z + 0.08, TOP = HR.y, FZ = HR.z, BANG = BANG_Y;
-    const SX = HR.x + 0.02, TAILX = HX + 0.14;
+    const SX = HR.x + 0.02, TAILX = HR.x + 0.12;
     const shell = (g) => { const o = mesh(g, hairM, 0, 0, 0); o.scale.set(HX, HY, HZ); head.add(o); return o; };
     // فوق: قشرة مدوّرة حافتها القدّامية خط الغُرّة المستقيم
-    const top = () => { const c = shell(G.hairCap); c.scale.set(HX + 0.12, HY + 0.12, HZ + 0.04); return c; };   // نفس مقاس الشعر النازل عشان ينضمون بدون عتبة
+    const top = () => { const c = shell(G.hairCap); c.scale.set(HR.x + 0.06, HR.y + 0.06, HR.z + 0.04); return c; };   // قشرة رفيعة لاصقة بالرأس   // نفس مقاس الشعر النازل عشان ينضمون بدون عتبة
     // الشعر النازل (نفس صورة التصميم): قطعة وحدة تلف الرأس من الجنبين والخلف وتترك الوجه مكشوف.
     // مقطعها حلقة بيضاوية مقصوصة من قدّام (وجهها الأمامي المسطّح = الجوانب اللي تبان جنب الوجه)، ممدودة لتحت لين bottom.
     // فوق خط الغُرّة تنضم على شكل الرأس (تصغر مع القبة)، وتحت تتوسّع شوي لين طرفها.
     const drape = (bottom, mt) => {
-        const ox = HX + 0.12, oz = HZ + 0.04, ix = HR.x - 0.08, iz = HR.z - 0.12;
+        const ox = HR.x + 0.06, oz = HR.z + 0.04, ix = HR.x - 0.04, iz = HR.z - 0.06;   // سماكة رفيعة (~0.1)
         const gap = Math.asin(0.8), N = 24, sh = new THREE.Shape();   // الوجه مكشوف بعرض الغُرّة، والخصل الجانبية تبدأ عند طرفه
         const pt = (rx, rz, t) => [Math.sin(t) * rx, Math.cos(t) * rz];
         for (let i = 0; i <= N; i++) { const t = gap + (TAU - 2 * gap) * i / N, q = pt(ox, oz, t); i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1]); }
@@ -392,7 +392,7 @@ function buildHair(head, style, hairM, mats, G) {
         const P = g.attributes.position;
         for (let i = 0; i < P.count; i++) {
             const y = P.getY(i);
-            const f = y > 0 ? Math.sqrt(Math.max(0.05, 1 - (y / (HY + 0.12)) ** 2)) : 1 + Math.min(0.16, -y * 0.09);   // ينضم مع القبة فوق ويتوسّع تحت
+            const f = y > 0 ? Math.sqrt(Math.max(0.05, 1 - (y / (HR.y + 0.06)) ** 2)) : 1 + Math.min(0.08, -y * 0.05);   // ينضم مع القبة فوق ويتوسّع تحت
             P.setX(i, P.getX(i) * f); P.setZ(i, P.getZ(i) * (y > 0 ? f : 1));
         }
         g.computeVertexNormals();
