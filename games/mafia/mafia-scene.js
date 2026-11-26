@@ -311,7 +311,7 @@ function buildChar(look, opts) {
 
     // الرأس: يدور من الذقن (head) والمحتوى فوقه (hc = مركز الرأس)
     const head = new THREE.Group(); head.position.y = 2.04; body.add(head);
-    const hc = new THREE.Group(); hc.position.y = HEAD_H / 2 - 0.12; head.add(hc);
+    const hc = new THREE.Group(); hc.position.y = HEAD_H / 2 + 0.02; head.add(hc);   // الرأس مرفوع شوي عن الياقة
     add(G.head, skinM, 0, 0, 0, hc).scale.set(HR.x, HR.y, HR.z);
     const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#221a26', { roughness: 0.25 });
     const shineM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
