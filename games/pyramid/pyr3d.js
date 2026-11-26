@@ -828,7 +828,7 @@ export async function mountPyramid(el, opts = {}) {
         pulse(p.clone().setY(L.yTop + .37), s.color, .4, 2.2, .6); sparks.emit(p, { count: 14, color: [a ? a.color : C.cyan, '#ffffff'], speed: 2.4, up: 2.5, life: .7, size: .22 });
         if (a) { const old = pickTags.get(num); if (old) { pickTags.delete(num); old.userData.out = now(); tagsOut.add(old); }
             const sp = new T.Sprite(new T.SpriteMaterial({ map: a.plateT, transparent: true, depthWrite: false, depthTest: false, toneMapped: false, fog: false })); sp.renderOrder = 6;
-            const pp = L.pos[num - 1]; sp.position.set(pp.x, L.yTop + 1.15 * K + .35, pp.z); sp.userData = { t0: now(), s: .55 * Math.max(.7, K), y: sp.position.y, ph: num }; sp.scale.set(.001, .001, 1); sc.add(sp); pickTags.set(num, sp); }
+            const pp = L.pos[num - 1]; sp.position.set(pp.x, L.yTop + 1.15 * K + .35, pp.z); sp.userData = { t0: now(), s: .78 * Math.max(.75, K), y: sp.position.y, ph: num }; sp.scale.set(.001, .001, 1); sc.add(sp); pickTags.set(num, sp); }
         if (a && !a.path) { a.lookAt = p.clone(); a.behUntil = Math.max(a.behUntil, now() + 1.6); if (a.rnd() < .5) { a.rig.play(a.rnd() < .5 ? 4 : 3); a.behUntil = now() + 1.4; a.ov = null; } }
     }
     async function timeUp() {
