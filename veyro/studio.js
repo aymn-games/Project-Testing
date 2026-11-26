@@ -785,6 +785,8 @@
         var f = focusOn();
         if (app.classList.contains('focus') === f) return false;
         app.classList.toggle('focus', f);
+        // الخروج من وضع التعديل فيه حركة (اللوحة ترجع لمكانها): نعيد القياس بعدها
+        setTimeout(function () { if (!drag && view === 'editor') renderCanvas(); }, 400);
         return true;
     }
 
@@ -1132,6 +1134,54 @@
         panel.appendChild(pb);
         syncWide();
         if (syncFocus()) renderCanvas();
+        renderFocusList();
+    }
+
+    /*
+     * وضع التعديل — يمين الشاشة: كل العناصر اللي من نفس النوع بالشاشة (كل الأليرتات مثلاً)، واللي تعدّله الحين
+     * مميّز. الضغط على أي واحد يفتحه مكانه، و«+» يرجّع لقسمه عشان تضيف جديد.
+     */
+    var LIST_NAMES = { alert: 'الأليرتات', top: 'التوب', goal: 'الأهداف', counter: 'العدّادات', jar: 'الوعاء', text: 'النصوص', icon: 'الأيقونات', shape: 'الأشكال', lastdonation: 'آخر داعم', music: 'مشغّل الأغاني' };
+    var LIST_SECS = { alert: 'alerts', top: 'tops', goal: 'goals', counter: 'goals', jar: 'jar', text: 'text', icon: 'icons', shape: 'shapes', lastdonation: 'lastsup', music: 'audio' };
+    var flist = el('aside', 'ob-flist glass');
+    flist.setAttribute('aria-label', 'عناصر الشاشة');
+    body.appendChild(flist);
+    function renderFocusList() {
+        var cur0 = selectedId && find(selectedId);
+        flist.textContent = '';
+        if (!cur0 || !app.classList.contains('focus')) return;
+        var same = S().items.filter(function (x) { return x.type === cur0.type; }).slice().reverse();
+        var h = el('div', 'ob-fl-h');
+        h.appendChild(el('b', null, (LIST_NAMES[cur0.type] || TYPE_NAMES[cur0.type] || 'العناصر') + ' بهالشاشة'));
+        h.appendChild(el('span', 'ob-fl-n', String(same.length)));
+        flist.appendChild(h);
+        var ul = el('div', 'ob-fl-list');
+        same.forEach(function (x) {
+            var on = x.id === cur0.id;
+            var b = button('', 'ob-fl-i' + (on ? ' on' : '') + (x.hidden ? ' off' : ''), function () { if (!on) select(x.id); });
+            var icn = el('span', 'ob-fl-ic');
+            icn.innerHTML = svg(ic(TYPE_ICONS[x.type] || 'star'));
+            b.appendChild(icn);
+            var t = el('span', 'ob-fl-t');
+            t.appendChild(el('b', null, x.type === 'alert' && O.isVideoAlert(x) ? (x.video.name || 'أليرت فيديو') : itemName(x)));
+            var sub = x.type === 'alert' ? trigSummary(x) : '';
+            if (x.hidden) sub = 'مخفي' + (sub ? ' · ' + sub : '');
+            if (sub) t.appendChild(el('small', null, sub));
+            b.appendChild(t);
+            if (on) b.appendChild(el('span', 'ob-fl-now', 'تعدّله الحين'));
+            if (on) b.setAttribute('aria-current', 'true');
+            ul.appendChild(b);
+        });
+        flist.appendChild(ul);
+        var sec = LIST_SECS[cur0.type];
+        if (sec) {
+            var add = button('', 'ob-btn ghost ob-fl-add', function () { select(null); go('editor', sec); });
+            add.innerHTML = svg(UI.plus);
+            add.appendChild(el('span', null, 'إضافة ' + (cur0.type === 'alert' ? 'أليرت' : 'جديد')));
+            flist.appendChild(add);
+        }
+        var cur1 = ul.querySelector('.on');
+        if (cur1 && cur1.scrollIntoView) cur1.scrollIntoView({ block: 'nearest' });
     }
 
     /*
