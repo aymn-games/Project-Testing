@@ -738,6 +738,8 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// تصميم بطاقة «البثوث النشطة» يمنحه الأدمن (backend/live-cards/live-card-styles-service.js) — NULL = عادي.
+ensureColumn('users', 'live_card_style', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
