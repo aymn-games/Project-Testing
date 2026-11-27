@@ -85,6 +85,9 @@
       '.agp-live-verified{flex:none;width:16px;height:16px;color:#7dd3fc;filter:drop-shadow(0 0 6px rgba(125,211,252,.5))}' +
       '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
+      '.agp-live-info > .agp-live-badge{align-self:flex-start;margin-bottom:2px}' +
+      '.agp-live-chip-id .agp-live-id-ic{width:15px;height:15px;padding:2px;border-radius:5px;box-sizing:content-box;color:var(--fx-btn-tx);background:var(--fx-btn)}' +
+      '.agp-live-card.fx .agp-live-chip-id{gap:6px;padding-inline-start:3px;font-weight:700}' +
       '.agp-live-card.fx{position:relative;overflow:hidden;isolation:isolate;padding:16px;border-radius:22px;border:1px solid transparent;background:var(--fx-bg) padding-box,var(--fx-border) border-box;box-shadow:0 18px 44px -26px var(--fx-glow);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}' +
       '.agp-live-card.fx:hover{transform:translateY(-4px);border-color:transparent;box-shadow:0 26px 56px -24px var(--fx-glow-h)}' +
       '.agp-live-card.fx::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fx-aura);pointer-events:none}' +
@@ -142,6 +145,8 @@
     vip: { label: 'مميز', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' },
     diamond: { label: 'ألماسي', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>' }
   };
+  // أيقونة ID بالبطاقات المميزة (بطاقة هوية).
+  var LIVE_ICON_ID = '<svg class="agp-live-id-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="ID"><rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.5 16c.6-1.5 1.7-2.2 3-2.2s2.4.7 3 2.2M14 10h4.5M14 13.5h3"/></svg>';
   // علامة التوثيق جنب اسم الحساب الرسمي (مثل علامة التوثيق بالمنصات).
   var LIVE_VERIFIED = '<svg class="agp-live-verified" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.9-3.1 3.2.3z"/><path d="M8.3 12.2l2.5 2.5 4.9-5" fill="none" stroke="#0d0a1a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -211,7 +216,15 @@
     viewers.appendChild(document.createTextNode(' مشاهد'));
     var idChip = document.createElement('span');
     idChip.className = 'agp-live-chip agp-live-chip-id';
-    idChip.textContent = 'ID: ' + s.customId;
+    if (fx) {
+      // بالبطاقات المميزة: أيقونة بطاقة هوية بدل «ID:»، بلون التصميم.
+      idChip.innerHTML = LIVE_ICON_ID;
+      var idVal = document.createElement('span');
+      idVal.textContent = s.customId;
+      idChip.appendChild(idVal);
+    } else {
+      idChip.textContent = 'ID: ' + s.customId;
+    }
     if (kind === 'live') meta.appendChild(viewers);
     meta.appendChild(idChip);
 
@@ -232,8 +245,9 @@
       badge.appendChild(document.createTextNode(fx.label));
       nameWrap.appendChild(name);
       if (fx.verified) nameWrap.insertAdjacentHTML('beforeend', LIVE_VERIFIED);
-      nameWrap.appendChild(badge);
       top.appendChild(nameWrap);
+      // الشارة بسطر مستقل فوق الاسم — لو كانت بنفس سطر الاسم تقصّه وتغطيه.
+      info.appendChild(badge);
     } else {
       top.appendChild(name);
     }
