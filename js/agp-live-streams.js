@@ -155,6 +155,16 @@
       '@keyframes agpFxBorder{0%{background-position:0 0,0% 50%}100%{background-position:0 0,100% 50%}}' +
       '@keyframes agpFxTwinkle{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:.75;transform:scale(1) rotate(45deg)}}' +
       '@keyframes agpFxFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}' +
+      // توب 3 الأسبوع الحالي (weekRank) — ذهبي/فضي/برونزي هادي، مستقل عن ألوان التصميم.
+      '.agp-live-card.rk-1{--rk-a:#f1d27a;--rk-b:#c9a24a;--rk-tx:#2a2008;--rk-soft:241,210,122}' +
+      '.agp-live-card.rk-2{--rk-a:#dfe5ee;--rk-b:#a9b4c3;--rk-tx:#151a21;--rk-soft:215,222,232}' +
+      '.agp-live-card.rk-3{--rk-a:#e5b18c;--rk-b:#b97c55;--rk-tx:#2a170c;--rk-soft:220,165,125}' +
+      '.agp-live-medal{position:absolute;top:-5px;right:-5px;z-index:2;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--rk-tx);background:linear-gradient(160deg,var(--rk-a),var(--rk-b));border:2px solid #15131f;box-shadow:0 3px 10px -3px rgba(var(--rk-soft),.7)}' +
+      '.agp-live-card.fx .agp-live-medal{border-color:var(--fx-gap)}' +
+      '.agp-live-badge.rank-badge{color:var(--rk-a);background:linear-gradient(135deg,rgba(var(--rk-soft),.2),rgba(var(--rk-soft),.06));border-color:rgba(var(--rk-soft),.4)}' +
+      // البطاقة العادية لتوب 3: إطار ناعم بلون الوسام بدل الإطار الرمادي.
+      '.agp-live-card.rk:not(.fx){border-color:rgba(var(--rk-soft),.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 38px -26px rgba(var(--rk-soft),.6)}' +
+      '.agp-live-card.rk:not(.fx):hover{border-color:rgba(var(--rk-soft),.6)}' +
       '@keyframes agpLiveShine{0%,60%{left:-70%}100%{left:140%}}' +
       '@keyframes agpLiveSpin{to{transform:rotate(360deg)}}' +
       '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
@@ -193,6 +203,8 @@
   var LIVE_ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h10v2h3.5v2.5A4.5 4.5 0 0 1 16.6 12 5.5 5.5 0 0 1 13 14.8V17h3v4H8v-4h3v-2.2A5.5 5.5 0 0 1 7.4 12 4.5 4.5 0 0 1 3.5 7.5V5H7zm10 4v3.2A2.5 2.5 0 0 0 18.5 7.5V7zM7 7H5.5v.5A2.5 2.5 0 0 0 7 10.2z"/></svg>';
   var LIVE_ICON_CROWN = '<svg viewBox="0 0 24 18" fill="currentColor" aria-hidden="true"><path d="M2 4l5.5 4.5L12 1l4.5 7.5L22 4l-2 11H4z"/><rect x="4" y="15.5" width="16" height="2.5" rx="1.2"/></svg>';
   // نص الشارة يوضح إنه من التصنيف الأسبوعي: «توب 1 أسبوعي · ذهبي ×3».
+  var RANK_LABELS = ['', 'الأول', 'الثاني', 'الثالث'];
+  var LIVE_ICON_MEDAL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h4l1.6 4.2L14.2 2h3.8l-3.4 7.2a6.5 6.5 0 1 1-5.2 0z"/><circle cx="12" cy="15.5" r="3.2" fill="rgba(0,0,0,.25)"/></svg>';
   function champLabel(n){ return 'توب 1 أسبوعي · ' + CHAMP_TIERS[n]; }
   function champTitle(c){ return 'أخذ المركز الأول بتصنيف الاستريمرز الأسبوعي ' + (c === 1 ? 'مرة وحدة' : c === 2 ? 'مرتين' : c + ' مرات'); }
   function buildBadge(icon, label, count, extraClass){
@@ -237,6 +249,9 @@
     var fxCard = kind === 'live' && s.card && LIVE_FX[s.card.style] ? s.card : (champ ? { style: 'champion' } : null);
     var fx = fxCard ? (fxCard.style === 'champion' ? { label: champLabel(champTier), icon: LIVE_ICON_TROPHY, count: champ } : LIVE_FX[fxCard.style]) : null;
     if (fx) card.className += ' fx fx-' + fxCard.style + (fxCard.style === 'champion' ? ' ct-' + champTier : '');
+    // توب 3 الأسبوع الحالي (مباشر): وسام على الصورة + شارة، والبطاقة العادية تاخذ إطار بلون الوسام.
+    var rank = kind === 'live' && s.weekRank >= 1 && s.weekRank <= 3 ? Number(s.weekRank) : 0;
+    if (rank) card.className += ' rk rk-' + rank;
     if (kind === 'live') {
       // الضغط يفتح بث الستريمر نفسه في تيك توك (تبويب جديد).
       card.href = 'https://www.tiktok.com/@' + encodeURIComponent(s.tiktok) + '/live';
@@ -316,12 +331,17 @@
     watch.className = 'agp-live-watch';
     watch.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>';
     watch.appendChild(document.createTextNode(kind === 'wait' ? 'دخول مباشر' : kind === 'idle' ? 'تحدّاه' : 'شاهد'));
+    // الشارات بسطر مستقل فوق الاسم — لو كانت بنفس سطر الاسم تقصّه وتغطيه.
+    var badges = document.createElement('div');
+    badges.className = 'agp-live-badges';
+    if (rank) {
+      var rankBadge = buildBadge(LIVE_ICON_MEDAL, RANK_LABELS[rank] + ' هذا الأسبوع', 0, 'rank-badge rk-' + rank);
+      rankBadge.title = 'مركزه الحالي بتصنيف الاستريمرز الأسبوعي — يتحدّث مباشرة';
+      badges.appendChild(rankBadge);
+    }
     if (fx) {
-      // الاسم + الشارة بحاوية وحدة عشان الاسم الطويل يتقص (…) والشارة تبقى ظاهرة.
       var nameWrap = document.createElement('div');
       nameWrap.className = 'agp-live-namewrap';
-      var badges = document.createElement('div');
-      badges.className = 'agp-live-badges';
       var mainBadge = buildBadge(fx.icon, fx.label, fx.count);
       if (fxCard.style === 'champion') mainBadge.title = champTitle(champ);
       badges.appendChild(mainBadge);
@@ -334,11 +354,10 @@
       nameWrap.appendChild(name);
       if (fx.verified) nameWrap.insertAdjacentHTML('beforeend', LIVE_VERIFIED);
       top.appendChild(nameWrap);
-      // الشارات بسطر مستقل فوق الاسم — لو كانت بنفس سطر الاسم تقصّه وتغطيه.
-      info.appendChild(badges);
     } else {
       top.appendChild(name);
     }
+    if (badges.firstChild) info.appendChild(badges);
     top.appendChild(watch);
     info.appendChild(top);
     info.appendChild(acc);
@@ -351,6 +370,13 @@
       if (fxCard.host) credits.appendChild(buildCredit(LIVE_ICON_MIC, 'يقدّم البث:', fxCard.host));
       if (fxCard.sponsor) credits.appendChild(buildCredit(LIVE_ICON_SPONSOR, 'البث برعاية', fxCard.sponsor));
       info.appendChild(credits);
+    }
+    if (rank) {
+      var medal = document.createElement('span');
+      medal.className = 'agp-live-medal';
+      medal.textContent = String(rank);
+      medal.title = RANK_LABELS[rank] + ' بتصنيف هذا الأسبوع';
+      av.appendChild(medal);
     }
     if (fxCard && fxCard.style === 'champion') {
       if (champTier >= 4) {

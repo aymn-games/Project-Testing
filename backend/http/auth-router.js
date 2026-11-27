@@ -2246,6 +2246,12 @@ function handleAdminSetLiveCardStyle(req, res, body) {
  * تيك توك (tiktok_display_name المحفوظ عند التوثيق)، ولو ما انحفظ نعرض يوزر
  * تيك توك نفسه — مو اسم العرض بالموقع. */
 function handlePublicLiveStreams(req, res) {
+  // توب 3 الأسبوع الحالي مباشرة (تصنيف الاستريمرز بالساعات — نفس قائمة الرئيسية، محفوظة 5 دقائق)
+  // — weekRank بكل بث: 1/2/3 أو null. راجع وسام المركز بـjs/agp-live-streams.js.
+  var weekRanks = {};
+  try {
+    authService.getTopStreamersByHours(3).forEach(function (r, i) { if (r.customId) weekRanks[r.customId] = i + 1; });
+  } catch (err) { logger.error('Public live streams: week ranking failed:', err); }
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
   var byUser = {};
@@ -2264,6 +2270,7 @@ function handlePublicLiveStreams(req, res) {
       customId: u.custom_id,
       card: liveCardStyles.getCardByCustomId(u.custom_id),
       champion: topChampions.getChampionCount(u.custom_id),
+      weekRank: weekRanks[u.custom_id] || null,
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2285,6 +2292,7 @@ function handlePublicLiveStreams(req, res) {
       customId: u.custom_id,
       card: liveCardStyles.getCardByCustomId(u.custom_id),
       champion: topChampions.getChampionCount(u.custom_id),
+      weekRank: weekRanks[u.custom_id] || null,
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since
