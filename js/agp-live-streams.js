@@ -85,7 +85,6 @@
       '.agp-live-verified{flex:none;width:16px;height:16px;color:#9ccbf0;filter:drop-shadow(0 0 5px rgba(156,203,240,.35))}' +
       '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
-      '.agp-live-info > .agp-live-badge{align-self:flex-start;margin-bottom:2px}' +
       // تبويب الـID بالبطاقات المميزة: إطار متدرّج بألوان التصميم (مو حدود شفافة مثل باقي الشارات)،
       // تعبئة داكنة بلمسة لون، توهّج خفيف، والرقم بتدرّج مثل الاسم.
       '.agp-live-card.fx .agp-live-chip.agp-live-chip-id{gap:6px;padding:3px 11px 3px 9px;border-radius:10px;border:1.5px solid transparent;font-weight:800;background:linear-gradient(135deg,var(--fx-chip),var(--fx-gap)) padding-box,var(--fx-btn) border-box;box-shadow:0 0 14px -6px var(--fx-glow-h),inset 0 1px 0 rgba(255,255,255,.06)}' +
@@ -121,10 +120,55 @@
       '.agp-live-card.fx-vip{--fx-a:#eab4cc;--fx-bg:linear-gradient(160deg,#1f141d 0%,#140d14 60%,#0f0a0f 100%);--fx-border:linear-gradient(135deg,rgba(245,200,220,.52),rgba(245,200,220,.07) 50%,rgba(245,215,228,.36));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(234,160,195,.11),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(240,175,185,.07),transparent 60%);--fx-shine:rgba(255,230,240,.06);--fx-glow:rgba(234,160,195,.24);--fx-glow-h:rgba(234,160,195,.38);--fx-ring:conic-gradient(from 0deg,#fbe6ef,#e9a9c6,#f0bcc4,#fbe6ef);--fx-gap:#150d15;--fx-ph:linear-gradient(135deg,#3d2234,#1c1019);--fx-ph-tx:#f5d5e4;--fx-tag:linear-gradient(90deg,#efbcd3,#f2c3c8);--fx-tag-tx:#3a1426;--fx-name:linear-gradient(90deg,#fff4f8,#f7d6e5 60%,#ebb5cd);--fx-badge:linear-gradient(135deg,rgba(234,160,195,.17),rgba(234,160,195,.05));--fx-badge-tx:#f5d5e4;--fx-badge-bd:rgba(240,185,210,.3);--fx-acc:#cfa5b9;--fx-game:#e0cbd5;--fx-chip:rgba(234,160,195,.06);--fx-chip-bd:rgba(240,185,210,.16);--fx-chip-tx:#bb9cab;--fx-num:#fdf0f6;--fx-id:#ecbdd2;--fx-btn:linear-gradient(90deg,#efbcd3,#f2c3c8);--fx-btn-tx:#3a1426}' +
       // ألماسي — ثلجي ناعم
       '.agp-live-card.fx-diamond{--fx-a:#a8d8f0;--fx-bg:linear-gradient(160deg,#0e1a24 0%,#0b141c 60%,#090f15 100%);--fx-border:linear-gradient(135deg,rgba(205,235,250,.58),rgba(160,210,240,.08) 45%,rgba(185,195,245,.42));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(130,195,235,.12),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(160,170,240,.09),transparent 60%),repeating-linear-gradient(60deg,rgba(255,255,255,.016) 0 1px,transparent 1px 14px);--fx-shine:rgba(235,248,255,.06);--fx-glow:rgba(130,195,235,.24);--fx-glow-h:rgba(130,195,235,.38);--fx-ring:conic-gradient(from 0deg,#e8f6fd,#9fd3ef,#b3bdf3,#e8f6fd);--fx-gap:#0c161e;--fx-ph:linear-gradient(135deg,#1a3547,#0e1c27);--fx-ph-tx:#cdeafa;--fx-tag:linear-gradient(90deg,#b2def3,#c3caf5);--fx-tag-tx:#0e2533;--fx-name:linear-gradient(90deg,#f4fbff,#d1ecfa 55%,#bcc6f4);--fx-badge:linear-gradient(135deg,rgba(140,200,235,.17),rgba(140,200,235,.05));--fx-badge-tx:#cdeafa;--fx-badge-bd:rgba(160,210,240,.3);--fx-acc:#98b9cb;--fx-game:#c4d8e3;--fx-chip:rgba(140,200,235,.06);--fx-chip-bd:rgba(160,210,240,.16);--fx-chip-tx:#93afbf;--fx-num:#f2faff;--fx-id:#aed9f0;--fx-btn:linear-gradient(90deg,#b2def3,#c3caf5);--fx-btn-tx:#0e2533}' +
+      // بطل التوب — برونزي — أول لقب
+      '.agp-live-card.fx-champion.ct-1{--fx-a:#d6a07a;--fx-bg:linear-gradient(160deg,#1b140f 0%,#120d0a 60%,#0d0a08 100%);--fx-border:linear-gradient(140deg,rgba(235,190,150,.55),rgba(200,140,100,.08) 45%,rgba(230,180,140,.4));--fx-aura:radial-gradient(110% 85% at 100% 0%,rgba(214,160,122,.13),transparent 58%),radial-gradient(70% 60% at 0% 100%,rgba(190,120,80,.08),transparent 60%);--fx-shine:rgba(255,250,240,.06);--fx-glow:rgba(214,160,122,.26);--fx-glow-h:rgba(214,160,122,.4);--fx-ring:conic-gradient(from 0deg,#f6dcc6,#d6a07a,#a8714a,#d6a07a,#f6dcc6);--fx-gap:#120d0a;--fx-ph:linear-gradient(135deg,#3a2618,#1a110b);--fx-ph-tx:#f0cdb2;--fx-tag:linear-gradient(180deg,#ecc3a1,#c98d63);--fx-tag-tx:#2a170c;--fx-name:linear-gradient(90deg,#fdf1e8,#eccab0 60%,#d5a07c);--fx-badge:linear-gradient(135deg,rgba(214,160,122,.2),rgba(214,160,122,.06));--fx-badge-tx:#f0cdb2;--fx-badge-bd:rgba(214,160,122,.34);--fx-acc:#c2a089;--fx-game:#d8c4b5;--fx-chip:rgba(214,160,122,.06);--fx-chip-bd:rgba(214,160,122,.17);--fx-chip-tx:#b39784;--fx-num:#f9e3d2;--fx-id:#e0b18f;--fx-btn:linear-gradient(180deg,#ecc3a1,#c98d63);--fx-btn-tx:#2a170c}' +
+      // بطل التوب — فضي — لقبين
+      '.agp-live-card.fx-champion.ct-2{--fx-a:#c3cddb;--fx-bg:linear-gradient(160deg,#14171c 0%,#0e1014 60%,#0b0c0f 100%);--fx-border:linear-gradient(140deg,rgba(235,240,248,.6),rgba(170,180,195,.08) 45%,rgba(215,222,232,.45));--fx-aura:radial-gradient(110% 85% at 100% 0%,rgba(195,205,219,.13),transparent 58%),radial-gradient(70% 60% at 0% 100%,rgba(150,165,185,.08),transparent 60%);--fx-shine:rgba(255,250,240,.06);--fx-glow:rgba(195,205,219,.26);--fx-glow-h:rgba(195,205,219,.4);--fx-ring:conic-gradient(from 0deg,#f7f9fc,#c3cddb,#8e99a8,#c3cddb,#f7f9fc);--fx-gap:#0e1014;--fx-ph:linear-gradient(135deg,#2c323c,#15181d);--fx-ph-tx:#e3e8ef;--fx-tag:linear-gradient(180deg,#eef2f7,#b8c2cf);--fx-tag-tx:#151a21;--fx-name:linear-gradient(90deg,#ffffff,#e2e8f0 55%,#b9c3d0);--fx-badge:linear-gradient(135deg,rgba(195,205,219,.2),rgba(195,205,219,.06));--fx-badge-tx:#e3e8ef;--fx-badge-bd:rgba(195,205,219,.34);--fx-acc:#a9b3c1;--fx-game:#cdd4de;--fx-chip:rgba(195,205,219,.06);--fx-chip-bd:rgba(195,205,219,.17);--fx-chip-tx:#9da7b5;--fx-num:#f4f7fb;--fx-id:#cfd8e4;--fx-btn:linear-gradient(180deg,#eef2f7,#b8c2cf);--fx-btn-tx:#151a21}' +
+      // بطل التوب — ذهبي — 3 ألقاب
+      '.agp-live-card.fx-champion.ct-3{--fx-a:#e3c77a;--fx-bg:linear-gradient(160deg,#19150b 0%,#110e08 60%,#0c0a06 100%);--fx-border:linear-gradient(140deg,rgba(250,230,170,.62),rgba(200,160,80,.1) 30%,rgba(250,225,150,.5) 55%,rgba(200,160,80,.1) 80%,rgba(250,230,170,.6));--fx-aura:radial-gradient(110% 85% at 100% 0%,rgba(227,199,122,.13),transparent 58%),radial-gradient(70% 60% at 0% 100%,rgba(200,160,80,.08),transparent 60%);--fx-shine:rgba(255,250,240,.06);--fx-glow:rgba(227,199,122,.26);--fx-glow-h:rgba(227,199,122,.4);--fx-ring:conic-gradient(from 0deg,#fcf2cf,#e3c77a,#c19a45,#e3c77a,#fcf2cf);--fx-gap:#110e08;--fx-ph:linear-gradient(135deg,#3a2e12,#1a150a);--fx-ph-tx:#f3e1aa;--fx-tag:linear-gradient(180deg,#f4e3ad,#d6b260);--fx-tag-tx:#2a2008;--fx-name:linear-gradient(90deg,#fff9e6,#f0da95 55%,#d6b260);--fx-badge:linear-gradient(135deg,rgba(227,199,122,.2),rgba(227,199,122,.06));--fx-badge-tx:#f3e1aa;--fx-badge-bd:rgba(227,199,122,.34);--fx-acc:#c4b080;--fx-game:#dacda9;--fx-chip:rgba(227,199,122,.06);--fx-chip-bd:rgba(227,199,122,.17);--fx-chip-tx:#b5a479;--fx-num:#fbedc4;--fx-id:#e8cf86;--fx-btn:linear-gradient(180deg,#f4e3ad,#d6b260);--fx-btn-tx:#2a2008}' +
+      // بطل التوب — بلاتيني — 4 ألقاب
+      '.agp-live-card.fx-champion.ct-4{--fx-a:#b2e0dc;--fx-bg:linear-gradient(160deg,#0f1919 0%,#0b1213 60%,#090e0f 100%);--fx-border:linear-gradient(140deg,rgba(220,250,246,.62),rgba(150,200,200,.1) 30%,rgba(205,200,245,.5) 55%,rgba(150,200,200,.1) 80%,rgba(220,250,246,.6));--fx-aura:radial-gradient(110% 85% at 100% 0%,rgba(178,224,220,.13),transparent 58%),radial-gradient(70% 60% at 0% 100%,rgba(190,185,240,.08),transparent 60%);--fx-shine:rgba(255,250,240,.06);--fx-glow:rgba(178,224,220,.26);--fx-glow-h:rgba(178,224,220,.4);--fx-ring:conic-gradient(from 0deg,#effdfb,#b2e0dc,#c9c4f2,#b2e0dc,#effdfb);--fx-gap:#0b1213;--fx-ph:linear-gradient(135deg,#1c3433,#0e1a1a);--fx-ph-tx:#d5f2ef;--fx-tag:linear-gradient(180deg,#dcf5f2,#b7cfee);--fx-tag-tx:#0d2222;--fx-name:linear-gradient(90deg,#f6fffe,#d0efeb 55%,#c9c4f2);--fx-badge:linear-gradient(135deg,rgba(178,224,220,.2),rgba(178,224,220,.06));--fx-badge-tx:#d5f2ef;--fx-badge-bd:rgba(178,224,220,.34);--fx-acc:#9fc2bf;--fx-game:#c6dedb;--fx-chip:rgba(178,224,220,.06);--fx-chip-bd:rgba(178,224,220,.17);--fx-chip-tx:#93b3b0;--fx-num:#effdfb;--fx-id:#bfe7e3;--fx-btn:linear-gradient(180deg,#dcf5f2,#b7cfee);--fx-btn-tx:#0d2222}' +
+      // بطل التوب — أسطوري — 5 ألقاب وأكثر
+      '.agp-live-card.fx-champion.ct-5{--fx-a:#dcbcfb;--fx-bg:linear-gradient(160deg,#17111f 0%,#100c17 60%,#0c0a11 100%);--fx-border:linear-gradient(120deg,rgba(255,200,225,.6),rgba(220,190,255,.55) 20%,rgba(185,215,255,.55) 40%,rgba(195,250,225,.5) 60%,rgba(255,240,185,.55) 80%,rgba(255,200,225,.6));--fx-aura:radial-gradient(110% 85% at 100% 0%,rgba(220,188,251,.13),transparent 58%),radial-gradient(70% 60% at 0% 100%,rgba(185,215,255,.08),transparent 60%);--fx-shine:rgba(255,250,240,.06);--fx-glow:rgba(220,188,251,.26);--fx-glow-h:rgba(220,188,251,.4);--fx-ring:conic-gradient(from 0deg,#ffd6e8,#dcbcfb,#b8d8ff,#c8f7e2,#fff1b8,#ffd6e8);--fx-gap:#100c17;--fx-ph:linear-gradient(135deg,#33264a,#18121f);--fx-ph-tx:#ecdfff;--fx-tag:linear-gradient(90deg,#f6c9dd,#d9c6fb,#c0e0fb);--fx-tag-tx:#1d1430;--fx-name:linear-gradient(90deg,#fff2f8,#e8daff 35%,#d6ecff 70%,#fff4d6);--fx-badge:linear-gradient(135deg,rgba(220,188,251,.2),rgba(220,188,251,.06));--fx-badge-tx:#ecdfff;--fx-badge-bd:rgba(220,188,251,.34);--fx-acc:#b7a9cf;--fx-game:#d2c9e2;--fx-chip:rgba(220,188,251,.06);--fx-chip-bd:rgba(220,188,251,.17);--fx-chip-tx:#a99dc0;--fx-num:#fbf6ff;--fx-id:#e2cdfd;--fx-btn:linear-gradient(90deg,#f6c9dd,#d9c6fb,#c0e0fb);--fx-btn-tx:#1d1430}' +
+      // التطور مع كل لقب: كل مستوى يضيف على اللي قبله.
+      // 2+: حلقة ثانية رفيعة حول الصورة.
+      '.agp-live-card.fx-champion:not(.ct-1) .agp-live-avatar::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid var(--fx-a);opacity:.4;pointer-events:none}' +
+      // 3+: الإطار المتدرّج يتحرك ببطء.
+      '.agp-live-card.fx-champion.ct-3,.agp-live-card.fx-champion.ct-4,.agp-live-card.fx-champion.ct-5{background-size:100% 100%,300% 300%;animation:agpFxBorder 7s ease-in-out infinite alternate}' +
+      // 4+: نجوم صغيرة تلمع على البطاقة.
+      '.agp-live-sparkles{position:absolute;inset:0;z-index:-1;pointer-events:none}' +
+      '.agp-live-sparkles i{position:absolute;width:7px;height:7px;background:var(--fx-a);clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0;animation:agpFxTwinkle 3.2s ease-in-out infinite}' +
+      '.agp-live-sparkles i:nth-child(1){top:14%;left:8%}' +
+      '.agp-live-sparkles i:nth-child(2){top:70%;left:20%;animation-delay:.8s;width:5px;height:5px}' +
+      '.agp-live-sparkles i:nth-child(3){top:22%;left:46%;animation-delay:1.6s;width:5px;height:5px}' +
+      '.agp-live-sparkles i:nth-child(4){top:80%;left:58%;animation-delay:2.2s}' +
+      '.agp-live-sparkles i:nth-child(5){top:10%;left:72%;animation-delay:1.1s;width:6px;height:6px}' +
+      // 5+: تاج فوق الصورة يطفو بهدوء.
+      '.agp-live-crown{position:absolute;top:-17px;left:50%;z-index:2;width:22px;height:16px;transform:translateX(-50%);color:var(--fx-a);filter:drop-shadow(0 2px 6px var(--fx-glow-h));animation:agpFxFloat 3s ease-in-out infinite}' +
+      '.agp-live-crown svg{display:block;width:100%;height:100%}' +
+      '.agp-live-card.fx-champion.ct-5 .agp-live-avatar{margin-top:6px}' +
+      // صف الشارات (التصميم + بطل التوب لو اجتمعوا).
+      '.agp-live-badges{align-self:flex-start;display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}' +
+      '.agp-live-badge-count{direction:ltr;unicode-bidi:isolate;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;opacity:.85;margin-inline-start:2px}' +
+      // شارة بطل التوب على بطاقة لها تصميم يدوي (المؤسس/رسمي…): ذهبية هادية ثابتة.
+      '.agp-live-badge.champ-extra{color:#f3e1aa;background:linear-gradient(135deg,rgba(227,199,122,.2),rgba(227,199,122,.06));border-color:rgba(227,199,122,.36)}' +
+      '@keyframes agpFxBorder{0%{background-position:0 0,0% 50%}100%{background-position:0 0,100% 50%}}' +
+      '@keyframes agpFxTwinkle{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:.75;transform:scale(1) rotate(45deg)}}' +
+      '@keyframes agpFxFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}' +
+      // توب 3 الأسبوع الحالي (weekRank) — ذهبي/فضي/برونزي هادي، مستقل عن ألوان التصميم.
+      '.agp-live-card.rk-1{--rk-a:#f1d27a;--rk-b:#c9a24a;--rk-tx:#2a2008;--rk-soft:241,210,122}' +
+      '.agp-live-card.rk-2{--rk-a:#dfe5ee;--rk-b:#a9b4c3;--rk-tx:#151a21;--rk-soft:215,222,232}' +
+      '.agp-live-card.rk-3{--rk-a:#e5b18c;--rk-b:#b97c55;--rk-tx:#2a170c;--rk-soft:220,165,125}' +
+      '.agp-live-medal{position:absolute;top:-5px;right:-5px;z-index:2;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--rk-tx);background:linear-gradient(160deg,var(--rk-a),var(--rk-b));border:2px solid #15131f;box-shadow:0 3px 10px -3px rgba(var(--rk-soft),.7)}' +
+      '.agp-live-card.fx .agp-live-medal{border-color:var(--fx-gap)}' +
+      '.agp-live-badge.rank-badge{color:var(--rk-a);background:linear-gradient(135deg,rgba(var(--rk-soft),.2),rgba(var(--rk-soft),.06));border-color:rgba(var(--rk-soft),.4)}' +
+      // البطاقة العادية لتوب 3: إطار ناعم بلون الوسام بدل الإطار الرمادي.
+      '.agp-live-card.rk:not(.fx){border-color:rgba(var(--rk-soft),.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 38px -26px rgba(var(--rk-soft),.6)}' +
+      '.agp-live-card.rk:not(.fx):hover{border-color:rgba(var(--rk-soft),.6)}' +
       '@keyframes agpLiveShine{0%,60%{left:-70%}100%{left:140%}}' +
       '@keyframes agpLiveSpin{to{transform:rotate(360deg)}}' +
       '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
-      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}.agp-live-card.fx::after{display:none}.agp-live-card.fx .agp-live-avatar::before{animation:none}}';
+      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}.agp-live-card.fx::after{display:none}.agp-live-card.fx .agp-live-avatar::before{animation:none}.agp-live-card.fx-champion{animation:none!important}.agp-live-sparkles i{animation:none;opacity:.5}.agp-live-crown{animation:none}}';
     document.head.appendChild(st);
   }
 
@@ -153,6 +197,30 @@
     vip: { label: 'مميز', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' },
     diamond: { label: 'ألماسي', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>' }
   };
+  // بطل التوب (المركز الأول بتصنيف الاستريمرز الأسبوعي) — المستوى = عدد الألقاب (حد أعلى 5).
+  // العدد من السيرفر (champion — backend/live-cards/champions-service.js).
+  var CHAMP_TIERS = ['', 'برونزي', 'فضي', 'ذهبي', 'بلاتيني', 'أسطوري'];
+  var LIVE_ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h10v2h3.5v2.5A4.5 4.5 0 0 1 16.6 12 5.5 5.5 0 0 1 13 14.8V17h3v4H8v-4h3v-2.2A5.5 5.5 0 0 1 7.4 12 4.5 4.5 0 0 1 3.5 7.5V5H7zm10 4v3.2A2.5 2.5 0 0 0 18.5 7.5V7zM7 7H5.5v.5A2.5 2.5 0 0 0 7 10.2z"/></svg>';
+  var LIVE_ICON_CROWN = '<svg viewBox="0 0 24 18" fill="currentColor" aria-hidden="true"><path d="M2 4l5.5 4.5L12 1l4.5 7.5L22 4l-2 11H4z"/><rect x="4" y="15.5" width="16" height="2.5" rx="1.2"/></svg>';
+  // نص الشارة يوضح إنه من التصنيف الأسبوعي: «توب 1 أسبوعي · ذهبي ×3».
+  var RANK_LABELS = ['', 'الأول', 'الثاني', 'الثالث'];
+  var LIVE_ICON_MEDAL = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2h4l1.6 4.2L14.2 2h3.8l-3.4 7.2a6.5 6.5 0 1 1-5.2 0z"/><circle cx="12" cy="15.5" r="3.2" fill="rgba(0,0,0,.25)"/></svg>';
+  function champLabel(n){ return 'توب 1 أسبوعي · ' + CHAMP_TIERS[n]; }
+  function champTitle(c){ return 'أخذ المركز الأول بتصنيف الاستريمرز الأسبوعي ' + (c === 1 ? 'مرة وحدة' : c === 2 ? 'مرتين' : c + ' مرات'); }
+  function buildBadge(icon, label, count, extraClass){
+    var b = document.createElement('span');
+    b.className = 'agp-live-badge' + (extraClass ? ' ' + extraClass : '');
+    b.innerHTML = icon;
+    b.appendChild(document.createTextNode(label));
+    if (count) {
+      var c = document.createElement('span');
+      c.className = 'agp-live-badge-count';
+      c.textContent = '×' + count;
+      b.appendChild(c);
+    }
+    return b;
+  }
+
   // أيقونة ID بالبطاقات المميزة (بطاقة هوية).
   var LIVE_ICON_ID = '<svg class="agp-live-id-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="ID"><rect x="2.5" y="5" width="19" height="14" rx="3"/><circle cx="8.5" cy="11" r="2.2"/><path d="M5.5 16c.6-1.5 1.7-2.2 3-2.2s2.4.7 3 2.2M14 10h4.5M14 13.5h3"/></svg>';
   // علامة التوثيق جنب اسم الحساب الرسمي (مثل علامة التوثيق بالمنصات).
@@ -175,9 +243,15 @@
     var kind = s.kind || 'live';
     var card = document.createElement('a');
     card.className = 'agp-live-card' + (kind === 'live' ? '' : ' ' + kind);
-    var fxCard = kind === 'live' && s.card && LIVE_FX[s.card.style] ? s.card : null;
-    var fx = fxCard ? LIVE_FX[fxCard.style] : null;
-    if (fx) card.className += ' fx fx-' + fxCard.style;
+    var champ = kind === 'live' && s.champion > 0 ? Number(s.champion) : 0;
+    var champTier = Math.min(champ, 5);
+    // التصميم اليدوي من الأدمن له الأولوية؛ بدونه بطل التوب ياخذ بطاقة «بطل» حسب عدد ألقابه.
+    var fxCard = kind === 'live' && s.card && LIVE_FX[s.card.style] ? s.card : (champ ? { style: 'champion' } : null);
+    var fx = fxCard ? (fxCard.style === 'champion' ? { label: champLabel(champTier), icon: LIVE_ICON_TROPHY, count: champ } : LIVE_FX[fxCard.style]) : null;
+    if (fx) card.className += ' fx fx-' + fxCard.style + (fxCard.style === 'champion' ? ' ct-' + champTier : '');
+    // توب 3 الأسبوع الحالي (مباشر): وسام على الصورة + شارة، والبطاقة العادية تاخذ إطار بلون الوسام.
+    var rank = kind === 'live' && s.weekRank >= 1 && s.weekRank <= 3 ? Number(s.weekRank) : 0;
+    if (rank) card.className += ' rk rk-' + rank;
     if (kind === 'live') {
       // الضغط يفتح بث الستريمر نفسه في تيك توك (تبويب جديد).
       card.href = 'https://www.tiktok.com/@' + encodeURIComponent(s.tiktok) + '/live';
@@ -257,22 +331,33 @@
     watch.className = 'agp-live-watch';
     watch.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>';
     watch.appendChild(document.createTextNode(kind === 'wait' ? 'دخول مباشر' : kind === 'idle' ? 'تحدّاه' : 'شاهد'));
+    // الشارات بسطر مستقل فوق الاسم — لو كانت بنفس سطر الاسم تقصّه وتغطيه.
+    var badges = document.createElement('div');
+    badges.className = 'agp-live-badges';
+    if (rank) {
+      var rankBadge = buildBadge(LIVE_ICON_MEDAL, RANK_LABELS[rank] + ' هذا الأسبوع', 0, 'rank-badge rk-' + rank);
+      rankBadge.title = 'مركزه الحالي بتصنيف الاستريمرز الأسبوعي — يتحدّث مباشرة';
+      badges.appendChild(rankBadge);
+    }
     if (fx) {
-      // الاسم + الشارة بحاوية وحدة عشان الاسم الطويل يتقص (…) والشارة تبقى ظاهرة.
       var nameWrap = document.createElement('div');
       nameWrap.className = 'agp-live-namewrap';
-      var badge = document.createElement('span');
-      badge.className = 'agp-live-badge';
-      badge.innerHTML = fx.icon;
-      badge.appendChild(document.createTextNode(fx.label));
+      var mainBadge = buildBadge(fx.icon, fx.label, fx.count);
+      if (fxCard.style === 'champion') mainBadge.title = champTitle(champ);
+      badges.appendChild(mainBadge);
+      // صاحب تصميم يدوي وهو بطل توب بعد: شارة البطل جنب شارة التصميم.
+      if (champ && fxCard.style !== 'champion') {
+        var extra = buildBadge(LIVE_ICON_TROPHY, champLabel(champTier), champ, 'champ-extra');
+        extra.title = champTitle(champ);
+        badges.appendChild(extra);
+      }
       nameWrap.appendChild(name);
       if (fx.verified) nameWrap.insertAdjacentHTML('beforeend', LIVE_VERIFIED);
       top.appendChild(nameWrap);
-      // الشارة بسطر مستقل فوق الاسم — لو كانت بنفس سطر الاسم تقصّه وتغطيه.
-      info.appendChild(badge);
     } else {
       top.appendChild(name);
     }
+    if (badges.firstChild) info.appendChild(badges);
     top.appendChild(watch);
     info.appendChild(top);
     info.appendChild(acc);
@@ -285,6 +370,28 @@
       if (fxCard.host) credits.appendChild(buildCredit(LIVE_ICON_MIC, 'يقدّم البث:', fxCard.host));
       if (fxCard.sponsor) credits.appendChild(buildCredit(LIVE_ICON_SPONSOR, 'البث برعاية', fxCard.sponsor));
       info.appendChild(credits);
+    }
+    if (rank) {
+      var medal = document.createElement('span');
+      medal.className = 'agp-live-medal';
+      medal.textContent = String(rank);
+      medal.title = RANK_LABELS[rank] + ' بتصنيف هذا الأسبوع';
+      av.appendChild(medal);
+    }
+    if (fxCard && fxCard.style === 'champion') {
+      if (champTier >= 4) {
+        var sp = document.createElement('span');
+        sp.className = 'agp-live-sparkles';
+        sp.setAttribute('aria-hidden', 'true');
+        sp.innerHTML = '<i></i><i></i><i></i><i></i><i></i>';
+        card.appendChild(sp);
+      }
+      if (champTier >= 5) {
+        var crown = document.createElement('span');
+        crown.className = 'agp-live-crown';
+        crown.innerHTML = LIVE_ICON_CROWN;
+        av.appendChild(crown);
+      }
     }
     card.appendChild(av);
     card.appendChild(info);

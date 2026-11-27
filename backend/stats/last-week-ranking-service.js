@@ -61,16 +61,47 @@ function computeSnapshot(period) {
  * تصنيف الأسبوع الماضي — يحفظه أول مرة ويرجع المحفوظ بعدها.
  * @returns {{periodStart: number, periodEnd: number, streamers: Array, players: Array, savedAt: number}}
  */
-function getLastWeekRanking(nowMs) {
-    var period = previousPeriod(nowMs);
+/** صف الفترة المحفوظ، ويحسبه ويحفظه لو ما انحفظ (فترة منتهية بس). */
+function ensureSnapshot(period) {
     var row = db.prepare('SELECT period_end, data, created_at FROM ranking_snapshots WHERE period_start = ?').get(period.start);
     if (!row) {
         var data = computeSnapshot(period);
-        var savedAt = now();
         db.prepare('INSERT OR IGNORE INTO ranking_snapshots (period_start, period_end, data, created_at) VALUES (?, ?, ?, ?)')
-            .run(period.start, period.end, JSON.stringify(data), savedAt);
+            .run(period.start, period.end, JSON.stringify(data), now());
         row = db.prepare('SELECT period_end, data, created_at FROM ranking_snapshots WHERE period_start = ?').get(period.start);
     }
+    return row;
+}
+
+var MAX_BACKFILL_WEEKS = 260;
+
+/**
+ * يتأكد إن كل أسبوع منتهي له صف محفوظ — الحفظ الكسول يفوّت الأسبوع اللي ما أحد
+ * طلب فيه «الأسبوع الماضي». يرجع لين أول بث مسجّل (حتى قبل تصفير التصنيف
+ * streamer_ranking_reset_at — عشان ألقاب التوب القديمة تنحسب). البيانات مؤرخة،
+ * فحساب أسبوع قديم الحين يطلع نفس نتيجته وقتها.
+ * الأسبوع اللي انقسم بالتصفير: يُحفظ الجزء اللي بعد التصفير بس (هو الرسمي)،
+ * والجزء اللي قبله يتخطّى عشان ما ينحسب نفس الأسبوع مرتين.
+ * يستخدمه عدّاد أبطال التوب (live-cards/champions-service.js).
+ */
+function ensureAllSnapshots(nowMs) {
+    var end = authService.getRankingPeriodStart(nowMs || now());
+    var row = db.prepare("SELECT value FROM app_settings WHERE key = 'streamer_ranking_reset_at'").get();
+    var resetAt = row ? Number(row.value) || 0 : 0;
+    var first = db.prepare('SELECT MIN(started_at) AS t FROM broadcasts').get();
+    var earliest = Math.min((first && first.t) || end, resetAt || end);
+    for (var i = 0; i < MAX_BACKFILL_WEEKS && end > earliest; i++) {
+        var weekStart = weekStartOf(end - 1);
+        if (end === resetAt && weekStart < resetAt) { end = weekStart; continue; } // جزء ما قبل التصفير من أسبوعه
+        var start = resetAt > weekStart && resetAt < end ? resetAt : weekStart;
+        ensureSnapshot({ start: start, end: end });
+        end = start;
+    }
+}
+
+function getLastWeekRanking(nowMs) {
+    var period = previousPeriod(nowMs);
+    var row = ensureSnapshot(period);
     var saved = JSON.parse(row.data);
     return {
         periodStart: period.start,
@@ -83,6 +114,7 @@ function getLastWeekRanking(nowMs) {
 
 module.exports = {
     getLastWeekRanking: getLastWeekRanking,
+    ensureAllSnapshots: ensureAllSnapshots,
     previousPeriod: previousPeriod,
     weekStartOf: weekStartOf
 };
