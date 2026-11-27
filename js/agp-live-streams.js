@@ -22,6 +22,9 @@
       '.agp-live-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:"Noto Kufi Arabic",sans-serif;font-size:15px;font-weight:700;color:#f4f2fb}' +
       '.agp-live-head-dot{width:8px;height:8px;border-radius:50%;background:#f43f5e;box-shadow:0 0 0 4px rgba(244,63,94,.16);animation:agpLiveDot 1.6s ease-in-out infinite}' +
       '.agp-live-head-count{font-size:12.5px;font-weight:600;color:#8f88a3}' +
+      '.agp-live-head-viewers{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);font-size:12px;font-weight:700;color:#fda4af;white-space:nowrap}' +
+      '.agp-live-head-viewers[hidden]{display:none}' +
+      '.agp-live-head-viewers svg{width:14px;height:14px}' +
       // الشريط: سكرول أفقي حقيقي (يتحرك تلقائياً بـJS، ويقدر المستخدم يسحبه بإصبعه/الماوس أو يوقفه).
       '.agp-live-head{flex-wrap:wrap}' +
       '.agp-live-ctl{margin-inline-start:auto;display:flex;align-items:center;gap:6px}' +
@@ -190,6 +193,7 @@
     var head = document.createElement('div');
     head.className = 'agp-live-head';
     head.innerHTML = '<span class="agp-live-head-dot"></span><span>بثوث شغّالة الآن</span><span class="agp-live-head-count" data-live-count></span>' +
+      '<span class="agp-live-head-viewers" data-live-viewers hidden title="إجمالي المشاهدين بكل البثوث"></span>' +
       '<div class="agp-live-ctl">' +
         '<button type="button" class="agp-live-btn icon" data-live-nav="prev" aria-label="السابق">' + LIVE_ICON_RIGHT + '</button>' +
         '<button type="button" class="agp-live-btn icon" data-live-nav="next" aria-label="التالي">' + LIVE_ICON_LEFT + '</button>' +
@@ -345,6 +349,14 @@
       if (section.__live) { section.__live.pos = sc.scrollLeft; section.__live.setAt = sc.scrollLeft; }
     });
     section.querySelector('[data-live-count]').textContent = streams && streams.length ? '(' + arNum(streams.length) + ')' : '';
+    // إجمالي المشاهدين = مجموع مشاهدين البثوث اللي عندها عدد (المنتظرين/الفاضيين بدون عدد ما ينحسبون).
+    // بالأرقام الإنجليزية مثل عدد المشاهدين على البطاقات.
+    var totalViewers = 0, hasViewers = false;
+    list.forEach(function(s){ if (typeof s.viewers === 'number') { totalViewers += s.viewers; hasViewers = true; } });
+    var tv = section.querySelector('[data-live-viewers]');
+    tv.innerHTML = LIVE_ICON_EYE;
+    tv.appendChild(document.createTextNode(totalViewers.toLocaleString('en') + ' مشاهد'));
+    tv.hidden = !hasViewers;
     section.hidden = !(streams && streams.length);
   }
 
