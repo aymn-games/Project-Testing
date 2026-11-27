@@ -68,8 +68,8 @@ body.match #rpill{opacity:1;transform:translate(-50%,0)}
 #rpill .rl{font:700 21px "IBM Plex Sans Arabic";color:#fff;padding-inline-start:4px}
 #rpill .rs{padding:5px 14px;border-radius:999px;background:rgba(122,147,146,.16);font:600 14px "IBM Plex Sans Arabic";color:#c2d5d1}
 #rpill .rs b{font:700 18px "IBM Plex Sans Arabic";color:var(--cyan);margin-inline-end:3px}
-#timer{position:fixed;left:50%;top:calc(122px * var(--z));z-index:6;transform:translate(-50%,0) scale(.6);opacity:0;transition:opacity .3s,transform .4s cubic-bezier(.2,1.4,.4,1);width:96px;height:96px;zoom:var(--z);pointer-events:none}
-#timer.in{opacity:1;transform:translate(-50%,0) scale(1)}
+#timer{position:fixed;right:16px;top:96px;z-index:6;transform:scale(.6);opacity:0;transition:opacity .3s,transform .4s cubic-bezier(.2,1.4,.4,1);width:96px;height:96px;zoom:var(--z);pointer-events:none} /* المؤقت على اليمين تحت أزرار الهيدر — ما يغطي الدوائر ولا أدوات البث على اليسار */
+#timer.in{opacity:1;transform:scale(1)}
 #timer svg{position:absolute;inset:0;transform:rotate(-90deg)}
 #timer circle{fill:none;stroke-width:7}#timer .bg{stroke:rgba(255,255,255,.1)}#timer .fg{stroke:var(--cyan);stroke-linecap:round;stroke-dasharray:276.5;transition:stroke .3s}
 #timer .core{position:absolute;inset:9px;border-radius:50%;background:radial-gradient(circle at 50% 35%,rgba(50,80,81,.95),rgba(19,52,54,.95));display:grid;place-items:center;font:700 34px "IBM Plex Sans Arabic";color:#fff;box-shadow:0 0 30px rgba(184,205,201,.25)}

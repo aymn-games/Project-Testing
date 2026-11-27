@@ -668,14 +668,18 @@ export async function mountPyramid(el, opts = {}) {
     function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0) {
         const b = new T.Box3(); pts.forEach(p => b.expandByPoint(p)); const c = b.getCenter(V()), s = b.getSize(V());
         const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
-        const halfW = s.x / 2 * margin + .5, halfH = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + .8;
+        const halfW = s.x / 2 * margin + .5, halfH0 = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + .8;
+        // مساحة فوق لواجهة اللعبة (شريط المرحلة والهيدر): الهرم ينزل تحتها وما يتغطى
+        const HUD = .3, halfH = halfH0 * (1 + HUD);
         const d = Math.max(halfW / Math.tan(hf / 2), halfH / Math.tan(vf / 2)) + s.z / 2 * Math.cos(pitch) * .5;
         const dir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+        const up = V(-Math.sin(yaw) * Math.sin(pitch), Math.cos(pitch), -Math.cos(yaw) * Math.sin(pitch)); // اتجاه «فوق» بالشاشة
+        c.addScaledVector(up, halfH0 * HUD * .95);
         return { look: c, pos: c.clone().addScaledVector(dir, Math.max(9, d)) };
     }
     function levelPts(L, extra = []) { if (!L) return extra; const p = [V(-L.w / 2, L.yTop, L.zFront), V(L.w / 2, L.yTop, L.zFront), V(-L.w / 2, L.yTop + 1.8, L.zBack), V(L.w / 2, L.yTop + 1.8, L.zBack)]; return p.concat(extra); }
     // كل صفوف الهرم الظاهرة (من القاعدة للقمة) — اللقطة الرئيسية تعرض الهرم كامل
-    function pyramidPts(extra = []) { let p = extra.slice(); const vis = levels.filter(L => L.group.visible && L.alive).slice(-3); for (const L of vis) p = levelPts(L, p); return p; }
+    function pyramidPts(extra = []) { let p = extra.slice(); const vis = levels.filter(L => L.group.visible && L.alive).slice(-2); for (const L of vis) p = levelPts(L, p); return p; } // الصف الجديد + الصف اللي واقفين عليه
     function actorPts() { const p = []; for (const a of actors.values()) if (!a.dead) p.push(a.pos.clone(), a.pos.clone().setY(a.pos.y + 1.9)); return p; }
     const drift = t => REDUCED ? V() : V(Math.sin(t * .23) * .35, Math.sin(t * .31) * .18, Math.cos(t * .19) * .25);
     function oblique(pts, pitch = .72, rate = 1.6, swing = .07) {
