@@ -483,6 +483,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 39.59, nameTopPct: 33.48, nameWidthPct: 42.36, nameHeightPct: 36.20,
             textColor: '#1c3a5e'
         },
+        // [غزال الشتاء] الأصل JPG 2000×667 بخلفية بيضاء، فُرّغت الخلفية والفتحة
+        // والفراغات بين القرون، وكُبّر لـ2172×724 (نفس النسبة، بدون مط).
+        // hole 275→727 × 128→580 (دائرة مركزها 501،354)، قرون الغزال ورأسه
+        // يغطون طرف الصورة اليسار — مقصود. name 905→1935 × 255→485 (عرض
+        // اللوح كامل بين الندفتين المعلّقتين 806→898 و1939→2000).
+        // content 11→704. اللوح داكن = أبيض افتراضي.
+        // shine: لمعة تمر فوق رسمة الإطار نفسها.
+        'frame-winter-deer.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 11, contentHeight: 694,
+            avatarLeftPct: 12.66, avatarTopPct: 16.86, avatarWidthPct: 20.81, avatarHeightPct: 65.13,
+            nameLeftPct: 41.67, nameTopPct: 35.16, nameWidthPct: 47.42, nameHeightPct: 33.14,
+            shine: true
+        },
         // [الدبدوب] hole 189→672 × 156→619, name 800→1960 × 355→580, content 4→689
         'frame-cute-bear.png': {
             canvasW: 2172, canvasH: 724, contentTop: 4, contentHeight: 685,
@@ -626,6 +639,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-tpl-frame-img{position:absolute;left:0;',
             'background-repeat:no-repeat;background-position:0 0;',
             'z-index:2;pointer-events:none;}',
+            // لمعة الإطار (shine:true بالقالب): شريط ضوء يمر فوق رسمة الإطار
+            // بس — ممسوك بقناع من صورة الإطار نفسها، فما يلمع على الصورة أو
+            // الفراغ الشفاف.
+            '.agp-pcard-tpl-shine{position:absolute;left:0;z-index:2;pointer-events:none;',
+            '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;',
+            'background:linear-gradient(110deg,transparent 42%,rgba(190,225,255,.18) 46%,rgba(255,255,255,.6) 50%,rgba(190,225,255,.18) 54%,transparent 58%);',
+            'background-size:300% 100%;background-repeat:no-repeat;',
+            'animation:agp-pcard-shine 4s linear infinite;}',
+            '@keyframes agp-pcard-shine{0%{background-position:100% 0}55%,100%{background-position:0 0}}',
+            '@media (prefers-reduced-motion:reduce){.agp-pcard-tpl-shine{animation:none;opacity:0}}',
             '.agp-pcard-tpl-name{position:absolute;z-index:3;',
             'display:flex;align-items:center;justify-content:center;overflow:hidden;',
             'font-weight:800;color:#fff;text-align:center;line-height:1.1;',
@@ -840,6 +863,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
             'background-size:' + layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px;' +
             'background-image:url(' + escapeHtml(frameSrc) + ')';
+        var shineMask = 'url(' + escapeHtml(frameSrc) + ')';
+        var shineSize = layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px';
+        var shineStyle = 'top:' + layout.frameTopOffsetPx + 'px;' +
+            'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
+            '-webkit-mask-image:' + shineMask + ';mask-image:' + shineMask + ';' +
+            '-webkit-mask-size:' + shineSize + ';mask-size:' + shineSize + ';';
         var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + layout.nameTopPx + 'px;' +
             'width:' + tpl.nameWidthPct + '%;height:' + layout.nameHeightPx + 'px;' +
             (tpl.textColor ? 'color:' + tpl.textColor + ';' : '') +
@@ -860,6 +889,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             (tpl.printedName ? ' title="' + escapeHtml(name) + '"' : '') + '>' +
             avatarHtml +
             '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+            (tpl.shine ? '<span class="agp-pcard-tpl-shine" style="' + shineStyle + '"></span>' : '') +
             nameHtml +
             '</span>';
     }
