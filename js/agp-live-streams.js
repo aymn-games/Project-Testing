@@ -86,8 +86,14 @@
       '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
       '.agp-live-info > .agp-live-badge{align-self:flex-start;margin-bottom:2px}' +
-      '.agp-live-chip-id .agp-live-id-ic{width:15px;height:15px;padding:2px;border-radius:5px;box-sizing:content-box;color:var(--fx-btn-tx);background:var(--fx-btn)}' +
-      '.agp-live-card.fx .agp-live-chip-id{gap:6px;padding-inline-start:3px;font-weight:700}' +
+      // شارة الـID بالبطاقات المميزة: «تذكرة» بزوايا ناعمة — جزء ملوّن بتدرّج التصميم، فاصل متقطّع بثقبين، ثم الرقم.
+      '.agp-live-card.fx .agp-live-chip-id{position:relative;gap:0;padding:0;border-radius:9px;overflow:hidden;font-weight:700;background:var(--fx-chip);border:1px solid var(--fx-chip-bd)}' +
+      '.agp-live-id-k{display:inline-flex;align-items:center;gap:4px;align-self:stretch;padding:0 8px 0 7px;background:var(--fx-btn);color:var(--fx-btn-tx);font-family:inherit;font-size:10.5px;font-weight:900;letter-spacing:.8px}' +
+      '.agp-live-id-ic{width:14px;height:14px}' +
+      '.agp-live-id-v{position:relative;padding:3px 10px 3px 11px;border-left:1.5px dashed var(--fx-chip-bd);letter-spacing:1px;font-size:12px}' +
+      '.agp-live-id-v::before,.agp-live-id-v::after{content:"";position:absolute;left:-4.5px;width:7px;height:7px;border-radius:50%;background:var(--fx-gap)}' +
+      '.agp-live-id-v::before{top:-4px}' +
+      '.agp-live-id-v::after{bottom:-4px}' +
       '.agp-live-card.fx{position:relative;overflow:hidden;isolation:isolate;padding:16px;border-radius:22px;border:1px solid transparent;background:var(--fx-bg) padding-box,var(--fx-border) border-box;box-shadow:0 18px 44px -26px var(--fx-glow);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}' +
       '.agp-live-card.fx:hover{transform:translateY(-4px);border-color:transparent;box-shadow:0 26px 56px -24px var(--fx-glow-h)}' +
       '.agp-live-card.fx::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fx-aura);pointer-events:none}' +
@@ -103,7 +109,7 @@
       '.agp-live-card.fx .agp-live-game svg,.agp-live-card.fx .agp-live-chip-viewers svg{color:var(--fx-a)}' +
       '.agp-live-card.fx .agp-live-chip{background:var(--fx-chip);border-color:var(--fx-chip-bd);color:var(--fx-chip-tx)}' +
       '.agp-live-card.fx .agp-live-chip b{color:var(--fx-num)}' +
-      '.agp-live-card.fx .agp-live-chip-id{color:var(--fx-id);letter-spacing:.6px}' +
+      '.agp-live-card.fx .agp-live-chip-id{color:var(--fx-id)}' +
       '.agp-live-card.fx .agp-live-watch{background:var(--fx-btn);color:var(--fx-btn-tx);box-shadow:0 8px 20px -10px var(--fx-a),inset 0 1px 0 rgba(255,255,255,.35)}' +
       // المؤسس — أسود وذهبي
       '.agp-live-card.fx-founder{--fx-a:#e9c46a;--fx-bg:linear-gradient(160deg,#1d170c 0%,#100d08 55%,#0b0906 100%);--fx-border:linear-gradient(140deg,rgba(255,226,150,.8),rgba(180,130,50,.14) 40%,rgba(180,130,50,.1) 62%,rgba(255,215,130,.65));--fx-aura:radial-gradient(120% 90% at 100% 0%,rgba(233,196,106,.17),transparent 55%),radial-gradient(80% 70% at 0% 100%,rgba(160,110,40,.13),transparent 60%),repeating-linear-gradient(135deg,rgba(255,220,150,.03) 0 1px,transparent 1px 9px);--fx-shine:rgba(255,230,170,.11);--fx-glow:rgba(233,196,106,.5);--fx-glow-h:rgba(233,196,106,.7);--fx-ring:conic-gradient(from 0deg,#fff3c4,#e9c46a,#c9973a,#e9c46a,#fff3c4);--fx-gap:#120e08;--fx-ph:linear-gradient(135deg,#3a2c12,#1a140a);--fx-ph-tx:#f6d98a;--fx-tag:linear-gradient(180deg,#f6dc8c,#d4a640);--fx-tag-tx:#2a1d05;--fx-name:linear-gradient(90deg,#fff6d6,#f0cd78 60%,#d9a84a);--fx-badge:linear-gradient(135deg,rgba(240,205,120,.24),rgba(240,205,120,.07));--fx-badge-tx:#f6d98a;--fx-badge-bd:rgba(240,205,120,.45);--fx-acc:#c9ad74;--fx-game:#d8c7a2;--fx-chip:rgba(233,196,106,.07);--fx-chip-bd:rgba(233,196,106,.22);--fx-chip-tx:#bfa87a;--fx-num:#ffe7a6;--fx-id:#e9c46a;--fx-btn:linear-gradient(180deg,#f8e2a0,#d9a943);--fx-btn-tx:#2a1d05}' +
@@ -218,8 +224,10 @@
     idChip.className = 'agp-live-chip agp-live-chip-id';
     if (fx) {
       // بالبطاقات المميزة: أيقونة بطاقة هوية بدل «ID:»، بلون التصميم.
-      idChip.innerHTML = LIVE_ICON_ID;
+      // شكل «تذكرة»: جزء ملوّن (أيقونة + ID) وفاصل متقطّع ثم الرقم.
+      idChip.innerHTML = '<span class="agp-live-id-k">' + LIVE_ICON_ID + 'ID</span>';
       var idVal = document.createElement('span');
+      idVal.className = 'agp-live-id-v';
       idVal.textContent = s.customId;
       idChip.appendChild(idVal);
     } else {
