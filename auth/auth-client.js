@@ -1102,9 +1102,10 @@ function adminListLiveCardStyles() {
     return request('/api/admin/live-card-styles', { method: 'GET' });
 }
 
-/** style: a key from STYLES, or null to reset to the normal card. */
-function adminSetLiveCardStyle(customId, style) {
-    return request('/api/admin/live-card-styles', { method: 'POST', body: { customId: customId, style: style || null } });
+/** style: a key from STYLES, or null to reset to the normal card.
+ * sponsor/host: optional card lines («البث برعاية …» / «يقدّم البث: …»). */
+function adminSetLiveCardStyle(customId, style, sponsor, host) {
+    return request('/api/admin/live-card-styles', { method: 'POST', body: { customId: customId, style: style || null, sponsor: sponsor || '', host: host || '' } });
 }
 
 /* Event theme — see backend/theme/site-theme-service.js */

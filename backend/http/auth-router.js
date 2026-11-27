@@ -2229,9 +2229,10 @@ function handleAdminListLiveCardStyles(req, res) {
   sendJson(res, 200, { success: true, styles: liveCardStyles.STYLES, users: liveCardStyles.listAdmin() });
 }
 
-/** الأدمن فقط — body: { customId, style } (style فاضي/null = يرجع للبطاقة العادية). */
+/** الأدمن فقط — body: { customId, style, sponsor?, host? } (style فاضي/null = يرجع للبطاقة العادية). */
 function handleAdminSetLiveCardStyle(req, res, body) {
-  var result = liveCardStyles.setStyleByCustomId(body && body.customId, body && body.style);
+  body = body || {};
+  var result = liveCardStyles.setStyleByCustomId(body.customId, body.style, body.sponsor, body.host);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
@@ -2260,7 +2261,7 @@ function handlePublicLiveStreams(req, res) {
       name: u.tiktok_display_name || tiktok,
       tiktok: tiktok,
       customId: u.custom_id,
-      cardStyle: liveCardStyles.getStyleByCustomId(u.custom_id),
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2280,7 +2281,7 @@ function handlePublicLiveStreams(req, res) {
       name: u.tiktok_display_name || p.username,
       tiktok: p.username,
       customId: u.custom_id,
-      cardStyle: liveCardStyles.getStyleByCustomId(u.custom_id),
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since

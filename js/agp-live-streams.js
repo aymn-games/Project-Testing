@@ -77,20 +77,25 @@
       '.agp-live-card.idle .agp-live-avatar-img,.agp-live-card.idle .agp-live-avatar-ph{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.14)}' +
       '.agp-live-card.idle .agp-live-tag{background:#059669}' +
       '.agp-live-card.idle .agp-live-watch{background:linear-gradient(180deg,#8a4fe8,#7a3fd4);box-shadow:0 6px 16px -8px rgba(122,63,212,.9),inset 0 1px 0 rgba(255,255,255,.25)}' +
-      // بطاقات مميزة يمنحها الأدمن (cardStyle من السيرفر — backend/live-cards/live-card-styles-service.js).
+      // بطاقات مميزة يمنحها الأدمن (card.style من السيرفر — backend/live-cards/live-card-styles-service.js).
       // شكل مستقل كلياً عن البطاقة العادية: خلفية بهالة ناعمة، إطار متدرّج رفيع، حلقة صورة تدور ببطء،
       // اسم بتدرّج، شارة، وكل عنصر (اليوزر، اللعبة، المشاهدين، ID، زر المشاهدة، وسم LIVE) بألوان التصميم.
       // الألوان كلها متغيرات (--fx-*) يحددها كل تصميم تحت.
       '.agp-live-namewrap{min-width:0;display:flex;align-items:center;gap:6px}' +
-      '.agp-live-verified{flex:none;width:16px;height:16px;color:#7dd3fc;filter:drop-shadow(0 0 6px rgba(125,211,252,.5))}' +
+      '.agp-live-verified{flex:none;width:16px;height:16px;color:#9ccbf0;filter:drop-shadow(0 0 5px rgba(156,203,240,.35))}' +
       '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
       '.agp-live-info > .agp-live-badge{align-self:flex-start;margin-bottom:2px}' +
       // تبويب الـID بالبطاقات المميزة: إطار متدرّج بألوان التصميم (مو حدود شفافة مثل باقي الشارات)،
       // تعبئة داكنة بلمسة لون، توهّج خفيف، والرقم بتدرّج مثل الاسم.
-      '.agp-live-card.fx .agp-live-chip.agp-live-chip-id{gap:6px;padding:3px 11px 3px 9px;border-radius:10px;border:1.5px solid transparent;font-weight:800;background:linear-gradient(135deg,var(--fx-chip),var(--fx-gap)) padding-box,var(--fx-btn) border-box;box-shadow:0 0 16px -4px var(--fx-a),inset 0 1px 0 rgba(255,255,255,.08)}' +
+      '.agp-live-card.fx .agp-live-chip.agp-live-chip-id{gap:6px;padding:3px 11px 3px 9px;border-radius:10px;border:1.5px solid transparent;font-weight:800;background:linear-gradient(135deg,var(--fx-chip),var(--fx-gap)) padding-box,var(--fx-btn) border-box;box-shadow:0 0 14px -6px var(--fx-glow-h),inset 0 1px 0 rgba(255,255,255,.06)}' +
       '.agp-live-id-ic{width:14px;height:14px;color:var(--fx-num)}' +
       '.agp-live-id-v{letter-spacing:1.2px;font-size:12px;background:var(--fx-name);-webkit-background-clip:text;background-clip:text;color:transparent}' +
+      // سطري «يقدّم البث» و«البث برعاية» (يكتبهم الأدمن) — تحت الشارات بفاصل ناعم.
+      '.agp-live-credits{display:flex;flex-direction:column;gap:3px;margin-top:7px;padding-top:7px;border-top:1px solid var(--fx-chip-bd)}' +
+      '.agp-live-credit{display:flex;align-items:center;gap:5px;min-width:0;font-size:11.5px;color:var(--fx-chip-tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-credit svg{flex:none;width:13px;height:13px;color:var(--fx-a)}' +
+      '.agp-live-credit b{font-weight:700;color:var(--fx-num);overflow:hidden;text-overflow:ellipsis}' +
       '.agp-live-card.fx{position:relative;overflow:hidden;isolation:isolate;padding:16px;border-radius:22px;border:1px solid transparent;background:var(--fx-bg) padding-box,var(--fx-border) border-box;box-shadow:0 18px 44px -26px var(--fx-glow);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}' +
       '.agp-live-card.fx:hover{transform:translateY(-4px);border-color:transparent;box-shadow:0 26px 56px -24px var(--fx-glow-h)}' +
       '.agp-live-card.fx::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fx-aura);pointer-events:none}' +
@@ -107,15 +112,15 @@
       '.agp-live-card.fx .agp-live-chip{background:var(--fx-chip);border-color:var(--fx-chip-bd);color:var(--fx-chip-tx)}' +
       '.agp-live-card.fx .agp-live-chip b{color:var(--fx-num)}' +
       '.agp-live-card.fx .agp-live-chip-id{color:var(--fx-id)}' +
-      '.agp-live-card.fx .agp-live-watch{background:var(--fx-btn);color:var(--fx-btn-tx);box-shadow:0 8px 20px -10px var(--fx-a),inset 0 1px 0 rgba(255,255,255,.35)}' +
-      // المؤسس — أسود وذهبي
-      '.agp-live-card.fx-founder{--fx-a:#e9c46a;--fx-bg:linear-gradient(160deg,#1d170c 0%,#100d08 55%,#0b0906 100%);--fx-border:linear-gradient(140deg,rgba(255,226,150,.8),rgba(180,130,50,.14) 40%,rgba(180,130,50,.1) 62%,rgba(255,215,130,.65));--fx-aura:radial-gradient(120% 90% at 100% 0%,rgba(233,196,106,.17),transparent 55%),radial-gradient(80% 70% at 0% 100%,rgba(160,110,40,.13),transparent 60%),repeating-linear-gradient(135deg,rgba(255,220,150,.03) 0 1px,transparent 1px 9px);--fx-shine:rgba(255,230,170,.11);--fx-glow:rgba(233,196,106,.5);--fx-glow-h:rgba(233,196,106,.7);--fx-ring:conic-gradient(from 0deg,#fff3c4,#e9c46a,#c9973a,#e9c46a,#fff3c4);--fx-gap:#120e08;--fx-ph:linear-gradient(135deg,#3a2c12,#1a140a);--fx-ph-tx:#f6d98a;--fx-tag:linear-gradient(180deg,#f6dc8c,#d4a640);--fx-tag-tx:#2a1d05;--fx-name:linear-gradient(90deg,#fff6d6,#f0cd78 60%,#d9a84a);--fx-badge:linear-gradient(135deg,rgba(240,205,120,.24),rgba(240,205,120,.07));--fx-badge-tx:#f6d98a;--fx-badge-bd:rgba(240,205,120,.45);--fx-acc:#c9ad74;--fx-game:#d8c7a2;--fx-chip:rgba(233,196,106,.07);--fx-chip-bd:rgba(233,196,106,.22);--fx-chip-tx:#bfa87a;--fx-num:#ffe7a6;--fx-id:#e9c46a;--fx-btn:linear-gradient(180deg,#f8e2a0,#d9a943);--fx-btn-tx:#2a1d05}' +
-      // حساب المنصة (رسمي) — بنفسجي/وردي/سماوي
-      '.agp-live-card.fx-platform{--fx-a:#b48cff;--fx-bg:linear-gradient(160deg,#1a1233 0%,#120d24 55%,#0d0a1a 100%);--fx-border:linear-gradient(135deg,rgba(190,150,255,.85),rgba(236,72,153,.32) 45%,rgba(56,189,248,.55));--fx-aura:radial-gradient(90% 80% at 100% 0%,rgba(168,85,247,.28),transparent 60%),radial-gradient(70% 70% at 0% 100%,rgba(236,72,153,.17),transparent 60%),radial-gradient(60% 50% at 50% 115%,rgba(56,189,248,.13),transparent 70%);--fx-shine:rgba(255,255,255,.08);--fx-glow:rgba(168,85,247,.55);--fx-glow-h:rgba(168,85,247,.75);--fx-ring:conic-gradient(from 0deg,#a855f7,#ec4899,#38bdf8,#a855f7);--fx-gap:#150f2a;--fx-ph:linear-gradient(135deg,#3b2470,#1c1338);--fx-ph-tx:#f1e6ff;--fx-tag:linear-gradient(90deg,#a855f7,#ec4899);--fx-tag-tx:#fff;--fx-name:linear-gradient(90deg,#ffffff,#ece2ff 55%,#f5c6ff);--fx-badge:linear-gradient(135deg,rgba(168,85,247,.38),rgba(236,72,153,.26));--fx-badge-tx:#fbeaff;--fx-badge-bd:rgba(216,180,254,.45);--fx-acc:#b9a6e8;--fx-game:#cfc4ef;--fx-chip:rgba(168,85,247,.10);--fx-chip-bd:rgba(196,160,255,.25);--fx-chip-tx:#a99bd0;--fx-num:#ffffff;--fx-id:#d8b4fe;--fx-btn:linear-gradient(90deg,#a855f7,#ec4899);--fx-btn-tx:#fff}' +
-      // مميز — وردي لؤلؤي
-      '.agp-live-card.fx-vip{--fx-a:#f9a8d4;--fx-bg:linear-gradient(160deg,#231421 0%,#150c16 60%,#0f0a10 100%);--fx-border:linear-gradient(135deg,rgba(253,186,216,.75),rgba(253,186,216,.1) 50%,rgba(251,207,232,.5));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(244,114,182,.18),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(253,164,175,.12),transparent 60%);--fx-shine:rgba(255,220,235,.09);--fx-glow:rgba(244,114,182,.45);--fx-glow-h:rgba(244,114,182,.65);--fx-ring:conic-gradient(from 0deg,#fde2ef,#f472b6,#fda4af,#fde2ef);--fx-gap:#170d17;--fx-ph:linear-gradient(135deg,#4a1f3b,#1f0f1c);--fx-ph-tx:#fbcfe8;--fx-tag:linear-gradient(90deg,#f9a8d4,#fda4af);--fx-tag-tx:#3b0a24;--fx-name:linear-gradient(90deg,#fff1f7,#fbcfe8 60%,#f9a8d4);--fx-badge:linear-gradient(135deg,rgba(244,114,182,.24),rgba(244,114,182,.08));--fx-badge-tx:#fbcfe8;--fx-badge-bd:rgba(249,168,212,.42);--fx-acc:#d9a5c0;--fx-game:#e6c9d7;--fx-chip:rgba(244,114,182,.08);--fx-chip-bd:rgba(249,168,212,.22);--fx-chip-tx:#c59ab1;--fx-num:#fff0f7;--fx-id:#f9a8d4;--fx-btn:linear-gradient(90deg,#f9a8d4,#fda4af);--fx-btn-tx:#3b0a24}' +
-      // ألماسي — ثلجي
-      '.agp-live-card.fx-diamond{--fx-a:#7dd3fc;--fx-bg:linear-gradient(160deg,#0c1d2a 0%,#0a1520 60%,#080f17 100%);--fx-border:linear-gradient(135deg,rgba(186,230,253,.85),rgba(125,211,252,.12) 45%,rgba(165,180,252,.6));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(56,189,248,.2),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(129,140,248,.16),transparent 60%),repeating-linear-gradient(60deg,rgba(255,255,255,.022) 0 1px,transparent 1px 14px);--fx-shine:rgba(224,242,254,.1);--fx-glow:rgba(56,189,248,.45);--fx-glow-h:rgba(56,189,248,.65);--fx-ring:conic-gradient(from 0deg,#e0f2fe,#38bdf8,#818cf8,#e0f2fe);--fx-gap:#0b1822;--fx-ph:linear-gradient(135deg,#123a55,#0b1c2a);--fx-ph-tx:#bae6fd;--fx-tag:linear-gradient(90deg,#7dd3fc,#a5b4fc);--fx-tag-tx:#06202f;--fx-name:linear-gradient(90deg,#f0fbff,#bae6fd 55%,#a5b4fc);--fx-badge:linear-gradient(135deg,rgba(56,189,248,.24),rgba(56,189,248,.08));--fx-badge-tx:#bae6fd;--fx-badge-bd:rgba(125,211,252,.42);--fx-acc:#8fbdd6;--fx-game:#c3dceb;--fx-chip:rgba(56,189,248,.08);--fx-chip-bd:rgba(125,211,252,.22);--fx-chip-tx:#8fb4c9;--fx-num:#f0fbff;--fx-id:#7dd3fc;--fx-btn:linear-gradient(90deg,#7dd3fc,#a5b4fc);--fx-btn-tx:#06202f}' +
+      '.agp-live-card.fx .agp-live-watch{background:var(--fx-btn);color:var(--fx-btn-tx);box-shadow:0 8px 18px -12px var(--fx-glow-h),inset 0 1px 0 rgba(255,255,255,.3)}' +
+      // المؤسس — ذهبي شمباني ناعم على أسود
+      '.agp-live-card.fx-founder{--fx-a:#d9bf86;--fx-bg:linear-gradient(160deg,#1a160f 0%,#110e0a 55%,#0c0a08 100%);--fx-border:linear-gradient(140deg,rgba(240,220,170,.55),rgba(190,160,100,.08) 42%,rgba(190,160,100,.06) 62%,rgba(235,212,160,.42));--fx-aura:radial-gradient(120% 90% at 100% 0%,rgba(217,191,134,.11),transparent 55%),radial-gradient(80% 70% at 0% 100%,rgba(170,140,90,.08),transparent 60%),repeating-linear-gradient(135deg,rgba(240,220,170,.018) 0 1px,transparent 1px 9px);--fx-shine:rgba(250,235,200,.06);--fx-glow:rgba(217,191,134,.26);--fx-glow-h:rgba(217,191,134,.4);--fx-ring:conic-gradient(from 0deg,#f6ead0,#d9bf86,#b8975e,#d9bf86,#f6ead0);--fx-gap:#110e0a;--fx-ph:linear-gradient(135deg,#34291a,#18130d);--fx-ph-tx:#ecd9ad;--fx-tag:linear-gradient(180deg,#eedcb0,#cdae72);--fx-tag-tx:#2b2214;--fx-name:linear-gradient(90deg,#fbf3e0,#ead3a2 60%,#cfb07a);--fx-badge:linear-gradient(135deg,rgba(225,200,145,.16),rgba(225,200,145,.05));--fx-badge-tx:#ecd9ad;--fx-badge-bd:rgba(225,200,145,.3);--fx-acc:#bfa983;--fx-game:#d5c8ae;--fx-chip:rgba(217,191,134,.05);--fx-chip-bd:rgba(217,191,134,.16);--fx-chip-tx:#b3a07e;--fx-num:#f3e4bf;--fx-id:#dcc390;--fx-btn:linear-gradient(180deg,#efdfb6,#d1b47c);--fx-btn-tx:#2b2214}' +
+      // حساب المنصة (رسمي) — لافندر/وردي/سماوي ناعم
+      '.agp-live-card.fx-platform{--fx-a:#bba6ee;--fx-bg:linear-gradient(160deg,#17122a 0%,#110d20 55%,#0d0b18 100%);--fx-border:linear-gradient(135deg,rgba(200,184,245,.58),rgba(236,180,210,.18) 45%,rgba(160,200,245,.4));--fx-aura:radial-gradient(90% 80% at 100% 0%,rgba(170,140,235,.16),transparent 60%),radial-gradient(70% 70% at 0% 100%,rgba(230,160,200,.09),transparent 60%),radial-gradient(60% 50% at 50% 115%,rgba(140,190,240,.08),transparent 70%);--fx-shine:rgba(255,255,255,.05);--fx-glow:rgba(160,130,230,.28);--fx-glow-h:rgba(160,130,230,.42);--fx-ring:conic-gradient(from 0deg,#c9b6f5,#eeb4d2,#a9cdf3,#c9b6f5);--fx-gap:#120e21;--fx-ph:linear-gradient(135deg,#33275a,#1a1530);--fx-ph-tx:#ebe3ff;--fx-tag:linear-gradient(90deg,#a993e0,#d9a0c2);--fx-tag-tx:#fff;--fx-name:linear-gradient(90deg,#ffffff,#ece6ff 55%,#f5e0f0);--fx-badge:linear-gradient(135deg,rgba(170,145,225,.24),rgba(220,160,195,.14));--fx-badge-tx:#f1eaff;--fx-badge-bd:rgba(210,195,245,.32);--fx-acc:#b2a5d6;--fx-game:#cbc3e6;--fx-chip:rgba(170,145,225,.07);--fx-chip-bd:rgba(190,170,240,.18);--fx-chip-tx:#a59ac6;--fx-num:#f6f2ff;--fx-id:#d6caf7;--fx-btn:linear-gradient(90deg,#a993e0,#d9a0c2);--fx-btn-tx:#fff}' +
+      // مميز — وردي لؤلؤي ناعم
+      '.agp-live-card.fx-vip{--fx-a:#eab4cc;--fx-bg:linear-gradient(160deg,#1f141d 0%,#140d14 60%,#0f0a0f 100%);--fx-border:linear-gradient(135deg,rgba(245,200,220,.52),rgba(245,200,220,.07) 50%,rgba(245,215,228,.36));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(234,160,195,.11),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(240,175,185,.07),transparent 60%);--fx-shine:rgba(255,230,240,.06);--fx-glow:rgba(234,160,195,.24);--fx-glow-h:rgba(234,160,195,.38);--fx-ring:conic-gradient(from 0deg,#fbe6ef,#e9a9c6,#f0bcc4,#fbe6ef);--fx-gap:#150d15;--fx-ph:linear-gradient(135deg,#3d2234,#1c1019);--fx-ph-tx:#f5d5e4;--fx-tag:linear-gradient(90deg,#efbcd3,#f2c3c8);--fx-tag-tx:#3a1426;--fx-name:linear-gradient(90deg,#fff4f8,#f7d6e5 60%,#ebb5cd);--fx-badge:linear-gradient(135deg,rgba(234,160,195,.17),rgba(234,160,195,.05));--fx-badge-tx:#f5d5e4;--fx-badge-bd:rgba(240,185,210,.3);--fx-acc:#cfa5b9;--fx-game:#e0cbd5;--fx-chip:rgba(234,160,195,.06);--fx-chip-bd:rgba(240,185,210,.16);--fx-chip-tx:#bb9cab;--fx-num:#fdf0f6;--fx-id:#ecbdd2;--fx-btn:linear-gradient(90deg,#efbcd3,#f2c3c8);--fx-btn-tx:#3a1426}' +
+      // ألماسي — ثلجي ناعم
+      '.agp-live-card.fx-diamond{--fx-a:#a8d8f0;--fx-bg:linear-gradient(160deg,#0e1a24 0%,#0b141c 60%,#090f15 100%);--fx-border:linear-gradient(135deg,rgba(205,235,250,.58),rgba(160,210,240,.08) 45%,rgba(185,195,245,.42));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(130,195,235,.12),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(160,170,240,.09),transparent 60%),repeating-linear-gradient(60deg,rgba(255,255,255,.016) 0 1px,transparent 1px 14px);--fx-shine:rgba(235,248,255,.06);--fx-glow:rgba(130,195,235,.24);--fx-glow-h:rgba(130,195,235,.38);--fx-ring:conic-gradient(from 0deg,#e8f6fd,#9fd3ef,#b3bdf3,#e8f6fd);--fx-gap:#0c161e;--fx-ph:linear-gradient(135deg,#1a3547,#0e1c27);--fx-ph-tx:#cdeafa;--fx-tag:linear-gradient(90deg,#b2def3,#c3caf5);--fx-tag-tx:#0e2533;--fx-name:linear-gradient(90deg,#f4fbff,#d1ecfa 55%,#bcc6f4);--fx-badge:linear-gradient(135deg,rgba(140,200,235,.17),rgba(140,200,235,.05));--fx-badge-tx:#cdeafa;--fx-badge-bd:rgba(160,210,240,.3);--fx-acc:#98b9cb;--fx-game:#c4d8e3;--fx-chip:rgba(140,200,235,.06);--fx-chip-bd:rgba(160,210,240,.16);--fx-chip-tx:#93afbf;--fx-num:#f2faff;--fx-id:#aed9f0;--fx-btn:linear-gradient(90deg,#b2def3,#c3caf5);--fx-btn-tx:#0e2533}' +
       '@keyframes agpLiveShine{0%,60%{left:-70%}100%{left:140%}}' +
       '@keyframes agpLiveSpin{to{transform:rotate(360deg)}}' +
       '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
@@ -153,13 +158,26 @@
   // علامة التوثيق جنب اسم الحساب الرسمي (مثل علامة التوثيق بالمنصات).
   var LIVE_VERIFIED = '<svg class="agp-live-verified" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.9-3.1 3.2.3z"/><path d="M8.3 12.2l2.5 2.5 4.9-5" fill="none" stroke="#0d0a1a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+  var LIVE_ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>';
+  var LIVE_ICON_SPONSOR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 20V7.5M12 7.5H8.2a2.3 2.3 0 1 1 0-4.5c2.3 0 3.8 4.5 3.8 4.5zM12 7.5h3.8a2.3 2.3 0 1 0 0-4.5c-2.3 0-3.8 4.5-3.8 4.5z"/></svg>';
+  function buildCredit(icon, label, value){
+    var row = document.createElement('div');
+    row.className = 'agp-live-credit';
+    row.innerHTML = icon;
+    row.appendChild(document.createTextNode(label + ' '));
+    var b = document.createElement('b');
+    b.textContent = value;
+    row.appendChild(b);
+    return row;
+  }
 
   function buildLiveCard(s){
     var kind = s.kind || 'live';
     var card = document.createElement('a');
     card.className = 'agp-live-card' + (kind === 'live' ? '' : ' ' + kind);
-    var fx = kind === 'live' && s.cardStyle && LIVE_FX[s.cardStyle] ? LIVE_FX[s.cardStyle] : null;
-    if (fx) card.className += ' fx fx-' + s.cardStyle;
+    var fxCard = kind === 'live' && s.card && LIVE_FX[s.card.style] ? s.card : null;
+    var fx = fxCard ? LIVE_FX[fxCard.style] : null;
+    if (fx) card.className += ' fx fx-' + fxCard.style;
     if (kind === 'live') {
       // الضغط يفتح بث الستريمر نفسه في تيك توك (تبويب جديد).
       card.href = 'https://www.tiktok.com/@' + encodeURIComponent(s.tiktok) + '/live';
@@ -260,6 +278,14 @@
     info.appendChild(acc);
     info.appendChild(game);
     info.appendChild(meta);
+    // «يقدّم البث» و«البث برعاية» — سطرين اختياريين يكتبهم الأدمن للبطاقة المميزة.
+    if (fx && (fxCard.host || fxCard.sponsor)) {
+      var credits = document.createElement('div');
+      credits.className = 'agp-live-credits';
+      if (fxCard.host) credits.appendChild(buildCredit(LIVE_ICON_MIC, 'يقدّم البث:', fxCard.host));
+      if (fxCard.sponsor) credits.appendChild(buildCredit(LIVE_ICON_SPONSOR, 'البث برعاية', fxCard.sponsor));
+      info.appendChild(credits);
+    }
     card.appendChild(av);
     card.appendChild(info);
     return card;
