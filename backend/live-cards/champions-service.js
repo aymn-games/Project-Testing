@@ -4,7 +4,8 @@
  *
  * المصدر: جدول ranking_snapshots (stats/last-week-ranking-service.js) — صف لكل
  * أسبوع منتهي، وأول واحد بقائمة streamers هو بطل الأسبوع. قبل العدّ نتأكد إن
- * كل الأسابيع المنتهية محفوظة (ensureAllSnapshots).
+ * كل الأسابيع المنتهية محفوظة من أول بث مسجّل (ensureAllSnapshots) — فالألقاب
+ * القديمة (حتى قبل تصفير التصنيف) تنحسب.
  *
  * العدد يرجع مع كل بث بـ/api/public/live-streams (champion)، والواجهة
  * (js/agp-live-streams.js) ترسم بطاقة «بطل التوب» تتطور مع كل لقب جديد:

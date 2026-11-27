@@ -76,17 +76,24 @@ function ensureSnapshot(period) {
 var MAX_BACKFILL_WEEKS = 260;
 
 /**
- * يتأكد إن كل أسبوع منتهي (من لحظة تصفير التصنيف streamer_ranking_reset_at لين بداية
- * الأسبوع الحالي) له صف محفوظ — الحفظ الكسول يفوّت الأسبوع اللي ما أحد طلب فيه
- * «الأسبوع الماضي». البيانات مؤرخة، فحساب أسبوع قديم الحين يطلع نفس نتيجته وقتها.
+ * يتأكد إن كل أسبوع منتهي له صف محفوظ — الحفظ الكسول يفوّت الأسبوع اللي ما أحد
+ * طلب فيه «الأسبوع الماضي». يرجع لين أول بث مسجّل (حتى قبل تصفير التصنيف
+ * streamer_ranking_reset_at — عشان ألقاب التوب القديمة تنحسب). البيانات مؤرخة،
+ * فحساب أسبوع قديم الحين يطلع نفس نتيجته وقتها.
+ * الأسبوع اللي انقسم بالتصفير: يُحفظ الجزء اللي بعد التصفير بس (هو الرسمي)،
+ * والجزء اللي قبله يتخطّى عشان ما ينحسب نفس الأسبوع مرتين.
  * يستخدمه عدّاد أبطال التوب (live-cards/champions-service.js).
  */
 function ensureAllSnapshots(nowMs) {
     var end = authService.getRankingPeriodStart(nowMs || now());
     var row = db.prepare("SELECT value FROM app_settings WHERE key = 'streamer_ranking_reset_at'").get();
     var resetAt = row ? Number(row.value) || 0 : 0;
-    for (var i = 0; i < MAX_BACKFILL_WEEKS && end > resetAt; i++) {
-        var start = Math.max(weekStartOf(end - 1), resetAt);
+    var first = db.prepare('SELECT MIN(started_at) AS t FROM broadcasts').get();
+    var earliest = Math.min((first && first.t) || end, resetAt || end);
+    for (var i = 0; i < MAX_BACKFILL_WEEKS && end > earliest; i++) {
+        var weekStart = weekStartOf(end - 1);
+        if (end === resetAt && weekStart < resetAt) { end = weekStart; continue; } // جزء ما قبل التصفير من أسبوعه
+        var start = resetAt > weekStart && resetAt < end ? resetAt : weekStart;
         ensureSnapshot({ start: start, end: end });
         end = start;
     }

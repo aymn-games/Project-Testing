@@ -22,6 +22,7 @@ var users = [], starts = [];
 test.after(function () {
     users.forEach(function (id) {
         db.prepare('DELETE FROM streamer_match_time WHERE user_id = ?').run(id);
+        db.prepare('DELETE FROM broadcasts WHERE user_id = ?').run(id);
         db.prepare('DELETE FROM users WHERE id = ?').run(id);
     });
     starts.forEach(function (s) { db.prepare('DELETE FROM ranking_snapshots WHERE period_start = ?').run(s); });
@@ -37,24 +38,33 @@ function makeUser(s) {
     return id;
 }
 
-test('يعد مرات المركز الأول لكل الأسابيع المنتهية', function () {
+test('يعد مرات المركز الأول لكل الأسابيع المنتهية (حتى قبل تصفير التصنيف)', function () {
     var cur = lw.weekStartOf(Date.now());
-    setSetting(RESET_KEY, String(cur - 4 * 7 * DAY));
-    for (var w = 1; w <= 4; w++) {
+    // التصفير بنص الأسبوع -4: جزءه الرسمي (بعد التصفير) ينحسب، وجزء ما قبله يتخطّى.
+    setSetting(RESET_KEY, String(cur - 4 * 7 * DAY + 2 * DAY));
+    starts.push(cur - 4 * 7 * DAY + 2 * DAY);
+    db.prepare('DELETE FROM ranking_snapshots WHERE period_start = ?').run(cur - 4 * 7 * DAY + 2 * DAY);
+    for (var w = 1; w <= 6; w++) {
         var s = cur - w * 7 * DAY;
         starts.push(s);
         db.prepare('DELETE FROM ranking_snapshots WHERE period_start = ?').run(s);
     }
     var a = makeUser('a'), b = makeUser('b');
     var ins = db.prepare('INSERT INTO streamer_match_time (user_id, started_at, ended_at) VALUES (?, ?, ?)');
-    // 4 أسابيع منتهية: a يفوز 3، b يفوز 1
+    // 4 أسابيع بعد التصفير: a يفوز 3، b يفوز 1 (الأسبوع -4 مبارياته بعد لحظة التصفير)
     [[a, b], [a, b], [b, a], [a, b]].forEach(function (pair, i) {
         var ws = cur - (4 - i) * 7 * DAY;
-        ins.run(pair[0], ws + DAY, ws + DAY + 5 * H);
-        ins.run(pair[1], ws + 2 * DAY, ws + 2 * DAY + 1 * H);
+        ins.run(pair[0], ws + 3 * DAY, ws + 3 * DAY + 5 * H);
+        ins.run(pair[1], ws + 4 * DAY, ws + 4 * DAY + 1 * H);
     });
+    // قبل التصفير: الأسبوع -5 كامل يفوزه b، وجزء ما قبل التصفير بالأسبوع -4 يفوزه b (ما ينحسب).
+    var w5 = cur - 5 * 7 * DAY;
+    ins.run(b, w5 + DAY, w5 + DAY + 6 * H);
+    ins.run(b, cur - 4 * 7 * DAY + 3 * H, cur - 4 * 7 * DAY + 20 * H);
+    // أقدم بث مسجّل = بداية الأسبوع -5 (الحد اللي يرجع له الحفظ)
+    db.prepare('INSERT INTO broadcasts (user_id, tiktok_username, started_at, ended_at) VALUES (?, ?, ?, ?)').run(b, tag + 'b', w5 + DAY, w5 + DAY + 6 * H);
     champions.clearCache();
     assert.equal(champions.getChampionCount(tag + 'a'), 3);
-    assert.equal(champions.getChampionCount(tag + 'b'), 1);
+    assert.equal(champions.getChampionCount(tag + 'b'), 2);
     assert.equal(champions.getChampionCount('nobody'), 0);
 });
