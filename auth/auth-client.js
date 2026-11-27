@@ -1096,6 +1096,18 @@ function adminDeletePartner(id) {
     return request('/api/admin/partners/delete', { method: 'POST', body: { id: id } });
 }
 
+/* Featured live-stream cards — see backend/live-cards/live-card-styles-service.js */
+
+function adminListLiveCardStyles() {
+    return request('/api/admin/live-card-styles', { method: 'GET' });
+}
+
+/** style: a key from STYLES, or null to reset to the normal card.
+ * sponsor/host: optional card lines («البث برعاية …» / «يقدّم البث: …»). */
+function adminSetLiveCardStyle(customId, style, sponsor, host) {
+    return request('/api/admin/live-card-styles', { method: 'POST', body: { customId: customId, style: style || null, sponsor: sponsor || '', host: host || '' } });
+}
+
 /* Event theme — see backend/theme/site-theme-service.js */
 
 /** result.theme is null when no theme is active. */
@@ -1404,6 +1416,8 @@ global.AGPAuth = {
     adminListPartners: adminListPartners,
     adminAddPartner: adminAddPartner,
     adminDeletePartner: adminDeletePartner,
+    adminListLiveCardStyles: adminListLiveCardStyles,
+    adminSetLiveCardStyle: adminSetLiveCardStyle,
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
     adminClearSiteTheme: adminClearSiteTheme,

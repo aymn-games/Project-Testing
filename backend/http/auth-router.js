@@ -26,6 +26,7 @@ var streamerHours = require('../points/streamer-hours');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
+var liveCardStyles = require('../live-cards/live-card-styles-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
 var lastWeekRankingService = require('../stats/last-week-ranking-service');
@@ -382,6 +383,9 @@ var ROUTES = [
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  // ---- تصاميم بطاقات «البثوث النشطة» المميزة (live-cards/live-card-styles-service.js)
+  { method: 'GET', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminListLiveCardStyles },
+  { method: 'POST', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminSetLiveCardStyle },
   { method: 'GET', path: '/api/admin/live-streams', requireAuth: true, requireAdmin: true, handler: handleAdminLiveStreams },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
@@ -2220,13 +2224,26 @@ function handleAdminLiveStreams(req, res) {
   sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
 }
 
+/** الأدمن فقط — الحسابات اللي عندها تصميم بطاقة مميز + قائمة التصاميم المتاحة. */
+function handleAdminListLiveCardStyles(req, res) {
+  sendJson(res, 200, { success: true, styles: liveCardStyles.STYLES, users: liveCardStyles.listAdmin() });
+}
+
+/** الأدمن فقط — body: { customId, style, sponsor?, host? } (style فاضي/null = يرجع للبطاقة العادية). */
+function handleAdminSetLiveCardStyle(req, res, body) {
+  body = body || {};
+  var result = liveCardStyles.setStyleByCustomId(body.customId, body.style, body.sponsor, body.host);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة
  * الألعاب. يرجع حقول عامة فقط (بدون connectionId/user.id/role)، وبث واحد
  * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين).
  * البث يظهر فقط لو حساب تيك توك الموثَّق الحالي لصاحب الجلسة هو نفسه
  * البث المتصل — الأدمن/«تشغيل كامل» يقدرون يتصلون ببث غيرهم، وبدون هذا
- * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم من قاعدة
- * البيانات لحظة الطلب (نفس ترتيب صفحة البروفايل: display_name ثم username). */
+ * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم هو اسم حساب
+ * تيك توك (tiktok_display_name المحفوظ عند التوثيق)، ولو ما انحفظ نعرض يوزر
+ * تيك توك نفسه — مو اسم العرض بالموقع. */
 function handlePublicLiveStreams(req, res) {
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
@@ -2241,9 +2258,10 @@ function handlePublicLiveStreams(req, res) {
     var prev = byUser[tiktok];
     if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
     byUser[tiktok] = {
-      name: u.display_name || u.username || tiktok,
+      name: u.tiktok_display_name || tiktok,
       tiktok: tiktok,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2260,9 +2278,10 @@ function handlePublicLiveStreams(req, res) {
     if (!u || !u.tiktok_username) return;
     if (String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase() !== p.username) return;
     byUser[p.username] = {
-      name: u.display_name || u.username || p.username,
+      name: u.tiktok_display_name || p.username,
       tiktok: p.username,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since

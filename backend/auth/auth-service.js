@@ -1601,7 +1601,7 @@ function adminSetEmail(userId, email) {
 }
 
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at, email_verified FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at, email_verified, live_card_style, live_card_sponsor, live_card_host FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession.
         if (!u.custom_id) {
