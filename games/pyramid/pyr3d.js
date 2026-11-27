@@ -830,9 +830,8 @@ export async function mountPyramid(el, opts = {}) {
         s.mode = 'chosen'; s.owner = String(id); s.color.set(a ? a.color : C.cyan); s.flash = 1;
         const p = L.pos[num - 1].clone().setY(L.yTop + .4);
         pulse(p.clone().setY(L.yTop + .37), s.color, .4, 2.2, .6); sparks.emit(p, { count: 14, color: [a ? a.color : C.cyan, '#ffffff'], speed: 2.4, up: 2.5, life: .7, size: .22 });
-        if (a) { const old = pickTags.get(num); if (old) { pickTags.delete(num); old.userData.out = now(); tagsOut.add(old); }
-            const sp = new T.Sprite(new T.SpriteMaterial({ map: a.plateT, transparent: true, depthWrite: false, depthTest: false, toneMapped: false, fog: false })); sp.renderOrder = 6;
-            const pp = L.pos[num - 1]; sp.position.set(pp.x, L.yTop + 1.15 * K + .35, pp.z); sp.userData = { t0: now(), s: .78 * Math.max(.75, K), y: sp.position.y, ph: num }; sp.scale.set(.001, .001, 1); sc.add(sp); pickTags.set(num, sp); }
+        // الشخصية تمشي لدائرتها أول ما يختار (ولو غيّر رقمه تمشي للجديدة) — اسمها فوق راسها يبين صاحب الرقم
+        if (a && !a.dead) { a.homeYaw = 0; a.lookAt = null; a.walkTo(L.stand(num - 1), 0, 3); }
         if (a && !a.path) { a.lookAt = p.clone(); a.behUntil = Math.max(a.behUntil, now() + 1.6); if (a.rnd() < .5) { a.rig.play(a.rnd() < .5 ? 4 : 3); a.behUntil = now() + 1.4; a.ov = null; } }
     }
     async function timeUp() {
@@ -849,8 +848,14 @@ export async function mountPyramid(el, opts = {}) {
         const L = activeLevel; setMood('choose'); let maxT = 0;
         const entries = Object.entries(assign);
         setShot(oblique(pyramidPts(actorPts()), .5, 1.2, .04));
-        entries.forEach(([id, num], q) => { const a = actors.get(String(id)); if (!a) return; const s = L.st[num - 1]; a.homeYaw = 0; a.setMood('still'); maxT = Math.max(maxT, a.walkTo(L.stand(num - 1), (q % 12) * .08 + Math.random() * .25, 3)); setTimeout(() => { s.mode = 'occupied'; s.flash = .6; }, maxT * 1000); });
-        await wait(maxT + .4);
+        entries.forEach(([id, num], q) => {
+            const a = actors.get(String(id)); if (!a) return; const tgt = L.stand(num - 1); a.homeYaw = 0;
+            let left = 0;
+            if (a.path && a.path.to.distanceTo(tgt) < .05) left = Math.max(0, a.path.t0 + a.path.dur - now());
+            else if (a.pos.distanceTo(tgt) > .05) { a.setMood('still'); left = a.walkTo(tgt, (q % 12) * .05, 3); }
+            maxT = Math.max(maxT, left);
+        });
+        await wait(maxT + .3);
         for (const [id, num] of entries) { const s = L.st[num - 1]; s.mode = 'occupied'; const a = actors.get(String(id)); if (a) a.setMood('tense', true); }
         // الدوائر الفاضية في هالمرحلة تنطفئ، والدرجة السابقة تغطس دوائرها
         L.st.forEach(s => { if (s.mode === 'idle') s.mode = 'dim'; });
