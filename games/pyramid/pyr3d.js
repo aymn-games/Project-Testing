@@ -892,41 +892,50 @@ export async function mountPyramid(el, opts = {}) {
         await wait(.5); setMood('tense'); setShot(mainShot());
     }
     // الإقصاء العشوائي: الكشاف يتنقل بين الدوائر المشغولة ويتباطأ لين يوقف على الضحية (اللي اختارتها اللعبة)
-    async function roulette(victimId, o = {}) {
-        const L = activeLevel, v = actors.get(String(victimId)); if (!L || !v) return;
-        setMood('tense'); screen('إقصاء عشوائي', '…');
+    // الإقصاء العشوائي بالحيّات: الكشاف يتنقل ويثبّت على كل ضحية (اللعبة هي اللي اختارتهم)، ثم لقطة تجمعهم
+    // كلهم، والحيّات تطلع من أرقامهم وتلدغهم بنفس اللحظة. victimIds: رقم لاعب أو مصفوفة.
+    async function roulette(victimIds, o = {}) {
+        const L = activeLevel; if (!L) return;
+        const vs = [].concat(victimIds).map(id => actors.get(String(id))).filter(Boolean); if (!vs.length) return;
+        setMood('tense'); screen('الحيّة', vs.length > 1 ? vs.length + ' ضحايا' : '…');
         const occ = L.st.map((s, j) => s.owner && actors.get(s.owner) && !actors.get(s.owner).dead ? j : -1).filter(j => j >= 0);
-        const vj = L.st.findIndex(s => s.owner === v.id);
+        const vjs = vs.map(v => L.st.findIndex(s => s.owner === v.id));
         setShot(oblique(levelPts(L, actorPts()), .9, 1.3, 0));
         for (const a of actors.values()) if (!a.dead) a.setMood('tense', true);
-        const spot = new T.Mesh(new T.CylinderGeometry(.35, R * 1.25, 14, 24, 1, true), new T.MeshBasicMaterial({ map: beamTex, color: C.gold, transparent: true, opacity: .5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
-        spot.geometry.translate(0, 7, 0); spot.geometry.rotateX(Math.PI); spot.geometry.translate(0, 14, 0); sc.add(spot);
-        const hops = Math.max(14, Math.min(26, occ.length + 10)), dur = o.dur || 4.2; let prevJ = -1, t = 0;
-        const seq = []; for (let i = 0; i < hops - 1; i++) { let j; do j = occ[(Math.random() * occ.length) | 0]; while (occ.length > 1 && j === (seq[seq.length - 1] ?? -1)); seq.push(j); } seq.push(vj);
-        for (let i = 0; i < hops; i++) {
-            const k = i / (hops - 1), gap = lerp(.07, .55, Math.pow(k, 2.4)) * dur / 4.2;
-            const j = seq[i]; if (prevJ >= 0 && L.st[prevJ].mode === 'spot') L.st[prevJ].mode = 'occupied';
-            L.st[j].mode = 'spot'; L.st[j].flash = .7; prevJ = j;
-            spot.position.copy(L.pos[j]).setY(L.yTop); emit('tick', k);
-            const a = actors.get(L.st[j].owner); if (a) { a.ov = 'clasp'; a.behUntil = now() + .8; }
-            await wait(gap); t += gap;
+        const mkSpot = () => { const m = new T.Mesh(new T.CylinderGeometry(.35, R * 1.25, 14, 24, 1, true), new T.MeshBasicMaterial({ map: beamTex, color: C.gold, transparent: true, opacity: .5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false })); m.geometry.translate(0, 7, 0); m.geometry.rotateX(Math.PI); m.geometry.translate(0, 14, 0); sc.add(m); return m; };
+        const spot = mkSpot(), locked = new Set(), pillars = [];
+        let prevJ = -1;
+        for (let m = 0; m < vjs.length; m++) {
+            const free = occ.filter(j => !locked.has(j)), hops = m === 0 ? Math.max(14, Math.min(26, occ.length + 10)) : 9, dur = (o.dur || 4.2) * (m === 0 ? 1 : .55);
+            const seq = []; for (let i = 0; i < hops - 1; i++) { let j; do j = free[(Math.random() * free.length) | 0]; while (free.length > 1 && j === (seq[seq.length - 1] ?? -1)); seq.push(j); } seq.push(vjs[m]);
+            for (let i = 0; i < hops; i++) {
+                const k = i / (hops - 1), gap = lerp(.07, .55, Math.pow(k, 2.4)) * dur / 4.2;
+                const j = seq[i]; if (prevJ >= 0 && !locked.has(prevJ) && L.st[prevJ].mode === 'spot') L.st[prevJ].mode = 'occupied';
+                L.st[j].mode = 'spot'; L.st[j].flash = .7; prevJ = j;
+                spot.position.copy(L.pos[j]).setY(L.yTop); emit('tick', k);
+                const a = actors.get(L.st[j].owner); if (a) { a.ov = 'clasp'; a.behUntil = now() + .8; }
+                await wait(gap);
+            }
+            // ثبّت على هالضحية: عمود ضوء أحمر يبقى، والكشاف يكمل للي بعده
+            locked.add(vjs[m]); const pl = mkSpot(); pl.material.color.set(C.red); pl.position.copy(L.pos[vjs[m]]).setY(L.yTop); pillars.push(pl); emit('suspense');
+            if (m < vjs.length - 1) await wait(.5);
         }
-        // وقفة تشويق ثم الحسم مع لقطة قريبة
-        const vp = L.pos[vj].clone().setY(L.yTop + 1); setShot(close(vp, 6.5, .38, .35, 2.2)); emit('suspense');
-        await wait(1.1);
-        spot.material.color.set(C.red);
-        // الحيّة تطلع من الرقم وتلدغ صاحبه
-        setShot(close(vp.clone().setY(vp.y - .2), 5.2 * Math.max(.75, K), .3, .55, 2.4));
-        for (const o of actors.values()) if (o !== v) o.plate.visible = false; // اللقطة القريبة: اسم الضحية بس
-        await snakeAttack(v, L, vj);
-        emit('strike');
-        await dropActor(v, { kind: 'random', hold: .45 });
-        for (const o of actors.values()) o.plate.visible = true;
         sc.remove(spot); spot.geometry.dispose(); spot.material.dispose();
+        // لقطة تجمع كل الضحايا
+        const pts = []; vjs.forEach(j => { const p = L.pos[j]; pts.push(V(p.x, L.yTop, p.z), V(p.x, L.yTop + 2 * CS, p.z)); });
+        if (vs.length === 1) { const vp = L.pos[vjs[0]].clone().setY(L.yTop + 1); setShot(close(vp, 6.5, .38, .35, 2.2)); await wait(1.1); setShot(close(vp.clone().setY(vp.y - .2), 5.2 * Math.max(.75, K), .3, .55, 2.4)); }
+        else { setShot(t => { const F = frameBox(pts, .34, .22 + Math.sin(t * .2) * .05, 1.15); return { pos: F.pos, look: F.look, rate: 2.2 }; }); await wait(1.4); }
+        const vset = new Set(vs);
+        for (const a of actors.values()) if (!vset.has(a)) a.plate.visible = false; // الأسماء: الضحايا بس
+        await Promise.all(vs.map((v, i) => wait(i * .12).then(() => snakeAttack(v, L, vjs[i], i > 0))));
+        emit('strike');
+        await Promise.all(vs.map(v => dropActor(v, { kind: 'random', hold: .45 })));
+        for (const a of actors.values()) a.plate.visible = true;
+        pillars.forEach(p => { sc.remove(p); p.geometry.dispose(); p.material.dispose(); });
         await wait(.4); setShot(mainShot());
     }
     // ---------- الحيّة المميتة: تطلع من فتحة بالرقم، تتمايل وتفحّ، ثم تلدغ صاحب الرقم وترجع لجحرها
-    function snakeAttack(a, L, j) {
+    function snakeAttack(a, L, j, quiet) {
         const sk = Math.max(.75, K), base = L.pos[j].clone().setY(L.yTop + .36 * K); base.z += .32 * K;
         const target = a.pos.clone().setY(a.pos.y + 1.1 * (a.baseScale || 1));
         const g = new T.Group(); sc.add(g);
@@ -941,7 +950,7 @@ export async function mountPyramid(el, opts = {}) {
         const r0 = .13 * sk, H = 1.25 * sk * (a.baseScale || 1), t0 = now();
         const T1 = .9, T2 = 2.0, T3 = 2.3, T4 = 2.75, T5 = 3.5; // طلوع ← تمايل وفحيح ← لدغة ← تثبيت ← رجوع
         a.lookAt = base.clone().setY(base.y + H); a.ov = 'shock'; a.rig.mood && a.rig.mood('scared'); a.behUntil = now() + 9; a.moodSet = 'locked';
-        emit('hiss'); pulse(base.clone().setY(base.y + .02), '#0e1d1d', .2, .9 * sk, .5, .6);
+        if (!quiet) emit('hiss'); pulse(base.clone().setY(base.y + .02), '#0e1d1d', .2, .9 * sk, .5, .6);
         const P = V(), up = V(), line = V(), _d = V();
         let bit = false;
         return new Promise(res => {

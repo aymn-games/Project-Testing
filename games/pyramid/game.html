@@ -277,12 +277,12 @@ body.inlobby #demo,body.champ #demo{display:none}
 <div id="outStrip"><h5 id="osTitle">—</h5><div class="chips" id="osChips"></div></div>
 <div id="snake" role="alert"><div class="stage">
   <span class="p p1" style="animation-delay:0s">انتبهوا…</span>
-  <span class="p p2" style="animation-delay:.45s">تحت واحد من الـ<b id="snNum">0</b> رقم</span>
-  <span class="p p3" style="animation-delay:.95s">حيّة</span>
-  <span class="p p4" style="animation-delay:1.35s">مميتة</span>
+  <span class="p p2" style="animation-delay:.45s">تحت <b id="snCount">واحد</b> من الـ<b id="snNum">0</b> رقم</span>
+  <span class="p p3" style="animation-delay:.95s" id="snWord">حيّة</span>
+  <span class="p p4" style="animation-delay:1.35s" id="snDead">مميتة</span>
   <svg class="sn" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 104c-14 0-14-18 0-18h52c16 0 16-22 0-22H44c-15 0-15-21 0-21h30" fill="none" stroke="#e9d6b0" stroke-width="11" stroke-linecap="round"/><path d="M30 104c-14 0-14-18 0-18h52c16 0 16-22 0-22H44c-15 0-15-21 0-21h30" fill="none" stroke="#2e6e70" stroke-width="5" stroke-linecap="round" stroke-dasharray="3 9"/><ellipse cx="86" cy="43" rx="15" ry="11" fill="#e9d6b0"/><circle cx="90" cy="39" r="2.6" fill="#1d4a4c"/><path d="M100 45l9-2m-9 2 8 5" stroke="#c4664c" stroke-width="2.4" stroke-linecap="round"/></svg>
-  <span class="p p5" style="animation-delay:1.9s">وراح تلدغ صاحبه</span>
-  <span class="p p6" style="animation-delay:2.5s">من هو صاحب الرقم؟</span>
+  <span class="p p5" style="animation-delay:1.9s" id="snBite">وراح تلدغ صاحبه</span>
+  <span class="p p6" style="animation-delay:2.5s" id="snQ">من هو صاحب الرقم؟</span>
 </div></div>
 <div id="notice"></div>
 <div id="qToast"></div>
