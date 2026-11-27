@@ -738,6 +738,11 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// تصميم بطاقة «البثوث النشطة» يمنحه الأدمن (backend/live-cards/live-card-styles-service.js) — NULL = عادي.
+ensureColumn('users', 'live_card_style', 'TEXT');
+// سطرين اختياريين على البطاقة المميزة: «البث برعاية …» و«يقدّم البث …» — يكتبها الأدمن.
+ensureColumn('users', 'live_card_sponsor', 'TEXT');
+ensureColumn('users', 'live_card_host', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
@@ -933,6 +938,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
     { image_filename: 'frame-gold-bat.png', display_name_ar: 'الخفاش الذهبي (منح محدود)' },
     { image_filename: 'frame-winged-crown.png', display_name_ar: 'التاج المجنّح (منح محدود)' },
+    { image_filename: 'frame-winter-deer.png', display_name_ar: 'غزال الشتاء (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
