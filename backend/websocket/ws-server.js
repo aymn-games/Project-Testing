@@ -224,7 +224,7 @@ function checkSubscription(user) {
 function checkStreamConnectAllowed(payload) {
   var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
   if (!user) {
-    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب تيك توك عشان تتصل بالبث.' };
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع عشان تتصل بالبث.' };
   }
   if (user.role === 'admin') return null;
   // صلاحية «تشغيل كامل» يمنحها الأدمن (admin.html → منح الصلاحيات): كل
@@ -235,32 +235,24 @@ function checkStreamConnectAllowed(payload) {
   if (!isStreamerAccount) {
     return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
   }
-  if (!user.tiktok_verified || !user.tiktok_username) {
-    return { code: 'tiktok_not_linked', message: 'لازم تربط حساب تيك توك بحسابك في الموقع (من صفحة حسابي) عشان تتصل بالبث.' };
-  }
-  if (normalizeTikTokUsername(payload.username) !== normalizeTikTokUsername(user.tiktok_username)) {
-    return { code: 'tiktok_account_mismatch', message: 'تقدر تتصل فقط ببث حساب تيك توك المربوط بحسابك: @' + normalizeTikTokUsername(user.tiktok_username) };
-  }
+  // أي ستريمر يقدر يتصل بأي بث (حسابه المربوط أو «اتصال بحساب آخر» بمكتبة الألعاب).
+  // ساعات البث تنحسب لصاحب الحساب بس لما يكون هو اللي متصل (handleConnectMessage).
   return checkSubscription(user);
 }
 
-// ربط بث كيك/تويتش — نفس شروط تيك توك: حساب ستريمر + حساب المنصة مربوط
-// (OAuth — auth/kick-oauth-service.js و auth/twitch-oauth-service.js) ويكون
-// هو نفس القناة المطلوبة + اشتراك فعّال. الأدمن مستثنى، و«تشغيل كامل»
-// مستثنى من الشروط كلها إلا الاشتراك.
+// ربط بث كيك/تويتش — نفس شروط تيك توك: حساب ستريمر + اشتراك فعّال. الأدمن
+// مستثنى، و«تشغيل كامل» مستثنى من الشروط كلها إلا الاشتراك. ربط القناة
+// (OAuth — auth/kick-oauth-service.js و auth/twitch-oauth-service.js) يخلي
+// مكتبة الألعاب تتصل فيها تلقائياً، بس مو شرط.
 var LINKED_PLATFORMS = {
-  kick: { label: 'كيك', field: 'kick', strip: /^(https?:\/\/)?(www\.)?kick\.com\//i },
-  twitch: { label: 'تويتش', field: 'twitch', strip: /^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i }
+  kick: { label: 'كيك' },
+  twitch: { label: 'تويتش' }
 };
-function normalizeChannelName(platform, s) {
-  var def = LINKED_PLATFORMS[platform];
-  return String(s || '').trim().replace(def.strip, '').replace(/^@+/, '').split(/[/?#]/)[0].toLowerCase();
-}
 function checkLinkedPlatformConnectAllowed(platform, payload) {
   var def = LINKED_PLATFORMS[platform];
   var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
   if (!user) {
-    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب ' + def.label + ' عشان تتصل بالبث.' };
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع عشان تتصل ببث ' + def.label + '.' };
   }
   if (user.role === 'admin') return null;
   if (user.permissions && user.permissions.full_game_access) return checkSubscription(user);
@@ -268,13 +260,7 @@ function checkLinkedPlatformConnectAllowed(platform, payload) {
   if (!isStreamerAccount) {
     return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
   }
-  var linkedName = user[def.field + '_username'];
-  if (!user[def.field + '_verified'] || !linkedName) {
-    return { code: def.field + '_not_linked', message: 'لازم تربط حساب ' + def.label + ' بحسابك في الموقع (من صفحة حسابي) عشان تتصل ببث ' + def.label + '.' };
-  }
-  if (normalizeChannelName(platform, payload.username) !== normalizeChannelName(platform, linkedName)) {
-    return { code: def.field + '_account_mismatch', message: 'تقدر تتصل فقط ببث قناة ' + def.label + ' المربوطة بحسابك: ' + linkedName };
-  }
+  // أي ستريمر يقدر يتصل بأي قناة، مثل تيك توك فوق.
   return checkSubscription(user);
 }
 
@@ -391,9 +377,8 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
   entry.activeConnector = null;
   entry.activePlatform = null;
 
-  // قيد تشغيل البث: لازم حساب ستريمر مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
-  // ويكون هو نفسه اليوزرنيم المطلوب الاتصال ببثه (الأدمن مستثنى من شرط
-  // الربط/التطابق للتجربة). الرسالة تُعرض للمستخدم كما هي بالواجهة.
+  // قيد تشغيل البث: لازم حساب ستريمر مسجَّل بالموقع واشتراك فعّال (الأدمن مستثنى).
+  // الستريمر يتصل بأي بث. الرسالة تُعرض للمستخدم كما هي بالواجهة.
   if (platform === 'tiktok' || LINKED_PLATFORMS[platform]) {
     var denial = LINKED_PLATFORMS[platform] ? checkLinkedPlatformConnectAllowed(platform, payload) : checkStreamConnectAllowed(payload);
     if (denial) {
@@ -486,7 +471,12 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
       var matchedUser = authService.findVerifiedUserByTikTok(payload.username);
       if (matchedUser) {
         entry.statsUsername = payload.username;
-        if (!isOverlay) entry.broadcastTracking = { userId: matchedUser.id, username: payload.username };
+        // ساعات البث لصاحب الحساب بس لما يكون هو المتصل (أو أدمن/تشغيل كامل مثل قبل)،
+        // عشان اتصال ستريمر ثاني ببثه ما يزوّد ساعاته بالتصنيف.
+        var connectingUser = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
+        var mayTrack = Boolean(connectingUser && (connectingUser.id === matchedUser.id || connectingUser.role === 'admin' ||
+          (connectingUser.permissions && connectingUser.permissions.full_game_access)));
+        if (!isOverlay && mayTrack) entry.broadcastTracking = { userId: matchedUser.id, username: payload.username };
       }
     } catch (err) {
       logger.error('WS Server: failed to resolve broadcast owner:', err);
@@ -542,7 +532,7 @@ function handleConnectMessage(connectionId, socket, payload, skipLiveCheck) {
       // الأوفرلي ما يحتاج التعليقات/الهدايا نفسها — يقرأ الملخص من /api/stream/session-stats.
       // الاستثناء: payload.chat = مكتبة الألعاب والتحكم بالشات مفعّل (js/agp-remote-control.js)
       // → نرسل التعليق مختصر (المعرّف والاسم والنص) عشان أوامر المتحكم توصل.
-      if (!isOverlay) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard, data.character));
+      if (!isOverlay) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard, data.character, data.entrance));
       else if (payload.chat && data.text) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, false, null, null, null, null));
 
       if (entry.live && entry.activeConnector === connector) entry.live.comments++;
@@ -779,6 +769,11 @@ module.exports = {
       if (pathname === '/ws/remote') {
         // «التحكم عن بعد»: جوال المتحكم ↔ صفحة اللعبة عند الستريمر
         require('../remote-control/remote-control-server').handleUpgrade(req, socket);
+        return;
+      }
+      if (pathname === '/ws/phone-room') {
+        // «غرفة الجوالات» (اللعب بدون بث): جوالات اللاعبين — phone-room/
+        require('../phone-room/phone-room-server').handleUpgrade(req, socket);
         return;
       }
       if (pathname === '/ws/party') {

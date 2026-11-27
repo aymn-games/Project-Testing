@@ -39,6 +39,8 @@ function handleWhoami(req, res, body, user) {
         out.display_name = row.display_name || null;
         out.avatar_image_base64 = row.avatar_image_base64 || null;
     } catch (err) { logger.error('Veyro whoami: profile lookup failed:', err); }
+    // فيرو يعرض سعر مشترك الألعاب (خصم مشتركي الألعاب بالمتجر — store/veyro-link.js)
+    try { out.games_subscriber = require('../store/veyro-link').isGamesSubscriber(user.id); } catch (err) { out.games_subscriber = false; }
     sendJson(res, 200, { success: true, user: out });
 }
 

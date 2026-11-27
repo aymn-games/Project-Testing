@@ -207,7 +207,7 @@
     { id: 'win-cards', group: 'items', mode: 'both', icon: 'trophy', label: 'بطاقات الفوز', show: function (p) { return !!p.winCards; }, render: renderWinCards },
     { id: 'elim-cards', group: 'items', mode: 'both', icon: 'cards', label: 'بطاقات الإقصاء', show: function (p) { return !!p.elimCards; }, render: renderElimCards },
     { id: 'character', group: 'items', mode: 'both', icon: 'person', label: 'الشخصيات', show: function (p) { return S.owner || p.character !== undefined; }, render: renderCharacter },
-    { id: 'entrance', group: 'items', mode: 'both', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance; }, render: renderEntrance },
+    { id: 'entrance', group: 'items', mode: 'both', icon: 'sparkle', label: 'الدخولية', show: function (p) { return !!p.entrance || !!(p.entrances && p.entrances.length); }, render: renderEntrance },
     { id: 'codes', group: 'items', mode: 'both', owner: true, icon: 'gift', label: 'أكوادي', render: renderCodes },
 
     { id: 'subscription', group: 'broadcast', mode: 'streamer', owner: true, streamerOnly: true, icon: 'crown', label: 'الاشتراك', render: renderSubscription },
@@ -890,13 +890,84 @@
     var elim = p.elimCards || [];
     body.appendChild(panel(null, null, [cardsGrid('elim', elim, function (k, on) { return window.AGPAuth.toggleElimCard(k, on); }, 'ما عندك بطاقات إقصاء بعد.', 104)]));
   }
+  // الدخوليات: 5 نماذج (نيترو/ملكي/الأميرة/العاصفة/النوتات) تُمنح من الأدمن. صاحب الحساب
+  // يختار وحدة من اللي يملكها، ويعدّل نصها ولونها، ويوقفها أو يشغّلها، ويعاينها
+  // بشكلها الحقيقي (js/agp-entrance.js — نفس اللي يطلع باللوبي).
+  var ENT_INFO = {
+    nitro: { name: 'نيترو', desc: 'لهب نيترو وانطلاق — بصوت', art: 'radial-gradient(circle at 30% 40%,#bfe3ff,#2f7dff 35%,#06112b 75%)' },
+    royal: { name: 'ملكي', desc: 'ضوء ذهبي ولمعات — بدون صوت', art: 'radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)' },
+    princess: { name: 'الأميرة', desc: 'أضواء وردية وفراشات — بدون صوت', art: 'radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)' },
+    storm: { name: 'العاصفة', desc: 'غيوم وصواعق حقيقية — بصوت', art: 'radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)' },
+    notes: { name: 'النوتات', desc: 'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت', art: 'radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)' }
+  };
+  var ENT_COLORS = {
+    blue: ['أزرق', '#3d8bff'], red: ['أحمر', '#ff4d4d'], green: ['أخضر', '#2fd47a'], purple: ['بنفسجي', '#9b6bff'], gold: ['ذهبي', '#e8b13c'],
+    silver: ['فضي', '#c9d1dc'], rose: ['ذهبي وردي', '#e59a82'], pink: ['وردي', '#ff6fb4'], sky: ['سماوي', '#5ec2ff'], white: ['أبيض', '#f2f4f8']
+  };
+  function entPreview(p, key, text, color) {
+    if (!window.AymanGamesPlatform || !window.AymanGamesPlatform.entrance) return showToast('المعاينة ما تحمّلت، حدّث الصفحة.', true);
+    var fr = (p.frames || []).filter(function (f) { return f.equipped; })[0];
+    window.AymanGamesPlatform.entrance.preview({
+      id: 'preview', name: p.display_name || p.username || 'أنت', avatarUrl: p.avatar_image_base64 || p.tiktok_avatar_url || null,
+      frame: fr ? { imageFilename: fr.imageFilename } : null, entrance: { templateKey: key, entranceText: text, color: color }
+    });
+  }
   function renderEntrance(body, p) {
-    var e = p.entrance;
-    body.appendChild(panel(null, null, [e ? h('div', { class: 'pf-kvs' }, [
-      kvRow('الدخولية', e.template_key || '—'),
-      e.entrance_text ? kvRow('النص', e.entrance_text) : null,
-      kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
-    ]) : emptyNote('ما عندك دخولية مفعّلة بعد.')]));
+    var e = p.entrance, owned = p.entrances || [];
+    if (!S.owner) {
+      body.appendChild(panel(null, null, [e ? h('div', { class: 'pf-kvs' }, [
+        kvRow('الدخولية', (ENT_INFO[e.template_key] || {}).name || e.template_key || '—'),
+        e.entrance_text ? kvRow('النص', e.entrance_text) : null,
+        kvRow('الحالة', e.enabled === false ? pill('موقوفة', 'warn') : pill('مفعّلة', 'ok'))
+      ]) : emptyNote('ما عنده دخولية.')]));
+      return;
+    }
+    // اللي يملكها
+    var grid = h('div', { class: 'pf-items pf-items-frames' });
+    if (!owned.length) grid.appendChild(emptyNote('ما عندك دخوليات بعد. تنمنح من إدارة المنصة.'));
+    owned.forEach(function (o) {
+      var info = ENT_INFO[o.key] || { name: o.displayNameAr, desc: '', art: '#222' };
+      var active = e && e.template_key === o.key;
+      var card = h('div', { class: 'pf-item' }, [
+        h('div', { class: 'pf-item-art', style: '--art-h:76px;background:' + info.art + ';border-radius:12px' }),
+        h('div', { class: 'pf-item-row' }, [h('div', { class: 'pf-item-name', text: info.name }), active ? pill(e.enabled === false ? 'موقوفة' : 'مفعّلة', e.enabled === false ? 'warn' : 'ok') : null]),
+        h('div', { class: 'pf-muted', style: 'font-size:12px;margin:2px 0 6px', text: info.desc }),
+        h('div', { class: 'pf-item-ctl' }, [
+          active ? null : actionBtn('تفعيل', function () { return window.AGPAuth.equipEntrance(o.key); }),
+          h('button', { type: 'button', class: 'pf-btn pf-btn-ghost pf-btn-sm', onclick: function () { entPreview(p, o.key, active ? e.entrance_text : o.defaultText, active ? e.color : o.colors[0]); } }, [icon('play'), 'معاينة'])
+        ])
+      ]);
+      grid.appendChild(card);
+    });
+    var kids = [grid];
+    // إعدادات المفعّلة: النص + اللون + تشغيل/إيقاف
+    if (e && ENT_INFO[e.template_key]) {
+      var cat = owned.filter(function (o) { return o.key === e.template_key; })[0] || { colors: [], defaultText: '' };
+      var input = h('input', { type: 'text', class: 'pf-input', maxlength: '40', value: e.entrance_text || '', placeholder: cat.defaultText, 'aria-label': 'نص الدخولية' });
+      var saveText = actionBtn('حفظ النص', function () { return window.AGPAuth.updateEntranceSettings({ text: input.value }); }, 'pf-btn-primary');
+      var chips = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, cat.colors.map(function (c) {
+        var meta = ENT_COLORS[c] || [c, '#888'], on = (e.color || cat.colors[0]) === c;
+        var b = h('button', { type: 'button', class: 'pf-chip', title: meta[0], style: 'cursor:pointer;gap:7px;' + (on ? 'outline:2px solid ' + meta[1] + ';outline-offset:1px' : '') }, [
+          h('span', { style: 'width:14px;height:14px;border-radius:50%;display:inline-block;background:' + meta[1] + ';box-shadow:0 0 8px ' + meta[1] }), meta[0]]);
+        if (!on) b.addEventListener('click', function () {
+          b.disabled = true;
+          window.AGPAuth.updateEntranceSettings({ color: c }).then(function (r) { if (r && r.success) window.location.reload(); else { b.disabled = false; showToast('تعذّر تغيير اللون.', true); } });
+        });
+        return b;
+      }));
+      var enabled = e.enabled !== false;
+      kids.push(h('div', { class: 'pf-kvs', style: 'margin-top:14px' }, [
+        kvRow('النص اللي يطلع تحت اسمك', h('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, [input, saveText])),
+        kvRow('اللون', chips),
+        kvRow('الحالة', h('div', { style: 'display:flex;gap:8px;align-items:center' }, [
+          pill(enabled ? 'مفعّلة' : 'موقوفة', enabled ? 'ok' : 'warn'),
+          actionBtn(enabled ? 'إيقاف' : 'تشغيل', function () { return window.AGPAuth.toggleEntrance(!enabled); }),
+          h('button', { type: 'button', class: 'pf-btn pf-btn-primary pf-btn-sm', onclick: function () { entPreview(p, e.template_key, input.value || cat.defaultText, e.color || cat.colors[0]); } }, [icon('play'), 'معاينة'])
+        ]))
+      ]));
+      kids.push(h('p', { class: 'pf-field-help', text: 'دخوليتك تطلع بالشاشة أول ما تدخل لوبي أي لعبة (لازم حسابك موثّق بتيك توك). تطلع مع إطارك المفعّل لو عندك واحد.' }));
+    }
+    body.appendChild(panel('دخولياتي', plural(owned.length, 'دخولية', 'دخولية'), kids));
   }
 
   /* ---------- محفظة عملات أيمن (تصميم جاهز — النظام نفسه ينبني لاحقاً) */

@@ -780,6 +780,8 @@ function getPublicProfile(customId) {
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
         entrance: collectiblesService.getEntrance(user.id),
+        entrances: collectiblesService.getOwnedEntrances(user.id),
+        entranceCatalog: collectiblesService.getEntranceCatalog(),
         elimCards: collectiblesService.getElimCards(user.id),
         winCards: collectiblesService.getWinCards(user.id),
         character: collectiblesService.getCharacter(user.id),
@@ -1336,7 +1338,7 @@ function getTopStreamersByHours(limit) {
     return rows;
 }
 
-function computeTopStreamersByHours(limit, periodStart) {
+function computeTopStreamersByHours(limit, periodStart, periodEnd) {
     // بث/مباراة بدأت قبل بداية الأسبوع وانتهت بعدها: ينحسب منها الجزء اللي
     // بعد البداية فقط. بعد التحويل: وقت المباريات فقط (راجع streamer-hours.js).
     var rows = db.prepare(
@@ -1349,7 +1351,7 @@ function computeTopStreamersByHours(limit, periodStart) {
            AND h.total_ms > 0
          ORDER BY total_ms DESC
          LIMIT @limit`
-    ).all(Object.assign({ limit: limit || 20 }, streamerHours.hoursParams(periodStart)));
+    ).all(Object.assign({ limit: limit || 20 }, streamerHours.hoursParams(periodStart, periodEnd)));
     return rows.map(function (r) {
         return {
             tiktokUsername: r.tiktokUsername,
@@ -1599,7 +1601,7 @@ function adminSetEmail(userId, email) {
 }
 
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at, email_verified FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at, email_verified, live_card_style, live_card_sponsor, live_card_host FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession.
         if (!u.custom_id) {
@@ -1693,6 +1695,8 @@ module.exports = {
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
     getRankingPeriodStart: getRankingPeriodStart,
+    // توب الاستريمرز بالساعات لفترة محددة [periodStart, periodEnd) — لحفظ تصنيف الأسبوع الماضي.
+    computeTopStreamersByHours: computeTopStreamersByHours,
     endBroadcast: endBroadcast,
     incrementBroadcastStat: incrementBroadcastStat,
     addGiftValue: addGiftValue,

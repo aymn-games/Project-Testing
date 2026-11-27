@@ -798,6 +798,22 @@ function adminListFrameCodes() {
 
 /** Owner toggles their entrance on/off without deleting it (template/text
  * stay saved for one-click re-enable). */
+/** Owner picks one of their owned entrances (nitro/royal/princess/storm/notes). */
+function equipEntrance(key) {
+    return request('/api/entrance/equip', { method: 'POST', body: { key: key } });
+}
+/** Owner edits their entrance text and/or colour preset. settings: {text?, color?} */
+function updateEntranceSettings(settings) {
+    return request('/api/entrance/settings', { method: 'POST', body: settings || {} });
+}
+/** Admin only — grant (or revoke with revoke:true) one entrance to a user. */
+function adminGrantEntrance(userId, key, revoke) {
+    return request('/api/admin/entrance/grant', { method: 'POST', body: { userId: userId, key: key, revoke: Boolean(revoke) } });
+}
+/** Admin only — a user's entrances: {catalog, owned, active}. */
+function adminGetUserEntrances(userId) {
+    return request('/api/admin/entrances?userId=' + encodeURIComponent(userId || ''), { method: 'GET' });
+}
 function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
@@ -897,6 +913,23 @@ function adminUpdateStreamerLevel(slug, fields) {
     });
 }
 
+/* Admin only — manual streamer hours (compensate/deduct), see
+ * backend/points/streamer-hours.js. hours < 0 = deduction. */
+function adminListHoursAdjustments(userId) {
+    return request('/api/admin/streamer-hours/adjustments' + (userId ? '?userId=' + encodeURIComponent(userId) : ''), { method: 'GET' });
+}
+
+function adminAdjustStreamerHours(userId, hours, effectiveAt, reason) {
+    return request('/api/admin/streamer-hours/adjust', {
+        method: 'POST',
+        body: { userId: userId, hours: hours, effectiveAt: effectiveAt, reason: reason || '' }
+    });
+}
+
+function adminDeleteHoursAdjustment(id) {
+    return request('/api/admin/streamer-hours/adjustments/delete', { method: 'POST', body: { id: id } });
+}
+
 /** Only admin accounts can access the streamer dashboard (dashboard-core);
  * every other account is redirected to its public profile instead. */
 function canAccessDashboard(user) {
@@ -927,6 +960,10 @@ function hasSubscriptionAccess(user) {
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
+    // «غرفة الجوالات» (اللعب بدون بث — phone-room.html): صلاحية يمنحها الأدمن
+    // بنفسه لكل حساب، فتفتح الألعاب بدون شرط ستريمر/ربط/اشتراك. الاتصال ببث
+    // حقيقي يبقى بنفس شروطه بالخادم (ws-server.js checkStreamConnectAllowed).
+    if (user.permissions && user.permissions.phone_rooms) return true;
     if (!hasSubscriptionAccess(user)) return false;
     // Admin-granted full access: every game on any stream, no streamer
     // account or TikTok link needed (see admin.html → منح الصلاحيات).
@@ -958,6 +995,12 @@ function getRecentSupporters(limit) {
     var path = '/api/supporters/recent';
     if (limit) path += '?limit=' + encodeURIComponent(limit);
     return request(path, { method: 'GET' });
+}
+
+/** تصنيف «الأسبوع الماضي» المحفوظ: توب الاستريمرز بالساعات واللاعبين بالفوز
+ * للأسبوع اللي خلص (backend/stats/last-week-ranking-service.js). */
+function getLastWeekRanking() {
+    return request('/api/public/last-week-ranking', { method: 'GET' });
 }
 
 /** Top streamers by total stream hours. Returns TikTok username + hours
@@ -1051,6 +1094,18 @@ function adminAddPartner(customId, category) {
 
 function adminDeletePartner(id) {
     return request('/api/admin/partners/delete', { method: 'POST', body: { id: id } });
+}
+
+/* Featured live-stream cards — see backend/live-cards/live-card-styles-service.js */
+
+function adminListLiveCardStyles() {
+    return request('/api/admin/live-card-styles', { method: 'GET' });
+}
+
+/** style: a key from STYLES, or null to reset to the normal card.
+ * sponsor/host: optional card lines («البث برعاية …» / «يقدّم البث: …»). */
+function adminSetLiveCardStyle(customId, style, sponsor, host) {
+    return request('/api/admin/live-card-styles', { method: 'POST', body: { customId: customId, style: style || null, sponsor: sponsor || '', host: host || '' } });
 }
 
 /* Event theme — see backend/theme/site-theme-service.js */
@@ -1317,6 +1372,10 @@ global.AGPAuth = {
     adminBurnCode: adminBurnCode,
     adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
+    equipEntrance: equipEntrance,
+    updateEntranceSettings: updateEntranceSettings,
+    adminGrantEntrance: adminGrantEntrance,
+    adminGetUserEntrances: adminGetUserEntrances,
     adminGrantElimCard: adminGrantElimCard,
     adminRevokeElimCard: adminRevokeElimCard,
     toggleElimCard: toggleElimCard,
@@ -1328,12 +1387,16 @@ global.AGPAuth = {
     reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
+    adminListHoursAdjustments: adminListHoursAdjustments,
+    adminAdjustStreamerHours: adminAdjustStreamerHours,
+    adminDeleteHoursAdjustment: adminDeleteHoursAdjustment,
     canAccessDashboard: canAccessDashboard,
     isStreamerAccount: isStreamerAccount,
     canPlayGames: canPlayGames,
     needsWelcome: needsWelcome,
     completeWelcome: completeWelcome,
     adminResetWelcome: adminResetWelcome,
+    getLastWeekRanking: getLastWeekRanking,
     getTopStreamers: getTopStreamers,
     getTopStreamersByParticipations: getTopStreamersByParticipations,
     getUserWeeklyRanks: getUserWeeklyRanks,
@@ -1353,6 +1416,8 @@ global.AGPAuth = {
     adminListPartners: adminListPartners,
     adminAddPartner: adminAddPartner,
     adminDeletePartner: adminDeletePartner,
+    adminListLiveCardStyles: adminListLiveCardStyles,
+    adminSetLiveCardStyle: adminSetLiveCardStyle,
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
     adminClearSiteTheme: adminClearSiteTheme,

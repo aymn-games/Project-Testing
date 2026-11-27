@@ -53,6 +53,11 @@ function init(db) {
         '  updated_at INTEGER NOT NULL' +
         ');'
     );
+    // لوحة تحكم فيرو: الإيميل وآيدي البروفايل (custom_id) للبحث — ينكتبون من سيرفر الألعاب مع الحساب
+    var cols = db.prepare('PRAGMA table_info(users)').all().map(function (c) { return c.name; });
+    if (cols.indexOf('email') === -1) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+    if (cols.indexOf('custom_id') === -1) db.exec('ALTER TABLE users ADD COLUMN custom_id TEXT');
+    if (cols.indexOf('created_at') === -1) db.exec('ALTER TABLE users ADD COLUMN created_at INTEGER');
     return db;
 }
 

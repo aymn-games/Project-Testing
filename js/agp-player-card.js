@@ -450,6 +450,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 54.05, nameTopPct: 39.24, nameWidthPct: 29.70, nameHeightPct: 26.79,
             printedName: true
         },
+        // إطار "الخفاش الذهبي" — منح محدود (باكج مع بطاقتي الإقصاء والفوز).
+        // الأصل JPG 1079×359 بخلفية بيضاء وممطوط بالعرض ~13% (الدائرة بيضاوية):
+        // صُحّحت النسبة، وفُرّغت الخلفية والفتحة الدائرية لشفافية حقيقية، وتعبّى
+        // لوح الاسم بأسود متدرّج، وكُبّر لارتفاع 704 ووُسِّط على 2172×724.
+        // hole 289→731 × 164→597، name 840→1870 × 370→530 (داخل اللوح 812→1899 ×
+        // 349→552)، content 10→713. اللوح أسود — اسم أبيض افتراضي.
+        'frame-gold-bat.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 703,
+            avatarLeftPct: 13.31, avatarTopPct: 21.91, avatarWidthPct: 20.35, avatarHeightPct: 61.59,
+            nameLeftPct: 38.67, nameTopPct: 51.21, nameWidthPct: 47.42, nameHeightPct: 22.76
+        },
+        // إطار "التاج المجنّح" — منح محدود (مع بطاقتي الإقصاء والفوز بنفس التصميم).
+        // نسخة عريضة 2172×724 (طوّلت لوح الاسم بالعرض فصار بنفس عرض باقي الإطارات).
+        // الأصل PNG بخلفية سوداء: فُرّغت الخلفية والفتحة الدائرية لشفافية حقيقية.
+        // hole 282→599 × 219→530، name 650→1800 × 285→475 (داخل اللوح الكريمي
+        // 610→1865 × 264→497)، content 13→697. لوح فاتح — نص بني ذهبي.
+        'frame-winged-crown.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 13, contentHeight: 684,
+            avatarLeftPct: 12.98, avatarTopPct: 30.12, avatarWidthPct: 14.59, avatarHeightPct: 45.47,
+            nameLeftPct: 29.93, nameTopPct: 39.77, nameWidthPct: 52.95, nameHeightPct: 27.78,
+            textColor: '#6b4208'
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
@@ -460,6 +482,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 10.59, avatarTopPct: 18.25, avatarWidthPct: 20.12, avatarHeightPct: 60.94,
             nameLeftPct: 39.59, nameTopPct: 33.48, nameWidthPct: 42.36, nameHeightPct: 36.20,
             textColor: '#1c3a5e'
+        },
+        // [غزال الشتاء] الأصل JPG 2000×667 بخلفية بيضاء، فُرّغت الخلفية والفتحة
+        // والفراغات بين القرون، وكُبّر لـ2172×724 (نفس النسبة، بدون مط).
+        // hole 275→727 × 128→580 (دائرة مركزها 501،354)، قرون الغزال ورأسه
+        // يغطون طرف الصورة اليسار — مقصود. name 905→1935 × 255→485 (عرض
+        // اللوح كامل بين الندفتين المعلّقتين 806→898 و1939→2000).
+        // content 11→704. اللوح داكن = أبيض افتراضي.
+        // shine: لمعة تمر فوق رسمة الإطار نفسها.
+        'frame-winter-deer.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 11, contentHeight: 694,
+            avatarLeftPct: 12.66, avatarTopPct: 16.86, avatarWidthPct: 20.81, avatarHeightPct: 65.13,
+            nameLeftPct: 41.67, nameTopPct: 35.16, nameWidthPct: 47.42, nameHeightPct: 33.14,
+            shine: true
         },
         // [الدبدوب] hole 189→672 × 156→619, name 800→1960 × 355→580, content 4→689
         'frame-cute-bear.png': {
@@ -604,6 +639,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-tpl-frame-img{position:absolute;left:0;',
             'background-repeat:no-repeat;background-position:0 0;',
             'z-index:2;pointer-events:none;}',
+            // لمعة الإطار (shine:true بالقالب): شريط ضوء يمر فوق رسمة الإطار
+            // بس — ممسوك بقناع من صورة الإطار نفسها، فما يلمع على الصورة أو
+            // الفراغ الشفاف.
+            '.agp-pcard-tpl-shine{position:absolute;left:0;z-index:2;pointer-events:none;',
+            '-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;',
+            'background:linear-gradient(110deg,transparent 42%,rgba(190,225,255,.18) 46%,rgba(255,255,255,.6) 50%,rgba(190,225,255,.18) 54%,transparent 58%);',
+            'background-size:300% 100%;background-repeat:no-repeat;',
+            'animation:agp-pcard-shine 4s linear infinite;}',
+            '@keyframes agp-pcard-shine{0%{background-position:100% 0}55%,100%{background-position:0 0}}',
+            '@media (prefers-reduced-motion:reduce){.agp-pcard-tpl-shine{animation:none;opacity:0}}',
             '.agp-pcard-tpl-name{position:absolute;z-index:3;',
             'display:flex;align-items:center;justify-content:center;overflow:hidden;',
             'font-weight:800;color:#fff;text-align:center;line-height:1.1;',
@@ -818,6 +863,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
             'background-size:' + layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px;' +
             'background-image:url(' + escapeHtml(frameSrc) + ')';
+        var shineMask = 'url(' + escapeHtml(frameSrc) + ')';
+        var shineSize = layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px';
+        var shineStyle = 'top:' + layout.frameTopOffsetPx + 'px;' +
+            'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
+            '-webkit-mask-image:' + shineMask + ';mask-image:' + shineMask + ';' +
+            '-webkit-mask-size:' + shineSize + ';mask-size:' + shineSize + ';';
         var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + layout.nameTopPx + 'px;' +
             'width:' + tpl.nameWidthPct + '%;height:' + layout.nameHeightPx + 'px;' +
             (tpl.textColor ? 'color:' + tpl.textColor + ';' : '') +
@@ -838,6 +889,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             (tpl.printedName ? ' title="' + escapeHtml(name) + '"' : '') + '>' +
             avatarHtml +
             '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+            (tpl.shine ? '<span class="agp-pcard-tpl-shine" style="' + shineStyle + '"></span>' : '') +
             nameHtml +
             '</span>';
     }

@@ -23,6 +23,7 @@ var CHECK_MS = 30 * 1000;
 var IDLE_MS = 2 * 60 * 1000;
 var CHECK_GAP_MS = 1500;
 var START_DELAY_MS = 25 * 1000;
+var CONNECT_TIMEOUT_MS = 45 * 1000; // اتصال علّق على «يتصل…» أكثر من كذا = نقفله ونقول للستريمر يعيد
 
 function normalize(u) {
     var s = String(u || '').trim().replace(/^@+/, '').toLowerCase();
@@ -42,6 +43,8 @@ function createWatcher(deps) {
     var autoAudio = deps.autoAudio !== false;
     var _active = new Map(); // username -> { connector, id, status }
     var _manual = new Set(); // يوزرات طلبوا «اتصل بالبث» يدوياً
+    var _lastErr = new Map(); // username -> 'timeout' | 'error' (آخر محاولة فشلت — تنمسح مع أي محاولة جديدة)
+    var connectTimeoutMs = deps.connectTimeoutMs == null ? CONNECT_TIMEOUT_MS : deps.connectTimeoutMs;
     var _ticking = false;
 
     function delay(ms) { return ms ? new Promise(function (r) { setTimeout(r, ms); }) : Promise.resolve(); }
@@ -50,6 +53,7 @@ function createWatcher(deps) {
         var a = _active.get(username);
         if (!a) return;
         _active.delete(username);
+        if (a.timer) clearTimeout(a.timer);
         stats.setWatching(username, false);
         try { a.connector.disconnect(); } catch (e) { /* ignore */ }
         log.log('Screen Audio: stopped "' + username + '" (' + reason + ').');
@@ -59,8 +63,16 @@ function createWatcher(deps) {
         var connector = deps.createConnector();
         if (!connector) return;
         var id = stats.WATCH_PREFIX + 'audio:' + username + ':' + Date.now().toString(36);
-        var a = { connector: connector, id: id, status: 'connecting' };
+        var a = { connector: connector, id: id, status: 'connecting', timer: null };
         _active.set(username, a);
+        _lastErr.delete(username);
+        // تيك توك أحياناً ما يرد أبداً: بدون هذا يبقى «يتصل…» للأبد ويمنع أي محاولة ثانية
+        if (connectTimeoutMs) {
+            a.timer = setTimeout(function () {
+                if (_active.get(username) === a && a.status !== 'connected') { _lastErr.set(username, 'timeout'); stop(username, 'connect timeout'); }
+            }, connectTimeoutMs);
+            if (a.timer.unref) a.timer.unref();
+        }
         stats.setWatching(username, true);
         log.log('Screen Audio: "' + username + '" is live with an audio screen open — connecting.');
         function mine() { return _active.get(username) === a; }
@@ -69,14 +81,15 @@ function createWatcher(deps) {
                 if (!mine()) return;
                 a.status = status;
                 if (status === 'ended') _manual.delete(username);
+                if (status === 'connected' && a.timer) { clearTimeout(a.timer); a.timer = null; }
                 if (status === 'connected') stats.attach(username, connector.getRoomId ? connector.getRoomId() : null, id);
                 else if (status === 'ended') { stats.markEnded(username, id); stop(username, 'stream ended'); }
-                else if (status === 'error') stop(username, 'connection error — retry next check');
+                else if (status === 'error') { _lastErr.set(username, 'error'); stop(username, 'connection error — retry next check'); }
             },
             onComment: function (d) { stats.recordComment(username, id, d); },
             onGift: function (d) { stats.recordGift(username, id, d); },
             onFollow: function (d) { stats.recordFollow(username, id, d); },
-            onViewerUpdate: function (d) { stats.recordViewers(username, id, d.current, d.totalUsers); },
+            onViewerUpdate: function (d) { stats.recordViewers(username, id, d.current, d.totalUsers, d.topViewers); },
             onLike: function (d) { stats.recordLike(username, id, d); },
             onShare: function (d) { stats.recordShare(username, id, d); },
             onMember: function (d) { stats.recordMember(username, id, d); },
@@ -117,11 +130,15 @@ function createWatcher(deps) {
         }).then(function () { _ticking = false; });
     }
 
-    /** «اتصل بالبث» يدوياً (السيرفر تأكد إنه يوزره الموثّق) → { state } */
-    function connectManual(username) {
+    /**
+     * «اتصل بالبث» يدوياً (السيرفر تأكد إنه يوزره الموثّق) → { state }
+     * force = «إعادة الاتصال»: يقفل الاتصال الحالي (لو علّق أو بقى على بث قديم بعد ما أعاد البث) ويفتح واحد جديد.
+     */
+    function connectManual(username, force) {
         var u = normalize(username);
         if (!u) return { state: 'idle' };
         _manual.add(u);
+        if (force && _active.has(u)) stop(u, 'reconnect requested by streamer');
         if (!_active.has(u) && !deps.statsWatcherActive(u)) start(u);
         return { state: status(u) };
     }
@@ -146,7 +163,9 @@ function createWatcher(deps) {
         active: function () { return Array.from(_active.keys()); },
         connectManual: connectManual,
         disconnectManual: disconnectManual,
-        status: status
+        status: status,
+        /** آخر سبب فشل للاتصال (timeout | error) أو null */
+        lastError: function (username) { var u = normalize(username); return (u && !_active.has(u) && _lastErr.get(u)) || null; }
     };
 }
 

@@ -630,8 +630,10 @@ class Component extends DCLogic {
   later(job){ this.q.push(job); if(!this.wheelBusy()) this.flush(); }
   flush(){ while(this.q.length&&!this.wheelBusy()){ const job=this.q.shift(); job(); } }
   // الدور التالي: اللعب التلقائي يلف العجلة بعد 1.2 ثانية
-  next(){ clearTimeout(this._at); this.flush(); const s=this.state; if(this.busy()||s.players.length<2) return;
-    if(s.auto) this._at=setTimeout(()=>{ if(this.state.auto) this.spin(); },1200); }
+  // اللف التلقائي ينتظر لين تختفي كل التبويبات من الشاشة (الصناديق، الإقصاء، الصعوبة، الإعدادات)
+  overlayOpen(){ const s=this.state; return !!(s.diffOpen||s.settingsOpen||s.supPick); }
+  next(){ clearTimeout(this._at); this.flush(); const s=this.state; if(this.busy()||this.overlayOpen()||s.players.length<2) return;
+    if(s.auto) this._at=setTimeout(()=>{ if(this.state.auto&&!this.overlayOpen()) this.spin(); },1200); }
   toggleAuto=()=>{ const s=this.state; if(s.winOpen) return; const on=!s.auto; clearTimeout(this._at); this.click(); this.setState({auto:on},()=>{ if(on) this.next(); }); }
   // إيقاف اللعب كامل: المؤقت واللعب التلقائي والشات (أرقام الصناديق والدخول والإنعاش تنتظر). «إكمال» يرجّع كل شي.
   togglePause=()=>{ const s=this.state; if(s.winOpen) return; this.click();
@@ -688,7 +690,9 @@ class Component extends DCLogic {
       if(c.hidden){ if(!FR.hasElimCard(this.reg.player(n))) this.boom(); this.setState({result:'danger'}); this.logEv('kick',HIDDEN_CHARACTER.name,n);
         // إقصاء تلقائي بدون تأكيد: النتيجة تظهر 1.6 ثانية ثم يُقصى وتنقفل الصناديق
         this._et=setTimeout(()=>{ this.closeRes(true); this.eliminate(n,'self'); },1600); }
-      else { this.chime(); this.setState({result:'safe'}); this.logEv('safe',n,c.content.name); }
+      else { this.chime(); this.setState({result:'safe'}); this.logEv('safe',n,c.content.name);
+        // صندوق آمن: النتيجة تظهر 1.6 ثانية ثم ينقفل التبويب ويرجع للروليت تلقائيًا
+        this._et=setTimeout(()=>{ if(this.state.resOpen&&this.state.result==='safe') this.closeRes(); },1600); }
     },650); }
   manualKick=()=>{ const s=this.state; if(!s.resOpen||s.resolved||!s.landed) return; const n=s.landed; this.setState({resolved:true}); this.boom(); this.logEv('kick','الاستريمر',n); this.closeRes(true); this.eliminate(n,'streamer'); }
   manualClose=()=>{ const s=this.state; if(!s.resOpen||s.resolved) return; this.click(); this.closeRes(); }
@@ -799,7 +803,7 @@ class Component extends DCLogic {
   events(){ const L=this.state.log||[];
     return { evList:L.map(e=>{ const [label,c,verb]=this.evTypes[e.type]; return {label,c,verb,actor:e.actor,target:e.target,time:e.time,bg:c+'0d',bd:c+'26'}; }),
       evLegend:Object.values(this.evTypes).map(([label,c])=>({label,c})), evEmpty:!L.length }; }
-  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
+  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false},()=>{ if(this.state.auto&&!this.overlayOpen()) this.next(); }),260); }
   anims(){ const s=this.state, o=(k,i,out)=>s[k+'Out']?out:i;
     return { settOv:o('settingsOpen','fade .25s ease','fadeOut .26s ease forwards'), settAn:o('settingsOpen','slideIn .45s cubic-bezier(.2,1,.3,1)','slideOut .26s ease forwards'),
       evOv:o('eventsOpen','fade .2s ease','fadeOut .26s ease forwards'), evAn:o('eventsOpen','slideDown .4s cubic-bezier(.2,1,.3,1)','slideUp .26s ease forwards'),

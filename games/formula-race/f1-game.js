@@ -1153,7 +1153,8 @@
             if (known && !known.frame && p.frame && S.phase === 'lobby') { known.frame = p.frame; renderReady(); }
             if (S.phase !== 'lobby' || norm(p.text) !== norm(settings.keyword)) return;
             if (settings.joinMode === 'followers' && !p.isFollower) return;
-            addCar(p);
+            var hadCar = !!S.byId[p.id];
+            if (addCar(p) && !hadCar) { var AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true }); } // دخولية اللاعب (js/agp-entrance.js)
         });
         AGP.events.on('stream:giftReceived', function (p) { if (p && p.id) onGift(p); });
         AGP.events.on('stream:likeReceived', function (p) {

@@ -31,7 +31,8 @@
         mafia: { name: 'المافيا', url: 'games/mafia/join.html?room=' },
         codenames: { name: 'كود نيمز (السباي ماستر)', url: 'games/codenames/spymaster.html?code=' },
         billiards: { name: 'بلياردو ٨', url: 'https://billiards.aymngames.online/?room=' },
-        impostor: { name: 'من الأمبوستر؟', url: 'discord-games/impostor/?room=' }
+        impostor: { name: 'من الأمبوستر؟', url: 'discord-games/impostor/?room=' },
+        phone: { name: 'غرفة الجوالات (بدون بث)', url: 'phone/?code=' }
     };
     // نفس databaseURL بـ discord-games/impostor/script.js
     var IMPOSTOR_DB = 'https://who-is-the-impostor-816c8-default-rtdb.firebaseio.com';
@@ -324,6 +325,10 @@
         scheduled = true;
         (window.requestAnimationFrame || setTimeout)(function () { scheduled = false; ensureButtons(); ensureHomeField(); });
     }
+    // للصفحات اللي فيها خانة رقم غرفة بتصميمها الخاص (الرئيسية الجديدة js/agp-home.js):
+    // نفس البحث ونفس الانتقال بدون تكرار منطق النطاقات والأمبوستر.
+    window.AGPJoinRoom = { findRoom: findRoom, goTo: goTo, games: GAMES };
+
     // نراقب document نفسه: الصفحات المجمّعة تستبدل documentElement كامل لما تنفك
     new MutationObserver(schedule).observe(document, { childList: true, subtree: true });
     schedule();

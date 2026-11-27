@@ -37,6 +37,9 @@
  *                    بين كل من عنده صلاحية إدارتها، صف واحد ثابت يُستبدَل
  *                    بالكامل مع كل حفظ من لوحة admin-questions.html —
  *                    راجع backend/letters-cell/letters-cell-questions-service.js
+ *   ranking_snapshots — تصنيف كل أسبوع منتهي محفوظ كما هو (توب الاستريمرز
+ *                    بالساعات واللاعبين بالفوز) لتبويب «الأسبوع الماضي» —
+ *                    راجع backend/stats/last-week-ranking-service.js
  *   platform_stats_cache — أرقام حقيقية مُجمَّعة لقسم "الأرقام" بالصفحة
  *                    الرئيسية (حسابات مسجّلة، استريمرز نشطين، مشاهدين...)،
  *                    محسوبة من الجداول الفعلية ومخزَّنة مؤقتاً (٣ أيام) —
@@ -164,8 +167,18 @@ db.exec(`
         UNIQUE(user_id, frame_type, frame_ref)
     );
 
-    -- الدخولية النشطة لكل مستخدم — صف واحد لكل مستخدم، يُستبدَل بالكامل
-    -- مع كل منح جديد (تلقائي مع إطار خاص، أو يدوي من الأدمن).
+    -- الدخوليات اللي يملكها المستخدم (منح يدوي من الأدمن، مثل الإطارات) —
+    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm/notes).
+    CREATE TABLE IF NOT EXISTS user_owned_entrances (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        entrance_key TEXT NOT NULL,
+        granted_by TEXT NOT NULL DEFAULT 'admin_manual',
+        granted_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, entrance_key)
+    );
+
+    -- الدخولية المفعّلة لكل مستخدم — صف واحد: المفتاح (لازم يكون من اللي
+    -- يملكها) + النص + اللون، واللاعب يعدّلها من بروفايله.
     CREATE TABLE IF NOT EXISTS user_entrances (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         template_key TEXT NOT NULL,
@@ -366,6 +379,15 @@ db.exec(`
         computed_at INTEGER NOT NULL
     );
 
+    -- نسخة محفوظة من التصنيف الأسبوعي بعد ما يخلص الأسبوع (قبل ما يتصفر
+    -- العرض): صف لكل أسبوع منتهي — راجع backend/stats/last-week-ranking-service.js
+    CREATE TABLE IF NOT EXISTS ranking_snapshots (
+        period_start INTEGER PRIMARY KEY,
+        period_end INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+
     -- ساعات البث الفعلية = وقت المباريات المكتملة فقط (من بدايتها لإعلان
     -- الفائز) أثناء بث مباشر. راجع backend/points/streamer-hours.js
     CREATE TABLE IF NOT EXISTS streamer_match_time (
@@ -375,6 +397,20 @@ db.exec(`
         ended_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_streamer_match_time_user ON streamer_match_time(user_id);
+
+    -- تعديل يدوي لساعات الاستريمر من لوحة الأدمن (تعويض ساعات ما انحسبت، أو
+    -- خصم لتصحيح خطأ). ms بالموجب = إضافة، بالسالب = خصم. effective_at = اليوم
+    -- اللي تنحسب فيه (يحدد أسبوع التصنيف). راجع backend/points/streamer-hours.js
+    CREATE TABLE IF NOT EXISTS streamer_hours_adjustments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ms INTEGER NOT NULL,
+        effective_at INTEGER NOT NULL,
+        reason TEXT,
+        admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_streamer_hours_adj_user ON streamer_hours_adjustments(user_id);
 
     -- سجل الجولات المكتملة لكل لاعب (صف لكل جولة) — لتصنيف "توب اللاعبين"
     -- الأسبوعي بالرئيسية (getTopPlayersByWins بـpoints-service.js). العدّادات
@@ -702,6 +738,11 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// تصميم بطاقة «البثوث النشطة» يمنحه الأدمن (backend/live-cards/live-card-styles-service.js) — NULL = عادي.
+ensureColumn('users', 'live_card_style', 'TEXT');
+// سطرين اختياريين على البطاقة المميزة: «البث برعاية …» و«يقدّم البث …» — يكتبها الأدمن.
+ensureColumn('users', 'live_card_sponsor', 'TEXT');
+ensureColumn('users', 'live_card_host', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
@@ -769,6 +810,8 @@ ensureColumn('player_rounds_log', 'duration_ms', 'INTEGER NOT NULL DEFAULT 0');
 // تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 افتراضي (مفعّلة)، 0 يعني
 // الستريمر أطفأها بنفسه (القالب/النص يبقيان محفوظين لإعادة التفعيل).
 ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');
+// لون الدخولية اللي اختاره اللاعب (من ألوانها الجاهزة؛ فاضي = لونها الأساسي).
+ensureColumn('user_entrances', 'color', "TEXT NOT NULL DEFAULT ''");
 // اختيار نوع الحساب (لاعب/استريمر) بعد تسجيل الدخول عبر جوجل — افتراضي 1
 // ("تم الاختيار") للحسابات الحالية؛ فقط حسابات جوجل الجديدة تُنشأ بـ0.
 ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');
@@ -893,6 +936,9 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-purple-spider.png', display_name_ar: 'العنكبوت البنفسجي (منح محدود)' },
     { image_filename: 'frame-roro-lilac.png', display_name_ar: 'Roro — الليلك واللؤلؤ (منح محدود)' },
     { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
+    { image_filename: 'frame-gold-bat.png', display_name_ar: 'الخفاش الذهبي (منح محدود)' },
+    { image_filename: 'frame-winged-crown.png', display_name_ar: 'التاج المجنّح (منح محدود)' },
+    { image_filename: 'frame-winter-deer.png', display_name_ar: 'غزال الشتاء (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
@@ -917,6 +963,7 @@ migrateSingleCardTable('user_win_cards');
 // معرّفة بـbackend/collectibles/collectibles-service.js.
 [
     { name: 'القطة الزرقاء (منح محدود)', frameImage: 'frame-blue-kitty.png', cardKey: 'blue-kitty' },
+    { name: 'الخفاش الذهبي (منح محدود)', frameImage: 'frame-gold-bat.png', cardKey: 'gold-bat' },
     // إطار + بطاقة إقصاء بس (ما لها بطاقة فوز للحين).
     { name: 'الفرس المجنّح الأسود (منح محدود)', frameImage: 'frame-black-pegasus.png', cardKey: 'black-pegasus', noWinCard: true }
 ].forEach(function (bundle) {

@@ -173,3 +173,53 @@ test('tts: per-screen limit of requests per minute (cache hits are free)', async
     s.clock.t += 61000;
     assert.equal((await s.tts('k1', 'بعد دقيقة', 'f', 1)).success, true);
 });
+
+function audioRes(status, bytes) {
+    return Promise.resolve({ ok: status >= 200 && status < 300, status: status, json: function () { return Promise.resolve({}); }, arrayBuffer: function () { return Promise.resolve(new Uint8Array(bytes || [1, 2, 3]).buffer); } });
+}
+
+test('tts: picks any allowed Arabic Google voice (standard, wavenet, HD), unknown names fall back', async function () {
+    var f = fakeFetch(function () { return res(200, { audioContent: Buffer.from('x').toString('base64') }); });
+    var s = svc({ fetch: f });
+    await s.tts('k1', 'هلا', 'ar-XA-Wavenet-C', 1);
+    await s.tts('k1', 'هلا', 'ar-XA-Chirp3-HD-Kore', 1.1);
+    await s.tts('k1', 'هلا', 'en-US-Evil-Z', 1);
+    var names = f.calls.map(function (c) { return JSON.parse(c.opts.body).voice.name; });
+    assert.deepEqual(names, ['ar-XA-Wavenet-C', 'ar-XA-Chirp3-HD-Kore', 'ar-XA-Standard-A']);
+});
+
+test('tts: ElevenLabs needs a key, sends voice settings, prefers the streamer key and caches', async function () {
+    var f = fakeFetch(function () { return audioRes(200, [9, 9]); });
+    var off = audio.createService(new Database(':memory:'), { fetch: f, ttsKey: 'g' });
+    assert.deepEqual(await off.tts('k1', 'هلا', 'el:cgSgspJ2msm6clMCkdW9', 1, { userId: 7 }), { success: false, error: 'disabled' });
+    assert.deepEqual(await off.tts('k1', 'هلا', 'el:bad', 1, { userId: 7 }), { success: false, error: 'bad_voice' });
+    assert.equal(f.calls.length, 0);
+
+    var s = audio.createService(new Database(':memory:'), { fetch: f, ttsKey: 'g', elevenKey: 'platformElevenKey_aaaaaaaaaaaaa' });
+    var r = await s.tts('k1', 'هلا والله', 'el:cgSgspJ2msm6clMCkdW9', 5, { userId: 7, st: '0.3', sim: '0.9', sty: '0.2', boost: '0' });
+    assert.equal(r.success, true);
+    assert.deepEqual([...r.audio], [9, 9]);
+    var call = f.calls[0];
+    assert.match(call.url, /api\.elevenlabs\.io\/v1\/text-to-speech\/cgSgspJ2msm6clMCkdW9/);
+    assert.equal(call.opts.headers['xi-api-key'], 'platformElevenKey_aaaaaaaaaaaaa');
+    assert.deepEqual(JSON.parse(call.opts.body).voice_settings, { stability: 0.3, similarity_boost: 0.9, style: 0.2, use_speaker_boost: false, speed: 1.2 });
+    await s.tts('k1', 'هلا والله', 'el:cgSgspJ2msm6clMCkdW9', 5, { userId: 7, st: '0.3', sim: '0.9', sty: '0.2', boost: '0' });
+    assert.equal(f.calls.length, 1);
+
+    assert.deepEqual(s.setUserElevenKey(7, 'nope'), { success: false, error: 'invalid_key' });
+    assert.equal(s.setUserElevenKey(7, 'sk_ownkey1234567890abcdefghij').hasKey, true);
+    assert.equal(s.voiceProviders(7).ownEleven, true);
+    await s.tts('k1', 'رسالة ثانية', 'el:cgSgspJ2msm6clMCkdW9', 1, { userId: 7 });
+    assert.equal(f.calls[1].opts.headers['xi-api-key'], 'sk_ownkey1234567890abcdefghij');
+    assert.equal(s.setUserElevenKey(7, null).hasKey, false);
+    assert.equal(s.hasUserElevenKey(7), false);
+});
+
+test('tts: ElevenLabs platform key has a daily character cap per streamer', async function () {
+    var f = fakeFetch(function () { return audioRes(200); });
+    var s = audio.createService(new Database(':memory:'), { fetch: f, elevenKey: 'platformElevenKey_aaaaaaaaaaaaa' });
+    var text = 'ا'.repeat(200), n = Math.floor(audio.EL_PLATFORM_DAILY_CHARS / 200);
+    for (var i = 0; i < n; i++) assert.equal((await s.tts('k' + i, (i + text).slice(0, 200), 'el:cgSgspJ2msm6clMCkdW9', 1, { userId: 3 })).success, true);
+    assert.deepEqual(await s.tts('kx', 'زيادة', 'el:cgSgspJ2msm6clMCkdW9', 1, { userId: 3 }), { success: false, error: 'quota' });
+    assert.equal((await s.tts('ky', 'غيره', 'el:cgSgspJ2msm6clMCkdW9', 1, { userId: 4 })).success, true);
+});

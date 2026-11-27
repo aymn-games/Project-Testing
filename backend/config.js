@@ -27,6 +27,8 @@ module.exports = {
     veyroApiUrl: (process.env.VEYRO_API_URL || '').replace(/\/+$/, ''),
     // سر نقل بيانات فيرو لسيرفره (نفس القيمة بالخدمتين) — يُحذف بعد ما يخلص النقل.
     veyroExportSecret: process.env.VEYRO_EXPORT_SECRET || '',
+    // سر تفعيل اشتراكات فيرو المشتراة من المتجر (store/veyro-link.js) — نفس القيمة بخدمة veyro-api.
+    veyroStoreSecret: process.env.VEYRO_STORE_SECRET || '',
     // مراقب الإحصائيات (stats/stream-stats-watcher.js) — يتصل ببث الستريمرز
     // المفعّل لهم من لوحة الأدمن طول بثهم حتى بدون لعبة.
     streamStatsWatcher: process.env.STREAM_STATS_WATCHER === '1',

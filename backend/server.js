@@ -70,6 +70,8 @@ function start() {
         }
         // كتالوج هدايا تيك توك (الأسماء بالعربي والإنجليزي، الأسعار، الصور) — مرة باليوم من تيك توك نفسه.
         require('./platforms/tiktok/gift-catalog').startAutoRefresh(logger);
+        // اشتراكات فيرو من المتجر: خطط فيرو ونسب خصم مشتركي الألعاب، وإعادة إرسال اللي ما وصل — store/veyro-link.js
+        require('./store/veyro-link').start();
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 

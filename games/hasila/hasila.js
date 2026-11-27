@@ -210,6 +210,7 @@
         pl.team = k; pl.kicked = false;
         S.players[p.id] = pl;
         S.teams[k].members.push(p.id);
+        if (S.screen === 'lobby') { var AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true }); } // دخولية اللاعب (js/agp-entrance.js)
         if (AGP.winCard && pl.winCard && AGP.winCard.preloadFor) AGP.winCard.preloadFor(playerForCard(pl));
         SFX.join();
         toast(avatarHtml(pl) + '<span><b style="color:' + teamColor(k) + '">' + esc(pl.name) + '</b> ' + (inMatch() ? 'دخل المباراة مع ' : 'انضم إلى ') + 'الفريق ' + esc(teamName(k)) + '</span>');

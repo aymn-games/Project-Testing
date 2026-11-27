@@ -113,6 +113,22 @@
   .vy-tip.show { opacity: 1; transform: none; }
 
   .vy-foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); margin-top: 8px; }
+  /* مكتبة فيرو العامة بالمحرر: أيقونات وقوالب توب وإطارات */
+  .vy-aicon img { width: 70%; height: 70%; object-fit: contain; }
+  .vy-tplgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; width: 100%; }
+  .vy-tpl, .vy-frm { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; font-size: 12.5px; font-weight: 600; color: var(--lav-l); cursor: pointer; }
+  .vy-tpl .sw { display: flex; gap: 4px; }
+  .vy-tpl .sw i { width: 14px; height: 14px; border-radius: 50% 50% 50% 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+  .vy-frm img { width: 48px; height: 48px; object-fit: contain; }
+  /* الاشتراك (من لوحة تحكم فيرو) تحت الحساب */
+  .vy-subline { min-height: 34px; padding: 6px 10px; font-size: 12px; justify-content: flex-start; }
+  .vy-subline .lbl { overflow: hidden; text-overflow: ellipsis; }
+  .vy-adminbtn { color: var(--lav-l); }
+  .vy-adminbtn:hover { color: #fff; }
+  /* إعلان الأدمن فوق الصفحة */
+  .vy-ann { flex: none; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px 4px 14px 4px; border: 1px solid rgba(233,194,122,.4); background: linear-gradient(180deg, rgba(233,194,122,.14), rgba(233,194,122,.05)); color: #f6deaa; font-size: 13.5px; font-weight: 600; line-height: 1.7; }
+  .vy-ann span { flex: 1; min-width: 0; }
+  .vy-ann .x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 8px; background: rgba(0,0,0,.2); color: inherit; cursor: pointer; font-size: 18px; line-height: 1; }
   .vy-user { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); min-width: 0; color: var(--text); }
   .vy-user .av { width: 36px; height: 36px; flex: none; border-radius: 50%; background: linear-gradient(160deg, var(--lav-m), var(--lav-d)); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; overflow: hidden; }
   .vy-user .av img { width: 100%; height: 100%; object-fit: cover; }
@@ -558,9 +574,12 @@
   .vy-lcard:hover { border-color: var(--line-2); }
   .vy-lcard.pick { cursor: pointer; }
   .vy-lcard.pick:hover { transform: translateY(-2px); border-color: rgba(207,195,220,.5); }
-  .vy-lcard .th { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden; background: repeating-conic-gradient(rgba(169,155,184,.1) 0 25%, transparent 0 50%) 0 0 / 14px 14px, #0d0c12; }
+  /* خلفية ثابتة لبطاقات الأليرتات بالمكتبة: صورة المدينة (brand/library-bg.webp) وشعار فيرو بالنص — الأليرت المفرّغ يطلع فوقهم */
+  .vy-lcard .th { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 11px; overflow: hidden; background: linear-gradient(rgba(10,8,16,.28), rgba(10,8,16,.28)), url("brand/library-bg.webp") center / cover no-repeat, #14121a; }
+  .vy-lcard .th::before { content: ""; position: absolute; inset: 0; background: url("brand/veyro-logo.webp") center / 46% auto no-repeat; opacity: .9; filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); pointer-events: none; }
   .vy-lcard .th video, .vy-lcard .th canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
-  .vy-lcard .th.keyed video { opacity: 0; }
+  .vy-lcard .th.keyed video, .vy-lcard .th.stilled video { opacity: 0; }
+  .vy-lcard .th.keyed .still { display: none; }
   .vy-lcard .th .dur { position: absolute; bottom: 5px; left: 5px; padding: 1px 6px; border-radius: 6px; background: rgba(10,9,13,.8); font-size: 11px; direction: ltr; }
   .vy-lcard .th .kb { position: absolute; top: 5px; right: 5px; padding: 1px 7px; border-radius: 99px; background: rgba(10,9,13,.75); font-size: 10.5px; color: var(--muted); }
   .vy-lcard .th .kb.on { color: #b9f5c9; }
@@ -633,6 +652,22 @@
   .vk-stage.bg-dark { background: #0b0a10; }
   .vk-stage.bg-light { background: #eceaf2; }
   .vk-stage.bg-game { background: url("../elimination-roulette-cover.png") center / cover, #14121a; }
+  /* «مشاهدة» أليرت من مكتبة فيرو (نفس هيكل أداة التفريغ) */
+  .vy-vstage { flex: none; align-self: center; width: min(100%, calc((100vh - 190px) * 16 / 9)); aspect-ratio: 16 / 9; }
+  .vy-vmedia { inset: 0; }
+  .vy-vbg { position: absolute; inset: 0; }
+  .vy-vside { min-height: 0; overflow-y: auto; padding: 16px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .vy-vbar { align-items: center; flex-wrap: wrap; }
+  .vy-vbar button { white-space: nowrap; }
+  .vy-libcats { margin: 0 0 10px; flex-wrap: wrap; }
+  /* الألوان الجاهزة للأليرت */
+  .vy-tints { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; width: 100%; }
+  .vy-tint { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 12px 3px 12px 3px; border: 1px solid var(--line-2); background: rgba(169,155,184,.06); color: var(--lav-l); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .vy-tint i { flex: none; width: 16px; height: 16px; border-radius: 50% 50% 50% 4px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); }
+  .vy-tint.orig i { background: conic-gradient(#ff3b5c, #ffc83d, #3ddc84, #3fa9ff, #a26bff, #ff3b5c); }
+  .vy-tint:hover { color: #fff; background: rgba(169,155,184,.14); }
+  .vy-tint.on { color: #fff; border-color: rgba(233,225,243,.7); background: rgba(141,127,163,.35); box-shadow: 0 0 0 2px rgba(169,155,184,.2); }
+  .vk-stage.bg-stream { background: url("brand/stream-sim.svg") center / cover, #0b1230; }
   .vk-media { position: absolute; inset: 12px; }
   .vk-media video, .vk-media canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .vk-media canvas { display: none; }
@@ -708,6 +743,15 @@
   .ob-gform { padding: 38px 34px; display: flex; flex-direction: column; justify-content: center; gap: 4px; text-align: right; }
   .ob-gform h2 { margin: 0 0 6px; font-family: "Noto Kufi Arabic", sans-serif; font-size: 23px; font-weight: 800; }
   .ob-gform p { margin: 0 0 22px; color: var(--lav-l); line-height: 1.9; font-size: 14px; }
+  /* خطط فيرو بصفحة «فعّل اشتراكك» (السعر من لوحة فيرو، وخصم مشتركي الألعاب) */
+  .vy-plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 0 0 14px; }
+  .vy-plan { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 14px 4px 14px 4px; border: 1px solid var(--line-2); background: rgba(169,155,184,.06); }
+  .vy-plan b { font-family: "Noto Kufi Arabic", sans-serif; font-size: 14px; }
+  .vy-plan .pr strong { font-size: 20px; font-weight: 800; color: #fff; }
+  .vy-plan .pr s { color: var(--muted-2); font-size: 13px; }
+  .vy-plan .pr small { color: var(--muted); font-size: 11.5px; }
+  .vy-plan .off { font-size: 11.5px; font-weight: 700; color: #ffd54a; }
+  .ob-gform .vy-plans + .fine { margin: -6px 0 12px; }
   .ob-gform .ob-btn { width: 100%; }
   .ob-gform .or { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--muted-2); font-size: 12px; }
   .ob-gform .or::before, .ob-gform .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -854,6 +898,22 @@
   .ob-ibar-b:hover svg { transform: translateY(-2px); }
   .ob-ibar-b.on { background: rgba(233,194,122,.1) padding-box, linear-gradient(160deg, rgba(255,226,170,.6), rgba(233,194,122,.15)) border-box; }
   .ob-ibar-b.bad { background: rgba(236,143,157,.06) padding-box, linear-gradient(160deg, rgba(255,190,200,.45), rgba(236,143,157,.1)) border-box; }
+
+  /* أزرار العنصر أصغر: أيقونة واسم بسطر واحد، عشان الإعدادات تاخذ مساحة أكبر */
+  .ob-ibar { padding: 8px 16px; gap: 5px; }
+  .ob-ibar-b { flex-direction: row; justify-content: center; gap: 5px; padding: 7px 4px; font-size: 11.5px; white-space: nowrap; }
+  .ob-ibar-b svg { width: 15px; height: 15px; flex: none; }
+
+  /* تبويبات إعدادات العنصر (tabify بـstudio.js): ثابتة فوق، ويبين تبويب واحد */
+  .ob-itabs-w { flex: none; padding: 10px 16px 2px; min-width: var(--panel-w); }
+  .ob-itabs { overflow-x: auto; scrollbar-width: none; }
+  .ob-itabs::-webkit-scrollbar { display: none; }
+  .ob-itabs button { flex: 1 0 auto; white-space: nowrap; padding-inline: 10px; }
+  .ob-tabhide { display: none !important; }
+  .ob-pbody.tabbed .ob-grp-h { cursor: default; pointer-events: none; padding: 10px 14px; }
+  .ob-pbody.tabbed .ob-grp-c { display: none; }
+  .ob-pbody.tabbed .ob-grp.solo > .ob-grp-h { display: none; }
+  .ob-pbody.tabbed .ob-grp.solo > .ob-grp-b { border-top: 0; }
 
   /* أسماء الشاشات فوق المحرر: «لسان» بخط مضيء تحت المختار */
   .ob-chip { border-radius: var(--vf-sm); border: 1px solid transparent; background: linear-gradient(180deg, rgba(169,155,184,.06), rgba(169,155,184,.015)) padding-box, var(--vb-edge) border-box; }
@@ -1050,12 +1110,127 @@
     .ob-zoom { max-width: calc(100% - 16px); overflow-x: auto; scrollbar-width: none; bottom: 8px; }
     .ob-zoom > span { display: none; }
     .ob-body.closed .ob-panel { display: none; }
-    .ob-phead, .ob-pbody, .ob-ibar { min-width: 0; }
+    .ob-phead, .ob-pbody, .ob-ibar, .ob-itabs-w { min-width: 0; }
     .ob-gbox { grid-template-columns: 1fr; }
     .ob-gbrand { padding: 24px; border-left: 0; border-bottom: 1px solid var(--line); align-items: center; }
     .ob-gbrand ul { display: none; }
     .ob-gform { padding: 26px 22px; }
   }
+
+  /* ---------- وضع التعديل (studio.js → syncFocus): العنصر المفتوح ياخذ الشاشة كاملة ----------
+     شاشة البث فوق كبيرة، والإعدادات تحتها بأعمدة. بدون القائمة الجانبية ولا شريط الشاشات. */
+  .vy-app.focus { grid-template-columns: minmax(0, 1fr); --panel-w: 100%; }
+  .vy-app.focus > .vy-side, .vy-app.focus .ob-top, .vy-app.focus .ob-mtabs, .vy-app.focus .vy-mbar, .vy-app.focus .vy-ann { display: none; }
+  .vy-app.focus .ob-editor { grid-template-rows: minmax(0, 1fr); }
+  /* الشاشة فوق أصغر (40٪ من الطول) والإعدادات تحتها أكبر، ويمين الكل قائمة عناصر نفس النوع (ob-flist) */
+  .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-columns: clamp(210px, 15vw, 280px) minmax(0, 1fr); grid-template-rows: minmax(200px, 40%) minmax(0, 1fr); grid-template-areas: "l s" "l p"; gap: 10px; }
+  .vy-app.focus .ob-stage { grid-area: s; }
+  .vy-app.focus .ob-body { transition: none; }
+  .vy-app.focus .ob-panel { grid-area: p; }
+  .ob-flist { display: none; }
+  /* آيباد أفقي: التبويبات بسطر لحالها تحت العنوان والأزرار، عشان ما تنقص */
+  @media (min-width: 901px) and (max-width: 1279px) {
+    .vy-app.focus .ob-body .ob-panel { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "h b" "t t" "p p"; }
+    .vy-app.focus .ob-panel .ob-itabs-w { padding: 0 14px 10px; }
+    .vy-app.focus .ob-panel .ob-itabs { max-width: none; }
+  }
+  .vy-app.focus .ob-flist { grid-area: l; display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 14px 12px; border-radius: 20px; }
+  .ob-fl-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
+  .ob-fl-h b { font-family: "Noto Kufi Arabic", sans-serif; font-size: 14px; }
+  .ob-fl-n { min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(169,155,184,.16); color: var(--lav-l); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+  .ob-fl-list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; gap: 6px; }
+  .ob-fl-i { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 13px; border: 1px solid var(--line); background: rgba(169,155,184,.04); color: var(--text); text-align: right; cursor: pointer; flex-wrap: wrap; transition: background .2s, border-color .2s; }
+  .ob-fl-i:hover { background: rgba(169,155,184,.1); border-color: var(--line-2); }
+  .ob-fl-i.on { background: linear-gradient(180deg, rgba(141,127,163,.42), rgba(110,97,127,.26)); border-color: rgba(233,225,243,.6); box-shadow: 0 0 0 2px rgba(207,195,220,.25), 0 8px 22px -14px rgba(141,127,163,.9); }
+  .ob-fl-i.off { opacity: .6; }
+  .ob-fl-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.12); color: var(--lav-l); }
+  .ob-fl-i.on .ob-fl-ic { background: var(--grad); color: #fff; }
+  .ob-fl-ic svg { width: 18px; height: 18px; }
+  .ob-fl-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ob-fl-t b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ob-fl-t small { font-size: 11.5px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ob-fl-now { flex-basis: 100%; font-size: 11px; font-weight: 700; color: #fff; padding-right: 44px; }
+  .ob-fl-now::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok, #7cff6b); box-shadow: 0 0 8px var(--ok, #7cff6b); margin-left: 6px; vertical-align: middle; }
+  .ob-fl-add { flex: none; justify-content: center; gap: 6px; }
+  .ob-fl-add svg { width: 16px; height: 16px; }
+  .vy-app.focus .ob-panel { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "h t b" "p p p"; align-items: center; opacity: 1; }
+  .vy-app.focus .ob-phead { grid-area: h; border-bottom: 0; padding: 12px 16px; align-items: center; flex-direction: row-reverse; justify-content: flex-end; min-width: 0; }
+  .vy-app.focus .ob-phead h2 { font-size: 17px; white-space: nowrap; }
+  .vy-app.focus .ob-phead p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .vy-app.focus .ob-itabs-w { grid-area: t; padding: 8px 6px; min-width: 0; }
+  .vy-app.focus .ob-itabs { max-width: 720px; margin: 0 auto; }
+  .vy-app.focus .ob-ibar { grid-area: b; display: flex; border-bottom: 0; padding: 8px 14px; min-width: 0; }
+  .vy-app.focus .ob-ibar-b { padding: 7px 10px; }
+  .vy-app.focus .ob-pbody { grid-area: p; align-self: stretch; border-top: 1px solid var(--line); padding: 14px 18px 20px; min-width: 0; }
+  /* صفوف المجموعة بأعمدة، عشان الخيارات تنفرد بعرض الشاشة بدل ما تنزل تحت بعض */
+  /* كل خيار بطاقة لحاله: عنوانه وتحكّمه داخل نفس الإطار، فواضح أي زر يتبع أي خيار */
+  .vy-app.focus .ob-grp-b { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; padding: 12px; align-items: start; }
+  .vy-app.focus .ob-grp-b > * + * { border-top: 1px solid var(--line) !important; }
+  .vy-app.focus .ob-grp-b > .ob-row { border: 1px solid var(--line); border-radius: 14px; background: rgba(169,155,184,.05); padding: 12px 14px; }
+  .vy-app.focus .ob-grp-b > .ob-row:not(.col) { align-items: center; }
+  /* ترتيب الصورة والاسم والرسالة صار على شاشة البث نفسها — المعاينة الصغيرة ما تحتاجها */
+  .vy-app.focus .va-lay, .vy-app.focus .va-play { display: none; }
+  .vy-app.focus .ob-sel .agp-so-vpart { outline: 1.5px dashed rgba(233,225,243,.6); outline-offset: 3px; border-radius: 4px; }
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav, .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname, .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg { outline: 2px solid #fff; box-shadow: 0 0 0 5px rgba(169,155,184,.3); }
+  .vy-app.focus .ob-sel .agp-so-vpart.ob-vdrag { outline-color: var(--warn); }
+  .vy-app.focus .ob-sel .agp-so-vpart::before { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); padding: 1px 7px; border-radius: 6px; background: rgba(20,18,26,.92); color: #fff; font: 600 11px/1.7 "IBM Plex Sans Arabic", sans-serif; letter-spacing: 0; white-space: nowrap; text-shadow: none; z-index: 5; }
+  /* اسم العنصر فوقه: للمحدد بس (والعناصر القريبة من بعض ما تتزاحم أسماؤها) */
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav::before { content: "الصورة"; }
+  .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname::before { content: "الاسم"; }
+  .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg::before { content: "الرسالة"; }
+  @media (max-width: 900px) {
+    .vy-app.focus .vy-main { padding-top: 10px; }
+    .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(180px, 32%) auto minmax(0, 1fr); grid-template-areas: "s" "l" "p"; gap: 8px; }
+    .vy-app.focus .ob-flist { flex-direction: row; align-items: center; padding: 6px; overflow-x: auto; border-radius: 14px; }
+    .vy-app.focus .ob-fl-h { display: none; }
+    .vy-app.focus .ob-fl-list { flex-direction: row; overflow: visible; }
+    .vy-app.focus .ob-fl-i { width: auto; flex: none; max-width: 220px; padding: 6px 8px; flex-wrap: nowrap; }
+    .vy-app.focus .ob-fl-t small, .vy-app.focus .ob-fl-now { display: none; }
+    .vy-app.focus .ob-fl-ic { width: 28px; height: 28px; }
+    .vy-app.focus .ob-fl-add { padding: 0 10px; height: 40px; }
+    .vy-app.focus .ob-fl-add span { display: none; }
+    .vy-app.focus .ob-panel { display: flex; flex-direction: column; max-height: none; min-height: 0; }
+    .vy-app.focus .ob-phead { padding: 10px 14px; }
+    .vy-app.focus .ob-ibar { display: grid; padding: 6px 14px; }
+    .vy-app.focus .ob-ibar-b { padding: 7px 4px; }
+    .vy-app.focus .ob-itabs-w { padding: 4px 14px 8px; }
+    .vy-app.focus .ob-pbody { padding: 12px 14px 18px; }
+    .vy-app.focus .ob-grp-b { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /* شريط المعاينة ما يطلع برا الشاشة: يمرر بالعرض لو ضاق، وزر «تجربة بث» أول شي فيه (يمين) */
+  .ob-zoom { max-width: calc(100% - 20px); overflow-x: auto; scrollbar-width: none; }
+  .ob-zoom::-webkit-scrollbar { display: none; }
+  .ob-zoom > * { flex: none; }
+  @media (max-width: 1279px) { .ob-zoom > span { display: none; } .ob-zoom .ob-btn { padding-inline: 10px; } }
+  /* القائمة الجانبية تبان كاملة بالشاشات القصيرة (آيباد أفقي 768، لابتوب 800) */
+  @media (min-width: 901px) and (max-height: 1000px) {
+    .vy-nav .vy-item { height: 32px; font-size: 14px; }
+    .vy-nav .vy-group { margin: 6px 12px 1px; }
+  }
+  @media (min-width: 901px) and (max-height: 860px) {
+    .vy-side .vy-brand { height: 60px; margin-bottom: 2px; }
+    .vy-side .vy-brand img.full { width: 140px; }
+    .vy-nav .vy-item { height: 31px; font-size: 13.5px; }
+    .vy-nav .vy-group { margin: 5px 12px 1px; font-size: 11px; }
+    .vy-app.mini .vy-nav .vy-group { margin: 5px 14px; }
+    .vy-side .vy-foot .ob-btn { height: 36px; }
+    .vy-side .vy-foot { gap: 6px; padding-top: 8px; margin-top: 6px; }
+  }
+
+  /* مفتاح التبديل بصف الإعدادات: جنبه «مفعّل/مطفي» عشان يبان إنه زر التفعيل وحالته */
+  .ob-row > .ob-toggle { margin-inline-start: 58px; }
+  .ob-row:has(> .ob-toggle) > .ob-label { flex: 0 1 auto; min-width: 0; }
+  .ob-row > .ob-toggle::after { content: "مطفي"; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; pointer-events: none; }
+  .ob-row > .ob-toggle:has(input:checked)::after { content: "مفعّل"; color: var(--lav-l); }
+
+  /* «تجربة بث» (studio.js → setSim): زرها أول شريط المعاينة، وشارة فوق الشاشة وهي شغّالة */
+  .ob-zoom .ob-simb svg { width: 15px; height: 15px; }
+  .ob-zoom .ob-simb.on { color: #fff; background: linear-gradient(180deg, #d0546c, #9e3550); border-color: transparent; }
+  .ob-zsep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; flex: none; }
+  .ob-simtag { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; background: rgba(20,18,26,.88); border: 1px solid rgba(236,143,157,.45); color: #fff; font-size: 12.5px; font-weight: 600; pointer-events: none; white-space: nowrap; }
+  .ob-simtag i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a78; box-shadow: 0 0 8px #ff5a78; animation: ob-simp 1.2s ease-in-out infinite; }
+  @keyframes ob-simp { 50% { opacity: .35; } }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -1069,6 +1244,115 @@
     .vy-item { height: 34px; font-size: 14px; }
     .vy-group { margin: 6px 12px 2px; }
   }
+
+  /* ---------- القارئ الصوتي: صفحة إعدادات بكامل الشاشة (studio.js → openTts) ---------- */
+  body.vt-open { overflow: hidden; }
+  .vt-full { position: fixed; inset: 0; z-index: 900; direction: rtl; display: flex; flex-direction: column; color: var(--text);
+    background: radial-gradient(900px 600px at 90% -10%, rgba(110,97,127,.35), transparent 60%), radial-gradient(800px 600px at 0% 110%, rgba(110,97,127,.28), transparent 60%), linear-gradient(180deg, #13111a, #0b0a10);
+    animation: vt-in .28s var(--ease) both; }
+  @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .vt-head { display: flex; align-items: center; gap: 16px; padding: 14px 22px; border-bottom: 1px solid var(--line); background: rgba(14,13,19,.6); backdrop-filter: var(--blur); flex: none; }
+  .vt-back { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px 9px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--card-2); cursor: pointer; font-weight: 600; font-size: 13.5px; }
+  .vt-back svg { width: 18px; height: 18px; }
+  .vt-back:hover { border-color: var(--lav); }
+  .vt-title { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .vt-title > .vt-ic { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: var(--grad); color: #fff; box-shadow: 0 8px 22px -10px rgba(169,155,184,.9); }
+  .vt-title > .vt-ic svg { width: 22px; height: 22px; }
+  .vt-title h1 { margin: 0; font-size: 19px; font-weight: 800; }
+  .vt-title small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .vt-hacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .vt-on { display: flex; align-items: center; gap: 9px; padding: 7px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .vt-body { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 18px 22px 22px; }
+  .vt-col { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; padding: 18px; border-radius: 20px; border: 1px solid var(--line-2);
+    background: linear-gradient(160deg, rgba(169,155,184,.09), rgba(66,57,79,.08)); scrollbar-width: thin; scrollbar-color: var(--lav-d) transparent; }
+  .vt-ct, .vt-st { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15.5px; font-weight: 800; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .vt-st { font-size: 14.5px; margin-top: 14px; padding-bottom: 9px; }
+  .vt-st.bad .vt-ic { color: var(--bad); }
+  .vt-ic { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; color: var(--lav-l); font-style: normal; }
+  .vt-ic svg { width: 100%; height: 100%; }
+  .vt-mk { font-weight: 900; font-size: 17px; line-height: 1; }
+  .vt-radios { display: flex; flex-direction: column; gap: 2px; }
+  .vt-radio, .vt-chk { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: right; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text); }
+  .vt-radio { padding: 10px 6px; border: 0; background: none; border-radius: 12px; }
+  .vt-radio:hover { background: var(--card); }
+  .vt-lb { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .vt-tx { display: flex; flex-direction: column; gap: 2px; line-height: 1.4; }
+  .vt-tx small { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+  .vt-dot { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1.5px solid var(--line-2); display: grid; place-items: center; transition: border-color .2s, box-shadow .2s; }
+  .vt-radio.on .vt-dot { border-color: var(--lav-l); box-shadow: 0 0 0 3px rgba(169,155,184,.18), 0 0 14px -2px rgba(207,195,220,.6); }
+  .vt-radio.on .vt-dot::after { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--lav-l); }
+  .vt-chk { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(12,11,16,.35); transition: border-color .2s, background .2s; }
+  .vt-chk:hover { border-color: var(--line-2); }
+  .vt-chk.on { border-color: rgba(207,195,220,.4); background: linear-gradient(160deg, rgba(169,155,184,.14), rgba(66,57,79,.12)); }
+  .vt-box { width: 26px; height: 26px; flex: none; border-radius: 7px; border: 1.5px solid var(--line-2); background: rgba(0,0,0,.4); display: grid; place-items: center; color: transparent; transition: all .2s; }
+  .vt-box svg { width: 18px; height: 18px; }
+  .vt-chk.on .vt-box { border-color: var(--lav-l); color: var(--lav-l); background: rgba(169,155,184,.16); box-shadow: 0 0 12px -3px rgba(207,195,220,.7); }
+  .vt-sep { height: 1px; background: var(--line); margin: 6px 0; flex: none; }
+  .vt-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .vt-field.col { flex-direction: column; align-items: stretch; gap: 7px; }
+  .vt-field.sub { margin: -3px 14px 4px 0; padding: 10px 12px; border-radius: 12px; background: rgba(12,11,16,.3); border: 1px dashed var(--line-2); }
+  .vt-field .ob-input.num { flex: 0 0 90px; text-align: center; }
+  .vt-fl { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .vt-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vt-two .vt-field { flex-direction: column; align-items: stretch; gap: 6px; }
+  .vt-two .ob-input.num { flex: none; }
+  .vt-tpl { min-height: 64px; text-align: center; }
+  .vt-chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
+  .vt-chip { padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--card); color: var(--lav-l); font-family: ui-monospace, monospace; font-size: 12.5px; cursor: pointer; direction: ltr; }
+  .vt-chip.on { background: rgba(169,155,184,.2); border-color: var(--lav-l); color: #fff; }
+  .vt-hint { color: var(--muted-2); font-size: 12px; line-height: 1.6; }
+  .vt-sample { font-size: 13px; color: var(--muted); padding: 10px 12px; border-radius: 12px; background: rgba(12,11,16,.35); border: 1px solid var(--line); }
+  .vt-sample b { color: var(--text); font-weight: 600; }
+  .vt-ban { display: flex; gap: 8px; }
+  .vt-ban .ob-input { text-align: left; }
+  .vt-banb { background: #0b0a10; border-color: var(--line-2); }
+  .vt-banned { display: flex; flex-wrap: wrap; gap: 7px; }
+  .vt-bchip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 6px 5px 11px; border-radius: 999px; background: rgba(236,143,157,.1); border: 1px solid rgba(236,143,157,.35); font-size: 12.5px; direction: ltr; }
+  .vt-bx { width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(236,143,157,.2); color: #fff; cursor: pointer; line-height: 1; font-size: 15px; }
+  .vt-bx:hover { background: rgba(236,143,157,.45); }
+  .vt-sel { appearance: none; -webkit-appearance: none; padding: 12px 14px; border-radius: 999px; text-align: center; font-weight: 600; cursor: pointer;
+    background: rgba(169,155,184,.1) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cfc3dc'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat 16px center / 18px; }
+  .vt-sel option { background: #1a1722; color: #fff; }
+  .vt-test { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--line-2); background: #0b0a10; color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+  .vt-test .vt-ic { width: 16px; height: 16px; color: #fff; }
+  .vt-test:hover:not(:disabled) { border-color: var(--lav-l); }
+  .vt-test:disabled { opacity: .7; cursor: progress; }
+  .vt-vlist { display: flex; flex-wrap: wrap; gap: 7px; }
+  .vt-vchip { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--card); font-size: 13px; cursor: pointer; }
+  .vt-vchip.on { background: rgba(169,155,184,.22); border-color: var(--lav-l); color: #fff; }
+  .vt-vchip.f::before { content: "♀ "; color: var(--pink); }
+  .vt-vchip.m::before { content: "♂ "; color: var(--sky); }
+  .vt-sl { display: flex; flex-direction: column; gap: 7px; padding: 4px 0; }
+  .vt-slh { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: 700; }
+  .vt-slh b { font-variant-numeric: tabular-nums; color: var(--lav-l); font-size: 13px; }
+  .vt-range { width: 100%; accent-color: var(--lav); }
+  .vt-key { margin-top: 6px; }
+  .vt-key .ob-input { text-align: left; }
+  .vt-card { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; margin-bottom: 12px; text-align: right; cursor: pointer; border-radius: 18px; border: 1px solid rgba(207,195,220,.3); color: var(--text);
+    background: linear-gradient(160deg, rgba(169,155,184,.14), rgba(66,57,79,.1)); transition: border-color .2s, transform .25s var(--ease); }
+  .vt-card:hover { border-color: var(--lav-l); transform: translateY(-1px); }
+  .vt-card-i { width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--grad); color: #fff; }
+  .vt-card-i svg { width: 24px; height: 24px; }
+  .vt-card-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .vt-card-m b { font-size: 15px; }
+  .vt-card-m small { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .vt-card-go { flex: none; padding: 7px 13px; border-radius: 999px; background: rgba(169,155,184,.18); font-size: 12.5px; font-weight: 700; }
+  @media (max-width: 1100px) {
+    .vt-body { grid-template-columns: 1fr 1fr; overflow-y: auto; align-content: start; }
+    .vt-col { overflow: visible; min-height: auto; }
+    .vt-col:last-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 720px) {
+    .vt-head { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+    .vt-title { order: -1; flex-basis: calc(100% - 100px); }
+    .vt-title small { display: none; }
+    .vt-hacts { width: 100%; }
+    .vt-hacts .ob-btn { flex: 1; padding: 9px 10px; font-size: 12.5px; }
+    .vt-body { display: flex; flex-direction: column; padding: 12px 16px 24px; gap: 12px; overflow-x: hidden; }
+    .vt-col { padding: 14px; flex: none; min-width: 0; }
+    .vt-field { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) { .vt-full { animation: none; } }
 </style>
 </head>
 <body>

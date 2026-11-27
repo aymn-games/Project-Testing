@@ -14,6 +14,7 @@ var tiktokConnector = require('./tiktok/tiktok-connector'); // يُستخدَم 
 var connectionPool = require('./tiktok/shared-connection-pool');
 var kickConnector = require('./kick/kick-connector');
 var twitchConnector = require('./twitch/twitch-connector');
+var phoneConnector = require('./phone/phone-connector');
 
 /**
  * جلب موصِّل جديد (نسخة مستقلة) للمنصة المطلوبة.
@@ -36,6 +37,10 @@ function createConnectorForPlatform(platform, meta) {
         // تويتش: EventSub رسمي عبر Webhooks — اشتراك مشترك لكل قناة (twitch/twitch-hub.js).
         return twitchConnector.createTwitchConnector();
     }
+    if (platform === 'phone') {
+        // «غرفة الجوالات» (اللعب بدون بث): أحداث جوالات اللاعبين بدل البث — phone-room/
+        return phoneConnector.createPhoneConnector();
+    }
     return null;
 }
 
@@ -48,6 +53,7 @@ function getActiveConnectorName(platform) {
     if (platform === 'tiktok') return 'tiktok-connector.js (real, shared pool)';
     if (platform === 'kick') return 'kick-connector.js (official API, webhooks)';
     if (platform === 'twitch') return 'twitch-connector.js (EventSub, webhooks)';
+    if (platform === 'phone') return 'phone-connector.js (phone room, no stream)';
     return 'none';
 }
 

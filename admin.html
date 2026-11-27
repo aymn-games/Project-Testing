@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة الأدمن — AGP</title>
 <link rel="icon" href="favicon.ico">
@@ -256,12 +257,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                     <span>{{ selFrame.label }}</span>
                   </div>
                 </div>
-                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نموذج الدخولية (اختياري)</span>
-                  <select value="{{ grantTpl }}" onChange="{{ onGrantTpl }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">افتراضي الكتالوج</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select>
-                </label>
-                <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px"><span style="font-size:12px;color:#9199ab">نص الدخولية (اختياري)</span>
-                  <input value="{{ grantText }}" onChange="{{ onGrantText }}" placeholder="اتركه فاضي لاستخدام النص الافتراضي" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
-                </label>
                 <div style="display:flex;gap:8px">
                   <button onClick="{{ revokeFrame }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب الإطار</button>
                   <button onClick="{{ grantFrame }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الإطار</button>
@@ -306,6 +301,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                   <button onClick="{{ m.pick }}" style="display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ m.border }};background:{{ m.bg }}">
                     <div style="height:72px;border-radius:6px;background:{{ m.swatch }}"></div>
                     <span style="font-size:13px;font-weight:500">{{ m.label }}</span>
+                    <span style="font-size:11.5px;color:#9199ab">{{ m.desc }}</span>
                   </button>
                 </sc-for>
               </div>
@@ -315,10 +311,12 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               <input value="{{ entranceText }}" onChange="{{ onEntranceText }}" placeholder="نص الدخولية" style="width:100%;max-width:560px;height:40px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
-              <span style="font-size:12.5px;color:#9199ab;max-width:520px;text-wrap:pretty">لو مستخدم أوقف دخوليته بنفسه من بروفايله، تعيين دخولية جديدة هنا يعيد تفعيلها تلقائياً.</span>
-              <div style="display:flex;gap:8px">
-                <button onClick="{{ removeEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إزالة الدخولية</button>
-                <button onClick="{{ saveEntrance }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الدخولية</button>
+              <span style="font-size:12.5px;color:#9199ab;max-width:520px;text-wrap:pretty">{{ entOwnedText }} — اللاعب يقدر يملك أكثر من دخولية ويختار وحدة، ويعدّل نصها ولونها من بروفايله. «منح» يضيفها له بدون ما يغيّر المفعّلة، و«منح وتفعيل» يفعّلها بالنص المكتوب فوق.</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onClick="{{ removeEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب كل الدخوليات</button>
+                <button onClick="{{ revokeOneEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#fca5a5;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب هذي الدخولية</button>
+                <button onClick="{{ grantOneEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer" style-hover="border-color:#7c3aed">منح</button>
+                <button onClick="{{ saveEntrance }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح وتفعيل</button>
               </div>
             </div>
           </div>
@@ -395,6 +393,37 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             </sc-if>
             <sc-for list="{{ permHolders }}" as="h" hint-placeholder-count="0">
               <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid #1a1d26">
+                <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ h.initial }}</span>
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font-size:13px;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.name }}</span>
+                  <span style="font-size:12px;color:#9199ab;font-family:'IBM Plex Mono',monospace">{{ h.ids }}</span>
+                </div>
+                <button onClick="{{ h.revoke }}" style="height:30px;padding:0 12px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer" style-hover="background:#2a1416">سحب</button>
+              </div>
+            </sc-for>
+          </div>
+          <!-- غرفة الجوالات (اللعب بدون بث) — permissions.phone_rooms -->
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:10px;border:2px solid #7c3aed;background:rgba(124,58,237,.12)">
+                <span style="width:44px;height:44px;flex-shrink:0;border-radius:12px;background:#1d1830;display:flex;align-items:center;justify-content:center;font-size:22px">📱</span>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span style="font-size:14px;font-weight:600;color:#e7e9ee">اللعب بدون بث (غرفة الجوالات)</span>
+                  <span style="font-size:12.5px;color:#9199ab;line-height:1.7">يفتح غرفة برقم وباركود، واللاعبين يلعبون كل الألعاب من جوالاتهم وكأنهم بالبث (phone-room.html).</span>
+                </div>
+              </div>
+              <span style="font-size:13px;color:{{ phoneStatusColor }}">{{ phoneStatus }}</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ revokePhone }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب الصلاحية</button>
+              <button onClick="{{ grantPhone }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الصلاحية</button>
+            </div>
+            <div style="padding:12px 18px;border-top:1px solid #1f222c;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="font-size:13px;font-weight:600">عندهم الصلاحية</span>
+              <span style="font-size:12px;color:#9199ab">{{ phoneHoldersCount }}</span>
+            </div>
+            <sc-for list="{{ phoneHolders }}" as="h" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid #1a1d26">
                 <span style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ h.initial }}</span>
                 <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
                   <span style="font-size:13px;color:#e7e9ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.name }}</span>
@@ -680,8 +709,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">اسم الملف</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">الاسم المعروض (عربي)</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نقاط المستوى المطلوبة</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نموذج الدخولية الافتراضي</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نص الدخولية الافتراضي</th>
                 <th style="border-bottom:1px solid #262a37"></th>
               </tr></thead>
               <tbody><sc-for list="{{ catalog }}" as="c" hint-placeholder-count="11"><tr>
@@ -689,8 +716,6 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <td dir="ltr" style="text-align:right;padding:10px 14px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ c.file }}</td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><input value="{{ c.name }}" onChange="{{ c.onName }}" style="width:150px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isLevel }}"><input type="number" value="{{ c.points }}" onChange="{{ c.onPoints }}" placeholder="غير مفعّل" style="width:110px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></sc-if><sc-if value="{{ c.isSpecial }}"><span style="color:#5b6274">—</span></sc-if></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><select value="{{ c.model }}" onChange="{{ c.onModel }}" style="height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 8px;font-size:13px"><option value="">—</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
-                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><input value="{{ c.text }}" onChange="{{ c.onText }}" style="width:170px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
                 <td style="padding:10px 14px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ c.save }}" style="height:30px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">حفظ</button></td>
               </tr></sc-for></tbody>
             </table>
@@ -818,6 +843,52 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
         </sc-if>
 
+        <!-- LIVE CARD STYLES -->
+        <sc-if value="{{ is.livecards }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">بطاقات البث المميزة</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">امنح أي حساب تصميم بطاقة مميز يظهر بقسم «بثوث شغّالة الآن» بمكتبة الألعاب لما يفتح بث. اكتب معرّف الحساب (ID) وتأكد منه، ثم اختر التصميم، واكتب لو تبي «يقدّم البث» و«البث برعاية» (يظهرون تحت البطاقة). المنح مرة ثانية لنفس الحساب يعدّل بياناته. تقدر بعد تمنحها من نافذة المستخدم بصفحة المستخدمين.</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">معرّف الحساب (ID)</span>
+                <div style="display:flex;gap:6px"><input value="{{ lcQ }}" onChange="{{ onLcQ }}" placeholder="AY-0001" style="width:150px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"><button onClick="{{ searchLc }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">بحث</button></div>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1"><span style="font-size:12px;color:#9199ab">معاينة الحساب</span>
+                <div style="height:36px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:8px;border:1px dashed #2f3342;font-size:13px;color:{{ lcPreview.color }}">
+                  <sc-if value="{{ lcPreview.ok }}"><span style="position:relative;overflow:hidden;width:28px;height:28px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ lcPreview.initial }}<sc-if value="{{ lcPreview.avatar }}"><img src="{{ lcPreview.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span></sc-if>
+                  <span>{{ lcPreview.label }}</span>
+                </div>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">التصميم</span><select value="{{ lcStyle }}" onChange="{{ onLcStyle }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="founder">المؤسس (ذهبي شمباني)</option><option value="platform">حساب المنصة — رسمي</option><option value="vip">مميز (وردي لؤلؤي)</option><option value="diamond">ألماسي (ثلجي)</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">يقدّم البث (اختياري)</span><input value="{{ lcHost }}" onChange="{{ onLcHost }}" maxLength="40" placeholder="اسم اللي ماسك البث" style="width:170px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">البث برعاية (اختياري)</span><input value="{{ lcSponsor }}" onChange="{{ onLcSponsor }}" maxLength="40" placeholder="اسم الراعي" style="width:170px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <button onClick="{{ grantLc }}" disabled="{{ lcGrantDisabled }}" style="height:36px;padding:0 18px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ lcGrantOpacity }}">منح</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">ID</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">تيك توك</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">التصميم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">يقدّم البث</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">برعاية</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ lcUsers }}" as="lc" hint-placeholder-count="3"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ lc.name }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ lc.customId }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;direction:ltr;text-align:right">{{ lc.tk }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ lc.styleLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ lc.hostLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ lc.sponsorLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;text-align:left;white-space:nowrap"><button onClick="{{ lc.edit }}" style="height:28px;padding:0 10px;margin-left:6px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">تعديل</button><button onClick="{{ lc.del }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer">إزالة</button></td>
+              </tr></sc-for></tbody>
+            </table>
+            <sc-if value="{{ lcEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:32px;text-align:center;color:#5b6274;font-size:13px">ما فيه حسابات ببطاقات مميزة بعد.</div></sc-if>
+          </div>
+        </sc-if>
+
         <!-- THEME -->
         <sc-if value="{{ is.theme }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -900,6 +971,40 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               <tbody><sc-if value="{{ stats.empty }}"><tr><td colspan="6" style="padding:32px;text-align:center;color:#5b6274;font-size:13px">{{ stats.empty }}</td></tr></sc-if><sc-for list="{{ stats.rows }}" as="r" hint-placeholder-count="6"><tr><sc-for list="{{ r }}" as="cell"><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ cell }}</td></sc-for></tr></sc-for></tbody>
             </table></div>
           </div>
+          <!-- تعديل ساعات الاستريمر يدوياً (backend/points/streamer-hours.js addAdjustment) -->
+          <sc-if value="{{ hrsShow }}" hint-placeholder-val="{{ true }}">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;flex-direction:column;gap:4px;padding:12px 18px;border-bottom:1px solid #262a37"><span style="font-weight:600">تعويض / خصم ساعات استريمر</span>
+              <span style="font-size:12.5px;color:#9199ab;text-wrap:pretty">للاستريمر اللي ما انحسبت له ساعات. تنضاف لساعاته الكلية والبروفايل ومستوى SP، وللتصنيف الأسبوعي بالأسبوع اللي فيه التاريخ المختار. كل تعديل ينكتب بالسجل تحت وتقدر تتراجع عنه.</span></div>
+            <div style="padding:14px 18px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نوع الآيدي</span>
+                <select value="{{ hrsType }}" onChange="{{ onHrsType }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="internal">الآيدي الداخلي</option><option value="profile">آيدي البروفايل</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الآيدي</span><input value="{{ hrsId }}" onChange="{{ onHrsId }}" placeholder="{{ hrsPh }}" style="width:140px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">صاحب الحساب</span>
+                <div style="height:36px;display:flex;align-items:center;padding:0 12px;border-radius:8px;border:1px dashed {{ hrsPick.border }};background:{{ hrsPick.bg }};font-size:13px;color:{{ hrsPick.color }}">{{ hrsPick.label }}</div></div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">العملية</span>
+                <select value="{{ hrsMode }}" onChange="{{ onHrsMode }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="add">إضافة (تعويض)</option><option value="sub">خصم</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد الساعات</span><input type="number" min="0.25" max="200" step="0.25" value="{{ hrsAmount }}" onChange="{{ onHrsAmount }}" placeholder="2.5" style="width:100px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">تنحسب بتاريخ</span><input type="date" value="{{ hrsDate }}" max="{{ hrsToday }}" onChange="{{ onHrsDate }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">السبب (اختياري)</span><input value="{{ hrsReason }}" onChange="{{ onHrsReason }}" placeholder="ساعات ما انحسبت يوم ..." style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <button onClick="{{ hrsSubmit }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">تنفيذ</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #262a37"><span style="font-size:13px;font-weight:600">سجل التعديلات</span><span style="font-size:12px;color:#9199ab">{{ hrsLogNote }}</span></div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px">
+              <thead><tr><sc-for list="{{ hrsCols }}" as="h"><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">{{ h }}</th></sc-for></tr></thead>
+              <tbody><sc-if value="{{ hrsEmpty }}"><tr><td colspan="7" style="padding:24px;text-align:center;color:#5b6274;font-size:13px">{{ hrsEmpty }}</td></tr></sc-if>
+                <sc-for list="{{ hrsRows }}" as="r" hint-placeholder-count="3"><tr>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.name }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace;color:{{ r.color }}">{{ r.hours }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.day }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ r.reason }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ r.admin }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:#9199ab">{{ r.created }}</td>
+                  <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px"><button onClick="{{ r.undo }}" style="height:30px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#fca5a5;border:1px solid #4a2427;font-size:12.5px;cursor:pointer">تراجع</button></td>
+                </tr></sc-for></tbody>
+            </table></div>
+          </div>
+          </sc-if>
         </sc-if>
 
         <sc-if value="{{ is.live }}" hint-placeholder-val="{{ false }}">
@@ -1054,6 +1159,23 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         </div>
 
         <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d;display:flex;align-items:center;justify-content:space-between;gap:8px"><span>بطاقة البث المميزة</span><span style="font-weight:500;color:#5b6274">{{ du.lcHint }}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">التصميم</span>
+            <select value="{{ du.lcStyle }}" onChange="{{ du.onLcStyle }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">عادية (بدون تصميم)</option><option value="founder">المؤسس (ذهبي شمباني)</option><option value="platform">حساب المنصة — رسمي</option><option value="vip">مميز (وردي لؤلؤي)</option><option value="diamond">ألماسي (ثلجي)</option></select>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">يقدّم البث</span>
+            <input value="{{ du.lcHost }}" onChange="{{ du.onLcHost }}" maxLength="40" placeholder="اختياري" style="width:190px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">البث برعاية</span>
+            <input value="{{ du.lcSponsor }}" onChange="{{ du.onLcSponsor }}" maxLength="40" placeholder="اختياري" style="width:190px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;justify-content:flex-start;padding:0 14px 12px"><button onClick="{{ du.saveLc }}" style="height:32px;padding:0 14px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:12.5px;cursor:pointer">حفظ البطاقة</button></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
           <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الصلاحيات</div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
             <span style="font-size:13.5px">تحويل لحساب ستريمر</span>
@@ -1143,8 +1265,8 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store'];
-const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','livecards','theme','levels','stats','live','store'];
+const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة', notes:'النوتات' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
 const TYPE_LABELS = { suggestion:'اقتراح', question:'سؤال', bug:'مشكلة تقنية' };
@@ -1155,6 +1277,8 @@ const CAT_PATTERNS = [['club',/^frame-club-/],['country',/^frame-country-/],['ge
 const PAGE_SIZE = 50;
 
 function categorize(f){ for(const [k,re] of CAT_PATTERNS) if(re.test(f||'')) return k; return 'other'; }
+// يوم بتوقيت السعودية (YYYY-MM-DD) — لتعويض ساعات الاستريمر (التصنيف الأسبوعي يتصفّر سبت 12 ص بتوقيت السعودية).
+function riyadhDay(ms){ return new Date(ms+3*3600000).toISOString().slice(0,10); }
 function fmtDate(ms){ if(!ms) return '—'; try{ return new Date(ms).toLocaleString('ar',{dateStyle:'medium',timeStyle:'short'}); }catch(e){ return new Date(ms).toLocaleString(); } }
 function fmtDay(ms){ try{ return new Date(ms).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return '—'; } }
 function fmtBytes(n){ if(!n) return ''; if(n<1024) return n+' B'; if(n<1048576) return (n/1024).toFixed(0)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
@@ -1171,15 +1295,16 @@ class Component extends DCLogic {
     me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', emailDraft:'', confirm:null, toast:null,
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
-    frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
+    frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'nitro', entranceText:'', entOwned:null, entOwnedFor:null, cardKey:null,
     codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, subEnf:null, subGType:'internal', subGId:'', subGUser:null, subGState:'empty', subGDays:30, compDays:1, compNote:'', planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
+    lcUsers:null, lcStyles:null, lcQ:'', lcFound:undefined, lcStyle:'founder', lcSponsor:'', lcHost:'', dLcStyle:null, dLcSponsor:null, dLcHost:null,
     theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
     levels:null, lvEdits:{},
-    statsTab:'streamers', streamerStats:null, userStats:null, live:null, liveErr:false,
+    statsTab:'streamers', streamerStats:null, userStats:null, hrsType:'internal', hrsId:'', hrsUser:null, hrsState:'empty', hrsMode:'add', hrsAmount:'', hrsDate:riyadhDay(Date.now()), hrsReason:'', hrsLog:null, live:null, liveErr:false,
     tickets:null, ticketsTotal:0, newCount:0, ticketId: h.page==='support'&&/^\d+$/.test(h.arg||'')?Number(h.arg):null, ticket:null, statusDraft:'new',
     tType:'', tStatus:'', tQ:'', reply:'', busy:{}
   }; })();
@@ -1216,6 +1341,7 @@ class Component extends DCLogic {
     if(page==='announce') this.loadAnnouncement();
     if(page==='supporters' && !this.state.supporters) this.loadSupporters();
     if(page==='partners' && !this.state.partners) this.loadPartners();
+    if(page==='livecards' && !this.state.lcUsers) this.loadLiveCards();
     if(page==='theme' && !this.state.theme) this.loadTheme();
     if(page==='levels' && !this.state.levels) this.loadLevels();
     if(page==='stats' && !this.state.streamerStats) this.loadStats();
@@ -1250,7 +1376,7 @@ class Component extends DCLogic {
       levelLabel: lvl?`${pts} — ${lvl}`:(pts?`${pts} — بلا مستوى`:'بلا مستوى'), frameLabel: u.equippedFrame?(u.equippedFrame.displayNameAr||u.equippedFrame.frameRef):'—',
       giftsLabel:`${st.total_gifts||0} (${st.total_gifts_value||0})`,
       roleBg: u.role==='admin'?'#241a3d':'#1d2130', roleColor: u.role==='admin'?'#c4b5fd':'#9199ab',
-      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'', emailDraft:u.email||'' }) };
+      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'', emailDraft:u.email||'', dLcStyle:null, dLcSponsor:null, dLcHost:null }) };
   }
   userAction(key, call, ok, fail){ return this.busy(key, call).then(r=>{ if(!r) return; if(r.success){ if(ok) this.flash(ok); this.loadUsers(); } else this.flash(fail(r),'err'); return r; }); }
 
@@ -1271,6 +1397,9 @@ class Component extends DCLogic {
   setSubPick(patch){ this.setState(patch,()=>{ clearTimeout(this._slk); const v=this.state.subGId.trim(); if(!v){ this.setState({ subGUser:null, subGState:'empty' }); return; }
     this.setState({ subGUser:null, subGState:'loading' }); const seq=this._sseq=(this._sseq||0)+1;
     this._slk=setTimeout(()=>A.adminLookupUser(v,this.state.subGType).then(r=>{ if(seq!==this._sseq) return; this.setState(r&&r.success&&r.user?{ subGUser:r.user, subGState:'ok' }:{ subGUser:null, subGState:'missing' }); },()=>{ if(seq===this._sseq) this.setState({ subGState:'missing' }); }),350); }); }
+  // دخوليات المستخدم المختار (صفحة الدخوليات) — force يعيد التحميل بعد منح/سحب
+  loadEntOwned(userId, force){ if(!userId||(!force&&this._entLoading===userId)) return; this._entLoading=userId;
+    A.adminGetUserEntrances(userId).then(r=>{ this._entLoading=null; this.setState({ entOwned:(r&&r.success?(r.owned||[]).map(e=>e.key):[]), entOwnedFor:userId }); }); }
   loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
@@ -1280,13 +1409,19 @@ class Component extends DCLogic {
   loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
   loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[] }); }); }
   loadPartners(){ return A.adminListPartners().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ partners:r.partners||[] }); }); }
+  loadLiveCards(){ return A.adminListLiveCardStyles().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ lcUsers:r.users||[], lcStyles:r.styles||{} }); }); }
   loadTheme(){ return A.getSiteTheme().then(r=>{ const t=r&&r.success?r.theme:null; this.setState(s=>({ theme:{ active:!!t, data:t }, themePreset:t&&t.presetKey?t.presetKey:s.themePreset,
     themeColors: t?{ accent:t.accent||'#7c3aed', accentPink:t.accentPink||'#ff4dff', accent2:t.accent2||'#00c2ff' }:s.themeColors })); }); }
 
   // ---------- المستويات / الإحصائيات ----------
   loadLevels(){ return A.getStreamerLevels().then(r=>{ if(!r||!r.success) return this.flash('تعذّر التحميل.','err'); this.setState({ levels:r.levels||[], lvEdits:{} }); }); }
   lvEdit(slug, field, value){ this.setState(s=>({ lvEdits:{ ...s.lvEdits, [slug]:{ ...(s.lvEdits[slug]||{}), [field]:value } } })); }
+  loadHoursLog(){ return A.adminListHoursAdjustments().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل سجل تعديل الساعات.','err'); this.setState({ hrsLog:r.adjustments||[] }); }); }
+  setHrsPick(patch){ this.setState(patch,()=>{ clearTimeout(this._hlk); const v=this.state.hrsId.trim(); if(!v){ this.setState({ hrsUser:null, hrsState:'empty' }); return; }
+    this.setState({ hrsUser:null, hrsState:'loading' }); const seq=this._hseq=(this._hseq||0)+1;
+    this._hlk=setTimeout(()=>A.adminLookupUser(v,this.state.hrsType).then(r=>{ if(seq!==this._hseq) return; this.setState(r&&r.success&&r.user?{ hrsUser:r.user, hrsState:'ok' }:{ hrsUser:null, hrsState:'missing' }); },()=>{ if(seq===this._hseq) this.setState({ hrsState:'missing' }); }),350); }); }
   loadStats(){
+    this.loadHoursLog();
     A.getAdminStreamerStats().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل إحصائيات الستريمرز.','err'); this.setState({ streamerStats:r.stats }); });
     A.getAdminUserStats().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل إحصائيات المستخدمين.','err'); this.setState({ userStats:r.stats }); });
   }
@@ -1325,7 +1460,7 @@ class Component extends DCLogic {
       ['الحسابات',[['users','المستخدمون']]],
       ['الدعم',[['support','تذاكر الدعم']]],
       ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
-      ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
+      ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['livecards','بطاقات البث المميزة'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات'],['live','البثوث الشغّالة الآن']]],
       ['المتجر',[['store','إدارة المتجر']]]
     ];
@@ -1374,6 +1509,16 @@ class Component extends DCLogic {
         // «تجربة الحلبة»: يفتح لعبة الحلبة وهي بمرحلة الاختبار (permissions.arena_tester)
         tAr:this.tog(perm('arena_tester')||dRaw.role==='admin'), toggleArena:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح الحلبة دائماً','err'); setPerm('arena_tester'); },
         tSt:this.tog(perm('stream_studio')||dRaw.role==='admin'), toggleStudio:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح استوديو البث دائماً','err'); setPerm('stream_studio'); },
+        // بطاقة البث المميزة (backend/live-cards/live-card-styles-service.js) — المسودة null = القيمة المحفوظة
+        lcStyle:s.dLcStyle!==null?s.dLcStyle:(dRaw.live_card_style||''),
+        lcSponsor:s.dLcSponsor!==null?s.dLcSponsor:(dRaw.live_card_sponsor||''),
+        lcHost:s.dLcHost!==null?s.dLcHost:(dRaw.live_card_host||''),
+        onLcStyle:e=>this.setState({ dLcStyle:e.target.value }), onLcSponsor:e=>this.setState({ dLcSponsor:e.target.value }), onLcHost:e=>this.setState({ dLcHost:e.target.value }),
+        lcHint:dRaw.live_card_style?'عنده بطاقة مميزة — تظهر لما يفتح بث':'بطاقة عادية',
+        saveLc:()=>{ const st=s.dLcStyle!==null?s.dLcStyle:(dRaw.live_card_style||''); const sp=s.dLcSponsor!==null?s.dLcSponsor:(dRaw.live_card_sponsor||''); const ho=s.dLcHost!==null?s.dLcHost:(dRaw.live_card_host||'');
+          if(!dRaw.custom_id) return this.flash('الحساب ما عنده ID عام.','err');
+          this.userAction('lc',()=>A.adminSetLiveCardStyle(dRaw.custom_id,st||null,sp,ho),st?'تم حفظ البطاقة المميزة.':'رجعت بطاقته للشكل العادي.',r=>'تعذّر الحفظ: '+(r.error||'unknown'))
+            .then(r=>{ if(r&&r.success) this.setState({ dLcStyle:null, dLcSponsor:null, dLcHost:null, lcUsers:null }); }); },
         savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
           this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },
         viewProfile:()=>window.open('profile.html?id='+encodeURIComponent(dRaw.custom_id||''),'_blank'),
@@ -1409,8 +1554,10 @@ class Component extends DCLogic {
     const libTabs=[['club','نوادي'],['country','دول خليجية والسعودية'],['general','عام'],['girls','بنات'],['boys','عيال'],['rare','نادرة'],['other','أخرى (كتالوج أساسي)']].map(([k,l])=>({ label:l,
       count:frames.filter(f=>f.cat===k&&(!lq||f.name.toLowerCase().includes(lq)||f.file.toLowerCase().includes(lq))).length, go:()=>this.setState({ libTab:k }),
       bg:s.libTab===k?'#7c3aed':'transparent', color:s.libTab===k?'#fff':'#9199ab', border:s.libTab===k?'#7c3aed':'#262a37' }));
-    const entranceModels=[['gold','linear-gradient(135deg,#78350f,#f59e0b 60%,#fde68a)'],['neon','linear-gradient(135deg,#1e1b4b,#7c3aed 55%,#22d3ee)'],['fire','linear-gradient(135deg,#450a0a,#dc2626 55%,#fb923c)'],['ice','linear-gradient(135deg,#0c4a6e,#38bdf8 60%,#e0f2fe)']]
-      .map(([k,sw])=>({ label:TEMPLATE_LABELS[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
+    const ENT_DESC={ nitro:'لهب نيترو أزرق وانطلاق — بصوت', royal:'عمود ضوء ذهبي ولمعات — بدون صوت', princess:'أضواء وردية وفراشات — بدون صوت', storm:'غيوم وصواعق حقيقية — بصوت', notes:'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت' };
+    const ownedNow=(s.entOwnedFor&&s.pickUser&&s.entOwnedFor===s.pickUser.id)?(s.entOwned||[]):null;
+    const entranceModels=[['nitro','radial-gradient(circle at 30% 40%,#bfe3ff,#2f7dff 35%,#06112b 75%)'],['royal','radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)'],['princess','radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)'],['storm','radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)'],['notes','radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)']]
+      .map(([k,sw])=>({ label:TEMPLATE_LABELS[k]+(ownedNow&&ownedNow.includes(k)?' ✓':''), desc:ENT_DESC[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
     const elimCards=(s.elimCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ cardKey:c.key }), border:s.cardKey===c.key?'#7c3aed':'#262a37', bg:s.cardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
     const selCard=(s.elimCardList||[]).find(c=>c.key===s.cardKey);
     const winCards=(s.winCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ winCardKey:c.key }), border:s.winCardKey===c.key?'#7c3aed':'#262a37', bg:s.winCardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
@@ -1424,8 +1571,7 @@ class Component extends DCLogic {
         onName:ev=>this.catEdit(c.slug,'displayNameAr',ev.target.value), onPoints:ev=>this.catEdit(c.slug,'levelPointsRequired',ev.target.value),
         onModel:ev=>this.catEdit(c.slug,'defaultEntranceTemplate',ev.target.value), onText:ev=>this.catEdit(c.slug,'defaultEntranceText',ev.target.value),
         save:()=>{ const fields={ displayNameAr:val('displayNameAr',c.display_name_ar) };
-          if(sp){ fields.defaultEntranceTemplate=val('defaultEntranceTemplate',c.default_entrance_template); fields.defaultEntranceText=val('defaultEntranceText',c.default_entrance_text); }
-          else fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
+          if(!sp) fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
           this.busy('cat'+c.slug,()=>A.adminUpdateCatalogEntry(c.slug,fields)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadCatalog(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }); } }; });
     const levels=(s.levels||[]).map(l=>{ const e=s.lvEdits[l.slug]||{};
       const name=e.displayNameAr!==undefined?e.displayNameAr:l.display_name_ar, sp=e.minSp!==undefined?e.minSp:l.min_sp;
@@ -1438,6 +1584,13 @@ class Component extends DCLogic {
     const partners=(s.partners||[]).map(x=>({ ...x, pid:x.customId, cat:CATEGORY_LABELS[x.category]||x.category,
       del:()=>this.ask('حذف هذا الشريك؟',`سيُزال «${x.name}» من شركاء الإبداع بالصفحة الرئيسية.`,'حذف',()=>A.adminDeletePartner(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadPartners(); })) }));
     const pf=s.partnerFound;
+    // ---- بطاقات البث المميزة
+    const lcStyles=s.lcStyles||{};
+    const lcUsers=(s.lcUsers||[]).map(x=>({ ...x, tk:x.tiktok?'@'+x.tiktok:'—', styleLabel:lcStyles[x.style]||x.style, hostLabel:x.host||'—', sponsorLabel:x.sponsor||'—',
+      edit:()=>{ this.setState({ lcQ:x.customId, lcStyle:x.style, lcHost:x.host||'', lcSponsor:x.sponsor||'' }); A.adminFindSupporterUser(x.customId).then(r=>{ if(r&&r.success&&r.user) this.setState({ lcFound:r.user }); }); window.scrollTo({ top:0, behavior:'smooth' }); },
+      del:()=>this.ask('إزالة التصميم المميز؟',`بطاقة «${x.name}» ترجع للتصميم العادي.`,'إزالة',()=>A.adminSetLiveCardStyle(x.customId,null,'','').then(r=>{ if(r&&r.success===false) return this.flash('تعذّرت الإزالة: '+(r.error||'unknown'),'err'); this.flash('تمت الإزالة.'); this.loadLiveCards(); })) }));
+    const lf=s.lcFound;
+    const lcPreview=lf?{ ok:true, label:lf.name, initial:initialOf(lf.name), avatar:lf.avatarBase64||'', color:'#e7e9ee' }:lf===null?{ ok:false, label:'ما فيه حساب بهذا المعرّف.', color:'#fca5a5' }:{ ok:false, label:'ابحث بالمعرّف لعرض الحساب', color:'#5b6274' };
     const partnerPreview=pf?{ ok:true, label:pf.name, initial:initialOf(pf.name), avatar:pf.avatarBase64||'', color:'#e7e9ee' }:pf===null?{ ok:false, label:'ما فيه حساب بهذا المعرّف.', color:'#fca5a5' }:{ ok:false, label:'ابحث بالمعرّف لعرض الحساب', color:'#5b6274' };
 
     // ---- tickets
@@ -1543,14 +1696,17 @@ class Component extends DCLogic {
       selFrame, libFrames, libTabs, libQ:s.libQ, onLibQ:e=>this.setState({ libQ:e.target.value }), libEmpty:!libFrames.length,
       grantTpl:s.grantTpl, onGrantTpl:e=>this.setState({ grantTpl:e.target.value }), grantText:s.grantText, onGrantText:e=>this.setState({ grantText:e.target.value }),
       grantFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
-        this.busy('grant',()=>A.adminGrantFrame(u.id,sf.type,sf.ref,{ entranceTemplate:s.grantTpl, entranceText:s.grantText })).then(r=>{ if(r) this.flash(r.success?'تم منح الإطار.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+        this.busy('grant',()=>A.adminGrantFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم منح الإطار.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
       revokeFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
         this.ask('سحب الإطار؟',`سيُسحب إطار «${sf.name}» من ${this.pickName(u)}.`,'سحب الإطار',()=>this.busy('revoke',()=>A.adminRevokeFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم سحب الإطار.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // entrances
       entranceModels, entranceText:s.entranceText, onEntranceText:e=>this.setState({ entranceText:e.target.value }),
-      saveEntrance:()=>this.needUser(u=>{ const text=s.entranceText.trim(); if(!text) return this.flash('اكتب نص الدخولية أولاً.','err');
-        this.busy('ent',()=>A.adminSetEntrance(u.id,s.entranceModel,text)).then(r=>{ if(r) this.flash(r.success?'تم حفظ الدخولية.':'تعذّر الحفظ.',r.success?'ok':'err'); }); }),
-      removeEntrance:()=>this.needUser(u=>this.ask('إزالة الدخولية؟',`ستُزال دخولية ${this.pickName(u)}.`,'إزالة',()=>this.busy('entx',()=>A.adminClearEntrance(u.id)).then(r=>{ if(r) this.flash(r.success?'تمت إزالة الدخولية.':'تعذّرت الإزالة.',r.success?'ok':'err'); }))),
+      entOwnedText:!s.pickUser?'اختر مستخدماً لتشوف دخولياته':(ownedNow===null?(this.loadEntOwned(s.pickUser.id),'جاري التحميل…'):(ownedNow.length?'يملك: '+ownedNow.map(k=>TEMPLATE_LABELS[k]).join('، '):'ما يملك دخوليات')),
+      saveEntrance:()=>this.needUser(u=>{ const text=s.entranceText.trim();
+        this.busy('ent',()=>A.adminSetEntrance(u.id,s.entranceModel,text)).then(r=>{ if(r) this.flash(r.success?`تم منح «${TEMPLATE_LABELS[s.entranceModel]}» وتفعيلها.`:'تعذّر الحفظ.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }); }),
+      grantOneEntrance:()=>this.needUser(u=>this.busy('ent',()=>A.adminGrantEntrance(u.id,s.entranceModel)).then(r=>{ if(r) this.flash(r.success?`تم منح «${TEMPLATE_LABELS[s.entranceModel]}».`:(r.error==='already_owned'?'المستخدم يملكها أصلاً.':'تعذّر المنح.'),r.success?'ok':'err'); this.loadEntOwned(u.id,true); })),
+      revokeOneEntrance:()=>this.needUser(u=>this.ask('سحب الدخولية؟',`ستُسحب «${TEMPLATE_LABELS[s.entranceModel]}» من ${this.pickName(u)}.`,'سحب',()=>this.busy('entx',()=>A.adminGrantEntrance(u.id,s.entranceModel,true)).then(r=>{ if(r) this.flash(r.success?'تم السحب.':'تعذّر السحب.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }))),
+      removeEntrance:()=>this.needUser(u=>this.ask('سحب كل الدخوليات؟',`ستُسحب كل دخوليات ${this.pickName(u)}.`,'سحب الكل',()=>this.busy('entx',()=>A.adminClearEntrance(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب كل الدخوليات.':'تعذّر السحب.',r.success?'ok':'err'); this.loadEntOwned(u.id,true); }))),
       // elim
       elimCards,
       grantCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
@@ -1577,6 +1733,21 @@ class Component extends DCLogic {
           revokeFullAccess:()=>this.needUser(u=>{ if(s.users&&!has(pk)) return this.flash('الحساب ما عنده الصلاحية.','err'); revokeAsk(u); }),
           permHolders:holders.map(u=>({ name:u.username, initial:(u.username||'?').charAt(0).toUpperCase(), ids:'#'+(u.custom_id||'—')+' · '+(u.email||''), revoke:()=>revokeAsk(u) })),
           permHoldersEmpty:!!s.users&&!holders.length, permHoldersCount:s.users?holders.length+' حساب':'…'
+        }; })(),
+      // perms — «غرفة الجوالات» اللعب بدون بث (permissions.phone_rooms)
+      ...(()=>{ const users=s.users||[], has=u=>!!(u&&u.permissions&&u.permissions.phone_rooms);
+        const pk=s.pickUser&&users.find(x=>x.id===s.pickUser.id);
+        const setPhone=(u,v)=>this.busy('phoneacc',()=>A.adminSetPermission(u.id,'phone_rooms',v)).then(r=>{ if(!r) return;
+          this.flash(r.success?(v?'تم منح صلاحية اللعب بدون بث.':'تم سحب صلاحية اللعب بدون بث.'):'تعذّر التحديث: '+(r.error||'unknown'),r.success?'ok':'err'); if(r.success) this.loadUsers(); });
+        const revokeAsk=u=>this.ask('سحب الصلاحية؟',`ستُسحب صلاحية اللعب بدون بث (غرفة الجوالات) من ${this.pickName(u)}.`,'سحب الصلاحية',()=>setPhone(u,false));
+        const holders=users.filter(has);
+        return {
+          phoneStatus:!s.pickUser?'اكتب آيدي المستخدم فوق عشان تشوف حالته.':!s.users?'جارٍ تحميل الحالة…':has(pk)?'✅ هذا الحساب عنده الصلاحية.':'هذا الحساب ما عنده الصلاحية.',
+          phoneStatusColor:has(pk)?'#6ee7b7':'#9199ab',
+          grantPhone:()=>this.needUser(u=>{ if(has(pk)) return this.flash('الحساب عنده الصلاحية أصلاً.','err'); setPhone(u,true); }),
+          revokePhone:()=>this.needUser(u=>{ if(s.users&&!has(pk)) return this.flash('الحساب ما عنده الصلاحية.','err'); revokeAsk(u); }),
+          phoneHolders:holders.map(u=>({ name:u.username, initial:(u.username||'?').charAt(0).toUpperCase(), ids:'#'+(u.custom_id||'—')+' · '+(u.email||''), revoke:()=>revokeAsk(u) })),
+          phoneHoldersCount:s.users?holders.length+' حساب':'…'
         }; })(),
       // codes
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
@@ -1770,6 +1941,16 @@ class Component extends DCLogic {
       partnerAddDisabled:!pf, partnerAddOpacity:pf?1:0.4,
       addPartner:()=>{ if(!pf) return; const v=s.partnerQ.trim();
         this.busy('padd',()=>A.adminAddPartner(v,s.partnerCat)).then(r=>{ if(!r) return; if(r.success){ this.setState({ partnerQ:'', partnerFound:undefined }); this.flash('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.'); this.loadPartners(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      // live card styles
+      lcUsers, lcEmpty:!lcUsers.length, lcQ:s.lcQ, lcPreview, lcStyle:s.lcStyle,
+      onLcStyle:e=>this.setState({ lcStyle:e.target.value }),
+      lcSponsor:s.lcSponsor, lcHost:s.lcHost, onLcSponsor:e=>this.setState({ lcSponsor:e.target.value }), onLcHost:e=>this.setState({ lcHost:e.target.value }),
+      onLcQ:e=>this.setState({ lcQ:e.target.value, lcFound:undefined }),
+      searchLc:()=>{ const v=s.lcQ.trim(); if(!v) return this.flash('اكتب معرّف الحساب أولاً.','err');
+        this.busy('lcsearch',()=>A.adminFindSupporterUser(v)).then(r=>{ if(!r) return; if(r.success&&r.user) this.setState({ lcFound:r.user }); else { this.setState({ lcFound:null }); this.flash('ما فيه حساب بهذا المعرّف.','err'); } }); },
+      lcGrantDisabled:!lf, lcGrantOpacity:lf?1:0.4,
+      grantLc:()=>{ if(!lf) return; const v=s.lcQ.trim();
+        this.busy('lcgrant',()=>A.adminSetLiveCardStyle(v,s.lcStyle,s.lcSponsor,s.lcHost)).then(r=>{ if(!r) return; if(r.success){ this.setState({ lcQ:'', lcFound:undefined, lcSponsor:'', lcHost:'' }); this.loadUsers&&this.state.users&&this.loadUsers(); this.flash('تم المنح — يظهر التصميم ببطاقته أول ما يفتح بث.'); this.loadLiveCards(); } else this.flash('تعذّر المنح: '+(r.error||'unknown'),'err'); }); },
       // theme
       themeStatus:s.theme&&s.theme.active?{ label:'ثيم مناسبة مفعّل حالياً على الصفحة الرئيسية'+(s.theme.data&&s.theme.data.presetKey&&THEME_PRESETS[s.theme.data.presetKey]?' ('+(s.theme.data.presetKey==='national-day'?'اليوم الوطني السعودي':'يوم التأسيس')+')':'')+'.', dot:'#a855f7', border:'#33285a', bg:'#1d1830' }
         :{ label:s.theme?'الموقع على ألوانه الافتراضية — لا يوجد ثيم مفعّل.':'جارٍ التحميل…', dot:'#5b6274', border:'#262a37', bg:'#14161d' },
@@ -1777,6 +1958,36 @@ class Component extends DCLogic {
       themeColors:[['accent','اللون الأساسي'],['accentPink','لون التدرّج الثاني'],['accent2','لون إضافي (لمسات خفيفة)']].map(([k,l])=>({ label:l, value:s.themeColors[k], onChange:e=>{ const v=e.target.value; this.setState(st=>({ themeColors:{ ...st.themeColors, [k]:v } })); } })),
       enableTheme:()=>this.busy('theme',()=>A.adminSetSiteTheme(s.themePreset||null,s.themeColors.accent,s.themeColors.accent2,s.themeColors.accentPink)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم التفعيل — الألوان صارت تظهر الآن لكل زائر للصفحة الرئيسية.'); this.loadTheme(); } else this.flash('تعذّر التفعيل: '+(r.error||'unknown'),'err'); }),
       disableTheme:()=>this.ask('إلغاء تفعيل الثيم؟','الموقع يرجع لألوانه الافتراضية فوراً لكل زائر.','إلغاء التفعيل',()=>this.busy('themex',()=>A.adminClearSiteTheme()).then(r=>{ if(!r) return; if(r.success){ this.flash('تم إلغاء التفعيل — الموقع رجع لألوانه الافتراضية.'); this.loadTheme(); } else this.flash('تعذّر الإلغاء.','err'); })),
+      // تعديل ساعات الاستريمر يدوياً
+      ...(()=>{ const hu=s.hrsUser, nm=x=>x.display_name||x.username, log=s.hrsLog;
+        const HERR={ invalid_hours:'عدد الساعات غير صحيح (حتى 200).', user_not_found:'ما فيه حساب بهذا الآيدي.', exceeds_total:'الخصم أكبر من ساعات الاستريمر الكلية.', not_found:'التعديل محذوف أصلاً.' };
+        const after=(r,ok)=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التنفيذ: '+(HERR[r.error]||r.error||'unknown'),'err'); this.flash(ok); this.loadStats(); };
+        const fmtH=h=>(h>0?'+':'')+h+' س';
+        return {
+          hrsShow:s.statsTab==='streamers',
+          hrsType:s.hrsType, hrsId:s.hrsId, hrsMode:s.hrsMode, hrsAmount:s.hrsAmount, hrsDate:s.hrsDate, hrsReason:s.hrsReason, hrsToday:riyadhDay(Date.now()),
+          hrsPh:s.hrsType==='internal'?'3':'12345678',
+          onHrsType:ev=>this.setHrsPick({ hrsType:ev.target.value }), onHrsId:ev=>this.setHrsPick({ hrsId:ev.target.value }),
+          onHrsMode:ev=>this.setState({ hrsMode:ev.target.value }), onHrsAmount:ev=>this.setState({ hrsAmount:ev.target.value }),
+          onHrsDate:ev=>this.setState({ hrsDate:ev.target.value }), onHrsReason:ev=>this.setState({ hrsReason:ev.target.value }),
+          hrsPick:s.hrsState==='ok'&&hu?{ label:`${nm(hu)} · #${hu.id}`+(hu.tiktok_username?` · \u2066@${hu.tiktok_username}\u2069`:' · بدون تيك توك موثّق'), color:'#e7e9ee', border:'#14532d', bg:'#0f1d15' }
+            :s.hrsState==='missing'?{ label:'ما فيه حساب بهذا المعرّف', color:'#fca5a5', border:'#4a2427', bg:'#1a0f12' }
+            :s.hrsState==='loading'?{ label:'جارٍ البحث…', color:'#9199ab', border:'#2f3342', bg:'transparent' }
+            :{ label:'اكتب الآيدي', color:'#5b6274', border:'#2f3342', bg:'transparent' },
+          hrsSubmit:()=>{ if(!s.hrsId.trim()) return this.flash('اكتب آيدي الاستريمر أولاً.','err'); if(!hu) return this.flash('لم يتم التأكد من الحساب بعد — تأكد من الآيدي ونوعه.','err');
+            const n=Math.round(Number(s.hrsAmount)*100)/100; if(!(n>0&&n<=200)) return this.flash('عدد الساعات من 0.25 إلى 200.','err');
+            const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s.hrsDate||''); if(!m) return this.flash('اختر التاريخ.','err');
+            const at=Date.UTC(+m[1],+m[2]-1,+m[3],9); // 12:00 ظهراً بتوقيت السعودية (الخادم يقصّها للحين لو بالمستقبل)
+            const sub=s.hrsMode==='sub', hours=sub?-n:n;
+            this.ask(sub?'خصم ساعات؟':'تعويض ساعات؟',`${sub?'تنخصم من':'تنضاف لـ'} ${nm(hu)} ${n} ساعة، محسوبة بتاريخ ${s.hrsDate}.`,sub?'خصم':'إضافة',
+              ()=>this.busy('hrsadj',()=>A.adminAdjustStreamerHours(hu.id,hours,at,s.hrsReason)).then(r=>{ if(r&&r.success) this.setState({ hrsAmount:'', hrsReason:'' }); after(r,`تم. ساعات ${nm(hu)} الكلية الحين: ${r&&r.totalHours}`); })); },
+          hrsCols:['الاستريمر','الساعات','تنحسب بتاريخ','السبب','بواسطة','وقت التعديل',''],
+          hrsLogNote:log?`${log.length} تعديل`:'',
+          hrsEmpty:!log?'جارٍ التحميل…':(!log.length?'ما فيه أي تعديل يدوي للحين.':''),
+          hrsRows:(log||[]).map(a=>({ name:a.name+(a.tiktokUsername?` (\u2066@${a.tiktokUsername}\u2069)`:''), hours:fmtH(a.hours), color:a.hours>0?'#4ade80':'#fca5a5',
+            day:riyadhDay(a.effectiveAt), reason:a.reason||'—', admin:a.admin||'—', created:fmtDate(a.createdAt),
+            undo:()=>this.ask('تراجع عن التعديل؟',`يرجع ${a.name} كأن تعديل ${fmtH(a.hours)} ما صار.`,'تراجع',()=>this.busy('hrsdel',()=>A.adminDeleteHoursAdjustment(a.id)).then(r=>after(r,'تم التراجع.'))) }))
+        }; })(),
       // stats
       stats, statsTabs:[['streamers','إحصائيات الستريمرز'],['users','إحصائيات المستخدمين']].map(([k,l])=>({ label:l, go:()=>this.setState({ statsTab:k }), bg:s.statsTab===k?'#7c3aed':'transparent', color:s.statsTab===k?'#fff':'#9199ab' })),
       csv:()=>{ if(s.statsTab==='streamers'){ if(!SS) return; const rows=[stats.cols,...(SS.topStreamers||[]).map((r,i)=>[i+1,r.username,r.tiktokUsername||'',r.totalBroadcasts,r.totalHours,r.totalViews]),[],['إجمالي الستريمرز',SS.totalStreamers],['إجمالي الساعات',SS.totalHours],['إجمالي المشاهدات',SS.totalViews]]; downloadCsv('agp-streamer-stats.csv',rows); }

@@ -16,7 +16,7 @@ var fs = require('fs');
 var path = require('path');
 var crypto = require('crypto');
 
-var MAX_FILE_BYTES = 20 * 1024 * 1024; // 20MB
+var MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
 var MAX_FILES = 10;
 var MAX_NAME = 60;
 var ID_RE = /^[a-f0-9]{32}$/;
@@ -110,9 +110,11 @@ function createService(db, dir) {
      * @param {number} [declared] Content-Length لو موجود
      * @returns {Promise<{success:boolean, error?:string, media?:Object}>}
      */
-    function upload(userId, meta, input, declared) {
+    function upload(userId, meta, input, declared, max) {
+        // فيرو: max = حد الفيديوهات من لوحة تحكم فيرو (الخطة أو حد مخصّص) — بدونه MAX_FILES
+        var cap = max != null ? max : MAX_FILES;
         return new Promise(function (resolve) {
-            if (count(userId) >= MAX_FILES) { input.resume(); resolve({ success: false, error: 'too_many_files', max: MAX_FILES }); return; }
+            if (count(userId) >= cap) { input.resume(); resolve({ success: false, error: 'too_many_files', max: cap }); return; }
             if (declared && declared > MAX_FILE_BYTES) { input.resume(); resolve({ success: false, error: 'file_too_large', max: MAX_FILE_BYTES }); return; }
             try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { resolve({ success: false, error: 'storage_unavailable' }); return; }
             var id = crypto.randomBytes(16).toString('hex');
@@ -212,7 +214,7 @@ module.exports = {
     createService: createService,
     sniff: sniff,
     list: function (userId) { return get().list(userId); },
-    upload: function (userId, meta, input, declared) { return get().upload(userId, meta, input, declared); },
+    upload: function (userId, meta, input, declared, max) { return get().upload(userId, meta, input, declared, max); },
     remove: function (userId, id) { return get().remove(userId, id); },
     update: function (userId, id, patch) { return get().update(userId, id, patch); },
     cleanKey: cleanKey,

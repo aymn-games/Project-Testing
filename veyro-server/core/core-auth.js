@@ -33,11 +33,12 @@ function createCoreAuth(deps) {
     var inflight = new Map();
 
     var upsert = db.prepare(
-        'INSERT INTO users (id, username, display_name, role, is_streamer, permissions, tiktok_username, tiktok_verified, tiktok_display_name, tiktok_avatar_url, avatar_image_base64, updated_at) ' +
-        'VALUES (@id, @username, @display_name, @role, @is_streamer, @permissions, @tiktok_username, @tiktok_verified, @tiktok_display_name, @tiktok_avatar_url, @avatar_image_base64, @updated_at) ' +
+        'INSERT INTO users (id, username, display_name, role, is_streamer, permissions, tiktok_username, tiktok_verified, tiktok_display_name, tiktok_avatar_url, avatar_image_base64, email, custom_id, created_at, updated_at) ' +
+        'VALUES (@id, @username, @display_name, @role, @is_streamer, @permissions, @tiktok_username, @tiktok_verified, @tiktok_display_name, @tiktok_avatar_url, @avatar_image_base64, @email, @custom_id, @created_at, @updated_at) ' +
         'ON CONFLICT(id) DO UPDATE SET username = excluded.username, display_name = COALESCE(excluded.display_name, users.display_name), role = excluded.role, ' +
         'is_streamer = excluded.is_streamer, permissions = excluded.permissions, tiktok_username = excluded.tiktok_username, tiktok_verified = excluded.tiktok_verified, ' +
         'tiktok_display_name = excluded.tiktok_display_name, tiktok_avatar_url = excluded.tiktok_avatar_url, ' +
+        'email = COALESCE(excluded.email, users.email), custom_id = COALESCE(excluded.custom_id, users.custom_id), created_at = COALESCE(excluded.created_at, users.created_at), ' +
         'avatar_image_base64 = CASE WHEN excluded.avatar_image_base64 IS NOT NULL OR @avatar_known = 1 THEN excluded.avatar_image_base64 ELSE users.avatar_image_base64 END, ' +
         'updated_at = excluded.updated_at'
     );
@@ -76,6 +77,10 @@ function createCoreAuth(deps) {
             tiktok_avatar_url: u.tiktok_avatar_url || null,
             avatar_image_base64: known ? (u.avatar_image_base64 || null) : null,
             avatar_known: known ? 1 : 0,
+            // لوحة تحكم فيرو: البحث بالإيميل وآيدي البروفايل
+            email: u.email || null,
+            custom_id: u.custom_id != null ? String(u.custom_id) : null,
+            created_at: u.created_at ? Number(u.created_at) : null,
             updated_at: now()
         });
     }

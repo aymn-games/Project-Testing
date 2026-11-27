@@ -315,6 +315,33 @@ function extractIsModerator(data) {
     return Boolean(id && id.isModeratorOfAnchor);
 }
 
+/**
+ * فيرو: صفات كاتب التعليق لفلترة «القارئ الصوتي» (الأدوار المسموح لها):
+ * متابع، مشترك سوبر فان، ومستوى الفريق (Team Level = مستوى نادي المعجبين).
+ */
+function extractChatRoles(data, user, streamUsername) {
+    var u = (data && data.user) || {};
+    var id = u.userIdentity || {};
+    var fc = u.fansClub && u.fansClub.data;
+    return {
+        uniqueId: user && user.uniqueId,
+        isFollower: isStreamOwner(user, streamUsername) || Boolean(id.isFollowerOfAnchor || id.isMutualFollowingWithAnchor) || extractIsFollower(data),
+        isSubscriber: Boolean(id.isSubscriberOfAnchor),
+        teamLevel: Number(fc && fc.level) || 0
+    };
+}
+
+/** فيرو: توب المشاهدين بقائمة تيك توك الرسمية (ROOM_USER ranksList) → معرّفات tiktok:<id> بالترتيب */
+function extractTopViewers(data) {
+    var list = (data && (data.ranksList || data.ranks || data.topViewers)) || [];
+    if (!Array.isArray(list)) return [];
+    return list.slice().sort(function (a, b) { return (Number(a && a.rank) || 99) - (Number(b && b.rank) || 99); }).map(function (c) {
+        var u = c && c.user;
+        var ident = u && (u.displayId || u.uniqueId || u.id);
+        return ident ? 'tiktok:' + ident : null;
+    }).filter(Boolean).slice(0, 3);
+}
+
 function extractFollowDebugInfo(data) {
     var followInfo = data && data.user && data.user.followInfo;
     var userIdentity = data && data.user && data.user.userIdentity;
@@ -466,7 +493,7 @@ function createTikTokConnector() {
             // النص يُمرَّر (بدون استعلامات) لأوامر «التحكم بالشات» بمكتبة الألعاب
             // (js/agp-remote-control.js) — ws-server يرسله بس لو الصفحة طلبته (payload.chat).
             if (_statsOnly) {
-                _callbacks.onComment({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data), isModerator: extractIsModerator(data) });
+                _callbacks.onComment(Object.assign({ id: user.id, name: user.name, text: (data && (data.content || data.comment)) || '', avatarUrls: extractAvatarUrls(data), isModerator: extractIsModerator(data) }, extractChatRoles(data, user, _username)));
                 return;
             }
 
@@ -570,7 +597,7 @@ function createTikTokConnector() {
             _connection.on(TikTokLib.WebcastEvent.ROOM_USER, function (data) {
                 var current = Number(data && data.total) || 0;
                 var totalUsers = Number(data && data.totalUser) || 0;
-                _callbacks.onViewerUpdate({ current: current, totalUsers: totalUsers });
+                _callbacks.onViewerUpdate({ current: current, totalUsers: totalUsers, topViewers: extractTopViewers(data) });
             });
         }
 

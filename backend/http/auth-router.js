@@ -26,8 +26,10 @@ var streamerHours = require('../points/streamer-hours');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
+var liveCardStyles = require('../live-cards/live-card-styles-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
+var lastWeekRankingService = require('../stats/last-week-ranking-service');
 var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
@@ -46,6 +48,7 @@ var fs = require('fs');
 var roomLookupService = require('../rooms/room-lookup-service');
 var gamePrefsService = require('../game-prefs/game-prefs-service');
 var remoteControlService = require('../remote-control/remote-control-service');
+var phoneRoomService = require('../phone-room/phone-room-service');
 var seenNotices = require('../notices/seen-notices');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
@@ -113,6 +116,12 @@ var ROUTES = [
   { method: 'GET', path: '/api/game-prefs', requireAuth: true, handler: handleGetGamePrefs },
   { method: 'POST', path: '/api/game-prefs', requireAuth: true, handler: handleSaveGamePrefs },
   // «التحكم عن بعد» — الستريمر يدير المتحكمين، والمتحكم يشوف مين أعطاه صلاحية (remote-control/)
+  // «غرفة الجوالات» (اللعب بدون بث) — صاحب صلاحية 'phone_rooms' يفتح غرفة واللاعبين يدخلون بجوالاتهم (phone-room/)
+  { method: 'GET', path: '/api/phone-room/mine', requireAuth: true, handler: handlePhoneRoomMine },
+  { method: 'POST', path: '/api/phone-room/open', requireAuth: true, handler: handlePhoneRoomOpen },
+  { method: 'POST', path: '/api/phone-room/close', requireAuth: true, handler: handlePhoneRoomClose },
+  { method: 'POST', path: '/api/phone-room/kick', requireAuth: true, handler: handlePhoneRoomKick },
+  { method: 'GET', path: '/api/phone-room/info', requireAuth: false, handler: handlePhoneRoomInfo },
   { method: 'GET', path: '/api/remote-control/config', requireAuth: true, handler: handleGetRemoteControl },
   { method: 'POST', path: '/api/remote-control/config', requireAuth: true, handler: handleSaveRemoteControl },
   { method: 'GET', path: '/api/remote-control/access', requireAuth: true, handler: handleRemoteControlAccess },
@@ -178,6 +187,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/collectibles/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantFrame },
   { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
+  { method: 'POST', path: '/api/admin/entrance/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantEntrance },
+  { method: 'GET', path: '/api/admin/entrances', requireAuth: true, requireAdmin: true, handler: handleAdminUserEntrances },
   { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
   // أكواد استرداد الإطارات — توليد/عرض للأدمن، واسترداد لصاحب الحساب.
   { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
@@ -311,6 +322,8 @@ var ROUTES = [
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
+  { method: 'POST', path: '/api/entrance/equip', requireAuth: true, handler: handleEquipEntrance },
+  { method: 'POST', path: '/api/entrance/settings', requireAuth: true, handler: handleEntranceSettings },
   { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
   { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
   { method: 'POST', path: '/api/admin/win-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinCard },
@@ -321,6 +334,10 @@ var ROUTES = [
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
   { method: 'POST', path: '/api/admin/streamer-levels', requireAuth: true, requireAdmin: true, handler: handleAdminUpdateStreamerLevel },
+  // ---- تعديل ساعات الاستريمر يدوياً (تعويض/خصم) — points/streamer-hours.js
+  { method: 'GET', path: '/api/admin/streamer-hours/adjustments', requireAuth: true, requireAdmin: true, handler: handleAdminListHoursAdjustments },
+  { method: 'POST', path: '/api/admin/streamer-hours/adjust', requireAuth: true, requireAdmin: true, handler: handleAdminAdjustHours },
+  { method: 'POST', path: '/api/admin/streamer-hours/adjustments/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteHoursAdjustment },
   // ---- حفلة ترحيب الستريمر الجديد
   { method: 'POST', path: '/api/auth/welcome/complete', requireAuth: true, handler: handleCompleteWelcome },
   { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome },
@@ -352,6 +369,9 @@ var ROUTES = [
   // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
   // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
+  // ---- تصنيف «الأسبوع الماضي» المحفوظ (توب الاستريمرز بالساعات واللاعبين
+  // بالفوز للأسبوع اللي خلص) — عام — راجع backend/stats/last-week-ranking-service.js
+  { method: 'GET', path: '/api/public/last-week-ranking', requireAuth: false, handler: handleLastWeekRanking },
   // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
   { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
   // نبضة حضور من شاشة المذيع بألعاب الباركود (المافيا، محطة سهيل، حفلة
@@ -363,6 +383,9 @@ var ROUTES = [
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  // ---- تصاميم بطاقات «البثوث النشطة» المميزة (live-cards/live-card-styles-service.js)
+  { method: 'GET', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminListLiveCardStyles },
+  { method: 'POST', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminSetLiveCardStyle },
   { method: 'GET', path: '/api/admin/live-streams', requireAuth: true, requireAdmin: true, handler: handleAdminLiveStreams },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
@@ -914,6 +937,28 @@ function handleAdminSetEntrance(req, res, body) {
   sendJson(res, 200, result);
 }
 
+/**
+ * منح/سحب دخولية واحدة (nitro/royal/princess/storm/notes) — مثل الإطارات، المستخدم
+ * يقدر يملك أكثر من وحدة. body.revoke === true يسحب body.key.
+ */
+function handleAdminGrantEntrance(req, res, body) {
+  var result = body.revoke
+    ? collectiblesService.revokeEntrance(body.userId, body.key)
+    : collectiblesService.grantEntrance(body.userId, body.key, 'admin_manual');
+  sendJson(res, result.success || result.error === 'already_owned' ? 200 : 400, result);
+}
+
+/** دخوليات مستخدم معيّن (للوحة الأدمن): الكتالوج + اللي يملكها + المفعّلة. */
+function handleAdminUserEntrances(req, res) {
+  var userId = Number(getQueryParam(req, 'userId'));
+  sendJson(res, 200, {
+    success: true,
+    catalog: collectiblesService.getEntranceCatalog(),
+    owned: userId ? collectiblesService.getOwnedEntrances(userId) : [],
+    active: userId ? collectiblesService.getEntrance(userId) : null
+  });
+}
+
 function handleAdminGenerateFrameCodes(req, res, body) {
   var result = collectiblesService.generateFrameCodes(body.frameType, body.frameRef, body.count, body.note);
   sendJson(res, result.success ? 200 : 400, result);
@@ -1181,6 +1226,18 @@ function handleToggleEntrance(req, res, body, user) {
   sendJson(res, result.success ? 200 : 400, result);
 }
 
+/** صاحب الحساب يختار دخولية من اللي يملكها. body.key */
+function handleEquipEntrance(req, res, body, user) {
+  var result = collectiblesService.equipEntrance(user.id, body.key);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** صاحب الحساب يعدّل نص دخوليته ولونها. body.text / body.color (اختياريان) */
+function handleEntranceSettings(req, res, body, user) {
+  var result = collectiblesService.updateEntranceSettings(user.id, { text: body.text, color: body.color });
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 /**
  * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحب
  * body.cardKey (أو كل بطاقاته لو ما انمرَّر)، وإلا تُمنح body.cardKey لـbody.userId.
@@ -1360,6 +1417,35 @@ function handleSaveGamePrefs(req, res, body, user) {
  * ----------------------------------------------------------------------- */
 
 /** GET /api/remote-control/config → { success, enabled, max, controllers:[{username, enabled, createdAt, account}] } */
+/** GET /api/phone-room/mine → { success, allowed, room: {code, hostOnline, players:[{id,name,online}]} | null } */
+function handlePhoneRoomMine(req, res, body, user) {
+  var allowed = phoneRoomService.canHost(user);
+  sendJson(res, 200, { success: true, allowed: allowed, room: allowed ? phoneRoomService.getRoomOf(user) : null });
+}
+
+/** POST /api/phone-room/open → { success, room } أو error: no_permission | rooms_full */
+function handlePhoneRoomOpen(req, res, body, user) {
+  var r = phoneRoomService.openRoom(user);
+  sendJson(res, r.success ? 200 : (r.error === 'no_permission' ? 403 : 503), r);
+}
+
+function handlePhoneRoomClose(req, res, body, user) {
+  var r = phoneRoomService.closeRoom(user);
+  sendJson(res, 200, r);
+}
+
+/** POST /api/phone-room/kick { playerId } */
+function handlePhoneRoomKick(req, res, body, user) {
+  var r = phoneRoomService.kickPlayer(user, String(body.playerId || ''));
+  sendJson(res, r.success ? 200 : 404, r);
+}
+
+/** GET /api/phone-room/info?code= → { success, room: {code, host, live} } — صفحة الجوال قبل الدخول (بدون حساب) */
+function handlePhoneRoomInfo(req, res) {
+  var info = phoneRoomService.roomInfo(String(getQueryParam(req, 'code') || '').trim());
+  sendJson(res, info ? 200 : 404, info ? { success: true, room: info } : { success: false, error: 'no_room' });
+}
+
 function handleGetRemoteControl(req, res, body, user) {
   if (!isStreamerUser(user)) { sendJson(res, 403, { success: false, error: 'not_streamer' }); return; }
   sendJson(res, 200, Object.assign({ success: true }, remoteControlService.getConfig(user.id)));
@@ -1926,6 +2012,30 @@ function handleAdminUpdateStreamerLevel(req, res, body) {
 }
 
 /* -----------------------------------------------------------------------
+ * تعديل ساعات الاستريمر يدوياً (لوحة الأدمن ← إحصائيات الستريمرز).
+ * ----------------------------------------------------------------------- */
+
+/** GET ?userId= (اختياري) → { success, adjustments:[...] } */
+function handleAdminListHoursAdjustments(req, res) {
+  var userId = Number(getQueryParam(req, 'userId')) || null;
+  sendJson(res, 200, { success: true, adjustments: streamerHours.listAdjustments(userId, 100) });
+}
+
+/** POST { userId, hours (سالب = خصم), effectiveAt (ms), reason } */
+function handleAdminAdjustHours(req, res, body, user) {
+  var r = streamerHours.addAdjustment(Number(body.userId), body.hours, body.effectiveAt, body.reason, user && user.id);
+  if (r.success) logger.log('Admin ' + (user && user.id) + ' adjusted streamer hours: user=' + body.userId + ' hours=' + body.hours + '.');
+  sendJson(res, r.success ? 200 : (r.error === 'user_not_found' ? 404 : 400), r);
+}
+
+/** POST { id } — تراجع عن تعديل. */
+function handleAdminDeleteHoursAdjustment(req, res, body, user) {
+  var r = streamerHours.deleteAdjustment(body.id);
+  if (r.success) logger.log('Admin ' + (user && user.id) + ' deleted streamer hours adjustment #' + body.id + '.');
+  sendJson(res, r.success ? 200 : 404, r);
+}
+
+/* -----------------------------------------------------------------------
  * حفلة ترحيب الستريمر الجديد.
  * ----------------------------------------------------------------------- */
 
@@ -2077,6 +2187,11 @@ function handleTopPlayersByRounds(req, res) {
 }
 
 /** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً بالسيرفر. */
+function handleLastWeekRanking(req, res) {
+  var r = lastWeekRankingService.getLastWeekRanking();
+  sendJson(res, 200, { success: true, periodStart: r.periodStart, periodEnd: r.periodEnd, savedAt: r.savedAt, streamers: r.streamers, players: r.players });
+}
+
 function handleGetPlatformStats(req, res) {
   var result = platformStatsService.getCachedStats();
   sendJson(res, 200, { success: true, stats: result.stats, computedAt: result.computedAt });
@@ -2109,13 +2224,26 @@ function handleAdminLiveStreams(req, res) {
   sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
 }
 
+/** الأدمن فقط — الحسابات اللي عندها تصميم بطاقة مميز + قائمة التصاميم المتاحة. */
+function handleAdminListLiveCardStyles(req, res) {
+  sendJson(res, 200, { success: true, styles: liveCardStyles.STYLES, users: liveCardStyles.listAdmin() });
+}
+
+/** الأدمن فقط — body: { customId, style, sponsor?, host? } (style فاضي/null = يرجع للبطاقة العادية). */
+function handleAdminSetLiveCardStyle(req, res, body) {
+  body = body || {};
+  var result = liveCardStyles.setStyleByCustomId(body.customId, body.style, body.sponsor, body.host);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة
  * الألعاب. يرجع حقول عامة فقط (بدون connectionId/user.id/role)، وبث واحد
  * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين).
  * البث يظهر فقط لو حساب تيك توك الموثَّق الحالي لصاحب الجلسة هو نفسه
  * البث المتصل — الأدمن/«تشغيل كامل» يقدرون يتصلون ببث غيرهم، وبدون هذا
- * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم من قاعدة
- * البيانات لحظة الطلب (نفس ترتيب صفحة البروفايل: display_name ثم username). */
+ * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم هو اسم حساب
+ * تيك توك (tiktok_display_name المحفوظ عند التوثيق)، ولو ما انحفظ نعرض يوزر
+ * تيك توك نفسه — مو اسم العرض بالموقع. */
 function handlePublicLiveStreams(req, res) {
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
@@ -2130,9 +2258,10 @@ function handlePublicLiveStreams(req, res) {
     var prev = byUser[tiktok];
     if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
     byUser[tiktok] = {
-      name: u.display_name || u.username || tiktok,
+      name: u.tiktok_display_name || tiktok,
       tiktok: tiktok,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2149,9 +2278,10 @@ function handlePublicLiveStreams(req, res) {
     if (!u || !u.tiktok_username) return;
     if (String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase() !== p.username) return;
     byUser[p.username] = {
-      name: u.display_name || u.username || p.username,
+      name: u.tiktok_display_name || p.username,
       tiktok: p.username,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since

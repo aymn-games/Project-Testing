@@ -366,6 +366,7 @@
                     players[user].side = side;
                     team.players.push(user);
                     log('join', user + ' انضم لـ ' + team.name);
+                    var AE = typeof window !== 'undefined' && window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) AE.play(p, { rejoin: true }); // دخولية اللاعب
                     if (lobbyExpired && canStart()) startMatch();
                     hooks.onChange();
                     return true;

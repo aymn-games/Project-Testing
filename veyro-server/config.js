@@ -21,6 +21,8 @@ module.exports = {
     coreApiUrl: (process.env.CORE_API_URL || 'https://project-testing-akds.onrender.com').replace(/\/+$/, ''),
     // سر مشترك مع سيرفر الألعاب لنقل بيانات فيرو القديمة (migrate/import-from-core.js)
     coreExportSecret: process.env.VEYRO_EXPORT_SECRET || '',
+    // سر تفعيل الاشتراكات المشتراة من متجر الألعاب (admin/admin-router.js → store-grant) — نفس القيمة بسيرفر الألعاب
+    storeSecret: process.env.VEYRO_STORE_SECRET || '',
 
     // رابط الموقع (رجوع Streamlabs بعد الموافقة)
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',
@@ -34,6 +36,7 @@ module.exports = {
 
     youtubeApiKey: process.env.YOUTUBE_API_KEY || '',
     googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
+    elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || '',
     streamlabsClientId: process.env.STREAMLABS_CLIENT_ID || '',
     streamlabsClientSecret: process.env.STREAMLABS_CLIENT_SECRET || '',
     // رجوع Streamlabs بعد الموافقة — على سيرفر فيرو نفسه (لازم يطابق اللي بإعدادات تطبيق Streamlabs)
