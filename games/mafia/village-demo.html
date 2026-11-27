@@ -1802,7 +1802,7 @@ function buildChar(look, opts) {
     const sleeveM = S(shadow ? '#0b0b10' : opts.outfit ? outfitC : '#f6f3ec');
     const goldM = S(shadow ? '#0b0b10' : '#f2c230', { roughness: 0.45 });
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
-    const hairM = S(C.hair, { roughness: 0.7, side: THREE.DoubleSide });
+    const hairM = S(C.hair, { roughness: 0.48, side: THREE.DoubleSide });   // لمعة خفيفة مثل الشعر
     const mats = [skinM, outfitM, hemM, lowM, beltM, sleeveM, goldM, sockM, shoeM, toeM, hairM];
     const add = (geo, m, x, y, z, par) => { const o = mesh(geo, m, x, y, z); par.add(o); return o; };
 
@@ -1862,18 +1862,28 @@ function buildChar(look, opts) {
     });
     if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
-    buildHair(hc, style, hairM, mats, G);
+    const hairSway = buildHair(hc, style, hairM, mats, G);
 
     // الحلقات البعيدة (فوق 25 لاعب): بدون ظلال عشان الأداء
     if (opts.lite) root.traverse((o) => { o.castShadow = false; });
     root.userData.base = mats.map((m) => m.color.clone());
-    const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y };
+    const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y, hairSway };
     c.sit = (on) => {
         c.sitY = on ? SIT_Y : 0; body.position.y = c.sitY;
         legs.forEach((l) => { l.hip.rotation.x = on ? -Math.PI / 2 : 0; l.knee.rotation.x = on ? Math.PI / 2 : 0; });
     };
     c.sit(true);
     return c;
+}
+
+/** حركة الشعر: كل خصلة (والذيلين) تتمرجح بهدوء من جذرها، وأقوى لما الشخصية تتحرك (k = شدة إضافية) */
+function swayHair(c, T, k) {
+    if (!c.hairSway) return;
+    const m = 1 + (k || 0);
+    c.hairSway.forEach((h) => {
+        const a = h.amp * m, t = T * h.sp + h.ph;
+        h.g.rotation.set(Math.sin(t) * a * 0.6, 0, Math.sin(t * 0.83 + 1.1) * a + (h.side ? h.side * a * 0.3 : 0));
+    });
 }
 
 /**
@@ -2004,7 +2014,7 @@ function buildHair(head, style, hairM, mats, G) {
     const pigtail = (s) => {
         // الذيل: مقطع دائري يمشي على منحنى بمستوى الوجه (بدون لف): من الربطة يطلع لبرا وفوق لين مستوى أعلى الرأس،
         // يدور من فوق، وينزل لتحت على الجنب ويستدق لين طرفه
-        const P = (x, y, z) => new THREE.Vector3(s * x, y, z);
+        const P = (x, y, z) => new THREE.Vector3(s * x, y, z), pg = new THREE.Group();
         const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.12, 0.55, -0.12), P(HR.x + 0.34, 0.6, -0.16), P(HR.x + 0.6, 0.52, -0.2), P(HR.x + 0.7, 0.1, -0.2), P(HR.x + 0.68, -0.55, -0.17), P(HR.x + 0.52, -1.4, -0.12)]);
         const SEG = 44, RAD = 14, radius = (u) => u < 0.18 ? 0.2 + u / 0.18 * 0.11 : 0.31 - (u - 0.18) / 0.82 * 0.21;
         const pos = [], idx = [], B = new THREE.Vector3(0, 0, 1);
@@ -2014,22 +2024,88 @@ function buildHair(head, style, hairM, mats, G) {
             if (i) for (let j = 0; j < RAD; j++) { const a = (i - 1) * (RAD + 1) + j, b2 = i * (RAD + 1) + j; idx.push(a, b2, a + 1, b2, b2 + 1, a + 1); }
         }
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-        head.add(mesh(g, hairM, 0, 0, 0));
-        [0, 1].forEach((u) => { const c = curve.getPointAt(u), b = mesh(new THREE.SphereGeometry(radius(u) * 0.98, 18, 12), hairM, c.x, c.y, c.z); b.scale.z = 0.9; head.add(b); });   // الأطراف مقفولة ومدوّرة
+        pg.add(mesh(g, hairM, 0, 0, 0));
+        [0, 1].forEach((u) => { const c = curve.getPointAt(u), b = mesh(new THREE.SphereGeometry(radius(u) * 0.98, 18, 12), hairM, c.x, c.y, c.z); b.scale.z = 0.9; pg.add(b); });   // الأطراف مقفولة ومدوّرة
         // الربطة: أسطوانة قصيرة مدوّرة الحواف باتجاه الذيل
         const t0 = curve.getTangentAt(0.0), c0 = curve.getPointAt(0.0);
         const tie = mesh(new THREE.SphereGeometry(0.19, 18, 12), tieM, c0.x - s * 0.05, c0.y - 0.03, c0.z); tie.scale.set(1, 0.78, 1);
-        tie.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t0.clone().normalize()); head.add(tie);
+        tie.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t0.clone().normalize()); pg.add(tie);
+        // الذيل كامل يتمرجح من عند الربطة
+        const c0p = curve.getPointAt(0), pivot = new THREE.Group(); pivot.position.copy(c0p); pg.position.copy(c0p).multiplyScalar(-1); pivot.add(pg); head.add(pivot);
+        sway.push({ g: pivot, amp: 0.1, ph: s * 1.3, sp: 1.1, side: s });
+    };
+
+    // ---------------------------------------------------------------- خصل الشعر (بدل القطع المربعة)
+    // كل خصلة شريط مدوّر مستدق: مقطعه بيضاوي مسطّح (عريض على سطح الرأس ورقيق بالسماكة)، يمشي على مسار
+    // لاصق بالرأس ثم يتدلّى، ورأسه مدبّب ناعم. كل خصلة بمجموعة محورها عند جذرها عشان تتحرك (sway).
+    const sway = [];
+    const SEGL = 16, RADL = 10;
+    const surf = (phi, y, off) => {   // نقطة على سطح الرأس (phi = 0 قدّام) مع إزاحة للخارج
+        const rx = HR.x + off, ry = HR.y + off, rz = HR.z + off, yy = Math.max(-ry * 0.999, Math.min(ry * 0.999, y)), c = Math.sqrt(1 - (yy / ry) ** 2);
+        return new THREE.Vector3(Math.sin(phi) * rx * c, yy, Math.cos(phi) * rz * c);
+    };
+    // مسار خصلة: من الجذر (y0) لين الطرف (y1)، لاصقة بالرأس لين HANG ثم تنزل مستقيمة تحت مع انفراج بسيط
+    const lockPath = (phi, y0, y1, off, flare) => {
+        const HANG = -HR.y * 0.55, pts = [], n = 8;
+        for (let i = 0; i <= n; i++) {
+            const y = y0 + (y1 - y0) * i / n;
+            if (y >= HANG) pts.push(surf(phi, y, off));
+            else { const b = surf(phi, HANG, off), k = (HANG - y); pts.push(new THREE.Vector3(b.x * (1 + k * (flare || 0.05)), y, b.z * (1 + k * (flare || 0.05)) - k * 0.04)); }
+        }
+        return new THREE.CatmullRomCurve3(pts);
+    };
+    const lock = (curve, w, t, amp, tipW) => {
+        const pos = [], idx = [], root = curve.getPointAt(0), up = new THREE.Vector3(0, 1, 0);
+        for (let i = 0; i <= SEGL; i++) {
+            const u = i / SEGL, c = curve.getPointAt(u), T = curve.getTangentAt(u);
+            // اتجاه "للخارج" = بعيد عن مركز الرأس (أفقياً)، والعرض عمودي عليه
+            const out = new THREE.Vector3(c.x, Math.max(-0.2, Math.min(0.6, c.y * 0.3)), c.z).normalize();
+            const N = new THREE.Vector3().crossVectors(T, out).normalize(), B = new THREE.Vector3().crossVectors(N, T).normalize();
+            const taper = u < 0.75 ? 1 : 1 - Math.pow((u - 0.75) / 0.25, 1.3) * (1 - (tipW || 0.05));   // رأس مدبّب ناعم
+            const ww = w * taper * (0.9 + 0.1 * Math.sin(u * Math.PI)), tt = t * (0.6 + 0.4 * taper);
+            for (let j = 0; j <= RADL; j++) {
+                const a = j / RADL * TAU, v = new THREE.Vector3().addScaledVector(N, Math.cos(a) * ww).addScaledVector(B, Math.sin(a) * tt);
+                pos.push(c.x + v.x - root.x, c.y + v.y - root.y, c.z + v.z - root.z);
+            }
+            if (i) for (let j = 0; j < RADL; j++) { const a2 = (i - 1) * (RADL + 1) + j, b2 = i * (RADL + 1) + j; idx.push(a2, b2, a2 + 1, b2, b2 + 1, a2 + 1); }
+        }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+        const grp = new THREE.Group(); grp.position.copy(root); grp.add(mesh(g, hairM, 0, 0, 0)); head.add(grp);
+        sway.push({ g: grp, amp: amp || 0.03, ph: Math.random() * TAU, sp: 0.8 + Math.random() * 0.5 });
+        return grp;
+    };
+    // غُرّة من خصل: كل خصلة من قرب أعلى الرأس تنزل على الجبهة، وأطرافها بأطوال مختلفة شوي (حافة طبيعية)
+    const bangs = (n, spread, tipY) => {
+        for (let i = 0; i < n; i++) {
+            const k = n === 1 ? 0 : i / (n - 1) * 2 - 1, phi = k * spread, len = (i % 2 ? 0.08 : 0) + (Math.abs(k) > 0.85 ? -0.05 : 0);
+            lock(lockPath(phi, HR.y * 0.75, tipY - len, 0.06, 0), 0.3 - Math.abs(k) * 0.05, 0.075, 0.025);
+        }
+    };
+    const sideLocks = (bottom, cnt) => {
+        [-1, 1].forEach((s) => { for (let i = 0; i < cnt; i++) { const phi = s * (1.0 + i * 0.32); lock(lockPath(phi, HR.y * 0.45, bottom - i * 0.05, 0.05, 0.08), 0.26, 0.08, 0.05); } });
+    };
+    const backLocks = (bottom, cnt) => {
+        for (let i = 0; i < cnt; i++) { const phi = Math.PI - 1.7 + 3.4 * i / (cnt - 1); lock(lockPath(phi, HR.y * 0.7, bottom - (i % 2) * 0.06, 0.05, 0.1), 0.34, 0.09, 0.06); }
+    };
+    // قشرة الرأس: ناعمة وفيها خطوط خصل خفيفة من التاج (مو مضلّعة)
+    const cap = () => {
+        const geo = new THREE.SphereGeometry(1, 64, 24, 0, TAU, 0, HAIR_CUT + 0.25), pa = geo.attributes.position;
+        for (let i = 0; i < pa.count; i++) {
+            const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), phi = Math.atan2(x, z), groove = 1 + 0.012 * Math.cos(phi * 26) * (1 - Math.max(0, y)) ;
+            pa.setXYZ(i, x * (HR.x + 0.05) * groove, y * (HR.y + 0.06), z * (HR.z + 0.04) * groove);
+        }
+        geo.computeVertexNormals(); head.add(mesh(geo, hairM, 0, 0, 0));
     };
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
-        case 0: top(); sides(-0.3); break;                                       // قصير (لين الأذن)
-        case 1:                                                                    // ضفاير (تصميم صاحب المنصة): غُرّة مسنّنة وخصل جنب الوجه لين الذقن وذيلين فوق
-            top(); fringe(3, 0.11); sideShell(-0.62, 0.79); [-1, 1].forEach(pigtail);
+        case 0: cap(); bangs(8, 0.95, BANG_Y - 0.2); sideLocks(-0.35, 2); backLocks(-0.62, 9); break;   // قصير
+        case 1:                                                                    // ضفاير: غرة خصل، خصل جنب الوجه لين الذقن، وذيلين
+            cap(); bangs(8, 0.95, BANG_Y - 0.24); sideLocks(-0.55, 2); backLocks(-0.7, 9); [-1, 1].forEach(pigtail);
             break;
-        case 2: top(); sides(-1.82); break;                                        // طويل (لين الخصر)
-        case 3: top(); sides(-0.3); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;   // كعكتين
+        case 2: cap(); bangs(8, 0.95, BANG_Y - 0.2); sideLocks(-1.95, 3); backLocks(-2.0, 11); break;      // طويل (لين الخصر)
+        case 3: cap(); bangs(8, 0.95, BANG_Y - 0.2); sideLocks(-0.35, 2); backLocks(-0.62, 9);              // كعكتين
+            [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;
         case 4: {                                                                  // كيرلي
             for (let i = 0; i < 34; i++) {
                 const phi = Math.acos(1 - (i + 0.5) / 34 * 1.2), th = i * 2.399;
@@ -2039,8 +2115,8 @@ function buildHair(head, style, hairM, mats, G) {
             }
             break;
         }
-        case 5: {                                                                  // كاب: نفس القبة وقدّامها حافة
-            top(); sides(-0.2);
+        case 5: {                                                                  // كاب
+            cap(); sideLocks(-0.3, 2); backLocks(-0.55, 9);
             head.add(mesh(G.visor, hairM, 0, BANG + 0.02, FZ + 0.25));
             break;
         }
@@ -2072,6 +2148,7 @@ function buildHair(head, style, hairM, mats, G) {
             break;
         }
     }
+    return sway;
 }
 
 // ---------------------------------------------------------------- المسرح
@@ -2642,6 +2719,7 @@ export function createStage(container, getFrame, opts) {
             c.root.position.set(0, 0, 0); c.root.rotation.set(0, 0, 0);
             c.body.position.y = c.sitY;
             c.head.rotation.set(0, Math.sin(T * 0.6 + ph) * 0.18, 0);
+            swayHair(c, T, speakers[id] ? 1.2 : 0);   // الشعر يتحرك (أكثر لما يتكلم)
             c.torso.scale.y = 1 + Math.sin(T * 2 + ph) * 0.025;
             c.armL.rotation.set(-0.55, 0, -0.2); c.armR.rotation.set(-0.55, 0, 0.2);
             const eyeOpen = sleeping && alive && fallK === 0 ? 0.12 : 1;
