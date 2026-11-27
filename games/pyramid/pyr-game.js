@@ -171,7 +171,7 @@ const later = (ms, fn) => G.timers.push(setTimeout(fn, ms));
 const byId = id => G.alive.find(p => String(p.id) === String(id));
 
 async function startMatch() {
-    $('#rules').classList.remove('in'); showLobby(false); SFX.unlock(); SFX.ambient(true);
+    $('#rules').classList.remove('in'); showLobby(false); SFX.unlock();
     G.alive = G.players.slice(); G.round = 0; G.startedAt = Date.now(); G.phase = 'intro';
     document.body.classList.add('match'); updateCount();
     // اللاعبين بالساحة قبل البداية (لو أحد انضاف آخر لحظة)
@@ -320,7 +320,8 @@ function hookStream() {
     P.connect();
     // التعليق: { id: 'tiktok:<user>', name, text, isFollower, avatarUrl, frame, winCard, character } (adapters/agp-tiktok-adapter.js)
     P.onComment(pl => { const id = String(pl.id), name = pl.name || pl.nickname || 'لاعب';
-        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null, pl.winCard || null, pl.character || null); }
+        if (G.phase === 'lobby' && isJoin(pl.text)) { if (G.settings.who === 'followers' && !pl.isFollower) return; const before = G.players.length; addPlayer(id, name, false, pl.avatarUrl || null, pl.frame || null, pl.winCard || null, pl.character || null);
+            if (G.players.length > before) { const AE = window.AymanGamesPlatform && window.AymanGamesPlatform.entrance; if (AE) try { AE.play(pl, { rejoin: true }); } catch (e) { } } }
         else answer(id, pl.text); });
 }
 
