@@ -860,7 +860,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                   <span>{{ lcPreview.label }}</span>
                 </div>
               </div>
-              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">التصميم</span><select value="{{ lcStyle }}" onChange="{{ onLcStyle }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="platform">حساب المنصة (رسمي)</option><option value="admin">إدارة</option><option value="gold">ذهبي (مميز)</option><option value="diamond">ألماسي</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">التصميم</span><select value="{{ lcStyle }}" onChange="{{ onLcStyle }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="founder">المؤسس (أسود وذهبي)</option><option value="platform">حساب المنصة — رسمي</option><option value="vip">مميز (وردي لؤلؤي)</option><option value="diamond">ألماسي (ثلجي)</option></select></label>
               <button onClick="{{ grantLc }}" disabled="{{ lcGrantDisabled }}" style="height:36px;padding:0 18px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ lcGrantOpacity }}">منح</button>
             </div>
             <table style="width:100%;border-collapse:collapse">
@@ -1278,7 +1278,7 @@ class Component extends DCLogic {
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
-    lcUsers:null, lcStyles:null, lcQ:'', lcFound:undefined, lcStyle:'platform',
+    lcUsers:null, lcStyles:null, lcQ:'', lcFound:undefined, lcStyle:'founder',
     theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
     levels:null, lvEdits:{},
     statsTab:'streamers', streamerStats:null, userStats:null, hrsType:'internal', hrsId:'', hrsUser:null, hrsState:'empty', hrsMode:'add', hrsAmount:'', hrsDate:riyadhDay(Date.now()), hrsReason:'', hrsLog:null, live:null, liveErr:false,

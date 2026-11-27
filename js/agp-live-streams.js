@@ -78,23 +78,42 @@
       '.agp-live-card.idle .agp-live-tag{background:#059669}' +
       '.agp-live-card.idle .agp-live-watch{background:linear-gradient(180deg,#8a4fe8,#7a3fd4);box-shadow:0 6px 16px -8px rgba(122,63,212,.9),inset 0 1px 0 rgba(255,255,255,.25)}' +
       // بطاقات مميزة يمنحها الأدمن (cardStyle من السيرفر — backend/live-cards/live-card-styles-service.js).
-      // كل تصميم: إطار متدرّج (--fx-a/--fx-b) + توهج + حلقة الصورة + شارة بجانب الاسم + لمعة تمر على البطاقة.
+      // شكل مستقل كلياً عن البطاقة العادية: خلفية بهالة ناعمة، إطار متدرّج رفيع، حلقة صورة تدور ببطء،
+      // اسم بتدرّج، شارة، وكل عنصر (اليوزر، اللعبة، المشاهدين، ID، زر المشاهدة، وسم LIVE) بألوان التصميم.
+      // الألوان كلها متغيرات (--fx-*) يحددها كل تصميم تحت.
       '.agp-live-namewrap{min-width:0;display:flex;align-items:center;gap:6px}' +
-      '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 6px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.6;color:#fff;background:linear-gradient(135deg,var(--fx-a),var(--fx-b));box-shadow:0 2px 10px -3px var(--fx-a)}' +
+      '.agp-live-verified{flex:none;width:16px;height:16px;color:#7dd3fc;filter:drop-shadow(0 0 6px rgba(125,211,252,.5))}' +
+      '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
-      '.agp-live-card.fx{position:relative;overflow:hidden;border:1.5px solid transparent;background:linear-gradient(180deg,var(--fx-bg1),rgba(14,13,22,.97)) padding-box,linear-gradient(135deg,var(--fx-a),var(--fx-b),var(--fx-a)) border-box;box-shadow:0 0 0 1px rgba(0,0,0,.2),0 14px 38px -22px var(--fx-a)}' +
-      '.agp-live-card.fx:hover{border-color:transparent;box-shadow:0 0 0 1px rgba(0,0,0,.2),0 20px 46px -18px var(--fx-a)}' +
-      '.agp-live-card.fx::after{content:"";position:absolute;top:0;bottom:0;width:45%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.09),transparent);transform:skewX(-18deg);animation:agpLiveShine 4.5s ease-in-out infinite;pointer-events:none}' +
-      '.agp-live-card.fx .agp-live-avatar-img,.agp-live-card.fx .agp-live-avatar-ph{border-color:var(--fx-a);box-shadow:0 0 0 3px var(--fx-ring),0 0 18px -4px var(--fx-a)}' +
-      '.agp-live-card.fx .agp-live-name{color:var(--fx-name)}' +
-      '.agp-live-card.fx-platform{--fx-a:#a855f7;--fx-b:#ec4899;--fx-ring:rgba(168,85,247,.22);--fx-bg1:rgba(40,22,58,.94);--fx-name:#f5e9ff}' +
-      '.agp-live-card.fx-admin{--fx-a:#ef4444;--fx-b:#f97316;--fx-ring:rgba(239,68,68,.2);--fx-bg1:rgba(48,18,22,.94);--fx-name:#ffe4e1}' +
-      '.agp-live-card.fx-gold{--fx-a:#f59e0b;--fx-b:#fde047;--fx-ring:rgba(245,158,11,.22);--fx-bg1:rgba(44,33,14,.94);--fx-name:#fff4d1}' +
-      '.agp-live-card.fx-gold .agp-live-badge{color:#3b2603}' +
-      '.agp-live-card.fx-diamond{--fx-a:#22d3ee;--fx-b:#818cf8;--fx-ring:rgba(34,211,238,.2);--fx-bg1:rgba(14,34,48,.94);--fx-name:#e0fbff}' +
-      '@keyframes agpLiveShine{0%,55%{left:-60%}100%{left:130%}}' +
+      '.agp-live-card.fx{position:relative;overflow:hidden;isolation:isolate;padding:16px;border-radius:22px;border:1px solid transparent;background:var(--fx-bg) padding-box,var(--fx-border) border-box;box-shadow:0 18px 44px -26px var(--fx-glow);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}' +
+      '.agp-live-card.fx:hover{transform:translateY(-4px);border-color:transparent;box-shadow:0 26px 56px -24px var(--fx-glow-h)}' +
+      '.agp-live-card.fx::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fx-aura);pointer-events:none}' +
+      '.agp-live-card.fx::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-70%;z-index:-1;background:linear-gradient(100deg,transparent,var(--fx-shine),transparent);transform:skewX(-20deg);animation:agpLiveShine 7s ease-in-out infinite;pointer-events:none}' +
+      '.agp-live-card.fx .agp-live-avatar{width:60px;height:60px}' +
+      '.agp-live-card.fx .agp-live-avatar::before{content:"";position:absolute;inset:-3px;border-radius:50%;background:var(--fx-ring);animation:agpLiveSpin 9s linear infinite}' +
+      '.agp-live-card.fx .agp-live-avatar-img,.agp-live-card.fx .agp-live-avatar-ph{position:relative;width:60px;height:60px;border:3px solid var(--fx-gap);box-shadow:none}' +
+      '.agp-live-card.fx .agp-live-avatar-ph{background:var(--fx-ph);color:var(--fx-ph-tx)}' +
+      '.agp-live-card.fx .agp-live-tag{z-index:1;background:var(--fx-tag);color:var(--fx-tag-tx);border-color:var(--fx-gap);letter-spacing:1px}' +
+      '.agp-live-card.fx .agp-live-name{font-size:15.5px;font-weight:800;background:var(--fx-name);-webkit-background-clip:text;background-clip:text;color:transparent}' +
+      '.agp-live-card.fx .agp-live-acc{color:var(--fx-acc)}' +
+      '.agp-live-card.fx .agp-live-game{color:var(--fx-game)}' +
+      '.agp-live-card.fx .agp-live-game svg,.agp-live-card.fx .agp-live-chip-viewers svg{color:var(--fx-a)}' +
+      '.agp-live-card.fx .agp-live-chip{background:var(--fx-chip);border-color:var(--fx-chip-bd);color:var(--fx-chip-tx)}' +
+      '.agp-live-card.fx .agp-live-chip b{color:var(--fx-num)}' +
+      '.agp-live-card.fx .agp-live-chip-id{color:var(--fx-id);letter-spacing:.6px}' +
+      '.agp-live-card.fx .agp-live-watch{background:var(--fx-btn);color:var(--fx-btn-tx);box-shadow:0 8px 20px -10px var(--fx-a),inset 0 1px 0 rgba(255,255,255,.35)}' +
+      // المؤسس — أسود وذهبي
+      '.agp-live-card.fx-founder{--fx-a:#e9c46a;--fx-bg:linear-gradient(160deg,#1d170c 0%,#100d08 55%,#0b0906 100%);--fx-border:linear-gradient(140deg,rgba(255,226,150,.8),rgba(180,130,50,.14) 40%,rgba(180,130,50,.1) 62%,rgba(255,215,130,.65));--fx-aura:radial-gradient(120% 90% at 100% 0%,rgba(233,196,106,.17),transparent 55%),radial-gradient(80% 70% at 0% 100%,rgba(160,110,40,.13),transparent 60%),repeating-linear-gradient(135deg,rgba(255,220,150,.03) 0 1px,transparent 1px 9px);--fx-shine:rgba(255,230,170,.11);--fx-glow:rgba(233,196,106,.5);--fx-glow-h:rgba(233,196,106,.7);--fx-ring:conic-gradient(from 0deg,#fff3c4,#e9c46a,#c9973a,#e9c46a,#fff3c4);--fx-gap:#120e08;--fx-ph:linear-gradient(135deg,#3a2c12,#1a140a);--fx-ph-tx:#f6d98a;--fx-tag:linear-gradient(180deg,#f6dc8c,#d4a640);--fx-tag-tx:#2a1d05;--fx-name:linear-gradient(90deg,#fff6d6,#f0cd78 60%,#d9a84a);--fx-badge:linear-gradient(135deg,rgba(240,205,120,.24),rgba(240,205,120,.07));--fx-badge-tx:#f6d98a;--fx-badge-bd:rgba(240,205,120,.45);--fx-acc:#c9ad74;--fx-game:#d8c7a2;--fx-chip:rgba(233,196,106,.07);--fx-chip-bd:rgba(233,196,106,.22);--fx-chip-tx:#bfa87a;--fx-num:#ffe7a6;--fx-id:#e9c46a;--fx-btn:linear-gradient(180deg,#f8e2a0,#d9a943);--fx-btn-tx:#2a1d05}' +
+      // حساب المنصة (رسمي) — بنفسجي/وردي/سماوي
+      '.agp-live-card.fx-platform{--fx-a:#b48cff;--fx-bg:linear-gradient(160deg,#1a1233 0%,#120d24 55%,#0d0a1a 100%);--fx-border:linear-gradient(135deg,rgba(190,150,255,.85),rgba(236,72,153,.32) 45%,rgba(56,189,248,.55));--fx-aura:radial-gradient(90% 80% at 100% 0%,rgba(168,85,247,.28),transparent 60%),radial-gradient(70% 70% at 0% 100%,rgba(236,72,153,.17),transparent 60%),radial-gradient(60% 50% at 50% 115%,rgba(56,189,248,.13),transparent 70%);--fx-shine:rgba(255,255,255,.08);--fx-glow:rgba(168,85,247,.55);--fx-glow-h:rgba(168,85,247,.75);--fx-ring:conic-gradient(from 0deg,#a855f7,#ec4899,#38bdf8,#a855f7);--fx-gap:#150f2a;--fx-ph:linear-gradient(135deg,#3b2470,#1c1338);--fx-ph-tx:#f1e6ff;--fx-tag:linear-gradient(90deg,#a855f7,#ec4899);--fx-tag-tx:#fff;--fx-name:linear-gradient(90deg,#ffffff,#ece2ff 55%,#f5c6ff);--fx-badge:linear-gradient(135deg,rgba(168,85,247,.38),rgba(236,72,153,.26));--fx-badge-tx:#fbeaff;--fx-badge-bd:rgba(216,180,254,.45);--fx-acc:#b9a6e8;--fx-game:#cfc4ef;--fx-chip:rgba(168,85,247,.10);--fx-chip-bd:rgba(196,160,255,.25);--fx-chip-tx:#a99bd0;--fx-num:#ffffff;--fx-id:#d8b4fe;--fx-btn:linear-gradient(90deg,#a855f7,#ec4899);--fx-btn-tx:#fff}' +
+      // مميز — وردي لؤلؤي
+      '.agp-live-card.fx-vip{--fx-a:#f9a8d4;--fx-bg:linear-gradient(160deg,#231421 0%,#150c16 60%,#0f0a10 100%);--fx-border:linear-gradient(135deg,rgba(253,186,216,.75),rgba(253,186,216,.1) 50%,rgba(251,207,232,.5));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(244,114,182,.18),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(253,164,175,.12),transparent 60%);--fx-shine:rgba(255,220,235,.09);--fx-glow:rgba(244,114,182,.45);--fx-glow-h:rgba(244,114,182,.65);--fx-ring:conic-gradient(from 0deg,#fde2ef,#f472b6,#fda4af,#fde2ef);--fx-gap:#170d17;--fx-ph:linear-gradient(135deg,#4a1f3b,#1f0f1c);--fx-ph-tx:#fbcfe8;--fx-tag:linear-gradient(90deg,#f9a8d4,#fda4af);--fx-tag-tx:#3b0a24;--fx-name:linear-gradient(90deg,#fff1f7,#fbcfe8 60%,#f9a8d4);--fx-badge:linear-gradient(135deg,rgba(244,114,182,.24),rgba(244,114,182,.08));--fx-badge-tx:#fbcfe8;--fx-badge-bd:rgba(249,168,212,.42);--fx-acc:#d9a5c0;--fx-game:#e6c9d7;--fx-chip:rgba(244,114,182,.08);--fx-chip-bd:rgba(249,168,212,.22);--fx-chip-tx:#c59ab1;--fx-num:#fff0f7;--fx-id:#f9a8d4;--fx-btn:linear-gradient(90deg,#f9a8d4,#fda4af);--fx-btn-tx:#3b0a24}' +
+      // ألماسي — ثلجي
+      '.agp-live-card.fx-diamond{--fx-a:#7dd3fc;--fx-bg:linear-gradient(160deg,#0c1d2a 0%,#0a1520 60%,#080f17 100%);--fx-border:linear-gradient(135deg,rgba(186,230,253,.85),rgba(125,211,252,.12) 45%,rgba(165,180,252,.6));--fx-aura:radial-gradient(100% 80% at 100% 0%,rgba(56,189,248,.2),transparent 60%),radial-gradient(70% 60% at 0% 100%,rgba(129,140,248,.16),transparent 60%),repeating-linear-gradient(60deg,rgba(255,255,255,.022) 0 1px,transparent 1px 14px);--fx-shine:rgba(224,242,254,.1);--fx-glow:rgba(56,189,248,.45);--fx-glow-h:rgba(56,189,248,.65);--fx-ring:conic-gradient(from 0deg,#e0f2fe,#38bdf8,#818cf8,#e0f2fe);--fx-gap:#0b1822;--fx-ph:linear-gradient(135deg,#123a55,#0b1c2a);--fx-ph-tx:#bae6fd;--fx-tag:linear-gradient(90deg,#7dd3fc,#a5b4fc);--fx-tag-tx:#06202f;--fx-name:linear-gradient(90deg,#f0fbff,#bae6fd 55%,#a5b4fc);--fx-badge:linear-gradient(135deg,rgba(56,189,248,.24),rgba(56,189,248,.08));--fx-badge-tx:#bae6fd;--fx-badge-bd:rgba(125,211,252,.42);--fx-acc:#8fbdd6;--fx-game:#c3dceb;--fx-chip:rgba(56,189,248,.08);--fx-chip-bd:rgba(125,211,252,.22);--fx-chip-tx:#8fb4c9;--fx-num:#f0fbff;--fx-id:#7dd3fc;--fx-btn:linear-gradient(90deg,#7dd3fc,#a5b4fc);--fx-btn-tx:#06202f}' +
+      '@keyframes agpLiveShine{0%,60%{left:-70%}100%{left:140%}}' +
+      '@keyframes agpLiveSpin{to{transform:rotate(360deg)}}' +
       '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
-      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}.agp-live-card.fx::after{display:none}}';
+      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}.agp-live-card.fx::after{display:none}.agp-live-card.fx .agp-live-avatar::before{animation:none}}';
     document.head.appendChild(st);
   }
 
@@ -118,11 +137,14 @@
 
   // التصاميم المميزة — نفس مفاتيح STYLES بـbackend/live-cards/live-card-styles-service.js.
   var LIVE_FX = {
-    platform: { label: 'رسمي', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.9-3.1 3.2.3z"/><path d="M8.5 12.2l2.3 2.3 4.7-4.8" fill="none" stroke="#2a1440" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
-    admin: { label: 'إدارة', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z"/></svg>' },
-    gold: { label: 'مميز', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5z"/></svg>' },
+    founder: { label: 'المؤسس', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 3.5L12 5l4.5 6.5L21 8l-1.8 10H4.8z"/><rect x="5" y="19.5" width="14" height="2" rx="1"/></svg>' },
+    platform: { label: 'رسمي', verified: true, icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.9-3.1 3.2.3z"/></svg>' },
+    vip: { label: 'مميز', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>' },
     diamond: { label: 'ألماسي', icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>' }
   };
+  // علامة التوثيق جنب اسم الحساب الرسمي (مثل علامة التوثيق بالمنصات).
+  var LIVE_VERIFIED = '<svg class="agp-live-verified" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.4 2.1 3.2-.3.9 3.1 2.8 1.6-1.2 3 1.2 3-2.8 1.6-.9 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.9-3.1-2.8-1.6 1.2-3-1.2-3 2.8-1.6.9-3.1 3.2.3z"/><path d="M8.3 12.2l2.5 2.5 4.9-5" fill="none" stroke="#0d0a1a" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 
   function buildLiveCard(s){
     var kind = s.kind || 'live';
@@ -209,6 +231,7 @@
       badge.innerHTML = fx.icon;
       badge.appendChild(document.createTextNode(fx.label));
       nameWrap.appendChild(name);
+      if (fx.verified) nameWrap.insertAdjacentHTML('beforeend', LIVE_VERIFIED);
       nameWrap.appendChild(badge);
       top.appendChild(nameWrap);
     } else {

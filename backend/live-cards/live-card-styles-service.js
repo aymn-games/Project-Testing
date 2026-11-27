@@ -12,10 +12,10 @@ var db = require('../db/database');
 
 /** مفتاح التصميم ← اسمه بلوحة الأدمن (الواجهة لها نفس المفاتيح). */
 var STYLES = {
-    platform: 'حساب المنصة (رسمي)',
-    admin: 'إدارة',
-    gold: 'ذهبي (مميز)',
-    diamond: 'ألماسي'
+    founder: 'المؤسس (أسود وذهبي)',
+    platform: 'حساب المنصة — رسمي',
+    vip: 'مميز (وردي لؤلؤي)',
+    diamond: 'ألماسي (ثلجي)'
 };
 
 function isValidStyle(style) {
