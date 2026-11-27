@@ -232,11 +232,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // صوت خاص لكل بطاقة (اختياري: tpl.sound) — نسخة Audio وحدة لكل ملف.
     // يشتغل تلقائياً مرة وحدة لما تظهر البطاقة (renderHtml)، بدون أي تعديل
-    // بملفات الألعاب. إعادة رسم نفس البطاقة (pop:false، أو نفس الفائز خلال
-    // SOUND_GAP_MS) ما تعيد الصوت.
-    var SOUND_GAP_MS = 15000;
+    // بملفات الألعاب — حتى لو اللعبة ترسمها بـpop:false (أغلب الألعاب تحط
+    // حركة الظهور على غلافها وترسم البطاقة نفسها بدون حركة).
+    // إعادة الرسم ما تعيد الصوت: يعيده بس لو البطاقة اختفت (ما انرسمت خلال
+    // SOUND_HIDDEN_MS) ومر SOUND_GAP_MS من آخر تشغيل — يعني فوز جديد.
+    var SOUND_GAP_MS = 20000;
+    var SOUND_HIDDEN_MS = 2500;
     var _audio = {};
     var _lastPlayed = {};
+    var _lastRendered = {};
     function audioFor(tpl) {
         if (!tpl.sound || typeof Audio === 'undefined') return null;
         if (!_audio[tpl.sound]) {
@@ -249,8 +253,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var a = audioFor(tpl);
         if (!a) return false;
         var key = ((player && player.id) || playerName(player)) + '|' + tpl.image;
-        var now = Date.now();
-        if (_lastPlayed[key] && now - _lastPlayed[key] < SOUND_GAP_MS) return false;
+        var now = Date.now(), seen = _lastRendered[key];
+        _lastRendered[key] = now;
+        if (_lastPlayed[key] && (now - _lastPlayed[key] < SOUND_GAP_MS || (seen && now - seen < SOUND_HIDDEN_MS))) return false;
         _lastPlayed[key] = now;
         try {
             a.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 1;
@@ -295,6 +300,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          * @param {boolean} [opts.pop=true] - false skips the pop-in animation (for
          *   re-renders, e.g. when the earned points arrive after the card is shown)
          * @param {boolean} [opts.silent=false] - true never plays the card's sound
+         *   (the sound plays once when the card first shows, pop or not)
          * @returns {string} HTML for the card; fills its container's width
          */
         renderHtml: function (player, lines, opts) {
@@ -313,7 +319,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }).join('');
 
             var pop = !(opts && opts.pop === false);
-            if (tpl.sound && pop && !(opts && opts.silent)) playOnce(player, tpl, opts && opts.volume);
+            if (tpl.sound && !(opts && opts.silent)) playOnce(player, tpl, opts && opts.volume);
             return '<div class="agp-wincard' + (pop ? ' agp-wincard-pop' : '') + '" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(player, tpl) +
                 '<img class="agp-wincard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
@@ -332,7 +338,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playSound: function (player, volume) {
             var tpl = templateFor(player);
             if (!tpl || !tpl.sound) return false;
-            _lastPlayed[((player && player.id) || playerName(player)) + '|' + tpl.image] = 0;
+            var key = ((player && player.id) || playerName(player)) + '|' + tpl.image;
+            _lastPlayed[key] = 0; _lastRendered[key] = 0;
             return playOnce(player, tpl, volume);
         },
 

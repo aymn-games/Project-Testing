@@ -82,6 +82,8 @@
 6. **إلزامي**: إرسال نتيجة المباراة لنظام النقاط عبر
    `AGPAuth.reportMatchPoints(...)` (التفاصيل في `CLAUDE.md` بالجذر).
 7. بطاقة اللعبة في صفحة الألعاب (`.game-card[data-agp-game-id]`) لاكتشافها
+   بمكتبة الألعاب الحالية: أضف اللعبة لـ`REAL_GAMES` و`CARD_INFO` بـ`js/agp-games-library.js`
+   (وسجل تحديثها بـ`GAME_UPDATES` بنفس الملف).
    تلقائياً عبر `agp-registry.js`.
 8. اللعبة المستضافة خارجياً تُربط عبر `AGP.gameBridge.connect(...)` — لا
    `postMessage` يدوي.

@@ -166,7 +166,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-ent-royal .agp-ent-tag{font-family:"Aref Ruqaa",serif;font-size:24px;letter-spacing:2px;color:#e9cf8a;}',
             '.agp-ent-flash{position:absolute;inset:0;opacity:0;mix-blend-mode:screen;}',
             '.agp-ent-trail{position:absolute;inset:0;}',
-            '.agp-ent-notes{position:absolute;inset:0;width:1280px;height:720px;}',
+            '.agp-ent-notecv{position:absolute;left:0;top:0;width:1280px;height:720px;}',
             '.agp-ent-bfs{position:absolute;inset:0;}',
             '.agp-ent-bf{position:absolute;left:0;top:0;width:0;height:0;perspective:520px;}',
             '.agp-ent-bf .w{position:absolute;top:-70px;width:100px;height:140px;filter:drop-shadow(0 0 6px rgba(255,170,220,.9)) drop-shadow(0 0 16px rgba(255,120,200,.55));}',
@@ -265,7 +265,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return out;
     }
     function buildNotes(o) {
-        var cv = o.root.querySelector('.agp-ent-notes'), dpr = Math.min(2, window.devicePixelRatio || 1);
+        var cv = o.root.querySelector('.agp-ent-notecv'), dpr = Math.min(2, window.devicePixelRatio || 1);
         cv.width = 1280 * dpr; cv.height = 720 * dpr;
         var g = cv.getContext('2d'); g.scale(dpr, dpr);
         var parts = [];
@@ -400,7 +400,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="agp-ent-dim" style="background:' + M.dim + '"></div>' +
             '<div class="agp-ent-stage"><div class="agp-ent-world">' +
             '<div class="agp-ent-back"></div>' +
-            (M.notes ? '<canvas class="agp-ent-notes"></canvas>' : '') +
+            (M.notes ? '<canvas class="agp-ent-notecv"></canvas>' : '') +
             '<div class="agp-ent-card"><div class="agp-ent-card-in">' + cardHtml(player) + '</div></div>' +
             '<div class="agp-ent-title"><div class="agp-ent-tag">' + esc(M.tag) + '</div>' +
             '<div class="agp-ent-name" style="text-shadow:0 0 24px rgba(' + glow + ',.75),0 4px 12px rgba(0,0,0,.8)">' + esc(player.name || '') + '</div>' +

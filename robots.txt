@@ -1,0 +1,20 @@
+# ألعاب أيمن — aymngames.online
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-
+Disallow: /dev-dashboard.html
+Disallow: /control.html
+Disallow: /dashboard/
+Disallow: /dashboard-core/
+Disallow: /stream-studio.html
+Disallow: /streamer-stats.html
+Disallow: /profile.html
+Disallow: /login.html
+Disallow: /signup.html
+Disallow: /choose-account-type.html
+Disallow: /backend/
+Disallow: /docs/
+Disallow: /.claude/
+
+Sitemap: https://aymngames.online/sitemap.xml

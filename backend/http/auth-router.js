@@ -26,8 +26,11 @@ var streamerHours = require('../points/streamer-hours');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
+var liveCardStyles = require('../live-cards/live-card-styles-service');
+var topChampions = require('../live-cards/champions-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
+var lastWeekRankingService = require('../stats/last-week-ranking-service');
 var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var codenamesSpyCodes = require('../codenames/spy-codes-service');
@@ -367,6 +370,9 @@ var ROUTES = [
   // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
   // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
+  // ---- تصنيف «الأسبوع الماضي» المحفوظ (توب الاستريمرز بالساعات واللاعبين
+  // بالفوز للأسبوع اللي خلص) — عام — راجع backend/stats/last-week-ranking-service.js
+  { method: 'GET', path: '/api/public/last-week-ranking', requireAuth: false, handler: handleLastWeekRanking },
   // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
   { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
   // نبضة حضور من شاشة المذيع بألعاب الباركود (المافيا، محطة سهيل، حفلة
@@ -378,6 +384,9 @@ var ROUTES = [
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  // ---- تصاميم بطاقات «البثوث النشطة» المميزة (live-cards/live-card-styles-service.js)
+  { method: 'GET', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminListLiveCardStyles },
+  { method: 'POST', path: '/api/admin/live-card-styles', requireAuth: true, requireAdmin: true, handler: handleAdminSetLiveCardStyle },
   { method: 'GET', path: '/api/admin/live-streams', requireAuth: true, requireAdmin: true, handler: handleAdminLiveStreams },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
@@ -2179,6 +2188,11 @@ function handleTopPlayersByRounds(req, res) {
 }
 
 /** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً بالسيرفر. */
+function handleLastWeekRanking(req, res) {
+  var r = lastWeekRankingService.getLastWeekRanking();
+  sendJson(res, 200, { success: true, periodStart: r.periodStart, periodEnd: r.periodEnd, savedAt: r.savedAt, streamers: r.streamers, players: r.players });
+}
+
 function handleGetPlatformStats(req, res) {
   var result = platformStatsService.getCachedStats();
   sendJson(res, 200, { success: true, stats: result.stats, computedAt: result.computedAt });
@@ -2211,14 +2225,33 @@ function handleAdminLiveStreams(req, res) {
   sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats(), streamUsage: streamUsage });
 }
 
+/** الأدمن فقط — الحسابات اللي عندها تصميم بطاقة مميز + قائمة التصاميم المتاحة. */
+function handleAdminListLiveCardStyles(req, res) {
+  sendJson(res, 200, { success: true, styles: liveCardStyles.STYLES, users: liveCardStyles.listAdmin() });
+}
+
+/** الأدمن فقط — body: { customId, style, sponsor?, host? } (style فاضي/null = يرجع للبطاقة العادية). */
+function handleAdminSetLiveCardStyle(req, res, body) {
+  body = body || {};
+  var result = liveCardStyles.setStyleByCustomId(body.customId, body.style, body.sponsor, body.host);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة
  * الألعاب. يرجع حقول عامة فقط (بدون connectionId/user.id/role)، وبث واحد
  * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين).
  * البث يظهر فقط لو حساب تيك توك الموثَّق الحالي لصاحب الجلسة هو نفسه
  * البث المتصل — الأدمن/«تشغيل كامل» يقدرون يتصلون ببث غيرهم، وبدون هذا
- * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم من قاعدة
- * البيانات لحظة الطلب (نفس ترتيب صفحة البروفايل: display_name ثم username). */
+ * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم هو اسم حساب
+ * تيك توك (tiktok_display_name المحفوظ عند التوثيق)، ولو ما انحفظ نعرض يوزر
+ * تيك توك نفسه — مو اسم العرض بالموقع. */
 function handlePublicLiveStreams(req, res) {
+  // توب 3 الأسبوع الحالي مباشرة (تصنيف الاستريمرز بالساعات — نفس قائمة الرئيسية، محفوظة 5 دقائق)
+  // — weekRank بكل بث: 1/2/3 أو null. راجع وسام المركز بـjs/agp-live-streams.js.
+  var weekRanks = {};
+  try {
+    authService.getTopStreamersByHours(3).forEach(function (r, i) { if (r.customId) weekRanks[r.customId] = i + 1; });
+  } catch (err) { logger.error('Public live streams: week ranking failed:', err); }
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
   var byUser = {};
@@ -2232,9 +2265,12 @@ function handlePublicLiveStreams(req, res) {
     var prev = byUser[tiktok];
     if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
     byUser[tiktok] = {
-      name: u.display_name || u.username || tiktok,
+      name: u.tiktok_display_name || tiktok,
       tiktok: tiktok,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
+      champion: topChampions.getChampionCount(u.custom_id),
+      weekRank: weekRanks[u.custom_id] || null,
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2251,9 +2287,12 @@ function handlePublicLiveStreams(req, res) {
     if (!u || !u.tiktok_username) return;
     if (String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase() !== p.username) return;
     byUser[p.username] = {
-      name: u.display_name || u.username || p.username,
+      name: u.tiktok_display_name || p.username,
       tiktok: p.username,
       customId: u.custom_id,
+      card: liveCardStyles.getCardByCustomId(u.custom_id),
+      champion: topChampions.getChampionCount(u.custom_id),
+      weekRank: weekRanks[u.custom_id] || null,
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since

@@ -37,6 +37,9 @@
  *                    بين كل من عنده صلاحية إدارتها، صف واحد ثابت يُستبدَل
  *                    بالكامل مع كل حفظ من لوحة admin-questions.html —
  *                    راجع backend/letters-cell/letters-cell-questions-service.js
+ *   ranking_snapshots — تصنيف كل أسبوع منتهي محفوظ كما هو (توب الاستريمرز
+ *                    بالساعات واللاعبين بالفوز) لتبويب «الأسبوع الماضي» —
+ *                    راجع backend/stats/last-week-ranking-service.js
  *   platform_stats_cache — أرقام حقيقية مُجمَّعة لقسم "الأرقام" بالصفحة
  *                    الرئيسية (حسابات مسجّلة، استريمرز نشطين، مشاهدين...)،
  *                    محسوبة من الجداول الفعلية ومخزَّنة مؤقتاً (٣ أيام) —
@@ -374,6 +377,15 @@ db.exec(`
         id INTEGER PRIMARY KEY CHECK (id = 1),
         data TEXT NOT NULL,
         computed_at INTEGER NOT NULL
+    );
+
+    -- نسخة محفوظة من التصنيف الأسبوعي بعد ما يخلص الأسبوع (قبل ما يتصفر
+    -- العرض): صف لكل أسبوع منتهي — راجع backend/stats/last-week-ranking-service.js
+    CREATE TABLE IF NOT EXISTS ranking_snapshots (
+        period_start INTEGER PRIMARY KEY,
+        period_end INTEGER NOT NULL,
+        data TEXT NOT NULL,
+        created_at INTEGER NOT NULL
     );
 
     -- ساعات البث الفعلية = وقت المباريات المكتملة فقط (من بدايتها لإعلان
@@ -726,6 +738,11 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// تصميم بطاقة «البثوث النشطة» يمنحه الأدمن (backend/live-cards/live-card-styles-service.js) — NULL = عادي.
+ensureColumn('users', 'live_card_style', 'TEXT');
+// سطرين اختياريين على البطاقة المميزة: «البث برعاية …» و«يقدّم البث …» — يكتبها الأدمن.
+ensureColumn('users', 'live_card_sponsor', 'TEXT');
+ensureColumn('users', 'live_card_host', 'TEXT');
 // المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
 ensureColumn('store_orders', 'customer_mobile', 'TEXT');
 ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
@@ -921,6 +938,7 @@ migrateSingleCardTable('user_win_cards');
     { image_filename: 'frame-roro-moon.png', display_name_ar: 'Roro — القمر والسماعات (منح محدود)' },
     { image_filename: 'frame-gold-bat.png', display_name_ar: 'الخفاش الذهبي (منح محدود)' },
     { image_filename: 'frame-winged-crown.png', display_name_ar: 'التاج المجنّح (منح محدود)' },
+    { image_filename: 'frame-winter-deer.png', display_name_ar: 'غزال الشتاء (منح محدود)' },
     // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
     // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
     // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).

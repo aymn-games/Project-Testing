@@ -899,6 +899,22 @@
   .ob-ibar-b.on { background: rgba(233,194,122,.1) padding-box, linear-gradient(160deg, rgba(255,226,170,.6), rgba(233,194,122,.15)) border-box; }
   .ob-ibar-b.bad { background: rgba(236,143,157,.06) padding-box, linear-gradient(160deg, rgba(255,190,200,.45), rgba(236,143,157,.1)) border-box; }
 
+  /* أزرار العنصر أصغر: أيقونة واسم بسطر واحد، عشان الإعدادات تاخذ مساحة أكبر */
+  .ob-ibar { padding: 8px 16px; gap: 5px; }
+  .ob-ibar-b { flex-direction: row; justify-content: center; gap: 5px; padding: 7px 4px; font-size: 11.5px; white-space: nowrap; }
+  .ob-ibar-b svg { width: 15px; height: 15px; flex: none; }
+
+  /* تبويبات إعدادات العنصر (tabify بـstudio.js): ثابتة فوق، ويبين تبويب واحد */
+  .ob-itabs-w { flex: none; padding: 10px 16px 2px; min-width: var(--panel-w); }
+  .ob-itabs { overflow-x: auto; scrollbar-width: none; }
+  .ob-itabs::-webkit-scrollbar { display: none; }
+  .ob-itabs button { flex: 1 0 auto; white-space: nowrap; padding-inline: 10px; }
+  .ob-tabhide { display: none !important; }
+  .ob-pbody.tabbed .ob-grp-h { cursor: default; pointer-events: none; padding: 10px 14px; }
+  .ob-pbody.tabbed .ob-grp-c { display: none; }
+  .ob-pbody.tabbed .ob-grp.solo > .ob-grp-h { display: none; }
+  .ob-pbody.tabbed .ob-grp.solo > .ob-grp-b { border-top: 0; }
+
   /* أسماء الشاشات فوق المحرر: «لسان» بخط مضيء تحت المختار */
   .ob-chip { border-radius: var(--vf-sm); border: 1px solid transparent; background: linear-gradient(180deg, rgba(169,155,184,.06), rgba(169,155,184,.015)) padding-box, var(--vb-edge) border-box; }
   .ob-chip:hover { border-color: transparent; }
@@ -1094,12 +1110,127 @@
     .ob-zoom { max-width: calc(100% - 16px); overflow-x: auto; scrollbar-width: none; bottom: 8px; }
     .ob-zoom > span { display: none; }
     .ob-body.closed .ob-panel { display: none; }
-    .ob-phead, .ob-pbody, .ob-ibar { min-width: 0; }
+    .ob-phead, .ob-pbody, .ob-ibar, .ob-itabs-w { min-width: 0; }
     .ob-gbox { grid-template-columns: 1fr; }
     .ob-gbrand { padding: 24px; border-left: 0; border-bottom: 1px solid var(--line); align-items: center; }
     .ob-gbrand ul { display: none; }
     .ob-gform { padding: 26px 22px; }
   }
+
+  /* ---------- وضع التعديل (studio.js → syncFocus): العنصر المفتوح ياخذ الشاشة كاملة ----------
+     شاشة البث فوق كبيرة، والإعدادات تحتها بأعمدة. بدون القائمة الجانبية ولا شريط الشاشات. */
+  .vy-app.focus { grid-template-columns: minmax(0, 1fr); --panel-w: 100%; }
+  .vy-app.focus > .vy-side, .vy-app.focus .ob-top, .vy-app.focus .ob-mtabs, .vy-app.focus .vy-mbar, .vy-app.focus .vy-ann { display: none; }
+  .vy-app.focus .ob-editor { grid-template-rows: minmax(0, 1fr); }
+  /* الشاشة فوق أصغر (40٪ من الطول) والإعدادات تحتها أكبر، ويمين الكل قائمة عناصر نفس النوع (ob-flist) */
+  .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-columns: clamp(210px, 15vw, 280px) minmax(0, 1fr); grid-template-rows: minmax(200px, 40%) minmax(0, 1fr); grid-template-areas: "l s" "l p"; gap: 10px; }
+  .vy-app.focus .ob-stage { grid-area: s; }
+  .vy-app.focus .ob-body { transition: none; }
+  .vy-app.focus .ob-panel { grid-area: p; }
+  .ob-flist { display: none; }
+  /* آيباد أفقي: التبويبات بسطر لحالها تحت العنوان والأزرار، عشان ما تنقص */
+  @media (min-width: 901px) and (max-width: 1279px) {
+    .vy-app.focus .ob-body .ob-panel { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "h b" "t t" "p p"; }
+    .vy-app.focus .ob-panel .ob-itabs-w { padding: 0 14px 10px; }
+    .vy-app.focus .ob-panel .ob-itabs { max-width: none; }
+  }
+  .vy-app.focus .ob-flist { grid-area: l; display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 14px 12px; border-radius: 20px; }
+  .ob-fl-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
+  .ob-fl-h b { font-family: "Noto Kufi Arabic", sans-serif; font-size: 14px; }
+  .ob-fl-n { min-width: 24px; height: 22px; padding: 0 7px; border-radius: 11px; background: rgba(169,155,184,.16); color: var(--lav-l); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+  .ob-fl-list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; gap: 6px; }
+  .ob-fl-i { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 13px; border: 1px solid var(--line); background: rgba(169,155,184,.04); color: var(--text); text-align: right; cursor: pointer; flex-wrap: wrap; transition: background .2s, border-color .2s; }
+  .ob-fl-i:hover { background: rgba(169,155,184,.1); border-color: var(--line-2); }
+  .ob-fl-i.on { background: linear-gradient(180deg, rgba(141,127,163,.42), rgba(110,97,127,.26)); border-color: rgba(233,225,243,.6); box-shadow: 0 0 0 2px rgba(207,195,220,.25), 0 8px 22px -14px rgba(141,127,163,.9); }
+  .ob-fl-i.off { opacity: .6; }
+  .ob-fl-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(169,155,184,.12); color: var(--lav-l); }
+  .ob-fl-i.on .ob-fl-ic { background: var(--grad); color: #fff; }
+  .ob-fl-ic svg { width: 18px; height: 18px; }
+  .ob-fl-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ob-fl-t b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ob-fl-t small { font-size: 11.5px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ob-fl-now { flex-basis: 100%; font-size: 11px; font-weight: 700; color: #fff; padding-right: 44px; }
+  .ob-fl-now::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok, #7cff6b); box-shadow: 0 0 8px var(--ok, #7cff6b); margin-left: 6px; vertical-align: middle; }
+  .ob-fl-add { flex: none; justify-content: center; gap: 6px; }
+  .ob-fl-add svg { width: 16px; height: 16px; }
+  .vy-app.focus .ob-panel { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "h t b" "p p p"; align-items: center; opacity: 1; }
+  .vy-app.focus .ob-phead { grid-area: h; border-bottom: 0; padding: 12px 16px; align-items: center; flex-direction: row-reverse; justify-content: flex-end; min-width: 0; }
+  .vy-app.focus .ob-phead h2 { font-size: 17px; white-space: nowrap; }
+  .vy-app.focus .ob-phead p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .vy-app.focus .ob-itabs-w { grid-area: t; padding: 8px 6px; min-width: 0; }
+  .vy-app.focus .ob-itabs { max-width: 720px; margin: 0 auto; }
+  .vy-app.focus .ob-ibar { grid-area: b; display: flex; border-bottom: 0; padding: 8px 14px; min-width: 0; }
+  .vy-app.focus .ob-ibar-b { padding: 7px 10px; }
+  .vy-app.focus .ob-pbody { grid-area: p; align-self: stretch; border-top: 1px solid var(--line); padding: 14px 18px 20px; min-width: 0; }
+  /* صفوف المجموعة بأعمدة، عشان الخيارات تنفرد بعرض الشاشة بدل ما تنزل تحت بعض */
+  /* كل خيار بطاقة لحاله: عنوانه وتحكّمه داخل نفس الإطار، فواضح أي زر يتبع أي خيار */
+  .vy-app.focus .ob-grp-b { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; padding: 12px; align-items: start; }
+  .vy-app.focus .ob-grp-b > * + * { border-top: 1px solid var(--line) !important; }
+  .vy-app.focus .ob-grp-b > .ob-row { border: 1px solid var(--line); border-radius: 14px; background: rgba(169,155,184,.05); padding: 12px 14px; }
+  .vy-app.focus .ob-grp-b > .ob-row:not(.col) { align-items: center; }
+  /* ترتيب الصورة والاسم والرسالة صار على شاشة البث نفسها — المعاينة الصغيرة ما تحتاجها */
+  .vy-app.focus .va-lay, .vy-app.focus .va-play { display: none; }
+  .vy-app.focus .ob-sel .agp-so-vpart { outline: 1.5px dashed rgba(233,225,243,.6); outline-offset: 3px; border-radius: 4px; }
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav, .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname, .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg { outline: 2px solid #fff; box-shadow: 0 0 0 5px rgba(169,155,184,.3); }
+  .vy-app.focus .ob-sel .agp-so-vpart.ob-vdrag { outline-color: var(--warn); }
+  .vy-app.focus .ob-sel .agp-so-vpart::before { position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); padding: 1px 7px; border-radius: 6px; background: rgba(20,18,26,.92); color: #fff; font: 600 11px/1.7 "IBM Plex Sans Arabic", sans-serif; letter-spacing: 0; white-space: nowrap; text-shadow: none; z-index: 5; }
+  /* اسم العنصر فوقه: للمحدد بس (والعناصر القريبة من بعض ما تتزاحم أسماؤها) */
+  .vy-app.focus .ob-sel[data-psel="avatar"] .agp-so-vav::before { content: "الصورة"; }
+  .vy-app.focus .ob-sel[data-psel="name"] .agp-so-vname::before { content: "الاسم"; }
+  .vy-app.focus .ob-sel[data-psel="msg"] .agp-so-vmsg::before { content: "الرسالة"; }
+  @media (max-width: 900px) {
+    .vy-app.focus .vy-main { padding-top: 10px; }
+    .vy-app.focus .ob-body, .vy-app.focus .ob-body.closed { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(180px, 32%) auto minmax(0, 1fr); grid-template-areas: "s" "l" "p"; gap: 8px; }
+    .vy-app.focus .ob-flist { flex-direction: row; align-items: center; padding: 6px; overflow-x: auto; border-radius: 14px; }
+    .vy-app.focus .ob-fl-h { display: none; }
+    .vy-app.focus .ob-fl-list { flex-direction: row; overflow: visible; }
+    .vy-app.focus .ob-fl-i { width: auto; flex: none; max-width: 220px; padding: 6px 8px; flex-wrap: nowrap; }
+    .vy-app.focus .ob-fl-t small, .vy-app.focus .ob-fl-now { display: none; }
+    .vy-app.focus .ob-fl-ic { width: 28px; height: 28px; }
+    .vy-app.focus .ob-fl-add { padding: 0 10px; height: 40px; }
+    .vy-app.focus .ob-fl-add span { display: none; }
+    .vy-app.focus .ob-panel { display: flex; flex-direction: column; max-height: none; min-height: 0; }
+    .vy-app.focus .ob-phead { padding: 10px 14px; }
+    .vy-app.focus .ob-ibar { display: grid; padding: 6px 14px; }
+    .vy-app.focus .ob-ibar-b { padding: 7px 4px; }
+    .vy-app.focus .ob-itabs-w { padding: 4px 14px 8px; }
+    .vy-app.focus .ob-pbody { padding: 12px 14px 18px; }
+    .vy-app.focus .ob-grp-b { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /* شريط المعاينة ما يطلع برا الشاشة: يمرر بالعرض لو ضاق، وزر «تجربة بث» أول شي فيه (يمين) */
+  .ob-zoom { max-width: calc(100% - 20px); overflow-x: auto; scrollbar-width: none; }
+  .ob-zoom::-webkit-scrollbar { display: none; }
+  .ob-zoom > * { flex: none; }
+  @media (max-width: 1279px) { .ob-zoom > span { display: none; } .ob-zoom .ob-btn { padding-inline: 10px; } }
+  /* القائمة الجانبية تبان كاملة بالشاشات القصيرة (آيباد أفقي 768، لابتوب 800) */
+  @media (min-width: 901px) and (max-height: 1000px) {
+    .vy-nav .vy-item { height: 32px; font-size: 14px; }
+    .vy-nav .vy-group { margin: 6px 12px 1px; }
+  }
+  @media (min-width: 901px) and (max-height: 860px) {
+    .vy-side .vy-brand { height: 60px; margin-bottom: 2px; }
+    .vy-side .vy-brand img.full { width: 140px; }
+    .vy-nav .vy-item { height: 31px; font-size: 13.5px; }
+    .vy-nav .vy-group { margin: 5px 12px 1px; font-size: 11px; }
+    .vy-app.mini .vy-nav .vy-group { margin: 5px 14px; }
+    .vy-side .vy-foot .ob-btn { height: 36px; }
+    .vy-side .vy-foot { gap: 6px; padding-top: 8px; margin-top: 6px; }
+  }
+
+  /* مفتاح التبديل بصف الإعدادات: جنبه «مفعّل/مطفي» عشان يبان إنه زر التفعيل وحالته */
+  .ob-row > .ob-toggle { margin-inline-start: 58px; }
+  .ob-row:has(> .ob-toggle) > .ob-label { flex: 0 1 auto; min-width: 0; }
+  .ob-row > .ob-toggle::after { content: "مطفي"; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; pointer-events: none; }
+  .ob-row > .ob-toggle:has(input:checked)::after { content: "مفعّل"; color: var(--lav-l); }
+
+  /* «تجربة بث» (studio.js → setSim): زرها أول شريط المعاينة، وشارة فوق الشاشة وهي شغّالة */
+  .ob-zoom .ob-simb svg { width: 15px; height: 15px; }
+  .ob-zoom .ob-simb.on { color: #fff; background: linear-gradient(180deg, #d0546c, #9e3550); border-color: transparent; }
+  .ob-zsep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; flex: none; }
+  .ob-simtag { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; background: rgba(20,18,26,.88); border: 1px solid rgba(236,143,157,.45); color: #fff; font-size: 12.5px; font-weight: 600; pointer-events: none; white-space: nowrap; }
+  .ob-simtag i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a78; box-shadow: 0 0 8px #ff5a78; animation: ob-simp 1.2s ease-in-out infinite; }
+  @keyframes ob-simp { 50% { opacity: .35; } }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }

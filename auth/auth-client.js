@@ -997,6 +997,12 @@ function getRecentSupporters(limit) {
     return request(path, { method: 'GET' });
 }
 
+/** تصنيف «الأسبوع الماضي» المحفوظ: توب الاستريمرز بالساعات واللاعبين بالفوز
+ * للأسبوع اللي خلص (backend/stats/last-week-ranking-service.js). */
+function getLastWeekRanking() {
+    return request('/api/public/last-week-ranking', { method: 'GET' });
+}
+
 /** Top streamers by total stream hours. Returns TikTok username + hours
  * only, no sensitive account data. */
 function getTopStreamers(limit) {
@@ -1088,6 +1094,18 @@ function adminAddPartner(customId, category) {
 
 function adminDeletePartner(id) {
     return request('/api/admin/partners/delete', { method: 'POST', body: { id: id } });
+}
+
+/* Featured live-stream cards — see backend/live-cards/live-card-styles-service.js */
+
+function adminListLiveCardStyles() {
+    return request('/api/admin/live-card-styles', { method: 'GET' });
+}
+
+/** style: a key from STYLES, or null to reset to the normal card.
+ * sponsor/host: optional card lines («البث برعاية …» / «يقدّم البث: …»). */
+function adminSetLiveCardStyle(customId, style, sponsor, host) {
+    return request('/api/admin/live-card-styles', { method: 'POST', body: { customId: customId, style: style || null, sponsor: sponsor || '', host: host || '' } });
 }
 
 /* Event theme — see backend/theme/site-theme-service.js */
@@ -1378,6 +1396,7 @@ global.AGPAuth = {
     needsWelcome: needsWelcome,
     completeWelcome: completeWelcome,
     adminResetWelcome: adminResetWelcome,
+    getLastWeekRanking: getLastWeekRanking,
     getTopStreamers: getTopStreamers,
     getTopStreamersByParticipations: getTopStreamersByParticipations,
     getUserWeeklyRanks: getUserWeeklyRanks,
@@ -1397,6 +1416,8 @@ global.AGPAuth = {
     adminListPartners: adminListPartners,
     adminAddPartner: adminAddPartner,
     adminDeletePartner: adminDeletePartner,
+    adminListLiveCardStyles: adminListLiveCardStyles,
+    adminSetLiveCardStyle: adminSetLiveCardStyle,
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
     adminClearSiteTheme: adminClearSiteTheme,

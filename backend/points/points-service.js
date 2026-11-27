@@ -155,18 +155,18 @@ var TOP_PLAYERS_MIN = {
     hours: 'l.play_ms > 0'
 };
 
-function getTopPlayers(metric, limit, sinceMs) {
+function getTopPlayers(metric, limit, sinceMs, untilMs) {
     var rows = db.prepare(
         `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
                 u.custom_id AS customId, l.games_won AS gamesWon, l.games_played AS gamesPlayed,
                 l.play_ms AS playMs
          FROM (SELECT user_id, SUM(won) AS games_won, COUNT(*) AS games_played, SUM(duration_ms) AS play_ms
-               FROM player_rounds_log WHERE created_at >= ? GROUP BY user_id) l
+               FROM player_rounds_log WHERE created_at >= ? AND created_at < ? GROUP BY user_id) l
          JOIN users u ON u.id = l.user_id
          WHERE ${TOP_PLAYERS_MIN[metric]}
          ORDER BY ${TOP_PLAYERS_ORDER[metric]}
          LIMIT ?`
-    ).all(sinceMs || 0, limit || 20);
+    ).all(sinceMs || 0, untilMs || 8640000000000000, limit || 20);
     return rows.map(function (r) {
         return {
             username: r.username,
@@ -212,7 +212,7 @@ function getPlayerWeeklyRanks(userId, sinceMs) {
  * @param {number} [limit]
  * @param {number} [sinceMs]
  */
-function getTopPlayersByWins(limit, sinceMs) { return getTopPlayers('wins', limit, sinceMs); }
+function getTopPlayersByWins(limit, sinceMs, untilMs) { return getTopPlayers('wins', limit, sinceMs, untilMs); }
 
 /** أعلى اللاعبين بعدد الجولات المكتملة هالأسبوع ("الأكثر لعباً"). */
 function getTopPlayersByRounds(limit, sinceMs) { return getTopPlayers('rounds', limit, sinceMs); }

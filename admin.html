@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة الأدمن — AGP</title>
 <link rel="icon" href="favicon.ico">
@@ -842,6 +843,52 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
         </sc-if>
 
+        <!-- LIVE CARD STYLES -->
+        <sc-if value="{{ is.livecards }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">بطاقات البث المميزة</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">امنح أي حساب تصميم بطاقة مميز يظهر بقسم «بثوث شغّالة الآن» بمكتبة الألعاب لما يفتح بث. اكتب معرّف الحساب (ID) وتأكد منه، ثم اختر التصميم، واكتب لو تبي «يقدّم البث» و«البث برعاية» (يظهرون تحت البطاقة). المنح مرة ثانية لنفس الحساب يعدّل بياناته. تقدر بعد تمنحها من نافذة المستخدم بصفحة المستخدمين.</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">معرّف الحساب (ID)</span>
+                <div style="display:flex;gap:6px"><input value="{{ lcQ }}" onChange="{{ onLcQ }}" placeholder="AY-0001" style="width:150px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"><button onClick="{{ searchLc }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">بحث</button></div>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1"><span style="font-size:12px;color:#9199ab">معاينة الحساب</span>
+                <div style="height:36px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:8px;border:1px dashed #2f3342;font-size:13px;color:{{ lcPreview.color }}">
+                  <sc-if value="{{ lcPreview.ok }}"><span style="position:relative;overflow:hidden;width:28px;height:28px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ lcPreview.initial }}<sc-if value="{{ lcPreview.avatar }}"><img src="{{ lcPreview.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span></sc-if>
+                  <span>{{ lcPreview.label }}</span>
+                </div>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">التصميم</span><select value="{{ lcStyle }}" onChange="{{ onLcStyle }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="founder">المؤسس (ذهبي شمباني)</option><option value="platform">حساب المنصة — رسمي</option><option value="vip">مميز (وردي لؤلؤي)</option><option value="diamond">ألماسي (ثلجي)</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">يقدّم البث (اختياري)</span><input value="{{ lcHost }}" onChange="{{ onLcHost }}" maxLength="40" placeholder="اسم اللي ماسك البث" style="width:170px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">البث برعاية (اختياري)</span><input value="{{ lcSponsor }}" onChange="{{ onLcSponsor }}" maxLength="40" placeholder="اسم الراعي" style="width:170px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <button onClick="{{ grantLc }}" disabled="{{ lcGrantDisabled }}" style="height:36px;padding:0 18px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ lcGrantOpacity }}">منح</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">ID</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">تيك توك</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">التصميم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">يقدّم البث</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">برعاية</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ lcUsers }}" as="lc" hint-placeholder-count="3"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ lc.name }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ lc.customId }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;direction:ltr;text-align:right">{{ lc.tk }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ lc.styleLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ lc.hostLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ lc.sponsorLabel }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;text-align:left;white-space:nowrap"><button onClick="{{ lc.edit }}" style="height:28px;padding:0 10px;margin-left:6px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">تعديل</button><button onClick="{{ lc.del }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer">إزالة</button></td>
+              </tr></sc-for></tbody>
+            </table>
+            <sc-if value="{{ lcEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:32px;text-align:center;color:#5b6274;font-size:13px">ما فيه حسابات ببطاقات مميزة بعد.</div></sc-if>
+          </div>
+        </sc-if>
+
         <!-- THEME -->
         <sc-if value="{{ is.theme }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -1112,6 +1159,23 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         </div>
 
         <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d;display:flex;align-items:center;justify-content:space-between;gap:8px"><span>بطاقة البث المميزة</span><span style="font-weight:500;color:#5b6274">{{ du.lcHint }}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">التصميم</span>
+            <select value="{{ du.lcStyle }}" onChange="{{ du.onLcStyle }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">عادية (بدون تصميم)</option><option value="founder">المؤسس (ذهبي شمباني)</option><option value="platform">حساب المنصة — رسمي</option><option value="vip">مميز (وردي لؤلؤي)</option><option value="diamond">ألماسي (ثلجي)</option></select>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">يقدّم البث</span>
+            <input value="{{ du.lcHost }}" onChange="{{ du.onLcHost }}" maxLength="40" placeholder="اختياري" style="width:190px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">البث برعاية</span>
+            <input value="{{ du.lcSponsor }}" onChange="{{ du.onLcSponsor }}" maxLength="40" placeholder="اختياري" style="width:190px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none">
+          </div>
+          <div style="display:flex;justify-content:flex-start;padding:0 14px 12px"><button onClick="{{ du.saveLc }}" style="height:32px;padding:0 14px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:12.5px;cursor:pointer">حفظ البطاقة</button></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
           <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الصلاحيات</div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
             <span style="font-size:13.5px">تحويل لحساب ستريمر</span>
@@ -1201,7 +1265,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','livecards','theme','levels','stats','live','store'];
 const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة', notes:'النوتات' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -1237,6 +1301,7 @@ class Component extends DCLogic {
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
+    lcUsers:null, lcStyles:null, lcQ:'', lcFound:undefined, lcStyle:'founder', lcSponsor:'', lcHost:'', dLcStyle:null, dLcSponsor:null, dLcHost:null,
     theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
     levels:null, lvEdits:{},
     statsTab:'streamers', streamerStats:null, userStats:null, hrsType:'internal', hrsId:'', hrsUser:null, hrsState:'empty', hrsMode:'add', hrsAmount:'', hrsDate:riyadhDay(Date.now()), hrsReason:'', hrsLog:null, live:null, liveErr:false,
@@ -1276,6 +1341,7 @@ class Component extends DCLogic {
     if(page==='announce') this.loadAnnouncement();
     if(page==='supporters' && !this.state.supporters) this.loadSupporters();
     if(page==='partners' && !this.state.partners) this.loadPartners();
+    if(page==='livecards' && !this.state.lcUsers) this.loadLiveCards();
     if(page==='theme' && !this.state.theme) this.loadTheme();
     if(page==='levels' && !this.state.levels) this.loadLevels();
     if(page==='stats' && !this.state.streamerStats) this.loadStats();
@@ -1310,7 +1376,7 @@ class Component extends DCLogic {
       levelLabel: lvl?`${pts} — ${lvl}`:(pts?`${pts} — بلا مستوى`:'بلا مستوى'), frameLabel: u.equippedFrame?(u.equippedFrame.displayNameAr||u.equippedFrame.frameRef):'—',
       giftsLabel:`${st.total_gifts||0} (${st.total_gifts_value||0})`,
       roleBg: u.role==='admin'?'#241a3d':'#1d2130', roleColor: u.role==='admin'?'#c4b5fd':'#9199ab',
-      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'', emailDraft:u.email||'' }) };
+      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'', emailDraft:u.email||'', dLcStyle:null, dLcSponsor:null, dLcHost:null }) };
   }
   userAction(key, call, ok, fail){ return this.busy(key, call).then(r=>{ if(!r) return; if(r.success){ if(ok) this.flash(ok); this.loadUsers(); } else this.flash(fail(r),'err'); return r; }); }
 
@@ -1343,6 +1409,7 @@ class Component extends DCLogic {
   loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
   loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[] }); }); }
   loadPartners(){ return A.adminListPartners().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ partners:r.partners||[] }); }); }
+  loadLiveCards(){ return A.adminListLiveCardStyles().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ lcUsers:r.users||[], lcStyles:r.styles||{} }); }); }
   loadTheme(){ return A.getSiteTheme().then(r=>{ const t=r&&r.success?r.theme:null; this.setState(s=>({ theme:{ active:!!t, data:t }, themePreset:t&&t.presetKey?t.presetKey:s.themePreset,
     themeColors: t?{ accent:t.accent||'#7c3aed', accentPink:t.accentPink||'#ff4dff', accent2:t.accent2||'#00c2ff' }:s.themeColors })); }); }
 
@@ -1393,7 +1460,7 @@ class Component extends DCLogic {
       ['الحسابات',[['users','المستخدمون']]],
       ['الدعم',[['support','تذاكر الدعم']]],
       ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
-      ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
+      ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['livecards','بطاقات البث المميزة'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات'],['live','البثوث الشغّالة الآن']]],
       ['المتجر',[['store','إدارة المتجر']]]
     ];
@@ -1442,6 +1509,16 @@ class Component extends DCLogic {
         // «تجربة الحلبة»: يفتح لعبة الحلبة وهي بمرحلة الاختبار (permissions.arena_tester)
         tAr:this.tog(perm('arena_tester')||dRaw.role==='admin'), toggleArena:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح الحلبة دائماً','err'); setPerm('arena_tester'); },
         tSt:this.tog(perm('stream_studio')||dRaw.role==='admin'), toggleStudio:()=>{ if(dRaw.role==='admin') return this.flash('الأدمن يفتح استوديو البث دائماً','err'); setPerm('stream_studio'); },
+        // بطاقة البث المميزة (backend/live-cards/live-card-styles-service.js) — المسودة null = القيمة المحفوظة
+        lcStyle:s.dLcStyle!==null?s.dLcStyle:(dRaw.live_card_style||''),
+        lcSponsor:s.dLcSponsor!==null?s.dLcSponsor:(dRaw.live_card_sponsor||''),
+        lcHost:s.dLcHost!==null?s.dLcHost:(dRaw.live_card_host||''),
+        onLcStyle:e=>this.setState({ dLcStyle:e.target.value }), onLcSponsor:e=>this.setState({ dLcSponsor:e.target.value }), onLcHost:e=>this.setState({ dLcHost:e.target.value }),
+        lcHint:dRaw.live_card_style?'عنده بطاقة مميزة — تظهر لما يفتح بث':'بطاقة عادية',
+        saveLc:()=>{ const st=s.dLcStyle!==null?s.dLcStyle:(dRaw.live_card_style||''); const sp=s.dLcSponsor!==null?s.dLcSponsor:(dRaw.live_card_sponsor||''); const ho=s.dLcHost!==null?s.dLcHost:(dRaw.live_card_host||'');
+          if(!dRaw.custom_id) return this.flash('الحساب ما عنده ID عام.','err');
+          this.userAction('lc',()=>A.adminSetLiveCardStyle(dRaw.custom_id,st||null,sp,ho),st?'تم حفظ البطاقة المميزة.':'رجعت بطاقته للشكل العادي.',r=>'تعذّر الحفظ: '+(r.error||'unknown'))
+            .then(r=>{ if(r&&r.success) this.setState({ dLcStyle:null, dLcSponsor:null, dLcHost:null, lcUsers:null }); }); },
         savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
           this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },
         viewProfile:()=>window.open('profile.html?id='+encodeURIComponent(dRaw.custom_id||''),'_blank'),
@@ -1507,6 +1584,13 @@ class Component extends DCLogic {
     const partners=(s.partners||[]).map(x=>({ ...x, pid:x.customId, cat:CATEGORY_LABELS[x.category]||x.category,
       del:()=>this.ask('حذف هذا الشريك؟',`سيُزال «${x.name}» من شركاء الإبداع بالصفحة الرئيسية.`,'حذف',()=>A.adminDeletePartner(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadPartners(); })) }));
     const pf=s.partnerFound;
+    // ---- بطاقات البث المميزة
+    const lcStyles=s.lcStyles||{};
+    const lcUsers=(s.lcUsers||[]).map(x=>({ ...x, tk:x.tiktok?'@'+x.tiktok:'—', styleLabel:lcStyles[x.style]||x.style, hostLabel:x.host||'—', sponsorLabel:x.sponsor||'—',
+      edit:()=>{ this.setState({ lcQ:x.customId, lcStyle:x.style, lcHost:x.host||'', lcSponsor:x.sponsor||'' }); A.adminFindSupporterUser(x.customId).then(r=>{ if(r&&r.success&&r.user) this.setState({ lcFound:r.user }); }); window.scrollTo({ top:0, behavior:'smooth' }); },
+      del:()=>this.ask('إزالة التصميم المميز؟',`بطاقة «${x.name}» ترجع للتصميم العادي.`,'إزالة',()=>A.adminSetLiveCardStyle(x.customId,null,'','').then(r=>{ if(r&&r.success===false) return this.flash('تعذّرت الإزالة: '+(r.error||'unknown'),'err'); this.flash('تمت الإزالة.'); this.loadLiveCards(); })) }));
+    const lf=s.lcFound;
+    const lcPreview=lf?{ ok:true, label:lf.name, initial:initialOf(lf.name), avatar:lf.avatarBase64||'', color:'#e7e9ee' }:lf===null?{ ok:false, label:'ما فيه حساب بهذا المعرّف.', color:'#fca5a5' }:{ ok:false, label:'ابحث بالمعرّف لعرض الحساب', color:'#5b6274' };
     const partnerPreview=pf?{ ok:true, label:pf.name, initial:initialOf(pf.name), avatar:pf.avatarBase64||'', color:'#e7e9ee' }:pf===null?{ ok:false, label:'ما فيه حساب بهذا المعرّف.', color:'#fca5a5' }:{ ok:false, label:'ابحث بالمعرّف لعرض الحساب', color:'#5b6274' };
 
     // ---- tickets
@@ -1857,6 +1941,16 @@ class Component extends DCLogic {
       partnerAddDisabled:!pf, partnerAddOpacity:pf?1:0.4,
       addPartner:()=>{ if(!pf) return; const v=s.partnerQ.trim();
         this.busy('padd',()=>A.adminAddPartner(v,s.partnerCat)).then(r=>{ if(!r) return; if(r.success){ this.setState({ partnerQ:'', partnerFound:undefined }); this.flash('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.'); this.loadPartners(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      // live card styles
+      lcUsers, lcEmpty:!lcUsers.length, lcQ:s.lcQ, lcPreview, lcStyle:s.lcStyle,
+      onLcStyle:e=>this.setState({ lcStyle:e.target.value }),
+      lcSponsor:s.lcSponsor, lcHost:s.lcHost, onLcSponsor:e=>this.setState({ lcSponsor:e.target.value }), onLcHost:e=>this.setState({ lcHost:e.target.value }),
+      onLcQ:e=>this.setState({ lcQ:e.target.value, lcFound:undefined }),
+      searchLc:()=>{ const v=s.lcQ.trim(); if(!v) return this.flash('اكتب معرّف الحساب أولاً.','err');
+        this.busy('lcsearch',()=>A.adminFindSupporterUser(v)).then(r=>{ if(!r) return; if(r.success&&r.user) this.setState({ lcFound:r.user }); else { this.setState({ lcFound:null }); this.flash('ما فيه حساب بهذا المعرّف.','err'); } }); },
+      lcGrantDisabled:!lf, lcGrantOpacity:lf?1:0.4,
+      grantLc:()=>{ if(!lf) return; const v=s.lcQ.trim();
+        this.busy('lcgrant',()=>A.adminSetLiveCardStyle(v,s.lcStyle,s.lcSponsor,s.lcHost)).then(r=>{ if(!r) return; if(r.success){ this.setState({ lcQ:'', lcFound:undefined, lcSponsor:'', lcHost:'' }); this.loadUsers&&this.state.users&&this.loadUsers(); this.flash('تم المنح — يظهر التصميم ببطاقته أول ما يفتح بث.'); this.loadLiveCards(); } else this.flash('تعذّر المنح: '+(r.error||'unknown'),'err'); }); },
       // theme
       themeStatus:s.theme&&s.theme.active?{ label:'ثيم مناسبة مفعّل حالياً على الصفحة الرئيسية'+(s.theme.data&&s.theme.data.presetKey&&THEME_PRESETS[s.theme.data.presetKey]?' ('+(s.theme.data.presetKey==='national-day'?'اليوم الوطني السعودي':'يوم التأسيس')+')':'')+'.', dot:'#a855f7', border:'#33285a', bg:'#1d1830' }
         :{ label:s.theme?'الموقع على ألوانه الافتراضية — لا يوجد ثيم مفعّل.':'جارٍ التحميل…', dot:'#5b6274', border:'#262a37', bg:'#14161d' },

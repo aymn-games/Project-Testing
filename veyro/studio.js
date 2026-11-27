@@ -83,11 +83,11 @@
         { key: 'alerts', label: 'الأليرتات', icon: 'bell', title: 'الأليرتات', desc: 'اختر أليرت من مكتبتك وحدد متى يشتغل: هدايا بعدد عملات، تكبيسات، دخولية شخص، أفضل معجب…' },
         { key: 'tops', label: 'التوب', icon: 'trophy', title: 'التوب', desc: 'أكثر المشاهدين تفاعلاً بالبث، يتحدّث لحاله.' },
         { key: 'goals', label: 'الأهداف', icon: 'bars', title: 'الأهداف والعدّادات', desc: 'هدف يتعبّى قدام المشاهدين، وعدّادات لأرقام البث.' },
-        { key: 'donations', label: 'الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
+        { key: 'donations', label: 'أليرتات الدونيشن', icon: 'dollar', title: 'أليرتات الدونيشن', desc: 'الدعم المادي من Streamlabs (كريترز/دكان تب وغيره): اختر أليرت من مكتبتك لكل مبلغ، وحدد مكان اسم الداعم وصورته ومدته.' },
         { key: 'lastsup', label: 'آخر داعم', icon: 'crown', title: 'آخر داعم', desc: 'آخر واحد دعمك بالدونيشن (Streamlabs): اسمه ومبلغه، ويتحدّث مع كل دعم.' },
         { key: 'audio', label: 'الصوت', icon: 'speaker', title: 'الصوت', desc: 'قارئ يقرأ رسائل الشات بصوت، ومشغّل أغاني يشغّل اللي يطلبه المشاهدين بأمر بالشات.' },
         { key: 'jar', label: 'الوعاء', icon: 'gift', title: 'وعاء الهدايا', desc: 'وعاء يتعبّى بصور الهدايا اللي توصلك.' },
-        { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'عناوين وجمل بخطوط عربية وتأثيرات وحركة.' },
+        { key: 'text', label: 'النصوص', icon: 'text', title: 'النصوص', desc: 'نصوص بخطوط مميزة وزخارف متحركة.' },
         { key: 'icons', label: 'الأيقونات', icon: 'star', title: 'الأيقونات والملصقات', desc: 'أيقونات وإيموجي تزيّن فيها شاشتك.' },
         { key: 'shapes', label: 'الأشكال', icon: 'shapes', title: 'الأشكال', desc: 'لوحات وإطارات وشرائط تحط فوقها الأدوات.' },
         { sep: true },
@@ -96,7 +96,14 @@
     ];
     // «الأيقونات» و«الأشكال» انشالت من القائمة (طلب صاحب المنصة). أقسامها باقية فوق عشان العناصر
     // الموجودة بالشاشات تنفتح وتتعدّل من «الطبقات»، والرابط المباشر #tools/icons يشتغل.
-    var TOOL_KEYS = ['library', 'alerts', 'donations', 'lastsup', 'tops', 'goals', 'jar', 'audio', 'text'];
+    // الأدوات بمجموعات (القائمة الجانبية): كل مجموعة عنوان وتحته أقسامها — وبالجوال نفس الترتيب كشريط
+    var TOOL_GROUPS = [
+        { label: 'التنبيهات', keys: ['library', 'alerts'] },
+        { label: 'التفاعل', keys: ['tops', 'goals', 'jar'] },
+        { label: 'الدونيشن', keys: ['donations', 'lastsup'] },
+        { label: 'الصوت والنصوص', keys: ['audio', 'text'] }
+    ];
+    var TOOL_KEYS = [].concat.apply([], TOOL_GROUPS.map(function (g) { return g.keys; }));
     var VIEW_TITLES = { home: 'الرئيسية', screens: 'الشاشات', stats: 'إحصائيات البث', editor: 'أدوات البث' };
     var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء الهدايا', alert: 'أليرت', icon: 'أيقونة', shape: 'شكل', tts: 'القارئ الصوتي', music: 'مشغّل الأغاني', lastdonation: 'آخر دعم' };
     var TYPE_ICONS = { text: 'text', top: 'trophy', goal: 'bars', counter: 'bars', jar: 'gift', alert: 'bell', icon: 'star', shape: 'shapes', tts: 'speaker', music: 'note', lastdonation: 'dollar' };
@@ -152,17 +159,10 @@
             { label: 'القط الدائري', sub: 'قط مدوّر من زجاج بنيون قوس قزح، يتعبّى بالدعم', type: 'goal', set: { design: 'blob', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'aurora', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#ff8fd2' } },
             { label: 'هلال الفراشات', sub: 'هلال زجاج فضّي وفراشتين، يتعبّى بالدعم', type: 'goal', set: { design: 'crescent', metric: 'diamonds', title: 'هدف الدعم', target: 5000, autoNext: true, palette: 'silver', speed: 'normal', bubbles: true, showNums: true, showPct: false, size: 3.4, color: '#b9bfff' } }
         ],
+        // تصاميم النصوص الجديدة (القديمة انشالت كلها بطلب صاحب المنصة)
         text: [
-            { label: 'عنوان ذهبي', type: 'text', set: { text: 'حياكم الله', style: 'gold', font: 'lalezar', size: 9 } },
-            { label: 'نيون', type: 'text', set: { text: 'LIVE', style: 'neon', font: 'changa', color: '#4dd8ff', size: 8, anim: 'glow' } },
-            { label: 'بخلفية', type: 'text', set: { text: 'تابعني 💜', style: 'pill', font: 'cairo', size: 5 } },
-            { label: 'نار', type: 'text', set: { text: 'تحدي اليوم', style: 'fire', font: 'cairo', size: 7 } },
-            { label: 'زجاجي', type: 'text', set: { text: 'اكتب سؤالك بالشات', style: 'glass', font: 'tajawal', size: 4.5 } },
-            { label: 'نص عادي', type: 'text', set: { text: 'اكتب نصك هنا', style: 'outline', size: 6 } },
-            { label: 'لوحة الأصدقاء — مخمل', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'velvet', style: 'plain', color: '#f6eefe', font: 'cairo', size: 4, bnBg: 'shimmer', bnMotion: 'static' } },
-            { label: 'لوحة الأصدقاء — خشب', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'wood', style: 'plain', color: '#3a220e', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
-            { label: 'لوحة الأصدقاء — ورق فاخر', type: 'text', set: { text: 'حياكم في البث', banner: 'peek', bnMat: 'paper', bnTextFx: 'foil', style: 'plain', color: '#3a2a1a', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'static' } },
-            { label: 'لوحة الأصدقاء — شريط', type: 'text', set: { text: 'تابعني وفعّل الجرس 💜', banner: 'peek', bnMat: 'linen', style: 'plain', color: '#3a2e22', font: 'cairo', size: 4, bnBg: 'none', bnMotion: 'marquee', bnWidth: 12 } }
+            { label: 'ريشة اللانهاية', sub: 'ريشة على شكل ∞ تلف النص، وطيور وقلبين — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'elmessiri', size: 7, color: '#ffffff', deco: 'infinity' } },
+            { label: 'ريشتين ونجوم', sub: 'لانهاية بريشتين متقابلتين، ونجوم تلمع وقلب — متحركة بنعومة', type: 'text', set: { text: 'حياكم', font: 'ruwudu', size: 7, color: '#ffffff', deco: 'infinity2' } }
         ],
         shapes: [
             { label: 'لوحة زجاجية', sub: 'خلفية للأدوات', type: 'shape', opts: { shape: 'round', fill: 'glass', w: 60, h: 36 } },
@@ -263,7 +263,8 @@
      * (POST /api/screens/test-alert — الرابط يسحبه خلال ثانيتين). لو الأليرت جديد نحفظ أول.
      */
     function tryAlert(it, type) {
-        O.alertDemo(it.id, type);
+        // المعاينة هنا صامتة: الصوت يطلع من تطبيق البث بس (لا يتكرر مرتين)
+        O.alertDemo(it.id, type, { mute: true });
         if (!cur) return;
         if (save.pending) flush();
         api('POST', '/api/screens/test-alert', { id: cur.id, itemId: it.id, type: type }).then(function (d) {
@@ -499,10 +500,12 @@
         navEl.appendChild(navItem('الرئيسية', 'home', view === 'home', function () { go('home'); }));
         navEl.appendChild(navItem('الشاشات', 'screens', view === 'screens', function () { go('screens'); }, screens.length ? String(screens.length) : ''));
         navEl.appendChild(navItem('إحصائيات البث', 'bars', view === 'stats', function () { go('stats'); }));
-        navEl.appendChild(el('div', 'vy-group', 'أدوات البث'));
-        TOOL_KEYS.forEach(function (k) {
-            var sec = secOf(k);
-            navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }));
+        TOOL_GROUPS.forEach(function (g) {
+            navEl.appendChild(el('div', 'vy-group', g.label));
+            g.keys.forEach(function (k) {
+                var sec = secOf(k);
+                navEl.appendChild(navItem(sec.label, sec.icon, view === 'editor' && section === k && panelOpen && !selectedId, function () { pickSection(k); }));
+            });
         });
         navEl.appendChild(el('div', 'vy-group', 'الشاشة المفتوحة'));
         ['layers', 'screen'].forEach(function (k) {
@@ -525,6 +528,9 @@
         if (next === 'editor' && !cur) { if (screens[0]) openScreen(screens[0]); else { next = 'screens'; } }
         var changed = next !== view;
         view = next;
+        syncFocus();
+        if (view !== 'editor') setSim(false);
+        syncMini();
         ['home', 'screens', 'stats', 'editor'].forEach(function (v) {
             var sEl = document.getElementById('vy-' + v);
             sEl.hidden = v !== view;
@@ -609,6 +615,7 @@
     function group(box, title, sub) {
         var key = (selectedId ? (find(selectedId) || {}).type : section) + ':' + title;
         var g = el('section', 'ob-grp' + (grpShut[key] ? ' shut' : ''));
+        g.setAttribute('data-title', title);
         var h = button('', 'ob-grp-h', function () {
             var shut = g.classList.toggle('shut');
             grpShut[key] = shut;
@@ -766,11 +773,30 @@
 
     /* ---------------- المعاينة ---------------- */
 
+    /*
+     * «وضع التعديل»: أي عنصر تفتحه ياخذ الشاشة كاملة — شاشة البث الحقيقية كبيرة فوق، وإعداداته
+     * تحتها بأعمدة، بدون القائمة الجانبية. الصورة والاسم والرسالة (أليرت الفيديو) تنسحب على الشاشة
+     * نفسها (partHit). الرجوع (→ أو Esc) يرجّع المحرر العادي. القارئ الصوتي له صفحته (openTts).
+     */
+    function focusOn() {
+        var it = view === 'editor' && selectedId && find(selectedId);
+        return Boolean(it && it.type !== 'tts');
+    }
+    function syncFocus() {
+        var f = focusOn();
+        if (app.classList.contains('focus') === f) return false;
+        app.classList.toggle('focus', f);
+        // الخروج من وضع التعديل فيه حركة (اللوحة ترجع لمكانها): نعيد القياس بعدها
+        setTimeout(function () { if (!drag && view === 'editor') renderCanvas(); }, 400);
+        return true;
+    }
+
     function renderCanvas() {
         if (!cur) return;
+        syncFocus();
         var st = S();
         var o = orientNow();
-        var pad = 28;
+        var pad = app.classList.contains('focus') ? 14 : 28;
         var W = stage.clientWidth - pad * 2, H = stage.clientHeight - pad * 2 - 54;
         if (W < 50 || H < 50) return;
         var box = O.frameIn(TEMPLATE, o, W, H);
@@ -790,6 +816,12 @@
         tag.appendChild(el('b', null, o === 'l' ? '1920×1080' : '1080×1920'));
         tag.appendChild(el('span', null, Math.round(box.w / (o === 'l' ? 1920 : 1080) * 100) + '%'));
         frame.appendChild(tag);
+        if (O.simulating()) {
+            var sv = el('div', 'ob-simtag');
+            sv.appendChild(el('i'));
+            sv.appendChild(el('span', null, 'تجربة بث — بالموقع بس'));
+            frame.appendChild(sv);
+        }
         if (!st.items.filter(function (x) { return x.type !== 'tts'; }).length) {
             var em = el('div', 'ob-empty');
             em.appendChild(el('b', null, 'شاشة فاضية'));
@@ -804,16 +836,36 @@
     }
 
     function buildNode(it) {
-        var n = O.buildItem(it, F, { preview: true });
+        // العنصر المفتوح بوضع التعديل: أليرت الفيديو يبان واقف بشكله الحقيقي (pose) عشان ترتّبه على الشاشة
+        var n = O.buildItem(it, F, { preview: true, pose: it.id === selectedId && focusOn() });
         if (it.hidden) n.classList.add('ob-hidden');
         if (it.id === selectedId) {
             n.classList.add('ob-sel');
+            if (O.isVideoAlert(it) && O.partsOf(it)) n.setAttribute('data-psel', partSel);
             var h = el('span', 'ob-handle');
             h.title = 'كبّر / صغّر';
             n.appendChild(h);
         }
         nodes[it.id] = n;
         return n;
+    }
+
+    /*
+     * وضع التعديل: الصورة والاسم والرسالة بالأليرت المحدد تنسحب على الشاشة نفسها.
+     * تنبني متأخر (مع حركة المعاينة)، فنلقاها وقت الضغط. شكل التحديد بالـCSS (.ob-sel[data-psel]).
+     */
+    var PART_CLS = { avatar: 'agp-so-vav', name: 'agp-so-vname', msg: 'agp-so-vmsg' };
+    /** أي عنصر (صورة/اسم/رسالة) تحت المؤشر — العناصر نفسها ما تستقبل الماوس (pointer-events:none). */
+    function partHit(n, x, y) {
+        if (!n) return null;
+        var keys = Object.keys(PART_CLS);
+        for (var i = keys.length - 1; i >= 0; i--) {
+            var q = n.querySelector('.' + PART_CLS[keys[i]]);
+            if (!q) continue;
+            var r = q.getBoundingClientRect(), pad = 6;
+            if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) return { el: q, key: keys[i] };
+        }
+        return null;
     }
 
     function placeNode(it) {
@@ -845,7 +897,17 @@
         body.classList.toggle('closed', !panelOpen);
     }
 
+    var partDrag = null;
     frame.addEventListener('pointerdown', function (e) {
+        var selIt = selectedId && find(selectedId);
+        var hit = selIt && app.classList.contains('focus') && !(e.target.closest && e.target.closest('.ob-handle')) && partHit(nodes[selIt.id], e.clientX, e.clientY);
+        if (hit) {
+            e.preventDefault();
+            partDrag = { it: selIt, key: hit.key, el: hit.el, box: hit.el.closest('.agp-so-vbox'), pid: e.pointerId, moved: false, sx: e.clientX, sy: e.clientY };
+            hit.el.classList.add('ob-vdrag');
+            nodes[selIt.id].setAttribute('data-psel', hit.key);
+            return;
+        }
         var handle = e.target.closest && e.target.closest('.ob-handle');
         var n = e.target.closest && e.target.closest('.agp-so-item');
         if (!n) { if (selectedId) select(null); return; }
@@ -866,6 +928,19 @@
     });
 
     window.addEventListener('pointermove', function (e) {
+        if (partDrag && e.pointerId === partDrag.pid) {
+            if (Math.abs(e.clientX - partDrag.sx) + Math.abs(e.clientY - partDrag.sy) < 3 && !partDrag.moved) return;
+            partDrag.moved = true;
+            var r = partDrag.box.getBoundingClientRect();
+            var px = clamp((e.clientX - r.left) / r.width * 100, 0, 100), py = clamp((e.clientY - r.top) / r.height * 100, 0, 100);
+            px = Math.round(px * 10) / 10; py = Math.round(py * 10) / 10;
+            var it2 = partDrag.it;
+            if (!it2.parts) it2.parts = JSON.parse(JSON.stringify(O.partsOf(it2)));
+            it2.parts[partDrag.key] = Object.assign({}, O.partsOf(it2)[partDrag.key], { x: px, y: py });
+            partDrag.el.style.left = px + '%';
+            partDrag.el.style.top = py + '%';
+            return;
+        }
         if (resize && e.pointerId === resize.pid) {
             // المقبض بالزاوية اليسار تحت: نبعد عنه = يكبر
             var d = ((resize.sx - e.clientX) + (e.clientY - resize.sy)) / 2;
@@ -885,6 +960,18 @@
     });
 
     function endPointer(e) {
+        if (partDrag && e.pointerId === partDrag.pid) {
+            var pd = partDrag;
+            partDrag = null;
+            pd.el.classList.remove('ob-vdrag');
+            var again = partSel !== pd.key || !pd.moved;
+            partSel = pd.key;
+            // ضغطة بدون سحب = يفتح ستايل العنصر بتبويب «النصوص»
+            if (!pd.moved) { partOpen = pd.key; tabSel[pd.it.type] = 'النصوص'; }
+            if (pd.moved) { commit(); rebuildNode(pd.it); }
+            if (again) renderPanel();
+            return;
+        }
         if (resize && e.pointerId === resize.pid) { resize = null; commit(); renderPanel(); return; }
         if (!drag || e.pointerId !== drag.pid) return;
         var moved = drag.moved;
@@ -924,8 +1011,53 @@
         renderZoom();
         if (file) toast('خلفيتك للمعاينة بس — ما تنحفظ ولا تطلع برابط الشاشة');
     }
+    /*
+     * «تجربة» (بالموقع بس — ما يوصل لرابط الشاشة بـOBS)، وتشتغل مرة وحدة لين النهاية:
+     * - أليرت مفتوح بوضع التعديل: يشغّل هالأليرت بس، مرة وحدة.
+     * - أداة بيانات مفتوحة (توب، هدف، وعاء…): بث وهمي قصير بدون أليرتات، وتقف لحالها.
+     * - بدون عنصر مفتوح: بث وهمي للشاشة كلها، أليرت واحد بالمرة، وتقف لحالها.
+     */
+    var simAlert = null;
+    function simTarget() { var it = app.classList.contains('focus') && selectedId && find(selectedId); return it || null; }
+    function setSim(on) {
+        if (!on) {
+            if (O.simulating()) O.simulate(false);
+            simAlert = null;
+            renderZoom();
+            renderCanvas();
+            return;
+        }
+        if (O.simulating() || simAlert) return;
+        var it = simTarget();
+        if (it && it.type === 'alert') {
+            simAlert = it.id;
+            O.alertDemo(it.id, (it.events || ['gift'])[0]);
+            renderZoom();
+            var t = setInterval(function () {
+                if (simAlert !== it.id) { clearInterval(t); return; }
+                if (!O.alertBusy(it.id)) { clearInterval(t); simAlert = null; renderZoom(); }
+            }, 400);
+            return;
+        }
+        O.simulate(true, { ticks: it ? 12 : 20, alerts: !it, onEnd: function () { renderZoom(); renderCanvas(); } });
+        renderZoom();
+        renderCanvas();
+        toast(it ? 'تجربة لهالأداة بالموقع بس — تقف لحالها' : 'تجربة بث بالموقع بس — ما يوصل شي لشاشة البث، وتقف لحالها');
+    }
     function renderZoom() {
         zoomBar.textContent = '';
+        var simOn = O.simulating() || Boolean(simAlert);
+        var tgt = simTarget();
+        var sb = el('button', 'ob-btn ob-simb' + (simOn ? ' on' : ' primary'));
+        sb.type = 'button';
+        sb.innerHTML = svg(ic(simOn ? 'pause' : 'play'));
+        sb.appendChild(el('span', null, simOn ? (simAlert ? 'يشتغل…' : 'وقّف التجربة') : tgt && tgt.type === 'alert' ? 'جرّب الأليرت' : tgt ? 'جرّب الأداة' : 'تجربة بث'));
+        sb.title = tgt && tgt.type === 'alert' ? 'يشغّل هالأليرت مرة وحدة بالمعاينة بس — ما يوصل لشاشة البث'
+            : 'بث وهمي قصير بالمعاينة بس (هدايا وتكبيسات ومتابعات ودونيشن) ويقف لحاله — ما يوصل لشاشة البث';
+        if (simAlert) sb.disabled = true;
+        sb.addEventListener('click', function () { setSim(!O.simulating()); });
+        zoomBar.appendChild(sb);
+        zoomBar.appendChild(el('i', 'ob-zsep'));
         zoomBar.appendChild(el('span', null, 'خلفية المعاينة'));
         PREVIEWS.forEach(function (p) {
             zoomBar.appendChild(button(p.label, 'ob-btn' + (!localBg && (S().preview || 'checker') === p.key ? ' primary' : ' ghost'), function () {
@@ -991,6 +1123,8 @@
             panel.appendChild(head(TYPE_NAMES[it.type] || 'عنصر', itemName(it), function () { select(null); }));
             panel.appendChild(itemBar(it));
             propsPane(it, pb);
+            var tb = tabify(it, pb);
+            if (tb) panel.appendChild(tb);
         } else {
             var sec = SECTIONS.filter(function (s) { return s.key === section; })[0] || SECTIONS[0];
             panel.appendChild(head(sec.title, sec.desc));
@@ -999,6 +1133,7 @@
             if (sec.key === 'alerts' && TOOLS.alerts) pb.appendChild(el('div', 'ob-gtitle', 'أليرتات بطاقة (بدون فيديو)'));
             if (sec.key === 'audio') ttsCard(pb);
             if (TOOLS[sec.key]) toolsPane(TOOLS[sec.key].filter(function (t) { return t.type !== 'tts'; }), pb, sec.key === 'jar');
+            if (sec.key === 'text') pb.appendChild(el('div', 'ob-hint', 'تصاميم جديدة تنضاف تباعاً.'));
             // قوالب التوب من مكتبة فيرو (ينشرها الأدمن)
             if (sec.key === 'tops') {
                 loadVyLib(function () { if (libOf('top').length && section === 'tops' && !selectedId) renderPanel(); });
@@ -1024,12 +1159,132 @@
         }
         panel.appendChild(pb);
         syncWide();
+        if (syncFocus()) renderCanvas();
+        renderFocusList();
+        renderZoom(); // زر «تجربة» يتغيّر حسب العنصر المفتوح
     }
 
-    /** المكتبة والأليرتات (وإعدادات أي أليرت) = لوحة عريضة، وشاشة البث تصغر؛ تقفلها ترجع تتمدد. */
+    /*
+     * وضع التعديل — يمين الشاشة: كل العناصر اللي من نفس النوع بالشاشة (كل الأليرتات مثلاً)، واللي تعدّله الحين
+     * مميّز. الضغط على أي واحد يفتحه مكانه، و«+» يرجّع لقسمه عشان تضيف جديد.
+     */
+    var LIST_NAMES = { alert: 'الأليرتات', top: 'التوب', goal: 'الأهداف', counter: 'العدّادات', jar: 'الوعاء', text: 'النصوص', icon: 'الأيقونات', shape: 'الأشكال', lastdonation: 'آخر داعم', music: 'مشغّل الأغاني' };
+    var LIST_SECS = { alert: 'alerts', top: 'tops', goal: 'goals', counter: 'goals', jar: 'jar', text: 'text', icon: 'icons', shape: 'shapes', lastdonation: 'lastsup', music: 'audio' };
+    var flist = el('aside', 'ob-flist glass');
+    flist.setAttribute('aria-label', 'عناصر الشاشة');
+    body.appendChild(flist);
+    function renderFocusList() {
+        var cur0 = selectedId && find(selectedId);
+        flist.textContent = '';
+        if (!cur0 || !app.classList.contains('focus')) return;
+        var same = S().items.filter(function (x) { return x.type === cur0.type; }).slice().reverse();
+        var h = el('div', 'ob-fl-h');
+        h.appendChild(el('b', null, (LIST_NAMES[cur0.type] || TYPE_NAMES[cur0.type] || 'العناصر') + ' بهالشاشة'));
+        h.appendChild(el('span', 'ob-fl-n', String(same.length)));
+        flist.appendChild(h);
+        var ul = el('div', 'ob-fl-list');
+        same.forEach(function (x) {
+            var on = x.id === cur0.id;
+            var b = button('', 'ob-fl-i' + (on ? ' on' : '') + (x.hidden ? ' off' : ''), function () { if (!on) select(x.id); });
+            var icn = el('span', 'ob-fl-ic');
+            icn.innerHTML = svg(ic(TYPE_ICONS[x.type] || 'star'));
+            b.appendChild(icn);
+            var t = el('span', 'ob-fl-t');
+            t.appendChild(el('b', null, x.type === 'alert' && O.isVideoAlert(x) ? (x.video.name || 'أليرت فيديو') : itemName(x)));
+            var sub = x.type === 'alert' ? trigSummary(x) : '';
+            if (x.hidden) sub = 'مخفي' + (sub ? ' · ' + sub : '');
+            if (sub) t.appendChild(el('small', null, sub));
+            b.appendChild(t);
+            if (on) b.appendChild(el('span', 'ob-fl-now', 'تعدّله الحين'));
+            if (on) b.setAttribute('aria-current', 'true');
+            ul.appendChild(b);
+        });
+        flist.appendChild(ul);
+        var sec = LIST_SECS[cur0.type];
+        if (sec) {
+            var add = button('', 'ob-btn ghost ob-fl-add', function () { select(null); go('editor', sec); });
+            add.innerHTML = svg(UI.plus);
+            add.appendChild(el('span', null, 'إضافة ' + (cur0.type === 'alert' ? 'أليرت' : 'جديد')));
+            flist.appendChild(add);
+        }
+        var cur1 = ul.querySelector('.on');
+        if (cur1 && cur1.scrollIntoView) cur1.scrollIntoView({ block: 'nearest' });
+    }
+
+    /*
+     * تبويبات إعدادات العنصر: بدل مجموعات طويلة تحت بعض (الأليرت كان 4 شاشات تمرير)، كل مجموعة
+     * تنحط بتبويب قصير فوق اللوحة، ويبين تبويب واحد بس. المجموعات نفسها ما تغيّرت (group())،
+     * والتبويب ينعرف من عنوانها هنا. اللي قبل أول مجموعة (أزرار «جرّب») وبعد آخرها (الملاحظات)
+     * يبين بكل التبويبات، واللي بين مجموعتين يمشي مع اللي بعده. عنصر فيه data-tab يروح لتبويبه.
+     */
+    var TAB_OF = {
+        'متى يشتغل': 'متى يشتغل', 'الصوت والمدة': 'الصوت',
+        'الحجم والمكان': 'الشكل', 'الحجم والألوان والخلفية': 'الشكل', 'الشكل والحركة': 'الشكل', 'الحجم واللون': 'الشكل', 'الشكل': 'الشكل', 'المقاس': 'الشكل',
+        'العناصر': 'النصوص', 'وقت الظهور بالأليرت': 'النصوص', 'نص الرسالة': 'النصوص', 'النص فوق الفيديو': 'النصوص', 'النصوص': 'النصوص',
+        'المحتوى': 'المحتوى', 'التصميم والمحتوى': 'المحتوى', 'الهدف': 'الهدف',
+        'قوالب من مكتبة فيرو': 'الإطار', 'الإطار': 'الإطار', 'الألوان': 'الألوان', 'العنوان والحجم': 'العنوان والحجم',
+        'الحركة والأرقام': 'الحركة', 'الحركة': 'الحركة', 'نص الهدف': 'شكل النص', 'كلام النص ومكانه': 'كلام النص',
+        'الأيقونات والخطوط': 'الخطوط', 'الحجم': 'الخطوط',
+        'التشغيل': 'التشغيل', 'الطابور': 'التشغيل', 'أوامر الشات': 'الأوامر', 'الصلاحيات': 'الأوامر',
+        // الهدف: ألوان السائل مع شكله
+        'goal:الألوان': 'الشكل',
+        'lastdonation:الحجم واللون': 'الخطوط'
+    };
+    var TAB_ORDER = ['متى يشتغل', 'الهدف', 'المحتوى', 'التشغيل', 'الأوامر', 'الشكل', 'الإطار', 'الألوان', 'الخطوط', 'العنوان والحجم', 'الحركة', 'شكل النص', 'كلام النص', 'النصوص', 'الصوت'];
+    function tabbed(n, t) { n.setAttribute('data-tab', t); return n; }
+    var tabSel = {}; // آخر تبويب لكل نوع عنصر (يبقى لين تسكّر الصفحة)
+    function tabOf(type, title) { return TAB_OF[type + ':' + title] || TAB_OF[title] || title; }
+    function tabify(it, pb) {
+        var kids = Array.prototype.slice.call(pb.children);
+        var named = kids.map(function (k) {
+            var t = k.getAttribute('data-tab');
+            if (!t && k.classList.contains('ob-grp')) t = tabOf(it.type, k.getAttribute('data-title'));
+            return t || '';
+        });
+        var first = -1, last = -1;
+        named.forEach(function (t, i) { if (t) { if (first < 0) first = i; last = i; } });
+        if (first < 0) return null;
+        var of = new Array(kids.length), next = '';
+        for (var i = last; i >= first; i--) { if (named[i]) next = named[i]; of[i] = next; }
+        var names = [];
+        of.forEach(function (t) { if (t && names.indexOf(t) === -1) names.push(t); });
+        if (names.length < 2) return null;
+        var rank = function (t) { var r = TAB_ORDER.indexOf(t); return r < 0 ? 99 : r; };
+        names.sort(function (a, b) { return rank(a) - rank(b); });
+        var active = names.indexOf(tabSel[it.type]) !== -1 ? tabSel[it.type] : names[0];
+        pb.classList.add('tabbed');
+        // مجموعة وحدة بالتبويب = بدون عنوانها (التبويب هو العنوان)، وأكثر = عناوين ثابتة ما تنطوي
+        names.forEach(function (t) {
+            var gs = kids.filter(function (k, j) { return of[j] === t && k.classList.contains('ob-grp'); });
+            gs.forEach(function (g) { g.classList.remove('shut'); g.classList.toggle('solo', gs.length === 1); });
+        });
+        var bar = el('div', 'ob-ptabs ob-itabs');
+        bar.setAttribute('role', 'tablist');
+        function show(t) {
+            active = t;
+            tabSel[it.type] = t;
+            kids.forEach(function (k, j) { k.classList.toggle('ob-tabhide', Boolean(of[j]) && of[j] !== t); });
+            Array.prototype.forEach.call(bar.children, function (b) {
+                var on = b.getAttribute('data-t') === t;
+                b.classList.toggle('on', on);
+                b.setAttribute('aria-selected', String(on));
+            });
+        }
+        names.forEach(function (t) {
+            var b = button(t, '', function () { if (t === active) return; show(t); pb.scrollTop = 0; });
+            b.setAttribute('data-t', t);
+            b.setAttribute('role', 'tab');
+            bar.appendChild(b);
+        });
+        show(active);
+        var w = el('div', 'ob-itabs-w');
+        w.appendChild(bar);
+        return w;
+    }
+
+    /** المكتبة = لوحة عريضة (شبكة فيديوهات)، وشاشة البث تصغر؛ باقي الأقسام والإعدادات بعرضها العادي عشان المعاينة تبقى كبيرة. */
     function syncWide() {
-        var it = selectedId && find(selectedId);
-        var w = panelOpen && (it ? it.type === 'alert' : (section === 'library' || section === 'alerts'));
+        var w = panelOpen && !selectedId && section === 'library';
         if (body.classList.contains('wide') === w) return;
         body.classList.toggle('wide', w);
         setTimeout(function () { if (!drag) renderCanvas(); }, 380);
@@ -1207,7 +1462,7 @@
         else if (it.type === 'lastdonation') lastDonationProps(it, box);
         else if (it.type === 'tts') ttsProps(it, box);
         else if (it.type === 'music') musicProps(it, box);
-        box.appendChild(el('div', 'ob-hint', 'اسحبه بالمعاينة لأي مكان، وكبّره من النقطة اللي بزاويته. بالكيبورد: الأسهم للتحريك، Delete للحذف، Ctrl+D للتكرار.'));
+        box.appendChild(el('div', 'ob-hint', 'اسحبه على شاشة البث لأي مكان، وكبّره من النقطة اللي بزاويته. بالكيبورد: الأسهم للتحريك، Delete للحذف، Ctrl+D للتكرار، Esc للرجوع.'));
     }
 
     /** أزرار العنصر (ترتيب، تكرار، إخفاء، حذف): ثابتة فوق اللوحة، ما تحتاج تنزل لآخرها. */
@@ -1233,7 +1488,9 @@
 
     function textProps(it, box) {
         var tabs = el('div', 'ob-ptabs');
-        [['text', 'النص'], ['banner', 'اللوحة'], ['font', 'الخط'], ['fx', 'التأثير'], ['anim', 'الحركة']].forEach(function (t) {
+        // «اللوحة» و«التأثير» انشالوا مع تصاميم النصوص القديمة — النص الحين بسيط (خط ولون وحركة)
+        if (textTab === 'banner' || textTab === 'fx') textTab = 'text';
+        [['text', 'النص'], ['font', 'الخط'], ['anim', 'الحركة']].forEach(function (t) {
             tabs.appendChild(button(t[1], t[0] === textTab ? 'on' : '', function () { textTab = t[0]; renderPanel(); }));
         });
         box.appendChild(tabs);
@@ -1241,12 +1498,15 @@
             box.appendChild(row('النص', textInput(it.text, 200, function (v) { update(it, 'text', v); }, true), true));
             box.appendChild(row('الحجم', slider(2, 20, 0.5, it.size, function (v) { update(it, 'size', v); })));
             box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); }), true));
+            // الزخرفة حوالين النص (js/agp-stream-overlay.js DECOS)
+            box.appendChild(row('الزخرفة', pills(opts(O.DECOS), it.deco || 'none', function (v) { if (v === 'none') { delete it.deco; update(it, 'deco', undefined, true); } else update(it, 'deco', v, true); }), true));
+            if (it.deco && it.deco !== 'none') box.appendChild(row('لون الزخرفة', swatches(it.decoColor || '#ffffff', function (c) { update(it, 'decoColor', c, true); }), true));
         } else if (textTab === 'font') {
             var g = el('div', 'ob-fgrid');
             var cur2 = it.font || O.DEFAULT_FONT;
             O.FONTS.forEach(function (f) {
                 O.loadFont(f);
-                var b = button('', 'ob-fbtn' + (f.key === cur2 ? ' on' : ''), function () { update(it, 'font', f.key, true); });
+                var b = button('', 'ob-fbtn' + (f.key === O.fontOf(cur2).key ? ' on' : ''), function () { update(it, 'font', f.key, true); });
                 var sample = el('span', null, 'حياكم');
                 sample.style.fontFamily = O.fontStack(f);
                 sample.style.fontWeight = String(f.b);
@@ -1255,44 +1515,9 @@
                 g.appendChild(b);
             });
             box.appendChild(g);
-        } else if (textTab === 'banner') {
-            bannerProps(it, box);
-        } else if (textTab === 'fx') {
-            box.appendChild(row('التأثير', pills(opts(O.TEXT_STYLES), it.style || 'outline', function (v) { update(it, 'style', v, true); }), true));
         } else {
             animRows(it, box);
         }
-    }
-
-    /** «لوحة الأصدقاء»: لوحة بنقط فوق وتحت، وأرنب وقطة يطلّون — كل شي فيها يتخصص. */
-    function bannerProps(it, box) {
-        var on = it.banner === 'peek';
-        box.appendChild(row('اللوحة', pills([{ label: 'بدون', value: 'none' }, { label: 'لوحة الأصدقاء', value: 'peek' }], on ? 'peek' : 'none', function (v) {
-            if (v === 'peek') { it.style = 'plain'; it.bnMat = it.bnMat || 'velvet'; if (!it.color || it.color === '#ffffff') it.color = '#f6eefe'; update(it, 'banner', 'peek', true); }
-            else { delete it.banner; update(it, 'banner', undefined, true); }
-        }), true, 'النص يطلع داخل لوحة وفوقها شخصيات'));
-        if (!on) return;
-        var root = box;
-        box = group(root, 'اللوحة');
-        box.appendChild(row('الخامة', pills([{ label: 'مخمل', value: 'velvet' }, { label: 'كتان', value: 'linen' }, { label: 'خشب', value: 'wood' }, { label: 'جلد', value: 'leather' }, { label: 'ورق فاخر', value: 'paper' }, { label: 'ساتان', value: 'satin' }], it.bnMat || 'velvet', function (v) { delete it.bnColor; update(it, 'bnMat', v, true); }), true, 'شكل اللوحة الحقيقي: ملمسها وإضاءتها وتفاصيلها'));
-        box.appendChild(row('لمسة النص', pills([{ label: 'الأصلي', value: '' }, { label: 'محفور', value: 'deboss' }, { label: 'بارز', value: 'emboss' }, { label: 'ذهب', value: 'foil' }, { label: 'عادي', value: 'plain' }], it.bnTextFx || '', function (v) { if (v) update(it, 'bnTextFx', v, true); else { delete it.bnTextFx; update(it, 'bnTextFx', undefined, true); } }), true, 'ذهب = رقائق ذهبية (يتجاهل لون النص)'));
-        box.appendChild(row('الزوايا', pills([{ label: 'حادة', value: 'sharp' }, { label: 'ناعمة', value: 'soft' }, { label: 'مدوّرة', value: 'round' }], it.bnRound || 'soft', function (v) { update(it, 'bnRound', v, true); }), true));
-        box.appendChild(row('عرض اللوحة', slider(0, 30, 0.5, Number(it.bnWidth) || 0, function (v) { update(it, 'bnWidth', v); }), false, '0 = على قد النص'));
-        box = group(root, 'الشخصيات');
-        box.appendChild(row('الشخصيات', pills([{ label: 'الاثنين', value: 'both' }, { label: 'الأرنب', value: 'bunny' }, { label: 'القطة', value: 'kitten' }, { label: 'بدون', value: 'none' }], it.bnChars || 'both', function (v) { update(it, 'bnChars', v, true); }), true, 'دمى قطيفة'));
-        if (it.bnChars !== 'none') {
-            box.appendChild(row('مكانهم', pills([{ label: 'يمين', value: 'right' }, { label: 'وسط', value: 'center' }, { label: 'يسار', value: 'left' }], it.bnPos || 'center', function (v) { update(it, 'bnPos', v, true); }), true));
-            box.appendChild(row('حركتهم', pills([{ label: 'يطلّون ويرمشون', value: 'peek' }, { label: 'ثابتين', value: 'still' }], it.bnCharAnim || 'peek', function (v) { update(it, 'bnCharAnim', v, true); }), true));
-        }
-        box = group(root, 'الحركة');
-        box.appendChild(row('حركة الخلفية', pills([{ label: 'بدون', value: 'none' }, { label: 'لمعة', value: 'shimmer' }, { label: 'بريق', value: 'sparkle' }, { label: 'تدرّج', value: 'gradient' }, { label: 'تنفّس', value: 'breathe' }, { label: 'فقاعات', value: 'bubbles' }], it.bnBg === 'dots' ? 'sparkle' : it.bnBg || 'none', function (v) { update(it, 'bnBg', v, true); }), true));
-        box.appendChild(row('حركة النص', pills([{ label: 'ثابت', value: 'static' }, { label: 'شريط', value: 'marquee' }, { label: 'كتابة', value: 'type' }, { label: 'ظهور', value: 'pop' }, { label: 'طفو', value: 'float' }], it.bnMotion || 'static', function (v) { update(it, 'bnMotion', v, true); }), true, 'شريط = يمشي، كتابة = ينكتب وينمسح، ظهور = ينط كل شوي'));
-        box = group(root, 'الألوان');
-        optColor(it, box, 'bnColor', 'لون اللوحة', 'الأصلي = لون الخامة');
-        if (['velvet', 'linen', 'leather'].indexOf(it.bnMat || 'velvet') !== -1) optColor(it, box, 'bnStitch', 'لون الخياطة');
-        if (it.bnChars !== 'none' && it.bnChars !== 'kitten') optColor(it, box, 'bnBunny', 'لون الأرنب', 'الأصلي = أبيض');
-        if (it.bnChars !== 'none' && it.bnChars !== 'bunny') optColor(it, box, 'bnKitten', 'لون القطة', 'الأصلي = برتقالي (شقراء)');
-        root.appendChild(el('div', 'ob-hint', 'لون النص وحجمه من «النص»، والخط من «الخط»، وحركة اللوحة كاملة من «الحركة».'));
     }
 
     function animRows(it, box) {
@@ -1815,7 +2040,7 @@
     /** اختيار خط (يفتح عند الضغط عشان اللوحة ما تطول). */
     var ldFontOpen = null;
     function fontPick(it, box, key, label) {
-        var curF = O.FONTS.filter(function (f) { return f.key === it[key]; })[0];
+        var curF = it[key] ? O.fontOf(it[key]) : null;
         var w = el('div', 'ob-sw');
         var tb = button(curF ? curF.label : 'الأصلي', 'ob-pill' + (ldFontOpen === key ? ' on' : ''), function () { ldFontOpen = ldFontOpen === key ? null : key; renderPanel(); });
         if (curF) { O.loadFont(curF); tb.style.fontFamily = O.fontStack(curF); }
@@ -1826,7 +2051,7 @@
         var g = el('div', 'ob-fgrid');
         O.FONTS.forEach(function (f) {
             O.loadFont(f);
-            var b = button('', 'ob-fbtn' + (f.key === it[key] ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
+            var b = button('', 'ob-fbtn' + (it[key] && f.key === O.fontOf(it[key]).key ? ' on' : ''), function () { ldFontOpen = null; update(it, key, f.key, true); });
             var sample = el('span', null, key === 'amtFont' ? '$25' : 'حياكم');
             sample.style.fontFamily = O.fontStack(f);
             sample.style.fontWeight = String(f.b);
@@ -1875,7 +2100,7 @@
             }
             ldStyleRows(it, group(root, 'الأيقونات والخطوط'), des);
             group(root, 'الحجم').appendChild(row('الحجم', slider(1, 8, 0.1, it.size, function (v) { update(it, 'size', v); })));
-            root.appendChild(streamlabsCard());
+            root.appendChild(tabbed(streamlabsCard(), 'المحتوى'));
             return;
         }
         box.appendChild(row('العنوان', textInput(it.title, 40, function (v) { update(it, 'title', v); }), false, 'اختياري — فاضي = بدون عنوان'));
@@ -1886,7 +2111,7 @@
         optColor(it, box, 'boxColor', 'خلفية البطاقة', 'الأصلي = غامق');
         ldStyleRows(it, group(root, 'الأيقونات والخطوط'), 'card');
         sizeColor(it, group(root, 'الحجم واللون'), 1, 8);
-        root.appendChild(streamlabsCard());
+        root.appendChild(tabbed(streamlabsCard(), 'المحتوى'));
     }
 
     /* ---------------- أدوات الصوت: القارئ الصوتي ومشغّل الأغاني ---------------- */
@@ -3319,7 +3544,7 @@
             bgS.addEventListener('input', function () { bgR.querySelector('.ob-rval').textContent = bgS.value + '٪'; });
             kc.appendChild(bgR);
         }
-        box.appendChild(kc);
+        kc.setAttribute('data-tab', 'الشكل');
 
         var root = box;
         triggerRows(it, group(root, 'متى يشتغل'));
@@ -3335,11 +3560,13 @@
             }), true, 'يشتغل مع بداية الأليرت'));
             if (it.soundId) box.appendChild(row('مستوى الصوت الإضافي', slider(0, 1, 0.05, it.soundVol == null ? 0.8 : it.soundVol, function (v) { it.soundVol = v; commit(); })));
         }
-        lookGroup(it, root);
         durationRows(it, box);
+        // تبويب «الشكل»: الحجم أول، بعده الألوان والخلفية، وآخره التفريغ
         box = group(root, 'الحجم والمكان');
         box.appendChild(row('حجم سريع', sizeShortcuts(it), true, 'يوسّط الأليرت ويضبط حجمه على الشاشة'));
         box.appendChild(row('الحجم', slider(1, 20, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        lookGroup(it, root);
+        root.appendChild(kc);
         box = root;
         var parts = O.partsOf(it);
         if (parts) {
@@ -3429,7 +3656,7 @@
     function partsEditor(it, box, parts) {
         var card = el('div', 'ob-card va-parts');
         card.appendChild(el('h3', null, 'الصورة والاسم والرسالة'));
-        card.appendChild(el('div', 'ob-hint', 'اسحب أي عنصر لمكانه، أو اضغطه وعدّله تحت. ▶ يشغّل المعاينة بالتوقيت.'));
+        card.appendChild(el('div', 'ob-hint', 'اسحب الصورة والاسم والرسالة لمكانها على شاشة البث فوق، أو اضغط أي وحدة وعدّل ستايلها هنا. «جرّب» يشغّل الأليرت بالتوقيت.'));
         var vw = Number(it.video.w) || 16, vh = Number(it.video.h) || 9;
         var wEm = 18 * Math.min(1, vw / vh);
         var lay = el('div', 'va-lay');
@@ -3499,7 +3726,8 @@
         }
         clock.textContent = fmtSec(len());
 
-        var ev = { type: (it.events || ['gift'])[0] || 'gift', user: 'اسم الداعم', gift: 'وردة', count: 5, diamonds: 5 };
+        // نفس المثال اللي تطلع فيه المعاينة و«جرّب» (O.partsSample) — الطول والمكان يتطابقون
+        var ev = O.partsSample(it);
         var chips = {};
         function emPx() { return lay.clientWidth / wEm; }
         function paintChip(key) {
@@ -3534,6 +3762,8 @@
                 tx.style.color = p.c || '#fff';
                 tx.style.setProperty('--agp-so-c', p.c || '#fff');
                 c.style.textShadow = p.st ? 'none' : '';
+                // بدون ستايل، البث يكتب النص مباشرة بدون هوامش (partText) — نفس الشي هنا عشان الحجم يتطابق
+                tx.style.padding = p.st ? '' : '0';
                 var f = O.fontOf(p.f || 'notokufi'); O.loadFont(f);
                 c.style.fontFamily = O.fontStack(f); c.style.fontWeight = String(Math.max(700, f.b));
             }
@@ -3546,7 +3776,7 @@
                 af.appendChild(ai);
                 c.appendChild(af);
             } else {
-                c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? String(x[1]).replace('{gift}', 'وردة').replace('{count}', '5').replace('{diamonds}', '5').replace('{name}', 'اسم الداعم') : x[1]));
+                c.appendChild(el('span', 'agp-so-tx', x[0] === 'msg' ? O.fillMsg(x[1], ev) : x[1]));
             }
             c.title = PART_NAMES[x[0]];
             chips[x[0]] = c;
@@ -3758,7 +3988,7 @@
                 var curF = p.f || 'notokufi';
                 O.FONTS.forEach(function (f) {
                     O.loadFont(f);
-                    var fb = button('', 'ob-fbtn' + (f.key === curF ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
+                    var fb = button('', 'ob-fbtn' + (f.key === O.fontOf(curF).key ? ' on' : ''), function () { setPart(key, 'f', f.key, true); });
                     var sample = el('span', null, key === 'name' ? 'أيمن' : 'شكراً');
                     sample.style.fontFamily = O.fontStack(f);
                     sample.style.fontWeight = String(f.b);
@@ -3783,7 +4013,9 @@
             }), true));
         });
         gM.appendChild(el('div', 'ob-hint', 'بالرسالة: {gift} اسم الهدية، {count} العدد، {diamonds} الماس، {name} الاسم.'));
-        box.appendChild(button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); }));
+        var back = button('رجّع للنص البسيط', 'ob-btn ghost', function () { delete it.parts; it.msg = {}; commit(); rebuildNode(it); renderPanel(); });
+        back.setAttribute('data-tab', 'النصوص');
+        box.appendChild(back);
     }
 
     /* أداة التفريغ: معاينة كبيرة + لون/أسود/أبيض/مؤثرات + حماية الشخصية + قطّارة + تلقائي + القوة والنعومة والتقليص والانعكاس */
@@ -4611,8 +4843,22 @@
     /* ---------------- القائمة: طي، درج الجوال، الحساب، تأثيرات الماوس ---------------- */
 
     var NAV_KEY = 'vy:nav-mini';
-    function setMini(on) {
+    /*
+     * آيباد أفقي وشاشات الكمبيوتر الصغيرة (901–1279): بالمحرر القائمة تنطوي لأيقونات بس لحالها، عشان شاشة البث
+     * تاخذ مساحتها. ما ينحفظ كاختيار — اختيار الستريمر («طي القائمة») يرجع بالشاشات الأكبر وبباقي الصفحات.
+     */
+    var miniPref = false;
+    function autoMini() { return view === 'editor' && window.innerWidth > 900 && window.innerWidth < 1280; }
+    function syncMini() {
+        var on = miniPref || autoMini();
+        if (app.classList.contains('mini') === on) return;
         app.classList.toggle('mini', on);
+        setTimeout(function () { if (view === 'editor' && !drag) renderCanvas(); }, 380);
+    }
+    window.addEventListener('resize', syncMini);
+    function setMini(on) {
+        miniPref = on;
+        app.classList.toggle('mini', on || autoMini());
         try { localStorage.setItem(NAV_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
         var cb = document.getElementById('vy-collapse');
         cb.setAttribute('aria-label', on ? 'فتح القائمة' : 'طي القائمة');
