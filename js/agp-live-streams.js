@@ -192,7 +192,9 @@
   var CHAMP_TIERS = ['', 'برونزي', 'فضي', 'ذهبي', 'بلاتيني', 'أسطوري'];
   var LIVE_ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h10v2h3.5v2.5A4.5 4.5 0 0 1 16.6 12 5.5 5.5 0 0 1 13 14.8V17h3v4H8v-4h3v-2.2A5.5 5.5 0 0 1 7.4 12 4.5 4.5 0 0 1 3.5 7.5V5H7zm10 4v3.2A2.5 2.5 0 0 0 18.5 7.5V7zM7 7H5.5v.5A2.5 2.5 0 0 0 7 10.2z"/></svg>';
   var LIVE_ICON_CROWN = '<svg viewBox="0 0 24 18" fill="currentColor" aria-hidden="true"><path d="M2 4l5.5 4.5L12 1l4.5 7.5L22 4l-2 11H4z"/><rect x="4" y="15.5" width="16" height="2.5" rx="1.2"/></svg>';
-  function champLabel(n){ return n >= 5 ? 'أسطورة التوب' : 'بطل ' + CHAMP_TIERS[n]; }
+  // نص الشارة يوضح إنه من التصنيف الأسبوعي: «توب 1 أسبوعي · ذهبي ×3».
+  function champLabel(n){ return 'توب 1 أسبوعي · ' + CHAMP_TIERS[n]; }
+  function champTitle(c){ return 'أخذ المركز الأول بتصنيف الاستريمرز الأسبوعي ' + (c === 1 ? 'مرة وحدة' : c === 2 ? 'مرتين' : c + ' مرات'); }
   function buildBadge(icon, label, count, extraClass){
     var b = document.createElement('span');
     b.className = 'agp-live-badge' + (extraClass ? ' ' + extraClass : '');
@@ -320,9 +322,15 @@
       nameWrap.className = 'agp-live-namewrap';
       var badges = document.createElement('div');
       badges.className = 'agp-live-badges';
-      badges.appendChild(buildBadge(fx.icon, fx.label, fx.count));
+      var mainBadge = buildBadge(fx.icon, fx.label, fx.count);
+      if (fxCard.style === 'champion') mainBadge.title = champTitle(champ);
+      badges.appendChild(mainBadge);
       // صاحب تصميم يدوي وهو بطل توب بعد: شارة البطل جنب شارة التصميم.
-      if (champ && fxCard.style !== 'champion') badges.appendChild(buildBadge(LIVE_ICON_TROPHY, champLabel(champTier), champ, 'champ-extra'));
+      if (champ && fxCard.style !== 'champion') {
+        var extra = buildBadge(LIVE_ICON_TROPHY, champLabel(champTier), champ, 'champ-extra');
+        extra.title = champTitle(champ);
+        badges.appendChild(extra);
+      }
       nameWrap.appendChild(name);
       if (fx.verified) nameWrap.insertAdjacentHTML('beforeend', LIVE_VERIFIED);
       top.appendChild(nameWrap);
