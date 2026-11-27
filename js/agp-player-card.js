@@ -483,6 +483,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 39.59, nameTopPct: 33.48, nameWidthPct: 42.36, nameHeightPct: 36.20,
             textColor: '#1c3a5e'
         },
+        // [غزال الشتاء] الأصل JPG 2000×667 بخلفية بيضاء، فُرّغت الخلفية والفتحة
+        // والفراغات بين القرون، وكُبّر لـ2172×724 (نفس النسبة، بدون مط).
+        // hole 275→727 × 128→580 (دائرة مركزها 501،354)، قرون الغزال ورأسه
+        // يغطون طرف الصورة اليسار — مقصود. name 960→1890 × 270→470 (داخل
+        // اللوح الكحلي بعيد عن الندف المعلّقة والجليد)، content 11→704.
+        // اللوح داكن = أبيض افتراضي.
+        'frame-winter-deer.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 11, contentHeight: 694,
+            avatarLeftPct: 12.66, avatarTopPct: 16.86, avatarWidthPct: 20.81, avatarHeightPct: 65.13,
+            nameLeftPct: 44.20, nameTopPct: 37.32, nameWidthPct: 42.82, nameHeightPct: 28.82
+        },
         // [الدبدوب] hole 189→672 × 156→619, name 800→1960 × 355→580, content 4→689
         'frame-cute-bear.png': {
             canvasW: 2172, canvasH: 724, contentTop: 4, contentHeight: 685,
