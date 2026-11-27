@@ -156,7 +156,7 @@ function renderRules() {
         `كل مرحلة فيها <b>دوائر بعدد اللاعبين</b> ومرقّمة. اكتب <b>رقم دائرة فاضية</b> بالشات قبل نهاية الوقت (${G.settings.pickTime} ثانية).`,
         'تقدر <b>تغيّر رقمك</b> قبل نهاية الوقت، والرقم المحجوز لغيرك ما ينقبل.',
         'مع نهاية الوقت: شخصيتك تمشي لدائرتك، و<b>من لم يختر يُقصى</b> مباشرة.',
-        'بعدها <b>حيّة مميتة</b> تسكن تحت أحد الأرقام عشوائياً، وتلدغ صاحبه ويُقصى. والناجين يطلعون لصف أصغر أعلى الهرم.',
+        `بعدها <b>${(+G.settings.snakes || 1) > 1 ? (+G.settings.snakes) + ' حيّات مميتة' : 'حيّة مميتة'}</b> تسكن تحت ${(+G.settings.snakes || 1) > 1 ? 'أرقام' : 'أحد الأرقام'} عشوائياً، وتلدغ أصحابها ويُقصون مع بعض. والناجين يطلعون لصف أصغر أعلى الهرم.`,
         'آخر لاعب يبقى يوصل <b>القمة</b> ويفوز.'
     ].map(t => `<div class="rrow">${t}</div>`).join('');
     $('#rulesCount').textContent = `${G.players.length} لاعب جاهز`;
@@ -220,12 +220,19 @@ async function playRound() {
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 3) إقصاء عشوائي (القرار هنا قبل الأنيميشن — المشهد يعرضه بس)
     // حدث «الحيّة المميتة»: تبويب ينبّه إن حيّة ساكنة تحت أحد الأرقام ← الكشاف يدوّر ← الحيّة تطلع وتلدغ صاحب الرقم
-    pill('حيّة بين الأرقام'); await snakeCard();
-    const victim = G.alive[Math.floor(Math.random() * G.alive.length)];
+    // كم ضحية هالمرحلة (من الإعدادات) — ما يتعدى الباقين ناقص واحد عشان يبقى بطل
+    const k = Math.max(1, Math.min(+G.settings.snakes || 1, G.alive.length - 1));
+    pill(k > 1 ? `${k} حيّات بين الأرقام` : 'حيّة بين الأرقام'); await snakeCard(k);
+    const pool = G.alive.slice(), victims = [];
+    for (let i = 0; i < k; i++) victims.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    const victim = victims[0];
     pill('الحيّة تتنقل بين الأرقام…'); SFX.roll(3.4);
-    await G.scene.roulette(victim.id);
-    banner(`الرقم ${G.picks.get(String(victim.id))}`, `كانت الحيّة تحته · لدغت ${victim.name}`, 'red', 2200);
-    G.alive = G.alive.filter(p => p !== victim); pill();
+    G.lastVictims = victims;
+    await G.scene.roulette(victims.map(v => v.id));
+    const nums = victims.map(v => G.picks.get(String(v.id))).sort((a, b) => a - b);
+    if (k === 1) banner(`الرقم ${nums[0]}`, `كانت الحيّة تحته · لدغت ${victim.name}`, 'red', 2200);
+    else banner('الأرقام ' + nums.join(' · '), `${k} حيّات · لدغت ${victims.map(v => v.name).join(' و')}`, 'red', 2600);
+    G.alive = G.alive.filter(p => !victims.includes(p)); pill();
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 4) الناجين + بناء الصف الجديد
     SFX.survive(); banner(`نجا ${G.alive.length}`, 'لاعب · يصعدون درجة · الهرم يضيق', 'gold', 1900); fx('gold', 1600);
@@ -235,8 +242,9 @@ async function playRound() {
     playRound();
 }
 // تبويب الحيّة: يطلع بنص الشاشة قبل الاختيار العشوائي
-function snakeCard() { return new Promise(res => {
-    const el = $('#snake'); $('#snNum').textContent = G.alive.length; el.classList.add('in'); SFX.hiss(1.6); fx('danger', 3400);
+function snakeCard(k = 1) { return new Promise(res => {
+    const el = $('#snake'); $('#snNum').textContent = G.alive.length;
+    $('#snCount').textContent = k > 1 ? k : 'واحد'; $('#snWord').textContent = k > 1 ? 'حيّات' : 'حيّة'; $('#snDead').textContent = k > 1 ? 'مميتة' : 'مميتة'; $('#snBite').textContent = k > 1 ? 'وراح تلدغ أصحابها مع بعض' : 'وراح تلدغ صاحبه'; $('#snQ').textContent = k > 1 ? 'من هم أصحاب الأرقام؟' : 'من هو صاحب الرقم؟'; el.classList.add('in'); SFX.hiss(1.6); fx('danger', 3400);
     setTimeout(() => { el.classList.remove('in'); setTimeout(res, 420); }, 4400);
 }); }
 function showStrip(title, list) { $('#osTitle').textContent = title; const max = 18; $('#osChips').innerHTML = list.slice(0, max).map(p => `<span class="chip">${avatarHtml(p, 'sm')}${esc(p.name)}</span>`).join('') + (list.length > max ? `<span class="chip">+${list.length - max}</span>` : ''); $('#outStrip').classList.add('in'); }
@@ -323,14 +331,13 @@ function hookStream() {
         scene = await mountPyramid($('#stage'), { quality: G.settings.quality, onQuality: paintQuality, onEvent: (e, d) => {
             if (e === 'tick') SFX.tick(d); else if (e === 'build') SFX.build(d); else if (e === 'rise') SFX.rise(); else if (e === 'intro') SFX.intro();
             else if (e === 'fall') { SFX.elim(d); SFX.fall(); if (d === 'random') flash('#ef4444', 260); }
-            else if (e === 'suspense') SFX.suspense(); else if (e === 'strike') { fx('danger', 2400); const v = G.lastVictim; if (v) outCard(v); }
+            else if (e === 'suspense') SFX.suspense(); else if (e === 'strike') { fx('danger', 2400); const vs = G.lastVictims || []; if (vs.length === 1) outCard(vs[0]); else if (vs.length) { showStrip(`لدغت الحيّات ${vs.length} لاعبين 🐍`, vs); setTimeout(hideStrip, 3200); } }
             else if (e === 'firework') SFX.firework(); else if (e === 'hiss') SFX.hiss(1.8); else if (e === 'bite') { SFX.bite(); flash('#c4664c', 220); } else if (e === 'join' && G.phase === 'lobby') SFX.join();
         } });
     } catch (e) { console.error(e); }
     if (!scene) { $('#fallback').hidden = false; $('#loading').classList.add('hide'); return; }
     G.scene = scene; G.phase = 'lobby'; window.__pyr = G;
     // ضحية الإقصاء العشوائي لبطاقة الاسم (تتسجّل قبل نداء المشهد)
-    const origRoulette = scene.roulette; scene.roulette = id => { G.lastVictim = G.alive.find(p => String(p.id) === String(id)); return origRoulette(id); };
     const demo = !window.PYPlatform || window.PYPlatform.demo;
     G.bots = demo;
     if (demo) {
