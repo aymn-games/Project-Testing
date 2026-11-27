@@ -86,14 +86,11 @@
       '.agp-live-badge{flex:none;display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;line-height:1.55;letter-spacing:.2px;color:var(--fx-badge-tx);background:var(--fx-badge);border:1px solid var(--fx-badge-bd);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}' +
       '.agp-live-badge svg{width:11px;height:11px}' +
       '.agp-live-info > .agp-live-badge{align-self:flex-start;margin-bottom:2px}' +
-      // شارة الـID بالبطاقات المميزة: «تذكرة» بزوايا ناعمة — جزء ملوّن بتدرّج التصميم، فاصل متقطّع بثقبين، ثم الرقم.
-      '.agp-live-card.fx .agp-live-chip-id{position:relative;gap:0;padding:0;border-radius:9px;overflow:hidden;font-weight:700;background:var(--fx-chip);border:1px solid var(--fx-chip-bd)}' +
-      '.agp-live-id-k{display:inline-flex;align-items:center;gap:4px;align-self:stretch;padding:0 8px 0 7px;background:var(--fx-btn);color:var(--fx-btn-tx);font-family:inherit;font-size:10.5px;font-weight:900;letter-spacing:.8px}' +
-      '.agp-live-id-ic{width:14px;height:14px}' +
-      '.agp-live-id-v{position:relative;padding:3px 10px 3px 11px;border-left:1.5px dashed var(--fx-chip-bd);letter-spacing:1px;font-size:12px}' +
-      '.agp-live-id-v::before,.agp-live-id-v::after{content:"";position:absolute;left:-4.5px;width:7px;height:7px;border-radius:50%;background:var(--fx-gap)}' +
-      '.agp-live-id-v::before{top:-4px}' +
-      '.agp-live-id-v::after{bottom:-4px}' +
+      // تبويب الـID بالبطاقات المميزة: إطار متدرّج بألوان التصميم (مو حدود شفافة مثل باقي الشارات)،
+      // تعبئة داكنة بلمسة لون، توهّج خفيف، والرقم بتدرّج مثل الاسم.
+      '.agp-live-card.fx .agp-live-chip.agp-live-chip-id{gap:6px;padding:3px 11px 3px 9px;border-radius:10px;border:1.5px solid transparent;font-weight:800;background:linear-gradient(135deg,var(--fx-chip),var(--fx-gap)) padding-box,var(--fx-btn) border-box;box-shadow:0 0 16px -4px var(--fx-a),inset 0 1px 0 rgba(255,255,255,.08)}' +
+      '.agp-live-id-ic{width:14px;height:14px;color:var(--fx-num)}' +
+      '.agp-live-id-v{letter-spacing:1.2px;font-size:12px;background:var(--fx-name);-webkit-background-clip:text;background-clip:text;color:transparent}' +
       '.agp-live-card.fx{position:relative;overflow:hidden;isolation:isolate;padding:16px;border-radius:22px;border:1px solid transparent;background:var(--fx-bg) padding-box,var(--fx-border) border-box;box-shadow:0 18px 44px -26px var(--fx-glow);transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s}' +
       '.agp-live-card.fx:hover{transform:translateY(-4px);border-color:transparent;box-shadow:0 26px 56px -24px var(--fx-glow-h)}' +
       '.agp-live-card.fx::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--fx-aura);pointer-events:none}' +
@@ -224,8 +221,7 @@
     idChip.className = 'agp-live-chip agp-live-chip-id';
     if (fx) {
       // بالبطاقات المميزة: أيقونة بطاقة هوية بدل «ID:»، بلون التصميم.
-      // شكل «تذكرة»: جزء ملوّن (أيقونة + ID) وفاصل متقطّع ثم الرقم.
-      idChip.innerHTML = '<span class="agp-live-id-k">' + LIVE_ICON_ID + 'ID</span>';
+      idChip.innerHTML = LIVE_ICON_ID;
       var idVal = document.createElement('span');
       idVal.className = 'agp-live-id-v';
       idVal.textContent = s.customId;
