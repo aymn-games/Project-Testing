@@ -2225,8 +2225,9 @@ function handleAdminLiveStreams(req, res) {
  * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين).
  * البث يظهر فقط لو حساب تيك توك الموثَّق الحالي لصاحب الجلسة هو نفسه
  * البث المتصل — الأدمن/«تشغيل كامل» يقدرون يتصلون ببث غيرهم، وبدون هذا
- * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم من قاعدة
- * البيانات لحظة الطلب (نفس ترتيب صفحة البروفايل: display_name ثم username). */
+ * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم هو اسم حساب
+ * تيك توك (tiktok_display_name المحفوظ عند التوثيق)، ولو ما انحفظ نعرض يوزر
+ * تيك توك نفسه — مو اسم العرض بالموقع. */
 function handlePublicLiveStreams(req, res) {
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
@@ -2241,7 +2242,7 @@ function handlePublicLiveStreams(req, res) {
     var prev = byUser[tiktok];
     if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
     byUser[tiktok] = {
-      name: u.display_name || u.username || tiktok,
+      name: u.tiktok_display_name || tiktok,
       tiktok: tiktok,
       customId: u.custom_id,
       gameName: c.gameName || null,
@@ -2260,7 +2261,7 @@ function handlePublicLiveStreams(req, res) {
     if (!u || !u.tiktok_username) return;
     if (String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase() !== p.username) return;
     byUser[p.username] = {
-      name: u.display_name || u.username || p.username,
+      name: u.tiktok_display_name || p.username,
       tiktok: p.username,
       customId: u.custom_id,
       gameName: p.gameName,

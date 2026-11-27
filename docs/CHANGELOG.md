@@ -9,6 +9,15 @@
 
 ---
 
+## [غير مُرقَّم] — بطاقات «البثوث النشطة»: اسم حساب تيك توك بدل اسم الموقع (2026-11-27)
+
+### تغيّر (Changed)
+- `GET /api/public/live-streams` (`handlePublicLiveStreams` بـ`backend/http/auth-router.js`)
+  صار يرجع `name` = اسم حساب تيك توك الموثَّق (`tiktok_display_name`)، ولو ما انحفظ
+  يرجع يوزر تيك توك نفسه — بدل اسم العرض بالموقع (`display_name`/`username`).
+  ينطبق على بطاقات المكتبة (`js/agp-live-streams.js`) وقوائم الدعوة بالنسخة
+  والبلنتيات (`versus.html`/`penalty`).
+
 ## [غير مُرقَّم] — فيرو: «جرّب» يطلع صوته من تطبيق البث بس (2026-11-26)
 
 ### تغيّر (Changed)
