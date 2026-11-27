@@ -204,7 +204,7 @@ const GEO_LO = Object.assign({}, GEO_HI, {
  * opts.outfit = 'doctor'|'detective'|'shadow' للشخصيات الخاصة. opts.lite = الحلقات البعيدة (مثلثات أقل).
  * يرجع {root, body, head, armL, armR, legs, eyes, mats, torso, sit(bool)} — root أصله عند الأرض.
  */
-const HEAD_W = 1.86, HEAD_H = 1.8, HEAD_D = 1.5;   // الرأس: بيضاوي مدوّر (أنصاف أقطاره HEAD_*/2)
+const HEAD_W = 1.86, HEAD_H = 1.88, HEAD_D = 1.5;   // الرأس: بيضاوي مدوّر (أنصاف أقطاره HEAD_*/2)
 const HR = { x: HEAD_W / 2, y: HEAD_H / 2, z: HEAD_D / 2 };
 /** نقطة على سطح الوجه (x,y من مركز الرأس) — للعيون والخدود والفم على الرأس المدوّر */
 /** يدوّر قطعة على الوجه عشان تلصق على سطح الرأس المدوّر (باتجاه العمودي على السطح) */
@@ -337,10 +337,10 @@ function buildChar(look, opts) {
     if (!shadow) mats.push(cheekM);
     const eyes = [];
     [-1, 1].forEach((s) => {
-        const e = onFace(add(G.eye, eyeM, s * 0.33, -0.11, faceZ(s * 0.33, -0.11, -0.02), hc)); e.scale.set(1, 1.25, 0.3); e.userData.sy = 1.25; eyes.push(e);
+        const e = onFace(add(G.eye, eyeM, s * 0.33, -0.17, faceZ(s * 0.33, -0.17, -0.02), hc)); e.scale.set(1, 1.25, 0.3); e.userData.sy = 1.25; eyes.push(e);
         if (shadow || opts.lite) return;
-        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.33 + 0.05, -0.05, faceZ(s * 0.33 + 0.05, -0.05, 0.02)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
-        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.27, faceZ(s * 0.55, -0.27, -0.02), hc)); ck.scale.set(1.3, 0.75, 0.2); ck.castShadow = false;
+        const sh = new THREE.Mesh(G.shine, shineM); sh.position.set(s * 0.33 + 0.05, -0.11, faceZ(s * 0.33 + 0.05, -0.11, 0.02)); hc.add(sh); sh.userData.sy = 1; eyes.push(sh);
+        const ck = onFace(add(G.cheek, cheekM, s * 0.55, -0.35, faceZ(s * 0.55, -0.35, -0.02), hc)); ck.scale.set(1.3, 0.75, 0.2); ck.castShadow = false;
     });
     if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
@@ -418,7 +418,7 @@ function buildHair(head, style, hairM, mats, G) {
     };
     const sides = (bottom) => drape(bottom);
     // غُرّة مسنّنة (تصميم الضفاير): شريط على سطح الجبهة، حافته التحتية زقزاق (أسنان مثلّثة)
-    const FR_DROP = 0.14;   // الغُرّة المسنّنة تنزل أكثر على الجبهة
+    const FR_DROP = 0.15;   // الغُرّة المسنّنة تنزل أكثر على الجبهة
     const fringe = (teeth, depth) => {
         // غُرّة لها سماكة: طبقة برا وطبقة جوا، وحافة تحتية بأسنان ناعمة (رؤوس مدوّرة) تقفل بينهم بانحناءة
         const t0 = Math.asin(0.84), SUB = 6, cols = teeth * SUB, pos = [], idx = [];
@@ -450,7 +450,7 @@ function buildHair(head, style, hairM, mats, G) {
             const rx = HR.x + rr, ry = HR.y + rr, rz = HR.z + rr - 0.02;
             let x = -Math.cos(phi) * Math.sin(th) * rx, y = Math.cos(th) * ry, z = Math.sin(phi) * Math.sin(th) * rz;
             const dFront = Math.min(u, 1 - u) * PL;   // بُعدها عن حافة الوجه
-            y -= v * v * Math.max(0, 1 - dFront / 0.5) * 0.14;   // رأس الخصلة ينزل عند حافة الوجه
+            y += v * v * Math.max(0, 1 - dFront / 0.28) * 0.16;   // الخصلة أقصر عند حافة الوجه، والشعر يكمل لتحت ورا (يغطي جنب الرأس لين الفك)
             return [x, y, z];
         };
         // شبكة: صفوف (v) × أعمدة؛ كل عمود فيه برا، ثم الحافة المدوّرة، ثم جوا — مقطع على شكل U مقلوب حول طرف الخصلة
@@ -487,7 +487,7 @@ function buildHair(head, style, hairM, mats, G) {
         // الذيل: مقطع دائري يمشي على منحنى بمستوى الوجه (بدون لف): من الربطة يطلع لبرا وفوق لين مستوى أعلى الرأس،
         // يدور من فوق، وينزل لتحت على الجنب ويستدق لين طرفه
         const P = (x, y, z) => new THREE.Vector3(s * x, y, z);
-        const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.12, 0.55, -0.12), P(HR.x + 0.34, 0.74, -0.16), P(HR.x + 0.6, 0.66, -0.2), P(HR.x + 0.7, 0.22, -0.2), P(HR.x + 0.68, -0.45, -0.17), P(HR.x + 0.5, -1.25, -0.12)]);
+        const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.12, 0.55, -0.12), P(HR.x + 0.34, 0.6, -0.16), P(HR.x + 0.6, 0.52, -0.2), P(HR.x + 0.7, 0.1, -0.2), P(HR.x + 0.68, -0.55, -0.17), P(HR.x + 0.52, -1.4, -0.12)]);
         const SEG = 44, RAD = 14, radius = (u) => u < 0.18 ? 0.2 + u / 0.18 * 0.11 : 0.31 - (u - 0.18) / 0.82 * 0.21;
         const pos = [], idx = [], B = new THREE.Vector3(0, 0, 1);
         for (let i = 0; i <= SEG; i++) {
@@ -508,7 +508,7 @@ function buildHair(head, style, hairM, mats, G) {
     switch (style) {
         case 0: top(); sides(-0.3); break;                                       // قصير (لين الأذن)
         case 1:                                                                    // ضفاير (تصميم صاحب المنصة): غُرّة مسنّنة وخصل جنب الوجه لين الذقن وذيلين فوق
-            top(); fringe(6, 0.07); sideShell(-0.46, 0.72); [-1, 1].forEach(pigtail);
+            top(); fringe(3, 0.11); sideShell(-0.62, 0.79); [-1, 1].forEach(pigtail);
             break;
         case 2: top(); sides(-1.82); break;                                        // طويل (لين الخصر)
         case 3: top(); sides(-0.3); [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;   // كعكتين
