@@ -61,16 +61,40 @@ function computeSnapshot(period) {
  * تصنيف الأسبوع الماضي — يحفظه أول مرة ويرجع المحفوظ بعدها.
  * @returns {{periodStart: number, periodEnd: number, streamers: Array, players: Array, savedAt: number}}
  */
-function getLastWeekRanking(nowMs) {
-    var period = previousPeriod(nowMs);
+/** صف الفترة المحفوظ، ويحسبه ويحفظه لو ما انحفظ (فترة منتهية بس). */
+function ensureSnapshot(period) {
     var row = db.prepare('SELECT period_end, data, created_at FROM ranking_snapshots WHERE period_start = ?').get(period.start);
     if (!row) {
         var data = computeSnapshot(period);
-        var savedAt = now();
         db.prepare('INSERT OR IGNORE INTO ranking_snapshots (period_start, period_end, data, created_at) VALUES (?, ?, ?, ?)')
-            .run(period.start, period.end, JSON.stringify(data), savedAt);
+            .run(period.start, period.end, JSON.stringify(data), now());
         row = db.prepare('SELECT period_end, data, created_at FROM ranking_snapshots WHERE period_start = ?').get(period.start);
     }
+    return row;
+}
+
+var MAX_BACKFILL_WEEKS = 260;
+
+/**
+ * يتأكد إن كل أسبوع منتهي (من لحظة تصفير التصنيف streamer_ranking_reset_at لين بداية
+ * الأسبوع الحالي) له صف محفوظ — الحفظ الكسول يفوّت الأسبوع اللي ما أحد طلب فيه
+ * «الأسبوع الماضي». البيانات مؤرخة، فحساب أسبوع قديم الحين يطلع نفس نتيجته وقتها.
+ * يستخدمه عدّاد أبطال التوب (live-cards/champions-service.js).
+ */
+function ensureAllSnapshots(nowMs) {
+    var end = authService.getRankingPeriodStart(nowMs || now());
+    var row = db.prepare("SELECT value FROM app_settings WHERE key = 'streamer_ranking_reset_at'").get();
+    var resetAt = row ? Number(row.value) || 0 : 0;
+    for (var i = 0; i < MAX_BACKFILL_WEEKS && end > resetAt; i++) {
+        var start = Math.max(weekStartOf(end - 1), resetAt);
+        ensureSnapshot({ start: start, end: end });
+        end = start;
+    }
+}
+
+function getLastWeekRanking(nowMs) {
+    var period = previousPeriod(nowMs);
+    var row = ensureSnapshot(period);
     var saved = JSON.parse(row.data);
     return {
         periodStart: period.start,
@@ -83,6 +107,7 @@ function getLastWeekRanking(nowMs) {
 
 module.exports = {
     getLastWeekRanking: getLastWeekRanking,
+    ensureAllSnapshots: ensureAllSnapshots,
     previousPeriod: previousPeriod,
     weekStartOf: weekStartOf
 };

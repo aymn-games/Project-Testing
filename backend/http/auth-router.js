@@ -27,6 +27,7 @@ var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
 var liveCardStyles = require('../live-cards/live-card-styles-service');
+var topChampions = require('../live-cards/champions-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
 var lastWeekRankingService = require('../stats/last-week-ranking-service');
@@ -2262,6 +2263,7 @@ function handlePublicLiveStreams(req, res) {
       tiktok: tiktok,
       customId: u.custom_id,
       card: liveCardStyles.getCardByCustomId(u.custom_id),
+      champion: topChampions.getChampionCount(u.custom_id),
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
@@ -2282,6 +2284,7 @@ function handlePublicLiveStreams(req, res) {
       tiktok: p.username,
       customId: u.custom_id,
       card: liveCardStyles.getCardByCustomId(u.custom_id),
+      champion: topChampions.getChampionCount(u.custom_id),
       gameName: p.gameName,
       viewers: typeof p.viewers === 'number' ? p.viewers : null,
       connectedAt: p.since
