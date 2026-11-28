@@ -46,7 +46,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'IBM Pl
     <div class="grp"><b>الحركة</b><div class="chips" id="poses"></div></div>
     <div class="grp"><b>التسريحة</b><div class="chips" id="styles"></div></div>
     <div class="grp"><b>اللبس</b><div class="chips" id="outfits"></div></div>
-    <div class="grp"><b>زينة الشعر</b><div class="chips" id="accs"></div></div>
+    <div class="grp"><b>زينة الشعر <small style="font-weight:400;opacity:.7">(اضغط عشان تفعّل أو تطفي)</small></b><div class="chips" id="accs"></div><div id="accCols"></div></div>
     <div class="grp"><b>لون الشعر</b><div class="sws" id="hairC"></div></div>
     <div class="grp"><b>البشرة</b><div class="sws" id="skin"></div></div>
     <div class="grp"><b>لون اللبس</b><div class="sws" id="shirt"></div></div>
@@ -90,7 +90,7 @@ controls.target.set(0, 1.05, 0); controls.enableDamping = true; controls.minDist
 controls.maxPolarAngle = Math.PI * 0.55; controls.autoRotate = true; controls.autoRotateSpeed = 1.4; controls.enablePan = false;
 const stool = mesh(GEO.stool, mat('#4a3020'), 0, 0.15, 0); stool.visible = false; scene.add(stool);
 
-let look = { skin: 0, hair: 1, hairC: 7, shirt: 2, pants: 0, outfit: 0, acc: 0 }, pose = 'idle', wind = true, char = null, poseAt = performance.now();
+let look = { skin: 0, hair: 1, hairC: 7, shirt: 2, pants: 0, outfit: 0, accs: 0, accC: L.ACC_DEF.slice() }, pose = 'idle', wind = true, char = null, poseAt = performance.now();
 function rebuild() {
   if (char) { scene.remove(char.root); char.root.traverse((o) => { if (o.geometry && !o.geometry.parameters) o.geometry.dispose(); }); }
   char = buildChar(look, {}); scene.add(char.root); applySit();
@@ -103,6 +103,14 @@ function chips(el, items, cur, on) {
   el.innerHTML = items.map(([v, t]) => `<button type="button" class="chip${String(v) === String(cur) ? ' on' : ''}" data-v="${v}">${t}</button>`).join('');
   el.onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; on(b.dataset.v); chips(el, items, b.dataset.v, on); };
 }
+// زينة الشعر: كل وحدة تتفعّل لحالها، وتحت كل مفعّلة ألوانها
+function renderAccs() {
+  const el = $('accs'), cols = $('accCols');
+  el.innerHTML = L.ACCS.map((n, i) => `<button type="button" class="chip${look.accs & (1 << i) ? ' on' : ''}" data-i="${i}" aria-pressed="${!!(look.accs & (1 << i))}">${n}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('[data-i]'); if (!b) return; look.accs ^= 1 << +b.dataset.i; renderAccs(); rebuild(); };
+  cols.innerHTML = L.ACCS.map((n, i) => !(look.accs & (1 << i)) ? '' : `<div class="row" style="margin-top:8px"><span>لون ${n}</span><div class="sws">${L.ACC_C.map((c, j) => `<button type="button" class="sw${(look.accC[i] >= 0 ? look.accC[i] : L.ACC_DEF[i]) === j ? ' on' : ''}" style="background:${c}" data-a="${i}" data-j="${j}" aria-label="لون ${n} ${j + 1}"></button>`).join('')}</div></div>`).join('');
+  cols.onclick = (e) => { const b = e.target.closest('[data-a]'); if (!b) return; look.accC[+b.dataset.a] = +b.dataset.j; renderAccs(); rebuild(); };
+}
 function swatches(el, list, k) {
   el.innerHTML = list.map((c, i) => `<button type="button" class="sw${look[k] === i ? ' on' : ''}" style="background:${c}" data-i="${i}" aria-label="لون ${i + 1}"></button>`).join('');
   el.onclick = (e) => { const b = e.target.closest('[data-i]'); if (!b) return; look[k] = +b.dataset.i; swatches(el, list, k); rebuild(); };
@@ -111,7 +119,7 @@ function renderPanel() {
   chips($('poses'), POSES, pose, (v) => { pose = v; poseAt = performance.now(); applySit(); });
   chips($('styles'), L.HAIR_STYLES.map((n, i) => [i, n]), look.hair, (v) => { look.hair = +v; rebuild(); });
   chips($('outfits'), L.OUTFITS.map((n, i) => [i, n]), look.outfit, (v) => { look.outfit = +v; rebuild(); });
-  chips($('accs'), L.ACCS.map((n, i) => [i, n]), look.acc, (v) => { look.acc = +v; rebuild(); });
+  renderAccs();
   swatches($('hairC'), L.HAIR_C, 'hairC'); swatches($('skin'), L.SKIN, 'skin'); swatches($('shirt'), L.SHIRT, 'shirt'); swatches($('pants'), L.PANTS, 'pants');
 }
 function toggle(id, get, set) { const b = $(id); b.onclick = () => { set(!get()); b.classList.toggle('on', get()); b.setAttribute('aria-pressed', String(get())); }; }

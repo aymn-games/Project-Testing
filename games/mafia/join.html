@@ -643,7 +643,12 @@ body.watching { overflow: hidden; }
     var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
     var params = new URLSearchParams(location.search);
     // شكل محفوظ من قبل ما ينضاف اللبس: نعطيه لبس يناسب تسريحته (ويقدر يغيّره)
-    function withOutfit(l) { if (l && l.outfit == null) l.outfit = L.fitOutfit(l.hair | 0); if (l && l.acc == null) l.acc = L.fitAcc(l.hair | 0); return l; }
+    function withOutfit(l) {
+        if (l && l.outfit == null) l.outfit = L.fitOutfit(l.hair | 0);
+        if (l && l.accs == null) l.accs = l.acc > 0 && l.acc <= 6 ? 1 << (l.acc - 1) : L.fitAcc(l.hair | 0);   // الشكل القديم: زينة وحدة
+        if (l && !Array.isArray(l.accC)) l.accC = L.ACC_DEF.slice();
+        return l;
+    }
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: withOutfit(NET.look()) || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
 
@@ -777,7 +782,6 @@ body.watching { overflow: hidden; }
         { k: 'hair', n: 'التسريحة', names: L.HAIR_STYLES },
         { k: 'hairC', n: 'لون الشعر', c: L.HAIR_C },
         { k: 'outfit', n: 'اللبس', names: L.OUTFITS },
-        { k: 'acc', n: 'زينة الشعر', names: L.ACCS },
         { k: 'shirt', n: 'لون اللبس', c: L.SHIRT },
         { k: 'pants', n: 'البنطلون أو التنورة', c: L.PANTS }
     ];
@@ -788,10 +792,24 @@ body.watching { overflow: hidden; }
             var items = r.c ? r.c.map(function (col, i) { return '<button type="button" class="sw' + (S.look[r.k] === i ? ' on' : '') + '" style="background:' + col + '" data-k="' + r.k + '" data-v="' + i + '" aria-label="' + r.n + ' ' + (i + 1) + '"></button>'; }).join('')
                 : r.names.map(function (nm, i) { return '<button type="button" class="pill' + (S.look[r.k] === i ? ' on' : '') + '" data-k="' + r.k + '" data-v="' + i + '">' + nm + '</button>'; }).join('');
             return '<div class="opt-row"><span class="lbl">' + r.n + '</span><div class="opts">' + items + '</div></div>';
-        }).join('') + '<button type="button" class="btn ghost" id="randLook">🎲 شكل عشوائي</button>';
+        }).join('') + accRows() + '<button type="button" class="btn ghost" id="randLook">🎲 شكل عشوائي</button>';
+    }
+    // زينة الشعر: كل وحدة تتفعّل وتنطفي لحالها (أكثر من وحدة مع بعض)، وتحت كل مفعّلة صف ألوانها
+    function accRows() {
+        var m = S.look.accs | 0, cs = S.look.accC || L.ACC_DEF;
+        var pills = L.ACCS.map(function (nm, i) { var on = m & (1 << i); return '<button type="button" class="pill' + (on ? ' on' : '') + '" data-acc="' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + nm + '</button>'; }).join('');
+        var rows = L.ACCS.map(function (nm, i) {
+            if (!(m & (1 << i))) return '';
+            var cur = cs[i] >= 0 ? cs[i] : L.ACC_DEF[i];
+            return '<div class="opt-row"><span class="lbl">لون ' + nm + '</span><div class="opts">' + L.ACC_C.map(function (col, j) { return '<button type="button" class="sw' + (cur === j ? ' on' : '') + '" style="background:' + col + '" data-accc="' + i + '" data-v="' + j + '" aria-label="لون ' + nm + ' ' + (j + 1) + '"></button>'; }).join('') + '</div></div>';
+        }).join('');
+        return '<div class="opt-row"><span class="lbl">زينة الشعر</span><div class="opts">' + pills + '</div></div>' + rows;
     }
     $('editor').addEventListener('click', function (e) {
+        var ab = e.target.closest('[data-acc]'), cb = e.target.closest('[data-accc]');
         if (e.target.id === 'randLook') S.look = L.randomLook();
+        else if (ab) S.look.accs = (S.look.accs | 0) ^ (1 << Number(ab.getAttribute('data-acc')));
+        else if (cb) { S.look.accC = (S.look.accC || L.ACC_DEF).slice(); S.look.accC[Number(cb.getAttribute('data-accc'))] = Number(cb.getAttribute('data-v')); }
         else { var b = e.target.closest('[data-k]'); if (!b) return; S.look[b.getAttribute('data-k')] = Number(b.getAttribute('data-v')); }
         NET.look(S.look); renderEditor();
         if (S.me) net.send({ t: 'look', look: S.look });
