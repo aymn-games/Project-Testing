@@ -1,9 +1,9 @@
 /**
  * AGP SUPPORTERS SERVICE — سجل داعمي المنصة (اسم/رسالة/مبلغ).
  *
- * ⚠️ لا يوجد ربط تلقائي مع منصة الدعم الفعلية (creators.sa) — كل صف يُدخَل
- * يدوياً من الأدمن (admin-settings.html). التخزين والعرض مستقلان عن مصدر
- * الإدخال، فمتى توفّر Webhook حقيقي يكفي مساراً جديداً ينادي addSupporter().
+ * مصدران: تلقائي من Streamlabs حساب المنصة (supporters/platform-streamlabs.js ←
+ * addStreamlabsDonation، رمز PLATFORM_STREAMLABS_SOCKET_TOKEN)، ويدوي من الأدمن
+ * (admin.html ← الداعمون). العرض العام الأحدث أولاً (listRecent).
  *
  * ربط اختياري بحساب مسجَّل عبر custom_id: لو موجود، دوال العرض تُظهر اسم
  * وصورة الحساب الحيّة بدل الاسم النصي الثابت وقت الإدخال.
@@ -17,7 +17,7 @@ function now() { return Date.now(); }
 
 // أعمدة العرض المشتركة — LEFT JOIN لجلب اسم/صورة الحساب المرتبط لو موجود.
 var SELECT_WITH_USER =
-    'SELECT s.id, s.name, s.message, s.amount, s.created_at, s.user_id, ' +
+    'SELECT s.id, s.name, s.message, s.amount, s.currency, s.sl_id, s.created_at, s.user_id, ' +
     'u.display_name AS linked_display_name, u.username AS linked_username, ' +
     'u.avatar_image_base64 AS linked_avatar, u.custom_id AS linked_custom_id ' +
     'FROM supporters s LEFT JOIN users u ON u.id = s.user_id ';
@@ -29,6 +29,8 @@ function decorateRow(row) {
         name: linkedName || row.name,
         message: row.message,
         amount: row.amount,
+        currency: row.currency || 'USD',
+        source: row.sl_id ? 'streamlabs' : 'manual',
         created_at: row.created_at,
         linked: Boolean(row.user_id),
         avatarBase64: row.linked_avatar || null,
@@ -107,14 +109,35 @@ function addSupporter(name, message, amount, customId) {
 }
 
 /**
- * آخر N داعمين (الأحدث أولاً) — تُستخدَم بالشريط المتحرك بالصفحة
- * الرئيسية (راجع index.html، مكان النص القديم "لتفعيل الاشتراك...").
+ * دونيشن وصل من Streamlabs حساب المنصة — يُحفظ مرة وحدة بس (sl_id فريد).
+ * @param {{slId: string|number, name?: string, amount: number|string, currency?: string, message?: string}} d
+ * @returns {Object|null} الصف الجديد، أو null لو مكرر أو غير صالح
+ */
+function addStreamlabsDonation(d) {
+    if (!d || d.slId == null || d.slId === '') return null;
+    var amount = Number(String(d.amount == null ? '' : d.amount).replace(/[,\s]/g, ''));
+    if (!isFinite(amount) || amount <= 0) return null;
+    amount = Math.round(amount * 100) / 100;
+    var name = String(d.name || '').trim().slice(0, 60) || 'داعم';
+    var message = String(d.message || '').trim().slice(0, 300);
+    var currency = String(d.currency || 'USD').trim().toUpperCase().slice(0, 8) || 'USD';
+    var createdAt = now();
+    var result = db.prepare(
+        'INSERT OR IGNORE INTO supporters (name, message, amount, currency, sl_id, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(name, message, amount, currency, 'sl:' + String(d.slId), createdAt);
+    if (!result.changes) return null;
+    return { id: result.lastInsertRowid, name: name, message: message, amount: amount, currency: currency, created_at: createdAt };
+}
+
+/**
+ * آخر N داعمين (الأحدث أولاً) — قائمة الداعمين بالصفحة الرئيسية
+ * (js/agp-home.js) وصفحة top-supporters.html: كل دعم جديد يصير الأول.
  * @param {number} [limit]
  * @returns {Array<Object>}
  */
 function listRecent(limit) {
     var n = Number(limit) || 3;
-    var rows = db.prepare(SELECT_WITH_USER + 'ORDER BY s.created_at DESC LIMIT ?').all(n);
+    var rows = db.prepare(SELECT_WITH_USER + 'ORDER BY s.created_at DESC, s.id DESC LIMIT ?').all(n);
     return rows.map(decorateRow);
 }
 
@@ -157,7 +180,7 @@ function listTop(limit) {
  */
 function listAll(limit) {
     var n = Number(limit) || 200;
-    var rows = db.prepare(SELECT_WITH_USER + 'ORDER BY s.created_at DESC LIMIT ?').all(n);
+    var rows = db.prepare(SELECT_WITH_USER + 'ORDER BY s.created_at DESC, s.id DESC LIMIT ?').all(n);
     return rows.map(decorateRow);
 }
 
@@ -173,6 +196,7 @@ function deleteSupporter(id) {
 
 module.exports = {
     addSupporter: addSupporter,
+    addStreamlabsDonation: addStreamlabsDonation,
     listRecent: listRecent,
     listTop: listTop,
     listAll: listAll,

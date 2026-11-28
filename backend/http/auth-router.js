@@ -2063,14 +2063,14 @@ function handleGetRecentSupporters(req, res) {
   sendJson(res, 200, { success: true, supporters: supportersService.listRecent(limit) });
 }
 
-/** توب الداعمين (مجموع مبالغ كل اسم) — مسار عام. */
+/** توب الداعمين (مجموع مبالغ كل اسم) — مسار عام. القوائم العامة صارت «الأحدث» (/recent). */
 function handleGetTopSupporters(req, res) {
   sendJson(res, 200, { success: true, supporters: supportersService.listTop(50) });
 }
 
 /** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
 function handleAdminListSupporters(req, res) {
-  sendJson(res, 200, { success: true, supporters: supportersService.listAll(200) });
+  sendJson(res, 200, { success: true, supporters: supportersService.listAll(200), streamlabs: require('../supporters/platform-streamlabs').get().getState() });
 }
 
 /** الأدمن فقط — إضافة دعم جديد يدوياً. */
