@@ -776,7 +776,8 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         <sc-if value="{{ is.supporters }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
             <h1 style="margin:0;font-size:22px;font-weight:600">داعمو المنصة</h1>
-            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">إدخال يدوي حالياً — أضف كل دعم تشوفه بلوحة تحكم كريترز… يظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة "توب الداعمين".</p></sc-if>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">أي دعم يوصل لحساب المنصة على Streamlabs ينضاف هنا تلقائياً، ويظهر أول القائمة بالصفحة الرئيسية وبصفحة "توب الداعمين" (الأحدث أولاً). والإضافة اليدوية تحت لأي دعم ما وصل.</p></sc-if>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#c5cad6"><span style="width:8px;height:8px;border-radius:50%;background:{{ slDot }}"></span><span>Streamlabs: {{ slLabel }}</span></div>
           </div>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
@@ -794,9 +795,9 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <th style="border-bottom:1px solid #262a37"></th>
               </tr></thead>
               <tbody><sc-for list="{{ supporters }}" as="s" hint-placeholder-count="4"><tr>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ s.name }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ s.name }} <span style="font-size:11px;font-weight:400;color:#7c8396">{{ s.src }}</span></td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;color:#9199ab;font-size:13px">{{ s.msg }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">${{ s.amount }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ s.amt }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:#9199ab">{{ s.date }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ s.del }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer">حذف</button></td>
               </tr></sc-for></tbody>
@@ -1407,7 +1408,7 @@ class Component extends DCLogic {
 
   // ---------- واجهة الموقع ----------
   loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
-  loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[] }); }); }
+  loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[], supSl:r.streamlabs||null }); }); }
   loadPartners(){ return A.adminListPartners().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ partners:r.partners||[] }); }); }
   loadLiveCards(){ return A.adminListLiveCardStyles().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ lcUsers:r.users||[], lcStyles:r.styles||{} }); }); }
   loadTheme(){ return A.getSiteTheme().then(r=>{ const t=r&&r.success?r.theme:null; this.setState(s=>({ theme:{ active:!!t, data:t }, themePreset:t&&t.presetKey?t.presetKey:s.themePreset,
@@ -1579,7 +1580,8 @@ class Component extends DCLogic {
         save:()=>this.busy('lv'+l.slug,()=>A.adminUpdateStreamerLevel(l.slug,{ displayNameAr:name, minSp:Number(sp) })).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadLevels(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }) }; });
 
     // ---- supporters / partners
-    const supporters=(s.supporters||[]).map(x=>({ ...x, msg:x.message||'—', date:fmtDay(x.created_at),
+    const supporters=(s.supporters||[]).map(x=>({ ...x, msg:x.message||'—', date:fmtDay(x.created_at), src:x.source==='streamlabs'?'Streamlabs':'يدوي',
+      amt:(!x.currency||x.currency==='USD')?'$'+x.amount:x.amount+' '+x.currency,
       del:()=>this.ask('حذف هذا الدعم؟',`سيُحذف دعم «${x.name}» من الشريط المتحرك وصفحة توب الداعمين.`,'حذف',()=>A.adminDeleteSupporter(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadSupporters(); })) }));
     const partners=(s.partners||[]).map(x=>({ ...x, pid:x.customId, cat:CATEGORY_LABELS[x.category]||x.category,
       del:()=>this.ask('حذف هذا الشريك؟',`سيُزال «${x.name}» من شركاء الإبداع بالصفحة الرئيسية.`,'حذف',()=>A.adminDeletePartner(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadPartners(); })) }));
@@ -1930,7 +1932,8 @@ class Component extends DCLogic {
         this.busy('ann',()=>A.adminSetAnnouncement(text,s.annImage.trim())).then(r=>{ if(!r) return; if(r.success){ this.setState({ annActive:true }); this.flash('تم نشر الإعلان — يظهر الآن لكل زائر جديد للصفحة الرئيسية.'); } else this.flash('تعذّر النشر: '+(r.error||'unknown'),'err'); }); },
       removeAnn:()=>this.ask('إزالة الإعلان الحالي؟','ما راح يظهر لأي زائر بعد الآن.','إزالة',()=>this.busy('annx',()=>A.adminClearAnnouncement()).then(r=>{ if(!r) return; if(r.success){ this.setState({ annActive:false }); this.flash('تمت إزالة الإعلان — ما راح يظهر لأي زائر بعد الآن.'); } else this.flash('تعذّرت الإزالة.','err'); })),
       // supporters / partners
-      supporters, supportersEmpty:!supporters.length, supName:s.supName, supMsg:s.supMsg, supAmount:s.supAmount,
+      supporters, supportersEmpty:!supporters.length, ...(()=>{ const st=(s.supSl||{}).status; return { slDot:st==='connected'?'#34d399':st==='connecting'?'#fbbf24':st==='invalid_token'?'#f87171':'#5b6274',
+        slLabel:st==='connected'?'متصل — الدعم ينضاف تلقائياً':st==='connecting'?'جاري الاتصال…':st==='invalid_token'?'الرمز مرفوض — حدّث PLATFORM_STREAMLABS_SOCKET_TOKEN بـRender':'غير مربوط — أضف PLATFORM_STREAMLABS_SOCKET_TOKEN بـRender' }; })(), supName:s.supName, supMsg:s.supMsg, supAmount:s.supAmount,
       onSupName:e=>this.setState({ supName:e.target.value }), onSupMsg:e=>this.setState({ supMsg:e.target.value }), onSupAmount:e=>this.setState({ supAmount:e.target.value }),
       addSupporter:()=>{ const name=s.supName.trim(); if(!name) return this.flash('اكتب اسم الداعم أولاً.','err');
         this.busy('sup',()=>A.adminAddSupporter(name,s.supMsg,s.supAmount)).then(r=>{ if(!r) return; if(r.success){ this.setState({ supName:'', supMsg:'', supAmount:'' }); this.flash('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.'); this.loadSupporters(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },

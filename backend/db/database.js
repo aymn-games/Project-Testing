@@ -26,7 +26,7 @@
  *   streamer_levels — كتالوج مستويات "SP" (نقاط الستريمر) القابلة
  *                    للتعديل من الأدمن — راجع backend/points/streamer-level-service.js
  *                    [0.45.0]
- *   supporters     — سجل داعمي المنصة (اسم/رسالة/مبلغ) — إدخال يدوي من
+ *   supporters     — سجل داعمي المنصة (اسم/رسالة/مبلغ) — تلقائي من Streamlabs أو يدوي من
  *                    الأدمن حالياً (لا ربط تلقائي مع منصة كريترز/دكان
  *                    تب بعد، بانتظار رد الدعم الفني منهم) — راجع
  *                    backend/supporters/supporters-service.js
@@ -884,6 +884,11 @@ db.exec(`
 // ربط اختياري بين صف دعم (supporters) وحساب مسجَّل (users.id) — NULL
 // افتراضياً. لو مربوط، تُعرَض اسم/صورة الحساب الحيّة بدل النص الثابت.
 ensureColumn('supporters', 'user_id', 'INTEGER');
+// الدعم التلقائي من Streamlabs (حساب المنصة — supporters/platform-streamlabs.js): رقم الدونيشن
+// عند Streamlabs (sl_id، فهرس فريد يمنع التكرار لو أعاد إرساله) وعملته. الإدخال اليدوي sl_id = NULL.
+ensureColumn('supporters', 'sl_id', 'TEXT');
+ensureColumn('supporters', 'currency', "TEXT NOT NULL DEFAULT 'USD'");
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_supporters_sl ON supporters(sl_id) WHERE sl_id IS NOT NULL');
 
 // آخر مرة فتح فيها صاحب التذكرة محادثتها — أي رد أدمن بعد هذا الوقت يُعَد
 // "غير مقروء" (شارة زر "تذاكري" بالبروفايل). 0 = لم يفتحها بعد.

@@ -43,6 +43,9 @@ module.exports = {
     googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
     // زر «اربط Streamlabs» (OAuth) — من تطبيق مسجّل عند Streamlabs. فارغ = الزر مخفي، والربط بلصق
     // الرمز يكمل عادي. الـSecret سري تماماً (Render بس). راجع streamlabs/streamlabs-oauth.js.
+    // رمز Socket API لحساب Streamlabs الخاص بالمنصة: كل دونيشن له ينضاف تلقائياً لـ«داعمي
+    // المنصة» (supporters/platform-streamlabs.js). سري (Render بس). فارغ = إدخال يدوي بس.
+    platformStreamlabsSocketToken: process.env.PLATFORM_STREAMLABS_SOCKET_TOKEN || '',
     streamlabsClientId: process.env.STREAMLABS_CLIENT_ID || '',
     streamlabsClientSecret: process.env.STREAMLABS_CLIENT_SECRET || '',
     streamlabsRedirectUri: process.env.STREAMLABS_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/streamlabs/oauth/callback',

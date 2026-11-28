@@ -68,6 +68,8 @@ function start() {
             // Streamlabs: اتصال لكل ستريمر مربوط (الدونيشن — كريترز وغيره) — streamlabs/streamlabs-manager.js
             require('./streamlabs/streamlabs-manager').startStreamlabs();
         }
+        // داعمو المنصة: دونيشن Streamlabs حساب المنصة ينضاف تلقائياً (PLATFORM_STREAMLABS_SOCKET_TOKEN)
+        require('./supporters/platform-streamlabs').startPlatformStreamlabs();
         // كتالوج هدايا تيك توك (الأسماء بالعربي والإنجليزي، الأسعار، الصور) — مرة باليوم من تيك توك نفسه.
         require('./platforms/tiktok/gift-catalog').startAutoRefresh(logger);
         // اشتراكات فيرو من المتجر: خطط فيرو ونسب خصم مشتركي الألعاب، وإعادة إرسال اللي ما وصل — store/veyro-link.js

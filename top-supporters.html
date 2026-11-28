@@ -132,17 +132,17 @@
     </div>
 
     <div class="top-tabs">
-        <button type="button" class="top-tab-btn active" data-top-tab="top">🏆 الأعلى دعماً</button>
-        <button type="button" class="top-tab-btn" data-top-tab="recent">🕒 أحدث الداعمين</button>
+        <button type="button" class="top-tab-btn active" data-top-tab="recent">🕒 أحدث الداعمين</button>
+        <button type="button" class="top-tab-btn" data-top-tab="top">🏆 الأعلى دعماً</button>
     </div>
 
-    <div class="top-tab-panel active" data-top-panel="top">
-        <ul class="top-list" id="top-supporters-list">
+    <div class="top-tab-panel active" data-top-panel="recent">
+        <ul class="top-list" id="recent-supporters-list">
             <li class="top-empty">جارٍ التحميل…</li>
         </ul>
     </div>
-    <div class="top-tab-panel" data-top-panel="recent">
-        <ul class="top-list" id="recent-supporters-list">
+    <div class="top-tab-panel" data-top-panel="top">
+        <ul class="top-list" id="top-supporters-list">
             <li class="top-empty">جارٍ التحميل…</li>
         </ul>
     </div>
@@ -168,9 +168,10 @@
         return div.innerHTML;
     }
 
-    function formatAmount(amount) {
+    function formatAmount(amount, currency) {
         var n = Number(amount) || 0;
-        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
+        var unit = !currency || currency === 'USD' ? 'دولار' : currency;
+        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ' + unit;
     }
 
     function avatarHtml(s) {
@@ -229,7 +230,7 @@
                     avatarHtml(s) +
                     '<div class="top-info"><div class="top-name">' + escapeHtml(s.name) + '</div>' +
                     '<div class="top-meta">' + meta + '</div></div>' +
-                    '<div class="top-amount">' + formatAmount(s.amount) + '</div>' +
+                    '<div class="top-amount">' + formatAmount(s.amount, s.currency) + '</div>' +
                     '</li>';
             }).join('');
         }).catch(function () {
@@ -238,7 +239,7 @@
     }
 
     var tabButtons = document.querySelectorAll('.top-tab-btn');
-    var recentLoaded = false;
+    var topLoaded = false;
     for (var i = 0; i < tabButtons.length; i++) {
         tabButtons[i].addEventListener('click', function () {
             var target = this.getAttribute('data-top-tab');
@@ -248,15 +249,16 @@
             for (var k = 0; k < panels.length; k++) {
                 panels[k].classList.toggle('active', panels[k].getAttribute('data-top-panel') === target);
             }
-            if (target === 'recent' && !recentLoaded) {
-                recentLoaded = true;
-                loadRecent();
+            if (target === 'top' && !topLoaded) {
+                topLoaded = true;
+                loadTop();
             }
         });
     }
 
-    if (hasAuthClient) loadTop();
-    else topListEl.innerHTML = '<li class="top-empty">تعذّر تحميل قائمة الداعمين حالياً.</li>';
+    // الافتراضي «أحدث الداعمين»: كل دعم جديد (تلقائي من Streamlabs المنصة) يصير الأول
+    if (hasAuthClient) loadRecent();
+    else recentListEl.innerHTML = '<li class="top-empty">تعذّر تحميل قائمة الداعمين حالياً.</li>';
 }());
 </script>
 </body>

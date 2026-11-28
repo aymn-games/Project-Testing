@@ -435,6 +435,16 @@ Streamlabs (Creators/Dukkan Tip, PayPal, …) reach Veyro screens.
 The token never leaves the server. Totals count USD only; other currencies and
 Streamlabs test donations still alert and appear in the log.
 
+### Platform supporters (the platform's own Streamlabs)
+
+`supporters/platform-streamlabs.js` opens one socket with
+`PLATFORM_STREAMLABS_SOCKET_TOKEN` (empty = off). It always runs on the games
+server, even in Veyro proxy mode. Each non-test donation goes to
+`supporters-service.addStreamlabsDonation()`, which saves it into `supporters`
+with `sl_id` (unique, so no duplicates) and `currency`. Public lists use
+`/api/supporters/recent`, newest first. `GET /api/admin/supporters` also
+returns `streamlabs: { status, lastError, lastDonationAt }`.
+
 ## 13. Remote Control («التحكم عن بعد»)
 
 `backend/remote-control/` — a streamer grants up to 5 TikTok usernames control over their games, from a phone screen (`control.html`) or chat commands.

@@ -62,13 +62,13 @@
   function metaLine(k,r,cls){
     if(CAT[k].money)return r[2]?'<span class="'+cls+' msg">'+esc(r[2])+'</span>':'';
     return '<span class="'+cls+' idl">'+(r[2]?'<span class="h">@'+esc(r[2])+'</span>':'')+(r[3]?'<span class="id">ID <span class="num">'+esc(r[3])+'</span></span>':'')+'</span>'}
-  function num(k,n){n=Number(n)||0;return CAT[k].money?'$'+n.toLocaleString('en-US'):n.toLocaleString('en-US',{maximumFractionDigits:1})}
+  function num(k,n,cur){n=Number(n)||0;if(!CAT[k].money)return n.toLocaleString('en-US',{maximumFractionDigits:1});var v=n.toLocaleString('en-US',{maximumFractionDigits:2});return cur&&cur!=='USD'?v+' '+cur:'$'+v}
   function simpleFav(name,rank){var c=hue(name);
     return '<span class="fav fr-simple"><span class="aura"></span><span class="av" style="--a1:'+c[0]+';--a2:'+c[1]+'">'+initial(name)+'</span><span class="oring"><i></i></span><span class="trank"><b>'+rank+'</b></span></span>'}
   function throne(k,rows,unit){
     var order=rows.length>3?[3,1,0,2,4]:[1,0,2];
     return '<div class="throne'+(rows.length>3?' five':'')+'">'+order.map(function(i){var r=rows[i];if(!r)return '';
-      return '<div class="tcol rk'+(i+1)+'">'+(i>2&&k!=='sup'?simpleFav(r[0],i+1):fav(r[0],i+1,k==='pla'?'spark':k==='str'?'gold':'crystal'))+'<span class="tname">'+esc(r[0])+'</span>'+metaLine(k,r,'tmeta')+'<span class="tcount"><span class="tic">'+TIC[k]+'</span><span class="tnum">'+num(k,r[1])+'</span>'+((unit||CAT[k].unit)?'<span class="tunit">'+(unit||CAT[k].unit)+'</span>':'')+'</span></div>'}).join('')+'</div>'}
+      return '<div class="tcol rk'+(i+1)+'">'+(i>2&&k!=='sup'?simpleFav(r[0],i+1):fav(r[0],i+1,k==='pla'?'spark':k==='str'?'gold':'crystal'))+'<span class="tname">'+esc(r[0])+'</span>'+metaLine(k,r,'tmeta')+'<span class="tcount"><span class="tic">'+TIC[k]+'</span><span class="tnum">'+num(k,r[1],r[3])+'</span>'+((unit||CAT[k].unit)?'<span class="tunit">'+(unit||CAT[k].unit)+'</span>':'')+'</span></div>'}).join('')+'</div>'}
   function title(k,extra,label){return '<h3 class="grp-t"><span class="ti"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">'+ICON[k]+'</svg></span>'+(label||CAT[k].t)+(extra?' <small>'+extra+'</small>':'')+'</h3>'}
   /* weekly reset: every Saturday 00:00 Riyadh time (UTC+3, no daylight saving) */
   var WEEK_MS=7*864e5,KSA=3*36e5;
@@ -92,8 +92,9 @@
         (WEEK[c].length?throne(c,WEEK[c],WEEKU[c]):'<div class="lw-empty"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z" opacity="0.2"/><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></svg><b>'+(loaded.week?'ما فيه نتائج للأسبوع الماضي':'نجيب القائمة')+'</b><span>'+(loaded.week?'القائمة تظهر هنا بعد أول أسبوع كامل':'لحظات')+'</span></div>')+'</div>'}).join('')+'</div>';
     } else {
       var rows=CAT[k].rows;
-      if(!rows.length){meta.innerHTML='<span class="pill"><i></i>هذا الأسبوع</span><span>'+CAT[k].t+'</span>';b.innerHTML='<div class="lw-empty" style="margin:0 auto"><b>'+(loaded[k]?'ما فيه أحد بالقائمة للحين':'نجيب القائمة')+'</b><span>'+(loaded[k]?'القائمة تتعبى أول ما يبدأ النشاط هالأسبوع':'لحظات')+'</span></div>';b.classList.remove('panel-fade');void b.offsetWidth;b.classList.add('panel-fade');return}
-      meta.innerHTML='<span class="pill"><i></i>هذا الأسبوع</span><span>توب <span class="num">5</span> '+CAT[k].t+'</span>';
+      var pill=k==='sup'?'الأحدث':'هذا الأسبوع';
+      if(!rows.length){meta.innerHTML='<span class="pill"><i></i>'+pill+'</span><span>'+CAT[k].t+'</span>';b.innerHTML='<div class="lw-empty" style="margin:0 auto"><b>'+(loaded[k]?'ما فيه أحد بالقائمة للحين':'نجيب القائمة')+'</b><span>'+(loaded[k]?'القائمة تتعبى أول ما يبدأ النشاط هالأسبوع':'لحظات')+'</span></div>';b.classList.remove('panel-fade');void b.offsetWidth;b.classList.add('panel-fade');return}
+      meta.innerHTML='<span class="pill"><i></i>'+pill+'</span><span>'+(k==='sup'?'آخر <span class="num">5</span> داعمين، كل دعم جديد يصير الأول':'توب <span class="num">5</span> '+CAT[k].t)+'</span>';
       b.innerHTML='<div class="big">'+throne(k,rows)+(k==='sup'?'<a class="btn btn-primary btn-lg support-btn" href="https://creators.sa/aymngame" target="_blank" rel="noopener"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232,102c0,66-104,122-104,122S24,168,24,102A54,54,0,0,1,78,48c22.59,0,41.94,12.31,50,32,8.06-19.69,27.41-32,50-32A54,54,0,0,1,232,102Z" opacity="0.2"/><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40ZM128,214.8C109.74,204.16,32,155.69,32,102A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,155.61,146.24,204.15,128,214.8Z"/></svg>دعم المنصة</a>':'')+'</div>';
     }
     b.classList.remove('panel-fade');void b.offsetWidth;b.classList.add('panel-fade');
@@ -104,10 +105,10 @@
   function redraw(k){loaded[k]=true;var t=document.querySelector('.tab[aria-selected="true"]');if(t&&t.dataset.k===k)render(k)}
   var A=window.AGPAuth;
   if(A){
-    Promise.all([A.getTopSupporters?A.getTopSupporters():null,A.getRecentSupporters?A.getRecentSupporters(20):null]).then(function(rs){
-      var top=(rs[0]&&rs[0].supporters)||[],recent=(rs[1]&&rs[1].supporters)||[],msg={};
-      recent.forEach(function(s){if(s&&s.name&&s.message&&!msg[s.name])msg[s.name]=s.message});
-      CAT.sup.rows=top.slice(0,5).map(function(s){avatar(s);return [nm(s),s.totalAmount,msg[s.name]||'']});redraw('sup')}).catch(function(){redraw('sup')});
+    /* الداعمين: آخر 5 (الأحدث أولاً، مو حسب المبلغ) — تلقائي من Streamlabs المنصة (backend/supporters/platform-streamlabs.js) */
+    if(A.getRecentSupporters)A.getRecentSupporters(5).then(function(r){
+      CAT.sup.rows=((r&&r.supporters)||[]).slice(0,5).map(function(s){avatar(s);return [nm(s),s.amount,s.message||'',s.currency||'USD']});redraw('sup')}).catch(function(){redraw('sup')});
+    else loaded.sup=true;
     if(A.getTopStreamers)A.getTopStreamers(5).then(function(r){CAT.str.rows=((r&&r.streamers)||[]).slice(0,5).map(function(x){avatar(x);return [nm(x),x.totalHours,x.tiktokUsername,x.customId]});redraw('str')}).catch(function(){redraw('str')});
     if(A.getTopPlayersByWins)A.getTopPlayersByWins(5).then(function(r){CAT.pla.rows=((r&&r.players)||[]).slice(0,5).map(function(x){avatar(x);return [nm(x),x.gamesWon,x.username,x.customId]});redraw('pla')}).catch(function(){redraw('pla')});
     if(A.getLastWeekRanking)A.getLastWeekRanking().then(function(d){if(!d||!d.success)return redraw('week');
