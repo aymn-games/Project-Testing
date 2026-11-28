@@ -31,7 +31,7 @@ var Village = require('./mafia-village');
 function engineFor(settings) { return settings && settings.system === 'village' ? Village : Game; }
 
 // حدود ملامح الشخصية (لازم تطابق اللوحات في games/mafia/mafia-looks.js)
-var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6, outfit: 5, accs: 256 };   // outfit = نوع اللبس (OUTFITS)، accs = الزينة المفعّلة (bitmask على ACCS) بـmafia-looks.js
+var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6, outfit: 5, accs: 256, girl: 2 };   // girl = 0 ولد · 1 بنت   // outfit = نوع اللبس (OUTFITS)، accs = الزينة المفعّلة (bitmask على ACCS) بـmafia-looks.js
 var ACC_N = 8, ACC_COLORS = 10;   // accC = لون كل زينة (ACCS.length و ACC_C.length بـmafia-looks.js)
 var HOST_GRACE_MS = 30 * 60 * 1000;
 var TICK_MS = 100, LIVE_SEND_MS = 250, IDLE_SEND_MS = 1000;
@@ -66,6 +66,7 @@ function cleanLook(l) {
         o[k] = isFinite(v) && v >= 0 && v < LOOK_LIMITS[k] ? v : Math.floor(Math.random() * LOOK_LIMITS[k]);
     });
     // الزينة: لو ما وصلت (شكل قديم) نحوّل acc القديم أو بدون، وألوانها أرقام داخل اللوحة
+    if (!(l && l.girl != null)) o.girl = [1, 2, 3].indexOf(o.hair) >= 0 ? 1 : 0;   // شكل قديم بدون ولد/بنت: من التسريحة (مو عشوائي)
     var am = Math.floor(Number(l && l.accs));
     if (!(l && l.accs != null)) { var old = Math.floor(Number(l && l.acc)); o.accs = old >= 1 && old <= 6 ? 1 << (old - 1) : 0; }
     else if (!(isFinite(am) && am >= 0 && am < LOOK_LIMITS.accs)) o.accs = 0;   // قيمة غلط ← بدون زينة (مو زينة عشوائية كثيرة)

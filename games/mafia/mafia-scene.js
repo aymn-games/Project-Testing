@@ -325,7 +325,6 @@ function clothify(m, yTop, yBot, k) {
     u.k = k || 1;
     return u;
 }
-const GIRL_STYLES = [1, 2, 3];   // التسريحات اللي تلبس تنورة (ضفاير، طويل، كعكتين)
 
 function buildChar(look, opts) {
     opts = opts || {};
@@ -350,7 +349,7 @@ function buildChar(look, opts) {
 
     const root = new THREE.Group(), body = new THREE.Group(); body.scale.setScalar(CHAR_K); root.add(body);
     const style = opts.outfit ? (opts.outfit === 'detective' ? 'fedora' : opts.outfit === 'doctor' ? 'surgeon' : 'hood') : C.style;
-    const girl = !opts.outfit && GIRL_STYLES.indexOf(style) >= 0;
+    const girl = !opts.outfit && C.girl;   // بنت: البلوزة مع تنورة (الولد شورت)
 
     // نوع اللبس (look.outfit — MafiaLooks.OUTFITS): 0 بلوزة · 1 ثوب · 2 هودي · 3 جاكيت · 4 فستان. الشخصيات الخاصة (opts.outfit) لها لبسها
     const wear = opts.outfit ? -1 : C.outfit;

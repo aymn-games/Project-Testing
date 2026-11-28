@@ -34,21 +34,45 @@
         jester: { n: 'المهرّج', icon: '🃏', c: '#a855f7', team: 'neutral', desc: 'تفوز لو طردتك القرية بالتصويت.' }
     };
 
+    // ولد أو بنت (look.girl): كل واحد له خياراته من التسريحات واللبس والزينة (أرقامها من HAIR_STYLES/OUTFITS/ACCS)
+    var GENDER = {
+        boy: { hair: [0, 4, 5, 6], outfit: [1, 2, 3], acc: [6] },                    // قصير، كيرلي، كاب، شماغ · ثوب، هودي، جاكيت · نظارة
+        girl: { hair: [0, 1, 2, 3, 4], outfit: [0, 4, 2, 3], acc: [0, 1, 2, 3, 4, 5, 6, 7] }   // + ضفاير، طويل، كعكتين · بلوزة، فستان · كل الزينة
+    };
+    var GIRL_HAIR = [1, 2, 3];
+    /** ولد ولا بنت: من look.girl، والشكل القديم (بدونه) من التسريحة */
+    function isGirl(look) { look = look || {}; return look.girl != null ? !!(look.girl | 0) : GIRL_HAIR.indexOf(look.hair | 0) >= 0; }
+    function optsFor(look) { return isGirl(look) ? GENDER.girl : GENDER.boy; }
+    /**
+     * يرتّب الشكل على خيارات الجنس: لو التسريحة أو اللبس مو من خياراته ياخذ أول خيار، والزينة اللي مو له تنشال.
+     * يعدّل look نفسه ويرجعه (للمحرر لما يتغيّر ولد/بنت، وللرسم).
+     */
+    function fitGender(look) {
+        var o = optsFor(look), m = 0;
+        look.girl = isGirl(look) ? 1 : 0;
+        if (o.hair.indexOf(look.hair | 0) < 0) look.hair = o.hair[0];
+        if (o.outfit.indexOf(look.outfit | 0) < 0) look.outfit = o.outfit[0];
+        o.acc.forEach(function (i) { m |= (look.accs | 0) & (1 << i); }); look.accs = m;
+        if (!Array.isArray(look.accC)) look.accC = ACC_DEF.slice();
+        return look;
+    }
     function randomLook() {
         function r(n) { return Math.floor(Math.random() * n); }
-        var hair = r(HAIR_STYLES.length);
-        return { skin: r(SKIN.length), hair: hair, hairC: r(HAIR_C.length), shirt: r(SHIRT.length), pants: r(PANTS.length), outfit: fitOutfit(hair), accs: fitAcc(hair), accC: ACC_DEF.slice() };
+        function pick(a) { return a[r(a.length)]; }
+        var girl = r(2), o = girl ? GENDER.girl : GENDER.boy, hair = pick(o.hair);
+        return { girl: girl, skin: r(SKIN.length), hair: hair, hairC: r(HAIR_C.length), shirt: r(SHIRT.length), pants: r(PANTS.length), outfit: fitOutfit(hair, girl), accs: fitAcc(hair, girl), accC: ACC_DEF.slice() };
     }
-    /** زينة عشوائية (bitmask): لتسريحات البنات وحدة من زينة الشعر، وأحياناً نظارة لأي أحد (واللاعب يغيّرها) */
-    function fitAcc(hair) {
+    /** زينة عشوائية (bitmask): للبنت وحدة من زينة الشعر، وأحياناً نظارة لأي أحد (واللاعب يغيّرها) */
+    function fitAcc(hair, girl) {
         var m = 0, hairOnes = [0, 1, 2, 3, 4, 5, 7];
-        if (hair === 1 || hair === 2 || hair === 3) m |= 1 << hairOnes[Math.floor(Math.random() * hairOnes.length)];
+        if (girl == null ? GIRL_HAIR.indexOf(hair) >= 0 : girl) m |= 1 << hairOnes[Math.floor(Math.random() * hairOnes.length)];
         if (Math.random() < 0.15) m |= 1 << 6;
         return m;
     }
-    /** لبس عشوائي يناسب التسريحة: الشماغ غالباً مع الثوب، والفستان لتسريحات البنات (اللاعب يقدر يغيّره) */
-    function fitOutfit(hair) {
-        var pick = hair === 6 ? [1, 1, 1, 2, 3] : (hair === 1 || hair === 2 || hair === 3) ? [0, 4, 4, 2, 3] : [0, 1, 2, 3];
+    /** لبس عشوائي من خيارات الجنس: الشماغ غالباً مع الثوب (اللاعب يغيّره) */
+    function fitOutfit(hair, girl) {
+        if (girl == null) girl = GIRL_HAIR.indexOf(hair) >= 0;
+        var pick = girl ? [0, 4, 4, 2, 3] : hair === 6 ? [1, 1, 1, 2, 3] : [1, 2, 3];
         return pick[Math.floor(Math.random() * pick.length)];
     }
 
@@ -65,6 +89,7 @@
             skin: SKIN[look.skin] || SKIN[0], hair: HAIR_C[look.hairC] || HAIR_C[0],
             shirt: SHIRT[look.shirt] || SHIRT[0], pants: PANTS[look.pants] || PANTS[0], style: look.hair | 0,
             outfit: look.outfit >= 0 && look.outfit < OUTFITS.length ? look.outfit | 0 : 0,
+            girl: isGirl(look),
             accs: accList(look)
         };
     }
@@ -135,5 +160,5 @@
             front + accSVG(c) + '</svg>';
     }
 
-    window.MafiaLooks = { SKIN: SKIN, HAIR_STYLES: HAIR_STYLES, HAIR_C: HAIR_C, SHIRT: SHIRT, PANTS: PANTS, OUTFITS: OUTFITS, ACCS: ACCS, ACC_C: ACC_C, ACC_DEF: ACC_DEF, accList: accList, ROLE: ROLE, randomLook: randomLook, fitOutfit: fitOutfit, fitAcc: fitAcc, colors: colors, avatarSVG: avatarSVG };
+    window.MafiaLooks = { SKIN: SKIN, HAIR_STYLES: HAIR_STYLES, HAIR_C: HAIR_C, SHIRT: SHIRT, PANTS: PANTS, OUTFITS: OUTFITS, ACCS: ACCS, GENDER: GENDER, isGirl: isGirl, optsFor: optsFor, fitGender: fitGender, ACC_C: ACC_C, ACC_DEF: ACC_DEF, accList: accList, ROLE: ROLE, randomLook: randomLook, fitOutfit: fitOutfit, fitAcc: fitAcc, colors: colors, avatarSVG: avatarSVG };
 })();
