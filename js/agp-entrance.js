@@ -2,7 +2,7 @@
  * AGP ENTRANCE — دخولية اللاعب: مشهد 4 ثواني فوق الشاشة كلها لما يدخل لاعب
  * عنده دخولية مفعّلة (backend/collectibles: user_entrances + user_owned_entrances).
  *
- * 5 نماذج: 4 بمؤثرات حقيقية مصوّرة (assets/entrances/<key>/، مصادرها
+ * 6 نماذج: 4 بمؤثرات حقيقية مصوّرة (assets/entrances/<key>/، مصادرها
  * بـCREDITS.md) تنحط فوق اللوبي بـmix-blend-mode: screen:
  *   nitro    — نيترو: جزيئات زرقاء، لهب ينفجر، كرة نار، جمر. بصوت (مخفّف).
  *   royal    — ملكي: عمود ضوء ذهبي، غبار ولمعات ذهبية. بدون صوت.
@@ -10,6 +10,9 @@
  *   storm    — العاصفة: غيوم وصواعق حقيقية، الإطار يطلع مع الصاعقة. بصوت (مخفّف).
  *   notes    — النوتات: موجة نوتات موسيقية مضيئة (مرسومة بالكود على canvas، بدون
  *              ملفات فيديو) مع خطوط المدرج، والإطار يركب الموجة ويستقر بالنص. بدون صوت.
+ *   cloud    — الغيمة: دخولية ناعمة ولطيفة بألوان باستيل — غيوم قطنية تدخل من
+ *              الجوانب، فقاعات تطفو، قلوب صغيرة ولمعات، والإطار يطلع من تحت وينط
+ *              بنعومة. مرسومة بالكود على canvas (بدون ملفات). بدون صوت.
  * المشهد يعرض إطار اللاعب نفسه (AGP.playerCard، أي إطار — مو مربوط بإطار
  * معيّن)، واسمه كبير، ونص الدخولية اللي يكتبه من بروفايله، وبلونه اللي اختاره
  * (entrance.color من ألوان النموذج الجاهزة).
@@ -52,11 +55,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         royal:    { gold: 45, silver: 'silver', rose: 18 },
         princess: { pink: 328, purple: 282, sky: 200 },
         storm:    { white: null, blue: 215, purple: 270, red: 0 },
-        notes:    { gold: 45, silver: 'silver', pink: 328, sky: 200 }
+        notes:    { gold: 45, silver: 'silver', pink: 328, sky: 200 },
+        cloud:    { pink: 328, purple: 270, sky: 200, mint: 160 }
     };
     var GLOW = {
         blue: '110,180,255', red: '255,95,95', green: '90,230,150', purple: '185,125,255', gold: '255,205,110', silver: '220,228,240',
-        rose: '255,170,150', pink: '255,140,205', sky: '130,200,255', white: '200,215,255'
+        rose: '255,170,150', pink: '255,140,205', sky: '130,200,255', white: '200,215,255', mint: '120,225,190'
     };
     var MODELS = {
         nitro: {
@@ -102,6 +106,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         notes: {
             tag: 'دخول النوتات', notes: true, dim: 'radial-gradient(ellipse at 50% 45%, rgba(22,8,44,.6), rgba(4,2,10,.95) 72%)',
             layers: []
+        },
+        cloud: {
+            tag: 'دخول الغيمة', cloud: true, dim: 'radial-gradient(ellipse at 50% 45%, rgba(40,20,48,.5), rgba(10,6,16,.93) 72%)',
+            layers: []
         }
     };
 
@@ -136,7 +144,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!document.querySelector('link[data-agp-entrance-fonts]')) {
             var link = document.createElement('link');
             link.rel = 'stylesheet'; link.setAttribute('data-agp-entrance-fonts', '1');
-            link.href = 'https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Cairo:wght@700;900&display=swap';
+            link.href = 'https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Baloo+Bhaijaan+2:wght@800&family=Cairo:wght@700;900&display=swap';
             document.head.appendChild(link);
         }
         var st = document.createElement('style');
@@ -167,6 +175,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-ent-flash{position:absolute;inset:0;opacity:0;mix-blend-mode:screen;}',
             '.agp-ent-trail{position:absolute;inset:0;}',
             '.agp-ent-notecv{position:absolute;left:0;top:0;width:1280px;height:720px;}',
+            '.agp-ent-cloudcv{position:absolute;left:0;top:0;width:1280px;height:720px;-webkit-mask-image:linear-gradient(transparent,#000 9%,#000 80%,transparent);mask-image:linear-gradient(transparent,#000 9%,#000 80%,transparent);}',
+            '.agp-ent-cloud .agp-ent-name{font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-weight:800;line-height:1.25;}',
+            '.agp-ent-cloud .agp-ent-tag{letter-spacing:3px;}',
+            '.agp-ent-cloud .agp-ent-tag::before,.agp-ent-cloud .agp-ent-tag::after{content:"\\2661";width:auto;height:auto;margin:0 12px;background:none;font-size:20px;}',
+            '.agp-ent-cloud .agp-ent-title::before{background:radial-gradient(ellipse,rgba(20,10,28,.6),rgba(20,10,28,.3) 45%,transparent 70%);}',
             '.agp-ent-bfs{position:absolute;inset:0;}',
             '.agp-ent-bf{position:absolute;left:0;top:0;width:0;height:0;perspective:520px;}',
             '.agp-ent-bf .w{position:absolute;top:-70px;width:100px;height:140px;filter:drop-shadow(0 0 6px rgba(255,170,220,.9)) drop-shadow(0 0 16px rgba(255,120,200,.55));}',
@@ -304,6 +317,120 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
+    // ---------------------------------------------------------------- cloud (soft pastel)
+    // دخولية ناعمة: غيوم قطنية تدخل من الجوانب وتطلع بالنهاية، فقاعات تطفو من تحت،
+    // لمعات صغيرة، ودفعة قلوب لما ينزل الإطار. كل شي sprites مرسومة مرة وحدة، وكل
+    // حركة محسوبة من الزمن t (بذرة ثابتة)، فالحركة ناعمة بأي معدل إطارات.
+    var CLOUD_PAL = {
+        pink:   { main: '255,150,200', light: '255,226,241', dim: 'radial-gradient(ellipse at 50% 45%, rgba(70,24,52,.5), rgba(18,6,14,.92) 72%)' },
+        purple: { main: '190,160,255', light: '236,226,255', dim: 'radial-gradient(ellipse at 50% 45%, rgba(44,26,78,.5), rgba(10,6,20,.92) 72%)' },
+        sky:    { main: '140,200,255', light: '226,242,255', dim: 'radial-gradient(ellipse at 50% 45%, rgba(18,40,74,.5), rgba(4,8,18,.92) 72%)' },
+        mint:   { main: '120,225,190', light: '222,250,238', dim: 'radial-gradient(ellipse at 50% 45%, rgba(14,54,46,.5), rgba(3,12,10,.92) 72%)' }
+    };
+    // [from x, to x, y, scale, drift phase]
+    var CLOUDS = [[-420, 110, 650, 1.35, 0], [1700, 1170, 640, 1.45, 1.7], [-320, 400, 735, 1.05, 2.9],
+                  [1600, 880, 745, 1.15, 4.1], [-300, 140, 85, .7, 5.2], [1580, 1140, 105, .8, .8]];
+    function cloudSprites(pal) {
+        function mk(w, h, draw) { var c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d'); draw(g, w, h); return c; }
+        var cloud = mk(460, 260, function (g) {
+            var puffs = [[130, 160, 72], [205, 120, 88], [290, 130, 78], [350, 165, 60], [85, 180, 46], [230, 180, 84], [330, 190, 48]];
+            g.shadowColor = 'rgba(' + pal.main + ',.75)'; g.shadowBlur = 34;
+            var gr = g.createLinearGradient(0, 40, 0, 250);
+            gr.addColorStop(0, 'rgba(255,255,255,.97)'); gr.addColorStop(.55, 'rgba(' + pal.light + ',.93)'); gr.addColorStop(1, 'rgba(' + pal.main + ',.7)');
+            g.fillStyle = gr; g.beginPath();
+            puffs.forEach(function (p) { g.moveTo(p[0] + p[2], p[1]); g.arc(p[0], p[1], p[2], 0, Math.PI * 2); });
+            g.fill(); g.shadowBlur = 0;
+            g.fillStyle = 'rgba(255,255,255,.55)';   // ضوء ناعم فوق الغيمة
+            g.beginPath(); g.ellipse(195, 82, 46, 18, -.25, 0, Math.PI * 2); g.fill();
+        });
+        var bubble = mk(72, 72, function (g) {
+            g.translate(36, 36);
+            var gr = g.createRadialGradient(-6, -6, 2, 0, 0, 30);
+            gr.addColorStop(0, 'rgba(255,255,255,.05)'); gr.addColorStop(.7, 'rgba(' + pal.light + ',.12)'); gr.addColorStop(1, 'rgba(' + pal.main + ',.45)');
+            g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 30, 0, Math.PI * 2); g.fill();
+            g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,.75)'; g.stroke();
+            g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-11, -12, 7, 4, -.7, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(12, 13, 2.2, 0, Math.PI * 2); g.fill();
+        });
+        var heart = mk(80, 80, function (g) {
+            g.translate(40, 42); var u = 24;
+            g.shadowColor = 'rgba(' + pal.main + ',.95)'; g.shadowBlur = 14;
+            g.fillStyle = 'rgb(' + pal.light + ')';
+            g.beginPath(); g.moveTo(0, u * .55);
+            g.bezierCurveTo(-u * 1.1, -u * .15, -u * .55, -u * 1.05, 0, -u * .45);
+            g.bezierCurveTo(u * .55, -u * 1.05, u * 1.1, -u * .15, 0, u * .55);
+            g.fill(); g.shadowBlur = 0;
+            g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.ellipse(-u * .42, -u * .45, u * .16, u * .1, -.6, 0, Math.PI * 2); g.fill();
+        });
+        var spark = mk(64, 64, function (g) {
+            g.translate(32, 32); g.shadowColor = 'rgba(' + pal.main + ',1)'; g.shadowBlur = 10; g.fillStyle = '#fff';
+            g.beginPath(); for (var i = 0; i < 8; i++) { var r = i % 2 ? 4 : 20, a = i * Math.PI / 4; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill();
+        });
+        return { cloud: cloud, bubble: bubble, heart: heart, spark: spark };
+    }
+    function buildCloud(o, color) {
+        var pal = CLOUD_PAL[color] || CLOUD_PAL.pink;
+        o.dim.style.background = pal.dim;
+        var cv = o.root.querySelector('.agp-ent-cloudcv'), dpr = Math.min(2, window.devicePixelRatio || 1);
+        cv.width = 1280 * dpr; cv.height = 720 * dpr;
+        var g = cv.getContext('2d'); g.scale(dpr, dpr);
+        var R = function (i, k) { return hash(i * 17.3 + k * 91.7); }, bubbles = [], floats = [], burst = [], sparks = [], i;
+        for (i = 0; i < 46; i++) bubbles.push({ born: .2 + R(i, 1) * 2.7, life: 1.7 + R(i, 2) * 1.1, x: 60 + R(i, 3) * 1160, sp: 150 + R(i, 4) * 170, r: 9 + R(i, 5) * 22, ph: R(i, 6) * 6.28 });
+        for (i = 0; i < 18; i++) floats.push({ born: 1.35 + R(i, 7) * 1.7, life: 1.4 + R(i, 8) * .7, x: 640 + (R(i, 9) - .5) * 560, y: 330 + (R(i, 10) - .5) * 120, sp: 60 + R(i, 11) * 60, sc: .35 + R(i, 12) * .3, ph: R(i, 13) * 6.28 });
+        for (i = 0; i < 12; i++) burst.push({ a: i / 12 * Math.PI * 2 + (R(i, 14) - .5) * .4, d: 210 + R(i, 15) * 110, sc: .45 + R(i, 16) * .35, rot: (R(i, 17) - .5) * .8 });
+        for (i = 0; i < 30; i++) sparks.push({ x: 40 + R(i, 18) * 1200, y: 30 + R(i, 19) * 660, ph: R(i, 20) * 6.28, sp: 2.2 + R(i, 21) * 2.4, sc: .3 + R(i, 22) * .45 });
+        o.cloud = { g: g, s: cloudSprites(pal), bubbles: bubbles, floats: floats, burst: burst, sparks: sparks };
+    }
+    function drawCloud(o, t) {
+        var C = o.cloud, g = C.g, S = C.s, all = 1 - smooth(3.45, 3.95, t), i, p, a, d;
+        g.clearRect(0, 0, 1280, 720);
+        // لمعات بعيدة
+        var sw = smooth(.3, .9, t) * all;
+        for (i = 0; i < C.sparks.length; i++) {
+            p = C.sparks[i]; a = Math.pow(Math.max(0, Math.sin(t * p.sp + p.ph)), 3) * sw; if (a <= .02) continue;
+            d = 64 * p.sc * (.7 + .3 * a);
+            g.globalAlpha = a; g.drawImage(S.spark, p.x - d / 2, p.y - d / 2, d, d);
+        }
+        // فقاعات تطفو
+        for (i = 0; i < C.bubbles.length; i++) {
+            p = C.bubbles[i]; var age = t - p.born; if (age < 0 || age > p.life) continue;
+            var u = age / p.life; a = smooth(0, .15, u) * (1 - smooth(.7, 1, u)) * all; if (a <= 0) continue;
+            var by = 770 - p.sp * age, bx = p.x + 16 * Math.sin(p.ph + age * 2.4);
+            d = p.r * 2 * (1 + .04 * Math.sin(age * 6 + p.ph));
+            g.globalAlpha = a; g.drawImage(S.bubble, bx - d / 2, by - d / 2, d, d * (1 - .05 * Math.sin(age * 5 + p.ph)));
+        }
+        // دفعة قلوب لما ينزل الإطار
+        var bt = t - 1.25;
+        if (bt > 0 && bt < 1.3) {
+            var k = cubicOut(clamp(bt / 1.1)), ba = (1 - smooth(.55, 1.3, bt)) * smooth(0, .08, bt);
+            for (i = 0; i < C.burst.length; i++) {
+                p = C.burst[i]; d = 80 * p.sc * (.6 + .4 * k);
+                g.save(); g.globalAlpha = ba; g.translate(640 + Math.cos(p.a) * p.d * k, 288 + Math.sin(p.a) * p.d * k * .8 - 30 * bt);
+                g.rotate(p.rot * k); g.drawImage(S.heart, -d / 2, -d / 2, d, d); g.restore();
+            }
+        }
+        // قلوب صغيرة تطلع حول الإطار
+        for (i = 0; i < C.floats.length; i++) {
+            p = C.floats[i]; var fa = t - p.born; if (fa < 0 || fa > p.life) continue;
+            var fu = fa / p.life; a = smooth(0, .2, fu) * (1 - smooth(.6, 1, fu)) * all; if (a <= 0) continue;
+            d = 80 * p.sc * (.7 + .3 * smooth(0, .3, fu));
+            g.save(); g.globalAlpha = a; g.translate(p.x + 14 * Math.sin(p.ph + fa * 3), p.y - p.sp * fa); g.rotate(.25 * Math.sin(p.ph + fa * 2.5));
+            g.drawImage(S.heart, -d / 2, -d / 2, d, d); g.restore();
+        }
+        // الغيوم تدخل من الجوانب، تتمايل، وترجع تطلع بالنهاية
+        var ex = easeInOut(seg(t, 3.15, 3.95));
+        for (i = 0; i < CLOUDS.length; i++) {
+            p = CLOUDS[i];
+            var ck = cubicOut(seg(t, .05 + i * .07, 1.35 + i * .07));
+            var cx = p[0] + (p[1] - p[0]) * ck + (p[0] - p[1]) * ex + 10 * Math.sin(t * .9 + p[4]);
+            var cy = p[2] + 6 * Math.sin(t * 1.3 + p[4]);
+            var cw = 460 * p[3], ch = 260 * p[3];
+            g.globalAlpha = seg(t, 0, .5) * (1 - seg(t, 3.55, 3.95)) * .95;
+            g.drawImage(S.cloud, cx - cw / 2, cy - ch / 2, cw, ch);
+        }
+        g.globalAlpha = 1;
+    }
+
     // ---------------------------------------------------------------- per-model motion of card + title
     function title(o, t, tIn, tOut, rise) {
         var a = cubicOut(seg(t, tIn, tIn + .7)), out = seg(t, tOut, tOut + .35);
@@ -376,6 +503,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             shake(o, t, 0);
             flash(o, .22 * bump(t, 2.05, .2), o.glow);
             title(o, t, 2.0, 3.05, 14);
+        },
+        cloud: function (o, t) {
+            o.dim.style.opacity = seg(t, 0, .4) * (1 - seg(t, 3.55, 4));
+            drawCloud(o, t);
+            // الإطار يطلع من تحت بنعومة، ينط نطّة صغيرة (يتمدد ويرجع)، ويتمايل كأنه طاير
+            var u = seg(t, .7, 1.25), bk = 1 + 2.2 * Math.pow(u - 1, 3) + 1.2 * Math.pow(u - 1, 2);
+            var st = t - 1.25, sq = st > 0 ? .07 * Math.exp(-st * 5.5) * Math.sin(st * 15) : 0;
+            var co = seg(t, 3.1, 3.5), fl = t > 1.25 ? Math.sin((t - 1.25) * 2.4) * 5 * (1 - co) : 0;
+            o.card.style.transform = 'translate(0px,' + ((1 - bk) * 320 + fl - co * 40) + 'px) scale(' + ((1 + sq) * (.9 + .1 * u)) + ',' + ((1 - sq) * (.9 + .1 * u)) + ')';
+            o.card.style.filter = 'brightness(' + (1 + .25 * bump(t, 1.3, .25)) + ') drop-shadow(0 0 26px rgba(' + o.glow + ',' + (.55 * smooth(1.0, 1.6, t)) + '))';
+            o.card.style.opacity = seg(t, .7, .95) * (1 - co);
+            shake(o, t, 0);
+            flash(o, .2 * bump(t, 1.28, .22), o.glow);
+            title(o, t, 1.55, 3.05, 22);
         }
     };
 
@@ -401,6 +542,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="agp-ent-stage"><div class="agp-ent-world">' +
             '<div class="agp-ent-back"></div>' +
             (M.notes ? '<canvas class="agp-ent-notecv"></canvas>' : '') +
+            (M.cloud ? '<canvas class="agp-ent-cloudcv"></canvas>' : '') +
             '<div class="agp-ent-card"><div class="agp-ent-card-in">' + cardHtml(player) + '</div></div>' +
             '<div class="agp-ent-title"><div class="agp-ent-tag">' + esc(M.tag) + '</div>' +
             '<div class="agp-ent-name" style="text-shadow:0 0 24px rgba(' + glow + ',.75),0 4px 12px rgba(0,0,0,.8)">' + esc(player.name || '') + '</div>' +
@@ -426,6 +568,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (shift) q('trail').style.filter = 'hue-rotate(' + shift + 'deg)';
         }
         if (M.notes) buildNotes(o);
+        if (M.cloud) buildCloud(o, color);
         if (M.sound) { o.audio = new Audio(ASSETS + key + '/' + M.sound); o.audio.preload = 'auto'; }
         return o;
     }
@@ -553,6 +696,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // Kept for js/agp-game-shell.js (the old small badges are gone; the full-screen entrance replaces them).
     AGP.playerEntrance = { syncSettled: function () {} };
 
-    AGP.log('AGP Entrance loaded (5 entrances: nitro/royal/princess/storm/notes).');
+    AGP.log('AGP Entrance loaded (6 entrances: nitro/royal/princess/storm/notes/cloud).');
 
 }(window.AymanGamesPlatform));

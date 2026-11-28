@@ -798,7 +798,7 @@ function adminListFrameCodes() {
 
 /** Owner toggles their entrance on/off without deleting it (template/text
  * stay saved for one-click re-enable). */
-/** Owner picks one of their owned entrances (nitro/royal/princess/storm/notes). */
+/** Owner picks one of their owned entrances (nitro/royal/princess/storm/notes/cloud). */
 function equipEntrance(key) {
     return request('/api/entrance/equip', { method: 'POST', body: { key: key } });
 }

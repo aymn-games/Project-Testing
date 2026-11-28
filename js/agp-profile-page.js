@@ -898,11 +898,12 @@
     royal: { name: 'ملكي', desc: 'ضوء ذهبي ولمعات — بدون صوت', art: 'radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)' },
     princess: { name: 'الأميرة', desc: 'أضواء وردية وفراشات — بدون صوت', art: 'radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)' },
     storm: { name: 'العاصفة', desc: 'غيوم وصواعق حقيقية — بصوت', art: 'radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)' },
-    notes: { name: 'النوتات', desc: 'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت', art: 'radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)' }
+    notes: { name: 'النوتات', desc: 'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت', art: 'radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)' },
+    cloud: { name: 'الغيمة', desc: 'غيوم وفقاعات وقلوب ناعمة بألوان باستيل — بدون صوت', art: 'radial-gradient(circle at 45% 40%,#ffffff,#ffd6ec 28%,#c9b6ff 55%,#2a1838 85%)' }
   };
   var ENT_COLORS = {
     blue: ['أزرق', '#3d8bff'], red: ['أحمر', '#ff4d4d'], green: ['أخضر', '#2fd47a'], purple: ['بنفسجي', '#9b6bff'], gold: ['ذهبي', '#e8b13c'],
-    silver: ['فضي', '#c9d1dc'], rose: ['ذهبي وردي', '#e59a82'], pink: ['وردي', '#ff6fb4'], sky: ['سماوي', '#5ec2ff'], white: ['أبيض', '#f2f4f8']
+    silver: ['فضي', '#c9d1dc'], rose: ['ذهبي وردي', '#e59a82'], pink: ['وردي', '#ff6fb4'], sky: ['سماوي', '#5ec2ff'], white: ['أبيض', '#f2f4f8'], mint: ['نعناعي', '#6fe0b8']
   };
   function entPreview(p, key, text, color) {
     if (!window.AymanGamesPlatform || !window.AymanGamesPlatform.entrance) return showToast('المعاينة ما تحمّلت، حدّث الصفحة.', true);

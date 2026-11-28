@@ -168,7 +168,7 @@ db.exec(`
     );
 
     -- الدخوليات اللي يملكها المستخدم (منح يدوي من الأدمن، مثل الإطارات) —
-    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm/notes).
+    -- مفتاحها من ENTRANCE_CATALOG بـcollectibles-service.js (nitro/royal/princess/storm/notes/cloud).
     CREATE TABLE IF NOT EXISTS user_owned_entrances (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         entrance_key TEXT NOT NULL,

@@ -1267,7 +1267,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 // ============================================================
 const A = window.AGPAuth;
 const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','livecards','theme','levels','stats','live','store'];
-const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة', notes:'النوتات' };
+const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة', notes:'النوتات', cloud:'الغيمة' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
 const TYPE_LABELS = { suggestion:'اقتراح', question:'سؤال', bug:'مشكلة تقنية' };
@@ -1555,9 +1555,9 @@ class Component extends DCLogic {
     const libTabs=[['club','نوادي'],['country','دول خليجية والسعودية'],['general','عام'],['girls','بنات'],['boys','عيال'],['rare','نادرة'],['other','أخرى (كتالوج أساسي)']].map(([k,l])=>({ label:l,
       count:frames.filter(f=>f.cat===k&&(!lq||f.name.toLowerCase().includes(lq)||f.file.toLowerCase().includes(lq))).length, go:()=>this.setState({ libTab:k }),
       bg:s.libTab===k?'#7c3aed':'transparent', color:s.libTab===k?'#fff':'#9199ab', border:s.libTab===k?'#7c3aed':'#262a37' }));
-    const ENT_DESC={ nitro:'لهب نيترو أزرق وانطلاق — بصوت', royal:'عمود ضوء ذهبي ولمعات — بدون صوت', princess:'أضواء وردية وفراشات — بدون صوت', storm:'غيوم وصواعق حقيقية — بصوت', notes:'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت' };
+    const ENT_DESC={ nitro:'لهب نيترو أزرق وانطلاق — بصوت', royal:'عمود ضوء ذهبي ولمعات — بدون صوت', princess:'أضواء وردية وفراشات — بدون صوت', storm:'غيوم وصواعق حقيقية — بصوت', notes:'موجة نوتات موسيقية والإطار يدخل معها — بدون صوت', cloud:'غيوم وفقاعات وقلوب ناعمة بألوان باستيل — بدون صوت' };
     const ownedNow=(s.entOwnedFor&&s.pickUser&&s.entOwnedFor===s.pickUser.id)?(s.entOwned||[]):null;
-    const entranceModels=[['nitro','radial-gradient(circle at 30% 40%,#bfe3ff,#2f7dff 35%,#06112b 75%)'],['royal','radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)'],['princess','radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)'],['storm','radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)'],['notes','radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)']]
+    const entranceModels=[['nitro','radial-gradient(circle at 30% 40%,#bfe3ff,#2f7dff 35%,#06112b 75%)'],['royal','radial-gradient(circle at 50% 20%,#fff2c4,#e0a93a 35%,#1a1004 80%)'],['princess','radial-gradient(circle at 40% 40%,#ffe0f0,#ff6fb4 35%,#2a0618 80%)'],['storm','radial-gradient(circle at 60% 10%,#f2f5ff,#8a93a8 30%,#0b0d14 75%)'],['notes','radial-gradient(circle at 35% 45%,#fff6dc,#f0bf5a 30%,#3a1a5e 62%,#0d0618 85%)'],['cloud','radial-gradient(circle at 45% 40%,#ffffff,#ffd6ec 28%,#c9b6ff 55%,#2a1838 85%)']]
       .map(([k,sw])=>({ label:TEMPLATE_LABELS[k]+(ownedNow&&ownedNow.includes(k)?' ✓':''), desc:ENT_DESC[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
     const elimCards=(s.elimCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ cardKey:c.key }), border:s.cardKey===c.key?'#7c3aed':'#262a37', bg:s.cardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
     const selCard=(s.elimCardList||[]).find(c=>c.key===s.cardKey);
