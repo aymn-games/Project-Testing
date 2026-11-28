@@ -274,9 +274,55 @@ function charGeo(lo) {
         hoodRoll: new THREE.TorusGeometry(0.3, 0.1, 10, r + 6),
         string: roundCyl(0.016, 0.016, 0.2, 0.008, 6),
         shirtFront: new RoundedBoxGeometry(0.28, 0.68, 0.08, s, 0.035),
-        lapel: new RoundedBoxGeometry(0.09, 0.34, 0.03, 1, 0.012)
+        lapel: new RoundedBoxGeometry(0.09, 0.34, 0.03, 1, 0.012),
+        flap: new RoundedBoxGeometry(0.18, 0.05, 0.04, 1, 0.015)
     };
+    CHAR_GEO[k].skirtF = folded(CHAR_GEO[k].skirt, 10, 0.06, 0.2, -0.235);   // تنورة بطيّات
+    CHAR_GEO[k].robeF = folded(CHAR_GEO[k].robe, 12, 0.03, 0.2, -0.61);    // ثوب بطيّات تحت
     return CHAR_GEO[k];
+}
+// ---------------------------------------------------------------- القماش (طيّات + حركة)
+/** طيّات ثابتة على قطعة ملفوفة (تنورة/ثوب): تموّج حول المحور يزيد لتحت (من yTop لين yBot)، والظل يطلع من الشكل نفسه */
+function folded(geo, freq, amp, yTop, yBot) {
+    const g = geo.clone(), P = g.attributes.position;
+    for (let i = 0; i < P.count; i++) {
+        const x = P.getX(i), y = P.getY(i), z = P.getZ(i), r = Math.hypot(x, z);
+        if (r < 1e-4) continue;
+        const w = Math.max(0, Math.min(1, (yTop - y) / (yTop - yBot))), f = 1 + Math.sin(Math.atan2(x, z) * freq) * amp * w * w;
+        P.setXYZ(i, x * f, y, z * f);
+    }
+    g.computeVertexNormals(); return g;
+}
+/** ملمس نسيج خفيف (bump) مشترك لكل الأقمشة */
+let WEAVE = null;
+function weave() {
+    if (WEAVE) return WEAVE;
+    WEAVE = canvasTex(64, 64, (ctx) => {
+        ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 64, 64);
+        for (let y = 0; y < 64; y += 2) for (let x = 0; x < 64; x += 2) { const v = 118 + (((x >> 1) + (y >> 1)) % 2 ? 22 : -22) + ((x * 7 + y * 13) % 9) - 4; ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(x, y, 2, 2); }
+    });
+    WEAVE.wrapS = WEAVE.wrapT = THREE.RepeatWrapping; WEAVE.repeat.set(6, 6);
+    return WEAVE;
+}
+/**
+ * قماش يتحرك (بالـGPU، بدون نسخ للمجسم): كل نقطة تحت yTop تتمرجح بوزن يزيد لين yBot (المربوط بالخصر ثابت والطرف حر):
+ * تموّج حول القطعة (نسيم/حركة)، ومرجحة عكس اتجاه الحركة (يتأخر ورا الجسم)، وانفراد لما الشخصية تنزل من نطّة.
+ * k = تصحيح المقاس (لو القطعة مكبّرة). swayHair() يحرّك القيم كل فريم.
+ */
+function clothify(m, yTop, yBot, k) {
+    const u = { uT: { value: 0 }, uTop: { value: yTop }, uBot: { value: yBot }, uRip: { value: 0 }, uFlare: { value: 0 }, uSway: { value: new THREE.Vector3() } };
+    m.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, u);
+        sh.vertexShader = 'uniform float uT, uTop, uBot, uRip, uFlare; uniform vec3 uSway;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+            float cw = clamp((uTop - transformed.y) / (uTop - uBot), 0.0, 1.0); cw *= cw;
+            float cph = atan(transformed.x, transformed.z);
+            float crip = sin(cph * 7.0 + uT * 2.3) * 0.6 + sin(cph * 10.0 - uT * 1.7 + 1.3) * 0.4;
+            transformed.xz += transformed.xz * cw * (crip * uRip + uFlare);
+            transformed += uSway * cw;`);
+    };
+    m.customProgramCacheKey = () => 'agp-cloth';
+    u.k = k || 1;
+    return u;
 }
 const GIRL_STYLES = [1, 2, 3];   // التسريحات اللي تلبس تنورة (ضفاير، طويل، كعكتين)
 
@@ -296,6 +342,9 @@ function buildChar(look, opts) {
     const sockM = S(shadow ? '#0b0b10' : '#f8fafc'), shoeM = S(shadow ? '#000' : '#18181f', { roughness: 0.4 }), toeM = S(shadow ? '#000' : '#f8fafc');
     const hairM = S(C.hair, { roughness: 0.48, side: THREE.DoubleSide });   // لمعة خفيفة مثل الشعر
     const mats = [skinM, outfitM, hemM, lowM, beltM, sleeveM, goldM, sockM, shoeM, toeM, hairM];
+    const cloth = [];   // القطع اللي تتحرك (clothify)
+    // قماش يتحرك: نسخة من المادة بحركة على مقاس القطعة (عشان باقي القطع بنفس اللون تبقى ثابتة)
+    const flow = (m, yTop, yBot, k) => { if (opts.lite) return m; const c2 = m.clone(); cloth.push(clothify(c2, yTop, yBot, k)); mats.push(c2); return c2; };
     const add = (geo, m, x, y, z, par) => { const o = mesh(geo, m, x, y, z); par.add(o); return o; };
 
     const root = new THREE.Group(), body = new THREE.Group(); body.scale.setScalar(CHAR_K); root.add(body);
@@ -307,6 +356,8 @@ function buildChar(look, opts) {
     const whiteM = shadow ? outfitM : S('#f3efe6', { roughness: 0.7 }), creamM = shadow ? outfitM : S('#dcd6c8', { roughness: 0.7 });
     const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6 });
     mats.push(whiteM, creamM, accM);
+    // ملمس نسيج خفيف على كل الأقمشة (مو على البشرة والشعر والجزمة)
+    if (!opts.lite && !shadow) [outfitM, hemM, lowM, beltM, sleeveM, whiteM, creamM, accM].forEach((m) => { m.bumpMap = weave(); m.bumpScale = 0.35; m.roughness = Math.max(m.roughness, 0.78); });
     // الرجول: الفخذ من الحوض، والركبة محور للساق (جلوس = فخذ للأمام وساق للأسفل).
     // الثوب يغطيها بلونه (لو جلس يبان القماش على حضنه)، والهودي والجاكيت ببنطلون طويل، والباقي رجول وجوارب بيض
     const legM = wear === 1 ? outfitM : (wear === 2 || wear === 3) ? lowM : skinM;
@@ -323,6 +374,7 @@ function buildChar(look, opts) {
         return { hip, knee };
     });
     let torso, robe = null;
+    const extraSway = [];
     // الكم: قصير منفوخ بسوار ملوّن وتحته الذراع (sleeve=false)، أو طويل لين الرسغ بلون اللبس (sleeve=true)
     const arm = (s, long, sleeveCol, cuffCol) => {
         const g = new THREE.Group(); g.position.set(s * 0.5, 1.97, 0); body.add(g);
@@ -342,7 +394,7 @@ function buildChar(look, opts) {
     if (wear === 1) {
         // الثوب: قطعة وحدة بلون اللبس لين الكعب، ياقة قايمة صغيرة، وسحّاب أزرار قدّام، وأكمام طويلة بكبك
         torso = add(G.torso, outfitM, 0, 1.68, 0, body);
-        robe = add(G.robe, outfitM, 0, 0.82, 0, body);
+        robe = add(G.robeF, flow(outfitM, 0.15, -0.61), 0, 0.82, 0, body);
         add(G.collar2, outfitM, 0, 2.05, 0, body);
         add(G.placket, hemM, 0, 1.84, 0.425, body);
         [1.92, 1.8].forEach((y) => add(G.stud, goldM, 0, y, 0.45, body));
@@ -353,7 +405,7 @@ function buildChar(look, opts) {
         add(G.hem, hemM, 0, 1.33, 0, body).scale.set(1.04, 1.4, 1.04);
         add(G.pocket, hemM, 0, 1.5, 0.405, body);
         const hood = add(G.hoodRoll, outfitM, 0, 2.02, -0.1, body); hood.rotation.x = Math.PI / 2 + 0.25; hood.scale.set(1, 1.05, 0.8);
-        [-1, 1].forEach((s2) => add(G.string, whiteM, s2 * 0.09, 1.86, 0.43, body));
+        [-1, 1].forEach((s2) => { const pv = new THREE.Group(); pv.position.set(s2 * 0.09, 1.96, 0.43); body.add(pv); add(G.string, whiteM, 0, -0.1, 0, pv); extraSway.push({ g: pv, amp: 0.12, ph: s2 * 1.7, sp: 1.6 }); });   // الخيطين يتمرجحون
         add(G.shorts, lowM, 0, 1.08, 0, body);
         armL = arm(-1, true, outfitM, hemM); armR = arm(1, true, outfitM, hemM);
     } else if (wear === 3) {
@@ -365,6 +417,8 @@ function buildChar(look, opts) {
         [-1, 1].forEach((s2) => { const lp = add(G.lapel, hemM, s2 * 0.13, 1.84, 0.425, body); lp.rotation.set(-0.12, 0, s2 * 0.32); });
         add(G.shorts, lowM, 0, 1.08, 0, body);
         add(G.belt, beltM, 0, 1.25, 0, body);
+        [1.74, 1.56].forEach((y) => add(G.stud, shoeM, 0.17, y, 0.43, body).scale.setScalar(1.6));   // أزرار الجاكيت
+        [-1, 1].forEach((s2) => { const fl = add(G.flap, hemM, s2 * 0.25, 1.45, 0.385, body); fl.rotation.y = s2 * 0.5; });   // غطا الجيبين
         armL = arm(-1, true, outfitM, whiteM); armR = arm(1, true, outfitM, whiteM);
     } else if (wear === 4) {
         // الفستان: قطعة وحدة بلون اللبس بتنورة واسعة، ياقة وفيونكة وشريطة خصر بيضاء، وأكمام منفوخة
@@ -372,8 +426,8 @@ function buildChar(look, opts) {
         add(G.ruff, whiteM, 0, 2.03, 0, body);
         [-1, 1].forEach((s2) => { const bw = add(G.bow, whiteM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
         add(G.belt, whiteM, 0, 1.31, 0, body).scale.set(1.01, 1.4, 1.01);
-        add(G.skirt, outfitM, 0, 0.98, 0, body).scale.set(1.1, 1.15, 1.1);
-        add(G.hem, whiteM, 0, 0.72, 0, body).scale.set(1.62, 0.6, 1.62);
+        add(G.skirtF, flow(outfitM, 0.2, -0.235), 0, 0.98, 0, body).scale.set(1.1, 1.15, 1.1);
+        add(G.hem, flow(whiteM, 10, 9, 1.1 / 1.62), 0, 0.72, 0, body).scale.set(1.62, 0.6, 1.62);   // الحافة تمشي مع طرف التنورة
         armL = arm(-1, false, outfitM, whiteM); armR = arm(1, false, outfitM, whiteM);
     } else {
         // البلوزة (تصميم صاحب المنصة): بيضاء، وعليها حزام عريض بلون قميص اللاعب، وياقة مكشكشة وفيونكة
@@ -384,7 +438,7 @@ function buildChar(look, opts) {
         add(G.ruff, accM, 0, 2.03, 0, body);
         if (!opts.outfit) [-1, 1].forEach((s2) => { const bw = add(G.bow, accM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
         add(G.belt, beltM, 0, 1.27, 0, body);
-        if (girl) add(G.skirt, lowM, 0, 0.98, 0, body);
+        if (girl) add(G.skirtF, flow(lowM, 0.2, -0.235), 0, 0.98, 0, body);
         else add(G.shorts, lowM, 0, 1.08, 0, body);
         armL = arm(-1, false, opts.outfit ? sleeveM : whiteM, accM); armR = arm(1, false, opts.outfit ? sleeveM : whiteM, accM);
     }
@@ -406,13 +460,13 @@ function buildChar(look, opts) {
     });
     if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
-    const hairSway = buildHair(hc, style, hairM, mats, G, shadow ? '#0b0b10' : C.shirt, opts);
+    const hairSway = buildHair(hc, style, hairM, mats, G, shadow ? '#0b0b10' : C.shirt, opts, flow).concat(extraSway);
 
     // الشخصية ترمي ظلها على الأرض بس، وما تستقبل ظل من نفسها: ظل الشعر كان يغمّق الوجه (رمادي)
     // ويطلع خطوط كثيفة على الشعر (shadow acne). الحلقات البعيدة (فوق 25 لاعب): بدون ظلال أبداً عشان الأداء
     root.traverse((o) => { o.receiveShadow = false; if (opts.lite) o.castShadow = false; });
     root.userData.base = mats.map((m) => m.color.clone());
-    const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y, hairSway };
+    const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y, hairSway, cloth };
     c.sit = (on) => {
         c.sitY = on ? SIT_Y : 0; body.position.y = c.sitY;
         legs.forEach((l) => { l.hip.rotation.x = on ? -Math.PI / 2 : 0; l.knee.rotation.x = on ? Math.PI / 2 : 0; });
@@ -424,12 +478,37 @@ function buildChar(look, opts) {
 }
 
 /** حركة الشعر: كل خصلة (والذيلين) تتمرجح بهدوء من جذرها، وأقوى لما الشخصية تتحرك (k = شدة إضافية) */
+const _q = new THREE.Quaternion(), _v = new THREE.Vector3();
 function swayHair(c, T, k) {
     if (!c.hairSway) return;
     const m = 1 + (k || 0);
+    if (c.cloth && c.cloth.length) swayCloth(c, T, k || 0, m);
     c.hairSway.forEach((h) => {
         const a = h.amp * m, t = T * h.sp + h.ph;
         h.g.rotation.set(Math.sin(t) * a * 0.6, 0, Math.sin(t * 0.83 + 1.1) * a + (h.side ? h.side * a * 0.3 : 0));
+    });
+}
+
+/**
+ * حركة القماش: سرعة الشخصية من موقعها بآخر فريمين (matrixWorld) بإحداثيات الجسم، فالقماش يتأخر ورا الحركة،
+ * وينفرد لما تنزل من نطّة، ويتبع خطوات الرجول، ونسيم خفيف دايم. m = 0 يوقّف كل شي (زر «حركة الشعر» بالاستوديو).
+ */
+function swayCloth(c, T, k, m) {
+    const e = c.root.matrixWorld.elements, st = c._cl || (c._cl = { x: e[12], y: e[13], z: e[14], t: T, v: new THREE.Vector3() });
+    const dt = T - st.t;
+    if (dt > 1e-4 && dt < 0.5) {
+        _v.set((e[12] - st.x) / dt, (e[13] - st.y) / dt, (e[14] - st.z) / dt);
+        st.v.lerp(_v, Math.min(1, dt * 8));
+    } else if (dt >= 0.5) st.v.set(0, 0, 0);
+    st.x = e[12]; st.y = e[13]; st.z = e[14]; st.t = T;
+    c.body.getWorldQuaternion(_q).invert(); _v.copy(st.v).applyQuaternion(_q);
+    const cl = (a, lo, hi) => Math.max(lo, Math.min(hi, a)), L0 = c.legs[0].hip.rotation.x, L1 = c.legs[1].hip.rotation.x;
+    const step = c.sitY ? 0 : (L0 - L1) * 0.5;   // مرجحة الرجول بالمشي (الجالس لا)
+    c.cloth.forEach((u) => {
+        u.uT.value = T * (1 + Math.max(0, k) * 0.5);
+        u.uRip.value = m * (0.018 + Math.max(0, k) * 0.012);
+        u.uFlare.value = m * cl(-_v.y * 0.05, -0.04, 0.16);
+        u.uSway.value.set(cl(-_v.x * 0.06, -0.12, 0.12) * u.k, cl(-_v.y * 0.03, -0.06, 0.06), (cl(-_v.z * 0.06, -0.12, 0.12) - step * 0.16) * u.k).multiplyScalar(m);
     });
 }
 
@@ -463,7 +542,7 @@ function bakeChar(c) {
     return c;
 }
 
-function buildHair(head, style, hairM, mats, G, accent, opts) {
+function buildHair(head, style, hairM, mats, G, accent, opts, flow) {
     opts = opts || {};
     // head = مركز الرأس. الرأس بيضاوي بأنصاف أقطار HR، والشعر قشرة أكبر منه شوي (HX/HY/HZ)
     const HX = HR.x + 0.1, HY = HR.y + 0.08, HZ = HR.z + 0.08, TOP = HR.y, FZ = HR.z, BANG = BANG_Y;
@@ -704,7 +783,7 @@ function buildHair(head, style, hairM, mats, G, accent, opts) {
             // النقشة بمقاس ثابت على القماش (مو ممطوطة): u حول الرأس، v على طول القماش من فوق
             const uv = clothG.attributes.uv;
             for (let i = 0; i < pc.count; i++) { const x = pc.getX(i), y = pc.getY(i), z = pc.getZ(i), r = Math.hypot(x, z); if (y > HR.y * 0.62) uv.setXY(i, x * 6, z * 6); else uv.setXY(i, Math.atan2(x, z) * 6.4, (y > 0 ? (Math.PI / 2 - Math.atan2(y, r)) * 1.1 : 1.6 - y) * 6); }   // فوق العقال: إسقاط من فوق (بدون تجمّع عند القمة)
-            head.add(mesh(clothG, ghutraM, 0, 0, 0));
+            head.add(mesh(clothG, flow ? flow(ghutraM, -0.1, -1.15) : ghutraM, 0, 0, 0));   // الطرف النازل يتمرجح
             // فوق الرأس مقفول (القماش مفتوح من قدّام بس عند الوجه)
             const topG = new THREE.SphereGeometry(1, 48, 12, 0, TAU, 0, 1.05), pt = topG.attributes.position, tu = topG.attributes.uv;
             for (let i = 0; i < pt.count; i++) { pt.setXYZ(i, pt.getX(i) * (HR.x + 0.075), pt.getY(i) * (HR.y + 0.095), pt.getZ(i) * (HR.z + 0.075)); tu.setXY(i, pt.getX(i) * 6, pt.getZ(i) * 6); }
@@ -1042,8 +1121,9 @@ export function createStage(container, getFrame, opts) {
         c.legs[0].hip.rotation.x = w * amp; c.legs[1].hip.rotation.x = -w * amp;
         c.legs[0].knee.rotation.x = Math.max(0, -w) * amp; c.legs[1].knee.rotation.x = Math.max(0, w) * amp;
         c.armL.rotation.set(-w * amp * 0.8, 0, -0.2); c.armR.rotation.set(w * amp * 0.8, 0, 0.2);
+        swayHair(c, performance.now() / 1000, amp * 1.5);   // الشعر واللبس يتحركون مع المشي
     }
-    function standPose(c) { c.legs.forEach((l) => { l.hip.rotation.x = 0; l.knee.rotation.x = 0; }); }
+    function standPose(c) { c.legs.forEach((l) => { l.hip.rotation.x = 0; l.knee.rotation.x = 0; }); swayHair(c, performance.now() / 1000, 0); }
     const mw = (x, y, z) => new THREE.Vector3(MARKET.x + x, MARKET.y + y, MARKET.z + z);   // من إحداثيات السوق للعالم
 
     // ---------- توقيتات مشهد الهجوم (ms من بداية اللقطة — مدتها SHOT.attack=10000 بالخادم)
