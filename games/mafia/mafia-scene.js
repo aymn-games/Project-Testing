@@ -264,7 +264,17 @@ function charGeo(lo) {
         tie: new THREE.SphereGeometry(0.13, r - 4, r - 6),
         bun: new THREE.SphereGeometry(0.3, r, r - 4),
         blob: new THREE.SphereGeometry(0.27, r - 4, r - 6),
-        visor: new RoundedBoxGeometry(1.2, 0.07, 0.55, 1, 0.03)
+        visor: new RoundedBoxGeometry(1.2, 0.07, 0.55, 1, 0.03),
+        // اللبس (look.outfit)
+        robe: roundCyl(0.445, 0.53, 1.22, 0.08, r + 8),
+        collar2: roundCyl(0.3, 0.32, 0.1, 0.04, r + 8),
+        placket: new RoundedBoxGeometry(0.09, 0.36, 0.03, 1, 0.012),
+        stud: new THREE.SphereGeometry(0.022, 8, 6),
+        pocket: new RoundedBoxGeometry(0.46, 0.2, 0.06, s, 0.03),
+        hoodRoll: new THREE.TorusGeometry(0.3, 0.1, 10, r + 6),
+        string: roundCyl(0.016, 0.016, 0.2, 0.008, 6),
+        shirtFront: new RoundedBoxGeometry(0.28, 0.68, 0.08, s, 0.035),
+        lapel: new RoundedBoxGeometry(0.09, 0.34, 0.03, 1, 0.012)
     };
     return CHAR_GEO[k];
 }
@@ -292,40 +302,92 @@ function buildChar(look, opts) {
     const style = opts.outfit ? (opts.outfit === 'detective' ? 'fedora' : opts.outfit === 'doctor' ? 'surgeon' : 'hood') : C.style;
     const girl = !opts.outfit && GIRL_STYLES.indexOf(style) >= 0;
 
-    // الرجول: الفخذ من الحوض، والركبة محور للساق (جلوس = فخذ للأمام وساق للأسفل)
+    // نوع اللبس (look.outfit — MafiaLooks.OUTFITS): 0 بلوزة · 1 ثوب · 2 هودي · 3 جاكيت · 4 فستان. الشخصيات الخاصة (opts.outfit) لها لبسها
+    const wear = opts.outfit ? -1 : C.outfit;
+    const whiteM = shadow ? outfitM : S('#f3efe6', { roughness: 0.7 }), creamM = shadow ? outfitM : S('#dcd6c8', { roughness: 0.7 });
+    const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6 });
+    mats.push(whiteM, creamM, accM);
+    // الرجول: الفخذ من الحوض، والركبة محور للساق (جلوس = فخذ للأمام وساق للأسفل).
+    // الثوب يغطيها بلونه (لو جلس يبان القماش على حضنه)، والهودي والجاكيت ببنطلون طويل، والباقي رجول وجوارب بيض
+    const legM = wear === 1 ? outfitM : (wear === 2 || wear === 3) ? lowM : skinM;
+    const sockLegM = wear === 1 ? outfitM : (wear === 2 || wear === 3) ? lowM : sockM;
     const legs = [-0.19, 0.19].map((x) => {
         const hip = new THREE.Group(); hip.position.set(x, 0.78, 0); body.add(hip);
-        add(G.thigh, skinM, 0, -0.16, 0, hip);
+        add(G.thigh, legM, 0, -0.16, 0, hip);
         const knee = new THREE.Group(); knee.position.y = -0.31; hip.add(knee);
-        add(G.sock, sockM, 0, -0.13, 0, knee);
-        add(G.rim, sockM, 0, -0.02, 0, knee);
+        add(G.sock, sockLegM, 0, -0.13, 0, knee);
+        add(G.rim, (wear === 2 || wear === 3) ? beltM : sockLegM, 0, -0.02, 0, knee);
         add(G.shoe, shoeM, 0, -0.36, 0.06, knee);
         add(G.toe, toeM, 0, -0.39, 0.27, knee);
         add(G.sole, toeM, 0, -0.47, 0.06, knee);
         return { hip, knee };
     });
-    // البلوزة (تصميم صاحب المنصة): بيضاء، وعليها حزام عريض بلون قميص اللاعب حافته مسنّنة، وياقة مكشكشة وفيونكة
-    // بنفس اللون، وشريط أوف وايت تحت، والتنورة أو الشورت. الكم قصير منفوخ بسوار ملوّن، وتحته الذراع والكف
-    const whiteM = shadow ? outfitM : S('#f3efe6', { roughness: 0.7 }), creamM = shadow ? outfitM : S('#dcd6c8', { roughness: 0.7 });
-    const accM = shadow ? outfitM : opts.outfit ? outfitM : S(outfitC, { roughness: 0.6 });
-    mats.push(whiteM, creamM, accM);
-    const torso = add(G.torso, opts.outfit ? outfitM : whiteM, 0, 1.68, 0, body);
-    add(G.band, accM, 0, 1.66, 0, body);
-    add(G.hem, creamM, 0, 1.33, 0, body).scale.set(1.04, 1.4, 1.04);
-    add(G.ruff, accM, 0, 2.03, 0, body);
-    if (!opts.outfit) [-1, 1].forEach((s2) => { const bw = add(G.bow, accM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
-    add(G.belt, beltM, 0, 1.27, 0, body);
-    if (girl) add(G.skirt, lowM, 0, 0.98, 0, body);
-    else add(G.shorts, lowM, 0, 1.08, 0, body);
-    const arm = (s) => {
+    let torso, robe = null;
+    // الكم: قصير منفوخ بسوار ملوّن وتحته الذراع (sleeve=false)، أو طويل لين الرسغ بلون اللبس (sleeve=true)
+    const arm = (s, long, sleeveCol, cuffCol) => {
         const g = new THREE.Group(); g.position.set(s * 0.5, 1.97, 0); body.add(g);
-        add(G.puff, opts.outfit ? sleeveM : whiteM, 0, -0.22, 0, g).scale.set(0.85, 1.55, 0.85);
-        add(G.cuff, accM, 0, -0.5, 0, g);
-        add(G.forearm, opts.outfit ? sleeveM : skinM, 0, -0.72, 0, g).scale.set(1, 0.6, 1);
+        if (long) {
+            add(G.puff, sleeveCol, 0, -0.22, 0, g).scale.set(0.8, 1.5, 0.8);
+            add(G.forearm, sleeveCol, 0, -0.66, 0, g).scale.set(1.12, 0.85, 1.12);
+            add(G.cuff, cuffCol, 0, -0.84, 0, g).scale.set(0.82, 0.8, 0.82);
+        } else {
+            add(G.puff, sleeveCol, 0, -0.22, 0, g).scale.set(0.85, 1.55, 0.85);
+            add(G.cuff, cuffCol, 0, -0.5, 0, g);
+            add(G.forearm, opts.outfit ? sleeveM : skinM, 0, -0.72, 0, g).scale.set(1, 0.6, 1);
+        }
         add(G.hand, skinM, 0, -0.92, 0, g);
         g.rotation.z = s * 0.06; return g;
     };
-    const armL = arm(-1), armR = arm(1);
+    let armL, armR;
+    if (wear === 1) {
+        // الثوب: قطعة وحدة بلون اللبس لين الكعب، ياقة قايمة صغيرة، وسحّاب أزرار قدّام، وأكمام طويلة بكبك
+        torso = add(G.torso, outfitM, 0, 1.68, 0, body);
+        robe = add(G.robe, outfitM, 0, 0.82, 0, body);
+        add(G.collar2, outfitM, 0, 2.05, 0, body);
+        add(G.placket, hemM, 0, 1.84, 0.425, body);
+        [1.92, 1.8].forEach((y) => add(G.stud, goldM, 0, y, 0.45, body));
+        armL = arm(-1, true, outfitM, outfitM); armR = arm(1, true, outfitM, outfitM);
+    } else if (wear === 2) {
+        // الهودي: بلون اللبس وحافة مضلّعة أغمق، جيب كنغر قدّام، قبعة الهودي ملفوفة ورا الرقبة، وخيطين؛ وبنطلون طويل
+        torso = add(G.torso, outfitM, 0, 1.68, 0, body);
+        add(G.hem, hemM, 0, 1.33, 0, body).scale.set(1.04, 1.4, 1.04);
+        add(G.pocket, hemM, 0, 1.5, 0.405, body);
+        const hood = add(G.hoodRoll, outfitM, 0, 2.02, -0.1, body); hood.rotation.x = Math.PI / 2 + 0.25; hood.scale.set(1, 1.05, 0.8);
+        [-1, 1].forEach((s2) => add(G.string, whiteM, s2 * 0.09, 1.86, 0.43, body));
+        add(G.shorts, lowM, 0, 1.08, 0, body);
+        armL = arm(-1, true, outfitM, hemM); armR = arm(1, true, outfitM, hemM);
+    } else if (wear === 3) {
+        // قميص وجاكيت: جاكيت مفتوح بلون اللبس، وتحته قميص أبيض يبان قدّام بياقته، وطيّتين للجاكيت؛ وبنطلون بحزام
+        torso = add(G.torso, outfitM, 0, 1.68, 0, body);
+        add(G.hem, hemM, 0, 1.33, 0, body).scale.set(1.04, 1.1, 1.04);
+        add(G.shirtFront, whiteM, 0, 1.68, 0.385, body);
+        add(G.ruff, whiteM, 0, 2.03, 0, body).scale.set(0.95, 1, 0.95);
+        [-1, 1].forEach((s2) => { const lp = add(G.lapel, hemM, s2 * 0.13, 1.84, 0.425, body); lp.rotation.set(-0.12, 0, s2 * 0.32); });
+        add(G.shorts, lowM, 0, 1.08, 0, body);
+        add(G.belt, beltM, 0, 1.25, 0, body);
+        armL = arm(-1, true, outfitM, whiteM); armR = arm(1, true, outfitM, whiteM);
+    } else if (wear === 4) {
+        // الفستان: قطعة وحدة بلون اللبس بتنورة واسعة، ياقة وفيونكة وشريطة خصر بيضاء، وأكمام منفوخة
+        torso = add(G.torso, outfitM, 0, 1.68, 0, body);
+        add(G.ruff, whiteM, 0, 2.03, 0, body);
+        [-1, 1].forEach((s2) => { const bw = add(G.bow, whiteM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
+        add(G.belt, whiteM, 0, 1.31, 0, body).scale.set(1.01, 1.4, 1.01);
+        add(G.skirt, outfitM, 0, 0.98, 0, body).scale.set(1.1, 1.15, 1.1);
+        add(G.hem, whiteM, 0, 0.72, 0, body).scale.set(1.62, 0.6, 1.62);
+        armL = arm(-1, false, outfitM, whiteM); armR = arm(1, false, outfitM, whiteM);
+    } else {
+        // البلوزة (تصميم صاحب المنصة): بيضاء، وعليها حزام عريض بلون قميص اللاعب، وياقة مكشكشة وفيونكة
+        // بنفس اللون، وشريط أوف وايت تحت، والتنورة أو الشورت. الكم قصير منفوخ بسوار ملوّن، وتحته الذراع والكف
+        torso = add(G.torso, opts.outfit ? outfitM : whiteM, 0, 1.68, 0, body);
+        add(G.band, accM, 0, 1.66, 0, body);
+        add(G.hem, creamM, 0, 1.33, 0, body).scale.set(1.04, 1.4, 1.04);
+        add(G.ruff, accM, 0, 2.03, 0, body);
+        if (!opts.outfit) [-1, 1].forEach((s2) => { const bw = add(G.bow, accM, s2 * 0.1, 1.93, 0.42, body); bw.rotation.set(0.1, 0, -s2 * 0.5); });
+        add(G.belt, beltM, 0, 1.27, 0, body);
+        if (girl) add(G.skirt, lowM, 0, 0.98, 0, body);
+        else add(G.shorts, lowM, 0, 1.08, 0, body);
+        armL = arm(-1, false, opts.outfit ? sleeveM : whiteM, accM); armR = arm(1, false, opts.outfit ? sleeveM : whiteM, accM);
+    }
 
     // الرأس: يدور من الذقن (head) والمحتوى فوقه (hc = مركز الرأس)
     const head = new THREE.Group(); head.position.y = 2.04; body.add(head);
@@ -354,6 +416,8 @@ function buildChar(look, opts) {
     c.sit = (on) => {
         c.sitY = on ? SIT_Y : 0; body.position.y = c.sitY;
         legs.forEach((l) => { l.hip.rotation.x = on ? -Math.PI / 2 : 0; l.knee.rotation.x = on ? Math.PI / 2 : 0; });
+        // الثوب: وهو جالس ينتهي عند الحضن (والفخذين بلونه) بدل ما يخترق الكرسي لين الأرض
+        if (robe) { robe.scale.y = on ? 0.56 : 1; robe.position.y = on ? 1.09 : 0.82; }
     };
     c.sit(true);
     return c;
