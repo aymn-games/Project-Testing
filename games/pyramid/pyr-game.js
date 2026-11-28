@@ -118,7 +118,7 @@ const BUB = new Map();
 function bubble(key, o) {
     dropBubble(key, true);
     const el = document.createElement('div'), p = o.p, c = o.out ? '#e9906f' : colorOf(p.id), slot = BUB.size % 3;
-    el.className = 'bub' + (o.out ? ' out' : ''); el.style.setProperty('--k', c); el.style.setProperty('--h', (o.out ? 26 : 34 + slot * 38) + 'px');
+    el.className = 'bub' + (o.out ? ' out' : ''); el.style.setProperty('--k', c); el.style.setProperty('--h', (o.out ? 18 + slot * 34 : 34 + slot * 38) + 'px');
     el.innerHTML = `<div class="c">${avatarHtml(p, 'sm')}<b class="n"></b>${o.num != null ? `<span class="ar">←</span><b class="num">${o.num}</b>` : ''}</div><i></i>`;
     el.querySelector('.n').textContent = p.name; $('#bubbles').appendChild(el);
     BUB.set(key, { el, id: p.id, num: o.num, until: o.ms ? performance.now() + o.ms : 0 });
@@ -238,10 +238,9 @@ async function playRound() {
     // 2) من لم يختر يُقصى مباشرة
     if (idle.length) {
         pill('إقصاء من لم يختر'); fx('danger', 2500);
-        showStrip(`أُقصي ${idle.length === 1 ? 'لاعب واحد' : idle.length + ' لاعبين'} لم ${idle.length === 1 ? 'يختر' : 'يختاروا'}`, idle);
         await G.scene.eliminate(idle.map(p => p.id), 'idle');
         clearBubbles('o:');
-        G.alive = chosen; hideStrip(); pill();
+        G.alive = chosen; pill();
     }
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 3) إقصاء عشوائي (القرار هنا قبل الأنيميشن — المشهد يعرضه بس)

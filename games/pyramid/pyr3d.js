@@ -665,12 +665,12 @@ export async function mountPyramid(el, opts = {}) {
     let shotT0 = now();
     function setShot(fn) { shot = fn; shotT0 = now(); }
     // إطار يحتوي مجموعة نقاط من زاوية (yaw, pitch) — يحسب المسافة حسب نسبة الشاشة
-    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0) {
+    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0, HUD = .3) {
         const b = new T.Box3(); pts.forEach(p => b.expandByPoint(p)); const c = b.getCenter(V()), s = b.getSize(V());
         const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
         const halfW = s.x / 2 * margin + .5, halfH0 = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + .8;
         // مساحة فوق لواجهة اللعبة (شريط المرحلة والهيدر): الهرم ينزل تحتها وما يتغطى
-        const HUD = .3, halfH = halfH0 * (1 + HUD);
+        const halfH = halfH0 * (1 + Math.abs(HUD));
         const d = Math.max(halfW / Math.tan(hf / 2), halfH / Math.tan(vf / 2)) + s.z / 2 * Math.cos(pitch) * .5;
         const dir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
         const up = V(-Math.sin(yaw) * Math.sin(pitch), Math.cos(pitch), -Math.cos(yaw) * Math.sin(pitch)); // اتجاه «فوق» بالشاشة
@@ -897,7 +897,7 @@ export async function mountPyramid(el, opts = {}) {
         while (groups.length > 4) { let bi = 0, bd = 1e9; for (let i = 0; i < groups.length - 1; i++) { const d = Math.abs(groups[i + 1][0].pos.x - groups[i][groups[i].length - 1].pos.x); if (d < bd) { bd = d; bi = i; } } groups.splice(bi, 2, groups[bi].concat(groups[bi + 1])); }
         for (const g of groups) {
             const pts = []; g.forEach(a => { const s = a.baseScale || 1; pts.push(a.pos.clone(), a.pos.clone().setY(a.pos.y + 2.1 * s)); });
-            const F = frameBox(pts, .3, .18, 1.25);
+            const F = frameBox(pts, .42, .18, 1.3, 0);
             setShot(t => ({ pos: F.pos.clone().add(drift(t).multiplyScalar(.2)), look: F.look.clone(), rate: 2.6 })); // زوم على المجموعة
             await wait(.9);
             const per = g.length > 8 ? .06 : .14;
