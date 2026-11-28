@@ -31,7 +31,7 @@ var Village = require('./mafia-village');
 function engineFor(settings) { return settings && settings.system === 'village' ? Village : Game; }
 
 // حدود ملامح الشخصية (لازم تطابق اللوحات في games/mafia/mafia-looks.js)
-var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6, outfit: 5 };   // outfit = نوع اللبس (OUTFITS بـmafia-looks.js)
+var LOOK_LIMITS = { skin: 6, hair: 7, hairC: 8, shirt: 12, pants: 6, outfit: 5, acc: 7 };   // outfit = نوع اللبس (OUTFITS)، acc = زينة الشعر (ACCS) بـmafia-looks.js
 var HOST_GRACE_MS = 30 * 60 * 1000;
 var TICK_MS = 100, LIVE_SEND_MS = 250, IDLE_SEND_MS = 1000;
 var MAX_MSG = 8 * 1024;

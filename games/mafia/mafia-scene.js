@@ -461,6 +461,7 @@ function buildChar(look, opts) {
     if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
     const hairSway = buildHair(hc, style, hairM, mats, G, shadow ? '#0b0b10' : C.shirt, opts, flow).concat(extraSway);
+    if (!opts.outfit && style !== 5 && style !== 6) hairSway.push(...hairAcc(hc, C.acc, C.shirt, C.hair, style, mats, !!opts.lite));   // زينة الشعر (ما تنلبس مع الكاب والشماغ)
 
     // الشخصية ترمي ظلها على الأرض بس، وما تستقبل ظل من نفسها: ظل الشعر كان يغمّق الوجه (رمادي)
     // ويطلع خطوط كثيفة على الشعر (shadow acne). الحلقات البعيدة (فوق 25 لاعب): بدون ظلال أبداً عشان الأداء
@@ -804,6 +805,88 @@ function buildHair(head, style, hairM, mats, G, accent, opts, flow) {
             // مفتوح من قدّام عشان تبان العيون الحمر
             const hood = mesh(new THREE.SphereGeometry(0.56, 24, 18, Math.PI / 2 + 0.75, TAU - 1.5, 0, 2.2), mat('#09090d', { roughness: 1, side: THREE.DoubleSide }), 0, 0.04, -0.06);
             hood.rotation.x = -0.2; big.add(hood);
+            break;
+        }
+    }
+    return sway;
+}
+
+/**
+ * زينة الشعر (look.acc — MafiaLooks.ACCS): 1 طوق · 2 فيونكة · 3 وردة · 4 تاج · 5 بنسات · 6 آذان قطة. head = مركز الرأس.
+ * لونها من لون اللبس (تتناسق معه)، والتاج ذهبي. ترجع قطع تتمرجح بهدوء (نفس نظام الشعر).
+ */
+function hairAcc(head, acc, col, hairCol, style, mats, lite) {
+    if (!acc) return [];
+    const sway = [], seg = lite ? 8 : 18;
+    const S = (c, o) => { const m = mat(c, Object.assign({ roughness: 0.5 }, o || {})); mats.push(m); return m; };
+    const main = S(col), light = S(new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getStyle()), dark = S(new THREE.Color(col).multiplyScalar(0.75).getStyle());
+    const gold = S('#f2c230', { roughness: 0.3, metalness: 0.6 }), pink = S('#ff8fb8', { roughness: 0.4 });
+    // نقطة فوق سطح الشعر (phi = 0 قدّام، y من مركز الرأس) والاتجاه العمودي عليه — عشان القطعة تلصق على الرأس المدوّر
+    const RX = HR.x + 0.13, RY = HR.y + 0.11, RZ = HR.z + 0.13;
+    const at = (phi, y, off) => { const k = off || 0, c = Math.sqrt(Math.max(0.02, 1 - (y / RY) ** 2)); return new THREE.Vector3(Math.sin(phi) * (RX + k) * c, y + (k * y / RY), Math.cos(phi) * (RZ + k) * c); };
+    const nrm = (p) => new THREE.Vector3(p.x / RX ** 2, p.y / RY ** 2, p.z / RZ ** 2).normalize();
+    const place = (g, phi, y, off, spin) => {   // يلصق مجموعة على الرأس: z المحلي للخارج، وy المحلي لفوق
+        const p = at(phi, y, off), n = nrm(p); g.position.copy(p);
+        const m4 = new THREE.Matrix4().lookAt(new THREE.Vector3(), n, new THREE.Vector3(0, 1, 0)); g.quaternion.setFromRotationMatrix(m4);
+        g.rotateZ(spin || 0); g.rotateY(Math.PI); head.add(g); return g;
+    };
+    const sph = (r, m, x, y, z, sx, sy, sz, par) => { const o = mesh(new THREE.SphereGeometry(r, seg, Math.max(6, seg - 6)), m, x, y, z); o.scale.set(sx || 1, sy || 1, sz || 1); par.add(o); return o; };
+    const bob = (g, amp, ph) => sway.push({ g, amp, ph, sp: 1.2 });
+    switch (acc) {
+        case 1: {   // طوق: شريط مدوّر فوق الرأس من أذن لأذن، مايل لقدّام شوي، وعليه نقاط فاتحة
+            const pts = []; for (let i = 0; i <= 24; i++) { const t = -1.3 + 2.6 * i / 24; pts.push(new THREE.Vector3(Math.sin(t) * (HR.x + 0.1), Math.cos(t) * (HR.y + 0.09), 0)); }
+            const band = new THREE.Group(); band.rotation.x = 0.36; head.add(band);
+            band.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, lite ? 6 : 12, false), main, 0, 0, 0));
+            [-1, 1].forEach((s) => { const e = pts[s < 0 ? 0 : 24]; band.add(mesh(new THREE.SphereGeometry(0.075, 12, 8), main, e.x, e.y, e.z)); });
+            if (!lite) [-0.7, -0.35, 0, 0.35, 0.7].forEach((t) => sph(0.035, light, Math.sin(t) * (HR.x + 0.16), Math.cos(t) * (HR.y + 0.15), 0.02, 1, 1, 0.6, band));
+            break;
+        }
+        case 2: {   // فيونكة كبيرة فوق جنب الرأس: جناحين منفوخين وعقدة بالنص وطرفين نازلين
+            const g = place(new THREE.Group(), 0.62, 0.72, 0.1, -0.35); g.scale.setScalar(1.35);
+            [-1, 1].forEach((s) => { const w = sph(0.2, main, s * 0.2, 0.02, 0, 1.15, 0.8, 0.45, g); w.rotation.z = s * 0.25; sph(0.1, light, s * 0.24, 0.04, 0.05, 1, 0.6, 0.3, g); });
+            sph(0.09, dark, 0, 0, 0.04, 1, 1, 0.8, g);
+            [-1, 1].forEach((s) => { const t = sph(0.08, main, s * 0.08, -0.17, -0.02, 0.7, 1.9, 0.35, g); t.rotation.z = s * 0.35; });
+            bob(g, 0.05, 0.4);
+            break;
+        }
+        case 3: {   // وردة فوق الأذن: خمس بتلات مدوّرة ونص أصفر وورقة خضرا
+            const g = place(new THREE.Group(), -0.95, 0.42, 0.07, 0.3); g.scale.setScalar(1.45);
+            for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; sph(0.11, i % 2 ? main : light, Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0, 1, 1, 0.45, g); }
+            sph(0.075, gold, 0, 0, 0.04, 1, 1, 0.7, g);
+            const leaf = sph(0.09, S('#5cbf6a'), 0.12, -0.2, -0.03, 0.6, 1.4, 0.3, g); leaf.rotation.z = 0.7;
+            bob(g, 0.03, 1.1);
+            break;
+        }
+        case 4: {   // تاج صغير ذهبي فوق الرأس: حلقة وأسنان مدوّرة الرؤوس وجواهر وردية
+            const g = new THREE.Group(); g.position.set(0, HR.y + 0.06, 0.08); g.rotation.x = 0.25; head.add(g);
+            const R = style === 3 ? 0.26 : 0.34;   // أصغر بين الكعكتين
+            const ring = mesh(new THREE.TorusGeometry(R, 0.045, 8, lite ? 16 : 32), gold, 0, 0.02, 0); ring.rotation.x = Math.PI / 2; g.add(ring);
+            for (let i = 0; i < 5; i++) {
+                const a = (i / 5) * TAU + Math.PI / 2, x = Math.cos(a) * R, z = Math.sin(a) * R, h = i === 0 ? 0.26 : 0.18;
+                const sp = mesh(new THREE.ConeGeometry(0.07, h, lite ? 6 : 12), gold, x, 0.04 + h / 2, z); g.add(sp);
+                sph(0.04, i === 0 ? pink : gold, x, 0.06 + h, z, 1, 1, 1, g);
+                if (i === 0) sph(0.05, pink, x, 0.06, z + 0.04, 1, 1, 0.6, g);
+            }
+            break;
+        }
+        case 5: {   // بنسات: ثلاث بنسات ملوّنة على جنب الغرة، ونجمة صغيرة على وحدة
+            [[0.78, 0.5, 0.55, main], [0.92, 0.36, 0.65, S('#ffd84a')], [1.04, 0.22, 0.75, light]].forEach(([phi, y, spin, m]) => {
+                const g = place(new THREE.Group(), phi, y, 0.06, spin);
+                g.add(mesh(new RoundedBoxGeometry(0.4, 0.09, 0.06, 2, 0.03), m, 0, 0, 0));
+            });
+            const st = place(new THREE.Group(), 0.74, 0.56, 0.11, 0);   // نجمة على أول بنسة
+            for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + Math.PI / 2; sph(0.06, pink, Math.cos(a) * 0.07, Math.sin(a) * 0.07, 0, 1, 1, 0.5, st); }
+            sph(0.06, pink, 0, 0, 0, 1, 1, 0.5, st);
+            break;
+        }
+        case 6: {   // آذان قطة: مثلّثات مدوّرة بلون الشعر وداخلها وردي
+            const hm = S(hairCol, { roughness: 0.5 });
+            [-1, 1].forEach((s) => {
+                const g = new THREE.Group(); g.position.set(s * 0.5, HR.y * 0.78, -0.05); g.rotation.set(-0.1, 0, -s * 0.38); head.add(g);   // على جنب أعلى الرأس، مايلة لبرا
+                const outer = mesh(new THREE.ConeGeometry(0.27, 0.55, lite ? 6 : 14, 1), hm, 0, 0.22, 0); outer.scale.z = 0.5; g.add(outer);
+                const inner = mesh(new THREE.ConeGeometry(0.16, 0.36, lite ? 6 : 14, 1), pink, 0, 0.19, 0.1); inner.scale.z = 0.25; g.add(inner);
+                bob(g, 0.04, s);
+            });
             break;
         }
     }

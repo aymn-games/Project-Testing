@@ -2,7 +2,7 @@
  * «المافيا» — ملامح الشخصيات (مشتركة بين شاشة البث والجوال).
  *
  * look = {skin, hair, hairC, shirt, pants, outfit} أرقام داخل حدود اللوحات تحت —
- * outfit = نوع اللبس (OUTFITS)، وshirt لونه، وpants لون البنطلون أو التنورة —
+ * outfit = نوع اللبس (OUTFITS)، وshirt لونه، وpants لون البنطلون أو التنورة، وacc = زينة الشعر (ACCS) —
  * لازم تطابق LOOK_LIMITS في backend/mafia/mafia-server.js.
  * avatarSVG(look) يرسم نسخة ثنائية الأبعاد للجوال واللوبي (بدون Three.js).
  */
@@ -15,6 +15,7 @@
     var SHIRT = ['#e2483d', '#2f7de1', '#2fb36a', '#f2b632', '#f07c2a', '#8f55d6', '#e65fa3', '#18a8a0', '#f4f1ea', '#3b4250', '#7cc243', '#1aa6d6'];
     var PANTS = ['#2b3346', '#4a3b2c', '#1f2b4a', '#5a5f6b', '#6b4a2b', '#20242c'];
     var OUTFITS = ['بلوزة', 'ثوب', 'هودي', 'جاكيت', 'فستان'];
+    var ACCS = ['بدون', 'طوق', 'فيونكة', 'وردة', 'تاج', 'بنسات', 'آذان قطة'];   // زينة الشعر (ما تنلبس مع الكاب والشماغ)
     var ROLE = {
         mafia: { n: 'مافيا', icon: '🔪', c: '#e2483d', team: 'mafia', desc: 'كل ليلة تصوّت مع فريقك على عملية (قتل أو تجنيد) وكرت مساعد. لا تنكشف بالنهار!' },
         doctor: { n: 'طبيب', icon: '🩺', c: '#2fb36a', team: 'town', desc: 'كل ليلة تحمي شخص من هجوم المافيا. ما تكرر نفس الشخص ليلتين ورا بعض، وتحمي نفسك مرة وحدة بس.' },
@@ -32,7 +33,11 @@
     function randomLook() {
         function r(n) { return Math.floor(Math.random() * n); }
         var hair = r(HAIR_STYLES.length);
-        return { skin: r(SKIN.length), hair: hair, hairC: r(HAIR_C.length), shirt: r(SHIRT.length), pants: r(PANTS.length), outfit: fitOutfit(hair) };
+        return { skin: r(SKIN.length), hair: hair, hairC: r(HAIR_C.length), shirt: r(SHIRT.length), pants: r(PANTS.length), outfit: fitOutfit(hair), acc: fitAcc(hair) };
+    }
+    /** زينة عشوائية لتسريحات البنات (وبدون لغيرهم، واللاعب يقدر يحط وحدة) */
+    function fitAcc(hair) {
+        return (hair === 1 || hair === 2 || hair === 3) ? 1 + Math.floor(Math.random() * (ACCS.length - 1)) : 0;
     }
     /** لبس عشوائي يناسب التسريحة: الشماغ غالباً مع الثوب، والفستان لتسريحات البنات (اللاعب يقدر يغيّره) */
     function fitOutfit(hair) {
@@ -45,7 +50,8 @@
         return {
             skin: SKIN[look.skin] || SKIN[0], hair: HAIR_C[look.hairC] || HAIR_C[0],
             shirt: SHIRT[look.shirt] || SHIRT[0], pants: PANTS[look.pants] || PANTS[0], style: look.hair | 0,
-            outfit: look.outfit >= 0 && look.outfit < OUTFITS.length ? look.outfit | 0 : 0
+            outfit: look.outfit >= 0 && look.outfit < OUTFITS.length ? look.outfit | 0 : 0,
+            acc: look.acc > 0 && look.acc < ACCS.length ? look.acc | 0 : 0
         };
     }
 
@@ -67,6 +73,20 @@
         }
     }
 
+    /** زينة الشعر بالرسم الصغير */
+    function accSVG(c) {
+        var col = c.shirt, pk = '#ff8fb8', g = '#f2c230';
+        switch (c.acc) {
+            case 1: return '<path d="M14 30 Q50 -6 86 30" stroke="' + col + '" stroke-width="7" fill="none" stroke-linecap="round"/>';
+            case 2: return '<g transform="translate(74 12) rotate(20)"><ellipse cx="-10" cy="0" rx="10" ry="7" fill="' + col + '"/><ellipse cx="10" cy="0" rx="10" ry="7" fill="' + col + '"/><circle r="4.5" fill="' + col + '" stroke="rgba(0,0,0,.25)"/></g>';
+            case 3: return '<g transform="translate(16 30)"><circle cx="0" cy="-6" r="5" fill="' + col + '"/><circle cx="6" cy="-1" r="5" fill="' + col + '"/><circle cx="3" cy="6" r="5" fill="' + col + '"/><circle cx="-4" cy="6" r="5" fill="' + col + '"/><circle cx="-6" cy="-1" r="5" fill="' + col + '"/><circle r="3.5" fill="' + g + '"/></g>';
+            case 4: return '<path d="M36 8 L36 -4 L43 3 L50 -8 L57 3 L64 -4 L64 8Z" fill="' + g + '" transform="translate(0 4)"/><circle cx="50" cy="0" r="2.6" fill="' + pk + '"/>';
+            case 5: return '<rect x="64" y="22" width="16" height="4" rx="2" fill="' + col + '" transform="rotate(-25 72 24)"/><rect x="68" y="29" width="16" height="4" rx="2" fill="#ffd84a" transform="rotate(-25 76 31)"/>';
+            case 6: return '<path d="M18 22 L22 -2 L38 12Z" fill="' + c.hair + '"/><path d="M23 15 L25 4 L32 11Z" fill="' + pk + '"/><path d="M82 22 L78 -2 L62 12Z" fill="' + c.hair + '"/><path d="M77 15 L75 4 L68 11Z" fill="' + pk + '"/>';
+        }
+        return '';
+    }
+
     function avatarSVG(look, size) {
         var c = colors(look), s = size || 96, h = c.hair, back = '', front = '';
         // قبة مدوّرة أعرض من الرأس، وحافتها التحتية خط الغُرّة المستقيم
@@ -85,15 +105,15 @@
                 front = '<rect x="13" y="9" width="74" height="24" rx="11" fill="#f4f1ea"/><path d="M18 22 H82" stroke="#c4302b" stroke-width="4" stroke-dasharray="4 4"/><rect x="16" y="10" width="68" height="6" rx="3" fill="#1f1a17"/>' +
                     '<rect x="11" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/><rect x="81" y="24" width="8" height="66" rx="3" fill="#f4f1ea"/>'; break;
         }
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + s + '" height="' + s + '" aria-hidden="true">' + back +
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -8 100 108" width="' + s + '" height="' + s + '" aria-hidden="true">' + back +
             shoulders(c) +
             // الرأس المربع والوجه
             '<ellipse cx="50" cy="48" rx="33" ry="33" fill="' + c.skin + '"/>' +
             '<ellipse cx="38" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><ellipse cx="62" cy="54" rx="5.6" ry="6.6" fill="#221a26"/><circle cx="40.2" cy="51.6" r="1.9" fill="#fff"/><circle cx="64.2" cy="51.6" r="1.9" fill="#fff"/>' +
             '<ellipse cx="26" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/><ellipse cx="74" cy="62" rx="4.6" ry="2.7" fill="#f19a93"/>' +
             '<ellipse cx="50" cy="66" rx="3" ry="1.3" fill="#d8613f"/>' +
-            front + '</svg>';
+            front + (c.style === 5 || c.style === 6 ? '' : accSVG(c)) + '</svg>';
     }
 
-    window.MafiaLooks = { SKIN: SKIN, HAIR_STYLES: HAIR_STYLES, HAIR_C: HAIR_C, SHIRT: SHIRT, PANTS: PANTS, OUTFITS: OUTFITS, ROLE: ROLE, randomLook: randomLook, fitOutfit: fitOutfit, colors: colors, avatarSVG: avatarSVG };
+    window.MafiaLooks = { SKIN: SKIN, HAIR_STYLES: HAIR_STYLES, HAIR_C: HAIR_C, SHIRT: SHIRT, PANTS: PANTS, OUTFITS: OUTFITS, ACCS: ACCS, ROLE: ROLE, randomLook: randomLook, fitOutfit: fitOutfit, fitAcc: fitAcc, colors: colors, avatarSVG: avatarSVG };
 })();

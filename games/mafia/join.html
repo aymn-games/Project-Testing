@@ -643,7 +643,7 @@ body.watching { overflow: hidden; }
     var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
     var params = new URLSearchParams(location.search);
     // شكل محفوظ من قبل ما ينضاف اللبس: نعطيه لبس يناسب تسريحته (ويقدر يغيّره)
-    function withOutfit(l) { if (l && l.outfit == null) l.outfit = L.fitOutfit(l.hair | 0); return l; }
+    function withOutfit(l) { if (l && l.outfit == null) l.outfit = L.fitOutfit(l.hair | 0); if (l && l.acc == null) l.acc = L.fitAcc(l.hair | 0); return l; }
     var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: withOutfit(NET.look()) || L.randomLook(), view: '', hideRole: false, draft: '' };
     if (S.me && S.code && S.me.room !== S.code) S.me = null;
 
@@ -777,6 +777,7 @@ body.watching { overflow: hidden; }
         { k: 'hair', n: 'التسريحة', names: L.HAIR_STYLES },
         { k: 'hairC', n: 'لون الشعر', c: L.HAIR_C },
         { k: 'outfit', n: 'اللبس', names: L.OUTFITS },
+        { k: 'acc', n: 'زينة الشعر', names: L.ACCS },
         { k: 'shirt', n: 'لون اللبس', c: L.SHIRT },
         { k: 'pants', n: 'البنطلون أو التنورة', c: L.PANTS }
     ];
