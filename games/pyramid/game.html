@@ -252,6 +252,20 @@ body.inlobby #demo,body.champ #demo{display:none}
 #snake svg.sn{position:absolute;top:130px;left:50%;margin-left:70px;width:150px;height:150px;opacity:0}
 #snake.in svg.sn{animation:kIn .7s .9s forwards,sway 1.4s 1.6s ease-in-out infinite}
 @media (max-aspect-ratio:1/1){#snake .p3{font-size:96px;margin-left:-120px}#snake .p4{font-size:44px}#snake svg.sn{margin-left:40px;width:110px}}
+
+/* ---- فقاعات الأسماء فوق الدوائر/الرؤوس (حجم ثابت على الشاشة) ---- */
+#bubbles{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.bub{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform}
+.bub .c{display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;background:rgba(18,48,50,.95);border:2.5px solid var(--k);box-shadow:0 8px 22px rgba(0,0,0,.45);white-space:nowrap;animation:bubIn .45s cubic-bezier(.2,1.5,.4,1) both}
+.bub .av.sm{width:30px;height:30px;font-size:14px;border-color:var(--k)}
+.bub .n{font:800 18px "IBM Plex Sans Arabic";color:#fff;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.bub .ar{font:600 16px "IBM Plex Sans Arabic";color:#e9d6b0}.bub .num{font:800 24px "IBM Plex Sans Arabic";color:#e9d6b0}
+.bub i{display:block;width:3px;height:var(--h);background:linear-gradient(var(--k),transparent);transform-origin:top;animation:bubStem .4s ease-out both}
+.bub.out .c{background:rgba(90,32,22,.95)}
+.bub.gone{opacity:0;transition:opacity .4s}
+@keyframes bubIn{0%{opacity:0;transform:translateY(12px) scale(.6)}100%{opacity:1;transform:none}}
+@keyframes bubStem{from{transform:scaleY(0)}}
+@media (max-aspect-ratio:1/1){.bub .n{font-size:15px;max-width:110px}.bub .num{font-size:20px}}
 </style>
 </head>
 <body class="inlobby">
@@ -285,6 +299,7 @@ body.inlobby #demo,body.champ #demo{display:none}
   <span class="p p5" style="animation-delay:1.9s" id="snBite">وراح تلدغ صاحبه</span>
   <span class="p p6" style="animation-delay:2.5s" id="snQ">من هو صاحب الرقم؟</span>
 </div></div>
+<div id="bubbles"></div>
 <div id="notice"></div>
 <div id="qToast"></div>
 <div id="flash"></div>
