@@ -229,7 +229,7 @@ async function playRound() {
     banner('انتهى الوقت!', `اختار ${G.picks.size} من ${n} · الكل لمكانه`, '', 1500);
     await G.scene.timeUp();
     clearBubbles('p:');
-    G.alive.filter(p => !G.picks.has(String(p.id))).forEach(p => bubble('o:' + p.id, { p, out: true }));
+    G.alive.filter(p => !G.picks.has(String(p.id))).forEach(p => { bubble('o:' + p.id, { p, out: true }); G.scene.setPlate(p.id, false); });
     const chosen = G.alive.filter(p => G.picks.has(String(p.id))), idle = G.alive.filter(p => !G.picks.has(String(p.id)));
     if (!chosen.length) { clearBubbles(); await banner('ما أحد اختار!', 'نعيد نفس المرحلة', 'red', 2000); G.round--; G.scene.choosing(false); return playRound(); }
     // 1) اللي اختاروا يمشون لدوائرهم

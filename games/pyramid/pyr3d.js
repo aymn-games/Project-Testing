@@ -1050,6 +1050,8 @@ export async function mountPyramid(el, opts = {}) {
     function setQuality(m) { if (!['auto', 'low', 'balanced', 'high'].includes(m)) return; mode = m; if (m === 'auto') { ladderIdx = probe.startIdx; gov.banned.clear(); gov.cool = 3; } applyTier(m === 'auto' ? 'نقيس أداء جهازك من جديد' : ''); }
     // موقع راس لاعب على الشاشة (لتبويبات HTML)
     function headScreen(id) { const a = actors.get(String(id)); if (!a) return null; const p = a.pos.clone().setY(a.pos.y + a.extraY + 2.05 * (a.baseScale || 1)).project(cam); if (p.z > 1) return null; const b = r.domElement.getBoundingClientRect(); return { x: b.left + (p.x + 1) / 2 * b.width, y: b.top + (1 - p.y) / 2 * b.height }; }
+    // إخفاء/إظهار اسم الشخصية الصغير فوق راسها (لما تطلع فقاعة الاسم الكبيرة)
+    function setPlate(id, on) { const x = actors.get(String(id)); if (x) x.plate.visible = !!on; }
     // مكان دائرة على الشاشة (لفقاعة الاختيار)
     function circleScreen(num) { const L = activeLevel; if (!L || !L.pos[num - 1]) return null; const p = L.pos[num - 1].clone().setY(L.yTop + .4 * K).project(cam); if (p.z > 1) return null; const b = r.domElement.getBoundingClientRect(); return { x: b.left + (p.x + 1) / 2 * b.width, y: b.top + (1 - p.y) / 2 * b.height }; }
     function stop() {
@@ -1058,5 +1060,5 @@ export async function mountPyramid(el, opts = {}) {
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose && m.dispose(); }); });
         r.dispose(); r.domElement.remove();
     }
-    return { circleScreen, setPlayers, startMatch, choosing, setUrgency, pick, timeUp, moveIn, eliminate, roulette, survived, nextLevel, champion, reset, setQuality, qualityInfo, screen, headScreen, stop, get vrm() { return !!VRM; }, get gpu() { return probe; } };
+    return { setPlate, circleScreen, setPlayers, startMatch, choosing, setUrgency, pick, timeUp, moveIn, eliminate, roulette, survived, nextLevel, champion, reset, setQuality, qualityInfo, screen, headScreen, stop, get vrm() { return !!VRM; }, get gpu() { return probe; } };
 }
