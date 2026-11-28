@@ -15,7 +15,7 @@
     if (!AGP) return;
 
     AGP.remoteGames = [
-        { id: 'box-war', name: 'حرب الصناديق', icon: '📦', url: 'games/box-war/index.html', ready: true },
+        { id: 'box-war', name: 'استحواذ', icon: '📦', url: 'games/box-war/index.html', ready: true },
         { id: 'arena', name: 'الحلبة', icon: '🥊', url: 'games/arena/index.html', ready: true }, // مرحلة اختبار: الصفحة تفتح للأدمن بس
         { id: 'elimination-roulette', name: 'روليت الإقصاء', icon: '🎡', url: 'games/elimination-roulette/index.html', ready: true },
         { id: 'tribe-roulette', name: 'روليت مخفي', icon: '🏹', url: 'games/tribe-roulette/index.html', ready: true },
