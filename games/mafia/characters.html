@@ -488,10 +488,11 @@ function buildChar(look, opts) {
     });
     if (!shadow) onFace(add(G.cheek, S('#e0704f', { roughness: 0.5 }), 0, -0.46, faceZ(0, -0.46, -0.006), hc)).scale.set(0.85, 0.32, 0.18);   // فم صغير ناعم
 
-    const hairSway = buildHair(hc, style, hairM, mats, G);
+    const hairSway = buildHair(hc, style, hairM, mats, G, shadow ? '#0b0b10' : C.shirt, opts);
 
-    // الحلقات البعيدة (فوق 25 لاعب): بدون ظلال عشان الأداء
-    if (opts.lite) root.traverse((o) => { o.castShadow = false; });
+    // الشخصية ترمي ظلها على الأرض بس، وما تستقبل ظل من نفسها: ظل الشعر كان يغمّق الوجه (رمادي)
+    // ويطلع خطوط كثيفة على الشعر (shadow acne). الحلقات البعيدة (فوق 25 لاعب): بدون ظلال أبداً عشان الأداء
+    root.traverse((o) => { o.receiveShadow = false; if (opts.lite) o.castShadow = false; });
     root.userData.base = mats.map((m) => m.color.clone());
     const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y, hairSway };
     c.sit = (on) => {
@@ -542,7 +543,8 @@ function bakeChar(c) {
     return c;
 }
 
-function buildHair(head, style, hairM, mats, G) {
+function buildHair(head, style, hairM, mats, G, accent, opts) {
+    opts = opts || {};
     // head = مركز الرأس. الرأس بيضاوي بأنصاف أقطار HR، والشعر قشرة أكبر منه شوي (HX/HY/HZ)
     const HX = HR.x + 0.1, HY = HR.y + 0.08, HZ = HR.z + 0.08, TOP = HR.y, FZ = HR.z, BANG = BANG_Y;
     const SX = HR.x + 0.02, TAILX = HR.x + 0.12;
@@ -641,8 +643,8 @@ function buildHair(head, style, hairM, mats, G) {
         // الذيل: مقطع دائري يمشي على منحنى بمستوى الوجه (بدون لف): من الربطة يطلع لبرا وفوق لين مستوى أعلى الرأس،
         // يدور من فوق، وينزل لتحت على الجنب ويستدق لين طرفه
         const P = (x, y, z) => new THREE.Vector3(s * x, y, z), pg = new THREE.Group();
-        const curve = new THREE.CatmullRomCurve3([P(HR.x + 0.12, 0.55, -0.12), P(HR.x + 0.34, 0.6, -0.16), P(HR.x + 0.6, 0.52, -0.2), P(HR.x + 0.7, 0.1, -0.2), P(HR.x + 0.68, -0.55, -0.17), P(HR.x + 0.52, -1.4, -0.12)]);
-        const SEG = 44, RAD = 14, radius = (u) => u < 0.18 ? 0.2 + u / 0.18 * 0.11 : 0.31 - (u - 0.18) / 0.82 * 0.21;
+        const curve = new THREE.CatmullRomCurve3([P(HR.x - 0.02, 0.5, -0.14), P(HR.x + 0.2, 0.52, -0.18), P(HR.x + 0.38, 0.38, -0.2), P(HR.x + 0.44, 0.0, -0.2), P(HR.x + 0.4, -0.5, -0.17), P(HR.x + 0.3, -1.0, -0.12)]);
+        const SEG = 44, RAD = 14, radius = (u) => u < 0.15 ? 0.17 + u / 0.15 * 0.07 : 0.24 - (u - 0.15) / 0.85 * 0.15;
         const pos = [], idx = [], B = new THREE.Vector3(0, 0, 1);
         for (let i = 0; i <= SEG; i++) {
             const u = i / SEG, c = curve.getPointAt(u), T = curve.getTangentAt(u), N = new THREE.Vector3().crossVectors(B, T).normalize(), r = radius(u);
@@ -654,7 +656,7 @@ function buildHair(head, style, hairM, mats, G) {
         [0, 1].forEach((u) => { const c = curve.getPointAt(u), b = mesh(new THREE.SphereGeometry(radius(u) * 0.98, 18, 12), hairM, c.x, c.y, c.z); b.scale.z = 0.9; pg.add(b); });   // الأطراف مقفولة ومدوّرة
         // الربطة: أسطوانة قصيرة مدوّرة الحواف باتجاه الذيل
         const t0 = curve.getTangentAt(0.0), c0 = curve.getPointAt(0.0);
-        const tie = mesh(new THREE.SphereGeometry(0.19, 18, 12), tieM, c0.x - s * 0.05, c0.y - 0.03, c0.z); tie.scale.set(1, 0.78, 1);
+        const tie = mesh(new THREE.SphereGeometry(0.16, 18, 12), tieM, c0.x - s * 0.05, c0.y - 0.03, c0.z); tie.scale.set(1, 0.78, 1);
         tie.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), t0.clone().normalize()); pg.add(tie);
         // الذيل كامل يتمرجح من عند الربطة
         const c0p = curve.getPointAt(0), pivot = new THREE.Group(); pivot.position.copy(c0p); pg.position.copy(c0p).multiplyScalar(-1); pivot.add(pg); head.add(pivot);
@@ -703,15 +705,16 @@ function buildHair(head, style, hairM, mats, G) {
     // غُرّة من خصل: كل خصلة من قرب أعلى الرأس تنزل على الجبهة، وأطرافها بأطوال مختلفة شوي (حافة طبيعية)
     const bangs = (n, spread, tipY) => {
         for (let i = 0; i < n; i++) {
-            const k = n === 1 ? 0 : i / (n - 1) * 2 - 1, phi = k * spread, len = [0, 0.1, 0.04, 0.13, 0.02, 0.11, 0.05, 0.12, 0.01, 0.08][i % 10] - 0.04 + (Math.abs(k) > 0.85 ? -0.06 : 0);   // أطوال مختلفة = حافة طبيعية
-            lock(lockPath(phi, HR.y * 0.75, tipY - len, 0.06, 0), 0.4 - Math.abs(k) * 0.05, 0.08, 0.025, 0.2);
+            // خصل عريضة قليلة متداخلة شوي (مو عشر خصل رفيعة فوق بعض)، والطول يقصر بنعومة للأطراف مع فرق بسيط بين الجيران
+            const k = n === 1 ? 0 : i / (n - 1) * 2 - 1, phi = k * spread, len = (i % 2 ? 0.05 : 0) + k * k * 0.1;
+            lock(lockPath(phi, HR.y * 0.78, tipY - len, 0.065, 0), 0.22 - k * k * 0.03, 0.1, 0.02, 0.38);
         }
     };
-    const sideLocks = (bottom, cnt) => {
-        [-1, 1].forEach((s) => { for (let i = 0; i < cnt; i++) { const phi = s * (1.0 + i * 0.32); lock(lockPath(phi, HR.y * 0.45, bottom - i * 0.05, 0.05, 0.08), 0.26, 0.08, 0.05); } });
+    const sideLocks = (bottom, cnt, rootY) => {
+        [-1, 1].forEach((s) => { for (let i = 0; i < cnt; i++) { const phi = s * (1.02 + i * 0.3); lock(lockPath(phi, rootY != null ? rootY : HR.y * 0.45, bottom - i * 0.04, 0.05, 0.03), 0.25, 0.1, 0.05, 0.4); } });
     };
-    const backLocks = (bottom, cnt) => {
-        for (let i = 0; i < cnt; i++) { const phi = Math.PI - 1.7 + 3.4 * i / (cnt - 1); lock(lockPath(phi, HR.y * 0.7, bottom - (i % 2) * 0.06, 0.05, 0.1), 0.34, 0.09, 0.06); }
+    const backLocks = (bottom, cnt, rootY) => {
+        for (let i = 0; i < cnt; i++) { const phi = Math.PI - 1.7 + 3.4 * i / (cnt - 1); lock(lockPath(phi, rootY != null ? rootY : HR.y * 0.7, bottom - (i % 2) * 0.05, 0.05, 0.035), 0.34, 0.1, 0.06, 0.45); }
     };
     // قشرة الرأس: ناعمة وفيها خطوط خصل خفيفة من التاج (مو مضلّعة)
     const cap = () => {
@@ -728,51 +731,66 @@ function buildHair(head, style, hairM, mats, G) {
     // الشماغ والقبعات القديمة مصممة على رأس كروي صغير (0.45) فنكبّرها للرأس الكبير
     const big = new THREE.Group(); big.scale.setScalar(2.05); big.position.y = 0.05; head.add(big);
     switch (style) {
-        case 0: cap(); bangs(10, 0.95, BANG_Y - 0.26); sideLocks(-0.35, 2); backLocks(-0.62, 9); break;   // قصير
+        case 0: cap(); bangs(7, 0.92, BANG_Y - 0.22); sideLocks(-0.35, 2); backLocks(-0.62, 9); break;   // قصير
         case 1:                                                                    // ضفاير: غرة خصل، خصل جنب الوجه لين الذقن، وذيلين
-            cap(); bangs(10, 0.95, BANG_Y - 0.22); sideLocks(-0.55, 2); backLocks(-0.7, 9); [-1, 1].forEach(pigtail);
+            cap(); bangs(7, 0.92, BANG_Y - 0.2); sideLocks(-0.55, 2); backLocks(-0.7, 9); [-1, 1].forEach(pigtail);
             break;
-        case 2: cap(); bangs(10, 0.95, BANG_Y - 0.26); sideLocks(-1.95, 3); backLocks(-2.0, 11); break;      // طويل (لين الخصر)
-        case 3: cap(); bangs(10, 0.95, BANG_Y - 0.26); sideLocks(-0.35, 2); backLocks(-0.62, 9);              // كعكتين
-            [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.46, TOP + 0.2, -0.1))); break;
-        case 4: {                                                                  // كيرلي: قشرة ناعمة وفوقها لفّات مدوّرة متداخلة (حلقات شعر) بأحجام مختلفة
+        case 2: cap(); drape(-1.75); bangs(7, 0.92, BANG_Y - 0.22); sideLocks(-1.85, 2); backLocks(-1.95, 11); break;   // طويل (لين الخصر): صفحة وحدة ناعمة وفوقها خصل
+        case 3: cap(); bangs(7, 0.92, BANG_Y - 0.22); sideLocks(-0.35, 2); backLocks(-0.62, 9);              // كعكتين
+            [-1, 1].forEach((s) => head.add(mesh(G.bun, hairM, s * 0.5, TOP + 0.12, -0.12))); break;
+        case 4: {                                                                  // كيرلي: غيمة كرات شعر ناعمة بأحجام مختلفة (والوجه مكشوف)
             cap();
-            const curlG = new THREE.TorusGeometry(0.12, 0.1, 16, 28);
-            for (let i = 0; i < 46; i++) {
-                const ph2 = Math.acos(1 - (i + 0.5) / 46 * 1.25), th = i * 2.399;
+            const N = opts.lite ? 40 : 76;
+            for (let i = 0; i < N; i++) {
+                const ph2 = Math.acos(1 - (i + 0.5) / N * 1.6), th = i * 2.399;
                 const x = Math.sin(ph2) * Math.sin(th), y = Math.cos(ph2), z = Math.sin(ph2) * Math.cos(th);
-                if (z > 0.35 && y < 0.62) continue;   // الوجه مكشوف
-                const r = 1 + 0.25 * ((i * 7) % 5) / 5, o = mesh(curlG, hairM, x * (HR.x + 0.08), y * (HR.y + 0.1) + 0.04, z * (HR.z + 0.08));
-                o.scale.setScalar(r); o.lookAt(o.position.clone().multiplyScalar(2)); o.rotateZ(i * 1.7); head.add(o);
-                sway.push({ g: o, amp: 0.02, ph: i, sp: 1.3 });
+                if (z > 0.3 && y < 0.5) continue;   // الوجه مكشوف
+                const r = 0.62 + 0.22 * ((i * 7) % 5) / 4, o = mesh(G.blob, hairM, x * (HR.x + 0.02), y * (HR.y + 0.02) + 0.02, z * (HR.z + 0.02));
+                o.scale.set(r, r * 0.9, r); head.add(o);
             }
-            [-1, 1].forEach((s2) => { for (let k = 0; k < 2; k++) lock(lockPath(s2 * (1.15 + k * 0.35), HR.y * 0.3, -0.45 - k * 0.08, 0.06, 0.1), 0.2, 0.1, 0.05, 0.4); });
+            // حافة الغرة: كرات أصغر على خط الجبهة
+            for (let i = 0; i < 7; i++) { const k = i / 6 * 2 - 1, ph = k * 0.95, p = surf(ph, BANG_Y + 0.06 - k * k * 0.12, 0.06); const o = mesh(G.blob, hairM, p.x, p.y, p.z); o.scale.setScalar(0.5 + (i % 2) * 0.08); head.add(o); }
             break;
         }
-        case 5: {                                                                  // كاب
-            cap(); sideLocks(-0.3, 2); backLocks(-0.55, 9);
-            head.add(mesh(G.visor, hairM, 0, BANG + 0.02, FZ + 0.25));
+        case 5: {                                                                  // كاب: طاقية بلون اللبس وحافة قدّام وزر فوق، والشعر يطلع من تحتها
+            cap(); sideLocks(-0.3, 2, 0.2); backLocks(-0.55, 9, 0.22);   // الخصل تطلع من تحت حافة الطاقية
+            const capM = mat(accent || '#e2483d', { roughness: 0.6 }); mats.push(capM);
+            const crown = mesh(new THREE.SphereGeometry(1, 48, 20, 0, TAU, 0, 1.2), capM, 0, 0, 0); crown.scale.set(HR.x + 0.19, HR.y + 0.12, HR.z + 0.19); head.add(crown);
+            const brimG = new THREE.CylinderGeometry(1, 1, 0.09, 40, 1, false, -Math.PI / 2, Math.PI);
+            const brimM = mat(new THREE.Color(accent || '#e2483d').multiplyScalar(0.78).getStyle(), { roughness: 0.6 }); mats.push(brimM);
+            const brim = mesh(brimG, brimM, 0, (HR.y + 0.12) * Math.cos(1.2) + 0.03, 0.05); brim.scale.set(HR.x * 0.86, 1, (HR.z + 0.19) * 1.45); brim.rotation.x = 0.22; head.add(brim);
+            const btn = mesh(G.tie, capM, 0, HR.y + 0.13, 0); btn.scale.set(0.6, 0.4, 0.6); head.add(btn);
             break;
         }
         case 6: {                                                                  // شماغ وعقال
-            const ghutraM = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide, map: canvasTex(128, 128, (ctx) => {
-                ctx.fillStyle = '#f6f3ec'; ctx.fillRect(0, 0, 128, 128); ctx.fillStyle = '#c4302b';
-                for (let y = 0; y < 128; y += 16) for (let x = (y / 16) % 2 ? 8 : 0; x < 128; x += 16) ctx.fillRect(x + 1, y + 1, 6, 6);
+            const ghutraM = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide, map: canvasTex(64, 64, (ctx) => {
+                // نقشة الشماغ: أرضية بيضاء وشبكة حمرا رفيعة بمعيّنات صغيرة عند التقاطعات
+                ctx.fillStyle = '#f6f3ec'; ctx.fillRect(0, 0, 64, 64); ctx.fillStyle = '#c4302b';
+                ctx.fillRect(0, 30, 64, 4); ctx.fillRect(30, 0, 4, 64);
+                [[0, 0], [64, 0], [0, 64], [64, 64]].forEach(([cx, cy]) => { ctx.beginPath(); ctx.moveTo(cx, cy - 12); ctx.lineTo(cx + 12, cy); ctx.lineTo(cx, cy + 12); ctx.lineTo(cx - 12, cy); ctx.fill(); });
             }) });
-            ghutraM.map.wrapS = ghutraM.map.wrapT = THREE.RepeatWrapping; ghutraM.map.repeat.set(10, 6);
+            ghutraM.map.wrapS = ghutraM.map.wrapT = THREE.RepeatWrapping; 
             mats.push(ghutraM);
-            // قماش واحد ناعم: يغطي الرأس ويتدلّى على الكتوف والظهر بطيّات، ومفتوح من قدّام عند الوجه
-            const clothG = new THREE.SphereGeometry(1, 72, 40, Math.PI / 2 + 0.72, TAU - 1.44, 0, Math.PI * 0.94), pc = clothG.attributes.position;
+            // قماش واحد: فوق يلبس الرأس، وتحت خط الأذن ينزل مستقيم لين الكتوف (يتوسّع شوي مع طيّات)، ومفتوح من قدّام عند الوجه
+            const clothG = new THREE.SphereGeometry(1, 72, 40, Math.PI / 2 + 0.7, TAU - 1.4, 0, Math.PI * 0.94), pc = clothG.attributes.position;
             for (let i = 0; i < pc.count; i++) {
-                const x = pc.getX(i), y = pc.getY(i), z = pc.getZ(i), ph2 = Math.atan2(x, z), down = Math.max(0, -y);
-                const flare = 1 + down * 0.3, fold = 1 + 0.03 * down * Math.sin(ph2 * 9);   // يتوسّع تحت وفيه طيّات
-                const yy = y > 0 ? y * (HR.y + 0.09) : -down * 1.45;   // ينزل لين الكتوف
+                let x = pc.getX(i), y = pc.getY(i), z = pc.getZ(i); const ph2 = Math.atan2(x, z), down = Math.max(0, -y);
+                if (y < 0) { const r = Math.hypot(x, z) || 1; x /= r; z /= r; }   // تحت: جدار مستقيم بدل ما ينضم (شكل البيضة)
+                const flare = 1 + down * down * 0.12, fold = 1 + 0.025 * down * Math.sin(ph2 * 11);
+                const yy = y > 0 ? y * (HR.y + 0.09) : -down * 1.15;
                 pc.setXYZ(i, x * (HR.x + 0.07) * flare * fold, yy, z * (HR.z + 0.07) * flare * fold);
             }
             clothG.computeVertexNormals();
+            // النقشة بمقاس ثابت على القماش (مو ممطوطة): u حول الرأس، v على طول القماش من فوق
+            const uv = clothG.attributes.uv;
+            for (let i = 0; i < pc.count; i++) { const x = pc.getX(i), y = pc.getY(i), z = pc.getZ(i), r = Math.hypot(x, z); if (y > HR.y * 0.62) uv.setXY(i, x * 6, z * 6); else uv.setXY(i, Math.atan2(x, z) * 6.4, (y > 0 ? (Math.PI / 2 - Math.atan2(y, r)) * 1.1 : 1.6 - y) * 6); }   // فوق العقال: إسقاط من فوق (بدون تجمّع عند القمة)
             head.add(mesh(clothG, ghutraM, 0, 0, 0));
+            // فوق الرأس مقفول (القماش مفتوح من قدّام بس عند الوجه)
+            const topG = new THREE.SphereGeometry(1, 48, 12, 0, TAU, 0, 1.05), pt = topG.attributes.position, tu = topG.attributes.uv;
+            for (let i = 0; i < pt.count; i++) { pt.setXYZ(i, pt.getX(i) * (HR.x + 0.075), pt.getY(i) * (HR.y + 0.095), pt.getZ(i) * (HR.z + 0.075)); tu.setXY(i, pt.getX(i) * 6, pt.getZ(i) * 6); }
+            topG.computeVertexNormals(); head.add(mesh(topG, ghutraM, 0, 0, 0));
             const iqalM = mat('#141414', { roughness: 0.5 });
-            [0, 0.13].forEach((dy) => { const y0 = HR.y * 0.5 + dy, k = Math.sqrt(1 - (y0 / (HR.y + 0.09)) ** 2); const iq = mesh(new THREE.TorusGeometry(1, 0.06, 12, 48), iqalM, 0, y0, 0); iq.rotation.x = Math.PI / 2; iq.scale.set((HR.x + 0.13) * k, (HR.z + 0.13) * k, 1); head.add(iq); });   // العقال لاصق على الشماغ
+            [0, 0.12].forEach((dy) => { const y0 = HR.y * 0.55 + dy, k = Math.sqrt(1 - (y0 / (HR.y + 0.09)) ** 2); const iq = mesh(new THREE.TorusGeometry(1, 0.055, 12, 48), iqalM, 0, y0, 0); iq.rotation.x = Math.PI / 2; iq.scale.set((HR.x + 0.11) * k, (HR.z + 0.11) * k, 1); head.add(iq); });   // العقال لاصق على الشماغ
             break;
         }
         case 'fedora': {
