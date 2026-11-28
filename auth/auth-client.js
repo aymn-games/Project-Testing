@@ -577,6 +577,14 @@ function adminListChoiceCodes() {
     return request('/api/admin/choice-codes', { method: 'GET' });
 }
 /** Admin only — frames permanently excluded from every choice code: ["catalog:<slug>"|"custom:<id>"] */
+/** مين عنده هذا الإطار: {owners:[{userId, username, customId, tiktokUsername, grantedBy, grantedByLabel, grantedAt, code}]} */
+function adminGetFrameOwners(frameType, frameRef) {
+    return request('/api/admin/collectibles/frame-owners?frameType=' + encodeURIComponent(frameType) + '&frameRef=' + encodeURIComponent(frameRef), { method: 'GET' });
+}
+/** سحب الإطار من كل اللي أخذوه بكود — {revoked: عدد} */
+function adminRevokeFrameFromCodes(frameType, frameRef) {
+    return request('/api/admin/collectibles/revoke-from-codes', { method: 'POST', body: { frameType: frameType, frameRef: String(frameRef) } });
+}
 function adminGetChoiceExcluded() {
     return request('/api/admin/choice-codes/excluded', { method: 'GET' });
 }
@@ -1320,6 +1328,8 @@ global.AGPAuth = {
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
     adminGetChoiceExcluded: adminGetChoiceExcluded,
+    adminGetFrameOwners: adminGetFrameOwners,
+    adminRevokeFrameFromCodes: adminRevokeFrameFromCodes,
     adminSetChoiceExcluded: adminSetChoiceExcluded,
     adminGetWinReward: adminGetWinReward,
     adminSetWinReward: adminSetWinReward,

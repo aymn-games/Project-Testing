@@ -1296,6 +1296,91 @@ function listChoiceCodes() {
   });
 }
 
+/**
+ * يضيف إطار للاستثناء الدائم من أكواد الاختيار (لو مو موجود). يُستدعى عند
+ * إنشاء إطار حصري من لوحة الأدمن، عشان الإطارات الخاصة ما تطلع بالأكواد
+ * الجماعية إلا لو الأدمن رجّعها بنفسه.
+ */
+function excludeFromChoiceCodes(frameType, frameRef) {
+  var key = frameKey(frameType, String(frameRef));
+  var list = getPermanentExcluded();
+  if (list.indexOf(key) >= 0) return { success: true, frames: list };
+  return setPermanentExcluded(list.concat([key]));
+}
+
+/* ----------------------------------------------------------------------
+ * مين عنده الإطار؟ (أدمن) — كل ملّاك إطار معيّن، مع طريقة حصوله عليه والكود
+ * اللي استخدمه، وسحب جماعي من كل اللي أخذوه بكود.
+ * ---------------------------------------------------------------------- */
+var GRANT_SOURCE_LABELS = {
+  redeem_code: 'كود', admin_manual: 'منح يدوي', store: 'المتجر', auto_level: 'مستوى',
+  auto_permission: 'صلاحية', auto_founders_month: 'شهر المؤسسين'
+};
+
+/** الكود اللي استخدمه المستخدم لهذا الإطار (إطار واحد / اختيار / باكج) أو null. */
+function codeUsedForFrame(userId, frameType, frameRef) {
+  var single = db.prepare('SELECT code FROM frame_codes WHERE redeemed_by = ? AND frame_type = ? AND frame_ref = ? ORDER BY redeemed_at DESC LIMIT 1')
+    .get(userId, frameType, frameRef);
+  if (single) return { code: single.code, kind: 'frame' };
+  var choice = db.prepare('SELECT code FROM choice_code_redemptions WHERE user_id = ? AND frame_type = ? AND frame_ref = ? ORDER BY redeemed_at DESC LIMIT 1')
+    .get(userId, frameType, frameRef);
+  if (choice) return { code: choice.code, kind: 'choice' };
+  var bundles = db.prepare('SELECT code, bundle_id FROM bundle_codes WHERE redeemed_by = ? ORDER BY redeemed_at DESC').all(userId);
+  for (var i = 0; i < bundles.length; i++) {
+    var b = getBundle(bundles[i].bundle_id);
+    if (b && b.items.some(function (it) { return it.kind === 'frame' && it.frameType === frameType && String(it.frameRef) === frameRef; })) {
+      return { code: bundles[i].code, kind: 'bundle' };
+    }
+  }
+  return null;
+}
+
+/**
+ * @returns {{success: boolean, owners?: Object[], error?: string}}
+ */
+function listFrameOwners(frameType, frameRef) {
+  frameRef = String(frameRef == null ? '' : frameRef);
+  if (!frameExists(frameType, frameRef)) return { success: false, error: 'unknown_frame' };
+  var rows = db.prepare(
+    'SELECT f.user_id, f.granted_by, f.granted_at, f.equipped, u.username, u.custom_id, u.tiktok_username, u.tiktok_verified ' +
+    'FROM user_frames f LEFT JOIN users u ON u.id = f.user_id ' +
+    'WHERE f.frame_type = ? AND f.frame_ref = ? ORDER BY f.granted_at DESC'
+  ).all(frameType, frameRef);
+  return {
+    success: true,
+    owners: rows.map(function (r) {
+      var used = r.granted_by === 'redeem_code' ? codeUsedForFrame(r.user_id, frameType, frameRef) : null;
+      return {
+        userId: r.user_id,
+        username: r.username || null,
+        customId: r.custom_id || null,
+        tiktokUsername: r.tiktok_username || null,
+        tiktokVerified: !!r.tiktok_verified,
+        grantedBy: r.granted_by,
+        grantedByLabel: GRANT_SOURCE_LABELS[r.granted_by] || r.granted_by,
+        grantedAt: r.granted_at,
+        equipped: !!r.equipped,
+        code: used ? used.code : null,
+        codeKind: used ? used.kind : null
+      };
+    })
+  };
+}
+
+/**
+ * سحب الإطار من كل اللي أخذوه بكود (granted_by = 'redeem_code'). اللي أخذه
+ * بمنح يدوي أو من المتجر أو بمستوى يبقى عنده.
+ * @returns {{success: boolean, revoked?: number, error?: string}}
+ */
+function revokeFrameFromCodeRedeemers(frameType, frameRef) {
+  frameRef = String(frameRef == null ? '' : frameRef);
+  if (!frameExists(frameType, frameRef)) return { success: false, error: 'unknown_frame' };
+  var info = db.prepare("DELETE FROM user_frames WHERE frame_type = ? AND frame_ref = ? AND granted_by = 'redeem_code'")
+    .run(frameType, frameRef);
+  logger.log('Collectibles: revoked frame ' + frameType + ':' + frameRef + ' from ' + info.changes + ' code redeemers');
+  return { success: true, revoked: info.changes };
+}
+
 /* ----------------------------------------------------------------------
  * جائزة فوز مباريات البثين — الأدمن يحدد الإطارات المسموحة وعدد مرات
  * الاستخدام (app_settings 'challenge_win_reward')، وكل مباراة تنتهي بفائز
@@ -1539,6 +1624,9 @@ module.exports = {
   listChoiceCodes: listChoiceCodes,
   getPermanentExcluded: getPermanentExcluded,
   setPermanentExcluded: setPermanentExcluded,
+  excludeFromChoiceCodes: excludeFromChoiceCodes,
+  listFrameOwners: listFrameOwners,
+  revokeFrameFromCodeRedeemers: revokeFrameFromCodeRedeemers,
   getWinRewardConfig: getWinRewardConfig,
   setWinRewardConfig: setWinRewardConfig,
   createWinRewardCode: createWinRewardCode,

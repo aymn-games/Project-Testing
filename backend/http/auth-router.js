@@ -187,6 +187,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/collectibles/custom-frame', requireAuth: true, requireAdmin: true, handler: handleAdminCreateCustomFrame },
   { method: 'POST', path: '/api/admin/collectibles/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantFrame },
   { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
+  { method: 'GET', path: '/api/admin/collectibles/frame-owners', requireAuth: true, requireAdmin: true, handler: handleAdminFrameOwners },
+  { method: 'POST', path: '/api/admin/collectibles/revoke-from-codes', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrameFromCodes },
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
   { method: 'POST', path: '/api/admin/entrance/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantEntrance },
   { method: 'GET', path: '/api/admin/entrances', requireAuth: true, requireAdmin: true, handler: handleAdminUserEntrances },
@@ -903,6 +905,9 @@ function handleAdminUpdateCatalog(req, res, body) {
 
 function handleAdminCreateCustomFrame(req, res, body) {
   var result = collectiblesService.createCustomFrame(body.imageFilename, body.displayNameAr);
+  // الإطار الحصري خاص من البداية: ما يطلع بالأكواد الجماعية لين الأدمن يرجّعه
+  // من «الاستثناء الدائم» بنفسه.
+  if (result.success) collectiblesService.excludeFromChoiceCodes('custom', result.id);
   sendJson(res, result.success ? 201 : 400, result);
 }
 
@@ -917,6 +922,16 @@ function handleAdminGrantFrame(req, res, body) {
     entranceTemplate: body.entranceTemplate,
     entranceText: body.entranceText
   });
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminFrameOwners(req, res) {
+  var result = collectiblesService.listFrameOwners(getQueryParam(req, 'frameType'), getQueryParam(req, 'frameRef'));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminRevokeFrameFromCodes(req, res, body) {
+  var result = collectiblesService.revokeFrameFromCodeRedeemers(body.frameType, body.frameRef);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
