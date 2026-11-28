@@ -568,8 +568,16 @@ function redeemChoiceCode(code, frameType, frameRef) {
 }
 
 /** Admin only — one multi-use "choose your frame" code. excluded: ["catalog:<slug>", "custom:<id>"] */
-function adminGenerateChoiceCode(maxUses, excluded, note) {
-    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, excluded: excluded || [], note: note || '' } });
+/** كود جماعي جديد ياخذ نسخة من «قائمة الكود الجماعي» المحفوظة. */
+function adminGenerateChoiceCode(maxUses, note) {
+    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, note: note || '' } });
+}
+/** قائمة الكود الجماعي: الإطارات اللي يضيفها الأدمن بيده ["catalog:<slug>"|"custom:<id>"]. */
+function adminGetChoicePool() {
+    return request('/api/admin/choice-codes/pool', { method: 'GET' });
+}
+function adminSetChoicePool(frames) {
+    return request('/api/admin/choice-codes/pool', { method: 'POST', body: { frames: frames || [] } });
 }
 
 /** Admin only — list "choose your frame" codes with their usage. */
@@ -1328,6 +1336,8 @@ global.AGPAuth = {
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
     adminGetChoiceExcluded: adminGetChoiceExcluded,
+    adminGetChoicePool: adminGetChoicePool,
+    adminSetChoicePool: adminSetChoicePool,
     adminGetFrameOwners: adminGetFrameOwners,
     adminRevokeFrameFromCodes: adminRevokeFrameFromCodes,
     adminSetChoiceExcluded: adminSetChoiceExcluded,

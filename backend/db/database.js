@@ -894,6 +894,12 @@ db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_supporters_sl ON supporters(sl_id
 // "غير مقروء" (شارة زر "تذاكري" بالبروفايل). 0 = لم يفتحها بعد.
 ensureColumn('tickets', 'user_seen_at', 'INTEGER NOT NULL DEFAULT 0');
 
+// أكواد اختيار الإطار (الأكواد الجماعية): قائمة الإطارات المسموحة لكل كود،
+// تنحفظ وقت إنشائه (JSON مفاتيح "catalog:<slug>"/"custom:<id>"). أي إطار
+// ينضاف بعدها ما يدخل بالكود أبداً. NULL = كود قديم قبل هذا التغيير
+// (يتثبّت مرة وحدة بـcollectibles-service.js — freezeLegacyChoiceCodes).
+ensureColumn('choice_codes', 'allowed', 'TEXT');
+
 // تعدد بطاقات الإقصاء/الفوز: الشكل القديم كان صف واحد لكل مستخدم (user_id
 // = PRIMARY KEY). SQLite ما يسمح بتغيير المفتاح الأساسي بـALTER، فيُعاد
 // بناء الجدول مرة واحدة (لو ما فيه عمود id بعد) مع نقل كل البطاقات

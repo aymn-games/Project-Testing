@@ -217,6 +217,8 @@ var ROUTES = [
   // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
   { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
   { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
+  { method: 'GET', path: '/api/admin/choice-codes/pool', requireAuth: true, requireAdmin: true, handler: handleAdminGetChoicePool },
+  { method: 'POST', path: '/api/admin/choice-codes/pool', requireAuth: true, requireAdmin: true, handler: handleAdminSetChoicePool },
   { method: 'GET', path: '/api/admin/choice-codes/excluded', requireAuth: true, requireAdmin: true, handler: handleAdminGetChoiceExcluded },
   { method: 'POST', path: '/api/admin/choice-codes/excluded', requireAuth: true, requireAdmin: true, handler: handleAdminSetChoiceExcluded },
   { method: 'GET', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminGetWinReward },
@@ -1022,12 +1024,21 @@ function handleRedeemChoiceCode(req, res, body, user) {
 }
 
 function handleAdminGenerateChoiceCode(req, res, body) {
-  var result = collectiblesService.generateChoiceCode(body.maxUses, body.excluded, body.note);
+  // الكود الجماعي ياخذ نسخة من «قائمة الكود الجماعي» المحفوظة وقت إنشائه.
+  var result = collectiblesService.generateChoiceCodeFromPool(body.maxUses, body.note);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 function handleAdminListChoiceCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
+}
+
+function handleAdminGetChoicePool(req, res) {
+  sendJson(res, 200, { success: true, frames: collectiblesService.getChoicePool() });
+}
+
+function handleAdminSetChoicePool(req, res, body) {
+  sendJson(res, 200, collectiblesService.setChoicePool(body && body.frames));
 }
 
 function handleAdminGetChoiceExcluded(req, res) {

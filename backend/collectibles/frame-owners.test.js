@@ -22,8 +22,8 @@ test('إطار حصري مستثنى من الكود الجماعي، والمل
     var frameId = String(svc.createCustomFrame(tag + '.png', tag).id);
     var code = null;
     try {
-        // قبل الاستثناء: الإطار يطلع بالكود الجماعي
-        code = svc.generateChoiceCode(5, [], tag).code;
+        // الإطار بقائمة الكود: يطلع بالكود الجماعي
+        code = svc.generateChoiceCode(5, ['custom:' + frameId], tag).code;
         var opts = svc.redeemFrameCode(a, code).choices.map(function (f) { return f.frameType + ':' + f.frameRef; });
         assert.ok(opts.indexOf('custom:' + frameId) >= 0);
 
@@ -33,8 +33,8 @@ test('إطار حصري مستثنى من الكود الجماعي، والمل
 
         // بعد الاستثناء: ما يطلع لـ b ولا يقدر يستلمه
         svc.excludeFromChoiceCodes('custom', frameId);
-        var optsB = svc.redeemFrameCode(b, code).choices.map(function (f) { return f.frameType + ':' + f.frameRef; });
-        assert.equal(optsB.indexOf('custom:' + frameId), -1);
+        // إطار الكود الوحيد صار مستثنى، فما يبقى شي يختاره
+        assert.equal(svc.redeemFrameCode(b, code).success, false);
         assert.equal(svc.claimChoiceCode(b, code, 'custom', frameId).error, 'invalid_frame');
 
         var owners = svc.listFrameOwners('custom', frameId).owners;
