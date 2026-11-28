@@ -112,6 +112,29 @@ function avatarHtml(p, cls = '') { const c = colorOf(p.id); return p.avatar ? `<
 function updateCount() { const lobby = G.phase === 'lobby'; $('#count').textContent = lobby ? G.players.length : G.alive.length; $('#countLbl').textContent = lobby ? 'بالساحة' : 'باقين'; }
 function pill(state) { $('#rRound').textContent = 'المرحلة ' + G.round; $('#rLeft').textContent = G.alive.length; if (state) $('#rState').textContent = state; updateCount(); }
 
+// ---------- فقاعات الأسماء (مرسومة على الشاشة نفسها: حجمها ثابت ومقروء مهما بعدت الكاميرا)
+// اختيار رقم: فقاعة «الاسم ← الرقم» فوق الدائرة وتختفي بعد ثانيتين. من لم يختر: فقاعة حمراء فوق راسه لين يطيح.
+const BUB = new Map();
+function bubble(key, o) {
+    dropBubble(key, true);
+    const el = document.createElement('div'), p = o.p, c = o.out ? '#e9906f' : colorOf(p.id), slot = BUB.size % 3;
+    el.className = 'bub' + (o.out ? ' out' : ''); el.style.setProperty('--k', c); el.style.setProperty('--h', (o.out ? 18 + slot * 34 : 34 + slot * 38) + 'px');
+    el.innerHTML = `<div class="c">${avatarHtml(p, 'sm')}<b class="n"></b>${o.num != null ? `<span class="ar">←</span><b class="num">${o.num}</b>` : ''}</div><i></i>`;
+    el.querySelector('.n').textContent = p.name; $('#bubbles').appendChild(el);
+    BUB.set(key, { el, id: p.id, num: o.num, until: o.ms ? performance.now() + o.ms : 0 });
+}
+function dropBubble(key, now) { const b = BUB.get(key); if (!b) return; BUB.delete(key); if (now) b.el.remove(); else { b.el.classList.add('gone'); setTimeout(() => b.el.remove(), 450); } }
+function clearBubbles(prefix) { for (const k of [...BUB.keys()]) if (!prefix || k.startsWith(prefix)) dropBubble(k); }
+(function bubLoop() {
+    requestAnimationFrame(bubLoop); if (!G.scene || !BUB.size) return; const t = performance.now();
+    for (const [k, b] of BUB) {
+        if (b.until && t > b.until) { dropBubble(k); continue; }
+        const q = b.num != null ? G.scene.circleScreen(b.num) : G.scene.headScreen(b.id);
+        if (!q) { b.el.style.visibility = 'hidden'; continue; }
+        b.el.style.visibility = ''; b.el.style.transform = `translate(${q.x.toFixed(1)}px,${q.y.toFixed(1)}px) translate(-50%,-100%)`;
+    }
+})();
+
 // ---------- اللوبي (نفس بلدة الكاوبوي/روليت الإقصاء: بطاقة إطار لمن عنده + كبسولة صورة واسم + زر إقصاء)
 const KICK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
 const FRAME_W_RATIO = 4.96, X_SIZE = 24;
@@ -205,17 +228,19 @@ async function playRound() {
     G.scene.choosing(false); SFX.timeUp(); flash('#c4b5fd', 260); pill('انتهى الوقت');
     banner('انتهى الوقت!', `اختار ${G.picks.size} من ${n} · الكل لمكانه`, '', 1500);
     await G.scene.timeUp();
+    clearBubbles('p:');
+    G.alive.filter(p => !G.picks.has(String(p.id))).forEach(p => { bubble('o:' + p.id, { p, out: true }); G.scene.setPlate(p.id, false); });
     const chosen = G.alive.filter(p => G.picks.has(String(p.id))), idle = G.alive.filter(p => !G.picks.has(String(p.id)));
-    if (!chosen.length) { await banner('ما أحد اختار!', 'نعيد نفس المرحلة', 'red', 2000); G.round--; G.scene.choosing(false); return playRound(); }
+    if (!chosen.length) { clearBubbles(); await banner('ما أحد اختار!', 'نعيد نفس المرحلة', 'red', 2000); G.round--; G.scene.choosing(false); return playRound(); }
     // 1) اللي اختاروا يمشون لدوائرهم
     pill('الكل لمكانه'); const assign = {}; chosen.forEach(p => { assign[p.id] = G.picks.get(String(p.id)); });
     await G.scene.moveIn(assign);
     // 2) من لم يختر يُقصى مباشرة
     if (idle.length) {
         pill('إقصاء من لم يختر'); fx('danger', 2500);
-        showStrip(`أُقصي ${idle.length === 1 ? 'لاعب واحد' : idle.length + ' لاعبين'} لم ${idle.length === 1 ? 'يختر' : 'يختاروا'}`, idle);
         await G.scene.eliminate(idle.map(p => p.id), 'idle');
-        G.alive = chosen; hideStrip(); pill();
+        clearBubbles('o:');
+        G.alive = chosen; pill();
     }
     if (G.alive.length === 1) return crown(G.alive[0]);
     // 3) إقصاء عشوائي (القرار هنا قبل الأنيميشن — المشهد يعرضه بس)
@@ -260,7 +285,7 @@ function answer(id, text) {
     const owner = G.taken.get(num); if (owner && owner !== key) { if (!p.bot) notice(`الرقم ${num} محجوز — اختر رقم ثاني يا ${p.name}`); return; }
     if (prev != null) G.taken.delete(prev);
     G.picks.set(key, num); G.taken.set(num, key);
-    G.scene.pick(p.id, num, prev); SFX.pick(num); // الاسم يطلع فوق الدائرة نفسها (pyr3d.js)
+    G.scene.pick(p.id, num, prev); SFX.pick(num); bubble('p:' + key, { p, num, ms: 2200 }); // الاسم يطلع فوق الدائرة نفسها (pyr3d.js)
     $('#hPicked').textContent = G.picks.size;
 }
 
@@ -288,7 +313,7 @@ async function crown(p) {
     renderChamp(); await sleep(3200);
     if (G.champ === p) { document.body.classList.remove('match'); document.body.classList.add('champ'); $('#champ').classList.add('in'); }
 }
-function closeChamp() { $('#champ').classList.remove('in'); document.body.classList.remove('champ', 'match', 'picking'); document.body.dataset.fx = ''; G.champ = null; }
+function closeChamp() { clearBubbles(); $('#champ').classList.remove('in'); document.body.classList.remove('champ', 'match', 'picking'); document.body.dataset.fx = ''; G.champ = null; }
 async function replay() { closeChamp(); G.phase = 'lobby'; G.scene.reset(); G.scene.setPlayers(G.players); renderLobby(); showLobby(true); await sleep(300); openRules(); }
 function newMatch() { closeChamp(); G.phase = 'lobby'; G.players = []; G.alive = []; G.scene.reset(); if (G.bots) fillBots(8); showLobby(true); renderLobby(); }
 

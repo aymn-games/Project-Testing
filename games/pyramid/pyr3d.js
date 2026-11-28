@@ -665,12 +665,12 @@ export async function mountPyramid(el, opts = {}) {
     let shotT0 = now();
     function setShot(fn) { shot = fn; shotT0 = now(); }
     // إطار يحتوي مجموعة نقاط من زاوية (yaw, pitch) — يحسب المسافة حسب نسبة الشاشة
-    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0) {
+    function frameBox(pts, pitch = .72, yaw = 0, margin = 1.0, HUD = .3) {
         const b = new T.Box3(); pts.forEach(p => b.expandByPoint(p)); const c = b.getCenter(V()), s = b.getSize(V());
         const vf = cam.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * aspect);
         const halfW = s.x / 2 * margin + .5, halfH0 = (s.z / 2 * Math.sin(pitch) + s.y / 2 * Math.cos(pitch)) * margin + .8;
         // مساحة فوق لواجهة اللعبة (شريط المرحلة والهيدر): الهرم ينزل تحتها وما يتغطى
-        const HUD = .3, halfH = halfH0 * (1 + HUD);
+        const halfH = halfH0 * (1 + Math.abs(HUD));
         const d = Math.max(halfW / Math.tan(hf / 2), halfH / Math.tan(vf / 2)) + s.z / 2 * Math.cos(pitch) * .5;
         const dir = V(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
         const up = V(-Math.sin(yaw) * Math.sin(pitch), Math.cos(pitch), -Math.cos(yaw) * Math.sin(pitch)); // اتجاه «فوق» بالشاشة
@@ -887,14 +887,24 @@ export async function mountPyramid(el, opts = {}) {
         sparks.emit(base.clone().setY(base.y + .2), { count: 18, color: [C.violet, C.lav], speed: 1.5, up: 1.5, life: 1.2, gravity: -1 });
         a.dispose(); actors.delete(a.id);
     }
+    // إقصاء من لم يختر: الكاميرا تقرّب (زوم) على كل مجموعة قريبة من بعض لين يطيحون، ثم ترجع للقطة الهرم.
+    // المتفرقين يتقسمون لمجموعات حسب مكانهم (4 مجموعات بالأكثر عشان ما يطوّل).
     async function eliminate(ids, kind = 'idle') {
         const list = ids.map(id => actors.get(String(id))).filter(Boolean); if (!list.length) return;
         setMood('danger');
-        if (list.length <= 3) { const c = V(); list.forEach(a => c.add(a.pos)); c.multiplyScalar(1 / list.length); setShot(close(c.setY(c.y + 1), 8 + list.length * 2, .5, .2)); await wait(.7); }
-        // دفعات صغيرة متتابعة عشان كل إقصاء ينشاف
-        const per = list.length > 12 ? .08 : list.length > 4 ? .18 : .45;
-        await Promise.all(list.map((a, i) => wait(i * per).then(() => dropActor(a, { kind, hold: .7 }))));
-        await wait(.5); setMood('tense'); setShot(mainShot());
+        const sorted = list.slice().sort((a, b) => a.pos.x - b.pos.x), groups = [];
+        sorted.forEach(a => { const g = groups[groups.length - 1]; if (g && Math.abs(a.pos.x - g[0].pos.x) < 9 && Math.abs(a.pos.z - g[0].pos.z) < 9) g.push(a); else groups.push([a]); });
+        while (groups.length > 4) { let bi = 0, bd = 1e9; for (let i = 0; i < groups.length - 1; i++) { const d = Math.abs(groups[i + 1][0].pos.x - groups[i][groups[i].length - 1].pos.x); if (d < bd) { bd = d; bi = i; } } groups.splice(bi, 2, groups[bi].concat(groups[bi + 1])); }
+        for (const g of groups) {
+            const pts = []; g.forEach(a => { const s = a.baseScale || 1; pts.push(a.pos.clone(), a.pos.clone().setY(a.pos.y + 2.1 * s)); });
+            const F = frameBox(pts, .42, .18, 1.3, 0);
+            setShot(t => ({ pos: F.pos.clone().add(drift(t).multiplyScalar(.2)), look: F.look.clone(), rate: 2.6 })); // زوم على المجموعة
+            await wait(.9);
+            const per = g.length > 8 ? .06 : .14;
+            await Promise.all(g.map((a, i) => wait(i * per).then(() => dropActor(a, { kind, hold: .55 }))));
+            await wait(.25);
+        }
+        setMood('tense'); setShot(mainShot()); await wait(.6); // يرجع الزوم
     }
     // الإقصاء العشوائي: الكشاف يتنقل بين الدوائر المشغولة ويتباطأ لين يوقف على الضحية (اللي اختارتها اللعبة)
     // الإقصاء العشوائي بالحيّات: الكشاف يتنقل ويثبّت على كل ضحية (اللعبة هي اللي اختارتهم)، ثم لقطة تجمعهم
@@ -1039,12 +1049,16 @@ export async function mountPyramid(el, opts = {}) {
     }
     function setQuality(m) { if (!['auto', 'low', 'balanced', 'high'].includes(m)) return; mode = m; if (m === 'auto') { ladderIdx = probe.startIdx; gov.banned.clear(); gov.cool = 3; } applyTier(m === 'auto' ? 'نقيس أداء جهازك من جديد' : ''); }
     // موقع راس لاعب على الشاشة (لتبويبات HTML)
-    function headScreen(id) { const a = actors.get(String(id)); if (!a) return null; const p = a.pos.clone().setY(a.pos.y + a.extraY + 2.2).project(cam); if (p.z > 1) return null; const b = r.domElement.getBoundingClientRect(); return { x: b.left + (p.x + 1) / 2 * b.width, y: b.top + (1 - p.y) / 2 * b.height }; }
+    function headScreen(id) { const a = actors.get(String(id)); if (!a) return null; const p = a.pos.clone().setY(a.pos.y + a.extraY + 2.05 * (a.baseScale || 1)).project(cam); if (p.z > 1) return null; const b = r.domElement.getBoundingClientRect(); return { x: b.left + (p.x + 1) / 2 * b.width, y: b.top + (1 - p.y) / 2 * b.height }; }
+    // إخفاء/إظهار اسم الشخصية الصغير فوق راسها (لما تطلع فقاعة الاسم الكبيرة)
+    function setPlate(id, on) { const x = actors.get(String(id)); if (x) x.plate.visible = !!on; }
+    // مكان دائرة على الشاشة (لفقاعة الاختيار)
+    function circleScreen(num) { const L = activeLevel; if (!L || !L.pos[num - 1]) return null; const p = L.pos[num - 1].clone().setY(L.yTop + .4 * K).project(cam); if (p.z > 1) return null; const b = r.domElement.getBoundingClientRect(); return { x: b.left + (p.x + 1) / 2 * b.width, y: b.top + (1 - p.y) / 2 * b.height }; }
     function stop() {
         running = false; cancelAnimationFrame(raf); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
         reset();
         sc.traverse(o => { o.geometry && o.geometry.dispose(); [].concat(o.material || []).forEach(m => { for (const k in m) if (m[k] && m[k].isTexture) m[k].dispose(); m.dispose && m.dispose(); }); });
         r.dispose(); r.domElement.remove();
     }
-    return { setPlayers, startMatch, choosing, setUrgency, pick, timeUp, moveIn, eliminate, roulette, survived, nextLevel, champion, reset, setQuality, qualityInfo, screen, headScreen, stop, get vrm() { return !!VRM; }, get gpu() { return probe; } };
+    return { setPlate, circleScreen, setPlayers, startMatch, choosing, setUrgency, pick, timeUp, moveIn, eliminate, roulette, survived, nextLevel, champion, reset, setQuality, qualityInfo, screen, headScreen, stop, get vrm() { return !!VRM; }, get gpu() { return probe; } };
 }
