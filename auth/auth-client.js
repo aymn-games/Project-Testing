@@ -568,8 +568,16 @@ function redeemChoiceCode(code, frameType, frameRef) {
 }
 
 /** Admin only — one multi-use "choose your frame" code. excluded: ["catalog:<slug>", "custom:<id>"] */
-function adminGenerateChoiceCode(maxUses, excluded, note) {
-    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, excluded: excluded || [], note: note || '' } });
+/** كود جماعي جديد ياخذ نسخة من «قائمة الكود الجماعي» المحفوظة. */
+function adminGenerateChoiceCode(maxUses, note) {
+    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, note: note || '' } });
+}
+/** قائمة الكود الجماعي: الإطارات اللي يضيفها الأدمن بيده ["catalog:<slug>"|"custom:<id>"]. */
+function adminGetChoicePool() {
+    return request('/api/admin/choice-codes/pool', { method: 'GET' });
+}
+function adminSetChoicePool(frames) {
+    return request('/api/admin/choice-codes/pool', { method: 'POST', body: { frames: frames || [] } });
 }
 
 /** Admin only — list "choose your frame" codes with their usage. */
@@ -577,6 +585,14 @@ function adminListChoiceCodes() {
     return request('/api/admin/choice-codes', { method: 'GET' });
 }
 /** Admin only — frames permanently excluded from every choice code: ["catalog:<slug>"|"custom:<id>"] */
+/** مين عنده هذا الإطار: {owners:[{userId, username, customId, tiktokUsername, grantedBy, grantedByLabel, grantedAt, code}]} */
+function adminGetFrameOwners(frameType, frameRef) {
+    return request('/api/admin/collectibles/frame-owners?frameType=' + encodeURIComponent(frameType) + '&frameRef=' + encodeURIComponent(frameRef), { method: 'GET' });
+}
+/** سحب الإطار من كل اللي أخذوه بكود — {revoked: عدد} */
+function adminRevokeFrameFromCodes(frameType, frameRef) {
+    return request('/api/admin/collectibles/revoke-from-codes', { method: 'POST', body: { frameType: frameType, frameRef: String(frameRef) } });
+}
 function adminGetChoiceExcluded() {
     return request('/api/admin/choice-codes/excluded', { method: 'GET' });
 }
@@ -1320,6 +1336,10 @@ global.AGPAuth = {
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
     adminGetChoiceExcluded: adminGetChoiceExcluded,
+    adminGetChoicePool: adminGetChoicePool,
+    adminSetChoicePool: adminSetChoicePool,
+    adminGetFrameOwners: adminGetFrameOwners,
+    adminRevokeFrameFromCodes: adminRevokeFrameFromCodes,
     adminSetChoiceExcluded: adminSetChoiceExcluded,
     adminGetWinReward: adminGetWinReward,
     adminSetWinReward: adminSetWinReward,

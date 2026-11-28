@@ -1186,8 +1186,20 @@ function parseExcluded(row) {
   try { var list = JSON.parse(row.excluded || '[]'); return Array.isArray(list) ? list : []; } catch (e) { return []; }
 }
 
-/** الإطارات المتاحة لهذا المستخدم بهذا الكود: غير مستثناة وما يملكها. */
+function parseAllowed(row) {
+  if (row.allowed == null) return null;
+  try { var list = JSON.parse(row.allowed); return Array.isArray(list) ? list.map(String) : []; } catch (e) { return []; }
+}
+
+/**
+ * الإطارات المتاحة لهذا المستخدم بهذا الكود: اللي بقائمة الكود المحفوظة وقت
+ * إنشائه بس (allowed)، غير المستثناة دائماً، وما يملكها. الكود القديم بدون
+ * قائمة (ما يفترض يوجد بعد التثبيت) يرجع للطريقة القديمة: الكل ناقص المستثنى.
+ */
 function choiceCodeOptions(userId, row) {
+  var allowedList = parseAllowed(row);
+  var allowed = null;
+  if (allowedList) { allowed = {}; allowedList.forEach(function (k) { allowed[k] = true; }); }
   var excluded = {};
   parseExcluded(row).concat(getPermanentExcluded()).forEach(function (k) { excluded[k] = true; });
   var owned = {};
@@ -1195,9 +1207,65 @@ function choiceCodeOptions(userId, row) {
     .forEach(function (r) { owned[frameKey(r.frame_type, r.frame_ref)] = true; });
   return listAllFramesForChoice().filter(function (f) {
     var k = frameKey(f.frameType, f.frameRef);
+    if (allowed && !allowed[k]) return false;
     return !excluded[k] && !owned[k];
   });
 }
+
+/* ----------------------------------------------------------------------
+ * قائمة الكود الجماعي (app_settings 'choice_pool_frames') — الأدمن يضيف لها
+ * الإطارات بيده، وكل كود جماعي جديد ياخذ نسخة منها وقت إنشائه. أي إطار
+ * ما هو بالقائمة ما يطلع بأي كود جماعي أبداً.
+ * ---------------------------------------------------------------------- */
+var CHOICE_POOL_KEY = 'choice_pool_frames';
+
+function knownFrameKeys() {
+  var known = {};
+  listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
+  return known;
+}
+
+function cleanFrameKeys(list) {
+  var known = knownFrameKeys();
+  return (Array.isArray(list) ? list : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
+}
+
+function getChoicePool() {
+  var row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(CHOICE_POOL_KEY);
+  try { var list = row ? JSON.parse(row.value) : []; return cleanFrameKeys(list); } catch (e) { return []; }
+}
+
+/** @returns {{success: boolean, frames?: string[]}} */
+function setChoicePool(frames) {
+  var clean = cleanFrameKeys(frames);
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run(CHOICE_POOL_KEY, JSON.stringify(clean));
+  logger.log('Collectibles: choice-code pool = ' + clean.length + ' frames');
+  return { success: true, frames: clean };
+}
+
+/**
+ * تثبيت الأكواد الجماعية القديمة (مرة وحدة): كل كود بدون قائمة ياخذ الإطارات
+ * اللي كانت موجودة يوم انسوى (الحصرية بتاريخ إنشائها، والكتالوج دائماً)
+ * ناقص اللي كان مستثنى بالكود نفسه. الإطارات اللي انضافت بعده تطلع منه.
+ */
+(function freezeLegacyChoiceCodes() {
+  var rows = db.prepare('SELECT code, excluded, created_at FROM choice_codes WHERE allowed IS NULL').all();
+  if (!rows.length) return;
+  var catalogKeys = getCatalog().map(function (c) { return frameKey('catalog', c.slug); });
+  var customs = db.prepare('SELECT id, created_at FROM custom_frames').all();
+  var update = db.prepare('UPDATE choice_codes SET allowed = ? WHERE code = ? AND allowed IS NULL');
+  db.transaction(function () {
+    rows.forEach(function (r) {
+      var ex = {};
+      parseExcluded(r).forEach(function (k) { ex[String(k)] = true; });
+      var keys = catalogKeys.concat(customs.filter(function (c) { return c.created_at <= r.created_at; })
+        .map(function (c) { return frameKey('custom', String(c.id)); }));
+      update.run(JSON.stringify(keys.filter(function (k) { return !ex[k]; })), r.code);
+    });
+  })();
+  logger.log('Collectibles: froze ' + rows.length + ' legacy choice codes to the frames that existed when each was created');
+})();
 
 /** فحوصات مشتركة بين العرض والاستلام — يرجع خطأ أو null. */
 function choiceCodeBlocker(userId, code, row) {
@@ -1260,40 +1328,131 @@ function claimChoiceCode(userId, rawCode, frameType, frameRef) {
 }
 
 /**
- * توليد كود اختيار واحد (أدمن).
+ * توليد كود اختيار واحد (كود جماعي).
  * @param {number} maxUses - كم شخص يقدر يستخدمه
- * @param {string[]} excluded - مفاتيح "catalog:<slug>" / "custom:<id>"
- * @returns {{success: boolean, code?: string, error?: string}}
+ * @param {string[]} allowed - الإطارات المسموحة بالكود ("catalog:<slug>" / "custom:<id>").
+ *   تنحفظ مع الكود، وأي إطار ينضاف بعدين ما يدخل فيه.
+ * @returns {{success: boolean, code?: string, frames?: number, error?: string}}
  */
-function generateChoiceCode(maxUses, excluded, note) {
+function generateChoiceCode(maxUses, allowed, note) {
   maxUses = Math.floor(Number(maxUses));
   if (!maxUses || maxUses < 1 || maxUses > MAX_CHOICE_CODE_USES) return { success: false, error: 'invalid_max_uses' };
-  var known = {};
-  listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
-  var cleanExcluded = (Array.isArray(excluded) ? excluded : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
-  var blocked = {};
-  cleanExcluded.concat(getPermanentExcluded()).forEach(function (k) { if (known[k]) blocked[k] = true; });
-  if (Object.keys(blocked).length >= Object.keys(known).length) return { success: false, error: 'all_excluded' };
+  var perm = {};
+  getPermanentExcluded().forEach(function (k) { perm[k] = true; });
+  var cleanAllowed = cleanFrameKeys(allowed).filter(function (k) { return !perm[k]; });
+  if (!cleanAllowed.length) return { success: false, error: 'no_frames' };
 
-  var insert = db.prepare('INSERT OR IGNORE INTO choice_codes (code, max_uses, uses, excluded, note, created_at) VALUES (?, ?, 0, ?, ?, ?)');
+  var insert = db.prepare('INSERT OR IGNORE INTO choice_codes (code, max_uses, uses, excluded, allowed, note, created_at) VALUES (?, ?, 0, \'[]\', ?, ?, ?)');
   var code = null;
   db.transaction(function () {
     while (!code) {
       var candidate = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
       if (codeTakenElsewhere(candidate, 'choice_codes')) continue;
-      if (insert.run(candidate, maxUses, JSON.stringify(cleanExcluded), String(note || '').slice(0, 200), now()).changes === 1) code = candidate;
+      if (insert.run(candidate, maxUses, JSON.stringify(cleanAllowed), String(note || '').slice(0, 200), now()).changes === 1) code = candidate;
     }
   })();
 
-  logger.log('Collectibles: generated choice code ' + code + ' (max ' + maxUses + ' uses, ' + cleanExcluded.length + ' excluded)');
-  return { success: true, code: code };
+  logger.log('Collectibles: generated choice code ' + code + ' (max ' + maxUses + ' uses, ' + cleanAllowed.length + ' frames)');
+  return { success: true, code: code, frames: cleanAllowed.length };
+}
+
+/** كود جماعي من قائمة الكود الجماعي المحفوظة (أدمن). */
+function generateChoiceCodeFromPool(maxUses, note) {
+  if (!getChoicePool().length) return { success: false, error: 'empty_pool' };
+  return generateChoiceCode(maxUses, getChoicePool(), note);
 }
 
 /** قائمة أكواد الاختيار للأدمن، الأحدث أولاً. */
 function listChoiceCodes() {
   return db.prepare('SELECT * FROM choice_codes ORDER BY created_at DESC LIMIT 500').all().map(function (r) {
-    return { code: r.code, maxUses: r.max_uses, uses: r.uses, excluded: parseExcluded(r), note: r.note, createdAt: r.created_at, burnedAt: r.burned_at || null };
+    var allowed = parseAllowed(r);
+    return { code: r.code, maxUses: r.max_uses, uses: r.uses, excluded: parseExcluded(r), allowed: allowed, framesCount: allowed ? allowed.length : null, note: r.note, createdAt: r.created_at, burnedAt: r.burned_at || null };
   });
+}
+
+/**
+ * يضيف إطار للاستثناء الدائم من أكواد الاختيار (لو مو موجود). يُستدعى عند
+ * إنشاء إطار حصري من لوحة الأدمن، عشان الإطارات الخاصة ما تطلع بالأكواد
+ * الجماعية إلا لو الأدمن رجّعها بنفسه.
+ */
+function excludeFromChoiceCodes(frameType, frameRef) {
+  var key = frameKey(frameType, String(frameRef));
+  var list = getPermanentExcluded();
+  if (list.indexOf(key) >= 0) return { success: true, frames: list };
+  return setPermanentExcluded(list.concat([key]));
+}
+
+/* ----------------------------------------------------------------------
+ * مين عنده الإطار؟ (أدمن) — كل ملّاك إطار معيّن، مع طريقة حصوله عليه والكود
+ * اللي استخدمه، وسحب جماعي من كل اللي أخذوه بكود.
+ * ---------------------------------------------------------------------- */
+var GRANT_SOURCE_LABELS = {
+  redeem_code: 'كود', admin_manual: 'منح يدوي', store: 'المتجر', auto_level: 'مستوى',
+  auto_permission: 'صلاحية', auto_founders_month: 'شهر المؤسسين'
+};
+
+/** الكود اللي استخدمه المستخدم لهذا الإطار (إطار واحد / اختيار / باكج) أو null. */
+function codeUsedForFrame(userId, frameType, frameRef) {
+  var single = db.prepare('SELECT code FROM frame_codes WHERE redeemed_by = ? AND frame_type = ? AND frame_ref = ? ORDER BY redeemed_at DESC LIMIT 1')
+    .get(userId, frameType, frameRef);
+  if (single) return { code: single.code, kind: 'frame' };
+  var choice = db.prepare('SELECT code FROM choice_code_redemptions WHERE user_id = ? AND frame_type = ? AND frame_ref = ? ORDER BY redeemed_at DESC LIMIT 1')
+    .get(userId, frameType, frameRef);
+  if (choice) return { code: choice.code, kind: 'choice' };
+  var bundles = db.prepare('SELECT code, bundle_id FROM bundle_codes WHERE redeemed_by = ? ORDER BY redeemed_at DESC').all(userId);
+  for (var i = 0; i < bundles.length; i++) {
+    var b = getBundle(bundles[i].bundle_id);
+    if (b && b.items.some(function (it) { return it.kind === 'frame' && it.frameType === frameType && String(it.frameRef) === frameRef; })) {
+      return { code: bundles[i].code, kind: 'bundle' };
+    }
+  }
+  return null;
+}
+
+/**
+ * @returns {{success: boolean, owners?: Object[], error?: string}}
+ */
+function listFrameOwners(frameType, frameRef) {
+  frameRef = String(frameRef == null ? '' : frameRef);
+  if (!frameExists(frameType, frameRef)) return { success: false, error: 'unknown_frame' };
+  var rows = db.prepare(
+    'SELECT f.user_id, f.granted_by, f.granted_at, f.equipped, u.username, u.custom_id, u.tiktok_username, u.tiktok_verified ' +
+    'FROM user_frames f LEFT JOIN users u ON u.id = f.user_id ' +
+    'WHERE f.frame_type = ? AND f.frame_ref = ? ORDER BY f.granted_at DESC'
+  ).all(frameType, frameRef);
+  return {
+    success: true,
+    owners: rows.map(function (r) {
+      var used = r.granted_by === 'redeem_code' ? codeUsedForFrame(r.user_id, frameType, frameRef) : null;
+      return {
+        userId: r.user_id,
+        username: r.username || null,
+        customId: r.custom_id || null,
+        tiktokUsername: r.tiktok_username || null,
+        tiktokVerified: !!r.tiktok_verified,
+        grantedBy: r.granted_by,
+        grantedByLabel: GRANT_SOURCE_LABELS[r.granted_by] || r.granted_by,
+        grantedAt: r.granted_at,
+        equipped: !!r.equipped,
+        code: used ? used.code : null,
+        codeKind: used ? used.kind : null
+      };
+    })
+  };
+}
+
+/**
+ * سحب الإطار من كل اللي أخذوه بكود (granted_by = 'redeem_code'). اللي أخذه
+ * بمنح يدوي أو من المتجر أو بمستوى يبقى عنده.
+ * @returns {{success: boolean, revoked?: number, error?: string}}
+ */
+function revokeFrameFromCodeRedeemers(frameType, frameRef) {
+  frameRef = String(frameRef == null ? '' : frameRef);
+  if (!frameExists(frameType, frameRef)) return { success: false, error: 'unknown_frame' };
+  var info = db.prepare("DELETE FROM user_frames WHERE frame_type = ? AND frame_ref = ? AND granted_by = 'redeem_code'")
+    .run(frameType, frameRef);
+  logger.log('Collectibles: revoked frame ' + frameType + ':' + frameRef + ' from ' + info.changes + ' code redeemers');
+  return { success: true, revoked: info.changes };
 }
 
 /* ----------------------------------------------------------------------
@@ -1368,10 +1527,8 @@ function createWinRewardCode(userId, meta) {
   var cfg = getWinRewardConfig();
   if (!cfg.enabled) return { success: false, error: 'disabled' };
   if (db.prepare('SELECT 1 FROM challenge_reward_codes WHERE user_id = ?').get(userId)) return { success: false, error: 'already_rewarded' };
-  var allowed = {};
-  cfg.frames.forEach(function (k) { allowed[k] = true; });
-  var excluded = listAllFramesForChoice().map(function (f) { return frameKey(f.frameType, f.frameRef); }).filter(function (k) { return !allowed[k]; });
-  var r = generateChoiceCode(cfg.maxUses, excluded, 'جائزة فوز — ' + String(meta.gameName || meta.game || '') + ' — ' + String(meta.teamName || ''));
+  // قائمة الكود تنحفظ وقت إنشائه — الإطارات اللي تنضاف بعدين ما تدخل فيه.
+  var r = generateChoiceCode(cfg.maxUses, cfg.frames, 'جائزة فوز — ' + String(meta.gameName || meta.game || '') + ' — ' + String(meta.teamName || ''));
   if (!r.success) return r;
   db.prepare('INSERT INTO challenge_reward_codes (code, user_id, match_id, game, team_name, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(r.code, userId, String(meta.matchId || ''), String(meta.game || ''), String(meta.teamName || '').slice(0, 40), now());
@@ -1536,9 +1693,15 @@ module.exports = {
   burnCode: burnCode,
   claimChoiceCode: claimChoiceCode,
   generateChoiceCode: generateChoiceCode,
+  generateChoiceCodeFromPool: generateChoiceCodeFromPool,
+  getChoicePool: getChoicePool,
+  setChoicePool: setChoicePool,
   listChoiceCodes: listChoiceCodes,
   getPermanentExcluded: getPermanentExcluded,
   setPermanentExcluded: setPermanentExcluded,
+  excludeFromChoiceCodes: excludeFromChoiceCodes,
+  listFrameOwners: listFrameOwners,
+  revokeFrameFromCodeRedeemers: revokeFrameFromCodeRedeemers,
   getWinRewardConfig: getWinRewardConfig,
   setWinRewardConfig: setWinRewardConfig,
   createWinRewardCode: createWinRewardCode,

@@ -69,7 +69,8 @@ test('منح كود جائزة الفوز لعضو الفريق واسترداد
     var s = makeUser('gs', { streamer: true, tiktok: tag + '_gs', customId: c1 });
     var member = makeUser('gm', { customId: cm });
     var outsider = makeUser('go', { customId: co });
-    var gen = svc.generateChoiceCode(2, [], 'test');
+    // الكود الجماعي يحتاج قائمة إطارات صريحة (تنحفظ وقت إنشائه)
+    var gen = svc.generateChoiceCode(2, svc.getCatalog().map(function (c) { return 'catalog:' + c.slug; }), 'test');
     assert.equal(gen.success, true);
     var code = gen.code;
     db.prepare('INSERT INTO challenge_reward_codes (code, user_id, match_id, game, team_name, created_at) VALUES (?, ?, ?, ?, ?, ?)')

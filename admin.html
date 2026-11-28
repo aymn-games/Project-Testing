@@ -469,8 +469,8 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
-              <span style="font-weight:600">كود اختيار إطار</span>
-              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كود واحد تشاركه، وكل لاعب يستخدمه يختار إطار واحد بنفسه من الإطارات الظاهرة تحت. حدد كم شخص يقدر يستخدمه، واضغط على أي إطار تبي تستثنيه من هذا الكود. الإطارات اللي ما تبيها تنعطى بأي كود أبداً (الحصرية مثلاً)، حطها مرة وحدة بـ«الاستثناء الدائم» وتنطبق على كل الأكواد تلقائياً، حتى القديمة.</span>
+              <span style="font-weight:600">كود استرداد جماعي (اختيار إطار)</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كود واحد تشاركه، وكل لاعب يستخدمه يختار إطار واحد بنفسه. الكود ما يعرض إلا الإطارات اللي أضفتها بيدك لـ«قائمة الكود الجماعي» تحت، وكل كود ياخذ نسخة من القائمة وقت ما تسويه: أي إطار ينضاف للموقع بعدها ما يطلع فيه أبداً، وتعديل القائمة ما يغيّر الأكواد اللي سويتها قبل. «الاستثناء الدائم» حماية إضافية: الإطار المستثنى ما يطلع بأي كود حتى لو كان بقائمته.</span>
             </div>
             <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 18px;flex-wrap:wrap">
               <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد مرات الاستخدام (كم شخص)</span><input type="number" min="1" value="{{ choiceMax }}" onChange="{{ onChoiceMax }}" style="width:160px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
@@ -487,12 +487,12 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
               <div style="display:flex;flex-direction:column;gap:8px">
                 <div style="display:inline-flex;border:1px solid #2f3342;border-radius:9px;overflow:hidden;width:max-content">
-                  <button onClick="{{ choiceModeCode }}" style="height:30px;padding:0 12px;border:none;font-size:12.5px;cursor:pointer;background:{{ choiceModeCodeBg }};color:{{ choiceModeCodeFg }}">استثناء لهذا الكود</button>
+                  <button onClick="{{ choiceModeCode }}" style="height:30px;padding:0 12px;border:none;font-size:12.5px;cursor:pointer;background:{{ choiceModeCodeBg }};color:{{ choiceModeCodeFg }}">📋 قائمة الكود الجماعي ({{ choicePoolCount }})</button>
                   <button onClick="{{ choiceModePerm }}" style="height:30px;padding:0 12px;border:none;border-right:1px solid #2f3342;font-size:12.5px;cursor:pointer;background:{{ choiceModePermBg }};color:{{ choiceModePermFg }}">🔒 الاستثناء الدائم ({{ choicePermCount }})</button>
                 </div>
                 <span style="font-size:12.5px;color:#9199ab">{{ choiceSummary }}</span>
               </div>
-              <div style="display:flex;gap:6px"><button onClick="{{ choiceShowAll }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">إظهار الكل</button><button onClick="{{ choiceHideAll }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">استثناء الكل</button></div>
+              <div style="display:flex;gap:6px"><button onClick="{{ choiceClear }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">{{ choiceClearLabel }}</button></div>
             </div>
             <div style="padding:4px 18px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:520px;overflow-y:auto">
               <sc-for list="{{ choiceFrames }}" as="f" hint-placeholder-count="8">
@@ -503,24 +503,21 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 </button>
               </sc-for>
             </div>
-            <div style="border-top:1px solid #262a37;overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
-              <thead><tr>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الكود</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاستخدام</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الإطارات المستثناة</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الملاحظة</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37"></th>
-              </tr></thead>
-              <tbody><sc-for list="{{ choiceRows }}" as="c" hint-placeholder-count="2"><tr>
-                <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ c.code }}</td>
-                <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ c.uses }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ c.excluded }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ c.note }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:{{ c.color }}">{{ c.status }}</td>
-                <td style="padding:11px 18px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.canBurn }}"><button onClick="{{ c.burn }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إيقاف</button></sc-if></td>
-              </tr></sc-for></tbody>
-            </table></div>
+            <div style="border-top:1px solid #262a37;overflow-x:auto"><div style="min-width:720px">
+              <div style="display:grid;grid-template-columns:1.2fr 0.8fr 0.8fr 1.4fr 1.2fr 80px;gap:10px;padding:10px 18px;border-bottom:1px solid #262a37;font-size:12px;color:#9199ab;font-weight:500">
+                <span>الكود</span><span>الاستخدام</span><span>الإطارات</span><span>الملاحظة</span><span>الحالة</span><span></span>
+              </div>
+              <sc-for list="{{ choiceRows }}" as="c" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:1.2fr 0.8fr 0.8fr 1.4fr 1.2fr 80px;gap:10px;align-items:center;padding:10px 18px;border-bottom:1px solid #1d2029">
+                  <span dir="ltr" style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ c.code }}</span>
+                  <span dir="ltr" style="text-align:right;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ c.uses }}</span>
+                  <span style="font-size:13px">{{ c.frames }}</span>
+                  <span style="font-size:13px;color:#9199ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.note }}</span>
+                  <span style="font-size:12.5px;color:{{ c.color }}">{{ c.status }}</span>
+                  <span><sc-if value="{{ c.canBurn }}"><button onClick="{{ c.burn }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">إيقاف</button></sc-if></span>
+                </div>
+              </sc-for>
+            </div></div>
             <sc-if value="{{ choiceEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه أكواد اختيار بعد.</div></sc-if>
           </div>
           <!-- أكواد اشتراك الستريمر (backend/subscriptions/subscription-service.js): شهر أو شهرين، والستريمر يفعّلها من بروفايله -->
@@ -747,6 +744,55 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               </tr></sc-for></tbody>
             </table>
           </div>
+        </sc-if>
+
+        <!-- OWNERS: مين عنده الإطار؟ -->
+        <sc-if value="{{ is.owners }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">مين عنده الإطار؟</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px">اختر أي إطار وتشوف كل اللي عندهم: كيف أخذوه والكود اللي استخدموه. تقدر تسحبه من شخص واحد، أو من كل اللي أخذوه بكود دفعة وحدة (اللي منحته له يدوياً أو اشتراه من المتجر يبقى عنده).</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #262a37;flex-wrap:wrap">
+              <span style="font-weight:600">اختر الإطار</span>
+              <input value="{{ ownQ }}" onChange="{{ onOwnQ }}" placeholder="اكتب اسم الإطار…" style="width:100%;max-width:440px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+            </div>
+            <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:420px;overflow-y:auto">
+              <sc-for list="{{ ownFrames }}" as="f" hint-placeholder-count="8">
+                <button onClick="{{ f.pick }}" style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ f.border }};background:{{ f.bg }}" style-hover="border-color:#7c3aed">
+                  <div style="height:72px;border-radius:6px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="{{ f.file }}" alt="" loading="lazy" style="max-width:100%;max-height:72px;object-fit:contain"></div>
+                  <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ ownFramesEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:0 16px 24px;text-align:center;color:#5b6274;font-size:13px">ما فيه إطار بهذا الاسم.</div></sc-if>
+          </div>
+          <sc-if value="{{ ownHasFrame }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #262a37;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:10px"><img src="{{ ownSel.file }}" alt="" style="width:34px;height:34px;border-radius:6px;object-fit:contain;background:#0b0d12"><span style="font-weight:600">{{ ownSel.name }}</span><span style="font-size:12px;color:#9199ab">{{ ownSummary }}</span></div>
+                <button onClick="{{ revokeAllCodes }}" style="height:34px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب من كل اللي أخذوه بكود ({{ ownCodeCount }})</button>
+              </div>
+              <div style="overflow-x:auto">
+                <div style="min-width:720px">
+                  <div style="display:grid;grid-template-columns:1.4fr 1.1fr 0.9fr 1.1fr 1.1fr 70px;gap:10px;padding:10px 16px;border-bottom:1px solid #262a37;font-size:12px;color:#9199ab;font-weight:500">
+                    <span>الحساب</span><span>تيك توك</span><span>كيف أخذه</span><span>الكود</span><span>التاريخ</span><span></span>
+                  </div>
+                  <sc-for list="{{ ownerRows }}" as="ow" hint-placeholder-count="3">
+                    <div style="display:grid;grid-template-columns:1.4fr 1.1fr 0.9fr 1.1fr 1.1fr 70px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid #1d2029">
+                      <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ow.name }} <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9199ab">{{ ow.ids }}</span></span>
+                      <span dir="ltr" style="text-align:right;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ow.tiktok }}</span>
+                      <span style="font-size:12.5px;color:{{ ow.srcColor }}">{{ ow.source }}</span>
+                      <span dir="ltr" style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px">{{ ow.code }}</span>
+                      <span style="font-size:12px;color:#9199ab">{{ ow.date }}</span>
+                      <span style="text-align:left"><button onClick="{{ ow.revoke }}" style="height:30px;padding:0 12px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer" style-hover="background:#2a1416">سحب</button></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-if value="{{ ownEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 16px;text-align:center;color:#5b6274;font-size:13px">{{ ownEmptyText }}</div></sc-if>
+            </div>
+          </sc-if>
         </sc-if>
 
         <!-- ANNOUNCEMENT -->
@@ -1266,7 +1312,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','livecards','theme','levels','stats','live','store'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','owners','announce','supporters','partners','livecards','theme','levels','stats','live','store'];
 const TEMPLATE_LABELS = { nitro:'نيترو', royal:'ملكي', princess:'الأميرة', storm:'العاصفة', notes:'النوتات' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -1297,8 +1343,8 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'nitro', entranceText:'', entOwned:null, entOwnedFor:null, cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choicePerm:[], choiceMode:'code', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, subEnf:null, subGType:'internal', subGId:'', subGUser:null, subGState:'empty', subGDays:30, compDays:1, compNote:'', planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
-    catEdits:{}, exFile:'', exName:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choicePool:[], choiceCodes:null, choicePerm:[], choiceMode:'pool', choiceOut:'', subMonths:1, subCount:5, subNote:'', subOut:'', subCodes:null, subPlans:null, subscribers:null, subAdjDays:7, subEnf:null, subGType:'internal', subGId:'', subGUser:null, subGState:'empty', subGDays:30, compDays:1, compNote:'', planMonths:'', planName:'', planPauses:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    catEdits:{}, exFile:'', exName:'', ownKey:null, ownQ:'', owners:null, ownersFor:null,
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
@@ -1337,7 +1383,7 @@ class Component extends DCLogic {
 
   loadPage(page){
     if((page==='users'||page==='perms') && !this.state.users) this.loadUsers();
-    if(['grant','codes','elim','win','catalog','exclusive'].includes(page) && !this.state.catalog) this.loadCatalog();
+    if(['grant','codes','elim','win','catalog','exclusive','owners'].includes(page) && !this.state.catalog) this.loadCatalog();
     if(page==='codes' && !this.state.codes) this.loadCodes();
     if(page==='announce') this.loadAnnouncement();
     if(page==='supporters' && !this.state.supporters) this.loadSupporters();
@@ -1401,7 +1447,10 @@ class Component extends DCLogic {
   // دخوليات المستخدم المختار (صفحة الدخوليات) — force يعيد التحميل بعد منح/سحب
   loadEntOwned(userId, force){ if(!userId||(!force&&this._entLoading===userId)) return; this._entLoading=userId;
     A.adminGetUserEntrances(userId).then(r=>{ this._entLoading=null; this.setState({ entOwned:(r&&r.success?(r.owned||[]).map(e=>e.key):[]), entOwnedFor:userId }); }); }
-  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); A.adminGetChoiceExcluded().then(r=>{ if(r&&r.success) this.setState({ choicePerm:r.frames||[] }); }); A.adminGetChoicePool().then(r=>{ if(r&&r.success) this.setState({ choicePool:r.frames||[] }); }); if(A.adminListSubscriptionCodes) A.adminListSubscriptionCodes().then(r=>this.setState({ subCodes:(r&&r.codes)||[] })); this.loadSubscribers(); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  // مين عنده الإطار؟ — يحمّل ملّاك الإطار المختار (force بعد السحب)
+  loadOwners(key){ const f=this.allFrames().find(x=>x.key===key); if(!f) return; this.setState({ ownKey:key, owners:null, ownersFor:key });
+    A.adminGetFrameOwners(f.type,f.ref).then(r=>{ if(this.state.ownersFor!==key) return; if(!r||!r.success){ this.setState({ owners:[] }); return this.flash('تعذّر تحميل ملّاك الإطار.','err'); } this.setState({ owners:r.owners||[] }); }); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
@@ -1460,7 +1509,7 @@ class Component extends DCLogic {
     const navDef=[
       ['الحسابات',[['users','المستخدمون']]],
       ['الدعم',[['support','تذاكر الدعم']]],
-      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
+      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية'],['owners','مين عنده الإطار؟']]],
       ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['livecards','بطاقات البث المميزة'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات'],['live','البثوث الشغّالة الآن']]],
       ['المتجر',[['store','إدارة المتجر']]]
@@ -1774,46 +1823,50 @@ class Component extends DCLogic {
         const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=s.codesOut; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
         if(navigator.clipboard) navigator.clipboard.writeText(s.codesOut).then(done,fallback); else fallback(); },
       // choice codes (كود اختيار إطار)
-      ...(()=>{ const frames=this.allFrames(), ex=new Set(s.choiceExcluded), perm=new Set(s.choicePerm), permMode=s.choiceMode==='perm';
-        const shown=frames.filter(f=>!ex.has(f.key)&&!perm.has(f.key)).length, permCount=frames.filter(f=>perm.has(f.key)).length;
-        // الاستثناء الدائم يتحفظ بالسيرفر على طول (يرجع للقائمة القديمة لو فشل الحفظ)
+      ...(()=>{ const frames=this.allFrames(), pool=new Set(s.choicePool), perm=new Set(s.choicePerm), permMode=s.choiceMode==='perm';
+        const shown=frames.filter(f=>pool.has(f.key)&&!perm.has(f.key)).length, permCount=frames.filter(f=>perm.has(f.key)).length, poolCount=frames.filter(f=>pool.has(f.key)).length;
+        // القائمة والاستثناء الدائم يتحفظون بالسيرفر على طول (يرجعون للقديم لو فشل الحفظ)
         const savePerm=next=>{ const prev=s.choicePerm; this.setState({ choicePerm:next });
           A.adminSetChoiceExcluded(next).then(r=>{ if(!r||!r.success){ this.setState({ choicePerm:prev }); this.flash('تعذّر حفظ الاستثناء الدائم.','err'); } else this.setState({ choicePerm:r.frames||next }); }); };
+        const savePool=next=>{ const prev=s.choicePool; this.setState({ choicePool:next });
+          A.adminSetChoicePool(next).then(r=>{ if(!r||!r.success){ this.setState({ choicePool:prev }); this.flash('تعذّر حفظ قائمة الكود الجماعي.','err'); } else this.setState({ choicePool:r.frames||next }); }); };
         const NAMES={ founder:'المؤسس', streamer:'الاستريمر', supporter:'الداعم', distinguished:'المميز' };
         const label=f=>(f.type==='catalog'&&!(s.catalog||[]).find(c=>c.slug===f.ref&&c.display_name_ar))?(NAMES[f.ref]||(/^level-\d$/.test(f.ref)?'المستوى '+f.ref.slice(6):f.name)):f.name;
         return {
           choiceMax:s.choiceMax, choiceNote:s.choiceNote, choiceOut:s.choiceOut,
           onChoiceMax:e=>this.setState({ choiceMax:e.target.value }), onChoiceNote:e=>this.setState({ choiceNote:e.target.value }),
-          choicePermCount:permCount,
-          choiceModeCode:()=>this.setState({ choiceMode:'code' }), choiceModePerm:()=>this.setState({ choiceMode:'perm' }),
+          choicePermCount:permCount, choicePoolCount:poolCount,
+          choiceModeCode:()=>this.setState({ choiceMode:'pool' }), choiceModePerm:()=>this.setState({ choiceMode:'perm' }),
           choiceModeCodeBg:permMode?'#0b0d12':'#7c3aed', choiceModeCodeFg:permMode?'#c3c8d4':'#fff',
           choiceModePermBg:permMode?'#b45309':'#0b0d12', choiceModePermFg:permMode?'#fff':'#c3c8d4',
           choiceSummary:permMode
-            ?`اضغط على الإطار عشان ما ينعطى بأي كود اختيار أبداً · مستثنى دائماً ${permCount} من ${frames.length} — يتحفظ تلقائياً`
-            :`يظهر للاعب ${shown} من ${frames.length} إطار`+(permCount?` · مستثنى دائماً ${permCount}`:'')+(ex.size?` · مستثنى لهذا الكود ${ex.size}`:''),
-          choiceShowAll:()=>permMode?savePerm([]):this.setState({ choiceExcluded:[] }),
-          choiceHideAll:()=>permMode?savePerm(frames.map(f=>f.key)):this.setState({ choiceExcluded:frames.map(f=>f.key) }),
-          choiceFrames:frames.map(f=>{ const p=perm.has(f.key), off=ex.has(f.key);
-            if(permMode) return { file:f.file, name:label(f), status:p?'🔒 مستثنى دائماً':'يدخل بالأكواد', statusColor:p?'#f59e0b':'#4ade80',
-              border:p?'#5a3d10':'#262a37', opacity:p?0.35:1, hint:p?'اضغط لإرجاعه للأكواد':'اضغط لاستثنائه من كل الأكواد',
+            ?`اضغط على الإطار عشان ما ينعطى بأي كود جماعي أبداً · مستثنى دائماً ${permCount} من ${frames.length} — يتحفظ تلقائياً`
+            :`اضغط على الإطار عشان تضيفه للقائمة أو تشيله · الكود الجديد يعرض ${shown} إطار — تتحفظ تلقائياً`,
+          choiceClearLabel:permMode?'إلغاء كل الاستثناءات':'تفريغ القائمة',
+          choiceClear:()=>permMode
+            ?this.ask('إلغاء كل الاستثناءات الدائمة؟','الإطارات المستثناة ترجع تقدر تنضاف للقائمة. الأكواد ما تعرض إلا اللي بقائمتها.','إلغاء الكل',()=>savePerm([]))
+            :this.ask('تفريغ قائمة الكود الجماعي؟','القائمة تصير فاضية. الأكواد اللي سويتها قبل ما تتأثر.','تفريغ',()=>savePool([])),
+          choiceFrames:frames.map(f=>{ const p=perm.has(f.key), inPool=pool.has(f.key);
+            if(permMode) return { file:f.file, name:label(f), status:p?'🔒 مستثنى دائماً':'غير مستثنى', statusColor:p?'#f59e0b':'#9199ab',
+              border:p?'#5a3d10':'#262a37', opacity:p?0.35:1, hint:p?'اضغط لإلغاء استثنائه':'اضغط لاستثنائه من كل الأكواد',
               toggle:()=>savePerm(p?s.choicePerm.filter(k=>k!==f.key):[...s.choicePerm,f.key]) };
             if(p) return { file:f.file, name:label(f), status:'🔒 مستثنى دائماً', statusColor:'#f59e0b', border:'#5a3d10', opacity:0.25,
-              hint:'مستثنى دائماً — غيّره من «الاستثناء الدائم»', toggle:()=>this.flash('هذا الإطار مستثنى دائماً. لإرجاعه افتح «الاستثناء الدائم».') };
-            return { file:f.file, name:label(f), status:off?'مستثنى لهذا الكود':'يظهر', statusColor:off?'#f87171':'#4ade80',
-            border:off?'#4a2427':'#262a37', opacity:off?0.35:1, hint:off?'اضغط لإرجاعه':'اضغط لاستثنائه',
-            toggle:()=>this.setState(st=>({ choiceExcluded:st.choiceExcluded.includes(f.key)?st.choiceExcluded.filter(k=>k!==f.key):[...st.choiceExcluded,f.key] })) }; }),
+              hint:'مستثنى دائماً — غيّره من «الاستثناء الدائم»', toggle:()=>this.flash('هذا الإطار مستثنى دائماً. لإضافته ألغِ استثناءه من «الاستثناء الدائم» أولاً.','err') };
+            return { file:f.file, name:label(f), status:inPool?'✓ بالقائمة':'مو بالقائمة', statusColor:inPool?'#4ade80':'#5b6274',
+              border:inPool?'#7c3aed':'#262a37', opacity:inPool?1:0.35, hint:inPool?'اضغط لإزالته من القائمة':'اضغط لإضافته للقائمة',
+              toggle:()=>savePool(inPool?s.choicePool.filter(k=>k!==f.key):[...s.choicePool,f.key]) }; }),
           genChoiceCode:()=>{ const n=Math.floor(Number(s.choiceMax)); if(!(n>=1)) return this.flash('عدد مرات الاستخدام لازم يكون 1 أو أكثر.','err');
-            if(shown<1) return this.flash('لازم يظهر إطار واحد على الأقل.','err');
-            this.busy('choice',()=>A.adminGenerateChoiceCode(n,s.choiceExcluded,s.choiceNote)).then(r=>{ if(!r) return;
-              const E={ invalid_max_uses:'عدد مرات الاستخدام غير صحيح.', all_excluded:'لازم يظهر إطار واحد على الأقل.' };
+            if(shown<1) return this.flash('أضف إطار واحد على الأقل لقائمة الكود الجماعي.','err');
+            this.busy('choice',()=>A.adminGenerateChoiceCode(n,s.choiceNote)).then(r=>{ if(!r) return;
+              const E={ invalid_max_uses:'عدد مرات الاستخدام غير صحيح.', empty_pool:'أضف إطار واحد على الأقل لقائمة الكود الجماعي.', no_frames:'كل إطارات القائمة مستثناة دائماً.' };
               if(!r.success) return this.flash(E[r.error]||('تعذّر الإنشاء: '+(r.error||'unknown')),'err');
-              this.setState({ choiceOut:r.code, choiceNote:'' }); this.flash(`تم إنشاء الكود ${r.code} — يستخدمه ${n} شخص.`); this.loadCodes(); }); },
+              this.setState({ choiceOut:r.code, choiceNote:'' }); this.flash(`تم إنشاء الكود ${r.code} — يستخدمه ${n} شخص، وفيه ${r.frames} إطار.`); this.loadCodes(); }); },
           copyChoice:()=>{ const t=s.choiceOut; if(!t) return; const done=()=>this.flash('تم نسخ الكود.');
             const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
             if(navigator.clipboard) navigator.clipboard.writeText(t).then(done,fallback); else fallback(); },
           choiceEmpty:!!s.choiceCodes&&!s.choiceCodes.length,
           choiceRows:(s.choiceCodes||[]).map(c=>{ const full=c.uses>=c.maxUses;
-            return { code:c.code, uses:`${c.uses} / ${c.maxUses}`, excluded:c.excluded.length?c.excluded.length+' إطار'+(permCount?' + الدائم':''):(permCount?'الدائم فقط':'لا شيء'), note:c.note||'—',
+            return { code:c.code, uses:`${c.uses} / ${c.maxUses}`, frames:c.framesCount==null?'—':c.framesCount+' إطار', note:c.note||'—',
               status:c.burnedAt?`موقوف · \u2068${fmtDate(c.burnedAt)}\u2069`:full?'اكتمل':'فعّال', color:c.burnedAt?'#f87171':full?'#9199ab':'#4ade80',
               canBurn:!c.burnedAt&&!full, burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يستخدمه بعد الآن. اللي استخدموه يبقى لهم إطارهم.`,'إيقاف',()=>this.busy('burn',()=>A.adminBurnCode(c.code)).then(r=>{ if(!r) return;
                 if(!r.success) return this.flash('تعذّر الإيقاف: '+(r.error||'unknown'),'err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) }; }) }; })(),
@@ -1924,6 +1977,27 @@ class Component extends DCLogic {
       exFile:s.exFile, exName:s.exName, onExFile:e=>this.setState({ exFile:e.target.value }), onExName:e=>this.setState({ exName:e.target.value }),
       addExclusive:()=>{ const file=s.exFile.trim(); if(!file) return this.flash('اكتب اسم ملف الإطار الحصري أولاً.','err');
         this.busy('ex',()=>A.adminCreateCustomFrame(file,s.exName)).then(r=>{ if(!r) return; if(r.success){ this.setState({ exFile:'', exName:'' }); this.flash('تمت الإضافة — ارفع الصورة بنفس اسم الملف لجذر المستودع.'); this.loadCatalog(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      // مين عنده الإطار؟
+      ...(()=>{ const frames=this.allFrames(), oq=s.ownQ.trim().toLowerCase(), sel=frames.find(f=>f.key===s.ownKey)||null;
+        const list=s.ownersFor===s.ownKey?s.owners:null, codeCount=(list||[]).filter(o=>o.grantedBy==='redeem_code').length;
+        const CODE_KIND={ frame:'كود إطار', choice:'كود جماعي', bundle:'كود باكج' };
+        return {
+          ownQ:s.ownQ, onOwnQ:e=>this.setState({ ownQ:e.target.value }),
+          ownFrames:frames.filter(f=>!oq||String(f.name).toLowerCase().includes(oq)||String(f.file).toLowerCase().includes(oq))
+            .map(f=>({ file:f.file, name:f.name, pick:()=>this.loadOwners(f.key), border:f.key===s.ownKey?'#7c3aed':'#262a37', bg:f.key===s.ownKey?'rgba(124,58,237,.12)':'#11131a' })),
+          ownFramesEmpty:!!s.catalog&&!frames.some(f=>!oq||String(f.name).toLowerCase().includes(oq)||String(f.file).toLowerCase().includes(oq)),
+          ownHasFrame:!!sel, ownSel:sel?{ file:sel.file, name:sel.name }:{ file:'', name:'' },
+          ownSummary:list?`${list.length} شخص عنده · ${codeCount} أخذوه بكود`:'جارٍ التحميل…', ownCodeCount:codeCount,
+          ownEmpty:!list||!list.length, ownEmptyText:!list?'جارٍ التحميل…':'ما أحد عنده هذا الإطار.',
+          ownerRows:(list||[]).map(o=>({ name:o.username||('#'+o.userId), ids:`#${o.userId}${o.customId?' · '+o.customId:''}`,
+            tiktok:o.tiktokUsername?'@'+o.tiktokUsername+(o.tiktokVerified?' ✓':''):'—',
+            source:o.grantedBy==='redeem_code'?(CODE_KIND[o.codeKind]||'كود'):o.grantedByLabel, srcColor:o.grantedBy==='redeem_code'?'#fcd34d':'#c3c8d4',
+            code:o.code||'—', date:fmtDate(o.grantedAt),
+            revoke:()=>this.ask('سحب الإطار؟',`سيُسحب إطار «${sel.name}» من ${o.username||('#'+o.userId)}.`,'سحب الإطار',()=>this.busy('ownx',()=>A.adminRevokeFrame(o.userId,sel.type,sel.ref)).then(r=>{ if(!r) return; this.flash(r.success?'تم سحب الإطار.':'تعذّر السحب.',r.success?'ok':'err'); this.loadOwners(sel.key); })) })),
+          revokeAllCodes:()=>{ if(!sel||!list) return; if(!codeCount) return this.flash('ما أحد أخذ هذا الإطار بكود.','err');
+            this.ask('سحب من كل اللي أخذوه بكود؟',`سيُسحب إطار «${sel.name}» من ${codeCount} شخص أخذوه بكود. اللي منحته له يدوياً أو اشتراه يبقى عنده. هذا الإجراء ما يتراجع عنه.`,'سحب من الكل',
+              ()=>this.busy('ownall',()=>A.adminRevokeFrameFromCodes(sel.type,sel.ref)).then(r=>{ if(!r) return; this.flash(r.success?`تم سحب الإطار من ${r.revoked} شخص.`:'تعذّر السحب: '+(r.error||'unknown'),r.success?'ok':'err'); this.loadOwners(sel.key); })); }
+        }; })(),
       levels,
       // announce
       ann:s.annActive?{ label:'يوجد إعلان منشور حالياً ويظهر لكل زائر.', dot:'#22c55e', border:'#14532d', bg:'#0f1d15' }:{ label:'لا يوجد إعلان منشور.', dot:'#5b6274', border:'#262a37', bg:'#14161d' },

@@ -187,6 +187,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/collectibles/custom-frame', requireAuth: true, requireAdmin: true, handler: handleAdminCreateCustomFrame },
   { method: 'POST', path: '/api/admin/collectibles/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantFrame },
   { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
+  { method: 'GET', path: '/api/admin/collectibles/frame-owners', requireAuth: true, requireAdmin: true, handler: handleAdminFrameOwners },
+  { method: 'POST', path: '/api/admin/collectibles/revoke-from-codes', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrameFromCodes },
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
   { method: 'POST', path: '/api/admin/entrance/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantEntrance },
   { method: 'GET', path: '/api/admin/entrances', requireAuth: true, requireAdmin: true, handler: handleAdminUserEntrances },
@@ -215,6 +217,8 @@ var ROUTES = [
   // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
   { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
   { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
+  { method: 'GET', path: '/api/admin/choice-codes/pool', requireAuth: true, requireAdmin: true, handler: handleAdminGetChoicePool },
+  { method: 'POST', path: '/api/admin/choice-codes/pool', requireAuth: true, requireAdmin: true, handler: handleAdminSetChoicePool },
   { method: 'GET', path: '/api/admin/choice-codes/excluded', requireAuth: true, requireAdmin: true, handler: handleAdminGetChoiceExcluded },
   { method: 'POST', path: '/api/admin/choice-codes/excluded', requireAuth: true, requireAdmin: true, handler: handleAdminSetChoiceExcluded },
   { method: 'GET', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminGetWinReward },
@@ -903,6 +907,9 @@ function handleAdminUpdateCatalog(req, res, body) {
 
 function handleAdminCreateCustomFrame(req, res, body) {
   var result = collectiblesService.createCustomFrame(body.imageFilename, body.displayNameAr);
+  // الإطار الحصري خاص من البداية: ما يطلع بالأكواد الجماعية لين الأدمن يرجّعه
+  // من «الاستثناء الدائم» بنفسه.
+  if (result.success) collectiblesService.excludeFromChoiceCodes('custom', result.id);
   sendJson(res, result.success ? 201 : 400, result);
 }
 
@@ -917,6 +924,16 @@ function handleAdminGrantFrame(req, res, body) {
     entranceTemplate: body.entranceTemplate,
     entranceText: body.entranceText
   });
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminFrameOwners(req, res) {
+  var result = collectiblesService.listFrameOwners(getQueryParam(req, 'frameType'), getQueryParam(req, 'frameRef'));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminRevokeFrameFromCodes(req, res, body) {
+  var result = collectiblesService.revokeFrameFromCodeRedeemers(body.frameType, body.frameRef);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
@@ -1007,12 +1024,21 @@ function handleRedeemChoiceCode(req, res, body, user) {
 }
 
 function handleAdminGenerateChoiceCode(req, res, body) {
-  var result = collectiblesService.generateChoiceCode(body.maxUses, body.excluded, body.note);
+  // الكود الجماعي ياخذ نسخة من «قائمة الكود الجماعي» المحفوظة وقت إنشائه.
+  var result = collectiblesService.generateChoiceCodeFromPool(body.maxUses, body.note);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 function handleAdminListChoiceCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
+}
+
+function handleAdminGetChoicePool(req, res) {
+  sendJson(res, 200, { success: true, frames: collectiblesService.getChoicePool() });
+}
+
+function handleAdminSetChoicePool(req, res, body) {
+  sendJson(res, 200, collectiblesService.setChoicePool(body && body.frames));
 }
 
 function handleAdminGetChoiceExcluded(req, res) {
