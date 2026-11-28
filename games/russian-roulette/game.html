@@ -65,6 +65,19 @@ input::placeholder{color:#6f6a7c}
 @keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
 @keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
 @keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
+/* مرحلة الاختيار: صاحب الدور فوق، وبطاقات الأهداف تحت بمقاس مرن (--d يحسبه resFit) — نفس روليت الإقصاء */
+.rrTop{flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding:12px 40px 18px;border-radius:28px;background:linear-gradient(180deg,rgba(52,211,153,.10),rgba(255,255,255,.015) 75%);border:1px solid rgba(52,211,153,.35)}
+.rrGrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--cols),var(--cw));justify-content:center;align-content:center;row-gap:calc(var(--d)*.14);padding:12px 6px;overflow-y:auto;scrollbar-width:none}
+.rrCard{display:flex;flex-direction:column;align-items:center;gap:calc(var(--d)*.2);min-width:0;padding:0;border:none;background:none;cursor:pointer;font-family:inherit;color:inherit}
+.rrRing{position:relative;display:block;width:var(--d);height:var(--d);border-radius:50%;padding:calc(var(--d)*.06);box-sizing:border-box;background:linear-gradient(160deg,#ede9fe 0%,#a78bfa 30%,#6d28d9 65%,#4c1d95 100%);box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 calc(var(--d)*.06) calc(var(--d)*.2) rgba(0,0,0,.55),0 0 calc(var(--d)*.22) rgba(139,92,246,.45);transition:background .2s,box-shadow .2s,transform .2s}
+.rrAv{position:relative;overflow:hidden;width:100%;height:100%;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:max(2px,calc(var(--d)*.027)) solid #0d0a16;box-shadow:inset 0 4px 14px rgba(255,255,255,.12),inset 0 -8px 18px rgba(0,0,0,.35);color:#fff;font:700 calc(var(--d)*.37) 'IBM Plex Sans Arabic'}
+.rrNum{position:absolute;left:50%;bottom:calc(var(--d)*-.12);transform:translateX(-50%);min-width:calc(var(--d)*.57);height:calc(var(--d)*.36);padding:calc(var(--d)*.033) calc(var(--d)*.11) 0;box-sizing:border-box;border-radius:calc(var(--d)*.12);display:grid;place-items:center;background:linear-gradient(180deg,#a78bfa,#7c3aed 55%,#5b21b6);border:1px solid rgba(255,255,255,.35);box-shadow:0 0 0 max(2px,calc(var(--d)*.027)) #0d0a16,0 6px 18px rgba(124,58,237,.6),inset 0 2px 0 rgba(255,255,255,.3);font:900 calc(var(--d)*.31)/1 'Zain','IBM Plex Sans Arabic';letter-spacing:1px;text-shadow:0 2px 4px rgba(0,0,0,.35);color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rrNum>span{display:inline-block;transform:scaleX(1.18)}
+.rrName{max-width:calc(var(--cw) - 6px);margin-bottom:calc(var(--d)*-.14);font:700 max(13px,calc(var(--d)*.15))/1.3 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrHearts{display:flex;gap:2px;justify-content:center}
+.rrHeart{display:block;width:max(11px,calc(var(--d)*.12));height:max(11px,calc(var(--d)*.12))}
+.rrCard:hover .rrRing{background:linear-gradient(160deg,#fee2e2,#f87171 35%,#b91c1c 75%,#7f1d1d);box-shadow:0 calc(var(--d)*.06) calc(var(--d)*.2) rgba(0,0,0,.55),0 0 calc(var(--d)*.25) rgba(248,113,113,.55)}
+.rrCard:active .rrRing{transform:scale(.96)}
 </style>
 </helmet>
 <div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#07060b;font-family:'IBM Plex Sans Arabic',sans-serif;color:#f4f2f8">
@@ -201,46 +214,43 @@ input::placeholder{color:#6f6a7c}
     </sc-if>
 
     <sc-if value="{{ chooseOpen }}" hint-placeholder-val="{{ false }}">
-      <div style="position:absolute;inset:0;z-index:40;padding:104px 32px 24px;box-sizing:border-box;background:rgba(10,9,15,.96);display:grid;grid-template-columns:420px minmax(0,1fr);gap:24px;animation:fade .25s ease">
-        <div style="min-height:0;box-sizing:border-box;padding:40px 24px;border-radius:28px;background:linear-gradient(180deg,rgba(52,211,153,.08),rgba(255,255,255,.02) 60%);border:1px solid rgba(52,211,153,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
-          <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 19px 'IBM Plex Sans Arabic';color:#6ee7b7"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span>صاحب الدور</span>
-          <div style="width:230px;height:230px;border-radius:50%;padding:6px;border:5px solid #34d399;box-shadow:0 0 0 8px rgba(52,211,153,.12), 0 0 50px rgba(52,211,153,.35);box-sizing:border-box">
-            <div style="position:relative;overflow:hidden;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6d28d9,#2e1065);display:grid;place-items:center;font:700 96px 'IBM Plex Sans Arabic';color:#fff">{{ chIni }}<img src="{{ chAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ chOp }}"></div>
+      <div style="position:absolute;inset:0;z-index:40;padding:96px 24px 18px;box-sizing:border-box;background:rgba(10,9,15,.96);display:flex;flex-direction:column;gap:14px;animation:fade .25s ease">
+        <div class="rrTop">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-self:start;animation:{{ cdAn }}">
+            <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
+            <span style="font:700 52px/1 'IBM Plex Sans Arabic';color:{{ cdCol }};font-variant-numeric:tabular-nums;transition:color .3s">{{ timeTxt }}</span>
+            <div style="width:220px;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ cdCol }};border-radius:999px;transition:width 1s linear, background .3s"></div></div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%">
-            <span style="font:700 52px/1.2 'IBM Plex Sans Arabic';color:#f4f2f8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ chName }}</span>
-            <div style="display:flex;align-items:center;gap:12px">
-              <span style="padding:3px 14px;border-radius:11px;background:linear-gradient(160deg,#5b21b6,#3b0f7a);box-shadow:0 0 0 1px rgba(167,139,250,.3), 0 3px 10px rgba(46,16,101,.45);font:800 26px 'IBM Plex Sans Arabic';color:#ede9fe">رقم {{ chNum }}</span>
-              <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
+          <div style="display:flex;align-items:center;gap:24px;min-width:0;animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
+            <div style="position:relative;flex-shrink:0;width:132px;height:132px;border-radius:50%;padding:5px;border:4px solid #34d399;box-shadow:0 0 0 8px rgba(52,211,153,.12), 0 0 50px rgba(52,211,153,.35);box-sizing:border-box">
+              <div style="position:relative;overflow:hidden;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6d28d9,#2e1065);display:grid;place-items:center;font:700 58px 'IBM Plex Sans Arabic';color:#fff">{{ chIni }}<img src="{{ chAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ chOp }}"></div>
+              <span style="position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);min-width:56px;height:36px;padding:4px 12px 0;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;background:linear-gradient(180deg,#a78bfa,#7c3aed 55%,#5b21b6);border:1px solid rgba(255,255,255,.35);box-shadow:0 0 0 3px #0d0a16,0 6px 18px rgba(124,58,237,.6);font:900 30px/1 'Zain','IBM Plex Sans Arabic';color:#fff;white-space:nowrap">{{ chNum }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0">
+              <span style="display:flex;align-items:center;gap:8px;padding:6px 16px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 18px 'IBM Plex Sans Arabic';color:#6ee7b7;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399"></span>صاحب الدور</span>
+              <span style="font:700 44px/1.2 'IBM Plex Sans Arabic';color:#f4f2f8;max-width:640px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ chName }}</span>
+              <span style="display:flex;gap:4px"><sc-for list="{{ chHearts }}" as="h" hint-placeholder-count="4"><span style="width:26px;height:26px;display:block"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:100%;height:100%;display:block"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></span></sc-for></span>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;animation:{{ cdAn }}">
-            <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
-            <span style="font:700 72px/1 'IBM Plex Sans Arabic';color:{{ cdCol }};font-variant-numeric:tabular-nums;transition:color .3s">{{ timeTxt }}</span>
-            <div style="width:240px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ cdCol }};border-radius:999px;transition:width 1s linear, background .3s"></div></div>
-          </div>
-          <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin-top:8px">
-            <button onClick="{{ resume }}" style="height:56px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:linear-gradient(135deg,#3b0764,#5b21b6);color:#fff;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.12)" style-active="transform:scale(.97)">إنهاء الاختيار</button>
-            <button onClick="{{ kickChooser }}" style="height:56px;border-radius:999px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:#fca5a5;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(248,113,113,.16)" style-active="transform:scale(.97)">إقصاء صاحب الدور</button>
+          <div style="display:flex;flex-direction:column;gap:10px;width:280px;justify-self:end">
+            <button onClick="{{ resume }}" style="height:54px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:linear-gradient(135deg,#3b0764,#5b21b6);color:#fff;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.12)" style-active="transform:scale(.97)">إنهاء الاختيار</button>
+            <button onClick="{{ kickChooser }}" style="height:54px;border-radius:999px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.08);color:#fca5a5;font:700 19px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(248,113,113,.16)" style-active="transform:scale(.97)">إقصاء صاحب الدور</button>
           </div>
         </div>
-        <div style="min-height:0;box-sizing:border-box;border-radius:28px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;overflow:hidden">
-          <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 28px;border-bottom:1px solid rgba(255,255,255,.06)">
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <span style="font:700 26px 'IBM Plex Sans Arabic'">اختر الهدف</span>
-              <span style="font:500 17px 'IBM Plex Sans Arabic';color:#a8a3b5">اختر من الشات بكتابة الرقم، أو يدوياً بالضغط على اللاعب</span>
+        <div style="flex:1;min-height:0;box-sizing:border-box;border-radius:28px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;overflow:hidden">
+          <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:10px 24px;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;align-items:baseline;gap:14px;min-width:0">
+              <span style="font:700 24px 'IBM Plex Sans Arabic'">اختر الهدف</span>
+              <span style="font:500 16px 'IBM Plex Sans Arabic';color:#a8a3b5">اختر من الشات بكتابة الرقم، أو يدوياً بالضغط على اللاعب</span>
             </div>
-            <span style="flex-shrink:0;font:700 19px 'IBM Plex Sans Arabic';color:#a78bfa">{{ candCount }} لاعب</span>
+            <span style="flex-shrink:0;font:700 18px 'IBM Plex Sans Arabic';color:#a78bfa">{{ candCount }} لاعب</span>
           </div>
-          <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:22px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-content:start;gap:10px">
+          <div ref="{{ gridRef }}" data-noscroll="" class="rrGrid" style="--d:{{ gD }}px;--cw:{{ gCw }}px;--cols:{{ gCols }}">
             <sc-for list="{{ cands }}" as="c" hint-placeholder-count="12">
-              <button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:12px;height:84px;padding:0 14px 0 12px;border-radius:14px;background:#1a1626;border:1px solid rgba(255,255,255,.1);cursor:pointer;min-width:0;text-align:start;color:#f4f2f8;transition:all .2s" style-hover="background:#2a1620;border-color:rgba(248,113,113,.55)" style-active="transform:scale(.98)">
-                <span style="position:relative;overflow:hidden;flex-shrink:0;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#2e1065);border:2px solid rgba(167,139,250,.35);box-sizing:border-box;color:#fff;font:700 19px 'IBM Plex Sans Arabic'">{{ c.ini }}<img src="{{ c.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }}"></span>
-                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
-                  <span style="font:800 25px/1.25 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
-                  <span style="display:flex;gap:2px"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></sc-for></span>
-                </span>
-                <span style="flex-shrink:0;margin-inline-start:auto;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;line-height:1;padding-top:3px;box-sizing:border-box;background:linear-gradient(160deg,#5b21b6,#3b0f7a);box-shadow:0 0 0 1px rgba(167,139,250,.3), 0 3px 10px rgba(46,16,101,.45);color:#ede9fe;font:800 38px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ c.num }}</span>
+              <button onClick="{{ c.pick }}" class="rrCard">
+                <span class="rrRing"><span class="rrAv">{{ c.ini }}<img src="{{ c.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.op }}"></span><span class="rrNum"><span>{{ c.num }}</span></span></span>
+                <span class="rrName">{{ c.name }}</span>
+                <span class="rrHearts"><sc-for list="{{ c.hearts }}" as="h" hint-placeholder-count="4"><span class="rrHeart"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:100%;height:100%;display:block"><path d="M12 21s-7.5-4.6-9.6-9.1C.9 8.6 2.9 4.5 6.8 4.5c2.1 0 3.6 1.1 5.2 3 1.6-1.9 3.1-3 5.2-3 3.9 0 5.9 4.1 4.4 7.4C19.5 16.4 12 21 12 21z" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2"></path></svg></span></sc-for></span>
               </button>
             </sc-for>
           </div>
@@ -620,7 +630,7 @@ class Component extends DCLogic {
     this.state.players.forEach(p=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(p.name)); }catch(e){} });
     this._iv=setInterval(()=>this.tick(),1000); this._av=setInterval(()=>{ if(this.canAuto()) this.spin(); },250);
     RR.connect(); this.unsub=RR.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=RR.onGift(p=>this.onGift(p)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearTimeout(this._rvt); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
+  componentWillUnmount(){ this._gridRO?.disconnect(); removeEventListener('resize',this.fit); clearInterval(this._iv); clearTimeout(this._rvt); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); this.unsubGift?.(); }
   // بداية المباراة الفعلية (للنقاط) + كل من شارك فيها
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players.map(p=>p.name)); }
   // اللعب التلقائي: ينتظر ثانيتين بعد انتهاء الدور واختفاء كل النوافذ
@@ -738,6 +748,19 @@ class Component extends DCLogic {
     setTimeout(()=>{ if(this.alive().length<=1&&!this.busy()){ this.shut('setOpen'); this.win(); } },0); }
   replaySame=()=>{ this.stopVid(); this.clearT(); this.setState(st=>({players:st.players.map(p=>({...p,alive:true,hearts:st.cfg.chambers})),log:[],supUsed:{},phase:null,winner:null,pts:null,chooser:null,target:null,clash:null,elim:null,landedId:null,lastChooser:null,awaiting:false,idleAt:Date.now(),hold:false}),()=>this.startMatch()); };
 
+  // مساحة شبكة الأهداف (تتحدث مع تغيّر الحجم) — منها يُحسب مقاس البطاقة
+  gridRef=el=>{ if(el===this._grid) return; this._gridRO?.disconnect(); this._grid=el; if(!el) return;
+    const m=()=>{ const cs=getComputedStyle(el), W=Math.floor(el.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)), H=Math.floor(el.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom));
+      if(W!==this.state.gW||H!==this.state.gH) this.setState({gW:W,gH:H}); };
+    m(); if(window.ResizeObserver){ this._gridRO=new ResizeObserver(m); this._gridRO.observe(el); } };
+  // مقاس مرن (نفس روليت الإقصاء): أكبر بطاقة يبان معها كل اللاعبين بدون سكرول، بين DMIN وDMAX.
+  // المقاسات بوحدات المسرح (1920×1080) لأن الشاشة داخل المسرح المكبَّر/المصغَّر.
+  resFit(n){ const W=this.state.gW||0, H=this.state.gH||0, CW=1.3, CH=1.8, DMAX=340, DMIN=78;
+    if(!n||W<=0||H<=0) return { gD:DMIN, gCw:Math.round(DMIN*CW), gCols:1 };
+    let bd=0, bc=1; for(let c=1;c<=n;c++){ const r=Math.ceil(n/c), d=Math.min(W/(c*CW),H/(r*CH-.14)); if(d>bd){bd=d;bc=c;} }
+    const d=Math.max(DMIN,Math.min(DMAX,Math.floor(bd))); let c=bc;
+    if(d===DMAX||d===DMIN){ c=Math.max(1,Math.min(n,Math.floor(W/(d*CW)))); c=Math.ceil(n/Math.ceil(n/c)); }
+    return { gD:d, gCw:Math.min(d*2,Math.max(Math.round(d*CW),Math.floor(W/c))), gCols:c }; }
   hearts(n,max,lostIdx){ return Array.from({length:max},(_,i)=>({fill:i<n?'#f43f5e':'transparent',stroke:i<n?'#f43f5e':'rgba(255,255,255,.28)',an:i===lostIdx?'heartBreak .6s cubic-bezier(.2,1.4,.4,1)':'none'})); }
   buildFx(){ if(this._fx) return this._fx; const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a);
     const glow=(k,css)=>h('div',{key:k,style:{position:'absolute',borderRadius:'50%',filter:'blur(40px)',...css}});
@@ -799,7 +822,7 @@ class Component extends DCLogic {
       hitPct:Math.round(c.bullets/c.chambers*100)+'%', gunTxt:`${c.bullets} ${c.bullets===1?'طلقة':'طلقات'} · ${c.chambers} غرف`,
       chooseOpen:s.phase==='choose'&&!!ch, chName:ch?ch.name:'', chIni:ini(ch&&ch.name), chAv:A(ch&&ch.name).av, chOp:A(ch&&ch.name).op, chNum:ch?ch.num:'', chHearts:ch?this.hearts(ch.hearts,c.chambers):[],
       left:s.left, cdOff:(452.4*(1-s.left/c.chooseSec)).toFixed(1), cdCol:s.left<=5?'#f87171':'#a78bfa', cdAn:s.left<=5?'warnPulse 1s ease-in-out infinite':'none', timeTxt:'00:'+String(s.left).padStart(2,'0'), timePct:(s.left/c.chooseSec*100).toFixed(1), candCount:Math.max(0,W.length-1),
-      cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})),
+      cands:W.filter(p=>p.id!==s.chooser).sort((x,y)=>x.num-y.num).map(p=>({num:p.num,name:p.name,ini:ini(p.name),...A(p.name),hearts:this.hearts(p.hearts,c.chambers),pick:()=>this.pickTarget(p.id)})), ...this.resFit(Math.max(0,W.length-1)), gridRef:this.gridRef,
       kickChooser:()=>ch&&this.eliminate(ch.id,{by:'المذيع',type:'manual',host:true,tag:'إقصاء يدوي'}), resume:()=>this.endTurn(),
       clashOpen:s.phase==='clash'&&!!tg, shName:ch?ch.name:'', shIni:ini(ch&&ch.name), shAv:A(ch&&ch.name).av, shOp:A(ch&&ch.name).op, tgName:tg?tg.name:'', tgIni:ini(tg&&tg.name), tgAv:A(tg&&tg.name).av, tgOp:A(tg&&tg.name).op,
       clashHit:!!(s.clash&&s.clash.stage==='hit'), clashMiss:!!(s.clash&&s.clash.stage==='miss'),
