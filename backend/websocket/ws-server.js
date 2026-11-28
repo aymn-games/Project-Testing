@@ -276,7 +276,7 @@ var GAME_NAMES = {
   'rock-paper-scissors': 'حجرة ورقة مقص', 'impostor': 'من الأمبوستر؟', 'uno': 'أونو',
   'cowboy-duel': 'بلدة الكاوبوي', 'abyss': 'الهاوية', 'formula-race': 'فورمولا ون',
   'lamha': 'محِك العقول', 'hasila': 'حصيلة', 'arena': 'الحلبة', 'pyramid': 'الهرم',
-  'box-war': 'حرب الصناديق'
+  'box-war': 'استحواذ'
 };
 
 // صفحات الألعاب: /games/<slug>/ و /discord-games/<slug>/

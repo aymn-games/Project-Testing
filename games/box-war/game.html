@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>حرب الصناديق — ألعاب أيمن</title>
+<title>استحواذ — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
 <style>
-/* حرب الصناديق — شاشة اللعب. التخطيط: هيدر المنصة ثابت فوق، شريط النتيجة، ثم شبكة الصناديق تملأ باقي الشاشة (الأزرق يسار / الأحمر يمين) */
+/* استحواذ — شاشة اللعب. التخطيط: هيدر المنصة ثابت فوق، شريط النتيجة، ثم شبكة الصناديق تملأ باقي الشاشة (الأزرق يسار / الأحمر يمين) */
 :root{
   color-scheme:dark;
   /* هوية ألعاب أيمن (نفس لعبة إكس أو): أسود بنفسجي، زجاج داكن، بنفسجي للمنصة، ألوان الفرق هادئة */
@@ -1153,7 +1153,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     list = list.slice(0, 12);
     $('winCards').innerHTML = list.map(function (p, j) {
       var n = p.caps + p.rec, player = reg.player(p.name);
-      var lines = [winner ? 'فوز ' + CFG.name[winner] : 'تعادل', n + ' صندوق', 'حرب الصناديق'];
+      var lines = [winner ? 'فوز ' + CFG.name[winner] : 'تعادل', n + ' صندوق', 'استحواذ'];
       if (AGP.winCard && AGP.winCard.canShow(player)) {
         return '<div class="wcard-own" style="animation-delay:' + (0.5 + j * 0.08).toFixed(2) + 's">' + AGP.winCard.renderHtml(player, lines, { pop: false }) + '</div>';
       }
