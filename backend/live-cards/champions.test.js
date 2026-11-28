@@ -64,7 +64,12 @@ test('يعد مرات المركز الأول لكل الأسابيع المنت
     // أقدم بث مسجّل = بداية الأسبوع -5 (الحد اللي يرجع له الحفظ)
     db.prepare('INSERT INTO broadcasts (user_id, tiktok_username, started_at, ended_at) VALUES (?, ?, ?, ?)').run(b, tag + 'b', w5 + DAY, w5 + DAY + 6 * H);
     champions.clearCache();
-    assert.equal(champions.getChampionCount(tag + 'a'), 3);
-    assert.equal(champions.getChampionCount(tag + 'b'), 2);
-    assert.equal(champions.getChampionCount('nobody'), 0);
+    assert.equal(champions.getChampionCount(a), 3);
+    assert.equal(champions.getChampionCount(b), 2);
+    assert.equal(champions.getChampionCount(999999999), 0);
+
+    // يغيّر اسمه والـID العام بعد ما أخذ ألقابه: ألقابه تبقى له.
+    db.prepare('UPDATE users SET custom_id = ?, display_name = ? WHERE id = ?').run(tag + 'a-new', 'اسم جديد', a);
+    champions.clearCache();
+    assert.equal(champions.getChampionCount(a), 3);
 });
