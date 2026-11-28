@@ -787,10 +787,11 @@ class Component extends DCLogic {
   maxPlayers(){ return Math.max(2,Math.min(200,+CFG.maxPlayers||20)); }
   // رسائل الشات: الانضمام بالكلمة المفتاحية (نافذة لاعبين جدد)، رقم القبيلة/اللاعب من صاحب الدور، «تخطي» بالإنعاش
   onComment(p){ const user=this.reg.nameFor(p), text=p.text, s=this.state;
-    if(s.autoJoin&&!s.winOpen&&CFG.keyword&&TR.norm(text)===TR.norm(CFG.keyword)) return this.autoJoinPlayer(user,p);
-    if(!s.resOpen||s.resOpenOut||user!==s.landed) return;
-    if(s.revive&&TR.norm(text)===TR.norm('تخطي')) return this.endRes();
-    const k=TR.chatNumber(text); if(k) this.pick(k-1); }
+    // صاحب الدور أولاً: رقمه اختيار حتى لو كانت الكلمة المفتاحية رقم (مثلاً «1»)
+    if(s.resOpen&&!s.resOpenOut&&user===s.landed){
+      if(s.revive&&TR.norm(text)===TR.norm('تخطي')) return this.endRes();
+      const k=TR.chatNumber(text); if(k) return this.pick(k-1); }
+    if(s.autoJoin&&!s.winOpen&&CFG.keyword&&TR.norm(text)===TR.norm(CFG.keyword)) this.autoJoinPlayer(user,p); }
   // هدايا البث: لازم تكون من اللاعب المُقصى نفسه، وبحد مرات الإنعاش المختار
   onGift(p){ const s=this.state; if(!s.supOn||!s.supType||s.winOpen) return; if(!TR.giftMatches(s.supType,p.giftName,p.giftValue)) return;
     const n=this.reg.nameFor(p); if(!s.out.includes(n)) return;
